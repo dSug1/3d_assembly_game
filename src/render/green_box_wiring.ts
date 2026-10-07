@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, pieceCamera, pieceOrbitEnds, pieceOrbitProgress, pushedPiece, referenceYawGain, returnCamera, returnDone, returnLook, returnPieceOffset, ringDistanceRange, scaledGap, startCentreReturn, startPieceOrbit, viewAxis } from "../input/piece_orbit";
+import { anglesOf, pieceCamera, pieceOrbitEnds, pieceOrbitProgress, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, startCentreReturn, startPieceOrbit, viewAxis } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -648,12 +648,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
     if (cr !== null) {
-      // ⭐⭐ (2026-10-07) the way back, in TWO PHASES with finger travel: the camera back to its place watching the piece, THEN the watch
-      // slerping to the pink gizmo — each over `pieceOrbitFadeMm` (twice the time it took as one)
+      // ⭐⭐ (2026-10-07) the way back, the way in reversed: from where the camera was, its difference from this pose fading out, its view
+      // axis slerping back to the centre — both with finger travel, over the way in's own settings
       camAt = returnCamera(cr, [c.x, c.y, c.z], o, cfg.pieceOrbitFadeMm);
-      const ax = returnLook(cr, camAt, pp, [c.x, c.y, c.z], cfg.pieceOrbitFadeMm);
+      const ax = returnLook(cr, camAt, [c.x, c.y, c.z], cfg.pieceOrbitSlerpMm);
       lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
-      if (returnDone(cr, cfg.pieceOrbitFadeMm)) {
+      if (returnProgress(cr, cfg.pieceOrbitFadeMm) >= 1 && returnProgress(cr, cfg.pieceOrbitSlerpMm) >= 1) {
         st.centreReturn = null; // home: the centre orbit as it always was
         st.hudDirty = true;
       }
