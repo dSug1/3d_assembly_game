@@ -589,3 +589,7 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   although triggered by the same input"*) — `alignRestingFace` and `enterPieceOrbit`, both called by the same tap → `PIECE_ORBIT.md` §1bis.
 * ⭐⭐ **The orbit around the piece ends by itself** at `pieceOrbitEndPct` % (50) of the piece's start distance to the pink gizmo, and
   **the way back to the centre orbit is the way in reversed** — at that end or at a respawn (`f8beaf5`) → `PIECE_ORBIT.md` §6.
+* ⛔ A two-phase way back (`b80111a`) was built and reverted by the owner (`bb0b79b`).
+* ⭐⭐ **The start and end transitions ease every frame, as the orbit does** (*"Smooth the movement of the camera at start and end of
+  piece orbit"*): they read the finger's travel through the orbit's own spring (`boxSmoothMs`) instead of in steps at each pointer
+  event → `PIECE_ORBIT.md` §6bis.

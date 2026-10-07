@@ -2,7 +2,7 @@
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
 > piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
-> its own), `f8beaf5` (§6, the end by itself and the way back). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
+> its own), `f8beaf5` (§6, the end by itself and the way back), and the transitions' smoothing (§6bis). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
 > `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`),
 > `render/pointer_wiring.ts` (`orbitTapped`, `orbitDragStep`, the finger travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
@@ -122,6 +122,8 @@ orbit."*
   where it is, looking where it looks; then, with **finger travel**, its **view axis slerps back to the orbit centre** (`returnLook`, over
   `pieceOrbitSlerpMm`), and its difference from the centre orbit's own camera — angles around the centre AND distance from it — **fades
   out** (`returnCamera`, over `pieceOrbitFadeMm`). Home, the state is dropped: the centre orbit as it always was.
+- ⛔ A TWO-PHASE way back (`b80111a`: the camera home watching the piece, then the watch to the gizmo, twice the travel) was built and
+  REVERTED by the owner (`bb0b79b`, back to `4539a2b`) — the way back is the one above.
 - **The piece**: dx turned only the camera around the piece, so the rig's yaw had drifted from the piece's real direction — at the end
   the rig's yaw is put back on it (the springs and the camera started again from there), and the piece's small difference from the ring
   curve (its frozen line is straight, the rings are not) fades out the same way (`returnPieceOffset`).
@@ -131,10 +133,26 @@ orbit."*
 - HUD: the `green` line reads *· back to the centre orbit* during it; the verdict *orbit: the piece within 50 % of its start distance to
   the pink gizmo — back to the centre orbit*.
 
+## 6bis. The transitions ease every frame, as the orbit does (2026-10-07)
+
+The owner: *"Why when the camera changes focus to piece and then to pink gizmo, the movement of the camera with delta position input is
+much less smooth than during standard orbit?"* — then *"Smooth the movement of the camera at start and end of piece orbit"*.
+
+- **Why** (read in the code): the orbit itself steps once per pointer EVENT (47–68 ms apart on the tablet, `D86`) but is eased EVERY FRAME
+  on its spring (`boxSmoothMs`, 60 ms). The transitions — the way in's view-axis slerp (§2) and offset fade, the way back's fade and slerp
+  (§6) — read the finger's travel RAW, added in the pointer handler: they moved in steps at the event rate, a 10 mm slerp 20–30 % of its
+  turn per event (~10° jolts on a 30–40° swing).
+- **Now** (`smoothTravel`): the drag adds to a RAW count (`rawMm`); every frame the travel the transitions read (`travelledMm`) follows it on
+  the SAME critically damped spring as the orbit (τ = `boxSmoothMs` / 2) — continuous, never past the finger's count, settling exactly on
+  it. ⚠ Cost: the orbit's own ~60 ms of lag. `boxSmoothMs` 0: the raw count, as before.
+- Vector: events every 60 ms of 3 mm, frames every 16 ms — the travel moves on EVERY frame, never more than 1.6 mm (the raw jump is 3),
+  never back, settles exactly; failing on the code before it.
+
 ## 7. Open
 
 - ⚠ The view-axis slerps and the fades move only with a FINGER — the coast after a lift does not advance them (as the scene's centre
-  move); a finger lifted right after the end leaves the camera partly turned until the next orbit.
+  move); a finger lifted right after the end leaves the camera partly turned until the next orbit (the smoothing of §6bis only lets the
+  last event's travel land).
 - ⚠ The frame where it ENDS was not caught headless (the harness's last frame before it is missing): continuity there is vectored, not
   yet seen.
 - ⚠ This branch has the rings at **±1.575 m** (`1.0.59s-`'s); the ±1.0 m of `1.0.59t-` was not carried over.

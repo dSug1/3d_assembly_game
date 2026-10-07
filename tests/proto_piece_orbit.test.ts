@@ -24,6 +24,7 @@ import {
   returnProgress,
   ringDistanceRange,
   scaledGap,
+  smoothTravel,
   startCentreReturn,
   startPieceOrbit,
   viewAxis,
@@ -50,6 +51,9 @@ const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const len = (a: Vec3): number => Math.hypot(a[0], a[1], a[2]);
 const unit = (a: Vec3): Vec3 => { const n = len(a); return [a[0] / n, a[1] / n, a[2] / n]; };
+/** A drag step, settled at once (τ 0) — the frame's smoothing is its own vector. */
+const adv = (p: PieceOrbit, mm: number): PieceOrbit => smoothTravel(advancePieceOrbit(p, mm), 1, 0);
+const advR = (r: ReturnType<typeof startCentreReturn>, mm: number) => smoothTravel(advanceCentreReturn(r, mm), 1, 0);
 const ringAngles = (yaw: number, v: number) => anglesOf(cameraOffset(cfg, { yaw, v }, [0, 0, 0], OFF, 1));
 
 /** The frame's placement, as `greenBoxFrame` composes it: the piece, the camera, its view axis (unit). */
@@ -86,10 +90,10 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
   it("⭐⭐⭐ the VIEW AXIS slerps from the orbit centre to the piece with FINGER TRAVEL — the camera does not swing out and back", () => {
     let po = aligned(0.3, 0.1);
     const start = frame(po, 0.3, 0.1);
-    po = advancePieceOrbit(po, BLEND / 2);
+    po = adv(po, BLEND / 2);
     expect(pieceOrbitProgress(po, BLEND)).toBeCloseTo(0.5, 12); // eased, its middle
     const mid = frame(po, 0.3, 0.1);
-    po = advancePieceOrbit(po, BLEND);
+    po = adv(po, BLEND);
     const done = frame(po, 0.3, 0.1);
     const toCentre = unit(sub(C, mid.cam));
     const toPiece = unit(sub(mid.piece, mid.cam));
@@ -108,7 +112,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const po0 = aligned(yaw, v);
     expect(Math.abs(po0.dAzRad) + Math.abs(po0.dElRad)).toBeGreaterThan(1e-3); // there IS an offset to fade
     const ring = ringAngles(yaw, v);
-    const at = (mm: number) => anglesOf(sub(frame(advancePieceOrbit(po0, mm), yaw, v).cam, frame(po0, yaw, v).piece));
+    const at = (mm: number) => anglesOf(sub(frame(adv(po0, mm), yaw, v).cam, frame(po0, yaw, v).piece));
     expect(at(0).el - ring.el).toBeCloseTo(po0.dElRad, 9);
     expect(at(FADE / 2).el - ring.el).toBeCloseTo(po0.dElRad / 2, 9); // eased: half at half
     expect(at(FADE).el).toBeCloseTo(ring.el, 12); // gone: the rings' angles
@@ -123,14 +127,14 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(scaledGap(1.3, 1.3, 2.5, 0.1, 50)).toBeCloseTo(0.975, 12);
     expect(scaledGap(1.3, 2.9, 2.5, 0.1, 50)).toBeCloseTo(1.3, 12); // pushed back out: held
     expect(scaledGap(1.3, 0.1, 2.5, 0.1, 100)).toBeCloseTo(1.3, 12); // 100 %: no scaling
-    const po = advancePieceOrbit(aligned(0.3, 0.1), 1000);
+    const po = adv(aligned(0.3, 0.1), 1000);
     const far = frame(po, 0.3, 0.1);
     const near = frame(po, 0.3, 0.3);
     expect(len(sub(near.cam, near.piece))).toBeLessThan(len(sub(far.cam, far.piece)) - 0.1); // dy brings the camera in
   });
 
   it("⭐⭐ dx turns the CAMERA around the piece and no longer moves it; dy pushes it on its frozen line through the centre (the pink gizmo), at the rings' distance", () => {
-    const po = advancePieceOrbit(aligned(0.3, 0.1), 1000);
+    const po = adv(aligned(0.3, 0.1), 1000);
     const a = frame(po, 0.3, 0.1);
     const b = frame(po, 1.1, 0.1);
     for (const k of [0, 1, 2]) expect(b.piece[k]).toBeCloseTo(a.piece[k]!, 12);
@@ -214,18 +218,47 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     for (const k of [0, 1, 2]) expect(at(r)[k]).toBeCloseTo(camera[k]!, 12); // nothing moves
     for (const k of [0, 1, 2]) expect(returnLook(r, camera, C, 10)[k]).toBeCloseTo(look0[k]!, 12); // looking where it looked
     expect(returnPieceOffset(r, FADE)).toEqual(pieceOff);
-    r = advanceCentreReturn(r, 5); // half the slerp's travel
+    r = advR(r, 5); // half the slerp's travel
     const cam5 = at(r);
     const toC = unit(sub(C, cam5));
     const ax = returnLook(r, cam5, C, 10);
     const whole = Math.acos(look0[0] * toC[0] + look0[1] * toC[1] + look0[2] * toC[2]);
     const done = Math.acos(Math.min(1, ax[0] * look0[0] + ax[1] * look0[1] + ax[2] * look0[2]));
     expect(done / whole).toBeCloseTo(0.5, 9); // a SLERP, half at half
-    r = advanceCentreReturn(r, FADE);
+    r = advR(r, FADE);
     for (const k of [0, 1, 2]) expect(at(r)[k]).toBeCloseTo(C[k]! + ringCam[k]!, 12); // home: the centre orbit's own camera
     for (const k of [0, 1, 2]) expect(returnLook(r, at(r), C, 10)[k]).toBeCloseTo(unit(sub(C, at(r)))[k]!, 12); // looking at the centre
     expect(returnPieceOffset(r, FADE).map((x) => Math.abs(x))).toEqual([0, 0, 0]);
     expect(returnProgress(r, FADE)).toBe(1);
+  });
+
+  it("⭐⭐⭐ the transitions EASE EVERY FRAME (*\"Smooth the movement of the camera at start and end of piece orbit\"*): pointer events in steps, the travel read continuous", () => {
+    const TAU = 30; // boxSmoothMs 60 / 2
+    // pointer events every 60 ms, 3 mm each (the tablet); frames every 16 ms
+    let p = aligned(0.3, 0.1);
+    const read: number[] = [];
+    for (let f = 0; f < 60; f++) {
+      if (f % 4 === 0) p = advancePieceOrbit(p, 3); // an event: the RAW count steps
+      p = smoothTravel(p, 16, TAU);
+      read.push(p.travelledMm);
+    }
+    const steps = read.slice(1).map((x, i) => x - read[i]!);
+    // ⛔ raw, the travel moved 3 mm on one frame in four and 0 on the others; smoothed, it moves on EVERY frame, never backward
+    expect(Math.min(...steps.slice(8))).toBeGreaterThan(0);
+    expect(Math.max(...steps)).toBeLessThan(1.6); // never the 3 mm jump
+    expect(p.travelledMm).toBeLessThanOrEqual(p.rawMm); // never ahead of the finger
+    // it catches up once the finger stops — and settles EXACTLY on the raw count
+    for (let f = 0; f < 60; f++) p = smoothTravel(p, 16, TAU);
+    expect(p.travelledMm).toBe(p.rawMm);
+    expect(p.velMm).toBe(0);
+    // τ 0: the raw count at once (the old behaviour, `boxSmoothMs` 0)
+    expect(smoothTravel(advancePieceOrbit(aligned(0.3, 0.1), 5), 16, 0).travelledMm).toBe(5);
+    // the way back the same
+    const r = smoothTravel(advanceCentreReturn(startCentreReturn(C, [1, 1, 1], [0, 0, -1], [1, 0, 0], [0, 0, 0]), 4), 16, TAU);
+    expect(r.travelledMm).toBeGreaterThan(0);
+    expect(r.travelledMm).toBeLessThan(4);
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/if \(st\.pieceOrbit !== null\) st\.pieceOrbit = smoothTravel\(st\.pieceOrbit, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*const po = st\.pieceOrbit;/);
   });
 
   it("⭐ the piece ON the centre: the fallback direction, never a NaN", () => {

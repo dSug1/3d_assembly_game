@@ -26,6 +26,8 @@ import type { Vec3 } from "../core/vec";
 export interface PieceOrbit {
   readonly dir: Vec3;
   readonly travelledMm: number;
+  readonly rawMm: number;
+  readonly velMm: number;
   readonly gap0M: number;
   readonly ring0M: number;
   /** ⭐ The piece's distance from the PINK GIZMO when it started (`pieceOrbitEnds`). */
@@ -71,12 +73,40 @@ export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, ca
   const gap0M = Math.hypot(rel[0], rel[1], rel[2]);
   const a = anglesOf(rel);
   const pink0M = Math.hypot(piece[0] - pink[0], piece[1] - pink[1], piece[2] - pink[2]);
-  return { dir, travelledMm: 0, gap0M, ring0M: n, dAzRad: wrap(a.az - ring.az), dElRad: a.el - ring.el, pink0M };
+  return { dir, travelledMm: 0, rawMm: 0, velMm: 0, gap0M, ring0M: n, dAzRad: wrap(a.az - ring.az), dElRad: a.el - ring.el, pink0M };
 }
 
-/** ⭐ One step of finger travel, millimetres (the drag that drives the orbit). */
+/** ⭐ One step of finger travel, millimetres (the drag that drives the orbit) — into the RAW count; the transitions read the smoothed one
+ * (`smoothTravel`). */
 export function advancePieceOrbit(p: PieceOrbit, travelMm: number): PieceOrbit {
-  return travelMm > 0 ? { ...p, travelledMm: p.travelledMm + travelMm } : p;
+  return travelMm > 0 ? { ...p, rawMm: p.rawMm + travelMm } : p;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE TRANSITIONS EASE EVERY FRAME, AS THE ORBIT DOES** (the owner, 2026-10-07: *"Smooth the movement of the camera at
+ * start and end of piece orbit"* — *"why … the movement of the camera with delta position input is much less smooth than during standard
+ * orbit?"*). The finger's travel arrives once per pointer EVENT (47–68 ms apart on the tablet, `D86`) and the transitions read it raw, so
+ * they jumped at the event rate — a 10 mm slerp 20–30 % per event — while the orbit itself eases every frame on its spring. Now the travel
+ * they read (`travelledMm`) follows the raw count (`rawMm`) on the SAME critically damped spring as the orbit (τ = `boxSmoothMs` / 2,
+ * `springOrbit`'s): continuous position and speed, no event steps. τ 0: the raw count at once.
+ */
+export function smoothTravel<T extends { readonly travelledMm: number; readonly rawMm: number; readonly velMm: number }>(p: T, dtMs: number, tauMs: number): T {
+  if (!(tauMs > 0) || !(dtMs > 0)) return p.travelledMm === p.rawMm && p.velMm === 0 ? p : { ...p, travelledMm: p.rawMm, velMm: 0 };
+  const w = 1 / tauMs;
+  const e = Math.exp(-w * dtMs);
+  const d = p.travelledMm - p.rawMm;
+  let x = p.rawMm + (d + (p.velMm + w * d) * dtMs) * e;
+  let v = (p.velMm - w * (p.velMm + w * d) * dtMs) * e;
+  // ⭐ settled: exactly the raw count (a spring only approaches it), and never past it (the travel only grows)
+  if (Math.abs(p.rawMm - x) < 1e-3 && Math.abs(v) < 1e-4) {
+    x = p.rawMm;
+    v = 0;
+  }
+  if (x > p.rawMm) {
+    x = p.rawMm;
+    v = 0;
+  }
+  return { ...p, travelledMm: Math.max(p.travelledMm, x), velMm: v };
 }
 
 /** ⭐ A share of finger travel over `budgetMm`, eased in and out (smoothstep, as `OrbitCentreBlend`); a budget of zero is all at once. */
@@ -267,6 +297,8 @@ export interface CentreReturn {
   readonly dRM: number;
   readonly pieceOff: Vec3;
   readonly travelledMm: number;
+  readonly rawMm: number;
+  readonly velMm: number;
 }
 
 /** ⭐ At the end: from the camera as it is (`camera`, looking along `look0`) against the centre orbit's camera (`ringCam`, an offset from
@@ -282,12 +314,14 @@ export function startCentreReturn(centre: Vec3, camera: Vec3, look0: Vec3, ringC
     dRM: Math.hypot(rel[0], rel[1], rel[2]) - Math.hypot(ringCam[0], ringCam[1], ringCam[2]),
     pieceOff,
     travelledMm: 0,
+    rawMm: 0,
+    velMm: 0,
   };
 }
 
 /** ⭐ One step of finger travel, millimetres. */
 export function advanceCentreReturn(r: CentreReturn, travelMm: number): CentreReturn {
-  return travelMm > 0 ? { ...r, travelledMm: r.travelledMm + travelMm } : r;
+  return travelMm > 0 ? { ...r, rawMm: r.rawMm + travelMm } : r;
 }
 
 /** ⭐ A share of finger travel over `budgetMm`, eased (smoothstep, as the way in); a budget of zero is at once. */

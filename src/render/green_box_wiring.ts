@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, pieceCamera, pieceOrbitEnds, pieceOrbitProgress, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, startCentreReturn, startPieceOrbit, viewAxis } from "../input/piece_orbit";
+import { anglesOf, pieceCamera, pieceOrbitEnds, pieceOrbitProgress, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceOrbit, viewAxis } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -562,6 +562,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   // ⭐⭐ prototype (2026-10-06): orbiting AROUND THE PIECE (`piece_orbit.ts`), the piece is pushed along its frozen line through the
   // centre at the rings' distance (dy as fast as before; dx no longer moves it) — else on the rings as before
+  // ⭐⭐ (2026-10-07) *"Smooth the movement of the camera at start and end of piece orbit"* — the travel the transitions read eases toward
+  // the finger's on the orbit's own spring (`smoothTravel`, τ = `boxSmoothMs` / 2), every frame
+  if (st.pieceOrbit !== null) st.pieceOrbit = smoothTravel(st.pieceOrbit, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  if (st.centreReturn !== null) st.centreReturn = smoothTravel(st.centreReturn, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   const po = st.pieceOrbit;
   const cr = st.centreReturn;
   // ⭐ (2026-10-07) on the way back to the centre orbit, the piece's difference from the rings fades out (`returnPieceOffset`)
