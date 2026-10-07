@@ -1,6 +1,6 @@
 # The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
-⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59u-from1.0.59s-Orbit-around-piece`** (2026-10-06 — the chain since `1.0.58b-` is in §7–§8);
+⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59v-`** (2026-10-07 — the chain since `1.0.58b-` is in §7–§8);
 first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
 the fork — the main line is merged INTO it, one way.
 ⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
@@ -582,3 +582,10 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   the other direction"*, *"rotate twice faster"*, *"set the default piece yaw per orbit yaw to 3"*): carried `d` round the centre, it turns
   `+3d` on itself — `(k − 1)·d` = 2d as seen from the camera. The factor is a slider, CAMERA › GREEN PIECE ORBIT › *piece yaw per orbit
   yaw* (`orbitPieceYawFactor`, −3…3; −1 = the old "against"). Still stopped once aligned → `RESTING_FACE_ALIGNMENT.md` §2bis.
+
+⭐ **`1.0.59v-`** (2026-10-07, from `1.0.59u-from1.0.59s-Orbit-around-piece`):
+
+* ⭐⭐ **The alignment and the orbit around the piece are two independent actions** (`86afd21`; *"Make those two actions independent,
+  although triggered by the same input"*) — `alignRestingFace` and `enterPieceOrbit`, both called by the same tap → `PIECE_ORBIT.md` §1bis.
+* ⭐⭐ **The orbit around the piece ends by itself** at `pieceOrbitEndPct` % (50) of the piece's start distance to the pink gizmo, and
+  **the way back to the centre orbit is the way in reversed** — at that end or at a respawn (`f8beaf5`) → `PIECE_ORBIT.md` §6.

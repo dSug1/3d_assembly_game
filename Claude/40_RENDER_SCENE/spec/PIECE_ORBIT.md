@@ -1,12 +1,13 @@
 # The orbit around the piece — specification (prototype)
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
-> piece*), `f98b584` (*frozen gain*); the slerp's own slider after. ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free), `render/green_box_wiring.ts`
-> (`alignRestingFace`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`), `render/pointer_wiring.ts` (`orbitDragStep`, the finger
-> travel); vectors `tests/proto_piece_orbit.test.ts`.
+> piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
+> its own), `f8beaf5` (§6, the end by itself and the way back). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
+> `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`),
+> `render/pointer_wiring.ts` (`orbitTapped`, `orbitDragStep`, the finger travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
 > ([`DOUBLE_ORBIT_PROTOTYPE.md`](DOUBLE_ORBIT_PROTOTYPE.md)).
-> **Scope:** the orbited piece (green or turquoise) and the camera, from the first resting-face alignment on.
+> **Scope:** the orbited piece (green or turquoise) and the camera, from the alignment tap until the orbit ends (§6).
 
 ---
 
@@ -17,7 +18,7 @@ the owner chose: the piece *"still pushed by dy"*; the fingers drive the *"camer
 *"the same as when the orbit center is moved in the scene (camera catches up while orbiting, etc.)"*; the pink ring *"stays at the old
 centre"*; back to the centre *"never automatically"*.
 
-From the FIRST resting-face alignment (`alignRestingFace`) until a respawn:
+From the alignment tap (`enterPieceOrbit`, §1bis) until it ends (§6):
 
 | | Orbit around the centre (before) | Orbit around the piece |
 |---|---|---|
@@ -27,8 +28,20 @@ From the FIRST resting-face alignment (`alignRestingFace`) until a respawn:
 | **the camera looks at** | the orbit centre (the pink gizmo) | the piece |
 | **the pink ring** | at the orbit centre | **stays** at the orbit centre (`centreBlend.targetM`, never retargeted by this) |
 
-- **A re-alignment** keeps the mode (its state is set only once); **a respawn** (`spawnOrbitPiece`) ends it.
-- ⛔ **No way back yet** — see §6.
+- **A tap while in it** keeps the mode (its state is set only once); it ENDS by itself, or at a respawn (`spawnOrbitPiece`) — §6.
+
+## 1bis. An action of its own (`86afd21`, 2026-10-07)
+
+The owner: *"Currently, a second touch on piece / right click while left click is hold triggers both resting face alignment and camera
+orbit positioning around the piece. Make those two actions independent, although triggered by the same input. Later on, we will likely
+map other inputs for those two different actions."*
+
+- **`alignRestingFace`** turns the piece's resting face and nothing else; **`enterPieceOrbit`** starts the orbit around the piece and
+  nothing else — neither calls nor reads the other.
+- **The tap** (`orbitTapped` — a second touch ON the piece, or a right click while the left button orbits, its FIRST tap) calls both,
+  each on its own; ONE episode if either acted. Mapping one to another input is one call moved.
+- The orbit no longer needs an alignment to succeed: a piece with nothing to align to enters it too. HUD: the verdict adds *· the camera
+  orbits the piece*.
 
 ## 2. The way in — the camera does not move (`f98b584`)
 
@@ -88,22 +101,45 @@ sliders values"*.
 |---|---|---|
 | gap at the closest ring (% of the gap at alignment) — `pieceOrbitGapMinPct` | 50 | CAMERA › **CAMERA ORBIT AROUND PIECE** |
 | starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` (the way back's too) | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| ends when the piece is this close to the pink gizmo (% of its start distance) — `pieceOrbitEndPct` | 50 | CAMERA › CAMERA ORBIT AROUND PIECE |
 
 ⭐ The owner: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"*, *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT
 AROUND CENTER"*. The HUD's `camera` line: `r=` is the distance **to the piece** in this mode (the camera looks along an axis, not at a
 target); `c=` still names the orbit centre.
 
-## 6. Open
+## 6. The end, and the way back to the orbit around the centre (`f8beaf5`, 2026-10-07)
 
-- ⛔ **The way back to the orbit around the centre** — none today (only a respawn: the SCENE menu's piece switch, or a restart). Options
-  put to the owner: a double tap on empty space (the camera reset's gesture), a tap on the pink ring, a button beside *HUD* / ☰, pushing
-  the piece back out past where it was aligned — each the way in reversed (the view axis back to the gizmo, the camera onto the centre's
-  rings).
-- ⚠ The view-axis slerp and the fade move only with a FINGER — the coast after a lift does not advance them (as the scene's centre move).
+The owner: *"Track the initial distance of the piece to pink gizmo when orbit around the piece is triggered. Automatically end it when
+the distance crosses initial distance * x% (make a slider in camera orbit around piece menu and set default to 50%). When it ends (in this
+case or at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece
+orbit."*
+
+- **The start distance** to the pink gizmo (`centreBlend.targetM`) is recorded when the orbit starts (`pink0M`).
+- **The end, by itself**: checked at each frame's start — the piece closer than **`pieceOrbitEndPct` %** (50) of it (`pieceOrbitEnds`;
+  pushed away, never). ⭐ It replaces *"never automatically"* (§1).
+- **The way back, the way in reversed** (`returnToCentreOrbit`, `startCentreReturn`): on the frame it ends **nothing moves** — the camera
+  where it is, looking where it looks; then, with **finger travel**, its **view axis slerps back to the orbit centre** (`returnLook`, over
+  `pieceOrbitSlerpMm`), and its difference from the centre orbit's own camera — angles around the centre AND distance from it — **fades
+  out** (`returnCamera`, over `pieceOrbitFadeMm`). Home, the state is dropped: the centre orbit as it always was.
+- **The piece**: dx turned only the camera around the piece, so the rig's yaw had drifted from the piece's real direction — at the end
+  the rig's yaw is put back on it (the springs and the camera started again from there), and the piece's small difference from the ring
+  curve (its frozen line is straight, the rings are not) fades out the same way (`returnPieceOffset`).
+- **At a respawn** (around the piece, or still on the way back): the same way back from the camera as it is; the piece and the rig go
+  back to boot as a respawn always does.
+- **A new tap** enters the orbit around the piece again — a way back still in progress gives way.
+- HUD: the `green` line reads *· back to the centre orbit* during it; the verdict *orbit: the piece within 50 % of its start distance to
+  the pink gizmo — back to the centre orbit*.
+
+## 7. Open
+
+- ⚠ The view-axis slerps and the fades move only with a FINGER — the coast after a lift does not advance them (as the scene's centre
+  move); a finger lifted right after the end leaves the camera partly turned until the next orbit.
+- ⚠ The frame where it ENDS was not caught headless (the harness's last frame before it is missing): continuity there is vectored, not
+  yet seen.
 - ⚠ This branch has the rings at **±1.575 m** (`1.0.59s-`'s); the ±1.0 m of `1.0.59t-` was not carried over.
 
-## 7. Checked headless (2026-10-06)
+## 8. Checked headless (2026-10-06, 2026-10-07)
 
 `Scene_1`, an orbit + a second-finger tap on the piece at boot (3.0 m from the centre), then dy in, then dx: the camera's distance to the
 piece **1.263 → 0.766 m** without ever growing (no swing), 0.752 m at 0.64 m; the gain ×0.74 throughout; after a 180-pixel dx turn the
@@ -112,3 +148,10 @@ slerp is half the angle at half the travel and the distance never leaves the gap
 scaling; dx turns only the camera, dy pushes on the frozen line; the gain equalises the summed sweep and depends on the sliders alone;
 the wiring — each failing on a mutant (the look at the piece at once, no fade, the gap never scaled, dx still carrying the piece, a bent
 ratio, the gain left out of the drag).
+
+⭐ 2026-10-07 (`f8beaf5`): aligned at boot (3.0 m from the gizmo), pushed in — the orbit ENDED at **1.49 m**, the first step under 50 %; the
+two frames after it nearly identical; a 160-pixel sideways drag brought the camera most of the way back onto the centre orbit (60 mm of
+travel needed); no error. Vectors: the start distance and the threshold (pushed away, never; from zero, never); the way back — nothing
+moves at its start, the slerp half at half, home exactly the centre orbit's camera looking at the centre, the piece's offset gone —; the
+two actions apart (the alignment never starts the orbit, the orbit never reads the alignment); each failing on a mutant (never ending,
+the distance not faded, the coupled tap).
