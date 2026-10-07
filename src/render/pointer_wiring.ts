@@ -11,7 +11,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains } from "./green_box_wiring";
+import { alignRestingFace, enterPieceOrbit, greenDragGains } from "./green_box_wiring";
 import { isOrbitTap, orbitTapCount, secondMoved } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -1250,19 +1250,25 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
 
 /**
  * ⭐⭐⭐ prototype — **A TAP COUNTED WHILE ORBITING** (`RESTING_FACE_ALIGNMENT.md` §1, §6; the owner, 2026-10-05): the count goes up; the
- * FIRST tap is the resting-face alignment (`alignRestingFace`) and costs ONE episode (*"The first tap shall cost one episode count"*),
- * landed now (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry either).
- * The later taps do nothing yet.
+ * FIRST tap triggers TWO INDEPENDENT ACTIONS — the resting-face alignment (`alignRestingFace`) and the camera's orbit around the piece
+ * (`enterPieceOrbit`; the owner, 2026-10-07: *"Make those two actions independent, although triggered by the same input"* — each may get
+ * its own input later) — and costs ONE episode if either did something (*"The first tap shall cost one episode count"*), landed now
+ * (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry either). The later taps
+ * do nothing yet.
  */
 export function orbitTapped(st: SceneState, now: number): void {
   const ot = st.orbitTap;
   if (ot === null) return;
   const r = orbitTapCount(ot.count);
   ot.count = r.count;
-  if (r.aligns && alignRestingFace(st, now)) {
+  // ⭐ the same input, two actions — each called on its own (neither reads the other's result)
+  const aligned = r.aligns && alignRestingFace(st, now);
+  const orbiting = r.aligns && enterPieceOrbit(st);
+  if (aligned || orbiting) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
-    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`)
+    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`), and the orbit's start
+    if (orbiting) st.lastVerdict = `${aligned ? st.lastVerdict : `orbit: tap ${ot.count}`} · the camera orbits the piece`;
   } else {
     st.lastVerdict = `orbit: tap ${ot.count} — counted (nothing defined yet)`;
   }

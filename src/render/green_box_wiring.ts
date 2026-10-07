@@ -244,17 +244,28 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   }
   st.restAlign = { from: q, t0: now, base };
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
-  // ⭐⭐ prototype (2026-10-06): *"when resting face is aligned, the orbit center moves to the piece, the rest orbit around the piece"* —
-  // from the FIRST alignment on (`piece_orbit.ts`); a re-alignment keeps it, only a respawn ends it (*"never automatically"*)
-  if (st.pieceOrbit === null) {
-    const c = st.orbitCentreM;
-    const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
-    const h = Math.hypot(out[0], out[2]) || 1;
-    const cam = st.camera.position;
-    // ⭐ the rings' angles around the piece now — the camera's own are kept against them, so it starts EXACTLY where it is
-    const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
-    st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z], ring);
-  }
+  st.hudDirty = true;
+  return true;
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE CAMERA ENTERS THE ORBIT AROUND THE PIECE** (`PIECE_ORBIT.md`; the owner, 2026-10-06: *"when resting face is
+ * aligned, the orbit center moves to the piece, the rest orbit around the piece"*). ⭐ AN ACTION OF ITS OWN (the owner, 2026-10-07:
+ * *"Make those two actions independent, although triggered by the same input. Later on, we will likely map other inputs for those two
+ * different actions"*): it no longer lives inside `alignRestingFace` — the tap (`orbitTapped`) calls both, each alone. Entered once; a
+ * second call keeps it (`false`), only a respawn ends it (*"never automatically"*). `true` when it starts here.
+ */
+export function enterPieceOrbit(st: SceneState): boolean {
+  const box = st.greenBox;
+  if (box === null || st.pieceOrbit !== null) return false;
+  const pos = box.position;
+  const c = st.orbitCentreM;
+  const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
+  const h = Math.hypot(out[0], out[2]) || 1;
+  const cam = st.camera.position;
+  // ⭐ the rings' angles around the piece now — the camera's own are kept against them, so it starts EXACTLY where it is
+  const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
+  st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [out[0] / h, 0, out[2] / h], [cam.x, cam.y, cam.z], ring);
   st.hudDirty = true;
   return true;
 }
