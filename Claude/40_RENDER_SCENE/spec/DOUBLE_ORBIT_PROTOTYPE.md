@@ -1,6 +1,6 @@
 # The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
-⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59v-`** (2026-10-07 — the chain since `1.0.58b-` is in §7–§8);
+⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59w-`** (2026-10-08 — the chain since `1.0.58b-` is in §7–§8);
 first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
 the fork — the main line is merged INTO it, one way.
 ⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
@@ -595,3 +595,14 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   event → `PIECE_ORBIT.md` §6bis.
 * ⭐⭐ **The way back moves AROUND THE PIECE, its view tied to the move, one value** (`pieceOrbitReturnMm`, 60 mm; the piece was lost from
   view when the camera started between it and the gizmo) → `PIECE_ORBIT.md` §6.
+
+⭐ **2026-10-08** — `1.0.59v-` renamed **`1.0.59v-Way-In-for-Piece-Orbit`**; work goes on on **`1.0.59w-`**:
+
+* ⭐⭐ **The way in rebuilt** (`PIECE_ORBIT.md` §2): one progress, `pieceOrbitEnterMm` **12 mm**; the PIVOT handed over gradually — dx turns
+  the camera round the piece while the piece is carried round the gizmo by the share left of the way in; the view straight at a point
+  sliding from the gizmo to the piece, paced to turn evenly (option B); one yaw speed through the way in and the orbit; never cancelled.
+  ⛔ Tried and dropped the same day: the orbit from the tap (sweeps), the fingers keeping the centre orbit to the end (a sudden slide),
+  the per-axis way in (reverted), the view by angle, option A.
+* ⭐⭐ **The end and the way out** (§6): **75 %** of the distance at the piece orbit's start **AND a clear push step** (|dy| ≥ 2 |dx|, dy
+  outside the deadband); the way out in **30 mm**, keeping its squared turn (*"I prefer the squared turn for the way out"*). ⛔ A forced
+  way out (no room before the waist) was built and dropped.

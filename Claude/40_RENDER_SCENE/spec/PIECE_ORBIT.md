@@ -2,8 +2,12 @@
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
 > piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
-> its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), and the way back around the piece (§6). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
-> `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`),
+> its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), and the way back around the piece (§6);
+> **2026-10-08**, on `1.0.59v-` (renamed `1.0.59v-Way-In-for-Piece-Orbit`) and **`1.0.59w-`**: the way in rebuilt (§2 — `600c3e2`, the
+> gradual pivot `70f50e1`, option B `0aa43da`), the yaw speed one through it, the end at 75 % plus a clear push, the way out in 30 mm (§6 —
+> `a8bae99`, `fa95e0f`, `ba0828e`). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
+> `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`; the way in:
+> `PieceEntry`, `startPieceEntry`, `carryHeading`, `entryCamera`, `entryLook`, `evenSlide`; the end: `pushStep`),
 > `render/pointer_wiring.ts` (`orbitTapped`, `orbitDragStep`, the finger travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
 > ([`DOUBLE_ORBIT_PROTOTYPE.md`](DOUBLE_ORBIT_PROTOTYPE.md)).
@@ -18,7 +22,7 @@ the owner chose: the piece *"still pushed by dy"*; the fingers drive the *"camer
 *"the same as when the orbit center is moved in the scene (camera catches up while orbiting, etc.)"*; the pink ring *"stays at the old
 centre"*; back to the centre *"never automatically"*.
 
-From the alignment tap (`enterPieceOrbit`, §1bis) until it ends (§6):
+From the end of the WAY IN (§2 — the alignment tap starts it, `enterPieceOrbit`, §1bis) until it ends (§6):
 
 | | Orbit around the centre (before) | Orbit around the piece |
 |---|---|---|
@@ -43,24 +47,41 @@ map other inputs for those two different actions."*
 - The orbit no longer needs an alignment to succeed: a piece with nothing to align to enters it too. HUD: the verdict adds *· the camera
   orbits the piece*.
 
-## 2. The way in — the camera does not move (`f98b584`)
+## 2. The way in (2026-10-08)
 
-The owner: *"Why not simply slerp rotating the view axis of the camera to align with the piece and catch the orbit from there?"* — then
-*"the view-axis slerp runs with finger travel like the centre move"* and *"fade out the starting angle offset"*.
+The owner, in order: *"There is a dissimetry between way in and way out … if i introduce yaw rotation during the way in, the camera end up
+having big sweep movement during which neither the piece nor the gizmo is in the screen"*; *"Start again from a5947c3 … Apply whatever of the
+way out you can but making it simpler so the piece and gizmo stay in the view"*; *"On the way in, when I input dx, the scene seems to continue
+to rotate around the gizmo until one frame when the scene starts to really be pushed left or right by the dx"*; *"Set the way in to the orbit
+at 12 mm"*; and, on its view, *"I think I want to retain the sliding point"* → *"Option B is chosen"*.
 
-- **On the alignment's frame nothing moves** — the camera where it was, looking where it looked.
-- **The VIEW AXIS slerps** from the orbit centre to the piece, from where the camera is, by **finger travel** over `pieceOrbitSlerpMm`
-  (**10 mm**; smoothstep) — `viewAxis`. ⭐ The owner: *"make the camera slerp faster (put a slider)"* — it had shared the scene's centre
-  move's `orbitBlendDistanceMm` (30 mm). ⛔ A fixed-time slerp (400 ms, then a quintic ease) was built and DISCARDED by the owner the same
-  day; the slerp stays on finger travel.
-- **The orbit starts from where the camera is**: at the alignment, the camera's angles around the piece are recorded AGAINST the rings'
-  angles (`startPieceOrbit` → `dAzRad`, `dElRad`). The camera then sits at the rings' angles (`cameraOffset`'s: the rig's yaw + the yaw
-  offset, the ring pitch + the pitch offset) **plus that difference, fading out with finger travel** over `pieceOrbitFadeMm` (60 mm) —
-  `pieceCamera`. Once faded, dx and dy move the camera exactly as the rings say.
-- ⛔ **Superseded** (`d3e0c07`): the camera's orbit CENTRE glided from the pink gizmo to the piece by finger travel, the camera keeping its
-  ring angles around the moving centre. Because those angles are not the centre-to-piece direction (the ring pitch, the offsets), the
-  camera swung OUT and back toward the piece during the glide — the owner: *"why does the camera move away from the piece … to then move
-  back close to the piece"*.
+The tap starts the WAY IN (`startPieceEntry`); when it is done (`entryProgress` = 1) the orbit around the piece starts (`startPieceOrbit`) —
+with the camera, the piece and the view exactly where the way in left them.
+
+- **ONE progress**: finger travel over **`pieceOrbitEnterMm` (12 mm)**, eased (smoothstep) and smoothed every frame on the orbit's spring
+  (§6bis). **On the tap's frame nothing moves. A way in is never cancelled** (§6).
+- **The pivot handed over GRADUALLY** (`carryHeading`): dx turns the CAMERA round the piece with all of the yaw, as the piece orbit does,
+  while the PIECE is carried round the gizmo by the share of the yaw LEFT of the way in — all of it at the tap (exactly the centre orbit),
+  half midway, none at the end (exactly the piece orbit): the scene goes from turning in place round the gizmo to sliding round the piece
+  little by little — no frame where it suddenly starts sliding. dy moves the piece along the rings as in the centre orbit.
+- **The camera** (`entryCamera`): round the piece at the rings' angles (the yaw and the ring pitch, the offsets), the camera's distance from
+  the piece at the tap, plus the small shift of the tap's pose from those angles (the yaw and pitch offsets) fading out with the progress.
+- **The view** (`entryLook`, option B): STRAIGHT AT a point sliding along the line from the gizmo to the piece, the slide paced
+  (`evenSlide`: the sine rule in the camera–gizmo–piece triangle) so the view's direction turns the eased share of the whole angle — an
+  even turn, gentle at both ends; a view off the gizmo at the tap (a way back cut short) is kept on the tap's frame and fades out.
+- **The yaw speed is one** (*"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*): the
+  game-wide gain (§4) applies to a drag that starts in the way in as in the piece orbit.
+- ⛔ **Superseded the same day, in order**: the orbit around the piece starting AT the tap (`802a498`, reverted `a3d6fe9`: dx swung the camera
+  round the piece mid-transition — big sweeps with neither in view); the fingers keeping the centre orbit through the way in and the piece
+  orbit starting all at once at its end (`600c3e2`: the scene turned round the gizmo until one frame, then slid); a way in per axis — yaw
+  with dx, pitch with dy at the orbit's own rates — then fed by the whole movement (`17636ca`, `cca0683`, reverted: on the outer rings the
+  ring's pitch is so slow, 0.05°/mm, that a straight push stayed in the way in down to ~1.24 m); a calculated 3 mm (the slide's peak turn
+  rate = the orbit's 3.78°/mm — undone by that revert); 60 mm (`600c3e2`: the whole top half of the rings is only ~33 mm of dy, the way in
+  never completed on a straight push); the view turned by angle (`8fcae29`, reverted `da996d1` — the owner meant the pivot); the view aimed
+  at the sliding point AND blended toward it by the same progress (the turn went as t², a magnet then a snap), then straight at it at an
+  even slide (option A, `be823f3`: the turn still gathered toward the piece end as the point neared the camera).
+- ⛔ **Before 2026-10-08**: the camera's orbit CENTRE gliding to the piece (`d3e0c07`: the camera swung out and back); the view slerped to the
+  piece over 10 mm (`pieceOrbitSlerpMm`) and the starting offset faded over 60 mm (`pieceOrbitFadeMm`) — both sliders gone.
 
 ## 3. The gap — scaled as the piece comes in (`68b4584`)
 
@@ -89,8 +110,9 @@ sliders values"*.
   behind the camera do not count. ⛔ Never above 1, never below 0.1.
 - **Recomputed only when a slider it reads changes** (the key: the offsets, the radius offset, the boot zoom, the gap %, the radius clamp,
   the rings) — never from the live camera or zoom. **×0.74** with today's sliders. The HUD's `green` line shows it.
-- **Applied to a drag that STARTS around the piece** (`pieceYawGainDrag`, latched at the drag's first step): a drag running at the
-  alignment tap keeps its speed to its end — a steady speed through every drag.
+- **Applied to a drag that STARTS around the piece or in the way in** (`pieceYawGainDrag`, latched at the drag's first step; the way in since
+  2026-10-08 — one yaw speed through it and the orbit): a drag running at the alignment tap keeps its speed to its end — a steady speed
+  through every drag.
 - ⛔ **Superseded**: a per-frame gain at the live pose (it ranged 0.55–0.95 through a turn; first it hit the 0.1 floor, the corners behind
   the camera swinging through ±90°); then that gain frozen at each drag's start (*"I'd rather have a steady speed, so freeze the gain at the
   start of each drag"*) — replaced, before it was committed, by the one game-wide gain.
@@ -100,10 +122,9 @@ sliders values"*.
 | Slider | Default | Menu |
 |---|---|---|
 | gap at the closest ring (% of the gap at alignment) — `pieceOrbitGapMinPct` | 50 | CAMERA › **CAMERA ORBIT AROUND PIECE** |
-| starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` (the way IN) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` (the way IN) | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| ends when the piece is this close to the pink gizmo (% of its start distance) — `pieceOrbitEndPct` | 50 | CAMERA › CAMERA ORBIT AROUND PIECE |
-| way back to the centre orbit (mm of finger travel, 0 = at once) — `pieceOrbitReturnMm` (the way BACK: move and view, ONE value) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| way in to the orbit around the piece (mm of finger travel, 0 = at once; 0–60, 1 mm steps) — `pieceOrbitEnterMm` (§2) | 12 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| ends when the piece is this close to the pink gizmo (% of its distance at the piece orbit's start) — `pieceOrbitEndPct` (§6) | 75 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| way back to the centre orbit (mm of finger travel, 0 = at once) — `pieceOrbitReturnMm` (the way BACK: move and view, ONE value) | 30 | CAMERA › CAMERA ORBIT AROUND PIECE |
 
 ⭐ The owner: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"*, *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT
 AROUND CENTER"*. The HUD's `camera` line: `r=` is the distance **to the piece** in this mode (the camera looks along an axis, not at a
@@ -116,16 +137,22 @@ the distance crosses initial distance * x% (make a slider in camera orbit around
 case or at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece
 orbit."*
 
-- **The start distance** to the pink gizmo (`centreBlend.targetM`) is recorded when the orbit starts (`pink0M`).
-- **The end, by itself**: checked at each frame's start — the piece closer than **`pieceOrbitEndPct` %** (50) of it (`pieceOrbitEnds`;
-  pushed away, never). ⭐ It replaces *"never automatically"* (§1).
+- **The start distance** to the pink gizmo (`centreBlend.targetM`) is recorded when the orbit around the piece STARTS — at the end of the
+  way in (2026-10-08, *"Add it"*; at the tap before, which cut a way in short on a push).
+- **The end, by itself**: checked at each frame's start — the piece closer than **`pieceOrbitEndPct` % (75)** of it (`pieceOrbitEnds`;
+  pushed away, never) **AND a CLEAR PUSH step seen** (2026-10-08, the owner: *"the way out triggers only when, besides the xx% distance, a
+  finger step is a clear push. That means |dy| at least twice |dx| on that step, with dy outside the deadband. If the piece crosses the
+  xx% line during a diagonal or sideways movement, the way out waits for the first such push step"* — `pushStep`; *"Set to 75% plus clear
+  push step"*, 50 before). ⭐ It replaces *"never automatically"* (§1). ⛔ A way in is never cancelled by it. ⛔ A FORCED way out (when dy
+  had no more room for it before the waist rings) was built and dropped before it was committed: the whole top half of the rings is ~33 mm
+  of dy, so it fired almost at once.
 - **The way back — AROUND THE PIECE, the view TIED to the move, ONE value** (`returnToCentreOrbit`, `startCentreReturn`; 2026-10-07). The
   owner: *"Explain how the camera exits … if the camera is in between the piece and the gizmo due to some piece orbit, when the camera
   moves to center orbit there are moments when the piece is not seen any longer"* — the cause: the camera moved AROUND THE GIZMO (its
   angles and distance about the centre, over 60 mm) while its view reached the gizmo after only 10 mm, so from between the piece and
   the gizmo the piece sat BEHIND the camera for most of the way; then *"both together … with 10mm and 60mm merged into one single
-  value"* — *"60 mm"*. On the frame it ends **nothing moves** — the camera where it is, looking where it looks; then ONE eased progress,
-  finger travel over **`pieceOrbitReturnMm` (60 mm)**, drives everything:
+  value"* — *"60 mm"*, then *"Set way out in 30mm"* (2026-10-08). On the frame it ends **nothing moves** — the camera where it is, looking
+  where it looks; then ONE eased progress, finger travel over **`pieceOrbitReturnMm` (30 mm)**, drives everything:
   - **the camera moves AROUND THE PIECE** — its angles around the piece and its distance from it, against the centre orbit's home camera
     seen from the piece, fade out (`returnCamera`) — so it never swings round the gizmo;
   - **its view aims at a point sliding from the piece to the gizmo** at that same progress (`returnLook`; blended from the LIVE direction
@@ -133,7 +160,9 @@ orbit."*
   - the piece's offset from the rings fades with it (below).
   Home, the state is dropped: the centre orbit as it always was. ⛔ The start's view is held as a TURN off the direction to the piece,
   never a fixed world direction — the first build kept `look0` fixed, and a long dx during the way back pointed the view off the scene
-  (seen headless). The way IN is unchanged (*"For the way in, we will advise later on"*).
+  (seen headless). ⭐⭐ **Its view keeps the SQUARED turn** (the owner, 2026-10-08: *"I prefer the squared turn for the way out"*): option
+  B (§2's even slide) was tried on it and discarded — from between the piece and the gizmo the even turn left the piece up to 33.5° off
+  the view's centre (the squared turn: 23.8°; the usual case 8.7° against 6.9°).
 - ⛔ A TWO-PHASE way back (`b80111a`: the camera home watching the piece, then the watch to the gizmo, twice the travel) was built and
   REVERTED by the owner (`bb0b79b`, back to `4539a2b`); the one-slerp way back around the gizmo (`f8beaf5`) is replaced by the one above.
 - **The piece**: dx turned only the camera around the piece, so the rig's yaw had drifted from the piece's real direction — at the end
@@ -142,13 +171,15 @@ orbit."*
 - **At a respawn** (around the piece, or still on the way back): the same way back from the camera as it is; the piece and the rig go
   back to boot as a respawn always does.
 - **A new tap** enters the orbit around the piece again — a way back still in progress gives way.
-- HUD: the `green` line reads *· back to the centre orbit* during it; the verdict *orbit: the piece within 50 % of its start distance to
-  the pink gizmo — back to the centre orbit*.
+- HUD: the `green` line reads *· entering the orbit around the piece* during the way in, *· around the piece, yaw gain ×…* in it, *· back
+  to the centre orbit* during the way back; the verdict *orbit: the piece within 75 % of its start distance to the pink gizmo — back to the
+  centre orbit*.
 
 ## 6bis. The transitions ease every frame, as the orbit does (2026-10-07)
 
 The owner: *"Why when the camera changes focus to piece and then to pink gizmo, the movement of the camera with delta position input is
-much less smooth than during standard orbit?"* — then *"Smooth the movement of the camera at start and end of piece orbit"*.
+much less smooth than during standard orbit?"* — then *"Smooth the movement of the camera at start and end of piece orbit"*. (Built on the
+way in of its day; the way in of §2 reads its progress the same way.)
 
 - **Why** (read in the code): the orbit itself steps once per pointer EVENT (47–68 ms apart on the tablet, `D86`) but is eased EVERY FRAME
   on its spring (`boxSmoothMs`, 60 ms). The transitions — the way in's view-axis slerp (§2) and offset fade, the way back's fade and slerp
@@ -162,6 +193,8 @@ much less smooth than during standard orbit?"* — then *"Smooth the movement of
 
 ## 7. Open
 
+- ⚠ **The way in's progress is finger travel**: 12 mm — on a straight push from the top ring it completes at ~1.8–2.0 m, the piece orbit
+  then runs to 75 % of that (~1.3 m) and a push step. Nothing here is judged on the tablet yet.
 - ⚠ The view-axis slerps and the fades move only with a FINGER — the coast after a lift does not advance them (as the scene's centre
   move); a finger lifted right after the end leaves the camera partly turned until the next orbit (the smoothing of §6bis only lets the
   last event's travel land).
@@ -191,3 +224,10 @@ in the middle of the view (the first build, its start view a fixed world directi
 the piece and the gizmo, the camera's distance to the piece stays between its two ends and the piece within 25° of the view axis ALL the
 way; home exactly the centre orbit's camera looking at the gizmo; a big dx early on keeps the piece within 30° — failing on mutants (the
 view straight to the gizmo; the fixed world start direction).
+
+⭐ 2026-10-08 (`ba0828e`, then the gradual pivot and option B): a straight push after the tap at boot — the way in done by ~1.8–2.0 m, the
+orbit around the piece to 1.26 m (75 % of its start, on a push step), the way back; with sideways drags during the way in, it completes
+within its 12 mm and the orbit around the piece takes over without a jump; no error. Vectors: nothing moves at the tap; the piece carried
+by the share left (all at the tap, none at the end); the orbit starting exactly where the way in ended; the view straight at a point on the
+gizmo–piece line, turned the eased share of the angle (option B); the push rule; the gain latched in the way in too — each failing on a
+mutant (the all-at-once switch, the plain slide of option A, a looser push rule).
