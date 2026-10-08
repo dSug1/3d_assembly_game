@@ -15,6 +15,8 @@ import {
   carryHeading,
   entryCamera,
   entryLook,
+  entryPieceOffset,
+  headingAbout,
   entryProgress,
   evenSlide,
   meanSweep,
@@ -270,6 +272,43 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(meanSweep(a, b, [[0.002, 0, 5.01]])).toBe(0);
   });
 
+  it("⭐⭐⭐ NO JUMP AT THE SPHERE, aligned or not (*\"I want the position and quaternion to remain at the entrance and exit of the sphere even if the resting face is not aligned\"*)", () => {
+    const RET = DEFAULT_CONFIG.pieceOrbitReturnMm;
+    const v = 0.3;
+    // ⭐ THE EXIT (a way in cutting a way out short): the piece where the way out left it, on the way in's first frame too
+    const po = aligned(0.4, v);
+    const yaw = 0.4 + 0.5; // dx turned the camera round the piece: the rig's yaw drifted off the piece's line
+    const atExit = frame(po, yaw, v).piece;
+    const reYaw = Math.atan2(atExit[0] - C[0], atExit[2] - C[2]); // the rebase: the yaw put back on the piece's direction
+    const ring = add(C, orbitOffset(cfg, reYaw, v, 1).offsetM as Vec3);
+    const pieceOff = sub(atExit, ring);
+    expect(len(pieceOff)).toBeGreaterThan(0.01); // a real difference to fade (else the vector proves nothing)
+    const r = advR(startCentreReturn(atExit, [0, 1, 0], [0, 0, -1], [1, 0, 0], pieceOff), RET / 5); // a fifth of the way out
+    const shown = add(ring, returnPieceOffset(r, RET));
+    const left = returnPieceOffset(r, RET);
+    const f = centreFrame(reYaw, v);
+    const e = startPieceEntry(C, shown, f.cam, f.axis, C, ringAngles(reYaw, v), reYaw, left);
+    const first = add(entryFrame(e, reYaw, v).piece, entryPieceOffset(e, FADE));
+    expect(len(sub(first, shown))).toBeLessThan(1e-9); // ⛔ was the leftover (the way out's offset dropped in one frame)
+    expect(len(entryPieceOffset(advE(e, FADE), FADE))).toBeLessThan(1e-12); // gone by the way in's end
+    expect(entryPieceOffset(tapped(0.4, v), FADE)).toEqual([0, 0, 0]); // none after a finished way out, at boot, at a respawn
+    // ⭐ THE ENTRANCE (the way out's rebase): the heading the spin reads does not move — the piece did not
+    expect(headingAbout(C, atExit)).toBeCloseTo(headingAbout(C, add(ring, pieceOff)), 12);
+    const springHeading = (y: number) => { const o = orbitOffset(cfg, y, v, 1).offsetM; return Math.atan2(o[0], o[2]); };
+    expect(Math.abs(springHeading(yaw) - springHeading(reYaw))).toBeGreaterThan(0.1); // what the spin used to read: a jump of ×3 that
+    // …and a dx that turns only the camera round the piece turns nothing: the piece on its line, whatever the yaw
+    expect(headingAbout(C, frame(po, 0.4, v).piece)).toBeCloseTo(headingAbout(C, frame(po, 1.4, v).piece), 12);
+    // the wiring: the spin reads the piece as placed; the way in takes the leftover over and adds it as it fades
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.greenBox\?\.position;\s*const c = st\.orbitCentreM;\s*return p === undefined \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], \[p\.x, p\.y, p\.z\]\);/);
+    expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left\);\s*st\.centreReturn = null;/);
+    // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit while the sphere is on
+    expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBeGreaterThan(0);
+    expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/);
+    expect(w).toMatch(/const eo: Vec3 = st\.pieceEntry === null \? \[0, 0, 0\] : entryPieceOffset\(st\.pieceEntry, cfg\.pieceOrbitEnterMm\);/);
+    expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
+  });
+
   it("⭐⭐⭐ THE SPHERE round the pink gizmo drives the ways in and out (*\"When the piece enters the sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10%\"*)", () => {
     expect(SPHERE_HYSTERESIS).toBe(0.1);
     // boot / a respawn: the plain side of the radius (outside at boot → a way in)
@@ -397,7 +436,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const tap = code("render/pointer_wiring.ts");
     expect(tap).toMatch(/const aligned = r\.aligns && alignRestingFace\(st, now\);\s*if \(aligned\) \{/); // (2026-10-08) the tap aligns only
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
-    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw\);/);
+    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left\);/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
     expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = carryHeading\(st\.pieceEntry, st\.boxOrbit\.yaw, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/const be = st\.pieceEntry === null \? null : orbitOffset\(st\.cfg, st\.pieceEntry\.headingRad, st\.boxOrbit\.v, st\.boxOrbit\.zoom\)\.offsetM;/);

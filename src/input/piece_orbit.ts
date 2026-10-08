@@ -94,6 +94,12 @@ export interface PieceEntry {
   /** ⭐ Where it looked at the tap, as a TURN off the direction to the orbit centre (axis, angle) — it fades out. */
   readonly lookAxis: Vec3;
   readonly lookAngleRad: number;
+  /**
+   * ⭐⭐ (2026-10-08, the owner: *"I want the position and quaternion to remain at the entrance and exit of the sphere"*) the piece's
+   * difference from the rings that a WAY OUT cut short had still left — taken over at the start and faded out over this way in
+   * (`entryPieceOffset`), so the piece does not jump; zero after a finished way out, at boot or after a respawn.
+   */
+  readonly pieceOff: Vec3;
   readonly travelledMm: number;
   readonly rawMm: number;
   readonly velMm: number;
@@ -101,7 +107,7 @@ export interface PieceEntry {
 
 /** ⭐ At the tap: the camera (`camera`, looking along `look0`) round the piece against the rings' angles (`ring`), the piece's distances,
  * and its heading round the gizmo — the orbit's yaw then (`yawRad`). */
-export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, pink: Vec3, ring: AroundAngles, yawRad: number): PieceEntry {
+export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, pink: Vec3, ring: AroundAngles, yawRad: number, pieceOff: Vec3 = [0, 0, 0]): PieceEntry {
   const tw = turnBetween(unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]), unitOf(look0));
   const a = anglesOf([camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]]);
   return {
@@ -113,6 +119,7 @@ export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: 
     lastYawRad: yawRad,
     lookAxis: tw.axis,
     lookAngleRad: tw.angle,
+    pieceOff,
     travelledMm: 0,
     rawMm: 0,
     velMm: 0,
@@ -124,6 +131,21 @@ export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: 
 export function carryHeading(e: PieceEntry, yawRad: number, enterMm: number): PieceEntry {
   const t = entryProgress(e, enterMm);
   return { ...e, headingRad: e.headingRad + wrap(yawRad - e.lastYawRad) * (1 - t), lastYawRad: yawRad };
+}
+
+/** ⭐ The way out's leftover difference from the rings (`pieceOff`), still left: all of it at the start, none at the end. */
+export function entryPieceOffset(e: PieceEntry, enterMm: number): Vec3 {
+  const left = 1 - entryProgress(e, enterMm);
+  return [e.pieceOff[0] * left, e.pieceOff[1] * left, e.pieceOff[2] * left];
+}
+
+/**
+ * ⭐⭐ The piece's HEADING round the orbit centre (radians about +y, the convention of an orbit offset's `atan2(x, z)`) — read from where the
+ * piece IS, so the spin with the orbit (`counterYawFrame`) follows what is drawn: a rebased yaw at a way out, or a dx that turns only the
+ * camera round the piece, moves nothing and so turns nothing (2026-10-08).
+ */
+export function headingAbout(centre: Vec3, piece: Vec3): number {
+  return Math.atan2(piece[0] - centre[0], piece[2] - centre[2]);
 }
 
 /** ⭐ One step of finger travel, millimetres — into the raw count (`smoothTravel` eases what is read). */

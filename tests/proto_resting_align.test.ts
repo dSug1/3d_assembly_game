@@ -142,7 +142,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     const x = qRotate(carried, [1, 0, 0]);
     expect(Math.atan2(-x[2], x[0])).toBeCloseTo(1.2, 12);
     // ⛔ the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* — it stops at the tap, and stays stopped
-    expect(w).toMatch(/if \(prev === null \|\| st\.restAligned\) return;/);
+    expect(w).toMatch(/if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/); // (2026-10-08) and while the sphere is on
     expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};\s*st\.restAligned = true;/);
     expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;\s*st\.restAligned = false;/); // the respawn clears it
     // ⛔ no gate on a finger: before the alignment the frame step runs whatever the finger does
@@ -183,6 +183,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(w).toMatch(/const r = restAlignToFace\(/);
     expect(w).toMatch(/const REST_ALIGN_MS = 125;/);
     expect(w).toMatch(/const q = u < 1 \? qSlerp\(a\.from, a\.base, u \* u \* \(3 - 2 \* u\)\) : a\.base;/);
-    expect(w).toMatch(/return Math\.atan2\(o\[0\], o\[2\]\);/);
+    // (2026-10-08) the heading read from the piece AS PLACED (`headingAbout`), no longer from the spring's yaw — no spin at the sphere
+    expect(w).toMatch(/return p === undefined \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], \[p\.x, p\.y, p\.z\]\);/);
   });
 });

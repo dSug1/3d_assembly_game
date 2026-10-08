@@ -34,7 +34,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, carryHeading, entryCamera, entryLook, entryProgress, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -211,11 +211,16 @@ function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; rea
 /** ⭐ The resting-face alignment's single turn, ms (`RESTING_FACE_ALIGNMENT.md` §2: *"snap in one single rotation in 125 ms"*). */
 const REST_ALIGN_MS = 125;
 
-/** ⭐ The horizontal heading of the piece about the ring (radians about +y): its offset's, at the spring's yaw — what the counter-yaw reads. */
+/**
+ * ⭐ The horizontal heading of the piece about the orbit centre (radians about +y) — what the counter-yaw reads. ⭐⭐ (2026-10-08, the owner:
+ * *"I want the position and quaternion to remain at the entrance and exit of the sphere even if the resting face is not aligned"*) read from
+ * the piece AS PLACED (`headingAbout`), no longer from the spring's yaw: the way out's rebase of the yaw, and a dx that turns only the camera
+ * round the piece, used to spin it by 3× a turn it never made.
+ */
 function orbitHeading(st: SceneState): number {
-  if (st.boxOrbit === null) return 0;
-  const o = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
-  return Math.atan2(o[0], o[2]);
+  const p = st.greenBox?.position;
+  const c = st.orbitCentreM;
+  return p === undefined ? 0 : headingAbout([c.x, c.y, c.z], [p.x, p.y, p.z]);
 }
 
 /**
@@ -268,8 +273,10 @@ export function enterPieceOrbit(st: SceneState): boolean {
   // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (for the record)
   // ⭐ (2026-10-08) the camera's angles round the piece against the rings', and the piece's heading round the gizmo — the orbit's yaw now
   const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
-  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw);
-  st.centreReturn = null; // a way back in progress gives way
+  // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
+  const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
+  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left);
+  st.centreReturn = null;
   st.hudDirty = true;
   return true;
 }
@@ -328,7 +335,10 @@ function counterYawFrame(st: SceneState): void {
   const h = orbitHeading(st);
   const prev = st.orbitHeadingPrev;
   st.orbitHeadingPrev = h;
-  if (prev === null || st.restAligned) return;
+  // ⭐⭐ (2026-10-08, the owner: *"when the piece is not aligned and inside the sphere, the piece rotates with the yaw orbit. remove that (I want
+  // the piece to behave the same as when resting face is aligned)"*) — while the SPHERE is on, no spin at all, inside it or out (the way in's
+  // carried share too), aligned or not; the heading is still read, so a sphere set to 0 resumes the spin without a jump
+  if (prev === null || st.restAligned || st.cfg.pieceSphereRadiusM > 0) return;
   const d = wrapAngle(h - prev);
   if (d === 0) return;
   const r = box.rotationQuaternion ?? Quaternion.Identity();
@@ -571,11 +581,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitReturnMm);
   // ⭐ (2026-10-08) on the way in, at its own heading round the gizmo (`carryHeading`) — the rings' radius and height as the orbit's
   const be = st.pieceEntry === null ? null : orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
+  // ⭐ (2026-10-08) …plus what a way out cut short had left, fading out (`entryPieceOffset`)
+  const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm);
   const pp: Vec3 =
     po !== null
       ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
       : be !== null
-        ? [c.x + be[0] * k, c.y + be[1] * k, c.z + be[2] * k]
+        ? [c.x + be[0] * k + eo[0], c.y + be[1] * k + eo[1], c.z + be[2] * k + eo[2]]
         : [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]];
   box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
