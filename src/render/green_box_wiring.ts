@@ -519,16 +519,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       returnToCentreOrbit(st, true);
     }
   }
-  // ⭐ …and a WAY IN pushed past that same distance is cancelled: the way back from where the camera is (the fingers kept the centre orbit)
-  if (st.pieceEntry !== null) {
-    const t = st.centreBlend.targetM;
-    const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-    if (pieceOrbitEnds(d, st.pieceEntry.pink0M, st.cfg.pieceOrbitEndPct)) {
-      st.lastVerdict = `orbit: the piece within ${st.cfg.pieceOrbitEndPct} % of its start distance to the pink gizmo during the way in — back to the centre orbit`;
-      st.pieceEntry = null;
-      returnToCentreOrbit(st, false);
-    }
-  }
+  // ⛔ (2026-10-08) a WAY IN is never cancelled by the distance (*"Do the two recommended changes"*): the end is measured from the moment
+  // the orbit around the piece STARTS (`startPieceOrbit` at the way in's end), so a way in slow on the outer rings is never cut short
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
   // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.
@@ -690,7 +682,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       if (entryDone(pe)) {
         const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
         const h = Math.hypot(out[0], out[2]) || 1;
-        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], pp, [out[0] / h, 0, out[2] / h], camAt, pe.pink0M);
+        // ⭐ (2026-10-08) the end distance measured from HERE — the start of the orbit around the piece, not the tap
+        const t = st.centreBlend.targetM;
+        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], pp, [out[0] / h, 0, out[2] / h], camAt, Math.hypot(pp[0] - t[0], pp[1] - t[1], pp[2] - t[2]));
         st.pieceEntry = null;
         st.hudDirty = true;
       }
