@@ -40,6 +40,7 @@ import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
 import { advanceCentreReturn, advancePieceEntry } from "../input/piece_orbit";
+import { orbitDegPerMm } from "../input/follow_camera";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -1243,7 +1244,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   // rather than on a timer.
   st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
   // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
-  if (st.pieceEntry !== null) st.pieceEntry = advancePieceEntry(st.pieceEntry, Math.hypot(dx, dy) / mmToPx(1));
+  // ⭐⭐ (2026-10-08) …each axis in the DEGREES the following orbit around the piece would turn for it: dx at its yaw rate (the game-wide
+  // gain included), dy at the ring's pitch rate where the piece is — the gizmo orbit's own (*"respectively on dx and dy"*)
+  if (st.pieceEntry !== null) {
+    const r = orbitDegPerMm(st.cfg, st.orbit.elevation);
+    st.pieceEntry = advancePieceEntry(st.pieceEntry, (Math.abs(dx) / mmToPx(1)) * r.yawDegPerMm * st.pieceYawGain, (Math.abs(dy) / mmToPx(1)) * r.pitchDegPerMm);
+  }
   // …and the way back to the centre orbit (2026-10-07), the same travel
   if (st.centreReturn !== null) st.centreReturn = advanceCentreReturn(st.centreReturn, Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);

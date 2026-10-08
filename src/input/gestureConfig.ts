@@ -474,7 +474,6 @@ export interface GestureConfig {
   cameraYawOffsetDeg: number;
   pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
-  pieceOrbitEnterMm: number;
   pieceOrbitEndPct: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
@@ -959,9 +958,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice
   // faster"* — before the alignment the piece turns on itself this many times the orbit's turn, in its sense (−1 was the old "against")
   orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
-  // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
-  // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
-  pieceOrbitEnterMm: 60,
   // ⭐ prototype, the owner 2026-10-07: *"Automatically end it when the distance crosses initial distance * x% (make a slider … default
   // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start
   pieceOrbitEndPct: 50,

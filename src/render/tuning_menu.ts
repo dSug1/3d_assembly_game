@@ -181,7 +181,6 @@ export function installTuningMenu(st: SceneState): void {
           title: "CAMERA ORBIT AROUND PIECE",
           sliders: [
             tunable(st, "gap at the closest ring (% of the gap at alignment)", "pieceOrbitGapMinPct", 10, 100, 5),
-            tunable(st, "way in to the orbit around the piece (mm of finger travel, 0 = at once)", "pieceOrbitEnterMm", 0, 300, 5),
             tunable(st, "ends when the piece is this close to the pink gizmo (% of its start distance)", "pieceOrbitEndPct", 0, 100, 5),
             tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
           ],
