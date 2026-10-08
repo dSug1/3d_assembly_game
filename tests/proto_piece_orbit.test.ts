@@ -16,6 +16,7 @@ import {
   entryCamera,
   entryLook,
   entryProgress,
+  evenSlide,
   meanSweep,
   pieceCamera,
   pieceOrbitEnds,
@@ -144,19 +145,34 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(entryProgress(tapped(0.3, 0.1), 0)).toBe(1); // a zero budget: at once
   });
 
-  it("⭐⭐⭐ the way in's VIEW looks STRAIGHT AT the sliding point (*\"build option A\"*) — no second blend squaring the turn", () => {
+  it("⭐⭐⭐ the way in's VIEW: straight at a point SLIDING on the line from the gizmo to the piece, paced so the view turns EVENLY (*\"build option B without Option A\"*)", () => {
     for (const v of [0.1, 0.5, 0.9]) {
       const f = centreFrame(0.3, v);
       const e0 = tapped(0.3, v);
+      const toC = unit(sub(C, f.cam));
+      const toP = unit(sub(f.piece, f.cam));
+      const whole = ang(toC, toP);
+      expect(whole).toBeGreaterThan(1e-3); // there IS a turn to pace
       for (const frac of [0.25, 0.5, 0.75]) {
         const e = advE(e0, FADE * frac);
         const t = entryProgress(e, FADE);
-        const aim: Vec3 = add(C, [(f.piece[0] - C[0]) * t, (f.piece[1] - C[1]) * t, (f.piece[2] - C[2]) * t]);
         const ax = entryLook(e, f.cam, C, f.piece, FADE); // the camera held still
+        // ⭐ the view has turned exactly the eased share of the angle — no squaring, no gathering toward the piece end
+        expect(ang(ax, toC) / whole).toBeCloseTo(t, 6);
+        // ⭐ …and it looks straight at a point ON the line from the gizmo to the piece (the sliding point kept)
+        const s = evenSlide(f.cam, C, f.piece, t);
+        expect(s).toBeGreaterThanOrEqual(0);
+        expect(s).toBeLessThanOrEqual(1);
+        const aim: Vec3 = add(C, [(f.piece[0] - C[0]) * s, (f.piece[1] - C[1]) * s, (f.piece[2] - C[2]) * s]);
         const want = unit(sub(aim, f.cam));
         for (const k of [0, 1, 2]) expect(ax[k]).toBeCloseTo(want[k]!, 9);
       }
     }
+    // the ends: the gizmo and the piece themselves; a degenerate triangle: the plain progress
+    const P: Vec3 = [0, 0, 0];
+    expect(evenSlide(P, [0, 0, -3], [0.4, 0, -1.2], 0)).toBeCloseTo(0, 12);
+    expect(evenSlide(P, [0, 0, -3], [0.4, 0, -1.2], 1)).toBeCloseTo(1, 12);
+    expect(evenSlide(P, [0, 0, -3], [0, 0, -1.2], 0.4)).toBe(0.4);
   });
 
   it("⭐⭐ then the orbit around the piece STARTS where the way in ended — the piece, the camera, the view: no jump", () => {

@@ -149,18 +149,42 @@ export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, ente
 }
 
 /**
- * ⭐⭐ Its view on the way in, TIED to the move: STRAIGHT AT a point sliding from the orbit centre to the piece at the eased progress,
- * turned off it by what is left of the tap's own turn. ⭐ The owner, 2026-10-08: *"you previously identified the visible turn therefore goes
- * roughly as t². can you propose a way to fix that? I think I want to retain the sliding point"* → *"build option A"*: it was ALSO blended
- * from the direction to the centre by the same progress — the two multiplied (2–6 % turned at a quarter, a magnet then a snap). ⚠ What
- * stays: the point nears the camera as it slides (~3 m → ~1.25 m), so the turn still gathers toward the piece end (option B, a slide paced
- * to turn the view evenly, is the next step).
+ * ⭐⭐ Its view on the way in, TIED to the move: STRAIGHT AT a point sliding from the orbit centre to the piece, turned off it by what is
+ * left of the tap's own turn. ⭐ The owner, 2026-10-08: *"you previously identified the visible turn therefore goes roughly as t² … I think
+ * I want to retain the sliding point"* → *"build option A"* (look straight at it — the second blend, which squared the turn, removed) →
+ * *"build option B without Option A"*: the point slides at the pace that TURNS THE VIEW EVENLY (\`evenSlide\`) — where its direction from the
+ * camera has turned the eased share of the whole angle, so the turn no longer gathers toward the piece end as the point nears the camera.
  */
 export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number): Vec3 {
   const t = entryProgress(e, enterMm);
-  const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * t, centre[1] + (piece[1] - centre[1]) * t, centre[2] + (piece[2] - centre[2]) * t];
+  const s = evenSlide(camera, centre, piece, t);
+  const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * s, centre[1] + (piece[1] - centre[1]) * s, centre[2] + (piece[2] - centre[2]) * s];
   const b = unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]);
   return unitOf(rotateAbout(b, e.lookAxis, e.lookAngleRad * (1 - t)));
+}
+
+/**
+ * ⭐⭐ prototype — **OPTION B: THE SLIDE PACED TO TURN THE VIEW EVENLY** (2026-10-08): the fraction \`s\` of the way from the orbit centre
+ * (\`centre\`) to the piece at which the point's direction from the camera has turned \`t\` × the whole angle between the two. The sine rule
+ * in the triangle camera–centre–point: |centre→point| = |camera→centre| · sin(t·θ) / sin(t·θ + α), α the angle at the centre between the
+ * camera and the piece. Far from the camera the point slides fast, near it slowly — the view turns at one pace. ⛔ A degenerate triangle
+ * (the three in a line): \`t\` itself.
+ */
+export function evenSlide(camera: Vec3, centre: Vec3, piece: Vec3, t: number): number {
+  const k = Math.min(1, Math.max(0, t));
+  const pc: Vec3 = [centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]];
+  const cq: Vec3 = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
+  const lpc = Math.hypot(pc[0], pc[1], pc[2]);
+  const lcq = Math.hypot(cq[0], cq[1], cq[2]);
+  if (!(lpc > 1e-9) || !(lcq > 1e-9)) return k;
+  const toC = unitOf(pc);
+  const toQ = unitOf([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  const theta = Math.acos(Math.max(-1, Math.min(1, toC[0] * toQ[0] + toC[1] * toQ[1] + toC[2] * toQ[2])));
+  // α: at the centre, between the camera (−pc) and the piece (cq)
+  const alpha = Math.acos(Math.max(-1, Math.min(1, -(pc[0] * cq[0] + pc[1] * cq[1] + pc[2] * cq[2]) / (lpc * lcq))));
+  const den = Math.sin(k * theta + alpha);
+  if (!(theta > 1e-9) || !(Math.abs(den) > 1e-9)) return k;
+  return Math.min(1, Math.max(0, (lpc * Math.sin(k * theta)) / den / lcq));
 }
 
 /** ⭐ The turn taking unit `from` onto unit `to`: its unit axis and angle (a vertical axis when there is none). */
