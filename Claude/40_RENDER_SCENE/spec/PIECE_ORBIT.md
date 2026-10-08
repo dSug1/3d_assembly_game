@@ -2,7 +2,7 @@
 
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
 > piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
-> its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), the way back around the piece (§6), and the way in the same (§2). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
+> its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), and the way back around the piece (§6). ⛔ Unjudged by a hand. `input/piece_orbit.ts` (engine-free),
 > `render/green_box_wiring.ts` (`enterPieceOrbit`, `returnToCentreOrbit`, `greenBoxFrame`, `sweepPoints`, `pieceOrbitAngleOffset`),
 > `render/pointer_wiring.ts` (`orbitTapped`, `orbitDragStep`, the finger travel); vectors `tests/proto_piece_orbit.test.ts`.
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
@@ -49,17 +49,13 @@ The owner: *"Why not simply slerp rotating the view axis of the camera to align 
 *"the view-axis slerp runs with finger travel like the centre move"* and *"fade out the starting angle offset"*.
 
 - **On the alignment's frame nothing moves** — the camera where it was, looking where it looked.
-- ⭐⭐ **ONE value, the view TIED to the move — as the way back** (2026-10-07, the owner: *"Build the same for the way in"*): ONE eased
-  progress, finger travel over **`pieceOrbitEnterMm` (60 mm)**, drives both bullets below — the camera's starting difference fading out
-  (`pieceCamera`) and its **VIEW aimed at a point sliding from the orbit centre to the piece** (`enterLook`; blended from the live
-  direction to the centre by it too, and the start's own turn off that direction fading out — a start view not on the centre, a way back
-  cut short, is kept on the frame and gone at the end). The view lands on the piece exactly when the camera lands on the rings' angles.
-  ⛔ Before: the view axis slerped to the piece over its own `pieceOrbitSlerpMm` (10 mm; *"make the camera slerp faster (put a slider)"*,
-  it had shared the centre move's 30 mm) while the offset faded over `pieceOrbitFadeMm` (60 mm) — both sliders gone. A fixed-time slerp
-  (400 ms, then a quintic ease) was built and DISCARDED by the owner on 2026-10-06; the way in stays on finger travel.
+- **The VIEW AXIS slerps** from the orbit centre to the piece, from where the camera is, by **finger travel** over `pieceOrbitSlerpMm`
+  (**10 mm**; smoothstep) — `viewAxis`. ⭐ The owner: *"make the camera slerp faster (put a slider)"* — it had shared the scene's centre
+  move's `orbitBlendDistanceMm` (30 mm). ⛔ A fixed-time slerp (400 ms, then a quintic ease) was built and DISCARDED by the owner the same
+  day; the slerp stays on finger travel.
 - **The orbit starts from where the camera is**: at the alignment, the camera's angles around the piece are recorded AGAINST the rings'
   angles (`startPieceOrbit` → `dAzRad`, `dElRad`). The camera then sits at the rings' angles (`cameraOffset`'s: the rig's yaw + the yaw
-  offset, the ring pitch + the pitch offset) **plus that difference, fading out with finger travel** over `pieceOrbitEnterMm` (60 mm) —
+  offset, the ring pitch + the pitch offset) **plus that difference, fading out with finger travel** over `pieceOrbitFadeMm` (60 mm) —
   `pieceCamera`. Once faded, dx and dy move the camera exactly as the rings say.
 - ⛔ **Superseded** (`d3e0c07`): the camera's orbit CENTRE glided from the pink gizmo to the piece by finger travel, the camera keeping its
   ring angles around the moving centre. Because those angles are not the centre-to-piece direction (the ring pitch, the offsets), the
@@ -104,7 +100,8 @@ sliders values"*.
 | Slider | Default | Menu |
 |---|---|---|
 | gap at the closest ring (% of the gap at alignment) — `pieceOrbitGapMinPct` | 50 | CAMERA › **CAMERA ORBIT AROUND PIECE** |
-| way in to the orbit around the piece (mm of finger travel, 0 = at once) — `pieceOrbitEnterMm` (the way IN: move and view, ONE value) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| starting angle offset fade-out (mm of finger travel, 0 = at once) — `pieceOrbitFadeMm` (the way IN) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
+| view axis slerp to the piece (mm of finger travel, 0 = at once) — `pieceOrbitSlerpMm` (the way IN) | 10 | CAMERA › CAMERA ORBIT AROUND PIECE |
 | ends when the piece is this close to the pink gizmo (% of its start distance) — `pieceOrbitEndPct` | 50 | CAMERA › CAMERA ORBIT AROUND PIECE |
 | way back to the centre orbit (mm of finger travel, 0 = at once) — `pieceOrbitReturnMm` (the way BACK: move and view, ONE value) | 60 | CAMERA › CAMERA ORBIT AROUND PIECE |
 
@@ -136,7 +133,7 @@ orbit."*
   - the piece's offset from the rings fades with it (below).
   Home, the state is dropped: the centre orbit as it always was. ⛔ The start's view is held as a TURN off the direction to the piece,
   never a fixed world direction — the first build kept `look0` fixed, and a long dx during the way back pointed the view off the scene
-  (seen headless). ⭐ The way IN was then built the same (§2).
+  (seen headless). The way IN is unchanged (*"For the way in, we will advise later on"*).
 - ⛔ A TWO-PHASE way back (`b80111a`: the camera home watching the piece, then the watch to the gizmo, twice the travel) was built and
   REVERTED by the owner (`bb0b79b`, back to `4539a2b`); the one-slerp way back around the gizmo (`f8beaf5`) is replaced by the one above.
 - **The piece**: dx turned only the camera around the piece, so the rig's yaw had drifted from the piece's real direction — at the end
@@ -194,7 +191,3 @@ in the middle of the view (the first build, its start view a fixed world directi
 the piece and the gizmo, the camera's distance to the piece stays between its two ends and the piece within 25° of the view axis ALL the
 way; home exactly the centre orbit's camera looking at the gizmo; a big dx early on keeps the piece within 30° — failing on mutants (the
 view straight to the gizmo; the fixed world start direction).
-
-⭐ 2026-10-07, the way in the same: entry, push and end — no error; the piece and the gizmo in view. Vectors: at three poses the view stays
-BETWEEN the gizmo and the piece all the way and lands on the piece exactly as the camera lands on the rings' angles (not before); a start
-view off the centre kept on the frame — failing on a mutant (the view six times quicker than the move, the old 10 against 60 mm).
