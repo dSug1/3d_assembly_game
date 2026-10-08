@@ -579,6 +579,7 @@ export function createScene(
   st.restAligned = false;
   st.pieceOrbit = null;
   st.centreReturn = null;
+  st.pieceEntry = null;
   st.pieceYawGain = 1;
   st.pieceYawGainKey = "";
   st.pieceYawGainDrag = 1;

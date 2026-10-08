@@ -372,7 +372,7 @@ export function greenReadout(st: SceneState): string {
   // ⭐ …and the scene's parts: how many have a resting face, and the one asked last (at boot, or the moment it was unseated)
   const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
   // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
-  const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.moved ? " +2nd moved" : " +2nd on piece"}`}${st.restAlign !== null ? " · aligning" : st.restAligned ? " · aligned (no counter-yaw)" : ""}${st.pieceOrbit !== null ? ` · around the piece, yaw gain ×${st.pieceYawGain.toFixed(2)}` : ""}${st.centreReturn !== null ? " · back to the centre orbit" : ""}`;
+  const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.moved ? " +2nd moved" : " +2nd on piece"}`}${st.restAlign !== null ? " · aligning" : st.restAligned ? " · aligned (no counter-yaw)" : ""}${st.pieceOrbit !== null ? ` · around the piece, yaw gain ×${st.pieceYawGain.toFixed(2)}` : ""}${st.pieceEntry !== null ? " · entering the orbit around the piece" : ""}${st.centreReturn !== null ? " · back to the centre orbit" : ""}`;
   const parts = `${taps} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
   return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
