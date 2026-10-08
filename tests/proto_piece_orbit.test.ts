@@ -18,6 +18,7 @@ import {
   meanSweep,
   pieceCamera,
   pieceOrbitEnds,
+  pushStep,
   pushedPiece,
   referenceYawGain,
   returnCamera,
@@ -233,6 +234,22 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(pieceOrbitEnds(0, 0, 50)).toBe(false); // started ON the gizmo: never
   });
 
+  it("⭐⭐ the way out WAITS FOR A CLEAR PUSH (*\"|dy| at least twice |dx| on that step, with dy outside the deadband\"*): the distance AND one such step", () => {
+    expect(pushStep(1, 2, true)).toBe(true); // exactly twice
+    expect(pushStep(-3, -9, true)).toBe(true); // either sign
+    expect(pushStep(0, 4, true)).toBe(true);
+    expect(pushStep(1.1, 2, true)).toBe(false); // a diagonal: dy under twice dx
+    expect(pushStep(5, 0, true)).toBe(false); // sideways
+    expect(pushStep(0, 4, false)).toBe(false); // dy inside the deadband
+    expect(pushStep(0, 0, true)).toBe(false); // no step
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toMatch(/if \(\(st\.pieceOrbit !== null \|\| st\.pieceEntry !== null\) && pushStep\(dx, dy, st\.orbitMotion\.tracker\.axes\.y === "MOVING"\)\) st\.pieceOrbitPushSeen = true;/);
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/st\.pieceOrbitPushSeen = false; \/\/ a push counts on the frame after its step, then is spent/);
+    // ⭐⭐ the yaw speed one through the way in and the orbit around the piece (*\"so there is no visual discontinuity\"*)
+    expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;/);
+  });
+
   it("⭐⭐⭐ the WAY BACK, AROUND THE PIECE, its view TIED to the move (one value): nothing moves when it ends; the piece in view ALL the way, even from between it and the gizmo", () => {
     const RET = 60;
     // the centre orbit's home: the piece on the rings, the camera beyond it from the centre (C)
@@ -332,15 +349,15 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/camAt = entryCamera\(pe, camAt, pp, ring, cfg\.pieceOrbitEnterMm\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,200}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, pe\.pink0M\);\s*st\.pieceEntry = null;/);
     // a way in pushed past the end distance is cancelled — the way back from where the camera is
-    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceEntry\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?st\.pieceEntry = null;\s*returnToCentreOrbit\(st, false\);/);
+    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceEntry\.pink0M, st\.cfg\.pieceOrbitEndPct\) && st\.pieceOrbitPushSeen\) \{[\s\S]{0,300}?st\.pieceEntry = null;\s*returnToCentreOrbit\(st, false\);/);
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
-    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
+    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\) && st\.pieceOrbitPushSeen\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
     expect(w).toMatch(/camAt = returnCamera\(cr, pp, homeRel, cfg\.pieceOrbitReturnMm\);\s*const ax = returnLook\(cr, camAt, pp, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitReturnMm\);/);
     expect(w).toMatch(/\? \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\]\]/);
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
-    expect(DEFAULT_CONFIG.pieceOrbitEndPct).toBe(50);
-    expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(60); // ONE value for the way back's move and view
+    expect(DEFAULT_CONFIG.pieceOrbitEndPct).toBe(75); // *"Set to 75% plus clear push step"* (2026-10-08)
+    expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitEndPct", 0, 100, 5)');
     expect(w).toMatch(/st\.restAligned = false;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;/); // the respawn
@@ -360,7 +377,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(p).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag, dy \* st\.cfg\.boxGainPitch \* g\.pitch\);/);
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
-    expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \? st\.pieceYawGain : 1;\s*\}/);
+    expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
     expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 60]);
     const menu = code("render/tuning_menu.ts");

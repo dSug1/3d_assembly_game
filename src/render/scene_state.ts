@@ -450,6 +450,8 @@ export interface SceneState {
   centreReturn: CentreReturn | null;
   /** ⭐ Prototype (2026-10-08): the WAY IN to the orbit around the piece in progress (`enterPieceOrbit` → the frame); `null` once in. */
   pieceEntry: PieceEntry | null;
+  /** ⭐ Prototype (2026-10-08): an orbit step since the last frame was a CLEAR PUSH (`pushStep`) — the way out needs one. */
+  pieceOrbitPushSeen: boolean;
   /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
    * (`pieceYawGainKey`). */
   pieceYawGain: number;

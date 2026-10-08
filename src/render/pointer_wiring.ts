@@ -39,7 +39,7 @@ import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
-import { advanceCentreReturn, advancePieceEntry } from "../input/piece_orbit";
+import { advanceCentreReturn, advancePieceEntry, pushStep } from "../input/piece_orbit";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -1182,8 +1182,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
       // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
-      // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end
-      st.pieceYawGainDrag = st.pieceOrbit !== null ? st.pieceYawGain : 1;
+      // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
+      // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
+      // through the way in and the orbit that follows, whichever a drag starts in
+      st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null ? st.pieceYawGain : 1;
     }
     st.orbitMotion.tracker.push(s);
     // ⭐ the inside-the-leash gains (`greenDragGains`).
@@ -1194,6 +1196,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
     // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ prototype (2026-10-08): the way out needs a CLEAR PUSH step (`pushStep`: |dy| ≥ 2 |dx|, dy outside the deadband) — seen here, read
+    // by the next frame's end check
+    if ((st.pieceOrbit !== null || st.pieceEntry !== null) && pushStep(dx, dy, st.orbitMotion.tracker.axes.y === "MOVING")) st.pieceOrbitPushSeen = true;
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build

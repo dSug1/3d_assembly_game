@@ -513,7 +513,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.pieceOrbit !== null) {
     const t = st.centreBlend.targetM;
     const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-    if (pieceOrbitEnds(d, st.pieceOrbit.pink0M, st.cfg.pieceOrbitEndPct)) {
+    // ⭐ (2026-10-08) …and a CLEAR PUSH step seen (`pushStep`) — crossed on a diagonal or sideways, it waits for the first push
+    if (pieceOrbitEnds(d, st.pieceOrbit.pink0M, st.cfg.pieceOrbitEndPct) && st.pieceOrbitPushSeen) {
       st.lastVerdict = `orbit: the piece within ${st.cfg.pieceOrbitEndPct} % of its start distance to the pink gizmo — back to the centre orbit`;
       returnToCentreOrbit(st, true);
     }
@@ -522,12 +523,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.pieceEntry !== null) {
     const t = st.centreBlend.targetM;
     const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-    if (pieceOrbitEnds(d, st.pieceEntry.pink0M, st.cfg.pieceOrbitEndPct)) {
+    if (pieceOrbitEnds(d, st.pieceEntry.pink0M, st.cfg.pieceOrbitEndPct) && st.pieceOrbitPushSeen) {
       st.lastVerdict = `orbit: the piece within ${st.cfg.pieceOrbitEndPct} % of its start distance to the pink gizmo during the way in — back to the centre orbit`;
       st.pieceEntry = null;
       returnToCentreOrbit(st, false);
     }
   }
+  st.pieceOrbitPushSeen = false; // a push counts on the frame after its step, then is spent
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
   // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.

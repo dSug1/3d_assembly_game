@@ -963,11 +963,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   pieceOrbitEnterMm: 60,
   // ⭐ prototype, the owner 2026-10-07: *"Automatically end it when the distance crosses initial distance * x% (make a slider … default
-  // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start
-  pieceOrbitEndPct: 50,
+  // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start — AND a
+  // clear push step (`pushStep`); 75 since 2026-10-08 (*"Set to 75% plus clear push step"*; was 50)
+  pieceOrbitEndPct: 75,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
-  // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`)
-  pieceOrbitReturnMm: 60,
+  // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
+  pieceOrbitReturnMm: 30,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

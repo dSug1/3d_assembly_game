@@ -318,6 +318,16 @@ export function pieceOrbitEnds(pieceToPinkM: number, pink0M: number, endPct: num
 }
 
 /**
+ * ⭐⭐ prototype — **THE WAY OUT WAITS FOR A CLEAR PUSH** (the owner, 2026-10-08: *"the way out triggers only when, besides the xx% distance,
+ * a finger step is a clear push. That means |dy| at least twice |dx| on that step, with dy outside the deadband. If the piece crosses the
+ * xx% line during a diagonal or sideways movement, the way out waits for the first such push step"*): one orbit step counts as a PUSH when
+ * dy is outside the deadband (the orbit finger's own tracker, its y axis MOVING) and |dy| ≥ 2 |dx|.
+ */
+export function pushStep(dxPx: number, dyPx: number, dyOutsideDeadband: boolean): boolean {
+  return dyOutsideDeadband && Math.abs(dyPx) > 0 && Math.abs(dyPx) >= 2 * Math.abs(dxPx);
+}
+
+/**
  * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE** (the owner, 2026-10-07: *"When it ends (in this case or at respawn), the
  * camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece orbit"* — then, the piece
  * lost from view on the way back when the camera started between it and the gizmo: *"both together"* — moving AROUND THE PIECE, the view
