@@ -126,14 +126,19 @@ export function entryCamera(e: PieceEntry, centreCam: Vec3, piece: Vec3, ring: A
   return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t];
 }
 
-/** ⭐⭐ Its view on the way in, TIED to the move (as the way back): toward a point sliding from the orbit centre to the piece at the
- * progress — blended from the live direction to the centre by it too — turned off it by what is left of the tap's own turn. */
+/**
+ * ⭐⭐ Its view on the way in, TIED to the move: turned BY ANGLE from the live direction to the orbit centre to the live direction to the
+ * piece at the eased progress (\`slerpDir\`), turned off it by what is left of the tap's own turn. ⭐ The owner, 2026-10-08: *"on the way in,
+ * it seems the camera watch is magnetted to the gizmo and at one point is is snapped to the piece, without the smooth transition it has in
+ * the way out"* — it aimed at a point SLIDING from the gizmo to the piece AND blended toward it by the same progress: the turn went as t²
+ * (6 % at a quarter), crowded again at the end as the point neared the camera — over 12 mm, a magnet then a snap. By angle, the turn
+ * spreads evenly: slow at the ends, 1.5 × its mean at the middle.
+ */
 export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number): Vec3 {
   const t = entryProgress(e, enterMm);
-  const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * t, centre[1] + (piece[1] - centre[1]) * t, centre[2] + (piece[2] - centre[2]) * t];
   const toCentre = unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]);
-  const b = slerpDir(toCentre, unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]), t);
-  return unitOf(rotateAbout(b, e.lookAxis, e.lookAngleRad * (1 - t)));
+  const toPiece = unitOf([piece[0] - camera[0], piece[1] - camera[1], piece[2] - camera[2]]);
+  return unitOf(rotateAbout(slerpDir(toCentre, toPiece, t), e.lookAxis, e.lookAngleRad * (1 - t)));
 }
 
 /** ⭐ The turn taking unit `from` onto unit `to`: its unit axis and angle (a vertical axis when there is none). */

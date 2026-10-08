@@ -128,6 +128,23 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(entryProgress(tapped(0.3, 0.1), 0)).toBe(1); // a zero budget: at once
   });
 
+  it("⭐⭐⭐ the way in's VIEW turns BY ANGLE, evenly (*\"magnetted to the gizmo and at one point … snapped to the piece\"*)", () => {
+    for (const v of [0.1, 0.5, 0.9]) {
+      const f = centreFrame(0.3, v);
+      const e0 = tapped(0.3, v);
+      const toC = unit(sub(C, f.cam));
+      const toP = unit(sub(f.piece, f.cam));
+      const whole = ang(toC, toP);
+      // the camera held still: the view's share of the turn = the eased progress, whatever the distances to the gizmo and the piece
+      for (const frac of [0.25, 0.5, 0.75]) {
+        const ax = entryLook(advE(e0, FADE * frac), f.cam, C, f.piece, FADE);
+        const eased = frac * frac * (3 - 2 * frac);
+        expect(ang(ax, toC) / whole).toBeCloseTo(eased, 6);
+        expect(ang(ax, toC) + ang(ax, toP)).toBeCloseTo(whole, 6); // on the arc between them, never off it
+      }
+    }
+  });
+
   it("⭐⭐ then the orbit around the piece STARTS where the way in ended — the piece, the camera, the view: no jump", () => {
     for (const [yaw, v] of [[0.3, 0.1], [-1.2, 0.8], [2.0, 0.35]] as const) {
       const e = advE(tapped(yaw, v), FADE);
