@@ -74,10 +74,9 @@ export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, ca
  * orbit around the piece starts (`startPieceOrbit`) with the camera already in its place.
  * ⭐⭐ **EACH AXIS AT THE FOLLOWING ORBIT'S OWN SPEED** (the owner, 2026-10-08: *"make sure the way in travel time respectively on dx and dy
  * matches the following orbit dx and dy respectively. I think the pitch way in travel time should be slower"* — *"And the piece orbit dy
- * travel time shall be the same as gizmo orbit"*): the slide's YAW part and its PITCH part each advance by the degrees the orbit around
- * the piece would turn on THAT axis (`advancePieceEntry`: × its yaw rate, the game-wide gain included; × the ring's pitch rate where the
- * piece is — the gizmo orbit's own, which the piece orbit keeps) — fed first by dx and dy respectively, then (*"Do the two recommended
- * changes"*) both by the WHOLE finger movement, so a pure push or a pure sideways drag completes both; each completes when that turn reaches
+ * travel time shall be the same as gizmo orbit"*): the slide's YAW part advances with dx, its PITCH part with dy, each by the degrees the
+ * orbit around the piece would turn for that finger step (`advancePieceEntry`: dx × its yaw rate, the game-wide gain included; dy × the
+ * ring's pitch rate where the piece is — the gizmo orbit's own, which the piece orbit keeps); each completes when that turn reaches
  * 1.5 × its own offset at the tap (`needAzDeg`, `needElDeg`) — so its eased PEAK equals the orbit's rate: no change of speed at the
  * hand-over. Near the outer rings the ring's pitch is slow (0.05°/mm), so the pitch part is slow there — up to ~150 mm of dy on the top
  * ring, ~1 mm near the waist; the yaw part never more than ~2.6 mm of dx. ⛔ One travel for both, `pieceOrbitEnterMm` (60, then 3).
@@ -85,7 +84,7 @@ export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, ca
 export interface PieceEntry {
   /** ⭐ The camera's distance from the piece at the tap — its distance around the piece once in. */
   readonly gap0M: number;
-  /** ⭐ The piece's distance from the pink gizmo at the tap (kept for the record: the end is measured from the piece orbit's start). */
+  /** ⭐ The piece's distance from the pink gizmo at the tap (`pieceOrbitEnds` — a way in pushed past it is cancelled). */
   readonly pink0M: number;
   /** ⭐ The camera's difference from the centre orbit's pose at the tap (zero but for a way back cut short) — it fades out. */
   readonly camOff: Vec3;

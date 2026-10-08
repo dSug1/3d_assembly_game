@@ -170,8 +170,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐⭐ the finger's mm into orbit-degrees, wired: dx at the yaw rate × the game-wide gain, dy at the ring's pitch rate — the GIZMO
     // orbit's own, which the piece orbit keeps (*\"the piece orbit dy travel time shall be the same as gizmo orbit\"*)
     const pw = code("render/pointer_wiring.ts");
-    // ⭐ (2026-10-08) each part fed by the WHOLE finger movement, at its own axis's rate
-    expect(pw).toMatch(/const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation\);\s*const mm = Math\.hypot\(dx, dy\) \/ mmToPx\(1\);\s*st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, mm \* r\.yawDegPerMm \* st\.pieceYawGain, mm \* r\.pitchDegPerMm\);/);
+    expect(pw).toMatch(/const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation\);\s*st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, \(Math\.abs\(dx\) \/ mmToPx\(1\)\) \* r\.yawDegPerMm \* st\.pieceYawGain, \(Math\.abs\(dy\) \/ mmToPx\(1\)\) \* r\.pitchDegPerMm\);/);
     // the piece orbit's pitch per dy IS the gizmo orbit's: the camera's elevation round the piece = the gizmo orbit camera's round the centre
     for (const v of [0.05, 0.3, 0.6, 0.95]) {
       const fc = centreFrame(0.3, v);
@@ -386,10 +385,9 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
     expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], \[c\.x \+ o\[0\], c\.y \+ o\[1\], c\.z \+ o\[2\]\], st\.centreBlend\.targetM, ring\);/);
     expect(w).toMatch(/camAt = entryCamera\(pe, camAt, pp, ring\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp\);/);
-    expect(w).toMatch(/if \(entryDone\(pe\)\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\)\);\s*st\.pieceEntry = null;/);
-    // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance; the end is measured from the piece orbit's start
-    expect(w).not.toMatch(/pieceOrbitEnds\(d, st\.pieceEntry\.pink0M/);
-    expect(w).toMatch(/st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\)\);/);
+    expect(w).toMatch(/if \(entryDone\(pe\)\) \{[\s\S]{0,200}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, pe\.pink0M\);\s*st\.pieceEntry = null;/);
+    // a way in pushed past the end distance is cancelled — the way back from where the camera is
+    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceEntry\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?st\.pieceEntry = null;\s*returnToCentreOrbit\(st, false\);/);
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\)\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
