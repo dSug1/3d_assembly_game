@@ -961,7 +961,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
-  pieceOrbitEnterMm: 60,
+  pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⭐ prototype, the owner 2026-10-07: *"Automatically end it when the distance crosses initial distance * x% (make a slider … default
   // to 50%)"* — the orbit around the piece ends when the piece is this close to the pink gizmo, % of its distance at the start — AND a
   // clear push step (`pushStep`); 75 since 2026-10-08 (*"Set to 75% plus clear push step"*; was 50)

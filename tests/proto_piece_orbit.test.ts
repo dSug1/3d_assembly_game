@@ -379,10 +379,10 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
-    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 60]);
+    expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 12]); // the way in at 12 mm (2026-10-08)
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"pieceOrbitGapMinPct", 10, 100, 5)');
-    expect(menu).toContain('"pieceOrbitEnterMm", 0, 300, 5)');
+    expect(menu).toContain('"pieceOrbitEnterMm", 0, 60, 1)');
     expect(menu).not.toMatch(/pieceOrbitSlerpMm|pieceOrbitFadeMm/); // merged into the way in's one value
     // ⭐ the pink ring stays at the old centre: it still reads the centre blend's target, which nothing here retargets
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);
