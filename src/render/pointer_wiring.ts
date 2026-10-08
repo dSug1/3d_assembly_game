@@ -11,7 +11,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, enterPieceOrbit, greenDragGains } from "./green_box_wiring";
+import { alignRestingFace, greenDragGains } from "./green_box_wiring";
 import { isOrbitTap, orbitTapCount, secondMoved } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -39,7 +39,7 @@ import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
-import { advanceCentreReturn, advancePieceEntry, pushStep } from "../input/piece_orbit";
+import { advanceCentreReturn, advancePieceEntry } from "../input/piece_orbit";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -1196,9 +1196,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
     // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
-    // ⭐ prototype (2026-10-08): the way out needs a CLEAR PUSH step (`pushStep`: |dy| ≥ 2 |dx|, dy outside the deadband) — seen here, read
-    // by the next frame's end check
-    if ((st.pieceOrbit !== null || st.pieceEntry !== null) && pushStep(dx, dy, st.orbitMotion.tracker.axes.y === "MOVING")) st.pieceOrbitPushSeen = true;
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
@@ -1257,11 +1254,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
 
 /**
  * ⭐⭐⭐ prototype — **A TAP COUNTED WHILE ORBITING** (`RESTING_FACE_ALIGNMENT.md` §1, §6; the owner, 2026-10-05): the count goes up; the
- * FIRST tap triggers TWO INDEPENDENT ACTIONS — the resting-face alignment (`alignRestingFace`) and the camera's orbit around the piece
- * (`enterPieceOrbit`; the owner, 2026-10-07: *"Make those two actions independent, although triggered by the same input"* — each may get
- * its own input later) — and costs ONE episode if either did something (*"The first tap shall cost one episode count"*), landed now
- * (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry either). The later taps
- * do nothing yet.
+ * FIRST tap is the resting-face alignment (`alignRestingFace`) and costs ONE episode if it aligned (*"The first tap shall cost one episode
+ * count"*), landed now (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry
+ * either). ⭐ It also started the orbit around the piece from 2026-10-07 (two independent actions on one input); since 2026-10-08 that orbit
+ * is the SPHERE's round the pink gizmo (`sphereFrame`) — *"disconnected from resting face"*. The later taps do nothing yet.
  */
 export function orbitTapped(st: SceneState, now: number): void {
   const ot = st.orbitTap;
@@ -1269,13 +1265,13 @@ export function orbitTapped(st: SceneState, now: number): void {
   const r = orbitTapCount(ot.count);
   ot.count = r.count;
   // ⭐ the same input, two actions — each called on its own (neither reads the other's result)
+  // ⭐⭐ (2026-10-08, the owner: *"The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it
+  // is now)"*) the tap ALIGNS only; the orbit around the piece starts and ends at the sphere round the gizmo (`sphereFrame`)
   const aligned = r.aligns && alignRestingFace(st, now);
-  const orbiting = r.aligns && enterPieceOrbit(st);
-  if (aligned || orbiting) {
+  if (aligned) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
-    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`), and the orbit's start
-    if (orbiting) st.lastVerdict = `${aligned ? st.lastVerdict : `orbit: tap ${ot.count}`} · the camera orbits the piece`;
+    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`)
   } else {
     st.lastVerdict = `orbit: tap ${ot.count} — counted (nothing defined yet)`;
   }

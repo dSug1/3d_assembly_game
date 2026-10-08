@@ -23,7 +23,7 @@ export interface PieceOrbit {
   readonly dir: Vec3;
   readonly gap0M: number;
   readonly ring0M: number;
-  /** ⭐ The piece's distance from the PINK GIZMO when it started (`pieceOrbitEnds`). */
+  /** ⭐ The piece's distance from the PINK GIZMO when it started (the old end rule; kept for the record). */
   readonly pink0M: number;
 }
 
@@ -360,22 +360,18 @@ export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
 }
 
 /**
- * ⭐⭐ prototype — **THE ORBIT AROUND THE PIECE ENDS BY ITSELF** (the owner, 2026-10-07: *"Track the initial distance of the piece to pink
- * gizmo when orbit around the piece is triggered. Automatically end it when the distance crosses initial distance * x%"*): the piece now
- * closer to the pink gizmo than `endPct` % of its distance then (`pink0M`). ⛔ A start distance of zero never ends it.
+ * ⭐⭐⭐ prototype — **THE SPHERE ROUND THE PINK GIZMO DRIVES THE WAYS IN AND OUT** (the owner, 2026-10-08: *"Create a sphere radius x centered on
+ * pink gizmo, slider for x, default = 1m, translucent white. When the piece enters the sphere, automatically trigger way out. When the piece
+ * exits the sphere, automatically trigger way in. place an hysteresis of 10% on the crossing … The way in and way out are therefore
+ * disconnected from resting face"* — the band ±10 %, a way in at boot when outside). Whether the piece is OUTSIDE the sphere (the orbit
+ * around the piece) now: it goes inside only below (1 − 10 %) × the radius, outside only beyond (1 + 10 %) × — no flicker on the surface.
+ * `wasOutside` `null` (boot, a respawn): the plain side of the radius. ⛔ It replaced the end at x % of the start distance plus a clear push.
  */
-export function pieceOrbitEnds(pieceToPinkM: number, pink0M: number, endPct: number): boolean {
-  return pink0M > 0 && pieceToPinkM < (pink0M * endPct) / 100;
-}
+export const SPHERE_HYSTERESIS = 0.1;
 
-/**
- * ⭐⭐ prototype — **THE WAY OUT WAITS FOR A CLEAR PUSH** (the owner, 2026-10-08: *"the way out triggers only when, besides the xx% distance,
- * a finger step is a clear push. That means |dy| at least twice |dx| on that step, with dy outside the deadband. If the piece crosses the
- * xx% line during a diagonal or sideways movement, the way out waits for the first such push step"*): one orbit step counts as a PUSH when
- * dy is outside the deadband (the orbit finger's own tracker, its y axis MOVING) and |dy| ≥ 2 |dx|.
- */
-export function pushStep(dxPx: number, dyPx: number, dyOutsideDeadband: boolean): boolean {
-  return dyOutsideDeadband && Math.abs(dyPx) > 0 && Math.abs(dyPx) >= 2 * Math.abs(dxPx);
+export function outsideSphere(distM: number, radiusM: number, wasOutside: boolean | null): boolean {
+  if (wasOutside === null) return distM > radiusM;
+  return wasOutside ? !(distM < radiusM * (1 - SPHERE_HYSTERESIS)) : distM > radiusM * (1 + SPHERE_HYSTERESIS);
 }
 
 /**

@@ -7,6 +7,7 @@
  */
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { OrbitController } from "../input";
 import { topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -33,7 +34,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, carryHeading, entryCamera, entryLook, entryProgress, pieceCamera, pieceOrbitEnds, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { anglesOf, carryHeading, entryCamera, entryLook, entryProgress, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -253,7 +254,7 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
  * aligned, the orbit center moves to the piece, the rest orbit around the piece"*). ⭐ AN ACTION OF ITS OWN (the owner, 2026-10-07:
  * *"Make those two actions independent, although triggered by the same input. Later on, we will likely map other inputs for those two
  * different actions"*): it no longer lives inside `alignRestingFace` — the tap (`orbitTapped`) calls both, each alone. Entered once; a
- * second call keeps it (`false`), only a respawn ends it (*"never automatically"*). `true` when it starts here.
+ * second call keeps it (`false`). `true` when it starts here. ⭐ Since 2026-10-08 called by the SPHERE (`sphereFrame`), no longer by the tap.
  */
 export function enterPieceOrbit(st: SceneState): boolean {
   const box = st.greenBox;
@@ -264,7 +265,7 @@ export function enterPieceOrbit(st: SceneState): boolean {
   const tg = st.camera.getTarget();
   // ⭐⭐ (2026-10-08) THE WAY IN starts (`startPieceEntry`) — the fingers keep the centre orbit until it is done (the frame then starts the
   // orbit around the piece, `startPieceOrbit`). Recorded now: the camera against the centre orbit's own camera (zero but for a way back
-  // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (`pieceOrbitEnds`)
+  // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (for the record)
   // ⭐ (2026-10-08) the camera's angles round the piece against the rings', and the piece's heading round the gizmo — the orbit's yaw now
   const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
   st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw);
@@ -369,7 +370,6 @@ function restingFillFrame(st: SceneState): void {
 export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): void {
   const p = st.orbitPieces[kind] ?? st.orbitPieces[0];
   if (p === undefined) return;
-  const wasAround = st.pieceOrbit !== null || st.centreReturn !== null || st.pieceEntry !== null;
   for (const o of st.orbitPieces) o.mesh.setEnabled(o === p);
   st.greenBox = p.mesh;
   st.orbitPieceKind = kind;
@@ -390,9 +390,9 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.restAligned = false;
     st.pieceOrbit = null;
     st.pieceEntry = null;
-    // ⭐ (2026-10-07) around the piece: back to the centre orbit as the way in reversed, from the camera as it is; else nothing to undo
-    if (wasAround) returnToCentreOrbit(st, false);
-    else st.centreReturn = null;
+    st.centreReturn = null;
+    // ⭐ (2026-10-08) the SPHERE decides afresh on the next frame (`sphereFrame`): back at boot, outside it → a way in, as at boot
+    st.pieceOutside = null;
   }
   st.hudDirty = true;
 }
@@ -508,20 +508,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.cfg.orbitPieceKind !== st.orbitPieceKind) spawnOrbitPiece(st, st.cfg.orbitPieceKind, false);
   const now = performance.now();
   const c = st.orbitCentreM;
-  // ⭐⭐ prototype (2026-10-07): *"Automatically end it when the distance crosses initial distance * x%"* — the piece within
-  // `pieceOrbitEndPct` % of its distance to the pink gizmo at the start: back to the orbit around the centre (`returnToCentreOrbit`)
-  if (st.pieceOrbit !== null) {
-    const t = st.centreBlend.targetM;
-    const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-    // ⭐ (2026-10-08) …and a CLEAR PUSH step seen (`pushStep`) — crossed on a diagonal or sideways, it waits for the first push
-    if (pieceOrbitEnds(d, st.pieceOrbit.pink0M, st.cfg.pieceOrbitEndPct) && st.pieceOrbitPushSeen) {
-      st.lastVerdict = `orbit: the piece within ${st.cfg.pieceOrbitEndPct} % of its start distance to the pink gizmo — back to the centre orbit`;
-      returnToCentreOrbit(st, true);
-    }
-  }
-  // ⛔ (2026-10-08, the owner: *"Add it"*) a WAY IN is never cancelled by the distance: the end is measured from the moment the orbit
-  // around the piece STARTS (`startPieceOrbit` at the way in's end), so a way in is never cut short by a push
-  st.pieceOrbitPushSeen = false; // a push counts on the frame after its step, then is spent
+  // ⭐ (2026-10-08) the orbit around the piece starts and ends at the SPHERE round the pink gizmo — `sphereFrame`, at this frame's end
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
   // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.
@@ -733,9 +720,60 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
+  sphereFrame(st);
   counterYawFrame(st);
   restAlignFrame(st, now);
   restingFillFrame(st);
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE SPHERE ROUND THE PINK GIZMO** (`outsideSphere`; the owner, 2026-10-08: *"Create a sphere radius x centered on pink
+ * gizmo, slider for x, default = 1m, translucent white. When the piece enters the sphere, automatically trigger way out. When the piece exits
+ * the sphere, automatically trigger way in. place an hysteresis of 10% on the crossing"*). Each frame: the sphere drawn on the gizmo
+ * (`pieceSphereRadiusM`, a faint white seen from both sides — the camera is often inside it); the piece's side of it, ±10 % on the crossing:
+ * OUTSIDE → a WAY IN (`enterPieceOrbit`, unless already in or on its way in) — at boot and after a respawn too; INSIDE → a WAY OUT
+ * (`returnToCentreOrbit`, from the orbit around the piece or a way in cut short). The resting-face tap no longer takes part.
+ */
+function sphereFrame(st: SceneState): void {
+  const box = st.greenBox;
+  if (box === null) return;
+  const t = st.centreBlend.targetM;
+  const r = st.cfg.pieceSphereRadiusM;
+  const mesh = pieceSphereMesh(st);
+  mesh.isVisible = r > 0;
+  mesh.position.set(t[0], t[1], t[2]);
+  mesh.scaling.setAll(Math.max(1e-6, r));
+  if (!(r > 0)) return;
+  const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
+  const prev = st.pieceOutside;
+  const out = outsideSphere(d, r, prev);
+  st.pieceOutside = out;
+  if (out === prev) return;
+  st.hudDirty = true;
+  if (out) {
+    if (enterPieceOrbit(st)) st.lastVerdict = `orbit: the piece ${prev === null ? "outside" : "out of"} the sphere (${d.toFixed(2)} m) — the camera goes round the piece`;
+  } else if (st.pieceOrbit !== null || st.pieceEntry !== null) {
+    st.pieceEntry = null;
+    st.lastVerdict = `orbit: the piece inside the sphere (${d.toFixed(2)} m) — back to the centre orbit`;
+    returnToCentreOrbit(st, true);
+  }
+}
+
+/** ⭐ The sphere's mesh, made once: a unit sphere scaled to the radius, faint white, both faces, never picked, never casting a shadow. */
+function pieceSphereMesh(st: SceneState): Mesh {
+  if (st.pieceSphere !== null) return st.pieceSphere;
+  const m = CreateSphere("piece-sphere", { diameter: 2, segments: 32 }, st.scene);
+  const mat = new StandardMaterial("piece-sphere-mat", st.scene);
+  mat.diffuseColor = new Color3(1, 1, 1);
+  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.disableLighting = true;
+  mat.alpha = 0.08;
+  mat.backFaceCulling = false;
+  m.material = mat;
+  m.isPickable = false;
+  m.alphaIndex = 1;
+  st.pieceSphere = m;
+  return m;
 }
 
 /** ⭐ The camera's yaw and pitch offsets (the CAMERA OFFSET sliders), radians. */

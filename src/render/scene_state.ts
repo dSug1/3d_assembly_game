@@ -450,8 +450,10 @@ export interface SceneState {
   centreReturn: CentreReturn | null;
   /** ⭐ Prototype (2026-10-08): the WAY IN to the orbit around the piece in progress (`enterPieceOrbit` → the frame); `null` once in. */
   pieceEntry: PieceEntry | null;
-  /** ⭐ Prototype (2026-10-08): an orbit step since the last frame was a CLEAR PUSH (`pushStep`) — the way out needs one. */
-  pieceOrbitPushSeen: boolean;
+  /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
+  pieceOutside: boolean | null;
+  /** ⭐ …the sphere's mesh (`sphereFrame`), made at its first use. */
+  pieceSphere: import("@babylonjs/core/Meshes/mesh").Mesh | null;
   /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
    * (`pieceYawGainKey`). */
   pieceYawGain: number;
