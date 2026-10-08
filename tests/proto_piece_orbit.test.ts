@@ -144,6 +144,21 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(entryProgress(tapped(0.3, 0.1), 0)).toBe(1); // a zero budget: at once
   });
 
+  it("⭐⭐⭐ the way in's VIEW looks STRAIGHT AT the sliding point (*\"build option A\"*) — no second blend squaring the turn", () => {
+    for (const v of [0.1, 0.5, 0.9]) {
+      const f = centreFrame(0.3, v);
+      const e0 = tapped(0.3, v);
+      for (const frac of [0.25, 0.5, 0.75]) {
+        const e = advE(e0, FADE * frac);
+        const t = entryProgress(e, FADE);
+        const aim: Vec3 = add(C, [(f.piece[0] - C[0]) * t, (f.piece[1] - C[1]) * t, (f.piece[2] - C[2]) * t]);
+        const ax = entryLook(e, f.cam, C, f.piece, FADE); // the camera held still
+        const want = unit(sub(aim, f.cam));
+        for (const k of [0, 1, 2]) expect(ax[k]).toBeCloseTo(want[k]!, 9);
+      }
+    }
+  });
+
   it("⭐⭐ then the orbit around the piece STARTS where the way in ended — the piece, the camera, the view: no jump", () => {
     for (const [yaw, v] of [[0.3, 0.1], [-1.2, 0.8], [2.0, 0.35]] as const) {
       const e = advE(tapped(yaw, v), FADE);

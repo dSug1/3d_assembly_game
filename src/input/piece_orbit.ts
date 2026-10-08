@@ -148,13 +148,18 @@ export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, ente
   return [piece[0] + d[0] * e.gap0M, piece[1] + d[1] * e.gap0M, piece[2] + d[2] * e.gap0M];
 }
 
-/** ⭐⭐ Its view on the way in, TIED to the move (as the way back): toward a point sliding from the orbit centre to the piece at the
- * progress — blended from the live direction to the centre by it too — turned off it by what is left of the tap's own turn. */
+/**
+ * ⭐⭐ Its view on the way in, TIED to the move: STRAIGHT AT a point sliding from the orbit centre to the piece at the eased progress,
+ * turned off it by what is left of the tap's own turn. ⭐ The owner, 2026-10-08: *"you previously identified the visible turn therefore goes
+ * roughly as t². can you propose a way to fix that? I think I want to retain the sliding point"* → *"build option A"*: it was ALSO blended
+ * from the direction to the centre by the same progress — the two multiplied (2–6 % turned at a quarter, a magnet then a snap). ⚠ What
+ * stays: the point nears the camera as it slides (~3 m → ~1.25 m), so the turn still gathers toward the piece end (option B, a slide paced
+ * to turn the view evenly, is the next step).
+ */
 export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number): Vec3 {
   const t = entryProgress(e, enterMm);
   const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * t, centre[1] + (piece[1] - centre[1]) * t, centre[2] + (piece[2] - centre[2]) * t];
-  const toCentre = unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]);
-  const b = slerpDir(toCentre, unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]), t);
+  const b = unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]);
   return unitOf(rotateAbout(b, e.lookAxis, e.lookAngleRad * (1 - t)));
 }
 
