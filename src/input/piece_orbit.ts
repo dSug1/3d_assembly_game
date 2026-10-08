@@ -77,7 +77,7 @@ export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, ca
 export interface PieceEntry {
   /** ⭐ The camera's distance from the piece at the tap — its distance around the piece once in. */
   readonly gap0M: number;
-  /** ⭐ The piece's distance from the pink gizmo at the tap (`pieceOrbitEnds` — a way in pushed past it is cancelled). */
+  /** ⭐ The piece's distance from the pink gizmo at the tap (for the record: the end is measured from the piece orbit's start). */
   readonly pink0M: number;
   /** ⭐ The camera's difference from the centre orbit's pose at the tap (zero but for a way back cut short) — it fades out. */
   readonly camOff: Vec3;

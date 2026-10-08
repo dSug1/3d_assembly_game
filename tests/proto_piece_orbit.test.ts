@@ -347,9 +347,9 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
     expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], \[c\.x \+ o\[0\], c\.y \+ o\[1\], c\.z \+ o\[2\]\], st\.centreBlend\.targetM\);/);
     expect(w).toMatch(/camAt = entryCamera\(pe, camAt, pp, ring, cfg\.pieceOrbitEnterMm\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/);
-    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,200}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, pe\.pink0M\);\s*st\.pieceEntry = null;/);
-    // a way in pushed past the end distance is cancelled — the way back from where the camera is
-    expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceEntry\.pink0M, st\.cfg\.pieceOrbitEndPct\) && st\.pieceOrbitPushSeen\) \{[\s\S]{0,300}?st\.pieceEntry = null;\s*returnToCentreOrbit\(st, false\);/);
+    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\)\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
+    // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
+    expect(w).not.toMatch(/pieceOrbitEnds\(d, st\.pieceEntry\.pink0M/);
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\) && st\.pieceOrbitPushSeen\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
