@@ -79,8 +79,18 @@ export interface PieceEntry {
   readonly gap0M: number;
   /** ⭐ The piece's distance from the pink gizmo at the tap (for the record: the end is measured from the piece orbit's start). */
   readonly pink0M: number;
-  /** ⭐ The camera's difference from the centre orbit's pose at the tap (zero but for a way back cut short) — it fades out. */
-  readonly camOff: Vec3;
+  /** ⭐ The camera's angles round the piece at the tap MINUS the rings' (the yaw and pitch offsets' small shift) — they fade out. */
+  readonly dAzRad: number;
+  readonly dElRad: number;
+  /**
+   * ⭐⭐ THE PIVOT, HANDED OVER GRADUALLY (the owner, 2026-10-08: *"On the way in, when I input dx, the scene seems to continue to rotate
+   * around the gizmo until one frame when the scene starts to really be pushed left or right by the dx. This is not what happens on the
+   * way out"*): the piece's heading round the gizmo, carried by the orbit's yaw by the share LEFT of the way in (`carryHeading`) — all of
+   * it at the tap (the centre orbit), none at the end (the piece orbit) — while the camera turns round the piece with all of it.
+   */
+  readonly headingRad: number;
+  /** ⭐ The orbit's yaw last frame (`carryHeading` reads its change). */
+  readonly lastYawRad: number;
   /** ⭐ Where it looked at the tap, as a TURN off the direction to the orbit centre (axis, angle) — it fades out. */
   readonly lookAxis: Vec3;
   readonly lookAngleRad: number;
@@ -89,19 +99,31 @@ export interface PieceEntry {
   readonly velMm: number;
 }
 
-/** ⭐ At the tap: the camera (`camera`, looking along `look0`) against the centre orbit's own camera (`centreCam`), the piece's distances. */
-export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, centreCam: Vec3, pink: Vec3): PieceEntry {
+/** ⭐ At the tap: the camera (`camera`, looking along `look0`) round the piece against the rings' angles (`ring`), the piece's distances,
+ * and its heading round the gizmo — the orbit's yaw then (`yawRad`). */
+export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, pink: Vec3, ring: AroundAngles, yawRad: number): PieceEntry {
   const tw = turnBetween(unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]), unitOf(look0));
+  const a = anglesOf([camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]]);
   return {
     gap0M: Math.hypot(camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]),
     pink0M: Math.hypot(piece[0] - pink[0], piece[1] - pink[1], piece[2] - pink[2]),
-    camOff: [camera[0] - centreCam[0], camera[1] - centreCam[1], camera[2] - centreCam[2]],
+    dAzRad: wrap(a.az - ring.az),
+    dElRad: a.el - ring.el,
+    headingRad: yawRad,
+    lastYawRad: yawRad,
     lookAxis: tw.axis,
     lookAngleRad: tw.angle,
     travelledMm: 0,
     rawMm: 0,
     velMm: 0,
   };
+}
+
+/** ⭐⭐ Each frame: the orbit's yaw changed by Δ since the last frame — the piece's heading round the gizmo moves by Δ × (1 − progress): with
+ * the orbit at the tap, by less and less, not at all at the end (`headingRad`). */
+export function carryHeading(e: PieceEntry, yawRad: number, enterMm: number): PieceEntry {
+  const t = entryProgress(e, enterMm);
+  return { ...e, headingRad: e.headingRad + wrap(yawRad - e.lastYawRad) * (1 - t), lastYawRad: yawRad };
 }
 
 /** ⭐ One step of finger travel, millimetres — into the raw count (`smoothTravel` eases what is read). */
@@ -116,14 +138,14 @@ export function entryProgress(e: PieceEntry, enterMm: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** ⭐⭐ The camera on the way in: from the centre orbit's camera (`centreCam`, plus what is left of `camOff`) to the piece orbit's — the
- * rings' angles (`ring`) about the PIECE, `gap0M` from it — at the progress. Both follow the finger, so dx keeps carrying them round the
- * gizmo together. */
-export function entryCamera(e: PieceEntry, centreCam: Vec3, piece: Vec3, ring: AroundAngles, enterMm: number): Vec3 {
-  const t = entryProgress(e, enterMm);
-  const from: Vec3 = [centreCam[0] + e.camOff[0] * (1 - t), centreCam[1] + e.camOff[1] * (1 - t), centreCam[2] + e.camOff[2] * (1 - t)];
-  const to = pieceCamera(piece, ring, e.gap0M);
-  return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t];
+/** ⭐⭐ The camera on the way in: ROUND THE PIECE as it is (carried round the gizmo by the share left, `carryHeading`), at the rings' angles
+ * (`ring` — so dx turns it round the piece with all of the yaw) plus what is left of the tap's small shift (`dAzRad`, `dElRad`), `gap0M`
+ * from it. At the tap exactly where it was; at the end exactly the piece orbit's pose. */
+export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, enterMm: number): Vec3 {
+  const left = 1 - entryProgress(e, enterMm);
+  const lim = (89 * Math.PI) / 180;
+  const d = dirOf({ az: ring.az + e.dAzRad * left, el: Math.max(-lim, Math.min(lim, ring.el + e.dElRad * left)) });
+  return [piece[0] + d[0] * e.gap0M, piece[1] + d[1] * e.gap0M, piece[2] + d[2] * e.gap0M];
 }
 
 /** ⭐⭐ Its view on the way in, TIED to the move (as the way back): toward a point sliding from the orbit centre to the piece at the

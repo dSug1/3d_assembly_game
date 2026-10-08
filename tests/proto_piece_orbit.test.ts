@@ -12,6 +12,7 @@ import {
   advanceCentreReturn,
   advancePieceEntry,
   anglesOf,
+  carryHeading,
   entryCamera,
   entryLook,
   entryProgress,
@@ -67,16 +68,19 @@ function centreFrame(yaw: number, v: number) {
   const cam = add(C, cameraOffset(cfg, { yaw, v }, bo.offsetM as Vec3, OFF, GAP));
   return { piece, cam, axis: unit(sub(C, cam)) };
 }
-/** The WAY IN's frame, as `greenBoxFrame` composes it: the centre orbit's piece; the camera and the view by `entryCamera`, `entryLook`. */
+/** The WAY IN's frame, as `greenBoxFrame` composes it: the piece at its own heading round the gizmo (`carryHeading`); the camera round it
+ * at the rings' angles for the orbit's yaw (`entryCamera`), the view by `entryLook`. */
 function entryFrame(e: PieceEntry, yaw: number, v: number) {
-  const f = centreFrame(yaw, v);
-  const cam = entryCamera(e, f.cam, f.piece, ringAngles(yaw, v), FADE);
-  return { piece: f.piece, cam, axis: entryLook(e, cam, C, f.piece, FADE) };
+  const piece = add(C, orbitOffset(cfg, e.headingRad, v, 1).offsetM as Vec3);
+  const cam = entryCamera(e, piece, ringAngles(yaw, v), FADE);
+  return { piece, cam, axis: entryLook(e, cam, C, piece, FADE) };
 }
+/** One frame of the way in: the finger's travel, then the heading carried by the orbit's yaw now. */
+const stepE = (e: PieceEntry, yaw: number, mm: number): PieceEntry => carryHeading(advE(e, mm), yaw, FADE);
 /** The tap at (yaw, v): the way in starts. */
 const tapped = (yaw: number, v: number): PieceEntry => {
   const f = centreFrame(yaw, v);
-  return startPieceEntry(C, f.piece, f.cam, f.axis, f.cam, C);
+  return startPieceEntry(C, f.piece, f.cam, f.axis, C, ringAngles(yaw, v), yaw);
 };
 /** The orbit around the piece's frame: the piece on its frozen line, the camera at the rings' angles around it, looking at it. */
 function frame(po: PieceOrbit, yaw: number, v: number) {
@@ -106,16 +110,28 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     }
   });
 
-  it("⭐⭐⭐ THE WAY IN, the way out mirrored: dx keeps carrying the piece and the camera round the GIZMO — the piece AND the gizmo in view all the way, whatever the yaw", () => {
+  it("⭐⭐⭐ THE PIVOT HANDED OVER GRADUALLY (*\"the scene seems to continue to rotate around the gizmo until one frame when the scene starts to really be pushed left or right by the dx\"*)", () => {
     for (const v of [0.1, 0.35, 0.8]) {
+      // ⭐ at the tap: dx is the centre orbit — the piece carried round the gizmo by ALL of the yaw, the camera with it
+      const dYaw = 0.2;
       const e0 = tapped(0.3, v);
-      // ⛔ the owner's case: dx DURING the way in — here the yaw sweeps a whole turn while the travel goes from 0 to the end
-      for (let mm = 0; mm <= FADE; mm += 3) {
-        const yaw = 0.3 + (2 * Math.PI * mm) / FADE;
-        const f = entryFrame(advE(e0, mm), yaw, v);
-        expect(ang(f.axis, unit(sub(f.piece, f.cam)))).toBeLessThan((25 * Math.PI) / 180); // the piece in view
-        expect(ang(f.axis, unit(sub(C, f.cam)))).toBeLessThan((25 * Math.PI) / 180); // the gizmo in view
+      const a0 = entryFrame(stepE(e0, 0.3 + dYaw, 0), 0.3 + dYaw, v);
+      const c0 = centreFrame(0.3 + dYaw, v);
+      for (const k of [0, 1, 2]) expect(a0.piece[k]).toBeCloseTo(c0.piece[k]!, 12);
+      for (const k of [0, 1, 2]) expect(a0.cam[k]).toBeCloseTo(c0.cam[k]!, 9);
+      // ⭐⭐ part-way: the piece carried by the SHARE LEFT (1 − progress) — the pivot passes from the gizmo to the piece gradually
+      for (const frac of [0.25, 0.5, 0.75]) {
+        const e = advE(e0, FADE * frac);
+        const t = entryProgress(e, FADE);
+        const moved = stepE(e, 0.3 + dYaw, 0);
+        expect(moved.headingRad - e0.headingRad).toBeCloseTo(dYaw * (1 - t), 12);
       }
+      // ⭐ at the end: dx is the piece orbit — the piece not carried at all, the camera turned round it
+      const eEnd = advE(e0, FADE);
+      const moved = stepE(eEnd, 0.3 + dYaw, 0);
+      expect(moved.headingRad).toBeCloseTo(e0.headingRad, 12);
+      const f = entryFrame(moved, 0.3 + dYaw, v);
+      expect(ang(unit(sub(f.cam, f.piece)), unit(sub(entryFrame(eEnd, 0.3, v).cam, f.piece)))).toBeGreaterThan(0.1); // the camera went round
     }
     // ONE value: at its end the view is ON the piece AND the camera at the piece orbit's pose — together, and not before
     const e = advE(tapped(0.3, 0.1), FADE);
@@ -143,7 +159,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const f0 = centreFrame(0.3, 0.1);
     const tilted = unit(add(unit(sub(C, f0.cam)), [0, 0.3, 0]));
     const off: Vec3 = [0.05, 0.02, -0.03];
-    const e1 = startPieceEntry(C, f0.piece, add(f0.cam, off), tilted, f0.cam, C);
+    const e1 = startPieceEntry(C, f0.piece, add(f0.cam, off), tilted, C, ringAngles(0.3, 0.1), 0.3);
     const s0 = entryFrame(e1, 0.3, 0.1);
     for (const k of [0, 1, 2]) expect(s0.cam[k]).toBeCloseTo(f0.cam[k]! + off[k]!, 12);
     for (const k of [0, 1, 2]) expect(s0.axis[k]).toBeCloseTo(tilted[k]!, 12);
@@ -226,7 +242,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
   it("⭐⭐ it ENDS by itself (*\"when the distance crosses initial distance * x%\"*): the start distance to the pink gizmo recorded, the end below x %", () => {
     const pink: Vec3 = [0.5, 0.3, -0.1];
     const f = centreFrame(0.3, 0.1);
-    const po = startPieceEntry(C, f.piece, f.cam, f.axis, f.cam, pink); // recorded at the TAP, carried into the orbit
+    const po = startPieceEntry(C, f.piece, f.cam, f.axis, pink, ringAngles(0.3, 0.1), 0.3); // recorded at the TAP
     expect(po.pink0M).toBeCloseTo(len(sub(f.piece, pink)), 12);
     expect(pieceOrbitEnds(po.pink0M * 0.51, po.pink0M, 50)).toBe(false);
     expect(pieceOrbitEnds(po.pink0M * 0.49, po.pink0M, 50)).toBe(true);
@@ -324,7 +340,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(r.travelledMm).toBeGreaterThan(0);
     expect(r.travelledMm).toBeLessThan(4);
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*const po = st\.pieceOrbit;/);
+    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);[\s\S]{0,400}?const po = st\.pieceOrbit;/);
   });
 
   it("⭐ the piece ON the centre: the fallback direction, never a NaN", () => {
@@ -345,8 +361,11 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const tap = code("render/pointer_wiring.ts");
     expect(tap).toMatch(/const aligned = r\.aligns && alignRestingFace\(st, now\);\s*const orbiting = r\.aligns && enterPieceOrbit\(st\);\s*if \(aligned \|\| orbiting\) \{/);
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
-    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], \[c\.x \+ o\[0\], c\.y \+ o\[1\], c\.z \+ o\[2\]\], st\.centreBlend\.targetM\);/);
-    expect(w).toMatch(/camAt = entryCamera\(pe, camAt, pp, ring, cfg\.pieceOrbitEnterMm\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/);
+    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw\);/);
+    // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
+    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = carryHeading\(st\.pieceEntry, st\.boxOrbit\.yaw, cfg\.pieceOrbitEnterMm\);/);
+    expect(w).toMatch(/const be = st\.pieceEntry === null \? null : orbitOffset\(st\.cfg, st\.pieceEntry\.headingRad, st\.boxOrbit\.v, st\.boxOrbit\.zoom\)\.offsetM;/);
+    expect(w).toMatch(/camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\)\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
     // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
     expect(w).not.toMatch(/pieceOrbitEnds\(d, st\.pieceEntry\.pink0M/);
@@ -354,14 +373,14 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/if \(pieceOrbitEnds\(d, st\.pieceOrbit\.pink0M, st\.cfg\.pieceOrbitEndPct\) && st\.pieceOrbitPushSeen\) \{[\s\S]{0,300}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/if \(wasAround\) returnToCentreOrbit\(st, false\);/); // …and at a respawn
     expect(w).toMatch(/camAt = returnCamera\(cr, pp, homeRel, cfg\.pieceOrbitReturnMm\);\s*const ax = returnLook\(cr, camAt, pp, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitReturnMm\);/);
-    expect(w).toMatch(/\? \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\]\]/);
+    expect(w).toMatch(/: \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\]\]/);
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitEndPct).toBe(75); // *"Set to 75% plus clear push step"* (2026-10-08)
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitEndPct", 0, 100, 5)');
     expect(w).toMatch(/st\.restAligned = false;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;/); // the respawn
-    expect(w).toMatch(/: pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\);/);
+    expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece = scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     expect(w).toMatch(/camAt = pieceCamera\(pp, ring, gapPiece\);\s*lookAt = pp;/); // around the piece: at the rings' angles, looking at it
     expect(w).toMatch(/st\.camera\.setPosition\(new Vector3\(camAt\[0\], camAt\[1\], camAt\[2\]\)\);\s*st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\);/);
