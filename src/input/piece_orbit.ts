@@ -68,18 +68,11 @@ export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, ca
  * ⭐⭐⭐ prototype — **THE WAY IN, THE WAY OUT MIRRORED** (the owner, 2026-10-08: *"Start again from a5947c3 … Apply whatever of the way out
  * you can but making it simpler so the piece and gizmo stay in the view"* → the proposal agreed: *"Build the new way in"*). From the tap,
  * the fingers KEEP the centre orbit — dx carries the piece and the camera round the gizmo, dy moves the piece along the rings — so the
- * camera never gets round to the gizmo's side of the piece; meanwhile the camera slides from where the centre orbit puts it to where the
- * piece orbit will (the same rig angles, about the PIECE, at the camera's distance from it at the tap — `entryCamera`) — the view does not
- * turn: both orbits aim along the same rig angles — and is aimed at a point sliding from the gizmo to the piece (`entryLook`). Done, the
- * orbit around the piece starts (`startPieceOrbit`) with the camera already in its place.
- * ⭐⭐ **EACH AXIS AT THE FOLLOWING ORBIT'S OWN SPEED** (the owner, 2026-10-08: *"make sure the way in travel time respectively on dx and dy
- * matches the following orbit dx and dy respectively. I think the pitch way in travel time should be slower"* — *"And the piece orbit dy
- * travel time shall be the same as gizmo orbit"*): the slide's YAW part advances with dx, its PITCH part with dy, each by the degrees the
- * orbit around the piece would turn for that finger step (`advancePieceEntry`: dx × its yaw rate, the game-wide gain included; dy × the
- * ring's pitch rate where the piece is — the gizmo orbit's own, which the piece orbit keeps); each completes when that turn reaches
- * 1.5 × its own offset at the tap (`needAzDeg`, `needElDeg`) — so its eased PEAK equals the orbit's rate: no change of speed at the
- * hand-over. Near the outer rings the ring's pitch is slow (0.05°/mm), so the pitch part is slow there — up to ~150 mm of dy on the top
- * ring, ~1 mm near the waist; the yaw part never more than ~2.6 mm of dx. ⛔ One travel for both, `pieceOrbitEnterMm` (60, then 3).
+ * camera never gets round to the gizmo's side of the piece; meanwhile, ONE progress (finger travel over `enterMm`, eased, smoothed as the
+ * orbit) blends the camera from where the centre orbit puts it to where the piece orbit will (the same angles, about the PIECE, at the
+ * camera's distance from it at the tap — `entryCamera`), and aims its view at a point sliding from the gizmo to the piece (`entryLook`).
+ * Done, the orbit around the piece starts (`startPieceOrbit`) with the camera already in its place. ⛔ The orbit around the piece used to
+ * start AT the tap, dx swinging the camera round the piece during the transition (`802a498`, reverted: big sweeps with neither in view).
  */
 export interface PieceEntry {
   /** ⭐ The camera's distance from the piece at the tap — its distance around the piece once in. */
@@ -91,88 +84,52 @@ export interface PieceEntry {
   /** ⭐ Where it looked at the tap, as a TURN off the direction to the orbit centre (axis, angle) — it fades out. */
   readonly lookAxis: Vec3;
   readonly lookAngleRad: number;
-  /** ⭐ The orbit-turn each axis needs to complete: 1.5 × the slide's yaw / pitch offset at the tap, degrees (0: nothing to do). */
-  readonly needAzDeg: number;
-  readonly needElDeg: number;
-  /** ⭐ The orbit-turn done so far on each axis, degrees — raw from the finger, eased per frame (`smoothPieceEntry`). */
-  readonly yaw: TravelCount;
-  readonly pitch: TravelCount;
-}
-
-/** ⭐ A count fed in steps and read eased (`smoothTravel`). */
-export interface TravelCount {
   readonly travelledMm: number;
   readonly rawMm: number;
   readonly velMm: number;
 }
 
-/** ⭐ At the tap: the camera (`camera`, looking along `look0`) against the centre orbit's own camera (`centreCam`), the slide's offsets round
- * the piece against the rings' angles (`ring`), the piece's distances. */
-export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, centreCam: Vec3, pink: Vec3, ring: AroundAngles): PieceEntry {
+/** ⭐ At the tap: the camera (`camera`, looking along `look0`) against the centre orbit's own camera (`centreCam`), the piece's distances. */
+export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, centreCam: Vec3, pink: Vec3): PieceEntry {
   const tw = turnBetween(unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]), unitOf(look0));
-  const a = anglesOf([centreCam[0] - piece[0], centreCam[1] - piece[1], centreCam[2] - piece[2]]);
-  const zero: TravelCount = { travelledMm: 0, rawMm: 0, velMm: 0 };
   return {
     gap0M: Math.hypot(camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]),
     pink0M: Math.hypot(piece[0] - pink[0], piece[1] - pink[1], piece[2] - pink[2]),
     camOff: [camera[0] - centreCam[0], camera[1] - centreCam[1], camera[2] - centreCam[2]],
     lookAxis: tw.axis,
     lookAngleRad: tw.angle,
-    needAzDeg: (1.5 * Math.abs(wrap(a.az - ring.az)) * 180) / Math.PI,
-    needElDeg: (1.5 * Math.abs(a.el - ring.el) * 180) / Math.PI,
-    yaw: zero,
-    pitch: zero,
+    travelledMm: 0,
+    rawMm: 0,
+    velMm: 0,
   };
 }
 
-/** ⭐ One finger step: the degrees the orbit around the piece would turn for it — `yawDeg` for its dx, `pitchDeg` for its dy (magnitudes). */
-export function advancePieceEntry(e: PieceEntry, yawDeg: number, pitchDeg: number): PieceEntry {
-  const add = (c: TravelCount, d: number): TravelCount => (d > 0 ? { ...c, rawMm: c.rawMm + d } : c);
-  return { ...e, yaw: add(e.yaw, Math.abs(yawDeg)), pitch: add(e.pitch, Math.abs(pitchDeg)) };
+/** ⭐ One step of finger travel, millimetres — into the raw count (`smoothTravel` eases what is read). */
+export function advancePieceEntry(e: PieceEntry, travelMm: number): PieceEntry {
+  return travelMm > 0 ? { ...e, rawMm: e.rawMm + travelMm } : e;
 }
 
-/** ⭐ Each frame: both counts eased on the orbit's spring (`smoothTravel`). */
-export function smoothPieceEntry(e: PieceEntry, dtMs: number, tauMs: number): PieceEntry {
-  return { ...e, yaw: smoothTravel(e.yaw, dtMs, tauMs), pitch: smoothTravel(e.pitch, dtMs, tauMs) };
+/** ⭐ The way in's ONE progress: the travel over `enterMm`, eased (smoothstep); a budget of zero is at once. */
+export function entryProgress(e: PieceEntry, enterMm: number): number {
+  if (enterMm <= 0) return 1;
+  const t = Math.min(1, e.travelledMm / enterMm);
+  return t * t * (3 - 2 * t);
 }
 
-/** ⭐ The way in's progress on each axis (eased, smoothstep), and the slower of the two (`both`) for what belongs to neither. */
-export function entryProgress(e: PieceEntry): { readonly yaw: number; readonly pitch: number; readonly both: number } {
-  const ease = (done: number, need: number): number => {
-    if (!(need > 1e-6)) return 1;
-    const t = Math.min(1, done / need);
-    return t * t * (3 - 2 * t);
-  };
-  const yaw = ease(e.yaw.travelledMm, e.needAzDeg);
-  const pitch = ease(e.pitch.travelledMm, e.needElDeg);
-  return { yaw, pitch, both: Math.min(yaw, pitch) };
+/** ⭐⭐ The camera on the way in: from the centre orbit's camera (`centreCam`, plus what is left of `camOff`) to the piece orbit's — the
+ * rings' angles (`ring`) about the PIECE, `gap0M` from it — at the progress. Both follow the finger, so dx keeps carrying them round the
+ * gizmo together. */
+export function entryCamera(e: PieceEntry, centreCam: Vec3, piece: Vec3, ring: AroundAngles, enterMm: number): Vec3 {
+  const t = entryProgress(e, enterMm);
+  const from: Vec3 = [centreCam[0] + e.camOff[0] * (1 - t), centreCam[1] + e.camOff[1] * (1 - t), centreCam[2] + e.camOff[2] * (1 - t)];
+  const to = pieceCamera(piece, ring, e.gap0M);
+  return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t];
 }
 
-/** ⭐ The way in is done: both axes at the end of their turn. */
-export function entryDone(e: PieceEntry): boolean {
-  const p = entryProgress(e);
-  return p.yaw >= 1 && p.pitch >= 1;
-}
-
-/** ⭐⭐ The camera on the way in, round the PIECE: its angles there the centre orbit's (`centreCam`, plus what is left of `camOff`), each
- * slid onto the rings' (`ring`) by its own axis's progress; its distance onto `gap0M`. Both ends follow the finger, so dx keeps carrying
- * them round the gizmo together. */
-export function entryCamera(e: PieceEntry, centreCam: Vec3, piece: Vec3, ring: AroundAngles): Vec3 {
-  const p = entryProgress(e);
-  const from: Vec3 = [centreCam[0] + e.camOff[0] * (1 - p.both) - piece[0], centreCam[1] + e.camOff[1] * (1 - p.both) - piece[1], centreCam[2] + e.camOff[2] * (1 - p.both) - piece[2]];
-  const a = anglesOf(from);
-  const lim = (89 * Math.PI) / 180;
-  const az = ring.az + wrap(a.az - ring.az) * (1 - p.yaw);
-  const el = Math.max(-lim, Math.min(lim, ring.el + (a.el - ring.el) * (1 - p.pitch)));
-  const dist = Math.hypot(from[0], from[1], from[2]) + (e.gap0M - Math.hypot(from[0], from[1], from[2])) * p.both;
-  const d = dirOf({ az, el });
-  return [piece[0] + d[0] * dist, piece[1] + d[1] * dist, piece[2] + d[2] * dist];
-}
-
-/** ⭐⭐ Its view on the way in, TIED to the move (as the way back): toward a point sliding from the orbit centre to the piece at the slower
- * axis's progress — blended from the live direction to the centre by it too — turned off it by what is left of the tap's own turn. */
-export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3): Vec3 {
-  const t = entryProgress(e).both;
+/** ⭐⭐ Its view on the way in, TIED to the move (as the way back): toward a point sliding from the orbit centre to the piece at the
+ * progress — blended from the live direction to the centre by it too — turned off it by what is left of the tap's own turn. */
+export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number): Vec3 {
+  const t = entryProgress(e, enterMm);
   const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * t, centre[1] + (piece[1] - centre[1]) * t, centre[2] + (piece[2] - centre[2]) * t];
   const toCentre = unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]);
   const b = slerpDir(toCentre, unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]), t);
