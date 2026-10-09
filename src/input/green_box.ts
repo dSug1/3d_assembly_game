@@ -12,6 +12,7 @@
  */
 import type { BodySpec, Triple } from "../core/game_structure";
 import { cross, length, qFromAxisAngle, qmul, sub, type Quat, type Vec3 } from "../core/vec";
+import type { GestureConfig } from "./gestureConfig";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -132,6 +133,21 @@ export const GREEN_ZOOM_MIN = 0.1;
 export const GREEN_ZOOM_MAX = 2;
 /** ⭐ The green piece's orbit is the rings as configured — never scaled by the zoom any more. */
 export const GREEN_PIECE_ORBIT_ZOOM = 1;
+
+/**
+ * ⭐⭐ prototype — **THE ORBITED PIECE'S OWN MINIMUM DISTANCE TO THE ORBIT CENTRE: ZERO** (the owner, 2026-10-09: *"we shall get the piece its
+ * own minimum. later on, we will implement collision like the other parts in the scene have … give the piece its minimum at zero. no
+ * slider"*). It rode the CAMERA's near-plane guard (`cameraRadiusMinM`, 0.15 m) — a floor that made it glide on a 0.15 m ball through the
+ * waist; now the rings alone decide (`Scene_1`'s waist: 0.09 m — a ring's radius is always positive, so never the centre itself), and
+ * collision will be the only thing to stop it near another part. ⚠ Until then it passes THROUGH the painting at the waist. The camera keeps
+ * its own minimum; the far end keeps the camera's maximum (`cameraRadiusMaxM`).
+ */
+export const PIECE_MIN_DISTANCE_M = 0;
+
+/** ⭐ The piece's distance from the orbit centre, held to its own range: [`PIECE_MIN_DISTANCE_M`, `cameraRadiusMaxM`]. */
+export function clampPieceRadiusM(radiusM: number, cfg: GestureConfig): number {
+  return Math.min(cfg.cameraRadiusMaxM, Math.max(PIECE_MIN_DISTANCE_M, radiusM));
+}
 
 export function clampGreenZoom(zoom: number, lower: number = GREEN_ZOOM_MIN): number {
   return Math.min(GREEN_ZOOM_MAX, Math.max(Math.max(GREEN_ZOOM_MIN, lower), Number.isFinite(zoom) ? zoom : 1));

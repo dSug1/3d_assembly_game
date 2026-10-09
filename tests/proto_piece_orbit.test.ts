@@ -42,7 +42,7 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { sceneConfig } from "../src/input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
 import { cameraOffset, springOrbit } from "../src/input/follow_camera";
-import { clampCameraRadiusM } from "../src/input/pinch";
+import { clampPieceRadiusM, PIECE_MIN_DISTANCE_M } from "../src/input/green_box";
 import { SCENE_1 } from "../src/content/scene_1";
 import type { Vec3 } from "../src/core/vec";
 
@@ -310,6 +310,24 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
   });
 
+  it("⭐⭐ the piece's OWN minimum distance to the orbit centre is ZERO — no longer the camera's 0.15 m (*\"give the piece its minimum at zero. no slider\"*)", () => {
+    const sc = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    expect(PIECE_MIN_DISTANCE_M).toBe(0);
+    expect(sc.cameraRadiusMinM).toBe(0.15); // the camera keeps its near-plane guard
+    expect(clampPieceRadiusM(0.09, sc)).toBe(0.09);
+    expect(clampPieceRadiusM(1e6, sc)).toBe(sc.cameraRadiusMaxM); // the far end as before
+    // through the waist the piece follows the rings: 0.09 m at its narrowest (it rode a 0.15 m ball)
+    let closest = 9;
+    for (let v = 0; v <= 1; v += 0.0005) closest = Math.min(closest, clampPieceRadiusM(orbitOffset(sc, 0, v, 1).radiusM, sc));
+    expect(closest).toBeCloseTo(sc.orbitMiddleRadiusM, 3);
+    expect(closest).toBeLessThan(sc.cameraRadiusMinM);
+    // every place the piece is placed or judged reads the piece's range — the frame, the way out, the keep-in-view zoom floor, the yaw gain
+    const w = code("render/green_box_wiring.ts");
+    expect(w).not.toMatch(/clampCameraRadiusM/);
+    expect(w.split("clampPieceRadiusM(").length - 1).toBe(4);
+    expect(code("render/tuning_menu.ts")).not.toMatch(/PIECE_MIN_DISTANCE|pieceMinDistance/); // no slider
+  });
+
   it("⭐⭐ the way out's offset is measured where the piece is DRAWN, so a fast dy no longer holds it off the gizmo (the owner, 2026-10-09: *\"do the fix\"*)", () => {
     // a straight dy push from the top ring into the sphere (1 m) and through the waist, frame by frame with the game's springs; the closest
     // the piece gets to the gizmo — measured from the spring's elevation (the fix) or the finger's (as it was)
@@ -319,7 +337,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const VPM = 0.02 * (1 / 0.7826) * 0.5; // v per mm of dy (the gain × the four-ring scale × the box's pitch gain)
     const ringAt = (v: number): Vec3 => {
       const o = orbitOffset(sc, 0, v, 1);
-      const k = clampCameraRadiusM(o.radiusM, sc) / o.radiusM;
+      const k = clampPieceRadiusM(o.radiusM, sc) / o.radiusM;
       return [o.offsetM[0] * k, o.offsetM[1] * k, o.offsetM[2] * k];
     };
     const closest = (speedMmS: number, fromDrawn: boolean): number => {

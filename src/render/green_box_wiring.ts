@@ -17,7 +17,7 @@ import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -29,7 +29,6 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
-import { clampCameraRadiusM } from "../input/pinch";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
@@ -315,7 +314,7 @@ function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   // ⭐ where the rings put the piece and the camera — at the elevation the piece is DRAWN at (the spring's), on a rebase
   const hv = rebase && st.boxSpring !== null ? st.boxSpring.at.v : st.orbit.elevation;
   const bo = orbitOffset(st.cfg, st.orbit.yaw, hv, GREEN_PIECE_ORBIT_ZOOM);
-  const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
+  const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
   const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
   const p = box.position;
@@ -547,7 +546,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.greenZoomMinKey = key;
     const ring = Array.from({ length: 33 }, (_, i) => {
       const o = orbitOffset(cfg, 0, i / 32, GREEN_PIECE_ORBIT_ZOOM);
-      return { distanceM: clampCameraRadiusM(o.radiusM, cfg), pitchRad: Math.atan2(o.offsetM[1], Math.hypot(o.offsetM[0], o.offsetM[2])) };
+      return { distanceM: clampPieceRadiusM(o.radiusM, cfg), pitchRad: Math.atan2(o.offsetM[1], Math.hypot(o.offsetM[0], o.offsetM[2])) };
     });
     st.greenZoomMin = minGreenZoom({
       yawOffsetRad: (cfg.cameraYawOffsetDeg * Math.PI) / 180,
@@ -570,8 +569,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxOrbit = st.boxSpring.at;
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
-  // ⛔ The same near-plane guard the rig's pose had (`applyCamera`): the clamp only shortens.
-  const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
+  // ⛔ The piece's own range (`clampPieceRadiusM`, 2026-10-09: its minimum ZERO, no longer the camera's near-plane guard): the clamp only shortens.
+  const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   // ⭐⭐ prototype (2026-10-06): orbiting AROUND THE PIECE (`piece_orbit.ts`), the piece is pushed along its frozen line through the
   // centre at the rings' distance (dy as fast as before; dx no longer moves it) — else on the rings as before
   // ⭐⭐ (2026-10-07) *"Smooth the movement of the camera at start and end of piece orbit"* — the travel the transitions read eases toward
@@ -720,7 +719,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       centre,
       ring: (y, v) => {
         const r = orbitOffset(cfg, y, v, GREEN_PIECE_ORBIT_ZOOM);
-        const kk = r.radiusM > 1e-9 ? clampCameraRadiusM(r.radiusM, cfg) / r.radiusM : 1;
+        const kk = r.radiusM > 1e-9 ? clampPieceRadiusM(r.radiusM, cfg) / r.radiusM : 1;
         return { offsetM: [r.offsetM[0] * kk, r.offsetM[1] * kk, r.offsetM[2] * kk], radiusM: r.radiusM * kk };
       },
       camOffset: (y, v, rel, g) => cameraOffset(cfg, { yaw: y, v }, rel, off, g),
