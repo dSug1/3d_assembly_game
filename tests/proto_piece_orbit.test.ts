@@ -41,7 +41,8 @@ import {
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { sceneConfig } from "../src/input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
-import { cameraOffset } from "../src/input/follow_camera";
+import { cameraOffset, springOrbit } from "../src/input/follow_camera";
+import { clampCameraRadiusM } from "../src/input/pinch";
 import { SCENE_1 } from "../src/content/scene_1";
 import type { Vec3 } from "../src/core/vec";
 
@@ -307,6 +308,60 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/);
     expect(w).toMatch(/const eo: Vec3 = st\.pieceEntry === null \? \[0, 0, 0\] : entryPieceOffset\(st\.pieceEntry, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
+  });
+
+  it("⭐⭐ the way out's offset is measured where the piece is DRAWN, so a fast dy no longer holds it off the gizmo (the owner, 2026-10-09: *\"do the fix\"*)", () => {
+    // a straight dy push from the top ring into the sphere (1 m) and through the waist, frame by frame with the game's springs; the closest
+    // the piece gets to the gizmo — measured from the spring's elevation (the fix) or the finger's (as it was)
+    const sc = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const RET = sc.pieceOrbitReturnMm;
+    const TAU = sc.boxSmoothMs / 2;
+    const VPM = 0.02 * (1 / 0.7826) * 0.5; // v per mm of dy (the gain × the four-ring scale × the box's pitch gain)
+    const ringAt = (v: number): Vec3 => {
+      const o = orbitOffset(sc, 0, v, 1);
+      const k = clampCameraRadiusM(o.radiusM, sc) / o.radiusM;
+      return [o.offsetM[0] * k, o.offsetM[1] * k, o.offsetM[2] * k];
+    };
+    const closest = (speedMmS: number, fromDrawn: boolean): number => {
+      const r0 = ringAt(1);
+      const dir = unit(r0);
+      let rigV = 1;
+      let spring = { at: { yaw: 0, v: 1, zoom: 1 }, velYaw: 0, velV: 0, velLnZoom: 0 };
+      let out = true;
+      let ret: ReturnType<typeof startCentreReturn> | null = null;
+      let min = 9;
+      const dt = 1000 / 60;
+      const mm = (speedMmS * dt) / 1000;
+      for (let i = 0; i < 20000 && spring.at.v > 0.3; i++) {
+        if (rigV > 0.3) rigV -= VPM * mm;
+        if (ret !== null) ret = advanceCentreReturn(ret, mm);
+        if (ret === null || fromDrawn) spring = springOrbit(spring, { yaw: 0, v: rigV, zoom: 1 }, dt, TAU);
+        else spring = { ...spring, at: { ...spring.at, v: rigV }, velV: 0 }; // as it was: the spring reset onto the finger
+        const sv = spring.at.v;
+        if (ret === null) {
+          const p: Vec3 = [dir[0] * len(ringAt(sv)), dir[1] * len(ringAt(sv)), dir[2] * len(ringAt(sv))];
+          out = outsideSphere(len(p), 1, out);
+          if (!out) {
+            const home = ringAt(fromDrawn ? sv : rigV);
+            ret = startCentreReturn(p, [0, 1, 0], [0, 0, -1], [1, 0, 0], sub(p, home));
+          }
+          continue;
+        }
+        ret = smoothTravel(ret, dt, TAU);
+        min = Math.min(min, len(add(ringAt(sv), returnPieceOffset(ret, RET))));
+      }
+      return min;
+    };
+    expect(closest(160, false)).toBeGreaterThan(0.3); // ⛔ as it was: a flick held the piece ~0.36 m off
+    expect(closest(160, true)).toBeLessThan(0.21); // ✅ now ~0.20 (the way out's own travel smoothing is what is left)
+    expect(closest(5, true)).toBeLessThan(0.16);
+    // the wiring: the spring re-based on the yaw only, its elevation kept; the offset from the spring's elevation
+    const w = code("render/green_box_wiring.ts");
+    const rb = w.slice(w.indexOf("function returnToCentreOrbit"), w.indexOf("function counterYawFrame"));
+    expect(rb).toMatch(/st\.boxSpring = sp === null \? null : \{ at: \{ yaw: st\.orbit\.yaw, v: sp\.at\.v, zoom: sp\.at\.zoom \}, velYaw: 0, velV: sp\.velV, velLnZoom: sp\.velLnZoom \};/);
+    expect(rb).toMatch(/const hv = rebase && st\.boxSpring !== null \? st\.boxSpring\.at\.v : st\.orbit\.elevation;\s*const bo = orbitOffset\(st\.cfg, st\.orbit\.yaw, hv, GREEN_PIECE_ORBIT_ZOOM\);/);
+    expect(rb).toMatch(/cameraOffset\(st\.cfg, \{ yaw: st\.orbit\.yaw, v: hv \}, rel,/);
+    expect(rb).not.toMatch(/st\.boxSpring = null;/);
   });
 
   it("⭐⭐⭐ THE SPHERE round the pink gizmo drives the ways in and out (*\"When the piece enters the sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10%\"*)", () => {

@@ -302,16 +302,22 @@ function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
     const p = box.position;
     st.orbit = new OrbitController(st.cfg, Math.atan2(p.z - c.z, p.x - c.x), st.orbit.elevation);
     st.orbitInertia.stop();
-    st.boxSpring = null;
+    // ⭐⭐ (2026-10-09, the owner: *"do the fix"* — a fast dy kept the piece far from the gizmo) the spring is re-based on the new YAW
+    // only: its ELEVATION goes on where the piece is drawn, still easing after the finger. ⛔ It was reset onto the finger's elevation and
+    // the gap measured from there, so the spring's trailing (larger the faster the push) was baked into the piece offset below — and
+    // faded over 30 mm of travel instead of the spring's ~60 ms
+    const sp = st.boxSpring;
+    st.boxSpring = sp === null ? null : { at: { yaw: st.orbit.yaw, v: sp.at.v, zoom: sp.at.zoom }, velYaw: 0, velV: sp.velV, velLnZoom: sp.velLnZoom };
     st.cameraOrbit = null;
     st.cameraLagged = null;
     st.orbitHeadingPrev = null;
   }
-  // ⭐ where the rings put the piece and the camera at the rig as it now is
-  const bo = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM);
+  // ⭐ where the rings put the piece and the camera — at the elevation the piece is DRAWN at (the spring's), on a rebase
+  const hv = rebase && st.boxSpring !== null ? st.boxSpring.at.v : st.orbit.elevation;
+  const bo = orbitOffset(st.cfg, st.orbit.yaw, hv, GREEN_PIECE_ORBIT_ZOOM);
   const k = bo.radiusM > 1e-9 ? clampCameraRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
-  const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: st.orbit.elevation }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
+  const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
   const p = box.position;
   const pieceOff: Vec3 = rebase ? [p.x - (c.x + rel[0]), p.y - (c.y + rel[1]), p.z - (c.z + rel[2])] : [0, 0, 0];
   // ⭐ seen from the PIECE as it is drawn (where the rings put it + its offset): the home camera and the camera as it is
