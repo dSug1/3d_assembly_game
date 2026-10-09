@@ -137,32 +137,9 @@ export function fourRingLayout(cfg: GestureConfig): {
   return { knots, radius, height, mRadius, mHeight, total: knots[3]! };
 }
 
-/**
- * ⭐⭐ prototype — **THE FOUR RINGS MADE THREE, THE 2nd AND 3rd MERGED** (the owner, 2026-10-09: *"Make a slider to toggle from 4 to 3 rings in
- * the menu camera orbit around center. When on 3 rings configuration, merge the 2nd and 3rd rings of the four ring configuration and make sure
- * the camera 2D curve is smoothed on the 3 rings as well as for the way in and way out"*). The merged ring is the two rings' MIDPOINT (radius
- * and height); the curve is the same monotone cubic (Fritsch–Carlson, C¹ — no corner at any ring, the waist's extremum AT the ring), each
- * outer segment keeping its ⅓ span in `s` (`total` ⅔), so a millimetre of dy runs through an outer segment as with four rings, the waist
- * simply gone. ⭐ Everything reads the curve through `orbitOffset` — the rig, the camera, the piece's distance, the way in and the way out.
- */
-export function mergedRingLayout(cfg: GestureConfig): ReturnType<typeof fourRingLayout> {
-  const radius = [cfg.orbitBottomRadiusM, (cfg.orbitLowerRadiusM + cfg.orbitMiddleRadiusM) / 2, cfg.orbitTopRadiusM];
-  const height = [cfg.orbitBottomHeightM, (cfg.orbitLowerHeightM + cfg.orbitMiddleHeightM) / 2, cfg.orbitTopHeightM];
-  // evenTangents are per unit of a [0, 1] span (h = ½); the spans here are ⅓, so × 1.5 (the Fritsch–Carlson caps scale with them)
-  const per = (ys: readonly number[]) => evenTangents(ys).map((m) => m * 1.5);
-  return { knots: [0, 1 / 3, 2 / 3], radius, height, mRadius: per(radius), mHeight: per(height), total: 2 / 3 };
-}
-
-/** ⭐ The layout the surface runs on: four rings, or three with the 2nd and 3rd merged; `null` — a scene of three rings as ever. */
-export function ringLayout(cfg: GestureConfig): ReturnType<typeof fourRingLayout> | null {
-  if (cfg.orbitLowerRingOn !== 1) return null;
-  return cfg.orbitRingCount === 3 ? mergedRingLayout(cfg) : fourRingLayout(cfg);
-}
-
-/** ⭐ prototype (green box): the factor on the drag's elevation gain — 1 ÷ the layout's `total`, 1 with a scene's three rings. */
+/** ⭐ prototype (green box): the factor on the drag's elevation gain — 1 ÷ the four-ring layout's `total`, 1 with three rings. */
 export function elevationGainScale(cfg: GestureConfig): number {
-  const l = ringLayout(cfg);
-  return l === null ? 1 : 1 / l.total;
+  return cfg.orbitLowerRingOn === 1 ? 1 / fourRingLayout(cfg).total : 1;
 }
 
 export function rigsOf(cfg: GestureConfig): {
@@ -243,8 +220,7 @@ export function orbitOffset(
   // ⭐ prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle when the scene gives one
   // (`orbitLowerRingOn`); else the three rings exactly as before.
   // ⭐ …the waist re-spanned so it has no plateau, the outer segments as they were (`fourRingLayout`).
-  // ⭐ (2026-10-09) or THREE, the 2nd and 3rd merged into one (`orbitRingCount` 3, `mergedRingLayout`)
-  const four = ringLayout(cfg);
+  const four = cfg.orbitLowerRingOn === 1 ? fourRingLayout(cfg) : null;
   const radius =
     (four === null
       ? throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped)
