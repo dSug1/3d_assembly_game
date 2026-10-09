@@ -536,7 +536,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // (exact, over 33 positions along the rings, the box's distance clamp included) is computed on a change only.
   const cfg = st.cfg;
   const aspect = st.canvas.clientHeight > 0 ? st.canvas.clientWidth / st.canvas.clientHeight : 1;
-  const key = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.greenKeepInViewMargin, cfg.cameraRadiusOffsetMm, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, st.camera.fov, aspect].join("|");
+  const key = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.greenKeepInViewMargin, cfg.cameraRadiusOffsetMm, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitRingCount, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, st.camera.fov, aspect].join("|");
   if (key !== st.greenZoomMinKey) {
     st.greenZoomMinKey = key;
     const ring = Array.from({ length: 33 }, (_, i) => {
@@ -705,7 +705,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by
   // the sliders values"* — the yaw gain around the piece (`referenceYawGain`), RECOMPUTED ONLY when a slider it reads changes (the
   // offsets, the radius offset, the boot zoom, the gap's %, the rings) — never from the live camera. Read at each orbit drag's start.
-  const gainKey = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.cameraRadiusOffsetMm, st.orbitStartZoom, cfg.pieceOrbitGapMinPct, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM].join("|");
+  const gainKey = [cfg.cameraYawOffsetDeg, cfg.cameraPitchOffsetDeg, cfg.cameraRadiusOffsetMm, st.orbitStartZoom, cfg.pieceOrbitGapMinPct, cfg.cameraRadiusMaxM, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.orbitLowerRingOn, cfg.orbitRingCount, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM].join("|");
   if (gainKey !== st.pieceYawGainKey) {
     st.pieceYawGainKey = gainKey;
     const pv = st.playVolume;

@@ -197,6 +197,8 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ prototype (green box), 2026-10-02: the rings named 1st … 4th from the TOP (the owner); the 3rd sits between the 2nd and the
             // 4th, on = 1 (a three-ring scene has none).
             tunable(st, "3rd ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
+            // ⭐ prototype, the owner 2026-10-09: *"Make a slider to toggle from 4 to 3 rings"* — 3: the 2nd and 3rd merged at their midpoint
+            tunable(st, "rings: 4 / 3 (3 = the 2nd and 3rd merged)", "orbitRingCount", 3, 4, 1),
             tunable(st, "3rd ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
             tunable(st, "3rd ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
             tunable(st, "4th ring (bottom) radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),

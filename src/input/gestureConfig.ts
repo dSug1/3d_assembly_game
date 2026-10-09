@@ -430,6 +430,11 @@ export interface GestureConfig {
    * evenly spaced in the elevation parameter (bottom 0, lower ⅓, middle ⅔, top 1). 0: the three rings as ever.
    */
   orbitLowerRingOn: number;
+  /**
+   * ⭐ Prototype (2026-10-09): with the fourth ring on, 4 — the four rings; 3 — the 2nd and 3rd MERGED into one at their midpoint
+   * (`mergedRingLayout`). The CAMERA ORBIT AROUND CENTER menu's toggle.
+   */
+  orbitRingCount: number;
   /** Metres. Radius of the LOWER ring (the fourth, between the bottom and the middle), when on. */
   orbitLowerRadiusM: number;
   /** Metres. Height of the LOWER ring, when on — between the bottom's and the middle's. */
@@ -936,6 +941,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMiddleHeightM: 0.1,
   // ⭐ prototype (green box), 2026-10-02: no fourth ring by default — a scene turns it on (`OrbitRig.lowerRadiusM`).
   orbitLowerRingOn: 0,
+  orbitRingCount: 4,
   orbitLowerRadiusM: 0.36,
   orbitLowerHeightM: -0.1,
   orbitTopRadiusM: 1.0,
@@ -1328,6 +1334,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // which no amount of gain tuning can fix because the geometry is wrong.
   if (cfg.orbitLowerRingOn !== 0 && cfg.orbitLowerRingOn !== 1) {
     throw new Error(`orbitLowerRingOn (${cfg.orbitLowerRingOn}) must be 0 or 1.`);
+  }
+  if (cfg.orbitRingCount !== 3 && cfg.orbitRingCount !== 4) {
+    throw new Error(`orbitRingCount (${cfg.orbitRingCount}) must be 3 or 4.`);
   }
   // ⭐ With the fourth ring on, it must sit BETWEEN the bottom and the middle too.
   if (
