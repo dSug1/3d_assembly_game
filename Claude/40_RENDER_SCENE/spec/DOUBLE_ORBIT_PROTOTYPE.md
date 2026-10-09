@@ -365,6 +365,14 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   **a millimetre of dy moves the outer segments exactly as before** (checked against an independent re-implementation of the even
   layout). The 3rd ring now sits at v = 0.426, the 2nd at 0.574. Speed ratio **4.24** (≈190 evenly spaced). ⚠ The cost, measured: the
   waist is short, so the camera's pitch sweeps −59° → +59° in ~12 mm of dy, **~16.5°/mm at its centre**.
+* ⛔⛔ **THREE RINGS, THE 2nd AND 3rd MERGED — TESTED AND REJECTED** (`1.0.59x-`, 2026-10-09; built `5ba6af2`, reverted `f1c0d9a`). The
+  owner: *"Make a slider to toggle from 4 to 3 rings in the menu camera orbit around center. When on 3 rings configuration, merge the 2nd
+  and 3rd rings of the four ring configuration and make sure the camera 2D curve is smoothed on the 3 rings as well as for the way in and
+  way out"*. Built as a CAMERA ORBIT AROUND CENTER slider (`orbitRingCount`, 4 / 3): the merged ring at the 2nd and 3rd rings' MIDPOINT
+  (`Scene_1` 0.09 m at 0), the same monotone cubic through bottom, merged, top (C¹, no corner), each outer segment keeping its ⅓ span so
+  the waist simply vanished (the elevation gain × 1.5); the way in and the way out read the same curve through `orbitOffset`. ⛔ **Rejected
+  on the device: *"transitions are too fast between rings"*.** ⭐ The four rings stay: the waist's own span (above) is what slows the
+  camera through the middle, and removing it leaves the outer segments meeting at one ring with nothing between them.
 * ⭐⭐ **A YAW CYCLE, THEN A PITCH CYCLE** (the owner, 2026-10-03: *"on start, order the logical faces as a chain of yaw turns starting
   from the face that points most against the pink normal and when the cycle of yaw turns has finished (once the initial face came
   back) switch to a cycle of pitch turns, and when the cycle of pitch turns has finished, go back to yaw turns, etc."*). Replaces the
@@ -606,3 +614,5 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐⭐ **The end and the way out** (§6): **75 %** of the distance at the piece orbit's start **AND a clear push step** (|dy| ≥ 2 |dx|, dy
   outside the deadband); the way out in **30 mm**, keeping its squared turn (*"I prefer the squared turn for the way out"*). ⛔ A forced
   way out (no room before the waist) was built and dropped.
+* ⛔ **Three rings (the 2nd and 3rd merged, a 4 / 3 slider) — tested and rejected** (`1.0.59x-`, 2026-10-09, *"transitions are too fast
+  between rings"*; `5ba6af2` reverted by `f1c0d9a`): the four rings stay → §6, after *"THE WAIST WITHOUT ITS PLATEAU"*.
