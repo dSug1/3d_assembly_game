@@ -12,6 +12,9 @@
 > **Builds on:** [`RESTING_FACE_ALIGNMENT.md`](RESTING_FACE_ALIGNMENT.md) (the tap that starts it) and the double orbit
 > ([`DOUBLE_ORBIT_PROTOTYPE.md`](DOUBLE_ORBIT_PROTOTYPE.md)).
 > **Scope:** the orbited piece (green or turquoise) and the camera, from the alignment tap until the orbit ends (§6).
+> ⭐⭐ **Since 2026-10-08 (`1.0.59x-Automated-approach-and-min-distance`) the WHITE SPHERE round the pink gizmo starts and ends it — the
+> tap only aligns** (§9); then the piece's own minimum distance, the way out's offset from where the piece is drawn, and (`1.0.59y-Zoom-added`)
+> the zoom outside the sphere (§9).
 
 ---
 
@@ -132,6 +135,9 @@ target); `c=` still names the orbit centre.
 
 ## 6. The end, and the way back to the orbit around the centre (`f8beaf5`, 2026-10-07)
 
+> ⛔ **The END RULE below is SUPERSEDED (2026-10-08, `1.0.59x-`)** — the x % and then the 75 % + a clear push step are deleted; the way out
+> starts when the piece ENTERS the white sphere (§9). ⭐ The way out itself stands: 30 mm, around the piece, its squared turn.
+
 The owner: *"Track the initial distance of the piece to pink gizmo when orbit around the piece is triggered. Automatically end it when
 the distance crosses initial distance * x% (make a slider in camera orbit around piece menu and set default to 50%). When it ends (in this
 case or at respawn), the camera orbit transition to center orbit is the same reverse as when it transitions from center orbit to piece
@@ -231,3 +237,41 @@ within its 12 mm and the orbit around the piece takes over without a jump; no er
 by the share left (all at the tap, none at the end); the orbit starting exactly where the way in ended; the view straight at a point on the
 gizmo–piece line, turned the eased share of the angle (option B); the push rule; the gain latched in the way in too — each failing on a
 mutant (the all-at-once switch, the plain slide of option A, a looser push rule).
+
+## 9. The white sphere, and what it brought (2026-10-08/09, `1.0.59x-` → `1.0.59y-`)
+
+The owner: *"Create a sphere radius x centered on pink gizmo, slider for x, default = 1m, translucent white. When the piece enters the
+sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10% on the
+crossing … The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it is now)."* — *"Way in
+at boot"*, *"±10 %: in at 0.9 m, out at 1.1 m"*.
+
+- **The sphere** (`sphereFrame`, after `pinkRingFrame` each frame): centred on the pink gizmo, radius `pieceSphereRadiusM` (CAMERA ORBIT
+  AROUND PIECE, 0–3 m, **1 m**; 0 = none), white at α 0.08 seen from both sides (the camera is often inside it), never picked.
+  **Inside below 0.9 r → the WAY OUT; outside beyond 1.1 r → the WAY IN** (`outsideSphere`, `SPHERE_HYSTERESIS` 0.1); at boot and after
+  a respawn the plain radius decides (`Scene_1` boots at 3 m: a way in). **The resting-face tap only aligns.**
+- **Room, as advised**: from 0.9 m about 12 mm of dy are left before the waist, so a 30 mm way out may still run past it (harmless); past the
+  waist the piece can leave at 1.1 m on the lower half — a new way in; the way in has ~25 mm of room outward. ⚠ A radius ≥ **2.87 m** would
+  let a 30 mm way out always finish before the floor — but then 1.1 r > 3 m, the rings' ends, and the piece could never leave again.
+- **No jump at the crossings** (`f62a346`; *"I want the position and quaternion to remain at the entrance and exit of the sphere even if the
+  resting face is not aligned"*): the spin with the orbit reads the piece's REAL heading round the centre (`headingAbout`) — the way
+  out's rebase of the yaw had spun an unaligned piece by 3× its drift in one frame; and a way in that cuts a way out short TAKES OVER its
+  offset still left and fades it over its own 12 mm (`entryPieceOffset`) — it was dropped in one frame.
+- **No spin while the sphere is on** (*"when the piece is not aligned and inside the sphere, the piece rotates with the yaw orbit. remove
+  that (I want the piece to behave the same as when resting face is aligned)"*): `counterYawFrame` does nothing while `pieceSphereRadiusM`
+  > 0, inside the sphere or out; a sphere at 0 resumes it without a jump.
+- **The way out's offset is measured where the piece is DRAWN** (`44327fc`, *"do the fix"*): the rebase keeps the box spring's elevation
+  (re-based on the yaw only) and measures from there — it measured from the FINGER's, so a fast dy baked the spring's trailing into an
+  offset faded over 30 mm. The closest approach coming from outside, sphere 1 m: **5 mm/s 0.168 → 0.155 m, 40 mm/s 0.203 → 0.166 m,
+  160 mm/s 0.357 → 0.197 m**; what is left is the way out's own travel smoothing (§6bis — kept: removing it brings the jolts back).
+- **The piece's OWN minimum distance, ZERO** (`0f42faf`, *"give the piece its minimum at zero. no slider"*): `PIECE_MIN_DISTANCE_M`,
+  `clampPieceRadiusM`, read at the four places that place or judge the piece. It rode the CAMERA's near-plane guard (`cameraRadiusMinM`,
+  0.15 m) — a 0.15 m ball through the waist; now the rings decide (`Scene_1`'s waist **0.09 m**), the camera keeping its 0.15 m.
+  ⚠ Until collision is built the piece passes THROUGH the painting at the waist. Headless: closest 0.090 m from inside, ~0.13 m from outside.
+- **The zoom outside the sphere** (`6b5e8b7`, *"why the zoom only works if the piece is inside the white sphere?"* → *"build it"*): the way
+  in and the orbit around the piece multiply the camera's distance from the piece by the zoom now over the zoom at their start
+  (`zoomScale`, `PieceEntry.zoom0`, `PieceOrbit.zoom0`) — they read `gap0M` alone. Headless, outside: **1.263 m → 0.799 m** (zoom 0.633)
+  **→ 1.996 m** (1.58); the hand-over from the way in keeps the distance at any zoom (vectored at 3).
+- ⛔ Three rings (the 2nd and 3rd merged) were tried and rejected the same day → [`DOUBLE_ORBIT_PROTOTYPE.md`](DOUBLE_ORBIT_PROTOTYPE.md) §6.
+
+Vectors: `tests/proto_piece_orbit.test.ts` (the hysteresis, the wiring, no jump at either crossing, the drawn-elevation offset at 5 and
+160 mm/s, the zero minimum, the zoom) — each failing on the old code.

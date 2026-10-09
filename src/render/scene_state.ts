@@ -443,6 +443,10 @@ export interface SceneState {
   orbitHeadingPrev: number | null;
   /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
   restAligned: boolean;
+  /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): what the last alignment aligned TO — its target face (`key`, `alignFaceOf`'s label; "" with
+   * none) and the reference the edge roll lines the edges up with (`ref`: that face's long axis, world; `null` — the screen's
+   * horizontal); the stop last reached (`stop`, of `of`; −1 before the first roll). `null` until the first alignment; a respawn clears it. */
+  restRoll: { readonly key: string; readonly ref: Vec3 | null; readonly stop: number; readonly of: number } | null;
   /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
    * respawn. `null`: the orbit around the centre as before. */
   pieceOrbit: PieceOrbit | null;

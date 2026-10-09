@@ -11,8 +11,8 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains } from "./green_box_wiring";
-import { isOrbitTap, orbitTapCount, secondMoved } from "../input/orbit_tap";
+import { alignRestingFace, greenDragGains, restTargetKey, rollRestingFace } from "./green_box_wiring";
+import { isOrbitTap, orbitTapCount, secondMoved, tapAction } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -1267,13 +1267,16 @@ export function orbitTapped(st: SceneState, now: number): void {
   // ⭐ the same input, two actions — each called on its own (neither reads the other's result)
   // ⭐⭐ (2026-10-08, the owner: *"The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it
   // is now)"*) the tap ALIGNS only; the orbit around the piece starts and ends at the sphere round the gizmo (`sphereFrame`)
-  const aligned = r.aligns && alignRestingFace(st, now);
+  // ⭐⭐ (2026-10-09, `1.0.59z-`) a tap ALIGNS, or — already aligned to the same face — ROLLS to the next edge (`tapAction`), the orbit
+  // finger lifted in between or not; one episode either way
+  const action = tapAction(st.restAligned, st.restRoll !== null && st.restRoll.key === restTargetKey(st));
+  const aligned = action === "ROLL" ? rollRestingFace(st, now) : alignRestingFace(st, now);
   if (aligned) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
     // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`)
-  } else {
-    st.lastVerdict = `orbit: tap ${ot.count} — counted (nothing defined yet)`;
+  } else if (action === "ALIGN") {
+    st.lastVerdict = `orbit: tap ${ot.count} — counted (no piece to align)`;
   }
   st.hudDirty = true;
 }

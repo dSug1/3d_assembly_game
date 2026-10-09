@@ -202,6 +202,14 @@ axisDegenerateTol    0.05 (relative eigenvalue gap)
 | **boot** | the orbited pieces (green, turquoise) | at their creation (`createGreenBox`) |
 | **unseated / leaves its goal** | a part that was seated last frame and is not any more | ⭐ AS BUILT: the seated set (on a Pioneer, or placed in its goal) is DIFFED every frame, after the goal commit (`restingFaceFrame`) — one funnel for EVERY path that frees a part: the unsnap, an unalign, a dissolve, and an UNDO that restores the links or the goal wholesale. ⛔ The first plan (a call in `unseatWorld`) would have missed the undo. |
 
+⭐⭐ **2026-10-09 (`1.0.59y-`, the owner: *"add the resting face to the object model so that each object in the scene has a resting face
+identified and tracked"*)**: **EVERY object at boot** — seated, placed in its goal and FROZEN too (§13.1–§13.2 reversed) — and the answer
+**RECORDED IN THE OBJECT MODEL** (`SceneObject.restingFace`: its face ids, its area centroid, its outward normal, why; `setRestingFace`,
+`restingFaceRecord`), so it is TRACKED with the body: `restingFaceWorld` reads it in the world at any moment. An unseat still chooses
+again. The orbited pieces join the model with theirs (`SPAWN`, `registerOrbitPieces`). ⛔ Nothing is highlighted but the orbited pieces'
+(*"no need to highlight the resting faces of any part, excep the green and turquoise pieces"*). ⚠ What the model holds is the face, not its
+long axis, short axis or edges (the orbited pieces keep those outside it).
+
 ⭐ The boot pass waits for the goal's BASELINE commit (its first frame): a part placed in its goal at boot is seated, so it must be known
 first. In `Scene_1` that leaves the 5 parts that boot out of the goal (36 of 41 are placed).
 
@@ -227,7 +235,10 @@ HUD — the held part's resting face, `M` and axis; the orbited piece's on the g
 ## 13. Decisions on the scope (the owner, 2026-10-04)
 
 1. **Frozen bodies** (`Scene_1`'s floor) — **excluded** (*"agreed"*): a resting face for the table itself is meaningless.
-2. **A part placed in its goal IS a seated part** (*"part placed in its goal: for me, this is a seated part"*) — **excluded** at boot, and
+   ⛔ **Reversed 2026-10-09** (*"I think it's useful to add resting face also to frozen objects"*): asked once at boot (it never moves and is
+   never seated) — the face of a frozen body others stand on.
+2. ⛔ **Reversed 2026-10-09 for the BOOT pass** (*"each object in the scene has a resting face"*): every part is asked at boot; the unseat
+   below still chooses again. — **A part placed in its goal IS a seated part** (*"part placed in its goal: for me, this is a seated part"*) — **excluded** at boot, and
    it gets its resting face at the moment it **leaves** its goal (placed → not placed), as an unseated part does (§11).
    ⚠ With `lockPlacedPieces` on (the default), a placed part is locked and cannot leave — that moment then never comes, except by an
    undo that takes the placing back, which must reach the same call.

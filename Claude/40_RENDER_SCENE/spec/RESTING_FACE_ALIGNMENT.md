@@ -7,7 +7,9 @@
 > **Builds on:** [`RESTING_FACE.md`](RESTING_FACE.md) (the selector: which face, and its group).
 > **Scope:** the orbited piece — the green frustum or the turquoise prism, whichever the SCENE switch names.
 > ⭐ **Since 2026-10-06 the same first tap also starts THE ORBIT AROUND THE PIECE — an action of its own since 2026-10-07 (`1.0.59v-`)**
-> → [`PIECE_ORBIT.md`](PIECE_ORBIT.md) §1bis.
+> → [`PIECE_ORBIT.md`](PIECE_ORBIT.md) §1bis. ⛔ **Since 2026-10-08 the tap only ALIGNS** — the white sphere starts and ends the orbit
+> around the piece (`PIECE_ORBIT.md` §9).
+> ⭐⭐ **Since 2026-10-09 (`1.0.59z-Rotation-of-resting-face`) a tap on a piece already aligned ROLLS it to the next edge** (§11).
 
 ---
 
@@ -25,10 +27,11 @@ does not zoom.
 
 | tap | what it does |
 |---|---|
-| **first** | the **resting-face alignment** (§2) |
-| second, third, … | counted, nothing else — ⏳ to be defined later |
+| the piece **not aligned** to the face it would align to now — the first tap, after a respawn, or the pink face has changed since | the **resting-face alignment** (§2) |
+| the piece **aligned to that same face** | the **ROLL to the next edge** (§11) |
 
-**The counter resets when the first touch lifts.**
+⛔ Was (until 2026-10-09): the first tap aligned, the later ones were only counted. **The counter resets when the first touch lifts** — it is
+the HUD's only now (`taps N`): lifting and pressing the orbit finger again between taps changes nothing (`tapAction`).
 
 ---
 
@@ -201,3 +204,41 @@ a screenshot the green piece stands with its bottom turned to the painting's blu
 axes' end points; anti-parallel to a vertical pink face from the tumbled boot pose; the floor when there is no pink face; the most
 parallel pair and the ends' tie-break; a hexagon end never turned past 30°; the turn never past 90°), each failing on a mutant
 (gravity instead of the pink face, the farthest ends, no fold, the largest turn).
+
+## 11. The roll to the next edge (2026-10-09, `1.0.59z-Rotation-of-resting-face`)
+
+The owner: *"if (the first touch / left click is held or tapped /clicked again) and second touch on piece / right click is tapped again :
+rotation of the piece around the normal of the resting face so the next edge of the resting face takes the alignment with the pink face
+long axis … in the green piece, that would be the short axis aligning with the pink face long axis, in the turquoise piece, that would be
+the next long axis. If there is no pink face, this shall be defined. Propose something. The idea that a series of second touch/right click
+make scroll the edges so there is a snapped roll around the normal of the resting face to choose which edge/axis aligns with the pink face
+long axis."* — the proposal agreed: *"Build what you proposed."*
+
+- **When** (`tapAction`, `input/orbit_tap.ts`): a tap ROLLS when the piece is aligned AND to the same target face as now (`restRoll.key`
+  against `restTargetKey`); else it ALIGNS (§2). The alignment records what it aligned to: the face, and the long axis it paired
+  (`st.restRoll`; a respawn clears it).
+- **The stops** (`edgeStops`, `core/resting_face.ts`): ONE PER EDGE of the resting face, in order round it — the in-plane line from the
+  face's centre out through that edge, at right angles to it. At stop *k* that line is parallel to the reference.
+
+  | face | edges | roll per tap | the stops |
+  |---|---|---|---|
+  | green (base 103.5 × 45 mm) | 4 | 90° | long axis ∥ → **short axis ∥** → long axis reversed → short axis reversed → back |
+  | turquoise (hexagon) | 6 | 60° | one across-flats long axis to the next, each both ways |
+  | any polygon | n | uneven | each edge in turn |
+
+- **The roll** (`nextEdgeRoll`): about the resting face's normal, the smallest turn **CLOCKWISE AS SEEN FROM THE CAMERA** to the next stop —
+  the stop already reached is passed over, so a tap always moves; past the last edge, back to the first. From the pose the alignment or the
+  last roll left — quick taps ADD UP. ⛔⛔ **The scene is LEFT-HANDED** (Babylon's default: the screen's right is up × forward), so the turn
+  is positive about the normal pointing TOWARD the camera; the first build used the axis pointing away and would have turned
+  counter-clockwise — caught by a check through Babylon's own projection, now a vector (four cameras, one below).
+- **The reference**: the long axis of the face it was aligned to, the one the alignment paired — the pink face's, or with no pink face the
+  floor's top (`alignFaceOf`; `Scene_1`'s floor is square: the axis the alignment chose). **No long axis, or no target face at all: the
+  screen's horizontal** laid on the face (the camera's right), so the stops are relative to the view.
+- **Feel and score**: ONE turn eased over `REST_ALIGN_MS` (125 ms), rotation only — the piece stays where the orbit puts it; **1 episode**
+  per roll, as the alignment. HUD: `aligned … · edge k/n`, the verdict *"orbit: tap — roll 90°: edge 2 / 4 ∥ the pink long axis"*.
+
+**Checked headless** (`Scene_1`, an orbit finger + second-finger taps aimed at the piece; the orbit finger lifted and pressed again before
+the fourth): green — tap 1 aligned, then **90°** each, edge 2 → 3 → 4 → 1, the fifth tap landing EXACTLY on the aligned pose; turquoise —
+aligned, then **60°** each, edge to edge; no error. Vectors: `tests/proto_resting_roll.test.ts` (the stops of the rectangle and the hexagon;
+green 90° to its short axis and back in four; turquoise 60° and back in six; the sense flipping with a camera below; clockwise through
+Babylon's projection; a tap always moving; ALIGN vs ROLL; the wiring) — the old turn direction fails two.

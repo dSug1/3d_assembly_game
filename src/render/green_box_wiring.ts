@@ -12,7 +12,7 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -238,17 +238,73 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
   // axes parallel (the most parallel pair; a tie to the closest ends) by a turn about its normal. No face at all: the pose as it is.
   const target = alignFaceOf(st, [pos.x, pos.y, pos.z]);
   let base: Quat = q;
+  let paired = -1;
   if (target === null) {
     st.lastVerdict = "orbit: tap 1 — nothing to align to (no pink face, no frozen body)";
   } else {
     const r = restAlignToFace(q, [pos.x, pos.y, pos.z], p.restingFace.normal, p.restingLong, target.normal, target.long);
     base = r.q;
+    paired = r.pinkAxis;
     st.lastVerdict =
       `orbit: tap 1 — aligned: the resting face against ${target.label}` +
       (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
   st.restAlign = { from: q, t0: now, base };
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
+  // ⭐ (2026-10-09) what it aligned TO — the next tap on the same target ROLLS to the next edge (`rollRestingFace`) against that face's
+  // long axis (the one paired), or the screen's horizontal with none
+  st.restRoll = {
+    key: target?.label ?? "",
+    ref: target !== null && paired >= 0 ? target.long.axes[paired]! : null,
+    stop: -1,
+    of: edgeStops(p.restingEdges, p.restingFace.normal).length,
+  };
+  st.hudDirty = true;
+  return true;
+}
+
+/** ⭐ The face a tap would align the orbited piece to now (`alignFaceOf`'s label; "" with none) — compared with the last alignment's. */
+export function restTargetKey(st: SceneState): string {
+  const b = st.greenBox;
+  if (b === null) return "";
+  return alignFaceOf(st, [b.position.x, b.position.y, b.position.z])?.label ?? "";
+}
+
+/**
+ * ⭐⭐⭐ prototype — **THE ROLL TO THE NEXT EDGE** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"rotation of the piece around
+ * the normal of the resting face so the next edge of the resting face takes the alignment with the pink face long axis … a series of second
+ * touch/right click make scroll the edges so there is a snapped roll around the normal of the resting face"* → the proposal agreed: *"Build
+ * what you proposed"*). A tap on a piece already aligned to the same face (`tapAction`): the piece turns about its resting face's normal,
+ * CLOCKWISE AS SEEN FROM THE CAMERA, to the next EDGE STOP (`edgeStops`, `nextEdgeRoll`) — that edge's outward line parallel to the
+ * reference (the paired long axis of the face it was aligned to, else the screen's horizontal laid on the face). Green: long axis →
+ * short axis → … (4 stops, 90°); turquoise: one long axis to the next (6 stops, 60°). One turn eased over `REST_ALIGN_MS`, rotation
+ * only; quick taps add up (each from the stop the last one was heading for). `false` with nothing to roll.
+ */
+export function rollRestingFace(st: SceneState, now: number): boolean {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  const rr = st.restRoll;
+  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return false;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const shown: Quat = [r.w, r.x, r.y, r.z];
+  const from = st.restAlign?.base ?? shown; // ⭐ quick taps add up: from where the last one was heading
+  const cam = st.camera.position;
+  const tg = st.camera.getTarget();
+  const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
+  let ref = rr.ref;
+  if (ref === null) {
+    const right = st.camera.getDirection(new Vector3(1, 0, 0));
+    ref = [right.x, right.y, right.z];
+  }
+  const stops = edgeStops(p.restingEdges, p.restingFace.normal);
+  const roll = nextEdgeRoll(from, p.restingFace.normal, stops, ref, view);
+  if (roll === null) {
+    st.lastVerdict = "orbit: tap — nothing to roll (no edge, or the reference along the normal)";
+    st.hudDirty = true;
+    return false;
+  }
+  st.restAlign = { from: shown, t0: now, base: roll.q };
+  st.restRoll = { ...rr, stop: roll.stop, of: stops.length };
+  st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: edge ${roll.stop + 1} / ${stops.length} ∥ ${rr.ref === null ? "the screen's horizontal" : "the pink long axis"}`;
   st.hudDirty = true;
   return true;
 }
@@ -403,6 +459,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.restAlign = null;
     st.orbitHeadingPrev = null;
     st.restAligned = false;
+    st.restRoll = null;
     st.pieceOrbit = null;
     st.pieceEntry = null;
     st.centreReturn = null;

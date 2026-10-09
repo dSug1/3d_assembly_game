@@ -544,6 +544,63 @@ export function faceEdges(points: readonly Vec3[], normal: Vec3): Edge[] {
   return back.map((a, i) => [a, back[(i + 1) % back.length]!] as Edge);
 }
 
+/**
+ * ⭐⭐ prototype — **THE EDGE STOPS OF A FACE** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"a series of second
+ * touch/right click make scroll the edges so there is a snapped roll around the normal of the resting face to choose which edge/axis
+ * aligns with the pink face long axis"*). One per edge, in the edges' order round the face (`faceEdges`): the in-plane direction from the
+ * face's centre OUT through that edge, at right angles to it — the face's frame. A stop is reached when its direction is parallel to
+ * the reference (the pink face's long axis). ⭐ A rectangle gives its long axis, its short axis and both again reversed (4 stops, 90°
+ * apart); a regular hexagon its three across-flats axes, each both ways (6, 60°); any polygon one per edge.
+ */
+export function edgeStops(edges: readonly Edge[], normal: Vec3): Vec3[] {
+  const n = normalize(normal);
+  if (n === null || edges.length === 0) return [];
+  let c: Vec3 = [0, 0, 0];
+  for (const e of edges) c = add(c, e[0]);
+  c = scale(c, 1 / edges.length);
+  const out: Vec3[] = [];
+  for (const [a, b] of edges) {
+    const d = normalize(cross(sub(b, a), n));
+    if (d === null) continue;
+    const mid = scale(add(a, b), 0.5);
+    out.push(dot(d, sub(mid, c)) < 0 ? scale(d, -1) : d);
+  }
+  return out;
+}
+
+/**
+ * ⭐⭐ prototype — **THE ROLL TO THE NEXT EDGE** (the same request): from the pose `q`, the SMALLEST turn about the resting face's normal,
+ * CLOCKWISE AS SEEN FROM THE CAMERA (`view`: the camera's look direction), that brings the next edge stop (`edgeStops`, the face's
+ * frame) parallel to `ref` (world: the pink face's long axis, or the screen's horizontal) — the stop already there (within 1e-6 rad) is
+ * passed over, so a tap always moves on; past the last edge it comes back to the first. `null` with no stop, or `ref` along the normal.
+ */
+export function nextEdgeRoll(
+  q: Quat,
+  restNormal: Vec3,
+  stops: readonly Vec3[],
+  ref: Vec3,
+  view: Vec3,
+): { readonly q: Quat; readonly stop: number; readonly angleRad: number } | null {
+  const n = normalize(qRotate(q, restNormal));
+  if (n === null || stops.length === 0) return null;
+  // ⭐ the axis pointing TOWARD the camera: ⛔ the scene is LEFT-HANDED (Babylon's default — the screen's right is up × forward), so a
+  // positive turn about it reads CLOCKWISE on the screen (about the axis pointing away it would read counter-clockwise)
+  const a: Vec3 = dot(n, view) > 0 ? scale(n, -1) : n;
+  const r = normalize(sub(ref, scale(a, dot(ref, a))));
+  if (r === null) return null;
+  let best: { stop: number; angleRad: number } | null = null;
+  stops.forEach((s0, k) => {
+    const s = normalize(sub(qRotate(q, s0), scale(a, dot(qRotate(q, s0), a))));
+    if (s === null) return;
+    let phi = Math.atan2(dot(a, cross(s, r)), dot(s, r));
+    if (phi <= 1e-6) phi += 2 * Math.PI;
+    if (best === null || phi < best.angleRad) best = { stop: k, angleRad: phi };
+  });
+  if (best === null) return null;
+  const b: { stop: number; angleRad: number } = best;
+  return { q: qmul(qFromAxisAngle(a, b.angleRad), q), stop: b.stop, angleRad: b.angleRad };
+}
+
 /** ⭐ The distance from a point to a segment. */
 export function segmentDistance(p: Vec3, e: Edge): number {
   const ab = sub(e[1], e[0]);

@@ -8,8 +8,9 @@
  *   orbit finger still down; otherwise nothing. ⛔ It never zooms, and the first finger keeps orbiting meanwhile.
  * ⭐ The mouse's right button, with the left one orbiting, is judged on TIME only — the cursor moves with the orbit, and Unity applies
  * no radius to a button.
- * ⭐ The taps are COUNTED while the orbit finger is down (reset when it lifts): the FIRST is the resting-face alignment, the later
- * ones do nothing yet.
+ * ⭐ The taps are COUNTED while the orbit finger is down (reset when it lifts) — for the HUD. ⭐⭐ (2026-10-09, `tapAction`) a tap ALIGNS the
+ * resting face, or — the piece already aligned to the same target face — ROLLS it to the next edge, whether or not the orbit finger
+ * lifted in between.
  *
  * ⛔ ENGINE-FREE.
  */
@@ -24,7 +25,18 @@ export function isOrbitTap(pressMs: number, releaseMs: number, tapMaxMs: number,
   return orbitStillDown && !moved && releaseMs >= pressMs && releaseMs - pressMs <= tapMaxMs;
 }
 
-/** ⭐ One more tap counted: the new count, and whether this tap ALIGNS (the first only — the next ones are to be defined). */
-export function orbitTapCount(count: number): { readonly count: number; readonly aligns: boolean } {
-  return { count: count + 1, aligns: count === 0 };
+/** ⭐ One more tap counted (the HUD's `taps N`). */
+export function orbitTapCount(count: number): { readonly count: number } {
+  return { count: count + 1 };
+}
+
+/**
+ * ⭐⭐ prototype — **WHAT A TAP DOES** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"if (the first touch / left click is
+ * held or tapped /clicked again) and second touch on piece / right click is tapped again : rotation of the piece around the normal of the
+ * resting face so the next edge of the resting face takes the alignment with the pink face long axis"*): `ROLL` when the piece is
+ * already aligned AND to the SAME target face as now (`sameTarget`); else `ALIGN` — the first tap, after a respawn, or when the pink
+ * face has changed since. ⛔ The tap count plays no part: lifting and pressing the orbit finger again in between changes nothing.
+ */
+export function tapAction(aligned: boolean, sameTarget: boolean): "ALIGN" | "ROLL" {
+  return aligned && sameTarget ? "ROLL" : "ALIGN";
 }

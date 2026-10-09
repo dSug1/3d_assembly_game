@@ -616,3 +616,17 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
   way out (no room before the waist) was built and dropped.
 * ⛔ **Three rings (the 2nd and 3rd merged, a 4 / 3 slider) — tested and rejected** (`1.0.59x-`, 2026-10-09, *"transitions are too fast
   between rings"*; `5ba6af2` reverted by `f1c0d9a`): the four rings stay → §6, after *"THE WAIST WITHOUT ITS PLATEAU"*.
+
+⭐ **2026-10-08/09** — `1.0.59x-` renamed **`1.0.59x-Automated-approach-and-min-distance`**, then **`1.0.59y-Zoom-added`**, then
+**`1.0.59z-Rotation-of-resting-face`**:
+
+* ⭐⭐⭐ **The WHITE SPHERE round the pink gizmo drives the ways in and out** — inside below 0.9 r the way out, outside beyond 1.1 r the way in
+  (`pieceSphereRadiusM`, 1 m); the tap only aligns; the 75 % + push end is deleted → `PIECE_ORBIT.md` §9.
+* ⭐⭐ **No jump at either crossing, aligned or not; no spin with the orbit while the sphere is on; the way out's offset measured where the
+  piece is drawn (a flick no longer holds it off); the piece's own minimum distance ZERO** (it rode the camera's 0.15 m) → `PIECE_ORBIT.md` §9.
+* ⭐⭐ **Every object has a RESTING FACE in the OBJECT MODEL**, tracked with the body — frozen and seated parts included; **the green and
+  turquoise pieces are IN the model** (`orbited`: synced from the orbit, nobody's obstacle, no action, empty space to a touch) →
+  `RESTING_FACE.md` §11.
+* ⭐ **The zoom acts outside the sphere** (`zoomScale`) → `PIECE_ORBIT.md` §9.
+* ⭐⭐ **A tap on an aligned piece ROLLS it to the next edge** — clockwise on the screen, 90° on the green piece (long axis → short axis),
+  60° on the turquoise one → `RESTING_FACE_ALIGNMENT.md` §11.
