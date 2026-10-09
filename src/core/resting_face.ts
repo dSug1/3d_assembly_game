@@ -382,6 +382,19 @@ export function chooseInGroup(group: RestingGroup, q: Quat, down: Vec3 = [0, -1,
 }
 
 /**
+ * ⭐⭐ prototype — **A TAPPED FACE AS THE RESTING FACE** (2026-10-09; the owner: *"when a face of the green piece or the turquoise piece is left
+ * button tapped or first touch tapped, the hit face becomes the resting face and it aligns"*): the candidate holding the face
+ * `faceIndex` (of the topology the selector was given) — its merged support and metrics as the rule computed them, among the groups or
+ * the refused — or, for a face the rule discarded (not a support: the centre of mass outside it), that face alone with its outward
+ * `normal`, its metrics unknown (NaN).
+ */
+export function candidateForFace(result: RestingResult, faceIndex: number, normal: Vec3): RestingCandidate {
+  for (const g of result.groups) for (const m of g.members) if (m.faces.includes(faceIndex)) return m;
+  for (const m of result.rejected) if (m.faces.includes(faceIndex)) return m;
+  return { faces: [faceIndex], normal, h: NaN, dMin: NaN, dMax: NaN, thetaDeg: NaN, mirrors: NaN, S: NaN, C: NaN, I: NaN, score: NaN };
+}
+
+/**
  * ⭐⭐ **A CHOSEN CANDIDATE AS THE OBJECT MODEL HOLDS IT** (2026-10-09, `object_model.ts`'s `RestingFace`): the logical faces it merges
  * — by the ids of `faces` (the same list the selector was given) — its AREA centroid over their triangles (a merged pair weighed by
  * area, not averaged), and its outward normal; the part's own frame. `null` when an index has no face.

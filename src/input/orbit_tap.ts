@@ -31,6 +31,17 @@ export function orbitTapCount(count: number): { readonly count: number } {
 }
 
 /**
+ * ⭐⭐ prototype — **A TAP ON THE ORBITED PIECE ITSELF** (2026-10-09; the owner: *"when a face of the green piece or the turquoise piece is
+ * left button tapped or first touch tapped, the hit face becomes the resting face and it aligns. the roll to the next edge is then
+ * implemented on this new resting face"*): the FIRST touch (or the left button) pressed on the orbited piece — empty space to the router,
+ * so its drag orbits — makes the face it hit the resting face when it is released as a TAP (`isTapRelease`, §1.3's) with no other
+ * pointer down; outside the edge band. ⛔ Consumed: it is not one of a camera-reset double tap.
+ */
+export function restingFaceTap(onOrbitedPiece: boolean, firstTouch: boolean, inBand: boolean): boolean {
+  return onOrbitedPiece && firstTouch && !inBand;
+}
+
+/**
  * ⭐⭐ prototype — **WHAT A TAP DOES** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"if (the first touch / left click is
  * held or tapped /clicked again) and second touch on piece / right click is tapped again : rotation of the piece around the normal of the
  * resting face so the next edge of the resting face takes the alignment with the pink face long axis"*): `ROLL` when the piece is

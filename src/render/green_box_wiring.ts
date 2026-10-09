@@ -12,14 +12,14 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
-import { faceWorld, makeWorld, setLocalPlacement, worldPlacementOf, type ObjectId, type SceneObject } from "../core/object_model";
+import { faceWorld, makeWorld, setLocalPlacement, setRestingFace, worldPlacementOf, type ObjectId, type SceneObject } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
@@ -76,6 +76,22 @@ function restingOf(
   const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
   if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] } };
+  const parts = restingParts(st, m, topo, restingFace);
+  restingDepth(st, m);
+  return { resting, restingFace, ...parts };
+}
+
+/**
+ * ⭐ What a resting face carries on the orbited piece — its long axes, its edges and its PINK fill (with its x-ray twin) — for the face
+ * `restingFace` of the piece's topology. Built at creation, and again when a tap on the piece makes another face the resting face
+ * (`restOnTappedFace`, 2026-10-09).
+ */
+function restingParts(
+  st: SceneState,
+  m: Mesh,
+  topo: NonNullable<ReturnType<typeof topologyFromMesh>>,
+  restingFace: RestingCandidate,
+): { restingFill: Mesh; restingAxes: readonly Vec3[]; restingAxesFallback: boolean; restingEdges: readonly Edge[]; restingLong: LongAxes } {
   // ⭐ the resting face's LONG AXES (`faceLongAxes`, `RESTING_FACE_ALIGNMENT.md` §3) — edge to edge, perpendicular to both edges
   const facePoints = [...new Set(restingFace.faces.flatMap((f) => topo.faces[f]!.triangles))].map((i) => topo.positions[i]!);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
@@ -110,7 +126,7 @@ function restingOf(
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
   restingXray(st, m, fill, data);
-  return { resting, restingFace, restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends } };
+  return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends } };
 }
 
 /**
@@ -128,10 +144,6 @@ function restingOf(
  * with culled back faces never needs.
  */
 function restingXray(st: SceneState, m: Mesh, fill: Mesh, data: VertexData): void {
-  const own = m.material as StandardMaterial;
-  own.transparencyMode = Material.MATERIAL_ALPHABLEND; // ⭐ into the transparent pass, after every opaque body (alpha 1: unchanged)
-  own.disableDepthWrite = true;
-  m.alphaIndex = RESTING_ORDER;
   const twin = new Mesh(`${m.name}-resting-face-xray`, st.scene);
   data.applyToMesh(twin, false);
   const tm = new StandardMaterial(`${m.name}-resting-face-xray-mat`, st.scene);
@@ -145,6 +157,14 @@ function restingXray(st: SceneState, m: Mesh, fill: Mesh, data: VertexData): voi
   twin.alphaIndex = RESTING_ORDER + 1;
   twin.isPickable = false;
   twin.metadata = { orbitCandidate: false };
+}
+
+/** ⭐ Steps 1 and 3 of the draw order (above), once per piece: the piece into the transparent pass without depth, and its colourless depth clone. */
+function restingDepth(st: SceneState, m: Mesh): void {
+  const own = m.material as StandardMaterial;
+  own.transparencyMode = Material.MATERIAL_ALPHABLEND; // ⭐ into the transparent pass, after every opaque body (alpha 1: unchanged)
+  own.disableDepthWrite = true;
+  m.alphaIndex = RESTING_ORDER;
   const depth = m.clone(`${m.name}-depth`, m, true);
   if (depth === null) return;
   depth.position.set(0, 0, 0);
@@ -259,6 +279,31 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
     stop: -1,
     of: edgeStops(p.restingEdges, p.restingFace.normal).length,
   };
+  st.hudDirty = true;
+  return true;
+}
+
+/**
+ * ⭐⭐ prototype — **THE TAPPED FACE BECOMES THE RESTING FACE** (2026-10-09; the owner: *"when a face of the green piece or the turquoise
+ * piece is left button tapped or first touch tapped, the hit face becomes the resting face and it aligns. the roll to the next edge is
+ * then implemented on this new resting face"*). The face `faceId` (the model's id — the topology's) of the shown piece: its candidate
+ * (`candidateForFace`), its long axes, its edges and its pink fill rebuilt (the old fill disposed), and the object model's resting face
+ * set to it (`TAPPED`). The alignment and the roll then read it as any resting face. `false` with no such face.
+ */
+export function restOnTappedFace(st: SceneState, faceId: string): boolean {
+  const i = st.orbitPieces.findIndex((o) => o.mesh === st.greenBox);
+  const p = st.orbitPieces[i];
+  if (p === undefined) return false;
+  const topo = topologyFromMesh(p.mesh);
+  if (topo === null) return false;
+  const idx = topo.faces.findIndex((f) => f.id === faceId);
+  if (idx < 0) return false;
+  if (p.restingFace !== null && p.restingFace.faces.includes(idx)) return true; // ⭐ already its resting face: nothing to rebuild
+  const cand = candidateForFace(p.resting, idx, topo.faces[idx]!.normal);
+  p.restingFill?.dispose(); // its x-ray twin is its child: it goes with it
+  st.orbitPieces[i] = { ...p, restingFace: cand, ...restingParts(st, p.mesh, topo, cand) };
+  const rec = restingFaceRecord(topo.positions, topo.faces, cand);
+  if (rec !== null) st.world = setRestingFace(st.world, p.mesh.name, { ...rec, why: "TAPPED" });
   st.hudDirty = true;
   return true;
 }

@@ -434,6 +434,9 @@ export interface SceneState {
    * count, and the second touch in flight (its press, and whether it has become a pinch). `null` when no orbit finger has a count. */
   /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): a second touch on a PLACED piece while the first one orbits — the pink face it would set if
    * released as a tap (`pinkFaceTapCandidate`): its press, whether it moved, the face and the point it hit. `null` otherwise. */
+  /** ⭐ Prototype (2026-10-09): the FIRST touch (or the left button) pressed on the orbited piece — the face it hit, made the resting face
+   * if it is released as a tap (`restingFaceTap`). `null` otherwise, and dropped when another pointer presses. */
+  pieceFaceTap: { readonly pointerId: number; readonly faceId: string } | null;
   pinkTap: {
     readonly pointerId: number;
     readonly orbitPointer: number;

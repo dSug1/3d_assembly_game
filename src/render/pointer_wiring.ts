@@ -11,8 +11,8 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains, restTargetKey, rollRestingFace } from "./green_box_wiring";
-import { isOrbitTap, orbitTapCount, secondMoved, tapAction } from "../input/orbit_tap";
+import { alignRestingFace, greenDragGains, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
+import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved, tapAction } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -178,6 +178,15 @@ export function installPointerHandler(st: SceneState): void {
       // tap on the piece"* — a second touch ON the orbited piece is the alignment's tap candidate (it never zooms; the first finger keeps
       // orbiting); ANYWHERE ELSE it is a pinch from the moment it lands (no tap to wait for — nothing held back, no jump)
       const secondOnPiece = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh === st.greenBox;
+      // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
+      // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it
+      {
+        const first = st.router.all().length === 0; // ⚠ asked before this press is routed (`router.press`, below): nothing else down
+        const onPiece = st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox;
+        const n = onPiece && first ? pick?.getNormal(true) : null;
+        const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
+        st.pieceFaceTap = restingFaceTap(onPiece, first, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+      }
       const rayHit =
         orbitFinger !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
@@ -641,6 +650,25 @@ export function installPointerHandler(st: SceneState): void {
             }
             st.hudDirty = true;
             return;
+          }
+        }
+        // ⭐⭐ (2026-10-09) the first touch / left button released on the orbited piece as a TAP, nothing else down: the face it hit becomes
+        // the resting face and the piece ALIGNS it (one episode); the next taps of the second touch roll on that face. ⛔ Consumed — not a
+        // camera-reset tap.
+        {
+          const ft = st.pieceFaceTap;
+          if (ft !== null && ft.pointerId === e.pointerId) {
+            st.pieceFaceTap = null;
+            const tapped =
+              st.router.all().length === 0 &&
+              isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
+            if (tapped && restOnTappedFace(st, ft.faceId) && alignRestingFace(st, performance.now())) {
+              st.episodes.touch(--st.episodeSeq, true, true);
+              st.episodes.sync(true);
+              st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);
+              st.hudDirty = true;
+              return;
+            }
           }
         }
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the

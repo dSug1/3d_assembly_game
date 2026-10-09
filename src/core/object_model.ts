@@ -143,7 +143,8 @@ export interface RestingFace {
   readonly centre: Vec3;
   /** ⛔ OUTWARD — the direction that points DOWN when the part rests on it. */
   readonly normal: Vec3;
-  readonly why: "BOOT" | "UNSEATED" | "SPAWN";
+  /** `TAPPED`: an orbited piece's face made its resting face by a tap (2026-10-09). */
+  readonly why: "BOOT" | "UNSEATED" | "SPAWN" | "TAPPED";
 }
 
 export interface World {
