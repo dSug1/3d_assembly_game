@@ -382,6 +382,36 @@ export function chooseInGroup(group: RestingGroup, q: Quat, down: Vec3 = [0, -1,
 }
 
 /**
+ * ⭐⭐ **A CHOSEN CANDIDATE AS THE OBJECT MODEL HOLDS IT** (2026-10-09, `object_model.ts`'s `RestingFace`): the logical faces it merges
+ * — by the ids of `faces` (the same list the selector was given) — its AREA centroid over their triangles (a merged pair weighed by
+ * area, not averaged), and its outward normal; the part's own frame. `null` when an index has no face.
+ */
+export function restingFaceRecord(
+  positions: readonly Vec3[],
+  faces: readonly { readonly id: string; readonly triangles: readonly number[] }[],
+  chosen: RestingCandidate,
+): { faceIds: string[]; centre: Vec3; normal: Vec3 } | null {
+  const ids: string[] = [];
+  let area = 0;
+  let c: Vec3 = [0, 0, 0];
+  for (const i of chosen.faces) {
+    const f = faces[i];
+    if (f === undefined) return null;
+    ids.push(f.id);
+    for (let t = 0; t + 2 < f.triangles.length; t += 3) {
+      const a = positions[f.triangles[t]!]!;
+      const b = positions[f.triangles[t + 1]!]!;
+      const d = positions[f.triangles[t + 2]!]!;
+      const w = length(cross(sub(b, a), sub(d, a))) / 2;
+      c = add(c, scale([(a[0] + b[0] + d[0]) / 3, (a[1] + b[1] + d[1]) / 3, (a[2] + b[2] + d[2]) / 3], w));
+      area += w;
+    }
+  }
+  if (ids.length === 0 || !(area > 0)) return null;
+  return { faceIds: ids, centre: scale(c, 1 / area), normal: chosen.normal };
+}
+
+/**
  * ⭐⭐ prototype — **THE LONG AXIS OF A FACE** (`RESTING_FACE_ALIGNMENT.md` §3, the owner, 2026-10-05: *"the axis of symetry which is
  * the longest edge to edge and perpendicular to these edges (therefore, it cannot be the corner of the hexagone)"*). From the face's
  * points (its own frame, coplanar) and its normal: the face polygon (their 2D hull); a candidate is an edge's in-plane NORMAL `d`

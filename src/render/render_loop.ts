@@ -35,7 +35,7 @@ import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
 import { gestureChangedSoFar } from "./undo_wiring";
-import { greenBoxFrame } from "./green_box_wiring";
+import { greenBoxFrame, syncOrbitPieceModel } from "./green_box_wiring";
 import { restingFaceFrame } from "./resting_face_wiring";
 
 export function startRenderLoop(st: SceneState): void {
@@ -306,6 +306,7 @@ export function startRenderLoop(st: SceneState): void {
     // and one readout for both would report neither. ⭐ The decision is `jump_watch.ts`'s; this
     // holds the call, which is the 2026-09-19 lesson.
     for (const [jid, jmesh] of st.meshOf) {
+      if (st.world.objects.get(jid)?.orbited === true) continue; // ⭐ prototype: the orbit places it (`greenBoxFrame`)
       const jp = modelPose(st, jmesh);
       if (!jp) continue;
       const j = st.jumpWatch.note(jid, jp.position, jp.orientation);
@@ -316,7 +317,9 @@ export function startRenderLoop(st: SceneState): void {
         st.hudDirty = true;
       }
     }
-    for (const mesh of st.meshOf.values()) {
+    for (const [fid, mesh] of st.meshOf) {
+      // ⭐ prototype (2026-10-09): an ORBITED piece's mesh is the orbit's to place — the model is copied FROM it, never written back
+      if (st.world.objects.get(fid)?.orbited === true) continue;
       const f = followerFor(st, mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
       // than merely present. Whatever the rules wrote this frame is what the follower now
@@ -712,6 +715,7 @@ export function startRenderLoop(st: SceneState): void {
 
     // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
     greenBoxFrame(st, dtSec);
+    syncOrbitPieceModel(st);
     st.scene.render();
     st.frames++;
   }));

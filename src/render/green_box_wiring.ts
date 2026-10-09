@@ -9,17 +9,17 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { OrbitController } from "../input";
-import { topologyFromMesh, topologyOfBody } from "./bodies";
+import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { chooseInGroup, faceEdges, faceLongAxes, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
-import { faceWorld, worldPlacementOf, type ObjectId } from "../core/object_model";
+import { faceWorld, makeWorld, setLocalPlacement, worldPlacementOf, type ObjectId, type SceneObject } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
 import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
@@ -410,6 +410,60 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.pieceOutside = null;
   }
   st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐ prototype — **THE ORBITED PIECES JOIN THE OBJECT MODEL** (the owner, 2026-10-09: *"add the object model to the green and turquoise
+ * pieces so their faces can be tracked"*). Both pieces (one shown at a time): their logical faces from the mesh (the same topology the
+ * scene's parts are read from, so the ids match), their convex shape (for the collision to come), their resting face as chosen at their
+ * creation (`SPAWN`, the face the pink fill shows), and `orbited` — the orbit places them, the model follows (`syncOrbitPieceModel`).
+ * Called once, after the model and the shadows exist.
+ */
+export function registerOrbitPieces(st: SceneState): void {
+  const added: SceneObject[] = [];
+  for (const p of st.orbitPieces) {
+    const m = p.mesh;
+    const topo = topologyOfBody(st, m);
+    const rec = p.restingFace === null ? null : restingFaceRecord(topo.positions, topo.faces, p.restingFace);
+    const r = m.rotationQuaternion ?? Quaternion.Identity();
+    added.push({
+      id: m.name,
+      local: { position: [m.position.x, m.position.y, m.position.z], orientation: [r.w, r.x, r.y, r.z] },
+      parent: null,
+      faces: topo.faces.map((f) => ({ id: f.id, centre: f.centre, normal: f.normal })),
+      shape: shapeOfBody(st, m),
+      connectors: [],
+      constraints: [],
+      orbited: true,
+      ...(rec === null ? {} : { restingFace: { ...rec, why: "SPAWN" as const } }),
+    });
+    st.idOf.set(m, m.name);
+    st.meshOf.set(m.name, m);
+  }
+  st.world = makeWorld([...st.world.objects.values(), ...added]);
+}
+
+/**
+ * ⭐⭐ prototype — each frame, AFTER the orbit placed it: the shown piece's model placement copied from its mesh, so its faces and its
+ * resting face are tracked (`faceWorld`, `restingFaceWorld`). Written only when it moved. ⛔ It is no scene change: a goal commit
+ * that had seen the world as it was still has (the undo already ignores an orbited piece, `worldsDiffer`).
+ */
+export function syncOrbitPieceModel(st: SceneState): void {
+  const m = st.greenBox;
+  if (m === null) return;
+  const o = st.world.objects.get(m.name);
+  if (o === undefined || o.orbited !== true) return;
+  const r = m.rotationQuaternion ?? Quaternion.Identity();
+  const pos: Vec3 = [m.position.x, m.position.y, m.position.z];
+  const q: Quat = [r.w, r.x, r.y, r.z];
+  const was = o.local;
+  const same =
+    Math.hypot(pos[0] - was.position[0], pos[1] - was.position[1], pos[2] - was.position[2]) < 1e-9 &&
+    q.every((v, i) => Math.abs(v - was.orientation[i]!) < 1e-12);
+  if (same) return;
+  const committed = st.goalCommitWorld === st.world;
+  st.world = setLocalPlacement(st.world, m.name, { position: pos, orientation: q });
+  if (committed) st.goalCommitWorld = st.world;
 }
 
 export function createGreenBox(st: SceneState): void {

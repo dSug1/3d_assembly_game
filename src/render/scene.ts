@@ -78,7 +78,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
-import { bootTargetOnBlueFace, createGreenBox } from "./green_box_wiring";
+import { bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
 import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
@@ -590,6 +590,9 @@ export function createScene(
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
   createGreenBox(st);
+  // ⭐⭐ prototype (2026-10-09, *"add the object model to the green and turquoise pieces so their faces can be tracked"*): into the model,
+  // after it was built and after the shadows were attached
+  registerOrbitPieces(st);
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
@@ -636,7 +639,8 @@ export function createScene(
     const rect = st.canvas.getBoundingClientRect();
     const mesh = st.scene.pick(clientX - rect.left, clientY - rect.top)?.pickedMesh ?? null;
     const id = mesh === null ? undefined : st.idOf.get(mesh);
-    return id === undefined ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
+    // ⭐ prototype: an ORBITED piece is empty space to a click
+    return id === undefined || st.world.objects.get(id)?.orbited === true ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
   },
   // ⭐ `D155`: a Space freeze — the body the mouse's grip holds, a client point on it (its centre,
   // projected), and its pressed face handed over for the second touch that takes the hold.

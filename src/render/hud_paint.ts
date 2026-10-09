@@ -12,7 +12,7 @@ import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
-import { type ObjectId } from "../core/object_model";
+import { restingFaceWorld, type ObjectId } from "../core/object_model";
 import { type GoalReport } from "../core/goal";
 import { formatFrameStats } from "../core/frame_meter";
 import { alignedFaceOf } from "../core/face_pick";
@@ -374,7 +374,10 @@ export function greenReadout(st: SceneState): string {
   // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
   const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.moved ? " +2nd moved" : " +2nd on piece"}`}${st.restAlign !== null ? " · aligning" : st.restAligned ? " · aligned (no counter-yaw)" : ""}${st.pieceOrbit !== null ? ` · around the piece, yaw gain ×${st.pieceYawGain.toFixed(2)}` : ""}${st.pieceOutside === null ? "" : st.pieceOutside ? " · outside the sphere" : " · inside the sphere"}${st.pieceEntry !== null ? " · entering the orbit around the piece" : ""}${st.centreReturn !== null ? " · back to the centre orbit" : ""}`;
   const parts = `${taps} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
-  return `${piece}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+  // ⭐ (2026-10-09) its resting face as the OBJECT MODEL tracks it — the world normal now (`restingFaceWorld`)
+  const rw = restingFaceWorld(st.world, st.greenBox.name);
+  const tracked = rw === null ? " · model: no resting face" : ` · model: resting n (${rw.normal.map((v) => v.toFixed(2)).join(", ")})`;
+  return `${piece}${tracked}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
 }
 
 

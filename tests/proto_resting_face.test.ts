@@ -14,6 +14,7 @@ import { meshTopology } from "../src/core/mesh_topology";
 import { chooseInGroup, hull2, massProperties, mirrorPlanes, pickWinner, restingFaces, RESTING_DEFAULTS, type RestingGroup } from "../src/core/resting_face";
 import { dot, qFromAxisAngle, qRotate, type Quat, type Vec3 } from "../src/core/vec";
 import { greenBootOrientation } from "../src/input/green_box";
+import { restingFaceWorld, setWorldPlacement, type RestingFace } from "../src/core/object_model";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const scene = new Scene(new NullEngine());
@@ -178,20 +179,39 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(st.restingFaces.size).toBe(0); // ⭐ waits for the goal's baseline (a placed part is seated)
     never = false;
     restingFaceFrame(st as never);
-    expect([...st.restingFaces.keys()]).toEqual(["A"]); // B seated, C placed, the floor frozen: A alone
-    expect(st.restingFaces.get("A").why).toBe("BOOT");
+    // ⭐⭐ (2026-10-09, *"each object in the scene has a resting face identified and tracked"*) EVERY object at boot — seated, placed
+    // and frozen too (it was A alone: B seated, C placed, the floor frozen)
+    expect([...st.restingFaces.keys()]).toEqual(["A", "B", "C", "floor"]);
+    for (const id of ids) expect(st.restingFaces.get(id).why).toBe("BOOT");
     expect(st.restingShapes.size).toBe(1); // one shape, computed once
+    // …RECORDED IN THE OBJECT MODEL, in the body's frame
+    for (const id of ids) {
+      const rf = (st.world.objects.get(id) as { restingFace?: RestingFace }).restingFace;
+      expect(rf?.why).toBe("BOOT");
+      expect(rf!.faceIds.length).toBeGreaterThan(0);
+      expect(Math.abs(rf!.centre[1] + 1) + Math.abs(rf!.centre[0]) + Math.abs(rf!.centre[2])).toBeLessThan(1e-9); // the cube's bottom face centre
+      expect(rf!.normal[1]).toBeCloseTo(-1, 9); // outward, DOWN at the identity pose
+    }
     restingFaceFrame(st as never);
-    expect(st.restingFaces.size).toBe(1); // nothing changed: nothing asked
+    expect(st.restingFaces.size).toBe(4); // nothing changed: nothing asked again
     seated.delete("B"); // B unseated (an unsnap, an unalign, an undo — whichever)
     restingFaceFrame(st as never);
     expect(st.restingFaces.get("B").why).toBe("UNSEATED");
+    expect((st.world.objects.get("B") as { restingFace?: RestingFace }).restingFace?.why).toBe("UNSEATED");
     placed.delete("C"); // C leaves its goal
     restingFaceFrame(st as never);
     expect(st.restingFaces.get("C").why).toBe("UNSEATED");
-    expect(st.restingFaces.has("floor")).toBe(false);
+    expect(st.restingFaces.get("floor").why).toBe("BOOT"); // the floor is never seated: asked once
     expect(st.restingShapes.size).toBe(1);
-  });
+    // ⭐⭐ TRACKED: the body moves and turns, its resting face's world centre and normal follow it
+    const q: Quat = [Math.cos(Math.PI / 4), Math.sin(Math.PI / 4), 0, 0]; // 90° about +x
+    const turned = setWorldPlacement(st.world as never, "A", { position: [5, 0, 0], orientation: q });
+    const w = restingFaceWorld(turned, "A")!;
+    expect(w.normal[2]).toBeCloseTo(-1, 9); // −y turned 90° about +x → −z
+    expect(w.centre[0]).toBeCloseTo(5, 9);
+    expect(w.centre[2]).toBeCloseTo(-1, 9);
+    expect(restingFaceWorld(turned, "nobody")).toBeNull();
+  }, 30000); // the wiring's module graph is imported here (Babylon), slow under a full parallel run
 
   it("⭐⭐ wired: after the goal commit each frame; the orbited pieces' resting face at creation, chosen from the BOOT pose, filled YELLOW", () => {
     const loop = code("render/render_loop.ts");
@@ -222,6 +242,25 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(w).toMatch(/depth\.alphaIndex = RESTING_ORDER \+ 2;/);
     // 4. the full fill keeps the default index: after all three
     expect(w).not.toMatch(/fill\.alphaIndex/);
+  });
+
+  it("⭐⭐ the model's record: a MERGED support's centre is weighed by AREA (not the faces' mean); a frozen body takes one; its transform untouched", async () => {
+    const { restingFaceRecord } = await import("../src/core/resting_face");
+    const { makeWorld, setRestingFace } = await import("../src/core/object_model");
+    // two coplanar faces on y = 0: a 2 × 1 rectangle (x 0..2) and a 1 × 1 square (x 2..3) — area 2 and 1
+    const P: Vec3[] = [[0, 0, 0], [2, 0, 0], [2, 0, 1], [0, 0, 1], [3, 0, 0], [3, 0, 1]];
+    const faces = [{ id: "f0", triangles: [0, 1, 2, 0, 2, 3] }, { id: "f1", triangles: [1, 4, 5, 1, 5, 2] }];
+    const cand = { faces: [0, 1], normal: [0, -1, 0] as Vec3 } as never;
+    const rec = restingFaceRecord(P, faces, cand)!;
+    expect(rec.faceIds).toEqual(["f0", "f1"]);
+    expect(rec.centre[0]).toBeCloseTo((2 * 1 + 1 * 2.5) / 3, 12); // 1.5 by area — the faces' mean would say 1.75
+    expect(rec.centre[2]).toBeCloseTo(0.5, 12);
+    expect(restingFaceRecord(P, faces, { faces: [7], normal: [0, -1, 0] } as never)).toBeNull();
+    const floor = { id: "floor", local: { position: [1, 2, 3] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], constraints: [], frozen: true };
+    const w = setRestingFace(makeWorld([floor]), "floor", { ...rec, why: "BOOT" });
+    expect(w.objects.get("floor")!.restingFace!.faceIds).toEqual(["f0", "f1"]);
+    expect(w.objects.get("floor")!.local).toEqual(floor.local);
+    expect(setRestingFace(w, "nobody", { ...rec, why: "BOOT" })).toBe(w);
   });
 
   it("⭐⭐ engine-free (rule 1)", () => {

@@ -279,6 +279,8 @@ function candidates(
     if (!mb) continue;
     for (const o of world.objects.keys()) {
       if (moving.includes(o) || rootOf(world, o) === assemblyRoot) continue;
+      // ⭐ prototype (2026-10-09): an ORBITED piece is in the model for its faces — not an obstacle until its own collision is built
+      if (world.objects.get(o)?.orbited === true) continue;
       if (setup.exempt?.(m, o)) continue;
       const ob = worldBox(world, o, setup.bounds);
       if (ob && boxesNear(mb, ob, margin)) out.push([m, o]);
