@@ -484,6 +484,9 @@ export interface SceneState {
   pieceEntry: PieceEntry | null;
   /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
   pieceOutside: boolean | null;
+  /** ⭐ Prototype (2026-10-09): inside the sphere, the piece has been within 10 % below its radius since it came in — a crossing back out
+   * now starts the orbit around the piece (`sphereSide`). */
+  sphereArmed: boolean;
   /** ⭐ …the sphere's mesh (`sphereFrame`), made at its first use. */
   pieceSphere: import("@babylonjs/core/Meshes/mesh").Mesh | null;
   /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change

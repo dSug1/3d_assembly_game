@@ -182,7 +182,7 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             tunable(st, "gap at the closest ring (% of the gap at alignment)", "pieceOrbitGapMinPct", 10, 100, 5),
             tunable(st, "way in to the orbit around the piece (mm of finger travel, 0 = at once)", "pieceOrbitEnterMm", 0, 60, 1),
-            tunable(st, "sphere round the gizmo: radius (m; outside = around the piece, ±10 %; 0 = none)", "pieceSphereRadiusM", 0, 3, 0.05),
+            tunable(st, "sphere round the gizmo: radius (m; in at it, out at it once 10 % within; 0 = none)", "pieceSphereRadiusM", 0, 3, 0.05),
             tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
           ],
         },
