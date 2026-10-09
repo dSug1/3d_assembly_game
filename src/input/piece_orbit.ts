@@ -16,11 +16,18 @@
  */
 import type { Vec3 } from "../core/vec";
 
-/** ⭐ The orbit around the piece, once IN (`PieceEntry` is the way in): the frozen push direction (unit, from the orbit centre out to the
- * piece), the camera's distance from the piece (`gap0M`) and the piece's from the centre (`ring0M`) then — the gap's reference
- * (`scaledGap`) — and the piece's distance from the pink gizmo at the TAP (`pink0M`, `pieceOrbitEnds`). */
+/** ⭐ The orbit around the piece, once IN (`PieceEntry` is the way in): the piece's frozen HEADING round the orbit centre, the camera's
+ * distance from the piece (`gap0M`) and the piece's from the centre (`ring0M`) then — the gap's reference (`scaledGap`) — and the
+ * piece's distance from the pink gizmo at the TAP (`pink0M`, `pieceOrbitEnds`). */
 export interface PieceOrbit {
-  readonly dir: Vec3;
+  /**
+   * ⭐⭐ (2026-10-09, the owner: *"can't the piece be pushed along the rings?"* → *"build it"*) the piece's HEADING round the orbit centre
+   * (radians, the orbit yaw's convention: offset = (r cos, h, r sin)), frozen at the start: dy moves it ALONG THE RINGS at this heading — the
+   * rings' radius AND height for the ring position, as in the orbit round the centre; dx turns only the camera. ⛔ It was a straight line
+   * through the centre (`dir`, `pushedPiece`): the piece left the rings, and the way out then had a difference to fade over 30 mm of
+   * travel — pure dy reached the waist with half of it left (~0.13–0.15 m from the centre, not the rings' 0.09 m).
+   */
+  readonly headingRad: number;
   readonly gap0M: number;
   readonly ring0M: number;
   /** ⭐ The piece's distance from the PINK GIZMO when it started (the old end rule; kept for the record). */
@@ -70,9 +77,10 @@ const wrap = (a: number): number => {
 export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, pink0M: number, zoom0 = 1): PieceOrbit {
   const v: Vec3 = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
   const n = Math.hypot(v[0], v[1], v[2]);
-  const dir: Vec3 = n > 1e-9 ? [v[0] / n, v[1] / n, v[2] / n] : fallbackDir;
+  const flat = Math.hypot(v[0], v[2]) > 1e-9;
+  const headingRad = flat ? Math.atan2(v[2], v[0]) : Math.atan2(fallbackDir[2], fallbackDir[0]);
   const gap0M = Math.hypot(camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]);
-  return { dir, gap0M, ring0M: n, pink0M, zoom0 };
+  return { headingRad, gap0M, ring0M: n, pink0M, zoom0 };
 }
 
 /**
@@ -260,10 +268,6 @@ export function smoothTravel<T extends { readonly travelledMm: number; readonly 
   return { ...p, travelledMm: Math.max(p.travelledMm, x), velMm: v };
 }
 
-/** ⭐ The piece: on the frozen line through the orbit centre, at `distM` from it. */
-export function pushedPiece(centre: Vec3, dir: Vec3, distM: number): Vec3 {
-  return [centre[0] + dir[0] * distM, centre[1] + dir[1] * distM, centre[2] + dir[2] * distM];
-}
 
 /** ⭐⭐ The camera around the piece: at the rings' angles (`ring` — the rig's yaw and ring pitch, the offsets), `gapM` from it. ⛔ The
  * elevation held inside ±89° (as `cameraOffset`). */
