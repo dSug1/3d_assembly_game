@@ -432,6 +432,19 @@ export interface SceneState {
   restingLast: ObjectId | null;
   /** ⭐ Prototype (`RESTING_FACE_ALIGNMENT.md` §1, §4): the second-finger taps counted while one orbit finger is down — that finger, the
    * count, and the second touch in flight (its press, and whether it has become a pinch). `null` when no orbit finger has a count. */
+  /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): a second touch on a PLACED piece while the first one orbits — the pink face it would set if
+   * released as a tap (`pinkFaceTapCandidate`): its press, whether it moved, the face and the point it hit. `null` otherwise. */
+  pinkTap: {
+    readonly pointerId: number;
+    readonly orbitPointer: number;
+    readonly pressT: number;
+    readonly pressX: number;
+    readonly pressY: number;
+    moved: boolean;
+    readonly objectId: ObjectId;
+    readonly faceId: string;
+    readonly point: Vec3;
+  } | null;
   orbitTap: {
     readonly orbitPointer: number;
     count: number;

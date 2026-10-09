@@ -39,6 +39,23 @@ export function orbitTargetOnPress(
 }
 
 /**
+ * ⭐⭐ prototype — **THE PINK FACE BY A SECOND-TOUCH TAP** (`1.0.59z-`; the owner, 2026-10-09: *"user can also change the pink face by second
+ * touch on placed piece while the first touch stays pressed"* — *"On a TAP"*): while the first touch ORBITS, a second touch landing on a
+ * piece LOCKED in its goal — not the orbited piece (its tap aligns or rolls) — is a CANDIDATE: the point it hit, or `null`. ⭐ It moves the
+ * yellow target and the pink face only if it is released as a TAP (`isOrbitTap`: quick, never moved, the orbit finger still down) — so a
+ * pinch whose second finger lands on the painting still zooms and moves nothing. ⚠ Tied to the lock, as the first touch's press.
+ */
+export function pinkFaceTapCandidate(
+  orbiting: boolean,
+  onOrbitedPiece: boolean,
+  locked: boolean,
+  hitPoint: readonly [number, number, number] | null,
+): [number, number, number] | null {
+  if (!orbiting || onOrbitedPiece || !locked || hitPoint === null) return null;
+  return [hitPoint[0], hitPoint[1], hitPoint[2]];
+}
+
+/**
  * ⭐⭐ prototype (green box) — **ONLY A PRESS ON A PLACED PIECE MOVES THE YELLOW TARGET** (the owner, 2026-10-02: *"a press on
  * empty space or frozen object or green piece does not change the yellow orbit center position. Only a press on placed object
  * changes the yellow orbit center position."*). ⛔ So the empty-space press — the frozen floor and the green piece are empty

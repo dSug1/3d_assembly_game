@@ -574,6 +574,7 @@ export function createScene(
   st.restingSeated = null;
   st.restingLast = null;
   st.orbitTap = null;
+  st.pinkTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;
   st.restAligned = false;

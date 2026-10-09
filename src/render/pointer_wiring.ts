@@ -9,7 +9,7 @@ import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
-import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
+import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, greenDragGains, restTargetKey, rollRestingFace } from "./green_box_wiring";
 import { isOrbitTap, orbitTapCount, secondMoved, tapAction } from "../input/orbit_tap";
@@ -344,6 +344,25 @@ export function installPointerHandler(st: SceneState): void {
           if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbitFinger) st.orbitTap = { orbitPointer: orbitFinger, count: 0, second: null };
           st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, moved: false };
         }
+        // ⭐⭐ (2026-10-09, `1.0.59z-`) a second touch on a PLACED piece while orbiting: the pink face it would set if released as a TAP
+        // (`pinkFaceTapCandidate`) — the pinch below starts as for any second touch off the orbited piece
+        st.pinkTap = null;
+        {
+          const placedMesh = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh !== null ? pick.pickedMesh : null;
+          const placedId = placedMesh === null ? undefined : st.idOf.get(placedMesh);
+          const at = pick?.hit && pick.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
+          const cand = pinkFaceTapCandidate(
+            orbitFinger !== null,
+            secondOnPiece,
+            goalLocked(placedId, st.goalCommit, st.cfg.lockPlacedPieces === 1),
+            at,
+          );
+          const n = cand === null ? undefined : pick?.getNormal(true);
+          const face = n && placedId !== undefined ? faceFromPickedNormal(st.world, placedId, [n.x, n.y, n.z] as Vec3) : null;
+          if (cand !== null && face !== null && placedId !== undefined && orbitFinger !== null) {
+            st.pinkTap = { pointerId: e.pointerId, orbitPointer: orbitFinger, pressT: s.t, pressX: s.x, pressY: s.y, moved: false, objectId: placedId, faceId: face.faceId, point: cand };
+          }
+        }
         const p = pinchPair(st);
         if (p) {
           st.pinch.begin(p[0], p[1]);
@@ -569,6 +588,8 @@ export function installPointerHandler(st: SceneState): void {
           return;
         }
         if (st.router.outside().length === 2) {
+          const pt = st.pinkTap;
+          if (pt !== null && e.pointerId === pt.pointerId && secondMoved(pxToMm(Math.hypot(s.x - pt.pressX, s.y - pt.pressY)), st.cfg.motionDeadbandMm)) pt.moved = true;
           updatePinch(st);
         } else if (
           st.router.outside().length === 1 &&
@@ -604,6 +625,22 @@ export function installPointerHandler(st: SceneState): void {
             // ⭐ the orbit finger lifted: the count resets (the piece goes on turning against the orbit, as always — §2bis)
             st.orbitTap = null;
             st.hudDirty = true;
+          }
+          // ⭐⭐ (2026-10-09) the second touch on a placed piece released: a TAP (quick, never moved, the orbit finger still down) moves the
+          // yellow target to the point it hit and the pink face to that face — as the first touch's press does; else nothing
+          const pt = st.pinkTap;
+          if (pt !== null && e.pointerId === pt.orbitPointer) st.pinkTap = null;
+          if (pt !== null && e.pointerId === pt.pointerId) {
+            st.pinkTap = null;
+            const stillDown = st.router.all().some((q) => q.id === pt.orbitPointer);
+            if (isOrbitTap(pt.pressT, s.t, st.cfg.tapMaxDuration, pt.moved, stillDown)) {
+              st.centreBlend.retarget(pt.point);
+              syncCentre(st);
+              st.pinkFace = { objectId: pt.objectId, faceId: pt.faceId };
+              st.lastVerdict = `orbit: second-touch tap — the pink face is now ${pt.objectId}/${pt.faceId}`;
+            }
+            st.hudDirty = true;
+            return;
           }
         }
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the
