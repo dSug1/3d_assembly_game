@@ -25,6 +25,17 @@ export interface PieceOrbit {
   readonly ring0M: number;
   /** ⭐ The piece's distance from the PINK GIZMO when it started (the old end rule; kept for the record). */
   readonly pink0M: number;
+  /** ⭐ (2026-10-09) The zoom when it started — the gap scales by the zoom now over it (`zoomScale`). */
+  readonly zoom0: number;
+}
+
+/**
+ * ⭐⭐ (2026-10-09, the owner: *"why the zoom only works if the piece is inside the white sphere?"* → *"build it"*) — the factor on the
+ * camera's distance from the piece outside the sphere (the way in, the orbit round the piece): the zoom now over the zoom it started
+ * at, as the centre orbit's gap is the radius offset × the zoom (`cameraGapM`). 1 for a non-positive zoom.
+ */
+export function zoomScale(zoom0: number, zoom: number): number {
+  return zoom0 > 0 && zoom > 0 ? zoom / zoom0 : 1;
 }
 
 /** ⭐ Angles around a point of a direction from it — azimuth in the x–z plane (`cameraOffset`'s convention: x = cos az, z = sin az) and
@@ -56,12 +67,12 @@ const wrap = (a: number): number => {
  * (`fallbackDir` when the piece sits ON the centre), the camera's distance from the piece, and the start distance to the pink gizmo carried
  * from the tap. The camera is then exactly where the piece orbit puts it (the way in brought it there).
  */
-export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, pink0M: number): PieceOrbit {
+export function startPieceOrbit(centre: Vec3, piece: Vec3, fallbackDir: Vec3, camera: Vec3, pink0M: number, zoom0 = 1): PieceOrbit {
   const v: Vec3 = [piece[0] - centre[0], piece[1] - centre[1], piece[2] - centre[2]];
   const n = Math.hypot(v[0], v[1], v[2]);
   const dir: Vec3 = n > 1e-9 ? [v[0] / n, v[1] / n, v[2] / n] : fallbackDir;
   const gap0M = Math.hypot(camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]);
-  return { dir, gap0M, ring0M: n, pink0M };
+  return { dir, gap0M, ring0M: n, pink0M, zoom0 };
 }
 
 /**
@@ -100,6 +111,8 @@ export interface PieceEntry {
    * (`entryPieceOffset`), so the piece does not jump; zero after a finished way out, at boot or after a respawn.
    */
   readonly pieceOff: Vec3;
+  /** ⭐ (2026-10-09) The zoom at the start — the camera's distance from the piece scales by the zoom now over it (`zoomScale`). */
+  readonly zoom0: number;
   readonly travelledMm: number;
   readonly rawMm: number;
   readonly velMm: number;
@@ -107,7 +120,7 @@ export interface PieceEntry {
 
 /** ⭐ At the tap: the camera (`camera`, looking along `look0`) round the piece against the rings' angles (`ring`), the piece's distances,
  * and its heading round the gizmo — the orbit's yaw then (`yawRad`). */
-export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, pink: Vec3, ring: AroundAngles, yawRad: number, pieceOff: Vec3 = [0, 0, 0]): PieceEntry {
+export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: Vec3, pink: Vec3, ring: AroundAngles, yawRad: number, pieceOff: Vec3 = [0, 0, 0], zoom0 = 1): PieceEntry {
   const tw = turnBetween(unitOf([centre[0] - camera[0], centre[1] - camera[1], centre[2] - camera[2]]), unitOf(look0));
   const a = anglesOf([camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]]);
   return {
@@ -120,6 +133,7 @@ export function startPieceEntry(centre: Vec3, piece: Vec3, camera: Vec3, look0: 
     lookAxis: tw.axis,
     lookAngleRad: tw.angle,
     pieceOff,
+    zoom0,
     travelledMm: 0,
     rawMm: 0,
     velMm: 0,
@@ -162,12 +176,14 @@ export function entryProgress(e: PieceEntry, enterMm: number): number {
 
 /** ⭐⭐ The camera on the way in: ROUND THE PIECE as it is (carried round the gizmo by the share left, `carryHeading`), at the rings' angles
  * (`ring` — so dx turns it round the piece with all of the yaw) plus what is left of the tap's small shift (`dAzRad`, `dElRad`), `gap0M`
- * from it. At the tap exactly where it was; at the end exactly the piece orbit's pose. */
-export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, enterMm: number): Vec3 {
+ * from it — × the zoom now over the zoom at the start (`zoomScale`, 2026-10-09). At the tap exactly where it was; at the end exactly the
+ * piece orbit's pose. */
+export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, enterMm: number, zoom = e.zoom0): Vec3 {
   const left = 1 - entryProgress(e, enterMm);
   const lim = (89 * Math.PI) / 180;
   const d = dirOf({ az: ring.az + e.dAzRad * left, el: Math.max(-lim, Math.min(lim, ring.el + e.dElRad * left)) });
-  return [piece[0] + d[0] * e.gap0M, piece[1] + d[1] * e.gap0M, piece[2] + d[2] * e.gap0M];
+  const g = e.gap0M * zoomScale(e.zoom0, zoom);
+  return [piece[0] + d[0] * g, piece[1] + d[1] * g, piece[2] + d[2] * g];
 }
 
 /**

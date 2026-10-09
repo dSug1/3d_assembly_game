@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -274,7 +274,7 @@ export function enterPieceOrbit(st: SceneState): boolean {
   const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
   // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
   const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
-  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left);
+  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
   st.centreReturn = null;
   st.hudDirty = true;
   return true;
@@ -742,7 +742,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       // (dx turning it round the piece), the piece carried round the gizmo by the share left (`carryHeading`): the pivot passes from the
       // gizmo to the piece GRADUALLY; its view from the gizmo to the piece — then the orbit around the piece starts, nothing changing
       const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
-      camAt = entryCamera(pe, pp, ring, cfg.pieceOrbitEnterMm);
+      // ⭐ (2026-10-09) the zoom acts here too — the distance from the piece × the zoom now over the zoom at the start (`zoomScale`)
+      camAt = entryCamera(pe, pp, ring, cfg.pieceOrbitEnterMm, clampGreenZoom(st.zoom));
       const ax = entryLook(pe, camAt, [c.x, c.y, c.z], pp, cfg.pieceOrbitEnterMm);
       lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
       if (entryProgress(pe, cfg.pieceOrbitEnterMm) >= 1) {
@@ -750,14 +751,17 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
         const h = Math.hypot(out[0], out[2]) || 1;
         // ⭐ (2026-10-08) the end distance measured from HERE — the start of the orbit around the piece, not the tap
         const t = st.centreBlend.targetM;
-        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], pp, [out[0] / h, 0, out[2] / h], camAt, Math.hypot(pp[0] - t[0], pp[1] - t[1], pp[2] - t[2]));
+        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], pp, [out[0] / h, 0, out[2] / h], camAt, Math.hypot(pp[0] - t[0], pp[1] - t[1], pp[2] - t[2]), clampGreenZoom(st.zoom));
         st.pieceEntry = null;
         st.hudDirty = true;
       }
     }
   } else {
     const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
-    const gapPiece = scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct);
+    // ⭐ (2026-10-09, *"why the zoom only works if the piece is inside the white sphere?"*) × the zoom now over the zoom at its start
+    const gapPiece =
+      scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct) *
+      zoomScale(po.zoom0, clampGreenZoom(st.zoom));
     camAt = pieceCamera(pp, ring, gapPiece);
     lookAt = pp;
   }
