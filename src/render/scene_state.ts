@@ -423,6 +423,8 @@ export interface SceneState {
     readonly restingEdges: readonly Edge[];
     /** ⭐ its resting face's LONG AXES with their end points (`faceLongAxes`), its own frame — what aligns (`1.0.59q-`). */
     readonly restingLong: LongAxes;
+    /** ⭐ (2026-10-09) its resting face's CENTRE, its own frame — what the orbit places (`placeByFaceCentre`). */
+    readonly restingCentre: Vec3;
   }[];
   /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
@@ -458,13 +460,13 @@ export interface SceneState {
     readonly from: Quat;
     readonly t0: number;
     readonly base: Quat;
-    /** ⭐ (2026-10-09) a ROLL pivots on the resting face's centre (`faceCentre`, the piece's frame) from the offset it had (`off0`); an
-     * alignment turns about the piece's origin (`null`). */
-    readonly pivot: { readonly off0: Vec3; readonly faceCentre: Vec3 } | null;
   } | null;
-  /** ⭐ Prototype (2026-10-09): the orbited piece's offset from where the orbit puts it — what the rolls about the resting face's centre
-   * have shifted it by (`pivotOffset`); zero at a respawn. */
-  rollPivotOff: Vec3;
+  /** ⭐ Prototype (2026-10-09): the point the orbit placed this frame — the orbited piece's RESTING FACE CENTRE goes there
+   * (`placeByFaceCentre`); `null` before the first frame. */
+  pieceAnchor: Vec3 | null;
+  /** ⭐ Prototype (2026-10-09): when a tap makes another face the resting face, the piece's jump (`off`, world) faded out over the
+   * alignment's turn from `t0` — so the new centre takes over the anchor without a jump. */
+  anchorShift: { readonly off: Vec3; readonly t0: number } | null;
   /** ⭐ Prototype (§2bis): the orbited piece's heading about the ring last frame — the counter-yaw turns by its change. `null`: read afresh. */
   orbitHeadingPrev: number | null;
   /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */

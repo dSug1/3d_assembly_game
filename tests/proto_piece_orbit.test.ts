@@ -29,6 +29,7 @@ import {
   returnCamera,
   returnLook,
   returnPieceOffset,
+  ringProgress,
   returnProgress,
   ringDistanceRange,
   scaledGap,
@@ -302,7 +303,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(headingAbout(C, frame(po, 0.4, v).piece)).toBeCloseTo(headingAbout(C, frame(po, 1.4, v).piece), 12);
     // the wiring: the spin reads the piece as placed; the way in takes the leftover over and adds it as it fades
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.greenBox\?\.position;\s*const c = st\.orbitCentreM;\s*return p === undefined \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], \[p\.x, p\.y, p\.z\]\);/);
+    expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.pieceAnchor;\s*const c = st\.orbitCentreM;\s*return p === null \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], p\);/);
     expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, clampGreenZoom\(st\.zoom\)\);\s*st\.centreReturn = null;/);
     // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit while the sphere is on
     expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBeGreaterThan(0);
@@ -349,7 +350,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // every place the piece is placed or judged reads the piece's range — the frame, the way out, the keep-in-view zoom floor, the yaw gain
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toMatch(/clampCameraRadiusM/);
-    expect(w.split("clampPieceRadiusM(").length - 1).toBe(4);
+    expect(w.split("clampPieceRadiusM(").length - 1).toBe(5); // (2026-10-09) + the rings' closest point for the way out (`piecesClosestM`)
     expect(code("render/tuning_menu.ts")).not.toMatch(/PIECE_MIN_DISTANCE|pieceMinDistance/); // no slider
   });
 
@@ -365,7 +366,8 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
       const k = clampPieceRadiusM(o.radiusM, sc) / o.radiusM;
       return [o.offsetM[0] * k, o.offsetM[1] * k, o.offsetM[2] * k];
     };
-    const closest = (speedMmS: number, fromDrawn: boolean): number => {
+    const MIN_RINGS = ringDistanceRange((v) => orbitOffset(sc, 0, v, 1).radiusM).minM;
+    const closest = (speedMmS: number, fromDrawn: boolean, byRing = false): number => {
       const r0 = ringAt(1);
       const dir = unit(r0);
       let rigV = 1;
@@ -386,11 +388,12 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
           out = outsideSphere(len(p), 1, out);
           if (!out) {
             const home = ringAt(fromDrawn ? sv : rigV);
-            ret = startCentreReturn(p, [0, 1, 0], [0, 0, -1], [1, 0, 0], sub(p, home));
+            ret = startCentreReturn(p, [0, 1, 0], [0, 0, -1], [1, 0, 0], sub(p, home), byRing ? len(ringAt(sv)) : Infinity);
           }
           continue;
         }
         ret = smoothTravel(ret, dt, TAU);
+        if (byRing) ret = ringProgress(ret, len(ringAt(sv)), MIN_RINGS);
         min = Math.min(min, len(add(ringAt(sv), returnPieceOffset(ret, RET))));
       }
       return min;
@@ -398,6 +401,17 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(closest(160, false)).toBeGreaterThan(0.3); // ⛔ as it was: a flick held the piece ~0.36 m off
     expect(closest(160, true)).toBeLessThan(0.21); // ✅ now ~0.20 (the way out's own travel smoothing is what is left)
     expect(closest(5, true)).toBeLessThan(0.16);
+    // ⭐⭐ (2026-10-09, *"let the piece's leftover fade by whichever is further along: the finger travel … or how far the piece has come … toward
+    // the rings' closest point"*) — a pure dy on the straight line now reaches the rings' waist at ANY speed (it stopped at ~0.13–0.20 m)
+    expect(MIN_RINGS).toBeCloseTo(sc.orbitMiddleRadiusM, 3);
+    for (const speed of [5, 40, 160]) expect(closest(speed, true, true)).toBeLessThan(MIN_RINGS + 0.002);
+    expect(ringProgress(startCentreReturn(C, [0, 1, 0], [0, 0, -1], [1, 0, 0], [0.1, 0, 0], 0.9), 0.5, 0.09).ringT).toBeCloseTo(0.4 / 0.81, 12);
+    const back = ringProgress(ringProgress(startCentreReturn(C, [0, 1, 0], [0, 0, -1], [1, 0, 0], [0.1, 0, 0], 0.9), 0.3, 0.09), 0.8, 0.09);
+    expect(back.ringT).toBeCloseTo(0.6 / 0.81, 12); // pushed back out: never goes back
+    expect(len(returnPieceOffset(ringProgress(startCentreReturn(C, [0, 1, 0], [0, 0, -1], [1, 0, 0], [0.1, 0, 0], 0.9), 0.09, 0.09), RET))).toBeLessThan(1e-12); // at the waist: none left
+    expect(ringProgress(startCentreReturn(C, [0, 1, 0], [0, 0, -1], [1, 0, 0], [0.1, 0, 0]), 0.09, 0.09).ringT).toBe(0); // no start distance: travel alone
+    expect(code("render/green_box_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = ringProgress\(st\.centreReturn, bo\.radiusM \* k, piecesClosestM\(st\)\);/);
+    expect(code("render/green_box_wiring.ts")).toMatch(/homeRel, pieceOff, bo\.radiusM \* k\);/);
     // the wiring: the spring re-based on the yaw only, its elevation kept; the offset from the spring's elevation
     const w = code("render/green_box_wiring.ts");
     const rb = w.slice(w.indexOf("function returnToCentreOrbit"), w.indexOf("function counterYawFrame"));
@@ -547,7 +561,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
-    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.rollPivotOff = \[0, 0, 0\];\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.centreReturn = null;/); // the respawn
+    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.centreReturn = null;/); // the respawn
     expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece =\s*scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     // (2026-10-09) …× the zoom now over the zoom at its start — the zoom acts outside the sphere too

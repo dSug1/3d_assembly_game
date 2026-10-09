@@ -615,13 +615,13 @@ export function nextEdgeRoll(
 }
 
 /**
- * ⭐⭐ prototype — **THE ROLL PIVOTS ON THE RESTING FACE'S CENTRE** (2026-10-09; the owner: *"when the resting face rolls to the next edge, the
- * rotation shall be around the resting face center, not the object center"*). The piece turns about its own origin; the offset that keeps
- * the resting face's centre (`faceCentre`, the piece's frame) where it was when the roll started — at the pose `from`, the offset then
- * `off0` — is `off0 + from·c − now·c`, for ANY pose `now` on the way (so the ease needs no special path).
+ * ⭐⭐ prototype — **THE RESTING FACE'S CENTRE RIDES THE RINGS** (2026-10-09; the owner: *"as a conclusion of the way in, I want the center of
+ * the resting position to be on the ring at the 0.09 m min distance (= the radius of 2nd and 3rd rings), not the center of the object"*):
+ * the orbit places a point (`anchor`) and the piece is put so that its resting face's centre (`faceCentre`, its frame) is there — its
+ * origin at `anchor − q·faceCentre`. ⭐ So every turn of the piece (the alignment, a roll) pivots on that centre by construction.
  */
-export function pivotOffset(off0: Vec3, from: Quat, now: Quat, faceCentre: Vec3): Vec3 {
-  return add(off0, sub(qRotate(from, faceCentre), qRotate(now, faceCentre)));
+export function placeByFaceCentre(anchor: Vec3, q: Quat, faceCentre: Vec3): Vec3 {
+  return sub(anchor, qRotate(q, faceCentre));
 }
 
 /** ⭐ The distance from a point to a segment. */

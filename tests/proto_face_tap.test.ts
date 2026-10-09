@@ -54,7 +54,8 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     const fn = w.slice(w.indexOf("export function restOnTappedFace"), w.indexOf("export function restTargetKey"));
     expect(fn).toMatch(/if \(p\.restingFace !== null && p\.restingFace\.faces\.includes\(idx\)\) return true;/);
     expect(fn).toMatch(/p\.restingFill\?\.dispose\(\);/);
-    expect(fn).toMatch(/st\.orbitPieces\[i\] = \{ \.\.\.p, restingFace: cand, \.\.\.restingParts\(st, p\.mesh, topo, cand\) \};/);
+    expect(fn).toMatch(/const parts = restingParts\(st, p\.mesh, topo, cand\);/);
+    expect(fn).toMatch(/st\.orbitPieces\[i\] = \{ \.\.\.p, restingFace: cand, \.\.\.parts \};/);
     expect(fn).toMatch(/st\.world = setRestingFace\(st\.world, p\.mesh\.name, \{ \.\.\.rec, why: "TAPPED" \}\);/);
     // the piece's depth clone and transparent pass are set once, at creation — never again for a new face
     expect(w).toMatch(/const parts = restingParts\(st, m, topo, restingFace\);\s*restingDepth\(st, m\);/);

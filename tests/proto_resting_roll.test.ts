@@ -11,7 +11,7 @@ import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Viewport } from "@babylonjs/core/Maths/math.viewport";
 import { describe, expect, it } from "vitest";
-import { edgeStops, faceEdges, nextEdgeRoll, pivotOffset } from "../src/core/resting_face";
+import { edgeStops, faceEdges, nextEdgeRoll, placeByFaceCentre } from "../src/core/resting_face";
 import { tapAction } from "../src/input/orbit_tap";
 import { dot, qRotate, qSlerp, type Quat, type Vec3 } from "../src/core/vec";
 
@@ -107,23 +107,22 @@ describe("⭐⭐ prototype — the roll to the next edge", () => {
     expect(nextEdgeRoll([1, 0, 0, 0], DOWN, rectStops, [0, 1, 0], LOOK_DOWN)).toBeNull(); // a reference along the normal: no line to align
   });
 
-  it("⭐⭐ the roll pivots on the RESTING FACE'S CENTRE (*\"the rotation shall be around the resting face center, not the object center\"*): that centre stays put all the way", () => {
+  it("⭐⭐ the RESTING FACE'S CENTRE rides the anchor (*\"the center of the resting position to be on the ring … not the center of the object\"*): every turn — a roll, the alignment — pivots on it", () => {
     // a face whose centre is OFF the line through the piece's origin along its normal (a slanted face of the frustum, say)
     const fc: Vec3 = [0.03, -0.02, 0.01];
-    const n: Vec3 = [0, -1, 0];
-    const stops = rectStops;
+    const anchor: Vec3 = [0.5, 0.2, -0.3]; // where the orbit put it
     const q0: Quat = [1, 0, 0, 0];
-    const r = nextEdgeRoll(q0, n, stops, X, LOOK_DOWN)!;
-    const off0: Vec3 = [0.004, 0, -0.002]; // what earlier rolls had already shifted it by
-    const at = (q: Quat) => { const o = pivotOffset(off0, q0, q, fc); const c = qRotate(q, fc); return [o[0] + c[0], o[1] + c[1], o[2] + c[2]]; };
-    const start = at(q0);
-    for (const t of [0.25, 0.5, 0.75, 1]) {
-      const p = at(qSlerp(q0, r.q, t));
-      for (const k of [0, 1, 2]) expect(p[k]).toBeCloseTo(start[k]!, 12);
+    const r = nextEdgeRoll(q0, [0, -1, 0], rectStops, X, LOOK_DOWN)!;
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+      const q = qSlerp(q0, r.q, t);
+      const origin = placeByFaceCentre(anchor, q, fc);
+      const c = qRotate(q, fc);
+      for (const k of [0, 1, 2]) expect(origin[k]! + c[k]!).toBeCloseTo(anchor[k]!, 12); // the face centre exactly at the anchor
     }
-    expect(Math.hypot(...pivotOffset([0, 0, 0], q0, r.q, fc))).toBeGreaterThan(0.01); // ⛔ about the origin it would have moved
-    // a face centred ON the normal through the origin (the green base, the hexagon's end): no shift at all — the two pivots agree
-    expect(Math.hypot(...pivotOffset([0, 0, 0], q0, r.q, [0, -0.02, 0]))).toBeLessThan(1e-12);
+    // ⛔ about the piece's origin (the old rule) the face centre would have moved
+    const c0 = qRotate(q0, fc);
+    const c1 = qRotate(r.q, fc);
+    expect(Math.hypot(c1[0] - c0[0], c1[1] - c0[1], c1[2] - c0[2])).toBeGreaterThan(0.01);
   });
 
   it("⭐⭐ the rolls CARRY to a new resting face when the pink face has not changed — at once, in the alignment's own turn", () => {
@@ -131,15 +130,17 @@ describe("⭐⭐ prototype — the roll to the next edge", () => {
     const align = w.slice(w.indexOf("export function alignRestingFace"), w.indexOf("export function restTargetKey"));
     expect(align).toMatch(/export function alignRestingFace\(st: SceneState, now: number, carryRolls = 0\): boolean \{/);
     expect(align).toMatch(/for \(let i = 0; i < carryRolls; i\+\+\) \{\s*const step = nextEdgeRoll\(base, p\.restingFace\.normal, stops, ref \?\? \[right\.x, right\.y, right\.z\], view\);/);
-    expect(align).toMatch(/st\.restAlign = \{ from: q, t0: now, base, pivot: null \};/); // ONE turn, the rolls included
+    expect(align).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};/); // ONE turn, the rolls included
     const roll = w.slice(w.indexOf("export function rollRestingFace"), w.indexOf("export function enterPieceOrbit"));
     expect(roll).toMatch(/rolls: rr\.rolls \+ 1/);
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/const carry = st\.restRoll !== null && st\.restRoll\.key === restTargetKey\(st\) \? st\.restRoll\.rolls : 0;\s*if \(tapped && restOnTappedFace\(st, ft\.faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\)/);
-    // the pivot offset applied LAST, after the orbit placed the piece and the sphere and the transitions read it
-    expect(w).toMatch(/restAlignFrame\(st, now\);\s*rollPivotFrame\(st\);/);
-    expect(w).toMatch(/if \(a\.pivot !== null\) st\.rollPivotOff = pivotOffset\(a\.pivot\.off0, a\.from, q, a\.pivot\.faceCentre\);/);
-    expect(w).toMatch(/st\.restRoll = null;\s*st\.rollPivotOff = \[0, 0, 0\];/); // the respawn
+    // the mesh placed from the ANCHOR last, after the orbit placed it and the sphere and the transitions read it; a new face's jump faded
+    expect(w).toMatch(/restAlignFrame\(st, now\);\s*anchorFrame\(st, now\);/);
+    expect(w).toMatch(/const at = placeByFaceCentre\(a, \[r\.w, r\.x, r\.y, r\.z\], p\.restingCentre\);\s*const s = anchorShiftNow\(st, now\);/);
+    expect(w).toMatch(/st\.anchorShift = \{ off: \[jump\[0\] \+ prev\[0\], jump\[1\] \+ prev\[1\], jump\[2\] \+ prev\[2\]\], t0: performance\.now\(\) \};/);
+    expect(w).toMatch(/st\.pieceAnchor = pp;/);
+    expect(w).toMatch(/st\.restRoll = null;\s*st\.anchorShift = null;/); // the respawn
   });
 
   it("⭐⭐ what a tap does: ALIGN until aligned to the SAME face, then ROLL — the orbit finger lifted in between or not", () => {
@@ -159,7 +160,7 @@ describe("⭐⭐ prototype — the roll to the next edge", () => {
     expect(roll).toMatch(/const from = st\.restAlign\?\.base \?\? shown;/); // quick taps add up
     expect(roll).toMatch(/const right = st\.camera\.getDirection\(new Vector3\(1, 0, 0\)\);/); // no long axis: the screen's horizontal
     expect(roll).toMatch(/const roll = nextEdgeRoll\(from, p\.restingFace\.normal, stops, ref, view\);/);
-    expect(roll).toMatch(/st\.restAlign = \{ from: shown, t0: now, base: roll\.q, pivot: fc === null \? null : \{ off0: st\.rollPivotOff, faceCentre: fc \} \};/); // one eased turn, REST_ALIGN_MS, about the face centre
+    expect(roll).toMatch(/st\.restAlign = \{ from: shown, t0: now, base: roll\.q \};/); // one eased turn, REST_ALIGN_MS — about the face centre (the anchor)
     expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;/); // the respawn
     expect(code("render/scene.ts")).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;/);
     expect(code("render/hud_paint.ts")).toMatch(/ · edge \$\{st\.restRoll\.stop \+ 1\}\/\$\{st\.restRoll\.of\}/);

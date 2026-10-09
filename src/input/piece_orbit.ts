@@ -435,6 +435,13 @@ export interface CentreReturn {
   readonly dElRad: number;
   readonly dRM: number;
   readonly pieceOff: Vec3;
+  /**
+   * ⭐⭐ (2026-10-09, the owner: *"let the piece's leftover fade by whichever is further along: the finger travel, as now; or how far the
+   * piece has come from where the way out started toward the rings' closest point"*) — the rings' distance at the start (`ring0M`) and the
+   * share of the way from it to the rings' closest point reached so far (`ringT`, 0…1, never going back: `ringProgress`).
+   */
+  readonly ring0M: number;
+  readonly ringT: number;
   readonly travelledMm: number;
   readonly rawMm: number;
   readonly velMm: number;
@@ -442,7 +449,7 @@ export interface CentreReturn {
 
 /** ⭐ At the end: the camera as it is (`camera`, looking along `look0`) seen from the piece (`piece`), against the centre orbit's home camera
  * seen from the piece (`homeRel`), and the piece as it is against where the rings put it (`pieceOff`). */
-export function startCentreReturn(piece: Vec3, camera: Vec3, look0: Vec3, homeRel: Vec3, pieceOff: Vec3): CentreReturn {
+export function startCentreReturn(piece: Vec3, camera: Vec3, look0: Vec3, homeRel: Vec3, pieceOff: Vec3, ring0M = Infinity): CentreReturn {
   const rel: Vec3 = [camera[0] - piece[0], camera[1] - piece[1], camera[2] - piece[2]];
   const a = anglesOf(rel);
   const h = anglesOf(homeRel);
@@ -459,6 +466,8 @@ export function startCentreReturn(piece: Vec3, camera: Vec3, look0: Vec3, homeRe
     dElRad: a.el - h.el,
     dRM: Math.hypot(rel[0], rel[1], rel[2]) - Math.hypot(homeRel[0], homeRel[1], homeRel[2]),
     pieceOff,
+    ring0M,
+    ringT: 0,
     travelledMm: 0,
     rawMm: 0,
     velMm: 0,
@@ -518,7 +527,23 @@ function rotateAbout(v: Vec3, axis: Vec3, angle: number): Vec3 {
 }
 
 /** ⭐ The piece's difference from the rings, still left. */
+/**
+ * ⭐⭐ Each frame of the way out: the share of the way from the rings' distance at its start (`ring0M`) to their CLOSEST point (`minM`, the
+ * waist — 0.09 m in `Scene_1`) that the rings' distance now (`ringM`) has covered — kept at its MOST, so a piece pushed back out does
+ * not grow its leftover again. A start at or inside the closest point: 1 at once.
+ */
+export function ringProgress(r: CentreReturn, ringM: number, minM: number): CentreReturn {
+  if (!Number.isFinite(r.ring0M)) return r; // ⭐ a way out with no start distance (a respawn's): by travel alone
+  const span = r.ring0M - minM;
+  const t = !(span > 1e-9) ? 1 : Math.min(1, Math.max(0, (r.ring0M - ringM) / span));
+  return t > r.ringT ? { ...r, ringT: t } : r;
+}
+
+/** ⭐ The piece's difference from the rings still left: by the FURTHER of the travel (`returnMm`) and the progress toward the waist (`ringT`),
+ * eased the same way — so a pure dy reaches the rings' closest point with nothing left (2026-10-09). */
 export function returnPieceOffset(r: CentreReturn, returnMm: number): Vec3 {
-  const left = 1 - returnProgress(r, returnMm);
+  const travel = returnMm <= 0 ? 1 : Math.min(1, r.travelledMm / returnMm);
+  const t = Math.max(travel, r.ringT);
+  const left = 1 - t * t * (3 - 2 * t);
   return [r.pieceOff[0] * left, r.pieceOff[1] * left, r.pieceOff[2] * left];
 }

@@ -12,7 +12,7 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, pivotOffset, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -71,11 +71,12 @@ function restingOf(
   restingAxesFallback: boolean;
   restingEdges: readonly Edge[];
   restingLong: LongAxes;
+  restingCentre: Vec3;
 } {
   const topo = topologyFromMesh(m);
   const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
-  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] } };
+  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] }, restingCentre: [0, 0, 0] };
   const parts = restingParts(st, m, topo, restingFace);
   restingDepth(st, m);
   return { resting, restingFace, ...parts };
@@ -91,7 +92,7 @@ function restingParts(
   m: Mesh,
   topo: NonNullable<ReturnType<typeof topologyFromMesh>>,
   restingFace: RestingCandidate,
-): { restingFill: Mesh; restingAxes: readonly Vec3[]; restingAxesFallback: boolean; restingEdges: readonly Edge[]; restingLong: LongAxes } {
+): { restingFill: Mesh; restingAxes: readonly Vec3[]; restingAxesFallback: boolean; restingEdges: readonly Edge[]; restingLong: LongAxes; restingCentre: Vec3 } {
   // ⭐ the resting face's LONG AXES (`faceLongAxes`, `RESTING_FACE_ALIGNMENT.md` §3) — edge to edge, perpendicular to both edges
   const facePoints = [...new Set(restingFace.faces.flatMap((f) => topo.faces[f]!.triangles))].map((i) => topo.positions[i]!);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
@@ -126,7 +127,8 @@ function restingParts(
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
   restingXray(st, m, fill, data);
-  return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends } };
+  const restingCentre = restingFaceRecord(topo.positions, topo.faces, restingFace)?.centre ?? [0, 0, 0];
+  return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends }, restingCentre };
 }
 
 /**
@@ -237,9 +239,9 @@ const REST_ALIGN_MS = 125;
  * round the piece, used to spin it by 3× a turn it never made.
  */
 function orbitHeading(st: SceneState): number {
-  const p = st.greenBox?.position;
+  const p = st.pieceAnchor;
   const c = st.orbitCentreM;
-  return p === undefined ? 0 : headingAbout([c.x, c.y, c.z], [p.x, p.y, p.z]);
+  return p === null ? 0 : headingAbout([c.x, c.y, c.z], p);
 }
 
 /**
@@ -253,7 +255,9 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
   if (p === undefined || p.restingFace === null || st.greenBox === null) return false;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const q: Quat = [r.w, r.x, r.y, r.z];
-  const pos = p.mesh.position;
+  // ⭐ (2026-10-09) where the orbit placed it — its resting face's centre (`pieceAnchor`) — else the mesh before the first frame
+  const a = st.pieceAnchor;
+  const pos = a === null ? p.mesh.position : { x: a[0], y: a[1], z: a[2] };
   // ⭐ `1.0.59q-` (the owner, 2026-10-05): priority 1 BY THE PINK FACE — the resting face anti-aligned with it, then the two faces' long
   // axes parallel (the most parallel pair; a tie to the closest ends) by a turn about its normal. No face at all: the pose as it is.
   const target = alignFaceOf(st, [pos.x, pos.y, pos.z]);
@@ -290,7 +294,7 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
     }
     if (rolls > 0) st.lastVerdict += ` — ${rolls} roll${rolls > 1 ? "s" : ""} carried over: edge ${stop + 1} / ${stops.length}`;
   }
-  st.restAlign = { from: q, t0: now, base, pivot: null }; // ⭐ the alignment turns about the piece's origin
+  st.restAlign = { from: q, t0: now, base }; // ⭐ about the resting face's centre — the anchor (`placeByFaceCentre`)
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
   // ⭐ (2026-10-09) what it aligned TO — the next tap on the same target ROLLS to the next edge (`rollRestingFace`) against that face's
   // long axis (the one paired), or the screen's horizontal with none; and how many rolls it carries
@@ -317,7 +321,14 @@ export function restOnTappedFace(st: SceneState, faceId: string): boolean {
   if (p.restingFace !== null && p.restingFace.faces.includes(idx)) return true; // ⭐ already its resting face: nothing to rebuild
   const cand = candidateForFace(p.resting, idx, topo.faces[idx]!.normal);
   p.restingFill?.dispose(); // its x-ray twin is its child: it goes with it
-  st.orbitPieces[i] = { ...p, restingFace: cand, ...restingParts(st, p.mesh, topo, cand) };
+  const parts = restingParts(st, p.mesh, topo, cand);
+  // ⭐ (2026-10-09) the new face's centre now rides the anchor: the jump that would make (q·(new − old)) is faded out over the turn
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const q: Quat = [r.w, r.x, r.y, r.z];
+  const jump = qRotate(q, [parts.restingCentre[0] - p.restingCentre[0], parts.restingCentre[1] - p.restingCentre[1], parts.restingCentre[2] - p.restingCentre[2]]);
+  const prev = anchorShiftNow(st, performance.now());
+  st.anchorShift = { off: [jump[0] + prev[0], jump[1] + prev[1], jump[2] + prev[2]], t0: performance.now() };
+  st.orbitPieces[i] = { ...p, restingFace: cand, ...parts };
   const rec = restingFaceRecord(topo.positions, topo.faces, cand);
   if (rec !== null) st.world = setRestingFace(st.world, p.mesh.name, { ...rec, why: "TAPPED" });
   st.hudDirty = true;
@@ -328,7 +339,7 @@ export function restOnTappedFace(st: SceneState, faceId: string): boolean {
 export function restTargetKey(st: SceneState): string {
   const b = st.greenBox;
   if (b === null) return "";
-  return alignFaceOf(st, [b.position.x, b.position.y, b.position.z])?.label ?? "";
+  return alignFaceOf(st, st.pieceAnchor ?? [b.position.x, b.position.y, b.position.z])?.label ?? "";
 }
 
 /**
@@ -363,9 +374,8 @@ export function rollRestingFace(st: SceneState, now: number): boolean {
     st.hudDirty = true;
     return false;
   }
-  // ⭐⭐ (2026-10-09) about the resting face's CENTRE: the piece shifted so that centre stays put (`pivotOffset`, `restAlignFrame`)
-  const fc = st.world.objects.get(p.mesh.name)?.restingFace?.centre ?? null;
-  st.restAlign = { from: shown, t0: now, base: roll.q, pivot: fc === null ? null : { off0: st.rollPivotOff, faceCentre: fc } };
+  // ⭐⭐ (2026-10-09) about the resting face's CENTRE — it is the anchor the orbit places (`placeByFaceCentre`), so it stays put
+  st.restAlign = { from: shown, t0: now, base: roll.q };
   st.restRoll = { ...rr, stop: roll.stop, of: stops.length, rolls: rr.rolls + 1 };
   st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: edge ${roll.stop + 1} / ${stops.length} ∥ ${rr.ref === null ? "the screen's horizontal" : "the pink long axis"}`;
   st.hudDirty = true;
@@ -441,7 +451,8 @@ function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   // ⭐ seen from the PIECE as it is drawn (where the rings put it + its offset): the home camera and the camera as it is
   const piece: Vec3 = [c.x + rel[0] + pieceOff[0], c.y + rel[1] + pieceOff[1], c.z + rel[2] + pieceOff[2]];
   const homeRel: Vec3 = [c.x + ringCam[0] - piece[0], c.y + ringCam[1] - piece[1], c.z + ringCam[2] - piece[2]];
-  st.centreReturn = startCentreReturn(piece, [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], homeRel, pieceOff);
+  // ⭐ (2026-10-09) the rings' distance now — the start of the piece's progress toward their closest point (`ringProgress`)
+  st.centreReturn = startCentreReturn(piece, [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], homeRel, pieceOff, bo.radiusM * k);
   st.pieceOrbit = null;
   st.hudDirty = true;
 }
@@ -479,8 +490,6 @@ function restAlignFrame(st: SceneState, now: number): void {
   const u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
   const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
   st.greenBox.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
-  // ⭐ (2026-10-09) a roll keeps the resting face's centre where it was; an alignment leaves the offset as it is
-  if (a.pivot !== null) st.rollPivotOff = pivotOffset(a.pivot.off0, a.from, q, a.pivot.faceCentre);
   if (u >= 1) {
     st.restAlign = null; // ⭐ landed: the pose stays as it is (and goes on turning against the orbit)
     st.hudDirty = true;
@@ -525,7 +534,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.orbitHeadingPrev = null;
     st.restAligned = false;
     st.restRoll = null;
-    st.rollPivotOff = [0, 0, 0];
+    st.anchorShift = null;
     st.pieceOrbit = null;
     st.pieceEntry = null;
     st.centreReturn = null;
@@ -758,6 +767,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // (`carryHeading`) — the camera turning round it with all of it (`entryCamera`)
   if (st.pieceEntry !== null) st.pieceEntry = carryHeading(st.pieceEntry, st.boxOrbit.yaw, cfg.pieceOrbitEnterMm);
   const po = st.pieceOrbit;
+  // ⭐⭐ (2026-10-09) the way out's leftover also fades by the piece's progress toward the rings' closest point (`ringProgress`)
+  if (st.centreReturn !== null) st.centreReturn = ringProgress(st.centreReturn, bo.radiusM * k, piecesClosestM(st));
   const cr = st.centreReturn;
   // ⭐ (2026-10-07) on the way back to the centre orbit, the piece's difference from the rings fades out (`returnPieceOffset`)
   const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitReturnMm);
@@ -771,6 +782,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       : be !== null
         ? [c.x + be[0] * k + eo[0], c.y + be[1] * k + eo[1], c.z + be[2] * k + eo[2]]
         : [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]];
+  // ⭐⭐ (2026-10-09) `pp` is the ANCHOR — where the resting face's centre goes; the mesh is placed from it at the frame's end
+  // (`anchorFrame`); until then everything orbit-side reads the anchor
+  st.pieceAnchor = pp;
   box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
@@ -921,19 +935,44 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   sphereFrame(st);
   counterYawFrame(st);
   restAlignFrame(st, now);
-  rollPivotFrame(st);
+  anchorFrame(st, now);
   restingFillFrame(st);
 }
 
 /**
- * ⭐ (2026-10-09) The piece where the orbit put it (this frame's placement, read by the sphere and the transitions above) PLUS the offset the
- * rolls about its resting face's centre have given it (`rollPivotOff`) — last, so everything orbit-side reads the orbit's own position.
+ * ⭐⭐ (2026-10-09, *"I want the center of the resting position to be on the ring at the 0.09 m min distance … not the center of the
+ * object"*) The piece placed so that its RESTING FACE'S CENTRE is at the anchor the orbit placed this frame (`placeByFaceCentre`), its
+ * rotation as the frame left it — so the alignment and every roll pivot on that centre; plus a new face's jump fading out
+ * (`anchorShift`). Last, after the sphere, the transitions and the turn.
  */
-function rollPivotFrame(st: SceneState): void {
+function anchorFrame(st: SceneState, now: number): void {
   const b = st.greenBox;
-  const o = st.rollPivotOff;
-  if (b === null || (o[0] === 0 && o[1] === 0 && o[2] === 0)) return;
-  b.position.set(b.position.x + o[0], b.position.y + o[1], b.position.z + o[2]);
+  const a = st.pieceAnchor;
+  const p = st.orbitPieces.find((o) => o.mesh === b);
+  if (b === null || a === null || p === undefined) return;
+  const r = b.rotationQuaternion ?? Quaternion.Identity();
+  const at = placeByFaceCentre(a, [r.w, r.x, r.y, r.z], p.restingCentre);
+  const s = anchorShiftNow(st, now);
+  b.position.set(at[0] + s[0], at[1] + s[1], at[2] + s[2]);
+}
+
+/** ⭐ A new resting face's jump still left (`anchorShift`), eased out over the alignment's turn (`REST_ALIGN_MS`); cleared once gone. */
+function anchorShiftNow(st: SceneState, now: number): Vec3 {
+  const sh = st.anchorShift;
+  if (sh === null) return [0, 0, 0];
+  const u = Math.min(1, Math.max(0, (now - sh.t0) / REST_ALIGN_MS));
+  if (u >= 1) {
+    st.anchorShift = null;
+    return [0, 0, 0];
+  }
+  const left = 1 - u * u * (3 - 2 * u);
+  return [sh.off[0] * left, sh.off[1] * left, sh.off[2] * left];
+}
+
+/** ⭐ The rings' closest distance to the orbit centre, as the piece rides them (its own minimum, zero, applied) — the waist. */
+function piecesClosestM(st: SceneState): number {
+  const m = ringDistanceRange((v) => orbitOffset(st.cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM;
+  return clampPieceRadiusM(m, st.cfg);
 }
 
 /**
