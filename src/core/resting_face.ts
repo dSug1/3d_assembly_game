@@ -614,6 +614,16 @@ export function nextEdgeRoll(
   return { q: qmul(qFromAxisAngle(a, b.angleRad), q), stop: b.stop, angleRad: b.angleRad };
 }
 
+/**
+ * ⭐⭐ prototype — **THE ROLL PIVOTS ON THE RESTING FACE'S CENTRE** (2026-10-09; the owner: *"when the resting face rolls to the next edge, the
+ * rotation shall be around the resting face center, not the object center"*). The piece turns about its own origin; the offset that keeps
+ * the resting face's centre (`faceCentre`, the piece's frame) where it was when the roll started — at the pose `from`, the offset then
+ * `off0` — is `off0 + from·c − now·c`, for ANY pose `now` on the way (so the ease needs no special path).
+ */
+export function pivotOffset(off0: Vec3, from: Quat, now: Quat, faceCentre: Vec3): Vec3 {
+  return add(off0, sub(qRotate(from, faceCentre), qRotate(now, faceCentre)));
+}
+
 /** ⭐ The distance from a point to a segment. */
 export function segmentDistance(p: Vec3, e: Edge): number {
   const ab = sub(e[1], e[0]);

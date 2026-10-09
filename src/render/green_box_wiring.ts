@@ -12,7 +12,7 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, pivotOffset, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -248,7 +248,7 @@ function orbitHeading(st: SceneState): number {
  * axes made parallel. Eased in ONE turn over `REST_ALIGN_MS` from the pose as it is; the counter-yaw stops at this tap (§2bis), so nothing
  * fights the ease, and the piece holds the aligned pose afterwards.
  */
-export function alignRestingFace(st: SceneState, now: number): boolean {
+export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFace === null || st.greenBox === null) return false;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
@@ -269,16 +269,32 @@ export function alignRestingFace(st: SceneState, now: number): boolean {
       `orbit: tap 1 — aligned: the resting face against ${target.label}` +
       (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
-  st.restAlign = { from: q, t0: now, base };
+  const ref: Vec3 | null = target !== null && paired >= 0 ? target.long.axes[paired]! : null;
+  const stops = edgeStops(p.restingEdges, p.restingFace.normal);
+  // ⭐⭐ (2026-10-09, the owner: *"when a new resting face is selected and no change in the pink face, the numbers of rolls applied to the
+  // previous resting face shall immediately apply to the new resting face"*) — `carryRolls` steps to the next edge on top of the alignment,
+  // in the SAME turn
+  let stop = -1;
+  let rolls = 0;
+  if (carryRolls > 0) {
+    const cam = st.camera.position;
+    const tg = st.camera.getTarget();
+    const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
+    const right = st.camera.getDirection(new Vector3(1, 0, 0));
+    for (let i = 0; i < carryRolls; i++) {
+      const step = nextEdgeRoll(base, p.restingFace.normal, stops, ref ?? [right.x, right.y, right.z], view);
+      if (step === null) break;
+      base = step.q;
+      stop = step.stop;
+      rolls++;
+    }
+    if (rolls > 0) st.lastVerdict += ` — ${rolls} roll${rolls > 1 ? "s" : ""} carried over: edge ${stop + 1} / ${stops.length}`;
+  }
+  st.restAlign = { from: q, t0: now, base, pivot: null }; // ⭐ the alignment turns about the piece's origin
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
   // ⭐ (2026-10-09) what it aligned TO — the next tap on the same target ROLLS to the next edge (`rollRestingFace`) against that face's
-  // long axis (the one paired), or the screen's horizontal with none
-  st.restRoll = {
-    key: target?.label ?? "",
-    ref: target !== null && paired >= 0 ? target.long.axes[paired]! : null,
-    stop: -1,
-    of: edgeStops(p.restingEdges, p.restingFace.normal).length,
-  };
+  // long axis (the one paired), or the screen's horizontal with none; and how many rolls it carries
+  st.restRoll = { key: target?.label ?? "", ref, stop, of: stops.length, rolls };
   st.hudDirty = true;
   return true;
 }
@@ -347,8 +363,10 @@ export function rollRestingFace(st: SceneState, now: number): boolean {
     st.hudDirty = true;
     return false;
   }
-  st.restAlign = { from: shown, t0: now, base: roll.q };
-  st.restRoll = { ...rr, stop: roll.stop, of: stops.length };
+  // ⭐⭐ (2026-10-09) about the resting face's CENTRE: the piece shifted so that centre stays put (`pivotOffset`, `restAlignFrame`)
+  const fc = st.world.objects.get(p.mesh.name)?.restingFace?.centre ?? null;
+  st.restAlign = { from: shown, t0: now, base: roll.q, pivot: fc === null ? null : { off0: st.rollPivotOff, faceCentre: fc } };
+  st.restRoll = { ...rr, stop: roll.stop, of: stops.length, rolls: rr.rolls + 1 };
   st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: edge ${roll.stop + 1} / ${stops.length} ∥ ${rr.ref === null ? "the screen's horizontal" : "the pink long axis"}`;
   st.hudDirty = true;
   return true;
@@ -461,6 +479,8 @@ function restAlignFrame(st: SceneState, now: number): void {
   const u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
   const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
   st.greenBox.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
+  // ⭐ (2026-10-09) a roll keeps the resting face's centre where it was; an alignment leaves the offset as it is
+  if (a.pivot !== null) st.rollPivotOff = pivotOffset(a.pivot.off0, a.from, q, a.pivot.faceCentre);
   if (u >= 1) {
     st.restAlign = null; // ⭐ landed: the pose stays as it is (and goes on turning against the orbit)
     st.hudDirty = true;
@@ -505,6 +525,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.orbitHeadingPrev = null;
     st.restAligned = false;
     st.restRoll = null;
+    st.rollPivotOff = [0, 0, 0];
     st.pieceOrbit = null;
     st.pieceEntry = null;
     st.centreReturn = null;
@@ -900,7 +921,19 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   sphereFrame(st);
   counterYawFrame(st);
   restAlignFrame(st, now);
+  rollPivotFrame(st);
   restingFillFrame(st);
+}
+
+/**
+ * ⭐ (2026-10-09) The piece where the orbit put it (this frame's placement, read by the sphere and the transitions above) PLUS the offset the
+ * rolls about its resting face's centre have given it (`rollPivotOff`) — last, so everything orbit-side reads the orbit's own position.
+ */
+function rollPivotFrame(st: SceneState): void {
+  const b = st.greenBox;
+  const o = st.rollPivotOff;
+  if (b === null || (o[0] === 0 && o[1] === 0 && o[2] === 0)) return;
+  b.position.set(b.position.x + o[0], b.position.y + o[1], b.position.z + o[2]);
 }
 
 /**

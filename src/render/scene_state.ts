@@ -454,7 +454,17 @@ export interface SceneState {
     second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; moved: boolean } | null;
   } | null;
   /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
-  restAlign: { readonly from: Quat; readonly t0: number; readonly base: Quat } | null;
+  restAlign: {
+    readonly from: Quat;
+    readonly t0: number;
+    readonly base: Quat;
+    /** ⭐ (2026-10-09) a ROLL pivots on the resting face's centre (`faceCentre`, the piece's frame) from the offset it had (`off0`); an
+     * alignment turns about the piece's origin (`null`). */
+    readonly pivot: { readonly off0: Vec3; readonly faceCentre: Vec3 } | null;
+  } | null;
+  /** ⭐ Prototype (2026-10-09): the orbited piece's offset from where the orbit puts it — what the rolls about the resting face's centre
+   * have shifted it by (`pivotOffset`); zero at a respawn. */
+  rollPivotOff: Vec3;
   /** ⭐ Prototype (§2bis): the orbited piece's heading about the ring last frame — the counter-yaw turns by its change. `null`: read afresh. */
   orbitHeadingPrev: number | null;
   /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
@@ -462,7 +472,7 @@ export interface SceneState {
   /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): what the last alignment aligned TO — its target face (`key`, `alignFaceOf`'s label; "" with
    * none) and the reference the edge roll lines the edges up with (`ref`: that face's long axis, world; `null` — the screen's
    * horizontal); the stop last reached (`stop`, of `of`; −1 before the first roll). `null` until the first alignment; a respawn clears it. */
-  restRoll: { readonly key: string; readonly ref: Vec3 | null; readonly stop: number; readonly of: number } | null;
+  restRoll: { readonly key: string; readonly ref: Vec3 | null; readonly stop: number; readonly of: number; readonly rolls: number } | null;
   /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
    * respawn. `null`: the orbit around the centre as before. */
   pieceOrbit: PieceOrbit | null;

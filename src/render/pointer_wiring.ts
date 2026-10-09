@@ -662,7 +662,9 @@ export function installPointerHandler(st: SceneState): void {
             const tapped =
               st.router.all().length === 0 &&
               isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
-            if (tapped && restOnTappedFace(st, ft.faceId) && alignRestingFace(st, performance.now())) {
+            // ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting face, at once
+            const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
+            if (tapped && restOnTappedFace(st, ft.faceId) && alignRestingFace(st, performance.now(), carry)) {
               st.episodes.touch(--st.episodeSeq, true, true);
               st.episodes.sync(true);
               st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);

@@ -143,7 +143,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(Math.atan2(-x[2], x[0])).toBeCloseTo(1.2, 12);
     // ⛔ the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* — it stops at the tap, and stays stopped
     expect(w).toMatch(/if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/); // (2026-10-08) and while the sphere is on
-    expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};\s*st\.restAligned = true;/);
+    expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base, pivot: null \};[^\n]*\n\s*st\.restAligned = true;/);
     expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;\s*st\.restAligned = false;/); // the respawn clears it
     // ⛔ no gate on a finger: before the alignment the frame step runs whatever the finger does
     expect(w).toMatch(/function counterYawFrame\(st: SceneState\): void \{\s*const box = st\.greenBox;\s*if \(box === null \|\| st\.boxOrbit === null\) return;/);

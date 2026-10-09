@@ -580,6 +580,7 @@ export function createScene(
   st.orbitHeadingPrev = null;
   st.restAligned = false;
   st.restRoll = null;
+  st.rollPivotOff = [0, 0, 0];
   st.pieceOrbit = null;
   st.centreReturn = null;
   st.pieceEntry = null;

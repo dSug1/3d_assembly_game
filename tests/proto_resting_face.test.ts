@@ -226,7 +226,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(w.indexOf("const PINK = new Color3(1, 0.6, 0.9);")).toBeLessThan(w.indexOf("const RESTING_COLOUR = PINK;"));
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
-    expect(w).toMatch(/pinkRingFrame\(st\);\s*sphereFrame\(st\);\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*restingFillFrame\(st\);/); // (2026-10-08) the sphere
+    expect(w).toMatch(/pinkRingFrame\(st\);\s*sphereFrame\(st\);\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*rollPivotFrame\(st\);\s*restingFillFrame\(st\);/); // (2026-10-08) the sphere
   });
 
   it("⭐⭐ the yellow face is seen faintly THROUGH its own piece, never through another (the owner, 2026-10-05) — by draw order", () => {
