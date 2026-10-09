@@ -32,8 +32,8 @@ import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { add, qRotate, qSlerp, scale, type Quat, type Vec3 } from "../core/vec";
-import { zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -746,8 +746,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm);
   const pp: Vec3 =
     po !== null
-      ? // ⭐⭐ (2026-10-09) ALONG THE RINGS at its frozen heading — dy as in the orbit round the centre, dx never moving it
-        add([c.x, c.y, c.z], scale(orbitOffset(st.cfg, po.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM, k))
+      ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
       : be !== null
         ? [c.x + be[0] * k + eo[0], c.y + be[1] * k + eo[1], c.z + be[2] * k + eo[2]]
         : [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]];
