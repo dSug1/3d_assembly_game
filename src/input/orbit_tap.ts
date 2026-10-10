@@ -44,3 +44,14 @@ export function restingFaceTap(onOrbitedPiece: boolean, firstTouch: boolean, inB
 // ⛔ (2026-10-10, the owner) `tapAction` is DELETED: the second-touch / right-button tap neither rolls (*"remove the increment of the roll by
 // right button tap / second touch tap"*) nor aligns (*"remove that as the existing pieces are aligned at boot"*) — every piece is aligned
 // at its spawn (`bootRestAlign`), the roll is the orbit's dx, a new resting face is a tap ON the piece (`restingFaceTap`).
+
+/**
+ * ⭐⭐ prototype — **THE TAP ALIGNS TO A NEW PINK FACE** (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §19; the owner: *"previously, there was an
+ * alignment triggered by an input when the pink face was changed … How could we reinstate this alignment now"* → *"build it with old
+ * input"*): the second-touch tap on the orbited piece / the right tap while the left button orbits ALIGNS the resting face to the pink face
+ * when that face (`targetKey`, the face the piece would align to now) is not the one it was last aligned to (`alignedKey`); the same face:
+ * nothing, so a stray tap never undoes the rolls, yaws and pitches made since. `targetKey` "" (nothing to align to): nothing.
+ */
+export function tapAlignsToPink(alignedKey: string | null, targetKey: string): boolean {
+  return targetKey !== "" && targetKey !== alignedKey;
+}

@@ -14,7 +14,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { candidateForFace, chooseInGroup, coupleStops, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { nearestCouple, nextTumble, tumbleAxes, tumbleAxisSigned } from "../core/tumble";
+import { edgeAxisRelative, edgeDirections, nearestCouple, nextEdgeAxis, nextTumble, tumbleAxes, tumbleAxisSigned } from "../core/tumble";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -422,28 +422,37 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
  * (`nearestCouple`). `sense` +1: the near side RIGHT (yaw), the top AWAY (pitch). One turn eased over `REST_ALIGN_MS`, quick steps adding
  * up; the roll count starts again. `false` with nothing to tumble onto.
  */
-export function tumbleRestingFace(st: SceneState, now: number, turn: "YAW" | "PITCH", sense: 1 | -1): boolean {
+export function tumbleRestingFace(
+  st: SceneState,
+  now: number,
+  turn: "YAW" | "PITCH",
+  sense: 1 | -1,
+  /** ⭐ (2026-10-10) a path in flight: the axis it turns about (world) — the edge direction most along it is used; `null`: the first step */
+  want: Vec3 | null = null,
+): { readonly axis: Vec3; readonly angleRad: number } | null {
   const i = st.orbitPieces.findIndex((o) => o.mesh === st.greenBox);
   const p = st.orbitPieces[i];
   const rr = st.restRoll;
-  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return false;
+  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return null;
   const topo = topologyFromMesh(p.mesh);
-  if (topo === null) return false;
+  if (topo === null) return null;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const shown: Quat = [r.w, r.x, r.y, r.z];
-  const from = st.restAlign?.base ?? shown; // ⭐ quick steps add up: from where the last one was heading
+  const from = st.restAlign?.base ?? shown; // ⭐ from where the last turn was heading (one in flight at most — the clamp)
   const cam = st.camera.position;
   const tg = st.camera.getTarget();
   const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
   const rv = st.camera.getDirection(new Vector3(1, 0, 0));
   const uv = st.camera.getDirection(new Vector3(0, 1, 0));
   const right: Vec3 = [rv.x, rv.y, rv.z];
-  const axes = tumbleAxes(from, p.restingFace.normal, p.restingFlush, [0, 1, 0], right);
-  const axis = turn === "YAW" ? axes.yaw : axes.pitch;
+  // ⭐⭐ (2026-10-10) about the resting face's EDGE directions (`edgeDirections`); a path keeps its axis (the edge direction most along it)
+  const dirs = edgeDirections(p.restingEdges);
+  const axes = tumbleAxes(from, p.restingFace.normal, dirs, [0, 1, 0], right);
+  const axis = want !== null ? edgeAxisRelative(from, p.restingFace.normal, dirs, want, true) : turn === "YAW" ? axes.yaw : axes.pitch;
   if (axis === null) {
     st.lastVerdict = `orbit: ${turn.toLowerCase()} — none (${turn === "YAW" ? "the resting face is horizontal: dx rolls" : "no axis"})`;
     st.hudDirty = true;
-    return false;
+    return null;
   }
   const signed = tumbleAxisSigned(turn, axis, sense, view, right, [uv.x, uv.y, uv.z]);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((v) => v[k]!)));
@@ -455,7 +464,7 @@ export function tumbleRestingFace(st: SceneState, now: number, turn: "YAW" | "PI
   if (t === null || !restOnTappedFace(st, t.faceId)) {
     st.lastVerdict = `orbit: ${turn.toLowerCase()} — no face to tumble onto`;
     st.hudDirty = true;
-    return false;
+    return null;
   }
   const np = st.orbitPieces[i]!; // ⭐ the new resting face's axes and normal (`restOnTappedFace` rebuilt them)
   const c = np.restingFace === null ? { q: t.q, couple: null, angleRad: 0 } : nearestCouple(t.q, np.restingFace.normal, np.restingFlush, rr.pinkAxes);
@@ -466,7 +475,24 @@ export function tumbleRestingFace(st: SceneState, now: number, turn: "YAW" | "PI
     `orbit: ${turn === "YAW" ? (sense > 0 ? "yaw →" : "yaw ←") : sense > 0 ? "pitch ↑" : "pitch ↓"} ${((t.angleRad * 180) / Math.PI).toFixed(0)}° onto ${t.faceId}` +
     (c.couple === null ? "" : ` — a${c.couple[0]} ∥ b${c.couple[1]}`);
   st.hudDirty = true;
-  return true;
+  return { axis, angleRad: t.angleRad };
+}
+
+/** ⭐ The shown piece's resting face as one key (its merged faces' ids) — what a yaw / pitch path compares to know it is back (`pathAfterStep`). */
+export function restingFaceKey(st: SceneState): string {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return "";
+  const topo = topologyFromMesh(p.mesh);
+  return p.restingFace.faces.map((k) => topo?.faces[k]?.id ?? String(k)).sort().join("+");
+}
+
+/** ⭐ The next movement's axis once a path is whole (the swap): the resting face's NEXT edge direction after `w` (`nextEdgeAxis`), at the pose it is heading for. */
+export function otherTumbleAxis(st: SceneState, w: Vec3, sense: 1 | -1 = 1): Vec3 | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return null;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const q: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
+  return nextEdgeAxis(q, p.restingFace.normal, edgeDirections(p.restingEdges), w, sense);
 }
 
 /** ⭐ Is the shown piece's resting face VERTICAL now (`tumbleAxes`, the pose it is heading for) — a two-finger dx yaws it; else it rolls. */
@@ -475,7 +501,7 @@ export function restingFaceVertical(st: SceneState): boolean {
   if (p === undefined || p.restingFace === null) return false;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const q: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
-  return tumbleAxes(q, p.restingFace.normal, p.restingFlush, [0, 1, 0], [1, 0, 0]).vertical;
+  return tumbleAxes(q, p.restingFace.normal, edgeDirections(p.restingEdges), [0, 1, 0], [1, 0, 0]).vertical;
 }
 
 /**

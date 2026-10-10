@@ -832,6 +832,7 @@ export function createScene(
 
   st.zoom = st.orbitStartZoom;
   st.pinchMotion = new PinchMotion(st.cfg);
+  st.pinchDx = null;
   st.zoomAtPinchStart = st.orbitStartZoom;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.

@@ -24,6 +24,16 @@ export function pinchZooms(aMoving: boolean, bMoving: boolean): boolean {
 }
 
 /**
+ * ⭐⭐ prototype — **THE ZOOM OPENS ON BOTH FINGERS' dx** (2026-10-10, the owner: *"zoom can only be done if the two touches move beyond their
+ * dx deadbands"*): a pinch zooms only once BOTH fingers have travelled past the deadband ACROSS the screen (x) since it began — `dx0Mm`,
+ * `dx1Mm` each finger's x travel; then it is open for the rest of the pinch (`pinchZooms` still pauses it while both are still). ⭐ Why: a
+ * second touch held still while the first one moves is the yaw / pitch now, never a zoom.
+ */
+export function pinchDxOpen(dx0Mm: number, dx1Mm: number, deadbandMm: number): boolean {
+  return Math.abs(dx0Mm) > deadbandMm && Math.abs(dx1Mm) > deadbandMm;
+}
+
+/**
  * ⭐ The pinching fingers' motion states — one `MotionTracker` per finger, fed each finger's OWN samples (a sample already fed is not fed
  * again), and ticked so a finger that has stopped is seen stopped even with no event.
  */

@@ -599,7 +599,8 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     const tap = code("render/pointer_wiring.ts");
     const tapFn = tap.slice(tap.indexOf("export function orbitTapped("), tap.indexOf("export function orbitRightTap("));
-    expect(tapFn).not.toMatch(/alignRestingFace|rollRestingFace|tapAction|episodes\.touch/); // ⛔ (2026-10-10) the tap neither aligns nor rolls — the piece is aligned at its spawn, the roll is the orbit's dx
+    expect(tapFn).not.toMatch(/rollRestingFace|tapAction/); // ⛔ (2026-10-10) no roll by a tap
+    expect(tapFn).toMatch(/if \(tapAlignsToPink\(st\.restRoll\?\.key \?\? null, restTargetKey\(st\)\) && alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/); // ⭐ (2026-10-10) a new pink face: it aligns
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
     expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in

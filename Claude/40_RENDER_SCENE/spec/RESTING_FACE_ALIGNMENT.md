@@ -368,3 +368,75 @@ or 4th ring)"*.
   green and the turquoise piece, and any piece a later level spawns — is aligned on its first frame, before any input (§16's
   `bootRestAlign`, set by the spawn in `green_box_wiring.ts`), so no gesture is ever needed to make a piece aligned. ⚠ A future spawn path
   that bypasses that function must set `st.bootRestAlign = true` itself; `tests/proto_resting_roll.test.ts` pins that the spawn sets it.
+- ⭐ **Amended the same day** (§19): the second-touch / right tap ALIGNS again — but only to a NEW pink face.
+
+## 18. The YAW and the PITCH outside the sphere (2026-10-10, `1.0.63-`)
+
+> *"how do you suggest I do to yaw the object so that the next face can be aligned as resting face with a movement similar to the roll to
+> the next axis when the piece is outside the white sphere"* → *"yaw the object around gravity axis"* → *"we need a yaw if the resting face is
+> vertical and a pitch if the resting face is horizontal"* → *"build the yaw and pitch"* — the owner, 2026-10-10, then four rounds the same day.
+
+**The input** (only outside the sphere, the piece aligned — it is from its spawn, §17):
+
+| | mobile | desktop |
+|---|---|---|
+| hold | a SECOND touch pressed OFF any placed part (empty space, the floor, the orbited piece) and kept STILL — within the deadband (`motionDeadbandMm`) along x and y | the RIGHT button, pressed while the left one orbits |
+| move | the FIRST touch (the orbit finger), dx or dy | the left drag, dx or dy |
+
+- ⛔ The first build's two-finger PARALLEL slide is deleted, with its spacing tolerance and its pair rule (*"the input shall not be two-finger
+  dx or two finger dy"*). The second touch leaving its deadband ends the yaw / pitch: the pinch and the taps go on as before.
+- ⭐ **The axis** — whichever of dx and dy FIRST passes the deadband: **dy PITCHES; dx YAWS on a vertical resting face** and **ROLLS on a
+  horizontal one** (a turn about gravity is the roll there — the owner: *"the two-finger dx should do the same as the roll"*). Back within
+  the deadband along it, the choice is UNDONE and the next axis out owns it (*"the selection is reset if the first delta selection comes
+  back into its deadband"*).
+- ⭐ **The steps** — one face per `tumbleStepMm` (12 mm, CAMERA ORBIT AROUND PIECE, *yaw / pitch: travel per face*), signed (right / up
+  forward), back through zero before the other way. Each step is one turn eased over the alignment's 125 ms, then the new face's couple of
+  edge-to-edge axes put back on the pink face's by the smallest spin (`nearestCouple`, as the roll keeps it), the roll count started again.
+- ⛔⛔ **THE CLAMP** (*"when the dx is too fast, the piece makes strange movements. consider clamping"*): ONE turn in flight — a step only once
+  the last one landed, one at most; travel a fast move crosses meanwhile is DROPPED, never queued. ⭐ The cause, found by reading: two
+  queued steps were a turn past 180°, and the ease took the SHORTEST way there — about another axis. The orbit's dx roll (§15) has the same
+  clamp.
+- ⭐ **THE RESET** — the move STOPS (no travel, in any direction, for 250 ms — `TUMBLE_REST_MS`): the axis, the turn and the path start again
+  with the next travel (*"then reset when the delta position stops"*). ⚠ A move slower than ~4 mm/s counts as stopped.
+
+**The geometry** (`core/tumble.ts`, engine-free):
+- ⭐⭐ **The piece tips over its resting face's EDGES** — the turn axes are its EDGE directions (`edgeDirections`): YAW about the one closest to
+  gravity, PITCH about the one most across it (a horizontal face: the one most along the screen). ⛔ The first build turned about the face's
+  symmetry axes ACROSS ITS FLATS — on the turquoise's hexagonal end the plane across a flat runs through two opposite CORNERS, meeting the
+  side faces only along an edge, so it jumped end to end (*"the turquoise piece does not pass through the lateral faces"*). A rectangle's
+  edges run along its symmetry axes: the green piece is unchanged.
+- ⭐⭐ **The next face — THE SECTION LOOP** (`nextTumble`): the plane through the resting face's centre, perpendicular to the turn axis, cuts a
+  ring of faces — Blender's *bisect* rather than its quad *face loop* (Alt+click, through opposite edges), which breaks at a triangle or a
+  pole (a faceted bowl's bottom). Of the faces it cuts — **hull faces only** (a piece rests on its convex hull; a concave piece walks its
+  outer ring) — the next is the first the turn reaches in its sense; the step is the angle between the two normals in that plane, and a
+  slanted face's leftover tilt is taken out so the new face is exactly where the old one was. Headless: the green piece (a frustum) 105° /
+  81°; the turquoise 90° end ↔ side, 60° side ↔ side.
+- ⭐⭐ **THE PATHS AND THE SWAP** (*"if the path brings the starting resting face back swap to the other movement … while the delta position
+  continues"* → *"make each swap move on to the next edge direction and generalize that in case of a more complex geometry (for example
+  multifaceted sphere)"*): a path is WHOLE when it is back on the face it started from with a net count (out and back is no path), or has
+  turned a FULL TURN (a faceted sphere's loop need not come back to its face). The same move then goes on about the face's NEXT edge
+  direction (`nextEdgeAxis`): a rectangle alternates its two (yaw, pitch, yaw …), a hexagon takes its three in turn, any polygon all of
+  them; yaw and pitch alternate as names.
+- ⭐⭐ **REVERSED** (*"make sure the faces paths are reversed if the input goes in the other direction"*): the paths of one gesture are a
+  TRAIL (`trailBefore` / `trailAfter`). The input reversed walks the faces back — within a path, and ACROSS a swap: back at a path's start,
+  the next step back drops it and walks the previous path backwards; going on again re-enters the next edge direction. A path made whole
+  going backwards moves on the other way round the edge directions (the order mirrored). Headless, one gesture on the turquoise: up f7 → f5
+  → f6 → f2 → f7 ⟶ f3 → f6, then down f6 → f3 → f7 ⟶ f2 → f6 → f5.
+
+**The zoom** (*"zoom can only be done if the two touches move beyond their dx deadbands"*): a pinch zooms only once BOTH fingers have
+travelled past the deadband ACROSS the screen (x) since it began (`pinchDxOpen`), then as before — so a second touch held still while the
+first moves is never a zoom. Everywhere a pinch zooms.
+
+⚠ No step costs an episode (as the dx roll). `tests/proto_tumble.test.ts`; every rule above falsified on purpose (hull, section plane,
+tilt, smallest step, yaw axis, back, next, full turn, unlatch, held still, both dx, the mirrored order).
+
+## 19. The tap aligns to a NEW pink face (2026-10-10, `1.0.63-`)
+
+> *"previously, there was an alignment triggered by an input when the pink face was changed: what was the input? How could we reinstate
+> this alignment now"* → *"build it with old input"* — the owner.
+
+The second-touch tap on the orbited piece (mobile) or the right tap while the left button orbits (desktop) ALIGNS the resting face to the
+pink face — the long axes first, no rolls carried (the pink face changed), one episode — when that face is NOT the one it was last
+aligned to (`tapAlignsToPink`); the same face: nothing, so the rolls, yaws and pitches made since stay. So a new pink face is two taps — one
+on a placed piece to pick it (§14), one on the piece to align — and changing the pink face still aligns nothing by itself (§16). ⚠ At boot
+the piece is aligned to the floor while a pink face is already set: the first tap on the piece aligns it to that pink face.
