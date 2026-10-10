@@ -27,7 +27,7 @@ import { type Quat, type Vec3 } from "../core/vec";
 import { type FrameMeter } from "../core/frame_meter";
 import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { PinchMotion } from "../input/pinch_gate";
-import type { TumbleGesture, TumbleTurn } from "../input/tumble_gesture";
+import type { TumbleGesture, TumbleTrail, TumbleTurn } from "../input/tumble_gesture";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -500,16 +500,21 @@ export interface SceneState {
   orbitRollAcc: number;
   /**
    * ⭐ Prototype (2026-10-10): the YAW / PITCH gesture in flight (`tumble_gesture.ts`), outside the sphere — its two fingers (`a` the orbit
-   * finger, `b` the second) or the mouse (`a`/`b` null: left + right held), the midpoint at its start (px), the cursor travel so far (px, the
-   * mouse), its state, and the turn once the axis latched. `null` otherwise.
+   * finger, `b` the held second touch) or the mouse (`a`/`b` null: left + right held), the cursor travel so far (px, the mouse), its state,
+   * and the turn once the axis latched. `null` otherwise.
    */
   tumble: {
     readonly a: number | null;
     readonly b: number | null;
-    readonly startMid: readonly [number, number];
+    /** ⭐ (2026-10-10) the orbit finger's and the held second touch's positions at the start (px) — the touch gesture. */
+    readonly aStart: readonly [number, number];
+    readonly bStart: readonly [number, number];
     mouseTravel: [number, number];
     g: TumbleGesture;
     turn: TumbleTurn | null;
+    /** ⭐ (2026-10-10) the yaw / pitch TRAIL — the paths walked, the last in flight — and each path's axis (world; null until its first step). */
+    trail: TumbleTrail | null;
+    axes: (import("../core/vec").Vec3 | null)[];
   } | null;
   /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
   bootRestAlign: boolean;
@@ -669,6 +674,8 @@ export interface SceneState {
   pinch: PinchTracker;
   /** ⭐ Prototype (2026-10-06): each pinching finger's motion state — the zoom only while BOTH are MOVING (`pinch_gate.ts`). */
   pinchMotion: PinchMotion;
+  /** ⭐ Prototype (2026-10-10): each pinching finger's x at the pinch's start, and whether both have since passed the dx deadband (`pinchDxOpen`). */
+  pinchDx: { readonly x0: ReadonlyMap<number, number>; open: boolean } | null;
   pendingCentre: { x: number; y: number; at: number } | null;
   cameraReset: CameraResetAnimation | null;
   orbit: OrbitController;

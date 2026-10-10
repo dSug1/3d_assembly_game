@@ -12,7 +12,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, greenDragGains, orbitRollStepRad, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
-import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved } from "../input/orbit_tap";
+import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved, tapAlignsToPink } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
@@ -378,6 +378,8 @@ export function installPointerHandler(st: SceneState): void {
           st.pinch.begin(p[0], p[1]);
           // ⭐ each finger's motion state starts here (`pinch_gate.ts`: the zoom only while BOTH are MOVING)
           st.pinchMotion.begin(st.router.outside());
+          // ⭐ (2026-10-10) the zoom opens only on both fingers' dx (`pinchDxOpen`)
+          st.pinchDx = { x0: new Map(st.router.outside().map((q) => [q.id, q.last.x] as const)), open: false };
           // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
           // never an accumulation — so a pinch out and back returns exactly where it
           // began. See input/pinch.ts.
@@ -385,8 +387,14 @@ export function installPointerHandler(st: SceneState): void {
         }
         // ⭐⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) a second finger while the orbit finger is down, outside the sphere: a yaw /
         // pitch SLIDE or a pinch — undecided until the spacing or the midpoint says (`tumble_wiring.ts`)
+        // ⭐⭐ (2026-10-10, *"first touch delta position (dx or dy) while second touch is pressed outside a placed part and kept held and within
+        // delta positon deadbands"*) — armed only OFF a placed part (empty space, the floor, the orbited piece)
         st.tumble = null;
-        if (orbitFinger !== null) beginTouchTumble(st, orbitFinger, e.pointerId);
+        {
+          const hitId = pick?.hit === true && pick.pickedMesh !== null && pick.pickedMesh !== st.greenBox ? st.idOf.get(pick.pickedMesh) : undefined;
+          const onPlacedPart = !inBand && hitId !== undefined && st.world.objects.get(hitId)?.frozen !== true;
+          if (orbitFinger !== null && !onPlacedPart) beginTouchTumble(st, orbitFinger, e.pointerId);
+        }
         st.hudDirty = true;
         return;
       }
@@ -588,7 +596,7 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
-        // ⭐⭐ (2026-10-10) the yaw / pitch gesture owns its fingers' moves until it turns out a pinch (`feedTouchTumble`)
+        // ⭐⭐ (2026-10-10) the yaw / pitch gesture owns its fingers' moves while the second touch is held still (`feedTouchTumble`)
         if (st.tumble !== null && st.tumble.a !== null && (e.pointerId === st.tumble.a || e.pointerId === st.tumble.b)) {
           if (feedTouchTumble(st) === "OWNED") {
             st.hudDirty = true;
@@ -1290,7 +1298,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
       const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
       st.orbitRollAcc = r.acc;
-      for (let i = 0; i < Math.abs(r.steps); i++) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
+      // ⛔⛔ (2026-10-10, the owner: *"when the dx is too fast, the piece makes strange movements. consider clamping"*) ONE turn in flight: a roll
+      // only once the last turn landed, one at most — a fast dx crossing several stops drops the rest (queued, they made a turn past 180°,
+      // eased the SHORT way round, about another axis)
+      if (r.steps !== 0 && st.restAlign === null) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
     }
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
     // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
@@ -1363,8 +1374,15 @@ export function orbitTapped(st: SceneState): void {
   // ⛔⛔ (2026-10-10, the owner) the tap does NOTHING to the piece now — it rolled (*"remove the increment of the roll by right button tap /
   // second touch tap: this is superfluous as we have a roll movement already controlled by dx drag"*) and aligned (*"The tap also aligns a
   // piece that isn't aligned yet: remove that as the existing pieces are aligned at boot"*): every piece is aligned at its spawn
-  // (`bootRestAlign`). Still counted for the HUD, and still consumed (a second touch on the piece never pinches); costs nothing.
-  st.lastVerdict = `orbit: tap ${ot.count} — nothing (the roll is the orbit's dx; the piece was aligned at its spawn)`;
+  // (`bootRestAlign`). Still counted for the HUD, and still consumed (a second touch on the piece never pinches).
+  // ⭐⭐ (2026-10-10, the owner: *"How could we reinstate this alignment now"* → *"build it with old input"*) — but a NEW pink face: the tap
+  // ALIGNS the resting face to it (long axes first, no rolls carried — the pink face changed), one episode; the same face: nothing
+  if (tapAlignsToPink(st.restRoll?.key ?? null, restTargetKey(st)) && alignRestingFace(st, performance.now())) {
+    st.episodes.touch(--st.episodeSeq, true, true);
+    st.episodes.sync(true);
+  } else {
+    st.lastVerdict = `orbit: tap ${ot.count} — nothing (already aligned to this pink face; the roll is the orbit's dx)`;
+  }
   st.hudDirty = true;
 }
 

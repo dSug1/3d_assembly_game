@@ -5,8 +5,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { nearestCouple, nextTumble, tumbleAxes, tumbleAxisSigned, type TumbleFace } from "../src/core/tumble";
-import { startTumble, stepTumble, tumbleTurnOf } from "../src/input/tumble_gesture";
+import { edgeAxisRelative, edgeDirections, nearestCouple, nextEdgeAxis, nextTumble, tumbleAxes, tumbleAxisSigned, type TumbleFace } from "../src/core/tumble";
+import { heldStill, startTrail, startTumble, stepTumble, trailAfter, trailBefore, trailTurn, TUMBLE_REST_MS, tumbleTurnOf, type TumbleTrail } from "../src/input/tumble_gesture";
+import { pinchDxOpen } from "../src/input/pinch_gate";
 import { MouseSecondTouch } from "../src/input/mouse_second_touch";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { dot, qFromAxisAngle, qmul, qRotate, IDENTITY, type Quat, type Vec3 } from "../src/core/vec";
@@ -146,6 +147,61 @@ describe("⭐⭐⭐ prototype — the yaw and the pitch: the geometry (`core/tum
     expect(near(qRotate(t.q, n), [0, -1, 0], 1e-9)).toBe(true);
   });
 
+  it("⭐ a face's EDGE directions, one per line: a rectangle 2, a hexagon 3", () => {
+    const P = hexPrism(0.05, 0.1);
+    const cap = P.faces.find((f) => f.id === "bottom")!.points;
+    expect(edgeDirections(cap.map((p, i) => [p, cap[(i + 1) % cap.length]!] as const))).toHaveLength(3);
+    const rect: Vec3[] = [[-1, 0, -2], [1, 0, -2], [1, 0, 2], [-1, 0, 2]];
+    expect(edgeDirections(rect.map((p, i) => [p, rect[(i + 1) % 4]!] as const))).toHaveLength(2);
+  });
+
+  it("⭐⭐ the owner's report: the turquoise on an END face reaches its SIDE faces — about an EDGE (the first build's axis across the flats only reached the other end)", () => {
+    const P = hexPrism(0.05, 0.1);
+    const cap = P.faces.find((f) => f.id === "bottom")!.points;
+    const dirs = edgeDirections(cap.map((p, i) => [p, cap[(i + 1) % cap.length]!] as const));
+    const centre: Vec3 = [0, -0.1, 0];
+    for (const d of dirs)
+      for (const s of [1, -1]) {
+        const t = nextTumble(IDENTITY, P.faces, P.positions, ["bottom"], [0, -1, 0], centre, d.map((v) => v * s) as unknown as Vec3, 1e-6)!;
+        expect(t.faceId).toMatch(/^s[0-5]$/);
+        expect(deg(t.angleRad)).toBeCloseTo(90, 6);
+      }
+    // ⛔ the first build: about the axis ACROSS a flat (side 0's normal, x), the plane runs through two corners — only the other end
+    const across = nextTumble(IDENTITY, P.faces, P.positions, ["bottom"], [0, -1, 0], centre, [1, 0, 0], 1e-6)!;
+    expect(across.faceId).toBe("top");
+    // ⭐ and the end face is VERTICAL-agnostic: tumbleAxes now hands an edge direction
+    const a = tumbleAxes(IDENTITY, [0, -1, 0], dirs, UP, RIGHT);
+    expect(dirs.some((d) => Math.abs(dot(d, a.pitch!)) > 1 - 1e-9)).toBe(true);
+  });
+
+  it("⭐ the turquoise on a SIDE face: about its long edge it walks the six sides (60°); about its short edge it reaches an end", () => {
+    const P = hexPrism(0.05, 0.1);
+    const s0 = P.faces.find((f) => f.id === "s0")!;
+    const dirs = edgeDirections(s0.points.map((p, i) => [p, s0.points[(i + 1) % 4]!] as const));
+    const centre: Vec3 = [0.05 * Math.cos(Math.PI / 6), 0, 0];
+    const long = edgeAxisRelative(IDENTITY, [1, 0, 0], dirs, [0, 1, 0], true)!;
+    expect(deg(nextTumble(IDENTITY, P.faces, P.positions, ["s0"], [1, 0, 0], centre, long, 1e-6)!.angleRad)).toBeCloseTo(60, 6);
+    const short = edgeAxisRelative(IDENTITY, [1, 0, 0], dirs, [0, 1, 0], false)!;
+    expect(["top", "bottom"]).toContain(nextTumble(IDENTITY, P.faces, P.positions, ["s0"], [1, 0, 0], centre, short, 1e-6)!.faceId);
+  });
+
+  it("⭐⭐ the swap moves on to the NEXT edge direction: a rectangle alternates its two, a hexagon takes its three in turn", () => {
+    const P = hexPrism(0.05, 0.1);
+    const cap = P.faces.find((f) => f.id === "bottom")!.points;
+    const dirs = edgeDirections(cap.map((p, i) => [p, cap[(i + 1) % cap.length]!] as const));
+    const seen: Vec3[] = [dirs[0]!];
+    for (let i = 0; i < 3; i++) seen.push(nextEdgeAxis(IDENTITY, [0, -1, 0], dirs, seen[seen.length - 1]!)!);
+    const line = (a: Vec3, b: Vec3) => Math.abs(dot(a, b)) > 1 - 1e-9;
+    expect(line(seen[0]!, seen[1]!) || line(seen[1]!, seen[2]!) || line(seen[0]!, seen[2]!)).toBe(false); // three different
+    expect(line(seen[3]!, seen[0]!)).toBe(true); // and round again
+    const rect: Vec3[] = [[1, 0, 0], [0, 0, 1]];
+    expect(line(nextEdgeAxis(IDENTITY, [0, -1, 0], rect, [1, 0, 0])!, [0, 0, 1])).toBe(true);
+    expect(line(nextEdgeAxis(IDENTITY, [0, -1, 0], rect, [0, 0, 1])!, [1, 0, 0])).toBe(true);
+    // ⭐ the input reversed: the hexagon's edge directions taken the other way round — the forward order, mirrored
+    const back = nextEdgeAxis(IDENTITY, [0, -1, 0], dirs, seen[1]!, -1)!;
+    expect(line(back, seen[0]!)).toBe(true);
+  });
+
   it("⭐⭐ the couple put back: the SMALLEST spin about the normal, either sense, an axis being a line", () => {
     const off = (d: number): Quat => qFromAxisAngle([0, 1, 0], (d * Math.PI) / 180);
     const pink: Vec3[] = [[1, 0, 0], [0, 0, 1]];
@@ -174,47 +230,133 @@ describe("⭐⭐⭐ prototype — the yaw and the pitch: the geometry (`core/tum
 });
 
 describe("⭐⭐ prototype — the yaw / pitch gesture (`input/tumble_gesture.ts`)", () => {
-  const TOL = 6;
   const DB = 3.5;
   const STEP = 12;
 
-  it("⭐ two fingers: UNDECIDED until the spacing changes (a PINCH) or the midpoint travels with it kept (a SLIDE) — latched", () => {
-    const g0 = startTumble(40);
-    expect(g0.kind).toBe("UNDECIDED");
-    expect(stepTumble(g0, [1, 1], 41, TOL, DB, STEP).g.kind).toBe("UNDECIDED");
-    expect(stepTumble(g0, [1, 0], 47, TOL, DB, STEP).g.kind).toBe("PINCH");
-    const s = stepTumble(g0, [5, 0], 42, TOL, DB, STEP).g;
-    expect(s.kind).toBe("SLIDE");
-    // latched: a later spacing change does not make it a pinch
-    expect(stepTumble(s, [6, 0], 60, TOL, DB, STEP).g.kind).toBe("SLIDE");
+  it("⭐⭐ the input (2026-10-10): the FIRST touch's travel while the second is held STILL — within its deadband along x and y", () => {
+    expect(heldStill(2, -3, DB)).toBe(true);
+    expect(heldStill(3.6, 0, DB)).toBe(false);
+    expect(heldStill(0, -3.6, DB)).toBe(false);
   });
 
-  it("⭐ the mouse is a SLIDE from the start; the axis is whichever of x and y first passes the deadband, kept to the release", () => {
-    const m = startTumble(null);
-    expect(m.kind).toBe("SLIDE");
-    const y = stepTumble(m, [2, -4], null, TOL, DB, STEP).g;
+  it("⭐ the axis is whichever of x and y first passes the deadband", () => {
+    const y = stepTumble(startTumble(), [2, -4], DB, STEP).g;
     expect(y.axis).toBe("Y");
-    expect(stepTumble(y, [30, -4], null, TOL, DB, STEP).g.axis).toBe("Y"); // a later x does not take it
+    expect(stepTumble(y, [30, -4], DB, STEP).g.axis).toBe("Y"); // a later x does not take it while y stays out
   });
 
-  it("⭐ whole steps of travel, signed, a fresh count per gesture; back through zero before the other way", () => {
-    let g = startTumble(null);
-    let r = stepTumble(g, [25, 0], null, TOL, DB, STEP);
+  it("⭐⭐ the choice UNDONE when the travel comes back within the deadband along it — the next axis out owns it (the owner, 2026-10-10)", () => {
+    let r = stepTumble(startTumble(), [5, 0], DB, STEP);
+    expect(r.g.axis).toBe("X");
+    r = stepTumble(r.g, [2, 1], DB, STEP); // back within along x
+    expect(r.g.axis).toBeNull();
+    expect(r.restarted).toBe(true);
+    r = stepTumble(r.g, [2, 6], DB, STEP); // now y leaves it first
+    expect(r.g.axis).toBe("Y");
+  });
+
+  it("⭐ whole steps of travel, signed; back through zero before the other way", () => {
+    let r = stepTumble(startTumble(), [25, 0], DB, STEP);
     expect(r.steps).toBe(2);
-    g = r.g;
-    r = stepTumble(g, [20, 0], null, TOL, DB, STEP); // back 5: no step
+    r = stepTumble(r.g, [20, 0], DB, STEP); // back 5: no step
     expect(r.steps).toBe(0);
-    r = stepTumble(r.g, [-6, 0], null, TOL, DB, STEP); // 31 mm back from the two steps forward: two steps back — net zero at −6 mm
-    expect(r.steps).toBe(-2);
+    r = stepTumble(r.g, [-20, 0], DB, STEP); // back 40 more: two steps back (the deadband crossed on the way does not undo — the travel jumped it)
+    expect(r.steps).toBe(-3);
   });
 
-  it("⭐ what an axis turns: x yaws on a vertical face and ROLLS on a horizontal one (the owner's choice); y pitches", () => {
+  // a box's two loops through A: the yaw A → B → C → D → A, the pitch A → E → C → F → A — each step a quarter turn
+  const Q4 = Math.PI / 2;
+  const step = (t: TumbleTrail, from: string, to: string, sense: 1 | -1) => {
+    const b = trailBefore(t, from, sense);
+    return { action: b.action, trail: trailAfter(b.trail, to, sense, Q4) };
+  };
+
+  it("⭐⭐ the SWAP: back on the starting face with a net count, the next step goes on to the NEXT path (pitch after yaw); out and back is no path", () => {
+    let t = startTrail("YAW", "A", 1);
+    let r = step(t, "A", "B", 1);
+    for (const [f, g] of [["B", "C"], ["C", "D"], ["D", "A"]] as const) r = step(r.trail, f, g, 1);
+    expect(r.trail.paths[0]!.whole).toBe(true);
+    expect(trailTurn(r.trail)).toBe("YAW");
+    r = step(r.trail, "A", "E", 1);
+    expect(r.action).toBe("NEXT");
+    expect(trailTurn(r.trail)).toBe("PITCH");
+    // out and back on one path: not whole
+    t = startTrail("YAW", "A", 1);
+    r = step(step(t, "A", "B", 1).trail, "B", "A", -1);
+    expect(r.trail.paths[0]!.whole).toBe(false);
+  });
+
+  it("⭐⭐ the input REVERSED walks the faces BACK, across the swap too (the owner: *\"make sure the faces paths are reversed if the input goes in the other direction\"*)", () => {
+    // forward: the yaw A B C D A, then the pitch A E
+    let r = step(startTrail("YAW", "A", 1), "A", "B", 1);
+    for (const [f, g] of [["B", "C"], ["C", "D"], ["D", "A"], ["A", "E"]] as const) r = step(r.trail, f, g, 1);
+    expect(trailTurn(r.trail)).toBe("PITCH");
+    // back: E → A on the pitch (STAY, its net back to 0) …
+    r = step(r.trail, "E", "A", -1);
+    expect(r.action).toBe("STAY");
+    expect(trailTurn(r.trail)).toBe("PITCH");
+    // … then the next step back drops the pitch and walks the YAW backwards: A → D
+    r = step(r.trail, "A", "D", -1);
+    expect(r.action).toBe("BACK");
+    expect(trailTurn(r.trail)).toBe("YAW");
+    expect(r.trail.paths).toHaveLength(1);
+    expect(r.trail.paths[0]!.net).toBe(3);
+    // and forward again from there goes back up the yaw: D → A, then on to the next path
+    r = step(r.trail, "D", "A", 1);
+    expect(r.action).toBe("STAY");
+    expect(step(r.trail, "A", "E", 1).action).toBe("NEXT");
+  });
+
+  it("⭐ a path made whole BACKWARDS swaps too — the next path runs in that sense", () => {
+    let r = step(startTrail("PITCH", "A", -1), "A", "F", -1);
+    for (const [f, g] of [["F", "C"], ["C", "E"], ["E", "A"]] as const) r = step(r.trail, f, g, -1);
+    expect(r.trail.paths[0]!.whole).toBe(true);
+    const n = step(r.trail, "A", "D", -1);
+    expect(n.action).toBe("NEXT");
+    expect(trailTurn(n.trail)).toBe("YAW");
+  });
+
+  it("⭐⭐ …or WHOLE on a FULL TURN without the face coming back (a faceted sphere's loop) — generalised", () => {
+    let t = startTrail("PITCH", "A", 1);
+    const faces = ["B", "C", "D", "E", "F", "G", "H"]; // never A again
+    let from = "A";
+    for (const f of faces) {
+      t = trailAfter(trailBefore(t, from, 1).trail, f, 1, (2 * Math.PI) / 7);
+      from = f;
+    }
+    expect(t.paths[0]!.whole).toBe(true);
+    expect(trailBefore(t, from, 1).action).toBe("NEXT");
+  });
+
+  it("⭐ the RESET: a travel that stops (none, in any direction, for TUMBLE_REST_MS) and moves again latches afresh", () => {
+    let r = stepTumble(startTumble(0), [10, 0], DB, STEP, 100);
+    expect(r.g.axis).toBe("X");
+    r = stepTumble(r.g, [20, 0], DB, STEP, 200);
+    expect(r.steps).toBe(1);
+    r = stepTumble(r.g, [20, 0.2], DB, STEP, 300);
+    r = stepTumble(r.g, [20, 6], DB, STEP, 200 + TUMBLE_REST_MS + 50);
+    expect(r.restarted).toBe(true);
+    expect(r.g.axis).toBe("Y");
+    let t = stepTumble(startTumble(0), [5, 0], DB, STEP, 0);
+    for (let i = 1; i < 20; i++) {
+      t = stepTumble(t.g, [5 + 3 * i, 0], DB, STEP, i * 100);
+      expect(t.restarted).toBe(false);
+    }
+  });
+
+  it("⭐ what an axis turns first: x yaws on a vertical face and ROLLS on a horizontal one; y pitches", () => {
     expect(tumbleTurnOf("X", true)).toBe("YAW");
     expect(tumbleTurnOf("X", false)).toBe("ROLL");
     expect(tumbleTurnOf("Y", true)).toBe("PITCH");
     expect(tumbleTurnOf("Y", false)).toBe("PITCH");
     expect(DEFAULT_CONFIG.tumbleStepMm).toBe(12);
-    expect(DEFAULT_CONFIG.tumbleSpacingTolMm).toBe(6);
+    expect((DEFAULT_CONFIG as unknown as Record<string, unknown>).tumbleSpacingTolMm).toBeUndefined(); // ⛔ the two-finger slide is deleted
+  });
+
+  it("⭐⭐ the ZOOM opens only once BOTH fingers' dx pass the deadband (the owner, 2026-10-10)", () => {
+    expect(pinchDxOpen(4, -4, DB)).toBe(true);
+    expect(pinchDxOpen(10, 1, DB)).toBe(false); // one finger still: the yaw / pitch, never a zoom
+    expect(pinchDxOpen(0, 0, DB)).toBe(false);
   });
 });
 
@@ -253,13 +395,23 @@ describe("⭐⭐ prototype — the desktop: left + right buttons held, a drag", 
 });
 
 describe("⭐⭐ prototype — the yaw / pitch, wired", () => {
-  it("⭐ touch: begun by the second finger, its moves owned before the orbit / pinch / taps, ended by either finger", () => {
+  it("⭐ touch: armed by a second finger OFF a placed part, the orbit finger's moves owned while it is still, ended by either finger", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(orbitFinger !== null\) beginTouchTumble\(st, orbitFinger, e\.pointerId\);/);
-    const own = p.indexOf("if (feedTouchTumble(st) === \"OWNED\")");
+    expect(p).toMatch(/const onPlacedPart = !inBand && hitId !== undefined && st\.world\.objects\.get\(hitId\)\?\.frozen !== true;\s*if \(orbitFinger !== null && !onPlacedPart\) beginTouchTumble\(st, orbitFinger, e\.pointerId\);/);
+    const own = p.indexOf('if (feedTouchTumble(st) === "OWNED")');
     expect(own).toBeGreaterThan(0);
     expect(own).toBeLessThan(p.indexOf("const ot = st.orbitTap;\n        const sec = ot?.second;"));
     expect(p).toMatch(/st\.pinch\.end\(\);\s*endTumble\(st, e\.pointerId\);/);
+    const t = code("render/tumble_wiring.ts");
+    expect(t).toMatch(/!heldStill\(pxToMm\(pb\[0\] - t\.bStart\[0\]\), pxToMm\(pb\[1\] - t\.bStart\[1\]\), st\.cfg\.motionDeadbandMm\)/);
+    expect(t).toMatch(/\[pxToMm\(pa\[0\] - t\.aStart\[0\]\), -pxToMm\(pa\[1\] - t\.aStart\[1\]\)\]/);
+    expect(t).not.toMatch(/pairReady|spacing/);
+  });
+
+  it("⭐ the zoom's gate: the pinch records each finger's x at its start and stays closed until both pass the dx deadband", () => {
+    expect(code("render/pointer_wiring.ts")).toMatch(/st\.pinchDx = \{ x0: new Map\(st\.router\.outside\(\)\.map\(\(q\) => \[q\.id, q\.last\.x\] as const\)\), open: false \};/);
+    const c = code("render/camera_rig.ts");
+    expect(c).toMatch(/if \(gate !== null && !gate\.open\) \{[\s\S]*if \(pinchDxOpen\(dx\[0\] \?\? 0, dx\[1\] \?\? 0, st\.cfg\.motionDeadbandMm\)\) gate\.open = true;\s*st\.pinch\.begin\(p\[0\], p\[1\]\);\s*st\.zoomAtPinchStart = st\.zoom;\s*return;/);
   });
 
   it("⭐ mouse: the adapter asks the scene at the right press and feeds it the drag", () => {
@@ -268,10 +420,19 @@ describe("⭐⭐ prototype — the yaw / pitch, wired", () => {
     expect(code("render/mouse_adapter.ts")).toMatch(/e\.button === 2 && \(e\.buttons & 1\) !== 0 && tumbleOnRight !== undefined \? \{ tumble: tumbleOnRight\(\) \}/);
   });
 
-  it("⭐ only outside the sphere, aligned; x rolls on a horizontal face; a step re-aligns the couple and restarts the roll count", () => {
+  it("⭐ only outside the sphere, aligned; the path swaps to the NEXT edge direction; the reset; the clamp; the couple re-aligned", () => {
     const t = code("render/tumble_wiring.ts");
     expect(t).toMatch(/st\.greenBox !== null && st\.pieceOutside === true && st\.restAligned && st\.restRoll !== null/);
-    expect(t).toMatch(/t\.turn === "ROLL" \? rollRestingFace\(st, now, sense, true\) : tumbleRestingFace\(st, now, t\.turn, sense\)/);
+    expect(t).toMatch(/if \(t\.turn === "ROLL"\) \{\s*rollRestingFace\(st, now, sense, true\);/);
+    expect(t).toMatch(/const before = trailBefore\(t\.trail, face, sense\);/);
+    expect(t).toMatch(/if \(before\.action === "BACK"\) t\.axes = t\.axes\.slice\(0, -1\);/);
+    expect(t).toMatch(/t\.axes = \[\.\.\.t\.axes, prev === null \? null : otherTumbleAxis\(st, prev, sense\)\];/);
+    expect(t).toMatch(/const r = tumbleRestingFace\(st, now, trailTurn\(t\.trail\), sense, t\.axes\[t\.axes\.length - 1\] \?\? null\);/);
+    expect(t).toMatch(/t\.trail = trailAfter\(t\.trail, restingFaceKey\(st\), sense, r\.angleRad\);/);
+    expect(code("render/green_box_wiring.ts")).toMatch(/return nextEdgeAxis\(q, p\.restingFace\.normal, edgeDirections\(p\.restingEdges\), w, sense\);/);
+    expect(t).toMatch(/if \(r\.restarted\) restartPath\(st\);/);
+    expect(t).toMatch(/if \(steps === 0 \|\| st\.restAlign !== null\) return;/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/if \(r\.steps !== 0 && st\.restAlign === null\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
     const w = code("render/green_box_wiring.ts");
     const fn = w.slice(w.indexOf("export function tumbleRestingFace("), w.indexOf("export function restingFaceVertical("));
     expect(fn).toMatch(/restOnTappedFace\(st, t\.faceId\)/);
@@ -279,6 +440,6 @@ describe("⭐⭐ prototype — the yaw / pitch, wired", () => {
     expect(fn).toMatch(/st\.restRoll = \{ \.\.\.rr, rolls: 0, couple: c\.couple \};/);
     const menu = code("render/tuning_menu.ts");
     expect(menu).toContain('"tumbleStepMm", 3, 40, 1)');
-    expect(menu).toContain('"tumbleSpacingTolMm", 1, 20, 0.5)');
+    expect(menu).not.toContain("tumbleSpacingTolMm");
   });
 });

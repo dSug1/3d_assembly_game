@@ -7,6 +7,7 @@
  * quick taps adding up — kept.
  */
 import { readFileSync } from "node:fs";
+import { tapAlignsToPink } from "../src/input/orbit_tap";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
@@ -181,7 +182,8 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     expect(p).toMatch(/const r = orbitRollSteps\(st\.orbitRollAcc, Math\.sign\(dx\) \* turned, orbitRollStepRad\(st\)\);/);
     // ⭐ (2026-10-10) a NEW orbit drag starts fresh — every roll, the first included, one step of the orbit from where the drag began
     expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)+st\.orbitRollAcc = 0;\s*\}/);
-    expect(p).toMatch(/for \(let i = 0; i < Math\.abs\(r\.steps\); i\+\+\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
+    // ⛔⛔ (2026-10-10, *"when the dx is too fast … consider clamping"*) one roll at a time, only once the last turn landed
+    expect(p).toMatch(/if \(r\.steps !== 0 && st\.restAlign === null\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);
     expect(w).toMatch(/return n > 0 \? ORBIT_ROLL_SPAN_RAD \/ n : 0;/);
@@ -205,12 +207,17 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     expect(code("render/pointer_wiring.ts")).not.toMatch(/st\.restRoll\.key === restTargetKey\(st\)\) \{/); // the dx roll no longer asks
   });
 
-  it("⛔ what a tap does: NOTHING (2026-10-10: no roll by a tap; no alignment by a tap — every piece is aligned at its spawn)", () => {
+  it("⭐ what a tap does (2026-10-10): no roll; it ALIGNS only to a NEW pink face (every piece is aligned at its spawn)", () => {
     // ⛔ (2026-10-10) neither: `tapAction` is deleted, the tap only counts — the piece is aligned at its spawn, the roll is the orbit's dx
     expect(code("input/orbit_tap.ts")).not.toMatch(/export function tapAction/);
     const p = code("render/pointer_wiring.ts");
     const tapFn = p.slice(p.indexOf("export function orbitTapped("), p.indexOf("export function orbitRightTap("));
-    expect(tapFn).not.toMatch(/alignRestingFace|rollRestingFace|episodes\.touch/);
+    expect(tapFn).not.toMatch(/rollRestingFace/);
+    // ⭐ (2026-10-10, *"build it with old input"*) it ALIGNS again — but only to a NEW pink face (`tapAlignsToPink`)
+    expect(tapAlignsToPink("Floor/f1", "Piece3/f2")).toBe(true);
+    expect(tapAlignsToPink("Piece3/f2", "Piece3/f2")).toBe(false); // the same face: nothing — the rolls made since stay
+    expect(tapAlignsToPink(null, "Piece3/f2")).toBe(true);
+    expect(tapAlignsToPink("Piece3/f2", "")).toBe(false); // nothing to align to
     expect(code("render/green_box_wiring.ts")).toMatch(/st\.bootRestAlign = true;/); // every spawn aligns
   });
 

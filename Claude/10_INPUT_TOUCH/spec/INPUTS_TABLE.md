@@ -13,7 +13,9 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | holding | input | does |
 |---|---|---|
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
-| nothing | 2 fingers pinch on empty space | zoom |
+| nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-10) only once BOTH fingers have moved past the deadband in x (`pinchDxOpen`) |
+| ⭐ the orbited piece, OUTSIDE the sphere (prototype) | the orbit finger moves (dx or dy) while a SECOND touch, pressed off any placed part, is held STILL | **dy pitches; dx yaws** (vertical resting face) or **rolls** (horizontal) — face by face, 12 mm each; a whole path moves on to the next edge direction; reversed, the faces come back (`RESTING_FACE_ALIGNMENT.md` §18) |
+| ⭐ the orbited piece (prototype) | second-touch TAP on the piece, the orbit finger down | aligns the resting face to the pink face if it is a NEW one; else nothing (§19) |
 | nothing | double tap on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10); the taps are still recorded and may toggle |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
 | — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) ⭐ A double tap that does not land costs zero episodes (`D157`) |
@@ -61,6 +63,8 @@ on entering the capture zone, are deleted.
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
+| ⭐ the orbited piece, OUTSIDE the sphere (prototype) | left drag with the RIGHT button held | **dy pitches; dx yaws / rolls** — as the tablet's held second touch (§18) |
+| ⭐ the orbited piece (prototype) | right TAP while the left button orbits | aligns to a NEW pink face; else nothing (§19) |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |

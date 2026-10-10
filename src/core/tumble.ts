@@ -5,10 +5,12 @@
  * and a pitch if the resting face is horizontal"* → *"build the yaw and pitch"*).
  *
  * A TUMBLE turns the piece about an axis IN its resting face's plane, so that a NEIGHBOURING face becomes the resting face:
- * 1. **The axes** (`tumbleAxes`) come from the resting face's own edge-to-edge symmetry axes (the couple the roll lines up with the pink
- *    face): on a VERTICAL face the YAW is about the one closest to gravity (the vertical itself when the couple is upright) and the PITCH
- *    about the in-plane direction across it; on a HORIZONTAL face there is no yaw (a turn about gravity IS the roll) and the pitch is about
- *    the axis most horizontal on the screen.
+ * 1. **The axes** (`tumbleAxes`) are the resting face's EDGE directions — the piece tips over an edge, as a real one does (⭐⭐ 2026-10-10,
+ *    the owner: *"the turquoise piece does not pass through the lateral faces during yaw - pitch"*: the first build turned about the face's
+ *    symmetry axes ACROSS ITS FLATS, and on a hexagon the plane across one runs through two opposite CORNERS, meeting the side faces only
+ *    along an edge — so the end face alone was reached). On a VERTICAL face the YAW is about the edge direction closest to gravity and the
+ *    PITCH about the one most across it; on a HORIZONTAL face there is no yaw (a turn about gravity IS the roll) and the pitch is about the
+ *    edge direction most along the screen. A rectangle's edges run along its symmetry axes: the green box turns as before.
  * 2. **The next face** (`nextTumble`) — the SECTION LOOP: the plane through the resting face's centre, perpendicular to the turn axis, cuts
  *    a ring of faces (Blender's *bisect*, rather than its quad *face loop*, which breaks at a pole — a faceted bowl's bottom). Of the faces it
  *    cuts — hull faces only (a piece rests on its convex hull) — the next is the one the turn reaches FIRST in its
@@ -32,22 +34,69 @@ export const VERTICAL_FACE_COS = Math.SQRT1_2;
 
 const flatten = (v: Vec3, n: Vec3): Vec3 | null => normalize(sub(v, scale(n, dot(v, n))));
 
+/** ⭐ A face's EDGE directions, one per line (a rectangle 2, a regular hexagon 3), from its edges (`faceEdges`, the piece's frame). */
+export function edgeDirections(edges: readonly (readonly [Vec3, Vec3])[]): Vec3[] {
+  const out: Vec3[] = [];
+  for (const [a, b] of edges) {
+    const d = normalize(sub(b, a));
+    if (d !== null && !out.some((o) => Math.abs(dot(o, d)) > 1 - 1e-6)) out.push(d);
+  }
+  return out;
+}
+
+/** ⭐ The resting face's edge directions at the pose `q`, in the world, laid on the face (`restNormal` its normal, the piece's frame). */
+function worldDirs(q: Quat, restNormal: Vec3, dirs: readonly Vec3[]): { n: Vec3 | null; axes: Vec3[] } {
+  const n = normalize(qRotate(q, restNormal));
+  if (n === null) return { n, axes: [] };
+  return { n, axes: dirs.map((a) => flatten(qRotate(q, a), n)).filter((a): a is Vec3 => a !== null) };
+}
+
+/** ⭐ Of the resting face's edge directions at `q`, the one most PARALLEL (`along` true) or most PERPENDICULAR to `w` (world). */
+export function edgeAxisRelative(q: Quat, restNormal: Vec3, dirs: readonly Vec3[], w: Vec3, along: boolean): Vec3 | null {
+  const { axes } = worldDirs(q, restNormal, dirs);
+  let out: Vec3 | null = null;
+  const score = (a: Vec3) => (along ? Math.abs(dot(a, w)) : -Math.abs(dot(a, w)));
+  for (const a of axes) if (out === null || score(a) > score(out) + 1e-9) out = a;
+  return out;
+}
+
 /**
- * ⭐ The two turn axes of the resting face (`restNormal`, `restAxes` — its edge-to-edge axes — in the piece's frame) at the pose `q`:
- * `vertical` when the face is (`VERTICAL_FACE_COS`); then `yaw` the axis closest to gravity (`up`) and `pitch` the in-plane direction
- * across it; else `yaw` null and `pitch` the axis most along the screen's right (`screenRight`). With no axis, gravity / the screen's right
- * laid on the face. World directions, unsigned (the caller gives the sense).
+ * ⭐⭐ The NEXT edge direction after `w` (world), going round the resting face's normal (2026-10-10, the owner: *"make each swap move on to
+ * the next edge direction and generalize that in case of a more complex geometry"*): of its edge directions at `q`, laid on the face, the
+ * one at the smallest angle past `w` (`sense` −1: before it — the order mirrored when the input is reversed; an edge direction being a
+ * line: modulo a half turn, never `w` itself) — a rectangle's other one (90°),
+ * a hexagon's three in turn (60°), any polygon's all in turn. `null` with none other.
+ */
+export function nextEdgeAxis(q: Quat, restNormal: Vec3, dirs: readonly Vec3[], w: Vec3, sense: 1 | -1 = 1): Vec3 | null {
+  const { n, axes } = worldDirs(q, restNormal, dirs);
+  const w0 = n === null ? null : flatten(w, n);
+  if (n === null || w0 === null) return null;
+  let best: { a: Vec3; phi: number } | null = null;
+  for (const a of axes) {
+    let phi = Math.atan2(dot(n, cross(w0, a)), dot(w0, a));
+    phi = ((phi % Math.PI) + Math.PI) % Math.PI;
+    if (phi < 1e-6 || Math.PI - phi < 1e-6) continue; // `w` itself
+    if (sense < 0) phi = Math.PI - phi; // ⭐ the input reversed: the edge directions taken the other way round
+    if (best === null || phi < best.phi - 1e-9) best = { a, phi };
+  }
+  return best === null ? null : best.a;
+}
+
+/**
+ * ⭐ The two turn axes of the resting face (`restNormal`, `dirs` — its EDGE directions, `edgeDirections` — in the piece's frame) at the
+ * pose `q`: `vertical` when the face is (`VERTICAL_FACE_COS`); then `yaw` the edge direction closest to gravity (`up`) and `pitch` the
+ * one most across it; else `yaw` null and `pitch` the one most along the screen's right (`screenRight`). With none, gravity / the
+ * screen's right laid on the face. World directions, unsigned (the caller gives the sense).
  */
 export function tumbleAxes(
   q: Quat,
   restNormal: Vec3,
-  restAxes: readonly Vec3[],
+  dirs: readonly Vec3[],
   up: Vec3,
   screenRight: Vec3,
 ): { readonly vertical: boolean; readonly yaw: Vec3 | null; readonly pitch: Vec3 | null } {
-  const n = normalize(qRotate(q, restNormal));
+  const { n, axes } = worldDirs(q, restNormal, dirs);
   if (n === null) return { vertical: false, yaw: null, pitch: null };
-  const axes = restAxes.map((a) => flatten(qRotate(q, a), n)).filter((a): a is Vec3 => a !== null);
   const best = (score: (a: Vec3) => number): Vec3 | null => {
     let out: Vec3 | null = null;
     for (const a of axes) if (out === null || score(a) > score(out) + 1e-9) out = a;
@@ -56,7 +105,9 @@ export function tumbleAxes(
   const vertical = Math.abs(dot(n, up)) < VERTICAL_FACE_COS;
   if (vertical) {
     const yaw = best((a) => Math.abs(dot(a, up))) ?? flatten(up, n);
-    return { vertical, yaw, pitch: yaw === null ? null : normalize(cross(n, yaw)) };
+    // ⭐ the edge direction most across the yaw's (a rectangle: at right angles; a hexagon: 60°)
+    const pitch = yaw === null ? null : (best((a) => -Math.abs(dot(a, yaw))) ?? normalize(cross(n, yaw)));
+    return { vertical, yaw, pitch: pitch !== null && yaw !== null && Math.abs(dot(pitch, yaw)) > 1 - 1e-6 ? normalize(cross(n, yaw)) : pitch };
   }
   return { vertical, yaw: null, pitch: best((a) => Math.abs(dot(a, screenRight))) ?? flatten(screenRight, n) };
 }

@@ -677,3 +677,14 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   tap is only recorded (§1.3's history) and may still toggle the mode; `resetCamera` is deleted. ⚠ Kept: `CameraResetAnimation` and its
   vectors (no caller now), and `cameraResetMs` (CAMERA ORBIT AROUND CENTER, *reset time*) — it still sets the alignment turn's speed
   (`ALIGN_SNAP_FRACTION`). ⭐ The undo on a double tap on a scene PART (`D111`/`D141`) is untouched. `tests/proto_no_camera_reset.test.ts`.
+* ⛔ **The second-touch / right tap no longer ROLLS** (*"superfluous as we have a roll movement already controlled by dx drag"*) **nor
+  aligns an unaligned piece** — and ⭐ **every new spawn is aligned AT ITS SPAWN** (the rule written for any piece a later level spawns) →
+  `RESTING_FACE_ALIGNMENT.md` §17; ⭐ the tap aligns again to a **NEW pink face** only (*"build it with old input"*) → §19.
+* ⭐⭐⭐ **THE YAW AND THE PITCH outside the sphere** — built, then reshaped four times the same day → `RESTING_FACE_ALIGNMENT.md` §18:
+  the piece tips over its resting face's EDGES onto the next face of the SECTION LOOP (the turquoise's side faces reachable); dy pitches,
+  dx yaws (rolls on a horizontal face); a whole path moves on to the next edge direction (generalised: a full turn counts as whole), and
+  the input reversed walks the faces back across the swaps; a stop resets; ⛔ ONE turn in flight (the clamp — fast moves made a turn past
+  180° eased the short way, about another axis; the dx roll clamped too). ⭐ **The input** (*"first touch delta position (dx or dy) while
+  second touch is pressed outside a placed part and kept held and within delta positon deadbands"*; desktop: left drag with the right
+  button held) — ⛔ the two-finger parallel slide is deleted; ⭐ and **a pinch zooms only once BOTH fingers move past the dx deadband**.
+  Slider: CAMERA ORBIT AROUND PIECE › *yaw / pitch: travel per face* (12 mm). `tests/proto_tumble.test.ts`.

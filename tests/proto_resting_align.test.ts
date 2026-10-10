@@ -174,7 +174,8 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     // (2026-10-07) the same first tap triggers the alignment AND, independently, the orbit around the piece — one episode if either acted
     // (2026-10-08) the tap ALIGNS only — the orbit round the piece is the sphere's (`sphereFrame`); one episode if it aligned
     const tapFn = p.slice(p.indexOf("export function orbitTapped("), p.indexOf("export function orbitRightTap("));
-    expect(tapFn).not.toMatch(/alignRestingFace|rollRestingFace|tapAction|episodes\.touch/); // ⛔ (2026-10-10) the tap does nothing to the piece
+    expect(tapFn).not.toMatch(/rollRestingFace|tapAction/); // ⛔ (2026-10-10) no roll by a tap
+    expect(tapFn).toMatch(/if \(tapAlignsToPink\(st\.restRoll\?\.key \?\? null, restTargetKey\(st\)\) && alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/); // ⭐ (2026-10-10) a new pink face: it aligns
     // the mouse's right tap
     expect(code("render/scene.ts")).toMatch(/\(heldMs\) => orbitRightTap\(st, heldMs\)/);
     expect(p).toMatch(/if \(!isOrbitTap\(0, heldMs, st\.cfg\.tapMaxDuration, false, true\)\) return;/);

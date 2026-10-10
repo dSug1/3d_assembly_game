@@ -5,7 +5,8 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { pinchAllowed } from "../input/pinch";
-import { pinchZooms } from "../input/pinch_gate";
+import { pinchDxOpen, pinchZooms } from "../input/pinch_gate";
+import { pxToMm } from "../core/units";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
@@ -139,6 +140,16 @@ export function pinchPair(st: SceneState) : [Sample, Sample] | null {
 export function updatePinch(st: SceneState) {
   const p = pinchPair(st);
   if (!p) return;
+  // ⭐⭐ prototype (2026-10-10, *"zoom can only be done if the two touches move beyond their dx deadbands"*): closed until BOTH fingers'
+  // x travel passes the deadband (`pinchDxOpen`) — re-based meanwhile, so the zoom starts from where it opens, without a jump
+  const gate = st.pinchDx;
+  if (gate !== null && !gate.open) {
+    const dx = st.router.outside().map((q) => pxToMm(q.last.x - (gate.x0.get(q.id) ?? q.last.x)));
+    if (pinchDxOpen(dx[0] ?? 0, dx[1] ?? 0, st.cfg.motionDeadbandMm)) gate.open = true;
+    st.pinch.begin(p[0], p[1]);
+    st.zoomAtPinchStart = st.zoom;
+    return;
+  }
   // ⭐⭐ prototype (the owner, 2026-10-06): each finger's OWN motion state (`PinchMotion`, §1.1's tracker per finger — it persists between
   // that finger's events); the zoom while EITHER is MOVING (*"only one delta position outside its deadband"*), both still → the pinch
   // REBASED, no zoom
