@@ -12,7 +12,7 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { candidateForFace, chooseInGroup, edgeStops, faceEdges, faceLongAxes, nextEdgeRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { candidateForFace, chooseInGroup, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -72,11 +72,12 @@ function restingOf(
   restingEdges: readonly Edge[];
   restingLong: LongAxes;
   restingCentre: Vec3;
+  restingFlush: readonly Vec3[];
 } {
   const topo = topologyFromMesh(m);
   const resting = topo === null ? restingFaces([], []) : restingFaces(topo.positions, topo.faces);
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
-  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] }, restingCentre: [0, 0, 0] };
+  if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] }, restingCentre: [0, 0, 0], restingFlush: [] };
   const parts = restingParts(st, m, topo, restingFace);
   restingDepth(st, m);
   return { resting, restingFace, ...parts };
@@ -92,12 +93,15 @@ function restingParts(
   m: Mesh,
   topo: NonNullable<ReturnType<typeof topologyFromMesh>>,
   restingFace: RestingCandidate,
-): { restingFill: Mesh; restingAxes: readonly Vec3[]; restingAxesFallback: boolean; restingEdges: readonly Edge[]; restingLong: LongAxes; restingCentre: Vec3 } {
+): { restingFill: Mesh; restingAxes: readonly Vec3[]; restingAxesFallback: boolean; restingEdges: readonly Edge[]; restingLong: LongAxes; restingCentre: Vec3; restingFlush: readonly Vec3[] } {
   // ⭐ the resting face's LONG AXES (`faceLongAxes`, `RESTING_FACE_ALIGNMENT.md` §3) — edge to edge, perpendicular to both edges
   const facePoints = [...new Set(restingFace.faces.flatMap((f) => topo.faces[f]!.triangles))].map((i) => topo.positions[i]!);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
   const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((p) => p[k]!)));
-  const long = faceLongAxes(facePoints, restingFace.normal, 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!));
+  const tol = 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!);
+  const long = faceLongAxes(facePoints, restingFace.normal, tol);
+  // ⭐ (2026-10-10) ALL its edge-to-edge symmetry axes, computed when the face is chosen — what a roll lines up (`nextCoupleRoll`)
+  const restingFlush = faceFlushAxes(facePoints, restingFace.normal, tol).axes;
   const local = new Map<number, number>();
   const positions: number[] = [];
   const indices: number[] = [];
@@ -128,7 +132,7 @@ function restingParts(
   fill.metadata = { orbitCandidate: false };
   restingXray(st, m, fill, data);
   const restingCentre = restingFaceRecord(topo.positions, topo.faces, restingFace)?.centre ?? [0, 0, 0];
-  return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends }, restingCentre };
+  return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends }, restingCentre, restingFlush };
 }
 
 /**
@@ -192,7 +196,7 @@ const RESTING_ORDER = 1000;
  * points most toward the piece (the owner: *"if no pink face, anti-align with the normal of the first frozen object"* — the floor's
  * top). Its outward normal and its long axes (`faceLongAxes`, with their end points), read off its body's topology and placed by its pose.
  */
-function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes } | null {
+function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
   let id: ObjectId | null = st.pinkFace?.objectId ?? null;
   let faceId: string | null = st.pinkFace?.faceId ?? null;
   if (id === null) {
@@ -220,12 +224,16 @@ function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; rea
   const pts = [...new Set(face.triangles)].map((i) => topo.positions[i]!);
   const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((p) => p[k]!)));
   const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((p) => p[k]!)));
-  const long = faceLongAxes(pts, face.normal, 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!));
+  const tol = 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!);
+  const long = faceLongAxes(pts, face.normal, tol);
+  // ⭐ (2026-10-10) and ALL its edge-to-edge symmetry axes — the pink side of a roll's couples (`nextCoupleRoll`)
+  const flush = faceFlushAxes(pts, face.normal, tol).axes;
   const w = (v: Vec3): Vec3 => add(pose.position, qRotate(pose.orientation, v));
   return {
     label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`,
     normal: qRotate(pose.orientation, face.normal),
     long: { axes: long.axes.map((a) => qRotate(pose.orientation, a)), ends: long.ends.map((e) => [w(e[0]), w(e[1])] as const) },
+    flush: flush.map((a) => qRotate(pose.orientation, a)),
   };
 }
 
@@ -273,12 +281,12 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
       `orbit: tap 1 — aligned: the resting face against ${target.label}` +
       (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
-  const ref: Vec3 | null = target !== null && paired >= 0 ? target.long.axes[paired]! : null;
-  const stops = edgeStops(p.restingEdges, p.restingFace.normal);
+  void paired; // ⭐ the first alignment pairs the LONG axes (above); the rolls use every edge-to-edge couple (2026-10-10)
+  const pinkAxes: readonly Vec3[] = target?.flush ?? [];
   // ⭐⭐ (2026-10-09, the owner: *"when a new resting face is selected and no change in the pink face, the numbers of rolls applied to the
   // previous resting face shall immediately apply to the new resting face"*) — `carryRolls` steps to the next edge on top of the alignment,
   // in the SAME turn
-  let stop = -1;
+  let couple: readonly [number, number] | null = null;
   let rolls = 0;
   if (carryRolls > 0) {
     const cam = st.camera.position;
@@ -286,19 +294,19 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
     const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
     const right = st.camera.getDirection(new Vector3(1, 0, 0));
     for (let i = 0; i < carryRolls; i++) {
-      const step = nextEdgeRoll(base, p.restingFace.normal, stops, ref ?? [right.x, right.y, right.z], view);
+      const step = nextCoupleRoll(base, p.restingFace.normal, p.restingFlush, pinkAxes.length > 0 ? pinkAxes : [[right.x, right.y, right.z]], view);
       if (step === null) break;
       base = step.q;
-      stop = step.stop;
+      couple = [step.rest, step.pink];
       rolls++;
     }
-    if (rolls > 0) st.lastVerdict += ` — ${rolls} roll${rolls > 1 ? "s" : ""} carried over: edge ${stop + 1} / ${stops.length}`;
+    if (rolls > 0 && couple !== null) st.lastVerdict += ` — ${rolls} roll${rolls > 1 ? "s" : ""} carried over: a${couple[0]} ∥ b${couple[1]}`;
   }
   st.restAlign = { from: q, t0: now, base }; // ⭐ about the resting face's centre — the anchor (`placeByFaceCentre`)
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
   // ⭐ (2026-10-09) what it aligned TO — the next tap on the same target ROLLS to the next edge (`rollRestingFace`) against that face's
   // long axis (the one paired), or the screen's horizontal with none; and how many rolls it carries
-  st.restRoll = { key: target?.label ?? "", ref, stop, of: stops.length, rolls };
+  st.restRoll = { key: target?.label ?? "", pinkAxes, rolls, couple };
   st.hudDirty = true;
   return true;
 }
@@ -362,22 +370,23 @@ export function rollRestingFace(st: SceneState, now: number): boolean {
   const cam = st.camera.position;
   const tg = st.camera.getTarget();
   const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
-  let ref = rr.ref;
-  if (ref === null) {
+  // ⭐⭐ (2026-10-10) the next COUPLE of edge-to-edge symmetry axes — the resting face's and the pink face's (`nextCoupleRoll`); with no
+  // pink axis, the screen's horizontal laid on the face
+  let pinkAxes = rr.pinkAxes;
+  if (pinkAxes.length === 0) {
     const right = st.camera.getDirection(new Vector3(1, 0, 0));
-    ref = [right.x, right.y, right.z];
+    pinkAxes = [[right.x, right.y, right.z]];
   }
-  const stops = edgeStops(p.restingEdges, p.restingFace.normal);
-  const roll = nextEdgeRoll(from, p.restingFace.normal, stops, ref, view);
+  const roll = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, view);
   if (roll === null) {
-    st.lastVerdict = "orbit: tap — nothing to roll (no edge, or the reference along the normal)";
+    st.lastVerdict = "orbit: tap — nothing to roll (no symmetry axis, or the reference along the normal)";
     st.hudDirty = true;
     return false;
   }
   // ⭐⭐ (2026-10-09) about the resting face's CENTRE — it is the anchor the orbit places (`placeByFaceCentre`), so it stays put
   st.restAlign = { from: shown, t0: now, base: roll.q };
-  st.restRoll = { ...rr, stop: roll.stop, of: stops.length, rolls: rr.rolls + 1 };
-  st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: edge ${roll.stop + 1} / ${stops.length} ∥ ${rr.ref === null ? "the screen's horizontal" : "the pink long axis"}`;
+  st.restRoll = { ...rr, couple: [roll.rest, roll.pink], rolls: rr.rolls + 1 };
+  st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: resting axis a${roll.rest} ∥ ${rr.pinkAxes.length === 0 ? "the screen's horizontal" : `pink axis b${roll.pink}`}`;
   st.hudDirty = true;
   return true;
 }

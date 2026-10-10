@@ -438,12 +438,48 @@ export function faceLongAxes(
   normal: Vec3,
   tol: number,
 ): { readonly axes: readonly Vec3[]; readonly ends: readonly (readonly [Vec3, Vec3])[]; readonly length: number; readonly fallback: boolean } {
+  const f = facePolygon(points, normal, tol);
+  if (f === null) return { axes: [], ends: [], length: 0, fallback: true };
+  const { P, c, edgeNormals, symmetricAbout, dedupe, extent, endsOf, to3d, edgeToEdge } = f;
+  const longest = (ds: readonly (readonly [number, number])[], fallback: boolean) => {
+    const L = Math.max(...ds.map(extent));
+    const keep = ds.filter((d) => extent(d) >= L - tol);
+    return { axes: keep.map(to3d), ends: keep.map(endsOf), length: L, fallback };
+  };
+  if (edgeToEdge.length > 0) return longest(edgeToEdge, false);
+  // ⚠ fallback: any mirror axis (through a corner too), else the longest extent across an edge
+  const corners = P.map((p) => {
+    const l = Math.hypot(p[0] - c[0], p[1] - c[1]);
+    return [(p[0] - c[0]) / l, (p[1] - c[1]) / l] as [number, number];
+  });
+  const mirrors = dedupe([...edgeNormals, ...corners].filter(symmetricAbout));
+  return longest(mirrors.length > 0 ? mirrors : dedupe(edgeNormals), true);
+}
+
+/**
+ * ⭐⭐ prototype — **ALL THE EDGE-TO-EDGE SYMMETRY AXES OF A FACE** (2026-10-10; the owner: *"instead of rolling to the next edge, I believe
+ * rolling to the next couple of symetry axis is better: compute all the axis of symetry of the pink face when selecting it, compute all the
+ * axis of symetry of the resting face when selecting it"* → *"build it with edge-to-edge axes only, keeping the long-axis first
+ * alignment"*). The face's mirror lines that run EDGE TO EDGE — through its centroid, crossing two parallel edges at right angles, the face
+ * symmetric about them (`faceLongAxes`'s candidates, ALL of them, not only the longest): a rectangle 2, a regular hexagon 3 (across the flats),
+ * a square 2 (⛔ never its diagonals — a corner-to-corner line is no flush pose). One direction per line, the face's frame. ⚠ A face with
+ * none (a triangle, an irregular part): its edges' normals, one per line (`fallback`), so a roll always has somewhere to go.
+ */
+export function faceFlushAxes(points: readonly Vec3[], normal: Vec3, tol: number): { readonly axes: readonly Vec3[]; readonly fallback: boolean } {
+  const f = facePolygon(points, normal, tol);
+  if (f === null) return { axes: [], fallback: true };
+  if (f.edgeToEdge.length > 0) return { axes: f.edgeToEdge.map(f.to3d), fallback: false };
+  return { axes: f.dedupe(f.edgeNormals).map(f.to3d), fallback: true };
+}
+
+/** ⭐ A planar face as a convex polygon in its own plane — what `faceLongAxes` and `faceFlushAxes` read. `null` with no polygon. */
+function facePolygon(points: readonly Vec3[], normal: Vec3, tol: number) {
   const n = normalize(normal);
-  if (n === null || points.length < 3) return { axes: [], ends: [], length: 0, fallback: true };
+  if (n === null || points.length < 3) return null;
   const e1 = normalize(Math.abs(n[0]) < 0.9 ? cross(n, [1, 0, 0]) : cross(n, [0, 1, 0]))!;
   const e2 = cross(n, e1);
   const P = hull2(points.map((p) => [dot(p, e1), dot(p, e2)] as [number, number]));
-  if (P.length < 3) return { axes: [], ends: [], length: 0, fallback: true };
+  if (P.length < 3) return null;
   // the polygon's area centroid
   let A = 0;
   let cx = 0;
@@ -491,23 +527,49 @@ export function faceLongAxes(
     const at = (t: number): Vec3 => to3(c[0] + d[0] * (t - c0), c[1] + d[1] * (t - c0));
     return [at(Math.min(...s)), at(Math.max(...s))];
   };
-  const longest = (ds: readonly (readonly [number, number])[], fallback: boolean) => {
-    const L = Math.max(...ds.map(extent));
-    const keep = ds.filter((d) => extent(d) >= L - tol);
-    return { axes: keep.map((d) => normalize(add(scale(e1, d[0]), scale(e2, d[1])))!), ends: keep.map(endsOf), length: L, fallback };
-  };
+  const to3d = (d: readonly [number, number]): Vec3 => normalize(add(scale(e1, d[0]), scale(e2, d[1])))!;
   // ⭐ edge to edge: an edge normal with a parallel opposite edge, the polygon symmetric about it
   const edgeToEdge = dedupe(
     edgeNormals.filter((d) => edgeNormals.some((o) => o[0] * d[0] + o[1] * d[1] < -1 + 1e-9) && symmetricAbout(d)),
   );
-  if (edgeToEdge.length > 0) return longest(edgeToEdge, false);
-  // ⚠ fallback: any mirror axis (through a corner too), else the longest extent across an edge
-  const corners = P.map((p) => {
-    const l = Math.hypot(p[0] - c[0], p[1] - c[1]);
-    return [(p[0] - c[0]) / l, (p[1] - c[1]) / l] as [number, number];
+  return { P, c, edgeNormals, symmetricAbout, dedupe, extent, endsOf, to3d, edgeToEdge };
+}
+
+/**
+ * ⭐⭐ prototype — **THE ROLL TO THE NEXT COUPLE OF SYMMETRY AXES** (2026-10-10; the owner: *"at the click, instead of aligning the next edge to
+ * the long axis of the pink face, align the next closest couple of resting face - pink face axis"* → *"build it with edge-to-edge axes
+ * only"*). From the pose `q`, the SMALLEST turn about the resting face's normal, CLOCKWISE AS SEEN FROM THE CAMERA (`view`; the scene is
+ * left-handed, so positive about the normal pointing toward the camera), that makes one of the resting face's axes (`restAxes`, its frame —
+ * `faceFlushAxes`) parallel to one of the pink face's (`pinkAxes`, world). An axis is a LINE, so each couple lines up every 180°; the couple
+ * already aligned (within 1e-6 rad) is passed over, so a tap always moves. `null` with no axis on either side, or all along the normal.
+ */
+export function nextCoupleRoll(
+  q: Quat,
+  restNormal: Vec3,
+  restAxes: readonly Vec3[],
+  pinkAxes: readonly Vec3[],
+  view: Vec3,
+): { readonly q: Quat; readonly rest: number; readonly pink: number; readonly angleRad: number } | null {
+  const n = normalize(qRotate(q, restNormal));
+  if (n === null) return null;
+  const a: Vec3 = dot(n, view) > 0 ? scale(n, -1) : n;
+  const flat = (v: Vec3): Vec3 | null => normalize(sub(v, scale(a, dot(v, a))));
+  let best: { rest: number; pink: number; angleRad: number } | null = null;
+  restAxes.forEach((r0, i) => {
+    const s = flat(qRotate(q, r0));
+    if (s === null) return;
+    pinkAxes.forEach((p0, j) => {
+      const r = flat(p0);
+      if (r === null) return;
+      let phi = Math.atan2(dot(a, cross(s, r)), dot(s, r));
+      phi = ((phi % Math.PI) + Math.PI) % Math.PI; // a line: every half turn
+      if (phi <= 1e-6 || Math.PI - phi <= 1e-6) phi = Math.PI; // already aligned: the next time round
+      if (best === null || phi < best.angleRad) best = { rest: i, pink: j, angleRad: phi };
+    });
   });
-  const mirrors = dedupe([...edgeNormals, ...corners].filter(symmetricAbout));
-  return longest(mirrors.length > 0 ? mirrors : dedupe(edgeNormals), true);
+  if (best === null) return null;
+  const b: { rest: number; pink: number; angleRad: number } = best;
+  return { q: qmul(qFromAxisAngle(a, b.angleRad), q), rest: b.rest, pink: b.pink, angleRad: b.angleRad };
 }
 
 /**
@@ -555,63 +617,6 @@ export function faceEdges(points: readonly Vec3[], normal: Vec3): Edge[] {
   const H = hull2(flat);
   const back = H.map((h) => points[flat.findIndex((f) => f[0] === h[0] && f[1] === h[1])]!);
   return back.map((a, i) => [a, back[(i + 1) % back.length]!] as Edge);
-}
-
-/**
- * ⭐⭐ prototype — **THE EDGE STOPS OF A FACE** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"a series of second
- * touch/right click make scroll the edges so there is a snapped roll around the normal of the resting face to choose which edge/axis
- * aligns with the pink face long axis"*). One per edge, in the edges' order round the face (`faceEdges`): the in-plane direction from the
- * face's centre OUT through that edge, at right angles to it — the face's frame. A stop is reached when its direction is parallel to
- * the reference (the pink face's long axis). ⭐ A rectangle gives its long axis, its short axis and both again reversed (4 stops, 90°
- * apart); a regular hexagon its three across-flats axes, each both ways (6, 60°); any polygon one per edge.
- */
-export function edgeStops(edges: readonly Edge[], normal: Vec3): Vec3[] {
-  const n = normalize(normal);
-  if (n === null || edges.length === 0) return [];
-  let c: Vec3 = [0, 0, 0];
-  for (const e of edges) c = add(c, e[0]);
-  c = scale(c, 1 / edges.length);
-  const out: Vec3[] = [];
-  for (const [a, b] of edges) {
-    const d = normalize(cross(sub(b, a), n));
-    if (d === null) continue;
-    const mid = scale(add(a, b), 0.5);
-    out.push(dot(d, sub(mid, c)) < 0 ? scale(d, -1) : d);
-  }
-  return out;
-}
-
-/**
- * ⭐⭐ prototype — **THE ROLL TO THE NEXT EDGE** (the same request): from the pose `q`, the SMALLEST turn about the resting face's normal,
- * CLOCKWISE AS SEEN FROM THE CAMERA (`view`: the camera's look direction), that brings the next edge stop (`edgeStops`, the face's
- * frame) parallel to `ref` (world: the pink face's long axis, or the screen's horizontal) — the stop already there (within 1e-6 rad) is
- * passed over, so a tap always moves on; past the last edge it comes back to the first. `null` with no stop, or `ref` along the normal.
- */
-export function nextEdgeRoll(
-  q: Quat,
-  restNormal: Vec3,
-  stops: readonly Vec3[],
-  ref: Vec3,
-  view: Vec3,
-): { readonly q: Quat; readonly stop: number; readonly angleRad: number } | null {
-  const n = normalize(qRotate(q, restNormal));
-  if (n === null || stops.length === 0) return null;
-  // ⭐ the axis pointing TOWARD the camera: ⛔ the scene is LEFT-HANDED (Babylon's default — the screen's right is up × forward), so a
-  // positive turn about it reads CLOCKWISE on the screen (about the axis pointing away it would read counter-clockwise)
-  const a: Vec3 = dot(n, view) > 0 ? scale(n, -1) : n;
-  const r = normalize(sub(ref, scale(a, dot(ref, a))));
-  if (r === null) return null;
-  let best: { stop: number; angleRad: number } | null = null;
-  stops.forEach((s0, k) => {
-    const s = normalize(sub(qRotate(q, s0), scale(a, dot(qRotate(q, s0), a))));
-    if (s === null) return;
-    let phi = Math.atan2(dot(a, cross(s, r)), dot(s, r));
-    if (phi <= 1e-6) phi += 2 * Math.PI;
-    if (best === null || phi < best.angleRad) best = { stop: k, angleRad: phi };
-  });
-  if (best === null) return null;
-  const b: { stop: number; angleRad: number } = best;
-  return { q: qmul(qFromAxisAngle(a, b.angleRad), q), stop: b.stop, angleRad: b.angleRad };
 }
 
 /**

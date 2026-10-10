@@ -425,6 +425,8 @@ export interface SceneState {
     readonly restingLong: LongAxes;
     /** ⭐ (2026-10-09) its resting face's CENTRE, its own frame — what the orbit places (`placeByFaceCentre`). */
     readonly restingCentre: Vec3;
+    /** ⭐ (2026-10-10) its resting face's EDGE-TO-EDGE symmetry axes (`faceFlushAxes`), its own frame — what a roll lines up with the pink face's. */
+    readonly restingFlush: readonly Vec3[];
   }[];
   /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
@@ -474,7 +476,14 @@ export interface SceneState {
   /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): what the last alignment aligned TO — its target face (`key`, `alignFaceOf`'s label; "" with
    * none) and the reference the edge roll lines the edges up with (`ref`: that face's long axis, world; `null` — the screen's
    * horizontal); the stop last reached (`stop`, of `of`; −1 before the first roll). `null` until the first alignment; a respawn clears it. */
-  restRoll: { readonly key: string; readonly ref: Vec3 | null; readonly stop: number; readonly of: number; readonly rolls: number } | null;
+  restRoll: {
+    readonly key: string;
+    /** ⭐ (2026-10-10) the edge-to-edge symmetry axes of the face it was aligned to (`faceFlushAxes`, world); empty — the screen's horizontal. */
+    readonly pinkAxes: readonly Vec3[];
+    readonly rolls: number;
+    /** ⭐ the couple last aligned — resting axis, pink axis — `null` before the first roll. */
+    readonly couple: readonly [number, number] | null;
+  } | null;
   /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
    * respawn. `null`: the orbit around the centre as before. */
   pieceOrbit: PieceOrbit | null;
