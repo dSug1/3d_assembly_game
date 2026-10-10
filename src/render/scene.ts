@@ -91,6 +91,7 @@ import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler, orbitRightTap } from "./pointer_wiring";
+import { beginMouseTumble, endTumble, feedMouseTumble } from "./tumble_wiring";
 import { PinchMotion } from "../input/pinch_gate";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
@@ -588,6 +589,7 @@ export function createScene(
   st.pieceEntry = null;
   st.pieceAim = null;
   st.orbitRollAcc = 0;
+  st.tumble = null;
   st.pieceOutside = null;
   st.pieceSphere = null;
   st.pieceYawGain = 1;
@@ -696,7 +698,11 @@ export function createScene(
   },
   st.cfg.tapMaxDuration,
   // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right tap while the left button orbits — counted, the first one aligns the resting face
-  (heldMs) => orbitRightTap(st, heldMs));
+  (heldMs) => orbitRightTap(st, heldMs),
+  // ⭐⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) left + right buttons held, a drag: the yaw / pitch outside the sphere
+  () => beginMouseTumble(st),
+  (dx, dy) => feedMouseTumble(st, dx, dy),
+  () => endTumble(st));
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config

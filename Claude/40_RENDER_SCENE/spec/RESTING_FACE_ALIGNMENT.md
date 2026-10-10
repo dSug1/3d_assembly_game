@@ -353,3 +353,18 @@ or 4th ring)"*.
   the green and the turquoise piece), once the orbit has placed it (`bootRestAlign`): its resting face turned AT ONCE against the floor's face
   toward it (`alignFaceOf(…, frozenOnly)`, the long axes paired — no ease, no episode), the piece counted aligned with the floor's axes as the
   reference. Headless, no tap at all: the HUD *aligned to Floor/f1*, dx rolled at once.
+
+## 17. The tap does nothing to the piece; every piece is aligned AT ITS SPAWN (2026-10-10, `1.0.63-`)
+
+- ⛔⛔ **The second-touch tap and the mouse's right tap (while the left button orbits) no longer ROLL** (the owner: *"remove the increment
+  of the roll by right button tap / second touch tap: this is superfluous as we have a roll movement already controlled by dx drag"*) **nor
+  ALIGN** (*"The tap also aligns a piece that isn't aligned yet: remove that as the existing pieces are aligned at boot"*). `tapAction` is
+  deleted; `orbitTapped` only counts the tap for the HUD (`taps N`) and consumes it — a second touch on the piece still never pinches — and it
+  costs no episode. ⛔ So §2's *"the first tap is the resting-face alignment"*, §11's roll by a tap and §16's *"the tap goes on ROLLING"* are
+  superseded. What is left: the roll is the orbit's dx (§15); a new resting face is a first-touch / left-click tap ON the piece (§13); a new
+  pink face is a second-touch tap on a placed piece (§14).
+- ⭐⭐ **RULE — a newly spawned piece has its resting face aligned AT ITS SPAWN** (the owner: *"write in the md file that for new spawn
+  pieces, the resting face alignment shall be done at spawn"*): any piece that enters the orbit — the boot, a respawn, the switch between the
+  green and the turquoise piece, and any piece a later level spawns — is aligned on its first frame, before any input (§16's
+  `bootRestAlign`, set by the spawn in `green_box_wiring.ts`), so no gesture is ever needed to make a piece aligned. ⚠ A future spawn path
+  that bypasses that function must set `st.bootRestAlign = true` itself; `tests/proto_resting_roll.test.ts` pins that the spawn sets it.

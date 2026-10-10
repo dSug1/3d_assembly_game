@@ -27,6 +27,7 @@ import { type Quat, type Vec3 } from "../core/vec";
 import { type FrameMeter } from "../core/frame_meter";
 import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { PinchMotion } from "../input/pinch_gate";
+import type { TumbleGesture, TumbleTurn } from "../input/tumble_gesture";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -497,6 +498,19 @@ export interface SceneState {
   pieceAim: PieceAim | null;
   /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
   orbitRollAcc: number;
+  /**
+   * ⭐ Prototype (2026-10-10): the YAW / PITCH gesture in flight (`tumble_gesture.ts`), outside the sphere — its two fingers (`a` the orbit
+   * finger, `b` the second) or the mouse (`a`/`b` null: left + right held), the midpoint at its start (px), the cursor travel so far (px, the
+   * mouse), its state, and the turn once the axis latched. `null` otherwise.
+   */
+  tumble: {
+    readonly a: number | null;
+    readonly b: number | null;
+    readonly startMid: readonly [number, number];
+    mouseTravel: [number, number];
+    g: TumbleGesture;
+    turn: TumbleTurn | null;
+  } | null;
   /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
   bootRestAlign: boolean;
   /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */

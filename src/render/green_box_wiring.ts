@@ -14,6 +14,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { candidateForFace, chooseInGroup, coupleStops, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
+import { nearestCouple, nextTumble, tumbleAxes, tumbleAxisSigned } from "../core/tumble";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -375,7 +376,7 @@ export function restTargetKey(st: SceneState): string {
  * ⭐⭐⭐ prototype — **THE ROLL TO THE NEXT EDGE** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"rotation of the piece around
  * the normal of the resting face so the next edge of the resting face takes the alignment with the pink face long axis … a series of second
  * touch/right click make scroll the edges so there is a snapped roll around the normal of the resting face"* → the proposal agreed: *"Build
- * what you proposed"*). A tap on a piece already aligned to the same face (`tapAction`): the piece turns about its resting face's normal,
+ * what you proposed"*). A tap on a piece already aligned to the same face (`tapAction`, ⛔ deleted 2026-10-10 — the orbit dx rolls): the piece turns about its resting face's normal,
  * CLOCKWISE AS SEEN FROM THE CAMERA, to the next EDGE STOP (`edgeStops`, `nextEdgeRoll`) — that edge's outward line parallel to the
  * reference (the paired long axis of the face it was aligned to, else the screen's horizontal laid on the face). Green: long axis →
  * short axis → … (4 stops, 90°); turquoise: one long axis to the next (6 stops, 60°). One turn eased over `REST_ALIGN_MS`, rotation
@@ -413,10 +414,75 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
 }
 
 /**
+ * ⭐⭐⭐ prototype — **THE YAW AND THE PITCH** (`RESTING_FACE_ALIGNMENT.md` §18; the owner, 2026-10-10: *"build the yaw and pitch"*). Outside
+ * the sphere, a two-finger slide (desktop: left + right buttons held, drag): the piece TUMBLES about an axis in its resting face's plane
+ * (`tumbleAxes` — YAW about the couple axis closest to gravity on a vertical face, PITCH across it; on a horizontal face the pitch about the
+ * axis most along the screen) onto the NEXT face of the section loop (`nextTumble`), which becomes the resting face (`restOnTappedFace`:
+ * its pink fill, axes and centre; the anchor's jump faded out), its leftover tilt taken out and its couple put back on the pink face's
+ * (`nearestCouple`). `sense` +1: the near side RIGHT (yaw), the top AWAY (pitch). One turn eased over `REST_ALIGN_MS`, quick steps adding
+ * up; the roll count starts again. `false` with nothing to tumble onto.
+ */
+export function tumbleRestingFace(st: SceneState, now: number, turn: "YAW" | "PITCH", sense: 1 | -1): boolean {
+  const i = st.orbitPieces.findIndex((o) => o.mesh === st.greenBox);
+  const p = st.orbitPieces[i];
+  const rr = st.restRoll;
+  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return false;
+  const topo = topologyFromMesh(p.mesh);
+  if (topo === null) return false;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const shown: Quat = [r.w, r.x, r.y, r.z];
+  const from = st.restAlign?.base ?? shown; // ⭐ quick steps add up: from where the last one was heading
+  const cam = st.camera.position;
+  const tg = st.camera.getTarget();
+  const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
+  const rv = st.camera.getDirection(new Vector3(1, 0, 0));
+  const uv = st.camera.getDirection(new Vector3(0, 1, 0));
+  const right: Vec3 = [rv.x, rv.y, rv.z];
+  const axes = tumbleAxes(from, p.restingFace.normal, p.restingFlush, [0, 1, 0], right);
+  const axis = turn === "YAW" ? axes.yaw : axes.pitch;
+  if (axis === null) {
+    st.lastVerdict = `orbit: ${turn.toLowerCase()} — none (${turn === "YAW" ? "the resting face is horizontal: dx rolls" : "no axis"})`;
+    st.hudDirty = true;
+    return false;
+  }
+  const signed = tumbleAxisSigned(turn, axis, sense, view, right, [uv.x, uv.y, uv.z]);
+  const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((v) => v[k]!)));
+  const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((v) => v[k]!)));
+  const tol = 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!);
+  const faces = topo.faces.map((f) => ({ id: f.id, normal: f.normal, points: [...new Set(f.triangles)].map((k) => topo.positions[k]!) }));
+  const restIds = p.restingFace.faces.map((k) => topo.faces[k]?.id ?? "");
+  const t = nextTumble(from, faces, topo.positions, restIds, p.restingFace.normal, p.restingCentre, signed, tol);
+  if (t === null || !restOnTappedFace(st, t.faceId)) {
+    st.lastVerdict = `orbit: ${turn.toLowerCase()} — no face to tumble onto`;
+    st.hudDirty = true;
+    return false;
+  }
+  const np = st.orbitPieces[i]!; // ⭐ the new resting face's axes and normal (`restOnTappedFace` rebuilt them)
+  const c = np.restingFace === null ? { q: t.q, couple: null, angleRad: 0 } : nearestCouple(t.q, np.restingFace.normal, np.restingFlush, rr.pinkAxes);
+  st.restAlign = { from: shown, t0: now, base: c.q };
+  st.restRoll = { ...rr, rolls: 0, couple: c.couple };
+  st.orbitRollAcc = 0;
+  st.lastVerdict =
+    `orbit: ${turn === "YAW" ? (sense > 0 ? "yaw →" : "yaw ←") : sense > 0 ? "pitch ↑" : "pitch ↓"} ${((t.angleRad * 180) / Math.PI).toFixed(0)}° onto ${t.faceId}` +
+    (c.couple === null ? "" : ` — a${c.couple[0]} ∥ b${c.couple[1]}`);
+  st.hudDirty = true;
+  return true;
+}
+
+/** ⭐ Is the shown piece's resting face VERTICAL now (`tumbleAxes`, the pose it is heading for) — a two-finger dx yaws it; else it rolls. */
+export function restingFaceVertical(st: SceneState): boolean {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return false;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const q: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
+  return tumbleAxes(q, p.restingFace.normal, p.restingFlush, [0, 1, 0], [1, 0, 0]).vertical;
+}
+
+/**
  * ⭐⭐⭐ prototype — **THE CAMERA ENTERS THE ORBIT AROUND THE PIECE** (`PIECE_ORBIT.md`; the owner, 2026-10-06: *"when resting face is
  * aligned, the orbit center moves to the piece, the rest orbit around the piece"*). ⭐ AN ACTION OF ITS OWN (the owner, 2026-10-07:
  * *"Make those two actions independent, although triggered by the same input. Later on, we will likely map other inputs for those two
- * different actions"*): it no longer lives inside `alignRestingFace` — the tap (`orbitTapped`) calls both, each alone. Entered once; a
+ * different actions"*): it no longer lives inside `alignRestingFace` — the tap (`orbitTapped`, ⛔ inert since 2026-10-10) called both, each alone. Entered once; a
  * second call keeps it (`false`). `true` when it starts here. ⭐ Since 2026-10-08 called by the SPHERE (`sphereFrame`), no longer by the tap.
  */
 export function enterPieceOrbit(st: SceneState): boolean {

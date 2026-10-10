@@ -186,6 +186,9 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ prototype, the owner 2026-10-10: hide it without turning it off
             tunable(st, "sphere round the gizmo: shown (0 = hidden, still working; 1 = shown)", "pieceSphereVisible", 0, 1, 1),
             tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
+            // ⭐⭐ prototype (2026-10-10, *"build the yaw and pitch"*): outside the sphere, a two-finger slide (left + right buttons held, drag) yaws / pitches
+            tunable(st, "yaw / pitch: travel per face (mm)", "tumbleStepMm", 3, 40, 1),
+            tunable(st, "yaw / pitch: two-finger spacing tolerance (mm; beyond it, a pinch)", "tumbleSpacingTolMm", 1, 20, 0.5),
           ],
         },
         {
