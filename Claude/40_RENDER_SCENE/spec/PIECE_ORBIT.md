@@ -307,15 +307,22 @@ Vectors: `tests/proto_piece_orbit.test.ts` (the hysteresis, the wiring, no jump 
   radius; going OUT, the way in when it crosses the radius again — but only once it has been within `(1 − 10 %) × r` (2.07 m) since it came
   in (`armed`); a shallower dip goes back out still in the centre orbit, so the surface cannot flicker. ⛔ The literal reading (the piece orbit
   at r − 10 %, the centre orbit at r) would flip every frame inside the band. HUD: `inside the sphere (armed)`. Headless: the way out at
-  2.25 m, armed at 2.02 m, the way in at 2.36 m on the way back out.
+  2.25 m, armed at 2.02 m, the way in at 2.36 m on the way back out. ⛔ **The way in at the radius once armed is SUPERSEDED (2026-10-10)**:
+  out beyond 1.1 r → §11.
 - ⛔ **The piece pushed ALONG THE RINGS in the orbit round the piece — tried and reverted** (`6dcb430` → `df00bc9`). Asked *"can't the piece be
   pushed along the rings?"*, it was built: the piece slid along the rings at a frozen heading, so it never left them and pure dy reached the
   waist. ⛔ Reverted by the owner — *"I want the straight line"* — after *"a double light swing back and forth in the camera movement in the way
   out"* (measured headless: a ~0.2° left-right wobble of the view during the way in, and the view tilting down then up through the waist).
   The waist is reached instead by the way out's fade above.
 
-## 11. The sphere hidden, the re-aim by dx alone, the doubled objects reverted (2026-10-10)
+## 11. The sphere hidden, its way in at 1.1 r, the re-aim by dx alone, the doubled objects reverted (2026-10-10)
 
+- ⭐⭐ **The sphere: in at its radius, out beyond 1.1 × it** (the owner, on the glass: *"why I cannot use dy down to go backwards and exit the
+  white sphere?"* → *"do 1"*). ⛔ §10's arming LOCKED the piece: a dip of less than 10 % inside the sphere left it in the centre orbit on the
+  way back out, at the rings' end where dy pushes no further — so the way in never came. `outsideSphere(d, r, wasOutside)`: coming IN,
+  inside as soon as it crosses r; going OUT, outside once beyond `(1 + 10 %) × r` (2.53 m of the rings' 3 m — always reachable), a band just
+  outside the surface so it cannot flicker; boot / a respawn read the plain side of r. `sphereArmed` and the HUD's `(armed)` are deleted.
+  Headless: the way out at 2.297 m, the way in at 2.577 m.
 - ⭐ **The sphere can be hidden without turning it off** (`a343742`; *"is there a slider to hide the white sphere? if not, create one below the
   sphere round the gizmo"*): `pieceSphereVisible` (CAMERA ORBIT AROUND PIECE, *sphere round the gizmo: shown*, 0 / 1), right below the
   radius. ⭐ **Hidden by default** (`6593b2f`; *"default: white sphere is hidden"*). The ways in and out run on the radius alone either way.

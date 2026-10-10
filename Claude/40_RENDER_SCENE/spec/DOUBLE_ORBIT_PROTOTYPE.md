@@ -395,7 +395,8 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   the period's steps (`cycles.yaw.length + cycles.pitch.length`) — the frustum 180° ÷ 8 = **22.5° per step**, so 180° of orbit runs the
   whole yaw cycle and the whole pitch cycle and lands on the start face. Outside the sphere (2.04°/mm): **11.0 mm of dx per step**.
   HUD `…°/step`.
-* ⭐ **OBJECT ROTATION has two submenus** (the owner, 2026-10-03): *ROTATION IN WORLD COORDINATES* (every slider it had, unchanged) and
+* ⭐ **OBJECT ROTATION has two submenus** (the owner, 2026-10-03; ⛔ since 2026-10-10 OBJECT ROTATION sits inside TRANSLATION IN WORLDSPACE,
+  with only *ROTATION IN WORLD COORDINATES* left — see the 2026-10-10 chronology): *ROTATION IN WORLD COORDINATES* (every slider it had, unchanged) and
   *DOUBLE ORBIT MODE* with the toggle **`FacesRotateByIncrement`** (`facesRotateByIncrement`, **1** by default): on = the current rule
   (the yaw / pitch cycles stepped by increments of the yaw orbit); off = no dx counted and no face stepped — the owner's rule for it is
   to come. Either way the START anti-alignment and the pink face's change (the face anti-aligned now turned onto the new normal, the
@@ -656,3 +657,16 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ A new pink face leaves the piece alone (the rolls go on; aligning takes a press); the piece **boots aligned to the floor** →
   `RESTING_FACE_ALIGNMENT.md` §16.
 * ⛔ Every object twice as big — tried and reverted → `PIECE_ORBIT.md` §11.
+* ⭐⭐ **The white sphere: in at its radius, out beyond 1.1 r** — a shallow dip no longer locks the piece in the centre orbit outside it →
+  `PIECE_ORBIT.md` §11.
+* ⭐⭐ **The tuning menu's last section is TRANSLATION IN WORLDSPACE** (the owner: *"create a submenu TRANSLATION IN WORLDSPACE and move to
+  this submenu all the sliders which we do not use in the current movement of the green and turquoise pieces and their effect on the other
+  pieces of the scene"* → *"put it at the bottom, with the moved sections nested inside it under their current names. leave the two as they
+  are now"*). It holds the sliders read only when a scene PART is grabbed, nested under their old names, keys and values unchanged:
+  OBJECT TRANSLATION (collision allowance, screen-plane and depth gains, inertia, damping, phantom lead, roll drag, the translate sway),
+  the whole OBJECT ROTATION › ROTATION IN WORLD COORDINATES, and FACE ALIGNMENT (face highlight opacity, PIONEERFACECURSOR,
+  FOLLOWERFACE with CAPTURE). ⭐ Left where they were: OBJECT TRANSLATION's *lock pieces in their goal*, the motion deadband, the rest
+  floor and gap, the sway re-trigger and reference speed (the orbit finger and the orbit's sway read them); FACE ALIGNMENT's *highlight
+  offset* (it lifts the resting-face fill); and, by the owner's choice, *centre grace* and the never-grabbed goal mm / °. A section's
+  open / closed memory is keyed by its path, so the two OBJECT TRANSLATIONs and FACE ALIGNMENTs do not share it.
+  `tests/proto_menu_worldspace.test.ts`.
