@@ -585,6 +585,7 @@ export function createScene(
   st.pieceOrbit = null;
   st.centreReturn = null;
   st.pieceEntry = null;
+  st.pieceAim = null;
   st.pieceOutside = null;
   st.sphereArmed = false;
   st.pieceSphere = null;

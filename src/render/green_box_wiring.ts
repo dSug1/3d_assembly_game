@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, sphereSide, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, sphereSide, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -413,6 +413,8 @@ export function enterPieceOrbit(st: SceneState): boolean {
   // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
   const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
   st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
+  // ⭐ (2026-10-10) the view's re-aim to the piece: by dx only (`PieceAim`)
+  st.pieceAim = startPieceAim(st.pieceEntry);
   st.centreReturn = null;
   st.hudDirty = true;
   return true;
@@ -463,6 +465,7 @@ function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   // ⭐ (2026-10-09) the rings' distance now — the start of the piece's progress toward their closest point (`ringProgress`)
   st.centreReturn = startCentreReturn(piece, [cam.x, cam.y, cam.z], [lk[0] / ln, lk[1] / ln, lk[2] / ln], homeRel, pieceOff, bo.radiusM * k);
   st.pieceOrbit = null;
+  st.pieceAim = null; // ⭐ (2026-10-10) the way out starts from the view as it is
   st.hudDirty = true;
 }
 
@@ -546,6 +549,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.anchorShift = null;
     st.pieceOrbit = null;
     st.pieceEntry = null;
+    st.pieceAim = null;
     st.centreReturn = null;
     // ⭐ (2026-10-08) the SPHERE decides afresh on the next frame (`sphereFrame`): back at boot, outside it → a way in, as at boot
     st.pieceOutside = null;
@@ -772,6 +776,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ (2026-10-07) *"Smooth the movement of the camera at start and end of piece orbit"* — the travel the transitions read eases toward
   // the finger's on the orbit's own spring (`smoothTravel`, τ = `boxSmoothMs` / 2), every frame
   if (st.pieceEntry !== null) st.pieceEntry = smoothTravel(st.pieceEntry, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  if (st.pieceAim !== null) st.pieceAim = smoothTravel(st.pieceAim, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   if (st.centreReturn !== null) st.centreReturn = smoothTravel(st.centreReturn, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   // ⭐⭐ (2026-10-08) THE PIVOT HANDED OVER GRADUALLY: the piece carried round the gizmo by the share of the orbit's yaw LEFT of the way in
   // (`carryHeading`) — the camera turning round it with all of it (`entryCamera`)
@@ -889,9 +894,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       // (dx turning it round the piece), the piece carried round the gizmo by the share left (`carryHeading`): the pivot passes from the
       // gizmo to the piece GRADUALLY; its view from the gizmo to the piece — then the orbit around the piece starts, nothing changing
       const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
+      // ⭐ (2026-10-10) its view re-aims to the piece by dx only (`aimProgress`), AND the camera's start shift round the piece (the camera
+      // offsets seen from the piece) fades by it too — a pure dy leaves the piece where it was on the screen
+      const aimT = st.pieceAim === null ? entryProgress(pe, cfg.pieceOrbitEnterMm) : aimProgress(st.pieceAim, cfg.pieceOrbitEnterMm);
       // ⭐ (2026-10-09) the zoom acts here too — the distance from the piece × the zoom now over the zoom at the start (`zoomScale`)
-      camAt = entryCamera(pe, pp, ring, cfg.pieceOrbitEnterMm, clampGreenZoom(st.zoom));
-      const ax = entryLook(pe, camAt, [c.x, c.y, c.z], pp, cfg.pieceOrbitEnterMm);
+      camAt = entryCamera(pe, pp, ring, cfg.pieceOrbitEnterMm, clampGreenZoom(st.zoom), aimT);
+      const ax = entryLook(pe, camAt, [c.x, c.y, c.z], pp, cfg.pieceOrbitEnterMm, aimT);
       lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
       if (entryProgress(pe, cfg.pieceOrbitEnterMm) >= 1) {
         const out = orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM;
@@ -911,6 +919,18 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       zoomScale(po.zoom0, clampGreenZoom(st.zoom));
     camAt = pieceCamera(pp, ring, gapPiece);
     lookAt = pp;
+    // ⭐ (2026-10-10) …or, while the re-aim (by dx) is not done, the way in's view carried on — nothing moves at the hand-over
+    const aim = st.pieceAim;
+    if (aim !== null) {
+      const aimT = aimProgress(aim, cfg.pieceOrbitEnterMm);
+      if (aimT >= 1) st.pieceAim = null;
+      else {
+        // ⭐ the camera with what is left of its start shift (`aimRing`), then the view as the way in's
+        camAt = pieceCamera(pp, aimRing(aim.look, ring, aimT), gapPiece);
+        const ax = entryLook(aim.look, camAt, [c.x, c.y, c.z], pp, cfg.pieceOrbitEnterMm, aimT);
+        lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
+      }
+    }
   }
   // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by
   // the sliders values"* — the yaw gain around the piece (`referenceYawGain`), RECOMPUTED ONLY when a slider it reads changes (the

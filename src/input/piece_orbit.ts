@@ -178,8 +178,8 @@ export function entryProgress(e: PieceEntry, enterMm: number): number {
  * (`ring` — so dx turns it round the piece with all of the yaw) plus what is left of the tap's small shift (`dAzRad`, `dElRad`), `gap0M`
  * from it — × the zoom now over the zoom at the start (`zoomScale`, 2026-10-09). At the tap exactly where it was; at the end exactly the
  * piece orbit's pose. */
-export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, enterMm: number, zoom = e.zoom0): Vec3 {
-  const left = 1 - entryProgress(e, enterMm);
+export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, enterMm: number, zoom = e.zoom0, t = entryProgress(e, enterMm)): Vec3 {
+  const left = 1 - t;
   const lim = (89 * Math.PI) / 180;
   const d = dirOf({ az: ring.az + e.dAzRad * left, el: Math.max(-lim, Math.min(lim, ring.el + e.dElRad * left)) });
   const g = e.gap0M * zoomScale(e.zoom0, zoom);
@@ -193,12 +193,53 @@ export function entryCamera(e: PieceEntry, piece: Vec3, ring: AroundAngles, ente
  * *"build option B without Option A"*: the point slides at the pace that TURNS THE VIEW EVENLY (\`evenSlide\`) — where its direction from the
  * camera has turned the eased share of the whole angle, so the turn no longer gathers toward the piece end as the point nears the camera.
  */
-export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number): Vec3 {
-  const t = entryProgress(e, enterMm);
+export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3, enterMm: number, t = entryProgress(e, enterMm)): Vec3 {
   const s = evenSlide(camera, centre, piece, t);
   const aim: Vec3 = [centre[0] + (piece[0] - centre[0]) * s, centre[1] + (piece[1] - centre[1]) * s, centre[2] + (piece[2] - centre[2]) * s];
   const b = unitOf([aim[0] - camera[0], aim[1] - camera[1], aim[2] - camera[2]]);
   return unitOf(rotateAbout(b, e.lookAxis, e.lookAngleRad * (1 - t)));
+}
+
+/**
+ * ⭐⭐ prototype — **THE VIEW'S RE-AIM, BY dx ONLY** (2026-10-10; the owner: *"can we avoid the way in up-right movement if the movement is only on
+ * dy and realign the camera to the piece only when dx inputs?"* → *"build it"*). Inside the sphere the view aims at the GIZMO (the camera
+ * offsets put the piece below-left of it on the screen); around the piece it aims at the PIECE — so the way in's re-aim moved the piece
+ * up-right under a pure dy. ⭐ Now the re-aim (`entryLook`'s slide from the gizmo to the piece) advances with the orbit finger's dx ALONE, over
+ * the way in's own millimetres, and carries on into the orbit around the piece until it is done; the rest of the way in (the camera round the
+ * piece, the pivot) still runs on all the travel. `look`: the way in it started with (its start look, frozen).
+ */
+export interface PieceAim {
+  readonly look: PieceEntry;
+  readonly travelledMm: number;
+  readonly rawMm: number;
+  readonly velMm: number;
+}
+
+/** ⭐ The re-aim, started with the way in (from its record: where the view looked). */
+export function startPieceAim(look: PieceEntry): PieceAim {
+  return { look, travelledMm: 0, rawMm: 0, velMm: 0 };
+}
+
+/** ⭐ One step of the orbit finger's dx, millimetres (its size — either way) — into the raw count (`smoothTravel` eases what is read). */
+export function advancePieceAim(a: PieceAim, dxMm: number): PieceAim {
+  const m = Math.abs(dxMm);
+  return m > 0 ? { ...a, rawMm: a.rawMm + m } : a;
+}
+
+/**
+ * ⭐ The rings' angles round the piece with what is LEFT of the way in's start shift (`dAzRad`, `dElRad` — the camera offsets seen from the
+ * piece), by the re-aim's progress `t` — the orbit around the piece goes on fading it with dx after the way in is done (2026-10-10).
+ */
+export function aimRing(look: PieceEntry, ring: AroundAngles, t: number): AroundAngles {
+  const left = 1 - Math.min(1, Math.max(0, t));
+  return { az: ring.az + look.dAzRad * left, el: ring.el + look.dElRad * left };
+}
+
+/** ⭐ The re-aim's progress: its dx travel over `enterMm`, eased (smoothstep) as the way in; a budget of zero is at once. */
+export function aimProgress(a: PieceAim, enterMm: number): number {
+  if (enterMm <= 0) return 1;
+  const t = Math.min(1, a.travelledMm / enterMm);
+  return t * t * (3 - 2 * t);
 }
 
 /**

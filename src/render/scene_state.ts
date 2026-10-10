@@ -50,7 +50,7 @@ import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
 import { type Aabb } from "../core/collision";
-import { type CentreReturn, type PieceEntry, type PieceOrbit } from "../input/piece_orbit";
+import { type CentreReturn, type PieceAim, type PieceEntry, type PieceOrbit } from "../input/piece_orbit";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -491,6 +491,9 @@ export interface SceneState {
   centreReturn: CentreReturn | null;
   /** ⭐ Prototype (2026-10-08): the WAY IN to the orbit around the piece in progress (`enterPieceOrbit` → the frame); `null` once in. */
   pieceEntry: PieceEntry | null;
+  /** ⭐ Prototype (2026-10-10): the view's re-aim from the gizmo to the piece, advanced by dx only (`PieceAim`) — from the way in's start until
+   * it is done (into the orbit around the piece); `null` otherwise. */
+  pieceAim: PieceAim | null;
   /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
   pieceOutside: boolean | null;
   /** ⭐ Prototype (2026-10-09): inside the sphere, the piece has been within 10 % below its radius since it came in — a crossing back out

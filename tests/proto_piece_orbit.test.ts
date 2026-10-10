@@ -15,6 +15,10 @@ import {
   carryHeading,
   entryCamera,
   entryLook,
+  advancePieceAim,
+  aimProgress,
+  startPieceAim,
+  aimRing,
   zoomScale,
   entryPieceOffset,
   headingAbout,
@@ -304,12 +308,51 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // the wiring: the spin reads the piece as placed; the way in takes the leftover over and adds it as it fades
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.pieceAnchor;\s*const c = st\.orbitCentreM;\s*return p === null \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], p\);/);
-    expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, clampGreenZoom\(st\.zoom\)\);\s*st\.centreReturn = null;/);
+    expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, clampGreenZoom\(st\.zoom\)\);\s*(?:\/\/[^\n]*\n\s*)*st\.pieceAim = startPieceAim\(st\.pieceEntry\);\s*st\.centreReturn = null;/);
     // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit while the sphere is on
     expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBeGreaterThan(0);
     expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/);
     expect(w).toMatch(/const eo: Vec3 = st\.pieceEntry === null \? \[0, 0, 0\] : entryPieceOffset\(st\.pieceEntry, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
+  });
+
+  it("⭐⭐ the view RE-AIMS to the piece by dx ONLY (*\"can we avoid the way in up-right movement if the movement is only on dy and realign the camera to the piece only when dx inputs?\"*)", () => {
+    const e0 = tapped(0.4, 0.3);
+    const a0 = startPieceAim(e0);
+    // dx alone advances it, either way; dy never reaches it (the pointer feeds dx only)
+    expect(advancePieceAim(a0, -3).rawMm).toBe(3);
+    expect(advancePieceAim(a0, 0)).toBe(a0);
+    expect(aimProgress(a0, FADE)).toBe(0);
+    expect(aimProgress(smoothTravel(advancePieceAim(a0, FADE), 1, 0), FADE)).toBe(1);
+    // the way in DONE by the travel (a pure dy), the aim still at 0: the view keeps the centre orbit's framing — aimed past the piece at
+    // the gizmo, as at the start (⛔ it turned onto the piece: the piece moved up-right on the screen)
+    const e = advE(e0, FADE);
+    const f = entryFrame(e, 0.4, 0.3);
+    const at0 = entryLook(e, f.cam, C, f.piece, FADE, 0);
+    expect(ang(at0, unit(sub(C, f.cam)))).toBeCloseTo(e0.lookAngleRad, 9);
+    expect(ang(at0, unit(sub(f.piece, f.cam)))).toBeGreaterThan(0.01); // the piece off the view's centre, where it was
+    // …and a full aim: onto the piece
+    expect(ang(entryLook(e, f.cam, C, f.piece, FADE, 1), unit(sub(f.piece, f.cam)))).toBeLessThan(1e-9);
+    // the wiring: started with the way in, fed dx only, eased as the way in's travel, read by the way in and — until done — by the orbit
+    // around the piece; dropped by a way out and a respawn
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/st\.pieceAim = startPieceAim\(st\.pieceEntry\);/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.pieceAim !== null\) st\.pieceAim = advancePieceAim\(st\.pieceAim, dx \/ mmToPx\(1\)\);/);
+    expect(w).toMatch(/const aim = st\.pieceAim;\s*if \(aim !== null\) \{\s*const aimT = aimProgress\(aim, cfg\.pieceOrbitEnterMm\);\s*if \(aimT >= 1\) st\.pieceAim = null;\s*else \{\s*(?:\/\/[^\n]*\n\s*)*camAt = pieceCamera\(pp, aimRing\(aim\.look, ring, aimT\), gapPiece\);\s*const ax = entryLook\(aim\.look, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
+    expect(w).toMatch(/st\.pieceOrbit = null;\s*st\.pieceAim = null;/); // the way out
+    // …and the camera's start shift round the piece fades by the same dx-only progress — in the way in, then in the orbit around the piece
+    expect(w).toMatch(/camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\), aimT\);/);
+    expect(w).toMatch(/camAt = pieceCamera\(pp, aimRing\(aim\.look, ring, aimT\), gapPiece\);/);
+    const e1 = advE(e0, FADE);
+    const r1 = ringAngles(0.4, 0.3);
+    const shifted = aimRing(e1, r1, 0);
+    expect(shifted.az - r1.az).toBeCloseTo(e1.dAzRad, 12); // a pure dy: the start shift kept
+    expect(aimRing(e1, r1, 1)).toEqual({ az: r1.az, el: r1.el }); // a full dx: the rings' angles
+    // the hand-over: the way in's camera at a part-done re-aim = the orbit around the piece's camera with the same shift
+    const fh = entryFrame(e1, 0.4, 0.3);
+    const inCam = entryCamera(e1, fh.piece, r1, FADE, e1.zoom0, 0.3);
+    const orbitCam = pieceCamera(fh.piece, aimRing(e1, r1, 0.3), e1.gap0M);
+    expect(len(sub(inCam, orbitCam))).toBeLessThan(1e-9);
   });
 
   it("⭐⭐ the ZOOM acts outside the sphere too (*\"why the zoom only works if the piece is inside the white sphere?\"* → *\"build it\"*): the camera's distance from the piece × the zoom now over the zoom at the start; no jump at the hand-over", () => {
@@ -542,7 +585,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(r.travelledMm).toBeGreaterThan(0);
     expect(r.travelledMm).toBeLessThan(4);
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);[\s\S]{0,400}?const po = st\.pieceOrbit;/);
+    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.pieceAim !== null\) st\.pieceAim = smoothTravel\(st\.pieceAim, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);[\s\S]{0,400}?const po = st\.pieceOrbit;/);
   });
 
   it("⭐ the piece ON the centre: the fallback direction, never a NaN", () => {
@@ -567,7 +610,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
     expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = carryHeading\(st\.pieceEntry, st\.boxOrbit\.yaw, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/const be = st\.pieceEntry === null \? null : orbitOffset\(st\.cfg, st\.pieceEntry\.headingRad, st\.boxOrbit\.v, st\.boxOrbit\.zoom\)\.offsetM;/);
-    expect(w).toMatch(/camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\)\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm\);/);
+    expect(w).toMatch(/const aimT = st\.pieceAim === null \? entryProgress\(pe, cfg\.pieceOrbitEnterMm\) : aimProgress\(st\.pieceAim, cfg\.pieceOrbitEnterMm\);\s*(?:\/\/[^\n]*\n\s*)*camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\), aimT\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
     expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\), clampGreenZoom\(st\.zoom\)\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
     // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
@@ -576,7 +619,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
-    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.centreReturn = null;/); // the respawn
+    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.pieceAim = null;\s*st\.centreReturn = null;/); // the respawn
     expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece =\s*scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     // (2026-10-09) …× the zoom now over the zoom at its start — the zoom acts outside the sphere too
