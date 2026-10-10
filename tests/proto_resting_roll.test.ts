@@ -180,6 +180,8 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(st\.pieceOutside === true && st\.restAligned && st\.restRoll !== null && dx !== 0 && st\.restRoll\.key === restTargetKey\(st\)\) \{/);
     expect(p).toMatch(/const r = orbitRollSteps\(st\.orbitRollAcc, Math\.sign\(dx\) \* turned, orbitRollStepRad\(st\)\);/);
+    // ⭐ (2026-10-10) a NEW orbit drag starts fresh — every roll, the first included, one step of the orbit from where the drag began
+    expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)+st\.orbitRollAcc = 0;\s*\}/);
     expect(p).toMatch(/for \(let i = 0; i < Math\.abs\(r\.steps\); i\+\+\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);

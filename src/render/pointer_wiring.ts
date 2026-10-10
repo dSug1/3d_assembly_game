@@ -1253,6 +1253,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
       // through the way in and the orbit that follows, whichever a drag starts in
       st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null ? st.pieceYawGain : 1;
+      // ⭐ (2026-10-10, the owner: *"there seem to be the need for a bigger dx to trigger the first roll than afterwards"* → *"build the two
+      // changes"*) a NEW drag starts its roll count fresh — no leftover from the last drag, so its first roll takes one step like every other
+      st.orbitRollAcc = 0;
     }
     st.orbitMotion.tracker.push(s);
     // ⭐ the inside-the-leash gains (`greenDragGains`).
