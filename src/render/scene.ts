@@ -589,7 +589,6 @@ export function createScene(
   st.pieceAim = null;
   st.orbitRollAcc = 0;
   st.pieceOutside = null;
-  st.sphereArmed = false;
   st.pieceSphere = null;
   st.pieceYawGain = 1;
   st.pieceYawGainKey = "";

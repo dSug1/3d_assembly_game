@@ -26,7 +26,7 @@ import {
   evenSlide,
   meanSweep,
   pieceCamera,
-  sphereSide,
+  outsideSphere,
   SPHERE_HYSTERESIS,
   pushedPiece,
   referenceYawGain,
@@ -416,7 +416,6 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
       let rigV = 1;
       let spring = { at: { yaw: 0, v: 1, zoom: 1 }, velYaw: 0, velV: 0, velLnZoom: 0 };
       let out = true;
-      let side: ReturnType<typeof sphereSide> = { outside: true, armed: false };
       let ret: ReturnType<typeof startCentreReturn> | null = null;
       let min = 9;
       const dt = 1000 / 60;
@@ -429,8 +428,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
         const sv = spring.at.v;
         if (ret === null) {
           const p: Vec3 = [dir[0] * len(ringAt(sv)), dir[1] * len(ringAt(sv)), dir[2] * len(ringAt(sv))];
-          side = sphereSide(len(p), 1, side);
-          out = side.outside;
+          out = outsideSphere(len(p), 1, out);
           if (!out) {
             const home = ringAt(fromDrawn ? sv : rigV);
             ret = startCentreReturn(p, [0, 1, 0], [0, 0, -1], [1, 0, 0], sub(p, home), byRing ? len(ringAt(sv)) : Infinity);
@@ -468,28 +466,24 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
 
   it("⭐⭐⭐ THE SPHERE round the pink gizmo drives the ways in and out (*\"When the piece enters the sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10%\"*)", () => {
     expect(SPHERE_HYSTERESIS).toBe(0.1);
-    // ⭐⭐ (2026-10-09, *"Centre at r, piece at r−10%"*) — boot / a respawn: the plain side of the radius (outside → a way in)
-    const S = (d: number, prev: ReturnType<typeof sphereSide> | null) => sphereSide(d, 1, prev);
-    expect(S(3.0, null)).toEqual({ outside: true, armed: false });
-    expect(S(0.95, null)).toEqual({ outside: false, armed: false });
-    expect(S(0.5, null)).toEqual({ outside: false, armed: true });
-    // ⭐ coming IN: inside as soon as it crosses the radius (⛔ was only below 0.9)
-    const out0 = { outside: true, armed: false };
-    expect(S(1.0001, out0).outside).toBe(true);
-    expect(S(0.9999, out0)).toEqual({ outside: false, armed: false });
-    // ⭐ dipped in by less than 10 %: back out past the radius, STILL inside (the centre orbit) — no flicker on the surface
-    const shallow = S(0.95, S(0.9999, out0));
-    expect(shallow).toEqual({ outside: false, armed: false });
-    expect(S(1.05, shallow).outside).toBe(false);
-    // ⭐ been within 0.9: armed — out as soon as it crosses the radius (⛔ was only beyond 1.1)
-    const deep = S(0.8999, shallow);
-    expect(deep).toEqual({ outside: false, armed: true });
-    expect(S(0.9999, deep)).toEqual({ outside: false, armed: true });
-    expect(S(1.0001, deep)).toEqual({ outside: true, armed: false });
+    // ⭐⭐ (2026-10-10, *"do 1"*: in at the radius, out beyond 1.1 × it) — boot / a respawn: the plain side of the radius (outside → a way in)
+    expect(outsideSphere(3.0, 1, null)).toBe(true);
+    expect(outsideSphere(0.95, 1, null)).toBe(false);
+    // ⭐ coming IN: inside as soon as it crosses the radius
+    expect(outsideSphere(1.0001, 1, true)).toBe(true);
+    expect(outsideSphere(0.9999, 1, true)).toBe(false);
+    // ⭐ going OUT: still inside up to 1.1 × the radius, outside beyond — no flicker on the surface
+    expect(outsideSphere(1.05, 1, false)).toBe(false);
+    expect(outsideSphere(1.0999, 1, false)).toBe(false);
+    expect(outsideSphere(1.1001, 1, false)).toBe(true);
+    // ⛔ the trap it removed: a dip of less than 10 % then back out to the rings' end (3 m, the radius 2.3 m) — now outside again
+    let o: boolean | null = true;
+    for (const d of [2.5, 2.31, 2.29, 2.2, 2.3, 2.5, 2.7, 2.997]) o = outsideSphere(d, 2.3, o);
+    expect(o).toBe(true);
     // the wiring: the sphere at each frame's end; outside → a way in, inside → a way out; the tap aligns only; a respawn decides afresh
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/pinkRingFrame\(st\);\s*sphereFrame\(st\);/);
-    expect(w).toMatch(/const side = sphereSide\(d, r, prev === null \? null : \{ outside: prev, armed: st\.sphereArmed \}\);/);
+    expect(w).toMatch(/const out = outsideSphere\(d, r, prev\);/);
     expect(w).toMatch(/if \(out\) \{\s*if \(enterPieceOrbit\(st\)\)/);
     expect(w).toMatch(/\} else if \(st\.pieceOrbit !== null \|\| st\.pieceEntry !== null\) \{\s*st\.pieceEntry = null;[\s\S]{0,200}?returnToCentreOrbit\(st, true\);/);
     expect(w).toMatch(/st\.centreReturn = null;\s*\/\/[^\n]*\n\s*st\.pieceOutside = null;/); // the respawn
