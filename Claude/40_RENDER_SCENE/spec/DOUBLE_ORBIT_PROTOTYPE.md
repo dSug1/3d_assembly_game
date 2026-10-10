@@ -3,6 +3,9 @@
 ⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59w-`** (2026-10-08 — the chain since `1.0.58b-` is in §7–§8);
 first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
 the fork — the main line is merged INTO it, one way.
+⭐⭐ **2026-10-10: THE PROTOTYPE IS THE MAIN LINE** — *"I want to simplify and retain only the proto from now on. It shall not be a separate webpage https://dsug1.github.io/3d_assembly_game/proto/ any longer but be what the main merge from and serve on https://dsug1.github.io/3d_assembly_game/. There is no need to have repository variables any longer from this 1.0.62- branch onwards"*. `1.0.62-` is merged into `main` and served at
+**https://dsug1.github.io/3d_assembly_game/**; `/proto/` and `PROTO_BRANCH` are retired (`50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`). ⛔ The
+lines below ("never merged into `main`", the `/proto/` slot) are the record up to then.
 ⭐ `/proto/` builds the branch the repository variable `PROTO_BRANCH` names (`1.0.58b-` since 2026-10-01); a deploy is
 **Run workflow** on `main` (or any push to `main`), never a push to the prototype branch. It is deployed beside the main line at
 **https://dsug1.github.io/3d_assembly_game/proto/** (`50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`, *A second build at /proto/*).

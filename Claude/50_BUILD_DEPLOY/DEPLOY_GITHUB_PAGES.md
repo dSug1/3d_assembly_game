@@ -135,10 +135,16 @@ environment's deployment-branch policy, not the workflow:
 **Settings → Environments → `github-pages` → Deployment branches and tags** → allow
 all branches, or add a `1.*` pattern.
 
-⚠ Since 2026-10-01 the run also rebuilds `/proto/` (next section) — but only if the dispatched branch's own `pages.yml`
+⛔ (Retired 2026-10-10 — the run builds the root alone.) ⚠ Since 2026-10-01 the run also rebuilds `/proto/` (next section) — but only if the dispatched branch's own `pages.yml`
 has that step. A branch older than it deploys its root ALONE, and the site loses `/proto/` until the next run from `main`.
 
 ## ⭐⭐ A second build at `/proto/` — testing a prototype branch beside the main line (2026-10-01)
+
+> ⛔⛔ **RETIRED 2026-10-10.** The owner: *"I want to simplify and retain only the proto from now on. It shall not be a separate webpage https://dsug1.github.io/3d_assembly_game/proto/ any longer but be what the main merge from and serve on https://dsug1.github.io/3d_assembly_game/. There is no need to have repository variables any longer from this 1.0.62- branch onwards"*. From `1.0.62-` on, the orbiting prototype IS the main line: merged into
+> `main`, built by the one job of `pages.yml` into the site's root. The `/proto/` job, the `proto_branch` input of **Run workflow** and
+> the `PROTO_BRANCH` repository variable are gone (delete the variable in Settings → Secrets and variables → Actions → Variables if it
+> is still there — nothing reads it). The same change moved the workflow's actions off Node 20 (`checkout@v5`, `setup-node@v5`,
+> `node-version: 22`). ⚠ The section below is the record of how it worked.
 
 A repository has ONE Pages site and every deploy replaces it whole, so two branches deploying in turn would overwrite
 each other. ⭐ So one run builds both: the triggering branch into the ROOT, and a second branch into `/proto/`:
