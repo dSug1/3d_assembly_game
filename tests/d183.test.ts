@@ -63,10 +63,9 @@ describe("⭐⭐⭐ `D183` — identical pieces are interchangeable", () => {
 });
 
 describe("⭐⭐⭐ `D183` — PLACED is loose once grabbed, strict before", () => {
-  // (2026-10-10) 6 mm (was 4): past the fit's exact core, which scales with the objects (2 → 4 mm at double size), inside the 10 mm margin
-  const off: Pose = { position: add(at("Piece10"), [0.006, 0, 0]), orientation: qmul(qFromAxisAngle([0, 0, 1], 6 * DEG), R) };
+  const off: Pose = { position: add(at("Piece10"), [0.004, 0, 0]), orientation: qmul(qFromAxisAngle([0, 0, 1], 6 * DEG), R) };
 
-  it("⭐ 6 mm and 6° off: in place on the snap's margins, NOT on the never-grabbed ones", () => {
+  it("⭐ 4 mm and 6° off: in place on the snap's margins, NOT on the never-grabbed ones", () => {
     expect(goalReport(FINAL, U, poses({ Piece10: off }), LOOSE).inPlaceIds).toContain("Piece10");
     const strict = goalReport(FINAL, U, poses({ Piece10: off }), LOOSE, (id) => (id === "Piece10" ? STRICT : LOOSE));
     expect(strict.inPlaceIds).not.toContain("Piece10");
@@ -81,7 +80,7 @@ describe("⭐⭐⭐ `D183` — PLACED is loose once grabbed, strict before", () 
   it("⭐⭐ the target is the EXACT goal pose — the nearest accepted turn (a half-turned piece stays half-turned)", () => {
     const flipped = qmul(qmul(qFromAxisAngle([0, 0, 1], 6 * DEG), R), qFromAxisAngle([0, 1, 0], Math.PI));
     const g = goalReport(FINAL, U, poses({ Piece10: { position: off.position, orientation: flipped } }), LOOSE).bodies.get("Piece10")!;
-    expect(g.positionM).toBeCloseTo(0.006, 9);
+    expect(g.positionM).toBeCloseTo(0.004, 9);
     expect(g.angleRad).toBeCloseTo(6 * DEG, 9);
     expect(length(sub(g.target.position, at("Piece10")))).toBeLessThan(1e-9);
     expect(qAngle(qmul(g.target.orientation, qconj(qmul(R, qFromAxisAngle([0, 1, 0], Math.PI)))))).toBeLessThan(1e-9);

@@ -14,17 +14,13 @@ import { meshTopology } from "../src/core/mesh_topology";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 
-/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
- * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
-const K = (SCENE_1.unitM ?? 0.1) / 0.1;
-
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
 describe("⭐⭐ prototype — the turquoise piece", () => {
   it("⭐ its size on Scene_1: as long as the green piece's longest side (103.5 mm), half that across its corners", () => {
     const green = greenPyramidSizeM(bodyNamed(SCENE_1.bodies, "Piece17")!.dims, SCENE_1.unitM ?? 1);
     const t = turquoiseSizeM(green);
-    expect(t.lengthM).toBeCloseTo(0.1035 * K, 9);
+    expect(t.lengthM).toBeCloseTo(0.1035, 9);
     expect(t.lengthM).toBeCloseTo(2 * t.diameterM, 12); // extruded by twice its diameter
     expect(turquoiseSizeM([0.01, 0.3, 0.02]).lengthM).toBe(0.3); // the longest side, whichever axis carries it
   });

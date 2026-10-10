@@ -30,8 +30,7 @@ export function buildLighting(st: SceneState, target: Triple): ShadowGenerator[]
     defaultLighting(st);
     return [];
   }
-  // ⭐ (2026-10-10) the lights' own unit when the scene gives one — the objects doubled, the lights kept where they were
-  const u = st.sceneSpec.lightUnitM ?? st.sceneSpec.unitM ?? 1;
+  const u = st.sceneSpec.unitM ?? 1;
   const bg = spec.background;
   st.scene.clearColor = new Color4(bg[0], bg[1], bg[2], 1);
   // ⚠ The ambient FILL, standing in for Unity's environment lighting (see `LightingSpec.ambient`).

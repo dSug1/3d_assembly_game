@@ -17,10 +17,6 @@ import { SCENE_0 } from "../src/content/scene_0";
 import { SCENE1_DEMO } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN } from "../src/content/scene1_demo_plan";
 
-/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
- * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
-const K = (SCENE_1.unitM ?? 0.1) / 0.1;
-
 const SKIN = 0.001;
 const VOLUME: Aabb = { min: [-2, -2, -2], max: [2, 2, 2] };
 const setup = (volume: Aabb | null = VOLUME): CollisionSetup => ({
@@ -99,8 +95,8 @@ describe("⭐⭐ `3D7` — each level's volume, as data", () => {
   it("⭐ `Scene_1`: the floor's 2 m × 2 m footprint, from its top up 1 m", () => {
     const v = playVolumeOf(SCENE_1)!;
     for (let i = 0; i < 3; i++) {
-      expect(v.min[i]).toBeCloseTo([-1, 0, -1][i]! * K, 9);
-      expect(v.max[i]).toBeCloseTo([1, 1, 1][i]! * K, 9);
+      expect(v.min[i]).toBeCloseTo([-1, 0, -1][i]!, 9);
+      expect(v.max[i]).toBeCloseTo([1, 1, 1][i]!, 9);
     }
   });
 

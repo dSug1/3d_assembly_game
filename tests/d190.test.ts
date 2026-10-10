@@ -22,9 +22,7 @@ const FINAL = SCENE_1.final!;
 const IDS = FINAL.bodies.map((b) => b.id);
 const goalPos = (id: string): Vec3 => scale(FINAL.bodies.find((b) => b.id === id)!.position as Vec3, U);
 const kindOf = (id: string) => FINAL.bodies.find((b) => b.id === id)!.kind;
-/** ⭐ (2026-10-10) the fixture's metres were authored at 0.1 m per unit — they scale with the scene's unit (×2 since the objects doubled). */
-const K = U / 0.1;
-const TOL = { positionM: 0.04 * K, angleRad: (15 * Math.PI) / 180 };
+const TOL = { positionM: 0.04, angleRad: (15 * Math.PI) / 180 };
 
 /** A seeded generator (mulberry32) — the search is the same every run. */
 function rng(seed: number) {
@@ -54,7 +52,7 @@ function search(seed: number, games: number, steps: number): number {
   for (let game = 0; game < games; game++) {
     const poses = bootPoses();
     const occupied = (slotOf: string, except: string) =>
-      [...poses.entries()].some(([k, q]) => k !== except && Math.hypot(...(q.position.map((v, i) => v - goalPos(slotOf)[i]!) as [number, number, number])) < 0.05 * K);
+      [...poses.entries()].some(([k, q]) => k !== except && Math.hypot(...(q.position.map((v, i) => v - goalPos(slotOf)[i]!) as [number, number, number])) < 0.05);
     let prev = new Set(goalReport(FINAL, U, (id) => poses.get(id) ?? null, TOL).inPlaceIds);
     for (let step = 0; step < steps; step++) {
       const id = IDS[Math.floor(rnd() * IDS.length)]!;
@@ -64,7 +62,7 @@ function search(seed: number, games: number, steps: number): number {
       else if (r < 0.45 && !occupied(id, id)) p = { position: goalPos(id), orientation: qFromAxisAngle([0, 1, 0], Math.PI) };
       else if (r < 0.6 && !occupied(id, id))
         p = {
-          position: goalPos(id).map((v) => v + (rnd() - 0.5) * 0.06 * K) as unknown as Vec3,
+          position: goalPos(id).map((v) => v + (rnd() - 0.5) * 0.06) as unknown as Vec3,
           orientation: qFromAxisAngle([0, 0, 1], (rnd() - 0.5) * 0.35),
         };
       else if (r < 0.7) {
@@ -72,7 +70,7 @@ function search(seed: number, games: number, steps: number): number {
         if (twin !== undefined) p = { position: goalPos(twin), orientation: IDENTITY };
       } else if (r >= 0.7)
         p = {
-          position: [(rnd() - 0.5) * 2 * K, rnd() * K, (rnd() - 0.5) * 2 * K],
+          position: [(rnd() - 0.5) * 2, rnd(), (rnd() - 0.5) * 2],
           orientation: qmul(qFromAxisAngle([0, 1, 0], rnd() * 6.28), qFromAxisAngle([1, 0, 0], rnd() * 6.28)),
         };
       if (p === null) continue;

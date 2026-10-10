@@ -15,10 +15,6 @@ import { IDENTITY, type Vec3 } from "@core/vec";
 import { snapPathBlockedBy } from "@input/snap";
 import { UnsnapHold } from "@input/unsnap";
 
-/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
- * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
-const K = (SCENE_1.unitM ?? 0.1) / 0.1;
-
 const U = SCENE_1.unitM!;
 const fin = new Map(SCENE_1.final!.bodies.map((f) => [f.id, f.position]));
 /** `Scene_1` assembled, in metres — the reproduction's world. */
@@ -52,7 +48,7 @@ const from = (d: Vec3) =>
 
 describe("⭐⭐⭐ `D182` — a snap starts only if its flight to the seat is CLEAR (and a blocked one holds nothing)", () => {
   it("⛔ the reproduction: 15 mm beside the slot and 36 mm in front, the straight flight cuts through Piece31 — no start", () => {
-    expect(from([0.015 * K, 0, -0.036 * K])).toBe("Piece31"); // the reproduction's offsets scale with the objects
+    expect(from([0.015, 0, -0.036])).toBe("Piece31");
   });
 
   it("⭐ straight in front, or straight above, the flight is clear — the snap starts, from EITHER direction", () => {

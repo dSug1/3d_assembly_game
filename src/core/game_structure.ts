@@ -142,8 +142,6 @@ export interface SceneDescriptor {
    * ⛔ Applied to body positions and sizes and to light positions and ranges — never to angles.
    */
   readonly unitM?: number;
-  /** ⭐ Prototype (2026-10-10): metres per authored unit for the LIGHTS alone (default `unitM`) — the objects scaled, the lights kept. */
-  readonly lightUnitM?: number;
   /**
    * ⭐ `"LEVEL"`: the boot camera looks along `+z` from the height of the orbit centre. `"TOP"` (prototype (green box), the
    * owner 2026-10-01: *"boot scene 1 on the top ring"*): the boot elevation is the TOP ring (`v = 1`). Default: the rig's.
@@ -358,8 +356,6 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
   });
   if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))
     throw new Error(`scene ${o.id}: unitM must be a positive number`);
-  if (o.lightUnitM !== undefined && !(typeof o.lightUnitM === "number" && o.lightUnitM > 0 && Number.isFinite(o.lightUnitM)))
-    throw new Error(`scene ${o.id}: lightUnitM must be a positive number`);
   if (o.bootView !== undefined && o.bootView !== "LEVEL" && o.bootView !== "TOP") throw new Error(`scene ${o.id}: unknown bootView`);
   if (o.lighting !== undefined) {
     const l = o.lighting as Record<string, unknown> | null;
@@ -396,7 +392,6 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     title: o.title,
     bodies,
     ...(o.unitM !== undefined ? { unitM: o.unitM as number } : {}),
-    ...(o.lightUnitM !== undefined ? { lightUnitM: o.lightUnitM as number } : {}),
     ...(o.bootView !== undefined ? { bootView: o.bootView as "LEVEL" | "TOP" } : {}),
     ...(o.lighting !== undefined ? { lighting: o.lighting as LightingSpec } : {}),
     ...(o.orbit !== undefined ? { orbit: o.orbit as OrbitRig } : {}),
