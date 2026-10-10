@@ -965,7 +965,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⭐ prototype, the owner 2026-10-08: *"Create a sphere radius x centered on pink gizmo, slider for x, default = 1m"* — outside it the orbit
-  // around the piece, inside the centre orbit (`sphereSide`: in at the radius, out at the radius once within 10 % below it); 0 = no sphere
+  // around the piece, inside the centre orbit (`outsideSphere`: in at the radius, out beyond 1.1 × it); 0 = no sphere
   // (it replaced the end at 75 % + a push). ⭐ The owner, 2026-10-09: *"Set default radius of the white sphere to 2.3 m"* (was 1 m)
   pieceSphereRadiusM: 2.3,
   // ⭐ prototype, the owner 2026-10-10: *"is there a slider to hide the white sphere? if not, create one below the sphere round the gizmo"*

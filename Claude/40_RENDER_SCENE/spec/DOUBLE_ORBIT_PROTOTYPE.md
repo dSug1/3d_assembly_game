@@ -63,7 +63,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
     before). ⚠ ±1.45 m would turn twice as gently but needs the boot zoom ≤ 1.34. ⚠ The bottom ring at zoom 1.5 is 1.6 m below
     the centre — far below the floor (hidden; `D196`'s contour). Vectors in `tests/proto_green_box.test.ts`.
 * ⭐ **It BOOTS on the TOP ring** (`bootView: "TOP"`, *"boot scene 1 on the top ring"*) **at zoom 1.5** (`bootZoom`, slider
-  *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view; `0` restores the derived
+  *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view (⛔ the reset is deleted, 2026-10-10); `0` restores the derived
   half-radius rule, which made ×7.5 with these rings and capped the box at 3 m over most of its travel).
 * **The box's distance from the centre** at zoom 1.5: **3.00 m** on the top and bottom rings, **0.375 m** on the middle (with
   the waist; it was 1.55 / 0.30 / 1.48 m). A zoom scales the whole surface, and the box is always kept within **0.15–3 m** (`clampCameraRadiusM`); each
@@ -395,7 +395,8 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   the period's steps (`cycles.yaw.length + cycles.pitch.length`) — the frustum 180° ÷ 8 = **22.5° per step**, so 180° of orbit runs the
   whole yaw cycle and the whole pitch cycle and lands on the start face. Outside the sphere (2.04°/mm): **11.0 mm of dx per step**.
   HUD `…°/step`.
-* ⭐ **OBJECT ROTATION has two submenus** (the owner, 2026-10-03): *ROTATION IN WORLD COORDINATES* (every slider it had, unchanged) and
+* ⭐ **OBJECT ROTATION has two submenus** (the owner, 2026-10-03; ⛔ since 2026-10-10 OBJECT ROTATION sits inside TRANSLATION IN WORLDSPACE,
+  with only *ROTATION IN WORLD COORDINATES* left — see the 2026-10-10 chronology): *ROTATION IN WORLD COORDINATES* (every slider it had, unchanged) and
   *DOUBLE ORBIT MODE* with the toggle **`FacesRotateByIncrement`** (`facesRotateByIncrement`, **1** by default): on = the current rule
   (the yaw / pitch cycles stepped by increments of the yaw orbit); off = no dx counted and no face stepped — the owner's rule for it is
   to come. Either way the START anti-alignment and the pink face's change (the face anti-aligned now turned onto the new normal, the
@@ -645,3 +646,34 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐⭐ **The white sphere: in at its radius, out at it once armed within 10 %; 2.3 m** → `PIECE_ORBIT.md` §10.
 * ⭐⭐ **The roll goes to the next COUPLE of edge-to-edge symmetry axes** (resting face ↔ pink face): green 90°, turquoise 30° →
   `RESTING_FACE_ALIGNMENT.md` §12.
+
+⭐ **2026-10-10** — `1.0.61-from1.0.59z-`, then **`1.0.62-`** — ⭐⭐⭐ **merged into `main` and served at the site root: the prototype IS the main
+line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`:
+
+* ⭐ The white sphere: a show / hide slider, **hidden by default** → `PIECE_ORBIT.md` §11.
+* ⭐⭐ The way in re-aims to the piece (and fades the camera's start shift) by **dx alone** — no up-right slide on a pure dy → `PIECE_ORBIT.md` §11.
+* ⭐⭐ Outside the sphere the orbit's **dx rolls** the aligned piece — every axis within 45°, clockwise to the right; a fresh count per drag; the
+  count signed → `RESTING_FACE_ALIGNMENT.md` §15.
+* ⭐⭐ A new pink face leaves the piece alone (the rolls go on; aligning takes a press); the piece **boots aligned to the floor** →
+  `RESTING_FACE_ALIGNMENT.md` §16.
+* ⛔ Every object twice as big — tried and reverted → `PIECE_ORBIT.md` §11.
+* ⭐⭐ **The white sphere: in at its radius, out beyond 1.1 r** — a shallow dip no longer locks the piece in the centre orbit outside it →
+  `PIECE_ORBIT.md` §11.
+* ⭐⭐ **The tuning menu's last section is TRANSLATION IN WORLDSPACE** (the owner: *"create a submenu TRANSLATION IN WORLDSPACE and move to
+  this submenu all the sliders which we do not use in the current movement of the green and turquoise pieces and their effect on the other
+  pieces of the scene"* → *"put it at the bottom, with the moved sections nested inside it under their current names. leave the two as they
+  are now"*). It holds the sliders read only when a scene PART is grabbed, nested under their old names, keys and values unchanged:
+  OBJECT TRANSLATION (collision allowance, screen-plane and depth gains, inertia, damping, phantom lead, roll drag, the translate sway),
+  the whole OBJECT ROTATION › ROTATION IN WORLD COORDINATES, and FACE ALIGNMENT (face highlight opacity, PIONEERFACECURSOR,
+  FOLLOWERFACE with CAPTURE). ⭐ Left where they were: OBJECT TRANSLATION's *lock pieces in their goal*, the motion deadband, the rest
+  floor and gap, the sway re-trigger and reference speed (the orbit finger and the orbit's sway read them); FACE ALIGNMENT's *highlight
+  offset* (it lifts the resting-face fill); and, by the owner's choice, *centre grace* and the never-grabbed goal mm / °. A section's
+  open / closed memory is keyed by its path, so the two OBJECT TRANSLATIONs and FACE ALIGNMENTs do not share it.
+  `tests/proto_menu_worldspace.test.ts`.
+* ⛔ **The camera reset is deleted** (the owner: *"what does a double tap of first touch or left click do? is it useful in the current
+  build? can this function be removed?"* → *"remove the camera reset"*): a double tap (first touch) or double click (left button) on empty
+  space flew the orbit rig home — yaw, elevation, zoom — over `cameraResetMs`, and in this build the rig places the ORBITED PIECE, so it
+  threw the piece back to its boot spot on the rings, past the orbit's own smoothing (read from the code, not reproduced). Now such a
+  tap is only recorded (§1.3's history) and may still toggle the mode; `resetCamera` is deleted. ⚠ Kept: `CameraResetAnimation` and its
+  vectors (no caller now), and `cameraResetMs` (CAMERA ORBIT AROUND CENTER, *reset time*) — it still sets the alignment turn's speed
+  (`ALIGN_SNAP_FRACTION`). ⭐ The undo on a double tap on a scene PART (`D111`/`D141`) is untouched. `tests/proto_no_camera_reset.test.ts`.

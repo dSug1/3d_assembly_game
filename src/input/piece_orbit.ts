@@ -476,28 +476,17 @@ export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
  */
 export const SPHERE_HYSTERESIS = 0.1;
 
-/** ⭐ Which side of the sphere the piece is on (`outside`: the orbit around the piece), and whether a way back out is ARMED. */
-export interface SphereSide {
-  readonly outside: boolean;
-  readonly armed: boolean;
-}
-
 /**
- * ⭐⭐ (2026-10-09, the owner: *"The orbit around center shall trigger when the piece crosses the white sphere, the orbit around piece shall
- * trigger when the piece crosses the white sphere – 10%"* → *"Centre at r, piece at r−10%"*) — the band moved BELOW the surface, one-sided:
- * * coming IN: inside as soon as the piece crosses the radius (`r`) — the orbit round the centre;
- * * going OUT: outside when it crosses the radius again, but only once it has been within `(1 − 10 %) × r` since it came in (`armed`) —
- *   a piece that dipped in by less goes back out still in the centre orbit, so the surface cannot flicker.
- * `prev` `null` (boot, a respawn): the plain side of the radius, armed if already within the band.
- * ⛔ Was ±10 %: in below 0.9 r, out beyond 1.1 r (`outsideSphere`).
+ * ⭐⭐ (2026-10-10, the owner — a piece that dipped in by less than 10 % was LOCKED in the centre orbit outside the sphere, at the rings' end
+ * where dy could not push it further: *"why I cannot use dy down to go backwards and exit the white sphere?"* → *"do 1"*) — whether the piece is
+ * OUTSIDE the sphere (the orbit around the piece): coming IN, inside as soon as it crosses the radius (`r`); going OUT, outside once it is
+ * beyond `(1 + 10 %) × r` — the band just OUTSIDE the surface, so it cannot flicker, and always reachable (the rings go out to 3 m, the band
+ * ends at 2.53 m). `wasOutside` `null` (boot, a respawn): the plain side of the radius. ⛔ Was (2026-10-09) out at `r` only once ARMED by a dip
+ * within `(1 − 10 %) × r` (`sphereSide`); before that (2026-10-08) ±10 %.
  */
-export function sphereSide(distM: number, radiusM: number, prev: SphereSide | null): SphereSide {
-  const deep = distM < radiusM * (1 - SPHERE_HYSTERESIS);
-  if (prev === null) return distM > radiusM ? { outside: true, armed: false } : { outside: false, armed: deep };
-  if (prev.outside) return distM < radiusM ? { outside: false, armed: deep } : prev;
-  const armed = prev.armed || deep;
-  if (armed && distM > radiusM) return { outside: true, armed: false };
-  return armed === prev.armed ? prev : { outside: false, armed };
+export function outsideSphere(distM: number, radiusM: number, wasOutside: boolean | null): boolean {
+  if (wasOutside === null) return distM > radiusM;
+  return wasOutside ? !(distM < radiusM) : distM > radiusM * (1 + SPHERE_HYSTERESIS);
 }
 
 /**

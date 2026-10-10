@@ -13,6 +13,8 @@
 > ⭐⭐ **since 2026-10-10 (`1.0.61-from1.0.59z-`) to the next COUPLE of symmetry axes** (§12). ⭐ And: a first-touch / left-click TAP on the
 > piece makes the face it hit the resting face, the rolls carried over (§13); a second-touch tap on a PLACED piece moves the pink face (§14);
 > the piece turns about its resting face's centre (`PIECE_ORBIT.md` §10).
+> ⭐⭐ **2026-10-10**: outside the sphere the orbit's **dx rolls** the piece too (§15); a NEW pink face no longer forces an alignment — the
+> rolls go on, aligning to it takes a press on the piece (§16); the piece **boots aligned to the frozen floor**, the roll active at once (§16).
 
 ---
 
@@ -30,8 +32,8 @@ does not zoom.
 
 | tap | what it does |
 |---|---|
-| the piece **not aligned** to the face it would align to now — the first tap, after a respawn, or the pink face has changed since | the **resting-face alignment** (§2) |
-| the piece **aligned to that same face** | the **ROLL to the next couple of symmetry axes** (§12; was the next edge, §11) |
+| the piece **not aligned** — ⛔ never since 2026-10-10: it boots aligned to the floor (§16) | the **resting-face alignment** (§2) |
+| the piece **aligned** — ⭐ to whichever face, the pink face changed since or not (§16) | the **ROLL to the next couple of symmetry axes** (§12; was the next edge, §11) |
 
 ⭐ Two more taps (2026-10-09):
 
@@ -318,3 +320,36 @@ The owner: *"user can also change the pink face by second touch on placed piece 
   such second touch (its right tap is the align / roll tap). Tied to `lockPlacedPieces`, as the first touch's rule.
 - Headless: a tap on Piece4 → the pink face `Piece10/f1 → Piece4/f1`; a moved second touch from Piece5 zoomed (1.00 → 1.08) and changed
   nothing; the next tap on the orbited piece aligned to Piece4/f1. Vectors `tests/proto_pink_tap.test.ts`.
+
+## 15. Outside the sphere, the orbit's dx ROLLS the piece (2026-10-10)
+
+The owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree orbit around the
+piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right, whateve the ring position (1st
+or 4th ring)"*.
+
+- **When** (`orbitDragStep`): the piece outside the sphere (the way in or the orbit around the piece) and aligned. ⭐ Over
+  `ORBIT_ROLL_SPAN_RAD` (45°) of the orbit's yaw the piece passes every stop of a HALF turn (an axis is a line, so a half turn visits every
+  couple): one roll each 45° ÷ `coupleStops` — **green 22.5°, turquoise 7.5°**.
+- **The count** (`orbitRollSteps`): the orbit's turn signed by the dx (right +) into whole steps, the rest kept; a turn back goes back
+  through zero before it rolls the other way (no flicker on a boundary). ⭐ **A new drag starts it fresh** (`c68965a`; *"there seem to be the
+  need for a bigger dx to trigger the first roll than afterwards"* — the leftover of the last drag was kept): every roll, the first included,
+  one step from where the drag began. ⚠ The orbit has NO deadband (its yaw moves from the first pixel) — a first answer that blamed the
+  3.5 mm motion deadband was wrong, and corrected.
+- **The sense** (`nextCoupleRoll`'s `sense`): dx right **clockwise** on the screen, dx left **counter-clockwise**, from any ring. ⭐ The roll count
+  is SIGNED (clockwise +1, counter-clockwise −1), so a new resting face carries over the NET rolls in their own sense (§13).
+- Each roll is the tap's: one 125 ms turn about the resting face's centre; ⛔ no episode (the orbit is not scored).
+- Headless: green rolled at 23.8° and 45.6° of orbit, turquoise every ~7.9° (6 rolls by 45.6°), back the other way on dx left; after a
+  completed way in, the first roll one step in (7.96° / 1.85 mm). Vectors `tests/proto_resting_roll.test.ts`.
+
+## 16. A new pink face leaves the piece alone; the piece BOOTS aligned to the floor (2026-10-10)
+
+- ⭐⭐ **A new pink face no longer forces an alignment** (`6593b2f`; *"currently, a change of pink face triggers off the resting face
+  alignment. I want the roll to continue even if the pink face has changed but I do not want the change of pink face to modify the alignment
+  of the resting face (this shall still require a press)"*): the second-touch / right-click tap and the orbit's dx go on ROLLING, against the
+  axes of the face the piece was last aligned to (`tapAction(aligned)`); aligning to the new pink face takes a **press on the piece** — the
+  first-touch / left-click tap of §13. The rolls are carried over to it only if the pink face has not changed.
+- ⭐⭐ **The piece boots ALIGNED TO THE FROZEN FLOOR** (`6593b2f`; *"at boot, all the pieces (not placed) have their resting face aligned with
+  frozen object"* — *"so the roll is immediately active at boot"*): at the first frame after a spawn (the boot, a respawn, the switch between
+  the green and the turquoise piece), once the orbit has placed it (`bootRestAlign`): its resting face turned AT ONCE against the floor's face
+  toward it (`alignFaceOf(…, frozenOnly)`, the long axes paired — no ease, no episode), the piece counted aligned with the floor's axes as the
+  reference. Headless, no tap at all: the HUD *aligned to Floor/f1*, dx rolled at once.

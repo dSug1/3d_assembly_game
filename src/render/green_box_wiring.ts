@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, sphereSide, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -575,7 +575,6 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.centreReturn = null;
     // ⭐ (2026-10-08) the SPHERE decides afresh on the next frame (`sphereFrame`): back at boot, outside it → a way in, as at boot
     st.pieceOutside = null;
-    st.sphereArmed = false;
   }
   // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
   // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
@@ -1074,12 +1073,9 @@ function sphereFrame(st: SceneState): void {
   mesh.scaling.setAll(Math.max(1e-6, r));
   if (!(r > 0)) return;
   const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-  // ⭐ (2026-10-09) in at the radius; out at the radius once the piece has been 10 % within it (`sphereSide`)
+  // ⭐ (2026-10-10) in at the radius; out beyond 1.1 × the radius (`outsideSphere`)
   const prev = st.pieceOutside;
-  const side = sphereSide(d, r, prev === null ? null : { outside: prev, armed: st.sphereArmed });
-  if (side.armed !== st.sphereArmed) st.hudDirty = true;
-  st.sphereArmed = side.armed;
-  const out = side.outside;
+  const out = outsideSphere(d, r, prev);
   st.pieceOutside = out;
   if (out === prev) return;
   st.hudDirty = true;
