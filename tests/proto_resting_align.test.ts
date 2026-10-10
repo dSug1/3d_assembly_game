@@ -95,7 +95,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(isOrbitTap(1000, 1100, 200, true, true)).toBe(false); // it pinched
     expect(isOrbitTap(1000, 1100, 200, false, false)).toBe(false); // the orbit finger lifted first
     expect(orbitTapCount(0)).toEqual({ count: 1 });
-    expect(orbitTapCount(1)).toEqual({ count: 2 }); // (2026-10-09) the count is the HUD's; what a tap does is `tapAction`'s
+    expect(orbitTapCount(1)).toEqual({ count: 2 }); // (2026-10-09) the count is the HUD's; the tap does nothing to the piece since 2026-10-10
     expect(DEFAULT_CONFIG.tapMaxDuration).toBe(200); // ⭐ Unity's, for every tap (option 1)
     expect(code("render/tuning_menu.ts")).toContain('"tapMaxDuration", 100, 400, 10)');
   });
@@ -161,9 +161,9 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(p).not.toMatch(/sec\.pinched/);
     expect(p).toMatch(/\} else if \(e\.pointerId === ot\.orbitPointer\) \{\s*\/\/[^\n]*\n\s*orbitDragStep\(st, e\.pointerId, s, prev\);/);
     // the tap is judged and CONSUMED before the camera-reset / mode-toggle taps
-    expect(p).toMatch(/if \(isOrbitTap\(sec\.pressT, s\.t, st\.cfg\.tapMaxDuration, sec\.moved, stillDown\)\) orbitTapped\(st, performance\.now\(\)\);\s*st\.hudDirty = true;\s*return;/);
+    expect(p).toMatch(/if \(isOrbitTap\(sec\.pressT, s\.t, st\.cfg\.tapMaxDuration, sec\.moved, stillDown\)\) orbitTapped\(st\);\s*st\.hudDirty = true;\s*return;/);
     const i0 = p.indexOf("the second touch released — a TAP if quick");
-    const i1 = p.indexOf("orbitTapped(st, performance.now())");
+    const i1 = p.indexOf("orbitTapped(st);");
     expect(i0).toBeGreaterThan(0);
     expect(i1).toBeGreaterThan(i0);
     expect(p.indexOf("noteTap(", i0)).toBeGreaterThan(i1); // the release branch's camera-reset / toggle tap comes after
@@ -173,7 +173,8 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     // the first tap aligns and costs ONE episode
     // (2026-10-07) the same first tap triggers the alignment AND, independently, the orbit around the piece — one episode if either acted
     // (2026-10-08) the tap ALIGNS only — the orbit round the piece is the sphere's (`sphereFrame`); one episode if it aligned
-    expect(p).toMatch(/const action = tapAction\(st\.restAligned && st\.restRoll !== null\);\s*const aligned = action === "ROLL" \? rollRestingFace\(st, now\) : alignRestingFace\(st, now\);\s*if \(aligned\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);\s*st\.episodes\.sync\(true\);/);
+    const tapFn = p.slice(p.indexOf("export function orbitTapped("), p.indexOf("export function orbitRightTap("));
+    expect(tapFn).not.toMatch(/alignRestingFace|rollRestingFace|tapAction|episodes\.touch/); // ⛔ (2026-10-10) the tap does nothing to the piece
     // the mouse's right tap
     expect(code("render/scene.ts")).toMatch(/\(heldMs\) => orbitRightTap\(st, heldMs\)/);
     expect(p).toMatch(/if \(!isOrbitTap\(0, heldMs, st\.cfg\.tapMaxDuration, false, true\)\) return;/);

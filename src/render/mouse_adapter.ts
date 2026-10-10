@@ -85,6 +85,12 @@ export function attachMouseSecondTouch(
   tapMaxMs = 250,
   /** ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right press made while the left button was down, released after `heldMs` — the scene judges it. */
   onRightTap?: (heldMs: number) => void,
+  /** ⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) at a right press while the left button is down: does a two-button drag yaw / pitch now? */
+  tumbleOnRight?: () => boolean,
+  /** ⭐ (2026-10-10) that two-button drag moved, px (y down). */
+  onRightDrag?: (dx: number, dy: number) => void,
+  /** ⭐ (2026-10-10) that two-button drag ended. */
+  onRightDragEnd?: () => void,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch(tapMaxMs);
   let seen = 0;
@@ -142,6 +148,8 @@ export function attachMouseSecondTouch(
     // ⭐ `D167`: a Shift tap — the scene toggles the mode if a free part is held.
     if (v.toggleMode === true) onShiftTap?.();
     if (v.rightTapMs !== undefined) onRightTap?.(v.rightTapMs);
+    if (v.rightDrag !== undefined) onRightDrag?.(v.rightDrag.dx, v.rightDrag.dy);
+    if (v.rightDragEnd === true) onRightDragEnd?.();
     // ⭐ Delivered FIRST: this runs before Babylon processes the real event, so a lift the model
     // owes reaches the scene before the event that revealed it.
     for (const a of v.emit) deliver(a);
@@ -175,6 +183,8 @@ export function attachMouseSecondTouch(
         t: performance.now(),
         // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
         ...(type === "DOWN" && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
+        // ⭐ (2026-10-10) a RIGHT press with the left button down: the scene says whether a two-button drag yaws / pitches now
+        ...(type === "DOWN" && e.button === 2 && (e.buttons & 1) !== 0 && tumbleOnRight !== undefined ? { tumble: tumbleOnRight() } : {}),
       },
       pi,
     );

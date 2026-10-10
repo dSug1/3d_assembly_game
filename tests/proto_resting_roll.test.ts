@@ -15,7 +15,6 @@ import { Viewport } from "@babylonjs/core/Maths/math.viewport";
 import { describe, expect, it } from "vitest";
 import { coupleStops, faceFlushAxes, nextCoupleRoll, placeByFaceCentre } from "../src/core/resting_face";
 import { ORBIT_ROLL_SPAN_RAD, orbitRollSteps } from "../src/input/piece_orbit";
-import { tapAction } from "../src/input/orbit_tap";
 import { dot, qRotate, qSlerp, type Quat, type Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -203,14 +202,16 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
   });
 
   it("⭐⭐ a NEW PINK FACE leaves the piece alone: the rolls go on against the face it was aligned to; aligning to the new one takes a press on the piece", () => {
-    expect(tapAction(true)).toBe("ROLL");
     expect(code("render/pointer_wiring.ts")).not.toMatch(/st\.restRoll\.key === restTargetKey\(st\)\) \{/); // the dx roll no longer asks
   });
 
-  it("⭐⭐ what a tap does: ALIGN until aligned to the SAME face, then ROLL — the orbit finger lifted in between or not", () => {
-    expect(tapAction(false)).toBe("ALIGN");
-    expect(tapAction(true)).toBe("ROLL"); // ⭐ (2026-10-10) the pink face changed since or not — re-aligning takes a press ON the piece
-    expect(code("render/pointer_wiring.ts")).toMatch(/const action = tapAction\(st\.restAligned && st\.restRoll !== null\);/);
+  it("⛔ what a tap does: NOTHING (2026-10-10: no roll by a tap; no alignment by a tap — every piece is aligned at its spawn)", () => {
+    // ⛔ (2026-10-10) neither: `tapAction` is deleted, the tap only counts — the piece is aligned at its spawn, the roll is the orbit's dx
+    expect(code("input/orbit_tap.ts")).not.toMatch(/export function tapAction/);
+    const p = code("render/pointer_wiring.ts");
+    const tapFn = p.slice(p.indexOf("export function orbitTapped("), p.indexOf("export function orbitRightTap("));
+    expect(tapFn).not.toMatch(/alignRestingFace|rollRestingFace|episodes\.touch/);
+    expect(code("render/green_box_wiring.ts")).toMatch(/st\.bootRestAlign = true;/); // every spawn aligns
   });
 
   it("⭐⭐ wired: the axes computed when each face is chosen; the first alignment by the LONG axes; rolls and carried rolls by couples; the HUD", () => {

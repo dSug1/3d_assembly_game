@@ -479,6 +479,10 @@ export interface GestureConfig {
   /** ⭐ Prototype (2026-10-10): the white sphere DRAWN (1) or hidden (0) — it goes on driving the ways in and out either way. */
   pieceSphereVisible: number;
   pieceOrbitReturnMm: number;
+  /** ⭐ Prototype (2026-10-10): the yaw / pitch outside the sphere — finger (or cursor) travel per face, mm (`tumble_gesture.ts`). */
+  tumbleStepMm: number;
+  /** ⭐ Prototype (2026-10-10): two fingers whose spacing changes by more than this (mm) PINCH; kept within it while they travel, they SLIDE (yaw / pitch). */
+  tumbleSpacingTolMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -973,6 +977,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,
+  // ⭐ prototype, the owner 2026-10-10: *"build the yaw and pitch"* — ~ the green roll's finger travel per stop outside the sphere (≈ 11 mm)
+  tumbleStepMm: 12,
+  // ⭐ (the owner: *"for the latch and parallel-slide spacing tolerance: OK"*) — a slider, as only a hand can set it
+  tumbleSpacingTolMm: 6,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

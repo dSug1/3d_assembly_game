@@ -41,15 +41,6 @@ export function restingFaceTap(onOrbitedPiece: boolean, firstTouch: boolean, inB
   return onOrbitedPiece && firstTouch && !inBand;
 }
 
-/**
- * ⭐⭐ prototype — **WHAT A TAP DOES** (`1.0.59z-Rotation-of-resting-face`; the owner, 2026-10-09: *"if (the first touch / left click is
- * held or tapped /clicked again) and second touch on piece / right click is tapped again : rotation of the piece around the normal of the
- * resting face so the next edge of the resting face takes the alignment with the pink face long axis"*): `ROLL` when the piece is
- * already aligned; else `ALIGN` — the first tap, or after a respawn. ⭐⭐ (2026-10-10, the owner: *"I want the roll to continue even if the
- * pink face has changed but I do not want the change of pink face to modify the alignment of the resting face (this shall still require a
- * press)"*) a NEW pink face no longer turns the tap into an alignment: it goes on rolling, against the axes of the face the piece was last
- * aligned to; aligning to the new one takes a press ON the piece (`restingFaceTap`). ⛔ The tap count plays no part.
- */
-export function tapAction(aligned: boolean): "ALIGN" | "ROLL" {
-  return aligned ? "ROLL" : "ALIGN";
-}
+// ⛔ (2026-10-10, the owner) `tapAction` is DELETED: the second-touch / right-button tap neither rolls (*"remove the increment of the roll by
+// right button tap / second touch tap"*) nor aligns (*"remove that as the existing pieces are aligned at boot"*) — every piece is aligned
+// at its spawn (`bootRestAlign`), the roll is the orbit's dx, a new resting face is a tap ON the piece (`restingFaceTap`).
