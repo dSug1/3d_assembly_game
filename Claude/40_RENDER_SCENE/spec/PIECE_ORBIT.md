@@ -18,6 +18,9 @@
 > ⭐⭐ **2026-10-09/10** (`1.0.59z-Rotation-of-resting-face` → `1.0.61-from1.0.59z-`): the sphere's band moved BELOW its surface and its
 > radius to **2.3 m**; the **resting face's centre** is the point that rides the rings; the way out's leftover fades by the further of the
 > travel and the progress toward the waist; the piece pushed ALONG THE RINGS was tried and reverted — the straight line stays (§10).
+> ⭐⭐ **2026-10-10** (`1.0.61-` → `1.0.62-`, the main line since): the sphere HIDDEN by default (a slider of its own); the way in's view
+> re-aims to the piece — and the camera's start shift fades — by the orbit's **dx alone** (§11); outside the sphere the dx also ROLLS the
+> aligned piece (`RESTING_FACE_ALIGNMENT.md` §15); every object doubled in size — tried and reverted (§11).
 
 ---
 
@@ -310,3 +313,21 @@ Vectors: `tests/proto_piece_orbit.test.ts` (the hysteresis, the wiring, no jump 
   waist. ⛔ Reverted by the owner — *"I want the straight line"* — after *"a double light swing back and forth in the camera movement in the way
   out"* (measured headless: a ~0.2° left-right wobble of the view during the way in, and the view tilting down then up through the waist).
   The waist is reached instead by the way out's fade above.
+
+## 11. The sphere hidden, the re-aim by dx alone, the doubled objects reverted (2026-10-10)
+
+- ⭐ **The sphere can be hidden without turning it off** (`a343742`; *"is there a slider to hide the white sphere? if not, create one below the
+  sphere round the gizmo"*): `pieceSphereVisible` (CAMERA ORBIT AROUND PIECE, *sphere round the gizmo: shown*, 0 / 1), right below the
+  radius. ⭐ **Hidden by default** (`6593b2f`; *"default: white sphere is hidden"*). The ways in and out run on the radius alone either way.
+- ⭐⭐ **The way in re-aims to the piece by dx ONLY** (`e20c024`; *"can we avoid the way in up-right movement if the movement is only on dy and
+  realign the camera to the piece only when dx inputs?"* → *"build it"*). ⚠ Why the piece moved up-right on a pure-dy exit: inside the
+  sphere the view aims at the GIZMO — the camera offsets (yaw 2.5°, pitch 2°) put the piece below-left of it on the screen — and around the
+  piece at the PIECE, so the way in's re-aim slid it up-right (36 px, 33 px in a 1280 × 800 view). Now the view's slide from the gizmo to the
+  piece (`entryLook`) AND the camera's start shift round the piece (`entryCamera`, `aimRing`) advance with the orbit finger's dx alone
+  (`PieceAim`, `advancePieceAim`, `aimProgress`, over the way in's 12 mm), and carry on into the orbit around the piece until done; the rest
+  of the way in (the pivot, the hand-over) still runs on all the travel. Headless, a pure-dy exit: the piece 6 px (the same slow drift as
+  inside), the gizmo still; then dx re-centred it. ⚠ With dy only the piece stays off the view's centre around the piece until a dx; the way
+  OUT still re-aims on all the travel (not asked).
+- ⛔ **Every object twice as big — tried and reverted** (`1d48987` → `09c054a`; *"multiply all the dimensions of all the objects by two
+  (parts, frozen objects, pieces). However, keep all the other values unchanged"*): `Scene_1` at 0.2 m per unit with the lights kept at 0.1,
+  the boot orbit centre (the painting's old origin) and the goal fit's exact core scaled with it — reverted by the owner the same day.

@@ -645,3 +645,14 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐⭐ **The white sphere: in at its radius, out at it once armed within 10 %; 2.3 m** → `PIECE_ORBIT.md` §10.
 * ⭐⭐ **The roll goes to the next COUPLE of edge-to-edge symmetry axes** (resting face ↔ pink face): green 90°, turquoise 30° →
   `RESTING_FACE_ALIGNMENT.md` §12.
+
+⭐ **2026-10-10** — `1.0.61-from1.0.59z-`, then **`1.0.62-`** — ⭐⭐⭐ **merged into `main` and served at the site root: the prototype IS the main
+line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md`:
+
+* ⭐ The white sphere: a show / hide slider, **hidden by default** → `PIECE_ORBIT.md` §11.
+* ⭐⭐ The way in re-aims to the piece (and fades the camera's start shift) by **dx alone** — no up-right slide on a pure dy → `PIECE_ORBIT.md` §11.
+* ⭐⭐ Outside the sphere the orbit's **dx rolls** the aligned piece — every axis within 45°, clockwise to the right; a fresh count per drag; the
+  count signed → `RESTING_FACE_ALIGNMENT.md` §15.
+* ⭐⭐ A new pink face leaves the piece alone (the rolls go on; aligning takes a press); the piece **boots aligned to the floor** →
+  `RESTING_FACE_ALIGNMENT.md` §16.
+* ⛔ Every object twice as big — tried and reverted → `PIECE_ORBIT.md` §11.
