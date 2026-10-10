@@ -619,7 +619,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
-    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.pieceAim = null;\s*st\.centreReturn = null;/); // the respawn
+    expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.pieceAim = null;\s*st\.orbitRollAcc = 0;\s*st\.centreReturn = null;/); // the respawn
     expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece =\s*scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     // (2026-10-09) …× the zoom now over the zoom at its start — the zoom acts outside the sphere too

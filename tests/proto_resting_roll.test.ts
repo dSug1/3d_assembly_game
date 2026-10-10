@@ -13,7 +13,8 @@ import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Viewport } from "@babylonjs/core/Maths/math.viewport";
 import { describe, expect, it } from "vitest";
-import { faceFlushAxes, nextCoupleRoll, placeByFaceCentre } from "../src/core/resting_face";
+import { coupleStops, faceFlushAxes, nextCoupleRoll, placeByFaceCentre } from "../src/core/resting_face";
+import { ORBIT_ROLL_SPAN_RAD, orbitRollSteps } from "../src/input/piece_orbit";
 import { tapAction } from "../src/input/orbit_tap";
 import { dot, qRotate, qSlerp, type Quat, type Vec3 } from "../src/core/vec";
 
@@ -139,6 +140,53 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     }
   });
 
+  it("⭐⭐ OUTSIDE THE SPHERE THE ORBIT'S dx ROLLS TOO (*\"In 45 degree orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right\"*)", () => {
+    // the stops of a half turn: green on the rectangle 2, the hexagon on it 6 (on a single axis 3)
+    expect(coupleStops([1, 0, 0, 0], DOWN, rectAxes, PINK)).toBe(2);
+    expect(coupleStops([1, 0, 0, 0], DOWN, hexAxes, PINK)).toBe(6);
+    expect(coupleStops([1, 0, 0, 0], DOWN, hexAxes, [X])).toBe(3);
+    expect(coupleStops([1, 0, 0, 0], DOWN, [], PINK)).toBe(0);
+    // 45° of orbit to the right, in small dx steps: EVERY stop of the half turn passed once — green 2 rolls (22.5° each), turquoise 6 (7.5°)
+    for (const [axes, n] of [[rectAxes, 2], [hexAxes, 6]] as const) {
+      const step = ORBIT_ROLL_SPAN_RAD / coupleStops([1, 0, 0, 0], DOWN, axes, PINK);
+      let acc = 0;
+      let rolls = 0;
+      let q: Quat = [1, 0, 0, 0];
+      for (let i = 0; i < 450; i++) {
+        const r = orbitRollSteps(acc, (0.1 * D), step); // 0.1° of orbit per event, 45° in all
+        acc = r.acc;
+        for (let k = 0; k < r.steps; k++) {
+          q = nextCoupleRoll(q, DOWN, axes, PINK, LOOK_DOWN, 1)!.q;
+          rolls++;
+        }
+      }
+      expect(rolls).toBe(n);
+      // a half turn: every axis line back on itself (the stops visited once each)
+      for (const a of axes) expect(axes.some((b) => angleOf(qRotate(q, a), b) < 1e-6)).toBe(true);
+    }
+    // ⭐ the step accumulator: whole steps, the rest kept; a turn back goes through zero first (no flicker); no step size, nothing
+    expect(orbitRollSteps(0, 0.5, 0.2)).toEqual({ acc: expect.closeTo(0.1, 12), steps: 2 });
+    const one = orbitRollSteps(0, 0.21, 0.2);
+    expect(one.steps).toBe(1);
+    expect(orbitRollSteps(one.acc, -0.05, 0.2).steps).toBe(0); // back a little: no roll back
+    expect(orbitRollSteps(0, -0.45, 0.2).steps).toBe(-2);
+    expect(orbitRollSteps(0.1, 5, 0)).toEqual({ acc: 0, steps: 0 });
+    // ⭐ dx LEFT: counter-clockwise on the screen — the same stop distance, the other way in the world
+    const cw = nextCoupleRoll([1, 0, 0, 0], DOWN, rectAxes, PINK, LOOK_DOWN, 1)!;
+    const ccw = nextCoupleRoll([1, 0, 0, 0], DOWN, rectAxes, PINK, LOOK_DOWN, -1)!;
+    expect(ccw.angleRad).toBeCloseTo(cw.angleRad, 12);
+    expect(qRotate(ccw.q, X)[2]).toBeCloseTo(-qRotate(cw.q, X)[2], 9);
+    // the wiring: outside the sphere, aligned to the face it would align to now — the orbit's turn, signed by dx, in steps; no episode
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toMatch(/if \(st\.pieceOutside === true && st\.restAligned && st\.restRoll !== null && dx !== 0 && st\.restRoll\.key === restTargetKey\(st\)\) \{/);
+    expect(p).toMatch(/const r = orbitRollSteps\(st\.orbitRollAcc, Math\.sign\(dx\) \* turned, orbitRollStepRad\(st\)\);/);
+    expect(p).toMatch(/for \(let i = 0; i < Math\.abs\(r\.steps\); i\+\+\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
+    const w = code("render/green_box_wiring.ts");
+    expect(w).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);
+    expect(w).toMatch(/return n > 0 \? ORBIT_ROLL_SPAN_RAD \/ n : 0;/);
+    expect(ORBIT_ROLL_SPAN_RAD).toBeCloseTo(45 * D, 12);
+  });
+
   it("⭐⭐ what a tap does: ALIGN until aligned to the SAME face, then ROLL — the orbit finger lifted in between or not", () => {
     expect(tapAction(false, false)).toBe("ALIGN");
     expect(tapAction(false, true)).toBe("ALIGN");
@@ -154,12 +202,14 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     const align = w.slice(w.indexOf("export function alignRestingFace"), w.indexOf("export function restTargetKey"));
     expect(align).toMatch(/const r = restAlignToFace\(q, \[pos\.x, pos\.y, pos\.z\], p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/); // the long axes
     expect(align).toMatch(/const pinkAxes: readonly Vec3\[\] = target\?\.flush \?\? \[\];/);
-    expect(align).toMatch(/const step = nextCoupleRoll\(base, p\.restingFace\.normal, p\.restingFlush, pinkAxes\.length > 0 \? pinkAxes : \[\[right\.x, right\.y, right\.z\]\], view\);/);
+    expect(align).toMatch(/for \(let i = 0; i < Math\.abs\(carryRolls\); i\+\+\) \{\s*const step = nextCoupleRoll\(base, p\.restingFace\.normal, p\.restingFlush, pinkAxes\.length > 0 \? pinkAxes : \[\[right\.x, right\.y, right\.z\]\], view, sense\);/);
+    expect(align).toMatch(/const sense: 1 \| -1 = carryRolls > 0 \? 1 : -1;/); // the net rolls carried in their own sense
+    expect(align).toMatch(/rolls \+= sense;/);
     expect(align).toMatch(/st\.restRoll = \{ key: target\?\.label \?\? "", pinkAxes, rolls, couple \};/);
     const roll = w.slice(w.indexOf("export function rollRestingFace"), w.indexOf("export function enterPieceOrbit"));
     expect(roll).toMatch(/const from = st\.restAlign\?\.base \?\? shown;/); // quick taps add up
-    expect(roll).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view\);/);
-    expect(roll).toMatch(/st\.restRoll = \{ \.\.\.rr, couple: \[roll\.rest, roll\.pink\], rolls: rr\.rolls \+ 1 \};/);
+    expect(roll).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);
+    expect(roll).toMatch(/st\.restRoll = \{ \.\.\.rr, couple: \[roll\.rest, roll\.pink\], rolls: rr\.rolls \+ sense \};/); // signed: the net rolls
     expect(roll).toMatch(/st\.restAlign = \{ from: shown, t0: now, base: roll\.q \};/);
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/const carry = st\.restRoll !== null && st\.restRoll\.key === restTargetKey\(st\) \? st\.restRoll\.rolls : 0;/);

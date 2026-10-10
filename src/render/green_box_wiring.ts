@@ -12,7 +12,7 @@ import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { candidateForFace, chooseInGroup, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
+import { candidateForFace, chooseInGroup, coupleStops, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, sphereSide, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, sphereSide, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -288,25 +288,28 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
   // in the SAME turn
   let couple: readonly [number, number] | null = null;
   let rolls = 0;
-  if (carryRolls > 0) {
+  if (carryRolls !== 0) {
+    // ⭐ (2026-10-10) SIGNED: the net rolls, clockwise (+) or counter-clockwise (−) on the screen
+    const sense: 1 | -1 = carryRolls > 0 ? 1 : -1;
     const cam = st.camera.position;
     const tg = st.camera.getTarget();
     const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
     const right = st.camera.getDirection(new Vector3(1, 0, 0));
-    for (let i = 0; i < carryRolls; i++) {
-      const step = nextCoupleRoll(base, p.restingFace.normal, p.restingFlush, pinkAxes.length > 0 ? pinkAxes : [[right.x, right.y, right.z]], view);
+    for (let i = 0; i < Math.abs(carryRolls); i++) {
+      const step = nextCoupleRoll(base, p.restingFace.normal, p.restingFlush, pinkAxes.length > 0 ? pinkAxes : [[right.x, right.y, right.z]], view, sense);
       if (step === null) break;
       base = step.q;
       couple = [step.rest, step.pink];
-      rolls++;
+      rolls += sense;
     }
-    if (rolls > 0 && couple !== null) st.lastVerdict += ` — ${rolls} roll${rolls > 1 ? "s" : ""} carried over: a${couple[0]} ∥ b${couple[1]}`;
+    if (rolls !== 0 && couple !== null) st.lastVerdict += ` — ${Math.abs(rolls)} roll${Math.abs(rolls) > 1 ? "s" : ""} carried over (${rolls > 0 ? "clockwise" : "counter-clockwise"}): a${couple[0]} ∥ b${couple[1]}`;
   }
   st.restAlign = { from: q, t0: now, base }; // ⭐ about the resting face's centre — the anchor (`placeByFaceCentre`)
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
   // ⭐ (2026-10-09) what it aligned TO — the next tap on the same target ROLLS to the next edge (`rollRestingFace`) against that face's
   // long axis (the one paired), or the screen's horizontal with none; and how many rolls it carries
   st.restRoll = { key: target?.label ?? "", pinkAxes, rolls, couple };
+  st.orbitRollAcc = 0;
   st.hudDirty = true;
   return true;
 }
@@ -343,6 +346,19 @@ export function restOnTappedFace(st: SceneState, faceId: string): boolean {
   return true;
 }
 
+/**
+ * ⭐ The orbit's turn per roll outside the sphere (2026-10-10): `ORBIT_ROLL_SPAN_RAD` over the stops of a half turn of the shown piece's
+ * resting face against the axes it was aligned to (`coupleStops`); 0 with nothing to roll.
+ */
+export function orbitRollStepRad(st: SceneState): number {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  const rr = st.restRoll;
+  if (p === undefined || p.restingFace === null || rr === null || rr.pinkAxes.length === 0) return 0;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const n = coupleStops([r.w, r.x, r.y, r.z], p.restingFace.normal, p.restingFlush, rr.pinkAxes);
+  return n > 0 ? ORBIT_ROLL_SPAN_RAD / n : 0;
+}
+
 /** ⭐ The face a tap would align the orbited piece to now (`alignFaceOf`'s label; "" with none) — compared with the last alignment's. */
 export function restTargetKey(st: SceneState): string {
   const b = st.greenBox;
@@ -360,7 +376,7 @@ export function restTargetKey(st: SceneState): string {
  * short axis → … (4 stops, 90°); turquoise: one long axis to the next (6 stops, 60°). One turn eased over `REST_ALIGN_MS`, rotation
  * only; quick taps add up (each from the stop the last one was heading for). `false` with nothing to roll.
  */
-export function rollRestingFace(st: SceneState, now: number): boolean {
+export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, byOrbit = false): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   const rr = st.restRoll;
   if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return false;
@@ -377,7 +393,7 @@ export function rollRestingFace(st: SceneState, now: number): boolean {
     const right = st.camera.getDirection(new Vector3(1, 0, 0));
     pinkAxes = [[right.x, right.y, right.z]];
   }
-  const roll = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, view);
+  const roll = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, view, sense);
   if (roll === null) {
     st.lastVerdict = "orbit: tap — nothing to roll (no symmetry axis, or the reference along the normal)";
     st.hudDirty = true;
@@ -385,8 +401,8 @@ export function rollRestingFace(st: SceneState, now: number): boolean {
   }
   // ⭐⭐ (2026-10-09) about the resting face's CENTRE — it is the anchor the orbit places (`placeByFaceCentre`), so it stays put
   st.restAlign = { from: shown, t0: now, base: roll.q };
-  st.restRoll = { ...rr, couple: [roll.rest, roll.pink], rolls: rr.rolls + 1 };
-  st.lastVerdict = `orbit: tap — roll ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: resting axis a${roll.rest} ∥ ${rr.pinkAxes.length === 0 ? "the screen's horizontal" : `pink axis b${roll.pink}`}`;
+  st.restRoll = { ...rr, couple: [roll.rest, roll.pink], rolls: rr.rolls + sense }; // ⭐ signed: the net rolls (2026-10-10)
+  st.lastVerdict = `orbit: ${byOrbit ? (sense > 0 ? "dx → roll" : "dx ← roll") : "tap — roll"} ${((roll.angleRad * 180) / Math.PI).toFixed(0)}°: resting axis a${roll.rest} ∥ ${rr.pinkAxes.length === 0 ? "the screen's horizontal" : `pink axis b${roll.pink}`}`;
   st.hudDirty = true;
   return true;
 }
@@ -550,6 +566,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.pieceOrbit = null;
     st.pieceEntry = null;
     st.pieceAim = null;
+    st.orbitRollAcc = 0;
     st.centreReturn = null;
     // ⭐ (2026-10-08) the SPHERE decides afresh on the next frame (`sphereFrame`): back at boot, outside it → a way in, as at boot
     st.pieceOutside = null;

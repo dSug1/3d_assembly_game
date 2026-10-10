@@ -201,6 +201,34 @@ export function entryLook(e: PieceEntry, camera: Vec3, centre: Vec3, piece: Vec3
 }
 
 /**
+ * ⭐⭐ prototype — **OUTSIDE THE SPHERE, THE ORBIT'S dx ROLLS THE PIECE TOO** (2026-10-10; the owner: *"when the piece is outside the white sphere,
+ * I want the dx to also drive the roll to the next axis. In 45 degree orbit around the piece I want all the axis to have rolled at least once.
+ * direction of the roll : clockwise if dx is to the right, whateve the ring position (1st or 4th ring)"*). Over `ORBIT_ROLL_SPAN` of the orbit's
+ * yaw the piece rolls through every stop of a half turn (`coupleStops` — an axis is a line, so a half turn visits every couple): one roll each
+ * `ORBIT_ROLL_SPAN / stops` — green 22.5°, turquoise 7.5°.
+ */
+export const ORBIT_ROLL_SPAN_RAD = Math.PI / 4;
+
+/**
+ * ⭐ The orbit's turn, signed by the finger's dx (right +), into whole roll steps of `stepRad` — what is left kept for the next (`acc`); a
+ * turn back goes back through zero before it rolls the other way, so a finger hovering on a step cannot flicker. A step of 0: none.
+ */
+export function orbitRollSteps(acc: number, deltaRad: number, stepRad: number): { readonly acc: number; readonly steps: number } {
+  if (!(stepRad > 0)) return { acc: 0, steps: 0 };
+  let a = acc + deltaRad;
+  let steps = 0;
+  while (a >= stepRad) {
+    a -= stepRad;
+    steps++;
+  }
+  while (a <= -stepRad) {
+    a += stepRad;
+    steps--;
+  }
+  return { acc: a, steps };
+}
+
+/**
  * ⭐⭐ prototype — **THE VIEW'S RE-AIM, BY dx ONLY** (2026-10-10; the owner: *"can we avoid the way in up-right movement if the movement is only on
  * dy and realign the camera to the piece only when dx inputs?"* → *"build it"*). Inside the sphere the view aims at the GIZMO (the camera
  * offsets put the piece below-left of it on the screen); around the piece it aims at the PIECE — so the way in's re-aim moved the piece

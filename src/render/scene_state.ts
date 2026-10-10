@@ -480,6 +480,7 @@ export interface SceneState {
     readonly key: string;
     /** ⭐ (2026-10-10) the edge-to-edge symmetry axes of the face it was aligned to (`faceFlushAxes`, world); empty — the screen's horizontal. */
     readonly pinkAxes: readonly Vec3[];
+    /** ⭐ (2026-10-10) the NET rolls since the alignment — clockwise +1, counter-clockwise −1 — what a new resting face carries over. */
     readonly rolls: number;
     /** ⭐ the couple last aligned — resting axis, pink axis — `null` before the first roll. */
     readonly couple: readonly [number, number] | null;
@@ -494,6 +495,8 @@ export interface SceneState {
   /** ⭐ Prototype (2026-10-10): the view's re-aim from the gizmo to the piece, advanced by dx only (`PieceAim`) — from the way in's start until
    * it is done (into the orbit around the piece); `null` otherwise. */
   pieceAim: PieceAim | null;
+  /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
+  orbitRollAcc: number;
   /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
   pieceOutside: boolean | null;
   /** ⭐ Prototype (2026-10-09): inside the sphere, the piece has been within 10 % below its radius since it came in — a crossing back out

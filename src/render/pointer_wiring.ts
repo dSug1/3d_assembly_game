@@ -11,7 +11,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
+import { alignRestingFace, greenDragGains, orbitRollStepRad, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
 import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved, tapAction } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -39,7 +39,7 @@ import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
-import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit";
+import { advanceCentreReturn, advancePieceAim, advancePieceEntry, orbitRollSteps } from "../input/piece_orbit";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -1265,6 +1265,16 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
+    // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
+    // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —
+    // outside the sphere and aligned to the face it would align to now, the orbit's turn (signed by dx) rolls the piece a stop every
+    // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
+    if (st.pieceOutside === true && st.restAligned && st.restRoll !== null && dx !== 0 && st.restRoll.key === restTargetKey(st)) {
+      const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
+      const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
+      st.orbitRollAcc = r.acc;
+      for (let i = 0; i < Math.abs(r.steps); i++) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
+    }
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
     // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
     // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the
