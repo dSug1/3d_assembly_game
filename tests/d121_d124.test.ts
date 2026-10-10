@@ -12,6 +12,10 @@ import { secondTouchDrive } from "@input/second_touch_drive";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 
+/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
+ * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
+const K = (SCENE_1.unitM ?? 0.1) / 0.1;
+
 const PLATE: SceneObject = {
   id: "plate",
   local: { position: [0, -1, 0], orientation: IDENTITY },
@@ -88,9 +92,9 @@ describe("⭐ `D122` — Scene_1's sand floor: halved, 80 %, 107 %, 103 %, then 
   it("47.9 → 23.95 → 19.16 → 20.5012 → 21.116236 → 20 units across (2.000 m × 5 mm × 2.000 m), frozen, its TOP CENTRE the origin", () => {
     const floor = SCENE_1.bodies.find((b) => b.id === "Floor")!;
     const m = floor.dims.map((d) => d * SCENE_1.unitM!);
-    expect(m[0]).toBeCloseTo(2, 12);
-    expect(m[1]).toBeCloseTo(0.005, 12);
-    expect(m[2]).toBeCloseTo(2, 12);
+    expect(m[0]).toBeCloseTo(2 * K, 12);
+    expect(m[1]).toBeCloseTo(0.005 * K, 12);
+    expect(m[2]).toBeCloseTo(2 * K, 12);
     expect(floor.frozen).toBe(true);
     expect(floor.position[0]).toBe(0);
     expect(floor.position[2]).toBe(0);

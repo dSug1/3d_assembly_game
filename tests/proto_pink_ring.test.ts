@@ -8,6 +8,10 @@ import { bodyNamed, greenPyramidSizeM, pinkRingVisibility } from "../src/input/g
 import { SCENE_1 } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
 
+/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
+ * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
+const K = (SCENE_1.unitM ?? 0.1) / 0.1;
+
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
 describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
@@ -193,7 +197,7 @@ describe("⭐⭐ prototype — the green piece is a PYRAMID, Piece17 × 150 %, i
     const s = greenPyramidSizeM(p17.dims, SCENE_1.unitM!);
     // the owner: *"Dimensions = 150 % dimensions of the piece 17"*, *"divide the height of the green piece by 2"*, then
     // *"reduce the length of the green piece by 25%"* — the length is its longest side, the width
-    [0.1035, 0.04125, 0.045].forEach((v, i) => expect(s[i]!).toBeCloseTo(v, 12));
+    [0.1035 * K, 0.04125 * K, 0.045 * K].forEach((v, i) => expect(s[i]!).toBeCloseTo(v, 12));
     expect(bodyNamed(SCENE_0.bodies, "Piece17")).toBeNull();
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/bodyNamed\(st\.sceneSpec\.bodies, "Piece17"\)/);

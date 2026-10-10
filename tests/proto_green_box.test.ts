@@ -14,6 +14,10 @@ import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
 
+/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
+ * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
+const K = (SCENE_1.unitM ?? 0.1) / 0.1;
+
 const code = (f: string) =>
   readFileSync(new URL(`../src/render/${f}`, import.meta.url), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -24,9 +28,9 @@ describe("⭐⭐ prototype — the green box", () => {
     const y = smallestOfColour(SCENE_1.bodies, SCENE_1_PALETTE.MAT_C)!;
     expect(y.id).toBe("Piece6");
     const s = sizeM(y.dims, SCENE_1.unitM!);
-    expect(s[0]).toBeCloseTo(0.065, 9);
-    expect(s[1]).toBeCloseTo(0.037, 9);
-    expect(s[2]).toBeCloseTo(0.03, 9);
+    expect(s[0]).toBeCloseTo(0.065 * K, 9);
+    expect(s[1]).toBeCloseTo(0.037 * K, 9);
+    expect(s[2]).toBeCloseTo(0.03 * K, 9);
   });
 
   it("⭐ by VOLUME, among the yellow ones only; a scene with no yellow body has no box", () => {

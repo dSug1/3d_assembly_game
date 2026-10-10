@@ -9,6 +9,10 @@ import { topFaceOutline } from "../src/core/underside";
 import { IDENTITY, qFromAxisAngle, type Vec3 } from "../src/core/vec";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
 
+/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
+ * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
+const K = (SCENE_1.unitM ?? 0.1) / 0.1;
+
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
 /** A box's corners as a mesh gives them — every corner THREE times (24 split vertices). */
@@ -52,8 +56,8 @@ describe("⭐⭐ `D196` — the top face's contour", () => {
     const ring = topFaceOutline(boxPoints(w, h, d), { position: [p[0] * u, p[1] * u, p[2] * u], orientation: IDENTITY })!;
     for (const q of ring) {
       expect(q[1]).toBeCloseTo(0, 9);
-      expect(Math.abs(q[0])).toBeCloseTo(1, 9);
-      expect(Math.abs(q[2])).toBeCloseTo(1, 9);
+      expect(Math.abs(q[0])).toBeCloseTo(1 * K, 9);
+      expect(Math.abs(q[2])).toBeCloseTo(1 * K, 9);
     }
   });
 

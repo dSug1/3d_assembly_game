@@ -28,6 +28,12 @@ import type { BodySpec, FinalConfiguration, SceneDescriptor, Triple } from "../c
 /** ⭐ `D169`: how far up every position moved so the floor's top centre is the origin — authored units. */
 export const SCENE_1_SHIFT_Y = 2.3;
 
+/**
+ * ⭐ Metres per authored unit — the OBJECTS' scale. 0.1 as authored; ⭐⭐ 0.2 since the owner, 2026-10-10: *"multiply all the dimensions of all the
+ * objects by two"* (see `unitM` below). One home: the scene's `unitM` and the orbit's boot centre (the painting's old origin) read it.
+ */
+export const SCENE_1_UNIT_M = 0.2;
+
 type Slot = "MAT_A" | "MAT_B" | "MAT_C" | "MAT_D" | "MAT_E" | "MAT_F";
 
 /** The owner's slots, as flat diffuse colours (linear RGB). */
@@ -187,7 +193,13 @@ export const SCENE_1: SceneDescriptor = {
   // painting's height, so every lift the level needs has room.
   playVolume: { aboveFloor: 10 },
   // ⭐ One authored unit = 0.1 m, so the 4.9-unit painting is 0.49 m and the rig frames it.
-  unitM: 0.1,
+  // ⭐⭐ prototype, the owner 2026-10-10: *"multiply all the dimensions of all the objects by two (parts, frozen objects, pieces). However, keep
+  // all the other values unchanged (camera setup, curves, gains, etc.)"* — *"white sphere unchanged"*, *"gizmos unchanged"*: 0.2 m per
+  // unit doubles every body's size AND position (the pieces still touch, the painting 0.98 m), the goal, the play volume and the orbited
+  // pieces (Piece17's size); the rings, the camera, the gains, the sphere and the gizmos are metres or pixels, so they stay; the lights
+  // keep 0.1 (`lightUnitM`). Was 0.1.
+  unitM: SCENE_1_UNIT_M,
+  lightUnitM: 0.1,
   // ⭐ prototype (green box), the owner 2026-10-01: *"boot scene 1 on the top ring"* (was "LEVEL").
   bootView: "TOP",
   bodies: [...pieces, FLOOR],
@@ -235,7 +247,9 @@ export const SCENE_1: SceneDescriptor = {
   // ⭐ prototype (green box), the owner 2026-10-01: top 0.9 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 m (radius / height).
   orbit: {
     // ⭐ `D169`: the orbit rings travel with the scene — the boot centre is where the world origin was.
-    centreM: [0, SCENE_1_SHIFT_Y * 0.1, 0],
+    // ⭐ (2026-10-10) the painting's OLD ORIGIN — it moves with the objects (0.23 → 0.46 m); in the level the boot target is the blue face's
+    // anyway (`bootTargetOnBlueFace`); the demo's cube is centred on it
+    centreM: [0, SCENE_1_SHIFT_Y * SCENE_1_UNIT_M, 0],
     // ⭐⭐ prototype (green box), the owner 2026-10-02: a symmetric WAIST — *"top ring = 1.7 m radius, … middle ring = smallest
     // possible radius, height = 0, bottom ring = 1.7 m radius"*, the three others proposed and applied:
     // * middle 0.25 m — the smallest that keeps the green piece out of the painting at boot zoom 1.5 (1.5 × 0.25 = 0.375 m from

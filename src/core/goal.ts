@@ -180,7 +180,7 @@ function judge(slot: Slot, now: Pose, frame: Frame): { p: number; a: number; tar
  * frame tilted 10.6°, the painting's top row read 40–57 mm off, and nine pieces nobody touched counted as un-placed —
  * one move later they all "reached their goal" in one pop-up (the owner's report, found by a fuzz of random moves).
  */
-function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3; now: Vec3 }[]): Frame {
+function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3; now: Vec3 }[], inlierM: number): Frame {
   if (kind !== "RELATIVE") return { rotation: IDENTITY, translation: [0, 0, 0] };
   let set = pairs;
   let fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now));
@@ -188,7 +188,7 @@ function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3;
     const f = fit;
     const res = pairs.map((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))));
     const median = [...res].sort((a, b) => a - b)[Math.floor(res.length / 2)]!;
-    const keep = pairs.filter((_, i) => res[i]! <= Math.max(2 * median, FIT_INLIER_M));
+    const keep = pairs.filter((_, i) => res[i]! <= Math.max(2 * median, inlierM));
     if (keep.length < 3 || (keep.length === set.length && keep.every((g, i) => g === set[i]))) break;
     set = keep;
     fit = bestRigidFit(set.map((g) => g.at), set.map((g) => g.now)) ?? fit;
@@ -200,7 +200,7 @@ function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3;
   // piece does.
   for (let round = 0; round < FIT_ROUNDS && fit; round++) {
     const f = fit;
-    const core = pairs.filter((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))) <= FIT_INLIER_M);
+    const core = pairs.filter((g) => length(sub(g.now, add(qRotate(f.rotation, g.at), f.translation))) <= inlierM);
     if (core.length < 3 || (core.length === set.length && core.every((g, i) => g === set[i]))) break;
     const refit = bestRigidFit(core.map((g) => g.at), core.map((g) => g.now));
     if (!refit) break;
@@ -222,6 +222,16 @@ function fitFrame(kind: FinalConfiguration["frame"], pairs: readonly { at: Vec3;
  * off the table (found in the real app).
  */
 const FIT_INLIER_M = 0.002;
+
+/**
+ * ⭐ (2026-10-10) …a length of the PIECES' geometry, so it scales with the scene's unit (`FIT_INLIER_M` at 0.1 m per unit — `Scene_1` as
+ * authored): the owner doubled every object (*"multiply all the dimensions of all the objects by two"*), and a fixed 2 mm core, half as
+ * wide against the pieces, let a far move flip an untouched piece again (the `D190` random play, seed 8). The PLACEMENT margins — what a
+ * hand aims at on the glass — do not scale.
+ */
+function fitInlierM(unitM: number): number {
+  return (FIT_INLIER_M * unitM) / 0.1;
+}
 
 /** ⭐ `D190`: how many refits the frame may take to settle — each round only drops or restores pieces. */
 const FIT_ROUNDS = 12;
@@ -348,12 +358,12 @@ export function goalReport(
   // match, until it holds (a swapped pair of twins would otherwise read as two outliers of the fit).
   let slotOf = new Map(slots.map((s) => [s.id, s] as const));
   const pairs = () => present.map((s) => ({ at: slotOf.get(s.id)!.at, now: nowOf.get(s.id)!.position }));
-  let frame = fitFrame(final.frame, pairs());
+  let frame = fitFrame(final.frame, pairs(), fitInlierM(unitM));
   for (let round = 0; round < 3; round++) {
     const next = assign(slots, nowOf, frame, tol);
     if (slots.every((s) => next.get(s.id) === slotOf.get(s.id))) break;
     slotOf = next;
-    frame = fitFrame(final.frame, pairs());
+    frame = fitFrame(final.frame, pairs(), fitInlierM(unitM));
   }
   const inPlaceIds: string[] = [];
   const targetOrientations = new Map<string, Quat>();

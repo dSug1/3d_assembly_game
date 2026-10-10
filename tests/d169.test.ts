@@ -13,6 +13,10 @@ import { SCENE_0 } from "../src/content/scene_0";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { bootOrbitCentre } from "@input/scene_rig";
 
+/** ⭐ (2026-10-10) the owner doubled every object (*"multiply all the dimensions of all the objects by two"*): Scene_1's metres are its
+ * authored ones × K (K = 2 now; 1 at the 0.1 m per unit the numbers below were written for). */
+const K = (SCENE_1.unitM ?? 0.1) / 0.1;
+
 const floor = SCENE_1.bodies.find((b) => b.id === "Floor")!;
 const pieces = SCENE_1.final!.bodies.map((f) => ({ ...f, dims: SCENE_1.bodies.find((b) => b.id === f.id)!.dims }));
 
@@ -33,7 +37,7 @@ describe("⭐⭐ `D169` — Scene_1's floor top centre is the origin", () => {
   });
 
   it("⭐⭐ the orbit rings moved with it: the boot centre is the old origin, 0.23 m up — so the boot view is the same", () => {
-    expect(SCENE_1_SHIFT_Y * SCENE_1.unitM!).toBeCloseTo(0.23, 12);
+    expect(SCENE_1_SHIFT_Y * SCENE_1.unitM!).toBeCloseTo(0.23 * K, 12); // the old origin moves with the objects (0.46 m at K = 2)
     expect(bootOrbitCentre(SCENE_1.orbit, [0, 0, 0])).toEqual([0, SCENE_1_SHIFT_Y * SCENE_1.unitM!, 0]);
   });
 
