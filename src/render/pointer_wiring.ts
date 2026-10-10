@@ -34,7 +34,7 @@ import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state"
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, gizmoClientX, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
-import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
+import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
@@ -749,7 +749,10 @@ export function installPointerHandler(st: SceneState): void {
             for (const f of orphaned) releaseAlignmentOf(st, f);
             st.lastVerdict = `align: TAP on empty space released ${orphaned.length} follower(s) of ${heldId}`;
           }
-        } else if (
+        } else {
+          // ⛔ (prototype, the owner 2026-10-10: *"remove the camera reset"*) a DOUBLE tap on empty space no longer flies the camera home —
+          // in this build the rig places the orbited piece, so the reset threw it back to its boot spot on the rings. The tap is still
+          // recorded (§1.3's history) and may still toggle the mode.
           noteTap(
             st,
             routed.pressed,
@@ -763,10 +766,7 @@ export function installPointerHandler(st: SceneState): void {
               heldIsAligned: heldId !== undefined && alignedFaceOf(st.world, heldId) !== null,
               heldFollowerCount: heldId !== undefined ? st.links.followersOf(heldId).length : 0,
             }),
-          ) === "DOUBLE_TAP"
-        ) {
-          resetCamera(st);
-          st.lastVerdict = "DOUBLE_TAP → camera reset";
+          );
         }
       }
       st.hudDirty = true;

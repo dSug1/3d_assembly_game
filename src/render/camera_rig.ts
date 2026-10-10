@@ -8,10 +8,10 @@ import { pinchAllowed } from "../input/pinch";
 import { pinchZooms } from "../input/pinch_gate";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, nearestPairCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
+import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { WORLD_DOWN } from "../core/object_model";
-import { ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
+import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
 
 /**
@@ -77,50 +77,6 @@ export function syncCentre(st: SceneState) {
 
 
 /** Put the camera where the rig surface says, clamped away from the near plane. */
-/**
- * §1.3's DOUBLE-TAP outside any object: put the camera back where it launched.
- * ⛔ Everything that defines the view — yaw, elevation, zoom AND the orbit centre.
- * Resetting the angles but leaving the centre where a barycentre had moved it would
- * give a "default" view of somewhere the camera has never been.
- */
-export function resetCamera(st: SceneState) {
-  // ⚠ Any centre still waiting out its grace is dropped: it was chosen for a gesture
-  // that has turned out to be a reset.
-  st.pendingCentre = null;
-
-  // ⭐⭐ HOME IS THE LAST YELLOW TARGET, NOT THE ORIGIN. The marker shows the barycentre
-  // §2 rule 1 last CHOSE, and that is the thing the user has been orbiting — sending
-  // the camera back to the world origin instead would reset it to a place it may never
-  // have looked at. ⚠ Only the ANGLES and the zoom go back to their launch values.
-  const home: CameraPose = {
-    yawRad: ORBIT_START_YAW_RAD,
-    elevation: st.bootElevation,
-    // ⚠ THE BOOT ZOOM, NOT 1. ⛔ *"Home"* has to be the view the session opened with, or a
-    // double tap would fly the camera somewhere the user has never seen — the same argument
-    // this function already makes about the orbit CENTRE, applied to the zoom.
-    zoom: st.orbitStartZoom,
-    centreM: st.centreBlend.targetM,
-  };
-  const now: CameraPose = {
-    yawRad: st.orbit.yaw,
-    elevation: st.orbit.elevation,
-    zoom: st.zoom,
-    centreM: st.centreBlend.centreM,
-  };
-
-  if (st.cfg.cameraResetMs > 0) {
-    // ⛔ A blend in flight is ABANDONED to the animation: two things easing the same
-    // centre on two different clocks would fight, and the finger-travel one cannot
-    // even advance — a double-tap supplies no travel.
-    st.centreBlend.snapTo(now.centreM);
-    st.cameraReset = new CameraResetAnimation(now, home, st.cfg.cameraResetMs);
-    return;
-  }
-
-  st.cameraReset = null;
-  applyCameraPose(st, home);
-}
-
 
 /** Put the camera exactly at a pose. Shared by the reset's every frame and its end. */
 export function applyCameraPose(st: SceneState, p: CameraPose) : void {

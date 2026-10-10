@@ -63,7 +63,7 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
     before). ⚠ ±1.45 m would turn twice as gently but needs the boot zoom ≤ 1.34. ⚠ The bottom ring at zoom 1.5 is 1.6 m below
     the centre — far below the floor (hidden; `D196`'s contour). Vectors in `tests/proto_green_box.test.ts`.
 * ⭐ **It BOOTS on the TOP ring** (`bootView: "TOP"`, *"boot scene 1 on the top ring"*) **at zoom 1.5** (`bootZoom`, slider
-  *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view; `0` restores the derived
+  *boot zoom* at the top of CAMERA, 0.5–10 step 0.1 — applied at once, and the camera reset's view (⛔ the reset is deleted, 2026-10-10); `0` restores the derived
   half-radius rule, which made ×7.5 with these rings and capped the box at 3 m over most of its travel).
 * **The box's distance from the centre** at zoom 1.5: **3.00 m** on the top and bottom rings, **0.375 m** on the middle (with
   the waist; it was 1.55 / 0.30 / 1.48 m). A zoom scales the whole surface, and the box is always kept within **0.15–3 m** (`clampCameraRadiusM`); each
@@ -670,3 +670,10 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   offset* (it lifts the resting-face fill); and, by the owner's choice, *centre grace* and the never-grabbed goal mm / °. A section's
   open / closed memory is keyed by its path, so the two OBJECT TRANSLATIONs and FACE ALIGNMENTs do not share it.
   `tests/proto_menu_worldspace.test.ts`.
+* ⛔ **The camera reset is deleted** (the owner: *"what does a double tap of first touch or left click do? is it useful in the current
+  build? can this function be removed?"* → *"remove the camera reset"*): a double tap (first touch) or double click (left button) on empty
+  space flew the orbit rig home — yaw, elevation, zoom — over `cameraResetMs`, and in this build the rig places the ORBITED PIECE, so it
+  threw the piece back to its boot spot on the rings, past the orbit's own smoothing (read from the code, not reproduced). Now such a
+  tap is only recorded (§1.3's history) and may still toggle the mode; `resetCamera` is deleted. ⚠ Kept: `CameraResetAnimation` and its
+  vectors (no caller now), and `cameraResetMs` (CAMERA ORBIT AROUND CENTER, *reset time*) — it still sets the alignment turn's speed
+  (`ALIGN_SNAP_FRACTION`). ⭐ The undo on a double tap on a scene PART (`D111`/`D141`) is untouched. `tests/proto_no_camera_reset.test.ts`.

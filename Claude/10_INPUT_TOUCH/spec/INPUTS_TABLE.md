@@ -14,7 +14,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 |---|---|---|
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | nothing | 2 fingers pinch on empty space | zoom |
-| nothing | double tap on empty space | reset the camera |
+| nothing | double tap on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10); the taps are still recorded and may toggle |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
 | — | ⭐ **double tap on the body the last action MOVED** (double click on desktop) | **undo that action** — move, turn, alignment, snap, unsnap, release; again to go further back (`D111`). ⭐ On any OTHER body it is refused and the HUD says which body moved (`D141`) ⭐ A double tap that does not land costs zero episodes (`D157`) |
 | nothing | single tap anywhere | ⛔ nothing (`D108`: no longer toggles) |
@@ -62,7 +62,7 @@ on entering the capture zone, are deleted.
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
-| nothing | double left click on empty space | reset the camera |
+| nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |
 | a FREE body | left drag | translate as the tablet's first finger (`D145`; `D108`: no mode on desktop) |
 | a FREE body, pressed | ⭐ **a Shift TAP** (`D167`) | toggle translation ↔ rotation (it persists); ⛔ Ctrl does nothing since `D167` |
@@ -102,6 +102,7 @@ of its own ([`../../20_GAME_RULES/spec/SCORE.md`](../../20_GAME_RULES/spec/SCORE
 | the flick itself (rotation reset) | `D110` | the undo |
 | `D103`'s flick-unsnap (specified) | `D110` | the precise unsnap; the undo |
 | the camera reset by a double tap on a BODY | `D111` | empty space — and the **edge band** is always empty space (`D113`) |
+| ⛔ the camera reset by a double tap / double click on EMPTY space | prototype, 2026-10-10 (*"remove the camera reset"*) | none — the orbit rig places the orbited piece, so a reset threw it back to its boot spot on the rings |
 | any tap toggling the mode | `D108` | tablet: one tap on empty space, free body held; desktop: a Shift tap while a free part is pressed (`D167`; Ctrl before) |
 | the pinned Pioneer (`pioneerTranslates=0`) | `D109` | an aligned Follower's second finger drives both axes anywhere |
 | `worldAxisB=0`, `translatePairing=0` | `D109` | boot-fixed axes, plane solve — ⛔ themselves replaced by the live camera's (`D145`) |
