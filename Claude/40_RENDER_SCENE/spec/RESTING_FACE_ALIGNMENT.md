@@ -9,7 +9,10 @@
 > ⭐ **Since 2026-10-06 the same first tap also starts THE ORBIT AROUND THE PIECE — an action of its own since 2026-10-07 (`1.0.59v-`)**
 > → [`PIECE_ORBIT.md`](PIECE_ORBIT.md) §1bis. ⛔ **Since 2026-10-08 the tap only ALIGNS** — the white sphere starts and ends the orbit
 > around the piece (`PIECE_ORBIT.md` §9).
-> ⭐⭐ **Since 2026-10-09 (`1.0.59z-Rotation-of-resting-face`) a tap on a piece already aligned ROLLS it to the next edge** (§11).
+> ⭐⭐ **Since 2026-10-09 (`1.0.59z-Rotation-of-resting-face`) a tap on a piece already aligned ROLLS it to the next edge** (§11) —
+> ⭐⭐ **since 2026-10-10 (`1.0.61-from1.0.59z-`) to the next COUPLE of symmetry axes** (§12). ⭐ And: a first-touch / left-click TAP on the
+> piece makes the face it hit the resting face, the rolls carried over (§13); a second-touch tap on a PLACED piece moves the pink face (§14);
+> the piece turns about its resting face's centre (`PIECE_ORBIT.md` §10).
 
 ---
 
@@ -28,7 +31,14 @@ does not zoom.
 | tap | what it does |
 |---|---|
 | the piece **not aligned** to the face it would align to now — the first tap, after a respawn, or the pink face has changed since | the **resting-face alignment** (§2) |
-| the piece **aligned to that same face** | the **ROLL to the next edge** (§11) |
+| the piece **aligned to that same face** | the **ROLL to the next couple of symmetry axes** (§12; was the next edge, §11) |
+
+⭐ Two more taps (2026-10-09):
+
+| tap | what it does |
+|---|---|
+| the **first touch / left button** tapped ON the orbited piece (nothing else down) | the face it hit becomes the **resting face** and the piece **aligns** it — the rolls carried over if the pink face is unchanged (§13) |
+| a **second touch** tapped on a **PLACED** piece while the first one orbits | the **pink face** (and the yellow target) move there (§14) |
 
 ⛔ Was (until 2026-10-09): the first tap aligned, the later ones were only counted. **The counter resets when the first touch lifts** — it is
 the HUD's only now (`taps N`): lifting and pressing the orbit finger again between taps changes nothing (`tapAction`).
@@ -207,6 +217,9 @@ parallel pair and the ends' tie-break; a hexagon end never turned past 30°; the
 
 ## 11. The roll to the next edge (2026-10-09, `1.0.59z-Rotation-of-resting-face`)
 
+> ⛔ **SUPERSEDED 2026-10-10 by §12** — the roll goes to the next couple of symmetry axes; `edgeStops` / `nextEdgeRoll` are deleted. The
+> sense (clockwise on the screen, the left-handed check), the "when" (`tapAction`), the feel and the score below still hold.
+
 The owner: *"if (the first touch / left click is held or tapped /clicked again) and second touch on piece / right click is tapped again :
 rotation of the piece around the normal of the resting face so the next edge of the resting face takes the alignment with the pink face
 long axis … in the green piece, that would be the short axis aligning with the pink face long axis, in the turquoise piece, that would be
@@ -242,3 +255,66 @@ the fourth): green — tap 1 aligned, then **90°** each, edge 2 → 3 → 4 →
 aligned, then **60°** each, edge to edge; no error. Vectors: `tests/proto_resting_roll.test.ts` (the stops of the rectangle and the hexagon;
 green 90° to its short axis and back in four; turquoise 60° and back in six; the sense flipping with a camera below; clockwise through
 Babylon's projection; a tap always moving; ALIGN vs ROLL; the wiring) — the old turn direction fails two.
+
+## 12. The roll to the next COUPLE of symmetry axes (2026-10-10, `1.0.61-from1.0.59z-`)
+
+The owner: *"instead of rolling to the next edge, I believe rolling to the next couple of symetry axis is better: compute all the axis of
+symetry of the pink face when selecting it, compute all the axis of symetry of the resting face when selecting it, at the click, instead of
+aligning the next edge to the long axis of the pink face, align the next closest couple of resting face - pink face axis. Advise"* → *"build
+it with edge-to-edge axes only, keeping the long-axis first alignment"*.
+
+- **The axes** (`faceFlushAxes`, `core/resting_face.ts`): every mirror line of the face that runs EDGE TO EDGE — through its centroid, crossing
+  two parallel edges at right angles (`faceLongAxes`'s candidates, all of them; the two share `facePolygon`). ⛔ Never a diagonal or a corner
+  to corner line: those poses cannot mate (and *"it cannot be the corner of the hexagone"*, 2026-10-05). A face with none (a triangle, an
+  irregular part): its edges' normals (`fallback`). Computed when the face is chosen — the resting face at creation or at a tap
+  (`restingFlush`), the pink face when the piece aligns to it (`alignFaceOf`'s `flush`, kept in `restRoll.pinkAxes`).
+- **The roll** (`nextCoupleRoll`): of every couple (a resting axis, a pink axis) the smallest turn about the resting face's normal, CLOCKWISE
+  ON THE SCREEN, making them parallel — an axis is a line, so each couple lines up every 180°; the couple already aligned is passed over.
+  With no pink axis, the screen's horizontal. Quick taps add up; one 125 ms turn; 1 episode.
+
+  | resting face on the blue rectangle (2 axes) | the edge roll (§11) | the couple roll |
+  |---|---|---|
+  | green base (rectangle, 2 axes) | 90° | **90°** |
+  | turquoise end (hexagon, 3 axes) | 60° | **30°** — a flat axis ∥ the pink long axis, then ∥ its short axis |
+  | a rectangle on a SQUARE pink face | — | **90°**, never 45° |
+
+- **The first alignment is unchanged**: the two faces' LONG axes paired (§2). The CARRIED rolls of §13 use the couples.
+- HUD: `aligned … · a1∥b0 (2 rolls)`; the verdict *"orbit: tap — roll 30°: resting axis a1 ∥ pink axis b1"*. On the green piece both couples
+  line up at once (a0∥b0 and a1∥b1): one is named.
+- **Checked headless** (`Scene_1`, real second-finger taps): green 90° per tap; turquoise 30° per tap through a2∥b0, a1∥b1, a0∥b0, a2∥b1; the
+  orbit finger re-pressed in between changing nothing; no error. Vectors `tests/proto_resting_roll.test.ts` (rewritten): the axes of a
+  rectangle, a hexagon, a square (no diagonal) and a triangle (the fallback); 90°/30° and back to the start; one pink axis gives the
+  hexagon's 60°; clockwise through Babylon's projection; the face centre held at the anchor; the wiring.
+
+## 13. A tap ON the orbited piece makes the face it hit the resting face (2026-10-09)
+
+The owner: *"when a face of the green piece or the turquoise piece is left button tapped or first touch tapped, the hit face becomes the
+resting face and it aligns. the roll to the next edge is then implemented on this new resting face"* — and *"when a new resting face is
+selected and no change in the pink face, the numbers of rolls applied to the previous resting face shall immediately apply to the new
+resting face"*.
+
+- **The gesture** (`restingFaceTap`, `render/pointer_wiring.ts`): the FIRST touch (or the left button) pressed on the orbited piece — empty
+  space to the router, so its drag still orbits — records the face it hit (the model's faces, `faceFromPickedNormal`); released as a TAP
+  (§1.3's `isTapRelease`) with nothing else down, that face becomes the resting face. ⛔ Consumed: it is not one of a camera-reset double tap
+  (a double tap ON the piece no longer resets the camera).
+- **The new resting face** (`restOnTappedFace`): its candidate (`candidateForFace` — the rule's own, or the face alone when the rule had
+  discarded it), its long axes, its symmetry axes, its edges and its pink fill rebuilt; the object model's resting face set to it (`TAPPED`).
+  The same face as now: nothing rebuilt. Then the piece ALIGNS it (§2), 1 episode.
+- **The rolls carried** (`carryRolls`): the pink face unchanged since the last alignment (`restRoll.key`), the same NUMBER of rolls is
+  applied to the new face at once, inside the alignment's one turn; the pink face changed, they start again at 0.
+- Headless: turquoise — 2 rolls on the hexagon, then a tap made side face f1 (4 edges) the resting face: aligned, the 2 rolls carried; a tap
+  on the green piece's current resting face re-aligned it. Vectors `tests/proto_face_tap.test.ts`.
+
+## 14. The pink face by a second-touch TAP on a placed piece (2026-10-09)
+
+The owner: *"user can also change the pink face by second touch on placed piece while the first touch stays pressed"* — *"On a TAP"*
+(chosen over the press: the painting covers much of the screen, and a pinch started on it must still zoom).
+
+- While the first touch orbits, a second touch landing on a piece LOCKED in its goal — not the orbited piece — is a candidate
+  (`pinkFaceTapCandidate`, `input/goal_lock.ts`): the face and the point it hit. The pinch starts as for any second touch off the piece.
+- Released as a TAP (`isOrbitTap`: quick, never moved past the deadband, the orbit finger still down) the yellow target moves to that point
+  and the pink face to that face — as the first touch's press on a placed piece does; moved (a pinch) or slow, nothing.
+- The pink face having changed, the next tap on the orbited piece ALIGNS to it (`tapAction`), not a roll. ⚠ Touch only: the desktop has no
+  such second touch (its right tap is the align / roll tap). Tied to `lockPlacedPieces`, as the first touch's rule.
+- Headless: a tap on Piece4 → the pink face `Piece10/f1 → Piece4/f1`; a moved second touch from Piece5 zoomed (1.00 → 1.08) and changed
+  nothing; the next tap on the orbited piece aligned to Piece4/f1. Vectors `tests/proto_pink_tap.test.ts`.

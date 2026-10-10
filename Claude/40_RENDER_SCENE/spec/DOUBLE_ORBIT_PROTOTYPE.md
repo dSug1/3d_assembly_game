@@ -630,3 +630,15 @@ implementation"*); the owner restarted from `1.0.59s-` on **`1.0.59u-from1.0.59s
 * ⭐ **The zoom acts outside the sphere** (`zoomScale`) → `PIECE_ORBIT.md` §9.
 * ⭐⭐ **A tap on an aligned piece ROLLS it to the next edge** — clockwise on the screen, 90° on the green piece (long axis → short axis),
   60° on the turquoise one → `RESTING_FACE_ALIGNMENT.md` §11.
+
+⭐ **2026-10-09/10** — on `1.0.59z-Rotation-of-resting-face`, then **`1.0.61-from1.0.59z-`**:
+
+* ⭐⭐ **A second-touch tap on a placed piece moves the pink face** (a pinch from it still zooms) → `RESTING_FACE_ALIGNMENT.md` §14.
+* ⭐⭐ **A first-touch / left-click tap on the orbited piece makes the face it hit the resting face**, aligned; the rolls carried over when the
+  pink face is unchanged → `RESTING_FACE_ALIGNMENT.md` §13.
+* ⛔ The piece pushed ALONG THE RINGS in the orbit round the piece — built and reverted (*"I want the straight line"*) → `PIECE_ORBIT.md` §10.
+* ⭐⭐⭐ **The resting face's CENTRE rides the rings** (every turn pivots on it), and **the way out's leftover fades by the further of the travel and
+  the progress toward the waist** — pure dy reaches 0.09 m → `PIECE_ORBIT.md` §10.
+* ⭐⭐ **The white sphere: in at its radius, out at it once armed within 10 %; 2.3 m** → `PIECE_ORBIT.md` §10.
+* ⭐⭐ **The roll goes to the next COUPLE of edge-to-edge symmetry axes** (resting face ↔ pink face): green 90°, turquoise 30° →
+  `RESTING_FACE_ALIGNMENT.md` §12.

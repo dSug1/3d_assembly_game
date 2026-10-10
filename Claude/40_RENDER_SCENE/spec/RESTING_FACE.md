@@ -210,6 +210,9 @@ again. The orbited pieces join the model with theirs (`SPAWN`, `registerOrbitPie
 (*"no need to highlight the resting faces of any part, excep the green and turquoise pieces"*). ⚠ What the model holds is the face, not its
 long axis, short axis or edges (the orbited pieces keep those outside it).
 
+⭐ **2026-10-09**: a tap ON an orbited piece makes the face it hit its resting face (`TAPPED` in the model) → `RESTING_FACE_ALIGNMENT.md` §13;
+and the orbited piece's resting face CENTRE is the point the orbit places → `PIECE_ORBIT.md` §10.
+
 ⭐ The boot pass waits for the goal's BASELINE commit (its first frame): a part placed in its goal at boot is seated, so it must be known
 first. In `Scene_1` that leaves the 5 parts that boot out of the goal (36 of 41 are placed).
 

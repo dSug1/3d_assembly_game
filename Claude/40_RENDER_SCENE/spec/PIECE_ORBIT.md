@@ -15,6 +15,9 @@
 > ⭐⭐ **Since 2026-10-08 (`1.0.59x-Automated-approach-and-min-distance`) the WHITE SPHERE round the pink gizmo starts and ends it — the
 > tap only aligns** (§9); then the piece's own minimum distance, the way out's offset from where the piece is drawn, and (`1.0.59y-Zoom-added`)
 > the zoom outside the sphere (§9).
+> ⭐⭐ **2026-10-09/10** (`1.0.59z-Rotation-of-resting-face` → `1.0.61-from1.0.59z-`): the sphere's band moved BELOW its surface and its
+> radius to **2.3 m**; the **resting face's centre** is the point that rides the rings; the way out's leftover fades by the further of the
+> travel and the progress toward the waist; the piece pushed ALONG THE RINGS was tried and reverted — the straight line stays (§10).
 
 ---
 
@@ -245,6 +248,7 @@ sphere, automatically trigger way out. When the piece exits the sphere, automati
 crossing … The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it is now)."* — *"Way in
 at boot"*, *"±10 %: in at 0.9 m, out at 1.1 m"*.
 
+- ⛔ **The thresholds and the 1 m below are SUPERSEDED (2026-10-09, `5ef0088`)**: in at the radius, out at it once armed, 2.3 m → §10.
 - **The sphere** (`sphereFrame`, after `pinkRingFrame` each frame): centred on the pink gizmo, radius `pieceSphereRadiusM` (CAMERA ORBIT
   AROUND PIECE, 0–3 m, **1 m**; 0 = none), white at α 0.08 seen from both sides (the camera is often inside it), never picked.
   **Inside below 0.9 r → the WAY OUT; outside beyond 1.1 r → the WAY IN** (`outsideSphere`, `SPHERE_HYSTERESIS` 0.1); at boot and after
@@ -275,3 +279,34 @@ at boot"*, *"±10 %: in at 0.9 m, out at 1.1 m"*.
 
 Vectors: `tests/proto_piece_orbit.test.ts` (the hysteresis, the wiring, no jump at either crossing, the drawn-elevation offset at 5 and
 160 mm/s, the zero minimum, the zoom) — each failing on the old code.
+
+## 10. The resting face's centre on the rings, the way out to the waist, the sphere at 2.3 m (2026-10-09/10)
+
+- ⭐⭐ **The way out's leftover fades by the FURTHER of two progresses** (`d8e8687`; the owner: *"let the piece's leftover fade by whichever
+  is further along: the finger travel, as now; or how far the piece has come from where the way out started … toward the rings' closest
+  point"*). The finger travel over `pieceOrbitReturnMm` (30 mm), or the share of the way from the rings' distance at the way out's start
+  (`CentreReturn.ring0M`) to their closest point (the waist, 0.09 m in `Scene_1`, `piecesClosestM`) — `ringProgress`, kept at its MOST, so
+  pushing back out never brings the leftover back. Eased as before (`returnPieceOffset`). ⭐ Only the piece's offset: the camera's way out
+  (its 30 mm, its squared turn) is unchanged. Headless, a pure dy from the boot position (3 m) on the straight line: **0.090 m** at the
+  waist (it stopped at ~0.13–0.15 m); vectored at 5, 40 and 160 mm/s.
+- ⭐⭐⭐ **The RESTING FACE'S CENTRE rides the rings, not the piece's** (`d8e8687`; the owner: *"as a conclusion of the way in, I want the center
+  of the resting position to be on the ring at the 0.09 m min distance (= the radius of 2nd and 3rd rings), not the center of the object"*).
+  The point the orbit places — on the rings, on the straight line, through the way in and the way out — is the ANCHOR (`st.pieceAnchor`); the
+  piece is put so that its resting face's centre is there (`placeByFaceCentre`, `anchorFrame` — last in the frame, so the sphere, the
+  transitions, the distance and the heading all read the anchor). ⭐ So every turn of the piece — the alignment, a roll — pivots on that
+  centre by construction (it replaced the roll's own pivot offset of `2a5d323`, *"the rotation shall be around the resting face center, not
+  the object center"*). A tap that makes another face the resting face moves the anchor's point on the piece: that jump is faded out over
+  the alignment's 125 ms (`anchorShift`) — headless, per frame 0.4 → 12.7 → 13.9 → 7.1 mm, no jump. ⚠ At boot the piece sits a couple of
+  centimetres from where it did (its resting face's centre, not its middle, is on the rings).
+- ⭐⭐ **The sphere: in at its radius, out at it once ARMED; 2.3 m** (`5ef0088`; the owner: *"The orbit around center shall trigger when the
+  piece crosses the white sphere, the orbit around piece shall trigger when the piece crosses the white sphere – 10%"* → *"Centre at r, piece
+  at r−10%"*; *"Set default radius of the white sphere to 2.3 m"*). `sphereSide`: coming IN, the way out as soon as the piece crosses the
+  radius; going OUT, the way in when it crosses the radius again — but only once it has been within `(1 − 10 %) × r` (2.07 m) since it came
+  in (`armed`); a shallower dip goes back out still in the centre orbit, so the surface cannot flicker. ⛔ The literal reading (the piece orbit
+  at r − 10 %, the centre orbit at r) would flip every frame inside the band. HUD: `inside the sphere (armed)`. Headless: the way out at
+  2.25 m, armed at 2.02 m, the way in at 2.36 m on the way back out.
+- ⛔ **The piece pushed ALONG THE RINGS in the orbit round the piece — tried and reverted** (`6dcb430` → `df00bc9`). Asked *"can't the piece be
+  pushed along the rings?"*, it was built: the piece slid along the rings at a frozen heading, so it never left them and pure dy reached the
+  waist. ⛔ Reverted by the owner — *"I want the straight line"* — after *"a double light swing back and forth in the camera movement in the way
+  out"* (measured headless: a ~0.2° left-right wobble of the view during the way in, and the view tilting down then up through the waist).
+  The waist is reached instead by the way out's fade above.

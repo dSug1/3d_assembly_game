@@ -455,6 +455,12 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(tap).not.toMatch(/enterPieceOrbit/); // ⭐ the resting-face tap no longer starts the orbit round the piece
     expect(tap).not.toMatch(/pushStep|pieceOrbitPushSeen/);
     expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBe(2.3); // the owner, 2026-10-09 (was 1 m)
+    // ⭐ (2026-10-10) a slider of its own hides it — the ways in and out still run (the radius alone decides them)
+    expect(DEFAULT_CONFIG.pieceSphereVisible).toBe(1);
+    const menu = code("render/tuning_menu.ts");
+    expect(menu.indexOf('"pieceSphereVisible", 0, 1, 1)')).toBeGreaterThan(menu.indexOf('"pieceSphereRadiusM", 0, 3, 0.05)'));
+    expect(w).toMatch(/mesh\.isVisible = r > 0 && st\.cfg\.pieceSphereVisible === 1;/);
+    expect(w).toMatch(/if \(!\(r > 0\)\) return;\s*const d = /); // the crossing tests read the radius, never the slider
     expect(code("render/tuning_menu.ts")).toContain('"pieceSphereRadiusM", 0, 3, 0.05)');
     expect(w).toMatch(/mat\.alpha = 0\.08;\s*mat\.backFaceCulling = false;/); // translucent white, seen from inside too
     expect(w).toMatch(/m\.isPickable = false;/); // never a touch target

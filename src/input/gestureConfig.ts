@@ -476,6 +476,8 @@ export interface GestureConfig {
   orbitPieceYawFactor: number;
   pieceOrbitEnterMm: number;
   pieceSphereRadiusM: number;
+  /** ⭐ Prototype (2026-10-10): the white sphere DRAWN (1) or hidden (0) — it goes on driving the ways in and out either way. */
+  pieceSphereVisible: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
@@ -966,6 +968,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // around the piece, inside the centre orbit (`sphereSide`: in at the radius, out at the radius once within 10 % below it); 0 = no sphere
   // (it replaced the end at 75 % + a push). ⭐ The owner, 2026-10-09: *"Set default radius of the white sphere to 2.3 m"* (was 1 m)
   pieceSphereRadiusM: 2.3,
+  // ⭐ prototype, the owner 2026-10-10: *"is there a slider to hide the white sphere? if not, create one below the sphere round the gizmo"*
+  pieceSphereVisible: 1,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

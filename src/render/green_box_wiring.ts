@@ -999,7 +999,7 @@ function sphereFrame(st: SceneState): void {
   const t = st.centreBlend.targetM;
   const r = st.cfg.pieceSphereRadiusM;
   const mesh = pieceSphereMesh(st);
-  mesh.isVisible = r > 0;
+  mesh.isVisible = r > 0 && st.cfg.pieceSphereVisible === 1; // ⭐ (2026-10-10) hidden by its own slider, still working
   mesh.position.set(t[0], t[1], t[2]);
   mesh.scaling.setAll(Math.max(1e-6, r));
   if (!(r > 0)) return;
