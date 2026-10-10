@@ -579,6 +579,7 @@ export function createScene(
   st.restAlign = null;
   st.orbitHeadingPrev = null;
   st.restAligned = false;
+  st.bootRestAlign = false;
   st.restRoll = null;
   st.pieceAnchor = null;
   st.anchorShift = null;

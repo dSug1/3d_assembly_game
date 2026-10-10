@@ -497,6 +497,8 @@ export interface SceneState {
   pieceAim: PieceAim | null;
   /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
   orbitRollAcc: number;
+  /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
+  bootRestAlign: boolean;
   /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
   pieceOutside: boolean | null;
   /** ⭐ Prototype (2026-10-09): inside the sphere, the piece has been within 10 % below its radius since it came in — a crossing back out

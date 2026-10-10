@@ -178,7 +178,7 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     expect(qRotate(ccw.q, X)[2]).toBeCloseTo(-qRotate(cw.q, X)[2], 9);
     // the wiring: outside the sphere, aligned to the face it would align to now — the orbit's turn, signed by dx, in steps; no episode
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(st\.pieceOutside === true && st\.restAligned && st\.restRoll !== null && dx !== 0 && st\.restRoll\.key === restTargetKey\(st\)\) \{/);
+    expect(p).toMatch(/if \(st\.pieceOutside === true && st\.restAligned && st\.restRoll !== null && dx !== 0\) \{/); // the pink face changed or not
     expect(p).toMatch(/const r = orbitRollSteps\(st\.orbitRollAcc, Math\.sign\(dx\) \* turned, orbitRollStepRad\(st\)\);/);
     // ⭐ (2026-10-10) a NEW orbit drag starts fresh — every roll, the first included, one step of the orbit from where the drag began
     expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)+st\.orbitRollAcc = 0;\s*\}/);
@@ -189,11 +189,28 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     expect(ORBIT_ROLL_SPAN_RAD).toBeCloseTo(45 * D, 12);
   });
 
+  it("⭐⭐ BOOT: the orbited piece's resting face aligned to the FROZEN body, the roll active at once (*\"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is immediately active at boot\"*)", () => {
+    const w = code("render/green_box_wiring.ts");
+    // every spawn (boot, respawn, the switch) asks for it; the first frame, once the orbit placed the piece, does it
+    const spawn = w.slice(w.indexOf("export function spawnOrbitPiece"), w.indexOf("function bootRestAlign"));
+    expect(spawn).toMatch(/st\.bootRestAlign = true;\s*st\.hudDirty = true;\s*\}/);
+    expect(w).toMatch(/st\.pieceAnchor = pp;\s*if \(st\.bootRestAlign\) bootRestAlign\(st, pp\);/);
+    const fn = w.slice(w.indexOf("function bootRestAlign"), w.indexOf("export function registerOrbitPieces"));
+    expect(fn).toMatch(/const target = alignFaceOf\(st, at, true\);/); // the FROZEN body, whatever the pink face
+    expect(fn).toMatch(/const turned = restAlignToFace\(\[r\.w, r\.x, r\.y, r\.z\], at, p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/);
+    expect(fn).toMatch(/st\.restAlign = null;\s*st\.restAligned = true;\s*st\.restRoll = \{ key: target\.label, pinkAxes: target\.flush, rolls: 0, couple: null \};/); // at once, aligned
+    expect(code("render/scene.ts")).toMatch(/st\.bootRestAlign = false;/);
+  });
+
+  it("⭐⭐ a NEW PINK FACE leaves the piece alone: the rolls go on against the face it was aligned to; aligning to the new one takes a press on the piece", () => {
+    expect(tapAction(true)).toBe("ROLL");
+    expect(code("render/pointer_wiring.ts")).not.toMatch(/st\.restRoll\.key === restTargetKey\(st\)\) \{/); // the dx roll no longer asks
+  });
+
   it("⭐⭐ what a tap does: ALIGN until aligned to the SAME face, then ROLL — the orbit finger lifted in between or not", () => {
-    expect(tapAction(false, false)).toBe("ALIGN");
-    expect(tapAction(false, true)).toBe("ALIGN");
-    expect(tapAction(true, false)).toBe("ALIGN");
-    expect(tapAction(true, true)).toBe("ROLL");
+    expect(tapAction(false)).toBe("ALIGN");
+    expect(tapAction(true)).toBe("ROLL"); // ⭐ (2026-10-10) the pink face changed since or not — re-aligning takes a press ON the piece
+    expect(code("render/pointer_wiring.ts")).toMatch(/const action = tapAction\(st\.restAligned && st\.restRoll !== null\);/);
   });
 
   it("⭐⭐ wired: the axes computed when each face is chosen; the first alignment by the LONG axes; rolls and carried rolls by couples; the HUD", () => {

@@ -196,9 +196,14 @@ const RESTING_ORDER = 1000;
  * points most toward the piece (the owner: *"if no pink face, anti-align with the normal of the first frozen object"* — the floor's
  * top). Its outward normal and its long axes (`faceLongAxes`, with their end points), read off its body's topology and placed by its pose.
  */
-function alignFaceOf(st: SceneState, piece: Vec3): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
-  let id: ObjectId | null = st.pinkFace?.objectId ?? null;
-  let faceId: string | null = st.pinkFace?.faceId ?? null;
+function alignFaceOf(
+  st: SceneState,
+  piece: Vec3,
+  frozenOnly = false,
+): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
+  // ⭐ (2026-10-10) `frozenOnly`: the frozen body's face toward the piece even with a pink face (the boot alignment, `bootRestAlign`)
+  let id: ObjectId | null = frozenOnly ? null : (st.pinkFace?.objectId ?? null);
+  let faceId: string | null = frozenOnly ? null : (st.pinkFace?.faceId ?? null);
   if (id === null) {
     for (const [oid, o] of st.world.objects) {
       if (o.frozen !== true) continue;
@@ -572,6 +577,33 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.pieceOutside = null;
     st.sphereArmed = false;
   }
+  // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
+  // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
+  st.bootRestAlign = true;
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐ prototype — **THE BOOT ALIGNMENT TO THE FROZEN BODY** (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting
+ * face aligned with frozen object"* — *"so the roll is immediately active at boot"*). At the first frame after a spawn (boot, respawn, the
+ * switch), the piece where the orbit put it (`at`): its resting face turned AT ONCE against the frozen body's face toward it (the floor's top),
+ * the long axes paired (`restAlignToFace`, as a tap's alignment — but no ease, no episode), and the piece counted ALIGNED to it — so a roll,
+ * by dx outside the sphere or by a tap, works from the start, against the floor's axes. Aligning to the pink face takes a press on the piece.
+ */
+function bootRestAlign(st: SceneState, at: Vec3): void {
+  st.bootRestAlign = false;
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return;
+  const target = alignFaceOf(st, at, true);
+  if (target === null) return;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const turned = restAlignToFace([r.w, r.x, r.y, r.z], at, p.restingFace.normal, p.restingLong, target.normal, target.long);
+  p.mesh.rotationQuaternion = toBabylon(turned.q);
+  st.restAlign = null;
+  st.restAligned = true;
+  st.restRoll = { key: target.label, pinkAxes: target.flush, rolls: 0, couple: null };
+  st.orbitRollAcc = 0;
+  st.lastVerdict = `orbit: boot — the resting face aligned to ${target.label}; the roll is active`;
   st.hudDirty = true;
 }
 
@@ -817,6 +849,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ (2026-10-09) `pp` is the ANCHOR — where the resting face's centre goes; the mesh is placed from it at the frame's end
   // (`anchorFrame`); until then everything orbit-side reads the anchor
   st.pieceAnchor = pp;
+  if (st.bootRestAlign) bootRestAlign(st, pp); // ⭐ (2026-10-10) a spawn: aligned to the frozen body, now that the orbit placed it
   box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.

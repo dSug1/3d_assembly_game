@@ -499,7 +499,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(tap).not.toMatch(/pushStep|pieceOrbitPushSeen/);
     expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBe(2.3); // the owner, 2026-10-09 (was 1 m)
     // ⭐ (2026-10-10) a slider of its own hides it — the ways in and out still run (the radius alone decides them)
-    expect(DEFAULT_CONFIG.pieceSphereVisible).toBe(1);
+    expect(DEFAULT_CONFIG.pieceSphereVisible).toBe(0); // hidden by default (the owner, 2026-10-10)
     const menu = code("render/tuning_menu.ts");
     expect(menu.indexOf('"pieceSphereVisible", 0, 1, 1)')).toBeGreaterThan(menu.indexOf('"pieceSphereRadiusM", 0, 3, 0.05)'));
     expect(w).toMatch(/mesh\.isVisible = r > 0 && st\.cfg\.pieceSphereVisible === 1;/);
@@ -604,7 +604,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const enter = w.slice(w.indexOf("export function enterPieceOrbit"), w.indexOf("function counterYawFrame"));
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     const tap = code("render/pointer_wiring.ts");
-    expect(tap).toMatch(/const action = tapAction\(st\.restAligned, st\.restRoll !== null && st\.restRoll\.key === restTargetKey\(st\)\);\s*const aligned = action === "ROLL" \? rollRestingFace\(st, now\) : alignRestingFace\(st, now\);\s*if \(aligned\) \{/); // (2026-10-09) the tap aligns, or rolls to the next edge
+    expect(tap).toMatch(/const action = tapAction\(st\.restAligned && st\.restRoll !== null\);\s*const aligned = action === "ROLL" \? rollRestingFace\(st, now\) : alignRestingFace\(st, now\);\s*if \(aligned\) \{/); // (2026-10-09) the tap aligns, or rolls to the next edge
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
     expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in

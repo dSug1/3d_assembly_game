@@ -92,7 +92,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment by the pink face", 
 
   it("⭐⭐ wired: the face aligned to — the pink face, else the first frozen body's face toward the piece; the target by the pink face", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/let id: ObjectId \| null = st\.pinkFace\?\.objectId \?\? null;/);
+    expect(w).toMatch(/let id: ObjectId \| null = frozenOnly \? null : \(st\.pinkFace\?\.objectId \?\? null\);/); // (2026-10-10) or the frozen body only (the boot alignment)
     expect(w).toMatch(/for \(const \[oid, o\] of st\.world\.objects\) \{\s*if \(o\.frozen !== true\) continue;/);
     expect(w).toMatch(/const r = restAlignToFace\(q, \[pos\.x, pos\.y, pos\.z\], p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/);
     expect(w).not.toMatch(/restAlignToEdge\(/); // ⛔ the edges version is superseded

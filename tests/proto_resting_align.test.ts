@@ -173,7 +173,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     // the first tap aligns and costs ONE episode
     // (2026-10-07) the same first tap triggers the alignment AND, independently, the orbit around the piece — one episode if either acted
     // (2026-10-08) the tap ALIGNS only — the orbit round the piece is the sphere's (`sphereFrame`); one episode if it aligned
-    expect(p).toMatch(/const action = tapAction\(st\.restAligned, st\.restRoll !== null && st\.restRoll\.key === restTargetKey\(st\)\);\s*const aligned = action === "ROLL" \? rollRestingFace\(st, now\) : alignRestingFace\(st, now\);\s*if \(aligned\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);\s*st\.episodes\.sync\(true\);/);
+    expect(p).toMatch(/const action = tapAction\(st\.restAligned && st\.restRoll !== null\);\s*const aligned = action === "ROLL" \? rollRestingFace\(st, now\) : alignRestingFace\(st, now\);\s*if \(aligned\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);\s*st\.episodes\.sync\(true\);/);
     // the mouse's right tap
     expect(code("render/scene.ts")).toMatch(/\(heldMs\) => orbitRightTap\(st, heldMs\)/);
     expect(p).toMatch(/if \(!isOrbitTap\(0, heldMs, st\.cfg\.tapMaxDuration, false, true\)\) return;/);

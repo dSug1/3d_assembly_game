@@ -1272,7 +1272,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —
     // outside the sphere and aligned to the face it would align to now, the orbit's turn (signed by dx) rolls the piece a stop every
     // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
-    if (st.pieceOutside === true && st.restAligned && st.restRoll !== null && dx !== 0 && st.restRoll.key === restTargetKey(st)) {
+    // ⭐ (2026-10-10) …the pink face changed since or not: the roll goes on against the axes it was aligned to
+    if (st.pieceOutside === true && st.restAligned && st.restRoll !== null && dx !== 0) {
       const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
       const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
       st.orbitRollAcc = r.acc;
@@ -1351,7 +1352,8 @@ export function orbitTapped(st: SceneState, now: number): void {
   // is now)"*) the tap ALIGNS only; the orbit around the piece starts and ends at the sphere round the gizmo (`sphereFrame`)
   // ⭐⭐ (2026-10-09, `1.0.59z-`) a tap ALIGNS, or — already aligned to the same face — ROLLS to the next edge (`tapAction`), the orbit
   // finger lifted in between or not; one episode either way
-  const action = tapAction(st.restAligned, st.restRoll !== null && st.restRoll.key === restTargetKey(st));
+  // ⭐ (2026-10-10) a new pink face no longer forces an alignment here — a press ON the piece does that (`restingFaceTap`)
+  const action = tapAction(st.restAligned && st.restRoll !== null);
   const aligned = action === "ROLL" ? rollRestingFace(st, now) : alignRestingFace(st, now);
   if (aligned) {
     st.episodes.touch(--st.episodeSeq, true, true);

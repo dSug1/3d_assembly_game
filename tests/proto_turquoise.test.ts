@@ -72,7 +72,8 @@ describe("⭐⭐ prototype — the turquoise piece", () => {
     const w = code("render/green_box_wiring.ts");
     // the boot one; its depth clone's LOCAL identity; the resting-face ALIGNMENT (`restAlignFrame`); and since 2026-10-05 the yaw AGAINST
     // the orbit (`counterYawFrame`) — ⛔ *"the piece shall not move during its orbit"* (2026-10-04) is superseded by it
-    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(4);
+    expect(w.match(/rotationQuaternion\s*=/g)).toHaveLength(5); // (2026-10-10) + the boot alignment to the frozen body (`bootRestAlign`)
+    expect(w).toMatch(/p\.mesh\.rotationQuaternion = toBabylon\(turned\.q\);/);
     expect(w).toMatch(/box\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).toMatch(/depth\.rotationQuaternion = Quaternion\.Identity\(\);/);
     expect(w).toMatch(/st\.greenBox\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
