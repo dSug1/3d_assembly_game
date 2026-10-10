@@ -7,10 +7,16 @@
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
+import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { clampCameraRadiusM } from "../input/pinch";
+import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
+import type { Sample } from "../input";
+import { alignRestingFace, greenDragGains, orbitRollStepRad, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
+import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved, tapAction } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom } from "../input";
+import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
-import { mmToPx } from "../core/units";
+import { mmToPx, pxToMm } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { rotationChannel } from "../core/constraint_stack";
@@ -30,9 +36,10 @@ import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./
 import { axesOf, gizmoClientX, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
 import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, resetCamera, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
-import { noteSpin, nudgeOthers } from "./sway_pass";
+import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
+import { advanceCentreReturn, advancePieceAim, advancePieceEntry, orbitRollSteps } from "../input/piece_orbit";
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -103,6 +110,7 @@ export function installPointerHandler(st: SceneState): void {
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
     if (info.type === PointerEventTypes.POINTERUP) {
+      // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
       st.eventGaps.delete(e.pointerId);
       st.rawPressedBody.delete(e.pointerId);
       st.pointerTypeOf.delete(e.pointerId);
@@ -156,7 +164,31 @@ export function installPointerHandler(st: SceneState): void {
         st.canvas.getBoundingClientRect(),
         mmToPx(bandMmNow(st)),
       );
-      const rayHit = !inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null;
+      // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
+      // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §5 (the owner, 2026-10-05: *"Today a second touch on a piece can grab it: remove this
+      // possibility"*): a SECOND touch while the first one orbits (one finger on empty space, nothing held) is EMPTY SPACE — it
+      // taps or pinches, never grabs. ⚠ A real touch only: the mouse's right button has its own tap (`orbitRightTap`), and its
+      // Shift-made second touch keeps its anchor role.
+      const orbitFinger =
+        st.greenBox !== null && e.pointerType !== "mouse" && e.pointerId !== MOUSE_SECOND_ID &&
+        st.router.outside().length === 1 && st.router.objects().length === 0
+          ? st.router.outside()[0]!.id
+          : null;
+      // ⭐⭐ the owner, 2026-10-06: *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
+      // tap on the piece"* — a second touch ON the orbited piece is the alignment's tap candidate (it never zooms; the first finger keeps
+      // orbiting); ANYWHERE ELSE it is a pinch from the moment it lands (no tap to wait for — nothing held back, no jump)
+      const secondOnPiece = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh === st.greenBox;
+      // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
+      // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it
+      {
+        const first = st.router.all().length === 0; // ⚠ asked before this press is routed (`router.press`, below): nothing else down
+        const onPiece = st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox;
+        const n = onPiece && first ? pick?.getNormal(true) : null;
+        const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
+        st.pieceFaceTap = restingFaceTap(onPiece, first, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+      }
+      const rayHit =
+        orbitFinger !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
       // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
       // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
@@ -303,19 +335,48 @@ export function installPointerHandler(st: SceneState): void {
           // ⚠ The PRESS coordinates are kept, not re-read later: rule 1 chooses what to
           // orbit around from the ray of the finger that STARTED it, and a finger that
           // has drifted 120 ms' worth would choose a different barycentre.
+          // ⭐⭐ prototype (green box), 2026-10-02: an empty-space press (the floor and the green piece are empty space here) does
+          // NOT move the yellow target — only a press on a placed piece does (`EMPTY_PRESS_MOVES_TARGET`, switched off).
           st.pendingCentre =
-            st.cfg.orbitCentreGraceMs > 0
+            EMPTY_PRESS_MOVES_TARGET && st.cfg.orbitCentreGraceMs > 0
               ? { x: e.clientX, y: e.clientY, at: s.t }
               : null;
-          if (!st.pendingCentre) recomputeOrbitCentre(st, e);
+          if (EMPTY_PRESS_MOVES_TARGET && !st.pendingCentre) recomputeOrbitCentre(st, e);
         } else {
           // ⛔ A SECOND ONE ARRIVED: this is a pinch. Drop the pending retarget entirely
           // — the camera keeps orbiting whatever it was already orbiting.
           st.pendingCentre = null;
         }
+        // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a second touch ON the piece while orbiting — a tap candidate, decided by its travel and its
+        // release. The count belongs to the orbit finger (a new orbit finger starts again at zero). Off the piece: a pinch (below).
+        if (orbitFinger !== null && secondOnPiece) {
+          if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbitFinger) st.orbitTap = { orbitPointer: orbitFinger, count: 0, second: null };
+          st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, moved: false };
+        }
+        // ⭐⭐ (2026-10-09, `1.0.59z-`) a second touch on a PLACED piece while orbiting: the pink face it would set if released as a TAP
+        // (`pinkFaceTapCandidate`) — the pinch below starts as for any second touch off the orbited piece
+        st.pinkTap = null;
+        {
+          const placedMesh = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh !== null ? pick.pickedMesh : null;
+          const placedId = placedMesh === null ? undefined : st.idOf.get(placedMesh);
+          const at = pick?.hit && pick.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
+          const cand = pinkFaceTapCandidate(
+            orbitFinger !== null,
+            secondOnPiece,
+            goalLocked(placedId, st.goalCommit, st.cfg.lockPlacedPieces === 1),
+            at,
+          );
+          const n = cand === null ? undefined : pick?.getNormal(true);
+          const face = n && placedId !== undefined ? faceFromPickedNormal(st.world, placedId, [n.x, n.y, n.z] as Vec3) : null;
+          if (cand !== null && face !== null && placedId !== undefined && orbitFinger !== null) {
+            st.pinkTap = { pointerId: e.pointerId, orbitPointer: orbitFinger, pressT: s.t, pressX: s.x, pressY: s.y, moved: false, objectId: placedId, faceId: face.faceId, point: cand };
+          }
+        }
         const p = pinchPair(st);
         if (p) {
           st.pinch.begin(p[0], p[1]);
+          // ⭐ each finger's motion state starts here (`pinch_gate.ts`: the zoom only while BOTH are MOVING)
+          st.pinchMotion.begin(st.router.outside());
           // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
           // never an accumulation — so a pinch out and back returns exactly where it
           // began. See input/pinch.ts.
@@ -326,6 +387,21 @@ export function installPointerHandler(st: SceneState): void {
       }
 
       const mesh = routed.object!;
+      // ⭐⭐ prototype (green box) — **A FIRST PRESS ON A PIECE IN ITS GOAL MOVES THE ORBIT TARGET THERE** (the owner, 2026-10-01:
+      // *"when first touch or left button is pressed and hold on a placed piece, the yellow orbit target moves to the point
+      // where the raycast hits the face of the placed piece"*). ⭐ The decision is `orbitTargetOnPress`'s; the press point is the
+      // pick's. ⚠ The RIGHT button is the mouse adapter's own re-issued press (`isTrusted` false) — it does not move it.
+      const hitAt = pick?.hit && pick.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
+      const newTarget = orbitTargetOnPress(
+        routed.role === "OBJECT" && st.router.all().length === 1,
+        e.pointerType !== "mouse" || e.isTrusted,
+        goalLocked(st.idOf.get(mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1),
+        hitAt,
+      );
+      if (newTarget !== null) {
+        st.centreBlend.retarget(newTarget);
+        syncCentre(st);
+      }
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
       //
       // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE
@@ -355,6 +431,8 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
+      // ⭐ `1.0.59q-`: a press that MOVED the target puts the pink ring on THIS face — the mating edge's face (`pinkFaceEdges`)
+      if (newTarget !== null && faceHit && pickedId !== undefined) st.pinkFace = { objectId: pickedId, faceId: faceHit.faceId };
       let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;
@@ -427,7 +505,7 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔⛔ `D108`: a tap on the held body itself no longer toggles — only empty space does.
         noteTap(st, routed.pressed, s, e.pointerId, false);
       } else {
-        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
         // ⭐ A second touch on a seated Follower (redirected to its root) is the UNSNAP's.
         st.lastFedPointer = e.pointerId;
         feedUnsnap(st, s);
@@ -471,7 +549,7 @@ export function installPointerHandler(st: SceneState): void {
       if (info.type === PointerEventTypes.POINTERUP) {
         forgetAnchor(st, routed.seq);
         st.router.release(e.pointerId);
-      } else st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      } else st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
       st.hudDirty = true;
       return;
     }
@@ -481,7 +559,7 @@ export function installPointerHandler(st: SceneState): void {
         const prev = routed.last;
         // ⚠ The live hit is handed over and DISCARDED by the router: this finger may
         // now be over a part, and it is still an anchor. See router.ts's `hitNow`.
-        st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+        st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
         // ⭐⭐ THIS IS THE FINGER THAT DRIVES DEPTH OR ROLL, and this branch is the only place
         // either is applied. ✅ **SIMULTANEOUS SINCE 2026-09-17** (owner): the holder's own
         // x/y keep running in their own handler while this one adds its axis, and the two SUM.
@@ -505,21 +583,29 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
+        const ot = st.orbitTap;
+        const sec = ot?.second;
+        if (ot && sec && st.router.outside().length === 2 && st.router.objects().length === 0) {
+          if (e.pointerId === sec.pointerId) {
+            // ⭐ beyond the deadband: no longer a tap — and ⛔ NEVER a pinch (it landed on the piece: the zoom is a second touch OFF it)
+            if (secondMoved(pxToMm(Math.hypot(s.x - sec.pressX, s.y - sec.pressY)), st.cfg.motionDeadbandMm)) sec.moved = true;
+          } else if (e.pointerId === ot.orbitPointer) {
+            // ⭐ the first finger keeps orbiting for as long as this second touch is down
+            orbitDragStep(st, e.pointerId, s, prev);
+          }
+          st.hudDirty = true;
+          return;
+        }
         if (st.router.outside().length === 2) {
+          const pt = st.pinkTap;
+          if (pt !== null && e.pointerId === pt.pointerId && secondMoved(pxToMm(Math.hypot(s.x - pt.pressX, s.y - pt.pressY)), st.cfg.motionDeadbandMm)) pt.moved = true;
           updatePinch(st);
         } else if (
           st.router.outside().length === 1 &&
           st.router.objects().length === 0
         ) {
           // §2 rule 1: ONE touchpoint, no hit — orbit.
-          const dx = s.x - prev.x;
-          const dy = s.y - prev.y;
-          st.orbit.drag(dx, dy);
-          // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so
-          // the camera arrives as the gesture progresses rather than on a timer.
-          st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
-          syncCentre(st);
-          applyCamera(st);
+          orbitDragStep(st, e.pointerId, s, prev);
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         // ⭐⭐ DOUBLE-TAP OUTSIDE ANY OBJECT RESETS THE CAMERA. ⛔ Judged BEFORE the
@@ -532,6 +618,61 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         st.pinch.end();
+        // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §1, §4: the second touch released — a TAP if quick, never a pinch, the orbit finger still
+        // down. ⛔ Consumed here: it is not a camera-reset tap, nor a mode toggle.
+        {
+          const ot = st.orbitTap;
+          if (ot !== null && ot.second?.pointerId === e.pointerId) {
+            const sec = ot.second;
+            ot.second = null;
+            const stillDown = st.router.all().some((q) => q.id === ot.orbitPointer);
+            if (isOrbitTap(sec.pressT, s.t, st.cfg.tapMaxDuration, sec.moved, stillDown)) orbitTapped(st, performance.now());
+            st.hudDirty = true;
+            return;
+          }
+          if (ot !== null && e.pointerId === ot.orbitPointer) {
+            // ⭐ the orbit finger lifted: the count resets (the piece goes on turning against the orbit, as always — §2bis)
+            st.orbitTap = null;
+            st.hudDirty = true;
+          }
+          // ⭐⭐ (2026-10-09) the second touch on a placed piece released: a TAP (quick, never moved, the orbit finger still down) moves the
+          // yellow target to the point it hit and the pink face to that face — as the first touch's press does; else nothing
+          const pt = st.pinkTap;
+          if (pt !== null && e.pointerId === pt.orbitPointer) st.pinkTap = null;
+          if (pt !== null && e.pointerId === pt.pointerId) {
+            st.pinkTap = null;
+            const stillDown = st.router.all().some((q) => q.id === pt.orbitPointer);
+            if (isOrbitTap(pt.pressT, s.t, st.cfg.tapMaxDuration, pt.moved, stillDown)) {
+              st.centreBlend.retarget(pt.point);
+              syncCentre(st);
+              st.pinkFace = { objectId: pt.objectId, faceId: pt.faceId };
+              st.lastVerdict = `orbit: second-touch tap — the pink face is now ${pt.objectId}/${pt.faceId}`;
+            }
+            st.hudDirty = true;
+            return;
+          }
+        }
+        // ⭐⭐ (2026-10-09) the first touch / left button released on the orbited piece as a TAP, nothing else down: the face it hit becomes
+        // the resting face and the piece ALIGNS it (one episode); the next taps of the second touch roll on that face. ⛔ Consumed — not a
+        // camera-reset tap.
+        {
+          const ft = st.pieceFaceTap;
+          if (ft !== null && ft.pointerId === e.pointerId) {
+            st.pieceFaceTap = null;
+            const tapped =
+              st.router.all().length === 0 &&
+              isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
+            // ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting face, at once
+            const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
+            if (tapped && restOnTappedFace(st, ft.faceId) && alignRestingFace(st, performance.now(), carry)) {
+              st.episodes.touch(--st.episodeSeq, true, true);
+              st.episodes.sync(true);
+              st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);
+              st.hudDirty = true;
+              return;
+            }
+          }
+        }
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the
         // pending toggle. ⛔ A DOUBLE tap here is the camera reset, and cancels the pending
         // toggle rather than being consumed by it.
@@ -644,7 +785,7 @@ export function installPointerHandler(st: SceneState): void {
       feedUnsnap(st, s);
       // ⚠ Handed the live hit, which the router discards: a finger that presses on a
       // part and slides off is still holding it (§4).
-      st.router.move(e.pointerId, s, info.pickInfo?.pickedMesh ?? null);
+      st.router.move(e.pointerId, s, throughGreenBox(info.pickInfo?.pickedMesh ?? null, st.greenBox));
 
       // ⛔⛔ `D51`'s PINNED PIONEER IS DELETED (`D109`): a Pioneer held beside its Follower translates
       // like any held body, and the Follower's second finger drives both axes wherever it lands (`D108`).
@@ -695,7 +836,16 @@ export function installPointerHandler(st: SceneState): void {
       }
       // ⭐⭐ `D139`: a grip whose Follower just SEATED drives nothing with this finger until it lifts.
       // ⭐⭐ `D182`: nor one that is half of an unsnap couple — the Pioneer holds still until a finger lifts.
-      if (unsnapHolds(st, e.pointerId) || !seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
+      // ⭐⭐ prototype (green box): nor one whose piece is IN ITS GOAL — no translation, no rotation (`goal_lock.ts`).
+      const lockedInGoal = goalLocked(st.idOf.get(grip.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
+      if (lockedInGoal) st.lastVerdict = `${st.idOf.get(grip.mesh)} is in its goal — locked`;
+      // ⭐⭐ prototype (green box) — **AND ITS DRAG ORBITS** (the owner, 2026-10-01: *"allow the orbit to occur when first touch
+      // or left click is pressed and hold on placed piece"*): the one finger on a locked piece drives the orbit exactly as on
+      // empty space (`orbitDragStep`); the piece stays pressed — a HitFace, a Pioneer, an undo.
+      if (lockedInGoal && st.router.objects().length === 1 && st.router.outside().length === 0) {
+        orbitDragStep(st, e.pointerId, s, grip.prev);
+      }
+      if (lockedInGoal || unsnapHolds(st, e.pointerId) || !seatLockAllows(grip.seatLocked, grip.mode === "ROTATE" ? "ROTATE" : "TRANSLATE")) {
         grip.prev = s;
         st.hudDirty = true;
         return;
@@ -1081,4 +1231,149 @@ export function installPointerHandler(st: SceneState): void {
       st.episodes.gestureEnded(endGesture(st));
     }
   });
+}
+
+
+/**
+ * ⭐ §2 rule 1's ORBIT DRAG, one step — from empty space, and (prototype (green box)) from a finger on a piece locked in its goal.
+ * ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the camera orbit as
+ * well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so both orbits invert together;
+ * its own gains, yaw and pitch (*"the green box orbits too fast"*), slower inside the leash (`boxDragGains`). ⚠ The zoom (pinch,
+ * wheel) is unchanged.
+ */
+export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
+  const dx = s.x - prev.x;
+  const dy = s.y - prev.y;
+  if (st.greenBox !== null) {
+    // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
+    if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
+      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg) };
+      // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
+      // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
+      // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
+      // through the way in and the orbit that follows, whichever a drag starts in
+      st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null ? st.pieceYawGain : 1;
+      // ⭐ (2026-10-10, the owner: *"there seem to be the need for a bigger dx to trigger the first roll than afterwards"* → *"build the two
+      // changes"*) a NEW drag starts its roll count fresh — no leftover from the last drag, so its first roll takes one step like every other
+      st.orbitRollAcc = 0;
+    }
+    st.orbitMotion.tracker.push(s);
+    // ⭐ the inside-the-leash gains (`greenDragGains`).
+    const g = greenDragGains(st);
+    const yaw0 = st.orbit.yaw;
+    const v0 = st.orbit.elevation;
+    // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
+    // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
+    // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
+    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
+    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
+    // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
+    // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —
+    // outside the sphere and aligned to the face it would align to now, the orbit's turn (signed by dx) rolls the piece a stop every
+    // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
+    // ⭐ (2026-10-10) …the pink face changed since or not: the roll goes on against the axes it was aligned to
+    if (st.pieceOutside === true && st.restAligned && st.restRoll !== null && dx !== 0) {
+      const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
+      const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
+      st.orbitRollAcc = r.acc;
+      for (let i = 0; i < Math.abs(r.steps); i++) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
+    }
+    // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
+    // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
+    // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the
+    // sway's own spring (`swingBlock`). Each kick is counted for the HUD (`orbitSwayKicks`).
+    if (st.orbitSway === null || st.orbitSway.pointerId !== pointerId)
+      st.orbitSway = { pointerId, watcher: new SwayWatcher(st.cfg.swayTurnDeg, st.cfg.pointerNoiseMm) };
+    const kick = st.orbitSway.watcher.push(s, st.orbitMotion.tracker.current === "MOVING", true);
+    if (kick) {
+      const kinds = orbitSwayKinds(st.cfg.orbitSwayKind);
+      const pose = st.orbit.pose(GREEN_PIECE_ORBIT_ZOOM); // ⭐ the rings as they are — the zoom moves the camera only
+      const k = pose.radiusM > 1e-9 ? clampCameraRadiusM(pose.radiusM, st.cfg) / pose.radiusM : 1;
+      const c = st.orbitCentreM;
+      const t = st.centreBlend.targetM;
+      const p = st.greenBox.position;
+      const box: Vec3 = [p.x, p.y, p.z];
+      const rig: Vec3 = [c.x + pose.offsetM[0] * k, c.y + pose.offsetM[1] * k, c.z + pose.offsetM[2] * k];
+      let kicked = false;
+      // ⭐ Option 1, the SWING about the yellow target.
+      if (kinds.swing && st.cfg.orbitSwayDeg > 0) {
+        const axis = orbitSwingAxis([c.x, c.y, c.z], box, rig);
+        const peakRad = ((st.cfg.orbitSwayDeg * Math.PI) / 180) * swayScale(kick.speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
+        // ⭐ Its OWN softness (`orbitSwayTauMs`) — quicker than a held piece's, *"I want the sway to resolve quickly"*.
+        const impulse = impulseForPeak(peakRad, st.cfg.orbitSwayTauMs / 1000);
+        if (axis !== null && impulse > 0) {
+          swingBlock(st, st.greenBox, { x: t[0], y: t[1], z: t[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
+          kicked = true;
+        }
+      }
+      // ⭐ Option 2 (the owner, 2026-10-02: *"build also option 2"*), the SLIDE — the pieces translate the way the green piece
+      // is heading, `orbitSlideMm` on the glass × the finger's speed factor, on the same quick softness.
+      if (kinds.slide && st.cfg.orbitSlideMm > 0) {
+        const dir = orbitSlideDirection(box, rig);
+        if (dir !== null) {
+          nudgeOthersWorld(st, st.greenBox, dir, kick.speedMmPerS, st.cfg.orbitSlideMm, st.cfg.orbitSwayTauMs);
+          kicked = true;
+        }
+      }
+      if (kicked) {
+        st.orbitSwayKicks++;
+        st.hudDirty = true;
+      }
+    }
+  } else st.orbit.drag(dx, dy);
+  // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
+  // rather than on a timer.
+  st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+  // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
+  if (st.pieceEntry !== null) st.pieceEntry = advancePieceEntry(st.pieceEntry, Math.hypot(dx, dy) / mmToPx(1));
+  // ⭐ (2026-10-10) …and the view's re-aim to the piece: dx ALONE (a pure dy leaves the piece where it is on the screen)
+  if (st.pieceAim !== null) st.pieceAim = advancePieceAim(st.pieceAim, dx / mmToPx(1));
+  // …and the way back to the centre orbit (2026-10-07), the same travel
+  if (st.centreReturn !== null) st.centreReturn = advanceCentreReturn(st.centreReturn, Math.hypot(dx, dy) / mmToPx(1));
+  syncCentre(st);
+  applyCamera(st);
+}
+
+/**
+ * ⭐⭐⭐ prototype — **A TAP COUNTED WHILE ORBITING** (`RESTING_FACE_ALIGNMENT.md` §1, §6; the owner, 2026-10-05): the count goes up; the
+ * FIRST tap is the resting-face alignment (`alignRestingFace`) and costs ONE episode if it aligned (*"The first tap shall cost one episode
+ * count"*), landed now (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry
+ * either). ⭐ It also started the orbit around the piece from 2026-10-07 (two independent actions on one input); since 2026-10-08 that orbit
+ * is the SPHERE's round the pink gizmo (`sphereFrame`) — *"disconnected from resting face"*. The later taps do nothing yet.
+ */
+export function orbitTapped(st: SceneState, now: number): void {
+  const ot = st.orbitTap;
+  if (ot === null) return;
+  const r = orbitTapCount(ot.count);
+  ot.count = r.count;
+  // ⭐ the same input, two actions — each called on its own (neither reads the other's result)
+  // ⭐⭐ (2026-10-08, the owner: *"The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it
+  // is now)"*) the tap ALIGNS only; the orbit around the piece starts and ends at the sphere round the gizmo (`sphereFrame`)
+  // ⭐⭐ (2026-10-09, `1.0.59z-`) a tap ALIGNS, or — already aligned to the same face — ROLLS to the next edge (`tapAction`), the orbit
+  // finger lifted in between or not; one episode either way
+  // ⭐ (2026-10-10) a new pink face no longer forces an alignment here — a press ON the piece does that (`restingFaceTap`)
+  const action = tapAction(st.restAligned && st.restRoll !== null);
+  const aligned = action === "ROLL" ? rollRestingFace(st, now) : alignRestingFace(st, now);
+  if (aligned) {
+    st.episodes.touch(--st.episodeSeq, true, true);
+    st.episodes.sync(true);
+    // ⭐ the verdict is the alignment's own (its leading and mating edges, `alignRestingFace`)
+  } else if (action === "ALIGN") {
+    st.lastVerdict = `orbit: tap ${ot.count} — counted (no piece to align)`;
+  }
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐ prototype — **THE MOUSE'S RIGHT TAP WHILE THE LEFT BUTTON ORBITS** (§4): judged on TIME only (`heldMs`, the press to the release —
+ * the cursor moves with the orbit). It counts if the left button is the one orbit finger (on empty space, nothing held).
+ */
+export function orbitRightTap(st: SceneState, heldMs: number): void {
+  const out = st.router.outside();
+  const orbit = st.greenBox !== null && out.length === 1 && st.router.objects().length === 0 ? out[0]! : null;
+  if (orbit === null || st.pointerTypeOf.get(orbit.id) !== "mouse") return;
+  if (!isOrbitTap(0, heldMs, st.cfg.tapMaxDuration, false, true)) return;
+  if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbit.id) st.orbitTap = { orbitPointer: orbit.id, count: 0, second: null };
+  orbitTapped(st, performance.now());
 }

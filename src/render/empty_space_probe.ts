@@ -25,7 +25,8 @@ export function probeEmptySpace(st: SceneState, nowMs: number): void {
     const pick = st.scene.pick(x, y);
     const mesh = pick?.hit ? pick.pickedMesh : null;
     const id = mesh ? st.idOf.get(mesh) : undefined;
-    if (id === undefined) {
+    // ⭐ prototype: an ORBITED piece is empty space to a touch
+    if (id === undefined || st.world.objects.get(id)?.orbited === true) {
       empty = true;
       break;
     }

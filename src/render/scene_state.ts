@@ -8,6 +8,8 @@ import { type EpisodeTally } from "../input/episode_ledger";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import type { PressSide } from "../input/screen_rotate";
+import type { CameraOrbitState, OrbitSpring, OrbitZoom } from "../input/follow_camera";
+import type { OrbitInertia } from "../input/orbit_inertia";
 import type { Pose } from "../core/goal";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -21,7 +23,11 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, SpinSwayWatcher, CameraResetAnimation, Recognizer, TapHistory, MotionTracker, type GravityFrame, type Behaviour, type FollowState, type Sample } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
+
 import { type FrameMeter } from "../core/frame_meter";
+import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
+import type { PinchMotion } from "../input/pinch_gate";
+import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
 import { RotationFollower, RotationTally } from "../input/rotation_increment";
@@ -44,6 +50,7 @@ import { type SceneSnapshot } from "./undo_wiring";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
 import { type Aabb } from "../core/collision";
+import { type CentreReturn, type PieceAim, type PieceEntry, type PieceOrbit } from "../input/piece_orbit";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -371,6 +378,13 @@ export interface Follow {
   /** What the block swings AROUND: the held object's centre, captured at the kick. */
   swayPivot: Vector3;
   /**
+   * ⭐ prototype (green box), 2026-10-02: the SOFTNESS the block swing springs back on, ms — set by the kick that made it (a held
+   * piece's turn: `rotateSwayTauMs`; the green piece's orbit: `orbitSwayTauMs`, quicker — *"I want the sway to resolve quickly"*).
+   */
+  swayRotTauMs: number;
+  /** ⭐ prototype (green box), 2026-10-02: the same for the translation sway — a dragged piece: `translateSwayTauMs`; the orbit slide: `orbitSwayTauMs`. */
+  swayTransTauMs: number;
+  /**
    * The orientation this object would have with no sway at all. ⛔ Kept because the
    * sway is applied ON TOP every frame; reading the mesh back would compound it.
    */
@@ -387,6 +401,148 @@ export interface SceneState {
   sceneSpec: SceneDescriptor;
   tuning: ReturnType<typeof parseConfigOverrides>;
   centreMarker: Mesh;
+  /** ⭐ prototype (green box): the green box, midway between the yellow target and the camera — `null` in a scene with no yellow body. */
+  greenBox: Mesh | null;
+  /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
+  pinkRing: LinesMesh | null;
+  /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical
+   * face count (read at creation) and volume (the inertia's); the one in use is `greenBox` (`spawnOrbitPiece`). */
+  orbitPieces: {
+    readonly mesh: Mesh;
+    readonly faces: number;
+    readonly volumeM3: number;
+    /** ⭐ its resting face (`core/resting_face.ts`, at creation): the rule's answer, the face chosen from the boot pose, and its
+     * YELLOW fill (a child of the piece, lifted each frame like every highlight) — the owner, 2026-10-05. */
+    readonly resting: RestingResult;
+    readonly restingFace: RestingCandidate | null;
+    readonly restingFill: Mesh | null;
+    /** ⭐ its resting face's LONG AXES (`faceLongAxes`), the piece's frame — and whether they are the odd-sided fallback. */
+    readonly restingAxes: readonly Vec3[];
+    readonly restingAxesFallback: boolean;
+    /** ⭐ its resting face's EDGES (`faceEdges`), its own frame — the leading edge is one of them (`1.0.59q-`). */
+    readonly restingEdges: readonly Edge[];
+    /** ⭐ its resting face's LONG AXES with their end points (`faceLongAxes`), its own frame — what aligns (`1.0.59q-`). */
+    readonly restingLong: LongAxes;
+    /** ⭐ (2026-10-09) its resting face's CENTRE, its own frame — what the orbit places (`placeByFaceCentre`). */
+    readonly restingCentre: Vec3;
+    /** ⭐ (2026-10-10) its resting face's EDGE-TO-EDGE symmetry axes (`faceFlushAxes`), its own frame — what a roll lines up with the pink face's. */
+    readonly restingFlush: readonly Vec3[];
+  }[];
+  /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
+   * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
+  restingFaces: Map<ObjectId, RestingEntry>;
+  restingShapes: Map<string, RestingResult>;
+  restingSeated: Set<ObjectId> | null;
+  restingLast: ObjectId | null;
+  /** ⭐ Prototype (`RESTING_FACE_ALIGNMENT.md` §1, §4): the second-finger taps counted while one orbit finger is down — that finger, the
+   * count, and the second touch in flight (its press, and whether it has become a pinch). `null` when no orbit finger has a count. */
+  /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): a second touch on a PLACED piece while the first one orbits — the pink face it would set if
+   * released as a tap (`pinkFaceTapCandidate`): its press, whether it moved, the face and the point it hit. `null` otherwise. */
+  /** ⭐ Prototype (2026-10-09): the FIRST touch (or the left button) pressed on the orbited piece — the face it hit, made the resting face
+   * if it is released as a tap (`restingFaceTap`). `null` otherwise, and dropped when another pointer presses. */
+  pieceFaceTap: { readonly pointerId: number; readonly faceId: string } | null;
+  pinkTap: {
+    readonly pointerId: number;
+    readonly orbitPointer: number;
+    readonly pressT: number;
+    readonly pressX: number;
+    readonly pressY: number;
+    moved: boolean;
+    readonly objectId: ObjectId;
+    readonly faceId: string;
+    readonly point: Vec3;
+  } | null;
+  orbitTap: {
+    readonly orbitPointer: number;
+    count: number;
+    second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; moved: boolean } | null;
+  } | null;
+  /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
+  restAlign: {
+    readonly from: Quat;
+    readonly t0: number;
+    readonly base: Quat;
+  } | null;
+  /** ⭐ Prototype (2026-10-09): the point the orbit placed this frame — the orbited piece's RESTING FACE CENTRE goes there
+   * (`placeByFaceCentre`); `null` before the first frame. */
+  pieceAnchor: Vec3 | null;
+  /** ⭐ Prototype (2026-10-09): when a tap makes another face the resting face, the piece's jump (`off`, world) faded out over the
+   * alignment's turn from `t0` — so the new centre takes over the anchor without a jump. */
+  anchorShift: { readonly off: Vec3; readonly t0: number } | null;
+  /** ⭐ Prototype (§2bis): the orbited piece's heading about the ring last frame — the counter-yaw turns by its change. `null`: read afresh. */
+  orbitHeadingPrev: number | null;
+  /** ⭐ Prototype (§2bis): the orbited piece's resting face has been ALIGNED (a tap) — it no longer turns against the orbit. A respawn clears it. */
+  restAligned: boolean;
+  /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): what the last alignment aligned TO — its target face (`key`, `alignFaceOf`'s label; "" with
+   * none) and the reference the edge roll lines the edges up with (`ref`: that face's long axis, world; `null` — the screen's
+   * horizontal); the stop last reached (`stop`, of `of`; −1 before the first roll). `null` until the first alignment; a respawn clears it. */
+  restRoll: {
+    readonly key: string;
+    /** ⭐ (2026-10-10) the edge-to-edge symmetry axes of the face it was aligned to (`faceFlushAxes`, world); empty — the screen's horizontal. */
+    readonly pinkAxes: readonly Vec3[];
+    /** ⭐ (2026-10-10) the NET rolls since the alignment — clockwise +1, counter-clockwise −1 — what a new resting face carries over. */
+    readonly rolls: number;
+    /** ⭐ the couple last aligned — resting axis, pink axis — `null` before the first roll. */
+    readonly couple: readonly [number, number] | null;
+  } | null;
+  /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
+   * respawn. `null`: the orbit around the centre as before. */
+  pieceOrbit: PieceOrbit | null;
+  /** ⭐ Prototype (2026-10-07): the way BACK to the orbit around the centre in progress (`returnToCentreOrbit`); `null` once home. */
+  centreReturn: CentreReturn | null;
+  /** ⭐ Prototype (2026-10-08): the WAY IN to the orbit around the piece in progress (`enterPieceOrbit` → the frame); `null` once in. */
+  pieceEntry: PieceEntry | null;
+  /** ⭐ Prototype (2026-10-10): the view's re-aim from the gizmo to the piece, advanced by dx only (`PieceAim`) — from the way in's start until
+   * it is done (into the orbit around the piece); `null` otherwise. */
+  pieceAim: PieceAim | null;
+  /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
+  orbitRollAcc: number;
+  /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
+  bootRestAlign: boolean;
+  /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
+  pieceOutside: boolean | null;
+  /** ⭐ Prototype (2026-10-09): inside the sphere, the piece has been within 10 % below its radius since it came in — a crossing back out
+   * now starts the orbit around the piece (`sphereSide`). */
+  sphereArmed: boolean;
+  /** ⭐ …the sphere's mesh (`sphereFrame`), made at its first use. */
+  pieceSphere: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+  /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
+   * (`pieceYawGainKey`). */
+  pieceYawGain: number;
+  pieceYawGainKey: string;
+  /** ⭐ …what the drag in progress uses: the gain if it STARTED around the piece, else 1 — a steady speed through a drag. */
+  pieceYawGainDrag: number;
+  /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
+   * placed piece moves the target to. Its edges give the alignment's MATING edge. */
+  pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
+  /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
+  orbitPieceKind: number;
+  orbitPieceFaces: number;
+  /** ⭐ Prototype: the green piece's distance to the yellow target this frame, metres (`null` before the first frame). */
+  greenBoxDistM: number | null;
+  /** ⭐ Prototype: where the orbit rig puts the green box (where it used to put the camera), and the following camera. */
+  greenBoxRigM: Vec3 | null;
+  cameraOrbit: CameraOrbitState | null;
+  /** ⭐ Prototype: the camera's angles as SHOWN — `cameraOrbit.cam` eased by the time lag (`cameraLag`). */
+  cameraLagged: { readonly yaw: number; readonly v: number } | null;
+  /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
+  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker } | null;
+  /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */
+  orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
+  /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */
+  orbitSwayKicks: number;
+  /** ⭐ Prototype: the green piece's orbit INERTIA after the finger lifts (`OrbitInertia`), and the volume that sizes it (m³). */
+  orbitInertia: OrbitInertia;
+  greenPieceVolumeM3: number;
+  /** ⭐ Prototype: the finger lifted while the orbit coasted — the camera gets the release when the coast ends (`cameraRelease`). */
+  cameraReleasePending: boolean;
+  /** ⭐ Prototype: the closest zoom that keeps the green piece on screen (`minGreenZoom`), and what it was computed from. */
+  greenZoomMin: number;
+  greenZoomMinKey: string;
+  /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
+  boxOrbit: OrbitZoom | null;
+  /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */
+  boxSpring: OrbitSpring | null;
   mouseLayer: MouseSecondTouchHandle;
   orbitStartZoom: number;
   engine: Engine;
@@ -448,6 +604,8 @@ export interface SceneState {
   sceneStartMs: number | null;
   /** ⭐ `3D7` (`D181`): the play volume, world metres — `null` for a scene that declares none (unbounded). */
   playVolume: Aabb | null;
+  /** ⭐ `D196`: each frozen body's top-face contour, shown while it is hidden from below (`null`: none can be drawn). */
+  topOutlines: Map<string, LinesMesh | null>;
   /** ⭐ `D183`: the goal capture's arming, its pulls in flight, and each piece's pose last frame (what MOVED). */
   goalCapture: GoalCapture;
   goalPulls: GoalPulls;
@@ -498,6 +656,8 @@ export interface SceneState {
   lastVerdict: string;
   hudDirty: boolean;
   pinch: PinchTracker;
+  /** ⭐ Prototype (2026-10-06): each pinching finger's motion state — the zoom only while BOTH are MOVING (`pinch_gate.ts`). */
+  pinchMotion: PinchMotion;
   pendingCentre: { x: number; y: number; at: number } | null;
   cameraReset: CameraResetAnimation | null;
   orbit: OrbitController;

@@ -129,7 +129,7 @@ function firstHitAlong(st: SceneState, heldId: ObjectId, from: Vec3, dir: Vec3, 
     new Ray(new Vector3(from[0], from[1], from[2]), new Vector3(dir[0], dir[1], dir[2]), reach),
     (m) => {
       const id = st.idOf.get(m);
-      return id !== undefined && m.isPickable && m.isVisible && m.isEnabled() && driveBodyOf(st, id) !== root;
+      return id !== undefined && st.world.objects.get(id)?.orbited !== true && m.isPickable && m.isVisible && m.isEnabled() && driveBodyOf(st, id) !== root;
     },
   );
   return hit?.hit ? hit.distance : null;

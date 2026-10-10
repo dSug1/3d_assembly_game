@@ -20,7 +20,7 @@ record. **A status changes in BOTH places or neither.**
 holds; no Pioneer sway → `ALIGNMENT_RULES.md` §24. **`D183`** (`1.0.57-`) the goal capture; PLACED = the snap's margins
 (1 mm / 1° never grabbed); twins swap → `LEVEL_END.md` §5. **`D184`** finger up always away → §25. **`D185`** the pitch, a
 wheel from the press side → §26. **`D186`–`D188`** HUD button, live episodes, score bar → `LEVEL_END` §6. **`D189`** the goal
-count and pop-up move only when an action ends → §5bis. **`D190`** only moved pieces re-judged → §5ter. **`D191`–`D194`** demo heaps, 3 high → `DEMO_SCENE`. **`D195`** no depth ceiling in a play volume → `COLLISION` §10bis. ⛔ `D182`–`D195` unjudged. Next: `3D2`.
+count/pop-up move when an action ends → §5bis. **`D190`** only moved pieces re-judged → §5ter **`D191`–`D194`** demo heaps → `DEMO_SCENE`. **`D195`** no depth ceiling with a play volume → `COLLISION`. **`D196`** floor from below: contour → §16. ⛔ `D182`–`D196` unjudged. Next: `3D2`.
 
 ⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
 (played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
@@ -41,8 +41,8 @@ approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-
 axis; shapes and bounds behind replaceable seams (Blender-authored later, `3D8`/`3D9`) →
 [`COLLISION.md`](../30_OBJECTS_3D/spec/COLLISION.md).
 
-✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1614 golden vectors,
-all passing** (37 → … → 1611 → **1614**, the deploy split: + 1, `D195`: + 2, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D183`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
+✅ TypeScript + Babylon + Vite; `npm run verify` = typecheck + **1619 golden vectors,
+all passing** (37 → … → 1614 → **1619**, `D196`: + 5, `D127`–`D134`, the frame meter, `D136`–`D148`, `D153`–`D183`, the 0.1 mm highlight lift; ⭐ each DROP has a `D` row: `D106`–`D110`, `D120`, the audit). ⛔⛔ **A COUNT RESTATED IN TWO PLACES GOES STALE.**
 ⛔⛔⛔ **THE 2026-09-19 LESSON, BINDING ON EVERY ROW**: *a rule written in `scene.ts` is a rule nothing can interrogate* — **seven** mutants survived the whole suite in one day, all found by a hand. ⭐ **Decisions in `src/input/`.** ✅ The boundary test walks the import **graph**, since direct imports alone let `src/core → ../main → @render/scene` pass.
 ⛔⛔⛔ **THE OBJECT AXES** (`D74`–`D76`, 2026-09-22/23): a body translates along **its own axes**, the boot
 camera's, frozen for the scene — the only frame since `D109` deleted `worldAxisB=0`. ⭐⭐ Blender says NO to
@@ -62,8 +62,8 @@ and the in-zone basis are deleted, `D82`/`D109`).
 
 1. ⛔⛔ **The playability program above** — `GM1` ✅ (`D180`), `3D7` ✅ (`D181`, the play volume); `3D2` (the approach) next.
 2. ✅ **~~A device look on everything since `D106`~~** — *"Checked and all closed"*, the owner, 2026-09-30; ✅ and `D180`'s own (*"Tested, ok"*).
-   The old entry: (`INPUTS_TABLE.md`; ⭐ its §5 is the checklist for `D155`–`D168`), and on the alignment model's §10 list.
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
+4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed

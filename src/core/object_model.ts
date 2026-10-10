@@ -117,6 +117,34 @@ export interface SceneObject {
    * capture from its centre, silently reintroducing the exact defect this field removes.
    */
   readonly shape?: ConvexShape;
+  /**
+   * ⭐⭐ **ITS RESTING FACE** (the owner, 2026-10-09: *"add the resting face to the object model so that each object in the scene has a
+   * resting face identified and tracked"*) — the face the part is instinctively laid on (`core/resting_face.ts`, `RESTING_FACE.md`),
+   * in the LOCAL frame like `faces`, so the body's placement carries it: `restingFaceWorld` reads it in the world at any moment.
+   * ⭐ Absent until the selector has answered for the object (at boot, at an unseat — §11); a seated part keeps the last one it had.
+   */
+  readonly restingFace?: RestingFace;
+  /**
+   * ⭐⭐ prototype — **AN ORBITED PIECE** (the green frustum, the turquoise prism; the owner, 2026-10-09: *"add the object model to the green
+   * and turquoise pieces so their faces can be tracked"*). In the model for its FACES and its resting face — tracked, read in the world
+   * by `faceWorld` / `restingFaceWorld` — while the ORBIT places it: its placement is copied FROM its mesh each frame
+   * (`syncOrbitPieceModel`), never written back. ⛔ Until its own collision is built it is nobody's obstacle (`core/collision.ts`),
+   * its pose is no scene change (the undo, the goal commit), and a touch on it stays empty space.
+   */
+  readonly orbited?: boolean;
+}
+
+/**
+ * ⭐ A resting face as the model holds it: the logical faces it merges (this object's `Face` ids — coplanar facets are ONE support),
+ * its area centroid and its outward normal, local frame; and when it was chosen.
+ */
+export interface RestingFace {
+  readonly faceIds: readonly FaceId[];
+  readonly centre: Vec3;
+  /** ⛔ OUTWARD — the direction that points DOWN when the part rests on it. */
+  readonly normal: Vec3;
+  /** `TAPPED`: an orbited piece's face made its resting face by a tap (2026-10-09). */
+  readonly why: "BOOT" | "UNSEATED" | "SPAWN" | "TAPPED";
 }
 
 export interface World {
@@ -396,6 +424,32 @@ export function faceWorld(
   if (!here) return null;
   const centre = add(here.position, qRotate(here.orientation, face.centre));
   return { position: centre, centre, normal: qRotate(here.orientation, face.normal) };
+}
+
+/**
+ * ⭐⭐ An object's RESTING FACE in WORLD space — tracked: its local centre and normal through the object's placement, the whole parent
+ * chain included (as `faceWorld`). `null` without one.
+ */
+export function restingFaceWorld(world: World, id: ObjectId): { centre: Vec3; normal: Vec3; faceIds: readonly FaceId[] } | null {
+  const o = world.objects.get(id);
+  if (!o || !o.restingFace) return null;
+  const here = worldPlacementOf(world, id);
+  if (!here) return null;
+  return {
+    centre: add(here.position, qRotate(here.orientation, o.restingFace.centre)),
+    normal: qRotate(here.orientation, o.restingFace.normal),
+    faceIds: o.restingFace.faceIds,
+  };
+}
+
+/**
+ * ⭐ Record an object's resting face. ⭐ A FROZEN body takes one too: it is not a transform and not a constraint, so the frozen
+ * guarantee (its two writers above) is untouched. Unknown id: the world unchanged.
+ */
+export function setRestingFace(world: World, id: ObjectId, restingFace: RestingFace): World {
+  const o = world.objects.get(id);
+  if (!o) return world;
+  return withObject(world, { ...o, restingFace });
 }
 
 /**

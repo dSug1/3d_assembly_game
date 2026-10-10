@@ -9,24 +9,17 @@ name: Deploy to GitHub Pages
 # gesture threshold by feel needs seconds. Use USB or LAN for that; use this to check
 # the real production bundle and to test on a device you cannot plug in.
 #
-# ⭐ TWO BUILDS, ONE SITE (2026-10-01): the branch that triggered the run is built into the
-# site's ROOT (main, on a push), and -- optionally -- a SECOND branch into /proto/, each
-# gated by its own `npm run verify`, the two in PARALLEL jobs. A repository has one Pages site and every deploy
-# replaces it whole, so this is how a prototype branch is tested beside the main line
-# without either overwriting the other. ⭐ The second branch is named OUTSIDE the code: the
-# `proto_branch` field of "Run workflow", else the repository variable PROTO_BRANCH
-# (Settings -> Secrets and variables -> Actions -> Variables); empty or `none` = no /proto/.
-# See Claude/50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md, "A second build at /proto/".
+# ⭐ ONE BUILD, AT THE ROOT (2026-10-10, the owner: *"I want to simplify and retain only the proto from now on. It shall
+# not be a separate webpage .../proto/ any longer but be what the main merge from and serve on .../3d_assembly_game/.
+# There is no need to have repository variables any longer from this 1.0.62- branch onwards"*). The branch that
+# triggered the run (main, on a push) is built into the site's root -- since 1.0.62- that IS the orbiting prototype.
+# ⛔ The second build at /proto/ (2026-10-01), its `proto_branch` input and the PROTO_BRANCH variable are retired.
+# See Claude/50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      proto_branch:
-        description: "Branch built into /proto/ (empty: the PROTO_BRANCH variable; none: no /proto/)"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -39,19 +32,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ⭐⭐ THE TWO BUILDS RUN IN PARALLEL (2026-10-01): each job installs, verifies and builds its own branch, and the
-  # deploy waits for both — so a run lasts as long as the SLOWER build, not their sum (a run had grown to ~10 min).
-  # ⛔ The gate is unchanged: a red suite on either side means no `package`, so nothing is deployed.
-
-  # ── the ROOT: the branch that triggered the run (main, on a push) ──
-  site:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # ⭐ (2026-10-10) off Node 20: the v5 actions run on Node 24, and the build on Node 22 (the deploy run warned since 2026-10-02)
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
@@ -64,67 +53,13 @@ jobs:
 
       - run: npm run build
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist
-
-  # ── /proto/: the PROTOTYPE branch, when one is named ──
-  # ⭐ `base: "./"` and the page's relative `version.json` are what let a build live in a subfolder.
-  proto:
-    if: ${{ (github.event.inputs.proto_branch || vars.PROTO_BRANCH) != '' && (github.event.inputs.proto_branch || vars.PROTO_BRANCH) != 'none' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.proto_branch || vars.PROTO_BRANCH }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - run: npm ci
-
-      - name: Typecheck and golden vectors (prototype)
-        run: npm run verify
-
-      # ⛔ The build id is read from GITHUB_SHA (vite.config.ts), which is the TRIGGERING commit -- main's -- so /proto/
-      # was labelled with main's sha (seen live, 2026-10-01). Its own checkout's commit, so the HUD's `build` line names
-      # the code on screen.
-      - name: Build (labelled with its own commit)
-        run: GITHUB_SHA="$(git rev-parse HEAD)" npm run build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: proto
-          path: dist
-
-  # ── the site assembled: the root, and /proto/ inside it ──
-  package:
-    needs: [site, proto]
-    # ⭐ `always()` so a SKIPPED proto (none named) does not skip this; ⛔ but a FAILED one does — nothing is deployed.
-    if: ${{ always() && needs.site.result == 'success' && (needs.proto.result == 'success' || needs.proto.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
-
-      - if: needs.proto.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: proto
-          path: dist/proto
-
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    needs: package
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages

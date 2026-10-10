@@ -38,6 +38,12 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
+  // ── prototype `1.0.59q-` (2026-10-05): priority 1 of the resting-face alignment, SUPERSEDED twice in a day — kept until the
+  // owner settles the rule (`RESTING_FACE_ALIGNMENT.md` §2), then deleted with their vectors. ──────────────────────────────
+  restAlignTarget:
+    "superseded — priority 1 as the long axis toward the horizontal direction to the pink ring (`1.0.59p-`); now by the pink face",
+  restAlignToEdge: "superseded — priority 1 by the leading and mating EDGES (`1.0.59q-`, the same day); now by the pink face",
+  matingEdgeIndex: "superseded with `restAlignToEdge` — the pink face's mating edge",
   // ── Retired 2026-09-22, and KEPT until a hand judges the change that retired it. ─────
   // ⛔⛔ A THIRD CATEGORY THIS FILE'S HEADER DOES NOT NAME, and it is worth naming: not
   // *pending* a row, not *stale* from a settled deletion, but **superseded by a change that
@@ -79,6 +85,14 @@ const PENDING: Record<string, string> = {
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
+  smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
+  // ⭐ prototype (green box), 2026-10-02: the box follows the rig on a spring now (`springOrbit`) — no speed jump per event.
+  easeOrbit: "the green box's first ease (one exponential) — replaced by `springOrbit`; kept as the vectors' reference for the jitter it caused",
+  // ⭐ prototype (green box), 2026-10-02: the camera's pitch axis runs on the ring position `v` now — the angle is not monotone.
+  vForPitch: "pitch → ring position by a search that assumes the pitch rises monotonically — false on a waist (the stair); kept for its vectors",
+  // ⭐ prototype (green box), 2026-10-01: the empty-space press reads `nearestPairCentre` on this branch only.
+  orbitCentre: "§2 rule 1's subset barycentre — replaced on the prototype branch by `nearestPairCentre`; the main line still calls it",
   // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.
   surfaceGap: "`D49`'s surface gap — the clearance instrument of the collision and highlight vectors; no product caller since `D182`",
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the

@@ -27,7 +27,7 @@ export function startDemo(st: SceneState): void {
   const fitM = fitPointsDistanceM(demoFramePointsM(plan, unitM), [off[0] / len, off[1] / len, off[2] / len], st.camera.fov, aspect);
   st.demo = { plan, leadS: DEMO_LEAD_IN_S, progress: 0, done: false, fitM };
   // ⛔ A demo is watched: a press on a piece is empty space (it orbits), never a grip that fights the replay.
-  for (const mesh of st.meshOf.values()) mesh.isPickable = false;
+  for (const [id, mesh] of st.meshOf) if (st.world.objects.get(id)?.orbited !== true) mesh.isPickable = false; // the orbited piece keeps its own
 }
 
 /** ⭐ Every frame, before anything reads the model: advance the clock, write the poses and the camera. */
@@ -56,7 +56,7 @@ export function advanceDemoFrame(st: SceneState, dtSec: number): void {
   // ⭐ Once the last move has landed the demo HOLDS: poses and camera are left to the player.
   if (d.progress >= 1) {
     d.done = true;
-    for (const mesh of st.meshOf.values()) mesh.isPickable = true;
+    for (const [id, mesh] of st.meshOf) if (st.world.objects.get(id)?.orbited !== true) mesh.isPickable = true;
   }
 }
 

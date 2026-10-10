@@ -19,6 +19,10 @@ export function sceneConfig(base: GestureConfig, rig: OrbitRig | undefined): Ges
     orbitMiddleHeightM: rig.middleHeightM,
     orbitBottomRadiusM: rig.bottomRadiusM,
     orbitBottomHeightM: rig.bottomHeightM,
+    // ⭐ prototype (green box), 2026-10-02: the fourth ring, when the scene gives one
+    orbitLowerRingOn: rig.lowerRadiusM !== undefined && rig.lowerHeightM !== undefined ? 1 : 0,
+    orbitLowerRadiusM: rig.lowerRadiusM ?? base.orbitLowerRadiusM,
+    orbitLowerHeightM: rig.lowerHeightM ?? base.orbitLowerHeightM,
   };
 }
 

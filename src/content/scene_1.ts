@@ -188,7 +188,8 @@ export const SCENE_1: SceneDescriptor = {
   playVolume: { aboveFloor: 10 },
   // ⭐ One authored unit = 0.1 m, so the 4.9-unit painting is 0.49 m and the rig frames it.
   unitM: 0.1,
-  bootView: "LEVEL",
+  // ⭐ prototype (green box), the owner 2026-10-01: *"boot scene 1 on the top ring"* (was "LEVEL").
+  bootView: "TOP",
   bodies: [...pieces, FLOOR],
   lighting: {
     background: [0.0087, 0.1465, 0.2138],
@@ -231,15 +232,32 @@ export const SCENE_1: SceneDescriptor = {
     ],
   },
   // ⭐ `D131` (the owner, 2026-09-28): radii top 1.8 m, middle 1 m, bottom 1.5 m; heights as `Scene_0`'s.
+  // ⭐ prototype (green box), the owner 2026-10-01: top 0.9 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 m (radius / height).
   orbit: {
     // ⭐ `D169`: the orbit rings travel with the scene — the boot centre is where the world origin was.
     centreM: [0, SCENE_1_SHIFT_Y * 0.1, 0],
-    topRadiusM: 1.8,
-    topHeightM: 0.55,
-    middleRadiusM: 1.0,
-    middleHeightM: 0.1,
-    bottomRadiusM: 1.5,
-    bottomHeightM: -1.2, // ⭐ the owner, 2026-09-28 (was −0.5)
+    // ⭐⭐ prototype (green box), the owner 2026-10-02: a symmetric WAIST — *"top ring = 1.7 m radius, … middle ring = smallest
+    // possible radius, height = 0, bottom ring = 1.7 m radius"*, the three others proposed and applied:
+    // * middle 0.25 m — the smallest that keeps the green piece out of the painting at boot zoom 1.5 (1.5 × 0.25 = 0.375 m from
+    //   the axis; the painting reaches 0.30 m, the piece ~0.06 m more);
+    // * ±1.05 m — the tallest that stays under the 3 m camera clamp at boot zoom 1.5 (√(1.7² + 1.05²) = 2.00 m × 1.5 = 3.00 m):
+    //   a taller waist turns more gently, but a clamped ring is a corner of its own. Symmetric, so the height runs evenly
+    //   through the middle ring. (Was top 1.7 / 0.5, middle 0.2 / 0, bottom 0.9 / −0.4 — the stair.)
+    // ⭐ prototype (green box), the owner 2026-10-02: *"I want to set the zoom at 1.00 but the scene shall be exactly the same"* —
+    // every ring ×1.5 and the boot zoom 1.5 → 1.00 (`bootZoom`): the green piece sits at rings × zoom, so nothing moves.
+    // (Was 1.7 / ±1.05, 0.25 / 0 at zoom 1.5.)
+    topRadiusM: 2.55,
+    topHeightM: 1.575,
+    // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
+    // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
+    middleRadiusM: 0.09,
+    middleHeightM: 0.15,
+    // ⭐ prototype (green box), the owner 2026-10-02: *"add a fourth ring between the middle ring and the bottom ring, with radius same
+    // as middle ring and height the negative opposite of middle ring's height"* — 0.09 m at −0.15 m: a symmetric waist again.
+    lowerRadiusM: 0.09,
+    lowerHeightM: -0.15,
+    bottomRadiusM: 2.55,
+    bottomHeightM: -1.575,
   },
   final: SCENE_1_FINAL,
 };

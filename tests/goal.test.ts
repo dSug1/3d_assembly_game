@@ -140,10 +140,13 @@ describe("⭐⭐⭐ `D130` — a box's face OR its opposite: the four half-turns
 });
 
 describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
-  it("⭐ Scene_1: radii top 1.8, middle 1.0, bottom 1.5 m — and the rig validates (one waist)", () => {
+  it("⭐ Scene_1: a waist — 2.55 m at ±1.575 m, 0.09 m at 0.15 m, at zoom 1.00 (prototype, the owner 2026-10-02) — and the rig validates", () => {
     const c = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([1.8, 1.0, 1.5]);
-    expect([c.orbitTopHeightM, c.orbitMiddleHeightM, c.orbitBottomHeightM]).toEqual([0.55, 0.1, -1.2]);
+    // ⭐ the owner, 2026-10-02: the waist (1.7 at ±1.05, 0.25 at 0, at zoom 1.5), then *"set the zoom at 1.00 but the scene shall
+    // be exactly the same"* — every ring ×1.5
+    // ⭐ then *"set the default middle ring radius to 0.09 and middle ring height to 0.15"* (was 0.375 at 0)
+    expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([2.55, 0.09, 2.55]);
+    expect([c.orbitTopHeightM, c.orbitMiddleHeightM, c.orbitBottomHeightM]).toEqual([1.575, 0.15, -1.575]);
     expect(() => validateGestureConfig(c)).not.toThrow();
   });
 
@@ -156,8 +159,9 @@ describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
   it("⛔ no rig → the defaults, untouched; everything else in the config is never touched", () => {
     expect(sceneConfig(DEFAULT_CONFIG, undefined)).toBe(DEFAULT_CONFIG);
     const c = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect({ ...c, orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0 })
-      .toEqual({ ...DEFAULT_CONFIG, orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0 });
+    // ⭐ the ring keys — the fourth ring's three included (prototype, 2026-10-02) — and nothing else
+    const rings = { orbitTopRadiusM: 0, orbitMiddleRadiusM: 0, orbitBottomRadiusM: 0, orbitTopHeightM: 0, orbitMiddleHeightM: 0, orbitBottomHeightM: 0, orbitLowerRingOn: 0, orbitLowerRadiusM: 0, orbitLowerHeightM: 0 };
+    expect({ ...c, ...rings }).toEqual({ ...DEFAULT_CONFIG, ...rings });
   });
 
   it("⛔ the JSON seam keeps a rig and refuses a broken one by name", () => {

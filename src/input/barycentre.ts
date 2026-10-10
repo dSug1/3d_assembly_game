@@ -131,3 +131,36 @@ export function orbitCentre(
   return best;
 }
 
+
+/**
+ * ⭐⭐⭐ prototype (green box) — **THE ORBIT TARGET ON EMPTY SPACE: THE TWO PIECES NEAREST THE RAY** (the owner, 2026-10-01:
+ * *"when first touch or left button is pressed and hold on empty space or on frozen object, compute the projection of all the
+ * scene objects centers except frozen objects onto the raycast and place the yellow orbit target at the barycenter of the two
+ * objects which are at the least distances"*). Each centre is measured to the RAY (`distanceToRay`: one behind the camera is
+ * measured from the origin, so it cannot win off a line running backwards); the target is the MIDPOINT of the two nearest.
+ * ⭐ One piece: its centre. None: `null` (the target stays). Ties keep the earlier piece, so the choice cannot flicker.
+ * ⚠ It replaces `orbitCentre`'s subset barycentres for this press (kept, unwired, for the main line).
+ */
+export function nearestPairCentre(positions: readonly Vec3[], ray: Ray): Vec3 | null {
+  let a = -1;
+  let b = -1;
+  let da = Infinity;
+  let db = Infinity;
+  positions.forEach((p, i) => {
+    const d = distanceToRay(p, ray);
+    if (d < da) {
+      b = a;
+      db = da;
+      a = i;
+      da = d;
+    } else if (d < db) {
+      b = i;
+      db = d;
+    }
+  });
+  if (a < 0) return null;
+  const pa = positions[a]!;
+  if (b < 0) return [pa[0], pa[1], pa[2]];
+  const pb = positions[b]!;
+  return [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, (pa[2] + pb[2]) / 2];
+}

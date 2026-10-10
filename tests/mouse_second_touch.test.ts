@@ -110,11 +110,14 @@ describe("⭐⭐⭐ RIGHT PRESS AND HOLD = THE HITFACE; LEFT CLICK = THE PIONEER
       emit: [],
     });
     expect(m.isSecondDown).toBe(false);
-    // ⭐ its release is swallowed too, and lifts nothing
+    // ⭐ its release is swallowed too, and lifts nothing — ⭐ but it is TIMED since 2026-10-05 (`RESTING_FACE_ALIGNMENT.md` §4): the
+    // scene is told how long it was held (the orbit's right tap); the times here are absent, so 0
     expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 0, y: 0 }))).toEqual({
       skip: true,
       emit: [],
+      rightTapMs: 0,
     });
+    expect(m.isSecondDown).toBe(false);
   });
 
   it("⛔ a repeated right DOWN is swallowed and emits nothing", () => {

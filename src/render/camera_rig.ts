@@ -5,9 +5,10 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { pinchAllowed } from "../input/pinch";
+import { pinchZooms } from "../input/pinch_gate";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, orbitCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
+import { clampCameraRadiusM, nearestPairCentre, gravityFrame, CameraResetAnimation, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { WORLD_DOWN } from "../core/object_model";
 import { ORBIT_START_YAW_RAD, type SceneState } from "./scene_state";
@@ -26,6 +27,11 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
       (m) =>
         m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true,
     )
+    // ⭐ prototype (green box): frozen bodies (the floor) are not candidates — `nearestPairCentre`.
+    .filter((m) => {
+      const id = st.idOf.get(m);
+      return id === undefined || st.world.objects.get(id)?.frozen !== true;
+    })
     // ⛔⛔ THE HOME POSITION, WITH THE SWAY TAKEN BACK OFF. The sympathetic sway is a
     // decoration: it must not move what the scene MEANS. Reading `mesh.position`
     // directly would let the barycentre — and so where the camera orbits — depend on
@@ -41,14 +47,13 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
         ? mp.position
         : ([m.position.x, m.position.y, m.position.z] as Vec3);
     });
-  const c = orbitCentre(
-    visible,
-    {
+  // ⭐⭐ prototype (green box): the MIDPOINT of the two piece centres nearest the ray (the owner, 2026-10-01) — it replaces
+  // `orbitCentre`'s subset barycentres here. ⭐ No piece: the target stays where it is.
+  const c =
+    nearestPairCentre(visible, {
       origin: [ray.origin.x, ray.origin.y, ray.origin.z],
       direction: [ray.direction.x, ray.direction.y, ray.direction.z],
-    },
-    st.cfg,
-  );
+    }) ?? st.centreBlend.targetM;
   // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
   // so interrupting a half-finished migration does not put the jump back.
   st.centreBlend.retarget(c);
@@ -142,6 +147,13 @@ export function applyCamera(st: SceneState) {
   const wanted = pose.radiusM;
   const allowed = clampCameraRadiusM(wanted, st.cfg);
   const k = wanted > 1e-9 ? allowed / wanted : 1;
+  // ⭐ Prototype: with a green box, the rig puts the BOX where it put the camera — the camera follows it
+  // (`green_box_wiring.ts`). Without one (`Scene_0`), the camera as before.
+  if (st.greenBox !== null) {
+    const c = st.orbitCentreM;
+    st.greenBoxRigM = [c.x + pose.offsetM[0] * k, c.y + pose.offsetM[1] * k, c.z + pose.offsetM[2] * k];
+    return;
+  }
   st.camera.setPosition(
     st.orbitCentreM.add(
       new Vector3(
@@ -171,6 +183,15 @@ export function pinchPair(st: SceneState) : [Sample, Sample] | null {
 export function updatePinch(st: SceneState) {
   const p = pinchPair(st);
   if (!p) return;
+  // ⭐⭐ prototype (the owner, 2026-10-06): each finger's OWN motion state (`PinchMotion`, §1.1's tracker per finger — it persists between
+  // that finger's events); the zoom while EITHER is MOVING (*"only one delta position outside its deadband"*), both still → the pinch
+  // REBASED, no zoom
+  const moving = st.pinchMotion.moving(st.router.outside(), performance.now());
+  if (!pinchZooms(moving[0] === true, moving[1] === true)) {
+    st.pinch.begin(p[0], p[1]);
+    st.zoomAtPinchStart = st.zoom;
+    return;
+  }
   const factor = st.pinch.scale(p[0], p[1]);
   if (factor === null) return; // still inside the deadband: leave the camera alone
   st.zoom = st.zoomAtPinchStart * factor;

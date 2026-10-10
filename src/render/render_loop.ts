@@ -5,7 +5,12 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { advanceDemoFrame } from "./demo_wiring";
-import { hiddenFromBelow } from "../core/underside";
+import { hiddenFromBelow, topFaceOutline } from "../core/underside";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
+import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoShadowVerdict } from "../core/auto_shadow";
 import { FrameMeter } from "../core/frame_meter";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
@@ -16,7 +21,7 @@ import { planeEdgeOn } from "../input/axis_translate";
 import { alignedFaceOf } from "../core/face_pick";
 import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
 import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
-import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, writePose } from "./bodies";
+import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, shapeOfBody, writePose } from "./bodies";
 import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
 import { pressedPioneerFaceKeys } from "../input/pioneer_press";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
@@ -30,6 +35,8 @@ import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
 import { gestureChangedSoFar } from "./undo_wiring";
+import { greenBoxFrame, syncOrbitPieceModel } from "./green_box_wiring";
+import { restingFaceFrame } from "./resting_face_wiring";
 
 export function startRenderLoop(st: SceneState): void {
 
@@ -266,6 +273,8 @@ export function startRenderLoop(st: SceneState): void {
     dissolveOnGoal(st);
     // ⭐⭐ `D189`: the goal is COMMITTED when the scene comes to rest after a change — never midway through a movement.
     goalCommitFrame(st);
+    // ⭐⭐ the resting faces: the boot pass once the goal's baseline exists, then every part the frame UNSEATED (`resting_face_wiring.ts`).
+    restingFaceFrame(st);
     // ⭐⭐ `D180`: the level end — asked only while the scene is at rest; once, it freezes the scene and tells `main.ts`.
     levelEndFrame(st, now);
 
@@ -297,6 +306,7 @@ export function startRenderLoop(st: SceneState): void {
     // and one readout for both would report neither. ⭐ The decision is `jump_watch.ts`'s; this
     // holds the call, which is the 2026-09-19 lesson.
     for (const [jid, jmesh] of st.meshOf) {
+      if (st.world.objects.get(jid)?.orbited === true) continue; // ⭐ prototype: the orbit places it (`greenBoxFrame`)
       const jp = modelPose(st, jmesh);
       if (!jp) continue;
       const j = st.jumpWatch.note(jid, jp.position, jp.orientation);
@@ -307,7 +317,9 @@ export function startRenderLoop(st: SceneState): void {
         st.hudDirty = true;
       }
     }
-    for (const mesh of st.meshOf.values()) {
+    for (const [fid, mesh] of st.meshOf) {
+      // ⭐ prototype (2026-10-09): an ORBITED piece's mesh is the orbit's to place — the model is copied FROM it, never written back
+      if (st.world.objects.get(fid)?.orbited === true) continue;
       const f = followerFor(st, mesh);
       // ⭐⭐ THE MODEL IS RE-READ EVERY FRAME — this is what makes it authoritative rather
       // than merely present. Whatever the rules wrote this frame is what the follower now
@@ -368,13 +380,17 @@ export function startRenderLoop(st: SceneState): void {
       );
       // ⭐ The sway springs home on its own clock — slower and softer than the object's
       // own inertia, and CRITICALLY damped so it returns without wobbling about.
-      const swayTau = st.cfg.translateSwayTauMs / 1000;
-      f.swayX = advanceFollow(f.swayX, 0, swayTau, 1, dtSec);
-      f.swayY = advanceFollow(f.swayY, 0, swayTau, 1, dtSec);
-      f.swayZ = advanceFollow(f.swayZ, 0, swayTau, 1, dtSec);
-      f.swayRotX = advanceFollow(f.swayRotX, 0, swayTau, 1, dtSec);
-      f.swayRotY = advanceFollow(f.swayRotY, 0, swayTau, 1, dtSec);
-      f.swayRotZ = advanceFollow(f.swayRotZ, 0, swayTau, 1, dtSec);
+      // ⭐ prototype (green box), 2026-10-02: on the softness its kick was sized with (`swayTransTauMs`).
+      const transTau = f.swayTransTauMs / 1000;
+      f.swayX = advanceFollow(f.swayX, 0, transTau, 1, dtSec);
+      f.swayY = advanceFollow(f.swayY, 0, transTau, 1, dtSec);
+      f.swayZ = advanceFollow(f.swayZ, 0, transTau, 1, dtSec);
+      // ⭐ prototype (green box), 2026-10-02: the swing springs back on the softness its kick was sized with (`swayRotTauMs`) —
+      // ⚠ before, it always used the TRANSLATION softness while `spinOthers` sized its impulse with `rotateSwayTauMs` (equal by default).
+      const rotTau = f.swayRotTauMs / 1000;
+      f.swayRotX = advanceFollow(f.swayRotX, 0, rotTau, 1, dtSec);
+      f.swayRotY = advanceFollow(f.swayRotY, 0, rotTau, 1, dtSec);
+      f.swayRotZ = advanceFollow(f.swayRotZ, 0, rotTau, 1, dtSec);
 
       // ⭐ The block's swing, as a rotation about the pivot. ⛔ RIGID: the object both
       // ⭐⭐ THE WHOLE CHAIN, IN ONE EXPRESSION, AND IT LIVES OUTSIDE THIS FILE.
@@ -563,7 +579,9 @@ export function startRenderLoop(st: SceneState): void {
       // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
       // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
       // the same discipline the fills are under.
-      if (hitFace !== null) {
+      // ⭐ prototype (green box), the owner 2026-10-01: *"toggle off the fuchsia highlight (hitface) - don't delete the method"* —
+      // drawn only when `showHitFaceContour` is 1 (it ships 0). The HitFace itself is unchanged: it still aligns.
+      if (hitFace !== null && st.cfg.showHitFaceContour === 1) {
         const key = `${hitFace.objectId}/${hitFace.faceId}`;
         const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);
         if (m !== null) {
@@ -621,6 +639,10 @@ export function startRenderLoop(st: SceneState): void {
         if (mesh.isVisible !== want) mesh.isVisible = want;
         const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
         if (core && core.isVisible !== want) core.isVisible = want;
+        // ⭐⭐ `D196`: hidden from below, its TOP FACE's contour shows instead — in its own colour (the floor's sand yellow),
+        // never pickable, never an orbit candidate: it can touch nothing.
+        const outline = topOutlineFor(st, fid, mesh);
+        if (outline !== null && outline.isVisible === want) outline.isVisible = !want;
       }
     }
     // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame
@@ -691,7 +713,32 @@ export function startRenderLoop(st: SceneState): void {
       paint(st);
     }
 
+    // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
+    greenBoxFrame(st, dtSec);
+    syncOrbitPieceModel(st);
     st.scene.render();
     st.frames++;
   }));
+}
+
+/**
+ * ⭐⭐ `D196` — a frozen body's TOP-FACE contour (`topFaceOutline`, `core/underside.ts`), built once from its own hull and pose
+ * — a frozen body never moves — in its own colour; hidden until the body is. `null`: no top face, or a body with no shape.
+ */
+export function topOutlineFor(st: SceneState, id: string, mesh: AbstractMesh): LinesMesh | null {
+  if (st.topOutlines.has(id)) return st.topOutlines.get(id)!;
+  const pose = worldPlacementOf(st.world, id);
+  const ring = pose === null ? null : topFaceOutline(shapeOfBody(st, mesh).points, pose);
+  if (ring === null) {
+    st.topOutlines.set(id, null);
+    return null;
+  }
+  const lines = CreateLines(`top-outline-${id}`, { points: ring.map((p) => new Vector3(p[0], p[1], p[2])) }, st.scene);
+  const c = st.sceneSpec.bodies.find((b) => b.id === id)?.colour ?? [0.84, 0.74, 0.52];
+  lines.color = new Color3(c[0], c[1], c[2]);
+  lines.isPickable = false;
+  lines.metadata = { orbitCandidate: false };
+  lines.isVisible = false;
+  st.topOutlines.set(id, lines);
+  return lines;
 }

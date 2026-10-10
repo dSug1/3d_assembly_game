@@ -425,6 +425,15 @@ export interface GestureConfig {
   orbitMiddleRadiusM: number;
   /** Metres. Height of the MIDDLE ring. `0` puts it level with the orbit centre. */
   orbitMiddleHeightM: number;
+  /**
+   * ⭐ Prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle (`orbitLower…`), on when 1 — four rings
+   * evenly spaced in the elevation parameter (bottom 0, lower ⅓, middle ⅔, top 1). 0: the three rings as ever.
+   */
+  orbitLowerRingOn: number;
+  /** Metres. Radius of the LOWER ring (the fourth, between the bottom and the middle), when on. */
+  orbitLowerRadiusM: number;
+  /** Metres. Height of the LOWER ring, when on — between the bottom's and the middle's. */
+  orbitLowerHeightM: number;
   /** Metres. Radius of the TOP ring. ⚠ `0` is legal: directly overhead. */
   orbitTopRadiusM: number;
   /** Metres. Height of the TOP ring — the highest the camera may orbit. */
@@ -459,6 +468,61 @@ export interface GestureConfig {
    * ⛔ `0` snaps, which is the behaviour before this existed.
    */
   cameraResetMs: number;
+  /** ⭐ Prototype (`input/follow_camera.ts`): degrees the green box may orbit away from the camera, per axis, before it drags the camera. */
+  cameraLeashDeg: number;
+  /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
+  cameraYawOffsetDeg: number;
+  pieceOrbitGapMinPct: number;
+  orbitPieceYawFactor: number;
+  pieceOrbitEnterMm: number;
+  pieceSphereRadiusM: number;
+  /** ⭐ Prototype (2026-10-10): the white sphere DRAWN (1) or hidden (0) — it goes on driving the ways in and out either way. */
+  pieceSphereVisible: number;
+  pieceOrbitReturnMm: number;
+  /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
+  cameraPitchOffsetDeg: number;
+  /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
+  cameraRadiusOffsetMm: number;
+  /** ⭐ Prototype: the green box orbit's YAW gain, a multiplier on `gainOrbitYaw` (the owner: *"the green box orbits too fast"*). */
+  boxGainYaw: number;
+  /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
+  boxGainPitch: number;
+  /**
+   * ⭐ Prototype: the box's gain while it is INSIDE the camera leash, a multiplier ramped up to 1 at the leash edge (the owner,
+   * 2026-10-01: *"reduce the gains while the green box is within the leash zone … but maintain the orbit speed beyond"*).
+   */
+  boxGainInsideLeash: number;
+  /** ⭐ Prototype: the zoom the scene BOOTS at (the owner, 2026-10-01: *"set the default zoom at 1.5"*). `0` = the derived rule (half the maximum radius). */
+  bootZoom: number;
+  /** ⭐ Prototype: `1` — a piece in its goal cannot be moved or turned (`goal_lock.ts`); `0` re-enables it. */
+  lockPlacedPieces: number;
+  /** ⭐ Prototype: `1` draws the HitFace's fuchsia contour; `0` (the owner's default) hides it — the HitFace still works. */
+  showHitFaceContour: number;
+  /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
+  boxSmoothMs: number;
+  /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
+  cameraSettleDelayMs: number;
+  /** ⭐ Prototype: when the orbit finger is LIFTED, a camera at rest realigns on a spring of this time constant, ms. */
+  cameraCatchUpMs: number;
+  /** ⭐ Prototype: the camera's TIME LAG on top of the leash — its follow time constant, ms (`cameraLag`); 0 = none. */
+  cameraFollowMs: number;
+  /**
+   * ⭐ Prototype: how far the scene SWINGS about the yellow target when the green piece orbits, degrees — at the reference finger
+   * speed; scaled by it like every sway (`swayScale`), on the sway's spring (`translateSwayTauMs`). 0 = none.
+   */
+  orbitSwayDeg: number;
+  /** ⭐ Prototype: the orbit swing's softness, ms — when it peaks, and how fast it springs back (~5× this to settle). */
+  orbitSwayTauMs: number;
+  /** ⭐ Prototype: which orbit sway — 0 the swing, 1 the slide, 2 both (`orbitSwayKinds`). */
+  orbitSwayKind: number;
+  /** ⭐ Prototype: the orbit SLIDE's peak, mm on the glass, at the reference finger speed (scaled by it like every sway). */
+  orbitSlideMm: number;
+  /** ⭐ Prototype: the green piece's ORBIT INERTIA — its coast's time constant per cm³ of its volume, ms (`inertiaTauMs`); 0 = none. */
+  orbitInertiaGain: number;
+  /** ⭐ Prototype: the share of the half-view the green piece is kept inside (`minGreenZoom`) — 0.9 = the central 90 % (the owner, 2026-10-02; was 0.8). */
+  greenKeepInViewMargin: number;
+  /** ⭐ Prototype: WHICH piece the orbit carries — 0 the green frustum, 1 the turquoise hexagonal prism (the SCENE menu); a change respawns it as at boot. */
+  orbitPieceKind: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
@@ -839,7 +903,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // a noise can only make that rule stricter.
   pointerNoiseMm: 0.761,
 
-  tapMaxDuration: 250,
+  // ⭐ the owner, 2026-10-05 (option 1): Unity's default tap time, for EVERY tap in the game (was 250) — a slider in SCENE
+  tapMaxDuration: 200,
   doubleTapWindow: 300,
   doubleTapSlop: 8,
   // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,
@@ -871,6 +936,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitBottomHeightM: -1.2,
   orbitMiddleRadiusM: 0.36,
   orbitMiddleHeightM: 0.1,
+  // ⭐ prototype (green box), 2026-10-02: no fourth ring by default — a scene turns it on (`OrbitRig.lowerRadiusM`).
+  orbitLowerRingOn: 0,
+  orbitLowerRadiusM: 0.36,
+  orbitLowerHeightM: -0.1,
   orbitTopRadiusM: 1.0,
   orbitTopHeightM: 0.55,
   // ⭐ Chosen on the device by the owner, 2026-09-14. ⚠ `0` reproduces the old jump.
@@ -881,6 +950,58 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A GUESS, with a slider. Long enough to read as a movement rather than a cut, short
   // enough not to feel like waiting for a cutscene.
   cameraResetMs: 450,
+  // ⚠ Prototype guesses, with sliders in CAMERA.
+  cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, 0, 0.05, then back to 0 (was 3) — the camera right behind the box
+  // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
+  // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
+  cameraYawOffsetDeg: 2.5, // ⭐ the owner, 2026-10-05 (was 3)
+  // ⭐ prototype, the owner 2026-10-06: around the piece, the gap at the rings' closest, % of the camera's distance from the piece at the
+  // resting-face alignment (`scaledGap`)
+  pieceOrbitGapMinPct: 50,
+  // ⭐ prototype, the owner 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice
+  // faster"* — before the alignment the piece turns on itself this many times the orbit's turn, in its sense (−1 was the old "against")
+  orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
+  // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
+  // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
+  pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
+  // ⭐ prototype, the owner 2026-10-08: *"Create a sphere radius x centered on pink gizmo, slider for x, default = 1m"* — outside it the orbit
+  // around the piece, inside the centre orbit (`sphereSide`: in at the radius, out at the radius once within 10 % below it); 0 = no sphere
+  // (it replaced the end at 75 % + a push). ⭐ The owner, 2026-10-09: *"Set default radius of the white sphere to 2.3 m"* (was 1 m)
+  pieceSphereRadiusM: 2.3,
+  // ⭐ prototype, the owner 2026-10-10: *"is there a slider to hide the white sphere? if not, create one below the sphere round the gizmo"*
+  pieceSphereVisible: 0, // ⭐ the owner, 2026-10-10: *"default: white sphere is hidden"* (was 1)
+  // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
+  // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
+  pieceOrbitReturnMm: 30,
+  cameraPitchOffsetDeg: 2,
+  // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
+  cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)
+  boxGainYaw: 1.65,
+  boxGainPitch: 0.5,
+  // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
+  boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
+  bootZoom: 1, // ⭐ the owner, 2026-10-02: 1.00, with Scene_1's rings ×1.5 so the scene is unchanged (was 1.5)
+  lockPlacedPieces: 1,
+  showHitFaceContour: 0,
+  // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
+  boxSmoothMs: 60,
+  // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
+  cameraSettleDelayMs: 0,
+  // ⚠ A guess with a slider: ~0.5 s to arrive (a critically damped spring covers 95 % in ~4.7 τ).
+  cameraCatchUpMs: 120,
+  // ⭐ The owner, 2026-10-02: *"set the default camera lag to 0"* (was 150 ms, a guess) — no lag; the slider still adds one.
+  cameraFollowMs: 0,
+  // ⚠ A guess with a slider (the owner, 2026-10-02: *"build 1-3"*) — the rotation sway's 0.3° is lost against an orbit.
+  orbitSwayDeg: 4.5, // ⭐ the owner, 2026-10-03 (was 8; 2 before)
+  // ⭐ The owner, 2026-10-02: *"I want the sway to resolve quickly"* — a third of the held piece's 180 ms (a guess, with a slider).
+  orbitSwayTauMs: 70, // ⭐ the owner, 2026-10-03 (was 65; 60 before)
+  // ⭐ Option 1 (the swing) unless switched; option 2's slide a guess, with a slider.
+  orbitSwayKind: 0,
+  orbitSlideMm: 5,
+  // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
+  orbitPieceKind: 0, // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece"*
+  greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
+  orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
   // ⚠ It replaces 0.016 (~0.9°/mm), which I had guessed — a hand wants the camera to
@@ -999,6 +1120,63 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
 
+  if (!(cfg.boxSmoothMs >= 0 && cfg.boxSmoothMs <= 1000)) {
+    throw new Error(`boxSmoothMs (${cfg.boxSmoothMs}) must be in [0, 1000] ms.`);
+  }
+  if (!(Math.abs(cfg.cameraYawOffsetDeg) <= 90) || !(Math.abs(cfg.cameraPitchOffsetDeg) <= 60)) {
+    throw new Error(`cameraYawOffsetDeg / cameraPitchOffsetDeg (${cfg.cameraYawOffsetDeg} / ${cfg.cameraPitchOffsetDeg}) must be within ±90° / ±60°.`);
+  }
+  if (!(cfg.cameraRadiusOffsetMm >= 100 && cfg.cameraRadiusOffsetMm <= 2000)) {
+    throw new Error(`cameraRadiusOffsetMm (${cfg.cameraRadiusOffsetMm}) must be in [100, 2000] mm.`);
+  }
+  if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
+    throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);
+  }
+  if (!(cfg.showHitFaceContour === 0 || cfg.showHitFaceContour === 1)) {
+    throw new Error(`showHitFaceContour (${cfg.showHitFaceContour}) must be 0 or 1.`);
+  }
+  if (!(cfg.lockPlacedPieces === 0 || cfg.lockPlacedPieces === 1)) {
+    throw new Error(`lockPlacedPieces (${cfg.lockPlacedPieces}) must be 0 or 1.`);
+  }
+  if (!(cfg.bootZoom === 0 || (cfg.bootZoom >= 0.1 && cfg.bootZoom <= 20))) {
+    throw new Error(`bootZoom (${cfg.bootZoom}) must be 0 (derived) or in [0.1, 20].`);
+  }
+  if (!(cfg.boxGainInsideLeash >= 0.05 && cfg.boxGainInsideLeash <= 1)) {
+    throw new Error(`boxGainInsideLeash (${cfg.boxGainInsideLeash}) must be in [0.05, 1].`);
+  }
+  if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
+    throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
+  }
+  if (cfg.orbitPieceKind !== 0 && cfg.orbitPieceKind !== 1) {
+    throw new Error(`orbitPieceKind (${cfg.orbitPieceKind}) must be 0 (green) or 1 (turquoise).`);
+  }
+  if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {
+    throw new Error(`greenKeepInViewMargin (${cfg.greenKeepInViewMargin}) must be in (0, 1].`);
+  }
+  if (!(cfg.orbitInertiaGain >= 0 && cfg.orbitInertiaGain <= 50)) {
+    throw new Error(`orbitInertiaGain (${cfg.orbitInertiaGain}) must be in [0, 50] ms/cm³.`);
+  }
+  if (!(cfg.orbitSwayKind === 0 || cfg.orbitSwayKind === 1 || cfg.orbitSwayKind === 2)) {
+    throw new Error(`orbitSwayKind (${cfg.orbitSwayKind}) must be 0, 1 or 2.`);
+  }
+  if (!(cfg.orbitSlideMm >= 0 && cfg.orbitSlideMm <= 50)) {
+    throw new Error(`orbitSlideMm (${cfg.orbitSlideMm}) must be in [0, 50] mm.`);
+  }
+  if (!(cfg.orbitSwayTauMs >= 10 && cfg.orbitSwayTauMs <= 1000)) {
+    throw new Error(`orbitSwayTauMs (${cfg.orbitSwayTauMs}) must be in [10, 1000] ms.`);
+  }
+  if (!(cfg.orbitSwayDeg >= 0 && cfg.orbitSwayDeg <= 20)) {
+    throw new Error(`orbitSwayDeg (${cfg.orbitSwayDeg}) must be in [0, 20]°.`);
+  }
+  if (!(cfg.cameraFollowMs >= 0 && cfg.cameraFollowMs <= 2000)) {
+    throw new Error(`cameraFollowMs (${cfg.cameraFollowMs}) must be in [0, 2000] ms.`);
+  }
+  if (!(cfg.cameraCatchUpMs >= 10 && cfg.cameraCatchUpMs <= 2000)) {
+    throw new Error(`cameraCatchUpMs (${cfg.cameraCatchUpMs}) must be in [10, 2000] ms.`);
+  }
+  if (!(cfg.cameraSettleDelayMs >= 0 && cfg.cameraSettleDelayMs <= 2000)) {
+    throw new Error(`cameraSettleDelayMs (${cfg.cameraSettleDelayMs}) must be in [0, 2000] ms.`);
+  }
   if (!(cfg.pitchSideConeDeg >= 0 && cfg.pitchSideConeDeg <= 80)) {
     throw new Error(`pitchSideConeDeg (${cfg.pitchSideConeDeg}) must be in [0, 80]°: past 80 the side never decides.`);
   }
@@ -1153,6 +1331,20 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // the surface folds back through itself, and the elevation parameter stops meaning
   // "how high the camera is" — it would move the camera DOWN over part of its range,
   // which no amount of gain tuning can fix because the geometry is wrong.
+  if (cfg.orbitLowerRingOn !== 0 && cfg.orbitLowerRingOn !== 1) {
+    throw new Error(`orbitLowerRingOn (${cfg.orbitLowerRingOn}) must be 0 or 1.`);
+  }
+  // ⭐ With the fourth ring on, it must sit BETWEEN the bottom and the middle too.
+  if (
+    cfg.orbitLowerRingOn === 1 &&
+    !(cfg.orbitBottomHeightM < cfg.orbitLowerHeightM && cfg.orbitLowerHeightM < cfg.orbitMiddleHeightM)
+  ) {
+    throw new Error(
+      `orbit ring heights must increase bottom → lower → middle → top, got ` +
+        `${cfg.orbitBottomHeightM} / ${cfg.orbitLowerHeightM} / ${cfg.orbitMiddleHeightM} / ${cfg.orbitTopHeightM} m: ` +
+        "the orbit surface would fold back through itself.",
+    );
+  }
   if (!(
     cfg.orbitBottomHeightM < cfg.orbitMiddleHeightM &&
     cfg.orbitMiddleHeightM < cfg.orbitTopHeightM
@@ -1196,6 +1388,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const [name, r] of [
     ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],
     ["orbitMiddleRadiusM", cfg.orbitMiddleRadiusM],
+    ["orbitLowerRadiusM", cfg.orbitLowerRingOn === 1 ? cfg.orbitLowerRadiusM : 1],
     ["orbitTopRadiusM", cfg.orbitTopRadiusM],
   ] as const) {
     if (!(r > 0)) {

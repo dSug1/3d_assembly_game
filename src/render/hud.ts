@@ -23,6 +23,8 @@ export interface HudFields {
   readonly pointers: number;
   readonly phase: string;
   readonly motion: string;
+  /** ⭐ Prototype: the green piece's distance to the yellow orbit target (`greenReadout`). */
+  readonly green: string;
   /** The last release verdict, already formatted by whoever owns the recognizer. */
   readonly lastVerdict: string;
   /** Camera radius, and whether a pinch is live. §2 rule 4. */
@@ -157,6 +159,9 @@ export function createHud(parent: HTMLElement = document.body): Hud {
         `pointers  ${f.pointers}`,
         `phase     ${f.phase}`,
         `motion    ${f.motion}`,
+        // ⭐ prototype (green box), the owner 2026-10-02: *"in the HUD, after motion, add a line with the distance of the green
+        // piece to yellow orbit center"*.
+        `green     ${f.green}`,
         // ⛔⛔ THE ROLL LINE IS GONE, AND IT WAS WORSE THAN DEAD. It showed
         // `RollDetector`'s swept angle — the CIRCULAR roll `A12` retired — so a circular
         // drag made degrees accumulate on the HUD while nothing on screen rolled. ⭐ An

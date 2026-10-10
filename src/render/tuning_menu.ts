@@ -58,6 +58,28 @@ return ({
 });
 }
 
+/**
+ * ⭐ prototype (green box) — **THE BOOT ZOOM SLIDER** (the owner, 2026-10-01: *"add the slider boot zoom and set it at 1.5"*).
+ * ⭐ Applied AT ONCE, not at the next boot: the zoom jumps to it, and it is where the camera reset (double tap on empty space)
+ * returns — the boot view, as if the scene had booted with it.
+ */
+export function bootZoomSlider(st: SceneState): MenuSlider {
+  // ⭐ 2026-10-02: the zoom is the CAMERA's distance behind the green piece (× the radius offset), 0.1–2.
+  const base = tunable(st, "boot zoom (× the camera's distance behind the green piece)", "bootZoom", 0.1, 2, 0.05);
+  return {
+    ...base,
+    set: (value) => {
+      const err = base.set(value);
+      if (err !== null) return err;
+      st.orbitStartZoom = value;
+      st.zoom = value;
+      st.zoomAtPinchStart = value;
+      applyCamera(st);
+      return null;
+    },
+  };
+}
+
 export function installTuningMenu(st: SceneState): void {
 
   createMenu([
@@ -75,6 +97,11 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "never-grabbed goal (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
         // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
         tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
+        // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
+        // toggled, the piece shall be spawn as per boot"*
+        tunable(st, "orbited piece (0 = green, 1 = turquoise)", "orbitPieceKind", 0, 1, 1),
+        // ⭐ the owner, 2026-10-05: the ONE tap time (every tap: the undo, the unalign, the align, the orbit tap) — Unity's 200 ms
+        tunable(st, "tap max duration (ms)", "tapMaxDuration", 100, 400, 10),
       ],
     },
     {
@@ -86,22 +113,96 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
       sliders: [
         tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
-        // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
-        tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
-        // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
-        tunable(st, "shadows (0 = off, 1 = on, 2 = auto)", "shadowsOn", 0, 2, 1),
-        tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
       ],
+      // ⭐ prototype (green box), the owner 2026-10-02: *"there are too many rows directly under CAMERA menu. Create submenus
+      // depending on what the slider tunes (green piece, camera offset, etc.)"* — one subsection per subject; no slider changed.
       subsections: [
         {
-          title: "CAMERA ORBIT",
+          // ⭐ How the green piece moves when the finger orbits, and after it lifts.
+          title: "GREEN PIECE ORBIT",
           sliders: [
-            tunable(st, "top radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
-            tunable(st, "top height (m)", "orbitTopHeightM", -1.5, 1.5, 0.01),
-            tunable(st, "middle radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
-            tunable(st, "middle height (m)", "orbitMiddleHeightM", -1.5, 1.5, 0.01),
-            tunable(st, "bottom radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
-            tunable(st, "bottom height (m)", "orbitBottomHeightM", -1.5, 1.5, 0.01),
+            tunable(st, "green box orbit gain — yaw (×)", "boxGainYaw", 0.05, 2, 0.05),
+            tunable(st, "green box orbit gain — pitch (×)", "boxGainPitch", 0.05, 2, 0.05),
+            tunable(st, "green box gain inside the leash (×)", "boxGainInsideLeash", 0.05, 1, 0.05),
+            tunable(st, "green box smoothing (ms, 0 = steps with the input)", "boxSmoothMs", 0, 300, 5),
+            // ⭐ The orbit coasts after the finger lifts — τ = this × the green piece's volume.
+            tunable(st, "orbit inertia gain (ms per cm³ of the green piece, 0 = none)", "orbitInertiaGain", 0, 10, 0.1),
+            // ⭐ 2026-10-06: before the alignment, the piece's own yaw per orbit yaw (2 = twice, with the orbit; −1 = against, as before)
+            tunable(st, "piece yaw per orbit yaw (× , − = against)", "orbitPieceYawFactor", -3, 3, 0.25),
+          ],
+        },
+        {
+          // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
+          title: "CAMERA OFFSET",
+          sliders: [
+            bootZoomSlider(st),
+            tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 0.5),
+            tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
+            tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
+            // ⭐ 2026-10-02: the zoom never comes closer than keeps the green piece inside this share of the view.
+            tunable(st, "green piece keep-in-view margin (share of the half-view)", "greenKeepInViewMargin", 0.3, 1, 0.05),
+          ],
+        },
+        {
+          // ⭐ How the camera follows the green piece: the leash, the time lag, and what happens when the input stops.
+          title: "CAMERA FOLLOW",
+          sliders: [
+            tunable(st, "camera leash behind the green box (deg)", "cameraLeashDeg", 0, 60, 0.05),
+            // ⭐ The TIME LAG on top of the leash (0 = none).
+            tunable(st, "camera time lag behind the green box (ms, 0 = none)", "cameraFollowMs", 0, 1000, 10),
+            tunable(st, "camera settle delay after an input stops (ms)", "cameraSettleDelayMs", 0, 1000, 10),
+            tunable(st, "camera catch-up after release, from rest (ms)", "cameraCatchUpMs", 20, 1000, 10),
+          ],
+        },
+        {
+          // ⭐ What the painting does when the green piece orbits: option 1 (swing), option 2 (slide), or both.
+          title: "ORBIT SWAY",
+          sliders: [
+            tunable(st, "orbit sway kind (0 = swing, 1 = slide, 2 = both)", "orbitSwayKind", 0, 2, 1),
+            tunable(st, "orbit sway — the scene swings when the green box orbits (deg)", "orbitSwayDeg", 0, 10, 0.1),
+            tunable(st, "orbit slide — the pieces translate the way the green box orbits (mm)", "orbitSlideMm", 0, 20, 0.5),
+            tunable(st, "orbit sway softness — how quickly it resolves (ms)", "orbitSwayTauMs", 10, 300, 5),
+          ],
+        },
+        {
+          // ⭐ How the scene is drawn.
+          title: "RENDERING",
+          sliders: [
+            // ⭐ `D125`: the transparent contour around a piece's coloured core (0 = invisible).
+            tunable(st, "piece contour opacity", "pieceContourAlpha", 0, 1, 0.05),
+            // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
+            tunable(st, "shadows (0 = off, 1 = on, 2 = auto)", "shadowsOn", 0, 2, 1),
+            tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
+          ],
+        },
+        {
+          // ⭐ prototype, the owner 2026-10-06: *"x% slider shall be in a CAMERA/CAMERA ORBIT AROUND PIECE menu"* — the orbit around the piece
+          // after the resting-face alignment (`piece_orbit.ts`)
+          title: "CAMERA ORBIT AROUND PIECE",
+          sliders: [
+            tunable(st, "gap at the closest ring (% of the gap at alignment)", "pieceOrbitGapMinPct", 10, 100, 5),
+            tunable(st, "way in to the orbit around the piece (mm of finger travel, 0 = at once)", "pieceOrbitEnterMm", 0, 60, 1),
+            tunable(st, "sphere round the gizmo: radius (m; in at it, out at it once 10 % within; 0 = none)", "pieceSphereRadiusM", 0, 3, 0.05),
+            // ⭐ prototype, the owner 2026-10-10: hide it without turning it off
+            tunable(st, "sphere round the gizmo: shown (0 = hidden, still working; 1 = shown)", "pieceSphereVisible", 0, 1, 1),
+            tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
+          ],
+        },
+        {
+          // ⭐ prototype, the owner 2026-10-06: *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT AROUND CENTER"*
+          title: "CAMERA ORBIT AROUND CENTER",
+          sliders: [
+            tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
+            tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -3, 3, 0.01),
+            tunable(st, "2nd ring radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
+            tunable(st, "2nd ring height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
+            // ⭐ prototype (green box), 2026-10-02: the rings named 1st … 4th from the TOP (the owner); the 3rd sits between the 2nd and the
+            // 4th, on = 1 (a three-ring scene has none).
+            tunable(st, "3rd ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
+            tunable(st, "3rd ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
+            tunable(st, "3rd ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
+            tunable(st, "4th ring (bottom) radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
+            tunable(st, "4th ring (bottom) height (m)", "orbitBottomHeightM", -3, 3, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
             tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
             // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
@@ -126,6 +227,8 @@ export function installTuningMenu(st: SceneState): void {
     {
       title: "OBJECT TRANSLATION",
       sliders: [
+        // ⭐ prototype (green box): a piece in its goal cannot be moved or turned — 0 re-enables it (`goal_lock.ts`).
+        tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
         // ⭐ `D136`: how far a body may SINK into another (mm on the glass) — contact is allowed; the
         // margin a hand must line a piece up within to slide it into a zero-clearance slot.
         tunable(st, "collision allowance — how far a body may sink into another (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
@@ -222,53 +325,61 @@ export function installTuningMenu(st: SceneState): void {
     },
     {
       title: "OBJECT ROTATION",
-      sliders: [
-        // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
-        // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
-        tunable(st, 
-          "yaw/pitch gain (rad/mm)",
-          "gainRotateFree",
-          0.005,
-          0.15,
-          0.005,
-        ),
-        // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
-        // pressed side follows the finger up.
-        tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
-        // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
-        // gain so one DOF does not feel like a different control from three — a guess, and
-        // the range is the same as the free gain's so a hand can compare them directly.
-        tunable(st, 
-          "anchored twist gain (rad/mm)",
-          "gainRotateConstrained",
-          0.005,
-          0.15,
-          0.005,
-        ),
-        // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
-        // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
-        // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
-        // because the earlier formulation that quantised the turn as it happened was rejected
-        // on the device for lagging the finger.
-        tunable(st, 
-          "rotation increment (deg, 0=off)",
-          "rotationIncrementDeg",
-          0,
-          45,
-          5,
-        ),
-        // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
-        // object's centre when it starts turning or turns the other way.
-        tunable(st, "sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
-        tunable(st, "sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
-        tunable(st, "sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
-        tunable(st, 
-          "sway reference turn (deg/s)",
-          "rotateSwayReferenceDegPerS",
-          20,
-          400,
-          10,
-        ),
+      // ⭐ prototype (green box), the owner 2026-10-03: *"Create in menu Object Rotation the submenu Rotation in World coordinates and
+      // move every existing slider into this submenu; the submenu Double Orbit mode"*. No slider changed.
+      sliders: [],
+      subsections: [
+        {
+          title: "ROTATION IN WORLD COORDINATES",
+          sliders: [
+            // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
+            // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
+            tunable(st, 
+              "yaw/pitch gain (rad/mm)",
+              "gainRotateFree",
+              0.005,
+              0.15,
+              0.005,
+            ),
+            // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
+            // pressed side follows the finger up.
+            tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
+            // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
+            // gain so one DOF does not feel like a different control from three — a guess, and
+            // the range is the same as the free gain's so a hand can compare them directly.
+            tunable(st, 
+              "anchored twist gain (rad/mm)",
+              "gainRotateConstrained",
+              0.005,
+              0.15,
+              0.005,
+            ),
+            // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
+            // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
+            // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
+            // because the earlier formulation that quantised the turn as it happened was rejected
+            // on the device for lagging the finger.
+            tunable(st, 
+              "rotation increment (deg, 0=off)",
+              "rotationIncrementDeg",
+              0,
+              45,
+              5,
+            ),
+            // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
+            // object's centre when it starts turning or turns the other way.
+            tunable(st, "sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
+            tunable(st, "sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
+            tunable(st, "sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
+            tunable(st, 
+              "sway reference turn (deg/s)",
+              "rotateSwayReferenceDegPerS",
+              20,
+              400,
+              10,
+            ),
+          ],
+        },
       ],
     },
     {
@@ -314,6 +425,8 @@ export function installTuningMenu(st: SceneState): void {
         {
           title: "FOLLOWERFACE",
           sliders: [
+            // ⭐ prototype (green box): the HitFace's fuchsia contour, off by default (the owner, 2026-10-01).
+            tunable(st, "HitFace fuchsia contour (1 = shown, 0 = hidden)", "showHitFaceContour", 0, 1, 1),
             // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
             // the flag; anything above draws an x-ray twin at that opacity.
             tunable(st, 

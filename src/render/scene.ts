@@ -78,20 +78,24 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
+import { bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
+import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
-import { applyCamera, requireGestureFrame } from "./camera_rig";
+import { applyCamera, requireGestureFrame, syncCentre } from "./camera_rig";
 import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
 import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
-import { installPointerHandler } from "./pointer_wiring";
+import { installPointerHandler, orbitRightTap } from "./pointer_wiring";
+import { PinchMotion } from "../input/pinch_gate";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
+import { OrbitInertia } from "../input/orbit_inertia";
 
 export interface SceneHandle {
   readonly scene: Scene;
@@ -543,6 +547,61 @@ export function createScene(
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   st.centreMarker.isPickable = false;
+  // ⭐ prototype (green box), the owner 2026-10-01: *"make the yellow orbit center always visible (not occluded by any object)"* —
+  // drawn in rendering group 2, after the bodies with the depth cleared (as the cursor rings are), so nothing hides it.
+  st.centreMarker.renderingGroupId = 2;
+  // ⭐ prototype (green box), the owner 2026-10-02: *"hide the yellow orbit center"* — the pink ring marks the target now. ⛔ Only
+  // HIDDEN: the marker still moves to every new target (`syncCentre`), and the target itself (`centreBlend.targetM`) is unchanged.
+  st.centreMarker.isVisible = false;
+  // ⭐ prototype (green box): the green box — the orbit rig drives it now, and the camera follows it (prototype).
+  st.greenBoxRigM = null;
+  st.cameraOrbit = null;
+  st.cameraLagged = null;
+  st.orbitMotion = null;
+  st.orbitSway = null;
+  st.orbitSwayKicks = 0;
+  st.orbitInertia = new OrbitInertia();
+  st.greenPieceVolumeM3 = 0;
+  st.cameraReleasePending = false;
+  st.greenZoomMin = 0.1;
+  st.greenZoomMinKey = "";
+  st.boxOrbit = null;
+  st.boxSpring = null;
+  st.pinkRing = null;
+  st.orbitPieces = [];
+  st.restingFaces = new Map();
+  st.restingShapes = new Map();
+  st.restingSeated = null;
+  st.restingLast = null;
+  st.orbitTap = null;
+  st.pinkTap = null;
+  st.pieceFaceTap = null;
+  st.restAlign = null;
+  st.orbitHeadingPrev = null;
+  st.restAligned = false;
+  st.bootRestAlign = false;
+  st.restRoll = null;
+  st.pieceAnchor = null;
+  st.anchorShift = null;
+  st.pieceOrbit = null;
+  st.centreReturn = null;
+  st.pieceEntry = null;
+  st.pieceAim = null;
+  st.orbitRollAcc = 0;
+  st.pieceOutside = null;
+  st.sphereArmed = false;
+  st.pieceSphere = null;
+  st.pieceYawGain = 1;
+  st.pieceYawGainKey = "";
+  st.pieceYawGainDrag = 1;
+  st.pinkFace = null; // set by the boot target (`bootTargetOnBlueFace`), below
+  st.orbitPieceKind = 0;
+  st.orbitPieceFaces = 0;
+  st.greenBoxDistM = null;
+  createGreenBox(st);
+  // ⭐⭐ prototype (2026-10-09, *"add the object model to the green and turquoise pieces so their faces can be tracked"*): into the model,
+  // after it was built and after the shadows were attached
+  registerOrbitPieces(st);
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
@@ -576,12 +635,11 @@ export function createScene(
     // the camera will never show (`input/mouse_wheel_zoom.ts`).
     const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return;
-    st.zoom = wheelZoom(
-      st.zoom,
-      notches,
-      st.cfg.cameraRadiusMinM / base,
-      st.cfg.cameraRadiusMaxM / base,
-    );
+    // ⭐ prototype (green box), 2026-10-02: with a green piece the zoom is the CAMERA's distance behind it — its own range, 0.1–2.
+    st.zoom =
+      st.greenBox !== null
+        ? wheelZoom(st.zoom, notches, Math.max(GREEN_ZOOM_MIN, st.greenZoomMin), GREEN_ZOOM_MAX)
+        : wheelZoom(st.zoom, notches, st.cfg.cameraRadiusMinM / base, st.cfg.cameraRadiusMaxM / base);
     st.zoomAtPinchStart = st.zoom;
     applyCamera(st);
   },
@@ -590,7 +648,8 @@ export function createScene(
     const rect = st.canvas.getBoundingClientRect();
     const mesh = st.scene.pick(clientX - rect.left, clientY - rect.top)?.pickedMesh ?? null;
     const id = mesh === null ? undefined : st.idOf.get(mesh);
-    return id === undefined ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
+    // ⭐ prototype: an ORBITED piece is empty space to a click
+    return id === undefined || st.world.objects.get(id)?.orbited === true ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
   },
   // ⭐ `D155`: a Space freeze — the body the mouse's grip holds, a client point on it (its centre,
   // projected), and its pressed face handed over for the second touch that takes the hold.
@@ -636,7 +695,9 @@ export function createScene(
     st.lastVerdict = `Shift tap → ${st.behaviour}`;
     st.hudDirty = true;
   },
-  st.cfg.tapMaxDuration);
+  st.cfg.tapMaxDuration,
+  // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right tap while the left button orbits — counted, the first one aligns the resting face
+  (heldMs) => orbitRightTap(st, heldMs));
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config
@@ -681,6 +742,7 @@ export function createScene(
   st.goalCommitQuiet = false;
   st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
+  st.topOutlines = new Map();
   st.onLevelEnd = null;
   st.hudSecond = -1;
   st.episodeFacts = new Map();
@@ -728,8 +790,9 @@ export function createScene(
    */
   st.cameraReset = null;
   // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
+  // ⭐ prototype (green box): `"TOP"` boots on the top ring.
   st.bootElevation =
-    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : ORBIT_START_ELEVATION;
+    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : st.sceneSpec.bootView === "TOP" ? 1 : ORBIT_START_ELEVATION;
   st.orbit = new OrbitController(
     st.cfg,
     ORBIT_START_YAW_RAD,
@@ -755,20 +818,27 @@ export function createScene(
    * the rig's own surface, which is what the orbit was designed around.
    */
   st.orbitStartZoom = (() => {
+    // ⭐ prototype (green box): the owner's literal boot zoom (`bootZoom`, 1.5) — your rings × 1.5 — unless 0.
+    if (st.cfg.bootZoom > 0) return st.cfg.bootZoom;
     const base = st.orbit.pose(1).radiusM;
     if (!(base > 1e-9)) return 1;
     return Math.max(1, st.cfg.cameraRadiusMaxM / 2 / base);
   })();
 
   st.zoom = st.orbitStartZoom;
+  st.pinchMotion = new PinchMotion(st.cfg);
   st.zoomAtPinchStart = st.orbitStartZoom;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  st.centreBlend = new OrbitCentreBlend(st.cfg, bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
+  st.centreBlend = new OrbitCentreBlend(st.cfg, bootTargetOnBlueFace(st) ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   const bootCentre = st.centreBlend.centreM;
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);
+  // ⛔⛔ prototype (green box): and the YELLOW MARKER goes there too — it was never placed at boot, so it sat at its creation point, the
+  // origin, until the first orbit or reset. Invisible while the orbit centre WAS the origin; `D169` lifted it 0.23 m and the
+  // marker has shown the wrong point at boot since (the green box, midway to it, exposed it: its face was 8.7° off the view).
+  syncCentre(st);
 
   // ⛔ The approach camera swing's latch and travel records stood here; the swing is deleted (`D120`).
 

@@ -12,7 +12,7 @@ import { formatElapsed } from "../input/episode_ledger";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { depthLimits, neutralLeadSec, type ReleaseVerdict, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
-import { type ObjectId } from "../core/object_model";
+import { restingFaceWorld, type ObjectId } from "../core/object_model";
 import { type GoalReport } from "../core/goal";
 import { formatFrameStats } from "../core/frame_meter";
 import { alignedFaceOf } from "../core/face_pick";
@@ -21,6 +21,9 @@ import { asVec3, modelPose } from "./bodies";
 import { hitFaceNow } from "./markers";
 import { axesOf } from "./gizmo";
 import { secondFingerOf } from "./drive";
+import { orbitDegPerMm } from "../input/follow_camera";
+import { greenDragGains } from "./green_box_wiring";
+import type { RestingCandidate, RestingResult } from "../core/resting_face";
 
 export function describe(v: ReleaseVerdict) : string {
   // ⛔⛔ THE `ROLLED BACK` READOUT IS GONE WITH THE ROLLBACK (owner, 2026-09-16), and the
@@ -148,15 +151,19 @@ export function paint(st: SceneState) {
     // disagree with the product while showing green. See `METHOD`.
     phase: first ? first.rec.currentPhase : "—",
     motion: first ? first.rec.motionState : "—",
+    green: greenReadout(st),
     lastVerdict: st.lastVerdict,
     // ⚠ Shown so a session can never be spent testing a value that was not in
     // force — including a typo'd key, which is REPORTED rather than ignored.
     camera:
       `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
       `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
-      `r=${st.camera.radius.toFixed(3)}m zoom=${st.zoom.toFixed(2)} ` +
+      // ⭐ prototype (2026-10-06): around the piece the camera looks along an axis, not at a target — r is its distance to the PIECE
+      `r=${(st.pieceOrbit !== null && st.greenBox !== null ? st.camera.position.subtract(st.greenBox.position).length() : st.camera.radius).toFixed(3)}m${st.pieceOrbit !== null ? " to the piece" : ""} zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""} ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}` +
       `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
+      // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.
+      `${st.greenBox !== null ? `  orbitSway×${st.orbitSwayKicks}` : ""}` +
       depthReadout(st),
     tuning:
       st.tuning.applied.length === 0 ? "defaults" : st.tuning.applied.join(" "),
@@ -352,4 +359,30 @@ return ({
   y: e.clientY,
   t: performance.now(),
 });
+}
+
+/** ⭐ prototype (green box) — the HUD's `green` line: the green piece's distance to the YELLOW target (the marker). */
+export function greenReadout(st: SceneState): string {
+  if (st.greenBox === null || st.greenBoxDistM === null) return "—";
+  // ⭐ …and what one millimetre of finger orbits HERE (the owner, 2026-10-02): yaw per mm of dx, pitch per mm of dy (`orbitDegPerMm`).
+  const g = greenDragGains(st);
+  const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
+  // ⭐ the orbited piece (green or turquoise, the SCENE menu's switch) and its logical faces, read when it was created
+  const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces${restingHud(st.orbitPieces.find((o) => o.mesh === st.greenBox)?.resting ?? null, st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingFace ?? null)}`;
+  // ⭐ …and the scene's parts: how many have a resting face, and the one asked last (at boot, or the moment it was unseated)
+  const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
+  // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
+  const taps = `${st.orbitTap === null ? "" : ` · taps ${st.orbitTap.count}${st.orbitTap.second === null ? "" : st.orbitTap.second.moved ? " +2nd moved" : " +2nd on piece"}`}${st.restAlign !== null ? " · aligning" : st.restAligned ? ` · aligned (no counter-yaw)${st.restRoll !== null && st.restRoll.couple !== null ? ` · a${st.restRoll.couple[0]}∥b${st.restRoll.couple[1]} (${st.restRoll.rolls} roll${st.restRoll.rolls === 1 ? "" : "s"})` : ""}` : ""}${st.pieceOrbit !== null ? ` · around the piece, yaw gain ×${st.pieceYawGain.toFixed(2)}` : ""}${st.pieceOutside === null ? "" : st.pieceOutside ? " · outside the sphere" : st.sphereArmed ? " · inside the sphere (armed)" : " · inside the sphere"}${st.pieceEntry !== null ? " · entering the orbit around the piece" : ""}${st.centreReturn !== null ? " · back to the centre orbit" : ""}`;
+  const parts = `${taps} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
+  // ⭐ (2026-10-09) its resting face as the OBJECT MODEL tracks it — the world normal now (`restingFaceWorld`)
+  const rw = restingFaceWorld(st.world, st.greenBox.name);
+  const tracked = rw === null ? " · model: no resting face" : ` · model: resting n (${rw.normal.map((v) => v.toFixed(2)).join(", ")})`;
+  return `${piece}${tracked}: ${st.greenBoxDistM.toFixed(3)} m to the yellow target${parts} | orbit ${r.yawDegPerMm.toFixed(2)}°/mm dx, ${r.pitchDegPerMm.toFixed(2)}°/mm dy`;
+}
+
+
+/** ⭐ prototype: a resting face on the HUD — ` · rests on f3 (M 2, θ 54°)`, flagged when below the gate or ambiguous. */
+function restingHud(r: RestingResult | null, chosen: RestingCandidate | null): string {
+  if (r === null || chosen === null) return " · rests on —";
+  return ` · rests on f${chosen.faces.join("+")} (M ${chosen.mirrors}, θ ${chosen.thetaDeg.toFixed(0)}°)${r.belowGate ? " ⚠BELOW-GATE" : ""}${r.ambiguous !== null ? " ⚠AMBIGUOUS" : ""}`;
 }

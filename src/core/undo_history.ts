@@ -93,6 +93,8 @@ export function worldsDiffer(a: World, b: World, eps = 1e-6): boolean {
     const ob = b.objects.get(id);
     if (ob === undefined) return true;
     if (oa === ob) continue;
+    // ⭐ prototype (2026-10-09): an ORBITED piece moves with the camera's orbit — never an action, never undone
+    if (oa.orbited === true) continue;
     if (objectsDiffer(oa, ob, eps)) return true;
   }
   return false;
@@ -161,6 +163,7 @@ export function bodiesTouched(
 ): ObjectId[] {
   const out = new Set<ObjectId>();
   for (const [id, ob] of b.world.objects) {
+    if (ob.orbited === true) continue; // ⭐ prototype: the orbit's, not an action's
     const oa = a.world.objects.get(id);
     if (oa === undefined) {
       out.add(id);

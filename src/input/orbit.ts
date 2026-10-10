@@ -64,33 +64,82 @@ export interface OrbitPose {
  * three rigs and therefore two transitions."*
  */
 function throughThree(atBottom: number, atMiddle: number, atTop: number, v: number): number {
-  const h = 0.5;
-  const d1 = (atMiddle - atBottom) / h;
-  const d2 = (atTop - atMiddle) / h;
+  return throughKnots([atBottom, atMiddle, atTop], v);
+}
 
-  // ⛔⛔ THE MIDDLE TANGENT IS ZERO WHEN THE DATA TURNS. That single line is what
-  // puts the extremum exactly AT the middle ring instead of somewhere between rings,
-  // and it is the whole of "three rigs, therefore two transitions".
-  let m1 = 0;
-  if (d1 * d2 > 0) {
-    const avg = (d1 + d2) / 2;
-    // Fritsch–Carlson's limiter: a tangent steeper than three times the shallower
-    // secant makes the cubic overshoot, which would carry the camera OUTSIDE the
-    // rings it is supposed to stop at.
-    const cap = 3 * Math.min(Math.abs(d1), Math.abs(d2));
-    m1 = Math.sign(avg) * Math.min(Math.abs(avg), cap);
-  }
+/**
+ * ⭐ prototype (green box), 2026-10-02 — **THE SAME MONOTONE CUBIC THROUGH ANY NUMBER OF RINGS**, evenly spaced in `v` (the owner:
+ * *"add a fourth ring between the middle ring and the bottom ring"*). Fritsch–Carlson as above, knot by knot: an interior tangent is
+ * ZERO where the data turns (the extremum AT a ring), else the secants' mean capped at 3 × the shallower; the end tangents are the
+ * end secants. ⭐ With three knots it is EXACTLY `throughThree` as it was.
+ */
+function throughKnots(ys: readonly number[], v: number): number {
+  const n = ys.length - 1;
+  if (n < 1) return ys[0] ?? 0;
+  const knots = ys.map((_, k) => k / n);
+  return hermiteAt(knots, ys, evenTangents(ys), v);
+}
 
-  const [y0, y1, m0, mEnd] = v <= h ? [atBottom, atMiddle, d1, m1] : [atMiddle, atTop, m1, d2];
-  const t = v <= h ? v / h : (v - h) / h;
+/** ⭐ Fritsch–Carlson tangents (per unit of the parameter) for knots evenly spaced over [0, 1]. */
+function evenTangents(ys: readonly number[]): number[] {
+  const n = ys.length - 1;
+  const h = 1 / n;
+  const d = Array.from({ length: n }, (_, k) => (ys[k + 1]! - ys[k]!) / h);
+  return ys.map((_, k) => {
+    if (k === 0) return d[0]!;
+    if (k === n) return d[n - 1]!;
+    const a = d[k - 1]!;
+    const b = d[k]!;
+    if (!(a * b > 0)) return 0;
+    const avg = (a + b) / 2;
+    return Math.sign(avg) * Math.min(Math.abs(avg), 3 * Math.min(Math.abs(a), Math.abs(b)));
+  });
+}
+
+/** ⭐ The cubic Hermite through `ys` at `knots` (increasing) with tangents `ms`, at `s` — the LOWER segment at a knot. */
+function hermiteAt(knots: readonly number[], ys: readonly number[], ms: readonly number[], s: number): number {
+  const n = knots.length - 1;
+  let k = 0;
+  while (k < n - 1 && s > knots[k + 1]! + 1e-12) k++;
+  const h = knots[k + 1]! - knots[k]!;
+  const t = h > 0 ? (s - knots[k]!) / h : 0;
   const t2 = t * t;
   const t3 = t2 * t;
-  return (
-    (2 * t3 - 3 * t2 + 1) * y0! +
-    (t3 - 2 * t2 + t) * h * m0! +
-    (-2 * t3 + 3 * t2) * y1! +
-    (t3 - t2) * h * mEnd!
-  );
+  return (2 * t3 - 3 * t2 + 1) * ys[k]! + (t3 - 2 * t2 + t) * h * ms[k]! + (-2 * t3 + 3 * t2) * ys[k + 1]! + (t3 - t2) * h * ms[k + 1]!;
+}
+
+/**
+ * ⭐⭐ prototype (green box) — **THE FOUR RINGS, THE WAIST WITHOUT ITS PLATEAU** (the owner, 2026-10-02: *"do it. However, maintain the
+ * relationship between top ring and middle ring and between fourth ring and bottom ring as I like the camera move at the transitions
+ * between those two couple of rings"*). Evenly spaced, the short waist (2nd ↔ 3rd ring, middle ↔ fourth) was entered at the steep
+ * tangent its long neighbours give and went nearly FLAT in its middle (the piece climbed ~7 cm over v = 0.4 → 0.6). ⭐ The two OUTER
+ * segments keep everything — their spans (⅓ of the old `v`) and the tangents at all four rings, so each is the same curve as before;
+ * only the WAIST's span changes: `Δ = its height step ÷ the mean of its end tangents`, so it runs at the speed it is entered at
+ * (`Scene_1`: 0.30 m ÷ 2.59 = 0.116, linear in height). The parameter `s` runs over [0, `total`] = [0, ⅔ + Δ]; `v` = `s` ÷ `total`,
+ * and the drag's elevation gain is ÷ `total` (`elevationGainScale`) — so a millimetre of dy moves the outer segments EXACTLY as before.
+ */
+export function fourRingLayout(cfg: GestureConfig): {
+  readonly knots: readonly number[];
+  readonly radius: readonly number[];
+  readonly height: readonly number[];
+  readonly mRadius: readonly number[];
+  readonly mHeight: readonly number[];
+  readonly total: number;
+} {
+  const radius = [cfg.orbitBottomRadiusM, cfg.orbitLowerRadiusM, cfg.orbitMiddleRadiusM, cfg.orbitTopRadiusM];
+  const height = [cfg.orbitBottomHeightM, cfg.orbitLowerHeightM, cfg.orbitMiddleHeightM, cfg.orbitTopHeightM];
+  const mRadius = evenTangents(radius);
+  const mHeight = evenTangents(height);
+  const meanM = (mHeight[1]! + mHeight[2]!) / 2;
+  const step = height[2]! - height[1]!;
+  const waist = meanM > 0 && step > 0 && Number.isFinite(step / meanM) ? step / meanM : 1 / 3;
+  const knots = [0, 1 / 3, 1 / 3 + waist, 2 / 3 + waist];
+  return { knots, radius, height, mRadius, mHeight, total: knots[3]! };
+}
+
+/** ⭐ prototype (green box): the factor on the drag's elevation gain — 1 ÷ the four-ring layout's `total`, 1 with three rings. */
+export function elevationGainScale(cfg: GestureConfig): number {
+  return cfg.orbitLowerRingOn === 1 ? 1 / fourRingLayout(cfg).total : 1;
 }
 
 export function rigsOf(cfg: GestureConfig): {
@@ -168,10 +217,18 @@ export function orbitOffset(
   // has no overshoot, so the surface is BOUNDED BY THE RINGS — which is the owner's
   // requirement in their words: *"define height and radius of top and bottom rigs and
   // not exceed these."*
+  // ⭐ prototype (green box), 2026-10-02: a FOURTH ring between the bottom and the middle when the scene gives one
+  // (`orbitLowerRingOn`); else the three rings exactly as before.
+  // ⭐ …the waist re-spanned so it has no plateau, the outer segments as they were (`fourRingLayout`).
+  const four = cfg.orbitLowerRingOn === 1 ? fourRingLayout(cfg) : null;
   const radius =
-    throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped) * zoom;
+    (four === null
+      ? throughThree(bottom.radiusM, middle.radiusM, top.radiusM, clamped)
+      : hermiteAt(four.knots, four.radius, four.mRadius, clamped * four.total)) * zoom;
   const height =
-    throughThree(bottom.heightM, middle.heightM, top.heightM, clamped) * zoom;
+    (four === null
+      ? throughThree(bottom.heightM, middle.heightM, top.heightM, clamped)
+      : hermiteAt(four.knots, four.height, four.mHeight, clamped * four.total)) * zoom;
 
   return {
     offsetM: [radius * Math.cos(yawRad), height, radius * Math.sin(yawRad)],
@@ -209,6 +266,15 @@ export class OrbitController {
    * `OrbitCentreBlend`), and a double-tap supplies none — a reset that eased would
    * simply never arrive.
    */
+  /**
+   * ⭐ prototype (green box), 2026-10-02: move the orbit by an ANGLE and an elevation step directly — the orbit's inertia after
+   * the finger lifts (`OrbitInertia`). ⛔ The elevation is clamped to its rings, as a drag's is.
+   */
+  nudge(dYawRad: number, dV: number): void {
+    this.yawRad += dYawRad;
+    this.v = Math.min(1, Math.max(0, this.v + dV));
+  }
+
   reset(yawRad: number, v: number): void {
     this.yawRad = yawRad;
     this.v = Math.min(1, Math.max(0, v));
@@ -252,7 +318,8 @@ export class OrbitController {
     // ⚠ `dyPx` is positive DOWNWARD, so `+dyMm` here means a finger moving UP lowers
     // the camera — the same inversion, in the axis where screen coordinates already
     // point the other way.
-    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation));
+    // ⭐ prototype (green box), 2026-10-02: × `elevationGainScale` — with four rings, a mm moves the outer segments as before.
+    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation * elevationGainScale(this.cfg)));
   }
 
   // ⛔ The approach swing's yaw / elevation OFFSETS and `absorb` are deleted with the swing (`D120`).
