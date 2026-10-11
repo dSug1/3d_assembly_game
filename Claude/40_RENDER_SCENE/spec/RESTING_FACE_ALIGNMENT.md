@@ -604,4 +604,4 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   respawn as well); the boot target sets the orbit centre only. ⚠ A frozen face's pink fill is not drawn. Headless: boot — pink `Floor/f1`,
   aligned to `Floor/f1`.
 - ⭐ **A switch hides the pink gizmo** (*"add a slider to hide the pink gizmo"*): CAMERA › CAMERA ORBIT AROUND CENTER › *pink gizmo (the orbit
-  centre's ring): shown* (`pinkGizmoVisible`, 1 by default; 0 = hidden).
+  centre's ring): shown* (`pinkGizmoVisible`; 0 = hidden). ⭐ **Hidden by default** (*"make the default pink gizmo hidden"*, the same day): it ships at 0, the slider shows it.
