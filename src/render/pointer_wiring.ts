@@ -370,7 +370,10 @@ export function installPointerHandler(st: SceneState): void {
         }
         // ⭐⭐⭐ (2026-10-11) the held second touch's input starts — the pink face its press would take noted (a PLACED part only: ⛔ never a
         // frozen body, never the orbited pieces); or the first touch pressed again while it is held
-        if (holdRole === "SECOND") {
+        // ⭐⭐ (2026-10-11, *"build with ALT and CTRL"*) on a desktop the key held is the second touch — it points at nothing — so the LEFT
+        // click while it is held says which face: a placed part's is the pink face its input would take (the mouse only; a finger pressed
+        // again on a part, on a tablet, takes nothing)
+        if (holdRole === "SECOND" || (holdRole === "FIRST" && e.pointerType === "mouse")) {
           const hitObj = pick?.hit === true && pick.pickedMesh !== null ? st.idOf.get(pick.pickedMesh) : undefined;
           const frozen = hitObj !== undefined && st.world.objects.get(hitObj)?.frozen === true;
           const n = pick?.getNormal(true);
@@ -378,8 +381,11 @@ export function installPointerHandler(st: SceneState): void {
             pinkCandidate({ onOrbitedPiece: onOrbited, frozen, objectId: hitObj ?? null, inBand }) && n && hitObj !== undefined
               ? faceFromPickedNormal(st.world, hitObj, [n.x, n.y, n.z] as Vec3)
               : null;
-          const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
-          holdSecondPress(st, e.pointerId, s.x, firstNow, face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null);
+          const pink = face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null;
+          if (holdRole === "SECOND") {
+            const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
+            holdSecondPress(st, e.pointerId, s.x, firstNow, pink);
+          } else holdFirstPress(st, e.pointerId, s.x, pink);
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;

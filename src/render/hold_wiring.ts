@@ -38,11 +38,15 @@ export function holdSecondPress(
   st.hudDirty = true;
 }
 
-/** ⭐ The first touch pressed again while the second is held: the same input goes on. */
-export function holdFirstPress(st: SceneState, first: number, x: number): void {
+/**
+ * ⭐ The first touch pressed again while the second is held: the same input goes on. `pink` (the mouse, 2026-10-11): the face its click
+ * hit — the key held points at nothing, so on a desktop the left click names the pink face (taken as a press's: at the way in or the release).
+ */
+export function holdFirstPress(st: SceneState, first: number, x: number, pink: { readonly objectId: ObjectId; readonly faceId: string } | null = null): void {
   const h = st.hold;
   if (h === null) return;
   h.first = first;
+  if (pink !== null && h.mode === "HELD") h.pink = pink;
   // ⭐ undecided still: its dx counts from here
   if (h.mode === "HELD") h.firstX0 = x;
   st.hudDirty = true;

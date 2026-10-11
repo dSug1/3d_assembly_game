@@ -83,7 +83,7 @@ export function attachMouseSecondTouch(
   onShiftTap?: () => void,
   /** ⭐ `D167`: the longest Shift press that is still a tap — the scene's `tapMaxDuration`. */
   tapMaxMs = 250,
-  /** ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) at a right press: does the scene orbit a piece — the right button then the HELD SECOND TOUCH? */
+  /** ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) does the scene orbit a piece — ALT / CTRL then the HELD SECOND TOUCH, the right button nothing? */
   orbitSecond?: () => boolean,
 ): MouseSecondTouchHandle {
   const model = new MouseSecondTouch(tapMaxMs);
@@ -162,6 +162,7 @@ export function attachMouseSecondTouch(
     seen++;
     realId = e.pointerId;
     shift = e.shiftKey;
+    if (modDown && !e.altKey && !e.ctrlKey) modDown = false; // ⭐ (2026-10-11) the model lifts it (`mod: false`)
     apply(
       {
         type,
@@ -172,9 +173,10 @@ export function attachMouseSecondTouch(
         y: e.clientY,
         space,
         t: performance.now(),
+        mod: e.altKey || e.ctrlKey,
         // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
         ...(type === "DOWN" && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
-        // ⭐⭐ (2026-10-11) a RIGHT press: the scene says whether it is the orbit's held second touch
+        // ⭐⭐ (2026-10-11) a RIGHT press: the scene says whether it orbits a piece — the right button then does nothing
         ...(type === "DOWN" && e.button === 2 && orbitSecond !== undefined ? { orbitSecond: orbitSecond() } : {}),
       },
       pi,
@@ -189,7 +191,16 @@ export function attachMouseSecondTouch(
     space = false;
     apply({ type: "CANCEL", button: -1, buttons: 0, shift: false, x: 0, y: 0 });
   };
+  /** ⭐ (2026-10-11) is the key-made second touch down (ALT or CTRL held, in the orbit)? */
+  let modDown = false;
+  const modKey = (k: string) => k === "Alt" || k === "Control";
   const onKey = (e: KeyboardEvent) => {
+    // ⭐⭐ (2026-10-11, the owner: *"build with ALT and CTRL"*) ALT or CTRL — the orbit's HELD SECOND TOUCH (either: Option on a Mac, where
+    // CTRL + click is the system's right click; CTRL on Linux, where ALT + drag moves the window)
+    if (modKey(e.key) && !e.repeat && !modDown && orbitSecond !== undefined && orbitSecond()) {
+      modDown = true;
+      apply({ type: "MOD_DOWN", button: -1, buttons: 0, shift, x: 0, y: 0, t: performance.now() });
+    }
     // ⭐⭐ `D167`: Alt and F10 must not hand the keyboard to the BROWSER's menu (Chrome, Edge and Firefox on Windows
     // focus it on Alt's release) — the page would lose focus mid-gesture. ⚠ Safari's Option key has no such role.
     if (e.key === "Alt" || e.key === "F10") e.preventDefault();
@@ -225,6 +236,11 @@ export function attachMouseSecondTouch(
   // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.
   const onKeyUp = (e: KeyboardEvent) => {
     if (e.key === "Alt" || e.key === "F10") e.preventDefault(); // ⭐ `D167`: the menu activates on the RELEASE
+    // ⭐ (2026-10-11) the key-made second touch lifts when NEITHER key is held any more
+    if (modKey(e.key) && modDown && !e.altKey && !e.ctrlKey) {
+      modDown = false;
+      apply({ type: "MOD_UP", button: -1, buttons: 0, shift, x: 0, y: 0, t: performance.now() });
+    }
     if (e.key === "Shift") {
       shift = false;
       apply({ type: "SHIFT_UP", button: -1, buttons: 0, shift: false, x: 0, y: 0, t: performance.now() });
@@ -250,6 +266,11 @@ export function attachMouseSecondTouch(
   const lostFocus = () => {
     shift = false;
     space = false;
+    // ⭐ (2026-10-11) a key release that will never arrive: the key-made second touch lifts now (the way out, as a release)
+    if (modDown) {
+      modDown = false;
+      apply({ type: "MOD_UP", button: -1, buttons: 0, shift: false, x: 0, y: 0, t: performance.now() });
+    }
   };
   window.addEventListener("blur", lostFocus);
   window.addEventListener("contextmenu", onMenu);
