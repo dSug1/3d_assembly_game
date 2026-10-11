@@ -723,3 +723,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 
 * ⛔ A CTRL tap mid-orbit no longer makes a way in and a way out (a tap never starts the way in); a CTRL held no longer freezes the orbit
   (undecided, the drag orbits the centre) → `RESTING_FACE_ALIGNMENT.md` §20.
+* ⛔⛔ The orbit centre and the pink face are separate: a plain press on a part moves the centre only, the pink face is the second touch's
+  alone; the boot pink face is the floor's (the face the piece is aligned to); a switch hides the pink gizmo → `RESTING_FACE_ALIGNMENT.md` §20.

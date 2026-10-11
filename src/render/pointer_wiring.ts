@@ -441,8 +441,12 @@ export function installPointerHandler(st: SceneState): void {
               faceNormal.z,
             ] as Vec3)
           : null;
-      // ⭐ `1.0.59q-`: a press that MOVED the target puts the pink ring on THIS face — the mating edge's face (`pinkFaceEdges`)
-      if (newTarget !== null && faceHit && pickedId !== undefined) st.pinkFace = { objectId: pickedId, faceId: faceHit.faceId };
+      // ⛔⛔ (2026-10-11, the owner: *"the problem is that I did not ask to change the pink face: the ctrl was on empty so there is no reason the
+      // pink face should have changed to the new face"*) — a plain first touch / left press on a part moves the ORBIT CENTRE only (§20: *"First
+      // touch or left click on placed part change the center of orbit"*); the pink face is the second touch's alone (a finger, ALT / CTRL).
+      // It was set here since `1.0.59q-` (*"a press that MOVED the target puts the pink ring on THIS face"*), from before the second touch
+      // existed — so a later way in highlighted a face nobody had picked, and the piece was not aligned to it
+      void faceHit;
       let pressFace = faceHit
         ? { faceId: faceHit.faceId, cos: faceHit.cos }
         : null;

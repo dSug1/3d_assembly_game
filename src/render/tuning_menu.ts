@@ -225,6 +225,8 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
             // whether this is an orbit or the start of a pinch. 0 commits immediately.
             tunable(st, "centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
+            // ⭐ prototype (2026-10-11, *"add a slider to hide the pink gizmo"*)
+            tunable(st, "pink gizmo (the orbit centre's ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1),
             // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
             tunable(st, "reset time (ms)", "cameraResetMs", 0, 2000, 50),
             // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never

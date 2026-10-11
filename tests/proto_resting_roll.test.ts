@@ -198,7 +198,7 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     const fn = w.slice(w.indexOf("function bootRestAlign"), w.indexOf("export function registerOrbitPieces"));
     expect(fn).toMatch(/const target = alignFaceOf\(st, at, true\);/); // the FROZEN body, whatever the pink face
     expect(fn).toMatch(/const turned = restAlignToFace\(\[r\.w, r\.x, r\.y, r\.z\], at, p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/);
-    expect(fn).toMatch(/st\.restAlign = null;\s*st\.restAligned = true;\s*st\.restRoll = \{ key: target\.label, pinkAxes: target\.flush, rolls: 0, couple: null \};/); // at once, aligned
+    expect(fn).toMatch(/st\.restAlign = null;\s*st\.restAligned = true;\s*(?:\/\/[^\n]*\n\s*)*st\.pinkFace = \{ objectId: target\.objectId, faceId: target\.faceId \};\s*st\.restRoll = \{ key: `\$\{target\.objectId\}\/\$\{target\.faceId\}`, pinkAxes: target\.flush, rolls: 0, couple: null \};/); // at once, aligned — and that face the pink face (2026-10-11)
     expect(code("render/scene.ts")).toMatch(/st\.bootRestAlign = false;/);
   });
 

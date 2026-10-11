@@ -477,6 +477,8 @@ export interface GestureConfig {
   pieceOrbitEnterMm: number;
   /** ⭐ Prototype (2026-10-11): the pink highlights (pink face, resting face) held after the input ends, then faded — ms (`highlightAlpha`). */
   highlightHoldMs: number;
+  /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
+  pinkGizmoVisible: number;
   highlightFadeMs: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
@@ -968,6 +970,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // fade gradually and rapidly away. Set default timer 750 ms"* — *"Do one slider with two cursors"*: the hold, then the fade
   highlightHoldMs: 300, // ⭐ the owner, 2026-10-11: *"set default hold = 300 ms fade = 250 ms"* (was 750)
   highlightFadeMs: 250,
+  // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default
+  pinkGizmoVisible: 1,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

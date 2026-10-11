@@ -77,8 +77,14 @@ describe("⭐⭐⭐ prototype — the resting-face alignment by edges", () => {
     }
   });
 
-  it("⭐ wired: the pink face known at boot and moved by a press (the edges version itself is superseded — `proto_resting_face_align`)", () => {
-    expect(code("render/green_box_wiring.ts")).toContain("st.pinkFace = at < 0 ? null : { objectId: blue.id, faceId: o.faces[at]!.id };");
-    expect(code("render/pointer_wiring.ts")).toContain("if (newTarget !== null && faceHit && pickedId !== undefined) st.pinkFace = { objectId: pickedId, faceId: faceHit.faceId };");
+  it("⭐ wired: the pink face known at boot; ⛔⛔ (2026-10-11) moved ONLY by the second touch — a plain press on a part moves the orbit centre, never the pink face", () => {
+    // ⭐⭐ (2026-10-11, *"the boot pink face could be the floor's face, matching the alignment"*) — the boot pink face is the face the piece is
+    // aligned to (the floor's, `bootRestAlign`); the boot target sets the orbit centre only
+    const w = code("render/green_box_wiring.ts");
+    expect(w).not.toContain("st.pinkFace = at < 0 ? null : { objectId: blue.id, faceId: o.faces[at]!.id };");
+    expect(w).toContain("st.pinkFace = { objectId: target.objectId, faceId: target.faceId };");
+    // ⛔ *"I did not ask to change the pink face: the ctrl was on empty so there is no reason the pink face should have changed to the new face"*
+    expect(code("render/pointer_wiring.ts")).not.toMatch(/st\.pinkFace\s*=/);
+    expect(code("render/hold_wiring.ts")).toMatch(/st\.pinkFace = next;/); // the second touch's (a finger, ALT / CTRL) — its only writer in play
   });
 });

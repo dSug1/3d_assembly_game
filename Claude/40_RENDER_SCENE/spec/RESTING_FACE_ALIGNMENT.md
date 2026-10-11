@@ -588,3 +588,20 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   CENTRE** (dx and dy) as before the key, the camera following it — the way in, when decided, starts from there. Both devices. ⚠ A deliberate way
   in begins at the earliest ~200 ms after the second touch's press. Headless: a CTRL tap mid-drag — no way in, the orbit went on; CTRL held
   through a dy drag — the elevation moved (−0.27), no freeze.
+- ⛔⛔ **The orbit centre and the pink face are TWO SEPARATE ACTIONS** (*"left click on new face …, then ctrl pressed and held on empty, then
+  left click drag on dx while ctrl is still pressed: the new face highlights as pink face but the resting face does not align with it"* → *"no,
+  the problem is not the alignment with the current pink face. The problem is that I did not ask to change the pink face"* → *"somewhere during
+  the modifications, you forgot that I need to specifically select a new pink face. changing the center of orbit and selecting a new pink face
+  are two separate actions, not linked together"*). A plain first touch / left press on a part moved the orbit centre AND made its face the
+  pink face — `1.0.59q-`'s *"a press that MOVED the target puts the pink ring on THIS face"*, from before the second touch existed, and kept
+  through every change since: so a later way in highlighted a face nobody had picked, the piece not aligned to it. ⭐ Now the plain press moves
+  the ORBIT CENTRE only; the pink face is changed ONLY by the second touch (a finger, ALT / CTRL). ⚠ My first reading (align to the current
+  pink face at the way in) was wrong and withdrawn before it shipped. Headless: a plain click on a part — the pink face unchanged; CTRL on
+  empty space, then a left drag — the way in, the pink face still unchanged.
+- ⭐ **The boot pink face is the FLOOR's face the piece is aligned to** (*"the boot pink face could be the floor's face, matching the
+  alignment"*): it was the blue piece's face (the boot orbit target's, `bootTargetOnBlueFace`) while the piece was aligned to the floor — a
+  way in highlighted one face while the roll lined up with the other. Now `bootRestAlign` makes the floor face the pink face too (at a
+  respawn as well); the boot target sets the orbit centre only. ⚠ A frozen face's pink fill is not drawn. Headless: boot — pink `Floor/f1`,
+  aligned to `Floor/f1`.
+- ⭐ **A switch hides the pink gizmo** (*"add a slider to hide the pink gizmo"*): CAMERA › CAMERA ORBIT AROUND CENTER › *pink gizmo (the orbit
+  centre's ring): shown* (`pinkGizmoVisible`, 1 by default; 0 = hidden).
