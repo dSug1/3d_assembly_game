@@ -110,14 +110,32 @@ describe("⭐⭐⭐ RIGHT PRESS AND HOLD = THE HITFACE; LEFT CLICK = THE PIONEER
       emit: [],
     });
     expect(m.isSecondDown).toBe(false);
-    // ⭐ its release is swallowed too, and lifts nothing — ⭐ but it is TIMED since 2026-10-05 (`RESTING_FACE_ALIGNMENT.md` §4): the
-    // scene is told how long it was held (the orbit's right tap); the times here are absent, so 0
-    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 0, y: 0 }))).toEqual({
-      skip: true,
-      emit: [],
-      rightTapMs: 0,
-    });
+    // ⭐ its release is swallowed too, and lifts nothing (⛔ the orbit's timed right tap is deleted, 2026-10-11)
+    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 0, y: 0 }))).toEqual({ skip: true, emit: [] });
     expect(m.isSecondDown).toBe(false);
+  });
+
+  it("⭐⭐ (2026-10-11) orbiting a piece, the RIGHT button is the HELD SECOND TOUCH — with or without the left, never driven, never latched", () => {
+    // with the left button down
+    const m = new MouseSecondTouch();
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
+    expect(m.step({ ...ev({ type: "DOWN", button: RIGHT, buttons: L | R, x: 10, y: 20 }), orbitSecond: true }).emit).toEqual([
+      { target: "SECOND", kind: "DOWN", x: 10, y: 20 },
+    ]);
+    expect(m.isSecondDown).toBe(true);
+    // the cursor drives the LEFT pointer, never the second
+    const mv = m.step(ev({ type: "MOVE", button: -1, buttons: L | R, x: 30, y: 20 }));
+    expect(mv.emit.filter((a) => a.target === "SECOND")).toEqual([]);
+    // its release lifts it — never latched (on a body or not)
+    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 30, y: 20 })).emit).toEqual([{ target: "SECOND", kind: "UP", x: 10, y: 20 }]);
+    expect(m.isSecondDown).toBe(false);
+    // the right button alone, then the left: the second first
+    const n = new MouseSecondTouch();
+    expect(n.step({ ...ev({ type: "DOWN", button: RIGHT, buttons: R, x: 5, y: 5 }), orbitSecond: true, onBody: { id: "Piece1", frozen: false } }).emit).toEqual([
+      { target: "SECOND", kind: "DOWN", x: 5, y: 5 },
+    ]);
+    expect(n.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 5, y: 5 })).emit).toEqual([{ target: "SECOND", kind: "UP", x: 5, y: 5 }]);
+    expect(n.isSecondLatched).toBe(false);
   });
 
   it("⛔ a repeated right DOWN is swallowed and emits nothing", () => {

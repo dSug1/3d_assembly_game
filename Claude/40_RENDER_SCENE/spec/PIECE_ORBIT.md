@@ -246,6 +246,8 @@ mutant (the all-at-once switch, the plain slide of option A, a looser push rule)
 
 ## 9. The white sphere, and what it brought (2026-10-08/09, `1.0.59x-` → `1.0.59y-`)
 
+> ⛔⛔ **THE WHITE SPHERE IS DELETED (2026-10-11)** — §9–§11's sphere rules are history: the way in, the orbit round the piece and the way out are the HELD SECOND TOUCH's now → `RESTING_FACE_ALIGNMENT.md` §20. The way in / way out themselves (their travel, their view, the pivot handed over, the way out's fade toward the waist) are unchanged.
+
 The owner: *"Create a sphere radius x centered on pink gizmo, slider for x, default = 1m, translucent white. When the piece enters the
 sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10% on the
 crossing … The way in and way out are therefore disconnected from resting face (which keeps its input trigger as it is now)."* — *"Way in

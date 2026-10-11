@@ -696,3 +696,11 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   point, its creep dropped the gesture, and the first finger fell back to the old *keeps orbiting while a second touch is on the piece*.
   ⭐ Now a TRAILING anchor: the held touch moving PAUSES the yaw / pitch, still again RESUMES it; both fingers across ZOOM; never the orbit
   while both are down. The desktop has no such path (both buttons held swallow every move) → `RESTING_FACE_ALIGNMENT.md` §18.
+
+⭐ **2026-10-11** — on `1.0.64-` (`1.0.63-` renamed `1.0.63-Resting-face-path`):
+
+* ⛔⛔⛔ **THE WHITE SPHERE IS DELETED, AND THE YAW / PITCH WITH IT** — the way in, the orbit round the piece and the way out are the **HELD
+  SECOND TOUCH**'s (the right button on a desktop): held off the orbited pieces + the first touch's dx — the way in, round the piece, the
+  roll; released — the way out (both by finger travel, their sliders kept); the first touch lifted and pressed again — the same input; its
+  press on a placed part's face — the pink face, aligned (never the floor; taken at the way in or the release, never by a pinch); the
+  highlights held 750 ms then faded 250 ms (one slider, two cursors) → `RESTING_FACE_ALIGNMENT.md` §20. `tests/proto_hold.test.ts`.

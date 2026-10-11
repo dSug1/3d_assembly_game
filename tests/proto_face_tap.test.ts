@@ -44,10 +44,11 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
 
   it("⭐⭐ wired: the face recorded at the press; at a TAP release with nothing else down, the resting face set, then ALIGNED — consumed before the camera-reset tap", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/const first = st\.router\.all\(\)\.length === 0;/); // asked before this press is routed
-    expect(p.indexOf("const first = st.router.all().length === 0;")).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, hit);"));
-    expect(p).toMatch(/st\.pieceFaceTap = restingFaceTap\(onPiece, first, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;/);
-    expect(p).toMatch(/st\.router\.all\(\)\.length === 0 &&\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);
+    // ⭐ (2026-10-11) the first touch — nothing else down, or the held second touch's first touch pressed again
+    expect(p).toMatch(/const first = st\.router\.all\(\)\.length === 0 \|\| holdRole === "FIRST";/); // asked before this press is routed
+    expect(p.indexOf('const first = st.router.all().length === 0 || holdRole === "FIRST";')).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, hit);"));
+    expect(p).toMatch(/st\.pieceFaceTap = restingFaceTap\(onOrbited, first, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;/);
+    expect(p).toMatch(/\(st\.router\.all\(\)\.length === 0 \|\| \(st\.hold !== null && st\.router\.all\(\)\.every\(\(q\) => q\.id === st\.hold!\.second\)\)\) &&\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);
     expect(p).toMatch(/if \(tapped && restOnTappedFace\(st, ft\.faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     expect(p.indexOf("restOnTappedFace(st, ft.faceId)")).toBeLessThan(p.indexOf("ONE call, ONE record: it judges the tap"));
     const w = code("render/green_box_wiring.ts");

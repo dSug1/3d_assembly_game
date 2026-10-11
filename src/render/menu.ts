@@ -40,6 +40,11 @@ export interface MenuSlider {
   readonly step: number;
   get(): number;
   set(value: number): string | null;
+  /**
+   * ⭐ (2026-10-11, the owner: *"Do one slider with two cursors"*) a SECOND cursor on the same track — its own value on the same scale (never
+   * below the first's), shown and stepped beside it. ⚠ `format` writes the caption for both.
+   */
+  readonly second?: { get(): number; set(value: number): string | null; format(a: number, b: number): string };
 }
 
 export interface MenuSection {
@@ -151,6 +156,88 @@ export function createMenu(
     if (message !== null) error.textContent = "⛔ " + message;
   };
 
+  /**
+   * ⭐ ONE TRACK, TWO CURSORS (2026-10-11): two range inputs laid over one another, the track drawn once behind; only their thumbs take a
+   * touch (`pointer-events` on the thumbs alone), so each cursor drags on its own. ⚠ Step buttons for both, as every slider here — a
+   * native thumb may not drag on every device (`touch-action: none` on the page).
+   */
+  const addDual = (slider: MenuSlider, second: NonNullable<MenuSlider["second"]>, body: HTMLElement): void => {
+    if (document.getElementById("menu-dual-style") === null) {
+      const style = document.createElement("style");
+      style.id = "menu-dual-style";
+      style.textContent =
+        ".menu-dual{position:absolute;left:0;top:0;width:100%;margin:0;pointer-events:none;background:transparent;-webkit-appearance:none;appearance:none;height:22px}" +
+        ".menu-dual::-webkit-slider-runnable-track{background:transparent}" +
+        ".menu-dual::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#ffd79a;border:2px solid #1b2533;cursor:pointer}" +
+        ".menu-dual::-moz-range-thumb{pointer-events:auto;width:16px;height:16px;border-radius:50%;background:#ffd79a;border:2px solid #1b2533;cursor:pointer}" +
+        ".menu-dual.b::-webkit-slider-thumb{background:#7fd0a0}.menu-dual.b::-moz-range-thumb{background:#7fd0a0}";
+      document.head.appendChild(style);
+    }
+    const row = document.createElement("div");
+    row.style.cssText = "padding:4px 10px 8px 10px";
+    const caption = document.createElement("div");
+    caption.style.cssText = "display:flex;justify-content:space-between;gap:6px";
+    const name = document.createElement("span");
+    name.textContent = slider.label;
+    const value = document.createElement("span");
+    value.style.color = "#ffd79a";
+    caption.append(name, value);
+    const track = document.createElement("div");
+    track.style.cssText = "position:relative;height:22px;margin:2px 0;touch-action:none";
+    const rail = document.createElement("div");
+    rail.style.cssText = "position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:#2b3648";
+    const mk = (cls: string) => {
+      const i = document.createElement("input");
+      i.type = "range";
+      i.className = cls;
+      i.min = String(slider.min);
+      i.max = String(slider.max);
+      i.step = String(slider.step);
+      return i;
+    };
+    const ia = mk("menu-dual a");
+    const ib = mk("menu-dual b");
+    track.append(rail, ia, ib);
+    const render = () => {
+      const a = slider.get();
+      const b = second.get();
+      ia.value = String(a);
+      ib.value = String(b);
+      value.textContent = second.format(a, b);
+    };
+    const step = (v: number) => Math.round(Math.min(slider.max, Math.max(slider.min, v)) / slider.step) * slider.step;
+    const applyA = (v: number) => {
+      showError(slider.set(step(v)));
+      render();
+    };
+    const applyB = (v: number) => {
+      showError(second.set(step(v)));
+      render();
+    };
+    ia.addEventListener("input", () => applyA(Number(ia.value)));
+    ib.addEventListener("input", () => applyB(Number(ib.value)));
+    const controls = document.createElement("div");
+    controls.style.cssText = "display:flex;gap:6px";
+    for (const [text, fn, delta] of [
+      ["◀ hold", applyA, -1],
+      ["hold ▶", applyA, +1],
+      ["◀ end", applyB, -1],
+      ["end ▶", applyB, +1],
+    ] as const) {
+      const b = document.createElement("button");
+      b.textContent = text;
+      b.style.cssText =
+        "flex:1;padding:8px 2px;font:12px/1 ui-monospace,monospace;color:#cfe3ff;" +
+        "background:#1b2533;border:1px solid #2b3648;border-radius:4px;touch-action:manipulation";
+      b.addEventListener("click", () => fn((fn === applyA ? slider.get() : second.get()) + delta * slider.step));
+      controls.appendChild(b);
+    }
+    row.append(caption, track, controls);
+    body.appendChild(row);
+    refreshers.push(render);
+    render();
+  };
+
   const addSection = (
     section: MenuSection,
     container: HTMLElement,
@@ -198,6 +285,10 @@ export function createMenu(
     applyExpanded();
 
     for (const slider of section.sliders) {
+      if (slider.second !== undefined) {
+        addDual(slider, slider.second, body);
+        continue;
+      }
       const row = document.createElement("div");
       row.style.cssText = "padding:4px 10px 8px 10px";
 

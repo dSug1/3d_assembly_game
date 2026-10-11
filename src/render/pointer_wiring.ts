@@ -9,14 +9,14 @@ import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
-import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, pinkFaceTapCandidate } from "../input/goal_lock";
+import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, greenDragGains, orbitRollStepRad, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
-import { isOrbitTap, orbitTapCount, restingFaceTap, secondMoved, tapAlignsToPink } from "../input/orbit_tap";
+import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3, IDENTITY } from "../core/vec";
-import { mmToPx, pxToMm } from "../core/units";
+import { mmToPx } from "../core/units";
 import { incrementRadians } from "../input/rotation_increment";
 import { alignedFaceOf, faceFromPickedNormal } from "../core/face_pick";
 import { rotationChannel } from "../core/constraint_stack";
@@ -24,7 +24,8 @@ import { frozenHoldAdmitted } from "../input/assembly";
 import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
-import { beginTouchTumble, endTumble, feedTouchTumble } from "./tumble_wiring";
+import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_wiring";
+import { pinkCandidate } from "../input/hold_gesture";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar, undoLast } from "./undo_wiring";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
@@ -166,30 +167,35 @@ export function installPointerHandler(st: SceneState): void {
         mmToPx(bandMmNow(st)),
       );
       // ⭐ prototype (green box): the box stops the ray, and a hit on it is a MISS (`throughGreenBox`).
-      // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §5 (the owner, 2026-10-05: *"Today a second touch on a piece can grab it: remove this
-      // possibility"*): a SECOND touch while the first one orbits (one finger on empty space, nothing held) is EMPTY SPACE — it
-      // taps or pinches, never grabs. ⚠ A real touch only: the mouse's right button has its own tap (`orbitRightTap`), and its
-      // Shift-made second touch keeps its anchor role.
-      const orbitFinger =
-        st.greenBox !== null && e.pointerType !== "mouse" && e.pointerId !== MOUSE_SECOND_ID &&
-        st.router.outside().length === 1 && st.router.objects().length === 0
-          ? st.router.outside()[0]!.id
-          : null;
-      // ⭐⭐ the owner, 2026-10-06: *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
-      // tap on the piece"* — a second touch ON the orbited piece is the alignment's tap candidate (it never zooms; the first finger keeps
-      // orbiting); ANYWHERE ELSE it is a pinch from the moment it lands (no tap to wait for — nothing held back, no jump)
-      const secondOnPiece = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh === st.greenBox;
+      // ⭐⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) THE HELD SECOND TOUCH — *"Second touch on mobile equals right click on desktop"*:
+      // the right button (`MOUSE_SECOND_ID`), or a finger pressed while ONE other is down on empty space, is the SECOND touch — unless it lands
+      // on the orbited piece (*"anywhere (except the green and turquoise pieces themselves)"*); while it is held, the next press is the FIRST
+      // touch again (*"first touch release and re-press does nothing (i.e. continuation of previous input)"*). ⛔ Neither grabs anything nor
+      // moves the orbit centre.
+      const onOrbited = st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox;
+      const holdRole: "SECOND" | "FIRST" | null =
+        st.greenBox === null
+          ? null
+          : st.hold !== null
+            ? st.hold.first === null && e.pointerId !== st.hold.second
+              ? "FIRST"
+              : null
+            : !onOrbited &&
+                (e.pointerId === MOUSE_SECOND_ID ||
+                  (e.pointerType !== "mouse" && st.router.outside().length === 1 && st.router.objects().length === 0))
+              ? "SECOND"
+              : null;
       // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
-      // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it
+      // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it. ⭐ (2026-10-11) with the second touch held too
+      // (*"First touch tap on green or turquoise pieces with or without Second touch pressed"*)
       {
-        const first = st.router.all().length === 0; // ⚠ asked before this press is routed (`router.press`, below): nothing else down
-        const onPiece = st.greenBox !== null && pick?.hit === true && pick.pickedMesh === st.greenBox;
-        const n = onPiece && first ? pick?.getNormal(true) : null;
+        const first = st.router.all().length === 0 || holdRole === "FIRST"; // ⚠ asked before this press is routed (`router.press`, below)
+        const n = onOrbited && first ? pick?.getNormal(true) : null;
         const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
-        st.pieceFaceTap = restingFaceTap(onPiece, first, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+        st.pieceFaceTap = restingFaceTap(onOrbited, first, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
       }
       const rayHit =
-        orbitFinger !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
+        holdRole !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
       // ⭐⭐⭐ **EVERY TOUCH ON A FROZEN BODY IS TREATED AS A MISS** (`D119`; first the second touch
       // only, the owner 2026-09-23: *"therefore, this second touch could for example move another
       // object"*). ⛔ Filtered on the way IN, before the latch, so every rule downstream sees a
@@ -348,31 +354,6 @@ export function installPointerHandler(st: SceneState): void {
           // — the camera keeps orbiting whatever it was already orbiting.
           st.pendingCentre = null;
         }
-        // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a second touch ON the piece while orbiting — a tap candidate, decided by its travel and its
-        // release. The count belongs to the orbit finger (a new orbit finger starts again at zero). Off the piece: a pinch (below).
-        if (orbitFinger !== null && secondOnPiece) {
-          if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbitFinger) st.orbitTap = { orbitPointer: orbitFinger, count: 0, second: null };
-          st.orbitTap.second = { pointerId: e.pointerId, pressT: s.t, pressX: s.x, pressY: s.y, moved: false };
-        }
-        // ⭐⭐ (2026-10-09, `1.0.59z-`) a second touch on a PLACED piece while orbiting: the pink face it would set if released as a TAP
-        // (`pinkFaceTapCandidate`) — the pinch below starts as for any second touch off the orbited piece
-        st.pinkTap = null;
-        {
-          const placedMesh = orbitFinger !== null && !inBand && pick?.hit === true && pick.pickedMesh !== null ? pick.pickedMesh : null;
-          const placedId = placedMesh === null ? undefined : st.idOf.get(placedMesh);
-          const at = pick?.hit && pick.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
-          const cand = pinkFaceTapCandidate(
-            orbitFinger !== null,
-            secondOnPiece,
-            goalLocked(placedId, st.goalCommit, st.cfg.lockPlacedPieces === 1),
-            at,
-          );
-          const n = cand === null ? undefined : pick?.getNormal(true);
-          const face = n && placedId !== undefined ? faceFromPickedNormal(st.world, placedId, [n.x, n.y, n.z] as Vec3) : null;
-          if (cand !== null && face !== null && placedId !== undefined && orbitFinger !== null) {
-            st.pinkTap = { pointerId: e.pointerId, orbitPointer: orbitFinger, pressT: s.t, pressX: s.x, pressY: s.y, moved: false, objectId: placedId, faceId: face.faceId, point: cand };
-          }
-        }
         const p = pinchPair(st);
         if (p) {
           st.pinch.begin(p[0], p[1]);
@@ -385,16 +366,19 @@ export function installPointerHandler(st: SceneState): void {
           // began. See input/pinch.ts.
           st.zoomAtPinchStart = st.zoom;
         }
-        // ⭐⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) a second finger while the orbit finger is down, outside the sphere: a yaw /
-        // pitch SLIDE or a pinch — undecided until the spacing or the midpoint says (`tumble_wiring.ts`)
-        // ⭐⭐ (2026-10-10, *"first touch delta position (dx or dy) while second touch is pressed outside a placed part and kept held and within
-        // delta positon deadbands"*) — armed only OFF a placed part (empty space, the floor, the orbited piece)
-        st.tumble = null;
-        {
-          const hitId = pick?.hit === true && pick.pickedMesh !== null && pick.pickedMesh !== st.greenBox ? st.idOf.get(pick.pickedMesh) : undefined;
-          const onPlacedPart = !inBand && hitId !== undefined && st.world.objects.get(hitId)?.frozen !== true;
-          if (orbitFinger !== null && !onPlacedPart) beginTouchTumble(st, orbitFinger, e.pointerId);
-        }
+        // ⭐⭐⭐ (2026-10-11) the held second touch's input starts — the pink face its press would take noted (a PLACED part only: ⛔ never a
+        // frozen body, never the orbited pieces); or the first touch pressed again while it is held
+        if (holdRole === "SECOND") {
+          const hitObj = pick?.hit === true && pick.pickedMesh !== null ? st.idOf.get(pick.pickedMesh) : undefined;
+          const frozen = hitObj !== undefined && st.world.objects.get(hitObj)?.frozen === true;
+          const n = pick?.getNormal(true);
+          const face =
+            pinkCandidate({ onOrbitedPiece: onOrbited, frozen, objectId: hitObj ?? null, inBand }) && n && hitObj !== undefined
+              ? faceFromPickedNormal(st.world, hitObj, [n.x, n.y, n.z] as Vec3)
+              : null;
+          const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
+          holdSecondPress(st, e.pointerId, s.x, firstNow, face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null);
+        } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
       }
@@ -596,30 +580,14 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
-        // ⭐⭐ (2026-10-10) the yaw / pitch gesture owns its fingers' moves (`feedTouchTumble`)
-        if (st.tumble !== null && st.tumble.a !== null && (e.pointerId === st.tumble.a || e.pointerId === st.tumble.b)) {
-          // ⛔⛔ (2026-10-11, *"the piece crosses the white sphere even if the second touch is pressed"*) — once armed, both fingers' moves are
-          // the yaw / pitch's (paused while the second one moves) or the ZOOM's: ⛔ never the orbit, until a finger lifts
-          if (feedTouchTumble(st, e.pointerId) === "ZOOM") updatePinch(st);
-          st.hudDirty = true;
-          return;
-        }
-        const ot = st.orbitTap;
-        const sec = ot?.second;
-        if (ot && sec && st.router.outside().length === 2 && st.router.objects().length === 0) {
-          if (e.pointerId === sec.pointerId) {
-            // ⭐ beyond the deadband: no longer a tap — and ⛔ NEVER a pinch (it landed on the piece: the zoom is a second touch OFF it)
-            if (secondMoved(pxToMm(Math.hypot(s.x - sec.pressX, s.y - sec.pressY)), st.cfg.motionDeadbandMm)) sec.moved = true;
-          } else if (e.pointerId === ot.orbitPointer) {
-            // ⭐ the first finger keeps orbiting for as long as this second touch is down
-            orbitDragStep(st, e.pointerId, s, prev);
-          }
+        // ⭐⭐⭐ (2026-10-11) the held second touch's input owns its two touches' moves: undecided (nothing moves), the way in / round the
+        // piece (the first touch's dx only), or the zoom — ⛔ never the centre orbit while the second touch is held
+        if (st.hold !== null && (e.pointerId === st.hold.first || e.pointerId === st.hold.second)) {
+          holdMove(st, e.pointerId, s, prev, (dxOnly) => orbitDragStep(st, e.pointerId, s, prev, dxOnly));
           st.hudDirty = true;
           return;
         }
         if (st.router.outside().length === 2) {
-          const pt = st.pinkTap;
-          if (pt !== null && e.pointerId === pt.pointerId && secondMoved(pxToMm(Math.hypot(s.x - pt.pressX, s.y - pt.pressY)), st.cfg.motionDeadbandMm)) pt.moved = true;
           updatePinch(st);
         } else if (
           st.router.outside().length === 1 &&
@@ -639,40 +607,11 @@ export function installPointerHandler(st: SceneState): void {
         // ⛔ A pinch needs BOTH touchpoints. Lifting one ends it rather than letting
         // the survivor keep scaling against a partner that is gone.
         st.pinch.end();
-        endTumble(st, e.pointerId); // ⭐ (2026-10-10) a yaw / pitch ends with either finger
-        // ⭐⭐ `RESTING_FACE_ALIGNMENT.md` §1, §4: the second touch released — a TAP if quick, never a pinch, the orbit finger still
-        // down. ⛔ Consumed here: it is not a camera-reset tap, nor a mode toggle.
-        {
-          const ot = st.orbitTap;
-          if (ot !== null && ot.second?.pointerId === e.pointerId) {
-            const sec = ot.second;
-            ot.second = null;
-            const stillDown = st.router.all().some((q) => q.id === ot.orbitPointer);
-            if (isOrbitTap(sec.pressT, s.t, st.cfg.tapMaxDuration, sec.moved, stillDown)) orbitTapped(st);
-            st.hudDirty = true;
-            return;
-          }
-          if (ot !== null && e.pointerId === ot.orbitPointer) {
-            // ⭐ the orbit finger lifted: the count resets (the piece goes on turning against the orbit, as always — §2bis)
-            st.orbitTap = null;
-            st.hudDirty = true;
-          }
-          // ⭐⭐ (2026-10-09) the second touch on a placed piece released: a TAP (quick, never moved, the orbit finger still down) moves the
-          // yellow target to the point it hit and the pink face to that face — as the first touch's press does; else nothing
-          const pt = st.pinkTap;
-          if (pt !== null && e.pointerId === pt.orbitPointer) st.pinkTap = null;
-          if (pt !== null && e.pointerId === pt.pointerId) {
-            st.pinkTap = null;
-            const stillDown = st.router.all().some((q) => q.id === pt.orbitPointer);
-            if (isOrbitTap(pt.pressT, s.t, st.cfg.tapMaxDuration, pt.moved, stillDown)) {
-              st.centreBlend.retarget(pt.point);
-              syncCentre(st);
-              st.pinkFace = { objectId: pt.objectId, faceId: pt.faceId };
-              st.lastVerdict = `orbit: second-touch tap — the pink face is now ${pt.objectId}/${pt.faceId}`;
-            }
-            st.hudDirty = true;
-            return;
-          }
+        // ⭐⭐⭐ (2026-10-11) the held second touch lifted: its input ends (the way out, or the pink face of a press that never pinched)
+        // — consumed, not a tap; the first touch lifted while it is held: the input goes on (and a tap on the piece below still counts)
+        if (holdRelease(st, e.pointerId) === "SECOND") {
+          st.hudDirty = true;
+          return;
         }
         // ⭐⭐ (2026-10-09) the first touch / left button released on the orbited piece as a TAP, nothing else down: the face it hit becomes
         // the resting face and the piece ALIGNS it (one episode); the next taps of the second touch roll on that face. ⛔ Consumed — not a
@@ -682,7 +621,7 @@ export function installPointerHandler(st: SceneState): void {
           if (ft !== null && ft.pointerId === e.pointerId) {
             st.pieceFaceTap = null;
             const tapped =
-              st.router.all().length === 0 &&
+              (st.router.all().length === 0 || (st.hold !== null && st.router.all().every((q) => q.id === st.hold!.second))) &&
               isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
             // ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting face, at once
             const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
@@ -690,6 +629,8 @@ export function installPointerHandler(st: SceneState): void {
               st.episodes.touch(--st.episodeSeq, true, true);
               st.episodes.sync(true);
               st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);
+              // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded (still on while the second touch is held)
+              if (st.hold === null) st.highlightEndedAt = performance.now();
               st.hudDirty = true;
               return;
             }
@@ -1263,9 +1204,10 @@ export function installPointerHandler(st: SceneState): void {
  * its own gains, yaw and pitch (*"the green box orbits too fast"*), slower inside the leash (`boxDragGains`). ⚠ The zoom (pinch,
  * wheel) is unchanged.
  */
-export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
+export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample, dxOnly = false): void {
   const dx = s.x - prev.x;
-  const dy = s.y - prev.y;
+  // ⭐ (2026-10-11, *"first touch's dy while the second is held: ignored"*) — the way in and the orbit round the piece take dx only
+  const dy = dxOnly ? 0 : s.y - prev.y;
   if (st.greenBox !== null) {
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
@@ -1274,10 +1216,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
       // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
       // through the way in and the orbit that follows, whichever a drag starts in
-      st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null ? st.pieceYawGain : 1;
+      st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null || st.hold?.mode === "WAY" ? st.pieceYawGain : 1;
       // ⭐ (2026-10-10, the owner: *"there seem to be the need for a bigger dx to trigger the first roll than afterwards"* → *"build the two
-      // changes"*) a NEW drag starts its roll count fresh — no leftover from the last drag, so its first roll takes one step like every other
-      st.orbitRollAcc = 0;
+      // changes"*) a NEW drag starts its roll count fresh — no leftover from the last drag, so its first roll takes one step like every other.
+      // ⭐ (2026-10-11) …except a first touch pressed again while the second is held: the same input goes on (*"continuation"*)
+      if (st.hold === null) st.orbitRollAcc = 0;
     }
     st.orbitMotion.tracker.push(s);
     // ⭐ the inside-the-leash gains (`greenDragGains`).
@@ -1295,7 +1238,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // outside the sphere and aligned to the face it would align to now, the orbit's turn (signed by dx) rolls the piece a stop every
     // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
     // ⭐ (2026-10-10) …the pink face changed since or not: the roll goes on against the axes it was aligned to
-    if (st.pieceOutside === true && st.restAligned && st.restRoll !== null && dx !== 0) {
+    // ⭐⭐ (2026-10-11) …on the held second touch's way in and round the piece (the sphere is deleted)
+    if (st.hold !== null && st.hold.mode === "WAY" && st.restAligned && st.restRoll !== null && dx !== 0) {
       const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
       const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
       st.orbitRollAcc = r.acc;
@@ -1358,44 +1302,4 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   if (st.centreReturn !== null) st.centreReturn = advanceCentreReturn(st.centreReturn, Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);
   applyCamera(st);
-}
-
-/**
- * ⭐⭐⭐ prototype — **A TAP COUNTED WHILE ORBITING** (`RESTING_FACE_ALIGNMENT.md` §1, §6; the owner, 2026-10-05): the count goes up; the
- * FIRST tap is the resting-face alignment (`alignRestingFace`) and costs ONE episode if it aligned (*"The first tap shall cost one episode
- * count"*), landed now (`D187`) — straight into the ledger, the model being unchanged (the orbited piece is not in it: no undo entry
- * either). ⭐ It also started the orbit around the piece from 2026-10-07 (two independent actions on one input); since 2026-10-08 that orbit
- * is the SPHERE's round the pink gizmo (`sphereFrame`) — *"disconnected from resting face"*. The later taps do nothing yet.
- * ⛔ (2026-10-10) every tap does nothing now — see the body.
- */
-export function orbitTapped(st: SceneState): void {
-  const ot = st.orbitTap;
-  if (ot === null) return;
-  ot.count = orbitTapCount(ot.count).count;
-  // ⛔⛔ (2026-10-10, the owner) the tap does NOTHING to the piece now — it rolled (*"remove the increment of the roll by right button tap /
-  // second touch tap: this is superfluous as we have a roll movement already controlled by dx drag"*) and aligned (*"The tap also aligns a
-  // piece that isn't aligned yet: remove that as the existing pieces are aligned at boot"*): every piece is aligned at its spawn
-  // (`bootRestAlign`). Still counted for the HUD, and still consumed (a second touch on the piece never pinches).
-  // ⭐⭐ (2026-10-10, the owner: *"How could we reinstate this alignment now"* → *"build it with old input"*) — but a NEW pink face: the tap
-  // ALIGNS the resting face to it (long axes first, no rolls carried — the pink face changed), one episode; the same face: nothing
-  if (tapAlignsToPink(st.restRoll?.key ?? null, restTargetKey(st)) && alignRestingFace(st, performance.now())) {
-    st.episodes.touch(--st.episodeSeq, true, true);
-    st.episodes.sync(true);
-  } else {
-    st.lastVerdict = `orbit: tap ${ot.count} — nothing (already aligned to this pink face; the roll is the orbit's dx)`;
-  }
-  st.hudDirty = true;
-}
-
-/**
- * ⭐ prototype — **THE MOUSE'S RIGHT TAP WHILE THE LEFT BUTTON ORBITS** (§4): judged on TIME only (`heldMs`, the press to the release —
- * the cursor moves with the orbit). It counts if the left button is the one orbit finger (on empty space, nothing held).
- */
-export function orbitRightTap(st: SceneState, heldMs: number): void {
-  const out = st.router.outside();
-  const orbit = st.greenBox !== null && out.length === 1 && st.router.objects().length === 0 ? out[0]! : null;
-  if (orbit === null || st.pointerTypeOf.get(orbit.id) !== "mouse") return;
-  if (!isOrbitTap(0, heldMs, st.cfg.tapMaxDuration, false, true)) return;
-  if (st.orbitTap === null || st.orbitTap.orbitPointer !== orbit.id) st.orbitTap = { orbitPointer: orbit.id, count: 0, second: null };
-  orbitTapped(st);
 }

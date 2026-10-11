@@ -12,8 +12,6 @@ import { meshTopology } from "../src/core/mesh_topology";
 import { chooseInGroup, faceLongAxes, restAlignTarget, restingFaces } from "../src/core/resting_face";
 import { dot, qRotate, type Quat, type Vec3 } from "../src/core/vec";
 import { counterYaw, greenBootOrientation, wrapAngle } from "../src/input/green_box";
-import { isOrbitTap, orbitTapCount, secondMoved } from "../src/input/orbit_tap";
-import { MouseSecondTouch } from "../src/input/mouse_second_touch";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -87,28 +85,7 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     expect(yaw / D).toBeLessThanOrEqual(30 + 1e-6); // three axes 60° apart (six directions): never more than 30°
   });
 
-  it("⭐⭐ the second touch ON the piece: MOVED once past the deadband (no longer a tap); a TAP released within the time, never moved, the orbit still down", () => {
-    expect(secondMoved(3.4, 3.5)).toBe(false);
-    expect(secondMoved(3.6, 3.5)).toBe(true);
-    expect(isOrbitTap(1000, 1150, 200, false, true)).toBe(true);
-    expect(isOrbitTap(1000, 1250, 200, false, true)).toBe(false); // held too long
-    expect(isOrbitTap(1000, 1100, 200, true, true)).toBe(false); // it pinched
-    expect(isOrbitTap(1000, 1100, 200, false, false)).toBe(false); // the orbit finger lifted first
-    expect(orbitTapCount(0)).toEqual({ count: 1 });
-    expect(orbitTapCount(1)).toEqual({ count: 2 }); // (2026-10-09) the count is the HUD's; the tap does nothing to the piece since 2026-10-10
-    expect(DEFAULT_CONFIG.tapMaxDuration).toBe(200); // ⭐ Unity's, for every tap (option 1)
-    expect(code("render/tuning_menu.ts")).toContain('"tapMaxDuration", 100, 400, 10)');
-  });
-
-  it("⭐ the mouse: a right press while the left is down is TIMED and reported at its release; a plain right click is untouched", () => {
-    const m = new MouseSecondTouch();
-    m.step({ type: "DOWN", button: 0, buttons: 1, shift: false, x: 0, y: 0, t: 0 });
-    m.step({ type: "DOWN", button: 2, buttons: 3, shift: false, x: 0, y: 0, t: 1000 });
-    expect(m.step({ type: "UP", button: 2, buttons: 1, shift: false, x: 5, y: 0, t: 1130 }).rightTapMs).toBe(130);
-    const plain = new MouseSecondTouch();
-    plain.step({ type: "DOWN", button: 2, buttons: 2, shift: false, x: 0, y: 0, t: 0 });
-    expect(plain.step({ type: "UP", button: 2, buttons: 0, shift: false, x: 0, y: 0, t: 100 }).rightTapMs).toBeUndefined();
-  });
+  // ⛔ (2026-10-11) the second-touch tap and the mouse's timed right tap are deleted — the second touch is HELD (`proto_hold.test.ts`)
 
   it("⭐⭐⭐ the piece turns AGAINST the orbit, the same amount, about the vertical (the owner: *\"in all cases … also at boot\"*)", () => {
     // the orbit moved the piece's heading by +0.3 rad about +y: the piece turns by −0.3 about +y
@@ -142,43 +119,14 @@ describe("⭐⭐⭐ prototype — the resting-face alignment", () => {
     const x = qRotate(carried, [1, 0, 0]);
     expect(Math.atan2(-x[2], x[0])).toBeCloseTo(1.2, 12);
     // ⛔ the owner, 2026-10-05: *"remove the rotation when the resting piece is aligned"* — it stops at the tap, and stays stopped
-    expect(w).toMatch(/if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/); // (2026-10-08) and while the sphere is on
+    expect(w).toMatch(/if \(prev === null \|\| st\.restAligned\) return;/); // ⛔ (2026-10-11) the sphere deleted — every piece aligned from its spawn
     expect(w).toMatch(/st\.restAlign = \{ from: q, t0: now, base \};[^\n]*\n\s*st\.restAligned = true;/);
     expect(w).toMatch(/st\.restAlign = null;\s*st\.orbitHeadingPrev = null;\s*st\.restAligned = false;/); // the respawn clears it
     // ⛔ no gate on a finger: before the alignment the frame step runs whatever the finger does
     expect(w).toMatch(/function counterYawFrame\(st: SceneState\): void \{\s*const box = st\.greenBox;\s*if \(box === null \|\| st\.boxOrbit === null\) return;/);
   });
 
-  it("⭐⭐ wired: never grabs; ON the piece a tap candidate (never a zoom, the orbit goes on), OFF it a pinch at once; the tap consumed; the lift resets", () => {
-    const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/const rayHit =\s*orbitFinger !== null \? null : throughGreenBox\(/);
-    // ⭐ 2026-10-06 (the owner): *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
-    // tap on the piece"* — only a second touch ON the piece is a tap candidate
-    expect(p).toMatch(/const secondOnPiece = orbitFinger !== null && !inBand && pick\?\.hit === true && pick\.pickedMesh === st\.greenBox;/);
-    expect(p).toMatch(/if \(orbitFinger !== null && secondOnPiece\) \{/);
-    // beyond the deadband it is no longer a tap — and NEVER a pinch (no updatePinch in that branch)
-    expect(p).toMatch(/if \(secondMoved\(pxToMm\(Math\.hypot\(s\.x - sec\.pressX, s\.y - sec\.pressY\)\), st\.cfg\.motionDeadbandMm\)\) sec\.moved = true;\s*\} else if/);
-    expect(p).not.toMatch(/sec\.pinched/);
-    expect(p).toMatch(/\} else if \(e\.pointerId === ot\.orbitPointer\) \{\s*\/\/[^\n]*\n\s*orbitDragStep\(st, e\.pointerId, s, prev\);/);
-    // the tap is judged and CONSUMED before the camera-reset / mode-toggle taps
-    expect(p).toMatch(/if \(isOrbitTap\(sec\.pressT, s\.t, st\.cfg\.tapMaxDuration, sec\.moved, stillDown\)\) orbitTapped\(st\);\s*st\.hudDirty = true;\s*return;/);
-    const i0 = p.indexOf("the second touch released — a TAP if quick");
-    const i1 = p.indexOf("orbitTapped(st);");
-    expect(i0).toBeGreaterThan(0);
-    expect(i1).toBeGreaterThan(i0);
-    expect(p.indexOf("noteTap(", i0)).toBeGreaterThan(i1); // the release branch's camera-reset / toggle tap comes after
-    // the lift resets the count — and nothing else (the piece turns against the orbit in ALL cases, §2bis)
-    expect(p).toMatch(/st\.orbitTap = null;\s*st\.hudDirty = true;\s*\}/);
-    expect(p).not.toMatch(/stopRestFollow/);
-    // the first tap aligns and costs ONE episode
-    // (2026-10-07) the same first tap triggers the alignment AND, independently, the orbit around the piece — one episode if either acted
-    // (2026-10-08) the tap ALIGNS only — the orbit round the piece is the sphere's (`sphereFrame`); one episode if it aligned
-    const tapFn = p.slice(p.indexOf("export function orbitTapped("), p.indexOf("export function orbitRightTap("));
-    expect(tapFn).not.toMatch(/rollRestingFace|tapAction/); // ⛔ (2026-10-10) no roll by a tap
-    expect(tapFn).toMatch(/if \(tapAlignsToPink\(st\.restRoll\?\.key \?\? null, restTargetKey\(st\)\) && alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/); // ⭐ (2026-10-10) a new pink face: it aligns
-    // the mouse's right tap
-    expect(code("render/scene.ts")).toMatch(/\(heldMs\) => orbitRightTap\(st, heldMs\)/);
-    expect(p).toMatch(/if \(!isOrbitTap\(0, heldMs, st\.cfg\.tapMaxDuration, false, true\)\) return;/);
+  it("⭐⭐ wired: the alignment's target, its ease (125 ms) and the heading read at the anchor", () => {
     const w = code("render/green_box_wiring.ts");
     // the target, the ease (125 ms), the follow by the orbit's heading until the finger lifts
     // ⭐ `1.0.59q-`: the target is by the PINK FACE now (`proto_resting_face_align.test.ts`)

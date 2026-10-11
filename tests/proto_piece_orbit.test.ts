@@ -26,8 +26,6 @@ import {
   evenSlide,
   meanSweep,
   pieceCamera,
-  outsideSphere,
-  SPHERE_HYSTERESIS,
   pushedPiece,
   referenceYawGain,
   returnCamera,
@@ -309,9 +307,9 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.pieceAnchor;\s*const c = st\.orbitCentreM;\s*return p === null \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], p\);/);
     expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, clampGreenZoom\(st\.zoom\)\);\s*(?:\/\/[^\n]*\n\s*)*st\.pieceAim = startPieceAim\(st\.pieceEntry\);\s*st\.centreReturn = null;/);
-    // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit while the sphere is on
-    expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBeGreaterThan(0);
-    expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned \|\| st\.cfg\.pieceSphereRadiusM > 0\) return;/);
+    // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit — ⛔ (2026-10-11) the sphere deleted:
+    // every piece is aligned from its spawn
+    expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned\) return;/);
     expect(w).toMatch(/const eo: Vec3 = st\.pieceEntry === null \? \[0, 0, 0\] : entryPieceOffset\(st\.pieceEntry, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
   });
@@ -428,7 +426,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
         const sv = spring.at.v;
         if (ret === null) {
           const p: Vec3 = [dir[0] * len(ringAt(sv)), dir[1] * len(ringAt(sv)), dir[2] * len(ringAt(sv))];
-          out = outsideSphere(len(p), 1, out);
+          out = len(p) > 1; // ⚠ the fixture's own trigger (the sphere is deleted, 2026-10-11): what is tested is the way out's offset
           if (!out) {
             const home = ringAt(fromDrawn ? sv : rigV);
             ret = startCentreReturn(p, [0, 1, 0], [0, 0, -1], [1, 0, 0], sub(p, home), byRing ? len(ringAt(sv)) : Infinity);
@@ -464,45 +462,22 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(rb).not.toMatch(/st\.boxSpring = null;/);
   });
 
-  it("⭐⭐⭐ THE SPHERE round the pink gizmo drives the ways in and out (*\"When the piece enters the sphere, automatically trigger way out. When the piece exits the sphere, automatically trigger way in. place an hysteresis of 10%\"*)", () => {
-    expect(SPHERE_HYSTERESIS).toBe(0.1);
-    // ⭐⭐ (2026-10-10, *"do 1"*: in at the radius, out beyond 1.1 × it) — boot / a respawn: the plain side of the radius (outside → a way in)
-    expect(outsideSphere(3.0, 1, null)).toBe(true);
-    expect(outsideSphere(0.95, 1, null)).toBe(false);
-    // ⭐ coming IN: inside as soon as it crosses the radius
-    expect(outsideSphere(1.0001, 1, true)).toBe(true);
-    expect(outsideSphere(0.9999, 1, true)).toBe(false);
-    // ⭐ going OUT: still inside up to 1.1 × the radius, outside beyond — no flicker on the surface
-    expect(outsideSphere(1.05, 1, false)).toBe(false);
-    expect(outsideSphere(1.0999, 1, false)).toBe(false);
-    expect(outsideSphere(1.1001, 1, false)).toBe(true);
-    // ⛔ the trap it removed: a dip of less than 10 % then back out to the rings' end (3 m, the radius 2.3 m) — now outside again
-    let o: boolean | null = true;
-    for (const d of [2.5, 2.31, 2.29, 2.2, 2.3, 2.5, 2.7, 2.997]) o = outsideSphere(d, 2.3, o);
-    expect(o).toBe(true);
-    // the wiring: the sphere at each frame's end; outside → a way in, inside → a way out; the tap aligns only; a respawn decides afresh
+  it("⛔⛔ (2026-10-11) THE WHITE SPHERE IS DELETED (*\"Remove the white sphere and all sliders and all conditions associated with white sphere entirely\"*) — the ways in and out are the held second touch's", () => {
+    const cfgKeys = Object.keys(DEFAULT_CONFIG);
+    expect(cfgKeys).not.toContain("pieceSphereRadiusM");
+    expect(cfgKeys).not.toContain("pieceSphereVisible");
+    expect(code("render/tuning_menu.ts")).not.toMatch(/pieceSphere/);
+    expect(code("input/piece_orbit.ts")).not.toMatch(/export (function outsideSphere|const SPHERE_HYSTERESIS)/);
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/pinkRingFrame\(st\);\s*sphereFrame\(st\);/);
-    expect(w).toMatch(/const out = outsideSphere\(d, r, prev\);/);
-    expect(w).toMatch(/if \(out\) \{\s*if \(enterPieceOrbit\(st\)\)/);
-    expect(w).toMatch(/\} else if \(st\.pieceOrbit !== null \|\| st\.pieceEntry !== null\) \{\s*st\.pieceEntry = null;[\s\S]{0,200}?returnToCentreOrbit\(st, true\);/);
-    expect(w).toMatch(/st\.centreReturn = null;\s*\/\/[^\n]*\n\s*st\.pieceOutside = null;/); // the respawn
-    expect(w).not.toMatch(/pieceOrbitEnds|pieceOrbitEndPct|pieceOrbitPushSeen/); // the old end rule gone
-    const tap = code("render/pointer_wiring.ts");
-    expect(tap).not.toMatch(/enterPieceOrbit/); // ⭐ the resting-face tap no longer starts the orbit round the piece
-    expect(tap).not.toMatch(/pushStep|pieceOrbitPushSeen/);
-    expect(DEFAULT_CONFIG.pieceSphereRadiusM).toBe(2.3); // the owner, 2026-10-09 (was 1 m)
-    // ⭐ (2026-10-10) a slider of its own hides it — the ways in and out still run (the radius alone decides them)
-    expect(DEFAULT_CONFIG.pieceSphereVisible).toBe(0); // hidden by default (the owner, 2026-10-10)
-    const menu = code("render/tuning_menu.ts");
-    expect(menu.indexOf('"pieceSphereVisible", 0, 1, 1)')).toBeGreaterThan(menu.indexOf('"pieceSphereRadiusM", 0, 3, 0.05)'));
-    expect(w).toMatch(/mesh\.isVisible = r > 0 && st\.cfg\.pieceSphereVisible === 1;/);
-    expect(w).toMatch(/if \(!\(r > 0\)\) return;\s*const d = /); // the crossing tests read the radius, never the slider
-    expect(code("render/tuning_menu.ts")).toContain('"pieceSphereRadiusM", 0, 3, 0.05)');
-    expect(w).toMatch(/mat\.alpha = 0\.08;\s*mat\.backFaceCulling = false;/); // translucent white, seen from inside too
-    expect(w).toMatch(/m\.isPickable = false;/); // never a touch target
-    // ⭐ the yaw speed one through the way in and the orbit around the piece (*\"so there is no visual discontinuity\"*)
-    expect(tap).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;/);
+    expect(w).not.toMatch(/sphereFrame\(|pieceSphereMesh|pieceOutside|CreateSphere/);
+    expect(code("render/scene_state.ts")).not.toMatch(/pieceOutside|pieceSphere/);
+    // the respawn ends the held second touch's input — no way in, no way out
+    expect(w).toMatch(/st\.centreReturn = null;\s*\/\/[^\n]*\n\s*st\.hold = null;/);
+    // ⭐ the way in and the way out are the held second touch's (`hold_wiring.ts`) — the way out exported for it
+    expect(w).toMatch(/export function returnToCentreOrbit\(st: SceneState, rebase: boolean\): void \{/);
+    const h = code("render/hold_wiring.ts");
+    expect(h).toMatch(/if \(enterPieceOrbit\(st\)\)/);
+    expect(h).toMatch(/st\.pieceEntry = null;\s*returnToCentreOrbit\(st, true\);/);
   });
 
   it("⭐⭐⭐ the WAY BACK, AROUND THE PIECE, its view TIED to the move (one value): nothing moves when it ends; the piece in view ALL the way, even from between it and the gizmo", () => {
@@ -597,10 +572,6 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(align).not.toMatch(/pieceOrbit|startPieceOrbit/); // the alignment no longer starts the orbit
     const enter = w.slice(w.indexOf("export function enterPieceOrbit"), w.indexOf("function counterYawFrame"));
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
-    const tap = code("render/pointer_wiring.ts");
-    const tapFn = tap.slice(tap.indexOf("export function orbitTapped("), tap.indexOf("export function orbitRightTap("));
-    expect(tapFn).not.toMatch(/rollRestingFace|tapAction/); // ⛔ (2026-10-10) no roll by a tap
-    expect(tapFn).toMatch(/if \(tapAlignsToPink\(st\.restRoll\?\.key \?\? null, restTargetKey\(st\)\) && alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/); // ⭐ (2026-10-10) a new pink face: it aligns
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
     expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
@@ -634,7 +605,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(p).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag, dy \* st\.cfg\.boxGainPitch \* g\.pitch\);/);
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
-    expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)*st\.orbitRollAcc = 0;\s*\}/);
+    expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)*if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
     expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 12]); // the way in at 12 mm (2026-10-08)
     const menu = code("render/tuning_menu.ts");

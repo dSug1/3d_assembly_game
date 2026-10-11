@@ -475,12 +475,10 @@ export interface GestureConfig {
   pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
   pieceOrbitEnterMm: number;
-  pieceSphereRadiusM: number;
-  /** ⭐ Prototype (2026-10-10): the white sphere DRAWN (1) or hidden (0) — it goes on driving the ways in and out either way. */
-  pieceSphereVisible: number;
+  /** ⭐ Prototype (2026-10-11): the pink highlights (pink face, resting face) held after the input ends, then faded — ms (`highlightAlpha`). */
+  highlightHoldMs: number;
+  highlightFadeMs: number;
   pieceOrbitReturnMm: number;
-  /** ⭐ Prototype (2026-10-10): the yaw / pitch outside the sphere — finger (or cursor) travel per face, mm (`tumble_gesture.ts`). */
-  tumbleStepMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -966,17 +964,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
-  // ⭐ prototype, the owner 2026-10-08: *"Create a sphere radius x centered on pink gizmo, slider for x, default = 1m"* — outside it the orbit
-  // around the piece, inside the centre orbit (`outsideSphere`: in at the radius, out beyond 1.1 × it); 0 = no sphere
-  // (it replaced the end at 75 % + a push). ⭐ The owner, 2026-10-09: *"Set default radius of the white sphere to 2.3 m"* (was 1 m)
-  pieceSphereRadiusM: 2.3,
-  // ⭐ prototype, the owner 2026-10-10: *"is there a slider to hide the white sphere? if not, create one below the sphere round the gizmo"*
-  pieceSphereVisible: 0, // ⭐ the owner, 2026-10-10: *"default: white sphere is hidden"* (was 1)
+  // ⭐⭐ prototype, the owner 2026-10-11: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
+  // fade gradually and rapidly away. Set default timer 750 ms"* — *"Do one slider with two cursors"*: the hold, then the fade
+  highlightHoldMs: 750,
+  highlightFadeMs: 250,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,
-  // ⭐ prototype, the owner 2026-10-10: *"build the yaw and pitch"* — ~ the green roll's finger travel per stop outside the sphere (≈ 11 mm)
-  tumbleStepMm: 12,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)

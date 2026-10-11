@@ -27,7 +27,6 @@ import { type Quat, type Vec3 } from "../core/vec";
 import { type FrameMeter } from "../core/frame_meter";
 import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
 import type { PinchMotion } from "../input/pinch_gate";
-import type { TumbleGesture, TumbleTrail, TumbleTurn } from "../input/tumble_gesture";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -435,29 +434,27 @@ export interface SceneState {
   restingShapes: Map<string, RestingResult>;
   restingSeated: Set<ObjectId> | null;
   restingLast: ObjectId | null;
-  /** ⭐ Prototype (`RESTING_FACE_ALIGNMENT.md` §1, §4): the second-finger taps counted while one orbit finger is down — that finger, the
-   * count, and the second touch in flight (its press, and whether it has become a pinch). `null` when no orbit finger has a count. */
-  /** ⭐ Prototype (`1.0.59z-`, 2026-10-09): a second touch on a PLACED piece while the first one orbits — the pink face it would set if
-   * released as a tap (`pinkFaceTapCandidate`): its press, whether it moved, the face and the point it hit. `null` otherwise. */
   /** ⭐ Prototype (2026-10-09): the FIRST touch (or the left button) pressed on the orbited piece — the face it hit, made the resting face
    * if it is released as a tap (`restingFaceTap`). `null` otherwise, and dropped when another pointer presses. */
   pieceFaceTap: { readonly pointerId: number; readonly faceId: string } | null;
-  pinkTap: {
-    readonly pointerId: number;
-    readonly orbitPointer: number;
-    readonly pressT: number;
-    readonly pressX: number;
-    readonly pressY: number;
-    moved: boolean;
-    readonly objectId: ObjectId;
-    readonly faceId: string;
-    readonly point: Vec3;
+  /**
+   * ⭐⭐ Prototype (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20): the HELD SECOND TOUCH's input — its pointer (the right button's on a
+   * desktop), the first touch's (`null` while lifted: a re-press continues), what the two are doing (`HoldMode`), the x each started from
+   * (px — the way in's decision), and the pink face its press would take (`null`: none — taken at the way in, or at the release).
+   */
+  hold: {
+    readonly second: number;
+    first: number | null;
+    mode: import("../input/hold_gesture").HoldMode;
+    readonly secondX0: number;
+    firstX0: number | null;
+    pink: { readonly objectId: ObjectId; readonly faceId: string } | null;
   } | null;
-  orbitTap: {
-    readonly orbitPointer: number;
-    count: number;
-    second: { readonly pointerId: number; readonly pressT: number; readonly pressX: number; readonly pressY: number; moved: boolean } | null;
-  } | null;
+  /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
+  highlightEndedAt: number | null;
+  /** ⭐ Prototype (2026-10-11): the pink face's fill (a child of its body) and the face it was built for. */
+  pinkFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+  pinkFillKey: string;
   /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
   restAlign: {
     readonly from: Quat;
@@ -498,36 +495,8 @@ export interface SceneState {
   pieceAim: PieceAim | null;
   /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
   orbitRollAcc: number;
-  /**
-   * ⭐ Prototype (2026-10-10): the YAW / PITCH gesture in flight (`tumble_gesture.ts`), outside the sphere — its two fingers (`a` the orbit
-   * finger, `b` the held second touch) or the mouse (`a`/`b` null: left + right held), the cursor travel so far (px, the mouse), its state,
-   * and the turn once the axis latched. `null` otherwise.
-   */
-  tumble: {
-    readonly a: number | null;
-    readonly b: number | null;
-    /** ⭐ (2026-10-10) the orbit finger's travel reference and last position (px) — the reference shifted while paused, so a resume does not jump. */
-    aStart: readonly [number, number];
-    aLast: readonly [number, number];
-    /** ⭐ (2026-10-11) the held second touch's TRAILING anchor (mm, `heldStep`), when it last pushed it (ms), and whether the yaw / pitch is paused. */
-    bAnchor: readonly [number, number];
-    bMovedAt: number;
-    paused: boolean;
-    /** ⭐ (2026-10-11) both fingers moved across: the gesture is the ZOOM's until a finger lifts (never the orbit's). */
-    zoom: boolean;
-    mouseTravel: [number, number];
-    g: TumbleGesture;
-    turn: TumbleTurn | null;
-    /** ⭐ (2026-10-10) the yaw / pitch TRAIL — the paths walked, the last in flight — and each path's axis (world; null until its first step). */
-    trail: TumbleTrail | null;
-    axes: (import("../core/vec").Vec3 | null)[];
-  } | null;
   /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
   bootRestAlign: boolean;
-  /** ⭐ Prototype (2026-10-08): the piece OUTSIDE the sphere round the pink gizmo (`outsideSphere`, ±10 %); `null` — decided afresh. */
-  pieceOutside: boolean | null;
-  /** ⭐ …the sphere's mesh (`sphereFrame`), made at its first use. */
-  pieceSphere: import("@babylonjs/core/Meshes/mesh").Mesh | null;
   /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
    * (`pieceYawGainKey`). */
   pieceYawGain: number;
