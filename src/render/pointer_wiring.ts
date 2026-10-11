@@ -596,12 +596,13 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
-        // ⭐⭐ (2026-10-10) the yaw / pitch gesture owns its fingers' moves while the second touch is held still (`feedTouchTumble`)
+        // ⭐⭐ (2026-10-10) the yaw / pitch gesture owns its fingers' moves (`feedTouchTumble`)
         if (st.tumble !== null && st.tumble.a !== null && (e.pointerId === st.tumble.a || e.pointerId === st.tumble.b)) {
-          if (feedTouchTumble(st) === "OWNED") {
-            st.hudDirty = true;
-            return;
-          }
+          // ⛔⛔ (2026-10-11, *"the piece crosses the white sphere even if the second touch is pressed"*) — once armed, both fingers' moves are
+          // the yaw / pitch's (paused while the second one moves) or the ZOOM's: ⛔ never the orbit, until a finger lifts
+          if (feedTouchTumble(st, e.pointerId) === "ZOOM") updatePinch(st);
+          st.hudDirty = true;
+          return;
         }
         const ot = st.orbitTap;
         const sec = ot?.second;

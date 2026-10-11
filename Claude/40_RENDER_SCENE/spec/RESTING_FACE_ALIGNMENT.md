@@ -384,7 +384,22 @@ or 4th ring)"*.
 | move | the FIRST touch (the orbit finger), dx or dy | the left drag, dx or dy |
 
 - ⛔ The first build's two-finger PARALLEL slide is deleted, with its spacing tolerance and its pair rule (*"the input shall not be two-finger
-  dx or two finger dy"*). The second touch leaving its deadband ends the yaw / pitch: the pinch and the taps go on as before.
+  dx or two finger dy"*).
+- ⛔⛔ **THE HELD TOUCH DRIFTING, AND THE ORBIT THAT CAME BACK** (2026-10-11, the owner on the glass: *"when i swap from dx to dy and back and
+  forth, at one point the yaw-pitch stops. I think there is some pollution with forward orbit and the piece crosses the white sphere even if
+  the second touch is presses"*). Reproduced headless: the held touch was judged against its PRESS point, so a resting fingertip's creep
+  added up; past 3.5 mm the yaw / pitch was DROPPED for the gesture, and the first finger fell through to an older rule — a second touch on
+  the orbited piece *keeps the first finger orbiting* — whose dy carried the piece from 3.00 m to 1.29 m, through the white sphere, the
+  second touch still pressed. ⭐ Now:
+  - the held touch is judged against a TRAILING anchor (`heldStep`, §1.1's model): past it the yaw / pitch PAUSES — the first finger's
+    moves count for nothing, its travel reference following it — and once the held touch has been still for 150 ms (`HELD_SETTLE_MS`) it
+    RESUMES from where the first finger is, without a jump;
+  - both fingers moving ACROSS (the zoom's dx gate, below) hand the gesture to the ZOOM until a finger lifts;
+  - ⛔ once armed, NEVER the orbit while both fingers are down — the old *keeps orbiting* rule stands only where no yaw / pitch is armed
+    (inside the sphere).
+  ⭐ The desktop needs no such fix: with both buttons held the mouse layer swallows every cursor move, so the orbit pointer cannot move, and
+  a button cannot drift; releasing the right button hands the drag back to the orbit, by design. Headless after the fix: the same drift
+  PAUSES (the piece stays at 3.00 m, outside the sphere), the next dy RESUMES; a pinch from an armed gesture zooms (1 → 0.77).
 - ⭐ **The axis** — whichever of dx and dy FIRST passes the deadband: **dy PITCHES; dx YAWS on a vertical resting face** and **ROLLS on a
   horizontal one** (a turn about gravity is the roll there — the owner: *"the two-finger dx should do the same as the roll"*). Back within
   the deadband along it, the choice is UNDONE and the next axis out owns it (*"the selection is reset if the first delta selection comes

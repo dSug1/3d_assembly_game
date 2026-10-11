@@ -506,9 +506,15 @@ export interface SceneState {
   tumble: {
     readonly a: number | null;
     readonly b: number | null;
-    /** ⭐ (2026-10-10) the orbit finger's and the held second touch's positions at the start (px) — the touch gesture. */
-    readonly aStart: readonly [number, number];
-    readonly bStart: readonly [number, number];
+    /** ⭐ (2026-10-10) the orbit finger's travel reference and last position (px) — the reference shifted while paused, so a resume does not jump. */
+    aStart: readonly [number, number];
+    aLast: readonly [number, number];
+    /** ⭐ (2026-10-11) the held second touch's TRAILING anchor (mm, `heldStep`), when it last pushed it (ms), and whether the yaw / pitch is paused. */
+    bAnchor: readonly [number, number];
+    bMovedAt: number;
+    paused: boolean;
+    /** ⭐ (2026-10-11) both fingers moved across: the gesture is the ZOOM's until a finger lifts (never the orbit's). */
+    zoom: boolean;
     mouseTravel: [number, number];
     g: TumbleGesture;
     turn: TumbleTurn | null;

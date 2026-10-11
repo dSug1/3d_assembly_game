@@ -4,14 +4,17 @@
  * the next edge direction); this holds the gesture in flight (`st.tumble`) and makes the steps (`tumbleRestingFace`, `rollRestingFace`).
  * ⛔ No rule here.
  * - **Touch** — begun when a second finger lands off any placed part while the orbit finger is down (`beginTouchTumble`): the ORBIT finger's
- *   travel yaws / pitches while the second finger is held STILL (`feedTouchTumble`); the second finger leaving its deadband hands both back
- *   (the pinch and the taps as before).
+ *   travel yaws / pitches while the second finger is held STILL (`feedTouchTumble`). ⭐⭐ (2026-10-11) the second finger MOVING (past its
+ *   trailing anchor, `heldStep`) PAUSES it — the first finger's moves then do nothing — and it resumes once that finger is still again
+ *   (`heldSettled`), from where the first finger is; both fingers moving ACROSS (the pinch's dx gate) hand it to the ZOOM. ⛔ Never back to the
+ *   orbit while both fingers are down: that is what crossed the white sphere with the second touch pressed.
  * - **Mouse** — begun at a right press while the left button orbits (`beginMouseTumble`, asked by the mouse layer), fed the cursor's delta
  *   (`feedMouseTumble`).
  * Either ends at a release (`endTumble`). Outside the sphere, the piece aligned (`tumbleAvailable`).
  */
 import { pxToMm } from "../core/units";
-import { heldStill, startTrail, startTumble, stepTumble, trailAfter, trailBefore, trailTurn, tumbleTurnOf } from "../input/tumble_gesture";
+import { heldSettled, heldStep, startTrail, startTumble, stepTumble, trailAfter, trailBefore, trailTurn, tumbleTurnOf } from "../input/tumble_gesture";
+import { pinchDxOpen } from "../input/pinch_gate";
 import { otherTumbleAxis, restingFaceKey, restingFaceVertical, rollRestingFace, tumbleRestingFace } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -33,30 +36,83 @@ export function beginTouchTumble(st: SceneState, a: number, b: number): void {
     st.tumble = null;
     return;
   }
-  st.tumble = { a, b, aStart: pa, bStart: pb, mouseTravel: [0, 0], g: startTumble(performance.now()), turn: null, trail: null, axes: [] };
+  st.tumble = {
+    a,
+    b,
+    aStart: pa,
+    aLast: pa,
+    bAnchor: [pxToMm(pb[0]), pxToMm(pb[1])],
+    bMovedAt: -Infinity,
+    paused: false,
+    zoom: false,
+    mouseTravel: [0, 0],
+    g: startTumble(performance.now()),
+    turn: null,
+    trail: null,
+    axes: [],
+  };
 }
 
 /**
- * ⭐ Touch: one of its fingers moved. `"OWNED"` — the move is the gesture's (nothing else runs: no orbit, no zoom); `"RELEASED"` — the second
- * finger left its deadband: the gesture is dropped, the caller goes on as before (a pinch, a tap that moved).
+ * ⭐ Touch: one of its fingers moved (`pointerId`). `"OWNED"` — the move is the gesture's (nothing else runs: no orbit, no zoom); `"ZOOM"` —
+ * both fingers have moved across (`pinchDxOpen`): the caller zooms (and never orbits) until a finger lifts.
  */
-export function feedTouchTumble(st: SceneState): "OWNED" | "RELEASED" {
+export function feedTouchTumble(st: SceneState, pointerId: number): "OWNED" | "ZOOM" {
   const t = st.tumble;
-  if (t === null || t.a === null || t.b === null) return "RELEASED";
+  if (t === null || t.a === null || t.b === null) return "ZOOM";
+  if (t.zoom) return "ZOOM";
   const pa = posOf(st, t.a);
   const pb = posOf(st, t.b);
-  if (pa === null || pb === null || !heldStill(pxToMm(pb[0] - t.bStart[0]), pxToMm(pb[1] - t.bStart[1]), st.cfg.motionDeadbandMm)) {
-    st.tumble = null;
-    st.lastVerdict = "orbit: the second touch moved — no yaw / pitch";
+  if (pa === null || pb === null) return "OWNED";
+  const now = performance.now();
+  if (pointerId === t.b) {
+    // ⭐ the held second touch against its TRAILING anchor: pushed — the yaw / pitch pauses
+    const h = heldStep(t.bAnchor, [pxToMm(pb[0]), pxToMm(pb[1])], st.cfg.motionDeadbandMm);
+    t.bAnchor = h.anchor;
+    if (h.moved) {
+      t.bMovedAt = now;
+      // ⭐ a finger that moved is no tap
+      if (st.orbitTap?.second?.pointerId === t.b) st.orbitTap.second.moved = true;
+      if (st.pinkTap !== null && st.pinkTap.pointerId === t.b) st.pinkTap = { ...st.pinkTap, moved: true };
+      if (!t.paused) {
+        t.paused = true;
+        st.lastVerdict = "orbit: the second touch moves — yaw / pitch paused";
+        st.hudDirty = true;
+      }
+    }
+  } else if (t.paused && heldSettled(t.bMovedAt, now)) {
+    t.paused = false;
+    st.lastVerdict = "orbit: the second touch is still again — yaw / pitch resumed";
     st.hudDirty = true;
-    return "RELEASED";
   }
+  // ⭐ both fingers moved ACROSS since the pinch began: the zoom's — for the rest of the gesture
+  const gate = st.pinchDx;
+  if (t.paused && gate !== null) {
+    const dx = [t.a, t.b].map((id) => {
+      const p = posOf(st, id);
+      return p === null ? 0 : pxToMm(p[0] - (gate.x0.get(id) ?? p[0]));
+    });
+    if (pinchDxOpen(dx[0]!, dx[1]!, st.cfg.motionDeadbandMm)) {
+      t.zoom = true;
+      st.lastVerdict = "orbit: both touches move across — zoom (no yaw / pitch, no orbit)";
+      st.hudDirty = true;
+      return "ZOOM";
+    }
+  }
+  if (pointerId !== t.a) return "OWNED";
+  if (t.paused) {
+    // ⭐ paused: the first finger's moves count for nothing — its travel stays where it was, so the resume does not jump
+    t.aStart = [t.aStart[0] + pa[0] - t.aLast[0], t.aStart[1] + pa[1] - t.aLast[1]];
+    t.aLast = pa;
+    return "OWNED";
+  }
+  t.aLast = pa;
   const r = stepTumble(
     t.g,
     [pxToMm(pa[0] - t.aStart[0]), -pxToMm(pa[1] - t.aStart[1])], // ⭐ y UP positive
     st.cfg.motionDeadbandMm,
     st.cfg.tumbleStepMm,
-    performance.now(),
+    now,
   );
   t.g = r.g;
   if (r.restarted) restartPath(st);
@@ -69,7 +125,21 @@ export function beginMouseTumble(st: SceneState): boolean {
   const out = st.router.outside();
   const orbit = out.length === 1 && st.router.objects().length === 0 ? out[0]! : null;
   if (orbit === null || st.pointerTypeOf.get(orbit.id) !== "mouse" || !tumbleAvailable(st)) return false;
-  st.tumble = { a: null, b: null, aStart: [0, 0], bStart: [0, 0], mouseTravel: [0, 0], g: startTumble(performance.now()), turn: null, trail: null, axes: [] };
+  st.tumble = {
+    a: null,
+    b: null,
+    aStart: [0, 0],
+    aLast: [0, 0],
+    bAnchor: [0, 0],
+    bMovedAt: -Infinity,
+    paused: false,
+    zoom: false,
+    mouseTravel: [0, 0],
+    g: startTumble(performance.now()),
+    turn: null,
+    trail: null,
+    axes: [],
+  };
   return true;
 }
 

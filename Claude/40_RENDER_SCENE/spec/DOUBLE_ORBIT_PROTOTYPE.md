@@ -688,3 +688,11 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   second touch is pressed outside a placed part and kept held and within delta positon deadbands"*; desktop: left drag with the right
   button held) — ⛔ the two-finger parallel slide is deleted; ⭐ and **a pinch zooms only once BOTH fingers move past the dx deadband**.
   Slider: CAMERA ORBIT AROUND PIECE › *yaw / pitch: travel per face* (12 mm). `tests/proto_tumble.test.ts`.
+
+⭐ **2026-10-11** — on `1.0.63-`:
+
+* ⛔⛔ **The yaw / pitch stopped, and the piece then ORBITED through the white sphere with the second touch pressed** (*"at one point the
+  yaw-pitch stops … the piece crosses the white sphere even if the second touch is presses"*): the held touch was judged against its PRESS
+  point, its creep dropped the gesture, and the first finger fell back to the old *keeps orbiting while a second touch is on the piece*.
+  ⭐ Now a TRAILING anchor: the held touch moving PAUSES the yaw / pitch, still again RESUMES it; both fingers across ZOOM; never the orbit
+  while both are down. The desktop has no such path (both buttons held swallow every move) → `RESTING_FACE_ALIGNMENT.md` §18.
