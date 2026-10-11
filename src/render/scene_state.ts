@@ -449,6 +449,8 @@ export interface SceneState {
     readonly secondX0: number;
     firstX0: number | null;
     pink: { readonly objectId: ObjectId; readonly faceId: string } | null;
+    /** ⭐ (2026-10-11) an ACTION happened (the pink face taken, the way in) — only then the highlights show. */
+    shown: boolean;
   } | null;
   /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
   highlightEndedAt: number | null;

@@ -423,7 +423,11 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
 export function enterPieceOrbit(st: SceneState): boolean {
   const box = st.greenBox;
   if (box === null || st.pieceOrbit !== null || st.pieceEntry !== null) return false;
-  const pos = box.position;
+  // ⛔⛔ (2026-10-11, the owner: *"At the end of the roll to the next axis, the object systematically translates towards the world's negative
+  // depth axis when second touch is lifted"*) — the ANCHOR (the resting face's centre: what rides the rings since 2026-10-09), never the
+  // mesh's origin: read there, the way out's offset carried the piece by its middle-to-face distance at the release (20.6 mm headless)
+  const a = st.pieceAnchor;
+  const pos = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
   const c = st.orbitCentreM;
   const cam = st.camera.position;
   const tg = st.camera.getTarget();
@@ -460,7 +464,8 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const lk: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
   const ln = Math.hypot(lk[0], lk[1], lk[2]) || 1;
   if (rebase) {
-    const p = box.position;
+    const a = st.pieceAnchor;
+    const p = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
     st.orbit = new OrbitController(st.cfg, Math.atan2(p.z - c.z, p.x - c.x), st.orbit.elevation);
     st.orbitInertia.stop();
     // ⭐⭐ (2026-10-09, the owner: *"do the fix"* — a fast dy kept the piece far from the gizmo) the spring is re-based on the new YAW
@@ -479,7 +484,11 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
   const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
-  const p = box.position;
+  // ⛔⛔ (2026-10-11, the owner: *"At the end of the roll to the next axis, the object systematically translates towards the world's negative
+  // depth axis when second touch is lifted"*) — the ANCHOR (the resting face's centre: what rides the rings since 2026-10-09), never the
+  // mesh's origin: read there, the way out's offset carried the piece by its middle-to-face distance at the release (20.6 mm headless)
+  const a = st.pieceAnchor;
+  const p = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
   const pieceOff: Vec3 = rebase ? [p.x - (c.x + rel[0]), p.y - (c.y + rel[1]), p.z - (c.z + rel[2])] : [0, 0, 0];
   // ⭐ seen from the PIECE as it is drawn (where the rings put it + its offset): the home camera and the camera as it is
   const piece: Vec3 = [c.x + rel[0] + pieceOff[0], c.y + rel[1] + pieceOff[1], c.z + rel[2] + pieceOff[2]];
@@ -536,7 +545,8 @@ function restingFillFrame(st: SceneState, now: number): void {
   // ⭐⭐ (2026-10-11, the owner: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
   // fade gradually and rapidly away"*) — shown while the held second touch's input runs, held `highlightHoldMs` after it, faded over
   // `highlightFadeMs` (`highlightAlpha`); none at boot
-  const a = highlightAlpha(now, st.hold !== null, st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs);
+  // ⭐ (2026-10-11) on only once the input ACTED (`hold.shown`) — a tap on empty space shows nothing
+  const a = highlightAlpha(now, st.hold !== null && st.hold.shown, st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs);
   pinkFillFrame(st, a);
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFill === null || p.restingFace === null) return;
