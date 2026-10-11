@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { edgeAxisRelative, edgeDirections, nearestCouple, nextEdgeAxis, nextTumble, tumbleAxes, tumbleAxisSigned, type TumbleFace } from "../src/core/tumble";
-import { heldStill, startTrail, startTumble, stepTumble, trailAfter, trailBefore, trailTurn, TUMBLE_REST_MS, tumbleTurnOf, type TumbleTrail } from "../src/input/tumble_gesture";
+import { HELD_SETTLE_MS, heldSettled, heldStep, startTrail, startTumble, stepTumble, trailAfter, trailBefore, trailTurn, TUMBLE_REST_MS, tumbleTurnOf, type TumbleTrail } from "../src/input/tumble_gesture";
 import { pinchDxOpen } from "../src/input/pinch_gate";
 import { MouseSecondTouch } from "../src/input/mouse_second_touch";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -233,10 +233,30 @@ describe("⭐⭐ prototype — the yaw / pitch gesture (`input/tumble_gesture.ts
   const DB = 3.5;
   const STEP = 12;
 
-  it("⭐⭐ the input (2026-10-10): the FIRST touch's travel while the second is held STILL — within its deadband along x and y", () => {
-    expect(heldStill(2, -3, DB)).toBe(true);
-    expect(heldStill(3.6, 0, DB)).toBe(false);
-    expect(heldStill(0, -3.6, DB)).toBe(false);
+  it("⭐⭐ the held second touch against a TRAILING anchor: within the deadband it is still; past it, it MOVED and drags the anchor", () => {
+    let h = heldStep([0, 0], [2, -3], DB);
+    expect(h.moved).toBe(false);
+    expect(h.anchor).toEqual([0, 0]);
+    h = heldStep([0, 0], [5, 0], DB);
+    expect(h.moved).toBe(true);
+    expect(h.anchor).toEqual([1.5, 0]); // dragged to one deadband behind
+    // ⭐⭐ the owner's report (2026-10-11): a fingertip CREEPING 0.5 mm at a time. Against its PRESS point it was "moved" past 3.5 mm and the
+    // yaw / pitch died; against the trailing anchor each creep past it is one short pause, never the end
+    let a: readonly [number, number] = [0, 0];
+    let moves = 0;
+    for (let i = 1; i <= 16; i++) {
+      const r = heldStep(a, [0.5 * i, 0], DB);
+      a = r.anchor;
+      if (r.moved) moves++;
+    }
+    expect(a[0]).toBeCloseTo(8 - DB, 9); // the anchor followed the creep
+    expect(moves).toBe(9);
+  });
+
+  it("⭐ the yaw / pitch resumes once the held touch has been still for HELD_SETTLE_MS", () => {
+    expect(heldSettled(1000, 1000 + HELD_SETTLE_MS - 1)).toBe(false);
+    expect(heldSettled(1000, 1000 + HELD_SETTLE_MS + 1)).toBe(true);
+    expect(heldSettled(-Infinity, 0)).toBe(true); // never moved
   });
 
   it("⭐ the axis is whichever of x and y first passes the deadband", () => {
@@ -395,17 +415,37 @@ describe("⭐⭐ prototype — the desktop: left + right buttons held, a drag", 
 });
 
 describe("⭐⭐ prototype — the yaw / pitch, wired", () => {
-  it("⭐ touch: armed by a second finger OFF a placed part, the orbit finger's moves owned while it is still, ended by either finger", () => {
+  it("⭐⭐ touch: armed by a second finger OFF a placed part; once armed, both fingers' moves are the yaw / pitch's or the zoom's — ⛔ NEVER the orbit (2026-10-11)", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/const onPlacedPart = !inBand && hitId !== undefined && st\.world\.objects\.get\(hitId\)\?\.frozen !== true;\s*if \(orbitFinger !== null && !onPlacedPart\) beginTouchTumble\(st, orbitFinger, e\.pointerId\);/);
-    const own = p.indexOf('if (feedTouchTumble(st) === "OWNED")');
+    // ⛔⛔ the owner's report: the yaw / pitch dropped, the first finger fell through to "keeps orbiting while the second touch is down" and
+    // dragged the piece through the white sphere. Now the branch RETURNS whatever the gesture says, before the orbit's branch.
+    expect(p).toMatch(/if \(feedTouchTumble\(st, e\.pointerId\) === "ZOOM"\) updatePinch\(st\);\s*st\.hudDirty = true;\s*return;\s*\}/);
+    const own = p.indexOf('if (feedTouchTumble(st, e.pointerId) === "ZOOM")');
     expect(own).toBeGreaterThan(0);
     expect(own).toBeLessThan(p.indexOf("const ot = st.orbitTap;\n        const sec = ot?.second;"));
     expect(p).toMatch(/st\.pinch\.end\(\);\s*endTumble\(st, e\.pointerId\);/);
     const t = code("render/tumble_wiring.ts");
-    expect(t).toMatch(/!heldStill\(pxToMm\(pb\[0\] - t\.bStart\[0\]\), pxToMm\(pb\[1\] - t\.bStart\[1\]\), st\.cfg\.motionDeadbandMm\)/);
+    expect(t).not.toMatch(/"RELEASED"|heldStill|pairReady|spacing/); // ⛔ no way out but a lift, the zoom, or the pause
+    // the held touch pauses it (trailing anchor) and resumes it once settled
+    expect(t).toMatch(/const h = heldStep\(t\.bAnchor, \[pxToMm\(pb\[0\]\), pxToMm\(pb\[1\]\)\], st\.cfg\.motionDeadbandMm\);/);
+    expect(t).toMatch(/\} else if \(t\.paused && heldSettled\(t\.bMovedAt, now\)\) \{\s*t\.paused = false;/);
+    // paused, the first finger's travel reference follows it — the resume does not jump
+    expect(t).toMatch(/t\.aStart = \[t\.aStart\[0\] \+ pa\[0\] - t\.aLast\[0\], t\.aStart\[1\] \+ pa\[1\] - t\.aLast\[1\]\];/);
+    // both fingers across: the zoom's, for the rest of the gesture
+    expect(t).toMatch(/if \(pinchDxOpen\(dx\[0\]!, dx\[1\]!, st\.cfg\.motionDeadbandMm\)\) \{\s*t\.zoom = true;/);
     expect(t).toMatch(/\[pxToMm\(pa\[0\] - t\.aStart\[0\]\), -pxToMm\(pa\[1\] - t\.aStart\[1\]\)\]/);
-    expect(t).not.toMatch(/pairReady|spacing/);
+  });
+
+  it("⭐ the desktop needs no such fix: with both buttons held the mouse layer swallows every move — the orbit pointer cannot move", () => {
+    const m = new MouseSecondTouch();
+    m.step({ type: "DOWN", button: 0, buttons: 1, shift: false, x: 0, y: 0, t: 0 });
+    m.step({ type: "DOWN", button: 2, buttons: 3, shift: false, x: 0, y: 0, t: 10, tumble: true });
+    for (let i = 1; i <= 30; i++) {
+      const v = m.step({ type: "MOVE", button: -1, buttons: 3, shift: false, x: i * 3, y: -i * 2, t: 10 + i * 16 });
+      expect(v.skip).toBe(true);
+      expect(v.emit.filter((a) => a.target === "REAL")).toEqual([]);
+    }
   });
 
   it("⭐ the zoom's gate: the pinch records each finger's x at its start and stays closed until both pass the dx deadband", () => {

@@ -4,7 +4,9 @@
  * Outside the sphere, the orbited piece aligned:
  * - ⭐⭐ **Mobile** (2026-10-10, the owner: *"the input shall not be two-finger dx or two finger dy. It shall be: first touch delta position
  *   (dx or dy) while second touch is pressed outside a placed part and kept held and within delta positon deadbands"*) — the orbit finger's
- *   travel, while a second finger is down off any placed part and STILL (`heldStill`); the second finger leaving its deadband ends it.
+ *   travel, while a second finger is down off any placed part and STILL (`heldStep`, a trailing anchor); ⭐ (2026-10-11) the second finger
+ *   MOVING pauses it (it resumes once that finger is still again), and both fingers moving across (the pinch's dx gate) hand it to the
+ *   zoom — ⛔ never back to the orbit while both fingers are down.
  *   ⛔ The two-finger parallel slide, its spacing tolerance and its pair rule are deleted.
  * - **Desktop** — the right button pressed while the left one orbits, then a left drag (the right button is the held second touch).
  * - **The axis** — whichever of x and y FIRST passes the deadband owns it. ⭐ (2026-10-10, the owner: *"modify so that the selection is reset
@@ -93,9 +95,29 @@ export function stepTumble(
   return { g: { ...s, countedMm: along, acc: r.acc }, steps: r.steps, restarted };
 }
 
-/** ⭐ Is the second touch still HELD STILL — its travel since its press within the deadband, along x and y (mm)? */
-export function heldStill(dxMm: number, dyMm: number, deadbandMm: number): boolean {
-  return Math.abs(dxMm) <= deadbandMm && Math.abs(dyMm) <= deadbandMm;
+/**
+ * ⭐⭐ THE HELD SECOND TOUCH, JUDGED AGAINST A TRAILING ANCHOR (2026-10-11, the owner: *"when i swap from dx to dy and back and forth, at one
+ * point the yaw-pitch stops … the piece crosses the white sphere even if the second touch is pressed"*). ⛔ It was judged against its PRESS
+ * point, so a resting fingertip's creep added up: past the deadband the yaw / pitch was dropped for the gesture, and the first finger fell
+ * back to orbiting. Now, like §1.1's deadband, the anchor TRAILS the finger at one deadband per axis (mm): `moved` when this position pushed
+ * it — the yaw / pitch PAUSES — and once the finger has been still for `HELD_SETTLE_MS` it resumes (`heldSettled`), from where it is.
+ */
+export function heldStep(
+  anchor: readonly [number, number],
+  pos: readonly [number, number],
+  deadbandMm: number,
+): { readonly anchor: readonly [number, number]; readonly moved: boolean } {
+  const drag = (a: number, p: number): number => (p - a > deadbandMm ? p - deadbandMm : a - p > deadbandMm ? p + deadbandMm : a);
+  const next: readonly [number, number] = [drag(anchor[0], pos[0]), drag(anchor[1], pos[1])];
+  return { anchor: next, moved: next[0] !== anchor[0] || next[1] !== anchor[1] };
+}
+
+/** ⭐ How long the held second touch must stay still after it moved before the yaw / pitch resumes — a few frames' dispatch (47–87 ms, `D86`). */
+export const HELD_SETTLE_MS = 150;
+
+/** ⭐ Has the held second touch been still long enough (`movedAt` the last time it pushed its anchor, ms) for the yaw / pitch to resume? */
+export function heldSettled(movedAt: number, now: number): boolean {
+  return now - movedAt > HELD_SETTLE_MS;
 }
 
 /** ⭐ What a latched axis turns first: x — the YAW on a vertical resting face, else the ROLL; y — the PITCH. */
