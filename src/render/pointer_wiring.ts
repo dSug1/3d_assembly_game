@@ -180,10 +180,9 @@ export function installPointerHandler(st: SceneState): void {
             ? st.hold.first === null && e.pointerId !== st.hold.second
               ? "FIRST"
               : null
-            : !onOrbited &&
-                (e.pointerId === MOUSE_SECOND_ID ||
-                  (e.pointerType !== "mouse" && st.router.outside().length === 1 && st.router.objects().length === 0))
-              ? "SECOND"
+            : e.pointerId === MOUSE_SECOND_ID ||
+                (!onOrbited && e.pointerType !== "mouse" && st.router.outside().length === 1 && st.router.objects().length === 0)
+              ? "SECOND" // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too (its press selects the resting face)
               : null;
       // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
       // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it. ⭐ (2026-10-11) with the second touch held too
@@ -191,7 +190,7 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐ (2026-10-11, the owner: *"add the possibility of selecting another resting face by second touch tap on the green or turquoise
       // piece"*) — the SECOND touch's tap on it too (the right button on a desktop): any touch pressed on the orbited piece is the candidate;
       // a press elsewhere leaves a pending one alone (its own release decides)
-      if (onOrbited) {
+      if (onOrbited && e.pointerId !== MOUSE_SECOND_ID) {
         const n = pick?.getNormal(true);
         const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
         st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
@@ -373,7 +372,7 @@ export function installPointerHandler(st: SceneState): void {
         // ⭐⭐ (2026-10-11, *"build with ALT and CTRL"*) on a desktop the key held is the second touch — it points at nothing — so the LEFT
         // click while it is held says which face: a placed part's is the pink face its input would take (the mouse only; a finger pressed
         // again on a part, on a tablet, takes nothing)
-        if (holdRole === "SECOND" || (holdRole === "FIRST" && e.pointerType === "mouse")) {
+        if (holdRole === "SECOND") {
           const hitObj = pick?.hit === true && pick.pickedMesh !== null ? st.idOf.get(pick.pickedMesh) : undefined;
           const frozen = hitObj !== undefined && st.world.objects.get(hitObj)?.frozen === true;
           const n = pick?.getNormal(true);
@@ -382,10 +381,16 @@ export function installPointerHandler(st: SceneState): void {
               ? faceFromPickedNormal(st.world, hitObj, [n.x, n.y, n.z] as Vec3)
               : null;
           const pink = face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null;
-          if (holdRole === "SECOND") {
-            const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
-            holdSecondPress(st, e.pointerId, s.x, firstNow, pink);
-          } else holdFirstPress(st, e.pointerId, s.x, pink);
+          const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
+          holdSecondPress(st, e.pointerId, s.x, firstNow, pink);
+          // ⭐⭐ (2026-10-11, *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the
+          // item on which the action is triggered"*) the key over the ORBITED piece: its face the resting face, at once (the key still the held
+          // second touch — a left drag then is the way in)
+          if (onOrbited && e.pointerId === MOUSE_SECOND_ID && st.greenBox !== null) {
+            const nn = pick?.getNormal(true);
+            const pf = nn ? faceFromPickedNormal(st.world, st.greenBox.name, [nn.x, nn.y, nn.z] as Vec3) : null;
+            if (pf !== null && selectRestingFace(st, pf.faceId) && st.hold !== null) st.hold.shown = true;
+          }
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
@@ -637,14 +642,7 @@ export function installPointerHandler(st: SceneState): void {
             // ⭐ (2026-10-11) a TAP whatever else is down — the first touch's, or the second's with the first orbiting
             const tapped =
               isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
-            // ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting face, at once
-            const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
-            if (tapped && restOnTappedFace(st, ft.faceId) && alignRestingFace(st, performance.now(), carry)) {
-              st.episodes.touch(--st.episodeSeq, true, true);
-              st.episodes.sync(true);
-              st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);
-              // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded
-              st.highlightEndedAt = performance.now();
+            if (tapped && selectRestingFace(st, ft.faceId)) {
               st.hudDirty = true;
               return;
             }
@@ -1316,4 +1314,21 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   if (st.centreReturn !== null) st.centreReturn = advanceCentreReturn(st.centreReturn, Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);
   applyCamera(st);
+}
+
+/**
+ * ⭐⭐ prototype — **THE FACE HIT BECOMES THE RESTING FACE**, aligned (§13): a tap on the orbited piece (any touch, any button), or the desktop's
+ * key pressed over it (2026-10-11). ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting
+ * face, at once. One episode; the highlights shown, then held and faded. `false` if nothing was aligned.
+ */
+function selectRestingFace(st: SceneState, faceId: string): boolean {
+  const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
+  if (!(restOnTappedFace(st, faceId) && alignRestingFace(st, performance.now(), carry))) return false;
+  st.episodes.touch(--st.episodeSeq, true, true);
+  st.episodes.sync(true);
+  st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: ${faceId} — the resting face now; `);
+  // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded
+  st.highlightEndedAt = performance.now();
+  st.hudDirty = true;
+  return true;
 }
