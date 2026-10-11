@@ -490,7 +490,7 @@ and the yaw / pitch (§18) with it. At boot the camera orbits the centre; nothin
 
 | | |
 |---|---|
-| **second touch pressed** on a PLACED part's face | the pink face its press would take — ⛔ never a frozen body (the floor: empty space), never the orbited pieces; taken **at the way in, or at the release** if it never pinched (*"option B"*: a zoom never changes it); the SAME face again: nothing; a new one: the resting face aligned to it (the long axes first, no rolls carried), one episode, ⛔ the orbit centre unchanged |
+| **second touch pressed** on a PLACED part's face | the pink face — ⛔ never a frozen body (the floor: empty space), never the orbited pieces; taken **at the way in, or at the release** if it never pinched (*"option B"*; ⭐ since later the same day: **at the press**, below); the SAME face again: nothing (⭐ later: the highlights shown); a new one: the resting face aligned to it (the long axes first, no rolls carried), one episode, ⛔ the orbit centre unchanged |
 | **first touch dx past the deadband**, the second held | decided there (`holdDecision`): the second touch's x travel within HALF the deadband — the **WAY IN**, then the orbit round the piece and the **roll** (dx only, its count from the way in's start, carried across a re-press); past half — a **PINCH** (the zoom, from where it is decided). Latched until the second touch lifts |
 | **first touch dy** while the second is held | ignored |
 | **first touch lifted and pressed again** | the same input: the roll's count kept, ⛔ no coast, no centre change |
@@ -549,3 +549,19 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   the touch that NAMED it lifts, on both; the tablet waits for the release only because a second finger on a part may be starting a PINCH
   (option B), and a mouse cannot pinch. Headless: ALT + a click on a part — the pink face at the click, ALT still down.
 - ⭐ **The highlights' defaults: hold 300 ms, fade 250 ms** (*"set default hold = 300 ms fade = 250 ms"*; the hold was 750 ms).
+- ⛔⛔ **"The same face again: nothing" now means the face the piece is ALIGNED to** (*"when I left click on a new face and then CTRL+left
+  click on the same face, the pink face is on this face but the piece's resting face does not align with it. the logic is broken in this
+  case. fix it"*): a plain left click on a piece locked in its goal moves the orbit centre AND makes its face the pink face, without aligning;
+  the rule compared with the PINK face, so the key + click on that same face read as nothing to do. ⭐ `pinkChanges` compares with the face
+  the piece was last aligned to (`restRoll.key`): not aligned to it yet — it aligns; already aligned — nothing, the rolls kept. The same for
+  a second finger pressed on a part. Headless on `Piece3`: a plain click — pink `Piece3/f1`, still aligned to the floor; CTRL + click — aligned
+  to `Piece3/f1`; again — nothing.
+- ⭐⭐ **The pink face AT THE PRESS, both devices** (*"currently, the change of pink face is done when CTRL is held and left button is tapped. I
+  want to also be able to do with CTRL held and left button is pressed (immediately when left button is pressed). Same for the mobile input"*):
+  the key held + a left PRESS on a placed part's face (the way in started or not; never during a zoom), and a second finger's PRESS on one,
+  take the pink face at once — the release-time take is deleted. ⚠ Cost, named and chosen: *option B* is undone — a pinch whose second
+  finger lands on a part changes the pink face before the zoom is told apart. Headless: CTRL + a left press on `Piece3` — aligned to
+  `Piece3/f1` with the button still down.
+- ⭐ **The same face again SHOWS the highlights** (*"if the same pink face is selected again, display the highlights (otherwise, it looks like
+  something is not working)"*): nothing is realigned (the rolls kept), but the pink face and the resting face are shown as for a new one; the
+  HUD says *"the pink face is already … — shown"*. Headless: after the fade, CTRL + a press on the same face — the highlights back (0 → 0.6).

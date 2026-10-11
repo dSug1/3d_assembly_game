@@ -87,9 +87,14 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // the first touch lifted: the input goes on — ⭐⭐ (2026-10-11, *"while CTRL/ALT is pressed, left click tap defines the new pink face"*) and
     // the click that named the pink face (the mouse) takes it at its own release, the key still held
     expect(hf).toContain("if (pointerId === h.first) {");
-    expect(hf).toContain("if (tapped && h.mode === \"HELD\" && h.pink !== null) { takePink(st); if (h.shown) st.highlightEndedAt = performance.now(); } h.first = null;");
+    expect(hf).not.toContain("if (tapped && h.mode === \"HELD\" && h.pink !== null)"); // ⛔ taken at the press now
+    // ⭐ (2026-10-11, *"if the same pink face is selected again, display the highlights"*) — nothing realigned, the highlights shown
+    expect(hf).toContain("if (!pinkChanges(st.restRoll?.key ?? null, next)) { // ⭐");
+    const same = hf.slice(hf.indexOf("if (!pinkChanges(st.restRoll?.key ?? null, next)) {"), hf.indexOf("return false; }", hf.indexOf("if (!pinkChanges(st.restRoll?.key ?? null, next)) {")));
+    expect(same).toContain("h.shown = true;");
+    expect(same).not.toContain("alignRestingFace");
     // the pink face: the same face does nothing; a new one aligned, one episode
-    expect(h).toMatch(/if \(!pinkChanges\(st\.restRoll\?\.key \?\? null, next\)\) return false;\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
+    expect(h).toMatch(/return false;\s*\}\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     // ⛔ no change of the orbit centre anywhere in it
     expect(h).not.toMatch(/centreBlend\.retarget|recomputeOrbitCentre/);
     const p = code("render/pointer_wiring.ts");
@@ -131,7 +136,13 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain('if (holdRole === "SECOND" || (holdRole === "FIRST" && e.pointerType === "mouse")) {');
     expect(p).toContain("} else holdFirstPress(st, e.pointerId, s.x, pink);");
-    expect(code("render/hold_wiring.ts")).toContain('if (pink !== null && h.mode === "HELD") h.pink = pink;');
+    // ⭐⭐ (2026-10-11, *"immediately when left button is pressed. Same for the mobile input"*) the pink face taken AT THE PRESS — the key
+    // held + a left press (the way in started or not, never in a zoom), and a second finger's press on a part
+    const hw = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(hw).toContain('if (pink !== null && h.mode !== "ZOOM") { h.pink = pink; takePink(st); }');
+    const sp = hw.slice(hw.indexOf("export function holdSecondPress("), hw.indexOf("export function holdFirstPress("));
+    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };');
+    expect(sp).toContain("takePink(st);");
   });
 
   it("⭐⭐ the highlights wired: the resting face's fill and the pink face's (a child of its body) faded by one alpha; the slider with TWO cursors", () => {

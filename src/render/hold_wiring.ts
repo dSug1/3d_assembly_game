@@ -35,6 +35,10 @@ export function holdSecondPress(
 ): void {
   st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };
   st.lastVerdict = `orbit: second touch held${pink === null ? "" : ` on ${pink.objectId}/${pink.faceId}`} — dx of the first touch: the way in`;
+  // ⭐⭐ (2026-10-11, the owner: *"I want to also be able to do with CTRL held and left button is pressed (immediately when left button is
+  // pressed). Same for the mobile input"*) — the pink face taken AT THE PRESS. ⚠ Cost, named: option B is undone — a pinch whose second finger
+  // lands on a part changes the pink face before the zoom is told apart
+  takePink(st);
   st.hudDirty = true;
 }
 
@@ -46,7 +50,12 @@ export function holdFirstPress(st: SceneState, first: number, x: number, pink: {
   const h = st.hold;
   if (h === null) return;
   h.first = first;
-  if (pink !== null && h.mode === "HELD") h.pink = pink;
+  // ⭐ (2026-10-11) the key held + a left PRESS on a part: the pink face at once (*"immediately when left button is pressed"*), the way in
+  // started or not; never during a zoom
+  if (pink !== null && h.mode !== "ZOOM") {
+    h.pink = pink;
+    takePink(st);
+  }
   // ⭐ undecided still: its dx counts from here
   if (h.mode === "HELD") h.firstX0 = x;
   st.hudDirty = true;
@@ -59,7 +68,14 @@ function takePink(st: SceneState): boolean {
   const next = h.pink;
   h.pink = null;
   // ⭐ against the face the piece is ALIGNED to (`restRoll.key`) — not the pink face, which a plain left click on a part moves without aligning
-  if (!pinkChanges(st.restRoll?.key ?? null, next)) return false;
+  if (!pinkChanges(st.restRoll?.key ?? null, next)) {
+    // ⭐ (2026-10-11, the owner: *"if the same pink face is selected again, display the highlights (otherwise, it looks like something is not
+    // working)"*) — nothing realigned, the rolls kept; but the pink face and the resting face shown, as for a new one
+    st.pinkFace = next;
+    h.shown = true;
+    st.lastVerdict = `orbit: the pink face is already ${next.objectId}/${next.faceId} — shown`;
+    return false;
+  }
   st.pinkFace = next;
   h.shown = true; // ⭐ an action: the highlights
   if (alignRestingFace(st, performance.now())) {
@@ -125,13 +141,9 @@ export function holdRelease(
   const h = st.hold;
   if (h === null) return null;
   if (pointerId === h.first) {
-    // ⭐⭐ (2026-10-11, the owner: *"to select a face, the CTRL/ALT has to be released: this is not practical: it should be while CTRL/ALT is
-    // pressed, left click tap defines the new pink face"*) — the click that NAMED the pink face (`holdFirstPress`'s, the mouse) takes it at its
-    // own release, the key still held: as a second finger's tap on a part does on a tablet (it waits only for what a mouse cannot do — a pinch)
-    if (tapped && h.mode === "HELD" && h.pink !== null) {
-      takePink(st);
-      if (h.shown) st.highlightEndedAt = performance.now();
-    }
+    // ⛔ (2026-10-11) the pink face at the click's release is gone: it is taken AT THE PRESS now (`holdFirstPress`, *"immediately when left
+    // button is pressed"*); the highlights shown by it run while the key is held, and their clock starts at the key's release
+    void tapped;
     h.first = null;
     st.hudDirty = true;
     return "FIRST";
