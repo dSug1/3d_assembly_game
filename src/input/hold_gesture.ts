@@ -26,12 +26,23 @@ export type HoldMode = "HELD" | "WAY" | "ZOOM";
  * ⭐ Why half: in a symmetric pinch both fingers cross their deadband about together, and which event lands first is a toss-up — at the
  * first finger's crossing the second has travelled well past half of it.
  */
-export function holdDecision(firstDxMm: number, secondDxMm: number, deadbandMm: number): "WAY" | "ZOOM" | null {
+export function holdDecision(
+  firstDxMm: number,
+  secondDxMm: number,
+  deadbandMm: number,
+  /** ⭐ (2026-10-11) how long the second touch has been held, and the tap time: a TAP never starts the way in */
+  heldMs = Infinity,
+  tapMs = 0,
+): "WAY" | "ZOOM" | null {
   // ⭐ (2026-10-11, the owner: *"zoom: make it possible also if first touch is immobile and second touch dx exit deadband"*) — the SECOND
   // touch's dx past its deadband first: a ZOOM at once
   if (Math.abs(secondDxMm) > deadbandMm) return "ZOOM";
   if (!(Math.abs(firstDxMm) > deadbandMm)) return null;
-  return Math.abs(secondDxMm) > deadbandMm / 2 ? "ZOOM" : "WAY";
+  if (Math.abs(secondDxMm) > deadbandMm / 2) return "ZOOM";
+  // ⭐⭐ (2026-10-11, the owner: *"why when I tap CTRL during a dx orbit around the center, the piece jumps and come back?"* → *"build it"*) — a
+  // second touch held less than the tap time may still be a TAP (its press's raycast its whole action): no way in yet — the drag goes on
+  // orbiting the centre meanwhile (`hold_wiring.ts`); a tap in the middle of a drag no longer makes a way in and a way out at once
+  return heldMs < tapMs ? null : "WAY";
 }
 
 /** ⭐ May a second touch's hit be the pink face — a placed part (not frozen), never the orbited pieces, not in the edge band? */

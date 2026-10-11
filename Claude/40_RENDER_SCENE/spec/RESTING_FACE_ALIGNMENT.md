@@ -578,3 +578,13 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   the way out). ⛔ The left click names nothing any more (the key + left press / tap route is deleted). The key-made second touch now PICKS
   (it was anchor-only). Headless: CTRL over `Piece1` — pink `Piece1/f4`, aligned; ALT over the piece — its resting face 5 → 4; ALT held + a
   left drag — the way in; ALT up — the way out.
+- ⛔⛔ **A CTRL tap mid-orbit made a way in and a way out at once; a CTRL held could freeze the orbit** (*"why when I tap CTRL during a dx orbit
+  around the center, the piece jumps and come back?"* — *"there are times when CTRL while orbiting selects a pink face and while held it completely
+  freezes the orbit : this is not happening always"*). The causes: (1) the key pressed during a drag is the held second touch, and the drag's dx
+  crossed the deadband within a few pixels — the way in — then the key's release — the way out: the jump and the return; (2) while UNDECIDED
+  (the key held, the dx not yet past the deadband) nothing moved, and with dy ignored a drag mostly in dy never decided — frozen for as long as
+  the key was held; the follow camera, told the drag had stopped, settled too. ⭐ Now: **a TAP never starts the way in** — the second touch held
+  less than the tap time (`tapMaxDuration`, 200 ms) leaves the decision open (`holdDecision`'s `heldMs`); and **undecided, the drag orbits the
+  CENTRE** (dx and dy) as before the key, the camera following it — the way in, when decided, starts from there. Both devices. ⚠ A deliberate way
+  in begins at the earliest ~200 ms after the second touch's press. Headless: a CTRL tap mid-drag — no way in, the orbit went on; CTRL held
+  through a dy drag — the elevation moved (−0.27), no freeze.

@@ -33,7 +33,7 @@ export function holdSecondPress(
   first: number | null,
   pink: { readonly objectId: ObjectId; readonly faceId: string } | null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };
+  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now() };
   st.lastVerdict = `orbit: second touch held${pink === null ? "" : ` on ${pink.objectId}/${pink.faceId}`} — dx of the first touch: the way in`;
   // ⭐⭐ (2026-10-11, the owner: *"I want to also be able to do with CTRL held and left button is pressed (immediately when left button is
   // pressed). Same for the mobile input"*) — the pink face taken AT THE PRESS. ⚠ Cost, named: option B is undone — a pinch whose second finger
@@ -97,8 +97,20 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     // way in, or a zoom if the second is on its way (`holdDecision`)
     const fx = xOf(st, h.first);
     const sx = xOf(st, h.second);
-    const d = holdDecision(fx === null || h.firstX0 === null ? 0 : pxToMm(fx - h.firstX0), sx === null ? 0 : pxToMm(sx - h.secondX0), st.cfg.motionDeadbandMm);
-    if (d === null) return h.mode;
+    const d = holdDecision(
+      fx === null || h.firstX0 === null ? 0 : pxToMm(fx - h.firstX0),
+      sx === null ? 0 : pxToMm(sx - h.secondX0),
+      st.cfg.motionDeadbandMm,
+      performance.now() - h.t0,
+      st.cfg.tapMaxDuration,
+    );
+    if (d === null) {
+      // ⭐⭐ (2026-10-11, the owner: *"there are times when CTRL while orbiting … while held it completely freezes the orbit"*) — UNDECIDED, the
+      // first touch goes on orbiting the CENTRE (dx and dy): it used to move nothing, and a drag mostly in dy never decided — frozen for as
+      // long as the key was held
+      if (pointerId === h.first) orbitStep(false);
+      return h.mode;
+    }
     h.mode = d;
     if (d === "ZOOM") {
       // ⭐ the zoom from here — what moved while undecided is no jump

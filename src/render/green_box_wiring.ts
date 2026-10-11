@@ -943,7 +943,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ (2026-10-11) the HELD SECOND TOUCH's input: the first touch orbits only on the way in / round the piece (`WAY`)
   const h = st.hold;
   const orbiting = h !== null
-    ? (h.mode === "WAY" ? h.first : null)
+    ? (h.mode === "WAY" || h.mode === "HELD" ? h.first : null) // ⭐ (2026-10-11) undecided, it orbits the centre: the camera follows it
     : out.length === 1 && objs.length === 0
       ? out[0]!.id
       : lockedHolder
