@@ -36,12 +36,16 @@ export function pinkCandidate(hit: { readonly onOrbitedPiece: boolean; readonly 
   return !hit.inBand && !hit.onOrbitedPiece && !hit.frozen && hit.objectId !== null;
 }
 
-/** ⭐ Does taking `next` change the pink face (`current`)? The same face again: nothing (the owner: *"same pink face pressed again does nothing"*). */
-export function pinkChanges(
-  current: { readonly objectId: string; readonly faceId: string } | null,
-  next: { readonly objectId: string; readonly faceId: string },
-): boolean {
-  return current === null || current.objectId !== next.objectId || current.faceId !== next.faceId;
+/**
+ * ⭐ Does taking `next` change anything — is the piece NOT already aligned to it (`alignedKey`, the face it was last aligned to, as
+ * `objectId/faceId`)? The same face again: nothing (the owner: *"same pink face pressed again does nothing"*). ⛔⛔ (2026-10-11, the owner:
+ * *"when I left click on a new face and then CTRL+left click on the same face, the pink face is on this face but the piece's resting face does
+ * not align with it. the logic is broken in this case"*) — it compared with the PINK face, and a plain left click on a part makes that face
+ * the pink face (with the orbit centre) WITHOUT aligning: the same face then read as nothing to do. What matters is what the piece is
+ * ALIGNED to.
+ */
+export function pinkChanges(alignedKey: string | null, next: { readonly objectId: string; readonly faceId: string }): boolean {
+  return alignedKey !== `${next.objectId}/${next.faceId}`;
 }
 
 /**

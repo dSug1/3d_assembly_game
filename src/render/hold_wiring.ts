@@ -58,7 +58,8 @@ function takePink(st: SceneState): boolean {
   if (h === null || h.pink === null) return false;
   const next = h.pink;
   h.pink = null;
-  if (!pinkChanges(st.pinkFace, next)) return false;
+  // ⭐ against the face the piece is ALIGNED to (`restRoll.key`) — not the pink face, which a plain left click on a part moves without aligning
+  if (!pinkChanges(st.restRoll?.key ?? null, next)) return false;
   st.pinkFace = next;
   h.shown = true; // ⭐ an action: the highlights
   if (alignRestingFace(st, performance.now())) {

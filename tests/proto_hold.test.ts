@@ -28,8 +28,11 @@ describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_
     expect(pinkCandidate({ onOrbitedPiece: false, frozen: false, objectId: null, inBand: false })).toBe(false); // empty space
     expect(pinkCandidate({ onOrbitedPiece: false, frozen: false, objectId: "Piece1", inBand: true })).toBe(false);
     // the same face again: nothing (*"same pink face pressed again does nothing"*)
-    expect(pinkChanges({ objectId: "Piece1", faceId: "f2" }, { objectId: "Piece1", faceId: "f2" })).toBe(false);
-    expect(pinkChanges({ objectId: "Piece1", faceId: "f2" }, { objectId: "Piece1", faceId: "f3" })).toBe(true);
+    // ⭐⭐ (2026-10-11) against the face the piece is ALIGNED to — not the pink face: a plain left click on a part makes it the pink face
+    // without aligning, and then the key + click on that SAME face must align (*"the logic is broken in this case. fix it"*)
+    expect(pinkChanges("Piece1/f2", { objectId: "Piece1", faceId: "f2" })).toBe(false); // aligned to it already: nothing
+    expect(pinkChanges("Piece1/f2", { objectId: "Piece1", faceId: "f3" })).toBe(true);
+    expect(pinkChanges("frozen Floor/f1", { objectId: "Piece1", faceId: "f2" })).toBe(true); // aligned to the floor at boot
     expect(pinkChanges(null, { objectId: "Piece1", faceId: "f3" })).toBe(true);
   });
 
@@ -86,7 +89,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(hf).toContain("if (pointerId === h.first) {");
     expect(hf).toContain("if (tapped && h.mode === \"HELD\" && h.pink !== null) { takePink(st); if (h.shown) st.highlightEndedAt = performance.now(); } h.first = null;");
     // the pink face: the same face does nothing; a new one aligned, one episode
-    expect(h).toMatch(/if \(!pinkChanges\(st\.pinkFace, next\)\) return false;\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
+    expect(h).toMatch(/if \(!pinkChanges\(st\.restRoll\?\.key \?\? null, next\)\) return false;\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     // ⛔ no change of the orbit centre anywhere in it
     expect(h).not.toMatch(/centreBlend\.retarget|recomputeOrbitCentre/);
     const p = code("render/pointer_wiring.ts");
