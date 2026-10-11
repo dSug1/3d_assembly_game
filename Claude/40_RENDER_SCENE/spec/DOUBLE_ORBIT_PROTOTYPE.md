@@ -709,3 +709,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   and the way in read the resting face's centre (the anchor), not the mesh's origin (20.6 mm headless) → `RESTING_FACE_ALIGNMENT.md` §20.
 * ⭐⭐ The desktop's held second touch is **ALT or CTRL** (not the right button, which now does nothing in the orbit): key + left drag — the
   way in; key up — the way out; key + left click on a part — the pink face → `RESTING_FACE_ALIGNMENT.md` §20.
+* ⭐ The key + left click tap takes the pink face at the click, the key still held; the highlights default to hold 300 ms, fade 250 ms →
+  `RESTING_FACE_ALIGNMENT.md` §20.

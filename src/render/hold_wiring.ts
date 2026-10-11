@@ -115,10 +115,22 @@ export function holdMove(st: SceneState, pointerId: number, s: Sample, prev: Sam
  * ⭐ A release. `"SECOND"` — the input ended (the way out, or the pink face taken), the highlights' clock started; `"FIRST"` — the first
  * touch lifted, the input goes on; `null` — not the input's.
  */
-export function holdRelease(st: SceneState, pointerId: number): "SECOND" | "FIRST" | null {
+export function holdRelease(
+  st: SceneState,
+  pointerId: number,
+  /** ⭐ (2026-10-11) this release ends a TAP (`isTapRelease`) — the desktop's click that named the pink face takes it at once */
+  tapped = false,
+): "SECOND" | "FIRST" | null {
   const h = st.hold;
   if (h === null) return null;
   if (pointerId === h.first) {
+    // ⭐⭐ (2026-10-11, the owner: *"to select a face, the CTRL/ALT has to be released: this is not practical: it should be while CTRL/ALT is
+    // pressed, left click tap defines the new pink face"*) — the click that NAMED the pink face (`holdFirstPress`'s, the mouse) takes it at its
+    // own release, the key still held: as a second finger's tap on a part does on a tablet (it waits only for what a mouse cannot do — a pinch)
+    if (tapped && h.mode === "HELD" && h.pink !== null) {
+      takePink(st);
+      if (h.shown) st.highlightEndedAt = performance.now();
+    }
     h.first = null;
     st.hudDirty = true;
     return "FIRST";
