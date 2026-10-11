@@ -65,7 +65,7 @@ on entering the capture zone, are deleted.
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
 | ⭐ the orbited piece (prototype, 2026-10-11) | **ALT or CTRL held** (= the second finger) + a left drag's **dx** | the way in, round the piece, the roll; the key released: the way out; the left released and pressed again while held: the same input (`RESTING_FACE_ALIGNMENT.md` §20) |
-| ⭐ the orbited piece (prototype, 2026-10-11) | **ALT or CTRL + left click** on a placed part's face | the **pink face** (never the floor), aligned — at the way in or the key's release; no centre change (§20) |
+| ⭐ the orbited piece (prototype, 2026-10-11) | **ALT or CTRL + left click** on a placed part's face | the **pink face** (never the floor), aligned — at the click's release, the key still held (a click that drags: at the way in); no centre change (§20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a left click on the orbited piece (key held or not) | the face hit becomes the **resting face**, aligned (§20) |
 | ⛔ the orbited piece (prototype, 2026-10-11) | the right button | nothing (it was the held second touch until ALT / CTRL replaced it) |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |

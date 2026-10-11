@@ -42,7 +42,7 @@ describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_
     expect(highlightAlpha(1000 + 750 + 125, false, 1000, H, F)).toBeCloseTo(0.5, 12); // half faded
     expect(highlightAlpha(1000 + 1000, false, 1000, H, F)).toBe(0);
     expect(highlightAlpha(1000 + 751, false, 1000, H, 0)).toBe(0); // no fade: off at once
-    expect([DEFAULT_CONFIG.highlightHoldMs, DEFAULT_CONFIG.highlightFadeMs]).toEqual([750, 250]); // *"Set default timer 750 ms"*
+    expect([DEFAULT_CONFIG.highlightHoldMs, DEFAULT_CONFIG.highlightFadeMs]).toEqual([300, 250]); // *"set default hold = 300 ms fade = 250 ms"* (2026-10-11; was 750)
   });
 });
 
@@ -80,13 +80,19 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(h).toMatch(/st\.hold = null;\s*(?:\/\/[^\n]*\n\s*)+if \(h\.shown\) st\.highlightEndedAt = performance\.now\(\);/);
     expect(h).toMatch(/st\.pinkFace = next;\s*h\.shown = true;/);
     expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false \};/);
-    expect(h).toMatch(/if \(pointerId === h\.first\) \{\s*h\.first = null;/);
+    const hf = h.replace(/\s+/g, " ");
+    // the first touch lifted: the input goes on — ⭐⭐ (2026-10-11, *"while CTRL/ALT is pressed, left click tap defines the new pink face"*) and
+    // the click that named the pink face (the mouse) takes it at its own release, the key still held
+    expect(hf).toContain("if (pointerId === h.first) {");
+    expect(hf).toContain("if (tapped && h.mode === \"HELD\" && h.pink !== null) { takePink(st); if (h.shown) st.highlightEndedAt = performance.now(); } h.first = null;");
     // the pink face: the same face does nothing; a new one aligned, one episode
     expect(h).toMatch(/if \(!pinkChanges\(st\.pinkFace, next\)\) return false;\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     // ⛔ no change of the orbit centre anywhere in it
     expect(h).not.toMatch(/centreBlend\.retarget|recomputeOrbitCentre/);
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(holdRelease\(st, e\.pointerId\) === "SECOND"\) \{\s*st\.hudDirty = true;\s*return;\s*\}/);
+    expect(p.replace(/\s+/g, " ")).toContain(
+      'if ( holdRelease( st, e.pointerId, isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)), ) === "SECOND" ) { st.hudDirty = true; return; }',
+    );
   });
 
   it("⛔⛔ (2026-10-11, *\"the object systematically translates towards the world's negative depth axis when second touch is lifted\"*) the way out and the way in read the ANCHOR, never the mesh's origin", () => {

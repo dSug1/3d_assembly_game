@@ -617,7 +617,13 @@ export function installPointerHandler(st: SceneState): void {
         st.pinch.end();
         // ⭐⭐⭐ (2026-10-11) the held second touch lifted: its input ends (the way out, or the pink face of a press that never pinched)
         // — consumed, not a tap; the first touch lifted while it is held: the input goes on (and a tap on the piece below still counts)
-        if (holdRelease(st, e.pointerId) === "SECOND") {
+        if (
+          holdRelease(
+            st,
+            e.pointerId,
+            isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)),
+          ) === "SECOND"
+        ) {
           st.hudDirty = true;
           return;
         }

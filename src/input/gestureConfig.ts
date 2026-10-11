@@ -966,7 +966,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⭐⭐ prototype, the owner 2026-10-11: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
   // fade gradually and rapidly away. Set default timer 750 ms"* — *"Do one slider with two cursors"*: the hold, then the fade
-  highlightHoldMs: 750,
+  highlightHoldMs: 300, // ⭐ the owner, 2026-10-11: *"set default hold = 300 ms fade = 250 ms"* (was 750)
   highlightFadeMs: 250,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)

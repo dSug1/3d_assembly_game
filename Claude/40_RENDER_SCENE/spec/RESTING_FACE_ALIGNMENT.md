@@ -505,7 +505,7 @@ and the yaw / pitch (§18) with it. At boot the camera orbits the centre; nothin
   way in itself ramps 0.25 → 0.07 m per move (about 2 m over its 12 mm — the slider is the dial).
 - ⭐⭐ **The highlights** (*"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights fade
   gradually and rapidly away. Set default timer 750 ms"*): the resting face's fill and the pink face's (a fill on its body) show while the
-  input runs, then HOLD **750 ms**, then FADE over **250 ms** (`highlightAlpha`); none at boot; a first-touch tap on the piece shows them
+  input runs, then HOLD **750 ms** (300 ms since the same day), then FADE over **250 ms** (`highlightAlpha`); none at boot; a first-touch tap on the piece shows them
   too. ⭐ ONE slider with TWO cursors (*"Do one slider with two cursors"*): CAMERA ORBIT AROUND PIECE › *pink highlights* — cursor 1 the
   hold's end, cursor 2 the fade's end (moving the hold carries the fade). ⚠ The pink RING stays where it was — at the orbit centre, the
   yellow target: it marks the orbit's centre now, no longer the pink face (the second touch does not move the centre).
@@ -542,3 +542,10 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   (or the window's focus loss) and counts as the release. The wheel was already blocked on the canvas (no page zoom with CTRL, no history with
   ALT). The parts game's right-button roles (`D94`/`D161`) are untouched. Headless: CTRL + left drag — the way in; CTRL up — the way out;
   ALT + a click on a part — the pink face at ALT's release; a right click — nothing.
+- ⭐⭐ **The desktop's pink face at the CLICK, the key still held** (*"to select a face, the CTRL/ALT has to be released: this is not practical:
+  it should be while CTRL/ALT is pressed, left click tap defines the new pink face. Does that asymmetries with mobile input?"*): the key + left
+  click TAP on a placed part's face takes the pink face at the click's release (a click that becomes a drag takes it at the way in, as
+  before). ⭐ No asymmetry in substance: on a tablet a second finger's tap on a part takes it at that finger's release — the face is taken when
+  the touch that NAMED it lifts, on both; the tablet waits for the release only because a second finger on a part may be starting a PINCH
+  (option B), and a mouse cannot pinch. Headless: ALT + a click on a part — the pink face at the click, ALT still down.
+- ⭐ **The highlights' defaults: hold 300 ms, fade 250 ms** (*"set default hold = 300 ms fade = 250 ms"*; the hold was 750 ms).
