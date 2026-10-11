@@ -453,6 +453,8 @@ export interface SceneState {
     shown: boolean;
     /** ⭐ (2026-10-11) when the second touch was pressed (ms) — a tap (within the tap time) never starts the way in. */
     readonly t0: number;
+    /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap rolls nothing (`holdTapRolls`). */
+    pressActed: boolean;
   } | null;
   /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
   highlightEndedAt: number | null;

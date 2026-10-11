@@ -58,7 +58,8 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     const p = code("render/pointer_wiring.ts");
     // one step, two callers: empty space and the locked piece
     // (a third since 2026-10-05: the orbit finger keeps orbiting while a second touch is still a possible tap)
-    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(3);
+    // (a fourth since 2026-10-11: the locked piece's finger as the held second touch's first touch — `holdMove`'s orbit step)
+    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(4);
     expect(p).toMatch(/if \(lockedInGoal && st\.router\.objects\(\)\.length === 1 && st\.router\.outside\(\)\.length === 0\) \{\s*orbitDragStep\(st, e\.pointerId, s, grip\.prev\);/);
     // its locked-piece call comes BEFORE the gate returns
     expect(p.indexOf("orbitDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal || unsnapHolds("));

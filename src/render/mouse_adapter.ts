@@ -36,6 +36,7 @@ import {
 import {
   MouseSecondTouch,
   MOUSE_SECOND_ID,
+  orbitModifiers,
   type MouseAction,
   type MouseInput,
 } from "../input/mouse_second_touch";
@@ -163,15 +164,17 @@ export function attachMouseSecondTouch(
     realId = e.pointerId;
     shift = e.shiftKey;
     if (modDown && !e.altKey && !e.ctrlKey) modDown = false; // ⭐ (2026-10-11) the model lifts it (`mod: false`)
+    // ⭐⭐ (2026-10-11, *"switch Space (and probably Shift + drag) off in the orbit"*) — `orbitModifiers`
+    const keys = orbitModifiers(orbitSecond !== undefined && orbitSecond(), e.shiftKey, space);
     apply(
       {
         type,
         button: e.button,
         buttons: e.buttons,
-        shift: e.shiftKey,
+        shift: keys.shift,
         x: e.clientX,
         y: e.clientY,
-        space,
+        space: keys.space,
         t: performance.now(),
         mod: e.altKey || e.ctrlKey,
         // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
@@ -216,7 +219,8 @@ export function attachMouseSecondTouch(
       e.preventDefault();
       // ⭐⭐ `D155`: a FRESH press (not the key's auto-repeat) freezes a left hold on a body into the
       // HitFace, or only re-arms Space after an alignment.
-      if (!e.repeat) {
+      // ⭐⭐ (2026-10-11) off in the orbit (`orbitModifiers`): no freeze, no HitFace — it only keeps the page from scrolling
+      if (!e.repeat && orbitModifiers(orbitSecond !== undefined && orbitSecond(), false, true).space) {
         const held = freezeHeld?.(realId) ?? null;
         inheritMesh = held?.mesh ?? null;
         apply({

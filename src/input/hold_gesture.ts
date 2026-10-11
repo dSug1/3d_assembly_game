@@ -75,3 +75,21 @@ export function highlightAlpha(now: number, active: boolean, endedAt: number | n
   if (!(fadeMs > 0) || t >= holdMs + fadeMs) return 0;
   return 1 - (t - holdMs) / fadeMs;
 }
+
+/**
+ * ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty or
+ * on the pink face) rolls to the next axis"*) — does the second touch's release ROLL the piece to the next axis? A TAP (`tapped`), that
+ * never became the way in or a zoom (`mode` still HELD), while the FIRST touch is held (`firstHeld`), whose press changed NO pink face
+ * (`pressChangedPink` false: empty space, a frozen body, or the current pink face again) and named no resting face (`onOrbited` false — the
+ * key over the orbited piece selects one), with the piece aligned to its pink face (`aligned`).
+ */
+export function holdTapRolls(
+  tapped: boolean,
+  mode: HoldMode,
+  firstHeld: boolean,
+  pressChangedPink: boolean,
+  onOrbited: boolean,
+  aligned: boolean,
+): boolean {
+  return tapped && mode === "HELD" && firstHeld && !pressChangedPink && !onOrbited && aligned;
+}

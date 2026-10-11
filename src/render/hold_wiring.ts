@@ -12,8 +12,8 @@
  *   highlights then held and faded.
  */
 import { pxToMm } from "../core/units";
-import { holdDecision, pinkChanges, type HoldMode } from "../input/hold_gesture";
-import { alignRestingFace, enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
+import { holdDecision, holdTapRolls, pinkChanges, type HoldMode } from "../input/hold_gesture";
+import { alignRestingFace, enterPieceOrbit, returnToCentreOrbit, rollRestingFace } from "./green_box_wiring";
 import { pinchPair, updatePinch } from "./camera_rig";
 import type { Sample } from "../input";
 import type { ObjectId } from "../core/object_model";
@@ -33,12 +33,12 @@ export function holdSecondPress(
   first: number | null,
   pink: { readonly objectId: ObjectId; readonly faceId: string } | null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now() };
+  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false };
   st.lastVerdict = `orbit: second touch held${pink === null ? "" : ` on ${pink.objectId}/${pink.faceId}`} — dx of the first touch: the way in`;
   // ⭐⭐ (2026-10-11, the owner: *"I want to also be able to do with CTRL held and left button is pressed (immediately when left button is
   // pressed). Same for the mobile input"*) — the pink face taken AT THE PRESS. ⚠ Cost, named: option B is undone — a pinch whose second finger
   // lands on a part changes the pink face before the zoom is told apart
-  takePink(st);
+  if (takePink(st) && st.hold !== null) st.hold.pressActed = true; // ⭐ a new pink face: its tap rolls nothing (`holdTapRolls`)
   st.hudDirty = true;
 }
 
@@ -152,7 +152,6 @@ export function holdRelease(
   if (pointerId === h.first) {
     // ⛔ (2026-10-11) the pink face at the click's release is gone: it is taken AT THE PRESS now (`holdFirstPress`, *"immediately when left
     // button is pressed"*); the highlights shown by it run while the key is held, and their clock starts at the key's release
-    void tapped;
     h.first = null;
     st.hudDirty = true;
     return "FIRST";
@@ -165,7 +164,20 @@ export function holdRelease(
       returnToCentreOrbit(st, true);
       st.lastVerdict = "orbit: the second touch lifted — the way out";
     }
-  } else if (h.mode === "HELD") takePink(st); // ⭐ a press that never pinched: the pink face taken at its release
+  } else if (h.mode === "HELD") {
+    if (takePink(st)) h.pressActed = true; // ⭐ a press that never pinched: the pink face taken at its release
+    // ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty
+    // or on the pink face) rolls to the next axis"*) — one stop, clockwise as seen from the camera (`rollRestingFace`); one episode
+    if (
+      holdTapRolls(tapped, h.mode, h.first !== null, h.pressActed, false, st.restAligned && st.restRoll !== null) &&
+      rollRestingFace(st, performance.now(), 1)
+    ) {
+      st.episodes.touch(--st.episodeSeq, true, true);
+      st.episodes.sync(true);
+      h.shown = true;
+      st.lastVerdict = st.lastVerdict.replace(/^orbit: tap — roll/, "orbit: second touch tap, first held — roll");
+    }
+  }
   st.hold = null;
   // ⭐⭐ (2026-10-11, the owner: *"why a second touch tap outside any object still highlights the pink face and the resting face? … There should
   // not be any action"*) — the highlights' clock only after an ACTION (the pink face taken, the way in); a tap on empty space, an undecided

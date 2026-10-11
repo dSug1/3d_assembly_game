@@ -604,4 +604,26 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   respawn as well); the boot target sets the orbit centre only. ⚠ A frozen face's pink fill is not drawn. Headless: boot — pink `Floor/f1`,
   aligned to `Floor/f1`.
 - ⭐ **A switch hides the pink gizmo** (*"add a slider to hide the pink gizmo"*): CAMERA › CAMERA ORBIT AROUND CENTER › *pink gizmo (the orbit
-  centre's ring): shown* (`pinkGizmoVisible`; 0 = hidden). ⭐ **Hidden by default** (*"make the default pink gizmo hidden"*, the same day): it ships at 0, the slider shows it.
+  centre's ring): shown* (`pinkGizmoVisible`; 0 = hidden). ⚠ Hidden by default for a few minutes (*"make the default pink gizmo hidden"*), then ⭐ **shown by default again** (*"set the default : pink gizmo shown"*): it ships at 1.
+- ⭐⭐ **The keyboard's older second touches are OFF in the orbit** (*"why space + left click change pink face ? which other keyboard keys are
+  active ?"* → *"switch Space (and probably Shift + drag) off in the orbit. leave shift tap for the moment"*). Space + click on a part latched
+  `D154`'s HitFace as a made-up second touch, and the orbit read it as its HELD second touch — so it took the pink face; Shift held through a
+  drag (`D94`) made one too. ⭐ While a piece is orbited both reach the mouse model as up (`orbitModifiers`, `input/mouse_second_touch.ts`): no
+  Space HitFace, no `D155` freeze, no Shift-made second touch — ALT / CTRL is the orbit's one key-made second touch. ⚠ Kept: the Shift TAP
+  (`D167`'s translate / rotate toggle), Esc, Space still never scrolls the page, the wheel zooms.
+- ⭐⭐ **A first touch held on a PART is the held input's first touch** (*"left click on a face and held then CTRL on the another face and held
+  (sets the new pink face->OK) then drag: the drag freezes the scene while the left click and CTRL are held. Why? I think this should enable the
+  roll to the next axis"*). Why: a press on a part is an OBJECT pointer, and the held input took its first touch only from the EMPTY-space
+  pointers — so the input had none (`first: null`) and the part's own orbit drag stops once a second pointer is down: nothing moved. ⭐ Now a
+  first touch on any part (placed in its goal or not; ⛔ never the orbited piece) is taken as the first touch (`partFirst`): its drag decides as
+  from empty space — the way in, then the orbit round the piece and its dx roll — and the part itself never moves; its release lifts the first
+  touch (the input goes on). A finger the same on a tablet. Headless: left held on a free part → CTRL → drag: `WAY`, the camera turned, `dx →
+  roll 90°`; the same from a placed part, and after a left drag from a free part to a placed one.
+- ⭐⭐ **The second touch's TAP, the first held, ROLLS to the next axis** (*"left click held + CTRL/ALT tap on empty or on the pink face (=first
+  touch held + second touch tap on empty or on the pink face) rolls to the next axis"*): a tap of the second touch (within the tap time, never
+  the way in nor a zoom) while the first touch is held, whose press changed NO pink face — empty space, a frozen body, or the current pink face
+  — and named no resting face (not over the orbited piece): the piece rolls ONE stop, clockwise as seen from the camera (`rollRestingFace`, the
+  same step as the orbit's dx roll), one episode, the highlights shown (`holdTapRolls`, `input/hold_gesture.ts`). A press that took a NEW pink
+  face aligns to it and rolls nothing; the next tap on that face rolls. ⚠ A tap with no first touch held does nothing, as before. ⛔ It brings
+  back a tap roll (`tapAction`'s, deleted 2026-10-10) only in this form. Headless: left held on empty space + CTRL tap — 1 roll, again — 2;
+  CTRL tap alone — none; left held on a part + CTRL tap — the new pink face, aligned; + CTRL tap — 1 roll.

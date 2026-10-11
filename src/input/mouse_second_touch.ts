@@ -547,3 +547,14 @@ function same(a: Pt, b: Pt): boolean {
 export function hitFaceAllowed(holderPointerType: string): boolean {
   return holderPointerType !== "mouse";
 }
+
+/**
+ * ⭐⭐ (2026-10-11, the owner: *"why space + left click change pink face ?"* → *"switch Space (and probably Shift + drag) off in the orbit.
+ * leave shift tap for the moment"*) — while the scene ORBITS a piece, the keyboard's older second touches are OFF: Space (`D154`'s HitFace
+ * latch, `D155`'s freeze) and Shift held through a drag (`D94`'s Shift-made #2) both made a second touch the orbit read as its HELD second
+ * touch, so a Space click on a part took the pink face. ⭐ ALT / CTRL is the orbit's one key-made second touch. ⚠ The Shift TAP (`D167`, its
+ * own SHIFT_DOWN / SHIFT_UP events) is untouched.
+ */
+export function orbitModifiers(orbit: boolean, shift: boolean, space: boolean): { readonly shift: boolean; readonly space: boolean } {
+  return orbit ? { shift: false, space: false } : { shift, space };
+}

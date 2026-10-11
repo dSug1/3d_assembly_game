@@ -726,3 +726,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⛔⛔ The orbit centre and the pink face are separate: a plain press on a part moves the centre only, the pink face is the second touch's
   alone; the boot pink face is the floor's (the face the piece is aligned to); a switch hides the pink gizmo → `RESTING_FACE_ALIGNMENT.md` §20.
 * ⭐ The pink gizmo is HIDDEN by default (`pinkGizmoVisible` 0; *"make the default pink gizmo hidden"*) — its slider shows it → `RESTING_FACE_ALIGNMENT.md` §20.
+* ⭐ The pink gizmo SHOWN by default again (*"set the default : pink gizmo shown"*).
+* ⭐⭐ Space and Shift + drag OFF in the orbit (`orbitModifiers`) — Space + click took the pink face; ⭐⭐ a first touch held on a part is the held
+  input's first touch (the drag froze); ⭐⭐ the second touch's TAP with the first held rolls to the next axis (`holdTapRolls`) →
+  `RESTING_FACE_ALIGNMENT.md` §20.
