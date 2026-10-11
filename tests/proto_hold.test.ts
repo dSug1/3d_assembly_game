@@ -107,9 +107,22 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(w).toMatch(/if \(st\.hold === null\) st\.orbitInertia\.release\(now\);\s*else st\.orbitInertia\.stop\(\);/);
   });
 
-  it("⭐ the desktop: the right button is the held second touch whenever a piece is orbited", () => {
-    expect(code("render/scene.ts")).toMatch(/\(\) => st\.greenBox !== null\);/);
-    expect(code("render/mouse_adapter.ts")).toMatch(/type === "DOWN" && e\.button === 2 && orbitSecond !== undefined \? \{ orbitSecond: orbitSecond\(\) \} : \{\}/);
+  it("⭐⭐ the desktop (2026-10-11, *\"build with ALT and CTRL\"*): ALT or CTRL held is the second touch whenever a piece is orbited; the LEFT click while it is held names the pink face", () => {
+    const flat = (t: string) => t.replace(/\s+/g, " ");
+    expect(code("render/scene.ts")).toContain("() => st.greenBox !== null);");
+    const a = flat(code("render/mouse_adapter.ts"));
+    expect(a).toContain('const modKey = (k: string) => k === "Alt" || k === "Control";');
+    expect(a).toContain('if (modKey(e.key) && !e.repeat && !modDown && orbitSecond !== undefined && orbitSecond()) { modDown = true; apply({ type: "MOD_DOWN"');
+    expect(a).toContain('if (modKey(e.key) && modDown && !e.altKey && !e.ctrlKey) { modDown = false; apply({ type: "MOD_UP"');
+    expect(a).toContain("mod: e.altKey || e.ctrlKey,");
+    // a lost focus lifts it (the way out, as a release)
+    expect(a).toContain('if (modDown) { modDown = false; apply({ type: "MOD_UP", button: -1, buttons: 0, shift: false');
+    // the wheel never zooms the page nor walks the history: blocked on the canvas, whatever key
+    expect(a).toContain("const onWheel = (e: WheelEvent) => { if (onWheelNotches === undefined) return; e.preventDefault();");
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toContain('if (holdRole === "SECOND" || (holdRole === "FIRST" && e.pointerType === "mouse")) {');
+    expect(p).toContain("} else holdFirstPress(st, e.pointerId, s.x, pink);");
+    expect(code("render/hold_wiring.ts")).toContain('if (pink !== null && h.mode === "HELD") h.pink = pink;');
   });
 
   it("⭐⭐ the highlights wired: the resting face's fill and the pink face's (a child of its body) faded by one alpha; the slider with TWO cursors", () => {

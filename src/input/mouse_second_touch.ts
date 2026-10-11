@@ -71,7 +71,7 @@ const RIGHT_BIT = 2;
 
 export interface MouseInput {
   /** ⭐ `SPACE`: the Space key went DOWN (not a repeat) — `D155`. */
-  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL" | "SPACE" | "SHIFT_DOWN" | "SHIFT_UP";
+  readonly type: "DOWN" | "MOVE" | "UP" | "CANCEL" | "SPACE" | "SHIFT_DOWN" | "SHIFT_UP" | "MOD_DOWN" | "MOD_UP";
   /** `PointerEvent.button` — `0` left, `2` right, `-1` for a move or a cancel. */
   readonly button: number;
   /** `PointerEvent.buttons` — the browser's mask AFTER this event. */
@@ -89,11 +89,13 @@ export interface MouseInput {
    */
   readonly onBody?: { readonly id: string; readonly frozen: boolean } | null;
   /**
-   * ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20, the owner: *"Second touch on mobile equals right click on desktop"*) at a RIGHT
-   * press: the scene orbits a piece, so the right button is the HELD SECOND TOUCH — pressed with or without the left button, never moved by
-   * the cursor, lifted with the right button, never latched. ⚠ Read only at a right press.
+   * ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) the scene orbits a piece: the RIGHT button does nothing there (*"replace anything with
+   * right click by left click + CTRL"* → *"build with ALT and CTRL"*) — the held second touch is ALT or CTRL (`MOD_DOWN`). ⚠ Read at a right
+   * press.
    */
   readonly orbitSecond?: boolean;
+  /** ⭐ (2026-10-11) is ALT or CTRL held at this pointer event? — a release the window missed lifts the key-made second touch. */
+  readonly mod?: boolean;
 }
 
 /**
@@ -152,6 +154,8 @@ export class MouseSecondTouch {
         rightBody?: string;
         /** ⭐ `D161`: the left button pressed while the right held it — an action was made; no latch. */
         used?: boolean;
+        /** ⭐ (2026-10-11) made by ALT / CTRL — the orbit's held second touch: no button, no pick, lifted with the key. */
+        modMade?: boolean;
       })
     | null = null;
   /**
@@ -197,6 +201,18 @@ export class MouseSecondTouch {
     if (ev.space !== true || ev.type === "SPACE") this.spaceUsed = false;
     if (ev.type === "SPACE") return this.spaceDown(ev, emit);
     if (ev.type === "SHIFT_DOWN" || ev.type === "SHIFT_UP") return this.shiftKey(ev);
+    // ⭐⭐ (2026-10-11, the owner: *"build with ALT and CTRL"*) the orbit's HELD SECOND TOUCH is a key: pressed where the cursor is, never driven
+    // by it, never picking (`anchorOnly` — it lands on nothing, so the left click says which face), lifted with the key
+    if (ev.type === "MOD_DOWN") {
+      if (this.second !== null || this.cursor === null) return PASS;
+      this.second = { x: this.cursor.x, y: this.cursor.y, shiftMade: false, modMade: true };
+      return { skip: false, emit: [this.secondAction("DOWN")] };
+    }
+    if (ev.type === "MOD_UP") {
+      if (this.second === null || this.second.modMade !== true) return PASS;
+      this.liftSecond(emit);
+      return { skip: false, emit };
+    }
     const dx = this.cursor === null ? 0 : ev.x - this.cursor.x;
     const dy = this.cursor === null ? 0 : ev.y - this.cursor.y;
     const here: Pt = { x: ev.x, y: ev.y };
@@ -271,12 +287,7 @@ export class MouseSecondTouch {
           // mean the opposite. ⚠ Swallowed either way — reaching Babylon it is a press of the
           // mouse's one pointer.
           if (ev.orbitSecond === true) {
-            // ⭐⭐ (2026-10-11) the orbit's HELD SECOND TOUCH — with or without the left button; the cursor never drives it, and its
-            // release lifts it (no `rightBody`: never latched as a HitFace)
-            if (this.second === null) {
-              this.second = { x: ev.x, y: ev.y, shiftMade: false };
-              emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
-            }
+            // ⛔ (2026-10-11, *"replace anything with right click by left click + CTRL"* → ALT or CTRL) the orbit: the right button does nothing
           } else if (this.real === null && this.second === null) {
             // ⭐ `D161`: on a (non-frozen) body, remember it — the release may latch the HitFace there.
             this.second =
@@ -316,7 +327,7 @@ export class MouseSecondTouch {
           // the mouse's ONE pointer, which would release touchpoint #1 while the left is held.
           skip = true;
           // ⛔⛔ Lifted WHERE IT IS, never at the cursor — a lift elsewhere is one enormous step.
-          if (this.second !== null && !this.second.shiftMade && this.second.spaceBody === undefined) {
+          if (this.second !== null && !this.second.shiftMade && this.second.modMade !== true && this.second.spaceBody === undefined) {
             // ⭐⭐⭐ `D161` (the owner, 2026-09-29: *"currently, right click on an object triggers the hitface but
             // when the right click is released, the hitface cancels: make it a latch with episode counting
             // once the action is completed (similar to the space key)"*): released UNUSED on a body, the
@@ -413,7 +424,10 @@ export class MouseSecondTouch {
     if (this.swallowLeft && (ev.buttons & LEFT_BIT) === 0) this.swallowLeft = false;
     // ⚠ A Shift-made #2 belongs to the LEFT button's hold, a right-made one to the right button, and a
     // Space-made one to NO button — it is latched past its click (`D154`).
-    if (this.second !== null && this.second.spaceBody === undefined) {
+    if (this.second !== null && this.second.modMade === true) {
+      // ⭐ (2026-10-11) the key's release missed (outside the window): the pointer event says no key is held
+      if (ev.mod === false) this.liftSecond(emit);
+    } else if (this.second !== null && this.second.spaceBody === undefined) {
       const bit = this.second.shiftMade ? LEFT_BIT : RIGHT_BIT;
       if ((ev.buttons & bit) === 0) this.liftSecond(emit);
     }
@@ -425,7 +439,7 @@ export class MouseSecondTouch {
 
   private secondAction(kind: "DOWN" | "MOVE" | "UP"): MouseAction {
     const s = this.second!;
-    return s.shiftMade
+    return s.shiftMade || s.modMade === true
       ? { target: "SECOND", kind, x: s.x, y: s.y, anchorOnly: true }
       : { target: "SECOND", kind, x: s.x, y: s.y };
   }

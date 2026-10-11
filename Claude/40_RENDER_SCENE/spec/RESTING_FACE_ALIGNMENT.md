@@ -531,3 +531,14 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   2026-10-09 is the resting face's centre (the anchor) — so at the release the piece moved by its middle-to-face distance (20.6 mm headless,
   always the same way relative to the resting face); the way in (`enterPieceOrbit`) read the same wrong point. ⭐ Both read the ANCHOR now:
   the release moves it 0 mm; the way in shows no jump (its steps ramp from 0 and back to 0 — the designed hand-over).
+- ⭐⭐ **On a desktop the held second touch is ALT or CTRL, no longer the right button** (*"replace anything with right click by left click +
+  CTRL. Does that create conflict?"* → *"instead of CTRL, if I use ALT is it better? (for Mac, etc.)"* → *"build with ALT and CTRL and with your
+  recommendations"*). ⚠ The conflict: one left button cannot be both touches — so the KEY is the held second touch and the left button stays
+  the first: **key held + left drag dx** — the way in, round the piece, the roll; **key released** — the way out; the left released and pressed
+  again while the key is held — the same input; **key + left click on a placed part's face** — the pink face (the key points at nothing, so
+  the click names the face; no centre change); a left click on the orbited piece — the resting face; ⛔ the RIGHT button does nothing in the orbit now. ⭐ EITHER key: ALT (Option)
+  on a Mac, where CTRL + click is the system's right click; CTRL on Linux, where ALT + drag moves the window; both on Windows. The key-made
+  second touch sits at the cursor, never picks, is never driven; a key release missed outside the window is caught by the next pointer event
+  (or the window's focus loss) and counts as the release. The wheel was already blocked on the canvas (no page zoom with CTRL, no history with
+  ALT). The parts game's right-button roles (`D94`/`D161`) are untouched. Headless: CTRL + left drag — the way in; CTRL up — the way out;
+  ALT + a click on a part — the pink face at ALT's release; a right click — nothing.

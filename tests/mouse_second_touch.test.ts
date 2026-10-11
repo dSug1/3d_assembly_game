@@ -115,27 +115,32 @@ describe("⭐⭐⭐ RIGHT PRESS AND HOLD = THE HITFACE; LEFT CLICK = THE PIONEER
     expect(m.isSecondDown).toBe(false);
   });
 
-  it("⭐⭐ (2026-10-11) orbiting a piece, the RIGHT button is the HELD SECOND TOUCH — with or without the left, never driven, never latched", () => {
-    // with the left button down
+  it("⭐⭐ (2026-10-11, *\"build with ALT and CTRL\"*) orbiting a piece, ALT / CTRL is the HELD SECOND TOUCH — at the cursor, never picking, never driven; the right button does nothing", () => {
+    // the key down with the left button down: the second touch where the cursor is, anchor-only (it points at nothing)
     const m = new MouseSecondTouch();
-    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 0, y: 0 }));
-    expect(m.step({ ...ev({ type: "DOWN", button: RIGHT, buttons: L | R, x: 10, y: 20 }), orbitSecond: true }).emit).toEqual([
-      { target: "SECOND", kind: "DOWN", x: 10, y: 20 },
-    ]);
+    m.step(ev({ type: "DOWN", button: LEFT, buttons: L, x: 10, y: 20 }));
+    expect(m.step(ev({ type: "MOD_DOWN", button: -1, buttons: 0, x: 0, y: 0 })).emit).toEqual([{ target: "SECOND", kind: "DOWN", x: 10, y: 20, anchorOnly: true }]);
     expect(m.isSecondDown).toBe(true);
     // the cursor drives the LEFT pointer, never the second
-    const mv = m.step(ev({ type: "MOVE", button: -1, buttons: L | R, x: 30, y: 20 }));
+    const mv = m.step({ ...ev({ type: "MOVE", button: -1, buttons: L, x: 30, y: 20 }), mod: true });
     expect(mv.emit.filter((a) => a.target === "SECOND")).toEqual([]);
-    // its release lifts it — never latched (on a body or not)
-    expect(m.step(ev({ type: "UP", button: RIGHT, buttons: L, x: 30, y: 20 })).emit).toEqual([{ target: "SECOND", kind: "UP", x: 10, y: 20 }]);
+    // the left released and pressed again: the second stays (the same input)
+    m.step({ ...ev({ type: "UP", button: LEFT, buttons: 0, x: 30, y: 20 }), mod: true });
+    expect(m.isSecondDown).toBe(true);
+    // the key up: it lifts where it was pressed
+    expect(m.step(ev({ type: "MOD_UP", button: -1, buttons: 0, x: 0, y: 0 })).emit).toEqual([{ target: "SECOND", kind: "UP", x: 10, y: 20, anchorOnly: true }]);
     expect(m.isSecondDown).toBe(false);
-    // the right button alone, then the left: the second first
-    const n = new MouseSecondTouch();
-    expect(n.step({ ...ev({ type: "DOWN", button: RIGHT, buttons: R, x: 5, y: 5 }), orbitSecond: true, onBody: { id: "Piece1", frozen: false } }).emit).toEqual([
-      { target: "SECOND", kind: "DOWN", x: 5, y: 5 },
-    ]);
-    expect(n.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 5, y: 5 })).emit).toEqual([{ target: "SECOND", kind: "UP", x: 5, y: 5 }]);
-    expect(n.isSecondLatched).toBe(false);
+    // ⭐ a key release missed (outside the window): the next pointer event says no key — it lifts
+    const k = new MouseSecondTouch();
+    k.step(ev({ type: "MOVE", button: -1, buttons: 0, x: 5, y: 5 }));
+    k.step(ev({ type: "MOD_DOWN", button: -1, buttons: 0, x: 0, y: 0 }));
+    expect(k.step({ ...ev({ type: "MOVE", button: -1, buttons: 0, x: 6, y: 5 }), mod: false }).emit).toEqual([{ target: "SECOND", kind: "UP", x: 5, y: 5, anchorOnly: true }]);
+    // ⛔ the right button in the orbit: nothing — no second touch, swallowed, never latched
+    const r = new MouseSecondTouch();
+    expect(r.step({ ...ev({ type: "DOWN", button: RIGHT, buttons: R, x: 5, y: 5 }), orbitSecond: true, onBody: { id: "Piece1", frozen: false } })).toEqual({ skip: true, emit: [] });
+    expect(r.isSecondDown).toBe(false);
+    expect(r.step(ev({ type: "UP", button: RIGHT, buttons: 0, x: 5, y: 5 })).emit).toEqual([]);
+    expect(r.isSecondLatched).toBe(false);
   });
 
   it("⛔ a repeated right DOWN is swallowed and emits nothing", () => {
