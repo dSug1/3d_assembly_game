@@ -89,10 +89,11 @@ export interface MouseInput {
    */
   readonly onBody?: { readonly id: string; readonly frozen: boolean } | null;
   /**
-   * ⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) at a RIGHT press while the left button is down: the scene says a drag of both
-   * buttons YAWS / PITCHES the orbited piece now (outside the sphere, aligned). ⚠ Read only there.
+   * ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20, the owner: *"Second touch on mobile equals right click on desktop"*) at a RIGHT
+   * press: the scene orbits a piece, so the right button is the HELD SECOND TOUCH — pressed with or without the left button, never moved by
+   * the cursor, lifted with the right button, never latched. ⚠ Read only at a right press.
    */
-  readonly tumble?: boolean;
+  readonly orbitSecond?: boolean;
 }
 
 /**
@@ -129,19 +130,6 @@ export interface Verdict {
   readonly emit: readonly MouseAction[];
   /** ⭐ `D167`: a Shift TAP while the left button holds a part — the scene toggles translation / rotation. */
   readonly toggleMode?: boolean;
-  /**
-   * ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a RIGHT press made while the LEFT button was down, released — how long it was held (ms). The
-   * scene judges the tap (time only: the cursor moves with the orbit) and whether the left button is orbiting.
-   */
-  readonly rightTapMs?: number;
-  /**
-   * ⭐⭐ (2026-10-10, the owner: *"the yaw/pitch shall be with left button hold and right button hold and drag"*) the cursor moved with BOTH
-   * buttons held, the scene having said so at the right press (`MouseInput.tumble`): its delta, px (y down) — the orbit pointer does not
-   * move. ⛔ Never a right tap then.
-   */
-  readonly rightDrag?: { readonly dx: number; readonly dy: number };
-  /** ⭐ That two-button drag ended (a button released, or its release missed). */
-  readonly rightDragEnd?: boolean;
 }
 
 const PASS: Verdict = { skip: false, emit: [] };
@@ -180,8 +168,6 @@ export class MouseSecondTouch {
   private spaceUsed = false;
   /** ⭐ `D167`: Shift went down at `t`; `used` once a Shift drag made the second touch — then it is a HOLD. */
   private shiftTap: { t: number; used: boolean } | null = null;
-  /** ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right press made while the left button was down — when (ms). */
-  private rightWhileLeft: { t: number; tumble: boolean; moved: boolean } | null = null;
 
   /** @param tapMaxMs the longest press that is still a tap — `tapMaxDuration`, the recognizer's own. */
   constructor(private readonly tapMaxMs = 250) {}
@@ -207,8 +193,6 @@ export class MouseSecondTouch {
   step(ev: MouseInput): Verdict {
     const emit: MouseAction[] = [];
     let skip = false;
-    let rightDrag: { dx: number; dy: number } | undefined;
-    let rightDragEnd = false;
     // ⭐ `D155`: Space is re-armed by its release (seen on any event) or by a fresh press.
     if (ev.space !== true || ev.type === "SPACE") this.spaceUsed = false;
     if (ev.type === "SPACE") return this.spaceDown(ev, emit);
@@ -286,18 +270,20 @@ export class MouseSecondTouch {
           // Pioneer. ⛔ So it is refused while the left button is down: it would arrive SECOND and
           // mean the opposite. ⚠ Swallowed either way — reaching Babylon it is a press of the
           // mouse's one pointer.
-          if (this.real === null && this.second === null) {
+          if (ev.orbitSecond === true) {
+            // ⭐⭐ (2026-10-11) the orbit's HELD SECOND TOUCH — with or without the left button; the cursor never drives it, and its
+            // release lifts it (no `rightBody`: never latched as a HitFace)
+            if (this.second === null) {
+              this.second = { x: ev.x, y: ev.y, shiftMade: false };
+              emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
+            }
+          } else if (this.real === null && this.second === null) {
             // ⭐ `D161`: on a (non-frozen) body, remember it — the release may latch the HitFace there.
             this.second =
               on !== null && !on.frozen
                 ? { x: ev.x, y: ev.y, shiftMade: false, rightBody: on.id }
                 : { x: ev.x, y: ev.y, shiftMade: false };
             emit.push({ target: "SECOND", kind: "DOWN", x: ev.x, y: ev.y });
-          } else if (this.real !== null) {
-            // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: refused as a HitFace (it would arrive second), but TIMED — released quickly it is the
-            // right TAP the left button's orbit counts (the scene decides; a plain right click is untouched)
-            // ⭐ (2026-10-10) and, if the scene says so, the start of a two-button drag — the yaw / pitch (`rightDrag`)
-            this.rightWhileLeft = { t: ev.t ?? 0, tumble: ev.tumble === true, moved: false };
           }
           skip = true;
         } else if (ev.button === LEFT_BUTTON && this.real === null) {
@@ -313,19 +299,6 @@ export class MouseSecondTouch {
       }
 
       case "UP":
-        if (this.rightWhileLeft !== null && ev.button === RIGHT_BUTTON) {
-          const rw = this.rightWhileLeft;
-          const heldMs = (ev.t ?? 0) - rw.t;
-          this.rightWhileLeft = null;
-          // ⭐ (2026-10-10) a two-button DRAG ends — never a tap
-          if (rw.moved) return { skip: true, emit: [], rightDragEnd: true };
-          return rw.tumble ? { skip: true, emit: [], rightTapMs: heldMs, rightDragEnd: true } : { skip: true, emit: [], rightTapMs: heldMs };
-        }
-        // ⭐ (2026-10-10) the LEFT button lifted first: the two-button drag is over too
-        if (this.rightWhileLeft !== null && ev.button === LEFT_BUTTON) {
-          if (this.rightWhileLeft.tumble) rightDragEnd = true;
-          this.rightWhileLeft = null;
-        }
         // ⭐ `D154`: the Pioneer tap lifts WHERE IT PRESSED, then the latched HitFace — in that order, so
         // the tap releases while the Follower is still held (`D119`: it aligns on the released tap).
         if (this.tap !== null && ev.button === this.tap.button) {
@@ -372,25 +345,6 @@ export class MouseSecondTouch {
         // ⛔ RECONCILED FIRST for a move: a pointer whose button the mask says is up must not
         // receive one last move before it is lifted.
         this.reconcile(ev, emit);
-        // ⭐⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) BOTH buttons held and the scene said so at the right press: the cursor YAWS /
-        // PITCHES (`rightDrag`) and the orbit pointer stays where it is (the cursor is relative from here, as for any second touch). ⛔ A
-        // button whose bit is clear ends it.
-        {
-          const rw = this.rightWhileLeft;
-          if (rw !== null && rw.tumble) {
-            if ((ev.buttons & RIGHT_BIT) === 0 || (ev.buttons & LEFT_BIT) === 0) {
-              this.rightWhileLeft = null;
-              rightDragEnd = true;
-            } else {
-              if (dx !== 0 || dy !== 0) {
-                rw.moved = true;
-                rightDrag = { dx, dy };
-              }
-              skip = true;
-              break;
-            }
-          }
-        }
         // ⭐ `D154`: a Space click's hold moves nothing — the tap stays where it pressed (a TAP), and a
         // swallowed left hold drives no body (the freeze).
         if (this.tap !== null || this.swallowLeft) {
@@ -433,11 +387,6 @@ export class MouseSecondTouch {
         if (this.second !== null) this.liftSecond(emit);
         this.swallowLeft = false;
         this.shiftTap = null;
-        // ⭐ (2026-10-10) a two-button drag is over too
-        if (this.rightWhileLeft !== null) {
-          if (this.rightWhileLeft.tumble) rightDragEnd = true;
-          this.rightWhileLeft = null;
-        }
         break;
     }
 
@@ -448,8 +397,7 @@ export class MouseSecondTouch {
     // ⛔⛔ `D167` — **THE ESC BUG**: a CANCEL carries no position (the adapter sends `0, 0`), and recording it as the
     // cursor made the next move one step from the page's corner to the pointer — a held body jumped away.
     if (ev.type !== "CANCEL") this.cursor = here;
-    const extra = { ...(rightDrag !== undefined ? { rightDrag } : {}), ...(rightDragEnd ? { rightDragEnd: true } : {}) };
-    return emit.length === 0 && !skip && rightDrag === undefined && !rightDragEnd ? PASS : { skip, emit, ...extra };
+    return emit.length === 0 && !skip ? PASS : { skip, emit };
   }
 
   /**

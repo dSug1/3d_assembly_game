@@ -90,8 +90,7 @@ import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
 import { alignedFaceOf } from "../core/face_pick";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
-import { installPointerHandler, orbitRightTap } from "./pointer_wiring";
-import { beginMouseTumble, endTumble, feedMouseTumble } from "./tumble_wiring";
+import { installPointerHandler } from "./pointer_wiring";
 import { PinchMotion } from "../input/pinch_gate";
 import { startRenderLoop } from "./render_loop";
 import { LevelEnd, type LevelResult } from "../core/level_end";
@@ -574,8 +573,10 @@ export function createScene(
   st.restingShapes = new Map();
   st.restingSeated = null;
   st.restingLast = null;
-  st.orbitTap = null;
-  st.pinkTap = null;
+  st.hold = null;
+  st.highlightEndedAt = null;
+  st.pinkFill = null;
+  st.pinkFillKey = "";
   st.pieceFaceTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;
@@ -589,9 +590,6 @@ export function createScene(
   st.pieceEntry = null;
   st.pieceAim = null;
   st.orbitRollAcc = 0;
-  st.tumble = null;
-  st.pieceOutside = null;
-  st.pieceSphere = null;
   st.pieceYawGain = 1;
   st.pieceYawGainKey = "";
   st.pieceYawGainDrag = 1;
@@ -697,12 +695,8 @@ export function createScene(
     st.hudDirty = true;
   },
   st.cfg.tapMaxDuration,
-  // ⭐ `RESTING_FACE_ALIGNMENT.md` §4: a right tap while the left button orbits — counted, the first one aligns the resting face
-  (heldMs) => orbitRightTap(st, heldMs),
-  // ⭐⭐ (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §18) left + right buttons held, a drag: the yaw / pitch outside the sphere
-  () => beginMouseTumble(st),
-  (dx, dy) => feedMouseTumble(st, dx, dy),
-  () => endTumble(st));
+  // ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) the right button is the orbit's HELD SECOND TOUCH whenever a piece is orbited
+  () => st.greenBox !== null);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
   // here is an `IN5` placeholder, and `IN5` is a device procedure. ⛔ ONE config

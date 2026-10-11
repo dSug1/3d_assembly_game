@@ -395,8 +395,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     // the box itself has no parent — only its yellow RESTING FACE rides it (2026-10-05; its white contour went with the rotation)
     expect(w).not.toMatch(/box\.parent\s*=/);
-    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(2);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(3);
     expect(w).toMatch(/fill\.parent = m;/);
+    expect(w).toMatch(/fill\.parent = mesh;/); // ⭐ (2026-10-11) the pink face's fill rides its body
     expect(w).toMatch(/twin\.parent = fill;/); // its faint twin rides the fill (2026-10-05)
   });
 
@@ -410,8 +411,9 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ wired: the box is PICKABLE (so the ray stops on it), and every pick the router reads goes through the filter
     expect(code("green_box_wiring.ts")).toMatch(/box\.isPickable = true/);
     const p = code("pointer_wiring.ts");
-    // ⭐ 2026-10-05: unless it is a second touch while the first orbits — then empty space outright (it never grabs)
-    expect(p).toMatch(/const rayHit =\s*orbitFinger !== null \? null : throughGreenBox\(/);
+    // ⭐ 2026-10-05: unless it is a second touch while the first orbits — then empty space outright (it never grabs); ⭐ (2026-10-11) the held
+    // second touch, and the first touch pressed again while it is held
+    expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
     expect(p).not.toMatch(/st\.router\.move\(e\.pointerId, s, info\.pickInfo\?\.pickedMesh \?\? null\)/);
     expect((p.match(/throughGreenBox\(info\.pickInfo\?\.pickedMesh \?\? null, st\.greenBox\)/g) ?? []).length).toBe(4);
   });

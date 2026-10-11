@@ -466,28 +466,8 @@ export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
   return [v[0] / n, v[1] / n, v[2] / n];
 }
 
-/**
- * ⭐⭐⭐ prototype — **THE SPHERE ROUND THE PINK GIZMO DRIVES THE WAYS IN AND OUT** (the owner, 2026-10-08: *"Create a sphere radius x centered on
- * pink gizmo, slider for x, default = 1m, translucent white. When the piece enters the sphere, automatically trigger way out. When the piece
- * exits the sphere, automatically trigger way in. place an hysteresis of 10% on the crossing … The way in and way out are therefore
- * disconnected from resting face"* — the band ±10 %, a way in at boot when outside). Whether the piece is OUTSIDE the sphere (the orbit
- * around the piece) now: it goes inside only below (1 − 10 %) × the radius, outside only beyond (1 + 10 %) × — no flicker on the surface.
- * `wasOutside` `null` (boot, a respawn): the plain side of the radius. ⛔ It replaced the end at x % of the start distance plus a clear push.
- */
-export const SPHERE_HYSTERESIS = 0.1;
-
-/**
- * ⭐⭐ (2026-10-10, the owner — a piece that dipped in by less than 10 % was LOCKED in the centre orbit outside the sphere, at the rings' end
- * where dy could not push it further: *"why I cannot use dy down to go backwards and exit the white sphere?"* → *"do 1"*) — whether the piece is
- * OUTSIDE the sphere (the orbit around the piece): coming IN, inside as soon as it crosses the radius (`r`); going OUT, outside once it is
- * beyond `(1 + 10 %) × r` — the band just OUTSIDE the surface, so it cannot flicker, and always reachable (the rings go out to 3 m, the band
- * ends at 2.53 m). `wasOutside` `null` (boot, a respawn): the plain side of the radius. ⛔ Was (2026-10-09) out at `r` only once ARMED by a dip
- * within `(1 − 10 %) × r` (`sphereSide`); before that (2026-10-08) ±10 %.
- */
-export function outsideSphere(distM: number, radiusM: number, wasOutside: boolean | null): boolean {
-  if (wasOutside === null) return distM > radiusM;
-  return wasOutside ? !(distM < radiusM) : distM > radiusM * (1 + SPHERE_HYSTERESIS);
-}
+// ⛔ (2026-10-11, the owner: *"Remove the white sphere and all sliders and all conditions associated with white sphere entirely"*) the
+// sphere's rule (`outsideSphere`, `SPHERE_HYSTERESIS`) is deleted: the ways in and out are the HELD SECOND TOUCH's (`hold_gesture.ts`).
 
 /**
  * ⭐⭐⭐ prototype — **THE WAY BACK TO THE ORBIT AROUND THE CENTRE** (the owner, 2026-10-07: *"When it ends (in this case or at respawn), the

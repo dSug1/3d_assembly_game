@@ -63,9 +63,9 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // its locked-piece call comes BEFORE the gate returns
     expect(p.indexOf("orbitDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal || unsnapHolds("));
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
-    // ⭐ 2026-10-05: first a second touch still pending (a possible tap) keeps the orbit finger orbiting
+    // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only
     expect(code("render/green_box_wiring.ts")).toMatch(
-      /const orbiting = pendingSecond\s*\? st\.orbitTap!\.orbitPointer\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
+      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \? h\.first : null\)\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
     );
   });
 });

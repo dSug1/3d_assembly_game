@@ -29,6 +29,24 @@ import { paint } from "./hud_paint";
  * itself; a camera radius inside the near plane renders a black page with no error.
  * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
  */
+/**
+ * ⭐ (2026-10-11, the owner: *"Do one slider with two cursors"*) the pink highlights' HOLD and FADE on one track: cursor 1 the hold's end
+ * (`highlightHoldMs`), cursor 2 the fade's end — hold + fade (`highlightFadeMs` = its distance from cursor 1, never negative). Moving the hold
+ * carries the fade with it.
+ */
+export function highlightTimerSlider(st: SceneState): MenuSlider {
+  const hold = tunable(st, "pink highlights: hold ● · fade end ● (ms after the input)", "highlightHoldMs", 0, 3000, 50);
+  const fade = tunable(st, "", "highlightFadeMs", 0, 3000, 50);
+  return {
+    ...hold,
+    second: {
+      get: () => st.cfg.highlightHoldMs + st.cfg.highlightFadeMs,
+      set: (v) => fade.set(Math.max(0, v - st.cfg.highlightHoldMs)),
+      format: (a, b) => `hold ${a.toFixed(0)} · fade ${(b - a).toFixed(0)}`,
+    },
+  };
+}
+
 export function tunable(st: SceneState, label: string,
   key: keyof typeof st.cfg & string,
   min: number,
@@ -182,12 +200,9 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             tunable(st, "gap at the closest ring (% of the gap at alignment)", "pieceOrbitGapMinPct", 10, 100, 5),
             tunable(st, "way in to the orbit around the piece (mm of finger travel, 0 = at once)", "pieceOrbitEnterMm", 0, 60, 1),
-            tunable(st, "sphere round the gizmo: radius (m; in at it, out beyond 1.1 × it; 0 = none)", "pieceSphereRadiusM", 0, 3, 0.05),
-            // ⭐ prototype, the owner 2026-10-10: hide it without turning it off
-            tunable(st, "sphere round the gizmo: shown (0 = hidden, still working; 1 = shown)", "pieceSphereVisible", 0, 1, 1),
             tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
-            // ⭐⭐ prototype (2026-10-10, *"build the yaw and pitch"*): outside the sphere, the first touch moving while a second is held still (left + right buttons held, drag) yaws / pitches
-            tunable(st, "yaw / pitch: travel per face (mm)", "tumbleStepMm", 3, 40, 1),
+            // ⭐⭐ prototype (2026-10-11): the pink highlights — hold, then fade — on ONE track with two cursors
+            highlightTimerSlider(st),
           ],
         },
         {

@@ -38,22 +38,7 @@ export function orbitTargetOnPress(
   return [hitPoint[0], hitPoint[1], hitPoint[2]];
 }
 
-/**
- * ⭐⭐ prototype — **THE PINK FACE BY A SECOND-TOUCH TAP** (`1.0.59z-`; the owner, 2026-10-09: *"user can also change the pink face by second
- * touch on placed piece while the first touch stays pressed"* — *"On a TAP"*): while the first touch ORBITS, a second touch landing on a
- * piece LOCKED in its goal — not the orbited piece (its tap aligns or rolls) — is a CANDIDATE: the point it hit, or `null`. ⭐ It moves the
- * yellow target and the pink face only if it is released as a TAP (`isOrbitTap`: quick, never moved, the orbit finger still down) — so a
- * pinch whose second finger lands on the painting still zooms and moves nothing. ⚠ Tied to the lock, as the first touch's press.
- */
-export function pinkFaceTapCandidate(
-  orbiting: boolean,
-  onOrbitedPiece: boolean,
-  locked: boolean,
-  hitPoint: readonly [number, number, number] | null,
-): [number, number, number] | null {
-  if (!orbiting || onOrbitedPiece || !locked || hitPoint === null) return null;
-  return [hitPoint[0], hitPoint[1], hitPoint[2]];
-}
+// ⛔ (2026-10-11) `pinkFaceTapCandidate` is DELETED — the pink face is the held second touch's now (`hold_gesture.ts`'s `pinkCandidate`).
 
 /**
  * ⭐⭐ prototype (green box) — **ONLY A PRESS ON A PLACED PIECE MOVES THE YELLOW TARGET** (the owner, 2026-10-02: *"a press on

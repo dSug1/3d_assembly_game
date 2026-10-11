@@ -323,6 +323,8 @@ The owner: *"user can also change the pink face by second touch on placed piece 
 
 ## 15. Outside the sphere, the orbit's dx ROLLS the piece (2026-10-10)
 
+> ⛔ **The sphere is deleted (2026-10-11, §20)**: the dx roll runs on the held second touch's way in and round the piece; its 45° span, its step and its clamp stand.
+
 The owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree orbit around the
 piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right, whateve the ring position (1st
 or 4th ring)"*.
@@ -371,6 +373,8 @@ or 4th ring)"*.
 - ⭐ **Amended the same day** (§19): the second-touch / right tap ALIGNS again — but only to a NEW pink face.
 
 ## 18. The YAW and the PITCH outside the sphere (2026-10-10, `1.0.63-`)
+
+> ⛔⛔ **DELETED 2026-10-11 (§20)** — *"No need for yaw- nor pitch-to-the-next-face. No need for faces paths."* The record below stands as history; the code (`core/tumble.ts`, the trail, the held-touch pause) is gone. ⭐ Kept from it: the pinch's dx gate.
 
 > *"how do you suggest I do to yaw the object so that the next face can be aligned as resting face with a movement similar to the roll to
 > the next axis when the piece is outside the white sphere"* → *"yaw the object around gravity axis"* → *"we need a yaw if the resting face is
@@ -447,6 +451,8 @@ tilt, smallest step, yaw axis, back, next, full turn, unlatch, held still, both 
 
 ## 19. The tap aligns to a NEW pink face (2026-10-10, `1.0.63-`)
 
+> ⛔ **Superseded 2026-10-11 (§20)**: the second-touch tap is gone; the held second touch's PRESS on a placed part's face takes the pink face and aligns to it.
+
 > *"previously, there was an alignment triggered by an input when the pink face was changed: what was the input? How could we reinstate
 > this alignment now"* → *"build it with old input"* — the owner.
 
@@ -455,3 +461,56 @@ pink face — the long axes first, no rolls carried (the pink face changed), one
 aligned to (`tapAlignsToPink`); the same face: nothing, so the rolls, yaws and pitches made since stay. So a new pink face is two taps — one
 on a placed piece to pick it (§14), one on the piece to align — and changing the pink face still aligns nothing by itself (§16). ⚠ At boot
 the piece is aligned to the floor while a pink face is already set: the first tap on the piece aligns it to that pink face.
+
+## 20. THE HELD SECOND TOUCH — the way in, round the piece, the way out; the pink face (2026-10-11, `1.0.64-`)
+
+> *"the way in and way out can be done anywhere if the conditions are satisfied … Remove the white sphere and all sliders and all conditions
+> associated with white sphere entirely … Second touch on mobile equals right click on desktop … Second touch on any object's face (except
+> the green and turquoise pieces themselves) selects the pink face and aligns the resting face with the pink face. This does not trigger a
+> change in the center of orbit … Second touch pressed anywhere (except the green and turquoise pieces themselves) && first touch dx drag
+> (beyond the deadband) triggers the way in and piece orbit … and controls the roll to the next-axis … Second touch released triggers the
+> way out … While second touch is held, first touch release and re-press does nothing (i.e. continuation of previous input) … No need for
+> yaw- nor pitch-to-the-next-face"* — the owner, 2026-10-11, then ten points settled before the build.
+
+⛔⛔ **The white sphere is DELETED**, with its rule (`outsideSphere`, its hysteresis), its frame, its mesh, its two sliders and its HUD text;
+and the yaw / pitch (§18) with it. At boot the camera orbits the centre; nothing enters the orbit round the piece by itself.
+
+**The roles** (`hold_gesture.ts`, `hold_wiring.ts`):
+
+| | mobile | desktop |
+|---|---|---|
+| **second touch** | a finger pressed while ONE other is down on empty space | the RIGHT button, with or without the left |
+| **first touch** | the other finger — lifted and pressed again while the second is held: the SAME input goes on | the left button |
+
+- ⛔ A second touch ON the orbited piece is no second touch (it can still pinch). Neither touch grabs a part or moves the orbit centre while
+  the second is held — a first touch pressed again on a placed part included (*"continuation wins"*).
+- ⭐ The desktop's right button is never moved by the cursor and never latched (its old HitFace role, `D94`/`D161`, is the parts game's).
+
+**What it does**:
+
+| | |
+|---|---|
+| **second touch pressed** on a PLACED part's face | the pink face its press would take — ⛔ never a frozen body (the floor: empty space), never the orbited pieces; taken **at the way in, or at the release** if it never pinched (*"option B"*: a zoom never changes it); the SAME face again: nothing; a new one: the resting face aligned to it (the long axes first, no rolls carried), one episode, ⛔ the orbit centre unchanged |
+| **first touch dx past the deadband**, the second held | decided there (`holdDecision`): the second touch's x travel within HALF the deadband — the **WAY IN**, then the orbit round the piece and the **roll** (dx only, its count from the way in's start, carried across a re-press); past half — a **PINCH** (the zoom, from where it is decided). Latched until the second touch lifts |
+| **first touch dy** while the second is held | ignored |
+| **first touch lifted and pressed again** | the same input: the roll's count kept, ⛔ no coast, no centre change |
+| **first touch TAP on the orbited piece**, the second held or not | the face hit becomes the resting face, aligned (the rolls carried if the pink face is unchanged) — §13 |
+| **second touch released** | the **WAY OUT** if the way in had started — from the camera as it is (a way in cut short too), its progress the first touch's NEXT travel (`pieceOrbitReturnMm`, 30 mm), the pink face unchanged; a release before any dx: the pink face taken (above) |
+
+- ⭐ **Finger travel, not time** (*"Continue with finger travel … Way in way out Sliders stay"*): the way in runs on the first touch's dx
+  (`pieceOrbitEnterMm`, 12 mm, its view re-aimed by dx), the way out on its next travel. ⚠ So a way out started with no finger moving waits
+  for the next drag — releasing both fingers mid-way leaves the camera round the piece until then.
+- ⭐ **No jump, no back-and-forth**: each transition starts from the camera as it is — the way out from a way in cut short, a way in again
+  from a way out cut short. Headless: an interrupted way in turned back and in again with a largest camera step of 0.089 m per 4 px move; the
+  way in itself ramps 0.25 → 0.07 m per move (about 2 m over its 12 mm — the slider is the dial).
+- ⭐⭐ **The highlights** (*"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights fade
+  gradually and rapidly away. Set default timer 750 ms"*): the resting face's fill and the pink face's (a fill on its body) show while the
+  input runs, then HOLD **750 ms**, then FADE over **250 ms** (`highlightAlpha`); none at boot; a first-touch tap on the piece shows them
+  too. ⭐ ONE slider with TWO cursors (*"Do one slider with two cursors"*): CAMERA ORBIT AROUND PIECE › *pink highlights* — cursor 1 the
+  hold's end, cursor 2 the fade's end (moving the hold carries the fade). ⚠ The pink RING stays where it was — at the orbit centre, the
+  yellow target: it marks the orbit's centre now, no longer the pink face (the second touch does not move the centre).
+
+Headless (both devices): the way in, the roll, the continuation across a lift and re-press, the way out by travel, an interrupted way in, the
+pink face from a press on a part (aligned, rolls reset), the zoom of two fingers apart, the highlights gone 1.3 s after the input; the
+mouse with the right button first or second. `tests/proto_hold.test.ts`; each rule falsified on purpose (half deadband, frozen, same
+face, fade, a pinch keeping the pink face, the coast, dy).

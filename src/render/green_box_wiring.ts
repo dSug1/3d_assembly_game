@@ -7,14 +7,13 @@
  */
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { OrbitController } from "../input";
 import { shapeOfBody, topologyFromMesh, topologyOfBody } from "./bodies";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { candidateForFace, chooseInGroup, coupleStops, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { edgeAxisRelative, edgeDirections, nearestCouple, nextEdgeAxis, nextTumble, tumbleAxes, tumbleAxisSigned } from "../core/tumble";
+import { highlightAlpha } from "../input/hold_gesture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -34,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
-import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, outsideSphere, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -413,103 +412,13 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
   return true;
 }
 
-/**
- * ⭐⭐⭐ prototype — **THE YAW AND THE PITCH** (`RESTING_FACE_ALIGNMENT.md` §18; the owner, 2026-10-10: *"build the yaw and pitch"*). Outside
- * the sphere, a two-finger slide (desktop: left + right buttons held, drag): the piece TUMBLES about an axis in its resting face's plane
- * (`tumbleAxes` — YAW about the couple axis closest to gravity on a vertical face, PITCH across it; on a horizontal face the pitch about the
- * axis most along the screen) onto the NEXT face of the section loop (`nextTumble`), which becomes the resting face (`restOnTappedFace`:
- * its pink fill, axes and centre; the anchor's jump faded out), its leftover tilt taken out and its couple put back on the pink face's
- * (`nearestCouple`). `sense` +1: the near side RIGHT (yaw), the top AWAY (pitch). One turn eased over `REST_ALIGN_MS`, quick steps adding
- * up; the roll count starts again. `false` with nothing to tumble onto.
- */
-export function tumbleRestingFace(
-  st: SceneState,
-  now: number,
-  turn: "YAW" | "PITCH",
-  sense: 1 | -1,
-  /** ⭐ (2026-10-10) a path in flight: the axis it turns about (world) — the edge direction most along it is used; `null`: the first step */
-  want: Vec3 | null = null,
-): { readonly axis: Vec3; readonly angleRad: number } | null {
-  const i = st.orbitPieces.findIndex((o) => o.mesh === st.greenBox);
-  const p = st.orbitPieces[i];
-  const rr = st.restRoll;
-  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return null;
-  const topo = topologyFromMesh(p.mesh);
-  if (topo === null) return null;
-  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
-  const shown: Quat = [r.w, r.x, r.y, r.z];
-  const from = st.restAlign?.base ?? shown; // ⭐ from where the last turn was heading (one in flight at most — the clamp)
-  const cam = st.camera.position;
-  const tg = st.camera.getTarget();
-  const view: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
-  const rv = st.camera.getDirection(new Vector3(1, 0, 0));
-  const uv = st.camera.getDirection(new Vector3(0, 1, 0));
-  const right: Vec3 = [rv.x, rv.y, rv.z];
-  // ⭐⭐ (2026-10-10) about the resting face's EDGE directions (`edgeDirections`); a path keeps its axis (the edge direction most along it)
-  const dirs = edgeDirections(p.restingEdges);
-  const axes = tumbleAxes(from, p.restingFace.normal, dirs, [0, 1, 0], right);
-  const axis = want !== null ? edgeAxisRelative(from, p.restingFace.normal, dirs, want, true) : turn === "YAW" ? axes.yaw : axes.pitch;
-  if (axis === null) {
-    st.lastVerdict = `orbit: ${turn.toLowerCase()} — none (${turn === "YAW" ? "the resting face is horizontal: dx rolls" : "no axis"})`;
-    st.hudDirty = true;
-    return null;
-  }
-  const signed = tumbleAxisSigned(turn, axis, sense, view, right, [uv.x, uv.y, uv.z]);
-  const lo = [0, 1, 2].map((k) => Math.min(...topo.positions.map((v) => v[k]!)));
-  const hi = [0, 1, 2].map((k) => Math.max(...topo.positions.map((v) => v[k]!)));
-  const tol = 0.005 * Math.hypot(hi[0]! - lo[0]!, hi[1]! - lo[1]!, hi[2]! - lo[2]!);
-  const faces = topo.faces.map((f) => ({ id: f.id, normal: f.normal, points: [...new Set(f.triangles)].map((k) => topo.positions[k]!) }));
-  const restIds = p.restingFace.faces.map((k) => topo.faces[k]?.id ?? "");
-  const t = nextTumble(from, faces, topo.positions, restIds, p.restingFace.normal, p.restingCentre, signed, tol);
-  if (t === null || !restOnTappedFace(st, t.faceId)) {
-    st.lastVerdict = `orbit: ${turn.toLowerCase()} — no face to tumble onto`;
-    st.hudDirty = true;
-    return null;
-  }
-  const np = st.orbitPieces[i]!; // ⭐ the new resting face's axes and normal (`restOnTappedFace` rebuilt them)
-  const c = np.restingFace === null ? { q: t.q, couple: null, angleRad: 0 } : nearestCouple(t.q, np.restingFace.normal, np.restingFlush, rr.pinkAxes);
-  st.restAlign = { from: shown, t0: now, base: c.q };
-  st.restRoll = { ...rr, rolls: 0, couple: c.couple };
-  st.orbitRollAcc = 0;
-  st.lastVerdict =
-    `orbit: ${turn === "YAW" ? (sense > 0 ? "yaw →" : "yaw ←") : sense > 0 ? "pitch ↑" : "pitch ↓"} ${((t.angleRad * 180) / Math.PI).toFixed(0)}° onto ${t.faceId}` +
-    (c.couple === null ? "" : ` — a${c.couple[0]} ∥ b${c.couple[1]}`);
-  st.hudDirty = true;
-  return { axis, angleRad: t.angleRad };
-}
-
-/** ⭐ The shown piece's resting face as one key (its merged faces' ids) — what a yaw / pitch path compares to know it is back (`pathAfterStep`). */
-export function restingFaceKey(st: SceneState): string {
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  if (p === undefined || p.restingFace === null) return "";
-  const topo = topologyFromMesh(p.mesh);
-  return p.restingFace.faces.map((k) => topo?.faces[k]?.id ?? String(k)).sort().join("+");
-}
-
-/** ⭐ The next movement's axis once a path is whole (the swap): the resting face's NEXT edge direction after `w` (`nextEdgeAxis`), at the pose it is heading for. */
-export function otherTumbleAxis(st: SceneState, w: Vec3, sense: 1 | -1 = 1): Vec3 | null {
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  if (p === undefined || p.restingFace === null) return null;
-  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
-  const q: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
-  return nextEdgeAxis(q, p.restingFace.normal, edgeDirections(p.restingEdges), w, sense);
-}
-
-/** ⭐ Is the shown piece's resting face VERTICAL now (`tumbleAxes`, the pose it is heading for) — a two-finger dx yaws it; else it rolls. */
-export function restingFaceVertical(st: SceneState): boolean {
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  if (p === undefined || p.restingFace === null) return false;
-  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
-  const q: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
-  return tumbleAxes(q, p.restingFace.normal, edgeDirections(p.restingEdges), [0, 1, 0], [1, 0, 0]).vertical;
-}
 
 /**
  * ⭐⭐⭐ prototype — **THE CAMERA ENTERS THE ORBIT AROUND THE PIECE** (`PIECE_ORBIT.md`; the owner, 2026-10-06: *"when resting face is
  * aligned, the orbit center moves to the piece, the rest orbit around the piece"*). ⭐ AN ACTION OF ITS OWN (the owner, 2026-10-07:
  * *"Make those two actions independent, although triggered by the same input. Later on, we will likely map other inputs for those two
  * different actions"*): it no longer lives inside `alignRestingFace` — the tap (`orbitTapped`, ⛔ inert since 2026-10-10) called both, each alone. Entered once; a
- * second call keeps it (`false`). `true` when it starts here. ⭐ Since 2026-10-08 called by the SPHERE (`sphereFrame`), no longer by the tap.
+ * second call keeps it (`false`). `true` when it starts here. ⭐ Since 2026-10-11 called by the HELD SECOND TOUCH (`hold_wiring.ts`); the sphere is deleted.
  */
 export function enterPieceOrbit(st: SceneState): boolean {
   const box = st.greenBox;
@@ -542,7 +451,7 @@ export function enterPieceOrbit(st: SceneState): boolean {
  * camera around the piece, so the rig had drifted from it — the springs and the camera starting again from there, and the piece's
  * difference from the rings fades out too; a respawn (`rebase` false) has already put the rig and the piece back at boot.
  */
-function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
+export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const box = st.greenBox;
   if (box === null) return;
   const c = st.orbitCentreM;
@@ -598,7 +507,8 @@ function counterYawFrame(st: SceneState): void {
   // ⭐⭐ (2026-10-08, the owner: *"when the piece is not aligned and inside the sphere, the piece rotates with the yaw orbit. remove that (I want
   // the piece to behave the same as when resting face is aligned)"*) — while the SPHERE is on, no spin at all, inside it or out (the way in's
   // carried share too), aligned or not; the heading is still read, so a sphere set to 0 resumes the spin without a jump
-  if (prev === null || st.restAligned || st.cfg.pieceSphereRadiusM > 0) return;
+  // ⭐ (2026-10-11) the sphere is deleted: no spin ever — every piece is aligned from its spawn
+  if (prev === null || st.restAligned) return;
   const d = wrapAngle(h - prev);
   if (d === 0) return;
   const r = box.rotationQuaternion ?? Quaternion.Identity();
@@ -622,12 +532,82 @@ function restAlignFrame(st: SceneState, now: number): void {
 }
 
 /** ⭐ The piece in use's yellow fill, lifted off its face by the highlight offset (`highlightLiftMm` on the glass, at its distance). */
-function restingFillFrame(st: SceneState): void {
+function restingFillFrame(st: SceneState, now: number): void {
+  // ⭐⭐ (2026-10-11, the owner: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
+  // fade gradually and rapidly away"*) — shown while the held second touch's input runs, held `highlightHoldMs` after it, faded over
+  // `highlightFadeMs` (`highlightAlpha`); none at boot
+  const a = highlightAlpha(now, st.hold !== null, st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs);
+  pinkFillFrame(st, a);
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFill === null || p.restingFace === null) return;
+  const fill = p.restingFill;
+  fill.isVisible = a > 0;
+  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * a;
+  for (const c of fill.getChildMeshes(true)) {
+    c.isVisible = a > 0;
+    if (c.material instanceof StandardMaterial) c.material.alpha = RESTING_XRAY_ALPHA * a;
+  }
   const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
-  p.restingFill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
+  fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
+}
+
+/**
+ * ⭐⭐ prototype — **THE PINK FACE'S FILL** (2026-10-11): the pink face — a placed part's face, taken by the held second touch — filled pink, a
+ * child of its body (it moves with it), lifted off it by the highlight offset, shown and faded with the resting face's (`highlightAlpha`).
+ * Rebuilt when the pink face changes; none for a frozen body's (the boot alignment's floor is no pink face).
+ */
+function pinkFillFrame(st: SceneState, a: number): void {
+  const pf = st.pinkFace;
+  const key = pf === null ? "" : `${pf.objectId}/${pf.faceId}`;
+  if (key !== st.pinkFillKey) {
+    st.pinkFill?.dispose();
+    st.pinkFill = null;
+    st.pinkFillKey = key;
+    const mesh = pf === null ? undefined : st.meshOf.get(pf.objectId);
+    if (pf !== null && mesh !== undefined && st.world.objects.get(pf.objectId)?.frozen !== true) {
+      const topo = st.topoOf.get(pf.objectId) ?? topologyOfBody(st, mesh);
+      const face = topo.faces.find((f) => f.id === pf.faceId);
+      if (face !== undefined) {
+        const local = new Map<number, number>();
+        const positions: number[] = [];
+        const indices: number[] = [];
+        for (const vi of face.triangles) {
+          let li = local.get(vi);
+          if (li === undefined) {
+            li = local.size;
+            local.set(vi, li);
+            const v = topo.positions[vi]!;
+            positions.push(v[0], v[1], v[2]);
+          }
+          indices.push(li);
+        }
+        const fill = new Mesh(`pink-face-${key}`, st.scene);
+        const data = new VertexData();
+        data.positions = positions;
+        data.indices = [...indices, ...indices.slice().reverse()]; // ⚠ double-sided
+        data.applyToMesh(fill, false);
+        const mat = new StandardMaterial(`pink-face-mat-${key}`, st.scene);
+        mat.emissiveColor = RESTING_COLOUR.clone();
+        mat.disableLighting = true;
+        mat.backFaceCulling = false;
+        fill.material = mat;
+        fill.parent = mesh;
+        fill.isPickable = false;
+        fill.metadata = { orbitCandidate: false, normal: face.normal };
+        st.pinkFill = fill;
+      }
+    }
+  }
+  const fill = st.pinkFill;
+  if (fill === null) return;
+  fill.isVisible = a > 0;
+  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * a;
+  if (a > 0) {
+    const n = (fill.metadata as { normal: Vec3 }).normal;
+    const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, fill.getAbsolutePosition()), st.camera.fov, st.canvas.clientHeight);
+    fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
+  }
 }
 
 /**
@@ -665,8 +645,8 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.pieceAim = null;
     st.orbitRollAcc = 0;
     st.centreReturn = null;
-    // ⭐ (2026-10-08) the SPHERE decides afresh on the next frame (`sphereFrame`): back at boot, outside it → a way in, as at boot
-    st.pieceOutside = null;
+    // ⭐ (2026-10-11) the held second touch's input ends with the respawn — no way in, no way out (the sphere is deleted)
+    st.hold = null;
   }
   // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
   // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
@@ -863,7 +843,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.cfg.orbitPieceKind !== st.orbitPieceKind) spawnOrbitPiece(st, st.cfg.orbitPieceKind, false);
   const now = performance.now();
   const c = st.orbitCentreM;
-  // ⭐ (2026-10-08) the orbit around the piece starts and ends at the SPHERE round the pink gizmo — `sphereFrame`, at this frame's end
+  // ⭐ (2026-10-11) the orbit around the piece starts and ends with the HELD SECOND TOUCH (`hold_wiring.ts`) — the sphere is deleted
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
   // green piece's volume (`OrbitInertia`, `inertiaTauMs`); a NEW touch stops it at once.
@@ -950,10 +930,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const lockedHolder =
     out.length === 0 && objs.length === 1 && st.held.get(objs[0]!.id) !== undefined &&
     goalLocked(st.idOf.get(st.held.get(objs[0]!.id)!.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
-  // ⭐ (2026-10-06) a second touch ON the piece — never a pinch — leaves the orbit finger orbiting for as long as it is down
-  const pendingSecond = st.orbitTap !== null && st.orbitTap.second !== null && out.length === 2 && objs.length === 0;
-  const orbiting = pendingSecond
-    ? st.orbitTap!.orbitPointer
+  // ⭐⭐ (2026-10-11) the HELD SECOND TOUCH's input: the first touch orbits only on the way in / round the piece (`WAY`)
+  const h = st.hold;
+  const orbiting = h !== null
+    ? (h.mode === "WAY" ? h.first : null)
     : out.length === 1 && objs.length === 0
       ? out[0]!.id
       : lockedHolder
@@ -963,8 +943,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
   if (released) {
     st.orbitMotion = null;
-    // ⭐ The finger lifted: the coast starts at the orbit's rate over the last moments of the drag.
-    st.orbitInertia.release(now);
+    // ⭐ The finger lifted: the coast starts at the orbit's rate over the last moments of the drag — ⛔ (2026-10-11, *"no coasting; the orbit
+    // simply waits for the re-press"*) not while the second touch is held
+    if (st.hold === null) st.orbitInertia.release(now);
+    else st.orbitInertia.stop();
   }
   let finger: { yaw: boolean; pitch: boolean; holdMs: number } | null = null;
   if (st.orbitMotion !== null) {
@@ -1103,11 +1085,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
-  sphereFrame(st);
   counterYawFrame(st);
   restAlignFrame(st, now);
   anchorFrame(st, now);
-  restingFillFrame(st);
+  restingFillFrame(st, now);
 }
 
 /**
@@ -1146,56 +1127,6 @@ function piecesClosestM(st: SceneState): number {
   return clampPieceRadiusM(m, st.cfg);
 }
 
-/**
- * ⭐⭐⭐ prototype — **THE SPHERE ROUND THE PINK GIZMO** (`outsideSphere`; the owner, 2026-10-08: *"Create a sphere radius x centered on pink
- * gizmo, slider for x, default = 1m, translucent white. When the piece enters the sphere, automatically trigger way out. When the piece exits
- * the sphere, automatically trigger way in. place an hysteresis of 10% on the crossing"*). Each frame: the sphere drawn on the gizmo
- * (`pieceSphereRadiusM`, a faint white seen from both sides — the camera is often inside it); the piece's side of it, ±10 % on the crossing:
- * OUTSIDE → a WAY IN (`enterPieceOrbit`, unless already in or on its way in) — at boot and after a respawn too; INSIDE → a WAY OUT
- * (`returnToCentreOrbit`, from the orbit around the piece or a way in cut short). The resting-face tap no longer takes part.
- */
-function sphereFrame(st: SceneState): void {
-  const box = st.greenBox;
-  if (box === null) return;
-  const t = st.centreBlend.targetM;
-  const r = st.cfg.pieceSphereRadiusM;
-  const mesh = pieceSphereMesh(st);
-  mesh.isVisible = r > 0 && st.cfg.pieceSphereVisible === 1; // ⭐ (2026-10-10) hidden by its own slider, still working
-  mesh.position.set(t[0], t[1], t[2]);
-  mesh.scaling.setAll(Math.max(1e-6, r));
-  if (!(r > 0)) return;
-  const d = Math.hypot(box.position.x - t[0], box.position.y - t[1], box.position.z - t[2]);
-  // ⭐ (2026-10-10) in at the radius; out beyond 1.1 × the radius (`outsideSphere`)
-  const prev = st.pieceOutside;
-  const out = outsideSphere(d, r, prev);
-  st.pieceOutside = out;
-  if (out === prev) return;
-  st.hudDirty = true;
-  if (out) {
-    if (enterPieceOrbit(st)) st.lastVerdict = `orbit: the piece ${prev === null ? "outside" : "out of"} the sphere (${d.toFixed(2)} m) — the camera goes round the piece`;
-  } else if (st.pieceOrbit !== null || st.pieceEntry !== null) {
-    st.pieceEntry = null;
-    st.lastVerdict = `orbit: the piece inside the sphere (${d.toFixed(2)} m) — back to the centre orbit`;
-    returnToCentreOrbit(st, true);
-  }
-}
-
-/** ⭐ The sphere's mesh, made once: a unit sphere scaled to the radius, faint white, both faces, never picked, never casting a shadow. */
-function pieceSphereMesh(st: SceneState): Mesh {
-  if (st.pieceSphere !== null) return st.pieceSphere;
-  const m = CreateSphere("piece-sphere", { diameter: 2, segments: 32 }, st.scene);
-  const mat = new StandardMaterial("piece-sphere-mat", st.scene);
-  mat.diffuseColor = new Color3(1, 1, 1);
-  mat.emissiveColor = new Color3(1, 1, 1);
-  mat.disableLighting = true;
-  mat.alpha = 0.08;
-  mat.backFaceCulling = false;
-  m.material = mat;
-  m.isPickable = false;
-  m.alphaIndex = 1;
-  st.pieceSphere = m;
-  return m;
-}
 
 /** ⭐ The camera's yaw and pitch offsets (the CAMERA OFFSET sliders), radians. */
 function pieceOrbitAngleOffset(st: SceneState): { yawRad: number; pitchRad: number } {

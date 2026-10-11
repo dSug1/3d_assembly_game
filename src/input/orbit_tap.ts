@@ -1,57 +1,21 @@
 /**
- * ⭐⭐⭐ prototype — **THE SECOND-FINGER TAP WHILE ORBITING** (`Claude/40_RENDER_SCENE/spec/RESTING_FACE_ALIGNMENT.md` §1, §4; the owner,
- * 2026-10-05, amended 2026-10-06: *"Zoom is triggered by second touch outside the piece, resting face alignment triggered by second touch
- * tap on the piece"*). While the first touch (or the left button) orbits, a SECOND touch:
- * * landing OFF the orbited piece is a **PINCH** from the moment it lands (no tap to wait for: nothing held back, no jump);
- * * landing ON the piece is a **TAP** candidate — a tap if released within `tapMaxDuration` (Unity's definition: a press and release
- *   within a time — and, for a touch, within a radius: the deadband, millimetres on the glass), never having MOVED beyond it, with the
- *   orbit finger still down; otherwise nothing. ⛔ It never zooms, and the first finger keeps orbiting meanwhile.
- * ⭐ The mouse's right button, with the left one orbiting, is judged on TIME only — the cursor moves with the orbit, and Unity applies
- * no radius to a button.
- * ⭐ The taps are COUNTED while the orbit finger is down (reset when it lifts) — for the HUD. ⭐⭐ (2026-10-09, `tapAction`) a tap ALIGNS the
- * resting face, or — the piece already aligned to the same target face — ROLLS it to the next edge, whether or not the orbit finger
- * lifted in between.
+ * ⭐⭐ prototype — **A TAP ON THE ORBITED PIECE** (`Claude/40_RENDER_SCENE/spec/RESTING_FACE_ALIGNMENT.md` §13, §20).
+ *
+ * ⛔ (2026-10-11) the second-finger tap while orbiting (`RESTING_FACE_ALIGNMENT.md` §1, §4, §19 — it counted, aligned, rolled, then aligned
+ * to a new pink face) is DELETED with its helpers (`secondMoved`, `isOrbitTap`, `orbitTapCount`, `tapAlignsToPink`): the second touch is
+ * HELD now (`hold_gesture.ts`) — its press on a placed part's face takes the pink face and aligns to it.
  *
  * ⛔ ENGINE-FREE.
  */
-
-/** ⭐ Has the second touch MOVED — its travel from its press beyond the deadband (mm on the glass)? Then it is no longer a tap. */
-export function secondMoved(travelMm: number, deadbandMm: number): boolean {
-  return travelMm > deadbandMm;
-}
-
-/** ⭐ Is the second touch's release a TAP? `moved`: it went beyond the deadband at some point (a touch); never for the mouse. */
-export function isOrbitTap(pressMs: number, releaseMs: number, tapMaxMs: number, moved: boolean, orbitStillDown: boolean): boolean {
-  return orbitStillDown && !moved && releaseMs >= pressMs && releaseMs - pressMs <= tapMaxMs;
-}
-
-/** ⭐ One more tap counted (the HUD's `taps N`). */
-export function orbitTapCount(count: number): { readonly count: number } {
-  return { count: count + 1 };
-}
 
 /**
  * ⭐⭐ prototype — **A TAP ON THE ORBITED PIECE ITSELF** (2026-10-09; the owner: *"when a face of the green piece or the turquoise piece is
  * left button tapped or first touch tapped, the hit face becomes the resting face and it aligns. the roll to the next edge is then
  * implemented on this new resting face"*): the FIRST touch (or the left button) pressed on the orbited piece — empty space to the router,
- * so its drag orbits — makes the face it hit the resting face when it is released as a TAP (`isTapRelease`, §1.3's) with no other
- * pointer down; outside the edge band. ⛔ Consumed: it is not one of a camera-reset double tap.
+ * so its drag orbits — makes the face it hit the resting face when it is released as a TAP (`isTapRelease`, §1.3's); outside the edge
+ * band. ⭐ (2026-10-11, *"First touch tap on green or turquoise pieces with or without Second touch pressed"*) the second touch may be held.
+ * ⛔ Consumed: it is not one of a camera-reset double tap.
  */
 export function restingFaceTap(onOrbitedPiece: boolean, firstTouch: boolean, inBand: boolean): boolean {
   return onOrbitedPiece && firstTouch && !inBand;
-}
-
-// ⛔ (2026-10-10, the owner) `tapAction` is DELETED: the second-touch / right-button tap neither rolls (*"remove the increment of the roll by
-// right button tap / second touch tap"*) nor aligns (*"remove that as the existing pieces are aligned at boot"*) — every piece is aligned
-// at its spawn (`bootRestAlign`), the roll is the orbit's dx, a new resting face is a tap ON the piece (`restingFaceTap`).
-
-/**
- * ⭐⭐ prototype — **THE TAP ALIGNS TO A NEW PINK FACE** (2026-10-10, `RESTING_FACE_ALIGNMENT.md` §19; the owner: *"previously, there was an
- * alignment triggered by an input when the pink face was changed … How could we reinstate this alignment now"* → *"build it with old
- * input"*): the second-touch tap on the orbited piece / the right tap while the left button orbits ALIGNS the resting face to the pink face
- * when that face (`targetKey`, the face the piece would align to now) is not the one it was last aligned to (`alignedKey`); the same face:
- * nothing, so a stray tap never undoes the rolls, yaws and pitches made since. `targetKey` "" (nothing to align to): nothing.
- */
-export function tapAlignsToPink(alignedKey: string | null, targetKey: string): boolean {
-  return targetKey !== "" && targetKey !== alignedKey;
 }
