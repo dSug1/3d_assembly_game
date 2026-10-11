@@ -194,8 +194,8 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 });
 
 describe("⭐ prototype — the pink gizmo's switch (2026-10-11, *\"add a slider to hide the pink gizmo\"*)", () => {
-  it("⭐ shown by default; at 0 the ring at the orbit centre is not drawn", () => {
-    expect(DEFAULT_CONFIG.pinkGizmoVisible).toBe(1);
+  it("⭐ HIDDEN by default (*\"make the default pink gizmo hidden\"*); at 0 the ring at the orbit centre is not drawn", () => {
+    expect(DEFAULT_CONFIG.pinkGizmoVisible).toBe(0);
     expect(code("render/tuning_menu.ts")).toContain('"pinkGizmoVisible", 0, 1, 1)');
     const w = code("render/green_box_wiring.ts").replace(/\s+/g, " ");
     expect(w).toContain("if (st.cfg.pinkGizmoVisible !== 1) { ring.isVisible = false; return; }");
