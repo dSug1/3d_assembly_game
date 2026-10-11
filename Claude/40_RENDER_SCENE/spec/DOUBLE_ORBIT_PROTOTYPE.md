@@ -711,3 +711,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   way in; key up — the way out; key + left click on a part — the pink face → `RESTING_FACE_ALIGNMENT.md` §20.
 * ⭐ The key + left click tap takes the pink face at the click, the key still held; the highlights default to hold 300 ms, fade 250 ms →
   `RESTING_FACE_ALIGNMENT.md` §20.
+* ⛔ A plain left click on a part then the key + click on the same face did not align — "the same face" is now the face the piece is ALIGNED
+  to, not the pink face → `RESTING_FACE_ALIGNMENT.md` §20.
+* ⭐ The pink face is taken AT THE PRESS (the key + left press; a second finger's press) — option B undone, its pinch cost named; the same face
+  again shows the highlights → `RESTING_FACE_ALIGNMENT.md` §20.

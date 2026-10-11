@@ -9,8 +9,8 @@
  * - **The pink face** (*"Second touch on any object's face (except the green and turquoise pieces themselves) selects the pink face and aligns
  *   the resting face with the pink face. This does not trigger a change in the center of orbit"*): only a PLACED part's face — ⛔ never a frozen
  *   body (*"frozen bodies (the floor) are never a pink face; a second touch on them counts as empty space: ok"*), never the orbited pieces —
- *   and taken once the press is known NOT to be a pinch (*"option B"*): at the way in's start, or at the release; the same face again:
- *   nothing (`pinkChanges`).
+ *   ⭐ taken AT THE PRESS (2026-10-11, *"immediately when left button is pressed. Same for the mobile input"* — it was taken once the press
+ *   was known NOT to be a pinch, *"option B"*); the face the piece is already aligned to: nothing (`pinkChanges`).
  * - **The way in** — the second touch held + the first touch's dx past the deadband: decided there (`holdDecision`) — the second touch's own x
  *   travel past HALF the deadband says the two fingers are pinching (ZOOM), else it is the way in (WAY). Latched until the second touch lifts.
  * - **The highlights** — the pink face and the resting face shown while the input runs, held `holdMs` after it, then faded over `fadeMs`
