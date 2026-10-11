@@ -27,6 +27,9 @@ export type HoldMode = "HELD" | "WAY" | "ZOOM";
  * first finger's crossing the second has travelled well past half of it.
  */
 export function holdDecision(firstDxMm: number, secondDxMm: number, deadbandMm: number): "WAY" | "ZOOM" | null {
+  // ⭐ (2026-10-11, the owner: *"zoom: make it possible also if first touch is immobile and second touch dx exit deadband"*) — the SECOND
+  // touch's dx past its deadband first: a ZOOM at once
+  if (Math.abs(secondDxMm) > deadbandMm) return "ZOOM";
   if (!(Math.abs(firstDxMm) > deadbandMm)) return null;
   return Math.abs(secondDxMm) > deadbandMm / 2 ? "ZOOM" : "WAY";
 }

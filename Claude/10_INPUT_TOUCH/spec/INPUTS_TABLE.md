@@ -13,7 +13,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | holding | input | does |
 |---|---|---|
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
-| nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-10) only once BOTH fingers have moved past the deadband in x (`pinchDxOpen`) |
+| nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) |
 | ⭐ the orbited piece (prototype) | the SECOND finger pressed on a placed part's face | the **pink face** (never the floor), aligned **at the press**; the face it is already aligned to: the highlights shown; ⛔ no centre change (§20) |

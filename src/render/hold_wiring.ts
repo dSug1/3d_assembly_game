@@ -90,17 +90,20 @@ function takePink(st: SceneState): boolean {
  * ⭐ A move of one of the input's two touches. `orbitStep` — the caller's orbit drag (dx only on the way in / round the piece). Returns the
  * mode now.
  */
-export function holdMove(st: SceneState, pointerId: number, s: Sample, prev: Sample, orbitStep: (dxOnly: boolean) => void): HoldMode | null {
+export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: Sample, orbitStep: (dxOnly: boolean) => void): HoldMode | null {
   const h = st.hold;
   if (h === null) return null;
   if (h.mode === "ZOOM") {
     updatePinch(st);
     return h.mode;
   }
-  if (pointerId !== h.first) return h.mode; // ⭐ the second touch: held, or on its way to a pinch — judged at the first's crossing
+  if (pointerId !== h.first && pointerId !== h.second) return h.mode;
   if (h.mode === "HELD") {
+    // ⭐ (2026-10-11) judged at EITHER touch's move: the second's dx past its deadband — a zoom (the first still or not); the first's — the
+    // way in, or a zoom if the second is on its way (`holdDecision`)
+    const fx = xOf(st, h.first);
     const sx = xOf(st, h.second);
-    const d = holdDecision(pxToMm(s.x - (h.firstX0 ?? prev.x)), sx === null ? 0 : pxToMm(sx - h.secondX0), st.cfg.motionDeadbandMm);
+    const d = holdDecision(fx === null || h.firstX0 === null ? 0 : pxToMm(fx - h.firstX0), sx === null ? 0 : pxToMm(sx - h.secondX0), st.cfg.motionDeadbandMm);
     if (d === null) return h.mode;
     h.mode = d;
     if (d === "ZOOM") {
@@ -124,7 +127,7 @@ export function holdMove(st: SceneState, pointerId: number, s: Sample, prev: Sam
     st.pieceYawGainDrag = st.pieceYawGain;
     st.hudDirty = true;
   }
-  orbitStep(true);
+  if (pointerId === h.first) orbitStep(true); // ⭐ the way in / round the piece: the first touch's dx only
   return h.mode;
 }
 

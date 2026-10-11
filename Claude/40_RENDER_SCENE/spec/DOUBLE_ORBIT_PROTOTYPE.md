@@ -715,3 +715,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   to, not the pink face → `RESTING_FACE_ALIGNMENT.md` §20.
 * ⭐ The pink face is taken AT THE PRESS (the key + left press; a second finger's press) — option B undone, its pinch cost named; the same face
   again shows the highlights → `RESTING_FACE_ALIGNMENT.md` §20.
+* ⭐ The zoom by the second finger alone — its dx past the deadband, the first still → `RESTING_FACE_ALIGNMENT.md` §20.
