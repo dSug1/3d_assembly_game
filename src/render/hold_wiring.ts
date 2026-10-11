@@ -43,19 +43,13 @@ export function holdSecondPress(
 }
 
 /**
- * ⭐ The first touch pressed again while the second is held: the same input goes on. `pink` (the mouse, 2026-10-11): the face its click
- * hit — the key held points at nothing, so on a desktop the left click names the pink face (taken as a press's: at the way in or the release).
+ * ⭐ The first touch pressed again while the second is held: the same input goes on. ⛔ (2026-10-11, *"instead of CTRL + left click press or
+ * tap, the action is triggered directly by CTRL being pressed or tapped"*) the left click names no pink face any more — the key's own press does.
  */
-export function holdFirstPress(st: SceneState, first: number, x: number, pink: { readonly objectId: ObjectId; readonly faceId: string } | null = null): void {
+export function holdFirstPress(st: SceneState, first: number, x: number): void {
   const h = st.hold;
   if (h === null) return;
   h.first = first;
-  // ⭐ (2026-10-11) the key held + a left PRESS on a part: the pink face at once (*"immediately when left button is pressed"*), the way in
-  // started or not; never during a zoom
-  if (pink !== null && h.mode !== "ZOOM") {
-    h.pink = pink;
-    takePink(st);
-  }
   // ⭐ undecided still: its dx counts from here
   if (h.mode === "HELD") h.firstX0 = x;
   st.hudDirty = true;

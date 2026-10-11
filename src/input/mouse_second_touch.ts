@@ -201,8 +201,9 @@ export class MouseSecondTouch {
     if (ev.space !== true || ev.type === "SPACE") this.spaceUsed = false;
     if (ev.type === "SPACE") return this.spaceDown(ev, emit);
     if (ev.type === "SHIFT_DOWN" || ev.type === "SHIFT_UP") return this.shiftKey(ev);
-    // ⭐⭐ (2026-10-11, the owner: *"build with ALT and CTRL"*) the orbit's HELD SECOND TOUCH is a key: pressed where the cursor is, never driven
-    // by it, never picking (`anchorOnly` — it lands on nothing, so the left click says which face), lifted with the key
+    // ⭐⭐ (2026-10-11, the owner: *"build with ALT and CTRL"*) the orbit's HELD SECOND TOUCH is a key: pressed where the cursor is — a raycast
+    // there names what it acts on (a part's face: the pink face; the orbited piece: the resting face) — never driven by the cursor, lifted with
+    // the key
     if (ev.type === "MOD_DOWN") {
       if (this.second !== null || this.cursor === null) return PASS;
       this.second = { x: this.cursor.x, y: this.cursor.y, shiftMade: false, modMade: true };
@@ -439,7 +440,9 @@ export class MouseSecondTouch {
 
   private secondAction(kind: "DOWN" | "MOVE" | "UP"): MouseAction {
     const s = this.second!;
-    return s.shiftMade || s.modMade === true
+    // ⭐ (2026-10-11, the owner: *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the item
+    // on which the action is triggered"*) the key-made second touch PICKS (its press is the raycast); only the Shift-made one is anchor-only
+    return s.shiftMade
       ? { target: "SECOND", kind, x: s.x, y: s.y, anchorOnly: true }
       : { target: "SECOND", kind, x: s.x, y: s.y };
   }

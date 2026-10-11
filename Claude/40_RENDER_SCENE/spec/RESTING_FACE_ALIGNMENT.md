@@ -570,3 +570,11 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   touch's move); and the pinch's own gate opens on the second finger's dx alone (`pinchDxOpen` — both fingers' before). ⛔ The first finger
   moving alone is still never a zoom: it is the way in. Headless: the first finger still, the second apart in x — zoom 1 → 0.883, and back
   1.006; no way in.
+- ⭐⭐ **The desktop's key ACTS ON ITS OWN PRESS** (*"modify in desktop mode: instead of CTRL + left click press or tap, the action is triggered
+  directly by CTRL being pressed or tapped : this sends a raycast which first hit is the item on which the action is triggered"* — *"CTRL or ALT
+  (both are equivalent)"*): pressing ALT or CTRL casts a ray at the cursor — over a **placed part's face**: the pink face, aligned at once (the
+  same face: the highlights); over the **orbited piece**: the face hit becomes the resting face, aligned at once; over **empty space** (or the
+  floor): nothing more. In every case the key is the held second touch until it is released (a left drag meanwhile: the way in; its release:
+  the way out). ⛔ The left click names nothing any more (the key + left press / tap route is deleted). The key-made second touch now PICKS
+  (it was anchor-only). Headless: CTRL over `Piece1` — pink `Piece1/f4`, aligned; ALT over the piece — its resting face 5 → 4; ALT held + a
+  left drag — the way in; ALT up — the way out.

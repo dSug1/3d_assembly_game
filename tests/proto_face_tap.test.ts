@@ -46,13 +46,16 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     const p = code("render/pointer_wiring.ts");
     // ⭐⭐ (2026-10-11) ANY touch on the orbited piece — the first's (the second held or not) and the SECOND's (*"add the possibility of
     // selecting another resting face by second touch tap on the green or turquoise piece"*); a press elsewhere leaves a pending one alone
-    expect(p).toMatch(/if \(onOrbited\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;\s*\}/);
+    // ⭐ (2026-10-11) …except the desktop's key, which selects at its PRESS (its raycast), never as a tap
+    expect(p).toMatch(/if \(onOrbited && e\.pointerId !== MOUSE_SECOND_ID\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;\s*\}/);
     expect(p.indexOf("st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand)")).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, hit);"));
     // a TAP whatever else is down
     expect(p).toMatch(/const tapped =\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);
     expect(p).not.toMatch(/const first = st\.router\.all\(\)\.length === 0/);
-    expect(p).toMatch(/if \(tapped && restOnTappedFace\(st, ft\.faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
-    expect(p.indexOf("restOnTappedFace(st, ft.faceId)")).toBeLessThan(p.indexOf("ONE call, ONE record: it judges the tap"));
+    // ⭐ (2026-10-11) through ONE helper — the tap's release and the desktop key's press over the piece
+    expect(p).toMatch(/if \(tapped && selectRestingFace\(st, ft\.faceId\)\) \{/);
+    expect(p.indexOf("selectRestingFace(st, ft.faceId)")).toBeLessThan(p.indexOf("ONE call, ONE record: it judges the tap"));
+    expect(p).toMatch(/if \(!\(restOnTappedFace\(st, faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\)\) return false;\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     const w = code("render/green_box_wiring.ts");
     const fn = w.slice(w.indexOf("export function restOnTappedFace"), w.indexOf("export function restTargetKey"));
     expect(fn).toMatch(/if \(p\.restingFace !== null && p\.restingFace\.faces\.includes\(idx\)\) return true;/);

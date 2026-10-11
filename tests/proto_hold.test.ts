@@ -67,7 +67,8 @@ describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_
 describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the press: the right button or a finger with ONE other down is the SECOND touch (not on the orbited piece); held, a new press is the FIRST again; neither grabs", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: !onOrbited &&\s*\(e\.pointerId === MOUSE_SECOND_ID \|\|\s*\(e\.pointerType !== "mouse" && st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\)\)\s*\? "SECOND"\s*: null;/);
+    // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too; a finger, never on it
+    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|\s*\(!onOrbited && e\.pointerType !== "mouse" && st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\)\s*\? "SECOND"/);
     expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
     // the pink face its press would take — a placed part only
     expect(p).toMatch(/pinkCandidate\(\{ onOrbitedPiece: onOrbited, frozen, objectId: hitObj \?\? null, inBand \}\)/);
@@ -149,12 +150,18 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // the wheel never zooms the page nor walks the history: blocked on the canvas, whatever key
     expect(a).toContain("const onWheel = (e: WheelEvent) => { if (onWheelNotches === undefined) return; e.preventDefault();");
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain('if (holdRole === "SECOND" || (holdRole === "FIRST" && e.pointerType === "mouse")) {');
-    expect(p).toContain("} else holdFirstPress(st, e.pointerId, s.x, pink);");
+    // ⭐⭐ (2026-10-11, *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the item on
+    // which the action is triggered"*) — the KEY's press acts: a part's face the pink face (as a second finger's press), the orbited piece the
+    // resting face; ⛔ the left click names nothing
+    expect(p).toContain('if (holdRole === "SECOND") {');
+    expect(p).not.toContain('holdRole === "FIRST" && e.pointerType === "mouse"');
+    expect(p.replace(/\s+/g, " ")).toContain("if (onOrbited && e.pointerId === MOUSE_SECOND_ID && st.greenBox !== null) {");
+    expect(p).toMatch(/if \(pf !== null && selectRestingFace\(st, pf\.faceId\) && st\.hold !== null\) st\.hold\.shown = true;/);
+    expect(code("input/mouse_second_touch.ts")).toMatch(/return s\.shiftMade\s*\? \{ target: "SECOND", kind, x: s\.x, y: s\.y, anchorOnly: true \}/);
     // ⭐⭐ (2026-10-11, *"immediately when left button is pressed. Same for the mobile input"*) the pink face taken AT THE PRESS — the key
     // held + a left press (the way in started or not, never in a zoom), and a second finger's press on a part
     const hw = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(hw).toContain('if (pink !== null && h.mode !== "ZOOM") { h.pink = pink; takePink(st); }');
+    expect(hw).not.toContain("h.pink = pink; takePink(st);"); // ⛔ (2026-10-11) the left click names no pink face — the key's press does
     const sp = hw.slice(hw.indexOf("export function holdSecondPress("), hw.indexOf("export function holdFirstPress("));
     expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };');
     expect(sp).toContain("takePink(st);");
