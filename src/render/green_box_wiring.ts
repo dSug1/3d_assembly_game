@@ -200,7 +200,7 @@ function alignFaceOf(
   st: SceneState,
   piece: Vec3,
   frozenOnly = false,
-): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
+): { readonly label: string; readonly objectId: ObjectId; readonly faceId: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
   // ⭐ (2026-10-10) `frozenOnly`: the frozen body's face toward the piece even with a pink face (the boot alignment, `bootRestAlign`)
   let id: ObjectId | null = frozenOnly ? null : (st.pinkFace?.objectId ?? null);
   let faceId: string | null = frozenOnly ? null : (st.pinkFace?.faceId ?? null);
@@ -236,6 +236,8 @@ function alignFaceOf(
   const w = (v: Vec3): Vec3 => add(pose.position, qRotate(pose.orientation, v));
   return {
     label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`,
+    objectId: id,
+    faceId,
     normal: qRotate(pose.orientation, face.normal),
     long: { axes: long.axes.map((a) => qRotate(pose.orientation, a)), ends: long.ends.map((e) => [w(e[0]), w(e[1])] as const) },
     flush: flush.map((a) => qRotate(pose.orientation, a)),
@@ -682,9 +684,13 @@ function bootRestAlign(st: SceneState, at: Vec3): void {
   p.mesh.rotationQuaternion = toBabylon(turned.q);
   st.restAlign = null;
   st.restAligned = true;
-  st.restRoll = { key: target.label, pinkAxes: target.flush, rolls: 0, couple: null };
+  // ⭐⭐ (2026-10-11, the owner: *"the boot pink face could be the floor's face, matching the alignment"*) — the pink face IS the face the piece
+  // is aligned to at boot (and at a respawn): a way in highlights what the roll lines up with. ⚠ A frozen face here only (the second touch
+  // never picks one); its fill is not drawn (`pinkFillFrame` skips a frozen body)
+  st.pinkFace = { objectId: target.objectId, faceId: target.faceId };
+  st.restRoll = { key: `${target.objectId}/${target.faceId}`, pinkAxes: target.flush, rolls: 0, couple: null };
   st.orbitRollAcc = 0;
-  st.lastVerdict = `orbit: boot — the resting face aligned to ${target.label}; the roll is active`;
+  st.lastVerdict = `orbit: boot — the resting face aligned to ${target.label}, the pink face; the roll is active`;
   st.hudDirty = true;
 }
 
@@ -815,6 +821,11 @@ const PINK_EPS_M = 0.002;
 export function pinkRingFrame(st: SceneState): void {
   const ring = st.pinkRing;
   if (ring === null) return;
+  // ⭐ (2026-10-11, the owner: *"add a slider to hide the pink gizmo"*) hidden by its slider
+  if (st.cfg.pinkGizmoVisible !== 1) {
+    ring.isVisible = false;
+    return;
+  }
   const t = st.centreBlend.targetM;
   const cam = st.camera.position;
   const dir = new Vector3(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
@@ -1169,9 +1180,9 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
     .filter((f): f is NonNullable<typeof f> => f !== null);
   const toward = orbitOffset(st.cfg, st.orbit.yaw, st.orbit.elevation, GREEN_PIECE_ORBIT_ZOOM).offsetM;
   const face = faceToward(faces, toward);
-  // ⭐ `1.0.59q-`: and that face IS the pink face — its edges give the mating edge (`pinkFaceEdges`)
-  const at = face === null ? -1 : faces.indexOf(face as (typeof faces)[number]);
-  st.pinkFace = at < 0 ? null : { objectId: blue.id, faceId: o.faces[at]!.id };
+  // ⛔ (2026-10-11) no longer the pink face too (`1.0.59q-`'s *"that face IS the pink face"*): the boot pink face is the floor's the piece is
+  // aligned to (`bootRestAlign`) — the orbit centre and the pink face are two separate things (the owner: *"changing the center of orbit and
+  // selecting a new pink face are two separate actions, not linked together"*)
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 
