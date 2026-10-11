@@ -15,6 +15,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-10) only once BOTH fingers have moved past the deadband in x (`pinchDxOpen`) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
+| ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) |
 | ⭐ the orbited piece (prototype) | the SECOND finger pressed on a placed part's face | the **pink face** (never the floor), aligned — taken at the way in or at its release; a pinch never takes it; ⛔ no centre change (§20) |
 | nothing | double tap on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10); the taps are still recorded and may toggle |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
@@ -63,6 +64,7 @@ on entering the capture zone, are deleted.
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
+| ⭐ the orbited piece (prototype, 2026-10-11) | a left OR right click on the orbited piece | the face hit becomes the **resting face**, aligned (§20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | the RIGHT button held (= the second finger) + a left drag's **dx** | the way in, round the piece, the roll; the right released: the way out; the right pressed on a placed part's face: the pink face (§20) |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |

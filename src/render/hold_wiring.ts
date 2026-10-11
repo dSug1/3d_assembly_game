@@ -33,7 +33,7 @@ export function holdSecondPress(
   first: number | null,
   pink: { readonly objectId: ObjectId; readonly faceId: string } | null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink };
+  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };
   st.lastVerdict = `orbit: second touch held${pink === null ? "" : ` on ${pink.objectId}/${pink.faceId}`} — dx of the first touch: the way in`;
   st.hudDirty = true;
 }
@@ -48,19 +48,21 @@ export function holdFirstPress(st: SceneState, first: number, x: number): void {
   st.hudDirty = true;
 }
 
-/** ⭐ The pink face its press would take, now — if it changes it (the same face: nothing), aligned to, one episode. */
-function takePink(st: SceneState): void {
+/** ⭐ The pink face its press would take, now — if it changes it (the same face: nothing), aligned to, one episode; `true` if it was taken. */
+function takePink(st: SceneState): boolean {
   const h = st.hold;
-  if (h === null || h.pink === null) return;
+  if (h === null || h.pink === null) return false;
   const next = h.pink;
   h.pink = null;
-  if (!pinkChanges(st.pinkFace, next)) return;
+  if (!pinkChanges(st.pinkFace, next)) return false;
   st.pinkFace = next;
+  h.shown = true; // ⭐ an action: the highlights
   if (alignRestingFace(st, performance.now())) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
     st.lastVerdict = `orbit: the pink face is now ${next.objectId}/${next.faceId} — ` + st.lastVerdict.replace(/^orbit: tap 1 — /, "");
   }
+  return true;
 }
 
 /**
@@ -95,6 +97,7 @@ export function holdMove(st: SceneState, pointerId: number, s: Sample, prev: Sam
     }
     // ⭐ WAY: the pink face taken (option B), then the way in — the roll counted from here
     takePink(st);
+    h.shown = true; // ⭐ an action: the highlights, for as long as the input runs
     if (enterPieceOrbit(st)) st.lastVerdict += " — the way in";
     st.orbitRollAcc = 0;
     st.pieceYawGainDrag = st.pieceYawGain;
@@ -126,7 +129,10 @@ export function holdRelease(st: SceneState, pointerId: number): "SECOND" | "FIRS
     }
   } else if (h.mode === "HELD") takePink(st); // ⭐ a press that never pinched: the pink face taken at its release
   st.hold = null;
-  st.highlightEndedAt = performance.now();
+  // ⭐⭐ (2026-10-11, the owner: *"why a second touch tap outside any object still highlights the pink face and the resting face? … There should
+  // not be any action"*) — the highlights' clock only after an ACTION (the pink face taken, the way in); a tap on empty space, an undecided
+  // hold or a zoom show nothing
+  if (h.shown) st.highlightEndedAt = performance.now();
   st.hudDirty = true;
   return "SECOND";
 }

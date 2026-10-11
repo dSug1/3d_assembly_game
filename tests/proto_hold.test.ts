@@ -66,7 +66,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(p).toMatch(/const dy = dxOnly \? 0 : s\.y - prev\.y;/);
     const h = code("render/hold_wiring.ts");
     // WAY: the pink face taken (option B), then the way in; the roll counted from here
-    expect(h).toMatch(/takePink\(st\);\s*if \(enterPieceOrbit\(st\)\) st\.lastVerdict \+= " — the way in";\s*st\.orbitRollAcc = 0;\s*st\.pieceYawGainDrag = st\.pieceYawGain;/);
+    expect(h).toMatch(/takePink\(st\);\s*h\.shown = true;[^\n]*\n\s*if \(enterPieceOrbit\(st\)\) st\.lastVerdict \+= " — the way in";\s*st\.orbitRollAcc = 0;\s*st\.pieceYawGainDrag = st\.pieceYawGain;/);
     // ZOOM: the zoom from where it is decided; a pinch never takes the pink face
     expect(h).toMatch(/if \(d === "ZOOM"\) \{[\s\S]*?st\.pinch\.begin\(p\[0\], p\[1\]\);\s*st\.zoomAtPinchStart = st\.zoom;[\s\S]*?h\.pink = null;/);
     expect(h).toMatch(/orbitStep\(true\);/);
@@ -75,14 +75,31 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the release: the second — the way out (if the way in had started) or the pink face of a press that never pinched; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
     expect(h).toMatch(/if \(h\.mode === "WAY"\) \{[\s\S]*?returnToCentreOrbit\(st, true\);[\s\S]*?\} else if \(h\.mode === "HELD"\) takePink\(st\);/);
-    expect(h).toMatch(/st\.hold = null;\s*st\.highlightEndedAt = performance\.now\(\);/);
+    // ⭐⭐ (2026-10-11, *"why a second touch tap outside any object still highlights … There should not be any action"*) — the clock only
+    // after an ACTION: the pink face taken, or the way in
+    expect(h).toMatch(/st\.hold = null;\s*(?:\/\/[^\n]*\n\s*)+if \(h\.shown\) st\.highlightEndedAt = performance\.now\(\);/);
+    expect(h).toMatch(/st\.pinkFace = next;\s*h\.shown = true;/);
+    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false \};/);
     expect(h).toMatch(/if \(pointerId === h\.first\) \{\s*h\.first = null;/);
     // the pink face: the same face does nothing; a new one aligned, one episode
-    expect(h).toMatch(/if \(!pinkChanges\(st\.pinkFace, next\)\) return;\s*st\.pinkFace = next;\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
+    expect(h).toMatch(/if \(!pinkChanges\(st\.pinkFace, next\)\) return false;\s*st\.pinkFace = next;\s*h\.shown = true;[^\n]*\n\s*if \(alignRestingFace\(st, performance\.now\(\)\)\) \{\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     // ⛔ no change of the orbit centre anywhere in it
     expect(h).not.toMatch(/centreBlend\.retarget|recomputeOrbitCentre/);
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(holdRelease\(st, e\.pointerId\) === "SECOND"\) \{\s*st\.hudDirty = true;\s*return;\s*\}/);
+  });
+
+  it("⛔⛔ (2026-10-11, *\"the object systematically translates towards the world's negative depth axis when second touch is lifted\"*) the way out and the way in read the ANCHOR, never the mesh's origin", () => {
+    const w = code("render/green_box_wiring.ts");
+    const out = w.slice(w.indexOf("export function returnToCentreOrbit("), w.indexOf("function counterYawFrame("));
+    const into = w.slice(w.indexOf("export function enterPieceOrbit("), w.indexOf("export function returnToCentreOrbit("));
+    // ⭐ the anchor — the resting face's centre, what rides the rings — for the rebase's yaw and for the offset the way out fades
+    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*st\.orbit = new OrbitController\(/);
+    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*const pieceOff: Vec3 = rebase/);
+    expect(into).toMatch(/const a = st\.pieceAnchor;\s*const pos = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};/);
+    // ⛔ read at the mesh, the offset carried the piece by its middle-to-face distance (20.6 mm toward −z, headless)
+    expect(out).not.toMatch(/^\s*const p = box\.position;/m);
+    expect(into).not.toMatch(/^\s*const pos = box\.position;/m);
   });
 
   it("⭐ the frame: the first touch orbits only on the way in / round the piece; no coast while the second touch is held (*\"the orbit simply waits for the re-press\"*)", () => {
@@ -97,7 +114,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 
   it("⭐⭐ the highlights wired: the resting face's fill and the pink face's (a child of its body) faded by one alpha; the slider with TWO cursors", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const a = highlightAlpha\(now, st\.hold !== null, st\.highlightEndedAt, st\.cfg\.highlightHoldMs, st\.cfg\.highlightFadeMs\);\s*pinkFillFrame\(st, a\);/);
+    expect(w).toMatch(/const a = highlightAlpha\(now, st\.hold !== null && st\.hold\.shown, st\.highlightEndedAt, st\.cfg\.highlightHoldMs, st\.cfg\.highlightFadeMs\);\s*pinkFillFrame\(st, a\);/);
     expect(w).toMatch(/\(fill\.material as StandardMaterial\)\.alpha = RESTING_ALPHA \* a;/);
     expect(w).toMatch(/if \(pf !== null && mesh !== undefined && st\.world\.objects\.get\(pf\.objectId\)\?\.frozen !== true\) \{/);
     const menu = code("render/tuning_menu.ts");
@@ -105,6 +122,6 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(menu).toMatch(/set: \(v\) => fade\.set\(Math\.max\(0, v - st\.cfg\.highlightHoldMs\)\),/);
     expect(code("render/menu.ts")).toMatch(/if \(slider\.second !== undefined\) \{\s*addDual\(slider, slider\.second, body\);\s*continue;\s*\}/);
     // the first-touch tap on the piece shows them too
-    expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.hold === null\) st\.highlightEndedAt = performance\.now\(\);/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/\/\/ ⭐ \(2026-10-11\) the highlights shown for the new resting face — held and faded\s*st\.highlightEndedAt = performance\.now\(\);/);
   });
 });

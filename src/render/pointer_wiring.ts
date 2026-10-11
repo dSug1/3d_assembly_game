@@ -188,11 +188,13 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
       // a TAP (`restingFaceTap`, at the release); any other pointer pressing drops it. ⭐ (2026-10-11) with the second touch held too
       // (*"First touch tap on green or turquoise pieces with or without Second touch pressed"*)
-      {
-        const first = st.router.all().length === 0 || holdRole === "FIRST"; // ⚠ asked before this press is routed (`router.press`, below)
-        const n = onOrbited && first ? pick?.getNormal(true) : null;
+      // ⭐⭐ (2026-10-11, the owner: *"add the possibility of selecting another resting face by second touch tap on the green or turquoise
+      // piece"*) — the SECOND touch's tap on it too (the right button on a desktop): any touch pressed on the orbited piece is the candidate;
+      // a press elsewhere leaves a pending one alone (its own release decides)
+      if (onOrbited) {
+        const n = pick?.getNormal(true);
         const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
-        st.pieceFaceTap = restingFaceTap(onOrbited, first, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+        st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
       }
       const rayHit =
         holdRole !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
@@ -620,8 +622,8 @@ export function installPointerHandler(st: SceneState): void {
           const ft = st.pieceFaceTap;
           if (ft !== null && ft.pointerId === e.pointerId) {
             st.pieceFaceTap = null;
+            // ⭐ (2026-10-11) a TAP whatever else is down — the first touch's, or the second's with the first orbiting
             const tapped =
-              (st.router.all().length === 0 || (st.hold !== null && st.router.all().every((q) => q.id === st.hold!.second))) &&
               isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
             // ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting face, at once
             const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
@@ -629,8 +631,8 @@ export function installPointerHandler(st: SceneState): void {
               st.episodes.touch(--st.episodeSeq, true, true);
               st.episodes.sync(true);
               st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: tap on ${ft.faceId} — the resting face now; `);
-              // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded (still on while the second touch is held)
-              if (st.hold === null) st.highlightEndedAt = performance.now();
+              // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded
+              st.highlightEndedAt = performance.now();
               st.hudDirty = true;
               return;
             }

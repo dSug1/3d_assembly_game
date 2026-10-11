@@ -13,7 +13,9 @@
  * left button tapped or first touch tapped, the hit face becomes the resting face and it aligns. the roll to the next edge is then
  * implemented on this new resting face"*): the FIRST touch (or the left button) pressed on the orbited piece — empty space to the router,
  * so its drag orbits — makes the face it hit the resting face when it is released as a TAP (`isTapRelease`, §1.3's); outside the edge
- * band. ⭐ (2026-10-11, *"First touch tap on green or turquoise pieces with or without Second touch pressed"*) the second touch may be held.
+ * band. ⭐ (2026-10-11, *"First touch tap on green or turquoise pieces with or without Second touch pressed"*) the second touch may be held;
+ * ⭐ and the SECOND touch's own tap on the piece does the same (*"add the possibility of selecting another resting face by second touch tap
+ * on the green or turquoise piece"*) — the caller passes `firstTouch` true for any touch.
  * ⛔ Consumed: it is not one of a camera-reset double tap.
  */
 export function restingFaceTap(onOrbitedPiece: boolean, firstTouch: boolean, inBand: boolean): boolean {

@@ -704,3 +704,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   roll; released — the way out (both by finger travel, their sliders kept); the first touch lifted and pressed again — the same input; its
   press on a placed part's face — the pink face, aligned (never the floor; taken at the way in or the release, never by a pinch); the
   highlights held 750 ms then faded 250 ms (one slider, two cursors) → `RESTING_FACE_ALIGNMENT.md` §20. `tests/proto_hold.test.ts`.
+* ⭐ After the first deploy: the highlights only after an ACTION (a second-touch tap on empty space lit them); a SECOND-touch tap (a right
+  click) on the orbited piece selects the resting face too; ⛔ the piece no longer moves toward −z when the second touch lifts — the way out
+  and the way in read the resting face's centre (the anchor), not the mesh's origin (20.6 mm headless) → `RESTING_FACE_ALIGNMENT.md` §20.

@@ -514,3 +514,20 @@ Headless (both devices): the way in, the roll, the continuation across a lift an
 pink face from a press on a part (aligned, rolls reset), the zoom of two fingers apart, the highlights gone 1.3 s after the input; the
 mouse with the right button first or second. `tests/proto_hold.test.ts`; each rule falsified on purpose (half deadband, frozen, same
 face, fade, a pinch keeping the pink face, the coast, dy).
+
+**Amended the same day (2026-10-11, after the first deploy)**:
+
+- ⛔ **A second-touch tap on empty space lit the highlights** (*"why a second touch tap outside any object still highlights the pink face and
+  the resting face? Which pink face is selected in such case? There should not be any action"*): they followed *"the second touch is down"*,
+  not an action — no pink face was selected, the current one (and the resting face) were shown. ⭐ Now they show only after an ACTION — the
+  pink face taken, the way in started (`hold.shown`), or a resting face tapped; a tap on empty space, an undecided hold or a zoom show nothing.
+- ⭐⭐ **A SECOND-touch tap on the orbited piece selects the resting face too** (*"add the possibility of selecting another resting face by
+  second touch tap on the green or turquoise piece"*) — as the first touch's (§13): the face it hit, aligned, the rolls carried if the pink
+  face is unchanged; on a desktop a right click on the piece. Any touch pressed on the piece is the candidate, decided at its own release as
+  a tap (others down or not).
+- ⛔⛔ **The piece moved toward −z when the second touch lifted after a roll** (*"At the end of the roll to the next axis, the object
+  systematically translates towards the world's negative depth axis when second touch is lifted. Correct that"*): the way out
+  (`returnToCentreOrbit`) measured the piece's offset from the rings at the MESH's origin, while the point that rides the rings since
+  2026-10-09 is the resting face's centre (the anchor) — so at the release the piece moved by its middle-to-face distance (20.6 mm headless,
+  always the same way relative to the resting face); the way in (`enterPieceOrbit`) read the same wrong point. ⭐ Both read the ANCHOR now:
+  the release moves it 0 mm; the way in shows no jump (its steps ramp from 0 and back to 0 — the designed hand-over).
