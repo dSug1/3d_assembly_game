@@ -26,12 +26,24 @@ describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_
     expect(holdDecision(0, 3.6, DB)).toBe("ZOOM");
     expect(holdDecision(0.5, -3.6, DB)).toBe("ZOOM");
     expect(holdDecision(0, 3.4, DB)).toBeNull(); // within it: nothing yet
+  });
+
+  it("⭐⭐ (2026-10-11, *\"why when I tap CTRL during a dx orbit around the center, the piece jumps and come back?\"*) a TAP never starts the way in; undecided, the drag orbits the centre (no freeze)", () => {
+    expect(holdDecision(3.6, 0, DB, 120, 200)).toBeNull(); // held 120 ms of a 200 ms tap: maybe a tap — no way in yet
+    expect(holdDecision(3.6, 0, DB, 201, 200)).toBe("WAY"); // held longer: the way in
+    expect(holdDecision(0, 3.6, DB, 50, 200)).toBe("ZOOM"); // the second finger's own dx: a zoom at once (a finger that moved is no tap)
+    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(h).toContain("performance.now() - h.t0, st.cfg.tapMaxDuration, );");
+    // ⭐⭐ (*"while held it completely freezes the orbit"*) undecided: the first touch orbits the CENTRE (dx and dy) — a dy drag used to never decide
+    expect(h).toContain("if (d === null) { // ⭐⭐");
+    expect(h).toContain("if (pointerId === h.first) orbitStep(false); return h.mode; }");
+    // the frame's camera follows it while undecided
+    expect(code("render/green_box_wiring.ts")).toContain('? (h.mode === "WAY" || h.mode === "HELD" ? h.first : null)');
     // the pinch's own gate: the second finger's dx opens it, the first still or moving; the first alone never
     expect(pinchDxOpen(0, 3.6, DB)).toBe(true);
     expect(pinchDxOpen(4, -4, DB)).toBe(true);
     expect(pinchDxOpen(10, 1, DB)).toBe(false);
     // wired: judged at EITHER touch's move; the orbit steps only on the first's
-    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(h).toContain("if (pointerId !== h.first && pointerId !== h.second) return h.mode;");
     expect(h).toContain("if (pointerId === h.first) orbitStep(true);");
   });
@@ -98,7 +110,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // after an ACTION: the pink face taken, or the way in
     expect(h).toMatch(/st\.hold = null;\s*(?:\/\/[^\n]*\n\s*)+if \(h\.shown\) st\.highlightEndedAt = performance\.now\(\);/);
     expect(h).toMatch(/st\.pinkFace = next;\s*h\.shown = true;/);
-    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false \};/);
+    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false, t0: performance\.now\(\) \};/);
     const hf = h.replace(/\s+/g, " ");
     // the first touch lifted: the input goes on — ⭐⭐ (2026-10-11, *"while CTRL/ALT is pressed, left click tap defines the new pink face"*) and
     // the click that named the pink face (the mouse) takes it at its own release, the key still held
@@ -163,7 +175,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const hw = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(hw).not.toContain("h.pink = pink; takePink(st);"); // ⛔ (2026-10-11) the left click names no pink face — the key's press does
     const sp = hw.slice(hw.indexOf("export function holdSecondPress("), hw.indexOf("export function holdFirstPress("));
-    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false };');
+    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now() };');
     expect(sp).toContain("takePink(st);");
   });
 

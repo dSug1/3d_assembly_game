@@ -718,3 +718,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐ The zoom by the second finger alone — its dx past the deadband, the first still → `RESTING_FACE_ALIGNMENT.md` §20.
 * ⭐⭐ The desktop's ALT / CTRL acts on its own PRESS — a raycast at the cursor: a part's face — the pink face; the orbited piece — the resting
   face; the left click names nothing → `RESTING_FACE_ALIGNMENT.md` §20. Branch renamed `1.0.64-Simplified-double-orbit`; work goes on on `1.0.65-`.
+
+⭐ **2026-10-11** — on `1.0.65-`:
+
+* ⛔ A CTRL tap mid-orbit no longer makes a way in and a way out (a tap never starts the way in); a CTRL held no longer freezes the orbit
+  (undecided, the drag orbits the centre) → `RESTING_FACE_ALIGNMENT.md` §20.

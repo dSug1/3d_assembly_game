@@ -451,6 +451,8 @@ export interface SceneState {
     pink: { readonly objectId: ObjectId; readonly faceId: string } | null;
     /** ⭐ (2026-10-11) an ACTION happened (the pink face taken, the way in) — only then the highlights show. */
     shown: boolean;
+    /** ⭐ (2026-10-11) when the second touch was pressed (ms) — a tap (within the tap time) never starts the way in. */
+    readonly t0: number;
   } | null;
   /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
   highlightEndedAt: number | null;

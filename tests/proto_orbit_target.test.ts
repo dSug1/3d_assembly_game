@@ -65,7 +65,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
     // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only
     expect(code("render/green_box_wiring.ts")).toMatch(
-      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \? h\.first : null\)\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
+      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \|\| h\.mode === "HELD" \? h\.first : null\)[^\n]*\n\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
     );
   });
 });
