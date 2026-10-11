@@ -565,3 +565,8 @@ face, fade, a pinch keeping the pink face, the coast, dy).
 - ⭐ **The same face again SHOWS the highlights** (*"if the same pink face is selected again, display the highlights (otherwise, it looks like
   something is not working)"*): nothing is realigned (the rolls kept), but the pink face and the resting face are shown as for a new one; the
   HUD says *"the pink face is already … — shown"*. Headless: after the fade, CTRL + a press on the same face — the highlights back (0 → 0.6).
+- ⭐⭐ **The zoom by the SECOND finger alone** (*"zoom: make it possible also if first touch is immobile and second touch dx exit deadband"*):
+  the second touch's dx leaving its deadband — the first touch still or moving — is a ZOOM at once (`holdDecision`, judged now at either
+  touch's move); and the pinch's own gate opens on the second finger's dx alone (`pinchDxOpen` — both fingers' before). ⛔ The first finger
+  moving alone is still never a zoom: it is the way in. Headless: the first finger still, the second apart in x — zoom 1 → 0.883, and back
+  1.006; no way in.

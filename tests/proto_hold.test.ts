@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { highlightAlpha, holdDecision, pinkCandidate, pinkChanges } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { pinchDxOpen } from "../src/input/pinch_gate";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const DB = 3.5;
@@ -19,6 +20,20 @@ describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_
     expect(holdDecision(3.6, 1.7, DB)).toBe("WAY");
     expect(holdDecision(3.6, -1.8, DB)).toBe("ZOOM"); // on its way: a pinch whose first finger's event happened to land first
     expect(holdDecision(3.6, 3.6, DB)).toBe("ZOOM");
+  });
+
+  it("⭐⭐ (2026-10-11, *\"zoom: make it possible also if first touch is immobile and second touch dx exit deadband\"*) the SECOND touch's dx past its deadband: a ZOOM, the first still", () => {
+    expect(holdDecision(0, 3.6, DB)).toBe("ZOOM");
+    expect(holdDecision(0.5, -3.6, DB)).toBe("ZOOM");
+    expect(holdDecision(0, 3.4, DB)).toBeNull(); // within it: nothing yet
+    // the pinch's own gate: the second finger's dx opens it, the first still or moving; the first alone never
+    expect(pinchDxOpen(0, 3.6, DB)).toBe(true);
+    expect(pinchDxOpen(4, -4, DB)).toBe(true);
+    expect(pinchDxOpen(10, 1, DB)).toBe(false);
+    // wired: judged at EITHER touch's move; the orbit steps only on the first's
+    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(h).toContain("if (pointerId !== h.first && pointerId !== h.second) return h.mode;");
+    expect(h).toContain("if (pointerId === h.first) orbitStep(true);");
   });
 
   it("⭐⭐ the pink face: a PLACED part only — never a frozen body (*\"frozen bodies (the floor) are never a pink face … ok\"*), never the orbited pieces", () => {
