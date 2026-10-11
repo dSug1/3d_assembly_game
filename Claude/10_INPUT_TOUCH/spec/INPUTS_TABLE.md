@@ -17,6 +17,8 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) |
+| ⭐ the orbited piece (prototype, 2026-10-11) | first finger held (empty space or a part) + a second finger TAP on empty space, a frozen body or the pink face | the piece ROLLS one stop to the next axis, clockwise (`holdTapRolls`); a tap that takes a NEW pink face aligns instead |
+| ⭐ the orbited piece (prototype, 2026-10-11) | first finger held ON A PART, second finger held, first drags | the way in and the dx roll, as from empty space — the part never moves (`partFirst`) |
 | ⭐ the orbited piece (prototype) | the SECOND finger pressed on a placed part's face | the **pink face** (never the floor), aligned **at the press**; the face it is already aligned to: the highlights shown; ⛔ no centre change (§20) |
 | nothing | double tap on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10); the taps are still recorded and may toggle |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
@@ -69,6 +71,9 @@ on entering the capture zone, are deleted.
 | ⭐ the orbited piece (prototype, 2026-10-11) | **ALT or CTRL pressed** with the cursor over a placed part's face | the **pink face** (never the floor), aligned **at the key's press** (its raycast); the face it is already aligned to: the highlights shown; no centre change (§20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a left click on the orbited piece, or **ALT / CTRL pressed** with the cursor over it | the face hit becomes the **resting face**, aligned (§20) |
 | ⛔ the orbited piece (prototype, 2026-10-11) | the right button | nothing (it was the held second touch until ALT / CTRL replaced it) |
+| ⭐ the orbited piece (prototype, 2026-10-11) | left held (empty space or a part) + an ALT / CTRL TAP on empty space, a frozen body or the pink face | the piece ROLLS one stop to the next axis, clockwise; a tap over a NEW pink face aligns instead |
+| ⭐ the orbited piece (prototype, 2026-10-11) | left held ON A PART + ALT / CTRL held + left drag | the way in and the dx roll (it froze before) |
+| ⛔ the orbited piece (prototype, 2026-10-11) | Space (+ click), Shift held through a drag | nothing (`orbitModifiers`); ⚠ the Shift TAP still toggles translate / rotate |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |

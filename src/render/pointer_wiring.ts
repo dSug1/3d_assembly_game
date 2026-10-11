@@ -181,7 +181,9 @@ export function installPointerHandler(st: SceneState): void {
               ? "FIRST"
               : null
             : e.pointerId === MOUSE_SECOND_ID ||
-                (!onOrbited && e.pointerType !== "mouse" && st.router.outside().length === 1 && st.router.objects().length === 0)
+                (!onOrbited &&
+                  e.pointerType !== "mouse" &&
+                  ((st.router.outside().length === 1 && st.router.objects().length === 0) || partFirst(st, e.pointerId) !== null))
               ? "SECOND" // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too (its press selects the resting face)
               : null;
       // ⭐⭐ (2026-10-09) the FIRST touch (or the left button) on the orbited piece: the face it hit — the resting face if it is released as
@@ -381,7 +383,10 @@ export function installPointerHandler(st: SceneState): void {
               ? faceFromPickedNormal(st.world, hitObj, [n.x, n.y, n.z] as Vec3)
               : null;
           const pink = face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null;
-          const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
+          // ⭐⭐ (2026-10-11, the owner: *"left click on a face and held then CTRL … then drag: the drag freezes the scene … I think this should
+          // enable the roll to the next axis"*) — a first touch held on a PLACED part is the input's first touch too (`partFirst`): it was
+          // left out (an OBJECT pointer, not an outside one), so its drag drove nothing — the locked part's own orbit stops once a second is down
+          const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? partFirst(st, e.pointerId);
           holdSecondPress(st, e.pointerId, s.x, firstNow, pink);
           // ⭐⭐ (2026-10-11, *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the
           // item on which the action is triggered"*) the key over the ORBITED piece: its face the resting face, at once (the key still the held
@@ -390,6 +395,7 @@ export function installPointerHandler(st: SceneState): void {
             const nn = pick?.getNormal(true);
             const pf = nn ? faceFromPickedNormal(st.world, st.greenBox.name, [nn.x, nn.y, nn.z] as Vec3) : null;
             if (pf !== null && selectRestingFace(st, pf.faceId) && st.hold !== null) st.hold.shown = true;
+            if (st.hold !== null) st.hold.pressActed = true; // ⭐ (2026-10-11) over the orbited piece: never the tap roll (`holdTapRolls`)
           }
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
@@ -821,6 +827,16 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐ prototype (green box) — **AND ITS DRAG ORBITS** (the owner, 2026-10-01: *"allow the orbit to occur when first touch
       // or left click is pressed and hold on placed piece"*): the one finger on a locked piece drives the orbit exactly as on
       // empty space (`orbitDragStep`); the piece stays pressed — a HitFace, a Pioneer, an undo.
+      if (st.hold !== null && e.pointerId === st.hold.first) {
+        // ⭐⭐ (2026-10-11) the held second touch's first touch, pressed on a part (`partFirst` — placed or not, *"left click on a face and held
+        // then CTRL on the another face … the drag freezes the scene"*): its moves are the input's — the way in and the roll, as from empty
+        // space; ⛔ the part itself never moves
+        const from = grip.prev;
+        holdMove(st, e.pointerId, s, from, (dxOnly) => orbitDragStep(st, e.pointerId, s, from, dxOnly));
+        grip.prev = s;
+        st.hudDirty = true;
+        return;
+      }
       if (lockedInGoal && st.router.objects().length === 1 && st.router.outside().length === 0) {
         orbitDragStep(st, e.pointerId, s, grip.prev);
       }
@@ -1130,6 +1146,8 @@ export function installPointerHandler(st: SceneState): void {
     }
 
     if (info.type === PointerEventTypes.POINTERUP) {
+      // ⭐ (2026-10-11) the held input's first touch on a placed part lifting: the input goes on (`holdRelease` → "FIRST")
+      if (st.hold !== null && e.pointerId === st.hold.first) holdRelease(st, e.pointerId);
       const verdict = grip.rec.release(s);
       st.lastVerdict = describe(verdict);
 
@@ -1212,6 +1230,20 @@ export function installPointerHandler(st: SceneState): void {
   });
 }
 
+
+/**
+ * ⭐⭐ (2026-10-11) the one pointer down, if it is held on a PART (placed in its goal or not; ⛔ never the orbited piece) — the held second touch's
+ * first touch, as a pointer on empty space would be; `null` otherwise (another outside pointer than `except` — the second touch pressing —,
+ * more than one). ⭐ First placed parts only; widened the same day (*"CTRL on the another face … the drag freezes the scene"*: a part not in its
+ * goal froze it still)
+ */
+function partFirst(st: SceneState, except: number | null = null): number | null {
+  if (st.router.outside().some((q) => q.id !== except)) return null;
+  const objs = st.router.objects();
+  if (objs.length !== 1) return null;
+  const grip = st.held.get(objs[0]!.id);
+  return grip !== undefined && grip.mesh !== st.greenBox ? objs[0]!.id : null;
+}
 
 /**
  * ⭐ §2 rule 1's ORBIT DRAG, one step — from empty space, and (prototype (green box)) from a finger on a piece locked in its goal.

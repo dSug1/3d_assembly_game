@@ -6,9 +6,10 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { highlightAlpha, holdDecision, pinkCandidate, pinkChanges } from "../src/input/hold_gesture";
+import { highlightAlpha, holdDecision, holdTapRolls, pinkCandidate, pinkChanges } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { pinchDxOpen } from "../src/input/pinch_gate";
+import { orbitModifiers } from "../src/input/mouse_second_touch";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const DB = 3.5;
@@ -80,7 +81,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the press: the right button or a finger with ONE other down is the SECOND touch (not on the orbited piece); held, a new press is the FIRST again; neither grabs", () => {
     const p = code("render/pointer_wiring.ts");
     // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too; a finger, never on it
-    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|\s*\(!onOrbited && e\.pointerType !== "mouse" && st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\)\s*\? "SECOND"/);
+    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|\s*\(!onOrbited &&\s*e\.pointerType !== "mouse" &&\s*\(\(st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\) \|\| partFirst\(st, e\.pointerId\) !== null\)\)\s*\? "SECOND"/);
     expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
     // the pink face its press would take — a placed part only
     expect(p).toMatch(/pinkCandidate\(\{ onOrbitedPiece: onOrbited, frozen, objectId: hitObj \?\? null, inBand \}\)/);
@@ -105,12 +106,12 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 
   it("⭐⭐ the release: the second — the way out (if the way in had started) or the pink face of a press that never pinched; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
-    expect(h).toMatch(/if \(h\.mode === "WAY"\) \{[\s\S]*?returnToCentreOrbit\(st, true\);[\s\S]*?\} else if \(h\.mode === "HELD"\) takePink\(st\);/);
+    expect(h).toMatch(/if \(h\.mode === "WAY"\) \{[\s\S]*?returnToCentreOrbit\(st, true\);[\s\S]*?\} else if \(h\.mode === "HELD"\) \{\s*if \(takePink\(st\)\) h\.pressActed = true;/);
     // ⭐⭐ (2026-10-11, *"why a second touch tap outside any object still highlights … There should not be any action"*) — the clock only
     // after an ACTION: the pink face taken, or the way in
     expect(h).toMatch(/st\.hold = null;\s*(?:\/\/[^\n]*\n\s*)+if \(h\.shown\) st\.highlightEndedAt = performance\.now\(\);/);
     expect(h).toMatch(/st\.pinkFace = next;\s*h\.shown = true;/);
-    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false, t0: performance\.now\(\) \};/);
+    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false, t0: performance\.now\(\), pressActed: false \};/);
     const hf = h.replace(/\s+/g, " ");
     // the first touch lifted: the input goes on — ⭐⭐ (2026-10-11, *"while CTRL/ALT is pressed, left click tap defines the new pink face"*) and
     // the click that named the pink face (the mouse) takes it at its own release, the key still held
@@ -175,8 +176,8 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const hw = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(hw).not.toContain("h.pink = pink; takePink(st);"); // ⛔ (2026-10-11) the left click names no pink face — the key's press does
     const sp = hw.slice(hw.indexOf("export function holdSecondPress("), hw.indexOf("export function holdFirstPress("));
-    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now() };');
-    expect(sp).toContain("takePink(st);");
+    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false };');
+    expect(sp).toContain("if (takePink(st) && st.hold !== null) st.hold.pressActed = true;");
   });
 
   it("⭐⭐ the highlights wired: the resting face's fill and the pink face's (a child of its body) faded by one alpha; the slider with TWO cursors", () => {
@@ -194,10 +195,54 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 });
 
 describe("⭐ prototype — the pink gizmo's switch (2026-10-11, *\"add a slider to hide the pink gizmo\"*)", () => {
-  it("⭐ HIDDEN by default (*\"make the default pink gizmo hidden\"*); at 0 the ring at the orbit centre is not drawn", () => {
-    expect(DEFAULT_CONFIG.pinkGizmoVisible).toBe(0);
+  it("⭐ SHOWN by default (*\"set the default : pink gizmo shown\"*, after a few minutes hidden); at 0 the ring at the orbit centre is not drawn", () => {
+    expect(DEFAULT_CONFIG.pinkGizmoVisible).toBe(1);
     expect(code("render/tuning_menu.ts")).toContain('"pinkGizmoVisible", 0, 1, 1)');
     const w = code("render/green_box_wiring.ts").replace(/\s+/g, " ");
     expect(w).toContain("if (st.cfg.pinkGizmoVisible !== 1) { ring.isVisible = false; return; }");
+  });
+});
+
+describe("⭐⭐ prototype — the keyboard in the orbit (2026-10-11, *\"switch Space (and probably Shift + drag) off in the orbit. leave shift tap for the moment\"*)", () => {
+  it("⭐ orbiting: Space and Shift reach the mouse model as up — no Space HitFace, no Shift-made second touch; elsewhere unchanged", () => {
+    expect(orbitModifiers(true, true, true)).toEqual({ shift: false, space: false });
+    expect(orbitModifiers(false, true, true)).toEqual({ shift: true, space: true });
+    expect(orbitModifiers(false, false, true)).toEqual({ shift: false, space: true });
+    const a = code("render/mouse_adapter.ts");
+    expect(a).toMatch(/const keys = orbitModifiers\(/);
+    expect(a).toMatch(/shift: keys\.shift,/);
+    expect(a).toMatch(/space: keys\.space,/);
+    expect(a).toMatch(/if \(!e\.repeat && orbitModifiers\(/); // the SPACE event (`D155`'s freeze) not sent
+  });
+});
+
+describe("⭐⭐ prototype — a first touch held on a PLACED part is the held input's first touch (2026-10-11, *\"the drag freezes the scene … I think this should enable the roll to the next axis\"*)", () => {
+  it("⭐ the second touch's press takes it as `first`, its moves go to `holdMove`, its release to `holdRelease`", () => {
+    const w = code("render/pointer_wiring.ts");
+    expect(w).toMatch(/function partFirst\(st: SceneState, except: number \| null = null\)/);
+    expect(w).toContain("?.id ?? partFirst(st, e.pointerId);");
+    expect(w).toContain("|| partFirst(st, e.pointerId) !== null))"); // a finger too, after one held on a part
+    expect(w).toContain("return grip !== undefined && grip.mesh !== st.greenBox ? objs[0]!.id : null;"); // ⭐ placed in its goal or not
+    expect(w).toMatch(/if \(st\.hold !== null && e\.pointerId === st\.hold\.first\) \{\s*(?:\/\/[^\n]*\n\s*)+const from = grip\.prev;\s*holdMove\([^\n]*\n\s*grip\.prev = s;\s*st\.hudDirty = true;\s*return;/);
+    expect(w).toContain("if (st.hold !== null && e.pointerId === st.hold.first) holdRelease(st, e.pointerId);");
+  });
+});
+
+describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to the next axis (2026-10-11, *\"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty or on the pink face) rolls to the next axis\"*)", () => {
+  it("⭐ a tap, undecided, the first held, no pink face changed, not over the orbited piece, aligned — and only then", () => {
+    expect(holdTapRolls(true, "HELD", true, false, false, true)).toBe(true);
+    expect(holdTapRolls(false, "HELD", true, false, false, true)).toBe(false); // a hold, not a tap
+    expect(holdTapRolls(true, "WAY", true, false, false, true)).toBe(false); // the way in
+    expect(holdTapRolls(true, "ZOOM", true, false, false, true)).toBe(false); // a zoom
+    expect(holdTapRolls(true, "HELD", false, false, false, true)).toBe(false); // the first touch not held
+    expect(holdTapRolls(true, "HELD", true, true, false, true)).toBe(false); // its press took a NEW pink face
+    expect(holdTapRolls(true, "HELD", true, false, true, true)).toBe(false); // over the orbited piece (a resting face)
+    expect(holdTapRolls(true, "HELD", true, false, false, false)).toBe(false); // nothing aligned
+  });
+  it("⭐ wired at the second touch's release: one stop clockwise (`rollRestingFace`, sense 1), one episode; a new pink face at the press marks it", () => {
+    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(h).toContain("holdTapRolls(tapped, h.mode, h.first !== null, h.pressActed, false, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)");
+    expect(h).toContain("if (takePink(st) && st.hold !== null) st.hold.pressActed = true;");
+    expect(code("render/pointer_wiring.ts")).toContain("if (st.hold !== null) st.hold.pressActed = true; // ⭐ (2026-10-11) over the orbited piece");
   });
 });

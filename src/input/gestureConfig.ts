@@ -970,8 +970,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // fade gradually and rapidly away. Set default timer 750 ms"* — *"Do one slider with two cursors"*: the hold, then the fade
   highlightHoldMs: 300, // ⭐ the owner, 2026-10-11: *"set default hold = 300 ms fade = 250 ms"* (was 750)
   highlightFadeMs: 250,
-  // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — HIDDEN by default (*"make the default pink gizmo hidden"*)
-  pinkGizmoVisible: 0,
+  // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
+  pinkGizmoVisible: 1,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,
