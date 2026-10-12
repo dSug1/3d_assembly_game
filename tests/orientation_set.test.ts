@@ -188,12 +188,11 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
     expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
-    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) \{\s*live\.dying = now;/);
+    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) live\.dying = now;/);
     expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
     expect(g).toContain("return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
-    expect(g).toContain("return restAlignToFace(shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
   });
   it("⭐⭐ the cube HELD: each new candidate that is not the pink face aligns the resting face to it, one episode for the hold; a tap is still a tap", () => {
     const c = code("render/orient_cube.ts");
@@ -223,13 +222,21 @@ describe("⭐ the window's copies and the candidate (2026-10-12, *\"scale the gr
   it("⭐⭐ no transitions: (a) the pose the piece is HEADING for (never the turn in flight); a fading (c) stays where it was", () => {
     const c = code("render/orient_cube.ts");
     expect(c).not.toContain("place(c.now"); // ⛔ (a) removed
-    expect(c).toContain("if (r.dying === null) place(r, r.q, corr, slot, size);");
   });
 });
 
-describe("⛔⛔ a fading copy stays IN the window (2026-10-12, the owner on the phone: *\"when i orbit, the replica flies outside the window into the scene before appearing back in the window\"*)", () => {
-  it("⭐ at its death it is placed for THIS frame, both matrices refreshed, then attached to the window's root (it moves with the window)", () => {
-    expect(flat("render/orient_cube.ts")).toContain("live.dying = now; // ⛔⛔ (2026-10-12, the owner on the phone:".replace(" // ⛔⛔ (2026-10-12, the owner on the phone:", ""));
-    expect(flat("render/orient_cube.ts")).toMatch(/place\(live, live\.q, corr, slot, size\); c\.root\.computeWorldMatrix\(true\); live\.mesh\.computeWorldMatrix\(true\); live\.mesh\.setParent\(c\.root\);/);
+describe("⛔⛔ the copy RIDES THE CUBE — no transition, never out of the window (2026-10-12, *\"when i orbit, the replica flies outside the window\"* → *\"There shall be no transition in the replica transform. Only a fade and appear. Make sure the replica does not jump outside the window\"* → *\"Ride the cube\"*)", () => {
+  it("⭐ placed ONCE at its birth (for THIS frame, both matrices refreshed), attached to the cube's root, never placed again; it fades where it is", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("place(copy, q, corr, slot, size); c.root.computeWorldMatrix(true); copy.mesh.computeWorldMatrix(true); copy.mesh.setParent(c.root);");
+    expect(c).toContain("if (live !== undefined) live.dying = now;");
+    expect(c).not.toContain("place(r, r.q, corr, slot, size)");
+    expect(c).not.toContain("orient-screen");
+  });
+  it("⭐ the window fitted to hold the copy seated on a face, not the cube alone", () => {
+    expect(code("render/orient_cube.ts")).toContain("const s = (0.8 * half) / Math.max(c.radius, c.inner * (1 + 2 * PIECE_SHARE));");
+  });
+  it("⭐ the preview from the pose the piece is HEADING for (a turn in flight changes nothing)", () => {
+    expect(code("render/green_box_wiring.ts")).toContain("return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
   });
 });
