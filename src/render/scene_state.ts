@@ -448,13 +448,12 @@ export interface SceneState {
     mode: import("../input/hold_gesture").HoldMode;
     readonly secondX0: number;
     firstX0: number | null;
-    pink: { readonly objectId: ObjectId; readonly faceId: string } | null;
-    /** ⭐ (2026-10-11) an ACTION happened (the pink face taken, the way in) — only then the highlights show. */
-    shown: boolean;
     /** ⭐ (2026-10-11) when the second touch was pressed (ms) — a tap (within the tap time) never starts the way in. */
     readonly t0: number;
     /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap rolls nothing (`holdTapRolls`). */
     pressActed: boolean;
+    /** ⭐ (2026-10-12) where the second touch's press hit a PLACED part (`null`: elsewhere) — its TAP moves the orbit centre there. */
+    readonly centreAt: readonly [number, number, number] | null;
     /** ⭐ (2026-10-12) the switch without lifting (`holdSwitch`): the second finger's trailing anchor (mm), since when it rests (ms), the first
      * finger's x when it came to rest (px; `null` — lifted), and whether the way in was made (the way out at the second finger's lift). */
     swAnchorMm: number;
@@ -512,11 +511,6 @@ export interface SceneState {
   pinkDir: import("../core/orientation_set").OrientDirection | null;
   /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */
   pinkTargetNormal: import("../core/vec").Vec3 | null;
-  /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
-  highlightEndedAt: number | null;
-  /** ⭐ Prototype (2026-10-11): the pink face's fill (a child of its body) and the face it was built for. */
-  pinkFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
-  pinkFillKey: string;
   /** ⭐ Prototype (§2): the resting-face alignment in progress — its start pose, its start time, its target (both turned against the orbit). */
   restAlign: {
     readonly from: Quat;
@@ -565,9 +559,6 @@ export interface SceneState {
   pieceYawGainKey: string;
   /** ⭐ …what the drag in progress uses: the gain if it STARTED around the piece, else 1 — a steady speed through a drag. */
   pieceYawGainDrag: number;
-  /** ⭐ Prototype (`1.0.59q-`): the face holding the pink ring — at boot the blue face toward the green piece, then the face a press on a
-   * placed piece moves the target to. Its edges give the alignment's MATING edge. */
-  pinkFace: { readonly objectId: ObjectId; readonly faceId: string } | null;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;

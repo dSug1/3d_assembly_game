@@ -30,24 +30,6 @@ import { paint } from "./hud_paint";
  * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
  */
 /**
- * ⭐ (2026-10-11, the owner: *"Do one slider with two cursors"*) the pink highlights' HOLD and FADE on one track: cursor 1 the hold's end
- * (`highlightHoldMs`), cursor 2 the fade's end — hold + fade (`highlightFadeMs` = its distance from cursor 1, never negative). Moving the hold
- * carries the fade with it.
- */
-export function highlightTimerSlider(st: SceneState): MenuSlider {
-  const hold = tunable(st, "pink highlights: hold ● · fade end ● (ms after the input)", "highlightHoldMs", 0, 3000, 50);
-  const fade = tunable(st, "", "highlightFadeMs", 0, 3000, 50);
-  return {
-    ...hold,
-    second: {
-      get: () => st.cfg.highlightHoldMs + st.cfg.highlightFadeMs,
-      set: (v) => fade.set(Math.max(0, v - st.cfg.highlightHoldMs)),
-      format: (a, b) => `hold ${a.toFixed(0)} · fade ${(b - a).toFixed(0)}`,
-    },
-  };
-}
-
-/**
  * ⭐ (2026-10-12, the owner: *"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*) the orientation window's
  * position on one track: cursor 1 left → right (`orientWindowXPct`), cursor 2 top → bottom (`orientWindowYPct`), 0–100 %.
  */
@@ -215,7 +197,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "way in to the orbit around the piece (mm of finger travel, 0 = at once)", "pieceOrbitEnterMm", 0, 60, 1),
             tunable(st, "way back to the centre orbit (mm of finger travel, 0 = at once)", "pieceOrbitReturnMm", 0, 300, 5),
             // ⭐⭐ prototype (2026-10-11): the pink highlights — hold, then fade — on ONE track with two cursors
-            highlightTimerSlider(st),
           ],
         },
         {

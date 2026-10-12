@@ -808,3 +808,38 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
     (the candidate outline's colour and thickness on the glass), fully opaque, drawn over everything.
   - Headless: boot — the copy at the centre on its resting face (the candidate −z outlined), the lit top pink at full strength; an orbit — the
     candidate +x outlined, the copy turned onto it; the copies' worst distance from the window's centre during the orbit ≈ 0.
+
+## 22. THE CUBE ONLY — no pink face from a part (2026-10-12, `1.0.68-`)
+
+The window's copy, refined further (the owner, in order):
+- *"Place the center of the highlighted face of the replica in the center of the candidate face of the cube"* — the copy's RESTING face's
+  centre on the candidate face's centre; the copy stands out from it, toward the camera.
+- *"There shall be no transition in the replica transform. Only a fade and appear. Make sure the replica does not jump outside the window"*
+  → the choice *"Ride the cube"*: each copy is placed ONCE at its birth (for that frame, the world matrices refreshed first) and attached
+  to the cube — it turns rigidly with it like its own faces and never moves on its own; the window is fitted to hold a copy seated on a
+  face (not the cube alone); the preview is computed from the pose the piece is HEADING for. ⚠ Measured headless: a shown copy moved 0
+  relative to the cube during an orbit (it drifted 102 px on screen before), 0 px past the window's edge. ⛔ Rejected on the way: a copy
+  frozen on the SCREEN (it slid off its face as the cube turned, and out of the window).
+- *"the replica move to the next face and then rotates to align the resting face: i do not want to see the intermediate step, directly the
+  resting face aligned transform to appear"* — the old copy fading out on the old face while the new one faded in on the next (two copies,
+  250 ms) read as one copy moving then turning: ⛔ the old copy now GOES AT ONCE; only the new one fades in, already in its final pose.
+  (Logged headless: exactly one copy per candidate change — no two-step pose.)
+
+⛔⛔ **Alignment is the cube's only** (*"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting
+face. Alignment of resting face shall be with the cube only. Second touch tap on seated / placed part now sets the pink gizmo (same as first
+touch tap on seated / placed part). Remove the ctrl-alt raycast function in desktop"* → *"Remove 1-4, keep 5"*):
+- The second touch takes NO pink face from a part and aligns nothing; its press on a PLACED part (a finger) notes where, and its TAP moves
+  the **orbit centre** (the pink gizmo) there — never also a roll (`pressActed`). A tap elsewhere, the first held, still rolls.
+- ALT / CTRL looks at nothing (its raycast — the pink face, the resting face over the orbited piece — deleted); it stays the held second
+  touch (the way in, the roll, the zoom switch is a finger's, the cube held).
+- Deleted with it: the part's pink face (`st.pinkFace`, `takePink`, `pinkChanges`, `pinkCandidate`), its fill in the scene
+  (`pinkFillFrame`), the highlights' clock (`highlightAlpha`, `highlightEndedAt`, `hold.shown`) and its two-cursor slider (`highlightHoldMs`
+  / `highlightFadeMs`), and `holdTapRolls`' "pink changed" / "over the orbited piece" inputs.
+- `alignFaceOf` reads the cube's facet ONLY (`st.pinkDir`); the frozen-body fallback is deleted. ⭐ The BOOT aligns to the cube's +y facet
+  (`BOOT_UP`: normal +y, edges along x and z — what the floor's top gave), so the roll is active from the start.
+- ⭐ Kept (*"keep 5"*): a first-touch / left tap on the orbited piece makes the face hit the resting face and aligns it (§13) — to the cube's
+  facet the piece is aligned to.
+- ⏭ Advised, not done: the older part-to-part assembly system (align by HitFace / Pioneer, snap / seat / unsnap, the PioneerFaceCursors, the
+  cyan / amber face highlights) still drives the free parts; to remove once the cube's approach replaces it.
+- Headless: boot — aligned to `cube (0.00, 1.00, 0.00)`; first finger held + a second-finger tap on a black bar — the orbit centre moved
+  there, no roll; on empty space — a roll; CTRL over a part — nothing.

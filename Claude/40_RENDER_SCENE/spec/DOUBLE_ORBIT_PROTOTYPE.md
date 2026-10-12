@@ -754,3 +754,9 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ The window: ONE copy of the piece as the candidate face would make it, at the cube's centre (×1.2, 70 % opaque, its resting face's
   edges yellow); the candidate face outlined yellow; no transitions; the piece's and the cube's pink faces never fade; a fading copy no
   longer flies out into the scene mid-orbit → `RESTING_FACE_ALIGNMENT.md` §21.
+
+## 2026-10-12 — on 1.0.68-
+
+* ⭐⭐ The window's copy seated on the candidate face, riding the cube (no transition, never out of the window), the old copy gone at once.
+* ⛔⛔ Alignment by the CUBE ONLY: no pink face from a part (second touch, ALT / CTRL raycast deleted); a second-touch tap on a placed part moves
+  the orbit centre; the pink fill, the highlights' clock and its slider deleted; the boot aligns to the cube's +y → `RESTING_FACE_ALIGNMENT.md` §22.

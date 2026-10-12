@@ -26,7 +26,6 @@ import { translatesOnDrag } from "../input/highlight";
 import { secondTouchDrive } from "../input/second_touch_drive";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_wiring";
-import { pinkCandidate } from "../input/hold_gesture";
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar, undoLast } from "./undo_wiring";
 import { axisDisplacement, axisTravel } from "../input/axis_translate";
@@ -381,28 +380,19 @@ export function installPointerHandler(st: SceneState): void {
         // click while it is held says which face: a placed part's is the pink face its input would take (the mouse only; a finger pressed
         // again on a part, on a tablet, takes nothing)
         if (holdRole === "SECOND") {
-          const hitObj = pick?.hit === true && pick.pickedMesh !== null ? st.idOf.get(pick.pickedMesh) : undefined;
-          const frozen = hitObj !== undefined && st.world.objects.get(hitObj)?.frozen === true;
-          const n = pick?.getNormal(true);
-          const face =
-            pinkCandidate({ onOrbitedPiece: onOrbited, frozen, objectId: hitObj ?? null, inBand }) && n && hitObj !== undefined
-              ? faceFromPickedNormal(st.world, hitObj, [n.x, n.y, n.z] as Vec3)
-              : null;
-          const pink = face !== null && hitObj !== undefined ? { objectId: hitObj, faceId: face.faceId } : null;
+          // ⛔⛔ (2026-10-12, the owner: *"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting
+          // face. Alignment of resting face shall be with the cube only"* — *"Remove the ctrl-alt raycast function in desktop"*) — a second touch
+          // takes no pink face any more, and the desktop's key looks at nothing (it has no position); ⭐ a FINGER's press on a PLACED part notes
+          // where — its TAP moves the orbit centre there (`holdRelease`), as a first touch's press does
+          const hitObj = e.pointerId === MOUSE_SECOND_ID || inBand || pick?.hit !== true || pick.pickedMesh === null ? undefined : st.idOf.get(pick.pickedMesh);
+          const onPlaced = hitObj !== undefined && goalLocked(hitObj, st.goalCommit, st.cfg.lockPlacedPieces === 1);
+          const centreAt: [number, number, number] | null =
+            onPlaced && pick?.pickedPoint ? [pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] : null;
           // ⭐⭐ (2026-10-11, the owner: *"left click on a face and held then CTRL … then drag: the drag freezes the scene … I think this should
           // enable the roll to the next axis"*) — a first touch held on a PLACED part is the input's first touch too (`partFirst`): it was
           // left out (an OBJECT pointer, not an outside one), so its drag drove nothing — the locked part's own orbit stops once a second is down
           const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? partFirst(st, e.pointerId);
-          holdSecondPress(st, e.pointerId, s.x, firstNow, pink);
-          // ⭐⭐ (2026-10-11, *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the
-          // item on which the action is triggered"*) the key over the ORBITED piece: its face the resting face, at once (the key still the held
-          // second touch — a left drag then is the way in)
-          if (onOrbited && e.pointerId === MOUSE_SECOND_ID && st.greenBox !== null) {
-            const nn = pick?.getNormal(true);
-            const pf = nn ? faceFromPickedNormal(st.world, st.greenBox.name, [nn.x, nn.y, nn.z] as Vec3) : null;
-            if (pf !== null && selectRestingFace(st, pf.faceId) && st.hold !== null) st.hold.shown = true;
-            if (st.hold !== null) st.hold.pressActed = true; // ⭐ (2026-10-11) over the orbited piece: never the tap roll (`holdTapRolls`)
-          }
+          holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt);
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
@@ -1369,8 +1359,6 @@ function selectRestingFace(st: SceneState, faceId: string): boolean {
   st.episodes.touch(--st.episodeSeq, true, true);
   st.episodes.sync(true);
   st.lastVerdict = st.lastVerdict.replace("orbit: tap 1 — ", `orbit: ${faceId} — the resting face now; `);
-  // ⭐ (2026-10-11) the highlights shown for the new resting face — held and faded
-  st.highlightEndedAt = performance.now();
   st.hudDirty = true;
   return true;
 }

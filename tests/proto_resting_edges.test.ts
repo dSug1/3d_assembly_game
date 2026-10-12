@@ -82,9 +82,9 @@ describe("⭐⭐⭐ prototype — the resting-face alignment by edges", () => {
     // aligned to (the floor's, `bootRestAlign`); the boot target sets the orbit centre only
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toContain("st.pinkFace = at < 0 ? null : { objectId: blue.id, faceId: o.faces[at]!.id };");
-    expect(w).toContain("st.pinkFace = { objectId: target.objectId, faceId: target.faceId };");
+    expect(w).not.toMatch(/st\.pinkFace\b/); // ⛔ (2026-10-12) no pink face at all — the boot aligns to the cube's +y (`BOOT_UP`)
     // ⛔ *"I did not ask to change the pink face: the ctrl was on empty so there is no reason the pink face should have changed to the new face"*
     expect(code("render/pointer_wiring.ts")).not.toMatch(/st\.pinkFace\s*=/);
-    expect(code("render/hold_wiring.ts")).toMatch(/st\.pinkFace = next;/); // the second touch's (a finger, ALT / CTRL) — its only writer in play
+    expect(code("render/hold_wiring.ts")).not.toMatch(/pinkFace/); // ⛔ (2026-10-12) the second touch takes no pink face
   });
 });

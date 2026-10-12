@@ -45,53 +45,15 @@ export function holdDecision(
   return heldMs < tapMs ? null : "WAY";
 }
 
-/** ⭐ May a second touch's hit be the pink face — a placed part (not frozen), never the orbited pieces, not in the edge band? */
-export function pinkCandidate(hit: { readonly onOrbitedPiece: boolean; readonly frozen: boolean; readonly objectId: string | null; readonly inBand: boolean }): boolean {
-  return !hit.inBand && !hit.onOrbitedPiece && !hit.frozen && hit.objectId !== null;
-}
-
-/**
- * ⭐ Does taking `next` change anything — is the piece NOT already aligned to it (`alignedKey`, the face it was last aligned to, as
- * `objectId/faceId`)? The same face again: nothing (the owner: *"same pink face pressed again does nothing"*). ⛔⛔ (2026-10-11, the owner:
- * *"when I left click on a new face and then CTRL+left click on the same face, the pink face is on this face but the piece's resting face does
- * not align with it. the logic is broken in this case"*) — it compared with the PINK face, and a plain left click on a part makes that face
- * the pink face (with the orbit centre) WITHOUT aligning: the same face then read as nothing to do. What matters is what the piece is
- * ALIGNED to.
- */
-export function pinkChanges(alignedKey: string | null, next: { readonly objectId: string; readonly faceId: string }): boolean {
-  return alignedKey !== `${next.objectId}/${next.faceId}`;
-}
-
-/**
- * ⭐ The highlights' strength, 0–1: `active` (the input running) — 1; else, from its end (`endedAt`, ms; `null` — never shown), 1 for
- * `holdMs`, then down to 0 over `fadeMs` (the owner: *"show pink highlights for a certain time … and then highlights fade gradually and
- * rapidly away. Set default timer 750 ms"*).
- */
-export function highlightAlpha(now: number, active: boolean, endedAt: number | null, holdMs: number, fadeMs: number): number {
-  if (active) return 1;
-  if (endedAt === null) return 0;
-  const t = now - endedAt;
-  if (t <= holdMs) return 1;
-  if (!(fadeMs > 0) || t >= holdMs + fadeMs) return 0;
-  return 1 - (t - holdMs) / fadeMs;
-}
-
 /**
  * ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty or
  * on the pink face) rolls to the next axis"*) — does the second touch's release ROLL the piece to the next axis? A TAP (`tapped`), that
- * never became the way in or a zoom (`mode` still HELD), while the FIRST touch is held (`firstHeld`), whose press changed NO pink face
- * (`pressChangedPink` false: empty space, a frozen body, or the current pink face again) and named no resting face (`onOrbited` false — the
- * key over the orbited piece selects one), with the piece aligned to its pink face (`aligned`).
+ * never became the way in or a zoom (`mode` still HELD), while the FIRST touch is held (`firstHeld`), whose press did nothing else
+ * (`pressActed` false — ⭐ 2026-10-12: a press on a PLACED part moves the orbit centre instead), with the piece aligned (`aligned`).
+ * ⛔ (2026-10-12) the pink face from a part and the key's raycast are deleted: no "pink changed", no "over the orbited piece".
  */
-export function holdTapRolls(
-  tapped: boolean,
-  mode: HoldMode,
-  firstHeld: boolean,
-  pressChangedPink: boolean,
-  onOrbited: boolean,
-  aligned: boolean,
-): boolean {
-  return tapped && mode === "HELD" && firstHeld && !pressChangedPink && !onOrbited && aligned;
+export function holdTapRolls(tapped: boolean, mode: HoldMode, firstHeld: boolean, pressActed: boolean, aligned: boolean): boolean {
+  return tapped && mode === "HELD" && firstHeld && !pressActed && aligned;
 }
 
 /**

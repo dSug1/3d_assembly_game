@@ -395,9 +395,9 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);
     // the box itself has no parent — only its yellow RESTING FACE rides it (2026-10-05; its white contour went with the rotation)
     expect(w).not.toMatch(/box\.parent\s*=/);
-    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(3);
+    expect(w.match(/\.parent\s*=/g) ?? []).toHaveLength(2); // ⛔ (2026-10-12) the part's pink face fill (a third) deleted
     expect(w).toMatch(/fill\.parent = m;/);
-    expect(w).toMatch(/fill\.parent = mesh;/); // ⭐ (2026-10-11) the pink face's fill rides its body
+    expect(w).not.toMatch(/fill\.parent = mesh;/); // ⛔ (2026-10-12) the part's pink face fill deleted
     expect(w).toMatch(/twin\.parent = fill;/); // its faint twin rides the fill (2026-10-05)
   });
 
