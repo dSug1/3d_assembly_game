@@ -249,10 +249,11 @@ export const SCENE_1: SceneDescriptor = {
     // ⭐ prototype (2026-10-12, the owner: *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* →
     // *"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)"*) — 1st and 4th ×2: 6.0 m
     // (were 2.55 / ±1.575, 3.0 m); the boot on the way up to the 1st ring where the piece is 3 m away (`bootDistanceM`)
-    // ⭐ (2026-10-12, *"amend: rings 1 and 4 with max 5m distance at zoom = 1 (instead of 6m)"*) — ×5/3 of the old rings instead of ×2: 4.25 / ±2.625, 5.0 m
-    // ⭐ (2026-10-12, *"make sure rings 1 and 4 are mirror. use the worst of the two to design both"*) — the 4th ring's 51° (below) for both
-    topRadiusM: 3.15,
-    topHeightM: 3.885,
+    // ⛔ (2026-10-12) 5 m, then mirrored at 51° (3.15 / ±3.885) — REVERTED (*"revert to the 6m max distance geometry as it was in previous commit: this geometry allows each quad to become yellow during orbit at maximum distance"*): at 51° the camera stood 60° above the piece on the 1st
+    // ring, where the horizontal quad is ALWAYS the candidate, so the side quads never turned yellow there
+    // ⛔⛔ THE CAMERA GEOMETRY SHALL ALLOW ALL THE QUADS TO BECOME YELLOW AT THE MAXIMUM DISTANCE ORBIT (`allQuadsReachable`; the HUD alerts)
+    topRadiusM: 5.1,
+    topHeightM: 3.15,
     // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
     // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
     middleRadiusM: 0.09,
@@ -261,12 +262,8 @@ export const SCENE_1: SceneDescriptor = {
     // as middle ring and height the negative opposite of middle ring's height"* — 0.09 m at −0.15 m: a symmetric waist again.
     lowerRadiusM: 0.09,
     lowerHeightM: -0.15,
-    // ⭐ (2026-10-12, *"make sure that the radius and height of the 1st and 4th rings are such that the horizontal quad can become yellow when the
-    // piece is at the maximum distance"*) — the 4th ring STEEPER (51° below the level, still 5.0 m): the camera's pitch offset lifts it toward the
-    // level, so at −31.7° (the 1st ring's mirror) it stood only 21° below the piece, under the 35.3° the horizontal quad needs; now ~40°, as the
-    // 1st ring's 41° above (`horizontalQuadReachable`, measured headless)
-    bottomRadiusM: 3.15,
-    bottomHeightM: -3.885,
+    bottomRadiusM: 5.1,
+    bottomHeightM: -3.15,
     bootDistanceM: 3,
   },
   final: SCENE_1_FINAL,

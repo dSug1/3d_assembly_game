@@ -954,7 +954,8 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
   (`candidateFace`, the one helper left in `input/orient_window.ts`).
 - ⭐⭐ **THE QUADS**: one per distinct PLANE of the directions (`distinctPlanes`: `Scene_1`'s cube gives three, orthogonal), square to the world,
   centred on the orbited piece's resting face, faint glass with faint edges, **drawn over the scene** (rendering group 1 — seen through the piece).
-- ⭐⭐ **THE PINK DIRECTION** — what a tap on empty space takes: the CANDIDATE (the direction facing the camera most, seen from the resting face),
+- ⭐⭐ **THE PINK DIRECTION** — what a tap on empty space takes: the CANDIDATE (the direction facing the camera most, seen from the resting face
+  itself — every direction from that one point; a unit cube there, its facets 1 m out, had leaned it toward the sides at the camera's ~1.5 m),
   or the direction last tapped, kept **until the next orbit drag** (`orbitDragStep` drops it — not when the candidate changes). **Its quad is
   edged YELLOW.** So a quad tapped turns yellow, and every tap on empty space then rolls the piece on it, until a drag.
 - ⭐⭐ **A TAP ON A QUAD** (first touch / left button, nearer than the scene within 5 mm — a quad lies ON the floor): the side tapped
@@ -962,15 +963,38 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
   other side turns it 180°. A DRAG from a quad orbits, as any drag. ⛔ **The orbited piece first**: a ray that meets the piece is the piece's
   (the resting-face pick), whatever quad lies in front.
 - ⭐ **A TAP ON EMPTY SPACE** = a tap on the pink direction (`orientTapShown`), as it was a tap on the cube's pink face (§24).
-- ⭐⭐ **THE SIZE**: from **0.20** at the gizmo (d = 0) to **1.4** at the boot's gizmo distance and beyond (both × the piece's radius, the side
-  twice that), along `(d / d₀)^power` between them (`quadSize`); the power is a slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face
-  quads: growth power*; it was 1.5). ⭐ The resting face's yellow contour scales by the same share, about the face's centre.
-- ⭐ **THE GIZMO IS YELLOW** — the quads' yellow (1, 0.85, 0.1), its band halved: five loops ±0.5 px (~1.5 px; it was ±1 px, ~3 px).
-- ⭐⭐ **THE 1st AND 4th RINGS DOUBLED** (`Scene_1`: 5.1 m / ±3.15 m — 6.0 m from the centre at zoom 1; were 2.55 / ±1.575, 3.0 m); the piece's
-  own maximum distance is **6 m** (`pieceRadiusMaxM`; it rode the camera's `cameraRadiusMaxM`, 3 m). ⭐ The boot stays at **3 m**:
-  `orbit.bootDistanceM: 3` boots on the way up to the 1st ring where the rings are 3 m away (`elevationAtDistance`), not on the 1st ring itself.
+- ⭐⭐ **THE SIZE** (*"the 1.4 shall be reached at the maximum distance … There shall be no plateau for the quad scale before shrinking"* →
+  *"the min scale of the quads … 0.1. the curve with the power (i.e. power 3) shall best fit those max and min scales"* → *"the scale 0.1 should be
+  reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"* → *"make the range 0.2 -> 1.4"* →
+  *"amended: make the range 0.01 ->1.4"*): d the piece's distance to the gizmo; **0.01** at **HALF** the rings' farthest (`quadsShownFromM`: 3 m in
+  `Scene_1`), **1.4** at the FARTHEST (`pieceDistanceRange`: 6.0 m), `((d − d_half) / (d_max − d_half))^power` between them (`quadSize`) — no
+  plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). Both × the piece's radius, the side twice that. The power is a
+  slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face quads: growth power*; it was 1.5). ⚠ The boot sits at 3.0 m — just at the threshold:
+  the quads appear as the piece moves out. ⭐ The resting face's yellow contour scales by the same share, about the face's centre (its smallest
+  while the quads are hidden). (Before, the same day: 0.20 at the gizmo → the gizmo's diameter → 0.1 at the rings' nearest; the 1.4 at the boot
+  distance with a plateau beyond.)
+- ⭐ **THE GIZMO IS YELLOW** — the quads' yellow (1, 0.85, 0.1), and **one 1 px loop, as a quad's edge** (*"make the yellow gizmo ring thickness
+  the same as the quad edge thickness"*; it was five loops, ~3 px, then ~1.5 px).
+- ⭐⭐ **THE 1st AND 4th RINGS AT 6 m** (`Scene_1`: **5.1 m at ±3.15 m** — 6.0 m from the centre at zoom 1, 31.7° from the level; were 2.55 /
+  ±1.575, 3.0 m); the piece's own maximum distance is **6 m** (`pieceRadiusMaxM`; it rode the camera's `cameraRadiusMaxM`, 3 m). ⭐ The boot
+  stays at **3 m**: `orbit.bootDistanceM: 3` boots on the way up to the 1st ring where the rings are 3 m away (`elevationAtDistance`), not on the
+  1st ring itself. ⛔ Tried and REVERTED the same day: 5 m (4.25 / ±2.625), then mirrored at 51° (3.15 / ±3.885) — *"revert to the 6m max
+  distance geometry as it was in previous commit: this geometry allows each quad to become yellow during orbit at maximum distance (this is not
+  the case in the current commit's geometry)"*: at 51° the camera stood 60° above the piece on the 1st ring, where the horizontal quad is ALWAYS
+  the candidate, so the side quads never turned yellow there.
+- ⛔⛔⛔ **THE CAMERA GEOMETRY SHALL ALLOW ALL THE QUADS TO BECOME YELLOW AT THE MAXIMUM-DISTANCE ORBIT** (the owner: *"Flag that the camera
+  geometry shall allow all the quads to become yellow at the maximum distance orbit"*). Seen from the resting face, at a camera elevation `el`:
+  the HORIZONTAL quad is the candidate at some yaw only past **atan(1/√2) = 35.26°** (at a diagonal yaw a side reads cos(el)/√2, the top sin(el));
+  a VERTICAL quad only under **45°** (at a yaw square to it, the side reads cos(el), the top sin(el)). So over the 1st and 4th rings one must stand
+  past 35.26° and one under 45° — one ring in (35.26°, 45°) does both (`allQuadsReachable`). ⚠ The elevation is NOT the ring's: the camera's pitch
+  offset lifts the camera. Measured headless at 6 m: the camera **41.6°** above the piece on the 1st ring (all quads yellow over the orbit: the
+  horizontal one at 8 of 16 yaws, the vertical ones at the other 8), **21°** below on the 4th (vertical quads only).
+  ⛔⛔ **ALERT — WHOEVER MOVES THE 1st / 4th RING SLIDERS (radius or height), OR THE CAMERA'S PITCH OFFSET: the HUD's `camera` line shows `⚠ not
+  every quad can turn yellow on the max-distance orbit` when the two rings' elevations, MEASURED ON them, fail the rule.** They are measured only
+  when the orbit reaches each ring (`st.ringQuadCheck`, forgotten when a ring slider changes): after moving a ring slider, drag the orbit to the
+  1st ring and to the 4th and read the HUD. The vectors pin the rule and `Scene_1`'s 31.7°.
   ⚠ The outer rings' tangents changed, so the waist's speed and the 1st ↔ 2nd transition are not the curves the owner tuned on 2026-10-02 —
   the vectors written on those keep the old rig as their fixture (`tests/helpers/rig_3m.ts`).
-- Headless (desktop): boot — the piece 3.01 m from the centre, the pink direction −z and its plane's quad yellow; a click on the x quad — aligned
+- Headless (desktop, the 6 m rig, the first build of §25): boot — the piece 3.01 m from the centre, the pink direction −z and its plane's quad yellow; a click on the x quad — aligned
   to +x, that quad yellow; two taps on empty space — two rolls on it; a drag — the tapped quad dropped; a press on the piece over a quad — the
   resting face picked, no quad tap. ⛔ No device look yet.

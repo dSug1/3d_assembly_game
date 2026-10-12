@@ -190,7 +190,10 @@ export function installTuningMenu(st: SceneState): void {
           // ⭐ prototype, the owner 2026-10-06: *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT AROUND CENTER"*
           title: "CAMERA ORBIT AROUND CENTER",
           sliders: [
-            // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled
+            // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)
+            // ⛔⛔ ALERT: the camera geometry shall allow ALL the quads to become yellow on the maximum-distance orbit — over the 1st / 4th rings, the
+            // camera once past 35.3° and once under 45° from the resting face (`allQuadsReachable`); the HUD's camera line warns once both rings are
+            // measured (`RESTING_FACE_ALIGNMENT.md` §25)
             tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 6, 0.01),
             tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -6, 6, 0.01),
             tunable(st, "2nd ring radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),

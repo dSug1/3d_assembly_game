@@ -39,3 +39,16 @@ export const HORIZONTAL_QUAD_MIN_ELEVATION_DEG = (Math.atan(Math.SQRT1_2) * 180)
 export function horizontalQuadReachable(elevationDeg: number): boolean {
   return Math.abs(elevationDeg) > HORIZONTAL_QUAD_MIN_ELEVATION_DEG;
 }
+
+/**
+ * ⛔⛔ (2026-10-12, the owner: *"revert to the 6m max distance geometry … this geometry allows each quad to become yellow during orbit at maximum
+ * distance … Flag that the camera geometry shall allow all the quads to become yellow at the maximum distance orbit"*) — a VERTICAL quad (a side
+ * direction) is the candidate at some yaw only while the camera stands LESS than 45° above / below the resting face (at a yaw square to it, the
+ * side reads cos(el), the top sin(el)); the horizontal one only past 35.26° (`horizontalQuadReachable`). ALL the quads can turn yellow on the
+ * maximum-distance orbit when, over its rings' elevations (the 1st and 4th, as measured), one passes each test — a single ring in (35.26°, 45°)
+ * passes both.
+ */
+export const SIDE_QUAD_MAX_ELEVATION_DEG = 45;
+export function allQuadsReachable(elevationsDeg: readonly number[]): boolean {
+  return elevationsDeg.some(horizontalQuadReachable) && elevationsDeg.some((e) => Math.abs(e) < SIDE_QUAD_MAX_ELEVATION_DEG);
+}
