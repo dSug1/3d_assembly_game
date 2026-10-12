@@ -203,7 +203,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       edges.parent = root;
       return { normal: n, fill, edges };
     });
-    st.restingQuads = { key, root, quads, growth: 1 };
+    st.restingQuads = { key, root, quads, growth: 1, shown: false };
   }
   const q = st.restingQuads;
   const at = restingCentreWorld(st);
@@ -228,8 +228,9 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   // quads' distance from the camera
   const cam = st.camera.position;
   const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
+  q.shown = show; // ⭐ *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"* — the resting contour hidden with the quads (`restingFillFrame`)
   if (!show) {
-    q.growth = Math.min(1, onePx / full); // ⭐ the resting contour at its smallest (`restingFillFrame`)
+    q.growth = Math.min(1, onePx / full);
     return;
   }
   // ⭐ at the resting face's centre, as the piece stands now

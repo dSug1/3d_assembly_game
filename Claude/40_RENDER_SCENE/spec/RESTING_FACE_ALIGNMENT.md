@@ -971,8 +971,11 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
   `Scene_1`), **1.4** at the FARTHEST (`pieceDistanceRange`: 6.0 m), `((d − d_half) / (d_max − d_half))^power` between them (`quadSize`) — no
   plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). The 1.4 × the piece's radius, the side twice that. The power is a
   slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face quads: growth power*; it was 1.5). ⚠ The boot sits at 3.0 m — just at the threshold:
-  the quads appear as the piece moves out. ⭐ The resting face's yellow contour scales by the same share, about the face's centre (its smallest
-  while the quads are hidden). (Before, the same day: 0.20 at the gizmo → the gizmo's diameter → 0.1 at the rings' nearest; the 1.4 at the boot
+  the quads appear as the piece moves out. ⭐ The resting face's yellow contour scales by the same share, about the face's centre, never under
+  ONE PIXEL across its longest axis — and ⛔ it is HIDDEN with the quads below half the farthest distance (*"same for the outline as for the
+  quads: min 1 pixel, hidden below half max distance"*; kept at the quads' smallest share there, it had shrunk to a point that flickered at the
+  quads' place). ⚠ So at the boot's 3.01 m the quads and the resting face's outline are both about one pixel: the resting face reads only as
+  the piece moves out. (Before, the same day: 0.20 at the gizmo → the gizmo's diameter → 0.1 at the rings' nearest; the 1.4 at the boot
   distance with a plateau beyond.)
 - ⭐ **THE GIZMO IS YELLOW** — the quads' yellow (1, 0.85, 0.1), and **one 1 px loop, as a quad's edge** (*"make the yellow gizmo ring thickness
   the same as the quad edge thickness"*; it was five loops, ~3 px, then ~1.5 px).
