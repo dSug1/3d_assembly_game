@@ -114,15 +114,19 @@ describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) a
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const n: Vec3 = (ci >= 0 ? normalize(qRotate(q, c.facetNormals[ci]!)) : null) ?? [-fwd.x, -fwd.y, -fwd.z];");
     expect(c).toContain("const v: Vec3 = cross(u, n);");
-    expect(c).toContain("nowFrame(st, q, add(at(SLOT_NOW), scale(n, pieceSize)), pieceSize);");
+    // ⭐ (2026-10-12, *"Place the green piece replica of the current green piece transform in the middle of the cube"*)
+    expect(c).toContain("nowFrame(st, q, o, pieceSize);");
+    expect(c).toContain("const SLOT_NEXT: readonly [number, number] = [0.62, 0.62];");
     expect(c).toContain("replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);");
     expect(c).toContain("const off = qRotate(w, scale(on === null ? copy.centre : copy.rest, k));");
     expect(c).toContain('const shaft = CreateTube("orient-arrow-shaft", { path, radius: ARROW_WIDTH, tessellation: 8 }, st.scene);');
   });
-  it("⭐⭐ *\"fade the highlight of the pink face on the cube (same as in the scene)\"* — the scene pink face's `highlightAlpha`", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("const fade = highlightAlpha( now, (st.hold !== null && st.hold.shown) || (st.orientHold !== null && st.orientHold.acted), st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs, );");
-    expect(c).toContain("(c.litMesh.material as StandardMaterial).alpha = LIT_ALPHA * fade;");
+  it("⛔ *\"Do not fade the pink faces on the green piece in the screen nor on the cube\"* — the resting face's fill and the cube's lit facet always at full strength", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).not.toContain("highlightAlpha(");
+    expect(c).not.toContain("LIT_ALPHA * fade");
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const rest = 1; const fill = p.restingFill; fill.isVisible = true; (fill.material as StandardMaterial).alpha = RESTING_ALPHA * rest;");
   });
 });
 
@@ -201,5 +205,21 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
     expect(c).toMatch(/if \(st\.orientHold !== null && e\.pointerId !== st\.orientHold\.pointerId\) \{\s*st\.orientDriver = \{ pointerId: e\.pointerId, prev: s \};/);
     expect(c).toMatch(/orbit\(e\.pointerId, s, dv\.prev\);/);
     expect(code("render/pointer_wiring.ts")).toContain("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {");
+  });
+});
+
+describe("⭐ the window's copies and the candidate (2026-10-12, *\"scale the green piece replicas 150% in the cube — highlight the edges of the candidate face — green piece replicas shall be instantly placed in their transform. No transitions\"*)", () => {
+  it("⭐ the copies 150 % (0.36 → 0.54 of the inner radius)", () => {
+    expect(code("render/orient_cube.ts")).toContain("const PIECE_SHARE = 0.54;");
+  });
+  it("⭐ the candidate face outlined — a yellow tube along its edges, rebuilt when the candidate changes", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("if (cand !== c.candEdgeTag) candidateEdges(st, cand);");
+    expect(c).toContain('const m = CreateTube("orient-candidate-edges", { path, radius: CANDIDATE_EDGE_WIDTH * c.inner, tessellation: 6 }, st.scene);');
+  });
+  it("⭐⭐ no transitions: (a) the pose the piece is HEADING for (never the turn in flight); a fading (c) stays where it was", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("place(c.now, st.restAlign?.base ?? [r.w, r.x, r.y, r.z], corr, slot, size);");
+    expect(c).toContain("if (r.dying === null) place(r, r.q, corr, slot, size, on);");
   });
 });

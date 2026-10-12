@@ -488,6 +488,9 @@ export interface SceneState {
     /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none); (a) the piece as it is; (c) the pieces as they would be (the
      * live one, the fading). */
     candidate: number;
+    /** ⭐ (2026-10-12) the candidate face's outline, and the candidate it was built for. */
+    candEdge: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+    candEdgeTag: number;
     now: {
       readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly piece: string;
