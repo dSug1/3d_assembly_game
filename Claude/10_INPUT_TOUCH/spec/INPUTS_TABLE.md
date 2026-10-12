@@ -19,9 +19,9 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) |
 | ⭐ the orbited piece (prototype, 2026-10-12) | first finger held (empty space or a part) + a second finger TAP on empty space or a frozen body | the piece ROLLS one stop to the next axis, clockwise (`holdTapRolls`); one episode |
 | ⭐ the orbited piece (prototype, 2026-10-11) | first finger held ON A PART, second finger held, first drags | the way in and the dx roll, as from empty space — the part never moves (`partFirst`) |
-| ⭐ the orbited piece (prototype, 2026-10-12) | both fingers held, in the way in + roll: the SECOND finger's dx past the deadband | the ZOOM, without lifting (`holdSwitch`) |
-| ⭐ the orbited piece (prototype, 2026-10-12) | both fingers held, in the zoom: the second finger RESTS 150 ms (`holdSwitchRestMs`), the FIRST finger's dx | the way in + roll again, without lifting; ⚠ before the rest the first finger still zooms |
+| ⏸ the orbited piece (prototype, 2026-10-12) | (the way in + roll, the zoom ↔ roll switch) | ⏸ COMMENTED OUT 2026-10-12 — two fingers are the STANDARD PINCH: either finger's travel past the deadband starts the zoom |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a TAP on a facet of the ORIENTATION WINDOW (at its centre: the piece as the yellow-outlined candidate face would make it; boot bottom-left) | the resting face SITS AGAINST that direction (a virtual pink face); the lit (pink) facet tapped again — the roll to the next axis; one episode each |
+| ⭐ the orbited piece (prototype, 2026-10-12) | a first-touch TAP on EMPTY space (left click on desktop) | the same as a tap on the cube's PINK face (the face shown): aligned to it, or the roll |
 | ⭐ the orbited piece (prototype, 2026-10-12) | (any tap on a facet) | the copy goes to the tapped face AT ONCE, showing the next orientation there, until the candidate changes |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a finger HELD in the orientation window + the other finger's drag | the camera orbits, the cube turns; each new CANDIDATE face (the one facing the camera) becomes the pink face and the resting face sits against it — a continuous snapped rotation; one episode |
 | ⭐ the orbited piece (prototype, 2026-10-12) | first finger held + a second finger TAP on a PLACED part | moves the **orbit centre** (the pink gizmo) there, as a first touch's press does — never a roll; ⛔ no pink face from a part, no alignment (the cube's only) |
@@ -72,7 +72,7 @@ on entering the capture zone, are deleted.
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
-| ⭐ the orbited piece (prototype, 2026-10-11) | **ALT or CTRL held** (= the second finger) + a left drag's **dx** | the way in, round the piece, the roll; the key released: the way out; the left released and pressed again while held: the same input (`RESTING_FACE_ALIGNMENT.md` §20) |
+| ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out) |
 | ⛔ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor over a placed part | nothing — ⛔ the key's raycast is deleted (it took the pink face, aligned to it); the key is the held second touch only |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a left click (a first-touch tap) on the orbited piece | the face hit becomes the **resting face**, aligned (§20); ⛔ ALT / CTRL over it does nothing since 2026-10-12 |
 | ⛔ the orbited piece (prototype, 2026-10-11) | the right button | nothing (it was the held second touch until ALT / CTRL replaced it) |

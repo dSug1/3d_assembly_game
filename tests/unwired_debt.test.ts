@@ -38,6 +38,14 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
+  // ── prototype 2026-10-12: the way in / the orbit round the piece / its dx roll / the zoom ↔ roll switch, commented out, KEPT. ──
+  enterPieceOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  returnToCentreOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  holdDecision: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  holdSwitch: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  trailAnchor: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  orbitRollSteps: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  orbitRollStepRad: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
   // ── prototype `1.0.59q-` (2026-10-05): priority 1 of the resting-face alignment, SUPERSEDED twice in a day — kept until the
   // owner settles the rule (`RESTING_FACE_ALIGNMENT.md` §2), then deleted with their vectors. ──────────────────────────────
   restAlignTarget:

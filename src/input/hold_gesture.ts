@@ -87,3 +87,12 @@ export function holdSwitch(
   if (mode === "ZOOM") return !secondMoved && secondRestMs >= restMs && Math.abs(firstDxMm) > deadbandMm ? "WAY" : "ZOOM";
   return mode;
 }
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"Simplify the zoom so that this reverts back to the standard zoom input design for mobile"*) — the STANDARD PINCH:
+ * two fingers down, it starts as soon as EITHER has travelled past the deadband (mm, from its press); then the zoom follows the fingers'
+ * distance. ⛔ The way in (`holdDecision`'s WAY) and the switch without lifting (`holdSwitch`) are commented out with the piece orbit.
+ */
+export function pinchStarts(firstTravelMm: number, secondTravelMm: number, deadbandMm: number): boolean {
+  return firstTravelMm > deadbandMm || secondTravelMm > deadbandMm;
+}

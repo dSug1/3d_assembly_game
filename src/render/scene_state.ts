@@ -26,7 +26,6 @@ import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
 import type { Edge, LongAxes, RestingCandidate, RestingResult } from "../core/resting_face";
-import type { PinchMotion } from "../input/pinch_gate";
 import type { RestingEntry } from "./resting_face_wiring";
 import { type SceneDescriptor } from "../core/game_structure";
 import { type ObjectId, type World } from "../core/object_model";
@@ -711,10 +710,6 @@ export interface SceneState {
   lastVerdict: string;
   hudDirty: boolean;
   pinch: PinchTracker;
-  /** ⭐ Prototype (2026-10-06): each pinching finger's motion state — the zoom only while BOTH are MOVING (`pinch_gate.ts`). */
-  pinchMotion: PinchMotion;
-  /** ⭐ Prototype (2026-10-10): each pinching finger's x at the pinch's start, and whether both have since passed the dx deadband (`pinchDxOpen`). */
-  pinchDx: { readonly x0: ReadonlyMap<number, number>; open: boolean } | null;
   pendingCentre: { x: number; y: number; at: number } | null;
   cameraReset: CameraResetAnimation | null;
   orbit: OrbitController;

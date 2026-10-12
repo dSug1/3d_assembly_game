@@ -4,7 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { orientCubePointer, orientFollowCursor } from "./orient_cube";
+import { orientCubePointer, orientFollowCursor, orientTapShown } from "./orient_cube";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -12,7 +12,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwing
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, greenDragGains, orbitRollStepRad, restOnTappedFace, restTargetKey, rollRestingFace } from "./green_box_wiring";
+import { alignRestingFace, greenDragGains, restOnTappedFace, restTargetKey } from "./green_box_wiring"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -41,7 +41,7 @@ import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
 import { cursorPointer, feedUnsnap } from "./seat_wiring";
-import { advanceCentreReturn, advancePieceAim, advancePieceEntry, orbitRollSteps } from "../input/piece_orbit";
+import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit"; // ⏸ (2026-10-12) orbitRollSteps — with the commented-out way in
 
 /** ⭐ `D182`: is this touchpoint half of an unsnap couple (so it drives nothing)? The rule is `UnsnapHold`'s. */
 function unsnapHolds(st: SceneState, pointerId: number): boolean {
@@ -366,9 +366,6 @@ export function installPointerHandler(st: SceneState): void {
         if (p) {
           st.pinch.begin(p[0], p[1]);
           // ⭐ each finger's motion state starts here (`pinch_gate.ts`: the zoom only while BOTH are MOVING)
-          st.pinchMotion.begin(st.router.outside());
-          // ⭐ (2026-10-10) the zoom opens only on both fingers' dx (`pinchDxOpen`)
-          st.pinchDx = { x0: new Map(st.router.outside().map((q) => [q.id, q.last.x] as const)), open: false };
           // ⚠ Captured HERE, once. The zoom is a ratio against the gesture's start,
           // never an accumulation — so a pinch out and back returns exactly where it
           // began. See input/pinch.ts.
@@ -652,6 +649,18 @@ export function installPointerHandler(st: SceneState): void {
               st.hudDirty = true;
               return;
             }
+          }
+          // ⭐⭐ (2026-10-12, the owner: *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink
+          // face"*) — a TAP on empty space (not the orbited piece, no second touch held, the desktop's key aside) taps the cube's face SHOWN
+          if (
+            (ft === null || ft.pointerId !== e.pointerId) &&
+            st.hold === null &&
+            e.pointerId !== MOUSE_SECOND_ID &&
+            isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)) &&
+            orientTapShown(st)
+          ) {
+            st.hudDirty = true;
+            return;
           }
         }
         // ⭐⭐ ONE call, ONE record: it judges the tap, keeps §1.3's history, and arms the
@@ -1284,15 +1293,17 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
     // ⭐ (2026-10-10) …the pink face changed since or not: the roll goes on against the axes it was aligned to
     // ⭐⭐ (2026-10-11) …on the held second touch's way in and round the piece (the sphere is deleted)
-    if (st.hold !== null && st.hold.mode === "WAY" && st.restAligned && st.restRoll !== null && dx !== 0) {
-      const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
-      const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
-      st.orbitRollAcc = r.acc;
-      // ⛔⛔ (2026-10-10, the owner: *"when the dx is too fast, the piece makes strange movements. consider clamping"*) ONE turn in flight: a roll
-      // only once the last turn landed, one at most — a fast dx crossing several stops drops the rest (queued, they made a turn past 180°,
-      // eased the SHORT way round, about another axis)
-      if (r.steps !== 0 && st.restAlign === null) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
-    }
+// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
+// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
+// ⏸     if (st.hold !== null && st.hold.mode === "WAY" && st.restAligned && st.restRoll !== null && dx !== 0) {
+// ⏸       const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
+// ⏸       const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
+// ⏸       st.orbitRollAcc = r.acc;
+// ⏸       // ⛔⛔ (2026-10-10, the owner: *"when the dx is too fast, the piece makes strange movements. consider clamping"*) ONE turn in flight: a roll
+// ⏸       // only once the last turn landed, one at most — a fast dx crossing several stops drops the rest (queued, they made a turn past 180°,
+// ⏸       // eased the SHORT way round, about another axis)
+// ⏸       if (r.steps !== 0 && st.restAlign === null) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
+// ⏸     }
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
     // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
     // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the

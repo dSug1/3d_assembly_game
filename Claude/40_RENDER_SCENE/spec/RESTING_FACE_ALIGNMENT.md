@@ -899,3 +899,29 @@ touch tap on seated / placed part). Remove the ctrl-alt raycast function in desk
 - ⛔ **The red arrow deleted** (the owner, 2026-10-12, `1.0.69-`: *"remove the red arrow"*) — the window shows the cube and the copy only; the
   preview no longer carries a turn and `turnBetween` is gone with it. ⚠ `nextCoupleRoll` still reports its own axis (a vectored property of
   the roll: turning the pose by it IS the roll).
+
+## 24. The way in commented out; the standard pinch; a tap on empty space taps the cube's pink face (2026-10-12, `1.0.69-`)
+
+The owner: *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink face. remove the
+roll to the next axis triggered by first touch pressed and delta position while second touch held (= left click held while CTRL/ALT is held).
+Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on). Simplify the zoom so that this reverts
+back to the standard zoom input design for mobile"* → *"shall we comment out the way out to the center orbit as well ?"*
+
+- ⭐⭐ **A first-touch / left TAP on EMPTY space taps the cube's PINK face** (the face shown — the candidate, or the face clicked): the same as
+  a tap on that facet (`orientTapShown` → `orientCubeTap`: aligned to it, or the roll when it is already the aligned face). ⛔ Not a tap on
+  the orbited piece (it still picks the resting face), not while a second touch is held, not the desktop's key.
+- ⏸⏸ **The way in, the orbit round the piece, its dx roll and the way out are COMMENTED OUT, not deleted** (lines prefixed `// ⏸ ` in
+  `hold_wiring.ts` and `pointer_wiring.ts`): the zoom ↔ way-in switch (`holdSwitch`), the way-in decision (`holdDecision`'s WAY),
+  `startWay`, the dx roll in `orbitDragStep`, and — to the owner's question — the WAY OUT at the second touch's release (with no way in there
+  is nothing to leave). Their exports (`enterPieceOrbit`, `returnToCentreOrbit`, `holdDecision`, `holdSwitch`, `trailAnchor`,
+  `orbitRollSteps`, `orbitRollStepRad`) are declared kept in `tests/unwired_debt.test.ts`; the vectors read the kept code un-commented
+  (`kept()`), and one asserts it IS commented out.
+- ⭐⭐ **The STANDARD PINCH on touch**: two fingers down (the second held), EITHER finger's travel past the deadband starts the zoom
+  (`pinchStarts`), which then follows the fingers' distance from that start. ⛔ Deleted: the dx gate (both fingers' sideways travel, 2026-10-10)
+  and the moving-fingers gate (2026-10-06) — `input/pinch_gate.ts` and its vectors. A second-finger TAP (no travel) still rolls (the first
+  held), or moves the orbit centre on a placed part.
+- **Desktop**: ALT / CTRL held + a left drag ORBITS THE CENTRE (no way in, no roll); ALT / CTRL TAP with the left held still rolls; the cube
+  held by the key still scrolls the alignment.
+- Headless (touch): the second finger moving apart — zoom 0.85; the first moving, the second still — zoom 0.72, no way in, no roll; a
+  second-finger tap — a roll; a first-touch tap on empty space — aligned to the cube's pink face (−z). (Desktop): CTRL + left drag — the
+  centre orbit only; a left tap on empty space — aligned to the pink face (+x).
