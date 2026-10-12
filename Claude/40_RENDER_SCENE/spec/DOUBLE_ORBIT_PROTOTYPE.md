@@ -730,3 +730,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ Space and Shift + drag OFF in the orbit (`orbitModifiers`) — Space + click took the pink face; ⭐⭐ a first touch held on a part is the held
   input's first touch (the drag froze); ⭐⭐ the second touch's TAP with the first held rolls to the next axis (`holdTapRolls`) →
   `RESTING_FACE_ALIGNMENT.md` §20.
+
+## 2026-10-12 — on 1.0.66-
+
+* ⭐⭐ Zoom ↔ way in + roll WITHOUT LIFTING (mobile; the desktop unchanged): the second finger's dx → zoom; it rests 150 ms + the first finger's
+  dx → the roll again (`holdSwitch`, `holdSwitchRestMs`) → `RESTING_FACE_ALIGNMENT.md` §20.

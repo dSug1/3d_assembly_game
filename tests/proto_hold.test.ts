@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { highlightAlpha, holdDecision, holdTapRolls, pinkCandidate, pinkChanges } from "../src/input/hold_gesture";
+import { highlightAlpha, holdDecision, holdSwitch, holdTapRolls, pinkCandidate, pinkChanges, trailAnchor } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { pinchDxOpen } from "../src/input/pinch_gate";
 import { orbitModifiers } from "../src/input/mouse_second_touch";
@@ -98,20 +98,24 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(p).toMatch(/const dy = dxOnly \? 0 : s\.y - prev\.y;/);
     const h = code("render/hold_wiring.ts");
     // WAY: the pink face taken (option B), then the way in; the roll counted from here
-    expect(h).toMatch(/takePink\(st\);\s*h\.shown = true;[^\n]*\n\s*if \(enterPieceOrbit\(st\)\) st\.lastVerdict \+= " — the way in";\s*st\.orbitRollAcc = 0;\s*st\.pieceYawGainDrag = st\.pieceYawGain;/);
+    // ⭐ (2026-10-12) the way in factored into `startWay` (the decision and the switch without lifting share it)
+    expect(h).toMatch(/takePink\(st\);\s*startWay\(st, h\);/);
+    expect(h).toMatch(/h\.shown = true;[^\n]*\n\s*if \(!h\.wayIn \|\| \(st\.pieceOrbit === null && st\.pieceEntry === null\)\) \{\s*if \(enterPieceOrbit\(st\)\) st\.lastVerdict \+= " — the way in";\s*\}\s*h\.wayIn = true;\s*st\.orbitRollAcc = 0;\s*st\.pieceYawGainDrag = st\.pieceYawGain;/);
     // ZOOM: the zoom from where it is decided; a pinch never takes the pink face
-    expect(h).toMatch(/if \(d === "ZOOM"\) \{[\s\S]*?st\.pinch\.begin\(p\[0\], p\[1\]\);\s*st\.zoomAtPinchStart = st\.zoom;[\s\S]*?h\.pink = null;/);
+    // ⭐ (2026-10-12) the zoom's start factored into `startZoom` (the decision and the switch without lifting share it)
+    expect(h).toMatch(/if \(d === "ZOOM"\) \{[\s\S]*?startZoom\(st\);\s*h\.pink = null;/);
+    expect(h).toMatch(/function startZoom\(st: SceneState\): void \{\s*const p = pinchPair\(st\);\s*if \(p !== null\) \{\s*st\.pinch\.begin\(p\[0\], p\[1\]\);\s*st\.zoomAtPinchStart = st\.zoom;/);
     expect(h).toMatch(/orbitStep\(true\);/);
   });
 
   it("⭐⭐ the release: the second — the way out (if the way in had started) or the pink face of a press that never pinched; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
-    expect(h).toMatch(/if \(h\.mode === "WAY"\) \{[\s\S]*?returnToCentreOrbit\(st, true\);[\s\S]*?\} else if \(h\.mode === "HELD"\) \{\s*if \(takePink\(st\)\) h\.pressActed = true;/);
+    expect(h).toMatch(/if \(h\.mode === "WAY" \|\| h\.wayIn\) \{[\s\S]*?returnToCentreOrbit\(st, true\);[\s\S]*?\} else if \(h\.mode === "HELD"\) \{\s*if \(takePink\(st\)\) h\.pressActed = true;/);
     // ⭐⭐ (2026-10-11, *"why a second touch tap outside any object still highlights … There should not be any action"*) — the clock only
     // after an ACTION: the pink face taken, or the way in
     expect(h).toMatch(/st\.hold = null;\s*(?:\/\/[^\n]*\n\s*)+if \(h\.shown\) st\.highlightEndedAt = performance\.now\(\);/);
     expect(h).toMatch(/st\.pinkFace = next;\s*h\.shown = true;/);
-    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false, t0: performance\.now\(\), pressActed: false \};/);
+    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), pink, shown: false, t0: performance\.now\(\), pressActed: false, swAnchorMm: pxToMm\(x\), swStillSince: performance\.now\(\), swFirstX0: xOf\(st, first\), wayIn: false \};/);
     const hf = h.replace(/\s+/g, " ");
     // the first touch lifted: the input goes on — ⭐⭐ (2026-10-11, *"while CTRL/ALT is pressed, left click tap defines the new pink face"*) and
     // the click that named the pink face (the mouse) takes it at its own release, the key still held
@@ -176,7 +180,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const hw = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(hw).not.toContain("h.pink = pink; takePink(st);"); // ⛔ (2026-10-11) the left click names no pink face — the key's press does
     const sp = hw.slice(hw.indexOf("export function holdSecondPress("), hw.indexOf("export function holdFirstPress("));
-    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false };');
+    expect(sp).toContain('st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false, swAnchorMm: pxToMm(x), swStillSince: performance.now(), swFirstX0: xOf(st, first), wayIn: false };');
     expect(sp).toContain("if (takePink(st) && st.hold !== null) st.hold.pressActed = true;");
   });
 
@@ -244,5 +248,31 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
     expect(h).toContain("holdTapRolls(tapped, h.mode, h.first !== null, h.pressActed, false, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)");
     expect(h).toContain("if (takePink(st) && st.hold !== null) st.hold.pressActed = true;");
     expect(code("render/pointer_wiring.ts")).toContain("if (st.hold !== null) st.hold.pressActed = true; // ⭐ (2026-10-11) over the orbited piece");
+  });
+});
+
+describe("⭐⭐ prototype — zoom ↔ way in + roll WITHOUT LIFTING (2026-10-12, *\"swap from one to another without releasing any of the two touches\"* → *\"Build with the 150ms rest. No change for desktop.\"*)", () => {
+  it("⭐ the trailing anchor: nothing inside the deadband; past it, dragged to one deadband behind, `moved`", () => {
+    expect(trailAnchor(10, 12.9, 3)).toEqual({ anchor: 10, moved: false });
+    expect(trailAnchor(10, 14, 3)).toEqual({ anchor: 11, moved: true });
+    expect(trailAnchor(10, 5, 3)).toEqual({ anchor: 8, moved: true });
+  });
+  it("⭐⭐ WAY → ZOOM when the second finger moves; ZOOM → WAY only after its REST (150 ms) and the first finger's dx past the deadband", () => {
+    expect(holdSwitch("WAY", true, 0, 0, 3, 150)).toBe("ZOOM");
+    expect(holdSwitch("WAY", false, 999, 50, 3, 150)).toBe("WAY");
+    expect(holdSwitch("ZOOM", false, 150, 3.1, 3, 150)).toBe("WAY");
+    expect(holdSwitch("ZOOM", false, 149, 50, 3, 150)).toBe("ZOOM"); // ⭐ the rest not over: the pinch goes on
+    expect(holdSwitch("ZOOM", false, 999, 2.9, 3, 150)).toBe("ZOOM"); // the first inside its deadband
+    expect(holdSwitch("ZOOM", true, 999, 50, 3, 150)).toBe("ZOOM"); // both moving: a pinch
+    expect(holdSwitch("HELD", true, 999, 50, 3, 150)).toBe("HELD"); // undecided is `holdDecision`'s
+    expect(DEFAULT_CONFIG.holdSwitchRestMs).toBe(150);
+    expect(code("render/tuning_menu.ts")).toContain('"holdSwitchRestMs", 0, 600, 10)');
+  });
+  it("⭐ wired: decided, a FINGER second touch only (⛔ the desktop's key unchanged); the way out from a zoom after the way in", () => {
+    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(h).toContain('if (h.mode !== "HELD" && h.second !== MOUSE_SECOND_ID && (pointerId === h.first || pointerId === h.second)) {');
+    expect(h).toContain("const next = holdSwitch( h.mode, secondMoved, now - h.swStillSince,");
+    expect(h).toContain('if (h.mode === "WAY" || h.wayIn) {');
+    expect(h).toMatch(/function startWay\(st: SceneState, h: [^)]*\): void \{ h\.shown = true;[^}]*if \(!h\.wayIn \|\| \(st\.pieceOrbit === null && st\.pieceEntry === null\)\) \{/);
   });
 });
