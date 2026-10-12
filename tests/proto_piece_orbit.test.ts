@@ -382,8 +382,8 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(PIECE_MIN_DISTANCE_M).toBe(0);
     expect(sc.cameraRadiusMinM).toBe(0.15); // the camera keeps its near-plane guard
     expect(clampPieceRadiusM(0.09, sc)).toBe(0.09);
-    expect(clampPieceRadiusM(1e6, sc)).toBe(sc.pieceRadiusMaxM); // ⭐ (2026-10-12) its own far end, 6 m (it was the camera's)
-    expect(sc.pieceRadiusMaxM).toBe(6);
+    expect(clampPieceRadiusM(1e6, sc)).toBe(sc.pieceRadiusMaxM); // ⭐ (2026-10-12) its own far end, 5 m (it was the camera's)
+    expect(sc.pieceRadiusMaxM).toBe(5);
     // through the waist the piece follows the rings: 0.09 m at its narrowest (it rode a 0.15 m ball)
     let closest = 9;
     for (let v = 0; v <= 1; v += 0.0005) closest = Math.min(closest, clampPieceRadiusM(orbitOffset(sc, 0, v, 1).radiusM, sc));

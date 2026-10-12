@@ -744,10 +744,10 @@ export function createGreenBox(st: SceneState): void {
 
 /**
  * ⭐ The band's loops, as scales of the ring: the ring is `GIZMO_RING_PX` (11 px) across, so 1 px of radius is 2/11 ≈ 0.18 of its
- * radius; ⭐ (2026-10-12, the owner: *"reduce the thickness of the yellow gizmo ring by a factor 2"*) loops ±0.5 px around it, a quarter of a
- * pixel apart — a ~1.5 px band centred on the old line (it was ±1 px, half a pixel apart, ~3 px).
+ * radius; ⭐ (2026-10-12, the owner: *"reduce the thickness of the yellow gizmo ring by a factor 2"*) loops ±0.5 px around it (~1.5 px) →
+ * *"make the yellow gizmo ring thickness the same as the quad edge thickness"* — ONE loop, a 1 px line as a quad's edge (it was ±1 px, ~3 px).
  */
-const PINK_RING_LOOPS = [-0.5, -0.25, 0, 0.25, 0.5].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
+const PINK_RING_LOOPS = [0].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
 /** ⭐ The ring's alpha when only the green piece is in front of it — *"slightly translucent"*. */
 const PINK_MASKED_ALPHA = 0.35;
 /** ⭐ A hit counts as IN FRONT only if nearer than the target by more than this — the piece it sits on is met right at it. */

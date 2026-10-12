@@ -27,3 +27,15 @@ export function candidateFace(
   }
   return cand;
 }
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"make sure that the radius and height of the 1st and 4th rings are such that the horizontal quad can become yellow
+ * when the piece is at the maximum distance … it shall remain the case for max distance = 5m or whatever the max distance is"* → *"capture that
+ * last point in the md files so that there is an alert if the 1st and 4th rings radius and heights are changed by the sliders"*) — the vertical
+ * direction is the candidate at SOME yaw when the camera, seen from the resting face, stands more than `atan(1/√2)` = 35.26° above (or below)
+ * it: at a diagonal yaw a side reads `cos(el)/√2`, the top `sin(el)`. `elevationDeg` the camera's elevation from the resting face.
+ */
+export const HORIZONTAL_QUAD_MIN_ELEVATION_DEG = (Math.atan(Math.SQRT1_2) * 180) / Math.PI;
+export function horizontalQuadReachable(elevationDeg: number): boolean {
+  return Math.abs(elevationDeg) > HORIZONTAL_QUAD_MIN_ELEVATION_DEG;
+}

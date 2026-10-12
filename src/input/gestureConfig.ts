@@ -976,8 +976,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the power of the scaling distance"*
   quadGrowthPower: 3,
   // ⭐ prototype, the owner 2026-10-12: *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* — it rode
-  // the camera's maximum (`cameraRadiusMaxM`, 3 m)
-  pieceRadiusMaxM: 6,
+  // the camera's maximum (`cameraRadiusMaxM`, 3 m) → *"amend: rings 1 and 4 with max 5m distance at zoom = 1 (instead of 6m)"*
+  pieceRadiusMaxM: 5,
   // ⭐ prototype, the owner 2026-10-12: *"Build with the 150ms rest"*
   holdSwitchRestMs: 150,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
