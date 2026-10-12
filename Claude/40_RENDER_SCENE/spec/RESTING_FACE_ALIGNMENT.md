@@ -787,3 +787,24 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
     "through everything" ghost layer is deleted (no part left to hide it).
   - Headless: at boot the candidate −z, the scheme facing the camera, the pink face already faded; after an orbit the candidate +x, the scheme
     turned into the side plane, (c) standing on +x.
+- ⭐⭐ **The window refined, the same day** (each the owner's, in order; ⛔ the (a) → (b) → (c) scheme above is superseded by the last):
+  - *"scale the green piece replicas 150% in the cube"*; *"highlight the edges of the candidate face so the user knows which one it is"* — a
+    yellow tube along the candidate face's edges, rebuilt when the candidate changes; *"green piece replicas shall be instantly placed in
+    their transform. No transitions (except the fade and appear)"* — a copy shows the pose the piece is HEADING for, never a turn in flight,
+    and a fading copy makes no move of its own.
+  - ⛔ *"Do not fade the pink faces on the green piece in the screen nor on the cube"* — the resting face's fill on the orbited piece and the
+    cube's lit facet are ALWAYS shown at full strength (their `highlightAlpha` fade, a few hours old, removed); ⚠ the pink fill on a PART's
+    face keeps its fade (not named).
+  - ⛔⛔ *"when i orbit, the replica flies outside the window into the scene before appearing back in the window"* (the owner on the phone) —
+    a fading copy kept its WORLD place while the window, drawn in front of the camera, moved on with the orbit: it was left in the scene
+    for its 250 ms fade (measured headless: 218 cube radii from the window's centre). ⭐ At its death it is attached to the window's root;
+    ⚠ placed for THIS frame and both world matrices refreshed first — mid-orbit the window moves ~0.1 m a frame, and a matrix one frame old
+    baked that gap into the attachment (still 19 radii). Now it stays at the window's centre.
+  - ⭐⭐ **ONE copy, at the centre** (*"Remove the current transform from the two replicas. Remove the red arrow. Place the other replica (the
+    one with the resting face aligned with the candidate face) at the center of the cube. Scale it 120%. Make it 30% less opaque and
+    highlight (in same yellow as cube highlight) its resting face edges (highlight fully opaque)"*): (a) and the arrow are deleted; the copy
+    of the piece as it would be (the candidate's alignment, or the next roll when the candidate is the pink face) sits with its bounding
+    centre on the polyhedron's centre, 0.648 of its inner radius (0.36 × 1.5 × 1.2), 70 % opaque; its resting face's edges are yellow tubes
+    (the candidate outline's colour and thickness on the glass), fully opaque, drawn over everything.
+  - Headless: boot — the copy at the centre on its resting face (the candidate −z outlined), the lit top pink at full strength; an orbit — the
+    candidate +x outlined, the copy turned onto it; the copies' worst distance from the window's centre during the orbit ≈ 0.

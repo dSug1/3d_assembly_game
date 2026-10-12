@@ -751,3 +751,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   alignment through the candidates — a continuous snapped rotation, one episode → `RESTING_FACE_ALIGNMENT.md` §21.
 * ⭐⭐⭐ The window redrawn: no part, no gizmo; inside the cube, in the CANDIDATE face's plane, (a) the piece as it is → (b) a red arrow → (c)
   the piece as it would be, standing on its resting face; the pink face fades as the scene's → `RESTING_FACE_ALIGNMENT.md` §21.
+* ⭐⭐ The window: ONE copy of the piece as the candidate face would make it, at the cube's centre (×1.2, 70 % opaque, its resting face's
+  edges yellow); the candidate face outlined yellow; no transitions; the piece's and the cube's pink faces never fade; a fading copy no
+  longer flies out into the scene mid-orbit → `RESTING_FACE_ALIGNMENT.md` §21.

@@ -110,16 +110,16 @@ describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) a
     expect(code("render/pointer_wiring.ts")).not.toContain("centreHost");
     expect(code("render/scene_state.ts")).not.toContain("centreHost");
   });
-  it("⭐⭐ (a), (b), (c) in the candidate face's plane (*\"The resting faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in the scene\"*): (c) stands on its RESTING face", () => {
+  it("⭐⭐ ONE copy at the CENTRE (*\"Remove the current transform from the two replicas. Remove the red arrow. Place the other replica (the one with the resting face aligned with the candidate face) at the center of the cube. Scale it 120%. Make it 30% less opaque and highlight (in same yellow as cube highlight) its resting face edges (highlight fully opaque)\"*)", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("const n: Vec3 = (ci >= 0 ? normalize(qRotate(q, c.facetNormals[ci]!)) : null) ?? [-fwd.x, -fwd.y, -fwd.z];");
-    expect(c).toContain("const v: Vec3 = cross(u, n);");
-    // ⭐ (2026-10-12, *"Place the green piece replica of the current green piece transform in the middle of the cube"*)
-    expect(c).toContain("nowFrame(st, q, o, pieceSize);");
-    expect(c).toContain("const SLOT_NEXT: readonly [number, number] = [0.62, 0.62];");
-    expect(c).toContain("replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);");
-    expect(c).toContain("const off = qRotate(w, scale(on === null ? copy.centre : copy.rest, k));");
-    expect(c).toContain('const shaft = CreateTube("orient-arrow-shaft", { path, radius: ARROW_WIDTH, tessellation: 8 }, st.scene);');
+    expect(c).not.toContain("nowFrame");
+    expect(c).not.toContain("orient-arrow");
+    expect(c).toContain("replicaFrame(st, cand, q, [centre.x, centre.y, centre.z], PIECE_SHARE * c.inner * s);");
+    expect(c).toMatch(/const PIECE_SHARE = 0\.648;\s*const REPLICA_ALPHA = 0\.7;/);
+    expect(c).toContain("(r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;");
+    expect(c).toContain('const outline = unlit(st, name + "-rest-edges-mat", CANDIDATE_EDGE, 0.999);');
+    expect(c).toContain("outline.depthFunction = Constants.ALWAYS;");
+    expect(c).toContain("p.restingEdges.forEach((e, i) => {");
   });
   it("⛔ *\"Do not fade the pink faces on the green piece in the screen nor on the cube\"* — the resting face's fill and the cube's lit facet always at full strength", () => {
     const c = code("render/orient_cube.ts");
@@ -185,7 +185,7 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
     expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
-    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) live\.dying = now;/);
+    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) \{\s*live\.dying = now;/);
     expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
@@ -210,7 +210,7 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
 
 describe("⭐ the window's copies and the candidate (2026-10-12, *\"scale the green piece replicas 150% in the cube — highlight the edges of the candidate face — green piece replicas shall be instantly placed in their transform. No transitions\"*)", () => {
   it("⭐ the copies 150 % (0.36 → 0.54 of the inner radius)", () => {
-    expect(code("render/orient_cube.ts")).toContain("const PIECE_SHARE = 0.54;");
+    expect(code("render/orient_cube.ts")).toContain("const PIECE_SHARE = 0.648;"); // ⭐ 0.54 × 1.2 since
   });
   it("⭐ the candidate face outlined — a yellow tube along its edges, rebuilt when the candidate changes", () => {
     const c = code("render/orient_cube.ts");
@@ -219,7 +219,14 @@ describe("⭐ the window's copies and the candidate (2026-10-12, *\"scale the gr
   });
   it("⭐⭐ no transitions: (a) the pose the piece is HEADING for (never the turn in flight); a fading (c) stays where it was", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("place(c.now, st.restAlign?.base ?? [r.w, r.x, r.y, r.z], corr, slot, size);");
-    expect(c).toContain("if (r.dying === null) place(r, r.q, corr, slot, size, on);");
+    expect(c).not.toContain("place(c.now"); // ⛔ (a) removed
+    expect(c).toContain("if (r.dying === null) place(r, r.q, corr, slot, size);");
+  });
+});
+
+describe("⛔⛔ a fading copy stays IN the window (2026-10-12, the owner on the phone: *\"when i orbit, the replica flies outside the window into the scene before appearing back in the window\"*)", () => {
+  it("⭐ at its death it is placed for THIS frame, both matrices refreshed, then attached to the window's root (it moves with the window)", () => {
+    expect(flat("render/orient_cube.ts")).toContain("live.dying = now; // ⛔⛔ (2026-10-12, the owner on the phone:".replace(" // ⛔⛔ (2026-10-12, the owner on the phone:", ""));
+    expect(flat("render/orient_cube.ts")).toMatch(/place\(live, live\.q, corr, slot, size\); c\.root\.computeWorldMatrix\(true\); live\.mesh\.computeWorldMatrix\(true\); live\.mesh\.setParent\(c\.root\);/);
   });
 });
