@@ -116,6 +116,7 @@ export function createMenu(
   const toggle = document.createElement("button");
   toggle.textContent = "☰";
   toggle.setAttribute("aria-label", "Tuning menu");
+  toggle.setAttribute("data-role", "menu-toggle"); // ⭐ (2026-10-12) the orientation window keeps clear of it
   toggle.style.cssText = [
     "position:fixed",
     "top:calc(6px + env(safe-area-inset-top))",

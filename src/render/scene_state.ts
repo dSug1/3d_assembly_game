@@ -467,9 +467,16 @@ export interface SceneState {
   orientDirs: readonly import("../core/orientation_set").OrientDirection[];
   orientDirty: boolean;
   orientCube: {
+    readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
     readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
-    readonly lines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
+    readonly edges: readonly import("@babylonjs/core/Meshes/linesMesh").LinesMesh[];
+    readonly copies: readonly import("@babylonjs/core/Meshes/mesh").Mesh[];
+    readonly ring: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
     readonly back: import("@babylonjs/core/Meshes/mesh").Mesh;
+    readonly host: import("../core/object_model").ObjectId | null;
+    readonly centre: import("../core/vec").Vec3;
+    readonly facetNormals: readonly import("../core/vec").Vec3[];
+    readonly facetPoints: readonly import("../core/vec").Vec3[];
     readonly triTag: readonly number[];
     readonly vertexTags: readonly number[];
     readonly vertexNormals: readonly import("../core/vec").Vec3[];
@@ -478,6 +485,9 @@ export interface SceneState {
   } | null;
   orientRect: { readonly left: number; readonly top: number; readonly size: number } | null;
   orientPress: { readonly pointerId: number; readonly tag: number; readonly x: number; readonly y: number; readonly t: number } | null;
+  /** ⭐ (2026-10-12) the PART that hosts the pink gizmo — the one whose face the orbit centre was put on (a press on a placed part, the boot's
+   * blue face); `null` — the centre on no part. The orientation window copies it. */
+  centreHost: import("../core/object_model").ObjectId | null;
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
   pinkDir: import("../core/orientation_set").OrientDirection | null;
   /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */

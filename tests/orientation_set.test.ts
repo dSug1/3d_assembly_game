@@ -75,7 +75,7 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
   });
   it("⭐⭐ rebuilt at the boot's goal baseline and at every goal commit; from the SEATED parts and the frozen bodies only, never the orbited pieces", () => {
     expect(code("render/goal_commit_wiring.ts")).toMatch(/const reached = st\.goalCommit\.commit\([^)]*\);\s*(?:\/\/[^\n]*\n\s*)*st\.orientDirty = true;/);
-    expect(code("render/orient_cube.ts")).toContain("if (st.orientDirty) rebuild(st);");
+    expect(code("render/orient_cube.ts")).toContain("if (st.orientDirty || (st.orientCube !== null && st.orientCube.host !== st.centreHost)"); // ⭐ and a new host part
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (orbited.has(id)) continue;");
     expect(g).toContain("if (o.frozen !== true && !st.goalCommit.has(id)) continue;");
@@ -95,5 +95,90 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
     const p = code("render/pointer_wiring.ts");
     expect(p.indexOf("if (orientCubePointer(st, info.type, e)) {")).toBeGreaterThan(0);
     expect(p.indexOf("if (orientCubePointer(st, info.type, e)) {")).toBeLessThan(p.indexOf("if (cursorPointer(st, info.type, e)) {"));
+  });
+});
+
+import { supportOffsets } from "../src/core/orientation_set";
+describe("⭐⭐ the polyhedron fitted around a part (2026-10-12, *\"represent the cube overlaid onto the part which hosts the pink gizmo\"*)", () => {
+  it("⭐ the six directions around a 2 × 1 × 0.5 box: the box itself, grown by the margin", () => {
+    const pts: Vec3[] = [];
+    for (const x of [-1, 1]) for (const y of [-0.5, 0.5]) for (const z of [-0.25, 0.25]) pts.push([x, y, z]);
+    const h = supportOffsets(AXES, pts, 0.01);
+    expect(h.map((v) => +v.toFixed(6))).toEqual([1.01, 1.01, 0.51, 0.51, 0.26, 0.26]);
+    const f = facetPolytope(AXES, 3, h);
+    expect(f).toHaveLength(6);
+    const top = f.find((x) => x.tag === 2)!;
+    for (const v of top.vertices) {
+      expect(v[1]).toBeCloseTo(0.51, 9);
+      expect(Math.abs(v[0])).toBeCloseTo(1.01, 9);
+      expect(Math.abs(v[2])).toBeCloseTo(0.26, 9);
+    }
+  });
+});
+
+const flat = (f: string) => code(f).replace(/\s+/g, " ");
+
+describe("⭐⭐ the window copies the part that hosts the pink gizmo (2026-10-12, *\"Instead of a cube, represent the cube overlaid onto the part which hosts the pink gizmo. Also show the pink gizmo in the overlaid part\"*)", () => {
+  it("⭐ the host: set by a press that moves the orbit centre onto a part, by the boot's blue face; a barycentre has none", () => {
+    expect(flat("render/pointer_wiring.ts")).toMatch(/st\.centreBlend\.retarget\(newTarget\); st\.centreHost = st\.idOf\.get\(mesh\) \?\? null;/);
+    expect(code("render/green_box_wiring.ts")).toContain("if (face !== null) st.centreHost = blue.id;");
+    expect(flat("render/camera_rig.ts")).toContain("st.centreBlend.retarget(c); st.centreHost = null;");
+  });
+  it("⭐⭐ the copy (contour + core), the polyhedron FITTED around it (`supportOffsets`), the gizmo's copy where the scene's gizmo is", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("offsets = supportOffsets(normals, fit.pts, FIT_MARGIN * r);");
+    expect(c).toContain('const copy = body.clone("orient-copy", root, true);');
+    expect(c).toContain('const cc = core.clone("orient-copy-core", copy, true);');
+    expect(c).toContain("const gp = st.pinkRing?.position ?? st.orbitCentreM;");
+    expect(c).toContain("c.ring.isVisible = show && c.host !== null && st.cfg.pinkGizmoVisible === 1;");
+  });
+  it("⭐⭐ occlusion (*\"the back face is more visible than the highlighted face in the front\"*): back facets culled, their edges hidden; the lit facet strong, the rest faint", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("mat.backFaceCulling = true;");
+    expect(c).toContain("e.isVisible = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0;");
+    expect(flat("render/orient_cube.ts")).toContain("const FACET_ALPHA = 0.16; const LIT_ALPHA = 0.85;");
+  });
+});
+
+describe("⭐⭐ the boot fix (2026-10-12, *\"Fix the boot\"*): with no pink face, the FROZEN body's face pointing most UP — the floor's top", () => {
+  it("⭐ `alignFaceOf`'s fallback asks `faceToward` for +y, never the direction from the body's first face", () => {
+    expect(flat("render/green_box_wiring.ts")).toContain("const toward = faceToward( faces.map((f) => ({ centre: f.centre, normal: f.normal })), [0, 1, 0], );");
+    expect(code("render/green_box_wiring.ts")).not.toContain("[piece[0] - faces[0]!.centre[0], piece[1] - faces[0]!.centre[1], piece[2] - faces[0]!.centre[2]]");
+  });
+});
+
+import { orientWindowBoot, orientWindowCorner } from "../src/input/orient_window";
+describe("⭐⭐ the window's position (2026-10-12, *\"Add a slider for the position of the window with two cursors (top-bottom & left-right)\"*)", () => {
+  it("⭐ boot: a touch screen bottom-left (*\"At boot on mobile … bottom left\"*), a desktop top-right (*\"At boot on desktop … top right\"*)", () => {
+    expect(orientWindowBoot(true)).toEqual({ xPct: 0, yPct: 100 });
+    expect(orientWindowBoot(false)).toEqual({ xPct: 100, yPct: 0 });
+  });
+  it("⭐ the corner: 0 % at the margin, 100 % against the far margin, clamped", () => {
+    expect(orientWindowCorner(1000, 600, 100, 10, 0, 100)).toEqual({ left: 10, top: 490 });
+    expect(orientWindowCorner(1000, 600, 100, 10, 100, 0)).toEqual({ left: 890, top: 10 });
+    expect(orientWindowCorner(1000, 600, 100, 10, 50, 50)).toEqual({ left: 450, top: 250 });
+    expect(orientWindowCorner(1000, 600, 100, 10, 150, -20)).toEqual({ left: 890, top: 10 });
+  });
+  it("⭐ wired: one slider, two cursors; the boot position by the pointer unless the URL names it", () => {
+    expect(code("render/tuning_menu.ts")).toContain('const x = tunable(st, "orientation window: ● left → right · ● top → bottom (%)", "orientWindowXPct", 0, 100, 5);');
+    const s = code("render/scene.ts");
+    expect(s).toContain('const boot = orientWindowBoot(typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);');
+    expect(s).toContain('if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;');
+    expect(code("render/orient_cube.ts")).toContain("orientWindowCorner(cw, ch, size, margin, st.cfg.orientWindowXPct, st.cfg.orientWindowYPct)");
+  });
+});
+
+import { clearOfOverlays } from "../src/input/orient_window";
+describe("⭐ the window kept clear of the screen's overlays (the HUD, the ☰, the ⏸, the score bar)", () => {
+  it("⭐ a top-half overlay it overlaps pushes it below; a bottom-half one above; one it does not overlap changes nothing", () => {
+    const hud = { left: 0, top: 0, right: 1000, bottom: 220 };
+    const pause = { left: 10, top: 650, right: 50, bottom: 690 };
+    expect(clearOfOverlays(890, 10, 100, [hud], 700, 10)).toBe(230);
+    expect(clearOfOverlays(10, 590, 100, [pause], 700, 10)).toBe(540);
+    expect(clearOfOverlays(890, 590, 100, [pause], 700, 10)).toBe(590);
+  });
+  it("⭐ wired: the window's top cleared of the visible overlays; the ☰ tagged", () => {
+    expect(code("render/orient_cube.ts")).toContain("const top = clearOfOverlays(left, corner.top, size, overlayRects(st), ch, margin);");
+    expect(code("render/menu.ts")).toContain('toggle.setAttribute("data-role", "menu-toggle");');
   });
 });

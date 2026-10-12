@@ -422,6 +422,7 @@ export function installPointerHandler(st: SceneState): void {
       );
       if (newTarget !== null) {
         st.centreBlend.retarget(newTarget);
+        st.centreHost = st.idOf.get(mesh) ?? null; // ⭐ (2026-10-12) the part that hosts the pink gizmo — the orientation window copies it
         syncCentre(st);
       }
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*

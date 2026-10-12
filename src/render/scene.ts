@@ -39,6 +39,7 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { orientWindowBoot } from "../input/orient_window";
 import { attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
@@ -126,6 +127,14 @@ export function createScene(
   // ⭐ `D131`: the scene's own orbit rig first, then the URL over it.
   st.tuning = parseConfigOverrides(sceneConfig(DEFAULT_CONFIG, spec.orbit), window.location.search);
   st.cfg = st.tuning.config;
+  // ⭐ (2026-10-12, *"At boot on mobile, set the position of the slider to bottom left"* / *"At boot on desktop, set the slider position to top
+  // right"*) — the orientation window's boot position by the device's pointer, unless the URL names it
+  {
+    const boot = orientWindowBoot(typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
+    const cfgW = st.cfg as unknown as Record<string, number>;
+    if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;
+    if (!st.tuning.applied.some((a) => a.startsWith("orientWindowYPct="))) cfgW.orientWindowYPct = boot.yPct;
+  }
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
   st.frameMeter = new FrameMeter();
@@ -583,6 +592,7 @@ export function createScene(
   st.orientPress = null;
   st.pinkDir = null;
   st.pinkTargetNormal = null;
+  st.centreHost = null;
   st.pinkFill = null;
   st.pinkFillKey = "";
   st.pieceFaceTap = null;
