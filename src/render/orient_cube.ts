@@ -620,3 +620,13 @@ export function orientFollowCursor(st: SceneState, pointerId: number, x: number,
   // (`orientCubeFrame`), never a jump
   st.orientWindowGoal = { xPct: p.xPct, yPct: p.yPct };
 }
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink
+ * face"*) — a tap on the face SHOWN (the pink one: the candidate, or the face clicked); `false` with no window or no face shown.
+ */
+export function orientTapShown(st: SceneState): boolean {
+  const c = st.orientCube;
+  if (c === null || st.orientRect === null || c.candEdgeTag < 0) return false;
+  return orientCubeTap(st, c.candEdgeTag);
+}

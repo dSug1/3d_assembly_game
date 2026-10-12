@@ -769,3 +769,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 ## 2026-10-12 — on 1.0.69-
 
 * ⛔ The red arrow of the orientation window deleted → `RESTING_FACE_ALIGNMENT.md` §23.
+* ⏸⏸ The way in, the orbit round the piece, its dx roll and the way out COMMENTED OUT (kept); the STANDARD pinch on touch; a first-touch / left
+  tap on empty space taps the cube's pink face → `RESTING_FACE_ALIGNMENT.md` §24.
