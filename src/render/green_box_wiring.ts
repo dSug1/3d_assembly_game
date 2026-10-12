@@ -580,12 +580,15 @@ function restingFillFrame(st: SceneState, now: number): void {
   pinkFillFrame(st, a);
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFill === null || p.restingFace === null) return;
+  // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"*) — the resting face's fill is
+  // ALWAYS shown, at full strength; the part's pink face fill above keeps its fade
+  const rest = 1;
   const fill = p.restingFill;
-  fill.isVisible = a > 0;
-  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * a;
+  fill.isVisible = true;
+  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * rest;
   for (const c of fill.getChildMeshes(true)) {
-    c.isVisible = a > 0;
-    if (c.material instanceof StandardMaterial) c.material.alpha = RESTING_XRAY_ALPHA * a;
+    c.isVisible = true;
+    if (c.material instanceof StandardMaterial) c.material.alpha = RESTING_XRAY_ALPHA * rest;
   }
   const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;

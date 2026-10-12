@@ -14,7 +14,7 @@
  *   CANDIDATE face (the one facing the camera most) were pressed (upper-right) — the next roll when the candidate is the pink face; a new pose
  *   fades (c) out and in again.
  * - Every facet is faint glass, front edges solid, back edges faint; the LIT facet (the direction the piece is aligned to) is pink, BEFORE the
- *   glass (a front facet veils it a little when it is at the back), and FADES as the scene's pink face does (`highlightAlpha`).
+ *   glass (a front facet veils it a little when it is at the back), ALWAYS shown (⛔ its fade, the scene pink face's, removed the same day).
  * - **Tap a facet** → the resting face SITS AGAINST it (*"sit against this face"*): a virtual pink face (`st.pinkDir`) — `alignRestingFace`
  *   reads it as a part's face; one episode. **Tap the lit facet** → the roll to the next axis, one episode.
  * - **The cube HELD** (a finger, or ALT / CTRL with the cursor in it) while the other touch drags: the camera orbits, the cube turns, each new
@@ -39,7 +39,6 @@ import { distinctDirections, facetPolytope, type OrientDirection } from "../core
 import { add, cross, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { isTapRelease } from "../input/mode_toggle";
-import { highlightAlpha } from "../input/hold_gesture";
 import { candidateFace, clearOfOverlays, orientWindowCorner } from "../input/orient_window";
 import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
@@ -55,6 +54,9 @@ const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 const PINK = new Color3(1, 0.45, 0.85);
 const FACET = new Color3(0.86, 0.88, 0.95);
 const ARROW = new Color3(1, 0.3, 0.1);
+/** ⭐ (2026-10-12, *"highlight the edges of the candidate face so the user knows which one it is"*) its outline: a tube this thick, this colour. */
+const CANDIDATE_EDGE = new Color3(1, 0.85, 0.1);
+const CANDIDATE_EDGE_WIDTH = 0.025;
 const LIGHT = normalize([0.35, 0.85, -0.4])!;
 /** ⭐ The facets' strength: a plain facet faint glass, the lit one nearly solid (before its fade); the box left over (no direction) fainter. */
 const FACET_ALPHA = 0.16;
@@ -65,16 +67,18 @@ const BACK_EDGE_ALPHA = 0.25;
 /**
  * ⭐ (2026-10-12) the layout INSIDE the polyhedron, in units of its inner radius, in the CANDIDATE FACE's plane through its centre (*"The resting
  * faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in the scene.
- * Therefore the attached scheme rotates as currently the replica does"*): (a) the piece as it is, lower-left; (c) the piece as it would be,
- * upper-right, its resting face ON the plane; each this big; the arrow between them (a quadratic curve, its head at (c)), a little off the
+ * Therefore the attached scheme rotates as currently the replica does"*): (a) the piece as it is, at the CENTRE; (c) the piece as it would
+ * be, upper-right, its resting face ON the plane; each this big; the arrow between them (a quadratic curve, its head at (c)), a little off the
  * plane. ⭐ The plane's in-face axes follow the screen's right and up as nearly as the face allows.
  */
-const SLOT_NOW: readonly [number, number] = [-0.45, -0.42];
-const SLOT_NEXT: readonly [number, number] = [0.45, 0.42];
-const PIECE_SHARE = 0.36;
-const ARROW_FROM: readonly [number, number] = [-0.5, -0.05];
-const ARROW_BEND: readonly [number, number] = [-0.45, 0.55];
-const ARROW_TO: readonly [number, number] = [0.08, 0.45];
+// ⭐ (2026-10-12, *"Place the green piece replica of the current green piece transform in the middle of the cube"*) (a) at the centre;
+// (c) out in the upper-right corner so the two do not overlap; the arrow from above (a) over to (c)
+const SLOT_NEXT: readonly [number, number] = [0.62, 0.62];
+// ⭐ (2026-10-12, *"scale the green piece replicas 150% in the cube"*) 0.36 → 0.54
+const PIECE_SHARE = 0.54;
+const ARROW_FROM: readonly [number, number] = [-0.3, 0.4];
+const ARROW_BEND: readonly [number, number] = [-0.1, 0.95];
+const ARROW_TO: readonly [number, number] = [0.3, 0.68];
 const ARROW_WIDTH = 0.035;
 const ARROW_LIFT = 0.15;
 const REPLICA_FADE_MS = 250;
@@ -131,6 +135,7 @@ function dispose(st: SceneState): void {
   c.back.dispose(false, true);
   c.arrow.dispose(false, true);
   c.now?.mesh.dispose(false, true);
+  c.candEdge?.dispose(false, true);
   for (const r of c.replicas) r.mesh.dispose(false, true);
   st.orientCube = null;
 }
@@ -246,6 +251,8 @@ function rebuild(st: SceneState): void {
     radius,
     lit: -2,
     candidate: -1,
+    candEdge: null,
+    candEdgeTag: -2,
     now: null,
     replicas: [],
   };
@@ -293,6 +300,7 @@ export function orientCubeFrame(st: SceneState): void {
     if (c.now !== null) c.now.mesh.isVisible = show;
     for (const r of c.replicas) r.mesh.isVisible = show;
     if (c.litMesh !== null) c.litMesh.isVisible = show;
+    if (c.candEdge !== null) c.candEdge.isVisible = show;
   }
   if (!show || c === null) {
     st.orientRect = null;
@@ -347,25 +355,15 @@ export function orientCubeFrame(st: SceneState): void {
     c.mesh.setVerticesData("color", colours(st), true, 4);
     litLayer(st);
   }
-  // ⭐⭐ (2026-10-12, *"fade the highlight of the pink face on the cube (same as in the scene)"*) — the scene pink face's own strength
-  const now = performance.now();
-  const fade = highlightAlpha(
-    now,
-    (st.hold !== null && st.hold.shown) || (st.orientHold !== null && st.orientHold.acted),
-    st.highlightEndedAt,
-    st.cfg.highlightHoldMs,
-    st.cfg.highlightFadeMs,
-  );
-  if (c.litMesh !== null) {
-    (c.litMesh.material as StandardMaterial).alpha = LIT_ALPHA * fade;
-    c.litMesh.isVisible = fade > 0;
-  }
+  // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"*) — the lit facet always at full
+  // strength (it faded as the scene's pink face, `highlightAlpha`, from earlier the same day)
   // ⭐⭐ (2026-10-12, *"the face of the cube which normal is pointing the most to the camera is the candidate support face"*)
   const cand = candidateFace(
     c.facetTags.map((tag, i) => ({ tag, normal: qRotate(q, c.facetNormals[i]!), centre: local(c.facetCentres[i]!) })),
     eye,
   );
   c.candidate = cand;
+  if (cand !== c.candEdgeTag) candidateEdges(st, cand);
   orientHoldStep(st, cand);
   // ⭐ (a), (b), (c) — in the candidate face's plane through the polyhedron's centre: n its normal (as drawn), u and v in the face, u as near
   // the screen's right as the face allows, v its up; with no candidate, the plane facing the camera
@@ -383,7 +381,7 @@ export function orientCubeFrame(st: SceneState): void {
   c.arrow.position.set(o[0] + n[0] * ARROW_LIFT * unit, o[1] + n[1] * ARROW_LIFT * unit, o[2] + n[2] * ARROW_LIFT * unit);
   c.arrow.rotationQuaternion!.copyFrom(Quaternion.RotationQuaternionFromAxis(new Vector3(...u), new Vector3(...v), new Vector3(...w)));
   c.arrow.scaling.setAll(unit);
-  nowFrame(st, q, add(at(SLOT_NOW), scale(n, pieceSize)), pieceSize);
+  nowFrame(st, q, o, pieceSize); // ⭐ (a) its bounding centre on the polyhedron's centre
   replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);
 }
 
@@ -418,8 +416,30 @@ function nowFrame(st: SceneState, corr: Quat, slot: Vec3, size: number): void {
   }
   if (c.now === null) c.now = pieceCopy(st, "orient-piece-now");
   if (c.now === null || st.greenBox === null) return;
+  // ⭐ (2026-10-12, *"green piece replicas shall be instantly placed in their transform. No transitions"*) the pose the piece is HEADING
+  // for — a turn in flight (`restAlign`) is not played here
   const r = st.greenBox.rotationQuaternion ?? Quaternion.Identity();
-  place(c.now, [r.w, r.x, r.y, r.z], corr, slot, size);
+  place(c.now, st.restAlign?.base ?? [r.w, r.x, r.y, r.z], corr, slot, size);
+}
+
+/** ⭐ The candidate face's outline (a tube along its edges, drawn after the glass), rebuilt when the candidate changes. */
+function candidateEdges(st: SceneState, cand: number): void {
+  const c = st.orientCube!;
+  c.candEdgeTag = cand;
+  c.candEdge?.dispose(false, true);
+  c.candEdge = null;
+  const i = c.facetTags.indexOf(cand);
+  if (cand < 0 || i < 0) return;
+  const v = c.facetVerts[i]!;
+  const path = [...v, v[0]!].map((p) => new Vector3(p[0], p[1], p[2]));
+  const m = CreateTube("orient-candidate-edges", { path, radius: CANDIDATE_EDGE_WIDTH * c.inner, tessellation: 6 }, st.scene);
+  m.material = unlit(st, "orient-candidate-edges-mat", CANDIDATE_EDGE, 0.999);
+  m.isPickable = false;
+  m.renderingGroupId = ORIENT_GROUP;
+  m.alwaysSelectAsActiveMesh = true;
+  m.alphaIndex = 3;
+  m.parent = c.root;
+  c.candEdge = m;
 }
 
 /**
@@ -452,7 +472,9 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
       return false;
     }
     (r.mesh.material as StandardMaterial).alpha = 0.999 * a;
-    place(r, r.q, corr, slot, size, on); // ⭐ its resting face on the candidate's plane — against its normal, as in the scene
+    // ⭐ its resting face on the candidate's plane — against its normal, as in the scene; ⛔ a fading copy stays where it was (no transition:
+    // *"instantly placed in their transform"*)
+    if (r.dying === null) place(r, r.q, corr, slot, size, on);
     return true;
   });
 }
@@ -485,8 +507,8 @@ function orientHoldStep(st: SceneState, cand: number): void {
 }
 
 /**
- * ⭐ The LIT facet's own layer: pink, drawn BEFORE the glass (a front glass facet veils it a little when it is at the back), its strength the
- * scene pink face's fade (`orientCubeFrame`). Rebuilt when the lit facet changes.
+ * ⭐ The LIT facet's own layer: pink, drawn BEFORE the glass (a front glass facet veils it a little when it is at the back), always at full
+ * strength. Rebuilt when the lit facet changes.
  */
 function litLayer(st: SceneState): void {
   const c = st.orientCube!;
