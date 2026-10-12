@@ -114,7 +114,10 @@ describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) a
     const c = code("render/orient_cube.ts");
     expect(c).not.toContain("nowFrame");
     expect(c).not.toContain("orient-arrow");
-    expect(c).toContain("replicaFrame(st, cand, q, [centre.x, centre.y, centre.z], PIECE_SHARE * c.inner * s);");
+    // ⭐ (2026-10-12, *"Place the center of the highlighted face of the replica in the center of the candidate face of the cube"*)
+    expect(c).toContain("const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];");
+    expect(c).toContain("replicaFrame(st, cand, q, seat, PIECE_SHARE * c.inner * s);");
+    expect(c).toContain("const off = qRotate(w, scale(copy.rest, k));");
     expect(c).toMatch(/const PIECE_SHARE = 0\.648;\s*const REPLICA_ALPHA = 0\.7;/);
     expect(c).toContain("(r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;");
     expect(c).toContain('const outline = unlit(st, name + "-rest-edges-mat", CANDIDATE_EDGE, 0.999);');
