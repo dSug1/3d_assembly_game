@@ -549,12 +549,17 @@ function restingFillFrame(st: SceneState, now: number): void {
   // contours in yellow (no more pink highlight of the resting face …)"*) — the fill hidden; its yellow contour (and its x-ray twin) always shown
   const fill = p.restingFill;
   fill.isVisible = false;
-  for (const c of fill.getChildMeshes(true)) c.isVisible = true;
-  const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
+  // ⭐⭐ (2026-10-12, the owner: *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"*) — hidden with the quads (below half the farthest distance: it had shrunk to a flickering point there)
+  const shown = st.restingQuads?.shown ?? true;
+  for (const c of fill.getChildMeshes(true)) c.isVisible = shown;
+  if (!shown) return;
+  const camD = Vector3.Distance(st.camera.position, p.mesh.position);
+  const lift = highlightLiftM(st.cfg.highlightLiftMm, camD, st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
   // ⭐⭐ (2026-10-12, the owner: *"scale the yellow highlight of the resting face in the same way as the quads"*) — about the face's centre, by the
-  // quads' growth this frame (`quadSize` ÷ the full size, at most 1)
-  const k = st.restingQuads?.growth ?? 1;
+  // quads' growth this frame (`quadSize` ÷ the full size, at most 1); ⭐ never under ONE PIXEL across (its longest axis, on the glass)
+  const longest = Math.max(1e-9, ...p.restingLong.ends.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])));
+  const k = Math.min(1, Math.max(st.restingQuads?.growth ?? 1, trackingMetresPerPx(camD, st.camera.fov, st.canvas.clientHeight) / longest));
   const c = p.restingCentre;
   fill.scaling.setAll(k);
   fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);

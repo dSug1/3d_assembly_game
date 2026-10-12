@@ -475,6 +475,8 @@ export interface SceneState {
     }[];
     /** ⭐ (2026-10-12) this frame's growth (the side ÷ the full side, `quadSize`) — the resting face's yellow contour scales by it too (`restingFillFrame`). */
     growth: number;
+    /** ⭐ (2026-10-12) the quads shown this frame — the resting face's yellow contour is hidden with them (`restingFillFrame`). */
+    shown: boolean;
   } | null;
   /** ⭐ (2026-10-12) a press on a resting-face quad: the side clicked (the direction to sit against), its press, its last sample, a drag yet. */
   quadPress: { readonly pointerId: number; readonly side: import("../core/vec").Vec3; readonly pressed: import("../input").Sample; prev: import("../input").Sample; dragging: boolean } | null;
