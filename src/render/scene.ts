@@ -588,6 +588,7 @@ export function createScene(
   // ⭐ (2026-10-12, §21) the orientation cube: built at the first frame, read again at every goal commit
   st.orientDirs = [];
   st.orientDirty = true;
+  st.restingQuads = null;
   st.orientCube = null;
   st.orientRect = null;
   st.orientPress = null;
