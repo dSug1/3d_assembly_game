@@ -88,3 +88,10 @@ export function quadSize(d: number, dMin: number, dMax: number, power: number, m
 export function quadSide(n: Vec3, hit: Vec3, eye: Vec3): Vec3 {
   return dot(n, sub(eye, hit)) >= 0 ? n : scale(n, -1);
 }
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"*) — the quads' nearest shown distance: HALF the farthest; nearer, they are hidden (`quadSize` runs from it).
+ */
+export function quadsShownFromM(dMax: number): number {
+  return dMax / 2;
+}

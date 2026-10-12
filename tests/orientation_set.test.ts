@@ -90,7 +90,7 @@ describe("⭐⭐ the resting-face quads (2026-10-12, *\"at the center of the res
   });
 });
 
-import { quadSide, quadSize } from "../src/core/orientation_set";
+import { quadSide, quadSize, quadsShownFromM } from "../src/core/orientation_set";
 describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a click aligns to the side clicked (2026-10-12)", () => {
   it("⭐ *\"grow with the distance of the piece to the pink gizmo\"* — (d/dRef)^power; *\"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale\"* — never above 1; a slider", () => {
     const k = DEFAULT_CONFIG.quadGrowthPower;
@@ -106,8 +106,12 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(quadSize(1, 0.1, 5, k, 0.9, 0.5)).toBe(0.5); // a minimum above the maximum: the maximum
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("const QUAD_SIZE = 1.4;");
-    expect(c).toContain("const QUAD_MIN = 0.1;");
-    expect(c).toContain("const range = pieceDistanceRange(st.cfg); const r = p.mesh.getBoundingInfo().boundingSphere.radius; const full = QUAD_SIZE * 2 * r; const side = quadSize(d, range.minM, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    expect(c).toContain("const QUAD_MIN = 0.01;"); // ⭐ *"amended: make the range 0.01 ->1.4"*
+    // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
+    expect(quadsShownFromM(6)).toBe(3);
+    expect(c).toContain("const from = quadsShownFromM(range.maxM); const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;");
+    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
     expect(c).not.toContain("dRef");
     expect(c).not.toContain("GIZMO_RING_PX");
     expect(c).not.toContain("GIZMO_RING_PX");
@@ -180,17 +184,17 @@ import { elevationAtDistance, orbitOffset, pieceDistanceRange } from "../src/inp
 import { sceneConfig } from "../src/input/scene_rig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { clampPieceRadiusM } from "../src/input/green_box";
-describe("⭐⭐ the 1st and 4th rings to 5 m (*\"amend: rings 1 and 4 with max 5m distance at zoom = 1 (instead of 6m)\"*); the boot still 3 m (2026-10-12, *\"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo\"* → *\"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)\"*)", () => {
+describe("⭐⭐ the 1st and 4th rings at 6 m (5 m, then mirrored at 51°, both REVERTED: *\"revert to the 6m max distance geometry as it was in previous commit\"*); the boot still 3 m (2026-10-12, *\"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo\"* → *\"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)\"*)", () => {
   const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-  it("⭐ the 1st and 4th rings ×5/3: 5.0 m from the centre at zoom 1; the piece's own cap 5 m (it was the camera's 3 m)", () => {
-    expect([cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM]).toEqual([3.15, 3.885, 3.15, -3.885]); // ⭐ mirrored, both at the 4th ring's 51° (the worst), for the horizontal quad
-    expect(orbitOffset(cfg, 0, 1, 1).radiusM).toBeCloseTo(5.0016, 4);
-    expect(orbitOffset(cfg, 0, 0, 1).radiusM).toBeCloseTo(5.0016, 4);
-    expect(clampPieceRadiusM(4.99, cfg)).toBeCloseTo(4.99, 12);
-    expect(clampPieceRadiusM(7, cfg)).toBe(5);
+  it("⭐ the 1st and 4th rings doubled: 6.0 m from the centre at zoom 1; the piece's own cap 6 m (it was the camera's 3 m)", () => {
+    expect([cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM]).toEqual([5.1, 3.15, 5.1, -3.15]);
+    expect(orbitOffset(cfg, 0, 1, 1).radiusM).toBeCloseTo(5.9944, 4);
+    expect(orbitOffset(cfg, 0, 0, 1).radiusM).toBeCloseTo(5.9944, 4);
+    expect(clampPieceRadiusM(5.99, cfg)).toBeCloseTo(5.99, 12);
+    expect(clampPieceRadiusM(7, cfg)).toBe(6);
     // ⭐ the range the quads' size spans: the waist's nearest to the 1st / 4th ring's farthest
     const range = pieceDistanceRange(cfg);
-    expect(range.maxM).toBe(5); // the 4th ring's 5.0016 m held to the piece's own 5 m
+    expect(range.maxM).toBeCloseTo(5.9944, 4);
     expect(range.minM).toBeGreaterThan(0.08);
     expect(range.minM).toBeLessThan(0.2);
   });
@@ -222,7 +226,7 @@ describe("⭐⭐ the quad tapped stays yellow until the next drag (2026-10-12, *
   });
 });
 
-import { horizontalQuadReachable, HORIZONTAL_QUAD_MIN_ELEVATION_DEG } from "../src/input/orient_window";
+import { allQuadsReachable, horizontalQuadReachable, HORIZONTAL_QUAD_MIN_ELEVATION_DEG, SIDE_QUAD_MAX_ELEVATION_DEG } from "../src/input/orient_window";
 describe("⭐⭐ the horizontal quad must be reachable on the 1st and 4th rings (2026-10-12, *\"make sure that the radius and height of the 1st and 4th rings are such that the horizontal quad can become yellow when the piece is at the maximum distance\"* → *\"there is an alert if the 1st and 4th rings radius and heights are changed by the sliders\"*)", () => {
   it("⭐ the vertical is the candidate at SOME yaw past atan(1/√2) = 35.26° of camera elevation from the resting face, above or below", () => {
     expect(HORIZONTAL_QUAD_MIN_ELEVATION_DEG).toBeCloseTo(35.264, 3);
@@ -238,13 +242,19 @@ describe("⭐⭐ the horizontal quad must be reachable on the 1st and 4th rings 
     expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),");
     expect(c).toContain("if (rc.key !== key) { rc.key = key; rc.top = null; rc.bottom = null; }");
     expect(c).toContain("if (at !== null && (v >= 0.999 || v <= 0.001)) {");
-    expect(c).toContain("rc.top !== null && !horizontalQuadReachable(rc.top)");
+    expect(c).toContain("if (rc.top === null || rc.bottom === null || allQuadsReachable([rc.top, rc.bottom])) return \"\";");
     expect(flat("render/hud_paint.ts")).toContain("ringQuadAlert(st) +");
   });
-  it("⭐ Scene_1's 1st and 4th rings MIRRORED at 51° (*\"make sure rings 1 and 4 are mirror. use the worst of the two to design both\"*) — the 4th ring was the worst: the camera's pitch offset lifts it", () => {
+  it("⛔⛔ ALL the quads must be able to turn yellow on the max-distance orbit (*\"Flag that the camera geometry shall allow all the quads to become yellow at the maximum distance orbit\"*) — one ring past 35.26°, one under 45°", () => {
+    expect(SIDE_QUAD_MAX_ELEVATION_DEG).toBe(45);
+    // at a yaw square to a side, the side reads cos(el), the top sin(el): equal at 45°
+    expect(Math.sin(Math.PI / 4)).toBeCloseTo(Math.cos(Math.PI / 4), 12);
+    expect(allQuadsReachable([41.6, -20.7])).toBe(true); // the 6 m rig, measured headless: the 1st ring passes both
+    expect(allQuadsReachable([60.2, -40.7])).toBe(true); // the mirrored 51° rig: the 4th ring alone (60° above: the sides never on the 1st)
+    expect(allQuadsReachable([60, -50])).toBe(false); // both too steep: no side quad
+    expect(allQuadsReachable([30, -20])).toBe(false); // both too flat: no horizontal quad
+    // ⭐ Scene_1 at 6 m: the 1st ring's 31.7° (the camera's 41.6° above the piece) — both tests at once
     const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect((Math.atan2(-cfg.orbitBottomHeightM, cfg.orbitBottomRadiusM) * 180) / Math.PI).toBeCloseTo(51, 0);
-    expect(cfg.orbitTopRadiusM).toBe(cfg.orbitBottomRadiusM);
-    expect(cfg.orbitTopHeightM).toBe(-cfg.orbitBottomHeightM);
+    expect((Math.atan2(cfg.orbitTopHeightM, cfg.orbitTopRadiusM) * 180) / Math.PI).toBeCloseTo(31.7, 1);
   });
 });

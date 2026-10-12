@@ -482,7 +482,7 @@ export interface SceneState {
    * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
   orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
   /** ⭐ (2026-10-12) the 1st / 4th ring check: the camera's elevation from the resting face last measured ON each ring (°), for the rings as they
-   * were then (`key`) — the HUD alerts when the horizontal quad cannot turn yellow there (`horizontalQuadReachable`). */
+   * were then (`key`) — the HUD alerts when not every quad can turn yellow on them (`allQuadsReachable`). */
   ringQuadCheck: { key: string; top: number | null; bottom: number | null };
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
   pinkDir: import("../core/orientation_set").OrientDirection | null;

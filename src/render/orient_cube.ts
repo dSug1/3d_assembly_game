@@ -22,13 +22,13 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, distinctPlanes, quadSide, quadSize, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, distinctPlanes, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qRotate, scale, sub, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
-import { candidateFace, horizontalQuadReachable } from "../input/orient_window";
+import { allQuadsReachable, candidateFace } from "../input/orient_window";
 import { alignRestingFace, orientationFrames, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
@@ -36,8 +36,11 @@ import type { SceneState } from "./scene_state";
 const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 /** ⭐ (2026-10-12) the resting-face quads: their full size (× the piece's radius), their glass, their edges, the pink direction's yellow. */
 const QUAD_SIZE = 1.4;
-/** ⭐ (2026-10-12, *"modify: the min scale of the quads at the minimum distance shall be 0.1"*; it was 0.20) — the size at the piece's nearest, × the piece's radius as `QUAD_SIZE` is. */
-const QUAD_MIN = 0.1;
+/**
+ * ⭐ (2026-10-12, *"modify: the min scale of the quads at the minimum distance shall be 0.1"*; it was 0.20) — the size at the piece's nearest, × the piece's radius as `QUAD_SIZE` is.
+ * ⭐ (2026-10-12, *"make the range 0.2 -> 1.4"* → *"amended: make the range 0.01 ->1.4"*) — 0.01.
+ */
+const QUAD_MIN = 0.01;
 const QUAD_ALPHA = 0.12;
 const QUAD_EDGE = new Color3(0.75, 0.78, 0.85);
 const QUAD_EDGE_ALPHA = 0.45;
@@ -116,14 +119,14 @@ export function orientCubeFrame(st: SceneState): void {
   restingQuadsFrame(st, shownTag(st));
 }
 
-/** ⭐ For the HUD: an alert when, measured ON the 1st or 4th ring, the horizontal quad can turn yellow at no yaw (`horizontalQuadReachable`). */
+/**
+ * ⛔⛔ For the HUD (2026-10-12, *"Flag that the camera geometry shall allow all the quads to become yellow at the maximum distance orbit"*): an
+ * alert when the 1st and 4th rings, both measured, leave a quad that can turn yellow at no yaw (`allQuadsReachable`).
+ */
 export function ringQuadAlert(st: SceneState): string {
   const rc = st.ringQuadCheck;
-  const bad = [
-    ...(rc.top !== null && !horizontalQuadReachable(rc.top) ? [`1st ring ${rc.top.toFixed(0)}°`] : []),
-    ...(rc.bottom !== null && !horizontalQuadReachable(rc.bottom) ? [`4th ring ${rc.bottom.toFixed(0)}°`] : []),
-  ];
-  return bad.length === 0 ? "" : `  ⚠ the horizontal quad cannot turn yellow on the ${bad.join(", ")} (needs > 35.3°: change the 1st / 4th rings' height ÷ radius)`;
+  if (rc.top === null || rc.bottom === null || allQuadsReachable([rc.top, rc.bottom])) return "";
+  return `  ⚠ not every quad can turn yellow on the max-distance orbit (camera ${rc.top.toFixed(0)}° on the 1st ring, ${rc.bottom.toFixed(0)}° on the 4th: needs one past 35.3° and one under 45°)`;
 }
 
 /** ⭐ The PINK direction now: the one tapped, else the candidate; −1 with none. */
@@ -169,7 +172,7 @@ export function orientTapShown(st: SceneState): boolean {
  * ⭐⭐ (2026-10-12, the owner: *"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron"*
  * → *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — one quad per distinct PLANE of the directions
  * (`distinctPlanes`: a cube's three), square to the world, centred on the orbited piece's resting face, faint glass with faint edges; the
- * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: 0.1 at the piece's nearest, 1.4 at its farthest — × the piece's radius). Rebuilt
+ * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: 0.01 at half the piece's farthest — hidden nearer — 1.4 at its farthest; × the piece's radius). Rebuilt
  * when the directions or the piece change; placed every frame.
  */
 function restingQuadsFrame(st: SceneState, shown: number): void {
@@ -209,27 +212,30 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const q = st.restingQuads;
   const at = restingCentreWorld(st);
   if (q === null || p === undefined || at === null) return;
-  const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible;
-  for (const x of q.quads) {
-    x.fill.isVisible = show;
-    x.edges.isVisible = show;
-  }
-  if (!show) return;
-  // ⭐ at the resting face's centre, as the piece stands now
-  q.root.position.set(at[0], at[1], at[2]);
   // ⭐⭐ (2026-10-12, *"the quads size grow with the distance of the piece to the pink gizmo"* → *"the 1.4 shall be reached at the maximum distance
-  // (i.e. at 6m in this scene). There shall be no plateau for the quad scale before shrinking as this is the case between 6m and 3m"* → *"the min
-  // scale of the quads at the minimum distance shall be 0.1. the curve with the power (i.e. power 3) shall best fit those max and min scales at max
-  // and min distances"*) — d the piece's distance to the gizmo; 0.1 at the rings' nearest, 1.4 at their farthest (`pieceDistanceRange`; both × the
-  // piece's radius, the side 2 × that), `quadGrowthPower` (3) between (`quadSize`); the resting face's yellow contour scales by the same share
-  // (`growth`, read by `restingFillFrame`)
+  // (i.e. at 6m in this scene). There shall be no plateau"* → *"the min scale of the quads … 0.1"* → *"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"*) — d the piece's
+  // distance to the gizmo; 0.01 at HALF the rings' farthest, 1.4 at the farthest (`pieceDistanceRange`; both × the piece's radius, the side 2 ×
+  // that), `quadGrowthPower` (3) between (`quadSize`); nearer than half, the quads HIDDEN (`quadsShownFromM`); the resting face's yellow contour
+  // scales by the same share (`growth`, read by `restingFillFrame`)
   const gizmo = st.pinkRing?.position ?? st.orbitCentreM;
   const pp = p.mesh.position;
   const d = Math.hypot(pp.x - gizmo.x, pp.y - gizmo.y, pp.z - gizmo.z);
   const range = pieceDistanceRange(st.cfg);
+  const from = quadsShownFromM(range.maxM);
+  const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;
+  for (const x of q.quads) {
+    x.fill.isVisible = show;
+    x.edges.isVisible = show;
+  }
+  if (!show) {
+    q.growth = QUAD_MIN / QUAD_SIZE;
+    return;
+  }
+  // ⭐ at the resting face's centre, as the piece stands now
+  q.root.position.set(at[0], at[1], at[2]);
   const r = p.mesh.getBoundingInfo().boundingSphere.radius;
   const full = QUAD_SIZE * 2 * r;
-  const side = quadSize(d, range.minM, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full);
+  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full);
   q.growth = side / full;
   q.root.scaling.setAll(side);
   // ⭐⭐ (2026-10-12, *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — the pink direction's plane
@@ -261,6 +267,7 @@ export function restingQuadPointer(
     const q = st.restingQuads;
     const piece = st.greenBox;
     if (q === null || piece === null || e.pointerId === MOUSE_SECOND_ID || st.hold !== null) return false;
+    if (!q.quads.some((k) => k.fill.isVisible)) return false; // ⭐ hidden (nearer than half the farthest): nothing to press
     if (e.pointerType === "mouse" && e.button !== 0) return false;
     if (st.router.all().length > 0) return false; // ⭐ a first touch only
     const rect = st.canvas.getBoundingClientRect();
