@@ -36,7 +36,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, facetPolytope, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, distinctPlanes, facetPolytope, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { isTapRelease } from "../input/mode_toggle";
@@ -256,6 +256,7 @@ function pieceCopy(
  */
 export function orientCubeFrame(st: SceneState): void {
   if (st.orientDirty || (st.orientCube === null && st.orientDirs.length > 0)) rebuild(st);
+  restingQuadsFrame(st); // ⭐ (2026-10-12) the planes of the polyhedron at the resting face's centre, in the scene
   const c = st.orientCube;
   const pct = st.cfg.orientCubeSizePct;
   const show = c !== null && pct > 0 && st.greenBox !== null;
@@ -629,4 +630,74 @@ export function orientTapShown(st: SceneState): boolean {
   const c = st.orientCube;
   if (c === null || st.orientRect === null || c.candEdgeTag < 0) return false;
   return orientCubeTap(st, c.candEdgeTag);
+}
+
+/** ⭐ (2026-10-12) the resting-face quads: their size (× the piece's radius), their glass, their edges, the resting plane's yellow. */
+const QUAD_SIZE = 1.4;
+const QUAD_ALPHA = 0.12;
+const QUAD_EDGE = new Color3(0.75, 0.78, 0.85);
+const QUAD_EDGE_ALPHA = 0.45;
+const QUAD_LIT = new Color3(1, 0.85, 0.1);
+const QUAD_SAME = Math.cos((10 * Math.PI) / 180);
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron.
+ * highlight the quad which corresponds to the resting face plane in yellow edges. (therefore, in the current status, there should be three
+ * quads each orthogonal to each other and intersecting at the axis passing through the center of the resting face)"*) — one quad per distinct
+ * PLANE of the polyhedron's directions (`distinctPlanes`: a cube's three), square to the world as the polyhedron is, centred on the orbited
+ * piece's resting face, faint glass with faint edges; the quad lying in the resting face's plane (its normal within 10°) edged in YELLOW.
+ * Rebuilt when the directions or the piece change; placed every frame.
+ */
+function restingQuadsFrame(st: SceneState): void {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  const key = `${p?.mesh.name ?? ""}|${st.orientDirs.map((d) => dirLabel(d.normal)).join(";")}`;
+  if (st.restingQuads === null || st.restingQuads.key !== key) {
+    st.restingQuads?.root.dispose(false, true);
+    st.restingQuads = null;
+    if (p === undefined || st.orientDirs.length === 0) return;
+    const root = new TransformNode("resting-quads", st.scene);
+    const quads = distinctPlanes(st.orientDirs.map((d) => d.normal)).map((n, i) => {
+      // the quad's two in-plane axes
+      const seed: Vec3 = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+      const a = normalize(sub(seed, scale(n, dot(seed, n))))!;
+      const b: Vec3 = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
+      const corners = [add(a, b), sub(a, b), scale(add(a, b), -1), sub(b, a)].map((v) => scale(v, 0.5));
+      const fill = new Mesh(`resting-quad-${i}`, st.scene);
+      const data = new VertexData();
+      data.positions = corners.flatMap((v) => [v[0], v[1], v[2]]);
+      data.indices = [0, 1, 2, 0, 2, 3];
+      data.applyToMesh(fill, false);
+      const fm = unlit(st, `resting-quad-${i}-mat`, Color3.White(), QUAD_ALPHA);
+      fm.disableDepthWrite = true;
+      fill.material = fm;
+      fill.isPickable = false;
+      fill.parent = root;
+      const edges = CreateLines(`resting-quad-${i}-edges`, { points: [...corners, corners[0]!].map((v) => new Vector3(v[0], v[1], v[2])) }, st.scene);
+      edges.isPickable = false;
+      edges.parent = root;
+      return { normal: n, fill, edges };
+    });
+    st.restingQuads = { key, root, quads };
+  }
+  const q = st.restingQuads;
+  if (q === null || p === undefined || p.restingFace === null) return;
+  const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible;
+  for (const x of q.quads) {
+    x.fill.isVisible = show;
+    x.edges.isVisible = show;
+  }
+  if (!show) return;
+  // ⭐ at the resting face's centre, as the piece stands now; sized to the piece
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const rot: Quat = [r.w, r.x, r.y, r.z];
+  const c = qRotate(rot, p.restingCentre);
+  q.root.position.set(p.mesh.position.x + c[0], p.mesh.position.y + c[1], p.mesh.position.z + c[2]);
+  q.root.scaling.setAll(QUAD_SIZE * 2 * p.mesh.getBoundingInfo().boundingSphere.radius);
+  // ⭐ the quad in the resting face's plane: yellow edges
+  const rn = qRotate(rot, p.restingFace.normal);
+  for (const x of q.quads) {
+    const lit = Math.abs(dot(x.normal, rn)) >= QUAD_SAME;
+    x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;
+    x.edges.alpha = lit ? 1 : QUAD_EDGE_ALPHA;
+  }
 }

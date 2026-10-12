@@ -331,3 +331,19 @@ describe("⛔ the red arrow deleted (2026-10-12, *\"remove the red arrow\"*)", (
     expect(code("render/green_box_wiring.ts")).toContain("return next?.q ?? null;");
   });
 });
+
+import { distinctPlanes } from "../src/core/orientation_set";
+describe("⭐⭐ the resting-face quads (2026-10-12, *\"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron. highlight the quad which corresponds to the resting face plane in yellow edges\"*)", () => {
+  it("⭐ the distinct PLANES: opposite normals are one — a cube's six directions give three", () => {
+    expect(distinctPlanes(AXES)).toHaveLength(3);
+    expect(distinctPlanes([[0, 1, 0], [0, -1, 0]])).toHaveLength(1);
+    const s = Math.SQRT1_2;
+    expect(distinctPlanes([...AXES, [s, s, 0], [-s, -s, 0]])).toHaveLength(4);
+  });
+  it("⭐ wired: one quad per plane at the resting face's centre; the one in the resting face's plane edged yellow", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("const quads = distinctPlanes(st.orientDirs.map((d) => d.normal)).map((n, i) => {");
+    expect(c).toContain("const c = qRotate(rot, p.restingCentre); q.root.position.set(p.mesh.position.x + c[0], p.mesh.position.y + c[1], p.mesh.position.z + c[2]);");
+    expect(c).toContain("const lit = Math.abs(dot(x.normal, rn)) >= QUAD_SAME; x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;");
+  });
+});

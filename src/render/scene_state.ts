@@ -464,6 +464,16 @@ export interface SceneState {
    * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
   orientDirs: readonly import("../core/orientation_set").OrientDirection[];
   orientDirty: boolean;
+  /** ⭐ (2026-10-12) the resting-face quads: one per plane of the polyhedron, at the orbited piece's resting face (`restingQuadsFrame`). */
+  restingQuads: {
+    readonly key: string;
+    readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
+    readonly quads: readonly {
+      readonly normal: import("../core/vec").Vec3;
+      readonly fill: import("@babylonjs/core/Meshes/mesh").Mesh;
+      readonly edges: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
+    }[];
+  } | null;
   orientCube: {
     readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
     readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;

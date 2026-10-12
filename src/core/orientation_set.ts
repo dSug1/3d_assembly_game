@@ -138,3 +138,18 @@ export function facetPolytope(normals: readonly Vec3[], bound = 1.6, offsets?: r
   return faces.map((f) => ({ tag: f.tag, normal: f.normal, vertices: f.v }));
 }
 
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"at the center of the resting face, create quads which match with the orientations of the faces of the
+ * polyhedron"*) — the distinct PLANES among the directions: opposite normals (n and −n, within `tolDeg`) are one plane; its normal the first
+ * met. A cube's six directions: three planes.
+ */
+export function distinctPlanes(normals: readonly Vec3[], tolDeg = 1): Vec3[] {
+  const c = Math.cos((tolDeg * Math.PI) / 180);
+  const out: Vec3[] = [];
+  for (const n0 of normals) {
+    const n = normalize(n0);
+    if (n === null) continue;
+    if (!out.some((m) => Math.abs(dot(m, n)) >= c)) out.push(n);
+  }
+  return out;
+}
