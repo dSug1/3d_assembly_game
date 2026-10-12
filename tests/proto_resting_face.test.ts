@@ -219,11 +219,10 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const restingFace = resting\.winner === null \? null : chooseInGroup\(resting\.winner, greenBootOrientation\(st\.sceneSpec\.id\)\);/);
     // ⭐ 2026-10-06: PINK, the pink ring's own constant (it was yellow) — the fill and its see-through twin
-    expect(w).toMatch(/const RESTING_COLOUR = PINK;/);
-    expect(w).not.toMatch(/RESTING_YELLOW/);
+    // ⭐⭐ (2026-10-12, *"resting face … highlighted contours in yellow (no more pink highlight of the resting face …)"*) — YELLOW again, a contour
+    expect(w).toMatch(/const RESTING_COLOUR = new Color3\(1, 0\.85, 0\.1\);/);
     expect(w).toMatch(/ mat\.emissiveColor = RESTING_COLOUR\.clone\(\);/);
-    expect(w).toMatch(/tm\.emissiveColor = RESTING_COLOUR\.clone\(\);/);
-    expect(w.indexOf("const PINK = new Color3(1, 0.6, 0.9);")).toBeLessThan(w.indexOf("const RESTING_COLOUR = PINK;"));
+    expect(w).toContain("contour.color = RESTING_COLOUR.clone();");
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
     expect(w).toMatch(/pinkRingFrame\(st\);\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*anchorFrame\(st, now\);\s*restingFillFrame\(st, now\);/); // ⛔ (2026-10-11) the sphere deleted
@@ -234,9 +233,9 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     // 1. the piece: in the transparent pass (after every opaque body), writing NO depth
     expect(w).toMatch(/own\.transparencyMode = Material\.MATERIAL_ALPHABLEND;[^\n]*\n\s*own\.disableDepthWrite = true;\s*m\.alphaIndex = RESTING_ORDER;/);
     // 2. the faint twin: depth-tested against the other bodies only, after the piece
-    expect(w).toMatch(/tm\.alpha = RESTING_XRAY_ALPHA;\s*tm\.disableDepthWrite = true;/);
-    expect(w).toMatch(/twin\.alphaIndex = RESTING_ORDER \+ 1;/);
-    expect(w).toMatch(/const RESTING_XRAY_ALPHA = 0\.25;/);
+    // 2. (2026-10-12) the contour's x-ray twin: drawn over the scene, faint
+    expect(w).toMatch(/xray\.alpha = RESTING_CONTOUR_XRAY_ALPHA;\s*xray\.renderingGroupId = 1;/);
+    expect(w).toMatch(/const RESTING_CONTOUR_XRAY_ALPHA = 0\.35;/);
     // 3. the piece's depth, restored after the twin — FORCED, the transparent pass writes none otherwise (seen on a screenshot)
     expect(w).toMatch(/dm\.disableColorWrite = true;\s*dm\.forceDepthWrite = true;/);
     expect(w).toMatch(/depth\.alphaIndex = RESTING_ORDER \+ 2;/);

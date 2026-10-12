@@ -74,3 +74,46 @@ export function candidateFace(
   }
   return cand;
 }
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"in desktop mode, when the left click is pressed and held to orbit around the center or around the piece, pin the
+ * cube window to a place below and to the right of the cursor. when the left click is released, freeze the position of the window"*) — the
+ * position-slider values that put the window's top-left `gap` below and to the right of the cursor (`cx`, `cy`, canvas px), clamped to the
+ * room inside the margins (`orientWindowCorner`'s inverse).
+ */
+export function orientWindowAtCursor(
+  cw: number,
+  ch: number,
+  size: number,
+  margin: number,
+  cx: number,
+  cy: number,
+  gap: number,
+): { readonly xPct: number; readonly yPct: number } {
+  const pct = (v: number, room: number) => (room > 0 ? Math.min(100, Math.max(0, ((v - margin) / room) * 100)) : 0);
+  return { xPct: pct(cx + gap, cw - 2 * margin - size), yPct: pct(cy + gap, ch - 2 * margin - size) };
+}
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"add a red arrow … with an inclination and direction indicating the direction of the rotation required to rotate
+ * from the green piece current quaternion to the replica quaternion"*) — the turn from `from` to `to` ([w, x, y, z]): its unit axis and its angle
+ * (0…π, the short way; the axis's sense carries the direction, right-handed); `null` with no turn (under `minRad`).
+ */
+export function turnBetween(
+  from: readonly [number, number, number, number],
+  to: readonly [number, number, number, number],
+  minRad = 0.01,
+): { readonly axis: readonly [number, number, number]; readonly angle: number } | null {
+  // rel = to · from⁻¹
+  const [aw, ax, ay, az] = to;
+  const [bw, bx, by, bz] = [from[0], -from[1], -from[2], -from[3]];
+  let w = aw * bw - ax * bx - ay * by - az * bz;
+  let x = aw * bx + ax * bw + ay * bz - az * by;
+  let y = aw * by - ax * bz + ay * bw + az * bx;
+  let z = aw * bz + ax * by - ay * bx + az * bw;
+  if (w < 0) [w, x, y, z] = [-w, -x, -y, -z];
+  const angle = 2 * Math.acos(Math.min(1, w));
+  const n = Math.hypot(x, y, z);
+  if (!(angle > minRad) || n < 1e-9) return null;
+  return { axis: [x / n, y / n, z / n], angle };
+}

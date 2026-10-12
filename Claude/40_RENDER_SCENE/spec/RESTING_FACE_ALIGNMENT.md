@@ -843,3 +843,34 @@ touch tap on seated / placed part). Remove the ctrl-alt raycast function in desk
   cyan / amber face highlights) still drives the free parts; to remove once the cube's approach replaces it.
 - Headless: boot — aligned to `cube (0.00, 1.00, 0.00)`; first finger held + a second-finger tap on a black bar — the orbit centre moved
   there, no roll; on empty space — a roll; CTRL over a part — nothing.
+
+## 23. The window, refined: the clicked face, yellow and pink swapped, the cursor-following window, the turn arrow (2026-10-12, `1.0.68-`)
+
+- ⭐⭐ *"when a cube's face is clicked, the replica shall immediately move to this face and update to the next possible orientation"* — the
+  face CLICKED is the one shown (the copy on it, its highlight) until the candidate changes (the camera turned on); the copy appears there at
+  ONCE (no fade-in) in the pose the next click would give (the click aligned the piece to that face, so the next roll). Headless: a click on
+  the top — the copy there the very next frame, at full strength, rolled; again — the next roll; an orbit — back to the candidate.
+- ⭐⭐ *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the resting face nor the cube
+  current aligned face) — pink face travels the cube (therefore replaces the current yellow contour highlight of the cube) — no more highlight
+  of the face of the replica"*:
+  - the scene's RESTING face: a YELLOW CONTOUR along its edges (and a faint twin drawn through the piece); its pink fill hidden;
+  - the cube's ALIGNED face (the direction the piece is aligned to): a yellow contour (a tube along its edges); it was a pink fill;
+  - the cube's face SHOWN (the candidate, or the face clicked — the one that travels the cube): a PINK fill, before the glass; it was a
+    yellow outline;
+  - the copy: no outline any more.
+- ⭐⭐ *"in desktop mode, when the left click is pressed and held to orbit around the center or around the piece, pin the cube window to a place
+  below and to the right of the cursor. when the left click is released, freeze the position of the window. This will enable to have the
+  window always close to the cursor without the need to travel the whole screen to reach the window"* — every orbit step of a MOUSE pointer
+  (`orbitDragStep`, around the centre or round the piece) moves the window's position sliders so its top-left sits 6 mm below-right of the
+  cursor (`orientWindowAtCursor`, clamped inside the margins); the release changes nothing — the window stays there, the sliders show where.
+  ⛔ Not while the cube is held (the key drives that orbit), never for a finger. Headless: a drag to (460, 474) — the window at (483, 497);
+  released and moved away — it stays.
+- ⭐ *"Also in desktop mode, scale the current cube window 175%"* — a desktop boots the window at 175 % (`orientCubeSizePct`; a touch screen
+  100 %); a URL value wins.
+- ⭐⭐ *"together with the replica in the cube window, add a red arrow (similar to the one we removed previously) with an inclination and
+  direction indicating the direction of the rotation required to rotate from the green piece current quaternion to the replica quaternion.
+  position the arrow so that the replica is not occluded by the arrow"* — the turn from the piece's pose (the one it is heading for) to the
+  copy's (`turnBetween`: axis and angle, the short way): a red ARC in the plane across that axis (its inclination), swept the way the turn goes
+  (its direction; as long as the turn, never under 40°), its head at the end; turned with the cube; in the window's corner DIAGONALLY OPPOSITE
+  the copy, so the copy is never behind it; hidden with no turn. ⚠ An axis lying across the screen shows the arc edge-on (a straight arrow) —
+  true to the turn, less readable.

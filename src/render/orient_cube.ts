@@ -38,10 +38,10 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { distinctDirections, facetPolytope, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
-import { Constants } from "@babylonjs/core/Engines/constants";
 import { mmToPx } from "../core/units";
 import { isTapRelease } from "../input/mode_toggle";
-import { candidateFace, clearOfOverlays, orientWindowCorner } from "../input/orient_window";
+import { candidateFace, clearOfOverlays, orientWindowAtCursor, orientWindowCorner, turnBetween } from "../input/orient_window";
+import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
@@ -72,6 +72,14 @@ const BACK_EDGE_ALPHA = 0.25;
 const PIECE_SHARE = 0.648;
 const REPLICA_ALPHA = 0.7;
 const REPLICA_FADE_MS = 250;
+/** ⭐ (2026-10-12) the cursor-following window: its top-left this far below and to the right of the cursor (mm on the glass). */
+const ORIENT_CURSOR_GAP_MM = 6;
+/** ⭐ (2026-10-12) the rotation arrow: its radius and thickness (× the inner radius), its colour, its least sweep, its place (× the window's half). */
+const TURN_ARROW_R = 0.75;
+const TURN_ARROW_W = 0.07;
+const TURN_ARROW = new Color3(1, 0.3, 0.1);
+const TURN_ARROW_MIN_SWEEP = (40 * Math.PI) / 180;
+const TURN_ARROW_CORNER = 0.6;
 
 /** ⭐ The screen's overlays the window keeps clear of, in canvas px (the HUD, its toggle, the ☰, the ⏸, the score bar) — the visible ones. */
 const OVERLAYS = '[data-role="hud"],[data-role="hud-toggle"],[data-role="menu-toggle"],[data-role="pause-button"],[data-role="scorebar"]';
@@ -103,7 +111,6 @@ function colours(st: SceneState): number[] {
     const n = c.vertexNormals[i]!;
     const k = 0.6 + 0.4 * Math.max(0, dot(n, LIGHT));
     if (tag < 0) out.push(0.3 * k, 0.3 * k, 0.35 * k, BOX_ALPHA);
-    else if (tag === c.lit) out.push(0, 0, 0, 0); // ⭐ the lit facet is its own layer (`litLayer`)
     else out.push(FACET.r * k, FACET.g * k, FACET.b * k, FACET_ALPHA);
   });
   return out;
@@ -125,6 +132,7 @@ function dispose(st: SceneState): void {
   c.back.dispose(false, true);
   c.candEdge?.dispose(false, true);
   for (const r of c.replicas) r.mesh.dispose(false, true);
+  c.turnArrow?.mesh.dispose(false, true);
   st.orientCube = null;
 }
 
@@ -213,18 +221,21 @@ function rebuild(st: SceneState): void {
     candidate: -1,
     candEdge: null,
     candEdgeTag: -2,
+    clicked: null,
+    instant: false,
+    turnArrow: null,
     replicas: [],
   };
 }
 
 /**
- * ⭐ A copy of the orbited piece (its geometry and a clone of its material), never pickable, never a body, drawn after the glass; its RESTING
- * face's edges outlined in the candidate's yellow (as thick on the glass as the candidate's outline), drawn over everything.
+ * ⭐ A copy of the orbited piece (its geometry and a clone of its material), never pickable, never a body, drawn after the glass. ⛔ (2026-10-12,
+ * *"no more highlight of the face of the replica"*) its resting face's yellow outline is deleted.
  */
 function pieceCopy(
   st: SceneState,
   name: string,
-): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3; readonly outline: StandardMaterial } | null {
+): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3 } | null {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined) return null;
   const m = p.mesh.clone(name, null, true) as Mesh | null;
@@ -243,24 +254,7 @@ function pieceCopy(
   m.rotationQuaternion = Quaternion.Identity();
   const b = p.mesh.getBoundingInfo().boundingSphere;
   const radius = Math.max(1e-6, b.radius);
-  const outline = unlit(st, name + "-rest-edges-mat", CANDIDATE_EDGE, 0.999);
-  outline.depthFunction = Constants.ALWAYS; // ⭐ never hidden — by the copy itself or the glass
-  outline.disableDepthWrite = true;
-  const n = p.restingFace?.normal ?? [0, 0, 0];
-  const lift = scale(n, radius * 0.01);
-  // ⭐ the copy is scaled to `PIECE_SHARE` of the inner radius: this local radius is the candidate outline's on the glass
-  const width = (CANDIDATE_EDGE_WIDTH * radius) / PIECE_SHARE;
-  p.restingEdges.forEach((e, i) => {
-    const path = e.map((v) => new Vector3(v[0] + lift[0], v[1] + lift[1], v[2] + lift[2]));
-    const t = CreateTube(`${name}-rest-edge-${i}`, { path, radius: width, tessellation: 6 }, st.scene);
-    t.material = outline;
-    t.isPickable = false;
-    t.renderingGroupId = ORIENT_GROUP;
-    t.alwaysSelectAsActiveMesh = true;
-    t.alphaIndex = 4;
-    t.parent = m;
-  });
-  return { mesh: m, piece: p.mesh.name, radius, centre: [b.center.x, b.center.y, b.center.z], rest: p.restingCentre, outline };
+  return { mesh: m, piece: p.mesh.name, radius, centre: [b.center.x, b.center.y, b.center.z], rest: p.restingCentre };
 }
 
 /**
@@ -279,6 +273,7 @@ export function orientCubeFrame(st: SceneState): void {
     for (const r of c.replicas) for (const m of [r.mesh, ...r.mesh.getChildMeshes()]) m.isVisible = show;
     if (c.litMesh !== null) c.litMesh.isVisible = show;
     if (c.candEdge !== null) c.candEdge.isVisible = show;
+    if (c.turnArrow !== null && !show) for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = false;
   }
   if (!show || c === null) {
     st.orientRect = null;
@@ -343,13 +338,18 @@ export function orientCubeFrame(st: SceneState): void {
     eye,
   );
   c.candidate = cand;
-  if (cand !== c.candEdgeTag) candidateEdges(st, cand);
+  // ⭐⭐ (2026-10-12, the owner: *"when a cube's face is clicked, the replica shall immediately move to this face and update to the next possible
+  // orientation"*) — the face CLICKED is the one shown (the copy on it, the yellow outline) until the candidate changes (the camera turned on)
+  if (c.clicked !== null && c.clicked.cand !== cand) c.clicked = null;
+  const shown = c.clicked?.tag ?? cand;
+  if (shown !== c.candEdgeTag) candidateEdges(st, shown);
   orientHoldStep(st, cand);
   // ⭐ (2026-10-12, *"Place the center of the highlighted face of the replica in the center of the candidate face of the cube"*) the copy's
   // resting face centred on the candidate face (the polyhedron's centre with no candidate)
-  const ci = c.facetTags.indexOf(cand);
+  const ci = c.facetTags.indexOf(shown);
   const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];
-  replicaFrame(st, cand, q, seat, PIECE_SHARE * c.inner * s);
+  replicaFrame(st, shown, q, seat, PIECE_SHARE * c.inner * s);
+  turnArrowFrame(st, q, centre, right, up, half, s);
 }
 
 /**
@@ -365,7 +365,11 @@ function place(copy: { readonly mesh: Mesh; readonly radius: number; readonly re
   copy.mesh.position.set(slot[0] - off[0], slot[1] - off[1], slot[2] - off[2]);
 }
 
-/** ⭐ The candidate face's outline (a tube along its edges, drawn after the glass), rebuilt when the candidate changes. */
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"pink face travels the cube (therefore replaces the current yellow contour highlight of the cube)"*) — the face
+ * SHOWN (the candidate, or the face clicked) filled PINK, before the glass (a front facet veils it a little when it is at the back); it was a
+ * yellow outline. Rebuilt when the face shown changes.
+ */
 function candidateEdges(st: SceneState, cand: number): void {
   const c = st.orientCube!;
   c.candEdgeTag = cand;
@@ -374,13 +378,16 @@ function candidateEdges(st: SceneState, cand: number): void {
   const i = c.facetTags.indexOf(cand);
   if (cand < 0 || i < 0) return;
   const v = c.facetVerts[i]!;
-  const path = [...v, v[0]!].map((p) => new Vector3(p[0], p[1], p[2]));
-  const m = CreateTube("orient-candidate-edges", { path, radius: CANDIDATE_EDGE_WIDTH * c.inner, tessellation: 6 }, st.scene);
-  m.material = unlit(st, "orient-candidate-edges-mat", CANDIDATE_EDGE, 0.999);
+  const m = new Mesh("orient-travelling-face", st.scene);
+  const data = new VertexData();
+  data.positions = v.flatMap((p) => [p[0], p[1], p[2]]);
+  data.indices = v.slice(1, -1).flatMap((_, k) => [0, k + 2, k + 1]);
+  data.applyToMesh(m, false);
+  m.material = unlit(st, "orient-travelling-face-mat", PINK, LIT_ALPHA);
   m.isPickable = false;
   m.renderingGroupId = ORIENT_GROUP;
   m.alwaysSelectAsActiveMesh = true;
-  m.alphaIndex = 3;
+  m.alphaIndex = 1;
   m.parent = c.root;
   c.candEdge = m;
 }
@@ -421,7 +428,9 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
         c.root.computeWorldMatrix(true);
         copy.mesh.computeWorldMatrix(true);
         copy.mesh.setParent(c.root);
-        c.replicas.push({ ...copy, q, tag: cand, born: now, dying: null });
+        // ⭐ after a click, at once — no fade-in (*"immediately"*)
+        c.replicas.push({ ...copy, q, tag: cand, born: c.instant ? now - REPLICA_FADE_MS : now, dying: null });
+        c.instant = false;
       }
     }
   }
@@ -433,7 +442,6 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
       return false;
     }
     (r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;
-    r.outline.alpha = 0.999 * a; // ⭐ the resting face's outline fully opaque once it is in
     // ⛔ never placed again (no transition): it rides the cube
     return true;
   });
@@ -474,17 +482,16 @@ function litLayer(st: SceneState): void {
   c.litMesh = null;
   const at = c.facetTags.indexOf(c.lit);
   if (c.lit < 0 || at < 0) return;
+  // ⭐⭐ (2026-10-12, the owner: *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the resting
+  // face nor the cube current aligned face)"*) — a yellow tube along its edges, drawn after the glass
   const v = c.facetVerts[at]!;
-  const m = new Mesh("orient-lit", st.scene);
-  const data = new VertexData();
-  data.positions = v.flatMap((p) => [p[0], p[1], p[2]]);
-  data.indices = v.slice(1, -1).flatMap((_, i) => [0, i + 2, i + 1]);
-  data.applyToMesh(m, false);
-  m.material = unlit(st, "orient-lit-mat", PINK, LIT_ALPHA);
+  const path = [...v, v[0]!].map((p) => new Vector3(p[0], p[1], p[2]));
+  const m = CreateTube("orient-aligned-contour", { path, radius: CANDIDATE_EDGE_WIDTH * c.inner, tessellation: 6 }, st.scene);
+  m.material = unlit(st, "orient-aligned-contour-mat", CANDIDATE_EDGE, 0.999);
   m.isPickable = false;
   m.renderingGroupId = ORIENT_GROUP;
   m.alwaysSelectAsActiveMesh = true;
-  m.alphaIndex = 1;
+  m.alphaIndex = 3;
   m.parent = c.root;
   c.litMesh = m;
 }
@@ -508,6 +515,12 @@ export function orientCubeTap(st: SceneState, tag: number): boolean {
   if (acted) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
+  }
+  // ⭐ (2026-10-12) the copy goes to the clicked face at once and shows the NEXT orientation there (the piece now aligned to it: the next roll)
+  const c = st.orientCube;
+  if (c !== null) {
+    c.clicked = { tag, cand: c.candidate };
+    c.instant = true;
   }
   st.hudDirty = true;
   return acted;
@@ -565,4 +578,79 @@ export function orientCubePointer(
     }
   }
   return true;
+}
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"together with the replica in the cube window, add a red arrow (similar to the one we removed previously) with an
+ * inclination and direction indicating the direction of the rotation required to rotate from the green piece current quaternion to the replica
+ * quaternion. position the arrow so that the replica is not occluded by the arrow"*) — an arc in the plane ACROSS the turn's axis (its
+ * inclination), swept the way the turn goes (its direction; as long as the turn, never under 40°), its head at the end; turned with the cube,
+ * in the window's corner OPPOSITE the copy (the copy never hidden). Rebuilt when the turn changes; hidden with none.
+ */
+function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, right: Vector3, up: Vector3, half: number, s: number): void {
+  const c = st.orientCube!;
+  const live = c.replicas.find((r) => r.dying === null);
+  const box = st.greenBox;
+  const r = box?.rotationQuaternion ?? Quaternion.Identity();
+  const from: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
+  const turn = live === undefined || box === null ? null : turnBetween(from, live.q);
+  if (turn === null || live === undefined) {
+    if (c.turnArrow !== null) for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = false;
+    return;
+  }
+  const same = (a: Quat, b: Quat) => Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]) > 0.99999;
+  if (c.turnArrow === null || !same(c.turnArrow.from, from) || !same(c.turnArrow.to, live.q)) {
+    c.turnArrow?.mesh.dispose(false, true);
+    const mesh = new Mesh("orient-turn-arrow", st.scene);
+    mesh.rotationQuaternion = Quaternion.Identity();
+    const a = turn.axis;
+    const seed: Vec3 = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const u = normalize(sub(seed, scale(a, dot(seed, a))))!;
+    const v: Vec3 = [a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0]]; // axis × u: the turn's sense
+    const R = TURN_ARROW_R * c.inner;
+    const sweep = Math.min(Math.max(turn.angle, TURN_ARROW_MIN_SWEEP), 1.75 * Math.PI);
+    const at = (t: number): Vector3 => new Vector3(...add(scale(u, R * Math.cos(t)), scale(v, R * Math.sin(t))));
+    const path = Array.from({ length: 33 }, (_, i) => at((sweep * i) / 32));
+    const w = TURN_ARROW_W * c.inner;
+    const shaft = CreateTube("orient-turn-arrow-shaft", { path, radius: w, tessellation: 8 }, st.scene);
+    const end = path[path.length - 1]!;
+    const tangent = new Vector3(...add(scale(u, -Math.sin(sweep)), scale(v, Math.cos(sweep))));
+    const head = CreateCylinder("orient-turn-arrow-head", { height: w * 6, diameterTop: 0, diameterBottom: w * 6, tessellation: 12 }, st.scene);
+    head.position = end.add(tangent.scale(w * 2));
+    const hq = shortestArc([0, 1, 0], [tangent.x, tangent.y, tangent.z]);
+    head.rotationQuaternion = new Quaternion(hq[1], hq[2], hq[3], hq[0]);
+    const mat = unlit(st, "orient-turn-arrow-mat", TURN_ARROW, 0.999);
+    for (const m of [shaft, head]) {
+      m.material = mat;
+      m.parent = mesh;
+      m.isPickable = false;
+      m.renderingGroupId = ORIENT_GROUP;
+      m.alwaysSelectAsActiveMesh = true;
+      m.alphaIndex = 4;
+    }
+    c.turnArrow = { mesh, from, to: live.q };
+  }
+  for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = true;
+  // ⭐ the corner diagonally OPPOSITE the copy, as the screen sees it — the copy never behind the arrow
+  const off = live.mesh.getAbsolutePosition().subtract(centre);
+  const sx = Vector3.Dot(off, right) >= 0 ? -1 : 1;
+  const sy = Vector3.Dot(off, up) >= 0 ? -1 : 1;
+  c.turnArrow.mesh.position.copyFrom(centre.add(right.scale(sx * TURN_ARROW_CORNER * half)).add(up.scale(sy * TURN_ARROW_CORNER * half)));
+  c.turnArrow.mesh.rotationQuaternion!.set(corr[1], corr[2], corr[3], corr[0]);
+  c.turnArrow.mesh.scaling.setAll(s);
+}
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"in desktop mode, when the left click is pressed and held to orbit around the center or around the piece, pin the
+ * cube window to a place below and to the right of the cursor. when the left click is released, freeze the position of the window"*) — called
+ * at every step of an orbit drag (`orbitDragStep`): a MOUSE drag moves the window's position sliders so it sits just below-right of the cursor;
+ * the release changes nothing, so the window stays there (the sliders show where). ⛔ Not while the cube is held (the key drives that orbit).
+ */
+export function orientFollowCursor(st: SceneState, pointerId: number, x: number, y: number): void {
+  if (st.pointerTypeOf.get(pointerId) !== "mouse" || st.orientHold !== null || st.orientRect === null) return;
+  const rect = st.canvas.getBoundingClientRect();
+  const p = orientWindowAtCursor(st.canvas.clientWidth, st.canvas.clientHeight, st.orientRect.size, mmToPx(ORIENT_MARGIN_MM), x - rect.left, y - rect.top, mmToPx(ORIENT_CURSOR_GAP_MM));
+  const cfg = st.cfg as unknown as Record<string, number>;
+  cfg.orientWindowXPct = p.xPct;
+  cfg.orientWindowYPct = p.yPct;
 }

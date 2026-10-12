@@ -50,7 +50,11 @@ function piecesFacesOf(m: Mesh): number {
 /** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
 const PINK = new Color3(1, 0.6, 0.9);
 /** ⭐ The colour of a resting face — the PINK ring's (the owner, 2026-10-06: *"resting face highlight in pink (same as pink ring) instead of yellow"*; it was yellow). */
-const RESTING_COLOUR = PINK;
+// ⭐⭐ (2026-10-12, the owner: *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the
+// resting face …)"*) — the resting face is a YELLOW CONTOUR (the cube's aligned-face yellow), its fill hidden
+const RESTING_COLOUR = new Color3(1, 0.85, 0.1);
+/** ⭐ The contour seen THROUGH its own piece (drawn over the scene). */
+const RESTING_CONTOUR_XRAY_ALPHA = 0.35;
 /** ⭐ Its fill's opacity — the face still visible under it, as the other face fills. */
 const RESTING_ALPHA = 0.6;
 
@@ -131,7 +135,19 @@ function restingParts(
   fill.parent = m;
   fill.isPickable = false;
   fill.metadata = { orbitCandidate: false };
-  restingXray(st, m, fill, data);
+  // ⭐ the contour along the face's edges, a child of the (hidden) fill so it rides its lift; and its twin drawn THROUGH the piece, fainter
+  const edges = faceEdges(facePoints, restingFace.normal).map((e) => e.map((p) => new Vector3(p[0], p[1], p[2])));
+  const contour = CreateLineSystem(`${m.name}-resting-contour`, { lines: edges }, st.scene);
+  contour.color = RESTING_COLOUR.clone();
+  contour.parent = fill;
+  contour.isPickable = false;
+  const xray = CreateLineSystem(`${m.name}-resting-contour-xray`, { lines: edges }, st.scene);
+  xray.color = RESTING_COLOUR.clone();
+  xray.alpha = RESTING_CONTOUR_XRAY_ALPHA;
+  xray.renderingGroupId = 1;
+  xray.parent = fill;
+  xray.isPickable = false;
+  void data;
   const restingCentre = restingFaceRecord(topo.positions, topo.faces, restingFace)?.centre ?? [0, 0, 0];
   return { restingFill: fill, restingAxes: long.axes, restingAxesFallback: long.fallback, restingEdges: faceEdges(facePoints, restingFace.normal), restingLong: { axes: long.axes, ends: long.ends }, restingCentre, restingFlush };
 }
@@ -150,21 +166,6 @@ function restingParts(
  * should; one BEHIND it is hidden by step 3 — both right. What step 1 gives up is only the piece hiding itself, which a convex body
  * with culled back faces never needs.
  */
-function restingXray(st: SceneState, m: Mesh, fill: Mesh, data: VertexData): void {
-  const twin = new Mesh(`${m.name}-resting-face-xray`, st.scene);
-  data.applyToMesh(twin, false);
-  const tm = new StandardMaterial(`${m.name}-resting-face-xray-mat`, st.scene);
-  tm.emissiveColor = RESTING_COLOUR.clone();
-  tm.disableLighting = true;
-  tm.backFaceCulling = false;
-  tm.alpha = RESTING_XRAY_ALPHA;
-  tm.disableDepthWrite = true;
-  twin.material = tm;
-  twin.parent = fill; // ⭐ its lift
-  twin.alphaIndex = RESTING_ORDER + 1;
-  twin.isPickable = false;
-  twin.metadata = { orbitCandidate: false };
-}
 
 /** ⭐ Steps 1 and 3 of the draw order (above), once per piece: the piece into the transparent pass without depth, and its colourless depth clone. */
 function restingDepth(st: SceneState, m: Mesh): void {
@@ -186,8 +187,6 @@ function restingDepth(st: SceneState, m: Mesh): void {
   depth.metadata = { orbitCandidate: false };
 }
 
-/** ⭐ The faint yellow seen THROUGH its own piece. */
-const RESTING_XRAY_ALPHA = 0.25;
 /** ⭐ The transparent-pass order of the piece, its yellow twin and its depth (below the default index, so all three come first). */
 const RESTING_ORDER = 1000;
 
@@ -548,16 +547,11 @@ function restingFillFrame(st: SceneState, now: number): void {
   void now;
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFill === null || p.restingFace === null) return;
-  // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"*) — the resting face's fill is
-  // ALWAYS shown, at full strength (the highlight timing and the part's pink face fill are deleted)
-  const rest = 1;
+  // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"* → *"resting face … highlighted
+  // contours in yellow (no more pink highlight of the resting face …)"*) — the fill hidden; its yellow contour (and its x-ray twin) always shown
   const fill = p.restingFill;
-  fill.isVisible = true;
-  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * rest;
-  for (const c of fill.getChildMeshes(true)) {
-    c.isVisible = true;
-    if (c.material instanceof StandardMaterial) c.material.alpha = RESTING_XRAY_ALPHA * rest;
-  }
+  fill.isVisible = false;
+  for (const c of fill.getChildMeshes(true)) c.isVisible = true;
   const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
   fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);

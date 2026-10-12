@@ -4,7 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { orientCubePointer } from "./orient_cube";
+import { orientCubePointer, orientFollowCursor } from "./orient_cube";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -1249,6 +1249,7 @@ function partFirst(st: SceneState, except: number | null = null): number | null 
  * wheel) is unchanged.
  */
 export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample, dxOnly = false): void {
+  orientFollowCursor(st, pointerId, s.x, s.y); // ⭐ (2026-10-12) desktop: the orientation window follows the cursor while it orbits
   const dx = s.x - prev.x;
   // ⭐ (2026-10-11, *"first touch's dy while the second is held: ignored"*) — the way in and the orbit round the piece take dx only
   const dy = dxOnly ? 0 : s.y - prev.y;

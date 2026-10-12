@@ -488,13 +488,18 @@ export interface SceneState {
     /** ⭐ (2026-10-12) the candidate face's outline, and the candidate it was built for. */
     candEdge: import("@babylonjs/core/Meshes/mesh").Mesh | null;
     candEdgeTag: number;
+    /** ⭐ (2026-10-12) the face last CLICKED (shown instead of the candidate until the candidate changes — `cand` the candidate then), and
+     * whether the next copy appears at once (no fade-in). */
+    clicked: { readonly tag: number; readonly cand: number } | null;
+    instant: boolean;
+    /** ⭐ (2026-10-12) the red arrow of the turn from the piece's pose (`from`) to the copy's (`to`). */
+    turnArrow: { readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh; readonly from: import("../core/vec").Quat; readonly to: import("../core/vec").Quat } | null;
     replicas: {
       readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly piece: string;
       readonly radius: number;
       readonly centre: import("../core/vec").Vec3;
       readonly rest: import("../core/vec").Vec3;
-      readonly outline: import("@babylonjs/core/Materials/standardMaterial").StandardMaterial;
       readonly q: import("../core/vec").Quat;
       readonly tag: number;
       readonly born: number;
