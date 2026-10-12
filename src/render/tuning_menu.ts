@@ -29,19 +29,6 @@ import { paint } from "./hud_paint";
  * itself; a camera radius inside the near plane renders a black page with no error.
  * ⭐ A rejected change is RETURNED so the menu can show why, never dropped in silence.
  */
-/**
- * ⭐ (2026-10-12, the owner: *"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*) the orientation window's
- * position on one track: cursor 1 left → right (`orientWindowXPct`), cursor 2 top → bottom (`orientWindowYPct`), 0–100 %.
- */
-export function orientWindowSlider(st: SceneState): MenuSlider {
-  const x = tunable(st, "orientation window: ● left → right · ● top → bottom (%)", "orientWindowXPct", 0, 100, 5);
-  const y = tunable(st, "", "orientWindowYPct", 0, 100, 5);
-  return {
-    ...x,
-    second: { get: y.get, set: y.set, format: (a, b) => `left→right ${a.toFixed(0)} · top→bottom ${b.toFixed(0)}` },
-  };
-}
-
 export function tunable(st: SceneState, label: string,
   key: keyof typeof st.cfg & string,
   min: number,
@@ -113,8 +100,6 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
         // toggled, the piece shall be spawn as per boot"*
         tunable(st, "orbited piece (0 = green, 1 = turquoise)", "orbitPieceKind", 0, 1, 1),
-        // ⭐ prototype (2026-10-12, *"make a on-off cursor in the scene menu to enable or disable the window following the cursor … default: follow is off"*)
-        tunable(st, "orientation window follows the cursor (desktop; 0 = off, 1 = on)", "orientWindowFollow", 0, 1, 1),
         // ⭐ the owner, 2026-10-05: the ONE tap time (every tap: the undo, the unalign, the align, the orbit tap) — Unity's 200 ms
         tunable(st, "tap max duration (ms)", "tapMaxDuration", 100, 400, 10),
       ],
@@ -205,8 +190,9 @@ export function installTuningMenu(st: SceneState): void {
           // ⭐ prototype, the owner 2026-10-06: *"rename the menu CAMERA/CAMERA ORBIT to CAMERA ORBIT AROUND CENTER"*
           title: "CAMERA ORBIT AROUND CENTER",
           sliders: [
-            tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 3, 0.01),
-            tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -3, 3, 0.01),
+            // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled
+            tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 6, 0.01),
+            tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -6, 6, 0.01),
             tunable(st, "2nd ring radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
             tunable(st, "2nd ring height (m)", "orbitMiddleHeightM", -3, 3, 0.01),
             // ⭐ prototype (green box), 2026-10-02: the rings named 1st … 4th from the TOP (the owner); the 3rd sits between the 2nd and the
@@ -214,8 +200,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "3rd ring on (0 / 1)", "orbitLowerRingOn", 0, 1, 1),
             tunable(st, "3rd ring radius (m)", "orbitLowerRadiusM", 0, 3, 0.01),
             tunable(st, "3rd ring height (m)", "orbitLowerHeightM", -3, 3, 0.01),
-            tunable(st, "4th ring (bottom) radius (m)", "orbitBottomRadiusM", 0, 3, 0.01),
-            tunable(st, "4th ring (bottom) height (m)", "orbitBottomHeightM", -3, 3, 0.01),
+            tunable(st, "4th ring (bottom) radius (m)", "orbitBottomRadiusM", 0, 6, 0.01),
+            tunable(st, "4th ring (bottom) height (m)", "orbitBottomHeightM", -6, 6, 0.01),
             // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
             tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
             // ⭐ How long rule 1 waits to see whether a second finger is landing — i.e.
@@ -223,12 +209,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
             // ⭐ prototype (2026-10-11, *"add a slider to hide the pink gizmo"*)
             tunable(st, "pink gizmo (the orbit centre's ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1),
+            // ⭐ prototype (2026-10-12, *"create a slider for the power of the scaling distance"*)
+            tunable(st, "resting-face quads: growth power with the gizmo's distance", "quadGrowthPower", 0.5, 5, 0.1),
             // ⭐ prototype (2026-10-12, *"Build with the 150ms rest"*)
             tunable(st, "zoom → roll: the second finger's rest before the first finger rolls (ms)", "holdSwitchRestMs", 0, 600, 10),
-            // ⭐ prototype (2026-10-12, *"Make a slider 0-200% to increase the size of the cube window in the overlay (zero means hiding the window)"*)
-            tunable(st, "orientation cube window: size (% — 0 hides it)", "orientCubeSizePct", 0, 200, 10),
-            // ⭐ prototype (2026-10-12, *"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*)
-            orientWindowSlider(st),
             // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
             tunable(st, "reset time (ms)", "cameraResetMs", 0, 2000, 50),
             // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never

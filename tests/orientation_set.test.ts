@@ -1,10 +1,10 @@
 /**
- * ⭐⭐⭐ prototype — the level's set of orientations as a polyhedron (`RESTING_FACE_ALIGNMENT.md` §21; the owner, 2026-10-12: *"Make sure that
+ * ⭐⭐⭐ prototype — the level's set of orientations (⛔ its polyhedron and window deleted 2026-10-12) (`RESTING_FACE_ALIGNMENT.md` §21; the owner, 2026-10-12: *"Make sure that
  * the cube gets updated to the proper polyhedron with the distinct face directions in the scene"*).
  */
 import { describe, expect, it } from "vitest";
-import { distinctDirections, facetPolytope } from "../src/core/orientation_set";
-import { dot, length, type Vec3 } from "../src/core/vec";
+import { distinctDirections } from "../src/core/orientation_set";
+import { dot, type Vec3 } from "../src/core/vec";
 
 const AXES: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
@@ -26,56 +26,14 @@ describe("⭐⭐⭐ the level's distinct face directions", () => {
   });
 });
 
-describe("⭐⭐⭐ the polyhedron of the directions", () => {
-  it("⭐⭐ the six world directions make a CUBE: six facets, one per direction, each a square of side 2 at unit distance", () => {
-    const f = facetPolytope(AXES);
-    expect(f).toHaveLength(6);
-    expect(f.map((x) => x.tag).sort()).toEqual([0, 1, 2, 3, 4, 5]);
-    for (const x of f) {
-      expect(x.vertices).toHaveLength(4);
-      for (const v of x.vertices) expect(dot(v, AXES[x.tag]!)).toBeCloseTo(1, 9);
-      for (const v of x.vertices) expect(length(v)).toBeCloseTo(Math.sqrt(3), 9);
-    }
-  });
-  it("⭐ an open set (only +y) keeps the bounding box's other faces, tagged -1 — not a direction", () => {
-    const f = facetPolytope([[0, 1, 0]]);
-    expect(f.filter((x) => x.tag === 0)).toHaveLength(1);
-    expect(f.filter((x) => x.tag === -1)).toHaveLength(5);
-  });
-  it("⭐ a seventh direction (a 45° part) cuts a new facet off the cube — every direction a facet", () => {
-    const s = Math.SQRT1_2;
-    const f = facetPolytope([...AXES, [s, s, 0]]);
-    expect(new Set(f.map((x) => x.tag))).toEqual(new Set([0, 1, 2, 3, 4, 5, 6]));
-    const cut = f.find((x) => x.tag === 6)!;
-    expect(cut.vertices).toHaveLength(4);
-    for (const v of cut.vertices) expect(dot(v, [s, s, 0])).toBeCloseTo(1, 9);
-  });
-  it("⭐ facet vertices are counter-clockwise seen from outside", () => {
-    for (const x of facetPolytope(AXES)) {
-      const [a, b, c] = x.vertices as [Vec3, Vec3, Vec3];
-      const n: Vec3 = [
-        (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]),
-        (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]),
-        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]),
-      ];
-      expect(dot(n, x.normal)).toBeGreaterThan(0);
-    }
-  });
-});
-
 import { readFileSync } from "node:fs";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
 describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, sit against this face\"*)", () => {
-  it("⭐ the slider: 0–200 %, 100 by default, 0 hides the window", () => {
-    expect(DEFAULT_CONFIG.orientCubeSizePct).toBe(100);
-    expect(code("render/tuning_menu.ts")).toContain('"orientCubeSizePct", 0, 200, 10)');
-    expect(code("render/orient_cube.ts")).toContain("const show = c !== null && pct > 0 && st.greenBox !== null;");
-  });
   it("⭐⭐ rebuilt at the boot's goal baseline and at every goal commit; from the SEATED parts and the frozen bodies only, never the orbited pieces", () => {
     expect(code("render/goal_commit_wiring.ts")).toMatch(/const reached = st\.goalCommit\.commit\([^)]*\);\s*(?:\/\/[^\n]*\n\s*)*st\.orientDirty = true;/);
-    expect(code("render/orient_cube.ts")).toContain("if (st.orientDirty || (st.orientCube === null && st.orientDirs.length > 0)) rebuild(st);");
+    expect(code("render/orient_cube.ts")).toMatch(/if \(st\.orientDirty\) \{\s*st\.orientDirty = false;\s*st\.orientDirs = distinctDirections\(orientationFrames\(st\)\);/);
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (orbited.has(id)) continue;");
     expect(g).toContain("if (o.frozen !== true && !st.goalCommit.has(id)) continue;");
@@ -92,45 +50,10 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
     expect(code("render/hold_wiring.ts")).not.toContain("st.pinkDir = null");
     expect(g).not.toContain("st.pinkDir = null");
   });
-  it("⭐ a press in its window is the cube's, before the router (no orbit, no grab)", () => {
-    const p = code("render/pointer_wiring.ts");
-    expect(p.indexOf("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {")).toBeGreaterThan(0);
-    expect(p.indexOf("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {")).toBeLessThan(p.indexOf("if (cursorPointer(st, info.type, e)) {"));
-  });
 });
 
 
 const flat = (f: string) => code(f).replace(/\s+/g, " ");
-
-describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) an arrow, (c) the piece as it would be, in the CANDIDATE face's plane (2026-10-12)", () => {
-  it("⭐ *\"remove the pink gizmo and the part which supports it (the blue part) from the window\"* — no host, no copy of a part, no ring", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("centreHost");
-    expect(c).not.toContain("orient-copy");
-    expect(c).not.toContain("orient-ring");
-    expect(code("render/pointer_wiring.ts")).not.toContain("centreHost");
-    expect(code("render/scene_state.ts")).not.toContain("centreHost");
-  });
-  it("⭐⭐ ONE copy at the CENTRE (*\"Remove the current transform from the two replicas. Remove the red arrow. Place the other replica (the one with the resting face aligned with the candidate face) at the center of the cube. Scale it 120%. Make it 30% less opaque and highlight (in same yellow as cube highlight) its resting face edges (highlight fully opaque)\"*)", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("nowFrame");
-    expect(c).not.toContain("orient-arrow");
-    // ⭐ (2026-10-12, *"Place the center of the highlighted face of the replica in the center of the candidate face of the cube"*)
-    expect(c).toContain("const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];");
-    expect(c).toContain("replicaFrame(st, shown, q, seat, PIECE_SHARE * c.inner * s);");
-    expect(c).toContain("const off = qRotate(w, scale(copy.rest, k));");
-    expect(c).toMatch(/const PIECE_SHARE = 0\.648;\s*const REPLICA_ALPHA = 0\.7;/);
-    expect(c).toContain("(r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;");
-    expect(c).not.toContain("-rest-edges"); // ⛔ (2026-10-12, *"no more highlight of the face of the replica"*)
-  });
-  it("⛔ *\"Do not fade the pink faces on the green piece in the screen nor on the cube\"* — the resting face's fill and the cube's lit facet always at full strength", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("highlightAlpha(");
-    expect(c).not.toContain("LIT_ALPHA * fade");
-    const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const fill = p.restingFill; fill.isVisible = false; for (const c of fill.getChildMeshes(true)) c.isVisible = true;"); // ⭐ (2026-10-12) the yellow contour, the fill hidden
-  });
-});
 
 describe("⭐⭐ the boot fix (2026-10-12, *\"Fix the boot\"*): with no pink face, the FROZEN body's face pointing most UP — the floor's top", () => {
   it("⭐ `alignFaceOf`'s fallback asks `faceToward` for +y, never the direction from the body's first face", () => {
@@ -141,194 +64,13 @@ describe("⭐⭐ the boot fix (2026-10-12, *\"Fix the boot\"*): with no pink fac
   });
 });
 
-import { orientWindowBoot, orientWindowCorner } from "../src/input/orient_window";
-describe("⭐⭐ the window's position (2026-10-12, *\"Add a slider for the position of the window with two cursors (top-bottom & left-right)\"*)", () => {
-  it("⭐ boot: a touch screen bottom-left (*\"At boot on mobile … bottom left\"*), a desktop top-right (*\"At boot on desktop … top right\"*)", () => {
-    expect(orientWindowBoot(true)).toEqual({ xPct: 0, yPct: 100 });
-    expect(orientWindowBoot(false)).toEqual({ xPct: 100, yPct: 0 });
-  });
-  it("⭐ the corner: 0 % at the margin, 100 % against the far margin, clamped", () => {
-    expect(orientWindowCorner(1000, 600, 100, 10, 0, 100)).toEqual({ left: 10, top: 490 });
-    expect(orientWindowCorner(1000, 600, 100, 10, 100, 0)).toEqual({ left: 890, top: 10 });
-    expect(orientWindowCorner(1000, 600, 100, 10, 50, 50)).toEqual({ left: 450, top: 250 });
-    expect(orientWindowCorner(1000, 600, 100, 10, 150, -20)).toEqual({ left: 890, top: 10 });
-  });
-  it("⭐ wired: one slider, two cursors; the boot position by the pointer unless the URL names it", () => {
-    expect(code("render/tuning_menu.ts")).toContain('const x = tunable(st, "orientation window: ● left → right · ● top → bottom (%)", "orientWindowXPct", 0, 100, 5);');
-    const s = code("render/scene.ts");
-    expect(s).toContain('const boot = orientWindowBoot(typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);');
-    expect(s).toContain('if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;');
-    expect(code("render/orient_cube.ts")).toContain("orientWindowCorner(cw, ch, size, margin, st.cfg.orientWindowXPct, st.cfg.orientWindowYPct)");
-  });
-});
-
-import { clearOfOverlays } from "../src/input/orient_window";
-describe("⭐ the window kept clear of the screen's overlays (the HUD, the ☰, the ⏸, the score bar)", () => {
-  it("⭐ a top-half overlay it overlaps pushes it below; a bottom-half one above; one it does not overlap changes nothing", () => {
-    const hud = { left: 0, top: 0, right: 1000, bottom: 220 };
-    const pause = { left: 10, top: 650, right: 50, bottom: 690 };
-    expect(clearOfOverlays(890, 10, 100, [hud], 700, 10)).toBe(230);
-    expect(clearOfOverlays(10, 590, 100, [pause], 700, 10)).toBe(540);
-    expect(clearOfOverlays(890, 590, 100, [pause], 700, 10)).toBe(590);
-  });
-  it("⭐ wired: the window's top cleared of the visible overlays; the ☰ tagged", () => {
-    expect(code("render/orient_cube.ts")).toContain("const top = clearOfOverlays(left, corner.top, size, overlayRects(st), ch, margin);");
-    expect(code("render/menu.ts")).toContain('toggle.setAttribute("data-role", "menu-toggle");');
-  });
-});
-
 import { candidateFace } from "../src/input/orient_window";
-describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10-12)", () => {
+describe("⭐⭐ the candidate direction", () => {
   it("⭐ *\"the face of the cube which normal is pointing the most to the camera is the candidate support face\"* — never a leftover face", () => {
     const f = AXES.map((n, tag) => ({ tag, normal: n, centre: n }));
     expect(candidateFace(f, [0.2, 0.3, -10])).toBe(5); // the camera on −z: the −z facet
     expect(candidateFace(f, [0.2, 10, -1])).toBe(2); // above: the top
     expect(candidateFace([...f.slice(0, 2), { tag: -1, normal: [0, 0, -1], centre: [0, 0, -1] }], [0, 0, -10])).not.toBe(-1);
-  });
-  it("⭐⭐ the copy of the orbited piece: the pose `restingPreview` gives — the alignment to the candidate, or the next roll when it is the pink face; a new pose fades the old copy out", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
-    expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
-    expect(c).toMatch(/if \(!same\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(live !== undefined\) \{\s*live\.mesh\.dispose\(false, true\);/);
-    expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
-    const g = code("render/green_box_wiring.ts");
-    expect(flat("render/green_box_wiring.ts")).toContain("export function restingPreview( st: SceneState, dir: OrientDirection, roll: boolean, ): Quat | null {");
-    expect(g).toContain("const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
-  });
-  it("⭐⭐ the cube HELD: each new candidate that is not the pink face aligns the resting face to it, one episode for the hold; a tap is still a tap", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).toMatch(/if \(h === null \|\| cand < 0 \|\| cand === h\.last\) return;\s*h\.last = cand;\s*if \(dirIndex\(st, st\.pinkTargetNormal\) === cand\) return;/);
-    expect(c).toMatch(/if \(!h\.acted\) \{\s*st\.episodes\.touch/);
-    expect(c).toContain("st.orientHold = { pointerId: e.pointerId, last: c.candidate, acted: false };");
-    expect(c).toContain("if (!scrolled && p.tag >= 0 && isTapRelease(");
-  });
-  it("⭐ the desktop: ALT / CTRL in the window holds the cube; a press in the window while it is held drives the orbit", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("e.pointerId === MOUSE_SECOND_ID) return false;");
-    expect(c).toMatch(/if \(st\.orientHold !== null && e\.pointerId !== st\.orientHold\.pointerId\) \{\s*st\.orientDriver = \{ pointerId: e\.pointerId, prev: s \};/);
-    expect(c).toMatch(/orbit\(e\.pointerId, s, dv\.prev\);/);
-    expect(code("render/pointer_wiring.ts")).toContain("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {");
-  });
-});
-
-describe("⭐ the window's copies and the candidate (2026-10-12, *\"scale the green piece replicas 150% in the cube — highlight the edges of the candidate face — green piece replicas shall be instantly placed in their transform. No transitions\"*)", () => {
-  it("⭐ the copies 150 % (0.36 → 0.54 of the inner radius)", () => {
-    expect(code("render/orient_cube.ts")).toContain("const PIECE_SHARE = 0.648;"); // ⭐ 0.54 × 1.2 since
-  });
-  it("⭐ the candidate face outlined — a yellow tube along its edges, rebuilt when the candidate changes", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).toContain("if (shown !== c.candEdgeTag) candidateEdges(st, shown);");
-    // ⭐ (2026-10-12, *"pink face travels the cube (therefore replaces the current yellow contour highlight of the cube)"*) — the face shown is PINK;
-    // the aligned face a YELLOW contour (*"cube current aligned face highlighted contours in yellow"*)
-    expect(c).toContain('m.material = unlit(st, "orient-travelling-face-mat", PINK, LIT_ALPHA);');
-    expect(c).toContain('const m = CreateTube("orient-aligned-contour", { path, radius: CANDIDATE_EDGE_WIDTH * c.inner, tessellation: 6 }, st.scene);');
-  });
-  it("⭐⭐ no transitions: (a) the pose the piece is HEADING for (never the turn in flight); a fading (c) stays where it was", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("place(c.now"); // ⛔ (a) removed
-  });
-});
-
-describe("⛔⛔ the copy RIDES THE CUBE — no transition, never out of the window (2026-10-12, *\"when i orbit, the replica flies outside the window\"* → *\"There shall be no transition in the replica transform. Only a fade and appear. Make sure the replica does not jump outside the window\"* → *\"Ride the cube\"*)", () => {
-  it("⭐ placed ONCE at its birth (for THIS frame, both matrices refreshed), attached to the cube's root, never placed again; it fades where it is", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("place(copy, q, corr, slot, size); c.root.computeWorldMatrix(true); copy.mesh.computeWorldMatrix(true); copy.mesh.setParent(c.root);");
-    // ⛔ (2026-10-12, *"i do not want to see the intermediate step"*) the old copy goes at once — no cross-fade
-    expect(flat("render/orient_cube.ts")).toContain("if (live !== undefined) { live.mesh.dispose(false, true); c.replicas = c.replicas.filter((r) => r !== live); }");
-    expect(c).not.toContain("place(r, r.q, corr, slot, size)");
-    expect(c).not.toContain("orient-screen");
-  });
-  it("⭐ the window fitted to hold the copy seated on a face, not the cube alone", () => {
-    expect(code("render/orient_cube.ts")).toContain("const s = (0.8 * half) / Math.max(c.radius, c.inner * (1 + 2 * PIECE_SHARE));");
-  });
-  it("⭐ the preview from the pose the piece is HEADING for (a turn in flight changes nothing)", () => {
-    expect(code("render/green_box_wiring.ts")).toContain("return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
-  });
-});
-
-describe("⭐⭐ a clicked face shows the copy at once (2026-10-12, *\"when a cube's face is clicked, the replica shall immediately move to this face and update to the next possible orientation\"*)", () => {
-  it("⭐ the face clicked is the one shown (copy, outline) until the candidate changes; the copy appears at once, no fade-in", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("c.clicked = { tag, cand: c.candidate }; c.instant = true;");
-    expect(c).toContain("if (c.clicked !== null && c.clicked.cand !== cand) c.clicked = null; const shown = c.clicked?.tag ?? cand;");
-    expect(c).toContain("replicaFrame(st, shown, q, seat, PIECE_SHARE * c.inner * s);");
-    expect(c).toContain("born: c.instant ? now - REPLICA_FADE_MS : now,");
-  });
-});
-
-import { orientWindowAtCursor } from "../src/input/orient_window";
-describe("⭐⭐ desktop: the window follows the cursor while it orbits, frozen at the release; 175 % (2026-10-12)", () => {
-  it("⭐ the slider values that put the window's top-left `gap` below-right of the cursor, clamped", () => {
-    // a 1000 × 600 canvas, a 100 px window, a 10 px margin: the room is 880 × 480
-    expect(orientWindowAtCursor(1000, 600, 100, 10, 100, 100, 20, 20)).toEqual({ xPct: (110 / 880) * 100, yPct: (110 / 480) * 100 });
-    expect(orientWindowAtCursor(1000, 600, 100, 10, 100, 100, 70, 20)).toEqual({ xPct: (160 / 880) * 100, yPct: (110 / 480) * 100 }); // ⭐ half a window more to the right
-    expect(orientWindowAtCursor(1000, 600, 100, 10, 990, 590, 20, 20)).toEqual({ xPct: 100, yPct: 100 });
-    expect(orientWindowAtCursor(1000, 600, 100, 10, -50, -50, 20, 20)).toEqual({ xPct: 0, yPct: 0 });
-  });
-  it("⭐ wired: every orbit step (around the centre or the piece) of a MOUSE pointer, not while the cube is held; the release changes nothing", () => {
-    expect(code("render/pointer_wiring.ts")).toMatch(/export function orbitDragStep\([^)]*\): void \{\s*orientFollowCursor\(st, pointerId, s\.x, s\.y\);/);
-    const c = code("render/orient_cube.ts");
-    expect(c).toContain('if (st.pointerTypeOf.get(pointerId) !== "mouse" || st.orientHold !== null || st.orientRect === null) return;');
-    expect(code("render/scene.ts")).toContain('if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 150;'); // ⭐ 175 % × 0.85 (2026-10-12)
-  });
-});
-
-
-describe("⭐ the arrow at the centre; the window GLIDES to the cursor (2026-10-12, *\"put the red arrow at the center of the cube, make it slightly less opaque than the replica — lerp the window to its position when it moves to catch the cursor\"*)", () => {
-  it("⭐ the follow sets a GOAL; each frame the sliders approach it exponentially (90 ms); the cursor's gap a further half window to the right", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("st.orientWindowGoal = { xPct: p.xPct, yPct: p.yPct };");
-    expect(c).toContain("const k = 1 - Math.exp(-Math.max(0, tNow - st.orientWindowLerpAt) / ORIENT_FOLLOW_TAU_MS);");
-    expect(c).toContain("mmToPx(ORIENT_CURSOR_GAP_MM) + st.orientRect.size / 2, mmToPx(ORIENT_CURSOR_GAP_MM));");
-  });
-});
-
-describe("⛔ a left TAP never moves the window — a DRAG that orbits does (2026-10-12, *\"a left click tap shall not move the window (the tap is used to select another position of the pink gizmo)\"*)", () => {
-  it("⭐ the follow starts only once the press has travelled past the tap slop, latched to that press", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("if (!(Math.hypot(x - pressed.x, y - pressed.y) > mmToPx(st.cfg.doubleTapSlop))) return; st.orientFollowPress = { pointerId, t: pressed.t };");
-    expect(c).toContain("const latched = st.orientFollowPress !== null && st.orientFollowPress.pointerId === pointerId && st.orientFollowPress.t === pressed.t;");
-  });
-});
-
-import { nextCoupleRoll } from "../src/core/resting_face";
-import { cross, qFromAxisAngle, qmul, qRotate } from "../src/core/vec";
-describe("⛔⛔ the arrow of a ROLL shows the roll's own turn — clockwise about the resting face's normal (2026-10-12, *\"when the next quaternion is a roll to the next axis, the red arrow direction is wrong\"* — *\"because the red arrow should show a clockwise rotation around the normal of the resting face\"*)", () => {
-  it("⭐ `nextCoupleRoll` reports its axis and angle: turning the pose by them IS the roll", () => {
-    const q0: [number, number, number, number] = [1, 0, 0, 0];
-    // a resting face down (−y), axes x and z; the pink axes x and z; the camera above, looking down
-    const r = nextCoupleRoll(q0, [0, -1, 0], [[1, 0, 0], [0, 0, 1]], [[1, 0, 0], [0, 0, 1]], [0, -1, 0], 1)!;
-    const again = qmul(qFromAxisAngle(r.axis, r.angleRad), q0);
-    for (let i = 0; i < 4; i++) expect(Math.abs(again[i]! - r.q[i]!)).toBeLessThan(1e-12);
-    expect(Math.abs(r.axis[1])).toBeCloseTo(1, 12); // about the normal
-  });
-  it("⭐ the arc's sweep (u toward axis × u) is the sense a positive turn about the axis takes", () => {
-    const a: [number, number, number] = [0, 0, 1];
-    const u: [number, number, number] = [1, 0, 0];
-    const turned = qRotate(qFromAxisAngle(a, 0.01), u);
-    const v = cross(a, u);
-    expect(turned[0] * v[0] + turned[1] * v[1] + turned[2] * v[2]).toBeGreaterThan(0);
-  });
-});
-
-
-describe("⭐ the follow switch (2026-10-12, *\"make a on-off cursor in the scene menu to enable or disable the window following the cursor. if the window does not follow the cursor, place it where it was before we modified. default: follow is off\"*)", () => {
-  it("⭐ off by default, in the SCENE menu; off, the follow does nothing; switched off, the window back at its boot position", () => {
-    expect(DEFAULT_CONFIG.orientWindowFollow).toBe(0);
-    expect(code("render/tuning_menu.ts")).toContain('"orientWindowFollow", 0, 1, 1)');
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("if (st.cfg.orientWindowFollow !== 1) return;");
-    expect(c).toContain("if (st.cfg.orientWindowFollow !== 1 && st.orientFollowWas) { const cfgH = st.cfg as unknown as Record<string, number>; cfgH.orientWindowXPct = st.orientWindowHome.xPct; cfgH.orientWindowYPct = st.orientWindowHome.yPct;");
-  });
-});
-
-
-describe("⛔ the red arrow deleted (2026-10-12, *\"remove the red arrow\"*)", () => {
-  it("⭐ no arrow in the window, no turn carried by the preview, no pose-to-pose turn rule", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).not.toMatch(/turnArrow|TURN_ARROW|turnBetween/);
-    expect(code("input/orient_window.ts")).not.toContain("export function turnBetween");
-    expect(code("render/green_box_wiring.ts")).toContain("return next?.q ?? null;");
   });
 });
 
@@ -340,21 +82,35 @@ describe("⭐⭐ the resting-face quads (2026-10-12, *\"at the center of the res
     const s = Math.SQRT1_2;
     expect(distinctPlanes([...AXES, [s, s, 0], [-s, -s, 0]])).toHaveLength(4);
   });
-  it("⭐ wired: one quad per plane at the resting face's centre; the one in the resting face's plane edged yellow", () => {
+  it("⭐ wired: one quad per plane at the resting face's centre", () => {
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("const quads = distinctPlanes(st.orientDirs.map((d) => d.normal)).map((n, i) => {");
-    expect(c).toContain("const c = qRotate(rot, p.restingCentre); q.root.position.set(p.mesh.position.x + c[0], p.mesh.position.y + c[1], p.mesh.position.z + c[2]);");
-    expect(c).toContain("const lit = Math.abs(dot(x.normal, rn)) >= QUAD_SAME; x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;");
+    expect(c).toContain("const c = qRotate([r.w, r.x, r.y, r.z], p.restingCentre); return [p.mesh.position.x + c[0], p.mesh.position.y + c[1], p.mesh.position.z + c[2]];");
+    expect(c).toContain("q.root.position.set(at[0], at[1], at[2]);");
   });
 });
 
-import { quadGrowth, quadSide } from "../src/core/orientation_set";
+import { quadSide, quadSize } from "../src/core/orientation_set";
 describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a click aligns to the side clicked (2026-10-12)", () => {
-  it("⭐ *\"grow with the distance of the piece to the pink gizmo (more than linearly but less than … quadratically)\"* — (d/dRef)^1.5; *\"the max size of the quad shall be the 1.4 you have set\"* — never above 1", () => {
-    expect(quadGrowth(0.5, 1)).toBeCloseTo(Math.pow(0.5, 1.5), 12);
-    expect(quadGrowth(2, 1)).toBe(1); // capped: the 1.4 × radius
-    expect(quadGrowth(0, 1)).toBe(0.1);
-    expect(quadGrowth(0.25, 1) / quadGrowth(0.5, 1)).toBeCloseTo(Math.pow(0.5, 1.5), 12); // superlinear, sub-quadratic
+  it("⭐ *\"grow with the distance of the piece to the pink gizmo\"* — (d/dRef)^power; *\"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale\"* — never above 1; a slider", () => {
+    const k = DEFAULT_CONFIG.quadGrowthPower;
+    expect(k).toBe(3);
+    // ⭐⭐ (2026-10-12, *"the minimum dimension of the quad when closest to the gizmo shall be the diameter of the gizmo. fit the power curve to
+    // match the 1.4 and this min dimension"*) — the minimum at d = 0, the full size at dRef and beyond
+    expect(quadSize(0, 1, k, 0.02, 0.5)).toBeCloseTo(0.02, 12);
+    expect(quadSize(1, 1, k, 0.02, 0.5)).toBeCloseTo(0.5, 12);
+    expect(quadSize(2, 1, k, 0.02, 0.5)).toBe(0.5); // capped: the 1.4 × the piece
+    expect(quadSize(0.5, 1, k, 0.02, 0.5)).toBeCloseTo(0.02 + 0.48 * 0.125, 12);
+    expect(quadSize(0.5, 1, 1.5, 0, 0.5)).toBeCloseTo(0.5 * Math.pow(0.5, 1.5), 12);
+    expect(quadSize(0, 1, k, 0.9, 0.5)).toBe(0.5); // a gizmo wider than the full quad: the full quad
+    const c = flat("render/orient_cube.ts");
+    // ⭐ amended: *"0.20 the radius of the piece. fit the power curve to match the 1.4 and 0.20"*
+    expect(c).toContain("const QUAD_SIZE = 1.4;");
+    expect(c).toContain("const QUAD_MIN = 0.2;");
+    expect(c).toContain("const full = QUAD_SIZE * 2 * r; const side = quadSize(d, q.dRef ?? d, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    expect(c).not.toContain("GIZMO_RING_PX");
+    expect(c).not.toContain("GIZMO_RING_PX");
+    expect(code("render/tuning_menu.ts")).toContain('"quadGrowthPower", 0.5, 5, 0.1)');
   });
   it("⭐ *\"click on one side or the other of the quad are differentiated so the piece can turn 180 degrees\"* — the normal on the eye's side", () => {
     expect(quadSide([1, 0, 0], [0, 0, 0], [5, 1, 0])).toEqual([1, 0, 0]);
@@ -366,5 +122,96 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(c).toContain("const tag = st.orientDirs.findIndex((dd) => dot(dd.normal, p.side) >= SAME_DIR); if (tag >= 0) orientCubeTap(st, tag);");
     expect(c).toContain("if (p.dragging) orbit(e.pointerId, s, p.prev);");
     expect(flat("render/pointer_wiring.ts")).toContain("if (restingQuadPointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {");
+  });
+});
+
+describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove the cube, the replica, the window, the sliders. keep the left click/first touch outside which triggers the equivalent to left click/first touch on the pink face of the cube (it now passes through the quads instead of the cube)\"*)", () => {
+  it("⛔ no polyhedron, no copy, no window, no sliders, no cube held, no cursor follow", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).not.toMatch(/orientCubePointer|orientFollowCursor|orientHoldStep|replicaFrame|pieceCopy|facetPolytope|orient-polyhedron|orient-window/);
+    expect(code("render/scene_state.ts")).not.toMatch(/orientCube:|orientRect|orientHold|orientDriver|orientWindow|orientFollow/);
+    expect(code("render/pointer_wiring.ts")).not.toMatch(/orientCubePointer|orientFollowCursor/);
+    expect(code("render/tuning_menu.ts")).not.toMatch(/orientCubeSizePct|orientWindow/);
+    expect(code("render/scene.ts")).not.toMatch(/orientWindowBoot|orientCubeSizePct/);
+    expect(code("render/green_box_wiring.ts")).not.toContain("export function restingPreview(");
+    const cfg = DEFAULT_CONFIG as unknown as Record<string, unknown>;
+    for (const k of ["orientCubeSizePct", "orientWindowXPct", "orientWindowYPct", "orientWindowFollow"]) expect(cfg[k]).toBeUndefined();
+  });
+  it("⭐⭐ the PINK direction: the candidate (facing the camera most from the resting face), or the one tapped until the candidate changes", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: add(at, d.normal) })),");
+    expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
+    expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
+    expect(c).toContain("return st.orientShown.clicked?.tag ?? st.orientShown.candidate;");
+    expect(c).toContain("st.orientShown.clicked = { tag, cand: st.orientShown.candidate };");
+  });
+  it("⭐⭐ *\"highlight in yellow the quad which corresponds to the pink face of the cube\"* — the pink direction's plane, not the resting face's", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("const pn = shown >= 0 ? (st.orientDirs[shown]?.normal ?? null) : null;");
+    expect(c).toContain("const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;");
+    expect(c).not.toContain("QUAD_SAME");
+  });
+  it("⭐ a tap on empty space taps the pink direction (through the quads)", () => {
+    expect(flat("render/orient_cube.ts")).toContain("const tag = shownTag(st); return tag >= 0 && orientCubeTap(st, tag);");
+    expect(flat("render/pointer_wiring.ts")).toContain("orientTapShown(st)");
+  });
+});
+
+describe("⛔⛔ the piece before any quad (2026-10-12, *\"make sure the click/touch on the faces of the green piece to select the resting face takes precedence to the click/touch on any quad\"*)", () => {
+  it("⭐ a ray meeting the orbited piece is the piece's — checked before any quad is picked", () => {
+    const c = flat("render/orient_cube.ts");
+    const piece = c.indexOf("if (st.scene.pick(x, y, (m) => m === piece)?.hit === true) return false;");
+    expect(piece).toBeGreaterThan(0);
+    expect(piece).toBeLessThan(c.indexOf("const hit = st.scene.pick(x, y, (m) => fills.includes(m as Mesh));"));
+  });
+});
+
+describe("⭐⭐ the resting face's yellow contour scales as the quads (2026-10-12, *\"scale the yellow highlight of the resting face in the same way as the quads\"*)", () => {
+  it("⭐ the quads' growth kept each frame; the fill (its contour's parent) scaled by it about the face's centre", () => {
+    expect(flat("render/orient_cube.ts")).toContain("q.growth = side / full; q.root.scaling.setAll(side);");
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const k = st.restingQuads?.growth ?? 1; const c = p.restingCentre; fill.scaling.setAll(k);");
+    expect(g).toContain("fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);");
+  });
+});
+
+import { elevationAtDistance, orbitOffset } from "../src/input/orbit";
+import { sceneConfig } from "../src/input/scene_rig";
+import { SCENE_1 } from "../src/content/scene_1";
+import { clampPieceRadiusM } from "../src/input/green_box";
+describe("⭐⭐ the 1st and 4th rings to 6 m; the boot still 3 m (2026-10-12, *\"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo\"* → *\"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)\"*)", () => {
+  const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+  it("⭐ the 1st and 4th rings doubled: 6.0 m from the centre at zoom 1; the piece's own cap 6 m (it was the camera's 3 m)", () => {
+    expect([cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM]).toEqual([5.1, 3.15, 5.1, -3.15]);
+    expect(orbitOffset(cfg, 0, 1, 1).radiusM).toBeCloseTo(5.9944, 4);
+    expect(orbitOffset(cfg, 0, 0, 1).radiusM).toBeCloseTo(5.9944, 4);
+    expect(clampPieceRadiusM(5.995, cfg)).toBeCloseTo(5.995, 12);
+    expect(clampPieceRadiusM(7, cfg)).toBe(6);
+  });
+  it("⭐ the boot: on the way up to the 1st ring, where the rings are 3 m from the centre", () => {
+    expect(SCENE_1.orbit?.bootDistanceM).toBe(3);
+    const v = elevationAtDistance(cfg, 3);
+    expect(v).toBeGreaterThan(0.5);
+    expect(v).toBeLessThan(1);
+    expect(orbitOffset(cfg, 0, v, 1).radiusM).toBeCloseTo(3, 6);
+    expect(orbitOffset(cfg, 0, v + 0.01, 1).radiusM).toBeGreaterThan(3);
+    expect(elevationAtDistance(cfg, 7)).toBe(1);
+    expect(code("render/scene.ts")).toContain("? elevationAtDistance(st.cfg, bootDistanceM)");
+  });
+});
+
+describe("⭐ the quads seen through the piece (2026-10-12, *\"show the quads even if they are occluded by the piece\"*)", () => {
+  it("⭐ fill and edges in rendering group 1 — drawn after the scene, its depth cleared", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("fill.isPickable = false; // ⭐ (2026-10-12, the owner: *\"show the quads even if they are occluded by the piece\"*) — drawn after the scene, its depth cleared fill.renderingGroupId = 1;");
+    expect(c).toContain("edges.isPickable = false; edges.renderingGroupId = 1;");
+  });
+});
+
+describe("⭐⭐ the quad tapped stays yellow until the next drag (2026-10-12, *\"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on rolling the resting piece on this quad until the next delta position\"*)", () => {
+  it("⭐ an orbit drag step that moves drops it; nothing else does", () => {
+    expect(flat("render/pointer_wiring.ts")).toContain("const dy = dxOnly ? 0 : s.y - prev.y; // ⭐⭐ (2026-10-12, *\"… keep on rolling the resting piece on this quad until the next delta position\"*) — a drag drops the quad tapped: // the yellow quad is the candidate again if (dx !== 0 || dy !== 0) st.orientShown.clicked = null;");
+    const c = code("render/orient_cube.ts");
+    expect(c.match(/clicked = null/g)).toBeNull();
   });
 });

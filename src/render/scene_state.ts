@@ -473,64 +473,16 @@ export interface SceneState {
       readonly fill: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly edges: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
     }[];
-    /** ⭐ (2026-10-12) the gizmo distance at the first frame — the size's reference (`quadGrowth`). */
+    /** ⭐ (2026-10-12) the gizmo distance at the first frame — the size's reference (`quadSize`). */
     dRef: number | null;
+    /** ⭐ (2026-10-12) this frame's growth (the side ÷ the full side, `quadSize`) — the resting face's yellow contour scales by it too (`restingFillFrame`). */
+    growth: number;
   } | null;
   /** ⭐ (2026-10-12) a press on a resting-face quad: the side clicked (the direction to sit against), its press, its last sample, a drag yet. */
   quadPress: { readonly pointerId: number; readonly side: import("../core/vec").Vec3; readonly pressed: import("../input").Sample; prev: import("../input").Sample; dragging: boolean } | null;
-  orientCube: {
-    readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
-    readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
-    readonly edges: readonly import("@babylonjs/core/Meshes/linesMesh").LinesMesh[];
-    readonly back: import("@babylonjs/core/Meshes/mesh").Mesh;
-    readonly facetNormals: readonly import("../core/vec").Vec3[];
-    readonly facetPoints: readonly import("../core/vec").Vec3[];
-    readonly facetVerts: readonly (readonly import("../core/vec").Vec3[])[];
-    readonly facetTags: readonly number[];
-    readonly facetCentres: readonly import("../core/vec").Vec3[];
-    litMesh: import("@babylonjs/core/Meshes/mesh").Mesh | null;
-    readonly inner: number;
-    readonly triTag: readonly number[];
-    readonly vertexTags: readonly number[];
-    readonly vertexNormals: readonly import("../core/vec").Vec3[];
-    readonly radius: number;
-    lit: number;
-    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none); the copies of the piece as it would be (the live one, the
-     * fading). */
-    candidate: number;
-    /** ⭐ (2026-10-12) the candidate face's outline, and the candidate it was built for. */
-    candEdge: import("@babylonjs/core/Meshes/mesh").Mesh | null;
-    candEdgeTag: number;
-    /** ⭐ (2026-10-12) the face last CLICKED (shown instead of the candidate until the candidate changes — `cand` the candidate then), and
-     * whether the next copy appears at once (no fade-in). */
-    clicked: { readonly tag: number; readonly cand: number } | null;
-    instant: boolean;
-    replicas: {
-      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
-      readonly piece: string;
-      readonly radius: number;
-      readonly centre: import("../core/vec").Vec3;
-      readonly rest: import("../core/vec").Vec3;
-      readonly q: import("../core/vec").Quat;
-      readonly tag: number;
-      readonly born: number;
-      dying: number | null;
-    }[];
-  } | null;
-  orientRect: { readonly left: number; readonly top: number; readonly size: number } | null;
-  orientPress: { readonly pointerId: number; readonly tag: number; readonly x: number; readonly y: number; readonly t: number } | null;
-  /** ⭐ (2026-10-12) THE CUBE HELD — the pointer holding it, the last candidate seen, whether a scroll aligned (one episode for the hold). */
-  orientHold: { readonly pointerId: number; last: number; acted: boolean } | null;
-  /** ⭐ (2026-10-12) where the window glides to (the slider values) while it catches the cursor, and when it last moved (ms). */
-  orientWindowGoal: { readonly xPct: number; readonly yPct: number } | null;
-  orientWindowLerpAt: number;
-  /** ⭐ (2026-10-12) the press whose DRAG moves the window (past the tap slop — a tap never does). */
-  orientFollowPress: { readonly pointerId: number; readonly t: number } | null;
-  /** ⭐ (2026-10-12) the window's boot position (where it goes back when the follow is switched off), and whether the follow was on last frame. */
-  orientWindowHome: { readonly xPct: number; readonly yPct: number };
-  orientFollowWas: boolean;
-  /** ⭐ (2026-10-12) a press in the window while the cube is held: it drives the orbit. */
-  orientDriver: { readonly pointerId: number; prev: import("../input").Sample } | null;
+  /** ⭐ (2026-10-12) THE PINK DIRECTION: the CANDIDATE (the direction facing the camera most from the resting face; −1 none), and the one last
+   * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
+  orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
   pinkDir: import("../core/orientation_set").OrientDirection | null;
   /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */

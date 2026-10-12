@@ -152,6 +152,9 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   **1.8 / 1.0 / 1.5 m** (top / middle / bottom), heights 0.55 / 0.1 / −0.5 m (unchanged) — ⭐ the bottom ring lowered to **−1.2 m** on 2026-09-28, in both scenes and the config default (the owner). `Scene_0`
   states the 2026-09-14 rig it always had (1.0 / 0.36 / 0.5). ⭐ The boot view does not move: the
   camera still boots 1.5 m out and the zoom multiplier absorbs the new rings.
+  ⭐ **Prototype, 2026-10-12** (the owner: *"double rings 1 and 4, keep the piece at 3m boot view as it is"*): the 1st and 4th rings
+  are **5.1 m at ±3.15 m** (6.0 m from the centre; were 2.55 / ±1.575), the orbited piece reaches **6 m** (`pieceRadiusMaxM`), and
+  `orbit.bootDistanceM: 3` boots where the rings are 3 m away → [`RESTING_FACE_ALIGNMENT.md`](../../40_RENDER_SCENE/spec/RESTING_FACE_ALIGNMENT.md) §25.
 
 ## 9. ⭐ The floor's top centre is the origin (`D169`)
 

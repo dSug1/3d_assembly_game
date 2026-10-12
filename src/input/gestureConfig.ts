@@ -477,16 +477,12 @@ export interface GestureConfig {
   pieceOrbitEnterMm: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
+  /** ⭐ Prototype (2026-10-12, §25): the resting-face quads' growth with the gizmo's distance — (d / d at boot)^this, at most 1. */
+  quadGrowthPower: number;
+  /** ⭐ Prototype (2026-10-12): the ORBITED PIECE's farthest distance from the orbit centre (m) — the rings beyond it are cut (`clampPieceRadiusM`). */
+  pieceRadiusMaxM: number;
   /** ⭐ Prototype (2026-10-12): zoom → roll without lifting — how long the second finger must REST before the first finger's dx rolls (ms). */
   holdSwitchRestMs: number;
-  /** ⭐ Prototype (2026-10-12, §21): the ORIENTATION CUBE's window size, % of its 22 mm (0 hides it; 0–200). */
-  orientCubeSizePct: number;
-  /** ⭐ Prototype (2026-10-12, §21): the orientation window's position — 0 % left … 100 % right, 0 % top … 100 % bottom. ⚠ Set at boot by the
-   * device (`orientWindowBoot`: a touch screen bottom-left, a desktop top-right) unless the URL names it. */
-  orientWindowXPct: number;
-  orientWindowYPct: number;
-  /** ⭐ Prototype (2026-10-12, §23): the desktop window FOLLOWS the cursor while it orbits (1) or stays at its place (0, its boot position). */
-  orientWindowFollow: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
@@ -976,16 +972,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
+  // ⭐ prototype, the owner 2026-10-12: *"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale"* → *"create a slider for
+  // the power of the scaling distance"*
+  quadGrowthPower: 3,
+  // ⭐ prototype, the owner 2026-10-12: *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* — it rode
+  // the camera's maximum (`cameraRadiusMaxM`, 3 m)
+  pieceRadiusMaxM: 6,
   // ⭐ prototype, the owner 2026-10-12: *"Build with the 150ms rest"*
   holdSwitchRestMs: 150,
-  // ⭐ prototype, the owner 2026-10-12: *"Make a slider 0-200% to increase the size of the cube window in the overlay (zero means hiding the window)"*
-  orientCubeSizePct: 100,
-  // ⭐ the owner 2026-10-12: *"Add a slider for the position of the window with two cursors"* — the desktop's (top-right); a touch screen's
-  // is set at boot (bottom-left, `orientWindowBoot`)
-  orientWindowXPct: 100,
-  orientWindowYPct: 0,
-  // ⭐ the owner 2026-10-12: *"make a on-off cursor in the scene menu to enable or disable the window following the cursor … default: follow is off"*
-  orientWindowFollow: 0,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

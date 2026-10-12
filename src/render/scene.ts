@@ -39,11 +39,10 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
-import { orientWindowBoot } from "../input/orient_window";
 import { attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
-import { levelElevation } from "../input/orbit";
+import { levelElevation, elevationAtDistance } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
 import { GestureSpan, UndoHistory } from "../core/undo_history";
 import { type SceneSnapshot } from "./undo_wiring";
@@ -126,17 +125,6 @@ export function createScene(
   // ⭐ `D131`: the scene's own orbit rig first, then the URL over it.
   st.tuning = parseConfigOverrides(sceneConfig(DEFAULT_CONFIG, spec.orbit), window.location.search);
   st.cfg = st.tuning.config;
-  // ⭐ (2026-10-12, *"At boot on mobile, set the position of the slider to bottom left"* / *"At boot on desktop, set the slider position to top
-  // right"*) — the orientation window's boot position by the device's pointer, unless the URL names it
-  {
-    const boot = orientWindowBoot(typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
-    const cfgW = st.cfg as unknown as Record<string, number>;
-    if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;
-    if (!st.tuning.applied.some((a) => a.startsWith("orientWindowYPct="))) cfgW.orientWindowYPct = boot.yPct;
-    // ⭐ (2026-10-12, *"Also in desktop mode, scale the current cube window 175%"*)
-    // ⭐ (2026-10-12, *"in desktop, scale the window 85%"*) — 175 % × 0.85 ≈ 149 %: 150 % (the slider's step is 10)
-    if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 150;
-  }
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
   st.frameMeter = new FrameMeter();
@@ -585,23 +573,14 @@ export function createScene(
   st.restingSeated = null;
   st.restingLast = null;
   st.hold = null;
-  // ⭐ (2026-10-12, §21) the orientation cube: built at the first frame, read again at every goal commit
+  // ⭐ (2026-10-12, §21/§25) the level's directions: read at the first frame, again at every goal commit; the resting-face quads
   st.orientDirs = [];
   st.orientDirty = true;
   st.restingQuads = null;
   st.quadPress = null;
-  st.orientCube = null;
-  st.orientRect = null;
-  st.orientPress = null;
+  st.orientShown = { candidate: -1, clicked: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;
-  st.orientHold = null;
-  st.orientDriver = null;
-  st.orientWindowGoal = null;
-  st.orientWindowLerpAt = performance.now();
-  st.orientFollowPress = null;
-  st.orientWindowHome = { xPct: st.cfg.orientWindowXPct, yPct: st.cfg.orientWindowYPct }; // ⭐ (2026-10-12) after the boot position is set
-  st.orientFollowWas = st.cfg.orientWindowFollow === 1;
   st.pieceFaceTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;
@@ -814,8 +793,17 @@ export function createScene(
   st.cameraReset = null;
   // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
   // ⭐ prototype (green box): `"TOP"` boots on the top ring.
+  // ⭐ prototype (2026-10-12, *"double rings 1 and 4, keep the piece at 3m boot view as it is"*): `"TOP"` with a boot distance — the elevation
+  // at which the rings are that far from the centre (`elevationAtDistance`)
+  const bootDistanceM = st.sceneSpec.orbit?.bootDistanceM;
   st.bootElevation =
-    st.sceneSpec.bootView === "LEVEL" ? levelElevation(st.cfg) : st.sceneSpec.bootView === "TOP" ? 1 : ORBIT_START_ELEVATION;
+    st.sceneSpec.bootView === "LEVEL"
+      ? levelElevation(st.cfg)
+      : st.sceneSpec.bootView === "TOP"
+        ? bootDistanceM !== undefined
+          ? elevationAtDistance(st.cfg, bootDistanceM)
+          : 1
+        : ORBIT_START_ELEVATION;
   st.orbit = new OrbitController(
     st.cfg,
     ORBIT_START_YAW_RAD,

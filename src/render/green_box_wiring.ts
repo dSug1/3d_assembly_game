@@ -47,8 +47,6 @@ function piecesFacesOf(m: Mesh): number {
   return topo === null ? 0 : pieceFaces(topo.positions, topo.faces).length;
 }
 
-/** ⭐ The pink — brighter since 2026-10-02 (it was 1, 0.42, 0.78). */
-const PINK = new Color3(1, 0.6, 0.9);
 /** ⭐ The colour of a resting face — the PINK ring's (the owner, 2026-10-06: *"resting face highlight in pink (same as pink ring) instead of yellow"*; it was yellow). */
 // ⭐⭐ (2026-10-12, the owner: *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the
 // resting face …)"*) — the resting face is a YELLOW CONTOUR (the cube's aligned-face yellow), its fill hidden
@@ -554,7 +552,12 @@ function restingFillFrame(st: SceneState, now: number): void {
   for (const c of fill.getChildMeshes(true)) c.isVisible = true;
   const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
-  fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
+  // ⭐⭐ (2026-10-12, the owner: *"scale the yellow highlight of the resting face in the same way as the quads"*) — about the face's centre, by the
+  // quads' growth this frame (`quadSize` ÷ the full size, at most 1)
+  const k = st.restingQuads?.growth ?? 1;
+  const c = p.restingCentre;
+  fill.scaling.setAll(k);
+  fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);
 }
 
 /**
@@ -729,7 +732,9 @@ export function createGreenBox(st: SceneState): void {
     { lines: PINK_RING_LOOPS.map((k) => RING_POINTS.map((p) => p.scale(k))) },
     st.scene,
   );
-  ring.color = PINK.clone();
+  // ⭐⭐ (2026-10-12, the owner: *"change the color of the pink gizmo to the same yellow as the quad color"*) — the quads' yellow (it was
+  // pink, 1, 0.6, 0.9)
+  ring.color = RESTING_COLOUR.clone();
   ring.isPickable = false;
   ring.metadata = { orbitCandidate: false };
   ring.billboardMode = Mesh.BILLBOARDMODE_ALL;
@@ -739,9 +744,10 @@ export function createGreenBox(st: SceneState): void {
 
 /**
  * ⭐ The band's loops, as scales of the ring: the ring is `GIZMO_RING_PX` (11 px) across, so 1 px of radius is 2/11 ≈ 0.18 of its
- * radius; loops ±1 px around it, half a pixel apart — a ~3 px band centred on the old line.
+ * radius; ⭐ (2026-10-12, the owner: *"reduce the thickness of the yellow gizmo ring by a factor 2"*) loops ±0.5 px around it, a quarter of a
+ * pixel apart — a ~1.5 px band centred on the old line (it was ±1 px, half a pixel apart, ~3 px).
  */
-const PINK_RING_LOOPS = [-1, -0.5, 0, 0.5, 1].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
+const PINK_RING_LOOPS = [-0.5, -0.25, 0, 0.25, 0.5].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
 /** ⭐ The ring's alpha when only the green piece is in front of it — *"slightly translucent"*. */
 const PINK_MASKED_ALPHA = 0.35;
 /** ⭐ A hit counts as IN FRONT only if nearer than the target by more than this — the piece it sits on is met right at it. */
@@ -1154,41 +1160,3 @@ export function orientationFrames(st: SceneState): { readonly normal: Vec3; read
   return out;
 }
 
-/**
- * ⭐⭐ (2026-10-12, §21, *"show the green/turquoise piece in the transform as it would be if it was aligned with the candidate support face …
- * if the candidate support face is the pink face, show the green-turquoise piece replication with the next roll to the next axis applied"*)
- * — the orientation the orbited piece WOULD take, nothing moved: sitting against the direction \`dir\` (\`alignRestingFace\`'s turn, from the
- * pose shown), or, with \`roll\`, the next roll to the next axis (\`rollRestingFace\`'s, from where a turn in flight is heading). \`null\`
- * with nothing to show.
- */
-export function restingPreview(
-  st: SceneState,
-  dir: OrientDirection,
-  roll: boolean,
-): Quat | null {
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  if (p === undefined || p.restingFace === null) return null;
-  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
-  const shown: Quat = [r.w, r.x, r.y, r.z];
-  if (roll) {
-    const rr = st.restRoll;
-    if (rr === null) return null;
-    const from = st.restAlign?.base ?? shown;
-    const cam = st.camera.position;
-    const tg = st.camera.getTarget();
-    let pinkAxes = rr.pinkAxes;
-    if (pinkAxes.length === 0) {
-      const right = st.camera.getDirection(new Vector3(1, 0, 0));
-      pinkAxes = [[right.x, right.y, right.z]];
-    }
-    const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1);
-    return next?.q ?? null; // ⛔ (2026-10-12) the red arrow deleted — its turn with it
-  }
-  const a = st.pieceAnchor;
-  const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
-  const ends = dir.axes.map((x) => [sub(pos, scale(x, 0.05)), add(pos, scale(x, 0.05))] as const);
-  // ⛔ (2026-10-12, the owner: *"There shall be no transition in the replica transform. Only a fade and appear"*) — from the pose the piece
-  // is HEADING for (a turn in flight, `restAlign`), as the roll's: from the pose SHOWN, the preview changed on every frame of the 125 ms
-  // turn, and a new copy faded in and out on each one
-  return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
-}

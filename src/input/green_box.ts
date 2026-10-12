@@ -140,13 +140,14 @@ export const GREEN_PIECE_ORBIT_ZOOM = 1;
  * slider"*). It rode the CAMERA's near-plane guard (`cameraRadiusMinM`, 0.15 m) — a floor that made it glide on a 0.15 m ball through the
  * waist; now the rings alone decide (`Scene_1`'s waist: 0.09 m — a ring's radius is always positive, so never the centre itself), and
  * collision will be the only thing to stop it near another part. ⚠ Until then it passes THROUGH the painting at the waist. The camera keeps
- * its own minimum; the far end keeps the camera's maximum (`cameraRadiusMaxM`).
+ * its own minimum. ⭐ (2026-10-12, *"so that the piece can go up to 6 m away from the yellow gizmo"*) — the far end is its OWN maximum too
+ * (`pieceRadiusMaxM`, 6 m; it was the camera's `cameraRadiusMaxM`, 3 m).
  */
 export const PIECE_MIN_DISTANCE_M = 0;
 
-/** ⭐ The piece's distance from the orbit centre, held to its own range: [`PIECE_MIN_DISTANCE_M`, `cameraRadiusMaxM`]. */
+/** ⭐ The piece's distance from the orbit centre, held to its own range: [`PIECE_MIN_DISTANCE_M`, `pieceRadiusMaxM`]. */
 export function clampPieceRadiusM(radiusM: number, cfg: GestureConfig): number {
-  return Math.min(cfg.cameraRadiusMaxM, Math.max(PIECE_MIN_DISTANCE_M, radiusM));
+  return Math.min(cfg.pieceRadiusMaxM, Math.max(PIECE_MIN_DISTANCE_M, radiusM));
 }
 
 export function clampGreenZoom(zoom: number, lower: number = GREEN_ZOOM_MIN): number {

@@ -11,6 +11,7 @@ import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, 
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
 import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
+import { RIG_3M } from "./helpers/rig_3m"; // ⭐ (2026-10-12) the rig these vectors were written on
 import { SCENE_0 } from "../src/content/scene_0";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
 
@@ -469,7 +470,7 @@ describe("⭐⭐ prototype — the green box", () => {
 
   it("⭐ prototype: Scene_1 boots on the TOP ring (the owner: *\"boot scene 1 on the top ring\"*)", () => {
     expect(SCENE_1.bootView).toBe("TOP");
-    expect(code("scene.ts")).toMatch(/st\.sceneSpec\.bootView === "TOP" \? 1 :/);
+    expect(code("scene.ts")).toMatch(/: st\.sceneSpec\.bootView === "TOP"\s*\? bootDistanceM !== undefined\s*\? elevationAtDistance\(st\.cfg, bootDistanceM\)\s*: 1/); // ⭐ (2026-10-12) at 3 m on the way up
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1)).bootView).toBe("TOP"); // the JSON seam keeps it
   });
 
@@ -509,14 +510,14 @@ describe("⛔⛔ prototype — NO STAIR between the rings: the camera's pitch ax
   const DEG = Math.PI / 180;
   it("⛔ on the waist the pitch angle is NOT monotone — it overshoots the top ring's pitch, then comes back", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const peak = Math.max(...Array.from({ length: 101 }, (_, i) => pitchOf(cfg, 0.5 + i * 0.005)));
     expect(peak).toBeGreaterThan(pitchOf(cfg, 1) + 1 * DEG); // 34.06° against 31.7°
   });
 
   it("⭐⭐ with the leash at 0, a dy sweep middle → top → middle: the camera sits EXACTLY on the green piece's pitch all the way", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const P0 = { leashRad: 0, settleDelayMs: 0, restTauMs: 120 };
     let s = cameraOrbitAt({ yaw: 0, v: 0.5 }, 0, cfg);
     let worst = 0;
@@ -533,7 +534,7 @@ describe("⛔⛔ prototype — NO STAIR between the rings: the camera's pitch ax
 describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 2026-10-02: *\"the shape shall be a waist … propose the three missing parameters so that the 2D curve … can be smooth\"*)", () => {
   it("⭐ the outer rings stay under the 3 m clamp at the boot zoom; ⛔ the middle ring NO LONGER clears the painting (the owner's 0.09 m, 2026-10-02)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const zoom = DEFAULT_CONFIG.bootZoom;
     const u = SCENE_1.unitM!;
     const c = SCENE_1.orbit!.centreM as readonly number[];
@@ -575,7 +576,7 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
       }
       return { radius: tightest, speedRatio: hi / lo };
     };
-    const now = measure(sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit));
+    const now = measure(sceneConfig(DEFAULT_CONFIG, RIG_3M));
     const stair = measure({ ...DEFAULT_CONFIG, orbitTopRadiusM: 1.7, orbitTopHeightM: 0.5, orbitMiddleRadiusM: 0.2, orbitMiddleHeightM: 0, orbitBottomRadiusM: 0.9, orbitBottomHeightM: -0.4 });
     // ⚠ was > 4× with three rings; the owner's fourth ring (2026-10-02) makes a short vertical cylinder at the waist, entered
     // and left more sharply — still over 2× the stair's tightest turn
@@ -590,7 +591,7 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
 describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02: *\"set the zoom at 1.00 but the scene shall be exactly the same\"*)", () => {
   it("⭐ on the OUTER rings, the green piece at zoom 1.00 is where it was at zoom 1.5 on the old ones (the middle ring changed after, by the owner)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
-    const now = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const now = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const before = { ...now, orbitTopRadiusM: 1.7, orbitTopHeightM: 1.05, orbitMiddleRadiusM: 0.25, orbitMiddleHeightM: 0, orbitBottomRadiusM: 1.7, orbitBottomHeightM: -1.05 };
     expect(DEFAULT_CONFIG.bootZoom).toBe(1);
     // ⚠ The whole surface matched until the owner set the middle ring to 0.09 m at 0.15 m (2026-10-02); the outer rings still do.
@@ -649,7 +650,7 @@ describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (t
     // the camera at zoom 0.5 and 2: the green piece's distance from the centre is the same, only the camera moves
     const { sceneConfig } = await import("../src/input/scene_rig");
     const { GREEN_PIECE_ORBIT_ZOOM, cameraGapM } = await import("../src/input/green_box");
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const box = orbitOffset(cfg, 0.3, 0.8, GREEN_PIECE_ORBIT_ZOOM).offsetM;
     const near = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 0.5));
     const far = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 2));
@@ -706,8 +707,7 @@ describe("⭐⭐ prototype — the zoom never brings the camera so close the gre
     const { orbitOffset } = await import("../src/input/orbit");
     const { cameraOffset } = await import("../src/input/follow_camera");
     const { sceneConfig } = await import("../src/input/scene_rig");
-    const { SCENE_1 } = await import("../src/content/scene_1");
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const vs = Array.from({ length: 33 }, (_, i) => i / 32);
     const ring = vs.map((v) => {
       const o = orbitOffset(cfg, 0, v, 1);
