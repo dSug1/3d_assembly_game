@@ -8,12 +8,14 @@
  * on which the cube / polyhedron is overlaid"*).
  *
  * - **What it shows**: a COPY of the part that hosts the pink gizmo (the orbit centre's part, `centreHost` — its contour and its core), the
- *   pink gizmo on it, and around it the polyhedron of the level's DISTINCT face directions (`core/orientation_set.ts`), FITTED to the part
- *   (`supportOffsets`: each direction's plane just outside the part — for a box part and six directions, the part's own box). No host part:
- *   the polyhedron alone (a cube in `Scene_1`). Drawn in a window placed by its two-cursor slider (boot: a touch screen bottom-left, a desktop top-right), turned as the world is seen from the camera.
- * - ⭐ (2026-10-12, *"make it more opaque and occlusion applies on the cube's faces, because at the moment, the back face is more visible than
- *   the highlighted face in the front"*) — only the facets turned TOWARD the camera are drawn (back-face culled, their edges hidden too); the
- *   part copy is solid behind them; plain facets are faint glass, the lit facet a strong pink.
+ *   pink gizmo on it, and the polyhedron of the level's DISTINCT face directions (`core/orientation_set.ts`) — ⛔ NOT fitted to the part
+ *   (2026-10-12, *"The cube/polyhedron shall not match and wrap the part : it shall stay a cube / polyhedron centered on the center of the
+ *   part in the center of the window"*): its own shape (a cube in `Scene_1`), centred on the part's centre, just large enough to hold it.
+ *   No host part: the polyhedron alone. Drawn in a window placed by its two-cursor slider (boot: a touch screen bottom-left, a desktop top-right), turned as the world is seen from the camera.
+ * - ⭐ (2026-10-12, *"Make the cube slightly occluding the pink face so it can be understood which face is in front and which is behind. Pink
+ *   face shall always be visible (not completely occluded by the replicated part)"*) — every facet is faint GLASS (the part hides the back ones
+ *   it covers); the LIT facet is its own pink layer drawn through the part (depth ALWAYS) and BEFORE the glass, so a front facet veils it a
+ *   little when it is at the back; front edges solid, back edges faint.
  * - **Tap a facet** → the resting face SITS AGAINST it (*"sit against this face"*): a virtual pink face (`st.pinkDir`) — `alignRestingFace`
  *   reads it as a part's face (its normal, its edges as the roll's axes); one episode. **Tap the lit facet** (the direction the piece is
  *   aligned to, whatever gave it) → the roll to the next axis, one episode.
@@ -31,7 +33,8 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, facetPolytope, supportOffsets, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, facetPolytope, type OrientDirection } from "../core/orientation_set";
+import { Constants } from "@babylonjs/core/Engines/constants";
 import { add, dot, normalize, qRotate, scale, shortestArc, sub, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { worldPlacementOf, type ObjectId } from "../core/object_model";
@@ -55,9 +58,13 @@ const LIGHT = normalize([0.35, 0.85, -0.4])!;
 /** ⭐ The facets' strength: a plain facet is faint glass over the part, the lit one nearly solid; the box left over (no direction) fainter. */
 const FACET_ALPHA = 0.16;
 const LIT_ALPHA = 0.85;
+/** ⭐ The lit facet seen THROUGH the part — faint, so the part still reads in front of it. */
+const LIT_GHOST_ALPHA = 0.35;
 const BOX_ALPHA = 0.08;
-/** ⭐ The polyhedron's margin around the part, as a share of the part's radius — it floats just off the part's faces. */
-const FIT_MARGIN = 0.04;
+/** ⭐ The polyhedron's inner radius, as a share of the part's radius — just large enough to hold the part. */
+const HOLD_MARGIN = 1.04;
+/** ⭐ A back edge's strength (a front one is solid). */
+const BACK_EDGE_ALPHA = 0.25;
 /** ⭐ The pink gizmo's copy: its radius as a share of the window's half side. */
 const RING_SHARE = 0.16;
 
@@ -91,7 +98,7 @@ function colours(st: SceneState): number[] {
     const n = c.vertexNormals[i]!;
     const k = 0.6 + 0.4 * Math.max(0, dot(n, LIGHT));
     if (tag < 0) out.push(0.3 * k, 0.3 * k, 0.35 * k, BOX_ALPHA);
-    else if (tag === c.lit) out.push(PINK.r, PINK.g * (0.85 + 0.15 * k), PINK.b, LIT_ALPHA);
+    else if (tag === c.lit) out.push(0, 0, 0, 0); // ⭐ the lit facet is its own layer (`litLayer`)
     else out.push(FACET.r * k, FACET.g * k, FACET.b * k, FACET_ALPHA);
   });
   return out;
@@ -132,14 +139,9 @@ function rebuild(st: SceneState): void {
   const host = st.centreHost !== null && st.meshOf.has(st.centreHost) ? st.centreHost : null;
   const fit = hostPoints(st, host);
   const normals = st.orientDirs.map((d) => d.normal);
-  let offsets: number[] | undefined;
-  let bound = 1.6;
-  if (fit !== null) {
-    const r = Math.max(...fit.pts.map((p) => Math.hypot(p[0], p[1], p[2])));
-    offsets = supportOffsets(normals, fit.pts, FIT_MARGIN * r);
-    bound = 1.6 * Math.max(...offsets.map(Math.abs), r);
-  }
-  const facets = facetPolytope(normals, bound, offsets);
+  // ⭐ its own shape, every plane at ONE distance — the part's radius (× `HOLD_MARGIN`), so it holds the part, centred on it
+  const inner = fit === null ? 1 : HOLD_MARGIN * Math.max(...fit.pts.map((p) => Math.hypot(p[0], p[1], p[2])));
+  const facets = facetPolytope(normals, 1.6 * inner, normals.map(() => inner));
   const root = new TransformNode("orient-root", st.scene);
   root.rotationQuaternion = Quaternion.Identity();
   const positions: number[] = [];
@@ -173,9 +175,10 @@ function rebuild(st: SceneState): void {
   mat.diffuseColor = Color3.Black();
   mat.emissiveColor = Color3.White();
   mat.specularColor = Color3.Black();
-  mat.backFaceCulling = true; // ⭐ only the facets turned toward the camera — the back ones never show through
+  mat.backFaceCulling = false; // ⭐ every facet, front and back — the part hides the back ones it covers
   mesh.material = mat;
   mesh.hasVertexAlpha = true;
+  mesh.alphaIndex = 2; // ⭐ after the lit layer: a front facet veils it
   mesh.isPickable = false; // ⭐ the scene's own picks never see it; the window's claim picks it by name (`orientCubePointer`)
   mesh.renderingGroupId = ORIENT_GROUP;
   mesh.alwaysSelectAsActiveMesh = true;
@@ -243,6 +246,9 @@ function rebuild(st: SceneState): void {
     centre: fit?.centre ?? [0, 0, 0],
     facetNormals: facets.map((f) => f.normal),
     facetPoints: facets.map((f) => f.vertices[0]!),
+    facetVerts: facets.map((f) => f.vertices),
+    facetTags: facets.map((f) => f.tag),
+    litMesh: null,
     triTag,
     vertexTags,
     vertexNormals,
@@ -268,7 +274,8 @@ export function orientCubeFrame(st: SceneState): void {
     c.back.isVisible = show;
     for (const m of c.copies) m.isVisible = show;
     c.ring.isVisible = show && c.host !== null && st.cfg.pinkGizmoVisible === 1;
-    if (!show) for (const e of c.edges) e.isVisible = false;
+    for (const e of c.edges) e.isVisible = show;
+    if (c.litMesh !== null) for (const m of [c.litMesh, ...c.litMesh.getChildMeshes()]) m.isVisible = show;
   }
   if (!show || c === null) {
     st.orientRect = null;
@@ -311,7 +318,7 @@ export function orientCubeFrame(st: SceneState): void {
   const eye: Vec3 = [cam.position.x, cam.position.y, cam.position.z];
   c.edges.forEach((e, i) => {
     const n = qRotate(q, c.facetNormals[i]!);
-    e.isVisible = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0;
+    e.alpha = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0 ? 1 : BACK_EDGE_ALPHA;
   });
   if (c.ring.isVisible) {
     // ⭐ where the scene's pink gizmo IS (its ring, placed in the world each frame) — not the rig's centre, which reaches it later
@@ -332,7 +339,49 @@ export function orientCubeFrame(st: SceneState): void {
   if (lit !== c.lit) {
     c.lit = lit;
     c.mesh.setVerticesData("color", colours(st), true, 4);
+    litLayer(st);
   }
+}
+
+/**
+ * ⭐ The LIT facet's own layer (2026-10-12, *"Pink face shall always be visible (not completely occluded by the replicated part)"*), drawn
+ * TWICE: solid pink where nothing is in front of it (depth-tested, writing its depth), and a faint pink GHOST through everything (depth
+ * ALWAYS) — so where the part covers it, it still shows, and the part still reads in front of it. Both before the glass: a front glass facet
+ * then veils it a little when it is at the back. Rebuilt when the lit facet changes.
+ */
+function litLayer(st: SceneState): void {
+  const c = st.orientCube!;
+  c.litMesh?.dispose(); // ⭐ its ghost is its child: it goes with it
+  c.litMesh = null;
+  const at = c.facetTags.indexOf(c.lit);
+  if (c.lit < 0 || at < 0) return;
+  const v = c.facetVerts[at]!;
+  const layer = (name: string, alpha: number, through: boolean): Mesh => {
+    const m = new Mesh(name, st.scene);
+    const data = new VertexData();
+    data.positions = v.flatMap((p) => [p[0], p[1], p[2]]);
+    data.indices = v.slice(1, -1).flatMap((_, i) => [0, i + 2, i + 1]);
+    data.applyToMesh(m, false);
+    const mat = new StandardMaterial(name + "-mat", st.scene);
+    mat.disableLighting = true;
+    mat.emissiveColor = PINK.clone();
+    mat.alpha = alpha;
+    mat.backFaceCulling = false;
+    if (through) mat.depthFunction = Constants.ALWAYS;
+    else mat.forceDepthWrite = true;
+    m.material = mat;
+    m.isPickable = false;
+    m.renderingGroupId = ORIENT_GROUP;
+    m.alwaysSelectAsActiveMesh = true;
+    return m;
+  };
+  const solid = layer("orient-lit", LIT_ALPHA, false);
+  solid.alphaIndex = 1;
+  solid.parent = c.root;
+  const ghost = layer("orient-lit-ghost", LIT_GHOST_ALPHA, true);
+  ghost.alphaIndex = 0;
+  ghost.parent = solid;
+  c.litMesh = solid;
 }
 
 /**

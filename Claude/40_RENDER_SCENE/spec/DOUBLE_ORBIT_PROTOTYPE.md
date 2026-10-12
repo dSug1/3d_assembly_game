@@ -744,3 +744,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ The window COPIES the part that hosts the pink gizmo (and the gizmo), the polyhedron fitted over it, back facets hidden, the lit facet
   strong pink; a two-cursor position slider (boot: a touch screen bottom-left, a desktop top-right, clear of the HUD / ☰ / ⏸); ⛔ the boot
   fixed — the piece rests on the floor's TOP → `RESTING_FACE_ALIGNMENT.md` §21.
+* ⭐⭐ The polyhedron NOT fitted: its own shape, centred on the part, holding it; every facet faint glass; the pink face solid where nothing is in
+  front and a faint ghost through the part — always visible, veiled a little by a front facet → `RESTING_FACE_ALIGNMENT.md` §21.

@@ -477,6 +477,9 @@ export interface SceneState {
     readonly centre: import("../core/vec").Vec3;
     readonly facetNormals: readonly import("../core/vec").Vec3[];
     readonly facetPoints: readonly import("../core/vec").Vec3[];
+    readonly facetVerts: readonly (readonly import("../core/vec").Vec3[])[];
+    readonly facetTags: readonly number[];
+    litMesh: import("@babylonjs/core/Meshes/mesh").Mesh | null;
     readonly triTag: readonly number[];
     readonly vertexTags: readonly number[];
     readonly vertexNormals: readonly import("../core/vec").Vec3[];
