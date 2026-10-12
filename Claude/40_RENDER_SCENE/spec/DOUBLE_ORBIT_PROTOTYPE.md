@@ -746,3 +746,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   fixed — the piece rests on the floor's TOP → `RESTING_FACE_ALIGNMENT.md` §21.
 * ⭐⭐ The polyhedron NOT fitted: its own shape, centred on the part, holding it; every facet faint glass; the pink face solid where nothing is in
   front and a faint ghost through the part — always visible, veiled a little by a front facet → `RESTING_FACE_ALIGNMENT.md` §21.
+* ⭐⭐⭐ The CANDIDATE support face (the facet facing the camera most) carries a fading copy of the orbited piece in the pose it would take (the
+  next roll when it is the pink face); the cube HELD + the other touch's drag (desktop: ALT / CTRL in the window + a left drag) scrolls the
+  alignment through the candidates — a continuous snapped rotation, one episode → `RESTING_FACE_ALIGNMENT.md` §21.

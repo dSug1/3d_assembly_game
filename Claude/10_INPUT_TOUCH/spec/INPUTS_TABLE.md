@@ -22,6 +22,7 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 | ⭐ the orbited piece (prototype, 2026-10-12) | both fingers held, in the way in + roll: the SECOND finger's dx past the deadband | the ZOOM, without lifting (`holdSwitch`) |
 | ⭐ the orbited piece (prototype, 2026-10-12) | both fingers held, in the zoom: the second finger RESTS 150 ms (`holdSwitchRestMs`), the FIRST finger's dx | the way in + roll again, without lifting; ⚠ before the rest the first finger still zooms |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a TAP on a facet of the ORIENTATION WINDOW (a copy of the gizmo's part inside the polyhedron; boot bottom-left) | the resting face SITS AGAINST that direction (a virtual pink face); the lit (pink) facet tapped again — the roll to the next axis; one episode each |
+| ⭐ the orbited piece (prototype, 2026-10-12) | a finger HELD in the orientation window + the other finger's drag | the camera orbits, the cube turns; each new CANDIDATE face (the one facing the camera) becomes the pink face and the resting face sits against it — a continuous snapped rotation; one episode |
 | ⭐ the orbited piece (prototype) | the SECOND finger pressed on a placed part's face | the **pink face** (never the floor), aligned **at the press**; the face it is already aligned to: the highlights shown; ⛔ no centre change (§20) |
 | nothing | double tap on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10); the taps are still recorded and may toggle |
 | — | ⭐ **anything in the EDGE BAND** — ⚠ it exists only when **no empty space is left on the screen** (`D114`); then 6 mm along the edges, dashed line, width = the slider at the top of **CAMERA** (0 = never) | empty space, whatever is drawn there — so a double tap there always resets the camera, one finger orbits, two pinch (`D113`). The HUD's first line shows `band=off` or `band=6mm` |
@@ -78,6 +79,7 @@ on entering the capture zone, are deleted.
 | ⭐ the orbited piece (prototype, 2026-10-11) | left held ON A PART + ALT / CTRL held + left drag | the way in and the dx roll (it froze before) |
 | ⛔ the orbited piece (prototype, 2026-10-11) | Space (+ click), Shift held through a drag | nothing (`orbitModifiers`); ⚠ the Shift TAP still toggles translate / rotate |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a left CLICK on a facet of the ORIENTATION WINDOW (boot top-right) | the resting face SITS AGAINST that direction; the lit facet clicked again — the roll; one episode each |
+| ⭐ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor in the orientation window, held + a left drag | the same continuous snapped rotation through the candidate faces; one episode |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |

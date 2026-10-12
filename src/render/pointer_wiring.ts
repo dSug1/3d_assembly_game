@@ -120,7 +120,7 @@ export function installPointerHandler(st: SceneState): void {
     }
 
     // ⭐⭐ (2026-10-12, §21) A PRESS IN THE ORIENTATION CUBE'S WINDOW IS THE CUBE'S — before the router: it never orbits nor grabs
-    if (orientCubePointer(st, info.type, e)) {
+    if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
       st.hudDirty = true;
       return;
     }

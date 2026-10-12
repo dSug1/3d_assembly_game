@@ -39,9 +39,10 @@ import { add, dot, normalize, qRotate, scale, shortestArc, sub, type Vec3 } from
 import { mmToPx } from "../core/units";
 import { worldPlacementOf, type ObjectId } from "../core/object_model";
 import { isTapRelease } from "../input/mode_toggle";
-import { clearOfOverlays, orientWindowCorner } from "../input/orient_window";
-import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
-import { alignRestingFace, orientationFrames, rollRestingFace } from "./green_box_wiring";
+import { candidateFace, clearOfOverlays, orientWindowCorner } from "../input/orient_window";
+import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
+import type { Sample } from "../input";
+import type { Quat } from "../core/vec";
 import { topologyOfBody } from "./bodies";
 import { RING_POINTS, type SceneState } from "./scene_state";
 
@@ -67,6 +68,10 @@ const HOLD_MARGIN = 1.04;
 const BACK_EDGE_ALPHA = 0.25;
 /** ⭐ The pink gizmo's copy: its radius as a share of the window's half side. */
 const RING_SHARE = 0.16;
+/** ⭐ (2026-10-12) the orbited piece's copy: its radius as a share of the polyhedron's inner radius, its gap off the candidate face, its fade. */
+const REPLICA_SHARE = 0.55;
+const REPLICA_GAP = 0.02;
+const REPLICA_FADE_MS = 250;
 
 /** ⭐ The screen's overlays the window keeps clear of, in canvas px (the HUD, its toggle, the ☰, the ⏸, the score bar) — the visible ones. */
 const OVERLAYS = '[data-role="hud"],[data-role="hud-toggle"],[data-role="menu-toggle"],[data-role="pause-button"],[data-role="scorebar"]';
@@ -247,6 +252,10 @@ function rebuild(st: SceneState): void {
     facetNormals: facets.map((f) => f.normal),
     facetPoints: facets.map((f) => f.vertices[0]!),
     facetVerts: facets.map((f) => f.vertices),
+    facetCentres: facets.map((f) => scale(f.vertices.reduce<Vec3>((a, v) => add(a, v), [0, 0, 0]), 1 / f.vertices.length)),
+    inner,
+    candidate: -1,
+    replicas: [],
     facetTags: facets.map((f) => f.tag),
     litMesh: null,
     triTag,
@@ -341,6 +350,109 @@ export function orientCubeFrame(st: SceneState): void {
     c.mesh.setVerticesData("color", colours(st), true, 4);
     litLayer(st);
   }
+  // ⭐⭐ (2026-10-12, *"the face of the cube which normal is pointing the most to the camera is the candidate support face"*)
+  const cand = candidateFace(
+    c.facetTags.map((tag, i) => ({ tag, normal: qRotate(q, c.facetNormals[i]!), centre: local(c.facetCentres[i]!) })),
+    eye,
+  );
+  c.candidate = cand;
+  orientHoldStep(st, cand);
+  replicaFrame(st, cand);
+}
+
+/**
+ * ⭐⭐ (2026-10-12, *"if the second touch stays pressed on the cube while the first touch delta positions, the pink face moves as the candidate
+ * support face scrolls and the resting face aligns as per the green-turquoise piece replication's transform accordingly: this provides a
+ * continuous snapped rotation"*) — the cube HELD (`orientHold`): each time the candidate changes to a face that is not the pink face, the
+ * resting face sits against it (the copy's turn); the whole hold one episode.
+ */
+function orientHoldStep(st: SceneState, cand: number): void {
+  const h = st.orientHold;
+  if (h === null || cand < 0 || cand === h.last) return;
+  h.last = cand;
+  if (dirIndex(st, st.pinkTargetNormal) === cand) return;
+  const dir = st.orientDirs[cand];
+  if (dir === undefined || st.greenBox === null) return;
+  const now = performance.now();
+  st.pinkDir = dir;
+  st.pinkFace = null;
+  if (!alignRestingFace(st, now)) return;
+  if (!h.acted) {
+    st.episodes.touch(--st.episodeSeq, true, true);
+    st.episodes.sync(true);
+  }
+  h.acted = true;
+  st.highlightEndedAt = now;
+  st.lastVerdict = `orbit: cube held — the candidate face ${dirLabel(dir.normal)} scrolled in: the resting face against it`;
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐ (2026-10-12, *"in the window, show the green/turquoise piece in the transform as it would be if it was aligned with the candidate support
+ * face, in a position in front of the candidate support face (therefore orbiting together with the cube rotation). This green /turquoise piece
+ * replication fades as the candidate support face changes and a new green/turquoise piece replication appears"* — *"if the candidate support
+ * face is the pink face, show the green-turquoise piece replication with the next roll to the next axis applied"*) — the copy of the orbited
+ * piece in the pose `restingPreview` gives, its resting face on the candidate face (a child of the window's root: it turns with the cube);
+ * a new pose — the old copy fades out and a new one fades in.
+ */
+function replicaFrame(st: SceneState, cand: number): void {
+  const c = st.orientCube!;
+  const now = performance.now();
+  const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
+  const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;
+  const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
+  const piece = st.greenBox?.name ?? "";
+  const live = c.replicas.find((r) => r.dying === null);
+  const same =
+    live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
+    Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
+  if (!same) {
+    if (live !== undefined) live.dying = now;
+    if (q !== null) {
+      const m = makeReplica(st, cand, q);
+      if (m !== null) c.replicas.push({ mesh: m, q, tag: cand, piece, born: now, dying: null });
+    }
+  }
+  c.replicas = c.replicas.filter((r) => {
+    let a = Math.min(1, (now - r.born) / REPLICA_FADE_MS);
+    if (r.dying !== null) a *= Math.max(0, 1 - (now - r.dying) / REPLICA_FADE_MS);
+    if (r.dying !== null && a <= 0) {
+      r.mesh.dispose(false, true);
+      return false;
+    }
+    (r.mesh.material as StandardMaterial).alpha = 0.999 * a; // ⭐ always the transparent pass: drawn after the pink ghost, never tinted by it
+    r.mesh.isVisible = c.mesh.isVisible;
+    return true;
+  });
+}
+
+/** ⭐ A copy of the orbited piece in the pose `q`, scaled to the polyhedron, its resting face on the facet of direction `tag`. */
+function makeReplica(st: SceneState, tag: number, q: Quat): Mesh | null {
+  const c = st.orientCube!;
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  const i = c.facetTags.indexOf(tag);
+  if (p === undefined || i < 0) return null;
+  const m = p.mesh.clone("orient-piece", c.root, true) as Mesh | null;
+  if (m === null) return null;
+  m.metadata = null; // ⛔ never an orbit candidate, never the orbited piece
+  m.isPickable = false;
+  m.receiveShadows = false;
+  m.renderingGroupId = ORIENT_GROUP;
+  m.alwaysSelectAsActiveMesh = true;
+  m.alphaIndex = 3;
+  const src = p.mesh.material as StandardMaterial | null;
+  const mat = src !== null ? src.clone("orient-piece-mat") : new StandardMaterial("orient-piece-mat", st.scene);
+  mat.alpha = 0;
+  mat.forceDepthWrite = true;
+  m.material = mat;
+  const k = (REPLICA_SHARE * c.inner) / Math.max(1e-6, p.mesh.getBoundingInfo().boundingSphere.radius);
+  m.scaling.setAll(k);
+  m.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
+  // ⭐ its resting face's centre on the facet's centre, a hair outside it
+  const n = c.facetNormals[i]!;
+  const at = sub(add(c.facetCentres[i]!, scale(n, c.inner * REPLICA_GAP)), qRotate(q, scale(p.restingCentre, k)));
+  m.position.set(at[0], at[1], at[2]);
+  return m;
 }
 
 /**
@@ -410,26 +522,54 @@ export function orientCubeTap(st: SceneState, tag: number): boolean {
   return acted;
 }
 
-/** ⭐ A press inside the window is the window's (before the router): a TAP on a facet acts at its release; the rest of it does nothing. */
-export function orientCubePointer(st: SceneState, type: number, e: PointerEvent): boolean {
+/**
+ * ⭐ A press inside the window is the window's (before the router): a TAP on a facet acts at its release; held, it HOLDS THE CUBE
+ * (`orientHold`) — the other touch's drag orbits and the candidate face scrolls the alignment (`orientHoldStep`). ⭐ (2026-10-12) the desktop's
+ * ALT / CTRL with the cursor in the window holds it too (*"ctrl-alt pressed while cursor is on the cube and held while the left click delta
+ * positions does the same"*); while it is held, a press that lands in the window DRIVES the orbit (`orbit`) instead of being the window's.
+ */
+export function orientCubePointer(
+  st: SceneState,
+  type: number,
+  e: PointerEvent,
+  s: Sample,
+  orbit: (pointerId: number, s: Sample, prev: Sample) => void,
+): boolean {
   if (type === PointerEventTypes.POINTERDOWN) {
     const r = st.orientRect;
     const c = st.orientCube;
-    if (r === null || c === null || e.pointerId === MOUSE_SECOND_ID) return false;
+    if (r === null || c === null) return false;
     const rect = st.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (x < r.left || x > r.left + r.size || y < r.top || y > r.top + r.size) return false;
+    const inside = x >= r.left && x <= r.left + r.size && y >= r.top && y <= r.top + r.size;
+    if (!inside) return false;
+    if (st.orientHold !== null && e.pointerId !== st.orientHold.pointerId) {
+      st.orientDriver = { pointerId: e.pointerId, prev: s };
+      return true;
+    }
     const pick = st.scene.pick(x, y, (m) => m === c.mesh);
     const tag = pick?.hit === true && pick.faceId >= 0 ? (c.triTag[pick.faceId] ?? -1) : -1;
     st.orientPress = { pointerId: e.pointerId, tag, x: e.clientX, y: e.clientY, t: performance.now() };
+    st.orientHold = { pointerId: e.pointerId, last: c.candidate, acted: false };
+    return true;
+  }
+  const dv = st.orientDriver;
+  if (dv !== null && e.pointerId === dv.pointerId) {
+    if (type === PointerEventTypes.POINTERMOVE) {
+      orbit(e.pointerId, s, dv.prev);
+      dv.prev = s;
+    }
+    if (type === PointerEventTypes.POINTERUP) st.orientDriver = null;
     return true;
   }
   const p = st.orientPress;
   if (p === null || e.pointerId !== p.pointerId) return false;
   if (type === PointerEventTypes.POINTERUP) {
     st.orientPress = null;
-    if (p.tag >= 0 && isTapRelease(p.t, p.x, p.y, performance.now(), e.clientX, e.clientY, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))) {
+    const scrolled = st.orientHold?.acted === true;
+    st.orientHold = null;
+    if (!scrolled && p.tag >= 0 && isTapRelease(p.t, p.x, p.y, performance.now(), e.clientX, e.clientY, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))) {
       orientCubeTap(st, p.tag);
     }
   }

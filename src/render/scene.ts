@@ -593,6 +593,8 @@ export function createScene(
   st.pinkDir = null;
   st.pinkTargetNormal = null;
   st.centreHost = null;
+  st.orientHold = null;
+  st.orientDriver = null;
   st.pinkFill = null;
   st.pinkFillKey = "";
   st.pieceFaceTap = null;

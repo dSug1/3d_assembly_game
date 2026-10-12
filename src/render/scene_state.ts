@@ -480,6 +480,18 @@ export interface SceneState {
     readonly facetVerts: readonly (readonly import("../core/vec").Vec3[])[];
     readonly facetTags: readonly number[];
     litMesh: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+    readonly facetCentres: readonly import("../core/vec").Vec3[];
+    readonly inner: number;
+    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none) and the orbited piece's copies on it (the live one, the fading). */
+    candidate: number;
+    replicas: {
+      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
+      readonly q: import("../core/vec").Quat;
+      readonly tag: number;
+      readonly piece: string;
+      readonly born: number;
+      dying: number | null;
+    }[];
     readonly triTag: readonly number[];
     readonly vertexTags: readonly number[];
     readonly vertexNormals: readonly import("../core/vec").Vec3[];
@@ -491,6 +503,10 @@ export interface SceneState {
   /** ⭐ (2026-10-12) the PART that hosts the pink gizmo — the one whose face the orbit centre was put on (a press on a placed part, the boot's
    * blue face); `null` — the centre on no part. The orientation window copies it. */
   centreHost: import("../core/object_model").ObjectId | null;
+  /** ⭐ (2026-10-12) THE CUBE HELD — the pointer holding it, the last candidate seen, whether a scroll aligned (one episode for the hold). */
+  orientHold: { readonly pointerId: number; last: number; acted: boolean } | null;
+  /** ⭐ (2026-10-12) a press in the window while the cube is held: it drives the orbit. */
+  orientDriver: { readonly pointerId: number; prev: import("../input").Sample } | null;
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
   pinkDir: import("../core/orientation_set").OrientDirection | null;
   /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */
