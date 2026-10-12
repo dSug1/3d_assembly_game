@@ -95,6 +95,11 @@ export interface OrbitRig {
    * it moves the rings. Absent: the world origin. ⛔ Not a config field: it is the scene's, like its bodies.
    */
   readonly centreM?: Triple;
+  /**
+   * ⭐ prototype (2026-10-12, the owner: *"double rings 1 and 4, keep the piece at 3m boot view as it is"*) — with `bootView: "TOP"`, the boot
+   * elevation is the one, between the 2nd ring and the top, at which the rings sit this far from the centre (zoom 1) — not the top ring itself.
+   */
+  readonly bootDistanceM?: number;
 }
 
 const ORBIT_KEYS = [
@@ -370,6 +375,8 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (r !== null && (r.lowerRadiusM !== undefined || r.lowerHeightM !== undefined))
       for (const k of ["lowerRadiusM", "lowerHeightM"] as const)
         if (typeof r[k] !== "number" || !Number.isFinite(r[k])) throw new Error(`scene ${o.id}: orbit.${k} must be a finite number`);
+    if (r !== null && r.bootDistanceM !== undefined && !(typeof r.bootDistanceM === "number" && r.bootDistanceM > 0))
+      throw new Error(`scene ${o.id}: orbit.bootDistanceM must be a positive number`);
     if (r !== null && r.centreM !== undefined && !isTriple(r.centreM))
       throw new Error(`scene ${o.id}: orbit.centreM is not three finite numbers`);
   }

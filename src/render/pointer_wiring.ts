@@ -4,7 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { orientCubePointer, orientFollowCursor, orientTapShown, restingQuadPointer } from "./orient_cube";
+import { orientTapShown, restingQuadPointer } from "./orient_cube";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -119,10 +119,6 @@ export function installPointerHandler(st: SceneState): void {
     }
 
     // ⭐⭐ (2026-10-12, §21) A PRESS IN THE ORIENTATION CUBE'S WINDOW IS THE CUBE'S — before the router: it never orbits nor grabs
-    if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
-      st.hudDirty = true;
-      return;
-    }
     // ⭐⭐ (2026-10-12) a press on a resting-face quad is the quads' (a tap aligns to its side; a drag orbits)
     if (restingQuadPointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
       st.hudDirty = true;
@@ -1263,10 +1259,12 @@ function partFirst(st: SceneState, except: number | null = null): number | null 
  * wheel) is unchanged.
  */
 export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample, dxOnly = false): void {
-  orientFollowCursor(st, pointerId, s.x, s.y); // ⭐ (2026-10-12) desktop: the orientation window follows the cursor while it orbits
   const dx = s.x - prev.x;
   // ⭐ (2026-10-11, *"first touch's dy while the second is held: ignored"*) — the way in and the orbit round the piece take dx only
   const dy = dxOnly ? 0 : s.y - prev.y;
+  // ⭐⭐ (2026-10-12, *"… keep on rolling the resting piece on this quad until the next delta position"*) — a drag drops the quad tapped:
+  // the yellow quad is the candidate again
+  if (dx !== 0 || dy !== 0) st.orientShown.clicked = null;
   if (st.greenBox !== null) {
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {

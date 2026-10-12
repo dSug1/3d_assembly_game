@@ -47,11 +47,11 @@ import { sceneConfig } from "../src/input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
 import { cameraOffset, springOrbit } from "../src/input/follow_camera";
 import { clampPieceRadiusM, PIECE_MIN_DISTANCE_M } from "../src/input/green_box";
-import { SCENE_1 } from "../src/content/scene_1";
+import { RIG_3M } from "./helpers/rig_3m"; // ⭐ (2026-10-12) the rig these vectors were written on
 import type { Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
-const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
 const D = Math.PI / 180;
 const OFF = { yawRad: 2.5 * D, pitchRad: 2 * D };
 const GAP = 1.25;
@@ -378,11 +378,12 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
   });
 
   it("⭐⭐ the piece's OWN minimum distance to the orbit centre is ZERO — no longer the camera's 0.15 m (*\"give the piece its minimum at zero. no slider\"*)", () => {
-    const sc = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const sc = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     expect(PIECE_MIN_DISTANCE_M).toBe(0);
     expect(sc.cameraRadiusMinM).toBe(0.15); // the camera keeps its near-plane guard
     expect(clampPieceRadiusM(0.09, sc)).toBe(0.09);
-    expect(clampPieceRadiusM(1e6, sc)).toBe(sc.cameraRadiusMaxM); // the far end as before
+    expect(clampPieceRadiusM(1e6, sc)).toBe(sc.pieceRadiusMaxM); // ⭐ (2026-10-12) its own far end, 6 m (it was the camera's)
+    expect(sc.pieceRadiusMaxM).toBe(6);
     // through the waist the piece follows the rings: 0.09 m at its narrowest (it rode a 0.15 m ball)
     let closest = 9;
     for (let v = 0; v <= 1; v += 0.0005) closest = Math.min(closest, clampPieceRadiusM(orbitOffset(sc, 0, v, 1).radiusM, sc));
@@ -398,7 +399,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
   it("⭐⭐ the way out's offset is measured where the piece is DRAWN, so a fast dy no longer holds it off the gizmo (the owner, 2026-10-09: *\"do the fix\"*)", () => {
     // a straight dy push from the top ring into the sphere (1 m) and through the waist, frame by frame with the game's springs; the closest
     // the piece gets to the gizmo — measured from the spring's elevation (the fix) or the finger's (as it was)
-    const sc = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const sc = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const RET = sc.pieceOrbitReturnMm;
     const TAU = sc.boxSmoothMs / 2;
     const VPM = 0.02 * (1 / 0.7826) * 0.5; // v per mm of dy (the gain × the four-ring scale × the box's pitch gain)

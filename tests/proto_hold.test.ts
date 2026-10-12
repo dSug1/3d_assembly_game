@@ -267,6 +267,6 @@ describe("⭐⭐ a first touch / left TAP on EMPTY space = a tap on the cube's p
     const p = code("render/pointer_wiring.ts").replace(/\s+/g, " ");
     expect(p).toContain("(ft === null || ft.pointerId !== e.pointerId) && st.hold === null && e.pointerId !== MOUSE_SECOND_ID &&");
     expect(p).toContain("orientTapShown(st)");
-    expect(code("render/orient_cube.ts")).toContain("return orientCubeTap(st, c.candEdgeTag);");
+    expect(code("render/orient_cube.ts")).toContain("return tag >= 0 && orientCubeTap(st, tag);"); // ⭐ (2026-10-12) the pink direction, the window deleted
   });
 });

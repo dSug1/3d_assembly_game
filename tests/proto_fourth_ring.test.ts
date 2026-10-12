@@ -9,6 +9,7 @@ import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfi
 import { sceneConfig } from "../src/input/scene_rig";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
 import { SCENE_1 } from "../src/content/scene_1";
+import { RIG_3M } from "./helpers/rig_3m"; // ⭐ (2026-10-12) the rig these vectors were written on
 import { SCENE_0 } from "../src/content/scene_0";
 
 const ring = (cfg: typeof DEFAULT_CONFIG, v: number) => {
@@ -18,7 +19,7 @@ const ring = (cfg: typeof DEFAULT_CONFIG, v: number) => {
 
 describe("⭐⭐ prototype — a fourth orbit ring", () => {
   it("⭐ Scene_1 has it: 0.09 m at −0.15 m — the 2nd ring's radius, its height negated; the orbit passes through all FOUR rings", () => {
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     expect(cfg.orbitLowerRingOn).toBe(1);
     expect(cfg.orbitLowerRadiusM).toBe(cfg.orbitMiddleRadiusM);
     expect(cfg.orbitLowerHeightM).toBe(-cfg.orbitMiddleHeightM);
@@ -64,7 +65,7 @@ describe("⭐⭐ prototype — a fourth orbit ring", () => {
   });
 
   it("⛔ refused when it does not sit between the bottom and the middle — the surface would fold", () => {
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     expect(() => validateGestureConfig({ ...cfg, orbitLowerHeightM: 0.2 })).toThrow(/bottom → lower → middle → top/);
     expect(() => validateGestureConfig({ ...cfg, orbitLowerHeightM: -1.6 })).toThrow(/bottom → lower → middle → top/);
     expect(() => validateGestureConfig({ ...cfg, orbitLowerRingOn: 0.5 })).toThrow(/orbitLowerRingOn/);
@@ -73,7 +74,7 @@ describe("⭐⭐ prototype — a fourth orbit ring", () => {
 });
 
 describe("⭐⭐ prototype — the waist without its plateau; the outer transitions as they were (the owner, 2026-10-02)", () => {
-  const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
+  const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
   // ⭐ an INDEPENDENT re-implementation of the even layout the owner liked: Fritsch–Carlson through four knots at 0, ⅓, ⅔, 1
   const even = (ys: number[], v: number): number => {
     const h = 1 / 3;

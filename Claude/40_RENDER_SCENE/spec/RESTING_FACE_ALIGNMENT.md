@@ -644,6 +644,9 @@ face, fade, a pinch keeping the pink face, the coast, dy).
 
 ## 21. THE ORIENTATION CUBE — the level's set of pink faces, on the glass (2026-10-12, `1.0.67-`)
 
+> ⛔⛔ **The window, its cube, its copy and its sliders are DELETED (2026-10-12, `1.0.70-`)** — the resting-face quads carry the alignment
+> now → §25. §21–§23 are the record.
+
 **Why** (the owner): *"There is some confusion between the pink gizmo and the pink face. Both are not linked because I want to be able to align
 the resting face to a pink face which is not systematically the face supporting the pink gizmo: this enables smart decisions how to align the
 resting face in few episodes by choosing the best pink face possible. However, the roles of pink gizmo and pink face get confusing. … would it
@@ -925,3 +928,49 @@ back to the standard zoom input design for mobile"* → *"shall we comment out t
 - Headless (touch): the second finger moving apart — zoom 0.85; the first moving, the second still — zoom 0.72, no way in, no roll; a
   second-finger tap — a roll; a first-touch tap on empty space — aligned to the cube's pink face (−z). (Desktop): CTRL + left drag — the
   centre orbit only; a left tap on empty space — aligned to the pink face (+x).
+
+## 25. THE RESTING-FACE QUADS — the window deleted; the 1st and 4th rings to 6 m; the gizmo yellow (2026-10-12, `1.0.70-`)
+
+The owner, in order: *"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron.
+highlight the quad which corresponds to the resting face plane in yellow edges"* → *"the quads size grow with the distance of the piece to the
+pink gizmo (more than linearly but less than exponentially or quadratically)"* → *"if a quad is clicked, the resting face aligns with this quad
+(or roll to the next axis if it is the same quad). click on one side or the other of the quad are differentiated so the piece can turn 180
+degrees"* → *"the max size of the quad shall be the 1.4 you have set"* → *"make sure the click/touch on the faces of the green piece to select the
+resting face takes precedence to the click/touch on any quad. modify: highlight in yellow the quad which corresponds to the pink face of the
+cube. remove the cube, the replica, the window, the sliders. keep the left click/first touch outside which triggers the equivalent to left
+click/first touch on the pink face of the cube (it now passes through the quads instead of the cube)"* → *"scale the yellow highlight of the
+resting face in the same way as the quads"* → *"change the color of the pink gizmo to the same yellow as the quad color. also, reduce the thickness
+of the yellow gizmo ring by a factor 2"* → *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* (asked:
+*"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)"*) → *"change the power 1.5 of the
+quads scaling to 3, maintain the 1.4 max scale"* → *"create a slider for the power of the scaling distance"* → *"show the quads even if they are
+occluded by the piece"* → *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on rolling the
+resting piece on this quad until the next delta position"* → *"amended: the minimum dimension of the quad when closest to the gizmo shall be 0.20
+the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
+
+- ⛔⛔ **THE ORIENTATION WINDOW IS DELETED** (§21–§23): the polyhedron, the copy of the piece, the window, its position / size / follow sliders
+  (`orientCubeSizePct`, `orientWindowXPct` / `YPct`, `orientWindowFollow`), the cube held (by a finger or ALT / CTRL), the cursor follow,
+  `facetPolytope` and `restingPreview`. What stays (`render/orient_cube.ts`): the level's distinct directions (read again at every goal
+  commit), the alignment by a direction (`orientCubeTap`: the resting face SITS AGAINST it, or the roll when it already does), the candidate
+  (`candidateFace`, the one helper left in `input/orient_window.ts`).
+- ⭐⭐ **THE QUADS**: one per distinct PLANE of the directions (`distinctPlanes`: `Scene_1`'s cube gives three, orthogonal), square to the world,
+  centred on the orbited piece's resting face, faint glass with faint edges, **drawn over the scene** (rendering group 1 — seen through the piece).
+- ⭐⭐ **THE PINK DIRECTION** — what a tap on empty space takes: the CANDIDATE (the direction facing the camera most, seen from the resting face),
+  or the direction last tapped, kept **until the next orbit drag** (`orbitDragStep` drops it — not when the candidate changes). **Its quad is
+  edged YELLOW.** So a quad tapped turns yellow, and every tap on empty space then rolls the piece on it, until a drag.
+- ⭐⭐ **A TAP ON A QUAD** (first touch / left button, nearer than the scene within 5 mm — a quad lies ON the floor): the side tapped
+  (`quadSide`, the normal on the camera's side) is the direction the resting face sits against — aligned, or the roll when it already is; the
+  other side turns it 180°. A DRAG from a quad orbits, as any drag. ⛔ **The orbited piece first**: a ray that meets the piece is the piece's
+  (the resting-face pick), whatever quad lies in front.
+- ⭐ **A TAP ON EMPTY SPACE** = a tap on the pink direction (`orientTapShown`), as it was a tap on the cube's pink face (§24).
+- ⭐⭐ **THE SIZE**: from **0.20** at the gizmo (d = 0) to **1.4** at the boot's gizmo distance and beyond (both × the piece's radius, the side
+  twice that), along `(d / d₀)^power` between them (`quadSize`); the power is a slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face
+  quads: growth power*; it was 1.5). ⭐ The resting face's yellow contour scales by the same share, about the face's centre.
+- ⭐ **THE GIZMO IS YELLOW** — the quads' yellow (1, 0.85, 0.1), its band halved: five loops ±0.5 px (~1.5 px; it was ±1 px, ~3 px).
+- ⭐⭐ **THE 1st AND 4th RINGS DOUBLED** (`Scene_1`: 5.1 m / ±3.15 m — 6.0 m from the centre at zoom 1; were 2.55 / ±1.575, 3.0 m); the piece's
+  own maximum distance is **6 m** (`pieceRadiusMaxM`; it rode the camera's `cameraRadiusMaxM`, 3 m). ⭐ The boot stays at **3 m**:
+  `orbit.bootDistanceM: 3` boots on the way up to the 1st ring where the rings are 3 m away (`elevationAtDistance`), not on the 1st ring itself.
+  ⚠ The outer rings' tangents changed, so the waist's speed and the 1st ↔ 2nd transition are not the curves the owner tuned on 2026-10-02 —
+  the vectors written on those keep the old rig as their fixture (`tests/helpers/rig_3m.ts`).
+- Headless (desktop): boot — the piece 3.01 m from the centre, the pink direction −z and its plane's quad yellow; a click on the x quad — aligned
+  to +x, that quad yellow; two taps on empty space — two rolls on it; a drag — the tapped quad dropped; a press on the piece over a quad — the
+  resting face picked, no quad tap. ⛔ No device look yet.

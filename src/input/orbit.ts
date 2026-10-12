@@ -492,3 +492,25 @@ export function levelElevation(cfg: GestureConfig): number {
   }
   return (lo + hi) / 2;
 }
+
+/**
+ * ⭐ prototype (2026-10-12, the owner: *"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with
+ * zoom=1)"*) — the HIGHEST elevation `v` at which the rings (zoom 1) are at most `distanceM` from the centre: down from the top ring until
+ * the distance falls to it, then bisected. `1` when the top ring is already within it.
+ */
+export function elevationAtDistance(cfg: GestureConfig, distanceM: number): number {
+  const r = (v: number) => orbitOffset(cfg, 0, v, 1).radiusM;
+  if (r(1) <= distanceM) return 1;
+  let lo = 1;
+  for (let i = 1; i <= 1000; i++) {
+    lo = 1 - i / 1000;
+    if (r(lo) <= distanceM) break;
+  }
+  let hi = Math.min(1, lo + 1 / 1000);
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (r(mid) <= distanceM) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}

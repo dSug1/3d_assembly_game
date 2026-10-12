@@ -246,8 +246,11 @@ export const SCENE_1: SceneDescriptor = {
     // ⭐ prototype (green box), the owner 2026-10-02: *"I want to set the zoom at 1.00 but the scene shall be exactly the same"* —
     // every ring ×1.5 and the boot zoom 1.5 → 1.00 (`bootZoom`): the green piece sits at rings × zoom, so nothing moves.
     // (Was 1.7 / ±1.05, 0.25 / 0 at zoom 1.5.)
-    topRadiusM: 2.55,
-    topHeightM: 1.575,
+    // ⭐ prototype (2026-10-12, the owner: *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* →
+    // *"double rings 1 and 4, keep the piece at 3m boot view as it is (everything mentionned here is with zoom=1)"*) — 1st and 4th ×2: 6.0 m
+    // (were 2.55 / ±1.575, 3.0 m); the boot on the way up to the 1st ring where the piece is 3 m away (`bootDistanceM`)
+    topRadiusM: 5.1,
+    topHeightM: 3.15,
     // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
     // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
     middleRadiusM: 0.09,
@@ -256,8 +259,9 @@ export const SCENE_1: SceneDescriptor = {
     // as middle ring and height the negative opposite of middle ring's height"* — 0.09 m at −0.15 m: a symmetric waist again.
     lowerRadiusM: 0.09,
     lowerHeightM: -0.15,
-    bottomRadiusM: 2.55,
-    bottomHeightM: -1.575,
+    bottomRadiusM: 5.1,
+    bottomHeightM: -3.15,
+    bootDistanceM: 3,
   },
   final: SCENE_1_FINAL,
 };
