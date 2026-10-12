@@ -749,3 +749,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐⭐ The CANDIDATE support face (the facet facing the camera most) carries a fading copy of the orbited piece in the pose it would take (the
   next roll when it is the pink face); the cube HELD + the other touch's drag (desktop: ALT / CTRL in the window + a left drag) scrolls the
   alignment through the candidates — a continuous snapped rotation, one episode → `RESTING_FACE_ALIGNMENT.md` §21.
+* ⭐⭐⭐ The window redrawn: no part, no gizmo; inside the cube, in the CANDIDATE face's plane, (a) the piece as it is → (b) a red arrow → (c)
+  the piece as it would be, standing on its resting face; the pink face fades as the scene's → `RESTING_FACE_ALIGNMENT.md` §21.

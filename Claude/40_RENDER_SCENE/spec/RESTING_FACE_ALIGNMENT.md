@@ -768,3 +768,22 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
   - Headless (touch and desktop): at boot the candidate is the front face (−z) with a copy on it, the top (+y) lit; one finger held on the cube
     and the other dragging across — the candidate scrolls −z → +z → +x → −x, the pink face follows each, 1 move in all; the same with CTRL in
     the window and a left drag.
+- ⭐⭐⭐ **THE WINDOW REDRAWN: (a) → (b) → (c) INSIDE THE CUBE** (the owner, 2026-10-12, with a sketch — the piece lying flat, a curved red
+  arrow, the piece standing):
+  - *"remove the pink gizmo and the part which supports it (the blue part) from the window"* — ⛔ the part's copy, the ring's copy and the host
+    tracking (`centreHost`) are deleted; the polyhedron is its own shape again (unit planes), alone in the window.
+  - *"move the green - turquoise piece inside the cube and instead, display (a) the green-turquoise piece as it is currently, (b) a curved
+    arrow towards (c) and (c) the green-turquoise piece as its transform would be if the candidate face was pressed"* — inside the
+    polyhedron: (a) a copy of the orbited piece in its LIVE pose (lower-left), (b) a red curved arrow (a tube along a quadratic curve, a cone
+    for its head), (c) a copy in the pose the candidate face would give (`restingPreview`; the next roll when the candidate is the pink face;
+    fading between poses, upper-right).
+  - *"The resting faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in
+    the scene"* → *"Therefore the attached scheme rotates as currently the replica does"* — the scheme lies in the CANDIDATE face's plane
+    through the polyhedron's centre (its in-face axes as near the screen's right and up as the face allows) and turns with the cube; (c)
+    STANDS ON ITS RESTING FACE on that plane, against the candidate's normal as in the scene; (a) keeps the piece's true current pose, a
+    little in front of the plane.
+  - *"fade the highlight of the pink face on the cube (same as in the scene)"* — the lit facet's strength is the scene pink face's
+    `highlightAlpha` (shown while an input runs — the held second touch, or a hold of the cube that aligned — then held and faded); the
+    "through everything" ghost layer is deleted (no part left to hide it).
+  - Headless: at boot the candidate −z, the scheme facing the camera, the pink face already faded; after an orbit the candidate +x, the scheme
+    turned into the side plane, (c) standing on +x.

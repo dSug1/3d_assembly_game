@@ -75,7 +75,7 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
   });
   it("⭐⭐ rebuilt at the boot's goal baseline and at every goal commit; from the SEATED parts and the frozen bodies only, never the orbited pieces", () => {
     expect(code("render/goal_commit_wiring.ts")).toMatch(/const reached = st\.goalCommit\.commit\([^)]*\);\s*(?:\/\/[^\n]*\n\s*)*st\.orientDirty = true;/);
-    expect(code("render/orient_cube.ts")).toContain("if (st.orientDirty || (st.orientCube !== null && st.orientCube.host !== st.centreHost)"); // ⭐ and a new host part
+    expect(code("render/orient_cube.ts")).toContain("if (st.orientDirty || (st.orientCube === null && st.orientDirs.length > 0)) rebuild(st);");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (orbited.has(id)) continue;");
     expect(g).toContain("if (o.frozen !== true && !st.goalCommit.has(id)) continue;");
@@ -101,30 +101,28 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
 
 const flat = (f: string) => code(f).replace(/\s+/g, " ");
 
-describe("⭐⭐ the window copies the part that hosts the pink gizmo (2026-10-12, *\"Instead of a cube, represent the cube overlaid onto the part which hosts the pink gizmo. Also show the pink gizmo in the overlaid part\"*)", () => {
-  it("⭐ the host: set by a press that moves the orbit centre onto a part, by the boot's blue face; a barycentre has none", () => {
-    expect(flat("render/pointer_wiring.ts")).toMatch(/st\.centreBlend\.retarget\(newTarget\); st\.centreHost = st\.idOf\.get\(mesh\) \?\? null;/);
-    expect(code("render/green_box_wiring.ts")).toContain("if (face !== null) st.centreHost = blue.id;");
-    expect(flat("render/camera_rig.ts")).toContain("st.centreBlend.retarget(c); st.centreHost = null;");
-  });
-  it("⭐⭐ the copy (contour + core), the polyhedron NOT fitted (*\"it shall stay a cube / polyhedron centered on the center of the part\"*): every plane at one distance, the part's radius; the gizmo's copy where the scene's gizmo is", () => {
+describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) an arrow, (c) the piece as it would be, in the CANDIDATE face's plane (2026-10-12)", () => {
+  it("⭐ *\"remove the pink gizmo and the part which supports it (the blue part) from the window\"* — no host, no copy of a part, no ring", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).not.toContain("supportOffsets");
-    expect(c).toContain("const facets = facetPolytope(normals, 1.6 * inner, normals.map(() => inner));");
-    expect(c).toContain('const copy = body.clone("orient-copy", root, true);');
-    expect(c).toContain('const cc = core.clone("orient-copy-core", copy, true);');
-    expect(c).toContain("const gp = st.pinkRing?.position ?? st.orbitCentreM;");
-    expect(c).toContain("c.ring.isVisible = show && c.host !== null && st.cfg.pinkGizmoVisible === 1;");
+    expect(c).not.toContain("centreHost");
+    expect(c).not.toContain("orient-copy");
+    expect(c).not.toContain("orient-ring");
+    expect(code("render/pointer_wiring.ts")).not.toContain("centreHost");
+    expect(code("render/scene_state.ts")).not.toContain("centreHost");
   });
-  it("⭐⭐ front / back (*\"Make the cube slightly occluding the pink face … Pink face shall always be visible\"*): every facet glass after the lit layer; the lit layer drawn through the part; back edges faint", () => {
+  it("⭐⭐ (a), (b), (c) in the candidate face's plane (*\"The resting faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in the scene\"*): (c) stands on its RESTING face", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("mat.backFaceCulling = false; // ⭐ every facet, front and back");
-    expect(c).toContain("mesh.alphaIndex = 2;");
-    // ⭐ twice: solid where nothing is in front (depth-tested), a faint ghost through the part (depth ALWAYS) — the part still reads in front
-    expect(flat("render/orient_cube.ts")).toContain("if (through) mat.depthFunction = Constants.ALWAYS; else mat.forceDepthWrite = true;");
-    expect(flat("render/orient_cube.ts")).toContain('const solid = layer("orient-lit", LIT_ALPHA, false); solid.alphaIndex = 1;');
-    expect(flat("render/orient_cube.ts")).toContain('const ghost = layer("orient-lit-ghost", LIT_GHOST_ALPHA, true); ghost.alphaIndex = 0;');
-    expect(c).toContain("e.alpha = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0 ? 1 : BACK_EDGE_ALPHA;");
+    expect(c).toContain("const n: Vec3 = (ci >= 0 ? normalize(qRotate(q, c.facetNormals[ci]!)) : null) ?? [-fwd.x, -fwd.y, -fwd.z];");
+    expect(c).toContain("const v: Vec3 = cross(u, n);");
+    expect(c).toContain("nowFrame(st, q, add(at(SLOT_NOW), scale(n, pieceSize)), pieceSize);");
+    expect(c).toContain("replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);");
+    expect(c).toContain("const off = qRotate(w, scale(on === null ? copy.centre : copy.rest, k));");
+    expect(c).toContain('const shaft = CreateTube("orient-arrow-shaft", { path, radius: ARROW_WIDTH, tessellation: 8 }, st.scene);');
+  });
+  it("⭐⭐ *\"fade the highlight of the pink face on the cube (same as in the scene)\"* — the scene pink face's `highlightAlpha`", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("const fade = highlightAlpha( now, (st.hold !== null && st.hold.shown) || (st.orientHold !== null && st.orientHold.acted), st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs, );");
+    expect(c).toContain("(c.litMesh.material as StandardMaterial).alpha = LIT_ALPHA * fade;");
   });
 });
 
@@ -184,7 +182,7 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
     expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
     expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) live\.dying = now;/);
-    expect(c).toContain('const m = p.mesh.clone("orient-piece", c.root, true) as Mesh | null;');
+    expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
     expect(g).toContain("return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
