@@ -896,3 +896,6 @@ touch tap on seated / placed part). Remove the ctrl-alt raycast function in desk
     (`orientWindowFollow`, **0** by default); off, the window stays at its boot position (a desktop top-right, under the HUD; a touch screen
     bottom-left), and switching it off puts it back there. Headless: off — a drag leaves it at (1122, 238); on — it goes to (545, 497); off
     again — back at (1122, 238).
+- ⛔ **The red arrow deleted** (the owner, 2026-10-12, `1.0.69-`: *"remove the red arrow"*) — the window shows the cube and the copy only; the
+  preview no longer carries a turn and `turnBetween` is gone with it. ⚠ `nextCoupleRoll` still reports its own axis (a vectored property of
+  the roll: turning the pose by it IS the roll).

@@ -1165,7 +1165,7 @@ export function restingPreview(
   st: SceneState,
   dir: OrientDirection,
   roll: boolean,
-): { readonly q: Quat; readonly turn: { readonly axis: Vec3; readonly angle: number } | null } | null {
+): Quat | null {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFace === null) return null;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
@@ -1182,8 +1182,7 @@ export function restingPreview(
       pinkAxes = [[right.x, right.y, right.z]];
     }
     const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1);
-    // ⭐ (2026-10-12, *"the red arrow should show a clockwise rotation around the normal of the resting face"*) — the roll's OWN turn
-    return next === null ? null : { q: next.q, turn: { axis: next.axis, angle: next.angleRad } };
+    return next?.q ?? null; // ⛔ (2026-10-12) the red arrow deleted — its turn with it
   }
   const a = st.pieceAnchor;
   const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
@@ -1191,5 +1190,5 @@ export function restingPreview(
   // ⛔ (2026-10-12, the owner: *"There shall be no transition in the replica transform. Only a fade and appear"*) — from the pose the piece
   // is HEADING for (a turn in flight, `restAlign`), as the roll's: from the pose SHOWN, the preview changed on every frame of the 125 ms
   // turn, and a new copy faded in and out on each one
-  return { q: restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q, turn: null };
+  return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
 }

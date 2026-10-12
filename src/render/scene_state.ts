@@ -492,8 +492,6 @@ export interface SceneState {
      * whether the next copy appears at once (no fade-in). */
     clicked: { readonly tag: number; readonly cand: number } | null;
     instant: boolean;
-    /** ⭐ (2026-10-12) the red arrow of the turn from the piece's pose (`from`) to the copy's (`to`). */
-    turnArrow: { readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh; readonly from: import("../core/vec").Quat; readonly to: import("../core/vec").Quat } | null;
     replicas: {
       readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly piece: string;
@@ -501,8 +499,6 @@ export interface SceneState {
       readonly centre: import("../core/vec").Vec3;
       readonly rest: import("../core/vec").Vec3;
       readonly q: import("../core/vec").Quat;
-      /** ⭐ (2026-10-12) a roll's own turn (axis, angle) — the arrow's; `null`: an alignment (the turn between the poses). */
-      readonly turn: { readonly axis: import("../core/vec").Vec3; readonly angle: number } | null;
       readonly tag: number;
       readonly born: number;
       dying: number | null;
