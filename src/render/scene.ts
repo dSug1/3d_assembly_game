@@ -592,7 +592,6 @@ export function createScene(
   st.orientPress = null;
   st.pinkDir = null;
   st.pinkTargetNormal = null;
-  st.centreHost = null;
   st.orientHold = null;
   st.orientDriver = null;
   st.pinkFill = null;

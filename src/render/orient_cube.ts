@@ -3,48 +3,47 @@
  * pink face - resting face alignment function by the resting face replicating the orientation of something on the screen … Another faceted
  * gizmo on UI overlay?"* → *"Start with 2, sit against this face. Make a slider 0-200% to increase the size of the cube window in the overlay
  * (zero means hiding the window). Make sure that the cube gets updated to the proper polyhedron with the distinct face directions in the
- * scene (therefore at boot of the scene and also each time a part is seated)"* → *"Instead of a cube, represent the cube overlaid onto the
- * part which hosts the pink gizmo. Also show the pink gizmo in the overlaid part. So the window is a replicate of the scene (part and gizmo)
- * on which the cube / polyhedron is overlaid"*).
+ * scene (therefore at boot of the scene and also each time a part is seated)"* → … → *"remove the pink gizmo and the part which supports it
+ * (the blue part) from the window — move the green - turquoise piece inside the cube and instead, display (a) the green-turquoise piece as
+ * it is currently, (b) a curved arrow towards (c) and (c) the green-turquoise piece as its transform would be if the candidate face was
+ * pressed — fade the highlight of the pink face on the cube (same as in the scene)"*).
  *
- * - **What it shows**: a COPY of the part that hosts the pink gizmo (the orbit centre's part, `centreHost` — its contour and its core), the
- *   pink gizmo on it, and the polyhedron of the level's DISTINCT face directions (`core/orientation_set.ts`) — ⛔ NOT fitted to the part
- *   (2026-10-12, *"The cube/polyhedron shall not match and wrap the part : it shall stay a cube / polyhedron centered on the center of the
- *   part in the center of the window"*): its own shape (a cube in `Scene_1`), centred on the part's centre, just large enough to hold it.
- *   No host part: the polyhedron alone. Drawn in a window placed by its two-cursor slider (boot: a touch screen bottom-left, a desktop top-right), turned as the world is seen from the camera.
- * - ⭐ (2026-10-12, *"Make the cube slightly occluding the pink face so it can be understood which face is in front and which is behind. Pink
- *   face shall always be visible (not completely occluded by the replicated part)"*) — every facet is faint GLASS (the part hides the back ones
- *   it covers); the LIT facet is its own pink layer drawn through the part (depth ALWAYS) and BEFORE the glass, so a front facet veils it a
- *   little when it is at the back; front edges solid, back edges faint.
+ * - **What it shows**: the polyhedron of the level's DISTINCT face directions (`core/orientation_set.ts`, a cube in `Scene_1`) in a window
+ *   placed by its two-cursor slider (boot: a touch screen bottom-left, a desktop top-right), turned as the world is seen from the camera; and
+ *   INSIDE it, laid out on the screen: (a) the orbited piece AS IT IS (lower-left), (b) a curved arrow, (c) the piece AS IT WOULD BE if the
+ *   CANDIDATE face (the one facing the camera most) were pressed (upper-right) — the next roll when the candidate is the pink face; a new pose
+ *   fades (c) out and in again.
+ * - Every facet is faint glass, front edges solid, back edges faint; the LIT facet (the direction the piece is aligned to) is pink, BEFORE the
+ *   glass (a front facet veils it a little when it is at the back), and FADES as the scene's pink face does (`highlightAlpha`).
  * - **Tap a facet** → the resting face SITS AGAINST it (*"sit against this face"*): a virtual pink face (`st.pinkDir`) — `alignRestingFace`
- *   reads it as a part's face (its normal, its edges as the roll's axes); one episode. **Tap the lit facet** (the direction the piece is
- *   aligned to, whatever gave it) → the roll to the next axis, one episode.
- * - **Rebuilt** at the boot's goal baseline and at every goal commit (`orientDirty`, set by `commitGoal`) and whenever the host part changes.
+ *   reads it as a part's face; one episode. **Tap the lit facet** → the roll to the next axis, one episode.
+ * - **The cube HELD** (a finger, or ALT / CTRL with the cursor in it) while the other touch drags: the camera orbits, the cube turns, each new
+ *   candidate becomes the pink face and the piece sits against it — a continuous snapped rotation, one episode.
+ * - **Rebuilt** at the boot's goal baseline and at every goal commit (`orientDirty`, set by `commitGoal`).
  * - A press inside the window is the window's, before the router (it never orbits nor grabs).
- * ⛔ Rules here are the window's drawing and its claim; the directions and the polyhedron are `core/orientation_set.ts`'s, the alignment
- * `green_box_wiring.ts`'s.
+ * ⛔ Rules here are the window's drawing and its claim; the directions and the polyhedron are `core/orientation_set.ts`'s, the candidate and the
+ * window's place `input/orient_window.ts`'s, the alignment `green_box_wiring.ts`'s.
  */
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { CreateLines, CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
+import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
+import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { distinctDirections, facetPolytope, type OrientDirection } from "../core/orientation_set";
-import { Constants } from "@babylonjs/core/Engines/constants";
-import { add, dot, normalize, qRotate, scale, shortestArc, sub, type Vec3 } from "../core/vec";
+import { add, cross, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
-import { worldPlacementOf, type ObjectId } from "../core/object_model";
 import { isTapRelease } from "../input/mode_toggle";
+import { highlightAlpha } from "../input/hold_gesture";
 import { candidateFace, clearOfOverlays, orientWindowCorner } from "../input/orient_window";
 import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
-import type { Quat } from "../core/vec";
-import { topologyOfBody } from "./bodies";
-import { RING_POINTS, type SceneState } from "./scene_state";
+import type { SceneState } from "./scene_state";
 
 /** ⭐ The window's side at 100 % (mm on the glass — rule 3), and its margin from the screen's edges. */
 export const ORIENT_WINDOW_MM = 22;
@@ -55,22 +54,29 @@ const ORIENT_GROUP = 3;
 const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 const PINK = new Color3(1, 0.45, 0.85);
 const FACET = new Color3(0.86, 0.88, 0.95);
+const ARROW = new Color3(1, 0.3, 0.1);
 const LIGHT = normalize([0.35, 0.85, -0.4])!;
-/** ⭐ The facets' strength: a plain facet is faint glass over the part, the lit one nearly solid; the box left over (no direction) fainter. */
+/** ⭐ The facets' strength: a plain facet faint glass, the lit one nearly solid (before its fade); the box left over (no direction) fainter. */
 const FACET_ALPHA = 0.16;
 const LIT_ALPHA = 0.85;
-/** ⭐ The lit facet seen THROUGH the part — faint, so the part still reads in front of it. */
-const LIT_GHOST_ALPHA = 0.35;
 const BOX_ALPHA = 0.08;
-/** ⭐ The polyhedron's inner radius, as a share of the part's radius — just large enough to hold the part. */
-const HOLD_MARGIN = 1.04;
 /** ⭐ A back edge's strength (a front one is solid). */
 const BACK_EDGE_ALPHA = 0.25;
-/** ⭐ The pink gizmo's copy: its radius as a share of the window's half side. */
-const RING_SHARE = 0.16;
-/** ⭐ (2026-10-12) the orbited piece's copy: its radius as a share of the polyhedron's inner radius, its gap off the candidate face, its fade. */
-const REPLICA_SHARE = 0.55;
-const REPLICA_GAP = 0.02;
+/**
+ * ⭐ (2026-10-12) the layout INSIDE the polyhedron, in units of its inner radius, in the CANDIDATE FACE's plane through its centre (*"The resting
+ * faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in the scene.
+ * Therefore the attached scheme rotates as currently the replica does"*): (a) the piece as it is, lower-left; (c) the piece as it would be,
+ * upper-right, its resting face ON the plane; each this big; the arrow between them (a quadratic curve, its head at (c)), a little off the
+ * plane. ⭐ The plane's in-face axes follow the screen's right and up as nearly as the face allows.
+ */
+const SLOT_NOW: readonly [number, number] = [-0.45, -0.42];
+const SLOT_NEXT: readonly [number, number] = [0.45, 0.42];
+const PIECE_SHARE = 0.36;
+const ARROW_FROM: readonly [number, number] = [-0.5, -0.05];
+const ARROW_BEND: readonly [number, number] = [-0.45, 0.55];
+const ARROW_TO: readonly [number, number] = [0.08, 0.45];
+const ARROW_WIDTH = 0.035;
+const ARROW_LIFT = 0.15;
 const REPLICA_FADE_MS = 250;
 
 /** ⭐ The screen's overlays the window keeps clear of, in canvas px (the HUD, its toggle, the ☰, the ⏸, the score bar) — the visible ones. */
@@ -109,31 +115,27 @@ function colours(st: SceneState): number[] {
   return out;
 }
 
-/** ⭐ The host part's points in the world, and the centre of their box — what the polyhedron is fitted around. */
-function hostPoints(st: SceneState, host: ObjectId | null): { readonly pts: Vec3[]; readonly centre: Vec3 } | null {
-  if (host === null) return null;
-  const mesh = st.meshOf.get(host);
-  const pose = worldPlacementOf(st.world, host);
-  if (mesh === undefined || pose === null) return null;
-  const topo = st.topoOf.get(host) ?? topologyOfBody(st, mesh);
-  const world = topo.positions.map((p) => add(pose.position, qRotate(pose.orientation, p)));
-  if (world.length === 0) return null;
-  const lo = [0, 1, 2].map((k) => Math.min(...world.map((p) => p[k]!)));
-  const hi = [0, 1, 2].map((k) => Math.max(...world.map((p) => p[k]!)));
-  const centre: Vec3 = [(lo[0]! + hi[0]!) / 2, (lo[1]! + hi[1]!) / 2, (lo[2]! + hi[2]!) / 2];
-  return { pts: world.map((p) => sub(p, centre)), centre };
+function unlit(st: SceneState, name: string, colour: Color3, alpha: number): StandardMaterial {
+  const m = new StandardMaterial(name, st.scene);
+  m.disableLighting = true;
+  m.emissiveColor = colour.clone();
+  m.alpha = alpha;
+  m.backFaceCulling = false;
+  return m;
 }
 
 function dispose(st: SceneState): void {
   const c = st.orientCube;
   if (c === null) return;
-  c.root.dispose(false, false); // ⭐ its children (the copy, the polyhedron, its edges) with it
-  c.back.dispose();
-  c.ring.dispose();
+  c.root.dispose(false, true); // ⭐ its children (the polyhedron, its edges, the lit layer) with it
+  c.back.dispose(false, true);
+  c.arrow.dispose(false, true);
+  c.now?.mesh.dispose(false, true);
+  for (const r of c.replicas) r.mesh.dispose(false, true);
   st.orientCube = null;
 }
 
-/** ⭐ The directions read again (a goal commit) and the window's content rebuilt around the host part. */
+/** ⭐ The directions read again (a goal commit) and the window's content rebuilt. */
 function rebuild(st: SceneState): void {
   if (st.orientDirty) {
     st.orientDirty = false;
@@ -141,11 +143,8 @@ function rebuild(st: SceneState): void {
   }
   dispose(st);
   if (st.orientDirs.length === 0) return;
-  const host = st.centreHost !== null && st.meshOf.has(st.centreHost) ? st.centreHost : null;
-  const fit = hostPoints(st, host);
   const normals = st.orientDirs.map((d) => d.normal);
-  // ⭐ its own shape, every plane at ONE distance — the part's radius (× `HOLD_MARGIN`), so it holds the part, centred on it
-  const inner = fit === null ? 1 : HOLD_MARGIN * Math.max(...fit.pts.map((p) => Math.hypot(p[0], p[1], p[2])));
+  const inner = 1;
   const facets = facetPolytope(normals, 1.6 * inner, normals.map(() => inner));
   const root = new TransformNode("orient-root", st.scene);
   root.rotationQuaternion = Quaternion.Identity();
@@ -174,13 +173,10 @@ function rebuild(st: SceneState): void {
   data.indices = indices;
   data.colors = new Array(vertexTags.length * 4).fill(1);
   data.applyToMesh(mesh, true);
-  const mat = new StandardMaterial("orient-polyhedron-mat", st.scene);
-  // ⭐ unlit: the vertex colour IS the colour (emissive white × the vertex colour)
-  mat.disableLighting = true;
+  // ⭐ unlit: the vertex colour IS the colour (emissive white × the vertex colour); every facet, front and back
+  const mat = unlit(st, "orient-polyhedron-mat", Color3.White(), 1);
   mat.diffuseColor = Color3.Black();
-  mat.emissiveColor = Color3.White();
   mat.specularColor = Color3.Black();
-  mat.backFaceCulling = false; // ⭐ every facet, front and back — the part hides the back ones it covers
   mesh.material = mat;
   mesh.hasVertexAlpha = true;
   mesh.alphaIndex = 2; // ⭐ after the lit layer: a front facet veils it
@@ -188,7 +184,7 @@ function rebuild(st: SceneState): void {
   mesh.renderingGroupId = ORIENT_GROUP;
   mesh.alwaysSelectAsActiveMesh = true;
   mesh.parent = root;
-  // ⭐ each facet's edges on their own, hidden while the facet faces away
+  // ⭐ each facet's edges on their own: solid while the facet faces the camera, faint while it faces away
   const edges = facets.map((f, i) => {
     const l = CreateLines(`orient-edge-${i}`, { points: [...f.vertices, f.vertices[0]!].map((v) => new Vector3(v[0], v[1], v[2])) }, st.scene);
     l.color = f.tag >= 0 ? new Color3(0.15, 0.15, 0.2) : new Color3(0.4, 0.4, 0.45);
@@ -198,44 +194,35 @@ function rebuild(st: SceneState): void {
     l.parent = root;
     return l;
   });
-  // ⭐ the host part's COPY: its contour and its core, as they stand in the scene (relative to the fitted centre)
-  const copies: Mesh[] = [];
-  const body = host === null ? undefined : st.meshOf.get(host);
-  if (body !== undefined && fit !== null) {
-    const copy = body.clone("orient-copy", root, true);
-    if (copy !== null) {
-      const p = body.getAbsolutePosition();
-      copy.position.set(p.x - fit.centre[0], p.y - fit.centre[1], p.z - fit.centre[2]);
-      copy.rotationQuaternion = body.absoluteRotationQuaternion.clone();
-      copy.scaling.copyFrom(body.absoluteScaling);
-      copies.push(copy as Mesh); // ⚠ a Mesh's clone is a Mesh; `meshOf` types it wider
-      const core = (body.metadata as { core?: Mesh } | null)?.core;
-      if (core !== undefined) {
-        const cc = core.clone("orient-copy-core", copy, true);
-        if (cc !== null) copies.push(cc);
-      }
-      for (const m of copies) {
-        m.metadata = null; // ⛔ never an orbit candidate, never a body
-        m.isPickable = false;
-        m.receiveShadows = false;
-        m.renderingGroupId = ORIENT_GROUP;
-        m.alwaysSelectAsActiveMesh = true;
-      }
-    }
+  // ⭐ (b) the curved arrow from (a) to (c) — drawn in its own plane, turned to face the camera every frame
+  const arrow = new Mesh("orient-arrow", st.scene);
+  const bend = (t: number): Vector3 => {
+    const u = 1 - t;
+    return new Vector3(
+      u * u * ARROW_FROM[0] + 2 * u * t * ARROW_BEND[0] + t * t * ARROW_TO[0],
+      u * u * ARROW_FROM[1] + 2 * u * t * ARROW_BEND[1] + t * t * ARROW_TO[1],
+      0,
+    );
+  };
+  const path = Array.from({ length: 24 }, (_, i) => bend(i / 23));
+  const shaft = CreateTube("orient-arrow-shaft", { path, radius: ARROW_WIDTH, tessellation: 8 }, st.scene);
+  const tip = path[path.length - 1]!;
+  const dir = tip.subtract(path[path.length - 2]!).normalize();
+  const head = CreateCylinder("orient-arrow-head", { height: ARROW_WIDTH * 6, diameterTop: 0, diameterBottom: ARROW_WIDTH * 6, tessellation: 12 }, st.scene);
+  head.position = tip.add(dir.scale(ARROW_WIDTH * 2));
+  head.rotationQuaternion = Quaternion.RotationAxis(new Vector3(0, 0, 1), Math.atan2(dir.y, dir.x) - Math.PI / 2);
+  const am = unlit(st, "orient-arrow-mat", ARROW, 0.999);
+  for (const m of [shaft, head]) {
+    m.material = am;
+    m.parent = arrow;
+    m.isPickable = false;
+    m.renderingGroupId = ORIENT_GROUP;
+    m.alwaysSelectAsActiveMesh = true;
+    m.alphaIndex = 3;
   }
-  // ⭐ the pink gizmo's copy — billboarded, so placed in the WORLD every frame (⛔ never parented: a billboard drops its parent's rotation)
-  const ring = CreateLineSystem("orient-ring", { lines: [1, 1.05, 1.1].map((k) => RING_POINTS.map((p) => p.scale(k))) }, st.scene);
-  ring.color = PINK.clone();
-  ring.billboardMode = Mesh.BILLBOARDMODE_ALL;
-  ring.isPickable = false;
-  ring.renderingGroupId = ORIENT_GROUP;
-  ring.alwaysSelectAsActiveMesh = true;
+  arrow.rotationQuaternion = Quaternion.Identity();
   const back = CreatePlane("orient-window", { size: 1 }, st.scene);
-  const bm = new StandardMaterial("orient-window-mat", st.scene);
-  bm.disableLighting = true;
-  bm.emissiveColor = new Color3(0.08, 0.09, 0.12);
-  bm.alpha = 0.35;
-  bm.backFaceCulling = false;
+  const bm = unlit(st, "orient-window-mat", new Color3(0.08, 0.09, 0.12), 0.35);
   back.material = bm;
   back.isPickable = false;
   back.renderingGroupId = ORIENT_GROUP;
@@ -244,47 +231,68 @@ function rebuild(st: SceneState): void {
     root,
     mesh,
     edges,
-    copies,
-    ring,
+    arrow,
     back,
-    host,
-    centre: fit?.centre ?? [0, 0, 0],
     facetNormals: facets.map((f) => f.normal),
     facetPoints: facets.map((f) => f.vertices[0]!),
     facetVerts: facets.map((f) => f.vertices),
-    facetCentres: facets.map((f) => scale(f.vertices.reduce<Vec3>((a, v) => add(a, v), [0, 0, 0]), 1 / f.vertices.length)),
-    inner,
-    candidate: -1,
-    replicas: [],
     facetTags: facets.map((f) => f.tag),
+    facetCentres: facets.map((f) => scale(f.vertices.reduce<Vec3>((a, v) => add(a, v), [0, 0, 0]), 1 / f.vertices.length)),
     litMesh: null,
+    inner,
     triTag,
     vertexTags,
     vertexNormals,
     radius,
     lit: -2,
+    candidate: -1,
+    now: null,
+    replicas: [],
   };
 }
 
+/** ⭐ A copy of the orbited piece (its geometry and a clone of its material), never pickable, never a body, drawn after the glass. */
+function pieceCopy(
+  st: SceneState,
+  name: string,
+): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3 } | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined) return null;
+  const m = p.mesh.clone(name, null, true) as Mesh | null;
+  if (m === null) return null;
+  m.metadata = null; // ⛔ never an orbit candidate, never the orbited piece
+  m.isPickable = false;
+  m.receiveShadows = false;
+  m.renderingGroupId = ORIENT_GROUP;
+  m.alwaysSelectAsActiveMesh = true;
+  m.alphaIndex = 3;
+  const src = p.mesh.material as StandardMaterial | null;
+  const mat = src !== null ? src.clone(name + "-mat") : new StandardMaterial(name + "-mat", st.scene);
+  mat.alpha = 0.999; // ⭐ always the transparent pass, after the glass
+  mat.forceDepthWrite = true;
+  m.material = mat;
+  m.rotationQuaternion = Quaternion.Identity();
+  const b = p.mesh.getBoundingInfo().boundingSphere;
+  return { mesh: m, piece: p.mesh.name, radius: Math.max(1e-6, b.radius), centre: [b.center.x, b.center.y, b.center.z], rest: p.restingCentre };
+}
+
 /**
- * ⭐ Every frame: rebuilt on a goal commit or a new host part; shown with an orbited piece and a size above 0 %; placed in its window
- * (where its position slider puts it, `ORIENT_WINDOW_MM` × the size slider), turned as the world is seen from the camera; the facet of the direction the piece is
- * aligned to lit pink; the edges of the facets turned away hidden; the pink gizmo's copy where the gizmo is on the part.
+ * ⭐ Every frame: rebuilt on a goal commit; shown with an orbited piece and a size above 0 %; placed in its window, turned as the world is seen
+ * from the camera; the lit facet faded as the scene's pink face is; the candidate read; (a), (b) and (c) laid out inside it.
  */
 export function orientCubeFrame(st: SceneState): void {
-  if (st.orientDirty || (st.orientCube !== null && st.orientCube.host !== st.centreHost) || (st.orientCube === null && st.orientDirs.length > 0)) {
-    rebuild(st);
-  }
+  if (st.orientDirty || (st.orientCube === null && st.orientDirs.length > 0)) rebuild(st);
   const c = st.orientCube;
   const pct = st.cfg.orientCubeSizePct;
   const show = c !== null && pct > 0 && st.greenBox !== null;
   if (c !== null) {
     c.mesh.isVisible = show;
     c.back.isVisible = show;
-    for (const m of c.copies) m.isVisible = show;
-    c.ring.isVisible = show && c.host !== null && st.cfg.pinkGizmoVisible === 1;
     for (const e of c.edges) e.isVisible = show;
-    if (c.litMesh !== null) for (const m of [c.litMesh, ...c.litMesh.getChildMeshes()]) m.isVisible = show;
+    for (const m of c.arrow.getChildMeshes()) m.isVisible = show;
+    if (c.now !== null) c.now.mesh.isVisible = show;
+    for (const r of c.replicas) r.mesh.isVisible = show;
+    if (c.litMesh !== null) c.litMesh.isVisible = show;
   }
   if (!show || c === null) {
     st.orientRect = null;
@@ -294,7 +302,7 @@ export function orientCubeFrame(st: SceneState): void {
   const ch = st.canvas.clientHeight;
   const size = (mmToPx(ORIENT_WINDOW_MM) * pct) / 100;
   const margin = mmToPx(ORIENT_MARGIN_MM);
-  // ⭐ (2026-10-12) where its two-cursor slider puts it (`orientWindowCorner`)
+  // ⭐ (2026-10-12) where its two-cursor slider puts it (`orientWindowCorner`), clear of the screen's overlays
   const corner = orientWindowCorner(cw, ch, size, margin, st.cfg.orientWindowXPct, st.cfg.orientWindowYPct);
   const left = corner.left;
   const top = clearOfOverlays(left, corner.top, size, overlayRects(st), ch, margin);
@@ -329,17 +337,6 @@ export function orientCubeFrame(st: SceneState): void {
     const n = qRotate(q, c.facetNormals[i]!);
     e.alpha = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0 ? 1 : BACK_EDGE_ALPHA;
   });
-  if (c.ring.isVisible) {
-    // ⭐ where the scene's pink gizmo IS (its ring, placed in the world each frame) — not the rig's centre, which reaches it later
-    const gp = st.pinkRing?.position ?? st.orbitCentreM;
-    const g: Vec3 = [gp.x - c.centre[0], gp.y - c.centre[1], gp.z - c.centre[2]];
-    const at = local(g);
-    // ⭐ toward the camera by a fifth of the window, so the part's own face never hides it (at this scale a hair z-fights it)
-    const toEye = normalize(sub(eye, at)) ?? [0, 0, 0];
-    const lift = half * 0.2;
-    c.ring.position.set(at[0] + toEye[0] * lift, at[1] + toEye[1] * lift, at[2] + toEye[2] * lift);
-    c.ring.scaling.setAll(RING_SHARE * half);
-  }
   const depth = d + c.radius * s * 1.2;
   c.back.position.copyFrom(cam.position.add(toCentre.scale(depth / Math.max(1e-6, Vector3.Dot(toCentre, fwd)))));
   c.back.scaling.setAll((2 * half * depth) / d);
@@ -350,6 +347,19 @@ export function orientCubeFrame(st: SceneState): void {
     c.mesh.setVerticesData("color", colours(st), true, 4);
     litLayer(st);
   }
+  // ⭐⭐ (2026-10-12, *"fade the highlight of the pink face on the cube (same as in the scene)"*) — the scene pink face's own strength
+  const now = performance.now();
+  const fade = highlightAlpha(
+    now,
+    (st.hold !== null && st.hold.shown) || (st.orientHold !== null && st.orientHold.acted),
+    st.highlightEndedAt,
+    st.cfg.highlightHoldMs,
+    st.cfg.highlightFadeMs,
+  );
+  if (c.litMesh !== null) {
+    (c.litMesh.material as StandardMaterial).alpha = LIT_ALPHA * fade;
+    c.litMesh.isVisible = fade > 0;
+  }
   // ⭐⭐ (2026-10-12, *"the face of the cube which normal is pointing the most to the camera is the candidate support face"*)
   const cand = candidateFace(
     c.facetTags.map((tag, i) => ({ tag, normal: qRotate(q, c.facetNormals[i]!), centre: local(c.facetCentres[i]!) })),
@@ -357,7 +367,94 @@ export function orientCubeFrame(st: SceneState): void {
   );
   c.candidate = cand;
   orientHoldStep(st, cand);
-  replicaFrame(st, cand);
+  // ⭐ (a), (b), (c) — in the candidate face's plane through the polyhedron's centre: n its normal (as drawn), u and v in the face, u as near
+  // the screen's right as the face allows, v its up; with no candidate, the plane facing the camera
+  const R: Vec3 = [right.x, right.y, right.z];
+  const U: Vec3 = [up.x, up.y, up.z];
+  const ci = c.facetTags.indexOf(cand);
+  const n: Vec3 = (ci >= 0 ? normalize(qRotate(q, c.facetNormals[ci]!)) : null) ?? [-fwd.x, -fwd.y, -fwd.z];
+  const u: Vec3 = normalize(sub(R, scale(n, dot(R, n)))) ?? normalize(sub(U, scale(n, dot(U, n)))) ?? R;
+  const v: Vec3 = cross(u, n);
+  const o: Vec3 = [centre.x, centre.y, centre.z];
+  const unit = c.inner * s;
+  const at = (slot: readonly [number, number]): Vec3 => add(o, add(scale(u, slot[0] * unit), scale(v, slot[1] * unit)));
+  const pieceSize = PIECE_SHARE * unit;
+  const w = cross(u, v); // ⭐ a proper basis (u, v, u × v): the arrow's plane is u–v
+  c.arrow.position.set(o[0] + n[0] * ARROW_LIFT * unit, o[1] + n[1] * ARROW_LIFT * unit, o[2] + n[2] * ARROW_LIFT * unit);
+  c.arrow.rotationQuaternion!.copyFrom(Quaternion.RotationQuaternionFromAxis(new Vector3(...u), new Vector3(...v), new Vector3(...w)));
+  c.arrow.scaling.setAll(unit);
+  nowFrame(st, q, add(at(SLOT_NOW), scale(n, pieceSize)), pieceSize);
+  replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);
+}
+
+/**
+ * ⭐ A copy placed, `size` its radius, in the pose `pose` (turned with the cube by `corr`): its bounding centre on `slot` — or, with `on`
+ * (the plane's normal), its RESTING face's centre on `slot`, a hair off the plane.
+ */
+function place(
+  copy: { readonly mesh: Mesh; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3 },
+  pose: Quat,
+  corr: Quat,
+  slot: Vec3,
+  size: number,
+  on: Vec3 | null = null,
+): void {
+  const k = size / copy.radius;
+  const w = qmul(corr, pose);
+  copy.mesh.scaling.setAll(k);
+  copy.mesh.rotationQuaternion!.set(w[1], w[2], w[3], w[0]);
+  const off = qRotate(w, scale(on === null ? copy.centre : copy.rest, k));
+  const lift = on === null ? [0, 0, 0] : scale(on, size * 0.02);
+  copy.mesh.position.set(slot[0] - off[0] + lift[0]!, slot[1] - off[1] + lift[1]!, slot[2] - off[2] + lift[2]!);
+}
+
+/** ⭐ (a) the orbited piece AS IT IS — its live pose, every frame (a new copy when the piece in use changes). */
+function nowFrame(st: SceneState, corr: Quat, slot: Vec3, size: number): void {
+  const c = st.orientCube!;
+  const piece = st.greenBox?.name ?? "";
+  if (c.now !== null && c.now.piece !== piece) {
+    c.now.mesh.dispose(false, true);
+    c.now = null;
+  }
+  if (c.now === null) c.now = pieceCopy(st, "orient-piece-now");
+  if (c.now === null || st.greenBox === null) return;
+  const r = st.greenBox.rotationQuaternion ?? Quaternion.Identity();
+  place(c.now, [r.w, r.x, r.y, r.z], corr, slot, size);
+}
+
+/**
+ * ⭐⭐ (c) the orbited piece AS IT WOULD BE if the candidate face were pressed (`restingPreview` — the next roll when the candidate is the pink
+ * face); a new pose — the old copy fades out and a new one fades in.
+ */
+function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size: number, on: Vec3): void {
+  const c = st.orientCube!;
+  const now = performance.now();
+  const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
+  const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;
+  const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
+  const piece = st.greenBox?.name ?? "";
+  const live = c.replicas.find((r) => r.dying === null);
+  const same =
+    live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
+    Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
+  if (!same) {
+    if (live !== undefined) live.dying = now;
+    if (q !== null) {
+      const copy = pieceCopy(st, "orient-piece-next");
+      if (copy !== null) c.replicas.push({ ...copy, q, tag: cand, born: now, dying: null });
+    }
+  }
+  c.replicas = c.replicas.filter((r) => {
+    let a = Math.min(1, (now - r.born) / REPLICA_FADE_MS);
+    if (r.dying !== null) a *= Math.max(0, 1 - (now - r.dying) / REPLICA_FADE_MS);
+    if (r.dying !== null && a <= 0) {
+      r.mesh.dispose(false, true);
+      return false;
+    }
+    (r.mesh.material as StandardMaterial).alpha = 0.999 * a;
+    place(r, r.q, corr, slot, size, on); // ⭐ its resting face on the candidate's plane — against its normal, as in the scene
+    return true;
+  });
 }
 
 /**
@@ -388,112 +485,28 @@ function orientHoldStep(st: SceneState, cand: number): void {
 }
 
 /**
- * ⭐⭐ (2026-10-12, *"in the window, show the green/turquoise piece in the transform as it would be if it was aligned with the candidate support
- * face, in a position in front of the candidate support face (therefore orbiting together with the cube rotation). This green /turquoise piece
- * replication fades as the candidate support face changes and a new green/turquoise piece replication appears"* — *"if the candidate support
- * face is the pink face, show the green-turquoise piece replication with the next roll to the next axis applied"*) — the copy of the orbited
- * piece in the pose `restingPreview` gives, its resting face on the candidate face (a child of the window's root: it turns with the cube);
- * a new pose — the old copy fades out and a new one fades in.
- */
-function replicaFrame(st: SceneState, cand: number): void {
-  const c = st.orientCube!;
-  const now = performance.now();
-  const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
-  const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;
-  const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
-  const piece = st.greenBox?.name ?? "";
-  const live = c.replicas.find((r) => r.dying === null);
-  const same =
-    live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
-    Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
-  if (!same) {
-    if (live !== undefined) live.dying = now;
-    if (q !== null) {
-      const m = makeReplica(st, cand, q);
-      if (m !== null) c.replicas.push({ mesh: m, q, tag: cand, piece, born: now, dying: null });
-    }
-  }
-  c.replicas = c.replicas.filter((r) => {
-    let a = Math.min(1, (now - r.born) / REPLICA_FADE_MS);
-    if (r.dying !== null) a *= Math.max(0, 1 - (now - r.dying) / REPLICA_FADE_MS);
-    if (r.dying !== null && a <= 0) {
-      r.mesh.dispose(false, true);
-      return false;
-    }
-    (r.mesh.material as StandardMaterial).alpha = 0.999 * a; // ⭐ always the transparent pass: drawn after the pink ghost, never tinted by it
-    r.mesh.isVisible = c.mesh.isVisible;
-    return true;
-  });
-}
-
-/** ⭐ A copy of the orbited piece in the pose `q`, scaled to the polyhedron, its resting face on the facet of direction `tag`. */
-function makeReplica(st: SceneState, tag: number, q: Quat): Mesh | null {
-  const c = st.orientCube!;
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  const i = c.facetTags.indexOf(tag);
-  if (p === undefined || i < 0) return null;
-  const m = p.mesh.clone("orient-piece", c.root, true) as Mesh | null;
-  if (m === null) return null;
-  m.metadata = null; // ⛔ never an orbit candidate, never the orbited piece
-  m.isPickable = false;
-  m.receiveShadows = false;
-  m.renderingGroupId = ORIENT_GROUP;
-  m.alwaysSelectAsActiveMesh = true;
-  m.alphaIndex = 3;
-  const src = p.mesh.material as StandardMaterial | null;
-  const mat = src !== null ? src.clone("orient-piece-mat") : new StandardMaterial("orient-piece-mat", st.scene);
-  mat.alpha = 0;
-  mat.forceDepthWrite = true;
-  m.material = mat;
-  const k = (REPLICA_SHARE * c.inner) / Math.max(1e-6, p.mesh.getBoundingInfo().boundingSphere.radius);
-  m.scaling.setAll(k);
-  m.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
-  // ⭐ its resting face's centre on the facet's centre, a hair outside it
-  const n = c.facetNormals[i]!;
-  const at = sub(add(c.facetCentres[i]!, scale(n, c.inner * REPLICA_GAP)), qRotate(q, scale(p.restingCentre, k)));
-  m.position.set(at[0], at[1], at[2]);
-  return m;
-}
-
-/**
- * ⭐ The LIT facet's own layer (2026-10-12, *"Pink face shall always be visible (not completely occluded by the replicated part)"*), drawn
- * TWICE: solid pink where nothing is in front of it (depth-tested, writing its depth), and a faint pink GHOST through everything (depth
- * ALWAYS) — so where the part covers it, it still shows, and the part still reads in front of it. Both before the glass: a front glass facet
- * then veils it a little when it is at the back. Rebuilt when the lit facet changes.
+ * ⭐ The LIT facet's own layer: pink, drawn BEFORE the glass (a front glass facet veils it a little when it is at the back), its strength the
+ * scene pink face's fade (`orientCubeFrame`). Rebuilt when the lit facet changes.
  */
 function litLayer(st: SceneState): void {
   const c = st.orientCube!;
-  c.litMesh?.dispose(); // ⭐ its ghost is its child: it goes with it
+  c.litMesh?.dispose(false, true);
   c.litMesh = null;
   const at = c.facetTags.indexOf(c.lit);
   if (c.lit < 0 || at < 0) return;
   const v = c.facetVerts[at]!;
-  const layer = (name: string, alpha: number, through: boolean): Mesh => {
-    const m = new Mesh(name, st.scene);
-    const data = new VertexData();
-    data.positions = v.flatMap((p) => [p[0], p[1], p[2]]);
-    data.indices = v.slice(1, -1).flatMap((_, i) => [0, i + 2, i + 1]);
-    data.applyToMesh(m, false);
-    const mat = new StandardMaterial(name + "-mat", st.scene);
-    mat.disableLighting = true;
-    mat.emissiveColor = PINK.clone();
-    mat.alpha = alpha;
-    mat.backFaceCulling = false;
-    if (through) mat.depthFunction = Constants.ALWAYS;
-    else mat.forceDepthWrite = true;
-    m.material = mat;
-    m.isPickable = false;
-    m.renderingGroupId = ORIENT_GROUP;
-    m.alwaysSelectAsActiveMesh = true;
-    return m;
-  };
-  const solid = layer("orient-lit", LIT_ALPHA, false);
-  solid.alphaIndex = 1;
-  solid.parent = c.root;
-  const ghost = layer("orient-lit-ghost", LIT_GHOST_ALPHA, true);
-  ghost.alphaIndex = 0;
-  ghost.parent = solid;
-  c.litMesh = solid;
+  const m = new Mesh("orient-lit", st.scene);
+  const data = new VertexData();
+  data.positions = v.flatMap((p) => [p[0], p[1], p[2]]);
+  data.indices = v.slice(1, -1).flatMap((_, i) => [0, i + 2, i + 1]);
+  data.applyToMesh(m, false);
+  m.material = unlit(st, "orient-lit-mat", PINK, LIT_ALPHA);
+  m.isPickable = false;
+  m.renderingGroupId = ORIENT_GROUP;
+  m.alwaysSelectAsActiveMesh = true;
+  m.alphaIndex = 1;
+  m.parent = c.root;
+  c.litMesh = m;
 }
 
 /**
@@ -569,6 +582,7 @@ export function orientCubePointer(
     st.orientPress = null;
     const scrolled = st.orientHold?.acted === true;
     st.orientHold = null;
+    if (scrolled) st.highlightEndedAt = performance.now(); // ⭐ the hold's highlights then fade, as the scene's do
     if (!scrolled && p.tag >= 0 && isTapRelease(p.t, p.x, p.y, performance.now(), e.clientX, e.clientY, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))) {
       orientCubeTap(st, p.tag);
     }

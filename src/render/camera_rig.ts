@@ -58,7 +58,6 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
   // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
   // so interrupting a half-finished migration does not put the jump back.
   st.centreBlend.retarget(c);
-  st.centreHost = null; // ⭐ (2026-10-12) a barycentre: the pink gizmo on no part
   syncCentre(st);
 }
 

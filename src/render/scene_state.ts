@@ -470,39 +470,45 @@ export interface SceneState {
     readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
     readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
     readonly edges: readonly import("@babylonjs/core/Meshes/linesMesh").LinesMesh[];
-    readonly copies: readonly import("@babylonjs/core/Meshes/mesh").Mesh[];
-    readonly ring: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
+    /** ⭐ (2026-10-12) (b) the curved arrow from (a) the piece as it is to (c) the piece as it would be */
+    readonly arrow: import("@babylonjs/core/Meshes/mesh").Mesh;
     readonly back: import("@babylonjs/core/Meshes/mesh").Mesh;
-    readonly host: import("../core/object_model").ObjectId | null;
-    readonly centre: import("../core/vec").Vec3;
     readonly facetNormals: readonly import("../core/vec").Vec3[];
     readonly facetPoints: readonly import("../core/vec").Vec3[];
     readonly facetVerts: readonly (readonly import("../core/vec").Vec3[])[];
     readonly facetTags: readonly number[];
-    litMesh: import("@babylonjs/core/Meshes/mesh").Mesh | null;
     readonly facetCentres: readonly import("../core/vec").Vec3[];
+    litMesh: import("@babylonjs/core/Meshes/mesh").Mesh | null;
     readonly inner: number;
-    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none) and the orbited piece's copies on it (the live one, the fading). */
-    candidate: number;
-    replicas: {
-      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
-      readonly q: import("../core/vec").Quat;
-      readonly tag: number;
-      readonly piece: string;
-      readonly born: number;
-      dying: number | null;
-    }[];
     readonly triTag: readonly number[];
     readonly vertexTags: readonly number[];
     readonly vertexNormals: readonly import("../core/vec").Vec3[];
     readonly radius: number;
     lit: number;
+    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none); (a) the piece as it is; (c) the pieces as they would be (the
+     * live one, the fading). */
+    candidate: number;
+    now: {
+      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
+      readonly piece: string;
+      readonly radius: number;
+      readonly centre: import("../core/vec").Vec3;
+      readonly rest: import("../core/vec").Vec3;
+    } | null;
+    replicas: {
+      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
+      readonly piece: string;
+      readonly radius: number;
+      readonly centre: import("../core/vec").Vec3;
+      readonly rest: import("../core/vec").Vec3;
+      readonly q: import("../core/vec").Quat;
+      readonly tag: number;
+      readonly born: number;
+      dying: number | null;
+    }[];
   } | null;
   orientRect: { readonly left: number; readonly top: number; readonly size: number } | null;
   orientPress: { readonly pointerId: number; readonly tag: number; readonly x: number; readonly y: number; readonly t: number } | null;
-  /** ⭐ (2026-10-12) the PART that hosts the pink gizmo — the one whose face the orbit centre was put on (a press on a placed part, the boot's
-   * blue face); `null` — the centre on no part. The orientation window copies it. */
-  centreHost: import("../core/object_model").ObjectId | null;
   /** ⭐ (2026-10-12) THE CUBE HELD — the pointer holding it, the last candidate seen, whether a scroll aligned (one episode for the hold). */
   orientHold: { readonly pointerId: number; last: number; acted: boolean } | null;
   /** ⭐ (2026-10-12) a press in the window while the cube is held: it drives the orbit. */

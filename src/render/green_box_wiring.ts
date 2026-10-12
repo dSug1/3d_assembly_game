@@ -1213,7 +1213,6 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
   // ⛔ (2026-10-11) no longer the pink face too (`1.0.59q-`'s *"that face IS the pink face"*): the boot pink face is the floor's the piece is
   // aligned to (`bootRestAlign`) — the orbit centre and the pink face are two separate things (the owner: *"changing the center of orbit and
   // selecting a new pink face are two separate actions, not linked together"*)
-  if (face !== null) st.centreHost = blue.id; // ⭐ (2026-10-12) the blue piece hosts the pink gizmo at boot
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 
