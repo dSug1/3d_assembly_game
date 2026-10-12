@@ -455,6 +455,12 @@ export interface SceneState {
     readonly t0: number;
     /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap rolls nothing (`holdTapRolls`). */
     pressActed: boolean;
+    /** ⭐ (2026-10-12) the switch without lifting (`holdSwitch`): the second finger's trailing anchor (mm), since when it rests (ms), the first
+     * finger's x when it came to rest (px; `null` — lifted), and whether the way in was made (the way out at the second finger's lift). */
+    swAnchorMm: number;
+    swStillSince: number;
+    swFirstX0: number | null;
+    wayIn: boolean;
   } | null;
   /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
   highlightEndedAt: number | null;

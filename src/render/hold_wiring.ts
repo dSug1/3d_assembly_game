@@ -12,7 +12,8 @@
  *   highlights then held and faded.
  */
 import { pxToMm } from "../core/units";
-import { holdDecision, holdTapRolls, pinkChanges, type HoldMode } from "../input/hold_gesture";
+import { holdDecision, holdSwitch, holdTapRolls, pinkChanges, trailAnchor, type HoldMode } from "../input/hold_gesture";
+import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { alignRestingFace, enterPieceOrbit, returnToCentreOrbit, rollRestingFace } from "./green_box_wiring";
 import { pinchPair, updatePinch } from "./camera_rig";
 import type { Sample } from "../input";
@@ -33,7 +34,7 @@ export function holdSecondPress(
   first: number | null,
   pink: { readonly objectId: ObjectId; readonly faceId: string } | null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false };
+  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), pink, shown: false, t0: performance.now(), pressActed: false, swAnchorMm: pxToMm(x), swStillSince: performance.now(), swFirstX0: xOf(st, first), wayIn: false };
   st.lastVerdict = `orbit: second touch held${pink === null ? "" : ` on ${pink.objectId}/${pink.faceId}`} — dx of the first touch: the way in`;
   // ⭐⭐ (2026-10-11, the owner: *"I want to also be able to do with CTRL held and left button is pressed (immediately when left button is
   // pressed). Same for the mobile input"*) — the pink face taken AT THE PRESS. ⚠ Cost, named: option B is undone — a pinch whose second finger
@@ -52,6 +53,7 @@ export function holdFirstPress(st: SceneState, first: number, x: number): void {
   h.first = first;
   // ⭐ undecided still: its dx counts from here
   if (h.mode === "HELD") h.firstX0 = x;
+  h.swFirstX0 = x; // ⭐ (2026-10-12) the switch's too
   st.hudDirty = true;
 }
 
@@ -87,6 +89,43 @@ function takePink(st: SceneState): boolean {
 export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: Sample, orbitStep: (dxOnly: boolean) => void): HoldMode | null {
   const h = st.hold;
   if (h === null) return null;
+  // ⭐⭐ (2026-10-12, *"swap from one to another without releasing any of the two touches"* → *"Build with the 150ms rest. No change for
+  // desktop."*) — decided, the finger that moves decides again (`holdSwitch`); ⛔ a finger second touch only (the desktop's key has no x)
+  if (h.mode !== "HELD" && h.second !== MOUSE_SECOND_ID && (pointerId === h.first || pointerId === h.second)) {
+    const now = performance.now();
+    const fx = xOf(st, h.first);
+    const sx = xOf(st, h.second);
+    let secondMoved = false;
+    if (sx !== null) {
+      const t = trailAnchor(h.swAnchorMm, pxToMm(sx), st.cfg.motionDeadbandMm);
+      h.swAnchorMm = t.anchor;
+      if (t.moved) {
+        secondMoved = true;
+        h.swStillSince = now; // ⭐ its rest starts again, and the first finger's dx counts from here
+        h.swFirstX0 = fx;
+      }
+    }
+    if (h.swFirstX0 === null) h.swFirstX0 = fx;
+    const next = holdSwitch(
+      h.mode,
+      secondMoved,
+      now - h.swStillSince,
+      fx === null || h.swFirstX0 === null ? 0 : pxToMm(fx - h.swFirstX0),
+      st.cfg.motionDeadbandMm,
+      st.cfg.holdSwitchRestMs,
+    );
+    if (next === "ZOOM" && h.mode === "WAY") {
+      h.mode = "ZOOM";
+      startZoom(st);
+      st.lastVerdict = "orbit: the second finger moves — zoom (no lift)";
+    } else if (next === "WAY" && h.mode === "ZOOM") {
+      h.mode = "WAY";
+      st.lastVerdict = "orbit: the second finger rests, the first moves — way in + roll (no lift)";
+      startWay(st, h);
+      st.hudDirty = true;
+      return h.mode; // ⭐ the roll from the next step: this one only decided
+    }
+  }
   if (h.mode === "ZOOM") {
     updatePinch(st);
     return h.mode;
@@ -112,14 +151,13 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
       return h.mode;
     }
     h.mode = d;
+    // ⭐ (2026-10-12) the switch's anchors from the decision
+    if (sx !== null) h.swAnchorMm = pxToMm(sx);
+    h.swStillSince = performance.now();
+    h.swFirstX0 = fx;
     if (d === "ZOOM") {
       // ⭐ the zoom from here — what moved while undecided is no jump
-      const p = pinchPair(st);
-      if (p !== null) {
-        st.pinch.begin(p[0], p[1]);
-        st.zoomAtPinchStart = st.zoom;
-      }
-      if (st.pinchDx !== null) st.pinchDx.open = true;
+      startZoom(st);
       h.pink = null; // ⭐ option B: a pinch never takes the pink face
       st.lastVerdict = "orbit: both touches move across — zoom";
       st.hudDirty = true;
@@ -127,11 +165,7 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     }
     // ⭐ WAY: the pink face taken (option B), then the way in — the roll counted from here
     takePink(st);
-    h.shown = true; // ⭐ an action: the highlights, for as long as the input runs
-    if (enterPieceOrbit(st)) st.lastVerdict += " — the way in";
-    st.orbitRollAcc = 0;
-    st.pieceYawGainDrag = st.pieceYawGain;
-    st.hudDirty = true;
+    startWay(st, h);
   }
   if (pointerId === h.first) orbitStep(true); // ⭐ the way in / round the piece: the first touch's dx only
   return h.mode;
@@ -157,7 +191,8 @@ export function holdRelease(
     return "FIRST";
   }
   if (pointerId !== h.second) return null;
-  if (h.mode === "WAY") {
+  if (h.mode === "WAY" || h.wayIn) {
+    // ⭐ (2026-10-12) …or a zoom switched to after the way in (`wayIn`)
     // ⭐ the way out — from the camera as it is (a way in cut short too); the pink face unchanged
     if (st.pieceOrbit !== null || st.pieceEntry !== null) {
       st.pieceEntry = null;
@@ -185,4 +220,29 @@ export function holdRelease(
   if (h.shown) st.highlightEndedAt = performance.now();
   st.hudDirty = true;
   return "SECOND";
+}
+
+/** ⭐ The zoom from here — the fingers' distance now is its start: no jump (the decision, and `holdSwitch`'s WAY → ZOOM). */
+function startZoom(st: SceneState): void {
+  const p = pinchPair(st);
+  if (p !== null) {
+    st.pinch.begin(p[0], p[1]);
+    st.zoomAtPinchStart = st.zoom;
+  }
+  if (st.pinchDx !== null) st.pinchDx.open = true;
+}
+
+/**
+ * ⭐ The way in (once — `wayIn`; already round the piece: it goes on), the roll counted from here, the highlights (the decision, and
+ * `holdSwitch`'s ZOOM → WAY).
+ */
+function startWay(st: SceneState, h: NonNullable<SceneState["hold"]>): void {
+  h.shown = true; // ⭐ an action: the highlights, for as long as the input runs
+  if (!h.wayIn || (st.pieceOrbit === null && st.pieceEntry === null)) {
+    if (enterPieceOrbit(st)) st.lastVerdict += " — the way in";
+  }
+  h.wayIn = true;
+  st.orbitRollAcc = 0;
+  st.pieceYawGainDrag = st.pieceYawGain;
+  st.hudDirty = true;
 }

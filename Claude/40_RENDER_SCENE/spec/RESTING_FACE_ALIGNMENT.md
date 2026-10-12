@@ -627,3 +627,17 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   face aligns to it and rolls nothing; the next tap on that face rolls. ⚠ A tap with no first touch held does nothing, as before. ⛔ It brings
   back a tap roll (`tapAction`'s, deleted 2026-10-10) only in this form. Headless: left held on empty space + CTRL tap — 1 roll, again — 2;
   CTRL tap alone — none; left held on a part + CTRL tap — the new pink face, aligned; + CTRL tap — 1 roll.
+- ⭐⭐ **2026-10-12 — ZOOM ↔ WAY IN + ROLL WITHOUT LIFTING** (*"How does zoom and roll to the next axis work in mobile? … Can we modify so we can
+  swap from one to another without releasing any of the two touches?"* → *"Build with the 150ms rest. No change for desktop."*). Before, the first
+  decision (`holdDecision`) was LATCHED until the second finger lifted: to swap, lift it (the way out after a way in) and press again. ⭐ Now, once
+  decided, **the finger that moves decides again** (`holdSwitch`, `input/hold_gesture.ts`):
+  - **way in + roll → zoom**: the SECOND finger's dx past the deadband, measured from where it RESTS (a trailing anchor, `trailAnchor`) — the zoom
+    starts from the fingers' distance then, no jump;
+  - **zoom → way in + roll**: the second finger at rest for **150 ms** (`holdSwitchRestMs`, a slider in CAMERA › CAMERA ORBIT AROUND CENTER, 0–600)
+    AND the FIRST finger's dx past the deadband since it came to rest — the way in made then if it was not yet (else the orbit round the piece and
+    its dx roll go on).
+  The second finger's lift still ends the input: the way out if the way in was ever made (`wayIn`), from a zoom too. ⚠ Cost, named and chosen: in
+  a zoom the first finger alone used to zoom as well (the pinch reads the fingers' distance); once the second has rested 150 ms it rolls instead —
+  a pinch with both fingers moving stays a zoom. ⛔ The desktop is unchanged (ALT / CTRL has no position; its zoom is the wheel). Headless (touch):
+  first dx — the way in, 2 rolls; second dx — zoom 0.88; a 300 ms rest, first dx — the roll again (4 rolls); second dx — zoom; a 50 ms rest, first
+  dx — still a zoom; the second lifted from the zoom — the way out.

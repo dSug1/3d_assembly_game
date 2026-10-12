@@ -479,6 +479,8 @@ export interface GestureConfig {
   highlightHoldMs: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
+  /** ⭐ Prototype (2026-10-12): zoom → roll without lifting — how long the second finger must REST before the first finger's dx rolls (ms). */
+  holdSwitchRestMs: number;
   highlightFadeMs: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
@@ -972,6 +974,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   highlightFadeMs: 250,
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
+  // ⭐ prototype, the owner 2026-10-12: *"Build with the 150ms rest"*
+  holdSwitchRestMs: 150,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

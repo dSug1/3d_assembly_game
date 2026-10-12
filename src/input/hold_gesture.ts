@@ -12,7 +12,7 @@
  *   ⭐ taken AT THE PRESS (2026-10-11, *"immediately when left button is pressed. Same for the mobile input"* — it was taken once the press
  *   was known NOT to be a pinch, *"option B"*); the face the piece is already aligned to: nothing (`pinkChanges`).
  * - **The way in** — the second touch held + the first touch's dx past the deadband: decided there (`holdDecision`) — the second touch's own x
- *   travel past HALF the deadband says the two fingers are pinching (ZOOM), else it is the way in (WAY). Latched until the second touch lifts.
+ *   travel past HALF the deadband says the two fingers are pinching (ZOOM), else it is the way in (WAY). ⭐ (2026-10-12) no longer latched: the finger that moves decides again (`holdSwitch`).
  * - **The highlights** — the pink face and the resting face shown while the input runs, held `holdMs` after it, then faded over `fadeMs`
  *   (`highlightAlpha`).
  * ⛔ No engine, no scene: millimetres and milliseconds.
@@ -92,4 +92,36 @@ export function holdTapRolls(
   aligned: boolean,
 ): boolean {
   return tapped && mode === "HELD" && firstHeld && !pressChangedPink && !onOrbited && aligned;
+}
+
+/**
+ * ⭐ A TRAILING ANCHOR (§1.1's shape, one axis, mm): inside one deadband of the anchor nothing happened; past it the anchor is dragged to one
+ * deadband behind `x` and `moved` says so — a travel past the deadband from wherever the finger RESTS, never from where it started.
+ */
+export function trailAnchor(anchorMm: number, xMm: number, deadbandMm: number): { readonly anchor: number; readonly moved: boolean } {
+  const d = xMm - anchorMm;
+  if (!(Math.abs(d) > deadbandMm)) return { anchor: anchorMm, moved: false };
+  return { anchor: xMm - Math.sign(d) * deadbandMm, moved: true };
+}
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"Can we modify so we can swap from one to another without releasing any of the two touches?"* → *"Build with the
+ * 150ms rest. No change for desktop."*) — **ZOOM ↔ WAY IN + ROLL, WITHOUT LIFTING**: once decided, the finger that MOVES decides again —
+ * - WAY: the SECOND finger's dx past its deadband (`secondMoved`, from where it rests) → ZOOM;
+ * - ZOOM: the second finger at rest for `restMs` (`secondRestMs`) AND the FIRST finger's dx past the deadband since it came to rest
+ *   (`firstDxMm`) → WAY.
+ * ⚠ Cost, named and chosen: in a zoom, the first finger alone used to zoom too (the pinch reads the fingers' distance); after the rest it
+ * rolls instead. A pinch with both fingers moving stays a zoom. ⛔ HELD (undecided) is `holdDecision`'s, never this.
+ */
+export function holdSwitch(
+  mode: HoldMode,
+  secondMoved: boolean,
+  secondRestMs: number,
+  firstDxMm: number,
+  deadbandMm: number,
+  restMs: number,
+): HoldMode {
+  if (mode === "WAY") return secondMoved ? "ZOOM" : "WAY";
+  if (mode === "ZOOM") return !secondMoved && secondRestMs >= restMs && Math.abs(firstDxMm) > deadbandMm ? "WAY" : "ZOOM";
+  return mode;
 }
