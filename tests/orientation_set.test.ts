@@ -188,12 +188,12 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
   it("⭐⭐ the copy of the orbited piece: the pose `restingPreview` gives — the alignment to the candidate, or the next roll when it is the pink face; a new pose fades the old copy out", () => {
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
-    expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
+    expect(c).toContain("const preview = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
     expect(c).toMatch(/if \(!same\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(live !== undefined\) \{\s*live\.mesh\.dispose\(false, true\);/);
     expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
-    expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
-    expect(g).toContain("return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
+    expect(flat("render/green_box_wiring.ts")).toContain("export function restingPreview( st: SceneState, dir: OrientDirection, roll: boolean, ): { readonly q: Quat; readonly turn: { readonly axis: Vec3; readonly angle: number } | null } | null {");
+    expect(g).toContain("const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
   });
   it("⭐⭐ the cube HELD: each new candidate that is not the pink face aligns the resting face to it, one episode for the hold; a tap is still a tap", () => {
     const c = code("render/orient_cube.ts");
@@ -242,7 +242,7 @@ describe("⛔⛔ the copy RIDES THE CUBE — no transition, never out of the win
     expect(code("render/orient_cube.ts")).toContain("const s = (0.8 * half) / Math.max(c.radius, c.inner * (1 + 2 * PIECE_SHARE));");
   });
   it("⭐ the preview from the pose the piece is HEADING for (a turn in flight changes nothing)", () => {
-    expect(code("render/green_box_wiring.ts")).toContain("return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
+    expect(code("render/green_box_wiring.ts")).toContain("return { q: restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q, turn: null };");
   });
 });
 
@@ -260,15 +260,16 @@ import { orientWindowAtCursor, turnBetween } from "../src/input/orient_window";
 describe("⭐⭐ desktop: the window follows the cursor while it orbits, frozen at the release; 175 % (2026-10-12)", () => {
   it("⭐ the slider values that put the window's top-left `gap` below-right of the cursor, clamped", () => {
     // a 1000 × 600 canvas, a 100 px window, a 10 px margin: the room is 880 × 480
-    expect(orientWindowAtCursor(1000, 600, 100, 10, 100, 100, 20)).toEqual({ xPct: (110 / 880) * 100, yPct: (110 / 480) * 100 });
-    expect(orientWindowAtCursor(1000, 600, 100, 10, 990, 590, 20)).toEqual({ xPct: 100, yPct: 100 });
-    expect(orientWindowAtCursor(1000, 600, 100, 10, -50, -50, 20)).toEqual({ xPct: 0, yPct: 0 });
+    expect(orientWindowAtCursor(1000, 600, 100, 10, 100, 100, 20, 20)).toEqual({ xPct: (110 / 880) * 100, yPct: (110 / 480) * 100 });
+    expect(orientWindowAtCursor(1000, 600, 100, 10, 100, 100, 70, 20)).toEqual({ xPct: (160 / 880) * 100, yPct: (110 / 480) * 100 }); // ⭐ half a window more to the right
+    expect(orientWindowAtCursor(1000, 600, 100, 10, 990, 590, 20, 20)).toEqual({ xPct: 100, yPct: 100 });
+    expect(orientWindowAtCursor(1000, 600, 100, 10, -50, -50, 20, 20)).toEqual({ xPct: 0, yPct: 0 });
   });
   it("⭐ wired: every orbit step (around the centre or the piece) of a MOUSE pointer, not while the cube is held; the release changes nothing", () => {
     expect(code("render/pointer_wiring.ts")).toMatch(/export function orbitDragStep\([^)]*\): void \{\s*orientFollowCursor\(st, pointerId, s\.x, s\.y\);/);
     const c = code("render/orient_cube.ts");
     expect(c).toContain('if (st.pointerTypeOf.get(pointerId) !== "mouse" || st.orientHold !== null || st.orientRect === null) return;');
-    expect(code("render/scene.ts")).toContain('if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 175;');
+    expect(code("render/scene.ts")).toContain('if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 150;'); // ⭐ 175 % × 0.85 (2026-10-12)
   });
 });
 
@@ -285,8 +286,94 @@ describe("⭐⭐ the red arrow of the turn from the piece to the copy (2026-10-1
   });
   it("⭐ wired: an arc across the axis, swept the turn's way, in the window's corner opposite the copy", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("const turn = live === undefined || box === null ? null : turnBetween(from, live.q);");
+    expect(c).toContain("const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));");
     expect(c).toContain("const v: Vec3 = [a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0]];");
-    expect(c).toMatch(/const sx = Vector3\.Dot\(off, right\) >= 0 \? -1 : 1;\s*const sy = Vector3\.Dot\(off, up\) >= 0 \? -1 : 1;/);
+  });
+});
+
+describe("⭐ the arrow at the centre; the window GLIDES to the cursor (2026-10-12, *\"put the red arrow at the center of the cube, make it slightly less opaque than the replica — lerp the window to its position when it moves to catch the cursor\"*)", () => {
+  it("⭐ the arrow at the polyhedron's centre, 0.55 opaque (the copy 0.7)", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("c.turnArrow.mesh.position.copyFrom(centre);");
+    expect(c).toContain("const TURN_ARROW_ALPHA = 0.55;");
+    expect(c).not.toContain("TURN_ARROW_CORNER");
+  });
+  it("⭐ the follow sets a GOAL; each frame the sliders approach it exponentially (90 ms); the cursor's gap a further half window to the right", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("st.orientWindowGoal = { xPct: p.xPct, yPct: p.yPct };");
+    expect(c).toContain("const k = 1 - Math.exp(-Math.max(0, tNow - st.orientWindowLerpAt) / ORIENT_FOLLOW_TAU_MS);");
+    expect(c).toContain("mmToPx(ORIENT_CURSOR_GAP_MM) + st.orientRect.size / 2, mmToPx(ORIENT_CURSOR_GAP_MM));");
+  });
+});
+
+describe("⛔ a left TAP never moves the window — a DRAG that orbits does (2026-10-12, *\"a left click tap shall not move the window (the tap is used to select another position of the pink gizmo)\"*)", () => {
+  it("⭐ the follow starts only once the press has travelled past the tap slop, latched to that press", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("if (!(Math.hypot(x - pressed.x, y - pressed.y) > mmToPx(st.cfg.doubleTapSlop))) return; st.orientFollowPress = { pointerId, t: pressed.t };");
+    expect(c).toContain("const latched = st.orientFollowPress !== null && st.orientFollowPress.pointerId === pointerId && st.orientFollowPress.t === pressed.t;");
+  });
+});
+
+import { nextCoupleRoll } from "../src/core/resting_face";
+import { cross, qFromAxisAngle, qmul, qRotate } from "../src/core/vec";
+describe("⛔⛔ the arrow of a ROLL shows the roll's own turn — clockwise about the resting face's normal (2026-10-12, *\"when the next quaternion is a roll to the next axis, the red arrow direction is wrong\"* — *\"because the red arrow should show a clockwise rotation around the normal of the resting face\"*)", () => {
+  it("⭐ `nextCoupleRoll` reports its axis and angle: turning the pose by them IS the roll", () => {
+    const q0: [number, number, number, number] = [1, 0, 0, 0];
+    // a resting face down (−y), axes x and z; the pink axes x and z; the camera above, looking down
+    const r = nextCoupleRoll(q0, [0, -1, 0], [[1, 0, 0], [0, 0, 1]], [[1, 0, 0], [0, 0, 1]], [0, -1, 0], 1)!;
+    const again = qmul(qFromAxisAngle(r.axis, r.angleRad), q0);
+    for (let i = 0; i < 4; i++) expect(Math.abs(again[i]! - r.q[i]!)).toBeLessThan(1e-12);
+    expect(Math.abs(r.axis[1])).toBeCloseTo(1, 12); // about the normal
+  });
+  it("⭐ the arc's sweep (u toward axis × u) is the sense a positive turn about the axis takes", () => {
+    const a: [number, number, number] = [0, 0, 1];
+    const u: [number, number, number] = [1, 0, 0];
+    const turned = qRotate(qFromAxisAngle(a, 0.01), u);
+    const v = cross(a, u);
+    expect(turned[0] * v[0] + turned[1] * v[1] + turned[2] * v[2]).toBeGreaterThan(0);
+  });
+  it("⭐ wired: the copy keeps the roll's turn; the arrow uses it before the pose-to-pose one", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));");
+    expect(c).toContain("turn: preview?.turn ?? null,");
+    expect(flat("render/green_box_wiring.ts")).toContain("return next === null ? null : { q: next.q, turn: { axis: next.axis, angle: next.angleRad } };");
+  });
+});
+
+import { qSlerp } from "../src/core/vec";
+describe("⭐⭐ the arrow's sense for an ALIGNMENT is the piece's own turn (2026-10-12, *\"make sure the red arrow direction is correct also for the other configurations\"*)", () => {
+  it("⭐ over 200 random pose pairs: a point swept by the arrow (axis × u) moves the way the piece's eased turn (qSlerp, the short way) first moves it", () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 2 - 1;
+    const unitQ = (): [number, number, number, number] => {
+      const v = [rnd(), rnd(), rnd(), rnd()];
+      const n = Math.hypot(...v);
+      return [v[0]! / n, v[1]! / n, v[2]! / n, v[3]! / n];
+    };
+    for (let k = 0; k < 200; k++) {
+      const from = unitQ();
+      const to = unitQ();
+      const t = turnBetween(from, to);
+      if (t === null || t.angle > Math.PI - 0.05) continue; // ⚠ a half turn has no short way
+      const seedV: [number, number, number] = Math.abs(t.axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+      const d = seedV[0] * t.axis[0] + seedV[1] * t.axis[1] + seedV[2] * t.axis[2];
+      const u: [number, number, number] = [seedV[0] - d * t.axis[0], seedV[1] - d * t.axis[1], seedV[2] - d * t.axis[2]];
+      const sweep = cross(t.axis, u); // the arrow's direction at its start
+      // the piece's first eased step, applied to the same world point: (slerp(from, to, ε) · from⁻¹)(u)
+      const step = qmul(qSlerp(from, to, 0.01), [from[0], -from[1], -from[2], -from[3]]);
+      const moved = qRotate(step, u);
+      const delta = [moved[0] - u[0], moved[1] - u[1], moved[2] - u[2]];
+      expect(delta[0]! * sweep[0] + delta[1]! * sweep[1] + delta[2]! * sweep[2]).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("⭐ the follow switch (2026-10-12, *\"make a on-off cursor in the scene menu to enable or disable the window following the cursor. if the window does not follow the cursor, place it where it was before we modified. default: follow is off\"*)", () => {
+  it("⭐ off by default, in the SCENE menu; off, the follow does nothing; switched off, the window back at its boot position", () => {
+    expect(DEFAULT_CONFIG.orientWindowFollow).toBe(0);
+    expect(code("render/tuning_menu.ts")).toContain('"orientWindowFollow", 0, 1, 1)');
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("if (st.cfg.orientWindowFollow !== 1) return;");
+    expect(c).toContain("if (st.cfg.orientWindowFollow !== 1 && st.orientFollowWas) { const cfgH = st.cfg as unknown as Record<string, number>; cfgH.orientWindowXPct = st.orientWindowHome.xPct; cfgH.orientWindowYPct = st.orientWindowHome.yPct;");
   });
 });

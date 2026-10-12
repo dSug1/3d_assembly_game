@@ -135,7 +135,8 @@ export function createScene(
     if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;
     if (!st.tuning.applied.some((a) => a.startsWith("orientWindowYPct="))) cfgW.orientWindowYPct = boot.yPct;
     // ⭐ (2026-10-12, *"Also in desktop mode, scale the current cube window 175%"*)
-    if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 175;
+    // ⭐ (2026-10-12, *"in desktop, scale the window 85%"*) — 175 % × 0.85 ≈ 149 %: 150 % (the slider's step is 10)
+    if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 150;
   }
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
@@ -595,6 +596,11 @@ export function createScene(
   st.pinkTargetNormal = null;
   st.orientHold = null;
   st.orientDriver = null;
+  st.orientWindowGoal = null;
+  st.orientWindowLerpAt = performance.now();
+  st.orientFollowPress = null;
+  st.orientWindowHome = { xPct: st.cfg.orientWindowXPct, yPct: st.cfg.orientWindowYPct }; // ⭐ (2026-10-12) after the boot position is set
+  st.orientFollowWas = st.cfg.orientWindowFollow === 1;
   st.pieceFaceTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;

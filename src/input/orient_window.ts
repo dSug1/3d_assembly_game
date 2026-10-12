@@ -78,8 +78,9 @@ export function candidateFace(
 /**
  * ⭐⭐ (2026-10-12, the owner: *"in desktop mode, when the left click is pressed and held to orbit around the center or around the piece, pin the
  * cube window to a place below and to the right of the cursor. when the left click is released, freeze the position of the window"*) — the
- * position-slider values that put the window's top-left `gap` below and to the right of the cursor (`cx`, `cy`, canvas px), clamped to the
- * room inside the margins (`orientWindowCorner`'s inverse).
+ * position-slider values that put the window's top-left `gapX` to the right of and `gapY` below the cursor (`cx`, `cy`, canvas px), clamped to
+ * the room inside the margins (`orientWindowCorner`'s inverse). ⭐ (2026-10-12, *"add a bit more horizontal distance between the cursor and the
+ * top left corner of the window (half the dimension of the window width)"*) — the caller adds half the window to `gapX`.
  */
 export function orientWindowAtCursor(
   cw: number,
@@ -88,10 +89,11 @@ export function orientWindowAtCursor(
   margin: number,
   cx: number,
   cy: number,
-  gap: number,
+  gapX: number,
+  gapY: number,
 ): { readonly xPct: number; readonly yPct: number } {
   const pct = (v: number, room: number) => (room > 0 ? Math.min(100, Math.max(0, ((v - margin) / room) * 100)) : 0);
-  return { xPct: pct(cx + gap, cw - 2 * margin - size), yPct: pct(cy + gap, ch - 2 * margin - size) };
+  return { xPct: pct(cx + gapX, cw - 2 * margin - size), yPct: pct(cy + gapY, ch - 2 * margin - size) };
 }
 
 /**

@@ -1161,7 +1161,11 @@ export function orientationFrames(st: SceneState): { readonly normal: Vec3; read
  * pose shown), or, with \`roll\`, the next roll to the next axis (\`rollRestingFace\`'s, from where a turn in flight is heading). \`null\`
  * with nothing to show.
  */
-export function restingPreview(st: SceneState, dir: OrientDirection, roll: boolean): Quat | null {
+export function restingPreview(
+  st: SceneState,
+  dir: OrientDirection,
+  roll: boolean,
+): { readonly q: Quat; readonly turn: { readonly axis: Vec3; readonly angle: number } | null } | null {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFace === null) return null;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
@@ -1177,7 +1181,9 @@ export function restingPreview(st: SceneState, dir: OrientDirection, roll: boole
       const right = st.camera.getDirection(new Vector3(1, 0, 0));
       pinkAxes = [[right.x, right.y, right.z]];
     }
-    return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1)?.q ?? null;
+    const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1);
+    // ⭐ (2026-10-12, *"the red arrow should show a clockwise rotation around the normal of the resting face"*) — the roll's OWN turn
+    return next === null ? null : { q: next.q, turn: { axis: next.axis, angle: next.angleRad } };
   }
   const a = st.pieceAnchor;
   const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
@@ -1185,5 +1191,5 @@ export function restingPreview(st: SceneState, dir: OrientDirection, roll: boole
   // ⛔ (2026-10-12, the owner: *"There shall be no transition in the replica transform. Only a fade and appear"*) — from the pose the piece
   // is HEADING for (a turn in flight, `restAlign`), as the roll's: from the pose SHOWN, the preview changed on every frame of the 125 ms
   // turn, and a new copy faded in and out on each one
-  return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
+  return { q: restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q, turn: null };
 }

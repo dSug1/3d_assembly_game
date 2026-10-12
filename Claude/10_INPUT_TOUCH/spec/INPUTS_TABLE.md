@@ -81,7 +81,7 @@ on entering the capture zone, are deleted.
 | ⛔ the orbited piece (prototype, 2026-10-11) | Space (+ click), Shift held through a drag | nothing (`orbitModifiers`); ⚠ the Shift TAP still toggles translate / rotate |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a left CLICK on a facet of the ORIENTATION WINDOW (boot top-right) | the resting face SITS AGAINST that direction; the lit facet clicked again — the roll; one episode each |
 | ⭐ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor in the orientation window, held + a left drag | the same continuous snapped rotation through the candidate faces; one episode |
-| ⭐ the orbited piece (prototype, 2026-10-12) | a left drag that ORBITS (around the centre or round the piece) | the orientation window follows the cursor (6 mm below-right); released, it stays there |
+| ⭐ the orbited piece (prototype, 2026-10-12) | a left DRAG that orbits (around the centre or round the piece; ⛔ never a tap) — with SCENE › *orientation window follows the cursor* ON (off by default) | the orientation window GLIDES to just below-right of the cursor (its left edge 6 mm + half a window to the right); released, it stays there; switched off, it goes back to its boot place |
 | — | ⭐ **left click on the ⏸ button** (`D144`) | the pause menu, as on the tablet |
 | nothing | double left click on empty space | ⛔ nothing — the camera reset is deleted (2026-10-10) |
 | — | ⭐ **double left click on any body** | **undo the last action** (`D111`); one that does not land costs zero episodes (`D157`) |

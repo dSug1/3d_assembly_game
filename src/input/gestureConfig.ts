@@ -485,6 +485,8 @@ export interface GestureConfig {
    * device (`orientWindowBoot`: a touch screen bottom-left, a desktop top-right) unless the URL names it. */
   orientWindowXPct: number;
   orientWindowYPct: number;
+  /** ⭐ Prototype (2026-10-12, §23): the desktop window FOLLOWS the cursor while it orbits (1) or stays at its place (0, its boot position). */
+  orientWindowFollow: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
@@ -982,6 +984,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // is set at boot (bottom-left, `orientWindowBoot`)
   orientWindowXPct: 100,
   orientWindowYPct: 0,
+  // ⭐ the owner 2026-10-12: *"make a on-off cursor in the scene menu to enable or disable the window following the cursor … default: follow is off"*
+  orientWindowFollow: 0,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

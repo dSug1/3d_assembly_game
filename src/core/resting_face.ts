@@ -550,7 +550,7 @@ export function nextCoupleRoll(
   pinkAxes: readonly Vec3[],
   view: Vec3,
   sense: 1 | -1 = 1,
-): { readonly q: Quat; readonly rest: number; readonly pink: number; readonly angleRad: number } | null {
+): { readonly q: Quat; readonly rest: number; readonly pink: number; readonly angleRad: number; readonly axis: Vec3 } | null {
   const n = normalize(qRotate(q, restNormal));
   if (n === null) return null;
   // ⭐ (2026-10-10) `sense` −1: COUNTER-clockwise on the screen (the orbit's dx to the left)
@@ -571,7 +571,9 @@ export function nextCoupleRoll(
   });
   if (best === null) return null;
   const b: { rest: number; pink: number; angleRad: number } = best;
-  return { q: qmul(qFromAxisAngle(a, b.angleRad), q), rest: b.rest, pink: b.pink, angleRad: b.angleRad };
+  // ⭐ (2026-10-12) and its own turn — the axis it turns about (the normal, its sense the roll's) and the angle (0…π]: the pose-to-pose turn the
+  // short way loses the sense at a half turn (*"when the next quaternion is a roll to the next axis, the red arrow direction is wrong"*)
+  return { q: qmul(qFromAxisAngle(a, b.angleRad), q), rest: b.rest, pink: b.pink, angleRad: b.angleRad, axis: a };
 }
 
 /**
