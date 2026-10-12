@@ -117,7 +117,7 @@ function box(b: number): { tag: number; normal: Vec3; v: Vec3[] }[] {
 /**
  * ⭐⭐ The polyhedron of `normals`: the bounding box `[-bound, bound]³` cut by the plane `n · x = offsets[i]` of each (1 without `offsets`) —
  * so each direction is a facet (tag = its index); what is left of the box (tag `-1`) only where the set does not close the shape.
- * ⭐ (2026-10-12) `offsets` from `supportOffsets` fit it around a part: for a box part and its six directions, the part's own box.
+ * ⭐ (2026-10-12) `offsets`: the planes' distances (the orientation window puts them all at the part's radius, around its centre).
  */
 export function facetPolytope(normals: readonly Vec3[], bound = 1.6, offsets?: readonly number[]): Facet[] {
   let faces = box(bound);
@@ -138,15 +138,3 @@ export function facetPolytope(normals: readonly Vec3[], bound = 1.6, offsets?: r
   return faces.map((f) => ({ tag: f.tag, normal: f.normal, vertices: f.v }));
 }
 
-/**
- * ⭐ (2026-10-12, *"represent the cube overlaid onto the part which hosts the pink gizmo"*) — each direction's plane offset around a part: its
- * support (`max n · p` over the part's points, centred) plus `margin` — the tightest polyhedron with these directions that holds the part.
- */
-export function supportOffsets(normals: readonly Vec3[], points: readonly Vec3[], margin: number): number[] {
-  return normals.map((n0) => {
-    const n = normalize(n0) ?? n0;
-    let h = -Infinity;
-    for (const p of points) h = Math.max(h, dot(n, p));
-    return (Number.isFinite(h) ? h : 0) + margin;
-  });
-}

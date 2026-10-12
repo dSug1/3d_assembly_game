@@ -708,7 +708,7 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
   - The **host** (`st.centreHost`): the part a press put the orbit centre on (`orbitTargetOnPress`), the blue piece at boot
     (`bootTargetOnBlueFace`); a barycentre (an empty-space press, off in this build) has none — then the polyhedron alone.
   - The **copy**: the host's contour and its core (`clone`, never pickable, never a body), as they stand in the world.
-  - The **polyhedron FITTED around it** (`supportOffsets`, `core/orientation_set.ts`): each direction's plane just outside the part's extent
+  - ⛔ (reversed below, the same day) The **polyhedron FITTED around it** (`supportOffsets`, `core/orientation_set.ts`): each direction's plane just outside the part's extent
     along it (4 % of its radius) — for a box part and six directions, the part's own box: a tap on the part's face in the window IS that
     direction; a direction no face of the host has cuts an edge or a corner off it.
   - The **pink gizmo's copy**: a pink ring where the scene's ring is (`st.pinkRing`'s position), billboarded and placed in the world each frame
@@ -731,3 +731,16 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
 - Headless: boot — the green piece flat on the floor's top, `Floor/f4` lit; the window copies the blue piece with the pink ring on it and the
   top facet pink, the back facets hidden; a press on a black bar — the window copies the bar, the ring on its front face; desktop boot 100 % /
   0 % (under the HUD), touch boot 0 % / 100 % (above the ⏸).
+- ⭐⭐ **The polyhedron is NOT fitted to the part; front and back read; the pink face always visible** (*"The cube/polyhedron shall not match and
+  wrap the part : it shall stay a cube / polyhedron centered on the center of the part in the center of the window. Make the cube slightly
+  occluding the pink face so it can be understood which face is in front and which is behind. Pink face shall always be visible (not completely
+  occluded by the replicated part)"*).
+  - **Its own shape** (a cube in `Scene_1`): every plane at ONE distance — the part's radius × 1.04 — so it holds the part, centred on the
+    part's centre, in the window's centre. ⛔ `supportOffsets` is deleted with its vector.
+  - **Every facet is faint glass** (alpha 0.16, front and back, no culling): the part hides the back facets it covers; the edges of the facets
+    turned toward the camera are solid, the others faint (0.25).
+  - **The pink face** (the lit facet) is its own layer, drawn **twice**: solid pink (0.85) where nothing is in front of it, and a faint pink
+    GHOST (0.35) through everything — so where the part covers it, it still shows, and the part still reads in front of it. Both are drawn
+    BEFORE the glass, so a front glass facet veils it a little when it is at the back.
+  - Headless: the pink face at the back (+z) — the blue part in front of it, the pink through the ghost and around it; at the front (−z) —
+    solid pink, the part faint behind it.

@@ -98,23 +98,6 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
   });
 });
 
-import { supportOffsets } from "../src/core/orientation_set";
-describe("⭐⭐ the polyhedron fitted around a part (2026-10-12, *\"represent the cube overlaid onto the part which hosts the pink gizmo\"*)", () => {
-  it("⭐ the six directions around a 2 × 1 × 0.5 box: the box itself, grown by the margin", () => {
-    const pts: Vec3[] = [];
-    for (const x of [-1, 1]) for (const y of [-0.5, 0.5]) for (const z of [-0.25, 0.25]) pts.push([x, y, z]);
-    const h = supportOffsets(AXES, pts, 0.01);
-    expect(h.map((v) => +v.toFixed(6))).toEqual([1.01, 1.01, 0.51, 0.51, 0.26, 0.26]);
-    const f = facetPolytope(AXES, 3, h);
-    expect(f).toHaveLength(6);
-    const top = f.find((x) => x.tag === 2)!;
-    for (const v of top.vertices) {
-      expect(v[1]).toBeCloseTo(0.51, 9);
-      expect(Math.abs(v[0])).toBeCloseTo(1.01, 9);
-      expect(Math.abs(v[2])).toBeCloseTo(0.26, 9);
-    }
-  });
-});
 
 const flat = (f: string) => code(f).replace(/\s+/g, " ");
 
@@ -124,19 +107,24 @@ describe("⭐⭐ the window copies the part that hosts the pink gizmo (2026-10-1
     expect(code("render/green_box_wiring.ts")).toContain("if (face !== null) st.centreHost = blue.id;");
     expect(flat("render/camera_rig.ts")).toContain("st.centreBlend.retarget(c); st.centreHost = null;");
   });
-  it("⭐⭐ the copy (contour + core), the polyhedron FITTED around it (`supportOffsets`), the gizmo's copy where the scene's gizmo is", () => {
+  it("⭐⭐ the copy (contour + core), the polyhedron NOT fitted (*\"it shall stay a cube / polyhedron centered on the center of the part\"*): every plane at one distance, the part's radius; the gizmo's copy where the scene's gizmo is", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("offsets = supportOffsets(normals, fit.pts, FIT_MARGIN * r);");
+    expect(c).not.toContain("supportOffsets");
+    expect(c).toContain("const facets = facetPolytope(normals, 1.6 * inner, normals.map(() => inner));");
     expect(c).toContain('const copy = body.clone("orient-copy", root, true);');
     expect(c).toContain('const cc = core.clone("orient-copy-core", copy, true);');
     expect(c).toContain("const gp = st.pinkRing?.position ?? st.orbitCentreM;");
     expect(c).toContain("c.ring.isVisible = show && c.host !== null && st.cfg.pinkGizmoVisible === 1;");
   });
-  it("⭐⭐ occlusion (*\"the back face is more visible than the highlighted face in the front\"*): back facets culled, their edges hidden; the lit facet strong, the rest faint", () => {
+  it("⭐⭐ front / back (*\"Make the cube slightly occluding the pink face … Pink face shall always be visible\"*): every facet glass after the lit layer; the lit layer drawn through the part; back edges faint", () => {
     const c = code("render/orient_cube.ts");
-    expect(c).toContain("mat.backFaceCulling = true;");
-    expect(c).toContain("e.isVisible = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0;");
-    expect(flat("render/orient_cube.ts")).toContain("const FACET_ALPHA = 0.16; const LIT_ALPHA = 0.85;");
+    expect(c).toContain("mat.backFaceCulling = false; // ⭐ every facet, front and back");
+    expect(c).toContain("mesh.alphaIndex = 2;");
+    // ⭐ twice: solid where nothing is in front (depth-tested), a faint ghost through the part (depth ALWAYS) — the part still reads in front
+    expect(flat("render/orient_cube.ts")).toContain("if (through) mat.depthFunction = Constants.ALWAYS; else mat.forceDepthWrite = true;");
+    expect(flat("render/orient_cube.ts")).toContain('const solid = layer("orient-lit", LIT_ALPHA, false); solid.alphaIndex = 1;');
+    expect(flat("render/orient_cube.ts")).toContain('const ghost = layer("orient-lit-ghost", LIT_GHOST_ALPHA, true); ghost.alphaIndex = 0;');
+    expect(c).toContain("e.alpha = dot(n, sub(eye, local(c.facetPoints[i]!))) > 0 ? 1 : BACK_EDGE_ALPHA;");
   });
 });
 
