@@ -483,6 +483,10 @@ export interface GestureConfig {
   holdSwitchRestMs: number;
   /** ⭐ Prototype (2026-10-12, §21): the ORIENTATION CUBE's window size, % of its 22 mm (0 hides it; 0–200). */
   orientCubeSizePct: number;
+  /** ⭐ Prototype (2026-10-12, §21): the orientation window's position — 0 % left … 100 % right, 0 % top … 100 % bottom. ⚠ Set at boot by the
+   * device (`orientWindowBoot`: a touch screen bottom-left, a desktop top-right) unless the URL names it. */
+  orientWindowXPct: number;
+  orientWindowYPct: number;
   highlightFadeMs: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
@@ -980,6 +984,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   holdSwitchRestMs: 150,
   // ⭐ prototype, the owner 2026-10-12: *"Make a slider 0-200% to increase the size of the cube window in the overlay (zero means hiding the window)"*
   orientCubeSizePct: 100,
+  // ⭐ the owner 2026-10-12: *"Add a slider for the position of the window with two cursors"* — the desktop's (top-right); a touch screen's
+  // is set at boot (bottom-left, `orientWindowBoot`)
+  orientWindowXPct: 100,
+  orientWindowYPct: 0,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
   pieceOrbitReturnMm: 30,

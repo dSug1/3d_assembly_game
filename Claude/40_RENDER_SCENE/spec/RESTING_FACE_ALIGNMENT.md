@@ -672,7 +672,7 @@ face, with a preview) — later. ⭐ The owner: *"Start with 2, sit against this
   direction. `Scene_1`: a cube.
 - **Rebuilt** at the boot's goal baseline and at every goal commit — a part seated, or unseated (*"at boot of the scene and also each time a
   part is seated"*): `commitGoal` sets `orientDirty`.
-- **The window**: bottom-right, **22 mm** on the glass × **the slider** — the tuning menu, CAMERA › CAMERA ORBIT AROUND CENTER › *orientation cube
+- **The window** (⭐ amended below: it COPIES the host part, and a slider places it): bottom-right, **22 mm** on the glass × **the slider** — the tuning menu, CAMERA › CAMERA ORBIT AROUND CENTER › *orientation cube
   window: size (% — 0 hides it)* (`orientCubeSizePct`, 0–200 %, 100 by default; *"Make a slider 0-200% to increase the size of the cube
   window in the overlay (zero means hiding the window)"*), 4 mm from the edges, a translucent backing. Drawn in the scene in its own
   rendering group (nothing hides it), turned as the world is seen from the camera — corrected to the view through the screen's centre, so the
@@ -685,7 +685,7 @@ face, with a preview) — later. ⭐ The owner: *"Start with 2, sit against this
 - A part's face taken by the second touch (`takePink`) and the boot alignment clear the virtual one: the last choice wins.
 - **A press inside the window is the cube's**, before the router (`orientCubePointer`): it never orbits, never grabs, never moves the centre;
   a tap on a facet acts at its release; the desktop's ALT / CTRL key-made second touch is not the cube's.
-- ⚠ Found while building it: the boot's frozen face (`Floor/f1`) is the floor's **−z side**, not its top — `alignFaceOf`'s fallback
+- ⛔ FIXED the same day (below, *"Fix the boot"*). Found while building it: the boot's frozen face (`Floor/f1`) was the floor's **−z side**, not its top — `alignFaceOf`'s fallback
   measures "toward the piece" from the floor's FIRST face's centre (`f0`, its +z side, 1 m away), not from the body's centre, so the boot
   lit facet is −z. Recorded, not changed (it is the boot alignment the owner accepted on 2026-10-11); a one-line fix if it is not meant.
 - Headless (desktop and touch): six directions at boot (a cube, two edge axes each); a tap on +x — the resting face against it, 1 move, the
@@ -695,3 +695,39 @@ face, with a preview) — later. ⭐ The owner: *"Start with 2, sit against this
 ⏭ **A possible later refinement** (the owner): *include the NON-SEATED parts in the possible directions* — their faces would join the set as
 they move, which makes the game heavier: the set (and the polyhedron) would have to be read again EVERY FRAME, not at a goal commit.
 ⏭ Then alternatives (1) and (4) above, if wanted.
+
+**Amended the same day (2026-10-12)**:
+- ⭐⭐ **Occlusion and a stronger highlight** (*"cube's face highlight: make it more opaque and occlusion applies on the cube's faces, because at
+  the moment, the back face is more visible than the highlighted face in the front and that causes confusion"*). The facets were translucent
+  with no culling, so a back facet showed through the front one. ⭐ Now only the facets turned TOWARD the camera are drawn (back-face culled;
+  the edges of the others hidden, each frame), the part's copy is solid behind them; a plain facet is faint glass (alpha 0.16), the lit one a
+  strong pink (0.85).
+- ⭐⭐⭐ **The window is a COPY OF THE SCENE: the part that hosts the pink gizmo, the gizmo on it, the polyhedron over it** (*"Instead of a cube,
+  represent the cube overlaid onto the part which hosts the pink gizmo. Also show the pink gizmo in the overlaid part. So the window is a
+  replicate of the scene (part and gizmo) on which the cube / polyhedron is overlaid"*).
+  - The **host** (`st.centreHost`): the part a press put the orbit centre on (`orbitTargetOnPress`), the blue piece at boot
+    (`bootTargetOnBlueFace`); a barycentre (an empty-space press, off in this build) has none — then the polyhedron alone.
+  - The **copy**: the host's contour and its core (`clone`, never pickable, never a body), as they stand in the world.
+  - The **polyhedron FITTED around it** (`supportOffsets`, `core/orientation_set.ts`): each direction's plane just outside the part's extent
+    along it (4 % of its radius) — for a box part and six directions, the part's own box: a tap on the part's face in the window IS that
+    direction; a direction no face of the host has cuts an edge or a corner off it.
+  - The **pink gizmo's copy**: a pink ring where the scene's ring is (`st.pinkRing`'s position), billboarded and placed in the world each frame
+    (⛔ never parented — a billboard drops its parent's rotation), lifted toward the camera so the part's face never hides it; shown with the
+    gizmo's own switch (`pinkGizmoVisible`).
+  - Rebuilt when the host changes, as well as at every goal commit.
+- ⭐⭐ **The boot, fixed** (*"Fix the boot"*): with no pink face, `alignFaceOf` now takes the frozen body's face pointing most UP — the floor's
+  TOP (`Floor/f4`), what the owner's *"anti-align with the normal of the first frozen object"* meant. ⚠ Measuring "toward the piece" from the
+  body's centre (instead of its first face's) would still have picked a side face for a piece on the outer ring, beyond the floor's edge. The
+  piece now boots resting on the floor's top; the boot pink face is `Floor/f4`, the window's top facet lit.
+- ⭐⭐ **A two-cursor POSITION slider** (*"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*): CAMERA ›
+  CAMERA ORBIT AROUND CENTER › *orientation window: ● left → right · ● top → bottom (%)* (`orientWindowXPct`, `orientWindowYPct`, 0–100 % of
+  the room inside the 4 mm margins, `orientWindowCorner`, `input/orient_window.ts`). **At boot** (`orientWindowBoot`): a touch screen
+  (`(pointer: coarse)`) **bottom-left** (*"At boot on mobile, set the position of the slider to bottom left"*), a desktop **top-right** (*"At
+  boot on desktop, set the slider position to top right"*); a URL value wins.
+  - ⭐ **Kept clear of the screen's overlays** (`clearOfOverlays`): the HUD panel and its toggle, the ☰, the ⏸ and the score bar — one in the
+    top half it overlaps pushes it below, one in the bottom half above. So on a desktop it sits just under the HUD panel at the right (it rises
+    when the HUD is collapsed), and on a phone just above the ⏸. ⚠ The open tuning panel is NOT avoided (it would push the window about while a
+    slider is moved).
+- Headless: boot — the green piece flat on the floor's top, `Floor/f4` lit; the window copies the blue piece with the pink ring on it and the
+  top facet pink, the back facets hidden; a press on a black bar — the window copies the bar, the ring on its front face; desktop boot 100 % /
+  0 % (under the HUD), touch boot 0 % / 100 % (above the ⏸).

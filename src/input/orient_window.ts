@@ -1,0 +1,52 @@
+/**
+ * ⭐⭐ prototype — **WHERE THE ORIENTATION WINDOW SITS** (`RESTING_FACE_ALIGNMENT.md` §21; the owner, 2026-10-12: *"Add a slider for the position
+ * of the window with two cursors (top-bottom & left-right)"* → *"At boot on mobile, set the position of the slider to bottom left."* → *"At
+ * boot on desktop, set the slider position to top right"*). Two percentages: 0 % left / top, 100 % right / bottom, across the room the window
+ * has inside its margins. ⛔ No engine, no DOM: the caller says whether the device's pointer is coarse (a finger).
+ */
+
+/** ⭐ The boot position: a touch screen (a coarse pointer) bottom-left; a desktop (a mouse) top-right. */
+export function orientWindowBoot(coarsePointer: boolean): { readonly xPct: number; readonly yPct: number } {
+  return coarsePointer ? { xPct: 0, yPct: 100 } : { xPct: 100, yPct: 0 };
+}
+
+/** ⭐ The window's top-left corner (px) on a `cw` × `ch` canvas: `size` square, `margin` from every edge, placed at `xPct` / `yPct` of its room. */
+export function orientWindowCorner(
+  cw: number,
+  ch: number,
+  size: number,
+  margin: number,
+  xPct: number,
+  yPct: number,
+): { readonly left: number; readonly top: number } {
+  const t = (v: number) => Math.min(100, Math.max(0, v)) / 100;
+  return {
+    left: margin + Math.max(0, cw - 2 * margin - size) * t(xPct),
+    top: margin + Math.max(0, ch - 2 * margin - size) * t(yPct),
+  };
+}
+
+/**
+ * ⭐ (2026-10-12) the window kept CLEAR of the screen's overlays (the HUD, its toggle, the ☰, the ⏸, the score bar — rectangles in the same px):
+ * one in the TOP half it overlaps pushes it down below it, one in the BOTTOM half pushes it up above it, `gap` apart; then held on the canvas.
+ * The slider still decides the corner — at boot on a desktop the top-right sits under the ☰, on a phone the bottom-left over the ⏸.
+ */
+export function clearOfOverlays(
+  left: number,
+  top: number,
+  size: number,
+  overlays: readonly { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }[],
+  ch: number,
+  gap: number,
+): number {
+  let t = top;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const o of overlays) {
+      const across = o.left < left + size && o.right > left;
+      const down = o.top < t + size && o.bottom > t;
+      if (!across || !down) continue;
+      t = (o.top + o.bottom) / 2 < ch / 2 ? o.bottom + gap : o.top - gap - size;
+    }
+  }
+  return Math.min(Math.max(0, t), Math.max(0, ch - size));
+}

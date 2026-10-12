@@ -222,10 +222,15 @@ function alignFaceOf(
     for (const [oid, o] of st.world.objects) {
       if (o.frozen !== true) continue;
       const faces = o.faces.map((f) => faceWorld(st.world, oid, f.id)).filter((f): f is NonNullable<typeof f> => f !== null);
+      // ⛔⛔ (2026-10-12, the owner: *"Fix the boot"*) — the face pointing most UP (the floor's TOP: *"anti-align with the normal of the first
+      // frozen object"* meant the floor's top). It was the face pointing most toward the piece measured from the body's FIRST face's centre
+      // (`f0`, the floor's +z side, 1 m away) — the piece boot-aligned against the floor's −z SIDE (`Floor/f1`); measured from the body's
+      // centre it would still pick a side for a piece on the outer ring, beyond the floor's edge
       const toward = faceToward(
         faces.map((f) => ({ centre: f.centre, normal: f.normal })),
-        faces.length > 0 ? [piece[0] - faces[0]!.centre[0], piece[1] - faces[0]!.centre[1], piece[2] - faces[0]!.centre[2]] : [0, 1, 0],
+        [0, 1, 0],
       );
+      void piece;
       const at = toward === null ? -1 : faces.findIndex((f) => f.normal === toward.normal);
       if (at < 0) continue;
       id = oid;
@@ -1207,6 +1212,7 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
   // ⛔ (2026-10-11) no longer the pink face too (`1.0.59q-`'s *"that face IS the pink face"*): the boot pink face is the floor's the piece is
   // aligned to (`bootRestAlign`) — the orbit centre and the pink face are two separate things (the owner: *"changing the center of orbit and
   // selecting a new pink face are two separate actions, not linked together"*)
+  if (face !== null) st.centreHost = blue.id; // ⭐ (2026-10-12) the blue piece hosts the pink gizmo at boot
   return face === null ? null : [face.centre[0], face.centre[1], face.centre[2]];
 }
 

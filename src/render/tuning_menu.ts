@@ -47,6 +47,19 @@ export function highlightTimerSlider(st: SceneState): MenuSlider {
   };
 }
 
+/**
+ * ⭐ (2026-10-12, the owner: *"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*) the orientation window's
+ * position on one track: cursor 1 left → right (`orientWindowXPct`), cursor 2 top → bottom (`orientWindowYPct`), 0–100 %.
+ */
+export function orientWindowSlider(st: SceneState): MenuSlider {
+  const x = tunable(st, "orientation window: ● left → right · ● top → bottom (%)", "orientWindowXPct", 0, 100, 5);
+  const y = tunable(st, "", "orientWindowYPct", 0, 100, 5);
+  return {
+    ...x,
+    second: { get: y.get, set: y.set, format: (a, b) => `left→right ${a.toFixed(0)} · top→bottom ${b.toFixed(0)}` },
+  };
+}
+
 export function tunable(st: SceneState, label: string,
   key: keyof typeof st.cfg & string,
   min: number,
@@ -231,6 +244,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "zoom → roll: the second finger's rest before the first finger rolls (ms)", "holdSwitchRestMs", 0, 600, 10),
             // ⭐ prototype (2026-10-12, *"Make a slider 0-200% to increase the size of the cube window in the overlay (zero means hiding the window)"*)
             tunable(st, "orientation cube window: size (% — 0 hides it)", "orientCubeSizePct", 0, 200, 10),
+            // ⭐ prototype (2026-10-12, *"Add a slider for the position of the window with two cursors (top-bottom & left-right)"*)
+            orientWindowSlider(st),
             // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
             tunable(st, "reset time (ms)", "cameraResetMs", 0, 2000, 50),
             // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never

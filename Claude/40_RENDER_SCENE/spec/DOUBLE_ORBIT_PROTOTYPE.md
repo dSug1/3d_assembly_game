@@ -741,3 +741,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐⭐ THE ORIENTATION CUBE — a polyhedron of the level's distinct face directions (seated parts + frozen bodies; a cube in `Scene_1`) in a
   bottom-right window (22 mm × a 0–200 % slider, 0 hides it); tap a facet — the resting face sits against it; tap the lit facet — the roll;
   rebuilt at every goal commit; ⏭ the non-seated parts later (every frame) → `RESTING_FACE_ALIGNMENT.md` §21.
+* ⭐⭐ The window COPIES the part that hosts the pink gizmo (and the gizmo), the polyhedron fitted over it, back facets hidden, the lit facet
+  strong pink; a two-cursor position slider (boot: a touch screen bottom-left, a desktop top-right, clear of the HUD / ☰ / ⏸); ⛔ the boot
+  fixed — the piece rests on the floor's TOP → `RESTING_FACE_ALIGNMENT.md` §21.
