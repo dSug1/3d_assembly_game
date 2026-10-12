@@ -158,7 +158,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⛔ the highlights' clock deleted (2026-10-12): the resting face's fill always shown; no part pink fill; no two-cursor timer slider", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toMatch(/highlightAlpha|pinkFillFrame|st\.pinkFace/);
-    expect(w).toMatch(/\(fill\.material as StandardMaterial\)\.alpha = RESTING_ALPHA \* rest;/);
+    expect(w).toMatch(/fill\.isVisible = false;\s*for \(const c of fill\.getChildMeshes\(true\)\) c\.isVisible = true;/); // ⭐ (2026-10-12) the yellow contour
     expect(code("render/tuning_menu.ts")).not.toContain("highlightTimerSlider");
     expect(code("render/pointer_wiring.ts")).not.toContain("st.highlightEndedAt");
   });

@@ -134,6 +134,8 @@ export function createScene(
     const cfgW = st.cfg as unknown as Record<string, number>;
     if (!st.tuning.applied.some((a) => a.startsWith("orientWindowXPct="))) cfgW.orientWindowXPct = boot.xPct;
     if (!st.tuning.applied.some((a) => a.startsWith("orientWindowYPct="))) cfgW.orientWindowYPct = boot.yPct;
+    // ⭐ (2026-10-12, *"Also in desktop mode, scale the current cube window 175%"*)
+    if (boot.xPct === 100 && !st.tuning.applied.some((a) => a.startsWith("orientCubeSizePct="))) cfgW.orientCubeSizePct = 175;
   }
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).

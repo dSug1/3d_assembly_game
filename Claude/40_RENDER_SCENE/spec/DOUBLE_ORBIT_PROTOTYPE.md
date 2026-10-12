@@ -760,3 +760,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ The window's copy seated on the candidate face, riding the cube (no transition, never out of the window), the old copy gone at once.
 * ⛔⛔ Alignment by the CUBE ONLY: no pink face from a part (second touch, ALT / CTRL raycast deleted); a second-touch tap on a placed part moves
   the orbit centre; the pink fill, the highlights' clock and its slider deleted; the boot aligns to the cube's +y → `RESTING_FACE_ALIGNMENT.md` §22.
+* ⭐⭐ The window: a clicked face shows the copy at once (the next orientation); the scene's resting face and the cube's aligned face are YELLOW
+  contours, the travelling face (candidate / clicked) PINK; the copy unoutlined; a red arrow of the turn piece → copy in the corner opposite
+  the copy; desktop: the window follows the cursor while orbiting (frozen at the release), 175 % → `RESTING_FACE_ALIGNMENT.md` §23.
