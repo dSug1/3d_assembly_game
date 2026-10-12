@@ -10,9 +10,11 @@
  *
  * - **What it shows**: the polyhedron of the level's DISTINCT face directions (`core/orientation_set.ts`, a cube in `Scene_1`) in a window
  *   placed by its two-cursor slider (boot: a touch screen bottom-left, a desktop top-right), turned as the world is seen from the camera; and
- *   INSIDE it, laid out on the screen: (a) the orbited piece AS IT IS (lower-left), (b) a curved arrow, (c) the piece AS IT WOULD BE if the
- *   CANDIDATE face (the one facing the camera most) were pressed (upper-right) — the next roll when the candidate is the pink face; a new pose
- *   fades (c) out and in again.
+ *   at its CENTRE one copy of the orbited piece AS IT WOULD BE if the CANDIDATE face (the one facing the camera most, outlined in yellow) were
+ *   pressed — its resting face against the candidate's normal, as in the scene (the next roll when the candidate is the pink face), 70 %
+ *   opaque, its resting face's edges outlined in the same yellow, fully opaque; a new pose fades the copy out and a new one in (2026-10-12,
+ *   *"Remove the current transform from the two replicas. Remove the red arrow. Place the other replica … at the center of the cube. Scale it
+ *   120%. Make it 30% less opaque and highlight (in same yellow as cube highlight) its resting face edges (highlight fully opaque)"*).
  * - Every facet is faint glass, front edges solid, back edges faint; the LIT facet (the direction the piece is aligned to) is pink, BEFORE the
  *   glass (a front facet veils it a little when it is at the back), ALWAYS shown (⛔ its fade, the scene pink face's, removed the same day).
  * - **Tap a facet** → the resting face SITS AGAINST it (*"sit against this face"*): a virtual pink face (`st.pinkDir`) — `alignRestingFace`
@@ -29,14 +31,14 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
-import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { distinctDirections, facetPolytope, type OrientDirection } from "../core/orientation_set";
-import { add, cross, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
+import { Constants } from "@babylonjs/core/Engines/constants";
 import { mmToPx } from "../core/units";
 import { isTapRelease } from "../input/mode_toggle";
 import { candidateFace, clearOfOverlays, orientWindowCorner } from "../input/orient_window";
@@ -53,7 +55,6 @@ const ORIENT_GROUP = 3;
 const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 const PINK = new Color3(1, 0.45, 0.85);
 const FACET = new Color3(0.86, 0.88, 0.95);
-const ARROW = new Color3(1, 0.3, 0.1);
 /** ⭐ (2026-10-12, *"highlight the edges of the candidate face so the user knows which one it is"*) its outline: a tube this thick, this colour. */
 const CANDIDATE_EDGE = new Color3(1, 0.85, 0.1);
 const CANDIDATE_EDGE_WIDTH = 0.025;
@@ -65,22 +66,11 @@ const BOX_ALPHA = 0.08;
 /** ⭐ A back edge's strength (a front one is solid). */
 const BACK_EDGE_ALPHA = 0.25;
 /**
- * ⭐ (2026-10-12) the layout INSIDE the polyhedron, in units of its inner radius, in the CANDIDATE FACE's plane through its centre (*"The resting
- * faces of the green-turquoise replicas inside the cube shall be aligned with the candidate face's normal as they would be in the scene.
- * Therefore the attached scheme rotates as currently the replica does"*): (a) the piece as it is, at the CENTRE; (c) the piece as it would
- * be, upper-right, its resting face ON the plane; each this big; the arrow between them (a quadratic curve, its head at (c)), a little off the
- * plane. ⭐ The plane's in-face axes follow the screen's right and up as nearly as the face allows.
+ * ⭐ (2026-10-12) the copy of the orbited piece at the polyhedron's centre: its radius as a share of the inner radius (0.36, × 1.5 — *"scale
+ * the green piece replicas 150%"* — × 1.2 — *"Scale it 120%"*), its opacity (*"30% less opaque"*).
  */
-// ⭐ (2026-10-12, *"Place the green piece replica of the current green piece transform in the middle of the cube"*) (a) at the centre;
-// (c) out in the upper-right corner so the two do not overlap; the arrow from above (a) over to (c)
-const SLOT_NEXT: readonly [number, number] = [0.62, 0.62];
-// ⭐ (2026-10-12, *"scale the green piece replicas 150% in the cube"*) 0.36 → 0.54
-const PIECE_SHARE = 0.54;
-const ARROW_FROM: readonly [number, number] = [-0.3, 0.4];
-const ARROW_BEND: readonly [number, number] = [-0.1, 0.95];
-const ARROW_TO: readonly [number, number] = [0.3, 0.68];
-const ARROW_WIDTH = 0.035;
-const ARROW_LIFT = 0.15;
+const PIECE_SHARE = 0.648;
+const REPLICA_ALPHA = 0.7;
 const REPLICA_FADE_MS = 250;
 
 /** ⭐ The screen's overlays the window keeps clear of, in canvas px (the HUD, its toggle, the ☰, the ⏸, the score bar) — the visible ones. */
@@ -133,8 +123,6 @@ function dispose(st: SceneState): void {
   if (c === null) return;
   c.root.dispose(false, true); // ⭐ its children (the polyhedron, its edges, the lit layer) with it
   c.back.dispose(false, true);
-  c.arrow.dispose(false, true);
-  c.now?.mesh.dispose(false, true);
   c.candEdge?.dispose(false, true);
   for (const r of c.replicas) r.mesh.dispose(false, true);
   st.orientCube = null;
@@ -199,33 +187,6 @@ function rebuild(st: SceneState): void {
     l.parent = root;
     return l;
   });
-  // ⭐ (b) the curved arrow from (a) to (c) — drawn in its own plane, turned to face the camera every frame
-  const arrow = new Mesh("orient-arrow", st.scene);
-  const bend = (t: number): Vector3 => {
-    const u = 1 - t;
-    return new Vector3(
-      u * u * ARROW_FROM[0] + 2 * u * t * ARROW_BEND[0] + t * t * ARROW_TO[0],
-      u * u * ARROW_FROM[1] + 2 * u * t * ARROW_BEND[1] + t * t * ARROW_TO[1],
-      0,
-    );
-  };
-  const path = Array.from({ length: 24 }, (_, i) => bend(i / 23));
-  const shaft = CreateTube("orient-arrow-shaft", { path, radius: ARROW_WIDTH, tessellation: 8 }, st.scene);
-  const tip = path[path.length - 1]!;
-  const dir = tip.subtract(path[path.length - 2]!).normalize();
-  const head = CreateCylinder("orient-arrow-head", { height: ARROW_WIDTH * 6, diameterTop: 0, diameterBottom: ARROW_WIDTH * 6, tessellation: 12 }, st.scene);
-  head.position = tip.add(dir.scale(ARROW_WIDTH * 2));
-  head.rotationQuaternion = Quaternion.RotationAxis(new Vector3(0, 0, 1), Math.atan2(dir.y, dir.x) - Math.PI / 2);
-  const am = unlit(st, "orient-arrow-mat", ARROW, 0.999);
-  for (const m of [shaft, head]) {
-    m.material = am;
-    m.parent = arrow;
-    m.isPickable = false;
-    m.renderingGroupId = ORIENT_GROUP;
-    m.alwaysSelectAsActiveMesh = true;
-    m.alphaIndex = 3;
-  }
-  arrow.rotationQuaternion = Quaternion.Identity();
   const back = CreatePlane("orient-window", { size: 1 }, st.scene);
   const bm = unlit(st, "orient-window-mat", new Color3(0.08, 0.09, 0.12), 0.35);
   back.material = bm;
@@ -236,7 +197,6 @@ function rebuild(st: SceneState): void {
     root,
     mesh,
     edges,
-    arrow,
     back,
     facetNormals: facets.map((f) => f.normal),
     facetPoints: facets.map((f) => f.vertices[0]!),
@@ -253,16 +213,18 @@ function rebuild(st: SceneState): void {
     candidate: -1,
     candEdge: null,
     candEdgeTag: -2,
-    now: null,
     replicas: [],
   };
 }
 
-/** ⭐ A copy of the orbited piece (its geometry and a clone of its material), never pickable, never a body, drawn after the glass. */
+/**
+ * ⭐ A copy of the orbited piece (its geometry and a clone of its material), never pickable, never a body, drawn after the glass; its RESTING
+ * face's edges outlined in the candidate's yellow (as thick on the glass as the candidate's outline), drawn over everything.
+ */
 function pieceCopy(
   st: SceneState,
   name: string,
-): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3 } | null {
+): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly outline: StandardMaterial } | null {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined) return null;
   const m = p.mesh.clone(name, null, true) as Mesh | null;
@@ -280,12 +242,30 @@ function pieceCopy(
   m.material = mat;
   m.rotationQuaternion = Quaternion.Identity();
   const b = p.mesh.getBoundingInfo().boundingSphere;
-  return { mesh: m, piece: p.mesh.name, radius: Math.max(1e-6, b.radius), centre: [b.center.x, b.center.y, b.center.z], rest: p.restingCentre };
+  const radius = Math.max(1e-6, b.radius);
+  const outline = unlit(st, name + "-rest-edges-mat", CANDIDATE_EDGE, 0.999);
+  outline.depthFunction = Constants.ALWAYS; // ⭐ never hidden — by the copy itself or the glass
+  outline.disableDepthWrite = true;
+  const n = p.restingFace?.normal ?? [0, 0, 0];
+  const lift = scale(n, radius * 0.01);
+  // ⭐ the copy is scaled to `PIECE_SHARE` of the inner radius: this local radius is the candidate outline's on the glass
+  const width = (CANDIDATE_EDGE_WIDTH * radius) / PIECE_SHARE;
+  p.restingEdges.forEach((e, i) => {
+    const path = e.map((v) => new Vector3(v[0] + lift[0], v[1] + lift[1], v[2] + lift[2]));
+    const t = CreateTube(`${name}-rest-edge-${i}`, { path, radius: width, tessellation: 6 }, st.scene);
+    t.material = outline;
+    t.isPickable = false;
+    t.renderingGroupId = ORIENT_GROUP;
+    t.alwaysSelectAsActiveMesh = true;
+    t.alphaIndex = 4;
+    t.parent = m;
+  });
+  return { mesh: m, piece: p.mesh.name, radius, centre: [b.center.x, b.center.y, b.center.z], outline };
 }
 
 /**
  * ⭐ Every frame: rebuilt on a goal commit; shown with an orbited piece and a size above 0 %; placed in its window, turned as the world is seen
- * from the camera; the lit facet faded as the scene's pink face is; the candidate read; (a), (b) and (c) laid out inside it.
+ * from the camera; the lit facet always shown; the candidate read and outlined; the copy at its centre.
  */
 export function orientCubeFrame(st: SceneState): void {
   if (st.orientDirty || (st.orientCube === null && st.orientDirs.length > 0)) rebuild(st);
@@ -296,9 +276,7 @@ export function orientCubeFrame(st: SceneState): void {
     c.mesh.isVisible = show;
     c.back.isVisible = show;
     for (const e of c.edges) e.isVisible = show;
-    for (const m of c.arrow.getChildMeshes()) m.isVisible = show;
-    if (c.now !== null) c.now.mesh.isVisible = show;
-    for (const r of c.replicas) r.mesh.isVisible = show;
+    for (const r of c.replicas) for (const m of [r.mesh, ...r.mesh.getChildMeshes()]) m.isVisible = show;
     if (c.litMesh !== null) c.litMesh.isVisible = show;
     if (c.candEdge !== null) c.candEdge.isVisible = show;
   }
@@ -365,61 +343,18 @@ export function orientCubeFrame(st: SceneState): void {
   c.candidate = cand;
   if (cand !== c.candEdgeTag) candidateEdges(st, cand);
   orientHoldStep(st, cand);
-  // ⭐ (a), (b), (c) — in the candidate face's plane through the polyhedron's centre: n its normal (as drawn), u and v in the face, u as near
-  // the screen's right as the face allows, v its up; with no candidate, the plane facing the camera
-  const R: Vec3 = [right.x, right.y, right.z];
-  const U: Vec3 = [up.x, up.y, up.z];
-  const ci = c.facetTags.indexOf(cand);
-  const n: Vec3 = (ci >= 0 ? normalize(qRotate(q, c.facetNormals[ci]!)) : null) ?? [-fwd.x, -fwd.y, -fwd.z];
-  const u: Vec3 = normalize(sub(R, scale(n, dot(R, n)))) ?? normalize(sub(U, scale(n, dot(U, n)))) ?? R;
-  const v: Vec3 = cross(u, n);
-  const o: Vec3 = [centre.x, centre.y, centre.z];
-  const unit = c.inner * s;
-  const at = (slot: readonly [number, number]): Vec3 => add(o, add(scale(u, slot[0] * unit), scale(v, slot[1] * unit)));
-  const pieceSize = PIECE_SHARE * unit;
-  const w = cross(u, v); // ⭐ a proper basis (u, v, u × v): the arrow's plane is u–v
-  c.arrow.position.set(o[0] + n[0] * ARROW_LIFT * unit, o[1] + n[1] * ARROW_LIFT * unit, o[2] + n[2] * ARROW_LIFT * unit);
-  c.arrow.rotationQuaternion!.copyFrom(Quaternion.RotationQuaternionFromAxis(new Vector3(...u), new Vector3(...v), new Vector3(...w)));
-  c.arrow.scaling.setAll(unit);
-  nowFrame(st, q, o, pieceSize); // ⭐ (a) its bounding centre on the polyhedron's centre
-  replicaFrame(st, cand, q, at(SLOT_NEXT), pieceSize, n);
+  // ⭐ the copy at the polyhedron's centre
+  replicaFrame(st, cand, q, [centre.x, centre.y, centre.z], PIECE_SHARE * c.inner * s);
 }
 
-/**
- * ⭐ A copy placed, `size` its radius, in the pose `pose` (turned with the cube by `corr`): its bounding centre on `slot` — or, with `on`
- * (the plane's normal), its RESTING face's centre on `slot`, a hair off the plane.
- */
-function place(
-  copy: { readonly mesh: Mesh; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3 },
-  pose: Quat,
-  corr: Quat,
-  slot: Vec3,
-  size: number,
-  on: Vec3 | null = null,
-): void {
+/** ⭐ A copy placed: its bounding centre on `slot`, `size` its radius, in the pose `pose` (turned with the cube by `corr`). */
+function place(copy: { readonly mesh: Mesh; readonly radius: number; readonly centre: Vec3 }, pose: Quat, corr: Quat, slot: Vec3, size: number): void {
   const k = size / copy.radius;
   const w = qmul(corr, pose);
   copy.mesh.scaling.setAll(k);
   copy.mesh.rotationQuaternion!.set(w[1], w[2], w[3], w[0]);
-  const off = qRotate(w, scale(on === null ? copy.centre : copy.rest, k));
-  const lift = on === null ? [0, 0, 0] : scale(on, size * 0.02);
-  copy.mesh.position.set(slot[0] - off[0] + lift[0]!, slot[1] - off[1] + lift[1]!, slot[2] - off[2] + lift[2]!);
-}
-
-/** ⭐ (a) the orbited piece AS IT IS — its live pose, every frame (a new copy when the piece in use changes). */
-function nowFrame(st: SceneState, corr: Quat, slot: Vec3, size: number): void {
-  const c = st.orientCube!;
-  const piece = st.greenBox?.name ?? "";
-  if (c.now !== null && c.now.piece !== piece) {
-    c.now.mesh.dispose(false, true);
-    c.now = null;
-  }
-  if (c.now === null) c.now = pieceCopy(st, "orient-piece-now");
-  if (c.now === null || st.greenBox === null) return;
-  // ⭐ (2026-10-12, *"green piece replicas shall be instantly placed in their transform. No transitions"*) the pose the piece is HEADING
-  // for — a turn in flight (`restAlign`) is not played here
-  const r = st.greenBox.rotationQuaternion ?? Quaternion.Identity();
-  place(c.now, st.restAlign?.base ?? [r.w, r.x, r.y, r.z], corr, slot, size);
+  const off = qRotate(w, scale(copy.centre, k));
+  copy.mesh.position.set(slot[0] - off[0], slot[1] - off[1], slot[2] - off[2]);
 }
 
 /** ⭐ The candidate face's outline (a tube along its edges, drawn after the glass), rebuilt when the candidate changes. */
@@ -443,10 +378,10 @@ function candidateEdges(st: SceneState, cand: number): void {
 }
 
 /**
- * ⭐⭐ (c) the orbited piece AS IT WOULD BE if the candidate face were pressed (`restingPreview` — the next roll when the candidate is the pink
+ * ⭐⭐ The orbited piece AS IT WOULD BE if the candidate face were pressed (`restingPreview` — the next roll when the candidate is the pink
  * face); a new pose — the old copy fades out and a new one fades in.
  */
-function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size: number, on: Vec3): void {
+function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size: number): void {
   const c = st.orientCube!;
   const now = performance.now();
   const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
@@ -458,7 +393,19 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
     live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
     Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
   if (!same) {
-    if (live !== undefined) live.dying = now;
+    if (live !== undefined) {
+      live.dying = now;
+      // ⛔⛔ (2026-10-12, the owner on the phone: *"when i orbit, the replica flies outside the window into the scene before appearing back in
+      // the window"*) — a fading copy kept its WORLD place while the window (drawn in front of the camera) moved on with the orbit: it was
+      // left in the scene for its fade. ⭐ Attached to the window's root as it stands (`setParent` keeps the world pose): it fades IN the
+      // window, turning with the cube, never transitioning on its own
+      // ⚠ placed for THIS frame and both matrices refreshed first: the window moves with the camera (~0.1 m a frame mid-orbit), and a
+      // world matrix one frame old baked that gap into the attachment — dozens of cube radii at the window's scale
+      place(live, live.q, corr, slot, size);
+      c.root.computeWorldMatrix(true);
+      live.mesh.computeWorldMatrix(true);
+      live.mesh.setParent(c.root);
+    }
     if (q !== null) {
       const copy = pieceCopy(st, "orient-piece-next");
       if (copy !== null) c.replicas.push({ ...copy, q, tag: cand, born: now, dying: null });
@@ -471,10 +418,10 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
       r.mesh.dispose(false, true);
       return false;
     }
-    (r.mesh.material as StandardMaterial).alpha = 0.999 * a;
-    // ⭐ its resting face on the candidate's plane — against its normal, as in the scene; ⛔ a fading copy stays where it was (no transition:
-    // *"instantly placed in their transform"*)
-    if (r.dying === null) place(r, r.q, corr, slot, size, on);
+    (r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;
+    r.outline.alpha = 0.999 * a; // ⭐ the resting face's outline fully opaque once it is in
+    // ⛔ a fading copy stays where it was (no transition: *"instantly placed in their transform"*)
+    if (r.dying === null) place(r, r.q, corr, slot, size);
     return true;
   });
 }

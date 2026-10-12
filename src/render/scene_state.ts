@@ -470,8 +470,6 @@ export interface SceneState {
     readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
     readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
     readonly edges: readonly import("@babylonjs/core/Meshes/linesMesh").LinesMesh[];
-    /** ⭐ (2026-10-12) (b) the curved arrow from (a) the piece as it is to (c) the piece as it would be */
-    readonly arrow: import("@babylonjs/core/Meshes/mesh").Mesh;
     readonly back: import("@babylonjs/core/Meshes/mesh").Mesh;
     readonly facetNormals: readonly import("../core/vec").Vec3[];
     readonly facetPoints: readonly import("../core/vec").Vec3[];
@@ -485,25 +483,18 @@ export interface SceneState {
     readonly vertexNormals: readonly import("../core/vec").Vec3[];
     readonly radius: number;
     lit: number;
-    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none); (a) the piece as it is; (c) the pieces as they would be (the
-     * live one, the fading). */
+    /** ⭐ (2026-10-12) the CANDIDATE SUPPORT FACE (a direction's index; −1 none); the copies of the piece as it would be (the live one, the
+     * fading). */
     candidate: number;
     /** ⭐ (2026-10-12) the candidate face's outline, and the candidate it was built for. */
     candEdge: import("@babylonjs/core/Meshes/mesh").Mesh | null;
     candEdgeTag: number;
-    now: {
-      readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
-      readonly piece: string;
-      readonly radius: number;
-      readonly centre: import("../core/vec").Vec3;
-      readonly rest: import("../core/vec").Vec3;
-    } | null;
     replicas: {
       readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly piece: string;
       readonly radius: number;
       readonly centre: import("../core/vec").Vec3;
-      readonly rest: import("../core/vec").Vec3;
+      readonly outline: import("@babylonjs/core/Materials/standardMaterial").StandardMaterial;
       readonly q: import("../core/vec").Quat;
       readonly tag: number;
       readonly born: number;
