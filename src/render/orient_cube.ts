@@ -40,8 +40,7 @@ import { distinctDirections, facetPolytope, type OrientDirection } from "../core
 import { add, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { isTapRelease } from "../input/mode_toggle";
-import { candidateFace, clearOfOverlays, orientWindowAtCursor, orientWindowCorner, turnBetween } from "../input/orient_window";
-import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { candidateFace, clearOfOverlays, orientWindowAtCursor, orientWindowCorner } from "../input/orient_window";
 import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
@@ -74,13 +73,6 @@ const REPLICA_ALPHA = 0.7;
 const REPLICA_FADE_MS = 250;
 /** ⭐ (2026-10-12) the cursor-following window: its top-left this far below and to the right of the cursor (mm on the glass). */
 const ORIENT_CURSOR_GAP_MM = 6;
-/** ⭐ (2026-10-12) the rotation arrow: its radius and thickness (× the inner radius), its colour, its least sweep, its place (× the window's half). */
-const TURN_ARROW_R = 0.75;
-const TURN_ARROW_W = 0.07;
-const TURN_ARROW = new Color3(1, 0.3, 0.1);
-const TURN_ARROW_MIN_SWEEP = (40 * Math.PI) / 180;
-/** ⭐ (2026-10-12, *"put the red arrow at the center of the cube, make it slightly less opaque than the replica"*) — its opacity (the copy's 0.7). */
-const TURN_ARROW_ALPHA = 0.55;
 /** ⭐ (2026-10-12, *"lerp the window to its position when it moves to catch the cursor"*) — the window's glide toward the cursor: its time constant (ms). */
 const ORIENT_FOLLOW_TAU_MS = 90;
 
@@ -135,7 +127,6 @@ function dispose(st: SceneState): void {
   c.back.dispose(false, true);
   c.candEdge?.dispose(false, true);
   for (const r of c.replicas) r.mesh.dispose(false, true);
-  c.turnArrow?.mesh.dispose(false, true);
   st.orientCube = null;
 }
 
@@ -226,7 +217,6 @@ function rebuild(st: SceneState): void {
     candEdgeTag: -2,
     clicked: null,
     instant: false,
-    turnArrow: null,
     replicas: [],
   };
 }
@@ -276,7 +266,6 @@ export function orientCubeFrame(st: SceneState): void {
     for (const r of c.replicas) for (const m of [r.mesh, ...r.mesh.getChildMeshes()]) m.isVisible = show;
     if (c.litMesh !== null) c.litMesh.isVisible = show;
     if (c.candEdge !== null) c.candEdge.isVisible = show;
-    if (c.turnArrow !== null && !show) for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = false;
   }
   if (!show || c === null) {
     st.orientRect = null;
@@ -376,7 +365,6 @@ export function orientCubeFrame(st: SceneState): void {
   const ci = c.facetTags.indexOf(shown);
   const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];
   replicaFrame(st, shown, q, seat, PIECE_SHARE * c.inner * s);
-  turnArrowFrame(st, q, centre, s);
 }
 
 /**
@@ -428,8 +416,7 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
   const now = performance.now();
   const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
   const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;
-  const preview = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
-  const q = preview?.q ?? null;
+  const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
   const piece = st.greenBox?.name ?? "";
   const live = c.replicas.find((r) => r.dying === null);
   const same =
@@ -457,7 +444,7 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
         copy.mesh.computeWorldMatrix(true);
         copy.mesh.setParent(c.root);
         // ⭐ after a click, at once — no fade-in (*"immediately"*)
-        c.replicas.push({ ...copy, q, turn: preview?.turn ?? null, tag: cand, born: c.instant ? now - REPLICA_FADE_MS : now, dying: null });
+        c.replicas.push({ ...copy, q, tag: cand, born: c.instant ? now - REPLICA_FADE_MS : now, dying: null });
         c.instant = false;
       }
     }
@@ -606,65 +593,6 @@ export function orientCubePointer(
     }
   }
   return true;
-}
-
-/**
- * ⭐⭐ (2026-10-12, the owner: *"together with the replica in the cube window, add a red arrow (similar to the one we removed previously) with an
- * inclination and direction indicating the direction of the rotation required to rotate from the green piece current quaternion to the replica
- * quaternion. position the arrow so that the replica is not occluded by the arrow"*) — an arc in the plane ACROSS the turn's axis (its
- * inclination), swept the way the turn goes (its direction; as long as the turn, never under 40°), its head at the end; turned with the cube,
- * at the polyhedron's CENTRE, a little more transparent than the copy (2026-10-12). Rebuilt when the turn changes; hidden with none.
- */
-function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, s: number): void {
-  const c = st.orientCube!;
-  const live = c.replicas.find((r) => r.dying === null);
-  const box = st.greenBox;
-  const r = box?.rotationQuaternion ?? Quaternion.Identity();
-  const from: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
-  // ⭐ (2026-10-12, *"the red arrow should show a clockwise rotation around the normal of the resting face"*) — a roll's own turn (its sense,
-  // up to a half turn); an alignment's, the turn between the two poses the short way
-  const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));
-  if (turn === null || live === undefined) {
-    if (c.turnArrow !== null) for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = false;
-    return;
-  }
-  const same = (a: Quat, b: Quat) => Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]) > 0.99999;
-  if (c.turnArrow === null || !same(c.turnArrow.from, from) || !same(c.turnArrow.to, live.q)) {
-    c.turnArrow?.mesh.dispose(false, true);
-    const mesh = new Mesh("orient-turn-arrow", st.scene);
-    mesh.rotationQuaternion = Quaternion.Identity();
-    const a = turn.axis;
-    const seed: Vec3 = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    const u = normalize(sub(seed, scale(a, dot(seed, a))))!;
-    const v: Vec3 = [a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0]]; // axis × u: the turn's sense
-    const R = TURN_ARROW_R * c.inner;
-    const sweep = Math.min(Math.max(turn.angle, TURN_ARROW_MIN_SWEEP), 1.75 * Math.PI);
-    const at = (t: number): Vector3 => new Vector3(...add(scale(u, R * Math.cos(t)), scale(v, R * Math.sin(t))));
-    const path = Array.from({ length: 33 }, (_, i) => at((sweep * i) / 32));
-    const w = TURN_ARROW_W * c.inner;
-    const shaft = CreateTube("orient-turn-arrow-shaft", { path, radius: w, tessellation: 8 }, st.scene);
-    const end = path[path.length - 1]!;
-    const tangent = new Vector3(...add(scale(u, -Math.sin(sweep)), scale(v, Math.cos(sweep))));
-    const head = CreateCylinder("orient-turn-arrow-head", { height: w * 6, diameterTop: 0, diameterBottom: w * 6, tessellation: 12 }, st.scene);
-    head.position = end.add(tangent.scale(w * 2));
-    const hq = shortestArc([0, 1, 0], [tangent.x, tangent.y, tangent.z]);
-    head.rotationQuaternion = new Quaternion(hq[1], hq[2], hq[3], hq[0]);
-    const mat = unlit(st, "orient-turn-arrow-mat", TURN_ARROW, TURN_ARROW_ALPHA);
-    for (const m of [shaft, head]) {
-      m.material = mat;
-      m.parent = mesh;
-      m.isPickable = false;
-      m.renderingGroupId = ORIENT_GROUP;
-      m.alwaysSelectAsActiveMesh = true;
-      m.alphaIndex = 4;
-    }
-    c.turnArrow = { mesh, from, to: live.q };
-  }
-  for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = true;
-  // ⭐ (2026-10-12, *"put the red arrow at the center of the cube"*) — at the polyhedron's centre (it was in the corner opposite the copy)
-  c.turnArrow.mesh.position.copyFrom(centre);
-  c.turnArrow.mesh.rotationQuaternion!.set(corr[1], corr[2], corr[3], corr[0]);
-  c.turnArrow.mesh.scaling.setAll(s);
 }
 
 /**

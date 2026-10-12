@@ -188,11 +188,11 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
   it("⭐⭐ the copy of the orbited piece: the pose `restingPreview` gives — the alignment to the candidate, or the next roll when it is the pink face; a new pose fades the old copy out", () => {
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
-    expect(c).toContain("const preview = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
+    expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
     expect(c).toMatch(/if \(!same\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(live !== undefined\) \{\s*live\.mesh\.dispose\(false, true\);/);
     expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
-    expect(flat("render/green_box_wiring.ts")).toContain("export function restingPreview( st: SceneState, dir: OrientDirection, roll: boolean, ): { readonly q: Quat; readonly turn: { readonly axis: Vec3; readonly angle: number } | null } | null {");
+    expect(flat("render/green_box_wiring.ts")).toContain("export function restingPreview( st: SceneState, dir: OrientDirection, roll: boolean, ): Quat | null {");
     expect(g).toContain("const next = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
   });
   it("⭐⭐ the cube HELD: each new candidate that is not the pink face aligns the resting face to it, one episode for the hold; a tap is still a tap", () => {
@@ -242,7 +242,7 @@ describe("⛔⛔ the copy RIDES THE CUBE — no transition, never out of the win
     expect(code("render/orient_cube.ts")).toContain("const s = (0.8 * half) / Math.max(c.radius, c.inner * (1 + 2 * PIECE_SHARE));");
   });
   it("⭐ the preview from the pose the piece is HEADING for (a turn in flight changes nothing)", () => {
-    expect(code("render/green_box_wiring.ts")).toContain("return { q: restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q, turn: null };");
+    expect(code("render/green_box_wiring.ts")).toContain("return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
   });
 });
 
@@ -256,7 +256,7 @@ describe("⭐⭐ a clicked face shows the copy at once (2026-10-12, *\"when a cu
   });
 });
 
-import { orientWindowAtCursor, turnBetween } from "../src/input/orient_window";
+import { orientWindowAtCursor } from "../src/input/orient_window";
 describe("⭐⭐ desktop: the window follows the cursor while it orbits, frozen at the release; 175 % (2026-10-12)", () => {
   it("⭐ the slider values that put the window's top-left `gap` below-right of the cursor, clamped", () => {
     // a 1000 × 600 canvas, a 100 px window, a 10 px margin: the room is 880 × 480
@@ -273,31 +273,8 @@ describe("⭐⭐ desktop: the window follows the cursor while it orbits, frozen 
   });
 });
 
-describe("⭐⭐ the red arrow of the turn from the piece to the copy (2026-10-12)", () => {
-  it("⭐ the turn between two poses: its axis and its angle, the short way; none for the same pose", () => {
-    const s = Math.SQRT1_2;
-    const t = turnBetween([1, 0, 0, 0], [s, 0, s, 0])!; // 90° about +y
-    expect(t.angle).toBeCloseTo(Math.PI / 2, 9);
-    expect(t.axis[1]).toBeCloseTo(1, 9);
-    const back = turnBetween([s, 0, s, 0], [1, 0, 0, 0])!; // the way back: the other sense
-    expect(back.axis[1]).toBeCloseTo(-1, 9);
-    expect(turnBetween([s, 0, s, 0], [-s, 0, -s, 0])).toBeNull(); // the same rotation (q and −q)
-    expect(turnBetween([1, 0, 0, 0], [0, 0, 0, 1])!.angle).toBeCloseTo(Math.PI, 9); // a half turn
-  });
-  it("⭐ wired: an arc across the axis, swept the turn's way, in the window's corner opposite the copy", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).toContain("const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));");
-    expect(c).toContain("const v: Vec3 = [a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0]];");
-  });
-});
 
 describe("⭐ the arrow at the centre; the window GLIDES to the cursor (2026-10-12, *\"put the red arrow at the center of the cube, make it slightly less opaque than the replica — lerp the window to its position when it moves to catch the cursor\"*)", () => {
-  it("⭐ the arrow at the polyhedron's centre, 0.55 opaque (the copy 0.7)", () => {
-    const c = code("render/orient_cube.ts");
-    expect(c).toContain("c.turnArrow.mesh.position.copyFrom(centre);");
-    expect(c).toContain("const TURN_ARROW_ALPHA = 0.55;");
-    expect(c).not.toContain("TURN_ARROW_CORNER");
-  });
   it("⭐ the follow sets a GOAL; each frame the sliders approach it exponentially (90 ms); the cursor's gap a further half window to the right", () => {
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("st.orientWindowGoal = { xPct: p.xPct, yPct: p.yPct };");
@@ -332,41 +309,8 @@ describe("⛔⛔ the arrow of a ROLL shows the roll's own turn — clockwise abo
     const v = cross(a, u);
     expect(turned[0] * v[0] + turned[1] * v[1] + turned[2] * v[2]).toBeGreaterThan(0);
   });
-  it("⭐ wired: the copy keeps the roll's turn; the arrow uses it before the pose-to-pose one", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));");
-    expect(c).toContain("turn: preview?.turn ?? null,");
-    expect(flat("render/green_box_wiring.ts")).toContain("return next === null ? null : { q: next.q, turn: { axis: next.axis, angle: next.angleRad } };");
-  });
 });
 
-import { qSlerp } from "../src/core/vec";
-describe("⭐⭐ the arrow's sense for an ALIGNMENT is the piece's own turn (2026-10-12, *\"make sure the red arrow direction is correct also for the other configurations\"*)", () => {
-  it("⭐ over 200 random pose pairs: a point swept by the arrow (axis × u) moves the way the piece's eased turn (qSlerp, the short way) first moves it", () => {
-    let seed = 7;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 2 - 1;
-    const unitQ = (): [number, number, number, number] => {
-      const v = [rnd(), rnd(), rnd(), rnd()];
-      const n = Math.hypot(...v);
-      return [v[0]! / n, v[1]! / n, v[2]! / n, v[3]! / n];
-    };
-    for (let k = 0; k < 200; k++) {
-      const from = unitQ();
-      const to = unitQ();
-      const t = turnBetween(from, to);
-      if (t === null || t.angle > Math.PI - 0.05) continue; // ⚠ a half turn has no short way
-      const seedV: [number, number, number] = Math.abs(t.axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-      const d = seedV[0] * t.axis[0] + seedV[1] * t.axis[1] + seedV[2] * t.axis[2];
-      const u: [number, number, number] = [seedV[0] - d * t.axis[0], seedV[1] - d * t.axis[1], seedV[2] - d * t.axis[2]];
-      const sweep = cross(t.axis, u); // the arrow's direction at its start
-      // the piece's first eased step, applied to the same world point: (slerp(from, to, ε) · from⁻¹)(u)
-      const step = qmul(qSlerp(from, to, 0.01), [from[0], -from[1], -from[2], -from[3]]);
-      const moved = qRotate(step, u);
-      const delta = [moved[0] - u[0], moved[1] - u[1], moved[2] - u[2]];
-      expect(delta[0]! * sweep[0] + delta[1]! * sweep[1] + delta[2]! * sweep[2]).toBeGreaterThan(0);
-    }
-  });
-});
 
 describe("⭐ the follow switch (2026-10-12, *\"make a on-off cursor in the scene menu to enable or disable the window following the cursor. if the window does not follow the cursor, place it where it was before we modified. default: follow is off\"*)", () => {
   it("⭐ off by default, in the SCENE menu; off, the follow does nothing; switched off, the window back at its boot position", () => {
@@ -375,5 +319,15 @@ describe("⭐ the follow switch (2026-10-12, *\"make a on-off cursor in the scen
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("if (st.cfg.orientWindowFollow !== 1) return;");
     expect(c).toContain("if (st.cfg.orientWindowFollow !== 1 && st.orientFollowWas) { const cfgH = st.cfg as unknown as Record<string, number>; cfgH.orientWindowXPct = st.orientWindowHome.xPct; cfgH.orientWindowYPct = st.orientWindowHome.yPct;");
+  });
+});
+
+
+describe("⛔ the red arrow deleted (2026-10-12, *\"remove the red arrow\"*)", () => {
+  it("⭐ no arrow in the window, no turn carried by the preview, no pose-to-pose turn rule", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).not.toMatch(/turnArrow|TURN_ARROW|turnBetween/);
+    expect(code("input/orient_window.ts")).not.toContain("export function turnBetween");
+    expect(code("render/green_box_wiring.ts")).toContain("return next?.q ?? null;");
   });
 });

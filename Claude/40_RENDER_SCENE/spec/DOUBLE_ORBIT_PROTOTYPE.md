@@ -765,3 +765,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the copy; desktop: the window follows the cursor while orbiting (frozen at the release), 175 % → `RESTING_FACE_ALIGNMENT.md` §23.
 * ⭐ The arrow at the cube's centre (0.55); a roll's arrow its own clockwise turn about the resting face's normal; the window GLIDES to the
   cursor (a drag only, half a window further right), 150 % on desktop; ⭐ the follow is a SCENE switch, OFF by default → `RESTING_FACE_ALIGNMENT.md` §23.
+
+## 2026-10-12 — on 1.0.69-
+
+* ⛔ The red arrow of the orientation window deleted → `RESTING_FACE_ALIGNMENT.md` §23.
