@@ -306,7 +306,9 @@ export function orientCubeFrame(st: SceneState): void {
     .add(right.scale(ndcX * d * tanV * (cw / ch)))
     .add(up.scale(ndcY * d * tanV));
   const half = (d * tanV * size) / ch; // ⭐ the window's half side, in metres, at the content's depth
-  const s = (0.8 * half) / c.radius;
+  // ⛔ (2026-10-12, *"Make sure the replica does not jump outside the window"*) — fitted to what it shows: the polyhedron, AND the copy seated on a
+  // face (its far side up to the inner radius + its diameter from the centre); the cube alone left a copy past the window's edge
+  const s = (0.8 * half) / Math.max(c.radius, c.inner * (1 + 2 * PIECE_SHARE));
   // ⭐ seen as from the screen's centre: the turn that takes the view direction onto the window's — the corner's perspective does not skew
   // it, and each facet still points the way its direction points in the scene as this camera sees it
   const toCentre = centre.subtract(cam.position).normalize();
@@ -399,22 +401,21 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
     live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
     Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
   if (!same) {
-    if (live !== undefined) {
-      live.dying = now;
-      // ⛔⛔ (2026-10-12, the owner on the phone: *"when i orbit, the replica flies outside the window into the scene before appearing back in
-      // the window"*) — a fading copy kept its WORLD place while the window (drawn in front of the camera) moved on with the orbit: it was
-      // left in the scene for its fade. ⭐ Attached to the window's root as it stands (`setParent` keeps the world pose): it fades IN the
-      // window, turning with the cube, never transitioning on its own
-      // ⚠ placed for THIS frame and both matrices refreshed first: the window moves with the camera (~0.1 m a frame mid-orbit), and a
-      // world matrix one frame old baked that gap into the attachment — dozens of cube radii at the window's scale
-      place(live, live.q, corr, slot, size);
-      c.root.computeWorldMatrix(true);
-      live.mesh.computeWorldMatrix(true);
-      live.mesh.setParent(c.root);
-    }
+    if (live !== undefined) live.dying = now; // ⭐ it fades where it is: on its face, riding the cube since it appeared
     if (q !== null) {
       const copy = pieceCopy(st, "orient-piece-next");
-      if (copy !== null) c.replicas.push({ ...copy, q, tag: cand, born: now, dying: null });
+      if (copy !== null) {
+        // ⛔⛔ (2026-10-12, the owner: *"There shall be no transition in the replica transform. Only a fade and appear. Make sure the replica does
+        // not jump outside the window"* → the choice *"Ride the cube"*) — placed ONCE, seated on the candidate face, then ATTACHED TO THE CUBE
+        // (`c.root`): it turns rigidly with the cube like its own faces and never moves on its own; the next candidate brings the next copy
+        // (fade out, fade in). The window is fitted to hold it (`s`). ⚠ Placed for THIS frame and both matrices refreshed before the
+        // attachment — mid-orbit the window moves ~0.1 m a frame, and a matrix one frame old would bake that gap in
+        place(copy, q, corr, slot, size);
+        c.root.computeWorldMatrix(true);
+        copy.mesh.computeWorldMatrix(true);
+        copy.mesh.setParent(c.root);
+        c.replicas.push({ ...copy, q, tag: cand, born: now, dying: null });
+      }
     }
   }
   c.replicas = c.replicas.filter((r) => {
@@ -426,8 +427,7 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
     }
     (r.mesh.material as StandardMaterial).alpha = REPLICA_ALPHA * a;
     r.outline.alpha = 0.999 * a; // ⭐ the resting face's outline fully opaque once it is in
-    // ⛔ a fading copy stays where it was (no transition: *"instantly placed in their transform"*)
-    if (r.dying === null) place(r, r.q, corr, slot, size);
+    // ⛔ never placed again (no transition): it rides the cube
     return true;
   });
 }

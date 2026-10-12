@@ -1281,5 +1281,8 @@ export function restingPreview(st: SceneState, dir: OrientDirection, roll: boole
   const a = st.pieceAnchor;
   const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
   const ends = dir.axes.map((x) => [sub(pos, scale(x, 0.05)), add(pos, scale(x, 0.05))] as const);
-  return restAlignToFace(shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
+  // ⛔ (2026-10-12, the owner: *"There shall be no transition in the replica transform. Only a fade and appear"*) — from the pose the piece
+  // is HEADING for (a turn in flight, `restAlign`), as the roll's: from the pose SHOWN, the preview changed on every frame of the 125 ms
+  // turn, and a new copy faded in and out on each one
+  return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
 }
