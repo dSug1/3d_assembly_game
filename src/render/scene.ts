@@ -583,7 +583,6 @@ export function createScene(
   st.restingSeated = null;
   st.restingLast = null;
   st.hold = null;
-  st.highlightEndedAt = null;
   // ⭐ (2026-10-12, §21) the orientation cube: built at the first frame, read again at every goal commit
   st.orientDirs = [];
   st.orientDirty = true;
@@ -594,8 +593,6 @@ export function createScene(
   st.pinkTargetNormal = null;
   st.orientHold = null;
   st.orientDriver = null;
-  st.pinkFill = null;
-  st.pinkFillKey = "";
   st.pieceFaceTap = null;
   st.restAlign = null;
   st.orbitHeadingPrev = null;
@@ -612,7 +609,6 @@ export function createScene(
   st.pieceYawGain = 1;
   st.pieceYawGainKey = "";
   st.pieceYawGainDrag = 1;
-  st.pinkFace = null; // set by the boot target (`bootTargetOnBlueFace`), below
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;

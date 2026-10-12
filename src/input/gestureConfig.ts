@@ -475,8 +475,6 @@ export interface GestureConfig {
   pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
   pieceOrbitEnterMm: number;
-  /** ⭐ Prototype (2026-10-11): the pink highlights (pink face, resting face) held after the input ends, then faded — ms (`highlightAlpha`). */
-  highlightHoldMs: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
   /** ⭐ Prototype (2026-10-12): zoom → roll without lifting — how long the second finger must REST before the first finger's dx rolls (ms). */
@@ -487,7 +485,6 @@ export interface GestureConfig {
    * device (`orientWindowBoot`: a touch screen bottom-left, a desktop top-right) unless the URL names it. */
   orientWindowXPct: number;
   orientWindowYPct: number;
-  highlightFadeMs: number;
   pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
@@ -974,10 +971,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
-  // ⭐⭐ prototype, the owner 2026-10-11: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
-  // fade gradually and rapidly away. Set default timer 750 ms"* — *"Do one slider with two cursors"*: the hold, then the fade
-  highlightHoldMs: 300, // ⭐ the owner, 2026-10-11: *"set default hold = 300 ms fade = 250 ms"* (was 750)
-  highlightFadeMs: 250,
+  // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
   // ⭐ prototype, the owner 2026-10-12: *"Build with the 150ms rest"*

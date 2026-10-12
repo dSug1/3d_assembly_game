@@ -196,10 +196,10 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     expect(spawn).toMatch(/st\.bootRestAlign = true;\s*st\.hudDirty = true;\s*\}/);
     expect(w).toMatch(/st\.pieceAnchor = pp;\s*if \(st\.bootRestAlign\) bootRestAlign\(st, pp\);/);
     const fn = w.slice(w.indexOf("function bootRestAlign"), w.indexOf("export function registerOrbitPieces"));
-    expect(fn).toMatch(/const target = alignFaceOf\(st, at, true\);/); // the FROZEN body, whatever the pink face
+    expect(fn).toMatch(/st\.pinkDir = BOOT_UP;\s*const target = alignFaceOf\(st, at\);/); // ⭐ (2026-10-12) the cube's +y facet — the floor's top direction
     expect(fn).toMatch(/const turned = restAlignToFace\(\[r\.w, r\.x, r\.y, r\.z\], at, p\.restingFace\.normal, p\.restingLong, target\.normal, target\.long\);/);
-    // ⭐ (2026-10-12) the orientation cube's facet gives way at the boot, and its lit direction is the boot's
-    expect(fn).toMatch(/st\.restAlign = null;\s*st\.restAligned = true;\s*(?:\/\/[^\n]*\n\s*)*st\.pinkDir = null;[^\n]*\n\s*st\.pinkTargetNormal = target\.normal;\s*st\.pinkFace = \{ objectId: target\.objectId, faceId: target\.faceId \};\s*st\.restRoll = \{ key: `\$\{target\.objectId\}\/\$\{target\.faceId\}`, pinkAxes: target\.flush, rolls: 0, couple: null \};/); // at once, aligned — and that face the pink face (2026-10-11)
+    // ⭐ (2026-10-12) aligned at once to the cube's +y facet (`BOOT_UP`) — no pink face; its lit direction is the boot's
+    expect(fn).toMatch(/st\.restAlign = null;\s*st\.restAligned = true;\s*st\.pinkTargetNormal = target\.normal;\s*st\.restRoll = \{ key: target\.label, pinkAxes: target\.flush, rolls: 0, couple: null \};/);
     expect(code("render/scene.ts")).toMatch(/st\.bootRestAlign = false;/);
   });
 

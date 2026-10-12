@@ -13,7 +13,6 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { candidateForFace, chooseInGroup, coupleStops, faceEdges, faceFlushAxes, faceLongAxes, nextCoupleRoll, placeByFaceCentre, restAlignToFace, restingFaceRecord, restingFaces, type Edge, type LongAxes, type RestingCandidate, type RestingResult } from "../core/resting_face";
 import { highlightLiftM } from "../input/highlight_lift";
-import { highlightAlpha } from "../input/hold_gesture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -193,56 +192,30 @@ const RESTING_XRAY_ALPHA = 0.25;
 const RESTING_ORDER = 1000;
 
 /**
- * ⭐ prototype — **THE FACE THE PIECE ALIGNS TO**, in the world (`1.0.59q-`): the PINK face (`st.pinkFace`: at boot the blue face toward
- * the green piece, then the face a press on a placed piece moves the target to) — or, with none, the FIRST FROZEN body's face that
- * points most toward the piece (the owner: *"if no pink face, anti-align with the normal of the first frozen object"* — the floor's
- * top). Its outward normal and its long axes (`faceLongAxes`, with their end points), read off its body's topology and placed by its pose.
+ * ⭐ prototype — **THE FACE THE PIECE ALIGNS TO**: ⛔⛔ (2026-10-12, the owner: *"Alignment of resting face shall be with the cube only"*) the
+ * orientation cube's facet only (`st.pinkDir`, a virtual pink face — *"sit against this face"*): its direction and its edges (the roll's
+ * axes); no position (the long axes' ends at the piece — a tie between them is never decided by a gap). A part's face and the frozen body's
+ * are deleted as targets (the boot's is the cube's +y, `BOOT_UP`). `null` with no facet.
  */
 function alignFaceOf(
   st: SceneState,
   piece: Vec3,
-  frozenOnly = false,
-): { readonly label: string; readonly objectId: ObjectId; readonly faceId: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
-  // ⭐⭐ (2026-10-12, §21, *"sit against this face"*) THE CUBE'S FACET first — a virtual pink face: its direction and its edges (the roll's
-  // axes); no position (the long axes' ends at the piece — a tie between them is never decided by a gap)
-  if (!frozenOnly && st.pinkDir !== null) {
-    const d = st.pinkDir;
-    return {
-      label: `cube ${dirLabel(d.normal)}`,
-      objectId: "orientation-cube",
-      faceId: dirLabel(d.normal),
-      normal: d.normal,
-      long: { axes: d.axes, ends: d.axes.map((a) => [sub(piece, scale(a, 0.05)), add(piece, scale(a, 0.05))] as const) },
-      flush: d.axes,
-    };
-  }
-  // ⭐ (2026-10-10) `frozenOnly`: the frozen body's face toward the piece even with a pink face (the boot alignment, `bootRestAlign`)
-  let id: ObjectId | null = frozenOnly ? null : (st.pinkFace?.objectId ?? null);
-  let faceId: string | null = frozenOnly ? null : (st.pinkFace?.faceId ?? null);
-  if (id === null) {
-    for (const [oid, o] of st.world.objects) {
-      if (o.frozen !== true) continue;
-      const faces = o.faces.map((f) => faceWorld(st.world, oid, f.id)).filter((f): f is NonNullable<typeof f> => f !== null);
-      // ⛔⛔ (2026-10-12, the owner: *"Fix the boot"*) — the face pointing most UP (the floor's TOP: *"anti-align with the normal of the first
-      // frozen object"* meant the floor's top). It was the face pointing most toward the piece measured from the body's FIRST face's centre
-      // (`f0`, the floor's +z side, 1 m away) — the piece boot-aligned against the floor's −z SIDE (`Floor/f1`); measured from the body's
-      // centre it would still pick a side for a piece on the outer ring, beyond the floor's edge
-      const toward = faceToward(
-        faces.map((f) => ({ centre: f.centre, normal: f.normal })),
-        [0, 1, 0],
-      );
-      void piece;
-      const at = toward === null ? -1 : faces.findIndex((f) => f.normal === toward.normal);
-      if (at < 0) continue;
-      id = oid;
-      faceId = o.faces[at]!.id;
-      break;
-    }
-  }
-  if (id === null || faceId === null) return null;
-  const g = faceGeometry(st, id, faceId);
-  return g === null ? null : { label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`, objectId: id, faceId, ...g };
+): { readonly label: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
+  const d = st.pinkDir;
+  if (d === null) return null;
+  return {
+    label: `cube ${dirLabel(d.normal)}`,
+    normal: d.normal,
+    long: { axes: d.axes, ends: d.axes.map((a) => [sub(piece, scale(a, 0.05)), add(piece, scale(a, 0.05))] as const) },
+    flush: d.axes,
+  };
 }
+
+/**
+ * ⭐ (2026-10-12) the boot's alignment target: the cube's +y facet (the floor's top direction), its edges along the world's x and z — what the
+ * frozen floor's top gave before, without a pink face (*"The boot alignment … could become simply the cube's +y facet"*).
+ */
+const BOOT_UP: OrientDirection = { normal: [0, 1, 0], axes: [[1, 0, 0], [0, 0, 1]] };
 
 /** ⭐ A body's face in the world: its outward normal, its long axes (with their ends) and its edge-to-edge axes — `null` with no such face. */
 function faceGeometry(
@@ -572,16 +545,11 @@ function restAlignFrame(st: SceneState, now: number): void {
 
 /** ⭐ The piece in use's yellow fill, lifted off its face by the highlight offset (`highlightLiftMm` on the glass, at its distance). */
 function restingFillFrame(st: SceneState, now: number): void {
-  // ⭐⭐ (2026-10-11, the owner: *"Pink face and resting face show pink highlights for a certain time (slider for timer) and then highlights
-  // fade gradually and rapidly away"*) — shown while the held second touch's input runs, held `highlightHoldMs` after it, faded over
-  // `highlightFadeMs` (`highlightAlpha`); none at boot
-  // ⭐ (2026-10-11) on only once the input ACTED (`hold.shown`) — a tap on empty space shows nothing
-  const a = highlightAlpha(now, st.hold !== null && st.hold.shown, st.highlightEndedAt, st.cfg.highlightHoldMs, st.cfg.highlightFadeMs);
-  pinkFillFrame(st, a);
+  void now;
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFill === null || p.restingFace === null) return;
   // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"*) — the resting face's fill is
-  // ALWAYS shown, at full strength; the part's pink face fill above keeps its fade
+  // ALWAYS shown, at full strength (the highlight timing and the part's pink face fill are deleted)
   const rest = 1;
   const fill = p.restingFill;
   fill.isVisible = true;
@@ -593,64 +561,6 @@ function restingFillFrame(st: SceneState, now: number): void {
   const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, p.mesh.position), st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
   fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
-}
-
-/**
- * ⭐⭐ prototype — **THE PINK FACE'S FILL** (2026-10-11): the pink face — a placed part's face, taken by the held second touch — filled pink, a
- * child of its body (it moves with it), lifted off it by the highlight offset, shown and faded with the resting face's (`highlightAlpha`).
- * Rebuilt when the pink face changes; none for a frozen body's (the boot alignment's floor is no pink face).
- */
-function pinkFillFrame(st: SceneState, a: number): void {
-  const pf = st.pinkFace;
-  const key = pf === null ? "" : `${pf.objectId}/${pf.faceId}`;
-  if (key !== st.pinkFillKey) {
-    st.pinkFill?.dispose();
-    st.pinkFill = null;
-    st.pinkFillKey = key;
-    const mesh = pf === null ? undefined : st.meshOf.get(pf.objectId);
-    if (pf !== null && mesh !== undefined && st.world.objects.get(pf.objectId)?.frozen !== true) {
-      const topo = st.topoOf.get(pf.objectId) ?? topologyOfBody(st, mesh);
-      const face = topo.faces.find((f) => f.id === pf.faceId);
-      if (face !== undefined) {
-        const local = new Map<number, number>();
-        const positions: number[] = [];
-        const indices: number[] = [];
-        for (const vi of face.triangles) {
-          let li = local.get(vi);
-          if (li === undefined) {
-            li = local.size;
-            local.set(vi, li);
-            const v = topo.positions[vi]!;
-            positions.push(v[0], v[1], v[2]);
-          }
-          indices.push(li);
-        }
-        const fill = new Mesh(`pink-face-${key}`, st.scene);
-        const data = new VertexData();
-        data.positions = positions;
-        data.indices = [...indices, ...indices.slice().reverse()]; // ⚠ double-sided
-        data.applyToMesh(fill, false);
-        const mat = new StandardMaterial(`pink-face-mat-${key}`, st.scene);
-        mat.emissiveColor = RESTING_COLOUR.clone();
-        mat.disableLighting = true;
-        mat.backFaceCulling = false;
-        fill.material = mat;
-        fill.parent = mesh;
-        fill.isPickable = false;
-        fill.metadata = { orbitCandidate: false, normal: face.normal };
-        st.pinkFill = fill;
-      }
-    }
-  }
-  const fill = st.pinkFill;
-  if (fill === null) return;
-  fill.isVisible = a > 0;
-  (fill.material as StandardMaterial).alpha = RESTING_ALPHA * a;
-  if (a > 0) {
-    const n = (fill.metadata as { normal: Vec3 }).normal;
-    const lift = highlightLiftM(st.cfg.highlightLiftMm, Vector3.Distance(st.camera.position, fill.getAbsolutePosition()), st.camera.fov, st.canvas.clientHeight);
-    fill.position.set(n[0] * lift, n[1] * lift, n[2] * lift);
-  }
 }
 
 /**
@@ -708,22 +618,19 @@ function bootRestAlign(st: SceneState, at: Vec3): void {
   st.bootRestAlign = false;
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined || p.restingFace === null) return;
-  const target = alignFaceOf(st, at, true);
+  // ⭐ (2026-10-12) the cube's +y facet (`BOOT_UP`) — the floor's top direction, no pink face
+  st.pinkDir = BOOT_UP;
+  const target = alignFaceOf(st, at);
   if (target === null) return;
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const turned = restAlignToFace([r.w, r.x, r.y, r.z], at, p.restingFace.normal, p.restingLong, target.normal, target.long);
   p.mesh.rotationQuaternion = toBabylon(turned.q);
   st.restAlign = null;
   st.restAligned = true;
-  // ⭐⭐ (2026-10-11, the owner: *"the boot pink face could be the floor's face, matching the alignment"*) — the pink face IS the face the piece
-  // is aligned to at boot (and at a respawn): a way in highlights what the roll lines up with. ⚠ A frozen face here only (the second touch
-  // never picks one); its fill is not drawn (`pinkFillFrame` skips a frozen body)
-  st.pinkDir = null; // ⭐ (2026-10-12) the cube's facet gives way
   st.pinkTargetNormal = target.normal;
-  st.pinkFace = { objectId: target.objectId, faceId: target.faceId };
-  st.restRoll = { key: `${target.objectId}/${target.faceId}`, pinkAxes: target.flush, rolls: 0, couple: null };
+  st.restRoll = { key: target.label, pinkAxes: target.flush, rolls: 0, couple: null };
   st.orbitRollAcc = 0;
-  st.lastVerdict = `orbit: boot — the resting face aligned to ${target.label}, the pink face; the roll is active`;
+  st.lastVerdict = `orbit: boot — the resting face aligned to ${target.label}; the roll is active`;
   st.hudDirty = true;
 }
 

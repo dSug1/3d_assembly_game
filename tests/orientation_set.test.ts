@@ -82,14 +82,15 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
   });
   it("⭐⭐ a facet is a VIRTUAL pink face — the resting face sits against it (`alignFaceOf` reads it first); the lit facet tapped again rolls", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toMatch(/if \(!frozenOnly && st\.pinkDir !== null\) \{\s*const d = st\.pinkDir;\s*return \{\s*label: `cube \$\{dirLabel\(d\.normal\)\}`,/);
+    expect(g).toMatch(/const d = st\.pinkDir;\s*if \(d === null\) return null;\s*return \{\s*label: `cube \$\{dirLabel\(d\.normal\)\}`,/); // ⭐ (2026-10-12) the cube's facet ONLY
     expect(g).toContain("st.pinkTargetNormal = target?.normal ?? null;");
     const c = code("render/orient_cube.ts");
     expect(c).toMatch(/if \(st\.restAligned && st\.restRoll !== null && dirIndex\(st, st\.pinkTargetNormal\) === tag\) \{\s*acted = rollRestingFace\(st, now, 1\);/);
-    expect(c).toMatch(/st\.pinkDir = dir;\s*st\.pinkFace = null;[^\n]*\n\s*acted = alignRestingFace\(st, now\);/);
-    // ⭐ a part's face taken by the second touch gives the cube's way, and the boot's
-    expect(code("render/hold_wiring.ts")).toContain("st.pinkDir = null; // ⭐ (2026-10-12) a part's face taken");
-    expect(g).toContain("st.pinkDir = null; // ⭐ (2026-10-12) the cube's facet gives way");
+    expect(c).toMatch(/st\.pinkDir = dir;\s*acted = alignRestingFace\(st, now\);/); // ⛔ (2026-10-12) no scene pink face to clear
+    // ⛔ (2026-10-12, *"Alignment of resting face shall be with the cube only"*) — nothing ever clears the cube's facet: no part's face takes its
+    // place; the boot sets the cube's +y (`BOOT_UP`)
+    expect(code("render/hold_wiring.ts")).not.toContain("st.pinkDir = null");
+    expect(g).not.toContain("st.pinkDir = null");
   });
   it("⭐ a press in its window is the cube's, before the router (no orbit, no grab)", () => {
     const p = code("render/pointer_wiring.ts");
@@ -135,7 +136,9 @@ describe("⭐⭐ the window: no part, no gizmo — (a) the piece as it is, (b) a
 
 describe("⭐⭐ the boot fix (2026-10-12, *\"Fix the boot\"*): with no pink face, the FROZEN body's face pointing most UP — the floor's top", () => {
   it("⭐ `alignFaceOf`'s fallback asks `faceToward` for +y, never the direction from the body's first face", () => {
-    expect(flat("render/green_box_wiring.ts")).toContain("const toward = faceToward( faces.map((f) => ({ centre: f.centre, normal: f.normal })), [0, 1, 0], );");
+    // ⭐ (2026-10-12, *"The boot alignment … could become simply the cube's +y facet"*) — the floor's top direction without a pink face
+    expect(flat("render/green_box_wiring.ts")).toContain("const BOOT_UP: OrientDirection = { normal: [0, 1, 0], axes: [[1, 0, 0], [0, 0, 1]] };");
+    expect(code("render/green_box_wiring.ts")).toContain("st.pinkDir = BOOT_UP;");
     expect(code("render/green_box_wiring.ts")).not.toContain("[piece[0] - faces[0]!.centre[0], piece[1] - faces[0]!.centre[1], piece[2] - faces[0]!.centre[2]]");
   });
 });
@@ -188,7 +191,7 @@ describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10
     const c = code("render/orient_cube.ts");
     expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
     expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
-    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) live\.dying = now;/);
+    expect(c).toMatch(/if \(!same\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(live !== undefined\) \{\s*live\.mesh\.dispose\(false, true\);/);
     expect(c).toContain("const m = p.mesh.clone(name, null, true) as Mesh | null;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
@@ -229,7 +232,8 @@ describe("⛔⛔ the copy RIDES THE CUBE — no transition, never out of the win
   it("⭐ placed ONCE at its birth (for THIS frame, both matrices refreshed), attached to the cube's root, never placed again; it fades where it is", () => {
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("place(copy, q, corr, slot, size); c.root.computeWorldMatrix(true); copy.mesh.computeWorldMatrix(true); copy.mesh.setParent(c.root);");
-    expect(c).toContain("if (live !== undefined) live.dying = now;");
+    // ⛔ (2026-10-12, *"i do not want to see the intermediate step"*) the old copy goes at once — no cross-fade
+    expect(flat("render/orient_cube.ts")).toContain("if (live !== undefined) { live.mesh.dispose(false, true); c.replicas = c.replicas.filter((r) => r !== live); }");
     expect(c).not.toContain("place(r, r.q, corr, slot, size)");
     expect(c).not.toContain("orient-screen");
   });

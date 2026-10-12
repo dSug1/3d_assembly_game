@@ -336,7 +336,7 @@ export function orientCubeFrame(st: SceneState): void {
     litLayer(st);
   }
   // ⛔ (2026-10-12, the owner: *"Do not fade the pink faces on the green piece in the screen nor on the cube"*) — the lit facet always at full
-  // strength (it faded as the scene's pink face, `highlightAlpha`, from earlier the same day)
+  // strength
   // ⭐⭐ (2026-10-12, *"the face of the cube which normal is pointing the most to the camera is the candidate support face"*)
   const cand = candidateFace(
     c.facetTags.map((tag, i) => ({ tag, normal: qRotate(q, c.facetNormals[i]!), centre: local(c.facetCentres[i]!) })),
@@ -401,7 +401,14 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
     live !== undefined && q !== null && live.tag === cand && live.piece === piece &&
     Math.abs(live.q[0] * q[0] + live.q[1] * q[1] + live.q[2] * q[2] + live.q[3] * q[3]) > 0.99999;
   if (!same) {
-    if (live !== undefined) live.dying = now; // ⭐ it fades where it is: on its face, riding the cube since it appeared
+    // ⛔⛔ (2026-10-12, the owner: *"the replica move to the next face and then rotates to align the resting face: i do not want to see the
+    // intermediate step, directly the resting face aligned transform to appear"*) — the old copy fading out on the old face while the new one
+    // faded in on the next (two copies, 250 ms) read as one copy moving then turning: the old one now GOES AT ONCE; only the new one fades in,
+    // already in its final pose
+    if (live !== undefined) {
+      live.mesh.dispose(false, true);
+      c.replicas = c.replicas.filter((r) => r !== live);
+    }
     if (q !== null) {
       const copy = pieceCopy(st, "orient-piece-next");
       if (copy !== null) {
@@ -447,14 +454,12 @@ function orientHoldStep(st: SceneState, cand: number): void {
   if (dir === undefined || st.greenBox === null) return;
   const now = performance.now();
   st.pinkDir = dir;
-  st.pinkFace = null;
   if (!alignRestingFace(st, now)) return;
   if (!h.acted) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
   }
   h.acted = true;
-  st.highlightEndedAt = now;
   st.lastVerdict = `orbit: cube held — the candidate face ${dirLabel(dir.normal)} scrolled in: the resting face against it`;
   st.hudDirty = true;
 }
@@ -498,13 +503,11 @@ export function orientCubeTap(st: SceneState, tag: number): boolean {
     if (acted) st.lastVerdict = st.lastVerdict.replace(/^orbit: tap — roll/, `orbit: cube ${dirLabel(dir.normal)} tapped again — roll`);
   } else {
     st.pinkDir = dir;
-    st.pinkFace = null; // ⭐ the scene's pink face gives way to the cube's (its fill goes)
     acted = alignRestingFace(st, now);
   }
   if (acted) {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
-    st.highlightEndedAt = now;
   }
   st.hudDirty = true;
   return acted;
@@ -557,7 +560,6 @@ export function orientCubePointer(
     st.orientPress = null;
     const scrolled = st.orientHold?.acted === true;
     st.orientHold = null;
-    if (scrolled) st.highlightEndedAt = performance.now(); // ⭐ the hold's highlights then fade, as the scene's do
     if (!scrolled && p.tag >= 0 && isTapRelease(p.t, p.x, p.y, performance.now(), e.clientX, e.clientY, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))) {
       orientCubeTap(st, p.tag);
     }
