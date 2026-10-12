@@ -514,3 +514,19 @@ export function elevationAtDistance(cfg: GestureConfig, distanceM: number): numb
   }
   return lo;
 }
+
+/**
+ * ⭐⭐ prototype (2026-10-12, the owner: *"the 1.4 shall be reached at the maximum distance … There shall be no plateau for the quad scale before
+ * shrinking"* → *"the min scale of the quads at the minimum distance shall be 0.1"*) — the orbited piece's nearest and farthest distance to the
+ * orbit centre over the whole rig (zoom 1, as the piece rides it), the far end held to its own maximum (`pieceRadiusMaxM`).
+ */
+export function pieceDistanceRange(cfg: GestureConfig, steps = 400): { readonly minM: number; readonly maxM: number } {
+  let minM = Infinity;
+  let maxM = 0;
+  for (let i = 0; i <= steps; i++) {
+    const r = Math.min(cfg.pieceRadiusMaxM, orbitOffset(cfg, 0, i / steps, 1).radiusM);
+    minM = Math.min(minM, r);
+    maxM = Math.max(maxM, r);
+  }
+  return { minM, maxM };
+}

@@ -141,7 +141,7 @@ export const GREEN_PIECE_ORBIT_ZOOM = 1;
  * waist; now the rings alone decide (`Scene_1`'s waist: 0.09 m — a ring's radius is always positive, so never the centre itself), and
  * collision will be the only thing to stop it near another part. ⚠ Until then it passes THROUGH the painting at the waist. The camera keeps
  * its own minimum. ⭐ (2026-10-12, *"so that the piece can go up to 6 m away from the yellow gizmo"*) — the far end is its OWN maximum too
- * (`pieceRadiusMaxM`, 6 m; it was the camera's `cameraRadiusMaxM`, 3 m).
+ * (`pieceRadiusMaxM`, 5 m since the owner's amend; it was the camera's `cameraRadiusMaxM`, 3 m).
  */
 export const PIECE_MIN_DISTANCE_M = 0;
 
