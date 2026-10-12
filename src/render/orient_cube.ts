@@ -224,7 +224,7 @@ function rebuild(st: SceneState): void {
 function pieceCopy(
   st: SceneState,
   name: string,
-): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly outline: StandardMaterial } | null {
+): { readonly mesh: Mesh; readonly piece: string; readonly radius: number; readonly centre: Vec3; readonly rest: Vec3; readonly outline: StandardMaterial } | null {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   if (p === undefined) return null;
   const m = p.mesh.clone(name, null, true) as Mesh | null;
@@ -260,7 +260,7 @@ function pieceCopy(
     t.alphaIndex = 4;
     t.parent = m;
   });
-  return { mesh: m, piece: p.mesh.name, radius, centre: [b.center.x, b.center.y, b.center.z], outline };
+  return { mesh: m, piece: p.mesh.name, radius, centre: [b.center.x, b.center.y, b.center.z], rest: p.restingCentre, outline };
 }
 
 /**
@@ -343,17 +343,23 @@ export function orientCubeFrame(st: SceneState): void {
   c.candidate = cand;
   if (cand !== c.candEdgeTag) candidateEdges(st, cand);
   orientHoldStep(st, cand);
-  // ⭐ the copy at the polyhedron's centre
-  replicaFrame(st, cand, q, [centre.x, centre.y, centre.z], PIECE_SHARE * c.inner * s);
+  // ⭐ (2026-10-12, *"Place the center of the highlighted face of the replica in the center of the candidate face of the cube"*) the copy's
+  // resting face centred on the candidate face (the polyhedron's centre with no candidate)
+  const ci = c.facetTags.indexOf(cand);
+  const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];
+  replicaFrame(st, cand, q, seat, PIECE_SHARE * c.inner * s);
 }
 
-/** ⭐ A copy placed: its bounding centre on `slot`, `size` its radius, in the pose `pose` (turned with the cube by `corr`). */
-function place(copy: { readonly mesh: Mesh; readonly radius: number; readonly centre: Vec3 }, pose: Quat, corr: Quat, slot: Vec3, size: number): void {
+/**
+ * ⭐ A copy placed, `size` its radius, in the pose `pose` (turned with the cube by `corr`): its RESTING face's centre on `slot` (2026-10-12, *"Place
+ * the center of the highlighted face of the replica in the center of the candidate face of the cube"*).
+ */
+function place(copy: { readonly mesh: Mesh; readonly radius: number; readonly rest: Vec3 }, pose: Quat, corr: Quat, slot: Vec3, size: number): void {
   const k = size / copy.radius;
   const w = qmul(corr, pose);
   copy.mesh.scaling.setAll(k);
   copy.mesh.rotationQuaternion!.set(w[1], w[2], w[3], w[0]);
-  const off = qRotate(w, scale(copy.centre, k));
+  const off = qRotate(w, scale(copy.rest, k));
   copy.mesh.position.set(slot[0] - off[0], slot[1] - off[1], slot[2] - off[2]);
 }
 

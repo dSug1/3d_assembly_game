@@ -494,6 +494,7 @@ export interface SceneState {
       readonly piece: string;
       readonly radius: number;
       readonly centre: import("../core/vec").Vec3;
+      readonly rest: import("../core/vec").Vec3;
       readonly outline: import("@babylonjs/core/Materials/standardMaterial").StandardMaterial;
       readonly q: import("../core/vec").Quat;
       readonly tag: number;
