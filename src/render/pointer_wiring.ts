@@ -4,7 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { orientCubePointer, orientFollowCursor, orientTapShown } from "./orient_cube";
+import { orientCubePointer, orientFollowCursor, orientTapShown, restingQuadPointer } from "./orient_cube";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -120,6 +120,11 @@ export function installPointerHandler(st: SceneState): void {
 
     // ⭐⭐ (2026-10-12, §21) A PRESS IN THE ORIENTATION CUBE'S WINDOW IS THE CUBE'S — before the router: it never orbits nor grabs
     if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
+      st.hudDirty = true;
+      return;
+    }
+    // ⭐⭐ (2026-10-12) a press on a resting-face quad is the quads' (a tap aligns to its side; a drag orbits)
+    if (restingQuadPointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {
       st.hudDirty = true;
       return;
     }

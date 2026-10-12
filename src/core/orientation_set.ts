@@ -153,3 +153,21 @@ export function distinctPlanes(normals: readonly Vec3[], tolDeg = 1): Vec3[] {
   }
   return out;
 }
+
+/**
+ * ⭐ (2026-10-12, the owner: *"the quads size grow with the distance of the piece to the pink gizmo (more than linearly but less than
+ * exponentially or quadratically)"*) → *"the max size of the quad shall be the 1.4 you have set"* — the quads' scale against their full size (reached at
+ * `dRef` and beyond): (d / dRef)^1.5, held within [0.1, 1].
+ */
+export function quadGrowth(d: number, dRef: number, power = 1.5): number {
+  if (!(dRef > 0) || !(d >= 0)) return 1;
+  return Math.min(1, Math.max(0.1, Math.pow(d / dRef, power)));
+}
+
+/**
+ * ⭐ (2026-10-12, the owner: *"click on one side or the other of the quad are differentiated so the piece can turn 180 degrees"*) — the side of a
+ * plane (normal `n`) a click at `hit` came from, as seen from `eye`: `n` when the eye is on its side, `−n` else.
+ */
+export function quadSide(n: Vec3, hit: Vec3, eye: Vec3): Vec3 {
+  return dot(n, sub(eye, hit)) >= 0 ? n : scale(n, -1);
+}
