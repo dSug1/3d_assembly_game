@@ -777,3 +777,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ The resting-face quads replace the orientation window (deleted, with its sliders); the pink direction's quad yellow; a tap on a quad aligns
   to its side; the piece's own faces first; the gizmo yellow and thinner; the 1st and 4th rings to 6 m (boot still 3 m) →
   `RESTING_FACE_ALIGNMENT.md` §25.
+* ⭐⭐ The 1st and 4th rings at 5 m, mirrored at 51° (the horizontal quad reachable on both, a HUD alert otherwise); the quads 0.1 → 1.4 over the
+  piece's distance range; the gizmo a 1 px line → `RESTING_FACE_ALIGNMENT.md` §25.
