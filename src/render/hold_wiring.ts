@@ -63,6 +63,7 @@ function takePink(st: SceneState): boolean {
   if (h === null || h.pink === null) return false;
   const next = h.pink;
   h.pink = null;
+  st.pinkDir = null; // ⭐ (2026-10-12) a part's face taken: the cube's facet gives way
   // ⭐ against the face the piece is ALIGNED to (`restRoll.key`) — not the pink face, which a plain left click on a part moves without aligning
   if (!pinkChanges(st.restRoll?.key ?? null, next)) {
     // ⭐ (2026-10-11, the owner: *"if the same pink face is selected again, display the highlights (otherwise, it looks like something is not

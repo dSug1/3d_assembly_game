@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { orientCubeFrame } from "./orient_cube";
 import { advanceDemoFrame } from "./demo_wiring";
 import { hiddenFromBelow, topFaceOutline } from "../core/underside";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -716,6 +717,7 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
+    orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
     st.scene.render();
     st.frames++;
   }));

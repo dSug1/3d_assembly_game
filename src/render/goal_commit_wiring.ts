@@ -27,6 +27,8 @@ export function commitGoal(st: SceneState, quiet = false): void {
   if (r === null) return;
   const baseline = st.goalCommit.never;
   const reached = st.goalCommit.commit(r.inPlaceIds, r.total, moved);
+  // ⭐⭐ (2026-10-12, §21, *"at boot of the scene and also each time a part is seated"*) the orientation cube's directions read again
+  st.orientDirty = true;
   st.hudDirty = true;
   if (baseline || quiet || st.demo !== null || reached.length === 0) return;
   const who = reached.length === 1 ? `${reached[0]} reached its goal` : `${reached.join(", ")} reached their goals`;

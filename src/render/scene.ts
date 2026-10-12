@@ -575,6 +575,14 @@ export function createScene(
   st.restingLast = null;
   st.hold = null;
   st.highlightEndedAt = null;
+  // ⭐ (2026-10-12, §21) the orientation cube: built at the first frame, read again at every goal commit
+  st.orientDirs = [];
+  st.orientDirty = true;
+  st.orientCube = null;
+  st.orientRect = null;
+  st.orientPress = null;
+  st.pinkDir = null;
+  st.pinkTargetNormal = null;
   st.pinkFill = null;
   st.pinkFillKey = "";
   st.pieceFaceTap = null;

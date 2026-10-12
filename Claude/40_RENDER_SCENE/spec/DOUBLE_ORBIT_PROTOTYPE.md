@@ -735,3 +735,9 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 
 * ⭐⭐ Zoom ↔ way in + roll WITHOUT LIFTING (mobile; the desktop unchanged): the second finger's dx → zoom; it rests 150 ms + the first finger's
   dx → the roll again (`holdSwitch`, `holdSwitchRestMs`) → `RESTING_FACE_ALIGNMENT.md` §20.
+
+## 2026-10-12 — on 1.0.67-
+
+* ⭐⭐⭐ THE ORIENTATION CUBE — a polyhedron of the level's distinct face directions (seated parts + frozen bodies; a cube in `Scene_1`) in a
+  bottom-right window (22 mm × a 0–200 % slider, 0 hides it); tap a facet — the resting face sits against it; tap the lit facet — the roll;
+  rebuilt at every goal commit; ⏭ the non-seated parts later (every frame) → `RESTING_FACE_ALIGNMENT.md` §21.

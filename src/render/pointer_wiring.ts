@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { orientCubePointer } from "./orient_cube";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -118,6 +119,11 @@ export function installPointerHandler(st: SceneState): void {
       st.pointerTypeOf.delete(e.pointerId);
     }
 
+    // ⭐⭐ (2026-10-12, §21) A PRESS IN THE ORIENTATION CUBE'S WINDOW IS THE CUBE'S — before the router: it never orbits nor grabs
+    if (orientCubePointer(st, info.type, e)) {
+      st.hudDirty = true;
+      return;
+    }
     // ⭐⭐⭐ A PIONEERFACECURSOR GRAB OWNS ITS POINTER — before the router can latch a role for it.
     if (cursorPointer(st, info.type, e)) {
       st.hudDirty = true;
