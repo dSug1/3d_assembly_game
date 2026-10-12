@@ -501,6 +501,8 @@ export interface SceneState {
       readonly centre: import("../core/vec").Vec3;
       readonly rest: import("../core/vec").Vec3;
       readonly q: import("../core/vec").Quat;
+      /** ⭐ (2026-10-12) a roll's own turn (axis, angle) — the arrow's; `null`: an alignment (the turn between the poses). */
+      readonly turn: { readonly axis: import("../core/vec").Vec3; readonly angle: number } | null;
       readonly tag: number;
       readonly born: number;
       dying: number | null;
@@ -510,6 +512,14 @@ export interface SceneState {
   orientPress: { readonly pointerId: number; readonly tag: number; readonly x: number; readonly y: number; readonly t: number } | null;
   /** ⭐ (2026-10-12) THE CUBE HELD — the pointer holding it, the last candidate seen, whether a scroll aligned (one episode for the hold). */
   orientHold: { readonly pointerId: number; last: number; acted: boolean } | null;
+  /** ⭐ (2026-10-12) where the window glides to (the slider values) while it catches the cursor, and when it last moved (ms). */
+  orientWindowGoal: { readonly xPct: number; readonly yPct: number } | null;
+  orientWindowLerpAt: number;
+  /** ⭐ (2026-10-12) the press whose DRAG moves the window (past the tap slop — a tap never does). */
+  orientFollowPress: { readonly pointerId: number; readonly t: number } | null;
+  /** ⭐ (2026-10-12) the window's boot position (where it goes back when the follow is switched off), and whether the follow was on last frame. */
+  orientWindowHome: { readonly xPct: number; readonly yPct: number };
+  orientFollowWas: boolean;
   /** ⭐ (2026-10-12) a press in the window while the cube is held: it drives the orbit. */
   orientDriver: { readonly pointerId: number; prev: import("../input").Sample } | null;
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */

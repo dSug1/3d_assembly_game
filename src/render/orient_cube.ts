@@ -79,7 +79,10 @@ const TURN_ARROW_R = 0.75;
 const TURN_ARROW_W = 0.07;
 const TURN_ARROW = new Color3(1, 0.3, 0.1);
 const TURN_ARROW_MIN_SWEEP = (40 * Math.PI) / 180;
-const TURN_ARROW_CORNER = 0.6;
+/** ⭐ (2026-10-12, *"put the red arrow at the center of the cube, make it slightly less opaque than the replica"*) — its opacity (the copy's 0.7). */
+const TURN_ARROW_ALPHA = 0.55;
+/** ⭐ (2026-10-12, *"lerp the window to its position when it moves to catch the cursor"*) — the window's glide toward the cursor: its time constant (ms). */
+const ORIENT_FOLLOW_TAU_MS = 90;
 
 /** ⭐ The screen's overlays the window keeps clear of, in canvas px (the HUD, its toggle, the ☰, the ⏸, the score bar) — the visible ones. */
 const OVERLAYS = '[data-role="hud"],[data-role="hud-toggle"],[data-role="menu-toggle"],[data-role="pause-button"],[data-role="scorebar"]';
@@ -284,6 +287,30 @@ export function orientCubeFrame(st: SceneState): void {
   const size = (mmToPx(ORIENT_WINDOW_MM) * pct) / 100;
   const margin = mmToPx(ORIENT_MARGIN_MM);
   // ⭐ (2026-10-12) where its two-cursor slider puts it (`orientWindowCorner`), clear of the screen's overlays
+  // ⭐ (2026-10-12, *"if the window does not follow the cursor, place it where it was before we modified"*) — the follow switched off: back to its
+  // boot position (`orientWindowHome`), the glide dropped
+  if (st.cfg.orientWindowFollow !== 1 && st.orientFollowWas) {
+    const cfgH = st.cfg as unknown as Record<string, number>;
+    cfgH.orientWindowXPct = st.orientWindowHome.xPct;
+    cfgH.orientWindowYPct = st.orientWindowHome.yPct;
+    st.orientWindowGoal = null;
+  }
+  st.orientFollowWas = st.cfg.orientWindowFollow === 1;
+  // ⭐ (2026-10-12) the glide to the cursor (`orientFollowCursor`'s goal): an exponential approach, the sliders moving with it; done — the goal goes
+  const goal = st.orientWindowGoal;
+  const tNow = performance.now();
+  if (goal !== null) {
+    const k = 1 - Math.exp(-Math.max(0, tNow - st.orientWindowLerpAt) / ORIENT_FOLLOW_TAU_MS);
+    const cfgW = st.cfg as unknown as Record<string, number>;
+    cfgW.orientWindowXPct = st.cfg.orientWindowXPct + (goal.xPct - st.cfg.orientWindowXPct) * k;
+    cfgW.orientWindowYPct = st.cfg.orientWindowYPct + (goal.yPct - st.cfg.orientWindowYPct) * k;
+    if (Math.abs(goal.xPct - st.cfg.orientWindowXPct) < 0.05 && Math.abs(goal.yPct - st.cfg.orientWindowYPct) < 0.05) {
+      cfgW.orientWindowXPct = goal.xPct;
+      cfgW.orientWindowYPct = goal.yPct;
+      st.orientWindowGoal = null;
+    }
+  }
+  st.orientWindowLerpAt = tNow;
   const corner = orientWindowCorner(cw, ch, size, margin, st.cfg.orientWindowXPct, st.cfg.orientWindowYPct);
   const left = corner.left;
   const top = clearOfOverlays(left, corner.top, size, overlayRects(st), ch, margin);
@@ -349,7 +376,7 @@ export function orientCubeFrame(st: SceneState): void {
   const ci = c.facetTags.indexOf(shown);
   const seat: Vec3 = ci >= 0 ? local(c.facetCentres[ci]!) : [centre.x, centre.y, centre.z];
   replicaFrame(st, shown, q, seat, PIECE_SHARE * c.inner * s);
-  turnArrowFrame(st, q, centre, right, up, half, s);
+  turnArrowFrame(st, q, centre, s);
 }
 
 /**
@@ -401,7 +428,8 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
   const now = performance.now();
   const dir = cand >= 0 ? st.orientDirs[cand] : undefined;
   const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;
-  const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
+  const preview = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);
+  const q = preview?.q ?? null;
   const piece = st.greenBox?.name ?? "";
   const live = c.replicas.find((r) => r.dying === null);
   const same =
@@ -429,7 +457,7 @@ function replicaFrame(st: SceneState, cand: number, corr: Quat, slot: Vec3, size
         copy.mesh.computeWorldMatrix(true);
         copy.mesh.setParent(c.root);
         // ⭐ after a click, at once — no fade-in (*"immediately"*)
-        c.replicas.push({ ...copy, q, tag: cand, born: c.instant ? now - REPLICA_FADE_MS : now, dying: null });
+        c.replicas.push({ ...copy, q, turn: preview?.turn ?? null, tag: cand, born: c.instant ? now - REPLICA_FADE_MS : now, dying: null });
         c.instant = false;
       }
     }
@@ -585,15 +613,17 @@ export function orientCubePointer(
  * inclination and direction indicating the direction of the rotation required to rotate from the green piece current quaternion to the replica
  * quaternion. position the arrow so that the replica is not occluded by the arrow"*) — an arc in the plane ACROSS the turn's axis (its
  * inclination), swept the way the turn goes (its direction; as long as the turn, never under 40°), its head at the end; turned with the cube,
- * in the window's corner OPPOSITE the copy (the copy never hidden). Rebuilt when the turn changes; hidden with none.
+ * at the polyhedron's CENTRE, a little more transparent than the copy (2026-10-12). Rebuilt when the turn changes; hidden with none.
  */
-function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, right: Vector3, up: Vector3, half: number, s: number): void {
+function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, s: number): void {
   const c = st.orientCube!;
   const live = c.replicas.find((r) => r.dying === null);
   const box = st.greenBox;
   const r = box?.rotationQuaternion ?? Quaternion.Identity();
   const from: Quat = st.restAlign?.base ?? [r.w, r.x, r.y, r.z];
-  const turn = live === undefined || box === null ? null : turnBetween(from, live.q);
+  // ⭐ (2026-10-12, *"the red arrow should show a clockwise rotation around the normal of the resting face"*) — a roll's own turn (its sense,
+  // up to a half turn); an alignment's, the turn between the two poses the short way
+  const turn = live === undefined || box === null ? null : (live.turn ?? turnBetween(from, live.q));
   if (turn === null || live === undefined) {
     if (c.turnArrow !== null) for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = false;
     return;
@@ -619,7 +649,7 @@ function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, right: Vect
     head.position = end.add(tangent.scale(w * 2));
     const hq = shortestArc([0, 1, 0], [tangent.x, tangent.y, tangent.z]);
     head.rotationQuaternion = new Quaternion(hq[1], hq[2], hq[3], hq[0]);
-    const mat = unlit(st, "orient-turn-arrow-mat", TURN_ARROW, 0.999);
+    const mat = unlit(st, "orient-turn-arrow-mat", TURN_ARROW, TURN_ARROW_ALPHA);
     for (const m of [shaft, head]) {
       m.material = mat;
       m.parent = mesh;
@@ -631,11 +661,8 @@ function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, right: Vect
     c.turnArrow = { mesh, from, to: live.q };
   }
   for (const m of c.turnArrow.mesh.getChildMeshes()) m.isVisible = true;
-  // ⭐ the corner diagonally OPPOSITE the copy, as the screen sees it — the copy never behind the arrow
-  const off = live.mesh.getAbsolutePosition().subtract(centre);
-  const sx = Vector3.Dot(off, right) >= 0 ? -1 : 1;
-  const sy = Vector3.Dot(off, up) >= 0 ? -1 : 1;
-  c.turnArrow.mesh.position.copyFrom(centre.add(right.scale(sx * TURN_ARROW_CORNER * half)).add(up.scale(sy * TURN_ARROW_CORNER * half)));
+  // ⭐ (2026-10-12, *"put the red arrow at the center of the cube"*) — at the polyhedron's centre (it was in the corner opposite the copy)
+  c.turnArrow.mesh.position.copyFrom(centre);
   c.turnArrow.mesh.rotationQuaternion!.set(corr[1], corr[2], corr[3], corr[0]);
   c.turnArrow.mesh.scaling.setAll(s);
 }
@@ -643,14 +670,25 @@ function turnArrowFrame(st: SceneState, corr: Quat, centre: Vector3, right: Vect
 /**
  * ⭐⭐ (2026-10-12, the owner: *"in desktop mode, when the left click is pressed and held to orbit around the center or around the piece, pin the
  * cube window to a place below and to the right of the cursor. when the left click is released, freeze the position of the window"*) — called
- * at every step of an orbit drag (`orbitDragStep`): a MOUSE drag moves the window's position sliders so it sits just below-right of the cursor;
+ * at every step of an orbit drag (`orbitDragStep`): a MOUSE drag sets the goal the window glides to — below-right of the cursor, its left edge
+ * a further half window to the right;
  * the release changes nothing, so the window stays there (the sliders show where). ⛔ Not while the cube is held (the key drives that orbit).
  */
 export function orientFollowCursor(st: SceneState, pointerId: number, x: number, y: number): void {
+  if (st.cfg.orientWindowFollow !== 1) return; // ⭐ (2026-10-12) the switch, off by default
   if (st.pointerTypeOf.get(pointerId) !== "mouse" || st.orientHold !== null || st.orientRect === null) return;
+  // ⛔ (2026-10-12, the owner: *"a left click tap shall not move the window (the tap is used to select another position of the pink gizmo)"* —
+  // *"(a drag to orbit shall be necessary to move the window)"*) — only once THIS press has travelled past the tap slop; then for the rest of it
+  const pressed = st.router.get(pointerId)?.pressed;
+  if (pressed === undefined) return;
+  const latched = st.orientFollowPress !== null && st.orientFollowPress.pointerId === pointerId && st.orientFollowPress.t === pressed.t;
+  if (!latched) {
+    if (!(Math.hypot(x - pressed.x, y - pressed.y) > mmToPx(st.cfg.doubleTapSlop))) return;
+    st.orientFollowPress = { pointerId, t: pressed.t };
+  }
   const rect = st.canvas.getBoundingClientRect();
-  const p = orientWindowAtCursor(st.canvas.clientWidth, st.canvas.clientHeight, st.orientRect.size, mmToPx(ORIENT_MARGIN_MM), x - rect.left, y - rect.top, mmToPx(ORIENT_CURSOR_GAP_MM));
-  const cfg = st.cfg as unknown as Record<string, number>;
-  cfg.orientWindowXPct = p.xPct;
-  cfg.orientWindowYPct = p.yPct;
+  const p = orientWindowAtCursor(st.canvas.clientWidth, st.canvas.clientHeight, st.orientRect.size, mmToPx(ORIENT_MARGIN_MM), x - rect.left, y - rect.top, mmToPx(ORIENT_CURSOR_GAP_MM) + st.orientRect.size / 2, mmToPx(ORIENT_CURSOR_GAP_MM));
+  // ⭐ (2026-10-12, *"lerp the window to its position when it moves to catch the cursor on left click pressed"*) — a GOAL the window glides to
+  // (`orientCubeFrame`), never a jump
+  st.orientWindowGoal = { xPct: p.xPct, yPct: p.yPct };
 }

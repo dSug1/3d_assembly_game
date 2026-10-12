@@ -874,3 +874,25 @@ touch tap on seated / placed part). Remove the ctrl-alt raycast function in desk
   (its direction; as long as the turn, never under 40°), its head at the end; turned with the cube; in the window's corner DIAGONALLY OPPOSITE
   the copy, so the copy is never behind it; hidden with no turn. ⚠ An axis lying across the screen shows the arc edge-on (a straight arrow) —
   true to the turn, less readable.
+- **Amended the same day** (each the owner's):
+  - *"put the red arrow at the center of the cube, make it slightly less opaque than the replica"* — the arrow at the polyhedron's CENTRE
+    (no longer the corner opposite the copy), 0.55 opaque (the copy 0.7).
+  - *"lerp the window to its position when it moves to catch the cursor on left click pressed"* — the follow sets a GOAL; each frame the
+    position sliders approach it exponentially (90 ms) — the window glides, never jumps (headless: 1101 → 855 → 693 → 613 … px).
+  - *"add a bit more horizontal distance between the cursor and the top left corner of the window (half the dimension of the window width)"* —
+    its left edge 6 mm + half the window to the right of the cursor (`orientWindowAtCursor`'s `gapX`); 6 mm below.
+  - *"in desktop, scale the window 85%"* — 175 % × 0.85 ≈ 149 %: a desktop boots at **150 %** (the slider's step is 10).
+  - *"a left click tap shall not move the window (the tap is used to select another position of the pink gizmo)"* — *"(a drag to orbit shall
+    be necessary to move the window)"* — the follow starts only once THIS press has travelled past the tap slop, then holds for the rest of it.
+  - ⛔⛔ *"when the next quaternion is a roll to the next axis, the red arrow direction is wrong"* — *"(because the red arrow should show a
+    clockwise rotation around the normal of the resting face)"*: the arrow showed the turn between the two poses the SHORT way, and a roll is
+    up to a half turn with its own sense — at a half turn the short way has none. ⭐ `nextCoupleRoll` now reports its own turn (its axis — the
+    normal, the sense the roll's — and its angle); the preview carries it, the arrow uses it. *"make sure the red arrow direction is correct
+    also for the other configurations"* — an alignment's arrow keeps the turn between the poses the short way, which IS the way the piece
+    turns (`qSlerp`, the short way round): checked over 200 random pose pairs (the arrow's sweep and the piece's first eased step agree).
+    ⚠ An alignment of exactly a half turn has no short way (the piece's own ease picks one).
+  - ⭐ *"make a on-off cursor in the scene menu to enable or disable the window following the cursor. if the window does not follow the cursor,
+    place it where it was before we modified. default: follow is off"* — SCENE › *orientation window follows the cursor (desktop; 0 = off, 1 = on)*
+    (`orientWindowFollow`, **0** by default); off, the window stays at its boot position (a desktop top-right, under the HUD; a touch screen
+    bottom-left), and switching it off puts it back there. Headless: off — a drag leaves it at (1122, 238); on — it goes to (545, 497); off
+    again — back at (1122, 238).
