@@ -641,3 +641,57 @@ face, fade, a pinch keeping the pink face, the coast, dy).
   a pinch with both fingers moving stays a zoom. ⛔ The desktop is unchanged (ALT / CTRL has no position; its zoom is the wheel). Headless (touch):
   first dx — the way in, 2 rolls; second dx — zoom 0.88; a 300 ms rest, first dx — the roll again (4 rolls); second dx — zoom; a 50 ms rest, first
   dx — still a zoom; the second lifted from the zoom — the way out.
+
+## 21. THE ORIENTATION CUBE — the level's set of pink faces, on the glass (2026-10-12, `1.0.67-`)
+
+**Why** (the owner): *"There is some confusion between the pink gizmo and the pink face. Both are not linked because I want to be able to align
+the resting face to a pink face which is not systematically the face supporting the pink gizmo: this enables smart decisions how to align the
+resting face in few episodes by choosing the best pink face possible. However, the roles of pink gizmo and pink face get confusing. … would it
+be possible to provide the pink face - resting face alignment function by the resting face replicating the orientation of something on the
+screen … Check literature of state-of-the-art implementation and propose alternatives to our current design."*
+
+**The finding the design rests on**: a pink face gives the alignment ONLY a direction (its outward normal) and its edges' directions (the roll's
+axes) — never a position, never which part it belongs to. So the scene's DISTINCT face directions are the whole alphabet of pink faces. In
+`Scene_1` every goal pose is `orientation: "identity"`: six directions, a cube — the "smart choice" was a search over 41 parts for a face
+that points the right way; it is one tap on a facet.
+
+**Literature and practice weighed** (the proposal of 2026-10-12): the ViewCube (Khan et al., I3D 2008) and Blender's navigation gizmo — a small
+faceted proxy you click to pick an orientation, here for the PIECE rather than the camera; World in Miniature (Stoakley et al., CHI 1995) and
+Voodoo Dolls (Pierce et al., I3D 1999) — act on a proxy, the object follows; snap-dragging (Bier 1990) and CAD's face-to-face mates — a small
+discrete set beats a free turn; constrained multitouch rotation (tBox, Cohé et al. GI 2011; Au et al. EG 2012; Sticky Tools, Hancock et al.
+ITS 2009) — a few large fixed targets on a tablet; rotation-matching studies (Hinckley et al. 1997; Bade et al. 2005) — a preview helps.
+Four alternatives were proposed: (1) separate the colours of the ring and the pink face, (2) ⭐ an orientation cube fixed in a screen corner,
+(3) the cube on the ring (rejected: it links the two again, moves, shrinks and is occluded), (4) a phantom of the orbited piece (the resting
+face, with a preview) — later. ⭐ The owner: *"Start with 2, sit against this face."*
+
+**The rule, as built**:
+- **The polyhedron** (`core/orientation_set.ts`): the face frames of every **SEATED** part (placed in its goal, the last commit's) and every
+  **frozen** body (the floor) — ⛔ never the orbited pieces — clustered within 1° into distinct directions (`distinctDirections`, each with
+  the union of its faces' edge axes); the polyhedron is the bounding box `[-1.6, 1.6]³` cut by the plane `n · x = 1` of each direction
+  (`facetPolytope`) — one facet per direction; what is left of the box (only when the set does not close the shape) is grey and not a
+  direction. `Scene_1`: a cube.
+- **Rebuilt** at the boot's goal baseline and at every goal commit — a part seated, or unseated (*"at boot of the scene and also each time a
+  part is seated"*): `commitGoal` sets `orientDirty`.
+- **The window**: bottom-right, **22 mm** on the glass × **the slider** — the tuning menu, CAMERA › CAMERA ORBIT AROUND CENTER › *orientation cube
+  window: size (% — 0 hides it)* (`orientCubeSizePct`, 0–200 %, 100 by default; *"Make a slider 0-200% to increase the size of the cube
+  window in the overlay (zero means hiding the window)"*), 4 mm from the edges, a translucent backing. Drawn in the scene in its own
+  rendering group (nothing hides it), turned as the world is seen from the camera — corrected to the view through the screen's centre, so the
+  corner's perspective does not skew it. Shown only with an orbited piece.
+- **Tap a facet** → the resting face **SITS AGAINST** it (*"sit against this face"* — the same anti-parallel alignment as a part's face): the
+  facet is a **virtual pink face** (`st.pinkDir`), read FIRST by `alignFaceOf` (its normal, its edge axes as the long axes and the roll's
+  axes); the scene's pink face is cleared (its fill goes). One episode; the resting face's highlights shown, then faded.
+- **The lit facet** (pink): the direction the piece is aligned to (`pinkTargetNormal`, set by every alignment), whatever gave it — a facet, a
+  part's face, the boot's frozen face. **Tap the lit facet** → the roll to the next axis (`rollRestingFace`), one episode.
+- A part's face taken by the second touch (`takePink`) and the boot alignment clear the virtual one: the last choice wins.
+- **A press inside the window is the cube's**, before the router (`orientCubePointer`): it never orbits, never grabs, never moves the centre;
+  a tap on a facet acts at its release; the desktop's ALT / CTRL key-made second touch is not the cube's.
+- ⚠ Found while building it: the boot's frozen face (`Floor/f1`) is the floor's **−z side**, not its top — `alignFaceOf`'s fallback
+  measures "toward the piece" from the floor's FIRST face's centre (`f0`, its +z side, 1 m away), not from the body's centre, so the boot
+  lit facet is −z. Recorded, not changed (it is the boot alignment the owner accepted on 2026-10-11); a one-line fix if it is not meant.
+- Headless (desktop and touch): six directions at boot (a cube, two edge axes each); a tap on +x — the resting face against it, 1 move, the
+  facet lit; again — a roll, 2 moves; a tap on +y — the piece down on its resting face, the top lit pink; 200 % — the window doubled; 0 % —
+  hidden; a drag started in the window — no orbit.
+
+⏭ **A possible later refinement** (the owner): *include the NON-SEATED parts in the possible directions* — their faces would join the set as
+they move, which makes the game heavier: the set (and the polyhedron) would have to be read again EVERY FRAME, not at a goal commit.
+⏭ Then alternatives (1) and (4) above, if wanted.

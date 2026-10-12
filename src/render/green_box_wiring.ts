@@ -32,7 +32,8 @@ import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { add, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { add, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
+import { dirLabel } from "./orient_cube";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
@@ -201,6 +202,19 @@ function alignFaceOf(
   piece: Vec3,
   frozenOnly = false,
 ): { readonly label: string; readonly objectId: ObjectId; readonly faceId: string; readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
+  // ⭐⭐ (2026-10-12, §21, *"sit against this face"*) THE CUBE'S FACET first — a virtual pink face: its direction and its edges (the roll's
+  // axes); no position (the long axes' ends at the piece — a tie between them is never decided by a gap)
+  if (!frozenOnly && st.pinkDir !== null) {
+    const d = st.pinkDir;
+    return {
+      label: `cube ${dirLabel(d.normal)}`,
+      objectId: "orientation-cube",
+      faceId: dirLabel(d.normal),
+      normal: d.normal,
+      long: { axes: d.axes, ends: d.axes.map((a) => [sub(piece, scale(a, 0.05)), add(piece, scale(a, 0.05))] as const) },
+      flush: d.axes,
+    };
+  }
   // ⭐ (2026-10-10) `frozenOnly`: the frozen body's face toward the piece even with a pink face (the boot alignment, `bootRestAlign`)
   let id: ObjectId | null = frozenOnly ? null : (st.pinkFace?.objectId ?? null);
   let faceId: string | null = frozenOnly ? null : (st.pinkFace?.faceId ?? null);
@@ -220,6 +234,16 @@ function alignFaceOf(
     }
   }
   if (id === null || faceId === null) return null;
+  const g = faceGeometry(st, id, faceId);
+  return g === null ? null : { label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`, objectId: id, faceId, ...g };
+}
+
+/** ⭐ A body's face in the world: its outward normal, its long axes (with their ends) and its edge-to-edge axes — `null` with no such face. */
+function faceGeometry(
+  st: SceneState,
+  id: ObjectId,
+  faceId: string,
+): { readonly normal: Vec3; readonly long: LongAxes; readonly flush: readonly Vec3[] } | null {
   const mesh = st.meshOf.get(id);
   const pose = worldPlacementOf(st.world, id);
   if (mesh === undefined || pose === null) return null;
@@ -235,9 +259,6 @@ function alignFaceOf(
   const flush = faceFlushAxes(pts, face.normal, tol).axes;
   const w = (v: Vec3): Vec3 => add(pose.position, qRotate(pose.orientation, v));
   return {
-    label: `${st.pinkFace === null ? "frozen " : ""}${id}/${faceId}`,
-    objectId: id,
-    faceId,
     normal: qRotate(pose.orientation, face.normal),
     long: { axes: long.axes.map((a) => qRotate(pose.orientation, a)), ends: long.ends.map((e) => [w(e[0]), w(e[1])] as const) },
     flush: flush.map((a) => qRotate(pose.orientation, a)),
@@ -289,6 +310,7 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
       (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
   void paired; // ⭐ the first alignment pairs the LONG axes (above); the rolls use every edge-to-edge couple (2026-10-10)
+  st.pinkTargetNormal = target?.normal ?? null; // ⭐ (2026-10-12) the orientation cube lights this direction's facet
   const pinkAxes: readonly Vec3[] = target?.flush ?? [];
   // ⭐⭐ (2026-10-09, the owner: *"when a new resting face is selected and no change in the pink face, the numbers of rolls applied to the
   // previous resting face shall immediately apply to the new resting face"*) — `carryRolls` steps to the next edge on top of the alignment,
@@ -687,6 +709,8 @@ function bootRestAlign(st: SceneState, at: Vec3): void {
   // ⭐⭐ (2026-10-11, the owner: *"the boot pink face could be the floor's face, matching the alignment"*) — the pink face IS the face the piece
   // is aligned to at boot (and at a respawn): a way in highlights what the roll lines up with. ⚠ A frozen face here only (the second touch
   // never picks one); its fill is not drawn (`pinkFillFrame` skips a frozen body)
+  st.pinkDir = null; // ⭐ (2026-10-12) the cube's facet gives way
+  st.pinkTargetNormal = target.normal;
   st.pinkFace = { objectId: target.objectId, faceId: target.faceId };
   st.restRoll = { key: `${target.objectId}/${target.faceId}`, pinkAxes: target.flush, rolls: 0, couple: null };
   st.orbitRollAcc = 0;
@@ -1200,3 +1224,22 @@ export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
 }
 
 const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);
+
+/**
+ * ⭐⭐ (2026-10-12, §21) THE FACE FRAMES THE ORIENTATION CUBE IS BUILT FROM: every face of every SEATED part (placed in its goal — the last
+ * commit's) and of every FROZEN body (the floor) — its outward normal and its edge-to-edge axes, in the world. ⛔ Never the orbited pieces.
+ * ⚠ A later refinement (the owner): the non-seated parts too — read every frame, as they move.
+ */
+export function orientationFrames(st: SceneState): { readonly normal: Vec3; readonly axes: readonly Vec3[] }[] {
+  const out: { normal: Vec3; axes: readonly Vec3[] }[] = [];
+  const orbited = new Set(st.orbitPieces.map((o) => o.mesh.name));
+  for (const [id, o] of st.world.objects) {
+    if (orbited.has(id)) continue;
+    if (o.frozen !== true && !st.goalCommit.has(id)) continue;
+    for (const f of o.faces) {
+      const g = faceGeometry(st, id, f.id);
+      if (g !== null) out.push({ normal: g.normal, axes: g.flush });
+    }
+  }
+  return out;
+}

@@ -462,6 +462,26 @@ export interface SceneState {
     swFirstX0: number | null;
     wayIn: boolean;
   } | null;
+  /** ⭐⭐ Prototype (2026-10-12, §21): THE ORIENTATION CUBE — the level's distinct face directions (`core/orientation_set.ts`), whether they
+   * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
+  orientDirs: readonly import("../core/orientation_set").OrientDirection[];
+  orientDirty: boolean;
+  orientCube: {
+    readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;
+    readonly lines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
+    readonly back: import("@babylonjs/core/Meshes/mesh").Mesh;
+    readonly triTag: readonly number[];
+    readonly vertexTags: readonly number[];
+    readonly vertexNormals: readonly import("../core/vec").Vec3[];
+    readonly radius: number;
+    lit: number;
+  } | null;
+  orientRect: { readonly left: number; readonly top: number; readonly size: number } | null;
+  orientPress: { readonly pointerId: number; readonly tag: number; readonly x: number; readonly y: number; readonly t: number } | null;
+  /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
+  pinkDir: import("../core/orientation_set").OrientDirection | null;
+  /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */
+  pinkTargetNormal: import("../core/vec").Vec3 | null;
   /** ⭐ Prototype (2026-10-11): when the last input that showed the pink highlights ended (ms; `null` — never shown) — `highlightAlpha`. */
   highlightEndedAt: number | null;
   /** ⭐ Prototype (2026-10-11): the pink face's fill (a child of its body) and the face it was built for. */
