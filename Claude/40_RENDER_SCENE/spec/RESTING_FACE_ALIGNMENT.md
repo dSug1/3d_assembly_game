@@ -744,3 +744,27 @@ they move, which makes the game heavier: the set (and the polyhedron) would have
     BEFORE the glass, so a front glass facet veils it a little when it is at the back.
   - Headless: the pink face at the back (+z) — the blue part in front of it, the pink through the ghost and around it; at the front (−z) —
     solid pink, the part faint behind it.
+- ⭐⭐⭐ **THE CANDIDATE SUPPORT FACE, THE PIECE'S PREVIEW, AND THE CUBE HELD** (the owner, 2026-10-12):
+  - *"the face of the cube which normal is pointing the most to the camera is the candidate support face"* — every frame, of the facets that
+    stand for a direction, the one whose normal points most toward the camera from its own centre (`candidateFace`, `input/orient_window.ts`).
+  - *"in the window, show the green/turquoise piece in the transform as it would be if it was aligned with the candidate support face, in a
+    position in front of the candidate support face (therefore orbiting together with the cube rotation). This green /turquoise piece
+    replication fades as the candidate support face changes and a new green/turquoise piece replication appears with the new candidate support
+    face"* — a COPY of the orbited piece (green or turquoise), scaled to the polyhedron (its radius 0.55 × the inner radius), its resting face
+    on the candidate face's centre a hair outside it, a child of the window's root (it turns with the cube), in the pose `restingPreview`
+    gives (`green_box_wiring.ts` — the turn a facet tap would make, from the pose shown; nothing moved). A new pose: the old copy fades out
+    and a new one fades in over 250 ms. Drawn last, so the pink face's ghost never tints it.
+  - *"if the candidate support face is the pink face, show the green-turquoise piece replication with the next roll to the next axis
+    applied"* — then `restingPreview` gives the next roll (`nextCoupleRoll`, from where a turn in flight is heading).
+  - *"if the second touch stays pressed on the cube while the first touch delta positions, the pink face moves as the candidate support face
+    scrolls and the resting face aligns as per the green-turquoise piece replication's transform accordingly: this provides a continuous
+    snapped rotation of the green-turquoise piece"* — a press held in the window HOLDS THE CUBE (`orientHold`); the other touch's drag orbits
+    the camera (the router's one-finger orbit — the held press never reaches it), the cube turns, and each time the candidate changes to a
+    face that is not the pink face the resting face sits against it (the copy's turn) and that face is the pink face. ⭐ The whole hold is ONE
+    episode. A short press is still a tap (align / roll); a hold that scrolled does nothing more at its release.
+  - *"For desktop, ctrl-alt pressed while cursor is on the cube and held while the left click delta positions does the same"* — ALT / CTRL
+    with the cursor in the window holds the cube (the key-made second touch presses at the cursor); a left press that lands in the window
+    while it is held DRIVES the orbit (`orientDriver` → `orbitDragStep`) instead of being the window's; a left press elsewhere orbits as usual.
+  - Headless (touch and desktop): at boot the candidate is the front face (−z) with a copy on it, the top (+y) lit; one finger held on the cube
+    and the other dragging across — the candidate scrolls −z → +z → +x → −x, the pink face follows each, 1 move in all; the same with CTRL in
+    the window and a left drag.

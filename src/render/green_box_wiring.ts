@@ -34,6 +34,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { dirLabel } from "./orient_cube";
+import type { OrientDirection } from "../core/orientation_set";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
@@ -1248,4 +1249,35 @@ export function orientationFrames(st: SceneState): { readonly normal: Vec3; read
     }
   }
   return out;
+}
+
+/**
+ * ⭐⭐ (2026-10-12, §21, *"show the green/turquoise piece in the transform as it would be if it was aligned with the candidate support face …
+ * if the candidate support face is the pink face, show the green-turquoise piece replication with the next roll to the next axis applied"*)
+ * — the orientation the orbited piece WOULD take, nothing moved: sitting against the direction \`dir\` (\`alignRestingFace\`'s turn, from the
+ * pose shown), or, with \`roll\`, the next roll to the next axis (\`rollRestingFace\`'s, from where a turn in flight is heading). \`null\`
+ * with nothing to show.
+ */
+export function restingPreview(st: SceneState, dir: OrientDirection, roll: boolean): Quat | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return null;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const shown: Quat = [r.w, r.x, r.y, r.z];
+  if (roll) {
+    const rr = st.restRoll;
+    if (rr === null) return null;
+    const from = st.restAlign?.base ?? shown;
+    const cam = st.camera.position;
+    const tg = st.camera.getTarget();
+    let pinkAxes = rr.pinkAxes;
+    if (pinkAxes.length === 0) {
+      const right = st.camera.getDirection(new Vector3(1, 0, 0));
+      pinkAxes = [[right.x, right.y, right.z]];
+    }
+    return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1)?.q ?? null;
+  }
+  const a = st.pieceAnchor;
+  const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
+  const ends = dir.axes.map((x) => [sub(pos, scale(x, 0.05)), add(pos, scale(x, 0.05))] as const);
+  return restAlignToFace(shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
 }

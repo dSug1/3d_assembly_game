@@ -93,8 +93,8 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
   });
   it("⭐ a press in its window is the cube's, before the router (no orbit, no grab)", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p.indexOf("if (orientCubePointer(st, info.type, e)) {")).toBeGreaterThan(0);
-    expect(p.indexOf("if (orientCubePointer(st, info.type, e)) {")).toBeLessThan(p.indexOf("if (cursorPointer(st, info.type, e)) {"));
+    expect(p.indexOf("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {")).toBeGreaterThan(0);
+    expect(p.indexOf("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {")).toBeLessThan(p.indexOf("if (cursorPointer(st, info.type, e)) {"));
   });
 });
 
@@ -168,5 +168,40 @@ describe("⭐ the window kept clear of the screen's overlays (the HUD, the ☰, 
   it("⭐ wired: the window's top cleared of the visible overlays; the ☰ tagged", () => {
     expect(code("render/orient_cube.ts")).toContain("const top = clearOfOverlays(left, corner.top, size, overlayRects(st), ch, margin);");
     expect(code("render/menu.ts")).toContain('toggle.setAttribute("data-role", "menu-toggle");');
+  });
+});
+
+import { candidateFace } from "../src/input/orient_window";
+describe("⭐⭐ the candidate support face, its preview, the cube held (2026-10-12)", () => {
+  it("⭐ *\"the face of the cube which normal is pointing the most to the camera is the candidate support face\"* — never a leftover face", () => {
+    const f = AXES.map((n, tag) => ({ tag, normal: n, centre: n }));
+    expect(candidateFace(f, [0.2, 0.3, -10])).toBe(5); // the camera on −z: the −z facet
+    expect(candidateFace(f, [0.2, 10, -1])).toBe(2); // above: the top
+    expect(candidateFace([...f.slice(0, 2), { tag: -1, normal: [0, 0, -1], centre: [0, 0, -1] }], [0, 0, -10])).not.toBe(-1);
+  });
+  it("⭐⭐ the copy of the orbited piece: the pose `restingPreview` gives — the alignment to the candidate, or the next roll when it is the pink face; a new pose fades the old copy out", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toContain("const roll = dir !== undefined && st.restAligned && dirIndex(st, st.pinkTargetNormal) === cand;");
+    expect(c).toContain("const q = dir === undefined || st.greenBox === null ? null : restingPreview(st, dir, roll);");
+    expect(c).toMatch(/if \(!same\) \{\s*if \(live !== undefined\) live\.dying = now;/);
+    expect(c).toContain('const m = p.mesh.clone("orient-piece", c.root, true) as Mesh | null;');
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toMatch(/export function restingPreview\(st: SceneState, dir: OrientDirection, roll: boolean\): Quat \| null \{/);
+    expect(g).toContain("return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes,");
+    expect(g).toContain("return restAlignToFace(shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;");
+  });
+  it("⭐⭐ the cube HELD: each new candidate that is not the pink face aligns the resting face to it, one episode for the hold; a tap is still a tap", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).toMatch(/if \(h === null \|\| cand < 0 \|\| cand === h\.last\) return;\s*h\.last = cand;\s*if \(dirIndex\(st, st\.pinkTargetNormal\) === cand\) return;/);
+    expect(c).toMatch(/if \(!h\.acted\) \{\s*st\.episodes\.touch/);
+    expect(c).toContain("st.orientHold = { pointerId: e.pointerId, last: c.candidate, acted: false };");
+    expect(c).toContain("if (!scrolled && p.tag >= 0 && isTapRelease(");
+  });
+  it("⭐ the desktop: ALT / CTRL in the window holds the cube; a press in the window while it is held drives the orbit", () => {
+    const c = code("render/orient_cube.ts");
+    expect(c).not.toContain("e.pointerId === MOUSE_SECOND_ID) return false;");
+    expect(c).toMatch(/if \(st\.orientHold !== null && e\.pointerId !== st\.orientHold\.pointerId\) \{\s*st\.orientDriver = \{ pointerId: e\.pointerId, prev: s \};/);
+    expect(c).toMatch(/orbit\(e\.pointerId, s, dv\.prev\);/);
+    expect(code("render/pointer_wiring.ts")).toContain("if (orientCubePointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {");
   });
 });
