@@ -347,3 +347,24 @@ describe("⭐⭐ the resting-face quads (2026-10-12, *\"at the center of the res
     expect(c).toContain("const lit = Math.abs(dot(x.normal, rn)) >= QUAD_SAME; x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;");
   });
 });
+
+import { quadGrowth, quadSide } from "../src/core/orientation_set";
+describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a click aligns to the side clicked (2026-10-12)", () => {
+  it("⭐ *\"grow with the distance of the piece to the pink gizmo (more than linearly but less than … quadratically)\"* — (d/dRef)^1.5; *\"the max size of the quad shall be the 1.4 you have set\"* — never above 1", () => {
+    expect(quadGrowth(0.5, 1)).toBeCloseTo(Math.pow(0.5, 1.5), 12);
+    expect(quadGrowth(2, 1)).toBe(1); // capped: the 1.4 × radius
+    expect(quadGrowth(0, 1)).toBe(0.1);
+    expect(quadGrowth(0.25, 1) / quadGrowth(0.5, 1)).toBeCloseTo(Math.pow(0.5, 1.5), 12); // superlinear, sub-quadratic
+  });
+  it("⭐ *\"click on one side or the other of the quad are differentiated so the piece can turn 180 degrees\"* — the normal on the eye's side", () => {
+    expect(quadSide([1, 0, 0], [0, 0, 0], [5, 1, 0])).toEqual([1, 0, 0]);
+    expect(quadSide([1, 0, 0], [0, 0, 0], [-5, 1, 0])).toEqual([-1, -0, -0]);
+  });
+  it("⭐ wired: a first press nearer than the scene on a quad is the quads'; a tap → `orientCubeTap` on the side's direction; a drag orbits", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("if (other?.hit === true && other.distance < hit.distance - 0.005) return false;");
+    expect(c).toContain("const tag = st.orientDirs.findIndex((dd) => dot(dd.normal, p.side) >= SAME_DIR); if (tag >= 0) orientCubeTap(st, tag);");
+    expect(c).toContain("if (p.dragging) orbit(e.pointerId, s, p.prev);");
+    expect(flat("render/pointer_wiring.ts")).toContain("if (restingQuadPointer(st, info.type, e, s, (id, ss, prev) => orbitDragStep(st, id, ss, prev))) {");
+  });
+});

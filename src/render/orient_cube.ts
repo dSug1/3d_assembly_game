@@ -36,9 +36,10 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, distinctPlanes, facetPolytope, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, distinctPlanes, facetPolytope, quadGrowth, quadSide, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qmul, qRotate, scale, shortestArc, sub, type Quat, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
+import { MOUSE_SECOND_ID as MOUSE_SECOND_ID_Q } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
 import { candidateFace, clearOfOverlays, orientWindowAtCursor, orientWindowCorner } from "../input/orient_window";
 import { alignRestingFace, orientationFrames, restingPreview, rollRestingFace } from "./green_box_wiring";
@@ -677,7 +678,7 @@ function restingQuadsFrame(st: SceneState): void {
       edges.parent = root;
       return { normal: n, fill, edges };
     });
-    st.restingQuads = { key, root, quads };
+    st.restingQuads = { key, root, quads, dRef: null };
   }
   const q = st.restingQuads;
   if (q === null || p === undefined || p.restingFace === null) return;
@@ -692,7 +693,12 @@ function restingQuadsFrame(st: SceneState): void {
   const rot: Quat = [r.w, r.x, r.y, r.z];
   const c = qRotate(rot, p.restingCentre);
   q.root.position.set(p.mesh.position.x + c[0], p.mesh.position.y + c[1], p.mesh.position.z + c[2]);
-  q.root.scaling.setAll(QUAD_SIZE * 2 * p.mesh.getBoundingInfo().boundingSphere.radius);
+  // ⭐⭐ (2026-10-12, *"the quads size grow with the distance of the piece to the pink gizmo (more than linearly but less than exponentially or
+  // quadratically)"*) — × (d / d at the first frame)^1.5, d the resting face's centre to the pink gizmo
+  const gizmo = st.pinkRing?.position ?? st.orbitCentreM;
+  const d = Math.hypot(q.root.position.x - gizmo.x, q.root.position.y - gizmo.y, q.root.position.z - gizmo.z);
+  if (q.dRef === null && d > 0) q.dRef = d;
+  q.root.scaling.setAll(QUAD_SIZE * 2 * p.mesh.getBoundingInfo().boundingSphere.radius * quadGrowth(d, q.dRef ?? d));
   // ⭐ the quad in the resting face's plane: yellow edges
   const rn = qRotate(rot, p.restingFace.normal);
   for (const x of q.quads) {
@@ -700,4 +706,58 @@ function restingQuadsFrame(st: SceneState): void {
     x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;
     x.edges.alpha = lit ? 1 : QUAD_EDGE_ALPHA;
   }
+}
+
+/**
+ * ⭐⭐ (2026-10-12, the owner: *"if a quad is clicked, the resting face aligns with this quad (or roll to the next axis if it is the same quad).
+ * click on one side or the other of the quad are differentiated so the piece can turn 180 degrees"*) — a first-touch / left press on a quad
+ * (nearer than anything else in the scene) is the quads': released as a TAP, the side clicked (`quadSide`: the normal on the camera's side)
+ * is the direction the resting face SITS AGAINST — `orientCubeTap` on that direction (aligned, or the roll when it already is); turned into a
+ * DRAG past the tap slop, it orbits the centre as any drag does (`orbit`).
+ */
+export function restingQuadPointer(
+  st: SceneState,
+  type: number,
+  e: PointerEvent,
+  s: Sample,
+  orbit: (pointerId: number, s: Sample, prev: Sample) => void,
+): boolean {
+  if (type === PointerEventTypes.POINTERDOWN) {
+    const q = st.restingQuads;
+    if (q === null || st.greenBox === null || e.pointerId === MOUSE_SECOND_ID_Q || st.hold !== null) return false;
+    if (e.pointerType === "mouse" && e.button !== 0) return false;
+    if (st.router.all().length > 0) return false; // ⭐ a first touch only
+    const rect = st.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const fills = q.quads.map((k) => k.fill);
+    const hit = st.scene.pick(x, y, (m) => fills.includes(m as Mesh));
+    if (hit?.hit !== true || hit.pickedPoint === null) return false;
+    const other = st.scene.pick(x, y); // ⭐ the scene's own pick (pickable meshes): nearer — it is not a quad press
+    // ⚠ 5 mm of slack: the quad in the resting face's plane lies ON the floor's top — a tie there is the quad's
+    if (other?.hit === true && other.distance < hit.distance - 0.005) return false;
+    const quad = q.quads[fills.indexOf(hit.pickedMesh as Mesh)];
+    if (quad === undefined) return false;
+    const cam = st.camera.position;
+    const side = quadSide(quad.normal, [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], [cam.x, cam.y, cam.z]);
+    st.quadPress = { pointerId: e.pointerId, side, pressed: s, prev: s, dragging: false };
+    return true;
+  }
+  const p = st.quadPress;
+  if (p === null || e.pointerId !== p.pointerId) return false;
+  if (type === PointerEventTypes.POINTERMOVE) {
+    if (!p.dragging && Math.hypot(s.x - p.pressed.x, s.y - p.pressed.y) > mmToPx(st.cfg.doubleTapSlop)) p.dragging = true;
+    if (p.dragging) orbit(e.pointerId, s, p.prev);
+    p.prev = s;
+    return true;
+  }
+  if (type === PointerEventTypes.POINTERUP) {
+    st.quadPress = null;
+    if (!p.dragging && isTapRelease(p.pressed.t, p.pressed.x, p.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))) {
+      const tag = st.orientDirs.findIndex((dd) => dot(dd.normal, p.side) >= SAME_DIR);
+      if (tag >= 0) orientCubeTap(st, tag);
+      st.lastVerdict = st.lastVerdict.replace(/^orbit: /, "orbit: quad tapped — ");
+    }
+  }
+  return true;
 }

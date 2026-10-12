@@ -473,7 +473,11 @@ export interface SceneState {
       readonly fill: import("@babylonjs/core/Meshes/mesh").Mesh;
       readonly edges: import("@babylonjs/core/Meshes/linesMesh").LinesMesh;
     }[];
+    /** ⭐ (2026-10-12) the gizmo distance at the first frame — the size's reference (`quadGrowth`). */
+    dRef: number | null;
   } | null;
+  /** ⭐ (2026-10-12) a press on a resting-face quad: the side clicked (the direction to sit against), its press, its last sample, a drag yet. */
+  quadPress: { readonly pointerId: number; readonly side: import("../core/vec").Vec3; readonly pressed: import("../input").Sample; prev: import("../input").Sample; dragging: boolean } | null;
   orientCube: {
     readonly root: import("@babylonjs/core/Meshes/transformNode").TransformNode;
     readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh;

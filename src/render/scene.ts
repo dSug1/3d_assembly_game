@@ -589,6 +589,7 @@ export function createScene(
   st.orientDirs = [];
   st.orientDirty = true;
   st.restingQuads = null;
+  st.quadPress = null;
   st.orientCube = null;
   st.orientRect = null;
   st.orientPress = null;
