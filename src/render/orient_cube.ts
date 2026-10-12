@@ -25,6 +25,7 @@ import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { distinctDirections, distinctPlanes, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qRotate, scale, sub, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
+import { trackingMetresPerPx } from "../input";
 import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
@@ -36,11 +37,6 @@ import type { SceneState } from "./scene_state";
 const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 /** ⭐ (2026-10-12) the resting-face quads: their full size (× the piece's radius), their glass, their edges, the pink direction's yellow. */
 const QUAD_SIZE = 1.4;
-/**
- * ⭐ (2026-10-12, *"modify: the min scale of the quads at the minimum distance shall be 0.1"*; it was 0.20) — the size at the piece's nearest, × the piece's radius as `QUAD_SIZE` is.
- * ⭐ (2026-10-12, *"make the range 0.2 -> 1.4"* → *"amended: make the range 0.01 ->1.4"*) — 0.01.
- */
-const QUAD_MIN = 0.01;
 const QUAD_ALPHA = 0.12;
 const QUAD_EDGE = new Color3(0.75, 0.78, 0.85);
 const QUAD_EDGE_ALPHA = 0.45;
@@ -172,7 +168,7 @@ export function orientTapShown(st: SceneState): boolean {
  * ⭐⭐ (2026-10-12, the owner: *"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron"*
  * → *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — one quad per distinct PLANE of the directions
  * (`distinctPlanes`: a cube's three), square to the world, centred on the orbited piece's resting face, faint glass with faint edges; the
- * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: 0.01 at half the piece's farthest — hidden nearer — 1.4 at its farthest; × the piece's radius). Rebuilt
+ * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: one pixel at half the piece's farthest — hidden nearer — 1.4 at its farthest; × the piece's radius). Rebuilt
  * when the directions or the piece change; placed every frame.
  */
 function restingQuadsFrame(st: SceneState, shown: number): void {
@@ -214,7 +210,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   if (q === null || p === undefined || at === null) return;
   // ⭐⭐ (2026-10-12, *"the quads size grow with the distance of the piece to the pink gizmo"* → *"the 1.4 shall be reached at the maximum distance
   // (i.e. at 6m in this scene). There shall be no plateau"* → *"the min scale of the quads … 0.1"* → *"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"*) — d the piece's
-  // distance to the gizmo; 0.01 at HALF the rings' farthest, 1.4 at the farthest (`pieceDistanceRange`; both × the piece's radius, the side 2 ×
+  // distance to the gizmo; ONE PIXEL at HALF the rings' farthest, 1.4 at the farthest (`pieceDistanceRange`; both × the piece's radius, the side 2 ×
   // that), `quadGrowthPower` (3) between (`quadSize`); nearer than half, the quads HIDDEN (`quadsShownFromM`); the resting face's yellow contour
   // scales by the same share (`growth`, read by `restingFillFrame`)
   const gizmo = st.pinkRing?.position ?? st.orbitCentreM;
@@ -227,15 +223,18 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
     x.fill.isVisible = show;
     x.edges.isVisible = show;
   }
+  const full = QUAD_SIZE * 2 * p.mesh.getBoundingInfo().boundingSphere.radius;
+  // ⭐ (2026-10-12, *"make the quad minimum one pixel"*; it was 0.01 × the piece's radius) — the smallest side: ONE PIXEL on the glass at the
+  // quads' distance from the camera
+  const cam = st.camera.position;
+  const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
   if (!show) {
-    q.growth = QUAD_MIN / QUAD_SIZE;
+    q.growth = Math.min(1, onePx / full); // ⭐ the resting contour at its smallest (`restingFillFrame`)
     return;
   }
   // ⭐ at the resting face's centre, as the piece stands now
   q.root.position.set(at[0], at[1], at[2]);
-  const r = p.mesh.getBoundingInfo().boundingSphere.radius;
-  const full = QUAD_SIZE * 2 * r;
-  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full);
+  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, onePx, full);
   q.growth = side / full;
   q.root.scaling.setAll(side);
   // ⭐⭐ (2026-10-12, *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — the pink direction's plane

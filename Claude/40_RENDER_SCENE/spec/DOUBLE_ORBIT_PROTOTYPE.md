@@ -781,3 +781,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   piece's distance range; the gizmo a 1 px line → `RESTING_FACE_ALIGNMENT.md` §25.
 * ⛔ The 5 m / 51° rings REVERTED to 6 m (all quads turn yellow on the max-distance orbit — now a rule with a HUD alert); the quads 0.01 at half
   the farthest distance (hidden nearer) → 1.4 at the farthest → `RESTING_FACE_ALIGNMENT.md` §25.
+* ⭐ The quads' smallest size is ONE PIXEL on the glass (at half the farthest distance) → `RESTING_FACE_ALIGNMENT.md` §25.

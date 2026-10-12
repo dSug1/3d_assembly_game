@@ -106,11 +106,12 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(quadSize(1, 0.1, 5, k, 0.9, 0.5)).toBe(0.5); // a minimum above the maximum: the maximum
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("const QUAD_SIZE = 1.4;");
-    expect(c).toContain("const QUAD_MIN = 0.01;"); // ⭐ *"amended: make the range 0.01 ->1.4"*
+    expect(c).not.toContain("QUAD_MIN"); // ⭐ *"make the quad minimum one pixel"* (it was 0.01)
+    expect(c).toContain("const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);");
     // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
     expect(quadsShownFromM(6)).toBe(3);
     expect(c).toContain("const from = quadsShownFromM(range.maxM); const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;");
-    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, QUAD_MIN * 2 * r, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
     expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
     expect(c).not.toContain("dRef");
     expect(c).not.toContain("GIZMO_RING_PX");

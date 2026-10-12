@@ -966,9 +966,10 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
 - ⭐⭐ **THE SIZE** (*"the 1.4 shall be reached at the maximum distance … There shall be no plateau for the quad scale before shrinking"* →
   *"the min scale of the quads … 0.1. the curve with the power (i.e. power 3) shall best fit those max and min scales"* → *"the scale 0.1 should be
   reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"* → *"make the range 0.2 -> 1.4"* →
-  *"amended: make the range 0.01 ->1.4"*): d the piece's distance to the gizmo; **0.01** at **HALF** the rings' farthest (`quadsShownFromM`: 3 m in
+  *"amended: make the range 0.01 ->1.4"* → *"make the quad minimum one pixel"*): d the piece's distance to the gizmo; **ONE PIXEL** on the glass
+  (at the quads' distance from the camera; it was 0.01 × the piece's radius) at **HALF** the rings' farthest (`quadsShownFromM`: 3 m in
   `Scene_1`), **1.4** at the FARTHEST (`pieceDistanceRange`: 6.0 m), `((d − d_half) / (d_max − d_half))^power` between them (`quadSize`) — no
-  plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). Both × the piece's radius, the side twice that. The power is a
+  plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). The 1.4 × the piece's radius, the side twice that. The power is a
   slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face quads: growth power*; it was 1.5). ⚠ The boot sits at 3.0 m — just at the threshold:
   the quads appear as the piece moves out. ⭐ The resting face's yellow contour scales by the same share, about the face's centre (its smallest
   while the quads are hidden). (Before, the same day: 0.20 at the gizmo → the gizmo's diameter → 0.1 at the rings' nearest; the 1.4 at the boot
