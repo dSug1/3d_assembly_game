@@ -11,7 +11,7 @@ import { boundsFromShapes, hullAtSpawn, resolveMove, type CollisionSetup } from 
 import { boxShape } from "@core/collision_shape";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
-import { lerpOrbit, orbitStepCandidates, refusedAxes } from "../src/input/piece_collision";
+import { backOff, lerpOrbit, projectStep, rememberNormal } from "../src/input/piece_collision";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const flat = (f: string) => code(f).replace(/\s+/g, " ");
@@ -27,21 +27,44 @@ const body = (id: string, at: Vec3, dims: [number, number, number], extra: Parti
   ...extra,
 });
 
-describe("⭐⭐⭐ the orbit's own slide — the whole step, else the yaw alone, else the ring position alone", () => {
-  const from = { yaw: 0, v: 0.6, zoom: 1 };
-  const to = { yaw: 0.1, v: 0.55, zoom: 1 };
-  it("⭐ the order: the whole step first, then the yaw alone (the ring position kept), then the ring position alone (the yaw kept)", () => {
-    expect(orbitStepCandidates(from, to)).toEqual([to, { yaw: 0.1, v: 0.6, zoom: 1 }, { yaw: 0, v: 0.55, zoom: 1 }]);
+describe("⭐⭐⭐ the slide PROJECTED onto the contact in the orbit's coordinates (2026-10-13, §11bis: *\"there is some jitter as the input goes into the direction of collision instead of smooth sliding\"* — the axis-by-axis fallback stair-stepped)", () => {
+  // a ring whose yaw moves the anchor along x and whose ring parameter moves it along y (unit Jacobian), and an OBLIQUE wall
+  const J: [Vec3, Vec3] = [[1, 0, 0], [0, 1, 0]];
+  const s = Math.SQRT1_2;
+  const wall: Vec3 = [s, s, 0]; // pointing toward the piece: moving along −x−y goes INTO it
+  it("⭐⭐ a step into an oblique wall keeps its part ALONG the wall — both coordinates move, every frame (no axis frozen, no stair-step)", () => {
+    const out = projectStep([-0.01, -0.02], J, [wall]);
+    expect(out[0] * s + out[1] * s).toBeCloseTo(0, 12); // nothing into the wall
+    expect(out[0]).toBeCloseTo(0.005, 12); // the yaw moves…
+    expect(out[1]).toBeCloseTo(-0.005, 12); // …and so does the ring position: along the wall, not one axis at a time
   });
-  it("⭐ an axis that did not move gives no fallback (it would be no step)", () => {
-    expect(orbitStepCandidates(from, { yaw: 0.1, v: 0.6, zoom: 1 })).toEqual([{ yaw: 0.1, v: 0.6, zoom: 1 }]);
-    expect(orbitStepCandidates(from, { yaw: 0, v: 0.55, zoom: 1 })).toEqual([{ yaw: 0, v: 0.55, zoom: 1 }]);
+  it("⭐ a step away from the contact, or along it, is untouched; head-on into it: nothing (a still rest, no shake)", () => {
+    expect(projectStep([0.01, 0.02], J, [wall])).toEqual([0.01, 0.02]);
+    const head = projectStep([-0.01, -0.01], J, [wall]);
+    expect(Math.hypot(head[0], head[1])).toBeLessThan(1e-12);
   });
-  it("⭐ the stop: a fraction of the whole step; the axes it refused are the ones whose input is discarded", () => {
-    expect(lerpOrbit(from, to, 0.5)).toEqual({ yaw: 0.05, v: 0.575, zoom: 1 });
-    expect(lerpOrbit(from, to, 2)).toEqual(to);
-    expect(refusedAxes(to, { yaw: 0.1, v: 0.6, zoom: 1 })).toEqual({ yaw: false, v: true }); // the yaw went on: only the ring position refused
-    expect(refusedAxes(to, to)).toEqual({ yaw: false, v: false });
+  it("⭐ the ring's own metric: where the yaw moves the anchor 3× further than the ring parameter, the slide is the least change in METRES", () => {
+    const Jw: [Vec3, Vec3] = [[3, 0, 0], [0, 1, 0]];
+    const out = projectStep([-0.01, -0.03], Jw, [wall]);
+    const d: Vec3 = [3 * out[0], out[1], 0];
+    expect(d[0] * s + d[1] * s).toBeCloseTo(0, 12);
+  });
+  it("⭐ two contacts against both coordinates (a crease the ring cannot follow): the step is zero", () => {
+    expect(projectStep([-0.01, -0.01], J, [[1, 0, 0], [0, 1, 0]])).toEqual([0, 0]);
+  });
+  it("⭐ the REST GAP: a stop pulled back a fixed distance short of the contact (the next frame starts apart)", () => {
+    expect(backOff(0.5, 0.01, 0.001)).toBeCloseTo(0.4, 12);
+    expect(backOff(0.05, 0.01, 0.001)).toBe(0);
+    expect(backOff(0.5, 0, 0.001)).toBe(0);
+  });
+  it("⭐ the contact's normals remembered: a near-duplicate replaces its old self, the newest first, at most two", () => {
+    const a: Vec3 = [1, 0, 0];
+    const b: Vec3 = [0, 1, 0];
+    expect(rememberNormal([], a)).toEqual([a]);
+    expect(rememberNormal([a], [0.9999, 0.0141, 0])).toHaveLength(1);
+    expect(rememberNormal([a], b)).toEqual([b, a]);
+    expect(rememberNormal([b, a], [0, 0, 1])).toHaveLength(2);
+    expect(lerpOrbit({ yaw: 0, v: 0.6, zoom: 1 }, { yaw: 0.1, v: 0.5, zoom: 1 }, 0.5).v).toBeCloseTo(0.55, 12);
   });
 });
 
@@ -74,14 +97,22 @@ describe("⭐⭐⭐ the rule is `resolveMove`'s, with the piece's own setup — 
 describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐ the piece's setup: no play volume, the frozen bodies exempt", () => {
     const c = flat("render/collision_wiring.ts");
-    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skinM(st), exempt: (a, b) => frozen(a) || frozen(b) };");
+    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) };");
   });
-  it("⭐⭐ the orbit step guarded each frame after the spring; the refused axes' input discarded (the spring and the orbit's target pulled back, the coast stopped)", () => {
+  it("⭐⭐ the orbit step guarded each frame after the spring; blocked, PROJECTED (up to 3 re-checks), else the stop a rest gap short; the orbit's target and the spring's velocity projected the same way — only the input INTO the contact discarded", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const g = guardOrbitStep(st, prevAt, st.boxSpring.at);");
-    expect(g).toContain("st.orbit.reset(ref.yaw ? g.at.yaw : st.orbit.yaw, ref.v ? g.at.v : st.orbit.elevation); st.orbitInertia.stop();");
-    expect(g).toContain("for (const cand of orbitStepCandidates(from, to)) {");
-    expect(g).toContain("const stop = lerpOrbit(from, to, first?.t ?? 0);");
+    expect(g).toContain("const vel = g.slide([sp.velYaw, sp.velV]); const tgt = g.slide([st.orbit.yaw - g.at.yaw, st.orbit.elevation - g.at.v]);");
+    expect(g).toContain("st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]); st.orbitInertia.stop();");
+    expect(g).toContain("const s = projectStep(dq, J, normals);");
+    expect(g).toContain("const stop = lerpOrbit(from, to, backOff(v.t, stepM, skin / 2));");
+    expect(g).not.toMatch(/orbitStepCandidates|refusedAxes/);
+  });
+  it("⭐ the skin HELD through a contact (the camera moving must not change the tolerance); the normal from `contactNormal` (factored out of `resolveMove`)", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const skin = pc?.skinM ?? skinM(st); const setup = pieceCollisionSetup(st, skin);");
+    expect(g).toContain("const n0 = contactNormal(setWorldPlacement(st.world, id, v.placed), id, v.blockedBy, setup);");
+    expect(flat("core/collision.ts")).toContain("const n = contactNormal(stoppedWorld, id, blocker, setup);");
   });
   it("⭐⭐ a turn checked WHOLE before it starts — the align and the roll refused when blocked (nothing changes, no episode)", () => {
     const g = flat("render/green_box_wiring.ts");

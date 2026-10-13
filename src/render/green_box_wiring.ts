@@ -31,11 +31,12 @@ import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { add, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { dirLabel } from "./orient_cube";
-import { guardPieceMove, pieceMoveVerdict } from "./collision_wiring";
-import { lerpOrbit, orbitStepCandidates, refusedAxes, type OrbitParams } from "../input/piece_collision";
-import type { MoveVerdict } from "../core/collision";
+import { guardPieceMove, pieceCollisionSetup, pieceMoveVerdict, skinM } from "./collision_wiring";
+import { backOff, lerpOrbit, projectStep, rememberNormal, type OrbitParams, type OrbitStep } from "../input/piece_collision";
+import { contactNormal } from "../core/collision";
+import { setWorldPlacement } from "../core/object_model";
 import type { OrientDirection } from "../core/orientation_set";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
@@ -875,18 +876,23 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
       : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxOrbit = st.boxSpring.at;
-  // ⭐⭐⭐ (2026-10-13, *"Now we need to work on the collision of the green-turquoise piece with the other parts"* → *"Build"*; `COLLISION.md` §11) — THE ORBIT STEP GUARDED: the whole step, else the yaw alone, else the ring position alone,
-  // else where the path stops (`guardOrbitStep`); the refused axes' input DISCARDED — the spring and the orbit's target pulled back to the
-  // stop, the coast stopped — so the camera stops with the piece and reversing the finger moves it back at once
+  // ⭐⭐⭐ (2026-10-13, *"Now we need to work on the collision of the green-turquoise piece with the other parts"* → *"Build"*; `COLLISION.md` §11) — THE ORBIT STEP GUARDED
+  // ⭐⭐ (2026-10-13, *"When the piece collides, sometimes (not always) there is some jitter … instead of smooth sliding"* → *"Build"*; §11bis) — a blocked step SLIDES along the contact in the orbit's coordinates (`guardOrbitStep`, `projectStep`);
+  // only the input INTO the contact is discarded: the orbit's target and the spring's velocity PROJECTED the same way (the slide keeps its pace,
+  // frame by frame — it went in bursts at the pointer-event rate when both were zeroed), the coast stopped
   let heldAnchor: Vec3 | null = null;
   if (prevAt !== null && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null) {
+    const g0 = performance.now();
     const g = guardOrbitStep(st, prevAt, st.boxSpring.at);
+    st.pieceGuardMs += (performance.now() - g0 - st.pieceGuardMs) / 30; // ⭐ the guard's cost, on the HUD
     heldAnchor = g.anchor;
-    if (g.at !== st.boxSpring.at) {
-      const ref = refusedAxes(st.boxSpring.at, g.at);
-      st.boxSpring = { at: g.at, velYaw: ref.yaw ? 0 : st.boxSpring.velYaw, velV: ref.v ? 0 : st.boxSpring.velV, velLnZoom: st.boxSpring.velLnZoom };
+    if (g.slide !== null) {
+      const sp = st.boxSpring;
+      const vel = g.slide([sp.velYaw, sp.velV]);
+      const tgt = g.slide([st.orbit.yaw - g.at.yaw, st.orbit.elevation - g.at.v]);
+      st.boxSpring = { at: g.at, velYaw: vel[0], velV: vel[1], velLnZoom: sp.velLnZoom };
       st.boxOrbit = g.at;
-      st.orbit.reset(ref.yaw ? g.at.yaw : st.orbit.yaw, ref.v ? g.at.v : st.orbit.elevation);
+      st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]);
       st.orbitInertia.stop();
     }
   }
@@ -1142,29 +1148,80 @@ function pieceMeshAt(st: SceneState, anchor: Vec3, q?: Quat): { position: Vec3; 
   return { position: placeByFaceCentre(anchor, o, p.restingCentre), orientation: o };
 }
 
+/** ⭐ (2026-10-13, §11bis) how long a contact is remembered after it was last met (its normals, its skin), ms. */
+const CONTACT_KEEP_MS = 200;
+/** ⭐ (2026-10-13, §11bis) the projected slide's re-checks (a second contact met: the crease). */
+const SLIDE_ITERATIONS = 3;
+
+/** ⭐ (2026-10-13, §11bis) the ring's Jacobian at `o`: how far the anchor moves per radian of yaw and per unit of ring parameter (metres). */
+function ringJacobian(st: SceneState, o: OrbitParams): [Vec3, Vec3] {
+  const h = 1e-4;
+  const a = ringAnchorAt(st, o);
+  const ay = ringAnchorAt(st, { ...o, yaw: o.yaw + h });
+  const dv = o.v + h <= 1 ? h : -h;
+  const av = ringAnchorAt(st, { ...o, v: o.v + dv });
+  return [scale(sub(ay, a), 1 / h), scale(sub(av, a), 1 / dv)];
+}
+
 /**
- * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11) — the orbit step `from → to` the piece may take: the first free of `orbitStepCandidates` (the whole
- * step, the yaw alone, the ring position alone), else the fraction of the whole step its path reaches (`lerpOrbit`). `anchor`: set when even
- * that stop is blocked (the gizmo moved under the piece) — the piece then stays where its own path stops, off its ring point until free.
+ * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11, §11bis — *"When the piece collides, sometimes (not always) there is some jitter … instead of smooth sliding"* → *"Build"*) — the orbit step `from → to` the piece may take. Free: the whole step. Blocked: the
+ * step PROJECTED onto the contact surface in the orbit's coordinates (`projectStep` through the ring's Jacobian; the contact's normal from
+ * `contactNormal`, remembered while the contact lasts — `rememberNormal`), checked again, up to `SLIDE_ITERATIONS` times (a second
+ * contact: the crease); none free — the whole step's stop pulled back a REST GAP of half the skin (`backOff`). The skin is held for the
+ * contact's length (the camera moving must not change it). `slide`: the same projection, for the caller to apply to the orbit's target and
+ * the spring's velocity (`null`: no contact this frame). `anchor`: set when even the stop is blocked (the gizmo moved under the piece) — the
+ * piece then stays where its own path stops, off its ring point until free.
  */
-function guardOrbitStep(st: SceneState, from: OrbitParams, to: OrbitParams): { at: OrbitParams; anchor: Vec3 | null } {
+function guardOrbitStep(
+  st: SceneState,
+  from: OrbitParams,
+  to: OrbitParams,
+): { at: OrbitParams; anchor: Vec3 | null; slide: ((s: OrbitStep) => OrbitStep) | null } {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
-  if (b === null || p === undefined || worldPlacementOf(st.world, b.name) === null) return { at: to, anchor: null };
-  let first: MoveVerdict | null = null;
-  for (const cand of orbitStepCandidates(from, to)) {
-    const target = pieceMeshAt(st, ringAnchorAt(st, cand));
-    if (target === null) return { at: to, anchor: null };
-    const v = guardPieceMove(st, b.name, target);
-    first ??= v;
-    if (v.blockedBy === null) return { at: cand, anchor: null };
+  if (b === null || p === undefined || worldPlacementOf(st.world, b.name) === null) return { at: to, anchor: null, slide: null };
+  const id = b.name;
+  const now = performance.now();
+  const pc = st.pieceContact !== null && now - st.pieceContact.at < CONTACT_KEEP_MS ? st.pieceContact : null;
+  const skin = pc?.skinM ?? skinM(st);
+  const setup = pieceCollisionSetup(st, skin);
+  const poseAt = (o: OrbitParams) => pieceMeshAt(st, ringAnchorAt(st, o));
+  const whole = poseAt(to);
+  if (whole === null) return { at: to, anchor: null, slide: null };
+  const v = guardPieceMove(st, id, whole, setup);
+  if (v.blockedBy === null) return { at: to, anchor: null, slide: null };
+  // ⭐ the contact's normal, where the whole step stopped
+  let normals = pc?.normals ?? [];
+  const n0 = contactNormal(setWorldPlacement(st.world, id, v.placed), id, v.blockedBy, setup);
+  if (n0 !== null) normals = rememberNormal(normals, n0);
+  const J = ringJacobian(st, from);
+  const dq: OrbitStep = [to.yaw - from.yaw, to.v - from.v];
+  let taken: OrbitParams | null = null;
+  for (let k = 0; k < SLIDE_ITERATIONS && taken === null; k++) {
+    const s = projectStep(dq, J, normals);
+    const cand: OrbitParams = { yaw: from.yaw + s[0], v: Math.min(1, Math.max(0, from.v + s[1])), zoom: to.zoom };
+    const target = poseAt(cand);
+    if (target === null) break;
+    const vc = guardPieceMove(st, id, target, setup);
+    if (vc.blockedBy === null) {
+      taken = cand;
+      break;
+    }
+    const nk = contactNormal(setWorldPlacement(st.world, id, vc.placed), id, vc.blockedBy, setup);
+    if (nk === null) break;
+    normals = rememberNormal(normals, nk, 3);
   }
-  const stop = lerpOrbit(from, to, first?.t ?? 0);
-  const target = pieceMeshAt(st, ringAnchorAt(st, stop));
-  if (target === null) return { at: stop, anchor: null };
-  const v = guardPieceMove(st, b.name, target);
-  if (v.blockedBy === null) return { at: stop, anchor: null };
-  return { at: stop, anchor: add(v.placed.position, qRotate(v.placed.orientation, p.restingCentre)) };
+  st.pieceContact = { normals, skinM: skin, at: now };
+  const slide = (s: OrbitStep): OrbitStep => projectStep(s, J, normals);
+  if (taken !== null) return { at: taken, anchor: null, slide };
+  // ⭐ no slide free: the whole step's stop, a REST GAP short of it
+  const stepM = length(sub(ringAnchorAt(st, to), ringAnchorAt(st, from)));
+  const stop = lerpOrbit(from, to, backOff(v.t, stepM, skin / 2));
+  const target = poseAt(stop);
+  if (target === null) return { at: stop, anchor: null, slide };
+  const vs = guardPieceMove(st, id, target, setup);
+  if (vs.blockedBy === null) return { at: stop, anchor: null, slide };
+  return { at: stop, anchor: add(vs.placed.position, qRotate(vs.placed.orientation, p.restingCentre)), slide };
 }
 
 /**

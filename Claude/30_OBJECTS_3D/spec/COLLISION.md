@@ -290,3 +290,41 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
 * ✅✅ **CLOSED BY A DEVICE LOOK** (2026-10-13, the owner: *"Ok. Working."*) — tested against `Piece2` placed for the test on the orbit's 1st ring at
   5.6 m, 30° of yaw from the boot (*"Place the red non-seated part somewhere on the 1st ring at 5.6m so i can test the quads response to
   collision"*); then put back on the floor by the painting (*"Put back the red piece"*).
+
+## 11bis. ⭐⭐⭐ THE PIECE'S SLIDE, SMOOTH — collide and slide in the orbit's coordinates (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"When the piece collides, sometimes (not always) there is some jitter as the input goes into the direction of collision instead of smooth
+> sliding. Check state-of-the-art patent-free and license-free literature if we can improve that … Do the root cause analysis and Propose
+> before anything is built."* → *"I agree with your recommendation. Before building, will this make the game more heavy and slower to run?"* →
+> *"Build"* — the owner.
+
+* ⛔⛔ **THE ROOT CAUSE, MEASURED** (headless: the piece pushed diagonally into `Piece4`, every frame recorded): a STICK-SLIP, not a slide —
+  `9.98  0.73  0.72  0.75  0.73  9.69  0.67 …` mm per frame: three frames creeping sideways with the ring position FROZEN, then a ~10 mm drop.
+  1. **The slide was axis by axis** (§11: the whole step, else the yaw alone, else the ring position alone) — on a surface oblique to the orbit's
+     axes it stair-steps: the yaw slides until a gap opens, then the whole step is free at once (the artefact of axis-separated response).
+  2. **The discard killed the smoothing** — the refused axis's spring velocity zeroed and the orbit's target pulled back to the stop on every
+     blocked frame, so that axis moved only when the next POINTER EVENT arrived, as one raw step: the drops came at the event rate.
+  3. The stop's depth floated inside the skin (a bisection) and 4. the skin itself followed the camera's distance (it moves while orbiting).
+* ⭐ **THE LITERATURE** (published techniques; permissive-licence implementations; none copied): COLLIDE AND SLIDE — Fauerby, *Improved
+  Collision Detection and Response* (2003); Nettle (2000): project the remaining motion onto the contact plane, iterate (a second plane: the
+  crease), keep a "very close distance"; Linahan (arXiv 1211.0059): its jitter is numerical robustness; Bullet's kinematic character
+  controller (zlib): the motion split along and against the contact, a contact margin; Box2D / Catto (GDC 2006, 2013): a small fixed slop,
+  positions corrected last; robotics: a motion driven by joint coordinates is constrained through its JACOBIAN (least squares).
+* ✅ **THE BUILD** (`input/piece_collision.ts`, `guardOrbitStep`):
+  1. **The step PROJECTED onto the contact in the orbit's coordinates** (`projectStep`): the ring's Jacobian at the piece (how far the anchor
+     moves per radian of yaw and per unit of ring parameter, by finite differences), the contact's normal (`contactNormal`, factored out of
+     `resolveMove`); the component into the contact removed with the least change in the ring's own metric `JᵀJ` — so BOTH coordinates move
+     along the surface, every frame, and the piece stays on its ring. Re-checked up to 3 times (a second contact: the crease; two contacts the
+     two coordinates cannot follow: zero). ⚠ A push straight into an OBLIQUE surface therefore slides along it (as collide-and-slide does);
+     head-on into a surface square to it, it rests still.
+  2. **A REST GAP**: when no projected step is free, the whole step's stop is pulled back half the skin (`backOff`) — the next frame starts apart.
+  3. **Only the input INTO the contact is discarded**: the orbit's target and the spring's velocity projected the same way (`slide`) — the
+     slide keeps its pace at the frame rate; reversing the finger still moves the piece back at once.
+  4. **The skin HELD for the contact's length** and 5. **the normals remembered** (`rememberNormal`, ≤ 3, near-duplicates merged) while the
+     contact lasts (200 ms after it was last met).
+* ✅ **MEASURED AFTER** (the same push): the piece moves on EVERY frame along the contact — no frozen frames, no drops: the step's variation
+  (sd / mean) 0.26–0.38, against 0.10 for the same push in free space and ~1.3 for the stair-step before. The guard's cost while sliding
+  0.2–0.5 ms a frame (smoothed; the HUD's `camera` line now prints `guard …ms`), against a 16.7 ms frame at 60 fps.
+* ✅ Vectors (`tests/piece_collision.test.ts`): the projection along an oblique wall moves BOTH coordinates and nothing into it; away or along:
+  untouched; head-on: zero; the ring's metric; a crease: zero; the rest gap; the normals remembered; the wiring (the target and the velocity
+  projected, the skin held, `contactNormal` shared with `resolveMove`) — RED against the axis-by-axis build. ⛔ No device look yet.
