@@ -657,7 +657,7 @@ describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (t
     const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
     expect(len(far) - len(near)).toBeCloseTo(2.5 - 0.625, 9);
     const w = code("green_box_wiring.ts");
-    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*let rig = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
+    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*let rig: OrbitQ = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
     expect(w).toMatch(/const gapFull = cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\);/); // (2026-10-06: scaled around the piece, `scaledGap`)
     expect(code("scene.ts")).toMatch(/st\.greenBox !== null\s*\? wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
   });
