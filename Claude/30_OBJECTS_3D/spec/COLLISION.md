@@ -416,3 +416,25 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   `Piece4` contact, the piece holding and able to back away — no message.
 * ✅ Vectors (`tests/piece_collision.test.ts`): the target guarded before the spring, the camera following it, the per-frame guard no longer
   pulling the target; a respawn's new target; the all-blocked check's probes and turns.
+
+## 11sexies. A large orbit step checked ALONG THE RING, not its chord; the stuck probes from the piece as it is (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there
+> was no blocking to revert the orbit during this large dx orbit. See attachments (gizmo was on the bottom face of the bottom part)"* — the owner,
+> from the phone (build `c64fe33`: the red pop-up shown, `⟂ green-box⟂Piece9 0%`, the gizmo at the floor).
+
+* ⛔⛔ **THE CAUSE — a CHORD for an ARC.** The collision rule checks a straight path between two poses (`resolveMove`, `blendPlacement`'s
+  lerp), but the piece travels the ring's ARC (the spring eases the yaw). A small step: the two coincide. A LARGE dx step (a big yaw jump in one
+  event): the chord cuts inside the arc — the TARGET's guard passed a step whose arc hits a part; the per-frame safety net then stopped the
+  spring mid-path (the SPRING EFFECT); and where even its stop was blocked, the piece was HELD OFF its ring — and the stuck probes, started from
+  the RING point, crossed the part every way: all "blocked", a FALSE RED FLAG. (A chord can also refuse a step whose arc is free.)
+* ✅ **THE FIX**: (1) an orbit step is walked ALONG THE RING (`guardOrbitPath`): cut into sub-steps of ≤ 2° of yaw and ≤ 2 cm of travel
+  (`orbitSubsteps`, at most 48), each guarded in turn from where the last ended; a sub-step that meets a contact slides, and the REST of the step
+  is projected onto that contact before it goes on — in both guards (the target's and the per-frame net). (2) The stuck probes start from the
+  piece AS IT IS (its actual pose + the ring's step `J·dq`), never from its ring point.
+* ✅ Measured headless (the gizmo at the floor as on the phone, the piece at the waist, 0.25 rad of yaw per event, there and back, three ring
+  positions): **0 frames** with the stuck flag up (no false red); the piece in contact on many frames, sliding (`Piece18`, `Piece13`,
+  `Piece12`). ⚠ The check measured CONTACT (GJK gap 0), not depth — contact within the skin is allowed (`D136`); the device is the judge of the
+  spring effect.
+* ✅ Vectors: the sub-step count (2° / 2 cm / ≤ 48), why (a 60° step's chord 13 cm inside a 1 m arc; each sub-step's within 1 mm), the wiring
+  (both guards walk the ring, the rest projected, the probes from the actual pose).
