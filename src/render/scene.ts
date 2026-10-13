@@ -582,6 +582,7 @@ export function createScene(
   st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
   st.pieceContact = null;
   st.pieceGuardMs = 0;
+  st.pieceMoveBlocked = false;
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;
@@ -719,6 +720,7 @@ export function createScene(
    * an object's edge still counts, which is what a hand meant by it.
    */
   st.taps = new TapHistory(st.cfg);
+  st.pieceTaps = new TapHistory(st.cfg);
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
    * a `live` map and an `outside` map and decide membership by which one an id was in —
@@ -848,6 +850,7 @@ export function createScene(
   st.centreBlend = new OrbitCentreBlend(st.cfg, bootTargetOnBlueFace(st) ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   const bootCentre = st.centreBlend.centreM;
+  st.bootCentreM = [bootCentre[0], bootCentre[1], bootCentre[2]]; // ⭐ (2026-10-13) a stuck piece's respawn puts the centre back here
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);
   // ⛔⛔ prototype (green box): and the YELLOW MARKER goes there too — it was never placed at boot, so it sat at its creation point, the
   // origin, until the first orbit or reset. Invisible while the orbit centre WAS the origin; `D169` lifted it 0.23 m and the

@@ -16,6 +16,9 @@ import type { SceneState } from "./scene_state";
 const SHAPES = hullAtSpawn;
 const BOUNDS = boundsFromShapes(SHAPES);
 
+/** ⭐ (2026-10-13) an orbited piece NOT shown (the green ↔ turquoise switch shows one) — never an obstacle, never moved. */
+const hiddenOrbited = (st: SceneState, id: ObjectId): boolean => st.world.objects.get(id)?.orbited === true && id !== st.greenBox?.name;
+
 const pairKey = (a: ObjectId, b: ObjectId): string => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
 
 /**
@@ -47,6 +50,8 @@ export function collisionSetup(
     ...(st.playVolume ? { volume: st.playVolume } : {}),
     exempt: (a, b) => {
       if (alsoExempt !== null && pairKey(a, b) === pairKey(alsoExempt[0], alsoExempt[1])) return true;
+      // ⭐ (2026-10-13, *"Build case 3"*) the orbited piece SHOWN is an obstacle; the other one, hidden, never
+      if (hiddenOrbited(st, a) || hiddenOrbited(st, b)) return true;
       // ⭐ SNAPPING: the couple is MEANT to meet at gap 0 (`COLLISION.md` §5).
       const snapping = (f: ObjectId, p: ObjectId) =>
         st.seatSnaps.has(f) && st.links.pioneerFor(f)?.objectId === p;
@@ -63,7 +68,7 @@ export function collisionSetup(
 export function pieceCollisionSetup(st: SceneState, skin: number = skinM(st)): CollisionSetup {
   const frozen = (id: ObjectId): boolean => st.world.objects.get(id)?.frozen === true;
   // ⭐ (2026-10-13, `COLLISION.md` §11bis) `skin`: held through a contact by the caller — the camera moving must not change the tolerance
-  return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) };
+  return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };
 }
 
 /** ⭐ The orbited piece's move judged, nothing recorded — a CHECK (the yellow quad's turn), not a move. */

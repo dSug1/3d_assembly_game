@@ -488,6 +488,12 @@ export interface SceneState {
   /** ⭐ (2026-10-13, `COLLISION.md` §11bis) the orbited piece's contact while it lasts: its normals (toward the piece), the skin held, when last met. */
   /** ⭐ (2026-10-13) the orbited piece's collision guard's cost per frame, ms (an exponential mean over ~30 frames) — the HUD reads it. */
   pieceGuardMs: number;
+  /** ⭐ (2026-10-13, §11quater) the orbited piece's last position input was blocked (a contact, no free move since) — half of "stuck". */
+  pieceMoveBlocked: boolean;
+  /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
+  pieceTaps: TapHistory;
+  /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */
+  bootCentreM: import("../core/vec").Vec3;
   pieceContact: { normals: import("../core/vec").Vec3[]; skinM: number; at: number } | null;
   /** ⭐ (2026-10-12) the 1st / 4th ring check: the camera's elevation from the resting face last measured ON each ring (°), for the rings as they
    * were then (`key`) — the HUD alerts when not every quad can turn yellow on them (`allQuadsReachable`). */
@@ -712,6 +718,9 @@ export interface SceneState {
   frameMeter: FrameMeter;
   /** ⭐ `D142`: the goal pop-up's element (made on first use) and its fade timer. */
   goalPopupEl?: HTMLDivElement;
+  /** ⭐ (2026-10-13) the red BLOCKED pop-up, and whether it is shown. */
+  blockedPopupEl?: HTMLDivElement;
+  blockedShown?: boolean;
   goalPopupTimer?: ReturnType<typeof setTimeout>;
   /** ⭐ `D138`: AUTO shadows' verdict — `null` while measuring — and when that measurement began. */
   autoShadow: "ON" | "OFF" | null;

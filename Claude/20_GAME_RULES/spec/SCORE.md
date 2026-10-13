@@ -254,3 +254,10 @@ last action whole — seats included — rather than releasing a chain of them.
   honest first build; a formula is a guessed number).
 - Whether the PioneerFaceCursor positions of a scene are the owner's only, or the player may move
   them in a scored game (⛔ today moving one is Free Flow, so no).
+
+## ⏸ OWED — the stuck piece's respawn costs a MALUS (prototype, 2026-10-13)
+
+The owner: *"Mark in the md file to count a malus for episode count in this case (we will work on episode counts later on)."* A double tap /
+click on the orbited piece while it is STUCK (its position input and its yellow quad's turn both blocked) respawns it at its spawn transform
+(`COLLISION.md` §11quater). ⛔ That respawn must cost a **MALUS on the episode count** — not counted yet; its size (and whether its two taps
+count too) is to be decided with the episode counts.

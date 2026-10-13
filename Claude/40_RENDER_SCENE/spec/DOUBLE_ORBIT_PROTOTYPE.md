@@ -803,3 +803,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 
 * ⭐⭐ The piece's slide made smooth: collide and slide in the orbit's coordinates (the step projected through the ring's Jacobian, a rest gap,
   only the input into the contact discarded, the skin held) — the stair-step jitter measured and removed → `COLLISION.md` §11bis.
+* ⏸ Slide or block (the discriminant), and where the piece can get STUCK (the gizmo moved under it, a part moved into it, pinched, spawned inside) — fixes offered, nothing built → `COLLISION.md` §11ter.
+* ⭐⭐ Case 3: the orbited piece an OBSTACLE for the other parts; a STUCK piece (position and quad turn both blocked) respawned by a double tap / click on it — ⚠ an episode MALUS owed → `COLLISION.md` §11quater, `SCORE.md`.
+* ⭐ The stuck piece: a RED pop-up — *Part is blocked. Double-click (Double-tap) the part to restart* — while it is stuck → `COLLISION.md` §11quater.

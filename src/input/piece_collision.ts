@@ -94,3 +94,19 @@ export function rememberNormal(kept: readonly Vec3[], n: Vec3, max = 2): Vec3[] 
   out.unshift(n);
   return out.slice(0, max);
 }
+
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"build a piece-switch respawn which activates if any delta position input (orbiting or translation) and any rotation by quad is blocked: in such case, if the user double tap/click on the piece, the piece respawns at its initial spawn transform"*) — the piece is STUCK, and a double tap / click on it respawns it, only when BOTH hold: its last
+ * position input was blocked (an orbit step met a contact, and no free move since) AND the turn its yellow quad would make is blocked (the quad
+ * RED). ⚠ An episode MALUS is owed for it (`COLLISION.md` §11quater) — the episode counts come later.
+ */
+export function pieceRespawnArmed(moveBlocked: boolean, turnBlocked: boolean): boolean {
+  return moveBlocked && turnBlocked;
+}
+
+/**
+ * ⭐ (2026-10-13, the owner: *"In such case the piece is blocked, Add a pop up message (same kind as the pop up when a part reach its goal) in red (instead of green) with written “Part is blocked. Double-click the part to restart” in desktop or “Part is blocked. Double-tap the part to restart” in mobile."*) — the words, by the device: a touch screen (a coarse pointer) TAPS, a desktop CLICKS.
+ */
+export function blockedMessage(coarsePointer: boolean): string {
+  return coarsePointer ? "Part is blocked. Double-tap the part to restart" : "Part is blocked. Double-click the part to restart";
+}

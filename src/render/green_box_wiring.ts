@@ -32,6 +32,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
+import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { guardPieceMove, pieceCollisionSetup, pieceMoveVerdict, skinM } from "./collision_wiring";
 import { backOff, lerpOrbit, projectStep, rememberNormal, type OrbitParams, type OrbitStep } from "../input/piece_collision";
@@ -631,6 +632,25 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
 }
 
 /**
+ * ⭐⭐ (2026-10-13, the owner: *"build a piece-switch respawn which activates if any delta position input (orbiting or translation) and any rotation by quad is blocked: in such case, if the user double tap/click on the piece, the piece respawns at its initial spawn transform"*; `COLLISION.md` §11quater) — THE STUCK PIECE RESPAWNED: as the piece switch does (`spawnOrbitPiece`: the
+ * boot orientation, the boot orbit, aligned to the frozen body at the next frame), and the orbit centre back where it booted (its spawn
+ * transform is on the boot ring). ⚠ An episode MALUS is owed (the episode counts come later).
+ */
+export function respawnStuckPiece(st: SceneState): void {
+  spawnOrbitPiece(st, st.orbitPieceKind, false);
+  st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);
+  syncCentre(st);
+  st.pieceMoveBlocked = false;
+  st.pieceContact = null;
+  st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
+  st.lastVerdict = "orbit: stuck — double tap on the piece: respawned at its spawn transform (⚠ an episode malus to come)";
+  // ⭐ the verdict line is the boot alignment's at the next frame: the HUD's collision slot keeps the respawn for 2 s
+  st.lastCollision = "stuck → respawned (⚠ episode malus owed)";
+  st.lastCollisionAt = performance.now();
+  st.hudDirty = true;
+}
+
+/**
  * ⭐⭐ prototype — **THE BOOT ALIGNMENT TO THE FROZEN BODY** (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting
  * face aligned with frozen object"* — *"so the roll is immediately active at boot"*). At the first frame after a spawn (boot, respawn, the
  * switch), the piece where the orbit put it (`at`): its resting face turned AT ONCE against the frozen body's face toward it (the floor's top),
@@ -886,6 +906,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const g = guardOrbitStep(st, prevAt, st.boxSpring.at);
     st.pieceGuardMs += (performance.now() - g0 - st.pieceGuardMs) / 30; // ⭐ the guard's cost, on the HUD
     heldAnchor = g.anchor;
+    // ⭐ (2026-10-13, §11quater) half of STUCK: a contact met this frame; a free move clears it
+    if (g.slide !== null) st.pieceMoveBlocked = true;
+    else if (Math.abs(g.at.yaw - prevAt.yaw) + Math.abs(g.at.v - prevAt.v) > 1e-9) st.pieceMoveBlocked = false;
     if (g.slide !== null) {
       const sp = st.boxSpring;
       const vel = g.slide([sp.velYaw, sp.velV]);

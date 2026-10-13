@@ -30,6 +30,8 @@ import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
 import { allQuadsReachable, candidateFace } from "../input/orient_window";
+import { blockedMessage, pieceRespawnArmed } from "../input/piece_collision";
+import { showBlockedPopup } from "./goal_popup";
 import { alignRestingFace, orientationFrames, pieceTurnBlocker, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
@@ -117,6 +119,13 @@ export function orientCubeFrame(st: SceneState): void {
   // rolling the resting piece on this quad until the next delta position"*) — the direction tapped stays the pink one until the next orbit
   // drag (`orbitDragStep` drops it), whatever the candidate does
   quadTurnFrame(st);
+  // ⭐⭐ (2026-10-13, the owner: *"In such case the piece is blocked, Add a pop up message (same kind as the pop up when a part reach its goal) in red (instead of green) with written “Part is blocked. Double-click the part to restart” in desktop or “Part is blocked. Double-tap the part to restart” in mobile."*) — the red pop-up while the piece is STUCK (its position input and its quad's turn both blocked)
+  const stuck = pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null);
+  if (stuck !== (st.blockedShown === true)) {
+    st.blockedShown = stuck;
+    const coarse = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+    showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);
+  }
   restingQuadsFrame(st, shownTag(st));
 }
 
