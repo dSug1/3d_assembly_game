@@ -527,3 +527,76 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   on `Piece13` moves the gizmo there (⚠ headless only with `?tapMaxDuration=400`: the software renderer makes a quick tap last ~280 ms).
 * ✅ Vectors: `orbitTargetOnRelease` (a tap moves, a drag does not); the press only notes; the release's wiring; the guard's start from the actual
   piece.
+
+## 12. THE ORBITED PIECE REBUILT — one solver, one authority, a 1 mm gap (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"Audit what we have built since commit b37be04 … Identify where the logic is weak or the code implementation is not robust … propose a way to
+> re-build everything with a clean logic and robust coding"* → the audit's three questions answered: *"1- ok 2- the gizmo is on the face hit by
+> raycast. It cannot be inside a part 3- i have no opinion. Do what you recommend. Build"* — the owner.
+
+⛔⛔ **§11bis–§11nonies's guard layers are REPLACED, not amended** (their text stays as the record): the target guard, the spring's safety net,
+the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the held skin, `projectStep`/`backOff`/`rememberNormal`
+(`input/piece_collision.ts`, deleted) and `pairGap`.
+
+* ⭐⭐⭐ **WHY A REBUILD** — the audit's root causes, every one of them structural: the rest pose sat INSIDE the part at skin depth, so whether a
+  step was allowed depended on the piece's HISTORY (the lock, the unlock that could not find "away"); TWO pose authorities (the guarded target and
+  the spring, plus a held anchor off the ring that could never be left cleanly); the skin followed the CAMERA; the inertia stopped at every
+  contact event; a clock budget cut steps mid-way; the turn's playback was unchecked; the stuck probes disagreed with the guard; and the respawn
+  read one flag twice (`pieceRespawnArmed(st.pieceStuck.all, st.pieceStuck.all)`).
+* ⭐⭐⭐ **ONE AUTHORITY**: the piece's place on its ring, `q = (yaw, v)` (`st.pieceQ`). Its world pose is a function of `q` — there is no pose
+  off the ring. The camera is driven by it.
+* ⭐⭐⭐ **ONE RULE — A CLEARANCE, NOT A PENETRATION**: a pose is admissible iff the piece's surface gap to every part (`nearestObstacle`, GJK; the
+  floor and the hidden piece exempt) is at least **half the gap kept**; the piece RESTS at the gap kept — `pieceGapMm`, **1 mm in the WORLD**
+  (the owner's *"1- ok"*), never scaled by the camera. Admissibility reads the pose alone, so **any free path is free backwards** and a step
+  that opens the gap is always taken: reversible by construction — no depth, no "only shallower", no unlock.
+* ⭐⭐⭐ **ONE SOLVER, ONCE A FRAME** (`input/piece_orbit_solver.ts`, pure): from `q` toward the orbit's target (the finger, the coast) —
+  CONSERVATIVE ADVANCEMENT along the ARC (Mirtich 1996: never further than the measured gap minus the gap kept; big strides in open air, so no
+  slow-down approaching a part); at the gap kept, the rest PROJECTED onto the contacts in the ring's metric (`projectExact`: an exact active
+  set — the sequential projection it replaces depended on the order the contacts were met) and slid in checked sub-steps of ≤ 4 mm; a corner
+  the projection did not know of is LEARNED and the step projected again (never crept into by halving); nothing left: BLOCKED — what pushed in
+  is discarded (the target set to where the piece is), and the coast stops only if nothing moved.
+* ⭐⭐ **A WORK CAP, NOT A CLOCK**: `pieceSolverQueries` (24) gap queries a frame — the same on every device and in every test; a step cut short
+  keeps its PROJECTED rest for the next frame (never dropped). ⛔ Not raised (*"do not increase the ms budget (i am testing on iphone)"*).
+* ⭐⭐ **THE RING MOVED UNDER THE PIECE** (a TAP moved the gizmo, a part moved — the owner: *"the gizmo … cannot be inside a part"*, but the
+  piece's place on the new ring can be): the piece goes to the ring's **nearest free place** (`nearestFree`: 1 cm strides, both coordinates
+  and the diagonals, up to 40 cm), the orbit's target with it.
+* ⭐⭐ **A TURN BY THE SAME RULE**: the quad's turn and the roll are swept along the very slerp the alignment plays (`turnSweepFree`,
+  conservative advancement in angle), refused where the gap falls under half the gap kept; a turn starting inside that margin may not take it
+  closer.
+* ⭐⭐ **STUCK FROM THE SAME SOLVER**: its own probes (`stuckProbe`: 3 mm each way along both ring coordinates — stuck only if none moves the
+  piece a quarter of that), then every direction's turn, one check a frame, once the input was blocked and the shown piece has caught up; the red
+  pop-up and the double-tap respawn read **the position AND the turns** (`pieceRespawnArmed(position, turns)`).
+* ⭐ Kept: the ring height the finger set (§11octies — a slide carries the piece up a part, it goes back when the way is FREE); the piece as
+  another body's obstacle (case 3); the gizmo moving on a TAP only (§11nonies); the pop-up's words; the respawn.
+* ⭐ **Sliders** (OBJECT TRANSLATION): *piece gap* (`pieceGapMm`, 0.2–5 mm) and *piece solver — gap checks per frame* (`pieceSolverQueries`,
+  8–96). **HUD**: `solver <mean>ms (peak) q<queries> d b` — `d` the work cap reached, `b` the input blocked.
+* ✅ Measured headless with real touches (desktop, ⚠ not the iPhone): twelve large sweeps into the parts and back — the true gap never under
+  0.9 mm, every reverse got out, no false pop-up; ~1.1–1.5 ms a frame in contact. Vectors: the eight of the audit (the rest gap, pose-only
+  admissibility, reversibility, an admissible path, the arc not the chord, stuck = the solver, the work cap, the gap in the world), each shown
+  RED against the old behaviour where a pure equivalent existed (the chord, the sequential projection, the creep, the double-read flag).
+
+### 12bis. The eye: the orbit's spring toward the SOLVED place; a slide never goes against the finger (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"the travel during orbit is extremely jittery: your built introduced this new issue."* · *"also, at the moment the piece collides, there is a
+> jittery shake."* · *"when the piece orbit anywhere (not necessarily close to collision, but for example above 3m - this is an example), the piece
+> jitters, and so do the quads. there is nothing close to collide with."* — the owner, on the first §12 build (`f9faa78`).
+
+* ⛔⛔ **THE FIRST §12 BUILD DREW THE PIECE ALONG THE SOLVER'S PATH** (`followPath` on a spring on the length left), so that no shown pose could
+  cut a corner the solver went round. Two defects, both mine, both measured headless against the build before the rebuild (`518ed37`):
+  * the path holds **every wobble of the finger's dy**: the piece followed it faithfully and shook, the quads with it — **112 direction
+    reversals** on a drag with a finger's dy noise, where the old per-coordinate spring had **0**;
+  * measured in the ANCHOR's metres, a large yaw near the waist moves the anchor a few millimetres while the camera swings with it: the yaw was
+    spent in ONE frame (0.094 rad, traced) — the camera jerked at the pointer-event rhythm.
+* ✅ **THE EYE IS THE ORBIT'S SPRING AGAIN** (`springOrbit`, τ = `boxSmoothMs` / 2, per coordinate) — aimed at the SOLVED place, which is always
+  admissible, so it never chases a refused target (the pull-back of §11–§11quinquies). The path follower is deleted. ⚠ The cost, named: on a
+  slide the shown piece may cut a corner of the solved path for ~τ (sub-millimetre at contact speeds). Measured: 0 reversals in open air, the
+  yaw's and the camera's ripple equal to the old build's.
+* ⛔⛔ **AND THE SHAKE AT THE CONTACT**: the finger's dy wobble pressing DOWN onto a sloped part made the exact slide run BACK along the yaw it was
+  asked to go, and the next wobble let it forward again — a rocking at the event rhythm (traced: the target and the piece reversing in yaw).
+  ✅ **A SLIDE NEVER GOES AGAINST THE FINGER** (`keepSense`): a coordinate of the slide opposite to the input is dropped (one the input left at
+  zero may move — a yaw push into a slope still rides up or down it); what is left must still honour every contact, else the piece stops.
+  Measured at the contact: **0** yaw reversals of the solved and shown piece (11 a pass before), the gap ≥ 1.1 mm. ⚠ What still moves at a
+  contact is the ring height, as much as the finger's own dy asks.
+* ✅ Vectors, each RED against the code that shipped: the spring smooths a dy wobble to under a third; a yaw near the waist then a ring-height
+  step is eased, not spent in one frame (the anchor metric measured failing); a slide never goes against the finger (red with the solver
+  unguarded).

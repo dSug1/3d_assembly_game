@@ -494,9 +494,6 @@ export interface SceneState {
   pieceQueries: number;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
-  /** ⭐ (§12) the path the eye follows, from the shown place to `pieceQ` — every point one the solver passed through — and its rate (m/s). */
-  piecePath: import("../input/piece_orbit_solver").OrbitQ[];
-  pieceFollowVel: number;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */
   orbitRawPrev: { yaw: number; v: number } | null;
   /** ⭐ (2026-10-13, §11octies) the RING HEIGHT the finger set (only its dy moves it) — the piece returns to it once a slide carried it off. */

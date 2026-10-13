@@ -35,7 +35,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { followPath, followSpring, nearestFree, solveOrbitStep, stuckProbe, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { nearestFree, solveOrbitStep, stuckProbe, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import type { OrientDirection } from "../core/orientation_set";
@@ -497,7 +497,6 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
     const sp = st.boxSpring;
     st.boxSpring = sp === null ? null : { at: { yaw: st.orbit.yaw, v: sp.at.v, zoom: sp.at.zoom }, velYaw: 0, velV: sp.velV, velLnZoom: sp.velLnZoom };
     st.pieceQ = null; // ⭐ (§12) the yaw re-based: the solved place starts again from the piece as drawn
-    st.piecePath = [];
     st.cameraOrbit = null;
     st.cameraLagged = null;
     st.orbitHeadingPrev = null;
@@ -627,7 +626,6 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     // ⭐ (2026-10-11) the held second touch's input ends with the respawn — no way in, no way out (the sphere is deleted)
     st.hold = null;
     st.pieceQ = null; // ⭐ (2026-10-13, §12) a new orbit: the solved place starts again from it
-    st.piecePath = [];
     st.orbitRawPrev = null;
     st.orbitUserV = null;
   }
@@ -899,8 +897,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.pieceQueries = 0;
   // ⭐⭐⭐ (2026-10-13, the audit's rebuild → *"Build"*; `COLLISION.md` §12) — THE PIECE'S PLACE ON ITS RING IS SOLVED, ONCE A FRAME: from where
   // it is (`st.pieceQ`, the one authority) toward the orbit's target (the finger, the coast) by `solveOrbitStep` — conservative advancement
-  // along the arc, the exact slide at the gap kept, a work cap. The eye follows the path the solver made (`followPath`, on `followSpring`);
-  // the camera is driven by the solved place. ⛔ The way in / out round a piece (`pieceOrbit`, `pieceEntry`, `centreReturn`) is not solved.
+  // along the arc, the exact slide at the gap kept, a work cap. The eye eases toward the SOLVED place on the orbit's spring (never toward a
+  // refused target: no pull-back); the camera is driven by the solved place. ⛔ The way in / out round a piece (`pieceOrbit`, `pieceEntry`, `centreReturn`) is not solved.
   const b0 = st.greenBox;
   if (st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null) {
     const t0 = performance.now();
@@ -908,8 +906,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const opt = pieceSolveOptions(st);
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
-      st.piecePath = [st.pieceQ];
-      st.pieceFollowVel = 0;
     }
     let q: OrbitQ = st.pieceQ;
     // ⭐⭐ THE RING MOVED UNDER THE PIECE (a TAP moved the gizmo; a part moved): inside the margin, it goes to the ring's nearest free place —
@@ -920,7 +916,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
         st.orbit.reset(st.orbit.yaw + (to.yaw - q.yaw), Math.min(1, Math.max(0, st.orbit.elevation + (to.v - q.v))));
         st.orbitInertia.stop();
         if (st.orbitUserV !== null) st.orbitUserV = Math.min(1, Math.max(0, st.orbitUserV + (to.v - q.v)));
-        st.piecePath.push(to);
         q = to;
         st.lastCollision = "orbit: the ring moved the piece into a part — moved to the nearest free place";
         st.lastCollisionAt = now;
@@ -934,7 +929,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.pieceQueries = r.queries;
     // ⭐ half of STUCK: an input that pushed into a part; a free input clears it (no input: unchanged)
     if (!sameQ(rig, q)) st.pieceMoveBlocked = r.blocked;
-    st.piecePath.push(...r.path.slice(1));
     q = r.q;
     if (r.deferred) {
       // ⭐ the work cap: the rest of the step (already projected) waits for the next frame
@@ -950,7 +944,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       const back = solveOrbitStep(q, [0, st.orbitUserV - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - r.queries) });
       st.pieceQueries += back.queries;
       if (!back.touched && !back.deferred) {
-        st.piecePath.push(...back.path.slice(1));
         q = back.q;
         st.orbit.reset(q.yaw, q.v);
       }
@@ -958,30 +951,23 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.pieceQ = q;
     rig = { ...q };
     st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    // ⭐⭐ THE EYE FOLLOWS THE PATH — every pose shown is one the solver passed through; a critically damped spring on the length left
-    if (st.piecePath.length > PATH_MAX_POINTS) st.piecePath = st.piecePath.slice(st.piecePath.length - PATH_MAX_POINTS);
-    const lenOf = (a: OrbitQ, b: OrbitQ) => length(sub(env.anchor(b), env.anchor(a)));
-    let leftM = 0;
-    for (let i = 1; i < st.piecePath.length; i++) leftM += lenOf(st.piecePath[i - 1]!, st.piecePath[i]!);
-    const f = followSpring(leftM, st.pieceFollowVel, dtSec * 1000, st.cfg.boxSmoothMs / 2);
-    const fp = followPath(st.piecePath, f.go, lenOf);
-    st.piecePath = fp.left;
-    st.pieceFollowVel = f.vel;
-    st.boxSpring = { at: fp.at, velYaw: 0, velV: 0, velLnZoom: 0 };
-    st.boxOrbit = fp.at;
     st.pieceGuardFrameMs = performance.now() - t0;
   } else {
-    // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are, on the spring (τ = boxSmoothMs / 2)
+    // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are
     st.pieceQ = null;
-    st.piecePath = [];
     st.orbitRawPrev = null;
     st.orbitUserV = null;
-    st.boxSpring =
-      st.boxSpring === null
-        ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
-        : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
-    st.boxOrbit = st.boxSpring.at;
   }
+  // ⭐⭐ THE EYE: the orbit's critically damped SPRING toward `rig` — the SOLVED place (τ = boxSmoothMs / 2), per coordinate, so a finger's own
+  // dy wobble is smoothed out. ⛔ (2026-10-13, *"the travel during orbit is extremely jittery"* → *"when the piece orbit anywhere … the piece
+  // jitters, and so do the quads"*) the eye FOLLOWING THE SOLVER'S PATH was deleted the same day: the path holds every wobble of the finger, and
+  // the piece shook with it (112 reversals on a headless drag where the spring had 0); and measured in the anchor's metres, a yaw near the waist
+  // was spent in one frame. ⚠ The cost: on a slide the shown piece may cut a corner of the solved path for ~τ (sub-millimetre at contact speeds)
+  st.boxSpring =
+    st.boxSpring === null
+      ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
+      : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  st.boxOrbit = st.boxSpring.at;
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⛔ The piece's own range (`clampPieceRadiusM`, 2026-10-09: its minimum ZERO, no longer the camera's near-plane guard): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
@@ -1242,12 +1228,13 @@ const LOOK_M = 0.3;
 /** ⭐ (§12) the relocation's search: its stride along the ring and its reach (anchor metres). */
 const RELOCATE_STEP_M = 0.01;
 const RELOCATE_MAX_M = 0.4;
-/** ⭐ (§12) the path the eye follows is kept to this many points (a long deferred chase drops its oldest). */
-const PATH_MAX_POINTS = 256;
 /** ⭐ (§12) the stuck probe: the anchor moved this far each way (m). */
 const STUCK_PROBE_M = 0.003;
 
 const sameQ = (a: OrbitQ, b: OrbitQ): boolean => Math.abs(a.yaw - b.yaw) + Math.abs(a.v - b.v) < 1e-12;
+/** ⭐ (§12) the shown piece has come to rest on its solved place (the spring has caught up). */
+const pieceShownAtRest = (st: SceneState, q: OrbitQ): boolean =>
+  st.boxOrbit !== null && Math.abs(st.boxOrbit.yaw - q.yaw) + Math.abs(st.boxOrbit.v - q.v) < 1e-4;
 
 /** ⭐ (§12) the solver's options from the tunables: the gap kept, in the WORLD (never the camera's), and the work cap. */
 function pieceSolveOptions(st: SceneState): SolveOptions {
@@ -1291,7 +1278,7 @@ export function pieceStuckFrame(st: SceneState): void {
   const ps = st.pieceStuck;
   const b = st.greenBox;
   const q = st.pieceQ;
-  if (!st.pieceMoveBlocked || b === null || q === null || st.piecePath.length > 1 || worldPlacementOf(st.world, b.name) === null) {
+  if (!st.pieceMoveBlocked || b === null || q === null || !pieceShownAtRest(st, q) || worldPlacementOf(st.world, b.name) === null) {
     ps.position = false;
     ps.turns = false;
     ps.idx = 0;
