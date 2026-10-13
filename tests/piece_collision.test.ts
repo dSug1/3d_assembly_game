@@ -11,7 +11,7 @@ import { boundsFromShapes, hullAtSpawn, resolveMove, type CollisionSetup } from 
 import { boxShape } from "@core/collision_shape";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
-import { backOff, blockedMessage, lerpOrbit, pieceRespawnArmed, projectStep, rememberNormal } from "../src/input/piece_collision";
+import { backOff, blockedMessage, lerpOrbit, orbitSubsteps, ORBIT_MAX_SUBSTEPS, pieceRespawnArmed, projectStep, rememberNormal } from "../src/input/piece_collision";
 import { UI_THEMES } from "../src/content/ui_themes";
 import { themeProblems } from "../src/core/ui_theme";
 
@@ -109,7 +109,7 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   });
   it("⭐⭐ the orbit step guarded each frame after the spring; blocked, PROJECTED (up to 3 re-checks), else the stop a rest gap short; the orbit's target and the spring's velocity projected the same way — only the input INTO the contact discarded", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const g = guardOrbitStep(st, prevAt, st.boxSpring.at);");
+    expect(g).toContain("const g = guardOrbitPath(st, prevAt, st.boxSpring.at);");
     // ⭐ (2026-10-13, §11quinquies) the per-frame guard is a safety net: the spring's velocity projected, the TARGET no longer touched there
     expect(g).toContain("const vel = g.slide([sp.velYaw, sp.velV]); st.boxSpring = { at: g.at, velYaw: vel[0], velV: vel[1], velLnZoom: sp.velLnZoom };");
     expect(g).toContain("const s = projectStep(dq, J, normals);");
@@ -175,7 +175,7 @@ describe("⭐⭐ the red BLOCKED pop-up while the piece is stuck (2026-10-13, *\
 describe("⭐⭐⭐ the orbit's TARGET guarded, as a part's input step is (2026-10-13, §11quinquies: *\"there is still some jitter … Check what is done for the translation of the parts because there the slide and block is smoother than for the piece orbit\"* → *\"Jitter appears everywhere\"*)", () => {
   it("⭐⭐ each step of the target goes through the guard from where the guarded target was, BEFORE the spring; the camera's driver is that target", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const g = guardOrbitStep(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));");
+    expect(g).toContain("const g = guardOrbitPath(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));");
     expect(g).toContain("st.pieceMoveBlocked = g.slide !== null; if (g.at !== rig) { st.orbit.reset(g.at.yaw, g.at.v); rig = { yaw: g.at.yaw, v: g.at.v, zoom: GREEN_PIECE_ORBIT_ZOOM }; st.orbitInertia.stop(); }");
     expect(g.indexOf("st.orbitTargetGuarded = { ...rig };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)"));
     expect(g).toContain("{ yaw: rig.yaw, v: rig.v },"); // the camera follows the guarded target
@@ -193,5 +193,26 @@ describe("⭐⭐ the red message and the respawn only when EVERY move is blocked
     expect(g).toContain("const turnsBlocked = st.orientDirs.every((d) => {");
     expect(g).toContain("const STUCK_CHECK_MS = 250;");
     expect(g).toContain("if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null");
+  });
+});
+
+describe("⭐⭐⭐ a large orbit step checked ALONG THE RING, not its chord (2026-10-13, §11sexies: *\"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there was no blocking to revert the orbit during this large dx orbit\"*)", () => {
+  it("⭐ the sub-steps: ≤ 2° of yaw and ≤ 2 cm of travel each, at least one, at most ORBIT_MAX_SUBSTEPS", () => {
+    expect(orbitSubsteps(0.001, 0.001)).toBe(1);
+    expect(orbitSubsteps((10 * Math.PI) / 180, 0.01)).toBe(5); // 10° of yaw: 5 sub-steps
+    expect(orbitSubsteps(0.001, 0.1)).toBe(5); // 10 cm of travel: 5
+    expect(orbitSubsteps(-Math.PI, 3)).toBe(ORBIT_MAX_SUBSTEPS);
+  });
+  it("⭐ why: the chord of a 60° step on a 1 m ring passes 13 cm inside the arc — a part there seen by neither, or one on the chord refused wrongly", () => {
+    const sag = 1 - Math.cos(Math.PI / 6);
+    expect(sag).toBeGreaterThan(0.13);
+    const n = orbitSubsteps(Math.PI / 3, 1);
+    expect(1 - Math.cos(Math.PI / 3 / n / 2)).toBeLessThan(0.001); // each sub-step's chord within 1 mm of the arc
+  });
+  it("⭐ wired: both guards walk the ring (the target's, the per-frame net); the rest projected after a contact; the stuck probes from the piece AS IT IS", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const n = orbitSubsteps(to.yaw - from.yaw, length(sub(ringAnchorAt(st, to), ringAnchorAt(st, from))));");
+    expect(g).toContain("rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met");
+    expect(g).toContain("const t = { position: add(actual.position, d), orientation: actual.orientation };");
   });
 });

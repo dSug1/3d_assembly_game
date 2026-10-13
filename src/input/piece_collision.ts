@@ -110,3 +110,19 @@ export function pieceRespawnArmed(moveBlocked: boolean, turnBlocked: boolean): b
 export function blockedMessage(coarsePointer: boolean): string {
   return coarsePointer ? "Part is blocked. Double-tap the part to restart" : "Part is blocked. Double-click the part to restart";
 }
+
+/** ⭐ (2026-10-13, §11sexies) the longest orbit sub-step: this much yaw, this much travel of the anchor (m) — the chord then hugs the ring's arc. */
+export const ORBIT_SUBSTEP_YAW_RAD = (2 * Math.PI) / 180;
+export const ORBIT_SUBSTEP_M = 0.02;
+/** ⭐ The most sub-steps one orbit step is cut into — a bound on the work, stated. */
+export const ORBIT_MAX_SUBSTEPS = 48;
+
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there was no blocking to revert the orbit during this large dx orbit"*) — how many sub-steps an orbit step needs so each one's straight path (the collision rule checks a CHORD)
+ * hugs the ring's ARC the piece actually travels: a large dx step cut the arc's corner — a part on the arc went unseen by the target's guard,
+ * then caught by the per-frame net mid-path (the spring effect), the piece held off its ring (the false red flag).
+ */
+export function orbitSubsteps(dYawRad: number, chordM: number): number {
+  const n = Math.max(Math.abs(dYawRad) / ORBIT_SUBSTEP_YAW_RAD, chordM / ORBIT_SUBSTEP_M);
+  return Math.min(ORBIT_MAX_SUBSTEPS, Math.max(1, Math.ceil(n)));
+}
