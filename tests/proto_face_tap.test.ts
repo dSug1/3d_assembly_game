@@ -53,7 +53,7 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     expect(p).toMatch(/const tapped =\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);
     expect(p).not.toMatch(/const first = st\.router\.all\(\)\.length === 0/);
     // ⭐ (2026-10-11) through ONE helper — the tap's release and the desktop key's press over the piece
-    expect(p).toMatch(/if \(tapped && selectRestingFace\(st, ft\.faceId\)\) \{/);
+    expect(p).toMatch(/if \(action === "FACE" && selectRestingFace\(st, ft\.faceId\)\) \{/);
     expect(p.indexOf("selectRestingFace(st, ft.faceId)")).toBeLessThan(p.indexOf("ONE call, ONE record: it judges the tap"));
     expect(p).toMatch(/if \(!\(restOnTappedFace\(st, faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\)\) return false;\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     const w = code("render/green_box_wiring.ts");

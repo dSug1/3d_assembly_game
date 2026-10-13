@@ -327,6 +327,12 @@ export interface GestureConfig {
    */
   pieceSolverQueries: number;
   /**
+   * ⭐ (prototype, 2026-10-13, the third audit; `COLLISION.md` §12quater) THE ORBIT DRAG'S OWN DEADBAND, mm on the glass — paid once when an axis
+   * enters motion and again after each pause; smaller than `motionDeadbandMm` (3.5) so a restart costs less. ⛔ Never under 3× the measured
+   * pointer noise (the audit's 1 mm would let a resting finger's noise leak through — the very wobble it exists to stop).
+   */
+  orbitDeadbandMm: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
    * `0` leaves the ring drawn and every press to the ordinary rules.
@@ -877,6 +883,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceGapMm: 1,
   // ⚠ a guess with a slider — each query is one GJK pass over the parts within reach
   pieceSolverQueries: 24,
+  // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
+  orbitDeadbandMm: 2.3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -1136,6 +1144,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
 
   if (!(cfg.pieceGapMm > 0 && cfg.pieceGapMm <= 20)) {
     throw new Error(`pieceGapMm (${cfg.pieceGapMm}) must be in (0, 20] mm: at 0 the orbited piece's clearance rule has no margin (COLLISION.md §12).`);
+  }
+  if (!(cfg.orbitDeadbandMm >= SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm && cfg.orbitDeadbandMm <= 8)) {
+    throw new Error(
+      `orbitDeadbandMm (${cfg.orbitDeadbandMm}) must be in [${(SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm).toFixed(2)}, 8] mm: under 3× the measured pointer noise a resting finger's wobble leaks through.`,
+    );
   }
   if (!(Number.isInteger(cfg.pieceSolverQueries) && cfg.pieceSolverQueries >= 4 && cfg.pieceSolverQueries <= 400)) {
     throw new Error(`pieceSolverQueries (${cfg.pieceSolverQueries}) must be an integer in [4, 400]: the orbit solver's work cap per frame.`);

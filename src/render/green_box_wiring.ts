@@ -573,7 +573,11 @@ function restAlignFrame(st: SceneState, now: number): void {
     if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) {
       u = a.u ?? 0;
       st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS };
-    } else st.restAlign = { ...a, u };
+      st.restAlignHeld = true; // ⭐ (the third audit) shown: the yellow quad turns red while its turn waits
+    } else {
+      st.restAlign = { ...a, u };
+      st.restAlignHeld = false;
+    }
     st.pieceGuardCarryMs += performance.now() - t1;
     st.pieceQueriesCarry += 2;
   }
@@ -581,6 +585,7 @@ function restAlignFrame(st: SceneState, now: number): void {
   b.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
   if (u >= 1) {
     st.restAlign = null; // ⭐ landed: the pose stays as it is (and goes on turning against the orbit)
+    st.restAlignHeld = false;
     st.hudDirty = true;
   }
 }
@@ -934,12 +939,16 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     }
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
+    // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
+    const relocKey = [st.pieceQ.yaw.toFixed(5), st.pieceQ.v.toFixed(5), st.centreBlend.targetM.map((x) => x.toFixed(4)).join(","), sceneSignature(st)].join("|");
+    if (st.relocateCursor.key !== relocKey) st.relocateCursor = { key: relocKey, from: 0 };
     const fr = orbitFrame(
-      { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRawV: st.orbitRawPrev?.v ?? null },
+      { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRaw: st.orbitRawPrev },
       env,
       opt,
-      { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M },
+      { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M, from: st.relocateCursor.from },
     );
+    st.relocateCursor = { key: relocKey, from: fr.relocateNext ?? (fr.relocateExhausted ? -1 : 0) };
     st.pieceQueries += fr.queries;
     st.pieceDeferred = fr.deferred;
     // ⭐ half of STUCK: an input that pushed into a part; a free input clears it (no input: unchanged)
@@ -1236,6 +1245,25 @@ const STUCK_PROBE_M = 0.003;
 const STUCK_EVERY_MS = 100;
 
 const sameQ = (a: OrbitQ, b: OrbitQ): boolean => Math.abs(a.yaw - b.yaw) + Math.abs(a.v - b.v) < 1e-12;
+/**
+ * ⭐⭐ (the third audit) THE SCENE AS THE COLLISION SEES IT — every body's position (0.1 mm) and orientation (1e-4), hashed (FNV-1a): the stuck
+ * check's and the red quad's verdicts are re-judged when it changes. ⛔ It was a weighted sum of positions — blind to a part turned in place,
+ * and able to cancel.
+ */
+export function sceneSignature(st: SceneState): string {
+  let h = 0x811c9dc5;
+  const mix = (x: number) => {
+    h ^= Math.round(x) | 0;
+    h = Math.imul(h, 0x01000193);
+  };
+  for (const [id, o] of st.world.objects) {
+    for (let i = 0; i < id.length; i++) mix(id.charCodeAt(i));
+    for (const x of o.local.position) mix(x * 1e4);
+    for (const x of o.local.orientation) mix(x * 1e4);
+  }
+  return (h >>> 0).toString(36);
+}
+
 /** ⭐ (§12) the shown piece has come to rest on its solved place (the spring has caught up). */
 const pieceShownAtRest = (st: SceneState, q: OrbitQ): boolean =>
   st.boxOrbit !== null && Math.abs(st.boxOrbit.yaw - q.yaw) + Math.abs(st.boxOrbit.v - q.v) < 1e-4;
@@ -1253,18 +1281,19 @@ function pieceSolveOptions(st: SceneState): SolveOptions {
 function pieceSolverEnv(st: SceneState): SolverEnv {
   const b = st.greenBox!;
   const setup = pieceCollisionSetup(st);
-  let memo: { q: OrbitQ; world: World; gapM: number; blocker: ObjectId | null } | null = null;
+  let memo: { q: OrbitQ; world: World; gapM: number; blocker: ObjectId | null; secondGapM: number } | null = null;
   const at = (q: OrbitQ) => {
     if (memo !== null && sameQ(memo.q, q)) return memo;
     const pose = pieceMeshAt(st, ringAnchorAt(st, q));
     const world = pose === null ? st.world : setWorldPlacement(st.world, b.name, pose);
     const n = nearestObstacle(world, b.name, setup, LOOK_M);
-    memo = { q, world, gapM: n.gapM, blocker: n.blocker };
+    memo = { q, world, gapM: n.gapM, blocker: n.blocker, secondGapM: n.secondGapM };
     return memo;
   };
   return {
     anchor: (q) => ringAnchorAt(st, q),
     gap: (q) => at(q).gapM,
+    secondGap: (q) => at(q).secondGapM,
     normal: (q) => {
       const m = at(q);
       return m.blocker === null ? null : contactNormal(m.world, b.name, m.blocker, setup);
@@ -1275,8 +1304,9 @@ function pieceSolverEnv(st: SceneState): SolverEnv {
 /**
  * ⭐⭐ (2026-10-13, the owner: *"the red message shall appear if all delta position and quad rotations are blocked"*; §12) — is EVERY move of
  * the piece blocked? Its position: the SOLVER's own answer (`stuckProbe`: a small step each way along both ring coordinates). Its turns: every
- * direction's quad tap (aligned to it, or its roll when already aligned there), by the same gap rule (`pieceTurnBlocker`). Asked only once
- * the input was blocked and the piece has come to rest on its path, ONE check a frame in turn; a free one ends the round (not stuck).
+ * direction's quad tap (aligned to it, or its roll when already aligned there), by the same gap rule (`pieceTurnBlocker`). Asked once the
+ * input was blocked (or the piece is inside the margin) and the shown piece has caught up: ONE check every `STUCK_EVERY_MS`, in turn
+ * (`stuckNext`); a round's verdict holds for its key (§12ter, §12quater).
  */
 export function pieceStuckFrame(st: SceneState): void {
   const b = st.greenBox;
@@ -1298,9 +1328,7 @@ export function pieceStuckFrame(st: SceneState): void {
   }
   const r = b.rotationQuaternion;
   const c = st.centreBlend.targetM;
-  let parts = 0;
-  for (const o of st.world.objects.values()) parts += o.local.position[0] * 1.3 + o.local.position[1] * 1.7 + o.local.position[2] * 1.9;
-  const key = [q.yaw.toFixed(5), q.v.toFixed(5), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", c.map((x) => x.toFixed(4)).join(","), parts.toFixed(5), st.restAligned, st.pinkTargetNormal?.join(",") ?? ""].join("|");
+  const key = [q.yaw.toFixed(5), q.v.toFixed(5), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", c.map((x) => x.toFixed(4)).join(","), sceneSignature(st), st.restAligned, st.pinkTargetNormal?.join(",") ?? ""].join("|");
   const next = stuckNext(st.pieceStuck, key, t0, STUCK_EVERY_MS);
   st.pieceStuck = next.s;
   if (next.check !== null) {

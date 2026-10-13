@@ -74,7 +74,8 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐⭐ *\"highlight the quad in red instead of yellow and back to yellow when rotation is allowed again\"* — its tap's turn checked (at most every 100 ms)", () => {
     const c = flat("render/orient_cube.ts");
     expect(c).toContain("const q = restingPreview(st, dir, roll); qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);");
-    expect(c).toContain("x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE;");
+    expect(c).toContain("x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE;"); // ⭐ red while held too (the third audit)
+    expect(c).toContain('r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", sceneSignature(st)].join("|");'); // ⭐ re-judged when a part moves
     expect(c).toContain("const QUAD_CHECK_MS = 100;");
   });
 });
@@ -83,7 +84,7 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
   it("⭐⭐⭐ the piece's place is SOLVED from where it is toward the orbit's target, and the camera is driven by the solved place", () => {
     const g = flat("render/green_box_wiring.ts");
     // ⭐ (the second audit) the frame DECIDED in `orbitFrame` (vectored on behaviour in piece_orbit_solver.test.ts); the render applies it
-    expect(g).toContain("const fr = orbitFrame( { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRawV: st.orbitRawPrev?.v ?? null }, env, opt, { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M }, );");
+    expect(g).toContain("const fr = orbitFrame( { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRaw: st.orbitRawPrev }, env, opt, { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M, from: st.relocateCursor.from }, );");
     expect(g).toContain("if (!sameQ(fr.target, rig)) st.orbit.reset(fr.target.yaw, fr.target.v); if (fr.stopCoast) st.orbitInertia.stop();");
     expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
     // ⛔ the layers it replaces: the target guard, the safety net on the spring, the held anchor, the unlock, the clock budget
@@ -92,7 +93,9 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
   it("⭐⭐ the eye eases toward the SOLVED place, never a refused target — no pull-back (the spring chased the raw target before)", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)");
-    expect(g.indexOf("st.pieceQ = q; rig = { ...q };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));
+    const solved = g.indexOf("st.pieceQ = fr.q; rig = { ...fr.q };");
+    expect(solved).toBeGreaterThan(0); // ⭐ (the third audit) the line must exist — its indexOf of −1 passed for ever
+    expect(solved).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));
   });
   it("⭐⭐⭐ (audit 8) the gap kept is in the WORLD — a tunable in mm, never scaled by the camera (the parts' skin is on the glass; the piece's is not)", () => {
     const g = flat("render/green_box_wiring.ts");
@@ -112,7 +115,7 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
     expect(g).toContain("const pose = pieceMeshAt(st, a, qSlerp(from, q, u));");
     expect(g).toContain("const u = turnSweepFree(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries);"); // ⭐ under the frame's cap
     // ⭐ (the second audit) the turn in flight re-checked each frame at the piece's place NOW, held (never aborted)
-    expect(g).toContain("if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) { u = a.u ?? 0; st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS }; }");
+    expect(g).toContain("if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) { u = a.u ?? 0; st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS }; st.restAlignHeld = true;");
     expect(g).toContain("const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;"); // the playback: the same slerp
   });
   it("⭐ the HUD: the solver's cost, its gap queries, d (the work cap) and b (the input blocked)", () => {
@@ -139,7 +142,7 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
     expect(c).toContain("const stuck = pieceRespawnArmed(st.pieceStuck.position, st.pieceStuck.turns);");
     expect(c).toContain("showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);");
     const p = flat("render/pointer_wiring.ts");
-    expect(p).toContain('if (tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP" && pieceRespawnArmed(st.pieceStuck.position, st.pieceStuck.turns)) { respawnStuckPiece(st); return; }');
+    expect(p).toContain('const action = pieceTapAction( tapped, tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP", pieceRespawnArmed(st.pieceStuck.position, st.pieceStuck.turns), st.blockedShown === true, ); if (action === "RESPAWN") { respawnStuckPiece(st); return; }');
     expect(p + c).not.toContain("pieceStuck.all");
   });
   it("⭐ the respawn: the switch's spawn, the centre back at boot, a new solved place", () => {
@@ -178,7 +181,9 @@ describe("⭐ CLEARANCE and the NEAREST OBSTACLE (core)", () => {
     const n = nearestObstacle(w, "a", setup, 0.5);
     expect(n.blocker).toBe("c");
     expect(n.gapM).toBeCloseTo(0.15, 9);
-    expect(nearestObstacle(w, "a", setup, 0.1)).toEqual({ gapM: 0.1, blocker: null });
+    expect(nearestObstacle(w, "a", setup, 0.1)).toEqual({ gapM: 0.1, blocker: null, secondGapM: 0.1 });
+    // ⭐ (the third audit) the gap to every OTHER body: b, 0.2 of air (the directional stride's bound on everything but the nearest)
+    expect(n.secondGapM).toBeCloseTo(0.2, 9);
   });
 });
 

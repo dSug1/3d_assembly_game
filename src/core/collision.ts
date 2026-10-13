@@ -427,23 +427,35 @@ export function clearance(world: World, id: ObjectId, setup: CollisionSetup, max
  * ⭐⭐ (2026-10-13, `COLLISION.md` §12) — `clearance` and WHICH body it is to: the nearest obstacle within `maxM` (`null` when none), the gap
  * `maxM` then; 0 when touching or in. The orbited piece's solver reads the gap and asks that body for the contact normal.
  */
-export function nearestObstacle(world: World, id: ObjectId, setup: CollisionSetup, maxM: number): { gapM: number; blocker: ObjectId | null } {
+export function nearestObstacle(
+  world: World,
+  id: ObjectId,
+  setup: CollisionSetup,
+  maxM: number,
+): { gapM: number; blocker: ObjectId | null; secondGapM: number } {
   const moving = subtreeOf(world, id);
   let best = maxM;
   let blocker: ObjectId | null = null;
+  // ⭐ (2026-10-13, the third audit) the least gap to every body OTHER than the nearest — the orbited piece's directional stride is bounded by it
+  let second = maxM;
+  const per = new Map<ObjectId, number>();
   for (const [m, o] of candidates(world, moving, rootOf(world, id), setup, maxM)) {
     const ma = worldParts(world, m, setup.shapes);
     const oa = worldParts(world, o, setup.shapes);
     if (!ma || !oa) continue;
     const g = partsGap(ma, oa);
     if (g === null) continue;
-    if (g <= CONTACT_M) return { gapM: 0, blocker: o };
-    if (g < best) {
+    const gg = g <= CONTACT_M ? 0 : g;
+    per.set(o, Math.min(per.get(o) ?? Infinity, gg));
+  }
+  for (const [o, g] of per) {
+    if (g < best || (blocker === null && g <= best)) {
+      if (blocker !== null) second = Math.min(second, best);
       best = g;
       blocker = o;
-    }
+    } else second = Math.min(second, g);
   }
-  return { gapM: best, blocker };
+  return { gapM: best, blocker, secondGapM: second };
 }
 
 /** What `resolveMove` decided. */

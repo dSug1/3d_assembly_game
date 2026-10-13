@@ -37,6 +37,8 @@ export interface SolverEnv {
   gap(q: OrbitQ): number;
   /** the contact normal at `q` (unit, from the nearest obstacle toward the piece), `null` with nothing near */
   normal(q: OrbitQ): Vec3 | null;
+  /** ⭐ (the third audit) the least gap at `q` to every obstacle OTHER than the nearest (m) — absent: taken as `gap(q)` (no directional gain) */
+  secondGap?(q: OrbitQ): number;
 }
 
 export interface SolveOptions {
@@ -165,6 +167,8 @@ function withNormal(ns: readonly Vec3[], n: Vec3): Vec3[] {
 
 /** ⭐ The longest slide sub-step along a contact (m) — the surface's curvature is followed within it. */
 export const SLIDE_STEP_M = 0.004;
+/** ⭐ (the third audit) the longest DIRECTIONAL stride near a part (m) — the ring's arc departs from the straight line it is judged on. */
+export const DIRECTIONAL_MAX_M = 0.05;
 /** ⭐ Below this much air to spare (m), the piece is AT the gap kept: the slide takes over from the advancement. */
 export const AT_CONTACT_M = 0.0002;
 
@@ -214,11 +218,44 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
       break;
     }
     if (spare > AT_CONTACT_M) {
-      const t = (spare / travel) * 0.9;
+      // the SCALAR stride — safe against everything, whatever the direction
+      const tS = Math.min(1, (spare / travel) * 0.9);
+      let t = tS;
+      let gl: number | null = null;
+      // ⭐⭐ (2026-10-13, the third audit: *"the orbit slows down when the piece approaches another part"* — it crept PARALLEL to a part, 22 mrad
+      // of a 1 rad swipe at 2 mm) the DIRECTIONAL stride: the gap to the NEAREST part along a straight translation is convex, its slope the
+      // contact normal's — so it cannot close faster than `approach` per metre; every OTHER part is held to its own gap. Near a part only,
+      // ≤ `DIRECTIONAL_MAX_M`, the landing (≥ the gap kept) and the midpoint (≥ half of it) checked — the ring's arc is not a straight line.
+      if (spare * 0.9 < DIRECTIONAL_MAX_M) {
+        const n = normalAt(q);
+        if (n !== null) {
+          const J = ringJacobian(env, q);
+          const tv: Vec3 = [J[0][0] * rest[0] + J[1][0] * rest[1], J[0][1] * rest[0] + J[1][1] * rest[1], J[0][2] * rest[0] + J[1][2] * rest[1]];
+          const tl = Math.hypot(tv[0], tv[1], tv[2]);
+          if (tl > 1e-12) {
+            const approach = -dot3(n, tv) / tl;
+            queries++;
+            const others = (env.secondGap?.(q) ?? g) - opt.gapM;
+            const along = approach > 1e-9 ? spare / approach : Infinity;
+            const stride = Math.min(along, others, DIRECTIONAL_MAX_M) * 0.9;
+            let tD = Math.min(1, stride / travel);
+            // ⭐ two tries at most, and only for a real gain — a curved part refused the long stride over and over, each try 2 queries
+            for (let tries = 0; tries < 2 && tD > 2 * tS; tries++) {
+              const end = gapAt(plus(q, rest, tD));
+              if (end >= opt.gapM && gapAt(plus(q, rest, tD / 2)) >= hard) {
+                t = tD;
+                gl = end;
+                break;
+              }
+              tD /= 2;
+            }
+          }
+        }
+      }
       q = plus(q, rest, t);
       path.push(q);
       rest = [rest[0] * (1 - t), rest[1] * (1 - t)];
-      g = gapAt(q);
+      g = gl ?? gapAt(q);
       continue;
     }
     // (2) AT THE GAP KEPT — the rest projected onto the contacts, slid by checked sub-steps
@@ -312,27 +349,35 @@ export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, r
  * THEN the places along the ring at growing anchor distances (`stepM`, up to `maxM`), both coordinates and the diagonals. The first with the
  * gap kept wins; `null` when none is free within reach.
  */
-export function nearestFree(q: OrbitQ, env: SolverEnv, gapM: number, stepM: number, maxM: number): OrbitQ | null {
+export function nearestFree(
+  q: OrbitQ,
+  env: SolverEnv,
+  gapM: number,
+  stepM: number,
+  maxM: number,
+  /** ⭐ (the third audit) the most candidates this call may try — the frame's cap; it was ~280 a frame with nothing free within reach */
+  budget = Infinity,
+  /** ⭐ the candidate to resume from (a search the cap cut short goes on next frame, not from the start) */
+  from = 0,
+): { to: OrbitQ | null; next: number | null } {
   const J = ringJacobian(env, q);
-  const n = env.normal(q);
+  // the candidates in order: straight out of the contact (1, 2, 4 … gaps kept up to `stepM`), then the grid outward
+  const out: QStep[] = [];
+  const n = from === 0 || budget === Infinity ? env.normal(q) : null;
+  let tried = n !== null ? 1 : 0;
+  const nOut = Math.floor(Math.log2(Math.max(1, stepM / gapM))) + 1;
   if (n !== null) {
     const m11 = dot3(J[0], J[0]);
     const m12 = dot3(J[0], J[1]);
     const m22 = dot3(J[1], J[1]);
     const det = m11 * m22 - m12 * m12;
     if (det > 1e-18) {
-      // the ring step whose anchor motion is closest to the normal, per metre of it
       const b0 = dot3(n, J[0]);
       const b1 = dot3(n, J[1]);
       const d0 = (m22 * b0 - m12 * b1) / det;
       const d1 = (m11 * b1 - m12 * b0) / det;
       const per = Math.hypot(J[0][0] * d0 + J[1][0] * d1, J[0][1] * d0 + J[1][1] * d1, J[0][2] * d0 + J[1][2] * d1);
-      if (per > 1e-9) {
-        for (let d = gapM; d <= stepM + 1e-12; d *= 2) {
-          const c = plus(q, [(d0 * d) / per, (d1 * d) / per]);
-          if (!same(c, q) && env.gap(c) >= gapM) return c;
-        }
-      }
+      if (per > 1e-9) for (let i = 0, d = gapM; i < nOut; i++, d *= 2) out.push([(d0 * d) / per, (d1 * d) / per]);
     }
   }
   const ly = Math.max(1e-9, Math.hypot(J[0][0], J[0][1], J[0][2]));
@@ -341,14 +386,25 @@ export function nearestFree(q: OrbitQ, env: SolverEnv, gapM: number, stepM: numb
     [1, 0], [-1, 0], [0, 1], [0, -1],
     [Math.SQRT1_2, Math.SQRT1_2], [-Math.SQRT1_2, Math.SQRT1_2], [Math.SQRT1_2, -Math.SQRT1_2], [-Math.SQRT1_2, -Math.SQRT1_2],
   ];
-  for (let d = stepM; d <= maxM + 1e-12; d += stepM) {
-    for (const [a, b] of dirs) {
-      const c = plus(q, [(a * d) / ly, (b * d) / lv]);
-      if (same(c, q)) continue; // a ring end: nothing that way
-      if (env.gap(c) >= gapM) return c;
+  const strides = Math.floor((maxM + 1e-12) / stepM);
+  const total = nOut + strides * dirs.length;
+  for (let k = from; k < total; k++) {
+    if (tried >= budget) return { to: null, next: k };
+    let s: QStep | undefined;
+    if (k < nOut) s = out[k];
+    else {
+      const i = k - nOut;
+      const d = (Math.floor(i / dirs.length) + 1) * stepM;
+      const [a, b] = dirs[i % dirs.length]!;
+      s = [(a * d) / ly, (b * d) / lv];
     }
+    if (s === undefined) continue; // no straight-out direction (no normal, a degenerate ring)
+    const c = plus(q, s);
+    if (same(c, q)) continue; // a ring end: nothing that way
+    tried++;
+    if (env.gap(c) >= gapM) return { to: c, next: null };
   }
-  return null;
+  return { to: null, next: null };
 }
 
 /**
@@ -367,8 +423,8 @@ export interface OrbitFrameIn {
   readonly target: OrbitQ;
   /** the ring height the input set (`null`: not yet) */
   readonly userV: number | null;
-  /** the target's ring height the last frame ended with (`null`: the first frame) */
-  readonly prevRawV: number | null;
+  /** the target the last frame ended with (`null`: the first frame) — the input this frame is `target − prevRaw` */
+  readonly prevRaw: { readonly yaw: number; readonly v: number } | null;
 }
 export interface OrbitFrameOut {
   readonly q: OrbitQ;
@@ -382,12 +438,16 @@ export interface OrbitFrameOut {
   /** the coast must stop (a relocation, or a push that moved nothing) */
   readonly stopCoast: boolean;
   readonly queries: number;
+  /** ⭐ (the third audit) the relocation's search: the candidate to resume from next frame, `null` when none is pending; `exhausted`: nothing free within reach */
+  readonly relocateNext: number | null;
+  readonly relocateExhausted: boolean;
 }
 export function orbitFrame(
   inp: OrbitFrameIn,
   env: SolverEnv,
   opt: SolveOptions,
-  relocate: { readonly stepM: number; readonly maxM: number },
+  /** the relocation's search: its strides, and where to resume (`from` < 0: do not search — exhausted for this place) */
+  relocate: { readonly stepM: number; readonly maxM: number; readonly from?: number },
 ): OrbitFrameOut {
   let extra = 0;
   const counted: SolverEnv = {
@@ -403,12 +463,27 @@ export function orbitFrame(
   };
   let q = inp.q;
   let target = inp.target;
-  const dvIn = inp.prevRawV === null ? 0 : target.v - inp.prevRawV;
+  const dyawIn = inp.prevRaw === null ? 0 : target.yaw - inp.prevRaw.yaw;
+  const dvIn = inp.prevRaw === null ? 0 : target.v - inp.prevRaw.v;
+  // ⭐⭐ (the third audit: after a deferred swipe the finger REVERSING saw the piece go on forward for 4 frames) a coordinate of the input that
+  // opposes the backlog the work cap left (the last target ahead of the piece) DROPS that backlog: the finger's reversal takes effect at once
+  if (inp.prevRaw !== null) {
+    const backYaw = inp.prevRaw.yaw - q.yaw;
+    const backV = inp.prevRaw.v - q.v;
+    if (dyawIn * backYaw < 0) target = { ...target, yaw: q.yaw + dyawIn };
+    if (dvIn * backV < 0) target = { ...target, v: clampV(q.v + dvIn) };
+  }
   let userV = clampV((inp.userV ?? target.v) + dvIn);
   let relocated = false;
   let stopCoast = false;
-  if (counted.gap(q) < opt.gapM / 2) {
-    const to = nearestFree(q, counted, opt.gapM, relocate.stepM, relocate.maxM);
+  let relocateNext: number | null = null;
+  let relocateExhausted = false;
+  if ((relocate.from ?? 0) >= 0 && counted.gap(q) < opt.gapM / 2) {
+    // ⭐ (the third audit) under the frame's cap, resumed next frame — never ~280 gap queries a frame
+    const found = nearestFree(q, counted, opt.gapM, relocate.stepM, relocate.maxM, Math.max(1, opt.maxQueries - extra), relocate.from ?? 0);
+    relocateNext = found.next;
+    relocateExhausted = found.to === null && found.next === null;
+    const to = found.to;
     if (to !== null) {
       target = { yaw: target.yaw + (to.yaw - q.yaw), v: clampV(target.v + (to.v - q.v)), zoom: target.zoom };
       userV = clampV(userV + (to.v - q.v));
@@ -435,7 +510,7 @@ export function orbitFrame(
       target = q;
     }
   }
-  return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, queries };
+  return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, queries, relocateNext, relocateExhausted };
 }
 
 /**
@@ -463,7 +538,9 @@ export interface StuckState {
 }
 export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity };
 export function stuckNext(s: StuckState, key: string, now: number, everyMs: number): { s: StuckState; check: number | null } {
-  const cur = s.key === key ? s : { ...STUCK_FRESH, key };
+  // ⭐ (the third audit) a CHANGED key restarts the round but keeps the PACE (`at`) and the last verdict, provisional until a check disagrees —
+  // a churning key (a turn playing, a part dragged, the sway) re-ran check 0 every frame and blinked the pop-up off for ≥ 600 ms
+  const cur = s.key === key ? s : { ...s, key, idx: 0, done: false };
   if (cur.done || now - cur.at < everyMs) return { s: cur, check: null };
   return { s: { ...cur, at: now }, check: cur.idx };
 }
@@ -472,6 +549,18 @@ export function stuckRecord(s: StuckState, check: number, blocked: boolean, tota
   const idx = check + 1;
   const position = check === 0 ? true : s.position;
   return idx >= total ? { ...s, idx: 0, position, turns: true, done: true } : { ...s, idx, position };
+}
+
+/**
+ * ⭐⭐ **A TAP ON THE ORBITED PIECE** (the third audit: the first tap of a double tap on a face other than the resting one CHANGED the resting face
+ * — the stuck verdict was dropped, and the second tap found the respawn unarmed). A DOUBLE tap while armed RESPAWNS; while the red pop-up is
+ * SHOWN, a single tap is CONSUMED (it changes nothing, so the double tap can land); else a tap selects the face.
+ */
+export function pieceTapAction(tapped: boolean, double: boolean, armed: boolean, popupShown: boolean): "RESPAWN" | "CONSUME" | "FACE" | "NONE" {
+  if (!tapped) return "NONE";
+  if (double && armed) return "RESPAWN";
+  if (popupShown) return "CONSUME";
+  return "FACE";
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */

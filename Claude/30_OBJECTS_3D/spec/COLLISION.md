@@ -635,3 +635,39 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   return and its wait; the slope stutter with a raw wobble against none; the deadband wired; the stuck schedule (7 checks then nothing, a free
   check ends the round, a new key a new round); deep inside — stuck AND turns refused; a turn under the cap; the turn hold; the straight-out
   relocation (red with the normal stride removed).
+
+### 12quater. The third audit's fixes — the directional stride, the backlog dropped on a reversal, the relocation capped, the stuck verdict kept, the double tap, the orbit drag's own band (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"let's do another audit by Fable of what we have built with the last three commits"* → *"build, update the md files, deploy. then perform the
+> fable audit once again on the last four commits."* — the owner. The audit: the architecture sound; two HIGH findings, quantitative.
+
+* ⛔⛔ **§12's "no slow-down approaching a part" WAS FALSE FOR A PASS ALONGSIDE ONE** — conservative advancement strode by the SCALAR gap whatever
+  the direction: 1 rad asked along a wall 2 mm away went 22 mrad in a frame, 4 mrad at 1.2 mm (measured). ✅ **THE DIRECTIONAL STRIDE**: the gap
+  to the NEAREST part under a straight translation is CONVEX and its slope is the contact normal's, so it cannot close faster than `approach`
+  (−n · the step's direction) per metre — the stride is the spare air ÷ `approach`; every OTHER part is held to its own gap
+  (`nearestObstacle`'s `secondGapM`), so nothing thin is tunnelled. The ring's arc is not a straight line: near a part only, ≤ 5 cm
+  (`DIRECTIONAL_MAX_M`), its landing (≥ the gap kept) and its midpoint (≥ half) checked, two tries at most and only for more than twice the
+  scalar stride (a curved part refusing it over and over cost the cap: 75 deferred frames of 88, measured, before that limit).
+* ⛔⛔ **A FINGER REVERSING AFTER A CAPPED SWIPE SAW THE PIECE GO ON FORWARD FOR 4 FRAMES** (the backlog — the target the cap left ahead — the
+  drag then added to). ✅ `orbitFrame` reads the input as the target minus the last frame's (`prevRaw`): a coordinate of it OPPOSING the
+  backlog drops that backlog — the reversal takes effect at once.
+* ⛔⛔ **THE RELOCATION WAS UNCAPPED AND RAN EVERY FRAME** — ~280 gap queries a frame while nothing was free within 40 cm (the iPhone freeze
+  candidate). ✅ `nearestFree` takes the frame's cap and RESUMES where it was cut (`st.relocateCursor`, keyed by the piece's place, the gizmo and
+  the scene); a place searched to the end is not searched again until the key changes.
+* ⛔ **THE STUCK SCHEDULE RE-RAN CHECK 0 EVERY FRAME UNDER A CHURNING KEY** (a turn playing, a part dragged, the sway) and the pop-up blinked off
+  for ≥ 600 ms. ✅ A changed key restarts the round but keeps the PACE and the last verdict, provisional until a check disagrees. ✅ The key —
+  shared with the red quad — is the scene's SIGNATURE (`sceneSignature`: every body's position and ORIENTATION, hashed): a part turned in place
+  was never seen, a weighted sum could cancel, and the red quad did not react to parts at all (a refused tap under a yellow quad, a red quad
+  after the part left).
+* ⛔ **THE DOUBLE-TAP RESPAWN COULD NOT FIRE FROM ANOTHER FACE**: the first tap changed the resting face, the verdict dropped, the second tap found
+  it unarmed. ✅ `pieceTapAction`: while the red pop-up shows, a single tap on the piece is CONSUMED.
+* ✅ **THE ORBIT DRAG'S OWN DEADBAND** (`orbitDeadbandMm`, 2.3 mm, a slider in OBJECT TRANSLATION), in its own tracker (the camera's MOVING read
+  keeps `motionDeadbandMm`): §12ter's "once per drag" was wrong — the band is paid again after every pause ≥ the rest window (~150 ms on the
+  tablet, 50 ms with a mouse). ⛔ The audit's 1 mm was REFUSED: under 3× the measured pointer noise (0.761 mm) a resting finger leaks out of
+  the band — the very wobble it exists to stop (the validator's own rule since `A10`).
+* ✅ The turn HELD shows its quad RED. ✅ A pin that could not fail (an `indexOf` of a line that no longer existed, −1) now asserts the line.
+* ⚠ Measured headless (desktop): the smallest gap 0.935 mm; 0 reversals on a wobbling drag; ~2 gap queries a frame at rest; a frame that also
+  runs a stuck or quad check reaches ~26–51 queries (the cap is per solve, the checks are paced but not inside it).
+* ✅ Vectors (7), each RED against the code before (two by mutant): a parallel swipe 2 mm off a floor goes > 0.2 rad (22 mrad before); the
+  directional stride never tunnels a thin part; a reversal after a capped swipe moves back at once; the relocation ≤ the cap per frame,
+  resumed, ending; the schedule's pace and verdict across a churning key; the tap decision; the orbit drag's band and its floor.
