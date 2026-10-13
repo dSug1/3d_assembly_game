@@ -96,3 +96,13 @@ export function holdSwitch(
 export function pinchStarts(firstTravelMm: number, secondTravelMm: number, deadbandMm: number): boolean {
   return firstTravelMm > deadbandMm || secondTravelMm > deadbandMm;
 }
+
+/**
+ * ⛔⛔ (2026-10-13, the owner: *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — the second touch's release that is a TAP (`isTapRelease`: within `tapMaxDuration` and the 8 mm
+ * `doubleTapSlop`) is a tap even when the fingers' wobble already started the STANDARD PINCH (either finger past the 3.5 mm deadband,
+ * `pinchStarts` — since 2026-10-12): a real finger's tap wanders a few mm, so the tap on a placed part (the gizmo moved there) and the tap roll
+ * were lost to a zoom. The mode the release is judged in: `HELD` for a tapped `ZOOM` (the caller undoes the zoom it started).
+ */
+export function holdTapMode(mode: HoldMode, tapped: boolean): HoldMode {
+  return tapped && mode === "ZOOM" ? "HELD" : mode;
+}

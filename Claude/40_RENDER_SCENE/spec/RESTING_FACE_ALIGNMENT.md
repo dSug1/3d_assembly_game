@@ -968,9 +968,12 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
   reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"* → *"make the range 0.2 -> 1.4"* →
   *"amended: make the range 0.01 ->1.4"* → *"make the quad minimum one pixel"*): d the piece's distance to the gizmo; **ONE PIXEL** on the glass
   (at the quads' distance from the camera; it was 0.01 × the piece's radius) at **HALF** the rings' farthest (`quadsShownFromM`: 3 m in
-  `Scene_1`), **1.4** at the FARTHEST (`pieceDistanceRange`: 6.0 m), `((d − d_half) / (d_max − d_half))^power` between them (`quadSize`) — no
-  plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). The 1.4 × the piece's radius, the side twice that. The power is a
-  slider, **3** (CAMERA ORBIT AROUND CENTER › *resting-face quads: growth power*; it was 1.5). ⚠ The boot sits at 3.0 m — just at the threshold:
+  `Scene_1`), **1.4** at the FARTHEST (`pieceDistanceRange`: 6.0 m), a **LOGARITHM** between them (`quadSize`, 2026-10-13: *"instead of power 3
+  for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*): with t = (d − d_half) /
+  (d_max − d_half), the share `ln(1 + k·t) / ln(1 + k)`, k = 9 — 28 % of the growth a tenth of the way out, 74 % halfway (power 3: 0.1 %, 12.5 %);
+  no plateau; ⛔ **nearer than half, the quads are HIDDEN** (and cannot be pressed). The 1.4 × the piece's radius, the side twice that. The
+  steepness k is a slider, **9** (CAMERA ORBIT AROUND CENTER › *resting-face quads: growth steepness (log curve)*, 0–50, 0 a straight line; it was
+  the power, 3, then 1.5 before that). ⚠ The boot sits at 3.0 m — just at the threshold:
   the quads appear as the piece moves out. ⭐ The resting face's yellow contour scales by the same share, about the face's centre, never under
   ONE PIXEL across its longest axis — and ⛔ it is HIDDEN with the quads below half the farthest distance (*"same for the outline as for the
   quads: min 1 pixel, hidden below half max distance"*; kept at the quads' smallest share there, it had shrunk to a point that flickered at the
@@ -1002,3 +1005,18 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
 - Headless (desktop, the 6 m rig, the first build of §25): boot — the piece 3.01 m from the centre, the pink direction −z and its plane's quad yellow; a click on the x quad — aligned
   to +x, that quad yellow; two taps on empty space — two rolls on it; a drag — the tapped quad dropped; a press on the piece over a quad — the
   resting face picked, no quad tap. ⛔ No device look yet.
+
+## 26. The second-touch tap that wobbles is a tap again (2026-10-13, `1.0.71-`)
+
+The owner: *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*
+
+- ⛔⛔ **The cause**: since the STANDARD PINCH (§24, 2026-10-12), EITHER finger's travel past the **3.5 mm** deadband starts the zoom
+  (`pinchStarts`), while a tap is judged within **8 mm** (`doubleTapSlop`) and 200 ms. A real finger's tap wanders a few millimetres, so a tap of
+  the second finger on a placed part became a pinch (mode `ZOOM`) and its release was not judged as a tap: the gizmo stayed. The tap roll (first
+  held + second tap on empty space) was lost the same way. Headless it worked only because a synthesised finger does not wobble.
+- ✅ **The fix**: the second touch's release that IS a tap (`isTapRelease`) is judged as a tap even in `ZOOM` (`holdTapMode`: a tapped ZOOM is
+  HELD), and the zoom it started is undone (`st.zoom = st.zoomAtPinchStart`): the gizmo moves to the placed part, or the piece rolls. A real pinch
+  (longer than a tap, or past 8 mm) is unchanged.
+- Headless (touch): the first finger held on empty space, the second tapping a placed part with 20 px (~5 mm) of wobble — the old code: `orbit: two
+  fingers — the pinch zoom`, the gizmo unmoved; the new: `orbit: second touch tap on a placed part — the orbit centre (the pink gizmo) moved
+  there`. ⛔ No device look yet.

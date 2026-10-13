@@ -784,3 +784,9 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐ The quads' smallest size is ONE PIXEL on the glass (at half the farthest distance) → `RESTING_FACE_ALIGNMENT.md` §25.
 * ⭐ The resting face's yellow outline as the quads: one pixel at least, hidden below half the farthest distance (the flickering point) →
   `RESTING_FACE_ALIGNMENT.md` §25.
+
+## 2026-10-13 — on 1.0.71-
+
+* ⭐ The quads (and the resting outline) grow along a LOGARITHM, fastest when small (steepness 9, a slider) → `RESTING_FACE_ALIGNMENT.md` §25.
+* ⛔⛔ The second-touch tap on a placed part moves the gizmo again: a tap that wobbled into the pinch is a tap (`holdTapMode`) → §26.
+* The vectors that read only commented-out (`// ⏸`) code are pruned (15 assertions, `kept()` deleted).
