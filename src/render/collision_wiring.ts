@@ -68,7 +68,7 @@ export function collisionSetup(
 export function pieceCollisionSetup(st: SceneState, skin: number = skinM(st)): CollisionSetup {
   const frozen = (id: ObjectId): boolean => st.world.objects.get(id)?.frozen === true;
   // ⭐ (2026-10-13, `COLLISION.md` §11bis) `skin`: held through a contact by the caller — the camera moving must not change the tolerance
-  return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };
+  return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, bisectIterations: 8, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };
 }
 
 /** ⭐ The orbited piece's move judged, nothing recorded — a CHECK (the yellow quad's turn), not a move. */

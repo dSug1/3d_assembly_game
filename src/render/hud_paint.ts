@@ -141,7 +141,7 @@ export function paint(st: SceneState) {
       // ⭐ `3D6`: the last block, for two seconds — a stop must never read as a bug.
       (performance.now() - st.lastCollisionAt < 2000 ? `  ⟂ ${st.lastCollision}` : "") +
       // ⭐ (2026-10-13, `COLLISION.md` §11bis) what the orbited piece's guard costs a frame (ms, smoothed)
-      (st.greenBox !== null ? `  guard ${st.pieceGuardMs.toFixed(2)}ms` : "") +
+      (st.greenBox !== null ? `  guard ${st.pieceGuardMs.toFixed(2)}ms (peak ${st.pieceGuardPeak.toFixed(0)})` : "") +
       `  band=${bandMmNow(st) > 0 ? `${bandMmNow(st)}mm (no empty space)` : "off"}` +
       goalReadout(st, goal) +
       demoReadout(st) +

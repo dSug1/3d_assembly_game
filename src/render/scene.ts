@@ -582,9 +582,15 @@ export function createScene(
   st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
   st.pieceContact = null;
   st.pieceGuardMs = 0;
+  st.pieceGuardFrameMs = 0;
+  st.pieceGuardDeadline = 0;
+  st.pieceFrameStepM = 0;
+  st.pieceMovedAt = 0;
+  st.pieceGuardPeak = 0;
+  st.pieceGuardPeakAt = 0;
   st.pieceMoveBlocked = false;
   st.orbitTargetGuarded = null;
-  st.pieceStuck = { all: false, at: 0 };
+  st.pieceStuck = { all: false, at: 0, idx: 0 };
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;

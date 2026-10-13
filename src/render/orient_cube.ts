@@ -47,6 +47,8 @@ const QUAD_LIT = new Color3(1, 0.85, 0.1);
 const QUAD_BLOCKED = new Color3(1, 0.15, 0.1);
 /** ⭐ How often the yellow quad's turn is checked again while nothing it depends on changed (ms) — a turn's path check is not free. */
 const QUAD_CHECK_MS = 100;
+/** ⭐ (2026-10-13, §11septies) the quad's turn check waits while the piece moves more than this a frame (m): mid-sweep its answer is stale at once. */
+const QUAD_PAUSE_STEP_M = 0.003;
 
 /** ⭐ A direction's short name — the virtual pink face's label and key. */
 export function dirLabel(n: Vec3): string {
@@ -151,6 +153,7 @@ function quadTurnFrame(st: SceneState): void {
   const key = [tag, roll, b.position.x.toFixed(4), b.position.y.toFixed(4), b.position.z.toFixed(4), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : ""].join("|");
   const now = performance.now();
   if (key === qc.key || now - qc.at < QUAD_CHECK_MS) return;
+  if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return; // ⭐ (2026-10-13, §11septies) mid-sweep: checked again once it slows
   qc.key = key;
   qc.at = now;
   const q = restingPreview(st, dir, roll);
