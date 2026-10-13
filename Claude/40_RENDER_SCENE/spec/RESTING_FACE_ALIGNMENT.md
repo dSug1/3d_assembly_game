@@ -1035,7 +1035,7 @@ The owner: *"The possibility to move the gizmo by second touch tap on mobile has
   the piece on screen (`minGreenZoom`). Measured headless at 6 m: the 4th ring's camera **42.9°** below the piece; over the orbit every quad turns
   yellow on BOTH rings (the horizontal one at 8 of 16 yaws on each).
 
-## 27. The piece collides; the yellow quad RED while its turn is blocked (2026-10-13, `1.0.72-`)
+## 27. The piece collides; the yellow quad RED while its turn is blocked (2026-10-13, `1.0.72-`, ✅ judged on the device: *"Ok. Working."*)
 
 The orbited piece now collides with the placed and loose parts (never the floor, never the play volume): the orbit step slides in the orbit's
 own coordinates and the camera stops with it; every turn (align, roll, a quad tap, an empty-space tap, a face tap) is checked whole before it

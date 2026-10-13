@@ -120,9 +120,7 @@ describe("⭐⭐ `3D7` — each level's volume, as data", () => {
         }
       }
     };
-    // ⚠ prototype (2026-10-13, the owner: *"Place the red non-seated part somewhere on the 1st ring at 5.6m so i can test the quads response to
-    // collision"*) — Piece2 boots in the air on the orbit's 1st ring, outside the volume, on purpose
-    for (const b of SCENE_1.bodies) if (!b.frozen && b.id !== "Piece2") inside(b.id, b.position, IDENTITY);
+    for (const b of SCENE_1.bodies) if (!b.frozen) inside(b.id, b.position, IDENTITY);
     for (const [id, s] of Object.entries(SCENE1_DEMO_PLAN.start)) inside(id, s.position, [...s.orientation] as unknown as Quat);
   });
 

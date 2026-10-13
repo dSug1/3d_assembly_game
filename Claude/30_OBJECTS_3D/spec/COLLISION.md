@@ -245,7 +245,7 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
 * ✅ 2 vectors (`tests/depth_translate.test.ts`): a piece 3.55 m from the camera goes away untouched, the near bound still
   binds, no volume keeps 3 m; and the wiring passes the scene's volume. Both RED on the old code (clamped back to 3 m).
 
-## 11. ⭐⭐⭐ THE ORBITED PIECE COLLIDES (prototype, 2026-10-13, `1.0.72-`, ⛔ unjudged by a hand)
+## 11. ⭐⭐⭐ THE ORBITED PIECE COLLIDES (prototype, 2026-10-13, `1.0.72-`, ✅ judged by a hand: *"Ok. Working."*)
 
 > *"Now we need to work on the collision of the green-turquoise piece with the other parts. Propose something, reusing what we have done for
 > the other parts (collision detection on next move, sliding, etc) and adapting it for the piece specific orbit movement. Also, i ontend to
@@ -287,3 +287,6 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   part, never by the frozen floor, never another body's obstacle; the wiring of the step, the turn checks and the red quad.
 * Headless (desktop): the piece stopped by `Piece4` → the yellow quad RED (`quadTurnCheck.blockedBy`: Piece4) → a tap on empty space:
   *"orbit: the roll is blocked by Piece4 — refused"*; slid on along the yaw, the quad yellow again. ⛔ No device look yet.
+* ✅✅ **CLOSED BY A DEVICE LOOK** (2026-10-13, the owner: *"Ok. Working."*) — tested against `Piece2` placed for the test on the orbit's 1st ring at
+  5.6 m, 30° of yaw from the boot (*"Place the red non-seated part somewhere on the 1st ring at 5.6m so i can test the quads response to
+  collision"*); then put back on the floor by the painting (*"Put back the red piece"*).

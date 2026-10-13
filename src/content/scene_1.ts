@@ -141,10 +141,7 @@ export const SCENE_1_FINAL: FinalConfiguration = {
  */
 const BOOT_MOVES: Readonly<Record<string, { position: Triple; yawDeg: number }>> = {
   Piece1: { position: [-1.992, 4.825, 1.287], yawDeg: 32.4 },
-  // ⭐ prototype (2026-10-13, the owner: *"Place the red non-seated part somewhere on the 1st ring at 5.6m so i can test the quads response to
-  // collision"*) — on the orbit's 1st ring where the rings are 5.6 m from the boot gizmo, 30° of yaw from the boot (2.484, 3.228, −4.173 m),
-  // in the air: the orbited piece meets it there (`COLLISION.md` §11). It was on the floor, by the painting: [-2.116, 4.56, -1.591]
-  Piece2: { position: [24.84, 32.284, -41.728], yawDeg: -5 },
+  Piece2: { position: [-2.116, 4.56, -1.591], yawDeg: -5 },
   Piece17: { position: [-2.17, 0.445, -1.313], yawDeg: 9.3 },
   Piece23: { position: [-2.864, 4.56, 0.587], yawDeg: 0 },
   Piece41: { position: [1.323, 0.445, -1.412], yawDeg: 0 },

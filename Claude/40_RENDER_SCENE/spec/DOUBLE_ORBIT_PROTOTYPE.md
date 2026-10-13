@@ -797,3 +797,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 
 * ⭐⭐⭐ The orbited piece COLLIDES: the orbit step slides in orbit coordinates (the camera stops with it), every turn checked whole and refused
   when blocked, the yellow quad RED meanwhile → `COLLISION.md` §11, `RESTING_FACE_ALIGNMENT.md` §27.
+* ✅ The piece's collision judged on the device (*"Ok. Working."*), against Piece2 placed on the 1st ring at 5.6 m for the test — then put back.
