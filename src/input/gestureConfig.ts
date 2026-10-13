@@ -477,8 +477,9 @@ export interface GestureConfig {
   pieceOrbitEnterMm: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
-  /** ⭐ Prototype (2026-10-12, §25): the resting-face quads' growth with the gizmo's distance — (d / d at boot)^this, at most 1. */
-  quadGrowthPower: number;
+  /** ⭐ Prototype (2026-10-12, §25): the resting-face quads' growth with the gizmo's distance — a LOGARITHM, ln(1 + k·t) / ln(1 + k), this its
+   * steepness k (`quadSize`; it was a power, 3). */
+  quadGrowthLogK: number;
   /** ⭐ Prototype (2026-10-12): the ORBITED PIECE's farthest distance from the orbit centre (m) — the rings beyond it are cut (`clampPieceRadiusM`). */
   pieceRadiusMaxM: number;
   /** ⭐ Prototype (2026-10-12): zoom → roll without lifting — how long the second finger must REST before the first finger's dx rolls (ms). */
@@ -973,8 +974,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
   // ⭐ prototype, the owner 2026-10-12: *"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale"* → *"create a slider for
-  // the power of the scaling distance"*
-  quadGrowthPower: 3,
+  // the power of the scaling distance"* → *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"* — the log curve's steepness
+  quadGrowthLogK: 9,
   // ⭐ prototype, the owner 2026-10-12: *"modify the 1st and 4th ring so that the piece can go up to 6 m away from the yellow gizmo"* — it rode
   // the camera's maximum (`cameraRadiusMaxM`, 3 m) → 5 m, then *"revert to the 6m max distance geometry as it was in previous commit: this geometry allows each quad to become yellow during orbit at maximum distance"*
   pieceRadiusMaxM: 6,

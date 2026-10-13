@@ -211,7 +211,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   // ⭐⭐ (2026-10-12, *"the quads size grow with the distance of the piece to the pink gizmo"* → *"the 1.4 shall be reached at the maximum distance
   // (i.e. at 6m in this scene). There shall be no plateau"* → *"the min scale of the quads … 0.1"* → *"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"*) — d the piece's
   // distance to the gizmo; ONE PIXEL at HALF the rings' farthest, 1.4 at the farthest (`pieceDistanceRange`; both × the piece's radius, the side 2 ×
-  // that), `quadGrowthPower` (3) between (`quadSize`); nearer than half, the quads HIDDEN (`quadsShownFromM`); the resting face's yellow contour
+  // that), a LOGARITHM between (`quadSize`, steepness `quadGrowthLogK`, 9 — *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*; it was power 3); nearer than half, the quads HIDDEN (`quadsShownFromM`); the resting face's yellow contour
   // scales by the same share (`growth`, read by `restingFillFrame`)
   const gizmo = st.pinkRing?.position ?? st.orbitCentreM;
   const pp = p.mesh.position;
@@ -235,7 +235,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   }
   // ⭐ at the resting face's centre, as the piece stands now
   q.root.position.set(at[0], at[1], at[2]);
-  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, onePx, full);
+  const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);
   q.growth = side / full;
   q.root.scaling.setAll(side);
   // ⭐⭐ (2026-10-12, *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — the pink direction's plane

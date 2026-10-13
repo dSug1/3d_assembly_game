@@ -71,14 +71,17 @@ export function distinctPlanes(normals: readonly Vec3[], tolDeg = 1): Vec3[] {
  * to match the 1.4 and this min dimension"* → *"amended: … 0.20 the radius of the piece. fit the power curve to match the 1.4 and 0.20"*) — the
  * ⭐⭐ → *"the 1.4 shall be reached at the maximum distance … There shall be no plateau for the quad scale before shrinking"* → *"the min scale of the
  * quads at the minimum distance shall be 0.1. the curve with the power (i.e. power 3) shall best fit those max and min scales at max and min
- * distances"* — the quads' side (m): `minM` at the nearest distance `dMin`, `maxM` at the farthest `dMax`, the power curve through both:
- * `minM + (maxM − minM) × ((d − dMin) / (dMax − dMin))^power`, held to the range (no plateau inside it). ⚠ `minM` above `maxM`: `maxM`.
+ * distances"* — the quads' side (m): `minM` at the nearest distance `dMin`, `maxM` at the farthest `dMax`, held to the range (no plateau inside it).
+ * ⭐⭐ (2026-10-12, the owner: *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*) — a LOGARITHM between them, `t` = (d − dMin) / (dMax − dMin):
+ * `minM + (maxM − minM) × ln(1 + k·t) / ln(1 + k)` — steepest at the start (slope k / ln(1 + k) there: ×4.1 a straight line's at k = 9), flattening
+ * toward the farthest; `k` its steepness (→ 0: a straight line). ⚠ `minM` above `maxM`: `maxM`. (It was `t^power`, power 3: slowest at the start.)
  */
-export function quadSize(d: number, dMin: number, dMax: number, power: number, minM: number, maxM: number): number {
+export function quadSize(d: number, dMin: number, dMax: number, k: number, minM: number, maxM: number): number {
   const lo = Math.min(Math.max(0, minM), maxM);
   if (!(dMax > dMin) || !Number.isFinite(d)) return maxM;
   const t = Math.min(1, Math.max(0, (d - dMin) / (dMax - dMin)));
-  return lo + (maxM - lo) * Math.pow(t, power);
+  const f = k > 1e-9 ? Math.log1p(k * t) / Math.log1p(k) : t;
+  return lo + (maxM - lo) * f;
 }
 
 /**
