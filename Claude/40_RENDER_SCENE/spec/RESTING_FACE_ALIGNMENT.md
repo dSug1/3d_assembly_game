@@ -995,7 +995,8 @@ the radius of the piece. fit the power curve to match the 1.4 and 0.20"*.
   a VERTICAL quad only under **45°** (at a yaw square to it, the side reads cos(el), the top sin(el)). So over the 1st and 4th rings one must stand
   past 35.26° and one under 45° — one ring in (35.26°, 45°) does both (`allQuadsReachable`). ⚠ The elevation is NOT the ring's: the camera's pitch
   offset lifts the camera. Measured headless at 6 m: the camera **41.6°** above the piece on the 1st ring (all quads yellow over the orbit: the
-  horizontal one at 8 of 16 yaws, the vertical ones at the other 8), **21°** below on the 4th (vertical quads only).
+  horizontal one at 8 of 16 yaws, the vertical ones at the other 8), **21°** below on the 4th (vertical quads only) — ⭐ **42.9°** since the
+  pitch offset is mirrored (§26): all quads on both rings.
   ⛔⛔ **ALERT — WHOEVER MOVES THE 1st / 4th RING SLIDERS (radius or height), OR THE CAMERA'S PITCH OFFSET: the HUD's `camera` line shows `⚠ not
   every quad can turn yellow on the max-distance orbit` when the two rings' elevations, MEASURED ON them, fail the rule.** They are measured only
   when the orbit reaches each ring (`st.ringQuadCheck`, forgotten when a ring slider changes): after moving a ring slider, drag the orbit to the
@@ -1026,3 +1027,10 @@ The owner: *"The possibility to move the gizmo by second touch tap on mobile has
   empty space or a frozen body is `orientTapShown` — aligned to the yellow quad's direction, or the roll when already aligned there; one episode
   (`holdTapTapsYellow`, which replaces `holdTapRolls`: the piece need not be aligned first). A tap on a placed part still moves the gizmo.
   Headless (touch): the first finger held, the second tapping empty space — aligned to the yellow quad (−z); again — the roll.
+- ⭐⭐ **The camera's pitch offset is MIRRORED below the level** (the owner: *"Why on the 4th ring the horizontal quad never gets yellow while it
+  does on the first ring?"* → *"Mirror the pitch offset"*). The CAMERA OFFSET pitch (2°, + = above) always lifted the camera; seen from the piece,
+  1.3 m off, the 2° at the centre comes to ~10° — so the 1st ring's camera stood **41.6°** above the piece and the 4th's only **20.7°** below, under
+  the 35.3° the horizontal quad needs. Now it pushes AWAY FROM THE LEVEL — up above it, down below it (`mirroredPitchOffset`, blended through
+  ±5° of the ring's pitch, so the camera never jumps at the level), in the camera's placement (`cameraOffset`) and in the zoom limit that keeps
+  the piece on screen (`minGreenZoom`). Measured headless at 6 m: the 4th ring's camera **42.9°** below the piece; over the orbit every quad turns
+  yellow on BOTH rings (the horizontal one at 8 of 16 yaws on each).

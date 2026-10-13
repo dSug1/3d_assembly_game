@@ -330,7 +330,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(ang(at0, unit(sub(C, f.cam)))).toBeCloseTo(e0.lookAngleRad, 9);
     expect(ang(at0, unit(sub(f.piece, f.cam)))).toBeGreaterThan(0.01); // the piece off the view's centre, where it was
     // …and a full aim: onto the piece
-    expect(ang(entryLook(e, f.cam, C, f.piece, FADE, 1), unit(sub(f.piece, f.cam)))).toBeLessThan(1e-9);
+    expect(ang(entryLook(e, f.cam, C, f.piece, FADE, 1), unit(sub(f.piece, f.cam)))).toBeLessThan(1e-7); // ⚠ (2026-10-13) acos cannot resolve under ~1.5e-8 rad; the mirrored pitch offset moved the fixture onto it
     // the wiring: started with the way in, fed dx only, eased as the way in's travel, read by the way in and — until done — by the orbit
     // around the piece; dropped by a way out and a respawn
     const w = code("render/green_box_wiring.ts");

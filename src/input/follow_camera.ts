@@ -79,6 +79,18 @@ export function wrapPi(a: number): number {
 }
 
 /** ⭐ The true pitch of a ring point: `atan2(height, radius)` (zoom does not change it). */
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"Mirror the pitch offset"* — *"Why on the 4th ring the horizontal quad never gets yellow while it does on the first ring?"*) — the
+ * camera's pitch offset (the CAMERA OFFSET slider, + = above) pushes the camera AWAY FROM THE LEVEL: up above it, DOWN below it, so the 1st and
+ * 4th rings are mirrors (it always lifted: seen from the piece, 1.3 m off, its 2° at the centre came to ~10° — the 1st ring's camera 41.6° above
+ * the piece, the 4th's only 20.7° below, under the 35.3° the horizontal quad needs). Through the level it is blended over ±`MIRROR_BLEND_RAD` of the
+ * ring's pitch, so the camera never jumps there.
+ */
+export const MIRROR_BLEND_RAD = (5 * Math.PI) / 180;
+export function mirroredPitchOffset(ringPitchRad: number, offsetRad: number): number {
+  return offsetRad * Math.max(-1, Math.min(1, ringPitchRad / MIRROR_BLEND_RAD));
+}
+
 export function pitchOf(cfg: GestureConfig, v: number): number {
   const o = orbitOffset(cfg, 0, v, 1).offsetM;
   return Math.atan2(o[1], Math.hypot(o[0], o[2]));
@@ -323,7 +335,8 @@ export function cameraOffset(
   radiusOffsetM: number,
 ): Vec3 {
   const lim = (89 * Math.PI) / 180;
-  const pitch = Math.max(-lim, Math.min(lim, pitchOf(cfg, cam.v) + off.pitchRad));
+  const ringPitch = pitchOf(cfg, cam.v);
+  const pitch = Math.max(-lim, Math.min(lim, ringPitch + mirroredPitchOffset(ringPitch, off.pitchRad))); // ⭐ (2026-10-13) mirrored below the level
   const yaw = cam.yaw + off.yawRad;
   const d = Math.hypot(boxOffset[0], boxOffset[1], boxOffset[2]) + Math.max(0, radiusOffsetM);
   return [d * Math.cos(pitch) * Math.cos(yaw), d * Math.sin(pitch), d * Math.cos(pitch) * Math.sin(yaw)];

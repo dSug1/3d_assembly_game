@@ -13,6 +13,7 @@
 import type { BodySpec, Triple } from "../core/game_structure";
 import { cross, length, qFromAxisAngle, qmul, sub, type Quat, type Vec3 } from "../core/vec";
 import type { GestureConfig } from "./gestureConfig";
+import { mirroredPitchOffset } from "./follow_camera";
 
 /** ⭐ The smallest body of `colour` (by volume) — `null` when the scene has none. Frozen bodies are not candidates. */
 export function smallestOfColour(bodies: readonly BodySpec[], colour: readonly [number, number, number]): BodySpec | null {
@@ -189,7 +190,7 @@ export function minGreenZoom(p: {
   for (const s of p.ring) {
     const d = s.distanceM;
     const box = [d * Math.cos(s.pitchRad), d * Math.sin(s.pitchRad), 0];
-    const pitch = Math.max(-lim89, Math.min(lim89, s.pitchRad + p.pitchOffsetRad));
+    const pitch = Math.max(-lim89, Math.min(lim89, s.pitchRad + mirroredPitchOffset(s.pitchRad, p.pitchOffsetRad))); // ⭐ (2026-10-13) as `cameraOffset`
     // the piece's centre, seen from the camera `g` behind it (as `cameraOffset` places it, looking at the target, up = world up)
     const fits = (g: number): boolean => {
       const R = d + g;

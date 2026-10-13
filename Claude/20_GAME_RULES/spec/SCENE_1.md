@@ -155,7 +155,7 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   ⭐ **Prototype, 2026-10-12** (the owner: *"double rings 1 and 4, keep the piece at 3m boot view as it is"*; 5 m and a 51° mirror tried and
   reverted): the 1st and 4th rings are **5.1 m at ±3.15 m** (6.0 m from the centre; were 2.55 / ±1.575), the orbited piece reaches **6 m**
   (`pieceRadiusMaxM`), ⛔⛔ the camera geometry shall allow ALL the resting-face quads to turn yellow on the max-distance orbit (the HUD alerts
-  otherwise), and
+  otherwise; ⭐ with the camera's pitch offset mirrored below the level, 2026-10-13, both rings pass), and
   `orbit.bootDistanceM: 3` boots where the rings are 3 m away → [`RESTING_FACE_ALIGNMENT.md`](../../40_RENDER_SCENE/spec/RESTING_FACE_ALIGNMENT.md) §25.
 
 ## 9. ⭐ The floor's top centre is the origin (`D169`)

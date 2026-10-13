@@ -267,3 +267,20 @@ describe("⭐⭐ the horizontal quad must be reachable on the 1st and 4th rings 
     expect((Math.atan2(cfg.orbitTopHeightM, cfg.orbitTopRadiusM) * 180) / Math.PI).toBeCloseTo(31.7, 1);
   });
 });
+
+import { MIRROR_BLEND_RAD, mirroredPitchOffset } from "../src/input/follow_camera";
+describe("⭐⭐ the camera's pitch offset MIRRORED below the level (2026-10-13, *\"Mirror the pitch offset\"* — the 4th ring's horizontal quad)", () => {
+  it("⭐ above the level up, below it down, blended through ±5° of the ring's pitch (no jump)", () => {
+    const off = (2 * Math.PI) / 180;
+    const ring = (31.7 * Math.PI) / 180;
+    expect(mirroredPitchOffset(ring, off)).toBeCloseTo(off, 12); // the 1st ring: up, as before
+    expect(mirroredPitchOffset(-ring, off)).toBeCloseTo(-off, 12); // the 4th ring: DOWN — its mirror
+    expect(mirroredPitchOffset(0, off)).toBe(0); // at the level: none
+    expect(mirroredPitchOffset(MIRROR_BLEND_RAD / 2, off)).toBeCloseTo(off / 2, 12); // half through the blend
+    expect(MIRROR_BLEND_RAD).toBeCloseTo((5 * Math.PI) / 180, 12);
+  });
+  it("⭐ wired: the camera (`cameraOffset`) and the zoom limit that keeps the piece on screen (`minGreenZoom`) both", () => {
+    expect(code("input/follow_camera.ts")).toContain("const pitch = Math.max(-lim, Math.min(lim, ringPitch + mirroredPitchOffset(ringPitch, off.pitchRad)));");
+    expect(code("input/green_box.ts")).toContain("s.pitchRad + mirroredPitchOffset(s.pitchRad, p.pitchOffsetRad)");
+  });
+});
