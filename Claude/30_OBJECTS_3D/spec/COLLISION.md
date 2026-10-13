@@ -244,3 +244,46 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   a body through it is *a black page*) binds everywhere. The HUD prints `[0.02–∞]`.
 * ✅ 2 vectors (`tests/depth_translate.test.ts`): a piece 3.55 m from the camera goes away untouched, the near bound still
   binds, no volume keeps 3 m; and the wiring passes the scene's volume. Both RED on the old code (clamped back to 3 m).
+
+## 11. ⭐⭐⭐ THE ORBITED PIECE COLLIDES (prototype, 2026-10-13, `1.0.72-`, ⛔ unjudged by a hand)
+
+> *"Now we need to work on the collision of the green-turquoise piece with the other parts. Propose something, reusing what we have done for
+> the other parts (collision detection on next move, sliding, etc) and adapting it for the piece specific orbit movement. Also, i ontend to
+> provide translation movement to the piece later on so the collision shall take that also into account."* → *"Rotation Blocked by piece : in
+> such case, highlight the quad in red instead of yellow and back to yellow when rotation is allowed again. The translation will be done by
+> sliding along the face of the placed part the resting face is touching (therefore not a pure world move): take that into account. I agree
+> with all the rest of your recommendations. Build"* — the owner.
+
+* **The rule is §3–§9's, unchanged** — `resolveMove`: the path checked in substeps no longer than the skin, contact allowed, only
+  penetration refused (`D136`). Before, nothing guarded the piece (the orbit placed it every frame; `candidates` skips orbited bodies).
+  ⭐ The piece's own SETUP (`pieceCollisionSetup`): the placed and loose parts only — ⛔ never the FROZEN bodies (the floor: the 3rd and 4th
+  rings pass under it) nor the PLAY VOLUME (2 × 2 × 1 m against a 6 m orbit); the other (hidden) orbited piece is never an obstacle, and the
+  orbited piece is never another body's obstacle (it is skipped as one, as before).
+* ⭐⭐ **THE ORBIT STEP SLIDES IN THE ORBIT'S OWN COORDINATES** (`input/piece_collision.ts`, `guardOrbitStep`) — a world slide (§3) would push
+  the piece off its ring. Each frame, after the orbit's spring: the whole step (yaw, ring position); else the YAW alone; else the RING
+  POSITION alone (`orbitStepCandidates`); else the fraction of the whole step its path reaches (`lerpOrbit`). ⭐ **The excess is DISCARDED**
+  (§3's rule): the refused axes' spring velocity zeroed, the orbit's target pulled back to the stop (`refusedAxes`, `st.orbit.reset`), the coast
+  stopped — **the camera stops with the piece** (the owner's choice: it frames the piece), and reversing the finger moves it back at once.
+  ⚠ When even that stop is blocked (the GIZMO moved under the piece — a tap on a placed part), the piece stays where its own path stops (a world
+  stop and slide, off its ring point) until it is free.
+* ⭐⭐ **A TURN IS CHECKED WHOLE BEFORE IT STARTS** (`pieceTurnBlocker`, in `alignRestingFace` and `rollRestingFace`) — the snap's `D182`
+  pattern, not §4's clamp: a turn cut short would leave the resting face misaligned. Blocked: REFUSED — *"orbit: the turn (the roll) is blocked
+  by PieceN — refused"*, nothing changes, no episode (`D158`). ⚠ It covers every turn: a quad tap, a tap on empty space (first or second
+  touch), a tap on a face of the piece (its new resting face).
+* ⭐⭐ **THE YELLOW QUAD TURNS RED** while the turn its tap would make is blocked (the owner: *"highlight the quad in red instead of yellow and
+  back to yellow when rotation is allowed again"*) — the turn (`restingPreview`: aligned to its direction, or the roll when already aligned
+  there) checked whole by the same rule, again when the yellow quad, the piece's pose or its alignment changed, at most every 100 ms.
+* ⭐⭐ **THE TRANSLATION TO COME** — the owner: *"The translation will be done by sliding along the face of the placed part the resting face is
+  touching (therefore not a pure world move)"*. ⭐ It goes through the same guard: the move is a step along the TOUCHED FACE'S PLANE (its two
+  in-plane axes, from the finger), so its stop-and-slide is §3's with the touched face's normal as one more constraint — the slide keeps the
+  in-plane remainder, never the component into the face; a blocker met along the plane stops it and the remainder slides along that blocker
+  within the plane (the intersection of the two planes: a line). ⚠ Open, to decide when it is built: whether the piece then keeps an OFFSET from
+  its ring point the orbit carries, or the gizmo moves with it.
+* ⚠ **WHAT IT EXPOSES**: the ring's waist (0.09 m round the gizmo) runs through the painting wherever the gizmo sits among the parts — the piece
+  now stops there (measured headless: going down at the boot yaw + 2 rad, stopped by `Piece4` at ring position 0.597 of an asked 0.55; a yaw
+  sweep stopped by `Piece10`, then `Piece13`, sliding). ⚠ The guard costs ~0.06 ms per move (measured); the slower frames near the painting
+  are the rendering, the camera close.
+* ✅ 10 vectors (`tests/piece_collision.test.ts`): the orbit's slide order, the stop, the refused axes; the moving orbited piece stopped by a
+  part, never by the frozen floor, never another body's obstacle; the wiring of the step, the turn checks and the red quad.
+* Headless (desktop): the piece stopped by `Piece4` → the yellow quad RED (`quadTurnCheck.blockedBy`: Piece4) → a tap on empty space:
+  *"orbit: the roll is blocked by Piece4 — refused"*; slid on along the yaw, the quad yellow again. ⛔ No device look yet.

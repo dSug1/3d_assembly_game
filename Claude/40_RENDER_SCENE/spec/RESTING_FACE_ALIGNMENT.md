@@ -1034,3 +1034,10 @@ The owner: *"The possibility to move the gizmo by second touch tap on mobile has
   ±5° of the ring's pitch, so the camera never jumps at the level), in the camera's placement (`cameraOffset`) and in the zoom limit that keeps
   the piece on screen (`minGreenZoom`). Measured headless at 6 m: the 4th ring's camera **42.9°** below the piece; over the orbit every quad turns
   yellow on BOTH rings (the horizontal one at 8 of 16 yaws on each).
+
+## 27. The piece collides; the yellow quad RED while its turn is blocked (2026-10-13, `1.0.72-`)
+
+The orbited piece now collides with the placed and loose parts (never the floor, never the play volume): the orbit step slides in the orbit's
+own coordinates and the camera stops with it; every turn (align, roll, a quad tap, an empty-space tap, a face tap) is checked whole before it
+starts and REFUSED when blocked; and the yellow quad turns **RED** while the turn its tap would make is blocked, yellow again once it is free
+→ [`COLLISION.md`](../../30_OBJECTS_3D/spec/COLLISION.md) §11.

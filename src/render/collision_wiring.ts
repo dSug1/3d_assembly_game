@@ -55,6 +55,32 @@ export function collisionSetup(
   };
 }
 
+/**
+ * ⭐⭐⭐ prototype (2026-10-13, *"Now we need to work on the collision of the green-turquoise piece with the other parts"* → *"Build"*; `COLLISION.md` §11) — the ORBITED PIECE's setup: the same rule and skin, against the placed and loose
+ * parts only — ⛔ never the FROZEN bodies (the floor: the 3rd and 4th rings pass under it) nor the PLAY VOLUME (2 × 2 × 1 m against a 6 m
+ * orbit), the owner's choice; the other orbited piece is never an obstacle (`candidates` skips orbited bodies).
+ */
+export function pieceCollisionSetup(st: SceneState): CollisionSetup {
+  const frozen = (id: ObjectId): boolean => st.world.objects.get(id)?.frozen === true;
+  return { shapes: SHAPES, bounds: BOUNDS, skinM: skinM(st), exempt: (a, b) => frozen(a) || frozen(b) };
+}
+
+/** ⭐ The orbited piece's move judged, nothing recorded — a CHECK (the yellow quad's turn), not a move. */
+export function pieceMoveVerdict(st: SceneState, id: ObjectId, target: Placed): MoveVerdict {
+  return resolveMove(st.world, id, target, pieceCollisionSetup(st));
+}
+
+/** ⭐ The orbited piece's guarded move (`resolveMove` with `pieceCollisionSetup`); a contact is named on the HUD as any other. */
+export function guardPieceMove(st: SceneState, id: ObjectId, target: Placed): MoveVerdict {
+  const v = pieceMoveVerdict(st, id, target);
+  if (v.blockedBy !== null) {
+    st.lastCollision = `${id}⟂${v.blockedBy} ${Math.round(v.t * 100)}%${v.slid ? " slid" : ""}`;
+    st.lastCollisionAt = performance.now();
+    st.hudDirty = true;
+  }
+  return v;
+}
+
 /** ⭐ The guarded move — what `setModelPose` writes instead of the asked pose. */
 export function guardMove(
   st: SceneState,

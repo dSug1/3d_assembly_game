@@ -579,6 +579,7 @@ export function createScene(
   st.restingQuads = null;
   st.quadPress = null;
   st.orientShown = { candidate: -1, clicked: null };
+  st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;
