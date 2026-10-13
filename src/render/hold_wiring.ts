@@ -2,7 +2,7 @@
  * ⭐⭐⭐ prototype — **THE HELD SECOND TOUCH, WIRED** (`RESTING_FACE_ALIGNMENT.md` §20; the owner, 2026-10-11). The decisions are
  * `input/hold_gesture.ts`'s; this holds the input in flight (`st.hold`) and calls the actions — the way in (`enterPieceOrbit`), the orbit
  * round the piece and the roll (`orbitDragStep`, dx only), the zoom (`updatePinch`), the way out (`returnToCentreOrbit`), the tap roll
- * (`rollRestingFace`), the orbit centre moved by a tap on a placed part. ⛔ No rule here.
+ * (⭐ 2026-10-13: the yellow quad tapped, `orientTapShown`), the orbit centre moved by a tap on a placed part. ⛔ No rule here.
  * ⛔⛔ (2026-10-12, the owner: *"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting face.
  * Alignment of resting face shall be with the cube only"*) — the second touch takes no pink face and aligns nothing; its highlights clock
  * is deleted with it.
@@ -15,10 +15,10 @@
  *   the first held, the roll to the next axis.
  */
 import { pxToMm } from "../core/units";
-import { holdTapMode, holdTapRolls, pinchStarts, type HoldMode } from "../input/hold_gesture";
+import { holdTapMode, holdTapTapsYellow, pinchStarts, type HoldMode } from "../input/hold_gesture";
 // ⏸ (2026-10-12) with the way in, commented out: import { holdDecision, holdSwitch, trailAnchor } from "../input/hold_gesture";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
-import { rollRestingFace } from "./green_box_wiring";
+import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { pinchPair, syncCentre, updatePinch } from "./camera_rig";
 import type { Sample } from "../input";
@@ -205,12 +205,10 @@ export function holdRelease(
       syncCentre(st);
       st.lastVerdict = "orbit: second touch tap on a placed part — the orbit centre (the pink gizmo) moved there";
     }
-    // ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty … rolls to the next axis"*) — one stop, clockwise as seen from the
-    // camera (`rollRestingFace`); one episode
-    if (holdTapRolls(tapped, mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)) {
-      st.episodes.touch(--st.episodeSeq, true, true);
-      st.episodes.sync(true);
-      st.lastVerdict = st.lastVerdict.replace(/^orbit: tap — roll/, "orbit: second touch tap, first held — roll");
+    // ⭐⭐ (2026-10-11, *"left click held + CTRL/ALT tap on empty … rolls to the next axis"*) → (2026-10-13, *"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there"*) — the YELLOW quad tapped
+    // (`orientTapShown`: aligned to its direction, or the roll when already aligned there); one episode (its own)
+    if (holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) {
+      st.lastVerdict = st.lastVerdict.replace(/^orbit: /, "orbit: second touch tap, first held — ");
     }
   }
   st.hold = null;

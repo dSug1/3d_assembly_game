@@ -49,11 +49,14 @@ export function holdDecision(
  * ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty or
  * on the pink face) rolls to the next axis"*) — does the second touch's release ROLL the piece to the next axis? A TAP (`tapped`), that
  * never became the way in or a zoom (`mode` still HELD), while the FIRST touch is held (`firstHeld`), whose press did nothing else
- * (`pressActed` false — ⭐ 2026-10-12: a press on a PLACED part moves the orbit centre instead), with the piece aligned (`aligned`).
+ * (`pressActed` false — ⭐ 2026-10-12: a press on a PLACED part moves the orbit centre instead).
+ * ⭐⭐ (2026-10-13, the owner: *"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there"*) — it no longer only ROLLS: it TAPS THE YELLOW QUAD, as the first touch's tap on empty space does
+ * (`orientTapShown`: aligned to it, or the roll when already aligned there) — so the piece need not be aligned first (`aligned` dropped;
+ * it was `holdTapRolls`).
  * ⛔ (2026-10-12) the pink face from a part and the key's raycast are deleted: no "pink changed", no "over the orbited piece".
  */
-export function holdTapRolls(tapped: boolean, mode: HoldMode, firstHeld: boolean, pressActed: boolean, aligned: boolean): boolean {
-  return tapped && mode === "HELD" && firstHeld && !pressActed && aligned;
+export function holdTapTapsYellow(tapped: boolean, mode: HoldMode, firstHeld: boolean, pressActed: boolean): boolean {
+  return tapped && mode === "HELD" && firstHeld && !pressActed;
 }
 
 /**

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { holdDecision, holdSwitch, holdTapMode, holdTapRolls, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
+import { holdDecision, holdSwitch, holdTapMode, holdTapTapsYellow, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { orbitModifiers } from "../src/input/mouse_second_touch";
 
@@ -186,18 +186,18 @@ describe("⭐⭐ prototype — a first touch held on a PLACED part is the held i
 });
 
 describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to the next axis (2026-10-11, *\"left click held + CTRL/ALT tap on empty or on the pink face (=first touch held + second touch tap on empty or on the pink face) rolls to the next axis\"*)", () => {
-  it("⭐ a tap, undecided, the first held, its press nothing else (⭐ 2026-10-12: a press on a placed part moves the centre), aligned — and only then", () => {
-    expect(holdTapRolls(true, "HELD", true, false, true)).toBe(true);
-    expect(holdTapRolls(false, "HELD", true, false, true)).toBe(false); // a hold, not a tap
-    expect(holdTapRolls(true, "WAY", true, false, true)).toBe(false); // the way in
-    expect(holdTapRolls(true, "ZOOM", true, false, true)).toBe(false); // a zoom
-    expect(holdTapRolls(true, "HELD", false, false, true)).toBe(false); // the first touch not held
-    expect(holdTapRolls(true, "HELD", true, true, true)).toBe(false); // its press acted (a placed part: the centre moved)
-    expect(holdTapRolls(true, "HELD", true, false, false)).toBe(false); // nothing aligned
+  it("⭐ a tap, undecided, the first held, its press nothing else (⭐ 2026-10-12: a press on a placed part moves the centre) — and only then; ⭐⭐ (2026-10-13) aligned or not", () => {
+    expect(holdTapTapsYellow(true, "HELD", true, false)).toBe(true);
+    expect(holdTapTapsYellow(false, "HELD", true, false)).toBe(false); // a hold, not a tap
+    expect(holdTapTapsYellow(true, "WAY", true, false)).toBe(false); // the way in
+    expect(holdTapTapsYellow(true, "ZOOM", true, false)).toBe(false); // a zoom (a tap that wobbled into it is judged HELD: `holdTapMode`)
+    expect(holdTapTapsYellow(true, "HELD", false, false)).toBe(false); // the first touch not held
+    expect(holdTapTapsYellow(true, "HELD", true, true)).toBe(false); // its press acted (a placed part: the centre moved)
   });
-  it("⭐ wired at the second touch's release: one stop clockwise (`rollRestingFace`, sense 1), one episode; a new pink face at the press marks it", () => {
+  it("⭐⭐ wired at the second touch's release (2026-10-13, *\"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there\"*): the YELLOW quad tapped — `orientTapShown`, as the first touch's tap on empty space", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("holdTapRolls(tapped, mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)");
+    expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null, h.pressActed) && orientTapShown(st)) {");
+    expect(h).not.toContain("holdTapRolls");
     expect(code("render/pointer_wiring.ts")).not.toContain("over the orbited piece: never the tap roll"); // ⛔ (2026-10-12) the key's raycast removed
     expect(code("render/hold_wiring.ts")).toContain("pressActed: centreAt !== null, centreAt,"); // ⭐ a tap on a placed part moves the centre, never rolls
   });
@@ -257,6 +257,6 @@ describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (
   it("⭐ wired at the second touch's release: the zoom undone, the tap judged in that mode", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(h).toContain("const mode = holdTapMode(h.mode, tapped); if (mode !== h.mode) st.zoom = st.zoomAtPinchStart; if (mode === \"HELD\") {");
-    expect(h).toContain("if (holdTapRolls(tapped, mode, h.first !== null,");
+    expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null,");
   });
 });

@@ -449,7 +449,7 @@ export interface SceneState {
     firstX0: number | null;
     /** ⭐ (2026-10-11) when the second touch was pressed (ms) — a tap (within the tap time) never starts the way in. */
     readonly t0: number;
-    /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap rolls nothing (`holdTapRolls`). */
+    /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap taps nothing (`holdTapTapsYellow`). */
     pressActed: boolean;
     /** ⭐ (2026-10-12) where the second touch's press hit a PLACED part (`null`: elsewhere) — its TAP moves the orbit centre there. */
     readonly centreAt: readonly [number, number, number] | null;
