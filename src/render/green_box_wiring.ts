@@ -1258,6 +1258,9 @@ function ringJacobian(st: SceneState, o: OrbitParams): [Vec3, Vec3] {
   return [scale(sub(ay, a), 1 / h), scale(sub(av, a), 1 / dv)];
 }
 
+/** ⭐ (2026-10-13) the samples an orbit step's path length is measured on. */
+const ORBIT_PATH_SAMPLES = 8;
+
 /**
  * ⭐⭐⭐ (2026-10-13, *"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there was no blocking to revert the orbit during this large dx orbit"*; `COLLISION.md` §11sexies) — an orbit step ALONG THE RING: cut into sub-steps (`orbitSubsteps`: ≤ 2° of yaw, ≤ 2 cm of
  * travel) each guarded in turn (`guardOrbitStep`) from where the last one ended — a sub-step that met a contact slides, and the REST of the step
@@ -1271,7 +1274,16 @@ function guardOrbitPath(
 ): { at: OrbitParams; anchor: Vec3 | null; slide: ((s: OrbitStep) => OrbitStep) | null } {
   const b = st.greenBox;
   if (b === null) return { at: to, anchor: null, slide: null };
-  const n = orbitSubsteps(to.yaw - from.yaw, length(sub(ringAnchorAt(st, to), ringAnchorAt(st, from))));
+  // ⭐ (2026-10-13, *"Do it"* — the hardening offered) the count from the PATH's length along the ring (8 samples), not the chord between its ends:
+  // through the waist the path is up to ~1.5× its chord, so each sub-step now keeps to ≤ 2 cm of travel as specified
+  let pathM = 0;
+  let prevA = ringAnchorAt(st, from);
+  for (let i = 1; i <= ORBIT_PATH_SAMPLES; i++) {
+    const a = ringAnchorAt(st, lerpOrbit(from, to, i / ORBIT_PATH_SAMPLES));
+    pathM += length(sub(a, prevA));
+    prevA = a;
+  }
+  const n = orbitSubsteps(to.yaw - from.yaw, pathM);
   if (n === 1) return guardOrbitStep(st, from, to, w0);
   let cur = from;
   let w = w0;

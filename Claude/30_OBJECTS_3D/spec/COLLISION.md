@@ -438,3 +438,9 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   spring effect.
 * ✅ Vectors: the sub-step count (2° / 2 cm / ≤ 48), why (a 60° step's chord 13 cm inside a 1 m arc; each sub-step's within 1 mm), the wiring
   (both guards walk the ring, the rest projected, the probes from the actual pose).
+* ⭐ **AND LARGE DY SWEEPS** (the owner: *"Check if some fix is also needed for large dy orbit sweeps"* → *"Do it"*): measured on `Scene_1`'s rings, a dy
+  step a finger can make in one event keeps each sub-step within ~1 mm of the ring's path (0.55 → 0.40: 1.1 mm; 0.62 → 0.52 through the waist:
+  0.6 mm); only the whole ring in ONE event (1 → 0) reaches 5.9 mm, the skin — and `resolveMove's` own skin-sized path check rules out
+  tunnelling anyway. ⭐ Hardened all the same: the sub-step count is taken from the PATH's length along the ring (8 samples,
+  `ORBIT_PATH_SAMPLES`), not the chord between its ends — through the waist the path is up to ~1.5× its chord (0.70 → 0.30: 2.26 m vs 1.48 m),
+  so each sub-step keeps to ≤ 2 cm of travel as specified (still at most 48).

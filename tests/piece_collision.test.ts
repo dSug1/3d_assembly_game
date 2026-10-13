@@ -211,7 +211,8 @@ describe("⭐⭐⭐ a large orbit step checked ALONG THE RING, not its chord (20
   });
   it("⭐ wired: both guards walk the ring (the target's, the per-frame net); the rest projected after a contact; the stuck probes from the piece AS IT IS", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const n = orbitSubsteps(to.yaw - from.yaw, length(sub(ringAnchorAt(st, to), ringAnchorAt(st, from))));");
+    expect(g).toContain("const n = orbitSubsteps(to.yaw - from.yaw, pathM);"); // ⭐ (2026-10-13) from the path's length along the ring, not its chord
+    expect(g).toContain("const a = ringAnchorAt(st, lerpOrbit(from, to, i / ORBIT_PATH_SAMPLES)); pathM += length(sub(a, prevA));");
     expect(g).toContain("rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met");
     expect(g).toContain("const t = { position: add(actual.position, d), orientation: actual.orientation };");
   });
