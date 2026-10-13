@@ -95,6 +95,11 @@ export interface CollisionSetup {
    * a move stops at a wall, a translation SLIDES along it, a rotation clamps on its own axis. Absent: unbounded.
    */
   readonly volume?: Aabb;
+  /**
+   * ⭐ (2026-10-13) the stop's bisection rounds (`largestFreeFraction`; 14 when absent) — the orbited piece's guard takes 8 (a substep is
+   * at most the skin long: 1/256 of it is ~0.02 mm), it runs many times a frame near a contact.
+   */
+  readonly bisectIterations?: number;
 }
 
 /** ⭐ `3D7`: what `blockedBy` names when a WALL of the play volume stopped the move — no body has this id. */
@@ -459,7 +464,7 @@ function advance(
     if (!v.free) {
       const lo = prev;
       const base = prevWorld;
-      const t = lo + (f - lo) * largestFreeFraction((u) => poseFree(base, at(lo + (f - lo) * u), moving, root, setup).free);
+      const t = lo + (f - lo) * largestFreeFraction((u) => poseFree(base, at(lo + (f - lo) * u), moving, root, setup).free, setup.bisectIterations ?? 14);
       return { t, blockedBy: v.blockedBy };
     }
     prev = f;

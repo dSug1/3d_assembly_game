@@ -444,3 +444,31 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   tunnelling anyway. ⭐ Hardened all the same: the sub-step count is taken from the PATH's length along the ring (8 samples,
   `ORBIT_PATH_SAMPLES`), not the chord between its ends — through the waist the path is up to ~1.5× its chord (0.70 → 0.30: 2.26 m vs 1.48 m),
   so each sub-step keeps to ≤ 2 cm of travel as specified (still at most 48).
+
+## 11septies. The guards never freeze a frame — a time budget, cheaper slides, the checks spread (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"When i do large orbit dx sweeps which collide, sometimes the scene freezes or the orbit slows down when the piece approaches the collision
+> part. Check what can be improved"* → *"Build, update the md files, deploy"* — the owner.
+
+* ⛔ **THE COST, MEASURED** (headless, the gizmo at the floor, 0.25 rad of yaw per event into the parts): the guards' work a frame — mean
+  0.7–1.6 ms, **peaks of 7.3 ms** on a desktop CPU (×3–5 on a phone: 20–35 ms in one frame — a hitch; several together, a freeze). Three things
+  stacked exactly at the contact: (1) a large step cut into up to 48 sub-steps, each one after the contact SLIDING again — up to ~6 collision
+  checks each, each with its own skin-length substeps and a 14-round stop bisection — on every event while the finger pushes; (2) the stuck
+  check every 250 ms: 4 probes + a whole-turn check per direction (6), at once; (3) the yellow quad's turn check every 100 ms, mid-sweep.
+* ✅ **THE FIX**:
+  1. **A TIME BUDGET** — the guards get **4 ms a frame** (`GUARD_BUDGET_MS`, `st.pieceGuardDeadline`): past it the sub-step walk stops where
+     it has checked (one sub-step always taken) and the unchecked REST of the input is KEPT — the orbit's target untouched, the guarded target
+     where it got to — and goes on next frame (`deferred`); only a step judged whole discards its excess. A heavy moment slows the orbit over a
+     few frames, never freezes one.
+  2. **Cheaper slides** — after a contact the projected rest of the step is walked ANEW with its own count (`pathSubsteps`), not re-slid every
+     2 cm (head-on, nothing is left: done); the stop's bisection 8 rounds for the piece (`CollisionSetup.bisectIterations`; 14 for the parts:
+     ~0.02 mm on a skin-long substep).
+  3. **The stuck check spread** — only once the piece has RESTED 150 ms under the push (a true block is only met at rest), and ONE check a frame
+     in turn (the 4 probes, then each direction's turn); a free one ends it at once.
+  4. **The quad's turn check paused** while the piece moves more than 3 mm a frame — checked again as soon as it slows.
+* ✅ Measured after (same sweeps): the guards' work a frame — mean 0.5–1.1 ms, **peak 5.0–5.5 ms** (the 4 ms budget plus one sub-step's
+  overrun; the budget is wall-clock, so a slower device keeps to it and walks the step over more frames). The rest of the frame headless is the
+  rendering. ⭐ The HUD's `guard` reading now gives both guards' cost a frame — its mean and the PEAK of the last 2 s (`guard 0.7ms (peak 5)`):
+  on the device, a freeze with a low peak is the rendering, a high peak the guards.
+* ✅ Vectors: the budget and the rest kept, the spring held to what was checked, the rest walked anew, the 8-round bisection for the piece,
+  the stuck check's rest and turn-taking, the quad's pause, the HUD's peak.

@@ -488,12 +488,21 @@ export interface SceneState {
   /** ⭐ (2026-10-13, `COLLISION.md` §11bis) the orbited piece's contact while it lasts: its normals (toward the piece), the skin held, when last met. */
   /** ⭐ (2026-10-13) the orbited piece's collision guard's cost per frame, ms (an exponential mean over ~30 frames) — the HUD reads it. */
   pieceGuardMs: number;
+  /** ⭐ (2026-10-13) the guards' cost THIS frame, and the peak of the last 2 s (when it was set). */
+  pieceGuardFrameMs: number;
+  /** ⭐ (2026-10-13, §11septies) the guards' deadline this frame (`performance.now()` ms): past it, the rest of a step waits for the next frame. */
+  pieceGuardDeadline: number;
+  /** ⭐ (2026-10-13) how far the piece moved this frame (m), and when it last moved (ms) — the quad's check pauses mid-sweep, the stuck check waits for a rest. */
+  pieceFrameStepM: number;
+  pieceMovedAt: number;
+  pieceGuardPeak: number;
+  pieceGuardPeakAt: number;
   /** ⭐ (2026-10-13, §11quater) the orbited piece's last position input was blocked (a contact, no free move since) — half of "stuck". */
   pieceMoveBlocked: boolean;
   /** ⭐ (2026-10-13, §11quinquies) the orbit's TARGET as the guard let it be (`null`: none yet) — the spring and the camera follow it. */
   orbitTargetGuarded: { yaw: number; v: number; zoom: number } | null;
   /** ⭐ (2026-10-13) every position step AND every quad turn blocked (checked at most every 250 ms while in contact) — the red pop-up, the respawn. */
-  pieceStuck: { all: boolean; at: number };
+  pieceStuck: { all: boolean; at: number; idx: number };
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
   pieceTaps: TapHistory;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */

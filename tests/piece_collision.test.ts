@@ -105,7 +105,7 @@ describe("⭐⭐⭐ the rule is `resolveMove`'s, with the piece's own setup — 
 describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐ the piece's setup: no play volume, the frozen bodies exempt", () => {
     const c = flat("render/collision_wiring.ts");
-    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };");
+    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, bisectIterations: 8, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };");
   });
   it("⭐⭐ the orbit step guarded each frame after the spring; blocked, PROJECTED (up to 3 re-checks), else the stop a rest gap short; the orbit's target and the spring's velocity projected the same way — only the input INTO the contact discarded", () => {
     const g = flat("render/green_box_wiring.ts");
@@ -176,7 +176,7 @@ describe("⭐⭐⭐ the orbit's TARGET guarded, as a part's input step is (2026-
   it("⭐⭐ each step of the target goes through the guard from where the guarded target was, BEFORE the spring; the camera's driver is that target", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const g = guardOrbitPath(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));");
-    expect(g).toContain("st.pieceMoveBlocked = g.slide !== null; if (g.at !== rig) { st.orbit.reset(g.at.yaw, g.at.v); rig = { yaw: g.at.yaw, v: g.at.v, zoom: GREEN_PIECE_ORBIT_ZOOM }; st.orbitInertia.stop(); }");
+    expect(g).toContain("st.pieceMoveBlocked = g.slide !== null; if (g.at !== rig) {"); // ⭐ (2026-10-13, §11septies) the reset only when not deferred — vectored below
     expect(g.indexOf("st.orbitTargetGuarded = { ...rig };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)"));
     expect(g).toContain("{ yaw: rig.yaw, v: rig.v },"); // the camera follows the guarded target
     expect(g).not.toContain("st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]);"); // the per-frame guard no longer pulls the target
@@ -189,8 +189,7 @@ describe("⭐⭐⭐ the orbit's TARGET guarded, as a part's input step is (2026-
 describe("⭐⭐ the red message and the respawn only when EVERY move is blocked (2026-10-13, *\"the red message shall appear if all delta position and quad rotations are blocked\"*)", () => {
   it("⭐ the position: a probe each way along both ring coordinates, all blocked; the turns: every direction's quad tap, all blocked; while in contact, at most every 250 ms", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const posBlocked = probes.every((c) => {");
-    expect(g).toContain("const turnsBlocked = st.orientDirs.every((d) => {");
+    expect(g).toContain("const blocked = k < probes.length ? probeBlocked(probes[k]!) : turnBlocked(st.orientDirs[k - probes.length]!);");
     expect(g).toContain("const STUCK_CHECK_MS = 250;");
     expect(g).toContain("if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null");
   });
@@ -211,9 +210,37 @@ describe("⭐⭐⭐ a large orbit step checked ALONG THE RING, not its chord (20
   });
   it("⭐ wired: both guards walk the ring (the target's, the per-frame net); the rest projected after a contact; the stuck probes from the piece AS IT IS", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const n = orbitSubsteps(to.yaw - from.yaw, pathM);"); // ⭐ (2026-10-13) from the path's length along the ring, not its chord
+    expect(g).toContain("return orbitSubsteps(to.yaw - from.yaw, pathM);"); // ⭐ (2026-10-13) from the path's length along the ring, not its chord
     expect(g).toContain("const a = ringAnchorAt(st, lerpOrbit(from, to, i / ORBIT_PATH_SAMPLES)); pathM += length(sub(a, prevA));");
     expect(g).toContain("rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met");
     expect(g).toContain("const t = { position: add(actual.position, d), orientation: actual.orientation };");
+  });
+});
+
+describe("⭐⭐ the guards never freeze a frame (2026-10-13, §11septies: *\"When i do large orbit dx sweeps which collide, sometimes the scene freezes or the orbit slows down when the piece approaches the collision part\"* → *\"Build\"*)", () => {
+  it("⭐⭐ a TIME BUDGET (4 ms a frame): past it the rest of a step waits for the next frame — KEPT (the target untouched), never discarded", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const GUARD_BUDGET_MS = 4;");
+    expect(g).toContain("st.pieceGuardDeadline = performance.now() + GUARD_BUDGET_MS;");
+    expect(g).toContain("if (guard > 0 && performance.now() > st.pieceGuardDeadline) { deferred = true; break; }");
+    expect(g).toContain("if (!g.deferred) { st.orbit.reset(g.at.yaw, g.at.v); st.orbitInertia.stop(); }");
+    expect(g).toContain("} else if (g.deferred) { // ⭐ (2026-10-13, §11septies) the budget spent: the spring only as far as was checked st.boxSpring = { ...st.boxSpring, at: g.at };");
+  });
+  it("⭐ after a contact the projected rest is walked ANEW (its own count) — not re-slid every 2 cm; head-on, nothing left: done", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("if (Math.abs(rest[0]) + Math.abs(rest[1]) < 1e-12) break; n = pathSubsteps(st, cur, { yaw: cur.yaw + rest[0], v: Math.min(1, Math.max(0, cur.v + rest[1])), zoom: to.zoom }); i = 0;");
+  });
+  it("⭐ the stop's bisection 8 rounds for the piece (14 for the parts): ~0.02 mm on a skin-long substep", () => {
+    expect(flat("core/collision.ts")).toContain("largestFreeFraction((u) => poseFree(base, at(lo + (f - lo) * u), moving, root, setup).free, setup.bisectIterations ?? 14);");
+  });
+  it("⭐ the stuck check: only after 150 ms at rest under the push, ONE check a frame in turn; the quad's check paused while the piece moves > 3 mm a frame", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("now - st.pieceMovedAt < STUCK_STILL_MS) {");
+    expect(g).toContain("const STUCK_STILL_MS = 150;");
+    expect(g).toContain("if (st.pieceFrameStepM > 0.0005) st.pieceMovedAt = now;");
+    expect(flat("render/orient_cube.ts")).toContain("if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return;");
+  });
+  it("⭐ the HUD: both guards' cost a frame, its mean and the peak of the last 2 s", () => {
+    expect(flat("render/hud_paint.ts")).toContain("` guard ${st.pieceGuardMs.toFixed(2)}ms (peak ${st.pieceGuardPeak.toFixed(0)})`");
   });
 });

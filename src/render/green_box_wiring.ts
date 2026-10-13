@@ -35,7 +35,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { guardPieceMove, pieceCollisionSetup, pieceMoveVerdict, skinM } from "./collision_wiring";
-import { backOff, lerpOrbit, orbitSubsteps, projectStep, rememberNormal, type OrbitParams, type OrbitStep } from "../input/piece_collision";
+import { backOff, lerpOrbit, ORBIT_MAX_SUBSTEPS, orbitSubsteps, projectStep, rememberNormal, type OrbitParams, type OrbitStep } from "../input/piece_collision";
 import { contactNormal } from "../core/collision";
 import { setWorldPlacement } from "../core/object_model";
 import type { OrientDirection } from "../core/orientation_set";
@@ -889,6 +889,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   }
   st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
   let rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
+  st.pieceGuardFrameMs = 0; // ⭐ (2026-10-13) both guards' cost this frame (the target's and the per-frame net), for the HUD
+  // ⭐⭐ (2026-10-13, *"When i do large orbit dx sweeps which collide, sometimes the scene freezes or the orbit slows down when the piece approaches the collision part. Check what can be improved"* → *"Build"*; §11septies) — THE GUARDS' TIME BUDGET this frame: past it the rest of a step waits for the next frame
+  st.pieceGuardDeadline = performance.now() + GUARD_BUDGET_MS;
   // ⭐⭐⭐ (2026-10-13, *"there is still some jitter … Check what is done for the translation of the parts because there the slide and block is smoother than for the piece orbit"* → *"Jitter appears everywhere"*; `COLLISION.md` §11quinquies) — THE TARGET GUARDED, AS A PART'S INPUT STEP IS: each step of the orbit's target (a
   // finger, the coast) goes through the guard (`guardOrbitStep`, the projected slide) from where the guarded target was — BEFORE the spring.
   // So the spring only ever eases toward a collision-free target, and the camera's driver is that target: nothing chases a refused input
@@ -899,13 +902,19 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (tg !== null && b0 !== null && Math.abs(rig.yaw - tg.yaw) + Math.abs(rig.v - tg.v) > 1e-12) {
       const fromPose = pieceMeshAt(st, ringAnchorAt(st, tg));
       if (fromPose !== null && worldPlacementOf(st.world, b0.name) !== null) {
+        const t0 = performance.now();
         const g = guardOrbitPath(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));
+        st.pieceGuardFrameMs += performance.now() - t0;
         // ⭐ half of STUCK: the INPUT met a contact; a free input step clears it (the spring easing between events does not)
         st.pieceMoveBlocked = g.slide !== null;
         if (g.at !== rig) {
-          st.orbit.reset(g.at.yaw, g.at.v);
+          // ⭐ (2026-10-13, §11septies) cut short by the BUDGET: the unchecked rest of the input is KEPT (the orbit's target untouched) — the next
+          // frame goes on from where the guarded target got to; only a step judged whole discards its excess
+          if (!g.deferred) {
+            st.orbit.reset(g.at.yaw, g.at.v);
+            st.orbitInertia.stop();
+          }
           rig = { yaw: g.at.yaw, v: g.at.v, zoom: GREEN_PIECE_ORBIT_ZOOM };
-          st.orbitInertia.stop();
         }
       }
     }
@@ -927,7 +936,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (prevAt !== null && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null) {
     const g0 = performance.now();
     const g = guardOrbitPath(st, prevAt, st.boxSpring.at);
-    st.pieceGuardMs += (performance.now() - g0 - st.pieceGuardMs) / 30; // ⭐ the guard's cost, on the HUD
+    st.pieceGuardFrameMs += performance.now() - g0;
     heldAnchor = g.anchor;
     // ⭐ (2026-10-13, §11quater) half of STUCK: a contact met this frame; a free move clears it
     if (g.slide !== null) st.pieceMoveBlocked = true; // ⭐ (2026-10-13) set here too (the gizmo moved under it); cleared only by a free INPUT step (above)
@@ -937,6 +946,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       const sp = st.boxSpring;
       const vel = g.slide([sp.velYaw, sp.velV]);
       st.boxSpring = { at: g.at, velYaw: vel[0], velV: vel[1], velLnZoom: sp.velLnZoom };
+      st.boxOrbit = g.at;
+    } else if (g.deferred) {
+      // ⭐ (2026-10-13, §11septies) the budget spent: the spring only as far as was checked
+      st.boxSpring = { ...st.boxSpring, at: g.at };
       st.boxOrbit = g.at;
     }
   }
@@ -963,6 +976,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const be = st.pieceEntry === null ? null : orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
   // ⭐ (2026-10-08) …plus what a way out cut short had left, fading out (`entryPieceOffset`)
   const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm);
+  // ⭐ (2026-10-13) the guards' cost on the HUD: a mean over ~30 frames and the PEAK of the last 2 s (a freeze shows there)
+  st.pieceGuardMs += (st.pieceGuardFrameMs - st.pieceGuardMs) / 30;
+  st.pieceGuardPeak = now - st.pieceGuardPeakAt > 2000 || st.pieceGuardFrameMs >= st.pieceGuardPeak ? (st.pieceGuardPeakAt = now, st.pieceGuardFrameMs) : st.pieceGuardPeak;
   let pp: Vec3 =
     po !== null
       ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
@@ -973,6 +989,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // (`anchorFrame`); until then everything orbit-side reads the anchor
   // ⭐ (2026-10-13) held where its path stopped when even the stop on its ring is blocked (the gizmo moved under it)
   if (heldAnchor !== null) pp = heldAnchor;
+  // ⭐ (2026-10-13, §11septies) how far the piece moved this frame, and when it last moved
+  st.pieceFrameStepM = st.pieceAnchor === null ? 0 : length(sub(pp, st.pieceAnchor));
+  if (st.pieceFrameStepM > 0.0005) st.pieceMovedAt = now;
   st.pieceAnchor = pp;
   if (st.bootRestAlign) bootRestAlign(st, pp); // ⭐ (2026-10-10) a spawn: aligned to the frozen body, now that the orbit placed it
   box.position.set(pp[0], pp[1], pp[2]);
@@ -1194,6 +1213,8 @@ function pieceMeshAt(st: SceneState, anchor: Vec3, q?: Quat): { position: Vec3; 
 
 /** ⭐ (2026-10-13) how often the "every move blocked" check runs while in contact (ms), and its probe: the anchor moved this far (m). */
 const STUCK_CHECK_MS = 250;
+/** ⭐ (2026-10-13, §11septies) the rest under the push before the stuck check starts (ms). */
+const STUCK_STILL_MS = 150;
 const STUCK_PROBE_M = 0.003;
 
 /**
@@ -1204,13 +1225,14 @@ const STUCK_PROBE_M = 0.003;
 export function pieceStuckFrame(st: SceneState): void {
   const ps = st.pieceStuck;
   const b = st.greenBox;
-  if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null || worldPlacementOf(st.world, b.name) === null) {
+  const now = performance.now();
+  // ⭐ (2026-10-13, §11septies) only once the piece has RESTED under the push (`STUCK_STILL_MS`) — a true block is only ever met at rest
+  if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null || worldPlacementOf(st.world, b.name) === null || now - st.pieceMovedAt < STUCK_STILL_MS) {
     ps.all = false;
+    ps.idx = 0;
     return;
   }
-  const now = performance.now();
-  if (now - ps.at < STUCK_CHECK_MS) return;
-  ps.at = now;
+  void STUCK_CHECK_MS;
   const o: OrbitParams = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v, zoom: st.boxOrbit.zoom };
   const Jc = ringJacobian(st, o);
   const ly = Math.max(1e-9, length(Jc[0]));
@@ -1224,23 +1246,33 @@ export function pieceStuckFrame(st: SceneState): void {
   // ⛔ (2026-10-13, *"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there was no blocking to revert the orbit during this large dx orbit"*) — each probe a small move FROM THE PIECE AS IT IS (the ring's step `J·dq` added to its actual pose): from the ring
   // point instead, a piece held off its ring had every probe's path cross the part — all "blocked", a false red flag
   const actual = worldPlacementOf(st.world, b.name)!;
-  const posBlocked = probes.every((c) => {
+  const probeBlocked = (c: OrbitParams): boolean => {
     if (Math.abs(c.v - o.v) + Math.abs(c.yaw - o.yaw) < 1e-12) return true; // a ring end: no step that way
     const d = add(scale(Jc[0], c.yaw - o.yaw), scale(Jc[1], c.v - o.v));
     const t = { position: add(actual.position, d), orientation: actual.orientation };
     return pieceMoveVerdict(st, b.name, t).blockedBy !== null;
-  });
-  if (!posBlocked) {
-    ps.all = false;
-    return;
-  }
+  };
   const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;
-  const turnsBlocked = st.orientDirs.every((d) => {
+  const turnBlocked = (d: OrientDirection): boolean => {
     const roll = aligned !== null && d.normal[0] * aligned[0] + d.normal[1] * aligned[1] + d.normal[2] * aligned[2] > 0.9998;
     const q = restingPreview(st, d, roll);
     return q === null || pieceTurnBlocker(st, q) !== null;
-  });
-  ps.all = turnsBlocked;
+  };
+  // ⭐⭐ (2026-10-13, §11septies) SPREAD OVER FRAMES: ONE check a frame, in turn (the 4 probes, then each direction's turn); a free one ends
+  // it at once (not stuck); all of them blocked in a row: stuck — and the round goes on, so a move freed later is seen
+  const total = probes.length + st.orientDirs.length;
+  const k = ps.idx % Math.max(1, total);
+  const blocked = k < probes.length ? probeBlocked(probes[k]!) : turnBlocked(st.orientDirs[k - probes.length]!);
+  if (!blocked) {
+    ps.all = false;
+    ps.idx = 0;
+    return;
+  }
+  ps.idx = k + 1;
+  if (ps.idx >= total) {
+    ps.all = true;
+    ps.idx = 0;
+  }
 }
 
 /** ⭐ (2026-10-13, §11bis) how long a contact is remembered after it was last met (its normals, its skin), ms. */
@@ -1260,6 +1292,8 @@ function ringJacobian(st: SceneState, o: OrbitParams): [Vec3, Vec3] {
 
 /** ⭐ (2026-10-13) the samples an orbit step's path length is measured on. */
 const ORBIT_PATH_SAMPLES = 8;
+/** ⭐ (2026-10-13, §11septies) the guards' time budget per frame (ms) — a heavy contact slows the orbit over a few frames, never freezes one. */
+const GUARD_BUDGET_MS = 4;
 
 /**
  * ⭐⭐⭐ (2026-10-13, *"Still some spring effect with large dx orbit. Check that the collision check holds at large orbit dx. Also, a red flag popped up when there was no blocking to revert the orbit during this large dx orbit"*; `COLLISION.md` §11sexies) — an orbit step ALONG THE RING: cut into sub-steps (`orbitSubsteps`: ≤ 2° of yaw, ≤ 2 cm of
@@ -1271,9 +1305,50 @@ function guardOrbitPath(
   from: OrbitParams,
   to: OrbitParams,
   w0 = st.world,
-): { at: OrbitParams; anchor: Vec3 | null; slide: ((s: OrbitStep) => OrbitStep) | null } {
+): { at: OrbitParams; anchor: Vec3 | null; slide: ((s: OrbitStep) => OrbitStep) | null; deferred: boolean } {
   const b = st.greenBox;
-  if (b === null) return { at: to, anchor: null, slide: null };
+  if (b === null) return { at: to, anchor: null, slide: null, deferred: false };
+  const n0 = pathSubsteps(st, from, to);
+  if (n0 === 1) return { ...guardOrbitStep(st, from, to, w0), deferred: false };
+  let n = n0;
+  let cur = from;
+  let w = w0;
+  let rest: OrbitStep = [to.yaw - from.yaw, to.v - from.v];
+  let slide: ((s: OrbitStep) => OrbitStep) | null = null;
+  let anchor: Vec3 | null = null;
+  let deferred = false;
+  let i = 0;
+  for (let guard = 0; guard < 2 * ORBIT_MAX_SUBSTEPS && i < n; guard++) {
+    // ⭐⭐ (2026-10-13, *"When i do large orbit dx sweeps which collide, sometimes the scene freezes or the orbit slows down when the piece approaches the collision part. Check what can be improved"* → *"Build"*; §11septies) THE BUDGET: past it (one sub-step always taken), the rest waits for the next frame
+    if (guard > 0 && performance.now() > st.pieceGuardDeadline) {
+      deferred = true;
+      break;
+    }
+    const k = n - i;
+    const next: OrbitParams = { yaw: cur.yaw + rest[0] / k, v: Math.min(1, Math.max(0, cur.v + rest[1] / k)), zoom: to.zoom };
+    const g = guardOrbitStep(st, cur, next, w);
+    rest = [rest[0] - rest[0] / k, rest[1] - rest[1] / k];
+    i++;
+    cur = g.at;
+    anchor = g.anchor;
+    if (anchor !== null) break; // held off its ring: no further along it
+    if (g.slide !== null) {
+      slide = g.slide;
+      rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met
+      // ⭐ (2026-10-13, §11septies) …and walked ANEW, its own count — not re-slid every 2 cm (head-on, nothing is left: done)
+      if (Math.abs(rest[0]) + Math.abs(rest[1]) < 1e-12) break;
+      n = pathSubsteps(st, cur, { yaw: cur.yaw + rest[0], v: Math.min(1, Math.max(0, cur.v + rest[1])), zoom: to.zoom });
+      i = 0;
+    }
+    const pose = pieceMeshAt(st, ringAnchorAt(st, cur));
+    if (pose === null) break;
+    w = setWorldPlacement(st.world, b.name, pose);
+  }
+  return { at: cur, anchor, slide, deferred };
+}
+
+/** ⭐ (2026-10-13) the sub-steps an orbit step needs along the ring (`orbitSubsteps` on its PATH's length, `ORBIT_PATH_SAMPLES` samples). */
+function pathSubsteps(st: SceneState, from: OrbitParams, to: OrbitParams): number {
   // ⭐ (2026-10-13, *"Do it"* — the hardening offered) the count from the PATH's length along the ring (8 samples), not the chord between its ends:
   // through the waist the path is up to ~1.5× its chord, so each sub-step now keeps to ≤ 2 cm of travel as specified
   let pathM = 0;
@@ -1283,30 +1358,7 @@ function guardOrbitPath(
     pathM += length(sub(a, prevA));
     prevA = a;
   }
-  const n = orbitSubsteps(to.yaw - from.yaw, pathM);
-  if (n === 1) return guardOrbitStep(st, from, to, w0);
-  let cur = from;
-  let w = w0;
-  let rest: OrbitStep = [to.yaw - from.yaw, to.v - from.v];
-  let slide: ((s: OrbitStep) => OrbitStep) | null = null;
-  let anchor: Vec3 | null = null;
-  for (let i = 0; i < n; i++) {
-    const k = n - i;
-    const next: OrbitParams = { yaw: cur.yaw + rest[0] / k, v: Math.min(1, Math.max(0, cur.v + rest[1] / k)), zoom: to.zoom };
-    const g = guardOrbitStep(st, cur, next, w);
-    rest = [rest[0] - rest[0] / k, rest[1] - rest[1] / k];
-    if (g.slide !== null) {
-      slide = g.slide;
-      rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met
-    }
-    cur = g.at;
-    anchor = g.anchor;
-    if (anchor !== null) break; // held off its ring: no further along it
-    const pose = pieceMeshAt(st, ringAnchorAt(st, cur));
-    if (pose === null) break;
-    w = setWorldPlacement(st.world, b.name, pose);
-  }
-  return { at: cur, anchor, slide };
+  return orbitSubsteps(to.yaw - from.yaw, pathM);
 }
 
 /**
