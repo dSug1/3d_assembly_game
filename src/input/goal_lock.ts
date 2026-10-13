@@ -38,6 +38,21 @@ export function orbitTargetOnPress(
   return [hitPoint[0], hitPoint[1], hitPoint[2]];
 }
 
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"Piece still locked onto the collided part without possibility to go backwards"* → *"Build"*; `COLLISION.md` §11nonies) — the press only NOTES where the gizmo would go (`orbitTargetOnPress`); it MOVES
+ * there at the release, and only if that release is a TAP. A drag that starts on a placed part ORBITS and leaves the gizmo where it is — every
+ * re-press used to move it (half a metre in six drags, measured), the whole ring with it: the piece's place on the ring dropped into the part it
+ * touched and locked it. ⚠ It narrows the owner's 2026-10-01 rule (*"when first touch or left button is pressed and hold on a placed piece, the
+ * yellow orbit target moves"*) to the TAP of 2026-10-12 (*"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch
+ * tap on seated / placed part)"*). `null`: the gizmo stays.
+ */
+export function orbitTargetOnRelease(
+  noted: readonly [number, number, number] | null,
+  tapped: boolean,
+): [number, number, number] | null {
+  return noted !== null && tapped ? [noted[0], noted[1], noted[2]] : null;
+}
+
 // ⛔ (2026-10-11) `pinkFaceTapCandidate` is DELETED — the pink face is the held second touch's now (`hold_gesture.ts`'s `pinkCandidate`).
 
 /**

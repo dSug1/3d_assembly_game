@@ -501,6 +501,8 @@ export interface SceneState {
   orbitRawPrev: { yaw: number; v: number } | null;
   /** ⭐ (2026-10-13, §11octies) the RING HEIGHT the finger set (only its dy moves it) — the piece returns to it once a slide carried it off. */
   orbitUserV: number | null;
+  /** ⭐ (2026-10-13, §11nonies) a press on a placed part: where the gizmo goes IF it is released as a tap (its press sample). */
+  pendingPartCentre: { pointerId: number; target: [number, number, number]; x: number; y: number; t: number } | null;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m), and when it last moved (ms) — the quad's check pauses mid-sweep, the stuck check waits for a rest. */
   pieceFrameStepM: number;
   pieceMovedAt: number;

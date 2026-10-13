@@ -175,7 +175,7 @@ describe("⭐⭐ the red BLOCKED pop-up while the piece is stuck (2026-10-13, *\
 describe("⭐⭐⭐ the orbit's TARGET guarded, as a part's input step is (2026-10-13, §11quinquies: *\"there is still some jitter … Check what is done for the translation of the parts because there the slide and block is smoother than for the piece orbit\"* → *\"Jitter appears everywhere\"*)", () => {
   it("⭐⭐ each step of the target goes through the guard from where the guarded target was, BEFORE the spring; the camera's driver is that target", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const g = guardOrbitPath(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));");
+    expect(g).toContain("const atTarget = setWorldPlacement(st.world, b0.name, fromPose);"); // ⭐ (2026-10-13, §11nonies) or the actual piece when that ring place is in a part
     expect(g).toContain("st.pieceMoveBlocked = g.slide !== null; if (g.at !== rig) {"); // ⭐ (2026-10-13, §11septies) the reset only when not deferred — vectored below
     expect(g.indexOf("st.orbitTargetGuarded = { ...rig };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)"));
     expect(g).toContain("{ yaw: rig.yaw, v: rig.v },"); // the camera follows the guarded target
@@ -274,5 +274,19 @@ describe("⭐⭐⭐ §11octies — the cheap approach, the height kept, the UNLO
   });
   it("⭐ the HUD's flags: d (the budget cut a step), H (held off the ring), U (the unlock let a step through)", () => {
     expect(code("render/hud_paint.ts")).toContain('${st.pieceDeferred ? " d" : ""}${st.pieceHeld ? " H" : ""}${st.pieceUnlocked ? " U" : ""}');
+  });
+});
+
+import { orbitTargetOnRelease } from "../src/input/goal_lock";
+describe("⭐⭐ §11nonies — a DRAG from a placed part no longer moves the gizmo; the guard starts from the piece as it is when its ring place is in a part (2026-10-13, *\"Piece still locked onto the collided part without possibility to go backwards\"*)", () => {
+  it("⭐ the gizmo moves at a TAP's release only — a drag's press only notes where", () => {
+    const at: [number, number, number] = [0.1, 0.2, 0.3];
+    expect(orbitTargetOnRelease(at, true)).toEqual(at);
+    expect(orbitTargetOnRelease(at, false)).toBeNull();
+    expect(orbitTargetOnRelease(null, true)).toBeNull();
+  });
+  it("⭐ the target's guard starts from the ACTUAL piece when its place on the ring is in or against a part", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const fromRingInPart = clearance(atTarget, b0.name, pieceCollisionSetup(st), 0.001) <= 0; const g = guardOrbitPath(st, tg, rig, fromRingInPart ? st.world : atTarget);");
   });
 });

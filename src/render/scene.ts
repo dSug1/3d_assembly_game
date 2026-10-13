@@ -589,6 +589,7 @@ export function createScene(
   st.pieceUnlocked = false;
   st.orbitRawPrev = null;
   st.orbitUserV = null;
+  st.pendingPartCentre = null;
   st.pieceFrameStepM = 0;
   st.pieceMovedAt = 0;
   st.pieceGuardPeak = 0;

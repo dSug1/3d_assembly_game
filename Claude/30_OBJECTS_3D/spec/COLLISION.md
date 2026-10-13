@@ -505,3 +505,25 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
 * ✅ The HUD's `guard` reading carries flags: `d` (the budget cut a step short), `H` (the piece held off its ring), `U` (the unlock fired).
 * ✅ Vectors: the clearance (and a pair's gap), the walk trusting it, the budget kept at 4 ms, the unlock's three conditions, the height kept and
   its waiting return, the HUD's flags.
+
+## 11nonies. A DRAG from a placed part no longer moves the gizmo; the guard starts from the piece as it is (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"Piece still locked onto the collided part without possibility to go backwards"* (iPhone, build `042651c`; the HUD: `first Piece18`, the
+> gizmo at `(−0.08, 0.02, −0.04)`) → *"Build, update the md files."* — the owner.
+
+* ⛔⛔ **THE SUSPECT, FOUND WITH REAL TOUCHES** (the lock itself was not reproduced headless — with the gizmo fixed, every reverse got out): near the
+  painting almost any touch lands on a PLACED part, and **a first PRESS on a placed part moved the gizmo there** (the 2026-10-01 rule) — so every
+  drag that started on a part moved the gizmo, and the whole ring with it: six drags carried it from `(−0.08, 0.02, −0.04)` to `(−0.19, 0.50,
+  −0.05)`. The piece's place on the ring then jumped against or into the part it touched; every step started from inside it, where the
+  penetration rule's over-reading depth could refuse every direction and the unlock (§11octies) find no "away" — and each re-press moved it again.
+* ✅ **THE GIZMO MOVES ON A TAP ONLY** — the press on a placed part NOTES where (`orbitTargetOnPress`, `st.pendingPartCentre`); the release moves
+  it there only if it is a TAP (`orbitTargetOnRelease`). A drag from a part ORBITS and leaves the gizmo where it is. ⚠ This narrows the
+  owner's 2026-10-01 rule (*"when first touch or left button is pressed and hold on a placed piece, the yellow orbit target moves"*) to the TAP
+  of 2026-10-12 (*"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed part)"*).
+* ✅ **THE GUARD STARTS FROM THE PIECE AS IT IS** when the guarded target's place on the ring is in or against a part (`clearance` ≤ 0 there):
+  the target's step then starts from the piece's actual pose, never from inside a part.
+* ✅ Measured headless with real touches, each drag starting ON a placed part (the gizmo at the phone's place): the gizmo stays at
+  `(−0.08, 0.02, −0.04)` through six drags; the piece goes left to `Piece9` and back right to `Piece10`, round after round — never locked. A TAP
+  on `Piece13` moves the gizmo there (⚠ headless only with `?tapMaxDuration=400`: the software renderer makes a quick tap last ~280 ms).
+* ✅ Vectors: `orbitTargetOnRelease` (a tap moves, a drag does not); the press only notes; the release's wiring; the guard's start from the actual
+  piece.

@@ -912,7 +912,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       const fromPose = pieceMeshAt(st, ringAnchorAt(st, tg));
       if (fromPose !== null && worldPlacementOf(st.world, b0.name) !== null) {
         const t0 = performance.now();
-        const g = guardOrbitPath(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));
+        // ⭐⭐ (2026-10-13, *"Piece still locked onto the collided part without possibility to go backwards"* → *"Build"*; §11nonies) — the step starts where the guarded target is… unless that place on the ring is IN or AGAINST a part
+        // (the ring moved under the piece: the gizmo moved): then from where the piece ACTUALLY is — from inside a part every direction could
+        // read "deeper" and none be allowed, the unlock finding no "away"
+        const atTarget = setWorldPlacement(st.world, b0.name, fromPose);
+        const fromRingInPart = clearance(atTarget, b0.name, pieceCollisionSetup(st), 0.001) <= 0;
+        const g = guardOrbitPath(st, tg, rig, fromRingInPart ? st.world : atTarget);
         st.pieceGuardFrameMs += performance.now() - t0;
         st.pieceDeferred = g.deferred;
         // ⭐ half of STUCK: the INPUT met a contact; a free input step clears it (the spring easing between events does not)

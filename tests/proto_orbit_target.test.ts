@@ -47,7 +47,10 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     expect(c).not.toMatch(/const c = orbitCentre\(/);
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/orbitTargetOnPress\(\s*routed\.role === "OBJECT" && st\.router\.all\(\)\.length === 1,\s*e\.pointerType !== "mouse" \|\| e\.isTrusted,/);
-    expect(p).toMatch(/st\.centreBlend\.retarget\(newTarget\);[\s\S]{0,300}?syncCentre\(st\);/);
+    // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
+    expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, x: s.x, y: s.y, t: s.t } : null;");
+    expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); if (to !== null) { st.centreBlend.retarget(to); syncCentre(st); }");
+    expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
   });
 
   it("⭐ the yellow target is ALWAYS VISIBLE — drawn in rendering group 2, after the bodies, the depth cleared (the owner: *\"not occluded by any object\"*)", () => {
