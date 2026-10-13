@@ -297,6 +297,9 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ `D136`: how far a body may SINK into another (mm on the glass) — contact is allowed; the
             // margin a hand must line a piece up within to slide it into a zero-clearance slot.
             tunable(st, "collision allowance — how far a body may sink into another (mm on glass)", "collisionSkinMm", 0.05, 3, 0.05),
+            // ⭐ (2026-10-13, §12) the orbited piece: its gap to the parts (mm in the world) and its solver's work per frame
+            tunable(st, "piece gap — the orbited piece rests this far from a part (mm)", "pieceGapMm", 0.2, 5, 0.1),
+            tunable(st, "piece solver — gap checks per frame (more: smoother, slower)", "pieceSolverQueries", 8, 96, 4),
             // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
             // under the finger at every camera distance. The slider exists so that claim
             // can be DISPROVED by finger, and so the owner can judge whether direct

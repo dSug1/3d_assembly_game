@@ -316,6 +316,17 @@ export interface GestureConfig {
    */
   collisionSkinMm: number;
   /**
+   * ⭐⭐ (prototype, 2026-10-13, `COLLISION.md` §12) THE ORBITED PIECE'S GAP, millimetres IN THE WORLD (not on the glass — it must not change
+   * with the camera): the piece rests this far from any part it is pushed against, and is never closer than half of it. The owner: *"1- ok"*
+   * to a fixed ~1 mm gap. ⛔ Must be > 0: at 0 the rule is the penetration test again, its history and its locks.
+   */
+  pieceGapMm: number;
+  /**
+   * ⭐ (prototype, 2026-10-13, §12) THE SOLVER'S WORK CAP — the most gap queries one frame's orbit step may make; past it the rest of the step
+   * waits for the next frame (never dropped). It replaces the 4 ms clock budget: a count is the same on every device and in every test.
+   */
+  pieceSolverQueries: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
    * `0` leaves the ring drawn and every press to the ordinary rules.
@@ -862,6 +873,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceHighlightAlpha: 0.17,
   // ⚠ A guess with a slider: small enough to read as contact, large enough to stay above GJK's noise.
   collisionSkinMm: 0.3,
+  // ⭐ the owner's ~1 mm (2026-10-13)
+  pieceGapMm: 1,
+  // ⚠ a guess with a slider — each query is one GJK pass over the parts within reach
+  pieceSolverQueries: 24,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -1117,6 +1132,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `collisionSkinMm (${cfg.collisionSkinMm}) must be in (0, 5] mm: it is how far a body may sink ` +
         "into another (D136), and the path check's substep — at 0 nothing could be lined up into a slot.",
     );
+  }
+
+  if (!(cfg.pieceGapMm > 0 && cfg.pieceGapMm <= 20)) {
+    throw new Error(`pieceGapMm (${cfg.pieceGapMm}) must be in (0, 20] mm: at 0 the orbited piece's clearance rule has no margin (COLLISION.md §12).`);
+  }
+  if (!(Number.isInteger(cfg.pieceSolverQueries) && cfg.pieceSolverQueries >= 4 && cfg.pieceSolverQueries <= 400)) {
+    throw new Error(`pieceSolverQueries (${cfg.pieceSolverQueries}) must be an integer in [4, 400]: the orbit solver's work cap per frame.`);
   }
 
   if (!(cfg.highlightLiftMm > 0 && cfg.highlightLiftMm <= 5)) {

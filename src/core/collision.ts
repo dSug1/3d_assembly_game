@@ -420,27 +420,30 @@ export function contactNormal(world: World, id: ObjectId, blocker: ObjectId, set
  * of at most this much (every point of the subtree) cannot reach anything — CONSERVATIVE ADVANCEMENT (Mirtich 1996).
  */
 export function clearance(world: World, id: ObjectId, setup: CollisionSetup, maxM: number): number {
+  return nearestObstacle(world, id, setup, maxM).gapM;
+}
+
+/**
+ * ⭐⭐ (2026-10-13, `COLLISION.md` §12) — `clearance` and WHICH body it is to: the nearest obstacle within `maxM` (`null` when none), the gap
+ * `maxM` then; 0 when touching or in. The orbited piece's solver reads the gap and asks that body for the contact normal.
+ */
+export function nearestObstacle(world: World, id: ObjectId, setup: CollisionSetup, maxM: number): { gapM: number; blocker: ObjectId | null } {
   const moving = subtreeOf(world, id);
   let best = maxM;
+  let blocker: ObjectId | null = null;
   for (const [m, o] of candidates(world, moving, rootOf(world, id), setup, maxM)) {
     const ma = worldParts(world, m, setup.shapes);
     const oa = worldParts(world, o, setup.shapes);
     if (!ma || !oa) continue;
     const g = partsGap(ma, oa);
     if (g === null) continue;
-    if (g <= CONTACT_M) return 0;
-    best = Math.min(best, g);
+    if (g <= CONTACT_M) return { gapM: 0, blocker: o };
+    if (g < best) {
+      best = g;
+      blocker = o;
+    }
   }
-  return best;
-}
-
-/** ⭐ (2026-10-13) the surface gap between two bodies as they stand (`null` with no shapes) — 0 when touching or in. */
-export function pairGap(world: World, a: ObjectId, b: ObjectId, setup: CollisionSetup): number | null {
-  const pa = worldParts(world, a, setup.shapes);
-  const pb = worldParts(world, b, setup.shapes);
-  if (!pa || !pb) return null;
-  const g = partsGap(pa, pb);
-  return g === null ? null : Math.max(0, g);
+  return { gapM: best, blocker };
 }
 
 /** What `resolveMove` decided. */
