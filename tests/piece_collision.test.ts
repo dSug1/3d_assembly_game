@@ -5,7 +5,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { boundsFromShapes, clearance, hullAtSpawn, nearestObstacle, resolveMove, type CollisionSetup } from "@core/collision";
+import { boundsFromShapes, clearance, hullAtSpawn, nearestObstacle, resolveMove, type CollisionSetup, type CollisionShapeSource } from "@core/collision";
 import { boxShape } from "@core/collision_shape";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
@@ -164,6 +164,28 @@ describe("⭐⭐ the red BLOCKED pop-up while the piece is stuck (2026-10-13, *\
     }
     expect(flat("render/ui_theme.ts")).toContain(".ui-toast--danger { background: var(--ui-danger); color: var(--ui-danger-text);");
     expect(flat("render/goal_popup.ts")).toContain('el.className = "ui-toast ui-toast--danger";');
+  });
+});
+
+describe("⭐⭐ the second gap per convex PART (the fourth audit: per body, a U-shaped body's far arm was unbounded)", () => {
+  it("⭐⭐ a body of two convex parts: the nearest part and, as the second gap, its OTHER part", () => {
+    const box = (cx: number, h: number): Vec3[] => {
+      const out: Vec3[] = [];
+      for (const x of [-h, h]) for (const y of [-0.05, 0.05]) for (const z of [-0.05, 0.05]) out.push([cx + x, y, z]);
+      return out;
+    };
+    const parts: CollisionShapeSource = {
+      partsOf(world, id) {
+        if (id === "u") return [box(0.07, 0.01), box(-0.12, 0.01)]; // two arms: 1 cm and 6 cm of air from the piece
+        const pts = world.objects.get(id)?.shape?.points;
+        return pts ? [pts] : null;
+      },
+    };
+    const w = makeWorld([body("piece", [0, 0, 0], [0.1, 0.1, 0.1]), body("u", [0, 0, 0], [0.01, 0.01, 0.01])]);
+    const n = nearestObstacle(w, "piece", { shapes: parts, bounds: boundsFromShapes(parts), skinM: 0.001 }, 0.3);
+    expect(n.blocker).toBe("u");
+    expect(n.gapM).toBeCloseTo(0.01, 9);
+    expect(n.secondGapM).toBeCloseTo(0.06, 9); // ⛔ 0.3 (the look distance) per body
   });
 });
 

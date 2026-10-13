@@ -436,19 +436,24 @@ export function nearestObstacle(
   const moving = subtreeOf(world, id);
   let best = maxM;
   let blocker: ObjectId | null = null;
-  // ⭐ (2026-10-13, the third audit) the least gap to every body OTHER than the nearest — the orbited piece's directional stride is bounded by it
+  // ⭐ (2026-10-13, the third audit) the least gap to everything OTHER than the nearest — the orbited piece's directional stride is bounded by it.
+  // ⭐⭐ (the fourth audit) per convex PART, not per body: the stride's bound holds for ONE convex part, and a body of several (a U, a `UCX_`
+  // compound) would have left its other parts unbounded
   let second = maxM;
-  const per = new Map<ObjectId, number>();
+  const per = new Map<string, { o: ObjectId; g: number }>();
   for (const [m, o] of candidates(world, moving, rootOf(world, id), setup, maxM)) {
     const ma = worldParts(world, m, setup.shapes);
     const oa = worldParts(world, o, setup.shapes);
     if (!ma || !oa) continue;
-    const g = partsGap(ma, oa);
-    if (g === null) continue;
-    const gg = g <= CONTACT_M ? 0 : g;
-    per.set(o, Math.min(per.get(o) ?? Infinity, gg));
+    oa.forEach((pb, j) => {
+      const g = partsGap(ma, [pb]);
+      if (g === null) return;
+      const k = o + "#" + j;
+      const gg = g <= CONTACT_M ? 0 : g;
+      if (gg < (per.get(k)?.g ?? Infinity)) per.set(k, { o, g: gg });
+    });
   }
-  for (const [o, g] of per) {
+  for (const { o, g } of per.values()) {
     if (g < best || (blocker === null && g <= best)) {
       if (blocker !== null) second = Math.min(second, best);
       best = g;

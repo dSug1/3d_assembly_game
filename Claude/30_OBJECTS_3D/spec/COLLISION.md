@@ -671,3 +671,36 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
 * ✅ Vectors (7), each RED against the code before (two by mutant): a parallel swipe 2 mm off a floor goes > 0.2 rad (22 mrad before); the
   directional stride never tunnels a thin part; a reversal after a capped swipe moves back at once; the relocation ≤ the cap per frame,
   resumed, ending; the schedule's pace and verdict across a churning key; the tap decision; the orbit drag's band and its floor.
+
+### 12quinquies. The fourth audit's fixes — the long slide at the gap kept, the second gap per convex part, the plane bound, the band ticked (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"build all the fixes, update the md files, deploy. then perform the fable audit once again on the last five commits."* — the owner. The
+> fourth audit: the architecture sound, the third audit's fixes correct, no regression; one MEDIUM finding left in the feel.
+
+* ⭐⭐ **THE BOUND IS BETTER THAN §12quater STATED** (the audit, on the real GJK: 2610 random translations of turned boxes, the least slack −7e-16):
+  the gap to the nearest convex part under ANY displacement δ of the piece is at least `g + n·δ` — its supporting plane — not only along a
+  straight line. ✅ So the path of a long stride is checked by that PLANE BOUND at four points of the ring's arc, with ANCHORS only (no
+  collision query): the free-air stride's midpoint query is gone (one query fewer per try), and the miscounted `secondGap` read too.
+* ⛔⛔ **A PIECE RESTING ON A PART STILL CRAWLED ALONG IT** — the slide at the gap kept went by 4 mm sub-steps: 0.048 rad a frame (measured) against
+  0.27 a millimetre higher; §12quater's long stride only began above 1.2 mm. *Push it onto a part and swipe along it: it lagged the finger and
+  slid on after it stopped.* ✅ **THE LONG SLIDE**: after the projection, the sub-step is as long as the plane bound of the nearest part and the
+  gap to every other allow (≤ 5 cm), its landing checked once — else the 4 mm sub-step as before.
+* ⚠ **THE STRIDE ASSUMED ONE CONVEX PART A BODY** — `secondGapM` excluded every part of the nearest BODY, so a body of several (a U; the `UCX_`
+  compounds `3D8` will bring) left its other parts unbounded and could be tunnelled. ✅ `nearestObstacle` keeps the second gap per convex
+  PART; the nearest is one part, everything else — the same body's other parts included — bounds the stride.
+* ⚠ **§12quater's "paid again after every pause" WAS FALSE**: the orbit drag's own band was pushed but never TICKED, so a silent pause never
+  re-rested it (it was "once per drag", and a wobble leaked for ~150 ms after a pause). ✅ Ticked with the camera's tracker — now true.
+* ✅ The scene signature (`worldSignature`, now pure in `input/`) leaves the ORBITED pieces out — their easing pose restarted the relocation's
+  capped search every frame (the keys carry the solved place and the turn). (⚠ §12quater named the sway among the churners: the sway never
+  writes the world — wrong, harmless.)
+* ✅ An ARMED stuck verdict (the pop-up up) gets ONE check at once on its first key change — a freed piece hides the pop-up within a frame
+  instead of up to ~0.7 s, a single tap no longer swallowed in that window; once, so a churning key keeps the pace.
+* ✅ The stuck probe's four solves share the cap (each had all of it — 96 in theory). ✅ `pieceTurnBlocker`'s comment names `turnSweepFree`.
+* ⚠ Kept, by the audit's own reading: leaving the inside of a part takes the step whole (it may cross a second part on the way out — the
+  reversibility rule wins); ~10 source-string pins of the wiring remain in `piece_collision.test.ts`.
+* ⚠ Measured headless (desktop): the smallest gap 0.843 mm; 0 reversals on a wobbling drag; ~2 queries a frame at rest; the worst frame 37
+  queries (51 before).
+* ✅ Vectors (6), each RED against the code before (two by mutant): resting on a part, a 1 rad swipe goes > 0.2 rad in a capped frame; the
+  thin part of another body is never tunnelled (the fixture fails with the bound removed — the old one did not); the second gap per part (a
+  U-shaped body: 0.06 m, not the look distance); the stuck probe under the cap; the armed verdict's one quick check; the signature without
+  the orbited pieces, with the parts' turns; the band ticked.

@@ -19,6 +19,7 @@
  *   a part (the gizmo moved, a part moved) is put back on the nearest free place of its ring (`nearestFree`).
  */
 import type { Vec3 } from "../core/vec";
+import type { World } from "../core/object_model";
 
 /** ⭐ The piece's place on its ring: the yaw, the ring parameter (0 … 1), the zoom (fixed for the piece). */
 export interface OrbitQ {
@@ -160,6 +161,20 @@ export function keepSense(s: QStep, dq: QStep, J: readonly [Vec3, Vec3], normals
   return k;
 }
 
+/**
+ * ⭐⭐ (2026-10-13, the fourth audit) **THE PLANE BOUND** — the gap to the nearest convex part under ANY displacement δ of the piece is at least
+ * `g + n·δ` (its supporting plane; verified on the real GJK over 2610 random translations, the least slack −7e-16): checked at four points
+ * of the sub-step `u` along the ring (the arc bends between them by a fraction of a millimetre), with ANCHORS only — no collision query.
+ */
+function planeHolds(env: SolverEnv, q: OrbitQ, s: QStep, u: number, n: Vec3, g: number, floor: number): boolean {
+  const a0 = env.anchor(q);
+  for (const f of [0.25, 0.5, 0.75, 1]) {
+    const a = env.anchor(plus(q, s, u * f));
+    if (g + n[0] * (a[0] - a0[0]) + n[1] * (a[1] - a0[1]) + n[2] * (a[2] - a0[2]) < floor) return false;
+  }
+  return true;
+}
+
 /** ⭐ A normal added to the solve's contacts — a near-duplicate (≤ ~8°) replaces its old self; three at most. */
 function withNormal(ns: readonly Vec3[], n: Vec3): Vec3[] {
   return [n, ...ns.filter((k) => dot3(k, n) < 0.99)].slice(0, 3);
@@ -234,18 +249,20 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
           const tl = Math.hypot(tv[0], tv[1], tv[2]);
           if (tl > 1e-12) {
             const approach = -dot3(n, tv) / tl;
-            queries++;
-            const others = (env.secondGap?.(q) ?? g) - opt.gapM;
+            const others = (env.secondGap?.(q) ?? g) - opt.gapM; // (memoised with the gap at `q`: not a query)
             const along = approach > 1e-9 ? spare / approach : Infinity;
             const stride = Math.min(along, others, DIRECTIONAL_MAX_M) * 0.9;
             let tD = Math.min(1, stride / travel);
-            // ⭐ two tries at most, and only for a real gain — a curved part refused the long stride over and over, each try 2 queries
-            for (let tries = 0; tries < 2 && tD > 2 * tS; tries++) {
-              const end = gapAt(plus(q, rest, tD));
-              if (end >= opt.gapM && gapAt(plus(q, rest, tD / 2)) >= hard) {
-                t = tD;
-                gl = end;
-                break;
+            // ⭐ only for a real gain; the path by the PLANE BOUND (anchors only — the fourth audit), the landing by one query, two at most
+            for (let tries = 0; tries < 2 && tD > 2 * tS; ) {
+              if (planeHolds(env, q, rest, tD, n, g, hard)) {
+                tries++;
+                const end = gapAt(plus(q, rest, tD));
+                if (end >= opt.gapM) {
+                  t = tD;
+                  gl = end;
+                  break;
+                }
               }
               tD /= 2;
             }
@@ -272,7 +289,27 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     if (Math.abs(s[0] - rest[0]) + Math.abs(s[1] - rest[1]) > 1e-12) touched = blocked = true;
     const sLen = arcLength(env, q, s);
     let u = Math.min(1, SLIDE_STEP_M / Math.max(1e-12, sLen));
-    let gn = gapAt(plus(q, s, u));
+    let gn = -1;
+    // ⭐⭐ (2026-10-13, the fourth audit: a piece RESTING on a part slid 4 mm a sub-step — 0.048 rad a frame against 0.27 a millimetre higher; the
+    // owner's "slows down near a part" in its last form) the LONG slide: as far as the plane bound of the nearest part (anchors only) and the
+    // gap to every other allow, ≤ `DIRECTIONAL_MAX_M`, its landing checked once — else the 4 mm sub-step as before
+    if (n !== null) {
+      const others = (env.secondGap?.(q) ?? g) - hard;
+      let uD = Math.min(1, (Math.min(others * 0.9, DIRECTIONAL_MAX_M)) / Math.max(1e-12, sLen));
+      for (let tries = 0; tries < 2 && uD > 2 * u; ) {
+        if (planeHolds(env, q, s, uD, n, g, hard)) {
+          tries++;
+          const end = gapAt(plus(q, s, uD));
+          if (end >= hard) {
+            u = uD;
+            gn = end;
+            break;
+          }
+        }
+        uD /= 2;
+      }
+    }
+    if (gn < 0) gn = gapAt(plus(q, s, u));
     if (gn < hard) {
       // ⭐ a contact the projection did not know of (a corner): LEARNED, and the step projected again — never crept into by halving
       const nn = normalAt(plus(q, s, u));
@@ -313,7 +350,9 @@ export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM:
   if (ly > 1e-9) steps.push([probeM / ly, 0], [-probeM / ly, 0]);
   if (lv > 1e-9) steps.push([0, probeM / lv], [0, -probeM / lv]);
   // ⭐ a move is a quarter of the probe or more — settling within the margin is not a way out
-  return steps.every((s) => dist(env.anchor(solveOrbitStep(q, s, env, opt).q), a0) < probeM / 4);
+  // ⭐ (the fourth audit) the four solves SHARE the cap — each was given all of it (96 in theory)
+  const each = { ...opt, maxQueries: Math.max(4, Math.ceil(opt.maxQueries / Math.max(1, steps.length))) };
+  return steps.every((s) => dist(env.anchor(solveOrbitStep(q, s, env, each).q), a0) < probeM / 4);
 }
 
 /**
@@ -535,17 +574,22 @@ export interface StuckState {
   readonly turns: boolean;
   readonly done: boolean;
   readonly at: number;
+  /** ⭐ (the fourth audit) the one quick recheck an ARMED verdict gets on a key change is spent */
+  readonly fast: boolean;
 }
-export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity };
+export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity, fast: false };
 export function stuckNext(s: StuckState, key: string, now: number, everyMs: number): { s: StuckState; check: number | null } {
   // ⭐ (the third audit) a CHANGED key restarts the round but keeps the PACE (`at`) and the last verdict, provisional until a check disagrees —
   // a churning key (a turn playing, a part dragged, the sway) re-ran check 0 every frame and blinked the pop-up off for ≥ 600 ms
-  const cur = s.key === key ? s : { ...s, key, idx: 0, done: false };
+  // ⭐ (the fourth audit) …but an ARMED verdict (the pop-up up) gets ONE check at once on its first key change — a freed piece hides it within a
+  // frame, not after the pace; once, so a churning key does not check every frame
+  const armedFast = s.key !== key && s.position && s.turns && !s.fast;
+  const cur = s.key === key ? s : { ...s, key, idx: 0, done: false, ...(armedFast ? { at: -Infinity, fast: true } : {}) };
   if (cur.done || now - cur.at < everyMs) return { s: cur, check: null };
   return { s: { ...cur, at: now }, check: cur.idx };
 }
 export function stuckRecord(s: StuckState, check: number, blocked: boolean, total: number): StuckState {
-  if (!blocked) return { ...s, idx: 0, position: check === 0 ? false : s.position, turns: false, done: true };
+  if (!blocked) return { ...s, idx: 0, position: check === 0 ? false : s.position, turns: false, done: true, fast: false };
   const idx = check + 1;
   const position = check === 0 ? true : s.position;
   return idx >= total ? { ...s, idx: 0, position, turns: true, done: true } : { ...s, idx, position };
@@ -561,6 +605,26 @@ export function pieceTapAction(tapped: boolean, double: boolean, armed: boolean,
   if (double && armed) return "RESPAWN";
   if (popupShown) return "CONSUME";
   return "FACE";
+}
+
+/**
+ * ⭐⭐ (the third and fourth audits) THE SCENE AS THE COLLISION SEES IT — every body's position (0.1 mm) and orientation (1e-4), hashed (FNV-1a),
+ * the ORBITED pieces left out (their pose eases every frame; the keys carry the solved place and the turn): the stuck check's, the red
+ * quad's and the relocation's verdicts are re-judged when it changes.
+ */
+export function worldSignature(world: World): string {
+  let h = 0x811c9dc5;
+  const mix = (x: number) => {
+    h ^= Math.round(x) | 0;
+    h = Math.imul(h, 0x01000193);
+  };
+  for (const [id, o] of world.objects) {
+    if (o.orbited === true) continue;
+    for (let i = 0; i < id.length; i++) mix(id.charCodeAt(i));
+    for (const x of o.local.position) mix(x * 1e4);
+    for (const x of o.local.orientation) mix(x * 1e4);
+  }
+  return (h >>> 0).toString(36);
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */
