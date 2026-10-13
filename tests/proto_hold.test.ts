@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { holdDecision, holdSwitch, holdTapRolls, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
+import { holdDecision, holdSwitch, holdTapMode, holdTapRolls, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { orbitModifiers } from "../src/input/mouse_second_touch";
 
@@ -197,7 +197,7 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
   });
   it("⭐ wired at the second touch's release: one stop clockwise (`rollRestingFace`, sense 1), one episode; a new pink face at the press marks it", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("holdTapRolls(tapped, h.mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)");
+    expect(h).toContain("holdTapRolls(tapped, mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)");
     expect(code("render/pointer_wiring.ts")).not.toContain("over the orbited piece: never the tap roll"); // ⛔ (2026-10-12) the key's raycast removed
     expect(code("render/hold_wiring.ts")).toContain("pressActed: centreAt !== null, centreAt,"); // ⭐ a tap on a placed part moves the centre, never rolls
   });
@@ -242,5 +242,21 @@ describe("⭐⭐ a first touch / left TAP on EMPTY space = a tap on the cube's p
     expect(p).toContain("(ft === null || ft.pointerId !== e.pointerId) && st.hold === null && e.pointerId !== MOUSE_SECOND_ID &&");
     expect(p).toContain("orientTapShown(st)");
     expect(code("render/orient_cube.ts")).toContain("return tag >= 0 && orientCubeTap(st, tag);"); // ⭐ (2026-10-12) the pink direction, the window deleted
+  });
+});
+
+describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (2026-10-13, *\"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate.\"*)", () => {
+  it("⭐ a tapped ZOOM is judged HELD (the gizmo moved, or the roll); a held pinch stays a zoom; the other modes unchanged", () => {
+    expect(holdTapMode("ZOOM", true)).toBe("HELD");
+    expect(holdTapMode("ZOOM", false)).toBe("ZOOM");
+    expect(holdTapMode("HELD", true)).toBe("HELD");
+    expect(holdTapMode("WAY", true)).toBe("WAY");
+    // ⚠ why: the tap's slop (8 mm) is wider than the pinch's deadband (3.5 mm)
+    expect(DEFAULT_CONFIG.doubleTapSlop).toBeGreaterThan(DEFAULT_CONFIG.motionDeadbandMm);
+  });
+  it("⭐ wired at the second touch's release: the zoom undone, the tap judged in that mode", () => {
+    const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
+    expect(h).toContain("const mode = holdTapMode(h.mode, tapped); if (mode !== h.mode) st.zoom = st.zoomAtPinchStart; if (mode === \"HELD\") {");
+    expect(h).toContain("if (holdTapRolls(tapped, mode, h.first !== null,");
   });
 });

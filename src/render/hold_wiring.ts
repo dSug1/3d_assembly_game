@@ -15,7 +15,7 @@
  *   the first held, the roll to the next axis.
  */
 import { pxToMm } from "../core/units";
-import { holdTapRolls, pinchStarts, type HoldMode } from "../input/hold_gesture";
+import { holdTapMode, holdTapRolls, pinchStarts, type HoldMode } from "../input/hold_gesture";
 // ⏸ (2026-10-12) with the way in, commented out: import { holdDecision, holdSwitch, trailAnchor } from "../input/hold_gesture";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { rollRestingFace } from "./green_box_wiring";
@@ -194,7 +194,10 @@ export function holdRelease(
 // ⏸       st.lastVerdict = "orbit: the second touch lifted — the way out";
 // ⏸     }
 // ⏸   }
-  if (h.mode === "HELD") {
+  // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the pinch is a tap: the zoom it started undone (`holdTapMode`)
+  const mode = holdTapMode(h.mode, tapped);
+  if (mode !== h.mode) st.zoom = st.zoomAtPinchStart;
+  if (mode === "HELD") {
     // ⭐⭐ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the orbit centre (the pink gizmo) to where the press hit the placed part; ⛔ never also the tap roll (`pressActed`)
     if (tapped && h.centreAt !== null) {
@@ -204,7 +207,7 @@ export function holdRelease(
     }
     // ⭐⭐ (2026-10-11, the owner: *"left click held + CTRL/ALT tap on empty … rolls to the next axis"*) — one stop, clockwise as seen from the
     // camera (`rollRestingFace`); one episode
-    if (holdTapRolls(tapped, h.mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)) {
+    if (holdTapRolls(tapped, mode, h.first !== null, h.pressActed, st.restAligned && st.restRoll !== null) && rollRestingFace(st, performance.now(), 1)) {
       st.episodes.touch(--st.episodeSeq, true, true);
       st.episodes.sync(true);
       st.lastVerdict = st.lastVerdict.replace(/^orbit: tap — roll/, "orbit: second touch tap, first held — roll");
