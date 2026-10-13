@@ -583,6 +583,8 @@ export function createScene(
   st.pieceContact = null;
   st.pieceGuardMs = 0;
   st.pieceMoveBlocked = false;
+  st.orbitTargetGuarded = null;
+  st.pieceStuck = { all: false, at: 0 };
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;

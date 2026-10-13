@@ -72,13 +72,20 @@ export function pieceCollisionSetup(st: SceneState, skin: number = skinM(st)): C
 }
 
 /** ⭐ The orbited piece's move judged, nothing recorded — a CHECK (the yellow quad's turn), not a move. */
-export function pieceMoveVerdict(st: SceneState, id: ObjectId, target: Placed, setup: CollisionSetup = pieceCollisionSetup(st)): MoveVerdict {
-  return resolveMove(st.world, id, target, setup);
+export function pieceMoveVerdict(
+  st: SceneState,
+  id: ObjectId,
+  target: Placed,
+  setup: CollisionSetup = pieceCollisionSetup(st),
+  /** ⭐ (2026-10-13) the world the move starts in — the piece where its guarded TARGET is, for the target's own guard */
+  world = st.world,
+): MoveVerdict {
+  return resolveMove(world, id, target, setup);
 }
 
 /** ⭐ The orbited piece's guarded move (`resolveMove` with `pieceCollisionSetup`); a contact is named on the HUD as any other. */
-export function guardPieceMove(st: SceneState, id: ObjectId, target: Placed, setup: CollisionSetup = pieceCollisionSetup(st)): MoveVerdict {
-  const v = pieceMoveVerdict(st, id, target, setup);
+export function guardPieceMove(st: SceneState, id: ObjectId, target: Placed, setup: CollisionSetup = pieceCollisionSetup(st), world = st.world): MoveVerdict {
+  const v = pieceMoveVerdict(st, id, target, setup, world);
   if (v.blockedBy !== null) {
     st.lastCollision = `${id}⟂${v.blockedBy} ${Math.round(v.t * 100)}%${v.slid ? " slid" : ""}`;
     st.lastCollisionAt = performance.now();
