@@ -731,3 +731,39 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
 * ✅ Vectors (7), each RED against the code before (two by mutant): the stop-and-go drag keeps > 80 % of its travel (< 50 % re-armed at every
   hesitation); the plane bound at a bulge (red with it removed); the nudge keeps the verdict; the relocation key changes with a turn; the
   spike between samples is refused (red without the refinement); the quick check re-armed per round; the stagger.
+
+### 12septies. The sixth audit's fixes, and the red square that lingered — the stuck gate in `input/`, the turn sweep certified, the tremor's rest, the quad asked while moving (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"once the piece has cleared a collision, the red square still show too long before fading to yellow (I have time to bring the piece almost to
+> the maximum distance away from the gizmo before the red square turns to yellow)"* → *"build F1-F6."* → *"update the md files. deploy."* — the
+> owner. The sixth audit: the architecture sound; §12sexies' nudge fix half-built, its turn plan coarser, its band window lengthening a leak.
+
+* ⛔⛔ **THE RED SQUARE STAYED RED WHILE THE PIECE MOVED AWAY** — §11septies paused the quad's check whenever the drawn piece moved more than
+  3 mm a frame (a budget saving under the old 4 ms clock); an orbit moves it far more, so pulling away from a part never re-asked it until the
+  piece slowed. ✅ **Asked while moving** (`quadCheckBudget`): every 100 ms while its key changes, under what the frame's solve LEFT of the
+  cap — a sweep the budget cuts answers `PENDING` (the colour kept, asked again next frame, `turnSweep`), never "free"; and **free at once**,
+  one query, when the piece is clear by more than the turn's whole sweep (~13 cm for the green piece).
+* ⛔⛔ **THE STUCK GATE SAT IN THE RENDER FILE AND DISAGREED WITH `stuckKeep`** — it reset the verdict whenever the last input step was FREE, and
+  in a pocket at the gap kept half a wiggle's steps are (one moves away from a wall — measured 15 of 30): the pop-up blinked and the double tap
+  disarmed while the piece was still stuck, the very defect §12sexies claimed fixed. ✅ `stuckGate` (pure): RESET only when the input was free,
+  the piece is not inside the margin, AND there is no armed verdict or its solved anchor really moved; the anchor is re-taken at every check
+  that keeps it armed (a drift of nudges does not add up). *A rule in a render file is a rule nothing can interrogate* — the 2026-09-19 lesson,
+  once more.
+* ⛔ **THE TURN SWEEP HAD GOT COARSER** (§12sexies: strides of half the budget, refined only when the END sample read close — a 5–8 mm notch passed
+  as free in 104–151 of 217 placements, measured). ✅ A stride is refined unless the gap's 1-Lipschitz bound CERTIFIES it
+  (`g + g₁ ≥ 2·hard + span`): certified strides are exact, the others refined once — the density near a part is back. ⚠ Still a sampling under the
+  cap (a corner may clip an edge for a frame or two; the end pose is checked). ⛔ §12sexies' "a sweep short of the end answers refused … caught by
+  its own vector" described a discarded draft: that fallback was unreachable. `turnSweepFree` is deleted — `turnSweep` with its whole budget.
+* ⛔ **A RESTING FINGER'S TREMOR KEPT THE ORBIT BAND MOVING** — ±0.76 mm straddles the trailing band's edge and restarted the rest clock on about
+  half its samples; with the 400 ms window a stopped finger took 0.84 s (median, p95 1.44 s) to re-rest, its tremor reaching the orbit all the
+  while (at a contact: the finger's own dy pressing in). ✅ `AxisBand`'s REST CANDIDATE (`jitterRest`, the orbit band only — the 3.5 mm band
+  elsewhere unchanged until a hand judges it): a crossing within one band of where the axis fell back inside is tremor, and the clock runs on.
+  Measured at tablet rate: 0.54 s median, 0.60 p95 — 400 ms of rest plus the 60 ms event grid (the audit's 1.2 × 400 ms is not reachable at
+  that rate). A steady drag never rests. ⚠ Lower `orbitBandRestMs` to shorten it, at the cost of the hesitation it allows.
+* ✅ The stagger flag read and cleared FIRST (an early return left it stale). ✅ New rules vectored on behaviour (`stuckGate`, `quadCheckBudget`,
+  `turnSweep`) — ⚠ source-string pins of the wiring remain.
+* ⚠ Measured headless (desktop): the smallest gap 0.838 mm; 0 reversals on a wobbling drag; ~2 queries a frame at rest; the worst frame 34.
+  ⚠ The square's red → yellow timing was NOT measured end to end headless — only its scheduling and the one-query free answer are vectored.
+* ✅ Vectors (4 groups), each RED against the code before (one by mutant): the gate and its pocket premise; the dip and the 6 mm notch refused
+  (red with the §12sexies rule); the tremor re-rests in 95 % within 600 ms (< 50 % before) and a steady drag never; the quad asked while moving,
+  under the leftover budget, free at once when clear, PENDING when cut.

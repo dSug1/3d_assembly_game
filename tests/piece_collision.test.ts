@@ -73,7 +73,8 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   });
   it("⭐⭐ *\"highlight the quad in red instead of yellow and back to yellow when rotation is allowed again\"* — its tap's turn checked (at most every 100 ms)", () => {
     const c = flat("render/orient_cube.ts");
-    expect(c).toContain("const q = restingPreview(st, dir, roll); qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);");
+    expect(c).toContain("const q = restingPreview(st, dir, roll); const v = q === null ? null : pieceTurnVerdict(st, q, budget); if (v === \"PENDING\") return; qc.key = key; qc.at = now; qc.blockedBy = v;");
+    expect(c).not.toContain("QUAD_PAUSE_STEP_M"); // ⭐ (the sixth audit) no longer paused while the piece moves
     expect(c).toContain("x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE;"); // ⭐ red while held too (the third audit)
     expect(c).toContain('r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", sceneSignature(st)].join("|");'); // ⭐ re-judged when a part moves
     expect(c).toContain("const QUAD_CHECK_MS = 100;");
@@ -113,7 +114,7 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
   it("⭐⭐ a TURN is swept by the same gap rule, along the slerp the alignment plays", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const pose = pieceMeshAt(st, a, qSlerp(from, q, u));");
-    expect(g).toContain("const u = turnSweepFree(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries);"); // ⭐ under the frame's cap
+    expect(g).toContain("const u = turnSweep(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries, Math.min(opt.maxQueries, budget));"); // ⭐ under the frame's cap — or what is left of it
     // ⭐ (the second audit) the turn in flight re-checked each frame at the piece's place NOW, held (never aborted)
     expect(g).toContain("if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) { u = a.u ?? 0; st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS }; st.restAlignHeld = true;");
     expect(g).toContain("const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;"); // the playback: the same slerp
@@ -135,7 +136,7 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
     expect(g).toContain("blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);");
     // ⭐ (the second audit) scheduled — one check every 100 ms, a verdict per key — and INSIDE the margin counts, blocked input or not
     expect(g).toContain("const next = stuckNext(st.pieceStuck, key, t0, STUCK_EVERY_MS);");
-    expect(g).toContain("if (!st.pieceMoveBlocked && !inside) {");
+    expect(g).toContain('if (stuckGate(st.pieceMoveBlocked, inside, armed, st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M) === "RESET") {'); // ⭐ (the sixth audit) decided in input/
   });
   it("⭐⭐ ⛔ the tautology fixed: both halves read, the position AND the turns — at the pop-up and at the double tap", () => {
     const c = flat("render/orient_cube.ts");

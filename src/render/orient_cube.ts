@@ -32,7 +32,8 @@ import { isTapRelease } from "../input/mode_toggle";
 import { allQuadsReachable, candidateFace } from "../input/orient_window";
 import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";
-import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnBlocker, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
+import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnVerdict, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
+import { quadCheckBudget } from "../input/piece_orbit_solver";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -48,7 +49,6 @@ const QUAD_BLOCKED = new Color3(1, 0.15, 0.1);
 /** ⭐ How often the yellow quad's turn is checked again while nothing it depends on changed (ms) — a turn's path check is not free. */
 const QUAD_CHECK_MS = 100;
 /** ⭐ (2026-10-13, §11septies) the quad's turn check waits while the piece moves more than this a frame (m): mid-sweep its answer is stale at once. */
-const QUAD_PAUSE_STEP_M = 0.003;
 
 /** ⭐ A direction's short name — the virtual pink face's label and key. */
 export function dirLabel(n: Vec3): string {
@@ -154,13 +154,18 @@ function quadTurnFrame(st: SceneState): void {
   // ⭐ (the third audit) and the SCENE (`sceneSignature`): a part moved into or out of the turn's sweep re-judges the quad (it stayed stale)
   const key = [tag, roll, b.position.x.toFixed(4), b.position.y.toFixed(4), b.position.z.toFixed(4), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", sceneSignature(st)].join("|");
   const now = performance.now();
-  if (key === qc.key || now - qc.at < QUAD_CHECK_MS) return;
-  if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return; // ⭐ (2026-10-13, §11septies) mid-sweep: checked again once it slows
-  qc.key = key;
-  qc.at = now;
+  // ⭐⭐ (2026-10-13, the sixth audit; the owner: *"once the piece has cleared a collision, the red square still show too long before fading to
+  // yellow"*) — due every `QUAD_CHECK_MS` while its key changes, MOVING OR NOT (⛔ the §11septies pause skipped it at > 3 mm a frame: pulling away
+  // from a part never re-asked it), under what the frame's solve left of the cap; a sweep the budget cut keeps the colour and asks again
+  const budget = quadCheckBudget(key !== qc.key, now - qc.at, QUAD_CHECK_MS, st.cfg.pieceSolverQueries, st.pieceSolveQueries);
+  if (budget === null) return;
   st.quadCheckRan = true; // ⭐ (the fifth audit) the stuck check skips this frame — the two paced checks never share one
   const q = restingPreview(st, dir, roll);
-  qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);
+  const v = q === null ? null : pieceTurnVerdict(st, q, budget);
+  if (v === "PENDING") return;
+  qc.key = key;
+  qc.at = now;
+  qc.blockedBy = v;
 }
 
 /**

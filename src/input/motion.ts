@@ -175,8 +175,23 @@ class AxisBand {
   private lastT: number | null = null;
   /** When this axis last emitted nothing. `null` while it is emitting. */
   private restingSinceMs: number | null = null;
+  /**
+   * ⭐ (2026-10-13, the sixth audit) where this axis first fell back INSIDE the band while moving — a crossing within one band of it is a
+   * resting finger's tremor, not motion, and does not restart the rest clock (`jitterRest` only).
+   */
+  private candidate: number | null = null;
+
+  constructor(
+    /**
+     * ⭐ (the sixth audit) a stopped finger's tremor (±0.76 mm) straddles the trailing band's edge and restarted the rest clock on about half its
+     * samples: with the orbit band's 400 ms window it took 0.7–1.3 s to re-rest, the tremor reaching the orbit all along. ⚠ Off by default — the
+     * 3.5 mm band elsewhere is unchanged until a hand judges it.
+     */
+    private readonly jitterRest = false,
+  ) {}
 
   reset(): void {
+    this.candidate = null;
     this.state = "STATIONARY";
     this.offset = 0;
     this.last = null;
@@ -205,6 +220,7 @@ class AxisBand {
       // would travel for ever and emit nothing.
       this.restingSinceMs ??= t;
       if (this.state === "MOVING") {
+        if (this.jitterRest && this.candidate === null) this.candidate = p;
         // ⛔⛔ **A SAMPLE THAT CARRIES MORE THAN A WHOLE BAND IS MOTION, WHATEVER THE CLOCK
         // SAYS.** ⭐ The rest clock measures how long this axis has been *inside* the band, and
         // a finger can sit still for 30 ms and then whip back across the band in one sample:
@@ -217,6 +233,7 @@ class AxisBand {
           // ⭐ Re-centre where it came to rest, so the band is centred on the finger again
           // and the boundary chatter this confirmation absorbs cannot restart.
           this.offset = 0;
+          this.candidate = null;
         }
         // ⛔⛔ **AND THE TRAVEL IS EMITTED EITHER WAY — AUDIT FIX, 2026-09-17.** This line
         // used to be inside the `else`, so the one sample on which the rest clock happened to
@@ -238,7 +255,12 @@ class AxisBand {
     // ⭐ Clamp the offset back to the boundary — exactly, with no round trip through a
     // position. This is the line the floating-point defect lived on.
     this.offset = sign * bandPx;
-    this.restingSinceMs = null;
+    // ⭐ (the sixth audit) a crossing within ONE band of where the axis fell back inside is tremor (±0.76 mm spans 1.5): the rest clock keeps running
+    const tremor = this.jitterRest && wasMoving && this.candidate !== null && Math.abs(p - this.candidate) <= bandPx;
+    if (!tremor) {
+      this.restingSinceMs = null;
+      this.candidate = null;
+    }
     this.state = "MOVING";
     // ⭐⭐ Already moving: pass the travel straight through. The band was paid on the way
     // out of rest, and charging it again at every change of direction is what made a
@@ -257,6 +279,7 @@ class AxisBand {
     if (nowMs - since < restConfirmMs) return;
     this.state = "STATIONARY";
     this.offset = 0;
+    this.candidate = null;
   }
 }
 
@@ -319,8 +342,8 @@ export function medianOf(xs: readonly number[]): number {
 }
 
 export class MotionTracker {
-  private readonly ax = new AxisBand();
-  private readonly ay = new AxisBand();
+  private readonly ax: AxisBand;
+  private readonly ay: AxisBand;
   private lastStep: { dx: number; dy: number } = ZERO_STEP;
   /**
    * ⭐⭐ The recent samples, for the speeds below. ⚠ Trimmed on every push, so it is `flickWindow`
@@ -340,7 +363,11 @@ export class MotionTracker {
     private readonly cfg: GestureConfig,
     /** ⭐ (2026-10-13, the fifth audit) the least rest window — the orbit drag's band: a hesitation shorter than this keeps the axis MOVING */
     private readonly minRestMs = 0,
+    /** ⭐ (the sixth audit) a resting finger's tremor does not restart the rest clock (`AxisBand`'s `jitterRest`) — the orbit band */
+    jitterRest = false,
   ) {
+    this.ax = new AxisBand(jitterRest);
+    this.ay = new AxisBand(jitterRest);
     // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
     // Recognizer builds one of these. See `validateGestureConfig` for the rules.
     validateGestureConfig(cfg);

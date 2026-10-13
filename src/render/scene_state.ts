@@ -492,6 +492,8 @@ export interface SceneState {
   /** ⭐ (2026-10-13, §12) this frame: the solver's work cap ran out (the rest waits), and the gap queries it made — for the HUD. */
   pieceDeferred: boolean;
   pieceQueries: number;
+  /** ⭐ (the sixth audit) the orbit solve's own gap queries this frame — the red quad's check gets what is left of the cap. */
+  pieceSolveQueries: number;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */
