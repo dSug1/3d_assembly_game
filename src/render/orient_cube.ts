@@ -30,7 +30,7 @@ import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
 import { allQuadsReachable, candidateFace } from "../input/orient_window";
-import { alignRestingFace, orientationFrames, rollRestingFace } from "./green_box_wiring";
+import { alignRestingFace, orientationFrames, pieceTurnBlocker, restingPreview, rollRestingFace } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -41,6 +41,10 @@ const QUAD_ALPHA = 0.12;
 const QUAD_EDGE = new Color3(0.75, 0.78, 0.85);
 const QUAD_EDGE_ALPHA = 0.45;
 const QUAD_LIT = new Color3(1, 0.85, 0.1);
+/** ⭐ (2026-10-13, *"Rotation Blocked by piece : in such case, highlight the quad in red instead of yellow and back to yellow when rotation is allowed again"*) */
+const QUAD_BLOCKED = new Color3(1, 0.15, 0.1);
+/** ⭐ How often the yellow quad's turn is checked again while nothing it depends on changed (ms) — a turn's path check is not free. */
+const QUAD_CHECK_MS = 100;
 
 /** ⭐ A direction's short name — the virtual pink face's label and key. */
 export function dirLabel(n: Vec3): string {
@@ -112,7 +116,34 @@ export function orientCubeFrame(st: SceneState): void {
   // ⭐⭐ (2026-10-12, the owner: *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on
   // rolling the resting piece on this quad until the next delta position"*) — the direction tapped stays the pink one until the next orbit
   // drag (`orbitDragStep` drops it), whatever the candidate does
+  quadTurnFrame(st);
   restingQuadsFrame(st, shownTag(st));
+}
+
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"Rotation Blocked by piece : in such case, highlight the quad in red instead of yellow and back to yellow when
+ * rotation is allowed again"*) — the turn a tap on the yellow quad would make (aligned to its direction, or the roll when already aligned
+ * there — `restingPreview`) checked whole (`pieceTurnBlocker`); again when the yellow quad, the piece's pose or its alignment changed, at most
+ * every `QUAD_CHECK_MS`.
+ */
+function quadTurnFrame(st: SceneState): void {
+  const qc = st.quadTurnCheck;
+  const tag = shownTag(st);
+  const dir = tag >= 0 ? st.orientDirs[tag] : undefined;
+  const b = st.greenBox;
+  if (dir === undefined || b === null) {
+    qc.blockedBy = null;
+    return;
+  }
+  const r = b.rotationQuaternion;
+  const roll = st.restAligned && st.restRoll !== null && dirIndex(st, st.pinkTargetNormal) === tag;
+  const key = [tag, roll, b.position.x.toFixed(4), b.position.y.toFixed(4), b.position.z.toFixed(4), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : ""].join("|");
+  const now = performance.now();
+  if (key === qc.key || now - qc.at < QUAD_CHECK_MS) return;
+  qc.key = key;
+  qc.at = now;
+  const q = restingPreview(st, dir, roll);
+  qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);
 }
 
 /**
@@ -242,7 +273,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const pn = shown >= 0 ? (st.orientDirs[shown]?.normal ?? null) : null;
   for (const x of q.quads) {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
-    x.edges.color = lit ? QUAD_LIT : QUAD_EDGE;
+    x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked
     x.edges.alpha = lit ? 1 : QUAD_EDGE_ALPHA;
   }
 }

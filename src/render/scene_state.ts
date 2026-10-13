@@ -483,6 +483,8 @@ export interface SceneState {
   /** ⭐ (2026-10-12) THE PINK DIRECTION: the CANDIDATE (the direction facing the camera most from the resting face; −1 none), and the one last
    * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
   orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
+  /** ⭐ (2026-10-13) the yellow quad's tap checked: what blocks its turn (`null`: free — yellow; else RED), when and for what it was checked. */
+  quadTurnCheck: { blockedBy: string | null; key: string; at: number };
   /** ⭐ (2026-10-12) the 1st / 4th ring check: the camera's elevation from the resting face last measured ON each ring (°), for the rings as they
    * were then (`key`) — the HUD alerts when not every quad can turn yellow on them (`allQuadsReachable`). */
   ringQuadCheck: { key: string; top: number | null; bottom: number | null };

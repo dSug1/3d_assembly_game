@@ -144,7 +144,8 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
     expect(code("render/pointer_wiring.ts")).not.toMatch(/orientCubePointer|orientFollowCursor/);
     expect(code("render/tuning_menu.ts")).not.toMatch(/orientCubeSizePct|orientWindow/);
     expect(code("render/scene.ts")).not.toMatch(/orientWindowBoot|orientCubeSizePct/);
-    expect(code("render/green_box_wiring.ts")).not.toContain("export function restingPreview(");
+    // ⭐ (2026-10-13) `restingPreview` is BACK — the yellow quad's turn check (`COLLISION.md` §11), not a copy in a window
+    expect(code("render/green_box_wiring.ts")).not.toMatch(/pieceCopy|replicaFrame/);
     const cfg = DEFAULT_CONFIG as unknown as Record<string, unknown>;
     for (const k of ["orientCubeSizePct", "orientWindowXPct", "orientWindowYPct", "orientWindowFollow"]) expect(cfg[k]).toBeUndefined();
   });

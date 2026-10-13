@@ -33,6 +33,9 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { dirLabel } from "./orient_cube";
+import { guardPieceMove, pieceMoveVerdict } from "./collision_wiring";
+import { lerpOrbit, orbitStepCandidates, refusedAxes, type OrbitParams } from "../input/piece_collision";
+import type { MoveVerdict } from "../core/collision";
 import type { OrientDirection } from "../core/orientation_set";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
@@ -286,6 +289,7 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
       (r.restAxis < 0 ? " (no long axes to pair)" : `, long axes a${r.restAxis} ∥ a${r.pinkAxis}`);
   }
   void paired; // ⭐ the first alignment pairs the LONG axes (above); the rolls use every edge-to-edge couple (2026-10-10)
+  const pinkWas = st.pinkTargetNormal;
   st.pinkTargetNormal = target?.normal ?? null; // ⭐ (2026-10-12) the orientation cube lights this direction's facet
   const pinkAxes: readonly Vec3[] = target?.flush ?? [];
   // ⭐⭐ (2026-10-09, the owner: *"when a new resting face is selected and no change in the pink face, the numbers of rolls applied to the
@@ -308,6 +312,15 @@ export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): b
       rolls += sense;
     }
     if (rolls !== 0 && couple !== null) st.lastVerdict += ` — ${Math.abs(rolls)} roll${Math.abs(rolls) > 1 ? "s" : ""} carried over (${rolls > 0 ? "clockwise" : "counter-clockwise"}): a${couple[0]} ∥ b${couple[1]}`;
+  }
+  // ⛔⛔ (2026-10-13, `COLLISION.md` §11) the turn checked WHOLE before it starts — refused when it would push the piece into a part (a turn
+  // cut short would leave the resting face misaligned); nothing changes, no episode
+  const blockedBy = pieceTurnBlocker(st, base);
+  if (blockedBy !== null) {
+    st.pinkTargetNormal = pinkWas;
+    st.lastVerdict = `orbit: the turn is blocked by ${blockedBy} — refused`;
+    st.hudDirty = true;
+    return false;
   }
   st.restAlign = { from: q, t0: now, base }; // ⭐ about the resting face's centre — the anchor (`placeByFaceCentre`)
   st.restAligned = true; // ⭐ from now on the piece no longer turns against the orbit (§2bis)
@@ -401,6 +414,13 @@ export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, 
   const roll = nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, view, sense);
   if (roll === null) {
     st.lastVerdict = "orbit: tap — nothing to roll (no symmetry axis, or the reference along the normal)";
+    st.hudDirty = true;
+    return false;
+  }
+  // ⛔⛔ (2026-10-13, `COLLISION.md` §11) refused when the whole turn is not free
+  const blockedBy = pieceTurnBlocker(st, roll.q);
+  if (blockedBy !== null) {
+    st.lastVerdict = `orbit: the roll is blocked by ${blockedBy} — refused`;
     st.hudDirty = true;
     return false;
   }
@@ -849,11 +869,27 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
   // ⭐ prototype (green box), 2026-10-02: on a critically damped SPRING (`springOrbit`) — no speed jump at a pointer event, so
   // the camera's time lag no longer shows a pulse (it was `easeOrbit`, one exponential). Same response: τ = boxSmoothMs / 2.
+  const prevAt = st.boxSpring?.at ?? null;
   st.boxSpring =
     st.boxSpring === null
       ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
       : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxOrbit = st.boxSpring.at;
+  // ⭐⭐⭐ (2026-10-13, *"Now we need to work on the collision of the green-turquoise piece with the other parts"* → *"Build"*; `COLLISION.md` §11) — THE ORBIT STEP GUARDED: the whole step, else the yaw alone, else the ring position alone,
+  // else where the path stops (`guardOrbitStep`); the refused axes' input DISCARDED — the spring and the orbit's target pulled back to the
+  // stop, the coast stopped — so the camera stops with the piece and reversing the finger moves it back at once
+  let heldAnchor: Vec3 | null = null;
+  if (prevAt !== null && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null) {
+    const g = guardOrbitStep(st, prevAt, st.boxSpring.at);
+    heldAnchor = g.anchor;
+    if (g.at !== st.boxSpring.at) {
+      const ref = refusedAxes(st.boxSpring.at, g.at);
+      st.boxSpring = { at: g.at, velYaw: ref.yaw ? 0 : st.boxSpring.velYaw, velV: ref.v ? 0 : st.boxSpring.velV, velLnZoom: st.boxSpring.velLnZoom };
+      st.boxOrbit = g.at;
+      st.orbit.reset(ref.yaw ? g.at.yaw : st.orbit.yaw, ref.v ? g.at.v : st.orbit.elevation);
+      st.orbitInertia.stop();
+    }
+  }
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⛔ The piece's own range (`clampPieceRadiusM`, 2026-10-09: its minimum ZERO, no longer the camera's near-plane guard): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
@@ -877,7 +913,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const be = st.pieceEntry === null ? null : orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM;
   // ⭐ (2026-10-08) …plus what a way out cut short had left, fading out (`entryPieceOffset`)
   const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm);
-  const pp: Vec3 =
+  let pp: Vec3 =
     po !== null
       ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
       : be !== null
@@ -885,6 +921,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
         : [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]];
   // ⭐⭐ (2026-10-09) `pp` is the ANCHOR — where the resting face's centre goes; the mesh is placed from it at the frame's end
   // (`anchorFrame`); until then everything orbit-side reads the anchor
+  // ⭐ (2026-10-13) held where its path stopped when even the stop on its ring is blocked (the gizmo moved under it)
+  if (heldAnchor !== null) pp = heldAnchor;
   st.pieceAnchor = pp;
   if (st.bootRestAlign) bootRestAlign(st, pp); // ⭐ (2026-10-10) a spawn: aligned to the frozen body, now that the orbit placed it
   box.position.set(pp[0], pp[1], pp[2]);
@@ -1085,6 +1123,91 @@ function anchorShiftNow(st: SceneState, now: number): Vec3 {
   }
   const left = 1 - u * u * (3 - 2 * u);
   return [sh.off[0] * left, sh.off[1] * left, sh.off[2] * left];
+}
+
+/** ⭐ (2026-10-13) the piece's anchor (its resting face's centre) on the rings at `o`, the piece's own distance clamp applied. */
+function ringAnchorAt(st: SceneState, o: OrbitParams): Vec3 {
+  const c = st.orbitCentreM;
+  const off = orbitOffset(st.cfg, o.yaw, o.v, o.zoom);
+  const k = off.radiusM > 1e-9 ? clampPieceRadiusM(off.radiusM, st.cfg) / off.radiusM : 1;
+  return [c.x + off.offsetM[0] * k, c.y + off.offsetM[1] * k, c.z + off.offsetM[2] * k];
+}
+
+/** ⭐ (2026-10-13) the orbited piece's mesh pose with its resting face's centre at `anchor`, turned `q` (else as it is). */
+function pieceMeshAt(st: SceneState, anchor: Vec3, q?: Quat): { position: Vec3; orientation: Quat } | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined) return null;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const o: Quat = q ?? [r.w, r.x, r.y, r.z];
+  return { position: placeByFaceCentre(anchor, o, p.restingCentre), orientation: o };
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11) — the orbit step `from → to` the piece may take: the first free of `orbitStepCandidates` (the whole
+ * step, the yaw alone, the ring position alone), else the fraction of the whole step its path reaches (`lerpOrbit`). `anchor`: set when even
+ * that stop is blocked (the gizmo moved under the piece) — the piece then stays where its own path stops, off its ring point until free.
+ */
+function guardOrbitStep(st: SceneState, from: OrbitParams, to: OrbitParams): { at: OrbitParams; anchor: Vec3 | null } {
+  const b = st.greenBox;
+  const p = st.orbitPieces.find((o) => o.mesh === b);
+  if (b === null || p === undefined || worldPlacementOf(st.world, b.name) === null) return { at: to, anchor: null };
+  let first: MoveVerdict | null = null;
+  for (const cand of orbitStepCandidates(from, to)) {
+    const target = pieceMeshAt(st, ringAnchorAt(st, cand));
+    if (target === null) return { at: to, anchor: null };
+    const v = guardPieceMove(st, b.name, target);
+    first ??= v;
+    if (v.blockedBy === null) return { at: cand, anchor: null };
+  }
+  const stop = lerpOrbit(from, to, first?.t ?? 0);
+  const target = pieceMeshAt(st, ringAnchorAt(st, stop));
+  if (target === null) return { at: stop, anchor: null };
+  const v = guardPieceMove(st, b.name, target);
+  if (v.blockedBy === null) return { at: stop, anchor: null };
+  return { at: stop, anchor: add(v.placed.position, qRotate(v.placed.orientation, p.restingCentre)) };
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11) — WHAT BLOCKS the orbited piece's turn to `q` about its resting face's centre, the whole turn
+ * checked (`resolveMove` along the path); `null` when it is free. Read before an align or a roll starts (refused when blocked) and for the
+ * yellow quad (red while its tap's turn is blocked).
+ */
+export function pieceTurnBlocker(st: SceneState, q: Quat): string | null {
+  const b = st.greenBox;
+  if (b === null || worldPlacementOf(st.world, b.name) === null) return null;
+  const a = st.pieceAnchor ?? [b.position.x, b.position.y, b.position.z];
+  const target = pieceMeshAt(st, a, q);
+  if (target === null) return null;
+  return pieceMoveVerdict(st, b.name, target).blockedBy;
+}
+
+/**
+ * ⭐⭐ (restored 2026-10-13 for the yellow quad's check; it was the orientation window's preview) — the orientation the orbited piece WOULD
+ * take, nothing moved: sitting against the direction `dir` (`alignRestingFace`'s turn), or, with `roll`, the next roll to the next axis
+ * (`rollRestingFace`'s, from where a turn in flight is heading). `null` with nothing to turn to.
+ */
+export function restingPreview(st: SceneState, dir: OrientDirection, roll: boolean): Quat | null {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  if (p === undefined || p.restingFace === null) return null;
+  const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
+  const shown: Quat = [r.w, r.x, r.y, r.z];
+  if (roll) {
+    const rr = st.restRoll;
+    if (rr === null) return null;
+    const from = st.restAlign?.base ?? shown;
+    const cam = st.camera.position;
+    const tg = st.camera.getTarget();
+    let pinkAxes = rr.pinkAxes;
+    if (pinkAxes.length === 0) {
+      const right = st.camera.getDirection(new Vector3(1, 0, 0));
+      pinkAxes = [[right.x, right.y, right.z]];
+    }
+    return nextCoupleRoll(from, p.restingFace.normal, p.restingFlush, pinkAxes, [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], 1)?.q ?? null;
+  }
+  const a = st.pieceAnchor;
+  const pos: Vec3 = a ?? [p.mesh.position.x, p.mesh.position.y, p.mesh.position.z];
+  const ends = dir.axes.map((x) => [sub(pos, scale(x, 0.05)), add(pos, scale(x, 0.05))] as const);
+  return restAlignToFace(st.restAlign?.base ?? shown, pos, p.restingFace.normal, p.restingLong, dir.normal, { axes: dir.axes, ends }).q;
 }
 
 /** ⭐ The rings' closest distance to the orbit centre, as the piece rides them (its own minimum, zero, applied) — the waist. */
