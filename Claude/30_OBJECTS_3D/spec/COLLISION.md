@@ -328,3 +328,62 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
 * ✅ Vectors (`tests/piece_collision.test.ts`): the projection along an oblique wall moves BOTH coordinates and nothing into it; away or along:
   untouched; head-on: zero; the ring's metric; a crease: zero; the rest gap; the normals remembered; the wiring (the target and the velocity
   projected, the skin held, `contactNormal` shared with `resolveMove`) — RED against the axis-by-axis build. ⛔ No device look yet.
+
+## 11ter. The piece: sliding or blocking, and where it can get STUCK (2026-10-13, the owner's two questions — ⛔ NOTHING BUILT)
+
+* ⭐ **SLIDE OR BLOCK — the discriminant** (*"What is the discriminant between sliding or blocking?"*): no threshold, no friction — geometry.
+  The step (yaw, ring position) becomes a world motion through the ring's Jacobian; its part INTO the contact (along the normal) is removed;
+  what is left is mapped back to the ring's two coordinates (`projectStep`). Anything left: it SLIDES by exactly that (a push at 45° slides at
+  ~70 % of its speed; a nearly head-on push creeps). Nothing left: it BLOCKS, a rest gap short — when the push is exactly along the normal, or
+  when two contacts leave the ring's two coordinates no common direction. The slide itself is re-checked (up to 3 times, a new contact each
+  time); none free: it stops. ⏸ Offered, not built: a FRICTION CONE (block within an angle of the normal, e.g. 20°, slide beyond it).
+* ⭐ **REVERSIBLE?** (*"Is the path of the piece always revertable or can the piece get stuck without a way out in some cases? Which cases?"*) —
+  a way out nearly always; the path itself is NOT reversible: a slide depends on its history, so reversing the finger moves the piece straight
+  back from where it slid to, not along the slide. Why there is a way out: a step AWAY from a contact is never touched by the projection, a pair
+  in contact may always get shallower (`D136`), and a blocked turn never starts.
+* ⛔⛔ **WHERE IT CAN BE TRAPPED** (from reading the code; ⛔ not reproduced on purpose):
+  1. **Pinched in both coordinates** — parts on both sides in yaw AND along the ring: every step goes into a contact. Hard to reach by orbiting
+     (the way in stays free), possible once something else changed.
+  2. **The gizmo moved under it** (a tap on a placed part moves the ring): its new ring point inside or between parts — it is held where its
+     own path stopped, off its ring; with the new ring through parts on every side, nothing frees it until the gizmo moves again.
+  3. **A part moved INTO it** — the orbited piece is no obstacle for the other bodies (`candidates` skips orbited bodies), so a dragged,
+     snapped or goal-pulled part can end up overlapping it; it may then only reduce that overlap, and overlapping parts on opposite sides,
+     every move deepens one: frozen.
+  4. **Spawned inside something** — the green ↔ turquoise switch respawns it at the boot pose (unlikely in `Scene_1` today).
+  5. Partial, not traps: at the ring's ends (0 or 1) a contact on the inner side leaves only the yaw; the ring's waist runs through the painting
+     at some yaws (go round); in a cramped spot every turn is refused (the red quad) until it orbits away.
+* ⏸ **THE FIXES OFFERED** (not built; the owner's answer awaited): (3) the orbited piece an OBSTACLE for the other parts — nothing pushed into
+  it; (2) a gizmo move refused when the piece's new ring point is blocked (named on the HUD), or the piece carried out along the contact normal
+  first; (1–4) a PUSH-OUT — overlapping with no move free, the piece pushed out along the contact normal over a few frames, then on (Bullet's
+  `recoverFromPenetration`); last resort: the piece switch's respawn. ⭐ Cases 2 and 3 to be reproduced headless first.
+
+## 11quater. Case 3 built — the piece an OBSTACLE; the STUCK piece respawned by a double tap (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"Build case 3. Then build a piece-switch respawn which activates if any delta position input (orbiting or translation) and any rotation by
+> quad is blocked: in such case, if the user double tap/click on the piece, the piece respawns at its initial spawn transform. Mark in the md
+> file to count a malus for episode count in this case (we will work on episode counts later on)."* — the owner.
+
+* ✅ **CASE 3 (§11ter) CLOSED IN CODE: THE ORBITED PIECE IS AN OBSTACLE** — `candidates` no longer skips orbited bodies; the HIDDEN one (the
+  green ↔ turquoise switch shows one) is exempted by both setups (`hiddenOrbited` in `collisionSetup` and `pieceCollisionSetup`). A part
+  dragged, snapped or pulled to its goal now stops at the piece — nothing can be pushed into it. Headless: `Piece3` moved onto the piece's
+  position, every other body exempt — stopped by `green-box` at 75 % of its path; the turquoise piece (hidden) exempt.
+* ✅ **THE STUCK PIECE'S RESPAWN** — **armed only when BOTH are blocked** (`pieceRespawnArmed`): its last POSITION input (an orbit step met a
+  contact, and no free move since — `st.pieceMoveBlocked`; the translation to come will set it the same way) AND the turn its YELLOW QUAD
+  would make (the quad RED — `quadTurnCheck`). Then a **DOUBLE TAP / CLICK ON THE PIECE** (its own tap history, `st.pieceTaps`) respawns it
+  (`respawnStuckPiece`): as the piece switch does (`spawnOrbitPiece`: the boot orientation, the boot orbit, aligned to the frozen body at the
+  next frame), and the orbit centre back where it booted (`bootCentreM` — the spawn transform is on the boot ring). The HUD's collision slot
+  reads *stuck → respawned* for 2 s. Not stuck, a double tap is two taps on the piece (its resting face), as before.
+  Headless: not stuck — no respawn; stuck (both halves FORCED: no real both-blocked spot was found in `Scene_1`, the turn being free at the rest
+  gap where the piece stopped) — back to the boot yaw at 3.0 m.
+* ⭐⭐ **THE RED POP-UP** (the owner: *"In such case the piece is blocked, Add a pop up message (same kind as the pop up when a part reach its
+  goal) in red (instead of green) with written “Part is blocked. Double-click the part to restart” in desktop or “Part is blocked. Double-tap the
+  part to restart” in mobile."*) — the goal pop-up's toast (`ui-toast`) in the theme's new DANGER pair (`ui-toast--danger`; both themes'
+  red readable ≥ 4.5 : 1), its own element (a goal pop-up never replaces it), SHOWN while the piece is stuck (the respawn's two halves) and
+  hidden as soon as it is not (a free move, or the respawn). The words by the device (`blockedMessage`): a coarse pointer *Double-tap*, else
+  *Double-click*. Headless (stuck forced): shown — *"Part is blocked. Double-click the part to restart"* — then hidden after the double click.
+* ⛔⛔ **EPISODE MALUS OWED** (the owner: *"Mark in the md file to count a malus for episode count in this case (we will work on episode counts
+  later on)"*) — **a respawn of a stuck piece must cost the player a MALUS on the episode count** (`SCORE.md`). ⏸ NOT counted yet: today the
+  respawn changes the scene without a scored episode. To decide with the episode counts: how many episodes it costs, and whether its two taps
+  count too.
+* ✅ Vectors (`tests/piece_collision.test.ts`, `tests/proto_orbited_model.test.ts`): a part moved into the orbited piece STOPS (the old vector
+  asserted it passed — reversed), the hidden piece exempt by the setup; the respawn armed only with both halves; the wiring.

@@ -26,10 +26,11 @@ const body = (id: string, at: Vec3, orbited = false): SceneObject => ({
 const setup: CollisionSetup = { shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM: 0.001 };
 
 describe("⭐⭐ prototype — the orbited pieces in the object model", () => {
-  it("⭐⭐ an ORBITED piece is nobody's obstacle (yet): a part moves through where it sits; a normal body there still stops it", () => {
+  it("⭐⭐ an ORBITED piece IS an obstacle since 2026-10-13 (*\"Build case 3\"*: nothing pushed into it): a part stops at it, as at a normal body; the HIDDEN one is exempted by the caller's setup", () => {
     const target = { position: [0.3, 0, 0] as Vec3, orientation: IDENTITY };
     const withOrbited = makeWorld([body("A", [0, 0, 0]), body("green-box", [0.3, 0, 0], true)]);
-    expect(resolveMove(withOrbited, "A", target, setup).blockedBy).toBeNull();
+    expect(resolveMove(withOrbited, "A", target, setup).blockedBy).toBe("green-box");
+    expect(resolveMove(withOrbited, "A", target, { ...setup, exempt: (a, b) => a === "green-box" || b === "green-box" }).blockedBy).toBeNull();
     const withPart = makeWorld([body("A", [0, 0, 0]), body("B", [0.3, 0, 0])]);
     expect(resolveMove(withPart, "A", target, setup).blockedBy).toBe("B"); // the vector is not vacuous
   });

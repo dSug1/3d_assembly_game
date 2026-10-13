@@ -36,6 +36,9 @@ export interface UiTheme {
     /** A success moment (the goal pop-up, *Level complete*). */
     readonly success: Hex;
     readonly successText: Hex;
+    /** ⭐ (2026-10-13) A warning moment (the piece blocked) — red where the success is green. */
+    readonly danger: Hex;
+    readonly dangerText: Hex;
   };
   readonly type: {
     readonly family: string;
@@ -94,6 +97,7 @@ export function themeProblems(t: UiTheme): string[] {
     ["accent text on accent", t.colour.accentText, t.colour.accent, 4.5],
     ["button text on button", t.colour.buttonText, t.colour.button, 4.5],
     ["success text on success", t.colour.successText, t.colour.success, 4.5],
+    ["danger text on danger", t.colour.dangerText, t.colour.danger, 4.5],
   ];
   for (const [what, fg, bg, min] of pairs) {
     const r = contrastRatio(fg, bg);

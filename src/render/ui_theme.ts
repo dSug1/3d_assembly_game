@@ -23,6 +23,8 @@ function tokens(t: UiTheme): Record<string, string> {
     "--ui-button-text": t.colour.buttonText,
     "--ui-success": t.colour.success,
     "--ui-success-text": t.colour.successText,
+    "--ui-danger": t.colour.danger,
+    "--ui-danger-text": t.colour.dangerText,
     "--ui-font": t.type.family,
     "--ui-size": `${t.type.sizePx}px`,
     "--ui-bold": String(t.type.weightBold),
@@ -107,6 +109,8 @@ const CSS = `
   box-shadow: var(--ui-shadow); pointer-events: none; user-select: none; white-space: nowrap;
   opacity: 0; transition: opacity var(--ui-enter) ease;
 }
+/* ⭐ (2026-10-13) the same toast, RED: a warning (the piece blocked) */
+.ui-toast--danger { background: var(--ui-danger); color: var(--ui-danger-text); top: 30%; }
 /* ⭐ \`D188\`: the score bar — top centre, glanceable, never a touch target; below the ☰ / HUD buttons on a narrow screen. */
 .ui-scorebar {
   position: fixed; z-index: 120; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%);

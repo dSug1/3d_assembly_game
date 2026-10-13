@@ -11,7 +11,9 @@ import { boundsFromShapes, hullAtSpawn, resolveMove, type CollisionSetup } from 
 import { boxShape } from "@core/collision_shape";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
-import { backOff, lerpOrbit, projectStep, rememberNormal } from "../src/input/piece_collision";
+import { backOff, blockedMessage, lerpOrbit, pieceRespawnArmed, projectStep, rememberNormal } from "../src/input/piece_collision";
+import { UI_THEMES } from "../src/content/ui_themes";
+import { themeProblems } from "../src/core/ui_theme";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const flat = (f: string) => code(f).replace(/\s+/g, " ");
@@ -88,16 +90,22 @@ describe("⭐⭐⭐ the rule is `resolveMove`'s, with the piece's own setup — 
     const v = resolveMove(w, "piece", { position: [0, -0.5, 0], orientation: IDENTITY }, pieceSetup);
     expect(v.blockedBy).toBeNull();
   });
-  it("⭐ an orbited piece is never another body's obstacle", () => {
+  it("⭐⭐ (2026-10-13, *\"Build case 3\"*) the orbited piece IS another body's obstacle: a part moved into it stops", () => {
     const v = resolveMove(w, "part", { position: [0, 0.3, 0], orientation: IDENTITY }, pieceSetup);
-    expect(v.blockedBy).toBeNull();
+    expect(v.blockedBy).toBe("piece");
+  });
+  it("⭐ the wiring: the shown piece an obstacle, the hidden one exempt (`hiddenOrbited`) — for the parts and for the piece", () => {
+    const c = flat("render/collision_wiring.ts");
+    expect(c).toContain("if (hiddenOrbited(st, a) || hiddenOrbited(st, b)) return true;");
+    expect(c).toContain("const hiddenOrbited = (st: SceneState, id: ObjectId): boolean => st.world.objects.get(id)?.orbited === true && id !== st.greenBox?.name;");
+    expect(code("core/collision.ts")).not.toContain("if (world.objects.get(o)?.orbited === true) continue;");
   });
 });
 
 describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐ the piece's setup: no play volume, the frozen bodies exempt", () => {
     const c = flat("render/collision_wiring.ts");
-    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) };");
+    expect(c).toContain("return { shapes: SHAPES, bounds: BOUNDS, skinM: skin, exempt: (a, b) => frozen(a) || frozen(b) || hiddenOrbited(st, a) || hiddenOrbited(st, b) };");
   });
   it("⭐⭐ the orbit step guarded each frame after the spring; blocked, PROJECTED (up to 3 re-checks), else the stop a rest gap short; the orbit's target and the spring's velocity projected the same way — only the input INTO the contact discarded", () => {
     const g = flat("render/green_box_wiring.ts");
@@ -124,5 +132,41 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
     expect(c).toContain("const q = restingPreview(st, dir, roll); qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);");
     expect(c).toContain("x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE;");
     expect(c).toContain("const QUAD_CHECK_MS = 100;");
+  });
+});
+
+describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-10-13, *\"build a piece-switch respawn which activates if any delta position input (orbiting or translation) and any rotation by quad is blocked: in such case, if the user double tap/click on the piece, the piece respawns at its initial spawn transform\"*)", () => {
+  it("⭐ armed only when BOTH are blocked: the position input and the yellow quad's turn", () => {
+    expect(pieceRespawnArmed(true, true)).toBe(true);
+    expect(pieceRespawnArmed(true, false)).toBe(false);
+    expect(pieceRespawnArmed(false, true)).toBe(false);
+    expect(pieceRespawnArmed(false, false)).toBe(false);
+  });
+  it("⭐ wired: a contact sets the position half, a free move clears it; the quad's half is its red; a DOUBLE tap on the piece then respawns it (the switch's spawn, the centre back at boot)", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("if (g.slide !== null) st.pieceMoveBlocked = true; else if (Math.abs(g.at.yaw - prevAt.yaw) + Math.abs(g.at.v - prevAt.v) > 1e-9) st.pieceMoveBlocked = false;");
+    expect(g).toContain("export function respawnStuckPiece(st: SceneState): void { spawnOrbitPiece(st, st.orbitPieceKind, false); st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]); syncCentre(st);");
+    const p = flat("render/pointer_wiring.ts");
+    expect(p).toContain('if (tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP" && pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null)) { respawnStuckPiece(st); return; }');
+  });
+});
+
+describe("⭐⭐ the red BLOCKED pop-up while the piece is stuck (2026-10-13, *\"In such case the piece is blocked, Add a pop up message (same kind as the pop up when a part reach its goal) in red (instead of green) with written “Part is blocked. Double-click the part to restart” in desktop or “Part is blocked. Double-tap the part to restart” in mobile.\"*)", () => {
+  it("⭐ the words by the device: a touch screen taps, a desktop clicks", () => {
+    expect(blockedMessage(true)).toBe("Part is blocked. Double-tap the part to restart");
+    expect(blockedMessage(false)).toBe("Part is blocked. Double-click the part to restart");
+  });
+  it("⭐ the goal pop-up's kind in RED: a danger pair in every theme, readable (≥ 4.5 : 1)", () => {
+    for (const th of UI_THEMES) {
+      expect(th.colour.danger).toMatch(/^#/);
+      expect(themeProblems(th).filter((p) => p.includes("danger"))).toEqual([]);
+    }
+    expect(flat("render/ui_theme.ts")).toContain(".ui-toast--danger { background: var(--ui-danger); color: var(--ui-danger-text);");
+    expect(flat("render/goal_popup.ts")).toContain('el.className = "ui-toast ui-toast--danger";');
+  });
+  it("⭐ wired: shown while stuck (the respawn's two halves), hidden as soon as not", () => {
+    const c = flat("render/orient_cube.ts");
+    expect(c).toContain("const stuck = pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null);");
+    expect(c).toContain("showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);");
   });
 });

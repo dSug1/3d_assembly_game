@@ -5,6 +5,8 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { orientTapShown, restingQuadPointer } from "./orient_cube";
+import { pieceRespawnArmed } from "../input/piece_collision";
+import { respawnStuckPiece } from "./green_box_wiring";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -646,6 +648,11 @@ export function installPointerHandler(st: SceneState): void {
             // ⭐ (2026-10-11) a TAP whatever else is down — the first touch's, or the second's with the first orbiting
             const tapped =
               isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
+            // ⭐⭐ (2026-10-13, *"build a piece-switch respawn which activates if any delta position input (orbiting or translation) and any rotation by quad is blocked: in such case, if the user double tap/click on the piece, the piece respawns at its initial spawn transform"*) — a DOUBLE tap on the piece while it is STUCK (its position input and its quad's turn both blocked)
+            if (tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP" && pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null)) {
+              respawnStuckPiece(st);
+              return;
+            }
             if (tapped && selectRestingFace(st, ft.faceId)) {
               st.hudDirty = true;
               return;
