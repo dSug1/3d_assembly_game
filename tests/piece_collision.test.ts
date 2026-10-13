@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { boundsFromShapes, hullAtSpawn, resolveMove, type CollisionSetup } from "@core/collision";
+import { boundsFromShapes, clearance, hullAtSpawn, pairGap, resolveMove, type CollisionSetup } from "@core/collision";
 import { boxShape } from "@core/collision_shape";
 import { makeWorld, type SceneObject } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
@@ -210,7 +210,7 @@ describe("⭐⭐⭐ a large orbit step checked ALONG THE RING, not its chord (20
   });
   it("⭐ wired: both guards walk the ring (the target's, the per-frame net); the rest projected after a contact; the stuck probes from the piece AS IT IS", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("return orbitSubsteps(to.yaw - from.yaw, pathM);"); // ⭐ (2026-10-13) from the path's length along the ring, not its chord
+    expect(g).toContain("return { n: orbitSubsteps(to.yaw - from.yaw, pathM), pathM };"); // ⭐ (2026-10-13) from the path's length along the ring, not its chord
     expect(g).toContain("const a = ringAnchorAt(st, lerpOrbit(from, to, i / ORBIT_PATH_SAMPLES)); pathM += length(sub(a, prevA));");
     expect(g).toContain("rest = g.slide(rest); // ⭐ the rest of the step projected onto the contact met");
     expect(g).toContain("const t = { position: add(actual.position, d), orientation: actual.orientation };");
@@ -223,12 +223,12 @@ describe("⭐⭐ the guards never freeze a frame (2026-10-13, §11septies: *\"Wh
     expect(g).toContain("const GUARD_BUDGET_MS = 4;");
     expect(g).toContain("st.pieceGuardDeadline = performance.now() + GUARD_BUDGET_MS;");
     expect(g).toContain("if (guard > 0 && performance.now() > st.pieceGuardDeadline) { deferred = true; break; }");
-    expect(g).toContain("if (!g.deferred) { st.orbit.reset(g.at.yaw, g.at.v); st.orbitInertia.stop(); }");
+    expect(g).toContain("if (!g.deferred) { st.orbit.reset(g.at.yaw, g.at.v); st.orbitInertia.stop();");
     expect(g).toContain("} else if (g.deferred) { // ⭐ (2026-10-13, §11septies) the budget spent: the spring only as far as was checked st.boxSpring = { ...st.boxSpring, at: g.at };");
   });
   it("⭐ after a contact the projected rest is walked ANEW (its own count) — not re-slid every 2 cm; head-on, nothing left: done", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("if (Math.abs(rest[0]) + Math.abs(rest[1]) < 1e-12) break; n = pathSubsteps(st, cur, { yaw: cur.yaw + rest[0], v: Math.min(1, Math.max(0, cur.v + rest[1])), zoom: to.zoom }); i = 0;");
+    expect(g).toContain("if (Math.abs(rest[0]) + Math.abs(rest[1]) < 1e-12) break; const ps = pathSubsteps(st, cur, { yaw: cur.yaw + rest[0], v: Math.min(1, Math.max(0, cur.v + rest[1])), zoom: to.zoom }); n = ps.n; stepM = ps.pathM / ps.n; i = 0;");
   });
   it("⭐ the stop's bisection 8 rounds for the piece (14 for the parts): ~0.02 mm on a skin-long substep", () => {
     expect(flat("core/collision.ts")).toContain("largestFreeFraction((u) => poseFree(base, at(lo + (f - lo) * u), moving, root, setup).free, setup.bisectIterations ?? 14);");
@@ -241,6 +241,38 @@ describe("⭐⭐ the guards never freeze a frame (2026-10-13, §11septies: *\"Wh
     expect(flat("render/orient_cube.ts")).toContain("if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return;");
   });
   it("⭐ the HUD: both guards' cost a frame, its mean and the peak of the last 2 s", () => {
-    expect(flat("render/hud_paint.ts")).toContain("` guard ${st.pieceGuardMs.toFixed(2)}ms (peak ${st.pieceGuardPeak.toFixed(0)})`");
+    expect(flat("render/hud_paint.ts")).toContain("` guard ${st.pieceGuardMs.toFixed(2)}ms (peak ${st.pieceGuardPeak.toFixed(0)})");
+  });
+});
+
+describe("⭐⭐⭐ §11octies — the cheap approach, the height kept, the UNLOCK (2026-10-13, *\"Can both be improved ?\"* → *\"Do not build detour. Instead, propose a way to unlock the head-on block when the user reverses the delta position direction\"* → *\"Finish\"*)", () => {
+  const near = (id: string, at: Vec3): SceneObject => body(id, at, [0.1, 0.1, 0.1]);
+  const setup: CollisionSetup = { shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM: 0.001 };
+  it("⭐ CLEARANCE: the least surface gap to anything not exempt within the look distance; the look distance when nothing is that near; 0 in contact", () => {
+    const w = makeWorld([near("a", [0, 0, 0]), near("b", [0.3, 0, 0])]);
+    expect(clearance(w, "a", setup, 0.5)).toBeCloseTo(0.2, 9); // 0.3 apart, 0.1 boxes: 0.2 of air
+    expect(clearance(w, "a", setup, 0.1)).toBe(0.1); // nothing within 0.1
+    expect(clearance(makeWorld([near("a", [0, 0, 0]), near("b", [0.1, 0, 0])]), "a", setup, 0.5)).toBe(0);
+    expect(pairGap(w, "a", "b", setup)).toBeCloseTo(0.2, 9);
+  });
+  it("⭐⭐ the walk trusts the clearance (×0.8) for that many sub-steps unchecked — the checks are left for the last centimetres", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const free = clearance(w, b.name, freeSetup, CLEARANCE_LOOK_M) - freeSetup.skinM; const m = Math.min(k, Math.floor((free * CLEARANCE_SAFETY) / Math.max(1e-9, stepM)));");
+    expect(g).toContain("const GUARD_BUDGET_MS = 4;"); // ⛔ not raised (*"do not increase the ms budget (i am testing on iphone)"*)
+  });
+  it("⭐⭐⭐ THE UNLOCK: a step AWAY from the part the piece TOUCHES is never refused by that part — judged against the others", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const touching = (pairGap(w, id, blk, setup) ?? 1) <= setup.skinM;");
+    expect(g).toContain("if (nb !== null && stepW[0] * nb[0] + stepW[1] * nb[1] + stepW[2] * nb[2] > 0) {");
+    expect(g).toContain("const others = { ...setup, exempt: (a: string, c: string) => (setup.exempt?.(a, c) ?? false) || a === blk || c === blk };");
+  });
+  it("⭐⭐ THE HEIGHT KEPT: only the finger's own dy moves it; a push of its own into a part is discarded; the return waits while blocked", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const dvIn = prevRaw === null ? 0 : rig.v - prevRaw.v; st.orbitUserV = Math.min(1, Math.max(0, (st.orbitUserV ?? rig.v) + dvIn));");
+    expect(g).toContain("if (g.slide !== null && Math.abs(dvIn) > 1e-12) st.orbitUserV = g.at.v;");
+    expect(g).toContain("if (back.slide === null && back.anchor === null && !back.deferred) {");
+  });
+  it("⭐ the HUD's flags: d (the budget cut a step), H (held off the ring), U (the unlock let a step through)", () => {
+    expect(code("render/hud_paint.ts")).toContain('${st.pieceDeferred ? " d" : ""}${st.pieceHeld ? " H" : ""}${st.pieceUnlocked ? " U" : ""}');
   });
 });
