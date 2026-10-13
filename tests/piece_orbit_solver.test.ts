@@ -11,6 +11,7 @@ import {
   pieceRespawnArmed,
   keepSense,
   orbitFrame,
+  pieceTapAction,
   STUCK_FRESH,
   stuckNext,
   stuckRecord,
@@ -192,11 +193,11 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
 
   it("⭐⭐ the ring's NEAREST FREE place: a piece the ring moved into a part goes to the closest place with the gap kept", () => {
     const e = env([{ c: [1, 0, 0.05], r: 0.1 }]);
-    const to = nearestFree(q(0), e, GAP, 0.01, 0.5)!;
+    const to = nearestFree(q(0), e, GAP, 0.01, 0.5).to!;
     expect(to).not.toBeNull();
     expect(e.gap(to)).toBeGreaterThanOrEqual(GAP);
     expect(Math.hypot(...(anchor(to).map((x, i) => x - anchor(q(0))[i]!) as [number, number, number]))).toBeLessThan(0.3);
-    expect(nearestFree(q(0), env([{ c: [1, 0, 0], r: 2 }]), GAP, 0.01, 0.2)).toBeNull();
+    expect(nearestFree(q(0), env([{ c: [1, 0, 0], r: 2 }]), GAP, 0.01, 0.2).to).toBeNull();
   });
 
   it("⭐⭐ a TURN by the same rule: refused where the gap falls under half the gap kept; a turn starting inside may not go closer", () => {
@@ -239,7 +240,12 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
 
   describe("⭐⭐⭐ the second audit (2026-10-13)", () => {
     const relocate = { stepM: 0.01, maxM: 0.4 };
-    const F = (qq: OrbitQ, target: OrbitQ, userV: number | null = null, prevRawV: number | null = null) => ({ q: qq, target, userV, prevRawV });
+    const F = (qq: OrbitQ, target: OrbitQ, userV: number | null = null, prevRawV: number | null = null) => ({
+      q: qq,
+      target,
+      userV,
+      prevRaw: prevRawV === null ? null : { yaw: target.yaw, v: prevRawV },
+    });
 
     it("⭐⭐ ONE FRAME: free — the piece goes to the target, nothing reset", () => {
       const e = env([AHEAD]);
@@ -312,7 +318,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
 
     it("⭐⭐ the deadband is wired on the orbit drag (§1.1's per-axis step, not the raw pixels)", () => {
       const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(p).toContain("const db = st.orbitMotion.tracker.step; st.orbit.drag(-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch);");
+      expect(p).toContain("const db = st.orbitMotion.band.step; st.orbit.drag(-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch);");
     });
 
     it("⭐⭐⭐ THE STUCK CHECK SCHEDULED: at most one check every interval, and a verdict is FINAL for its key (⛔ every frame for ever: ~60–90 gap queries a frame at rest)", () => {
@@ -380,10 +386,147 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       // the piece 0.6 mm into a big ball beside it
       const e = env([{ c: [1, 0, 0.5994], r: 0.5 }]);
       expect(e.gap(q(0))).toBe(0);
-      const to = nearestFree(q(0), e, GAP, 0.01, 0.4)!;
+      const to = nearestFree(q(0), e, GAP, 0.01, 0.4).to!;
       expect(e.gap(to)).toBeGreaterThanOrEqual(GAP);
       const moved = Math.hypot(...(anchor(to).map((x, i) => x - anchor(q(0))[i]!) as [number, number, number]));
       expect(moved).toBeLessThan(0.0025);
+    });
+  });
+
+  describe("⭐⭐⭐ the third audit (2026-10-13)", () => {
+    // a flat floor 2 mm under the ring's plane — a pass PARALLEL to a part
+    const floorEnv = (gapBelowM: number, extra: { c: Vec3; r: number }[] = []): SolverEnv => {
+      const balls = env(extra);
+      const floorY = -PIECE_R - gapBelowM;
+      return {
+        anchor,
+        gap: (x) => Math.min(Math.max(0, anchor(x)[1] - PIECE_R - floorY), balls.gap(x)),
+        normal: (x) => {
+          const fg = anchor(x)[1] - PIECE_R - floorY;
+          return fg <= balls.gap(x) ? [0, 1, 0] : balls.normal(x);
+        },
+        secondGap: (x) => {
+          const fg = Math.max(0, anchor(x)[1] - PIECE_R - floorY);
+          const bg = balls.gap(x);
+          return Math.max(fg, bg);
+        },
+      };
+    };
+    const CAP = { gapM: GAP, maxQueries: 24 };
+
+    it("⭐⭐⭐ a swipe PARALLEL to a part, 2 mm off it, is not crept (⛔ 22 mrad of a 1 rad swipe in a frame: the scalar stride ignored the direction)", () => {
+      const r = solveOrbitStep(q(0, 0), [1, 0], floorEnv(0.002), CAP);
+      expect(r.q.yaw).toBeGreaterThan(0.2);
+      // every point of it admissible
+      for (const p of r.path) expect(floorEnv(0.002).gap(p)).toBeGreaterThanOrEqual(GAP / 2);
+    });
+    it("⭐⭐ the directional stride never tunnels: a thin part across the path, beside a parallel floor, still stops the piece", () => {
+      // a 2 cm ball across the ring at yaw 0.15, the floor 2 mm under it
+      const e = floorEnv(0.002, [{ c: [Math.cos(0.15), 0, Math.sin(0.15)], r: 0.01 }]);
+      const r = solveOrbitStep(q(0, 0), [1, 0], e, { gapM: GAP, maxQueries: 400 });
+      expect(r.q.yaw).toBeLessThan(0.15);
+      for (const p of r.path) expect(e.gap(p)).toBeGreaterThanOrEqual(GAP / 2);
+    });
+    it("⭐⭐⭐ a finger REVERSING after a capped swipe moves the piece back at once (⛔ it went on forward for 4 frames on the backlog)", () => {
+      const e = floorEnv(0.0012);
+      // a capped frame left a backlog: the last target 0.9 ahead of the piece
+      const pieceAt = q(0.05, 0);
+      const prevRaw = { yaw: 0.95, v: 0 };
+      // the finger now moves back by 0.1
+      const r = orbitFrame({ q: pieceAt, target: q(0.85, 0), userV: 0, prevRaw }, e, CAP, { stepM: 0.01, maxM: 0.4 });
+      expect(r.q.yaw).toBeLessThan(pieceAt.yaw);
+      // the same frame with the finger still going forward keeps the backlog
+      const f = orbitFrame({ q: pieceAt, target: q(1.05, 0), userV: 0, prevRaw }, e, CAP, { stepM: 0.01, maxM: 0.4 });
+      expect(f.q.yaw).toBeGreaterThan(pieceAt.yaw);
+    });
+    it("⭐⭐⭐ the relocation's search is under the frame's cap and RESUMES (⛔ ~280 gap queries a frame with nothing free within reach)", () => {
+      let n = 0;
+      const big = env([{ c: [1, 0, 0], r: 2 }]);
+      const counted: SolverEnv = { anchor, gap: (x) => (n++, big.gap(x)), normal: (x) => (n++, big.normal(x)) };
+      let from = 0;
+      let frames = 0;
+      for (; frames < 100; frames++) {
+        n = 0;
+        const r = nearestFree(q(0), counted, GAP, 0.01, 0.4, 24, from);
+        expect(n).toBeLessThanOrEqual(25);
+        if (r.next === null) {
+          expect(r.to).toBeNull();
+          break;
+        }
+        from = r.next;
+      }
+      expect(frames).toBeGreaterThan(5); // the search went on over frames — and ENDED
+      // orbitFrame: exhausted is reported, and a search told to skip (from < 0) makes no query for it
+      const stuckIn = orbitFrame({ q: q(0), target: q(0), userV: 0, prevRaw: { yaw: 0, v: 0 } }, big, CAP, { stepM: 0.01, maxM: 0.4 });
+      expect(stuckIn.queries).toBeLessThanOrEqual(30);
+      expect(stuckIn.relocateNext).not.toBeNull();
+      const skip = orbitFrame({ q: q(0), target: q(0), userV: 0, prevRaw: { yaw: 0, v: 0 } }, big, CAP, { stepM: 0.01, maxM: 0.4, from: -1 });
+      expect(skip.relocated).toBe(false);
+      expect(skip.queries).toBeLessThanOrEqual(2);
+    });
+    it("⭐⭐⭐ the stuck schedule keeps its PACE and its VERDICT across a churning key (⛔ check 0 every frame, the pop-up off for ≥ 600 ms)", () => {
+      // a stuck verdict reached
+      let s = STUCK_FRESH;
+      for (let f = 0; f < 60; f++) {
+        const n = stuckNext(s, "k", f * 16.7, 100);
+        s = n.s;
+        if (n.check !== null) s = stuckRecord(s, n.check, true, 7);
+      }
+      expect(s.position && s.turns).toBe(true);
+      // the key now changes EVERY frame (a turn playing, a part dragged, the sway): the verdict holds, and the pace too
+      let checks = 0;
+      for (let f = 60; f < 120; f++) {
+        const n = stuckNext(s, "k" + f, f * 16.7, 100);
+        s = n.s;
+        expect(s.position && s.turns).toBe(true); // the pop-up never blinks off while every check still agrees
+        if (n.check !== null) {
+          checks++;
+          s = stuckRecord(s, n.check, true, 7);
+        }
+      }
+      expect(checks).toBeLessThanOrEqual(11);
+      // a check that disagrees ends it
+      const n = stuckNext(s, "k-free", 9999, 100);
+      expect(stuckRecord(n.s, n.check!, false, 7).turns).toBe(false);
+    });
+    it("⭐⭐ a tap on the orbited piece: a double tap while armed respawns; a single tap while the pop-up shows is CONSUMED (⛔ it changed the face and disarmed the double)", () => {
+      expect(pieceTapAction(true, true, true, true)).toBe("RESPAWN");
+      expect(pieceTapAction(true, false, true, true)).toBe("CONSUME");
+      expect(pieceTapAction(true, false, false, false)).toBe("FACE");
+      expect(pieceTapAction(true, true, false, false)).toBe("FACE");
+      expect(pieceTapAction(false, false, true, true)).toBe("NONE");
+    });
+    it("⭐⭐ the orbit drag's own deadband restarts after a pause for less (⛔ 3.5 mm a pause) — and never below 3× the pointer noise", async () => {
+      const { MotionTracker } = await import("../src/input/motion");
+      const { DEFAULT_CONFIG, validateGestureConfig } = await import("../src/input/gestureConfig");
+      const { mmToPx } = await import("../src/core/units");
+      const emitted = (bandMm: number) => {
+        const tr = new MotionTracker({ ...DEFAULT_CONFIG, motionDeadbandMm: bandMm });
+        let x = 0;
+        let t = 0;
+        let out = 0;
+        // a drag, a pause of 400 ms, then 5 mm more
+        for (let i = 0; i < 10; i++) {
+          x += mmToPx(1);
+          t += 16;
+          tr.push({ x, y: 0, t });
+        }
+        t += 400;
+        tr.tick(t);
+        tr.push({ x, y: 0, t });
+        for (let i = 0; i < 5; i++) {
+          x += mmToPx(1);
+          t += 16;
+          tr.push({ x, y: 0, t });
+          out += tr.step.dx;
+        }
+        return out / mmToPx(1);
+      };
+      expect(emitted(DEFAULT_CONFIG.orbitDeadbandMm)).toBeGreaterThan(emitted(DEFAULT_CONFIG.motionDeadbandMm) + 1);
+      expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitDeadbandMm: 1 })).toThrow(/orbitDeadbandMm/);
+      const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+      expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm })");
+      expect(p).toContain("const db = st.orbitMotion.band.step;");
     });
   });
 });

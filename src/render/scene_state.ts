@@ -511,6 +511,10 @@ export interface SceneState {
   /** ⭐ (2026-10-13, the second audit) the stuck and turn checks' cost and gap queries this frame — added to the next frame's HUD figures. */
   pieceGuardCarryMs: number;
   pieceQueriesCarry: number;
+  /** ⭐ (the third audit) the relocation's search for the piece's place (`key`): the candidate to resume from, −1 when exhausted there. */
+  relocateCursor: { key: string; from: number };
+  /** ⭐ (the third audit) the turn in flight is HELD (its next increment refused) — the yellow quad shows red. */
+  restAlignHeld: boolean;
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
   pieceTaps: TapHistory;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */
@@ -583,7 +587,7 @@ export interface SceneState {
   /** ⭐ Prototype: the camera's angles as SHOWN — `cameraOrbit.cam` eased by the time lag (`cameraLag`). */
   cameraLagged: { readonly yaw: number; readonly v: number } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
-  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker } | null;
+  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
   /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */
   orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
   /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */

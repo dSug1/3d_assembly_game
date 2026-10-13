@@ -32,7 +32,7 @@ import { isTapRelease } from "../input/mode_toggle";
 import { allQuadsReachable, candidateFace } from "../input/orient_window";
 import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";
-import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnBlocker, restingPreview, rollRestingFace } from "./green_box_wiring";
+import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnBlocker, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -151,7 +151,8 @@ function quadTurnFrame(st: SceneState): void {
   }
   const r = b.rotationQuaternion;
   const roll = st.restAligned && st.restRoll !== null && dirIndex(st, st.pinkTargetNormal) === tag;
-  const key = [tag, roll, b.position.x.toFixed(4), b.position.y.toFixed(4), b.position.z.toFixed(4), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : ""].join("|");
+  // ⭐ (the third audit) and the SCENE (`sceneSignature`): a part moved into or out of the turn's sweep re-judges the quad (it stayed stale)
+  const key = [tag, roll, b.position.x.toFixed(4), b.position.y.toFixed(4), b.position.z.toFixed(4), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", sceneSignature(st)].join("|");
   const now = performance.now();
   if (key === qc.key || now - qc.at < QUAD_CHECK_MS) return;
   if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return; // ⭐ (2026-10-13, §11septies) mid-sweep: checked again once it slows
@@ -288,7 +289,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const pn = shown >= 0 ? (st.orientDirs[shown]?.normal ?? null) : null;
   for (const x of q.quads) {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
-    x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked
+    x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked — or held (the third audit)
     x.edges.alpha = lit ? 1 : QUAD_EDGE_ALPHA;
   }
 }
