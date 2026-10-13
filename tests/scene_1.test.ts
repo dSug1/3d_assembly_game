@@ -45,8 +45,7 @@ describe("⭐⭐⭐ `D129` — the table is the level-completed configuration; f
   });
 
   it("⭐ each moved piece keeps its table HEIGHT — a one-finger drag is horizontal", () => {
-    // ⚠ prototype (2026-10-13) — Piece2 is lifted onto the orbit's 1st ring (5.6 m) to test the orbited piece's collision, on purpose
-    for (const id of MOVED.filter((m) => m !== "Piece2")) {
+    for (const id of MOVED) {
       const b = booted.find((x) => x.id === id)!;
       expect(b.position[1]).toBe(pieces.find((x) => x.id === id)!.position[1]);
     }
