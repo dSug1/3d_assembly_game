@@ -1293,7 +1293,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
       // ⭐ (the third audit) the drag's own deadband (`orbitDeadbandMm`), apart from the tracker the camera reads MOVING from
-      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg), band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs) };
+      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg), band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true) };
       // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
       // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
       // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed

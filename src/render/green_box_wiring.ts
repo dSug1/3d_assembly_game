@@ -35,7 +35,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { orbitFrame, relocationKey, stuckKeep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
@@ -925,6 +925,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.pieceGuardCarryMs = 0;
   st.pieceQueriesCarry = 0;
   st.pieceDeferred = false;
+  st.pieceSolveQueries = 0;
   // ⭐⭐⭐ (2026-10-13, the audit's rebuild → *"Build"*; `COLLISION.md` §12) — THE PIECE'S PLACE ON ITS RING IS SOLVED, ONCE A FRAME: from where
   // it is (`st.pieceQ`, the one authority) toward the orbit's target (the finger, the coast) by `solveOrbitStep` — conservative advancement
   // along the arc, the exact slide at the gap kept, a work cap. The eye eases toward the SOLVED place on the orbit's spring (never toward a
@@ -951,6 +952,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     );
     st.relocateCursor = { key: relocKey, from: fr.relocateNext ?? (fr.relocateExhausted ? -1 : 0) };
     st.pieceQueries += fr.queries;
+    st.pieceSolveQueries = fr.queries;
     st.pieceDeferred = fr.deferred;
     // ⭐ half of STUCK: an input that pushed into a part; a free input clears it (no input: unchanged)
     if (fr.blocked !== null) st.pieceMoveBlocked = fr.blocked;
@@ -1302,6 +1304,9 @@ function pieceSolverEnv(st: SceneState): SolverEnv {
  * (`stuckNext`); a round's verdict holds for its key (§12ter, §12quater).
  */
 export function pieceStuckFrame(st: SceneState): void {
+  // ⭐ (the sixth audit) read and cleared FIRST — an early return below left it stale for a later frame
+  const quadRan = st.quadCheckRan;
+  st.quadCheckRan = false;
   const b = st.greenBox;
   const q = st.pieceQ;
   if (b === null || q === null || worldPlacementOf(st.world, b.name) === null) {
@@ -1314,17 +1319,16 @@ export function pieceStuckFrame(st: SceneState): void {
     return;
   }
   // ⭐ (the fifth audit) staggered: not on a frame the red quad's check already ran
-  if (st.quadCheckRan) {
-    st.quadCheckRan = false;
-    return;
-  }
+  if (quadRan) return;
   const t0 = performance.now();
   const env = pieceSolverEnv(st);
   const opt = pieceSolveOptions(st);
   // ⭐ (2026-10-13, the second audit) INSIDE the margin (no free place within reach) is checked too, blocked input or not — it was silent
   const inside = env.gap(q) < opt.gapM / 2;
   st.pieceQueriesCarry += 1;
-  if (!st.pieceMoveBlocked && !inside) {
+  // ⭐⭐ (the sixth audit) the gate decided in `input/` (`stuckGate`): a free wiggle step no longer resets an armed verdict that has not moved
+  const armed = st.pieceStuck.position && st.pieceStuck.turns;
+  if (stuckGate(st.pieceMoveBlocked, inside, armed, st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M) === "RESET") {
     st.pieceStuck = STUCK_FRESH;
     st.pieceGuardCarryMs += performance.now() - t0;
     return;
@@ -1352,7 +1356,8 @@ export function pieceStuckFrame(st: SceneState): void {
     }
     st.pieceStuck = stuckRecord(st.pieceStuck, k, blocked, 1 + st.orientDirs.length);
     // ⭐ (the fifth audit) armed: remember where — a nudge smaller than a quarter of the probe keeps the verdict
-    if (st.pieceStuck.position && st.pieceStuck.turns && st.pieceStuck.anchor === null) st.pieceStuck = { ...st.pieceStuck, anchor: ringAnchorAt(st, q) };
+    // ⭐ (the sixth audit) re-anchored at every check that keeps it armed — a drift of nudges does not add up to a reset
+    if (st.pieceStuck.position && st.pieceStuck.turns && blocked) st.pieceStuck = { ...st.pieceStuck, anchor: ringAnchorAt(st, q) };
     if (!(st.pieceStuck.position && st.pieceStuck.turns)) st.pieceStuck = { ...st.pieceStuck, anchor: null };
   }
   st.pieceGuardCarryMs += performance.now() - t0;
@@ -1360,10 +1365,16 @@ export function pieceStuckFrame(st: SceneState): void {
 
 /**
  * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11, §12) — WHAT BLOCKS the orbited piece's turn to `q` about its resting face's centre, the whole turn
- * swept by the gap rule (`turnSweepFree`, the slerp the alignment plays); `null` when it is free. Read before an align or a roll starts (refused when blocked) and for the
+ * swept by the gap rule (`turnSweep`, the slerp the alignment plays); `null` when it is free. Read before an align or a roll starts (refused when blocked) and for the
  * yellow quad (red while its tap's turn is blocked).
  */
 export function pieceTurnBlocker(st: SceneState, q: Quat): string | null {
+  const v = pieceTurnVerdict(st, q, Infinity);
+  return v === "PENDING" ? "a part" : v;
+}
+
+/** ⭐ (the sixth audit) the turn's verdict under `budget` gap queries — `"PENDING"` when it ran out (the red quad asks again next frame). */
+export function pieceTurnVerdict(st: SceneState, q: Quat, budget: number): string | null | "PENDING" {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   if (b === null || p === undefined || worldPlacementOf(st.world, b.name) === null) return null;
@@ -1389,9 +1400,10 @@ export function pieceTurnBlocker(st: SceneState, q: Quat): string | null {
     return gapAtU(u);
   };
   // ⭐ (2026-10-13, the second audit) under the frame's cap (it took ~61 gap queries at the gap kept), timed and counted for the HUD
-  const u = turnSweepFree(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries);
+  const u = turnSweep(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries, Math.min(opt.maxQueries, budget));
   st.pieceGuardCarryMs += performance.now() - t0;
   st.pieceQueriesCarry += n;
+  if (u === "PENDING") return "PENDING";
   return u === null ? null : (blocker ?? "a part");
 }
 

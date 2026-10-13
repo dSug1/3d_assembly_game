@@ -15,7 +15,7 @@
  *   ring's own coordinates (`projectExact`: the least change in the ring's metric, every contact honoured — an exact active set, corners too) and
  *   it slides on; nothing left to project: BLOCKED. A cap on the work (the gap queries) budgets it: what is left unsolved is reported
  *   (`deferred`), never dropped.
- * - **stuck** is asked of the SAME solver (`stuckProbe`), a TURN of the piece of the same rule (`turnSweepFree`), and a piece the ring moved into
+ * - **stuck** is asked of the SAME solver (`stuckProbe`), a TURN of the piece of the same rule (`turnSweep`), and a piece the ring moved into
  *   a part (the gizmo moved, a part moved) is put back on the nearest free place of its ring (`nearestFree`).
  */
 import type { Vec3 } from "../core/vec";
@@ -339,7 +339,7 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
 
 /**
  * ⭐⭐ **STUCK, asked of the same solver**: a small step (`probeM` of anchor travel) each way along both ring coordinates — stuck only if not one
- * of them moves the piece a quarter of the probe. (Its turns are asked of `turnSweepFree` by the caller — the same clearance rule.)
+ * of them moves the piece a quarter of the probe. (Its turns are asked of `turnSweep` by the caller — the same clearance rule.)
  */
 export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM: number): boolean {
   const a0 = env.anchor(q);
@@ -365,27 +365,46 @@ export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM:
  * (its end farther out than its start) — ⛔ it was "never below the gap it starts with", which a piece deep in a part (the gap 0 everywhere)
  * passed on every turn: no red quad, no pop-up, no respawn. `maxQueries` caps the work (the caller passes the frame's cap).
  */
-export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, reachM: number, gapM: number, maxQueries = 24): number | null {
+
+/**
+ * ⭐⭐ (2026-10-13, the sixth audit) **THE TURN SWEEP, BUDGETED** — the sweep above under `budget` gap queries (≤ `maxQueries`, which plans the
+ * strides): `"PENDING"` when the budget ran out before the end — the caller keeps its verdict and asks again (the red quad, with what the frame's
+ * solve left over).
+ * ⭐ FREE AT ONCE when the piece is clear by more than the turn's whole sweep (one query): no point of it travels further than `reachM · angle`.
+ * ⭐ Near a part each stride is refined at its midpoint unless the gap's 1-Lipschitz bound CERTIFIES it (`g + g₁ ≥ 2·hard + du·sweep` — between
+ * two samples the gap cannot dip lower): ⛔ the fifth audit's refinement read only the END sample (`g₁ < 2·gapM`), so with strides of half the
+ * budget a 5–8 mm notch passed as free (104–151 of 217 placements, measured); certified strides are exact, uncertified ones refined once.
+ */
+export function turnSweep(
+  gapAtU: (u: number) => number,
+  angleRad: number,
+  reachM: number,
+  gapM: number,
+  maxQueries: number,
+  budget: number,
+): number | null | "PENDING" {
   const hard = gapM / 2;
   const g0 = gapAtU(0);
-  if (g0 < hard) return gapAtU(1) > g0 ? null : 1;
+  if (g0 < hard) return budget >= 2 ? (gapAtU(1) > g0 ? null : 1) : "PENDING";
   const sweep = Math.abs(angleRad) * reachM; // the furthest any point travels over the whole turn
-  // ⭐ (the fifth audit) strides planned for HALF the budget: every one can be refined at its midpoint and the end is still reached
+  if (g0 - hard >= sweep) return null; // ⭐ clear by more than the whole sweep
+  // strides planned for HALF the budget: every one can be refined at its midpoint and the end is still reached
   const steps = Math.max(1, Math.floor((Math.max(3, maxQueries) - 1) / 2));
   let used = 1;
   let u = 0;
   let g = g0;
-  while (used < maxQueries) {
-    const safe = sweep > 1e-12 ? (g - hard) / sweep : 1;
-    const du = Math.max(safe, 1 / steps); // the floor: the end reached within the queries
+  for (;;) {
+    if (used >= budget) return "PENDING";
+    const du = Math.max(sweep > 1e-12 ? (g - hard) / sweep : 1, 1 / steps);
     const u0 = u;
     u = Math.min(1, u + du);
     const g1 = gapAtU(u);
     used++;
     if (g1 < hard) return u;
-    // ⚠ (2026-10-13, the fifth audit) where the FLOOR bound the stride (near a part — 0.5 mm of margin over ~126 mm of corner travel would need
-    // ~250 samples, ten times the cap), the sweep is SAMPLED, not conservative: a sample still close to a part is refined once, at the midpoint
-    if (du > safe && g1 < 2 * gapM && used < maxQueries) {
+    const span = (u - u0) * sweep;
+    if (g + g1 < 2 * hard + span) {
+      // not certified by the bound: refined once at the midpoint
+      if (used >= budget) return "PENDING";
       const um = (u0 + u) / 2;
       used++;
       if (gapAtU(um) < hard) return um;
@@ -393,8 +412,6 @@ export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, r
     g = g1;
     if (u >= 1) return null;
   }
-  // ⛔ the budget ran out short of the end: not checked whole — refused, never "free"
-  return u >= 1 ? null : u;
 }
 
 /**
@@ -653,6 +670,30 @@ export function worldSignature(world: World): string {
  */
 export function stuckKeep(verdictAnchor: Vec3 | null, anchor: Vec3, probeM: number): boolean {
   return verdictAnchor === null || dist(verdictAnchor, anchor) < probeM / 4;
+}
+
+/**
+ * ⭐⭐ (2026-10-13, the sixth audit) **THE STUCK GATE** — whether this frame RESETS the stuck verdict or goes on to CHECK it. ⛔ The wiring reset it
+ * whenever the last input step was free, and in a pocket at the gap kept half a wiggle's steps ARE free (one moves away from a wall): the pop-up
+ * blinked and the double tap disarmed while the piece was still stuck — the rule sat in the render file, beside `stuckKeep`, and disagreed with
+ * it. Now: RESET only when the input was free, the piece is not inside the margin, AND there is no armed verdict or its solved anchor really
+ * moved (a quarter of the probe).
+ */
+export function stuckGate(moveBlocked: boolean, inside: boolean, armed: boolean, verdictAnchor: Vec3 | null, anchor: Vec3, probeM: number): "RESET" | "CHECK" {
+  if (moveBlocked || inside) return "CHECK";
+  if (armed && stuckKeep(verdictAnchor, anchor, probeM)) return "CHECK";
+  return "RESET";
+}
+
+/**
+ * ⭐ (2026-10-13, the sixth audit) THE RED QUAD'S CHECK, SCHEDULED: due when its key changed and `everyMs` passed — ⛔ no longer paused while the
+ * piece moves more than 3 mm a frame (§11septies): pulling away from a part the square stayed red almost to the far ring — and given only what the
+ * frame's solve left of the cap (`null`: not this frame).
+ */
+export function quadCheckBudget(keyChanged: boolean, sinceMs: number, everyMs: number, cap: number, solveUsed: number): number | null {
+  if (!keyChanged || sinceMs < everyMs) return null;
+  const left = cap - solveUsed;
+  return left >= 2 ? left : null;
 }
 
 /**

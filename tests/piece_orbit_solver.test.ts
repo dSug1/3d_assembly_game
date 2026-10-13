@@ -11,6 +11,9 @@ import {
   pieceRespawnArmed,
   keepSense,
   orbitFrame,
+  quadCheckBudget,
+  stuckGate,
+  turnSweep,
   relocationKey,
   stuckKeep,
   worldSignature,
@@ -22,11 +25,15 @@ import {
   projectExact,
   solveOrbitStep,
   stuckProbe,
-  turnSweepFree,
   type OrbitQ,
   type SolverEnv,
 } from "../src/input/piece_orbit_solver";
 
+// ⭐ (the sixth audit) the whole-budget sweep — `turnSweep` with all of its budget (never PENDING then; read as refused if it were)
+const turnSweepFree = (g: (u: number) => number, a: number, r: number, gap: number, m = 24): number | null => {
+  const v = turnSweep(g, a, r, gap, m, m);
+  return v === "PENDING" ? 0 : v;
+};
 const PIECE_R = 0.1;
 const GAP = 0.001;
 const OPT = { gapM: GAP, maxQueries: 400 };
@@ -553,7 +560,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       expect(emitted(DEFAULT_CONFIG.orbitDeadbandMm)).toBeGreaterThan(emitted(DEFAULT_CONFIG.motionDeadbandMm) + 1);
       expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitDeadbandMm: 1 })).toThrow(/orbitDeadbandMm/);
       const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs)");
+      expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true)");
       expect(p).toContain("const db = st.orbitMotion.band.step;");
     });
   });
@@ -686,9 +693,116 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
 
     it("⭐ the two paced checks never share a frame: the stuck check skips the frame the red quad's ran", () => {
       const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(g).toContain("if (st.quadCheckRan) { st.quadCheckRan = false; return; }");
+      // ⭐ (the sixth audit) read and cleared FIRST, before any early return
+      expect(g).toContain("const quadRan = st.quadCheckRan; st.quadCheckRan = false;");
+      expect(g).toContain("if (quadRan) return;");
       const c = readFileSync(new URL("../src/render/orient_cube.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(c).toContain("qc.key = key; qc.at = now; st.quadCheckRan = true;");
+      expect(c).toContain("if (budget === null) return; st.quadCheckRan = true;");
+    });
+  });
+
+  describe("⭐⭐⭐ the sixth audit (2026-10-13)", () => {
+    it("⭐⭐⭐ THE STUCK GATE: in a pocket some wiggle steps ARE free while the piece is still stuck — they must not reset an armed verdict", () => {
+      // the pocket at the gap kept on all four sides (the stuck vector's), a finger wiggling ±0.3 mm
+      const a0 = anchor(q(0));
+      const d = PIECE_R + 0.05 + GAP;
+      const balls = [
+        { c: [a0[0], a0[1], a0[2] + d] as Vec3, r: 0.05 },
+        { c: [a0[0], a0[1] + d, a0[2]] as Vec3, r: 0.05 },
+        { c: [a0[0], a0[1] - d, a0[2]] as Vec3, r: 0.05 },
+        { c: [a0[0], a0[1], a0[2] - d] as Vec3, r: 0.05 },
+      ];
+      const e = env(balls, (x) => anchor({ ...x, v: x.v - 0.5 }));
+      let at = q(0, 0.5);
+      let free = 0;
+      for (let i = 0; i < 30; i++) {
+        const s = [((i * 7) % 3) - 1, ((i * 5) % 3) - 1] as const;
+        const r = solveOrbitStep(at, [s[0] * 0.0003, s[1] * 0.0003], e, OPT);
+        if (!r.blocked && (s[0] !== 0 || s[1] !== 0)) free++;
+        at = r.q;
+      }
+      expect(free).toBeGreaterThan(0); // the premise: a "free" step happens …
+      expect(stuckProbe(at, e, OPT, 0.003)).toBe(true); // … while the piece is stuck all along
+      // the gate: a free step with an armed verdict that has not moved is a CHECK, not a RESET
+      expect(stuckGate(false, false, true, [0, 0, 0], [0.0003, 0, 0], 0.003)).toBe("CHECK");
+      expect(stuckGate(false, false, true, [0, 0, 0], [0.001, 0, 0], 0.003)).toBe("RESET");
+      expect(stuckGate(false, false, false, null, [0, 0, 0], 0.003)).toBe("RESET");
+      expect(stuckGate(true, false, false, null, [0, 0, 0], 0.003)).toBe("CHECK");
+      expect(stuckGate(false, true, false, null, [0, 0, 0], 0.003)).toBe("CHECK");
+    });
+
+    it("⭐⭐⭐ the turn sweep is CERTIFIED by the gap's Lipschitz bound, else refined (⛔ a 5–8 mm notch passed as free between two samples)", () => {
+      // a dip right after a near start
+      const dip = (u: number) => (u < 0.03 ? 0.001 - u * 0.03 : u < 0.06 ? 0 : 0.005 + (u - 0.06) * 0.1);
+      expect(turnSweepFree(dip, Math.PI / 2, 0.08, 0.001, 24)).not.toBeNull();
+      // a 6 mm notch (a V of the gap's own slope) centred at u = 0.52
+      const sweep = (Math.PI / 2) * 0.08;
+      const notch = (u: number) => Math.max(0, Math.min(0.0015, Math.abs(u - 0.52) * sweep - 0.003));
+      expect(turnSweepFree(notch, Math.PI / 2, 0.08, 0.001, 24)).not.toBeNull();
+      // free all the way at the gap kept: free, under the cap
+      let n = 0;
+      expect(turnSweepFree(() => (n++, 0.0015), Math.PI / 2, 0.08, 0.001, 24)).toBeNull();
+      expect(n).toBeLessThanOrEqual(24);
+    });
+
+    it("⭐⭐⭐ a resting finger's TREMOR re-rests the orbit band in time; a steady drag never rests (⛔ the tremor restarted the rest clock: 0.7–1.3 s)", async () => {
+      const { MotionTracker } = await import("../src/input/motion");
+      const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+      const { mmToPx } = await import("../src/core/units");
+      const cfg = { ...DEFAULT_CONFIG, motionDeadbandMm: DEFAULT_CONFIG.orbitDeadbandMm };
+      let seed = 7;
+      const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648) * 2 - 1;
+      const restTime = (jitterRest: boolean) => {
+        const tr = new MotionTracker(cfg, 400, jitterRest);
+        let t = 0;
+        let x = 0;
+        for (let i = 0; i < 20; i++) {
+          x += mmToPx(1);
+          t += 60;
+          tr.push({ x, y: 0, t }); // a drag at tablet rate …
+        }
+        const stop = t;
+        for (let i = 0; i < 60; i++) {
+          t += 60;
+          tr.push({ x: x + mmToPx(0.76) * rnd(), y: 0, t }); // … then the finger rests, its tremor dispatching
+          if (tr.axes.x === "STATIONARY") return t - stop;
+        }
+        return Infinity;
+      };
+      const times: number[] = [];
+      for (let k = 0; k < 400; k++) times.push(restTime(true));
+      // 400 ms of rest + the first in-band sample + the 60 ms event grid: measured p50 540, p95 600 (⛔ p50 840, p95 1440 before)
+      const within = times.filter((ms) => ms <= 1.5 * 400).length;
+      expect(within / times.length).toBeGreaterThanOrEqual(0.95);
+      // ⛔ without it, the tremor keeps it moving far longer
+      seed = 7;
+      const old: number[] = [];
+      for (let k = 0; k < 400; k++) old.push(restTime(false));
+      expect(old.filter((ms) => ms <= 1.5 * 400).length / old.length).toBeLessThan(0.5);
+      // a steady drag of 0.4 mm a sample at 16.7 ms never rests
+      const tr = new MotionTracker(cfg, 400, true);
+      let x = 0;
+      let rested = false;
+      for (let i = 0; i < 200; i++) {
+        x += mmToPx(0.4);
+        tr.push({ x, y: 0, t: i * 16.7 });
+        if (i > 20 && tr.axes.x === "STATIONARY") rested = true;
+      }
+      expect(rested).toBe(false);
+    });
+
+    it("⭐⭐⭐ THE RED QUAD is asked while the piece MOVES, with what the frame's solve left (⛔ paused at > 3 mm a frame: red almost to the far ring)", () => {
+      // due on a changed key after the pace, whatever the motion; the budget is the cap minus the solve's queries
+      expect(quadCheckBudget(true, 120, 100, 24, 6)).toBe(18);
+      expect(quadCheckBudget(true, 50, 100, 24, 6)).toBeNull(); // the pace
+      expect(quadCheckBudget(false, 500, 100, 24, 0)).toBeNull(); // nothing changed
+      expect(quadCheckBudget(true, 500, 100, 24, 23)).toBeNull(); // the solve took the frame
+      // FREE AT ONCE when clear by more than the turn's whole sweep: one query
+      let n = 0;
+      expect(turnSweep(() => (n++, 0.2), Math.PI / 2, 0.08, 0.001, 24, 24)).toBeNull();
+      expect(n).toBe(1);
+      // a sweep the budget cuts answers PENDING (the colour kept, asked again), never free
+      expect(turnSweep(() => 0.0015, Math.PI / 2, 0.08, 0.001, 24, 3)).toBe("PENDING");
     });
   });
 });
