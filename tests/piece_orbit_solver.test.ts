@@ -11,6 +11,7 @@ import {
   pieceRespawnArmed,
   keepSense,
   orbitFrame,
+  worldSignature,
   pieceTapAction,
   STUCK_FRESH,
   stuckNext,
@@ -420,12 +421,37 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       // every point of it admissible
       for (const p of r.path) expect(floorEnv(0.002).gap(p)).toBeGreaterThanOrEqual(GAP / 2);
     });
-    it("⭐⭐ the directional stride never tunnels: a thin part across the path, beside a parallel floor, still stops the piece", () => {
-      // a 2 cm ball across the ring at yaw 0.15, the floor 2 mm under it
-      const e = floorEnv(0.002, [{ c: [Math.cos(0.15), 0, Math.sin(0.15)], r: 0.01 }]);
+    it("⭐⭐ the directional stride never tunnels a thin part of ANOTHER body (the fourth audit's fixture: the old one passed with the bound removed)", () => {
+      // a 1 cm piece 2 mm over a floor, a 1 mm ball at the quarter point of a 4.5 cm stride, just off the path: the landing and the midpoint miss it
+      const R = 0.01;
+      const ball = { c: [Math.cos(0.01125), 0.011, Math.sin(0.01125)] as Vec3, r: 0.001 };
+      const floorY = -R - 0.002;
+      const ballGap = (x: OrbitQ) => {
+        const p = anchor(x);
+        return Math.max(0, Math.hypot(p[0] - ball.c[0], p[1] - ball.c[1], p[2] - ball.c[2]) - ball.r - R);
+      };
+      const floorGap = (x: OrbitQ) => Math.max(0, anchor(x)[1] - R - floorY);
+      const e: SolverEnv = {
+        anchor,
+        gap: (x) => Math.min(floorGap(x), ballGap(x)),
+        normal: (x) => {
+          if (floorGap(x) <= ballGap(x)) return [0, 1, 0];
+          const p = anchor(x);
+          const v: Vec3 = [p[0] - ball.c[0], p[1] - ball.c[1], p[2] - ball.c[2]];
+          const d = Math.hypot(v[0], v[1], v[2]);
+          return [v[0] / d, v[1] / d, v[2] / d];
+        },
+        secondGap: (x) => Math.max(floorGap(x), ballGap(x)),
+      };
       const r = solveOrbitStep(q(0, 0), [1, 0], e, { gapM: GAP, maxQueries: 400 });
-      expect(r.q.yaw).toBeLessThan(0.15);
-      for (const p of r.path) expect(e.gap(p)).toBeGreaterThanOrEqual(GAP / 2);
+      expect(r.q.yaw).toBeLessThan(0.0113);
+      // the arc itself, finely: never under half the gap kept
+      for (let i = 1; i < r.path.length; i++)
+        for (let k = 0; k <= 20; k++) {
+          const a0 = r.path[i - 1]!;
+          const a1 = r.path[i]!;
+          expect(e.gap({ yaw: a0.yaw + ((a1.yaw - a0.yaw) * k) / 20, v: a0.v + ((a1.v - a0.v) * k) / 20, zoom: 1 })).toBeGreaterThanOrEqual(GAP / 2 - 1e-9);
+        }
     });
     it("⭐⭐⭐ a finger REVERSING after a capped swipe moves the piece back at once (⛔ it went on forward for 4 frames on the backlog)", () => {
       const e = floorEnv(0.0012);
@@ -527,6 +553,57 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
       expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm })");
       expect(p).toContain("const db = st.orbitMotion.band.step;");
+    });
+  });
+
+  describe("⭐⭐⭐ the fourth audit (2026-10-13)", () => {
+    const floorAt = (gapBelowM: number): SolverEnv => {
+      const floorY = -PIECE_R - gapBelowM;
+      return {
+        anchor,
+        gap: (x) => Math.max(0, anchor(x)[1] - PIECE_R - floorY),
+        normal: () => [0, 1, 0],
+        secondGap: () => 10,
+      };
+    };
+    it("⭐⭐⭐ a piece RESTING on a part slides along it at full stride (⛔ 0.048 rad a frame: 4 mm sub-steps at the gap kept)", () => {
+      const e = floorAt(GAP);
+      const r = solveOrbitStep(q(0, 0), [1, 0], e, { gapM: GAP, maxQueries: 24 });
+      expect(r.q.yaw).toBeGreaterThan(0.2);
+      for (const p of r.path) expect(e.gap(p)).toBeGreaterThanOrEqual(GAP / 2);
+    });
+    it("⭐⭐ the stuck probe's four solves SHARE the cap (⛔ each was given all of it)", () => {
+      let n = 0;
+      const e = env([AHEAD]);
+      const at = solveOrbitStep(q(0), [Math.PI / 2, 0], e, OPT).q;
+      const counted: SolverEnv = { anchor, gap: (x) => (n++, e.gap(x)), normal: (x) => (n++, e.normal(x)) };
+      stuckProbe(at, counted, { gapM: GAP, maxQueries: 24 }, 0.003);
+      expect(n).toBeLessThanOrEqual(24 + 4 * 2);
+    });
+    it("⭐⭐ an ARMED verdict gets ONE check at once on a key change — a freed piece hides the pop-up within a frame — then the pace", () => {
+      const armed = { ...STUCK_FRESH, key: "k", position: true, turns: true, done: true, at: 1000 };
+      const a = stuckNext(armed, "k2", 1010, 100);
+      expect(a.check).toBe(0);
+      const b = stuckNext(a.s, "k3", 1026, 100);
+      expect(b.check).toBeNull();
+      // a disagreeing check clears it
+      expect(stuckRecord(a.s, 0, false, 7).position).toBe(false);
+    });
+    it("⭐⭐ the scene signature leaves the ORBITED pieces out (⛔ their easing pose restarted the relocation's search every frame)", () => {
+      const mk = (pieceX: number, partX: number, partQ: number[] = [1, 0, 0, 0]) =>
+        ({
+          objects: new Map([
+            ["piece", { local: { position: [pieceX, 0, 0], orientation: [1, 0, 0, 0] }, orbited: true }],
+            ["part", { local: { position: [partX, 0, 0], orientation: partQ } }],
+          ]),
+        }) as unknown as Parameters<typeof worldSignature>[0];
+      expect(worldSignature(mk(0, 0))).toBe(worldSignature(mk(0.3, 0)));
+      expect(worldSignature(mk(0, 0))).not.toBe(worldSignature(mk(0, 0.001)));
+      expect(worldSignature(mk(0, 0, [0.9998, 0.02, 0, 0]))).not.toBe(worldSignature(mk(0, 0))); // a part turned in place is seen
+    });
+    it("⭐ the orbit drag's band is TICKED with the camera's tracker (⛔ never ticked: a pause did not re-rest it)", () => {
+      const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+      expect(g).toMatch(/st\.orbitMotion\.tracker\.tick\(now\);[^;]*st\.orbitMotion\.band\.tick\(now\);/);
     });
   });
 });

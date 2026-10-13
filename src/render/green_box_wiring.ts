@@ -35,7 +35,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { orbitFrame, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
@@ -1048,6 +1048,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let finger: { yaw: boolean; pitch: boolean; holdMs: number } | null = null;
   if (st.orbitMotion !== null) {
     st.orbitMotion.tracker.tick(now);
+    // ⭐ (the fourth audit) the drag's own band ticked too: a silent pause re-rests it, so its wobble is filtered again (it was "once per drag")
+    st.orbitMotion.band.tick(now);
     const ax = st.orbitMotion.tracker.axes;
     finger = { yaw: ax.x === "MOVING", pitch: ax.y === "MOVING", holdMs: st.orbitMotion.tracker.restMs };
   } else if (st.orbitInertia.coasting) {
@@ -1251,17 +1253,7 @@ const sameQ = (a: OrbitQ, b: OrbitQ): boolean => Math.abs(a.yaw - b.yaw) + Math.
  * and able to cancel.
  */
 export function sceneSignature(st: SceneState): string {
-  let h = 0x811c9dc5;
-  const mix = (x: number) => {
-    h ^= Math.round(x) | 0;
-    h = Math.imul(h, 0x01000193);
-  };
-  for (const [id, o] of st.world.objects) {
-    for (let i = 0; i < id.length; i++) mix(id.charCodeAt(i));
-    for (const x of o.local.position) mix(x * 1e4);
-    for (const x of o.local.orientation) mix(x * 1e4);
-  }
-  return (h >>> 0).toString(36);
+  return worldSignature(st.world);
 }
 
 /** ⭐ (§12) the shown piece has come to rest on its solved place (the spring has caught up). */
@@ -1353,8 +1345,8 @@ export function pieceStuckFrame(st: SceneState): void {
 }
 
 /**
- * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11) — WHAT BLOCKS the orbited piece's turn to `q` about its resting face's centre, the whole turn
- * checked (`resolveMove` along the path); `null` when it is free. Read before an align or a roll starts (refused when blocked) and for the
+ * ⭐⭐⭐ (2026-10-13, `COLLISION.md` §11, §12) — WHAT BLOCKS the orbited piece's turn to `q` about its resting face's centre, the whole turn
+ * swept by the gap rule (`turnSweepFree`, the slerp the alignment plays); `null` when it is free. Read before an align or a roll starts (refused when blocked) and for the
  * yellow quad (red while its tap's turn is blocked).
  */
 export function pieceTurnBlocker(st: SceneState, q: Quat): string | null {
