@@ -791,3 +791,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⛔⛔ The second-touch tap on a placed part moves the gizmo again: a tap that wobbled into the pinch is a tap (`holdTapMode`) → §26.
 * The vectors that read only commented-out (`// ⏸`) code are pruned (15 assertions, `kept()` deleted).
 * ⭐⭐ The second touch's tap on empty space (first held) taps the YELLOW quad, as the first touch's does (it only rolled) → §26.
+* ⭐⭐ The camera's pitch offset MIRRORED below the level: the 4th ring's camera 42.9° below the piece, all quads yellow on both rings → §26.
