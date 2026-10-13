@@ -472,3 +472,36 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   on the device, a freeze with a low peak is the rendering, a high peak the guards.
 * ✅ Vectors: the budget and the rest kept, the spring held to what was checked, the rest walked anew, the 8-round bisection for the piece,
   the stuck check's rest and turn-taking, the quad's pause, the HUD's peak.
+
+## 11octies. The cheap approach, the ring height kept, the UNLOCK of a head-on block (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"On large orbit dx sweeps, the behavior is now : initial rapid orbit, the slow down, then rapid orbit again until parts collide. Then,
+> sometimes the piece seem magnet stuck to the collided part. Can both be improved ?"* · *"in attached configuration (gizmo under the bottom face
+> of the bottom part, dx towards left), the scene is frozen"* · *"Build it but do not increase the ms budget (i am testing on iphone)"* ·
+> *"Without 3, a head-on block stays a hard stop. But find a way to unlock so the user can go backwards"* · *"Do not build detour. Instead,
+> propose a way to unlock the head-on block when the user reverses the delta position direction"* → *"Finish, update the md files and deploy"*
+> — the owner (iPhone, build `aad3cd7`).
+
+* ⭐ **THE "FREEZE", REPRODUCED** (the gizmo at `(−0.10, 0.02, −0.05)` as on the phone): the yaw to the left stops after 0.2–0.3 rad against the
+  painting (`Piece17`, `Piece13`, `Piece9`) — a HEAD-ON block, not a frozen scene (frames run, dy still moves it): the ring at that height runs
+  through the painting, a sideways push holds no up/down to slide on. ⛔ The DETOUR (over or under the part) was proposed and REFUSED — a head-on
+  block stays a hard stop.
+* ✅ **THE UNLOCK** — **a step AWAY from the part the piece is TOUCHING is never refused by that part** (it is still judged against every other
+  body): touching (gap ≤ the skin), the step's world motion against the contact normal (`contactNormal`) → checked again with that part exempt;
+  free → taken. ⭐ Why it can lock BOTH ways otherwise: the penetration rule (`D136`) lets a pair in contact only get SHALLOWER, and its depth is
+  measured along the bodies' own axes — exact for boxes, an OVER-READ for a slanted hull such as the piece: a step that really backs away could
+  read "deeper" and be refused. Headless (the configuration above): after each yaw-left block, the reverse got out (+2.6 to +3 rad). The HUD
+  shows `U` the frame it lets a step through.
+* ✅ **THE APPROACH MADE CHEAP — CONSERVATIVE ADVANCEMENT** (Mirtich 1996): the walk measures the piece's CLEARANCE to the nearest part
+  (`clearance`, within 0.5 m) and lets that many sub-steps through unchecked (× 0.8; the piece only translates on the ring, so no point moves
+  further than the anchor's path) — the checks are left for the last centimetres before a contact, so the approach no longer spends the 4 ms
+  budget (the "fast → slow → fast" on the iPhone). ⛔ The budget is NOT raised (the owner). Headless: the median frame of the sweep 32 → 22 ms.
+* ✅ **THE RING HEIGHT KEPT (the "magnet")** — the height the FINGER set is remembered apart from where the piece is (`orbitUserV`): only the
+  input's own dy moves it, and a dy of its own pushed into a part is discarded there. A slide that carried the piece up or down a part no longer
+  leaves it there: each frame with no contact, the piece RETURNS to that height — guarded, and only when the way back is free; blocked (still over
+  the part), it WAITS — it never creeps along a part on its own. ⚠ My earlier headless "drift to 0.65" was my own test's dy (+0.15), not a slide:
+  the magnet is diagnosed from the code (a slide moves BOTH coordinates, and the whole excess used to be discarded), not reproduced headless —
+  the device is the judge.
+* ✅ The HUD's `guard` reading carries flags: `d` (the budget cut a step short), `H` (the piece held off its ring), `U` (the unlock fired).
+* ✅ Vectors: the clearance (and a pair's gap), the walk trusting it, the budget kept at 4 ms, the unlock's three conditions, the height kept and
+  its waiting return, the HUD's flags.

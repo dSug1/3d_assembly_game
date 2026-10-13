@@ -492,6 +492,15 @@ export interface SceneState {
   pieceGuardFrameMs: number;
   /** ⭐ (2026-10-13, §11septies) the guards' deadline this frame (`performance.now()` ms): past it, the rest of a step waits for the next frame. */
   pieceGuardDeadline: number;
+  /** ⭐ (2026-10-13) this frame: the target's step cut short by the budget, the piece held off its ring — for the HUD and the diagnosis. */
+  pieceDeferred: boolean;
+  pieceHeld: boolean;
+  /** ⭐ (2026-10-13, §11octies) this frame: a step AWAY from the touched part let through (the unlock). */
+  pieceUnlocked: boolean;
+  /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */
+  orbitRawPrev: { yaw: number; v: number } | null;
+  /** ⭐ (2026-10-13, §11octies) the RING HEIGHT the finger set (only its dy moves it) — the piece returns to it once a slide carried it off. */
+  orbitUserV: number | null;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m), and when it last moved (ms) — the quad's check pauses mid-sweep, the stuck check waits for a rest. */
   pieceFrameStepM: number;
   pieceMovedAt: number;
