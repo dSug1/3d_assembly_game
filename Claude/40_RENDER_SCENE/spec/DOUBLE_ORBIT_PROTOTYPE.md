@@ -790,3 +790,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐ The quads (and the resting outline) grow along a LOGARITHM, fastest when small (steepness 9, a slider) → `RESTING_FACE_ALIGNMENT.md` §25.
 * ⛔⛔ The second-touch tap on a placed part moves the gizmo again: a tap that wobbled into the pinch is a tap (`holdTapMode`) → §26.
 * The vectors that read only commented-out (`// ⏸`) code are pruned (15 assertions, `kept()` deleted).
+* ⭐⭐ The second touch's tap on empty space (first held) taps the YELLOW quad, as the first touch's does (it only rolled) → §26.

@@ -1020,3 +1020,9 @@ The owner: *"The possibility to move the gizmo by second touch tap on mobile has
 - Headless (touch): the first finger held on empty space, the second tapping a placed part with 20 px (~5 mm) of wobble — the old code: `orbit: two
   fingers — the pinch zoom`, the gizmo unmoved; the new: `orbit: second touch tap on a placed part — the orbit centre (the pink gizmo) moved
   there`. ⛔ No device look yet.
+- ⭐⭐ **And the second touch's tap on empty space taps the YELLOW quad** (the owner, the same day: *"the second touch's tap on empty space to do
+  exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there"*). It only ROLLED (one stop on the face
+  already aligned to, ignoring the yellow quad); now, first finger held (or the left button, with ALT / CTRL as the second touch), its tap on
+  empty space or a frozen body is `orientTapShown` — aligned to the yellow quad's direction, or the roll when already aligned there; one episode
+  (`holdTapTapsYellow`, which replaces `holdTapRolls`: the piece need not be aligned first). A tap on a placed part still moves the gizmo.
+  Headless (touch): the first finger held, the second tapping empty space — aligned to the yellow quad (−z); again — the roll.
