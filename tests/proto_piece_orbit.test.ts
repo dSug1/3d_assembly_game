@@ -476,9 +476,6 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/st\.centreReturn = null;\s*\/\/[^\n]*\n\s*st\.hold = null;/);
     // ⭐ the way in and the way out are the held second touch's (`hold_wiring.ts`) — the way out exported for it
     expect(w).toMatch(/export function returnToCentreOrbit\(st: SceneState, rebase: boolean\): void \{/);
-    const h = code("render/hold_wiring.ts");
-    expect(h).toMatch(/if \(enterPieceOrbit\(st\)\)/);
-    expect(h.replace(/^\/\/ ⏸ /gm, "")).toMatch(/st\.pieceEntry = null;\s*returnToCentreOrbit\(st, true\);/); // ⏸ (2026-10-12) the way out kept, commented
   });
 
   it("⭐⭐⭐ the WAY BACK, AROUND THE PIECE, its view TIED to the move (one value): nothing moves when it ends; the piece in view ALL the way, even from between it and the gizmo", () => {

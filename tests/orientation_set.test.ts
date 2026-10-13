@@ -93,14 +93,19 @@ describe("⭐⭐ the resting-face quads (2026-10-12, *\"at the center of the res
 import { quadSide, quadSize, quadsShownFromM } from "../src/core/orientation_set";
 describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a click aligns to the side clicked (2026-10-12)", () => {
   it("⭐ *\"grow with the distance of the piece to the pink gizmo\"* — (d/dRef)^power; *\"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale\"* — never above 1; a slider", () => {
-    const k = DEFAULT_CONFIG.quadGrowthPower;
-    expect(k).toBe(3);
+    // ⭐⭐ *\"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small\"* — ln(1 + k·t) / ln(1 + k), k = 9
+    const k = DEFAULT_CONFIG.quadGrowthLogK;
+    expect(k).toBe(9);
+    const f = (tt: number) => Math.log1p(k * tt) / Math.log1p(k);
     // ⭐⭐ (2026-10-12, *"the 1.4 shall be reached at the maximum distance … There shall be no plateau"* → *"the min scale of the quads at the
     // minimum distance shall be 0.1. the curve with the power (i.e. power 3) shall best fit those max and min scales at max and min distances"*)
     expect(quadSize(0.1, 0.1, 5, k, 0.02, 0.5)).toBeCloseTo(0.02, 12); // the minimum at the nearest
     expect(quadSize(5, 0.1, 5, k, 0.02, 0.5)).toBeCloseTo(0.5, 12); // the maximum at the farthest
     expect(quadSize(3, 0.1, 5, k, 0.02, 0.5)).toBeLessThan(0.5); // ⛔ no plateau between the boot's 3 m and the farthest
-    expect(quadSize(2.55, 0.1, 5, k, 0.02, 0.5)).toBeCloseTo(0.02 + 0.48 * 0.125, 12); // halfway: (½)³
+    expect(quadSize(2.55, 0.1, 5, k, 0.02, 0.5)).toBeCloseTo(0.02 + 0.48 * f(0.5), 12); // halfway: ln(5.5) / ln(10) = 0.74 — past a straight line's ½
+    expect(f(0.5)).toBeGreaterThan(0.5);
+    expect(f(0.1)).toBeCloseTo(Math.log(1.9) / Math.log(10), 12); // a tenth of the way: 0.28 of the growth — fastest when small
+    expect(quadSize(2.55, 0.1, 5, 0, 0.02, 0.5)).toBeCloseTo(0.26, 12); // k = 0: a straight line
     expect(quadSize(9, 0.1, 5, k, 0.02, 0.5)).toBe(0.5);
     expect(quadSize(0, 0.1, 5, k, 0.02, 0.5)).toBe(0.02);
     expect(quadSize(1, 0.1, 5, k, 0.9, 0.5)).toBe(0.5); // a minimum above the maximum: the maximum
@@ -111,12 +116,12 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
     expect(quadsShownFromM(6)).toBe(3);
     expect(c).toContain("const from = quadsShownFromM(range.maxM); const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;");
-    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthPower, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
+    expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
     expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
     expect(c).not.toContain("dRef");
     expect(c).not.toContain("GIZMO_RING_PX");
     expect(c).not.toContain("GIZMO_RING_PX");
-    expect(code("render/tuning_menu.ts")).toContain('"quadGrowthPower", 0.5, 5, 0.1)');
+    expect(code("render/tuning_menu.ts")).toContain('"quadGrowthLogK", 0, 50, 0.5)');
   });
   it("⭐ *\"click on one side or the other of the quad are differentiated so the piece can turn 180 degrees\"* — the normal on the eye's side", () => {
     expect(quadSide([1, 0, 0], [0, 0, 0], [5, 1, 0])).toEqual([1, 0, 0]);

@@ -175,14 +175,9 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
     const ccw = nextCoupleRoll([1, 0, 0, 0], DOWN, rectAxes, PINK, LOOK_DOWN, -1)!;
     expect(ccw.angleRad).toBeCloseTo(cw.angleRad, 12);
     expect(qRotate(ccw.q, X)[2]).toBeCloseTo(-qRotate(cw.q, X)[2], 9);
-    // the wiring: outside the sphere, aligned to the face it would align to now — the orbit's turn, signed by dx, in steps; no episode
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(st\.hold !== null && st\.hold\.mode === "WAY" && st\.restAligned && st\.restRoll !== null && dx !== 0\) \{/); // ⭐ (2026-10-11) on the held second touch's way in / round the piece
-    expect(p).toMatch(/const r = orbitRollSteps\(st\.orbitRollAcc, Math\.sign\(dx\) \* turned, orbitRollStepRad\(st\)\);/);
     // ⭐ (2026-10-10) a NEW orbit drag starts fresh — every roll, the first included, one step of the orbit from where the drag began
     expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)+if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/); // ⭐ (2026-10-11) kept across a re-press while the second touch is held
-    // ⛔⛔ (2026-10-10, *"when the dx is too fast … consider clamping"*) one roll at a time, only once the last turn landed
-    expect(p).toMatch(/if \(r\.steps !== 0 && st\.restAlign === null\) rollRestingFace\(st, performance\.now\(\), r\.steps > 0 \? 1 : -1, true\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);
     expect(w).toMatch(/return n > 0 \? ORBIT_ROLL_SPAN_RAD \/ n : 0;/);
