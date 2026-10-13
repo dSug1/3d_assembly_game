@@ -35,9 +35,10 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { nearestFree, solveOrbitStep, stuckProbe, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
+import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import type { OrientDirection } from "../core/orientation_set";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
@@ -554,9 +555,30 @@ function counterYawFrame(st: SceneState): void {
 function restAlignFrame(st: SceneState, now: number): void {
   const a = st.restAlign;
   if (a === null || st.greenBox === null) return;
-  const u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
+  let u = Math.min(1, Math.max(0, (now - a.t0) / REST_ALIGN_MS));
+  // ⭐⭐ (2026-10-13, the second audit) the turn was checked at the tap; the orbit may have carried the piece since — the next increment, at
+  // the piece's place NOW, is held when it would take it under the margin (`turnStepHeld`): the slerp waits, and resumes once the way is open
+  const b = st.greenBox;
+  const anchor = st.pieceAnchor;
+  if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null) {
+    const t1 = performance.now();
+    const r = b.rotationQuaternion ?? Quaternion.Identity();
+    const shown: Quat = [r.w, r.x, r.y, r.z];
+    const next = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
+    const setup = pieceCollisionSetup(st);
+    const gapWith = (o: Quat): number => {
+      const pose = pieceMeshAt(st, anchor, o);
+      return pose === null ? LOOK_M : nearestObstacle(setWorldPlacement(st.world, b.name, pose), b.name, setup, LOOK_M).gapM;
+    };
+    if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) {
+      u = a.u ?? 0;
+      st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS };
+    } else st.restAlign = { ...a, u };
+    st.pieceGuardCarryMs += performance.now() - t1;
+    st.pieceQueriesCarry += 2;
+  }
   const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
-  st.greenBox.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
+  b.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
   if (u >= 1) {
     st.restAlign = null; // ⭐ landed: the pose stays as it is (and goes on turning against the orbit)
     st.hudDirty = true;
@@ -645,7 +667,7 @@ export function respawnStuckPiece(st: SceneState): void {
   st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);
   syncCentre(st);
   st.pieceMoveBlocked = false;
-  st.pieceStuck = { position: false, turns: false, idx: 0 };
+  st.pieceStuck = STUCK_FRESH;
   st.quadTurnCheck = { blockedBy: null, key: "", at: 0 };
   st.lastVerdict = "orbit: stuck — double tap on the piece: respawned at its spawn transform (⚠ an episode malus to come)";
   // ⭐ the verdict line is the boot alignment's at the next frame: the HUD's collision slot keeps the respawn for 2 s
@@ -892,9 +914,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   }
   st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
   let rig: OrbitQ = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
-  st.pieceGuardFrameMs = 0;
+  // ⭐ (2026-10-13, the second audit) the stuck and turn checks of the last frame counted too (they run after this frame's mean)
+  st.pieceGuardFrameMs = st.pieceGuardCarryMs;
+  st.pieceQueries = st.pieceQueriesCarry;
+  st.pieceGuardCarryMs = 0;
+  st.pieceQueriesCarry = 0;
   st.pieceDeferred = false;
-  st.pieceQueries = 0;
   // ⭐⭐⭐ (2026-10-13, the audit's rebuild → *"Build"*; `COLLISION.md` §12) — THE PIECE'S PLACE ON ITS RING IS SOLVED, ONCE A FRAME: from where
   // it is (`st.pieceQ`, the one authority) toward the orbit's target (the finger, the coast) by `solveOrbitStep` — conservative advancement
   // along the arc, the exact slide at the gap kept, a work cap. The eye eases toward the SOLVED place on the orbit's spring (never toward a
@@ -907,51 +932,29 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
     }
-    let q: OrbitQ = st.pieceQ;
-    // ⭐⭐ THE RING MOVED UNDER THE PIECE (a TAP moved the gizmo; a part moved): inside the margin, it goes to the ring's nearest free place —
-    // and the orbit's target with it, so the input does not ask it back
-    if (env.gap(q) < opt.gapM / 2) {
-      const to = nearestFree(q, env, opt.gapM, RELOCATE_STEP_M, RELOCATE_MAX_M);
-      if (to !== null) {
-        st.orbit.reset(st.orbit.yaw + (to.yaw - q.yaw), Math.min(1, Math.max(0, st.orbit.elevation + (to.v - q.v))));
-        st.orbitInertia.stop();
-        if (st.orbitUserV !== null) st.orbitUserV = Math.min(1, Math.max(0, st.orbitUserV + (to.v - q.v)));
-        q = to;
-        st.lastCollision = "orbit: the ring moved the piece into a part — moved to the nearest free place";
-        st.lastCollisionAt = now;
-      }
-      rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
-    }
-    // ⭐ (§11octies, kept) the ring height the INPUT set: only the input's own dy moves it — a slide that carried the piece up a part does not
-    const prevRaw = st.orbitRawPrev;
-    st.orbitUserV = Math.min(1, Math.max(0, (st.orbitUserV ?? rig.v) + (prevRaw === null ? 0 : rig.v - prevRaw.v)));
-    const r = solveOrbitStep(q, [rig.yaw - q.yaw, rig.v - q.v], env, opt);
-    st.pieceQueries = r.queries;
+    // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
+    // reset, the work cap's rest, the ring height kept — the render only applies it
+    const fr = orbitFrame(
+      { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRawV: st.orbitRawPrev?.v ?? null },
+      env,
+      opt,
+      { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M },
+    );
+    st.pieceQueries += fr.queries;
+    st.pieceDeferred = fr.deferred;
     // ⭐ half of STUCK: an input that pushed into a part; a free input clears it (no input: unchanged)
-    if (!sameQ(rig, q)) st.pieceMoveBlocked = r.blocked;
-    q = r.q;
-    if (r.deferred) {
-      // ⭐ the work cap: the rest of the step (already projected) waits for the next frame
-      st.pieceDeferred = true;
-      st.orbit.reset(q.yaw + r.rest[0], Math.min(1, Math.max(0, q.v + r.rest[1])));
-    } else if (r.blocked) {
-      // ⭐ what pushed into the part is discarded — the target is where the piece is; a coast stops only when nothing moved
-      st.orbit.reset(q.yaw, q.v);
-      if (sameQ(r.q, r.path[0]!)) st.orbitInertia.stop();
-      if (Math.abs(rig.v - (prevRaw?.v ?? rig.v)) > 1e-12) st.orbitUserV = q.v; // the finger's own dy pushed in: the height asked is where it stopped
-    } else if (!r.touched && st.orbitUserV !== null && Math.abs(st.orbitUserV - q.v) > 1e-6) {
-      // ⭐ (§11octies, kept) …and back to that height when the way is FREE — a step that meets a part waits
-      const back = solveOrbitStep(q, [0, st.orbitUserV - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - r.queries) });
-      st.pieceQueries += back.queries;
-      if (!back.touched && !back.deferred) {
-        q = back.q;
-        st.orbit.reset(q.yaw, q.v);
-      }
+    if (fr.blocked !== null) st.pieceMoveBlocked = fr.blocked;
+    if (!sameQ(fr.target, rig)) st.orbit.reset(fr.target.yaw, fr.target.v);
+    if (fr.stopCoast) st.orbitInertia.stop();
+    if (fr.relocated) {
+      st.lastCollision = "orbit: the ring moved the piece into a part — moved to the nearest free place";
+      st.lastCollisionAt = now;
     }
-    st.pieceQ = q;
-    rig = { ...q };
+    st.orbitUserV = fr.userV;
+    st.pieceQ = fr.q;
+    rig = { ...fr.q };
     st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    st.pieceGuardFrameMs = performance.now() - t0;
+    st.pieceGuardFrameMs += performance.now() - t0;
   } else {
     // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are
     st.pieceQ = null;
@@ -1228,8 +1231,9 @@ const LOOK_M = 0.3;
 /** ⭐ (§12) the relocation's search: its stride along the ring and its reach (anchor metres). */
 const RELOCATE_STEP_M = 0.01;
 const RELOCATE_MAX_M = 0.4;
-/** ⭐ (§12) the stuck probe: the anchor moved this far each way (m). */
+/** ⭐ (§12) the stuck probe: the anchor moved this far each way (m); one check of the round every this many ms (the second audit). */
 const STUCK_PROBE_M = 0.003;
+const STUCK_EVERY_MS = 100;
 
 const sameQ = (a: OrbitQ, b: OrbitQ): boolean => Math.abs(a.yaw - b.yaw) + Math.abs(a.v - b.v) < 1e-12;
 /** ⭐ (§12) the shown piece has come to rest on its solved place (the spring has caught up). */
@@ -1275,39 +1279,49 @@ function pieceSolverEnv(st: SceneState): SolverEnv {
  * the input was blocked and the piece has come to rest on its path, ONE check a frame in turn; a free one ends the round (not stuck).
  */
 export function pieceStuckFrame(st: SceneState): void {
-  const ps = st.pieceStuck;
   const b = st.greenBox;
   const q = st.pieceQ;
-  if (!st.pieceMoveBlocked || b === null || q === null || !pieceShownAtRest(st, q) || worldPlacementOf(st.world, b.name) === null) {
-    ps.position = false;
-    ps.turns = false;
-    ps.idx = 0;
+  if (b === null || q === null || !pieceShownAtRest(st, q) || worldPlacementOf(st.world, b.name) === null) {
+    st.pieceStuck = STUCK_FRESH;
     return;
   }
-  const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;
-  const total = 1 + st.orientDirs.length;
-  const k = ps.idx % total;
-  let blocked: boolean;
-  if (k === 0) {
-    blocked = stuckProbe(q, pieceSolverEnv(st), pieceSolveOptions(st), STUCK_PROBE_M);
-    ps.position = blocked;
-  } else {
-    const d = st.orientDirs[k - 1]!;
-    const roll = aligned !== null && d.normal[0] * aligned[0] + d.normal[1] * aligned[1] + d.normal[2] * aligned[2] > 0.9998;
-    const turn = restingPreview(st, d, roll);
-    blocked = turn === null || pieceTurnBlocker(st, turn) !== null;
-  }
-  if (!blocked) {
-    ps.position = k === 0 ? false : ps.position;
-    ps.turns = false;
-    ps.idx = 0;
+  const t0 = performance.now();
+  const env = pieceSolverEnv(st);
+  const opt = pieceSolveOptions(st);
+  // ⭐ (2026-10-13, the second audit) INSIDE the margin (no free place within reach) is checked too, blocked input or not — it was silent
+  const inside = env.gap(q) < opt.gapM / 2;
+  st.pieceQueriesCarry += 1;
+  if (!st.pieceMoveBlocked && !inside) {
+    st.pieceStuck = STUCK_FRESH;
+    st.pieceGuardCarryMs += performance.now() - t0;
     return;
   }
-  ps.idx = k + 1;
-  if (ps.idx >= total) {
-    ps.turns = true;
-    ps.idx = 0;
+  const r = b.rotationQuaternion;
+  const c = st.centreBlend.targetM;
+  let parts = 0;
+  for (const o of st.world.objects.values()) parts += o.local.position[0] * 1.3 + o.local.position[1] * 1.7 + o.local.position[2] * 1.9;
+  const key = [q.yaw.toFixed(5), q.v.toFixed(5), r ? [r.w, r.x, r.y, r.z].map((x) => x.toFixed(4)).join(",") : "", c.map((x) => x.toFixed(4)).join(","), parts.toFixed(5), st.restAligned, st.pinkTargetNormal?.join(",") ?? ""].join("|");
+  const next = stuckNext(st.pieceStuck, key, t0, STUCK_EVERY_MS);
+  st.pieceStuck = next.s;
+  if (next.check !== null) {
+    const k = next.check;
+    let blocked: boolean;
+    if (k === 0) {
+      let n = 0;
+      const counted: SolverEnv = { anchor: env.anchor, gap: (x) => (n++, env.gap(x)), normal: (x) => (n++, env.normal(x)) };
+      blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);
+      st.pieceQueriesCarry += n;
+    }
+    else {
+      const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;
+      const d = st.orientDirs[k - 1]!;
+      const roll = aligned !== null && d.normal[0] * aligned[0] + d.normal[1] * aligned[1] + d.normal[2] * aligned[2] > 0.9998;
+      const turn = restingPreview(st, d, roll);
+      blocked = turn === null || pieceTurnBlocker(st, turn) !== null;
+    }
+    st.pieceStuck = stuckRecord(st.pieceStuck, k, blocked, 1 + st.orientDirs.length);
   }
+  st.pieceGuardCarryMs += performance.now() - t0;
 }
 
 /**
@@ -1333,7 +1347,17 @@ export function pieceTurnBlocker(st: SceneState, q: Quat): string | null {
     blocker = n.blocker;
     return n.gapM;
   };
-  const u = turnSweepFree(gapAtU, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), pieceSolveOptions(st).gapM);
+  const t0 = performance.now();
+  const opt = pieceSolveOptions(st);
+  let n = 0;
+  const counted = (u: number): number => {
+    n++;
+    return gapAtU(u);
+  };
+  // ⭐ (2026-10-13, the second audit) under the frame's cap (it took ~61 gap queries at the gap kept), timed and counted for the HUD
+  const u = turnSweepFree(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries);
+  st.pieceGuardCarryMs += performance.now() - t0;
+  st.pieceQueriesCarry += n;
   return u === null ? null : (blocker ?? "a part");
 }
 

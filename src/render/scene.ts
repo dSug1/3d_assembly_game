@@ -39,6 +39,7 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
+import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import { attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
@@ -592,7 +593,9 @@ export function createScene(
   st.pieceGuardPeak = 0;
   st.pieceGuardPeakAt = 0;
   st.pieceMoveBlocked = false;
-  st.pieceStuck = { position: false, turns: false, idx: 0 };
+  st.pieceStuck = STUCK_FRESH;
+  st.pieceGuardCarryMs = 0;
+  st.pieceQueriesCarry = 0;
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;

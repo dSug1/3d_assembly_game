@@ -601,7 +601,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(key).not.toMatch(/st\.zoom\b|cameraLagged|boxOrbit/); // never the live camera
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
-    expect(p).toMatch(/st\.orbit\.drag\(-dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag, dy \* st\.cfg\.boxGainPitch \* g\.pitch\);/);
+    expect(p).toMatch(/st\.orbit\.drag\(-db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag, \(dxOnly \? 0 : db\.dy\) \* st\.cfg\.boxGainPitch \* g\.pitch\);/);
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)*if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);

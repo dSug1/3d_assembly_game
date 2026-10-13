@@ -82,8 +82,10 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
 describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the audit's rebuild → *\"Build\"*)", () => {
   it("⭐⭐⭐ the piece's place is SOLVED from where it is toward the orbit's target, and the camera is driven by the solved place", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("const r = solveOrbitStep(q, [rig.yaw - q.yaw, rig.v - q.v], env, opt);");
-    expect(g).toContain("st.pieceQ = q; rig = { ...q };");
+    // ⭐ (the second audit) the frame DECIDED in `orbitFrame` (vectored on behaviour in piece_orbit_solver.test.ts); the render applies it
+    expect(g).toContain("const fr = orbitFrame( { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRawV: st.orbitRawPrev?.v ?? null }, env, opt, { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M }, );");
+    expect(g).toContain("if (!sameQ(fr.target, rig)) st.orbit.reset(fr.target.yaw, fr.target.v); if (fr.stopCoast) st.orbitInertia.stop();");
+    expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
     // ⛔ the layers it replaces: the target guard, the safety net on the spring, the held anchor, the unlock, the clock budget
     expect(g).not.toMatch(/guardOrbitPath|guardOrbitStep|heldAnchor|pieceUnlocked|GUARD_BUDGET_MS|orbitTargetGuarded|fromRingInPart/);
   });
@@ -91,11 +93,6 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)");
     expect(g.indexOf("st.pieceQ = q; rig = { ...q };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));
-  });
-  it("⭐⭐ blocked: what pushed in is discarded (the target is where the piece is); the work cap keeps the PROJECTED rest; a coast stops only when nothing moved", () => {
-    const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("st.orbit.reset(q.yaw + r.rest[0], Math.min(1, Math.max(0, q.v + r.rest[1])));");
-    expect(g).toContain("st.orbit.reset(q.yaw, q.v); if (sameQ(r.q, r.path[0]!)) st.orbitInertia.stop();");
   });
   it("⭐⭐⭐ (audit 8) the gap kept is in the WORLD — a tunable in mm, never scaled by the camera (the parts' skin is on the glass; the piece's is not)", () => {
     const g = flat("render/green_box_wiring.ts");
@@ -105,11 +102,6 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceGapMm: 0 })).toThrow(/pieceGapMm/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, pieceSolverQueries: 2.5 })).toThrow(/pieceSolverQueries/);
   });
-  it("⭐⭐ the ring moved under the piece (a TAP moved the gizmo, a part moved): it goes to the ring's nearest free place, the target with it", () => {
-    const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("if (env.gap(q) < opt.gapM / 2) { const to = nearestFree(q, env, opt.gapM, RELOCATE_STEP_M, RELOCATE_MAX_M);");
-    expect(g).toContain("st.orbit.reset(st.orbit.yaw + (to.yaw - q.yaw), Math.min(1, Math.max(0, st.orbit.elevation + (to.v - q.v))));");
-  });
   it("⭐ the solver's scene: the gap to the nearest part and the normal against THAT part", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const n = nearestObstacle(world, b.name, setup, LOOK_M);");
@@ -118,7 +110,9 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
   it("⭐⭐ a TURN is swept by the same gap rule, along the slerp the alignment plays", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const pose = pieceMeshAt(st, a, qSlerp(from, q, u));");
-    expect(g).toContain("const u = turnSweepFree(gapAtU, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), pieceSolveOptions(st).gapM);");
+    expect(g).toContain("const u = turnSweepFree(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries);"); // ⭐ under the frame's cap
+    // ⭐ (the second audit) the turn in flight re-checked each frame at the piece's place NOW, held (never aborted)
+    expect(g).toContain("if (turnStepHeld(gapWith(next), gapWith(shown), pieceSolveOptions(st).gapM)) { u = a.u ?? 0; st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS }; }");
     expect(g).toContain("const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;"); // the playback: the same slerp
   });
   it("⭐ the HUD: the solver's cost, its gap queries, d (the work cap) and b (the input blocked)", () => {
@@ -135,8 +129,10 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
   });
   it("⭐⭐ (audit 6) stuck is the SOLVER's answer — its probes, then every direction's turn, one a frame, once the shown piece has caught up", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("blocked = stuckProbe(q, pieceSolverEnv(st), pieceSolveOptions(st), STUCK_PROBE_M);");
-    expect(g).toContain("if (!st.pieceMoveBlocked || b === null || q === null || !pieceShownAtRest(st, q) ||");
+    expect(g).toContain("blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);");
+    // ⭐ (the second audit) scheduled — one check every 100 ms, a verdict per key — and INSIDE the margin counts, blocked input or not
+    expect(g).toContain("const next = stuckNext(st.pieceStuck, key, t0, STUCK_EVERY_MS);");
+    expect(g).toContain("if (!st.pieceMoveBlocked && !inside) {");
   });
   it("⭐⭐ ⛔ the tautology fixed: both halves read, the position AND the turns — at the pop-up and at the double tap", () => {
     const c = flat("render/orient_cube.ts");

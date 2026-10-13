@@ -506,8 +506,11 @@ export interface SceneState {
   pieceGuardPeakAt: number;
   /** ⭐ (2026-10-13, §11quater) the orbited piece's last position input was blocked (a contact, no free move since) — half of "stuck". */
   pieceMoveBlocked: boolean;
-  /** ⭐ (2026-10-13, §12) STUCK, from the solver: its position probes all blocked, and every quad turn blocked (one check a frame, `idx`) — the red pop-up, the respawn. */
-  pieceStuck: { position: boolean; turns: boolean; idx: number };
+  /** ⭐ (2026-10-13, §12) STUCK, from the solver: its position probes all blocked, and every quad turn blocked — scheduled (`stuckNext`), a verdict per key — the red pop-up, the respawn. */
+  pieceStuck: import("../input/piece_orbit_solver").StuckState;
+  /** ⭐ (2026-10-13, the second audit) the stuck and turn checks' cost and gap queries this frame — added to the next frame's HUD figures. */
+  pieceGuardCarryMs: number;
+  pieceQueriesCarry: number;
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
   pieceTaps: TapHistory;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */
@@ -524,6 +527,8 @@ export interface SceneState {
     readonly from: Quat;
     readonly t0: number;
     readonly base: Quat;
+    /** ⭐ (2026-10-13, the second audit) the share of the turn already shown — held there while the next increment is refused */
+    readonly u?: number;
   } | null;
   /** ⭐ Prototype (2026-10-09): the point the orbit placed this frame — the orbited piece's RESTING FACE CENTRE goes there
    * (`placeByFaceCentre`); `null` before the first frame. */

@@ -76,7 +76,7 @@ describe("⭐⭐ prototype — the turquoise piece", () => {
     expect(w).toMatch(/p\.mesh\.rotationQuaternion = toBabylon\(turned\.q\);/);
     expect(w).toMatch(/box\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).toMatch(/depth\.rotationQuaternion = Quaternion\.Identity\(\);/);
-    expect(w).toMatch(/st\.greenBox\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
+    expect(w).toMatch(/b\.rotationQuaternion = new Quaternion\(q\[1\], q\[2\], q\[3\], q\[0\]\);/);
     expect(w).not.toMatch(/trackOrbitedFaces|pieceTurns|freeTurns|greenHeldForOrbit/);
     const p = code("render/pointer_wiring.ts");
     expect(p).not.toMatch(/greenOrbitPointer|crossDeadbandScales|pinkFaceNormal/);

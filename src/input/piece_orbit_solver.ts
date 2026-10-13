@@ -282,20 +282,24 @@ export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM:
 /**
  * ⭐⭐ **A TURN, by the same rule** — the gap along the turn (`gapAtU(u)`, `u` its fraction), `angleRad` its angle, `reachM` the furthest any
  * point of the piece is from the point it turns about: walked by conservative advancement in angle (no point moves more than `reachM · Δθ`),
- * refused as soon as the gap falls under half the gap kept — or, a turn starting inside that margin, under the gap it starts with (a turn never
- * takes it closer). Returns the fraction where it was refused, `null` when the whole turn is free.
+ * refused as soon as the gap falls under half the gap kept. Returns the fraction where it was refused, `null` when the whole turn is free.
+ * ⭐ (2026-10-13, the second audit) a turn STARTING inside that margin (a piece the ring or a part put there): allowed only if it OPENS the gap
+ * (its end farther out than its start) — ⛔ it was "never below the gap it starts with", which a piece deep in a part (the gap 0 everywhere)
+ * passed on every turn: no red quad, no pop-up, no respawn. `maxQueries` caps the work (the caller passes the frame's cap).
  */
-export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, reachM: number, gapM: number, maxQueries = 64): number | null {
+export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, reachM: number, gapM: number, maxQueries = 24): number | null {
+  const hard = gapM / 2;
   const g0 = gapAtU(0);
-  const limit = Math.min(gapM / 2, g0);
+  if (g0 < hard) return gapAtU(1) > g0 ? null : 1;
   const sweep = Math.abs(angleRad) * reachM; // the furthest any point travels over the whole turn
+  const steps = Math.max(2, maxQueries) - 1;
   let u = 0;
   let g = g0;
-  for (let i = 1; i < maxQueries; i++) {
-    const du = sweep > 1e-12 ? Math.max((g - limit) / sweep, 1 / (maxQueries - 1)) : 1; // the floor: the end reached within the queries
+  for (let i = 0; i < steps; i++) {
+    const du = sweep > 1e-12 ? Math.max((g - hard) / sweep, 1 / steps) : 1; // the floor: the end reached within the queries
     u = Math.min(1, u + du);
     g = gapAtU(u);
-    if (g < limit - 1e-12) return u;
+    if (g < hard) return u;
     if (u >= 1) return null;
   }
   return null;
@@ -303,11 +307,34 @@ export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, r
 
 /**
  * ⭐⭐ **BACK ON THE RING'S NEAREST FREE PLACE** — the ring moved under the piece (the gizmo moved — a TAP; a part moved) and its place is inside
- * the margin: the places along the ring at growing anchor distances (`stepM`, up to `maxM`), both coordinates and the diagonals, the first with
- * the gap kept wins. `null` when none is free within reach.
+ * the margin. ⭐ (2026-10-13, the second audit) FIRST straight out of the contact: the ring's step closest to the contact normal (`J⁺ n`), at
+ * 1, 2, 4 … gaps kept up to `stepM` — a part pushed 0.3 mm against the resting piece moves it ~2 mm, not the grid's 1 cm in a fixed order;
+ * THEN the places along the ring at growing anchor distances (`stepM`, up to `maxM`), both coordinates and the diagonals. The first with the
+ * gap kept wins; `null` when none is free within reach.
  */
 export function nearestFree(q: OrbitQ, env: SolverEnv, gapM: number, stepM: number, maxM: number): OrbitQ | null {
   const J = ringJacobian(env, q);
+  const n = env.normal(q);
+  if (n !== null) {
+    const m11 = dot3(J[0], J[0]);
+    const m12 = dot3(J[0], J[1]);
+    const m22 = dot3(J[1], J[1]);
+    const det = m11 * m22 - m12 * m12;
+    if (det > 1e-18) {
+      // the ring step whose anchor motion is closest to the normal, per metre of it
+      const b0 = dot3(n, J[0]);
+      const b1 = dot3(n, J[1]);
+      const d0 = (m22 * b0 - m12 * b1) / det;
+      const d1 = (m11 * b1 - m12 * b0) / det;
+      const per = Math.hypot(J[0][0] * d0 + J[1][0] * d1, J[0][1] * d0 + J[1][1] * d1, J[0][2] * d0 + J[1][2] * d1);
+      if (per > 1e-9) {
+        for (let d = gapM; d <= stepM + 1e-12; d *= 2) {
+          const c = plus(q, [(d0 * d) / per, (d1 * d) / per]);
+          if (!same(c, q) && env.gap(c) >= gapM) return c;
+        }
+      }
+    }
+  }
   const ly = Math.max(1e-9, Math.hypot(J[0][0], J[0][1], J[0][2]));
   const lv = Math.max(1e-9, Math.hypot(J[1][0], J[1][1], J[1][2]));
   const dirs: QStep[] = [
@@ -322,6 +349,129 @@ export function nearestFree(q: OrbitQ, env: SolverEnv, gapM: number, stepM: numb
     }
   }
   return null;
+}
+
+/**
+ * ⭐⭐⭐ **ONE FRAME OF THE ORBITED PIECE, DECIDED** (2026-10-13, the second audit: the decision moved out of the render file, which now only
+ * applies it — the project's rule, and what makes it testable on BEHAVIOUR rather than on its source text):
+ * 1. its place inside the margin (the ring moved under it): to the ring's nearest free place, the orbit's target moved with it;
+ * 2. the input's own ring-height change read (`target.v − prevRawV`) — BEFORE any shift, so a relocation moves the height kept ONCE
+ *    (⛔ the wiring it replaces shifted it twice);
+ * 3. the step solved toward the target; deferred: the target becomes the projected rest; blocked: the target becomes the piece (what pushed in
+ *    is discarded), the coast stopped only if nothing moved, a push of the finger's own dy sets the height kept where it stopped;
+ * 4. free, with the height kept elsewhere (a slide carried it): back to it only if the WHOLE way is free.
+ */
+export interface OrbitFrameIn {
+  readonly q: OrbitQ;
+  /** the orbit's target (the finger, the coast) */
+  readonly target: OrbitQ;
+  /** the ring height the input set (`null`: not yet) */
+  readonly userV: number | null;
+  /** the target's ring height the last frame ended with (`null`: the first frame) */
+  readonly prevRawV: number | null;
+}
+export interface OrbitFrameOut {
+  readonly q: OrbitQ;
+  /** the orbit's target after the frame (reset to it when it differs from the input's) */
+  readonly target: OrbitQ;
+  readonly userV: number;
+  /** the input pushed into a part (`null`: there was no input) */
+  readonly blocked: boolean | null;
+  readonly deferred: boolean;
+  readonly relocated: boolean;
+  /** the coast must stop (a relocation, or a push that moved nothing) */
+  readonly stopCoast: boolean;
+  readonly queries: number;
+}
+export function orbitFrame(
+  inp: OrbitFrameIn,
+  env: SolverEnv,
+  opt: SolveOptions,
+  relocate: { readonly stepM: number; readonly maxM: number },
+): OrbitFrameOut {
+  let extra = 0;
+  const counted: SolverEnv = {
+    anchor: env.anchor,
+    gap: (x) => {
+      extra++;
+      return env.gap(x);
+    },
+    normal: (x) => {
+      extra++;
+      return env.normal(x);
+    },
+  };
+  let q = inp.q;
+  let target = inp.target;
+  const dvIn = inp.prevRawV === null ? 0 : target.v - inp.prevRawV;
+  let userV = clampV((inp.userV ?? target.v) + dvIn);
+  let relocated = false;
+  let stopCoast = false;
+  if (counted.gap(q) < opt.gapM / 2) {
+    const to = nearestFree(q, counted, opt.gapM, relocate.stepM, relocate.maxM);
+    if (to !== null) {
+      target = { yaw: target.yaw + (to.yaw - q.yaw), v: clampV(target.v + (to.v - q.v)), zoom: target.zoom };
+      userV = clampV(userV + (to.v - q.v));
+      q = to;
+      relocated = true;
+      stopCoast = true;
+    }
+  }
+  const asked = !same(target, q);
+  const r = solveOrbitStep(q, [target.yaw - q.yaw, target.v - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - extra) });
+  let queries = extra + r.queries;
+  q = r.q;
+  if (r.deferred) {
+    target = { yaw: q.yaw + r.rest[0], v: clampV(q.v + r.rest[1]), zoom: target.zoom };
+  } else if (r.blocked) {
+    target = q;
+    if (same(r.q, r.path[0]!)) stopCoast = true;
+    if (Math.abs(dvIn) > 1e-12) userV = q.v; // the finger's own dy pushed in: the height asked is where it stopped
+  } else if (!r.touched && Math.abs(userV - q.v) > 1e-6) {
+    const back = solveOrbitStep(q, [0, userV - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - queries) });
+    queries += back.queries;
+    if (!back.touched && !back.deferred) {
+      q = back.q;
+      target = q;
+    }
+  }
+  return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, queries };
+}
+
+/**
+ * ⭐⭐ **A TURN IN FLIGHT HELD** (2026-10-13, the second audit: the alignment's 125 ms slerp was checked once, at the tap, while the orbit kept
+ * moving the piece) — the next increment of the turn, at the piece's CURRENT place, is held when it would take the gap under half the gap kept
+ * AND closer than it is: the slerp waits (never aborts — the resting face would be left misaligned) and resumes when the orbit opens the way.
+ */
+export function turnStepHeld(gapNext: number, gapNow: number, gapM: number): boolean {
+  return gapNext < gapM / 2 && gapNext < gapNow;
+}
+
+/**
+ * ⭐⭐ **THE STUCK CHECK, SCHEDULED** (2026-10-13, the second audit: it ran every frame for ever once an input was blocked — ~60–90 gap queries a
+ * frame at rest, outside the cap and the HUD's timer). One check every `everyMs`, in turn (0 the position, then each turn); a round that
+ * ends — a check found free, or every check blocked — is the VERDICT for that `key` (the piece's place, its turn, the gizmo, the parts), and
+ * nothing runs again until the key changes.
+ */
+export interface StuckState {
+  readonly key: string;
+  readonly idx: number;
+  readonly position: boolean;
+  readonly turns: boolean;
+  readonly done: boolean;
+  readonly at: number;
+}
+export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity };
+export function stuckNext(s: StuckState, key: string, now: number, everyMs: number): { s: StuckState; check: number | null } {
+  const cur = s.key === key ? s : { ...STUCK_FRESH, key };
+  if (cur.done || now - cur.at < everyMs) return { s: cur, check: null };
+  return { s: { ...cur, at: now }, check: cur.idx };
+}
+export function stuckRecord(s: StuckState, check: number, blocked: boolean, total: number): StuckState {
+  if (!blocked) return { ...s, idx: 0, position: check === 0 ? false : s.position, turns: false, done: true };
+  const idx = check + 1;
+  const position = check === 0 ? true : s.position;
+  return idx >= total ? { ...s, idx: 0, position, turns: true, done: true } : { ...s, idx, position };
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */
