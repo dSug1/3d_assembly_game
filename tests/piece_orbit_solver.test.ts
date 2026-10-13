@@ -3,12 +3,13 @@
  * about the vertical, its height `v` — and a ball of a piece among ball obstacles: every number below can be checked by hand.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { springOrbit } from "../src/input/follow_camera";
 import type { Vec3 } from "../src/core/vec";
 import {
-  followPath,
-  followSpring,
   nearestFree,
   pieceRespawnArmed,
+  keepSense,
   projectExact,
   solveOrbitStep,
   stuckProbe,
@@ -119,6 +120,26 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
     expect(projectExact([0.5, 0.2], J, [n1])).toEqual([0.5, 0.2]);
   });
 
+  it("⭐⭐⭐ a slide never goes AGAINST the finger (⛔ *\"at the moment the piece collides, there is a jittery shake\"*: a dy wobble pressing down on a sloped part slid the piece back along its yaw)", () => {
+    const J: [Vec3, Vec3] = [[1, 0, 0], [0, 1, 0]];
+    const slope: Vec3 = [0.5, Math.sqrt(3) / 2, 0]; // a surface descending toward +yaw
+    const dq = [-0.1, -1] as const; // the finger: a little −yaw, a lot of −v (down onto it)
+    const exact = projectExact(dq, J, [slope]);
+    expect(exact[0]).toBeGreaterThan(0); // ⛔ the exact slide runs back along +yaw
+    expect(keepSense(exact, dq, J, [slope])).toEqual([0, 0]); // nothing goes against the finger: it stops
+    // a yaw push into the slope still rides along it (the input left v at zero)
+    const ride = projectExact([-1, 0], J, [slope]);
+    expect(keepSense(ride, [-1, 0], J, [slope])).toEqual(ride);
+    expect(ride[1]).toBeGreaterThan(0);
+    // in the solver: a wobbling finger against a ball beside the ring never moves the piece back along its yaw
+    const e = env([{ c: [0, -0.12, 1], r: 0.1 }]);
+    let at = solveOrbitStep(q(0), [Math.PI / 2 - 0.25, 0], e, OPT).q;
+    for (let i = 0; i < 40; i++) {
+      const r = solveOrbitStep(at, [0.01, i % 2 ? 0.02 : -0.02], e, OPT);
+      expect(r.q.yaw).toBeGreaterThanOrEqual(at.yaw - 1e-12);
+      at = r.q;
+    }
+  });
   it("⭐⭐ (audit 6) STUCK is the solver's answer — a pocket: stuck; one side opened: not", () => {
     const pocket = (open: boolean) => {
       const a = anchor(q(0));
@@ -186,17 +207,26 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
     expect(turnSweepFree((x) => 0.0001 * (1 - x), 1, 0.2, GAP)).not.toBeNull();
   });
 
-  it("⭐ the eye follows the PATH — round the corner the solver went, never across it — on a spring with no speed jump", () => {
-    const len = (a: OrbitQ, b: OrbitQ) => Math.hypot(b.yaw - a.yaw, b.v - a.v);
-    const path = [q(0, 0), q(1, 0), q(1, 1)];
-    expect(followPath(path, 1.5, len).at).toEqual({ yaw: 1, v: 0.5, zoom: 1 });
-    expect(followPath(path, 5, len).left).toEqual([q(1, 1)]);
-    // the spring: never past the end; the rate carried across frames
-    const a = followSpring(1, 0, 16, 50);
-    expect(a.go).toBeGreaterThan(0);
-    expect(a.go).toBeLessThan(1);
-    const b = followSpring(1 - a.go + 1, a.vel, 16, 50); // more path added: the rate carries on
-    expect(b.vel).toBeGreaterThan(0);
-    expect(followSpring(0.001, 50, 1000, 50).go).toBeCloseTo(0.001, 12);
+  it("⭐⭐⭐ the EYE smooths the finger's own dy wobble — the orbit's spring toward the solved place (⛔ *\"when the piece orbit anywhere … the piece jitters, and so do the quads\"*: the eye that FOLLOWED the solver's path shook with every wobble)", () => {
+    // a drag along yaw whose dy wobbles ±0.004 of the ring each event (a real finger), an event a frame
+    let sp = { at: q(0, 0.5), velYaw: 0, velV: 0, velLnZoom: 0 };
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let f = 0; f < 120; f++) {
+      const target = { yaw: f * 0.01, v: 0.5 + (f % 2 ? 0.004 : -0.004), zoom: 1 };
+      sp = springOrbit(sp, target, 16.7, 30);
+      if (f > 30) {
+        lo = Math.min(lo, sp.at.v);
+        hi = Math.max(hi, sp.at.v);
+      }
+    }
+    // the input swings 0.008; what the eye shows swings well under a third of it (a path follower would show all of it)
+    expect(hi - lo).toBeLessThan(0.008 / 3);
+  });
+  it("⭐ wired: the eye's spring aims at the SOLVED place — the follower and its path are deleted", () => {
+    const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+    expect(g).toContain("st.pieceQ = q; rig = { ...q };");
+    expect(g).toContain("st.boxSpring = st.boxSpring === null ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 } : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2); st.boxOrbit = st.boxSpring.at;");
+    expect(g).not.toMatch(/followPath|followSpring|piecePath/);
   });
 });

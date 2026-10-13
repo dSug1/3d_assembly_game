@@ -87,11 +87,10 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
     // ⛔ the layers it replaces: the target guard, the safety net on the spring, the held anchor, the unlock, the clock budget
     expect(g).not.toMatch(/guardOrbitPath|guardOrbitStep|heldAnchor|pieceUnlocked|GUARD_BUDGET_MS|orbitTargetGuarded|fromRingInPart/);
   });
-  it("⭐⭐ (audit 4) the eye FOLLOWS the solver's path — never a pose the solver did not pass through", () => {
+  it("⭐⭐ the eye eases toward the SOLVED place, never a refused target — no pull-back (the spring chased the raw target before)", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("st.piecePath.push(...r.path.slice(1));");
-    expect(g).toContain("const f = followSpring(leftM, st.pieceFollowVel, dtSec * 1000, st.cfg.boxSmoothMs / 2); const fp = followPath(st.piecePath, f.go, lenOf);");
-    expect(g).toContain("st.boxOrbit = fp.at;");
+    expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)");
+    expect(g.indexOf("st.pieceQ = q; rig = { ...q };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));
   });
   it("⭐⭐ blocked: what pushed in is discarded (the target is where the piece is); the work cap keeps the PROJECTED rest; a coast stops only when nothing moved", () => {
     const g = flat("render/green_box_wiring.ts");
@@ -134,10 +133,10 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
     expect(pieceRespawnArmed(false, true)).toBe(false);
     expect(pieceRespawnArmed(false, false)).toBe(false);
   });
-  it("⭐⭐ (audit 6) stuck is the SOLVER's answer — its probes, then every direction's turn, one a frame, once the piece rests on its path", () => {
+  it("⭐⭐ (audit 6) stuck is the SOLVER's answer — its probes, then every direction's turn, one a frame, once the shown piece has caught up", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("blocked = stuckProbe(q, pieceSolverEnv(st), pieceSolveOptions(st), STUCK_PROBE_M);");
-    expect(g).toContain("if (!st.pieceMoveBlocked || b === null || q === null || st.piecePath.length > 1 ||");
+    expect(g).toContain("if (!st.pieceMoveBlocked || b === null || q === null || !pieceShownAtRest(st, q) ||");
   });
   it("⭐⭐ ⛔ the tautology fixed: both halves read, the position AND the turns — at the pop-up and at the double tap", () => {
     const c = flat("render/orient_cube.ts");

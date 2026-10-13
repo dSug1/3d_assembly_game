@@ -49,7 +49,7 @@ export interface SolveOptions {
 export interface SolveResult {
   /** where the piece is after the step */
   readonly q: OrbitQ;
-  /** the polyline it travelled (`q0` first, `q` last) — every point admissible: what the eye follows */
+  /** the polyline it travelled (`q0` first, `q` last) — every point admissible */
   readonly path: readonly OrbitQ[];
   /** a contact stopped (part of) the step: what was left pushed into it, discarded */
   readonly blocked: boolean;
@@ -140,6 +140,24 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   return best;
 }
 
+/**
+ * ⭐⭐ **A SLIDE NEVER GOES AGAINST THE FINGER** (2026-10-13, the owner: *"at the moment the piece collides, there is a jittery shake"*) — a
+ * coordinate of the slide `s` that runs OPPOSITE to the input step `dq` is dropped (a coordinate the input left at zero may move: a yaw push
+ * into a slope still rides up or down it); what is left must still honour every contact, else nothing. ⛔ Without it a finger's own dy wobble
+ * pushing down onto a sloped part slid the piece BACK along the yaw it was asked to go, and its next wobble let it forward again: a shake at
+ * the event rhythm, measured on a headless drag.
+ */
+export function keepSense(s: QStep, dq: QStep, J: readonly [Vec3, Vec3], normals: readonly Vec3[]): QStep {
+  const k: QStep = [s[0] * dq[0] < 0 ? 0 : s[0], s[1] * dq[1] < 0 ? 0 : s[1]];
+  if (k[0] === s[0] && k[1] === s[1]) return s;
+  for (const n of normals) {
+    const a0 = dot3(n, J[0]);
+    const a1 = dot3(n, J[1]);
+    if (a0 * k[0] + a1 * k[1] < -1e-12 * (Math.abs(a0) + Math.abs(a1))) return [0, 0];
+  }
+  return k;
+}
+
 /** ⭐ A normal added to the solve's contacts — a near-duplicate (≤ ~8°) replaces its old self; three at most. */
 function withNormal(ns: readonly Vec3[], n: Vec3): Vec3[] {
   return [n, ...ns.filter((k) => dot3(k, n) < 0.99)].slice(0, 3);
@@ -206,7 +224,8 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     // (2) AT THE GAP KEPT — the rest projected onto the contacts, slid by checked sub-steps
     const n = normalAt(q);
     if (n !== null) normals = withNormal(normals, n);
-    const s = projectExact(rest, ringJacobian(env, q), normals);
+    const J = ringJacobian(env, q);
+    const s = keepSense(projectExact(rest, J, normals), dq, J, normals);
     if (tiny(s)) {
       touched = true;
       blocked = true; // (3)
@@ -303,49 +322,6 @@ export function nearestFree(q: OrbitQ, env: SolverEnv, gapM: number, stepM: numb
     }
   }
   return null;
-}
-
-/**
- * ⭐ The eye FOLLOWS the solved path: from the shown point (the path's first), `go` metres travelled along the polyline (`lenOf` a segment's
- * length) — every shown pose lies on a path the solver made, never across a corner it went round.
- */
-export function followPath(path: readonly OrbitQ[], go: number, lenOf: (a: OrbitQ, b: OrbitQ) => number): { at: OrbitQ; left: OrbitQ[] } {
-  let rest = Math.max(0, go);
-  for (let i = 0; i + 1 < path.length; i++) {
-    const a = path[i]!;
-    const b = path[i + 1]!;
-    const L = lenOf(a, b);
-    if (rest < L) {
-      const t = L > 1e-12 ? rest / L : 1;
-      const at: OrbitQ = { yaw: a.yaw + (b.yaw - a.yaw) * t, v: a.v + (b.v - a.v) * t, zoom: b.zoom };
-      return { at, left: [at, ...path.slice(i + 1)] };
-    }
-    rest -= L;
-  }
-  const end = path[path.length - 1]!;
-  return { at: end, left: [end] };
-}
-
-/**
- * ⭐ How far along its path the shown piece goes this frame: a critically damped spring on the length LEFT (`leftM` → 0, `vel` its rate of
- * decrease) — no speed jump when an input adds to the path (the camera's lag shows no pulse), τ its time constant. Never past the end.
- */
-export function followSpring(leftM: number, vel: number, dtMs: number, tauMs: number): { go: number; vel: number } {
-  if (!(tauMs > 0) || leftM <= 0) return { go: Math.max(0, leftM), vel: 0 };
-  const w = 1000 / tauMs;
-  const t = dtMs / 1000;
-  const e = Math.exp(-w * t);
-  // the length left x, x' = −vel: x(t) = (x0 + (x'0 + w x0) t) e^{−wt}
-  const x0 = leftM;
-  const xd0 = -vel;
-  const c = xd0 + w * x0;
-  let x = (x0 + c * t) * e;
-  let xd = (xd0 - w * c * t) * e;
-  if (x < 0) {
-    x = 0;
-    xd = 0;
-  }
-  return { go: x0 - x, vel: -xd };
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */
