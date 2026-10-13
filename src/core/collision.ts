@@ -384,6 +384,31 @@ export function slideAlong(rest: Vec3, n: Vec3): Vec3 {
   return into < 0 ? sub(rest, scale(n, into)) : rest;
 }
 
+/**
+ * ⭐ The CONTACT NORMAL between `id` and `blocker` as they stand in `world` — unit, pointing from the blocker toward `id` (the side
+ * `slideAlong` keeps): GJK's separation while apart; ⭐ `D125`: in contact GJK's separation is the zero vector and names no normal —
+ * the overlap measure does (`id` leaves along `−dir`). `null` with no shapes or no direction. ⭐ (2026-10-13) factored out of
+ * `resolveMove`'s slide for the orbited piece's own slide (`COLLISION.md` §11bis).
+ */
+export function contactNormal(world: World, id: ObjectId, blocker: ObjectId, setup: CollisionSetup): Vec3 | null {
+  const mp = worldParts(world, id, setup.shapes);
+  const bp = worldParts(world, blocker, setup.shapes);
+  if (!mp || !bp) return null;
+  let best: Vec3 | null = null;
+  for (const a of mp)
+    for (const b of bp) {
+      const s = separationBetween(a, b);
+      if (s && (best === null || length(s) < length(best))) best = s;
+    }
+  if (best && length(best) > CONTACT_M) return scale(best, 1 / length(best));
+  if (!best) return null;
+  const at = worldPlacementOf(world, id);
+  const bAt = worldPlacementOf(world, blocker);
+  const dirs = contactDirs([...(at ? [at.orientation] : []), ...(bAt ? [bAt.orientation] : [])]);
+  const d = partsDepth(mp, bp, dirs);
+  return d ? scale(d.dir, -1) : null;
+}
+
 /** What `resolveMove` decided. */
 export interface MoveVerdict {
   readonly placed: Placed;
@@ -484,26 +509,7 @@ export function resolveMove(
     const along = advance(stoppedWorld, id, moving, root, stopped, slideTo, setup);
     return { placed: along.t > 0 ? blendPlacement(stopped, slideTo, along.t) : stopped, t, slid: along.t > 0, blockedBy: blocker };
   }
-  const mp = worldParts(stoppedWorld, id, setup.shapes);
-  const bp = worldParts(stoppedWorld, blocker, setup.shapes);
-  let n: Vec3 | null = null;
-  if (mp && bp) {
-    let best: Vec3 | null = null;
-    for (const a of mp)
-      for (const b of bp) {
-        const s = separationBetween(a, b);
-        if (s && (best === null || length(s) < length(best))) best = s;
-      }
-    if (best && length(best) > CONTACT_M) n = scale(best, 1 / length(best));
-    // ⭐ `D125`: stopped IN CONTACT, GJK's separation is the zero vector and names no normal — the
-    // overlap measure does: `A` leaves along `−dir`.
-    else if (best) {
-      const bAt = worldPlacementOf(stoppedWorld, blocker);
-      const dirs = contactDirs([stopped.orientation, ...(bAt ? [bAt.orientation] : [])]);
-      const d = partsDepth(mp, bp, dirs);
-      if (d) n = scale(d.dir, -1);
-    }
-  }
+  const n = contactNormal(stoppedWorld, id, blocker, setup);
   if (n === null) return { placed: stopped, t, slid: false, blockedBy: blocker };
   const slide = slideAlong(scale(sub(target.position, from.position), 1 - t), n);
   if (length(slide) <= 1e-15) return { placed: stopped, t, slid: false, blockedBy: blocker };
