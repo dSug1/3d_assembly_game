@@ -12,7 +12,7 @@ import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
-import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress } from "../input/goal_lock";
+import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, greenDragGains, restOnTappedFace, restTargetKey } from "./green_box_wiring"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -114,6 +114,16 @@ export function installPointerHandler(st: SceneState): void {
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
     if (info.type === PointerEventTypes.POINTERUP) {
+      // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
+      const pc = st.pendingPartCentre;
+      if (pc !== null && pc.pointerId === e.pointerId) {
+        st.pendingPartCentre = null;
+        const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
+        if (to !== null) {
+          st.centreBlend.retarget(to);
+          syncCentre(st);
+        }
+      }
       // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
       st.eventGaps.delete(e.pointerId);
       st.rawPressedBody.delete(e.pointerId);
@@ -410,10 +420,8 @@ export function installPointerHandler(st: SceneState): void {
         goalLocked(st.idOf.get(mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1),
         hitAt,
       );
-      if (newTarget !== null) {
-        st.centreBlend.retarget(newTarget);
-        syncCentre(st);
-      }
+      // ⭐⭐ (2026-10-13, *"Piece still locked onto the collided part without possibility to go backwards"* → *"Build"*; §11nonies) NOTED, not moved: the gizmo goes there at the release if it is a TAP — a drag from the part orbits
+      st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, x: s.x, y: s.y, t: s.t } : null;
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
       //
       // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE
