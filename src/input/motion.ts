@@ -336,7 +336,11 @@ export class MotionTracker {
   private gaps: number[] = [];
   private lastPushT: number | null = null;
 
-  constructor(private readonly cfg: GestureConfig) {
+  constructor(
+    private readonly cfg: GestureConfig,
+    /** ⭐ (2026-10-13, the fifth audit) the least rest window — the orbit drag's band: a hesitation shorter than this keeps the axis MOVING */
+    private readonly minRestMs = 0,
+  ) {
     // ⭐ Every cross-tunable consistency rule lives in ONE place, and every
     // Recognizer builds one of these. See `validateGestureConfig` for the rules.
     validateGestureConfig(cfg);
@@ -401,10 +405,13 @@ export class MotionTracker {
    * no longer the threshold.
    */
   get restMs(): number {
-    return restWindowMs(
-      medianOf(this.gaps),
-      this.cfg.restConfirmMs,
-      this.cfg.restGapFactor,
+    return Math.max(
+      this.minRestMs,
+      restWindowMs(
+        medianOf(this.gaps),
+        this.cfg.restConfirmMs,
+        this.cfg.restGapFactor,
+      ),
     );
   }
 

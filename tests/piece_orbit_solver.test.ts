@@ -11,6 +11,8 @@ import {
   pieceRespawnArmed,
   keepSense,
   orbitFrame,
+  relocationKey,
+  stuckKeep,
   worldSignature,
   pieceTapAction,
   STUCK_FRESH,
@@ -207,7 +209,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
     const u = turnSweepFree(gapAt, Math.PI / 2, 0.2, GAP)!;
     expect(u).not.toBeNull();
     expect(gapAt(u)).toBeLessThan(GAP / 2);
-    expect(u).toBeLessThan(0.5);
+    expect(u).toBeLessThanOrEqual(0.5);
     expect(turnSweepFree((x) => 0.01 + x * 0.01, Math.PI / 2, 0.2, GAP)).toBeNull();
     // inside: may open, may not close
     expect(turnSweepFree((x) => 0.0001 + x * 0.001, 1, 0.2, GAP)).toBeNull();
@@ -551,7 +553,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       expect(emitted(DEFAULT_CONFIG.orbitDeadbandMm)).toBeGreaterThan(emitted(DEFAULT_CONFIG.motionDeadbandMm) + 1);
       expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitDeadbandMm: 1 })).toThrow(/orbitDeadbandMm/);
       const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm })");
+      expect(p).toContain("band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs)");
       expect(p).toContain("const db = st.orbitMotion.band.step;");
     });
   });
@@ -604,6 +606,89 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
     it("⭐ the orbit drag's band is TICKED with the camera's tracker (⛔ never ticked: a pause did not re-rest it)", () => {
       const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
       expect(g).toMatch(/st\.orbitMotion\.tracker\.tick\(now\);[^;]*st\.orbitMotion\.band\.tick\(now\);/);
+    });
+  });
+
+  describe("⭐⭐⭐ the fifth audit (2026-10-13)", () => {
+    it("⭐⭐⭐ a careful STOP-AND-GO drag keeps its travel through the orbit band (⛔ re-armed at every hesitation: 46–87 % of it dead)", async () => {
+      const { MotionTracker } = await import("../src/input/motion");
+      const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+      const { mmToPx } = await import("../src/core/units");
+      const emitted = (minRestMs: number) => {
+        const tr = new MotionTracker({ ...DEFAULT_CONFIG, motionDeadbandMm: DEFAULT_CONFIG.orbitDeadbandMm }, minRestMs);
+        let x = 0;
+        let t0 = 0;
+        let out = 0;
+        // a mouse: 10 bursts of 3 mm (5 events of 0.6 mm at 8 ms), a 200 ms hesitation between them (ticked every 16 ms, as the frame does)
+        for (let b = 0; b < 10; b++) {
+          for (let i = 0; i < 5; i++) {
+            x += mmToPx(0.6);
+            t0 += 8;
+            tr.push({ x, y: 0, t: t0 });
+            out += tr.step.dx;
+          }
+          for (let k = 0; k < 12; k++) {
+            t0 += 16.7;
+            tr.tick(t0);
+          }
+        }
+        return out / x;
+      };
+      expect(emitted(DEFAULT_CONFIG.orbitBandRestMs)).toBeGreaterThan(0.8);
+      expect(emitted(0)).toBeLessThan(0.5); // ⛔ the band re-armed at every hesitation
+    });
+
+    it("⭐⭐⭐ the PLANE BOUND stops a long slide where the ring bulges toward a part (⛔ nothing pinned it: with it removed every vector passed)", () => {
+      // the ring's anchor bulges 2 mm toward a wall over v ∈ [0.40, 0.42]; the piece rests at the gap kept against it
+      const bump = (v: number) => (v > 0.4 && v < 0.42 ? 0.002 * Math.sin((Math.PI * (v - 0.4)) / 0.02) : 0);
+      const anchorB = (x: OrbitQ): Vec3 => [(1 + bump(x.v)) * Math.cos(x.yaw), x.v, (1 + bump(x.v)) * Math.sin(x.yaw)];
+      const wallX = 1 + PIECE_R + GAP;
+      const e: SolverEnv = {
+        anchor: anchorB,
+        gap: (x) => Math.max(0, wallX - anchorB(x)[0] - PIECE_R),
+        normal: () => [-1, 0, 0],
+        secondGap: () => 10,
+      };
+      const r = solveOrbitStep(q(0, 0.38), [0, 0.05], e, { gapM: GAP, maxQueries: 24 });
+      expect(r.q.v).toBeLessThan(0.41); // ⛔ the unbounded long slide landed past the bulge, at 0.43, through the wall
+      for (const p of r.path) expect(e.gap(p)).toBeGreaterThanOrEqual(GAP / 2);
+    });
+
+    it("⭐⭐ a nudge keeps the stuck verdict — only a real move (a quarter of the probe) drops it (⛔ any easing of the shown piece wiped it)", () => {
+      expect(stuckKeep([0, 0, 0], [0.0002, 0, 0], 0.003)).toBe(true);
+      expect(stuckKeep([0, 0, 0], [0.001, 0, 0], 0.003)).toBe(false);
+      expect(stuckKeep(null, [1, 0, 0], 0.003)).toBe(true);
+      const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+      expect(g).toContain("if (!pieceShownAtRest(st, q)) { if (!stuckKeep(st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M)) st.pieceStuck = STUCK_FRESH; return; }");
+    });
+
+    it("⭐⭐ the relocation key carries the piece's TURN (⛔ an exhausted search was never retried after a turn in place)", () => {
+      const a = relocationKey(q(0.1, 0.5), [1, 0, 0, 0], [0, 0, 0], "s");
+      expect(relocationKey(q(0.1, 0.5), [0.9998, 0.02, 0, 0], [0, 0, 0], "s")).not.toBe(a);
+      expect(relocationKey(q(0.1, 0.5), [1, 0, 0, 0], [0, 0, 0], "s")).toBe(a);
+    });
+
+    it("⭐⭐ a turn sampled near a part is refined where a sample reads close (⛔ a 2.5 mm spike between two samples passed)", () => {
+      expect(turnSweepFree((u) => (Math.abs(u - 0.5) < 0.01 ? 0 : 0.001), Math.PI / 2, 0.08, 0.001, 24)).not.toBeNull();
+      // free all the way: still free
+      expect(turnSweepFree(() => 0.001, Math.PI / 2, 0.08, 0.001, 24)).toBeNull();
+      // the work stays under the cap
+      let n = 0;
+      turnSweepFree(() => (n++, 0.001), Math.PI / 2, 0.08, 0.001, 24);
+      expect(n).toBeLessThanOrEqual(24);
+    });
+
+    it("⭐ a COMPLETED stuck round re-arms the one quick check (each new burst of changes gets one)", () => {
+      let s = { ...STUCK_FRESH, key: "k", fast: true };
+      for (let k = 0; k < 7; k++) s = stuckRecord(s, k, true, 7);
+      expect(s.position && s.turns && !s.fast).toBe(true);
+    });
+
+    it("⭐ the two paced checks never share a frame: the stuck check skips the frame the red quad's ran", () => {
+      const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+      expect(g).toContain("if (st.quadCheckRan) { st.quadCheckRan = false; return; }");
+      const c = readFileSync(new URL("../src/render/orient_cube.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+      expect(c).toContain("qc.key = key; qc.at = now; st.quadCheckRan = true;");
     });
   });
 });

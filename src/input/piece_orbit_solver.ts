@@ -359,6 +359,8 @@ export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM:
  * ⭐⭐ **A TURN, by the same rule** — the gap along the turn (`gapAtU(u)`, `u` its fraction), `angleRad` its angle, `reachM` the furthest any
  * point of the piece is from the point it turns about: walked by conservative advancement in angle (no point moves more than `reachM · Δθ`),
  * refused as soon as the gap falls under half the gap kept. Returns the fraction where it was refused, `null` when the whole turn is free.
+ * ⚠ Conservative only while the stride is the gap's own; near a part the cap's floor makes it a SAMPLING, refined at a midpoint where a
+ * sample reads close (the fifth audit) — a corner may clip an edge between samples for a frame or two; the end pose is always checked.
  * ⭐ (2026-10-13, the second audit) a turn STARTING inside that margin (a piece the ring or a part put there): allowed only if it OPENS the gap
  * (its end farther out than its start) — ⛔ it was "never below the gap it starts with", which a piece deep in a part (the gap 0 everywhere)
  * passed on every turn: no red quad, no pop-up, no respawn. `maxQueries` caps the work (the caller passes the frame's cap).
@@ -368,17 +370,31 @@ export function turnSweepFree(gapAtU: (u: number) => number, angleRad: number, r
   const g0 = gapAtU(0);
   if (g0 < hard) return gapAtU(1) > g0 ? null : 1;
   const sweep = Math.abs(angleRad) * reachM; // the furthest any point travels over the whole turn
-  const steps = Math.max(2, maxQueries) - 1;
+  // ⭐ (the fifth audit) strides planned for HALF the budget: every one can be refined at its midpoint and the end is still reached
+  const steps = Math.max(1, Math.floor((Math.max(3, maxQueries) - 1) / 2));
+  let used = 1;
   let u = 0;
   let g = g0;
-  for (let i = 0; i < steps; i++) {
-    const du = sweep > 1e-12 ? Math.max((g - hard) / sweep, 1 / steps) : 1; // the floor: the end reached within the queries
+  while (used < maxQueries) {
+    const safe = sweep > 1e-12 ? (g - hard) / sweep : 1;
+    const du = Math.max(safe, 1 / steps); // the floor: the end reached within the queries
+    const u0 = u;
     u = Math.min(1, u + du);
-    g = gapAtU(u);
-    if (g < hard) return u;
+    const g1 = gapAtU(u);
+    used++;
+    if (g1 < hard) return u;
+    // ⚠ (2026-10-13, the fifth audit) where the FLOOR bound the stride (near a part — 0.5 mm of margin over ~126 mm of corner travel would need
+    // ~250 samples, ten times the cap), the sweep is SAMPLED, not conservative: a sample still close to a part is refined once, at the midpoint
+    if (du > safe && g1 < 2 * gapM && used < maxQueries) {
+      const um = (u0 + u) / 2;
+      used++;
+      if (gapAtU(um) < hard) return um;
+    }
+    g = g1;
     if (u >= 1) return null;
   }
-  return null;
+  // ⛔ the budget ran out short of the end: not checked whole — refused, never "free"
+  return u >= 1 ? null : u;
 }
 
 /**
@@ -576,8 +592,10 @@ export interface StuckState {
   readonly at: number;
   /** ⭐ (the fourth audit) the one quick recheck an ARMED verdict gets on a key change is spent */
   readonly fast: boolean;
+  /** ⭐ (the fifth audit) where the solved anchor was when the verdict armed (`stuckKeep`) */
+  readonly anchor: Vec3 | null;
 }
-export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity, fast: false };
+export const STUCK_FRESH: StuckState = { key: "", idx: 0, position: false, turns: false, done: false, at: -Infinity, fast: false, anchor: null };
 export function stuckNext(s: StuckState, key: string, now: number, everyMs: number): { s: StuckState; check: number | null } {
   // ⭐ (the third audit) a CHANGED key restarts the round but keeps the PACE (`at`) and the last verdict, provisional until a check disagrees —
   // a churning key (a turn playing, a part dragged, the sway) re-ran check 0 every frame and blinked the pop-up off for ≥ 600 ms
@@ -592,7 +610,8 @@ export function stuckRecord(s: StuckState, check: number, blocked: boolean, tota
   if (!blocked) return { ...s, idx: 0, position: check === 0 ? false : s.position, turns: false, done: true, fast: false };
   const idx = check + 1;
   const position = check === 0 ? true : s.position;
-  return idx >= total ? { ...s, idx: 0, position, turns: true, done: true } : { ...s, idx, position };
+  // ⭐ (the fifth audit) a completed stuck round re-arms its one quick check — each new burst of key changes gets one
+  return idx >= total ? { ...s, idx: 0, position, turns: true, done: true, fast: false } : { ...s, idx, position };
 }
 
 /**
@@ -625,6 +644,23 @@ export function worldSignature(world: World): string {
     for (const x of o.local.orientation) mix(x * 1e4);
   }
   return (h >>> 0).toString(36);
+}
+
+/**
+ * ⭐⭐ (2026-10-13, the fifth audit) **A NUDGE KEEPS THE STUCK VERDICT** — the verdict was wiped whenever the shown piece was not at rest, so a
+ * wiggling finger in a pocket kept the pop-up off and the double tap unarmed. It is kept unless the SOLVED anchor moved a quarter of the probe
+ * (`probeM`) since the verdict — the probe's own measure of "moved".
+ */
+export function stuckKeep(verdictAnchor: Vec3 | null, anchor: Vec3, probeM: number): boolean {
+  return verdictAnchor === null || dist(verdictAnchor, anchor) < probeM / 4;
+}
+
+/**
+ * ⭐ (2026-10-13, the fifth audit) the relocation's search key: the piece's solved place, its TURN (⛔ dropped with the orbited pieces from the
+ * scene signature — an exhausted search was never retried after a turn in place), the gizmo, the scene.
+ */
+export function relocationKey(q: OrbitQ, rotation: readonly number[] | null, gizmo: readonly number[], signature: string): string {
+  return [q.yaw.toFixed(5), q.v.toFixed(5), rotation === null ? "" : rotation.map((x) => x.toFixed(4)).join(","), gizmo.map((x) => x.toFixed(4)).join(","), signature].join("|");
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */

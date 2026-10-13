@@ -704,3 +704,30 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   thin part of another body is never tunnelled (the fixture fails with the bound removed — the old one did not); the second gap per part (a
   U-shaped body: 0.06 m, not the look distance); the stuck probe under the cap; the armed verdict's one quick check; the signature without
   the orbited pieces, with the parts' turns; the band ticked.
+
+### 12sexies. The fifth audit's fixes — the orbit band's hesitation window, the plane bound pinned, the verdict kept across a nudge, the turn sweep refined (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"build all the fixes, update the md files, deploy. then perform the fable audit once again on the last six commits."* — the owner. The fifth
+> audit: the architecture sound, the plane bound mathematically right, no regression in the solver — one regression in FEEL, mine.
+
+* ⛔⛔ **§12quinquies' TICKED BAND KILLED A STOP-AND-GO DRAG** — re-armed at the device's own rest window (~50 ms with a mouse, ~125–150 ms on
+  the tablet), every hesitation paid the 2.3 mm again: a careful approach in 2.6 mm bursts with 200 ms hesitations lost 87 % of its travel, a
+  finger in 5 mm bursts with 300 ms pauses 46 % (measured) — the gesture of a careful approach to a contact, and on the glass a "lock".
+  ✅ **The orbit band re-arms only after a real PAUSE** (`orbitBandRestMs`, 400 ms, a slider): `MotionTracker` takes a least rest window
+  (`minRestMs`), the band's own — the camera's tracker keeps the device's. A hesitation keeps the drag live; a pause re-arms the band.
+* ⛔ **NOTHING PINNED THE PLANE BOUND** — with `planeHolds` returning `true` every vector passed (the toy ring curves AWAY from every ball). ✅ A
+  ring that BULGES 2 mm toward a wall: the long slide stops short of the bulge (it went past it, through the wall, without the bound).
+* ⛔ **A NUDGE WIPED THE STUCK VERDICT** — reset whenever the shown piece was not at rest, so a finger wiggling in a pocket kept the pop-up off
+  and the double tap unarmed. ✅ Kept unless the SOLVED anchor moved a quarter of the probe since it armed (`stuckKeep`).
+* ⚠ **THE RELOCATION KEY HAD LOST THE PIECE'S TURN** with the orbited pieces' removal from the signature (§12quinquies) — an exhausted search was
+  never retried after a turn in place. ✅ `relocationKey` (pure) carries it.
+* ⛔ **§12's "refused as soon as the gap falls under half the gap kept" IS NOT TRUE NEAR A PART** — 0.5 mm of margin over ~126 mm of corner travel
+  would need ~250 samples, ten times the cap: there the turn sweep is a SAMPLING. ✅ Its strides are now planned for half the budget and each
+  one still close to a part is refined at its midpoint (a 2.5 mm spike between two samples passed before); ⛔ and a sweep that runs out of
+  budget short of the end answers REFUSED, never "free" (my first refinement did exactly that — caught by its own vector). ⚠ A corner can still
+  clip an edge between samples for a frame or two; the end pose is always checked.
+* ✅ The red quad's and the stuck check's paced checks never share a frame (`quadCheckRan`); a COMPLETED stuck round re-arms the one quick check.
+* ⚠ Measured headless (desktop): the smallest gap 0.84 mm; 0 reversals on a wobbling drag; ~2 queries a frame at rest; the worst frame 32.
+* ✅ Vectors (7), each RED against the code before (two by mutant): the stop-and-go drag keeps > 80 % of its travel (< 50 % re-armed at every
+  hesitation); the plane bound at a bulge (red with it removed); the nudge keeps the verdict; the relocation key changes with a turn; the
+  spike between samples is refused (red without the refinement); the quick check re-armed per round; the stagger.

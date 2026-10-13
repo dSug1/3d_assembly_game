@@ -301,6 +301,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "piece gap — the orbited piece rests this far from a part (mm)", "pieceGapMm", 0.2, 5, 0.1),
             tunable(st, "piece solver — gap checks per frame (more: smoother, slower)", "pieceSolverQueries", 8, 96, 4),
             tunable(st, "orbit drag deadband (mm on glass, ≥ 3× the pointer noise)", "orbitDeadbandMm", 2.3, 8, 0.1),
+            tunable(st, "orbit drag deadband — the pause that re-arms it (ms)", "orbitBandRestMs", 0, 1500, 50),
             // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
             // under the finger at every camera distance. The slider exists so that claim
             // can be DISPROVED by finger, and so the owner can judge whether direct

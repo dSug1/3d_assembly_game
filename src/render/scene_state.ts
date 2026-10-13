@@ -513,6 +513,8 @@ export interface SceneState {
   pieceQueriesCarry: number;
   /** ⭐ (the third audit) the relocation's search for the piece's place (`key`): the candidate to resume from, −1 when exhausted there. */
   relocateCursor: { key: string; from: number };
+  /** ⭐ (the fifth audit) the red quad's check ran this frame — the stuck check waits a frame (staggered). */
+  quadCheckRan: boolean;
   /** ⭐ (the third audit) the turn in flight is HELD (its next increment refused) — the yellow quad shows red. */
   restAlignHeld: boolean;
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
