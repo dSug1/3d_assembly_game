@@ -624,6 +624,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.centreReturn = null;
     // ⭐ (2026-10-11) the held second touch's input ends with the respawn — no way in, no way out (the sphere is deleted)
     st.hold = null;
+    st.orbitTargetGuarded = null; // ⭐ (2026-10-13) a new orbit: a new guarded target
   }
   // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
   // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
@@ -887,7 +888,29 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.hudDirty = true;
   }
   st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
-  const rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
+  let rig = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
+  // ⭐⭐⭐ (2026-10-13, *"there is still some jitter … Check what is done for the translation of the parts because there the slide and block is smoother than for the piece orbit"* → *"Jitter appears everywhere"*; `COLLISION.md` §11quinquies) — THE TARGET GUARDED, AS A PART'S INPUT STEP IS: each step of the orbit's target (a
+  // finger, the coast) goes through the guard (`guardOrbitStep`, the projected slide) from where the guarded target was — BEFORE the spring.
+  // So the spring only ever eases toward a collision-free target, and the camera's driver is that target: nothing chases a refused input
+  // any more (the target used to run into the part on every event, the spring after it, the camera leaning on it, all pulled back each frame).
+  if (st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null) {
+    const tg = st.orbitTargetGuarded;
+    const b0 = st.greenBox;
+    if (tg !== null && b0 !== null && Math.abs(rig.yaw - tg.yaw) + Math.abs(rig.v - tg.v) > 1e-12) {
+      const fromPose = pieceMeshAt(st, ringAnchorAt(st, tg));
+      if (fromPose !== null && worldPlacementOf(st.world, b0.name) !== null) {
+        const g = guardOrbitStep(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));
+        // ⭐ half of STUCK: the INPUT met a contact; a free input step clears it (the spring easing between events does not)
+        st.pieceMoveBlocked = g.slide !== null;
+        if (g.at !== rig) {
+          st.orbit.reset(g.at.yaw, g.at.v);
+          rig = { yaw: g.at.yaw, v: g.at.v, zoom: GREEN_PIECE_ORBIT_ZOOM };
+          st.orbitInertia.stop();
+        }
+      }
+    }
+    st.orbitTargetGuarded = { ...rig };
+  }
   // ⭐ prototype (green box), 2026-10-02: on a critically damped SPRING (`springOrbit`) — no speed jump at a pointer event, so
   // the camera's time lag no longer shows a pulse (it was `easeOrbit`, one exponential). Same response: τ = boxSmoothMs / 2.
   const prevAt = st.boxSpring?.at ?? null;
@@ -907,16 +930,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.pieceGuardMs += (performance.now() - g0 - st.pieceGuardMs) / 30; // ⭐ the guard's cost, on the HUD
     heldAnchor = g.anchor;
     // ⭐ (2026-10-13, §11quater) half of STUCK: a contact met this frame; a free move clears it
-    if (g.slide !== null) st.pieceMoveBlocked = true;
-    else if (Math.abs(g.at.yaw - prevAt.yaw) + Math.abs(g.at.v - prevAt.v) > 1e-9) st.pieceMoveBlocked = false;
+    if (g.slide !== null) st.pieceMoveBlocked = true; // ⭐ (2026-10-13) set here too (the gizmo moved under it); cleared only by a free INPUT step (above)
+    // ⭐ (2026-10-13, §11quinquies) a SAFETY NET now: the target is guarded already (above); this catches the spring's own path cutting a
+    // corner, or the gizmo moved under the piece — the spring slides, its velocity projected; ⛔ the target is not touched here any more
     if (g.slide !== null) {
       const sp = st.boxSpring;
       const vel = g.slide([sp.velYaw, sp.velV]);
-      const tgt = g.slide([st.orbit.yaw - g.at.yaw, st.orbit.elevation - g.at.v]);
       st.boxSpring = { at: g.at, velYaw: vel[0], velV: vel[1], velLnZoom: sp.velLnZoom };
       st.boxOrbit = g.at;
-      st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]);
-      st.orbitInertia.stop();
     }
   }
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
@@ -1171,6 +1192,53 @@ function pieceMeshAt(st: SceneState, anchor: Vec3, q?: Quat): { position: Vec3; 
   return { position: placeByFaceCentre(anchor, o, p.restingCentre), orientation: o };
 }
 
+/** ⭐ (2026-10-13) how often the "every move blocked" check runs while in contact (ms), and its probe: the anchor moved this far (m). */
+const STUCK_CHECK_MS = 250;
+const STUCK_PROBE_M = 0.003;
+
+/**
+ * ⭐⭐ (2026-10-13, the owner: *"the red message shall appear if all delta position and quad rotations are blocked"*) — is EVERY move of the piece blocked? Its position: a small step (`STUCK_PROBE_M`) each way along the
+ * ring's two coordinates (yaw ±, ring position ±), every one blocked. Its turns: every direction's quad tap (aligned to it, or its roll when
+ * already aligned there), every one blocked. Checked only while in contact (`pieceMoveBlocked`), at most every `STUCK_CHECK_MS`.
+ */
+export function pieceStuckFrame(st: SceneState): void {
+  const ps = st.pieceStuck;
+  const b = st.greenBox;
+  if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null || worldPlacementOf(st.world, b.name) === null) {
+    ps.all = false;
+    return;
+  }
+  const now = performance.now();
+  if (now - ps.at < STUCK_CHECK_MS) return;
+  ps.at = now;
+  const o: OrbitParams = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v, zoom: st.boxOrbit.zoom };
+  const Jc = ringJacobian(st, o);
+  const ly = Math.max(1e-9, length(Jc[0]));
+  const lv = Math.max(1e-9, length(Jc[1]));
+  const probes: OrbitParams[] = [
+    { ...o, yaw: o.yaw + STUCK_PROBE_M / ly },
+    { ...o, yaw: o.yaw - STUCK_PROBE_M / ly },
+    { ...o, v: Math.min(1, o.v + STUCK_PROBE_M / lv) },
+    { ...o, v: Math.max(0, o.v - STUCK_PROBE_M / lv) },
+  ];
+  const posBlocked = probes.every((c) => {
+    if (Math.abs(c.v - o.v) + Math.abs(c.yaw - o.yaw) < 1e-12) return true; // a ring end: no step that way
+    const t = pieceMeshAt(st, ringAnchorAt(st, c));
+    return t === null || pieceMoveVerdict(st, b.name, t).blockedBy !== null;
+  });
+  if (!posBlocked) {
+    ps.all = false;
+    return;
+  }
+  const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;
+  const turnsBlocked = st.orientDirs.every((d) => {
+    const roll = aligned !== null && d.normal[0] * aligned[0] + d.normal[1] * aligned[1] + d.normal[2] * aligned[2] > 0.9998;
+    const q = restingPreview(st, d, roll);
+    return q === null || pieceTurnBlocker(st, q) !== null;
+  });
+  ps.all = turnsBlocked;
+}
+
 /** ⭐ (2026-10-13, §11bis) how long a contact is remembered after it was last met (its normals, its skin), ms. */
 const CONTACT_KEEP_MS = 200;
 /** ⭐ (2026-10-13, §11bis) the projected slide's re-checks (a second contact met: the crease). */
@@ -1199,6 +1267,8 @@ function guardOrbitStep(
   st: SceneState,
   from: OrbitParams,
   to: OrbitParams,
+  /** ⭐ (2026-10-13) the world the step starts in: the piece as it is (the per-frame guard), or where its guarded target is (the target's) */
+  w = st.world,
 ): { at: OrbitParams; anchor: Vec3 | null; slide: ((s: OrbitStep) => OrbitStep) | null } {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
@@ -1211,11 +1281,11 @@ function guardOrbitStep(
   const poseAt = (o: OrbitParams) => pieceMeshAt(st, ringAnchorAt(st, o));
   const whole = poseAt(to);
   if (whole === null) return { at: to, anchor: null, slide: null };
-  const v = guardPieceMove(st, id, whole, setup);
+  const v = guardPieceMove(st, id, whole, setup, w);
   if (v.blockedBy === null) return { at: to, anchor: null, slide: null };
   // ⭐ the contact's normal, where the whole step stopped
   let normals = pc?.normals ?? [];
-  const n0 = contactNormal(setWorldPlacement(st.world, id, v.placed), id, v.blockedBy, setup);
+  const n0 = contactNormal(setWorldPlacement(w, id, v.placed), id, v.blockedBy, setup);
   if (n0 !== null) normals = rememberNormal(normals, n0);
   const J = ringJacobian(st, from);
   const dq: OrbitStep = [to.yaw - from.yaw, to.v - from.v];
@@ -1225,12 +1295,12 @@ function guardOrbitStep(
     const cand: OrbitParams = { yaw: from.yaw + s[0], v: Math.min(1, Math.max(0, from.v + s[1])), zoom: to.zoom };
     const target = poseAt(cand);
     if (target === null) break;
-    const vc = guardPieceMove(st, id, target, setup);
+    const vc = guardPieceMove(st, id, target, setup, w);
     if (vc.blockedBy === null) {
       taken = cand;
       break;
     }
-    const nk = contactNormal(setWorldPlacement(st.world, id, vc.placed), id, vc.blockedBy, setup);
+    const nk = contactNormal(setWorldPlacement(w, id, vc.placed), id, vc.blockedBy, setup);
     if (nk === null) break;
     normals = rememberNormal(normals, nk, 3);
   }
@@ -1242,7 +1312,7 @@ function guardOrbitStep(
   const stop = lerpOrbit(from, to, backOff(v.t, stepM, skin / 2));
   const target = poseAt(stop);
   if (target === null) return { at: stop, anchor: null, slide };
-  const vs = guardPieceMove(st, id, target, setup);
+  const vs = guardPieceMove(st, id, target, setup, w);
   if (vs.blockedBy === null) return { at: stop, anchor: null, slide };
   return { at: stop, anchor: add(vs.placed.position, qRotate(vs.placed.orientation, p.restingCentre)), slide };
 }

@@ -110,8 +110,8 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐⭐ the orbit step guarded each frame after the spring; blocked, PROJECTED (up to 3 re-checks), else the stop a rest gap short; the orbit's target and the spring's velocity projected the same way — only the input INTO the contact discarded", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const g = guardOrbitStep(st, prevAt, st.boxSpring.at);");
-    expect(g).toContain("const vel = g.slide([sp.velYaw, sp.velV]); const tgt = g.slide([st.orbit.yaw - g.at.yaw, st.orbit.elevation - g.at.v]);");
-    expect(g).toContain("st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]); st.orbitInertia.stop();");
+    // ⭐ (2026-10-13, §11quinquies) the per-frame guard is a safety net: the spring's velocity projected, the TARGET no longer touched there
+    expect(g).toContain("const vel = g.slide([sp.velYaw, sp.velV]); st.boxSpring = { at: g.at, velYaw: vel[0], velV: vel[1], velLnZoom: sp.velLnZoom };");
     expect(g).toContain("const s = projectStep(dq, J, normals);");
     expect(g).toContain("const stop = lerpOrbit(from, to, backOff(v.t, stepM, skin / 2));");
     expect(g).not.toMatch(/orbitStepCandidates|refusedAxes/);
@@ -119,7 +119,7 @@ describe("⭐⭐ wired — the orbit step, the turns, the red quad", () => {
   it("⭐ the skin HELD through a contact (the camera moving must not change the tolerance); the normal from `contactNormal` (factored out of `resolveMove`)", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("const skin = pc?.skinM ?? skinM(st); const setup = pieceCollisionSetup(st, skin);");
-    expect(g).toContain("const n0 = contactNormal(setWorldPlacement(st.world, id, v.placed), id, v.blockedBy, setup);");
+    expect(g).toContain("const n0 = contactNormal(setWorldPlacement(w, id, v.placed), id, v.blockedBy, setup);");
     expect(flat("core/collision.ts")).toContain("const n = contactNormal(stoppedWorld, id, blocker, setup);");
   });
   it("⭐⭐ a turn checked WHOLE before it starts — the align and the roll refused when blocked (nothing changes, no episode)", () => {
@@ -144,10 +144,11 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
   });
   it("⭐ wired: a contact sets the position half, a free move clears it; the quad's half is its red; a DOUBLE tap on the piece then respawns it (the switch's spawn, the centre back at boot)", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("if (g.slide !== null) st.pieceMoveBlocked = true; else if (Math.abs(g.at.yaw - prevAt.yaw) + Math.abs(g.at.v - prevAt.v) > 1e-9) st.pieceMoveBlocked = false;");
+    expect(g).toContain("st.pieceMoveBlocked = g.slide !== null;"); // ⭐ (2026-10-13) by the target's guard: the INPUT met a contact
+    expect(g).toContain("if (g.slide !== null) st.pieceMoveBlocked = true; // ⭐ (2026-10-13) set here too");
     expect(g).toContain("export function respawnStuckPiece(st: SceneState): void { spawnOrbitPiece(st, st.orbitPieceKind, false); st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]); syncCentre(st);");
     const p = flat("render/pointer_wiring.ts");
-    expect(p).toContain('if (tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP" && pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null)) { respawnStuckPiece(st); return; }');
+    expect(p).toContain('if (tapped && st.pieceTaps.record(routed.pressed, s.t) === "DOUBLE_TAP" && pieceRespawnArmed(st.pieceStuck.all, st.pieceStuck.all)) { respawnStuckPiece(st); return; }');
   });
 });
 
@@ -166,7 +167,31 @@ describe("⭐⭐ the red BLOCKED pop-up while the piece is stuck (2026-10-13, *\
   });
   it("⭐ wired: shown while stuck (the respawn's two halves), hidden as soon as not", () => {
     const c = flat("render/orient_cube.ts");
-    expect(c).toContain("const stuck = pieceRespawnArmed(st.pieceMoveBlocked, st.quadTurnCheck.blockedBy !== null);");
+    expect(c).toContain("pieceStuckFrame(st); const stuck = pieceRespawnArmed(st.pieceStuck.all, st.pieceStuck.all);");
     expect(c).toContain("showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);");
+  });
+});
+
+describe("⭐⭐⭐ the orbit's TARGET guarded, as a part's input step is (2026-10-13, §11quinquies: *\"there is still some jitter … Check what is done for the translation of the parts because there the slide and block is smoother than for the piece orbit\"* → *\"Jitter appears everywhere\"*)", () => {
+  it("⭐⭐ each step of the target goes through the guard from where the guarded target was, BEFORE the spring; the camera's driver is that target", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const g = guardOrbitStep(st, tg, rig, setWorldPlacement(st.world, b0.name, fromPose));");
+    expect(g).toContain("st.pieceMoveBlocked = g.slide !== null; if (g.at !== rig) { st.orbit.reset(g.at.yaw, g.at.v); rig = { yaw: g.at.yaw, v: g.at.v, zoom: GREEN_PIECE_ORBIT_ZOOM }; st.orbitInertia.stop(); }");
+    expect(g.indexOf("st.orbitTargetGuarded = { ...rig };")).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)"));
+    expect(g).toContain("{ yaw: rig.yaw, v: rig.v },"); // the camera follows the guarded target
+    expect(g).not.toContain("st.orbit.reset(g.at.yaw + tgt[0], g.at.v + tgt[1]);"); // the per-frame guard no longer pulls the target
+  });
+  it("⭐ a respawn starts a new guarded target", () => {
+    expect(flat("render/green_box_wiring.ts")).toContain("st.orbitTargetGuarded = null; // ⭐ (2026-10-13) a new orbit: a new guarded target");
+  });
+});
+
+describe("⭐⭐ the red message and the respawn only when EVERY move is blocked (2026-10-13, *\"the red message shall appear if all delta position and quad rotations are blocked\"*)", () => {
+  it("⭐ the position: a probe each way along both ring coordinates, all blocked; the turns: every direction's quad tap, all blocked; while in contact, at most every 250 ms", () => {
+    const g = flat("render/green_box_wiring.ts");
+    expect(g).toContain("const posBlocked = probes.every((c) => {");
+    expect(g).toContain("const turnsBlocked = st.orientDirs.every((d) => {");
+    expect(g).toContain("const STUCK_CHECK_MS = 250;");
+    expect(g).toContain("if (!st.pieceMoveBlocked || b === null || st.boxOrbit === null");
   });
 });

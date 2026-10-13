@@ -490,6 +490,10 @@ export interface SceneState {
   pieceGuardMs: number;
   /** ⭐ (2026-10-13, §11quater) the orbited piece's last position input was blocked (a contact, no free move since) — half of "stuck". */
   pieceMoveBlocked: boolean;
+  /** ⭐ (2026-10-13, §11quinquies) the orbit's TARGET as the guard let it be (`null`: none yet) — the spring and the camera follow it. */
+  orbitTargetGuarded: { yaw: number; v: number; zoom: number } | null;
+  /** ⭐ (2026-10-13) every position step AND every quad turn blocked (checked at most every 250 ms while in contact) — the red pop-up, the respawn. */
+  pieceStuck: { all: boolean; at: number };
   /** ⭐ (2026-10-13) the taps on the orbited piece — a DOUBLE tap while stuck respawns it. */
   pieceTaps: TapHistory;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */

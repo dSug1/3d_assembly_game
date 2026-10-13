@@ -387,3 +387,32 @@ stop-and-slide as `3D6`, against the volume's walls); a lost part is recoverable
   count too.
 * ✅ Vectors (`tests/piece_collision.test.ts`, `tests/proto_orbited_model.test.ts`): a part moved into the orbited piece STOPS (the old vector
   asserted it passed — reversed), the hidden piece exempt by the setup; the respawn armed only with both halves; the wiring.
+
+## 11quinquies. The orbit's TARGET guarded, as a part's input step is; the red message only when EVERYTHING is blocked (2026-10-13, `1.0.73-`, ⛔ unjudged by a hand)
+
+> *"the red message shall appear if all delta position and quad rotations are blocked · there is still some jitter. For example going upwards
+> and blocked in the attached configuration. Check what is done for the translation of the parts because there the slide and block is smoother
+> than for the piece orbit."* → *"The pushing up is only one example, easy to show. Jitter appears everywhere"* — the owner, from the phone
+> (build `38c9ae7`: the red pop-up shown while the piece could still move; the jitter at the waist, the gizmo near the floor).
+
+* ⛔⛔ **WHY A PART IS SMOOTH AND THE PIECE WAS NOT — the architecture, not the slide.** A part's translation guards the INPUT STEP itself (one
+  `resolveMove` per pointer event); the result is what is shown, nothing downstream fights it. The piece let the raw input into the orbit's
+  TARGET unguarded; a spring chased that target and the guard cut the SPRING's output every frame. Pushing into a part, each event drove the
+  target into it again, the spring accelerated toward it, the guard cut the spring, rewrote its velocity, pulled the target back — every frame
+  — and **the camera followed the UNGUARDED target** (`rig`, read before the guard), leaning into the refused input and coming back.
+* ✅ **THE FIX — guard the target, not the follower**: each step of the orbit's target (a finger, the coast) goes through the guard
+  (`guardOrbitStep`, the projected slide of §11bis) from where the guarded target was (the piece placed there, `setWorldPlacement`) — BEFORE
+  the spring (`st.orbitTargetGuarded`). The spring only ever eases toward a collision-free target, and the camera's driver IS that target. The
+  per-frame guard stays a SAFETY NET only (the spring's own path cutting a corner, the gizmo moved under the piece): it projects the spring and
+  its velocity, and no longer touches the target. A respawn starts a new guarded target.
+* ⚠ Measured headless (the diagonal push into `Piece4`, the orbit's target written at the event rate): the slide's step variation (sd / mean)
+  0.19–0.31, from 0.26–0.38 (§11bis) and ~1.3 before §11bis; 0.10 in free space. ⚠ A real finger's drag into a contact could not be produced
+  headless (the synthesised drags slid past); the device is the judge.
+* ✅ **THE RED MESSAGE (and the respawn) ONLY WHEN EVERY MOVE IS BLOCKED** (`pieceStuckFrame`, at most every 250 ms, only while the INPUT is in
+  contact): every POSITION step — a 3 mm probe each way along the ring's two coordinates (yaw ±, ring position ±), all blocked (a ring end counts
+  as blocked that way) — AND every QUAD TURN — each direction's tap (aligned to it, or its roll when already aligned there), all blocked. It
+  showed before as soon as the last input met a contact and the yellow quad was red, while the piece could still move away. "Position blocked"
+  (`pieceMoveBlocked`) is now set by the TARGET's guard (the input met a contact) and cleared only by a free input step. Headless: at the
+  `Piece4` contact, the piece holding and able to back away — no message.
+* ✅ Vectors (`tests/piece_collision.test.ts`): the target guarded before the spring, the camera following it, the per-frame guard no longer
+  pulling the target; a respawn's new target; the all-blocked check's probes and turns.

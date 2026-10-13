@@ -130,7 +130,7 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
     expect(w).toMatch(/st\.orbitPieces\.push\(\{ mesh: box, faces: piecesFacesOf\(box\), volumeM3: frustumVolumeM3\(w, h, d, OBJECT_TOP_SCALE\), \.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/st\.greenPieceVolumeM3 = p\.volumeM3;/);
     // ⭐ the coast is applied BEFORE the rig is read, so the box and the camera follow it the same frame
-    expect(w.indexOf("st.orbit.nudge(")).toBeLessThan(w.indexOf("const rig = { yaw: st.orbit.yaw"));
+    expect(w.indexOf("st.orbit.nudge(")).toBeLessThan(w.indexOf("let rig = { yaw: st.orbit.yaw")); // ⭐ (2026-10-13) `let`: the target guarded after it (§11quinquies)
     expect(code("render/tuning_menu.ts")).toContain('"orbitInertiaGain", 0, 10, 0.1)');
   });
 });
