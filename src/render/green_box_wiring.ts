@@ -35,7 +35,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { syncCentre } from "./camera_rig";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { orbitFrame, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, relocationKey, stuckKeep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, turnSweepFree, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
@@ -940,7 +940,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
     // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
-    const relocKey = [st.pieceQ.yaw.toFixed(5), st.pieceQ.v.toFixed(5), st.centreBlend.targetM.map((x) => x.toFixed(4)).join(","), sceneSignature(st)].join("|");
+    const rr = b0.rotationQuaternion;
+    const relocKey = relocationKey(st.pieceQ, rr ? [rr.w, rr.x, rr.y, rr.z] : null, st.centreBlend.targetM, sceneSignature(st));
     if (st.relocateCursor.key !== relocKey) st.relocateCursor = { key: relocKey, from: 0 };
     const fr = orbitFrame(
       { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRaw: st.orbitRawPrev },
@@ -1303,8 +1304,18 @@ function pieceSolverEnv(st: SceneState): SolverEnv {
 export function pieceStuckFrame(st: SceneState): void {
   const b = st.greenBox;
   const q = st.pieceQ;
-  if (b === null || q === null || !pieceShownAtRest(st, q) || worldPlacementOf(st.world, b.name) === null) {
+  if (b === null || q === null || worldPlacementOf(st.world, b.name) === null) {
     st.pieceStuck = STUCK_FRESH;
+    return;
+  }
+  // ⭐⭐ (the fifth audit) the shown piece still easing: no check this frame — and the verdict KEPT unless the solved anchor really moved
+  if (!pieceShownAtRest(st, q)) {
+    if (!stuckKeep(st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M)) st.pieceStuck = STUCK_FRESH;
+    return;
+  }
+  // ⭐ (the fifth audit) staggered: not on a frame the red quad's check already ran
+  if (st.quadCheckRan) {
+    st.quadCheckRan = false;
     return;
   }
   const t0 = performance.now();
@@ -1340,6 +1351,9 @@ export function pieceStuckFrame(st: SceneState): void {
       blocked = turn === null || pieceTurnBlocker(st, turn) !== null;
     }
     st.pieceStuck = stuckRecord(st.pieceStuck, k, blocked, 1 + st.orientDirs.length);
+    // ⭐ (the fifth audit) armed: remember where — a nudge smaller than a quarter of the probe keeps the verdict
+    if (st.pieceStuck.position && st.pieceStuck.turns && st.pieceStuck.anchor === null) st.pieceStuck = { ...st.pieceStuck, anchor: ringAnchorAt(st, q) };
+    if (!(st.pieceStuck.position && st.pieceStuck.turns)) st.pieceStuck = { ...st.pieceStuck, anchor: null };
   }
   st.pieceGuardCarryMs += performance.now() - t0;
 }

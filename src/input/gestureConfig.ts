@@ -333,6 +333,12 @@ export interface GestureConfig {
    */
   orbitDeadbandMm: number;
   /**
+   * ⭐ (prototype, 2026-10-13, the fifth audit; `COLLISION.md` §12sexies) how long the orbit drag must PAUSE before its band re-arms, ms — a
+   * hesitation shorter than this keeps the drag live (⛔ re-armed at the device's own rest window, a careful stop-and-go approach lost 46–87 %
+   * of its travel, measured). ⚠ A guess with a slider.
+   */
+  orbitBandRestMs: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
    * `0` leaves the ring drawn and every press to the ordinary rules.
@@ -885,6 +891,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   pieceSolverQueries: 24,
   // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
   orbitDeadbandMm: 2.3,
+  orbitBandRestMs: 400,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -1149,6 +1156,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(
       `orbitDeadbandMm (${cfg.orbitDeadbandMm}) must be in [${(SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm).toFixed(2)}, 8] mm: under 3× the measured pointer noise a resting finger's wobble leaks through.`,
     );
+  }
+  if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {
+    throw new Error(`orbitBandRestMs (${cfg.orbitBandRestMs}) must be in [0, 3000] ms: the pause that re-arms the orbit drag's band.`);
   }
   if (!(Number.isInteger(cfg.pieceSolverQueries) && cfg.pieceSolverQueries >= 4 && cfg.pieceSolverQueries <= 400)) {
     throw new Error(`pieceSolverQueries (${cfg.pieceSolverQueries}) must be an integer in [4, 400]: the orbit solver's work cap per frame.`);

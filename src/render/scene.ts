@@ -597,6 +597,7 @@ export function createScene(
   st.pieceGuardCarryMs = 0;
   st.pieceQueriesCarry = 0;
   st.relocateCursor = { key: "", from: 0 };
+  st.quadCheckRan = false;
   st.restAlignHeld = false;
   st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;

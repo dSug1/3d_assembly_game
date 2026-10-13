@@ -158,6 +158,7 @@ function quadTurnFrame(st: SceneState): void {
   if (st.pieceFrameStepM > QUAD_PAUSE_STEP_M) return; // ⭐ (2026-10-13, §11septies) mid-sweep: checked again once it slows
   qc.key = key;
   qc.at = now;
+  st.quadCheckRan = true; // ⭐ (the fifth audit) the stuck check skips this frame — the two paced checks never share one
   const q = restingPreview(st, dir, roll);
   qc.blockedBy = q === null ? null : pieceTurnBlocker(st, q);
 }
