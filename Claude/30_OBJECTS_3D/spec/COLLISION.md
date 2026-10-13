@@ -600,3 +600,38 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
 * ✅ Vectors, each RED against the code that shipped: the spring smooths a dy wobble to under a third; a yaw near the waist then a ring-height
   step is eased, not spent in one frame (the anchor metric measured failing); a slide never goes against the finger (red with the solver
   unguarded).
+
+### 12ter. The second audit's fixes — the orbit drag deadbanded, the stuck check scheduled, "inside" a verdict, the turn held, the relocation straight out, the frame decided in `input/` (2026-10-13, `1.0.74-`, ⛔ unjudged by a hand)
+
+> *"before I fix the sway, let's do another audit by Fable of what we have built with the last two commits. Same objectives as the previous
+> audit."* → *"build everything, update the md files, deploy"* — the owner. The audit found the architecture sound and eight local findings.
+
+* ⛔⛔ **A SLOPED SLIDE STUTTERED** (§12bis's `keepSense` traded the shake for it — confirmed with the real solver: a ±0.2 mm dy wobble made the
+  yaw advance 0 / 2.2 / 0 / 2.4 mrad, every other event). ⭐ The cause one layer down: the orbit drag fed RAW pixel deltas to `st.orbit.drag` —
+  the only input that bypassed §1.1. ✅ **The orbit drag now reads the tracker's per-axis DEADBANDED step** (`st.orbitMotion.tracker.step`,
+  `motionDeadbandMm`): a wobble on the axis the finger is not moving emits nothing; `keepSense` stays, and now only meets a real opposing input.
+  ⚠ Cost: one band (3.5 mm) of dead travel when an axis ENTERS motion, once per drag — a feel change of the orbit drag itself, to judge by hand.
+  Measured headless on a wobbling drag into a part: **0** direction reversals at the contact (129–149 before).
+* ⛔⛔ **THE STUCK CHECK RAN EVERY FRAME FOR EVER** once an input was blocked, finger lifted or not — one turn sweep alone took ~61 gap queries at the
+  gap kept, ~60–90 a frame, 3–4× the cap, outside the HUD's timer. ✅ **Scheduled** (`stuckNext`/`stuckRecord`): one check every 100 ms, in
+  turn; a round that ends (a free check, or every one blocked) is the VERDICT for its key — the piece's place, its turn, the gizmo, the parts —
+  and nothing runs again until the key changes. ✅ A turn sweep takes at most `pieceSolverQueries`. ✅ The stuck and turn checks' time and
+  queries are added to the HUD's `solver` figures (a frame late). ⚠ A frame that runs a check may exceed the cap (38 queries measured).
+* ⛔ **A PIECE INSIDE A PART WAS SILENTLY LOCKED** — no red quad, no pop-up, no respawn (`turnSweepFree` read "never below the gap it starts
+  with", which a gap of 0 everywhere passes). ✅ A turn starting inside the margin is allowed only if it OPENS the gap; and the stuck check runs
+  when the piece is inside the margin, blocked input or not — so the pop-up and the respawn arm.
+* ⚠ **THE TURN IN FLIGHT WAS NOT RE-CHECKED** while the orbit moved the piece (the quad tap with the second touch while the first orbits, the
+  common mobile gesture). ✅ Each frame of the 125 ms slerp checks its next increment at the piece's place NOW (`turnStepHeld`): under the
+  margin and closer, the slerp WAITS (never aborts — the resting face would be left misaligned) and resumes once the way opens.
+* ⚠ **A RELOCATION HOPPED ≥ 1 cm IN A FIXED ORDER**. ✅ `nearestFree` first tries straight out of the contact (the ring step closest to the contact
+  normal) at 1, 2, 4 … gaps kept — a 0.6 mm intrusion moves ~2 mm — then the 1 cm grid.
+* ✅ **THE FRAME IS DECIDED IN `input/`** (`orbitFrame`): the relocation, the solve, the target's reset, the work cap's rest, the ring height
+  kept; the render applies it. ⛔ Moving it found a defect: on a relocation the height kept was shifted TWICE (once explicitly, once through the
+  input's own height change, which already held the shift) — now once. Its source-string pins are replaced by behavioural vectors.
+* ⚠ Not changed, by the audit's own reading: the drawn piece may cut a corner of the solved path by up to a few mm for ~τ (30 ms) on a FAST slide
+  (§12bis said sub-millimetre — corrected here); the return to the height kept (§11octies) may read as a pull-back; a piece resting flat on a
+  part shows 5 of 6 quads red — correct (only the roll is free).
+* ✅ Vectors (10), each RED against the code before: one frame free / blocked / capped / relocated (the height shifted once) / the height's
+  return and its wait; the slope stutter with a raw wobble against none; the deadband wired; the stuck schedule (7 checks then nothing, a free
+  check ends the round, a new key a new round); deep inside — stuck AND turns refused; a turn under the cap; the turn hold; the straight-out
+  relocation (red with the normal stride removed).

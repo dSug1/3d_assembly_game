@@ -1302,7 +1302,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
     // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
     // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
-    st.orbit.drag(-dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dy * st.cfg.boxGainPitch * g.pitch);
+    // ⭐⭐ (2026-10-13, the second audit) through §1.1's per-axis DEADBAND (the tracker's step): a finger's wobble on the axis it is not moving
+    // emits nothing — raw, it rocked the piece's slide along a sloped part every other event; one band paid once per axis entering motion
+    const db = st.orbitMotion.tracker.step;
+    st.orbit.drag(-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
