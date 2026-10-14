@@ -509,6 +509,8 @@ export interface OrbitFrameOut {
   readonly relocated: boolean;
   /** the coast must stop (a relocation, or a push that moved nothing) */
   readonly stopCoast: boolean;
+  /** ⭐ (2026-10-14) the step met a part — slid along it or was stopped (the orbit sway's least angle) */
+  readonly touched: boolean;
   readonly queries: number;
   /** ⭐ (the third audit) the relocation's search: the candidate to resume from next frame, `null` when none is pending; `exhausted`: nothing free within reach */
   readonly relocateNext: number | null;
@@ -582,7 +584,7 @@ export function orbitFrame(
       target = q;
     }
   }
-  return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, queries, relocateNext, relocateExhausted };
+  return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, touched: r.touched, queries, relocateNext, relocateExhausted };
 }
 
 /**

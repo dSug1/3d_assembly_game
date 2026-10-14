@@ -392,7 +392,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // every place the piece is placed or judged reads the piece's range — the frame, the way out, the keep-in-view zoom floor, the yaw gain
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toMatch(/clampCameraRadiusM/);
-    expect(w.split("clampPieceRadiusM(").length - 1).toBe(6); // ⭐ (2026-10-13) + the collision guard's ring anchor (`ringAnchorAt`) // (2026-10-09) + the rings' closest point for the way out (`piecesClosestM`)
+    expect(w.split("clampPieceRadiusM(").length - 1).toBe(8); // ⭐ (2026-10-14) + the orbit sway's distance range (`pieceRingRangeM`, its closest and farthest) // ⭐ (2026-10-13) + the collision guard's ring anchor (`ringAnchorAt`) // (2026-10-09) + the rings' closest point for the way out (`piecesClosestM`)
     expect(code("render/tuning_menu.ts")).not.toMatch(/PIECE_MIN_DISTANCE|pieceMinDistance/); // no slider
   });
 

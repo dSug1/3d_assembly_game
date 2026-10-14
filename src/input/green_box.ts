@@ -91,6 +91,37 @@ export function orbitSwayKinds(kind: number): { swing: boolean; slide: boolean }
   return { swing: kind === 0 || kind === 2, slide: kind === 1 || kind === 2 };
 }
 
+/** ⭐ (2026-10-14) the orbit sway's least angle — at the rings' closest distance, or while the piece slides on a part (°). */
+export const ORBIT_SWAY_MIN_DEG = 0.1;
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"Orbit sway: make the sway in degree decrease linearly with the distance of the piece to the gizmo, from the orbit sway value of the slider (at maximum distance) to 0.1 degree (at minimum distance). If the piece is sliding on a part, set to minimum. Also, modify so that the center of the sway is not the gizmo but the barycenter of the placed"* → *"All placed parts"*) — THE SWAY'S ANGLE BY DISTANCE: linear in the piece's distance to the gizmo, from `ORBIT_SWAY_MIN_DEG` at the
+ * rings' closest distance (`minM`) to the slider's `orbitSwayDeg` at their farthest (`maxM`), clamped between; the least angle while the piece
+ * SLIDES on a part. A slider under the least angle is taken as it is (no sway grows from it); 0 is no sway.
+ */
+export function orbitSwayDegAt(sliderDeg: number, distM: number, minM: number, maxM: number, sliding: boolean): number {
+  if (!(sliderDeg > 0)) return 0;
+  const lo = Math.min(ORBIT_SWAY_MIN_DEG, sliderDeg);
+  if (sliding) return lo;
+  const u = maxM - minM > 1e-9 ? Math.min(1, Math.max(0, (distM - minM) / (maxM - minM))) : 1;
+  return lo + (sliderDeg - lo) * u;
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"Orbit sway: make the sway in degree decrease linearly with the distance of the piece to the gizmo, from the orbit sway value of the slider (at maximum distance) to 0.1 degree (at minimum distance). If the piece is sliding on a part, set to minimum. Also, modify so that the center of the sway is not the gizmo but the barycenter of the placed"* → *"All placed parts"*) — THE SWAY'S PIVOT: the barycentre of the parts PLACED in their goal (their centres); `null` with none
+ * placed (the caller keeps the gizmo).
+ */
+export function placedBarycentre(centres: readonly Vec3[]): Vec3 | null {
+  if (centres.length === 0) return null;
+  const s: [number, number, number] = [0, 0, 0];
+  for (const c of centres) {
+    s[0] += c[0];
+    s[1] += c[1];
+    s[2] += c[2];
+  }
+  return [s[0] / centres.length, s[1] / centres.length, s[2] / centres.length];
+}
+
 export function orbitSwingAxis(centre: Vec3, box: Vec3, rig: Vec3): Vec3 | null {
   const r: Vec3 = [box[0] - centre[0], box[1] - centre[1], box[2] - centre[2]];
   const h: Vec3 = [rig[0] - box[0], rig[1] - box[1], rig[2] - box[2]];

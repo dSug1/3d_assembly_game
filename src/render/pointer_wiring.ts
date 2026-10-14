@@ -6,11 +6,12 @@
  */
 import { orientTapShown, restingQuadPointer } from "./orient_cube";
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
-import { respawnStuckPiece } from "./green_box_wiring";
+import { pieceRingRangeM, respawnStuckPiece } from "./green_box_wiring";
+import { worldPlacementOf } from "../core/object_model";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
-import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayKinds, orbitSwingAxis, throughGreenBox } from "../input/green_box";
+import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre, throughGreenBox } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
@@ -1353,14 +1354,26 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
       const box: Vec3 = [p.x, p.y, p.z];
       const rig: Vec3 = [c.x + pose.offsetM[0] * k, c.y + pose.offsetM[1] * k, c.z + pose.offsetM[2] * k];
       let kicked = false;
-      // ⭐ Option 1, the SWING about the yellow target.
+      // ⭐ Option 1, the SWING — ⭐⭐ (2026-10-14, the owner: *"Orbit sway: make the sway in degree decrease linearly with the distance of the piece to the gizmo, from the orbit sway value of the slider (at maximum distance) to 0.1 degree (at minimum distance). If the piece is sliding on a part, set to minimum. Also, modify so that the center of the sway is not the gizmo but the barycenter of the placed"* → *"All placed parts"*) about the barycentre of the PLACED parts (the gizmo with none placed), its
+      // angle by the piece's distance to the gizmo (`orbitSwayDegAt`: 0.1° at the rings' closest, the slider's at their farthest; 0.1° while it
+      // slides on a part)
       if (kinds.swing && st.cfg.orbitSwayDeg > 0) {
         const axis = orbitSwingAxis([c.x, c.y, c.z], box, rig);
-        const peakRad = ((st.cfg.orbitSwayDeg * Math.PI) / 180) * swayScale(kick.speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
+        const a = st.pieceAnchor ?? box;
+        const range = pieceRingRangeM(st);
+        const deg = orbitSwayDegAt(st.cfg.orbitSwayDeg, Math.hypot(a[0] - c.x, a[1] - c.y, a[2] - c.z), range.minM, range.maxM, st.pieceTouching);
+        const peakRad = ((deg * Math.PI) / 180) * swayScale(kick.speedMmPerS, st.cfg.swayReferenceSpeedMmPerS);
+        const placed: Vec3[] = [];
+        for (const id of st.world.objects.keys()) {
+          if (!st.goalCommit.has(id)) continue;
+          const w = worldPlacementOf(st.world, id);
+          if (w !== null) placed.push(w.position);
+        }
+        const pivot = placedBarycentre(placed) ?? t;
         // ⭐ Its OWN softness (`orbitSwayTauMs`) — quicker than a held piece's, *"I want the sway to resolve quickly"*.
         const impulse = impulseForPeak(peakRad, st.cfg.orbitSwayTauMs / 1000);
         if (axis !== null && impulse > 0) {
-          swingBlock(st, st.greenBox, { x: t[0], y: t[1], z: t[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
+          swingBlock(st, st.greenBox, { x: pivot[0], y: pivot[1], z: pivot[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
           kicked = true;
         }
       }

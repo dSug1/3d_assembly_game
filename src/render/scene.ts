@@ -586,6 +586,7 @@ export function createScene(
   st.pieceDeferred = false;
   st.pieceQueries = 0;
   st.pieceSolveQueries = 0;
+  st.pieceTouching = false;
   st.pieceQ = null;
   st.orbitRawPrev = null;
   st.orbitUserV = null;

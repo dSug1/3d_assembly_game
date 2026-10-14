@@ -103,8 +103,8 @@ describe("⭐⭐ prototype — the painting SWINGS when the green piece orbits (
     const step = p.slice(p.indexOf("export function orbitDragStep"));
     expect(step).toMatch(/new SwayWatcher\(st\.cfg\.swayTurnDeg, st\.cfg\.pointerNoiseMm\)/);
     expect(step).toMatch(/st\.orbitSway\.watcher\.push\(s, st\.orbitMotion\.tracker\.current === "MOVING", true\)/);
-    expect(step).toMatch(/st\.cfg\.orbitSwayDeg \* Math\.PI\) \/ 180\) \* swayScale\(kick\.speedMmPerS, st\.cfg\.swayReferenceSpeedMmPerS\)/);
-    expect(step).toMatch(/swingBlock\(st, st\.greenBox, \{ x: t\[0\], y: t\[1\], z: t\[2\] \}, axis, impulse, st\.cfg\.orbitSwayTauMs\);/);
+    expect(step).toMatch(/\(\(deg \* Math\.PI\) \/ 180\) \* swayScale\(kick\.speedMmPerS, st\.cfg\.swayReferenceSpeedMmPerS\)/);
+    expect(step).toMatch(/swingBlock\(st, st\.greenBox, \{ x: pivot\[0\], y: pivot\[1\], z: pivot\[2\] \}, axis, impulse, st\.cfg\.orbitSwayTauMs\);/); // ⭐ (2026-10-14) about the placed parts' barycentre (the gizmo, \`t\`, with none placed)
     expect(step).toMatch(/if \(kicked\) \{\s*st\.orbitSwayKicks\+\+;/);
     // ⭐ sized with its OWN softness — the same τ it springs back on
     expect(step).toMatch(/impulseForPeak\(peakRad, st\.cfg\.orbitSwayTauMs \/ 1000\)/);
@@ -235,5 +235,32 @@ describe("⭐ prototype — the GUIDE SPHERE is REMOVED (the owner, 2026-10-04: 
     expect(code("render/green_box_wiring.ts")).not.toMatch(/guide-sphere|guideSphere/);
     expect(code("render/tuning_menu.ts")).not.toMatch(/guideSphere/);
     expect(code("render/scene_state.ts")).not.toMatch(/guideSphere/);
+  });
+});
+
+describe("⭐⭐ the orbit sway by DISTANCE, about the PLACED parts (the owner, 2026-10-14: *\"make the sway in degree decrease linearly with the distance of the piece to the gizmo, from the orbit sway value of the slider (at maximum distance) to 0.1 degree (at minimum distance). If the piece is sliding on a part, set to minimum. Also, modify so that the center of the sway is not the gizmo but the barycenter of the placed\"* → *\"All placed parts\"*)", () => {
+  it("⭐⭐ the angle: 0.1° at the rings' closest distance, the slider's at their farthest, linear between, clamped; 0.1° while sliding", async () => {
+    const { orbitSwayDegAt, ORBIT_SWAY_MIN_DEG } = await import("../src/input/green_box");
+    expect(ORBIT_SWAY_MIN_DEG).toBe(0.1);
+    expect(orbitSwayDegAt(4.5, 0.36, 0.36, 1.0, false)).toBeCloseTo(0.1, 12);
+    expect(orbitSwayDegAt(4.5, 1.0, 0.36, 1.0, false)).toBeCloseTo(4.5, 12);
+    expect(orbitSwayDegAt(4.5, 0.68, 0.36, 1.0, false)).toBeCloseTo(0.1 + 4.4 * 0.5, 12); // halfway: halfway
+    expect(orbitSwayDegAt(4.5, 2.0, 0.36, 1.0, false)).toBeCloseTo(4.5, 12); // beyond: clamped
+    expect(orbitSwayDegAt(4.5, 0.1, 0.36, 1.0, false)).toBeCloseTo(0.1, 12);
+    expect(orbitSwayDegAt(4.5, 1.0, 0.36, 1.0, true)).toBeCloseTo(0.1, 12); // sliding on a part: the least
+    expect(orbitSwayDegAt(0, 1.0, 0.36, 1.0, false)).toBe(0); // the slider at 0: no sway
+    expect(orbitSwayDegAt(0.05, 1.0, 0.36, 1.0, false)).toBeCloseTo(0.05, 12); // under the least: as it is
+  });
+  it("⭐⭐ the pivot: the barycentre of the placed parts — the gizmo with none placed", async () => {
+    const { placedBarycentre } = await import("../src/input/green_box");
+    expect(placedBarycentre([[0, 0, 0], [1, 0, 0], [0, 2, 0], [1, 2, 4]])).toEqual([0.5, 1, 1]);
+    expect(placedBarycentre([])).toBeNull();
+  });
+  it("⭐ wired: the swing about that pivot, its angle by the piece's distance and its contact (the solver's `touched`)", () => {
+    const p = code("render/pointer_wiring.ts").replace(/\s+/g, " ");
+    expect(p).toContain("const deg = orbitSwayDegAt(st.cfg.orbitSwayDeg, Math.hypot(a[0] - c.x, a[1] - c.y, a[2] - c.z), range.minM, range.maxM, st.pieceTouching);");
+    expect(p).toContain("const pivot = placedBarycentre(placed) ?? t;");
+    expect(p).toContain("swingBlock(st, st.greenBox, { x: pivot[0], y: pivot[1], z: pivot[2] }, axis, impulse, st.cfg.orbitSwayTauMs);");
+    expect(code("render/green_box_wiring.ts").replace(/\s+/g, " ")).toContain("st.pieceSolveQueries = fr.queries; st.pieceTouching = fr.touched;");
   });
 });
