@@ -305,8 +305,12 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐ (2026-10-14) the HOVER: a drag starting on the orbited piece slides it on the face it rests against (`HOVER.md`)
             tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
             tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
+            tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
             tunable(st, "hover camera speed (share of the way per mm)", "hoverCameraGain", 0.005, 0.3, 0.005),
+            // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
+            tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1, 30, 0.5),
+            tunable(st, "orbited piece goal margin (°)", "orbitGoalDeg", 0.5, 15, 0.5),
             // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
             // under the finger at every camera distance. The slider exists so that claim
             // can be DISPROVED by finger, and so the owner can judge whether direct

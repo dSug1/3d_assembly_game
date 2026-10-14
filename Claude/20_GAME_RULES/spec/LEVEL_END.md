@@ -234,3 +234,7 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   margins (it is always the player's). **Captured, it STAYS PLACED** (`orbitPiecePlaced`): the orbit no longer places, turns or hovers it (the
   camera still rides the rings); a piece switch or a respawn brings a piece back to the orbit.
 * ⛔ Not yet run end to end in the app (the score read 36/42 headless, the green piece 344 mm from its goal).
+* ⛔⛔ (2026-10-14, *"the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation"*) the
+  orbited piece was judged by a grabbed part's margins — 10 mm on the GLASS (182 mm at 4.25 m) and 15°: 35 mm off and 12° off read as placed.
+  ✅ Its OWN margins, in the WORLD (`orbitGoalTolerance`): `orbitGoalMm` 5 mm and `orbitGoalDeg` 3° (sliders) — only a fine placement counts,
+  and the capture pulls the rest. The parts keep theirs.

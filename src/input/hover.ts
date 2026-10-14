@@ -30,27 +30,6 @@ export function hoverContactM(gapM: number, atContactM: number): number {
   return gapM + Math.max(atContactM, gapM / 2);
 }
 
-/**
- * ⭐⭐ **MAY THE PIECE HOVER?** — among the bodies near it (\`contacts\`: each one's gap and the contact normal from it toward the piece), the
- * one whose face the RESTING face lies against: in contact (\`gapM\` ≤ \`maxGapM\`) and ANTI-PARALLEL (the resting face's outward normal against
- * the contact normal, within \`alignDeg\`). Its normal is the hover plane's; \`null\`: no hover (the drag orbits).
- */
-export function hoverContact(
-  restingNormalW: Vec3,
-  contacts: readonly { readonly id: string; readonly gapM: number; readonly normal: Vec3 | null }[],
-  maxGapM: number,
-  alignDeg = HOVER_ALIGN_DEG,
-): { id: string; normal: Vec3; gapM: number } | null {
-  const cosMin = Math.cos((alignDeg * Math.PI) / 180);
-  let best: { id: string; normal: Vec3; gapM: number } | null = null;
-  for (const c of contacts) {
-    if (c.normal === null || c.gapM > maxGapM) continue;
-    if (-dot(restingNormalW, c.normal) < cosMin) continue;
-    if (best === null || c.gapM < best.gapM) best = { id: c.id, normal: c.normal, gapM: c.gapM };
-  }
-  return best;
-}
-
 /** ⭐ The hover plane's two axes: the screen's right laid on the plane (\`e1\`), and \`n × e1\` (\`e2\`) — \`null\` with the plane edge-on to the right. */
 export function hoverPlane(n: Vec3, right: Vec3): { e1: Vec3; e2: Vec3 } | null {
   const k = dot(right, n);
@@ -146,4 +125,67 @@ export const HOVER_SPAN_M = 20;
  */
 export function hoverSwayDeg(sliderDeg: number, minDeg: number): number {
   return sliderDeg > 0 ? Math.min(minDeg, sliderDeg) : 0;
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the owner: *"I can't hover translate in the attached configuration. Make sure the threshold distance is between resting face and collision face. Or check what else is bugging. The green piece should hover translate on the blue part's vertical face."*) — **THE CONTACT, FACE TO FACE**: the distance is measured between the RESTING FACE and the part's FACE
+ * themselves — the resting face's centre above the plane of each face of each part within reach — and that face must be ANTI-PARALLEL to the
+ * resting face (`alignDeg`); the part's body within `maxGapM` too (the faces overlap). ⛔ It compared the resting face with the normal of the
+ * two bodies' CLOSEST POINTS, which tilts the moment those fall on an edge (the piece reaching past the face, a neighbour touched) — a piece
+ * lying flat on a face could be refused. The face's own normal is the hover plane's. `nearest`: the best candidate seen, for the verdict.
+ */
+export interface HoverFaceCandidate {
+  readonly id: string;
+  readonly bodyGapM: number;
+  readonly faces: readonly { readonly faceId?: string; readonly centre: Vec3; readonly normal: Vec3 }[];
+}
+export function hoverFaceContact(
+  restingCentreW: Vec3,
+  restingNormalW: Vec3,
+  candidates: readonly HoverFaceCandidate[],
+  maxGapM: number,
+  alignDeg = HOVER_ALIGN_DEG,
+): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null } {
+  const cosMin = Math.cos((alignDeg * Math.PI) / 180);
+  let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null = null;
+  let nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null = null;
+  for (const c of candidates) {
+    for (const f of c.faces) {
+      const cos = -dot(restingNormalW, f.normal); // 1: the resting face looks straight at the face
+      const d = dot(f.normal, [restingCentreW[0] - f.centre[0], restingCentreW[1] - f.centre[1], restingCentreW[2] - f.centre[2]]);
+      if (cos <= 0 || d < -maxGapM) continue; // a face looking away, or behind the resting face
+      const angleDeg = (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
+      const score = d + angleDeg * 1e-3;
+      if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM };
+      if (cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && (contact === null || d < contact.gapM)) contact = { id: c.id, faceId: f.faceId ?? null, normal: f.normal, centre: f.centre, gapM: Math.max(0, d) };
+    }
+  }
+  return { contact, nearest };
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the owner: *"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **A. THE SETTLE**: a resting face LOOKING AT a part's face within the hover's REACH (`hoverApproachMm`,
+ * 20 mm) — not only touching it — may hover: the piece first SETTLES onto that face, a solved move along its normal down to the gap kept (the
+ * other parts stop it), eased over `HOVER_SETTLE_MS`, then slides. Contact is the game's to make; the player only brings the piece close and
+ * facing. ⭐ Why: a part's collision surface is a transparent contour 1.5 mm outside its coloured face and a pushed piece rests 1 mm off it —
+ * "touching" is ~2.5 mm from what the eye sees, which no camera angle lets anyone judge, and the orbit reaches it only where its ring crosses
+ * the face.
+ */
+export const HOVER_SETTLE_MS = 150;
+/** ⭐ The settle to make: from the resting face's distance to the face's plane down to the gap kept (0 already there). */
+export function settleDepth(planeGapM: number, gapM: number): number {
+  return Math.max(0, planeGapM - gapM);
+}
+/** ⭐ The share of the settle shown `elapsedMs` after it began — eased (smoothstep), whole at `HOVER_SETTLE_MS`. */
+export function settleShare(elapsedMs: number): number {
+  const u = Math.min(1, Math.max(0, elapsedMs / HOVER_SETTLE_MS));
+  return u * u * (3 - 2 * u);
+}
+/**
+ * ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **B. THE CONTACT SHADOW**: a point of the resting face's outline laid on the target face's plane (`n` its normal, `c` a point
+ * on it) — drawn there, it shows which face and exactly where the piece will land, at any camera angle (the shadow: the classic depth cue).
+ */
+export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
+  const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
+  return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];
 }

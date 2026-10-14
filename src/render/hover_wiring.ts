@@ -5,25 +5,36 @@
  * travel, and back as the orbit comes back. ⛔ No rule here: the decisions are `input/hover.ts`'s and the solver's.
  */
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
+import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { SceneState } from "./scene_state";
 import type { Sample } from "../input";
 import { mmToPx } from "../core/units";
 import { qRotate, type Quat, type Vec3 } from "../core/vec";
-import { bodiesBehindPlane, bodiesWithin, contactNormal, type CollisionSetup } from "../core/collision";
+import { bodiesBehindPlane, bodiesWithin, type CollisionSetup } from "../core/collision";
+import { faceWorld } from "../core/object_model";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { AT_CONTACT_M, solveOrbitStep } from "../input/piece_orbit_solver";
+import { AT_CONTACT_M, solveOrbitStep, type OrbitQ } from "../input/piece_orbit_solver";
 import {
   HOVER_SPAN_M,
   clampDisc,
   hoverCameraPosition,
-  hoverContact,
+  HOVER_ALIGN_DEG,
+  hoverFaceContact,
+  projectOntoPlane,
+  settleDepth,
+  settleShare,
   hoverContactM,
   hoverPlane,
   hoverViewProgress,
   hoverViewWeight,
   planeStepFromScreen,
 } from "../input/hover";
-import { pieceSolveOptions, pieceSolverEnv } from "./green_box_wiring";
+import { RESTING_COLOUR, pieceSolveOptions, pieceSolverEnv } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
@@ -32,6 +43,9 @@ import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/g
 import { hoverSwayDeg } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
+
+/** ⭐ how far the hover looks for a part's face, to name the nearest when it refuses (m) */
+const HOVER_LOOK_M = 0.01;
 
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
@@ -64,40 +78,78 @@ function screenOf(st: SceneState, p: Vec3): [number, number] {
   return [v.x * k, v.y * k];
 }
 
+/** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept) — what `hoverFaceContact` reads. */
+function hoverCandidates(st: SceneState, reachM: number, setup: CollisionSetup) {
+  const b = st.greenBox!;
+  return bodiesWithin(st.world, b.name, setup, reachM).map((x) => {
+    const obj = st.world.objects.get(x.id);
+    const faces = (obj?.faces ?? []).flatMap((f) => {
+      const w = faceWorld(st.world, x.id, f.id);
+      return w === null ? [] : [{ faceId: f.id, centre: w.centre, normal: w.normal }];
+    });
+    return { id: x.id, bodyGapM: x.gapM, faces };
+  });
+}
+
 /** ⭐ May the drag hover? The resting face against a part's face, anti-parallel and in contact (`hoverContact`); then the hover starts. */
 function hoverStart(st: SceneState, pointerId: number): boolean {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   const anchor = st.pieceAnchor;
-  if (b === null || p === undefined || p.restingFace === null || anchor === null || st.pieceQ === null || st.orbitPiecePlaced) return false;
-  if (st.pieceOrbit !== null || st.pieceEntry !== null || st.centreReturn !== null || st.hold !== null || st.restAlign !== null) return false;
+  // ⭐ (2026-10-14, *"I can't hover translate in the attached configuration. Make sure the threshold distance is between resting face and collision face. Or check what else is bugging. The green piece should hover translate on the blue part's vertical face."*) every refusal SAYS why on the HUD's `last` line
+  const refuse = (why: string): false => {
+    st.lastVerdict = `hover: ${why} — the drag orbits`;
+    st.hudDirty = true;
+    return false;
+  };
+  if (b === null || p === undefined || p.restingFace === null || anchor === null) return refuse("no orbited piece with a resting face");
+  if (st.orbitPiecePlaced) return refuse("the piece is placed in its goal");
+  if (st.pieceQ === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
+  if (st.pieceOrbit !== null || st.pieceEntry !== null || st.centreReturn !== null) return refuse("the orbit round the piece is on");
+  if (st.hold !== null) return refuse("a second touch is held");
+  if (st.restAlign !== null) return refuse("a turn is playing");
   const r = b.rotationQuaternion ?? Quaternion.Identity();
   const rot: Quat = [r.w, r.x, r.y, r.z];
   const restingW = qRotate(rot, p.restingFace.normal);
   const opt = pieceSolveOptions(st);
   const maxGap = hoverContactM(opt.gapM, AT_CONTACT_M);
   const setup = pieceCollisionSetup(st);
-  const contacts = bodiesWithin(st.world, b.name, setup, maxGap).map((c) => ({ ...c, normal: contactNormal(st.world, b.name, c.id, setup) }));
-  const c = hoverContact(restingW, contacts, maxGap);
+  // ⭐⭐ the resting face against a part's FACE: their own planes, their own distance (`hoverFaceContact`) — the parts within 10 mm looked at
+  // ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) A — within the hover's REACH, not only touching: the piece will SETTLE onto the face first
+  const reach = Math.max(maxGap, st.cfg.hoverApproachMm / 1000);
+  const found = hoverFaceContact(anchor, restingW, hoverCandidates(st, Math.max(reach, HOVER_LOOK_M), setup), reach);
+  const c = found.contact;
   if (c === null) {
-    st.lastVerdict = "hover: the resting face is not against a part's face (anti-parallel, in contact) — the drag orbits";
-    st.hudDirty = true;
-    return false;
+    const nr = found.nearest;
+    return refuse(
+      nr === null
+        ? `the resting face faces no part within ${HOVER_LOOK_M * 1000} mm`
+        : `the resting face is ${(nr.planeGapM * 1000).toFixed(1)} mm from ${nr.id}'s face, ${nr.angleDeg.toFixed(1)}° off anti-parallel (needs ≤ ${(reach * 1000).toFixed(0)} mm and ≤ ${HOVER_ALIGN_DEG}°)`,
+    );
   }
   const right = st.camera.getDirection(new Vector3(1, 0, 0));
   const plane = hoverPlane(c.normal, [right.x, right.y, right.z]);
-  if (plane === null) return false;
+  if (plane === null) return refuse("the face is edge-on to the screen");
   const centre0: Vec3 = [st.orbitCentreM.x, st.orbitCentreM.y, st.orbitCentreM.z];
+  // ⭐⭐ A — THE SETTLE: not yet in contact, the piece goes down the face's normal to the gap kept — SOLVED (the face's own part, and every
+  // other, stops it), shown eased over HOVER_SETTLE_MS by `hoverFrame`
+  let settleM = 0;
+  if (c.gapM > maxGap) {
+    const down = (q: OrbitQ): Vec3 => add(anchor as Vec3, scale(c.normal, -q.yaw));
+    const r = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), { ...opt, maxQueries: Math.max(opt.maxQueries, 24) });
+    settleM = Math.max(0, r.q.yaw);
+  }
+  const settled: Vec3 = add(anchor as Vec3, scale(c.normal, -settleM));
   // ⭐⭐ (*"make sure that if collision faces are coplanar, the hover can continue over several parts' collision faces, provided within the max hover distance … the piece should be able to slide over the two white and one black parts"*) the parts lying wholly behind the contact face's plane are out of the hover's checks: the piece slides across coplanar faces
-  const level = c.normal[0] * anchor[0] + c.normal[1] * anchor[1] + c.normal[2] * anchor[2] - c.gapM;
+  const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, opt.gapM / 2);
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: [anchor[0], anchor[1], anchor[2]], centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, partId: c.id, behind };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, partId: c.id, behind };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0 };
   st.hoverOffsetFading = false;
   if (st.hoverView === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2 };
-  st.lastVerdict = `hover: on ${c.id}'s face — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
+  st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
 }
@@ -203,15 +255,16 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   hf.lv = hf.v;
   hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, lead), tau, zeta, dtSec);
   hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, lead), tau, zeta, dtSec);
-  const w = add(scale(hf.e1, hf.fu.x), scale(hf.e2, hf.fv.x));
+  const settleShown = hf.settleM * settleShare(now - hf.settleT0);
+  const w = add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.fu.x), scale(hf.e2, hf.fv.x)));
   if (hf.gizmo) {
     st.centreBlend.snapTo(add(hf.centre0, w));
     syncCentre(st);
   } else st.hoverOffset = add(hf.offset0, w);
   // settled after the release: the drawn offset IS the solved one
   const settled = Math.abs(hf.fu.x - hf.u) + Math.abs(hf.fv.x - hf.v) < 1e-6 && Math.abs(hf.fu.v) + Math.abs(hf.fv.v) < 1e-5;
-  if (st.hover === null && settled) {
-    const end = add(scale(hf.e1, hf.u), scale(hf.e2, hf.v));
+  if (st.hover === null && settled && settleShown >= hf.settleM) {
+    const end = add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v)));
     if (hf.gizmo) {
       st.centreBlend.snapTo(add(hf.centre0, end));
       syncCentre(st);
@@ -264,4 +317,96 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
     [camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]],
   );
   return { camAt: lerp3(camAt, pos, w), lookAt: lerp3(lookAt, hv.target, w) };
+}
+
+const READY_COLOUR = new Color3(0.2, 0.9, 1);
+const SHADOW_COLOUR = new Color3(0.2, 0.9, 1);
+/** ⭐ How often the "may it hover?" look runs when no hover is on (ms). */
+const READY_EVERY_MS = 100;
+
+/**
+ * ⭐⭐⭐ (2026-10-14, *"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **B. CONTACT, MADE VISIBLE**: while the resting face LOOKS AT a part's face within the hover's reach (the same test as
+ * the hover's start, every `READY_EVERY_MS`), or a hover is on: the CONTACT SHADOW (the resting face's outline laid on that face), a faint FILL
+ * on the face that will host the hover, and the resting face's contour turned CYAN — "press the piece and drag".
+ */
+export function hoverVisualFrame(st: SceneState, now: number): void {
+  const b = st.greenBox;
+  const p = st.orbitPieces.find((o) => o.mesh === b);
+  let ready = st.hoverReady;
+  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
+  else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
+  else if (now - st.hoverReadyAt >= READY_EVERY_MS) {
+    st.hoverReadyAt = now;
+    const r = b.rotationQuaternion ?? Quaternion.Identity();
+    const restingW = qRotate([r.w, r.x, r.y, r.z], p.restingFace.normal);
+    const reach = st.cfg.hoverApproachMm / 1000;
+    const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach).contact;
+    ready = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
+  }
+  st.hoverReady = ready;
+  // the resting face's contour: cyan while a hover is available
+  if (p?.restingFill) for (const c of p.restingFill.getChildMeshes(true)) if ("color" in c) (c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();
+  // the contact shadow
+  if (ready === null || b === null || p === undefined) {
+    st.hoverShadow?.setEnabled(false);
+    st.hoverFaceFill?.setEnabled(false);
+    return;
+  }
+  const r = b.rotationQuaternion ?? Quaternion.Identity();
+  const rot: Quat = [r.w, r.x, r.y, r.z];
+  const at: Vec3 = [b.position.x, b.position.y, b.position.z];
+  const lift = scale(ready.normal, 0.0004);
+  const lines = p.restingEdges.map((e) =>
+    e.map((q) => {
+      const w = add(at, qRotate(rot, q));
+      const s = add(projectOntoPlane(w, ready.normal, ready.centre), lift);
+      return new Vector3(s[0], s[1], s[2]);
+    }),
+  );
+  if (st.hoverShadow === null || st.hoverShadowCount !== lines.length) {
+    st.hoverShadow?.dispose();
+    st.hoverShadow = CreateLineSystem("hover-shadow", { lines, updatable: true }, st.scene);
+    st.hoverShadow.color = SHADOW_COLOUR.clone();
+    st.hoverShadow.isPickable = false;
+    st.hoverShadowCount = lines.length;
+  } else CreateLineSystem("hover-shadow", { lines, instance: st.hoverShadow }, st.scene);
+  st.hoverShadow.setEnabled(true);
+  // the face that will host the hover: a faint fill (rebuilt when the face changes)
+  const key = `${ready.id}|${ready.faceId}|${ready.centre.map((x) => x.toFixed(4)).join(",")}`;
+  if (st.hoverFaceKey !== key) {
+    st.hoverFaceKey = key;
+    st.hoverFaceFill?.dispose();
+    st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);
+  }
+  st.hoverFaceFill?.setEnabled(true);
+}
+
+/** ⭐ A part's face as a faint fill in the world, lifted off it (`lift`); `null` with no topology. */
+function buildFaceFill(st: SceneState, partId: string, faceId: string, lift: Vec3): Mesh | null {
+  const mesh = st.meshOf.get(partId);
+  const place = worldPlacementOf(st.world, partId);
+  if (mesh === undefined || place === null) return null;
+  const topo = st.topoOf.get(mesh.name) ?? null;
+  const face = topo?.faces.find((f) => f.id === faceId);
+  if (topo === null || face === undefined) return null;
+  const used = [...new Set(face.triangles)];
+  const at = new Map(used.map((i, k) => [i, k] as const));
+  const positions: number[] = [];
+  for (const i of used) {
+    const w = add(add(place.position, qRotate(place.orientation, topo.positions[i]!)), lift);
+    positions.push(w[0], w[1], w[2]);
+  }
+  const fill = new Mesh("hover-face", st.scene);
+  const data = new VertexData();
+  data.positions = positions;
+  data.indices = face.triangles.map((i) => at.get(i)!);
+  data.applyToMesh(fill);
+  const mat = new StandardMaterial("hover-face-mat", st.scene);
+  mat.diffuseColor = READY_COLOUR.clone();
+  mat.emissiveColor = READY_COLOUR.scale(0.6);
+  mat.alpha = st.cfg.faceHighlightAlpha;
+  mat.backFaceCulling = false;
+  fill.material = mat;
+  fill.isPickable = false;
+  return fill;
 }

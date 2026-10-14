@@ -405,3 +405,8 @@ export function goalReport(
     worstAngleRad: worst?.a ?? 0,
   };
 }
+
+/** ⭐ (2026-10-14) the orbited piece's goal margins: `mm` and `deg` in the WORLD — never the snap's on the glass (see `orbitGoalMm`). */
+export function orbitGoalTolerance(mm: number, deg: number): GoalTolerance {
+  return { positionM: mm / 1000, angleRad: (deg * Math.PI) / 180 };
+}

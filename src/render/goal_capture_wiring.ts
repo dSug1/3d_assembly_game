@@ -10,7 +10,7 @@
  * feels as the snap does; a piece NEVER grabbed within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm, 1°), so zooming
  * out cannot place a piece nobody moved. ⭐ One report serves the capture, the HUD, the dissolve and the level end.
  */
-import { goalReport, liveFinalOf, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
+import { goalReport, liveFinalOf, orbitGoalTolerance, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
 import { rootOf } from "../core/collision";
 import { worldPlacementOf } from "../core/object_model";
 import { qAngle, qconj, qmul, sub, length } from "../core/vec";
@@ -42,7 +42,10 @@ function strictTolerance(st: SceneState): GoalTolerance {
 export function goalTolOf(st: SceneState): (id: string) => GoalTolerance {
   const loose = looseTolerance(st);
   const strict = strictTolerance(st);
-  return (id) => (st.grabbed.has(id) ? loose : strict);
+  // ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) the ORBITED piece by its own margins, in the world (`orbitGoalTolerance`)
+  const orbited = orbitGoalTolerance(st.cfg.orbitGoalMm, st.cfg.orbitGoalDeg);
+  const shown = st.greenBox?.name ?? null;
+  return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);
 }
 
 /** ⭐⭐ (2026-10-14) the goal LIVE: the level's and the SHOWN orbited piece's (`liveFinalOf`) — `null` for a scene with no goal. */

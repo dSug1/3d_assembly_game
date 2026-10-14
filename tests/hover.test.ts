@@ -10,7 +10,7 @@ import {
   HOVER_UNLIMITED_MM,
   clampDisc,
   hoverCameraPosition,
-  hoverContact,
+  hoverFaceContact,
   hoverContactM,
   hoverPlane,
   hoverViewProgress,
@@ -29,17 +29,25 @@ describe("⭐⭐⭐ the hover — when it may, on which plane, how far", () => {
     expect(hoverContactM(0.002, 0.0002)).toBeCloseTo(0.003, 12);
   });
 
-  it("⭐⭐⭐ only when the resting face lies AGAINST a part's face: anti-parallel AND in contact — else the drag orbits", () => {
+  it("⭐⭐⭐ only when the resting face lies AGAINST a part's FACE — their own planes, their own distance — anti-parallel and in contact", () => {
     const down: Vec3 = [0, -1, 0]; // the resting face's outward normal (the piece sits on something)
-    const up: Vec3 = [0, 1, 0]; // a part's top face: its contact normal toward the piece
+    const centre: Vec3 = [0, 0.0012, 0]; // the resting face's centre, 1.2 mm above y = 0
+    const top = { centre: [0.3, 0, 0.2] as Vec3, normal: [0, 1, 0] as Vec3 }; // a part's top face, its centre elsewhere on the plane
+    const side = { centre: [0.5, -0.05, 0] as Vec3, normal: [1, 0, 0] as Vec3 };
     const max = 0.0015;
-    expect(hoverContact(down, [{ id: "top", gapM: 0.001, normal: up }], max)).toEqual({ id: "top", normal: up, gapM: 0.001 });
-    expect(hoverContact(down, [{ id: "top", gapM: 0.003, normal: up }], max)).toBeNull(); // not in contact
-    const tilted: Vec3 = [Math.sin(0.1), Math.cos(0.1), 0]; // 5.7° off
-    expect(hoverContact(down, [{ id: "top", gapM: 0.001, normal: tilted }], max)).toBeNull(); // not aligned
-    expect(hoverContact(down, [{ id: "wall", gapM: 0.001, normal: [1, 0, 0] }], max)).toBeNull(); // a wall touched sideways
-    // the wall AND the face below: the face below names the plane
-    expect(hoverContact(down, [{ id: "wall", gapM: 0.0005, normal: [1, 0, 0] }, { id: "top", gapM: 0.001, normal: up }], max)?.id).toBe("top");
+    const r = hoverFaceContact(centre, down, [{ id: "top", bodyGapM: 0.0012, faces: [top, side] }], max);
+    expect(r.contact?.id).toBe("top");
+    expect(r.contact?.normal).toEqual([0, 1, 0]); // the FACE's own normal is the plane's
+    expect(r.contact?.gapM).toBeCloseTo(0.0012, 12);
+    // 3 mm off: refused, and the verdict names it
+    const far = hoverFaceContact([0, 0.003, 0], down, [{ id: "top", bodyGapM: 0.003, faces: [top] }], max);
+    expect(far.contact).toBeNull();
+    expect(far.nearest?.id).toBe("top");
+    expect(far.nearest?.planeGapM).toBeCloseTo(0.003, 12);
+    // 5.7° off anti-parallel: refused
+    expect(hoverFaceContact(centre, [Math.sin(0.1), -Math.cos(0.1), 0], [{ id: "top", bodyGapM: 0.0012, faces: [top] }], max).contact).toBeNull();
+    // ⭐ a body whose CLOSEST POINTS are on an edge (the piece reaching past the face) is still judged by its face
+    expect(hoverFaceContact(centre, down, [{ id: "top", bodyGapM: 0.0012, faces: [top] }], max).contact?.id).toBe("top");
   });
 
   it("⭐ the plane's axes: the screen's right laid on it, and n × e1 — none when edge-on", () => {
@@ -249,5 +257,72 @@ describe("⭐⭐ the hover across COPLANAR faces (2026-10-14, the owner: *\"make
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const behind = bodiesBehindPlane(st.world, setup, c.normal, level, opt.gapM / 2);");
     expect(h).toContain("exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y)");
+  });
+});
+
+describe("⭐⭐ the orbited piece's goal margins IN THE WORLD (2026-10-14, the owner: *\"the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation\"*)", () => {
+  it("⭐⭐⭐ off-centre by 2 cm or turned 10° is NOT placed (⛔ a grabbed part's margins: 182 mm on the glass at 4.25 m, 15°) — the goal pose 1 mm above is", async () => {
+    const { goalReport, liveFinalOf, orbitGoalTolerance } = await import("../src/core/goal");
+    const { SCENE_1 } = await import("../src/content/scene_1");
+    const { IDENTITY, qFromAxisAngle } = await import("../src/core/vec");
+    const u = SCENE_1.unitM ?? 1;
+    const final = liveFinalOf(SCENE_1.final!, SCENE_1.orbitGoals, "green-box");
+    const at = new Map(final.bodies.map((b) => [b.id, { position: [b.position[0] * u, b.position[1] * u, b.position[2] * u] as Vec3, orientation: IDENTITY }]));
+    const loose = { positionM: 0.18, angleRad: (15 * Math.PI) / 180 }; // a grabbed part's, as measured headless
+    const orbit = orbitGoalTolerance(DEFAULT_CONFIG.orbitGoalMm, DEFAULT_CONFIG.orbitGoalDeg);
+    const placed = (dx: number, yawDeg: number) => {
+      const g = at.get("green-box")!;
+      const pose = { position: [g.position[0] + dx, g.position[1] + 0.001, g.position[2]] as Vec3, orientation: qFromAxisAngle([0, 1, 0], (yawDeg * Math.PI) / 180) };
+      const r = goalReport(final, u, (id) => (id === "green-box" ? pose : at.get(id) ?? null), loose, (id) => (id === "green-box" ? orbit : loose));
+      return r.inPlaceIds.includes("green-box");
+    };
+    expect(placed(0, 0)).toBe(true);
+    expect(placed(0.02, 0)).toBe(false);
+    expect(placed(0, 10)).toBe(false);
+    expect(placed(0, 180)).toBe(true); // its half-turn looks the same
+    // ⛔ by a grabbed part's margins it read as placed
+    const asPart = goalReport(final, u, (id) => (id === "green-box" ? { position: [at.get("green-box")!.position[0] + 0.02, at.get("green-box")!.position[1], at.get("green-box")!.position[2]] as Vec3, orientation: IDENTITY } : at.get(id) ?? null), loose);
+    expect(asPart.inPlaceIds.includes("green-box")).toBe(true);
+  });
+  it("⭐ wired: the shown orbited piece judged by its own margins", () => {
+    expect(code("render/goal_capture_wiring.ts")).toContain('return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);');
+  });
+});
+
+describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the owner: *\"I think the contact check is too strict … Propose something to ease the contact and its perception by the user\"* → *\"Build A&B\"*)", () => {
+  it("⭐⭐⭐ A: a resting face LOOKING AT a part's face within the REACH may hover — not only one touching it — the settle the rest of the way", async () => {
+    const { hoverFaceContact, settleDepth, settleShare, HOVER_SETTLE_MS } = await import("../src/input/hover");
+    const down: Vec3 = [0, -1, 0];
+    const top = { faceId: "f2", centre: [0.3, 0, 0.2] as Vec3, normal: [0, 1, 0] as Vec3 };
+    const reach = DEFAULT_CONFIG.hoverApproachMm / 1000;
+    const far = hoverFaceContact([0, 0.012, 0], down, [{ id: "top", bodyGapM: 0.012, faces: [top] }], reach);
+    expect(far.contact?.id).toBe("top");
+    expect(far.contact?.faceId).toBe("f2");
+    expect(far.contact?.gapM).toBeCloseTo(0.012, 12);
+    expect(settleDepth(0.012, 0.001)).toBeCloseTo(0.011, 12); // down to the gap kept
+    expect(settleDepth(0.0008, 0.001)).toBe(0); // already there
+    expect(hoverFaceContact([0, 0.025, 0], down, [{ id: "top", bodyGapM: 0.025, faces: [top] }], reach).contact).toBeNull(); // out of reach
+    expect(settleShare(0)).toBe(0);
+    expect(settleShare(HOVER_SETTLE_MS / 2)).toBeCloseTo(0.5, 12);
+    expect(settleShare(HOVER_SETTLE_MS)).toBe(1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverApproachMm: 1 })).toThrow(/hoverApproachMm/);
+  });
+  it("⭐⭐ A: the settle is SOLVED along the face's normal (the face's part stops it at the gap kept) and shown eased", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const r = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup),");
+    expect(h).toContain("const settleShown = hf.settleM * settleShare(now - hf.settleT0); const w = add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.fu.x), scale(hf.e2, hf.fv.x)));");
+  });
+  it("⭐⭐ B: the contact shadow — the resting face's outline laid on the hosting face's plane", async () => {
+    const { projectOntoPlane } = await import("../src/input/hover");
+    expect(projectOntoPlane([0.1, 0.012, 0.3], [0, 1, 0], [5, 0, -2])).toEqual([0.1, 0, 0.3]);
+    const p = projectOntoPlane([1, 1, 1], [Math.SQRT1_2, Math.SQRT1_2, 0], [0, 0, 0]);
+    expect(p[0] + p[1]).toBeCloseTo(0, 12);
+  });
+  it("⭐ B: wired — the same look as the hover's start; the shadow, the hosting face's fill and the cyan contour", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach).contact;");
+    expect(h).toContain("(c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();");
+    expect(h).toContain("st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);");
+    expect(code("render/green_box_wiring.ts")).toContain("hoverVisualFrame(st, now);");
   });
 });

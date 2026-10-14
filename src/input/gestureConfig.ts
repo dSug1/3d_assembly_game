@@ -351,6 +351,15 @@ export interface GestureConfig {
   /** ⭐ (2026-10-14) how fast the camera reaches the hover view, and leaves it as the orbit comes back — the share of the way per mm of finger. */
   hoverCameraGain: number;
   /**
+   * ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) THE ORBITED PIECE'S GOAL MARGINS, IN THE WORLD — mm and degrees. ⛔ It was judged by a grabbed part's:
+   * the snap's 10 mm ON THE GLASS at the camera's distance (182 mm at 4.25 m, measured) and 15° — loose on purpose for a part the capture then
+   * pulls exactly, far too loose for a fine placement: 35 mm off and 12° off read as placed.
+   */
+  orbitGoalMm: number;
+  /** ⭐⭐ (2026-10-14, *"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) the hover's REACH: a resting face looking at a part's face this close (mm, in the world) may hover — the piece settles onto it first. */
+  hoverApproachMm: number;
+  orbitGoalDeg: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
    * `0` leaves the ring drawn and every press to the ordinary rules.
@@ -909,6 +918,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   hoverAmplitudeMm: 15,
   hoverGain: 1,
   hoverCameraGain: 0.05,
+  // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
+  orbitGoalMm: 5,
+  // ⚠ a guess with a slider
+  hoverApproachMm: 20,
+  orbitGoalDeg: 3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -1178,6 +1192,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.hoverCameraGain > 0 && cfg.hoverCameraGain <= 1)) throw new Error(`hoverCameraGain (${cfg.hoverCameraGain}) must be in (0, 1] per mm.`);
+  if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
+  if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);
+  if (!(cfg.orbitGoalDeg > 0 && cfg.orbitGoalDeg <= 30)) throw new Error(`orbitGoalDeg (${cfg.orbitGoalDeg}) must be in (0, 30]°.`);
   if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {
     throw new Error(`orbitBandRestMs (${cfg.orbitBandRestMs}) must be in [0, 3000] ms: the pause that re-arms the orbit drag's band.`);
   }
