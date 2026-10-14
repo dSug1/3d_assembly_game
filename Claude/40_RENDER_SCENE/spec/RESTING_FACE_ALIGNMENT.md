@@ -1065,6 +1065,10 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 
 ## 29. The mirror growth past the quads (2026-10-14, `1.0.76-`)
 
+> ⛔⛔ **DELETED the same day** — the owner: *"keep the yellow highlight of the resting face at full scale"* then *"make the yellow highlight on the
+> part's hosting face full size (no scaling any longer) and appear and fade when the quads disappear or appear"*. Both yellows are full size;
+> `mirrorQuadShare` and the quads' `mirror` flag are gone. Kept below as the record.
+
 > *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece
 > moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At
 > full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting
@@ -1082,3 +1086,6 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐ (2026-10-14, *"there is one moment when the yellow highlight of the part's hosting face goes full scale just before disappearing when the part
   orbits away from the gizmo"*) — out of the mirror (the quads back) the supporting face's yellow stays at its LEAST while it fades: it jumped to
   full scale for the fade's quarter second.
+* ⭐⭐ (2026-10-14, *"make the yellow highlight on the part's hosting face full size (no scaling any longer) and appear and fade when the quads
+  disappear or appear"*) — the gizmo's supporting face's yellow is its FULL contour, always; only its FADE follows the quads (in over 250 ms
+  as they disappear, out as they appear — `supportAlpha`). The mirror growth (§29) is deleted.

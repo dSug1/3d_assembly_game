@@ -477,8 +477,6 @@ export interface SceneState {
     growth: number;
     /** ⭐ (2026-10-12) the quads shown this frame — the resting face's yellow contour is hidden with them (`restingFillFrame`). */
     shown: boolean;
-    /** ⭐⭐ (2026-10-14) hidden, the MIRROR growth (`mirrorQuadShare`): the resting face's contour and the gizmo's supporting face grow again toward the gizmo. */
-    mirror: boolean;
   } | null;
   /** ⭐ (2026-10-12) a press on a resting-face quad: the side clicked (the direction to sit against), its press, its last sample, a drag yet. */
   quadPress: { readonly pointerId: number; readonly side: import("../core/vec").Vec3; readonly pressed: import("../input").Sample; prev: import("../input").Sample; dragging: boolean } | null;
