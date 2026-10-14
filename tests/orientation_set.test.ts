@@ -185,8 +185,9 @@ describe("⭐⭐ the resting face's yellow contour scales as the quads (2026-10-
     const g = flat("render/green_box_wiring.ts");
     // ⭐⭐ *\"same for the outline as for the quads: min 1 pixel, hidden below half max distance\"*
     // ⭐ (2026-10-14) shown in the MIRROR too (the quads hidden, growing again toward the gizmo)
-    expect(g).toContain("const shown = (st.restingQuads?.shown ?? true) || (st.restingQuads?.mirror ?? false); for (const c of fill.getChildMeshes(true)) c.isVisible = shown; if (!shown) return;");
-    expect(g).toContain("const k = Math.min(1, Math.max(st.restingQuads?.growth ?? 1, trackingMetresPerPx(camD, st.camera.fov, st.canvas.clientHeight) / longest)); const c = p.restingCentre; fill.scaling.setAll(k);");
+    // ⛔ (2026-10-14, *"keep the yellow highlight of the resting face at full scale, do not diminish it"*) the contour no longer scales: always shown, full
+    expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
+    expect(g).toContain("const k = 1;");
     expect(flat("render/orient_cube.ts")).toContain("q.shown = show;");
     expect(g).toContain("fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);");
   });

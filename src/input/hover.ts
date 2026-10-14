@@ -496,7 +496,8 @@ export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: n
  * (sliding along the boundary), the longer of the two; else the furthest point of the step that does (`iters` halvings). `from` is inside.
  */
 export function boundStep(from: readonly [number, number], to: readonly [number, number], inside: (u: number, v: number) => boolean, iters = 12): [number, number] {
-  if (inside(to[0], to[1])) return [to[0], to[1]];
+  // ⭐ (2026-10-14, the owner: *"regression: I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes."*) a hover starting OUTSIDE the bound is not held by it (it would never move): free until it is inside
+  if (!inside(from[0], from[1]) || inside(to[0], to[1])) return [to[0], to[1]];
   const du = to[0] - from[0];
   const dv = to[1] - from[1];
   const a = inside(to[0], from[1]);
@@ -511,4 +512,13 @@ export function boundStep(from: readonly [number, number], to: readonly [number,
     else hi = m;
   }
   return [from[0] + du * lo, from[1] + dv * lo];
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the owner: *"regression: I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes."*) — **WHEN THE HOVER VIEW ENDS**: once the orbit has taken it back (its asked share 0) AND its shown share
+ * is back to 0, and only with NO hover on. ⛔ A new view (both shares 0 at the press) was deleted the very next frame: the camera never turned
+ * toward the corner — and a face seen nearly edge-on (a finger's ray grazing it moves nothing, waiting for that turn) froze the hover.
+ */
+export function hoverViewEnds(progress: number, shown: number, hoverOn: boolean): boolean {
+  return !hoverOn && progress <= 0 && shown < 1e-3;
 }

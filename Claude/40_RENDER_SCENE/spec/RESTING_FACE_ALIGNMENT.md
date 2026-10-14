@@ -1076,3 +1076,9 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * The resting face's yellow contour is SHOWN in the mirror (it was hidden with the quads) and scales by it, about its centre, never under one
   pixel. The gizmo's supporting face's yellow (§28) scales by the same share about the face's CENTRE: full, the face's contour; least, one pixel
   across at the face's distance.
+
+* ⭐⭐ (2026-10-14, *"keep the yellow highlight of the resting face at full scale, do not diminish it."*) — the resting face's yellow contour is
+  ALWAYS shown at FULL scale: it no longer grows with the quads nor in the mirror (only the gizmo's supporting face's yellow does).
+* ⭐ (2026-10-14, *"there is one moment when the yellow highlight of the part's hosting face goes full scale just before disappearing when the part
+  orbits away from the gizmo"*) — out of the mirror (the quads back) the supporting face's yellow stays at its LEAST while it fades: it jumped to
+  full scale for the fade's quarter second.

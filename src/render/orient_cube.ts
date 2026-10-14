@@ -198,7 +198,9 @@ function supportHighlightFrame(st: SceneState): void {
   // least, ONE PIXEL across at the face's distance
   const cam = st.camera.position;
   const onePx = trackingMetresPerPx(Math.hypot(centre[0] - cam.x, centre[1] - cam.y, centre[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
-  const share = Math.min(1, Math.max(extentM > 0 ? onePx / extentM : 1, st.restingQuads?.mirror ? st.restingQuads.growth : 1));
+  // ⭐ (2026-10-14, the owner: *"there is one moment when the yellow highlight of the part's hosting face goes full scale just before disappearing when the part orbits away from the gizmo. It does not happen when the piece orbits towards the gizmo."*) — out of the mirror (the quads back) it stays at its LEAST while it fades: ⛔ it jumped to full scale for the
+  // fade's quarter second as the piece orbited away
+  const share = Math.min(1, Math.max(extentM > 0 ? onePx / extentM : 1, st.restingQuads?.mirror ? st.restingQuads.growth : 0));
   const lift = scale(face.normal, 0.0004);
   mesh.position.set(centre[0] + lift[0], centre[1] + lift[1], centre[2] + lift[2]);
   mesh.scaling.setAll(share);

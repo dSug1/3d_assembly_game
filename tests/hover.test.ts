@@ -785,5 +785,28 @@ describe("⭐⭐⭐ the hover bounded by the hosting faces, the mirror growth, t
     const q = code("render/orient_cube.ts");
     expect(q).toContain("q.growth = q.mirror ? Math.max(Math.min(1, onePx / full), mirrorQuadShare(d, range.minM, from, st.cfg.quadGrowthLogK)) : Math.min(1, onePx / full);");
     expect(q).toContain("mesh.scaling.setAll(share);");
+    // ⭐ (2026-10-14) out of the mirror, its least while it fades
+    expect(q).toContain("st.restingQuads?.mirror ? st.restingQuads.growth : 0));");
+  });
+});
+
+describe("⭐⭐⭐ the regression: the hover froze (2026-10-14, the owner: *\"I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes.\"*)", () => {
+  it("⭐⭐⭐ the hover view lives while a hover is on — a new view (both shares 0) was deleted the next frame", async () => {
+    const { hoverViewEnds } = await import("../src/input/hover");
+    expect(hoverViewEnds(0, 0, true)).toBe(false); // ✅ just pressed: kept (⛔ it was dropped)
+    expect(hoverViewEnds(0, 0, false)).toBe(true); // the orbit took it back, shown back: ends
+    expect(hoverViewEnds(0, 0.2, false)).toBe(false); // still shown: eased out first
+    expect(code("render/hover_wiring.ts")).toContain("if (hoverViewEnds(hv.progress, hv.shown, st.hover !== null)) {");
+  });
+  it("⭐⭐ a hover starting OUTSIDE the faces' bound is not held by it", async () => {
+    const { boundStep } = await import("../src/input/hover");
+    const inside = (u: number) => u <= 0.1;
+    expect(boundStep([0.2, 0], [0.25, 0], inside)).toEqual([0.25, 0]); // ⛔ was held at [0.2, 0] for ever
+    expect(boundStep([0.05, 0], [0.25, 0], inside)[0]).toBeLessThanOrEqual(0.1); // inside: bounded as before
+  });
+  it("⭐ the resting face's yellow: always shown, at full scale", () => {
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
+    expect(g).toContain("const k = 1;");
   });
 });
