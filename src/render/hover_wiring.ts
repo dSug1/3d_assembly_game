@@ -30,6 +30,7 @@ import {
   rectUnionOutline,
   planeAxes,
   type Rect2,
+  boundStep,
   HOVER_ALIGN_DEG,
   hoverFaceContact,
   projectOntoPlane,
@@ -53,7 +54,6 @@ import { RESTING_COLOUR, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ri
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
-import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { hoverSwayDeg } from "../input/hover";
@@ -224,9 +224,9 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const hv0 = st.hoverView;
   const corner = hoverCornerDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]], hv0?.signs ?? null);
   if (corner !== null) {
-    if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: null };
+    if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: null };
     else if (hoverViewRetargets(hv0.n, c.normal))
-      st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
+      st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
   }
   st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
@@ -345,15 +345,13 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   const hf = st.hoverFollow;
   if (h !== null && hf !== null && Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) > 1e-12) hoverSolve(st, h, hf);
   if (hf === null || !(dtSec > 0)) return;
-  const tau = st.cfg.translateInertiaMs / 1000;
-  const zeta = st.cfg.translateDampingRatio;
-  const lead = st.cfg.translateLeadMs / 1000;
-  hf.vu = exponentialSmooth(hf.vu, (hf.u - hf.lu) / dtSec, tau, dtSec);
-  hf.vv = exponentialSmooth(hf.vv, (hf.v - hf.lv) / dtSec, tau, dtSec);
-  hf.lu = hf.u;
-  hf.lv = hf.v;
-  hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, lead), tau, zeta, dtSec);
-  hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, lead), tau, zeta, dtSec);
+  // ⭐⭐ (2026-10-14, the owner: *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the piece is far from the hosting face in orbit."*) — the DRAWN piece eases after the solved one on the ORBIT's own spring (critically damped,
+  // τ = `boxSmoothMs` / 2), no lead: ⛔ the part translation's follower (τ 7.6 ms, ζ 0.2, a phantom lead) passed the solve's per-frame steps
+  // straight through — a mouse's events beat against the frames (125 Hz against 143 fps measured on the HUD) — and its overshoot, clipped by
+  // `hoverDrawLag`, stuck and slipped
+  const tau = hoverDrawTau(st);
+  hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec);
+  hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);
   // ⭐⭐ the DRAWN lag behind the model: the follower's (behind the last solved step), and the settle still to show (above the settled place —
   // ⭐ (2026-10-14, the hover's second audit) ⛔ the MODEL eased down while the steps were solved at the settled depth: an unchecked pose)
   const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv);
@@ -377,6 +375,23 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
     st.pieceDeferred = true;
     return;
   }
+  // ⭐⭐⭐ (2026-10-14, the owner: *"modify: when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the hover translation shall stop and be bounded by the hosting face contour and the user shall be able to bring back the hovering piece inside the boundary by reversing the delta position input. No more automatic transition to orbit."*) — the target held where some portion of the resting face stays over a coplanar hosting face
+  // (`boundStep`: the whole step, else along one axis — sliding on the boundary — else as far as it goes); the finger's excess dropped, so its
+  // reversal brings the piece back at once
+  const gb = st.greenBox;
+  const rq = gb?.rotationQuaternion ?? Quaternion.Identity();
+  const rot: Quat = [rq.w, rq.x, rq.y, rq.z];
+  const inside = (u: number, v: number): boolean => {
+    if (h.coplanar.length === 0) return true;
+    const poly = restingPolyWorld(st, add(h.origin, add(scale(h.e1, u), scale(h.e2, v))), rot);
+    return poly.length === 0 || overlapsTriangles(poly, h.n, h.coplanar);
+  };
+  h.pending = boundStep([h.u, h.v], h.pending, inside);
+  if (Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) <= 1e-12) {
+    st.lastVerdict = "hover: at the edge of the hosting faces — reverse to come back";
+    st.hudDirty = true;
+    return;
+  }
   // ⭐ solved by the orbit's clearance rule, its two coordinates the plane's (the second offset into the solver's 0 … 1)
   const base = pieceCollisionSetup(st);
   const setup: CollisionSetup = { ...base, exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y) };
@@ -385,9 +400,15 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   st.pieceQueries += r.queries;
   st.pieceMoveBlocked = r.blocked;
   if (r.deferred) st.pieceDeferred = true;
-  const nu = r.q.yaw;
-  const nv = (r.q.v - 0.5) * HOVER_SPAN_M;
+  let nu = r.q.yaw;
+  let nv = (r.q.v - 0.5) * HOVER_SPAN_M;
   h.pending = hoverPendingAfter([nu, nv], r.deferred, h.pending);
+  // ⭐⭐ a slide that carried the resting face off the hosting faces: held where it was
+  if (!inside(nu, nv)) {
+    nu = h.u;
+    nv = h.v;
+    h.pending = [h.u, h.v];
+  }
   if (Math.abs(nu - h.u) + Math.abs(nv - h.v) > 1e-12) {
     hf.du = nu - h.u;
     hf.dv = nv - h.v;
@@ -398,20 +419,41 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   hf.v = nv;
   // ⭐⭐⭐ (2026-10-14, the hover's audit) the MODEL: the solved offset
   applyHoverModel(st, hf, add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
-  // ⭐⭐⭐ (2026-10-14, the owner: *"when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the movement shall default back to orbit even if the press has not been released."*) — no portion of the resting face over any of the coplanar hosting faces: back to the ORBIT, the finger
-  // still down (its next move orbits; the piece keeps its offset, taken back by the orbit's way in)
-  const b = st.greenBox;
-  if (b !== null && h.coplanar.length > 0) {
-    const r = b.rotationQuaternion ?? Quaternion.Identity();
-    const poly = restingPolyWorld(st, add(h.origin, add(scale(h.e1, h.u), scale(h.e2, h.v))), [r.w, r.x, r.y, r.z]);
-    if (poly.length > 0 && !overlapsTriangles(poly, h.n, h.coplanar)) {
-      st.hover = null;
-      st.hoverPress = null;
-      st.hoverBand = null;
-      st.lastVerdict = "hover: the resting face left the hosting faces — the drag orbits";
-      st.hudDirty = true;
-    }
+}
+
+/** ⭐ (2026-10-14) the hover's and the way in's drawn ease: the orbit's spring (s). */
+function hoverDrawTau(st: SceneState): number {
+  return Math.max(1, st.cfg.boxSmoothMs / 2) / 1000;
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the piece is far from the hosting face in orbit."*) — **THE WAY IN, DRAWN ON THE SPRING**: while the orbit takes the piece-only offset back, the DRAWN offset
+ * eases after the solved one (critically damped, the orbit's τ) — the difference added to the mesh only (`st.hoverDraw`). ⛔ Near the hosting
+ * face the solved share advanced in bursts (a part held it, the travel freed it) and the piece showed each one.
+ */
+export function wayInDrawFrame(st: SceneState, dtMs: number): void {
+  if (st.hoverFollow !== null || st.orbitPiecePlaced) {
+    st.wayInDrawn = null;
+    return;
   }
+  const o: Vec3 = st.hoverOffset ?? [0, 0, 0];
+  let d = st.wayInDrawn;
+  if (d === null) {
+    if (st.hoverWayIn === null) return;
+    d = { x: [o[0], o[1], o[2]], v: [0, 0, 0] };
+  }
+  const tau = hoverDrawTau(st);
+  const dt = dtMs / 1000;
+  const next = [0, 1, 2].map((k) => advanceFollow({ x: d!.x[k]!, v: d!.v[k]! }, o[k]!, tau, 1, dt));
+  d = { x: [next[0]!.x, next[1]!.x, next[2]!.x], v: [next[0]!.v, next[1]!.v, next[2]!.v] };
+  const lag: Vec3 = [d.x[0] - o[0], d.x[1] - o[1], d.x[2] - o[2]];
+  if (st.hoverWayIn === null && Math.hypot(...lag) < 1e-5 && Math.hypot(...d.v) < 1e-4) {
+    st.wayInDrawn = null;
+    st.hoverDraw = null;
+    return;
+  }
+  st.wayInDrawn = d;
+  st.hoverDraw = lag;
 }
 
 function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, w: Vec3): void {
@@ -449,7 +491,7 @@ export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   const hv = st.hoverView;
   if (hv !== null) {
     hv.progress = hoverViewProgress(hv.progress, travelMm, 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), false);
-    if (hv.progress <= 0) st.hoverView = null;
+    // ⭐ (2026-10-14) the view itself ends once its SHOWN share is back to 0 (`hoverCameraBlend`) — ⛔ dropped at once, it jumped
   }
 }
 
@@ -497,7 +539,19 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
 export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3 } {
   const hv = st.hoverView;
   if (hv === null) return { camAt, lookAt };
-  const w = hoverViewWeight(hv.progress);
+  // ⭐⭐ (2026-10-14, the owner: *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the piece is far from the hosting face in orbit."*) — the share SHOWN eases after the finger's (critically damped, the orbit's τ): ⛔ it stepped at each
+  // pointer event while the orbit's own camera eased every frame
+  const now = performance.now();
+  const dt = Math.min(0.1, Math.max(0, (now - hv.at) / 1000));
+  hv.at = now;
+  const f = advanceFollow({ x: hv.shown, v: hv.shownVel }, hv.progress, hoverDrawTau(st), 1, dt);
+  hv.shown = Math.min(1, Math.max(0, f.x));
+  hv.shownVel = f.v;
+  if (hv.progress <= 0 && hv.shown < 1e-3) {
+    st.hoverView = null;
+    return { camAt, lookAt };
+  }
+  const w = hoverViewWeight(hv.shown);
   if (w <= 0) return { camAt, lookAt };
   let dir = hv.iso;
   let target = hv.target;

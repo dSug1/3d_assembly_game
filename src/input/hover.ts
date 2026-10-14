@@ -489,3 +489,26 @@ export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: n
     }
   return segs;
 }
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the owner: *"modify: when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the hover translation shall stop and be bounded by the hosting face contour and the user shall be able to bring back the hovering piece inside the boundary by reversing the delta position input. No more automatic transition to orbit."*) — **THE HOVER BOUNDED BY THE HOSTING FACES**: a step from `from` toward `to` (plane coordinates) kept
+ * where `inside` holds (the resting face over some coplanar hosting face): the whole step if it does; else the step along ONE axis that does
+ * (sliding along the boundary), the longer of the two; else the furthest point of the step that does (`iters` halvings). `from` is inside.
+ */
+export function boundStep(from: readonly [number, number], to: readonly [number, number], inside: (u: number, v: number) => boolean, iters = 12): [number, number] {
+  if (inside(to[0], to[1])) return [to[0], to[1]];
+  const du = to[0] - from[0];
+  const dv = to[1] - from[1];
+  const a = inside(to[0], from[1]);
+  const b = inside(from[0], to[1]);
+  if (a && (!b || Math.abs(du) >= Math.abs(dv))) return [to[0], from[1]];
+  if (b) return [from[0], to[1]];
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < iters; i++) {
+    const m = (lo + hi) / 2;
+    if (inside(from[0] + du * m, from[1] + dv * m)) lo = m;
+    else hi = m;
+  }
+  return [from[0] + du * lo, from[1] + dv * lo];
+}

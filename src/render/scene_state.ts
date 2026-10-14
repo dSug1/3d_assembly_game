@@ -477,6 +477,8 @@ export interface SceneState {
     growth: number;
     /** ⭐ (2026-10-12) the quads shown this frame — the resting face's yellow contour is hidden with them (`restingFillFrame`). */
     shown: boolean;
+    /** ⭐⭐ (2026-10-14) hidden, the MIRROR growth (`mirrorQuadShare`): the resting face's contour and the gizmo's supporting face grow again toward the gizmo. */
+    mirror: boolean;
   } | null;
   /** ⭐ (2026-10-12) a press on a resting-face quad: the side clicked (the direction to sit against), its press, its last sample, a drag yet. */
   quadPress: { readonly pointerId: number; readonly side: import("../core/vec").Vec3; readonly pressed: import("../input").Sample; prev: import("../input").Sample; dragging: boolean } | null;
@@ -491,7 +493,7 @@ export interface SceneState {
     tag: number;
   } | null;
   /** ⭐ (2026-10-14) its yellow outline, faded in while the quads are hidden (`supportAlpha`). */
-  supportHighlight: { key: string; mesh: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null; alpha: number; at: number } | null;
+  supportHighlight: { key: string; mesh: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null; centre: import("../core/vec").Vec3; extentM: number; alpha: number; at: number } | null;
   /** ⭐ (2026-10-13) the yellow quad's tap checked: what blocks its turn (`null`: free — yellow; else RED), when and for what it was checked. */
   quadTurnCheck: { blockedBy: string | null; key: string; at: number };
   /** ⭐ (2026-10-13) the orbited piece's solver's cost per frame, ms (an exponential mean over ~30 frames) — the HUD reads it. */
@@ -555,6 +557,8 @@ export interface SceneState {
   } | null;
   /** ⭐⭐ (2026-10-14, the hover's audit) the hover's DRAWN lag (world, m): added to the piece's MESH only (`anchorFrame`) and taken off again when the model reads the mesh (`syncOrbitPieceModel`) — the model is the solved place. */
   hoverDraw: import("../core/vec").Vec3 | null;
+  /** ⭐ (2026-10-14) the way in's DRAWN offset easing after the solved one (`wayInDrawFrame`), and its rate. */
+  wayInDrawn: { x: import("../core/vec").Vec3; v: import("../core/vec").Vec3 } | null;
   /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
   hoverOffset: import("../core/vec").Vec3 | null;
   /** ⭐⭐ (2026-10-14, the owner: *"After a hover which has moved the piece, the orbit shall way in smoothly"*) the orbit's WAY IN taking the piece-only offset back (`HoverWayIn`); `null`: none on. */
@@ -562,6 +566,10 @@ export interface SceneState {
   /** ⭐ (2026-10-14) the HOVER VIEW the camera eases toward (its progress 0 … 1, its target and the face's frame); `null`: the orbit's camera. */
   hoverView: {
     progress: number;
+    /** ⭐ (2026-10-14) the share SHOWN — easing after `progress` on the orbit's spring — its rate, and when it was last eased */
+    shown: number;
+    shownVel: number;
+    at: number;
     target: import("../core/vec").Vec3;
     n: import("../core/vec").Vec3;
     e1: import("../core/vec").Vec3;

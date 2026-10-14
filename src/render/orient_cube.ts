@@ -26,7 +26,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, distinctPlanes, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, distinctPlanes, mirrorQuadShare, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qRotate, scale, sub, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "../input";
@@ -182,20 +182,33 @@ function supportHighlightFrame(st: SceneState): void {
   const visible = face !== null && (sf?.tag ?? -1) >= 0 && st.restingQuads !== null && !st.restingQuads.shown && st.greenBox !== null && !st.orbitPiecePlaced;
   const key = face === null ? "" : `${face.id}|${face.faceId}|${face.triangles[0]?.[0]?.map((x) => x.toFixed(4)).join(",") ?? ""}`;
   let mesh = sh?.mesh ?? null;
+  let centre: Vec3 = sh?.centre ?? [0, 0, 0];
+  let extentM = sh?.extentM ?? 0;
   if (sh === null || sh.key !== key) {
     mesh?.dispose();
-    mesh = face === null ? null : buildFaceOutline(st, face.triangles, face.normal);
+    const built = face === null ? null : buildFaceOutline(st, face.triangles);
+    mesh = built?.mesh ?? null;
+    centre = built?.centre ?? [0, 0, 0];
+    extentM = built?.extentM ?? 0;
   }
   const alpha = supportAlpha(sh?.alpha ?? 0, visible, dt);
-  st.supportHighlight = { key, mesh, alpha, at: now };
-  if (mesh === null) return;
+  st.supportHighlight = { key, mesh, centre, extentM, alpha, at: now };
+  if (mesh === null || face === null) return;
+  // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — scaled about the face's CENTRE by the mirror's share (the resting face's own): full, the face's contour;
+  // least, ONE PIXEL across at the face's distance
+  const cam = st.camera.position;
+  const onePx = trackingMetresPerPx(Math.hypot(centre[0] - cam.x, centre[1] - cam.y, centre[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
+  const share = Math.min(1, Math.max(extentM > 0 ? onePx / extentM : 1, st.restingQuads?.mirror ? st.restingQuads.growth : 1));
+  const lift = scale(face.normal, 0.0004);
+  mesh.position.set(centre[0] + lift[0], centre[1] + lift[1], centre[2] + lift[2]);
+  mesh.scaling.setAll(share);
   mesh.isVisible = alpha > 0.001;
   mesh.alpha = alpha;
   mesh.color = st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT;
 }
 
-/** ⭐ A face's OUTLINE from its triangles (the edges used once), lifted off it — the yellow of the gizmo's supporting face. */
-function buildFaceOutline(st: SceneState, tris: readonly (readonly [Vec3, Vec3, Vec3])[], n: Vec3): LinesMesh | null {
+/** ⭐ A face's OUTLINE from its triangles (the edges used once), about its centre (the mesh placed there) — the yellow of the gizmo's supporting face. */
+function buildFaceOutline(st: SceneState, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): { mesh: LinesMesh; centre: Vec3; extentM: number } | null {
   const k = (p: Vec3) => p.map((x) => x.toFixed(5)).join(",");
   const count = new Map<string, { a: Vec3; b: Vec3; n: number }>();
   for (const t of tris)
@@ -207,13 +220,16 @@ function buildFaceOutline(st: SceneState, tris: readonly (readonly [Vec3, Vec3, 
       if (e) e.n++;
       else count.set(id, { a, b, n: 1 });
     }
-  const lift = scale(n, 0.0004);
-  const lines = [...count.values()].filter((e) => e.n === 1).map((e) => [add(e.a, lift), add(e.b, lift)].map((p) => new Vector3(p[0], p[1], p[2])));
-  if (lines.length === 0) return null;
+  const edges = [...count.values()].filter((e) => e.n === 1);
+  if (edges.length === 0) return null;
+  const pts = edges.flatMap((e) => [e.a, e.b]);
+  const centre: Vec3 = [0, 1, 2].map((k) => (Math.min(...pts.map((p) => p[k]!)) + Math.max(...pts.map((p) => p[k]!))) / 2) as unknown as Vec3;
+  const extentM = Math.max(...[0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k]!)) - Math.min(...pts.map((p) => p[k]!))));
+  const lines = edges.map((e) => [sub(e.a, centre), sub(e.b, centre)].map((p) => new Vector3(p[0], p[1], p[2])));
   const m = CreateLineSystem("support-face-outline", { lines }, st.scene);
   m.isPickable = false;
   m.renderingGroupId = 1; // ⭐ as the quads: seen over what stands in front
-  return m;
+  return { mesh: m, centre, extentM };
 }
 
 /**
@@ -351,7 +367,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       edges.parent = root;
       return { normal: n, fill, edges };
     });
-    st.restingQuads = { key, root, quads, growth: 1, shown: false };
+    st.restingQuads = { key, root, quads, growth: 1, shown: false, mirror: false };
   }
   const q = st.restingQuads;
   const at = restingCentreWorld(st);
@@ -378,9 +394,12 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
   q.shown = show; // ⭐ *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"* — the resting contour hidden with the quads (`restingFillFrame`)
   if (!show) {
-    q.growth = Math.min(1, onePx / full);
+    // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — the MIRROR: from one pixel where the quads disappear to full at the rings' closest
+    q.mirror = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d < from;
+    q.growth = q.mirror ? Math.max(Math.min(1, onePx / full), mirrorQuadShare(d, range.minM, from, st.cfg.quadGrowthLogK)) : Math.min(1, onePx / full);
     return;
   }
+  q.mirror = false;
   // ⭐ at the resting face's centre, as the piece stands now
   q.root.position.set(at[0], at[1], at[2]);
   const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);

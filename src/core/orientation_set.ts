@@ -98,3 +98,14 @@ export function quadSide(n: Vec3, hit: Vec3, eye: Vec3): Vec3 {
 export function quadsShownFromM(dMax: number): number {
   return dMax / 2;
 }
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — **THE MIRROR OF THE QUADS' GROWTH**: past the point where the quads disappear (`dFrom`, half the rings'
+ * farthest), the share of full size grows again as the piece comes IN toward the gizmo — 0 at `dFrom`, 1 at `dNear` (the rings' closest) —
+ * on the quads' own logarithm (`quadSize`'s, steepness `k`). Beyond `dFrom` (the quads shown): 0.
+ */
+export function mirrorQuadShare(d: number, dNear: number, dFrom: number, k: number): number {
+  if (!(dFrom > dNear) || !Number.isFinite(d)) return 1;
+  const t = Math.min(1, Math.max(0, (dFrom - d) / (dFrom - dNear)));
+  return k > 1e-9 ? Math.log1p(k * t) / Math.log1p(k) : t;
+}

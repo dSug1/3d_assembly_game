@@ -1062,3 +1062,17 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐⭐⭐ **A TAP ON THE PIECE** (`selectRestingFace`): the face tapped becomes the resting face and aligns to the direction SHOWN NOW — the yellow
   quad's, or the supporting face's. ⛔ It aligned to the direction last TAPPED (`st.pinkDir`), whatever was yellow.
 * Headless: the gizmo staged on Piece10's face — found (its direction a level's), the quads hidden, the yellow at full.
+
+## 29. The mirror growth past the quads (2026-10-14, `1.0.76-`)
+
+> *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece
+> moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At
+> full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting
+> face."* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE MIRROR** (`mirrorQuadShare`): where the quads disappear (half the rings' farthest, §25) their growth turns back — the share grows
+  again as the piece comes IN toward the gizmo, 0 there (one pixel) to full at the rings' closest, on the quads' own logarithm
+  (`quadGrowthLogK`) — the exact mirror of the quads' curve about that point (vectored).
+* The resting face's yellow contour is SHOWN in the mirror (it was hidden with the quads) and scales by it, about its centre, never under one
+  pixel. The gizmo's supporting face's yellow (§28) scales by the same share about the face's CENTRE: full, the face's contour; least, one pixel
+  across at the face's distance.

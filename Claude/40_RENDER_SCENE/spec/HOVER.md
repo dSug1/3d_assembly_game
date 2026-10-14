@@ -300,6 +300,28 @@ floor** — marked seats where a piece may be set down, each a known target the 
   (0.5 mm), each by its extent on the plane's axes (the world's for a face square to them — every `Scene_1` part), grown 1.6 mm so the 3 mm
   joints between coloured cores close, the ones joined to the hosting face, their UNION's boundary drawn GREEN (#D8FDD2) on the coloured faces —
   with the ready look and during the hover, beside the hosting face's faint fill.
-* ⭐⭐⭐ **OFF THE FACES, BACK TO THE ORBIT**: after each hover solve, the resting face's outline at its solved place over NONE of the coplanar
+* ⛔ (superseded by §16: the hover is BOUNDED by the faces instead) **OFF THE FACES, BACK TO THE ORBIT**: after each hover solve, the resting face's outline at its solved place over NONE of the coplanar
   faces' triangles (gathered at the hover's start) ends the hover — the finger still down, its next move ORBITS; the piece keeps its offset,
   taken back by the orbit's way in (§13). Headless: a long drag left the faces and the same finger orbited on, ≥ 1.04 mm from every part.
+
+## 16. The hover bounded by the hosting faces; a smooth draw and a smooth way back (2026-10-14, `1.0.76-`)
+
+> *"modify: when there is not any portion of the resting face in contact with a hosting face … the hover translation shall stop and be bounded by
+> the hosting face contour and the user shall be able to bring back the hovering piece inside the boundary by reversing the delta position
+> input. No more automatic transition to orbit."* · *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling
+> back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the
+> piece is far from the hosting face in orbit."* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **BOUNDED** (`boundStep`): before each solve the hover's target is held where some portion of the resting face stays over a coplanar
+  hosting face — the whole step if it does; else the step along ONE axis that does (sliding along the boundary); else as far as the step goes
+  (12 halvings). The finger's excess is dropped, so reversing brings the piece back at once; a slide that carried it off is held where it was.
+  At the edge the HUD says *"at the edge of the hosting faces — reverse to come back"*. ⛔ §15's switch to the orbit is deleted. Headless: a drag
+  outward from a face's edge held the piece there; the same drag inward slid it 10 cm, ≥ 1.00 mm from every part.
+* ⭐⭐ **THE DRAW ON THE ORBIT'S SPRING**: the drawn piece eases after the solved one critically damped at the orbit's τ (`boxSmoothMs` / 2), no
+  lead. ⛔ The part translation's follower (τ 7.6 ms, ζ 0.2, a phantom lead) passed the solve's per-frame steps straight through — a mouse's
+  events beat against the frames (125 Hz against 143 fps on the owner's HUD): frame steps varied by more than half their mean (vectored), and
+  the overshoot `hoverDrawLag` clipped stuck and slipped. Now steady (under 15 %), never ahead of the solved place.
+* ⭐⭐ **THE WAY BACK, SMOOTH NEAR THE FACE**: the way in's offset is drawn on the same spring (`wayInDrawFrame`, the difference on the mesh
+  only), and keeps 8 of the frame's 24 gap queries (`HOVER_FADE_QUERIES`) — ⛔ near the hosting face the orbit's slide took them all and the
+  way in advanced in bursts, each one shown. The hover view's share eases on the spring too (it stepped at each pointer event), and the view
+  ends once its SHOWN share is back to 0 (it was dropped at once).
