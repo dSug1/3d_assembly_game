@@ -508,6 +508,8 @@ export interface SceneState {
     offset0: import("../core/vec").Vec3;
     u: number;
     v: number;
+    /** ⭐ (2026-10-14, the hover's second audit) the finger's target on the plane, solved once a frame (`hoverSolve`) — what the work cap left of it kept */
+    pending: [number, number];
     partId: string;
     /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
     behind: Set<string>;
@@ -567,6 +569,11 @@ export interface SceneState {
   hoverFaceKey: string;
   /** ⭐ (2026-10-14, the hover's audit) the resting contour's colour as last SET (its fill and whether cyan) — set again only when either changes. */
   hoverTint: { fill: object; ready: boolean } | null;
+  /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */
+  hoverSpent: number | null;
+  /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
+  hoverReadyWorld: object | null;
+  hoverReadyReachMm: number;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */

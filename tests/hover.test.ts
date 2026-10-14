@@ -139,7 +139,7 @@ describe("⭐ wired", () => {
     const h = code("render/hover_wiring.ts");
     // ⭐ applied each frame from the FOLLOWED offset (the part translation's follower)
     expect(h).toContain("if (hf.gizmo) { st.centreBlend.snapTo(add(hf.centre0, w)); syncCentre(st); } else st.hoverOffset = add(hf.offset0, w);");
-    expect(h).toContain("const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [tu - h.u, (tv - h.v) / HOVER_SPAN_M], env, pieceSolveOptions(st));");
+    expect(h).toContain("const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });");
     expect(code("render/green_box_wiring.ts")).toContain("({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));");
   });
 });
@@ -193,10 +193,12 @@ describe("⭐⭐⭐ the orbited pieces' GOALS and their capture (2026-10-14: *\"
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1)).orbitGoals).toEqual(SCENE_1.orbitGoals);
   });
 
-  it("⭐ wired: the live goal everywhere; the orbited piece always grabbed; captured, it leaves the orbit and stays", () => {
+  it("⭐ wired: the live goal everywhere; the orbited piece judged by its own margins; captured, it leaves the orbit and stays", () => {
     const g = code("render/goal_capture_wiring.ts");
     expect(g).toContain("return f === null ? null : liveFinalOf(f, st.sceneSpec.orbitGoals, st.greenBox?.name ?? null);");
-    expect(g).toContain("if (st.greenBox !== null && st.sceneSpec.orbitGoals !== undefined) st.grabbed.add(st.greenBox.name);");
+    // ⭐ (the hover's second audit) the dead "always grabbed" line removed: `goalTolOf` answers the orbited piece's own margins first
+    expect(g).not.toContain("st.grabbed.add(st.greenBox.name)");
+    expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);");
     expect(g).toContain("if (id === st.greenBox?.name) st.orbitPiecePlaced = true;");
     for (const f of ["render/goal_dissolve_wiring.ts", "render/level_end_wiring.ts"]) expect(code(f)).toContain("const final = liveFinal(st);");
     const w = code("render/green_box_wiring.ts");
@@ -257,7 +259,7 @@ describe("⭐⭐ the hover across COPLANAR faces (2026-10-14, the owner: *\"make
   });
   it("⭐ wired: found at the hover's start from the contact plane, and exempt in its solve", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const behind = bodiesBehindPlane(st.world, setup, c.normal, level, opt.gapM / 2);");
+    expect(h).toContain("const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));");
     expect(h).toContain("exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y)");
   });
 });
@@ -309,11 +311,12 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
     expect(settleShare(HOVER_SETTLE_MS)).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverApproachMm: 1 })).toThrow(/hoverApproachMm/);
   });
-  it("⭐⭐ A: the settle is SOLVED along the face's normal (the face's part stops it at the gap kept) and shown eased", () => {
+  it("⭐⭐ A: the settle is SOLVED along the face's normal (the face's part stops it at the gap kept), the model at once, the mesh eased", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const r = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup),");
-    expect(h).toContain("const settleShown = hf.settleM * settleShare(now - hf.settleT0);");
-    expect(h).toContain("applyHoverModel(st, hf, add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));");
+    expect(h).toContain("const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt); st.pieceQueriesCarry += s.queries;");
+    // ⭐ (the hover's second audit) the MODEL settled at once; the mesh drawn easing down
+    expect(h).toContain("applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));");
+    expect(h).toContain("const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));");
   });
   it("⭐⭐ B: the contact shadow — the resting face's outline laid on the hosting face's plane", async () => {
     const { projectOntoPlane } = await import("../src/input/hover");
@@ -372,11 +375,11 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐⭐ A: wired — the model the SOLVED offset, the lag on the mesh only and taken off where the model reads the mesh", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv); st.hoverDraw = add(scale(hf.e1, lu), scale(hf.e2, lv));");
+    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv); const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0)); st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));");
     expect(h).not.toContain("scale(hf.e1, hf.fu.x)");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const d = st.hoverDraw ?? [0, 0, 0]; b.position.set(at[0] + s[0] + d[0], at[1] + s[1] + d[1], at[2] + s[2] + d[2]);");
-    expect(g).toContain("const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];");
+    expect(g).toContain("const d = modelLag(st.hoverDraw, st.orbitPiecePlaced); const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];");
   });
   it("⭐⭐ B/C: a held second touch or the capture ends the hover", async () => {
     const { hoverEndsOn } = await import("../src/input/hover");
@@ -419,7 +422,130 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐ F: the piece-only offset's fade is SOLVED; H: the face fill's material disposed with it", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, pieceSolveOptions(st));");
+    expect(h).toContain("const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });");
     expect(h).toContain("st.hoverFaceFill?.dispose(false, true);");
+  });
+});
+
+describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under a hover, one solve a frame in the budget, the travel kept, behind by height, over the face", () => {
+  const free: SolverEnv = { anchor: (q) => [q.yaw, q.v, 0], gap: () => 1, normal: () => [0, 1, 0] };
+  it("⭐⭐⭐ 1: under a hover the orbit's frame leaves the piece where it is — the orbit's own frame would lift it back to the ring height asked", async () => {
+    const { orbitFrame } = await import("../src/input/piece_orbit_solver");
+    const { orbitFrameUnderHover } = await import("../src/input/hover");
+    const q: OrbitQ = { yaw: 1, v: 0.4, zoom: 1 };
+    const fr = orbitFrame({ q, target: q, userV: 0.6, prevRaw: null }, free, { gapM: 0.001, maxQueries: 24 }, { stepM: 0.01, maxM: 0.1 });
+    expect(fr.q.v).toBeGreaterThan(0.45); // ⛔ what ran under the hover: the piece taken off the hover's plane
+    const held = orbitFrameUnderHover(q);
+    expect(held.q).toEqual(q);
+    expect(held.target).toEqual(q);
+    expect(held.userV).toBe(0.4);
+    expect(held.queries).toBe(0);
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("if (st.hover !== null) { // ⭐⭐⭐ (2026-10-14, the hover's second audit) THE ORBIT HOLDS STILL UNDER A HOVER (`orbitFrameUnderHover`): no backlog, no way back to the height, no relocation const held = orbitFrameUnderHover(st.pieceQ);");
+  });
+  it("⭐⭐ 1: the hover starts only from a piece AT REST, and drops the orbit's backlog", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain('if (!pieceShownAtRest(st, q)) { st.lastVerdict = "hover: waiting for the piece to come to rest"; st.hudDirty = true; return "wait"; }');
+    expect(h).toContain("st.orbit.reset(q.yaw, q.v); st.orbitInertia.stop(); st.orbitUserV = q.v;");
+  });
+  it("⭐⭐⭐ 2: what the frame's cap has left — none under HOVER_MIN_QUERIES", async () => {
+    const { hoverQueryBudget, HOVER_MIN_QUERIES } = await import("../src/input/hover");
+    expect(hoverQueryBudget(24, 0)).toBe(24);
+    expect(hoverQueryBudget(24, 24 - HOVER_MIN_QUERIES)).toBe(HOVER_MIN_QUERIES);
+    expect(hoverQueryBudget(24, 21)).toBe(0);
+    expect(hoverQueryBudget(24, 30)).toBe(0);
+  });
+  it("⭐⭐⭐ 3: along a wall at the SHIPPED cap the travel is kept across frames — the dropped rest fell short", async () => {
+    const { hoverPendingAfter } = await import("../src/input/hover");
+    const R = 0.05;
+    const origin: Vec3 = [0.1 - R - 0.0011, R + 0.001, 0]; // 1.1 mm from a wall x ≥ 0.1, 1 mm over the floor
+    const e2: Vec3 = [0, 0, -1];
+    const anchor = (q: OrbitQ): Vec3 => [origin[0] + q.yaw, origin[1], origin[2] + (q.v - 0.5) * HOVER_SPAN_M * e2[2]];
+    const floorGap = (p: Vec3) => Math.max(0, p[1] - R);
+    const wallGap = (p: Vec3) => Math.max(0, 0.1 - (p[0] + R));
+    const env: SolverEnv = {
+      anchor,
+      gap: (q) => Math.min(floorGap(anchor(q)), wallGap(anchor(q))),
+      normal: (q) => (wallGap(anchor(q)) < floorGap(anchor(q)) ? [-1, 0, 0] : [0, 1, 0]),
+      secondGap: (q) => Math.max(floorGap(anchor(q)), wallGap(anchor(q))),
+    };
+    const cap = DEFAULT_CONFIG.pieceSolverQueries;
+    // a 10 mm step along the wall, parallel to it (the auditor: 6.48 mm in one solve at the cap)
+    let u = 0, v = 0;
+    let pending: [number, number] = [0, 0.01];
+    const one = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [pending[0], pending[1] / HOVER_SPAN_M], env, { gapM: 0.001, maxQueries: cap });
+    const firstV = (one.q.v - 0.5) * HOVER_SPAN_M;
+    for (let frame = 0; frame < 20; frame++) {
+      if (Math.abs(pending[0] - u) + Math.abs(pending[1] - v) < 1e-12) break;
+      const r = solveOrbitStep({ yaw: u, v: 0.5 + v / HOVER_SPAN_M, zoom: 1 }, [pending[0] - u, (pending[1] - v) / HOVER_SPAN_M], env, { gapM: 0.001, maxQueries: cap });
+      u = r.q.yaw;
+      v = (r.q.v - 0.5) * HOVER_SPAN_M;
+      pending = hoverPendingAfter([u, v], r.deferred, pending);
+      expect(env.gap(r.q)).toBeGreaterThanOrEqual(0.0005);
+    }
+    expect(Math.abs(v)).toBeCloseTo(0.01, 6); // ✅ the whole 10 mm along the wall
+    expect(one.deferred).toBe(true); // ⛔ one solve at the cap: cut short, and the rest was dropped
+    expect(Math.abs(firstV)).toBeLessThan(0.0099);
+    expect(hoverPendingAfter([1, 2], true, [3, 4])).toEqual([3, 4]);
+    expect(hoverPendingAfter([1, 2], false, [3, 4])).toEqual([1, 2]);
+  });
+  it("⭐⭐ 4: a part is BEHIND the plane only as far as the piece's own height allows — a neighbour 0.4 mm proud is checked for a piece 0.6 mm up", async () => {
+    const { behindToleranceM, BEHIND_FLUSH_M } = await import("../src/input/hover");
+    const hard = 0.0005;
+    expect(behindToleranceM(0.001, hard)).toBeCloseTo(0.0005, 15);
+    expect(behindToleranceM(0.0006, hard)).toBeCloseTo(0.0001, 15);
+    expect(behindToleranceM(0.0004, hard)).toBe(BEHIND_FLUSH_M); // flush tops still flush
+    const proud = 0.0004;
+    expect(proud <= hard).toBe(true); // ⛔ the old tolerance (half the gap kept) exempted it — the piece passing 0.2 mm from it
+    expect(proud <= behindToleranceM(0.0006, hard)).toBe(false); // ✅ checked
+  });
+  it("⭐⭐ 5: the resting face must lie OVER the face — a piece beside a box, above the plane of its top, is not ready", async () => {
+    const { HOVER_OVER_FACE_M, distanceToTriangles } = await import("../src/input/hover");
+    const up: Vec3 = [0, 1, 0];
+    const down: Vec3 = [0, -1, 0];
+    const tris: [Vec3, Vec3, Vec3][] = [
+      [[-0.1, 0, -0.1], [0.1, 0, -0.1], [0.1, 0, 0.1]],
+      [[-0.1, 0, -0.1], [0.1, 0, 0.1], [-0.1, 0, 0.1]],
+    ];
+    expect(distanceToTriangles([0, 0, 0], up, tris)).toBe(0);
+    expect(distanceToTriangles([0.15, 0, 0], up, tris)).toBeCloseTo(0.05, 12);
+    const beside = { id: "box", bodyGapM: 0.005, faces: [{ faceId: "top", centre: [0, 0, 0] as Vec3, normal: up, triangles: tris }] };
+    const r = hoverFaceContact([0.15, 0.01, 0], down, [beside], 0.02);
+    expect(r.contact).toBeNull();
+    expect(r.nearest?.overFace).toBe(false);
+    const { triangles: _t, ...noTris } = beside.faces[0]!;
+    void _t;
+    expect(hoverFaceContact([0.15, 0.01, 0], down, [{ ...beside, faces: [noTris] }], 0.02).contact).not.toBeNull(); // ⛔ the body test alone
+    expect(hoverFaceContact([0.1 + HOVER_OVER_FACE_M / 2, 0.01, 0], down, [beside], 0.02).contact?.id).toBe("box"); // the contour's room
+  });
+  it("⭐ 7: coplanar faces tie — the one CONTAINING the centre, not the nearer centre", () => {
+    const up: Vec3 = [0, 1, 0];
+    const down: Vec3 = [0, -1, 0];
+    const quad = (x0: number, x1: number): [Vec3, Vec3, Vec3][] => [
+      [[x0, 0, -1], [x1, 0, -1], [x1, 0, 1]],
+      [[x0, 0, -1], [x1, 0, 1], [x0, 0, 1]],
+    ];
+    const a = { id: "wide", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [0, 0, 0] as Vec3, normal: up, triangles: quad(-1, 1) }] };
+    const b = { id: "narrow", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [1.05, 0, 0] as Vec3, normal: up, triangles: quad(1, 1.1) }] };
+    expect(hoverFaceContact([0.99, 0.001, 0], down, [b, a], 0.0015).contact?.id).toBe("wide");
+  });
+  it("⭐⭐ 6/9/11: the frame's order and the captured finger — pinned where a reorder breaks them", () => {
+    const g = code("render/green_box_wiring.ts");
+    const i = g.indexOf("hoverFrame(st, now, dtSec);");
+    const j = g.indexOf("c = st.orbitCentreM; const hov = st.hoverOffset ?? [0, 0, 0];");
+    const k = g.indexOf("anchorFrame(st, now); }");
+    expect(i).toBeGreaterThan(0);
+    expect(j).toBeGreaterThan(i); // 6: the centre read AFTER the hover moved it
+    expect(k).toBeGreaterThan(j); // the mesh placed after the hover's lag is set
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("if (st.hover !== null && st.orbitPiecePlaced) st.hoverSpent = st.hover.pointerId;");
+    expect(h).toContain("if (st.hoverSpent === pointerId) return true;");
+    expect(h).toContain("if (st.hoverSpent === pointerId) st.hoverSpent = null;");
+  });
+  it("⭐ 11: the model takes the drawn lag off only while the orbit places the piece", async () => {
+    const { modelLag } = await import("../src/input/hover");
+    expect(modelLag([0.001, 0, 0], false)).toEqual([0.001, 0, 0]);
+    expect(modelLag([0.001, 0, 0], true)).toEqual([0, 0, 0]);
+    expect(modelLag(null, false)).toEqual([0, 0, 0]);
   });
 });

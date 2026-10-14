@@ -34,6 +34,7 @@ import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { syncCentre } from "./camera_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame } from "./hover_wiring";
+import { modelLag, orbitFrameUnderHover } from "../input/hover";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
@@ -660,6 +661,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.hoverBand = null;
     st.hoverFollow = null;
     st.hoverDraw = null;
+    st.hoverSpent = null;
     st.hoverOffset = null;
     st.hoverOffsetFading = false;
     st.hoverView = null;
@@ -761,7 +763,7 @@ export function syncOrbitPieceModel(st: SceneState): void {
   if (o === undefined || o.orbited !== true) return;
   const r = m.rotationQuaternion ?? Quaternion.Identity();
   // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag is the mesh's, not the model's
-  const d = st.hoverDraw !== null && !st.orbitPiecePlaced ? st.hoverDraw : [0, 0, 0];
+  const d = modelLag(st.hoverDraw, st.orbitPiecePlaced);
   const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];
   const q: Quat = [r.w, r.x, r.y, r.z];
   const was = o.local;
@@ -892,7 +894,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ the SCENE menu's switch moved: the other piece, spawned as at boot (`spawnOrbitPiece`)
   if (st.cfg.orbitPieceKind !== st.orbitPieceKind) spawnOrbitPiece(st, st.cfg.orbitPieceKind, false);
   const now = performance.now();
-  const c = st.orbitCentreM;
+  let c = st.orbitCentreM;
   // ⭐ (2026-10-11) the orbit around the piece starts and ends with the HELD SECOND TOUCH (`hold_wiring.ts`) — the sphere is deleted
   // ⭐ The rig — what the input drives, stepping with its events — and the box easing after it every frame.
   // ⭐⭐ prototype (green box), 2026-10-02: the orbit's INERTIA — with no finger down it coasts on, slowing with τ = the gain × the
@@ -954,6 +956,17 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
     // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
+    if (st.hover !== null) {
+      // ⭐⭐⭐ (2026-10-14, the hover's second audit) THE ORBIT HOLDS STILL UNDER A HOVER (`orbitFrameUnderHover`): no backlog, no way back to the height, no relocation
+      const held = orbitFrameUnderHover(st.pieceQ);
+      if (!sameQ(held.target, rig)) st.orbit.reset(held.target.yaw, held.target.v);
+      st.orbitInertia.stop();
+      st.orbitUserV = held.userV;
+      st.pieceQ = held.q;
+      st.pieceSolveQueries = held.queries;
+      rig = { ...held.q };
+      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    } else {
     const rr = b0.rotationQuaternion;
     const relocKey = relocationKey(st.pieceQ, rr ? [rr.w, rr.x, rr.y, rr.z] : null, st.centreBlend.targetM, sceneSignature(st));
     if (st.relocateCursor.key !== relocKey) st.relocateCursor = { key: relocKey, from: 0 };
@@ -980,6 +993,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.pieceQ = fr.q;
     rig = { ...fr.q };
     st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    }
     st.pieceGuardFrameMs += performance.now() - t0;
   } else {
     // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are
@@ -1027,6 +1041,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ (2026-10-14, the hover) the drawn hover offset following the solved one; the piece-only offset eased out once the orbit drops it
   hoverFrame(st, now, dtSec);
   hoverOffsetFrame(st, dtSec * 1000);
+  // ⭐ (2026-10-14, the hover's second audit) the centre as the hover left it THIS frame (`syncCentre` replaces it) — ⛔ read at the frame's top, the piece and the camera trailed a frame
+  c = st.orbitCentreM;
   const hov = st.hoverOffset ?? [0, 0, 0];
   const pp: Vec3 =
     po !== null
@@ -1294,7 +1310,7 @@ export function sceneSignature(st: SceneState): string {
 }
 
 /** ⭐ (§12) the shown piece has come to rest on its solved place (the spring has caught up). */
-const pieceShownAtRest = (st: SceneState, q: OrbitQ): boolean =>
+export const pieceShownAtRest = (st: SceneState, q: OrbitQ): boolean =>
   st.boxOrbit !== null && Math.abs(st.boxOrbit.yaw - q.yaw) + Math.abs(st.boxOrbit.v - q.v) < 1e-4;
 
 /** ⭐ (§12) the solver's options from the tunables: the gap kept, in the WORLD (never the camera's), and the work cap. */

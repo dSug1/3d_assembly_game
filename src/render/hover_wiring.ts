@@ -37,8 +37,11 @@ import {
   hoverEndsOn,
   hoverViewRetargets,
   retargetShare,
+  behindToleranceM,
+  hoverPendingAfter,
+  hoverQueryBudget,
 } from "../input/hover";
-import { RESTING_COLOUR, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
+import { RESTING_COLOUR, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
@@ -72,6 +75,7 @@ export function hoverRelease(st: SceneState, pointerId: number): void {
   }
   if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
   if (st.hoverBand?.pointerId === pointerId) st.hoverBand = null;
+  if (st.hoverSpent === pointerId) st.hoverSpent = null;
 }
 
 /** ⭐ A world point on the screen, in the samples' CSS pixels. */
@@ -82,36 +86,62 @@ function screenOf(st: SceneState, p: Vec3): [number, number] {
   return [v.x * k, v.y * k];
 }
 
-/** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept) — what `hoverFaceContact` reads. */
+/** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test). */
 function hoverCandidates(st: SceneState, reachM: number, setup: CollisionSetup) {
   const b = st.greenBox!;
   return bodiesWithin(st.world, b.name, setup, reachM).map((x) => {
     const obj = st.world.objects.get(x.id);
     const faces = (obj?.faces ?? []).flatMap((f) => {
       const w = faceWorld(st.world, x.id, f.id);
-      return w === null ? [] : [{ faceId: f.id, centre: w.centre, normal: w.normal }];
+      if (w === null) return [];
+      const triangles = faceTrianglesWorld(st, x.id, f.id);
+      return [{ faceId: f.id, centre: w.centre, normal: w.normal, ...(triangles === null ? {} : { triangles }) }];
     });
     return { id: x.id, bodyGapM: x.gapM, faces };
   });
 }
 
-/** ⭐ May the drag hover? The resting face against a part's face, anti-parallel and in contact (`hoverContact`); then the hover starts. */
-function hoverStart(st: SceneState, pointerId: number): boolean {
+/** ⭐ (2026-10-14, the hover's second audit) A part's face as triangles in the world (its mesh's topology); `null` with none. */
+function faceTrianglesWorld(st: SceneState, partId: string, faceId: string): [Vec3, Vec3, Vec3][] | null {
+  const mesh = st.meshOf.get(partId);
+  const place = worldPlacementOf(st.world, partId);
+  if (mesh === undefined || place === null) return null;
+  const topo = st.topoOf.get(mesh.name) ?? null;
+  const face = topo?.faces.find((f) => f.id === faceId);
+  if (topo === null || face === undefined) return null;
+  const w = (i: number): Vec3 => add(place.position, qRotate(place.orientation, topo.positions[i]!));
+  const out: [Vec3, Vec3, Vec3][] = [];
+  for (let k = 0; k + 2 < face.triangles.length; k += 3) out.push([w(face.triangles[k]!), w(face.triangles[k + 1]!), w(face.triangles[k + 2]!)]);
+  return out;
+}
+
+/**
+ * ⭐ May the drag hover? The resting face looking at a part's face, anti-parallel, within reach, over it (`hoverFaceContact`); then the hover
+ * starts. `"wait"`: the shown piece is still easing onto its solved place — the drag does nothing yet and asks again.
+ */
+function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
-  const anchor = st.pieceAnchor;
   // ⭐ (2026-10-14, *"I can't hover translate in the attached configuration. Make sure the threshold distance is between resting face and collision face. Or check what else is bugging. The green piece should hover translate on the blue part's vertical face."*) every refusal SAYS why on the HUD's `last` line
   const refuse = (why: string): false => {
     st.lastVerdict = `hover: ${why} — the drag orbits`;
     st.hudDirty = true;
     return false;
   };
-  if (b === null || p === undefined || p.restingFace === null || anchor === null) return refuse("no orbited piece with a resting face");
+  if (b === null || p === undefined || p.restingFace === null || st.pieceAnchor === null) return refuse("no orbited piece with a resting face");
   if (st.orbitPiecePlaced) return refuse("the piece is placed in its goal");
-  if (st.pieceQ === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
+  const q = st.pieceQ;
+  if (q === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
   if (st.pieceOrbit !== null || st.pieceEntry !== null || st.centreReturn !== null) return refuse("the orbit round the piece is on");
   if (st.hold !== null) return refuse("a second touch is held");
   if (st.restAlign !== null) return refuse("a turn is playing");
+  // ⭐⭐ (2026-10-14, the hover's second audit) the shown piece AT REST on its solved place — the hover starts from where the piece IS (still easing: wait)
+  if (!pieceShownAtRest(st, q)) {
+    st.lastVerdict = "hover: waiting for the piece to come to rest";
+    st.hudDirty = true;
+    return "wait";
+  }
+  const anchor = ringAnchorAt(st, q);
   const r = b.rotationQuaternion ?? Quaternion.Identity();
   const rot: Quat = [r.w, r.x, r.y, r.z];
   const restingW = qRotate(rot, p.restingFace.normal);
@@ -128,30 +158,40 @@ function hoverStart(st: SceneState, pointerId: number): boolean {
     return refuse(
       nr === null
         ? `the resting face faces no part within ${HOVER_LOOK_M * 1000} mm`
-        : `the resting face is ${(nr.planeGapM * 1000).toFixed(1)} mm from ${nr.id}'s face, ${nr.angleDeg.toFixed(1)}° off anti-parallel (needs ≤ ${(reach * 1000).toFixed(0)} mm and ≤ ${HOVER_ALIGN_DEG}°)`,
+        : !nr.overFace
+          ? `the resting face is not over ${nr.id}'s face (beside it)`
+          : `the resting face is ${(nr.planeGapM * 1000).toFixed(1)} mm from ${nr.id}'s face, ${nr.angleDeg.toFixed(1)}° off anti-parallel (needs ≤ ${(reach * 1000).toFixed(0)} mm and ≤ ${HOVER_ALIGN_DEG}°)`,
     );
   }
   const right = st.camera.getDirection(new Vector3(1, 0, 0));
   const plane = hoverPlane(c.normal, [right.x, right.y, right.z]);
   if (plane === null) return refuse("the face is edge-on to the screen");
+  // ⭐⭐⭐ (2026-10-14, the hover's second audit) the orbit's backlog DROPPED: its target, its height and its coast are the piece's place (the orbit holds still under the hover)
+  st.orbit.reset(q.yaw, q.v);
+  st.orbitInertia.stop();
+  st.orbitUserV = q.v;
+  st.orbitRawPrev = { yaw: q.yaw, v: q.v };
   const centre0: Vec3 = [st.orbitCentreM.x, st.orbitCentreM.y, st.orbitCentreM.z];
   // ⭐⭐ A — THE SETTLE: not yet in contact, the piece goes down the face's normal to the gap kept — SOLVED (the face's own part, and every
-  // other, stops it), shown eased over HOVER_SETTLE_MS by `hoverFrame`
+  // other, stops it); ⭐ (2026-10-14, the hover's second audit) the MODEL settled at once, the mesh drawn easing down over HOVER_SETTLE_MS (`hoverFrame`); its queries counted
   let settleM = 0;
   if (c.gapM > maxGap) {
-    const down = (q: OrbitQ): Vec3 => add(anchor as Vec3, scale(c.normal, -q.yaw));
-    const r = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), { ...opt, maxQueries: Math.max(opt.maxQueries, 24) });
-    settleM = Math.max(0, r.q.yaw);
+    const down = (x: OrbitQ): Vec3 => add(anchor, scale(c.normal, -x.yaw));
+    const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt);
+    st.pieceQueriesCarry += s.queries;
+    settleM = Math.max(0, s.q.yaw);
   }
-  const settled: Vec3 = add(anchor as Vec3, scale(c.normal, -settleM));
+  const settled: Vec3 = add(anchor, scale(c.normal, -settleM));
   // ⭐⭐ (*"make sure that if collision faces are coplanar, the hover can continue over several parts' collision faces, provided within the max hover distance … the piece should be able to slide over the two white and one black parts"*) the parts lying wholly behind the contact face's plane are out of the hover's checks: the piece slides across coplanar faces
+  // ⭐⭐ (2026-10-14, the hover's second audit) "behind" within what the piece's own height above the plane allows (`behindToleranceM`)
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
-  const behind = bodiesBehindPlane(st.world, setup, c.normal, level, opt.gapM / 2);
+  const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, partId: c.id, behind };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], partId: c.id, behind };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
   st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
-  st.hoverDraw = null;
+  applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
+  st.hoverDraw = scale(c.normal, settleM);
   st.hoverOffsetFading = false;
   // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
   const hv0 = st.hoverView;
@@ -164,62 +204,48 @@ function hoverStart(st: SceneState, pointerId: number): boolean {
 }
 
 /**
- * ⭐⭐ One move of a finger that pressed on the orbited piece: `true` when the hover took it (or it is still a possible tap — nothing moves),
- * `false` to let the orbit have it.
+ * ⭐⭐ One move of a finger that pressed on the orbited piece: `true` when the hover took it (or it is still a possible tap, or the piece is
+ * still easing — nothing moves), `false` to let the orbit have it. ⭐⭐ (2026-10-14, the hover's second audit) the step is ADDED to the hover's pending target — solved once a
+ * frame by `hoverFrame`, inside the frame's budget.
  */
 export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
   void prev;
+  // ⭐⭐ (2026-10-14, the hover's second audit) a hover that ended in a CAPTURE spends its finger: it moves nothing more until it lifts (`D139`: a snap stops the drag that made it)
+  if (st.hoverSpent === pointerId) return true;
   const hb = st.hoverBand?.pointerId === pointerId ? st.hoverBand : null;
   if (hb !== null) hb.band.push(s);
   if (st.hover?.pointerId !== pointerId) {
     const hp = st.hoverPress;
     if (hp === null || hp.pointerId !== pointerId) return false;
     if (Math.hypot(s.x - hp.x, s.y - hp.y) < mmToPx(st.cfg.doubleTapSlop)) return true; // still a possible tap: nothing moves
+    const ok = hoverStart(st, pointerId);
+    if (ok === "wait") return true; // the piece still easing: asked again on the next move
     st.hoverPress = null;
-    if (!hoverStart(st, pointerId)) {
+    if (!ok) {
       st.hoverBand = null;
       return false;
     }
   }
   const h = st.hover!;
-  const b = st.greenBox;
-  if (b === null) return false;
+  if (st.greenBox === null) return false;
   // ⭐⭐ through the DEADBAND: a wobble on the axis the finger is not moving emits nothing
   const step = hb !== null ? hb.band.step : { dx: 0, dy: 0 };
   const dx = step.dx;
   const dy = step.dy;
   if (dx === 0 && dy === 0) return true;
   // the finger's step on the plane (each axis's screen shadow, per metre)
-  const at = add(h.origin, add(scale(h.e1, h.u), scale(h.e2, h.v)));
+  const at = add(h.origin, add(scale(h.e1, h.pending[0]), scale(h.e2, h.pending[1])));
   const s0 = screenOf(st, at);
   const s1 = screenOf(st, add(at, scale(h.e1, 0.01)));
   const s2 = screenOf(st, add(at, scale(h.e2, 0.01)));
   const a1: [number, number] = [(s1[0] - s0[0]) / 0.01, (s1[1] - s0[1]) / 0.01];
   const a2: [number, number] = [(s2[0] - s0[0]) / 0.01, (s2[1] - s0[1]) / 0.01];
   const [du, dv] = planeStepFromScreen(dx, dy, a1, a2, st.cfg.hoverGain);
-  const [tu, tv] = clampDisc(h.u + du, h.v + dv, st.cfg.hoverAmplitudeMm);
-  // ⭐ solved by the orbit's clearance rule, its two coordinates the plane's (the second offset into the solver's 0 … 1)
-  const base = pieceCollisionSetup(st);
-  const setup: CollisionSetup = { ...base, exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y) };
-  const env = pieceSolverEnv(st, (q) => add(h.origin, add(scale(h.e1, q.yaw), scale(h.e2, (q.v - 0.5) * HOVER_SPAN_M))), setup);
-  const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [tu - h.u, (tv - h.v) / HOVER_SPAN_M], env, pieceSolveOptions(st));
-  st.pieceQueries += r.queries;
-  st.pieceMoveBlocked = r.blocked;
-  const moved = add(scale(h.e1, r.q.yaw - h.u), scale(h.e2, (r.q.v - 0.5) * HOVER_SPAN_M - h.v));
-  h.u = r.q.yaw;
-  h.v = (r.q.v - 0.5) * HOVER_SPAN_M;
-  // ⭐⭐ the SOLVED offset is the follower's target — drawn by `hoverFrame`, as a translated part's mesh follows its model
-  const hf = st.hoverFollow;
-  if (hf !== null) {
-    if (Math.abs(h.u - hf.u) + Math.abs(h.v - hf.v) > 1e-12) {
-      hf.du = h.u - hf.u;
-      hf.dv = h.v - hf.v;
-    }
-    hf.u = h.u;
-    hf.v = h.v;
-  }
+  const [tu, tv] = clampDisc(h.pending[0] + du, h.pending[1] + dv, st.cfg.hoverAmplitudeMm);
+  const asked = add(scale(h.e1, tu - h.pending[0]), scale(h.e2, tv - h.pending[1]));
+  h.pending = [tu, tv];
   // ⭐⭐ (*"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the other parts SWAY at the least angle — a hover is a slide along a part (`hoverSwayDeg`), about the placed parts
-  if (hb !== null) hoverSway(st, hb.sway, s, moved, Math.hypot(dx, dy));
+  if (hb !== null) hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
   // the camera eases toward the hover view with the finger's travel
   const hv = st.hoverView;
   if (hv !== null) hv.progress = hoverViewProgress(hv.progress, Math.hypot(dx, dy) / mmToPx(1), st.cfg.hoverCameraGain, true);
@@ -251,10 +277,11 @@ function hoverSway(st: SceneState, watcher: SwayWatcher, s: Sample, moved: Vec3,
 }
 
 /**
- * ⭐⭐ Each frame: the hover's MODEL is its SOLVED offset (the settle eased in) — the gizmo moved (the piece riding it) or the piece alone; the
- * part translation's follower (`translateInertiaMs`, `translateDampingRatio`, the phantom lead `translateLeadMs`) only DRAWS it, its lag kept
- * behind the solved place (`hoverDrawLag`, `st.hoverDraw`). Once the finger lifted and the drawn lag is gone, it ends. A held second touch or
- * a capture ends it at once (`hoverEndsOn`). The hover finger's deadband ticked (a still finger sends no event).
+ * ⭐⭐ Each frame: the hover's pending target SOLVED once (`hoverSolve`, inside the frame's budget) — the MODEL its solved offset, the gizmo
+ * moved (the piece riding it) or the piece alone; the part translation's follower (`translateInertiaMs`, `translateDampingRatio`, the phantom
+ * lead `translateLeadMs`) only DRAWS it, its lag kept behind the solved place (`hoverDrawLag`), the settle drawn easing down
+ * (`st.hoverDraw`). Once the finger lifted and the drawn lag is gone, it ends. A held second touch or a capture ends it at once
+ * (`hoverEndsOn`). The hover finger's deadband ticked (a still finger sends no event).
  */
 export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   if (st.hoverBand !== null) st.hoverBand.band.tick(now);
@@ -263,7 +290,9 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
     hoverEndNow(st);
     return;
   }
+  const h = st.hover;
   const hf = st.hoverFollow;
+  if (h !== null && hf !== null && Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) > 1e-12) hoverSolve(st, h, hf);
   if (hf === null || !(dtSec > 0)) return;
   const tau = st.cfg.translateInertiaMs / 1000;
   const zeta = st.cfg.translateDampingRatio;
@@ -274,18 +303,50 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   hf.lv = hf.v;
   hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, lead), tau, zeta, dtSec);
   hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, lead), tau, zeta, dtSec);
-  const settleShown = hf.settleM * settleShare(now - hf.settleT0);
-  // ⭐⭐⭐ (2026-10-14, the hover's audit) the MODEL: the solved offset (the settle eased in — a solved move, shown monotonically)
-  applyHoverModel(st, hf, add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
-  // …the DRAWN lag behind it: the mesh only
+  // ⭐⭐ the DRAWN lag behind the model: the follower's (behind the last solved step), and the settle still to show (above the settled place —
+  // ⭐ (2026-10-14, the hover's second audit) ⛔ the MODEL eased down while the steps were solved at the settled depth: an unchecked pose)
   const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv);
-  st.hoverDraw = add(scale(hf.e1, lu), scale(hf.e2, lv));
+  const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));
+  st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));
   // settled after the release: nothing drawn apart
   const settled = Math.abs(hf.fu.x - hf.u) + Math.abs(hf.fv.x - hf.v) < 1e-6 && Math.abs(hf.fu.v) + Math.abs(hf.fv.v) < 1e-5;
-  if (st.hover === null && settled && settleShown >= hf.settleM) {
+  if (st.hover === null && settled && settleLeft <= 0) {
     st.hoverFollow = null;
     st.hoverDraw = null;
   }
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the hover's second audit) The hover's pending target solved ONCE this frame, with what the frame's work cap has left (`hoverQueryBudget`) — the orbit
+ * solves nothing under a hover, so the cap is the hover's; a solve the cap cut keeps its target (`hoverPendingAfter`).
+ */
+function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: NonNullable<SceneState["hoverFollow"]>): void {
+  const budget = hoverQueryBudget(st.cfg.pieceSolverQueries, st.pieceQueries);
+  if (budget === 0) {
+    st.pieceDeferred = true;
+    return;
+  }
+  // ⭐ solved by the orbit's clearance rule, its two coordinates the plane's (the second offset into the solver's 0 … 1)
+  const base = pieceCollisionSetup(st);
+  const setup: CollisionSetup = { ...base, exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y) };
+  const env = pieceSolverEnv(st, (q) => add(h.origin, add(scale(h.e1, q.yaw), scale(h.e2, (q.v - 0.5) * HOVER_SPAN_M))), setup);
+  const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });
+  st.pieceQueries += r.queries;
+  st.pieceMoveBlocked = r.blocked;
+  if (r.deferred) st.pieceDeferred = true;
+  const nu = r.q.yaw;
+  const nv = (r.q.v - 0.5) * HOVER_SPAN_M;
+  h.pending = hoverPendingAfter([nu, nv], r.deferred, h.pending);
+  if (Math.abs(nu - h.u) + Math.abs(nv - h.v) > 1e-12) {
+    hf.du = nu - h.u;
+    hf.dv = nv - h.v;
+  }
+  h.u = nu;
+  h.v = nv;
+  hf.u = nu;
+  hf.v = nv;
+  // ⭐⭐⭐ (2026-10-14, the hover's audit) the MODEL: the solved offset
+  applyHoverModel(st, hf, add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
 }
 
 function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, w: Vec3): void {
@@ -295,10 +356,12 @@ function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow
   } else st.hoverOffset = add(hf.offset0, w);
 }
 
-/** ⭐ (2026-10-14, the hover's audit) The hover ended at once (a held second touch, the capture): its finger handed back, the model at its solved place, nothing drawn apart. */
+/**
+ * ⭐ (2026-10-14, the hover's audit) The hover ended at once (a held second touch, the capture): the model at its solved place, nothing drawn
+ * apart. A held second touch hands the finger back; ⭐⭐ (2026-10-14, the hover's second audit) a CAPTURE spends it until it lifts (`st.hoverSpent`).
+ */
 function hoverEndNow(st: SceneState): void {
-  const hf = st.hoverFollow;
-  if (hf !== null && !st.orbitPiecePlaced) applyHoverModel(st, hf, add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
+  if (st.hover !== null && st.orbitPiecePlaced) st.hoverSpent = st.hover.pointerId;
   st.hover = null;
   st.hoverPress = null;
   st.hoverBand = null;
@@ -343,7 +406,10 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   const ring = ringAnchorAt(st, q); // the hover offset included
   const base: Vec3 = [ring[0] - o[0], ring[1] - o[1], ring[2] - o[2]];
   const env = pieceSolverEnv(st, (x) => add(base, scale(o, x.yaw)));
-  const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, pieceSolveOptions(st));
+  // ⭐⭐ (2026-10-14, the hover's second audit) inside what the frame's work cap has left (none: it waits a frame)
+  const budget = hoverQueryBudget(st.cfg.pieceSolverQueries, st.pieceQueries);
+  if (budget === 0) return;
+  const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });
   st.pieceQueries += r.queries;
   const n = scale(o, Math.min(1, Math.max(0, r.q.yaw)));
   if (done(n)) {
@@ -351,7 +417,7 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
     st.hoverOffsetFading = false;
   } else {
     st.hoverOffset = n;
-    if (r.q.yaw >= 1 - 1e-9) st.hoverOffsetFading = false; // blocked where it stands
+    if (r.blocked && r.q.yaw >= 1 - 1e-9) st.hoverOffsetFading = false; // blocked where it stands
   }
 }
 
@@ -403,8 +469,11 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   let ready = st.hoverReady;
   if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
-  else if (now - st.hoverReadyAt >= READY_EVERY_MS) {
+  else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
+    // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
     st.hoverReadyAt = now;
+    st.hoverReadyWorld = st.world;
+    st.hoverReadyReachMm = st.cfg.hoverApproachMm;
     const r = b.rotationQuaternion ?? Quaternion.Identity();
     const restingW = qRotate([r.w, r.x, r.y, r.z], p.restingFace.normal);
     const reach = st.cfg.hoverApproachMm / 1000;

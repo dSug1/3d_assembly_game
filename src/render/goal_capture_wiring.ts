@@ -73,8 +73,6 @@ export function goalCaptureFrame(st: SceneState, nowMs: number): void {
   // ⛔ A demo plays itself; a finished level is frozen.
   if (!final || st.demo !== null || st.levelEnd.result !== null) return;
   // ⭐ A grip grabs its body and, for a translation forwarded to it, the assembly's root.
-  // ⭐ (2026-10-14) the orbited piece is always the player's: held to the margins of a grabbed piece, never the untouched one's
-  if (st.greenBox !== null && st.sceneSpec.orbitGoals !== undefined) st.grabbed.add(st.greenBox.name);
   for (const grip of st.held.values()) {
     const id = st.idOf.get(grip.mesh);
     if (id !== undefined) {
