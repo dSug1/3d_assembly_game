@@ -10,6 +10,9 @@
  */
 import type { Vec3 } from "../core/vec";
 import type { OrbitQ } from "./piece_orbit_solver";
+import type { GestureConfig } from "./gestureConfig";
+import { cameraOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
+import { cameraGapM } from "./green_box";
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -72,46 +75,32 @@ export function clampDisc(u: number, v: number, maxMm: number): [number, number]
 }
 
 /**
- * ⭐⭐ **THE HOVER VIEW** (the owner: *"camera moves to align camera view with the normal of the collision surface with the same offset as the one
- * of boot"* → *"Distance + angles"*) — the camera on the piece's side of the face, looking at \`target\` along the face's normal \`n\`, at the boot
- * distance \`distM\`, turned by the CAMERA OFFSET's yaw (about \`e2\`, the plane's "up" on the screen) and pitch (about \`e1\`). Kept at least
- * \`minTiltDeg\` off the world vertical (a camera looking straight down has no up), tilted toward \`awayHint\` (where the camera was).
+ * ⭐⭐⭐ (2026-10-14, the owner: *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) — **THE HOVER VIEW IS ISOMETRIC**: the camera looks along a direction that projects EQUALLY onto the three
+ * orthogonal planes — the HORIZONTAL one, the GRAVITY (vertical) one of the hosting face, and the third, orthogonal to both — so its three
+ * components are equal: `(up + a + b) / √3` (35.26° above the horizontal). The camera sits ABOVE and to the RIGHT of the hosted face, looking
+ * down-left at it:
+ * * a SIDE face (`|n_y| ≤ 0.7`): `a` its normal laid flat (the piece's side), `b` the horizontal across it toward the screen's `right`;
+ * * a TOP face (an underside: `up` downward): `a` the screen's `right` laid flat, `b` the horizontal across it toward where the camera is
+ *   (`toCam`), so the view does not swing round to the other side.
+ * ⛔ It replaced the face-on view turned by the CAMERA OFFSET's angles (a vertical face was watched head-on, its contact seen edge-on).
  */
-export function hoverCameraPosition(
-  target: Vec3,
-  n: Vec3,
-  e1: Vec3,
-  e2: Vec3,
-  distM: number,
-  yawRad: number,
-  pitchRad: number,
-  awayHint: Vec3,
-  minTiltDeg = 3,
-): Vec3 {
-  // yaw about e2, then pitch about e1 (both small): the view direction n turned toward e1 and e2
-  let d: Vec3 = [
-    n[0] * Math.cos(yawRad) + e1[0] * Math.sin(yawRad),
-    n[1] * Math.cos(yawRad) + e1[1] * Math.sin(yawRad),
-    n[2] * Math.cos(yawRad) + e1[2] * Math.sin(yawRad),
-  ];
-  // ⭐ (2026-10-14, the hover's audit) the pitch turns toward the world's UP: on a side face `e2 = n × e1` points DOWN (Babylon is left-handed), and the boot's
-  // pitch put the hover view BELOW the piece
-  const p2: Vec3 = pitchAxis(e2);
-  d = [d[0] * Math.cos(pitchRad) + p2[0] * Math.sin(pitchRad), d[1] * Math.cos(pitchRad) + p2[1] * Math.sin(pitchRad), d[2] * Math.cos(pitchRad) + p2[2] * Math.sin(pitchRad)];
-  const maxUp = Math.cos((minTiltDeg * Math.PI) / 180);
-  if (Math.abs(d[1]) > maxUp) {
-    const h = unit([awayHint[0], 0, awayHint[2]]) ?? ([1, 0, 0] as Vec3);
-    const s = Math.sign(d[1]) || 1;
-    const t = (minTiltDeg * Math.PI) / 180;
-    d = [h[0] * Math.sin(t), s * Math.cos(t), h[2] * Math.sin(t)];
+export function hoverIsoDirection(n: Vec3, right: Vec3, toCam: Vec3): Vec3 {
+  const flat = (x: Vec3): Vec3 | null => unit([x[0], 0, x[2]]);
+  const up: Vec3 = [0, 1, 0];
+  let a: Vec3, b: Vec3, sy: number;
+  if (Math.abs(n[1]) <= 0.7) {
+    a = flat(n) ?? [1, 0, 0];
+    b = [-a[2], 0, a[0]];
+    if (dot(b, right) < 0) b = [-b[0], 0, -b[2]];
+    sy = 1;
+  } else {
+    a = flat(right) ?? [1, 0, 0];
+    b = [-a[2], 0, a[0]];
+    if (dot(b, toCam) < 0) b = [-b[0], 0, -b[2]];
+    sy = Math.sign(n[1]);
   }
-  const u = unit(d) ?? n;
-  return [target[0] + u[0] * distM, target[1] + u[1] * distM, target[2] + u[2] * distM];
-}
-
-/** ⭐ (2026-10-14, the hover's audit) The hover view's pitch axis: `e2`, turned to point UP when it points down (a level `e2`, on a top face, is kept). */
-export function pitchAxis(e2: Vec3): Vec3 {
-  return e2[1] < -1e-9 ? [-e2[0], -e2[1], -e2[2]] : e2;
+  const k = 1 / Math.sqrt(3);
+  return [(a[0] + b[0] + up[0] * sy) * k, (a[1] + b[1] + up[1] * sy) * k, (a[2] + b[2] + up[2] * sy) * k];
 }
 
 /**
@@ -330,4 +319,18 @@ export function behindToleranceM(planeGapM: number, hardM: number): number {
 /** ⭐ (2026-10-14, the hover's second audit) The drawn lag the MODEL takes off the mesh (`syncOrbitPieceModel`) — none once the piece is captured (the pull owns the mesh). */
 export function modelLag(draw: Vec3 | null, placed: boolean): Vec3 {
   return draw !== null && !placed ? draw : [0, 0, 0];
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) — **THE HOVER VIEW'S DISTANCE**: the camera's distance to the piece AT BOOT, had the zoom been what it is
+ * now — the boot's orbit pose (`cam`), the piece's place on the rings (`box`, from the centre) and the angle offsets, the camera put behind
+ * the piece by the gap the zoom makes NOW (`cameraGapM`). So the zoom works in the hover view as it does at boot.
+ */
+export function hoverViewDistanceM(
+  cfg: GestureConfig,
+  boot: { readonly cam: OrbitAt; readonly box: Vec3; readonly off: CameraAngleOffset },
+  zoom: number,
+): number {
+  const o = cameraOffset(cfg, boot.cam, boot.box, boot.off, cameraGapM(cfg.cameraRadiusOffsetMm / 1000, zoom));
+  return Math.hypot(o[0] - boot.box[0], o[1] - boot.box[1], o[2] - boot.box[2]);
 }

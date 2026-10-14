@@ -552,11 +552,15 @@ export interface SceneState {
     n: import("../core/vec").Vec3;
     e1: import("../core/vec").Vec3;
     e2: import("../core/vec").Vec3;
+    /** ⭐⭐ (2026-10-14) the ISOMETRIC view direction from the target (`hoverIsoDirection`) */
+    iso: import("../core/vec").Vec3;
     /** ⭐ (2026-10-14, the hover's audit) the view it RETARGETED from (a hover on another face), eased out over `HOVER_VIEW_RETARGET_MS` */
-    from: { target: import("../core/vec").Vec3; n: import("../core/vec").Vec3; e1: import("../core/vec").Vec3; e2: import("../core/vec").Vec3; t0: number } | null;
+    from: { target: import("../core/vec").Vec3; iso: import("../core/vec").Vec3; t0: number } | null;
   } | null;
   /** ⭐ (2026-10-14) the camera's distance to the piece at boot — the hover view's. */
   bootCamPieceDistM: number | null;
+  /** ⭐ (2026-10-14) the camera's BOOT pose — the orbit's, the piece's place on the rings, the angle offsets — for the hover view's distance at the zoom of the moment (`hoverViewDistanceM`). */
+  bootCamGeom: { cam: import("../input/follow_camera").OrbitAt; box: import("../core/vec").Vec3; off: import("../input/follow_camera").CameraAngleOffset } | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
   orbitPiecePlaced: boolean;
   /** ⭐⭐ (2026-10-14) a hover is AVAILABLE: the part's face the resting face looks at within reach (`hoverVisualFrame`), and when it was last looked for. */

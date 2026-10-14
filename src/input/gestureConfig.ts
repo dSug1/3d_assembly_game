@@ -913,9 +913,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
   orbitDeadbandMm: 2.3,
   orbitBandRestMs: 400,
-  hoverGizmoMove: 1,
+  // ⭐ (2026-10-14, the owner: *"Set default gizmo moves with hover off and hover distance is unlimited"*) the piece alone, unlimited
+  hoverGizmoMove: 0,
   // ⚠ guesses with sliders
-  hoverAmplitudeMm: 15,
+  hoverAmplitudeMm: 500,
   hoverGain: 1,
   hoverCameraGain: 0.05,
   // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding

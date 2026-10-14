@@ -9,7 +9,6 @@ import {
   HOVER_SPAN_M,
   HOVER_UNLIMITED_MM,
   clampDisc,
-  hoverCameraPosition,
   hoverFaceContact,
   hoverContactM,
   hoverPlane,
@@ -103,17 +102,35 @@ describe("⭐⭐⭐ the hover — when it may, on which plane, how far", () => {
 });
 
 describe("⭐⭐ the hover view — the camera along the face's normal, at the boot distance and angles; in and out by the finger's travel", () => {
-  it("⭐⭐ the view: along the normal at the boot distance, turned by the CAMERA OFFSET's angles", () => {
-    const n: Vec3 = [0, 0, 1];
-    const p = hoverCameraPosition([0, 0, 0], n, [1, 0, 0], [0, 1, 0], 2, 0, 0, [0, 0, 1]);
-    expect(p[2]).toBeCloseTo(2, 12);
-    const y = hoverCameraPosition([0, 0, 0], n, [1, 0, 0], [0, 1, 0], 2, 0.2, 0, [0, 0, 1]);
-    expect(Math.hypot(...y)).toBeCloseTo(2, 12);
-    expect(y[0]).toBeCloseTo(2 * Math.sin(0.2), 12);
-    // a top face, no angle: kept a few degrees off the vertical (a camera straight down has no up)
-    const top = hoverCameraPosition([0, 0, 0], [0, 1, 0], [1, 0, 0], [0, 0, -1], 2, 0, 0, [0, 1, 1]);
-    expect(top[1] / 2).toBeLessThan(Math.cos((3 * Math.PI) / 180) + 1e-9);
-    expect(top[2]).toBeGreaterThan(0); // toward where the camera was
+  it("⭐⭐⭐ the view is ISOMETRIC (2026-10-14): equal on the horizontal, the gravity and the third plane; above and right of the face", async () => {
+    const { hoverIsoDirection } = await import("../src/input/hover");
+    const k = 1 / Math.sqrt(3);
+    // a side face looking +z, the camera at +z (Babylon: its right is −x)
+    const s = hoverIsoDirection([0, 0, 1], [-1, 0, 0], [0, 0.5, 1]);
+    for (const c of s) expect(Math.abs(c)).toBeCloseTo(k, 12); // projects equally onto the three planes
+    expect(s[1]).toBeGreaterThan(0); // from above
+    expect(s[2]).toBeGreaterThan(0); // on the piece's side of the face
+    expect(s[0]).toBeLessThan(0); // toward the screen's right: looking down-LEFT at the face
+    // a top face: up, the screen's right, toward where the camera is
+    const t = hoverIsoDirection([0, 1, 0], [1, 0, 0], [0, 1, 2]);
+    for (const c of t) expect(Math.abs(c)).toBeCloseTo(k, 12);
+    expect(t[1]).toBeGreaterThan(0);
+    expect(t[0]).toBeGreaterThan(0);
+    expect(t[2]).toBeGreaterThan(0);
+    // a face turned 30° about the vertical: still equal
+    const n: Vec3 = [Math.sin(0.5), 0, Math.cos(0.5)];
+    const u = hoverIsoDirection(n, [-Math.cos(0.5), 0, Math.sin(0.5)], [0, 1, 1]);
+    expect(Math.abs(u[1])).toBeCloseTo(k, 12);
+    expect(u[0] * n[0] + u[2] * n[2]).toBeCloseTo(k, 12);
+  });
+  it("⭐⭐ the view's distance: the boot distance at the zoom of the moment", async () => {
+    const { hoverViewDistanceM } = await import("../src/input/hover");
+    const boot = { cam: { yaw: 0.3, v: 0.5 }, box: [0.4, 0.1, 0.2] as Vec3, off: { yawRad: 0, pitchRad: 0 } };
+    const cfg = { ...DEFAULT_CONFIG, cameraRadiusOffsetMm: 1000 };
+    const d1 = hoverViewDistanceM(cfg, boot, 1);
+    const d2 = hoverViewDistanceM(cfg, boot, 2);
+    expect(d2).toBeGreaterThan(d1); // the zoom works in the hover view
+    expect(d2 - d1).toBeGreaterThan(0.5); // ~ one more radius offset behind the piece
   });
 
   it("⭐⭐ in by the hover drag's travel, out by the orbit's — the slider's share per mm; eased", () => {
@@ -409,16 +426,10 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
     const lower = { id: "lower", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [0.15, -0.0004, 0] as Vec3, normal: up }] };
     expect(hoverFaceContact(at, down, [right, lower], 0.0015).contact?.id).toBe("right");
   });
-  it("⭐⭐ the hover view's pitch turns toward the world's UP on a side face (e2 = n × e1 points down there)", () => {
-    // a side face looking +z, the screen's right −x (Babylon, a camera at +z): e2 = z × (−x) = −y
-    const n: Vec3 = [0, 0, 1];
-    const e1: Vec3 = [-1, 0, 0];
-    const e2: Vec3 = [0, -1, 0];
-    const p = hoverCameraPosition([0, 0, 0], n, e1, e2, 1, 0, (20 * Math.PI) / 180, [0, 0.3, 1]);
-    expect(p[1]).toBeCloseTo(Math.sin((20 * Math.PI) / 180), 12); // ⛔ was −0.342: below the piece
-    // a top face: e2 level — kept
-    const t = hoverCameraPosition([0, 0, 0], [0, 1, 0], [1, 0, 0], [0, 0, 1], 1, 0, (20 * Math.PI) / 180, [0, 1, 1]);
-    expect(t[2]).toBeCloseTo(Math.sin((20 * Math.PI) / 180), 12);
+  it("⭐ the defaults (2026-10-14, the owner: *\"Set default gizmo moves with hover off and hover distance is unlimited\"*); the highlight green", () => {
+    expect(DEFAULT_CONFIG.hoverGizmoMove).toBe(0);
+    expect(DEFAULT_CONFIG.hoverAmplitudeMm).toBe(HOVER_UNLIMITED_MM);
+    expect(code("render/hover_wiring.ts")).toContain("const READY_COLOUR = Color3.FromInts(216, 253, 210);");
   });
   it("⭐ F: the piece-only offset's fade is SOLVED; H: the face fill's material disposed with it", () => {
     const h = code("render/hover_wiring.ts");
