@@ -711,7 +711,7 @@ describe("⭐⭐⭐ the gizmo's supporting face as the mating face; a tap on the
   });
 });
 
-describe("⭐⭐⭐ the hover bounded by the hosting faces, the mirror growth, the smooth draw (2026-10-14, the owner)", () => {
+describe("⭐⭐⭐ the hover bounded by the hosting faces, the smooth draw (2026-10-14, the owner)", () => {
   it("⭐⭐⭐ the hover stops at the faces' edge, slides along it, and comes back by reversing — no switch to the orbit", async () => {
     const { boundStep } = await import("../src/input/hover");
     const inside = (u: number, v: number) => u <= 0.1 && Math.abs(v) <= 0.05; // the faces: u ≤ 0.1, |v| ≤ 0.05
@@ -721,17 +721,6 @@ describe("⭐⭐⭐ the hover bounded by the hosting faces, the mirror growth, t
     expect(s[0]).toBeLessThanOrEqual(0.1);
     expect(s[0]).toBeGreaterThan(0.099);
     expect(boundStep([0.1, 0], [0.05, 0], inside)).toEqual([0.05, 0]); // reversed: back at once
-  });
-  it("⭐⭐⭐ the MIRROR growth: 0 where the quads disappear, full at the rings' closest, on the quads' own logarithm", async () => {
-    const { mirrorQuadShare, quadSize } = await import("../src/core/orientation_set");
-    const near = 0.09, from = 3, k = DEFAULT_CONFIG.quadGrowthLogK;
-    expect(mirrorQuadShare(from, near, from, k)).toBe(0);
-    expect(mirrorQuadShare(near, near, from, k)).toBeCloseTo(1, 12);
-    expect(mirrorQuadShare(5, near, from, k)).toBe(0); // the quads shown: none
-    // the mirror of the quads' curve: as far in from `from` as the quads are out
-    const max = 2 * from - near;
-    const d = 1.2;
-    expect(mirrorQuadShare(d, near, from, k)).toBeCloseTo(quadSize(2 * from - d, from, max, k, 0, 1), 12);
   });
   it("⭐⭐⭐ the hover's drawn piece on the orbit's spring: a mouse's events beating against the frames show as a steady slide, no stick-slip", async () => {
     const { advanceFollow } = await import("../src/input/follow");
@@ -783,10 +772,12 @@ describe("⭐⭐⭐ the hover bounded by the hosting faces, the mirror growth, t
     expect(g).toContain("const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;");
     expect(g).toContain("wayInDrawFrame(st, dtSec * 1000);");
     const q = code("render/orient_cube.ts");
-    expect(q).toContain("q.growth = q.mirror ? Math.max(Math.min(1, onePx / full), mirrorQuadShare(d, range.minM, from, st.cfg.quadGrowthLogK)) : Math.min(1, onePx / full);");
+    expect(q).not.toContain("mirrorQuadShare"); // ⛔ (2026-10-14) the mirror growth deleted: the yellows are full size
     expect(q).toContain("mesh.scaling.setAll(share);");
     // ⭐ (2026-10-14) out of the mirror, its least while it fades
-    expect(q).toContain("st.restingQuads?.mirror ? st.restingQuads.growth : 0));");
+    // ⭐ (2026-10-14, *"make the yellow highlight on the part's hosting face full size (no scaling any longer)"*) full size; only its fade follows the quads
+    expect(q).toContain("const share = 1;");
+    expect(q).not.toContain("st.restingQuads?.mirror ? st.restingQuads.growth");
   });
 });
 

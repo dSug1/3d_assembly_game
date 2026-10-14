@@ -26,7 +26,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
-import { distinctDirections, distinctPlanes, mirrorQuadShare, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
+import { distinctDirections, distinctPlanes, quadSide, quadSize, quadsShownFromM, type OrientDirection } from "../core/orientation_set";
 import { add, dot, normalize, qRotate, scale, sub, type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "../input";
@@ -194,16 +194,12 @@ function supportHighlightFrame(st: SceneState): void {
   const alpha = supportAlpha(sh?.alpha ?? 0, visible, dt);
   st.supportHighlight = { key, mesh, centre, extentM, alpha, at: now };
   if (mesh === null || face === null) return;
-  // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — scaled about the face's CENTRE by the mirror's share (the resting face's own): full, the face's contour;
-  // least, ONE PIXEL across at the face's distance
-  const cam = st.camera.position;
-  const onePx = trackingMetresPerPx(Math.hypot(centre[0] - cam.x, centre[1] - cam.y, centre[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
-  // ⭐ (2026-10-14, the owner: *"there is one moment when the yellow highlight of the part's hosting face goes full scale just before disappearing when the part orbits away from the gizmo. It does not happen when the piece orbits towards the gizmo."*) — out of the mirror (the quads back) it stays at its LEAST while it fades: ⛔ it jumped to full scale for the
-  // fade's quarter second as the piece orbited away
-  const share = Math.min(1, Math.max(extentM > 0 ? onePx / extentM : 1, st.restingQuads?.mirror ? st.restingQuads.growth : 0));
+  // ⭐⭐ (2026-10-14, the owner: *"make the yellow highlight on the part's hosting face full size (no scaling any longer) and appear and fade when the quads disappear or appear"*) — FULL SIZE, the
+  // face's contour; only its fade (`supportAlpha`) follows the quads — ⛔ the mirror growth about the face's centre is deleted
+  const share = 1;
   const lift = scale(face.normal, 0.0004);
   mesh.position.set(centre[0] + lift[0], centre[1] + lift[1], centre[2] + lift[2]);
-  mesh.scaling.setAll(share);
+  mesh.scaling.setAll(share); void extentM;
   mesh.isVisible = alpha > 0.001;
   mesh.alpha = alpha;
   mesh.color = st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT;
@@ -369,7 +365,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       edges.parent = root;
       return { normal: n, fill, edges };
     });
-    st.restingQuads = { key, root, quads, growth: 1, shown: false, mirror: false };
+    st.restingQuads = { key, root, quads, growth: 1, shown: false };
   }
   const q = st.restingQuads;
   const at = restingCentreWorld(st);
@@ -396,12 +392,9 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);
   q.shown = show; // ⭐ *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"* — the resting contour hidden with the quads (`restingFillFrame`)
   if (!show) {
-    // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — the MIRROR: from one pixel where the quads disappear to full at the rings' closest
-    q.mirror = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d < from;
-    q.growth = q.mirror ? Math.max(Math.min(1, onePx / full), mirrorQuadShare(d, range.minM, from, st.cfg.quadGrowthLogK)) : Math.min(1, onePx / full);
+    q.growth = Math.min(1, onePx / full);
     return;
   }
-  q.mirror = false;
   // ⭐ at the resting face's centre, as the piece stands now
   q.root.position.set(at[0], at[1], at[2]);
   const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full);
