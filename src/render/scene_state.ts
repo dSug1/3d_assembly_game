@@ -520,6 +520,9 @@ export interface SceneState {
   hoverFollow: {
     e1: import("../core/vec").Vec3;
     e2: import("../core/vec").Vec3;
+    n: import("../core/vec").Vec3;
+    settleM: number;
+    settleT0: number;
     centre0: import("../core/vec").Vec3;
     offset0: import("../core/vec").Vec3;
     gizmo: boolean;
@@ -541,6 +544,14 @@ export interface SceneState {
   bootCamPieceDistM: number | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
   orbitPiecePlaced: boolean;
+  /** ⭐⭐ (2026-10-14) a hover is AVAILABLE: the part's face the resting face looks at within reach (`hoverVisualFrame`), and when it was last looked for. */
+  hoverReady: { id: string; faceId: string; normal: import("../core/vec").Vec3; centre: import("../core/vec").Vec3 } | null;
+  hoverReadyAt: number;
+  /** ⭐ (2026-10-14) the contact shadow (the resting face's outline on the hosting face), its line count, and the hosting face's fill (its key). */
+  hoverShadow: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  hoverShadowCount: number;
+  hoverFaceFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+  hoverFaceKey: string;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */

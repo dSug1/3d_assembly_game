@@ -33,7 +33,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { syncCentre } from "./camera_rig";
-import { hoverCameraBlend, hoverFrame, hoverOffsetFrame } from "./hover_wiring";
+import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame } from "./hover_wiring";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
@@ -57,7 +57,7 @@ function piecesFacesOf(m: Mesh): number {
 /** ⭐ The colour of a resting face — the PINK ring's (the owner, 2026-10-06: *"resting face highlight in pink (same as pink ring) instead of yellow"*; it was yellow). */
 // ⭐⭐ (2026-10-12, the owner: *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the
 // resting face …)"*) — the resting face is a YELLOW CONTOUR (the cube's aligned-face yellow), its fill hidden
-const RESTING_COLOUR = new Color3(1, 0.85, 0.1);
+export const RESTING_COLOUR = new Color3(1, 0.85, 0.1);
 /** ⭐ The contour seen THROUGH its own piece (drawn over the scene). */
 const RESTING_CONTOUR_XRAY_ALPHA = 0.35;
 /** ⭐ Its fill's opacity — the face still visible under it, as the other face fills. */
@@ -1217,6 +1217,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     anchorFrame(st, now);
   }
   restingFillFrame(st, now);
+  hoverVisualFrame(st, now); // ⭐ (2026-10-14) the contact shadow, the hosting face, the ready colour
 }
 
 /**

@@ -84,3 +84,31 @@ during the orbit and the quad turns (`LEVEL_END.md` §5quater).
 * ⛔ No device look; no end-to-end run of a hover or of the orbited piece's capture in the app.
 * The hover is not an episode yet (`SCORE.md`).
 * A held turn, a way in / out round a piece, or the second touch held: no hover (the drag orbits).
+
+## 8. The second pass (2026-10-14) — face to face, the reach and the settle, contact made visible, the orbited piece's own margins
+
+> *"I can't hover translate in the attached configuration. Make sure the threshold distance is between resting face and collision face.
+> Or check what else is bugging."* · *"I think the contact check is too strict. It is difficult for the user to judge the contact depending
+> on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact
+> and its perception by the user"* → *"Build A&B"* · *"the green piece is declared having achieved its goal: this is wrong: not centered,
+> not aligned in quad rotation"* — the owner.
+
+* ⭐⭐ **FACE TO FACE** (`hoverFaceContact`): the distance is the resting face's centre above the PLANE of each face of each part within
+  reach, that face anti-parallel to the resting face (2°) — ⛔ it compared the resting face with the normal of the bodies' CLOSEST POINTS,
+  which tilts when those fall on an edge. The hosting face's own normal is the hover plane's; its own plane is where the coplanar test
+  (`bodiesBehindPlane`) is levelled.
+* ⭐⭐⭐ **WHY "CONTACT" WAS UNREACHABLE BY EYE** (measured): a part's collision surface is a transparent CONTOUR 1.5 mm outside its coloured
+  face, and a pushed piece rests 1 mm off it — "touching" is ~2.5 mm from the face the eye sees, unjudgeable from any camera; and the orbit
+  reaches it only where its ring crosses the face. Staged headless, the hover worked at contact; the owner's attempts stood a few mm off.
+* ⭐⭐⭐ **A. THE REACH AND THE SETTLE**: a resting face LOOKING AT a part's face within `hoverApproachMm` (**20 mm**, a slider; ≥ 1.5) may
+  hover. Not yet in contact, the piece first SETTLES onto it: a move along the face's normal down to the gap kept, SOLVED (the face's own part
+  and every other stop it), shown eased over `HOVER_SETTLE_MS` (150 ms), then it slides. Headless: from 10 mm off, settled 9.0 mm, then slid
+  at 1.00 mm across five coplanar faces.
+* ⭐⭐⭐ **B. CONTACT MADE VISIBLE** (`hoverVisualFrame`, the same look as the hover's start, every 100 ms when no hover is on): the **contact
+  shadow** — the resting face's outline laid on the hosting face (`projectOntoPlane`), cyan; a faint **fill** on the hosting face; the resting
+  face's contour turned **cyan** — *press the piece and drag*. A geometric cue only (the shadow, the classic depth cue), nothing licensed.
+* ⭐⭐ **Every refusal SAYS why** on the HUD's `last` line (the nearest face, its distance and angle; a held second touch; a turn playing …).
+* ⛔⛔ **THE ORBITED PIECE'S GOAL** was judged by a grabbed PART's margins — 10 mm on the GLASS at the camera's distance (182 mm at 4.25 m,
+  measured) and 15°: loose on purpose for a part the capture then pulls exactly, so 35 mm off and 12° off read as placed. ✅ Its own margins,
+  in the WORLD: `orbitGoalMm` **5 mm**, `orbitGoalDeg` **3°** (sliders; the quads turn exactly, so the angle is only room for rounding) →
+  `LEVEL_END.md` §5quater.
