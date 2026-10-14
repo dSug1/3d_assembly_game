@@ -544,7 +544,8 @@ export interface SceneState {
   hoverDraw: import("../core/vec").Vec3 | null;
   /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
   hoverOffset: import("../core/vec").Vec3 | null;
-  hoverOffsetFading: boolean;
+  /** ⭐⭐ (2026-10-14, the owner: *"After a hover which has moved the piece, the orbit shall way in smoothly"*) the orbit's WAY IN taking the piece-only offset back (`HoverWayIn`); `null`: none on. */
+  hoverWayIn: import("../input/hover").HoverWayIn | null;
   /** ⭐ (2026-10-14) the HOVER VIEW the camera eases toward (its progress 0 … 1, its target and the face's frame); `null`: the orbit's camera. */
   hoverView: {
     progress: number;

@@ -433,7 +433,7 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐ F: the piece-only offset's fade is SOLVED; H: the face fill's material disposed with it", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });");
+    expect(h).toContain("const r = solveOrbitStep({ yaw: w.share, v: 0.5, zoom: 1 }, [want - w.share, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });");
     expect(h).toContain("st.hoverFaceFill?.dispose(false, true);");
   });
 });
@@ -558,5 +558,39 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
     expect(modelLag([0.001, 0, 0], false)).toEqual([0.001, 0, 0]);
     expect(modelLag([0.001, 0, 0], true)).toEqual([0, 0, 0]);
     expect(modelLag(null, false)).toEqual([0, 0, 0]);
+  });
+});
+
+describe("⭐⭐⭐ after a hover, the orbit WAYS IN (2026-10-14, the owner: *\"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit.\"*)", () => {
+  it("⭐⭐⭐ the offset goes back by the orbit drag's TRAVEL, the way in's own easing — nothing without a finger move", async () => {
+    const { hoverWayInLeft, startHoverWayIn } = await import("../src/input/hover");
+    const { entryProgress, smoothTravel } = await import("../src/input/piece_orbit");
+    const span = DEFAULT_CONFIG.pieceOrbitEnterMm;
+    expect(hoverWayInLeft(0, span)).toBe(1);
+    expect(hoverWayInLeft(span, span)).toBe(0);
+    // the way in's own curve, travel for travel
+    for (const mm of [1, 3, 6, 9]) {
+      const e = { travelledMm: mm } as Parameters<typeof entryProgress>[0];
+      expect(hoverWayInLeft(mm, span)).toBeCloseTo(1 - entryProgress(e, span), 12);
+    }
+    // ⛔ the old fade: τ = boxSmoothMs / 2, with NO finger travel at all — 0.1 s later most of the offset was gone (the jump)
+    const old = Math.exp(-100 / (DEFAULT_CONFIG.boxSmoothMs / 2));
+    expect(old).toBeLessThan(0.05);
+    // ✅ now: 0.1 s without travel leaves it all
+    let w = startHoverWayIn([0.1, 0, 0]);
+    for (let i = 0; i < 6; i++) w = smoothTravel(w, 16.7, DEFAULT_CONFIG.boxSmoothMs / 2);
+    expect(hoverWayInLeft(w.travelledMm, span)).toBe(1);
+    // a first mm of orbit: the piece has hardly moved (no jump)
+    w = { ...w, rawMm: 1 };
+    for (let i = 0; i < 30; i++) w = smoothTravel(w, 16.7, DEFAULT_CONFIG.boxSmoothMs / 2);
+    expect(hoverWayInLeft(w.travelledMm, span)).toBeGreaterThan(0.97);
+  });
+  it("⭐⭐ wired: an orbit step adds its travel; the frame reads it on the spring; the gizmo is not written by the toggle", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset); st.hoverWayIn = { ...w, rawMm: w.rawMm + travelMm };");
+    expect(h).toContain("w = smoothTravel(w, dtMs, st.cfg.boxSmoothMs / 2); st.hoverWayIn = w; const want = hoverWayInLeft(w.travelledMm, st.cfg.pieceOrbitEnterMm);");
+    const step = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
+    expect(step).not.toContain("centreBlend");
+    expect(step).not.toContain("syncCentre");
   });
 });

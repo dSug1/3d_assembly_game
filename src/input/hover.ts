@@ -334,3 +334,28 @@ export function hoverViewDistanceM(
   const o = cameraOffset(cfg, boot.cam, boot.box, boot.off, cameraGapM(cfg.cameraRadiusOffsetMm / 1000, zoom));
   return Math.hypot(o[0] - boot.box[0], o[1] - boot.box[1], o[2] - boot.box[2]);
 }
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the owner: *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) — **AFTER A HOVER, THE ORBIT WAYS IN**: the piece's hover offset (`hoverGizmoMove` 0 — the gizmo never
+ * moved) goes back to the piece's ring place over the next ORBIT drag's finger travel, exactly as the way in round a piece: the travel read
+ * on the orbit's spring (`smoothTravel`), the share left `1 − smoothstep(travel / pieceOrbitEnterMm)` (`entryProgress`'s). ⛔ It eased out
+ * in ~0.1 s whatever the finger did (τ = `boxSmoothMs` / 2): the piece jumped back to where it was before the hover as the orbit began.
+ */
+export interface HoverWayIn {
+  /** the offset when the orbit began to take it back (m) */
+  readonly pieceOff: Vec3;
+  /** the finger's raw travel (mm), what is read of it on the spring, and its rate */
+  readonly rawMm: number;
+  readonly travelledMm: number;
+  readonly velMm: number;
+  /** the share of `pieceOff` the piece still carries (solved: a part may hold it) */
+  readonly share: number;
+}
+export function startHoverWayIn(offset: Vec3): HoverWayIn {
+  return { pieceOff: offset, rawMm: 0, travelledMm: 0, velMm: 0, share: 1 };
+}
+export function hoverWayInLeft(travelledMm: number, enterMm: number): number {
+  if (enterMm <= 0) return 0;
+  const t = Math.min(1, Math.max(0, travelledMm / enterMm));
+  return 1 - t * t * (3 - 2 * t);
+}

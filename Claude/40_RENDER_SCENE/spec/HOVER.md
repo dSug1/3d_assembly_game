@@ -58,7 +58,7 @@ is in the world. Not in contact or not aligned: the drag orbits (the HUD's verdi
   `translateDampingRatio`, the phantom lead `translateLeadMs`), each frame (`hoverFrame`), settling after the release.
 * **What moves** (`hoverGizmoMove`, a slider): **1** (default) the yellow GIZMO, the piece riding its ring with it — the misplaced-by-eye
   gizmo is corrected and every later orbit turns about it; **0** the piece alone, an offset on its ring place, **dropped by the next orbit
-  drag** (*"Cleared on orbit"*), eased out.
+  drag** (*"Cleared on orbit"*) — ⭐ by its travel, the way in's (§13).
 
 ## 4. The camera — the hover view, in and out by the finger's travel
 
@@ -231,3 +231,20 @@ floor** — marked seats where a piece may be set down, each a known target the 
   the boot's at zoom 1.
 * ⭐ **THE GREEN**: the ready contour, the contact shadow and the hosting face's fill are **#D8FDD2** (216, 253, 210), sampled from the owner's
   swatch — they were cyan.
+
+## 13. After a hover, the orbit WAYS IN (2026-10-14, `1.0.76-`)
+
+> *"After a hover which has moved the piece and release of the press, the next press toggles to orbit and the piece jumps to a previous
+> position"* → *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece
+> orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."* — the owner. ⛔ Unjudged by a hand.
+
+* ⛔ **The jump**: the piece-only hover offset (`hoverGizmoMove` 0, the default) was dropped by the next orbit drag (*"Cleared on orbit"*, §3)
+  over ~0.1 s whatever the finger did (τ = `boxSmoothMs` / 2) — read as a jump back to where the piece was before the hover.
+* ⭐⭐⭐ **THE WAY IN** (`HoverWayIn`, `hoverWayInLeft`): the offset goes back to the piece's ring place by the orbit drag's FINGER TRAVEL,
+  exactly as the way in round a piece — the travel read on the orbit's spring (`smoothTravel`), the share left
+  `1 − smoothstep(travel / pieceOrbitEnterMm)` (**12 mm**, `entryProgress`'s curve); no finger travel, no move. SOLVED as before (a part in
+  the way holds the piece until the travel opens it), inside the frame's query budget.
+* ⭐ **The gizmo is not touched** by the toggle: the orbit step only adds its travel (a vector checks it writes no centre).
+* Headless: a 512 mm hover offset went back over the first 12 mm of orbit travel, eased (start and end slow), the gizmo still.
+* ⚠ Not addressed here (the owner's second report, to be reworked): the hover drag's own mapping can still carry the piece far from the
+  finger (120 px moved it ~0.5 m headless, the camera swinging meanwhile).

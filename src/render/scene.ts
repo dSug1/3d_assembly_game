@@ -592,7 +592,7 @@ export function createScene(
   st.hoverBand = null;
   st.hoverFollow = null;
   st.hoverOffset = null;
-  st.hoverOffsetFading = false;
+  st.hoverWayIn = null;
   st.hoverView = null;
   st.bootCamPieceDistM = null;
   st.bootCamGeom = null;
