@@ -1215,13 +1215,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     });
     st.hudDirty = true;
   }
-  // ⭐ (2026-10-14, the hover) the camera's distance to the piece at boot — the hover view keeps it (*"the same offset as the one of boot"*)
-  if (st.bootCamPieceDistM === null && st.pieceAnchor !== null) {
-    const a = st.pieceAnchor;
-    st.bootCamPieceDistM = Math.hypot(camAt[0] - a[0], camAt[1] - a[1], camAt[2] - a[2]);
-    // ⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) and its pose, for that distance at any later zoom
-    if (po === null && st.cameraLagged !== null) st.bootCamGeom = { cam: st.cameraLagged, box: [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], off };
-  }
   // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
   ({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.

@@ -15,7 +15,6 @@ import {
   hoverViewProgress,
   hoverSwayDeg,
   hoverViewWeight,
-  planeStepFromScreen,
 } from "../src/input/hover";
 import { AT_CONTACT_M, solveOrbitStep, type OrbitQ, type SolverEnv } from "../src/input/piece_orbit_solver";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
@@ -57,13 +56,6 @@ describe("⭐⭐⭐ the hover — when it may, on which plane, how far", () => {
     expect(hoverPlane([1, 0, 0], [1, 0, 0])).toBeNull();
   });
 
-  it("⭐⭐ the finger ON the plane: solved onto both axes so the piece follows it exactly (× the gain)", () => {
-    // e1 shadows to (100, 0) px per metre, e2 to (30, −80): a finger step of (130, −80) is one metre of each
-    const [u, v] = planeStepFromScreen(130, -80, [100, 0], [30, -80], 1);
-    expect(u).toBeCloseTo(1, 12);
-    expect(v).toBeCloseTo(1, 12);
-    expect(planeStepFromScreen(130, -80, [100, 0], [30, -80], 0.5)[0]).toBeCloseTo(0.5, 12);
-  });
 
   it("⭐⭐ the amplitude: held in its disc — and unlimited at the slider's top (500 mm)", () => {
     const d = clampDisc(0.03, 0.04, 10);
@@ -102,36 +94,6 @@ describe("⭐⭐⭐ the hover — when it may, on which plane, how far", () => {
 });
 
 describe("⭐⭐ the hover view — the camera along the face's normal, at the boot distance and angles; in and out by the finger's travel", () => {
-  it("⭐⭐⭐ the view is ISOMETRIC (2026-10-14): equal on the horizontal, the gravity and the third plane; above and right of the face", async () => {
-    const { hoverIsoDirection } = await import("../src/input/hover");
-    const k = 1 / Math.sqrt(3);
-    // a side face looking +z, the camera at +z (Babylon: its right is −x)
-    const s = hoverIsoDirection([0, 0, 1], [-1, 0, 0], [0, 0.5, 1]);
-    for (const c of s) expect(Math.abs(c)).toBeCloseTo(k, 12); // projects equally onto the three planes
-    expect(s[1]).toBeGreaterThan(0); // from above
-    expect(s[2]).toBeGreaterThan(0); // on the piece's side of the face
-    expect(s[0]).toBeLessThan(0); // toward the screen's right: looking down-LEFT at the face
-    // a top face: up, the screen's right, toward where the camera is
-    const t = hoverIsoDirection([0, 1, 0], [1, 0, 0], [0, 1, 2]);
-    for (const c of t) expect(Math.abs(c)).toBeCloseTo(k, 12);
-    expect(t[1]).toBeGreaterThan(0);
-    expect(t[0]).toBeGreaterThan(0);
-    expect(t[2]).toBeGreaterThan(0);
-    // a face turned 30° about the vertical: still equal
-    const n: Vec3 = [Math.sin(0.5), 0, Math.cos(0.5)];
-    const u = hoverIsoDirection(n, [-Math.cos(0.5), 0, Math.sin(0.5)], [0, 1, 1]);
-    expect(Math.abs(u[1])).toBeCloseTo(k, 12);
-    expect(u[0] * n[0] + u[2] * n[2]).toBeCloseTo(k, 12);
-  });
-  it("⭐⭐ the view's distance: the boot distance at the zoom of the moment", async () => {
-    const { hoverViewDistanceM } = await import("../src/input/hover");
-    const boot = { cam: { yaw: 0.3, v: 0.5 }, box: [0.4, 0.1, 0.2] as Vec3, off: { yawRad: 0, pitchRad: 0 } };
-    const cfg = { ...DEFAULT_CONFIG, cameraRadiusOffsetMm: 1000 };
-    const d1 = hoverViewDistanceM(cfg, boot, 1);
-    const d2 = hoverViewDistanceM(cfg, boot, 2);
-    expect(d2).toBeGreaterThan(d1); // the zoom works in the hover view
-    expect(d2 - d1).toBeGreaterThan(0.5); // ~ one more radius offset behind the piece
-  });
 
   it("⭐⭐ in by the hover drag's travel, out by the orbit's — the slider's share per mm; eased", () => {
     expect(hoverViewProgress(0, 10, 0.05, true)).toBeCloseTo(0.5, 12);
@@ -592,5 +554,74 @@ describe("⭐⭐⭐ after a hover, the orbit WAYS IN (2026-10-14, the owner: *\"
     const step = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
     expect(step).not.toContain("centreBlend");
     expect(step).not.toContain("syncCentre");
+  });
+});
+
+describe("⭐⭐⭐ the hover view: the NEAREST isometric corner, an arc from the rings and back, the piece under the finger (2026-10-14, the owner: *\"… a good isometric view of the piece and sliding surface with minimum movement from the orbit ring … and also which can simply smoothly easily blend back into orbit rings\"*)", () => {
+  const k = 1 / Math.sqrt(3);
+  it("⭐⭐⭐ the corner on the side the camera already is — left or right, above or below; isometric to the face", async () => {
+    const { hoverCornerDirection } = await import("../src/input/hover");
+    // a side face looking +z; the screen's right −x (Babylon, a camera at +z)
+    const n: Vec3 = [0, 0, 1];
+    const right: Vec3 = [-1, 0, 0];
+    for (const [cx, cy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]] as const) {
+      const toCam: Vec3 = [0.4 * cx, 0.3 * cy, 1];
+      const c = hoverCornerDirection(n, right, toCam)!;
+      for (const x of c.dir) expect(Math.abs(x)).toBeCloseTo(k, 12); // equal on the face's three axes
+      expect(c.dir[2]).toBeGreaterThan(0); // the piece's side
+      expect(Math.sign(c.dir[0])).toBe(cx); // the camera's own side, left or right
+      expect(Math.sign(c.dir[1])).toBe(cy); // …above or below
+      // the nearest of the four corners
+      const u = Math.hypot(...toCam);
+      const best = ([[1, 1], [-1, 1], [1, -1], [-1, -1]] as [number, number][]).map(([a, b]) => (a * 0.4 * cx + b * 0.3 * cy + 1) / u).reduce((m, x) => Math.max(m, x), -1);
+      expect((c.dir[0] * toCam[0] + c.dir[1] * toCam[1] + c.dir[2] * toCam[2]) / u).toBeCloseTo(best * k, 12);
+    }
+    // square on an axis: the side kept
+    expect(hoverCornerDirection(n, right, [0, 0.3, 1], [-1, 1])!.signs[0]).toBe(-1);
+  });
+  it("⭐⭐⭐ the arc: from the rings' camera, its distance KEPT, never nearer the piece; at 0 exactly the rings' camera", async () => {
+    const { hoverCameraSwing } = await import("../src/input/hover");
+    const target: Vec3 = [0.2, 0.1, 0];
+    const camAt: Vec3 = [-1.8, 0.6, 0.3];
+    const look: Vec3 = [0, 0, 0];
+    const d0 = Math.hypot(camAt[0] - target[0], camAt[1] - target[1], camAt[2] - target[2]);
+    const dir: Vec3 = [k, k, k];
+    for (let i = 1; i <= 10; i++) {
+      const r = hoverCameraSwing(camAt, look, target, dir, i / 10);
+      expect(Math.hypot(r.camAt[0] - target[0], r.camAt[1] - target[1], r.camAt[2] - target[2])).toBeCloseTo(d0, 9);
+    }
+    const end = hoverCameraSwing(camAt, look, target, dir, 1);
+    expect((end.camAt[0] - target[0]) / d0).toBeCloseTo(k, 9);
+    expect(end.lookAt).toEqual(target);
+    const zero = hoverCameraSwing(camAt, look, target, dir, 0);
+    expect(zero.camAt).toEqual(camAt); // the way out ends ON the rings
+    expect(zero.lookAt).toEqual(look);
+  });
+  it("⭐⭐⭐ the finger's RAY on the plane: one world point, the same coordinates from any camera — a step is exact for the camera of the moment", async () => {
+    const { rayPlaneCoords } = await import("../src/input/hover");
+    const p0: Vec3 = [0, 0, 0];
+    const n: Vec3 = [0, 1, 0];
+    const e1: Vec3 = [1, 0, 0];
+    const e2: Vec3 = [0, 0, -1];
+    const pt: Vec3 = [0.03, 0, -0.02];
+    for (const cam of [[0.5, 1, 1], [-1, 0.6, 0.2], [0, 2, 0.01]] as Vec3[]) {
+      const h = rayPlaneCoords(cam, [pt[0] - cam[0], pt[1] - cam[1], pt[2] - cam[2]], p0, n, e1, e2)!;
+      expect(h[0]).toBeCloseTo(0.03, 12);
+      expect(h[1]).toBeCloseTo(0.02, 12);
+    }
+    expect(rayPlaneCoords([0, 0.01, 1], [0, -0.01, -1], p0, n, e1, e2)).toBeNull(); // grazing
+    expect(rayPlaneCoords([0, 1, 0], [0, 1, 0], p0, n, e1, e2)).toBeNull(); // behind the camera
+  });
+  it("⭐⭐ the view's way in and out: the way in's travel (pieceOrbitEnterMm); wired on the arc and the ray", () => {
+    const span = DEFAULT_CONFIG.pieceOrbitEnterMm;
+    expect(hoverViewProgress(0, span / 2, 1 / span, true)).toBeCloseTo(0.5, 12);
+    expect(hoverViewProgress(1, span, 1 / span, false)).toBe(0);
+    expect("hoverCameraGain" in DEFAULT_CONFIG).toBe(false);
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("return hoverCameraSwing(camAt, lookAt, target, dir, w);");
+    // a finger STEP: two rays from the camera of the moment — a camera turning under a resting finger moves nothing
+    expect(h).toContain("const a = at(from[0], from[1]); const b = at(h.finger[0], h.finger[1]); if (a === null || b === null) return false;");
+    expect(h).toContain("h.pending = clampDisc(h.pending[0] + g * (b[0] - a[0]), h.pending[1] + g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);");
+    expect(h).not.toContain("h.base");
   });
 });

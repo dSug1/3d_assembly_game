@@ -213,6 +213,8 @@ floor** — marked seats where a piece may be set down, each a known target the 
 
 ## 12. The defaults, the isometric hover view, the green (2026-10-14, `1.0.76-`)
 
+> ⛔ The hover view's DIRECTION, its DISTANCE and the straight blend below are superseded by §14 (the nearest isometric corner, on an arc).
+
 > *"Set default gizmo moves with hover off and hover distance is unlimited"* · *"modify the offset and distance of the camera during hover so
 > that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan
 > highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot
@@ -248,3 +250,35 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * Headless: a 512 mm hover offset went back over the first 12 mm of orbit travel, eased (start and end slow), the gizmo still.
 * ⚠ Not addressed here (the owner's second report, to be reworked): the hover drag's own mapping can still carry the piece far from the
   finger (120 px moved it ~0.5 m headless, the camera swinging meanwhile).
+
+## 14. The hover view: the NEAREST isometric corner, on an arc from the rings and back; each finger step from the camera of the moment (2026-10-14, `1.0.76-`)
+
+> *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the
+> camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling
+> into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera
+> position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring
+> (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can
+> simply smoothly easily blend back into orbit rings."* → the proposal → *"Build"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE NEAREST ISOMETRIC CORNER** (`hoverCornerDirection`): in the hosting face's frame — its normal `n`, `t1` the screen's right laid
+  on it, `t2 = n × t1` — the four isometric views `(n ± t1 ± t2)/√3` see the face at 35° and both its axes alike; the hover takes the one on
+  the side the camera ALREADY is (the signs of the camera's direction along `t1`, `t2`): the nearest of the four — left or right, above or
+  below (toward or away on a top face). Square on an axis (within 0.02), the side chosen before is kept. ⛔ §12's fixed above-right view at the
+  boot's distance is deleted (`hoverIsoDirection`, `hoverViewDistanceM`, the boot pose it read).
+* ⭐⭐⭐ **ON AN ARC, ITS DISTANCE KEPT** (`hoverCameraSwing`): the camera turns about the hover's target (the resting face's centre at the
+  start) from where the rings' camera is toward the corner — a great-circle turn (`slerpDir`), the distance to the target unchanged (no zoom
+  jump), the look slid from the gizmo to the target by the same share. ⛔ The position was blended along a straight line toward a view at
+  another distance.
+* ⭐⭐ **BACK ONTO THE RINGS, SIMPLY**: the orbit holds still under a hover (§10), so the rings' camera is where it was; the same arc runs back
+  as the orbit drag travels, and at its end the camera IS the rings' camera. In and out by the way in's own travel, `pieceOrbitEnterMm`
+  (12 mm) — the `hoverCameraGain` slider is deleted.
+* ⭐⭐ **EACH FINGER STEP FROM THE CAMERA OF THE MOMENT** (`rayPlaneCoords`, `hoverFingerStep`): the rays through where the finger was and
+  where it is, both cast from the camera as it is, meet the hover's plane — the distance between the two points (× `hoverGain`) is the step,
+  exact under the finger. So only the FINGER moves the piece; a camera turning under a resting finger moves nothing. ⛔ The screen step was
+  solved onto the plane's screen SHADOWS (a linearisation a foreshortened axis multiplied). ⛔ A first build kept the piece at the point
+  ABSOLUTELY under the finger: the camera's turn then swept that point — and the piece — 0.23 m across the plane, headless; deleted the same
+  hour. A ray grazing the plane (under 12°: a face seen nearly edge-on) moves nothing — the camera still turns toward the corner, which sees
+  the face at 35°, and the drag takes over.
+* Headless (a staged camera from BELOW the floor, the worst case): the camera took the arc (≤ 10 cm a frame at 1 m for a very large turn); the
+  piece followed the finger's distance on the plane; the next orbit took the piece back smoothly. ⚠ On a device the turn is expected far
+  smaller (20–50° from a ring).

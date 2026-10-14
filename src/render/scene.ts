@@ -594,8 +594,6 @@ export function createScene(
   st.hoverOffset = null;
   st.hoverWayIn = null;
   st.hoverView = null;
-  st.bootCamPieceDistM = null;
-  st.bootCamGeom = null;
   st.orbitPiecePlaced = false;
   st.hoverReady = null;
   st.hoverReadyAt = 0;
