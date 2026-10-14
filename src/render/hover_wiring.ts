@@ -35,6 +35,8 @@ import {
   hoverViewWeight,
   planeStepFromScreen,
   hoverDrawLag,
+  hoverWayInLeft,
+  startHoverWayIn,
   hoverEndsOn,
   hoverViewRetargets,
   retargetShare,
@@ -47,6 +49,7 @@ import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
+import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { hoverSwayDeg } from "../input/hover";
 import { swingBlock } from "./sway_pass";
@@ -193,7 +196,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
-  st.hoverOffsetFading = false;
+  st.hoverWayIn = null; // a new hover takes the offset as it stands
   // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
   // ⭐⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) the ISOMETRIC view: above and right of the face, looking down-left at it
   const cam = st.camera.position;
@@ -380,7 +383,11 @@ function hoverEndNow(st: SceneState): void {
  */
 export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   if (travelMm <= 0) return;
-  if (st.hoverOffset !== null) st.hoverOffsetFading = true;
+  // ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece ways in by this travel — the gizmo untouched
+  if (st.hoverOffset !== null) {
+    const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
+    st.hoverWayIn = { ...w, rawMm: w.rawMm + travelMm };
+  }
   const hv = st.hoverView;
   if (hv !== null) {
     hv.progress = hoverViewProgress(hv.progress, travelMm, st.cfg.hoverCameraGain, false);
@@ -389,39 +396,38 @@ export function hoverOrbitStep(st: SceneState, travelMm: number): void {
 }
 
 /**
- * ⭐ Each frame: a dropped piece-only offset eased out (τ = `boxSmoothMs` / 2) — ⭐⭐ (2026-10-14, the hover's audit) SOLVED: the piece's way back to its ring place
- * is the solver's, the share of the offset kept as its one coordinate (⛔ it was scaled down blind, through whatever stood between). Blocked
- * where it stands, the fade stops there (the next orbit drag asks again).
+ * ⭐⭐ Each frame (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*): the piece WAYS IN from where the hover left it to its ring place, by the orbit drag's travel read on the
+ * orbit's spring (`smoothTravel`) — the share left `hoverWayInLeft(travel, pieceOrbitEnterMm)`, the way in's own. SOLVED (the second audit):
+ * the share is the solver's one coordinate, inside what the frame's cap has left; a part in the way holds the piece where it stands until the
+ * finger's travel opens it.
  */
 export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   const o = st.hoverOffset;
-  if (o === null || !st.hoverOffsetFading || st.orbitPiecePlaced) return;
-  const k = Math.exp(-dtMs / Math.max(1, st.cfg.boxSmoothMs / 2));
-  const done = (n: Vec3) => Math.hypot(n[0], n[1], n[2]) < 1e-4;
+  let w = st.hoverWayIn;
+  if (o === null || w === null || st.orbitPiecePlaced) return;
+  w = smoothTravel(w, dtMs, st.cfg.boxSmoothMs / 2);
+  st.hoverWayIn = w;
+  const want = hoverWayInLeft(w.travelledMm, st.cfg.pieceOrbitEnterMm);
+  if (Math.abs(want - w.share) < 1e-9) return;
+  let share = want;
   const q = st.pieceQ;
-  if (q === null || st.greenBox === null) {
-    const n = scale(o, k);
-    if (done(n)) {
-      st.hoverOffset = null;
-      st.hoverOffsetFading = false;
-    } else st.hoverOffset = n;
-    return;
+  if (q !== null && st.greenBox !== null) {
+    // ⭐⭐ (2026-10-14, the hover's second audit) inside what the frame's work cap has left (none: it waits a frame)
+    const budget = hoverQueryBudget(st.cfg.pieceSolverQueries, st.pieceQueries);
+    if (budget === 0) return;
+    const ring = ringAnchorAt(st, q); // the hover offset included
+    const base: Vec3 = [ring[0] - o[0], ring[1] - o[1], ring[2] - o[2]];
+    const env = pieceSolverEnv(st, (x) => add(base, scale(w!.pieceOff, x.yaw)));
+    const r = solveOrbitStep({ yaw: w.share, v: 0.5, zoom: 1 }, [want - w.share, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });
+    st.pieceQueries += r.queries;
+    share = Math.min(1, Math.max(0, r.q.yaw));
   }
-  const ring = ringAnchorAt(st, q); // the hover offset included
-  const base: Vec3 = [ring[0] - o[0], ring[1] - o[1], ring[2] - o[2]];
-  const env = pieceSolverEnv(st, (x) => add(base, scale(o, x.yaw)));
-  // ⭐⭐ (2026-10-14, the hover's second audit) inside what the frame's work cap has left (none: it waits a frame)
-  const budget = hoverQueryBudget(st.cfg.pieceSolverQueries, st.pieceQueries);
-  if (budget === 0) return;
-  const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, { ...pieceSolveOptions(st), maxQueries: budget });
-  st.pieceQueries += r.queries;
-  const n = scale(o, Math.min(1, Math.max(0, r.q.yaw)));
-  if (done(n)) {
+  if (share < 1e-6) {
     st.hoverOffset = null;
-    st.hoverOffsetFading = false;
+    st.hoverWayIn = null;
   } else {
-    st.hoverOffset = n;
-    if (r.blocked && r.q.yaw >= 1 - 1e-9) st.hoverOffsetFading = false; // blocked where it stands
+    st.hoverOffset = scale(w.pieceOff, share);
+    st.hoverWayIn = { ...w, share };
   }
 }
 
