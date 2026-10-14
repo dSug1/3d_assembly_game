@@ -154,7 +154,8 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
     expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),");
     expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
     expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
-    expect(c).toContain("return st.orientShown.clicked?.tag ?? st.orientShown.candidate;");
+    // ⭐ (2026-10-14) through `shownDirectionTag`: with the quads hidden, the gizmo's supporting face first
+    expect(c).toContain("return shownDirectionTag(st.restingQuads?.shown ?? true, st.supportFace?.tag ?? -1, st.orientShown.clicked?.tag ?? null, st.orientShown.candidate);");
     expect(c).toContain("st.orientShown.clicked = { tag, cand: st.orientShown.candidate };");
   });
   it("⭐⭐ *\"highlight in yellow the quad which corresponds to the pink face of the cube\"* — the pink direction's plane, not the resting face's", () => {

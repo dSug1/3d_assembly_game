@@ -483,6 +483,15 @@ export interface SceneState {
   /** ⭐ (2026-10-12) THE PINK DIRECTION: the CANDIDATE (the direction facing the camera most from the resting face; −1 none), and the one last
    * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
   orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
+  /** ⭐⭐⭐ (2026-10-14) the face SUPPORTING the yellow gizmo (`supportFaceIndex`) — the mating face while the quads are hidden — its direction's tag, and when it was looked for. */
+  supportFace: {
+    key: string;
+    at: number;
+    face: { id: string; faceId: string; normal: import("../core/vec").Vec3; triangles: [import("../core/vec").Vec3, import("../core/vec").Vec3, import("../core/vec").Vec3][] } | null;
+    tag: number;
+  } | null;
+  /** ⭐ (2026-10-14) its yellow outline, faded in while the quads are hidden (`supportAlpha`). */
+  supportHighlight: { key: string; mesh: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null; alpha: number; at: number } | null;
   /** ⭐ (2026-10-13) the yellow quad's tap checked: what blocks its turn (`null`: free — yellow; else RED), when and for what it was checked. */
   quadTurnCheck: { blockedBy: string | null; key: string; at: number };
   /** ⭐ (2026-10-13) the orbited piece's solver's cost per frame, ms (an exponential mean over ~30 frames) — the HUD reads it. */
@@ -512,6 +521,8 @@ export interface SceneState {
     pending: [number, number];
     /** ⭐⭐ (2026-10-14) the finger's deadbanded place on the glass — each step read as two rays from the camera of the moment (`hoverFingerStep`) */
     finger: [number, number];
+    /** ⭐⭐ (2026-10-14) the coloured triangles of every face in the hosting face's plane — the resting face over none of them ends the hover */
+    coplanar: [import("../core/vec").Vec3, import("../core/vec").Vec3, import("../core/vec").Vec3][];
     partId: string;
     /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
     behind: Set<string>;
@@ -571,6 +582,9 @@ export interface SceneState {
   hoverShadowCount: number;
   hoverFaceFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
   hoverFaceKey: string;
+  /** ⭐⭐ (2026-10-14) the green OUTLINE of the coplanar hosting faces joined to the hosting one, and its key. */
+  hoverOutline: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  hoverOutlineKey: string;
   /** ⭐ (2026-10-14, the hover's audit) the resting contour's colour as last SET (its fill and whether cyan) — set again only when either changes. */
   hoverTint: { fill: object; ready: boolean } | null;
   /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */

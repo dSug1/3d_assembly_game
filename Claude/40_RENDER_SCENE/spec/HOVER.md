@@ -282,3 +282,24 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * Headless (a staged camera from BELOW the floor, the worst case): the camera took the arc (≤ 10 cm a frame at 1 m for a very large turn); the
   piece followed the finger's distance on the plane; the next orbit took the piece back smoothly. ⚠ On a device the turn is expected far
   smaller (20–50° from a ring).
+
+## 15. The latch from a dy collision, the outline of the coplanar faces, back to the orbit off the faces (2026-10-14, `1.0.76-`)
+
+> *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces
+> aligned … the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that?"* ·
+> *"Display also a green highlight over the biggest boundary of coplanar hosting faces so the user can visually couple it with the green
+> highlight of the resting face"* · *"when there is not any portion of the resting face in contact with a hosting face … the movement shall
+> default back to orbit even if the press has not been released."* — the owner. ⛔ Unjudged by a hand.
+
+* ⛔⛔⛔ **WHY THE DX WAS NEEDED**: the latch (the ready look and `hoverStart`, `hoverFaceContact`) required the resting face's CENTRE over the
+  hosting face (§10, item 5). The orbit keeps that centre ON THE RING, at least the ring's least radius from the gizmo: at a dy collision near
+  the gizmo on a narrow face the centre stood past the face's edge while much of the resting face lay over it — only a dx, swinging the centre
+  over the face, latched. ✅ **ANY PORTION** of the resting face over the face latches (`overlapsTriangles`: the resting face's outline and the
+  face's coloured triangles, laid on the plane, overlap by more than 0.1 mm — separating axes, `convexOverlap2D`); touching an edge is none.
+* ⭐⭐ **THE OUTLINE OF THE COPLANAR HOSTING FACES** (`rectUnionOutline`, `buildCoplanarOutline`): every part's face in the hosting face's plane
+  (0.5 mm), each by its extent on the plane's axes (the world's for a face square to them — every `Scene_1` part), grown 1.6 mm so the 3 mm
+  joints between coloured cores close, the ones joined to the hosting face, their UNION's boundary drawn GREEN (#D8FDD2) on the coloured faces —
+  with the ready look and during the hover, beside the hosting face's faint fill.
+* ⭐⭐⭐ **OFF THE FACES, BACK TO THE ORBIT**: after each hover solve, the resting face's outline at its solved place over NONE of the coplanar
+  faces' triangles (gathered at the hover's start) ends the hover — the finger still down, its next move ORBITS; the piece keeps its offset,
+  taken back by the orbit's way in (§13). Headless: a long drag left the faces and the same finger orbited on, ≥ 1.04 mm from every part.

@@ -305,7 +305,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   });
   it("⭐ B: wired — the same look as the hover's start; the shadow, the hosting face's fill and the cyan contour", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach).contact;");
+    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;");
     expect(h).toContain("(c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();");
     // ⭐ (the hover's audit) set only when it changes — no colour cloned per line every frame
     expect(h).toContain("if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {");
@@ -623,5 +623,89 @@ describe("⭐⭐⭐ the hover view: the NEAREST isometric corner, an arc from th
     expect(h).toContain("const a = at(from[0], from[1]); const b = at(h.finger[0], h.finger[1]); if (a === null || b === null) return false;");
     expect(h).toContain("h.pending = clampDisc(h.pending[0] + g * (b[0] - a[0]), h.pending[1] + g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);");
     expect(h).not.toContain("h.base");
+  });
+});
+
+describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the drag back to orbit off the faces (2026-10-14, the owner)", () => {
+  const up: Vec3 = [0, 1, 0];
+  const down: Vec3 = [0, -1, 0];
+  const quad = (x0: number, x1: number, z0: number, z1: number, y = 0): [Vec3, Vec3, Vec3][] => [
+    [[x0, y, z0], [x1, y, z0], [x1, y, z1]],
+    [[x0, y, z0], [x1, y, z1], [x0, y, z1]],
+  ];
+  it("⭐⭐⭐ 1: ANY PORTION of the resting face over the face latches — the resting CENTRE past a narrow face's edge did not (the dy collision near the gizmo)", async () => {
+    const { overlapsTriangles } = await import("../src/input/hover");
+    // a narrow top face, 4 cm wide in x; the resting face 10 cm × 4 cm, its centre 3 cm past the face's edge (on the ring, off the gizmo)
+    const face = { id: "narrow", bodyGapM: 0.001, faces: [{ faceId: "top", centre: [0, 0, 0] as Vec3, normal: up, triangles: quad(-0.02, 0.02, -0.05, 0.05) }] };
+    const c: Vec3 = [0.05, 0.001, 0];
+    const poly: Vec3[] = [[0, 0.001, -0.02], [0.1, 0.001, -0.02], [0.1, 0.001, 0.02], [0, 0.001, 0.02]];
+    expect(hoverFaceContact(c, down, [face], 0.02).contact).toBeNull(); // ⛔ the centre test: no latch
+    expect(hoverFaceContact(c, down, [face], 0.02, 2, poly).contact?.id).toBe("narrow"); // ✅ the overlap: latched at once
+    // touching an edge only is no portion
+    expect(overlapsTriangles([[0.02, 0, -0.02], [0.1, 0, -0.02], [0.1, 0, 0.02], [0.02, 0, 0.02]], up, quad(-0.02, 0.02, -0.05, 0.05))).toBe(false);
+  });
+  it("⭐⭐ convex overlap by separating axes; the hull of an outline", async () => {
+    const { convexOverlap2D, convexHull2D } = await import("../src/input/hover");
+    const sq = (x: number, y: number, s: number) => [[x, y], [x + s, y], [x + s, y + s], [x, y + s]] as [number, number][];
+    expect(convexOverlap2D(sq(0, 0, 1), sq(0.5, 0.5, 1))).toBe(true);
+    expect(convexOverlap2D(sq(0, 0, 1), sq(2, 0, 1))).toBe(false);
+    expect(convexOverlap2D(sq(0, 0, 1), sq(1, 0, 1))).toBe(false); // edge to edge
+    // a diamond beside a square's corner: the boxes overlap, the shapes do not
+    expect(convexOverlap2D(sq(0, 0, 1), [[1.6, 1], [2, 1.4], [1.6, 1.8], [1.2, 1.4]])).toBe(false);
+    expect(convexHull2D([[0, 0], [1, 0], [1, 1], [0, 1], [0.5, 0.5], [0, 0]])).toHaveLength(4);
+  });
+  it("⭐⭐⭐ 3: the resting face over NONE of the coplanar faces — the drag goes back to the orbit, the finger still down", async () => {
+    const { overlapsTriangles } = await import("../src/input/hover");
+    const faces = [...quad(0, 0.1, 0, 0.1), ...quad(0.103, 0.2, 0, 0.1)]; // two parts' tops, a 3 mm joint
+    const at = (x: number): Vec3[] => [[x, 0.001, 0.02], [x + 0.04, 0.001, 0.02], [x + 0.04, 0.001, 0.06], [x, 0.001, 0.06]];
+    expect(overlapsTriangles(at(0.08), up, faces)).toBe(true); // straddling the joint
+    expect(overlapsTriangles(at(0.1005), up, faces)).toBe(true); // over the joint, its edges on both
+    expect(overlapsTriangles(at(0.25), up, faces)).toBe(false); // wholly over the void: back to the orbit
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain('if (poly.length > 0 && !overlapsTriangles(poly, h.n, h.coplanar)) { st.hover = null; st.hoverPress = null; st.hoverBand = null; st.lastVerdict = "hover: the resting face left the hosting faces — the drag orbits";');
+  });
+  it("⭐⭐ 2: the outline of the coplanar faces joined to the host — two parts a joint apart read as one; a far one left out", async () => {
+    const { rectUnionOutline } = await import("../src/input/hover");
+    const segs = rectUnionOutline([{ x0: 0, y0: 0, x1: 0.1, y1: 0.1 }, { x0: 0.103, y0: 0, x1: 0.2, y1: 0.05 }, { x0: 1, y0: 1, x1: 1.1, y1: 1.1 }], 0, 0.0016);
+    const len = segs.reduce((s, [p, q]) => s + Math.hypot(q[0] - p[0], q[1] - p[1]), 0);
+    // the union of the two grown rectangles: an L — its perimeter
+    const g = 0.0016;
+    const w = 0.2 + 2 * g, hTall = 0.1 + 2 * g;
+    expect(len).toBeCloseTo(2 * (w + hTall), 9);
+    expect(segs.every(([p, q]) => Math.max(p[0], q[0]) < 0.5)).toBe(true); // the far face not in it
+    expect(rectUnionOutline([{ x0: 0, y0: 0, x1: 1, y1: 1 }], 3, 0)).toEqual([]);
+  });
+});
+
+describe("⭐⭐⭐ the gizmo's supporting face as the mating face; a tap on the piece aligns to the yellow one (2026-10-14, the owner)", () => {
+  const up: Vec3 = [0, 1, 0];
+  it("⭐⭐⭐ the face the gizmo sits on: within 3 mm of its plane and of its coloured outline; none in the air", async () => {
+    const { supportFaceIndex } = await import("../src/input/support_face");
+    const top = { normal: up, centre: [0, 0.0015, 0] as Vec3, triangles: [[[-0.1, 0, -0.1], [0.1, 0, -0.1], [0.1, 0, 0.1]], [[-0.1, 0, -0.1], [0.1, 0, 0.1], [-0.1, 0, 0.1]]] as [Vec3, Vec3, Vec3][] };
+    const side = { normal: [1, 0, 0] as Vec3, centre: [0.1015, -0.05, 0] as Vec3, triangles: [[[0.1, -0.1, -0.1], [0.1, 0, -0.1], [0.1, 0, 0.1]]] as [Vec3, Vec3, Vec3][] };
+    expect(supportFaceIndex([0.05, 0, 0.02], [side, top])).toBe(1); // on the coloured top
+    expect(supportFaceIndex([0.05, 0.2, 0.02], [side, top])).toBe(-1); // in the air
+    expect(supportFaceIndex([0.3, 0, 0.02], [side, top])).toBe(-1); // in the top's plane, beyond it
+  });
+  it("⭐⭐⭐ the direction shown: the supporting face's while the quads are hidden, else the tapped one, else the candidate", async () => {
+    const { shownDirectionTag } = await import("../src/input/support_face");
+    expect(shownDirectionTag(false, 4, 2, 1)).toBe(4);
+    expect(shownDirectionTag(true, 4, 2, 1)).toBe(2); // the quads back: theirs
+    expect(shownDirectionTag(true, 4, null, 1)).toBe(1);
+    expect(shownDirectionTag(false, -1, null, 1)).toBe(1); // no supporting face: as before
+  });
+  it("⭐⭐ the yellow fades in with the quads hidden and out when they show", async () => {
+    const { supportAlpha, SUPPORT_FADE_MS } = await import("../src/input/support_face");
+    expect(supportAlpha(0, true, SUPPORT_FADE_MS / 2)).toBeCloseTo(0.5, 12);
+    expect(supportAlpha(0.5, true, SUPPORT_FADE_MS)).toBe(1);
+    expect(supportAlpha(1, false, SUPPORT_FADE_MS / 4)).toBeCloseTo(0.75, 12);
+  });
+  it("⭐⭐⭐ wired: the shown direction is the supporting face's with the quads hidden; a tap on the piece aligns its new resting face to the one shown", () => {
+    const q = code("render/orient_cube.ts");
+    expect(q).toContain("return shownDirectionTag(st.restingQuads?.shown ?? true, st.supportFace?.tag ?? -1, st.orientShown.clicked?.tag ?? null, st.orientShown.candidate);");
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toContain("const shown = shownDirection(st); if (shown !== null) st.pinkDir = shown;");
+    const sel = p.slice(p.indexOf("function selectRestingFace"));
+    expect(sel.indexOf("st.pinkDir = shown")).toBeLessThan(sel.indexOf("alignRestingFace(st, performance.now(), carry)"));
   });
 });
