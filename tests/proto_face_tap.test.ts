@@ -47,7 +47,7 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     // ⭐⭐ (2026-10-11) ANY touch on the orbited piece — the first's (the second held or not) and the SECOND's (*"add the possibility of
     // selecting another resting face by second touch tap on the green or turquoise piece"*); a press elsewhere leaves a pending one alone
     // ⭐ (2026-10-11) …except the desktop's key, which selects at its PRESS (its raycast), never as a tap
-    expect(p).toMatch(/if \(onOrbited && e\.pointerId !== MOUSE_SECOND_ID\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;\s*\}/);
+    expect(p).toMatch(/if \(onOrbited && e\.pointerId !== MOUSE_SECOND_ID\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;[\s\S]{0,300}?if \(holdRole === null && !inBand\) hoverPressNote\(st, e\.pointerId, s\);\s*\}/); // ⭐ (2026-10-14) + the hover's press
     expect(p.indexOf("st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand)")).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, hit);"));
     // a TAP whatever else is down
     expect(p).toMatch(/const tapped =\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);

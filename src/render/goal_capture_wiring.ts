@@ -10,7 +10,7 @@
  * feels as the snap does; a piece NEVER grabbed within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm, 1°), so zooming
  * out cannot place a piece nobody moved. ⭐ One report serves the capture, the HUD, the dissolve and the level end.
  */
-import { goalReport, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
+import { goalReport, liveFinalOf, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
 import { rootOf } from "../core/collision";
 import { worldPlacementOf } from "../core/object_model";
 import { qAngle, qconj, qmul, sub, length } from "../core/vec";
@@ -23,6 +23,7 @@ import { setModelPose } from "./bodies";
 import { commitGoal } from "./goal_commit_wiring";
 import { offsetRadiusM } from "./seat_wiring";
 import type { SceneState } from "./scene_state";
+import type { FinalConfiguration } from "../core/game_structure";
 
 /** ⭐ A GRABBED piece's margins — the snap's, at the camera NOW. */
 export function looseTolerance(st: SceneState): GoalTolerance {
@@ -44,9 +45,15 @@ export function goalTolOf(st: SceneState): (id: string) => GoalTolerance {
   return (id) => (st.grabbed.has(id) ? loose : strict);
 }
 
+/** ⭐⭐ (2026-10-14) the goal LIVE: the level's and the SHOWN orbited piece's (`liveFinalOf`) — `null` for a scene with no goal. */
+export function liveFinal(st: SceneState): FinalConfiguration | null {
+  const f = st.sceneSpec.final;
+  return f === null ? null : liveFinalOf(f, st.sceneSpec.orbitGoals, st.greenBox?.name ?? null);
+}
+
 /** ⭐ The goal as it stands NOW — `null` for a scene with no goal. */
 export function placedReport(st: SceneState): GoalReport | null {
-  const final = st.sceneSpec.final;
+  const final = liveFinal(st);
   if (!final) return null;
   return goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
 }
@@ -59,10 +66,12 @@ function movedSince(a: Pose, b: Pose): boolean {
 }
 
 export function goalCaptureFrame(st: SceneState, nowMs: number): void {
-  const final = st.sceneSpec.final;
+  const final = liveFinal(st);
   // ⛔ A demo plays itself; a finished level is frozen.
   if (!final || st.demo !== null || st.levelEnd.result !== null) return;
   // ⭐ A grip grabs its body and, for a translation forwarded to it, the assembly's root.
+  // ⭐ (2026-10-14) the orbited piece is always the player's: held to the margins of a grabbed piece, never the untouched one's
+  if (st.greenBox !== null && st.sceneSpec.orbitGoals !== undefined) st.grabbed.add(st.greenBox.name);
   for (const grip of st.held.values()) {
     const id = st.idOf.get(grip.mesh);
     if (id !== undefined) {
@@ -110,6 +119,8 @@ function startPull(st: SceneState, id: string, report: GoalReport, nowMs: number
   if (pioneer !== null) releaseAlignmentOf(st, id);
   st.goalCapture.captured(id);
   st.goalPulls.start(id, from, g.target, nowMs);
+  // ⭐⭐ (2026-10-14, *"Piece stays placed"*) the orbited piece captured: out of the orbit — the pull places it and it stays (a switch or a respawn brings a piece back)
+  if (id === st.greenBox?.name) st.orbitPiecePlaced = true;
   // ⭐⭐ `D139`: the drag that made the capture STOPS — a grip on the piece keeps the roll alone until its finger lifts.
   for (const [pointerId, grip] of st.held) {
     const on = st.idOf.get(grip.mesh) === id || st.rawPressedBody.get(pointerId) === id;
@@ -134,6 +145,7 @@ function advancePulls(st: SceneState, nowMs: number): void {
     if (moved !== null && moved.blockedBy !== null) {
       st.goalPulls.cancel(step.id);
       st.goalCapture.retry(step.id);
+      if (step.id === st.greenBox?.name) st.orbitPiecePlaced = false; // ⭐ (2026-10-14) back to the orbit
       st.lastVerdict = `goal: ${step.id} CANCELLED — ${moved.blockedBy} is in the way`;
       st.hudDirty = true;
       continue;

@@ -587,6 +587,15 @@ export function createScene(
   st.pieceQueries = 0;
   st.pieceSolveQueries = 0;
   st.pieceTouching = false;
+  st.hover = null;
+  st.hoverPress = null;
+  st.hoverBand = null;
+  st.hoverFollow = null;
+  st.hoverOffset = null;
+  st.hoverOffsetFading = false;
+  st.hoverView = null;
+  st.bootCamPieceDistM = null;
+  st.orbitPiecePlaced = false;
   st.pieceQ = null;
   st.orbitRawPrev = null;
   st.orbitUserV = null;

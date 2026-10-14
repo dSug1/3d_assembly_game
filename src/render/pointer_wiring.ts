@@ -8,6 +8,7 @@ import { orientTapShown, restingQuadPointer } from "./orient_cube";
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
 import { pieceRingRangeM, respawnStuckPiece } from "./green_box_wiring";
 import { worldPlacementOf } from "../core/object_model";
+import { hoverDragStep, hoverOrbitStep, hoverPressNote, hoverRelease } from "./hover_wiring";
 import { pressSteers, pressHit } from "../input/frozen_pick";
 import { bandMmNow } from "./empty_space_probe";
 import { inEdgeBand } from "../input/edge_band";
@@ -115,6 +116,7 @@ export function installPointerHandler(st: SceneState): void {
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
     if (info.type === PointerEventTypes.POINTERUP) {
+      hoverRelease(st, e.pointerId); // ⭐ (2026-10-14) the finger lifted: the hover ends — back to the orbit
       // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
       const pc = st.pendingPartCentre;
       if (pc !== null && pc.pointerId === e.pointerId) {
@@ -215,6 +217,8 @@ export function installPointerHandler(st: SceneState): void {
         const n = pick?.getNormal(true);
         const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
         st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+        // ⭐⭐ (2026-10-14, the HOVER) the first touch on the piece: its drag may hover (`hoverDragStep`, decided past the tap's slop)
+        if (holdRole === null && !inBand) hoverPressNote(st, e.pointerId, s);
       }
       const rayHit =
         holdRole !== null ? null : throughGreenBox(!inBand && pick?.hit && pick.pickedMesh ? pick.pickedMesh : null, st.greenBox);
@@ -621,8 +625,8 @@ export function installPointerHandler(st: SceneState): void {
           st.router.outside().length === 1 &&
           st.router.objects().length === 0
         ) {
-          // §2 rule 1: ONE touchpoint, no hit — orbit.
-          orbitDragStep(st, e.pointerId, s, prev);
+          // §2 rule 1: ONE touchpoint, no hit — orbit. ⭐⭐ (2026-10-14) …unless it pressed ON the orbited piece and may HOVER
+          if (!hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);
         }
       } else if (info.type === PointerEventTypes.POINTERUP) {
         // ⭐⭐ DOUBLE-TAP OUTSIDE ANY OBJECT RESETS THE CAMERA. ⛔ Judged BEFORE the
@@ -1318,6 +1322,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // emits nothing — raw, it rocked the piece's slide along a sloped part every other event; one band paid once per axis entering motion
     const db = st.orbitMotion.band.step;
     st.orbit.drag(-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch);
+    // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
+    hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, st.orbit.elevation - v0);
     // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
@@ -1411,6 +1417,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
  * face, at once. One episode; the highlights shown, then held and faded. `false` if nothing was aligned.
  */
 function selectRestingFace(st: SceneState, faceId: string): boolean {
+  if (st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) a piece placed in its goal keeps its faces
   const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;
   if (!(restOnTappedFace(st, faceId) && alignRestingFace(st, performance.now(), carry))) return false;
   st.episodes.touch(--st.episodeSeq, true, true);

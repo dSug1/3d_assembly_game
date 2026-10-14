@@ -44,7 +44,7 @@ export type BootOrientation =
  * OPPOSITE was (the owner: *"face aligned or opposite face aligned as there is no way to
  * distinguish two opposite faces for these geometries"*), and a rectangle face shows no 180° spin.
  */
-export type GoalSymmetry = "halfTurns";
+export type GoalSymmetry = "halfTurns" | "yawHalfTurns" | "hexPrism";
 
 /** ⭐ One body's pose in a level's FINAL configuration — authored units, like `BodySpec`. */
 export interface FinalPose {
@@ -166,6 +166,11 @@ export interface SceneDescriptor {
   readonly playVolume?: { readonly aboveFloor: number };
   /** ⭐ `GM1`'s: the final configuration to reach. `null` until an owner authors one. */
   readonly final: FinalConfiguration | null;
+  /**
+   * ⭐⭐ (2026-10-14, the owner: *"goal capture also applies to orbited piece during orbit and quad rotation"* → the goals given on the glass (*"Here is the green piece goal"*, *"Here is the turquoise piece goal"*) → *"Yes, centred"*, *"Centred"*, *"Counts (x/42)"*, *"Piece stays placed"*) — THE ORBITED PIECES' GOALS, in `final`'s frame and units: the one SHOWN joins the goal (`liveFinal`),
+   * the hidden one never counts. Kept apart from `final`, which the demo and the table's own checks read as the parts alone.
+   */
+  readonly orbitGoals?: readonly FinalPose[];
 }
 
 export interface LevelSpec {
@@ -405,6 +410,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     ...(o.playVolume !== undefined ? { playVolume: { aboveFloor: (o.playVolume as { aboveFloor: number }).aboveFloor } } : {}),
     ...(o.demo !== undefined ? { demo: o.demo as DemoPlan } : {}),
     final: parseFinal(o.id, o.final, bodies),
+    ...(o.orbitGoals !== undefined ? { orbitGoals: parseOrbitGoals(o.id, o.orbitGoals) } : {}),
   };
 }
 
@@ -434,7 +440,7 @@ function parseFinal(sceneId: string, raw: unknown, bodies: readonly BodySpec[]):
       // ⛔ A seeded rotation changes with `?sceneSeed=` — a goal must be one fixed pose.
       if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation))
         throw new Error(`${at}: unknown orientation`);
-      if (x.symmetry !== undefined && x.symmetry !== "halfTurns") throw new Error(`${at}: unknown symmetry`);
+      if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism") throw new Error(`${at}: unknown symmetry`);
       if (x.kind !== undefined && (typeof x.kind !== "string" || x.kind === "")) throw new Error(`${at}: kind must be a non-empty string`);
       return {
         id: x.id,
@@ -445,6 +451,29 @@ function parseFinal(sceneId: string, raw: unknown, bodies: readonly BodySpec[]):
       };
     }),
   };
+}
+
+/** ⭐ (2026-10-14) the orbited pieces' goals — their ids are the orbited meshes' (not the scene's bodies); otherwise checked as a final pose. */
+function parseOrbitGoals(sceneId: string, raw: unknown): readonly FinalPose[] {
+  const where = `scene ${sceneId}: orbitGoals`;
+  if (!Array.isArray(raw)) throw new Error(`${where}: not an array`);
+  const seen = new Set<string>();
+  return raw.map((p: unknown, k: number) => {
+    const x = (typeof p === "object" && p !== null ? p : {}) as Record<string, unknown>;
+    const at = `${where}: ${typeof x.id === "string" ? x.id : `pose ${k}`}`;
+    if (typeof x.id !== "string" || x.id === "") throw new Error(`${at}: id must be a non-empty string`);
+    if (seen.has(x.id)) throw new Error(`${at}: duplicate id`);
+    seen.add(x.id);
+    if (!isTriple(x.position)) throw new Error(`${at}: position is not three finite numbers`);
+    if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation)) throw new Error(`${at}: unknown orientation`);
+    if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism") throw new Error(`${at}: unknown symmetry`);
+    return {
+      id: x.id,
+      position: x.position,
+      orientation: x.orientation,
+      ...(x.symmetry === undefined ? {} : { symmetry: x.symmetry }),
+    };
+  });
 }
 
 /** ⭐ The inverse of `parseSceneDescriptor`; `parse(serialize(s))` equals `s`. */

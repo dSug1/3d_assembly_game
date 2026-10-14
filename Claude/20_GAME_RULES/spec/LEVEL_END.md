@@ -217,3 +217,20 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
 * **A settings screen** with the theme choice in it (`GAME_STRUCTURE.md` §5 #3).
 * **A scene-side style** — a theme carrying the 3D palette, lighting mood and materials, for a full art-direction swap.
 * **Pause freezes the clock** (`GAME_STRUCTURE.md` §5 #4) — the results' time still counts a paused stretch.
+
+## 5quater. ⭐⭐ The orbited pieces' goals, and their capture (2026-10-14, `1.0.75-`, ⛔ unjudged by a hand)
+
+> *"goal capture also applies to orbited piece during orbit and quad rotation"* → the goals given on the glass (*"Here is the green piece
+> goal"*, *"Here is the turquoise piece goal"*) → *"Yes, centred"*, *"Centred"*, *"Counts (x/42)"*, *"Piece stays placed"* — the owner.
+
+* **The goals** (`SCENE_1_ORBIT_GOALS`, `SceneDescriptor.orbitGoals`, in `final`'s frame and units): both CENTRED on the TOP face of
+  `Piece4` (the white piece above the blue panel), flush — the green lying wide face down, its long axis along the painting's top edge
+  (`yawHalfTurns`: it and its half-turn about its own vertical, never upside down); the turquoise STANDING (`hexPrism`: every sixth of a
+  turn about its axis, either end up). Derived from `Piece4`'s row and the meshes' own sizes, and vectored against them.
+* **They count**: the goal LIVE (`liveFinalOf`) is the table's 41 and the goal of the orbited piece SHOWN — **x/42**; the hidden one never
+  counts. ⭐ Kept apart from `final`, which the demo (it drops them) and the table's own checks read as the parts alone; they survive the
+  JSON seam (`parseOrbitGoals`).
+* **The capture**: the same as a part's (`D183`), during the orbit and the quad turns — the orbited piece always judged by a GRABBED piece's
+  margins (it is always the player's). **Captured, it STAYS PLACED** (`orbitPiecePlaced`): the orbit no longer places, turns or hovers it (the
+  camera still rides the rings); a piece switch or a respawn brings a piece back to the orbit.
+* ⛔ Not yet run end to end in the app (the score read 36/42 headless, the green piece 344 mm from its goal).

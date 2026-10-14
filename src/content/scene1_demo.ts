@@ -23,8 +23,12 @@ export const SCENE1_DEMO_OPTIONS: Partial<DemoOptions> = {
 
 const finalOf = (id: string) => SCENE_1.final!.bodies.find((f) => f.id === id);
 
+// ⭐ (2026-10-14) without the orbited pieces' goals: the demo plays the table's parts alone, and its end needs the goal met
+const { orbitGoals: _orbitGoals, ...SCENE_1_PARTS } = SCENE_1;
+void _orbitGoals;
+
 export const SCENE1_DEMO: SceneDescriptor = {
-  ...SCENE_1,
+  ...SCENE_1_PARTS,
   id: "Scene1_demo",
   title: "Demo — the painting",
   bodies: SCENE_1.bodies.map((b) => {
