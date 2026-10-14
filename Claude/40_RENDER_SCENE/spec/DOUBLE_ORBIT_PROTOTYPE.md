@@ -206,6 +206,16 @@ and the camera catches up the way a third-person camera does (Zelda's Z-targetin
   the axis is the rotation that carries the green piece toward the rig, so an elevation orbit swings the painting about a
   HORIZONTAL axis across the view — vectored on `Scene_1`'s own rings at three yaws, up and down; a yaw-only mutant goes red.
   ⚠ Pinned on the top or bottom ring, a dy drag moves nothing, so nothing swings.
+  ⭐⭐ **BY DISTANCE, ABOUT THE PLACED PARTS** (the owner, 2026-10-14: *"make the sway in degree decrease linearly with the distance of the
+  piece to the gizmo, from the orbit sway value of the slider (at maximum distance) to 0.1 degree (at minimum distance). If the piece is
+  sliding on a part, set to minimum. Also, modify so that the center of the sway is not the gizmo but the barycenter of the placed"* →
+  *"All placed parts"*; ⛔ unjudged by a hand): the swing's angle is LINEAR in the piece's distance to the gizmo — `ORBIT_SWAY_MIN_DEG`
+  (**0.1°**) at the rings' closest distance, the slider's `orbitSwayDeg` at their farthest (`pieceRingRangeM`, the piece's own clamp
+  applied), clamped between (`orbitSwayDegAt`); **0.1° while the piece slides on a part** (the last orbit solve met one —
+  `orbitFrame`'s `touched`, `st.pieceTouching`); a slider under 0.1° is taken as it is, 0 is no sway. ⭐ The swing's PIVOT is the
+  barycentre of the parts PLACED in their goal (`placedBarycentre` over `goalCommit`), the gizmo with none placed. ⚠ Its AXIS still
+  follows the orbit about the gizmo (`orbitSwingAxis`); the speed factor and the softness are unchanged; the slide (kind 1) is not
+  scaled. (The sway moves the meshes only — the collision solver never sees it.)
   ⭐⭐ **OPTION 2, THE SLIDE** (the owner, 2026-10-02: *"build also option 2"*): the pieces TRANSLATE the way the green piece
   is heading (`orbitSlideDirection`, from where it is to where the rig puts it), `orbitSlideMm` (**5 mm** on the glass, a guess;
   CAMERA › *orbit slide*, 0–20) × the finger's speed factor, on the same quick softness (`orbitSwayTauMs`) — the dragged
@@ -817,3 +827,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ The fourth audit's fixes: the long slide at the gap kept (a piece resting on a part no longer crawls along it), the plane bound for a stride's path (anchors only), the second gap per convex part, the orbit drag's band ticked, the armed pop-up rechecked at once → `COLLISION.md` §12quinquies.
 * ⭐⭐ The fifth audit's fixes: the orbit drag's band re-arms only after a 400 ms PAUSE (a stop-and-go approach lost up to 87 % of its travel), the plane bound pinned by a vector, the stuck verdict kept across a nudge, the turn sweep refined near a part (and never "free" when its budget ran out) → `COLLISION.md` §12sexies.
 * ⭐⭐ The red square no longer lingers: the quad's turn is re-asked while the piece moves (it paused above 3 mm a frame), under the frame's leftover budget, free at once when clear; the sixth audit's fixes — the stuck gate in `input/`, the turn sweep certified, a resting finger's tremor no longer keeping the orbit band moving → `COLLISION.md` §12septies.
+* ⭐⭐ The orbit sway by DISTANCE (0.1° at the rings' closest → the slider's at their farthest; 0.1° while the piece slides on a part), swung about the barycentre of the PLACED parts → the orbit sway bullet above (2026-10-14).

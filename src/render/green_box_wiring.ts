@@ -953,6 +953,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.relocateCursor = { key: relocKey, from: fr.relocateNext ?? (fr.relocateExhausted ? -1 : 0) };
     st.pieceQueries += fr.queries;
     st.pieceSolveQueries = fr.queries;
+    st.pieceTouching = fr.touched;
     st.pieceDeferred = fr.deferred;
     // ⭐ half of STUCK: an input that pushed into a part; a free input clears it (no input: unchanged)
     if (fr.blocked !== null) st.pieceMoveBlocked = fr.blocked;
@@ -970,6 +971,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   } else {
     // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are
     st.pieceQ = null;
+    st.pieceTouching = false;
     st.orbitRawPrev = null;
     st.orbitUserV = null;
   }
@@ -1446,6 +1448,12 @@ export function restingPreview(st: SceneState, dir: OrientDirection, roll: boole
 }
 
 /** ⭐ The rings' closest distance to the orbit centre, as the piece rides them (its own minimum, zero, applied) — the waist. */
+/** ⭐ (2026-10-14) the piece's distance range to the gizmo on the rings (their closest and farthest, the piece's own clamp applied), m. */
+export function pieceRingRangeM(st: SceneState): { minM: number; maxM: number } {
+  const r = ringDistanceRange((v) => orbitOffset(st.cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM);
+  return { minM: clampPieceRadiusM(r.minM, st.cfg), maxM: clampPieceRadiusM(r.maxM, st.cfg) };
+}
+
 function piecesClosestM(st: SceneState): number {
   const m = ringDistanceRange((v) => orbitOffset(st.cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM;
   return clampPieceRadiusM(m, st.cfg);
