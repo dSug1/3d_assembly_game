@@ -348,8 +348,6 @@ export interface GestureConfig {
   hoverAmplitudeMm: number;
   /** ⭐ (2026-10-14) the hover's gain — 1: the piece under the finger. */
   hoverGain: number;
-  /** ⭐ (2026-10-14) how fast the camera reaches the hover view, and leaves it as the orbit comes back — the share of the way per mm of finger. */
-  hoverCameraGain: number;
   /**
    * ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) THE ORBITED PIECE'S GOAL MARGINS, IN THE WORLD — mm and degrees. ⛔ It was judged by a grabbed part's:
    * the snap's 10 mm ON THE GLASS at the camera's distance (182 mm at 4.25 m, measured) and 15° — loose on purpose for a part the capture then
@@ -918,7 +916,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ guesses with sliders
   hoverAmplitudeMm: 500,
   hoverGain: 1,
-  hoverCameraGain: 0.05,
   // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
   orbitGoalMm: 5,
   // ⚠ a guess with a slider
@@ -1192,7 +1189,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
-  if (!(cfg.hoverCameraGain > 0 && cfg.hoverCameraGain <= 1)) throw new Error(`hoverCameraGain (${cfg.hoverCameraGain}) must be in (0, 1] per mm.`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
   if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);
   if (!(cfg.orbitGoalDeg > 0 && cfg.orbitGoalDeg <= 30)) throw new Error(`orbitGoalDeg (${cfg.orbitGoalDeg}) must be in (0, 30]°.`);

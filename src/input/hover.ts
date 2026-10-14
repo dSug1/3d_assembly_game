@@ -10,9 +10,6 @@
  */
 import type { Vec3 } from "../core/vec";
 import type { OrbitQ } from "./piece_orbit_solver";
-import type { GestureConfig } from "./gestureConfig";
-import { cameraOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
-import { cameraGapM } from "./green_box";
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -46,23 +43,6 @@ export function hoverPlane(n: Vec3, right: Vec3): { e1: Vec3; e2: Vec3 } | null 
   return e2 === null ? null : { e1, e2 };
 }
 
-/**
- * ⭐⭐ **THE FINGER ON THE PLANE** (the method of \`D76\`): \`a1\`, \`a2\` the screen shadows of one metre along \`e1\` and \`e2\` (px), the finger's
- * step solved onto both so the piece follows it exactly — × \`gain\` (1: under the finger). Edge-on (the shadows nearly parallel), each axis
- * takes its projection.
- */
-export function planeStepFromScreen(dxPx: number, dyPx: number, a1: readonly [number, number], a2: readonly [number, number], gain: number): [number, number] {
-  const det = a1[0] * a2[1] - a1[1] * a2[0];
-  const n1 = Math.hypot(a1[0], a1[1]);
-  const n2 = Math.hypot(a2[0], a2[1]);
-  if (Math.abs(det) > 0.05 * n1 * n2 && n1 > 1e-9 && n2 > 1e-9) {
-    return [((dxPx * a2[1] - dyPx * a2[0]) / det) * gain, ((a1[0] * dyPx - a1[1] * dxPx) / det) * gain];
-  }
-  const u = n1 > 1e-9 ? (dxPx * a1[0] + dyPx * a1[1]) / (n1 * n1) : 0;
-  const v = n2 > 1e-9 ? (dxPx * a2[0] + dyPx * a2[1]) / (n2 * n2) : 0;
-  return [u * gain, v * gain];
-}
-
 /** ⭐ The amplitude slider's top (mm): there the limit is OFF — the hover is unlimited. */
 export const HOVER_UNLIMITED_MM = 500;
 
@@ -75,38 +55,79 @@ export function clampDisc(u: number, v: number, maxMm: number): [number, number]
 }
 
 /**
- * ⭐⭐⭐ (2026-10-14, the owner: *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) — **THE HOVER VIEW IS ISOMETRIC**: the camera looks along a direction that projects EQUALLY onto the three
- * orthogonal planes — the HORIZONTAL one, the GRAVITY (vertical) one of the hosting face, and the third, orthogonal to both — so its three
- * components are equal: `(up + a + b) / √3` (35.26° above the horizontal). The camera sits ABOVE and to the RIGHT of the hosted face, looking
- * down-left at it:
- * * a SIDE face (`|n_y| ≤ 0.7`): `a` its normal laid flat (the piece's side), `b` the horizontal across it toward the screen's `right`;
- * * a TOP face (an underside: `up` downward): `a` the screen's `right` laid flat, `b` the horizontal across it toward where the camera is
- *   (`toCam`), so the view does not swing round to the other side.
- * ⛔ It replaced the face-on view turned by the CAMERA OFFSET's angles (a vertical face was watched head-on, its contact seen edge-on).
+ * ⭐⭐⭐ (2026-10-14, the owner: *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) — **THE HOVER VIEW: THE NEAREST ISOMETRIC CORNER**. The hosting face's frame: its normal `n`, `t1` the
+ * screen's right laid on the face, `t2 = n × t1`. Its four isometric views `(n ± t1 ± t2)/√3` see the face at 35° and both its axes alike;
+ * the one on the side the camera ALREADY is (the signs of `toCam` along `t1` and `t2`) is the nearest of the four — left or right, above or
+ * below (toward or away on a top face). A camera square on an axis (within `HOVER_CORNER_TIE`) keeps `prev`'s side (or +). ⛔ It replaced a
+ * fixed above-right view at the boot's distance (§12), far from the rings: the toggle swung the camera a long way and the piece left the press.
  */
-export function hoverIsoDirection(n: Vec3, right: Vec3, toCam: Vec3): Vec3 {
-  const flat = (x: Vec3): Vec3 | null => unit([x[0], 0, x[2]]);
-  const up: Vec3 = [0, 1, 0];
-  let a: Vec3, b: Vec3, sy: number;
-  if (Math.abs(n[1]) <= 0.7) {
-    a = flat(n) ?? [1, 0, 0];
-    b = [-a[2], 0, a[0]];
-    if (dot(b, right) < 0) b = [-b[0], 0, -b[2]];
-    sy = 1;
-  } else {
-    a = flat(right) ?? [1, 0, 0];
-    b = [-a[2], 0, a[0]];
-    if (dot(b, toCam) < 0) b = [-b[0], 0, -b[2]];
-    sy = Math.sign(n[1]);
-  }
-  const k = 1 / Math.sqrt(3);
-  return [(a[0] + b[0] + up[0] * sy) * k, (a[1] + b[1] + up[1] * sy) * k, (a[2] + b[2] + up[2] * sy) * k];
+export const HOVER_CORNER_TIE = 0.02;
+export function hoverCornerDirection(n: Vec3, right: Vec3, toCam: Vec3, prev: readonly [number, number] | null = null): { dir: Vec3; signs: [number, number] } | null {
+  const k = dot(right, n);
+  const t1 = unit([right[0] - n[0] * k, right[1] - n[1] * k, right[2] - n[2] * k]);
+  if (t1 === null) return null;
+  const t2 = unit(cross(n, t1));
+  if (t2 === null) return null;
+  const c = unit(toCam) ?? n;
+  const side = (x: number, i: 0 | 1): number => (Math.abs(x) <= HOVER_CORNER_TIE ? (prev?.[i] ?? 1) : Math.sign(x));
+  const s1 = side(dot(c, t1), 0);
+  const s2 = side(dot(c, t2), 1);
+  const r = 1 / Math.sqrt(3);
+  return { dir: [(n[0] + s1 * t1[0] + s2 * t2[0]) * r, (n[1] + s1 * t1[1] + s2 * t2[1]) * r, (n[2] + s1 * t1[2] + s2 * t2[2]) * r], signs: [s1, s2] };
+}
+
+/**
+ * ⭐⭐ (*"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) — **THE CAMERA TURNS ON AN ARC** about the hover's target: its direction turned (a great-circle slerp) from where the orbit's camera
+ * is toward the corner's, its DISTANCE KEPT (no zoom jump), its look slid from the gizmo to the target — by the blend weight `w`. At `w = 0`
+ * exactly the orbit's camera, so the way out ends on the rings. ⛔ The camera's position was blended along a straight line (it cut near the
+ * piece when the two views were far apart) toward a view at another distance.
+ */
+export function hoverCameraSwing(camAt: Vec3, lookAt: Vec3, target: Vec3, dir: Vec3, w: number): { camAt: Vec3; lookAt: Vec3 } {
+  if (!(w > 0)) return { camAt, lookAt };
+  const k = Math.min(1, w);
+  const rel: Vec3 = [camAt[0] - target[0], camAt[1] - target[1], camAt[2] - target[2]];
+  const d = Math.hypot(rel[0], rel[1], rel[2]);
+  const a = unit(rel) ?? dir;
+  const u = slerpDir(a, dir, k);
+  return {
+    camAt: [target[0] + u[0] * d, target[1] + u[1] * d, target[2] + u[2] * d],
+    lookAt: [lookAt[0] + (target[0] - lookAt[0]) * k, lookAt[1] + (target[1] - lookAt[1]) * k, lookAt[2] + (target[2] - lookAt[2]) * k],
+  };
+}
+/** ⭐ The great-circle turn from unit `a` toward unit `b` by `t`; opposite directions turn over the world's up (or x). */
+export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
+  const c = Math.max(-1, Math.min(1, dot(a, b)));
+  const th = Math.acos(c);
+  if (th < 1e-9) return b;
+  const axis = unit(cross(a, b)) ?? unit(cross(a, [0, 1, 0])) ?? unit(cross(a, [1, 0, 0]))!;
+  const p = cross(axis, a);
+  const s = th * t;
+  return unit([a[0] * Math.cos(s) + p[0] * Math.sin(s), a[1] * Math.cos(s) + p[1] * Math.sin(s), a[2] * Math.cos(s) + p[2] * Math.sin(s)]) ?? b;
+}
+
+/**
+ * ⭐⭐⭐ (*"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) — **THE PIECE STAYS UNDER THE FINGER**: the finger's RAY meets the hover's plane (through `p0`, normal `n`), read in the plane's
+ * coordinates (`e1`, `e2`) — a finger STEP is the distance between two such points, both rays cast from the camera of the moment
+ * (`hoverFingerStep`). ⛔ The finger's screen step was solved onto the plane's screen SHADOWS (a linearisation that a foreshortened axis
+ * multiplied), and the piece left the press.
+ * `null`: the ray grazes the plane (under `minDeg`) or meets it behind the camera — the point would fly.
+ */
+export const HOVER_RAY_MIN_DEG = 12;
+export function rayPlaneCoords(o: Vec3, d: Vec3, p0: Vec3, n: Vec3, e1: Vec3, e2: Vec3, minDeg = HOVER_RAY_MIN_DEG): [number, number] | null {
+  const dl = Math.hypot(d[0], d[1], d[2]);
+  if (!(dl > 1e-12)) return null;
+  if (Math.abs(dot(d, n)) / dl < Math.sin((minDeg * Math.PI) / 180)) return null;
+  const t = dot([p0[0] - o[0], p0[1] - o[1], p0[2] - o[2]], n) / dot(d, n);
+  if (!(t > 0)) return null;
+  const h: Vec3 = [o[0] + d[0] * t - p0[0], o[1] + d[1] * t - p0[1], o[2] + d[2] * t - p0[2]];
+  return [dot(h, e1), dot(h, e2)];
 }
 
 /**
  * ⭐⭐ **THE WAY IN AND OUT OF THE HOVER VIEW, BY THE FINGER'S TRAVEL** (the owner: *"Use a camera movement similar to way in or way out to smooth
  * the view, controlled by delta position. Make a slider for the gain"*) — the share of the hover view, raised by a hover drag's travel and
- * lowered by an orbit drag's, \`gainPerMm\` per millimetre of finger; the blend weight eases in and out (smoothstep).
+ * lowered by an orbit drag's, \`gainPerMm\` per millimetre of finger; the blend weight eases in and out (smoothstep). ⭐ (2026-10-14) the gain is
+ * the way in's own: \`1 / pieceOrbitEnterMm\` (the \`hoverCameraGain\` slider deleted).
  */
 export function hoverViewProgress(progress: number, travelMm: number, gainPerMm: number, toward: boolean): number {
   const d = Math.max(0, travelMm) * Math.max(0, gainPerMm);
@@ -319,20 +340,6 @@ export function behindToleranceM(planeGapM: number, hardM: number): number {
 /** ⭐ (2026-10-14, the hover's second audit) The drawn lag the MODEL takes off the mesh (`syncOrbitPieceModel`) — none once the piece is captured (the pull owns the mesh). */
 export function modelLag(draw: Vec3 | null, placed: boolean): Vec3 {
   return draw !== null && !placed ? draw : [0, 0, 0];
-}
-
-/**
- * ⭐⭐ (2026-10-14, the owner: *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) — **THE HOVER VIEW'S DISTANCE**: the camera's distance to the piece AT BOOT, had the zoom been what it is
- * now — the boot's orbit pose (`cam`), the piece's place on the rings (`box`, from the centre) and the angle offsets, the camera put behind
- * the piece by the gap the zoom makes NOW (`cameraGapM`). So the zoom works in the hover view as it does at boot.
- */
-export function hoverViewDistanceM(
-  cfg: GestureConfig,
-  boot: { readonly cam: OrbitAt; readonly box: Vec3; readonly off: CameraAngleOffset },
-  zoom: number,
-): number {
-  const o = cameraOffset(cfg, boot.cam, boot.box, boot.off, cameraGapM(cfg.cameraRadiusOffsetMm / 1000, zoom));
-  return Math.hypot(o[0] - boot.box[0], o[1] - boot.box[1], o[2] - boot.box[2]);
 }
 
 /**

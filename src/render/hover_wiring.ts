@@ -4,7 +4,7 @@
  * each step solved by the orbit's own clearance rule (the other faces stop and slide it). The camera eases toward the HOVER VIEW with the drag's
  * travel, and back as the orbit comes back. ⛔ No rule here: the decisions are `input/hover.ts`'s and the solver's.
  */
-import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -22,8 +22,10 @@ import { AT_CONTACT_M, solveOrbitStep, type OrbitQ } from "../input/piece_orbit_
 import {
   HOVER_SPAN_M,
   clampDisc,
-  hoverIsoDirection,
-  hoverViewDistanceM,
+  hoverCornerDirection,
+  hoverCameraSwing,
+  rayPlaneCoords,
+  slerpDir,
   HOVER_ALIGN_DEG,
   hoverFaceContact,
   projectOntoPlane,
@@ -33,7 +35,6 @@ import {
   hoverPlane,
   hoverViewProgress,
   hoverViewWeight,
-  planeStepFromScreen,
   hoverDrawLag,
   hoverWayInLeft,
   startHoverWayIn,
@@ -80,14 +81,6 @@ export function hoverRelease(st: SceneState, pointerId: number): void {
   if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
   if (st.hoverBand?.pointerId === pointerId) st.hoverBand = null;
   if (st.hoverSpent === pointerId) st.hoverSpent = null;
-}
-
-/** ⭐ A world point on the screen, in the samples' CSS pixels. */
-function screenOf(st: SceneState, p: Vec3): [number, number] {
-  const w = st.engine.getRenderWidth();
-  const v = Vector3.Project(new Vector3(p[0], p[1], p[2]), Matrix.Identity(), st.scene.getTransformMatrix(), st.camera.viewport.toGlobal(w, st.engine.getRenderHeight()));
-  const k = w > 0 ? st.canvas.clientWidth / w : 1;
-  return [v.x * k, v.y * k];
 }
 
 /** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test). */
@@ -191,20 +184,22 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], partId: c.id, behind };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], finger: [0, 0], partId: c.id, behind };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
   st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
   // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
-  // ⭐⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) the ISOMETRIC view: above and right of the face, looking down-left at it
+  // ⭐⭐⭐ (2026-10-14, *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) the NEAREST ISOMETRIC CORNER of the hosting face, on the side the camera already is
   const cam = st.camera.position;
-  const iso = hoverIsoDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]]);
   const hv0 = st.hoverView;
-  if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, from: null };
-  else if (hoverViewRetargets(hv0.n, c.normal))
-    st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
+  const corner = hoverCornerDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]], hv0?.signs ?? null);
+  if (corner !== null) {
+    if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: null };
+    else if (hoverViewRetargets(hv0.n, c.normal))
+      st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
+  }
   st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
@@ -232,6 +227,9 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
       st.hoverBand = null;
       return false;
     }
+    // ⭐⭐ (2026-10-14) the finger's place when the hover began: its ray's point on the plane is the base
+    st.hover!.finger = [s.x, s.y];
+    return true;
   }
   const h = st.hover!;
   if (st.greenBox === null) return false;
@@ -240,23 +238,41 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
   const dx = step.dx;
   const dy = step.dy;
   if (dx === 0 && dy === 0) return true;
-  // the finger's step on the plane (each axis's screen shadow, per metre)
-  const at = add(h.origin, add(scale(h.e1, h.pending[0]), scale(h.e2, h.pending[1])));
-  const s0 = screenOf(st, at);
-  const s1 = screenOf(st, add(at, scale(h.e1, 0.01)));
-  const s2 = screenOf(st, add(at, scale(h.e2, 0.01)));
-  const a1: [number, number] = [(s1[0] - s0[0]) / 0.01, (s1[1] - s0[1]) / 0.01];
-  const a2: [number, number] = [(s2[0] - s0[0]) / 0.01, (s2[1] - s0[1]) / 0.01];
-  const [du, dv] = planeStepFromScreen(dx, dy, a1, a2, st.cfg.hoverGain);
-  const [tu, tv] = clampDisc(h.pending[0] + du, h.pending[1] + dv, st.cfg.hoverAmplitudeMm);
-  const asked = add(scale(h.e1, tu - h.pending[0]), scale(h.e2, tv - h.pending[1]));
-  h.pending = [tu, tv];
+  // ⭐⭐⭐ (2026-10-14, *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) the finger's RAY on the hover's plane: the piece moves by what that point moved (× `hoverGain`), so it stays
+  // under the finger while the camera turns; the finger's place on the glass is its deadbanded one
+  const from: [number, number] = [h.finger[0], h.finger[1]];
+  h.finger = [h.finger[0] + dx, h.finger[1] + dy];
+  const was: [number, number] = [h.pending[0], h.pending[1]];
+  // ⭐ the ray grazing the plane (a face seen nearly edge-on): the piece waits — the camera still turns toward the corner below, which sees the
+  // face at 35°, and the next good point is the new base
+  const onPlane = hoverFingerStep(st, h, from);
+  const asked = add(scale(h.e1, h.pending[0] - was[0]), scale(h.e2, h.pending[1] - was[1]));
   // ⭐⭐ (*"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the other parts SWAY at the least angle — a hover is a slide along a part (`hoverSwayDeg`), about the placed parts
-  if (hb !== null) hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
+  if (hb !== null && onPlane) hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
   // the camera eases toward the hover view with the finger's travel
   const hv = st.hoverView;
-  if (hv !== null) hv.progress = hoverViewProgress(hv.progress, Math.hypot(dx, dy) / mmToPx(1), st.cfg.hoverCameraGain, true);
+  if (hv !== null) hv.progress = hoverViewProgress(hv.progress, Math.hypot(dx, dy) / mmToPx(1), 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), true);
   st.hudDirty = true;
+  return true;
+}
+
+/**
+ * ⭐⭐ (2026-10-14) The finger's STEP on the hover's plane: the rays through where it was (`from`) and where it is now, both cast from the camera
+ * AS IT IS (`rayPlaneCoords`) — the plane distance between their two points, × `hoverGain`, added to the pending target and held in the
+ * amplitude's disc. So only the FINGER moves the piece (a camera turning while the finger rests moves nothing — ⛔ an absolute "point under the
+ * finger" swept the piece 0.23 m across the plane as the camera turned, headless), and the step is the exact one under the finger for the
+ * camera of the moment. Either ray grazing the plane (or behind the camera): `false`, nothing.
+ */
+function hoverFingerStep(st: SceneState, h: NonNullable<SceneState["hover"]>, from: readonly [number, number]): boolean {
+  const at = (x: number, y: number) => {
+    const ray = st.scene.createPickingRay(x, y, null, st.camera);
+    return rayPlaneCoords([ray.origin.x, ray.origin.y, ray.origin.z], [ray.direction.x, ray.direction.y, ray.direction.z], h.origin, h.n, h.e1, h.e2);
+  };
+  const a = at(from[0], from[1]);
+  const b = at(h.finger[0], h.finger[1]);
+  if (a === null || b === null) return false;
+  const g = st.cfg.hoverGain;
+  h.pending = clampDisc(h.pending[0] + g * (b[0] - a[0]), h.pending[1] + g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);
   return true;
 }
 
@@ -390,7 +406,7 @@ export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   }
   const hv = st.hoverView;
   if (hv !== null) {
-    hv.progress = hoverViewProgress(hv.progress, travelMm, st.cfg.hoverCameraGain, false);
+    hv.progress = hoverViewProgress(hv.progress, travelMm, 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), false);
     if (hv.progress <= 0) st.hoverView = null;
   }
 }
@@ -431,30 +447,27 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   }
 }
 
-/** ⭐ The camera blended toward the hover view by its progress — ISOMETRIC, at the boot distance for the zoom of the moment. */
+/**
+ * ⭐⭐⭐ (2026-10-14, *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) The camera turned toward the hover view by its progress, ON AN ARC about the target from where the orbit's camera
+ * is (`hoverCameraSwing`), its distance kept — at progress 0 exactly the rings' camera. A retarget (another face) turns the corner from the
+ * old one over `HOVER_VIEW_RETARGET_MS`.
+ */
 export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3 } {
   const hv = st.hoverView;
   if (hv === null) return { camAt, lookAt };
   const w = hoverViewWeight(hv.progress);
   if (w <= 0) return { camAt, lookAt };
-  // ⭐⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) the distance the camera had to the piece at boot, at the zoom of the moment
-  const dist =
-    st.bootCamGeom !== null
-      ? hoverViewDistanceM(st.cfg, st.bootCamGeom, st.zoom)
-      : (st.bootCamPieceDistM ?? Math.hypot(camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]));
-  const viewOf = (v: { target: Vec3; iso: Vec3 }): Vec3 => add(v.target, scale(v.iso, dist));
-  let pos = viewOf(hv);
+  let dir = hv.iso;
   let target = hv.target;
-  // ⭐⭐ (2026-10-14, the hover's audit) retargeted to another face: eased from the view it left
   if (hv.from !== null) {
     const s = retargetShare(performance.now() - hv.from.t0);
     if (s >= 1) hv.from = null;
     else {
-      pos = lerp3(viewOf(hv.from), pos, s);
+      dir = slerpDir(hv.from.iso, dir, s);
       target = lerp3(hv.from.target, target, s);
     }
   }
-  return { camAt: lerp3(camAt, pos, w), lookAt: lerp3(lookAt, target, w) };
+  return hoverCameraSwing(camAt, lookAt, target, dir, w);
 }
 
 // ⭐ (2026-10-14, the owner: *"change the cyan highlight color to this green color as attached"*) — #D8FDD2 (216, 253, 210), sampled from the owner's swatch
