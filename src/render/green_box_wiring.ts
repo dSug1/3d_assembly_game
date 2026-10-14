@@ -605,16 +605,14 @@ function restingFillFrame(st: SceneState, now: number): void {
   fill.isVisible = false;
   // ⭐⭐ (2026-10-12, the owner: *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"*) — hidden with the quads (below half the farthest distance: it had shrunk to a flickering point there)
   // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — and in the MIRROR: past where the quads disappear it grows again toward the gizmo (`growth`)
-  const shown = (st.restingQuads?.shown ?? true) || (st.restingQuads?.mirror ?? false);
-  for (const c of fill.getChildMeshes(true)) c.isVisible = shown;
-  if (!shown) return;
+  // ⭐⭐ (2026-10-14, the owner: *"keep the yellow highlight of the resting face at full scale, do not diminish it."*) — ALWAYS SHOWN, AT FULL SCALE (no growth with the quads, no mirror)
+  for (const c of fill.getChildMeshes(true)) c.isVisible = true;
   const camD = Vector3.Distance(st.camera.position, p.mesh.position);
   const lift = highlightLiftM(st.cfg.highlightLiftMm, camD, st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;
   // ⭐⭐ (2026-10-12, the owner: *"scale the yellow highlight of the resting face in the same way as the quads"*) — about the face's centre, by the
   // quads' growth this frame (`quadSize` ÷ the full size, at most 1); ⭐ never under ONE PIXEL across (its longest axis, on the glass)
-  const longest = Math.max(1e-9, ...p.restingLong.ends.map(([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])));
-  const k = Math.min(1, Math.max(st.restingQuads?.growth ?? 1, trackingMetresPerPx(camD, st.camera.fov, st.canvas.clientHeight) / longest));
+  const k = 1;
   const c = p.restingCentre;
   fill.scaling.setAll(k);
   fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);

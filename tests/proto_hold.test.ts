@@ -145,7 +145,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toMatch(/highlightAlpha|pinkFillFrame|st\.pinkFace/);
     // ⭐ (2026-10-12) the yellow contour — shown with the quads (*"same for the outline as for the quads: … hidden below half max distance"*)
-    expect(w).toMatch(/fill\.isVisible = false;[\s\S]{0,900}for \(const c of fill\.getChildMeshes\(true\)\) c\.isVisible = shown;/);
+    expect(w).toMatch(/fill\.isVisible = false;[\s\S]{0,1500}for \(const c of fill\.getChildMeshes\(true\)\) c\.isVisible = true;/); // ⭐ (2026-10-14) always shown, at full scale
     expect(code("render/tuning_menu.ts")).not.toContain("highlightTimerSlider");
     expect(code("render/pointer_wiring.ts")).not.toContain("st.highlightEndedAt");
   });

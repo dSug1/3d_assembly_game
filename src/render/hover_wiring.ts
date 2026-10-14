@@ -31,6 +31,7 @@ import {
   planeAxes,
   type Rect2,
   boundStep,
+  hoverViewEnds,
   HOVER_ALIGN_DEG,
   hoverFaceContact,
   projectOntoPlane,
@@ -547,7 +548,7 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   const f = advanceFollow({ x: hv.shown, v: hv.shownVel }, hv.progress, hoverDrawTau(st), 1, dt);
   hv.shown = Math.min(1, Math.max(0, f.x));
   hv.shownVel = f.v;
-  if (hv.progress <= 0 && hv.shown < 1e-3) {
+  if (hoverViewEnds(hv.progress, hv.shown, st.hover !== null)) {
     st.hoverView = null;
     return { camAt, lookAt };
   }

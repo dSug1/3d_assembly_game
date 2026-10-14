@@ -325,3 +325,16 @@ floor** — marked seats where a piece may be set down, each a known target the 
   only), and keeps 8 of the frame's 24 gap queries (`HOVER_FADE_QUERIES`) — ⛔ near the hosting face the orbit's slide took them all and the
   way in advanced in bursts, each one shown. The hover view's share eases on the spring too (it stepped at each pointer event), and the view
   ends once its SHOWN share is back to 0 (it was dropped at once).
+
+## 17. The regression: the hover froze (2026-10-14, `1.0.76-`)
+
+> *"regression: I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes."* — the owner.
+
+* ⛔⛔⛔ **THE CAUSE** (§16's eased hover view): a NEW hover view starts with both shares at 0, and the view was ended as soon as both were 0 —
+  the very next frame, before the drag raised it. So the camera never turned toward the corner. With a face seen nearly edge-on — the usual
+  case after a dy collision, the camera level with a top face — the finger's ray grazes the plane and moves nothing *while waiting for that
+  turn* (§14): nothing moved at all. Headless the view was `null` during a drag (measured), `1` once fixed.
+* ✅ **The view ends only with NO hover on** (`hoverViewEnds`): its asked share back to 0 AND its shown share back to 0.
+* ⭐ And a hover that STARTS outside the faces' bound (§16) is not held by it — free until it is inside (`boundStep`): it could never move.
+* ⚠ A synthesised MOUSE drag does not reach the hover headless (the same before and after), so the freeze was found by reading the code, then
+  measured with touch.
