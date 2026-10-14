@@ -33,8 +33,12 @@ import {
   hoverViewProgress,
   hoverViewWeight,
   planeStepFromScreen,
+  hoverDrawLag,
+  hoverEndsOn,
+  hoverViewRetargets,
+  retargetShare,
 } from "../input/hover";
-import { RESTING_COLOUR, pieceSolveOptions, pieceSolverEnv } from "./green_box_wiring";
+import { RESTING_COLOUR, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
@@ -146,9 +150,14 @@ function hoverStart(st: SceneState, pointerId: number): boolean {
   behind.delete(b.name);
   st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, partId: c.id, behind };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
+  st.hoverDraw = null;
   st.hoverOffsetFading = false;
-  if (st.hoverView === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2 };
+  // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
+  const hv0 = st.hoverView;
+  if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, from: null };
+  else if (hoverViewRetargets(hv0.n, c.normal))
+    st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, from: { target: hv0.target, n: hv0.n, e1: hv0.e1, e2: hv0.e2, t0: performance.now() } };
   st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
@@ -202,6 +211,10 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
   // ⭐⭐ the SOLVED offset is the follower's target — drawn by `hoverFrame`, as a translated part's mesh follows its model
   const hf = st.hoverFollow;
   if (hf !== null) {
+    if (Math.abs(h.u - hf.u) + Math.abs(h.v - hf.v) > 1e-12) {
+      hf.du = h.u - hf.u;
+      hf.dv = h.v - hf.v;
+    }
     hf.u = h.u;
     hf.v = h.v;
   }
@@ -238,12 +251,18 @@ function hoverSway(st: SceneState, watcher: SwayWatcher, s: Sample, moved: Vec3,
 }
 
 /**
- * ⭐⭐ Each frame: the hover's drawn offset FOLLOWS the solved one — the part translation's own follower (`translateInertiaMs`,
- * `translateDampingRatio`, the phantom lead `translateLeadMs`), per plane axis — and is applied: the gizmo moved (the piece riding it) or the
- * piece alone. Once the finger lifted and the drawn offset settled, it ends. The hover finger's deadband ticked (a still finger sends no event).
+ * ⭐⭐ Each frame: the hover's MODEL is its SOLVED offset (the settle eased in) — the gizmo moved (the piece riding it) or the piece alone; the
+ * part translation's follower (`translateInertiaMs`, `translateDampingRatio`, the phantom lead `translateLeadMs`) only DRAWS it, its lag kept
+ * behind the solved place (`hoverDrawLag`, `st.hoverDraw`). Once the finger lifted and the drawn lag is gone, it ends. A held second touch or
+ * a capture ends it at once (`hoverEndsOn`). The hover finger's deadband ticked (a still finger sends no event).
  */
 export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   if (st.hoverBand !== null) st.hoverBand.band.tick(now);
+  // ⭐⭐ (2026-10-14, the hover's audit) a held second touch, or the capture: the hover ends now, at its solved place
+  if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced)) {
+    hoverEndNow(st);
+    return;
+  }
   const hf = st.hoverFollow;
   if (hf === null || !(dtSec > 0)) return;
   const tau = st.cfg.translateInertiaMs / 1000;
@@ -256,21 +275,36 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, lead), tau, zeta, dtSec);
   hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, lead), tau, zeta, dtSec);
   const settleShown = hf.settleM * settleShare(now - hf.settleT0);
-  const w = add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.fu.x), scale(hf.e2, hf.fv.x)));
+  // ⭐⭐⭐ (2026-10-14, the hover's audit) the MODEL: the solved offset (the settle eased in — a solved move, shown monotonically)
+  applyHoverModel(st, hf, add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
+  // …the DRAWN lag behind it: the mesh only
+  const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv);
+  st.hoverDraw = add(scale(hf.e1, lu), scale(hf.e2, lv));
+  // settled after the release: nothing drawn apart
+  const settled = Math.abs(hf.fu.x - hf.u) + Math.abs(hf.fv.x - hf.v) < 1e-6 && Math.abs(hf.fu.v) + Math.abs(hf.fv.v) < 1e-5;
+  if (st.hover === null && settled && settleShown >= hf.settleM) {
+    st.hoverFollow = null;
+    st.hoverDraw = null;
+  }
+}
+
+function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, w: Vec3): void {
   if (hf.gizmo) {
     st.centreBlend.snapTo(add(hf.centre0, w));
     syncCentre(st);
   } else st.hoverOffset = add(hf.offset0, w);
-  // settled after the release: the drawn offset IS the solved one
-  const settled = Math.abs(hf.fu.x - hf.u) + Math.abs(hf.fv.x - hf.v) < 1e-6 && Math.abs(hf.fu.v) + Math.abs(hf.fv.v) < 1e-5;
-  if (st.hover === null && settled && settleShown >= hf.settleM) {
-    const end = add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v)));
-    if (hf.gizmo) {
-      st.centreBlend.snapTo(add(hf.centre0, end));
-      syncCentre(st);
-    } else st.hoverOffset = add(hf.offset0, end);
-    st.hoverFollow = null;
-  }
+}
+
+/** ⭐ (2026-10-14, the hover's audit) The hover ended at once (a held second touch, the capture): its finger handed back, the model at its solved place, nothing drawn apart. */
+function hoverEndNow(st: SceneState): void {
+  const hf = st.hoverFollow;
+  if (hf !== null && !st.orbitPiecePlaced) applyHoverModel(st, hf, add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
+  st.hover = null;
+  st.hoverPress = null;
+  st.hoverBand = null;
+  st.hoverFollow = null;
+  st.hoverDraw = null;
+  st.hudDirty = true;
 }
 
 /**
@@ -287,16 +321,38 @@ export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   }
 }
 
-/** ⭐ Each frame: a dropped piece-only offset eased out (τ = `boxSmoothMs` / 2). */
+/**
+ * ⭐ Each frame: a dropped piece-only offset eased out (τ = `boxSmoothMs` / 2) — ⭐⭐ (2026-10-14, the hover's audit) SOLVED: the piece's way back to its ring place
+ * is the solver's, the share of the offset kept as its one coordinate (⛔ it was scaled down blind, through whatever stood between). Blocked
+ * where it stands, the fade stops there (the next orbit drag asks again).
+ */
 export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   const o = st.hoverOffset;
-  if (o === null || !st.hoverOffsetFading) return;
+  if (o === null || !st.hoverOffsetFading || st.orbitPiecePlaced) return;
   const k = Math.exp(-dtMs / Math.max(1, st.cfg.boxSmoothMs / 2));
-  const n = scale(o, k);
-  if (Math.hypot(n[0], n[1], n[2]) < 1e-4) {
+  const done = (n: Vec3) => Math.hypot(n[0], n[1], n[2]) < 1e-4;
+  const q = st.pieceQ;
+  if (q === null || st.greenBox === null) {
+    const n = scale(o, k);
+    if (done(n)) {
+      st.hoverOffset = null;
+      st.hoverOffsetFading = false;
+    } else st.hoverOffset = n;
+    return;
+  }
+  const ring = ringAnchorAt(st, q); // the hover offset included
+  const base: Vec3 = [ring[0] - o[0], ring[1] - o[1], ring[2] - o[2]];
+  const env = pieceSolverEnv(st, (x) => add(base, scale(o, x.yaw)));
+  const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, pieceSolveOptions(st));
+  st.pieceQueries += r.queries;
+  const n = scale(o, Math.min(1, Math.max(0, r.q.yaw)));
+  if (done(n)) {
     st.hoverOffset = null;
     st.hoverOffsetFading = false;
-  } else st.hoverOffset = n;
+  } else {
+    st.hoverOffset = n;
+    if (r.q.yaw >= 1 - 1e-9) st.hoverOffsetFading = false; // blocked where it stands
+  }
 }
 
 /** ⭐ The camera blended toward the hover view by its progress (the boot distance and the CAMERA OFFSET's angles). */
@@ -306,17 +362,29 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   const w = hoverViewWeight(hv.progress);
   if (w <= 0) return { camAt, lookAt };
   const dist = st.bootCamPieceDistM ?? Math.hypot(camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]);
-  const pos = hoverCameraPosition(
-    hv.target,
-    hv.n,
-    hv.e1,
-    hv.e2,
-    dist,
-    (st.cfg.cameraYawOffsetDeg * Math.PI) / 180,
-    (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180,
-    [camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]],
-  );
-  return { camAt: lerp3(camAt, pos, w), lookAt: lerp3(lookAt, hv.target, w) };
+  const viewOf = (v: { target: Vec3; n: Vec3; e1: Vec3; e2: Vec3 }): Vec3 =>
+    hoverCameraPosition(
+      v.target,
+      v.n,
+      v.e1,
+      v.e2,
+      dist,
+      (st.cfg.cameraYawOffsetDeg * Math.PI) / 180,
+      (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180,
+      [camAt[0] - v.target[0], camAt[1] - v.target[1], camAt[2] - v.target[2]],
+    );
+  let pos = viewOf(hv);
+  let target = hv.target;
+  // ⭐⭐ (2026-10-14, the hover's audit) retargeted to another face: eased from the view it left
+  if (hv.from !== null) {
+    const s = retargetShare(performance.now() - hv.from.t0);
+    if (s >= 1) hv.from = null;
+    else {
+      pos = lerp3(viewOf(hv.from), pos, s);
+      target = lerp3(hv.from.target, target, s);
+    }
+  }
+  return { camAt: lerp3(camAt, pos, w), lookAt: lerp3(lookAt, target, w) };
 }
 
 const READY_COLOUR = new Color3(0.2, 0.9, 1);
@@ -345,7 +413,12 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   }
   st.hoverReady = ready;
   // the resting face's contour: cyan while a hover is available
-  if (p?.restingFill) for (const c of p.restingFill.getChildMeshes(true)) if ("color" in c) (c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();
+  // ⭐ (2026-10-14, the hover's audit) set only when it CHANGES (a new fill, or ready ↔ not) — ⛔ it cloned a colour per contour line every frame
+  const fill = p?.restingFill ?? null;
+  if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {
+    for (const c of fill.getChildMeshes(true)) if ("color" in c) (c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();
+    st.hoverTint = { fill, ready: ready !== null };
+  }
   // the contact shadow
   if (ready === null || b === null || p === undefined) {
     st.hoverShadow?.setEnabled(false);
@@ -375,7 +448,7 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const key = `${ready.id}|${ready.faceId}|${ready.centre.map((x) => x.toFixed(4)).join(",")}`;
   if (st.hoverFaceKey !== key) {
     st.hoverFaceKey = key;
-    st.hoverFaceFill?.dispose();
+    st.hoverFaceFill?.dispose(false, true); // ⭐ (2026-10-14, the hover's audit) its own material with it (it leaked one per face)
     st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);
   }
   st.hoverFaceFill?.setEnabled(true);

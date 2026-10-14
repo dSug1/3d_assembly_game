@@ -309,7 +309,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
             tunable(st, "hover camera speed (share of the way per mm)", "hoverCameraGain", 0.005, 0.3, 0.005),
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
-            tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1, 30, 0.5),
+            tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1.5, 30, 0.5),
             tunable(st, "orbited piece goal margin (°)", "orbitGoalDeg", 0.5, 15, 0.5),
             // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
             // under the finger at every camera distance. The slider exists so that claim

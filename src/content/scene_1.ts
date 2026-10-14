@@ -122,10 +122,13 @@ export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
  * the table. ⭐ Derived, and vectored against the meshes' own sizes: Piece4's top at 4.56 + 0.82 / 2 = 4.97; the green piece (Piece17's
  * 0.92 × 0.55 × 0.3 → 1.035 × 0.4125 × 0.45, `greenPyramidSizeM`) wide face down, its long axis along the painting's top edge (x) — its
  * centre 0.4125 / 2 above; the turquoise (a hexagonal prism 1.035 long, `turquoiseSizeM`) STANDING — its centre 1.035 / 2 above.
+ * ⭐⭐ (2026-10-14, the hover's audit) flush on Piece4's CONTOUR (`SCENE_1_CONTOUR_MARGIN` above its coloured top) — the surface a piece
+ * TOUCHES: ⛔ flush on the core, the goal lay 1.5 mm inside the contour, the capture's pull a penetration that waited, and an
+ * `orbitGoalMm` under ~2.5 mm unreachable from a piece resting on it.
  */
 export const SCENE_1_ORBIT_GOALS: readonly FinalPose[] = [
-  { id: "green-box", position: [1.04, 4.97 + 0.4125 / 2, -0.34], orientation: "identity", symmetry: "yawHalfTurns" },
-  { id: "turquoise-piece", position: [1.04, 4.97 + 1.035 / 2, -0.34], orientation: "identity", symmetry: "hexPrism" },
+  { id: "green-box", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 0.4125 / 2, -0.34], orientation: "identity", symmetry: "yawHalfTurns" },
+  { id: "turquoise-piece", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 1.035 / 2, -0.34], orientation: "identity", symmetry: "hexPrism" },
 ];
 
 export const SCENE_1_FINAL: FinalConfiguration = {
