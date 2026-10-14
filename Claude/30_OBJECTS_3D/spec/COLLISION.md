@@ -778,3 +778,9 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   then learned and the step blocked; found by the hover's wall vector (2.4 mm short). ✅ Each slide sub-step is capped by the safe distance to
   every OTHER part (`secondGap` − the gap kept): the piece closes in to the gap kept first. ⚠ It applies to the orbit's slides too: a few
   more frames reach the cap near a second part (12 of 90 on the headless sweep; the least gap 0.94 mm).
+
+* ⭐⭐⭐ (2026-10-14, the hover's second audit → *"Build 1 to 12"*) **THE ORBIT HOLDS STILL UNDER A HOVER** (`orbitFrameUnderHover`): no
+  backlog, no return to the ring height, no relocation while a hover is on — it could lift the piece off the hover's plane and the hover's
+  next step was then checked at the wrong place. The hover solves ONCE a frame inside `pieceSolverQueries` (`hoverQueryBudget`; it solved
+  per pointer event, up to 96 queries a frame), keeps what the cap cut (`hoverPendingAfter`), and leaves out only the parts below the
+  piece's own height (`behindToleranceM`) → `HOVER.md` §10.

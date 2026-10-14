@@ -241,3 +241,5 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
 * ⭐ (2026-10-14, the hover's audit) the orbited pieces' goals sit flush on Piece4's CONTOUR (`SCENE_1_CONTOUR_MARGIN`, 1.5 mm above its
   coloured top) — the surface a piece touches. ⛔ Flush on the core they lay inside the contour: the capture's pull was a penetration that
   waited, and an `orbitGoalMm` under ~2.5 mm was unreachable from a resting piece. The slider now starts at 1.5 mm.
+* ⭐ (2026-10-14, the hover's second audit) a hover that pulls the orbited piece into its goal SPENDS its finger — it moves nothing more until
+  it lifts (`D139`: a snap stops the drag that made it); it used to turn the camera. The dead "always grabbed" line is removed → `HOVER.md` §10.

@@ -139,5 +139,72 @@ during the orbit and the quad turns (`LEVEL_END.md` §5quater).
   `orbitGoalMm` slider starts at 1.5 mm (a resting piece sits 0.5 – 1.2 mm off).
 * ⭐ Housekeeping: the hosting face's fill disposes its material (one leaked per face); the resting contour's colour is set only when it
   changes (it was cloned per line every frame).
-* ⚠ Still open (named by the audit, not changed): the hover's solve runs per pointer EVENT (within the 24-query cap); the FLOOR cannot host a
-  hover (a frozen body's faces are not looked at).
+* ⚠ Still open (named by the audit, not changed): the FLOOR cannot host a hover (a frozen body's faces are not looked at). ⏸ A proposal is parked → §11. ✅ The per-event
+  solve is fixed by §10.
+
+## 10. The second audit's fixes (2026-10-14) — the orbit held, one solve a frame, the travel kept, behind by height, over the face
+
+> *"Build 1 to 12. For 9, i do not understand which drag and which stop so i cannot provide feedback. Update the md files"* — the owner,
+> on the second Fable audit of everything since `bce905c`. ⛔ Unjudged by a hand; checked by 1957 vectors and a headless drag.
+
+* ⛔⛔⛔ **1. THE ORBIT HOLDS STILL UNDER A HOVER** (`orbitFrameUnderHover`): the orbit's frame went on solving under the hover — a backlog
+  continued, the way back to the ring height the finger had set, a relocation — and could lift the piece OFF the hover's plane mid-drag while
+  the hover solved from where it began: a step checked at the wrong place, a penetration, the 1 cm jump of §9 by another path. ✅ While a
+  hover is on, the orbit solves nothing: the piece's ring place, its target and its height are held. ✅ And a hover STARTS only from a piece
+  shown AT REST on its solved place (still easing: the drag waits — *"waiting for the piece to come to rest"*), from its exact ring place, the
+  orbit's backlog and coast dropped.
+* ⛔⛔⛔ **2. ONE SOLVE A FRAME, INSIDE THE BUDGET** (the owner: *"do not increase the ms budget (i am testing on iphone)"*): the hover solved
+  on every pointer EVENT, 24 queries each — a 125–250 Hz mouse made 48–96 a frame. ✅ Each event only ADDS its step to the hover's pending
+  target; `hoverFrame` solves it once, with what the frame's `pieceSolverQueries` has left (`hoverQueryBudget`, none under 4: it waits a
+  frame); the piece-only offset's fade runs on what is left after that; the settle's queries are counted. Headless, a drag at three events
+  a frame peaked at 25 queries (the solver's own last check past its cap, as for the orbit).
+* ⛔⛔ **3. THE FINGER'S TRAVEL IS KEPT** (`hoverPendingAfter`): a solve the cap cut dropped its rest — a 10 mm step along a wall 1.1 mm away
+  moved 6.48 mm (vectored at the shipped cap). ✅ The target is kept until reached (the orbit's own rule); blocked, it is where it stopped.
+* ⛔⛔ **4. "BEHIND" BY THE PIECE'S OWN HEIGHT** (`behindToleranceM`): a part may rise above the hover's plane at most the piece's height
+  above it less half the gap kept — ⛔ it was half the gap kept whatever the height, so a piece hovering at 0.6 mm could pass 0.2 mm from a
+  neighbour 0.4 mm proud.
+* ⛔⛔ **5. THE RESTING FACE MUST LIE OVER THE FACE** (`HOVER_OVER_FACE_M`, 2 mm — the contour's room): the face's own triangles, the resting
+  face's centre laid on its plane within them. ⛔ It was a body test: a piece BESIDE a box, above the plane of its top, turned cyan, and the
+  settle took it down into the air. The refusal says *"not over …'s face (beside it)"*.
+* ⭐ **6.** The piece and the camera read the gizmo as the hover left it THIS frame (they trailed it by one).
+* ⭐ **7.** Coplanar faces tie by the face CONTAINING the centre first, then the nearer centre.
+* ⭐ **8.** The settle: the MODEL settled at once (solved), the MESH drawn easing down over 150 ms — ⛔ the model eased while the steps were
+  solved at the settled depth (an unchecked pose).
+* ⭐⭐ **9. A CAPTURE STOPS THE DRAG THAT MADE IT** (`D139`'s rule for a snap, chosen for the owner, who could not judge the question as asked):
+  the finger that hovered the piece INTO its goal moves nothing more until it lifts — ⛔ it was handed to the orbit, so the same finger, still
+  moving, started turning the camera round the placed piece.
+* ⭐ **10.** The HUD's zoom line says when the hover view holds the camera (*"hover view N %: the zoom held there"*).
+* ⭐ **11.** Vectors that a reorder breaks (the frame's order, the captured finger) and behavioural ones for every new rule; fewer pins.
+* ⭐ **12.** The dead "orbited piece always grabbed" line is removed (its own margins answer first).
+* ⭐ The ready look (cyan, the shadow) runs again only when the world moved — at rest it costs nothing.
+
+## 11. ⏸ PARKED — the floor as a hover's host (proposal, 2026-10-14; not built)
+
+> *"How do you propose the floor to host a hover? It currently does not collide with an orbit nor a quad rotation."* → *"Capture that in the md
+> file for later implementation improvement. However, without gizmo support, there is no way to bring the piece close to the hover point and
+> this requires the hover distance to be unlimited. We will see later on if we implement that or if we post placeholders on the floor where a
+> piece may be seated."* — the owner.
+
+**Why the floor is not hosting today**: it is a FROZEN body, exempt from the piece's collision by design (`COLLISION.md` §11bis — the lower
+rings pass under it); `hoverCandidates` looks only at bodies `bodiesWithin` reports under that setup, so its faces are never looked at.
+
+**The proposal — the floor LOOKED AT, never collided with**: a hover needs no collision with its HOST — it slides PARALLEL to the hosting face
+(its distance to that plane never changes), and the settle's target depth is computed from the face's plane (`settleDepth`), the solver
+only stopping it earlier on OTHER parts.
+1. **Looked at**: the ready look and `hoverStart` also take the FROZEN bodies' faces — their TOP face only (normal up; a piece below the
+   floor must not hover against its underside). The floor stays exempt from every solve (orbit, quads, hover, settle).
+2. **A signed settle**: the orbit passes through the floor, so the piece may be partly INSIDE it — a resting face below the floor's top, or
+   nearer than the gap kept, settles UP to the gap kept (solved against the parts); deeper than the reach below, no hover. The same lift would
+   serve a piece inside a part's contour.
+3. **Shown as any host**: the cyan contour, the contact shadow on the floor, a faint fill of the floor's top (its own triangles, so the fill
+   and the "over the face" test of §10 stay local).
+4. **The hover view**: looking down at the floor, 3° off the vertical (the guard of §4).
+* ⚠ Unchanged by it: once the hover ends, the orbit and the quads still ignore the floor — an orbit drag from a floor hover may carry the
+  piece through it, as today. A floor that stops the orbit conflicts with the lower rings: a separate decision.
+* Cost: one more body in the ready look (only when the world moved); nothing added to the 24-query budget.
+
+⛔⛔ **WHAT BLOCKS IT (the owner)**: the orbit brings the piece near a floor point only where its ring crosses the floor — **without the GIZMO's
+support** (moving the yellow gizmo onto the floor point first) there is no way to bring the piece close to WHERE it should hover, and the
+hover would have to carry it the rest of the way: **an UNLIMITED hover distance** (`hoverAmplitudeMm` at its top, 500).
+**Two ways forward, to be chosen later**: (a) build the proposal WITH gizmo support and an unlimited distance; or (b) **PLACEHOLDERS on the
+floor** — marked seats where a piece may be set down, each a known target the piece is brought to (no free hover on the floor at all).

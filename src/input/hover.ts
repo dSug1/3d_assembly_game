@@ -9,6 +9,7 @@
  * clearance rule, so the other faces stop and slide it. Pure: the scene reaches it through numbers.
  */
 import type { Vec3 } from "../core/vec";
+import type { OrbitQ } from "./piece_orbit_solver";
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -148,7 +149,40 @@ export function hoverSwayDeg(sliderDeg: number, minDeg: number): number {
 export interface HoverFaceCandidate {
   readonly id: string;
   readonly bodyGapM: number;
-  readonly faces: readonly { readonly faceId?: string; readonly centre: Vec3; readonly normal: Vec3 }[];
+  readonly faces: readonly {
+    readonly faceId?: string;
+    readonly centre: Vec3;
+    readonly normal: Vec3;
+    /** ⭐ (2026-10-14, the hover's second audit) the face's triangles in the world — given, the resting face's centre must lie OVER them (`HOVER_OVER_FACE_M`) */
+    readonly triangles?: readonly (readonly [Vec3, Vec3, Vec3])[];
+  }[];
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover's second audit) — **THE FACES OVERLAP**: the resting face's centre, laid on the face's plane, within this of the face's own triangles (m). The
+ * coloured face lies 1.5 mm inside its contour (`SCENE_1_CONTOUR_MARGIN`), so 2 mm. ⛔ It was a BODY test only: a piece BESIDE a box,
+ * 10 mm above the plane of its top, turned cyan, and the settle took it 9 mm down into the air.
+ */
+export const HOVER_OVER_FACE_M = 0.002;
+
+/** ⭐ (2026-10-14, the hover's second audit) A point's distance, in a plane (`n`), to a set of triangles lying in it — 0 inside one. */
+export function distanceToTriangles(p: Vec3, n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): number {
+  let best = Infinity;
+  for (const [a, b, c] of tris) {
+    const ab = sub(b, a), bc = sub(c, b), ca = sub(a, c);
+    const s1 = dot(cross(ab, sub(p, a)), n), s2 = dot(cross(bc, sub(p, b)), n), s3 = dot(cross(ca, sub(p, c)), n);
+    if ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) return 0;
+    best = Math.min(best, segDist(p, a, b), segDist(p, b, c), segDist(p, c, a));
+  }
+  return best;
+}
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+function segDist(p: Vec3, a: Vec3, b: Vec3): number {
+  const ab = sub(b, a);
+  const l2 = dot(ab, ab);
+  const t = l2 > 1e-24 ? Math.min(1, Math.max(0, dot(sub(p, a), ab) / l2)) : 0;
+  const d = sub(p, [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t]);
+  return Math.hypot(d[0], d[1], d[2]);
 }
 export function hoverFaceContact(
   restingCentreW: Vec3,
@@ -156,25 +190,31 @@ export function hoverFaceContact(
   candidates: readonly HoverFaceCandidate[],
   maxGapM: number,
   alignDeg = HOVER_ALIGN_DEG,
-): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null } {
+): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number; overFace: boolean } | null } {
   const cosMin = Math.cos((alignDeg * Math.PI) / 180);
-  let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number } | null = null;
-  let nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null = null;
+  let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number; overM: number } | null = null;
+  let nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number; overFace: boolean } | null = null;
   for (const c of candidates) {
     for (const f of c.faces) {
       const cos = -dot(restingNormalW, f.normal); // 1: the resting face looks straight at the face
       const d = dot(f.normal, [restingCentreW[0] - f.centre[0], restingCentreW[1] - f.centre[1], restingCentreW[2] - f.centre[2]]);
       if (cos <= 0 || d < -maxGapM) continue; // a face looking away, or behind the resting face
       const angleDeg = (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
-      const score = d + angleDeg * 1e-3;
-      if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM };
-      if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM)) continue;
+      const onPlane: Vec3 = [restingCentreW[0] - f.normal[0] * d, restingCentreW[1] - f.normal[1] * d, restingCentreW[2] - f.normal[2] * d];
+      const overM = f.triangles === undefined ? 0 : distanceToTriangles(onPlane, f.normal, f.triangles);
+      const overFace = overM <= HOVER_OVER_FACE_M;
+      const score = d + angleDeg * 1e-3 + (overFace ? 0 : 1);
+      if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3 + (nearest.overFace ? 0 : 1)) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM, overFace };
+      if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && overFace)) continue;
       // ⭐⭐ (2026-10-14, the hover's audit) COPLANAR faces tie on the distance: the one UNDER the resting face's centre hosts (the least in-plane distance to its
       // centre) — ⛔ the first listed won, so a piece over a part's top could hover in the plane of its neighbour's, named after it
       const off: Vec3 = [restingCentreW[0] - f.centre[0] - f.normal[0] * d, restingCentreW[1] - f.centre[1] - f.normal[1] * d, restingCentreW[2] - f.centre[2] - f.normal[2] * d];
       const inPlaneM = Math.hypot(off[0], off[1], off[2]);
-      const better = contact === null || d < contact.gapM - HOVER_TIE_M || (Math.abs(d - contact.gapM) <= HOVER_TIE_M && inPlaneM < contact.inPlaneM);
-      if (better) contact = { id: c.id, faceId: f.faceId ?? null, normal: f.normal, centre: f.centre, gapM: Math.max(0, d), inPlaneM };
+      // ⭐ (2026-10-14, the hover's second audit) on a tie, the face CONTAINING the centre first (⛔ by the centres alone, a centre at 0.99 over a face spanning −1 … 1 named
+      // its neighbour 1 … 1.1), then the nearer centre
+      const tie = contact !== null && Math.abs(d - contact.gapM) <= HOVER_TIE_M;
+      const better = contact === null || d < contact.gapM - HOVER_TIE_M || (tie && (overM < contact.overM - 1e-9 || (Math.abs(overM - contact.overM) <= 1e-9 && inPlaneM < contact.inPlaneM)));
+      if (better) contact = { id: c.id, faceId: f.faceId ?? null, normal: f.normal, centre: f.centre, gapM: Math.max(0, d), inPlaneM, overM };
     }
   }
   return { contact, nearest };
@@ -241,4 +281,53 @@ export function hoverViewRetargets(prevN: Vec3, n: Vec3): boolean {
 export function retargetShare(elapsedMs: number): number {
   const u = Math.min(1, Math.max(0, elapsedMs / HOVER_VIEW_RETARGET_MS));
   return u * u * (3 - 2 * u);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the hover's second audit) — **THE ORBIT HOLDS STILL UNDER A HOVER**: while a hover is on, the orbit's frame solves nothing — the piece's ring place
+ * held (no backlog continued, no return toward the ring height the finger set, no relocation), the target and the height kept being that
+ * place. ⛔ The orbit's frame went on under the hover: after a slide had carried the ring height off the one asked, its way back lifted the
+ * piece OFF the hover's plane mid-drag while the hover still solved from its start — a step checked at the wrong place, a penetration, a
+ * relocation's jump.
+ */
+export function orbitFrameUnderHover(q: OrbitQ): { q: OrbitQ; target: OrbitQ; userV: number; queries: number } {
+  return { q, target: q, userV: q.v, queries: 0 };
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the hover's second audit) — **ONE SOLVE A FRAME, INSIDE THE FRAME'S BUDGET** (the owner: *"do not increase the ms budget (i am testing on iphone)"*):
+ * the finger's deadbanded steps are ADDED to the hover's pending target on each event, and solved once a frame with what the frame's work
+ * cap (`pieceSolverQueries`) has left — none left (under `HOVER_MIN_QUERIES`), it waits a frame. ⛔ It solved on every pointer EVENT, 24
+ * queries each: a 125–250 Hz mouse made 48–96 a frame.
+ */
+export const HOVER_MIN_QUERIES = 4;
+export function hoverQueryBudget(capQueries: number, usedQueries: number): number {
+  const left = capQueries - usedQueries;
+  return left >= HOVER_MIN_QUERIES ? left : 0;
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover's second audit) — **THE FINGER'S TRAVEL IS KEPT**: a solve the work cap cut (`deferred`) keeps its target for the next frame — the orbit's own
+ * rule; reached, or blocked (a wall), the target is where it stopped. ⛔ The rest was dropped: a 10 mm step along a wall 1.1 mm away moved
+ * 6.48 mm at the shipped cap — "gain 1 = under the finger" failed near a second part.
+ */
+export function hoverPendingAfter(solved: readonly [number, number], deferred: boolean, pending: readonly [number, number]): [number, number] {
+  return deferred ? [pending[0], pending[1]] : [solved[0], solved[1]];
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover's second audit) — **WHAT LIES "BEHIND" THE PLANE**: a part rising at most `t` above the hover's plane is never nearer the piece, moving at
+ * `planeGapM` above that plane, than `planeGapM − t` — so the parts left out of the hover's checks may rise `planeGapM − hardM` at most
+ * (`hardM`, half the gap kept: the least admissible). ⛔ It was half the gap kept whatever the piece's height: a piece hovering at 0.5–1 mm
+ * could be carried INTO a neighbour 0.5 mm proud.
+ */
+/** ⭐ flush tops read as flush whatever the rounding (1 µm) */
+export const BEHIND_FLUSH_M = 1e-6;
+export function behindToleranceM(planeGapM: number, hardM: number): number {
+  return Math.max(BEHIND_FLUSH_M, planeGapM - hardM);
+}
+
+/** ⭐ (2026-10-14, the hover's second audit) The drawn lag the MODEL takes off the mesh (`syncOrbitPieceModel`) — none once the piece is captured (the pull owns the mesh). */
+export function modelLag(draw: Vec3 | null, placed: boolean): Vec3 {
+  return draw !== null && !placed ? draw : [0, 0, 0];
 }
