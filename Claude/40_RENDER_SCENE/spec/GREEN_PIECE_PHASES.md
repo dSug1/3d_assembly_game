@@ -9,6 +9,8 @@ behaviours (the contour, the yaw share, the cross deadband), the pink face's nor
 coarse / commit stages read several of them. The orbited piece's orientation is now the RESTING FACE's (`RESTING_FACE.md`) and its
 alignment a second-finger tap while orbiting (`RESTING_FACE_ALIGNMENT.md`). ⛔ Re-read against those two before building any step here.
 
+⭐ **2026-10-14 — the HOVER is defined and built in `HOVER.md`** (on the orbit and the quads, not on this draft's stages): the approach is the orbit's dy, the long axis the quads, the hover a drag on the piece across the contact face, the seat the goal capture.
+
 **Goal:** make the green piece follow the way a child assembles two bricks: pick the face → commit by bringing it toward the target →
 approach along the insertion axis while rolling the long axis into line → hover → fine roll → contact → seat.
 

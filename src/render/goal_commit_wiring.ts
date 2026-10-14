@@ -10,6 +10,7 @@
  * ⛔ Never midway through a movement: the HUD's `goal n/41` and the score bar read the COMMITTED count.
  * ⚠ An UNDO commits silently (its restore is not an achievement), and a DEMO shows no pop-up.
  */
+import { liveFinal } from "./goal_capture_wiring";
 import { placedReport } from "./goal_capture_wiring";
 import { showGoalPopup } from "./goal_popup";
 import { piecesMoved } from "../input/goal_commit";
@@ -22,7 +23,7 @@ export function commitGoal(st: SceneState, quiet = false): void {
   const moved =
     st.goalCommitWorld === null || st.sceneSpec.final === null
       ? null
-      : piecesMoved(st.goalCommitWorld, st.world, st.sceneSpec.final.bodies.map((b) => b.id));
+      : piecesMoved(st.goalCommitWorld, st.world, (liveFinal(st) ?? st.sceneSpec.final).bodies.map((b) => b.id));
   st.goalCommitWorld = st.world;
   if (r === null) return;
   const baseline = st.goalCommit.never;

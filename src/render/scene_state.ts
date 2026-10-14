@@ -496,6 +496,51 @@ export interface SceneState {
   pieceSolveQueries: number;
   /** ⭐ (2026-10-14) the last orbit solve met a part — slid along it or was stopped (the orbit sway's least angle). */
   pieceTouching: boolean;
+  /** ⭐⭐ (2026-10-14, the HOVER) the hover in progress: its finger, the contact face's normal and its plane's axes, where it began (the piece's
+   * anchor, the gizmo, the piece-only offset), the solved offset on the plane (m) and the part touched. */
+  hover: {
+    pointerId: number;
+    n: import("../core/vec").Vec3;
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    origin: import("../core/vec").Vec3;
+    centre0: import("../core/vec").Vec3;
+    offset0: import("../core/vec").Vec3;
+    u: number;
+    v: number;
+    partId: string;
+    /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
+    behind: Set<string>;
+  } | null;
+  /** ⭐ (2026-10-14) a first touch pressed on the orbited piece — its drag may hover (decided past the tap's slop). */
+  hoverPress: { pointerId: number; x: number; y: number } | null;
+  /** ⭐ (2026-10-14) the hover finger's own deadband (the orbit band's) and its sway trigger. */
+  hoverBand: { pointerId: number; band: import("../input").MotionTracker; sway: import("../input").SwayWatcher } | null;
+  /** ⭐ (2026-10-14) the hover's drawn offset following the solved one (`u`, `v`) on the part translation's follower; the plane, the gizmo or piece. */
+  hoverFollow: {
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    centre0: import("../core/vec").Vec3;
+    offset0: import("../core/vec").Vec3;
+    gizmo: boolean;
+    u: number;
+    v: number;
+    fu: import("../input/follow").FollowState;
+    fv: import("../input/follow").FollowState;
+    vu: number;
+    vv: number;
+    lu: number;
+    lv: number;
+  } | null;
+  /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
+  hoverOffset: import("../core/vec").Vec3 | null;
+  hoverOffsetFading: boolean;
+  /** ⭐ (2026-10-14) the HOVER VIEW the camera eases toward (its progress 0 … 1, its target and the face's frame); `null`: the orbit's camera. */
+  hoverView: { progress: number; target: import("../core/vec").Vec3; n: import("../core/vec").Vec3; e1: import("../core/vec").Vec3; e2: import("../core/vec").Vec3 } | null;
+  /** ⭐ (2026-10-14) the camera's distance to the piece at boot — the hover view's. */
+  bootCamPieceDistM: number | null;
+  /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
+  orbitPiecePlaced: boolean;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */

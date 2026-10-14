@@ -14,11 +14,11 @@ import { followersToDissolve, mateSpin } from "../input/goal_dissolve";
 import { setModelPose } from "./bodies";
 import { releaseAlignmentOf } from "./alignment_wiring";
 import { commitGoal } from "./goal_commit_wiring";
-import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
+import { goalTolOf, looseTolerance , liveFinal } from "./goal_capture_wiring";
 import type { SceneState } from "./scene_state";
 
 export function dissolveOnGoal(st: SceneState): void {
-  const final = st.sceneSpec.final;
+  const final = liveFinal(st); // ⭐ (2026-10-14) the shown orbited piece's goal too
   if (!final) return;
   const seated = st.links.alignedObjects().filter((f) => st.links.isSeated(f));
   if (seated.length === 0) return;

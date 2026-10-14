@@ -339,6 +339,18 @@ export interface GestureConfig {
    */
   orbitBandRestMs: number;
   /**
+   * ⭐⭐ (prototype, 2026-10-14, the hover; `HOVER.md`) the owner: *"make a slider in object translation to toggle on or off the move of the
+   * gizmo"* — 1: a hover drag slides the yellow GIZMO and the piece rides with it (every later orbit turns about the corrected centre); 0: the
+   * piece alone, its offset dropped by the next orbit drag (*"Cleared on orbit"*).
+   */
+  hoverGizmoMove: number;
+  /** ⭐ (2026-10-14) the hover's reach from where it began (mm, in the world) — *"from 10mm to 500 mm (in this last case … unlimited)"*. */
+  hoverAmplitudeMm: number;
+  /** ⭐ (2026-10-14) the hover's gain — 1: the piece under the finger. */
+  hoverGain: number;
+  /** ⭐ (2026-10-14) how fast the camera reaches the hover view, and leaves it as the orbit comes back — the share of the way per mm of finger. */
+  hoverCameraGain: number;
+  /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
    * slider to toggle the possibility to drag the cursor"*. ⚠ A 0/1 selector, refused in between.
    * `0` leaves the ring drawn and every press to the ordinary rules.
@@ -892,6 +904,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
   orbitDeadbandMm: 2.3,
   orbitBandRestMs: 400,
+  hoverGizmoMove: 1,
+  // ⚠ guesses with sliders
+  hoverAmplitudeMm: 15,
+  hoverGain: 1,
+  hoverCameraGain: 0.05,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
   pioneerCursorDrag: 0,
@@ -1157,6 +1174,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `orbitDeadbandMm (${cfg.orbitDeadbandMm}) must be in [${(SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm).toFixed(2)}, 8] mm: under 3× the measured pointer noise a resting finger's wobble leaks through.`,
     );
   }
+  if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
+  if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
+  if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
+  if (!(cfg.hoverCameraGain > 0 && cfg.hoverCameraGain <= 1)) throw new Error(`hoverCameraGain (${cfg.hoverCameraGain}) must be in (0, 1] per mm.`);
   if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {
     throw new Error(`orbitBandRestMs (${cfg.orbitBandRestMs}) must be in [0, 3000] ms: the pause that re-arms the orbit drag's band.`);
   }

@@ -289,6 +289,15 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     if (Math.abs(s[0] - rest[0]) + Math.abs(s[1] - rest[1]) > 1e-12) touched = blocked = true;
     const sLen = arcLength(env, q, s);
     let u = Math.min(1, SLIDE_STEP_M / Math.max(1e-12, sLen));
+    // ⭐ (2026-10-14, the hover) never past the safe distance to every OTHER part: sliding along one contact toward a second, the 4 mm sub-step
+    // overshot it and the step stopped up to 4 mm short of it (learning it, then blocked) — now it closes in to the gap kept first
+    {
+      const others = env.secondGap?.(q);
+      if (others !== undefined) {
+        const uo = ((others - opt.gapM) * 0.9) / Math.max(1e-12, sLen);
+        if (uo > 1e-9 && uo < u) u = uo;
+      }
+    }
     let gn = -1;
     // ⭐⭐ (2026-10-13, the fourth audit: a piece RESTING on a part slid 4 mm a sub-step — 0.048 rad a frame against 0.27 a millimetre higher; the
     // owner's "slows down near a part" in its last form) the LONG slide: as far as the plane bound of the nearest part (anchors only) and the

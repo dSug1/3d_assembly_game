@@ -767,3 +767,14 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
 * ✅ Vectors (4 groups), each RED against the code before (one by mutant): the gate and its pocket premise; the dip and the 6 mm notch refused
   (red with the §12sexies rule); the tremor re-rests in 95 % within 600 ms (< 50 % before) and a steady drag never; the quad asked while moving,
   under the leftover budget, free at once when clear, PENDING when cut.
+
+### 12octies. The hover's solve; a slide closes in on a second contact (2026-10-14, `1.0.75-`, ⛔ unjudged by a hand)
+
+* ✅ **The hover** (`HOVER.md`) is solved by this solver: `solveOrbitStep` on the contact plane's two coordinates (`pieceSolverEnv` takes the
+  anchor's map and the setup), so a hover step keeps the gap kept to every face it does not slide along, and slides along them.
+  ⭐ The parts lying wholly behind the contact face's plane are exempt for the hover (`bodiesBehindPlane`): a move parallel to that plane
+  cannot reach them — coplanar faces are slid across as one.
+* ⛔ **A slide along one contact toward a SECOND stopped up to 4 mm short of it** — the fixed 4 mm sub-step overshot the second, which was
+  then learned and the step blocked; found by the hover's wall vector (2.4 mm short). ✅ Each slide sub-step is capped by the safe distance to
+  every OTHER part (`secondGap` − the gap kept): the piece closes in to the gap kept first. ⚠ It applies to the orbit's slides too: a few
+  more frames reach the cap near a second part (12 of 90 on the headless sweep; the least gap 0.94 mm).

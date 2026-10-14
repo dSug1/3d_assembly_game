@@ -9,10 +9,10 @@ import { goalReport } from "../core/goal";
 import { worldPlacementOf } from "../core/object_model";
 import type { LevelEndFacts } from "../core/level_end";
 import type { SceneState } from "./scene_state";
-import { goalTolOf, looseTolerance } from "./goal_capture_wiring";
+import { goalTolOf, looseTolerance , liveFinal } from "./goal_capture_wiring";
 
 export function levelEndFrame(st: SceneState, nowMs: number): void {
-  const final = st.sceneSpec.final;
+  const final = liveFinal(st); // ⭐ (2026-10-14) the shown orbited piece's goal too
   if (!final || st.levelEnd.result !== null) return;
   const pointersDown = st.gestureSpan.active;
   const animating = st.alignSnaps.size > 0 || st.seatSnaps.size > 0 || st.goalPulls.size > 0;

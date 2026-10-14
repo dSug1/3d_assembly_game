@@ -463,6 +463,41 @@ export function nearestObstacle(
   return { gapM: best, blocker, secondGapM: second };
 }
 
+/**
+ * ⭐ (2026-10-14, the hover) every body within `maxM` of `id` (its subtree), each with its least surface gap — 0 touching or in. The hover asks
+ * which of them the orbited piece's resting face lies against.
+ */
+export function bodiesWithin(world: World, id: ObjectId, setup: CollisionSetup, maxM: number): { id: ObjectId; gapM: number }[] {
+  const moving = subtreeOf(world, id);
+  const per = new Map<ObjectId, number>();
+  for (const [m, o] of candidates(world, moving, rootOf(world, id), setup, maxM)) {
+    const ma = worldParts(world, m, setup.shapes);
+    const oa = worldParts(world, o, setup.shapes);
+    if (!ma || !oa) continue;
+    const g = partsGap(ma, oa);
+    if (g === null || g > maxM) continue;
+    per.set(o, Math.min(per.get(o) ?? Infinity, g <= CONTACT_M ? 0 : g));
+  }
+  return [...per].map(([o, g]) => ({ id: o, gapM: g }));
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover; the owner: *"make sure that if collision faces are coplanar, the hover can continue over several parts' collision faces, provided within the max hover distance … the piece should be able to slide over the two white and one black parts"*) — every body lying ENTIRELY behind the plane `n · x = level` (within `tolM`): a piece in front of
+ * it, moved PARALLEL to it, can never reach one — its distance to such a body never falls under its distance to the plane. The hover leaves
+ * them out, so a piece slides across COPLANAR faces of several parts as across one.
+ */
+export function bodiesBehindPlane(world: World, setup: CollisionSetup, n: Vec3, level: number, tolM: number): Set<ObjectId> {
+  const out = new Set<ObjectId>();
+  for (const id of world.objects.keys()) {
+    const parts = worldParts(world, id, setup.shapes);
+    if (!parts) continue;
+    let max = -Infinity;
+    for (const part of parts) for (const p of part) max = Math.max(max, n[0] * p[0] + n[1] * p[1] + n[2] * p[2]);
+    if (max <= level + tolM) out.add(id);
+  }
+  return out;
+}
+
 /** What `resolveMove` decided. */
 export interface MoveVerdict {
   readonly placed: Placed;

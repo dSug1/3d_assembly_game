@@ -33,10 +33,11 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { syncCentre } from "./camera_rig";
+import { hoverCameraBlend, hoverFrame, hoverOffsetFrame } from "./hover_wiring";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
-import { contactNormal, nearestObstacle } from "../core/collision";
+import { contactNormal, nearestObstacle, type CollisionSetup } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import type { OrientDirection } from "../core/orientation_set";
@@ -270,7 +271,7 @@ function orbitHeading(st: SceneState): number {
  */
 export function alignRestingFace(st: SceneState, now: number, carryRolls = 0): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  if (p === undefined || p.restingFace === null || st.greenBox === null) return false;
+  if (p === undefined || p.restingFace === null || st.greenBox === null || st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) placed: no turn
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const q: Quat = [r.w, r.x, r.y, r.z];
   // ⭐ (2026-10-09) where the orbit placed it — its resting face's centre (`pieceAnchor`) — else the mesh before the first frame
@@ -400,7 +401,7 @@ export function restTargetKey(st: SceneState): string {
 export function rollRestingFace(st: SceneState, now: number, sense: 1 | -1 = 1, byOrbit = false): boolean {
   const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
   const rr = st.restRoll;
-  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null) return false;
+  if (p === undefined || p.restingFace === null || st.greenBox === null || rr === null || st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) placed: no roll
   const r = p.mesh.rotationQuaternion ?? Quaternion.Identity();
   const shown: Quat = [r.w, r.x, r.y, r.z];
   const from = st.restAlign?.base ?? shown; // ⭐ quick taps add up: from where the last one was heading
@@ -653,6 +654,14 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     // ⭐ (2026-10-11) the held second touch's input ends with the respawn — no way in, no way out (the sphere is deleted)
     st.hold = null;
     st.pieceQ = null; // ⭐ (2026-10-13, §12) a new orbit: the solved place starts again from it
+    st.orbitPiecePlaced = false; // ⭐ (2026-10-14) a switch or a respawn brings a piece back to the orbit
+    st.hover = null; // ⭐ (2026-10-14) a new orbit: no hover, no piece-only offset, the orbit's camera
+    st.hoverPress = null;
+    st.hoverBand = null;
+    st.hoverFollow = null;
+    st.hoverOffset = null;
+    st.hoverOffsetFading = false;
+    st.hoverView = null;
     st.orbitRawPrev = null;
     st.orbitUserV = null;
   }
@@ -931,7 +940,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // along the arc, the exact slide at the gap kept, a work cap. The eye eases toward the SOLVED place on the orbit's spring (never toward a
   // refused target: no pull-back); the camera is driven by the solved place. ⛔ The way in / out round a piece (`pieceOrbit`, `pieceEntry`, `centreReturn`) is not solved.
   const b0 = st.greenBox;
-  if (st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null) {
+  // ⭐ (2026-10-14) a piece captured onto its goal stays placed: no solve (the camera still rides the rings)
+  if (!st.orbitPiecePlaced && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null) {
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
     const opt = pieceSolveOptions(st);
@@ -1011,19 +1021,24 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ (2026-10-13) the solver's cost on the HUD: a mean over ~30 frames and the PEAK of the last 2 s (a freeze shows there)
   st.pieceGuardMs += (st.pieceGuardFrameMs - st.pieceGuardMs) / 30;
   st.pieceGuardPeak = now - st.pieceGuardPeakAt > 2000 || st.pieceGuardFrameMs >= st.pieceGuardPeak ? (st.pieceGuardPeakAt = now, st.pieceGuardFrameMs) : st.pieceGuardPeak;
+  // ⭐ (2026-10-14, the hover) the drawn hover offset following the solved one; the piece-only offset eased out once the orbit drops it
+  hoverFrame(st, now, dtSec);
+  hoverOffsetFrame(st, dtSec * 1000);
+  const hov = st.hoverOffset ?? [0, 0, 0];
   const pp: Vec3 =
     po !== null
       ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
       : be !== null
         ? [c.x + be[0] * k + eo[0], c.y + be[1] * k + eo[1], c.z + be[2] * k + eo[2]]
-        : [c.x + bo.offsetM[0] * k + back[0], c.y + bo.offsetM[1] * k + back[1], c.z + bo.offsetM[2] * k + back[2]];
+        : [c.x + bo.offsetM[0] * k + back[0] + hov[0], c.y + bo.offsetM[1] * k + back[1] + hov[1], c.z + bo.offsetM[2] * k + back[2] + hov[2]];
   // ⭐⭐ (2026-10-09) `pp` is the ANCHOR — where the resting face's centre goes; the mesh is placed from it at the frame's end
   // (`anchorFrame`); until then everything orbit-side reads the anchor
   // ⭐ (2026-10-13) how far the piece moved this frame (the yellow quad's check waits while it sweeps)
   st.pieceFrameStepM = st.pieceAnchor === null ? 0 : length(sub(pp, st.pieceAnchor));
   st.pieceAnchor = pp;
   if (st.bootRestAlign) bootRestAlign(st, pp); // ⭐ (2026-10-10) a spawn: aligned to the frozen body, now that the orbit placed it
-  box.position.set(pp[0], pp[1], pp[2]);
+  // ⭐⭐ (2026-10-14, *"Piece stays placed"*) captured onto its goal, the piece is the pull's, then stays — the orbit no longer places it
+  if (!st.orbitPiecePlaced) box.position.set(pp[0], pp[1], pp[2]);
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
   const out = st.router.outside();
@@ -1181,6 +1196,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     });
     st.hudDirty = true;
   }
+  // ⭐ (2026-10-14, the hover) the camera's distance to the piece at boot — the hover view keeps it (*"the same offset as the one of boot"*)
+  if (st.bootCamPieceDistM === null && st.pieceAnchor !== null) {
+    const a = st.pieceAnchor;
+    st.bootCamPieceDistM = Math.hypot(camAt[0] - a[0], camAt[1] - a[1], camAt[2] - a[2]);
+  }
+  // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
+  ({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));
@@ -1189,9 +1211,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const tgt = st.centreBlend.targetM;
   st.greenBoxDistM = Math.hypot(box.position.x - tgt[0], box.position.y - tgt[1], box.position.z - tgt[2]);
   pinkRingFrame(st);
-  counterYawFrame(st);
-  restAlignFrame(st, now);
-  anchorFrame(st, now);
+  if (!st.orbitPiecePlaced) {
+    counterYawFrame(st);
+    restAlignFrame(st, now);
+    anchorFrame(st, now);
+  }
   restingFillFrame(st, now);
 }
 
@@ -1226,11 +1250,13 @@ function anchorShiftNow(st: SceneState, now: number): Vec3 {
 }
 
 /** ⭐ (2026-10-13) the piece's anchor (its resting face's centre) on the rings at `o`, the piece's own distance clamp applied. */
-function ringAnchorAt(st: SceneState, o: OrbitQ): Vec3 {
+export function ringAnchorAt(st: SceneState, o: OrbitQ): Vec3 {
   const c = st.orbitCentreM;
   const off = orbitOffset(st.cfg, o.yaw, o.v, o.zoom);
   const k = off.radiusM > 1e-9 ? clampPieceRadiusM(off.radiusM, st.cfg) / off.radiusM : 1;
-  return [c.x + off.offsetM[0] * k, c.y + off.offsetM[1] * k, c.z + off.offsetM[2] * k];
+  // ⭐ (2026-10-14, the hover) the piece-only offset (`hoverGizmoMove` 0) rides with it until the orbit drops it
+  const h = st.hoverOffset ?? [0, 0, 0];
+  return [c.x + off.offsetM[0] * k + h[0], c.y + off.offsetM[1] * k + h[1], c.z + off.offsetM[2] * k + h[2]];
 }
 
 /** ⭐ (2026-10-13) the orbited piece's mesh pose with its resting face's centre at `anchor`, turned `q` (else as it is). */
@@ -1266,7 +1292,7 @@ const pieceShownAtRest = (st: SceneState, q: OrbitQ): boolean =>
   st.boxOrbit !== null && Math.abs(st.boxOrbit.yaw - q.yaw) + Math.abs(st.boxOrbit.v - q.v) < 1e-4;
 
 /** ⭐ (§12) the solver's options from the tunables: the gap kept, in the WORLD (never the camera's), and the work cap. */
-function pieceSolveOptions(st: SceneState): SolveOptions {
+export function pieceSolveOptions(st: SceneState): SolveOptions {
   return { gapM: st.cfg.pieceGapMm / 1000, maxQueries: st.cfg.pieceSolverQueries };
 }
 
@@ -1275,20 +1301,19 @@ function pieceSolveOptions(st: SceneState): SolveOptions {
  * (`nearestObstacle`, the floor and the hidden piece exempt), and the contact normal against that part (`contactNormal`). The last pose asked
  * is remembered (the normal is asked right after the gap at the same place).
  */
-function pieceSolverEnv(st: SceneState): SolverEnv {
+export function pieceSolverEnv(st: SceneState, anchorOf: (q: OrbitQ) => Vec3 = (q) => ringAnchorAt(st, q), setup: CollisionSetup = pieceCollisionSetup(st)): SolverEnv {
   const b = st.greenBox!;
-  const setup = pieceCollisionSetup(st);
   let memo: { q: OrbitQ; world: World; gapM: number; blocker: ObjectId | null; secondGapM: number } | null = null;
   const at = (q: OrbitQ) => {
     if (memo !== null && sameQ(memo.q, q)) return memo;
-    const pose = pieceMeshAt(st, ringAnchorAt(st, q));
+    const pose = pieceMeshAt(st, anchorOf(q));
     const world = pose === null ? st.world : setWorldPlacement(st.world, b.name, pose);
     const n = nearestObstacle(world, b.name, setup, LOOK_M);
     memo = { q, world, gapM: n.gapM, blocker: n.blocker, secondGapM: n.secondGapM };
     return memo;
   };
   return {
-    anchor: (q) => ringAnchorAt(st, q),
+    anchor: anchorOf,
     gap: (q) => at(q).gapM,
     secondGap: (q) => at(q).secondGapM,
     normal: (q) => {
@@ -1311,7 +1336,7 @@ export function pieceStuckFrame(st: SceneState): void {
   st.quadCheckRan = false;
   const b = st.greenBox;
   const q = st.pieceQ;
-  if (b === null || q === null || worldPlacementOf(st.world, b.name) === null) {
+  if (b === null || q === null || st.orbitPiecePlaced || worldPlacementOf(st.world, b.name) === null) {
     st.pieceStuck = STUCK_FRESH;
     return;
   }

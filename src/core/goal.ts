@@ -18,6 +18,7 @@
  * ⛔ ENGINE-FREE.
  */
 import { resolveBootOrientation, type FinalConfiguration, type GoalSymmetry } from "./game_structure";
+import type { FinalPose } from "./game_structure";
 import { add, IDENTITY, length, qAngle, qconj, qFromAxisAngle, qmul, qRotate, scale, sub, type Quat, type Vec3 } from "./vec";
 
 export interface Pose {
@@ -60,8 +61,26 @@ const HALF_TURNS: readonly Quat[] = [
 ];
 
 /** ⭐ Every orientation that looks like `goal` — the symmetry applied in the BODY's frame, first. */
+/** ⭐ (2026-10-14) a tapered body (the green piece): the identity and its half-turn about its own vertical — never upside down. */
+const YAW_HALF_TURNS: readonly Quat[] = [IDENTITY, qFromAxisAngle([0, 1, 0], Math.PI)];
+/** ⭐ (2026-10-14) a hexagonal prism along its own y (the turquoise piece): every sixth of a turn about it, each end up. */
+const HEX_PRISM: readonly Quat[] = [0, 1, 2, 3, 4, 5].flatMap((k) => {
+  const yaw = qFromAxisAngle([0, 1, 0], (k * Math.PI) / 3);
+  return [yaw, qmul(yaw, qFromAxisAngle([1, 0, 0], Math.PI))];
+});
+
 export function acceptedOrientations(goal: Quat, symmetry: GoalSymmetry | undefined): readonly Quat[] {
-  return symmetry === "halfTurns" ? HALF_TURNS.map((s) => qmul(goal, s)) : [goal];
+  const set = symmetry === "halfTurns" ? HALF_TURNS : symmetry === "yawHalfTurns" ? YAW_HALF_TURNS : symmetry === "hexPrism" ? HEX_PRISM : [IDENTITY];
+  return set.map((s) => qmul(goal, s));
+}
+
+/**
+ * ⭐⭐ (2026-10-14) THE GOAL LIVE — the level's `final` and, of the orbited pieces' goals, the one whose body is SHOWN (`shownId`): it counts
+ * (*"Counts (x/42)"*), the hidden one never does.
+ */
+export function liveFinalOf(final: FinalConfiguration, orbitGoals: readonly FinalPose[] | undefined, shownId: string | null): FinalConfiguration {
+  const g = shownId === null ? undefined : orbitGoals?.find((b) => b.id === shownId);
+  return g === undefined ? final : { ...final, bodies: [...final.bodies, g] };
 }
 
 /** Largest-eigenvalue eigenvector of a symmetric 4×4, by cyclic Jacobi. */

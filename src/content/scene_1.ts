@@ -23,7 +23,7 @@
  * materials to the glTF path; the RGB values below are mine, a Mondrian palette on the flat diffuse
  * path the build already has.
  */
-import type { BodySpec, FinalConfiguration, SceneDescriptor, Triple } from "../core/game_structure";
+import type { BodySpec, FinalConfiguration, FinalPose, SceneDescriptor, Triple } from "../core/game_structure";
 
 /** ⭐ `D169`: how far up every position moved so the floor's top centre is the origin — authored units. */
 export const SCENE_1_SHIFT_Y = 2.3;
@@ -116,6 +116,18 @@ export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
  * 1.26 bar (Piece22, 26, 29, 38) may fill any of their four slots. ⚠ Same size in the same axis order: a bar turned
  * a quarter is not its upright twin, the half-turns being the only turns accepted.
  */
+/**
+ * ⭐⭐ (2026-10-14, the owner, on the glass: *"Here is the green piece goal"*, *"Here is the turquoise piece goal"* → *"Yes, centred"*, *"Centred"*)
+ * — THE ORBITED PIECES' GOALS: on the TOP FACE of Piece4 (the white piece above the blue panel, Piece10), centred on it, flush. Units, as
+ * the table. ⭐ Derived, and vectored against the meshes' own sizes: Piece4's top at 4.56 + 0.82 / 2 = 4.97; the green piece (Piece17's
+ * 0.92 × 0.55 × 0.3 → 1.035 × 0.4125 × 0.45, `greenPyramidSizeM`) wide face down, its long axis along the painting's top edge (x) — its
+ * centre 0.4125 / 2 above; the turquoise (a hexagonal prism 1.035 long, `turquoiseSizeM`) STANDING — its centre 1.035 / 2 above.
+ */
+export const SCENE_1_ORBIT_GOALS: readonly FinalPose[] = [
+  { id: "green-box", position: [1.04, 4.97 + 0.4125 / 2, -0.34], orientation: "identity", symmetry: "yawHalfTurns" },
+  { id: "turquoise-piece", position: [1.04, 4.97 + 1.035 / 2, -0.34], orientation: "identity", symmetry: "hexPrism" },
+];
+
 export const SCENE_1_FINAL: FinalConfiguration = {
   frame: "RELATIVE",
   bodies: ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
@@ -267,4 +279,5 @@ export const SCENE_1: SceneDescriptor = {
     bootDistanceM: 3,
   },
   final: SCENE_1_FINAL,
+  orbitGoals: SCENE_1_ORBIT_GOALS,
 };
