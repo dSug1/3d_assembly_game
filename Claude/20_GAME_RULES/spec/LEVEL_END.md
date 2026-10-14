@@ -238,3 +238,6 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   orbited piece was judged by a grabbed part's margins — 10 mm on the GLASS (182 mm at 4.25 m) and 15°: 35 mm off and 12° off read as placed.
   ✅ Its OWN margins, in the WORLD (`orbitGoalTolerance`): `orbitGoalMm` 5 mm and `orbitGoalDeg` 3° (sliders) — only a fine placement counts,
   and the capture pulls the rest. The parts keep theirs.
+* ⭐ (2026-10-14, the hover's audit) the orbited pieces' goals sit flush on Piece4's CONTOUR (`SCENE_1_CONTOUR_MARGIN`, 1.5 mm above its
+  coloured top) — the surface a piece touches. ⛔ Flush on the core they lay inside the contour: the capture's pull was a penetration that
+  waited, and an `orbitGoalMm` under ~2.5 mm was unreachable from a resting piece. The slider now starts at 1.5 mm.

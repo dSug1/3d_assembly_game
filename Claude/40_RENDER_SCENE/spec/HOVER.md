@@ -54,7 +54,7 @@ is in the world. Not in contact or not aligned: the drag orbits (the HUD's verdi
   falls under its distance to the plane). So the piece slides across the flush tops of several parts as across one, within the amplitude;
   a part RISING above the plane (a wall, a taller neighbour) still stops and slides it. ⚠ Past the last coplanar face the piece goes on
   over the void at the same height — the hover never drops it.
-* **The lerp**: the DRAWN offset follows the solved one on the part translation's own follower (`advanceFollow`, `translateInertiaMs`,
+* **The lerp**: the DRAWN offset follows the solved one on the part translation's own follower (⛔ §9: drawn only, never the model) (`advanceFollow`, `translateInertiaMs`,
   `translateDampingRatio`, the phantom lead `translateLeadMs`), each frame (`hoverFrame`), settling after the release.
 * **What moves** (`hoverGizmoMove`, a slider): **1** (default) the yellow GIZMO, the piece riding its ring with it — the misplaced-by-eye
   gizmo is corrected and every later orbit turns about it; **0** the piece alone, an offset on its ring place, **dropped by the next orbit
@@ -112,3 +112,32 @@ during the orbit and the quad turns (`LEVEL_END.md` §5quater).
   measured) and 15°: loose on purpose for a part the capture then pulls exactly, so 35 mm off and 12° off read as placed. ✅ Its own margins,
   in the WORLD: `orbitGoalMm` **5 mm**, `orbitGoalDeg` **3°** (sliders; the quads turn exactly, so the angle is only room for rounding) →
   `LEVEL_END.md` §5quater.
+
+## 9. The audit's fixes (2026-10-14) — the follower drawn only, what ends a hover, the view on a new face, the coplanar tie
+
+> *"Build, update the md files, deploy, relaunch the same audit on the commits since bce905c"* — the owner, on the Fable audit of §1–§8.
+
+* ⛔⛔⛔ **THE FOLLOWER WAS THE MODEL** (the audit's one HIGH finding): the part translation's follower (`ζ` 0.2 and a phantom lead) was
+  written to the gizmo / the offset, so the model overshot a wall — **1.5 mm at 60 fps, 2.2 mm at 120** (vectored) past the 0.5 mm the
+  solver keeps; the next orbit frame found the piece inside a part and its relocation jumped it ≥ 1 cm along the ring. ✅ **The MODEL is the
+  solved offset** (the settle eased in, a solved move); the follower only DRAWS the piece — its lag added to the MESH (`st.hoverDraw`,
+  `anchorFrame`) and taken off where the model reads the mesh (`syncOrbitPieceModel`), kept BEHIND the solved place along the last solved
+  step (`hoverDrawLag`: the part ahead, or across that step, dropped).
+* ⭐⭐ **WHAT ENDS A HOVER BESIDES THE LIFT** (`hoverEndsOn`): a second touch HELD (⛔ the hover went on, the centre pinned under it) or the
+  piece CAPTURED onto its goal (⛔ the hover went on writing the gizmo) — it ends at its solved place, its finger handed back.
+* ⭐⭐ **THE VIEW FOLLOWS A NEW FACE** (`hoverViewRetargets`): a hover begun on a face turned more than ~2.6° from the view's own retargets
+  the hover view, eased from the one it leaves over `HOVER_VIEW_RETARGET_MS` (250 ms) — ⛔ it stayed on the first face.
+* ⭐⭐ **COPLANAR FACES TIE** (`HOVER_TIE_M`, 0.1 mm): the face UNDER the resting face's centre hosts (the least in-plane distance) — ⛔ the
+  first listed won, so the hover could be named after, and levelled on, a neighbour's face.
+* ⭐ **THE PITCH TURNS UP**: on a side face `e2 = n × e1` points DOWN (Babylon is left-handed), so the CAMERA OFFSET's pitch put the hover
+  view below the piece; the pitch axis is turned to point up (`pitchAxis`; a level one, on a top face, kept). ⚠ On a face tilted toward the
+  camera `e2` leans down too and is flipped — no such face in `Scene_1`.
+* ⭐ **THE FADE IS SOLVED**: a dropped piece-only offset (`hoverGizmoMove` 0) goes back to the ring place by the solver, the share kept as its
+  one coordinate — ⛔ it was scaled down blind; blocked, it stops where it stands.
+* ⭐ **THE GOALS ON THE CONTOUR**: the orbited pieces' goals sit flush on Piece4's CONTOUR (`SCENE_1_CONTOUR_MARGIN` above its coloured top)
+  — ⛔ flush on the core, 1.5 mm inside the contour, the capture's pull was a penetration that waited → `LEVEL_END.md` §5quater. The
+  `orbitGoalMm` slider starts at 1.5 mm (a resting piece sits 0.5 – 1.2 mm off).
+* ⭐ Housekeeping: the hosting face's fill disposes its material (one leaked per face); the resting contour's colour is set only when it
+  changes (it was cloned per line every frame).
+* ⚠ Still open (named by the audit, not changed): the hover's solve runs per pointer EVENT (within the 24-query cap); the FLOOR cannot host a
+  hover (a frozen body's faces are not looked at).

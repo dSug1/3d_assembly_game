@@ -602,6 +602,8 @@ export function createScene(
   st.hoverShadowCount = 0;
   st.hoverFaceFill = null;
   st.hoverFaceKey = "";
+  st.hoverTint = null;
+  st.hoverDraw = null;
   st.pieceQ = null;
   st.orbitRawPrev = null;
   st.orbitUserV = null;

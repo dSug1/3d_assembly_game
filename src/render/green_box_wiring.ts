@@ -659,6 +659,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.hoverPress = null;
     st.hoverBand = null;
     st.hoverFollow = null;
+    st.hoverDraw = null;
     st.hoverOffset = null;
     st.hoverOffsetFading = false;
     st.hoverView = null;
@@ -759,7 +760,9 @@ export function syncOrbitPieceModel(st: SceneState): void {
   const o = st.world.objects.get(m.name);
   if (o === undefined || o.orbited !== true) return;
   const r = m.rotationQuaternion ?? Quaternion.Identity();
-  const pos: Vec3 = [m.position.x, m.position.y, m.position.z];
+  // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag is the mesh's, not the model's
+  const d = st.hoverDraw !== null && !st.orbitPiecePlaced ? st.hoverDraw : [0, 0, 0];
+  const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];
   const q: Quat = [r.w, r.x, r.y, r.z];
   const was = o.local;
   const same =
@@ -1234,7 +1237,9 @@ function anchorFrame(st: SceneState, now: number): void {
   const r = b.rotationQuaternion ?? Quaternion.Identity();
   const at = placeByFaceCentre(a, [r.w, r.x, r.y, r.z], p.restingCentre);
   const s = anchorShiftNow(st, now);
-  b.position.set(at[0] + s[0], at[1] + s[1], at[2] + s[2]);
+  // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag: the mesh only — the model is the solved place (`syncOrbitPieceModel` takes it off)
+  const d = st.hoverDraw ?? [0, 0, 0];
+  b.position.set(at[0] + s[0] + d[0], at[1] + s[1] + d[1], at[2] + s[2] + d[2]);
 }
 
 /** ⭐ A new resting face's jump still left (`anchorShift`), eased out over the alignment's turn (`REST_ALIGN_MS`); cleared once gone. */

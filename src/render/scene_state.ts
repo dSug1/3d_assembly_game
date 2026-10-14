@@ -534,12 +534,25 @@ export interface SceneState {
     vv: number;
     lu: number;
     lv: number;
+    /** ⭐ (2026-10-14, the hover's audit) the last solved step on the plane — the drawn lag is kept behind it (`hoverDrawLag`) */
+    du: number;
+    dv: number;
   } | null;
+  /** ⭐⭐ (2026-10-14, the hover's audit) the hover's DRAWN lag (world, m): added to the piece's MESH only (`anchorFrame`) and taken off again when the model reads the mesh (`syncOrbitPieceModel`) — the model is the solved place. */
+  hoverDraw: import("../core/vec").Vec3 | null;
   /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
   hoverOffset: import("../core/vec").Vec3 | null;
   hoverOffsetFading: boolean;
   /** ⭐ (2026-10-14) the HOVER VIEW the camera eases toward (its progress 0 … 1, its target and the face's frame); `null`: the orbit's camera. */
-  hoverView: { progress: number; target: import("../core/vec").Vec3; n: import("../core/vec").Vec3; e1: import("../core/vec").Vec3; e2: import("../core/vec").Vec3 } | null;
+  hoverView: {
+    progress: number;
+    target: import("../core/vec").Vec3;
+    n: import("../core/vec").Vec3;
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    /** ⭐ (2026-10-14, the hover's audit) the view it RETARGETED from (a hover on another face), eased out over `HOVER_VIEW_RETARGET_MS` */
+    from: { target: import("../core/vec").Vec3; n: import("../core/vec").Vec3; e1: import("../core/vec").Vec3; e2: import("../core/vec").Vec3; t0: number } | null;
+  } | null;
   /** ⭐ (2026-10-14) the camera's distance to the piece at boot — the hover view's. */
   bootCamPieceDistM: number | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
@@ -552,6 +565,8 @@ export interface SceneState {
   hoverShadowCount: number;
   hoverFaceFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
   hoverFaceKey: string;
+  /** ⭐ (2026-10-14, the hover's audit) the resting contour's colour as last SET (its fill and whether cyan) — set again only when either changes. */
+  hoverTint: { fill: object; ready: boolean } | null;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */

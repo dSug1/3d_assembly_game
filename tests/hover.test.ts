@@ -145,12 +145,14 @@ describe("⭐ wired", () => {
 });
 
 describe("⭐⭐⭐ the orbited pieces' GOALS and their capture (2026-10-14: *\"goal capture also applies to orbited piece during orbit and quad rotation\"* → *\"Yes, centred\"*, *\"Centred\"*, *\"Counts (x/42)\"*, *\"Piece stays placed\"*)", () => {
-  it("⭐⭐ centred on Piece4's top face, flush — derived from the meshes' own sizes", async () => {
+  it("⭐⭐ centred on Piece4's top face, flush on its CONTOUR — derived from the meshes' own sizes", async () => {
     const { SCENE_1 } = await import("../src/content/scene_1");
     const { greenPyramidSizeM, turquoiseSizeM } = await import("../src/input/green_box");
     const p4 = SCENE_1.final!.bodies.find((b) => b.id === "Piece4")!;
     const p17 = SCENE_1.bodies.find((b) => b.id === "Piece17")!;
-    const top = p4.position[1] + 0.82 / 2;
+    const { SCENE_1_CONTOUR_MARGIN } = await import("../src/content/scene_1");
+    // ⭐⭐ (the hover's audit) flush on Piece4's CONTOUR — the surface a piece touches — not on its coloured core 1.5 mm inside it
+    const top = p4.position[1] + 0.82 / 2 + SCENE_1_CONTOUR_MARGIN;
     const green = greenPyramidSizeM(p17.dims, 1); // in the table's units
     const g = SCENE_1.orbitGoals!.find((b) => b.id === "green-box")!;
     expect(g.position[0]).toBe(p4.position[0]);
@@ -310,7 +312,8 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   it("⭐⭐ A: the settle is SOLVED along the face's normal (the face's part stops it at the gap kept) and shown eased", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const r = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup),");
-    expect(h).toContain("const settleShown = hf.settleM * settleShare(now - hf.settleT0); const w = add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.fu.x), scale(hf.e2, hf.fv.x)));");
+    expect(h).toContain("const settleShown = hf.settleM * settleShare(now - hf.settleT0);");
+    expect(h).toContain("applyHoverModel(st, hf, add(scale(hf.n, -settleShown), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));");
   });
   it("⭐⭐ B: the contact shadow — the resting face's outline laid on the hosting face's plane", async () => {
     const { projectOntoPlane } = await import("../src/input/hover");
@@ -322,7 +325,101 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach).contact;");
     expect(h).toContain("(c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();");
+    // ⭐ (the hover's audit) set only when it changes — no colour cloned per line every frame
+    expect(h).toContain("if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {");
     expect(h).toContain("st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);");
     expect(code("render/green_box_wiring.ts")).toContain("hoverVisualFrame(st, now);");
+  });
+});
+
+describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, what ends a hover, the view on a new face, the coplanar tie, the pitch up", () => {
+  it("⭐⭐⭐ A: the followed offset overshoots a wall (ζ 0.2 + lead) — the DRAWN one never passes the solved place, at 60 and 120 fps", async () => {
+    const { hoverDrawLag } = await import("../src/input/hover");
+    const { advanceFollow } = await import("../src/input/follow");
+    const { exponentialSmooth, phantomTarget } = await import("../src/input/lead");
+    const cfg = DEFAULT_CONFIG;
+    for (const dt of [1 / 60, 1 / 120]) {
+      const tau = cfg.translateInertiaMs / 1000;
+      const wall = 0.03; // the solver stops the piece here
+      let u = 0, lu = 0, vu = 0, du = 0;
+      let f = { x: 0, v: 0 };
+      let rawOver = 0, drawnOver = -1;
+      for (let i = 0; i < Math.round(1 / dt); i++) {
+        const next = Math.min(wall, u + 0.4 * dt); // a quick drag, 0.4 m/s, into the wall
+        if (next !== u) du = next - u;
+        u = next;
+        vu = exponentialSmooth(vu, (u - lu) / dt, tau, dt);
+        lu = u;
+        f = advanceFollow(f, phantomTarget(u, vu, cfg.translateLeadMs / 1000), tau, cfg.translateDampingRatio, dt);
+        rawOver = Math.max(rawOver, f.x - wall);
+        const drawn = u + hoverDrawLag(f.x - u, 0, du, 0)[0];
+        drawnOver = Math.max(drawnOver, drawn - wall);
+      }
+      expect(rawOver).toBeGreaterThan(0.0005); // ⛔ the old MODEL: past the 0.5 mm the solver keeps
+      expect(drawnOver).toBeLessThanOrEqual(1e-12); // ✅ drawn: never ahead of the solved place
+    }
+  });
+  it("⭐⭐ A: the drawn lag — behind along the last step only; nothing before a step", async () => {
+    const { hoverDrawLag } = await import("../src/input/hover");
+    const k = hoverDrawLag(-0.002, 0.001, 1, 0); // behind kept, across dropped
+    expect(k[0]).toBeCloseTo(-0.002, 15);
+    expect(k[1]).toBeCloseTo(0, 15);
+    expect(hoverDrawLag(0.002, 0, 1, 0)[0]).toBeCloseTo(0, 15); // ahead dropped
+    expect(hoverDrawLag(0.002, 0, 0, 0)).toEqual([0, 0]);
+    const [a, b] = hoverDrawLag(-0.001, -0.001, 1, 1);
+    expect(a).toBeCloseTo(-0.001, 12);
+    expect(b).toBeCloseTo(-0.001, 12);
+  });
+  it("⭐⭐ A: wired — the model the SOLVED offset, the lag on the mesh only and taken off where the model reads the mesh", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv); st.hoverDraw = add(scale(hf.e1, lu), scale(hf.e2, lv));");
+    expect(h).not.toContain("scale(hf.e1, hf.fu.x)");
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const d = st.hoverDraw ?? [0, 0, 0]; b.position.set(at[0] + s[0] + d[0], at[1] + s[1] + d[1], at[2] + s[2] + d[2]);");
+    expect(g).toContain("const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];");
+  });
+  it("⭐⭐ B/C: a held second touch or the capture ends the hover", async () => {
+    const { hoverEndsOn } = await import("../src/input/hover");
+    expect(hoverEndsOn(false, false)).toBe(false);
+    expect(hoverEndsOn(true, false)).toBe(true);
+    expect(hoverEndsOn(false, true)).toBe(true);
+    expect(code("render/hover_wiring.ts")).toContain("if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced)) { hoverEndNow(st); return; }");
+  });
+  it("⭐⭐ D: a hover on another face retargets the view, eased over HOVER_VIEW_RETARGET_MS", async () => {
+    const { hoverViewRetargets, retargetShare, HOVER_VIEW_RETARGET_MS } = await import("../src/input/hover");
+    expect(hoverViewRetargets([0, 1, 0], [0, 1, 0])).toBe(false);
+    expect(hoverViewRetargets([0, 1, 0], [0, 0, 1])).toBe(true);
+    expect(hoverViewRetargets([0, 1, 0], [0, Math.cos(0.01), Math.sin(0.01)])).toBe(false); // 0.6°: the same face
+    expect(retargetShare(0)).toBe(0);
+    expect(retargetShare(HOVER_VIEW_RETARGET_MS)).toBe(1);
+    expect(code("render/hover_wiring.ts")).toContain("else if (hoverViewRetargets(hv0.n, c.normal))");
+  });
+  it("⭐⭐ E: COPLANAR faces tie — the one under the resting face's centre hosts, whichever is listed first", () => {
+    const up: Vec3 = [0, 1, 0];
+    const down: Vec3 = [0, -1, 0];
+    const left = { id: "left", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [-0.2, 0, 0] as Vec3, normal: up }] };
+    const right = { id: "right", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [0.2, 0, 0] as Vec3, normal: up }] };
+    const at: Vec3 = [0.15, 0.001, 0]; // over the right part
+    expect(hoverFaceContact(at, down, [left, right], 0.0015).contact?.id).toBe("right");
+    expect(hoverFaceContact(at, down, [right, left], 0.0015).contact?.id).toBe("right");
+    // a nearer plane still wins over a nearer centre
+    const lower = { id: "lower", bodyGapM: 0.001, faces: [{ faceId: "f2", centre: [0.15, -0.0004, 0] as Vec3, normal: up }] };
+    expect(hoverFaceContact(at, down, [right, lower], 0.0015).contact?.id).toBe("right");
+  });
+  it("⭐⭐ the hover view's pitch turns toward the world's UP on a side face (e2 = n × e1 points down there)", () => {
+    // a side face looking +z, the screen's right −x (Babylon, a camera at +z): e2 = z × (−x) = −y
+    const n: Vec3 = [0, 0, 1];
+    const e1: Vec3 = [-1, 0, 0];
+    const e2: Vec3 = [0, -1, 0];
+    const p = hoverCameraPosition([0, 0, 0], n, e1, e2, 1, 0, (20 * Math.PI) / 180, [0, 0.3, 1]);
+    expect(p[1]).toBeCloseTo(Math.sin((20 * Math.PI) / 180), 12); // ⛔ was −0.342: below the piece
+    // a top face: e2 level — kept
+    const t = hoverCameraPosition([0, 0, 0], [0, 1, 0], [1, 0, 0], [0, 0, 1], 1, 0, (20 * Math.PI) / 180, [0, 1, 1]);
+    expect(t[2]).toBeCloseTo(Math.sin((20 * Math.PI) / 180), 12);
+  });
+  it("⭐ F: the piece-only offset's fade is SOLVED; H: the face fill's material disposed with it", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const r = solveOrbitStep({ yaw: 1, v: 0.5, zoom: 1 }, [k - 1, 0], env, pieceSolveOptions(st));");
+    expect(h).toContain("st.hoverFaceFill?.dispose(false, true);");
   });
 });

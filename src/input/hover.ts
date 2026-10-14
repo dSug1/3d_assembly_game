@@ -17,6 +17,9 @@ const unit = (a: Vec3): Vec3 | null => {
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : null;
 };
 
+/** ⭐ (2026-10-14, the hover's audit) Two faces whose planes lie within this of each other (m) are COPLANAR for the contact's choice — the in-plane distance decides. */
+export const HOVER_TIE_M = 1e-4;
+
 /** ⭐ The resting face and the part's face count as aligned within this angle (°): the quads align exactly — this is numerical room. */
 export const HOVER_ALIGN_DEG = 2;
 
@@ -90,7 +93,10 @@ export function hoverCameraPosition(
     n[1] * Math.cos(yawRad) + e1[1] * Math.sin(yawRad),
     n[2] * Math.cos(yawRad) + e1[2] * Math.sin(yawRad),
   ];
-  d = [d[0] * Math.cos(pitchRad) + e2[0] * Math.sin(pitchRad), d[1] * Math.cos(pitchRad) + e2[1] * Math.sin(pitchRad), d[2] * Math.cos(pitchRad) + e2[2] * Math.sin(pitchRad)];
+  // ⭐ (2026-10-14, the hover's audit) the pitch turns toward the world's UP: on a side face `e2 = n × e1` points DOWN (Babylon is left-handed), and the boot's
+  // pitch put the hover view BELOW the piece
+  const p2: Vec3 = pitchAxis(e2);
+  d = [d[0] * Math.cos(pitchRad) + p2[0] * Math.sin(pitchRad), d[1] * Math.cos(pitchRad) + p2[1] * Math.sin(pitchRad), d[2] * Math.cos(pitchRad) + p2[2] * Math.sin(pitchRad)];
   const maxUp = Math.cos((minTiltDeg * Math.PI) / 180);
   if (Math.abs(d[1]) > maxUp) {
     const h = unit([awayHint[0], 0, awayHint[2]]) ?? ([1, 0, 0] as Vec3);
@@ -100,6 +106,11 @@ export function hoverCameraPosition(
   }
   const u = unit(d) ?? n;
   return [target[0] + u[0] * distM, target[1] + u[1] * distM, target[2] + u[2] * distM];
+}
+
+/** ⭐ (2026-10-14, the hover's audit) The hover view's pitch axis: `e2`, turned to point UP when it points down (a level `e2`, on a top face, is kept). */
+export function pitchAxis(e2: Vec3): Vec3 {
+  return e2[1] < -1e-9 ? [-e2[0], -e2[1], -e2[2]] : e2;
 }
 
 /**
@@ -147,7 +158,7 @@ export function hoverFaceContact(
   alignDeg = HOVER_ALIGN_DEG,
 ): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null } {
   const cosMin = Math.cos((alignDeg * Math.PI) / 180);
-  let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null = null;
+  let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number } | null = null;
   let nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number } | null = null;
   for (const c of candidates) {
     for (const f of c.faces) {
@@ -157,7 +168,13 @@ export function hoverFaceContact(
       const angleDeg = (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
       const score = d + angleDeg * 1e-3;
       if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM };
-      if (cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && (contact === null || d < contact.gapM)) contact = { id: c.id, faceId: f.faceId ?? null, normal: f.normal, centre: f.centre, gapM: Math.max(0, d) };
+      if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM)) continue;
+      // ⭐⭐ (2026-10-14, the hover's audit) COPLANAR faces tie on the distance: the one UNDER the resting face's centre hosts (the least in-plane distance to its
+      // centre) — ⛔ the first listed won, so a piece over a part's top could hover in the plane of its neighbour's, named after it
+      const off: Vec3 = [restingCentreW[0] - f.centre[0] - f.normal[0] * d, restingCentreW[1] - f.centre[1] - f.normal[1] * d, restingCentreW[2] - f.centre[2] - f.normal[2] * d];
+      const inPlaneM = Math.hypot(off[0], off[1], off[2]);
+      const better = contact === null || d < contact.gapM - HOVER_TIE_M || (Math.abs(d - contact.gapM) <= HOVER_TIE_M && inPlaneM < contact.inPlaneM);
+      if (better) contact = { id: c.id, faceId: f.faceId ?? null, normal: f.normal, centre: f.centre, gapM: Math.max(0, d), inPlaneM };
     }
   }
   return { contact, nearest };
@@ -188,4 +205,40 @@ export function settleShare(elapsedMs: number): number {
 export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
   const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
   return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-14, the hover's audit) — **THE FOLLOWER IS DRAWN, NEVER SOLVED**: the hover's MODEL is the solved offset; the part translation's follower (`ζ` 0.2
+ * and a phantom lead) only DRAWS the piece, its lag kept BEHIND the solved place along the last solved step (`dirU`, `dirV`) — the part
+ * of it ahead, or across that step, dropped. ⛔ The followed offset WAS the model: underdamped and led, it overshot a wall by 1.5 mm at
+ * 60 fps (2.2 mm at 120) past the 0.5 mm the solver keeps — the next orbit frame found the piece inside, its relocation jumped it ≥ 1 cm
+ * along the ring. Returns the drawn lag `(du, dv)` to add to the solved offset; `[0, 0]` before any step.
+ */
+export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number): [number, number] {
+  const l = Math.hypot(dirU, dirV);
+  if (!(l > 1e-12)) return [0, 0];
+  const s = Math.min(0, (lagU * dirU + lagV * dirV) / l);
+  return [(s * dirU) / l, (s * dirV) / l];
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover's audit) — **WHAT ENDS A HOVER BESIDES THE LIFT**: a second touch HELD (its own gesture takes over — ⛔ the hover went on, the centre pinned
+ * under it) or the piece CAPTURED onto its goal (the pull owns it — ⛔ the hover went on writing the gizmo).
+ */
+export function hoverEndsOn(holdActive: boolean, placed: boolean): boolean {
+  return holdActive || placed;
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the hover's audit) — **THE HOVER VIEW FOLLOWS A NEW FACE**: a hover begun on a face turned from the view's own (more than ~2.6°) RETARGETS the view
+ * — ⛔ it stayed on the first face, so a hover on a side face after one on a top face was watched from above. Eased from the view it leaves
+ * over `HOVER_VIEW_RETARGET_MS`.
+ */
+export const HOVER_VIEW_RETARGET_MS = 250;
+export function hoverViewRetargets(prevN: Vec3, n: Vec3): boolean {
+  return dot(prevN, n) <= 0.999;
+}
+export function retargetShare(elapsedMs: number): number {
+  const u = Math.min(1, Math.max(0, elapsedMs / HOVER_VIEW_RETARGET_MS));
+  return u * u * (3 - 2 * u);
 }
