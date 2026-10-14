@@ -22,7 +22,8 @@ import { AT_CONTACT_M, solveOrbitStep, type OrbitQ } from "../input/piece_orbit_
 import {
   HOVER_SPAN_M,
   clampDisc,
-  hoverCameraPosition,
+  hoverIsoDirection,
+  hoverViewDistanceM,
   HOVER_ALIGN_DEG,
   hoverFaceContact,
   projectOntoPlane,
@@ -194,10 +195,13 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverOffsetFading = false;
   // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
+  // ⭐⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) the ISOMETRIC view: above and right of the face, looking down-left at it
+  const cam = st.camera.position;
+  const iso = hoverIsoDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]]);
   const hv0 = st.hoverView;
-  if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, from: null };
+  if (hv0 === null) st.hoverView = { progress: 0, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, from: null };
   else if (hoverViewRetargets(hv0.n, c.normal))
-    st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, from: { target: hv0.target, n: hv0.n, e1: hv0.e1, e2: hv0.e2, t0: performance.now() } };
+    st.hoverView = { progress: hv0.progress, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
   st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
@@ -421,24 +425,18 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   }
 }
 
-/** ⭐ The camera blended toward the hover view by its progress (the boot distance and the CAMERA OFFSET's angles). */
+/** ⭐ The camera blended toward the hover view by its progress — ISOMETRIC, at the boot distance for the zoom of the moment. */
 export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3 } {
   const hv = st.hoverView;
   if (hv === null) return { camAt, lookAt };
   const w = hoverViewWeight(hv.progress);
   if (w <= 0) return { camAt, lookAt };
-  const dist = st.bootCamPieceDistM ?? Math.hypot(camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]);
-  const viewOf = (v: { target: Vec3; n: Vec3; e1: Vec3; e2: Vec3 }): Vec3 =>
-    hoverCameraPosition(
-      v.target,
-      v.n,
-      v.e1,
-      v.e2,
-      dist,
-      (st.cfg.cameraYawOffsetDeg * Math.PI) / 180,
-      (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180,
-      [camAt[0] - v.target[0], camAt[1] - v.target[1], camAt[2] - v.target[2]],
-    );
+  // ⭐⭐ (2026-10-14, *"modify the offset and distance of the camera during hover so that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot with same zoom."*) the distance the camera had to the piece at boot, at the zoom of the moment
+  const dist =
+    st.bootCamGeom !== null
+      ? hoverViewDistanceM(st.cfg, st.bootCamGeom, st.zoom)
+      : (st.bootCamPieceDistM ?? Math.hypot(camAt[0] - hv.target[0], camAt[1] - hv.target[1], camAt[2] - hv.target[2]));
+  const viewOf = (v: { target: Vec3; iso: Vec3 }): Vec3 => add(v.target, scale(v.iso, dist));
   let pos = viewOf(hv);
   let target = hv.target;
   // ⭐⭐ (2026-10-14, the hover's audit) retargeted to another face: eased from the view it left
@@ -453,8 +451,9 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   return { camAt: lerp3(camAt, pos, w), lookAt: lerp3(lookAt, target, w) };
 }
 
-const READY_COLOUR = new Color3(0.2, 0.9, 1);
-const SHADOW_COLOUR = new Color3(0.2, 0.9, 1);
+// ⭐ (2026-10-14, the owner: *"change the cyan highlight color to this green color as attached"*) — #D8FDD2 (216, 253, 210), sampled from the owner's swatch
+const READY_COLOUR = Color3.FromInts(216, 253, 210);
+const SHADOW_COLOUR = Color3.FromInts(216, 253, 210);
 /** ⭐ How often the "may it hover?" look runs when no hover is on (ms). */
 const READY_EVERY_MS = 100;
 

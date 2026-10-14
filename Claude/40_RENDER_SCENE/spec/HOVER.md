@@ -62,6 +62,8 @@ is in the world. Not in contact or not aligned: the drag orbits (the HUD's verdi
 
 ## 4. The camera — the hover view, in and out by the finger's travel
 
+> ⛔ The view's DIRECTION and DISTANCE below are superseded by §12 (isometric, the boot distance at the zoom of the moment).
+
 The **hover view** (`hoverCameraPosition`): looking at the piece's contact point along the face's normal, at the boot distance from the
 piece (`bootCamPieceDistM`, measured at the first frame), turned by the CAMERA OFFSET's yaw and pitch (*"Distance + angles"*), kept 3° off
 the vertical (a camera looking straight down has no up). Reached by the hover drag's travel and left by the next ORBIT drag's travel — the
@@ -208,3 +210,24 @@ support** (moving the yellow gizmo onto the floor point first) there is no way t
 hover would have to carry it the rest of the way: **an UNLIMITED hover distance** (`hoverAmplitudeMm` at its top, 500).
 **Two ways forward, to be chosen later**: (a) build the proposal WITH gizmo support and an unlimited distance; or (b) **PLACEHOLDERS on the
 floor** — marked seats where a piece may be set down, each a known target the piece is brought to (no free hover on the floor at all).
+
+## 12. The defaults, the isometric hover view, the green (2026-10-14, `1.0.76-`)
+
+> *"Set default gizmo moves with hover off and hover distance is unlimited"* · *"modify the offset and distance of the camera during hover so
+> that it's view direction projects equally to the three orthogonal planes horizontal, gravity and the third orthogonal and the cyan
+> highlight can be viewed from top right towards bottom left. Distance of camera to object equals the distance of camera to object at boot
+> with same zoom."* · *"change the cyan highlight color to this green color as attached"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐ **Defaults**: `hoverGizmoMove` **0** (the piece alone moves; the gizmo stays) and `hoverAmplitudeMm` **500** (unlimited). Headless: the
+  piece slid ~20 cm along a face and stopped 1.00 mm from the next part.
+* ⭐⭐⭐ **THE HOVER VIEW IS ISOMETRIC** (`hoverIsoDirection`): the camera looks along a direction with three EQUAL components — on the
+  horizontal plane, the vertical (gravity) plane of the hosting face, and the third orthogonal to both: `(up + a + b)/√3`, 35.26° above the
+  horizontal. It sits ABOVE and to the RIGHT of the face, looking down-left at it. A side face: `a` its normal laid flat, `b` toward the
+  screen's right. A top face: `a` the screen's right laid flat, `b` toward where the camera already is. ⛔ The face-on view turned by the
+  CAMERA OFFSET's angles (and its pitch fix of §9) is deleted (`hoverCameraPosition`, `pitchAxis`).
+* ⭐⭐ **THE DISTANCE** (`hoverViewDistanceM`): the camera's distance to the piece AT BOOT, had the zoom been the current one — the boot's
+  orbit pose, the piece's place on the rings and the angle offsets recorded at the first frame (`st.bootCamGeom`), the camera put behind the
+  piece by the gap the zoom makes now. So the ZOOM works in the hover view (§10's HUD note now only shows the view's share). Headless: 1.263 m,
+  the boot's at zoom 1.
+* ⭐ **THE GREEN**: the ready contour, the contact shadow and the hosting face's fill are **#D8FDD2** (216, 253, 210), sampled from the owner's
+  swatch — they were cyan.
