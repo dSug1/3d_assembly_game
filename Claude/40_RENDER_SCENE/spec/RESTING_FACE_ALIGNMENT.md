@@ -1041,3 +1041,24 @@ The orbited piece now collides with the placed and loose parts (never the floor,
 own coordinates and the camera stops with it; every turn (align, roll, a quad tap, an empty-space tap, a face tap) is checked whole before it
 starts and REFUSED when blocked; and the yellow quad turns **RED** while the turn its tap would make is blocked, yellow again once it is free
 → [`COLLISION.md`](../../30_OBJECTS_3D/spec/COLLISION.md) §11.
+
+## 28. The gizmo's supporting face as the mating face while the quads are hidden; a tap on the piece aligns to the yellow one (2026-10-14, `1.0.76-`)
+
+> *"modify: when there is no quad shown, the yellow highlight appears on the surface supporting the yellow gizmo and this surface serves as the
+> mating face (therefore, a tap on the piece's face will align with this mating face instead of the quad which is not shown, etc.), when the
+> quads reappear the yellow highlight fades from the part's face and the rotation is done on the quad (same as current). This will therefore
+> toggle the piece rotation between quad and part's face."* · *"modify: a tap on the green-turquoise piece will select it as the resting face and
+> align it with the current yellow-highlighted quad or part's face"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE SUPPORTING FACE** (`input/support_face.ts`, `supportFaceIndex`): the face the yellow gizmo sits on — within 3 mm of its plane and of
+  its coloured triangles (every part's and the frozen bodies', the orbited pieces aside), the nearest plane first; looked for again when the
+  gizmo moves, else every 500 ms. Its direction among the level's (`orientDirs`, within 1°).
+* ⭐⭐⭐ **THE DIRECTION SHOWN** (`shownDirectionTag`): the quads HIDDEN (the piece nearer the gizmo than half the rings' farthest, §25) — the
+  supporting face's; else, as before, the one tapped, else the candidate. So everything that aligned to the yellow quad aligns to the supporting
+  face while the quads are hidden: a tap on empty space (`orientTapShown`), a roll on it, the turn's check (RED while blocked). Tapping it is not
+  recorded as a quad tapped (the quads back, the yellow is theirs again).
+* ⭐⭐ **ITS YELLOW**: the supporting face's outline (its triangles' edges used once), yellow (red while its turn is blocked, as the quad), drawn over
+  what stands in front; FADED IN while the quads are hidden and OUT when they show, over 250 ms (`supportAlpha`).
+* ⭐⭐⭐ **A TAP ON THE PIECE** (`selectRestingFace`): the face tapped becomes the resting face and aligns to the direction SHOWN NOW — the yellow
+  quad's, or the supporting face's. ⛔ It aligned to the direction last TAPPED (`st.pinkDir`), whatever was yellow.
+* Headless: the gizmo staged on Piece10's face — found (its direction a level's), the quads hidden, the yellow at full.

@@ -200,6 +200,8 @@ export function hoverFaceContact(
   candidates: readonly HoverFaceCandidate[],
   maxGapM: number,
   alignDeg = HOVER_ALIGN_DEG,
+  /** ⭐⭐ (2026-10-14) the resting face's outline in the world — given, ANY overlap with the face's triangles counts (`overlapsTriangles`) */
+  restingPoly: readonly Vec3[] | null = null,
 ): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number; overFace: boolean } | null } {
   const cosMin = Math.cos((alignDeg * Math.PI) / 180);
   let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number; overM: number } | null = null;
@@ -212,7 +214,10 @@ export function hoverFaceContact(
       const angleDeg = (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
       const onPlane: Vec3 = [restingCentreW[0] - f.normal[0] * d, restingCentreW[1] - f.normal[1] * d, restingCentreW[2] - f.normal[2] * d];
       const overM = f.triangles === undefined ? 0 : distanceToTriangles(onPlane, f.normal, f.triangles);
-      const overFace = overM <= HOVER_OVER_FACE_M;
+      // ⭐⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."*) — ANY PORTION of the resting face over the face: ⛔ its CENTRE had to be, and the orbit keeps the
+      // resting face's centre on the ring at least its least radius from the gizmo — at a dy collision near the gizmo on a narrow face the centre
+      // stood past the face's edge with much of the resting face over it, and only a dx (swinging the centre over the face) latched the hover
+      const overFace = restingPoly !== null && f.triangles !== undefined ? overlapsTriangles(restingPoly, f.normal, f.triangles) : overM <= HOVER_OVER_FACE_M;
       const score = d + angleDeg * 1e-3 + (overFace ? 0 : 1);
       if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3 + (nearest.overFace ? 0 : 1)) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM, overFace };
       if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && overFace)) continue;
@@ -365,4 +370,122 @@ export function hoverWayInLeft(travelledMm: number, enterMm: number): number {
   if (enterMm <= 0) return 0;
   const t = Math.min(1, Math.max(0, travelledMm / enterMm));
   return 1 - t * t * (3 - 2 * t);
+}
+
+/** ⭐ Two faces overlap when they share more than this across (m) — touching edges do not count. */
+export const HOVER_OVERLAP_EPS_M = 1e-4;
+
+/** ⭐ Two orthonormal axes of the plane of normal `n`. */
+export function planeAxes(n: Vec3): [Vec3, Vec3] {
+  const seed: Vec3 = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const k = dot(seed, n);
+  const a = unit([seed[0] - n[0] * k, seed[1] - n[1] * k, seed[2] - n[2] * k])!;
+  return [a, unit(cross(n, a))!];
+}
+
+/** ⭐ A 2-D convex hull (Andrew's monotone chain), counter-clockwise; duplicates dropped. */
+export function convexHull2D(pts: readonly (readonly [number, number])[]): [number, number][] {
+  const p = [...pts].map((q) => [q[0], q[1]] as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return p;
+  const cr = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: [number, number][] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, q) <= 1e-18) lo.pop();
+    lo.push(q);
+  }
+  const up: [number, number][] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i]!;
+    while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, q) <= 1e-18) up.pop();
+    up.push(q);
+  }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+
+/** ⭐ Two convex 2-D polygons OVERLAP by more than `eps` across, by separating axes (the edge normals of both). */
+export function convexOverlap2D(a: readonly (readonly [number, number])[], b: readonly (readonly [number, number])[], eps = HOVER_OVERLAP_EPS_M): boolean {
+  if (a.length === 0 || b.length === 0) return false;
+  const axes: [number, number][] = [];
+  for (const poly of [a, b])
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i]!;
+      const q = poly[(i + 1) % poly.length]!;
+      const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (l > 1e-12) axes.push([-(q[1] - p[1]) / l, (q[0] - p[0]) / l]);
+    }
+  for (const ax of axes) {
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const p of a) {
+      const t = p[0] * ax[0] + p[1] * ax[1];
+      a0 = Math.min(a0, t);
+      a1 = Math.max(a1, t);
+    }
+    for (const p of b) {
+      const t = p[0] * ax[0] + p[1] * ax[1];
+      b0 = Math.min(b0, t);
+      b1 = Math.max(b1, t);
+    }
+    if (Math.min(a1, b1) - Math.max(a0, b0) <= eps) return false;
+  }
+  return true;
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."* · *"when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the movement shall default back to orbit even if the press has not been released."*) — **ANY PORTION OF THE RESTING FACE OVER A FACE**: the resting face's outline (`poly`, its convex
+ * hull) and the face's triangles, both laid on the plane of `n`, overlap by more than `HOVER_OVERLAP_EPS_M` across.
+ */
+export function overlapsTriangles(poly: readonly Vec3[], n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): boolean {
+  const [a, b] = planeAxes(n);
+  const P = (p: Vec3): [number, number] => [dot(p, a), dot(p, b)];
+  const hull = convexHull2D(poly.map(P));
+  return tris.some((t) => convexOverlap2D(hull, [P(t[0]), P(t[1]), P(t[2])]));
+}
+
+/**
+ * ⭐⭐ (2026-10-14, the owner: *"Display also a green highlight over the biggest boundary of coplanar hosting faces so the user can visually couple it with the green highlight of the resting face (similar to yellow highlight for resting face and quad)."*) — **THE OUTLINE OF THE COPLANAR HOSTING FACES**: rectangles in the plane (each face's extent), each grown by
+ * `growM` (so faces a joint apart — 3 mm between the coloured cores — read as one), the ones joined to rectangle `seed` (overlapping or touching,
+ * step by step), their UNION's boundary as segments. Exact for faces square to the plane's axes (every `Scene_1` part); others are taken by their
+ * extent.
+ */
+export interface Rect2 {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: number): [[number, number], [number, number]][] {
+  if (seed < 0 || seed >= rects.length) return [];
+  const g = rects.map((r) => ({ x0: r.x0 - growM, y0: r.y0 - growM, x1: r.x1 + growM, y1: r.y1 + growM }));
+  const touch = (a: Rect2, b: Rect2) => a.x0 <= b.x1 + 1e-9 && b.x0 <= a.x1 + 1e-9 && a.y0 <= b.y1 + 1e-9 && b.y0 <= a.y1 + 1e-9;
+  const inSet = new Set<number>([seed]);
+  const stack = [seed];
+  while (stack.length > 0) {
+    const i = stack.pop()!;
+    g.forEach((r, j) => {
+      if (!inSet.has(j) && touch(g[i]!, r)) {
+        inSet.add(j);
+        stack.push(j);
+      }
+    });
+  }
+  const comp = [...inSet].map((i) => g[i]!);
+  const xs = [...new Set(comp.flatMap((r) => [r.x0, r.x1]))].sort((a, b) => a - b);
+  const ys = [...new Set(comp.flatMap((r) => [r.y0, r.y1]))].sort((a, b) => a - b);
+  const covered = (i: number, j: number): boolean => {
+    if (i < 0 || j < 0 || i >= xs.length - 1 || j >= ys.length - 1) return false;
+    const cx = (xs[i]! + xs[i + 1]!) / 2;
+    const cy = (ys[j]! + ys[j + 1]!) / 2;
+    return comp.some((r) => cx > r.x0 && cx < r.x1 && cy > r.y0 && cy < r.y1);
+  };
+  const segs: [[number, number], [number, number]][] = [];
+  for (let i = 0; i < xs.length - 1; i++)
+    for (let j = 0; j < ys.length - 1; j++) {
+      if (!covered(i, j)) continue;
+      const x0 = xs[i]!, x1 = xs[i + 1]!, y0 = ys[j]!, y1 = ys[j + 1]!;
+      if (!covered(i - 1, j)) segs.push([[x0, y0], [x0, y1]]);
+      if (!covered(i + 1, j)) segs.push([[x1, y0], [x1, y1]]);
+      if (!covered(i, j - 1)) segs.push([[x0, y0], [x1, y0]]);
+      if (!covered(i, j + 1)) segs.push([[x0, y1], [x1, y1]]);
+    }
+  return segs;
 }
