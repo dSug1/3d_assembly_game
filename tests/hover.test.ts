@@ -201,8 +201,8 @@ describe("⭐⭐ the hover's deadband, its follower, its sway (2026-10-14, the o
   });
   it("⭐⭐ the drawn offset FOLLOWS the solved one on the part translation's follower (its inertia, damping and lead)", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const tau = st.cfg.translateInertiaMs / 1000; const zeta = st.cfg.translateDampingRatio; const lead = st.cfg.translateLeadMs / 1000;");
-    expect(h).toContain("hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, lead), tau, zeta, dtSec);");
+    // ⭐ (2026-10-14, *"When the piece hovers in desktop, the slide is not smooth but jittery"*) the orbit's spring, critically damped, no lead
+    expect(h).toContain("const tau = hoverDrawTau(st); hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec); hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);");
     expect(code("render/green_box_wiring.ts")).toContain("hoverFrame(st, now, dtSec); hoverOffsetFrame(st, dtSec * 1000);");
   });
   it("⭐ the sway kicked by the hover finger's own trigger, at that least angle, about the placed parts, the way the piece moves", () => {
@@ -654,7 +654,7 @@ describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the dra
     expect(convexOverlap2D(sq(0, 0, 1), [[1.6, 1], [2, 1.4], [1.6, 1.8], [1.2, 1.4]])).toBe(false);
     expect(convexHull2D([[0, 0], [1, 0], [1, 1], [0, 1], [0.5, 0.5], [0, 0]])).toHaveLength(4);
   });
-  it("⭐⭐⭐ 3: the resting face over NONE of the coplanar faces — the drag goes back to the orbit, the finger still down", async () => {
+  it("⭐⭐⭐ 3: the resting face over NONE of the coplanar faces — the test the hover's bound reads (⛔ no more back to the orbit)", async () => {
     const { overlapsTriangles } = await import("../src/input/hover");
     const faces = [...quad(0, 0.1, 0, 0.1), ...quad(0.103, 0.2, 0, 0.1)]; // two parts' tops, a 3 mm joint
     const at = (x: number): Vec3[] => [[x, 0.001, 0.02], [x + 0.04, 0.001, 0.02], [x + 0.04, 0.001, 0.06], [x, 0.001, 0.06]];
@@ -662,7 +662,8 @@ describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the dra
     expect(overlapsTriangles(at(0.1005), up, faces)).toBe(true); // over the joint, its edges on both
     expect(overlapsTriangles(at(0.25), up, faces)).toBe(false); // wholly over the void: back to the orbit
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain('if (poly.length > 0 && !overlapsTriangles(poly, h.n, h.coplanar)) { st.hover = null; st.hoverPress = null; st.hoverBand = null; st.lastVerdict = "hover: the resting face left the hosting faces — the drag orbits";');
+    expect(h).not.toContain("the resting face left the hosting faces — the drag orbits");
+    expect(h).toContain("h.pending = boundStep([h.u, h.v], h.pending, inside);");
   });
   it("⭐⭐ 2: the outline of the coplanar faces joined to the host — two parts a joint apart read as one; a far one left out", async () => {
     const { rectUnionOutline } = await import("../src/input/hover");
@@ -707,5 +708,82 @@ describe("⭐⭐⭐ the gizmo's supporting face as the mating face; a tap on the
     expect(p).toContain("const shown = shownDirection(st); if (shown !== null) st.pinkDir = shown;");
     const sel = p.slice(p.indexOf("function selectRestingFace"));
     expect(sel.indexOf("st.pinkDir = shown")).toBeLessThan(sel.indexOf("alignRestingFace(st, performance.now(), carry)"));
+  });
+});
+
+describe("⭐⭐⭐ the hover bounded by the hosting faces, the mirror growth, the smooth draw (2026-10-14, the owner)", () => {
+  it("⭐⭐⭐ the hover stops at the faces' edge, slides along it, and comes back by reversing — no switch to the orbit", async () => {
+    const { boundStep } = await import("../src/input/hover");
+    const inside = (u: number, v: number) => u <= 0.1 && Math.abs(v) <= 0.05; // the faces: u ≤ 0.1, |v| ≤ 0.05
+    expect(boundStep([0, 0], [0.05, 0.01], inside)).toEqual([0.05, 0.01]); // inside: the whole step
+    expect(boundStep([0.09, 0], [0.12, 0.02], inside)).toEqual([0.09, 0.02]); // along the edge: the axis that stays inside
+    const s = boundStep([0.09, 0.04], [0.12, 0.07], inside); // a corner: as far as it goes
+    expect(s[0]).toBeLessThanOrEqual(0.1);
+    expect(s[0]).toBeGreaterThan(0.099);
+    expect(boundStep([0.1, 0], [0.05, 0], inside)).toEqual([0.05, 0]); // reversed: back at once
+  });
+  it("⭐⭐⭐ the MIRROR growth: 0 where the quads disappear, full at the rings' closest, on the quads' own logarithm", async () => {
+    const { mirrorQuadShare, quadSize } = await import("../src/core/orientation_set");
+    const near = 0.09, from = 3, k = DEFAULT_CONFIG.quadGrowthLogK;
+    expect(mirrorQuadShare(from, near, from, k)).toBe(0);
+    expect(mirrorQuadShare(near, near, from, k)).toBeCloseTo(1, 12);
+    expect(mirrorQuadShare(5, near, from, k)).toBe(0); // the quads shown: none
+    // the mirror of the quads' curve: as far in from `from` as the quads are out
+    const max = 2 * from - near;
+    const d = 1.2;
+    expect(mirrorQuadShare(d, near, from, k)).toBeCloseTo(quadSize(2 * from - d, from, max, k, 0, 1), 12);
+  });
+  it("⭐⭐⭐ the hover's drawn piece on the orbit's spring: a mouse's events beating against the frames show as a steady slide, no stick-slip", async () => {
+    const { advanceFollow } = await import("../src/input/follow");
+    const { exponentialSmooth, phantomTarget } = await import("../src/input/lead");
+    const cfg = DEFAULT_CONFIG;
+    const dt = 1 / 143; // the HUD's 143 fps
+    // the solved place steps only on frames with an event (125 Hz): 1 mm, now and then 0
+    const solved: number[] = [];
+    let x = 0, acc = 0;
+    for (let i = 0; i < 143; i++) {
+      acc += 125 / 143;
+      if (acc >= 1) {
+        acc -= 1;
+        x += 0.001;
+      }
+      solved.push(x);
+    }
+    const spread = (xs: number[]) => {
+      const steps = xs.slice(30).map((v, i) => v - xs[29 + i]!);
+      const m = steps.reduce((a, b) => a + b, 0) / steps.length;
+      return Math.max(...steps.map((s) => Math.abs(s - m))) / m;
+    };
+    // ⛔ the part translation's follower (τ 7.6 ms, ζ 0.2, a lead), clipped ahead
+    let f = { x: 0, v: 0 }, vu = 0, lu = 0;
+    const old: number[] = [];
+    for (const u of solved) {
+      vu = exponentialSmooth(vu, (u - lu) / dt, cfg.translateInertiaMs / 1000, dt);
+      lu = u;
+      f = advanceFollow(f, phantomTarget(u, vu, cfg.translateLeadMs / 1000), cfg.translateInertiaMs / 1000, cfg.translateDampingRatio, dt);
+      old.push(Math.min(f.x, u));
+    }
+    // ✅ the orbit's spring
+    let g = { x: 0, v: 0 };
+    const now: number[] = [];
+    for (const u of solved) {
+      g = advanceFollow(g, u, cfg.boxSmoothMs / 2 / 1000, 1, dt);
+      now.push(g.x);
+    }
+    expect(spread(old)).toBeGreaterThan(0.5); // ⛔ frame steps varying by more than half the mean
+    expect(spread(now)).toBeLessThan(0.15); // ✅ steady
+    expect(Math.max(...now.map((v, i) => v - solved[i]!))).toBeLessThanOrEqual(1e-12); // never ahead of the solved place
+  });
+  it("⭐⭐ wired: the way in drawn on the spring, its share of the cap kept; the hover view's share eased", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const next = [0, 1, 2].map((k) => advanceFollow({ x: d!.x[k]!, v: d!.v[k]! }, o[k]!, tau, 1, dt));");
+    expect(h).toContain("const f = advanceFollow({ x: hv.shown, v: hv.shownVel }, hv.progress, hoverDrawTau(st), 1, dt);");
+    expect(h).toContain("const w = hoverViewWeight(hv.shown);");
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;");
+    expect(g).toContain("wayInDrawFrame(st, dtSec * 1000);");
+    const q = code("render/orient_cube.ts");
+    expect(q).toContain("q.growth = q.mirror ? Math.max(Math.min(1, onePx / full), mirrorQuadShare(d, range.minM, from, st.cfg.quadGrowthLogK)) : Math.min(1, onePx / full);");
+    expect(q).toContain("mesh.scaling.setAll(share);");
   });
 });

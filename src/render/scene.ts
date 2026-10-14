@@ -610,6 +610,7 @@ export function createScene(
   st.hoverReadyWorld = null;
   st.hoverReadyReachMm = 0;
   st.hoverDraw = null;
+  st.wayInDrawn = null;
   st.pieceQ = null;
   st.orbitRawPrev = null;
   st.orbitUserV = null;

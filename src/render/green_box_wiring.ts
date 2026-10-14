@@ -33,7 +33,9 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { syncCentre } from "./camera_rig";
-import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame } from "./hover_wiring";
+import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
+/** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
+const HOVER_FADE_QUERIES = 8;
 import { modelLag, orbitFrameUnderHover } from "../input/hover";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
@@ -602,7 +604,8 @@ function restingFillFrame(st: SceneState, now: number): void {
   const fill = p.restingFill;
   fill.isVisible = false;
   // ⭐⭐ (2026-10-12, the owner: *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"*) — hidden with the quads (below half the farthest distance: it had shrunk to a flickering point there)
-  const shown = st.restingQuads?.shown ?? true;
+  // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — and in the MIRROR: past where the quads disappear it grows again toward the gizmo (`growth`)
+  const shown = (st.restingQuads?.shown ?? true) || (st.restingQuads?.mirror ?? false);
   for (const c of fill.getChildMeshes(true)) c.isVisible = shown;
   if (!shown) return;
   const camD = Vector3.Distance(st.camera.position, p.mesh.position);
@@ -661,6 +664,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.hoverBand = null;
     st.hoverFollow = null;
     st.hoverDraw = null;
+    st.wayInDrawn = null;
     st.hoverSpent = null;
     st.hoverOffset = null;
     st.hoverWayIn = null;
@@ -949,7 +953,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (!st.orbitPiecePlaced && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null) {
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
-    const opt = pieceSolveOptions(st);
+    // ⭐ (2026-10-14) the way in after a hover keeps its share of the frame's cap (`HOVER_FADE_QUERIES`): near the hosting face the orbit's slide
+    // took it all and the way in advanced in bursts
+    const opt0 = pieceSolveOptions(st);
+    const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
     }
@@ -1041,6 +1048,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ (2026-10-14, the hover) the drawn hover offset following the solved one; the piece-only offset eased out once the orbit drops it
   hoverFrame(st, now, dtSec);
   hoverOffsetFrame(st, dtSec * 1000);
+  wayInDrawFrame(st, dtSec * 1000); // ⭐ (2026-10-14) the way in drawn on the orbit's spring
   // ⭐ (2026-10-14, the hover's second audit) the centre as the hover left it THIS frame (`syncCentre` replaces it) — ⛔ read at the frame's top, the piece and the camera trailed a frame
   c = st.orbitCentreM;
   const hov = st.hoverOffset ?? [0, 0, 0];
