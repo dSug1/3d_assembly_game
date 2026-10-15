@@ -400,7 +400,7 @@ floor** — marked seats where a piece may be set down, each a known target the 
 > in mobile mode."* · *"attachments 1, 2 & 3: the sliding is not working in these configurations in mobile mode, and the camera does not move to its
 > sliding position"* — the owner. ⛔ Unjudged by a hand.
 
-* ⭐⭐⭐ **THE EDGE MARGIN** (`hoverEdgeMarginMm`, 2 mm, a slider under *hover reach*): the resting face must overlap the hosting faces by at least
+* ⭐⭐⭐ **THE EDGE MARGIN** (`hoverEdgeMarginMm`, 2 mm, a slider — ⭐ (2026-10-15, *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) moved to the top-level OBJECT TRANSLATION section as *resting face margin on the boundary*; it was under *hover reach* in TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION): the resting face must overlap the hosting faces by at least
   the margin ACROSS (`overlapsTriangles`' `marginM`, the separating-axis overlap) — for the latch (`hoverFaceContact`, the readiness look) and the
   bound (`boundStep`'s `inside`). So the slide stops the margin short of the edge-to-edge limit. ⚠ Read as *"at least 2 mm must still overlap"*;
   the other reading (*the whole resting face 2 mm inside the boundary*) was named to the owner, not built.

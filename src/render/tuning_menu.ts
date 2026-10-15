@@ -240,6 +240,9 @@ export function installTuningMenu(st: SceneState): void {
       sliders: [
         // ⭐ prototype (green box): a piece in its goal cannot be moved or turned — 0 re-enables it (`goal_lock.ts`).
         tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
+        // ⭐ (2026-10-15, the owner: *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) — moved here from
+        // TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION (`HOVER.md` §18)
+        tunable(st, "resting face margin on the boundary — it slides at least this far over the hosting faces (mm)", "hoverEdgeMarginMm", 0, 10, 0.5),
         // ⭐ (2026-10-10) the sliders read only when a scene PART is dragged moved to TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION;
         // these stay — the orbit finger's motion state (the camera's follow, a tap from a pinch) and the orbit's sway trigger and size.
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
@@ -308,7 +311,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
             tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
             tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
-            tunable(st, "hover edge margin — the resting face stays this far over the hosting faces (mm)", "hoverEdgeMarginMm", 0, 10, 0.5),
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
             tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1.5, 30, 0.5),

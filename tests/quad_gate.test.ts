@@ -64,7 +64,7 @@ describe("⭐⭐⭐ the resting face's contour (2026-10-15, the owner: *\"Hide t
 
 describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow edges highlight and their corresponding face fill 30% more transparent\"* · *\"quads are hidden when 65 % max travel distance is still remaining\"*)", () => {
   it("⭐⭐ (2026-10-15, the owner: *\"make a slider for non-yellow quad highlight transparency (edges and fill) just below pink gizmo slider\"*) an unlit quad's edges `quadUnlitAlpha` (0.1), its fill a quarter of it (0.025); the yellow one 1 and 0.12 — ⛔ 0.315 / 0.084, then 0.2 / 0.05, the same day", () => {
-    expect(DEFAULT_CONFIG.quadUnlitAlpha).toBe(0.1);
+    expect(DEFAULT_CONFIG.quadUnlitAlpha).toBe(0.13); // ⭐ (2026-10-15, *"Set non-yellow quad opacity to 0.130"*)
     expect(QUAD_UNLIT_FILL_SHARE).toBe(0.25);
     expect(quadEdgeAlpha(false, 0.1)).toBe(0.1);
     expect(quadFillAlpha(false, 0.1)).toBeCloseTo(0.025, 12);

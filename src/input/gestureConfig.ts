@@ -1038,8 +1038,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
-  // ⭐ the owner's 0.1 (edges; the fill 0.025), with a slider
-  quadUnlitAlpha: 0.1,
+  // ⭐ the owner's 0.13 (2026-10-15, *"Set non-yellow quad opacity to 0.130"*; was 0.1) — the edges; the fill a quarter (0.0325)
+  quadUnlitAlpha: 0.13,
   // ⭐ prototype, the owner 2026-10-12: *"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale"* → *"create a slider for
   // the power of the scaling distance"* → *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"* — the log curve's steepness
   quadGrowthLogK: 9,
