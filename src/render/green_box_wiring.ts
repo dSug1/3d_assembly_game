@@ -18,7 +18,7 @@ import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility, ringLatch } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld, makeWorld, setLocalPlacement, setRestingFace, worldPlacementOf, type ObjectId, type SceneObject } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -883,7 +883,9 @@ export function pinkRingFrame(st: SceneState): void {
   // ⭐ The owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — the
   // boot exemption (translucent behind pieces until a placed-piece press, `bootTarget`) is switched OFF: the boot target is on a
   // face now, so the one rule applies from the first frame.
-  const v = pinkRingVisibility(hits, dist, PINK_EPS_M);
+  // ⭐⭐⭐ (2026-10-15, *"the yellow gizmo flickers sometimes when I orbit at high distance"*) the verdict HELD `RING_SETTLE_MS` before it shows (`ringLatch`)
+  st.pinkRingLatch = ringLatch(st.pinkRingLatch, pinkRingVisibility(hits, dist, PINK_EPS_M), performance.now());
+  const v = st.pinkRingLatch.shown;
   ring.isVisible = v !== "HIDDEN";
   ring.alpha = v === "TRANSLUCENT" ? PINK_MASKED_ALPHA : 1;
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX;

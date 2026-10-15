@@ -1109,10 +1109,26 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐⭐ **THE RESTING FACE'S CONTOUR** (`restingContourShown`): GREEN #D8FDD2 (`render/colours.ts`'s `RESTING_FACE_COLOUR`, the slide's own — one
   colour, one place), shown with the quads or while a slide is available or on (`HOVER.md`); hidden otherwise. ⛔ It was yellow, always shown (§29).
   The gizmo's ring keeps the yellow.
-* ⭐ **THE QUADS**: an unlit quad's edges **0.2** and fill **0.05** (`quadEdgeAlpha` / `quadFillAlpha`; the owner, the same day: *"edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05"* — first built × 0.7, 0.315 / 0.084), the yellow one 1 / 0.12; hidden nearer than **65 %** of the farthest
+* ⭐ **THE QUADS**: an unlit quad's edges **0.1** (a slider, `quadUnlitAlpha`, just below the *yellow gizmo* one) and its fill **a quarter** of it (0.025, `QUAD_UNLIT_FILL_SHARE`) — the owner the same day: × 0.7 (0.315 / 0.084), then 0.2 / 0.05, then 0.1 / 0.025 and the slider; the yellow one 1 / 0.12; hidden nearer than **65 %** of the farthest
   distance (`QUADS_SHOWN_FROM_SHARE`; it was half). ⚠ `Scene_1` boots its piece 3.01 m out of 5.99 m — under 3.9 m: a fresh level shows no quads,
   no resting contour, and a tap does nothing until the orbit goes out.
 * ⛔ **A BOOT CRASH CAUGHT BEFORE IT SHIPPED**: the colour, exported from `green_box_wiring.ts` and read at the top level of `hover_wiring.ts` (the two
   import each other), was read before it was initialised — *"Cannot access … before initialization"*, found by a headless boot, green suite. Now a
   LEAF module, vectored (it imports nothing from the render layer).
 * Vectors: `tests/quad_gate.test.ts`; headless: at 5.99 m the quads shown, a tap allowed, alphas 0.315 / 0.084 (before the 0.2 / 0.05 change); near the gizmo all off.
+
+## 31. The yellow gizmo held; its slider renamed (2026-10-15, `1.0.76-`)
+
+> *"the yellow gizmo flickers sometimes when I orbit at high distance"* · *"why does the flicker appears now. Why it was not here in previous
+> branches ?"* · *"rename pink gizmo to yellow gizmo slider"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **MEASURED, HEADLESS** (the far ring, camera 7.2 m out, an orbit by mouse drags): at the same yaw on every turn the ring went shown → hidden →
+  shown in 2–4 frames — the camera's ray to the gizmo sweeping across a thin part as it comes out from behind the painting. ⭐ The orbit sway OFF
+  changed nothing (geometry, not the sway); the static occlusion margin is clean (8 640 camera poses: nothing within 0.5–6 mm of the 2 mm threshold).
+* ⭐⭐ **NOT NEW**: the same recording on `8cc9fd3` (this morning) and on `1bd1897` (`1.0.72-`, two days old) shows the same blink, at the same yaw.
+  ⚠ Why it is SEEN now is not measured; a guess offered: the unlit quads are much fainter and the resting contour hides with the quads, so the ring
+  is the brightest mark left at a distance.
+* ✅ **`ringLatch`** (`input/green_box.ts`): the ring shows a new verdict (visible / translucent / hidden) once it has held `RING_SETTLE_MS` (120 ms);
+  the first at once. ⚠ Cost: a real occlusion hides it — or its end shows it — up to 120 ms late. Vectors: `tests/pink_ring_latch.test.ts` (the
+  measured pattern switches once, not three times).
+* The SCENE slider *pink gizmo* is now *yellow gizmo* (`pinkGizmoVisible` unchanged).

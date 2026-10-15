@@ -568,6 +568,7 @@ export function createScene(
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;
+  st.pinkRingLatch = null;
   st.orbitPieces = [];
   st.restingFaces = new Map();
   st.restingShapes = new Map();

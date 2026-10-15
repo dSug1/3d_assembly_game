@@ -5,7 +5,8 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { quadEdgeAlpha, quadFillAlpha, quadTapsAllowed, restingContourShown } from "../src/input/quad_gate";
+import { QUAD_UNLIT_FILL_SHARE, quadEdgeAlpha, quadFillAlpha, quadTapsAllowed, restingContourShown } from "../src/input/quad_gate";
+import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import { quadsShownFromM } from "../src/core/orientation_set";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -62,15 +63,30 @@ describe("⭐⭐⭐ the resting face's contour (2026-10-15, the owner: *\"Hide t
 });
 
 describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow edges highlight and their corresponding face fill 30% more transparent\"* · *\"quads are hidden when 65 % max travel distance is still remaining\"*)", () => {
-  it("⭐⭐ (2026-10-15, the owner: *\"non-yellow quads' edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged\"*) an unlit quad's edges 0.2, its fill 0.05; the yellow one 1 and 0.12 — ⛔ × 0.7 (0.315, 0.084) the same day", () => {
-    expect(quadEdgeAlpha(false)).toBe(0.2);
-    expect(quadFillAlpha(false)).toBe(0.05);
-    expect(quadEdgeAlpha(true)).toBe(1);
-    expect(quadFillAlpha(true)).toBe(0.12);
+  it("⭐⭐ (2026-10-15, the owner: *\"make a slider for non-yellow quad highlight transparency (edges and fill) just below pink gizmo slider\"*) an unlit quad's edges `quadUnlitAlpha` (0.1), its fill a quarter of it (0.025); the yellow one 1 and 0.12 — ⛔ 0.315 / 0.084, then 0.2 / 0.05, the same day", () => {
+    expect(DEFAULT_CONFIG.quadUnlitAlpha).toBe(0.1);
+    expect(QUAD_UNLIT_FILL_SHARE).toBe(0.25);
+    expect(quadEdgeAlpha(false, 0.1)).toBe(0.1);
+    expect(quadFillAlpha(false, 0.1)).toBeCloseTo(0.025, 12);
+    expect(quadEdgeAlpha(false, 0.4)).toBe(0.4);
+    expect(quadFillAlpha(false, 0.4)).toBeCloseTo(0.1, 12);
+    expect(quadEdgeAlpha(true, 0.1)).toBe(1);
+    expect(quadFillAlpha(true, 0.1)).toBe(0.12);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadUnlitAlpha: -0.1 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadUnlitAlpha: 1.1 })).toThrow();
     const q = code("render/orient_cube.ts");
-    expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit);");
-    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit);");
-    expect(q).not.toMatch(/QUAD_EDGE_ALPHA|QUAD_ALPHA\b/); // one place: `quad_gate.ts`
+    expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha);");
+    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha);");
+    expect(q).not.toMatch(/QUAD_EDGE_ALPHA|QUAD_ALPHA\b/); // one place: `quad_gate.ts` and the tunable
+    // the slider just below the (renamed) yellow gizmo's
+    const m = code("render/tuning_menu.ts");
+    const g = m.indexOf('"pinkGizmoVisible", 0, 1, 1)');
+    const u = m.indexOf('"quadUnlitAlpha", 0, 1, 0.01)');
+    expect(g).toBeGreaterThan(0);
+    expect(u).toBeGreaterThan(g);
+    expect(m.slice(g, u).split("tunable(st,").length - 1).toBe(1); // only its own call between them: just below
+    expect(m).toContain('tunable(st, "yellow gizmo (the orbit centre\'s ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1)');
+    expect(m).not.toContain('"pink gizmo (the orbit centre');
   });
   it("⭐⭐ hidden nearer than 65 % of the farthest distance — ⛔ half", () => {
     expect(quadsShownFromM(6)).toBeCloseTo(3.9, 12);
