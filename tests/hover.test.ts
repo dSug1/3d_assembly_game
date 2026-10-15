@@ -64,7 +64,6 @@ describe("⭐⭐⭐ the hover — when it may, on which plane, how far", () => {
     expect(clampDisc(0.003, 0.004, 10)).toEqual([0.003, 0.004]);
     expect(clampDisc(3, 4, HOVER_UNLIMITED_MM)).toEqual([3, 4]);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverAmplitudeMm: 5 })).toThrow(/hoverAmplitudeMm/);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverGizmoMove: 0.5 })).toThrow(/hoverGizmoMove/);
   });
 
   it("⭐⭐⭐ a hover step is SOLVED: sliding along a part's top face it is stopped — and slides — by a wall standing on it", () => {
@@ -114,10 +113,9 @@ describe("⭐ wired", () => {
     expect(p).toContain("hoverRelease(st, e.pointerId);");
     expect(p).toContain("hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));");
   });
-  it("⭐ the gizmo moved (slider 1) or the piece alone (0); the step solved by the orbit's clearance rule; the camera blended", () => {
+  it("⭐ the piece's offset kept against the gizmo of the moment (⛔ 2026-10-15: the gizmo-move slider deleted — the gizmo follows the centre, §22); the step solved by the orbit's clearance rule; the camera blended", () => {
     const h = code("render/hover_wiring.ts");
-    // ⭐ applied each frame from the FOLLOWED offset (the part translation's follower)
-    expect(h).toContain("if (hf.gizmo) { st.centreBlend.snapTo(add(hf.centre0, w)); syncCentre(st); } else st.hoverOffset = add(hf.offset0, w);");
+    expect(h).toContain("st.hoverOffset = hoverOffsetFor(hf.offset0, w, hf.centre0, [st.orbitCentreM.x, st.orbitCentreM.y, st.orbitCentreM.z]);");
     expect(h).toContain("const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });");
     expect(code("render/green_box_wiring.ts")).toContain("({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));");
   });
@@ -387,7 +385,7 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
     expect(hoverFaceContact(at, down, [right, lower], 0.0015).contact?.id).toBe("right");
   });
   it("⭐ the defaults (2026-10-14, the owner: *\"Set default gizmo moves with hover off and hover distance is unlimited\"*); the highlight green", () => {
-    expect(DEFAULT_CONFIG.hoverGizmoMove).toBe(0);
+    expect((DEFAULT_CONFIG as unknown as Record<string, unknown>).hoverGizmoMove).toBeUndefined(); // ⛔ (2026-10-15) the slider deleted: the gizmo follows the centre (§22)
     expect(DEFAULT_CONFIG.hoverAmplitudeMm).toBe(HOVER_UNLIMITED_MM);
     expect(code("render/hover_wiring.ts")).toContain("const READY_COLOUR = RESTING_FACE_COLOUR;"); // ⭐ (2026-10-15) the same #D8FDD2, one place
   });
@@ -945,5 +943,35 @@ describe("⭐⭐⭐ a face hosts only a resting face IN FRONT of it (2026-10-15,
     expect(hoverFaceContact([0, -0.01, 0], down, [top(0)], 0.02, 2, poly(-0.01)).contact).toBeNull(); // ✅ (⛔ latched on "bar")
     expect(hoverFaceContact([0, -0.0005, 0], down, [top(0)], 0.02, 2, poly(-0.0005)).contact?.id).toBe("bar"); // at contact (rounding): latched
     expect(hoverFaceContact([0, 0.01, 0], down, [top(0)], 0.02, 2, poly(0.01)).contact?.id).toBe("bar"); // in front, within reach: latched (it settles)
+  });
+});
+
+describe("⭐⭐⭐ the gizmo follows the resting face's centre (2026-10-15, the owner: *\"when the piece slides on the coplanar surface, the gizmo lerp into the projection of the center of the resting face onto the coplanar surface and then follows the sliding of the center of the resting face. When the orbit is restarted again at the end of sliding, the gizmo keeps it's last sliding position.\"*)", () => {
+  it("⭐⭐⭐ the composition: wherever the gizmo is, the piece's anchor (its ring base about the gizmo + its offset) is EXACTLY where the slide put it — the gizmo moving never moves the piece", async () => {
+    const { hoverOffsetFor } = await import("../src/input/hover");
+    const ringOff: Vec3 = [0.2, 0.05, -0.1]; // the piece's place on its ring, from the gizmo (the orbit holds still under a hover)
+    const centre0: Vec3 = [1, 2, 3];
+    const offset0: Vec3 = [0.01, 0, 0.02]; // a piece-only offset it already carried
+    const w: Vec3 = [0.07, -0.001, 0.04]; // the slide (and the settle)
+    const want: Vec3 = [centre0[0] + ringOff[0] + offset0[0] + w[0], centre0[1] + ringOff[1] + offset0[1] + w[1], centre0[2] + ringOff[2] + offset0[2] + w[2]];
+    for (const g of [centre0, [1.1, 2, 3.05], [0.5, 1.5, 2.9]] as Vec3[]) {
+      const o = hoverOffsetFor(offset0, w, centre0, g);
+      for (let k = 0; k < 3; k++) expect(g[k]! + ringOff[k]! + o[k]!).toBeCloseTo(want[k]!, 12);
+    }
+  });
+  it("⭐⭐ the gizmo's target: the resting face's centre projected onto the hosting plane", async () => {
+    const { projectOntoPlane } = await import("../src/input/hover");
+    expect(projectOntoPlane([0.3, 0.012, -0.2], [0, 1, 0], [5, 0, 7])).toEqual([0.3, 0, -0.2]);
+  });
+  it("⭐⭐⭐ wired: each frame the gizmo eases (the drawn piece's spring) toward that projection and the offset is kept against it; the slide over, it is set ON the last projection and stays (the next orbit ways the piece out to its ring about it)", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("function gizmoFollowFrame(st: SceneState, hf: NonNullable<SceneState[\"hoverFollow\"]>, dtSec: number): void {");
+    expect(h).toContain("const p = projectOntoPlane(add(hf.anchor0, w), hf.n, hf.planeAt);");
+    expect(h).toContain("st.centreBlend.snapTo(g); syncCentre(st);");
+    expect(h).toContain("gizmoFollowFrame(st, hf, dtSec);");
+    // the slide over: on the projection, exactly
+    expect(h).toContain("const g: Vec3 = st.hover === null ? p : [hf.gz[0]!.x, hf.gz[1]!.x, hf.gz[2]!.x];");
+    expect(code("render/tuning_menu.ts")).not.toContain("hoverGizmoMove");
+    expect(h).not.toContain("hf.gizmo");
   });
 });
