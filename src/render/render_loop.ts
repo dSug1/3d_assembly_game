@@ -12,7 +12,8 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { autoShadowVerdict } from "../core/auto_shadow";
+import { autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
+import { applyShadowLevel } from "./lighting";
 import { FrameMeter } from "../core/frame_meter";
 import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
 import { mmToPx } from "../core/units";
@@ -669,8 +670,9 @@ export function startRenderLoop(st: SceneState): void {
           st.hudDirty = true;
         }
       }
-      const on = mode === 1 || (mode === 2 && st.autoShadow !== "OFF");
-      if (st.scene.shadowsEnabled !== on) st.scene.shadowsEnabled = on;
+      // ⭐⭐⭐ (2026-10-15, *"make the green - turquoise piece project shadows, even on low fps device"*) — off means the orbited piece's shadow ALONE, from
+      // one light (`shadowLevel`, `applyShadowLevel`); ⛔ every shadow was switched off
+      applyShadowLevel(st, shadowLevel(mode, st.autoShadow));
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;

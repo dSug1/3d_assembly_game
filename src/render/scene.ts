@@ -40,7 +40,7 @@
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
-import { attachShadows, buildLighting } from "./lighting";
+import { attachOrbitedShadows, attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import { levelElevation, elevationAtDistance } from "../input/orbit";
@@ -358,6 +358,10 @@ export function createScene(
   // ⭐ `Scene_1`: every movable body casts, every body receives (the frozen floor only receives).
   // ⭐ `D125`: a body with a contour casts from its CORE — the transparent margin throws no shadow.
   attachShadows(shadowGens, [...st.meshOf.values()], (m) => st.world.objects.get(st.idOf.get(m) ?? "")?.frozen === true, (m) => coreOf(m));
+  st.shadowGens = shadowGens;
+  st.shadowFull = [];
+  st.shadowKey = -1;
+  st.shadowLevelSeen = null;
 
   st.faceMarkers = new Map<string, FaceMarker>();
 
@@ -648,6 +652,8 @@ export function createScene(
   // ⭐⭐ prototype (2026-10-09, *"add the object model to the green and turquoise pieces so their faces can be tracked"*): into the model,
   // after it was built and after the shadows were attached
   registerOrbitPieces(st);
+  // ⭐⭐ (2026-10-15) the orbited pieces cast, on every device (`attachOrbitedShadows`, `applyShadowLevel`)
+  attachOrbitedShadows(st);
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can
