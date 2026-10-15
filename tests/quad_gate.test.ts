@@ -5,7 +5,7 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { QUAD_UNLIT_SHARE, quadAlpha, quadTapsAllowed, restingContourShown } from "../src/input/quad_gate";
+import { quadEdgeAlpha, quadFillAlpha, quadTapsAllowed, restingContourShown } from "../src/input/quad_gate";
 import { quadsShownFromM } from "../src/core/orientation_set";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -62,15 +62,15 @@ describe("⭐⭐⭐ the resting face's contour (2026-10-15, the owner: *\"Hide t
 });
 
 describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow edges highlight and their corresponding face fill 30% more transparent\"* · *\"quads are hidden when 65 % max travel distance is still remaining\"*)", () => {
-  it("⭐⭐ an unlit quad's edges and fill × 0.7; the yellow one unchanged", () => {
-    expect(QUAD_UNLIT_SHARE).toBe(0.7);
-    expect(quadAlpha(0.45, false)).toBeCloseTo(0.315, 12);
-    expect(quadAlpha(0.12, false)).toBeCloseTo(0.084, 12);
-    expect(quadAlpha(1, true)).toBe(1);
-    expect(quadAlpha(0.12, true)).toBe(0.12);
+  it("⭐⭐ (2026-10-15, the owner: *\"non-yellow quads' edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged\"*) an unlit quad's edges 0.2, its fill 0.05; the yellow one 1 and 0.12 — ⛔ × 0.7 (0.315, 0.084) the same day", () => {
+    expect(quadEdgeAlpha(false)).toBe(0.2);
+    expect(quadFillAlpha(false)).toBe(0.05);
+    expect(quadEdgeAlpha(true)).toBe(1);
+    expect(quadFillAlpha(true)).toBe(0.12);
     const q = code("render/orient_cube.ts");
-    expect(q).toContain("x.edges.alpha = lit ? 1 : quadAlpha(QUAD_EDGE_ALPHA, false);");
-    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadAlpha(QUAD_ALPHA, lit);");
+    expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit);");
+    expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit);");
+    expect(q).not.toMatch(/QUAD_EDGE_ALPHA|QUAD_ALPHA\b/); // one place: `quad_gate.ts`
   });
   it("⭐⭐ hidden nearer than 65 % of the farthest distance — ⛔ half", () => {
     expect(quadsShownFromM(6)).toBeCloseTo(3.9, 12);

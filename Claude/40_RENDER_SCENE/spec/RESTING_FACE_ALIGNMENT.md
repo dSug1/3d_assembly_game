@@ -1109,10 +1109,10 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐⭐ **THE RESTING FACE'S CONTOUR** (`restingContourShown`): GREEN #D8FDD2 (`render/colours.ts`'s `RESTING_FACE_COLOUR`, the slide's own — one
   colour, one place), shown with the quads or while a slide is available or on (`HOVER.md`); hidden otherwise. ⛔ It was yellow, always shown (§29).
   The gizmo's ring keeps the yellow.
-* ⭐ **THE QUADS**: an unlit quad's edges and fill × 0.7 (`quadAlpha`: 0.45 → 0.315, 0.12 → 0.084); hidden nearer than **65 %** of the farthest
+* ⭐ **THE QUADS**: an unlit quad's edges **0.2** and fill **0.05** (`quadEdgeAlpha` / `quadFillAlpha`; the owner, the same day: *"edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05"* — first built × 0.7, 0.315 / 0.084), the yellow one 1 / 0.12; hidden nearer than **65 %** of the farthest
   distance (`QUADS_SHOWN_FROM_SHARE`; it was half). ⚠ `Scene_1` boots its piece 3.01 m out of 5.99 m — under 3.9 m: a fresh level shows no quads,
   no resting contour, and a tap does nothing until the orbit goes out.
 * ⛔ **A BOOT CRASH CAUGHT BEFORE IT SHIPPED**: the colour, exported from `green_box_wiring.ts` and read at the top level of `hover_wiring.ts` (the two
   import each other), was read before it was initialised — *"Cannot access … before initialization"*, found by a headless boot, green suite. Now a
   LEAF module, vectored (it imports nothing from the render layer).
-* Vectors: `tests/quad_gate.test.ts`; headless: at 5.99 m the quads shown, a tap allowed, alphas 0.315 / 0.084; near the gizmo all off.
+* Vectors: `tests/quad_gate.test.ts`; headless: at 5.99 m the quads shown, a tap allowed, alphas 0.315 / 0.084 (before the 0.2 / 0.05 change); near the gizmo all off.
