@@ -16,11 +16,8 @@
  */
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
-import { CreateLines, CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
-import { faceWorld } from "../core/object_model";
-import { shownDirectionTag, supportAlpha, supportFaceIndex, type SupportCandidate } from "../input/support_face";
-import { faceTrianglesWorld } from "./hover_wiring";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { quadAlpha, quadTapsAllowed } from "../input/quad_gate";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -121,8 +118,6 @@ export function orientCubeFrame(st: SceneState): void {
     if (v >= 0.999) rc.top = el;
     else rc.bottom = el;
   }
-  // ⭐⭐⭐ (2026-10-14, the owner: *"when there is no quad shown, the yellow highlight appears on the surface supporting the yellow gizmo and this surface serves as the mating face (therefore, a tap on the piece's face will align with this mating face instead of the quad which is not shown, etc.), when the quads reappear the yellow highlight fades from the part's face and the rotation is done on the quad (same as current). This will therefore toggle the piece rotation between quad and part's face."*) — the face SUPPORTING the gizmo, the mating face while the quads are hidden
-  supportFaceFrame(st);
   // ⭐⭐ (2026-10-12, the owner: *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on
   // rolling the resting piece on this quad until the next delta position"*) — the direction tapped stays the pink one until the next orbit
   // drag (`orbitDragStep` drops it), whatever the candidate does
@@ -138,96 +133,6 @@ export function orientCubeFrame(st: SceneState): void {
     showBlockedPopup(st, stuck ? blockedMessage(coarse) : null);
   }
   restingQuadsFrame(st, shownTag(st));
-  supportHighlightFrame(st);
-}
-
-/** ⭐ How often the gizmo's supporting face is looked for again while the gizmo stays (ms): a part may have moved under it. */
-const SUPPORT_EVERY_MS = 500;
-
-/**
- * ⭐⭐⭐ (2026-10-14, the owner: *"when there is no quad shown, the yellow highlight appears on the surface supporting the yellow gizmo and this surface serves as the mating face (therefore, a tap on the piece's face will align with this mating face instead of the quad which is not shown, etc.), when the quads reappear the yellow highlight fades from the part's face and the rotation is done on the quad (same as current). This will therefore toggle the piece rotation between quad and part's face."*) — the face the yellow gizmo SITS ON (`supportFaceIndex`: within 3 mm of its plane and of its coloured
- * triangles — every part's and the frozen bodies', the orbited pieces aside), and its direction among the level's (`tag`, −1 with none). Looked
- * for again when the gizmo moves, else every `SUPPORT_EVERY_MS`.
- */
-function supportFaceFrame(st: SceneState): void {
-  const g = st.centreBlend.targetM;
-  const key = `${g.map((x) => x.toFixed(4)).join(",")}|${st.orientDirs.length}`;
-  const now = performance.now();
-  const sf = st.supportFace;
-  if (sf !== null && sf.key === key && now - sf.at < SUPPORT_EVERY_MS) return;
-  const cands: (SupportCandidate & { id: string; faceId: string })[] = [];
-  for (const [id, obj] of st.world.objects) {
-    if (obj.orbited === true) continue;
-    for (const f of obj.faces) {
-      const w = faceWorld(st.world, id, f.id);
-      if (w === null) continue;
-      cands.push({ id, faceId: f.id, normal: w.normal, centre: w.centre, triangles: faceTrianglesWorld(st, id, f.id) ?? [] });
-    }
-  }
-  const i = supportFaceIndex([g[0], g[1], g[2]], cands);
-  const c = i >= 0 ? cands[i]! : null;
-  st.supportFace = { key, at: now, face: c === null ? null : { id: c.id, faceId: c.faceId, normal: c.normal, triangles: c.triangles.map((t) => [t[0], t[1], t[2]]) }, tag: c === null ? -1 : dirIndex(st, c.normal) };
-}
-
-/**
- * ⭐⭐⭐ (2026-10-14, the owner: *"when there is no quad shown, the yellow highlight appears on the surface supporting the yellow gizmo and this surface serves as the mating face (therefore, a tap on the piece's face will align with this mating face instead of the quad which is not shown, etc.), when the quads reappear the yellow highlight fades from the part's face and the rotation is done on the quad (same as current). This will therefore toggle the piece rotation between quad and part's face."*) — the supporting face's outline, YELLOW (RED while its turn is blocked, as the quad), faded IN while the
- * quads are hidden and OUT when they show (`supportAlpha`); rebuilt when the face changes.
- */
-function supportHighlightFrame(st: SceneState): void {
-  const sf = st.supportFace;
-  const face = sf?.face ?? null;
-  const now = performance.now();
-  const sh = st.supportHighlight;
-  const dt = sh === null ? 0 : now - sh.at;
-  const visible = face !== null && (sf?.tag ?? -1) >= 0 && st.restingQuads !== null && !st.restingQuads.shown && st.greenBox !== null && !st.orbitPiecePlaced;
-  const key = face === null ? "" : `${face.id}|${face.faceId}|${face.triangles[0]?.[0]?.map((x) => x.toFixed(4)).join(",") ?? ""}`;
-  let mesh = sh?.mesh ?? null;
-  let centre: Vec3 = sh?.centre ?? [0, 0, 0];
-  let extentM = sh?.extentM ?? 0;
-  if (sh === null || sh.key !== key) {
-    mesh?.dispose();
-    const built = face === null ? null : buildFaceOutline(st, face.triangles);
-    mesh = built?.mesh ?? null;
-    centre = built?.centre ?? [0, 0, 0];
-    extentM = built?.extentM ?? 0;
-  }
-  const alpha = supportAlpha(sh?.alpha ?? 0, visible, dt);
-  st.supportHighlight = { key, mesh, centre, extentM, alpha, at: now };
-  if (mesh === null || face === null) return;
-  // ⭐⭐ (2026-10-14, the owner: *"make the yellow highlight on the part's hosting face full size (no scaling any longer) and appear and fade when the quads disappear or appear"*) — FULL SIZE, the
-  // face's contour; only its fade (`supportAlpha`) follows the quads — ⛔ the mirror growth about the face's centre is deleted
-  const share = 1;
-  const lift = scale(face.normal, 0.0004);
-  mesh.position.set(centre[0] + lift[0], centre[1] + lift[1], centre[2] + lift[2]);
-  mesh.scaling.setAll(share); void extentM;
-  mesh.isVisible = alpha > 0.001;
-  mesh.alpha = alpha;
-  mesh.color = st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT;
-}
-
-/** ⭐ A face's OUTLINE from its triangles (the edges used once), about its centre (the mesh placed there) — the yellow of the gizmo's supporting face. */
-function buildFaceOutline(st: SceneState, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): { mesh: LinesMesh; centre: Vec3; extentM: number } | null {
-  const k = (p: Vec3) => p.map((x) => x.toFixed(5)).join(",");
-  const count = new Map<string, { a: Vec3; b: Vec3; n: number }>();
-  for (const t of tris)
-    for (let i = 0; i < 3; i++) {
-      const a = t[i]!;
-      const b = t[(i + 1) % 3]!;
-      const id = [k(a), k(b)].sort().join("|");
-      const e = count.get(id);
-      if (e) e.n++;
-      else count.set(id, { a, b, n: 1 });
-    }
-  const edges = [...count.values()].filter((e) => e.n === 1);
-  if (edges.length === 0) return null;
-  const pts = edges.flatMap((e) => [e.a, e.b]);
-  const centre: Vec3 = [0, 1, 2].map((k) => (Math.min(...pts.map((p) => p[k]!)) + Math.max(...pts.map((p) => p[k]!))) / 2) as unknown as Vec3;
-  const extentM = Math.max(...[0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k]!)) - Math.min(...pts.map((p) => p[k]!))));
-  const lines = edges.map((e) => [sub(e.a, centre), sub(e.b, centre)].map((p) => new Vector3(p[0], p[1], p[2])));
-  const m = CreateLineSystem("support-face-outline", { lines }, st.scene);
-  m.isPickable = false;
-  m.renderingGroupId = 1; // ⭐ as the quads: seen over what stands in front
-  return { mesh: m, centre, extentM };
 }
 
 /**
@@ -284,11 +189,12 @@ export function ringQuadAlert(st: SceneState): string {
 }
 
 /**
- * ⭐ The PINK direction now: the one tapped, else the candidate; −1 with none. ⭐⭐⭐ (2026-10-14, the owner: *"when there is no quad shown, the yellow highlight appears on the surface supporting the yellow gizmo and this surface serves as the mating face (therefore, a tap on the piece's face will align with this mating face instead of the quad which is not shown, etc.), when the quads reappear the yellow highlight fades from the part's face and the rotation is done on the quad (same as current). This will therefore toggle the piece rotation between quad and part's face."*) — the quads HIDDEN, the
- * gizmo's supporting face's (`shownDirectionTag`).
+ * ⭐ The PINK direction now: the one tapped, else the candidate; −1 with none. ⛔ (2026-10-15, the owner: *"Remove the yellow highlight of the part's
+ * hosting face … since I want the quad rotation of the piece to occur only if the quads are shown"*) — the gizmo's supporting face as the mating
+ * direction while the quads are hidden (2026-10-14) is deleted: a tap turns the piece only while they show (`quadTapsAllowed`).
  */
 function shownTag(st: SceneState): number {
-  return shownDirectionTag(st.restingQuads?.shown ?? true, st.supportFace?.tag ?? -1, st.orientShown.clicked?.tag ?? null, st.orientShown.candidate);
+  return st.orientShown.clicked?.tag ?? st.orientShown.candidate;
 }
 
 /**
@@ -311,8 +217,7 @@ export function orientCubeTap(st: SceneState, tag: number): boolean {
     st.episodes.touch(--st.episodeSeq, true, true);
     st.episodes.sync(true);
   }
-  // ⭐ (2026-10-14) the gizmo's supporting face is not "tapped": the quads back, the yellow is theirs again
-  if (st.restingQuads?.shown !== false || tag !== (st.supportFace?.tag ?? -1)) st.orientShown.clicked = { tag, cand: st.orientShown.candidate };
+  st.orientShown.clicked = { tag, cand: st.orientShown.candidate };
   st.hudDirty = true;
   return acted;
 }
@@ -322,6 +227,8 @@ export function orientCubeTap(st: SceneState, tag: number): boolean {
  * face"* → *"(it now passes through the quads instead of the cube)"*) — a tap on the PINK direction (its quad's yellow); `false` with none.
  */
 export function orientTapShown(st: SceneState): boolean {
+  // ⭐⭐⭐ (2026-10-15, the owner: *"Currently, if I tap on empty anywhere, the piece quad rotates. Allow the quad rotation on tap only if the quads are shown."*)
+  if (!quadTapsAllowed(st.restingQuads?.shown === true)) return false;
   const tag = shownTag(st);
   return tag >= 0 && orientCubeTap(st, tag);
 }
@@ -330,7 +237,7 @@ export function orientTapShown(st: SceneState): boolean {
  * ⭐⭐ (2026-10-12, the owner: *"at the center of the resting face, create quads which match with the orientations of the faces of the polyhedron"*
  * → *"highlight in yellow the quad which corresponds to the pink face of the cube"*) — one quad per distinct PLANE of the directions
  * (`distinctPlanes`: a cube's three), square to the world, centred on the orbited piece's resting face, faint glass with faint edges; the
- * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: one pixel at half the piece's farthest — hidden nearer — 1.4 at its farthest; × the piece's radius). Rebuilt
+ * quad of the PINK direction (`shown`) edged YELLOW. Sized by the gizmo's distance (`quadSize`: one pixel at 65 % of the piece's farthest — hidden nearer (half until 2026-10-15) — 1.4 at its farthest; × the piece's radius). Rebuilt
  * when the directions or the piece change; placed every frame.
  */
 function restingQuadsFrame(st: SceneState, shown: number): void {
@@ -405,7 +312,9 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   for (const x of q.quads) {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
     x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked — or held (the third audit)
-    x.edges.alpha = lit ? 1 : QUAD_EDGE_ALPHA;
+    // ⭐⭐ (2026-10-15, the owner: *"Make the quads' non-yellow edges highlight and their corresponding face fill 30% more transparent (no change for the quad's yellow edges highlight and fill)"*)
+    x.edges.alpha = lit ? 1 : quadAlpha(QUAD_EDGE_ALPHA, false);
+    (x.fill.material as StandardMaterial).alpha = quadAlpha(QUAD_ALPHA, lit);
   }
 }
 
@@ -429,7 +338,7 @@ export function restingQuadPointer(
     const q = st.restingQuads;
     const piece = st.greenBox;
     if (q === null || piece === null || e.pointerId === MOUSE_SECOND_ID || st.hold !== null) return false;
-    if (!q.quads.some((k) => k.fill.isVisible)) return false; // ⭐ hidden (nearer than half the farthest): nothing to press
+    if (!q.quads.some((k) => k.fill.isVisible)) return false; // ⭐ hidden (nearer than 65 % of the farthest): nothing to press
     if (e.pointerType === "mouse" && e.button !== 0) return false;
     if (st.router.all().length > 0) return false; // ⭐ a first touch only
     const rect = st.canvas.getBoundingClientRect();

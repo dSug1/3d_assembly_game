@@ -95,6 +95,8 @@ export function quadSide(n: Vec3, hit: Vec3, eye: Vec3): Vec3 {
 /**
  * ⭐⭐ (2026-10-12, the owner: *"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly"*) — the quads' nearest shown distance: HALF the farthest; nearer, they are hidden (`quadSize` runs from it).
  */
+/** ⭐⭐ (2026-10-15, the owner: *"Currently, the quads are hidden at half the max travel distance. Change to 35 % max travel distance (i.e. quads are hidden when 65 % max travel distance is still remaining)."*) */
+export const QUADS_SHOWN_FROM_SHARE = 0.65;
 export function quadsShownFromM(dMax: number): number {
-  return dMax / 2;
+  return dMax * QUADS_SHOWN_FROM_SHARE;
 }

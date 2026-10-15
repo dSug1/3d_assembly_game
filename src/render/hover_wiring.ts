@@ -7,6 +7,7 @@
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { RESTING_FACE_COLOUR } from "./colours";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -51,7 +52,7 @@ import {
   hoverPendingAfter,
   hoverQueryBudget,
 } from "../input/hover";
-import { RESTING_COLOUR, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
+import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
@@ -568,7 +569,8 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
 }
 
 // ⭐ (2026-10-14, the owner: *"change the cyan highlight color to this green color as attached"*) — #D8FDD2 (216, 253, 210), sampled from the owner's swatch
-const READY_COLOUR = Color3.FromInts(216, 253, 210);
+// ⭐ (2026-10-15) the resting face's own colour now (`RESTING_FACE_COLOUR`): one colour, one place
+const READY_COLOUR = RESTING_FACE_COLOUR;
 const SHADOW_COLOUR = Color3.FromInts(216, 253, 210);
 /** ⭐ How often the "may it hover?" look runs when no hover is on (ms). */
 const READY_EVERY_MS = 100;
@@ -597,13 +599,6 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     ready = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
   }
   st.hoverReady = ready;
-  // the resting face's contour: cyan while a hover is available
-  // ⭐ (2026-10-14, the hover's audit) set only when it CHANGES (a new fill, or ready ↔ not) — ⛔ it cloned a colour per contour line every frame
-  const fill = p?.restingFill ?? null;
-  if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {
-    for (const c of fill.getChildMeshes(true)) if ("color" in c) (c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();
-    st.hoverTint = { fill, ready: ready !== null };
-  }
   // the contact shadow
   if (ready === null || b === null || p === undefined) {
     st.hoverShadow?.setEnabled(false);
