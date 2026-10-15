@@ -25,7 +25,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   green boundary — ⭐ (§21) a step never takes it FARTHER from the boundary (`rectsDistance`, `boundStep`, `holdOffBound`): inside it cannot leave,
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
-  (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
+  (coplanar faces slid across). What moves (§22): the piece (an offset on its ring place, kept against the gizmo of the moment), and the GIZMO follows the resting face's
+  centre projected onto the hosting plane, on the drawn piece's spring; the slide over, it stays ON the last projection (`hoverGizmoMove` deleted).
 * **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
   ahead (§9, §16). The other parts sway at 0.1°.
 * **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
@@ -33,7 +34,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   its share eased on the spring; left the same way by the orbit's travel; at its end exactly the rings' camera. ⚠ It ends only with no hover
   on (§17 — the freeze).
 * **Back to the orbit** — the piece-only offset goes back to the ring place by the ORBIT drag's travel over `pieceOrbitEnterMm` (§13), solved
-  (8 of the frame's 24 queries kept for it), drawn on the spring (§16). The gizmo never moves on the toggle.
+  (8 of the frame's 24 queries kept for it), drawn on the spring (§16) — out to its ring about the gizmo where the slide left it (§22).
 * **Around it** (`RESTING_FACE_ALIGNMENT.md` §30, 2026-10-15): a tap turns the piece (on empty space) or picks its resting face (on the piece)
   ONLY while the quads show (hidden nearer than 65 % of the farthest distance); ⛔ the gizmo's supporting face as the mating face, and its
   yellow, are deleted (§28 superseded). The resting face's contour is GREEN #D8FDD2, shown with the quads or while a slide is available / on.
@@ -467,3 +468,25 @@ floor** — marked seats where a piece may be set down, each a known target the 
   "behind" it (the host among them) were exempt from its checks. ✅ `HOVER_BEHIND_M` (1 mm, contact rounding): a face hosts only a resting face IN
   FRONT of it.
 * Vectors: `tests/hover.test.ts` (*a rapid drag cannot throw the piece off the boundary*, *a face hosts only a resting face IN FRONT of it*).
+
+## 22. The gizmo follows the resting face's centre (2026-10-15, `1.0.78-`)
+
+> *"when the piece slides on the coplanar surface, the gizmo lerp into the projection of the center of the resting face onto the coplanar surface and
+> then follows the sliding of the center of the resting face. When the orbit is restarted again at the end of sliding, the gizmo keeps it's last sliding
+> position. In case of U-shape, check if the fact that the gizmo could end up in an empty space is a problem afterwards (how to select hosting face
+> then)."* → the piece back on its ring by *"Way out by finger travel"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE GIZMO** (`gizmoFollowFrame`): each frame toward the SOLVED centre projected onto the hosting plane (`projectOntoPlane`, a point of the
+  hosting face), on the drawn piece's spring (τ = `boxSmoothMs` / 2) — it eases in from where it was, then trails the slide with the piece; the finger
+  lifted, it is set ON the last projection and stays (`centreBlend.snapTo`).
+* ⭐⭐⭐ **THE PIECE NEVER MOVED BY IT** (`hoverOffsetFor`): the piece rides its ring about the gizmo, so its piece-only offset is kept against the
+  gizmo of the moment — the offset it had + the slide − the gizmo's move. Vectored as a composition: wherever the gizmo is, ring base + offset = where
+  the slide put it.
+* ⭐ **BACK TO THE ORBIT**: the next orbit drag ways the piece out from where it slid to its ring place about the new gizmo, by the drag's travel over
+  `pieceOrbitEnterMm` (§13, solved). ⛔ The `hoverGizmoMove` slider is deleted (the gizmo moved WITH the piece, keeping its side offset, or not at all).
+* ⭐ **A U-SHAPE**: a gizmo left over the void of a U is not a problem — the hosting face is the face the resting face LOOKS AT (`hoverFaceContact`);
+  nothing reads the gizmo for it since the supporting face was deleted (`RESTING_FACE_ALIGNMENT.md` §30). The orbit then pivots about a point in the
+  air until a tap on a placed part moves the gizmo.
+* Headless (touch, staged on Piece10's face): the hover slid ~30 cm on Piece18's face; the gizmo moved 132 mm, 0.7–0.95 mm behind the projection on
+  the last slide frame, ON it after the lift; the piece's frame steps 0–8.8 mm during the slide (no jump); the next orbit drag took the offset
+  264 mm → 0, the gizmo unmoved.
