@@ -356,8 +356,6 @@ export interface GestureConfig {
   orbitGoalMm: number;
   /** ⭐⭐ (2026-10-14, *"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) the hover's REACH: a resting face looking at a part's face this close (mm, in the world) may hover — the piece settles onto it first. */
   hoverApproachMm: number;
-  /** ⭐⭐ (2026-10-15, the owner: *"Make a margin of a couple of mm so that the piece slides within a margin of the boundary, not up to the edge to edge limit."*) the least the resting face must overlap the hosting faces, across (mm, in the world) — for the hover's latch and its bound. */
-  hoverEdgeMarginMm: number;
   orbitGoalDeg: number;
   /**
    * ⭐⭐ Whether a PioneerFaceCursor can be DRAGGED at all — the owner, 2026-09-25: *"create a
@@ -924,8 +922,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitGoalMm: 5,
   // ⚠ a guess with a slider
   hoverApproachMm: 20,
-  // ⭐ the owner's "a couple of mm", with a slider
-  hoverEdgeMarginMm: 2,
   orbitGoalDeg: 3,
   // ⛔⛔ **OFF BY DEFAULT** — the owner, 2026-09-25: *"default is cursor drag off."* ⚠ It shipped ON
   // for one build. ⭐ `?pioneerCursorDrag=1`, or FACE › drag on/off, turns it back on.
@@ -1200,7 +1196,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
   if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);
   if (!(cfg.quadUnlitAlpha >= 0 && cfg.quadUnlitAlpha <= 1)) throw new Error(`quadUnlitAlpha (${cfg.quadUnlitAlpha}) must be in [0, 1].`);
-  if (!(cfg.hoverEdgeMarginMm >= 0 && cfg.hoverEdgeMarginMm <= 20)) throw new Error(`hoverEdgeMarginMm (${cfg.hoverEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitGoalDeg > 0 && cfg.orbitGoalDeg <= 30)) throw new Error(`orbitGoalDeg (${cfg.orbitGoalDeg}) must be in (0, 30]°.`);
   if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {
     throw new Error(`orbitBandRestMs (${cfg.orbitBandRestMs}) must be in [0, 3000] ms: the pause that re-arms the orbit drag's band.`);

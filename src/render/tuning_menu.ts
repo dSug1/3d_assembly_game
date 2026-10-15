@@ -240,9 +240,6 @@ export function installTuningMenu(st: SceneState): void {
       sliders: [
         // ⭐ prototype (green box): a piece in its goal cannot be moved or turned — 0 re-enables it (`goal_lock.ts`).
         tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
-        // ⭐ (2026-10-15, the owner: *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) — moved here from
-        // TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION (`HOVER.md` §18)
-        tunable(st, "resting face margin on the boundary — it slides at least this far over the hosting faces (mm)", "hoverEdgeMarginMm", 0, 10, 0.5),
         // ⭐ (2026-10-10) the sliders read only when a scene PART is dragged moved to TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION;
         // these stay — the orbit finger's motion state (the camera's follow, a tap from a pinch) and the orbit's sway trigger and size.
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over

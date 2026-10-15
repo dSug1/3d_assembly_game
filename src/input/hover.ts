@@ -202,8 +202,6 @@ export function hoverFaceContact(
   alignDeg = HOVER_ALIGN_DEG,
   /** ⭐⭐ (2026-10-14) the resting face's outline in the world — given, ANY overlap with the face's triangles counts (`overlapsTriangles`) */
   restingPoly: readonly Vec3[] | null = null,
-  /** ⭐⭐ (2026-10-15) the least overlap across that counts (m, `hoverEdgeMarginMm`) */
-  marginM = HOVER_OVERLAP_EPS_M,
 ): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number; overFace: boolean } | null } {
   const cosMin = Math.cos((alignDeg * Math.PI) / 180);
   let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number; overM: number } | null = null;
@@ -219,7 +217,7 @@ export function hoverFaceContact(
       // ⭐⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."*) — ANY PORTION of the resting face over the face: ⛔ its CENTRE had to be, and the orbit keeps the
       // resting face's centre on the ring at least its least radius from the gizmo — at a dy collision near the gizmo on a narrow face the centre
       // stood past the face's edge with much of the resting face over it, and only a dx (swinging the centre over the face) latched the hover
-      const overFace = restingPoly !== null && f.triangles !== undefined ? overlapsTriangles(restingPoly, f.normal, f.triangles, marginM) : overM <= HOVER_OVER_FACE_M;
+      const overFace = restingPoly !== null && f.triangles !== undefined ? overlapsTriangles(restingPoly, f.normal, f.triangles) : overM <= HOVER_OVER_FACE_M;
       const score = d + angleDeg * 1e-3 + (overFace ? 0 : 1);
       if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3 + (nearest.overFace ? 0 : 1)) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM, overFace };
       if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && overFace)) continue;
@@ -440,14 +438,12 @@ export function convexOverlap2D(a: readonly (readonly [number, number])[], b: re
  * ⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."* · *"when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the movement shall default back to orbit even if the press has not been released."*) — **ANY PORTION OF THE RESTING FACE OVER A FACE**: the resting face's outline (`poly`, its convex
  * hull) and the face's triangles, both laid on the plane of `n`, overlap by more than `HOVER_OVERLAP_EPS_M` across.
  */
-export function overlapsTriangles(poly: readonly Vec3[], n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[], marginM = HOVER_OVERLAP_EPS_M): boolean {
+export function overlapsTriangles(poly: readonly Vec3[], n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): boolean {
   const [a, b] = planeAxes(n);
   const P = (p: Vec3): [number, number] => [dot(p, a), dot(p, b)];
   const hull = convexHull2D(poly.map(P));
-  // ⭐⭐⭐ (2026-10-15, the owner: *"Make a margin of a couple of mm so that the piece slides within a margin of the boundary, not up to the edge to edge limit."*) — the overlap must be at least
-  // `marginM` across (`hoverEdgeMarginMm`), so the slide stops that far short of the edge-to-edge limit
-  const eps = Math.max(HOVER_OVERLAP_EPS_M, marginM);
-  return tris.some((t) => convexOverlap2D(hull, [P(t[0]), P(t[1]), P(t[2])], eps));
+  // ⛔ (2026-10-15) the edge margin (`hoverEdgeMarginMm`) is deleted: the latch counts any portion; the slide's bound is the CENTRE's (`insideRects`)
+  return tris.some((t) => convexOverlap2D(hull, [P(t[0]), P(t[1]), P(t[2])]));
 }
 
 /**
@@ -462,7 +458,8 @@ export interface Rect2 {
   readonly x1: number;
   readonly y1: number;
 }
-export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: number): [[number, number], [number, number]][] {
+/** ⭐ (2026-10-15) the rectangles joined to `seed` (overlapping or touching, step by step), each grown by `growM` — the drawn outline's region (`rectsBoundary`) and the slide's bound (`insideRects`). */
+export function rectComponent(rects: readonly Rect2[], seed: number, growM: number): Rect2[] {
   if (seed < 0 || seed >= rects.length) return [];
   const g = rects.map((r) => ({ x0: r.x0 - growM, y0: r.y0 - growM, x1: r.x1 + growM, y1: r.y1 + growM }));
   const touch = (a: Rect2, b: Rect2) => a.x0 <= b.x1 + 1e-9 && b.x0 <= a.x1 + 1e-9 && a.y0 <= b.y1 + 1e-9 && b.y0 <= a.y1 + 1e-9;
@@ -477,7 +474,11 @@ export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: n
       }
     });
   }
-  const comp = [...inSet].map((i) => g[i]!);
+  return [...inSet].sort((x, y) => x - y).map((i) => g[i]!);
+}
+
+/** ⭐ (2026-10-15) the BOUNDARY of a union of rectangles, as segments — what the hover's green outline draws. */
+export function rectsBoundary(comp: readonly Rect2[]): [[number, number], [number, number]][] {
   const xs = [...new Set(comp.flatMap((r) => [r.x0, r.x1]))].sort((a, b) => a - b);
   const ys = [...new Set(comp.flatMap((r) => [r.y0, r.y1]))].sort((a, b) => a - b);
   const covered = (i: number, j: number): boolean => {
@@ -497,6 +498,16 @@ export function rectUnionOutline(rects: readonly Rect2[], seed: number, growM: n
       if (!covered(i, j + 1)) segs.push([[x0, y1], [x1, y1]]);
     }
   return segs;
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-15, the owner: *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face
+ * remains within the boundary."*) — **THE CENTRE BOUND**: a point (the resting face's centre, on the plane's axes) within the drawn boundary — inside
+ * or on one of its rectangles (`rectComponent`). ⛔ It replaced the edge margin (an overlap of the resting face's outline of at least
+ * `hoverEdgeMarginMm`), deleted with its slider.
+ */
+export function insideRects(comp: readonly Rect2[], x: number, y: number): boolean {
+  return comp.some((r) => x >= r.x0 - 1e-12 && x <= r.x1 + 1e-12 && y >= r.y0 - 1e-12 && y <= r.y1 + 1e-12);
 }
 
 /**
