@@ -93,3 +93,21 @@ describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow
     expect(quadsShownFromM(1)).toBeCloseTo(0.65, 12);
   });
 });
+
+describe("⛔⛔ the quads' edges never faded (2026-10-15, the owner: *\"the slider does not change the opacity of the non-yellow quads' edges\"*)", () => {
+  it("⛔⛔ Babylon: a line mesh BLENDS only when created with `useVertexAlpha: true` — without it its `alpha` is ignored (the default, despite the docs, is undefined)", async () => {
+    const { NullEngine } = await import("@babylonjs/core/Engines/nullEngine");
+    const { Scene } = await import("@babylonjs/core/scene");
+    const { CreateLines } = await import("@babylonjs/core/Meshes/Builders/linesBuilder");
+    const { Vector3 } = await import("@babylonjs/core/Maths/math.vector");
+    const scene = new Scene(new NullEngine());
+    const pts = [new Vector3(0, 0, 0), new Vector3(1, 0, 0)];
+    const plain = CreateLines("plain", { points: pts }, scene);
+    const blended = CreateLines("blended", { points: pts, useVertexAlpha: true }, scene);
+    expect(plain.material?.needAlphaBlending()).toBe(false); // ⛔ what the quads' edges were: opaque whatever the alpha
+    expect(blended.material?.needAlphaBlending()).toBe(true);
+  });
+  it("⭐⭐ wired: the quads' edges are created blending", () => {
+    expect(code("render/orient_cube.ts")).toContain("{ points: [...corners, corners[0]!].map((v) => new Vector3(v[0], v[1], v[2])), useVertexAlpha: true }");
+  });
+});

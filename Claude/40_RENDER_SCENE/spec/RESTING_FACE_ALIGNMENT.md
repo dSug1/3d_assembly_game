@@ -1119,6 +1119,8 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 
 ## 31. The yellow gizmo held; its slider renamed (2026-10-15, `1.0.76-`)
 
+> ⛔⛔ **THE HOLD IS DELETED the same day** (§32): *"I don't like your implementation of the timer"* → the gizmo always seen while its slider is on. Kept below as the record.
+
 > *"the yellow gizmo flickers sometimes when I orbit at high distance"* · *"why does the flicker appears now. Why it was not here in previous
 > branches ?"* · *"rename pink gizmo to yellow gizmo slider"* — the owner. ⛔ Unjudged by a hand.
 
@@ -1132,3 +1134,22 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
   the first at once. ⚠ Cost: a real occlusion hides it — or its end shows it — up to 120 ms late. Vectors: `tests/pink_ring_latch.test.ts` (the
   measured pattern switches once, not three times).
 * The SCENE slider *pink gizmo* is now *yellow gizmo* (`pinkGizmoVisible` unchanged).
+
+## 32. The quads' edges never faded; the yellow gizmo always seen (2026-10-15, `1.0.76-`)
+
+> *"the slider does not change the opacity of the non-yellow quads' edges: they stay the same and I don't see the effect of the slider. Check what is
+> wrong."* · *"I don't like your implementation of the timer for the yellow gizmo. Check the commits when the gizmo was pink several of branches ago
+> and check if the pink gizmo did flicker."* · *"Let's make it simple and light for game lightness: make the gizmo always seen if the gizmo slider is
+> toggled on. No need for raycast, timer, etc."* — the owner. ⛔ Unjudged by a hand.
+
+* ⛔⛔⛔ **A BABYLON TRAP — A LINE MESH BLENDS ONLY WITH `useVertexAlpha: true`**: without it (the builder's default is `undefined`, whatever its docs
+  say) its material reports `needAlphaBlending() = false` and its `alpha` is IGNORED — drawn opaque. The quads' edges were created without it, so
+  every edge opacity since 2026-10-12 (0.45, 0.315, 0.2, 0.1, the slider) changed nothing on the glass; only the fills did. ✅ Now created blending
+  (measured in the app: `needAlphaBlending` true, the slider live). Vectored on Babylon itself (`tests/quad_gate.test.ts`: a plain line does not
+  blend, one with the flag does). ⚠ Every other line mesh that sets an `alpha` is in the same trap — e.g. the resting contour's x-ray twin, the
+  hover's lines; not changed.
+* ⭐⭐ **THE PINK BUILD FLICKERED TOO**: the far-orbit recording on `74e48e2` (`1.0.65-`, the gizmo pink, its top ring at 2.55 m) shows the same blink
+  at the same yaw on every turn — the per-frame ray to the target crossing a thin part. Nothing changed: it was always there.
+* ⭐⭐⭐ **THE YELLOW GIZMO, ALWAYS SEEN** while its slider is on (`pinkGizmoVisible`), drawn on top (rendering group 2) — the per-frame RAY, its
+  verdict (hidden behind a part, translucent behind the piece — that translucency never showed either: the ring did not blend), `pinkRingVisibility`
+  and §31's 120 ms hold are DELETED. ⭐ A depth-tested ring (real occlusion) was proposed, chosen, then dropped for this — lighter for the game.

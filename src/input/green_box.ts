@@ -257,63 +257,6 @@ export function cameraGapM(radiusOffsetM: number, zoom: number): number {
 }
 
 
-/** One hit along the camera's ray to the yellow target: how far, and whether it is the green piece. */
-export interface RingHit {
-  readonly distanceM: number;
-  readonly isGreenBox: boolean;
-}
-
-/**
- * ⭐⭐ prototype (green box) — **THE PINK RING'S OCCLUSION** (the owner, 2026-10-02: *"The pink gizmo ring is occludable by any
- * other object except frozen object. If the green box occludes the pink gizmo ring, the pink gizmo ring becomes slightly
- * translucent (to show that it is masked by the green box but still visible)"*). `hits` are what the camera's ray meets on
- * the way to the target — frozen bodies already left out by the caller. A hit counts only if it is NEARER than the target by
- * more than `epsM`: the piece the target sits ON is met right at it, and must not hide it.
- * * any piece in front → `HIDDEN`; * only the green piece → `TRANSLUCENT`; * nothing → `VISIBLE`.
- */
-export function pinkRingVisibility(
-  hits: readonly RingHit[],
-  targetDistM: number,
-  epsM: number,
-  /**
-   * ⭐ prototype (green box), the owner 2026-10-02: *"display the pink ring at the boot"* — the BOOT target (the scene's orbit
-   * centre, behind the painting's panel) has pieces in front from the boot camera, so it was hidden. Until the target is first
-   * set by a press on a placed piece, a piece in front makes it TRANSLUCENT instead: it is always displayed at boot.
-   */
-  bootTarget = false,
-): "VISIBLE" | "TRANSLUCENT" | "HIDDEN" {
-  let masked = false;
-  for (const h of hits) {
-    if (!(h.distanceM < targetDistM - epsM)) continue;
-    if (!h.isGreenBox && !bootTarget) return "HIDDEN";
-    masked = true;
-  }
-  return masked ? "TRANSLUCENT" : "VISIBLE";
-}
-
-/** ⭐ The ring's verdict (`pinkRingVisibility`). */
-export type RingVerdict = "VISIBLE" | "TRANSLUCENT" | "HIDDEN";
-/**
- * ⭐⭐⭐ (2026-10-15, the owner: *"the yellow gizmo flickers sometimes when I orbit at high distance"*) — **THE VERDICT HELD**: a new verdict is shown
- * once it has held `RING_SETTLE_MS`; the first one at once. ⭐ Measured headless on the far ring (camera 7.2 m out): at the same yaw on every turn
- * the ring went shown → hidden → shown in 2–4 frames — the camera's ray sweeping across a thin part as it came out from behind the painting (the
- * sway OFF changed nothing). Every frame's verdict was right; switching on it every frame was the flicker. ⚠ Cost: a real occlusion hides it (or
- * its end shows it) up to `RING_SETTLE_MS` late.
- */
-export const RING_SETTLE_MS = 120;
-export interface RingLatch {
-  readonly shown: RingVerdict;
-  readonly pending: RingVerdict | null;
-  readonly since: number;
-}
-export function ringLatch(l: RingLatch | null, raw: RingVerdict, now: number, settleMs = RING_SETTLE_MS): RingLatch {
-  if (l === null) return { shown: raw, pending: null, since: now };
-  if (raw === l.shown) return l.pending === null ? l : { shown: l.shown, pending: null, since: now };
-  if (l.pending !== raw) return { shown: l.shown, pending: raw, since: now };
-  if (now - l.since >= settleMs) return { shown: raw, pending: null, since: now };
-  return l;
-}
-
 /** ⭐ One face of a piece, in its own frame: outward normal, area centroid, area. */
 export interface PieceFace {
   readonly normal: Vec3;
