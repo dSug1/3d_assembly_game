@@ -306,6 +306,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
             tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
             tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
+            tunable(st, "hover edge margin — the resting face stays this far over the hosting faces (mm)", "hoverEdgeMarginMm", 0, 10, 0.5),
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
             tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1.5, 30, 0.5),

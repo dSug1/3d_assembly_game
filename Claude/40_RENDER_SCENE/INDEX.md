@@ -3,7 +3,7 @@
 > **STATUS** · ⭐ **SPLIT INTO MODULES 2026-09-26** · **OWNS** · the Babylon scene,
 > camera, picking, materials, the on-glass readout and the tuning menu
 > **READ IF** · you are drawing something, or wondering why the boundary exists
-> **LAST VERIFIED** · 2026-09-27
+> **LAST VERIFIED** · 2026-10-14
 
 ## The rule this folder exists to protect
 
@@ -48,9 +48,10 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `ui_theme.ts` · `level_end_ui.ts` · `level_end_wiring.ts` | `D180`: the UI theme's tokens and classes (every screen's style) · the results screen · the level end's per-frame facts |
 | `hud.ts` · `menu.ts` · `mouse_adapter.ts` | the readout · the slider panel · `D94`'s desktop seam (below) |
 | `scene.ts` | the composition root |
+| ⭐ `green_box_wiring` · `orient_cube` · `hover_wiring` | orbited piece, `HOVER.md` §0 |
 
-⚠ No vector reaches any of them; the split was checked by the typecheck, the suite, the build and a
-**headless Chrome boot** with a clean console — rule 5 still owes a hand. ⭐ Three essays moved to
+⚠ No vector reaches them; the split was checked by the typecheck, the suite, the build and a
+**headless Chrome boot** — a hand is owed. ⭐ Three essays moved to
 [`history/2026-09-26_index_essays_moved.md`](history/2026-09-26_index_essays_moved.md).
 
 ## Where it stands

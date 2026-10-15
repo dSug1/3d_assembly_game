@@ -784,3 +784,24 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   next step was then checked at the wrong place. The hover solves ONCE a frame inside `pieceSolverQueries` (`hoverQueryBudget`; it solved
   per pointer event, up to 96 queries a frame), keeps what the cap cut (`hoverPendingAfter`), and leaves out only the parts below the
   piece's own height (`behindToleranceM`) → `HOVER.md` §10.
+
+### 12nonies. The tunnel: a stride measured on its own travel; out of a part by strides that open it (2026-10-15, `1.0.76-`, ⛔ unjudged by a hand)
+
+> *"If I set both 2nd ring and 3rd ring radius to 0.2 m, I orbit … dx so the piece collides with the hosting face … release the press, then press
+> again … dy towards the 4th ring, the piece goes through the hosting face"* · *"the piece goes through the piece10 vertical large faces (both of
+> them)"* · *"If I do dy instead, the piece goes through the blue part"* — the owner.
+
+* ⛔⛔⛔ **THE CAUSE, TWO HOLES IN `solveOrbitStep`**: (1) a stride was the whole step's arc length SCALED by its share `t` — but the ring's speed along
+  `v` is not uniform (it changes sharply at a ring; the owner's 2nd and 3rd rings at 0.2 m make it sharp), so a share of the step carried the piece
+  several times further than its share of the length: past its clearance, a pose INSIDE a part accepted (the scalar stride had no landing check);
+  (2) then, started inside the margin, ONE whole step that ended farther out was taken — out of the part's far side. ⭐ Found by an exhaustive
+  headless search in the real app (gizmo on Piece10, rings 2–3 at 0.2 m, every orientation, 120 yaws × 5 heights × 3 step sizes, each solved path
+  sampled 16× between its points): 17 crossings in 269 647 solves before; **0 in 358 676 after**. ⚠ Five replays of the owner's gestures (touch,
+  mouse, flings) had found nothing: the steps that hit were large dy steps near a ring.
+* ✅ **`fitStride`**: every stride (the scalar one, the directional one, the slide's sub-steps, the long slide, the bound by the other parts) is the
+  largest share whose OWN arc fits its bound. **`arcLength`** doubles its chords (4 … 256) until the length settles — a chord under-measures a bend.
+  Anchors only: no gap query added (the 24-query budget is untouched).
+* ✅ **Inside the margin**: out by strides of at most `SLIDE_STEP_M` (and the other parts' clearance), each one OPENING the gap; deep inside (no
+  stride opens it) the piece is held — `nearestFree` puts it back on the ring.
+* Vectors: `tests/piece_orbit_solver.test.ts` (*the tunnel through Piece10*) — a fast-then-slow ring past a thin wall (it landed beyond it, x = 0.39),
+  and a piece inside a part (it jumped out of the far side); both failed against the old solver.

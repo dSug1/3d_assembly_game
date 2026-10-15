@@ -1,5 +1,8 @@
 # The double-orbit camera — a PROTOTYPE (branch `1.0.58b-` only)
 
+⭐⭐⭐ **TODAY (2026-10-14): `1.0.76-`, the main line** (live `2a54a92`). The dated lines at the end of this file are the change log up to the
+HOVER; the hover's own state is [`HOVER.md` §0](HOVER.md). ⛔ The header lines below (`1.0.59w-`, `/proto/`) are the record.
+
 ⛔⛔ **THIS FILE EXISTS ON THE PROTOTYPE BRANCHES ONLY.** Today **`1.0.59w-`** (2026-10-08 — the chain since `1.0.58b-` is in §7–§8);
 first `1.0.58b-` (2026-10-01, from `1.0.58a-` at `40aa812`, itself from `1.0.58-Trial-with-double-orbit`); never merged into `main` or
 the fork — the main line is merged INTO it, one way.
@@ -839,3 +842,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ (2026-10-14) the hover BOUNDED by the hosting faces (no switch to the orbit); its draw, the way back and the hover view's share on the orbit's spring → `HOVER.md` §16. The resting contour and the supporting face's yellow grow again toward the gizmo — the quads' mirror → `RESTING_FACE_ALIGNMENT.md` §29.
 * ⛔⛔ (2026-10-14) the hover froze: the new hover view was ended the frame after it began, so the camera never turned and a grazing finger moved nothing — fixed (`hoverViewEnds`) → `HOVER.md` §17; the resting face's yellow always full; the supporting face's yellow no longer flashes full as it fades.
 * ⭐ (2026-10-14) the hosting face's yellow is full size, faded in as the quads disappear and out as they appear; the mirror growth deleted → `RESTING_FACE_ALIGNMENT.md` §29.
+* ⭐⭐ (2026-10-15) the hover's EDGE MARGIN (2 mm, a slider); the desktop slide's jitter (the drawn lag's part across no longer dropped); a one-axis step taken up to the edge → `HOVER.md` §18.
+* ⛔⛔⛔ (2026-10-15) the orbit TUNNELLED through a part (a dy near a ring with the owner's 0.2 m rings): a stride is measured on its own travel, a piece inside leaves by strides that open the gap → `COLLISION.md` §12nonies.
