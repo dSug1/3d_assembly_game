@@ -844,6 +844,11 @@ export interface SceneState {
   autoShadowArmedAt: number;
   /** The `shadowsOn` value last applied, so a change back to AUTO re-arms the measurement. */
   shadowModeSeen: number;
+  /** ⭐ (2026-10-15) the scene's shadow generators, each one's FULL caster list, the light that draws the orbited piece's shadow alone, and the level applied (`applyShadowLevel`). */
+  shadowGens: import("@babylonjs/core/Lights/Shadows/shadowGenerator").ShadowGenerator[];
+  shadowFull: import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh[][];
+  shadowKey: number;
+  shadowLevelSeen: "FULL" | "PIECE" | null;
   unsnapTrace: string;
   lastFedPointer: number;
   cfg: GestureConfig;

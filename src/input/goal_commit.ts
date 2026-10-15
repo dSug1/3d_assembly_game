@@ -15,6 +15,7 @@
  * ⛔ ENGINE-FREE.
  */
 import { worldPlacementOf, type World } from "../core/object_model";
+import type { Placed } from "../core/mate_connector";
 import { length, qAngle, qconj, qmul, sub } from "../core/vec";
 /**
  * ⭐ `D190`: the pieces an action MOVED — their world pose differs between the model last committed and the model now
@@ -38,6 +39,33 @@ export function piecesMoved(before: World, after: World, ids: readonly string[])
 
 const MOVED_M = 1e-7;
 const MOVED_RAD = 1e-6;
+
+/**
+ * ⭐⭐⭐ (2026-10-15, the owner: *"When a piece/part reaches its goal, set its transform to perfectly match the goal transform so there is no misalignment
+ * of any sort."*) — **A PLACED PIECE SET EXACTLY ON ITS GOAL**: each placed piece (`ids`) whose pose differs from its exact goal pose by any amount, with
+ * that pose — the parents before their children (`depthOf`: a parent moved carries its seated children), none `skip` names (a frozen body, the orbited
+ * piece still in the orbit). ⛔ A piece is judged placed within margins (a grabbed part: the snap's 10 mm on the glass / 15°); a pull landed exactly,
+ * but a DISSOLVE set only its spin (`D143`) and a piece placed without a pull kept its offset.
+ */
+export function goalSnaps(
+  ids: readonly string[],
+  targetOf: (id: string) => Placed | null,
+  poseOf: (id: string) => Placed | null,
+  skip: (id: string) => boolean,
+  depthOf: (id: string) => number,
+): { id: string; target: Placed }[] {
+  const out: { id: string; target: Placed; depth: number }[] = [];
+  for (const id of ids) {
+    if (skip(id)) continue;
+    const t = targetOf(id);
+    const p = poseOf(id);
+    if (t === null || p === null) continue;
+    const turned = qAngle(qmul(t.orientation, qconj(p.orientation)));
+    if (length(sub(t.position, p.position)) <= MOVED_M && turned <= MOVED_RAD) continue;
+    out.push({ id, target: t, depth: depthOf(id) });
+  }
+  return out.sort((a, b) => a.depth - b.depth).map(({ id, target }) => ({ id, target }));
+}
 
 export class GoalCommit {
   private placed: ReadonlySet<string> | null = null;

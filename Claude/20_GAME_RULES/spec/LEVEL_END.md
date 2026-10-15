@@ -243,3 +243,16 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   waited, and an `orbitGoalMm` under ~2.5 mm was unreachable from a resting piece. The slider now starts at 1.5 mm.
 * ⭐ (2026-10-14, the hover's second audit) a hover that pulls the orbited piece into its goal SPENDS its finger — it moves nothing more until
   it lifts (`D139`: a snap stops the drag that made it); it used to turn the camera. The dead "always grabbed" line is removed → `HOVER.md` §10.
+
+## 5quinquies. ⭐⭐⭐ A placed piece is set EXACTLY on its goal (2026-10-15, `1.0.78-`, ⛔ unjudged by a hand)
+
+> *"When a piece/part reaches its goal, set its transform to perfectly match the goal transform so there is no misalignment of any sort."* — the owner.
+
+* ⛔ **WHY IT WAS OFF**: a piece is judged PLACED within margins (a grabbed part: the snap's 10 mm on the glass / 15°; never grabbed: 1 mm / 1°; the
+  orbited piece: 5 mm / 3°). A goal PULL (§5) landed exactly — but a seated piece's DISSOLVE (`D142`/`D143`) set only its spin about its face, and a
+  piece placed without a pull kept its offset.
+* ✅ **AT EVERY COMMIT** (`commitGoal`, the one funnel: rest after a change, a snap, a pull, a dissolve, an undo — §5bis), each placed piece off its exact
+  goal pose by any amount is set ON it (`input/goal_commit.ts`'s `goalSnaps`: the report's target, parents before children; frozen bodies and the
+  orbited piece still in the orbit left alone; not during a demo). Written without collision, as the dissolve's mate is — it is the product landing
+  a pose; before the committed model is kept (no second commit) and with the capture's last pose (no second pull).
+* Vectors: `tests/goal_exact.test.ts`.

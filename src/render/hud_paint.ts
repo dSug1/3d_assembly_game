@@ -109,11 +109,12 @@ function goalReadout(st: SceneState, r: GoalReport | null): string {
 /** ⭐ `D138`: what the shadow switch is doing — and on AUTO, what the device's measurement decided. */
 function shadowsLabel(st: SceneState): string {
   const m = st.cfg.shadowsOn;
-  if (m === 0) return "off";
+  // ⭐ (2026-10-15) "off" keeps the orbited piece's own shadow (`shadowLevel`)
+  if (m === 0) return "off (the piece's shadow kept)";
   if (m === 1) return "on";
   if (st.autoShadow === null) return "auto (measuring…)";
   return st.autoShadow === "OFF"
-    ? `auto → OFF (too slow: median over ${st.cfg.autoShadowBudgetMs}ms)`
+    ? `auto → OFF (too slow: median over ${st.cfg.autoShadowBudgetMs}ms) — the piece's shadow kept`
     : `auto → on`;
 }
 

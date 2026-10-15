@@ -11,6 +11,7 @@ import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator"
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { illuminanceAt, lightColour, unityForward, type Triple } from "../core/lighting";
+import { keyLightIndex } from "../core/auto_shadow";
 import type { SceneState } from "./scene_state";
 
 /** The default: `Scene_0`'s light and background, exactly as they were. */
@@ -74,6 +75,8 @@ function shadowFor(light: SpotLight | DirectionalLight, strength: number): Shado
   g.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
   g.setDarkness(1 - Math.min(1, Math.max(0, strength)));
   g.bias = 0.0005;
+  // ⭐⭐ (2026-10-15) the orbited piece is drawn in the TRANSPARENT pass (its yellow face seen through it): a transparent-pass mesh casts only with this
+  g.transparencyShadow = true;
   return g;
 }
 
@@ -93,4 +96,38 @@ export function attachShadows(
     d.receiveShadows = true;
     if (!frozen(m)) for (const g of gens) g.addShadowCaster(d, false);
   }
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-15, the owner: *"make the green - turquoise piece project shadows, even on low fps device"*) — the ORBITED pieces cast (⛔ they were not
+ * casters at all) and receive; each generator's FULL caster list kept, and the light that draws the piece's shadow alone (`keyLightIndex`).
+ */
+export function attachOrbitedShadows(st: SceneState): void {
+  const gens = st.shadowGens;
+  if (gens.length === 0) return;
+  for (const o of st.orbitPieces) {
+    o.mesh.receiveShadows = true;
+    for (const g of gens) g.addShadowCaster(o.mesh, false);
+  }
+  st.shadowFull = gens.map((g) => (g.getShadowMap()?.renderList ?? []).slice());
+  st.shadowKey = keyLightIndex(gens.map((g) => g.getLight().intensity));
+  st.shadowLevelSeen = null;
+}
+
+/**
+ * ⭐⭐ The shadow LEVEL applied (`shadowLevel`), on change only: `FULL` — every light, every caster; `PIECE` — the key light alone, the orbited pieces
+ * alone (the others' shadows off: no map drawn, none sampled).
+ */
+export function applyShadowLevel(st: SceneState, level: "FULL" | "PIECE"): void {
+  const gens = st.shadowGens;
+  if (gens.length === 0 || st.shadowLevelSeen === level) return;
+  st.shadowLevelSeen = level;
+  st.scene.shadowsEnabled = true;
+  gens.forEach((g, i) => {
+    const map = g.getShadowMap();
+    const key = i === st.shadowKey;
+    g.getLight().shadowEnabled = level === "FULL" || key;
+    if (map === null) return;
+    map.renderList = level === "FULL" ? (st.shadowFull[i] ?? []).slice() : key ? st.orbitPieces.map((o) => o.mesh as AbstractMesh) : [];
+  });
 }
