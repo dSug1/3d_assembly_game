@@ -20,15 +20,15 @@ export function restingContourShown(quadsShown: boolean, slideReady: boolean): b
 /**
  * ⭐ A quad's edges and fill: the YELLOW one (lit) as before — edges 1, fill 0.12; the others fainter — ⭐⭐ (2026-10-15, the owner: *"non-yellow quads'
  * edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged."*) edges 0.2, fill 0.05 (⛔ × 0.7 — 0.315, 0.084 —
- * the same day).
+ * the same day) → *"from 0.2 to 0.1 and their fills from 0.05 to 0.025"* → a slider (`quadUnlitAlpha`, the edges; the fill a quarter).
  */
 export const QUAD_LIT_EDGE_ALPHA = 1;
 export const QUAD_LIT_FILL_ALPHA = 0.12;
-export const QUAD_UNLIT_EDGE_ALPHA = 0.2;
-export const QUAD_UNLIT_FILL_ALPHA = 0.05;
-export function quadEdgeAlpha(lit: boolean): number {
-  return lit ? QUAD_LIT_EDGE_ALPHA : QUAD_UNLIT_EDGE_ALPHA;
+/** ⭐ (2026-10-15, *"make a slider for non-yellow quad highlight transparency (edges and fill)"*) — the unlit fill is this share of the unlit edges (`quadUnlitAlpha`): 0.1 → 0.025, as asked. */
+export const QUAD_UNLIT_FILL_SHARE = 0.25;
+export function quadEdgeAlpha(lit: boolean, unlitAlpha: number): number {
+  return lit ? QUAD_LIT_EDGE_ALPHA : unlitAlpha;
 }
-export function quadFillAlpha(lit: boolean): number {
-  return lit ? QUAD_LIT_FILL_ALPHA : QUAD_UNLIT_FILL_ALPHA;
+export function quadFillAlpha(lit: boolean, unlitAlpha: number): number {
+  return lit ? QUAD_LIT_FILL_ALPHA : unlitAlpha * QUAD_UNLIT_FILL_SHARE;
 }

@@ -257,7 +257,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       data.positions = corners.flatMap((v) => [v[0], v[1], v[2]]);
       data.indices = [0, 1, 2, 0, 2, 3];
       data.applyToMesh(fill, false);
-      const fm = unlit(st, `resting-quad-${i}-mat`, Color3.White(), quadFillAlpha(false));
+      const fm = unlit(st, `resting-quad-${i}-mat`, Color3.White(), quadFillAlpha(false, st.cfg.quadUnlitAlpha));
       fm.disableDepthWrite = true;
       fill.material = fm;
       fill.isPickable = false;
@@ -311,8 +311,8 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
     x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked — or held (the third audit)
     // ⭐⭐ (2026-10-15, the owner: *"non-yellow quads' edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged."*)
-    x.edges.alpha = quadEdgeAlpha(lit);
-    (x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit);
+    x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha);
+    (x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha);
   }
 }
 

@@ -37,7 +37,7 @@ describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
     expect(w).toMatch(/ring\.alpha = v === "TRANSLUCENT" \? PINK_MASKED_ALPHA : 1;/);
     // ⭐ the owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — one
     // rule from the first frame; the boot exemption is switched off (the parameter stays, `true` would restore it)
-    expect(w).toMatch(/const v = pinkRingVisibility\(hits, dist, PINK_EPS_M\);/);
+    expect(w).toMatch(/ringLatch\(st\.pinkRingLatch, pinkRingVisibility\(hits, dist, PINK_EPS_M\), performance\.now\(\)\);/); // ⭐ (2026-10-15) held before it shows
     expect(w).not.toMatch(/targetSetByPress/);
     const setTarget = w.indexOf("st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));");
     expect(setTarget).toBeGreaterThan(0); // ⚠ the line must EXIST, or the order below passes on -1

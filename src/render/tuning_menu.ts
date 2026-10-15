@@ -211,7 +211,9 @@ export function installTuningMenu(st: SceneState): void {
             // whether this is an orbit or the start of a pinch. 0 commits immediately.
             tunable(st, "centre grace (ms)", "orbitCentreGraceMs", 0, 400, 10),
             // ⭐ prototype (2026-10-11, *"add a slider to hide the pink gizmo"*)
-            tunable(st, "pink gizmo (the orbit centre's ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1),
+            tunable(st, "yellow gizmo (the orbit centre's ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1),
+            // ⭐ (2026-10-15, the owner: *"make a slider for non-yellow quad highlight transparency (edges and fill) just below pink gizmo slider"*)
+            tunable(st, "non-yellow quads' opacity (edges; the fill a quarter of it)", "quadUnlitAlpha", 0, 1, 0.01),
             // ⭐ prototype (2026-10-12, *"create a slider for the power of the scaling distance"*)
             // ⭐ (2026-10-12, *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*) — the log curve's steepness (0 = a straight line)
             tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),

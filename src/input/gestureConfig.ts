@@ -521,6 +521,8 @@ export interface GestureConfig {
   pieceOrbitEnterMm: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
+  /** ⭐⭐ (2026-10-15, the owner: *"make a slider for non-yellow quad highlight transparency (edges and fill)"*) the non-yellow quads' edge opacity (0 … 1); their fill a quarter of it (`QUAD_UNLIT_FILL_SHARE`). */
+  quadUnlitAlpha: number;
   /** ⭐ Prototype (2026-10-12, §25): the resting-face quads' growth with the gizmo's distance — a LOGARITHM, ln(1 + k·t) / ln(1 + k), this its
    * steepness k (`quadSize`; it was a power, 3). */
   quadGrowthLogK: number;
@@ -1036,6 +1038,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
+  // ⭐ the owner's 0.1 (edges; the fill 0.025), with a slider
+  quadUnlitAlpha: 0.1,
   // ⭐ prototype, the owner 2026-10-12: *"change the power 1.5 of the quads scaling to 3, maintain the 1.4 max scale"* → *"create a slider for
   // the power of the scaling distance"* → *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"* — the log curve's steepness
   quadGrowthLogK: 9,
@@ -1195,6 +1199,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
   if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);
+  if (!(cfg.quadUnlitAlpha >= 0 && cfg.quadUnlitAlpha <= 1)) throw new Error(`quadUnlitAlpha (${cfg.quadUnlitAlpha}) must be in [0, 1].`);
   if (!(cfg.hoverEdgeMarginMm >= 0 && cfg.hoverEdgeMarginMm <= 20)) throw new Error(`hoverEdgeMarginMm (${cfg.hoverEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitGoalDeg > 0 && cfg.orbitGoalDeg <= 30)) throw new Error(`orbitGoalDeg (${cfg.orbitGoalDeg}) must be in (0, 30]°.`);
   if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {

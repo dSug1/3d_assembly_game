@@ -404,6 +404,8 @@ export interface SceneState {
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
   pinkRing: LinesMesh | null;
+  /** ⭐ (2026-10-15) the ring's verdict, held before it shows (`ringLatch`). */
+  pinkRingLatch: import("../input/green_box").RingLatch | null;
   /** ⭐ Prototype: the pieces the orbit can carry — [0] the green frustum, [1] the turquoise hexagonal prism — each with its logical
    * face count (read at creation) and volume (the inertia's); the one in use is `greenBox` (`spawnOrbitPiece`). */
   orbitPieces: {
