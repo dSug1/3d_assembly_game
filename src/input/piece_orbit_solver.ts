@@ -75,16 +75,52 @@ const same = (a: OrbitQ, b: OrbitQ): boolean => Math.abs(a.yaw - b.yaw) + Math.a
 /** ⭐ The arc's samples: the step's length along the ring is measured on this many chords. */
 export const ARC_SAMPLES = 4;
 
-/** ⭐ The step's length along the ring (the anchor's path) — no point of the piece travels further (it only translates). */
+/** ⭐ (2026-10-15) the most chords the arc's length is refined to. */
+export const ARC_MAX_SAMPLES = 256;
+
+/**
+ * ⭐ The step's length along the ring (the anchor's path) — no point of the piece travels further (it only translates). ⭐⭐ (2026-10-15) the
+ * chords doubled until the length settles (a chord is never longer than its arc: too few cut a ring's bend and under-measure it) — anchors
+ * only, no collision query.
+ */
 export function arcLength(env: SolverEnv, q: OrbitQ, s: QStep): number {
-  let len = 0;
-  let prev = env.anchor(q);
-  for (let i = 1; i <= ARC_SAMPLES; i++) {
-    const a = env.anchor(plus(q, s, i / ARC_SAMPLES));
-    len += dist(a, prev);
-    prev = a;
+  const chords = (n: number): number => {
+    let len = 0;
+    let prev = env.anchor(q);
+    for (let i = 1; i <= n; i++) {
+      const a = env.anchor(plus(q, s, i / n));
+      len += dist(a, prev);
+      prev = a;
+    }
+    return len;
+  };
+  let n = ARC_SAMPLES;
+  let len = chords(n);
+  while (n < ARC_MAX_SAMPLES) {
+    n *= 2;
+    const finer = chords(n);
+    const settled = finer - len <= 1e-3 * finer + 1e-9;
+    len = finer;
+    if (settled) break;
   }
   return len;
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-15, the owner: *"If I do dy instead, the piece goes through the blue part"*) — **A STRIDE MEASURED ON ITS OWN TRAVEL**: the
+ * largest share `t' ≤ t` of the step `s` whose own arc is at most `maxM`. ⛔ The stride was the whole step's length SCALED by `t` — but the ring's
+ * speed along `v` is not uniform (it changes sharply at a ring: the owner's 2nd and 3rd rings at 0.2 m), so a share of the step could carry the
+ * piece several times further than its share of the length: past its clearance, into a part, and — the next step taken whole from inside —
+ * through it.
+ */
+export function fitStride(env: SolverEnv, q: OrbitQ, s: QStep, t: number, maxM: number): number {
+  if (!(maxM > 0)) return 0;
+  for (let i = 0; i < 40 && t > 1e-12; i++) {
+    const len = arcLength(env, q, [s[0] * t, s[1] * t]);
+    if (len <= maxM) return t;
+    t *= Math.min(0.9, Math.max(0.05, (maxM / len) * 0.98));
+  }
+  return 0;
 }
 
 /** ⭐ The ring's Jacobian at `q`: how far the anchor moves per radian of yaw and per unit of `v` (metres) — finite differences. */
@@ -189,7 +225,7 @@ export const AT_CONTACT_M = 0.0002;
 
 /**
  * ⭐⭐⭐ **ONE INPUT STEP SOLVED** — from `q0`, the step `dq`:
- * (0) `q0` inside the admissible margin (the ring moved under it): only a step that OPENS the gap is taken, whole;
+ * (0) inside the admissible margin (the ring moved under it): out by short strides that each OPEN the gap (2026-10-15 — never one whole step);
  * (1) free air: advance along the arc as far as the gap minus `gapM` allows — the whole step when it fits;
  * (2) at the gap kept: project the rest onto the contacts (`projectExact`) and slide by sub-steps of ≤ `SLIDE_STEP_M`, each one checked (the gap
  *     ≥ half the gap kept, halved up to 5 times), a contact the projection did not know of learned and projected again;
@@ -213,17 +249,31 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
   let touched = false;
   let blocked = false;
   let g = gapAt(q);
-  // (0) STARTED INSIDE the margin: only a step that opens it
-  if (g < hard) {
-    const end = plus(q, rest);
-    if (gapAt(end) > g) return { q: end, path: [q0, end], blocked: false, touched: true, deferred: false, rest: [0, 0], queries };
-    return { q, path, blocked: true, touched: true, deferred: false, rest: [0, 0], queries };
-  }
   let normals: Vec3[] = [];
   for (let guard = 0; guard < 400 && !tiny(rest); guard++) {
     if (queries >= opt.maxQueries) return { q, path, blocked, touched, deferred: true, rest, queries };
     const travel = arcLength(env, q, rest);
     if (!(travel > 1e-12)) break;
+    // (0) INSIDE the margin: out by short strides, each one OPENING the gap, never further than the other parts allow — ⭐⭐⭐ (2026-10-15, the
+    // owner: *"If I do dy instead, the piece goes through the blue part"*) ⛔ one whole step that ended farther out was taken: from inside a part,
+    // through it and out of its far side. Deep inside (no stride opens it): held — the ring's nearest free place is `nearestFree`'s job
+    if (g < hard) {
+      touched = true;
+      const others = env.secondGap?.(q);
+      const reach = Math.min(SLIDE_STEP_M, others === undefined ? SLIDE_STEP_M : Math.max(0, (others - hard) * 0.9));
+      const t = fitStride(env, q, rest, 1, reach);
+      const end = t > 0 ? plus(q, rest, t) : q;
+      const ge = t > 0 ? gapAt(end) : g;
+      if (!(ge > g)) {
+        blocked = true;
+        break;
+      }
+      q = end;
+      path.push(q);
+      rest = [rest[0] * (1 - t), rest[1] * (1 - t)];
+      g = ge;
+      continue;
+    }
     const spare = g - opt.gapM;
     // (1) FREE AIR — no point travels further than the air it has
     if (spare >= travel) {
@@ -234,7 +284,8 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     }
     if (spare > AT_CONTACT_M) {
       // the SCALAR stride — safe against everything, whatever the direction
-      const tS = Math.min(1, (spare / travel) * 0.9);
+      // ⭐⭐⭐ (2026-10-15) on the stride's OWN travel (`fitStride`)
+      const tS = fitStride(env, q, rest, Math.min(1, (spare / travel) * 0.9), spare * 0.9);
       let t = tS;
       let gl: number | null = null;
       // ⭐⭐ (2026-10-13, the third audit: *"the orbit slows down when the piece approaches another part"* — it crept PARALLEL to a part, 22 mrad
@@ -252,7 +303,7 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
             const others = (env.secondGap?.(q) ?? g) - opt.gapM; // (memoised with the gap at `q`: not a query)
             const along = approach > 1e-9 ? spare / approach : Infinity;
             const stride = Math.min(along, others, DIRECTIONAL_MAX_M) * 0.9;
-            let tD = Math.min(1, stride / travel);
+            let tD = fitStride(env, q, rest, Math.min(1, stride / travel), stride);
             // ⭐ only for a real gain; the path by the PLANE BOUND (anchors only — the fourth audit), the landing by one query, two at most
             for (let tries = 0; tries < 2 && tD > 2 * tS; ) {
               if (planeHolds(env, q, rest, tD, n, g, hard)) {
@@ -288,13 +339,14 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     // what pushed in: discarded (a step AWAY from the contact is neither — it leaves)
     if (Math.abs(s[0] - rest[0]) + Math.abs(s[1] - rest[1]) > 1e-12) touched = blocked = true;
     const sLen = arcLength(env, q, s);
-    let u = Math.min(1, SLIDE_STEP_M / Math.max(1e-12, sLen));
+    let u = fitStride(env, q, s, Math.min(1, SLIDE_STEP_M / Math.max(1e-12, sLen)), SLIDE_STEP_M);
     // ⭐ (2026-10-14, the hover) never past the safe distance to every OTHER part: sliding along one contact toward a second, the 4 mm sub-step
     // overshot it and the step stopped up to 4 mm short of it (learning it, then blocked) — now it closes in to the gap kept first
     {
       const others = env.secondGap?.(q);
       if (others !== undefined) {
-        const uo = ((others - opt.gapM) * 0.9) / Math.max(1e-12, sLen);
+        const lo = (others - opt.gapM) * 0.9;
+        const uo = lo > 0 ? fitStride(env, q, s, Math.min(u, lo / Math.max(1e-12, sLen)), lo) : 0;
         if (uo > 1e-9 && uo < u) u = uo;
       }
     }
@@ -304,7 +356,8 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     // gap to every other allow, ≤ `DIRECTIONAL_MAX_M`, its landing checked once — else the 4 mm sub-step as before
     if (n !== null) {
       const others = (env.secondGap?.(q) ?? g) - hard;
-      let uD = Math.min(1, (Math.min(others * 0.9, DIRECTIONAL_MAX_M)) / Math.max(1e-12, sLen));
+      const lD = Math.min(others * 0.9, DIRECTIONAL_MAX_M);
+      let uD = fitStride(env, q, s, Math.min(1, lD / Math.max(1e-12, sLen)), lD);
       for (let tries = 0; tries < 2 && uD > 2 * u; ) {
         if (planeHolds(env, q, s, uD, n, g, hard)) {
           tries++;

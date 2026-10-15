@@ -806,3 +806,29 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
     });
   });
 });
+
+describe("⭐⭐⭐ the tunnel through Piece10 (2026-10-15, the owner: *\"if I release and then press again and do dx, the piece continues to be blocked (which is OK). If I do dy instead, the piece goes through the blue part\"*)", () => {
+  // ⭐ a ring whose speed changes sharply along v — as at a ring of the owner's rig (2nd and 3rd at 0.2 m): fast first, then slow
+  const fastThenSlow = (x: OrbitQ): Vec3 => [x.v < 0.1 ? 4 * x.v : 0.4 + 0.02 * (x.v - 0.1), 0, 0];
+  const WALL = { c: [0.2, 0, 0] as Vec3, r: 0.01 }; // a thin part across the path: the piece is inside it for x in [0.09, 0.31]
+  it("⭐⭐⭐ a stride is measured on ITS OWN travel — ⛔ the whole step's length, scaled, let a fraction of the step carry the piece through a part", () => {
+    const e = env([WALL], fastThenSlow);
+    expect(e.gap(q(0, 0))).toBeCloseTo(0.09, 9);
+    const r = solveOrbitStep(q(0, 0), [0, 0.5], e, OPT);
+    for (const p of r.path) expect(fastThenSlow(p)[0]).toBeLessThan(0.09); // ✅ never past the wall's near side (⛔ it landed at x = 0.39, beyond it)
+    expect(r.blocked).toBe(true);
+    expect(e.gap(r.q)).toBeGreaterThanOrEqual(GAP / 2);
+  });
+  it("⭐⭐⭐ a piece INSIDE the margin leaves in short checked strides that open the gap — ⛔ one whole step that ended farther out was taken, through the part", () => {
+    const line = (x: OrbitQ): Vec3 => [x.v, 0, 0];
+    const e = env([WALL], line);
+    expect(e.gap(q(0, 0.15))).toBe(0); // inside the wall
+    const r = solveOrbitStep(q(0, 0.15), [0, 0.5], e, OPT);
+    expect(r.q.v).toBeCloseTo(0.15, 12); // ✅ deep inside, no stride opens the gap: held (the ring's nearest free place is `nearestFree`'s job) — ⛔ it jumped to 0.65
+    // a piece just inside the margin, the step leaving it: taken, and the rest of the step solved as usual
+    const e2 = env([{ c: [0, 0, 0], r: 0.01 }], line);
+    const r2 = solveOrbitStep(q(0, 0.1103), [0, 0.3], e2, OPT); // gap 0.3 mm < half the gap kept
+    expect(e2.gap(q(0, 0.1103))).toBeLessThan(GAP / 2);
+    expect(r2.q.v).toBeCloseTo(0.4103, 9);
+  });
+});

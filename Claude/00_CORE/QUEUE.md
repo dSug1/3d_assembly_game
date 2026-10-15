@@ -14,7 +14,7 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-10-14, branch `1.0.76-`, live `2a54a92`)
+## ⭐⭐⭐ YOU ARE HERE (2026-10-15, branch `1.0.76-`)
 
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE (green frustum / turquoise hex prism)
 round a yellow gizmo on rings, the camera follows; merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per change —, `PIECE_ORBIT.md`,
@@ -22,10 +22,10 @@ round a yellow gizmo on rings, the camera follows; merged into `main`, served at
 ⭐⭐ **The child's sequence** (`GREEN_PIECE_PHASES.md`): pick the face → approach (the orbit, its dy) → roll the long axis into line (the
 resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to the hover; the orbited piece has goals on Piece4 (x/42).
 ⭐⭐⭐ **CURRENT THREAD — THE HOVER** → [`HOVER.md` §0](../40_RENDER_SCENE/spec/HOVER.md) (the hover as it stands, and what is open). Built
-2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand.
+2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand. ⭐ 10-15: §18; `COLLISION.md` §12nonies.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1975 golden vectors, all passing** — MEASURED 2026-10-14 (the count's home; 1619 below is the 2026-10-02 record).
+✅ `npm run verify`: **1983 golden vectors, all passing** — MEASURED 2026-10-15 (the count's home; 1619 below is the 2026-10-02 record).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

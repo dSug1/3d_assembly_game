@@ -13,7 +13,7 @@ the device through several rounds and reported defects, each fixed (§8–§17),
 the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 
 * **Ready (the latch)** — the resting face LOOKS AT a part's face: anti-parallel within 2°, within `hoverApproachMm` (20 mm) of its plane,
-  and ANY PORTION of the resting face over that face (`overlapsTriangles`, §15 — not its centre). Shown by the resting contour turning
+  and some portion of the resting face over that face by at least `hoverEdgeMarginMm` (2 mm) across (`overlapsTriangles`, §15, §18 — not its centre). Shown by the resting contour turning
   GREEN #D8FDD2, the contact shadow (the resting face projected on the face), a faint fill of the face and the GREEN OUTLINE of all the
   coplanar faces joined to it (§15). Looked for every 100 ms when the world moved; frozen bodies (the floor) are never hosts (§11, parked).
 * **Start** — a drag (left drag on desktop) that starts ON the piece, past the tap's slop. Refusals are named on the HUD's `last` line. The
@@ -42,7 +42,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   `orbitGoalMm` 5 mm / `orbitGoalDeg` 3°; the green one accepts its long side along Piece4's top (or turned 180°), wide base down.
 
 **Open — what the next conversation should know**
-1. ⛔ **No device close.** Last reports fixed: the freeze (§17), the scaling (§29). The owner had not yet re-tested `2a54a92`.
+1. ⛔ **No device close.** Last reports fixed (2026-10-15): the edge margin, the desktop jitter, a one-axis step held short of the edge (§18), the
+   orbit's tunnel through a part (`COLLISION.md` §12nonies). ⚠ The iPhone's mobile reports of 2026-10-15 were made on a STALE build (`3a94915`,
+   before §17's freeze fix) — to re-test with the HUD's `build` = the live id.
 2. ⚠ **The red yellow while a turn still works** (explained, not changed): the red check sweeps the turn a tap on EMPTY space would make, from
    the CURRENT resting face, finely; a tap on the piece makes another turn, unchecked; and the PLAYED turn (`restAlignFrame`, ~8 steps over
    125 ms, held only when a step gets closer than it is) can pass through a thin corner the check catches — a real weak spot, offered as a fix
@@ -391,3 +393,23 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * ⭐ And a hover that STARTS outside the faces' bound (§16) is not held by it — free until it is inside (`boundStep`): it could never move.
 * ⚠ A synthesised MOUSE drag does not reach the hover headless (the same before and after), so the freeze was found by reading the code, then
   measured with touch.
+
+## 18. The edge margin; the desktop jitter; a one-axis step held short of the edge (2026-10-15, `1.0.76-`)
+
+> *"currently if any portion of the resting face contacts with the hosting face, the contact is on … Make a margin of a couple of mm so that the
+> piece slides within a margin of the boundary, not up to the edge to edge limit."* · *"in desktop mode, the sliding movement is jittery. It is ok
+> in mobile mode."* · *"attachments 1, 2 & 3: the sliding is not working in these configurations in mobile mode, and the camera does not move to its
+> sliding position"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE EDGE MARGIN** (`hoverEdgeMarginMm`, 2 mm, a slider under *hover reach*): the resting face must overlap the hosting faces by at least
+  the margin ACROSS (`overlapsTriangles`' `marginM`, the separating-axis overlap) — for the latch (`hoverFaceContact`, the readiness look) and the
+  bound (`boundStep`'s `inside`). So the slide stops the margin short of the edge-to-edge limit. ⚠ Read as *"at least 2 mm must still overlap"*;
+  the other reading (*the whole resting face 2 mm inside the boundary*) was named to the owner, not built.
+* ⭐⭐⭐ **THE DESKTOP JITTER** (`hoverDrawLag`): the drawn lag is kept WHOLE while it is behind; only its part AHEAD along the last step is dropped.
+  ⛔ It was projected onto the last step's direction and its part ACROSS dropped — a mouse's integer-pixel steps through the per-axis band
+  alternate axis from frame to frame (125 Hz against 143 fps), so the drawn piece swung across on every switch: 5.6 mm a frame against a 0.7 mm
+  step in the vector (now under 15 % of a step). A finger's steps do not alternate: mobile was smooth.
+* ⭐⭐ **A ONE-AXIS STEP AT THE EDGE** (`boundStep`): ⛔ a step along one axis found its "slide along the other axis" inside (it is `from`) and
+  stopped where it stood, short of the edge — common, the deadband's corridor making one-axis steps; now the halving takes it up to the edge.
+* ⚠ **The mobile reports** (no slide, no hover view, in three configurations) came from an iPhone on `3a94915` — before §17's fix of exactly that
+  (the camera never turned, a grazing finger moved nothing). Not re-tested yet.
