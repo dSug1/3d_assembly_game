@@ -263,16 +263,6 @@ export function settleShare(elapsedMs: number): number {
  * ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **B. THE CONTACT SHADOW**: a point of the resting face's outline laid on the target face's plane (`n` its normal, `c` a point
  * on it) — drawn there, it shows which face and exactly where the piece will land, at any camera angle (the shadow: the classic depth cue).
  */
-/**
- * ⭐⭐⭐ (2026-10-15, the owner: *"when the piece slides on the coplanar surface, the gizmo lerp into the projection of the center of the resting face onto
- * the coplanar surface and then follows the sliding of the center of the resting face"*) — **THE PIECE'S OFFSET AGAINST THE GIZMO OF THE MOMENT**: the
- * piece rides its ring about the gizmo, so a gizmo moved from `centre0` to `gizmo` would carry it — its piece-only offset takes that back: the offset it
- * had (`offset0`) + the slide (`w`) − the gizmo's move. Wherever the gizmo is, the piece stays where the slide put it.
- */
-export function hoverOffsetFor(offset0: Vec3, w: Vec3, centre0: Vec3, gizmo: Vec3): Vec3 {
-  return [offset0[0] + w[0] + centre0[0] - gizmo[0], offset0[1] + w[1] + centre0[1] - gizmo[1], offset0[2] + w[2] + centre0[2] - gizmo[2]];
-}
-
 export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
   const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
   return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];

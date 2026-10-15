@@ -529,10 +529,7 @@ export interface SceneState {
     settleT0: number;
     centre0: import("../core/vec").Vec3;
     offset0: import("../core/vec").Vec3;
-    /** ⭐⭐⭐ (2026-10-15) the anchor at the start, a point of the hosting plane, and the gizmo's spring toward the centre's projection (`gizmoFollowFrame`) */
-    anchor0: import("../core/vec").Vec3;
-    planeAt: import("../core/vec").Vec3;
-    gz: import("../input/follow").FollowState[];
+    gizmo: boolean;
     u: number;
     v: number;
     fu: import("../input/follow").FollowState;
@@ -545,7 +542,7 @@ export interface SceneState {
   hoverDraw: import("../core/vec").Vec3 | null;
   /** ⭐ (2026-10-14) the way in's DRAWN offset easing after the solved one (`wayInDrawFrame`), and its rate. */
   wayInDrawn: { x: import("../core/vec").Vec3; v: import("../core/vec").Vec3 } | null;
-  /** ⭐ (2026-10-14) the piece-only hover offset (against the gizmo of the moment, 2026-10-15), and whether the orbit dropped it (eased out). */
+  /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
   hoverOffset: import("../core/vec").Vec3 | null;
   /** ⭐⭐ (2026-10-14, the owner: *"After a hover which has moved the piece, the orbit shall way in smoothly"*) the orbit's WAY IN taking the piece-only offset back (`HoverWayIn`); `null`: none on. */
   hoverWayIn: import("../input/hover").HoverWayIn | null;
