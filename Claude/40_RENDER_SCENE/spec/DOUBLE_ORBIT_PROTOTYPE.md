@@ -845,3 +845,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ (2026-10-15) the hover's EDGE MARGIN (2 mm, a slider); the desktop slide's jitter (the drawn lag's part across no longer dropped); a one-axis step taken up to the edge → `HOVER.md` §18.
 * ⛔⛔⛔ (2026-10-15) the orbit TUNNELLED through a part (a dy near a ring with the owner's 0.2 m rings): a stride is measured on its own travel, a piece inside leaves by strides that open the gap → `COLLISION.md` §12nonies.
 * ⭐⭐⭐ (2026-10-15) the QUADS GATE THE TURN — a tap turns the piece or picks its resting face only while they show; the hosting face's yellow deleted (§28 superseded); the resting face's contour green, shown with the quads or a slide; unlit quads 30 % fainter; quads hidden at 65 % of the farthest → `RESTING_FACE_ALIGNMENT.md` §30.
+* ⭐ (2026-10-15) the unlit quads fainter still: edges 0.2, fills 0.05 (the yellow one unchanged) → `RESTING_FACE_ALIGNMENT.md` §30.

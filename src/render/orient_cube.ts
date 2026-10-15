@@ -17,7 +17,7 @@
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { quadAlpha, quadTapsAllowed } from "../input/quad_gate";
+import { quadEdgeAlpha, quadFillAlpha, quadTapsAllowed } from "../input/quad_gate";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
@@ -41,9 +41,7 @@ import type { SceneState } from "./scene_state";
 const SAME_DIR = Math.cos((1 * Math.PI) / 180);
 /** ⭐ (2026-10-12) the resting-face quads: their full size (× the piece's radius), their glass, their edges, the pink direction's yellow. */
 const QUAD_SIZE = 1.4;
-const QUAD_ALPHA = 0.12;
 const QUAD_EDGE = new Color3(0.75, 0.78, 0.85);
-const QUAD_EDGE_ALPHA = 0.45;
 const QUAD_LIT = new Color3(1, 0.85, 0.1);
 /** ⭐ (2026-10-13, *"Rotation Blocked by piece : in such case, highlight the quad in red instead of yellow and back to yellow when rotation is allowed again"*) */
 const QUAD_BLOCKED = new Color3(1, 0.15, 0.1);
@@ -259,7 +257,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       data.positions = corners.flatMap((v) => [v[0], v[1], v[2]]);
       data.indices = [0, 1, 2, 0, 2, 3];
       data.applyToMesh(fill, false);
-      const fm = unlit(st, `resting-quad-${i}-mat`, Color3.White(), QUAD_ALPHA);
+      const fm = unlit(st, `resting-quad-${i}-mat`, Color3.White(), quadFillAlpha(false));
       fm.disableDepthWrite = true;
       fill.material = fm;
       fill.isPickable = false;
@@ -312,9 +310,9 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   for (const x of q.quads) {
     const lit = pn !== null && Math.abs(dot(x.normal, pn)) >= SAME_DIR;
     x.edges.color = lit ? (st.quadTurnCheck.blockedBy !== null || st.restAlignHeld ? QUAD_BLOCKED : QUAD_LIT) : QUAD_EDGE; // ⭐ (2026-10-13) RED while its turn is blocked — or held (the third audit)
-    // ⭐⭐ (2026-10-15, the owner: *"Make the quads' non-yellow edges highlight and their corresponding face fill 30% more transparent (no change for the quad's yellow edges highlight and fill)"*)
-    x.edges.alpha = lit ? 1 : quadAlpha(QUAD_EDGE_ALPHA, false);
-    (x.fill.material as StandardMaterial).alpha = quadAlpha(QUAD_ALPHA, lit);
+    // ⭐⭐ (2026-10-15, the owner: *"non-yellow quads' edges go from 0.45 to 0.2 and their fills from 0.12 to 0.05. The yellow quad is unchanged."*)
+    x.edges.alpha = quadEdgeAlpha(lit);
+    (x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit);
   }
 }
 
