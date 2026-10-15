@@ -467,3 +467,16 @@ floor** — marked seats where a piece may be set down, each a known target the 
   "behind" it (the host among them) were exempt from its checks. ✅ `HOVER_BEHIND_M` (1 mm, contact rounding): a face hosts only a resting face IN
   FRONT of it.
 * Vectors: `tests/hover.test.ts` (*a rapid drag cannot throw the piece off the boundary*, *a face hosts only a resting face IN FRONT of it*).
+
+## 22. ⛔ REVERTED the same day — the gizmo following the resting face's centre (2026-10-15, `1.0.78-`)
+
+> *"when the piece slides on the coplanar surface, the gizmo lerp into the projection of the center of the resting face onto the coplanar surface and
+> then follows the sliding of the center of the resting face …"* → built (`488d066`, deployed `e0231bd`) → *"revert to commit 51bf7e9. I did not like
+> the gizmo to move"* — the owner.
+
+* ⛔ **REVERTED** (`8431214`, live `ad376a5`): the hover is as §21 left it — the piece alone moves (a piece-only offset on its ring place, the
+  `hoverGizmoMove` slider back at 0), the gizmo stays where it was; the next orbit ways the piece back to its ring (§13).
+* Kept as the record of what was tried: the gizmo eased onto the solved centre's projection on the hosting plane (the drawn piece's spring) and
+  stayed there after the lift; the piece's offset was kept against the gizmo of the moment (ring base + offset = where the slide put it); the next
+  orbit drag eased the piece OUT to its ring about the new gizmo (264 mm → 0 in the headless run). ⚠ The owner's U-shape question was answered then:
+  the hosting face is the face the resting face looks at, so a gizmo over a void would not have broken the latch.
