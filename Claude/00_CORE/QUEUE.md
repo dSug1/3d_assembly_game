@@ -14,13 +14,22 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-09-30)
+## ⭐⭐⭐ YOU ARE HERE (2026-10-14, branch `1.0.76-`, live `2a54a92`)
 
-⭐⭐ **`D181`** `3D7`, the play volume → `COLLISION.md` §10 ✅. **`D182`** the snap waits for a clear flight; the unsnap
-holds; no Pioneer sway → `ALIGNMENT_RULES.md` §24. **`D183`** (`1.0.57-`) the goal capture; PLACED = the snap's margins
-(1 mm / 1° never grabbed); twins swap → `LEVEL_END.md` §5. **`D184`** finger up always away → §25. **`D185`** the pitch, a
-wheel from the press side → §26. **`D186`–`D188`** HUD button, live episodes, score bar → `LEVEL_END` §6. **`D189`** the goal
-count/pop-up move when an action ends → §5bis. **`D190`** only moved pieces re-judged → §5ter **`D191`–`D194`** demo heaps → `DEMO_SCENE`. **`D195`** no depth ceiling with a play volume → `COLLISION`. **`D196`** floor from below: contour → §16. ⛔ `D182`–`D196` unjudged. Next: `3D2`.
+⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE (green frustum / turquoise hex prism)
+round a yellow gizmo on rings, the camera follows; merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per change —, `PIECE_ORBIT.md`,
+`RESTING_FACE_ALIGNMENT.md`, `HOVER.md`) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
+⭐⭐ **The child's sequence** (`GREEN_PIECE_PHASES.md`): pick the face → approach (the orbit, its dy) → roll the long axis into line (the
+resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to the hover; the orbited piece has goals on Piece4 (x/42).
+⭐⭐⭐ **CURRENT THREAD — THE HOVER** → [`HOVER.md` §0](../40_RENDER_SCENE/spec/HOVER.md) (the hover as it stands, and what is open). Built
+2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand.
+⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
+md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
+✅ `npm run verify`: **1975 golden vectors, all passing** — MEASURED 2026-10-14 (the count's home; 1619 below is the 2026-10-02 record).
+
+## (the record) YOU ARE HERE (2026-09-30)
+
+⭐ The `D181`–`D196` line moved → [`history/2026-10-14_queue_spent_blocks.md`](history/2026-10-14_queue_spent_blocks.md).
 
 ⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
 (played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
@@ -28,12 +37,7 @@ count/pop-up move when an action ends → §5bis. **`D190`** only moved pieces r
 [`LEVEL_END.md`](../20_GAME_RULES/spec/LEVEL_END.md). ✅✅ Closed by a device look (*"Tested, ok"*, `a796ac0`). ⭐ The owner closed the device look on
 everything since `D106` (2026-09-30) and kept the demo's portrait start as it is.
 
-⭐⭐ **2026-09-28, live on `1.0.48-Scene_1-completed`** (all unjudged by a hand): `Scene_1`'s goal + boot + relative goal check
-(`D129`–`D131`), a rig per scene, the edge-on readout (`D134`), collision allows contact (`D136`), a sideways
-pinch while translating zooms (`D137`), auto shadows + a frame meter (`D138`), a snap stops its drag (`D139`),
-defect 73 (`D140`), undo only on the moved body (`D141`), ⭐ the mate sets the spin at the goal's dissolve (`D143`). ⚠ `D133`/`D135` were built and reverted.
-⭐ **`1.0.51-Game-shell`: `D144`** — a ⏸ pause menu leaves a level (by page reload), ONE scene list, `Scene_1` boots → `GM6`.
-⭐⭐ **`1.0.52-`: `D145`** — translation along the LIVE camera (`dx` its right, `dy` its view, flattened; up = away iff the camera is at/above the gizmo, read every step, so a zoom or a lift mid-drag can flip it, `D147`/`D148`); red + blue light together, each line stopping at the object it hits with a white ring in perspective (`D153`; `D149`–`D152` reverted) → `IN4`.
+⭐ The 2026-09-28 – `1.0.52-` lines (`D129`–`D148`) moved → [`history/2026-10-14_queue_spent_blocks.md`](history/2026-10-14_queue_spent_blocks.md).
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`
 collision** → **`GM1` a goal + the mate + completion** → **`3D7` play volume** → **`3D2` the
 approach** → **`GM9` the player layer** → [`queue_notes/PLAYABILITY_2026-09-27.md`](queue_notes/PLAYABILITY_2026-09-27.md).
@@ -63,7 +67,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 1. ⛔⛔ **The playability program above** — `GM1` ✅ (`D180`), `3D7` ✅ (`D181`, the play volume); `3D2` (the approach) next.
 2. ✅ **~~A device look on everything since `D106`~~** — *"Checked and all closed"*, the owner, 2026-09-30; ✅ and `D180`'s own (*"Tested, ok"*).
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
-4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7.
+4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7. ⭐ (2026-10-14) it IS the main line — see the block above.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
 ### ⛔⛔⛔ THE 2026-09-17 AUDIT### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed

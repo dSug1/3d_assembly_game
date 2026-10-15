@@ -202,6 +202,8 @@ export function hoverFaceContact(
   alignDeg = HOVER_ALIGN_DEG,
   /** ⭐⭐ (2026-10-14) the resting face's outline in the world — given, ANY overlap with the face's triangles counts (`overlapsTriangles`) */
   restingPoly: readonly Vec3[] | null = null,
+  /** ⭐⭐ (2026-10-15) the least overlap across that counts (m, `hoverEdgeMarginMm`) */
+  marginM = HOVER_OVERLAP_EPS_M,
 ): { contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number } | null; nearest: { id: string; planeGapM: number; angleDeg: number; bodyGapM: number; overFace: boolean } | null } {
   const cosMin = Math.cos((alignDeg * Math.PI) / 180);
   let contact: { id: string; faceId: string | null; normal: Vec3; centre: Vec3; gapM: number; inPlaneM: number; overM: number } | null = null;
@@ -217,7 +219,7 @@ export function hoverFaceContact(
       // ⭐⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."*) — ANY PORTION of the resting face over the face: ⛔ its CENTRE had to be, and the orbit keeps the
       // resting face's centre on the ring at least its least radius from the gizmo — at a dy collision near the gizmo on a narrow face the centre
       // stood past the face's edge with much of the resting face over it, and only a dx (swinging the centre over the face) latched the hover
-      const overFace = restingPoly !== null && f.triangles !== undefined ? overlapsTriangles(restingPoly, f.normal, f.triangles) : overM <= HOVER_OVER_FACE_M;
+      const overFace = restingPoly !== null && f.triangles !== undefined ? overlapsTriangles(restingPoly, f.normal, f.triangles, marginM) : overM <= HOVER_OVER_FACE_M;
       const score = d + angleDeg * 1e-3 + (overFace ? 0 : 1);
       if (nearest === null || score < nearest.planeGapM + nearest.angleDeg * 1e-3 + (nearest.overFace ? 0 : 1)) nearest = { id: c.id, planeGapM: d, angleDeg, bodyGapM: c.bodyGapM, overFace };
       if (!(cos >= cosMin && d <= maxGapM && c.bodyGapM <= maxGapM && overFace)) continue;
@@ -269,11 +271,15 @@ export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
  * 60 fps (2.2 mm at 120) past the 0.5 mm the solver keeps — the next orbit frame found the piece inside, its relocation jumped it ≥ 1 cm
  * along the ring. Returns the drawn lag `(du, dv)` to add to the solved offset; `[0, 0]` before any step.
  */
+// ⭐⭐⭐ (2026-10-15, the owner: *"in desktop mode, the sliding movement is jittery. It is ok in mobile mode"*) — the lag kept WHOLE while it is behind; only
+// its part AHEAD along the last step (past the solved place) is dropped. ⛔ It was projected onto the last step's direction, its part ACROSS dropped:
+// a mouse's integer-pixel steps through the per-axis band alternate axis from frame to frame (125 Hz against 143 fps), so the drawn piece swung
+// across by the lag on every switch — 5.6 mm a frame against a 0.7 mm step, in the vector
 export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number): [number, number] {
   const l = Math.hypot(dirU, dirV);
   if (!(l > 1e-12)) return [0, 0];
-  const s = Math.min(0, (lagU * dirU + lagV * dirV) / l);
-  return [(s * dirU) / l, (s * dirV) / l];
+  const ahead = Math.max(0, (lagU * dirU + lagV * dirV) / l);
+  return [lagU - (ahead * dirU) / l, lagV - (ahead * dirV) / l];
 }
 
 /**
@@ -434,11 +440,14 @@ export function convexOverlap2D(a: readonly (readonly [number, number])[], b: re
  * ⭐⭐ (2026-10-14, the owner: *"Most of the times, I achieve collision with the dy input of the orbit by reaching close to the gizmo with resting face and hosting faces aligned. The collision block further dy orbit move. However, the green highlight for hover latch does not appear and I need to input a slight dx orbit to latch the hover. Why is that? It is more user friendly if the latch is possible from the initial dy orbit collision."* · *"when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the movement shall default back to orbit even if the press has not been released."*) — **ANY PORTION OF THE RESTING FACE OVER A FACE**: the resting face's outline (`poly`, its convex
  * hull) and the face's triangles, both laid on the plane of `n`, overlap by more than `HOVER_OVERLAP_EPS_M` across.
  */
-export function overlapsTriangles(poly: readonly Vec3[], n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): boolean {
+export function overlapsTriangles(poly: readonly Vec3[], n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[], marginM = HOVER_OVERLAP_EPS_M): boolean {
   const [a, b] = planeAxes(n);
   const P = (p: Vec3): [number, number] => [dot(p, a), dot(p, b)];
   const hull = convexHull2D(poly.map(P));
-  return tris.some((t) => convexOverlap2D(hull, [P(t[0]), P(t[1]), P(t[2])]));
+  // ⭐⭐⭐ (2026-10-15, the owner: *"Make a margin of a couple of mm so that the piece slides within a margin of the boundary, not up to the edge to edge limit."*) — the overlap must be at least
+  // `marginM` across (`hoverEdgeMarginMm`), so the slide stops that far short of the edge-to-edge limit
+  const eps = Math.max(HOVER_OVERLAP_EPS_M, marginM);
+  return tris.some((t) => convexOverlap2D(hull, [P(t[0]), P(t[1]), P(t[2])], eps));
 }
 
 /**
@@ -502,8 +511,12 @@ export function boundStep(from: readonly [number, number], to: readonly [number,
   const dv = to[1] - from[1];
   const a = inside(to[0], from[1]);
   const b = inside(from[0], to[1]);
-  if (a && (!b || Math.abs(du) >= Math.abs(dv))) return [to[0], from[1]];
-  if (b) return [from[0], to[1]];
+  // ⭐⭐ (2026-10-15) a slide along an axis the step does not move on is no slide: ⛔ a step along u alone found its v-"slide" inside (it is `from`)
+  // and stopped where it stood, short of the edge — the halving below takes it up to the edge
+  const slideU = a && Math.abs(du) > 0;
+  const slideV = b && Math.abs(dv) > 0;
+  if (slideU && (!slideV || Math.abs(du) >= Math.abs(dv))) return [to[0], from[1]];
+  if (slideV) return [from[0], to[1]];
   let lo = 0;
   let hi = 1;
   for (let i = 0; i < iters; i++) {

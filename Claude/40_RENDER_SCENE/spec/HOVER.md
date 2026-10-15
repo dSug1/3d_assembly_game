@@ -1,7 +1,60 @@
 # The hover — the fine alignment on the contact surface (prototype spec)
 
-**Status:** built 2026-10-14 on `1.0.75-`, ⛔ **unjudged by a hand** (no device look; a hover and a capture of the orbited piece were
-not run end to end in the app — vectors and a headless drag only). Pure: `src/input/hover.ts`; wired: `src/render/hover_wiring.ts`.
+**Status:** built 2026-10-14 on `1.0.75-` → `1.0.76-` (live build `2a54a92`), ⛔ **unjudged by a hand** as a whole — the owner has driven it on
+the device through several rounds and reported defects, each fixed (§8–§17), but never closed it. Pure: `src/input/hover.ts`,
+`src/input/support_face.ts`; wired: `src/render/hover_wiring.ts` (and `orient_cube.ts` for the supporting face). Vectors:
+`tests/hover.test.ts`.
+
+⭐⭐⭐ **START WITH §0** — the hover AS IT STANDS. §1–§17 are the record, in order; later sections supersede earlier ones and say so.
+
+## 0. THE HOVER AS IT STANDS (2026-10-14, `2a54a92`) — read this first
+
+**What it is**: the fine placement of the orbited piece (green / turquoise) on a part's face, after the orbit's approach and the quads' turn;
+the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
+
+* **Ready (the latch)** — the resting face LOOKS AT a part's face: anti-parallel within 2°, within `hoverApproachMm` (20 mm) of its plane,
+  and ANY PORTION of the resting face over that face (`overlapsTriangles`, §15 — not its centre). Shown by the resting contour turning
+  GREEN #D8FDD2, the contact shadow (the resting face projected on the face), a faint fill of the face and the GREEN OUTLINE of all the
+  coplanar faces joined to it (§15). Looked for every 100 ms when the world moved; frozen bodies (the floor) are never hosts (§11, parked).
+* **Start** — a drag (left drag on desktop) that starts ON the piece, past the tap's slop. Refusals are named on the HUD's `last` line. The
+  piece SETTLES onto the face (solved, the model at once, drawn eased over 150 ms) to the 1 mm gap kept. The orbit's backlog is dropped and the
+  orbit HOLDS STILL while the hover is on (§10). Ends: the finger lifts; a second touch held; a goal capture (which spends the finger until it
+  lifts, §10).
+* **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
+  exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
+  `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where some portion of the resting face stays over a coplanar face
+  (`boundStep`, §16 — slides along the edge, reversing comes back at once). Solved ONCE a frame by the orbit's solver inside the frame's
+  24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
+  (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
+* **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
+  ahead (§9, §16). The other parts sway at 0.1°.
+* **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
+  is already on), reached on an ARC about the piece at the camera's own distance, by the hover drag's travel over `pieceOrbitEnterMm` (12 mm),
+  its share eased on the spring; left the same way by the orbit's travel; at its end exactly the rings' camera. ⚠ It ends only with no hover
+  on (§17 — the freeze).
+* **Back to the orbit** — the piece-only offset goes back to the ring place by the ORBIT drag's travel over `pieceOrbitEnterMm` (§13), solved
+  (8 of the frame's 24 queries kept for it), drawn on the spring (§16). The gizmo never moves on the toggle.
+* **Around it** (`RESTING_FACE_ALIGNMENT.md` §28–§29): with the quads hidden (the piece near the gizmo) the face SUPPORTING the gizmo is the
+  mating face — its full contour YELLOW (red while the turn is blocked), faded in/out as the quads disappear/appear; a tap on the piece makes
+  the face tapped the resting face and aligns it to the direction shown (the yellow quad, or that face). The resting face's yellow contour is
+  always shown at full scale.
+* **The orbited goals** (`LEVEL_END.md` §5quater): green and turquoise on Piece4's top, flush on its CONTOUR, judged in the WORLD at
+  `orbitGoalMm` 5 mm / `orbitGoalDeg` 3°; the green one accepts its long side along Piece4's top (or turned 180°), wide base down.
+
+**Open — what the next conversation should know**
+1. ⛔ **No device close.** Last reports fixed: the freeze (§17), the scaling (§29). The owner had not yet re-tested `2a54a92`.
+2. ⚠ **The red yellow while a turn still works** (explained, not changed): the red check sweeps the turn a tap on EMPTY space would make, from
+   the CURRENT resting face, finely; a tap on the piece makes another turn, unchecked; and the PLAYED turn (`restAlignFrame`, ~8 steps over
+   125 ms, held only when a step gets closer than it is) can pass through a thin corner the check catches — a real weak spot, offered as a fix
+   (make the played turn follow the check), not asked yet.
+3. ⚠ **"The green highlight is well inside the hosting face"** (the owner's attachment, 2026-10-14) — not explained: at that moment the HUD said
+   no part faced the piece, so no green should have been drawn; a front-on screenshot was asked for (a stale highlight is possible).
+4. ⚠ **"I cannot snap the goal of the green piece on Piece4's top"** — explained, not a defect: the piece stood 90° off (its long side across
+   the top); one more roll on the yellow, then hover to the centre (it overhangs the 30 mm top by design, the piece being 45 mm deep).
+5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
+6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
+7. ⚠ The hover is not an episode yet (`SCORE.md`).
+
 
 > *"We have built up to approach (the orbit around center dy) and roll long axis into line (the quads rotation of piece). Now we need to
 > define the hover for the fine edge-to-edge alignment of the piece and assembly. I am enclined to build the hover with a translation of

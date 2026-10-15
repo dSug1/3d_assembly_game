@@ -305,7 +305,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   });
   it("⭐ B: wired — the same look as the hover's start; the shadow, the hosting face's fill and the cyan contour", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;");
+    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z]), st.cfg.hoverEdgeMarginMm / 1000).contact;");
     expect(h).toContain("(c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();");
     // ⭐ (the hover's audit) set only when it changes — no colour cloned per line every frame
     expect(h).toContain("if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {");
@@ -343,9 +343,9 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐⭐ A: the drawn lag — behind along the last step only; nothing before a step", async () => {
     const { hoverDrawLag } = await import("../src/input/hover");
-    const k = hoverDrawLag(-0.002, 0.001, 1, 0); // behind kept, across dropped
+    const k = hoverDrawLag(-0.002, 0.001, 1, 0); // behind kept — ⭐ (2026-10-15) and across kept too: dropping it was the desktop jitter
     expect(k[0]).toBeCloseTo(-0.002, 15);
-    expect(k[1]).toBeCloseTo(0, 15);
+    expect(k[1]).toBeCloseTo(0.001, 15);
     expect(hoverDrawLag(0.002, 0, 1, 0)[0]).toBeCloseTo(0, 15); // ahead dropped
     expect(hoverDrawLag(0.002, 0, 0, 0)).toEqual([0, 0]);
     const [a, b] = hoverDrawLag(-0.001, -0.001, 1, 1);
@@ -799,5 +799,88 @@ describe("⭐⭐⭐ the regression: the hover froze (2026-10-14, the owner: *\"I
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
     expect(g).toContain("const k = 1;");
+  });
+});
+
+describe("⭐⭐⭐ the device pass of 2026-10-15 (the owner: *\"Make a margin of a couple of mm so that the piece slides within a margin of the boundary, not up to the edge to edge limit\"* · *\"in desktop mode, the sliding movement is jittery. It is ok in mobile mode\"*)", () => {
+  const up: Vec3 = [0, 1, 0];
+  const quad = (x0: number, x1: number, z0: number, z1: number, y = 0): [Vec3, Vec3, Vec3][] => [
+    [[x0, y, z0], [x1, y, z0], [x1, y, z1]],
+    [[x0, y, z0], [x1, y, z1], [x0, y, z1]],
+  ];
+  // the resting face, 40 × 40 mm, its left edge at x
+  const at = (x: number): Vec3[] => [[x, 0.001, 0.02], [x + 0.04, 0.001, 0.02], [x + 0.04, 0.001, 0.06], [x, 0.001, 0.06]];
+  it("⭐⭐⭐ THE EDGE MARGIN: the resting face must overlap the hosting faces by the margin — 1 mm over a face's edge no longer counts at 2 mm", async () => {
+    const { overlapsTriangles } = await import("../src/input/hover");
+    const face = quad(0, 0.1, 0, 0.1);
+    expect(overlapsTriangles(at(0.099), up, face, 0.002)).toBe(false); // ✅ 1 mm over: out (⛔ it counted)
+    expect(overlapsTriangles(at(0.097), up, face, 0.002)).toBe(true); // 3 mm over: in
+    expect(overlapsTriangles(at(0.099), up, face)).toBe(true); // no margin given: any portion, as before
+    // across a 3 mm joint of two coplanar faces, the face is always over one of them by far more than the margin
+    const two = [...face, ...quad(0.103, 0.2, 0, 0.1)];
+    for (let x = 0.06; x <= 0.105; x += 0.0005) expect(overlapsTriangles(at(x), up, two, 0.002)).toBe(true);
+  });
+  it("⭐⭐⭐ THE EDGE MARGIN: the bound stops the slide the margin short of the edge-to-edge limit", async () => {
+    const { overlapsTriangles, boundStep } = await import("../src/input/hover");
+    const face = quad(0, 0.1, 0, 0.1);
+    const inside = (u: number) => overlapsTriangles(at(u), up, face, 0.002);
+    const stop = boundStep([0.05, 0], [0.2, 0], inside)[0];
+    expect(stop).toBeLessThanOrEqual(0.098 + 1e-9); // the left edge at most 2 mm short of the face's right edge
+    expect(stop).toBeGreaterThan(0.0975); // and right up to it (12 halvings)
+  });
+  it("⭐⭐ THE EDGE MARGIN: the latch reads it too — a resting face over a face by less than the margin does not latch", () => {
+    const f = { id: "top", bodyGapM: 0.001, faces: [{ faceId: "f", centre: [0.05, 0, 0.05] as Vec3, normal: up, triangles: quad(0, 0.1, 0, 0.1) }] };
+    const down: Vec3 = [0, -1, 0];
+    const poly = at(0.099);
+    const c: Vec3 = [0.119, 0.001, 0.04];
+    expect(hoverFaceContact(c, down, [f], 0.02, 2, poly, 0.002).contact).toBeNull(); // ✅ 1 mm over: no latch
+    expect(hoverFaceContact(c, down, [f], 0.02, 2, poly).contact?.id).toBe("top"); // no margin: as before
+    expect(hoverFaceContact([0.117, 0.001, 0.04], down, [f], 0.02, 2, at(0.097), 0.002).contact?.id).toBe("top");
+  });
+  it("⭐⭐ THE EDGE MARGIN: a tunable, 2 mm, read by the latch, the readiness look and the bound", () => {
+    expect(DEFAULT_CONFIG.hoverEdgeMarginMm).toBe(2);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverEdgeMarginMm: -1 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverEdgeMarginMm: 30 })).toThrow();
+    const h = code("render/hover_wiring.ts");
+    expect(h.match(/st\.cfg\.hoverEdgeMarginMm \/ 1000/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+  });
+  it("⭐⭐⭐ THE DESKTOP JITTER: a diagonal mouse drag whose solved steps alternate axis (integer pixels through the per-axis band) — the DRAWN piece moves steadily", async () => {
+    const { hoverDrawLag } = await import("../src/input/hover");
+    const { advanceFollow } = await import("../src/input/follow");
+    const tau = DEFAULT_CONFIG.boxSmoothMs / 2000;
+    const dt = 1 / 143; // the owner's frame rate
+    let u = 0, v = 0, du = 0, dv = 0;
+    let fu = { x: 0, v: 0 }, fv = { x: 0, v: 0 };
+    const drawn: [number, number][] = [];
+    for (let i = 0; i < 286; i++) {
+      // the solved step of the frame: along u, then along v, then both — a steady diagonal 0.1 m/s on average
+      const k = i % 3;
+      const s = 0.1 * dt * 1.5;
+      const su = k === 0 ? s : k === 2 ? s / 2 : 0;
+      const sv = k === 1 ? s : k === 2 ? s / 2 : 0;
+      u += su;
+      v += sv;
+      du = su;
+      dv = sv;
+      fu = advanceFollow(fu, u, tau, 1, dt);
+      fv = advanceFollow(fv, v, tau, 1, dt);
+      const [lu, lv] = hoverDrawLag(fu.x - u, fv.x - v, du, dv);
+      drawn.push([u + lu, v + lv]);
+    }
+    // the drawn step's component ACROSS the drag's direction, frame to frame, once settled: no back-and-forth
+    const across = drawn.slice(144).map((p, i, a) => (i === 0 ? 0 : (p[0] - a[i - 1]![0] - (p[1] - a[i - 1]![1])) / Math.SQRT2)).slice(1);
+    const mean = 0.1 * dt;
+    const worst = Math.max(...across.map(Math.abs));
+    expect(worst).toBeLessThan(0.15 * mean); // ⛔ it swung across by more than the step itself
+  });
+  it("⭐⭐ THE DESKTOP JITTER: the drawn lag — kept whole while behind, only an AHEAD part (past the solved place) dropped", async () => {
+    const { hoverDrawLag } = await import("../src/input/hover");
+    const k = hoverDrawLag(-0.002, 0.001, 1, 0); // behind, and across: both kept (⛔ across was dropped — the jitter)
+    expect(k[0]).toBeCloseTo(-0.002, 15);
+    expect(k[1]).toBeCloseTo(0.001, 15);
+    const a = hoverDrawLag(0.002, 0.001, 1, 0); // ahead along the step: dropped, across kept
+    expect(a[0]).toBeCloseTo(0, 15);
+    expect(a[1]).toBeCloseTo(0.001, 15);
+    expect(hoverDrawLag(0.002, 0, 0, 0)).toEqual([0, 0]); // nothing before a step
   });
 });

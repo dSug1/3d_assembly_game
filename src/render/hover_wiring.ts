@@ -177,7 +177,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   // ⭐⭐ the resting face against a part's FACE: their own planes, their own distance (`hoverFaceContact`) — the parts within 10 mm looked at
   // ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) A — within the hover's REACH, not only touching: the piece will SETTLE onto the face first
   const reach = Math.max(maxGap, st.cfg.hoverApproachMm / 1000);
-  const found = hoverFaceContact(anchor, restingW, hoverCandidates(st, Math.max(reach, HOVER_LOOK_M), setup), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, anchor, rot));
+  const found = hoverFaceContact(anchor, restingW, hoverCandidates(st, Math.max(reach, HOVER_LOOK_M), setup), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, anchor, rot), st.cfg.hoverEdgeMarginMm / 1000);
   const c = found.contact;
   if (c === null) {
     const nr = found.nearest;
@@ -185,7 +185,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
       nr === null
         ? `the resting face faces no part within ${HOVER_LOOK_M * 1000} mm`
         : !nr.overFace
-          ? `no part of the resting face is over ${nr.id}'s face (beside it)`
+          ? `the resting face is not over ${nr.id}'s face by ${st.cfg.hoverEdgeMarginMm} mm (beside it)`
           : `the resting face is ${(nr.planeGapM * 1000).toFixed(1)} mm from ${nr.id}'s face, ${nr.angleDeg.toFixed(1)}° off anti-parallel (needs ≤ ${(reach * 1000).toFixed(0)} mm and ≤ ${HOVER_ALIGN_DEG}°)`,
     );
   }
@@ -385,7 +385,7 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   const inside = (u: number, v: number): boolean => {
     if (h.coplanar.length === 0) return true;
     const poly = restingPolyWorld(st, add(h.origin, add(scale(h.e1, u), scale(h.e2, v))), rot);
-    return poly.length === 0 || overlapsTriangles(poly, h.n, h.coplanar);
+    return poly.length === 0 || overlapsTriangles(poly, h.n, h.coplanar, st.cfg.hoverEdgeMarginMm / 1000);
   };
   h.pending = boundStep([h.u, h.v], h.pending, inside);
   if (Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) <= 1e-12) {
@@ -584,15 +584,16 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   let ready = st.hoverReady;
   if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
-  else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
+  // ⭐ (2026-10-15) the key: the reach AND the edge margin (both sliders)
+  else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm * 1000 + st.cfg.hoverEdgeMarginMm)) {
     // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
     st.hoverReadyAt = now;
     st.hoverReadyWorld = st.world;
-    st.hoverReadyReachMm = st.cfg.hoverApproachMm;
+    st.hoverReadyReachMm = st.cfg.hoverApproachMm * 1000 + st.cfg.hoverEdgeMarginMm;
     const r = b.rotationQuaternion ?? Quaternion.Identity();
     const restingW = qRotate([r.w, r.x, r.y, r.z], p.restingFace.normal);
     const reach = st.cfg.hoverApproachMm / 1000;
-    const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;
+    const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z]), st.cfg.hoverEdgeMarginMm / 1000).contact;
     ready = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
   }
   st.hoverReady = ready;
