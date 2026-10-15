@@ -513,7 +513,8 @@ export interface SceneState {
     /** ⭐⭐ (2026-10-14) the finger's deadbanded place on the glass — each step read as two rays from the camera of the moment (`hoverFingerStep`) */
     finger: [number, number];
     /** ⭐⭐ (2026-10-14) the coloured triangles of every face in the hosting face's plane — the resting face over none of them ends the hover */
-    coplanar: [import("../core/vec").Vec3, import("../core/vec").Vec3, import("../core/vec").Vec3][];
+    /** ⭐⭐⭐ (2026-10-15) the drawn boundary the resting face's centre stays in (`coplanarBoundary`); `null`: none found — unbounded */
+    bound: { a: import("../core/vec").Vec3; b: import("../core/vec").Vec3; onFace: number; rects: import("../input/hover").Rect2[] } | null;
     partId: string;
     /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
     behind: Set<string>;

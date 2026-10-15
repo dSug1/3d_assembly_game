@@ -27,11 +27,12 @@ import {
   hoverCameraSwing,
   rayPlaneCoords,
   slerpDir,
-  overlapsTriangles,
-  rectUnionOutline,
   planeAxes,
   type Rect2,
   boundStep,
+  insideRects,
+  rectComponent,
+  rectsBoundary,
   hoverViewEnds,
   HOVER_ALIGN_DEG,
   hoverFaceContact,
@@ -67,6 +68,7 @@ const HOVER_LOOK_M = 0.01;
 
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
+const dotv = (p: Vec3, q: Vec3): number => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
 const lerp3 = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
 
 /** ⭐ A first touch (or left press) on the orbited piece: noted — the drag that follows hovers if the piece may (decided past the tap's slop). */
@@ -178,7 +180,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   // ⭐⭐ the resting face against a part's FACE: their own planes, their own distance (`hoverFaceContact`) — the parts within 10 mm looked at
   // ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) A — within the hover's REACH, not only touching: the piece will SETTLE onto the face first
   const reach = Math.max(maxGap, st.cfg.hoverApproachMm / 1000);
-  const found = hoverFaceContact(anchor, restingW, hoverCandidates(st, Math.max(reach, HOVER_LOOK_M), setup), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, anchor, rot), st.cfg.hoverEdgeMarginMm / 1000);
+  const found = hoverFaceContact(anchor, restingW, hoverCandidates(st, Math.max(reach, HOVER_LOOK_M), setup), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, anchor, rot));
   const c = found.contact;
   if (c === null) {
     const nr = found.nearest;
@@ -186,7 +188,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
       nr === null
         ? `the resting face faces no part within ${HOVER_LOOK_M * 1000} mm`
         : !nr.overFace
-          ? `the resting face is not over ${nr.id}'s face by ${st.cfg.hoverEdgeMarginMm} mm (beside it)`
+          ? `no part of the resting face is over ${nr.id}'s face (beside it)`
           : `the resting face is ${(nr.planeGapM * 1000).toFixed(1)} mm from ${nr.id}'s face, ${nr.angleDeg.toFixed(1)}° off anti-parallel (needs ≤ ${(reach * 1000).toFixed(0)} mm and ≤ ${HOVER_ALIGN_DEG}°)`,
     );
   }
@@ -214,7 +216,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], finger: [0, 0], partId: c.id, behind, coplanar: coplanarFaces(st, c.normal, level).flatMap((x) => x.tris) };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], finger: [0, 0], partId: c.id, behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
   st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
@@ -380,13 +382,12 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   // ⭐⭐⭐ (2026-10-14, the owner: *"modify: when there is not any portion of the resting face in contact with a hosting face (i.e. on its full surface, the resting face faces empty) the hover translation shall stop and be bounded by the hosting face contour and the user shall be able to bring back the hovering piece inside the boundary by reversing the delta position input. No more automatic transition to orbit."*) — the target held where some portion of the resting face stays over a coplanar hosting face
   // (`boundStep`: the whole step, else along one axis — sliding on the boundary — else as far as it goes); the finger's excess dropped, so its
   // reversal brings the piece back at once
-  const gb = st.greenBox;
-  const rq = gb?.rotationQuaternion ?? Quaternion.Identity();
-  const rot: Quat = [rq.w, rq.x, rq.y, rq.z];
+  // ⭐⭐⭐ (2026-10-15, the owner: *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face remains within the boundary."*) — the resting face's CENTRE within the
+  // drawn boundary (`insideRects`, the outline's own rectangles) — ⛔ the edge margin (an overlap of its outline) is deleted
   const inside = (u: number, v: number): boolean => {
-    if (h.coplanar.length === 0) return true;
-    const poly = restingPolyWorld(st, add(h.origin, add(scale(h.e1, u), scale(h.e2, v))), rot);
-    return poly.length === 0 || overlapsTriangles(poly, h.n, h.coplanar, st.cfg.hoverEdgeMarginMm / 1000);
+    if (h.bound === null) return true;
+    const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v)));
+    return insideRects(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));
   };
   h.pending = boundStep([h.u, h.v], h.pending, inside);
   if (Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) <= 1e-12) {
@@ -586,16 +587,15 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   let ready = st.hoverReady;
   if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
-  // ⭐ (2026-10-15) the key: the reach AND the edge margin (both sliders)
-  else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm * 1000 + st.cfg.hoverEdgeMarginMm)) {
+  else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
     // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
     st.hoverReadyAt = now;
     st.hoverReadyWorld = st.world;
-    st.hoverReadyReachMm = st.cfg.hoverApproachMm * 1000 + st.cfg.hoverEdgeMarginMm;
+    st.hoverReadyReachMm = st.cfg.hoverApproachMm;
     const r = b.rotationQuaternion ?? Quaternion.Identity();
     const restingW = qRotate([r.w, r.x, r.y, r.z], p.restingFace.normal);
     const reach = st.cfg.hoverApproachMm / 1000;
-    const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z]), st.cfg.hoverEdgeMarginMm / 1000).contact;
+    const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;
     ready = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
   }
   st.hoverReady = ready;
@@ -645,28 +645,38 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
 /** ⭐ The faces' joints are bridged: the coloured cores of two touching parts stand 3 mm apart (their contours meet). */
 const OUTLINE_GROW_M = 0.0016;
 /**
+ * ⭐⭐⭐ (2026-10-15) THE BOUNDARY — the one the outline draws and the slide's clamp reads (`insideRects`): the coplanar faces joined to the hosting
+ * face, by their extents, grown by `OUTLINE_GROW_M`; `null` with no hosting face found among them.
  * ⭐⭐ (2026-10-14, the owner: *"Display also a green highlight over the biggest boundary of coplanar hosting faces so the user can visually couple it with the green highlight of the resting face (similar to yellow highlight for resting face and quad)."*) — the coplanar faces of the hosting face's plane, each by its extent on the plane's axes (the world's, for a
- * face square to them), the ones joined to the hosting face, their union's BOUNDARY (`rectUnionOutline`) drawn green on the coloured faces.
+ * face square to them), the ones joined to the hosting face, their union's BOUNDARY (`rectsBoundary` of `rectComponent`) drawn green on the coloured faces.
  */
-function buildCoplanarOutline(st: SceneState, ready: NonNullable<SceneState["hoverReady"]>): LinesMesh | null {
-  const n = ready.normal;
-  const level = n[0] * ready.centre[0] + n[1] * ready.centre[1] + n[2] * ready.centre[2];
+export function coplanarBoundary(st: SceneState, n: Vec3, centre: Vec3, id: string, faceId: string | null): { a: Vec3; b: Vec3; onFace: number; rects: Rect2[] } | null {
+  const level = n[0] * centre[0] + n[1] * centre[1] + n[2] * centre[2];
   const faces = coplanarFaces(st, n, level);
-  const seed = faces.findIndex((f) => f.id === ready.id && f.faceId === ready.faceId);
+  const seed = faces.findIndex((f) => f.id === id && f.faceId === faceId);
   if (seed < 0) return null;
   // the plane's axes: the world's when the face is square to them (exact extents), else any
   const ax = [0, 1, 2].findIndex((i) => Math.abs(n[i]!) > 0.999);
   const [a, b]: [Vec3, Vec3] =
     ax === 0 ? [[0, 1, 0], [0, 0, 1]] : ax === 1 ? [[1, 0, 0], [0, 0, 1]] : ax === 2 ? [[1, 0, 0], [0, 1, 0]] : planeAxes(n);
-  const dotv = (p: Vec3, q: Vec3) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
   const rects: Rect2[] = faces.map((f) => {
     const xs = f.tris.flatMap((t) => t.map((p) => dotv(p, a)));
     const ys = f.tris.flatMap((t) => t.map((p) => dotv(p, b)));
     return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
   });
-  const segs = rectUnionOutline(rects, seed, OUTLINE_GROW_M);
+  const comp = rectComponent(rects, seed, OUTLINE_GROW_M);
+  if (comp.length === 0) return null;
+  return { a, b, onFace: dotv(faces[seed]!.tris[0]![0], n), rects: comp };
+}
+
+function buildCoplanarOutline(st: SceneState, ready: NonNullable<SceneState["hoverReady"]>): LinesMesh | null {
+  const n = ready.normal;
+  const bd = coplanarBoundary(st, n, ready.centre, ready.id, ready.faceId);
+  if (bd === null) return null;
+  const segs = rectsBoundary(bd.rects);
   if (segs.length === 0) return null;
-  const onFace = dotv(faces[seed]!.tris[0]![0], n) + 0.0004; // the coloured face's plane, lifted
+  const { a, b } = bd;
+  const onFace = bd.onFace + 0.0004; // the coloured face's plane, lifted
   const P3 = (x: number, y: number) => new Vector3(a[0] * x + b[0] * y + n[0] * onFace, a[1] * x + b[1] * y + n[1] * onFace, a[2] * x + b[2] * y + n[2] * onFace);
   const lines = CreateLineSystem("hover-outline", { lines: segs.map(([p, q]) => [P3(p[0], p[1]), P3(q[0], q[1])]) }, st.scene);
   lines.color = READY_COLOUR.clone();

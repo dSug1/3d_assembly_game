@@ -305,7 +305,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   });
   it("⭐ B: wired — the same look as the hover's start; the shadow, the hosting face's fill and the cyan contour", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z]), st.cfg.hoverEdgeMarginMm / 1000).contact;");
+    expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;");
     // ⭐ (2026-10-15) the resting face's contour is green whatever the state: no tint switched any more (`quad_gate.test.ts`)
     expect(h).toContain("st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);");
     expect(code("render/green_box_wiring.ts")).toContain("hoverVisualFrame(st, now);");
@@ -664,7 +664,8 @@ describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the dra
     expect(h).toContain("h.pending = boundStep([h.u, h.v], h.pending, inside);");
   });
   it("⭐⭐ 2: the outline of the coplanar faces joined to the host — two parts a joint apart read as one; a far one left out", async () => {
-    const { rectUnionOutline } = await import("../src/input/hover");
+    const { rectComponent, rectsBoundary } = await import("../src/input/hover");
+    const rectUnionOutline = (r: { x0: number; y0: number; x1: number; y1: number }[], seed: number, grow: number) => rectsBoundary(rectComponent(r, seed, grow)); // ⭐ (2026-10-15) the outline, as the product builds it
     const segs = rectUnionOutline([{ x0: 0, y0: 0, x1: 0.1, y1: 0.1 }, { x0: 0.103, y0: 0, x1: 0.2, y1: 0.05 }, { x0: 1, y0: 1, x1: 1.1, y1: 1.1 }], 0, 0.0016);
     const len = segs.reduce((s, [p, q]) => s + Math.hypot(q[0] - p[0], q[1] - p[1]), 0);
     // the union of the two grown rectangles: an L — its perimeter
@@ -773,55 +774,11 @@ describe("⭐⭐⭐ the regression: the hover froze (2026-10-14, the owner: *\"I
   });
 });
 
-describe("⭐⭐⭐ the device pass of 2026-10-15 (the owner: *\"Make a margin of a couple of mm so that the piece slides within a margin of the boundary, not up to the edge to edge limit\"* · *\"in desktop mode, the sliding movement is jittery. It is ok in mobile mode\"*)", () => {
-  const up: Vec3 = [0, 1, 0];
-  const quad = (x0: number, x1: number, z0: number, z1: number, y = 0): [Vec3, Vec3, Vec3][] => [
-    [[x0, y, z0], [x1, y, z0], [x1, y, z1]],
-    [[x0, y, z0], [x1, y, z1], [x0, y, z1]],
-  ];
-  // the resting face, 40 × 40 mm, its left edge at x
-  const at = (x: number): Vec3[] => [[x, 0.001, 0.02], [x + 0.04, 0.001, 0.02], [x + 0.04, 0.001, 0.06], [x, 0.001, 0.06]];
-  it("⭐⭐⭐ THE EDGE MARGIN: the resting face must overlap the hosting faces by the margin — 1 mm over a face's edge no longer counts at 2 mm", async () => {
-    const { overlapsTriangles } = await import("../src/input/hover");
-    const face = quad(0, 0.1, 0, 0.1);
-    expect(overlapsTriangles(at(0.099), up, face, 0.002)).toBe(false); // ✅ 1 mm over: out (⛔ it counted)
-    expect(overlapsTriangles(at(0.097), up, face, 0.002)).toBe(true); // 3 mm over: in
-    expect(overlapsTriangles(at(0.099), up, face)).toBe(true); // no margin given: any portion, as before
-    // across a 3 mm joint of two coplanar faces, the face is always over one of them by far more than the margin
-    const two = [...face, ...quad(0.103, 0.2, 0, 0.1)];
-    for (let x = 0.06; x <= 0.105; x += 0.0005) expect(overlapsTriangles(at(x), up, two, 0.002)).toBe(true);
-  });
-  it("⭐⭐⭐ THE EDGE MARGIN: the bound stops the slide the margin short of the edge-to-edge limit", async () => {
-    const { overlapsTriangles, boundStep } = await import("../src/input/hover");
-    const face = quad(0, 0.1, 0, 0.1);
-    const inside = (u: number) => overlapsTriangles(at(u), up, face, 0.002);
-    const stop = boundStep([0.05, 0], [0.2, 0], inside)[0];
-    expect(stop).toBeLessThanOrEqual(0.098 + 1e-9); // the left edge at most 2 mm short of the face's right edge
-    expect(stop).toBeGreaterThan(0.0975); // and right up to it (12 halvings)
-  });
-  it("⭐⭐ THE EDGE MARGIN: the latch reads it too — a resting face over a face by less than the margin does not latch", () => {
-    const f = { id: "top", bodyGapM: 0.001, faces: [{ faceId: "f", centre: [0.05, 0, 0.05] as Vec3, normal: up, triangles: quad(0, 0.1, 0, 0.1) }] };
-    const down: Vec3 = [0, -1, 0];
-    const poly = at(0.099);
-    const c: Vec3 = [0.119, 0.001, 0.04];
-    expect(hoverFaceContact(c, down, [f], 0.02, 2, poly, 0.002).contact).toBeNull(); // ✅ 1 mm over: no latch
-    expect(hoverFaceContact(c, down, [f], 0.02, 2, poly).contact?.id).toBe("top"); // no margin: as before
-    expect(hoverFaceContact([0.117, 0.001, 0.04], down, [f], 0.02, 2, at(0.097), 0.002).contact?.id).toBe("top");
-  });
-  it("⭐⭐ THE EDGE MARGIN: a tunable, 2 mm, read by the latch, the readiness look and the bound", () => {
-    expect(DEFAULT_CONFIG.hoverEdgeMarginMm).toBe(2);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverEdgeMarginMm: -1 })).toThrow();
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverEdgeMarginMm: 30 })).toThrow();
-    const h = code("render/hover_wiring.ts");
-    expect(h.match(/st\.cfg\.hoverEdgeMarginMm \/ 1000/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
-    // ⭐ (2026-10-15, *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) — in the TOP-LEVEL OBJECT TRANSLATION section
-    const m = code("render/tuning_menu.ts");
-    const top = m.indexOf('title: "OBJECT TRANSLATION"');
-    const next = m.indexOf('title: "FACE ALIGNMENT"', top);
-    const at = m.indexOf('"hoverEdgeMarginMm", 0, 10, 0.5)');
-    expect(at).toBeGreaterThan(top);
-    expect(at).toBeLessThan(next);
-    expect(m.split('"hoverEdgeMarginMm"').length - 1).toBe(1); // one slider, not two
+describe("⭐⭐⭐ the device pass of 2026-10-15 (the owner: *\"Make a margin of a couple of mm (⛔ deleted the same day: the CENTRE bound below) so that the piece slides within a margin of the boundary, not up to the edge to edge limit\"* · *\"in desktop mode, the sliding movement is jittery. It is ok in mobile mode\"*)", () => {
+  it("⛔ THE EDGE MARGIN IS DELETED (2026-10-15, the owner: *\"Remove the slider resting face margin on the boundary\"*) — no tunable, no slider", () => {
+    expect((DEFAULT_CONFIG as unknown as Record<string, unknown>).hoverEdgeMarginMm).toBeUndefined();
+    expect(code("render/tuning_menu.ts")).not.toContain("hoverEdgeMarginMm");
+    expect(code("render/hover_wiring.ts")).not.toContain("hoverEdgeMarginMm");
   });
   it("⭐⭐⭐ THE DESKTOP JITTER: a diagonal mouse drag whose solved steps alternate axis (integer pixels through the per-axis band) — the DRAWN piece moves steadily", async () => {
     const { hoverDrawLag } = await import("../src/input/hover");
@@ -861,5 +818,47 @@ describe("⭐⭐⭐ the device pass of 2026-10-15 (the owner: *\"Make a margin o
     expect(a[0]).toBeCloseTo(0, 15);
     expect(a[1]).toBeCloseTo(0.001, 15);
     expect(hoverDrawLag(0.002, 0, 0, 0)).toEqual([0, 0]); // nothing before a step
+  });
+});
+
+describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face remains within the boundary.\"*)", () => {
+  // two coplanar faces a 3 mm joint apart (their extents), a far third one
+  const rects = [
+    { x0: 0, y0: 0, x1: 0.1, y1: 0.1 },
+    { x0: 0.103, y0: 0, x1: 0.2, y1: 0.1 },
+    { x0: 0.5, y0: 0, x1: 0.6, y1: 0.1 },
+  ];
+  it("⭐⭐⭐ the boundary IS the drawn outline's: the faces joined to the host (each grown by the outline's own 1.6 mm — the drawing's, nothing added), the same rectangles the outline is drawn from", async () => {
+    const { rectComponent } = await import("../src/input/hover");
+    const comp = rectComponent(rects, 0, 0.0016);
+    expect(comp).toHaveLength(2); // the far face is not joined
+    for (const [k, v] of Object.entries({ x0: -0.0016, y0: -0.0016, x1: 0.1016, y1: 0.1016 })) expect(comp[0]![k as "x0"]).toBeCloseTo(v, 12);
+    // one source for the drawing and the clamp: the outline is drawn from these rectangles (`rectsBoundary(bd.rects)`, wired below)
+  });
+  it("⭐⭐⭐ the centre inside the drawn boundary — across the joint (drawn as one), not beyond the outline, not on the far face", async () => {
+    const { rectComponent, insideRects } = await import("../src/input/hover");
+    const comp = rectComponent(rects, 0, 0.0016);
+    expect(insideRects(comp, 0.05, 0.05)).toBe(true);
+    expect(insideRects(comp, 0.1015, 0.05)).toBe(true); // in the joint: the outline is drawn round both
+    expect(insideRects(comp, 0.2016, 0.05)).toBe(true); // ON the outline
+    expect(insideRects(comp, 0.2017, 0.05)).toBe(false); // past it
+    expect(insideRects(comp, 0.55, 0.05)).toBe(false); // the far face: not joined, not drawn
+  });
+  it("⭐⭐⭐ clamped: a slide outward stops with the centre ON the boundary, slides along it, and reverses at once", async () => {
+    const { rectComponent, insideRects, boundStep } = await import("../src/input/hover");
+    const comp = rectComponent(rects, 0, 0.0016);
+    const inside = (u: number, v: number) => insideRects(comp, u, v);
+    const stop = boundStep([0.15, 0.05], [0.3, 0.05], inside);
+    expect(stop[0]).toBeLessThanOrEqual(0.2016 + 1e-12);
+    expect(stop[0]).toBeGreaterThan(0.2016 - 0.15 / 4096 - 1e-9); // up to it (12 halvings)
+    expect(boundStep([0.2016, 0.05], [0.25, 0.07], inside)).toEqual([0.2016, 0.07]); // along the edge
+    expect(boundStep([0.2016, 0.05], [0.18, 0.05], inside)).toEqual([0.18, 0.05]); // reversed: back at once
+  });
+  it("⭐⭐⭐ wired: the hover keeps the boundary it started with (`coplanarBoundary`, the outline's own), and its bound reads the resting face's CENTRE in it", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId)");
+    expect(h).toContain("const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v))); return insideRects(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));");
+    expect(h).toContain("const segs = rectsBoundary(bd.rects);"); // the drawn outline from the same rectangles
+    expect(h).not.toMatch(/overlapsTriangles\(poly, h\.n/); // ⛔ the overlap of the resting face's outline is no longer the bound
   });
 });
