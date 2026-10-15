@@ -174,6 +174,8 @@ export interface HoverFaceCandidate {
  * 10 mm above the plane of its top, turned cyan, and the settle took it 9 mm down into the air.
  */
 export const HOVER_OVER_FACE_M = 0.002;
+/** ⭐ (2026-10-15) how far BEHIND a face's plane the resting face's centre may be and still latch (m) — contact rounding only: a resting face hosts IN FRONT of the face. */
+export const HOVER_BEHIND_M = 0.001;
 
 /** ⭐ (2026-10-14, the hover's second audit) A point's distance, in a plane (`n`), to a set of triangles lying in it — 0 inside one. */
 export function distanceToTriangles(p: Vec3, n: Vec3, tris: readonly (readonly [Vec3, Vec3, Vec3])[]): number {
@@ -210,7 +212,11 @@ export function hoverFaceContact(
     for (const f of c.faces) {
       const cos = -dot(restingNormalW, f.normal); // 1: the resting face looks straight at the face
       const d = dot(f.normal, [restingCentreW[0] - f.centre[0], restingCentreW[1] - f.centre[1], restingCentreW[2] - f.centre[2]]);
-      if (cos <= 0 || d < -maxGapM) continue; // a face looking away, or behind the resting face
+      // ⭐⭐⭐ (2026-10-15, the owner: *"the green piece approaches from underneath … the slanted face allows the resting face to be close enough to the hosting
+      // face. as a result, the sliding is odd"*) — a face looking away, or one the resting face is BEHIND (beyond `HOVER_BEHIND_M`, contact rounding):
+      // ⛔ it was allowed the whole reach (20 mm) behind the plane — a slanted piece tucked beside / under a part latched onto a face it was behind,
+      // the hover ran on that plane and the parts "behind" it (the host among them) were exempt from its checks
+      if (cos <= 0 || d < -HOVER_BEHIND_M) continue;
       const angleDeg = (Math.acos(Math.min(1, cos)) * 180) / Math.PI;
       const onPlane: Vec3 = [restingCentreW[0] - f.normal[0] * d, restingCentreW[1] - f.normal[1] * d, restingCentreW[2] - f.normal[2] * d];
       const overM = f.triangles === undefined ? 0 : distanceToTriangles(onPlane, f.normal, f.triangles);
@@ -513,12 +519,18 @@ export function rectsBoundary(comp: readonly Rect2[]): [[number, number], [numbe
 
 /**
  * ⭐⭐⭐ (2026-10-15, the owner: *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face
- * remains within the boundary."*) — **THE CENTRE BOUND**: a point (the resting face's centre, on the plane's axes) within the drawn boundary — inside
- * or on one of its rectangles (`rectComponent`). ⛔ It replaced the edge margin (an overlap of the resting face's outline of at least
- * `hoverEdgeMarginMm`), deleted with its slider.
+ * remains within the boundary."* → *"a rapid delta position can throw the piece outside the boundary"*) — **THE DISTANCE TO THE DRAWN BOUNDARY**: of a point
+ * (the resting face's centre, on the plane's axes) to the nearest of its rectangles (`rectComponent`) — 0 inside or on it, `Infinity` with none. The
+ * clamp keeps it from GROWING (`boundStep`, `holdOffBound`).
  */
-export function insideRects(comp: readonly Rect2[], x: number, y: number): boolean {
-  return comp.some((r) => x >= r.x0 - 1e-12 && x <= r.x1 + 1e-12 && y >= r.y0 - 1e-12 && y <= r.y1 + 1e-12);
+export function rectsDistance(comp: readonly Rect2[], x: number, y: number): number {
+  let best = Infinity;
+  for (const r of comp) {
+    const dx = Math.max(r.x0 - x, 0, x - r.x1);
+    const dy = Math.max(r.y0 - y, 0, y - r.y1);
+    best = Math.min(best, dx <= 1e-12 && dy <= 1e-12 ? 0 : Math.hypot(dx, dy));
+  }
+  return best;
 }
 
 /**
@@ -531,13 +543,20 @@ export function insideRects(comp: readonly Rect2[], x: number, y: number): boole
  * aim; held at `from` only when the step went from INSIDE the boundary to outside. ⛔ It was held whenever the solved place was outside — a hover
  * starting with the centre outside (the latch is any portion of the resting face, §15) was put back at its start every frame: the piece froze.
  */
-export function holdOffBound(from: readonly [number, number], solved: readonly [number, number], inside: (u: number, v: number) => boolean): [number, number] {
-  return inside(from[0], from[1]) && !inside(solved[0], solved[1]) ? [from[0], from[1]] : [solved[0], solved[1]];
+export function holdOffBound(from: readonly [number, number], solved: readonly [number, number], dist: (u: number, v: number) => number): [number, number] {
+  // ⭐⭐⭐ (2026-10-15, *"a rapid delta position can throw the piece outside the boundary"*) — held whenever it ends FARTHER from the boundary than it
+  // started (from inside: off it; from outside: away from it)
+  return dist(solved[0], solved[1]) > dist(from[0], from[1]) + 1e-12 ? [from[0], from[1]] : [solved[0], solved[1]];
 }
 
-export function boundStep(from: readonly [number, number], to: readonly [number, number], inside: (u: number, v: number) => boolean, iters = 12): [number, number] {
-  // ⭐ (2026-10-14, the owner: *"regression: I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes."*) a hover starting OUTSIDE the bound is not held by it (it would never move): free until it is inside
-  if (!inside(from[0], from[1]) || inside(to[0], to[1])) return [to[0], to[1]];
+export function boundStep(from: readonly [number, number], to: readonly [number, number], dist: (u: number, v: number) => number, iters = 12): [number, number] {
+  // ⭐⭐⭐ (2026-10-15, the owner: *"a rapid delta position can throw the piece outside the boundary and when the orbit restart, the piece is not reachable
+  // any longer and does not follow the orbit"*) — ONE RULE: a step may never take the centre FARTHER from the drawn boundary than it is (`dist`, 0
+  // inside). Inside, it cannot leave; outside (the latch is any portion of the resting face, §15), it moves toward it or along it, never away.
+  // ⛔ (2026-10-14, the §17 freeze) a hover starting outside was FREE until inside — one fast drag away threw the piece metres off
+  const d0 = dist(from[0], from[1]);
+  const inside = (u: number, v: number): boolean => dist(u, v) <= d0 + 1e-12;
+  if (inside(to[0], to[1])) return [to[0], to[1]];
   const du = to[0] - from[0];
   const dv = to[1] - from[1];
   const a = inside(to[0], from[1]);

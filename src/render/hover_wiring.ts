@@ -32,7 +32,7 @@ import {
   boundStep,
   holdOffBound,
   wayInDue,
-  insideRects,
+  rectsDistance,
   rectComponent,
   rectsBoundary,
   hoverViewEnds,
@@ -386,12 +386,13 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   // reversal brings the piece back at once
   // ⭐⭐⭐ (2026-10-15, the owner: *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face remains within the boundary."*) — the resting face's CENTRE within the
   // drawn boundary (`insideRects`, the outline's own rectangles) — ⛔ the edge margin (an overlap of its outline) is deleted
-  const inside = (u: number, v: number): boolean => {
-    if (h.bound === null) return true;
+  // ⭐⭐⭐ (2026-10-15) the centre's DISTANCE to the boundary, never to grow (`boundStep`, `holdOffBound`) — ⛔ an in/out test left a hover starting outside free
+  const dist = (u: number, v: number): number => {
+    if (h.bound === null) return 0;
     const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v)));
-    return insideRects(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));
+    return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));
   };
-  h.pending = boundStep([h.u, h.v], h.pending, inside);
+  h.pending = boundStep([h.u, h.v], h.pending, dist);
   if (Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) <= 1e-12) {
     st.lastVerdict = "hover: at the edge of the hosting faces — reverse to come back";
     st.hudDirty = true;
@@ -411,7 +412,7 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   h.pending = hoverPendingAfter([nu, nv], r.deferred, h.pending);
   // ⭐⭐ a slide that carried the centre off the boundary: held where it was — ⭐⭐⭐ (2026-10-15, the Fable audit) only a step from INSIDE (`holdOffBound`)
   const was: [number, number] = [nu, nv];
-  [nu, nv] = holdOffBound([h.u, h.v], [nu, nv], inside);
+  [nu, nv] = holdOffBound([h.u, h.v], [nu, nv], dist);
   if (nu !== was[0] || nv !== was[1]) h.pending = [h.u, h.v];
   if (Math.abs(nu - h.u) + Math.abs(nv - h.v) > 1e-12) {
     hf.du = nu - h.u;

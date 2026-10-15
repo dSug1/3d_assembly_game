@@ -661,7 +661,7 @@ describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the dra
     expect(overlapsTriangles(at(0.25), up, faces)).toBe(false); // wholly over the void: back to the orbit
     const h = code("render/hover_wiring.ts");
     expect(h).not.toContain("the resting face left the hosting faces — the drag orbits");
-    expect(h).toContain("h.pending = boundStep([h.u, h.v], h.pending, inside);");
+    expect(h).toContain("h.pending = boundStep([h.u, h.v], h.pending, dist);");
   });
   it("⭐⭐ 2: the outline of the coplanar faces joined to the host — two parts a joint apart read as one; a far one left out", async () => {
     const { rectComponent, rectsBoundary } = await import("../src/input/hover");
@@ -689,7 +689,7 @@ describe("⭐⭐ a tap on the piece aligns to the yellow quad (2026-10-14, the o
 describe("⭐⭐⭐ the hover bounded by the hosting faces, the smooth draw (2026-10-14, the owner)", () => {
   it("⭐⭐⭐ the hover stops at the faces' edge, slides along it, and comes back by reversing — no switch to the orbit", async () => {
     const { boundStep } = await import("../src/input/hover");
-    const inside = (u: number, v: number) => u <= 0.1 && Math.abs(v) <= 0.05; // the faces: u ≤ 0.1, |v| ≤ 0.05
+    const inside = (u: number, v: number) => Math.hypot(Math.max(0, u - 0.1), Math.max(0, Math.abs(v) - 0.05)); // ⭐ (2026-10-15) the DISTANCE to the faces: u ≤ 0.1, |v| ≤ 0.05
     expect(boundStep([0, 0], [0.05, 0.01], inside)).toEqual([0.05, 0.01]); // inside: the whole step
     expect(boundStep([0.09, 0], [0.12, 0.02], inside)).toEqual([0.09, 0.02]); // along the edge: the axis that stays inside
     const s = boundStep([0.09, 0.04], [0.12, 0.07], inside); // a corner: as far as it goes
@@ -762,11 +762,12 @@ describe("⭐⭐⭐ the regression: the hover froze (2026-10-14, the owner: *\"I
     expect(hoverViewEnds(0, 0.2, false)).toBe(false); // still shown: eased out first
     expect(code("render/hover_wiring.ts")).toContain("if (hoverViewEnds(hv.progress, hv.shown, st.hover !== null)) {");
   });
-  it("⭐⭐ a hover starting OUTSIDE the faces' bound is not held by it", async () => {
+  it("⭐⭐ a hover starting OUTSIDE the faces' bound is not held by it — it moves TOWARD the boundary (⭐⭐⭐ 2026-10-15: never away)", async () => {
     const { boundStep } = await import("../src/input/hover");
-    const inside = (u: number) => u <= 0.1;
-    expect(boundStep([0.2, 0], [0.25, 0], inside)).toEqual([0.25, 0]); // ⛔ was held at [0.2, 0] for ever
-    expect(boundStep([0.05, 0], [0.25, 0], inside)[0]).toBeLessThanOrEqual(0.1); // inside: bounded as before
+    const dist = (u: number) => Math.max(0, u - 0.1);
+    expect(boundStep([0.2, 0], [0.15, 0], dist)).toEqual([0.15, 0]); // toward: moves (⛔ it was held at [0.2, 0] for ever, 2026-10-14)
+    expect(boundStep([0.2, 0], [0.25, 0], dist)).toEqual([0.2, 0]); // ⭐⭐⭐ away: held (⛔ free — a rapid drag threw the piece away, 2026-10-15)
+    expect(boundStep([0.05, 0], [0.25, 0], dist)[0]).toBeLessThanOrEqual(0.1); // inside: bounded as before
   });
   it("⭐ the resting face's contour: at full scale (⛔ 2026-10-15: no longer always shown — `quad_gate.test.ts`)", () => {
     const g = code("render/green_box_wiring.ts");
@@ -836,18 +837,18 @@ describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The
     // one source for the drawing and the clamp: the outline is drawn from these rectangles (`rectsBoundary(bd.rects)`, wired below)
   });
   it("⭐⭐⭐ the centre inside the drawn boundary — across the joint (drawn as one), not beyond the outline, not on the far face", async () => {
-    const { rectComponent, insideRects } = await import("../src/input/hover");
+    const { rectComponent, rectsDistance } = await import("../src/input/hover");
     const comp = rectComponent(rects, 0, 0.0016);
-    expect(insideRects(comp, 0.05, 0.05)).toBe(true);
-    expect(insideRects(comp, 0.1015, 0.05)).toBe(true); // in the joint: the outline is drawn round both
-    expect(insideRects(comp, 0.2016, 0.05)).toBe(true); // ON the outline
-    expect(insideRects(comp, 0.2017, 0.05)).toBe(false); // past it
-    expect(insideRects(comp, 0.55, 0.05)).toBe(false); // the far face: not joined, not drawn
+    expect(rectsDistance(comp, 0.05, 0.05)).toBe(0);
+    expect(rectsDistance(comp, 0.1015, 0.05)).toBe(0); // in the joint: the outline is drawn round both
+    expect(rectsDistance(comp, 0.2016, 0.05)).toBe(0); // ON the outline
+    expect(rectsDistance(comp, 0.2017, 0.05)).toBeCloseTo(0.0001, 12); // past it, by its distance
+    expect(rectsDistance(comp, 0.55, 0.05)).toBeCloseTo(0.55 - 0.2016, 12); // the far face: not joined, not drawn — the distance to the outline
   });
   it("⭐⭐⭐ clamped: a slide outward stops with the centre ON the boundary, slides along it, and reverses at once", async () => {
-    const { rectComponent, insideRects, boundStep } = await import("../src/input/hover");
+    const { rectComponent, rectsDistance, boundStep } = await import("../src/input/hover");
     const comp = rectComponent(rects, 0, 0.0016);
-    const inside = (u: number, v: number) => insideRects(comp, u, v);
+    const inside = (u: number, v: number) => rectsDistance(comp, u, v);
     const stop = boundStep([0.15, 0.05], [0.3, 0.05], inside);
     expect(stop[0]).toBeLessThanOrEqual(0.2016 + 1e-12);
     expect(stop[0]).toBeGreaterThan(0.2016 - 0.15 / 4096 - 1e-9); // up to it (12 halvings)
@@ -857,7 +858,7 @@ describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The
   it("⭐⭐⭐ wired: the hover keeps the boundary it started with (`coplanarBoundary`, the outline's own), and its bound reads the resting face's CENTRE in it", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId)");
-    expect(h).toContain("const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v))); return insideRects(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));");
+    expect(h).toContain("const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v))); return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));");
     expect(h).toContain("const segs = rectsBoundary(bd.rects);"); // the drawn outline from the same rectangles
     expect(h).not.toMatch(/overlapsTriangles\(poly, h\.n/); // ⛔ the overlap of the resting face's outline is no longer the bound
   });
@@ -865,14 +866,15 @@ describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The
 
 describe("⭐⭐⭐ the audit of 2026-10-15 (Fable): the hover", () => {
   // a narrow face, its boundary x ∈ [−0.0216, 0.0216] (the drawn outline, 1.6 mm grown)
-  const insideNarrow = (u: number) => Math.abs(u) <= 0.0216;
+  const insideNarrow = (u: number) => Math.max(0, Math.abs(u) - 0.0216); // ⭐ (2026-10-15) the DISTANCE to it
   it("⭐⭐⭐ HIGH — a hover starting with the CENTRE outside the boundary is free until inside: the solved step is KEPT (⛔ held at the start every frame — the piece froze)", async () => {
     const { holdOffBound } = await import("../src/input/hover");
     expect(holdOffBound([0.05, 0], [0.048, 0], insideNarrow)).toEqual([0.048, 0]); // ✅ outside → still outside: moves (⛔ [0.05, 0])
     expect(holdOffBound([0.01, 0], [0.03, 0], insideNarrow)).toEqual([0.01, 0]); // inside → outside (a slide carried it off): held
     expect(holdOffBound([0.01, 0], [0.015, 0], insideNarrow)).toEqual([0.015, 0]); // inside → inside: kept
+    expect(holdOffBound([0.05, 0], [0.06, 0], insideNarrow)).toEqual([0.05, 0]); // ⭐⭐⭐ (2026-10-15) outside → farther: held
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("[nu, nv] = holdOffBound([h.u, h.v], [nu, nv], inside);");
+    expect(h).toContain("[nu, nv] = holdOffBound([h.u, h.v], [nu, nv], dist);");
     expect(h).not.toMatch(/if \(!inside\(nu, nv\)\) \{/);
   });
   it("⭐⭐ MEDIUM — the hover's gap queries count in the frame's solve (the quads' turn check reads it) — ⛔ under a hover it read 0: ~48 queries a frame", () => {
@@ -910,5 +912,38 @@ describe("⭐⭐⭐ the audit of 2026-10-15 (Fable): the hover", () => {
     const follow = s.slice(at(" hoverFollow: {"), at(" hoverDraw:"));
     expect(follow).toContain("settleM: number;");
     expect(follow).not.toMatch(/\bvu\b|\bvv\b|\blu\b|\blv\b/);
+  });
+});
+
+describe("⭐⭐⭐ a rapid drag cannot throw the piece off the boundary (2026-10-15, the owner: *\"a rapid delta position can throw the piece outside the boundary and when the orbit restart, the piece is not reachable any longer and does not follow the orbit\"*)", () => {
+  // the drawn boundary: a narrow top, its outline x ∈ [−0.0216, 0.0216], y ∈ [−0.05, 0.05]
+  const comp = [{ x0: -0.0216, y0: -0.05, x1: 0.0216, y1: 0.05 }];
+  it("⭐⭐⭐ a hover starting with the centre OUTSIDE (the latch is any portion of the resting face) moves toward the boundary, slides along it, never away — ⛔ it was free: one fast drag threw the piece metres off", async () => {
+    const { rectsDistance, boundStep } = await import("../src/input/hover");
+    const dist = (u: number, v: number) => rectsDistance(comp, u, v);
+    expect(boundStep([0.05, 0], [0.5, 0], dist)).toEqual([0.05, 0]); // ✅ a rapid drag away: held (⛔ [0.5, 0])
+    expect(boundStep([0.05, 0], [0.04, 0], dist)).toEqual([0.04, 0]); // toward: taken
+    expect(boundStep([0.05, 0], [0.5, 0.03], dist)).toEqual([0.05, 0.03]); // away and along: only the slide along it
+    expect(boundStep([0.05, 0], [0, 0], dist)).toEqual([0, 0]); // into it: taken whole
+  });
+  it("⭐⭐ the solver's own slide never carries it farther either (`holdOffBound`)", async () => {
+    const { rectsDistance, holdOffBound } = await import("../src/input/hover");
+    const dist = (u: number, v: number) => rectsDistance(comp, u, v);
+    expect(holdOffBound([0.05, 0], [0.07, 0], dist)).toEqual([0.05, 0]);
+    expect(holdOffBound([0.05, 0], [0.045, 0.01], dist)).toEqual([0.045, 0.01]);
+  });
+});
+
+describe("⭐⭐⭐ a face hosts only a resting face IN FRONT of it (2026-10-15, the owner: *\"the green piece approaches from underneath, arrives in sliding position with the resting face facing the bottom while the hosting face is also facing the bottom because the slanted face allows the resting face to be close enough to the hosting face. as a result, the sliding is odd\"*)", () => {
+  const down: Vec3 = [0, -1, 0];
+  const up: Vec3 = [0, 1, 0];
+  const top = (y: number) => ({ id: "bar", bodyGapM: 0.001, faces: [{ faceId: "top", centre: [0, y, 0] as Vec3, normal: up, triangles: [[[-0.1, y, -0.1], [0.1, y, -0.1], [0.1, y, 0.1]], [[-0.1, y, -0.1], [0.1, y, 0.1], [-0.1, y, 0.1]]] as [Vec3, Vec3, Vec3][] }] });
+  const poly = (y: number): Vec3[] => [[-0.02, y, -0.02], [0.02, y, -0.02], [0.02, y, 0.02], [-0.02, y, 0.02]];
+  it("⭐⭐⭐ the resting face BEHIND the face's plane (the slanted piece tucked beside / under the part, its base 10 mm below the top) does not latch — ⛔ it did, anywhere within the 20 mm reach on either side", async () => {
+    const { HOVER_BEHIND_M } = await import("../src/input/hover");
+    expect(HOVER_BEHIND_M).toBe(0.001);
+    expect(hoverFaceContact([0, -0.01, 0], down, [top(0)], 0.02, 2, poly(-0.01)).contact).toBeNull(); // ✅ (⛔ latched on "bar")
+    expect(hoverFaceContact([0, -0.0005, 0], down, [top(0)], 0.02, 2, poly(-0.0005)).contact?.id).toBe("bar"); // at contact (rounding): latched
+    expect(hoverFaceContact([0, 0.01, 0], down, [top(0)], 0.02, 2, poly(0.01)).contact?.id).toBe("bar"); // in front, within reach: latched (it settles)
   });
 });

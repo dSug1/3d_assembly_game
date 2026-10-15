@@ -767,6 +767,14 @@ export function syncOrbitPieceModel(st: SceneState): void {
   if (m === null) return;
   const o = st.world.objects.get(m.name);
   if (o === undefined || o.orbited !== true) return;
+  // ⛔⛔⛔ (2026-10-15, the owner: *"the green piece reached its goal and still, it is misaligned. Your fix in 716b71b did not work."*) — PLACED, the MODEL
+  // leads: the mesh is drawn from it (the goal pull, the exact goal pose). ⛔ The mesh was copied INTO the model every frame — and once placed nothing
+  // moved the mesh (the orbit stops placing it, the parts' drawing skips the orbited piece): the pull and the exact pose were undone the next frame
+  if (st.orbitPiecePlaced) {
+    m.position.set(o.local.position[0], o.local.position[1], o.local.position[2]);
+    m.rotationQuaternion = new Quaternion(o.local.orientation[1], o.local.orientation[2], o.local.orientation[3], o.local.orientation[0]);
+    return;
+  }
   const r = m.rotationQuaternion ?? Quaternion.Identity();
   // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag is the mesh's, not the model's
   const d = modelLag(st.hoverDraw, st.orbitPiecePlaced);
