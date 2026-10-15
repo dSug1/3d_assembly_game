@@ -13,7 +13,7 @@ the device through several rounds and reported defects, each fixed (§8–§17),
 the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 
 * **Ready (the latch)** — the resting face LOOKS AT a part's face: anti-parallel within 2°, within `hoverApproachMm` (20 mm) of its plane,
-  and some portion of the resting face over that face by at least `hoverEdgeMarginMm` (2 mm) across (`overlapsTriangles`, §15, §18 — not its centre). Shown by the resting contour turning
+  and ANY PORTION of the resting face over that face (`overlapsTriangles`, §15 — not its centre; §18's margin deleted, §19). Shown by the resting contour turning
   GREEN #D8FDD2, the contact shadow (the resting face projected on the face), a faint fill of the face and the GREEN OUTLINE of all the
   coplanar faces joined to it (§15). Looked for every 100 ms when the world moved; frozen bodies (the floor) are never hosts (§11, parked).
 * **Start** — a drag (left drag on desktop) that starts ON the piece, past the tap's slop. Refusals are named on the HUD's `last` line. The
@@ -22,8 +22,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   lifts, §10).
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
-  `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where some portion of the resting face stays over a coplanar face
-  (`boundStep`, §16 — slides along the edge, reversing comes back at once). Solved ONCE a frame by the orbit's solver inside the frame's
+  `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
+  green boundary (`insideRects`, §19 — slides along the edge, reversing comes back at once; `boundStep`, §16). Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
 * **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
@@ -400,7 +400,7 @@ floor** — marked seats where a piece may be set down, each a known target the 
 > in mobile mode."* · *"attachments 1, 2 & 3: the sliding is not working in these configurations in mobile mode, and the camera does not move to its
 > sliding position"* — the owner. ⛔ Unjudged by a hand.
 
-* ⭐⭐⭐ **THE EDGE MARGIN** (`hoverEdgeMarginMm`, 2 mm, a slider — ⭐ (2026-10-15, *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) moved to the top-level OBJECT TRANSLATION section as *resting face margin on the boundary*; it was under *hover reach* in TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION): the resting face must overlap the hosting faces by at least
+* ⛔⛔ (DELETED the same day, §19: the CENTRE bound, the slider removed) ⭐⭐⭐ **THE EDGE MARGIN** (`hoverEdgeMarginMm`, 2 mm, a slider — ⭐ (2026-10-15, *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) moved to the top-level OBJECT TRANSLATION section as *resting face margin on the boundary*; it was under *hover reach* in TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION): the resting face must overlap the hosting faces by at least
   the margin ACROSS (`overlapsTriangles`' `marginM`, the separating-axis overlap) — for the latch (`hoverFaceContact`, the readiness look) and the
   bound (`boundStep`'s `inside`). So the slide stops the margin short of the edge-to-edge limit. ⚠ Read as *"at least 2 mm must still overlap"*;
   the other reading (*the whole resting face 2 mm inside the boundary*) was named to the owner, not built.
@@ -412,3 +412,20 @@ floor** — marked seats where a piece may be set down, each a known target the 
   stopped where it stood, short of the edge — common, the deadband's corridor making one-axis steps; now the halving takes it up to the edge.
 * ⚠ **The mobile reports** (no slide, no hover view, in three configurations) came from an iPhone on `3a94915` — before §17's fix of exactly that
   (the camera never turned, a grazing finger moved nothing). Not re-tested yet.
+
+## 19. The centre bound — the drawn boundary; the edge margin deleted (2026-10-15, `1.0.76-`)
+
+> *"Remove the slider resting face margin on the boundary and make change the logic for the boundary: the center of the resting face shall remain
+> within the boundary."* → *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face
+> remains within the boundary."* — the owner. ⛔ Unjudged by a hand (a slide to the edge not driven, headless or on the glass).
+
+* ⭐⭐⭐ **THE BOUNDARY IS THE ONE DRAWN**: the green outline of the coplanar faces joined to the hosting face (`coplanarBoundary` in
+  `hover_wiring.ts`, kept at the hover's start in `st.hover.bound`): their extents on the plane's axes, grown by the outline's own `OUTLINE_GROW_M`
+  (1.6 mm — the drawing's join of cores 3 mm apart, nothing added for the clamp), the ones joined to the host (`rectComponent`). The outline is drawn
+  from THOSE rectangles (`rectsBoundary`) — one source for the drawing and the clamp (`rectUnionOutline` deleted).
+* ⭐⭐⭐ **THE CLAMP** (`insideRects`, through `boundStep`): the resting face's CENTRE (the hover's anchor) within the boundary — a slide outward stops
+  with it ON the outline, slides along it, reverses at once; a hover starting with the centre outside (the latch is any portion, §15) is free until
+  it is inside (§17).
+* ⛔ **DELETED**: §18's edge margin (`hoverEdgeMarginMm`, its slider — briefly moved to the top-level OBJECT TRANSLATION section), and the overlap of the
+  resting face's outline as the bound. The latch is any portion again.
+* Vectors: `tests/hover.test.ts` (*THE CENTRE BOUND*); they failed against the overlap bound.
