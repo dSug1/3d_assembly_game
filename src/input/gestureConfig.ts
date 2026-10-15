@@ -338,6 +338,12 @@ export interface GestureConfig {
    * of its travel, measured). ⚠ A guess with a slider.
    */
   orbitBandRestMs: number;
+  /**
+   * ⭐⭐ (prototype, 2026-10-14, the hover; `HOVER.md`) the owner: *"make a slider in object translation to toggle on or off the move of the
+   * gizmo"* — 1: a hover drag slides the yellow GIZMO and the piece rides with it (every later orbit turns about the corrected centre); 0: the
+   * piece alone, its offset dropped by the next orbit drag (*"Cleared on orbit"*).
+   */
+  hoverGizmoMove: number;
   /** ⭐ (2026-10-14) the hover's reach from where it began (mm, in the world) — *"from 10mm to 500 mm (in this last case … unlimited)"*. */
   hoverAmplitudeMm: number;
   /** ⭐ (2026-10-14) the hover's gain — 1: the piece under the finger. */
@@ -907,6 +913,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
   orbitDeadbandMm: 2.3,
   orbitBandRestMs: 400,
+  // ⭐ (2026-10-14, the owner: *"Set default gizmo moves with hover off and hover distance is unlimited"*) the piece alone, unlimited
+  hoverGizmoMove: 0,
   // ⚠ guesses with sliders
   hoverAmplitudeMm: 500,
   hoverGain: 1,
@@ -1182,6 +1190,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `orbitDeadbandMm (${cfg.orbitDeadbandMm}) must be in [${(SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm).toFixed(2)}, 8] mm: under 3× the measured pointer noise a resting finger's wobble leaks through.`,
     );
   }
+  if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);

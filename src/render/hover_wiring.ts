@@ -54,7 +54,6 @@ import {
   behindToleranceM,
   hoverPendingAfter,
   hoverQueryBudget,
-  hoverOffsetFor,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
@@ -221,8 +220,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   behind.delete(b.name);
   st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  // ⭐⭐⭐ (2026-10-15) the gizmo follows the resting face's centre (`gizmoFollowFrame`): its spring starts where the gizmo is
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], anchor0: [anchor[0], anchor[1], anchor[2]], planeAt: c.centre, gz: [0, 1, 2].map((k) => ({ x: centre0[k]!, v: 0 })), u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, du: 0, dv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
@@ -236,7 +234,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
     else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))
       st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
   }
-  st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the piece, the gizmo follows its centre`;
+  st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
 }
@@ -357,7 +355,6 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   // τ = `boxSmoothMs` / 2), no lead: ⛔ the part translation's follower (τ 7.6 ms, ζ 0.2, a phantom lead) passed the solve's per-frame steps
   // straight through — a mouse's events beat against the frames (125 Hz against 143 fps measured on the HUD) — and its overshoot, clipped by
   // `hoverDrawLag`, stuck and slipped
-  gizmoFollowFrame(st, hf, dtSec);
   const tau = hoverDrawTau(st);
   hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec);
   hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);
@@ -465,26 +462,10 @@ export function wayInDrawFrame(st: SceneState, dtMs: number): void {
 }
 
 function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, w: Vec3): void {
-  // ⭐⭐⭐ (2026-10-15) the piece's offset against the gizmo of the moment (`hoverOffsetFor`) — the gizmo follows the centre (`gizmoFollowFrame`); ⛔ the
-  // `hoverGizmoMove` slider (the gizmo moved WITH the piece, or not at all) is deleted
-  st.hoverOffset = hoverOffsetFor(hf.offset0, w, hf.centre0, [st.orbitCentreM.x, st.orbitCentreM.y, st.orbitCentreM.z]);
-}
-
-/**
- * ⭐⭐⭐ (2026-10-15, the owner: *"when the piece slides on the coplanar surface, the gizmo lerp into the projection of the center of the resting face onto the
- * coplanar surface and then follows the sliding of the center of the resting face. When the orbit is restarted again at the end of sliding, the gizmo keeps
- * it's last sliding position."*) — **THE GIZMO FOLLOWS THE CENTRE**: each frame toward the solved centre projected onto the hosting plane, on the drawn
- * piece's spring (so it eases in, then trails the slide with the piece); the slide over (the finger lifted), ON that projection, and it stays — the
- * next orbit drag ways the piece out to its ring about it (`hoverOrbitStep`). The piece's offset is kept against it every frame (`hoverOffsetFor`).
- */
-function gizmoFollowFrame(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, dtSec: number): void {
-  const w = add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v)));
-  const p = projectOntoPlane(add(hf.anchor0, w), hf.n, hf.planeAt);
-  const tau = hoverDrawTau(st);
-  hf.gz = hf.gz.map((f, k) => (st.hover === null ? { x: p[k]!, v: 0 } : advanceFollow(f, p[k]!, tau, 1, dtSec)));
-  const g: Vec3 = st.hover === null ? p : [hf.gz[0]!.x, hf.gz[1]!.x, hf.gz[2]!.x];
-  st.centreBlend.snapTo(g); syncCentre(st);
-  st.hoverOffset = hoverOffsetFor(hf.offset0, w, hf.centre0, g);
+  if (hf.gizmo) {
+    st.centreBlend.snapTo(add(hf.centre0, w));
+    syncCentre(st);
+  } else st.hoverOffset = add(hf.offset0, w);
 }
 
 /**
