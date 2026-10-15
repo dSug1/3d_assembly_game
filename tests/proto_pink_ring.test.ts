@@ -4,41 +4,22 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { bodyNamed, greenPyramidSizeM, pinkRingVisibility } from "../src/input/green_box";
+import { bodyNamed, greenPyramidSizeM } from "../src/input/green_box";
 import { SCENE_1 } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
-describe("⭐⭐⭐ prototype — the pink ring's occlusion", () => {
-  it("⭐ a piece in front hides it; only the green piece in front makes it translucent; nothing in front, visible", () => {
-    const at = 1.0;
-    const eps = 0.002;
-    expect(pinkRingVisibility([], at, eps)).toBe("VISIBLE");
-    expect(pinkRingVisibility([{ distanceM: 0.6, isGreenBox: true }], at, eps)).toBe("TRANSLUCENT");
-    expect(pinkRingVisibility([{ distanceM: 0.6, isGreenBox: false }], at, eps)).toBe("HIDDEN");
-    // the green piece AND a piece in front: the piece hides it
-    expect(pinkRingVisibility([{ distanceM: 0.4, isGreenBox: true }, { distanceM: 0.7, isGreenBox: false }], at, eps)).toBe("HIDDEN");
-    // ⭐ the piece the target sits ON is met right at the target — it does not hide it
-    expect(pinkRingVisibility([{ distanceM: 0.9995, isGreenBox: false }], at, eps)).toBe("VISIBLE");
-    // a piece BEHIND the target never hides it
-    expect(pinkRingVisibility([{ distanceM: 1.3, isGreenBox: false }], at, eps)).toBe("VISIBLE");
-    // ⭐ the BOOT target (the owner, 2026-10-02: *"display the pink ring at the boot"*): pieces in front make it translucent, never hide it
-    expect(pinkRingVisibility([{ distanceM: 0.6, isGreenBox: false }], at, eps, true)).toBe("TRANSLUCENT");
-    expect(pinkRingVisibility([], at, eps, true)).toBe("VISIBLE");
-  });
-
-  it("⭐ wired: at the yellow target, the amber ring's size on the glass, billboarded, drawn on top; frozen bodies never hide it", () => {
+describe("⭐⭐⭐ prototype — the yellow gizmo: ALWAYS SEEN while its slider is on (2026-10-15, the owner: *\"Let's make it simple and light for game lightness: make the gizmo always seen if the gizmo slider is toggled on. No need for raycast, timer, etc.\"*)", () => {
+  it("⭐⭐⭐ wired: at the yellow target, the amber ring's size on the glass, billboarded, drawn on top — no ray, no verdict, no timer", () => {
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);
     expect(w).toMatch(/trackingMetresPerPx\(dist, st\.camera\.fov, st\.canvas\.clientHeight\) \* GIZMO_RING_PX/);
-    expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;/);
-    expect(w).toMatch(/st\.world\.objects\.get\(id\)\?\.frozen !== true/);
-    expect(w).toMatch(/ring\.alpha = v === "TRANSLUCENT" \? PINK_MASKED_ALPHA : 1;/);
-    // ⭐ the owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — one
-    // rule from the first frame; the boot exemption is switched off (the parameter stays, `true` would restore it)
-    expect(w).toMatch(/ringLatch\(st\.pinkRingLatch, pinkRingVisibility\(hits, dist, PINK_EPS_M\), performance\.now\(\)\);/); // ⭐ (2026-10-15) held before it shows
-    expect(w).not.toMatch(/targetSetByPress/);
+    expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;\s*ring\.renderingGroupId = 2;/);
+    expect(w).toMatch(/ring\.isVisible = true;\s*const m = trackingMetresPerPx[^\n]*\n\s*ring\.scaling\.set\(m, m, m\);\s*ring\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);
+    expect(w).toMatch(/if \(st\.cfg\.pinkGizmoVisible !== 1\) \{\s*ring\.isVisible = false;/);
+    // ⛔ the per-frame ray, its verdict, the translucency behind the piece and the timer are deleted
+    expect(w).not.toMatch(/pinkRingVisibility|ringLatch|ringDrawnAt|PINK_EPS_M|PINK_MASKED_ALPHA|multiPickWithRay\(new Ray\(cam\.clone\(\)/);
     const setTarget = w.indexOf("st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));");
     expect(setTarget).toBeGreaterThan(0); // ⚠ the line must EXIST, or the order below passes on -1
     expect(w.indexOf("pinkRingFrame(st);")).toBeGreaterThan(setTarget);

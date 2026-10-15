@@ -18,7 +18,7 @@ import { highlightLiftM } from "../input/highlight_lift";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces, pinkRingVisibility, ringLatch } from "../input/green_box";
+import { bodyNamed, cameraGapM, clampPieceRadiusM, clampGreenZoom, faceToward, GREEN_PIECE_ORBIT_ZOOM, greenPyramidSizeM, minGreenZoom, greenBootOrientation, counterYaw, wrapAngle, hexPrismVolumeM3, turquoiseSizeM, pieceFaces } from "../input/green_box";
 import { SCENE_1_PALETTE } from "../content/scene_1";
 import { faceWorld, makeWorld, setLocalPlacement, setRestingFace, worldPlacementOf, type ObjectId, type SceneObject } from "../core/object_model";
 import { cameraRelease, frustumVolumeM3, inertiaTauMs } from "../input/orbit_inertia";
@@ -26,7 +26,6 @@ import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { Ray } from "@babylonjs/core/Culling/ray";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
@@ -821,10 +820,10 @@ export function createGreenBox(st: SceneState): void {
   st.orbitPieces.push({ mesh: hex, faces: piecesFacesOf(hex), volumeM3: hexPrismVolumeM3(ts.diameterM, ts.lengthM), ...restingOf(st, hex) });
   spawnOrbitPiece(st, st.cfg.orbitPieceKind, true);
   // ⭐⭐ prototype (green box): the PINK RING at the yellow target — billboarded, the amber gizmo ring's size on the glass
-  // (`GIZMO_RING_PX`), drawn on top; WHAT hides it is decided each frame by a ray (`pinkRingFrame`).
+  // (`GIZMO_RING_PX`), drawn on top — ⭐⭐⭐ (2026-10-15, the owner: *"make the gizmo always seen if the gizmo slider is toggled on. No need for raycast, timer"*) always.
   // ⭐ prototype (green box), the owner 2026-10-02: *"make the pink ring slightly thicker and brighter so I can see it better"*.
   // ⛔ WebGL draws a line ONE pixel wide whatever is asked, so the band is `PINK_RING_LOOPS` concentric loops half a pixel apart
-  // (~3 px), one line system — still billboarded, unpickable, and hidden / translucent by the same rule.
+  // (~3 px), one line system — still billboarded, unpickable.
   const ring = CreateLineSystem(
     "pink-target-ring",
     { lines: PINK_RING_LOOPS.map((k) => RING_POINTS.map((p) => p.scale(k))) },
@@ -846,15 +845,13 @@ export function createGreenBox(st: SceneState): void {
  * *"make the yellow gizmo ring thickness the same as the quad edge thickness"* — ONE loop, a 1 px line as a quad's edge (it was ±1 px, ~3 px).
  */
 const PINK_RING_LOOPS = [0].map((px) => 1 + (px * 2) / GIZMO_RING_PX);
-/** ⭐ The ring's alpha when only the green piece is in front of it — *"slightly translucent"*. */
-const PINK_MASKED_ALPHA = 0.35;
-/** ⭐ A hit counts as IN FRONT only if nearer than the target by more than this — the piece it sits on is met right at it. */
-const PINK_EPS_M = 0.002;
 
 /**
- * ⭐⭐ prototype (green box) — **THE PINK RING, EACH FRAME**: at the yellow target, the amber ring's size on the glass, and
- * hidden / translucent / visible by what the camera's ray meets before the target (`pinkRingVisibility`). ⛔ Frozen bodies
- * (the floor) never hide it; the ring itself and the markers are not pickable, so they are never met.
+ * ⭐⭐ prototype (green box) — **THE YELLOW GIZMO, EACH FRAME**: at the yellow target, the amber ring's size on the glass, drawn on top, ALWAYS
+ * shown while its slider is on. ⛔⛔ (2026-10-15, the owner: *"Let's make it simple and light for game lightness: make the gizmo always seen if the
+ * gizmo slider is toggled on. No need for raycast, timer, etc."*) — the per-frame ray that hid it behind a part (translucent behind the piece) is
+ * DELETED: it blinked the ring off for the 1–2 frames it crossed a thin part on a far orbit (measured; the pink build `74e48e2` did the same), and
+ * a 120 ms hold on its verdict was refused.
  */
 export function pinkRingFrame(st: SceneState): void {
   const ring = st.pinkRing;
@@ -872,22 +869,7 @@ export function pinkRingFrame(st: SceneState): void {
     ring.isVisible = false;
     return;
   }
-  const hits = (
-    st.scene.multiPickWithRay(new Ray(cam.clone(), dir.scale(1 / dist), dist), (m) => {
-      if (!m.isPickable || !m.isVisible || !m.isEnabled()) return false;
-      if (m === st.greenBox) return true;
-      const id = st.idOf.get(m);
-      return id !== undefined && st.world.objects.get(id)?.frozen !== true;
-    }) ?? []
-  ).map((h) => ({ distanceM: h.distance, isGreenBox: h.pickedMesh === st.greenBox }));
-  // ⭐ The owner, 2026-10-02: *"the pink ring shall occlude already from boot because it sits on the blue piece face"* — the
-  // boot exemption (translucent behind pieces until a placed-piece press, `bootTarget`) is switched OFF: the boot target is on a
-  // face now, so the one rule applies from the first frame.
-  // ⭐⭐⭐ (2026-10-15, *"the yellow gizmo flickers sometimes when I orbit at high distance"*) the verdict HELD `RING_SETTLE_MS` before it shows (`ringLatch`)
-  st.pinkRingLatch = ringLatch(st.pinkRingLatch, pinkRingVisibility(hits, dist, PINK_EPS_M), performance.now());
-  const v = st.pinkRingLatch.shown;
-  ring.isVisible = v !== "HIDDEN";
-  ring.alpha = v === "TRANSLUCENT" ? PINK_MASKED_ALPHA : 1;
+  ring.isVisible = true;
   const m = trackingMetresPerPx(dist, st.camera.fov, st.canvas.clientHeight) * GIZMO_RING_PX;
   ring.scaling.set(m, m, m);
   ring.position.set(t[0], t[1], t[2]);

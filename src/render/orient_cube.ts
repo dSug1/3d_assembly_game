@@ -264,7 +264,7 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
       // ⭐ (2026-10-12, the owner: *"show the quads even if they are occluded by the piece"*) — drawn after the scene, its depth cleared
       fill.renderingGroupId = 1;
       fill.parent = root;
-      const edges = CreateLines(`resting-quad-${i}-edges`, { points: [...corners, corners[0]!].map((v) => new Vector3(v[0], v[1], v[2])) }, st.scene);
+      const edges = CreateLines(`resting-quad-${i}-edges`, { points: [...corners, corners[0]!].map((v) => new Vector3(v[0], v[1], v[2])), useVertexAlpha: true }, st.scene); // ⛔⛔ (2026-10-15) without it a line mesh does not blend: the edges' alpha was ignored (*"the slider does not change the opacity"*)
       edges.isPickable = false;
       edges.renderingGroupId = 1;
       edges.parent = root;
