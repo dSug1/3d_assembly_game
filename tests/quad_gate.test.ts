@@ -111,3 +111,11 @@ describe("⛔⛔ the quads' edges never faded (2026-10-15, the owner: *\"the sli
     expect(code("render/orient_cube.ts")).toContain("{ points: [...corners, corners[0]!].map((v) => new Vector3(v[0], v[1], v[2])), useVertexAlpha: true }");
   });
 });
+
+describe("⭐⭐ the audit of 2026-10-15 (Fable): the quads' distance from the gizmo's TARGET, not the ring mesh", () => {
+  it("⭐⭐ with the yellow gizmo hidden its mesh is not placed — the quads (and so the tap gate and the resting contour) read the target the ring is drawn at", () => {
+    const q = code("render/orient_cube.ts");
+    expect(q).toContain("const gizmo = st.centreBlend.targetM;");
+    expect(q).not.toContain("st.pinkRing?.position");
+  });
+});

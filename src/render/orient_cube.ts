@@ -280,9 +280,10 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   // distance to the gizmo; ONE PIXEL at HALF the rings' farthest, 1.4 at the farthest (`pieceDistanceRange`; both × the piece's radius, the side 2 ×
   // that), a LOGARITHM between (`quadSize`, steepness `quadGrowthLogK`, 9 — *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*; it was power 3); nearer than half, the quads HIDDEN (`quadsShownFromM`); the resting face's yellow contour
   // scales by the same share (`growth`, read by `restingFillFrame`)
-  const gizmo = st.pinkRing?.position ?? st.orbitCentreM;
+  // ⭐⭐ (2026-10-15, the Fable audit) the gizmo's TARGET (the ring is drawn there) — ⛔ the ring's mesh, not placed while the yellow gizmo is hidden
+  const gizmo = st.centreBlend.targetM;
   const pp = p.mesh.position;
-  const d = Math.hypot(pp.x - gizmo.x, pp.y - gizmo.y, pp.z - gizmo.z);
+  const d = Math.hypot(pp.x - gizmo[0], pp.y - gizmo[1], pp.z - gizmo[2]);
   const range = pieceDistanceRange(st.cfg);
   const from = quadsShownFromM(range.maxM);
   const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;

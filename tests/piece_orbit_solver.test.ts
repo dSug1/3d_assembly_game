@@ -832,3 +832,59 @@ describe("⭐⭐⭐ the tunnel through Piece10 (2026-10-15, the owner: *\"if I r
     expect(r2.q.v).toBeCloseTo(0.4103, 9);
   });
 });
+
+describe("⭐⭐ the audit of 2026-10-15 (Fable): the solver's CPU — its arc measured to 2 %, not 0.1 %", () => {
+  it("⭐⭐ a slide along a wall on the real rig (Scene_1, the owner's 2nd and 3rd rings at 0.2 m) costs ≤ 3000 anchor evaluations a solve — ⛔ 6 719 (11 ms in Node): the 24-query cap did not bound the frame", async () => {
+    const { orbitOffset } = await import("../src/input/orbit");
+    const { sceneConfig } = await import("../src/input/scene_rig");
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    const { SCENE_1 } = await import("../src/content/scene_1");
+    const cfg = { ...sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit), orbitMiddleRadiusM: 0.2, orbitLowerRadiusM: 0.2 };
+    let anchors = 0;
+    const A = (x: OrbitQ): Vec3 => {
+      anchors++;
+      return orbitOffset(cfg, x.yaw, x.v, 1).offsetM as unknown as Vec3;
+    };
+    let worst = 0;
+    for (const [yaw, v, dv] of [[2.1, 0.4, 1], [2.1, 0.4, -1], [0.5, 0.6, -1], [2.1, 0.45, 0.3]] as const) {
+      const a0 = orbitOffset(cfg, yaw, v, 1).offsetM as unknown as Vec3;
+      const a1 = orbitOffset(cfg, yaw, Math.min(1, Math.max(0, v + 1e-3 * Math.sign(dv))), 1).offsetM as unknown as Vec3;
+      const t = [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]];
+      const l = Math.hypot(t[0]!, t[1]!, t[2]!);
+      for (const tilt of [0.2, 0.5, 1, 2, 4])
+        for (const side of [[1, 0, 0], [0, 1, 0], [0, 0, 1]] as Vec3[]) {
+          // a wall 1 mm ahead, tilted so the piece SLIDES along it
+          const m: Vec3 = [-t[0]! / l + side[0] * tilt, -t[1]! / l + side[1] * tilt, -t[2]! / l + side[2] * tilt];
+          const ml = Math.hypot(m[0], m[1], m[2]);
+          if (ml < 1e-6) continue; // a tilt cancelling the motion: no wall
+          const n: Vec3 = [m[0] / ml, m[1] / ml, m[2] / ml];
+          const W: Vec3 = [a0[0] - n[0] * 0.001, a0[1] - n[1] * 0.001, a0[2] - n[2] * 0.001];
+          const e: SolverEnv = { anchor: A, gap: (x) => { const a = A(x); return Math.max(0, (a[0] - W[0]) * n[0] + (a[1] - W[1]) * n[1] + (a[2] - W[2]) * n[2]); }, normal: () => n };
+          anchors = 0;
+          const r = solveOrbitStep({ yaw, v, zoom: 1 }, [0, dv], e, { gapM: 0.001, maxQueries: 24 });
+          worst = Math.max(worst, anchors);
+          expect(e.gap(r.q)).toBeGreaterThanOrEqual(0.0005); // still never inside
+        }
+    }
+    expect(worst).toBeLessThanOrEqual(3000);
+  });
+});
+
+describe("⭐ the audit of 2026-10-15 (Fable): inside the margin of TWO parts, a step leaving both is taken", () => {
+  it("⭐ a corner: 0.3 mm from two walls, a step straight away from both moves — ⛔ blocked (the other part's clearance floored the stride at 0)", () => {
+    // the toy ring at yaw 0, v 0: anchor (1, 0, 0); wall 1 normal +z at z = −0.3 mm, wall 2 normal +y at y = −0.3 mm
+    const walls: { n: Vec3; d: number }[] = [{ n: [0, 0, 1], d: -0.0003 }, { n: [0, 1, 0], d: -0.0003 }];
+    const dists = (x: OrbitQ) => { const a = anchor(x); return walls.map((w) => a[0] * w.n[0] + a[1] * w.n[1] + a[2] * w.n[2] - w.d).map((g) => Math.max(0, g)); };
+    const e: SolverEnv = {
+      anchor,
+      gap: (x) => Math.min(...dists(x)),
+      secondGap: (x) => Math.max(...dists(x)),
+      normal: (x) => { const ds = dists(x); return walls[ds[0]! <= ds[1]! ? 0 : 1]!.n; },
+    };
+    expect(e.gap(q(0, 0))).toBeCloseTo(0.0003, 12);
+    const r = solveOrbitStep(q(0, 0), [0.02, 0.02], e, OPT);
+    expect(r.q.yaw).toBeGreaterThan(0.01); // ✅ it leaves (⛔ held at 0)
+    expect(r.q.v).toBeGreaterThan(0.01);
+    for (const p of r.path) expect(e.gap(p)).toBeGreaterThanOrEqual(0.0003 - 1e-12); // never closer than it started
+  });
+});

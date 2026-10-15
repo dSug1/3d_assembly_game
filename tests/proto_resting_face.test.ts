@@ -226,7 +226,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(w).toContain("contour.color = RESTING_FACE_COLOUR.clone();");
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
-    expect(w).toMatch(/pinkRingFrame\(st\);\s*if \(!st\.orbitPiecePlaced\) \{\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*anchorFrame\(st, now\);\s*\}\s*restingFillFrame\(st, now\);/); // ⭐ (2026-10-14) a piece placed in its goal is no longer turned or placed by the orbit // ⛔ (2026-10-11) the sphere deleted
+    expect(w).toMatch(/pinkRingFrame\(st\);\s*if \(!st\.orbitPiecePlaced\) \{\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*anchorFrame\(st, now\);\s*\}\s*hoverVisualFrame\(st, now\);[^\n]*\n\s*restingFillFrame\(st, now\);/); // ⭐ (2026-10-15) the hover's look first: the contour reads this frame's readiness // ⭐ (2026-10-14) a piece placed in its goal is no longer turned or placed by the orbit // ⛔ (2026-10-11) the sphere deleted
   });
 
   it("⭐⭐ the yellow face is seen faintly THROUGH its own piece, never through another (the owner, 2026-10-05) — by draw order", () => {

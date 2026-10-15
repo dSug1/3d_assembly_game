@@ -805,3 +805,16 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   stride opens it) the piece is held — `nearestFree` puts it back on the ring.
 * Vectors: `tests/piece_orbit_solver.test.ts` (*the tunnel through Piece10*) — a fast-then-slow ring past a thin wall (it landed beyond it, x = 0.39),
   and a piece inside a part (it jumped out of the far side); both failed against the old solver.
+
+### 12decies. The Fable audit's fixes — the arc settled at 2 %; out of the margin of two parts (2026-10-15, `1.0.77-`, ⛔ unjudged by a hand)
+
+* ⭐⭐ **THE CPU THE QUERY CAP DID NOT BOUND**: §12nonies's arc, refined to 0.1 %, cost no gap query but up to **6 719 anchor evaluations** for one
+  solve sliding along a wall on `Scene_1`'s rig with the owner's 0.2 m rings (11 ms in Node; a whole-ring dy, the audit: 12 574 / 21 ms) — dropped
+  frames on the iPhone. ✅ `ARC_SETTLE` = **2 %**: sound, every bound `fitStride` serves keeps ≥ 10 % slack (the 0.9 factors), so the true arc stays
+  ≤ 0.918 of the clearance. Vector: the sliding-wall sweep on the real rig ≤ 3000 anchors (it was 6 719), never inside. ✅ The exhaustive headless
+  tunnel search (§12nonies's) re-run on it: **0 crossings in 358 676 solves**.
+* ⭐ **RULE (0) INSIDE TWO MARGINS**: the stride from inside was floored by the OTHER part's clearance — 0 when a second part was inside the margin too,
+  so a step leaving both was blocked. Now the stride's own shape (≤ `SLIDE_STEP_M`), halved up to 5 times while it does not open the gap; the landing
+  `ge > g` refuses any stride that closes the least gap. Vector: a corner 0.3 mm from two walls, a step away from both moves (it was blocked).
+* ⚠ Noted, unchanged: a rule (0) stride is accepted on its end (bounded by 4 mm, invisible); `nearestFree` jumps on a candidate's end gap alone
+  (pre-existing, not reproduced).

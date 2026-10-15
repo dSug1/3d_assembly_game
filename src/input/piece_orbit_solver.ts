@@ -77,6 +77,8 @@ export const ARC_SAMPLES = 4;
 
 /** ⭐ (2026-10-15) the most chords the arc's length is refined to. */
 export const ARC_MAX_SAMPLES = 256;
+/** ⭐ (2026-10-15) the arc's length is settled when doubling the chords adds less than this share. */
+export const ARC_SETTLE = 0.02;
 
 /**
  * ⭐ The step's length along the ring (the anchor's path) — no point of the piece travels further (it only translates). ⭐⭐ (2026-10-15) the
@@ -99,7 +101,10 @@ export function arcLength(env: SolverEnv, q: OrbitQ, s: QStep): number {
   while (n < ARC_MAX_SAMPLES) {
     n *= 2;
     const finer = chords(n);
-    const settled = finer - len <= 1e-3 * finer + 1e-9;
+    // ⭐⭐ (2026-10-15, the Fable audit) settled within 2 % — sound: every bound it serves keeps ≥ 10 % slack (the 0.9 factors), so the true arc
+    // stays ≤ 0.918 of the clearance. ⛔ At 0.1 % a slide along a wall cost 6 719 anchor evaluations a solve (11 ms in Node) — the 24-query cap bounded
+    // the gap queries, not the frame
+    const settled = finer - len <= ARC_SETTLE * finer + 1e-9;
     len = finer;
     if (settled) break;
   }
@@ -259,12 +264,17 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     // through it and out of its far side. Deep inside (no stride opens it): held — the ring's nearest free place is `nearestFree`'s job
     if (g < hard) {
       touched = true;
-      const others = env.secondGap?.(q);
-      const reach = Math.min(SLIDE_STEP_M, others === undefined ? SLIDE_STEP_M : Math.max(0, (others - hard) * 0.9));
-      const t = fitStride(env, q, rest, 1, reach);
-      const end = t > 0 ? plus(q, rest, t) : q;
-      const ge = t > 0 ? gapAt(end) : g;
-      if (!(ge > g)) {
+      // ⭐ (2026-10-15, the Fable audit) the stride's own shape, halved while it does not open the gap (5 at most, one query each) — ⛔ the OTHER part's
+      // clearance floored it: inside the margin of two parts it was 0, and a step leaving both was blocked. The landing's `ge > g` already refuses a
+      // stride that closes the least gap
+      let t = fitStride(env, q, rest, 1, SLIDE_STEP_M);
+      let ge = t > 0 ? gapAt(plus(q, rest, t)) : g;
+      for (let h = 0; h < 5 && t > 0 && !(ge > g); h++) {
+        t /= 2;
+        ge = gapAt(plus(q, rest, t));
+      }
+      const end = plus(q, rest, t);
+      if (!(t > 0 && ge > g)) {
         blocked = true;
         break;
       }

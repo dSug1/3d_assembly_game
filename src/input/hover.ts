@@ -294,8 +294,12 @@ export function hoverEndsOn(holdActive: boolean, placed: boolean): boolean {
  * over `HOVER_VIEW_RETARGET_MS`.
  */
 export const HOVER_VIEW_RETARGET_MS = 250;
-export function hoverViewRetargets(prevN: Vec3, n: Vec3): boolean {
-  return dot(prevN, n) <= 0.999;
+/** ⭐ (2026-10-15, the Fable audit) a new hover's start this far from the view's target (m) retargets it, even on a face of the same normal. */
+export const HOVER_RETARGET_M = 0.005;
+export function hoverViewRetargets(prevN: Vec3, n: Vec3, prevTarget: Vec3, target: Vec3, retargetM = HOVER_RETARGET_M): boolean {
+  // ⛔ (2026-10-15) the normal alone: a second hover on a face of the same normal (hovered 20 cm along a top, lifted, pressed again) kept the
+  // first hover's target, the camera arcing about a point behind the piece
+  return dot(prevN, n) <= 0.999 || Math.hypot(target[0] - prevTarget[0], target[1] - prevTarget[1], target[2] - prevTarget[2]) > retargetM;
 }
 export function retargetShare(elapsedMs: number): number {
   const u = Math.min(1, Math.max(0, elapsedMs / HOVER_VIEW_RETARGET_MS));
@@ -366,6 +370,13 @@ export interface HoverWayIn {
   readonly velMm: number;
   /** the share of `pieceOff` the piece still carries (solved: a part may hold it) */
   readonly share: number;
+  /** ⭐ (2026-10-15, the Fable audit) the travel (mm) at which a part last held it short of its share — not solved again until the travel moves on */
+  readonly heldAtMm?: number | null;
+}
+/** ⭐ (2026-10-15, the Fable audit) is the way in due a solve this frame? Its share is not the one wanted, and a part did not hold it at this very travel. ⛔ It re-solved every idle frame, for ever. */
+export function wayInDue(w: HoverWayIn, want: number): boolean {
+  if (Math.abs(want - w.share) < 1e-9) return false;
+  return w.heldAtMm === undefined || w.heldAtMm === null || w.heldAtMm !== w.travelledMm;
 }
 export function startHoverWayIn(offset: Vec3): HoverWayIn {
   return { pieceOff: offset, rawMm: 0, travelledMm: 0, velMm: 0, share: 1 };
@@ -515,6 +526,15 @@ export function insideRects(comp: readonly Rect2[], x: number, y: number): boole
  * where `inside` holds (the resting face over some coplanar hosting face): the whole step if it does; else the step along ONE axis that does
  * (sliding along the boundary), the longer of the two; else the furthest point of the step that does (`iters` halvings). `from` is inside.
  */
+/**
+ * ⭐⭐⭐ (2026-10-15, the Fable audit) — **THE SOLVED STEP HELD OFF THE BOUND**: the solver's slide may carry the centre past where `boundStep` let it
+ * aim; held at `from` only when the step went from INSIDE the boundary to outside. ⛔ It was held whenever the solved place was outside — a hover
+ * starting with the centre outside (the latch is any portion of the resting face, §15) was put back at its start every frame: the piece froze.
+ */
+export function holdOffBound(from: readonly [number, number], solved: readonly [number, number], inside: (u: number, v: number) => boolean): [number, number] {
+  return inside(from[0], from[1]) && !inside(solved[0], solved[1]) ? [from[0], from[1]] : [solved[0], solved[1]];
+}
+
 export function boundStep(from: readonly [number, number], to: readonly [number, number], inside: (u: number, v: number) => boolean, iters = 12): [number, number] {
   // ⭐ (2026-10-14, the owner: *"regression: I cannot grab any longer the piece to hover when the green highlight appears. the scene freezes."*) a hover starting OUTSIDE the bound is not held by it (it would never move): free until it is inside
   if (!inside(from[0], from[1]) || inside(to[0], to[1])) return [to[0], to[1]];
