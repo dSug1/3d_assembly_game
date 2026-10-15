@@ -305,7 +305,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "orbit drag deadband (mm on glass, ≥ 3× the pointer noise)", "orbitDeadbandMm", 2.3, 8, 0.1),
             tunable(st, "orbit drag deadband — the pause that re-arms it (ms)", "orbitBandRestMs", 0, 1500, 50),
             // ⭐⭐ (2026-10-14) the HOVER: a drag starting on the orbited piece slides it on the face it rests against (`HOVER.md`)
-            tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
             tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
             tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
