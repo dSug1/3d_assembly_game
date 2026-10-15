@@ -814,6 +814,14 @@ describe("⭐⭐⭐ the device pass of 2026-10-15 (the owner: *\"Make a margin o
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverEdgeMarginMm: 30 })).toThrow();
     const h = code("render/hover_wiring.ts");
     expect(h.match(/st\.cfg\.hoverEdgeMarginMm \/ 1000/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    // ⭐ (2026-10-15, *"Make a slider for the margin of the resting face on boundary inside the object translation menu"*) — in the TOP-LEVEL OBJECT TRANSLATION section
+    const m = code("render/tuning_menu.ts");
+    const top = m.indexOf('title: "OBJECT TRANSLATION"');
+    const next = m.indexOf('title: "FACE ALIGNMENT"', top);
+    const at = m.indexOf('"hoverEdgeMarginMm", 0, 10, 0.5)');
+    expect(at).toBeGreaterThan(top);
+    expect(at).toBeLessThan(next);
+    expect(m.split('"hoverEdgeMarginMm"').length - 1).toBe(1); // one slider, not two
   });
   it("⭐⭐⭐ THE DESKTOP JITTER: a diagonal mouse drag whose solved steps alternate axis (integer pixels through the per-axis band) — the DRAWN piece moves steadily", async () => {
     const { hoverDrawLag } = await import("../src/input/hover");
