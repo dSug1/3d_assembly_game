@@ -504,8 +504,6 @@ export interface SceneState {
     e1: import("../core/vec").Vec3;
     e2: import("../core/vec").Vec3;
     origin: import("../core/vec").Vec3;
-    centre0: import("../core/vec").Vec3;
-    offset0: import("../core/vec").Vec3;
     u: number;
     v: number;
     /** ⭐ (2026-10-14, the hover's second audit) the finger's target on the plane, solved once a frame (`hoverSolve`) — what the work cap left of it kept */
@@ -515,7 +513,6 @@ export interface SceneState {
     /** ⭐⭐ (2026-10-14) the coloured triangles of every face in the hosting face's plane — the resting face over none of them ends the hover */
     /** ⭐⭐⭐ (2026-10-15) the drawn boundary the resting face's centre stays in (`coplanarBoundary`); `null`: none found — unbounded */
     bound: { a: import("../core/vec").Vec3; b: import("../core/vec").Vec3; onFace: number; rects: import("../input/hover").Rect2[] } | null;
-    partId: string;
     /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
     behind: Set<string>;
   } | null;
@@ -537,10 +534,6 @@ export interface SceneState {
     v: number;
     fu: import("../input/follow").FollowState;
     fv: import("../input/follow").FollowState;
-    vu: number;
-    vv: number;
-    lu: number;
-    lv: number;
     /** ⭐ (2026-10-14, the hover's audit) the last solved step on the plane — the drawn lag is kept behind it (`hoverDrawLag`) */
     du: number;
     dv: number;

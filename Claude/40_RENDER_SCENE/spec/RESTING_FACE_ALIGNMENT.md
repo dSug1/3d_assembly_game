@@ -1154,3 +1154,4 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
   verdict (hidden behind a part, translucent behind the piece — that translucency never showed either: the ring did not blend), `pinkRingVisibility`
   and §31's 120 ms hold are DELETED. ⭐ A depth-tested ring (real occlusion) was proposed, chosen, then dropped for this — lighter for the game.
 * ⭐ (2026-10-15, *"Set non-yellow quad opacity to 0.130"*) — `quadUnlitAlpha` defaults to **0.13** (the fill a quarter, 0.0325); was 0.1.
+* ⭐⭐ (2026-10-15, the Fable audit) the quads' distance is read from the gizmo's TARGET (`st.centreBlend.targetM`) — ⛔ from the ring's mesh, not placed while the yellow gizmo is hidden: the quads, the tap gate and the resting contour read a stale distance with the slider off.

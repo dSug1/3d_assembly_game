@@ -1,9 +1,8 @@
 # The hover — the fine alignment on the contact surface (prototype spec)
 
-**Status:** built 2026-10-14 on `1.0.75-` → `1.0.76-` (live build `2a54a92`), ⛔ **unjudged by a hand** as a whole — the owner has driven it on
-the device through several rounds and reported defects, each fixed (§8–§17), but never closed it. Pure: `src/input/hover.ts`,
-`src/input/support_face.ts`; wired: `src/render/hover_wiring.ts` (and `orient_cube.ts` for the supporting face). Vectors:
-`tests/hover.test.ts`.
+**Status:** built 2026-10-14 on `1.0.75-` → `1.0.76-Simplified-hover`, audited and fixed on `1.0.77-` (§20), ⛔ **unjudged by a hand** as a
+whole — the owner has driven it on the device through several rounds and reported defects, each fixed (§8–§20), but never closed it. Pure:
+`src/input/hover.ts` (`support_face.ts` deleted 2026-10-15); wired: `src/render/hover_wiring.ts`. Vectors: `tests/hover.test.ts`.
 
 ⭐⭐⭐ **START WITH §0** — the hover AS IT STANDS. §1–§17 are the record, in order; later sections supersede earlier ones and say so.
 
@@ -23,7 +22,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
-  green boundary (`insideRects`, §19 — slides along the edge, reversing comes back at once; `boundStep`, §16). Solved ONCE a frame by the orbit's solver inside the frame's
+  green boundary (`insideRects`, §19 — slides along the edge, reversing comes back at once; `boundStep`, §16; a solved slide held only when it left
+  the boundary from inside, `holdOffBound`, §20). Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
 * **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
@@ -429,3 +429,24 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * ⛔ **DELETED**: §18's edge margin (`hoverEdgeMarginMm`, its slider — briefly moved to the top-level OBJECT TRANSLATION section), and the overlap of the
   resting face's outline as the bound. The latch is any portion again.
 * Vectors: `tests/hover.test.ts` (*THE CENTRE BOUND*); they failed against the overlap bound.
+
+## 20. The Fable audit's fixes (2026-10-15, `1.0.77-`)
+
+> *"Do an audit of what we have built since commit bce905c … with Fable agent. Check for soundness of the logic and robustness of the code. Propose
+> fixes."* → *"apply all the fixes. for the U-shape, if the cost-benefit of few points checks along the step vs. lightness of code is negative, keep as
+> it is"* — the owner. ⛔ Unjudged by a hand.
+
+* ⛔⛔⛔ **HIGH — THE FREEZE §19 BROUGHT** (`holdOffBound`): a hover starting with the resting face's centre OUTSIDE the boundary (the latch is any
+  portion, §15 — the dy collision near the gizmo) was put back at its start after every solve: `boundStep` let it go, the post-solve check
+  (`if (!inside(solved))`) held it. Reproduced by the audit (0 of 40 frames moved). Now held only when the step went from inside to outside.
+* ⭐⭐ **THE FRAME'S QUERIES**: the hover's solve counts in `st.pieceSolveQueries` — ⛔ under a hover it read 0, and the quads' turn check (later in the
+  frame) spent the 24 again: ~48 a frame, ten times a second.
+* ⭐⭐ **THE VIEW RETARGETS ON THE START POINT TOO** (`hoverViewRetargets`, `HOVER_RETARGET_M` 5 mm): ⛔ a second hover on a face of the same normal
+  kept the first hover's target.
+* ⭐ **THE WAY BACK HELD BY A PART** is not solved again until the finger's travel moves on (`wayInDue`, `HoverWayIn.heldAtMm`) — ⛔ every idle frame.
+* ⭐ **THE RESTING CONTOUR** reads this frame's readiness (`hoverVisualFrame` before `restingFillFrame`) — ⛔ a frame late.
+* ⭐ **HYGIENE**: the unread fields deleted (`st.hover.partId`, `centre0`, `offset0`; `hoverFollow.vu/vv/lu/lv`).
+* ⏸ **KEPT, the owner's call**: on a U-shaped boundary one fast step may jump the void of the U (`boundStep` reads a step's end) — *"I do not mind if
+  the piece can jump the U-shape as this is also the case in reality"*; a check of points along every step would cost code and queries for it.
+* ⚠ Noted, unchanged: an edge of a tilted resting face (within the 2° latch) could dip under the "behind" tolerance (the quads align exactly — not
+  reproducible); the drawn outline and the clamp's boundary can name different faces for ≤ 100 ms of world change before the press.

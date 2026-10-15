@@ -1225,8 +1225,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     restAlignFrame(st, now);
     anchorFrame(st, now);
   }
+  hoverVisualFrame(st, now); // ⭐ (2026-10-14) the contact shadow, the hosting face, the ready colour — ⭐ (2026-10-15, the Fable audit) BEFORE the contour reads its readiness
   restingFillFrame(st, now);
-  hoverVisualFrame(st, now); // ⭐ (2026-10-14) the contact shadow, the hosting face, the ready colour
 }
 
 /**

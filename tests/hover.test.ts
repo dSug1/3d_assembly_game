@@ -367,12 +367,12 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐⭐ D: a hover on another face retargets the view, eased over HOVER_VIEW_RETARGET_MS", async () => {
     const { hoverViewRetargets, retargetShare, HOVER_VIEW_RETARGET_MS } = await import("../src/input/hover");
-    expect(hoverViewRetargets([0, 1, 0], [0, 1, 0])).toBe(false);
-    expect(hoverViewRetargets([0, 1, 0], [0, 0, 1])).toBe(true);
-    expect(hoverViewRetargets([0, 1, 0], [0, Math.cos(0.01), Math.sin(0.01)])).toBe(false); // 0.6°: the same face
+    expect(hoverViewRetargets([0, 1, 0], [0, 1, 0], [0, 0, 0], [0, 0, 0])).toBe(false);
+    expect(hoverViewRetargets([0, 1, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0])).toBe(true);
+    expect(hoverViewRetargets([0, 1, 0], [0, Math.cos(0.01), Math.sin(0.01)], [0, 0, 0], [0, 0, 0])).toBe(false); // 0.6°: the same face
     expect(retargetShare(0)).toBe(0);
     expect(retargetShare(HOVER_VIEW_RETARGET_MS)).toBe(1);
-    expect(code("render/hover_wiring.ts")).toContain("else if (hoverViewRetargets(hv0.n, c.normal))");
+    expect(code("render/hover_wiring.ts")).toContain("else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))"); // ⭐ (2026-10-15) and the start point
   });
   it("⭐⭐ E: COPLANAR faces tie — the one under the resting face's centre hosts, whichever is listed first", () => {
     const up: Vec3 = [0, 1, 0];
@@ -860,5 +860,55 @@ describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The
     expect(h).toContain("const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v))); return insideRects(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));");
     expect(h).toContain("const segs = rectsBoundary(bd.rects);"); // the drawn outline from the same rectangles
     expect(h).not.toMatch(/overlapsTriangles\(poly, h\.n/); // ⛔ the overlap of the resting face's outline is no longer the bound
+  });
+});
+
+describe("⭐⭐⭐ the audit of 2026-10-15 (Fable): the hover", () => {
+  // a narrow face, its boundary x ∈ [−0.0216, 0.0216] (the drawn outline, 1.6 mm grown)
+  const insideNarrow = (u: number) => Math.abs(u) <= 0.0216;
+  it("⭐⭐⭐ HIGH — a hover starting with the CENTRE outside the boundary is free until inside: the solved step is KEPT (⛔ held at the start every frame — the piece froze)", async () => {
+    const { holdOffBound } = await import("../src/input/hover");
+    expect(holdOffBound([0.05, 0], [0.048, 0], insideNarrow)).toEqual([0.048, 0]); // ✅ outside → still outside: moves (⛔ [0.05, 0])
+    expect(holdOffBound([0.01, 0], [0.03, 0], insideNarrow)).toEqual([0.01, 0]); // inside → outside (a slide carried it off): held
+    expect(holdOffBound([0.01, 0], [0.015, 0], insideNarrow)).toEqual([0.015, 0]); // inside → inside: kept
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("[nu, nv] = holdOffBound([h.u, h.v], [nu, nv], inside);");
+    expect(h).not.toMatch(/if \(!inside\(nu, nv\)\) \{/);
+  });
+  it("⭐⭐ MEDIUM — the hover's gap queries count in the frame's solve (the quads' turn check reads it) — ⛔ under a hover it read 0: ~48 queries a frame", () => {
+    const h = code("render/hover_wiring.ts");
+    const solve = h.slice(h.indexOf("function hoverSolve"), h.indexOf("function hoverDrawTau"));
+    expect(solve).toContain("st.pieceSolveQueries += r.queries;");
+  });
+  it("⭐⭐ a second hover on a face with the SAME normal but another start point retargets the view — ⛔ it kept the first hover's target", async () => {
+    const { hoverViewRetargets } = await import("../src/input/hover");
+    expect(hoverViewRetargets([0, 1, 0], [0, 1, 0], [0, 0, 0], [0.2, 0, 0])).toBe(true); // ✅ (⛔ false)
+    expect(hoverViewRetargets([0, 1, 0], [0, 1, 0], [0, 0, 0], [0.002, 0, 0])).toBe(false); // the same place
+    expect(hoverViewRetargets([0, 1, 0], [1, 0, 0], [0, 0, 0], [0, 0, 0])).toBe(true); // another face
+    expect(code("render/hover_wiring.ts")).toContain("hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]])");
+  });
+  it("⭐ a way back held by a part is not solved again while the finger's travel has not changed (⛔ a few gap queries every idle frame, for ever)", async () => {
+    const { wayInDue, startHoverWayIn } = await import("../src/input/hover");
+    const w = { ...startHoverWayIn([0.1, 0, 0]), travelledMm: 5, rawMm: 5 };
+    expect(wayInDue(w, 0.5)).toBe(true); // share 1, wants 0.5
+    expect(wayInDue({ ...w, share: 0.7, heldAtMm: 5 }, 0.5)).toBe(false); // ✅ held there, the travel unchanged
+    expect(wayInDue({ ...w, share: 0.7, heldAtMm: 4 }, 0.5)).toBe(true); // the travel moved on: tried again
+    expect(wayInDue({ ...w, share: 0.5 }, 0.5)).toBe(false); // nothing left to do
+    expect(code("render/hover_wiring.ts")).toContain("if (!wayInDue(w, want)) return;");
+  });
+  it("⭐ the resting contour reads THIS frame's readiness (the hover's look runs first) — ⛔ a frame late", () => {
+    const g = code("render/green_box_wiring.ts");
+    expect(g.indexOf("hoverVisualFrame(st, now);")).toBeGreaterThan(0);
+    expect(g.indexOf("hoverVisualFrame(st, now);")).toBeLessThan(g.indexOf("restingFillFrame(st, now);"));
+  });
+  it("⭐ hygiene: the fields nothing read are gone (the hover's partId, centre0, offset0; the follower's vu/vv/lu/lv)", () => {
+    const s = code("render/scene_state.ts");
+    const at = (k: string) => { const i = s.indexOf(k); expect(i).toBeGreaterThan(0); return i; }; // ⚠ the markers must exist (the source is whitespace-collapsed)
+    const hover = s.slice(at(" hover: {"), at(" hoverPress:"));
+    expect(hover).toContain("pointerId: number;");
+    expect(hover).not.toMatch(/partId|centre0|offset0/);
+    const follow = s.slice(at(" hoverFollow: {"), at(" hoverDraw:"));
+    expect(follow).toContain("settleM: number;");
+    expect(follow).not.toMatch(/\bvu\b|\bvv\b|\blu\b|\blv\b/);
   });
 });

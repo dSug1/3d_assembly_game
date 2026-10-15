@@ -30,6 +30,8 @@ import {
   planeAxes,
   type Rect2,
   boundStep,
+  holdOffBound,
+  wayInDue,
   insideRects,
   rectComponent,
   rectsBoundary,
@@ -216,9 +218,9 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, centre0, offset0: st.hoverOffset ?? [0, 0, 0], u: 0, v: 0, pending: [0, 0], finger: [0, 0], partId: c.id, behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
@@ -229,7 +231,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const corner = hoverCornerDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]], hv0?.signs ?? null);
   if (corner !== null) {
     if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: null };
-    else if (hoverViewRetargets(hv0.n, c.normal))
+    else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))
       st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
   }
   st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
@@ -401,17 +403,16 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   const env = pieceSolverEnv(st, (q) => add(h.origin, add(scale(h.e1, q.yaw), scale(h.e2, (q.v - 0.5) * HOVER_SPAN_M))), setup);
   const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });
   st.pieceQueries += r.queries;
+  st.pieceSolveQueries += r.queries; // ⭐⭐ (2026-10-15, the Fable audit) the quads' turn check reads it: ⛔ under a hover it read 0 and spent the 24 again
   st.pieceMoveBlocked = r.blocked;
   if (r.deferred) st.pieceDeferred = true;
   let nu = r.q.yaw;
   let nv = (r.q.v - 0.5) * HOVER_SPAN_M;
   h.pending = hoverPendingAfter([nu, nv], r.deferred, h.pending);
-  // ⭐⭐ a slide that carried the resting face off the hosting faces: held where it was
-  if (!inside(nu, nv)) {
-    nu = h.u;
-    nv = h.v;
-    h.pending = [h.u, h.v];
-  }
+  // ⭐⭐ a slide that carried the centre off the boundary: held where it was — ⭐⭐⭐ (2026-10-15, the Fable audit) only a step from INSIDE (`holdOffBound`)
+  const was: [number, number] = [nu, nv];
+  [nu, nv] = holdOffBound([h.u, h.v], [nu, nv], inside);
+  if (nu !== was[0] || nv !== was[1]) h.pending = [h.u, h.v];
   if (Math.abs(nu - h.u) + Math.abs(nv - h.v) > 1e-12) {
     hf.du = nu - h.u;
     hf.dv = nv - h.v;
@@ -511,7 +512,7 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
   w = smoothTravel(w, dtMs, st.cfg.boxSmoothMs / 2);
   st.hoverWayIn = w;
   const want = hoverWayInLeft(w.travelledMm, st.cfg.pieceOrbitEnterMm);
-  if (Math.abs(want - w.share) < 1e-9) return;
+  if (!wayInDue(w, want)) return;
   let share = want;
   const q = st.pieceQ;
   if (q !== null && st.greenBox !== null) {
@@ -530,7 +531,8 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
     st.hoverWayIn = null;
   } else {
     st.hoverOffset = scale(w.pieceOff, share);
-    st.hoverWayIn = { ...w, share };
+    // ⭐ (2026-10-15) held short by a part at this travel: not solved again until the travel moves on (`wayInDue`)
+    st.hoverWayIn = { ...w, share, heldAtMm: Math.abs(share - want) > 1e-9 ? w.travelledMm : null };
   }
 }
 
