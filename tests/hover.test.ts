@@ -306,9 +306,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   it("⭐ B: wired — the same look as the hover's start; the shadow, the hosting face's fill and the cyan contour", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z]), st.cfg.hoverEdgeMarginMm / 1000).contact;");
-    expect(h).toContain("(c as LinesMesh).color = (ready !== null ? READY_COLOUR : RESTING_COLOUR).clone();");
-    // ⭐ (the hover's audit) set only when it changes — no colour cloned per line every frame
-    expect(h).toContain("if (fill !== null && (st.hoverTint === null || st.hoverTint.fill !== fill || st.hoverTint.ready !== (ready !== null))) {");
+    // ⭐ (2026-10-15) the resting face's contour is green whatever the state: no tint switched any more (`quad_gate.test.ts`)
     expect(h).toContain("st.hoverFaceFill = buildFaceFill(st, ready.id, ready.faceId, lift);");
     expect(code("render/green_box_wiring.ts")).toContain("hoverVisualFrame(st, now);");
   });
@@ -391,7 +389,7 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   it("⭐ the defaults (2026-10-14, the owner: *\"Set default gizmo moves with hover off and hover distance is unlimited\"*); the highlight green", () => {
     expect(DEFAULT_CONFIG.hoverGizmoMove).toBe(0);
     expect(DEFAULT_CONFIG.hoverAmplitudeMm).toBe(HOVER_UNLIMITED_MM);
-    expect(code("render/hover_wiring.ts")).toContain("const READY_COLOUR = Color3.FromInts(216, 253, 210);");
+    expect(code("render/hover_wiring.ts")).toContain("const READY_COLOUR = RESTING_FACE_COLOUR;"); // ⭐ (2026-10-15) the same #D8FDD2, one place
   });
   it("⭐ F: the piece-only offset's fade is SOLVED; H: the face fill's material disposed with it", () => {
     const h = code("render/hover_wiring.ts");
@@ -678,32 +676,8 @@ describe("⭐⭐⭐ the latch from a dy collision, the coplanar outline, the dra
   });
 });
 
-describe("⭐⭐⭐ the gizmo's supporting face as the mating face; a tap on the piece aligns to the yellow one (2026-10-14, the owner)", () => {
-  const up: Vec3 = [0, 1, 0];
-  it("⭐⭐⭐ the face the gizmo sits on: within 3 mm of its plane and of its coloured outline; none in the air", async () => {
-    const { supportFaceIndex } = await import("../src/input/support_face");
-    const top = { normal: up, centre: [0, 0.0015, 0] as Vec3, triangles: [[[-0.1, 0, -0.1], [0.1, 0, -0.1], [0.1, 0, 0.1]], [[-0.1, 0, -0.1], [0.1, 0, 0.1], [-0.1, 0, 0.1]]] as [Vec3, Vec3, Vec3][] };
-    const side = { normal: [1, 0, 0] as Vec3, centre: [0.1015, -0.05, 0] as Vec3, triangles: [[[0.1, -0.1, -0.1], [0.1, 0, -0.1], [0.1, 0, 0.1]]] as [Vec3, Vec3, Vec3][] };
-    expect(supportFaceIndex([0.05, 0, 0.02], [side, top])).toBe(1); // on the coloured top
-    expect(supportFaceIndex([0.05, 0.2, 0.02], [side, top])).toBe(-1); // in the air
-    expect(supportFaceIndex([0.3, 0, 0.02], [side, top])).toBe(-1); // in the top's plane, beyond it
-  });
-  it("⭐⭐⭐ the direction shown: the supporting face's while the quads are hidden, else the tapped one, else the candidate", async () => {
-    const { shownDirectionTag } = await import("../src/input/support_face");
-    expect(shownDirectionTag(false, 4, 2, 1)).toBe(4);
-    expect(shownDirectionTag(true, 4, 2, 1)).toBe(2); // the quads back: theirs
-    expect(shownDirectionTag(true, 4, null, 1)).toBe(1);
-    expect(shownDirectionTag(false, -1, null, 1)).toBe(1); // no supporting face: as before
-  });
-  it("⭐⭐ the yellow fades in with the quads hidden and out when they show", async () => {
-    const { supportAlpha, SUPPORT_FADE_MS } = await import("../src/input/support_face");
-    expect(supportAlpha(0, true, SUPPORT_FADE_MS / 2)).toBeCloseTo(0.5, 12);
-    expect(supportAlpha(0.5, true, SUPPORT_FADE_MS)).toBe(1);
-    expect(supportAlpha(1, false, SUPPORT_FADE_MS / 4)).toBeCloseTo(0.75, 12);
-  });
-  it("⭐⭐⭐ wired: the shown direction is the supporting face's with the quads hidden; a tap on the piece aligns its new resting face to the one shown", () => {
-    const q = code("render/orient_cube.ts");
-    expect(q).toContain("return shownDirectionTag(st.restingQuads?.shown ?? true, st.supportFace?.tag ?? -1, st.orientShown.clicked?.tag ?? null, st.orientShown.candidate);");
+describe("⭐⭐ a tap on the piece aligns to the yellow quad (2026-10-14, the owner) — ⛔ the gizmo's supporting face as the mating face is deleted (2026-10-15, `quad_gate.test.ts`)", () => {
+  it("⭐⭐ wired: a tap on the piece aligns its new resting face to the direction shown", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const shown = shownDirection(st); if (shown !== null) st.pinkDir = shown;");
     const sel = p.slice(p.indexOf("function selectRestingFace"));
@@ -773,10 +747,8 @@ describe("⭐⭐⭐ the hover bounded by the hosting faces, the smooth draw (202
     expect(g).toContain("wayInDrawFrame(st, dtSec * 1000);");
     const q = code("render/orient_cube.ts");
     expect(q).not.toContain("mirrorQuadShare"); // ⛔ (2026-10-14) the mirror growth deleted: the yellows are full size
-    expect(q).toContain("mesh.scaling.setAll(share);");
-    // ⭐ (2026-10-14) out of the mirror, its least while it fades
-    // ⭐ (2026-10-14, *"make the yellow highlight on the part's hosting face full size (no scaling any longer)"*) full size; only its fade follows the quads
-    expect(q).toContain("const share = 1;");
+    // ⛔ (2026-10-15) the hosting face's yellow is deleted (`quad_gate.test.ts`)
+    expect(q).not.toContain("support-face-outline");
     expect(q).not.toContain("st.restingQuads?.mirror ? st.restingQuads.growth");
   });
 });
@@ -795,9 +767,8 @@ describe("⭐⭐⭐ the regression: the hover froze (2026-10-14, the owner: *\"I
     expect(boundStep([0.2, 0], [0.25, 0], inside)).toEqual([0.25, 0]); // ⛔ was held at [0.2, 0] for ever
     expect(boundStep([0.05, 0], [0.25, 0], inside)[0]).toBeLessThanOrEqual(0.1); // inside: bounded as before
   });
-  it("⭐ the resting face's yellow: always shown, at full scale", () => {
+  it("⭐ the resting face's contour: at full scale (⛔ 2026-10-15: no longer always shown — `quad_gate.test.ts`)", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
     expect(g).toContain("const k = 1;");
   });
 });

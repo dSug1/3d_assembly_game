@@ -5,6 +5,8 @@
  * jump to a new barycentre). ⛔ No rule here.
  * ⛔ Not pickable (a touch goes through it to what is behind), not in the model: no collision, no goal, no score.
  */
+import { restingContourShown } from "../input/quad_gate";
+import { RESTING_FACE_COLOUR } from "./colours";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { OrbitController } from "../input";
@@ -61,6 +63,7 @@ function piecesFacesOf(m: Mesh): number {
 // ⭐⭐ (2026-10-12, the owner: *"resting face and cube current aligned face highlighted contours in yellow (no more pink highlight of the
 // resting face …)"*) — the resting face is a YELLOW CONTOUR (the cube's aligned-face yellow), its fill hidden
 export const RESTING_COLOUR = new Color3(1, 0.85, 0.1);
+
 /** ⭐ The contour seen THROUGH its own piece (drawn over the scene). */
 const RESTING_CONTOUR_XRAY_ALPHA = 0.35;
 /** ⭐ Its fill's opacity — the face still visible under it, as the other face fills. */
@@ -135,7 +138,7 @@ function restingParts(
   data.indices = [...indices, ...indices.slice().reverse()]; // ⚠ double-sided: it must read from either side
   data.applyToMesh(fill, false);
   const mat = new StandardMaterial(`${m.name}-resting-face-mat`, st.scene);
-  mat.emissiveColor = RESTING_COLOUR.clone();
+  mat.emissiveColor = RESTING_FACE_COLOUR.clone();
   mat.disableLighting = true;
   mat.backFaceCulling = false;
   mat.alpha = RESTING_ALPHA;
@@ -146,11 +149,11 @@ function restingParts(
   // ⭐ the contour along the face's edges, a child of the (hidden) fill so it rides its lift; and its twin drawn THROUGH the piece, fainter
   const edges = faceEdges(facePoints, restingFace.normal).map((e) => e.map((p) => new Vector3(p[0], p[1], p[2])));
   const contour = CreateLineSystem(`${m.name}-resting-contour`, { lines: edges }, st.scene);
-  contour.color = RESTING_COLOUR.clone();
+  contour.color = RESTING_FACE_COLOUR.clone();
   contour.parent = fill;
   contour.isPickable = false;
   const xray = CreateLineSystem(`${m.name}-resting-contour-xray`, { lines: edges }, st.scene);
-  xray.color = RESTING_COLOUR.clone();
+  xray.color = RESTING_FACE_COLOUR.clone();
   xray.alpha = RESTING_CONTOUR_XRAY_ALPHA;
   xray.renderingGroupId = 1;
   xray.parent = fill;
@@ -606,7 +609,9 @@ function restingFillFrame(st: SceneState, now: number): void {
   // ⭐⭐ (2026-10-12, the owner: *"same for the outline as for the quads: min 1 pixel, hidden below half max distance"*) — hidden with the quads (below half the farthest distance: it had shrunk to a flickering point there)
   // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — and in the MIRROR: past where the quads disappear it grows again toward the gizmo (`growth`)
   // ⭐⭐ (2026-10-14, the owner: *"keep the yellow highlight of the resting face at full scale, do not diminish it."*) — ALWAYS SHOWN, AT FULL SCALE (no growth with the quads, no mirror)
-  for (const c of fill.getChildMeshes(true)) c.isVisible = true;
+  // ⭐⭐⭐ (2026-10-15, the owner: *"Hide the yellow highlight of the resting face when the quads are not shown"* · *"Continue to green highlight the resting face … when sliding is allowed"*) — shown with the quads, or while a slide is available or on (`restingContourShown`)
+  const shown = restingContourShown(st.restingQuads?.shown === true, st.hoverReady !== null || st.hover !== null);
+  for (const c of fill.getChildMeshes(true)) c.isVisible = shown;
   const camD = Vector3.Distance(st.camera.position, p.mesh.position);
   const lift = highlightLiftM(st.cfg.highlightLiftMm, camD, st.camera.fov, st.canvas.clientHeight);
   const n = p.restingFace.normal;

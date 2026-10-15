@@ -4,6 +4,7 @@
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
+import { quadTapsAllowed } from "../input/quad_gate";
 import { orientTapShown, restingQuadPointer, shownDirection } from "./orient_cube";
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
 import { pieceRingRangeM, respawnStuckPiece } from "./green_box_wiring";
@@ -1418,8 +1419,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
  */
 function selectRestingFace(st: SceneState, faceId: string): boolean {
   if (st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) a piece placed in its goal keeps its faces
-  // ⭐⭐ (2026-10-14, the owner: *"a tap on the green-turquoise piece will select it as the resting face and align it with the current yellow-highlighted quad or part's face"*) — aligned to the direction SHOWN now (the yellow quad, or the gizmo's supporting face while the quads
-  // are hidden) — ⛔ it aligned to the direction last TAPPED, whatever was yellow
+  // ⭐⭐⭐ (2026-10-15, the owner: *"allow the resting face selection by tap on piece only if quads are shown"*)
+  if (!quadTapsAllowed(st.restingQuads?.shown === true)) return false;
+  // ⭐⭐ (2026-10-14, the owner: *"a tap on the green-turquoise piece will select it as the resting face and align it with the current yellow-highlighted quad or part's face"*) — aligned to the direction SHOWN now (the yellow quad; ⛔ the gizmo's supporting face is deleted, 2026-10-15)
+  // — ⛔ it aligned to the direction last TAPPED, whatever was yellow
   const shown = shownDirection(st);
   if (shown !== null) st.pinkDir = shown;
   const carry = st.restRoll !== null && st.restRoll.key === restTargetKey(st) ? st.restRoll.rolls : 0;

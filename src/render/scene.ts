@@ -602,10 +602,7 @@ export function createScene(
   st.hoverFaceFill = null;
   st.hoverFaceKey = "";
   st.hoverOutline = null;
-  st.supportFace = null;
-  st.supportHighlight = null;
   st.hoverOutlineKey = "";
-  st.hoverTint = null;
   st.hoverSpent = null;
   st.hoverReadyWorld = null;
   st.hoverReadyReachMm = 0;

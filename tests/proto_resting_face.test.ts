@@ -221,8 +221,9 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     // ⭐ 2026-10-06: PINK, the pink ring's own constant (it was yellow) — the fill and its see-through twin
     // ⭐⭐ (2026-10-12, *"resting face … highlighted contours in yellow (no more pink highlight of the resting face …)"*) — YELLOW again, a contour
     expect(w).toMatch(/const RESTING_COLOUR = new Color3\(1, 0\.85, 0\.1\);/);
-    expect(w).toMatch(/ mat\.emissiveColor = RESTING_COLOUR\.clone\(\);/);
-    expect(w).toContain("contour.color = RESTING_COLOUR.clone();");
+    // ⭐⭐ (2026-10-15, *"make the highlight of the resting face green (same as the highlight when sliding)"*) — the slide's green (the gizmo ring keeps the yellow)
+    expect(w).toMatch(/ mat\.emissiveColor = RESTING_FACE_COLOUR\.clone\(\);/);
+    expect(w).toContain("contour.color = RESTING_FACE_COLOUR.clone();");
     expect(w).toMatch(/\.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/\.\.\.restingOf\(st, hex\) \}\);/);
     expect(w).toMatch(/pinkRingFrame\(st\);\s*if \(!st\.orbitPiecePlaced\) \{\s*counterYawFrame\(st\);\s*restAlignFrame\(st, now\);\s*anchorFrame\(st, now\);\s*\}\s*restingFillFrame\(st, now\);/); // ⭐ (2026-10-14) a piece placed in its goal is no longer turned or placed by the orbit // ⛔ (2026-10-11) the sphere deleted

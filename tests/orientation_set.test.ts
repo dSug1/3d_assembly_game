@@ -114,7 +114,7 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(c).not.toContain("QUAD_MIN"); // ⭐ *"make the quad minimum one pixel"* (it was 0.01)
     expect(c).toContain("const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);");
     // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
-    expect(quadsShownFromM(6)).toBe(3);
+    expect(quadsShownFromM(6)).toBeCloseTo(3.9, 12); // ⭐ (2026-10-15) 65 % of the farthest (it was half)
     expect(c).toContain("const from = quadsShownFromM(range.maxM); const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;");
     expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
     expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
@@ -154,8 +154,8 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
     expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),");
     expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
     expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
-    // ⭐ (2026-10-14) through `shownDirectionTag`: with the quads hidden, the gizmo's supporting face first
-    expect(c).toContain("return shownDirectionTag(st.restingQuads?.shown ?? true, st.supportFace?.tag ?? -1, st.orientShown.clicked?.tag ?? null, st.orientShown.candidate);");
+    // ⛔ (2026-10-15) the gizmo's supporting face as the mating direction is deleted: the tapped one, else the candidate
+    expect(c).toContain("return st.orientShown.clicked?.tag ?? st.orientShown.candidate;");
     expect(c).toContain("st.orientShown.clicked = { tag, cand: st.orientShown.candidate };");
   });
   it("⭐⭐ *\"highlight in yellow the quad which corresponds to the pink face of the cube\"* — the pink direction's plane, not the resting face's", () => {
@@ -186,7 +186,8 @@ describe("⭐⭐ the resting face's yellow contour scales as the quads (2026-10-
     // ⭐⭐ *\"same for the outline as for the quads: min 1 pixel, hidden below half max distance\"*
     // ⭐ (2026-10-14) shown in the MIRROR too (the quads hidden, growing again toward the gizmo)
     // ⛔ (2026-10-14, *"keep the yellow highlight of the resting face at full scale, do not diminish it"*) the contour no longer scales: always shown, full
-    expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
+    // ⛔ (2026-10-15) shown with the quads or a slide only (`restingContourShown`)
+    expect(g).toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = shown;");
     expect(g).toContain("const k = 1;");
     expect(flat("render/orient_cube.ts")).toContain("q.shown = show;");
     expect(g).toContain("fill.position.set(c[0] * (1 - k) + n[0] * lift, c[1] * (1 - k) + n[1] * lift, c[2] * (1 - k) + n[2] * lift);");
