@@ -34,10 +34,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   on (§17 — the freeze).
 * **Back to the orbit** — the piece-only offset goes back to the ring place by the ORBIT drag's travel over `pieceOrbitEnterMm` (§13), solved
   (8 of the frame's 24 queries kept for it), drawn on the spring (§16). The gizmo never moves on the toggle.
-* **Around it** (`RESTING_FACE_ALIGNMENT.md` §28–§29): with the quads hidden (the piece near the gizmo) the face SUPPORTING the gizmo is the
-  mating face — its full contour YELLOW (red while the turn is blocked), faded in/out as the quads disappear/appear; a tap on the piece makes
-  the face tapped the resting face and aligns it to the direction shown (the yellow quad, or that face). The resting face's yellow contour is
-  always shown at full scale.
+* **Around it** (`RESTING_FACE_ALIGNMENT.md` §30, 2026-10-15): a tap turns the piece (on empty space) or picks its resting face (on the piece)
+  ONLY while the quads show (hidden nearer than 65 % of the farthest distance); ⛔ the gizmo's supporting face as the mating face, and its
+  yellow, are deleted (§28 superseded). The resting face's contour is GREEN #D8FDD2, shown with the quads or while a slide is available / on.
 * **The orbited goals** (`LEVEL_END.md` §5quater): green and turquoise on Piece4's top, flush on its CONTOUR, judged in the WORLD at
   `orbitGoalMm` 5 mm / `orbitGoalDeg` 3°; the green one accepts its long side along Piece4's top (or turned 180°), wide base down.
 

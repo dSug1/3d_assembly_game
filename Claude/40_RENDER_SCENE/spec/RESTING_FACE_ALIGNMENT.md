@@ -1089,3 +1089,30 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐⭐ (2026-10-14, *"make the yellow highlight on the part's hosting face full size (no scaling any longer) and appear and fade when the quads
   disappear or appear"*) — the gizmo's supporting face's yellow is its FULL contour, always; only its FADE follows the quads (in over 250 ms
   as they disappear, out as they appear — `supportAlpha`). The mirror growth (§29) is deleted.
+
+## 30. The quads gate the turn; the resting face green; the hosting face's yellow deleted (2026-10-15, `1.0.76-`)
+
+> *"Currently, if I tap on empty anywhere, the piece quad rotates. Allow the quad rotation on tap only if the quads are shown. Also, allow the
+> resting face selection by tap on piece only if quads are shown."* · *"Make the quads' non-yellow edges highlight and their corresponding face fill
+> 30% more transparent (no change for the quad's yellow edges highlight and fill)."* · *"Currently, the quads are hidden at half the max travel
+> distance. Change to 35 % max travel distance (i.e. quads are hidden when 65 % max travel distance is still remaining)."* · *"Hide the yellow
+> highlight of the resting face when the quads are not shown. When the quads are shown, make the highlight of the resting face green (same as the
+> highlight when sliding) instead of yellow."* · *"Remove the yellow highlight of the part's hosting face. I do not want to show the yellow
+> highlight (nor the red highlight) on the part's hosting face, since I want the quad rotation of the piece to occur only if the quads are shown"* ·
+> *"Continue to green highlight the resting face and the coplanar faces boundary when sliding is allowed"* — the owner. ⛔ Unjudged by a hand.
+
+* ⭐⭐⭐ **THE QUADS GATE THE TURN** (`input/quad_gate.ts`, `quadTapsAllowed`): a tap on empty space — first touch or second (`orientTapShown`) — and
+  a tap on the piece (`selectRestingFace`) act only while the quads are SHOWN; otherwise the tap does nothing.
+* ⛔⛔ **§28 IS SUPERSEDED**: the gizmo's supporting face as the mating face while the quads are hidden, its yellow (red) outline and its fade are
+  DELETED, with `input/support_face.ts` (`supportFaceIndex`, `shownDirectionTag`, `supportAlpha`). The direction shown is the one tapped, else the
+  candidate.
+* ⭐⭐ **THE RESTING FACE'S CONTOUR** (`restingContourShown`): GREEN #D8FDD2 (`render/colours.ts`'s `RESTING_FACE_COLOUR`, the slide's own — one
+  colour, one place), shown with the quads or while a slide is available or on (`HOVER.md`); hidden otherwise. ⛔ It was yellow, always shown (§29).
+  The gizmo's ring keeps the yellow.
+* ⭐ **THE QUADS**: an unlit quad's edges and fill × 0.7 (`quadAlpha`: 0.45 → 0.315, 0.12 → 0.084); hidden nearer than **65 %** of the farthest
+  distance (`QUADS_SHOWN_FROM_SHARE`; it was half). ⚠ `Scene_1` boots its piece 3.01 m out of 5.99 m — under 3.9 m: a fresh level shows no quads,
+  no resting contour, and a tap does nothing until the orbit goes out.
+* ⛔ **A BOOT CRASH CAUGHT BEFORE IT SHIPPED**: the colour, exported from `green_box_wiring.ts` and read at the top level of `hover_wiring.ts` (the two
+  import each other), was read before it was initialised — *"Cannot access … before initialization"*, found by a headless boot, green suite. Now a
+  LEAF module, vectored (it imports nothing from the render layer).
+* Vectors: `tests/quad_gate.test.ts`; headless: at 5.99 m the quads shown, a tap allowed, alphas 0.315 / 0.084; near the gizmo all off.
