@@ -256,3 +256,7 @@ level from its boot; *Level select* = the level's own world. ⭐ Every other URL
   orbited piece still in the orbit left alone; not during a demo). Written without collision, as the dissolve's mate is — it is the product landing
   a pose; before the committed model is kept (no second commit) and with the capture's last pose (no second pull).
 * Vectors: `tests/goal_exact.test.ts`.
+* ⛔⛔⛔ (2026-10-15, *"the green piece reached its goal and still, it is misaligned. Your fix in 716b71b did not work."*) — the ORBITED piece: its mesh
+  was copied INTO the model every frame (`syncOrbitPieceModel`), and once placed nothing moved the mesh (the orbit stops placing it, the parts'
+  drawing skips the orbited piece) — the goal pull and the exact pose were undone the next frame (it still counted, within its 5 mm / 3°). ✅ PLACED,
+  the MODEL leads: the mesh is drawn from it. Measured headless: a pose written to the placed piece's model is its mesh's, position and turn.

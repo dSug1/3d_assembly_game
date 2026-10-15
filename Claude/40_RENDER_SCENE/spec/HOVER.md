@@ -11,7 +11,7 @@ whole — the owner has driven it on the device through several rounds and repor
 **What it is**: the fine placement of the orbited piece (green / turquoise) on a part's face, after the orbit's approach and the quads' turn;
 the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 
-* **Ready (the latch)** — the resting face LOOKS AT a part's face: anti-parallel within 2°, within `hoverApproachMm` (20 mm) of its plane,
+* **Ready (the latch)** — the resting face LOOKS AT a part's face: anti-parallel within 2°, IN FRONT of its plane (§21: ≤ 1 mm behind) within `hoverApproachMm` (20 mm),
   and ANY PORTION of the resting face over that face (`overlapsTriangles`, §15 — not its centre; §18's margin deleted, §19). Shown by the resting contour turning
   GREEN #D8FDD2, the contact shadow (the resting face projected on the face), a faint fill of the face and the GREEN OUTLINE of all the
   coplanar faces joined to it (§15). Looked for every 100 ms when the world moved; frozen bodies (the floor) are never hosts (§11, parked).
@@ -22,8 +22,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
-  green boundary (`insideRects`, §19 — slides along the edge, reversing comes back at once; `boundStep`, §16; a solved slide held only when it left
-  the boundary from inside, `holdOffBound`, §20). Solved ONCE a frame by the orbit's solver inside the frame's
+  green boundary — ⭐ (§21) a step never takes it FARTHER from the boundary (`rectsDistance`, `boundStep`, `holdOffBound`): inside it cannot leave,
+  outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
 * **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
@@ -450,3 +450,20 @@ floor** — marked seats where a piece may be set down, each a known target the 
   the piece can jump the U-shape as this is also the case in reality"*; a check of points along every step would cost code and queries for it.
 * ⚠ Noted, unchanged: an edge of a tilted resting face (within the 2° latch) could dip under the "behind" tolerance (the quads align exactly — not
   reproducible); the drawn outline and the clamp's boundary can name different faces for ≤ 100 ms of world change before the press.
+
+## 21. A rapid drag cannot throw the piece off the boundary; a face hosts only a resting face in front of it (2026-10-15, `1.0.78-`)
+
+> *"a rapid delta position can throw the piece outside the boundary and when the orbit restart, the piece is not reachable any longer and does not
+> follow the orbit."* · *"the green piece approaches from underneath, arrives in sliding position with the resting face facing the bottom while the
+> hosting face is also facing the bottom because the slanted face allows the resting face to be close enough to the hosting face. as a result, the
+> sliding is odd"* — the owner. ⛔ Unjudged by a hand (a synthesised drag does not reach the hover headless: vectored only).
+
+* ⛔⛔⛔ **FREE WHILE OUTSIDE** (§17's fix, kept by §20): a hover starting with the centre OUTSIDE the boundary (the latch is any portion, §15) let
+  every step through — one fast drag AWAY threw the piece as far as the finger went (the amplitude is unlimited), out of reach; the way back is a
+  straight line a part can block. ✅ ONE RULE: a step may never take the centre FARTHER from the drawn boundary (`rectsDistance`, 0 inside) —
+  `boundStep` for the aim, `holdOffBound` for the solver's slide. Inside it cannot leave; outside it moves toward the boundary or along it.
+* ⛔⛔ **A FACE THE RESTING FACE WAS BEHIND** (`hoverFaceContact`): the resting face's centre was allowed the whole reach (20 mm) on EITHER side of a
+  face's plane — the slanted green piece, tucked under or beside a part, latched onto a face it was behind; the hover ran on that plane and the parts
+  "behind" it (the host among them) were exempt from its checks. ✅ `HOVER_BEHIND_M` (1 mm, contact rounding): a face hosts only a resting face IN
+  FRONT of it.
+* Vectors: `tests/hover.test.ts` (*a rapid drag cannot throw the piece off the boundary*, *a face hosts only a resting face IN FRONT of it*).

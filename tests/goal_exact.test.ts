@@ -40,3 +40,15 @@ describe("⭐⭐⭐ a placed piece set exactly on its goal (2026-10-15)", () => 
     expect(c).toContain("id === st.greenBox?.name && !st.orbitPiecePlaced");
   });
 });
+
+describe("⛔⛔⛔ the ORBITED piece placed: the model leads its mesh (2026-10-15, the owner: *\"the green piece reached its goal and still, it is misaligned. Your fix in 716b71b did not work.\"*)", () => {
+  it("⛔⛔⛔ once captured the mesh is drawn FROM the model — ⛔ the orbited piece's mesh was copied INTO the model every frame (`syncOrbitPieceModel`), and nothing moved the mesh once placed: the pull and the exact goal pose were undone the next frame", () => {
+    const g = code("render/green_box_wiring.ts");
+    const sync = g.slice(g.indexOf("export function syncOrbitPieceModel"), g.indexOf("export function createGreenBox"));
+    const lead = sync.indexOf("if (st.orbitPiecePlaced) {");
+    expect(lead).toBeGreaterThan(0);
+    expect(lead).toBeLessThan(sync.indexOf("st.world = setLocalPlacement(")); // before the mesh → model copy
+    expect(sync).toContain("m.position.set(o.local.position[0], o.local.position[1], o.local.position[2]);");
+    expect(sync).toContain("m.rotationQuaternion = new Quaternion(o.local.orientation[1], o.local.orientation[2], o.local.orientation[3], o.local.orientation[0]);");
+  });
+});
