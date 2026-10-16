@@ -919,7 +919,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Reverted (`5c94bc0`); kept as the record: past a top face's crossing the rig's up points back at the camera — a 180° roll is owed somewhere if the
   camera's up follows the rig; the owner refused the roll, and the model below removes the need for it.
 
-### ⭐⭐⭐ THE TURNED CURVE ON LEVEL RINGS — the camera upright (`1.0.79-`)
+### ⛔ REVERTED the same day — level rings with their OWN centres (`1.0.79-`, `59b4531`, live `58c320a`)
 
 > (two sketches: the 2D curve for a vertical supporting face — no change — and for a HORIZONTAL one: rings 1 and 4 high on either side, rings 2 and 3
 > just above the face on either side of the gizmo, the plane movement in the face's plane) *"This is slightly different from what you have built."* →
@@ -927,10 +927,19 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 > *"consequently, if the supporting face is horizontal, the resting face will never fully contact the supporting face"* → (a shift of the curve onto
 > the face proposed) → *"do not build this shift, build only your previous proposal."* — the owner.
 
-* ⭐⭐⭐ **dy** — the piece's place follows the 2D curve TURNED (`q`: halfway between rings 2 and 3 along the face's normal at the camera's yaw when
+> *"your implementation is not what I want. the camera is now completely disconnected from the piece. the ring 3 shall be in the opposite side of the
+> gizmo from the ring 2 in the direction of the 2D curve, the 2D curve shall aim at the gizmo at all time during the orbit … analyze what you did
+> wrong, revert to previous commit, rebuild"* — *"sometimes the piece bounces back, sometimes it bounces forward"* — the owner.
+
+* ⛔⛔ **WHAT WAS WRONG** (kept as the record): I read *"the ring it is sitting on"* as a level circle of ITS OWN, centred beyond the piece. (1) The rings
+  turned about their own off-centre axes, so off the yaw the gizmo was set at the curve SLID sideways instead of turning about the gizmo — ring 2 and
+  ring 3 no longer sat across it; (2) the camera took a heading and tilt round the GIZMO while the piece sat on an off-centre ring — it no longer looked
+  through the piece; (3) each v step of the solver moved the ring's centre too, so a stop or a slide at a part landed the piece ahead or behind — the
+  BOUNCE. Reverted (`533e67f`). The model as it was:
+* ~~**dy** — the piece's place follows the 2D curve TURNED (`q`: halfway between rings 2 and 3 along the face's normal at the camera's yaw when
   the gizmo moved, `yaw0`) — `C(v) = q · orbitOffset(yaw0, v)`. **The ring it sits on** — a LEVEL circle (axis = gravity) of the ring's own radius
   `r(v)`, through `C(v)`, its centre BEYOND the piece as seen from the camera (`beta`, `rigBetaFor`: the turned radial levelled; for a top / bottom
-  face the camera's side). **dx** — the piece round that ring: `P = centre + r · u(yaw + beta)` (`rigPlace`, `input/orbit_rig.ts`).
+  face the camera's side). **dx** — the piece round that ring: `P = centre + r · u(yaw + beta)`.~~
 * ⭐ Unturned it is `orbitOffset` EXACTLY (vectored) — the boot, a respawn, no face; a SIDE face: today's rings turned by a yaw. A TOP face: halfway
   between rings 2 and 3 the piece sits 9 cm (× zoom) above the face on a 9 cm level ring — dx slides it ACROSS the face, dy along the curve.
 * ⭐⭐⭐ **The camera UPRIGHT** (`rigCameraAngles`): its up the world's, its HEADING `yaw + beta` turned by dx alone (never read off a position, so it
@@ -945,3 +954,21 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless (touch, `Scene_1`): Piece3's TOP face — at the waist the piece 9 cm above the gizmo, the camera looking straight down; the crossing's largest
   frame step of the view 1.0°, its up (0, 1, 0) throughout; dx there: the piece 13 cm across the face at the same 9 cm. A SIDE face: the axis vertical,
   0.6°. ⛔ No device close. 2037 vectors.
+
+### ⭐⭐⭐ THE TURNED CURVE SWUNG ROUND THE GIZMO'S VERTICAL — the camera upright, behind the piece (`1.0.79-`)
+
+* ⭐⭐⭐ **dy** — the piece follows the 2D curve TURNED (`q`, halfway between rings 2 and 3 along the face's normal at the camera's yaw when the gizmo
+  moved, `yaw0`). **dx** — the WHOLE turned curve swung round the vertical THROUGH THE GIZMO: `P = yawTurn(yaw − yaw0) · q · orbitOffset(yaw0, v)`
+  (`rigPlace`, `input/orbit_rig.ts` — `6d6670f`'s placement). Every ring is a LEVEL circle about the gizmo's vertical (axis = gravity), the curve aims at
+  the gizmo at every dx, ring 3 opposite ring 2 across it along the curve. Smooth in yaw and v: a step of the solver moves the piece as far as on the
+  unturned rig — no bounce (vectored; headless 0 reversals).
+* ⭐⭐⭐ **The camera UPRIGHT and BEHIND THE PIECE** (`rigCameraAngles`): its up the world's; its heading the near side (`beta`) turned by dx alone; its
+  tilt the piece's own elevation, FOLDED — on the near side its direction from the gizmo IS the piece's (vectored), past a top face's crossing it comes
+  back down on its own side (the piece beyond the gizmo) instead of going over the top: never upside down, nothing rolls. Unturned: `orbitOffset` and
+  `cameraOffset` exactly; a side face: today's rig turned by a yaw. The old turn and the new blended at the gizmo's share; the rebase by `rigYawToward`.
+* ⚠ Halfway between rings 2 and 3 on a top face the piece is straight above the gizmo (9 cm × zoom): dx turns it in place there, and the resting face
+  never reaches the face by the orbit alone (the shift onto the face — not built, the owner). ⚠ Still in the rig's own frame: the all-quads check, the
+  orientation cube, the reference yaw gain, the boot target.
+* Headless (touch, `Scene_1`): Piece3's TOP face — at the waist 9 cm above the gizmo, the camera straight down; the crossing's largest frame step of the
+  view 0.93°, its up (0, 1, 0), the piece's largest frame step 1.5 mm, no reversal. A SIDE face: 0.6°, 1.2 mm, no reversal. ⛔ No device close.
+  2040 vectors (4 new fail against the reverted model).

@@ -63,19 +63,49 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       }
     }
   });
-  it("⭐⭐⭐ EVERY RING IS LEVEL (the owner: *\"the axis of each ring is the gravity axis\"*) and dx carries the piece round it, at the ring's own radius", () => {
+  it("⭐⭐⭐ EVERY RING IS LEVEL ABOUT THE GIZMO'S VERTICAL (the owner: *\"the axis of each ring is the gravity axis … dx orbits the piece on the ring it is sitting on\"*)", () => {
     for (const p of [turnFor(0.4, [0, 1, 0]), turnFor(-1, [0.3, 0.8, -0.5]), turnFor(2, [0, 0, 1])]) {
-      for (const v of [0.1, 0.5, 0.9]) {
+      for (const v of [0.1, 0.3, 0.7, 0.9]) {
         const pts = [0, 1, 2, 3, 4, 5].map((k) => rigPlace(cfg, p, k, v, 1));
-        const o = orbitOffset(cfg, 0, v, 1).offsetM;
-        const r = Math.hypot(o[0], o[2]);
-        for (const q of pts) expect(q[1]).toBeCloseTo(pts[0]![1], 12); // level
-        const c0 = rigPlace(cfg, p, p.yaw0, v, 1);
-        const cx = c0[0] - r * Math.cos(p.yaw0 + p.beta);
-        const cz = c0[2] - r * Math.sin(p.yaw0 + p.beta);
-        for (const q of pts) expect(Math.hypot(q[0] - cx, q[2] - cz)).toBeCloseTo(r, 9); // one circle of the ring's radius
+        for (const q of pts) {
+          expect(q[1]).toBeCloseTo(pts[0]![1], 12); // level
+          expect(Math.hypot(q[0], q[2])).toBeCloseTo(Math.hypot(pts[0]![0], pts[0]![2]), 12); // round the gizmo's vertical
+        }
       }
     }
+  });
+  it("⭐⭐⭐ THE CURVE AIMS AT THE GIZMO AT EVERY dx, ring 3 OPPOSITE ring 2 across it along the curve (the owner's words) — ⛔ rings with their own centres slid the curve off the gizmo", () => {
+    const p = turnFor(0.4, [0, 1, 0]);
+    const ring2 = 0.6, ring3 = 0.4; // either side of the waist (0.5)
+    for (const yaw of [0.4, 1.3, -2.2, 3.0]) {
+      const a = rigPlace(cfg, p, yaw, ring2, 1);
+      const b = rigPlace(cfg, p, yaw, ring3, 1);
+      expect((a[0] * b[0] + a[2] * b[2]) / (Math.hypot(a[0], a[2]) * Math.hypot(b[0], b[2]))).toBeCloseTo(-1, 9); // opposite sides of the gizmo
+      // the whole curve in ONE vertical plane through the gizmo's vertical
+      const n = unit([a[2], 0, -a[0]]);
+      for (const v of [0, 0.2, 0.45, 0.55, 0.8, 1]) {
+        const q = rigPlace(cfg, p, yaw, v, 1);
+        expect(Math.abs(q[0] * n[0] + q[2] * n[2])).toBeLessThan(1e-9);
+      }
+    }
+  });
+  it("⭐⭐ NO BOUNCE: the place is smooth in yaw and v — a small step of the solver moves the piece a small distance (⛔ off-centre rings jumped it back and forth)", () => {
+    const p = turnFor(0.4, [0, 1, 0]);
+    let worst = 0;
+    for (let v = 0; v < 1; v += 0.01) {
+      for (const yaw of [0.4, 1.5]) {
+        const a = rigPlace(cfg, p, yaw, v, 1);
+        const b = rigPlace(cfg, p, yaw, v + 0.001, 1);
+        const c = rigPlace(cfg, p, yaw + 0.001, v, 1);
+        const da = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+        const dc = Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]);
+        const ua = orbitOffset(cfg, yaw, v, 1).offsetM, ub = orbitOffset(cfg, yaw, v + 0.001, 1).offsetM;
+        // ⭐ the same step as on the unturned rig (a rotation keeps every distance along the curve)
+        expect(da).toBeCloseTo(Math.hypot(ua[0] - ub[0], ua[1] - ub[1], ua[2] - ub[2]), 9);
+        worst = Math.max(worst, dc / 0.001);
+      }
+    }
+    expect(worst).toBeLessThan(6.1); // a yaw step moves it at most its distance from the gizmo's vertical (the 1st ring's 6 m)
   });
   it("⭐⭐ at the camera's yaw when the gizmo moved, the piece rides the TURNED CURVE (dy): halfway between rings 2 and 3 along the face's normal", () => {
     for (const [yaw0, n] of [[0.4, [0, 1, 0]], [0, [-1, 0, 0]], [1.1, [0.3, 0.8, -0.5]]] as [number, Vec3][]) {
@@ -98,14 +128,15 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       }
     }
   });
-  it("⭐⭐⭐ a TOP face: halfway between rings 2 and 3 the piece sits above the face on a 9 cm level ring — dx SLIDES it across the face (the plane movement)", () => {
+  it("⭐⭐⭐ a TOP face: halfway between rings 2 and 3 the piece passes over the gizmo along the face's normal; rings 1 and 4 high on either side, rings 2 and 3 just above the face", () => {
     const p = turnFor(0.4, [0, 1, 0]);
-    const w = waistV(cfg);
-    const at = rigPlace(cfg, p, 0.4, w, 1);
-    expect(at[1]).toBeCloseTo(0.09, 9); // the ring's radius, along the normal
-    const side = rigPlace(cfg, p, 0.4 + 0.5, w, 1);
-    expect(side[1]).toBeCloseTo(0.09, 9); // dx: in the face's plane
-    expect(Math.hypot(side[0] - at[0], side[2] - at[2])).toBeGreaterThan(0.03); // ⛔ a yaw about the gizmo's vertical spun it in place
+    const at = rigPlace(cfg, p, 0.4, waistV(cfg), 1);
+    expect(at[1]).toBeCloseTo(0.09, 9); // the waist's radius, along the normal
+    expect(Math.hypot(at[0], at[2])).toBeLessThan(1e-9);
+    const r1 = rigPlace(cfg, p, 0.4, 1, 1), r4 = rigPlace(cfg, p, 0.4, 0, 1);
+    expect(r1[1]).toBeCloseTo(cfg.orbitTopRadiusM, 9);
+    expect(r4[1]).toBeCloseTo(cfg.orbitBottomRadiusM, 9);
+    expect(r1[0] * r4[0] + r1[2] * r4[2]).toBeLessThan(0); // on either side
   });
   it("⭐⭐⭐ THE CAMERA IS NEVER UPSIDE DOWN (a top face): its heading is dx's alone — the same at every v — its tilt the curve's folded, never past straight down", () => {
     const p = turnFor(0.4, [0, 1, 0]);
@@ -117,7 +148,18 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     }
     expect(rigCameraAngles(cfg, p, { yaw: 1.3, v: waistV(cfg) }).el).toBeCloseTo(89 * DEG, 9); // straight down at the crossing
   });
-  it("⭐ the rings' centres beyond the piece as the camera sees it: unturned 0; a side face the turned radial; a top face the camera's side", () => {
+  it("⭐⭐⭐ THE CAMERA BEHIND THE PIECE (⛔ cut from it): on the near side its direction from the gizmo IS the piece's — side face everywhere, top face on the camera's half", () => {
+    for (const [p, vs] of [[turnFor(0, [0, 0, 1]), [0.05, 0.3, 0.45, 0.6, 0.9]], [turnFor(0.4, [0, 1, 0]), [0.05, 0.2, 0.35, 0.45]]] as [RigParams, number[]][]) {
+      for (const yaw of [p.yaw0, p.yaw0 + 1.1, p.yaw0 - 2.4]) {
+        for (const v of vs) {
+          const a = rigCameraAngles(cfg, p, { yaw, v });
+          const d: Vec3 = [Math.cos(a.el) * Math.cos(a.az), Math.sin(a.el), Math.cos(a.el) * Math.sin(a.az)];
+          expect(angle(d, rigPlace(cfg, p, yaw, v, 1))).toBeLessThan(1e-4);
+        }
+      }
+    }
+  });
+  it("⭐ the camera's near side: unturned 0; a side face the turned radial; a top face the camera's side", () => {
     expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBe(0);
     const qs = rigRotationFor(cfg, 0, [0, 0, 1]);
     expect(Math.cos(rigBetaFor(qs, 0, [1, 0, 0]) - Math.PI / 2)).toBeCloseTo(1, 9);
@@ -142,7 +184,7 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
 });
 
 describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
-  it("⭐⭐ every world place the rings give is the turned curve's level ring: the piece's anchor (so the solver), the drawn piece, the way in's heading", () => {
+  it("⭐⭐ every world place the rings give is the turned curve swung round the gizmo's vertical: the piece's anchor (so the solver), the drawn piece, the way in's heading", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const offP = ringPlaceNow(st, o.yaw, o.v, o.zoom);"); // ringAnchorAt
     expect(g).toContain("const boP = ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);");
