@@ -55,12 +55,14 @@ import {
   behindToleranceM,
   hoverPendingAfter,
   hoverQueryBudget,
+  HOVER_OVERSHOOT_M,
   hoverOffered,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
+import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { hoverSwayDeg } from "../input/hover";
@@ -78,6 +80,13 @@ const lerp3 = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, 
 /** ⭐ A first touch (or left press) on the orbited piece: noted — the drag that follows hovers if the piece may (decided past the tap's slop). */
 export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): void {
   st.hoverPress = { pointerId, x: s.x, y: s.y };
+  // ⭐⭐ (2026-10-16, the owner: *"if the next press is on the piece itself, the sliding setup toggles back on (highlights, sliding mode, etc.)"*) — a press ON the
+  // piece after a slide sets it up again: the spent slide cleared, the readiness looked for again at once (a press elsewhere leaves it spent: the drag orbits)
+  if (st.hoverSlid) {
+    st.hoverSlid = false;
+    st.hoverReadyWorld = null;
+    st.hoverReadyAt = -Infinity;
+  }
   // ⭐⭐ (2026-10-14, *"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the finger's (or the mouse's) own DEADBAND — the orbit drag's band (`orbitDeadbandMm`, its pause, its tremor rule)
   const band = new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true);
   band.push(s);
@@ -228,7 +237,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   behind.delete(b.name);
   st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, du: 0, dv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
@@ -363,12 +372,22 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   // τ = `boxSmoothMs` / 2), no lead: ⛔ the part translation's follower (τ 7.6 ms, ζ 0.2, a phantom lead) passed the solve's per-frame steps
   // straight through — a mouse's events beat against the frames (125 Hz against 143 fps measured on the HUD) — and its overshoot, clipped by
   // `hoverDrawLag`, stuck and slipped
-  const tau = hoverDrawTau(st);
-  hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec);
-  hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);
+  // ⭐⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world
+  // translation."* → *"build the inertia"*) — the PART TRANSLATION'S FOLLOWER on the drawn piece: a spring of its own inertia and damping (`hoverInertiaMs`,
+  // `hoverDampingRatio`) toward a phantom target leading the solved place by its smoothed velocity (`hoverLeadMs`); the model stays the solved place (the
+  // collision and the boundary exact), the drawn piece may run ahead of it by `HOVER_OVERSHOOT_M` at most. ⛔ (10-14) a critically damped spring at the
+  // orbit's τ, the part ahead dropped
+  const tauI = Math.max(1e-4, st.cfg.hoverInertiaMs / 1000);
+  const leadS = st.cfg.hoverLeadMs / 1000;
+  hf.vu = exponentialSmooth(hf.vu, (hf.u - hf.lu) / dtSec, tauI, dtSec);
+  hf.vv = exponentialSmooth(hf.vv, (hf.v - hf.lv) / dtSec, tauI, dtSec);
+  hf.lu = hf.u;
+  hf.lv = hf.v;
+  hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);
+  hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);
   // ⭐⭐ the DRAWN lag behind the model: the follower's (behind the last solved step), and the settle still to show (above the settled place —
   // ⭐ (2026-10-14, the hover's second audit) ⛔ the MODEL eased down while the steps were solved at the settled depth: an unchecked pose)
-  const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv);
+  const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv, HOVER_OVERSHOOT_M);
   const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));
   st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));
   // settled after the release: nothing drawn apart

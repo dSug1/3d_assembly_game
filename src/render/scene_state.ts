@@ -534,6 +534,11 @@ export interface SceneState {
     v: number;
     fu: import("../input/follow").FollowState;
     fv: import("../input/follow").FollowState;
+    /** ⭐ (2026-10-16) the solved place's smoothed velocity and its last value — the phantom lead's (`hoverLeadMs`) */
+    vu: number;
+    vv: number;
+    lu: number;
+    lv: number;
     /** ⭐ (2026-10-14, the hover's audit) the last solved step on the plane — the drawn lag is kept behind it (`hoverDrawLag`) */
     du: number;
     dv: number;

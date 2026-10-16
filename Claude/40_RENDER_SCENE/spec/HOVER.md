@@ -18,7 +18,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 * **Start** — a drag (left drag on desktop) that starts ON the piece, past the tap's slop. Refusals are named on the HUD's `last` line. The
   piece SETTLES onto the face (solved, the model at once, drawn eased over 150 ms) to the 1 mm gap kept. The orbit's backlog is dropped and the
   orbit HOLDS STILL while the hover is on (§10). Ends: the finger lifts; a second touch held; a goal capture (which spends the finger until it
-  lifts, §10).
+  lifts, §10). ⭐ (§23) the lift STOPS the slide at once (the drawn piece where it is, the highlights off); the next press ELSEWHERE orbits, the next
+  press ON THE PIECE sets the slide up again (highlights, slide).
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
@@ -26,8 +27,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
-* **Drawn** — the MODEL is the solved place; the mesh eases after it on the orbit's spring (critically damped, τ = `boxSmoothMs` / 2), never
-  ahead (§9, §16). The other parts sway at 0.1°.
+* **Drawn** — the MODEL is the solved place; ⭐ (§23) the mesh follows it on the PART TRANSLATION'S FOLLOWER — `hoverInertiaMs` 60 ms,
+  `hoverDampingRatio` 0.5, `hoverLeadMs` 0.2 (OBJECT TRANSLATION › PIECE SLIDING), at most 3 mm ahead (`HOVER_OVERSHOOT_M`). The other parts
+  sway at 0.1°; the hover's highlights are parented to their host part, so they follow its sway.
 * **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
   is already on), reached on an ARC about the piece at the camera's own distance, by the hover drag's travel over `pieceOrbitEnterMm` (12 mm),
   its share eased on the spring; left the same way by the orbit's travel; at its end exactly the rings' camera. ⚠ It ends only with no hover
@@ -480,3 +482,25 @@ floor** — marked seats where a piece may be set down, each a known target the 
   stayed there after the lift; the piece's offset was kept against the gizmo of the moment (ring base + offset = where the slide put it); the next
   orbit drag eased the piece OUT to its ring about the new gizmo (264 mm → 0 in the headless run). ⚠ The owner's U-shape question was answered then:
   the hosting face is the face the resting face looks at, so a gizmo over a void would not have broken the latch.
+
+## 23. The slide stops at the lift, a press on the piece sets it up again; the highlights follow the sway; the slide's inertia (2026-10-16, `1.0.78-`)
+
+> *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit … Make sure the
+> highlights follow the parts when they sway … Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation
+> of a part in world translation."* → *"build the inertia. place the sliders in object translation under subfolder piece sliding"* → *"if the next press
+> is on the piece itself, the sliding setup toggles back on (highlights, sliding mode, etc.)"* — the owner.
+
+* **The stop** — the lift ends the hover AND its drawn follower (`hoverFollow`, `hoverDraw` dropped: the piece is drawn where it stands, no ease
+  left to play); `st.hoverSlid` is set, and while it is, no slide is offered (`hoverOffered`): the readiness and its highlights go off at once, a
+  drag elsewhere orbits (the way back of §13 then runs on its travel and clears the flag). ⭐ A press ON THE PIECE clears it and invalidates the
+  readiness (`hoverPressNote`), so the latch is looked for on that press and the drag slides again. A new piece (`spawnOrbitPiece`) starts clear.
+  Before: the drawn piece kept easing after the lift, so the orbit's first steps slid it on before it turned.
+* **The highlights follow the sway** — the contact shadow, the face fill and the coplanar outline are built in the HOST part's model frame
+  (`hostFrame`) and PARENTED to its mesh: the sway (drawn only) carries them; the model frame is the drawn one at rest, so nothing moves without it.
+* **The inertia** — the part translation's follower (`advanceFollow` toward `phantomTarget`, the velocity by `exponentialSmooth`) on the drawn
+  piece's two plane coordinates; the model stays the solved place (the collision and the boundary exact). The drawn piece may run AHEAD of it by
+  3 mm at most (`hoverDrawLag`'s cap) — the overshoot; behind, it is free. ⚠ The part translation's own values (7.6 ms, 0.2) were measured
+  headlessly to let a 42 mm frame step through (jerky); 60 ms / 0.5 gave a largest step of 11.8 mm and a 2.6 mm overshoot. Sliders: OBJECT
+  TRANSLATION › PIECE SLIDING (inertia 1–100 ms, damping 0.1–1, lead 0–5 ms).
+* Checked headlessly (touch): the lift stops the ease and the highlights; a drag elsewhere orbits; a press on the piece re-arms (Piece32, the
+  outline back) and its drag slides. ⚠ The desktop mouse cannot be staged (§0, open 6); ⛔ no device close.

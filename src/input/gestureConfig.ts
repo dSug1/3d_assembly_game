@@ -346,6 +346,14 @@ export interface GestureConfig {
   hoverGizmoMove: number;
   /** ⭐ (2026-10-14) the hover's reach from where it began (mm, in the world) — *"from 10mm to 500 mm (in this last case … unlimited)"*. */
   hoverAmplitudeMm: number;
+  /**
+   * ⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world
+   * translation."* → *"build the inertia. place the sliders in object translation under subfolder piece sliding"*) — the slide's drawn piece on the part
+   * translation's follower: its inertia (ms), its damping ratio (< 1 overshoots a little) and its phantom lead (ms) — 60 ms / 0.5 / 0.2 by default (measured: the part's 7.6 ms smoothed nothing).
+   */
+  hoverInertiaMs: number;
+  hoverDampingRatio: number;
+  hoverLeadMs: number;
   /** ⭐ (2026-10-14) the hover's gain — 1: the piece under the finger. */
   hoverGain: number;
   /**
@@ -917,6 +925,11 @@ export const DEFAULT_CONFIG: GestureConfig = {
   hoverGizmoMove: 0,
   // ⚠ guesses with sliders
   hoverAmplitudeMm: 500,
+  // ⭐ (2026-10-16) MEASURED on a touch slide (headless): the part translation's 7.6 ms / 0.2 smoothed nothing — the per-frame solved steps showed through,
+  // 42 mm in one frame; 60 ms / 0.5: the largest step 11.8 mm, an overshoot of 2.6 mm (under the 3 mm cap). The lead is the part's
+  hoverInertiaMs: 60,
+  hoverDampingRatio: 0.5,
+  hoverLeadMs: 0.2,
   hoverGain: 1,
   // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
   orbitGoalMm: 5,
@@ -1191,6 +1204,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
+  if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
+  if (!(cfg.hoverDampingRatio > 0 && cfg.hoverDampingRatio <= 2)) throw new Error(`hoverDampingRatio (${cfg.hoverDampingRatio}) must be in (0, 2].`);
+  if (!(cfg.hoverLeadMs >= 0 && cfg.hoverLeadMs <= 50)) throw new Error(`hoverLeadMs (${cfg.hoverLeadMs}) must be in [0, 50] ms.`);
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);

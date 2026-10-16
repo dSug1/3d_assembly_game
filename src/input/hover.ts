@@ -288,11 +288,16 @@ export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
 // its part AHEAD along the last step (past the solved place) is dropped. ⛔ It was projected onto the last step's direction, its part ACROSS dropped:
 // a mouse's integer-pixel steps through the per-axis band alternate axis from frame to frame (125 Hz against 143 fps), so the drawn piece swung
 // across by the lag on every switch — 5.6 mm a frame against a 0.7 mm step, in the vector
-export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number): [number, number] {
+// ⭐⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece"* → *"build the inertia"*) — the part ahead is kept up to `aheadMaxM`
+// (`HOVER_OVERSHOOT_M`): the part translation's follower overshoots a little where the finger stops, and a clip of it was the stick-slip of 10-14
+/** ⭐ (2026-10-16) the most the drawn piece may run AHEAD of its solved place along the slide (m) — the inertia's overshoot, a few millimetres. */
+export const HOVER_OVERSHOOT_M = 0.003;
+export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number, aheadMaxM = 0): [number, number] {
   const l = Math.hypot(dirU, dirV);
   if (!(l > 1e-12)) return [0, 0];
   const ahead = Math.max(0, (lagU * dirU + lagV * dirV) / l);
-  return [lagU - (ahead * dirU) / l, lagV - (ahead * dirV) / l];
+  const cut = ahead - Math.min(ahead, Math.max(0, aheadMaxM));
+  return [lagU - (cut * dirU) / l, lagV - (cut * dirV) / l];
 }
 
 /**
