@@ -94,6 +94,32 @@ export function hoverCameraSwing(camAt: Vec3, lookAt: Vec3, target: Vec3, dir: V
     lookAt: [lookAt[0] + (target[0] - lookAt[0]) * k, lookAt[1] + (target[1] - lookAt[1]) * k, lookAt[2] + (target[2] - lookAt[2]) * k],
   };
 }
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen. Therefore,
+ * the target isometric view relative to the hosting face will not be exactly isometric. But this is necessary so that the user feels the gravity is
+ * always aligned with the screen vertical axis."*) — **THE SLIDE VIEW UPRIGHT**: the camera's up (`up`, the orbit's) rolled about the view (`view`)
+ * toward the world's vertical seen from the camera, by the slide view's weight `w` — none at 0, exactly upright at 1 (gravity straight down the
+ * screen). The view's direction stays the nearest isometric corner, so the face's two axes no longer read alike on the screen. Looking straight down
+ * there is no upright to roll to: the orbit's up.
+ */
+export function uprightBlend(up: Vec3, view: Vec3, w: number): Vec3 {
+  const d = unit(view);
+  if (d === null) return up;
+  const sq = (u: Vec3): Vec3 | null => {
+    const k = dot(u, d);
+    return unit([u[0] - k * d[0], u[1] - k * d[1], u[2] - k * d[2]]);
+  };
+  const a = sq(up) ?? sq([0, 1, 0]);
+  if (a === null) return up;
+  const b = sq([0, 1, 0]);
+  if (b === null || !(w > 0)) return a;
+  const phi = Math.atan2(dot(cross(a, b), d), dot(a, b)) * Math.min(1, w);
+  const c = Math.cos(phi);
+  const s = Math.sin(phi);
+  const x = cross(d, a);
+  return unit([a[0] * c + x[0] * s, a[1] * c + x[1] * s, a[2] * c + x[2] * s]) ?? a;
+}
+
 /** ⭐ The great-circle turn from unit `a` toward unit `b` by `t`; opposite directions turn over the world's up (or x). */
 export function slerpDir(a: Vec3, b: Vec3, t: number): Vec3 {
   const c = Math.max(-1, Math.min(1, dot(a, b)));
