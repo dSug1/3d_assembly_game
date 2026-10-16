@@ -27,8 +27,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
-* **Drawn** — the MODEL is the solved place; ⭐ (§23) the mesh follows it on the PART TRANSLATION'S FOLLOWER — `hoverInertiaMs` 60 ms,
-  `hoverDampingRatio` 0.5, `hoverLeadMs` 0.2 (OBJECT TRANSLATION › PIECE SLIDING), at most 3 mm ahead (`HOVER_OVERSHOOT_M`). The other parts
+* **Drawn** — the MODEL is the solved place; ⭐ (§23) the mesh follows it on the PART TRANSLATION'S FOLLOWER — `hoverInertiaMs` 40 ms,
+  `hoverDampingRatio` 0.93, `hoverLeadMs` 0.2 (slider 0–100 ms) (OBJECT TRANSLATION › PIECE SLIDING), at most 3 mm ahead (`HOVER_OVERSHOOT_M`). The other parts
   sway at 0.1°; the hover's highlights are parented to their host part, so they follow its sway.
 * **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
   is already on), reached on an ARC about the piece at the camera's own distance, by the hover drag's travel over `pieceOrbitEnterMm` (12 mm),
@@ -502,5 +502,8 @@ floor** — marked seats where a piece may be set down, each a known target the 
   3 mm at most (`hoverDrawLag`'s cap) — the overshoot; behind, it is free. ⚠ The part translation's own values (7.6 ms, 0.2) were measured
   headlessly to let a 42 mm frame step through (jerky); 60 ms / 0.5 gave a largest step of 11.8 mm and a 2.6 mm overshoot. Sliders: OBJECT
   TRANSLATION › PIECE SLIDING (inertia 1–100 ms, damping 0.1–1, lead 0–5 ms).
+* ⭐ **The owner's defaults** (2026-10-16: *"set default slide inertia = 40 ms, slide damping ratio = 0.93, slide phantom lead raise the slider"*):
+  **40 ms / 0.93** (nearly critical: a trace of overshoot); the lead stays 0.2 ms, its slider now **0–100 ms** (step 0.5) — the spring trails the
+  solved place by about its own lag, and a lead of that order (tens of ms) cancels it; the 3 mm cap still bounds what runs ahead.
 * Checked headlessly (touch): the lift stops the ease and the highlights; a drag elsewhere orbits; a press on the piece re-arms (Piece32, the
   outline back) and its drag slides. ⚠ The desktop mouse cannot be staged (§0, open 6); ⛔ no device close.

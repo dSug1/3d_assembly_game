@@ -1021,13 +1021,18 @@ describe("⭐⭐⭐ the slide's inertia (2026-10-16, the owner: *\"Add some iner
     expect(maxOver).toBeLessThanOrEqual(HOVER_OVERSHOOT_M + 1e-12);
     expect(Math.abs(last)).toBeLessThan(1e-6); // settled on it
   });
-  it("⭐⭐ three tunables — 60 ms / 0.5 / the part's lead by default (MEASURED: the part's 7.6 ms / 0.2 let a 42 mm frame step through); validated", () => {
-    expect(DEFAULT_CONFIG.hoverInertiaMs).toBe(60);
-    expect(DEFAULT_CONFIG.hoverDampingRatio).toBe(0.5);
+  it("⭐⭐ three tunables — 40 ms / 0.93 / the part's lead by default (the owner, 2026-10-16: *\"set default slide inertia = 40 ms, slide damping ratio = 0.93\"*; 60 ms / 0.5 before); validated", () => {
+    expect(DEFAULT_CONFIG.hoverInertiaMs).toBe(40);
+    expect(DEFAULT_CONFIG.hoverDampingRatio).toBe(0.93);
     expect(DEFAULT_CONFIG.hoverLeadMs).toBe(DEFAULT_CONFIG.translateLeadMs);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverInertiaMs: 0 })).toThrow(/hoverInertiaMs/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverDampingRatio: 0 })).toThrow(/hoverDampingRatio/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverLeadMs: -1 })).toThrow(/hoverLeadMs/);
+  });
+  it("⭐ the phantom lead's slider reaches the spring's lag (the owner, 2026-10-16: *\"slide phantom lead raise the slider\"*; it stopped at 5 ms) — 0 to 100 ms, validated up to 200", () => {
+    const m = code("render/tuning_menu.ts");
+    expect(m).toContain('tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.5)');
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverLeadMs: 100 })).not.toThrow();
   });
   it("⭐⭐ wired: the drawn piece on that follower; the sliders in OBJECT TRANSLATION › PIECE SLIDING", () => {
     const h = code("render/hover_wiring.ts");

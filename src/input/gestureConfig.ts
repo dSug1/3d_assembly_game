@@ -926,9 +926,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ guesses with sliders
   hoverAmplitudeMm: 500,
   // ⭐ (2026-10-16) MEASURED on a touch slide (headless): the part translation's 7.6 ms / 0.2 smoothed nothing — the per-frame solved steps showed through,
-  // 42 mm in one frame; 60 ms / 0.5: the largest step 11.8 mm, an overshoot of 2.6 mm (under the 3 mm cap). The lead is the part's
-  hoverInertiaMs: 60,
-  hoverDampingRatio: 0.5,
+  // 42 mm in one frame; 60 ms / 0.5: the largest step 11.8 mm, an overshoot of 2.6 mm (under the 3 mm cap). The lead is the part's.
+  // ⭐ (2026-10-16, the owner: *"set default slide inertia = 40 ms, slide damping ratio = 0.93, slide phantom lead raise the slider"*) — 40 ms / 0.93
+  hoverInertiaMs: 40,
+  hoverDampingRatio: 0.93,
   hoverLeadMs: 0.2,
   hoverGain: 1,
   // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
@@ -1206,7 +1207,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
   if (!(cfg.hoverDampingRatio > 0 && cfg.hoverDampingRatio <= 2)) throw new Error(`hoverDampingRatio (${cfg.hoverDampingRatio}) must be in (0, 2].`);
-  if (!(cfg.hoverLeadMs >= 0 && cfg.hoverLeadMs <= 50)) throw new Error(`hoverLeadMs (${cfg.hoverLeadMs}) must be in [0, 50] ms.`);
+  if (!(cfg.hoverLeadMs >= 0 && cfg.hoverLeadMs <= 200)) throw new Error(`hoverLeadMs (${cfg.hoverLeadMs}) must be in [0, 200] ms.`);
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
