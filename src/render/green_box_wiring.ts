@@ -27,14 +27,14 @@ import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
-import { boxDragGains, cameraLag, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
 import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
-import { rigNow, syncCentre } from "./camera_rig";
-import { rigCameraOffset, rigOffset } from "../input/orbit_rig";
+import { fromRigSpace, rigQAt, syncCentre, toRigSpace } from "./camera_rig";
+import { rigOffset } from "../input/orbit_rig";
 import { IDENTITY } from "../core/vec";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
@@ -458,18 +458,25 @@ export function enterPieceOrbit(st: SceneState): boolean {
   // depth axis when second touch is lifted"*) — the ANCHOR (the resting face's centre: what rides the rings since 2026-10-09), never the
   // mesh's origin: read there, the way out's offset carried the piece by its middle-to-face distance at the release (20.6 mm headless)
   const a = st.pieceAnchor;
-  const pos = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
   const c = st.orbitCentreM;
-  const cam = st.camera.position;
-  const tg = st.camera.getTarget();
+  // ⭐⭐⭐ (2026-10-16) recorded in the RIG'S FRAME (the camera code's, `toRigSpace`) — the camera's yaw's turn
+  const lagged = st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const q = rigQAt(st, lagged.yaw);
+  const posR = toRigSpace(st, q, a === null ? [box.position.x, box.position.y, box.position.z] : a);
+  const pos = { x: posR[0], y: posR[1], z: posR[2] };
+  const camR = toRigSpace(st, q, [st.camera.position.x, st.camera.position.y, st.camera.position.z]);
+  const cam = { x: camR[0], y: camR[1], z: camR[2] };
+  const t0 = st.camera.getTarget();
+  const tgR = toRigSpace(st, q, [t0.x, t0.y, t0.z]);
+  const tg = { x: tgR[0], y: tgR[1], z: tgR[2] };
   // ⭐⭐ (2026-10-08) THE WAY IN starts (`startPieceEntry`) — the fingers keep the centre orbit until it is done (the frame then starts the
   // orbit around the piece, `startPieceOrbit`). Recorded now: the camera against the centre orbit's own camera (zero but for a way back
   // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (for the record)
   // ⭐ (2026-10-08) the camera's angles round the piece against the rings', and the piece's heading round the gizmo — the orbit's yaw now
-  const ring = anglesOf(rigCameraOffset(st.cfg, rigNow(st), st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
+  const ring = anglesOf(cameraOffset(st.cfg, lagged, [0, 0, 0], pieceOrbitAngleOffset(st), 1));
   // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
   const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
-  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
+  st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], toRigSpace(st, q, st.centreBlend.targetM), ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
   // ⭐ (2026-10-10) the view's re-aim to the piece: by dx only (`PieceAim`)
   st.pieceAim = startPieceAim(st.pieceEntry);
   st.centreReturn = null;
@@ -490,14 +497,14 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const box = st.greenBox;
   if (box === null) return;
   const c = st.orbitCentreM;
-  const cam = st.camera.position;
-  const tg = st.camera.getTarget();
-  const lk: Vec3 = [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z];
-  const ln = Math.hypot(lk[0], lk[1], lk[2]) || 1;
   if (rebase) {
     const a = st.pieceAnchor;
     const p = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
-    st.orbit = new OrbitController(st.cfg, Math.atan2(p.z - c.z, p.x - c.x), st.orbit.elevation);
+    // ⭐⭐ (2026-10-16) the yaw whose TURNED ring points at the piece (`rigAtYaw`): the piece's world heading less the turned curve's at the fixed yaw
+    const r0 = rigOffset(rigQAt(st, st.rigYaw0), orbitOffset(st.cfg, st.rigYaw0, st.orbit.elevation, 1).offsetM);
+    const flat = Math.hypot(r0[0], r0[2]) > 1e-6 && Math.hypot(p.x - c.x, p.z - c.z) > 1e-6;
+    const yawNew = flat ? st.rigYaw0 + Math.atan2(p.z - c.z, p.x - c.x) - Math.atan2(r0[2], r0[0]) : st.orbit.yaw;
+    st.orbit = new OrbitController(st.cfg, yawNew, st.orbit.elevation);
     st.orbitInertia.stop();
     // ⭐⭐ (2026-10-09, the owner: *"do the fix"* — a fast dy kept the piece far from the gizmo) the spring is re-based on the new YAW
     // only: its ELEVATION goes on where the piece is drawn, still easing after the finger. ⛔ It was reset onto the finger's elevation and
@@ -510,19 +517,26 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
     st.cameraLagged = null;
     st.orbitHeadingPrev = null;
   }
+  // ⭐⭐⭐ (2026-10-16) recorded in the RIG'S FRAME (the camera code's), at the yaw's turn as it now stands
+  const q = rigQAt(st, st.orbit.yaw);
+  const camR = toRigSpace(st, q, [st.camera.position.x, st.camera.position.y, st.camera.position.z]);
+  const cam = { x: camR[0], y: camR[1], z: camR[2] };
+  const t0 = st.camera.getTarget();
+  const tgR = toRigSpace(st, q, [t0.x, t0.y, t0.z]);
+  const lk: Vec3 = [tgR[0] - cam.x, tgR[1] - cam.y, tgR[2] - cam.z];
+  const ln = Math.hypot(lk[0], lk[1], lk[2]) || 1;
   // ⭐ where the rings put the piece and the camera — at the elevation the piece is DRAWN at (the spring's), on a rebase
   const hv = rebase && st.boxSpring !== null ? st.boxSpring.at.v : st.orbit.elevation;
   const bo = orbitOffset(st.cfg, st.orbit.yaw, hv, GREEN_PIECE_ORBIT_ZOOM);
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
-  // ⭐⭐⭐ (2026-10-16) the rings as the rig is turned onto the gizmo's face
-  const boW = rigOffset(rigNow(st), bo.offsetM);
-  const rel: Vec3 = [boW[0] * k, boW[1] * k, boW[2] * k];
-  const ringCam = rigCameraOffset(st.cfg, rigNow(st), { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
+  const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
+  const ringCam = cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
   // ⛔⛔ (2026-10-11, the owner: *"At the end of the roll to the next axis, the object systematically translates towards the world's negative
   // depth axis when second touch is lifted"*) — the ANCHOR (the resting face's centre: what rides the rings since 2026-10-09), never the
   // mesh's origin: read there, the way out's offset carried the piece by its middle-to-face distance at the release (20.6 mm headless)
   const a = st.pieceAnchor;
-  const p = a === null ? box.position : { x: a[0], y: a[1], z: a[2] };
+  const pR = toRigSpace(st, q, a === null ? [box.position.x, box.position.y, box.position.z] : a);
+  const p = { x: pR[0], y: pR[1], z: pR[2] };
   const pieceOff: Vec3 = rebase ? [p.x - (c.x + rel[0]), p.y - (c.y + rel[1]), p.z - (c.z + rel[2])] : [0, 0, 0];
   // ⭐ seen from the PIECE as it is drawn (where the rings put it + its offset): the home camera and the camera as it is
   const piece: Vec3 = [c.x + rel[0] + pieceOff[0], c.y + rel[1] + pieceOff[1], c.z + rel[2] + pieceOff[2]];
@@ -1023,7 +1037,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   st.boxOrbit = st.boxSpring.at;
   const bo = orbitOffset(st.cfg, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);
   // ⭐⭐⭐ (2026-10-16) the rig turned onto the gizmo's face: every world place the rings give is turned by it (a turn keeps the distances)
-  const rigQ = rigNow(st);
+  const rigQ = rigQAt(st, st.boxOrbit.yaw);
   const boW = rigOffset(rigQ, bo.offsetM);
   // ⛔ The piece's own range (`clampPieceRadiusM`, 2026-10-09: its minimum ZERO, no longer the camera's near-plane guard): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
@@ -1042,11 +1056,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (st.centreReturn !== null) st.centreReturn = ringProgress(st.centreReturn, bo.radiusM * k, piecesClosestM(st));
   const cr = st.centreReturn;
   // ⭐ (2026-10-07) on the way back to the centre orbit, the piece's difference from the rings fades out (`returnPieceOffset`)
-  const back: Vec3 = cr === null ? [0, 0, 0] : returnPieceOffset(cr, cfg.pieceOrbitReturnMm);
+  const back: Vec3 = cr === null ? [0, 0, 0] : rigOffset(rigQ, returnPieceOffset(cr, cfg.pieceOrbitReturnMm)); // ⭐ (2026-10-16) recorded in the rig's frame
   // ⭐ (2026-10-08) on the way in, at its own heading round the gizmo (`carryHeading`) — the rings' radius and height as the orbit's
-  const be = st.pieceEntry === null ? null : rigOffset(rigQ, orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM);
+  const be = st.pieceEntry === null ? null : rigOffset(rigQAt(st, st.pieceEntry.headingRad), orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM);
   // ⭐ (2026-10-08) …plus what a way out cut short had left, fading out (`entryPieceOffset`)
-  const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm);
+  const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : rigOffset(rigQ, entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm)); // ⭐ (2026-10-16) recorded in the rig's frame
   // ⭐ (2026-10-13) the solver's cost on the HUD: a mean over ~30 frames and the PEAK of the last 2 s (a freeze shows there)
   st.pieceGuardMs += (st.pieceGuardFrameMs - st.pieceGuardMs) / 30;
   st.pieceGuardPeak = now - st.pieceGuardPeakAt > 2000 || st.pieceGuardFrameMs >= st.pieceGuardPeak ? (st.pieceGuardPeakAt = now, st.pieceGuardFrameMs) : st.pieceGuardPeak;
@@ -1146,8 +1160,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // the WAY IN (2026-10-08) inside the centre orbit — the camera brought to that pose, its view from the gizmo to the piece.
   let camAt: Vec3;
   let lookAt: Vec3;
+  // ⭐⭐⭐ (2026-10-16, the owner: *"at position in attachment 2 the dy downwards triggers a very fast orbit of the camera … dx input controls a mix of yaw and pitch orbit of the piece and camera. This is not clear what the dx input does"* → *"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical"*, *"Always yaw about vertical"*) — THE CAMERA IN THE RIG'S FRAME: the piece carried in (`toRigSpace`), the camera
+  // placed as on the rig as designed, its answer carried back out below and its up turned with it — the waist's crossing on a top face is the vertical
+  // face's swing, turned (⛔ in the world, crossing straight over the gizmo flipped the picture)
+  const qc = rigQAt(st, st.cameraLagged.yaw);
+  const ppW = pp;
+  {
+  const pp = toRigSpace(st, qc, ppW);
   if (po === null) {
-    const o = rigCameraOffset(st.cfg, rigQ, st.cameraLagged, [boW[0] * k, boW[1] * k, boW[2] * k], off, gapFull);
+    const o = cameraOffset(st.cfg, st.cameraLagged, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], off, gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
     if (cr !== null) {
@@ -1167,7 +1188,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       // ⭐⭐⭐ (2026-10-08) THE WAY IN: ONE progress, finger travel over `pieceOrbitEnterMm` — the camera round the piece at the rings' angles
       // (dx turning it round the piece), the piece carried round the gizmo by the share left (`carryHeading`): the pivot passes from the
       // gizmo to the piece GRADUALLY; its view from the gizmo to the piece — then the orbit around the piece starts, nothing changing
-      const ring = anglesOf(rigCameraOffset(st.cfg, rigQ, st.cameraLagged, [0, 0, 0], off, 1));
+      const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
       // ⭐ (2026-10-10) its view re-aims to the piece by dx only (`aimProgress`), AND the camera's start shift round the piece (the camera
       // offsets seen from the piece) fades by it too — a pure dy leaves the piece where it was on the screen
       const aimT = st.pieceAim === null ? entryProgress(pe, cfg.pieceOrbitEnterMm) : aimProgress(st.pieceAim, cfg.pieceOrbitEnterMm);
@@ -1176,17 +1197,17 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       const ax = entryLook(pe, camAt, [c.x, c.y, c.z], pp, cfg.pieceOrbitEnterMm, aimT);
       lookAt = [camAt[0] + ax[0], camAt[1] + ax[1], camAt[2] + ax[2]];
       if (entryProgress(pe, cfg.pieceOrbitEnterMm) >= 1) {
-        const out = rigOffset(rigQ, orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM);
+        const out = rigOffset(qc, orbitOffset(st.cfg, st.orbit.yaw, 0, 1).offsetM);
         const h = Math.hypot(out[0], out[2]) || 1;
         // ⭐ (2026-10-08) the end distance measured from HERE — the start of the orbit around the piece, not the tap
         const t = st.centreBlend.targetM;
-        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], pp, [out[0] / h, 0, out[2] / h], camAt, Math.hypot(pp[0] - t[0], pp[1] - t[1], pp[2] - t[2]), clampGreenZoom(st.zoom));
+        st.pieceOrbit = startPieceOrbit([c.x, c.y, c.z], ppW, [out[0] / h, 0, out[2] / h], fromRigSpace(st, qc, camAt), Math.hypot(ppW[0] - t[0], ppW[1] - t[1], ppW[2] - t[2]), clampGreenZoom(st.zoom)); // ⭐ (2026-10-16) in the world: the piece's line stays put
         st.pieceEntry = null;
         st.hudDirty = true;
       }
     }
   } else {
-    const ring = anglesOf(rigCameraOffset(st.cfg, rigQ, st.cameraLagged, [0, 0, 0], off, 1));
+    const ring = anglesOf(cameraOffset(st.cfg, st.cameraLagged, [0, 0, 0], off, 1));
     // ⭐ (2026-10-09, *"why the zoom only works if the piece is inside the white sphere?"*) × the zoom now over the zoom at its start
     const gapPiece =
       scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct) *
@@ -1206,6 +1227,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       }
     }
   }
+  }
+  // ⭐⭐⭐ (2026-10-16) back into the world, the camera's up turned with the rig
+  camAt = fromRigSpace(st, qc, camAt);
+  lookAt = fromRigSpace(st, qc, lookAt);
+  const upW = qRotate(qc, [0, 1, 0]);
   // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by
   // the sliders values"* — the yaw gain around the piece (`referenceYawGain`), RECOMPUTED ONLY when a slider it reads changes (the
   // offsets, the radius offset, the boot zoom, the gap's %, the rings) — never from the live camera. Read at each orbit drag's start.
@@ -1221,7 +1247,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
         const kk = r.radiusM > 1e-9 ? clampPieceRadiusM(r.radiusM, cfg) / r.radiusM : 1;
         return { offsetM: [r.offsetM[0] * kk, r.offsetM[1] * kk, r.offsetM[2] * kk], radiusM: r.radiusM * kk };
       },
-      camOffset: (y, v, rel, g) => rigCameraOffset(cfg, IDENTITY, { yaw: y, v }, rel, off, g), // ⭐ (2026-10-16) the reference gain: the rig's own frame (a turn changes no distance)
+      camOffset: (y, v, rel, g) => cameraOffset(cfg, { yaw: y, v }, rel, off, g),
       gapM: cameraGapM(cfg.cameraRadiusOffsetMm / 1000, st.orbitStartZoom),
       minPct: cfg.pieceOrbitGapMinPct,
       points: sweepPoints(st, centre),
@@ -1231,6 +1257,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
   ({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
+  if (st.camera.upVector.x !== upW[0] || st.camera.upVector.y !== upW[1] || st.camera.upVector.z !== upW[2]) st.camera.upVector = new Vector3(upW[0], upW[1], upW[2]);
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
@@ -1283,7 +1310,7 @@ function anchorShiftNow(st: SceneState, now: number): Vec3 {
 export function ringAnchorAt(st: SceneState, o: OrbitQ): Vec3 {
   const c = st.orbitCentreM;
   // ⭐⭐⭐ (2026-10-16) on the rig turned onto the gizmo's face (a turn keeps the radius)
-  const off = rigOffset(rigNow(st), orbitOffset(st.cfg, o.yaw, o.v, o.zoom).offsetM);
+  const off = rigOffset(rigQAt(st, o.yaw), orbitOffset(st.cfg, o.yaw, o.v, o.zoom).offsetM);
   const r = Math.hypot(off[0], off[1], off[2]);
   const k = r > 1e-9 ? clampPieceRadiusM(r, st.cfg) / r : 1;
   // ⭐ (2026-10-14, the hover) the piece-only offset (`hoverGizmoMove` 0) rides with it until the orbit drops it

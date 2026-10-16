@@ -899,6 +899,7 @@ export function createScene(
   // ⭐ (2026-10-16) the rig as it was designed at boot: no turn until the gizmo moves onto a face
   st.rigFrom = IDENTITY;
   st.rigTo = IDENTITY;
+  st.rigYaw0 = 0;
   const bootCentre = st.centreBlend.centreM;
   st.bootCentreM = [bootCentre[0], bootCentre[1], bootCentre[2]]; // ⭐ (2026-10-13) a stuck piece's respawn puts the centre back here
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);

@@ -10,7 +10,6 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
-import { cameraOffset } from "../src/input/follow_camera";
 import { IDENTITY, qRotate, type Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -56,20 +55,32 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       expect(Math.hypot(w[0], w[1], w[2])).toBeCloseTo(o.radiusM, 9);
     }
   });
-  it("⭐⭐ the camera offsets are DETACHED from the rig: unturned, `cameraOffset` exactly; turned, the offsets add to the world yaw and elevation of the turned ring", async () => {
-    const { rigCameraOffset, rigRotationFor } = await import("../src/input/orbit_rig");
-    const off = { yawRad: 0.05, pitchRad: 0.03 };
-    for (const v of [0.1, 0.45, 0.9]) {
-      const a = cameraOffset(cfg, { yaw: 0.6, v }, [0.3, 0.2, 0.1], off, 0.5);
-      const b = rigCameraOffset(cfg, IDENTITY, { yaw: 0.6, v }, [0.3, 0.2, 0.1], off, 0.5);
+  it("⭐ yawTurn adds to the orbit's yaw: orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)", async () => {
+    const { yawTurn } = await import("../src/input/orbit_rig");
+    for (const [y, d] of [[0.3, 0.9], [-2, 2.5]]) {
+      const a = orbitOffset(cfg, y! + d!, 0.7, 1).offsetM;
+      const b = qRotate(yawTurn(d!), orbitOffset(cfg, y!, 0.7, 1).offsetM);
       for (let i = 0; i < 3; i++) expect(b[i]).toBeCloseTo(a[i]!, 12);
     }
-    // a side face behind: the rig turned 180° about the vertical — the camera's offset is the unturned one turned the same, the yaw offset still
-    // to the camera's left of the ring (⛔ turned with a tilted rig it would have swung about the rig's axis)
-    const q = rigRotationFor(cfg, 0, [-1, 0, 0]);
-    const t = rigCameraOffset(cfg, q, { yaw: 0, v: 0.9 }, [1, 0, 0], off, 0);
-    const u = cameraOffset(cfg, { yaw: Math.PI, v: 0.9 }, [1, 0, 0], off, 0);
-    for (let i = 0; i < 3; i++) expect(t[i]).toBeCloseTo(u[i]!, 9);
+  });
+  it("⭐⭐⭐ dx YAWS ABOUT THE WORLD VERTICAL (the owner: *\"Always yaw about vertical\"*): a ring point at yaw y is the turned curve at the fixed yaw, swung by y − y0 round the vertical; unturned: today's rig exactly", async () => {
+    const { rigAtYaw, rigRotationFor, yawTurn } = await import("../src/input/orbit_rig");
+    const y0 = 0.4;
+    const R = rigRotationFor(cfg, y0, [0, 1, 0]);
+    for (const y of [y0, 1.3, -1.9]) {
+      for (const v of [0.2, 0.5, 0.9]) {
+        const a = qRotate(rigAtYaw(R, y0, y), orbitOffset(cfg, y, v, 1).offsetM);
+        const b = qRotate(yawTurn(y - y0), qRotate(R, orbitOffset(cfg, y0, v, 1).offsetM));
+        for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(b[i]!, 9);
+      }
+      const id = rigAtYaw(IDENTITY, y0, y);
+      expect(angle(qRotate(id, [1, 0.3, -0.2]), [1, 0.3, -0.2])).toBeLessThan(1e-6); // ⛔ no turn, no change
+    }
+  });
+  it("⭐⭐⭐ a TOP face: halfway between rings 2 and 3 the piece stays straight above the gizmo at EVERY dx (⛔ the rig's own axis wheeled it over the top)", async () => {
+    const { rigAtYaw, rigRotationFor, waistV } = await import("../src/input/orbit_rig");
+    const R = rigRotationFor(cfg, 0.4, [0, 1, 0]);
+    for (const y of [0.4, 1.0, 2.5, -1.2]) expect(angle(qRotate(rigAtYaw(R, 0.4, y), orbitOffset(cfg, y, waistV(cfg), 1).offsetM), [0, 1, 0])).toBeLessThan(1e-4);
   });
   it("⭐ the blend: from the old rotation to the new by the gizmo's share; at 1 exactly the new", async () => {
     const { rigAt, rigRotationFor } = await import("../src/input/orbit_rig");
@@ -84,8 +95,16 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
 describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   it("⭐⭐ the rings' world places read the turned rig: the piece's anchor, the camera, the ring angles of the way in and out", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const off = rigOffset(rigNow(st), orbitOffset(st.cfg, o.yaw, o.v, o.zoom).offsetM);"); // ringAnchorAt
-    expect(g).not.toMatch(/[^g]cameraOffset\(st\.cfg/); // every camera offset through the turned rig
+    expect(g).toContain("const off = rigOffset(rigQAt(st, o.yaw), orbitOffset(st.cfg, o.yaw, o.v, o.zoom).offsetM);"); // ringAnchorAt
+    expect(g).toContain("const rigQ = rigQAt(st, st.boxOrbit.yaw); const boW = rigOffset(rigQ, bo.offsetM);"); // the drawn piece
+  });
+  it("⭐⭐⭐ the CAMERA IN THE RIG'S FRAME (the owner: *\"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical\"*): the piece carried in, the answer carried out, the camera's up turned — ⛔ the world's up flipped the picture over the gizmo", () => {
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const qc = rigQAt(st, st.cameraLagged.yaw); const ppW = pp; { const pp = toRigSpace(st, qc, ppW);");
+    expect(g).toContain("camAt = fromRigSpace(st, qc, camAt); lookAt = fromRigSpace(st, qc, lookAt); const upW = qRotate(qc, [0, 1, 0]);");
+    expect(g).toContain("st.camera.upVector = new Vector3(upW[0], upW[1], upW[2]);");
+    expect(g).not.toContain("rigCameraOffset"); // ⛔ the offsets added in the world: undefined straight over the gizmo
+
   });
   it("⭐⭐ the gizmo's move sets the rig's new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {
     const p = code("render/pointer_wiring.ts");
@@ -93,6 +112,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const h = code("render/hold_wiring.ts");
     expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
     const c = code("render/camera_rig.ts");
-    expect(c).toContain("st.rigTo = rigRotationFor(st.cfg, st.orbit.yaw, normal);");
+    expect(c).toContain("st.rigFrom = rigQAt(st, yaw);");
+    expect(c).toContain("st.rigTo = rigRotationFor(st.cfg, yaw, normal); st.rigYaw0 = yaw;");
   });
 });

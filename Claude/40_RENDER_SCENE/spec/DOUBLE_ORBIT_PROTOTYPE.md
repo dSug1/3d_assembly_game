@@ -879,11 +879,34 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   choice). No face (the boot, a stuck piece's respawn): unturned, as before.
 * ⭐ **Eased with the gizmo's slide** (`rigNow` = slerp from the old turn to the new at `centreBlend.progress`, the orbit finger's travel): the camera and
   the piece swing over, never a jump (`retargetGizmo`, `camera_rig.ts`).
-* ⭐⭐ **The camera offsets DETACHED from the rig** (`rigCameraOffset`): the ring's direction turned, then the yaw offset added about the world vertical and
-  the pitch offset to the world elevation (mirrored by the ring's own pitch, as before), clamped at ±89°; unturned it is `cameraOffset` exactly (vectored).
+* ⛔ ~~The camera offsets added in the WORLD (`rigCameraOffset`)~~ — deleted the same day (below): undefined straight over the gizmo.
 * ⭐ **One path**: the piece's anchor (`ringAnchorAt`, so the solver), the drawn piece, the camera, the way in's and the orbit around the piece's ring
   angles, the way out's home pose — all through the turned rig. A turn keeps every distance: the clamps, the zoom, the gap, the 24-query budget untouched.
   ⚠ Still in the rig's own frame: the all-quads-reachable check, the orientation cube, the reference yaw gain, the boot target.
 * Headless (touch, `Scene_1`): a tap on Piece3's TOP face → the rig's axis (0, 0, 1); at the waist (v 0.506) the piece's direction from the gizmo
   (0, 0.99, 0.15), the camera above. A tap on Piece31's SIDE face (normal (−1, 0, 0)) → the axis back to vertical; at the waist (−0.99, 0.16, −0.01).
   ⛔ No device close. 2031 vectors (8 new in `tests/orbit_rig.test.ts`, each wiring one red first).
+
+### The same day, after the owner's look — the camera in the rig's frame, dx about the vertical (`1.0.79-`)
+
+> *"in the case I have placed the gizmo on the top face of piece4: dy downwards input brings the piece towards the gizmo … at position in attachment 2
+> the dy downwards triggers a very fast orbit of the camera with the dy input: can we slow down this orbit ? — dx input controls a mix of yaw and pitch
+> orbit of the piece and camera. This is not clear what the dx input does."* → *"I want the same as when the camera orbit between rings 2 and 3 when
+> the face is vertical"*, *"Always yaw about vertical"* — the owner.
+
+* ⛔⛔ **The cause of the fast orbit**: on a vertical face the waist's crossing swings the camera through the HORIZONTAL; on a top face the same crossing
+  passes over the ZENITH, and a camera with the world's up crossing straight over its target flips the picture there (and the offsets added in world
+  yaw / elevation were undefined at it). ⚠ The waist itself turns the view fast anywhere — 34°/mm at its middle, 118° over ~3.5 mm of finger
+  (`Scene_1`: the piece passes the gizmo 9 cm off) — the owner's *"the same as … vertical"* keeps that.
+* ⭐⭐⭐ **THE CAMERA IN THE RIG'S FRAME** (`toRigSpace` / `fromRigSpace`, `camera_rig.ts`): the piece and the way in's / way out's recorded poses carried
+  in, the camera placed by the code as it always was (`cameraOffset`, the offsets in the rig's frame — so the same ON THE SCREEN in any orientation),
+  carried back out, and the camera's UP turned with the rig (`ArcRotateCamera.upVector`). On a top face the crossing is the vertical face's swing,
+  turned. The way in's and way out's piece offsets are rig-frame vectors (turned where the piece is placed); the orbit around the piece keeps its line
+  in the world; the end-by-distance rebase finds the yaw whose turned ring points at the piece.
+* ⭐⭐ **dx YAWS ABOUT THE WORLD VERTICAL** (`rigAtYaw`): the turn fixed at the gizmo's move (`rigYaw0`) and swung round the vertical by dx —
+  `yawTurn(δ) · R · yawTurn(−δ)`. Unturned: today's rig exactly; a side face: unchanged (its turn is about the vertical); a top face: the waist stays
+  straight above the face at EVERY dx (dx spins the view about its normal). ⚠ On a tilted rig the level circles dx follows are not the rings' designed
+  radii (those hold in the rig's frame).
+* Headless (touch, `Scene_1`): Piece3's top face — the crossing's largest frame step of the view 1.14°, its up fixed (0, 0, 1), no flip; after dx at
+  the waist the piece still above the face. A side face: up (0, 1, 0), 0.87–1.23°. ⚠ The dy drags to the waist also moved the yaw 45° on a side face —
+  the collision's slide along the ring (the solver resets the orbit's yaw), not the turn. ⛔ No device close. 2034 vectors.

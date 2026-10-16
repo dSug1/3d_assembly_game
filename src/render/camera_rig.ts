@@ -8,8 +8,8 @@ import { pinchAllowed } from "../input/pinch";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
-import { type Quat, type Vec3 } from "../core/vec";
-import { rigAt, rigRotationFor } from "../input/orbit_rig";
+import { qconj, qRotate, type Quat, type Vec3 } from "../core/vec";
+import { rigAt, rigAtYaw, rigRotationFor } from "../input/orbit_rig";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
@@ -66,13 +66,36 @@ export function rigNow(st: SceneState): Quat {
   return rigAt(st.rigFrom, st.rigTo, st.centreBlend.progress);
 }
 
+/** ⭐⭐ (2026-10-16) the rig's world turn at the orbit's yaw `yaw` — dx swings the turned curve round the world vertical (`rigAtYaw`). */
+export function rigQAt(st: SceneState, yaw: number): Quat {
+  return rigAtYaw(rigNow(st), st.rigYaw0, yaw);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical"*) — **THE RIG'S FRAME**: a
+ * world point carried about the orbit centre by the rig's turn `q` undone, so the camera code sees the rig as designed (`fromRigSpace` carries its
+ * answer back, and the camera's up is `q`'s turned vertical).
+ */
+export function toRigSpace(st: SceneState, q: Quat, p: Vec3): Vec3 {
+  const c = st.orbitCentreM;
+  const r = qRotate(qconj(q), [p[0] - c.x, p[1] - c.y, p[2] - c.z]);
+  return [c.x + r[0], c.y + r[1], c.z + r[2]];
+}
+export function fromRigSpace(st: SceneState, q: Quat, p: Vec3): Vec3 {
+  const c = st.orbitCentreM;
+  const r = qRotate(q, [p[0] - c.x, p[1] - c.y, p[2] - c.z]);
+  return [c.x + r[0], c.y + r[1], c.z + r[2]];
+}
+
 /**
  * ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) → *"fix the rotation at the camera's yaw when the gizmo moves"* — the gizmo moved onto a face (`normal`, world; `null`: none): the rig's
  * new turn takes its waist direction at the camera's yaw onto that normal (`rigRotationFor`), eased from the turn it has with the gizmo's slide.
  */
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
-  st.rigFrom = rigNow(st);
-  st.rigTo = rigRotationFor(st.cfg, st.orbit.yaw, normal);
+  const yaw = st.orbit.yaw;
+  st.rigFrom = rigQAt(st, yaw); // the turn as it stands at this yaw — the new one is fixed here
+  st.rigTo = rigRotationFor(st.cfg, yaw, normal);
+  st.rigYaw0 = yaw;
   st.centreBlend.retarget(to);
   syncCentre(st);
 }

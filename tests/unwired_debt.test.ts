@@ -93,8 +93,6 @@ const PENDING: Record<string, string> = {
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
-  // ⭐ (2026-10-16) the rig turned onto the gizmo's face: the scene reads `rigCameraOffset` now, which IS this with no turn
-  cameraOffset: "the UNTURNED camera offset — `rigCameraOffset`'s oracle (equal with no turn, vectored); the scene calls the turned one",
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
   smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
   // ⭐ prototype (green box), 2026-10-02: the box follows the rig on a spring now (`springOrbit`) — no speed jump per event.
