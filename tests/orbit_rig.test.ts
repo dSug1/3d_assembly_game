@@ -82,42 +82,6 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     const R = rigRotationFor(cfg, 0.4, [0, 1, 0]);
     for (const y of [0.4, 1.0, 2.5, -1.2]) expect(angle(qRotate(rigAtYaw(R, 0.4, y), orbitOffset(cfg, y, waistV(cfg), 1).offsetM), [0, 1, 0])).toBeLessThan(1e-4);
   });
-  it("⭐⭐ the rig's up kept in full between rings 2 and 3, none at rings 1 and 4, eased over the WHOLE outer stretches (the owner: *\"build A\"*)", async () => {
-    const { rigUpWeight, waistV } = await import("../src/input/orbit_rig");
-    expect(rigUpWeight(cfg, waistV(cfg))).toBe(1);
-    expect(rigUpWeight(cfg, 0)).toBe(0);
-    expect(rigUpWeight(cfg, 1)).toBe(0);
-    const w = [0.95, 0.85, 0.75, 0.65].map((v) => rigUpWeight(cfg, v));
-    for (let i = 1; i < w.length; i++) expect(w[i]!).toBeGreaterThan(w[i - 1]!); // rising toward ring 2, never a step
-    expect(rigUpWeight({ ...cfg, orbitLowerRingOn: 0 }, 0.1)).toBe(1); // three rings: the waist runs from the bottom ring
-  });
-  it("⭐⭐⭐ a TOP face swept ring 4 → ring 1: the picture UPRIGHT at both rings, the rig's up through the crossing, and never a flip (⛔ the rig's up alone: upside down past the crossing)", async () => {
-    const { blendedUp, rigAtYaw, rigRotationFor, rigUpWeight } = await import("../src/input/orbit_rig");
-    const R = rigAtYaw(rigRotationFor(cfg, 0.4, [0, 1, 0]), 0.4, 0.4);
-    const rigUp = qRotate(R, [0, 1, 0]);
-    const at = (v: number) => {
-      const o = qRotate(R, orbitOffset(cfg, 0.4, v, 1).offsetM);
-      const view: Vec3 = [-o[0], -o[1], -o[2]];
-      return { view, up: blendedUp(view, rigUp, rigUpWeight(cfg, v)) };
-    };
-    const upright = (v: number) => {
-      const { view, up } = at(v);
-      const d = unit(view);
-      const k = d[1];
-      return angle(up, [-k * d[0], 1 - k * d[1], -k * d[2]]); // the world's up, seen on the screen
-    };
-    expect(upright(0)).toBeLessThan(1e-6);
-    expect(upright(1)).toBeLessThan(1e-6);
-    expect(angle(at(0.5).up, rigUp)).toBeLessThan(1e-6);
-    let worst = 0;
-    for (let v = 0; v < 1; v += 0.0025) worst = Math.max(worst, angle(at(v).up, at(v + 0.0025).up));
-    expect(worst).toBeLessThan(6); // ⭐ a gradual roll: a few degrees per 1/400 of the curve at most
-  });
-  it("⭐ a side face (and the boot): the rig's up IS upright — nothing rolls", async () => {
-    const { blendedUp, rigRotationFor } = await import("../src/input/orbit_rig");
-    const R = rigRotationFor(cfg, 0, [-1, 0, 0]);
-    for (const w of [0, 0.4, 1]) expect(angle(blendedUp([1, -0.3, 0.2], qRotate(R, [0, 1, 0]), w), blendedUp([1, -0.3, 0.2], [0, 1, 0], 1))).toBeLessThan(1e-6);
-  });
   it("⭐ the blend: from the old rotation to the new by the gizmo's share; at 1 exactly the new", async () => {
     const { rigAt, rigRotationFor } = await import("../src/input/orbit_rig");
     const to = rigRotationFor(cfg, 0, [0, 1, 0]);
@@ -137,9 +101,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   it("⭐⭐⭐ the CAMERA IN THE RIG'S FRAME (the owner: *\"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical\"*): the piece carried in, the answer carried out, the camera's up turned — ⛔ the world's up flipped the picture over the gizmo", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const qc = rigQAt(st, st.cameraLagged.yaw); const ppW = pp; { const pp = toRigSpace(st, qc, ppW);");
-    expect(g).toContain("camAt = fromRigSpace(st, qc, camAt); lookAt = fromRigSpace(st, qc, lookAt);");
-    // ⭐⭐ (2026-10-16, *"build A"*) the rig's up rolled back to upright over the outer stretches
-    expect(g).toContain("const upW = blendedUp([lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], qRotate(qc, [0, 1, 0]), rigUpWeight(st.cfg, st.cameraLagged.v));");
+    expect(g).toContain("camAt = fromRigSpace(st, qc, camAt); lookAt = fromRigSpace(st, qc, lookAt); const upW = qRotate(qc, [0, 1, 0]);");
     expect(g).toContain("st.camera.upVector = new Vector3(upW[0], upW[1], upW[2]);");
     expect(g).not.toContain("rigCameraOffset"); // ⛔ the offsets added in the world: undefined straight over the gizmo
 

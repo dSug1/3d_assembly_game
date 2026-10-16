@@ -910,19 +910,3 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless (touch, `Scene_1`): Piece3's top face — the crossing's largest frame step of the view 1.14°, its up fixed (0, 0, 1), no flip; after dx at
   the waist the piece still above the face. A side face: up (0, 1, 0), 0.87–1.23°. ⚠ The dy drags to the waist also moved the yaw 45° on a side face —
   the collision's slide along the ring (the solver resets the orbit's yaw), not the turn. ⛔ No device close. 2034 vectors.
-
-### …and the roll back to upright (`1.0.79-`)
-
-> *"this is good, except that if I continue the dy input from attachment 1, at one point the scene passes upside down as in attachment 2. Propose
-> something before building."* → *"build A"* — the owner.
-
-* ⛔ **Why**: the camera's up was the rig's up, turned — on a top face a FIXED horizontal: natural on the side the camera came in from (ring 4), and
-  pointing back at the camera past the crossing (toward ring 1), the scene upside down. Crossing over the top of a face the upright up REVERSES, so a
-  180° roll is owed somewhere — it used to happen in one frame at the zenith (the fast orbit); it never happened.
-* ⭐⭐ **A — THE ROLL OVER THE WHOLE OUTER STRETCHES** (`rigUpWeight`, `blendedUp`, `input/orbit_rig.ts`): the rig's up IN FULL between rings 2 and 3
-  (the crossing stays the vertical face's swing), eased (smoothstep on `v`, the camera's) to UPRIGHT (the world's vertical up on the screen) at rings 1
-  and 4. On a top face coming from ring 4 almost nothing rolls; toward ring 1 the picture turns 180° gradually and arrives upright. ⭐ The roll's sense
-  is FIXED (its angle read in (−90°, 270°]) — opposite ups always roll one way, never a flip on a rounding. A side face, the boot: the rig's up is
-  upright, nothing rolls.
-* Headless (touch, Piece3's top face): out to ring 1 (v 0.973) 2° off upright, the largest frame step of the up 4.1°; to ring 4 upright, 7.0° (at the
-  crossing itself, the view's own swing). ⛔ No device close. 2037 vectors.
