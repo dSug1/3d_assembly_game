@@ -68,6 +68,54 @@ export function rigAt(from: Quat, to: Quat, share: number): Quat {
   return share >= 1 ? to : qSlerp(from, to, share);
 }
 
+/**
+ * ⭐⭐ (2026-10-16, the owner: *"if I continue the dy input from attachment 1, at one point the scene passes upside down"* → *"build A"*) — how much of
+ * the RIG'S UP the camera keeps at the ring parameter `v`: all of it between rings 2 and 3 (the crossing, the vertical face's swing turned), easing
+ * (smoothstep) to NONE at rings 1 and 4 — over the WHOLE outer stretches, so the roll back to upright is as gentle as it can be. With three rings the
+ * waist runs from the bottom ring, so only the top stretch rolls.
+ */
+export function rigUpWeight(cfg: GestureConfig, v: number): number {
+  let lo: number;
+  let hi: number;
+  if (cfg.orbitLowerRingOn === 1) {
+    const f = fourRingLayout(cfg);
+    lo = f.knots[1]! / f.total;
+    hi = f.knots[2]! / f.total;
+  } else {
+    lo = 0;
+    hi = 0.5;
+  }
+  const s = (t: number): number => {
+    const u = Math.min(1, Math.max(0, t));
+    return u * u * (3 - 2 * u);
+  };
+  if (v > hi) return 1 - s(hi < 1 ? (v - hi) / (1 - hi) : 1);
+  if (v < lo) return 1 - s(lo > 0 ? (lo - v) / lo : 1);
+  return 1;
+}
+
+/**
+ * ⭐⭐ (2026-10-16, *"build A"*) — the camera's UP: the rig's up (`rigUp`) rolled about the view (`view`) toward UPRIGHT (the world's vertical up on the
+ * screen) by `1 − w` of the roll between them. ⭐ The roll's sense is fixed: its angle is read in (−90°, 270°], so the two ups OPPOSITE (a top face,
+ * past the crossing) always roll the same way — ⛔ an angle read in (−180°, 180°] flips sign on a rounding there, and the picture would spin. With
+ * the world's up along the view (straight down) there is nothing to roll toward: the rig's up.
+ */
+export function blendedUp(view: Vec3, rigUp: Vec3, w: number): Vec3 {
+  const d = normalize(view);
+  if (d === null) return rigUp;
+  const proj = (u: Vec3): Vec3 | null => {
+    const k = dot(u, d);
+    return normalize([u[0] - k * d[0], u[1] - k * d[1], u[2] - k * d[2]]);
+  };
+  const r = proj(rigUp);
+  if (r === null) return [0, 1, 0];
+  const up = proj([0, 1, 0]);
+  if (up === null || w >= 1) return r;
+  let phi = Math.atan2(dot(cross(r, up), d), dot(r, up));
+  if (phi <= -Math.PI / 2) phi += 2 * Math.PI;
+  return qRotate(qFromAxisAngle(d, (1 - Math.max(0, w)) * phi), r);
+}
+
 /** ⭐ The world turn that adds `deltaRad` to an orbit yaw: `orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)` (about the world vertical). */
 export function yawTurn(deltaRad: number): Quat {
   return qFromAxisAngle([0, 1, 0], -deltaRad);
