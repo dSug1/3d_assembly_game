@@ -8,9 +8,8 @@ import { pinchAllowed } from "../input/pinch";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
-import { type Vec3 } from "../core/vec";
-import { blendAngles, blendPlace, cameraOffsetAt, rigBetaFor, rigCameraAngles, rigPlace, rigRotationFor, type RigAngles } from "../input/orbit_rig";
-import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
+import { qconj, qRotate, type Quat, type Vec3 } from "../core/vec";
+import { rigAt, rigAtYaw, rigRotationFor } from "../input/orbit_rig";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
@@ -62,40 +61,41 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
 }
 
 
+/** ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) — the rig's rotation NOW: from the old turn to the new at the gizmo's own blend share, so it swings over as the gizmo slides. */
+export function rigNow(st: SceneState): Quat {
+  return rigAt(st.rigFrom, st.rigTo, st.centreBlend.progress);
+}
+
+/** ⭐⭐ (2026-10-16) the rig's world turn at the orbit's yaw `yaw` — dx swings the turned curve round the world vertical (`rigAtYaw`). */
+export function rigQAt(st: SceneState, yaw: number): Quat {
+  return rigAtYaw(rigNow(st), st.rigYaw0, yaw);
+}
+
 /**
- * ⭐⭐⭐ (2026-10-16, the owner: *"the axis of each ring is the gravity axis (in such way, the camera is never upside down). dx orbits the piece on the
- * ring it is sitting on."*) — THE PIECE'S RING PLACE now (from the gizmo): on the turned curve's level ring (`rigPlace`), the old turn's and the new
- * blended at the gizmo's share, so the rings swing over as the gizmo slides.
+ * ⭐⭐⭐ (2026-10-16, the owner: *"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical"*) — **THE RIG'S FRAME**: a
+ * world point carried about the orbit centre by the rig's turn `q` undone, so the camera code sees the rig as designed (`fromRigSpace` carries its
+ * answer back, and the camera's up is `q`'s turned vertical).
  */
-export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: number): Vec3 {
-  const s = st.centreBlend.progress;
-  const b = rigPlace(st.cfg, st.rigTo, yaw, v, zoom);
-  return s >= 1 ? b : blendPlace(rigPlace(st.cfg, st.rigFrom, yaw, v, zoom), b, s);
+export function toRigSpace(st: SceneState, q: Quat, p: Vec3): Vec3 {
+  const c = st.orbitCentreM;
+  const r = qRotate(qconj(q), [p[0] - c.x, p[1] - c.y, p[2] - c.z]);
+  return [c.x + r[0], c.y + r[1], c.z + r[2]];
 }
-
-/** ⭐⭐⭐ (2026-10-16) THE CAMERA'S ANGLES now — upright, its heading dx's, its tilt the turned curve's folded (`rigCameraAngles`), blended likewise. */
-export function cameraAnglesNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigAngles {
-  const s = st.centreBlend.progress;
-  const b = rigCameraAngles(st.cfg, st.rigTo, cam, off);
-  return s >= 1 ? b : blendAngles(rigCameraAngles(st.cfg, st.rigFrom, cam, off), b, s);
-}
-
-/** ⭐ (2026-10-16) the camera's offset from the gizmo now — `cameraOffset`'s rule at `cameraAnglesNow`. */
-export function cameraOffsetNow(st: SceneState, cam: OrbitAt, boxOffset: Vec3, off: CameraAngleOffset | undefined, radiusOffsetM: number): Vec3 {
-  return cameraOffsetAt(cameraAnglesNow(st, cam, off), boxOffset, radiusOffsetM);
+export function fromRigSpace(st: SceneState, q: Quat, p: Vec3): Vec3 {
+  const c = st.orbitCentreM;
+  const r = qRotate(q, [p[0] - c.x, p[1] - c.y, p[2] - c.z]);
+  return [c.x + r[0], c.y + r[1], c.z + r[2]];
 }
 
 /**
- * ⭐⭐⭐ (2026-10-16, the owner: *"fix the rotation at the camera's yaw when the gizmo moves"*) — the gizmo moved onto a face (`normal`, world; `null`:
- * none): the new turn takes the curve's direction halfway between rings 2 and 3, at the camera's yaw, onto that normal (`rigRotationFor`), the rings'
- * centres beyond the piece as the camera sees it (`rigBetaFor`); blended from the turn it had (the nearer end of a blend in progress).
+ * ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) → *"fix the rotation at the camera's yaw when the gizmo moves"* — the gizmo moved onto a face (`normal`, world; `null`: none): the rig's
+ * new turn takes its waist direction at the camera's yaw onto that normal (`rigRotationFor`), eased from the turn it has with the gizmo's slide.
  */
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
   const yaw = st.orbit.yaw;
-  const q = rigRotationFor(st.cfg, yaw, normal);
-  const cam = st.camera.position;
-  st.rigFrom = st.centreBlend.progress >= 0.5 ? st.rigTo : st.rigFrom;
-  st.rigTo = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, [cam.x - to[0], 0, cam.z - to[2]]) };
+  st.rigFrom = rigQAt(st, yaw); // the turn as it stands at this yaw — the new one is fixed here
+  st.rigTo = rigRotationFor(st.cfg, yaw, normal);
+  st.rigYaw0 = yaw;
   st.centreBlend.retarget(to);
   syncCentre(st);
 }

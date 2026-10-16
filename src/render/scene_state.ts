@@ -825,9 +825,11 @@ export interface SceneState {
   zoom: number;
   zoomAtPinchStart: number;
   centreBlend: OrbitCentreBlend;
-  /** ⭐⭐⭐ (2026-10-16) the rig turned onto the gizmo's face (`input/orbit_rig.ts`): the turn it had (`rigFrom`) and the new one (`rigTo`), blended at the gizmo's share */
-  rigFrom: import("../input/orbit_rig").RigParams;
-  rigTo: import("../input/orbit_rig").RigParams;
+  /** ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) — the rig's rotation onto the gizmo's face: from the one it had (`rigFrom`) to the new one (`rigTo`), at the gizmo's blend share (`rigNow`) */
+  rigFrom: import("../core/vec").Quat;
+  rigTo: import("../core/vec").Quat;
+  /** ⭐ (2026-10-16) the orbit's yaw when the gizmo moved — the turn is fixed there; dx swings it round the world vertical (`rigAtYaw`) */
+  rigYaw0: number;
   orbitCentreM: Vector3;
   eventGaps: Map< number, { last: number; gaps: { t: number; ms: number }[] } >;
   noise: PointerNoiseMeter;
