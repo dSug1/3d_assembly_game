@@ -39,7 +39,7 @@ import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
 const HOVER_FADE_QUERIES = 8;
-import { modelLag, orbitFrameUnderHover } from "../input/hover";
+import { modelLag, orbitFrameUnderHover, uprightBlend } from "../input/hover";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
@@ -1231,10 +1231,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.hudDirty = true;
   }
   // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
-  ({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));
+  const hb = hoverCameraBlend(st, camAt, lookAt);
+  camAt = hb.camAt;
+  lookAt = hb.lookAt;
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
-  const up = camFrame.up;
+  // ⭐⭐⭐ (2026-10-16, *"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen"*) — rolled to upright by the slide view's weight
+  const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);
   if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));

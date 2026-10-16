@@ -34,7 +34,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   sway at 0.1°; the hover's highlights are parented to their host part, so they follow its sway.
 * **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
   is already on), reached on an ARC about the piece at the camera's own distance, by the hover drag's travel over `pieceOrbitEnterMm` (12 mm),
-  its share eased on the spring; left the same way by the orbit's travel; at its end exactly the rings' camera. ⚠ It ends only with no hover
+  its share eased on the spring; left the same way by the orbit's travel; at its end exactly the rings' camera. ⭐ (§24) at the slide view the
+  camera is UPRIGHT — gravity straight down the screen (its up rolled to the world's vertical by the view's weight), so the corner is not exactly isometric. ⚠ It ends only with no hover
   on (§17 — the freeze).
 * **Back to the orbit** — the piece-only offset goes back to the ring place by the ORBIT drag's travel over `pieceOrbitEnterMm` (§13), solved
   (8 of the frame's 24 queries kept for it), drawn on the spring (§16). The gizmo never moves on the toggle.
@@ -523,3 +524,17 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * ⭐ **The owner's lead and friction** (2026-10-16: *"set the slide phantom lead to 9.75 ms and slide friction to 12.5 mm/s"*): `hoverLeadMs` **9.75**,
   `hoverFrictionMmS` **12.5**; their sliders' steps made finer (0.25 ms, 0.5 mm/s) so the defaults sit on them.
 * ⭐ (2026-10-16, the owner: *"set the slide friction to 8 mm/s"*) `hoverFrictionMmS` **8** (12.5 before).
+
+## 24. The slide view upright — gravity down the screen (2026-10-16, `1.0.79-`)
+
+> *"modify that to account another constraint: at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the
+> screen. Therefore, the target isometric view relative to the hosting face will not be exactly isometric. But this is necessary so that the user feels
+> the gravity is always aligned with the screen vertical axis."* — the owner.
+
+* ⛔ **Why**: the camera's up came from the orbit (`DOUBLE_ORBIT_PROTOTYPE.md`, the camera derived from the piece) — on a turned rig the slide happens
+  near rings 2 and 3, where that up is partway through the swing's half turn: at the slide view gravity could stand at an angle on the screen.
+* ⭐⭐⭐ **`uprightBlend`** (`input/hover.ts`): as the camera arcs into the slide view, its up rolls about the view toward the world's vertical by the
+  view's weight (`hoverCameraBlend` now gives it, the 12 mm of the slide's travel) — none at 0 (the orbit's), EXACTLY upright at 1; back by the orbit's
+  travel. The direction stays the nearest isometric corner `(n ± t1 ± t2)/√3` — upright, the face's two axes no longer read alike on the screen.
+* Headless (touch, Piece18's side face): at the slide view (shown 1) the up in the view's vertical plane — roll 0 — the view 35.3° down. ⚠ A top face's
+  slide view (also 35° down) not staged. ⛔ No device close. 2046 vectors.

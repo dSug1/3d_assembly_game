@@ -119,7 +119,7 @@ describe("⭐ wired", () => {
     // ⭐ applied each frame from the FOLLOWED offset (the part translation's follower)
     expect(h).toContain("if (hf.gizmo) { st.centreBlend.snapTo(add(hf.centre0, w)); syncCentre(st); } else st.hoverOffset = add(hf.offset0, w);");
     expect(h).toContain("const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });");
-    expect(code("render/green_box_wiring.ts")).toContain("({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));");
+    expect(code("render/green_box_wiring.ts")).toContain("const hb = hoverCameraBlend(st, camAt, lookAt);");
   });
 });
 
@@ -616,7 +616,7 @@ describe("⭐⭐⭐ the hover view: the NEAREST isometric corner, an arc from th
     expect(hoverViewProgress(1, span, 1 / span, false)).toBe(0);
     expect("hoverCameraGain" in DEFAULT_CONFIG).toBe(false);
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("return hoverCameraSwing(camAt, lookAt, target, dir, w);");
+    expect(h).toContain("return { ...hoverCameraSwing(camAt, lookAt, target, dir, w), w };"); // ⭐ (2026-10-16) with its weight: the up rolls to upright by it
     // a finger STEP: two rays from the camera of the moment — a camera turning under a resting finger moves nothing
     expect(h).toContain("const a = at(from[0], from[1]); const b = at(h.finger[0], h.finger[1]); if (a === null || b === null) return false;");
     expect(h).toContain("h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);"); // ⭐ (2026-10-16) × the kinetic friction: under the finger only with it at 0
@@ -1097,5 +1097,30 @@ describe("⭐⭐ the slide's KINETIC FRICTION (2026-10-16, the owner: *\"can you
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const k = hoverFrictionScale(h.speedMmS, st.cfg.hoverFrictionMmS);");
     expect(h).toContain("h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);");
+  });
+});
+
+describe("⭐⭐⭐ the slide view UPRIGHT — gravity down the screen (2026-10-16, the owner: *\"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen. Therefore, the target isometric view relative to the hosting face will not be exactly isometric. But this is necessary so that the user feels the gravity is always aligned with the screen vertical axis.\"*)", () => {
+  it("⭐⭐⭐ the camera's up rolls about the view toward the world's vertical by the slide view's weight: none at 0 (the orbit's), exactly upright at 1", async () => {
+    const { uprightBlend } = await import("../src/input/hover");
+    const view: Vec3 = [0.6, -0.55, 0.58]; // an isometric corner, looking down at 33°
+    const n = Math.hypot(...view);
+    const d: Vec3 = [view[0] / n, view[1] / n, view[2] / n];
+    const tilted: Vec3 = [0.7, 0.2, -0.5]; // the orbit's up over a crossing — not upright
+    const at0 = uprightBlend(tilted, view, 0);
+    const k = tilted[0] * d[0] + tilted[1] * d[1] + tilted[2] * d[2];
+    const p0 = [tilted[0] - k * d[0], tilted[1] - k * d[1], tilted[2] - k * d[2]];
+    const pn = Math.hypot(...p0);
+    for (let i = 0; i < 3; i++) expect(at0[i]).toBeCloseTo(p0[i]! / pn, 9); // the orbit's up (made square to the view)
+    const at1 = uprightBlend(tilted, view, 1);
+    expect(Math.abs(at1[0] * d[0] + at1[1] * d[1] + at1[2] * d[2])).toBeLessThan(1e-9);
+    expect(Math.abs(at1[0] * d[2] - at1[2] * d[0])).toBeLessThan(1e-9); // in the view's vertical plane: no roll — gravity down the screen
+    expect(at1[1]).toBeGreaterThan(0);
+    let prev = at0;
+    for (let w = 0.01; w <= 1.0001; w += 0.01) { const u = uprightBlend(tilted, view, w); expect(Math.acos(Math.min(1, u[0] * prev[0] + u[1] * prev[1] + u[2] * prev[2]))).toBeLessThan(0.05); prev = u; }
+  });
+  it("⭐⭐ wired: the slide view's weight rolls the camera's up to upright (`hoverCameraBlend` gives it)", () => {
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);");
   });
 });

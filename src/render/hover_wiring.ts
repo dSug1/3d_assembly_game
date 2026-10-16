@@ -578,9 +578,9 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
  * is (`hoverCameraSwing`), its distance kept — at progress 0 exactly the rings' camera. A retarget (another face) turns the corner from the
  * old one over `HOVER_VIEW_RETARGET_MS`.
  */
-export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3 } {
+export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3; w: number } {
   const hv = st.hoverView;
-  if (hv === null) return { camAt, lookAt };
+  if (hv === null) return { camAt, lookAt, w: 0 };
   // ⭐⭐ (2026-10-14, the owner: *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the piece is far from the hosting face in orbit."*) — the share SHOWN eases after the finger's (critically damped, the orbit's τ): ⛔ it stepped at each
   // pointer event while the orbit's own camera eased every frame
   const now = performance.now();
@@ -591,10 +591,10 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   hv.shownVel = f.v;
   if (hoverViewEnds(hv.progress, hv.shown, st.hover !== null)) {
     st.hoverView = null;
-    return { camAt, lookAt };
+    return { camAt, lookAt, w: 0 };
   }
   const w = hoverViewWeight(hv.shown);
-  if (w <= 0) return { camAt, lookAt };
+  if (w <= 0) return { camAt, lookAt, w: 0 };
   let dir = hv.iso;
   let target = hv.target;
   if (hv.from !== null) {
@@ -605,7 +605,8 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
       target = lerp3(hv.from.target, target, s);
     }
   }
-  return hoverCameraSwing(camAt, lookAt, target, dir, w);
+  // ⭐ (2026-10-16) with its weight: the camera's up rolls to upright by it (`uprightBlend`)
+  return { ...hoverCameraSwing(camAt, lookAt, target, dir, w), w };
 }
 
 // ⭐ (2026-10-14, the owner: *"change the cyan highlight color to this green color as attached"*) — #D8FDD2 (216, 253, 210), sampled from the owner's swatch
