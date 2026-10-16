@@ -8,7 +8,8 @@ import { pinchAllowed } from "../input/pinch";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
-import { type Vec3 } from "../core/vec";
+import { type Quat, type Vec3 } from "../core/vec";
+import { rigAt, rigRotationFor } from "../input/orbit_rig";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { asVec3, modelPose } from "./bodies";
@@ -59,6 +60,22 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
   syncCentre(st);
 }
 
+
+/** ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) — the rig's rotation NOW: from the old turn to the new at the gizmo's own blend share, so it swings over as the gizmo slides. */
+export function rigNow(st: SceneState): Quat {
+  return rigAt(st.rigFrom, st.rigTo, st.centreBlend.progress);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) → *"fix the rotation at the camera's yaw when the gizmo moves"* — the gizmo moved onto a face (`normal`, world; `null`: none): the rig's
+ * new turn takes its waist direction at the camera's yaw onto that normal (`rigRotationFor`), eased from the turn it has with the gizmo's slide.
+ */
+export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
+  st.rigFrom = rigNow(st);
+  st.rigTo = rigRotationFor(st.cfg, st.orbit.yaw, normal);
+  st.centreBlend.retarget(to);
+  syncCentre(st);
+}
 
 /** Read the blended centre into the scene, and show the chosen target. */
 export function syncCentre(st: SceneState) {
