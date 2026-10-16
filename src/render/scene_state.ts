@@ -578,6 +578,8 @@ export interface SceneState {
   hoverOutlineKey: string;
   /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */
   hoverSpent: number | null;
+  /** ⭐ (2026-10-16) a slide just ended: no hover offered until the orbit moves the piece (`hoverOffered`). */
+  hoverSlid: boolean;
   /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
   hoverReadyWorld: object | null;
   hoverReadyReachMm: number;

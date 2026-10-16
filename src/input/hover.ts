@@ -263,6 +263,15 @@ export function settleShare(elapsedMs: number): number {
  * ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **B. THE CONTACT SHADOW**: a point of the resting face's outline laid on the target face's plane (`n` its normal, `c` a point
  * on it) — drawn there, it shows which face and exactly where the piece will land, at any camera angle (the shadow: the classic depth cue).
  */
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the
+ * orbit."*) — **IS A HOVER OFFERED?** Not right after a slide (`slid`): no readiness highlight, no latch, until the orbit has moved the piece. ⛔ The piece,
+ * still in contact, was ready again at once — its highlights stayed and a press on it slid again instead of orbiting.
+ */
+export function hoverOffered(slid: boolean): boolean {
+  return !slid;
+}
+
 export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
   const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
   return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];

@@ -17,7 +17,8 @@ import type { Sample } from "../input";
 import { mmToPx } from "../core/units";
 import { qRotate, type Quat, type Vec3 } from "../core/vec";
 import { bodiesBehindPlane, bodiesWithin, type CollisionSetup } from "../core/collision";
-import { faceWorld } from "../core/object_model";
+import { composePlacement, faceWorld, invertPlacement } from "../core/object_model";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { AT_CONTACT_M, solveOrbitStep, type OrbitQ } from "../input/piece_orbit_solver";
 import {
@@ -54,6 +55,7 @@ import {
   behindToleranceM,
   hoverPendingAfter,
   hoverQueryBudget,
+  hoverOffered,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
@@ -86,6 +88,11 @@ export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): vo
 export function hoverRelease(st: SceneState, pointerId: number): void {
   if (st.hover?.pointerId === pointerId) {
     st.hover = null;
+    // ⭐⭐⭐ (2026-10-16, *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit."*) — the
+    // piece drawn where it was SOLVED at once (⛔ it eased on after the lift), and no hover offered until the orbit moved it (`hoverOffered`)
+    st.hoverFollow = null;
+    st.hoverDraw = null;
+    st.hoverSlid = true;
     st.hudDirty = true;
   }
   if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
@@ -160,6 +167,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
     return false;
   };
   if (b === null || p === undefined || p.restingFace === null || st.pieceAnchor === null) return refuse("no orbited piece with a resting face");
+  if (!hoverOffered(st.hoverSlid)) return refuse("the slide just ended");
   if (st.orbitPiecePlaced) return refuse("the piece is placed in its goal");
   const q = st.pieceQ;
   if (q === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
@@ -488,6 +496,7 @@ function hoverEndNow(st: SceneState): void {
  */
 export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   if (travelMm <= 0) return;
+  st.hoverSlid = false; // ⭐ (2026-10-16) the orbit moved: a hover is offered again
   // ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece ways in by this travel — the gizmo untouched
   if (st.hoverOffset !== null) {
     const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
@@ -588,7 +597,7 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   let ready = st.hoverReady;
-  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
+  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
   else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
     // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
@@ -613,11 +622,12 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const rot: Quat = [r.w, r.x, r.y, r.z];
   const at: Vec3 = [b.position.x, b.position.y, b.position.z];
   const lift = scale(ready.normal, 0.0004);
+  const host = hostFrame(st, ready.id);
   const lines = p.restingEdges.map((e) =>
     e.map((q) => {
       const w = add(at, qRotate(rot, q));
       const s = add(projectOntoPlane(w, ready.normal, ready.centre), lift);
-      return new Vector3(s[0], s[1], s[2]);
+      return host === null ? new Vector3(s[0], s[1], s[2]) : host.local(s);
     }),
   );
   if (st.hoverShadow === null || st.hoverShadowCount !== lines.length) {
@@ -627,6 +637,10 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     st.hoverShadow.isPickable = false;
     st.hoverShadowCount = lines.length;
   } else CreateLineSystem("hover-shadow", { lines, instance: st.hoverShadow }, st.scene);
+  // ⭐⭐ (2026-10-16) in the hosting part's frame, riding its sway
+  if (host !== null) {
+    if (st.hoverShadow.parent !== host.mesh) st.hoverShadow.parent = host.mesh;
+  } else st.hoverShadow.parent = null;
   st.hoverShadow.setEnabled(true);
   // the face that will host the hover: a faint fill (rebuilt when the face changes)
   const key = `${ready.id}|${ready.faceId}|${ready.centre.map((x) => x.toFixed(4)).join(",")}`;
@@ -643,6 +657,19 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     st.hoverOutline = buildCoplanarOutline(st, ready);
   }
   st.hoverOutline?.setEnabled(true);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"Make sure the highlights follow the parts when they sway … the boundary highlight shall follow the sway of the assembly"*) —
+ * **THE HOSTING PART'S FRAME**: a world point carried into the part's own frame by its MODEL pose; a highlight drawn there and parented to the part's mesh
+ * rides the mesh's drawn pose — its sway included. ⛔ Built in the world, the boundary, the face's fill and the contact shadow stood still while the parts swayed.
+ */
+function hostFrame(st: SceneState, partId: string): { mesh: AbstractMesh; local: (p: Vec3) => Vector3 } | null {
+  const mesh = st.meshOf.get(partId);
+  const place = worldPlacementOf(st.world, partId);
+  if (mesh === undefined || place === null) return null;
+  const inv = invertPlacement(place);
+  return { mesh, local: (p) => { const q = composePlacement(inv, { position: p, orientation: [1, 0, 0, 0] }).position; return new Vector3(q[0], q[1], q[2]); } };
 }
 
 /** ⭐ The faces' joints are bridged: the coloured cores of two touching parts stand 3 mm apart (their contours meet). */
@@ -680,10 +707,16 @@ function buildCoplanarOutline(st: SceneState, ready: NonNullable<SceneState["hov
   if (segs.length === 0) return null;
   const { a, b } = bd;
   const onFace = bd.onFace + 0.0004; // the coloured face's plane, lifted
-  const P3 = (x: number, y: number) => new Vector3(a[0] * x + b[0] * y + n[0] * onFace, a[1] * x + b[1] * y + n[1] * onFace, a[2] * x + b[2] * y + n[2] * onFace);
+  // ⭐⭐ (2026-10-16) drawn in the hosting part's frame, parented to its mesh: it follows the sway (`hostFrame`)
+  const host = hostFrame(st, ready.id);
+  const P3 = (x: number, y: number) => {
+    const w: Vec3 = [a[0] * x + b[0] * y + n[0] * onFace, a[1] * x + b[1] * y + n[1] * onFace, a[2] * x + b[2] * y + n[2] * onFace];
+    return host === null ? new Vector3(w[0], w[1], w[2]) : host.local(w);
+  };
   const lines = CreateLineSystem("hover-outline", { lines: segs.map(([p, q]) => [P3(p[0], p[1]), P3(q[0], q[1])]) }, st.scene);
   lines.color = READY_COLOUR.clone();
   lines.isPickable = false;
+  if (host !== null) lines.parent = host.mesh;
   return lines;
 }
 
@@ -698,9 +731,12 @@ function buildFaceFill(st: SceneState, partId: string, faceId: string, lift: Vec
   const used = [...new Set(face.triangles)];
   const at = new Map(used.map((i, k) => [i, k] as const));
   const positions: number[] = [];
+  // ⭐⭐ (2026-10-16) in the hosting part's frame, parented to its mesh: it follows the sway (`hostFrame`)
+  const host = hostFrame(st, partId);
   for (const i of used) {
     const w = add(add(place.position, qRotate(place.orientation, topo.positions[i]!)), lift);
-    positions.push(w[0], w[1], w[2]);
+    const l = host === null ? new Vector3(w[0], w[1], w[2]) : host.local(w);
+    positions.push(l.x, l.y, l.z);
   }
   const fill = new Mesh("hover-face", st.scene);
   const data = new VertexData();
@@ -714,5 +750,6 @@ function buildFaceFill(st: SceneState, partId: string, faceId: string, lift: Vec
   mat.backFaceCulling = false;
   fill.material = mat;
   fill.isPickable = false;
+  if (host !== null) fill.parent = host.mesh;
   return fill;
 }

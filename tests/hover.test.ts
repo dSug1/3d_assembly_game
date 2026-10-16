@@ -947,3 +947,40 @@ describe("⭐⭐⭐ a face hosts only a resting face IN FRONT of it (2026-10-15,
     expect(hoverFaceContact([0, 0.01, 0], down, [top(0)], 0.02, 2, poly(0.01)).contact?.id).toBe("bar"); // in front, within reach: latched (it settles)
   });
 });
+
+describe("⭐⭐⭐ the slide stops at the release (2026-10-16, the owner: *\"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit.\"*)", () => {
+  it("⭐⭐⭐ after a slide no hover is offered (no highlight, no latch) until the orbit has moved — the next press drives the orbit", async () => {
+    const { hoverOffered } = await import("../src/input/hover");
+    expect(hoverOffered(false)).toBe(true);
+    expect(hoverOffered(true)).toBe(false); // ✅ just slid: the next drag orbits (⛔ the piece still in contact re-latched, its highlights stayed)
+  });
+  it("⭐⭐⭐ wired: the release ends the drawn ease at once (the piece where it was solved), marks the slide spent, the highlights and the latch read it, the orbit's travel clears it", () => {
+    const h = code("render/hover_wiring.ts");
+    const rel = h.slice(h.indexOf("export function hoverRelease"), h.indexOf("function hoverCandidates"));
+    expect(rel).toContain("st.hoverFollow = null;");
+    expect(rel).toContain("st.hoverDraw = null;");
+    expect(rel).toContain("st.hoverSlid = true;");
+    expect(h).toContain("if (!hoverOffered(st.hoverSlid)) return refuse(");
+    expect(h).toContain("if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;");
+    const orbit = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
+    expect(orbit).toContain("st.hoverSlid = false;");
+  });
+});
+
+describe("⭐⭐⭐ the hover's highlights follow the parts' sway (2026-10-16, the owner: *\"Make sure the highlights follow the parts when they sway … the boundary highlight shall follow the sway of the assembly\"*)", () => {
+  it("⭐⭐ a world point carried into the hosting part's own frame (its MODEL pose) and back by its pose lands where it was — so, parented to the part's mesh, it rides the mesh's sway", async () => {
+    const { composePlacement, invertPlacement } = await import("../src/core/object_model");
+    const place = { position: [0.3, 0.2, -0.1] as Vec3, orientation: [Math.cos(0.4), 0, Math.sin(0.4), 0] as [number, number, number, number] };
+    const p: Vec3 = [0.5, 0.25, 0.05];
+    const local = composePlacement(invertPlacement(place), { position: p, orientation: [1, 0, 0, 0] }).position;
+    const back = composePlacement(place, { position: local, orientation: [1, 0, 0, 0] }).position;
+    for (let k = 0; k < 3; k++) expect(back[k]).toBeCloseTo(p[k]!, 12);
+  });
+  it("⭐⭐⭐ wired: the boundary, the hosting face's fill and the contact shadow are drawn in the hosting part's frame, parented to its mesh — ⛔ built in the world, they stood still while the parts swayed", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("function hostFrame(st: SceneState, partId: string): { mesh: AbstractMesh; local: (p: Vec3) => Vector3 } | null {");
+    expect(h).toContain("lines.parent = host.mesh;"); // the boundary
+    expect(h).toContain("fill.parent = host.mesh;"); // the face's fill
+    expect(h).toContain("st.hoverShadow.parent = host.mesh;"); // the contact shadow
+  });
+});
