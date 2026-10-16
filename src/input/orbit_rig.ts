@@ -11,12 +11,15 @@
  * at that yaw brings the piece in along the normal, the camera behind it looking at the face. A side face: a turn about the vertical (the rings stay
  * level); a top face: the rig tilted 90° (the rings stand up; dx turns the camera over and under). A rotation keeps every distance, so the clamps,
  * the zoom, the gap and the solver's budget are untouched.
+ * ⭐⭐ (2026-10-16, after the owner's look) THE CAMERA RUNS IN THE RIG'S FRAME (`camera_rig.ts`'s `toRigSpace`): the camera code sees the rig as
+ * designed, its answer is turned into the world and the camera's UP with it — so the waist's crossing on a top face is the vertical face's swing,
+ * turned (⛔ with the world's up, a camera crossing straight over the gizmo flipped the picture: the *"very fast orbit"*), and the owner's camera
+ * offsets are the same on the screen in any orientation of the curve.
  * ⛔ ENGINE-FREE. Shortest-arc and slerp are textbook (Shoemake 1985): no licence, no patent.
  */
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
-import { mirroredPitchOffset, pitchOf, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
-import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
 /**
  * ⭐ The ring parameter HALFWAY between rings 2 and 3 (numbered from the top): with four rings the middle of the waist's span (`fourRingLayout`'s
@@ -65,30 +68,20 @@ export function rigAt(from: Quat, to: Quat, share: number): Quat {
   return share >= 1 ? to : qSlerp(from, to, share);
 }
 
+/** ⭐ The world turn that adds `deltaRad` to an orbit yaw: `orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)` (about the world vertical). */
+export function yawTurn(deltaRad: number): Quat {
+  return qFromAxisAngle([0, 1, 0], -deltaRad);
+}
+
 /**
- * ⭐⭐ (2026-10-16, the owner: *"keep the camera offsets as they are right now (that means disconnecting the offset from the 2D curve if they were
- * linked so that the offsets are the same in any 2D curve orientation)"*) — the camera's offset from the orbit centre (`cameraOffset`) on a TURNED
- * rig: the RING's direction is turned by the rig, then the owner's offsets are added in the WORLD — the yaw offset about the vertical, the pitch
- * offset to the elevation (mirrored by the ring's own pitch, as before: above the waist up, below it down), clamped at ±89°. ⭐ With no turn it is
- * `cameraOffset` exactly. ⛔ Turned with the rig, the offsets would have swung with it (a yaw offset about a tilted axis).
+ * ⭐⭐⭐ (2026-10-16, the owner: *"at position in attachment 2 the dy downwards triggers a very fast orbit of the camera … dx input controls a mix of yaw and pitch orbit of the piece and camera. This is not clear what the dx input does"* → *"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical"*, *"Always yaw about vertical"*) — **dx YAWS ABOUT THE WORLD VERTICAL**: the rig's turn at the orbit's yaw `yaw`, for a turn `rig`
+ * fixed at the yaw `yaw0` (the gizmo's move): `yawTurn(δ) · rig · yawTurn(−δ)`, δ = yaw − yaw0 — so a ring point lands at `yawTurn(δ) · rig ·
+ * orbitOffset(yaw0, v)`: the TURNED CURVE swung round the vertical through the gizmo. ⭐ Unturned it is no turn at all (today's rig exactly); a side
+ * face's turn is itself about the vertical, so nothing changes there; on a TOP face the waist stays straight above the face at every dx (dx spins
+ * the view about the face's normal there). ⛔ It was the turned rig's own axis — on a top face a horizontal axis: dx wheeled the camera over the top.
  */
-export function rigCameraOffset(
-  cfg: GestureConfig,
-  rig: Quat,
-  cam: OrbitAt,
-  boxOffset: Vec3,
-  off: CameraAngleOffset = { yawRad: 0, pitchRad: 0 },
-  radiusOffsetM: number,
-): Vec3 {
-  const lim = (89 * Math.PI) / 180;
-  const ringPitch = pitchOf(cfg, cam.v);
-  const ring: Vec3 = [Math.cos(ringPitch) * Math.cos(cam.yaw), Math.sin(ringPitch), Math.cos(ringPitch) * Math.sin(cam.yaw)];
-  const w = qRotate(rig, ring);
-  const el0 = Math.asin(Math.max(-1, Math.min(1, w[1])));
-  // ⭐ straight up or down the azimuth is the ring's own (turned) — never an undefined atan2
-  const az0 = Math.hypot(w[0], w[2]) > 1e-9 ? Math.atan2(w[2], w[0]) : cam.yaw;
-  const pitch = Math.max(-lim, Math.min(lim, el0 + mirroredPitchOffset(ringPitch, off.pitchRad)));
-  const yaw = az0 + off.yawRad;
-  const d = Math.hypot(boxOffset[0], boxOffset[1], boxOffset[2]) + Math.max(0, radiusOffsetM);
-  return [d * Math.cos(pitch) * Math.cos(yaw), d * Math.sin(pitch), d * Math.cos(pitch) * Math.sin(yaw)];
+export function rigAtYaw(rig: Quat, yaw0: number, yaw: number): Quat {
+  const d = yaw - yaw0;
+  if (d === 0) return rig;
+  return qmul(qmul(yawTurn(d), rig), yawTurn(-d));
 }
