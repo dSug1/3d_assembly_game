@@ -1085,7 +1085,7 @@ describe("⭐⭐ the slide's KINETIC FRICTION (2026-10-16, the owner: *\"can you
     expect(hoverFrictionScale(Number.NaN, 10)).toBe(0);
   });
   it("⭐ a tunable in mm/s on the glass (rule 3), 10 by default, validated; its slider in OBJECT TRANSLATION › PIECE SLIDING", () => {
-    expect(DEFAULT_CONFIG.hoverFrictionMmS).toBe(12.5); // ⭐ (2026-10-16, the owner: *"slide friction to 12.5 mm/s"*; 10 before)
+    expect(DEFAULT_CONFIG.hoverFrictionMmS).toBe(8); // ⭐ (2026-10-16, the owner: *"set the slide friction to 8 mm/s"*; 10, then 12.5 before)
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverFrictionMmS: -1 })).toThrow(/hoverFrictionMmS/);
     const m = code("render/tuning_menu.ts");
     const sub = m.indexOf('title: "PIECE SLIDING"');
