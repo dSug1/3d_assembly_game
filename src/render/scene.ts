@@ -39,7 +39,7 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
-import { IDENTITY } from "../core/vec";
+import { UNTURNED } from "../input/orbit_rig";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import { attachOrbitedShadows, attachShadows, buildLighting } from "./lighting";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
@@ -897,9 +897,8 @@ export function createScene(
   st.centreBlend = new OrbitCentreBlend(st.cfg, bootTargetOnBlueFace(st) ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   // ⭐ (2026-10-16) the rig as it was designed at boot: no turn until the gizmo moves onto a face
-  st.rigFrom = IDENTITY;
-  st.rigTo = IDENTITY;
-  st.rigYaw0 = 0;
+  st.rigFrom = UNTURNED;
+  st.rigTo = UNTURNED;
   const bootCentre = st.centreBlend.centreM;
   st.bootCentreM = [bootCentre[0], bootCentre[1], bootCentre[2]]; // ⭐ (2026-10-13) a stuck piece's respawn puts the centre back here
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);

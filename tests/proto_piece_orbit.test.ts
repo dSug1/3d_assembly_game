@@ -310,7 +310,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit — ⛔ (2026-10-11) the sphere deleted:
     // every piece is aligned from its spawn
     expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned\) return;/);
-    expect(w).toContain("const eo: Vec3 = st.pieceEntry === null ? [0, 0, 0] : rigOffset(rigQ, entryPieceOffset(st.pieceEntry, cfg.pieceOrbitEnterMm));"); // ⭐ (2026-10-16) recorded in the rig's frame
+    expect(w).toMatch(/const eo: Vec3 = st\.pieceEntry === null \? \[0, 0, 0\] : entryPieceOffset\(st\.pieceEntry, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toMatch(/\? \[c\.x \+ be\[0\] \* k \+ eo\[0\], c\.y \+ be\[1\] \* k \+ eo\[1\], c\.z \+ be\[2\] \* k \+ eo\[2\]\]/);
   });
 
@@ -458,8 +458,8 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const w = code("render/green_box_wiring.ts");
     const rb = w.slice(w.indexOf("function returnToCentreOrbit"), w.indexOf("function counterYawFrame"));
     expect(rb).toMatch(/st\.boxSpring = sp === null \? null : \{ at: \{ yaw: st\.orbit\.yaw, v: sp\.at\.v, zoom: sp\.at\.zoom \}, velYaw: 0, velV: sp\.velV, velLnZoom: sp\.velLnZoom \};/);
-    expect(rb).toMatch(/const hv = rebase && st\.boxSpring !== null \? st\.boxSpring\.at\.v : st\.orbit\.elevation;\s*const bo = orbitOffset\(st\.cfg, st\.orbit\.yaw, hv, GREEN_PIECE_ORBIT_ZOOM\);/);
-    expect(rb).toContain("cameraOffset(st.cfg, { yaw: st.orbit.yaw, v: hv }, rel,"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face
+    expect(rb).toMatch(/const hv = rebase && st\.boxSpring !== null \? st\.boxSpring\.at\.v : st\.orbit\.elevation;\s*const boP = ringPlaceNow\(st, st\.orbit\.yaw, hv, GREEN_PIECE_ORBIT_ZOOM\);/); // ⭐ (2026-10-16) the turned curve on level rings (`orbit_rig.ts`)
+    expect(rb).toContain("cameraOffsetNow(st, { yaw: st.orbit.yaw, v: hv }, rel,");
     expect(rb).not.toMatch(/st\.boxSpring = null;/);
   });
 
@@ -571,16 +571,16 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const enter = w.slice(w.indexOf("export function enterPieceOrbit"), w.indexOf("function counterYawFrame"));
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
-    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], toRigSpace\(st, q, st\.centreBlend\.targetM\), ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
+    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
     expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = carryHeading\(st\.pieceEntry, st\.boxOrbit\.yaw, cfg\.pieceOrbitEnterMm\);/);
-    expect(w).toContain("const be = st.pieceEntry === null ? null : rigOffset(rigQAt(st, st.pieceEntry.headingRad), orbitOffset(st.cfg, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom).offsetM);"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face
+    expect(w).toContain("const be = st.pieceEntry === null ? null : ringPlaceNow(st, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom);"); // ⭐ (2026-10-16) the turned curve on level rings (`orbit_rig.ts`)
     expect(w).toMatch(/const aimT = st\.pieceAim === null \? entryProgress\(pe, cfg\.pieceOrbitEnterMm\) : aimProgress\(st\.pieceAim, cfg\.pieceOrbitEnterMm\);\s*(?:\/\/[^\n]*\n\s*)*camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\), aimT\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
-    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], ppW, \[out\[0\] \/ h, 0, out\[2\] \/ h\], fromRigSpace\(st, qc, camAt\), Math\.hypot\(ppW\[0\] - t\[0\], ppW\[1\] - t\[1\], ppW\[2\] - t\[2\]\), clampGreenZoom\(st\.zoom\)\);[^\n]*\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start; ⭐ (2026-10-16) in the world (the piece's line stays put)
+    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\), clampGreenZoom\(st\.zoom\)\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
     // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/camAt = returnCamera\(cr, pp, homeRel, cfg\.pieceOrbitReturnMm\);\s*const ax = returnLook\(cr, camAt, pp, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitReturnMm\);/);
-    expect(w).toContain(": [c.x + boW[0] * k + back[0] + hov[0], c.y + boW[1] * k + back[1] + hov[1], c.z + boW[2] * k + back[2] + hov[2]]"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face
+    expect(w).toMatch(/: \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\] \+ hov\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\] \+ hov\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\] \+ hov\[2\]\]/);
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
