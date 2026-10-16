@@ -534,6 +534,11 @@ export interface SceneState {
     v: number;
     fu: import("../input/follow").FollowState;
     fv: import("../input/follow").FollowState;
+    /** ⭐ (2026-10-16) the solved place's smoothed velocity and its last value — the phantom lead's (`hoverLeadMs`) */
+    vu: number;
+    vv: number;
+    lu: number;
+    lv: number;
     /** ⭐ (2026-10-14, the hover's audit) the last solved step on the plane — the drawn lag is kept behind it (`hoverDrawLag`) */
     du: number;
     dv: number;
@@ -578,6 +583,8 @@ export interface SceneState {
   hoverOutlineKey: string;
   /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */
   hoverSpent: number | null;
+  /** ⭐ (2026-10-16) a slide just ended: no hover offered until the orbit moves the piece (`hoverOffered`). */
+  hoverSlid: boolean;
   /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
   hoverReadyWorld: object | null;
   hoverReadyReachMm: number;

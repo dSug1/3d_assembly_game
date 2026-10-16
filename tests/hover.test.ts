@@ -202,7 +202,7 @@ describe("⭐⭐ the hover's deadband, its follower, its sway (2026-10-14, the o
   it("⭐⭐ the drawn offset FOLLOWS the solved one on the part translation's follower (its inertia, damping and lead)", () => {
     const h = code("render/hover_wiring.ts");
     // ⭐ (2026-10-14, *"When the piece hovers in desktop, the slide is not smooth but jittery"*) the orbit's spring, critically damped, no lead
-    expect(h).toContain("const tau = hoverDrawTau(st); hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec); hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);");
+    expect(h).toContain("hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);"); // ⭐ (2026-10-16) the part translation's follower again — the slide's inertia (it was the orbit's critically damped spring, 10-14)
     expect(code("render/green_box_wiring.ts")).toContain("hoverFrame(st, now, dtSec); hoverOffsetFrame(st, dtSec * 1000);");
   });
   it("⭐ the sway kicked by the hover finger's own trigger, at that least angle, about the placed parts, the way the piece moves", () => {
@@ -352,7 +352,7 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
   });
   it("⭐⭐ A: wired — the model the SOLVED offset, the lag on the mesh only and taken off where the model reads the mesh", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv); const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0)); st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));");
+    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv, HOVER_OVERSHOOT_M); const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0)); st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));");
     expect(h).not.toContain("scale(hf.e1, hf.fu.x)");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const d = st.hoverDraw ?? [0, 0, 0]; b.position.set(at[0] + s[0] + d[0], at[1] + s[1] + d[1], at[2] + s[2] + d[2]);");
@@ -911,7 +911,8 @@ describe("⭐⭐⭐ the audit of 2026-10-15 (Fable): the hover", () => {
     expect(hover).not.toMatch(/partId|centre0|offset0/);
     const follow = s.slice(at(" hoverFollow: {"), at(" hoverDraw:"));
     expect(follow).toContain("settleM: number;");
-    expect(follow).not.toMatch(/\bvu\b|\bvv\b|\blu\b|\blv\b/);
+    // ⭐ (2026-10-16) vu/vv/lu/lv are READ again — the slide's inertia (the phantom lead's velocity); the audit's hygiene stands for the hover's fields
+    expect(code("render/hover_wiring.ts")).toContain("hf.vu = exponentialSmooth(hf.vu, (hf.u - hf.lu) / dtSec, tauI, dtSec);");
   });
 });
 
@@ -945,5 +946,113 @@ describe("⭐⭐⭐ a face hosts only a resting face IN FRONT of it (2026-10-15,
     expect(hoverFaceContact([0, -0.01, 0], down, [top(0)], 0.02, 2, poly(-0.01)).contact).toBeNull(); // ✅ (⛔ latched on "bar")
     expect(hoverFaceContact([0, -0.0005, 0], down, [top(0)], 0.02, 2, poly(-0.0005)).contact?.id).toBe("bar"); // at contact (rounding): latched
     expect(hoverFaceContact([0, 0.01, 0], down, [top(0)], 0.02, 2, poly(0.01)).contact?.id).toBe("bar"); // in front, within reach: latched (it settles)
+  });
+});
+
+describe("⭐⭐⭐ the slide stops at the release (2026-10-16, the owner: *\"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit.\"*)", () => {
+  it("⭐⭐⭐ after a slide no hover is offered (no highlight, no latch) until the orbit has moved — the next press drives the orbit", async () => {
+    const { hoverOffered } = await import("../src/input/hover");
+    expect(hoverOffered(false)).toBe(true);
+    expect(hoverOffered(true)).toBe(false); // ✅ just slid: the next drag orbits (⛔ the piece still in contact re-latched, its highlights stayed)
+  });
+  it("⭐⭐⭐ wired: the release ends the drawn ease at once (the piece where it was solved), marks the slide spent, the highlights and the latch read it, the orbit's travel clears it", () => {
+    const h = code("render/hover_wiring.ts");
+    const rel = h.slice(h.indexOf("export function hoverRelease"), h.indexOf("function hoverCandidates"));
+    expect(rel).toContain("st.hoverFollow = null;");
+    expect(rel).toContain("st.hoverDraw = null;");
+    expect(rel).toContain("st.hoverSlid = true;");
+    expect(h).toContain("if (!hoverOffered(st.hoverSlid)) return refuse(");
+    expect(h).toContain("if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;");
+    const orbit = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
+    expect(orbit).toContain("st.hoverSlid = false;");
+  });
+});
+
+describe("⭐⭐⭐ the hover's highlights follow the parts' sway (2026-10-16, the owner: *\"Make sure the highlights follow the parts when they sway … the boundary highlight shall follow the sway of the assembly\"*)", () => {
+  it("⭐⭐ a world point carried into the hosting part's own frame (its MODEL pose) and back by its pose lands where it was — so, parented to the part's mesh, it rides the mesh's sway", async () => {
+    const { composePlacement, invertPlacement } = await import("../src/core/object_model");
+    const place = { position: [0.3, 0.2, -0.1] as Vec3, orientation: [Math.cos(0.4), 0, Math.sin(0.4), 0] as [number, number, number, number] };
+    const p: Vec3 = [0.5, 0.25, 0.05];
+    const local = composePlacement(invertPlacement(place), { position: p, orientation: [1, 0, 0, 0] }).position;
+    const back = composePlacement(place, { position: local, orientation: [1, 0, 0, 0] }).position;
+    for (let k = 0; k < 3; k++) expect(back[k]).toBeCloseTo(p[k]!, 12);
+  });
+  it("⭐⭐⭐ wired: the boundary, the hosting face's fill and the contact shadow are drawn in the hosting part's frame, parented to its mesh — ⛔ built in the world, they stood still while the parts swayed", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("function hostFrame(st: SceneState, partId: string): { mesh: AbstractMesh; local: (p: Vec3) => Vector3 } | null {");
+    expect(h).toContain("lines.parent = host.mesh;"); // the boundary
+    expect(h).toContain("fill.parent = host.mesh;"); // the face's fill
+    expect(h).toContain("st.hoverShadow.parent = host.mesh;"); // the contact shadow
+  });
+});
+
+describe("⭐⭐⭐ the slide's inertia (2026-10-16, the owner: *\"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world translation.\"* → *\"build the inertia. place the sliders in object translation under subfolder piece sliding\"*)", () => {
+  it("⭐⭐ the drawn lag: an overshoot AHEAD of the solved place is kept up to its cap (3 mm), never more — ⛔ it was dropped whole (the stick-slip of 10-14)", async () => {
+    const { hoverDrawLag, HOVER_OVERSHOOT_M } = await import("../src/input/hover");
+    expect(HOVER_OVERSHOOT_M).toBe(0.003);
+    expect(hoverDrawLag(0.002, 0, 1, 0, HOVER_OVERSHOOT_M)[0]).toBeCloseTo(0.002, 12); // ✅ 2 mm ahead: drawn (⛔ 0)
+    expect(hoverDrawLag(0.005, 0.001, 1, 0, HOVER_OVERSHOOT_M)).toEqual([0.003, 0.001]); // 5 mm ahead: capped at 3, the part across kept
+    expect(hoverDrawLag(-0.004, 0, 1, 0, HOVER_OVERSHOOT_M)[0]).toBeCloseTo(-0.004, 12); // behind: whole
+  });
+  it("⭐⭐⭐ the part translation's follower on the slide: the drawn piece lags while it is dragged and overshoots a little past where it stops (≤ 3 mm), then settles on it", async () => {
+    const { hoverDrawLag, HOVER_OVERSHOOT_M } = await import("../src/input/hover");
+    const { advanceFollow } = await import("../src/input/follow");
+    const { exponentialSmooth, phantomTarget } = await import("../src/input/lead");
+    const cfg = DEFAULT_CONFIG;
+    const dt = 1 / 120;
+    const tau = cfg.hoverInertiaMs / 1000;
+    let u = 0, lu = 0, vu = 0, du = 0;
+    let f = { x: 0, v: 0 };
+    let maxLag = 0, maxOver = 0, last = 0;
+    for (let i = 0; i < 240; i++) {
+      const next = i < 60 ? u + 0.4 * dt : u; // 0.5 s of a quick drag (0.4 m/s), then the finger stops
+      if (next !== u) du = next - u;
+      u = next;
+      vu = exponentialSmooth(vu, (u - lu) / dt, tau, dt);
+      lu = u;
+      f = advanceFollow(f, phantomTarget(u, vu, cfg.hoverLeadMs / 1000), tau, cfg.hoverDampingRatio, dt);
+      const drawn = u + hoverDrawLag(f.x - u, 0, du, 0, HOVER_OVERSHOOT_M)[0];
+      if (i < 60) maxLag = Math.max(maxLag, u - drawn);
+      else maxOver = Math.max(maxOver, drawn - u);
+      last = drawn - u;
+    }
+    expect(maxLag).toBeGreaterThan(0); // it lags while dragged: mass
+    expect(maxOver).toBeGreaterThan(0); // ✅ and overshoots where it stops (⛔ never: the ahead part dropped)
+    expect(maxOver).toBeLessThanOrEqual(HOVER_OVERSHOOT_M + 1e-12);
+    expect(Math.abs(last)).toBeLessThan(1e-6); // settled on it
+  });
+  it("⭐⭐ three tunables — 60 ms / 0.5 / the part's lead by default (MEASURED: the part's 7.6 ms / 0.2 let a 42 mm frame step through); validated", () => {
+    expect(DEFAULT_CONFIG.hoverInertiaMs).toBe(60);
+    expect(DEFAULT_CONFIG.hoverDampingRatio).toBe(0.5);
+    expect(DEFAULT_CONFIG.hoverLeadMs).toBe(DEFAULT_CONFIG.translateLeadMs);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverInertiaMs: 0 })).toThrow(/hoverInertiaMs/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverDampingRatio: 0 })).toThrow(/hoverDampingRatio/);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverLeadMs: -1 })).toThrow(/hoverLeadMs/);
+  });
+  it("⭐⭐ wired: the drawn piece on that follower; the sliders in OBJECT TRANSLATION › PIECE SLIDING", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);");
+    expect(h).toContain("const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv, HOVER_OVERSHOOT_M);");
+    const m = code("render/tuning_menu.ts");
+    const top = m.indexOf('title: "OBJECT TRANSLATION"');
+    const sub = m.indexOf('title: "PIECE SLIDING"', top);
+    const next = m.indexOf('title: "FACE ALIGNMENT"', top);
+    expect(sub).toBeGreaterThan(top);
+    expect(sub).toBeLessThan(next);
+    for (const k of ['"hoverInertiaMs"', '"hoverDampingRatio"', '"hoverLeadMs"']) {
+      const at = m.indexOf(k);
+      expect(at).toBeGreaterThan(sub);
+      expect(at).toBeLessThan(next);
+    }
+  });
+});
+
+describe("⭐⭐ after a slide, a press ON THE PIECE sets the slide up again (2026-10-16, the owner: *\"Modify: if the next press is on the piece itself, the sliding setup toggles back on (highlights, sliding mode, etc.)\"*)", () => {
+  it("⭐⭐ wired: the press on the piece clears the spent slide and asks the readiness look again at once (highlights back, a drag slides); a press elsewhere leaves it spent (the drag orbits)", () => {
+    const h = code("render/hover_wiring.ts");
+    const press = h.slice(h.indexOf("export function hoverPressNote"), h.indexOf("export function hoverRelease"));
+    expect(press).toContain("st.hoverSlid = false;");
+    expect(press).toContain("st.hoverReadyWorld = null;");
+    expect(press).toContain("st.hoverReadyAt = -Infinity;");
   });
 });

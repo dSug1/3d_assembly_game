@@ -263,6 +263,15 @@ export function settleShare(elapsedMs: number): number {
  * ⭐⭐ (*"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) — **B. THE CONTACT SHADOW**: a point of the resting face's outline laid on the target face's plane (`n` its normal, `c` a point
  * on it) — drawn there, it shows which face and exactly where the piece will land, at any camera angle (the shadow: the classic depth cue).
  */
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the
+ * orbit."*) — **IS A HOVER OFFERED?** Not right after a slide (`slid`): no readiness highlight, no latch, until the orbit has moved the piece. ⛔ The piece,
+ * still in contact, was ready again at once — its highlights stayed and a press on it slid again instead of orbiting.
+ */
+export function hoverOffered(slid: boolean): boolean {
+  return !slid;
+}
+
 export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
   const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
   return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];
@@ -279,11 +288,16 @@ export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
 // its part AHEAD along the last step (past the solved place) is dropped. ⛔ It was projected onto the last step's direction, its part ACROSS dropped:
 // a mouse's integer-pixel steps through the per-axis band alternate axis from frame to frame (125 Hz against 143 fps), so the drawn piece swung
 // across by the lag on every switch — 5.6 mm a frame against a 0.7 mm step, in the vector
-export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number): [number, number] {
+// ⭐⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece"* → *"build the inertia"*) — the part ahead is kept up to `aheadMaxM`
+// (`HOVER_OVERSHOOT_M`): the part translation's follower overshoots a little where the finger stops, and a clip of it was the stick-slip of 10-14
+/** ⭐ (2026-10-16) the most the drawn piece may run AHEAD of its solved place along the slide (m) — the inertia's overshoot, a few millimetres. */
+export const HOVER_OVERSHOOT_M = 0.003;
+export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: number, aheadMaxM = 0): [number, number] {
   const l = Math.hypot(dirU, dirV);
   if (!(l > 1e-12)) return [0, 0];
   const ahead = Math.max(0, (lagU * dirU + lagV * dirV) / l);
-  return [lagU - (ahead * dirU) / l, lagV - (ahead * dirV) / l];
+  const cut = ahead - Math.min(ahead, Math.max(0, aheadMaxM));
+  return [lagU - (cut * dirU) / l, lagV - (cut * dirV) / l];
 }
 
 /**

@@ -17,7 +17,8 @@ import type { Sample } from "../input";
 import { mmToPx } from "../core/units";
 import { qRotate, type Quat, type Vec3 } from "../core/vec";
 import { bodiesBehindPlane, bodiesWithin, type CollisionSetup } from "../core/collision";
-import { faceWorld } from "../core/object_model";
+import { composePlacement, faceWorld, invertPlacement } from "../core/object_model";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { AT_CONTACT_M, solveOrbitStep, type OrbitQ } from "../input/piece_orbit_solver";
 import {
@@ -54,11 +55,14 @@ import {
   behindToleranceM,
   hoverPendingAfter,
   hoverQueryBudget,
+  HOVER_OVERSHOOT_M,
+  hoverOffered,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
+import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { hoverSwayDeg } from "../input/hover";
@@ -76,6 +80,13 @@ const lerp3 = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, 
 /** ⭐ A first touch (or left press) on the orbited piece: noted — the drag that follows hovers if the piece may (decided past the tap's slop). */
 export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): void {
   st.hoverPress = { pointerId, x: s.x, y: s.y };
+  // ⭐⭐ (2026-10-16, the owner: *"if the next press is on the piece itself, the sliding setup toggles back on (highlights, sliding mode, etc.)"*) — a press ON the
+  // piece after a slide sets it up again: the spent slide cleared, the readiness looked for again at once (a press elsewhere leaves it spent: the drag orbits)
+  if (st.hoverSlid) {
+    st.hoverSlid = false;
+    st.hoverReadyWorld = null;
+    st.hoverReadyAt = -Infinity;
+  }
   // ⭐⭐ (2026-10-14, *"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the finger's (or the mouse's) own DEADBAND — the orbit drag's band (`orbitDeadbandMm`, its pause, its tremor rule)
   const band = new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true);
   band.push(s);
@@ -86,6 +97,11 @@ export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): vo
 export function hoverRelease(st: SceneState, pointerId: number): void {
   if (st.hover?.pointerId === pointerId) {
     st.hover = null;
+    // ⭐⭐⭐ (2026-10-16, *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit."*) — the
+    // piece drawn where it was SOLVED at once (⛔ it eased on after the lift), and no hover offered until the orbit moved it (`hoverOffered`)
+    st.hoverFollow = null;
+    st.hoverDraw = null;
+    st.hoverSlid = true;
     st.hudDirty = true;
   }
   if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
@@ -160,6 +176,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
     return false;
   };
   if (b === null || p === undefined || p.restingFace === null || st.pieceAnchor === null) return refuse("no orbited piece with a resting face");
+  if (!hoverOffered(st.hoverSlid)) return refuse("the slide just ended");
   if (st.orbitPiecePlaced) return refuse("the piece is placed in its goal");
   const q = st.pieceQ;
   if (q === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
@@ -220,7 +237,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   behind.delete(b.name);
   st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, du: 0, dv: 0 };
+  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
@@ -355,12 +372,22 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   // τ = `boxSmoothMs` / 2), no lead: ⛔ the part translation's follower (τ 7.6 ms, ζ 0.2, a phantom lead) passed the solve's per-frame steps
   // straight through — a mouse's events beat against the frames (125 Hz against 143 fps measured on the HUD) — and its overshoot, clipped by
   // `hoverDrawLag`, stuck and slipped
-  const tau = hoverDrawTau(st);
-  hf.fu = advanceFollow(hf.fu, hf.u, tau, 1, dtSec);
-  hf.fv = advanceFollow(hf.fv, hf.v, tau, 1, dtSec);
+  // ⭐⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world
+  // translation."* → *"build the inertia"*) — the PART TRANSLATION'S FOLLOWER on the drawn piece: a spring of its own inertia and damping (`hoverInertiaMs`,
+  // `hoverDampingRatio`) toward a phantom target leading the solved place by its smoothed velocity (`hoverLeadMs`); the model stays the solved place (the
+  // collision and the boundary exact), the drawn piece may run ahead of it by `HOVER_OVERSHOOT_M` at most. ⛔ (10-14) a critically damped spring at the
+  // orbit's τ, the part ahead dropped
+  const tauI = Math.max(1e-4, st.cfg.hoverInertiaMs / 1000);
+  const leadS = st.cfg.hoverLeadMs / 1000;
+  hf.vu = exponentialSmooth(hf.vu, (hf.u - hf.lu) / dtSec, tauI, dtSec);
+  hf.vv = exponentialSmooth(hf.vv, (hf.v - hf.lv) / dtSec, tauI, dtSec);
+  hf.lu = hf.u;
+  hf.lv = hf.v;
+  hf.fu = advanceFollow(hf.fu, phantomTarget(hf.u, hf.vu, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);
+  hf.fv = advanceFollow(hf.fv, phantomTarget(hf.v, hf.vv, leadS), tauI, st.cfg.hoverDampingRatio, dtSec);
   // ⭐⭐ the DRAWN lag behind the model: the follower's (behind the last solved step), and the settle still to show (above the settled place —
   // ⭐ (2026-10-14, the hover's second audit) ⛔ the MODEL eased down while the steps were solved at the settled depth: an unchecked pose)
-  const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv);
+  const [lu, lv] = hoverDrawLag(hf.fu.x - hf.u, hf.fv.x - hf.v, hf.du, hf.dv, HOVER_OVERSHOOT_M);
   const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));
   st.hoverDraw = add(scale(hf.n, settleLeft), add(scale(hf.e1, lu), scale(hf.e2, lv)));
   // settled after the release: nothing drawn apart
@@ -488,6 +515,7 @@ function hoverEndNow(st: SceneState): void {
  */
 export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   if (travelMm <= 0) return;
+  st.hoverSlid = false; // ⭐ (2026-10-16) the orbit moved: a hover is offered again
   // ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece ways in by this travel — the gizmo untouched
   if (st.hoverOffset !== null) {
     const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
@@ -588,7 +616,7 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   let ready = st.hoverReady;
-  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
+  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
   else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
     // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
@@ -613,11 +641,12 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const rot: Quat = [r.w, r.x, r.y, r.z];
   const at: Vec3 = [b.position.x, b.position.y, b.position.z];
   const lift = scale(ready.normal, 0.0004);
+  const host = hostFrame(st, ready.id);
   const lines = p.restingEdges.map((e) =>
     e.map((q) => {
       const w = add(at, qRotate(rot, q));
       const s = add(projectOntoPlane(w, ready.normal, ready.centre), lift);
-      return new Vector3(s[0], s[1], s[2]);
+      return host === null ? new Vector3(s[0], s[1], s[2]) : host.local(s);
     }),
   );
   if (st.hoverShadow === null || st.hoverShadowCount !== lines.length) {
@@ -627,6 +656,10 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     st.hoverShadow.isPickable = false;
     st.hoverShadowCount = lines.length;
   } else CreateLineSystem("hover-shadow", { lines, instance: st.hoverShadow }, st.scene);
+  // ⭐⭐ (2026-10-16) in the hosting part's frame, riding its sway
+  if (host !== null) {
+    if (st.hoverShadow.parent !== host.mesh) st.hoverShadow.parent = host.mesh;
+  } else st.hoverShadow.parent = null;
   st.hoverShadow.setEnabled(true);
   // the face that will host the hover: a faint fill (rebuilt when the face changes)
   const key = `${ready.id}|${ready.faceId}|${ready.centre.map((x) => x.toFixed(4)).join(",")}`;
@@ -643,6 +676,19 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     st.hoverOutline = buildCoplanarOutline(st, ready);
   }
   st.hoverOutline?.setEnabled(true);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"Make sure the highlights follow the parts when they sway … the boundary highlight shall follow the sway of the assembly"*) —
+ * **THE HOSTING PART'S FRAME**: a world point carried into the part's own frame by its MODEL pose; a highlight drawn there and parented to the part's mesh
+ * rides the mesh's drawn pose — its sway included. ⛔ Built in the world, the boundary, the face's fill and the contact shadow stood still while the parts swayed.
+ */
+function hostFrame(st: SceneState, partId: string): { mesh: AbstractMesh; local: (p: Vec3) => Vector3 } | null {
+  const mesh = st.meshOf.get(partId);
+  const place = worldPlacementOf(st.world, partId);
+  if (mesh === undefined || place === null) return null;
+  const inv = invertPlacement(place);
+  return { mesh, local: (p) => { const q = composePlacement(inv, { position: p, orientation: [1, 0, 0, 0] }).position; return new Vector3(q[0], q[1], q[2]); } };
 }
 
 /** ⭐ The faces' joints are bridged: the coloured cores of two touching parts stand 3 mm apart (their contours meet). */
@@ -680,10 +726,16 @@ function buildCoplanarOutline(st: SceneState, ready: NonNullable<SceneState["hov
   if (segs.length === 0) return null;
   const { a, b } = bd;
   const onFace = bd.onFace + 0.0004; // the coloured face's plane, lifted
-  const P3 = (x: number, y: number) => new Vector3(a[0] * x + b[0] * y + n[0] * onFace, a[1] * x + b[1] * y + n[1] * onFace, a[2] * x + b[2] * y + n[2] * onFace);
+  // ⭐⭐ (2026-10-16) drawn in the hosting part's frame, parented to its mesh: it follows the sway (`hostFrame`)
+  const host = hostFrame(st, ready.id);
+  const P3 = (x: number, y: number) => {
+    const w: Vec3 = [a[0] * x + b[0] * y + n[0] * onFace, a[1] * x + b[1] * y + n[1] * onFace, a[2] * x + b[2] * y + n[2] * onFace];
+    return host === null ? new Vector3(w[0], w[1], w[2]) : host.local(w);
+  };
   const lines = CreateLineSystem("hover-outline", { lines: segs.map(([p, q]) => [P3(p[0], p[1]), P3(q[0], q[1])]) }, st.scene);
   lines.color = READY_COLOUR.clone();
   lines.isPickable = false;
+  if (host !== null) lines.parent = host.mesh;
   return lines;
 }
 
@@ -698,9 +750,12 @@ function buildFaceFill(st: SceneState, partId: string, faceId: string, lift: Vec
   const used = [...new Set(face.triangles)];
   const at = new Map(used.map((i, k) => [i, k] as const));
   const positions: number[] = [];
+  // ⭐⭐ (2026-10-16) in the hosting part's frame, parented to its mesh: it follows the sway (`hostFrame`)
+  const host = hostFrame(st, partId);
   for (const i of used) {
     const w = add(add(place.position, qRotate(place.orientation, topo.positions[i]!)), lift);
-    positions.push(w[0], w[1], w[2]);
+    const l = host === null ? new Vector3(w[0], w[1], w[2]) : host.local(w);
+    positions.push(l.x, l.y, l.z);
   }
   const fill = new Mesh("hover-face", st.scene);
   const data = new VertexData();
@@ -714,5 +769,6 @@ function buildFaceFill(st: SceneState, partId: string, faceId: string, lift: Vec
   mat.backFaceCulling = false;
   fill.material = mat;
   fill.isPickable = false;
+  if (host !== null) fill.parent = host.mesh;
   return fill;
 }

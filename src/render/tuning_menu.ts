@@ -270,6 +270,17 @@ export function installTuningMenu(st: SceneState): void {
         // ⛔ The three rule selectors that stood here (pinned Pioneer, WorldAxisB, plane/channels)
         // are DELETED with their alternatives (`D109`, 2026-09-27).
       ],
+      // ⭐⭐ (2026-10-16, the owner: *"place the sliders in object translation under subfolder piece sliding"*) — the slide's inertia, the part translation's follower
+      subsections: [
+        {
+          title: "PIECE SLIDING",
+          sliders: [
+            tunable(st, "slide inertia (ms)", "hoverInertiaMs", 1, 100, 0.2),
+            tunable(st, "slide damping ratio (<1 = overshoot)", "hoverDampingRatio", 0.1, 1, 0.05),
+            tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 5, 0.1),
+          ],
+        },
+      ],
     },
     {
       // ⭐⭐ **THE FACE SUBMENU** — the owner, 2026-09-25: *"create a Face submenu and place the
