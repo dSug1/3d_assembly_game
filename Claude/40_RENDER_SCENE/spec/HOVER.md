@@ -23,7 +23,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   piece, or the orbit taking it out of every contact, offers it again.
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; ⭐ (§23) × the KINETIC
-  FRICTION `speed / (speed + hoverFrictionMmS)` (12.5 mm/s on the glass, 0 = off): a slow finger moves the piece less than itself; held in a disc of
+  FRICTION `speed / (speed + hoverFrictionMmS)` (8 mm/s on the glass, 0 = off): a slow finger moves the piece less than itself; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
   green boundary — ⭐ (§21) a step never takes it FARTHER from the boundary (`rectsDistance`, `boundStep`, `holdOffBound`): inside it cannot leave,
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
@@ -522,3 +522,4 @@ floor** — marked seats where a piece may be set down, each a known target the 
   drag); a press on the piece clears it at once. ⚠ Touch staged only — a stay right at a MOUSE up would be another fault.
 * ⭐ **The owner's lead and friction** (2026-10-16: *"set the slide phantom lead to 9.75 ms and slide friction to 12.5 mm/s"*): `hoverLeadMs` **9.75**,
   `hoverFrictionMmS` **12.5**; their sliders' steps made finer (0.25 ms, 0.5 mm/s) so the defaults sit on them.
+* ⭐ (2026-10-16, the owner: *"set the slide friction to 8 mm/s"*) `hoverFrictionMmS` **8** (12.5 before).
