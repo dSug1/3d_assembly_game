@@ -34,7 +34,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { fromRigSpace, rigQAt, syncCentre, toRigSpace } from "./camera_rig";
-import { rigOffset } from "../input/orbit_rig";
+import { blendedUp, rigOffset, rigUpWeight } from "../input/orbit_rig";
 import { IDENTITY } from "../core/vec";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
@@ -1231,7 +1231,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-10-16) back into the world, the camera's up turned with the rig
   camAt = fromRigSpace(st, qc, camAt);
   lookAt = fromRigSpace(st, qc, lookAt);
-  const upW = qRotate(qc, [0, 1, 0]);
+  // ⭐⭐ (2026-10-16, the owner: *"at one point the scene passes upside down"* → *"build A"*) the rig's up between rings 2 and 3, rolled back to upright over the outer stretches
+  const upW = blendedUp([lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], qRotate(qc, [0, 1, 0]), rigUpWeight(st.cfg, st.cameraLagged.v));
   // ⭐⭐ prototype (2026-10-06): *"the gain shall be unique during the whole game, and computed based on the camera position dictated by
   // the sliders values"* — the yaw gain around the piece (`referenceYawGain`), RECOMPUTED ONLY when a slider it reads changes (the
   // offsets, the radius offset, the boot zoom, the gap's %, the rings) — never from the live camera. Read at each orbit drag's start.
