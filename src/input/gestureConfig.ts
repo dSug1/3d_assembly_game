@@ -933,9 +933,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ (2026-10-16, the owner: *"set default slide inertia = 40 ms, slide damping ratio = 0.93, slide phantom lead raise the slider"*) — 40 ms / 0.93
   hoverInertiaMs: 40,
   hoverDampingRatio: 0.93,
-  hoverLeadMs: 0.2,
+  // ⭐ (2026-10-16, the owner: *"set the slide phantom lead to 9.75 ms and slide friction to 12.5 mm/s"*)
+  hoverLeadMs: 9.75,
   // ⚠ (2026-10-16) a guess with a slider: at 10 mm/s a slow finger moves the piece half as far
-  hoverFrictionMmS: 10,
+  hoverFrictionMmS: 12.5,
   hoverGain: 1,
   // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
   orbitGoalMm: 5,
