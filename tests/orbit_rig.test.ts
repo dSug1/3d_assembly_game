@@ -171,24 +171,18 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     }
     expect(prev.az - first).toBeCloseTo(Math.PI, 9);
   });
-  it("⭐⭐⭐ THE SWING'S WIDTH: its average turning speed (heading and tilt combined) per unit of the curve equals the vertical face's crossing between rings 2 and 3 (the owner: *\"the same speed vs. delta input\"*)", () => {
+  it("⭐⭐⭐ OPTION B: the swing spans rings 2 → 3 EXACTLY, centred on the crossing (the owner: *\"it looks like the piece does a Z-shape travel. build option B instead\"* — ⛔ C reached past the rings)", () => {
     const p = turnFor(0.4, [0, 1, 0]);
     const s = rigSwing(cfg, p)!;
-    // the camera frame's turn through the swing: the heading's (about the vertical) and the tilt's, combined
-    let turn = 0;
-    const n = 4000;
-    for (let i = 0; i < n; i++) {
-      const v0 = s.vc - s.w / 2 + (i * s.w) / n, v1 = v0 + s.w / n;
-      const a0 = rigCameraAngles(cfg, p, { yaw: 0.4, v: v0 }), a1 = rigCameraAngles(cfg, p, { yaw: 0.4, v: v1 });
-      turn += Math.hypot(a1.az - a0.az, a1.el - a0.el);
-    }
-    // the vertical face's crossing: the pitch from ring 2 to ring 3 over their span (Scene_1: four rings)
     const f = fourRingLayout(cfg);
     const v2 = f.knots[2]! / f.total, v3 = f.knots[1]! / f.total;
-    const pitch = (v: number) => { const o = orbitOffset(cfg, 0, v, 1).offsetM; return Math.atan2(o[1], Math.hypot(o[0], o[2])); };
-    const target = Math.abs(pitch(v2) - pitch(v3)) / (v2 - v3);
-    expect((turn / s.w) / target).toBeCloseTo(1, 1); // the same average speed per unit of dy (within the clamp's few %)
-    expect(s.w).toBeGreaterThan(v2 - v3); // it spreads past rings 2 and 3
+    expect(s.w).toBeCloseTo(v2 - v3, 12);
+    expect(s.vc - s.w / 2).toBeCloseTo(v3, 6); // it starts at ring 3 …
+    expect(s.vc + s.w / 2).toBeCloseTo(v2, 6); // … and ends at ring 2
+    // outside rings 2 and 3 the heading does not move
+    const az = (v: number) => rigCameraAngles(cfg, p, { yaw: 0.4, v }).az;
+    expect(az(v3 - 0.01)).toBeCloseTo(az(0), 12);
+    expect(az(v2 + 0.01)).toBeCloseTo(az(1), 12);
   });
   it("⭐ the camera's near side: unturned 0; a side face the turned radial; a top face the camera's side", () => {
     expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBe(0);

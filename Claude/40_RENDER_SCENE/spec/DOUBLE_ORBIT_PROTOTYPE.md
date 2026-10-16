@@ -973,7 +973,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   view 0.93°, its up (0, 1, 0), the piece's largest frame step 1.5 mm, no reversal. A SIDE face: 0.6°, 1.2 mm, no reversal. ⛔ No device close.
   2040 vectors (4 new fail against the reverted model).
 
-### …and THE SWING ROUND — the camera follows the piece on the second half (`1.0.79-`)
+### …and THE SWING ROUND — the camera follows the piece on the second half (`1.0.79-`; ⛔ its width C superseded by B, below)
 
 > *"the camera does not follow the piece on the second half of the 2d curve"* → (three ways over the top proposed: follow exactly — a 180° flip in one
 > frame; swing round over the crossing; swing round over a wider stretch) → *"build C. propose the width so that the camera turn has the same speed vs.
@@ -991,3 +991,14 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   ring set. ⚠ No slider (to add if 11.3 mm feels wrong).
 * Headless (touch, Piece3's top face): the camera's direction 5.3° off the piece's on BOTH halves (v 0.979 and 0.028 — the camera offsets), the
   crossing's largest frame step of the view 0.91°, its up (0, 1, 0), the piece 1.5 mm, no reversal; a side face 0.79°. ⛔ No device close. 2041 vectors.
+
+### ⭐⭐ The swing between rings 2 and 3 only — option B (`1.0.79-`)
+
+> *"I don't like this implementation: it looks like the piece does a Z-shape travel. build option B instead."* — the owner.
+
+* ⛔ **C** (the width solved so the swing turned as fast as the vertical crossing — 11.3 mm of finger in `Scene_1`, ~2.9 mm past rings 2 and 3 on each
+  side): the camera was still turning while the piece already travelled outside the crossing — read as a Z-shape travel. Kept above as the record.
+* ⭐⭐ **B**: the swing spans rings 2 → 3 EXACTLY, centred on the crossing (`rigSwing`'s width = the ring parameter span of rings 2 and 3 — `Scene_1`
+  v 0.429 → 0.571, 5.6 mm of finger); outside it the heading does not move, so on both halves the camera is behind the piece (vectored).
+* Headless (touch, Piece3's top face): the camera 5.3° off the piece's direction on BOTH halves (the camera offsets), the crossing's largest frame step
+  of the view 1.0°, its up (0, 1, 0), the piece 1.6 mm, no reversal; a side face 0.86°. ⛔ No device close. 2041 vectors.
