@@ -11,9 +11,9 @@ import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
 import { cameraOffset } from "../src/input/follow_camera";
-import { anglesOf } from "../src/input/piece_orbit";
-import { IDENTITY, qRotate, type Vec3 } from "../src/core/vec";
-import { UNTURNED, blendAngles, blendPlace, cameraOffsetAt, rigBetaFor, rigCameraAngles, rigPlace, rigRotationFor, rigSwing, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
+import { IDENTITY, qFromAxisAngle, qmul, qRotate, type Vec3 } from "../src/core/vec";
+import { rigFrameBetween, rigTurnFor } from "../src/input/orbit_rig";
+import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
 import { fourRingLayout } from "../src/input/orbit";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -26,7 +26,6 @@ const angle = (a: Vec3, b: Vec3): number => {
   const u = unit(a), w = unit(b);
   return (Math.acos(Math.max(-1, Math.min(1, u[0] * w[0] + u[1] * w[1] + u[2] * w[2]))) * 180) / Math.PI;
 };
-const DEG = Math.PI / 180;
 const turnFor = (yaw0: number, n: Vec3, cameraSide: Vec3 = [Math.cos(yaw0), 0, Math.sin(yaw0)]): RigParams => {
   const q = rigRotationFor(cfg, yaw0, n);
   return { q, yaw0, beta: rigBetaFor(q, yaw0, cameraSide) };
@@ -47,20 +46,20 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     }
     expect(rigRotationFor(cfg, 0.4, null)).toEqual(IDENTITY); // no face (the boot): as today
   });
-  it("⭐⭐⭐ UNTURNED it is the rig as it always was: the piece's place `orbitOffset`, the camera `cameraOffset`'s angles — exactly", () => {
+  it("⭐⭐⭐ UNTURNED it is the rig as it always was: the piece's place `orbitOffset`, the camera `cameraOffset`'s direction — exactly, its up upright", () => {
     const off = { yawRad: 0.05, pitchRad: 0.03 };
     for (const yaw of [0, 1.2, -2.7]) {
       for (const v of [0, 0.3, 0.5, 0.82, 1]) {
         const a = rigPlace(cfg, UNTURNED, yaw, v, 1.3);
         const b = orbitOffset(cfg, yaw, v, 1.3).offsetM;
         for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(b[i]!, 12);
-        const ca = rigCameraAngles(cfg, UNTURNED, { yaw, v }, off);
-        const cb = anglesOf(cameraOffset(cfg, { yaw, v }, [0, 0, 0], off, 1));
-        expect(Math.cos(ca.az - cb.az)).toBeCloseTo(1, 12);
-        expect(ca.el).toBeCloseTo(cb.el, 12);
-        const oa = cameraOffsetAt(ca, [0.3, 0.2, 0.1], 0.5);
+        const f = rigCameraFrame(cfg, UNTURNED, { yaw, v }, rigPlace(cfg, UNTURNED, yaw, v, 1), off);
+        const oa = cameraOffsetAt(f.dir, [0.3, 0.2, 0.1], 0.5);
         const ob = cameraOffset(cfg, { yaw, v }, [0.3, 0.2, 0.1], off, 0.5);
         for (let i = 0; i < 3; i++) expect(oa[i]).toBeCloseTo(ob[i]!, 12);
+        expect(Math.abs(f.up[0] * f.dir[0] + f.up[1] * f.dir[1] + f.up[2] * f.dir[2])).toBeLessThan(1e-12); // up ⟂ view
+        expect(f.up[1]).toBeGreaterThan(0); // upright
+        expect(Math.abs(f.up[0] * f.dir[2] - f.up[2] * f.dir[0])).toBeLessThan(1e-12); // in the vertical plane of the view: no roll
       }
     }
   });
@@ -139,57 +138,58 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     expect(r4[1]).toBeCloseTo(cfg.orbitBottomRadiusM, 9);
     expect(r1[0] * r4[0] + r1[2] * r4[2]).toBeLessThan(0); // on either side
   });
-  it("⭐⭐⭐ THE CAMERA FOLLOWS THE PIECE ON BOTH HALVES (the owner: *\"the camera does not follow the piece on the second half of the 2d curve\"* → *\"build C\"*): outside the swing its direction from the gizmo IS the piece's — side face everywhere", () => {
-    const top = turnFor(0.4, [0, 1, 0]);
-    const s = rigSwing(cfg, top)!;
-    expect(s).not.toBeNull();
-    expect(s.vc).toBeCloseTo(waistV(cfg), 6); // the crossing over the gizmo: halfway between rings 2 and 3
-    const outside = [0.02, 0.1, 0.2, 0.8, 0.9, 0.98].filter((v) => Math.abs(v - s.vc) > s.w / 2 + 1e-3);
-    expect(outside.some((v) => v > s.vc) && outside.some((v) => v < s.vc)).toBe(true); // both halves checked (⛔ the fold left the far half)
-    for (const [p, vs] of [[turnFor(0, [0, 0, 1]), [0.05, 0.3, 0.45, 0.6, 0.9]], [top, outside]] as [RigParams, number[]][]) {
+  it("⭐⭐⭐ THE CAMERA DERIVED FROM THE PIECE (the owner: *\"Can you synchronize all movements so that this disappear ?\"*): its direction IS the piece's at EVERY v, through the crossing too — ⛔ a heading of its own swung sideways: the Z-shape", () => {
+    for (const p of [turnFor(0.4, [0, 1, 0]), turnFor(0, [0, 0, 1]), turnFor(1.1, [0.3, 0.8, -0.5])]) {
       for (const yaw of [p.yaw0, p.yaw0 + 1.1, p.yaw0 - 2.4]) {
-        for (const v of vs) {
-          const a = rigCameraAngles(cfg, p, { yaw, v });
-          const d: Vec3 = [Math.cos(a.el) * Math.cos(a.az), Math.sin(a.el), Math.cos(a.el) * Math.sin(a.az)];
-          expect(angle(d, rigPlace(cfg, p, yaw, v, 1))).toBeLessThan(1e-4);
+        for (let v = 0; v <= 1.0001; v += 0.01) {
+          const place = rigPlace(cfg, p, yaw, v, 1);
+          const f = rigCameraFrame(cfg, p, { yaw, v }, place);
+          expect(angle(f.dir, place)).toBeLessThan(1e-4);
         }
       }
     }
     expect(rigSwing(cfg, turnFor(0, [0, 0, 1]))).toBeNull(); // a side face: no crossing, no swing
     expect(rigSwing(cfg, UNTURNED)).toBeNull();
   });
-  it("⭐⭐⭐ THE SWING: the heading turns HALF A ROUND, smoothly and always the same way, the camera upright (tilt within ±89°) — never upside down, no jump", () => {
+  it("⭐⭐⭐ THE UP over a top face's crossing: upright outside rings 2 and 3, turning half a round between them — smoothly, one way, never upside down outside", () => {
     const p = turnFor(0.4, [0, 1, 0]);
-    let prev = rigCameraAngles(cfg, p, { yaw: 1.3, v: 0 });
-    const first = prev.az;
+    const s = rigSwing(cfg, p)!;
+    const fr = (v: number) => rigCameraFrame(cfg, p, { yaw: 1.3, v }, rigPlace(cfg, p, 1.3, v, 1));
+    let prev = fr(0);
+    let turned = 0;
     for (let v = 0.001; v <= 1; v += 0.001) {
-      const a = rigCameraAngles(cfg, p, { yaw: 1.3, v });
-      expect(a.az - prev.az).toBeGreaterThanOrEqual(-1e-12); // one way
-      expect(a.az - prev.az).toBeLessThan(0.05); // no jump
-      expect(Math.abs(a.el)).toBeLessThanOrEqual(89 * DEG + 1e-12);
-      prev = a;
+      const f = fr(v);
+      expect(angle(f.up, prev.up)).toBeLessThan(6); // no jump (the crossing's own speed)
+      expect(Math.abs(f.up[0] * f.dir[0] + f.up[1] * f.dir[1] + f.up[2] * f.dir[2])).toBeLessThan(1e-9);
+      const inSwing = Math.abs(v - s.vc) < s.w / 2;
+      if (!inSwing) expect(f.up[1]).toBeGreaterThan(0); // upright outside
+      // the up's level heading turns one way
+      const a0 = Math.atan2(prev.up[2], prev.up[0]), a1 = Math.atan2(f.up[2], f.up[0]);
+      let d = a1 - a0;
+      d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
+      if (Math.hypot(f.up[0], f.up[2]) > 0.05 && Math.hypot(prev.up[0], prev.up[2]) > 0.05) turned += d;
+      prev = f;
     }
-    expect(prev.az - first).toBeCloseTo(Math.PI, 9);
+    expect(Math.abs(Math.abs(turned) - Math.PI)).toBeLessThan(0.05); // half a round in all
   });
-  it("⭐⭐⭐ OPTION B: the swing spans rings 2 → 3 EXACTLY, centred on the crossing (the owner: *\"it looks like the piece does a Z-shape travel. build option B instead\"* — ⛔ C reached past the rings)", () => {
+  it("⭐⭐⭐ OPTION B: the swing spans rings 2 → 3 EXACTLY, centred on the crossing (the owner: *\"it looks like the piece does a Z-shape travel. build option B instead\"*)", () => {
     const p = turnFor(0.4, [0, 1, 0]);
     const s = rigSwing(cfg, p)!;
     const f = fourRingLayout(cfg);
     const v2 = f.knots[2]! / f.total, v3 = f.knots[1]! / f.total;
     expect(s.w).toBeCloseTo(v2 - v3, 12);
-    expect(s.vc - s.w / 2).toBeCloseTo(v3, 6); // it starts at ring 3 …
-    expect(s.vc + s.w / 2).toBeCloseTo(v2, 6); // … and ends at ring 2
-    // outside rings 2 and 3 the heading does not move
-    const az = (v: number) => rigCameraAngles(cfg, p, { yaw: 0.4, v }).az;
-    expect(az(v3 - 0.01)).toBeCloseTo(az(0), 12);
-    expect(az(v2 + 0.01)).toBeCloseTo(az(1), 12);
+    expect(s.vc - s.w / 2).toBeCloseTo(v3, 6);
+    expect(s.vc + s.w / 2).toBeCloseTo(v2, 6);
+    expect(rigSwingShare(cfg, p, v3 - 0.01)).toBe(s.farAbove ? 0 : 1);
+    expect(rigSwingShare(cfg, p, v2 + 0.01)).toBe(s.farAbove ? 1 : 0);
   });
-  it("⭐ the camera's near side: unturned 0; a side face the turned radial; a top face the camera's side", () => {
-    expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBe(0);
+  it("⭐⭐ the camera's near side lies along the TURNED CURVE'S OWN PLANE (⛔ read off the camera's side it carried the camera's 7° yaw offset — the up tilted 6.4°): unturned 0; a side face the turned radial; a top face the curve's line, toward the camera", () => {
+    expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBeCloseTo(0, 12);
     const qs = rigRotationFor(cfg, 0, [0, 0, 1]);
     expect(Math.cos(rigBetaFor(qs, 0, [1, 0, 0]) - Math.PI / 2)).toBeCloseTo(1, 9);
-    const qt = rigRotationFor(cfg, 0, [0, 1, 0]);
-    expect(Math.cos(rigBetaFor(qt, 0, [0, 0, -1]) + Math.PI / 2)).toBeCloseTo(1, 9);
+    const qt = rigRotationFor(cfg, 0, [0, 1, 0]); // the curve's plane: the x line at yaw0 = 0
+    expect(Math.cos(rigBetaFor(qt, 0, [Math.cos(7 * Math.PI / 180), 0, Math.sin(7 * Math.PI / 180)]))).toBeCloseTo(1, 9); // 7° off: still ON the line
+    expect(Math.cos(rigBetaFor(qt, 0, [-1, 0, 0.1]) - Math.PI)).toBeCloseTo(1, 9); // the camera on the other side: the other way along it
   });
   it("⭐ the rebase: the yaw whose ring points at the piece — the inverse of the place", () => {
     for (const p of [UNTURNED, turnFor(0.4, [0, 1, 0]), turnFor(-0.6, [0.2, 0.5, 0.8])]) {
@@ -199,12 +199,58 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       }
     }
   });
-  it("⭐ the blend at the gizmo's share: places straight, the camera's azimuth the short way round; at 1 exactly the new", () => {
-    expect(blendPlace([0, 0, 0], [1, 2, 3], 1)).toEqual([1, 2, 3]);
-    expect(blendPlace([0, 0, 0], [1, 2, 3], 0.5)).toEqual([0.5, 1, 1.5]);
-    const m = blendAngles({ az: 3.0, el: 0 }, { az: -3.0, el: 0.4 }, 0.5);
-    expect(Math.cos(m.az - Math.PI)).toBeCloseTo(1, 9); // through ±180°, not through 0
-    expect(m.el).toBeCloseTo(0.2, 12);
+  it("⭐⭐ the blend's share EASED toward the gizmo's stepped progress (⛔ stepped: a 6 % screen jerk per pointer event) — an exponential approach that lands", async () => {
+    const { easeShare } = await import("../src/input/orbit_rig");
+    let s = 0;
+    const steps: number[] = [];
+    for (let i = 0; i < 60; i++) { const n = easeShare(s, i < 2 ? 0.03 : 0.03, 16, 30); steps.push(n - s); s = n; }
+    expect(Math.max(...steps)).toBeLessThan(0.03 * 0.45); // a 3 % step spread over frames
+    expect(s).toBe(0.03); // and it lands
+    expect(easeShare(0.2, 0.5, 16, 0)).toBe(0.5); // no smoothing time: at once
+  });
+  it("⭐⭐⭐ THE NEW TURN, THE NEARER OF TWO: the piece moves least through a gizmo change (⛔ near ring 1 it travelled over the top of the gizmo)", () => {
+    for (const v of [0.1, 0.3, 0.7, 0.9]) {
+      const t = rigTurnFor(cfg, 0.4, v, [0, 1, 0], [1, 0, 0], UNTURNED);
+      const here = rigPlace(cfg, UNTURNED, 0.4, v, 1);
+      const d = (p: RigParams) => { const a = rigPlace(cfg, p, 0.4, v, 1); return Math.hypot(a[0] - here[0], a[1] - here[1], a[2] - here[2]); };
+      const q1 = rigRotationFor(cfg, 0.4, [0, 1, 0]);
+      for (const q of [q1, qmul(qFromAxisAngle([0, 1, 0], Math.PI), q1)]) expect(d(t)).toBeLessThanOrEqual(d({ q, yaw0: 0.4, beta: rigBetaFor(q, 0.4, [1, 0, 0], 0) }) + 1e-9);
+      if (v > 0.5) expect(d(t)).toBeLessThan(2.5); // ⛔ the piece no longer sent across the gizmo (6.3 m at v 0.9; below the gizmo a top face has no ring)
+      expect(angle(rigPlace(cfg, t, 0.4, waistV(cfg), 1), [0, 1, 0])).toBeLessThan(1e-4); // halfway on the normal, either way
+    }
+  });
+  it("⭐⭐⭐ A GIZMO CHANGE, v held: the camera's direction and UP change smoothly all the way (⛔ a far stretch appearing midway flipped the up in one frame — 6 % of the screen)", () => {
+    // the new turn as the gizmo's move makes it: its near side the way nearer the old one (`retargetGizmo`)
+    const next = (from: RigParams, yaw: number, n: Vec3, cs: Vec3, v: number): RigParams => rigTurnFor(cfg, yaw, v, n, cs, from);
+    const top = turnFor(0.4, [0, 1, 0]);
+    const side = turnFor(0, [0, 0, 1]);
+    for (const v of [0.2, 0.45, 0.6, 0.715, 0.9]) {
+      for (const [a, b] of [[UNTURNED, next(UNTURNED, 0.4, [0, 1, 0], [1, 0, 0], v)], [side, next(side, 0.4, [0, 1, 0], [1, 0, 0], v)], [top, next(top, -1.2, [0, 1, 0], [-1, 0, 0.2], v)], [top, next(top, 2.0, [0.4, 0.6, 0.2], [0, 0, 1], v)]] as [RigParams, RigParams][]) {
+        let prev: ReturnType<typeof rigCameraFrame> | null = null;
+        for (let s = 0; s <= 1.0001; s += 0.002) {
+          const f = rigFrameBetween(cfg, a, b, s, { yaw: 0.4, v }, { yawRad: 0.12, pitchRad: 0.04 });
+          if (prev !== null) {
+            expect(angle(f.up, prev.up)).toBeLessThan(8);
+            expect(angle(f.dir, prev.dir)).toBeLessThan(8);
+          }
+          prev = f;
+        }
+      }
+    }
+  });
+  it("⭐⭐⭐ A GIZMO CHANGE: the TURN is blended (⛔ the places in a straight line, the camera apart) — on the way the piece keeps its ring distance from the gizmo, and the camera stays on it", () => {
+    const a = turnFor(0, [0, 0, 1]);
+    const b = turnFor(0.4, [0, 1, 0]);
+    expect(blendRig(a, b, 0)).toEqual(a);
+    expect(blendRig(a, b, 1)).toEqual(b);
+    for (const s of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+      const m = blendRig(a, b, s);
+      for (const v of [0.05, 0.3, 0.6, 0.95]) {
+        const place = rigPlace(cfg, m, 0.9, v, 1);
+        expect(Math.hypot(place[0], place[1], place[2])).toBeCloseTo(orbitOffset(cfg, 0, v, 1).radiusM, 9); // on a real curve
+        expect(angle(rigCameraFrame(cfg, m, { yaw: 0.9, v }, place).dir, place)).toBeLessThan(1e-4); // the camera on it
+      }
+    }
   });
 });
 
@@ -215,12 +261,17 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     expect(g).toContain("const boP = ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);");
     expect(g).toContain("const be = st.pieceEntry === null ? null : ringPlaceNow(st, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom);");
   });
-  it("⭐⭐⭐ the camera upright: its angles `cameraAnglesNow` (the centre orbit, the way in, the orbit around the piece), its up never turned", () => {
+  it("⭐⭐⭐ the camera DERIVED FROM THE PIECE (`cameraFrameNow` on the same blended turn — `rigNow`), its up set from it", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const o = cameraOffsetNow(st, st.cameraLagged,");
-    expect(g.split("const ring = cameraAnglesNow(st, st.cameraLagged, off);").length - 1).toBe(2);
-    expect(g).not.toContain("upVector"); // ⛔ the rig's up: upside down past the crossing
-    expect(g).not.toContain("toRigSpace");
+    expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off);");
+    expect(g).toContain("const o = cameraOffsetAt(camFrame.dir,");
+    expect(g.split("const ring = anglesOf(camFrame.dir);").length - 1).toBe(2);
+    expect(g).toContain("st.camera.upVector = new Vector3(up[0], up[1], up[2]);");
+    const c = code("render/camera_rig.ts");
+    expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
+    expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
+    expect(c).toContain("return rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);");
+    expect(c).toContain("st.rigFrom = rigNow(st);"); // the turn as it stands — never a jump
   });
   it("⭐⭐ the gizmo's move sets the new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {
     const p = code("render/pointer_wiring.ts");
@@ -228,7 +279,6 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const h = code("render/hold_wiring.ts");
     expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
     const c = code("render/camera_rig.ts");
-    expect(c).toContain("const q = rigRotationFor(st.cfg, yaw, normal);");
-    expect(c).toContain("st.rigTo = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, [cam.x - to[0], 0, cam.z - to[2]]) };");
+    expect(c).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, normal, [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
   });
 });

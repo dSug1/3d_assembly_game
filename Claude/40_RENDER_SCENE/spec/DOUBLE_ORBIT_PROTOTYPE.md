@@ -1002,3 +1002,31 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   v 0.429 → 0.571, 5.6 mm of finger); outside it the heading does not move, so on both halves the camera is behind the piece (vectored).
 * Headless (touch, Piece3's top face): the camera 5.3° off the piece's direction on BOTH halves (the camera offsets), the crossing's largest frame step
   of the view 1.0°, its up (0, 1, 0), the piece 1.6 mm, no reversal; a side face 0.86°. ⛔ No device close. 2041 vectors.
+
+### ⭐⭐⭐ Every movement synchronized — the camera derived from the piece; the gizmo change blended as a turn (`1.0.79-`)
+
+> *"there is still a Z-shape back and forth of the piece when the camera turns. Can you synchronize all movements so that this disappear ? Also, when I
+> change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset that should be its offset during the
+> travel, with the piece traveling outside the screen during the orbit."* — the owner.
+
+* ⛔⛔ **What was wrong** (one cause, four symptoms): the camera ran on a heading and tilt OF ITS OWN while the piece ran on the curve — they agreed
+  only outside the swing. (1) Through the swing the camera turned sideways while the piece went straight over: the Z. (2) A gizmo change blended the
+  piece's PLACE in a straight line between the old rig's and the new one's (a chord through odd places) and the camera's angles apart — mid-blend it no
+  longer pointed at the piece, and a blend stopped part-way kept it so. (3) The blend's share stepped with each pointer event (~3 %): the piece, metres
+  from the gizmo, jerked 12 % of the screen in a frame. (4) The near side was read off the camera's position — its 7° yaw offset tilted the picture 6.4°
+  on a top face.
+* ⭐⭐⭐ **The camera DERIVED FROM THE PIECE** (`rigCameraFrame`, `input/orbit_rig.ts`): its direction from the gizmo IS the piece's own (at the camera's
+  lagged orbit place, on the SAME turn) plus the offsets (the pitch about the camera's right, the yaw about the world vertical — unturned `cameraOffset`
+  exactly); its UP the upright one, blended into the swing's half turn above 30° of elevation (a top face's rings 2 and 3 sit at 30° — option B's
+  timing) and fully the swing's above 60°. The camera can no longer lose the piece.
+* ⭐⭐ **The gizmo change as a TURN** (`blendRig`): the rotation slerped, the fixed yaw and the near side the short way — every rig on the way is a real
+  curve, the piece swings over at its ring distance from the gizmo; the share EASED every frame toward the gizmo's stepped progress (`easeShare`, τ =
+  `boxSmoothMs` / 2); a new gizmo starts from the turn as it stands (a blend in progress included). ⭐ **The nearer of two turns** (`rigTurnFor`): the
+  first, or the first then half a turn about the face's normal — the one moving the piece least (near ring 1 it was sent over the top of the gizmo).
+  ⭐ The swing's heading read on each END turn (stable) and blended (`rigFrameBetween` — read off the blended turn its near / far split flipped, 132° in
+  one step); every crossing found, the far share smoothed over the swing's window (a far stretch appearing midway starts at zero width); the near side
+  from the turned curve's OWN plane, the way nearer the old one (`rigBetaFor`'s `preferBeta`).
+* Headless (touch, `Scene_1`): through a top face's crossing the piece HELD on the screen (≤ 0.0001 of the screen a frame — the Z gone), the up ≤ 1.4°
+  a frame; through a gizmo change ≤ 0.4 % of the screen a frame (12 % before), settling onto the camera; upright at rings 1 and 4 (6.4° before); no
+  reversal. ⚠ The view still turns half a round between rings 2 and 3 over a top face — about the piece now; a quick drag turns it fast (~9° a frame in
+  the scripted drags). ⛔ No device close. 2044 vectors.

@@ -459,7 +459,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const rb = w.slice(w.indexOf("function returnToCentreOrbit"), w.indexOf("function counterYawFrame"));
     expect(rb).toMatch(/st\.boxSpring = sp === null \? null : \{ at: \{ yaw: st\.orbit\.yaw, v: sp\.at\.v, zoom: sp\.at\.zoom \}, velYaw: 0, velV: sp\.velV, velLnZoom: sp\.velLnZoom \};/);
     expect(rb).toMatch(/const hv = rebase && st\.boxSpring !== null \? st\.boxSpring\.at\.v : st\.orbit\.elevation;\s*const boP = ringPlaceNow\(st, st\.orbit\.yaw, hv, GREEN_PIECE_ORBIT_ZOOM\);/); // ⭐ (2026-10-16) the turned curve on level rings (`orbit_rig.ts`)
-    expect(rb).toContain("cameraOffsetNow(st, { yaw: st.orbit.yaw, v: hv }, rel,");
+    expect(rb).toContain("cameraOffsetAt(cameraFrameNow(st, { yaw: st.orbit.yaw, v: hv }, pieceOrbitAngleOffset(st)).dir, rel,"); // ⭐ (2026-10-16) the camera derived from the piece
     expect(rb).not.toMatch(/st\.boxSpring = null;/);
   });
 

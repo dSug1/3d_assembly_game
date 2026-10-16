@@ -9,7 +9,7 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendAngles, blendPlace, cameraOffsetAt, rigBetaFor, rigCameraAngles, rigPlace, rigRotationFor, type RigAngles } from "../input/orbit_rig";
+import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
@@ -62,27 +62,19 @@ export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clien
 }
 
 
-/**
- * ⭐⭐⭐ (2026-10-16, the owner: *"the axis of each ring is the gravity axis (in such way, the camera is never upside down). dx orbits the piece on the
- * ring it is sitting on."*) — THE PIECE'S RING PLACE now (from the gizmo): on the turned curve's level ring (`rigPlace`), the old turn's and the new
- * blended at the gizmo's share, so the rings swing over as the gizmo slides.
- */
+/** ⭐⭐⭐ (2026-10-16) the rig's turn NOW — the old and the new BLENDED at the gizmo's share (`blendRig`): the piece and the camera read this one. */
+export function rigNow(st: SceneState): RigParams {
+  return blendRig(st.rigFrom, st.rigTo, st.rigShare);
+}
+
+/** ⭐⭐⭐ (2026-10-16) THE PIECE'S RING PLACE now (from the gizmo): the turned curve swung round the gizmo's vertical (`rigPlace`), on the turn now. */
 export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: number): Vec3 {
-  const s = st.centreBlend.progress;
-  const b = rigPlace(st.cfg, st.rigTo, yaw, v, zoom);
-  return s >= 1 ? b : blendPlace(rigPlace(st.cfg, st.rigFrom, yaw, v, zoom), b, s);
+  return rigPlace(st.cfg, rigNow(st), yaw, v, zoom);
 }
 
-/** ⭐⭐⭐ (2026-10-16) THE CAMERA'S ANGLES now — upright, its heading dx's, its tilt the turned curve's folded (`rigCameraAngles`), blended likewise. */
-export function cameraAnglesNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigAngles {
-  const s = st.centreBlend.progress;
-  const b = rigCameraAngles(st.cfg, st.rigTo, cam, off);
-  return s >= 1 ? b : blendAngles(rigCameraAngles(st.cfg, st.rigFrom, cam, off), b, s);
-}
-
-/** ⭐ (2026-10-16) the camera's offset from the gizmo now — `cameraOffset`'s rule at `cameraAnglesNow`. */
-export function cameraOffsetNow(st: SceneState, cam: OrbitAt, boxOffset: Vec3, off: CameraAngleOffset | undefined, radiusOffsetM: number): Vec3 {
-  return cameraOffsetAt(cameraAnglesNow(st, cam, off), boxOffset, radiusOffsetM);
+/** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn (`rigCameraFrame`). */
+export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
+  return rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);
 }
 
 /**
@@ -92,10 +84,12 @@ export function cameraOffsetNow(st: SceneState, cam: OrbitAt, boxOffset: Vec3, o
  */
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
   const yaw = st.orbit.yaw;
-  const q = rigRotationFor(st.cfg, yaw, normal);
   const cam = st.camera.position;
-  st.rigFrom = st.centreBlend.progress >= 0.5 ? st.rigTo : st.rigFrom;
-  st.rigTo = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, [cam.x - to[0], 0, cam.z - to[2]]) };
+  st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump
+  st.rigShare = 0;
+  // ⭐ the new near side the way nearer the old one (it only picks which way a swing turns) — a gizmo change never turns it half a round
+  // ⭐⭐ (2026-10-16) the nearer of the two turns at this yaw (`rigTurnFor`): the piece stays on its side through the gizmo's change
+  st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, normal, [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
   st.centreBlend.retarget(to);
   syncCentre(st);
 }

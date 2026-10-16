@@ -26,7 +26,7 @@
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
-import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qRotate, type Quat, type Vec3 } from "../core/vec";
+import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The rig's turn: the rotation `q` fixed at the orbit's yaw `yaw0` (the gizmo's move), the rings' outward heading offset `beta`. */
 export interface RigParams {
@@ -74,6 +74,10 @@ export function rigRotationFor(cfg: GestureConfig, yawRad: number, normal: Vec3 
 
 /** ⭐ The level unit direction at the azimuth `a` (the orbit's own convention: x = cos, z = sin). */
 const level = (a: number): Vec3 => [Math.cos(a), 0, Math.sin(a)];
+/** ⭐ (2026-10-16) the camera's up reads the swing's heading from this elevation of the piece (blended in fully at `SWING_FULL_RAD`). */
+const SWING_FROM_RAD = (30 * Math.PI) / 180;
+const SWING_FULL_RAD = (60 * Math.PI) / 180;
+const wrapPi = (a: number): number => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 
 /** ⭐ The world turn that adds `deltaRad` to an orbit yaw: `orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)` (about the world vertical). */
 export function yawTurn(deltaRad: number): Quat {
@@ -85,9 +89,26 @@ export function yawTurn(deltaRad: number): Quat {
  * levelled; when the turn stands it nearly straight up or down (a top / bottom face), the camera's side (`cameraSide`, the level direction from the
  * gizmo to the camera). Returned as `beta` (the heading is `yaw0 + beta`); unturned exactly 0.
  */
-export function rigBetaFor(q: Quat, yaw0: number, cameraSide: Vec3): number {
+export function rigBetaFor(q: Quat, yaw0: number, cameraSide: Vec3, preferBeta?: number): number {
+  // ⭐⭐ (2026-10-16) the turned curve's OWN plane: its level line (the plane through the gizmo spanned by the turned radial and the turned vertical) —
+  // ⛔ read off the camera's side, it carried the camera's yaw offset (7°) and tilted the up by 6.4° on a top face
+  const nP = qRotate(q, cross(level(yaw0), [0, 1, 0]));
+  const h = normalize([nP[2], 0, -nP[0]]);
   const t = qRotate(q, level(yaw0));
-  if (Math.hypot(t[0], t[2]) > 0.35) return Math.atan2(t[2], t[0]) - yaw0;
+  const tl = Math.hypot(t[0], t[2]);
+  // ⭐⭐ (2026-10-16) a preferred heading (the turn it comes from): the line's way NEARER it — the two ways only choose which way a swing turns, and
+  // the nearer keeps a gizmo change from turning the near side half a round (⛔ midway the whole curve flipped near ↔ far: the up in one frame)
+  if (h !== null && preferBeta !== undefined) {
+    const b1 = Math.atan2(h[2], h[0]) - yaw0;
+    const d1 = Math.abs(wrapPi(b1 - preferBeta));
+    return d1 <= Math.PI / 2 ? b1 : b1 + Math.PI;
+  }
+  if (h !== null) {
+    const towards: Vec3 = tl > 0.35 ? [t[0], 0, t[2]] : cameraSide;
+    const sgn = h[0] * towards[0] + h[2] * towards[2] >= 0 ? 1 : -1;
+    return Math.atan2(sgn * h[2], sgn * h[0]) - yaw0;
+  }
+  if (tl > 0.35) return Math.atan2(t[2], t[0]) - yaw0;
   if (Math.hypot(cameraSide[0], cameraSide[2]) > 1e-9) return Math.atan2(cameraSide[2], cameraSide[0]) - yaw0;
   return 0;
 }
@@ -114,9 +135,11 @@ export interface RigSwing {
   readonly w: number;
   /** The far side lies at v ABOVE the crossing (else below). */
   readonly farAbove: boolean;
+  /** ⭐ (2026-10-16) every stretch of the curve on the FAR side of the gizmo (ring parameter; the ends extended past 0 and 1). */
+  readonly far: readonly (readonly [number, number])[];
 }
 
-const swingCache = new WeakMap<RigParams, { key: string; swing: RigSwing | null }>();
+const swingCache = new Map<string, RigSwing | null>();
 
 const ringKey = (cfg: GestureConfig): string =>
   [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM].join(",");
@@ -135,11 +158,13 @@ function ring23(cfg: GestureConfig): [number, number] {
 
 /** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
 export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
-  const key = ringKey(cfg);
-  const hit = swingCache.get(p);
-  if (hit !== undefined && hit.key === key) return hit.swing;
+  // ⭐ keyed by the turn's VALUES and the rings: a blended turn is a new object every frame
+  const key = `${ringKey(cfg)}|${p.q.map((x) => x.toFixed(6)).join(",")}|${p.yaw0.toFixed(6)}|${p.beta.toFixed(6)}`;
+  const hit = swingCache.get(key);
+  if (hit !== undefined) return hit;
   const swing = solveSwing(cfg, p);
-  swingCache.set(p, { key, swing });
+  if (swingCache.size > 256) swingCache.clear();
+  swingCache.set(key, swing);
   return swing;
 }
 
@@ -150,9 +175,11 @@ function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
     const c = point(v);
     return c[0] * near[0] + c[2] * near[2];
   };
+  // ⭐⭐ (2026-10-16, *"when I change the gizmo, the piece does some strange travels"*) EVERY crossing — midway through a gizmo change the turned curve
+  // can start to pass over the gizmo in its middle, two crossings at once (⛔ the first alone made everything past it "far": the up flipped in a frame)
   const N = 400;
-  let vc = -1;
-  for (let i = 0; i < N && vc < 0; i++) {
+  const cross: number[] = [];
+  for (let i = 0; i < N; i++) {
     const a = i / N;
     const b = (i + 1) / N;
     if (side(a) > 0 !== side(b) > 0) {
@@ -163,23 +190,35 @@ function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
         if (side(m) > 0 === side(lo) > 0) lo = m;
         else hi = m;
       }
-      vc = (lo + hi) / 2;
+      cross.push((lo + hi) / 2);
     }
   }
-  if (vc < 0) return null;
+  if (cross.length === 0) return null;
+  const far: [number, number][] = [];
+  const bounds = [-Infinity, ...cross, Infinity];
+  for (let i = 0; i + 1 < bounds.length; i++) {
+    const lo = bounds[i]!;
+    const hi = bounds[i + 1]!;
+    const mid = lo === -Infinity ? Math.max(0, hi - 1e-3) : hi === Infinity ? Math.min(1, lo + 1e-3) : (lo + hi) / 2;
+    if (side(Math.min(1, Math.max(0, mid))) <= 0) far.push([lo, hi]);
+  }
+  const vc = cross[0]!;
   const farAbove = side(Math.min(1, vc + 1e-3)) <= 0;
   // ⭐⭐ (2026-10-16, the owner: *"it looks like the piece does a Z-shape travel. build option B instead."*) — the swing spans rings 2 → 3 exactly,
   // centred on the crossing (⛔ C: a width solved to the vertical crossing's speed, 11.3 mm in `Scene_1`, reaching past the rings — a Z-shape travel)
   const [v2, v3] = ring23(cfg);
-  return { vc, w: Math.max(1e-6, Math.abs(v2 - v3)), farAbove };
+  return { vc, w: Math.max(1e-6, Math.abs(v2 - v3)), farAbove, far };
 }
 
 /** ⭐ How far the camera's heading has swung round at `v` (0 on the near side, 1 behind the piece on the far side). */
 export function rigSwingShare(cfg: GestureConfig, p: RigParams, v: number): number {
   const s = rigSwing(cfg, p);
   if (s === null) return 0;
-  const t = smooth((v - (s.vc - s.w / 2)) / s.w);
-  return s.farAbove ? t : 1 - t;
+  // ⭐⭐ (2026-10-16) the SMOOTHED far fraction of the window [v − w/2, v + w/2] (the smoothstep's density): one crossing — exactly the swing of
+  // option B; a far stretch appearing midway through a gizmo change starts at zero width, so the share grows from zero — never a jump
+  let share = 0;
+  for (const [a, b] of s.far) share += smooth((b - v) / s.w + 0.5) - smooth((a - v) / s.w + 0.5);
+  return Math.min(1, Math.max(0, share));
 }
 
 /** ⭐ The camera's angles round the gizmo (azimuth, elevation) — `piece_orbit.ts`'s `AroundAngles`. */
@@ -188,47 +227,126 @@ export interface RigAngles {
   readonly el: number;
 }
 
-/**
- * ⭐⭐⭐ THE CAMERA, UPRIGHT — its angles round the gizmo at the camera's orbit place `cam`: its HEADING `cam.yaw + beta` (the near side, turned by dx
- * alone, ⛔ never read off a position, so it cannot spin over the gizmo), its TILT the turned curve's at `cam.v` FOLDED (the elevation of the piece's
- * own direction) — on the near side the camera's direction IS the piece's (behind it); past a top face's crossing it comes back down on the same side
- * (the piece beyond the gizmo); the owner's offsets as before — the yaw offset on the heading, the pitch offset away from the level
- * (`mirroredPitchOffset`) — clamped at ±89°. ⭐ Unturned it is `cameraOffset`'s angles exactly.
- */
-export function rigCameraAngles(cfg: GestureConfig, p: RigParams, cam: OrbitAt, off: CameraAngleOffset = { yawRad: 0, pitchRad: 0 }): RigAngles {
-  const lim = (89 * Math.PI) / 180;
-  const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, cam.v, 1).offsetM);
-  const n = Math.hypot(c[0], c[1], c[2]);
-  const e = n > 1e-12 ? Math.asin(Math.max(-1, Math.min(1, c[1] / n))) : 0;
-  // ⭐⭐ (2026-10-16, *"build C"*) + the swing round over the crossing: half a round, always the same way
-  const swing = Math.PI * rigSwingShare(cfg, p, cam.v);
-  return { az: cam.yaw + p.beta + swing + off.yawRad, el: Math.max(-lim, Math.min(lim, e + mirroredPitchOffset(e, off.pitchRad))) };
+/** ⭐ The camera's direction (from the gizmo toward it, unit) and its UP. */
+export interface RigCameraFrame {
+  readonly dir: Vec3;
+  readonly up: Vec3;
 }
 
-/** ⭐ The camera's offset from the gizmo at angles `a`, at the piece's distance (`boxOffset`) plus `radiusOffsetM` — `cameraOffset`'s rule. */
-export function cameraOffsetAt(a: RigAngles, boxOffset: Vec3, radiusOffsetM: number): Vec3 {
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"there is still a Z-shape back and forth of the piece when the camera turns. Can you synchronize all movements so that this disappear ? Also, when I change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset … with the piece traveling outside the screen during the orbit"*) — **THE CAMERA DERIVED FROM THE PIECE**: its direction from the gizmo IS the piece's own
+ * (`place`, the piece's place at the camera's orbit place — the SAME turn the piece is placed with, blended or not), so whatever the piece does —
+ * the crossing, a gizmo change, a slide — the camera follows it exactly (⛔ a heading and tilt of their own, blended apart from the piece's place: the
+ * Z-shape, the piece lost off the screen). Its UP: upright (the world's vertical seen from the camera) everywhere but between rings 2 and 3 over a
+ * crossing, where it turns half a round with the swing's heading (`rigSwingShare`) — the view turns, the camera stays on the piece. The owner's
+ * offsets as ever: the pitch offset away from the level (`mirroredPitchOffset`, about the camera's right), the yaw offset about the world vertical;
+ * clamped at ±89° outside the swing. ⭐ Unturned it is `cameraOffset`'s direction EXACTLY, its up the upright one.
+ */
+export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, place: Vec3, off: CameraAngleOffset = { yawRad: 0, pitchRad: 0 }, swingHeading?: number): RigCameraFrame {
+  const lim = (89 * Math.PI) / 180;
+  const d0 = normalize(place) ?? ([1, 0, 0] as Vec3);
+  const e = Math.asin(Math.max(-1, Math.min(1, d0[1])));
+  // the heading the up reads: the piece's OWN below 30° of elevation (the upright camera — robust, nothing to decide; a top face's rings 2 and 3 sit at 30°), the swing's above 60° (where
+  // the upright camera's heading is undefined), blended between (⛔ the swing's everywhere: midway through a gizmo change its near / far split flipped)
+  const hSwing = swingHeading ?? rigSwingHeading(cfg, p, cam);
+  const flat = Math.hypot(d0[0], d0[2]);
+  const hOwn = flat > 1e-9 ? Math.atan2(d0[2], d0[0]) : hSwing;
+  const wz = smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD));
+  const heading = level(hOwn + wrapPi(hSwing - hOwn) * wz);
+  const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
+  const k = dot(raw, d0);
+  const u0 = normalize([raw[0] - k * d0[0], raw[1] - k * d0[1], raw[2] - k * d0[2]]) ?? ([0, 1, 0] as Vec3);
+  // the pitch offset: about the camera's right — toward its up raises it (outside the swing exactly the elevation's change, clamped at ±89°)
+  let op = mirroredPitchOffset(e, off.pitchRad);
+  if (wz <= 0) op = Math.max(-lim, Math.min(lim, e + op)) - e;
+  const c = Math.cos(op);
+  const sn = Math.sin(op);
+  const d1: Vec3 = [c * d0[0] + sn * u0[0], c * d0[1] + sn * u0[1], c * d0[2] + sn * u0[2]];
+  const u1: Vec3 = [c * u0[0] - sn * d0[0], c * u0[1] - sn * d0[1], c * u0[2] - sn * d0[2]];
+  // the yaw offset: about the world vertical
+  const t = yawTurn(off.yawRad);
+  return { dir: qRotate(t, d1), up: qRotate(t, u1) };
+}
+
+/** ⭐ The camera's offset from the gizmo along `dir`, at the piece's distance (`boxOffset`) plus `radiusOffsetM` — `cameraOffset`'s rule. */
+export function cameraOffsetAt(dir: Vec3, boxOffset: Vec3, radiusOffsetM: number): Vec3 {
   const d = Math.hypot(boxOffset[0], boxOffset[1], boxOffset[2]) + Math.max(0, radiusOffsetM);
-  return [d * Math.cos(a.el) * Math.cos(a.az), d * Math.sin(a.el), d * Math.cos(a.el) * Math.sin(a.az)];
+  return [d * dir[0], d * dir[1], d * dir[2]];
 }
 
 /** ⭐ The yaw whose ring place points the piece at `rel` (from the gizmo) at `v` — the rebase at the end of the orbit around the piece. */
 export function rigYawToward(cfg: GestureConfig, p: RigParams, v: number, zoom: number, rel: Vec3): number {
   const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM);
   if (Math.hypot(c[0], c[2]) < 1e-9 || Math.hypot(rel[0], rel[2]) < 1e-9) return p.yaw0;
-  // ⭐ yawTurn(δ) turns an azimuth a to a − (−δ)… i.e. adds δ to the orbit's yaw: the piece's azimuth less the curve point's at yaw0
+  // ⭐ yawTurn(δ) adds δ to the orbit's yaw: the piece's azimuth less the curve point's at yaw0
   return p.yaw0 + Math.atan2(rel[2], rel[0]) - Math.atan2(c[2], c[0]);
 }
 
-/** ⭐ Two places blended at the gizmo's share `s` (the old turn's and the new) — the rings swing over as the gizmo slides, never a jump. */
-export function blendPlace(a: Vec3, b: Vec3, s: number): Vec3 {
+/**
+ * ⭐⭐ (2026-10-16, the owner: *"there is still a Z-shape back and forth of the piece when the camera turns. Can you synchronize all movements so that this disappear ? Also, when I change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset … with the piece traveling outside the screen during the orbit"*) — **THE TURN ITSELF BLENDED** at the gizmo's share `s`: the rotation slerped, the fixed yaw and the
+ * heading the short way — every rig on the way is a real turned curve, so the piece swings over at its ring distance from the gizmo, and the piece and
+ * the camera read the SAME blended turn. ⛔ The places blended in a straight line (a chord cutting through odd places) and the camera's angles apart.
+ */
+export function blendRig(a: RigParams, b: RigParams, s: number): RigParams {
   if (s >= 1) return b;
-  return [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
+  if (s <= 0) return a;
+  const q = qSlerp(a.q, b.q, s);
+  const yaw0 = a.yaw0 + wrapPi(b.yaw0 - a.yaw0) * s;
+  // ⭐ the near side ON the blended curve's own plane, the way nearer the blended heading — the near / far split stays clean all the way
+  return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s) };
 }
 
-/** ⭐ Two camera angle pairs blended at `s`: the azimuth the short way round. */
-export function blendAngles(a: RigAngles, b: RigAngles, s: number): RigAngles {
-  if (s >= 1) return b;
-  let d = b.az - a.az;
-  d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
-  return { az: a.az + d * s, el: a.el + (b.el - a.el) * s };
+/**
+ * ⭐⭐ (2026-10-16, the owner: *"when I change the gizmo, the piece does some strange travels"*) — the blend's share EASED every frame toward the gizmo's own (`centreBlend.progress`, which steps by the
+ * finger's travel, ~3 % a pointer event): the turn swings over continuously (⛔ stepped, a piece metres from the gizmo jerked with the camera — 6 % of
+ * the screen in one frame, headless). An exponential approach on the orbit's own smoothing time; at the target within 1e-4 it lands there.
+ */
+export function easeShare(cur: number, target: number, dtMs: number, tauMs: number): number {
+  if (!(tauMs > 0) || !(dtMs > 0)) return target;
+  const next = cur + (target - cur) * (1 - Math.exp(-dtMs / tauMs));
+  return Math.abs(target - next) < 1e-4 ? target : next;
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"when I change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset
+ * … with the piece traveling outside the screen"*) — **THE NEW TURN, THE NEARER OF TWO**: fixed at the camera's yaw, two turns put the curve's halfway
+ * direction on the face's normal — they differ in which half of the curve faces the camera The one that
+ * (⛔ the opposite yaw is the same curve — the orbit's yaw swings it back: the second is the first then HALF A TURN ABOUT THE FACE'S NORMAL) — the one that
+ * moves the piece LEAST from where it stands (`from`, at the orbit's place `yaw`, `v`) — so a gizmo change keeps the piece on its side (⛔ near ring 1 it
+ * travelled over the top of the gizmo, nearly straight up, and the camera turned half a round in a few frames); dy then crosses between rings 2 and 3.
+ * Its near side the way nearer the old one (`rigBetaFor`'s `preferBeta`).
+ */
+export function rigTurnFor(cfg: GestureConfig, yaw: number, v: number, normal: Vec3 | null, cameraSide: Vec3, from: RigParams): RigParams {
+  const here = rigPlace(cfg, from, yaw, v, 1);
+  let best: RigParams | null = null;
+  let bestD = Infinity;
+  const q1 = rigRotationFor(cfg, yaw, normal);
+  const n = normal === null ? null : normalize(normal);
+  for (const q of n === null ? [q1] : [q1, qmul(qFromAxisAngle(n, Math.PI), q1)]) {
+    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta) };
+    const at = rigPlace(cfg, cand, yaw, v, 1);
+    const d = Math.hypot(at[0] - here[0], at[1] - here[1], at[2] - here[2]);
+    if (d < bestD - 1e-9) {
+      bestD = d;
+      best = cand;
+    }
+  }
+  return best!;
+}
+
+/** ⭐ The swing's heading at the camera's orbit place — the near side turned half a round over a crossing (`rigSwingShare`). */
+export function rigSwingHeading(cfg: GestureConfig, p: RigParams, cam: OrbitAt): number {
+  return cam.yaw + p.beta + Math.PI * rigSwingShare(cfg, p, cam.v);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-16, *"when I change the gizmo, the piece does some strange travels"*) — **THE CAMERA'S FRAME THROUGH A GIZMO CHANGE**: the place on the
+ * BLENDED turn (`blendRig`), the swing's heading taken on each END turn — where its near / far split is stable — and blended the short way at the share
+ * (⛔ read off the blended turn, its split flipped midway — the up turned 132° in one step while the piece's heading moved 0.03°).
+ */
+export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
+  const p = blendRig(a, b, s);
+  const hb = rigSwingHeading(cfg, b, cam);
+  const hs = s >= 1 ? hb : (() => { const ha = rigSwingHeading(cfg, a, cam); return ha + wrapPi(hb - ha) * Math.max(0, s); })();
+  return rigCameraFrame(cfg, p, cam, rigPlace(cfg, p, cam.yaw, cam.v, 1), off, hs);
 }
