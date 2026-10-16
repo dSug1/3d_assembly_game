@@ -268,6 +268,20 @@ export function settleShare(elapsedMs: number): number {
  * orbit."*) — **IS A HOVER OFFERED?** Not right after a slide (`slid`): no readiness highlight, no latch, until the orbit has moved the piece. ⛔ The piece,
  * still in contact, was ready again at once — its highlights stayed and a press on it slid again instead of orbiting.
  */
+/**
+ * ⭐⭐ (2026-10-16, the owner: *"can you also add some friction ? (different from inertia)"* → *"Kinetic (drag)"*) — the KINETIC FRICTION of the slide:
+ * the finger's step on the plane is scaled by `speed / (speed + friction)` (both mm/s on the glass): a slow move is held back most, a fast one goes
+ * nearly 1:1, and the piece is never stuck (⛔ that would be static friction, not asked). `friction ≤ 0` is off.
+ */
+export function hoverFrictionScale(speedMmS: number, frictionMmS: number): number {
+  if (!(frictionMmS > 0)) return 1;
+  if (!(speedMmS > 0)) return 0;
+  return speedMmS / (speedMmS + frictionMmS);
+}
+
+/** ⭐ (2026-10-16) the time constant of the finger's glass speed the friction reads (s) — a frame's dispatch jitter smoothed out. */
+export const HOVER_FRICTION_SPEED_TAU_S = 0.05;
+
 export function hoverOffered(slid: boolean): boolean {
   return !slid;
 }

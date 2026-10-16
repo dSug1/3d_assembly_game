@@ -21,7 +21,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   lifts, §10). ⭐ (§23) the lift STOPS the slide at once (the drawn piece where it is, the highlights off); the next press ELSEWHERE orbits, the next
   press ON THE PIECE sets the slide up again (highlights, slide).
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
-  exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; held in a disc of
+  exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; ⭐ (§23) × the KINETIC
+  FRICTION `speed / (speed + hoverFrictionMmS)` (10 mm/s on the glass, 0 = off): a slow finger moves the piece less than itself; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
   green boundary — ⭐ (§21) a step never takes it FARTHER from the boundary (`rectsDistance`, `boundStep`, `holdOffBound`): inside it cannot leave,
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
@@ -507,3 +508,9 @@ floor** — marked seats where a piece may be set down, each a known target the 
   solved place by about its own lag, and a lead of that order (tens of ms) cancels it; the 3 mm cap still bounds what runs ahead.
 * Checked headlessly (touch): the lift stops the ease and the highlights; a drag elsewhere orbits; a press on the piece re-arms (Piece32, the
   outline back) and its drag slides. ⚠ The desktop mouse cannot be staged (§0, open 6); ⛔ no device close.
+* ⭐⭐ **The kinetic friction** (2026-10-16, the owner: *"can you also add some friction ? (different from inertia)"* → *"Kinetic (drag)"*, chosen over
+  a static stick and a speed-growing roughness): each finger step on the plane is scaled by `speed / (speed + hoverFrictionMmS)`
+  (`hoverFrictionScale`, the finger's glass speed smoothed over 50 ms, decaying when it rests) — a slow move is held back most, a fast one nearly
+  1:1, never stuck. The finger keeps its own place (its rays stay exact), so the piece falls behind a slow finger: it is under the finger only
+  with the friction at 0. Default **10 mm/s** (a guess: half the travel at 10 mm/s), slider 0–100 in PIECE SLIDING. ⚠ The headless drag is fast
+  (284 vs 288 mm of offset, off and on, both stopped by the boundary): the slow-finger effect is for a hand to judge.
