@@ -64,7 +64,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // a finger's press on a PLACED part notes where (its tap moves the orbit centre); the key looks at nothing
     expect(p).not.toContain("pinkCandidate");
     expect(p.replace(/\s+/g, " ")).toContain("const hitObj = e.pointerId === MOUSE_SECOND_ID || inBand || pick?.hit !== true || pick.pickedMesh === null ? undefined : st.idOf.get(pick.pickedMesh);");
-    expect(p).toContain("holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt);");
+    expect(p).toContain("holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null);"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p).toMatch(/holdSecondPress\(st, e\.pointerId, s\.x, firstNow,/);
     expect(p).toMatch(/\} else if \(holdRole === "FIRST"\) holdFirstPress\(st, e\.pointerId, s\.x\);/);
     // ⛔ the old second-touch taps and the yaw / pitch are gone
@@ -84,13 +84,13 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
 
   it("⭐⭐ the release: the second — the way out (if the way in had started), else a TAP: on a placed part the orbit centre moved there, else the roll; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
-    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), t0: performance\.now\(\), pressActed: centreAt !== null, centreAt, swAnchorMm: pxToMm\(x\), swStillSince: performance\.now\(\), swFirstX0: xOf\(st, first\), wayIn: false \};/);
+    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), t0: performance\.now\(\), pressActed: centreAt !== null, centreAt, centreNormal, swAnchorMm: pxToMm\(x\), swStillSince: performance\.now\(\), swFirstX0: xOf\(st, first\), wayIn: false \};/);
     expect(h.replace(/\s+/g, " ")).toContain("if (pointerId === h.first) { h.first = null;");
     // ⛔ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the ONE place the second touch moves the orbit centre: its TAP on a placed part, at its release
     expect(h).not.toMatch(/recomputeOrbitCentre/);
-    expect(h.split("centreBlend.retarget").length - 1).toBe(1);
-    expect(h).toMatch(/if \(tapped && h\.centreAt !== null\) \{\s*st\.centreBlend\.retarget\(\[h\.centreAt\[0\], h\.centreAt\[1\], h\.centreAt\[2\]\]\);\s*syncCentre\(st\);/);
+    expect(h.split("retargetGizmo(").length - 1).toBe(1); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(h.replace(/\s+/g, " ")).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
     const p = code("render/pointer_wiring.ts");
     expect(p.replace(/\s+/g, " ")).toContain(
       'if ( holdRelease( st, e.pointerId, isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)), ) === "SECOND" ) { st.hudDirty = true; return; }',

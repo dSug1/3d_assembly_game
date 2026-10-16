@@ -859,3 +859,31 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ (2026-10-16, `1.0.78-`) the slide's KINETIC FRICTION — a finger step × speed / (speed + 10 mm/s), slider in PIECE SLIDING → `HOVER.md` §23.
 * ⛔⛔ (2026-10-16, `1.0.78-`) the spent slide no longer re-armed by the orbit's first step (the piece still in contact re-latched): spent until a press on the piece or out of every contact; the slide's lead 9.75 ms, friction 12.5 mm/s → `HOVER.md` §23.
 * ⭐ (2026-10-16, `1.0.78-`) the slide's friction 8 mm/s (the owner) → `HOVER.md` §23.
+
+## 2026-10-16 — on 1.0.79-: the rig turned onto the gizmo's face
+
+> *"the following parameters of the rings stay unchanged: ring numbers, ring radiuses, relative height between each ring and the gizmo — The overall 2D
+> curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo. Therefore,
+> the script has to recalculate the 2D curve as well as the transforms of all the rings when the gizmo is moved. — Way in and way out shall be similar to
+> the current, except that they need to take into account the rotation of the 2D curve."* → *"build, fix the rotation at the camera's yaw when the gizmo
+> moves, keep the camera offsets as they are right now (that means disconnecting the offset from the 2D curve if they were linked so that the offsets are
+> the same in any 2D curve orientation), top faces: build what you recommend (I want the principle of a plane movement halfway between rings 2 and 3 to be
+> conserved)"* — the owner.
+
+* ⭐⭐⭐ **ONE ROTATION OF THE WHOLE RIG** (`input/orbit_rig.ts`): every ring and the curve between them turned together about the gizmo — each ring keeps
+  its number, radius and height IN THE RIG'S FRAME. When the gizmo moves onto a face (a tap on a placed part, first touch or the second's), the rig's new
+  turn is the SHORTEST that takes its direction HALFWAY between rings 2 and 3 (`waistV`; `Scene_1`: the gizmo's height, the plane movement), at the
+  camera's yaw of that moment, onto the face's normal (`rigRotationFor`, the pick's normal) — so a dy advance at that yaw brings the piece in along the
+  normal, the camera behind it looking at the face. A side face: a turn about the VERTICAL (the rings stay level; a face behind turns half a round about
+  it, never over the top — `rigArc`); a TOP face: the rig tilted 90° (the rings stand up; dx turns the camera over and under the assembly, the owner's
+  choice). No face (the boot, a stuck piece's respawn): unturned, as before.
+* ⭐ **Eased with the gizmo's slide** (`rigNow` = slerp from the old turn to the new at `centreBlend.progress`, the orbit finger's travel): the camera and
+  the piece swing over, never a jump (`retargetGizmo`, `camera_rig.ts`).
+* ⭐⭐ **The camera offsets DETACHED from the rig** (`rigCameraOffset`): the ring's direction turned, then the yaw offset added about the world vertical and
+  the pitch offset to the world elevation (mirrored by the ring's own pitch, as before), clamped at ±89°; unturned it is `cameraOffset` exactly (vectored).
+* ⭐ **One path**: the piece's anchor (`ringAnchorAt`, so the solver), the drawn piece, the camera, the way in's and the orbit around the piece's ring
+  angles, the way out's home pose — all through the turned rig. A turn keeps every distance: the clamps, the zoom, the gap, the 24-query budget untouched.
+  ⚠ Still in the rig's own frame: the all-quads-reachable check, the orientation cube, the reference yaw gain, the boot target.
+* Headless (touch, `Scene_1`): a tap on Piece3's TOP face → the rig's axis (0, 0, 1); at the waist (v 0.506) the piece's direction from the gizmo
+  (0, 0.99, 0.15), the camera above. A tap on Piece31's SIDE face (normal (−1, 0, 0)) → the axis back to vertical; at the waist (−0.99, 0.16, −0.01).
+  ⛔ No device close. 2031 vectors (8 new in `tests/orbit_rig.test.ts`, each wiring one red first).

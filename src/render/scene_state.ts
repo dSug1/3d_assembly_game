@@ -453,6 +453,8 @@ export interface SceneState {
     pressActed: boolean;
     /** ⭐ (2026-10-12) where the second touch's press hit a PLACED part (`null`: elsewhere) — its TAP moves the orbit centre there. */
     readonly centreAt: readonly [number, number, number] | null;
+    /** ⭐ (2026-10-16) the face's normal there (world) — the rig's new turn (`retargetGizmo`) */
+    readonly centreNormal: readonly [number, number, number] | null;
     /** ⭐ (2026-10-12) the switch without lifting (`holdSwitch`): the second finger's trailing anchor (mm), since when it rests (ms), the first
      * finger's x when it came to rest (px; `null` — lifted), and whether the way in was made (the way out at the second finger's lift). */
     swAnchorMm: number;
@@ -597,7 +599,7 @@ export interface SceneState {
   /** ⭐ (2026-10-13, §11octies) the RING HEIGHT the finger set (only its dy moves it) — the piece returns to it once a slide carried it off. */
   orbitUserV: number | null;
   /** ⭐ (2026-10-13, §11nonies) a press on a placed part: where the gizmo goes IF it is released as a tap (its press sample). */
-  pendingPartCentre: { pointerId: number; target: [number, number, number]; x: number; y: number; t: number } | null;
+  pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; x: number; y: number; t: number } | null;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m) — the quad's check pauses mid-sweep. */
   pieceFrameStepM: number;
   pieceGuardPeak: number;
@@ -823,6 +825,9 @@ export interface SceneState {
   zoom: number;
   zoomAtPinchStart: number;
   centreBlend: OrbitCentreBlend;
+  /** ⭐⭐⭐ (2026-10-16, the owner: *"the 2D curve … is rotated so that between the 2nd and 3rd ring, the camera view is anti-aligned with the normal of the face supporting the gizmo"*) — the rig's rotation onto the gizmo's face: from the one it had (`rigFrom`) to the new one (`rigTo`), at the gizmo's blend share (`rigNow`) */
+  rigFrom: import("../core/vec").Quat;
+  rigTo: import("../core/vec").Quat;
   orbitCentreM: Vector3;
   eventGaps: Map< number, { last: number; gaps: { t: number; ms: number }[] } >;
   noise: PointerNoiseMeter;

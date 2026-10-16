@@ -41,7 +41,7 @@ import { TURN_PITCH, TURN_ROLL, TURN_YAW, type SceneState } from "./scene_state"
 import { modelOrientation, poseOf, setModelOrientation } from "./bodies";
 import { alignFollowerTo, isSeatedCouple, noteTap, releaseAlignmentOf } from "./alignment_wiring";
 import { axesOf, gizmoClientX, noteAxisTravel, noteTurnAxis, rotationFrameOf } from "./gizmo";
-import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, screenFrame, syncCentre, updatePinch } from "./camera_rig";
+import { applyCamera, pinchPair, recomputeOrbitCentre, requireGestureFrame, retargetGizmo, screenFrame, syncCentre, updatePinch } from "./camera_rig";
 import { describe, sampleOf } from "./hud_paint";
 import { noteSpin, nudgeOthers, nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { applyDepthDrag, applyWorldStep, forgetAnchor, gripIsAlignedFollower } from "./drive";
@@ -123,10 +123,8 @@ export function installPointerHandler(st: SceneState): void {
       if (pc !== null && pc.pointerId === e.pointerId) {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
-        if (to !== null) {
-          st.centreBlend.retarget(to);
-          syncCentre(st);
-        }
+        // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
+        if (to !== null) retargetGizmo(st, to, pc.normal);
       }
       // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
       st.eventGaps.delete(e.pointerId);
@@ -408,7 +406,8 @@ export function installPointerHandler(st: SceneState): void {
           // enable the roll to the next axis"*) — a first touch held on a PLACED part is the input's first touch too (`partFirst`): it was
           // left out (an OBJECT pointer, not an outside one), so its drag drove nothing — the locked part's own orbit stops once a second is down
           const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? partFirst(st, e.pointerId);
-          holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt);
+          const centreN = centreAt !== null ? pick?.getNormal(true) : null;
+          holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null);
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
@@ -427,7 +426,9 @@ export function installPointerHandler(st: SceneState): void {
         hitAt,
       );
       // ⭐⭐ (2026-10-13, *"Piece still locked onto the collided part without possibility to go backwards"* → *"Build"*; §11nonies) NOTED, not moved: the gizmo goes there at the release if it is a TAP — a drag from the part orbits
-      st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, x: s.x, y: s.y, t: s.t } : null;
+      // ⭐ (2026-10-16) with the face's normal there (world): the rig's turn when the gizmo moves
+      const hitN = newTarget !== null ? pick?.getNormal(true) : null;
+      st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, x: s.x, y: s.y, t: s.t } : null;
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
       //
       // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE

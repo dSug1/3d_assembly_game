@@ -20,7 +20,7 @@ import { holdTapMode, holdTapTapsYellow, pinchStarts, type HoldMode } from "../i
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
-import { pinchPair, syncCentre, updatePinch } from "./camera_rig";
+import { pinchPair, retargetGizmo, updatePinch } from "./camera_rig";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -37,8 +37,9 @@ export function holdSecondPress(
   x: number,
   first: number | null,
   centreAt: readonly [number, number, number] | null = null,
+  centreNormal: readonly [number, number, number] | null = null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), t0: performance.now(), pressActed: centreAt !== null, centreAt, swAnchorMm: pxToMm(x), swStillSince: performance.now(), swFirstX0: xOf(st, first), wayIn: false };
+  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), t0: performance.now(), pressActed: centreAt !== null, centreAt, centreNormal, swAnchorMm: pxToMm(x), swStillSince: performance.now(), swFirstX0: xOf(st, first), wayIn: false };
   st.lastVerdict = "orbit: second touch held — dx of the first touch: the way in";
   st.hudDirty = true;
 }
@@ -201,8 +202,8 @@ export function holdRelease(
     // ⭐⭐ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the orbit centre (the pink gizmo) to where the press hit the placed part; ⛔ never also the tap roll (`pressActed`)
     if (tapped && h.centreAt !== null) {
-      st.centreBlend.retarget([h.centreAt[0], h.centreAt[1], h.centreAt[2]]);
-      syncCentre(st);
+      // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
+      retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);
       st.lastVerdict = "orbit: second touch tap on a placed part — the orbit centre (the pink gizmo) moved there";
     }
     // ⭐⭐ (2026-10-11, *"left click held + CTRL/ALT tap on empty … rolls to the next axis"*) → (2026-10-13, *"the second touch's tap on empty space to do exactly what the first touch's tap does: align to the yellow quad, or roll if already aligned there"*) — the YELLOW quad tapped
