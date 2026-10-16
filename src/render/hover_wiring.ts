@@ -55,6 +55,8 @@ import {
   behindToleranceM,
   hoverPendingAfter,
   hoverQueryBudget,
+  hoverFrictionScale,
+  HOVER_FRICTION_SPEED_TAU_S,
   HOVER_OVERSHOOT_M,
   hoverOffered,
 } from "../input/hover";
@@ -235,7 +237,7 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
+  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], speedMmS: 0, behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
   st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
@@ -262,7 +264,6 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
  * frame by `hoverFrame`, inside the frame's budget.
  */
 export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
-  void prev;
   // ⭐⭐ (2026-10-14, the hover's second audit) a hover that ended in a CAPTURE spends its finger: it moves nothing more until it lifts (`D139`: a snap stops the drag that made it)
   if (st.hoverSpent === pointerId) return true;
   const hb = st.hoverBand?.pointerId === pointerId ? st.hoverBand : null;
@@ -288,6 +289,9 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
   const step = hb !== null ? hb.band.step : { dx: 0, dy: 0 };
   const dx = step.dx;
   const dy = step.dy;
+  // ⭐⭐ (2026-10-16, the friction) the finger's glass speed (mm/s), smoothed — read even on a still step, so it decays when the finger rests
+  const dtS = (s.t - prev.t) / 1000;
+  if (dtS > 0) h.speedMmS = exponentialSmooth(h.speedMmS, Math.hypot(dx, dy) / mmToPx(1) / dtS, HOVER_FRICTION_SPEED_TAU_S, dtS);
   if (dx === 0 && dy === 0) return true;
   // ⭐⭐⭐ (2026-10-14, *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) the finger's RAY on the hover's plane: the piece moves by what that point moved (× `hoverGain`), so it stays
   // under the finger while the camera turns; the finger's place on the glass is its deadbanded one
@@ -323,7 +327,10 @@ function hoverFingerStep(st: SceneState, h: NonNullable<SceneState["hover"]>, fr
   const b = at(h.finger[0], h.finger[1]);
   if (a === null || b === null) return false;
   const g = st.cfg.hoverGain;
-  h.pending = clampDisc(h.pending[0] + g * (b[0] - a[0]), h.pending[1] + g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);
+  // ⭐⭐ (2026-10-16, the owner: *"can you also add some friction ? (different from inertia)"* → *"Kinetic (drag)"*) — the step scaled by the kinetic
+  // friction of the finger's speed: the piece falls behind a slow finger (the finger keeps its own place, so the ray stays exact)
+  const k = hoverFrictionScale(h.speedMmS, st.cfg.hoverFrictionMmS);
+  h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);
   return true;
 }
 

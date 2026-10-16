@@ -619,7 +619,7 @@ describe("⭐⭐⭐ the hover view: the NEAREST isometric corner, an arc from th
     expect(h).toContain("return hoverCameraSwing(camAt, lookAt, target, dir, w);");
     // a finger STEP: two rays from the camera of the moment — a camera turning under a resting finger moves nothing
     expect(h).toContain("const a = at(from[0], from[1]); const b = at(h.finger[0], h.finger[1]); if (a === null || b === null) return false;");
-    expect(h).toContain("h.pending = clampDisc(h.pending[0] + g * (b[0] - a[0]), h.pending[1] + g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);");
+    expect(h).toContain("h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);"); // ⭐ (2026-10-16) × the kinetic friction: under the finger only with it at 0
     expect(h).not.toContain("h.base");
   });
 });
@@ -1059,5 +1059,32 @@ describe("⭐⭐ after a slide, a press ON THE PIECE sets the slide up again (20
     expect(press).toContain("st.hoverSlid = false;");
     expect(press).toContain("st.hoverReadyWorld = null;");
     expect(press).toContain("st.hoverReadyAt = -Infinity;");
+  });
+});
+
+describe("⭐⭐ the slide's KINETIC FRICTION (2026-10-16, the owner: *\"can you also add some friction ? (different from inertia)\"* → *\"Kinetic (drag)\"*)", () => {
+  it("⭐⭐ a step is scaled by speed / (speed + friction): slow moves held back most, fast ones nearly 1:1, never stopped; 0 = off", async () => {
+    const { hoverFrictionScale } = await import("../src/input/hover");
+    expect(hoverFrictionScale(10, 0)).toBe(1); // off
+    expect(hoverFrictionScale(10, 10)).toBeCloseTo(0.5, 12); // at the friction speed: half
+    expect(hoverFrictionScale(2, 10)).toBeLessThan(0.2); // slow: held back
+    expect(hoverFrictionScale(2, 10)).toBeGreaterThan(0); // ⛔ never stuck (that is static friction, not asked)
+    expect(hoverFrictionScale(300, 10)).toBeGreaterThan(0.95); // fast: nearly 1:1
+    expect(hoverFrictionScale(0, 10)).toBe(0); // no speed, no step
+    expect(hoverFrictionScale(Number.NaN, 10)).toBe(0);
+  });
+  it("⭐ a tunable in mm/s on the glass (rule 3), 10 by default, validated; its slider in OBJECT TRANSLATION › PIECE SLIDING", () => {
+    expect(DEFAULT_CONFIG.hoverFrictionMmS).toBe(10);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverFrictionMmS: -1 })).toThrow(/hoverFrictionMmS/);
+    const m = code("render/tuning_menu.ts");
+    const sub = m.indexOf('title: "PIECE SLIDING"');
+    const at = m.indexOf('"hoverFrictionMmS"');
+    expect(at).toBeGreaterThan(sub);
+    expect(at).toBeLessThan(m.indexOf('title: "FACE ALIGNMENT"', sub));
+  });
+  it("⭐ wired: the finger's step on the plane is scaled by the friction of its smoothed glass speed (the finger itself keeps its place)", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const k = hoverFrictionScale(h.speedMmS, st.cfg.hoverFrictionMmS);");
+    expect(h).toContain("h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);");
   });
 });
