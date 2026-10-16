@@ -102,10 +102,9 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const out = w.slice(w.indexOf("export function returnToCentreOrbit("), w.indexOf("function counterYawFrame("));
     const into = w.slice(w.indexOf("export function enterPieceOrbit("), w.indexOf("export function returnToCentreOrbit("));
     // ⭐ the anchor — the resting face's centre, what rides the rings — for the rebase's yaw and for the offset the way out fades
-    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};[\s\S]{0,600}?st\.orbit = new OrbitController\(/);
-    // ⭐ (2026-10-16) the anchor carried into the rig's frame (the camera code's, `toRigSpace`)
-    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const pR = toRigSpace\(st, q, a === null \? \[box\.position\.x, box\.position\.y, box\.position\.z\] : a\);\s*const p = \{ x: pR\[0\], y: pR\[1\], z: pR\[2\] \};\s*const pieceOff: Vec3 = rebase/);
-    expect(into).toMatch(/const posR = toRigSpace\(st, q, a === null \? \[box\.position\.x, box\.position\.y, box\.position\.z\] : a\);/);
+    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*st\.orbit = new OrbitController\(/);
+    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*const pieceOff: Vec3 = rebase/);
+    expect(into).toMatch(/const a = st\.pieceAnchor;\s*const pos = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};/);
     // ⛔ read at the mesh, the offset carried the piece by its middle-to-face distance (20.6 mm toward −z, headless)
     expect(out).not.toMatch(/^\s*const p = box\.position;/m);
     expect(into).not.toMatch(/^\s*const pos = box\.position;/m);

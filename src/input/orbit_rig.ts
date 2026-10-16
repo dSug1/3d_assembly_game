@@ -5,21 +5,38 @@
  * → *"build, fix the rotation at the camera's yaw when the gizmo moves, keep the camera offsets as they are right now … top faces: build what you
  * recommend (I want the principle of a plane movement halfway between rings 2 and 3 to be conserved)"*).
  *
- * ⭐ ONE ROTATION of the whole rig — every ring and the curve between them, turned together about the gizmo: each ring keeps its number, its radius
- * and its height above the gizmo IN THE RIG'S OWN FRAME; only where it stands in the world changes. It is the SHORTEST turn that takes the rig's
- * direction halfway between rings 2 and 3 (`waistV`), at the camera's yaw when the gizmo moved, onto the supporting face's normal — so a dy advance
- * at that yaw brings the piece in along the normal, the camera behind it looking at the face. A side face: a turn about the vertical (the rings stay
- * level); a top face: the rig tilted 90° (the rings stand up; dx turns the camera over and under). A rotation keeps every distance, so the clamps,
- * the zoom, the gap and the solver's budget are untouched.
- * ⭐⭐ (2026-10-16, after the owner's look) THE CAMERA RUNS IN THE RIG'S FRAME (`camera_rig.ts`'s `toRigSpace`): the camera code sees the rig as
- * designed, its answer is turned into the world and the camera's UP with it — so the waist's crossing on a top face is the vertical face's swing,
- * turned (⛔ with the world's up, a camera crossing straight over the gizmo flipped the picture: the *"very fast orbit"*), and the owner's camera
- * offsets are the same on the screen in any orientation of the curve.
- * ⛔ ENGINE-FREE. Shortest-arc and slerp are textbook (Shoemake 1985): no licence, no patent.
+ * ⭐⭐⭐ (2026-10-16, after three looks — *"the axis of each ring is the gravity axis (in such way, the camera is never upside down). dx orbits the piece
+ * on the ring it is sitting on."* → *"the ring 3 shall be in the opposite side of the gizmo from the ring 2 in the direction of the 2D curve, the 2D curve
+ * shall aim at the gizmo at all time during the orbit"*) **THE TURNED CURVE, SWUNG ROUND THE GIZMO'S VERTICAL; THE CAMERA UPRIGHT**:
+ * * dy — the piece's place follows the 2D curve TURNED (`q`, the SHORTEST turn taking its direction halfway between rings 2 and 3 — `waistV` — at the
+ *   camera's yaw when the gizmo moved, `yaw0`, onto the face's normal): `C(v) = q · orbitOffset(yaw0, v)`;
+ * * dx — the WHOLE turned curve swung round the vertical THROUGH THE GIZMO: `P = yawTurn(yaw − yaw0) · C(v)`. Every ring is a LEVEL circle about the
+ *   gizmo's vertical (its axis the gravity's), the curve passes through the gizmo at every yaw, and ring 3 lies opposite ring 2 across the gizmo along
+ *   the curve;
+ * * the camera UPRIGHT (`rigCameraAngles`): its up the world's, its heading turned by dx alone, its tilt the curve's FOLDED — on the near side of the
+ *   gizmo exactly behind the piece (its direction from the gizmo is the piece's), and past a top face's crossing folded back on its own side, never over
+ *   the top: never upside down, nothing rolls.
+ * ⭐ Unturned (`q` none, `beta` 0) it is `orbitOffset(yaw, v)` and `cameraOffset` EXACTLY — the rig as it always was; a side face's turn is about the
+ * vertical, so its rings are today's turned by a yaw.
+ * ⛔ Deleted on the way: the wheel about the turned rig's own axis; the camera in the rig's frame (its up turned — upside down past a top face's
+ * crossing; a roll back to upright, refused); level rings with their OWN centres beyond the piece (the curve no longer aimed at the gizmo, the camera
+ * was cut from the piece, and the solver's steps bounced the piece back and forth — each v step moved its ring's centre).
+ * ⛔ ENGINE-FREE. Shortest-arc is textbook (Shoemake 1985): no licence, no patent.
  */
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
-import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
+import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qRotate, type Quat, type Vec3 } from "../core/vec";
+
+/** ⭐ The rig's turn: the rotation `q` fixed at the orbit's yaw `yaw0` (the gizmo's move), the rings' outward heading offset `beta`. */
+export interface RigParams {
+  readonly q: Quat;
+  readonly yaw0: number;
+  readonly beta: number;
+}
+
+/** ⭐ No turn: the rig as it always was (the boot, a respawn, no face). */
+export const UNTURNED: RigParams = { q: IDENTITY, yaw0: 0, beta: 0 };
 
 /**
  * ⭐ The ring parameter HALFWAY between rings 2 and 3 (numbered from the top): with four rings the middle of the waist's span (`fourRingLayout`'s
@@ -55,18 +72,8 @@ export function rigRotationFor(cfg: GestureConfig, yawRad: number, normal: Vec3 
   return rigArc(orbitOffset(cfg, yawRad, waistV(cfg), 1).offsetM, normal);
 }
 
-/** ⭐ A ring offset (the rig's own frame) carried into the world by the rig's rotation. */
-export function rigOffset(rig: Quat, offsetM: Vec3): Vec3 {
-  return qRotate(rig, offsetM);
-}
-
-/**
- * ⭐ The rig's rotation while the gizmo slides to its new place: from the rotation it had to the new one, at the gizmo's own blend share (the
- * orbit finger's travel), so the camera and the piece swing over with it — never a jump.
- */
-export function rigAt(from: Quat, to: Quat, share: number): Quat {
-  return share >= 1 ? to : qSlerp(from, to, share);
-}
+/** ⭐ The level unit direction at the azimuth `a` (the orbit's own convention: x = cos, z = sin). */
+const level = (a: number): Vec3 => [Math.cos(a), 0, Math.sin(a)];
 
 /** ⭐ The world turn that adds `deltaRad` to an orbit yaw: `orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)` (about the world vertical). */
 export function yawTurn(deltaRad: number): Quat {
@@ -74,14 +81,70 @@ export function yawTurn(deltaRad: number): Quat {
 }
 
 /**
- * ⭐⭐⭐ (2026-10-16, the owner: *"at position in attachment 2 the dy downwards triggers a very fast orbit of the camera … dx input controls a mix of yaw and pitch orbit of the piece and camera. This is not clear what the dx input does"* → *"I want the same as when the camera orbit between rings 2 and 3 when the face is vertical"*, *"Always yaw about vertical"*) — **dx YAWS ABOUT THE WORLD VERTICAL**: the rig's turn at the orbit's yaw `yaw`, for a turn `rig`
- * fixed at the yaw `yaw0` (the gizmo's move): `yawTurn(δ) · rig · yawTurn(−δ)`, δ = yaw − yaw0 — so a ring point lands at `yawTurn(δ) · rig ·
- * orbitOffset(yaw0, v)`: the TURNED CURVE swung round the vertical through the gizmo. ⭐ Unturned it is no turn at all (today's rig exactly); a side
- * face's turn is itself about the vertical, so nothing changes there; on a TOP face the waist stays straight above the face at every dx (dx spins
- * the view about the face's normal there). ⛔ It was the turned rig's own axis — on a top face a horizontal axis: dx wheeled the camera over the top.
+ * ⭐⭐ The camera's NEAR side for a turn `q` fixed at `yaw0` — the level heading from the gizmo toward the camera: the turned radial direction,
+ * levelled; when the turn stands it nearly straight up or down (a top / bottom face), the camera's side (`cameraSide`, the level direction from the
+ * gizmo to the camera). Returned as `beta` (the heading is `yaw0 + beta`); unturned exactly 0.
  */
-export function rigAtYaw(rig: Quat, yaw0: number, yaw: number): Quat {
-  const d = yaw - yaw0;
-  if (d === 0) return rig;
-  return qmul(qmul(yawTurn(d), rig), yawTurn(-d));
+export function rigBetaFor(q: Quat, yaw0: number, cameraSide: Vec3): number {
+  const t = qRotate(q, level(yaw0));
+  if (Math.hypot(t[0], t[2]) > 0.35) return Math.atan2(t[2], t[0]) - yaw0;
+  if (Math.hypot(cameraSide[0], cameraSide[2]) > 1e-9) return Math.atan2(cameraSide[2], cameraSide[0]) - yaw0;
+  return 0;
+}
+
+/**
+ * ⭐⭐⭐ THE PIECE'S PLACE (from the gizmo) at the orbit's yaw `yaw` and ring parameter `v`: the turned curve's point `C(v)` swung round the gizmo's
+ * vertical by dx — `yawTurn(yaw − yaw0) · q · orbitOffset(yaw0, v)`. Smooth in both (a rotation of the curve), so the solver's steps never jump.
+ */
+export function rigPlace(cfg: GestureConfig, p: RigParams, yaw: number, v: number, zoom: number): Vec3 {
+  return qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM));
+}
+
+/** ⭐ The camera's angles round the gizmo (azimuth, elevation) — `piece_orbit.ts`'s `AroundAngles`. */
+export interface RigAngles {
+  readonly az: number;
+  readonly el: number;
+}
+
+/**
+ * ⭐⭐⭐ THE CAMERA, UPRIGHT — its angles round the gizmo at the camera's orbit place `cam`: its HEADING `cam.yaw + beta` (the near side, turned by dx
+ * alone, ⛔ never read off a position, so it cannot spin over the gizmo), its TILT the turned curve's at `cam.v` FOLDED (the elevation of the piece's
+ * own direction) — on the near side the camera's direction IS the piece's (behind it); past a top face's crossing it comes back down on the same side
+ * (the piece beyond the gizmo); the owner's offsets as before — the yaw offset on the heading, the pitch offset away from the level
+ * (`mirroredPitchOffset`) — clamped at ±89°. ⭐ Unturned it is `cameraOffset`'s angles exactly.
+ */
+export function rigCameraAngles(cfg: GestureConfig, p: RigParams, cam: OrbitAt, off: CameraAngleOffset = { yawRad: 0, pitchRad: 0 }): RigAngles {
+  const lim = (89 * Math.PI) / 180;
+  const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, cam.v, 1).offsetM);
+  const n = Math.hypot(c[0], c[1], c[2]);
+  const e = n > 1e-12 ? Math.asin(Math.max(-1, Math.min(1, c[1] / n))) : 0;
+  return { az: cam.yaw + p.beta + off.yawRad, el: Math.max(-lim, Math.min(lim, e + mirroredPitchOffset(e, off.pitchRad))) };
+}
+
+/** ⭐ The camera's offset from the gizmo at angles `a`, at the piece's distance (`boxOffset`) plus `radiusOffsetM` — `cameraOffset`'s rule. */
+export function cameraOffsetAt(a: RigAngles, boxOffset: Vec3, radiusOffsetM: number): Vec3 {
+  const d = Math.hypot(boxOffset[0], boxOffset[1], boxOffset[2]) + Math.max(0, radiusOffsetM);
+  return [d * Math.cos(a.el) * Math.cos(a.az), d * Math.sin(a.el), d * Math.cos(a.el) * Math.sin(a.az)];
+}
+
+/** ⭐ The yaw whose ring place points the piece at `rel` (from the gizmo) at `v` — the rebase at the end of the orbit around the piece. */
+export function rigYawToward(cfg: GestureConfig, p: RigParams, v: number, zoom: number, rel: Vec3): number {
+  const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM);
+  if (Math.hypot(c[0], c[2]) < 1e-9 || Math.hypot(rel[0], rel[2]) < 1e-9) return p.yaw0;
+  // ⭐ yawTurn(δ) turns an azimuth a to a − (−δ)… i.e. adds δ to the orbit's yaw: the piece's azimuth less the curve point's at yaw0
+  return p.yaw0 + Math.atan2(rel[2], rel[0]) - Math.atan2(c[2], c[0]);
+}
+
+/** ⭐ Two places blended at the gizmo's share `s` (the old turn's and the new) — the rings swing over as the gizmo slides, never a jump. */
+export function blendPlace(a: Vec3, b: Vec3, s: number): Vec3 {
+  if (s >= 1) return b;
+  return [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
+}
+
+/** ⭐ Two camera angle pairs blended at `s`: the azimuth the short way round. */
+export function blendAngles(a: RigAngles, b: RigAngles, s: number): RigAngles {
+  if (s >= 1) return b;
+  let d = b.az - a.az;
+  d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
+  return { az: a.az + d * s, el: a.el + (b.el - a.el) * s };
 }
