@@ -277,8 +277,8 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             tunable(st, "slide inertia (ms)", "hoverInertiaMs", 1, 100, 0.2),
             tunable(st, "slide damping ratio (<1 = overshoot)", "hoverDampingRatio", 0.1, 1, 0.05),
-            tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.5),
-            tunable(st, "slide friction (mm/s, 0 = off)", "hoverFrictionMmS", 0, 100, 1),
+            tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.25),
+            tunable(st, "slide friction (mm/s, 0 = off)", "hoverFrictionMmS", 0, 100, 0.5),
           ],
         },
       ],

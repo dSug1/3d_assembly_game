@@ -59,6 +59,7 @@ import {
   HOVER_FRICTION_SPEED_TAU_S,
   HOVER_OVERSHOOT_M,
   hoverOffered,
+  hoverSlidAfterLook,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
@@ -522,7 +523,7 @@ function hoverEndNow(st: SceneState): void {
  */
 export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   if (travelMm <= 0) return;
-  st.hoverSlid = false; // ⭐ (2026-10-16) the orbit moved: a hover is offered again
+  // ⛔⛔ (2026-10-16) the orbit no longer clears the spent slide: the piece, still against the face, re-latched at once (`hoverSlidAfterLook`)
   // ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece ways in by this travel — the gizmo untouched
   if (st.hoverOffset !== null) {
     const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
@@ -623,7 +624,7 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   let ready = st.hoverReady;
-  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;
+  if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null) ready = null;
   else if (st.hover !== null) ready = st.hoverReady; // on: kept as the hover began
   else if (now - st.hoverReadyAt >= READY_EVERY_MS && (st.hoverReadyWorld !== st.world || st.hoverReadyReachMm !== st.cfg.hoverApproachMm)) {
     // ⭐ (2026-10-14, the hover's second audit) looked again only when the world moved (the piece, a part) or the reach did — at rest it costs nothing
@@ -634,8 +635,11 @@ export function hoverVisualFrame(st: SceneState, now: number): void {
     const restingW = qRotate([r.w, r.x, r.y, r.z], p.restingFace.normal);
     const reach = st.cfg.hoverApproachMm / 1000;
     const f = hoverFaceContact(st.pieceAnchor, restingW, hoverCandidates(st, reach, pieceCollisionSetup(st)), reach, HOVER_ALIGN_DEG, restingPolyWorld(st, st.pieceAnchor, [r.w, r.x, r.y, r.z])).contact;
-    ready = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
-  }
+    const found = f === null || f.faceId === null ? null : { id: f.id, faceId: f.faceId, normal: f.normal, centre: f.centre };
+    // ⛔⛔ (2026-10-16) a spent slide stays spent while the piece is against a face, and clears once it is out of every contact
+    st.hoverSlid = hoverSlidAfterLook(st.hoverSlid, found !== null);
+    ready = hoverOffered(st.hoverSlid) ? found : null;
+  } else if (!hoverOffered(st.hoverSlid)) ready = null;
   st.hoverReady = ready;
   // the contact shadow
   if (ready === null || b === null || p === undefined) {

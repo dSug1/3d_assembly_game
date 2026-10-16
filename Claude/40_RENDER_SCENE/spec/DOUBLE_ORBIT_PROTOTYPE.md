@@ -857,3 +857,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ (2026-10-16, `1.0.78-`) the slide stops at the lift and a press on the piece sets it up again; the hover's highlights parented to their host (they follow the sway); the slide's inertia, the part translation's follower (60 ms / 0.5 / 0.2, OBJECT TRANSLATION › PIECE SLIDING) → `HOVER.md` §23.
 * ⭐ (2026-10-16, `1.0.78-`) the slide's inertia defaults set by the owner — 40 ms / 0.93; the phantom lead's slider raised to 0–100 ms → `HOVER.md` §23.
 * ⭐⭐ (2026-10-16, `1.0.78-`) the slide's KINETIC FRICTION — a finger step × speed / (speed + 10 mm/s), slider in PIECE SLIDING → `HOVER.md` §23.
+* ⛔⛔ (2026-10-16, `1.0.78-`) the spent slide no longer re-armed by the orbit's first step (the piece still in contact re-latched): spent until a press on the piece or out of every contact; the slide's lead 9.75 ms, friction 12.5 mm/s → `HOVER.md` §23.

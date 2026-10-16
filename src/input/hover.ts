@@ -286,6 +286,16 @@ export function hoverOffered(slid: boolean): boolean {
   return !slid;
 }
 
+/**
+ * ⛔⛔ (2026-10-16, the owner: *"It is not working: if I release the press on sliding, the sliding stay. If I press on empty afterwards, the sliding stays"*) —
+ * the spent slide after a LOOK for a contact: it stays spent while the piece is still against a face (⛔ the orbit's first step cleared it, and the piece,
+ * still in contact, re-latched at once), and clears once the piece is out of every contact, so a later approach lights as ever. A press on the piece
+ * clears it at once (`hoverPressNote`).
+ */
+export function hoverSlidAfterLook(slid: boolean, contactFound: boolean): boolean {
+  return slid && contactFound;
+}
+
 export function projectOntoPlane(p: Vec3, n: Vec3, c: Vec3): Vec3 {
   const d = n[0] * (p[0] - c[0]) + n[1] * (p[1] - c[1]) + n[2] * (p[2] - c[2]);
   return [p[0] - n[0] * d, p[1] - n[1] * d, p[2] - n[2] * d];

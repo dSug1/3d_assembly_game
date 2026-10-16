@@ -962,9 +962,20 @@ describe("⭐⭐⭐ the slide stops at the release (2026-10-16, the owner: *\"Af
     expect(rel).toContain("st.hoverDraw = null;");
     expect(rel).toContain("st.hoverSlid = true;");
     expect(h).toContain("if (!hoverOffered(st.hoverSlid)) return refuse(");
-    expect(h).toContain("if (b === null || p === undefined || p.restingFace === null || st.orbitPiecePlaced || st.pieceAnchor === null || !hoverOffered(st.hoverSlid)) ready = null;");
     const orbit = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
-    expect(orbit).toContain("st.hoverSlid = false;");
+    // ⛔⛔ (2026-10-16, the owner: *"It is not working: if I release the press on sliding, the sliding stay. If I press on empty afterwards, the sliding stays"*) —
+    // the orbit's first step cleared the spent slide, and the piece, still against the face, re-latched at once (headless: the outline back 3 frames in)
+    expect(orbit).not.toContain("st.hoverSlid = false;");
+    const vis = h.slice(h.indexOf("export function hoverVisualFrame"), h.indexOf("function hostFrame"));
+    expect(vis).toContain("st.hoverSlid = hoverSlidAfterLook(st.hoverSlid, found !== null);");
+    expect(vis).toContain("ready = hoverOffered(st.hoverSlid) ? found : null;");
+  });
+  it("⭐⭐⭐ the spent slide stays spent while the piece is in contact with a face (an orbit along it re-offers nothing); it clears once the piece is out of every contact — a later approach lights as ever; a press on the piece clears it at once", async () => {
+    const { hoverSlidAfterLook } = await import("../src/input/hover");
+    expect(hoverSlidAfterLook(true, true)).toBe(true); // still against a face: spent
+    expect(hoverSlidAfterLook(true, false)).toBe(false); // out of contact: offered again
+    expect(hoverSlidAfterLook(false, true)).toBe(false);
+    expect(hoverSlidAfterLook(false, false)).toBe(false);
   });
 });
 
@@ -1024,14 +1035,14 @@ describe("⭐⭐⭐ the slide's inertia (2026-10-16, the owner: *\"Add some iner
   it("⭐⭐ three tunables — 40 ms / 0.93 / the part's lead by default (the owner, 2026-10-16: *\"set default slide inertia = 40 ms, slide damping ratio = 0.93\"*; 60 ms / 0.5 before); validated", () => {
     expect(DEFAULT_CONFIG.hoverInertiaMs).toBe(40);
     expect(DEFAULT_CONFIG.hoverDampingRatio).toBe(0.93);
-    expect(DEFAULT_CONFIG.hoverLeadMs).toBe(DEFAULT_CONFIG.translateLeadMs);
+    expect(DEFAULT_CONFIG.hoverLeadMs).toBe(9.75); // ⭐ (2026-10-16, the owner: *"set the slide phantom lead to 9.75 ms"*; the part's 0.2 before)
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverInertiaMs: 0 })).toThrow(/hoverInertiaMs/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverDampingRatio: 0 })).toThrow(/hoverDampingRatio/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverLeadMs: -1 })).toThrow(/hoverLeadMs/);
   });
   it("⭐ the phantom lead's slider reaches the spring's lag (the owner, 2026-10-16: *\"slide phantom lead raise the slider\"*; it stopped at 5 ms) — 0 to 100 ms, validated up to 200", () => {
     const m = code("render/tuning_menu.ts");
-    expect(m).toContain('tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.5)');
+    expect(m).toContain('tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.25)');
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverLeadMs: 100 })).not.toThrow();
   });
   it("⭐⭐ wired: the drawn piece on that follower; the sliders in OBJECT TRANSLATION › PIECE SLIDING", () => {
@@ -1074,7 +1085,7 @@ describe("⭐⭐ the slide's KINETIC FRICTION (2026-10-16, the owner: *\"can you
     expect(hoverFrictionScale(Number.NaN, 10)).toBe(0);
   });
   it("⭐ a tunable in mm/s on the glass (rule 3), 10 by default, validated; its slider in OBJECT TRANSLATION › PIECE SLIDING", () => {
-    expect(DEFAULT_CONFIG.hoverFrictionMmS).toBe(10);
+    expect(DEFAULT_CONFIG.hoverFrictionMmS).toBe(12.5); // ⭐ (2026-10-16, the owner: *"slide friction to 12.5 mm/s"*; 10 before)
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, hoverFrictionMmS: -1 })).toThrow(/hoverFrictionMmS/);
     const m = code("render/tuning_menu.ts");
     const sub = m.indexOf('title: "PIECE SLIDING"');

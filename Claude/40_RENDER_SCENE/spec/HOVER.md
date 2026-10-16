@@ -19,17 +19,18 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
   piece SETTLES onto the face (solved, the model at once, drawn eased over 150 ms) to the 1 mm gap kept. The orbit's backlog is dropped and the
   orbit HOLDS STILL while the hover is on (§10). Ends: the finger lifts; a second touch held; a goal capture (which spends the finger until it
   lifts, §10). ⭐ (§23) the lift STOPS the slide at once (the drawn piece where it is, the highlights off); the next press ELSEWHERE orbits, the next
-  press ON THE PIECE sets the slide up again (highlights, slide).
+  press ON THE PIECE sets the slide up again (highlights, slide). ⛔ The slide stays spent while the piece is against a face — only a press on the
+  piece, or the orbit taking it out of every contact, offers it again.
 * **Move** — each deadbanded finger step is read as TWO RAYS from the camera of the moment onto the face's plane (`hoverFingerStep`, §14):
   exact under the finger; a camera turn moves nothing; a ray under 12° to the plane moves nothing. × `hoverGain`; ⭐ (§23) × the KINETIC
-  FRICTION `speed / (speed + hoverFrictionMmS)` (10 mm/s on the glass, 0 = off): a slow finger moves the piece less than itself; held in a disc of
+  FRICTION `speed / (speed + hoverFrictionMmS)` (12.5 mm/s on the glass, 0 = off): a slow finger moves the piece less than itself; held in a disc of
   `hoverAmplitudeMm` (default 500 = UNLIMITED). The target is BOUNDED where the resting face's CENTRE stays within the drawn
   green boundary — ⭐ (§21) a step never takes it FARTHER from the boundary (`rectsDistance`, `boundStep`, `holdOffBound`): inside it cannot leave,
   outside it comes toward it or along it; slides along the edge, reversing comes back at once. Solved ONCE a frame by the orbit's solver inside the frame's
   24-query budget (`pieceSolverQueries`), the cut travel kept (§10); parts no higher than the piece above the plane are left out
   (coplanar faces slid across). What moves: `hoverGizmoMove` default **0 — the piece alone** (an offset on its ring place); 1 moves the gizmo.
 * **Drawn** — the MODEL is the solved place; ⭐ (§23) the mesh follows it on the PART TRANSLATION'S FOLLOWER — `hoverInertiaMs` 40 ms,
-  `hoverDampingRatio` 0.93, `hoverLeadMs` 0.2 (slider 0–100 ms) (OBJECT TRANSLATION › PIECE SLIDING), at most 3 mm ahead (`HOVER_OVERSHOOT_M`). The other parts
+  `hoverDampingRatio` 0.93, `hoverLeadMs` 9.75 ms (slider 0–100 ms) (OBJECT TRANSLATION › PIECE SLIDING), at most 3 mm ahead (`HOVER_OVERSHOOT_M`). The other parts
   sway at 0.1°; the hover's highlights are parented to their host part, so they follow its sway.
 * **The camera — the hover view** (§14): the NEAREST of the hosting face's four isometric corners (left/right, above/below — the side the camera
   is already on), reached on an ARC about the piece at the camera's own distance, by the hover drag's travel over `pieceOrbitEnterMm` (12 mm),
@@ -514,3 +515,10 @@ floor** — marked seats where a piece may be set down, each a known target the 
   1:1, never stuck. The finger keeps its own place (its rays stay exact), so the piece falls behind a slow finger: it is under the finger only
   with the friction at 0. Default **10 mm/s** (a guess: half the travel at 10 mm/s), slider 0–100 in PIECE SLIDING. ⚠ The headless drag is fast
   (284 vs 288 mm of offset, off and on, both stopped by the boundary): the slow-finger effect is for a hand to judge.
+* ⛔⛔ **The spent slide re-armed by the orbit** (2026-10-16, the owner: *"It is not working: if I release the press on sliding, the sliding stay. If I
+  press on empty afterwards, the sliding stays"*): the orbit's first step cleared `hoverSlid`, and the piece, still against the face, re-latched at
+  once — headless, the green outline was back 3 frames into the drag on empty space. ✅ Now `hoverSlidAfterLook`: the slide stays spent while a look
+  still finds a contact, and clears once the piece is out of every contact (18–23 mm into the orbit, headless — the outline stayed off the whole
+  drag); a press on the piece clears it at once. ⚠ Touch staged only — a stay right at a MOUSE up would be another fault.
+* ⭐ **The owner's lead and friction** (2026-10-16: *"set the slide phantom lead to 9.75 ms and slide friction to 12.5 mm/s"*): `hoverLeadMs` **9.75**,
+  `hoverFrictionMmS` **12.5**; their sliders' steps made finer (0.25 ms, 0.5 mm/s) so the defaults sit on them.
