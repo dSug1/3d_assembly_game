@@ -13,7 +13,8 @@ import { orbitOffset } from "../src/input/orbit";
 import { cameraOffset } from "../src/input/follow_camera";
 import { anglesOf } from "../src/input/piece_orbit";
 import { IDENTITY, qRotate, type Vec3 } from "../src/core/vec";
-import { UNTURNED, blendAngles, blendPlace, cameraOffsetAt, rigBetaFor, rigCameraAngles, rigPlace, rigRotationFor, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
+import { UNTURNED, blendAngles, blendPlace, cameraOffsetAt, rigBetaFor, rigCameraAngles, rigPlace, rigRotationFor, rigSwing, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
+import { fourRingLayout } from "../src/input/orbit";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
@@ -138,18 +139,14 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     expect(r4[1]).toBeCloseTo(cfg.orbitBottomRadiusM, 9);
     expect(r1[0] * r4[0] + r1[2] * r4[2]).toBeLessThan(0); // on either side
   });
-  it("⭐⭐⭐ THE CAMERA IS NEVER UPSIDE DOWN (a top face): its heading is dx's alone — the same at every v — its tilt the curve's folded, never past straight down", () => {
-    const p = turnFor(0.4, [0, 1, 0]);
-    const heads = [0, 0.2, 0.45, waistV(cfg), 0.55, 0.8, 1].map((v) => rigCameraAngles(cfg, p, { yaw: 1.3, v }));
-    for (const h of heads) {
-      expect(h.az).toBeCloseTo(heads[0]!.az, 12); // ⛔ read off a position, it spun 180° over the gizmo
-      expect(h.el).toBeGreaterThanOrEqual(0);
-      expect(h.el).toBeLessThanOrEqual(89 * DEG + 1e-12);
-    }
-    expect(rigCameraAngles(cfg, p, { yaw: 1.3, v: waistV(cfg) }).el).toBeCloseTo(89 * DEG, 9); // straight down at the crossing
-  });
-  it("⭐⭐⭐ THE CAMERA BEHIND THE PIECE (⛔ cut from it): on the near side its direction from the gizmo IS the piece's — side face everywhere, top face on the camera's half", () => {
-    for (const [p, vs] of [[turnFor(0, [0, 0, 1]), [0.05, 0.3, 0.45, 0.6, 0.9]], [turnFor(0.4, [0, 1, 0]), [0.05, 0.2, 0.35, 0.45]]] as [RigParams, number[]][]) {
+  it("⭐⭐⭐ THE CAMERA FOLLOWS THE PIECE ON BOTH HALVES (the owner: *\"the camera does not follow the piece on the second half of the 2d curve\"* → *\"build C\"*): outside the swing its direction from the gizmo IS the piece's — side face everywhere", () => {
+    const top = turnFor(0.4, [0, 1, 0]);
+    const s = rigSwing(cfg, top)!;
+    expect(s).not.toBeNull();
+    expect(s.vc).toBeCloseTo(waistV(cfg), 6); // the crossing over the gizmo: halfway between rings 2 and 3
+    const outside = [0.02, 0.1, 0.2, 0.8, 0.9, 0.98].filter((v) => Math.abs(v - s.vc) > s.w / 2 + 1e-3);
+    expect(outside.some((v) => v > s.vc) && outside.some((v) => v < s.vc)).toBe(true); // both halves checked (⛔ the fold left the far half)
+    for (const [p, vs] of [[turnFor(0, [0, 0, 1]), [0.05, 0.3, 0.45, 0.6, 0.9]], [top, outside]] as [RigParams, number[]][]) {
       for (const yaw of [p.yaw0, p.yaw0 + 1.1, p.yaw0 - 2.4]) {
         for (const v of vs) {
           const a = rigCameraAngles(cfg, p, { yaw, v });
@@ -158,6 +155,40 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
         }
       }
     }
+    expect(rigSwing(cfg, turnFor(0, [0, 0, 1]))).toBeNull(); // a side face: no crossing, no swing
+    expect(rigSwing(cfg, UNTURNED)).toBeNull();
+  });
+  it("⭐⭐⭐ THE SWING: the heading turns HALF A ROUND, smoothly and always the same way, the camera upright (tilt within ±89°) — never upside down, no jump", () => {
+    const p = turnFor(0.4, [0, 1, 0]);
+    let prev = rigCameraAngles(cfg, p, { yaw: 1.3, v: 0 });
+    const first = prev.az;
+    for (let v = 0.001; v <= 1; v += 0.001) {
+      const a = rigCameraAngles(cfg, p, { yaw: 1.3, v });
+      expect(a.az - prev.az).toBeGreaterThanOrEqual(-1e-12); // one way
+      expect(a.az - prev.az).toBeLessThan(0.05); // no jump
+      expect(Math.abs(a.el)).toBeLessThanOrEqual(89 * DEG + 1e-12);
+      prev = a;
+    }
+    expect(prev.az - first).toBeCloseTo(Math.PI, 9);
+  });
+  it("⭐⭐⭐ THE SWING'S WIDTH: its average turning speed (heading and tilt combined) per unit of the curve equals the vertical face's crossing between rings 2 and 3 (the owner: *\"the same speed vs. delta input\"*)", () => {
+    const p = turnFor(0.4, [0, 1, 0]);
+    const s = rigSwing(cfg, p)!;
+    // the camera frame's turn through the swing: the heading's (about the vertical) and the tilt's, combined
+    let turn = 0;
+    const n = 4000;
+    for (let i = 0; i < n; i++) {
+      const v0 = s.vc - s.w / 2 + (i * s.w) / n, v1 = v0 + s.w / n;
+      const a0 = rigCameraAngles(cfg, p, { yaw: 0.4, v: v0 }), a1 = rigCameraAngles(cfg, p, { yaw: 0.4, v: v1 });
+      turn += Math.hypot(a1.az - a0.az, a1.el - a0.el);
+    }
+    // the vertical face's crossing: the pitch from ring 2 to ring 3 over their span (Scene_1: four rings)
+    const f = fourRingLayout(cfg);
+    const v2 = f.knots[2]! / f.total, v3 = f.knots[1]! / f.total;
+    const pitch = (v: number) => { const o = orbitOffset(cfg, 0, v, 1).offsetM; return Math.atan2(o[1], Math.hypot(o[0], o[2])); };
+    const target = Math.abs(pitch(v2) - pitch(v3)) / (v2 - v3);
+    expect((turn / s.w) / target).toBeCloseTo(1, 1); // the same average speed per unit of dy (within the clamp's few %)
+    expect(s.w).toBeGreaterThan(v2 - v3); // it spreads past rings 2 and 3
   });
   it("⭐ the camera's near side: unturned 0; a side face the turned radial; a top face the camera's side", () => {
     expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBe(0);

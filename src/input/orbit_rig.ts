@@ -100,6 +100,122 @@ export function rigPlace(cfg: GestureConfig, p: RigParams, yaw: number, v: numbe
   return qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM));
 }
 
+/**
+ * ⭐⭐⭐ (2026-10-16, the owner: *"the camera does not follow the piece on the second half of the 2d curve"* → *"build C. propose the width so that the
+ * camera turn has the same speed vs. delta input than the rest of the curve"*) — **THE SWING ROUND**: where the turned curve passes OVER the gizmo (its
+ * level direction crosses to the far side — a top face; a side face never does), the camera's heading turns half a round, smoothly (smoothstep), over a
+ * stretch of the curve centred on the crossing — so past it the camera is behind the piece again, upright, and the turn always goes the same way.
+ * ⭐ Its WIDTH is solved from the rings: the camera's AVERAGE turning speed through the swing (its heading's turn and its tilt up and back, combined —
+ * the camera frame's angular speed) equals the curve's own crossing between rings 2 and 3 on a vertical face (its pitch from ring 2 to ring 3 over that
+ * span), the fastest stretch of the curve and the one the owner accepted. ⚠ Matching the outer stretches (≤ 5°/mm) would need ~36 mm of finger — most of
+ * the curve. `null`: no crossing, no swing.
+ */
+export interface RigSwing {
+  /** The ring parameter where the curve crosses over the gizmo. */
+  readonly vc: number;
+  /** The swing's width in the ring parameter. */
+  readonly w: number;
+  /** The far side lies at v ABOVE the crossing (else below). */
+  readonly farAbove: boolean;
+}
+
+const swingCache = new WeakMap<RigParams, { key: string; swing: RigSwing | null }>();
+
+const ringKey = (cfg: GestureConfig): string =>
+  [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM].join(",");
+
+const smooth = (t: number): number => {
+  const u = Math.min(1, Math.max(0, t));
+  return u * u * (3 - 2 * u);
+};
+
+/** ⭐ The ring parameters of rings 2 and 3 (numbered from the top). */
+function ring23(cfg: GestureConfig): [number, number] {
+  if (cfg.orbitLowerRingOn !== 1) return [0.5, 0];
+  const f = fourRingLayout(cfg);
+  return [f.knots[2]! / f.total, f.knots[1]! / f.total];
+}
+
+/** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
+export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
+  const key = ringKey(cfg);
+  const hit = swingCache.get(p);
+  if (hit !== undefined && hit.key === key) return hit.swing;
+  const swing = solveSwing(cfg, p);
+  swingCache.set(p, { key, swing });
+  return swing;
+}
+
+function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
+  const near = level(p.yaw0 + p.beta);
+  const point = (v: number): Vec3 => qRotate(p.q, orbitOffset(cfg, p.yaw0, v, 1).offsetM);
+  const side = (v: number): number => {
+    const c = point(v);
+    return c[0] * near[0] + c[2] * near[2];
+  };
+  const N = 400;
+  let vc = -1;
+  for (let i = 0; i < N && vc < 0; i++) {
+    const a = i / N;
+    const b = (i + 1) / N;
+    if (side(a) > 0 !== side(b) > 0) {
+      let lo = a;
+      let hi = b;
+      for (let k = 0; k < 40; k++) {
+        const m = (lo + hi) / 2;
+        if (side(m) > 0 === side(lo) > 0) lo = m;
+        else hi = m;
+      }
+      vc = (lo + hi) / 2;
+    }
+  }
+  if (vc < 0) return null;
+  const farAbove = side(Math.min(1, vc + 1e-3)) <= 0;
+  // the folded elevation of the piece's direction — the camera's tilt
+  const elev = (v: number): number => {
+    const c = point(Math.min(1, Math.max(0, v)));
+    const n = Math.hypot(c[0], c[1], c[2]);
+    return n > 1e-12 ? Math.asin(Math.max(-1, Math.min(1, c[1] / n))) : 0;
+  };
+  // the target: the vertical face's crossing — the pitch from ring 2 to ring 3 over their span
+  const [v2, v3] = ring23(cfg);
+  const pitch = (v: number): number => {
+    const o = orbitOffset(cfg, 0, v, 1).offsetM;
+    return Math.atan2(o[1], Math.hypot(o[0], o[2]));
+  };
+  const target = Math.abs(pitch(v2) - pitch(v3)) / Math.max(1e-6, Math.abs(v2 - v3));
+  const average = (w: number): number => {
+    const steps = 400;
+    let sum = 0;
+    const h = w / steps;
+    for (let i = 0; i < steps; i++) {
+      const v = vc - w / 2 + (i + 0.5) * h;
+      if (v < 0 || v > 1) continue;
+      const de = (elev(v + h / 2) - elev(v - h / 2)) / h;
+      const dt = (smooth((v + h / 2 - (vc - w / 2)) / w) - smooth((v - h / 2 - (vc - w / 2)) / w)) / h;
+      sum += Math.hypot(de, Math.PI * dt) * h;
+    }
+    return sum / w;
+  };
+  let lo = 0.02;
+  let hi = 2;
+  if (average(hi) > target) return { vc, w: hi, farAbove };
+  for (let k = 0; k < 50; k++) {
+    const m = (lo + hi) / 2;
+    if (average(m) > target) lo = m;
+    else hi = m;
+  }
+  return { vc, w: (lo + hi) / 2, farAbove };
+}
+
+/** ⭐ How far the camera's heading has swung round at `v` (0 on the near side, 1 behind the piece on the far side). */
+export function rigSwingShare(cfg: GestureConfig, p: RigParams, v: number): number {
+  const s = rigSwing(cfg, p);
+  if (s === null) return 0;
+  const t = smooth((v - (s.vc - s.w / 2)) / s.w);
+  return s.farAbove ? t : 1 - t;
+}
+
 /** ⭐ The camera's angles round the gizmo (azimuth, elevation) — `piece_orbit.ts`'s `AroundAngles`. */
 export interface RigAngles {
   readonly az: number;
@@ -118,7 +234,9 @@ export function rigCameraAngles(cfg: GestureConfig, p: RigParams, cam: OrbitAt, 
   const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, cam.v, 1).offsetM);
   const n = Math.hypot(c[0], c[1], c[2]);
   const e = n > 1e-12 ? Math.asin(Math.max(-1, Math.min(1, c[1] / n))) : 0;
-  return { az: cam.yaw + p.beta + off.yawRad, el: Math.max(-lim, Math.min(lim, e + mirroredPitchOffset(e, off.pitchRad))) };
+  // ⭐⭐ (2026-10-16, *"build C"*) + the swing round over the crossing: half a round, always the same way
+  const swing = Math.PI * rigSwingShare(cfg, p, cam.v);
+  return { az: cam.yaw + p.beta + swing + off.yawRad, el: Math.max(-lim, Math.min(lim, e + mirroredPitchOffset(e, off.pitchRad))) };
 }
 
 /** ⭐ The camera's offset from the gizmo at angles `a`, at the piece's distance (`boxOffset`) plus `radiusOffsetM` — `cameraOffset`'s rule. */

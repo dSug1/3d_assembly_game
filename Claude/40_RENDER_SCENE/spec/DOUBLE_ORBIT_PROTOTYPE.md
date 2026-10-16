@@ -972,3 +972,22 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless (touch, `Scene_1`): Piece3's TOP face — at the waist 9 cm above the gizmo, the camera straight down; the crossing's largest frame step of the
   view 0.93°, its up (0, 1, 0), the piece's largest frame step 1.5 mm, no reversal. A SIDE face: 0.6°, 1.2 mm, no reversal. ⛔ No device close.
   2040 vectors (4 new fail against the reverted model).
+
+### …and THE SWING ROUND — the camera follows the piece on the second half (`1.0.79-`)
+
+> *"the camera does not follow the piece on the second half of the 2d curve"* → (three ways over the top proposed: follow exactly — a 180° flip in one
+> frame; swing round over the crossing; swing round over a wider stretch) → *"build C. propose the width so that the camera turn has the same speed vs.
+> delta input than the rest of the curve"* — the owner.
+
+* ⛔ **Why**: the fold left the camera on its own side past a top face's crossing — it looked at the gizmo with the piece beyond. To be behind the piece
+  on the far half an upright camera must change heading by HALF A ROUND; following exactly makes it in one frame straight over the gizmo.
+* ⭐⭐⭐ **C — THE SWING ROUND** (`rigSwing`, `rigSwingShare`, `input/orbit_rig.ts`): where the turned curve passes OVER the gizmo (its level direction
+  crosses to the far side — a top face; a side face never does: no swing), the camera's heading turns 180° smoothly (smoothstep), always the same way,
+  over a stretch centred on the crossing; past it the camera is behind the piece again (vectored on both halves), upright, the tilt within ±89°.
+* ⭐⭐ **Its WIDTH is solved from the rings**: the camera's AVERAGE turning speed through the swing (the heading's turn and the tilt's, combined — the
+  camera frame's angular speed) equals the vertical face's crossing between rings 2 and 3 (its pitch from ring 2 to ring 3 over their span) — the
+  fastest stretch of the curve, accepted by the owner. `Scene_1`: **0.291 of the curve = 11.3 mm of finger** (v 0.354 → 0.646; rings 3 / 2 at 0.429 /
+  0.571, 5.6 mm apart — so ~2.9 mm beyond each). ⚠ Matching the outer stretches (≤ 5°/mm) would need ~36 mm — most of the curve. Cached per turn and
+  ring set. ⚠ No slider (to add if 11.3 mm feels wrong).
+* Headless (touch, Piece3's top face): the camera's direction 5.3° off the piece's on BOTH halves (v 0.979 and 0.028 — the camera offsets), the
+  crossing's largest frame step of the view 0.91°, its up (0, 1, 0), the piece 1.5 mm, no reversal; a side face 0.79°. ⛔ No device close. 2041 vectors.
