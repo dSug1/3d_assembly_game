@@ -101,14 +101,11 @@ export function rigPlace(cfg: GestureConfig, p: RigParams, yaw: number, v: numbe
 }
 
 /**
- * ⭐⭐⭐ (2026-10-16, the owner: *"the camera does not follow the piece on the second half of the 2d curve"* → *"build C. propose the width so that the
- * camera turn has the same speed vs. delta input than the rest of the curve"*) — **THE SWING ROUND**: where the turned curve passes OVER the gizmo (its
- * level direction crosses to the far side — a top face; a side face never does), the camera's heading turns half a round, smoothly (smoothstep), over a
- * stretch of the curve centred on the crossing — so past it the camera is behind the piece again, upright, and the turn always goes the same way.
- * ⭐ Its WIDTH is solved from the rings: the camera's AVERAGE turning speed through the swing (its heading's turn and its tilt up and back, combined —
- * the camera frame's angular speed) equals the curve's own crossing between rings 2 and 3 on a vertical face (its pitch from ring 2 to ring 3 over that
- * span), the fastest stretch of the curve and the one the owner accepted. ⚠ Matching the outer stretches (≤ 5°/mm) would need ~36 mm of finger — most of
- * the curve. `null`: no crossing, no swing.
+ * ⭐⭐⭐ (2026-10-16, the owner: *"the camera does not follow the piece on the second half of the 2d curve"* → *"build C …"* → *"I don't like this
+ * implementation: it looks like the piece does a Z-shape travel. build option B instead."*) — **THE SWING ROUND, BETWEEN RINGS 2 AND 3**: where the
+ * turned curve passes OVER the gizmo (its level direction crosses to the far side — a top face; a side face never does), the camera's heading turns half
+ * a round, smoothly (smoothstep), always the same way, over the stretch of rings 2 → 3 centred on the crossing — so past it the camera is behind the
+ * piece again, upright. ⛔ C (a wider swing, its speed matched to the vertical crossing's) read as a Z-shape travel. `null`: no crossing, no swing.
  */
 export interface RigSwing {
   /** The ring parameter where the curve crosses over the gizmo. */
@@ -171,41 +168,10 @@ function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   }
   if (vc < 0) return null;
   const farAbove = side(Math.min(1, vc + 1e-3)) <= 0;
-  // the folded elevation of the piece's direction — the camera's tilt
-  const elev = (v: number): number => {
-    const c = point(Math.min(1, Math.max(0, v)));
-    const n = Math.hypot(c[0], c[1], c[2]);
-    return n > 1e-12 ? Math.asin(Math.max(-1, Math.min(1, c[1] / n))) : 0;
-  };
-  // the target: the vertical face's crossing — the pitch from ring 2 to ring 3 over their span
+  // ⭐⭐ (2026-10-16, the owner: *"it looks like the piece does a Z-shape travel. build option B instead."*) — the swing spans rings 2 → 3 exactly,
+  // centred on the crossing (⛔ C: a width solved to the vertical crossing's speed, 11.3 mm in `Scene_1`, reaching past the rings — a Z-shape travel)
   const [v2, v3] = ring23(cfg);
-  const pitch = (v: number): number => {
-    const o = orbitOffset(cfg, 0, v, 1).offsetM;
-    return Math.atan2(o[1], Math.hypot(o[0], o[2]));
-  };
-  const target = Math.abs(pitch(v2) - pitch(v3)) / Math.max(1e-6, Math.abs(v2 - v3));
-  const average = (w: number): number => {
-    const steps = 400;
-    let sum = 0;
-    const h = w / steps;
-    for (let i = 0; i < steps; i++) {
-      const v = vc - w / 2 + (i + 0.5) * h;
-      if (v < 0 || v > 1) continue;
-      const de = (elev(v + h / 2) - elev(v - h / 2)) / h;
-      const dt = (smooth((v + h / 2 - (vc - w / 2)) / w) - smooth((v - h / 2 - (vc - w / 2)) / w)) / h;
-      sum += Math.hypot(de, Math.PI * dt) * h;
-    }
-    return sum / w;
-  };
-  let lo = 0.02;
-  let hi = 2;
-  if (average(hi) > target) return { vc, w: hi, farAbove };
-  for (let k = 0; k < 50; k++) {
-    const m = (lo + hi) / 2;
-    if (average(m) > target) lo = m;
-    else hi = m;
-  }
-  return { vc, w: (lo + hi) / 2, farAbove };
+  return { vc, w: Math.max(1e-6, Math.abs(v2 - v3)), farAbove };
 }
 
 /** ⭐ How far the camera's heading has swung round at `v` (0 on the near side, 1 behind the piece on the far side). */
