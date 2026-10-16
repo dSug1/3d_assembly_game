@@ -149,7 +149,7 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
   it("⭐ the respawn: the switch's spawn, the centre back at boot, a new solved place", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("export function respawnStuckPiece(st: SceneState): void { spawnOrbitPiece(st, st.orbitPieceKind, false); st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);");
-    expect(g).toContain("st.rigTo = UNTURNED; syncCentre(st);"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(g).toContain("st.rigTo = UNTURNED; st.rigShare = 1; syncCentre(st);"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(g).toContain("st.pieceQ = null; // ⭐ (2026-10-13, §12) a new orbit");
   });
 });

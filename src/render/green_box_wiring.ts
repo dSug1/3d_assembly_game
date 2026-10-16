@@ -33,7 +33,8 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
-import { cameraAnglesNow, cameraOffsetNow, ringPlaceNow, syncCentre } from "./camera_rig";
+import { cameraFrameNow, ringPlaceNow, syncCentre } from "./camera_rig";
+import { cameraOffsetAt, easeShare } from "../input/orbit_rig";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
@@ -46,7 +47,7 @@ import { contactNormal, nearestObstacle, type CollisionSetup } from "../core/col
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import type { OrientDirection } from "../core/orientation_set";
-import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
+import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
 /** ⭐ The green. */
 const GREEN = new Color3(0.12, 0.62, 0.2);
@@ -465,7 +466,7 @@ export function enterPieceOrbit(st: SceneState): boolean {
   // orbit around the piece, `startPieceOrbit`). Recorded now: the camera against the centre orbit's own camera (zero but for a way back
   // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (for the record)
   // ⭐ (2026-10-08) the camera's angles round the piece against the rings', and the piece's heading round the gizmo — the orbit's yaw now
-  const ring = cameraAnglesNow(st, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, pieceOrbitAngleOffset(st)); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
+  const ring = anglesOf(cameraFrameNow(st, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, pieceOrbitAngleOffset(st)).dir); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
   // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
   const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
   st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
@@ -515,7 +516,7 @@ export function returnToCentreOrbit(st: SceneState, rebase: boolean): void {
   const bo = { offsetM: boP, radiusM: Math.hypot(boP[0], boP[1], boP[2]) };
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
   const rel: Vec3 = [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k];
-  const ringCam = cameraOffsetNow(st, { yaw: st.orbit.yaw, v: hv }, rel, pieceOrbitAngleOffset(st), cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
+  const ringCam = cameraOffsetAt(cameraFrameNow(st, { yaw: st.orbit.yaw, v: hv }, pieceOrbitAngleOffset(st)).dir, rel, cameraGapM(st.cfg.cameraRadiusOffsetMm / 1000, st.zoom));
   // ⛔⛔ (2026-10-11, the owner: *"At the end of the roll to the next axis, the object systematically translates towards the world's negative
   // depth axis when second touch is lifted"*) — the ANCHOR (the resting face's centre: what rides the rings since 2026-10-09), never the
   // mesh's origin: read there, the way out's offset carried the piece by its middle-to-face distance at the release (20.6 mm headless)
@@ -693,6 +694,7 @@ export function respawnStuckPiece(st: SceneState): void {
   st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);
   st.rigFrom = UNTURNED; // ⭐ (2026-10-16) the boot's rig, unturned
   st.rigTo = UNTURNED;
+  st.rigShare = 1;
   syncCentre(st);
   st.pieceMoveBlocked = false;
   st.pieceStuck = STUCK_FRESH;
@@ -1014,6 +1016,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // jitters, and so do the quads"*) the eye FOLLOWING THE SOLVER'S PATH was deleted the same day: the path holds every wobble of the finger, and
   // the piece shook with it (112 reversals on a headless drag where the spring had 0); and measured in the anchor's metres, a yaw near the waist
   // was spent in one frame. ⚠ The cost: on a slide the shown piece may cut a corner of the solved path for ~τ (sub-millimetre at contact speeds)
+  // ⭐⭐ (2026-10-16, *"when I change the gizmo, the piece does some strange travels"*) the rig's blend share eased toward the gizmo's (it steps by pointer event)
+  st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxSpring =
     st.boxSpring === null
       ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
@@ -1142,8 +1146,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // the WAY IN (2026-10-08) inside the centre orbit — the camera brought to that pose, its view from the gizmo to the piece.
   let camAt: Vec3;
   let lookAt: Vec3;
+  // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
+  const camFrame = cameraFrameNow(st, st.cameraLagged, off);
   if (po === null) {
-    const o = cameraOffsetNow(st, st.cameraLagged, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], off, gapFull);
+    const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
     if (cr !== null) {
@@ -1163,7 +1169,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       // ⭐⭐⭐ (2026-10-08) THE WAY IN: ONE progress, finger travel over `pieceOrbitEnterMm` — the camera round the piece at the rings' angles
       // (dx turning it round the piece), the piece carried round the gizmo by the share left (`carryHeading`): the pivot passes from the
       // gizmo to the piece GRADUALLY; its view from the gizmo to the piece — then the orbit around the piece starts, nothing changing
-      const ring = cameraAnglesNow(st, st.cameraLagged, off);
+      const ring = anglesOf(camFrame.dir);
       // ⭐ (2026-10-10) its view re-aims to the piece by dx only (`aimProgress`), AND the camera's start shift round the piece (the camera
       // offsets seen from the piece) fades by it too — a pure dy leaves the piece where it was on the screen
       const aimT = st.pieceAim === null ? entryProgress(pe, cfg.pieceOrbitEnterMm) : aimProgress(st.pieceAim, cfg.pieceOrbitEnterMm);
@@ -1182,7 +1188,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       }
     }
   } else {
-    const ring = cameraAnglesNow(st, st.cameraLagged, off);
+    const ring = anglesOf(camFrame.dir);
     // ⭐ (2026-10-09, *"why the zoom only works if the piece is inside the white sphere?"*) × the zoom now over the zoom at its start
     const gapPiece =
       scaledGap(po.gap0M, bo.radiusM * k, po.ring0M, ringDistanceRange((v) => orbitOffset(cfg, 0, v, GREEN_PIECE_ORBIT_ZOOM).radiusM).minM, cfg.pieceOrbitGapMinPct) *
@@ -1227,6 +1233,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
   ({ camAt, lookAt } = hoverCameraBlend(st, camAt, lookAt));
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
+  // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
+  const up = camFrame.up;
+  if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));
   // ⭐ prototype (green box): the green piece's distance to the YELLOW target (the marker — where the centre is going, not
