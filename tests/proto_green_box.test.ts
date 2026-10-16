@@ -363,7 +363,7 @@ describe("⭐⭐ prototype — the green box", () => {
   it("⭐ wired: the camera is placed from the LAGGED angles; a slider (0–1000 ms) in CAMERA", () => {
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/cameraLag\(st\.cameraLagged, st\.cameraOrbit\.cam, dtSec \* 1000, st\.cfg\.cameraFollowMs\)/);
-    expect(w).toMatch(/const o = cameraOffset\(\s*st\.cfg,\s*st\.cameraLagged,/); // ⭐ (2026-10-16) the camera in the rig's frame (`toRigSpace`)
+    expect(w).toMatch(/const o = cameraOffsetNow\(\s*st,\s*st\.cameraLagged,/); // ⭐ (2026-10-16) the turned curve on level rings (`orbit_rig.ts`)
     expect(code("tuning_menu.ts")).toContain('"cameraFollowMs", 0, 1000, 10)');
     // the owner, 2026-10-02: *"set the default camera lag to 0"*
     expect(DEFAULT_CONFIG.cameraFollowMs).toBe(0);
