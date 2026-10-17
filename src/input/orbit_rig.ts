@@ -25,7 +25,7 @@
  */
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
-import { waistShare } from "./waist_view";
+import { waistRings } from "./waist_view";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
 import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
@@ -80,8 +80,11 @@ export function rigRotationFor(cfg: GestureConfig, yawRad: number, normal: Vec3 
 /** ⭐ The level unit direction at the azimuth `a` (the orbit's own convention: x = cos, z = sin). */
 const level = (a: number): Vec3 => [Math.cos(a), 0, Math.sin(a)];
 /** ⭐ (2026-10-16) the camera's up reads the swing's heading from this elevation of the piece (blended in fully at `SWING_FULL_RAD`). */
-const SWING_FROM_RAD = (30 * Math.PI) / 180; // ⭐ (2026-10-17) and only between rings 2 and 3 (`waistShare` — below)
+const SWING_FROM_RAD = (30 * Math.PI) / 180; // ⭐ (2026-10-17) between rings 2 and 3 (`waistGate`), or near the vertical anywhere (`STEEP_…`)
 const SWING_FULL_RAD = (60 * Math.PI) / 180;
+/** ⭐ (2026-10-17) outside rings 2 and 3 the swing's heading still takes over NEAR THE VERTICAL — from this elevation, fully at `STEEP_FULL_RAD`. */
+const STEEP_FROM_RAD = (70 * Math.PI) / 180;
+const STEEP_FULL_RAD = (85 * Math.PI) / 180;
 const wrapPi = (a: number): number => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 
 /** ⭐ The world turn that adds `deltaRad` to an orbit yaw: `orbitOffset(yaw + δ) = yawTurn(δ) · orbitOffset(yaw)` (about the world vertical). */
@@ -238,6 +241,15 @@ export interface RigCameraFrame {
   readonly up: Vec3;
 }
 
+/** ⭐ (2026-10-17) 1 between rings 2 and 3, fading to 0 over `WAIST_GATE_FADE` of their span beyond them — the swing's heading's gate. */
+const WAIST_GATE_FADE = 0.25;
+export function waistGate(cfg: GestureConfig, v: number): number {
+  const { v2, v3 } = waistRings(cfg);
+  if (!(v2 > v3)) return 0;
+  const out = Math.max(v - v2, v3 - v, 0) / (v2 - v3);
+  return smooth(1 - out / WAIST_GATE_FADE);
+}
+
 /**
  * ⭐⭐⭐ (2026-10-16, the owner: *"there is still a Z-shape back and forth of the piece when the camera turns. Can you synchronize all movements so that this disappear ? Also, when I change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset … with the piece traveling outside the screen during the orbit"*) — **THE CAMERA DERIVED FROM THE PIECE**: its direction from the gizmo IS the piece's own
  * (`place`, the piece's place at the camera's orbit place — the SAME turn the piece is placed with, blended or not), so whatever the piece does —
@@ -259,8 +271,16 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
   // ⭐⭐ (2026-10-17, the owner: *"there is a strange mix of roll and jumps of camera positions when the gizmo is supported by a face which is on the right side,
   // back side, or bottom side of the assembly"*) — the swing's heading only BETWEEN RINGS 2 AND 3, where a crossing over the top happens (⛔ anywhere above 30°:
   // a crossing far out on the ring 4 stretch rolled a back face's picture, 12.5° a step at v 0.2; a narrower band squeezed the top crossing to a near-flip)
-  const wz = waistShare(cfg, cam.v) === null ? 0 : smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD));
-  const heading = level(hOwn + wrapPi(hSwing - hOwn) * wz);
+  // ⭐⭐ (2026-10-17, the owner: *"when I move the gizmo from the top face of piece 4 to the vertical front face of piece 10 and start dy approach from max
+  // distance, at one point the camera does a 360 roll"*) — and NEAR THE VERTICAL everywhere (70°–85°): midway through a gizmo change the blended curve passes
+  // over the gizmo outside rings 2 and 3, where the piece's own heading is undefined — it flipped half a round in two steps (110°, then 54°)
+  // over the vertical; and the waist's band fades out over a quarter of the waist's span past rings 2 and 3 (⛔ cut at ring 3: a 26° snap of roll there, mid-change)
+  const wz = Math.max(
+    smooth((Math.abs(e) - STEEP_FROM_RAD) / (STEEP_FULL_RAD - STEEP_FROM_RAD)),
+    smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD)) * waistGate(cfg, cam.v),
+  );
+  // ⭐ (2026-10-17) the two headings blended as DIRECTIONS (⛔ the short way: passing half a round apart mid-change, it swapped sides — 92° of roll in one step)
+  const heading = level(Math.atan2((1 - wz) * Math.sin(hOwn) + wz * Math.sin(hSwing), (1 - wz) * Math.cos(hOwn) + wz * Math.cos(hSwing)));
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, d0);
   const u0 = normalize([raw[0] - k * d0[0], raw[1] - k * d0[1], raw[2] - k * d0[2]]) ?? ([0, 1, 0] as Vec3);

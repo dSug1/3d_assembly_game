@@ -238,6 +238,24 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       }
     }
   });
+  it("⭐⭐⭐ A GIZMO CHANGE from a TOP face to a VERTICAL face, dy swept from max distance as the change goes on: the camera never rolls round (⛔ the blended curve passed over the gizmo outside rings 2 and 3 — the up flipped half a round, 110° in one step; then a 26° snap at ring 3)", () => {
+    const off = { yawRad: (2.5 * Math.PI) / 180, pitchRad: (2 * Math.PI) / 180 };
+    for (const yaw of [0.4, 1.3, -0.7]) {
+      const camSide: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
+      const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], camSide, UNTURNED);
+      const front = rigTurnFor(cfg, yaw, 0.99, camSide, camSide, top);
+      // the change advancing with the finger's travel (s 0 → 1 over v 0.99 → 0.3), and every share held while v sweeps
+      const runs: ((v: number) => number)[] = [(v) => Math.min(1, (0.99 - v) / 0.69), ...[0.5, 0.6, 0.7, 0.85].map((s) => () => s)];
+      for (const shareAt of runs) {
+        let prev: ReturnType<typeof rigCameraFrame> | null = null;
+        for (let v = 0.99; v >= 0.02; v -= 0.002) {
+          const f = rigFrameBetween(cfg, top, front, shareAt(v), { yaw, v }, off);
+          if (prev !== null) expect(angle(f.up, prev.up)).toBeLessThan(6);
+          prev = f;
+        }
+      }
+    }
+  });
   it("⭐⭐⭐ A GIZMO CHANGE: the TURN is blended (⛔ the places in a straight line, the camera apart) — on the way the piece keeps its ring distance from the gizmo, and the camera stays on it", () => {
     const a = turnFor(0, [0, 0, 1]);
     const b = turnFor(0.4, [0, 1, 0]);
