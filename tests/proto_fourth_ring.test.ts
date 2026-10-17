@@ -120,6 +120,7 @@ describe("⭐⭐ prototype — the waist without its plateau; the outer transiti
     const step = cfg.orbitMiddleHeightM - cfg.orbitLowerHeightM;
     const mean = (L.mHeight[1]! + L.mHeight[2]!) / 2;
     expect(L.total).toBeCloseTo(2 / 3 + step / mean, 9);
+    expect(L.total).toBeCloseTo(0.7778, 4); // ⭐ (2026-10-17, the Fable audit) a NUMBER too — the formula alone is the implementation's own (0.2546 m ÷ 2.2910)
     const v1 = L.knots[1]! / L.total;
     const v2 = L.knots[2]! / L.total;
     for (let i = 0; i <= 10; i++) {

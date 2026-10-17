@@ -9,9 +9,8 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, waistV, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
-import { waistConeWeight, waistHoldDirection, waistRings, waistShare } from "../input/waist_view";
-import { slerpDir, uprightBlend } from "../input/hover";
+import { blendRig, rigEnds, rigPlace, rigTurnFor, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
@@ -74,33 +73,10 @@ export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: numbe
   return rigPlace(st.cfg, rigNow(st), yaw, v, zoom);
 }
 
-/** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn (`rigCameraFrame`). */
+/** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn; between rings 2 and 3 the
+ * semi-isometric hold — the whole composition is `cameraFrameHeld` (`input/camera_frame.ts`), its up carried from the last frame drawn (`st.cameraPrev`). */
 export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  const base = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);
-  // ⭐⭐⭐ (2026-10-17, the owner: *"camera always aims at the gizmo, position the ring 2 and ring 3 so that the camera ends up in the semi-isometric view
-  // during the travel of the piece between ring 2 and ring 3"*) — BETWEEN RINGS 2 AND 3, the gizmo on a face: the camera holds the angle it has at the
-  // rings (the slide view's tilt — rings 2 and 3 at `isoWaistHeightM`) and turns from ring 2's direction to ring 3's about the face's normal (`waistTurn`),
-  // still aimed at the gizmo — exactly its own direction at either ring, so the change is continuous (no S); kept in front of the face as tapped
-  const share = waistShare(st.cfg, cam.v);
-  const s = st.rigShare;
-  const faced = s >= 1 ? (st.rigTo.faced ? 1 : 0) : (st.rigFrom.faced ? 1 - s : 0) + (st.rigTo.faced ? s : 0);
-  if (share === null || !(faced > 0)) return base;
-  const p = rigNow(st);
-  const n0 = p.normal ?? st.rigTo.normal ?? null;
-  if (!n0) return base;
-  // ⭐⭐⭐ (2026-10-17, the owner: *"I think we need to trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone vs. the orientation of the camera view"* → *"build"*) — the hold only BEYOND the cone: within it the camera looks at the face (face-on halfway) and stays behind the piece
-  const nYaw = rigPlace(st.cfg, p, cam.yaw, waistV(st.cfg), 1);
-  const hold = faced * waistConeWeight(nYaw, n0, st.cfg.waistIsoConeDeg);
-  if (!(hold > 0)) return base;
-  const { v2, v3 } = waistRings(st.cfg);
-  const d2 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v2 }, off).dir;
-  const d3 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v3 }, off).dir;
-  const side = (st.cfg.cameraYawOffsetDeg >= 0 ? 1 : -1) * (Math.PI / 2);
-  // ⭐ about the REAL face's normal on the PIECE'S side, its tilt reaching the slide view's 35.3° halfway, kept over the face — both faded to nothing at
-  // either ring and edge-on (`waistHoldDirection`) — ⛔ always the front: a camera coming from behind the face jumped at ring 2 and at ring 3
-  let dir = waistHoldDirection(nYaw, n0, d2, d3, share, [Math.cos(cam.yaw + p.beta + side), 0, Math.sin(cam.yaw + p.beta + side)]);
-  if (hold < 1) dir = slerpDir(base.dir, dir, hold);
-  return { dir, up: uprightBlend(base.up, dir, hold) };
+  return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null);
 }
 
 /**
@@ -111,7 +87,8 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
   const yaw = st.orbit.yaw;
   const cam = st.camera.position;
-  st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump
+  // ⭐ the turn as it stands, a blend in progress included — never a jump; ⭐ (2026-10-17) caught mid-change, it carries the faces it was between (`rigEnds`)
+  st.rigFrom = st.rigShare >= 1 ? st.rigTo : st.rigShare <= 0 ? st.rigFrom : { ...rigNow(st), ends: rigEnds(st.rigFrom, st.rigTo, st.rigShare) };
   st.rigShare = 0;
   // ⭐ the new near side the way nearer the old one (it only picks which way a swing turns) — a gizmo change never turns it half a round
   // ⭐⭐ (2026-10-16) the nearer of the two turns at this yaw (`rigTurnFor`): the piece stays on its side through the gizmo's change

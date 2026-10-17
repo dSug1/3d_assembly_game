@@ -288,8 +288,9 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const c = code("render/camera_rig.ts");
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
     expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
-    expect(c).toContain("const base = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);"); // ⭐ (2026-10-17) turned between rings 2 and 3 (`waist_view.ts`)
-    expect(c).toContain("st.rigFrom = rigNow(st);"); // the turn as it stands — never a jump
+    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
+    expect(code("input/camera_frame.ts")).toContain("const base = rigFrameBetween(cfg, from, to, s, cam, off);");
+    expect(c).toContain("st.rigFrom = st.rigShare >= 1 ? st.rigTo : st.rigShare <= 0 ? st.rigFrom : { ...rigNow(st), ends: rigEnds(st.rigFrom, st.rigTo, st.rigShare) };"); // the turn as it stands — never a jump
   });
   it("⭐⭐ the gizmo's move sets the new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {
     const p = code("render/pointer_wiring.ts");

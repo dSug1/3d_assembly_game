@@ -828,6 +828,8 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-10-16) the rig turned onto the gizmo's face (`input/orbit_rig.ts`): the turn it had (`rigFrom`) and the new one (`rigTo`), blended at the gizmo's share */
   rigFrom: import("../input/orbit_rig").RigParams;
   rigTo: import("../input/orbit_rig").RigParams;
+  /** ⭐ (2026-10-17) the camera's frame as last drawn (`cameraFrameNow` — its up's roll bounded by the camera's own turn); `null`/absent: none */
+  cameraPrev?: import("../input/camera_frame").CameraFramePrev | null;
   /** ⭐ (2026-10-16) the blend's share as DRAWN — eased toward `centreBlend.progress` every frame (`easeShare`) */
   rigShare: number;
   orbitCentreM: Vector3;

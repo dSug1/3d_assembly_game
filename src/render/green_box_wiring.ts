@@ -695,6 +695,7 @@ export function respawnStuckPiece(st: SceneState): void {
   st.rigFrom = UNTURNED; // ⭐ (2026-10-16) the boot's rig, unturned
   st.rigTo = UNTURNED;
   st.rigShare = 1;
+  st.cameraPrev = null;
   syncCentre(st);
   st.pieceMoveBlocked = false;
   st.pieceStuck = STUCK_FRESH;
@@ -1148,6 +1149,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let lookAt: Vec3;
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
   const camFrame = cameraFrameNow(st, st.cameraLagged, off);
+  st.cameraPrev = camFrame; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`)
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];

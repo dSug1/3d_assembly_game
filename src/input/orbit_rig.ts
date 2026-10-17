@@ -25,7 +25,7 @@
  */
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
-import { waistRings } from "./waist_view";
+import { smoothstep01 as smooth, waistRings } from "./waist_view";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
 import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
@@ -36,8 +36,10 @@ export interface RigParams {
   readonly beta: number;
   /** ⭐ (2026-10-17) turned onto a FACE (the gizmo set on one) — the slide view between rings 2 and 3 holds only then (`input/waist_view.ts`) */
   readonly faced?: boolean;
-  /** ⭐ (2026-10-17) the face's normal as TAPPED (world) — the slide view's corner is kept in front of it (`frontSide`, `keepInFront`) */
+  /** ⭐ (2026-10-17) the face's normal as TAPPED (world) — the hold between rings 2 and 3 turns about it (`waistHoldDirection`, `keepInFront`) */
   readonly normal?: Vec3 | null;
+  /** ⭐ (2026-10-17, the Fable audit's A6) a turn caught mid-change: the faced turns it was blended from, weighted (`rigEnds`) — the hold reads them */
+  readonly ends?: readonly (readonly [RigParams, number])[];
 }
 
 /** ⭐ No turn: the rig as it always was (the boot, a respawn, no face). */
@@ -152,17 +154,6 @@ const swingCache = new Map<string, RigSwing | null>();
 const ringKey = (cfg: GestureConfig): string =>
   [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM].join(",");
 
-const smooth = (t: number): number => {
-  const u = Math.min(1, Math.max(0, t));
-  return u * u * (3 - 2 * u);
-};
-
-/** ⭐ The ring parameters of rings 2 and 3 (numbered from the top). */
-function ring23(cfg: GestureConfig): [number, number] {
-  if (cfg.orbitLowerRingOn !== 1) return [0.5, 0];
-  const f = fourRingLayout(cfg);
-  return [f.knots[2]! / f.total, f.knots[1]! / f.total];
-}
 
 /** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
 export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
@@ -214,7 +205,7 @@ function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   const farAbove = side(Math.min(1, vc + 1e-3)) <= 0;
   // ⭐⭐ (2026-10-16, the owner: *"it looks like the piece does a Z-shape travel. build option B instead."*) — the swing spans rings 2 → 3 exactly,
   // centred on the crossing (⛔ C: a width solved to the vertical crossing's speed, 11.3 mm in `Scene_1`, reaching past the rings — a Z-shape travel)
-  const [v2, v3] = ring23(cfg);
+  const { v2, v3 } = waistRings(cfg);
   return { vc, w: Math.max(1e-6, Math.abs(v2 - v3)), farAbove, far };
 }
 
@@ -255,7 +246,8 @@ export function waistGate(cfg: GestureConfig, v: number): number {
  * (`place`, the piece's place at the camera's orbit place — the SAME turn the piece is placed with, blended or not), so whatever the piece does —
  * the crossing, a gizmo change, a slide — the camera follows it exactly (⛔ a heading and tilt of their own, blended apart from the piece's place: the
  * Z-shape, the piece lost off the screen). Its UP: upright (the world's vertical seen from the camera) everywhere but between rings 2 and 3 over a
- * crossing, where it turns half a round with the swing's heading (`rigSwingShare`) — the view turns, the camera stays on the piece. The owner's
+ * crossing (faded past them, `waistGate`) and near the vertical (70°–85°, anywhere), where it turns with the swing's heading (`rigSwingShare`) — the
+ * view turns, the camera stays on the piece (its roll bounded by the camera's own motion where the screen draws it: `input/camera_frame.ts`). The owner's
  * offsets as ever: the pitch offset away from the level (`mirroredPitchOffset`, about the camera's right), the yaw offset about the world vertical;
  * clamped at ±89° outside the swing. ⭐ Unturned it is `cameraOffset`'s direction EXACTLY, its up the upright one.
  */
@@ -273,14 +265,18 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
   // a crossing far out on the ring 4 stretch rolled a back face's picture, 12.5° a step at v 0.2; a narrower band squeezed the top crossing to a near-flip)
   // ⭐⭐ (2026-10-17, the owner: *"when I move the gizmo from the top face of piece 4 to the vertical front face of piece 10 and start dy approach from max
   // distance, at one point the camera does a 360 roll"*) — and NEAR THE VERTICAL everywhere (70°–85°): midway through a gizmo change the blended curve passes
-  // over the gizmo outside rings 2 and 3, where the piece's own heading is undefined — it flipped half a round in two steps (110°, then 54°)
-  // over the vertical; and the waist's band fades out over a quarter of the waist's span past rings 2 and 3 (⛔ cut at ring 3: a 26° snap of roll there, mid-change)
+  // over the gizmo outside rings 2 and 3, where the piece's own heading is undefined — it flipped half a round in two steps (110°, then 54°);
+  // and the waist's band fades out over a quarter of the waist's span past rings 2 and 3 (⛔ cut at ring 3: a 26° snap of roll there, mid-change)
   const wz = Math.max(
     smooth((Math.abs(e) - STEEP_FROM_RAD) / (STEEP_FULL_RAD - STEEP_FROM_RAD)),
     smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD)) * waistGate(cfg, cam.v),
   );
   // ⭐ (2026-10-17) the two headings blended as DIRECTIONS (⛔ the short way: passing half a round apart mid-change, it swapped sides — 92° of roll in one step)
-  const heading = level(Math.atan2((1 - wz) * Math.sin(hOwn) + wz * Math.sin(hSwing), (1 - wz) * Math.cos(hOwn) + wz * Math.cos(hSwing)));
+  return frameAtHeading(e, d0, Math.atan2((1 - wz) * Math.sin(hOwn) + wz * Math.sin(hSwing), (1 - wz) * Math.cos(hOwn) + wz * Math.cos(hSwing)), wz, off, lim);
+}
+
+function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, off: CameraAngleOffset, lim: number): RigCameraFrame {
+  const heading = level(h);
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, d0);
   const u0 = normalize([raw[0] - k * d0[0], raw[1] - k * d0[1], raw[2] - k * d0[2]]) ?? ([0, 1, 0] as Vec3);
@@ -321,7 +317,36 @@ export function blendRig(a: RigParams, b: RigParams, s: number): RigParams {
   const q = qSlerp(a.q, b.q, s);
   const yaw0 = a.yaw0 + wrapPi(b.yaw0 - a.yaw0) * s;
   // ⭐ the near side ON the blended curve's own plane, the way nearer the blended heading — the near / far split stays clean all the way
-  return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s) };
+  // ⭐ (2026-10-17, the Fable audit's A6) the NEARER end's face (⛔ none: a tap mid-change stored a faceless `rigFrom` and dropped the hold at once)
+  const e = s < 0.5 ? a : b;
+  return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s), faced: e.faced === true, normal: e.normal ?? null };
+}
+
+/** ⭐ The most turns a caught blend keeps (`rigEnds` — the lightest dropped, the rest renormalised). */
+const MAX_ENDS = 4;
+
+/**
+ * ⭐⭐ (2026-10-17, the Fable audit's A2 / A6) the leaf turns a blend from `a` to `b` at `s` stands between, weighted (a turn caught mid-change expanded
+ * into its own `ends`) — the hold between rings 2 and 3 is evaluated on each and blended, so a tap mid-change keeps exactly the hold it had.
+ */
+export function rigEnds(a: RigParams, b: RigParams, s: number): (readonly [RigParams, number])[] {
+  const w = Math.min(1, Math.max(0, s));
+  const out: [RigParams, number][] = [];
+  const add = (r: RigParams, k: number): void => {
+    if (!(k > 0)) return;
+    for (const [leaf, lw] of r.ends ?? [[r, 1] as const]) {
+      const at = out.find((e) => e[0] === leaf);
+      if (at) at[1] += lw * k;
+      else out.push([leaf, lw * k]);
+    }
+  };
+  add(a, 1 - w);
+  add(b, w);
+  if (out.length <= MAX_ENDS) return out;
+  out.sort((x, y) => y[1] - x[1]);
+  const kept = out.slice(0, MAX_ENDS);
+  const total = kept.reduce((t, e) => t + e[1], 0);
+  return kept.map(([r, k]) => [r, k / total] as const);
 }
 
 /**
@@ -351,7 +376,7 @@ export function rigTurnFor(cfg: GestureConfig, yaw: number, v: number, normal: V
   const q1 = rigRotationFor(cfg, yaw, normal);
   const n = normal === null ? null : normalize(normal);
   for (const q of n === null ? [q1] : [q1, qmul(qFromAxisAngle(n, Math.PI), q1)]) {
-    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta), faced: normal !== null, normal: normal === null ? null : normal };
+    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta), faced: normal !== null, normal };
     const at = rigPlace(cfg, cand, yaw, v, 1);
     const d = Math.hypot(at[0] - here[0], at[1] - here[1], at[2] - here[2]);
     if (d < bestD - 1e-9) {
