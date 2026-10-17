@@ -1031,3 +1031,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   reversal. ⚠ The view still turns half a round between rings 2 and 3 over a top face — about the piece now; a quick drag turns it fast (~9° a frame in
   the scripted drags). ⛔ No device close. 2044 vectors.
 * ⭐⭐ (2026-10-16, `1.0.79-`) the slide view UPRIGHT — the camera's up rolled to the world's vertical by the slide view's weight: gravity straight down the screen → `HOVER.md` §24.
+* ⛔⛔ (2026-10-17, `1.0.79-`) the orbit blocked after a slide on Piece3's top (gizmo on Piece25) — the solver's contact projection and second-part clamp → `COLLISION.md` §12undecies.

@@ -538,3 +538,4 @@ floor** — marked seats where a piece may be set down, each a known target the 
   travel. The direction stays the nearest isometric corner `(n ± t1 ± t2)/√3` — upright, the face's two axes no longer read alike on the screen.
 * Headless (touch, Piece18's side face): at the slide view (shown 1) the up in the view's vertical plane — roll 0 — the view 35.3° down. ⚠ A top face's
   slide view (also 35° down) not staged. ⛔ No device close. 2046 vectors.
+* ⛔⛔ (2026-10-17, `1.0.79-`) the way back after a slide blocked when it started in CONTACT (the solver refused a singular metric before asking whether the step pushed in) and crawling over flush tops — fixed in the solver → `COLLISION.md` §12undecies.

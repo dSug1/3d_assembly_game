@@ -426,7 +426,7 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
     expect(hoverQueryBudget(24, 21)).toBe(0);
     expect(hoverQueryBudget(24, 30)).toBe(0);
   });
-  it("⭐⭐⭐ 3: along a wall at the SHIPPED cap the travel is kept across frames — the dropped rest fell short", async () => {
+  it("⭐⭐⭐ 3: along a wall the travel is kept across frames when a solve is cut short — the dropped rest fell short", async () => {
     const { hoverPendingAfter } = await import("../src/input/hover");
     const R = 0.05;
     const origin: Vec3 = [0.1 - R - 0.0011, R + 0.001, 0]; // 1.1 mm from a wall x ≥ 0.1, 1 mm over the floor
@@ -440,8 +440,12 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
       normal: (q) => (wallGap(anchor(q)) < floorGap(anchor(q)) ? [-1, 0, 0] : [0, 1, 0]),
       secondGap: (q) => Math.max(floorGap(anchor(q)), wallGap(anchor(q))),
     };
-    const cap = DEFAULT_CONFIG.pieceSolverQueries;
-    // a 10 mm step along the wall, parallel to it (the auditor: 6.48 mm in one solve at the cap)
+    // ⭐⭐ (2026-10-17, the contact slide's second-part clamp binds only a step that closes on a part — `tests/solver_flush.test.ts`) at the SHIPPED cap
+    // the whole 10 mm now goes in ONE solve (the auditor: 6.48 mm before); a cap that cuts it short still keeps its travel across frames
+    const shipped = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [0, 0.01 / HOVER_SPAN_M], env, { gapM: 0.001, maxQueries: DEFAULT_CONFIG.pieceSolverQueries });
+    expect(Math.abs((shipped.q.v - 0.5) * HOVER_SPAN_M)).toBeCloseTo(0.01, 6);
+    const cap = 2; // (a cap tight enough to cut the solve short)
+    // a 10 mm step along the wall, parallel to it
     let u = 0, v = 0;
     let pending: [number, number] = [0, 0.01];
     const one = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [pending[0], pending[1] / HOVER_SPAN_M], env, { gapM: 0.001, maxQueries: cap });
