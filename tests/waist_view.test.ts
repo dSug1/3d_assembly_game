@@ -84,8 +84,8 @@ describe("⭐⭐⭐ the slide view's angle between rings 2 and 3, the camera on 
   });
   it("⭐⭐ wired: the camera's frame turns between rings 2 and 3 with the gizmo on a face, aimed at the gizmo; the latched slide view, its arc and the keep slider are gone", () => {
     const c = code("render/camera_rig.ts");
-    expect(c).toContain("let dir = waistTurn(n0, d2, d3, share,"); // ⭐ (2026-10-17) about the REAL face's normal (the cone rule)
-    expect(c).toContain("dir = keepInFront(dir, n0);");
+    
+    
     expect(c).not.toContain("waistViewNow");
     const g = code("render/green_box_wiring.ts");
     expect(g).not.toContain("waistViewNow"); // ⛔ aimed at the piece all along: the assembly off the screen, a jump at max distance
@@ -125,6 +125,51 @@ describe("⭐⭐⭐ the semi-isometric hold only beyond a CONE (2026-10-17, the 
     expect(m.lastIndexOf("title:", at)).toBe(sub);
     const c = code("render/camera_rig.ts");
     expect(c).toContain("const hold = faced * waistConeWeight(nYaw, n0, st.cfg.waistIsoConeDeg);");
-    expect(c).toContain("let dir = waistTurn(n0, d2, d3, share,");
+  });
+});
+
+describe("⭐⭐⭐ a vertical face approached from BEHIND (2026-10-17, the owner: *\"in case the hosting face is vertical, if I orbit dy to approach from behind the face, there are two discontinuities during the travel\"*)", () => {
+  const n0: Vec3 = [0, 0, -1]; // the face as tapped
+  const swung = (deg: number): Vec3 => [Math.sin(deg / DEG), 0, -Math.cos(deg / DEG)]; // the curve's halfway direction, dx swung `deg` from the normal
+  it("⭐⭐ the cone is TWO-SIDED: facing the face's back is like facing its front — no hold; edge-on, the hold", async () => {
+    const { waistConeWeight } = await import("../src/input/waist_view");
+    expect(waistConeWeight(swung(0), n0, 45)).toBe(0);
+    expect(waistConeWeight(swung(180), n0, 45)).toBe(0); // ⛔ from behind it held, and a guard pulled the camera to the front
+    expect(waistConeWeight(swung(90), n0, 45)).toBe(1);
+    expect(waistConeWeight(swung(115), n0, 45)).toBe(1);
+  });
+  it("⭐⭐⭐ EXACTLY the camera's own direction at ring 2 and ring 3 whatever the side (⛔ the in-front guard yanked a camera behind the face to the front: 24° and 38° of roll at ring 2)", async () => {
+    const { waistHoldDirection } = await import("../src/input/waist_view");
+    for (const deg of [60, 90, 115, 150]) {
+      const nYaw = swung(deg);
+      // the camera behind the piece at rings 2 and 3: 54.7° off the curve's halfway direction, up and down
+      const t = 54.74 / DEG;
+      const d2: Vec3 = [nYaw[0] * Math.cos(t), Math.sin(t), nYaw[2] * Math.cos(t)];
+      const d3: Vec3 = [nYaw[0] * Math.cos(t), -Math.sin(t), nYaw[2] * Math.cos(t)];
+      const u = (v: Vec3) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
+      const a = waistHoldDirection(nYaw, n0, d2, d3, 0, null), b = waistHoldDirection(nYaw, n0, d2, d3, 1, null);
+      for (let i = 0; i < 3; i++) { expect(a[i]).toBeCloseTo(u(d2)[i]!, 9); expect(b[i]).toBeCloseTo(u(d3)[i]!, 9); }
+      let prev = a;
+      for (let s = 0.01; s <= 1.0001; s += 0.01) { const d = waistHoldDirection(nYaw, n0, d2, d3, s, null); expect(angle(d, prev)).toBeLessThan(4); prev = d; }
+      // and on the PIECE's side of the face halfway (behind it when the curve comes from behind)
+      const mid = waistHoldDirection(nYaw, n0, d2, d3, 0.5, null);
+      expect(Math.sign(dot(mid, n0))).toBe(Math.sign(dot(nYaw, n0)) || Math.sign(dot(mid, n0)));
+    }
+  });
+  it("⭐⭐ dx carrying the curve across the face's plane (edge-on): the hold's direction changes smoothly — the side's switch faded to nothing there", async () => {
+    const { waistHoldDirection } = await import("../src/input/waist_view");
+    const t = 54.74 / DEG;
+    let prev: Vec3 | null = null;
+    for (let deg = 70; deg <= 110; deg += 0.25) {
+      const nYaw = swung(deg);
+      const d2: Vec3 = [nYaw[0] * Math.cos(t), Math.sin(t), nYaw[2] * Math.cos(t)];
+      const d3: Vec3 = [nYaw[0] * Math.cos(t), -Math.sin(t), nYaw[2] * Math.cos(t)];
+      const d = waistHoldDirection(nYaw, n0, d2, d3, 0.5, null);
+      if (prev) expect(angle(d, prev)).toBeLessThan(3);
+      prev = d;
+    }
+  });
+  it("⭐ wired: the camera's frame holds through `waistHoldDirection`", () => {
+    expect(code("render/camera_rig.ts")).toContain("let dir = waistHoldDirection(nYaw, n0, d2, d3, share,");
   });
 });

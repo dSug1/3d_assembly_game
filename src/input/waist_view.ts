@@ -100,7 +100,8 @@ export function waistConeWeight(nYaw: Vec3, n0: Vec3, coneDeg: number): number {
   const a = unit(nYaw);
   const b = unit(n0);
   if (a === null || b === null) return 0;
-  const deg = (Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * 180) / Math.PI;
+  // ⭐⭐ (2026-10-17, the owner: *"in case the hosting face is vertical, if I orbit dy to approach from behind the face, there are two discontinuities during the travel"*) — TWO-SIDED: facing the face's back is like facing its front (no hold — nothing of the face to see better)
+  const deg = (Math.acos(Math.min(1, Math.abs(dot(a, b)))) * 180) / Math.PI;
   return smooth((deg - coneDeg) / WAIST_CONE_BAND_DEG);
 }
 
@@ -121,4 +122,38 @@ export function keepInFront(d: Vec3, n0: Vec3): Vec3 {
   if (flat === null) return d;
   const c = Math.sqrt(1 - FRONT_MIN * FRONT_MIN);
   return [flat[0] * c + n[0] * FRONT_MIN, flat[1] * c + n[1] * FRONT_MIN, flat[2] * c + n[2] * FRONT_MIN];
+}
+
+/** ⭐ How far past edge-on the PIECE'S SIDE of the face counts fully (the side's sign faded over it): sin ≈ 17°. */
+export const SIDE_SOFT = 0.3;
+
+/**
+ * ⭐⭐⭐ (2026-10-17, the owner: *"in case the hosting face is vertical, if I orbit dy to approach from behind the face, there are two discontinuities during the travel"*) — **THE HOLD'S DIRECTION**: turned from `d2` to `d3` about the face's normal ON THE PIECE'S SIDE (the side
+ * the curve's halfway direction `nYaw` is on — ⛔ always the front: a camera behind the face was yanked to the front at ring 2 and let go at ring 3, 24°
+ * and 38° of roll), its tilt reaching the slide view's 35.3° halfway, and kept ~10° over the face on that side — both FADED: by the bump `4s(1−s)` (nothing
+ * at either ring, so exactly `d2` and `d3` there) and by how clearly the curve is on one side (`SIDE_SOFT` — nothing edge-on, where dx switches the side).
+ */
+export function waistHoldDirection(nYaw: Vec3, n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null): Vec3 {
+  const a = unit(nYaw);
+  const b = unit(n0);
+  if (a === null || b === null) return waistTurn(nYaw, d2, d3, share, prefer);
+  const k = dot(a, b);
+  const sideSign = k >= 0 ? 1 : -1;
+  const nS: Vec3 = [b[0] * sideSign, b[1] * sideSign, b[2] * sideSign];
+  const soft = Math.min(1, Math.abs(k) / SIDE_SOFT);
+  const dir = waistTurn(nS, d2, d3, share, prefer, ISO_TILT_RAD * soft);
+  const s = Math.min(1, Math.max(0, share));
+  const g = 4 * s * (1 - s) * soft;
+  if (!(g > 0)) return dir;
+  const kept = keepInFront(dir, nS);
+  if (kept === dir) return dir;
+  // the guard faded in: a great-circle step from the turned direction toward the kept one
+  const c = Math.max(-1, Math.min(1, dot(dir, kept)));
+  const th = Math.acos(c);
+  if (th < 1e-9) return dir;
+  const t = th * g;
+  const sa = Math.sin(th);
+  const w1 = Math.sin(th - t) / sa;
+  const w2 = Math.sin(t) / sa;
+  return [dir[0] * w1 + kept[0] * w2, dir[1] * w1 + kept[1] * w2, dir[2] * w1 + kept[2] * w2];
 }

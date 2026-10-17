@@ -1128,3 +1128,20 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   camera crosses over (under) it behind the piece, the view turning about the piece (the swing).
 * Headless sweep (0.4 mm of finger a step): right 2.8°, back 1.7° (the roll gone); front 15°, bottom 8° (18° of up), top 13° (27° of up) — the waist's
   own crossing behind the piece (as on any vertical face) and the swing over / under a level face. ⛔ No device close. 2059 vectors.
+
+### …a vertical face approached from BEHIND: no discontinuity (`1.0.80-`, 2026-10-17)
+
+> *"in case the hosting face is vertical, if I orbit dy to approach from behind the face, there are two discontinuities during the travel."* → *"build"*
+> — the owner.
+
+* ⛔ **Reproduced** (headless, dx swung 115° so the curve comes from behind the face): entering rings 2–3 the camera jumped from behind the face to its
+  front — 24° of view, 38° of roll — and back at ring 3: the guard keeping the camera IN FRONT of the face as tapped yanked a camera that, behind the
+  piece, was rightly behind the face.
+* ⭐⭐⭐ **The hold on the PIECE'S side** (`waistHoldDirection`, `input/waist_view.ts`): turned about the face's normal on the side the curve's halfway
+  direction is on, its tilt reaching 35.3° halfway, kept ~10° over the face on that side — both FADED by the bump `4s(1−s)` (nothing at rings 2 and 3:
+  exactly the camera's own direction there) and by how clearly the curve is on one side (`SIDE_SOFT`, ~17° — nothing edge-on, where dx switches the
+  side). ⭐ **The cone two-sided** (`waistConeWeight` on `|n·n0|`): facing the face's BACK is like facing its front — no hold (nothing of the face to
+  see better); the hold only near edge-on.
+* Headless: through rings 2–3 from behind ≤ 10.7° a step (the crossing; 0.4 mm of finger a step), the ring-2 jump gone. 4 vectors (each red first):
+  the two-sided cone; exact continuity at the rings for swings of 60° / 90° / 115° / 150°, on the piece's side; smooth as dx carries the curve across
+  edge-on; the wiring. ⛔ No device close. 2063 vectors.
