@@ -1047,8 +1047,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the face's isometric corner `(n ± t1 ± t2)/√3` (35° off the face), upright (`uprightBlend`), looking at the PIECE (centred: no Z by construction), at its
   own distance; the camera offsets do not apply there. The face is the turned curve's halfway direction at the orbit's yaw (the hosting face's normal at the
   yaw the gizmo was set, swung by dx); its axes gravity's — `t1` level across it (blended continuously as a face turns level), `t2 = n × t1`.
-* ⭐ **In and out** over 12 mm of finger outside rings 2 and 3 (`waistWeight`, the slide view's own span `pieceOrbitEnterMm`), smoothstep, by the slide
-  view's own arc (`hoverCameraSwing`) — driven by the ring parameter, not the slide's travel.
+* ⛔ ~~**In and out** over 12 mm of finger outside rings 2 and 3 (`waistWeight`), driven by the ring parameter~~ — superseded the same day (below):
+  LATCHED all along the curve.
 * ⭐⭐ **The corner**: ring 2's (nearest the curve's camera there along `t2`) and ring 3's; across the face, the side the camera's yaw OFFSET puts it on (a
   fixed setting). Where they differ: **`waistCornerTurn` 1** (default) TURNS from one to the other about the face's normal across rings 2 → 3 (smoothstep,
   the piece centred — a side face from above to below, a top face round the vertical); **0** KEEPS the corner it entered by (`waistEntryNext`, latched
@@ -1060,3 +1060,24 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the screen; the way in ≤ 1.2 % of the screen a frame (on screen throughout). A SIDE face — the corner's 54.7° off the normal, roll 0, the piece still.
   ⚠ Not staged: a slide starting from this view (the slide script sets the gizmo without a face tap); slider 0 on a top face (its way out may arc near
   overhead). ⛔ No device close. 2057 vectors.
+
+### …the view LATCHED all along the curve; the camera kept in front of the face (`1.0.80-`, 2026-10-17)
+
+> *"during its travel on ring 1 or 4, the piece does a S-shape travel. I would prefer the way in and way out of the semi-isometric view latch since the
+> beginning of the travel so that there is no S-shape travel, or whatever else you can propose — … — if the hosting face is vertical and the travel
+> starts with a camera view close to the edge of the hosting face, the semi-isometric view can push the camera on the other side of the hosting face from
+> the piece between its travel in the ring 2-ring 3 interval."* → *"build 1 following my suggestion. build 3."* — the owner.
+
+* ⛔ **The S**: over the 12 mm way in the camera's aim slid from the gizmo onto the piece WHILE its direction arced toward the corner — two motions of
+  the piece on the screen at once. ⭐⭐⭐ **Latched** (`waistLatchWeight`): with the gizmo on a face the slide view holds at EVERY ring — its weight the
+  gizmo's being on a face, eased in by the gizmo's own change (`rigShare`); never the ring parameter. The piece stays centred through the whole travel.
+  ⚠ The cost, accepted by the owner: far out (rings 1 and 4, up to 6 m off) the view is aimed at the piece and the assembly may be off the screen
+  (~38° off the axis from ring 1 over a side face, computed). Slider 0's entry corner is re-read whenever the piece is outside rings 2–3 (`waistEntryNext`).
+* ⛔ **Behind the face**: the corner's side across the face came from the camera's yaw offset, measured against the curve's halfway direction at the
+  orbit's yaw — swung by dx; past ~35° toward the face's edge that corner stood BEHIND the real face. ⭐⭐ The rig keeps the face's normal AS TAPPED
+  (`RigParams.normal`); the side across is the one IN FRONT of it (`frontSide`; the yaw offset's only across a level face), and a corner dipping below
+  ~10° over the real face is tilted back (`keepInFront`, `FRONT_MIN` 0.17).
+* ⚠ Not built (the owner chose 1 and 3): the waist's own geometry (point 2 — measured 17.5 cm at rings 2 / 3, 9 cm halfway; the device's reading owed).
+* Headless (touch, `Scene_1`, Piece3's top face): at rings 1 and 4 the slide view (35.3° down, upright); the piece did not move on the screen through the
+  dy travel and the crossing; after the gizmo tap it eased in with the gizmo's change (≤ 1.6 % of the screen a frame), then centred. ⛔ No device close.
+  2058 vectors.

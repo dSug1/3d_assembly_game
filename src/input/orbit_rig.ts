@@ -35,6 +35,8 @@ export interface RigParams {
   readonly beta: number;
   /** ⭐ (2026-10-17) turned onto a FACE (the gizmo set on one) — the slide view between rings 2 and 3 holds only then (`input/waist_view.ts`) */
   readonly faced?: boolean;
+  /** ⭐ (2026-10-17) the face's normal as TAPPED (world) — the slide view's corner is kept in front of it (`frontSide`, `keepInFront`) */
+  readonly normal?: Vec3 | null;
 }
 
 /** ⭐ No turn: the rig as it always was (the boot, a respawn, no face). */
@@ -325,7 +327,7 @@ export function rigTurnFor(cfg: GestureConfig, yaw: number, v: number, normal: V
   const q1 = rigRotationFor(cfg, yaw, normal);
   const n = normal === null ? null : normalize(normal);
   for (const q of n === null ? [q1] : [q1, qmul(qFromAxisAngle(n, Math.PI), q1)]) {
-    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta), faced: normal !== null };
+    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta), faced: normal !== null, normal: normal === null ? null : normal };
     const at = rigPlace(cfg, cand, yaw, v, 1);
     const d = Math.hypot(at[0] - here[0], at[1] - here[1], at[2] - here[2]);
     if (d < bestD - 1e-9) {
