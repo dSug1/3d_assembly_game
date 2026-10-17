@@ -830,6 +830,8 @@ export interface SceneState {
   rigTo: import("../input/orbit_rig").RigParams;
   /** ⭐ (2026-10-16) the blend's share as DRAWN — eased toward `centreBlend.progress` every frame (`easeShare`) */
   rigShare: number;
+  /** ⭐ (2026-10-17) the corner the slide view between rings 2 and 3 entered by (`waistEntryNext`) */
+  waistEntry: "A" | "B" | null;
   orbitCentreM: Vector3;
   eventGaps: Map< number, { last: number; gaps: { t: number; ms: number }[] } >;
   noise: PointerNoiseMeter;

@@ -1032,3 +1032,31 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the scripted drags). ⛔ No device close. 2044 vectors.
 * ⭐⭐ (2026-10-16, `1.0.79-`) the slide view UPRIGHT — the camera's up rolled to the world's vertical by the slide view's weight: gravity straight down the screen → `HOVER.md` §24.
 * ⛔⛔ (2026-10-17, `1.0.79-`) the orbit blocked after a slide on Piece3's top (gizmo on Piece25) — the solver's contact projection and second-part clamp → `COLLISION.md` §12undecies.
+
+### ⭐⭐⭐ The slide view between rings 2 and 3 (`1.0.80-`, 2026-10-17)
+
+> *"Modify the 2D curve as well as the position of the rings so that during the travel between the 2nd ring and the 3rd ring the camera positions itself
+> so that the view is nearly isometric (i.e. same nearest-corner-with-gravity-direction-aligned-with-screen-vertical-direction isometric view as during
+> the slide,). For that, you can relax the requirement of heights for the 2nd and 3rd rings, the offset requirements for the camera during the travel
+> between the 2nd and 3rd ring. The way in and way out shall be smooth, copied from what is currently existing. If 180 degrees camera turns are required
+> in some configurations, implement something similar as what is currently existing when hosting face is horizontal, so that there is no Z-shape movement
+> of the green piece in the screen."* → *"12 mm outside rings 2–3"*; the corner turn: *"build both and make a slider to select which in the submenu
+> CAMERA ORBIT AROUND CENTER"* — the owner.
+
+* ⭐⭐⭐ **Between rings 2 and 3, with the gizmo on a face** (`input/waist_view.ts`, `waistViewNow` in `camera_rig.ts`): the camera holds the SLIDE VIEW —
+  the face's isometric corner `(n ± t1 ± t2)/√3` (35° off the face), upright (`uprightBlend`), looking at the PIECE (centred: no Z by construction), at its
+  own distance; the camera offsets do not apply there. The face is the turned curve's halfway direction at the orbit's yaw (the hosting face's normal at the
+  yaw the gizmo was set, swung by dx); its axes gravity's — `t1` level across it (blended continuously as a face turns level), `t2 = n × t1`.
+* ⭐ **In and out** over 12 mm of finger outside rings 2 and 3 (`waistWeight`, the slide view's own span `pieceOrbitEnterMm`), smoothstep, by the slide
+  view's own arc (`hoverCameraSwing`) — driven by the ring parameter, not the slide's travel.
+* ⭐⭐ **The corner**: ring 2's (nearest the curve's camera there along `t2`) and ring 3's; across the face, the side the camera's yaw OFFSET puts it on (a
+  fixed setting). Where they differ: **`waistCornerTurn` 1** (default) TURNS from one to the other about the face's normal across rings 2 → 3 (smoothstep,
+  the piece centred — a side face from above to below, a top face round the vertical); **0** KEEPS the corner it entered by (`waistEntryNext`, latched
+  as the view starts), the way out carrying it on. Slider in CAMERA › CAMERA ORBIT AROUND CENTER. The rings and the piece's path are unchanged; not on a
+  face (the boot), nothing changes. Through a gizmo change the corner is taken on each END turn and blended by its share.
+* ⛔ Fixed while building (headless): the face's level axis switched at a threshold as a face turned level (a 5 % screen jump); the side across read off
+  the camera's place (flipped in the curve's plane); the corner chosen on the BLENDED turn (a 32 % flip mid-change).
+* Headless (touch, `Scene_1`): Piece3's TOP face — at the waist 35.3° down, roll 0, aimed at the piece; through the crossing the piece did not move on
+  the screen; the way in ≤ 1.2 % of the screen a frame (on screen throughout). A SIDE face — the corner's 54.7° off the normal, roll 0, the piece still.
+  ⚠ Not staged: a slide starting from this view (the slide script sets the gizmo without a face tap); slider 0 on a top face (its way out may arc near
+  overhead). ⛔ No device close. 2057 vectors.

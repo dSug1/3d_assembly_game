@@ -1125,6 +1125,6 @@ describe("⭐⭐⭐ the slide view UPRIGHT — gravity down the screen (2026-10-
   });
   it("⭐⭐ wired: the slide view's weight rolls the camera's up to upright (`hoverCameraBlend` gives it)", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);");
+    expect(g).toContain("const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], Math.max(hb.w, wv.w));"); // ⭐ (2026-10-17) and the slide view between rings 2 and 3
   });
 });
