@@ -7,8 +7,8 @@
  * 2–3"*, the corner turn: *"build both and make a slider to select which in the submenu CAMERA ORBIT AROUND CENTER"*).
  *
  * ⭐ Between rings 2 and 3 the camera holds the SLIDE VIEW: the face's isometric corner `(n ± t1 ± t2)/√3` (35° off the face, `HOVER.md` §14), upright
- * (`uprightBlend`), looking at the PIECE (centred — no Z by construction), at its own distance; in and out over 12 mm of finger outside the rings (the
- * slide view's own span, `pieceOrbitEnterMm`), the slide view's arc (`hoverCameraSwing`). The FACE here is the turned curve's halfway direction at the
+ * (`uprightBlend`), looking at the PIECE (centred — no Z by construction), at its own distance — ⭐ LATCHED all along the curve with the gizmo on a
+ * face (`waistLatchWeight`; ⛔ first over 12 mm of finger outside rings 2–3 — an S on rings 1 and 4), by the slide view's arc (`hoverCameraSwing`). The FACE here is the turned curve's halfway direction at the
  * orbit's yaw (`rigPlace` at `waistV`) — the hosting face's normal at the yaw the gizmo was set, swung by dx (so dx still orbits the view).
  * Its axes are gravity's: `t1` level across the face, `t2 = n × t1` (on a level face `t1` is level across the camera's heading). Two corners: the one
  * nearest the curve's camera at ring 2 (`A`) and at ring 3 (`B`); where they differ the camera either TURNS from one to the other about the face's
@@ -17,7 +17,7 @@
  * ⛔ ENGINE-FREE.
  */
 import type { GestureConfig } from "./gestureConfig";
-import { elevationGainScale, fourRingLayout } from "./orbit";
+import { fourRingLayout } from "./orbit";
 import type { Vec3 } from "../core/vec";
 
 const unit = (a: Vec3): Vec3 | null => {
@@ -39,15 +39,42 @@ export function waistRings(cfg: GestureConfig): { v2: number; v3: number } {
 }
 
 /**
- * ⭐⭐ How much of the slide view the camera takes at the ring parameter `v`: all of it between rings 2 and 3, none farther than 12 mm of finger
- * (`pieceOrbitEnterMm`, the slide view's own span, through the drag's elevation gain) outside them, smoothstep between.
+ * ⭐⭐⭐ (2026-10-17, the owner: *"during its travel on ring 1 or 4, the piece does a S-shape travel. I would prefer the way in and way out of the
+ * semi-isometric view latch since the beginning of the travel so that there is no S-shape travel"* → *"build 1 following my suggestion"*) — **LATCHED
+ * ALL ALONG THE CURVE**: the slide view's weight is the gizmo's being on a FACE — blended by its own change (`rigShare`) — at every ring, never by the
+ * ring parameter. ⛔ A ramp by `v` over 12 mm outside rings 2–3: the aim slid from the gizmo to the piece while the view arced — the S on rings 1 and 4.
+ * ⚠ The cost, accepted: far out (ring 1 or 4, up to 6 m off) the view is aimed at the piece and the assembly may be off the screen.
  */
-export function waistWeight(cfg: GestureConfig, v: number): number {
-  const { v2, v3 } = waistRings(cfg);
-  const span = Math.max(1e-6, cfg.pieceOrbitEnterMm * cfg.gainOrbitElevation * elevationGainScale(cfg));
-  if (v >= v3 && v <= v2) return 1;
-  if (v > v2) return 1 - smooth((v - v2) / span);
-  return 1 - smooth((v3 - v) / span);
+export function waistLatchWeight(fromFaced: boolean, toFaced: boolean, share: number): number {
+  if (share >= 1) return toFaced ? 1 : 0;
+  const s = Math.max(0, share);
+  return (fromFaced ? 1 - s : 0) + (toFaced ? s : 0);
+}
+
+/** ⭐ (2026-10-17) the corner a dipping corner is tilted back to — its least height over the real face (sin ≈ 10°). */
+export const FRONT_MIN = 0.17;
+
+/**
+ * ⭐⭐⭐ (2026-10-17, the owner: *"if the hosting face is vertical and the travel starts with a camera view close to the edge of the hosting face, the
+ * semi-isometric view can push the camera on the other side of the hosting face from the piece"* → *"build 3"*) — the corner's side ACROSS the face: the
+ * one IN FRONT of the face as tapped (`n0`) — its `t1` toward `n0`; across a level face nothing to choose: `fallback` (the camera's yaw offset side).
+ * ⛔ The yaw offset's side alone: once dx swung the curve's halfway direction past ~35° toward the face's edge, that corner stood behind the real face.
+ */
+export function frontSide(f: { t1: Vec3 }, n0: Vec3, fallback: number): number {
+  const k = dot(f.t1, n0);
+  return Math.abs(k) > 1e-6 ? Math.sign(k) : fallback;
+}
+
+/** ⭐ A view direction kept IN FRONT of the face as tapped: one dipping below `FRONT_MIN` over it is tilted back to it (on the plane of it and `n0`). */
+export function keepInFront(d: Vec3, n0: Vec3): Vec3 {
+  const n = unit(n0);
+  if (n === null) return d;
+  const k = dot(d, n);
+  if (k >= FRONT_MIN) return d;
+  const flat = unit([d[0] - k * n[0], d[1] - k * n[1], d[2] - k * n[2]]);
+  if (flat === null) return d;
+  const c = Math.sqrt(1 - FRONT_MIN * FRONT_MIN);
+  return [flat[0] * c + n[0] * FRONT_MIN, flat[1] * c + n[1] * FRONT_MIN, flat[2] * c + n[2] * FRONT_MIN];
 }
 
 /** ⭐ The face's frame for the view: its normal `n`, `t1` level across it, `t2 = n × t1`; a level face takes `t1` across the camera's heading `levelHeading`. */
@@ -108,8 +135,12 @@ export function waistDirection(
   return cornerDirection(f, pa + d * share);
 }
 
-/** ⭐ The corner the camera ENTERED by (for `waistCornerTurn` 0): latched as the slide view starts — from above ring 2 `A`, below ring 3 `B` — and dropped once it is gone. */
-export function waistEntryNext(prev: "A" | "B" | null, weight: number, v: number, vMid: number): "A" | "B" | null {
-  if (!(weight > 0)) return null;
-  return prev ?? (v >= vMid ? "A" : "B");
+/**
+ * ⭐ The corner the camera ENTERED rings 2–3 by (for `waistCornerTurn` 0): re-read whenever the piece is outside them — above ring 2 `A`, below ring 3
+ * `B` — and kept across them (first seen inside: the nearer ring's). ⛔ Latched once along a whole curve (the view latched all along), it froze.
+ */
+export function waistEntryNext(prev: "A" | "B" | null, v: number, v2: number, v3: number): "A" | "B" {
+  if (v > v2) return "A";
+  if (v < v3) return "B";
+  return prev ?? (v >= (v2 + v3) / 2 ? "A" : "B");
 }
