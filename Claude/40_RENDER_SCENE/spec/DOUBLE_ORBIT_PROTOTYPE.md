@@ -1145,3 +1145,20 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless: through rings 2–3 from behind ≤ 10.7° a step (the crossing; 0.4 mm of finger a step), the ring-2 jump gone. 4 vectors (each red first):
   the two-sided cone; exact continuity at the rings for swings of 60° / 90° / 115° / 150°, on the piece's side; smooth as dx carries the curve across
   edge-on; the wiring. ⛔ No device close. 2063 vectors.
+
+### …a gizmo change from a top face to a vertical face: no roll round (`1.0.80-`, 2026-10-17)
+
+> *"when I move the gizmo from the top face of piece 4 to the vertical front face of piece 10 and start dy approach from max distance, at one point the
+> camera does a 360 roll and then another 360 roll in the other direction."* → *"update the md files, deploy"* — the owner.
+
+* ⛔ **Reproduced** (headless, the change advancing with the finger): midway through the change the BLENDED curve passed over the gizmo (~86° looking
+  down) OUTSIDE rings 2 and 3 — where the swing's heading was gated off (2026-10-17, the stray roll) and the up read the piece's own heading, undefined
+  overhead: it flipped half a round in two steps (110°, then 54°), back the other way as dy reversed; the pitch offset, turned with the up, pushed the
+  view further toward the vertical.
+* ⭐⭐ **The swing's heading near the vertical everywhere** (`rigCameraFrame`: 70°–85° of elevation outside rings 2 and 3 — no unblended curve goes above
+  ~60° there, so the right / back / bottom fix stands); ⭐ **the waist's 30°–60° band faded** over a quarter of the ring 2–3 span past each ring
+  (`waistGate`; ⛔ cut at ring 3: a 26° snap mid-change); ⭐ **the piece's heading and the swing's blended as DIRECTIONS** (⛔ the short way swapped
+  sides as they passed half a round apart).
+* Headless: the worst roll step 110° → 10° per 0.25 mm of finger in the app; on the pure path 24.6° → 3.4°. ⚠ A change PARKED at 30 % while dy sweeps
+  still steps 56° (92° before) — two opposite headings at comparable weights have no good answer; the change advances with the finger, so it should not
+  arise. 1 vector (red first: 6.7°). ⛔ No device close. 2064 vectors.
