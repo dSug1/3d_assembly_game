@@ -281,14 +281,14 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   });
   it("⭐⭐⭐ the camera DERIVED FROM THE PIECE (`cameraFrameNow` on the same blended turn — `rigNow`), its up set from it", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off);");
+    expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);");
     expect(g).toContain("const o = cameraOffsetAt(camFrame.dir,");
     expect(g.split("const ring = anglesOf(camFrame.dir);").length - 1).toBe(2);
     expect(g).toContain("st.camera.upVector = new Vector3(up[0], up[1], up[2]);");
     const c = code("render/camera_rig.ts");
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
     expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
-    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
+    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
     expect(code("input/camera_frame.ts")).toContain("const base = rigFrameBetween(cfg, from, to, s, cam, off);");
     expect(c).toContain("st.rigFrom = st.rigShare >= 1 ? st.rigTo : st.rigShare <= 0 ? st.rigFrom : { ...rigNow(st), ends: rigEnds(st.rigFrom, st.rigTo, st.rigShare) };"); // the turn as it stands — never a jump
   });

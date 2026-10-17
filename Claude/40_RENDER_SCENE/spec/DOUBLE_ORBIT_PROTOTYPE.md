@@ -1216,3 +1216,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   open (not built, the owner to judge on the glass): the gizmo change advances by the FINGER's travel even while the piece is held, so the curve turns
   under a blocked piece (a relocation — *"the ring moved the piece into a part"* — or, high over the assembly, the camera sweeping 10°–16° a frame once it
   frees). The candidate fix: advance the change by the PIECE's travel.
+
+### …the second Fable audit of the orbit: #1–#5 and the open item fixed (`1.0.80-`, 2026-10-17)
+
+> *"do another audit of the orbit with a fable agent, including what we have built in the last commit … propose fixes"* → *"fix all items, update md
+> files, deploy"* — the owner.
+
+* ⭐ **The geometry behind it**: a turned curve lies in a vertical plane and rings 2/3 stand at 54.7°, so EVERY hosting face tilted more than 35.3° makes the
+  piece pass exactly over the gizmo (35°–55°: twice) — the swing is the design there, not an accident of the top face.
+* ⭐⭐⭐ **#1 — THE UP'S ROLL BOUNDED BY THE ORBIT'S TRAVEL** (`rollLimitedUp`, `input/camera_frame.ts`): at most the larger of the travel since the last frame
+  (`ROLL_PER_V` 2500° per unit of the ring — 16° per 0.25 mm of dy on `Scene_1`, the swing's designed peak 12°–14° — and `ROLL_PER_YAW` 2°/° of dx) and
+  2× the view's own turn (a jump), plus 30°/s (`ROLL_SETTLE_DEG_S`). ⛔ A1's bound — the VIEW's turn — vanishes over the gizmo, where the picture must roll
+  half a round: 126°–174° behind on faces tilted 50°–75°, unwinding over seconds. The last frame carries its orbit place (`st.cameraPrev.cam`); the frame
+  time is passed (`cameraFrameNow(…, dtMs)`).
+* ⭐⭐⭐ **#2 — THE CURVE'S PEAK ELEVATION IN CLOSED FORM** (`rigPeakElevation`): the curve is planar, `sin e = R·cos(θ − φ)` over the curve's pitch range
+  (`pitchRange`, once per ring set, ⚠ not monotone) — `R` when `φ` falls inside it. ⛔ Sampled at 33 places it missed the exact pass of faces tilted
+  60°–87° (need 0.00–0.87 for a true 90°): the own heading's flip entered the target, 177° in one step. Checked against a 20 000-sample brute force on 40
+  random blended turns (≤ 0.05°). `rigSwingNeed` = the same 75°–88° ramp on it; its single-entry cache deleted.
+* ⭐⭐ **#3** the settle per SECOND (⛔ per frame: 5°/s on the tablet, 30°/s at 120 Hz — a 180° residual took 36 s on the tablet). **#4** the end turns'
+  swing headings blended as DIRECTIONS (`blendHeadings`, now the one rule for the camera's headings; ⛔ the short way jumped 2π·s, 43° a step at s 0.1).
+  **#5** a caught blend's turns dropped by WEIGHT (< 1e-3), never by a count (⛔ 4 kept: a fifth tap swapped faces, 3.9°).
+* ⭐⭐⭐ **THE OPEN ITEM — THE GIZMO CHANGE ADVANCES BY THE TRAVEL THE SOLVER HONOURED** (`gizmoBlendTravel`, `input/orbit_rig.ts`): while the piece's place
+  is solved (no hover — `pieceSolveRuns`), the drag keeps its travel (`st.gizmoTravelPending`, mm and its dx / dy parts) and the frame advances the change
+  after `orbitFrame`: all of it while the piece moved or only waited on the work cap, the share of each axis it slid while blocked, none on a relocation;
+  a travel no solve took up (a hover, the way in) all of it, as before. Checked with real mouse drags in the app (the change completes, nothing left
+  pending). ⚠ STILL OPEN: the curve turning under a piece that MOVES can still carry it into a part — one relocation per such drag midway through the
+  change, measured the same before and after (share 0.3–0.46); a fix would test the place at the new share before taking it (one query a frame).
+* Hygiene: the swing's cache keyed by the turn OBJECT first (a `WeakMap`; the value key cost 2 µs a read), the last frame's reset in ONE home (the spawn the
+  respawn goes through — the piece switch was missing it), headers corrected (*"a roll can never run ahead of the camera"* was the wrong invariant).
+* 7 vectors (each red on the deployed code): faces tilted 35°–85° — the drawn up within 20° of the target at every 0.25 mm step (126°–174° before); the
+  peak exact (need 1 at 60°–85°) and against the brute force; the settle equal per second at 20 / 60 / 120 Hz; the headings' blend continuous across half
+  a round; a fifth tap smooth; the honoured travel and its wiring; A1's bound restated on the travel. In the app: the owner's scenario ≤ 2° of roll a
+  step. ⛔ No device close. 2079 vectors.

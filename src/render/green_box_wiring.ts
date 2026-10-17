@@ -34,7 +34,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { cameraOffsetAt, easeShare } from "../input/orbit_rig";
+import { cameraOffsetAt, easeShare, gizmoBlendTravel } from "../input/orbit_rig";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
@@ -663,6 +663,8 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     // ⭐ (2026-10-11) the held second touch's input ends with the respawn — no way in, no way out (the sphere is deleted)
     st.hold = null;
     st.pieceQ = null; // ⭐ (2026-10-13, §12) a new orbit: the solved place starts again from it
+    st.cameraPrev = null; // ⭐ (2026-10-17) a new orbit: no last frame to carry the up from (a switch, a respawn)
+    st.gizmoTravelPending = null;
     st.orbitPiecePlaced = false; // ⭐ (2026-10-14) a switch or a respawn brings a piece back to the orbit
     st.hover = null; // ⭐ (2026-10-14) a new orbit: no hover, no piece-only offset, the orbit's camera
     st.hoverPress = null;
@@ -695,7 +697,6 @@ export function respawnStuckPiece(st: SceneState): void {
   st.rigFrom = UNTURNED; // ⭐ (2026-10-16) the boot's rig, unturned
   st.rigTo = UNTURNED;
   st.rigShare = 1;
-  st.cameraPrev = null;
   syncCentre(st);
   st.pieceMoveBlocked = false;
   st.pieceStuck = STUCK_FRESH;
@@ -895,6 +896,12 @@ export function pinkRingFrame(st: SceneState): void {
  * ⭐ Every frame (prototype): the box where the orbit rig put it; the camera on ITS orbit (`input/follow_camera.ts`: twice
  * the rig's radius and height, leashed and settled per axis), looking at the yellow target — the orbit centre.
  */
+/** ⭐ (2026-10-17) the piece's place on its ring is SOLVED this frame (`orbitFrame` — or held, under a hover): the one condition, read by the frame and the drag. */
+export function pieceSolveRuns(st: SceneState): boolean {
+  const b0 = st.greenBox;
+  return !st.orbitPiecePlaced && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null;
+}
+
 export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const box = st.greenBox;
   if (box === null || st.greenBoxRigM === null) return;
@@ -953,7 +960,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // refused target: no pull-back); the camera is driven by the solved place. ⛔ The way in / out round a piece (`pieceOrbit`, `pieceEntry`, `centreReturn`) is not solved.
   const b0 = st.greenBox;
   // ⭐ (2026-10-14) a piece captured onto its goal stays placed: no solve (the camera still rides the rings)
-  if (!st.orbitPiecePlaced && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null) {
+  if (pieceSolveRuns(st)) {
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
     // ⭐ (2026-10-14) the way in after a hover keeps its share of the frame's cap (`HOVER_FADE_QUERIES`): near the hosting face the orbit's slide
@@ -977,9 +984,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       rig = { ...held.q };
       st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
     } else {
-    const rr = b0.rotationQuaternion;
+    const rr = b0!.rotationQuaternion; // `pieceSolveRuns`: the green box exists
     const relocKey = relocationKey(st.pieceQ, rr ? [rr.w, rr.x, rr.y, rr.z] : null, st.centreBlend.targetM, sceneSignature(st));
     if (st.relocateCursor.key !== relocKey) st.relocateCursor = { key: relocKey, from: 0 };
+    const q0 = st.pieceQ;
+    const raw0 = st.orbitRawPrev;
     const fr = orbitFrame(
       { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRaw: st.orbitRawPrev },
       env,
@@ -998,6 +1007,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (fr.relocated) {
       st.lastCollision = "orbit: the ring moved the piece into a part — moved to the nearest free place";
       st.lastCollisionAt = now;
+    }
+    // ⭐⭐ (2026-10-17, the second Fable audit) the gizmo change advances by the travel the solver HONOURED (`gizmoBlendTravel`) — ⛔ by the finger: the curve
+    // turned under a piece held against a part
+    const pend = st.gizmoTravelPending;
+    if (pend) {
+      const input = raw0 === null ? { yaw: 0, v: 0 } : { yaw: rig.yaw - raw0.yaw, v: rig.v - raw0.v };
+      st.centreBlend.advance(gizmoBlendTravel(pend.mm, pend.mmX, pend.mmY, input, { yaw: fr.q.yaw - q0.yaw, v: fr.q.v - q0.v }, fr.blocked, fr.relocated));
+      st.gizmoTravelPending = null;
+      syncCentre(st);
     }
     st.orbitUserV = fr.userV;
     st.pieceQ = fr.q;
@@ -1018,6 +1036,12 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // the piece shook with it (112 reversals on a headless drag where the spring had 0); and measured in the anchor's metres, a yaw near the waist
   // was spent in one frame. ⚠ The cost: on a slide the shown piece may cut a corner of the solved path for ~τ (sub-millimetre at contact speeds)
   // ⭐⭐ (2026-10-16, *"when I change the gizmo, the piece does some strange travels"*) the rig's blend share eased toward the gizmo's (it steps by pointer event)
+  // ⭐ a travel the solve did not take up (no solve this frame — a hover, the way in): all of it, as before
+  if (st.gizmoTravelPending) {
+    st.centreBlend.advance(st.gizmoTravelPending.mm);
+    st.gizmoTravelPending = null;
+    syncCentre(st);
+  }
   st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxSpring =
     st.boxSpring === null
@@ -1148,8 +1172,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let camAt: Vec3;
   let lookAt: Vec3;
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
-  const camFrame = cameraFrameNow(st, st.cameraLagged, off);
-  st.cameraPrev = camFrame; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`)
+  const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);
+  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: st.cameraLagged }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`)
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];

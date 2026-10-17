@@ -27,7 +27,7 @@ import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
 import { smoothstep01 as smooth, waistRings } from "./waist_view";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
-import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
+import { IDENTITY, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
 /** ⭐ The rig's turn: the rotation `q` fixed at the orbit's yaw `yaw0` (the gizmo's move), the rings' outward heading offset `beta`. */
 export interface RigParams {
@@ -158,44 +158,79 @@ const ringKey = (cfg: GestureConfig): string =>
 /** ⭐ (2026-10-17) the swing's heading counts fully on a curve coming within `90° − PEAK_FULL` of the vertical, not at all short of `PEAK_FROM` (`rigSwingNeed`). */
 const PEAK_FROM_RAD = (75 * Math.PI) / 180;
 const PEAK_FULL_RAD = (88 * Math.PI) / 180;
-const PEAK_SAMPLES = 32;
-let peakKey = "";
-let peakValue = 0;
+/** ⭐ The curve's pitch range is read at this many places (once per ring set — `pitchRange`). */
+const PITCH_SAMPLES = 512;
+const pitchCache = new Map<string, readonly [number, number]>();
+
+/** ⭐ The range of the UNTURNED curve's pitch (its angle above the level, `orbitOffset`) over v ∈ [0, 1] — ⚠ not monotone (rings 2/3 sit steeper than 1/4). */
+function pitchRange(cfg: GestureConfig): readonly [number, number] {
+  const key = ringKey(cfg);
+  const hit = pitchCache.get(key);
+  if (hit !== undefined) return hit;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let i = 0; i <= PITCH_SAMPLES; i++) {
+    const o = orbitOffset(cfg, 0, i / PITCH_SAMPLES, 1).offsetM;
+    const t = Math.atan2(o[1], o[0]);
+    lo = Math.min(lo, t);
+    hi = Math.max(hi, t);
+  }
+  const r = [lo, hi] as const;
+  if (pitchCache.size > 64) pitchCache.clear();
+  pitchCache.set(key, r);
+  return r;
+}
+
+/**
+ * ⭐⭐ (2026-10-17, the second Fable audit's #2) **THE TURNED CURVE'S PEAK ELEVATION, EXACT** (up or down, rad): the curve is planar — the level heading
+ * `yaw0` and the vertical, turned by `q` — so with `a` the world's vertical seen unturned, `sin e(θ) = A·cos θ + B·sin θ = R·cos(θ − φ)` over the pitch range
+ * (`pitchRange`): `R` itself if `φ` (or `φ + π`) falls inside it — the curve passes straight over (under) the gizmo — else the nearer end. ⛔ Sampled at 33
+ * places, it missed the exact pass of a face tilted 65°–87° (read 0.00–0.87 of the need for a true 90°): the own heading's half-round flip entered the
+ * camera — 177° in one step on a 75° face.
+ */
+export function rigPeakElevation(cfg: GestureConfig, p: RigParams): number {
+  const a = qRotate(qconj(p.q), [0, 1, 0]);
+  const h = level(p.yaw0);
+  const A = a[0] * h[0] + a[2] * h[2];
+  const B = a[1];
+  const R = Math.hypot(A, B);
+  if (!(R > 1e-12)) return 0;
+  const phi = Math.atan2(B, A);
+  const [lo, hi] = pitchRange(cfg);
+  if (phi + Math.ceil((lo - phi) / Math.PI - 1e-12) * Math.PI <= hi + 1e-12) return Math.asin(Math.min(1, R));
+  return Math.asin(Math.min(1, R * Math.max(Math.abs(Math.cos(lo - phi)), Math.abs(Math.cos(hi - phi)))));
+}
 
 /**
  * ⭐⭐ (2026-10-17, the owner: *"when I change the gizmo from an horizontal face to a vertical face, there is still this annoying jittery roll twice (at
  * ring 2 and ring 3) during a dy approach. I thought we had solved that issue."*) — **HOW MUCH THE CURVE NEEDS THE SWING**: by how near the vertical (up
- * or down) the turned curve comes anywhere — the orbit's yaw swings it about the vertical, so its elevations are the turn's alone. The swing turns the
- * picture over a crossing; a curve that never comes near the vertical has none to turn for, and upright is continuous all along it (⛔ midway through a
- * top → vertical change the blended curve peaked at ~50°, and the up was pulled toward the top face's swing near ring 2 and again near ring 3 — there
- * and back twice, 8°–11° a frame).
+ * or down) the turned curve comes anywhere (`rigPeakElevation` — the orbit's yaw swings it about the vertical, so its elevations are the turn's alone).
+ * The swing turns the picture over a crossing; a curve that never comes near the vertical has none to turn for, and upright is continuous all along it
+ * (⛔ midway through a top → vertical change the blended curve peaked at ~50°, and the up was pulled toward the top face's swing near ring 2 and again near
+ * ring 3 — there and back twice, 8°–11° a frame).
  */
 export function rigSwingNeed(cfg: GestureConfig, p: RigParams): number {
-  const key = `${ringKey(cfg)}|${p.q.join(",")}|${p.yaw0}`;
-  if (key !== peakKey) {
-    let peak = 0;
-    for (let i = 0; i <= PEAK_SAMPLES; i++) {
-      const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, i / PEAK_SAMPLES, 1).offsetM);
-      const l = Math.hypot(c[0], c[1], c[2]);
-      if (l > 1e-12) peak = Math.max(peak, Math.asin(Math.min(1, Math.abs(c[1]) / l)));
-    }
-    peakKey = key;
-    peakValue = peak;
-  }
-  return smooth((peakValue - PEAK_FROM_RAD) / (PEAK_FULL_RAD - PEAK_FROM_RAD));
+  return smooth((rigPeakElevation(cfg, p) - PEAK_FROM_RAD) / (PEAK_FULL_RAD - PEAK_FROM_RAD));
 }
 
 /** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
 export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
+  // ⭐ (2026-10-17, the second Fable audit) the same turn OBJECT first — the end turns persist frame to frame, and the value key cost 2 µs a read
+  const rings = ringKey(cfg);
+  const own = swingByTurn.get(p);
+  if (own !== undefined && own.rings === rings) return own.swing;
   // ⭐ keyed by the turn's VALUES and the rings: a blended turn is a new object every frame
-  const key = `${ringKey(cfg)}|${p.q.map((x) => x.toFixed(6)).join(",")}|${p.yaw0.toFixed(6)}|${p.beta.toFixed(6)}`;
-  const hit = swingCache.get(key);
-  if (hit !== undefined) return hit;
-  const swing = solveSwing(cfg, p);
-  if (swingCache.size > 256) swingCache.clear();
-  swingCache.set(key, swing);
+  const key = `${rings}|${p.q.map((x) => x.toFixed(6)).join(",")}|${p.yaw0.toFixed(6)}|${p.beta.toFixed(6)}`;
+  let swing = swingCache.get(key);
+  if (swing === undefined) {
+    swing = solveSwing(cfg, p);
+    if (swingCache.size > 256) swingCache.clear();
+    swingCache.set(key, swing);
+  }
+  swingByTurn.set(p, { rings, swing });
   return swing;
 }
+const swingByTurn = new WeakMap<RigParams, { readonly rings: string; readonly swing: RigSwing | null }>();
 
 function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   const near = level(p.yaw0 + p.beta);
@@ -276,8 +311,9 @@ export function waistGate(cfg: GestureConfig, v: number): number {
  * (`place`, the piece's place at the camera's orbit place — the SAME turn the piece is placed with, blended or not), so whatever the piece does —
  * the crossing, a gizmo change, a slide — the camera follows it exactly (⛔ a heading and tilt of their own, blended apart from the piece's place: the
  * Z-shape, the piece lost off the screen). Its UP: upright (the world's vertical seen from the camera) everywhere but between rings 2 and 3 over a
- * crossing (faded past them, `waistGate`) and near the vertical (70°–85°, anywhere), where it turns with the swing's heading (`rigSwingShare`) — the
- * view turns, the camera stays on the piece (its roll bounded by the camera's own motion where the screen draws it: `input/camera_frame.ts`). The owner's
+ * crossing (faded past them, `waistGate`) and near the vertical (70°–85°, anywhere) — both only as far as the curve comes near the vertical at all
+ * (`rigSwingNeed`) — where it turns with the swing's heading (`rigSwingShare`): the view turns, the camera stays on the piece (its roll rate bounded where
+ * the screen draws it: `input/camera_frame.ts`). The owner's
  * offsets as ever: the pitch offset away from the level (`mirroredPitchOffset`, about the camera's right), the yaw offset about the world vertical;
  * clamped at ±89° outside the swing. ⭐ Unturned it is `cameraOffset`'s direction EXACTLY, its up the upright one.
  */
@@ -302,7 +338,7 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
     rigSwingNeed(cfg, p) *
     Math.max(smooth((Math.abs(e) - STEEP_FROM_RAD) / (STEEP_FULL_RAD - STEEP_FROM_RAD)), smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD)) * waistGate(cfg, cam.v));
   // ⭐ (2026-10-17) the two headings blended as DIRECTIONS (⛔ the short way: passing half a round apart mid-change, it swapped sides — 92° of roll in one step)
-  return frameAtHeading(e, d0, Math.atan2((1 - wz) * Math.sin(hOwn) + wz * Math.sin(hSwing), (1 - wz) * Math.cos(hOwn) + wz * Math.cos(hSwing)), wz, off, lim);
+  return frameAtHeading(e, d0, blendHeadings(hOwn, hSwing, wz), wz, off, lim);
 }
 
 function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, off: CameraAngleOffset, lim: number): RigCameraFrame {
@@ -352,8 +388,8 @@ export function blendRig(a: RigParams, b: RigParams, s: number): RigParams {
   return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s), faced: e.faced === true, normal: e.normal ?? null };
 }
 
-/** ⭐ The most turns a caught blend keeps (`rigEnds` — the lightest dropped, the rest renormalised). */
-const MAX_ENDS = 4;
+/** ⭐ A turn of a caught blend lighter than this is dropped (`rigEnds`; the rest renormalised) — ⛔ a COUNT of 4: a fifth tap swapped faces at once (3.9°). */
+const END_MIN_WEIGHT = 1e-3;
 
 /**
  * ⭐⭐ (2026-10-17, the Fable audit's A2 / A6) the leaf turns a blend from `a` to `b` at `s` stands between, weighted (a turn caught mid-change expanded
@@ -372,16 +408,39 @@ export function rigEnds(a: RigParams, b: RigParams, s: number): (readonly [RigPa
   };
   add(a, 1 - w);
   add(b, w);
-  if (out.length <= MAX_ENDS) return out;
-  out.sort((x, y) => y[1] - x[1]);
-  const kept = out.slice(0, MAX_ENDS);
+  const kept = out.filter((e) => e[1] >= END_MIN_WEIGHT);
+  if (kept.length === out.length) return out;
   const total = kept.reduce((t, e) => t + e[1], 0);
-  return kept.map(([r, k]) => [r, k / total] as const);
+  return total > 0 ? kept.map(([r, k]) => [r, k / total] as const) : out;
+}
+
+/**
+ * ⭐⭐ (2026-10-17, the second Fable audit — the open item) **THE GIZMO CHANGE ADVANCES BY THE TRAVEL THE SOLVER HONOURED**: the finger's travel this frame
+ * (`fingerMm`, of it `mmX` on dx — the yaw — and `mmY` on dy — the ring), against the orbit's input (`input`, since the last frame) and the piece's solved
+ * step (`solved`): all of it while the piece moved (or only waited on the work cap — it catches up); a blocked piece, the share of each axis it slid; a
+ * relocation, none. ⛔ By the finger alone: the curve turned under a piece held against a part — relocated (*"the ring moved the piece into a part"*), or,
+ * high over the assembly, the camera swept 10°–16° a frame once it was free.
+ */
+export function gizmoBlendTravel(
+  fingerMm: number,
+  mmX: number,
+  mmY: number,
+  input: { readonly yaw: number; readonly v: number },
+  solved: { readonly yaw: number; readonly v: number },
+  blocked: boolean | null,
+  relocated: boolean,
+): number {
+  if (relocated || !(fingerMm > 0)) return 0;
+  if (blocked !== true) return fingerMm;
+  const share = (got: number, asked: number): number => (Math.abs(asked) < 1e-12 ? 1 : Math.min(1, Math.max(0, got / asked)));
+  const full = Math.hypot(mmX, mmY);
+  if (!(full > 0)) return 0;
+  return (fingerMm * Math.hypot(mmX * share(solved.yaw, input.yaw), mmY * share(solved.v, input.v))) / full;
 }
 
 /**
  * ⭐⭐ (2026-10-16, the owner: *"when I change the gizmo, the piece does some strange travels"*) — the blend's share EASED every frame toward the gizmo's own (`centreBlend.progress`, which steps by the
- * finger's travel, ~3 % a pointer event): the turn swings over continuously (⛔ stepped, a piece metres from the gizmo jerked with the camera — 6 % of
+ * travel the solver honoured — `gizmoBlendTravel` — ~3 % a pointer event): the turn swings over continuously (⛔ stepped, a piece metres from the gizmo jerked with the camera — 6 % of
  * the screen in one frame, headless). An exponential approach on the orbit's own smoothing time; at the target within 1e-4 it lands there.
  */
 export function easeShare(cur: number, target: number, dtMs: number, tauMs: number): number {
@@ -422,14 +481,21 @@ export function rigSwingHeading(cfg: GestureConfig, p: RigParams, cam: OrbitAt):
   return cam.yaw + p.beta + Math.PI * rigSwingShare(cfg, p, cam.v);
 }
 
+/** ⭐ (2026-10-17) two headings blended at `s` as DIRECTIONS — the one rule for the camera's headings (⛔ the short way jumps 2π·s as they pass half a round apart). */
+export function blendHeadings(ha: number, hb: number, s: number): number {
+  const w = Math.min(1, Math.max(0, s));
+  return Math.atan2((1 - w) * Math.sin(ha) + w * Math.sin(hb), (1 - w) * Math.cos(ha) + w * Math.cos(hb));
+}
+
 /**
  * ⭐⭐⭐ (2026-10-16, *"when I change the gizmo, the piece does some strange travels"*) — **THE CAMERA'S FRAME THROUGH A GIZMO CHANGE**: the place on the
- * BLENDED turn (`blendRig`), the swing's heading taken on each END turn — where its near / far split is stable — and blended the short way at the share
+ * BLENDED turn (`blendRig`), the swing's heading taken on each END turn — where its near / far split is stable — and blended at the share (as directions)
  * (⛔ read off the blended turn, its split flipped midway — the up turned 132° in one step while the piece's heading moved 0.03°).
  */
 export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const p = blendRig(a, b, s);
   const hb = rigSwingHeading(cfg, b, cam);
-  const hs = s >= 1 ? hb : (() => { const ha = rigSwingHeading(cfg, a, cam); return ha + wrapPi(hb - ha) * Math.max(0, s); })();
+  // ⭐ (2026-10-17, the second Fable audit's #4) blended as DIRECTIONS, as `rigCameraFrame` blends its own (⛔ the short way: a 2π·s jump as the two crossed half a round apart — 43° a step at s 0.1)
+  const hs = s >= 1 ? hb : blendHeadings(rigSwingHeading(cfg, a, cam), hb, s);
   return rigCameraFrame(cfg, p, cam, rigPlace(cfg, p, cam.yaw, cam.v, 1), off, hs);
 }
