@@ -830,6 +830,8 @@ export interface SceneState {
   rigTo: import("../input/orbit_rig").RigParams;
   /** ⭐ (2026-10-17) the camera's frame as last drawn (`cameraFrameNow` — its up's roll bounded by the camera's own turn); `null`/absent: none */
   cameraPrev?: import("../input/camera_frame").CameraFramePrev | null;
+  /** ⭐ (2026-10-17) the orbit drag's finger travel since the last frame (mm; of it on dx, on dy), to advance the gizmo change by what the solver honours (`gizmoBlendTravel`) */
+  gizmoTravelPending?: { mm: number; mmX: number; mmY: number } | null;
   /** ⭐ (2026-10-16) the blend's share as DRAWN — eased toward `centreBlend.progress` every frame (`easeShare`) */
   rigShare: number;
   orbitCentreM: Vector3;

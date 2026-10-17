@@ -7,7 +7,7 @@
 import { quadTapsAllowed } from "../input/quad_gate";
 import { orientTapShown, restingQuadPointer, shownDirection } from "./orient_cube";
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
-import { pieceRingRangeM, respawnStuckPiece } from "./green_box_wiring";
+import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_wiring";
 import { worldPlacementOf } from "../core/object_model";
 import { hoverDragStep, hoverOrbitStep, hoverPressNote, hoverRelease } from "./hover_wiring";
 import { pressSteers, pressHit } from "../input/frozen_pick";
@@ -1402,7 +1402,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   } else st.orbit.drag(dx, dy);
   // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
   // rather than on a timer.
-  st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+  // ⭐⭐ (2026-10-17) …but while the piece's place is solved (no hover), by the travel the solver HONOURS — the frame applies it (`gizmoBlendTravel`)
+  if (pieceSolveRuns(st) && st.hover === null) {
+    const p = st.gizmoTravelPending ?? { mm: 0, mmX: 0, mmY: 0 };
+    st.gizmoTravelPending = { mm: p.mm + Math.hypot(dx, dy) / mmToPx(1), mmX: p.mmX + Math.abs(dx) / mmToPx(1), mmY: p.mmY + Math.abs(dy) / mmToPx(1) };
+  } else st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
   // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
   if (st.pieceEntry !== null) st.pieceEntry = advancePieceEntry(st.pieceEntry, Math.hypot(dx, dy) / mmToPx(1));
   // ⭐ (2026-10-10) …and the view's re-aim to the piece: dx ALONE (a pure dy leaves the piece where it is on the screen)

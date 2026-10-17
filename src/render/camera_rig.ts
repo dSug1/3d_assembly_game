@@ -74,9 +74,9 @@ export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: numbe
 }
 
 /** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn; between rings 2 and 3 the
- * semi-isometric hold — the whole composition is `cameraFrameHeld` (`input/camera_frame.ts`), its up carried from the last frame drawn (`st.cameraPrev`). */
-export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null);
+ * semi-isometric hold — the whole composition is `cameraFrameHeld` (`input/camera_frame.ts`), its up carried from the last frame drawn (`st.cameraPrev` — the ORBIT's frame, whatever camera the screen shows over it: the way in, a hover). */
+export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, dtMs?: number): RigCameraFrame {
+  return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null, dtMs);
 }
 
 /**
