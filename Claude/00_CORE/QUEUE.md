@@ -23,6 +23,7 @@ round a yellow gizmo on rings, the camera follows; merged into `main`, served at
 resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to the hover; the orbited piece has goals on Piece4 (x/42).
 ⭐⭐⭐ **CURRENT THREAD — THE HOVER** → [`HOVER.md` §0](../40_RENDER_SCENE/spec/HOVER.md) (the hover as it stands, and what is open). Built
 2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand. ⭐ 10-15: §18; `COLLISION.md` §12nonies.
+⏭⏭ **NEXT (2026-10-18, branch `1.0.81-`) — BUILD THE TOP ROLL**: over a horizontal face the camera in the curve's vertical plane, its up in the plane, the half-round only within 20° of straight above (slider *top roll band*) — the agreed spec, defaults, files and the vectors to write first → [`DOUBLE_ORBIT_PROTOTYPE.md`](../40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md), last section.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
 ✅ `npm run verify`: **2079 golden vectors, all passing** — MEASURED 2026-10-17 (the count's home; 1619 below is the 2026-10-02 record).

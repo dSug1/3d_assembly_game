@@ -46,6 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-10-14)
 
+⏭⏭⏭ **2026-10-18 — START HERE** (branch `1.0.81-`): **build THE TOP ROLL** — the spec, the owner's defaults, the files and the vectors to write first are the last section of [`Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md`](Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md).
 ⭐⭐⭐ **2026-10-14 — CONTINUE FROM HERE** (branch `1.0.78-`): the orbiting prototype IS the main line; the current thread is
 **THE HOVER** — the orbited piece slid on a part's face after the orbit's approach and the quads' turn. Read
 [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU ARE HERE block, then

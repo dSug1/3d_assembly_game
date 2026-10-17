@@ -1248,3 +1248,63 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   peak exact (need 1 at 60°–85°) and against the brute force; the settle equal per second at 20 / 60 / 120 Hz; the headings' blend continuous across half
   a round; a fifth tap smooth; the honoured travel and its wiring; A1's bound restated on the travel. In the app: the owner's scenario ≤ 2° of roll a
   step. ⛔ No device close. 2079 vectors.
+
+### ⏭ NEXT BUILD — THE TOP ROLL: over a horizontal face the camera stays in the curve's vertical plane, and turns half a round only at the top (agreed 2026-10-17, branch `1.0.81-`; ⛔ NOT BUILT — build it 2026-10-18)
+
+> *"when the gizmo is on a horizontal face, between the ring 2 and ring 3, the camera passes above the piece with a slight azimuth: for example a gravity
+> aligned vertical edge of an assembly part rolls in the screen view during this camera movement. Isn't is possible to modify this camera movement so that
+> there is no azimuth i.e. the vertical edges in the scene assembly remain vertical in the screen view. To avoid having the scene upside down at the exit
+> of the movement, the camera can also roll between ring 2 and ring 3 so the scene in ring 1 and ring 4 is not upside down. Propose something."* →
+> *"update the md files with this build and these defaults so I can restart here tomorrow and we build it tomorrow."* — the owner.
+
+**What was measured (2026-10-17, `cameraFrameHeld` on `Scene_1`, a top face, yaw 0.4, the owner's offsets 2.5° / 2°)**
+* The camera leaves the curve's vertical plane by **≤ 2.1°** — ALL of it from the yaw offset (0.00° with the offsets at 0; the pitch offset alone adds
+  nothing measurable). The "slight azimuth" is real but small.
+* What turns the vertical edges is mostly the **ROLL**: the up, against the in-plane frame, goes **164° → 20° evenly over the whole stretch between rings 2
+  and 3** (`rigSwingShare`'s half-round spread over the waist, option B) — the picture turns all the way, where vertical edges are long and clearly seen.
+
+**The agreed build**
+1. **No azimuth** — the yaw offset FADED to 0 as the view gets steep (full below 60° of elevation, none past 75°; back on the way down): looking nearly
+   straight down a sideways offset means nothing. The camera then stays exactly in the curve's vertical plane — a pure pitch over the gizmo.
+2. **No roll on the way up and down** — the up stays IN THAT PLANE (the plane's normal × the view): vertical edges stay vertical on the screen (exactly in
+   the screen's centre column; elsewhere they lean symmetrically toward it by perspective, without turning). It IS the upright camera up to the top, so
+   nothing changes at rings 2 and 3.
+3. **The half-round concentrated AT THE TOP** — all 180° while the view is within the band of straight down (`topRollBandDeg`, see defaults): there the
+   vertical edges are short spokes from the screen's centre, so the roll reads as the top view turning under the camera, not the scene tilting. Below the
+   band the camera is upright on BOTH sides: rings 1 and 4 never upside down.
+   * ρ = π · smoothstep((τ + B) / (2B)), τ = the view's signed angle past the vertical within the plane (0 straight above), B = the band; the up = the
+     in-plane up turned by ρ about the view. Before the crossing the in-plane up is the upright one; past it, the in-plane up is upside down and ρ = π
+     rights it.
+   * ONLY on a curve that truly CROSSES the vertical (`rigPeakElevation` = 90°: horizontal faces, faces tilted > 35.3°); a curve that does not cross keeps
+     the upright camera. ⭐ Continuous through a gizmo change: as a crossing slides off a ring end it takes no camera place past it (ρ stays 0).
+4. **The roll limiter lets the designed top roll through** — `rollLimitedUp`'s allowance gains the band roll's own change since the last frame
+   (|ρ(now) − ρ(prev)|), so the 180° is drawn exactly as designed (⚠ else 16° / 0.25 mm caps it: the band's 180° spans ~2 mm of dy at ±20° → ~22° a step).
+5. The PITCH offset applied about the PLANE's normal (not the rolled camera right — inside the band the right turns with ρ and would push the camera out of
+   the plane), faded inside the band like the yaw offset.
+
+**Defaults (the owner's, 2026-10-17)**
+* **`topRollBandDeg` = 20°** — the half-width of the band about straight above (40° of arc in all): a slider in CAMERA › CAMERA ORBIT AROUND CENTER,
+  *"top roll band (°)"*, range 2–60, step 1, validated; 0 would be an instant flip at the top (not offered), the maximum ≈ today's spread.
+* **The half-round's direction**: the side of the camera's yaw offset (`cameraYawOffsetDeg`'s sign — the camera already leans that way).
+* The yaw-offset fade: 60° → 75° of elevation (constants, one home, beside `SWING_FROM_RAD`).
+* ⚠ Cost, accepted: the turn is fast — ~180° over 1.5–2.5 mm of finger.
+
+**How to build it (files)**
+* `src/input/orbit_rig.ts` — `rigCameraFrame` / `frameAtHeading`: for a crossing curve (`rigPeakElevation` ≥ 90° − ε) the up from the plane (its normal =
+  the turned curve's plane normal, swung by the orbit's yaw) and ρ; the offsets faded / taken about the plane normal; a pure `topRoll(cfg, τ)` for ρ.
+  ⚠ Then check what becomes DEAD: the swing heading for crossing curves (`rigSwingHeading`, `rigSwingShare`, `solveSwing` and its caches, `waistGate`, the
+  STEEP band, `rigSwingNeed`'s ramp, `blendHeadings` in `rigFrameBetween`) — delete what nothing reads (the 2026-10-17 lesson: *a retired rule that is
+  still fed is not inert*); a partial-need curve (peak 75°–88°, not crossing) keeps the upright camera.
+* `src/input/camera_frame.ts` — `rollLimitedUp`'s allowance + |Δρ|; `CameraFramePrev` already carries `cam`.
+* `src/input/gestureConfig.ts` (`topRollBandDeg`, validated), `src/render/tuning_menu.ts` (the slider).
+* The semi-isometric hold (`waistHoldDirection`) never runs on a top face (its cone: the halfway direction IS the normal) — unaffected; vertical faces
+  unaffected (no crossing).
+
+**Vectors to write FIRST (each red on today's code)**
+1. A top face, dy swept through rings 2–3 at 0.25 mm: outside the band the up's roll against the in-plane up is 0 or π (`|sin| < 0.01`) — today it turns
+   164° → 20° all the way.
+2. Inside the band ρ goes 0 → π monotonically, π/2 straight above; the sign = the yaw offset's side.
+3. The view out of the curve's plane < 0.1° everywhere, the owner's offsets on (today 2.1°).
+4. The DRAWN up (threaded `cameraPrev`) within 1° of the target through the band (the limiter lets the top roll through).
+5. The slider: default 20, validated, in CAMERA ORBIT AROUND CENTER; the band width honoured (B = 10° / 30°).
+6. Kept green: the gizmo change horizontal → vertical (`camera_frame.test.ts`), faces tilted 35°–85° (their crossing now gets the top roll), A1–A7.
