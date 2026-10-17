@@ -60,6 +60,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
 6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
 7. ⚠ The hover is not an episode yet (`SCORE.md`).
+8. ⏸ **Future improvement (2026-10-17, not built)**: a gizmo change can still turn the curve INTO a part under a piece moving freely along it (one relocation — a hop — per such drag, midway through the change); the proposal: test the place at the new share before taking it, one query a frame → `COLLISION.md` §12duodecies.
 
 
 > *"We have built up to approach (the orbit around center dy) and roll long axis into line (the quads rotation of piece). Now we need to
