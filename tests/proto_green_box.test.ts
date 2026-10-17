@@ -580,10 +580,10 @@ describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 20
     const stair = measure({ ...DEFAULT_CONFIG, orbitTopRadiusM: 1.7, orbitTopHeightM: 0.5, orbitMiddleRadiusM: 0.2, orbitMiddleHeightM: 0, orbitBottomRadiusM: 0.9, orbitBottomHeightM: -0.4 });
     // ⚠ was > 4× with three rings; the owner's fourth ring (2026-10-02) makes a short vertical cylinder at the waist, entered
     // and left more sharply — still over 2× the stair's tightest turn
-    expect(now.radius).toBeGreaterThan(2 * stair.radius);
+    expect(now.radius).toBeGreaterThan(1.8 * stair.radius); // ⭐ (2026-10-17) rings 2 and 3 at r·√2 (±0.127 m, the slide view's tilt) — the owner relaxed their heights — a shorter waist, 1.88× (was over 2×)
     // ⚠ < 2.2 with the 0.375 m / 0 m middle ring, 2.37 with 0.09 m / 0.15 m, ~190 with the FOURTH ring evenly spaced (a plateau in the
     // waist) — and 4.24 with the waist re-spanned, the outer transitions kept (the owner, 2026-10-02)
-    expect(now.speedRatio).toBeLessThan(4.5);
+    expect(now.speedRatio).toBeLessThan(5); // ⭐ (2026-10-17) 4.82 with rings 2 and 3 at r·√2 (was 4.24)
     expect(stair.speedRatio).toBeGreaterThan(3.5);
   });
 });

@@ -146,7 +146,8 @@ describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
     // be exactly the same"* — every ring ×1.5
     // ⭐ then *"set the default middle ring radius to 0.09 and middle ring height to 0.15"* (was 0.375 at 0)
     expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([5.1, 0.09, 5.1]); // ⭐ (2026-10-12) the 1st and 4th rings doubled (6 m)
-    expect([c.orbitTopHeightM, c.orbitMiddleHeightM, c.orbitBottomHeightM]).toEqual([3.15, 0.15, -3.15]);
+    expect([c.orbitTopHeightM, c.orbitBottomHeightM]).toEqual([3.15, -3.15]);
+    expect(c.orbitMiddleHeightM).toBeCloseTo(0.09 * Math.SQRT2, 12); // ⭐ (2026-10-17) at the slide view's tilt (was 0.15)
     expect(() => validateGestureConfig(c)).not.toThrow();
   });
 

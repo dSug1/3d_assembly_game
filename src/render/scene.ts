@@ -900,7 +900,6 @@ export function createScene(
   st.rigFrom = UNTURNED;
   st.rigTo = UNTURNED;
   st.rigShare = 1;
-  st.waistEntry = null;
   const bootCentre = st.centreBlend.centreM;
   st.bootCentreM = [bootCentre[0], bootCentre[1], bootCentre[2]]; // ⭐ (2026-10-13) a stuck piece's respawn puts the centre back here
   st.orbitCentreM = new Vector3(bootCentre[0], bootCentre[1], bootCentre[2]);

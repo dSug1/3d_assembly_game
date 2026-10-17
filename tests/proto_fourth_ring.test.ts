@@ -116,7 +116,10 @@ describe("⭐⭐ prototype — the waist without its plateau; the outer transiti
 
   it("⭐⭐ the waist (2nd ↔ 3rd) has NO plateau any more: it runs at the speed it is entered at — linear in height", () => {
     const L = fourRingLayout(cfg);
-    expect(L.total).toBeCloseTo(2 / 3 + 0.3 / 2.5875, 3); // ⅔ + its height step ÷ its entry tangent
+    // ⅔ + its height step ÷ its entry tangent (the mean of the even layout's tangents at rings 3 and 2) // ⭐ (2026-10-17) rings 2 and 3 at r·√2 (±0.127 m, the slide view's tilt) — the owner relaxed their heights
+    const step = cfg.orbitMiddleHeightM - cfg.orbitLowerHeightM;
+    const mean = (L.mHeight[1]! + L.mHeight[2]!) / 2;
+    expect(L.total).toBeCloseTo(2 / 3 + step / mean, 9);
     const v1 = L.knots[1]! / L.total;
     const v2 = L.knots[2]! / L.total;
     for (let i = 0; i <= 10; i++) {
