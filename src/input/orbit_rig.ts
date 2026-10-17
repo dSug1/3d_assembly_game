@@ -155,6 +155,36 @@ const ringKey = (cfg: GestureConfig): string =>
   [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM].join(",");
 
 
+/** ⭐ (2026-10-17) the swing's heading counts fully on a curve coming within `90° − PEAK_FULL` of the vertical, not at all short of `PEAK_FROM` (`rigSwingNeed`). */
+const PEAK_FROM_RAD = (75 * Math.PI) / 180;
+const PEAK_FULL_RAD = (88 * Math.PI) / 180;
+const PEAK_SAMPLES = 32;
+let peakKey = "";
+let peakValue = 0;
+
+/**
+ * ⭐⭐ (2026-10-17, the owner: *"when I change the gizmo from an horizontal face to a vertical face, there is still this annoying jittery roll twice (at
+ * ring 2 and ring 3) during a dy approach. I thought we had solved that issue."*) — **HOW MUCH THE CURVE NEEDS THE SWING**: by how near the vertical (up
+ * or down) the turned curve comes anywhere — the orbit's yaw swings it about the vertical, so its elevations are the turn's alone. The swing turns the
+ * picture over a crossing; a curve that never comes near the vertical has none to turn for, and upright is continuous all along it (⛔ midway through a
+ * top → vertical change the blended curve peaked at ~50°, and the up was pulled toward the top face's swing near ring 2 and again near ring 3 — there
+ * and back twice, 8°–11° a frame).
+ */
+export function rigSwingNeed(cfg: GestureConfig, p: RigParams): number {
+  const key = `${ringKey(cfg)}|${p.q.join(",")}|${p.yaw0}`;
+  if (key !== peakKey) {
+    let peak = 0;
+    for (let i = 0; i <= PEAK_SAMPLES; i++) {
+      const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, i / PEAK_SAMPLES, 1).offsetM);
+      const l = Math.hypot(c[0], c[1], c[2]);
+      if (l > 1e-12) peak = Math.max(peak, Math.asin(Math.min(1, Math.abs(c[1]) / l)));
+    }
+    peakKey = key;
+    peakValue = peak;
+  }
+  return smooth((peakValue - PEAK_FROM_RAD) / (PEAK_FULL_RAD - PEAK_FROM_RAD));
+}
+
 /** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
 export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   // ⭐ keyed by the turn's VALUES and the rings: a blended turn is a new object every frame
@@ -267,10 +297,10 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
   // distance, at one point the camera does a 360 roll"*) — and NEAR THE VERTICAL everywhere (70°–85°): midway through a gizmo change the blended curve passes
   // over the gizmo outside rings 2 and 3, where the piece's own heading is undefined — it flipped half a round in two steps (110°, then 54°);
   // and the waist's band fades out over a quarter of the waist's span past rings 2 and 3 (⛔ cut at ring 3: a 26° snap of roll there, mid-change)
-  const wz = Math.max(
-    smooth((Math.abs(e) - STEEP_FROM_RAD) / (STEEP_FULL_RAD - STEEP_FROM_RAD)),
-    smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD)) * waistGate(cfg, cam.v),
-  );
+  // ⭐⭐ (2026-10-17) both only as far as the curve comes near the vertical at all (`rigSwingNeed`) — a curve with no crossing keeps the upright camera
+  const wz =
+    rigSwingNeed(cfg, p) *
+    Math.max(smooth((Math.abs(e) - STEEP_FROM_RAD) / (STEEP_FULL_RAD - STEEP_FROM_RAD)), smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD)) * waistGate(cfg, cam.v));
   // ⭐ (2026-10-17) the two headings blended as DIRECTIONS (⛔ the short way: passing half a round apart mid-change, it swapped sides — 92° of roll in one step)
   return frameAtHeading(e, d0, Math.atan2((1 - wz) * Math.sin(hOwn) + wz * Math.sin(hSwing), (1 - wz) * Math.cos(hOwn) + wz * Math.cos(hSwing)), wz, off, lim);
 }
