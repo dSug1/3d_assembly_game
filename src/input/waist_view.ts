@@ -54,7 +54,7 @@ export function waistShare(cfg: GestureConfig, v: number): number | null {
  * and its heading round the normal turned the short way — half a round (a level face: one side to the other) the way `prefer` lies (the camera's yaw
  * offset side). At `share` 0 exactly `d2`, at 1 exactly `d3`.
  */
-export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null): Vec3 {
+export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null, midTilt?: number): Vec3 {
   const n = unit(n0);
   const a = unit(d2);
   const b = unit(d3);
@@ -75,10 +75,33 @@ export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: V
     az = p !== null && dot(p, w) < 0 ? -Math.PI : Math.PI;
   }
   const s = Math.min(1, Math.max(0, share));
-  const t = tA + (tB - tA) * s;
+  // ⭐ (2026-10-17) with `midTilt`, the tilt reaches it halfway (a bump, nothing at either ring — so still exactly `d2` and `d3` there)
+  const lin = tA + (tB - tA) * s;
+  const t = midTilt === undefined ? lin : lin + (midTilt - lin) * 4 * s * (1 - s);
   const z = az * s;
   const c = Math.cos(t);
   return [Math.sin(t) * n[0] + c * (Math.cos(z) * u[0] + Math.sin(z) * w[0]), Math.sin(t) * n[1] + c * (Math.cos(z) * u[1] + Math.sin(z) * w[1]), Math.sin(t) * n[2] + c * (Math.cos(z) * u[2] + Math.sin(z) * w[2])];
+}
+
+/** ⭐ The isometric corner's tilt off the face: 35.26° (`asin(1/√3)`). */
+export const ISO_TILT_RAD = Math.asin(1 / Math.sqrt(3));
+
+/** ⭐ The band past the cone over which the hold blends in (°). */
+export const WAIST_CONE_BAND_DEG = 10;
+
+/**
+ * ⭐⭐⭐ (2026-10-17, the owner: *"I think we need to trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone vs. the orientation of the camera view"* → *"build"*) — **THE HOLD ONLY BEYOND A CONE**: its weight from the angle between the camera's direction halfway between
+ * rings 2 and 3 without the hold (`nYaw` — the curve's halfway direction: the face's normal at the yaw the gizmo was set, swung by dx) and the face's
+ * normal as TAPPED (`n0`): none within `coneDeg` (the camera looks at the face — no need), full `WAIST_CONE_BAND_DEG` past it (it sees the face nearly
+ * edge-on — the hold gives a better view of the face and its coplanars), smoothstep between. Right after a tap (no dx) the halfway direction IS the
+ * face's normal: no hold; a level face is turned about by dx: never.
+ */
+export function waistConeWeight(nYaw: Vec3, n0: Vec3, coneDeg: number): number {
+  const a = unit(nYaw);
+  const b = unit(n0);
+  if (a === null || b === null) return 0;
+  const deg = (Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * 180) / Math.PI;
+  return smooth((deg - coneDeg) / WAIST_CONE_BAND_DEG);
 }
 
 /** ⭐ (2026-10-17) the least height over the real face a view direction is kept at (sin ≈ 10°). */

@@ -528,6 +528,8 @@ export interface GestureConfig {
   pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
   pieceOrbitEnterMm: number;
+  /** ⭐⭐ (2026-10-17, the owner: *"I think we need to trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone vs. the orientation of the camera view"* → *"build"*) — the cone (°) between the camera's halfway direction and the face's normal within which no semi-isometric hold is made (`waistConeWeight`); it blends in over the next 10°. */
+  waistIsoConeDeg: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
   /** ⭐⭐ (2026-10-15, the owner: *"make a slider for non-yellow quad highlight transparency (edges and fill)"*) the non-yellow quads' edge opacity (0 … 1); their fill a quarter of it (`QUAD_UNLIT_FILL_SHARE`). */
@@ -1051,6 +1053,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
+  waistIsoConeDeg: 45,
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
@@ -1212,6 +1215,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     );
   }
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
+  if (!(cfg.waistIsoConeDeg >= 0 && cfg.waistIsoConeDeg <= 90)) throw new Error(`waistIsoConeDeg (${cfg.waistIsoConeDeg}) must be in [0, 90]°.`);
   if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
   if (!(cfg.hoverDampingRatio > 0 && cfg.hoverDampingRatio <= 2)) throw new Error(`hoverDampingRatio (${cfg.hoverDampingRatio}) must be in (0, 2].`);
   if (!(cfg.hoverFrictionMmS >= 0 && cfg.hoverFrictionMmS <= 500)) throw new Error(`hoverFrictionMmS (${cfg.hoverFrictionMmS}) must be in [0, 500] mm/s.`);

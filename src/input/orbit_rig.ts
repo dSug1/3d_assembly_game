@@ -25,6 +25,7 @@
  */
 import type { GestureConfig } from "./gestureConfig";
 import { fourRingLayout, orbitOffset } from "./orbit";
+import { waistShare } from "./waist_view";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
 import { IDENTITY, cross, dot, normalize, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
 
@@ -79,7 +80,7 @@ export function rigRotationFor(cfg: GestureConfig, yawRad: number, normal: Vec3 
 /** ⭐ The level unit direction at the azimuth `a` (the orbit's own convention: x = cos, z = sin). */
 const level = (a: number): Vec3 => [Math.cos(a), 0, Math.sin(a)];
 /** ⭐ (2026-10-16) the camera's up reads the swing's heading from this elevation of the piece (blended in fully at `SWING_FULL_RAD`). */
-const SWING_FROM_RAD = (30 * Math.PI) / 180;
+const SWING_FROM_RAD = (30 * Math.PI) / 180; // ⭐ (2026-10-17) and only between rings 2 and 3 (`waistShare` — below)
 const SWING_FULL_RAD = (60 * Math.PI) / 180;
 const wrapPi = (a: number): number => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 
@@ -255,7 +256,10 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
   const hSwing = swingHeading ?? rigSwingHeading(cfg, p, cam);
   const flat = Math.hypot(d0[0], d0[2]);
   const hOwn = flat > 1e-9 ? Math.atan2(d0[2], d0[0]) : hSwing;
-  const wz = smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD));
+  // ⭐⭐ (2026-10-17, the owner: *"there is a strange mix of roll and jumps of camera positions when the gizmo is supported by a face which is on the right side,
+  // back side, or bottom side of the assembly"*) — the swing's heading only BETWEEN RINGS 2 AND 3, where a crossing over the top happens (⛔ anywhere above 30°:
+  // a crossing far out on the ring 4 stretch rolled a back face's picture, 12.5° a step at v 0.2; a narrower band squeezed the top crossing to a near-flip)
+  const wz = waistShare(cfg, cam.v) === null ? 0 : smooth((Math.abs(e) - SWING_FROM_RAD) / (SWING_FULL_RAD - SWING_FROM_RAD));
   const heading = level(hOwn + wrapPi(hSwing - hOwn) * wz);
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, d0);

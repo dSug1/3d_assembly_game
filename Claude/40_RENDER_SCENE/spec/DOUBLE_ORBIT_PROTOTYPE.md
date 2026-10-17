@@ -1106,3 +1106,25 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless (touch, `Scene_1`): aimed at the gizmo throughout (0 mm); Piece3's TOP face — at the waist 37.3° down (35.3° + the pitch offset), upright; the
   piece within ~2 % of the screen through the crossing, ≤ 0.5 % a frame from the tap to the waist; a SIDE face 21.9° down mid-turn. ⚠ The max-distance
   orbit not staged (aimed at the gizmo, as before). ⛔ No device close. 2056 vectors.
+
+### …the roll removed; the semi-isometric hold only beyond a CONE (`1.0.80-`, 2026-10-17)
+
+> *"there is a strange mix of roll and jumps of camera positions when the gizmo is supported by a face which is on the right side, back side, or bottom
+> side of the assembly. — I think we need to trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is
+> beyond a certain cone vs. the orientation of the camera view. for example, if the face is anti-normal to the camera view during the ring 2-ring 3
+> travel, there is no need to trigger the semi-isometric view. if the face normal is orthogonal to the camera view during the ring2-ring3 view, the
+> semi-isometric view shall be triggered so the user has a better view of the gizmo-supporting face and its coplanars"* → *"build"* — the owner.
+
+* ⛔ **Reproduced** (headless, the gizmo on a part's front / right / back / bottom / top face, dy swept): (1) a ROLL on the back face, 12.5° a step at
+  v 0.2 — far out on the ring 4 stretch: the camera's up took the swing's heading wherever the view stood above 30°, and a crossing there (not over the
+  top) rolled the picture; (2) the hold between rings 2 and 3 turned the camera up to 180° in 5.6 mm even where the camera already faced the face.
+* ⭐⭐ **The swing's heading only between rings 2 and 3** (`rigCameraFrame`: its 30°–60° band gated by `waistShare`) — where a crossing over the top
+  happens; elsewhere the up is the upright one. ⚠ A narrower band (60°/75°–85°) everywhere was tried and squeezed the top crossing to a near-flip.
+* ⭐⭐⭐ **The hold only BEYOND A CONE** (`waistConeWeight`): weighted by the angle between the camera's halfway direction without it (the curve's halfway
+  direction — the face's normal at the yaw the gizmo was set, swung by dx) and the face's normal AS TAPPED: none within `waistIsoConeDeg` (45°, slider
+  *"semi-isometric cone (°)"* in CAMERA › CAMERA ORBIT AROUND CENTER), full 10° past it. When held, it turns about the REAL face's normal and its tilt
+  reaches the slide view's 35.3° against the real face halfway (`waistTurn`'s `midTilt`, `ISO_TILT_RAD`) — still exactly the camera's own direction at
+  either ring. ⭐ Right after a tap (no dx) the halfway direction IS the face's normal: no hold; a top / bottom face is turned about by dx: never — the
+  camera crosses over (under) it behind the piece, the view turning about the piece (the swing).
+* Headless sweep (0.4 mm of finger a step): right 2.8°, back 1.7° (the roll gone); front 15°, bottom 8° (18° of up), top 13° (27° of up) — the waist's
+  own crossing behind the piece (as on any vertical face) and the swing over / under a level face. ⛔ No device close. 2059 vectors.

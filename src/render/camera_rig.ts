@@ -10,7 +10,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, waistV, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
-import { keepInFront, waistRings, waistShare, waistTurn } from "../input/waist_view";
+import { ISO_TILT_RAD, keepInFront, waistConeWeight, waistRings, waistShare, waistTurn } from "../input/waist_view";
 import { slerpDir, uprightBlend } from "../input/hover";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -85,17 +85,22 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
   const s = st.rigShare;
   const faced = s >= 1 ? (st.rigTo.faced ? 1 : 0) : (st.rigFrom.faced ? 1 - s : 0) + (st.rigTo.faced ? s : 0);
   if (share === null || !(faced > 0)) return base;
+  const p = rigNow(st);
+  const n0 = p.normal ?? st.rigTo.normal ?? null;
+  if (!n0) return base;
+  // ⭐⭐⭐ (2026-10-17, the owner: *"I think we need to trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone vs. the orientation of the camera view"* → *"build"*) — the hold only BEYOND the cone: within it the camera looks at the face (face-on halfway) and stays behind the piece
+  const nYaw = rigPlace(st.cfg, p, cam.yaw, waistV(st.cfg), 1);
+  const hold = faced * waistConeWeight(nYaw, n0, st.cfg.waistIsoConeDeg);
+  if (!(hold > 0)) return base;
   const { v2, v3 } = waistRings(st.cfg);
   const d2 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v2 }, off).dir;
   const d3 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v3 }, off).dir;
-  const p = rigNow(st);
   const side = (st.cfg.cameraYawOffsetDeg >= 0 ? 1 : -1) * (Math.PI / 2);
-  let dir = waistTurn(rigPlace(st.cfg, p, cam.yaw, waistV(st.cfg), 1), d2, d3, share, [Math.cos(cam.yaw + p.beta + side), 0, Math.sin(cam.yaw + p.beta + side)]);
-  const n0 = p.normal ?? st.rigTo.normal ?? null;
-  if (n0) dir = keepInFront(dir, n0);
-  // the gizmo's change from no face: blended in by its share
-  if (faced < 1) dir = slerpDir(base.dir, dir, faced);
-  return { dir, up: uprightBlend(base.up, dir, faced) };
+  // ⭐ about the REAL face's normal, its tilt reaching the slide view's 35.3° against it halfway — a better view of the face and its coplanars
+  let dir = waistTurn(n0, d2, d3, share, [Math.cos(cam.yaw + p.beta + side), 0, Math.sin(cam.yaw + p.beta + side)], ISO_TILT_RAD);
+  dir = keepInFront(dir, n0);
+  if (hold < 1) dir = slerpDir(base.dir, dir, hold);
+  return { dir, up: uprightBlend(base.up, dir, hold) };
 }
 
 /**

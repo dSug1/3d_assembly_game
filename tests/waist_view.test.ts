@@ -84,12 +84,47 @@ describe("⭐⭐⭐ the slide view's angle between rings 2 and 3, the camera on 
   });
   it("⭐⭐ wired: the camera's frame turns between rings 2 and 3 with the gizmo on a face, aimed at the gizmo; the latched slide view, its arc and the keep slider are gone", () => {
     const c = code("render/camera_rig.ts");
-    expect(c).toContain("let dir = waistTurn(rigPlace(st.cfg, p, cam.yaw, waistV(st.cfg), 1), d2, d3, share,");
-    expect(c).toContain("if (n0) dir = keepInFront(dir, n0);");
+    expect(c).toContain("let dir = waistTurn(n0, d2, d3, share,"); // ⭐ (2026-10-17) about the REAL face's normal (the cone rule)
+    expect(c).toContain("dir = keepInFront(dir, n0);");
     expect(c).not.toContain("waistViewNow");
     const g = code("render/green_box_wiring.ts");
     expect(g).not.toContain("waistViewNow"); // ⛔ aimed at the piece all along: the assembly off the screen, a jump at max distance
     expect(code("input/gestureConfig.ts")).not.toContain("waistCornerTurn");
     expect(code("input/orbit_rig.ts")).toContain("faced: normal !== null, normal: normal === null ? null : normal");
+  });
+});
+
+describe("⭐⭐⭐ the semi-isometric hold only beyond a CONE (2026-10-17, the owner: *\"trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone vs. the orientation of the camera view\"* → *\"build\"*)", () => {
+  it("⭐⭐⭐ its weight: none while the camera's halfway direction is within the cone of the face's normal (it looks at the face), full 10° past it, smooth between", async () => {
+    const { waistConeWeight } = await import("../src/input/waist_view");
+    const n0: Vec3 = [0, 0, 1];
+    const at = (deg: number): Vec3 => [Math.sin(deg / DEG), 0, Math.cos(deg / DEG)];
+    expect(waistConeWeight(at(0), n0, 45)).toBe(0); // face-on: no need
+    expect(waistConeWeight(at(45), n0, 45)).toBe(0);
+    expect(waistConeWeight(at(55), n0, 45)).toBe(1);
+    expect(waistConeWeight(at(90), n0, 45)).toBe(1); // edge-on: the hold
+    const mid = waistConeWeight(at(50), n0, 45);
+    expect(mid).toBeGreaterThan(0.3);
+    expect(mid).toBeLessThan(0.7);
+  });
+  it("⭐⭐ held, the tilt reaches the slide view's 35.3° against the REAL face halfway between the rings — still exactly the camera's own direction at either ring", async () => {
+    const { waistTurn, ISO_TILT_RAD } = await import("../src/input/waist_view");
+    const n0: Vec3 = [0, 0, 1];
+    const d2: Vec3 = [0.9, 0.42, 0.1], d3: Vec3 = [0.9, -0.42, 0.1]; // nearly edge-on to the real face
+    const s0 = waistTurn(n0, d2, d3, 0, null, ISO_TILT_RAD), s1 = waistTurn(n0, d2, d3, 1, null, ISO_TILT_RAD);
+    const u = (v: Vec3) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
+    for (let i = 0; i < 3; i++) { expect(s0[i]).toBeCloseTo(u(d2)[i]!, 12); expect(s1[i]).toBeCloseTo(u(d3)[i]!, 12); }
+    expect(Math.asin(dot(waistTurn(n0, d2, d3, 0.5, null, ISO_TILT_RAD), n0)) * DEG).toBeCloseTo(35.264, 3);
+  });
+  it("⭐ the cone a slider in CAMERA ORBIT AROUND CENTER, 45° by default, validated; wired on the real face's normal", () => {
+    expect(DEFAULT_CONFIG.waistIsoConeDeg).toBe(45);
+    const m = code("render/tuning_menu.ts");
+    const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
+    const at = m.indexOf('"waistIsoConeDeg"');
+    expect(at).toBeGreaterThan(sub);
+    expect(m.lastIndexOf("title:", at)).toBe(sub);
+    const c = code("render/camera_rig.ts");
+    expect(c).toContain("const hold = faced * waistConeWeight(nYaw, n0, st.cfg.waistIsoConeDeg);");
+    expect(c).toContain("let dir = waistTurn(n0, d2, d3, share,");
   });
 });

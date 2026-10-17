@@ -542,3 +542,4 @@ floor** — marked seats where a piece may be set down, each a known target the 
 * ⭐⭐⭐ (2026-10-17, `1.0.80-`) between rings 2 and 3 the orbit's camera already holds the SLIDE VIEW (the nearest isometric corner, upright, on the piece) — a slide should start without a camera move → `DOUBLE_ORBIT_PROTOTYPE.md` (2026-10-17).
 * ⭐ (2026-10-17, `1.0.80-`) the slide view now LATCHED all along the orbit's curve with the gizmo on a face, kept in front of the face → `DOUBLE_ORBIT_PROTOTYPE.md` (2026-10-17).
 * ⭐⭐ (2026-10-17, `1.0.80-`) the latched slide view replaced: the orbit's camera always on the gizmo, rings 2 and 3 at the slide view's tilt (±r·√2) and the angle held between them → `DOUBLE_ORBIT_PROTOTYPE.md` (2026-10-17).
+* ⭐ (2026-10-17, `1.0.80-`) the semi-isometric hold between rings 2 and 3 only beyond a cone (45°) of the face's normal; the stray roll on right / back / bottom faces removed → `DOUBLE_ORBIT_PROTOTYPE.md` (2026-10-17).
