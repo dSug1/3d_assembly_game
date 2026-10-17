@@ -10,7 +10,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
 import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, waistV, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
-import { ISO_TILT_RAD, keepInFront, waistConeWeight, waistRings, waistShare, waistTurn } from "../input/waist_view";
+import { waistConeWeight, waistHoldDirection, waistRings, waistShare } from "../input/waist_view";
 import { slerpDir, uprightBlend } from "../input/hover";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -96,9 +96,9 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
   const d2 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v2 }, off).dir;
   const d3 = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, s, { yaw: cam.yaw, v: v3 }, off).dir;
   const side = (st.cfg.cameraYawOffsetDeg >= 0 ? 1 : -1) * (Math.PI / 2);
-  // ⭐ about the REAL face's normal, its tilt reaching the slide view's 35.3° against it halfway — a better view of the face and its coplanars
-  let dir = waistTurn(n0, d2, d3, share, [Math.cos(cam.yaw + p.beta + side), 0, Math.sin(cam.yaw + p.beta + side)], ISO_TILT_RAD);
-  dir = keepInFront(dir, n0);
+  // ⭐ about the REAL face's normal on the PIECE'S side, its tilt reaching the slide view's 35.3° halfway, kept over the face — both faded to nothing at
+  // either ring and edge-on (`waistHoldDirection`) — ⛔ always the front: a camera coming from behind the face jumped at ring 2 and at ring 3
+  let dir = waistHoldDirection(nYaw, n0, d2, d3, share, [Math.cos(cam.yaw + p.beta + side), 0, Math.sin(cam.yaw + p.beta + side)]);
   if (hold < 1) dir = slerpDir(base.dir, dir, hold);
   return { dir, up: uprightBlend(base.up, dir, hold) };
 }
