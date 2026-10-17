@@ -83,14 +83,11 @@ describe("⭐⭐⭐ the slide view's angle between rings 2 and 3, the camera on 
     expect(keepInFront(front, n0)).toEqual(front);
   });
   it("⭐⭐ wired: the camera's frame turns between rings 2 and 3 with the gizmo on a face, aimed at the gizmo; the latched slide view, its arc and the keep slider are gone", () => {
-    const c = code("render/camera_rig.ts");
-    
-    
-    expect(c).not.toContain("waistViewNow");
+    expect(code("render/camera_rig.ts")).not.toContain("waistViewNow");
     const g = code("render/green_box_wiring.ts");
     expect(g).not.toContain("waistViewNow"); // ⛔ aimed at the piece all along: the assembly off the screen, a jump at max distance
     expect(code("input/gestureConfig.ts")).not.toContain("waistCornerTurn");
-    expect(code("input/orbit_rig.ts")).toContain("faced: normal !== null, normal: normal === null ? null : normal");
+    expect(code("input/orbit_rig.ts")).toContain("faced: normal !== null, normal };"); // the turn knows its face (the hold reads it)
   });
 });
 
@@ -123,8 +120,7 @@ describe("⭐⭐⭐ the semi-isometric hold only beyond a CONE (2026-10-17, the 
     const at = m.indexOf('"waistIsoConeDeg"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
-    const c = code("render/camera_rig.ts");
-    expect(c).toContain("const hold = faced * waistConeWeight(nYaw, n0, st.cfg.waistIsoConeDeg);");
+    expect(code("input/camera_frame.ts")).toContain("return waistConeWeight(rigPlace(cfg, r, cam.yaw, vMid, 1), r.normal, cfg.waistIsoConeDeg);");
   });
 });
 
@@ -151,9 +147,8 @@ describe("⭐⭐⭐ a vertical face approached from BEHIND (2026-10-17, the owne
       for (let i = 0; i < 3; i++) { expect(a[i]).toBeCloseTo(u(d2)[i]!, 9); expect(b[i]).toBeCloseTo(u(d3)[i]!, 9); }
       let prev = a;
       for (let s = 0.01; s <= 1.0001; s += 0.01) { const d = waistHoldDirection(nYaw, n0, d2, d3, s, null); expect(angle(d, prev)).toBeLessThan(4); prev = d; }
-      // and on the PIECE's side of the face halfway (behind it when the curve comes from behind)
-      const mid = waistHoldDirection(nYaw, n0, d2, d3, 0.5, null);
-      expect(Math.sign(dot(mid, n0))).toBe(Math.sign(dot(nYaw, n0)) || Math.sign(dot(mid, n0)));
+      // and on the PIECE's side of the face halfway (behind it when the curve comes from behind) — edge-on (90°) has no side
+      if (deg !== 90) expect(Math.sign(dot(waistHoldDirection(nYaw, n0, d2, d3, 0.5, null), n0))).toBe(Math.sign(dot(nYaw, n0)));
     }
   });
   it("⭐⭐ dx carrying the curve across the face's plane (edge-on): the hold's direction changes smoothly — the side's switch faded to nothing there", async () => {
@@ -170,6 +165,6 @@ describe("⭐⭐⭐ a vertical face approached from BEHIND (2026-10-17, the owne
     }
   });
   it("⭐ wired: the camera's frame holds through `waistHoldDirection`", () => {
-    expect(code("render/camera_rig.ts")).toContain("let dir = waistHoldDirection(nYaw, n0, d2, d3, share,");
+    expect(code("input/camera_frame.ts")).toContain("const held = waistHoldDirection(rigPlace(cfg, r, cam.yaw, vMid, 1), r.normal!, d2, d3, share, waistPrefer(cfg, cam.yaw, r.beta), path);");
   });
 });

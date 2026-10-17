@@ -13,6 +13,8 @@
  * the turn starts and ends exactly on the camera's own directions at the rings — continuous, no S; the piece drifts ≤ 3.3° on the screen (computed), its
  * sideways part being the camera's yaw offset (semi-isometric: the tilt is the corner's, not its 45° across). ⛔ Deleted: the slide view latched all along
  * the curve aimed at the PIECE (the assembly off the screen far out, a jump at max distance), its 12 mm arc (an S), the keep-corner slider.
+ * ⭐ Since: the hold only BEYOND A CONE of the face's normal (`waistConeWeight`), on the PIECE'S side of the face (`waistHoldDirection`), turned the way
+ * the camera's own path turns (`waistTurn`'s `path`), evaluated on each end of a gizmo change and blended (`input/camera_frame.ts`).
  * ⛔ ENGINE-FREE.
  */
 import type { GestureConfig } from "./gestureConfig";
@@ -25,9 +27,20 @@ const unit = (a: Vec3): Vec3 | null => {
 };
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const smooth = (t: number): number => {
+/** ⭐ The smoothstep on [0, 1] (clamped) — the one home of the orbit rig's and the waist's easing. */
+export function smoothstep01(t: number): number {
   const u = Math.min(1, Math.max(0, t));
   return u * u * (3 - 2 * u);
+}
+const smooth = smoothstep01;
+/** ⭐ The great-circle step from unit `a` toward unit `b` by `t` (opposite: `b` past halfway). */
+const slerpUnit = (a: Vec3, b: Vec3, t: number): Vec3 => {
+  const th = Math.acos(Math.max(-1, Math.min(1, dot(a, b))));
+  const sa = Math.sin(th);
+  if (sa < 1e-9) return t < 0.5 ? a : b;
+  const w1 = Math.sin(th * (1 - t)) / sa;
+  const w2 = Math.sin(th * t) / sa;
+  return [a[0] * w1 + b[0] * w2, a[1] * w1 + b[1] * w2, a[2] * w1 + b[2] * w2];
 };
 
 /** ⭐ The height of rings 2 and 3 for a ring radius `r`: `r·√2` — the direction to them 54.7° off the face's normal, the isometric corner's tilt. */
@@ -51,10 +64,12 @@ export function waistShare(cfg: GestureConfig, v: number): number | null {
 
 /**
  * ⭐⭐⭐ The camera's direction between rings 2 and 3: from `d2` (its direction at ring 2) to `d3` (at ring 3), its TILT off the face (normal `n`) blended
- * and its heading round the normal turned the short way — half a round (a level face: one side to the other) the way `prefer` lies (the camera's yaw
- * offset side). At `share` 0 exactly `d2`, at 1 exactly `d3`.
+ * and its heading round the normal turned the way the camera's own PATH turns (`path`: its directions from ring 2 to ring 3, `d2` first, `d3` last —
+ * the turn summed step by step), else the short way — half a round the way `prefer` lies (the camera's yaw offset side). At `share` 0 exactly `d2`,
+ * at 1 exactly `d3`. ⛔ (2026-10-17, the Fable audit's A3) the short way only: on a face tilted 22°–35° the ends lie half a round apart with dx behind the
+ * face, and the way flipped with the offsets' residual — 110° of camera in one 0.05° step of dx.
  */
-export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null, midTilt?: number): Vec3 {
+export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null, midTilt?: number, path?: readonly Vec3[]): Vec3 {
   const n = unit(n0);
   const a = unit(d2);
   const b = unit(d3);
@@ -65,12 +80,15 @@ export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: V
   };
   const u = flat(a);
   const fb = flat(b);
-  if (u === null || fb === null) return share < 0.5 ? a : b;
+  // ⛔ (the Fable audit's A7) a hard switch at share 0.5 when a ring direction lay along the normal
+  if (u === null || fb === null) return slerpUnit(a, b, Math.min(1, Math.max(0, share)));
   const w = cross(n, u);
   const tA = Math.asin(Math.max(-1, Math.min(1, dot(a, n))));
   const tB = Math.asin(Math.max(-1, Math.min(1, dot(b, n))));
   let az = Math.atan2(dot(fb, w), dot(fb, u));
-  if (Math.abs(Math.abs(az) - Math.PI) < 1e-6) {
+  const along = path === undefined ? null : pathTurn(path, flat, n);
+  if (along !== null) az = along;
+  else if (Math.abs(Math.abs(az) - Math.PI) < 1e-6) {
     const p = prefer === null ? null : flat(prefer);
     az = p !== null && dot(p, w) < 0 ? -Math.PI : Math.PI;
   }
@@ -81,6 +99,42 @@ export function waistTurn(n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: V
   const z = az * s;
   const c = Math.cos(t);
   return [Math.sin(t) * n[0] + c * (Math.cos(z) * u[0] + Math.sin(z) * w[0]), Math.sin(t) * n[1] + c * (Math.cos(z) * u[1] + Math.sin(z) * w[1]), Math.sin(t) * n[2] + c * (Math.cos(z) * u[2] + Math.sin(z) * w[2])];
+}
+
+/** ⭐ The turn about `n` along `path` (flattened by `flat`), summed step by step; `null` if a step passes too near the normal (no heading to read). */
+function pathTurn(path: readonly Vec3[], flat: (d: Vec3) => Vec3 | null, n: Vec3): number | null {
+  if (path.length < 2) return null;
+  let prev: Vec3 | null = null;
+  let sum = 0;
+  for (const d of path) {
+    if (Math.hypot(d[0], d[1], d[2]) < 1e-12 || Math.abs(dot(unit(d)!, n)) > 0.995) return null;
+    const f = flat(d);
+    if (f === null) return null;
+    if (prev !== null) sum += Math.atan2(dot(cross(prev, f), n), dot(prev, f));
+    prev = f;
+  }
+  return sum;
+}
+
+/**
+ * ⭐⭐ (2026-10-17, the Fable audit's A3) the hold's weight by how far ring 2's and ring 3's directions (`d2`, `d3`) stand off the face's normal `n`
+ * (either way): full beyond ~26° (`|n·d|` ≤ 0.9), none within ~14° (0.97) — at the normal the turn about it has no heading to read, and the camera
+ * already sees the face square there (⛔ on a face tilted 22°–35°, ring 3 fell on the normal with dx behind the face: 110° of camera in one 0.05° of dx).
+ */
+export function waistPoleFade(n0: Vec3, d2: Vec3, d3: Vec3): number {
+  const n = unit(n0);
+  const a = unit(d2);
+  const b = unit(d3);
+  if (n === null || a === null || b === null) return 0;
+  return smooth((POLE_NONE - Math.max(Math.abs(dot(a, n)), Math.abs(dot(b, n)))) / (POLE_NONE - POLE_FULL));
+}
+const POLE_FULL = 0.9;
+const POLE_NONE = 0.97;
+
+/** ⭐ (2026-10-17) the side `waistTurn` falls back to: the camera's yaw-offset side of the rings' heading at the orbit's yaw (`beta`: the rig's). */
+export function waistPrefer(cfg: GestureConfig, yaw: number, beta: number): Vec3 {
+  const side = (cfg.cameraYawOffsetDeg >= 0 ? 1 : -1) * (Math.PI / 2);
+  return [Math.cos(yaw + beta + side), 0, Math.sin(yaw + beta + side)];
 }
 
 /** ⭐ The isometric corner's tilt off the face: 35.26° (`asin(1/√3)`). */
@@ -124,8 +178,9 @@ export function keepInFront(d: Vec3, n0: Vec3): Vec3 {
   return [flat[0] * c + n[0] * FRONT_MIN, flat[1] * c + n[1] * FRONT_MIN, flat[2] * c + n[2] * FRONT_MIN];
 }
 
-/** ⭐ How far past edge-on the PIECE'S SIDE of the face counts fully (the side's sign faded over it): sin ≈ 17°. */
-export const SIDE_SOFT = 0.3;
+/** ⭐ How far past edge-on the PIECE'S SIDE of the face counts fully (the side's sign faded over it): sin ≈ 6° (⛔ 17°: the owner's own case — the face
+ * edge-on to the view — got no lift at all, 20° at 10° off; the Fable audit's A4, *"narrow it"*). */
+export const SIDE_SOFT = 0.1;
 
 /**
  * ⭐⭐⭐ (2026-10-17, the owner: *"in case the hosting face is vertical, if I orbit dy to approach from behind the face, there are two discontinuities during the travel"*) — **THE HOLD'S DIRECTION**: turned from `d2` to `d3` about the face's normal ON THE PIECE'S SIDE (the side
@@ -133,15 +188,15 @@ export const SIDE_SOFT = 0.3;
  * and 38° of roll), its tilt reaching the slide view's 35.3° halfway, and kept ~10° over the face on that side — both FADED: by the bump `4s(1−s)` (nothing
  * at either ring, so exactly `d2` and `d3` there) and by how clearly the curve is on one side (`SIDE_SOFT` — nothing edge-on, where dx switches the side).
  */
-export function waistHoldDirection(nYaw: Vec3, n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null): Vec3 {
+export function waistHoldDirection(nYaw: Vec3, n0: Vec3, d2: Vec3, d3: Vec3, share: number, prefer: Vec3 | null, path?: readonly Vec3[]): Vec3 {
   const a = unit(nYaw);
   const b = unit(n0);
-  if (a === null || b === null) return waistTurn(nYaw, d2, d3, share, prefer);
+  if (a === null || b === null) return waistTurn(nYaw, d2, d3, share, prefer, undefined, path);
   const k = dot(a, b);
   const sideSign = k >= 0 ? 1 : -1;
   const nS: Vec3 = [b[0] * sideSign, b[1] * sideSign, b[2] * sideSign];
   const soft = Math.min(1, Math.abs(k) / SIDE_SOFT);
-  const dir = waistTurn(nS, d2, d3, share, prefer, ISO_TILT_RAD * soft);
+  const dir = waistTurn(nS, d2, d3, share, prefer, ISO_TILT_RAD * soft, path);
   const s = Math.min(1, Math.max(0, share));
   const g = 4 * s * (1 - s) * soft;
   if (!(g > 0)) return dir;

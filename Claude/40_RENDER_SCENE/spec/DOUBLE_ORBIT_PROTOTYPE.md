@@ -1162,3 +1162,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless: the worst roll step 110° → 10° per 0.25 mm of finger in the app; on the pure path 24.6° → 3.4°. ⚠ A change PARKED at 30 % while dy sweeps
   still steps 56° (92° before) — two opposite headings at comparable weights have no good answer; the change advances with the finger, so it should not
   arise. 1 vector (red first: 6.7°). ⛔ No device close. 2064 vectors.
+
+### …the Fable audit of `1.0.80-`: A1–A7 fixed (`1.0.80-`, 2026-10-17)
+
+> *"use Fable model agent to audit what we have built in this branch … propose fixes"* → *"build A1 to A7, A4: narrow it, update the md files, deploy"*
+> — the owner.
+
+* ⭐⭐⭐ **THE CAMERA'S FRAME IS ONE PURE FUNCTION** (`input/camera_frame.ts`, `cameraFrameHeld`; `render/camera_rig.ts`'s `cameraFrameNow` only calls
+  it): the composition the screen shows is the one the vectors measure (⛔ it lived in the render layer).
+* ⭐⭐⭐ **A1 — THE UP'S ROLL BOUNDED BY THE CAMERA'S OWN TURN** (`rollLimitedUp`): the direction stays a pure function of the orbit; the up is carried
+  from the last frame drawn (`st.cameraPrev`) onto the new view and rolled toward the upright target by at most **2× the camera's own turn** (+ 0.25° a
+  frame, so a camera left still settles upright) — the short way, so it can never spin round. ⛔ The audit found my *"should not arise"* false: a gizmo
+  change tapped mid-distance reaches rings 2–3 at 8–40 % and the target's up flipped 15°–42° (in the app up to 110°) a 0.25 mm step, passing near the
+  vertical. ⚠ Three stateless cures were built and measured first and REFUSED (a branch chosen by the last up, the swing read off the blended curve,
+  the swing scaled by the curve's peak elevation) — each moved the jump; *an up passing near the vertical must roll half a round; only its RATE can be
+  chosen.* Respawn forgets the last frame.
+* ⭐⭐ **A2 / A6 — THE HOLD ON EACH END OF A GIZMO CHANGE**: evaluated with each end's own face and blended at the share (⛔ the old face swapped for the new
+  at the first finger move: 8°–18°); a turn caught mid-change carries the faces it was between, weighted (`rigEnds`, at most 4) — a tap mid-change keeps
+  exactly the hold it had (⛔ stored faceless: the hold dropped at once). `blendRig` keeps the nearer end's face.
+* ⭐⭐ **A3 — THE HOLD FADED NEAR THE NORMAL** (`waistPoleFade`: full while ring 2's and ring 3's directions stand > ~26° off the face's normal, none within
+  ~14°) — on a face tilted 22°–35°, ring 3 fell on the normal with dx behind it, where the turn about it has no heading: 27°–110° in one 0.05° of dx. And
+  the turn's way read off the camera's own PATH from ring 2 to ring 3 (`waistTurn`'s `path`), the short way only as a fallback.
+* ⭐ **A4 — THE SIDE'S BAND NARROWED** (`SIDE_SOFT` 0.3 → 0.1, ~17° → ~6°, *"narrow it"*): 10° off edge-on the lift is 35° (was 20°); exactly edge-on still
+  none (no side to lift toward); dx across edge-on ≤ 0.4° per 0.05°.
+* ⭐ **A5** the up's roll toward upright faded with the hold's bump — nothing at rings 2 and 3 (⛔ 12.9° of up at ring 3 on a tilted face). **A7** a ring
+  direction along the normal: a great-circle step, never a switch at share 0.5 (⛔ 90°).
+* Hygiene: `ring23` deleted (`waistRings` the one home), `smoothstep01` exported once for the rig and the waist, the yaw-offset side in `waistPrefer`, a
+  stale doc (`frontSide`) and headers corrected, the `waist_view` tautology and two assertions that could not fail fixed, `proto_fourth_ring`'s layout
+  pinned to a NUMBER again (0.7778).
+* Measured (vectors, 0.25 mm of finger a step): A1 up per step ≤ 3× the view's own turn (≤ 16°, the turn ≤ 7.5°), upright at the end (≤ 0.02°); A2 ≤ 0.5°
+  (was 18.2°); A3 ≤ 0.2° (110°); A4 35.3° at 10° off edge-on (20.4°); A5 1.2° (13°); A6 0.00°; A7 smooth (90°). In the app, the owner's scenario (Piece4's
+  top → Piece10's front, dy from max distance): ≤ 7.1° of roll a step (10° at the last build, 110° before). 8 vectors (all 8 red first). ⛔ No device close.
+  2072 vectors.
