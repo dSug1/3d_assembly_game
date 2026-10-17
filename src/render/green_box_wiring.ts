@@ -33,7 +33,7 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
-import { cameraFrameNow, ringPlaceNow, syncCentre, waistViewNow } from "./camera_rig";
+import { cameraFrameNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { cameraOffsetAt, easeShare } from "../input/orbit_rig";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
@@ -1231,17 +1231,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.hudDirty = true;
   }
   // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
-  // ⭐⭐⭐ (2026-10-17) the slide view between rings 2 and 3 — in the centre orbit (not around the piece, nor on its way in or out)
-  const wv = po === null && st.pieceEntry === null && st.centreReturn === null ? waistViewNow(st, pp, camAt, lookAt) : { camAt, lookAt, w: 0 };
-  camAt = wv.camAt;
-  lookAt = wv.lookAt;
   const hb = hoverCameraBlend(st, camAt, lookAt);
   camAt = hb.camAt;
   lookAt = hb.lookAt;
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
   // ⭐⭐⭐ (2026-10-16, *"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen"*) — rolled to upright by the slide view's weight
-  const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], Math.max(hb.w, wv.w));
+  const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);
   if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));

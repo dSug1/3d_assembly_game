@@ -270,7 +270,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const c = code("render/camera_rig.ts");
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
     expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
-    expect(c).toContain("return rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);");
+    expect(c).toContain("const base = rigFrameBetween(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off);"); // ⭐ (2026-10-17) turned between rings 2 and 3 (`waist_view.ts`)
     expect(c).toContain("st.rigFrom = rigNow(st);"); // the turn as it stands — never a jump
   });
   it("⭐⭐ the gizmo's move sets the new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {

@@ -23,6 +23,7 @@
  * materials to the glTF path; the RGB values below are mine, a Mondrian palette on the flat diffuse
  * path the build already has.
  */
+import { isoWaistHeightM } from "../input/waist_view";
 import type { BodySpec, FinalConfiguration, FinalPose, SceneDescriptor, Triple } from "../core/game_structure";
 
 /** ⭐ `D169`: how far up every position moved so the floor's top centre is the origin — authored units. */
@@ -272,11 +273,13 @@ export const SCENE_1: SceneDescriptor = {
     // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
     // (was 0.375 / 0 — 0.375 kept the green piece out of the painting, which reaches 0.30 m; at 0.09 it passes through it).
     middleRadiusM: 0.09,
-    middleHeightM: 0.15,
+    // ⭐⭐ (2026-10-17, the owner: *"position the ring 2 and ring 3 so that the camera ends up in the semi-isometric view during the travel of the piece
+    // between ring 2 and ring 3"*) — r·√2 (`isoWaistHeightM`): the direction to the ring 54.7° off the face's normal, the isometric corner's tilt (was 0.15)
+    middleHeightM: isoWaistHeightM(0.09),
     // ⭐ prototype (green box), the owner 2026-10-02: *"add a fourth ring between the middle ring and the bottom ring, with radius same
     // as middle ring and height the negative opposite of middle ring's height"* — 0.09 m at −0.15 m: a symmetric waist again.
     lowerRadiusM: 0.09,
-    lowerHeightM: -0.15,
+    lowerHeightM: -isoWaistHeightM(0.09), // ⭐ (2026-10-17) −r·√2 (was −0.15)
     bottomRadiusM: 5.1,
     bottomHeightM: -3.15,
     bootDistanceM: 3,

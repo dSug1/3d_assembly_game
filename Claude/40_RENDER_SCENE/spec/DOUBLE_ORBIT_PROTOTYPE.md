@@ -1033,7 +1033,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐⭐ (2026-10-16, `1.0.79-`) the slide view UPRIGHT — the camera's up rolled to the world's vertical by the slide view's weight: gravity straight down the screen → `HOVER.md` §24.
 * ⛔⛔ (2026-10-17, `1.0.79-`) the orbit blocked after a slide on Piece3's top (gizmo on Piece25) — the solver's contact projection and second-part clamp → `COLLISION.md` §12undecies.
 
-### ⭐⭐⭐ The slide view between rings 2 and 3 (`1.0.80-`, 2026-10-17)
+### ⛔ SUPERSEDED the same day (below) — the slide view between rings 2 and 3 (`1.0.80-`, 2026-10-17)
 
 > *"Modify the 2D curve as well as the position of the rings so that during the travel between the 2nd ring and the 3rd ring the camera positions itself
 > so that the view is nearly isometric (i.e. same nearest-corner-with-gravity-direction-aligned-with-screen-vertical-direction isometric view as during
@@ -1061,7 +1061,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   ⚠ Not staged: a slide starting from this view (the slide script sets the gizmo without a face tap); slider 0 on a top face (its way out may arc near
   overhead). ⛔ No device close. 2057 vectors.
 
-### …the view LATCHED all along the curve; the camera kept in front of the face (`1.0.80-`, 2026-10-17)
+### ⛔ SUPERSEDED the same day (below) — the view LATCHED all along the curve; the camera kept in front of the face (`1.0.80-`, 2026-10-17)
 
 > *"during its travel on ring 1 or 4, the piece does a S-shape travel. I would prefer the way in and way out of the semi-isometric view latch since the
 > beginning of the travel so that there is no S-shape travel, or whatever else you can propose — … — if the hosting face is vertical and the travel
@@ -1081,3 +1081,28 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Headless (touch, `Scene_1`, Piece3's top face): at rings 1 and 4 the slide view (35.3° down, upright); the piece did not move on the screen through the
   dy travel and the crossing; after the gizmo tap it eased in with the gizmo's change (≤ 1.6 % of the screen a frame), then centred. ⛔ No device close.
   2058 vectors.
+
+### ⭐⭐⭐ The camera always on the gizmo; rings 2 and 3 at the slide view's tilt (`1.0.80-`, 2026-10-17)
+
+> *"I do not like this implementation. The camera should be focused on the gizmo during the ring 1 and ring 4 travel. Find a solution. Also, when I orbit
+> the piece on max distance, the assembly jumps from one side of the screen to the other. I believe that will be solved if the camera focuses on the
+> gizmo."* → (an arc toward the corner computed: aimed at the gizmo the piece drifted 5–19° on the screen) → *"camera always aims at the gizmo, position
+> the ring 2 and ring 3 so that the camera ends up in the semi-isometric view during the travel of the piece between ring 2 and ring 3. Avoid S-shape
+> travels of the piece during the whole travel. The key is positioning the ring 2 and ring 3 to match the semi-isometric view during the waist travel."*
+> — the owner.
+
+* ⛔ **Why the jump**: the latched view was aimed at the PIECE — a turn of the view about the piece swung an assembly 6 m off across the screen.
+* ⭐⭐⭐ **The camera is the orbit's EVERYWHERE** — behind the piece, aimed at the GIZMO (rings 1 and 4 exactly as before the slide-view work).
+* ⭐⭐⭐ **Rings 2 and 3 at the slide view's tilt** (`isoWaistHeightM`, `input/waist_view.ts`): their height `±r·√2` — `Scene_1` ±0.127 m at r 0.09
+  (was ±0.15) — so the direction to them from the gizmo is 54.7° off the face's normal: arriving at ring 2 the camera behind the piece is already 35.3°
+  off the face, the isometric corner's tilt (31.0° before). No arc.
+* ⭐⭐ **Between rings 2 and 3, the gizmo on a face** (`waistTurn`, in `cameraFrameNow`): the camera HOLDS that angle and turns from ring 2's direction to
+  ring 3's about the face's normal (smoothstep), the short way — half a round the camera's yaw offset's way — still aimed at the gizmo; it starts and ends
+  EXACTLY on its own direction at either ring: continuous, no S. Semi-isometric: the corner's tilt, the yaw offset's sideways (not its 45°). Kept in front
+  of the face as tapped (`keepInFront`). A gizmo change from no face blends it in by its share.
+* ⛔ Deleted: the slide view latched along the curve (aimed at the piece), its 12 mm arc, the keep-corner slider (`waistCornerTurn`), `waistViewNow`.
+* ⚠ The rings' new heights move four older measures (vectors updated): the waist's span in `v`, its turn 1.88× the reference stair's (over 2× before), its
+  speed ratio 4.82 (4.24), the peak pitch rate 14.6°/mm (~16.5); rings 2 → 3 still 5.6 mm of finger.
+* Headless (touch, `Scene_1`): aimed at the gizmo throughout (0 mm); Piece3's TOP face — at the waist 37.3° down (35.3° + the pitch offset), upright; the
+  piece within ~2 % of the screen through the crossing, ≤ 0.5 % a frame from the tap to the waist; a SIDE face 21.9° down mid-turn. ⚠ The max-distance
+  orbit not staged (aimed at the gizmo, as before). ⛔ No device close. 2056 vectors.
