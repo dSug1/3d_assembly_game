@@ -818,3 +818,23 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   `ge > g` refuses any stride that closes the least gap. Vector: a corner 0.3 mm from two walls, a step away from both moves (it was blocked).
 * ⚠ Noted, unchanged: a rule (0) stride is accepted on its end (bounded by 4 mm, invisible); `nearestFree` jumps on a candidate's end gap alone
   (pre-existing, not reproduced).
+
+### 12undecies. Unlocked after a slide — a step leaving every contact goes through; the second-part clamp only on a closing step (2026-10-17, `1.0.79-`, ⛔ unjudged by a hand)
+
+> *"if I position the gizmo on top face of piece 25 and slide the green piece on top face of piece 3, after the sliding is toggled off, the orbit is
+> blocked and I need to go a lot of back and forth to unlock the green piece. Why is that ?"* → *"build the fix"* — the owner.
+
+* **Reproduced in the real app** (touch, `Scene_1`): the gizmo on Piece25's top (a 1.3 cm ledge in the painting), the piece over Piece3 (standing on it,
+  its top 5 mm under the rig's halfway point), a slide there, the release — the piece rests 1.08 mm over TWO flush tops (Piece3 0.499 m, Piece30
+  0.498 m). The way back to the ring (`HOVER.md` §13) moved 0.7 % of its 24 mm and stopped; every orbit drag was refused through 60 mm of finger —
+  while every step refused stayed 1.08 mm clear of both, the gap only GROWING along the way back (1.08 → 5 mm).
+* ⛔⛔ **The cause — `projectExact`**: in contact (less than 0.2 mm over the kept gap) a step is projected onto the contacts; it inverted the step's
+  2 × 2 metric FIRST and returned no motion when that was singular — before asking whether the step pushed into any contact at all. The way back has
+  ONE coordinate (its share): its metric is always singular, so a way back starting in contact — every slide ends at the kept gap — was refused on its
+  first step, in 2 queries, though it LEFT the surface. ✅ **Feasibility first**: a step pushing into no contact is the step, whatever the metric.
+* ⭐ **And the second-part clamp** (`(secondGap − gap) × 0.9`, the contact slide's sub-step): over two flush tops at the kept gap it allowed 0.07 mm a
+  step — the orbit crawled. ✅ It binds now only a step that CLOSES on a part: the landing is read (a query the step makes anyway) and one as clear of
+  every part as it started keeps its whole stride (≤ 4 mm, `SLIDE_STEP_M`; its landing admissible — the thinnest body, the floor, is 5 mm: no tunnel).
+* After: the first orbit drag finishes the way back (offset 0, nothing blocked); dx turns the yaw freely (−1.571 → −0.361 rad and back), dy moves v.
+  `tests/solver_flush.test.ts` (4 vectors — three red against the old solver; the wall ahead still stops the slide); the hover's audit vector 3 now
+  forces its deferral with a 2-query cap (at the shipped 24 the 10 mm along a wall goes in one solve). 2050 vectors.

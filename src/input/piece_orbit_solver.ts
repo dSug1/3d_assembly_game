@@ -152,19 +152,23 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   const m11 = dot3(J[0], J[0]);
   const m12 = dot3(J[0], J[1]);
   const m22 = dot3(J[1], J[1]);
+  const A = normals.map((n) => [dot3(n, J[0]), dot3(n, J[1])] as const);
+  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -1e-12 * (Math.abs(a[0]) + Math.abs(a[1])));
+  // ⭐⭐⭐ (2026-10-17, the owner: *"after the sliding is toggled off, the orbit is blocked and I need to go a lot of back and forth to unlock the green
+  // piece"*) — a step that pushes into NO contact is the step, whatever the metric: asked FIRST. ⛔ The singular metric was refused before — the way back
+  // after a slide has one coordinate (its share), so a way back starting in contact (every slide ends at the kept gap) was blocked on its first step,
+  // in 2 queries, though it left the surface (the gap only growing — reproduced on Piece3's top)
+  if (feasible(dq)) return dq;
   const det = m11 * m22 - m12 * m12;
   if (!(det > 1e-18)) return [0, 0];
   const i11 = m22 / det;
   const i12 = -m12 / det;
   const i22 = m11 / det;
-  const A = normals.map((n) => [dot3(n, J[0]), dot3(n, J[1])] as const);
-  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -1e-12 * (Math.abs(a[0]) + Math.abs(a[1])));
   const cost = (s: QStep) => {
     const d0 = s[0] - dq[0];
     const d1 = s[1] - dq[1];
     return m11 * d0 * d0 + 2 * m12 * d0 * d1 + m22 * d1 * d1;
   };
-  if (feasible(dq)) return dq;
   let best: QStep = [0, 0];
   let bestCost = cost(best);
   for (const a of A) {
@@ -350,6 +354,7 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     if (Math.abs(s[0] - rest[0]) + Math.abs(s[1] - rest[1]) > 1e-12) touched = blocked = true;
     const sLen = arcLength(env, q, s);
     let u = fitStride(env, q, s, Math.min(1, SLIDE_STEP_M / Math.max(1e-12, sLen)), SLIDE_STEP_M);
+    let landed = -1; // the gap at the stride's landing, when the clamp's check already read it
     // ⭐ (2026-10-14, the hover) never past the safe distance to every OTHER part: sliding along one contact toward a second, the 4 mm sub-step
     // overshot it and the step stopped up to 4 mm short of it (learning it, then blocked) — now it closes in to the gap kept first
     {
@@ -357,10 +362,21 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
       if (others !== undefined) {
         const lo = (others - opt.gapM) * 0.9;
         const uo = lo > 0 ? fitStride(env, q, s, Math.min(u, lo / Math.max(1e-12, sLen)), lo) : 0;
-        if (uo > 1e-9 && uo < u) u = uo;
+        if (uo > 1e-9 && uo < u) {
+          // ⭐⭐⭐ (2026-10-17, the owner: *"after the sliding is toggled off, the orbit is blocked and I need to go a lot of back and forth to unlock the
+          // green piece"*) — the clamp binds only a step that CLOSES on a part: its landing is read (a query the step makes anyway), and one that stays
+          // as clear of every part as it started keeps its whole stride. ⛔ Over two FLUSH tops at the kept gap (Piece3 and Piece30, 1.08 mm both) it
+          // allowed 0.07 mm a step — the way back after a slide crawled 0.7 % of its way and the orbit froze, every refused step 1.08 mm clear of both.
+          // ⚠ no tunnel: the stride is at most `SLIDE_STEP_M` (4 mm) and its landing must be admissible — the thinnest body (the floor) is 5 mm
+          const at = plus(q, s, u);
+          const gAt = gapAt(at);
+          const oAt = env.secondGap?.(at) ?? gAt;
+          if (gAt >= hard && Math.min(gAt, oAt) >= Math.min(g, others) - 1e-7) landed = gAt;
+          else u = uo;
+        }
       }
     }
-    let gn = -1;
+    let gn = landed;
     // ⭐⭐ (2026-10-13, the fourth audit: a piece RESTING on a part slid 4 mm a sub-step — 0.048 rad a frame against 0.27 a millimetre higher; the
     // owner's "slows down near a part" in its last form) the LONG slide: as far as the plane bound of the nearest part (anchors only) and the
     // gap to every other allow, ≤ `DIRECTIONAL_MAX_M`, its landing checked once — else the 4 mm sub-step as before
