@@ -67,6 +67,28 @@ describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit
       }
     }
   });
+  it("⭐⭐⭐ a gizmo change from a HORIZONTAL face to a VERTICAL face, dy approached as the change goes on: the camera stays UPRIGHT through rings 2 and 3 — no roll there and back (the owner: *\"there is still this annoying jittery roll twice (at ring 2 and ring 3)\"* — ⛔ the top face's swing pulled the up near ring 2 and again near ring 3 on a curve that no longer passes over the top)", () => {
+    const upright = (dir: Vec3): Vec3 => {
+      const k = dir[1];
+      const u: Vec3 = [-k * dir[0], 1 - k * dir[1], -k * dir[2]];
+      const l = Math.hypot(...u);
+      return [u[0] / l, u[1] / l, u[2] / l];
+    };
+    for (const nf of [0, 20, -20]) {
+      for (const v0 of [0.99, 0.8]) {
+        const yaw = 0.4;
+        const top = rigTurnFor(cfg, yaw, v0, [0, 1, 0], level(yaw), UNTURNED);
+        const st = stub(top, rigTurnFor(cfg, yaw, v0, level(yaw + nf / D), level(yaw), top), 0);
+        for (let mm = 0; v0 - mm * MM_V >= 0.02; mm += 0.25) {
+          st.rigShare = smooth(mm / 30);
+          const v = v0 - mm * MM_V;
+          const f = frame(st, yaw, v);
+          // once the change is well under way (its curve peaking ≤ 65°: no crossing left), between and around rings 2 and 3
+          if (st.rigShare >= 0.4 && v <= v2 + 0.05 && v >= v3 - 0.05) expect(angle(f.up, upright(f.dir))).toBeLessThan(1);
+        }
+      }
+    }
+  });
   it("⭐⭐⭐ A2: a tap on another face with the piece between rings 2 and 3, the hold on: no jump at the first finger move (⛔ the old face swapped for the new one: 8°–18°)", () => {
     for (const dx of [60, 65, 75]) {
       const y0 = 0.4;

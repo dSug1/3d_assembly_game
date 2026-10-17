@@ -1194,3 +1194,25 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   (was 18.2°); A3 ≤ 0.2° (110°); A4 35.3° at 10° off edge-on (20.4°); A5 1.2° (13°); A6 0.00°; A7 smooth (90°). In the app, the owner's scenario (Piece4's
   top → Piece10's front, dy from max distance): ≤ 7.1° of roll a step (10° at the last build, 110° before). 8 vectors (all 8 red first). ⛔ No device close.
   2072 vectors.
+
+### …a gizmo change horizontal → vertical face: no roll there and back at rings 2 and 3 (`1.0.80-`, 2026-10-17)
+
+> *"when I change the gizmo from an horizontal face to a vertical face, there is still this annoying jittery roll twice (at ring 2 and ring 3) during a dy
+> approach. I thought we had solved that issue."* → *"look at it"* (the blocked piece) → *"update the md files, deploy"* — the owner.
+
+* ⛔ **Reproduced** in the app, frame by frame (the change advancing with the finger): +3° then −9° of roll at ring 2, −11° then +8° at ring 3; with the
+  change completed before the approach: none. The top face's SWING still pulled the up, weighted by the camera's elevation (high near ring 2, nothing
+  halfway, high near ring 3: twice) — on a blended curve that peaks at 45°–65° once the change is ~20 % on: nothing to turn for. The roll limiter (A1)
+  only slowed it; the cause stood. ⭐ *A rate limit hides a wrong target; it does not correct it.*
+* ⭐⭐ **THE SWING ONLY AS FAR AS THE CURVE COMES NEAR THE VERTICAL** (`rigSwingNeed`, `input/orbit_rig.ts`): from the turned curve's peak elevation (its
+  elevations are the turn's alone — the yaw swings it about the vertical; cached per turn), none below 75°, full past 88° (a top face's crossing: 90°);
+  both the waist's band and the near-vertical one scaled by it. A curve without a crossing keeps the upright camera.
+* Measured in the app: at ring 2 one way only, at ring 3 calm (≤ 1.7° a frame, no reversal); the owner's earlier scenario (Piece4's top → Piece10's front)
+  ≤ 2.1° a step (7.1°). What is left during the change is the horizon kept level while the change swings the camera sideways. 1 vector (red first: 2.4°
+  off upright): the camera upright through rings 2 and 3 once the change is under way. ⛔ No device close. 2073 vectors.
+* ⭐ **The blocked piece looked at** (right / left faces of Piece10): ⛔ the 55° camera jump was the HARNESS — it set the orbit's elevation absolutely each
+  frame, so a backlog built behind the blocked piece and snapped when it came free; the render loop resets the orbit to the solver's held target and a
+  finger adds to it — driven so, no jump. The "right" face (−x) has Piece31 6 mm in front of it: the piece stopping at ring 2 is the collision rule. ⚠ Left
+  open (not built, the owner to judge on the glass): the gizmo change advances by the FINGER's travel even while the piece is held, so the curve turns
+  under a blocked piece (a relocation — *"the ring moved the piece into a part"* — or, high over the assembly, the camera sweeping 10°–16° a frame once it
+  frees). The candidate fix: advance the change by the PIECE's travel.
