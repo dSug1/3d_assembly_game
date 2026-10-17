@@ -9,7 +9,9 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { blendRig, rigFrameBetween, rigPlace, rigTurnFor, waistV, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { nearestCorner, waistDirection, waistEntryNext, waistFrame, waistRings, waistWeight } from "../input/waist_view";
+import { hoverCameraSwing, slerpDir } from "../input/hover";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
@@ -92,6 +94,42 @@ export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): vo
   st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, normal, [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
   st.centreBlend.retarget(to);
   syncCentre(st);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-17, the owner: *"during the travel between the 2nd ring and the 3rd ring the camera positions itself so that the view is nearly isometric (i.e. same nearest-corner-with-gravity-direction-aligned-with-screen-vertical-direction isometric view as during the slide)"*) — **THE SLIDE VIEW BETWEEN RINGS 2 AND 3**: at the camera's orbit place, with the gizmo on a face, the
+ * camera arcs (the slide view's own arc, `hoverCameraSwing`) toward the face's isometric corner about the PIECE (`piece`, world) by `waistWeight` —
+ * looking at it, its distance kept. The corners: ring 2's and ring 3's (their sides along gravity's axis of the face; across it, the camera's own side),
+ * turned between or the entry one kept (`waistCornerTurn`). Returns the camera and the weight (the up rolls upright by it).
+ */
+export function waistViewNow(st: SceneState, piece: Vec3, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3; w: number } {
+  const cam = st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const s = st.rigShare;
+  const faced = s >= 1 ? (st.rigTo.faced ? 1 : 0) : (st.rigFrom.faced ? 1 - s : 0) + (st.rigTo.faced ? s : 0);
+  const w = waistWeight(st.cfg, cam.v) * faced;
+  const { v2, v3 } = waistRings(st.cfg);
+  st.waistEntry = waistEntryNext(st.waistEntry, w, cam.v, (v2 + v3) / 2);
+  if (!(w > 0)) return { camAt, lookAt, w: 0 };
+  // ⭐ the corner taken on each END turn — where its choice is stable — and blended by the gizmo's share (⛔ on the blended turn the rings' sides
+  // crossed the face's axis midway: the corner flipped, 32 % of the screen in a frame)
+  const cornerOf = (p: RigParams): Vec3 | null => {
+    const heading: Vec3 = [Math.cos(cam.yaw + p.beta), 0, Math.sin(cam.yaw + p.beta)];
+    const f = waistFrame(rigPlace(st.cfg, p, cam.yaw, waistV(st.cfg), 1), heading);
+    if (f === null) return null;
+    // the corners' sides: along gravity's axis of the face from the rings' own places; across it, the side the camera's yaw OFFSET puts it on (a
+    // fixed setting — ⛔ read off the camera's place it flipped wherever the camera sat in the curve's plane)
+    const off = st.cfg.cameraYawOffsetDeg >= 0 ? 0.2 : -0.2;
+    const across = nearestCorner(f, [Math.cos(cam.yaw + p.beta + off), 0, Math.sin(cam.yaw + p.beta + off)])[0];
+    const a: [number, number] = [across, nearestCorner(f, rigPlace(st.cfg, p, cam.yaw, v2, 1))[1]];
+    const b: [number, number] = [across, nearestCorner(f, rigPlace(st.cfg, p, cam.yaw, v3, 1))[1]];
+    return waistDirection(st.cfg, f, a, b, cam.v, st.cfg.waistCornerTurn === 1, st.waistEntry);
+  };
+  const dTo = st.rigTo.faced ? cornerOf(st.rigTo) : null;
+  const dFrom = s < 1 && st.rigFrom.faced ? cornerOf(st.rigFrom) : null;
+  const dir = dTo !== null && dFrom !== null ? slerpDir(dFrom, dTo, s) : (dTo ?? dFrom);
+  if (dir === null) return { camAt, lookAt, w: 0 };
+  const sw = hoverCameraSwing(camAt, lookAt, piece, dir, w);
+  return { ...sw, w };
 }
 
 /** Read the blended centre into the scene, and show the chosen target. */
