@@ -13,6 +13,7 @@ import { orbitOffset } from "../src/input/orbit";
 import { cameraOffset } from "../src/input/follow_camera";
 import { IDENTITY, qFromAxisAngle, qmul, qRotate, type Vec3 } from "../src/core/vec";
 import { rigFrameBetween, rigTurnFor } from "../src/input/orbit_rig";
+import { topRollWidth } from "../src/input/orbit_rig";
 import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
 import { fourRingLayout } from "../src/input/orbit";
 
@@ -159,7 +160,7 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     let turned = 0;
     for (let v = 0.001; v <= 1; v += 0.001) {
       const f = fr(v);
-      expect(angle(f.up, prev.up)).toBeLessThan(6); // no jump (the crossing's own speed)
+      expect(angle(f.up, prev.up)).toBeLessThan((1.6 * 180 * 0.001) / s.w + 1); // no jump: at most the top roll's own peak rate (⭐ 2026-10-18: the half-round within its band)
       expect(Math.abs(f.up[0] * f.dir[0] + f.up[1] * f.dir[1] + f.up[2] * f.dir[2])).toBeLessThan(1e-9);
       const inSwing = Math.abs(v - s.vc) < s.w / 2;
       if (!inSwing) expect(f.up[1]).toBeGreaterThan(0); // upright outside
@@ -172,16 +173,24 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     }
     expect(Math.abs(Math.abs(turned) - Math.PI)).toBeLessThan(0.05); // half a round in all
   });
-  it("⭐⭐⭐ OPTION B: the swing spans rings 2 → 3 EXACTLY, centred on the crossing (the owner: *\"it looks like the piece does a Z-shape travel. build option B instead\"*)", () => {
+  it("⭐⭐⭐ THE TOP ROLL (2026-10-18; ⛔ option B — the swing spanning rings 2 → 3): the swing only within `topRollBandDeg` of straight above, centred on the crossing", () => {
     const p = turnFor(0.4, [0, 1, 0]);
     const s = rigSwing(cfg, p)!;
+    const pitch = (v: number): number => { const o = orbitOffset(cfg, 0, v, 1).offsetM; return Math.atan2(o[1], o[0]); };
+    // the band's ends: the curve's pitch ±20° from the crossing's
+    expect(Math.abs(Math.abs(pitch(s.vc + s.w / 2) - pitch(s.vc - s.w / 2)) * (180 / Math.PI) - 40)).toBeLessThan(1);
+    expect(s.w).toBeCloseTo(topRollWidth(cfg, s.vc), 12);
     const f = fourRingLayout(cfg);
-    const v2 = f.knots[2]! / f.total, v3 = f.knots[1]! / f.total;
-    expect(s.w).toBeCloseTo(v2 - v3, 12);
-    expect(s.vc - s.w / 2).toBeCloseTo(v3, 6);
-    expect(s.vc + s.w / 2).toBeCloseTo(v2, 6);
-    expect(rigSwingShare(cfg, p, v3 - 0.01)).toBe(s.farAbove ? 0 : 1);
-    expect(rigSwingShare(cfg, p, v2 + 0.01)).toBe(s.farAbove ? 1 : 0);
+    expect(s.w).toBeLessThan((f.knots[2]! - f.knots[1]!) / f.total / 2); // well inside rings 2 → 3
+    expect(rigSwingShare(cfg, p, s.vc - s.w / 2 - 1e-4)).toBe(s.farAbove ? 0 : 1);
+    expect(rigSwingShare(cfg, p, s.vc + s.w / 2 + 1e-4)).toBe(s.farAbove ? 1 : 0);
+    expect(rigSwingShare(cfg, p, s.vc)).toBeCloseTo(0.5, 6);
+    // the band honoured: 10° and 30°
+    for (const b of [10, 30]) {
+      const c2 = { ...cfg, topRollBandDeg: b };
+      const s2 = rigSwing(c2, p)!;
+      expect(Math.abs(Math.abs(pitch(s2.vc + s2.w / 2) - pitch(s2.vc - s2.w / 2)) * (180 / Math.PI) - 2 * b)).toBeLessThan(1.5);
+    }
   });
   it("⭐⭐ the camera's near side lies along the TURNED CURVE'S OWN PLANE (⛔ read off the camera's side it carried the camera's 7° yaw offset — the up tilted 6.4°): unturned 0; a side face the turned radial; a top face the curve's line, toward the camera", () => {
     expect(rigBetaFor(IDENTITY, 0.7, [1, 0, 0])).toBeCloseTo(0, 12);

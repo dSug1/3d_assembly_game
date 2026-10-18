@@ -4,7 +4,9 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
+import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
+import { cameraFrameHeld } from "../src/input/camera_frame";
+import { rigPlace } from "../src/input/orbit_rig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import type { Vec3 } from "../src/core/vec";
@@ -269,3 +271,69 @@ describe("⭐⭐⭐ the orbit — the second Fable audit (2026-10-17)", () => {
     expect(g.indexOf("st.centreBlend.advance(gizmoBlendTravel(")).toBeLessThan(g.indexOf("st.rigShare = easeShare("));
   });
 });
+
+describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges in the scene assembly remain vertical in the screen view … the camera can also roll between ring 2 and ring 3 so the scene in ring 1 and ring 4 is not upside down\"*)", () => {
+  const cross3 = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const unit3 = (a: Vec3): Vec3 => { const l = Math.hypot(...a); return [a[0] / l, a[1] / l, a[2] / l]; };
+  const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  // a top face at the orbit's yaw; its curve's plane; dy swept ring 4 → ring 1 at 0.25 mm, the up threaded as the render loop threads it
+  const sweep = (yaw: number, o: { yawRad: number; pitchRad: number }, c = cfg) => {
+    const top = rigTurnFor(c, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+    const n = unit3(cross3(unit3(rigPlace(c, top, yaw, v2, 1)), unit3(rigPlace(c, top, yaw, v3, 1))));
+    const out: { v: number; e: number; roll: number; offPlane: number; lag: number }[] = [];
+    let prev: { dir: Vec3; up: Vec3; cam: { yaw: number; v: number } } | null = null;
+    for (let v = 0.99; v >= 0.02; v -= 0.25 * MM_V) {
+      const tgt = cameraFrameHeld(c, top, top, 1, { yaw, v }, o, null);
+      const f = cameraFrameHeld(c, top, top, 1, { yaw, v }, o, prev);
+      const inUp = unit3(cross3(f.dir, n));
+      out.push({ v, e: Math.asin(Math.min(1, Math.abs(f.dir[1]))) * D, roll: Math.atan2(dot3(cross3(inUp, f.up), f.dir), dot3(inUp, f.up)), offPlane: Math.abs(Math.asin(Math.max(-1, Math.min(1, dot3(f.dir, n))))) * D, lag: angle(f.up, tgt.up) });
+      prev = { dir: f.dir, up: f.up, cam: { yaw, v } };
+    }
+    return out;
+  };
+  it("⭐⭐⭐ outside the band the camera is UPRIGHT IN THE CURVE'S PLANE — vertical edges stay vertical — and the drawn up keeps to it (⛔ the half-round spread over rings 2 → 3: 164° → 20° against the plane, all the way)", () => {
+    for (const yaw of [0.4, 2.0, -1.1]) {
+      for (const r of sweep(yaw, { yawRad: 0, pitchRad: 0 })) {
+        if (r.e < 68) expect(Math.abs(Math.sin(r.roll))).toBeLessThan(0.01); // 90° − the 20° band − 2° (a number: never read off the config under test)
+        expect(r.lag).toBeLessThan(1); // the limiter lets the top roll through
+      }
+      // the owner's offsets on: still within 3° of the plane's frame outside the band (the yaw offset leans the camera below 60°)
+      for (const r of sweep(yaw, off)) if (r.e < 68) expect(Math.abs(Math.sin(r.roll))).toBeLessThan(Math.sin(3 / D));
+    }
+  });
+  it("⭐⭐⭐ the half-round only WITHIN the band about straight above: monotonic, a quarter at the top, upright on both sides (rings 1 and 4 never upside down); its sense the yaw offset's side", () => {
+    const turnOf = (c: typeof cfg): number => {
+      const rs = sweep(0.4, { yawRad: 0, pitchRad: 0 }, c);
+      let total = 0;
+      for (let i = 1; i < rs.length; i++) {
+        let d = rs[i]!.roll - rs[i - 1]!.roll;
+        d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
+        if (rs[i]!.e < 90 - c.topRollBandDeg - 2) expect(Math.abs(d)).toBeLessThan(0.02); // no roll outside the band
+        total += d;
+      }
+      return total;
+    };
+    const plus = turnOf(cfg);
+    expect(Math.abs(Math.abs(plus) - Math.PI)).toBeLessThan(0.05); // half a round in all
+    const minus = turnOf({ ...cfg, cameraYawOffsetDeg: -2.5 });
+    expect(Math.abs(Math.abs(minus) - Math.PI)).toBeLessThan(0.05);
+    expect(Math.sign(minus)).toBe(-Math.sign(plus)); // the other way with the offset on the other side
+    // a narrower band rolls over less of the curve
+    const span = (b: number): number => sweep(0.4, { yawRad: 0, pitchRad: 0 }, { ...cfg, topRollBandDeg: b }).filter((r, i, a) => i > 0 && Math.abs(Math.sin(r.roll - a[i - 1]!.roll)) > 0.005).length;
+    expect(span(10)).toBeLessThan(span(30));
+  });
+  it("⭐⭐ NO AZIMUTH: steep (≥ 75°) the camera is exactly in the curve's vertical plane, the owner's offsets faded (⛔ the yaw offset took it 2.1° out of it)", () => {
+    for (const yaw of [0.4, 2.0]) for (const r of sweep(yaw, off)) if (r.e >= 75) expect(r.offPlane).toBeLessThan(0.1);
+  });
+  it("⭐ the band a slider: CAMERA › CAMERA ORBIT AROUND CENTER, 20° by default, 2–60 validated", () => {
+    expect(DEFAULT_CONFIG.topRollBandDeg).toBe(20);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topRollBandDeg: 1 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topRollBandDeg: 61 })).toThrow();
+    const m = readFileSync("src/render/tuning_menu.ts", "utf8");
+    const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
+    const at = m.indexOf('"topRollBandDeg"');
+    expect(at).toBeGreaterThan(sub);
+    expect(m.lastIndexOf("title:", at)).toBe(sub);
+  });
+});
+

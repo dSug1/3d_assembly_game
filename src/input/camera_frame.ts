@@ -26,8 +26,9 @@ export const WAIST_PATH_STEPS = 8;
 
 /** ⭐ The up's roll toward its target per degree of the view's own turn (`rollLimitedUp` — a jump of the view lets the up follow at once). */
 export const ROLL_PER_DIR = 2;
-/** ⭐ …or per unit of the ring parameter travelled (°): 16° per 0.25 mm of dy on `Scene_1` — the swing's designed peak is 12°–14°. */
-export const ROLL_PER_V = 2500;
+/** ⭐ …or per unit of the ring parameter travelled (°): 51° per 0.25 mm of dy on `Scene_1` — ⭐ (2026-10-18) THE TOP ROLL's half-round over ±20° of
+ * straight above peaks at ~39° a 0.25 mm step (⛔ 2 500: it capped the designed turn — the drawn up 15° behind). */
+export const ROLL_PER_V = 8000;
 /** ⭐ …or per degree of dx (°/°). */
 export const ROLL_PER_YAW = 2;
 /** ⭐ …plus this much a SECOND (°), so a camera left still settles upright — whatever the frame rate. */

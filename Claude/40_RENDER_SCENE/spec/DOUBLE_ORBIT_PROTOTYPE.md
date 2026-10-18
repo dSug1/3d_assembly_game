@@ -1249,7 +1249,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   a round; a fifth tap smooth; the honoured travel and its wiring; A1's bound restated on the travel. In the app: the owner's scenario ≤ 2° of roll a
   step. ⛔ No device close. 2079 vectors.
 
-### ⏭ NEXT BUILD — THE TOP ROLL: over a horizontal face the camera stays in the curve's vertical plane, and turns half a round only at the top (agreed 2026-10-17, branch `1.0.81-`; ⛔ NOT BUILT — build it 2026-10-18)
+### THE TOP ROLL — the plan: over a horizontal face the camera stays in the curve's vertical plane, and turns half a round only at the top (agreed 2026-10-17, branch `1.0.81-`; ✅ BUILT 2026-10-18 — next section)
 
 > *"when the gizmo is on a horizontal face, between the ring 2 and ring 3, the camera passes above the piece with a slight azimuth: for example a gravity
 > aligned vertical edge of an assembly part rolls in the screen view during this camera movement. Isn't is possible to modify this camera movement so that
@@ -1308,3 +1308,30 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 4. The DRAWN up (threaded `cameraPrev`) within 1° of the target through the band (the limiter lets the top roll through).
 5. The slider: default 20, validated, in CAMERA ORBIT AROUND CENTER; the band width honoured (B = 10° / 30°).
 6. Kept green: the gizmo change horizontal → vertical (`camera_frame.test.ts`), faces tilted 35°–85° (their crossing now gets the top roll), A1–A7.
+
+### …THE TOP ROLL, built (`1.0.81-`, 2026-10-18)
+
+> *"start building, update the md files, deploy"* — the owner.
+
+* ⭐⭐⭐ **The swing concentrated in the band** (`topRollWidth`, `input/orbit_rig.ts`): the existing swing (`rigSwing` / `rigSwingShare`, the heading
+  turned half a round over a crossing) now spans only the stretch where the curve's pitch is within `topRollBandDeg` of the crossing's — found on each
+  side by bisection (the window their mean, ×2), per crossing (a `far` stretch carries the width at each end). ⛔ Option B (2026-10-16): the whole span of
+  rings 2 → 3. Outside the band the swing heading IS the piece's own, so the camera is the upright one — in the curve's vertical plane: vertical edges stay
+  vertical. ⭐ No separate in-plane frame was needed: the in-plane continuous frame and the upright camera coincide off the band, and a curve with no
+  crossing has no swing (unchanged).
+* ⭐⭐ **No azimuth** (`offsetKeep`): the owner's yaw AND pitch offsets fade from 60° to 75° of the view's elevation (up or down), in `frameAtHeading` —
+  steep, the camera is exactly in the plane.
+* ⭐ **The sense**: toward the yaw offset's side (`rigSwingHeading` × the sign of `cameraYawOffsetDeg`) — today's sense at the owner's +2.5°, the other way
+  with a negative offset.
+* ⭐ **The limiter lets it through**: `ROLL_PER_V` 2 500 → **8 000** (51° per 0.25 mm on `Scene_1`) — the half-round at ±20° peaks at ~49° a 0.25 mm step
+  (⚠ the accepted cost: fast). ⭐ The slider *"top roll band (°)"* in CAMERA › CAMERA ORBIT AROUND CENTER, `topRollBandDeg` **20**, 2–60 (validated, part of
+  the swing's cache key).
+* Measured (a top face, dy at 0.25 mm, the owner's offsets): the roll against the curve's plane stays at 0° / 180° (± 2° from the offsets below 60°) and
+  turns only between ~74° and straight above and back down to ~71° (⛔ before: 164° → 20° all the way); steep (≥ 75°) the camera 0.000° out of the plane
+  (2.4° before); the drawn up 0.0° behind the target. In the app the gizmo change top → Piece10's front still ≤ 2.1° of roll a step.
+* ⚠ Kept, deliberately: the STEEP band, `waistGate`, `rigSwingNeed` and the heading blends still serve curves NOT in a vertical plane (mid-change blends) —
+  not dead code.
+* Vectors (4 new, each red on the old code; 2 restated): upright in the plane off the band, the drawn up on the target; the half-round only within the band,
+  monotonic, half a round in all, its sense flipping with the offset's sign, a narrower band rolling over less; steep ≤ 0.1° out of the plane with the
+  offsets on; the slider. Restated: option B's span → the band's (±20° of pitch, 10° / 30° honoured); the up's step bounded by the top roll's own peak
+  rate. ⛔ No device close. 2083 vectors.
