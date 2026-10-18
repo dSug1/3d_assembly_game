@@ -13,7 +13,7 @@ import { goalReport, type Pose } from "@core/goal";
 import { add, IDENTITY, length, qAngle, qconj, qFromAxisAngle, qmul, qRotate, scale, sub, type Quat, type Vec3 } from "@core/vec";
 import { GoalCapture, GoalPulls } from "@input/goal_capture";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 
 const DEG = Math.PI / 180;
 const U = SCENE_1.unitM!;

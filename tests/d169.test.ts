@@ -8,7 +8,7 @@
  * they did relative to it, and the camera boots at the same offset from the orbit centre — so the view is unchanged.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_SHIFT_Y } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1, SCENE_1_SHIFT_Y } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE_0 } from "../src/content/scene_0";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { bootOrbitCentre } from "@input/scene_rig";

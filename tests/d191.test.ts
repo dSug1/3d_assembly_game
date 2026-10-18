@@ -12,7 +12,7 @@
  * generator's bookkeeping.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { DEMO_DEFAULTS, demoHeaps, demoVolume } from "@core/demo_plan";

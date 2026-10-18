@@ -12,7 +12,7 @@ import { makeWorld, worldPlacementOf, type World } from "@core/object_model";
 import { playVolumeOf } from "@core/play_volume";
 import { contourDims, parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { IDENTITY, qAngle, qconj, qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "@core/vec";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE_0 } from "../src/content/scene_0";
 import { SCENE1_DEMO } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN } from "../src/content/scene1_demo_plan";

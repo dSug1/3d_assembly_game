@@ -23,7 +23,7 @@
  * any start: the chain, the build growing by contact, the reach, the carry, the start view.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE1_DEMO as SHELL } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
 import { demoReach, flatOrientations, withDemoPlan } from "@core/demo_plan";

@@ -3,7 +3,7 @@
  * renaming, the lights' conventions checked against the owner's own words, and the scene switch.
  */
 import { describe, expect, it } from "vitest";
-import { SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SHIFT_Y, SCENE_1_SLOTS } from "../src/content/scene_1";
+import { SCENE_1 as SCENE_1_LEVEL, SCENE_1_TABLE as SCENE_1, SCENE_1_CONTOUR_MARGIN, SCENE_1_SHIFT_Y, SCENE_1_SLOTS } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 
 /** ⭐ `D169`: the owner's gravity coordinate, moved up with the scene so the floor's top centre is the origin. */
 const up = (y: number) => +(y + SCENE_1_SHIFT_Y).toFixed(6);
@@ -277,7 +277,7 @@ describe("⭐⭐ the switch and the view", () => {
   it("⭐ the registry: 0 is Scene_0, 1 is Scene_1, 2 the demo (`D170`, renamed `Scene1_demo` by `D171`); out of range falls back to Scene_0", () => {
     expect(SCENES.map((s) => s.id)).toEqual(["Scene_0", "Scene_1", "Scene1_demo"]);
     expect(sceneAt(0)).toBe(SCENE_0);
-    expect(sceneAt(1)).toBe(SCENE_1);
+    expect(sceneAt(1)).toBe(SCENE_1_LEVEL); // the level plays the table AND the seated frusta
     expect(sceneAt(7)).toBe(SCENE_0);
     expect(sceneAt(0.5)).toBe(SCENE_0);
   });

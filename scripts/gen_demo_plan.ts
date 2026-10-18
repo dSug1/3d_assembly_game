@@ -5,7 +5,7 @@
  * Run: `npx vite-node scripts/gen_demo_plan.ts`
  */
 import { writeFileSync } from "node:fs";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the table alone — the seated frusta are not in the demo
 import { SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { generateDemoPlan } from "../src/core/demo_plan";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
