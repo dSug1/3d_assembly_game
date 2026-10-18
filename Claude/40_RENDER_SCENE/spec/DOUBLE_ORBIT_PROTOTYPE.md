@@ -1335,3 +1335,29 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   monotonic, half a round in all, its sense flipping with the offset's sign, a narrower band rolling over less; steep ≤ 0.1° out of the plane with the
   offsets on; the slider. Restated: option B's span → the band's (±20° of pitch, 10° / 30° honoured); the up's step bounded by the top roll's own peak
   rate. ⛔ No device close. 2083 vectors.
+
+### …the curve's face snapped BY GRAVITY: two curves only (`1.0.81-`, 2026-10-18)
+
+> *"If I place the cursor on the top inclined face of piece 42, when i drive the green piece orbit with dy, the piece goes forward towards the gizmo then
+> goes backwards back towards the same side of the assembly instead of continuing into the opposite side of the assembly. Is it related to the inclination
+> of the gizmo hosting face?"* → *"build as follows: identify which of the faces of the frozen object the face supporting the gizmo projects the most (for
+> example, horizontal top or bottom face, right or left face, front or back face). Then, apply the 2D curve of the frozen object's identified face to the
+> face supporting the gizmo. This way, there are only 2 types of 2D curve: for horizontal face or for gravity vertical face. Note that if there are several
+> frozen object, the biggest one applies (currently, this is the floor of the scene)."* → *"if the face supporting the body projects equally to several
+> faces of the frozen object, select the vertical one"* — the owner.
+
+* ⛔ **Measured first**: turned onto the REAL normal of Piece42's top face (32° off up), the curve's halfway sat at 58° and its rings at ±55° / ±32° about
+  it — ring 4 26° on the near side, ring 3 67° just over the far side, ring 1 straight overhead: the piece went over the gizmo and came BACK, never down
+  the opposite side.
+* ⭐ First built as asked — snapped to the six faces of the biggest frozen body (the floor), a tie to the vertical — then the owner asked what to do with
+  no frozen body (a hidden one, the play volume, gravity and the camera's view plane, the first seated part's long axis …); my advice: GRAVITY ONLY, which
+  needs no frozen body, never reads the camera, and does not swing a turned piece's curve off its face (snapped to the floor's walls, a side face of a piece
+  turned 32° about gravity — Piece1 — got a curve 32° off its own direction, up to 45° at worst) → *"switch to gravity-only snapping"*.
+* ⭐⭐⭐ **The curve's face snapped by gravity** (`snapToGravity`, `input/orbit_rig.ts`; `retargetGizmo` turns the curve onto it): a gizmo face nearer
+  horizontal than vertical takes the horizontal face's curve (straight up or down); any other the vertical face's, turned toward the face's OWN horizontal
+  direction — only the TILT is snapped, never the heading. ⭐ A TIE (45°) keeps the VERTICAL face (the owner). The gizmo stays where it was tapped; the
+  semi-isometric hold and the top roll read the snapped curve. `snapToFrameAxis` and `curveFrame` (the frozen-frame build) are deleted.
+* After: on Piece42's top face the curve is the horizontal one — ring 4 and ring 1 on OPPOSITE sides at 58°, straight above halfway; in the app the gizmo on
+  it reads `rigNormal` [0, 1, 0], a full dy sweep clean (the up's fastest step the top roll's own, as on a horizontal face).
+* 3 vectors (red on the old code): only the tilt snapped — a tilted top, a tilted underside, a slanted side and a turned piece's side keeping their own
+  heading, the 45° tie to the vertical; the piece passing to the opposite side on Piece42's top face; the wiring. ⛔ No device close. 2091 vectors.

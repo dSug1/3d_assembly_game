@@ -307,6 +307,41 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const h = code("render/hold_wiring.ts");
     expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
     const c = code("render/camera_rig.ts");
-    expect(c).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, normal, [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
+    expect(c).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
+  });
+});
+
+describe("⭐⭐⭐ the curve's face SNAPPED BY GRAVITY (2026-10-18, the owner: *\"there are only 2 types of 2D curve: for horizontal face or for gravity vertical face\"* → *\"switch to gravity-only snapping\"*)", () => {
+  it("⭐⭐ only the TILT is snapped: a tilted top → up, a tilted underside → down, a slanted or turned side → its OWN horizontal direction; a 45° tie → the vertical face", async () => {
+    const { snapToGravity } = await import("../src/input/orbit_rig");
+    expect(snapToGravity([0.53, 0.85, 0])).toEqual([0, 1, 0]); // Piece42's top inclined face (32° off up)
+    expect(snapToGravity([0.2, -0.95, 0.1])).toEqual([0, -1, 0]); // a tilted underside
+    const side = snapToGravity([0.26, 0, 0.96])!; // Piece42's front slanted side: its own heading, not snapped to a wall
+    expect(side[0]).toBeCloseTo(0.26 / Math.hypot(0.26, 0.96), 9);
+    expect(side[1]).toBe(0);
+    const c = Math.cos(32 / 57.2958), s = Math.sin(32 / 57.2958);
+    const turned = snapToGravity([c * 0.9, 0.3, s * 0.9])!; // a side face of a piece turned 32° about gravity (Piece1), tilted a little: its heading kept
+    expect(turned[0]).toBeCloseTo(c, 9);
+    expect(turned[2]).toBeCloseTo(s, 9);
+    expect(turned[1]).toBe(0);
+    expect(snapToGravity([Math.SQRT1_2, Math.SQRT1_2, 0])).toEqual([1, 0, 0]); // ⭐ the tie: the vertical face (the owner)
+    expect(snapToGravity([0, -Math.SQRT1_2, -Math.SQRT1_2])).toEqual([0, 0, -1]);
+    expect(snapToGravity(null)).toBeNull();
+  });
+  it("⭐⭐⭐ on Piece42's top inclined face the piece passes OVER the gizmo to the OPPOSITE side, as on a horizontal face (⛔ turned onto the real normal: over the top to 67° on the far side, then back overhead)", async () => {
+    const { snapToGravity } = await import("../src/input/orbit_rig");
+    const yaw = 0;
+    const cs: Vec3 = [1, 0, 0];
+    const r = rigTurnFor(cfg, yaw, 0.99, snapToGravity([0.53, 0.85, 0]), cs, UNTURNED);
+    const side = (v: number): number => { const p = rigPlace(cfg, r, yaw, v, 1); return (p[0] * cs[0] + p[2] * cs[2]) / Math.hypot(p[0], p[1], p[2]); };
+    const elev = (v: number): number => { const p = rigPlace(cfg, r, yaw, v, 1); return Math.asin(p[1] / Math.hypot(p[0], p[1], p[2])) * 57.2958; };
+    expect(Math.sign(side(1))).toBe(-Math.sign(side(0)));
+    expect(Math.abs(side(1))).toBeGreaterThan(0.5);
+    expect(Math.abs(side(0))).toBeGreaterThan(0.5);
+    expect(elev(0)).toBeLessThan(60);
+    expect(elev(1)).toBeLessThan(60);
+  });
+  it("⭐ wired: the gizmo's move turns the curve onto the face snapped by gravity", () => {
+    expect(code("render/camera_rig.ts")).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
   });
 });

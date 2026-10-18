@@ -9,7 +9,7 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendRig, rigEnds, rigPlace, rigTurnFor, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { blendRig, rigEnds, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -92,7 +92,8 @@ export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): vo
   st.rigShare = 0;
   // ⭐ the new near side the way nearer the old one (it only picks which way a swing turns) — a gizmo change never turns it half a round
   // ⭐⭐ (2026-10-16) the nearer of the two turns at this yaw (`rigTurnFor`): the piece stays on its side through the gizmo's change
-  st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, normal, [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
+  // ⭐⭐⭐ (2026-10-18) the curve turned onto the face SNAPPED BY GRAVITY (`snapToGravity`) — two curves only: horizontal, vertical (its own heading)
+  st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
   st.centreBlend.retarget(to);
   syncCentre(st);
 }

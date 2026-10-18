@@ -246,6 +246,23 @@ export function rigSwingNeed(cfg: GestureConfig, p: RigParams): number {
   return smooth((rigPeakElevation(cfg, p) - PEAK_FROM_RAD) / (PEAK_FULL_RAD - PEAK_FROM_RAD));
 }
 
+/**
+ * ⭐⭐⭐ (2026-10-18, the owner: *"identify which of the faces of the frozen object the face supporting the gizmo projects the most … there are only 2 types
+ * of 2D curve: for horizontal face or for gravity vertical face"* → *"if the face supporting the body projects equally to several faces of the frozen
+ * object, select the vertical one"* → *"switch to gravity-only snapping"*) — **THE CURVE'S FACE, SNAPPED BY GRAVITY ONLY**: a gizmo face nearer horizontal
+ * than vertical takes a horizontal face's curve (straight up or down); any other a vertical face's, turned toward the face's OWN horizontal direction —
+ * only the TILT is snapped, never the heading, and nothing depends on a frozen body or the camera. A tie (45°) keeps the VERTICAL face. ⛔ Turned onto the
+ * real normal, a face tilted 32° kept its curve on one side (the piece went over the gizmo and came back); ⛔ snapped to the floor's six faces, a face
+ * turned about gravity (Piece1, 32°) got a curve up to 45° off its own direction. `null`: none.
+ */
+export function snapToGravity(n: Vec3 | null): Vec3 | null {
+  const u = n === null ? null : normalize(n);
+  if (u === null) return null;
+  const h = Math.hypot(u[0], u[2]);
+  if (Math.abs(u[1]) > h + 1e-9) return [0, u[1] > 0 ? 1 : -1, 0];
+  return h > 1e-12 ? [u[0] / h, 0, u[2] / h] : null;
+}
+
 /** ⭐ The rig's swing (`null` when its curve never passes over the gizmo) — cached per turn and ring set. */
 export function rigSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   // ⭐ (2026-10-17, the second Fable audit) the same turn OBJECT first — the end turns persist frame to frame, and the value key cost 2 µs a read
