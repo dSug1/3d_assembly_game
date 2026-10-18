@@ -145,14 +145,47 @@ export interface RigSwing {
   readonly w: number;
   /** The far side lies at v ABOVE the crossing (else below). */
   readonly farAbove: boolean;
-  /** ⭐ (2026-10-16) every stretch of the curve on the FAR side of the gizmo (ring parameter; the ends extended past 0 and 1). */
-  readonly far: readonly (readonly [number, number])[];
+  /** ⭐ (2026-10-16) every stretch of the curve on the FAR side of the gizmo (ring parameter; the ends extended past 0 and 1), ⭐ (2026-10-18) with the
+   * top roll's width at each end (`topRollWidth`; an open end: any). */
+  readonly far: readonly (readonly [number, number, number, number])[];
 }
 
 const swingCache = new Map<string, RigSwing | null>();
 
 const ringKey = (cfg: GestureConfig): string =>
-  [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM].join(",");
+  [cfg.orbitLowerRingOn, cfg.orbitTopRadiusM, cfg.orbitTopHeightM, cfg.orbitMiddleRadiusM, cfg.orbitMiddleHeightM, cfg.orbitLowerRadiusM, cfg.orbitLowerHeightM, cfg.orbitBottomRadiusM, cfg.orbitBottomHeightM, cfg.topRollBandDeg].join(",");
+
+/** ⭐ The unturned curve's pitch at `v` (its angle above the level, rad) — a turn keeps angles, so it is also the view's angle along the turned curve's plane. */
+function curvePitch(cfg: GestureConfig, v: number): number {
+  const o = orbitOffset(cfg, 0, Math.min(1, Math.max(0, v)), 1).offsetM;
+  return Math.atan2(o[1], o[0]);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-18, the owner: *"Isn't is possible to modify this camera movement so that there is no azimuth i.e. the vertical edges in the scene
+ * assembly remain vertical in the screen view. To avoid having the scene upside down at the exit of the movement, the camera can also roll between ring 2
+ * and ring 3"* → *"start building"*) — **THE TOP ROLL's WIDTH** at a crossing `vc`, in the ring parameter: the stretch over which the view turns
+ * `±topRollBandDeg` about straight above (where the curve's pitch θ has turned B away on each side) — ⛔ the whole span of rings 2 → 3 (option B): the picture rolled all the
+ * way, where vertical edges are long (164° → 20° against the curve's plane).
+ */
+export function topRollWidth(cfg: GestureConfig, vc: number): number {
+  const band = (cfg.topRollBandDeg * Math.PI) / 180;
+  const at = curvePitch(cfg, vc);
+  // ⭐ on each side, where the pitch has turned the band away from the crossing's (bisection; the ring's end if it never does) — the window their mean, ×2
+  const reach = (dir: number): number => {
+    const end = dir > 0 ? 1 - vc : vc;
+    if (!(end > 0) || Math.abs(curvePitch(cfg, vc + dir * end) - at) < band) return Math.max(end, 1e-4);
+    let lo = 0;
+    let hi = end;
+    for (let k = 0; k < 40; k++) {
+      const m = (lo + hi) / 2;
+      if (Math.abs(curvePitch(cfg, vc + dir * m) - at) < band) lo = m;
+      else hi = m;
+    }
+    return (lo + hi) / 2;
+  };
+  return Math.max(1e-4, reach(1) + reach(-1));
+}
 
 
 /** ⭐ (2026-10-17) the swing's heading counts fully on a curve coming within `90° − PEAK_FULL` of the vertical, not at all short of `PEAK_FROM` (`rigSwingNeed`). */
@@ -258,20 +291,19 @@ function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
     }
   }
   if (cross.length === 0) return null;
-  const far: [number, number][] = [];
+  const far: [number, number, number, number][] = [];
   const bounds = [-Infinity, ...cross, Infinity];
   for (let i = 0; i + 1 < bounds.length; i++) {
     const lo = bounds[i]!;
     const hi = bounds[i + 1]!;
     const mid = lo === -Infinity ? Math.max(0, hi - 1e-3) : hi === Infinity ? Math.min(1, lo + 1e-3) : (lo + hi) / 2;
-    if (side(Math.min(1, Math.max(0, mid))) <= 0) far.push([lo, hi]);
+    if (side(Math.min(1, Math.max(0, mid))) <= 0) far.push([lo, hi, Number.isFinite(lo) ? topRollWidth(cfg, lo) : 1, Number.isFinite(hi) ? topRollWidth(cfg, hi) : 1]);
   }
   const vc = cross[0]!;
   const farAbove = side(Math.min(1, vc + 1e-3)) <= 0;
-  // ⭐⭐ (2026-10-16, the owner: *"it looks like the piece does a Z-shape travel. build option B instead."*) — the swing spans rings 2 → 3 exactly,
-  // centred on the crossing (⛔ C: a width solved to the vertical crossing's speed, 11.3 mm in `Scene_1`, reaching past the rings — a Z-shape travel)
-  const { v2, v3 } = waistRings(cfg);
-  return { vc, w: Math.max(1e-6, Math.abs(v2 - v3)), farAbove, far };
+  // ⭐⭐⭐ (2026-10-18) THE TOP ROLL — the swing only within the band about straight above (`topRollWidth`), centred on the crossing; outside it the
+  // camera is upright, in the curve's vertical plane (⛔ option B, 2026-10-16: spanning rings 2 → 3 — the picture rolled all the way)
+  return { vc, w: topRollWidth(cfg, vc), farAbove, far };
 }
 
 /** ⭐ How far the camera's heading has swung round at `v` (0 on the near side, 1 behind the piece on the far side). */
@@ -281,7 +313,7 @@ export function rigSwingShare(cfg: GestureConfig, p: RigParams, v: number): numb
   // ⭐⭐ (2026-10-16) the SMOOTHED far fraction of the window [v − w/2, v + w/2] (the smoothstep's density): one crossing — exactly the swing of
   // option B; a far stretch appearing midway through a gizmo change starts at zero width, so the share grows from zero — never a jump
   let share = 0;
-  for (const [a, b] of s.far) share += smooth((b - v) / s.w + 0.5) - smooth((a - v) / s.w + 0.5);
+  for (const [a, b, wa, wb] of s.far) share += smooth((b - v) / wb + 0.5) - smooth((a - v) / wa + 0.5);
   return Math.min(1, Math.max(0, share));
 }
 
@@ -311,7 +343,8 @@ export function waistGate(cfg: GestureConfig, v: number): number {
  * (`place`, the piece's place at the camera's orbit place — the SAME turn the piece is placed with, blended or not), so whatever the piece does —
  * the crossing, a gizmo change, a slide — the camera follows it exactly (⛔ a heading and tilt of their own, blended apart from the piece's place: the
  * Z-shape, the piece lost off the screen). Its UP: upright (the world's vertical seen from the camera) everywhere but between rings 2 and 3 over a
- * crossing (faded past them, `waistGate`) and near the vertical (70°–85°, anywhere) — both only as far as the curve comes near the vertical at all
+ * crossing (faded past them, `waistGate`; ⭐ 2026-10-18 the half-round itself only within `topRollBandDeg` of straight above — THE TOP ROLL, `topRollWidth`)
+ * and near the vertical (70°–85°, anywhere) — both only as far as the curve comes near the vertical at all
  * (`rigSwingNeed`) — where it turns with the swing's heading (`rigSwingShare`): the view turns, the camera stays on the piece (its roll rate bounded where
  * the screen draws it: `input/camera_frame.ts`). The owner's
  * offsets as ever: the pitch offset away from the level (`mirroredPitchOffset`, about the camera's right), the yaw offset about the world vertical;
@@ -341,7 +374,21 @@ export function rigCameraFrame(cfg: GestureConfig, p: RigParams, cam: OrbitAt, p
   return frameAtHeading(e, d0, blendHeadings(hOwn, hSwing, wz), wz, off, lim);
 }
 
-function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, off: CameraAngleOffset, lim: number): RigCameraFrame {
+/** ⭐ (2026-10-18) the owner's camera offsets fade out from this elevation of the view (up or down), gone at `OFFSET_GONE_RAD` — the top roll's plane. */
+const OFFSET_FADE_RAD = (60 * Math.PI) / 180;
+const OFFSET_GONE_RAD = (75 * Math.PI) / 180;
+
+/**
+ * ⭐⭐ (2026-10-18, the top roll) how much of the owner's yaw / pitch offsets the camera keeps at elevation `e`: all below 60°, none past 75° — looking
+ * nearly straight down a sideways offset means nothing, and it took the camera out of the curve's vertical plane (≤ 2.1°: the "slight azimuth").
+ */
+export function offsetKeep(e: number): number {
+  return 1 - smooth((Math.abs(e) - OFFSET_FADE_RAD) / (OFFSET_GONE_RAD - OFFSET_FADE_RAD));
+}
+
+function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, offIn: CameraAngleOffset, lim: number): RigCameraFrame {
+  const keep = offsetKeep(e);
+  const off = keep >= 1 ? offIn : { yawRad: offIn.yawRad * keep, pitchRad: offIn.pitchRad * keep };
   const heading = level(h);
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, d0);
@@ -478,7 +525,8 @@ export function rigTurnFor(cfg: GestureConfig, yaw: number, v: number, normal: V
 
 /** ⭐ The swing's heading at the camera's orbit place — the near side turned half a round over a crossing (`rigSwingShare`). */
 export function rigSwingHeading(cfg: GestureConfig, p: RigParams, cam: OrbitAt): number {
-  return cam.yaw + p.beta + Math.PI * rigSwingShare(cfg, p, cam.v);
+  // ⭐ (2026-10-18, the top roll) the half-round turns toward the camera's yaw-offset side (today's sense at the owner's +2.5°; a negative offset, the other way)
+  return cam.yaw + p.beta + (cfg.cameraYawOffsetDeg >= 0 ? 1 : -1) * Math.PI * rigSwingShare(cfg, p, cam.v);
 }
 
 /** ⭐ (2026-10-17) two headings blended at `s` as DIRECTIONS — the one rule for the camera's headings (⛔ the short way jumps 2π·s as they pass half a round apart). */

@@ -838,3 +838,27 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
 * After: the first orbit drag finishes the way back (offset 0, nothing blocked); dx turns the yaw freely (−1.571 → −0.361 rad and back), dy moves v.
   `tests/solver_flush.test.ts` (4 vectors — three red against the old solver; the wall ahead still stops the slide); the hover's audit vector 3 now
   forces its deferral with a 2-query cap (at the shipped 24 the 10 mm along a wall goes in one solve). 2050 vectors.
+
+### 12duodecies. ⏸ FUTURE IMPROVEMENT — the gizmo change must not turn the curve into a part (proposal, 2026-10-17, `1.0.80-`; not built)
+
+> *"write in the md file the future improvement"* — the owner, after the second Fable audit of the orbit (`DOUBLE_ORBIT_PROTOTYPE.md`, 2026-10-17).
+
+* ⚠ **The defect left**: a gizmo change TURNS the piece's curve (`blendRig` at `rigShare`) and MOVES its centre (`centreBlend`) between two frames. The solve
+  (`orbitFrame`) only advances the piece ALONG the curve as it now stands, so a turn that sweeps the piece's place into a part is met only afterwards — by a
+  RELOCATION to the nearest free place (*"orbit: the ring moved the piece into a part — moved to the nearest free place"*): a visible hop.
+* ⭐ What is built (2026-10-17): the change advances by the travel the solver HONOURED (`gizmoBlendTravel`) — a piece HELD against a part stalls the change,
+  a relocation frame advances nothing. ⛔ It does not cover a piece that MOVES freely along the curve while the turn carries it sideways: measured with real
+  mouse drags in the app (gizmo Piece4's top → Piece10's front / −x face, dy from v 0.6) — **one relocation per drag, midway through the change (share
+  0.3–0.46), the same before and after** the honoured-travel build.
+* ⭐⭐ **The proposal — test the place at the NEW share before taking it**: each frame, before `rigShare` eases forward (and the centre with it), place the
+  piece at its solved `pieceQ` on the turn at the candidate share and centre, and ask the gap (ONE query of the 24 a frame — `pieceSolverEnv`'s `gap`).
+  * clear (gap ≥ the skin): take the share, as today;
+  * into a part: keep this frame's share and centre (the change WAITS); the finger's travel is not lost — it stays pending (`gizmoTravelPending`) and is
+    offered again next frame, so the change resumes as soon as the piece has moved on along the curve;
+  * better than a wait, if a hand finds the wait sticky: bisect the share step (2–3 queries) and take the largest clear part of it — conservative
+    advancement on the share, the same rule the solve uses on the arc (patent-free: interval halving).
+* ⚠ **Costs and questions for the owner**: a change can stall for as long as the piece stays where the turned curve would bury it (the piece moving along
+  the curve frees it); one extra query a frame during a change (the iPhone budget is 24 — the solve's cap would give one up); the centre's glide stalls
+  with the turn (they are one progress — kept so: a centre moving without the turn moves the piece just the same).
+* Vector to write first (red today): a stub world with a part beside the piece's place at share 0.4 — sweep the share 0 → 1 with the piece still: no frame
+  may place it with a negative gap, and `orbitFrame` must never report `relocated`.
