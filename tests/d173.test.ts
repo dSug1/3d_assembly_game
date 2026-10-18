@@ -11,7 +11,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { SCENE1_DEMO } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN as PLAN } from "../src/content/scene1_demo_plan";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { sceneAt, sceneReady } from "../src/content/scenes";
 import { GAME_CONTENT } from "../src/content/worlds";
 import { withDemoPlan } from "@core/demo_plan";

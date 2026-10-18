@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import { acceptedOrientations, bestRigidFit, goalReport, type Pose } from "@core/goal";
 import { parseSceneDescriptor, serializeSceneDescriptor, resolveBootOrientation } from "@core/game_structure";
 import { add, IDENTITY, qAngle, qconj, qFromAxisAngle, qmul, qRotate, scale, type Quat, type Vec3 } from "@core/vec";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE_0 } from "../src/content/scene_0";
 import { sceneConfig } from "@input/scene_rig";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";

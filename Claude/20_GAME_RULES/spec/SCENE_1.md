@@ -168,3 +168,23 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
 * ⛔ A defect the move exposed: the boot wrote `orbitCentreM = Vector3.Zero()` straight, so a start centre other than the origin never reached the camera; it now reads the centre blend's.
 * `Scene_2`'s asset (`Assets/Blender/scene_2.blend`) moved the same way → `BLENDER_ASSETS.md` §2.
 * ⭐ (2026-10-17, `1.0.80-`) rings 2 and 3 (middle and lower) at height ±0.09·√2 = ±0.127 m (were ±0.15): the slide view's tilt → `DOUBLE_ORBIT_PROTOTYPE.md` (2026-10-17).
+
+## 10. ⭐⭐ Two seated frusta — faces at a tilt for the gizmo (2026-10-18, `1.0.81-`, ⛔ no device close)
+
+> *"Add and seat a part with the same geometry as the green piece to the right face of piece 5 as attached. This will allow me to place the gizmo on
+> faces which have tilted orientation."* → *"also, add a similar part on the bottom face of piece 19 and seat it with its longest face snapped and
+> aligned with the bottom face of piece 19."* — the owner. ⚠ The attachment did not come through: the pose of `Piece42` was confirmed in words
+> (*"Yes, as described"*).
+
+* **The geometry**: the green piece's exactly — `greenPyramidSizeM` of Piece17, **1.035 × 0.4125 × 0.45 units** (103.5 × 41.25 × 45 mm), its top tapered to
+  half (`OBJECT_TOP_SCALE`), no contour (`SCENE_1_FRUSTUM_SIZE`, `SEATED_FRUSTA` in `content/scene_1.ts`). Each WIDE face (its longest) flush on the host's
+  CONTOUR (touching, no gap, no overlap), its long axis along the host's long side, the taper pointing away. Their four slanted sides stand **32.1°** and
+  **15.3°** off the host face's normal — the tilted faces the gizmo can rest on (pickable, orbit candidates; checked in the app: the gizmo set on Piece42's
+  32° side, a full dy sweep clean).
+* **`Piece42`** on **Piece5's RIGHT face** (+x, the painting's right edge, at x 2.475): long axis vertical, the taper to +x.
+* **`Piece43`** under **Piece19's BOTTOM face** (y 0.155): long axis along x, the taper down. ⚠ Piece19 sits 0.155 above the sand: the part SINKS
+  **0.26 units (2.6 cm) into the frozen floor** — the owner's choice (*"Sink into the floor"*, over a flatter part or none).
+* **Movable, white, part of the goal**: not frozen (a frozen body hosts no gizmo); white (`MAT_A` — ⚠ not yellow: the green piece is sized from the yellow
+  pieces); in `SCENE_1_FINAL` where they sit, a frustum the same only turned half a round about its taper axis (`yawHalfTurns`) — the level has **43** pieces.
+* **Not in the demo**: `SCENE_1_TABLE` (the table alone) is what `Scene1_demo` plays and `scripts/gen_demo_plan.ts` reads — its committed plan unchanged.
+  The table's own vectors read `SCENE_1_TABLE`; the frusta have theirs (`tests/scene_1_frusta.test.ts`, 5).

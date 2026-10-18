@@ -60,6 +60,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
 6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
 7. ⚠ The hover is not an episode yet (`SCORE.md`).
+10. ⭐ **Tilted faces to try (2026-10-18)**: two frusta of the green piece's geometry seated on Piece5's right face (`Piece42`) and under Piece19 (`Piece43`, sunk into the floor) — slanted sides at 32° / 15° → `SCENE_1.md` §10.
 9. ✅ **THE TOP ROLL — built 2026-10-18, ⛔ no device close**: over a horizontal face the camera upright in the curve's vertical plane (the offsets faded when steep), the half-round only within `topRollBandDeg` = 20° of straight above → `DOUBLE_ORBIT_PROTOTYPE.md`, last section.
 8. ⏸ **Future improvement (2026-10-17, not built)**: a gizmo change can still turn the curve INTO a part under a piece moving freely along it (one relocation — a hop — per such drag, midway through the change); the proposal: test the place at the new share before taking it, one query a frame → `COLLISION.md` §12duodecies.
 

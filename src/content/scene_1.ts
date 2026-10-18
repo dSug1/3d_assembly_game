@@ -24,6 +24,7 @@
  * path the build already has.
  */
 import { isoWaistHeightM } from "../input/waist_view";
+import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import type { BodySpec, FinalConfiguration, FinalPose, SceneDescriptor, Triple } from "../core/game_structure";
 
 /** ⭐ `D169`: how far up every position moved so the floor's top centre is the origin — authored units. */
@@ -132,15 +133,43 @@ export const SCENE_1_ORBIT_GOALS: readonly FinalPose[] = [
   { id: "turquoise-piece", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 1.035 / 2, -0.34], orientation: "identity", symmetry: "hexPrism" },
 ];
 
+/**
+ * ⭐⭐ (2026-10-18, the owner: *"Add and seat a part with the same geometry as the green piece to the right face of piece 5 … This will allow me to place
+ * the gizmo on faces which have tilted orientation"* → *"also, add a similar part on the bottom face of piece 19 and seat it with its longest face
+ * snapped and aligned with the bottom face of piece 19"*) — **TWO SEATED FRUSTA**: the green piece's geometry exactly (`greenPyramidSizeM` of Piece17 —
+ * 1.035 × 0.4125 × 0.45 units, its top tapered to half, `OBJECT_TOP_SCALE`; no contour), each WIDE face (its longest) flush on the host's contour, its long
+ * axis along the host's long side, the taper pointing away — so their four slanted sides are faces the gizmo can rest on at a TILT (~32° and ~15° off the
+ * host face's normal). Movable pieces like the rest (a frozen body hosts no gizmo), part of the goal where they sit; WHITE (⚠ not yellow: the green
+ * piece is sized from the yellow ones); kept OUT of the demo (`SCENE_1_TABLE` — its plan is the table's).
+ * * `Piece42` on Piece5's RIGHT face (+x, the painting's right edge): long axis vertical, the taper to +x (the owner: *"Yes, as described"*).
+ * * `Piece43` under Piece19's BOTTOM face: long axis along x, the taper down — ⚠ Piece19's bottom is 0.155 above the sand, so the part sinks 0.26 units
+ *   (2.6 cm) into the frozen floor (the owner: *"Sink into the floor"*, over a flatter part or none).
+ */
+export const SCENE_1_FRUSTUM_SIZE: Triple = [1.035, 0.4125, 0.45];
+const FRUSTUM_HALF_H = SCENE_1_FRUSTUM_SIZE[1] / 2;
+const S = Math.SQRT1_2;
+/** ⭐ The seated frusta's ids — everything else in `Scene_1` is the owner's table of boxes. */
+export const SCENE_1_FRUSTUM_IDS: readonly string[] = ["Piece42", "Piece43"];
+const SEATED_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: readonly [number, number, number, number] }[] = [
+  // Piece5: core x 2.305 ± 0.155, contour + 0.015 → its right face at 2.475; the frustum's body −y (the wide face) turned to −x: −90° about z
+  { id: "Piece42", slot: "MAT_A", position: [2.305 + 0.31 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, 4.56, -0.34], quat: [S, 0, 0, -S] },
+  // Piece19: core y 0.445 − 0.275 = 0.17, contour → 0.155 its bottom face; the wide face turned up: a half-turn about x
+  { id: "Piece43", slot: "MAT_A", position: [0.555, 0.445 - 0.55 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H, -0.34], quat: [0, 1, 0, 0] },
+];
+
 export const SCENE_1_FINAL: FinalConfiguration = {
   frame: "RELATIVE",
-  bodies: ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
-    id,
-    position: [x, y, z],
-    orientation: "identity",
-    symmetry: "halfTurns",
-    kind: `${slot} ${sx}×${sy}×${sz}`,
-  })),
+  bodies: [
+    ...ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
+      id,
+      position: [x, y, z] as Triple,
+      orientation: "identity" as const,
+      symmetry: "halfTurns" as const,
+      kind: `${slot} ${sx}×${sy}×${sz}`,
+    })),
+    // ⭐ a frustum looks the same only turned half a round about its own taper axis
+    ...SEATED_FRUSTA.map((f) => ({ id: f.id, position: f.position, orientation: { quat: f.quat } as const, symmetry: "yawHalfTurns" as const, kind: `${f.slot} frustum` })),
+  ],
 };
 
 /**
@@ -162,6 +191,16 @@ const BOOT_MOVES: Readonly<Record<string, { position: Triple; yawDeg: number }>>
   Piece23: { position: [-2.864, 4.56, 0.587], yawDeg: 0 },
   Piece41: { position: [1.323, 0.445, -1.412], yawDeg: 0 },
 };
+
+const frusta: BodySpec[] = SEATED_FRUSTA.map((f) => ({
+  id: f.id,
+  position: f.position,
+  colour: SCENE_1_PALETTE[f.slot],
+  dims: SCENE_1_FRUSTUM_SIZE,
+  orientation: { quat: f.quat },
+  frozen: false,
+  topScale: OBJECT_TOP_SCALE,
+}));
 
 const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => {
   const moved = BOOT_MOVES[id];
@@ -206,7 +245,7 @@ export const SCENE_1: SceneDescriptor = {
   unitM: 0.1,
   // ⭐ prototype (green box), the owner 2026-10-01: *"boot scene 1 on the top ring"* (was "LEVEL").
   bootView: "TOP",
-  bodies: [...pieces, FLOOR],
+  bodies: [...pieces, ...frusta, FLOOR],
   lighting: {
     background: [0.0087, 0.1465, 0.2138],
     shadowStrength: 0.4,
@@ -286,4 +325,11 @@ export const SCENE_1: SceneDescriptor = {
   },
   final: SCENE_1_FINAL,
   orbitGoals: SCENE_1_ORBIT_GOALS,
+};
+
+/** ⭐ (2026-10-18) `Scene_1` as the owner's TABLE alone — without the seated frusta: what the demo plays and its plan is generated from (`scene1_demo.ts`). */
+export const SCENE_1_TABLE: SceneDescriptor = {
+  ...SCENE_1,
+  bodies: SCENE_1.bodies.filter((b) => !SCENE_1_FRUSTUM_IDS.includes(b.id)),
+  final: { ...SCENE_1_FINAL, bodies: SCENE_1_FINAL.bodies.filter((b) => !SCENE_1_FRUSTUM_IDS.includes(b.id)) },
 };

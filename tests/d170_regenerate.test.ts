@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE1_DEMO_OPTIONS } from "../src/content/scene1_demo";
 import { formatDemoPlan } from "../src/content/demo_plan_format";
 import { DEMO_DEFAULTS, generateDemoPlan } from "@core/demo_plan";

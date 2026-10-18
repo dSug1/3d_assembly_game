@@ -10,7 +10,7 @@
  */
 import type { SceneDescriptor } from "../core/game_structure";
 import type { DemoOptions, DemoPlan } from "../core/demo_plan";
-import { SCENE_1, SCENE_1_PALETTE } from "./scene_1";
+import { SCENE_1_TABLE as SCENE_1, SCENE_1_PALETTE } from "./scene_1"; // ⭐ (2026-10-18) the table alone — the seated frusta are not in the demo
 
 /**
  * ⭐ `D174`/`D191` (the owner: *"ordered by color"*, *"small heaps one per color"*): the heaps, left to right, in the painting's own order — white, black,
