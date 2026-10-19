@@ -30,7 +30,7 @@ import { trackingMetresPerPx } from "../input";
 import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
-import { allQuadsReachable, candidateFace } from "../input/orient_window";
+import { carouselQuad, quadCarousel } from "../input/quad_carousel";
 import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";
 import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnVerdict, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
@@ -80,7 +80,7 @@ function restingCentreWorld(st: SceneState): Vec3 | null {
 
 /**
  * ⭐ Every frame: the directions read again on a goal commit; the CANDIDATE (the direction facing the camera most, seen from the resting face —
- * `candidateFace`, every direction seen from the resting face itself); the direction tapped kept until the candidate changes; the quads placed and lit.
+ * ⭐ 2026-10-19: the quads' loop stepped by the camera's yaw, `carouselQuad`); the direction tapped kept until the candidate changes; the quads placed and lit.
  */
 export function orientCubeFrame(st: SceneState): void {
   if (st.orientDirty) {
@@ -89,33 +89,15 @@ export function orientCubeFrame(st: SceneState): void {
   }
   const at = restingCentreWorld(st);
   const cam = st.camera.position;
-  const cand =
-    at === null
-      ? -1
-      : candidateFace(
-          // ⛔ (2026-10-12) seen FROM the resting face: every direction from the same point (the camera's direction only) — a unit cube there
-          // (facets 1 m out) leaned it toward the sides at the camera's ~1.5 m
-          st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),
-          [cam.x, cam.y, cam.z],
-        );
+  // ⭐⭐⭐ (2026-10-19, the owner: *"Propose another logic for the yellow highlight of the quads so that each quad is highlighted at least once in a 360 yaw
+  // orbit and the yellow highlight switches from one quad to the other in a progressive way"* → *"build it anchored"*) — THE YELLOW BY YAW (`carouselQuad`):
+  // the quads' loop stepped by the camera's azimuth about the gizmo (⛔ the direction facing the camera most: one quad won all round on Piece42's top)
+  const loopKey = `${st.orientDirs.map((d) => d.normal.map((x) => x.toFixed(4)).join(",")).join(";")}|${st.cfg.quadSliceMaxDeg}`;
+  if (st.orientCarousel?.key !== loopKey) st.orientCarousel = { key: loopKey, c: quadCarousel(st.orientDirs.map((d) => d.normal), st.cfg.quadSliceMaxDeg) };
+  const g = st.orbitCentreM;
+  const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);
   const sh = st.orientShown;
   sh.candidate = cand;
-  // ⭐⭐ (2026-10-12, *"there is an alert if the 1st and 4th rings radius and heights are changed by the sliders"*) — ON the 1st / 4th ring, the
-  // camera's elevation from the resting face measured; a slider moving either ring forgets it (to be measured again there)
-  const rc = st.ringQuadCheck;
-  const key = [st.cfg.orbitTopRadiusM, st.cfg.orbitTopHeightM, st.cfg.orbitBottomRadiusM, st.cfg.orbitBottomHeightM, st.cfg.pieceRadiusMaxM].join(",");
-  if (rc.key !== key) {
-    rc.key = key;
-    rc.top = null;
-    rc.bottom = null;
-  }
-  const v = st.orbit.elevation;
-  if (at !== null && (v >= 0.999 || v <= 0.001)) {
-    const e = [cam.x - at[0], cam.y - at[1], cam.z - at[2]];
-    const el = (Math.atan2(e[1]!, Math.hypot(e[0]!, e[2]!)) * 180) / Math.PI;
-    if (v >= 0.999) rc.top = el;
-    else rc.bottom = el;
-  }
   // ⭐⭐ (2026-10-12, the owner: *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on
   // rolling the resting piece on this quad until the next delta position"*) — the direction tapped stays the pink one until the next orbit
   // drag (`orbitDragStep` drops it), whatever the candidate does
@@ -176,15 +158,6 @@ function quadTurnFrame(st: SceneState): void {
   qc.blockedBy = v;
 }
 
-/**
- * ⛔⛔ For the HUD (2026-10-12, *"Flag that the camera geometry shall allow all the quads to become yellow at the maximum distance orbit"*): an
- * alert when the 1st and 4th rings, both measured, leave a quad that can turn yellow at no yaw (`allQuadsReachable`).
- */
-export function ringQuadAlert(st: SceneState): string {
-  const rc = st.ringQuadCheck;
-  if (rc.top === null || rc.bottom === null || allQuadsReachable([rc.top, rc.bottom])) return "";
-  return `  ⚠ not every quad can turn yellow on the max-distance orbit (camera ${rc.top.toFixed(0)}° on the 1st ring, ${rc.bottom.toFixed(0)}° on the 4th: needs one past 35.3° and one under 45°)`;
-}
 
 /**
  * ⭐ The PINK direction now: the one tapped, else the candidate; −1 with none. ⛔ (2026-10-15, the owner: *"Remove the yellow highlight of the part's

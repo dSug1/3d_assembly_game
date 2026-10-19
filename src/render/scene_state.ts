@@ -487,6 +487,8 @@ export interface SceneState {
   /** ⭐ (2026-10-12) THE PINK DIRECTION: the CANDIDATE (the direction facing the camera most from the resting face; −1 none), and the one last
    * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
   orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
+  /** ⭐ (2026-10-19) the yellow quad's loop (`quadCarousel`), for the quads and the slice it was built for */
+  orientCarousel?: { readonly key: string; readonly c: import("../input/quad_carousel").QuadCarousel } | null;
   /** ⭐ (2026-10-13) the yellow quad's tap checked: what blocks its turn (`null`: free — yellow; else RED), when and for what it was checked. */
   quadTurnCheck: { blockedBy: string | null; key: string; at: number };
   /** ⭐ (2026-10-13) the orbited piece's solver's cost per frame, ms (an exponential mean over ~30 frames) — the HUD reads it. */
@@ -627,9 +629,6 @@ export interface SceneState {
   pieceTaps: TapHistory;
   /** ⭐ (2026-10-13) the orbit centre at boot — where a respawn puts it back (the piece's spawn transform is on the boot ring). */
   bootCentreM: import("../core/vec").Vec3;
-  /** ⭐ (2026-10-12) the 1st / 4th ring check: the camera's elevation from the resting face last measured ON each ring (°), for the rings as they
-   * were then (`key`) — the HUD alerts when not every quad can turn yellow on them (`allQuadsReachable`). */
-  ringQuadCheck: { key: string; top: number | null; bottom: number | null };
   /** ⭐ (2026-10-12) THE VIRTUAL PINK FACE — a cube facet's direction the resting face sits against (`null`: the scene's pink face, `pinkFace`). */
   pinkDir: import("../core/orientation_set").OrientDirection | null;
   /** ⭐ (2026-10-12) the outward normal the piece was last aligned to (`alignRestingFace`) — the cube's lit facet. */

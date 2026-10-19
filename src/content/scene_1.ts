@@ -306,7 +306,7 @@ export const SCENE_1: SceneDescriptor = {
     // (were 2.55 / ±1.575, 3.0 m); the boot on the way up to the 1st ring where the piece is 3 m away (`bootDistanceM`)
     // ⛔ (2026-10-12) 5 m, then mirrored at 51° (3.15 / ±3.885) — REVERTED (*"revert to the 6m max distance geometry as it was in previous commit: this geometry allows each quad to become yellow during orbit at maximum distance"*): at 51° the camera stood 60° above the piece on the 1st
     // ring, where the horizontal quad is ALWAYS the candidate, so the side quads never turned yellow there
-    // ⛔⛔ THE CAMERA GEOMETRY SHALL ALLOW ALL THE QUADS TO BECOME YELLOW AT THE MAXIMUM DISTANCE ORBIT (`allQuadsReachable`; the HUD alerts)
+    // ⛔ (2026-10-19) the quads' reachability alert is deleted — the yellow quad goes by yaw, every quad every lap (`input/quad_carousel.ts`)
     topRadiusM: 5.1,
     topHeightM: 3.15,
     // ⭐ prototype (green box), the owner 2026-10-02: *"set the default middle ring radius to 0.09 and middle ring height to 0.15"*
