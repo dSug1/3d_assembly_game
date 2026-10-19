@@ -1063,8 +1063,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   waistIsoConeDeg: 45,
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
-  orbitTurnCapDegMm: 40, // ⭐ (2026-10-19) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
-  orbitTurnCapVerticalDegMm: 10, // ⭐ (2026-10-19) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) halved
+  orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
+  orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)

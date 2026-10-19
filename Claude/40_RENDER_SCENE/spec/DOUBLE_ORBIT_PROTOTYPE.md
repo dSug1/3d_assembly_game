@@ -1387,3 +1387,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * 5 vectors (`tests/turn_governor.test.ts`, red without the module): the frame's turn exact for known rotations; the horizontal face held to its cap, the
   rest untouched; the vertical face held to its; the sliders; the wiring (the drag and the coast). 4 text checks restated for the governed drag / coast.
   ⛔ No device close. 2096 vectors.
+* ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"* → *"same for vertical faces"*) **both caps 12.5°/mm** (were 40 and 10), the
+  sliders stepping 0.5: a horizontal face ≤ 12.5°/mm (96 free), ring 4 → ring 1 88.5 mm of finger (76.5 free, 78.3 at 40); a vertical face ≤ 12.8°/mm (20.4
+  free), 77.1 mm.

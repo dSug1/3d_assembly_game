@@ -46,7 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-10-14)
 
-⭐⭐⭐ **2026-10-19** (branch `1.0.81-`): **the turn governor** (the camera's turn per mm of dy capped, two sliders); **the curve's face snapped by gravity** (two curves only, the face's own heading, a tie to the vertical); **two seated frusta** for tilted gizmo faces (`SCENE_1.md` §10); **THE TOP ROLL is built** (⛔ no device close) — over a horizontal face the camera upright in the curve's vertical plane, the half-round only within 20° of straight above → the last section of [`Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md`](Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md).
+⭐⭐⭐ **2026-10-19** (branch `1.0.81-`): **the turn governor** (the camera's turn per mm of dy capped at 12.5°/mm, two sliders); **the curve's face snapped by gravity** (two curves only, the face's own heading, a tie to the vertical); **two seated frusta** for tilted gizmo faces (`SCENE_1.md` §10); **THE TOP ROLL is built** (⛔ no device close) — over a horizontal face the camera upright in the curve's vertical plane, the half-round only within 20° of straight above → the last section of [`Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md`](Claude/40_RENDER_SCENE/spec/DOUBLE_ORBIT_PROTOTYPE.md).
 ⭐⭐⭐ **2026-10-14 — CONTINUE FROM HERE** (branch `1.0.78-`): the orbiting prototype IS the main line; the current thread is
 **THE HOVER** — the orbited piece slid on a part's face after the orbit's approach and the quads' turn. Read
 [`Claude/00_CORE/QUEUE.md`](Claude/00_CORE/QUEUE.md)'s YOU ARE HERE block, then
