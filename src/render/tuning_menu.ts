@@ -195,9 +195,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)
-            // ⛔⛔ ALERT: the camera geometry shall allow ALL the quads to become yellow on the maximum-distance orbit — over the 1st / 4th rings, the
-            // camera once past 35.3° and once under 45° from the resting face (`allQuadsReachable`); the HUD's camera line warns once both rings are
-            // measured (`RESTING_FACE_ALIGNMENT.md` §25)
             tunable(st, "1st ring (top) radius (m)", "orbitTopRadiusM", 0, 6, 0.01),
             tunable(st, "1st ring (top) height (m)", "orbitTopHeightM", -6, 6, 0.01),
             tunable(st, "2nd ring radius (m)", "orbitMiddleRadiusM", 0, 3, 0.01),
@@ -297,6 +294,7 @@ export function installTuningMenu(st: SceneState): void {
       // ⭐ The owner, 2026-09-27: every highlight one pixel off what it marks, at every zoom.
       sliders: [
         tunable(st, "highlight offset (mm on the glass)", "highlightLiftMm", 0.05, 3, 0.05),
+        tunable(st, "yellow quad: slice of yaw at most (°)", "quadSliceMaxDeg", 10, 180, 1),
         // ⭐ (2026-10-10) the parts' face highlights, cursor, contours and capture moved to TRANSLATION IN WORLDSPACE › FACE ALIGNMENT;
         // the highlight offset stays — it lifts the orbited piece's resting-face fill too.
       ],

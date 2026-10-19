@@ -628,7 +628,6 @@ export function createScene(
   st.relocateCursor = { key: "", from: 0 };
   st.quadCheckRan = false;
   st.restAlignHeld = false;
-  st.ringQuadCheck = { key: "", top: null, bottom: null };
   st.pinkDir = null;
   st.pinkTargetNormal = null;
   st.pieceFaceTap = null;

@@ -26,7 +26,7 @@ describe("⭐⭐⭐ the level's distinct face directions", () => {
   });
 });
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
@@ -64,13 +64,9 @@ describe("⭐⭐ the boot fix (2026-10-12, *\"Fix the boot\"*): with no pink fac
   });
 });
 
-import { candidateFace } from "../src/input/orient_window";
-describe("⭐⭐ the candidate direction", () => {
-  it("⭐ *\"the face of the cube which normal is pointing the most to the camera is the candidate support face\"* — never a leftover face", () => {
-    const f = AXES.map((n, tag) => ({ tag, normal: n, centre: n }));
-    expect(candidateFace(f, [0.2, 0.3, -10])).toBe(5); // the camera on −z: the −z facet
-    expect(candidateFace(f, [0.2, 10, -1])).toBe(2); // above: the top
-    expect(candidateFace([...f.slice(0, 2), { tag: -1, normal: [0, 0, -1], centre: [0, 0, -1] }], [0, 0, -10])).not.toBe(-1);
+describe("⛔ the candidate direction (2026-10-19)", () => {
+  it("⛔ the quad facing the camera most (`candidateFace`) is deleted — the yellow quad is chosen by yaw (`quad_carousel.test.ts`)", () => {
+    expect(existsSync(new URL("../src/input/orient_window.ts", import.meta.url))).toBe(false); // the module deleted whole (its last rules gone)
   });
 });
 
@@ -151,7 +147,7 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
   });
   it("⭐⭐ the PINK direction: the candidate (facing the camera most from the resting face), or the one tapped until the candidate changes", () => {
     const c = flat("render/orient_cube.ts");
-    expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),");
+    expect(c).toContain("const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);"); // ⭐ (2026-10-19) by yaw
     expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
     expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
     // ⛔ (2026-10-15) the gizmo's supporting face as the mating direction is deleted: the tapped one, else the candidate
@@ -240,36 +236,12 @@ describe("⭐⭐ the quad tapped stays yellow until the next drag (2026-10-12, *
   });
 });
 
-import { allQuadsReachable, horizontalQuadReachable, HORIZONTAL_QUAD_MIN_ELEVATION_DEG, SIDE_QUAD_MAX_ELEVATION_DEG } from "../src/input/orient_window";
-describe("⭐⭐ the horizontal quad must be reachable on the 1st and 4th rings (2026-10-12, *\"make sure that the radius and height of the 1st and 4th rings are such that the horizontal quad can become yellow when the piece is at the maximum distance\"* → *\"there is an alert if the 1st and 4th rings radius and heights are changed by the sliders\"*)", () => {
-  it("⭐ the vertical is the candidate at SOME yaw past atan(1/√2) = 35.26° of camera elevation from the resting face, above or below", () => {
-    expect(HORIZONTAL_QUAD_MIN_ELEVATION_DEG).toBeCloseTo(35.264, 3);
-    // at a diagonal yaw, a side reads cos(el)/√2 and the top sin(el): equal at 35.26°
-    const el = (HORIZONTAL_QUAD_MIN_ELEVATION_DEG * Math.PI) / 180;
-    expect(Math.sin(el)).toBeCloseTo(Math.cos(el) * Math.SQRT1_2, 12);
-    expect(horizontalQuadReachable(41)).toBe(true);
-    expect(horizontalQuadReachable(-40)).toBe(true);
-    expect(horizontalQuadReachable(-21)).toBe(false); // the old 4th ring
-  });
-  it("⭐ the candidate seen FROM the resting face (no facet offset); the elevation measured ON each ring, forgotten when a slider moves a ring; the HUD alert", () => {
-    const c = flat("render/orient_cube.ts");
-    expect(c).toContain("st.orientDirs.map((d, tag) => ({ tag, normal: d.normal, centre: at })),");
-    expect(c).toContain("if (rc.key !== key) { rc.key = key; rc.top = null; rc.bottom = null; }");
-    expect(c).toContain("if (at !== null && (v >= 0.999 || v <= 0.001)) {");
-    expect(c).toContain("if (rc.top === null || rc.bottom === null || allQuadsReachable([rc.top, rc.bottom])) return \"\";");
-    expect(flat("render/hud_paint.ts")).toContain("ringQuadAlert(st) +");
-  });
-  it("⛔⛔ ALL the quads must be able to turn yellow on the max-distance orbit (*\"Flag that the camera geometry shall allow all the quads to become yellow at the maximum distance orbit\"*) — one ring past 35.26°, one under 45°", () => {
-    expect(SIDE_QUAD_MAX_ELEVATION_DEG).toBe(45);
-    // at a yaw square to a side, the side reads cos(el), the top sin(el): equal at 45°
-    expect(Math.sin(Math.PI / 4)).toBeCloseTo(Math.cos(Math.PI / 4), 12);
-    expect(allQuadsReachable([41.6, -20.7])).toBe(true); // the 6 m rig, measured headless: the 1st ring passes both
-    expect(allQuadsReachable([60.2, -40.7])).toBe(true); // the mirrored 51° rig: the 4th ring alone (60° above: the sides never on the 1st)
-    expect(allQuadsReachable([60, -50])).toBe(false); // both too steep: no side quad
-    expect(allQuadsReachable([30, -20])).toBe(false); // both too flat: no horizontal quad
-    // ⭐ Scene_1 at 6 m: the 1st ring's 31.7° (the camera's 41.6° above the piece) — both tests at once
-    const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
-    expect((Math.atan2(cfg.orbitTopHeightM, cfg.orbitTopRadiusM) * 180) / Math.PI).toBeCloseTo(31.7, 1);
+describe("⛔ the quads' reachability alert deleted (2026-10-19, the owner: *\"remove that alert\"*)", () => {
+  it("⛔ no ring measurement, no HUD alert — by yaw every quad lights every lap at any elevation; the yellow by yaw wired", () => {
+    expect(existsSync(new URL("../src/input/orient_window.ts", import.meta.url))).toBe(false);
+    expect(flat("render/hud_paint.ts")).not.toContain("ringQuadAlert");
+    expect(flat("render/orient_cube.ts")).not.toContain("ringQuadCheck");
+    expect(flat("render/orient_cube.ts")).toContain("const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);");
   });
 });
 

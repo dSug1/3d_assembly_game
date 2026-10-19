@@ -1172,3 +1172,29 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
   re-reads the quads when it changes.
 * Measured in the app: 6 quads at boot (Piece10), on Piece42, Piece11 and Piece17; 6 with no host (the floor's). 2 vectors (`tests/quad_sources.test.ts`, red on
   the old code), 7 text checks restated. 2080 vectors.
+
+## 34. The yellow quad by yaw — a loop of neighbours, anchored; the reachability alert deleted (2026-10-19, `1.0.81-`, ⛔ no device close)
+
+> *"now if I place the gizmo on the top face of part 42, the quads do not scroll and only one stays yellow highlighted all the time. Propose another logic
+> for the yellow highlight of the quads so that each quad is highlighted at least once in a 360 yaw orbit and the yellow highlight switches from one quad
+> to the other in a progressive way (for example, no switch from one quad to the opposite quad)."* → *"60 degrees might be too long: what is the current
+> degree /mm input delta for 3 quads? Do the same, or at least one time yellow per 360degrees, whichever is more."* → *"build it anchored. face alignment
+> menu."* → *"update the md files, deploy, remove that alert"* — the owner.
+
+* ⛔ **Measured**: the yellow was the quad facing the camera most (`candidateFace`, §22). On Piece42's top face (32° off up) one quad won 358°–362° of a
+  360° yaw orbit at every elevation. On a box (Piece10) near ring 4 a switch came every ~40° of yaw on average — **5.11° of yaw per mm of dx, so ~7.8 mm**
+  (a side 56°–66°, the top quad 24°–36° between two sides; 5 of 6 quads, never the bottom).
+* ⭐⭐⭐ **The yellow by yaw** (`input/quad_carousel.ts`: `quadTour`, `anchoredSlices`, `quadCarousel`, `carouselQuad`; wired in `render/orient_cube.ts`):
+  the host's quads (§33) in a closed LOOP — the shortest closed tour over their directions (every order up to 8 quads, else nearest neighbour + 2-opt), so
+  each step goes to an angular neighbour (a box: 90° every step, never the opposite face); a lap of the camera's azimuth about the gizmo cut into slices,
+  each slice's quad yellow. ⭐ **Anchored**: the slices per lap are the fewest that keep each at most `quadSliceMaxDeg` and are a whole multiple of the
+  quads — every quad lit as often, at the same yaws every lap (6 quads at 40° → **12 slices of 30°, each quad twice a lap**; 9 → 40°; 10 → 36°). The loop
+  runs the way the camera turns, its start and phase set so the sideways quads sit nearest the yaw they face. A 3° hysteresis at each slice's edge.
+* ⚠ **The cost, stated**: a side quad is not always yellow where it faces the camera — a loop of neighbours that comes round every 180° cannot put every
+  side quad at its own yaw (its second turn falls where its opposite faces): measured 0° for some, up to 45° on a box and 60° on Piece42 (two slices).
+* ⭐ **The slider**: *"yellow quad: slice of yaw at most (°)"* in FACE ALIGNMENT (top level), `quadSliceMaxDeg` **40**, 10–180.
+* ⛔ **The reachability alert deleted** (`horizontalQuadReachable`, `allQuadsReachable`, the ring measurement `ringQuadCheck`, the HUD's `ringQuadAlert`; §25 is
+  the record): it judged whether the old rule could light every quad from the 1st / 4th rings' elevations — by yaw every quad lights every lap at any
+  elevation. `input/orient_window.ts` deleted whole (its last rules gone).
+* Measured in the app (a 360° yaw sweep near ring 4): Piece42 and Piece10 both light all 6 quads, 30° each, twice a lap, each switch to a loop neighbour.
+  6 vectors (`tests/quad_carousel.test.ts`, red without the module), 3 restated. 2084 vectors.

@@ -531,6 +531,8 @@ export interface GestureConfig {
   /** ⭐⭐ (2026-10-18, the owner) THE TOP ROLL's band: over a crossing (a horizontal face) the half-round turns only while the view is within this
    * many degrees of straight above (below) — elsewhere the camera stays upright in the curve's vertical plane (°, 2–60). */
   topRollBandDeg: number;
+  /** ⭐⭐ (2026-10-19, the owner) the YELLOW QUAD by yaw: each quad's slice of a lap at most this (°) — the lap a whole multiple of the quads (anchored). */
+  quadSliceMaxDeg: number;
   /** ⭐⭐ (2026-10-19, the owner) THE TURN GOVERNOR on a curve that passes over the gizmo (a horizontal face): at most this many degrees of camera turn
    * (view and roll together) per mm of dy — the dy gain lowered where the camera would turn faster (°/mm). */
   orbitTurnCapDegMm: number;
@@ -1060,6 +1062,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
+  quadSliceMaxDeg: 40, // ⭐ (2026-10-19) today's ~40° a switch on a box; 6 quads → 12 slices of 30°
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -1224,6 +1227,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
+  if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
