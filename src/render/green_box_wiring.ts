@@ -33,8 +33,11 @@ import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
-import { cameraFrameNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { cameraOffsetAt, easeShare, gizmoBlendTravel } from "../input/orbit_rig";
+import { cameraFrameNow, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
+import { cameraOffsetAt, easeShare, gizmoBlendTravel, rigSwingNeed } from "../input/orbit_rig";
+import { governedRingStep } from "../input/turn_governor";
+import { cameraFrameHeld } from "../input/camera_frame";
+import { elevationGainScale } from "../input/orbit";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
@@ -917,7 +920,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.orbitMotion === null) st.orbitInertia.stop();
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
-    st.orbit.nudge(d.dYaw, d.dV);
+    st.orbit.nudge(d.dYaw, governedOrbitDv(st, d.dV, orbitDvPerMm(st))); // ⭐ (2026-10-19) the coast governed as the finger is
   }
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
   // one zoom (wheel, pinch, boot) is held to its range here (`clampGreenZoom`), every frame.
@@ -1592,6 +1595,26 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
  * ⭐ prototype (green box): the gains the green piece's orbit drag runs at NOW — the inside-the-leash factors (`boxDragGains`). ⭐ ONE
  * home: the drag and the HUD read it. (The yaw share while held went with the rotation, 2026-10-04.)
  */
+/**
+ * ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR's call (`governedRingStep`, `input/turn_governor.ts`): the ring step `dv` the finger (or the coast) asks for, cut where the
+ * camera — the frame the orbit asks for on the turn now — would turn faster than the cap per mm of dy: `orbitTurnCapDegMm` on a curve that passes over
+ * the gizmo (a horizontal face — `rigSwingNeed`), `orbitTurnCapVerticalDegMm` on any other. `dvPerMm`: the ring a millimetre of dy buys at the drag's gains.
+ */
+export function governedOrbitDv(st: SceneState, dv: number, dvPerMm: number): number {
+  if (dv === 0) return dv;
+  const cfg = st.cfg;
+  const crossing = rigSwingNeed(cfg, rigNow(st)) > 0.5;
+  const cap = crossing ? cfg.orbitTurnCapDegMm : cfg.orbitTurnCapVerticalDegMm;
+  const yaw = st.orbit.yaw;
+  const off = pieceOrbitAngleOffset(st);
+  return governedRingStep((v) => cameraFrameHeld(cfg, st.rigFrom, st.rigTo, st.rigShare, { yaw, v }, off, null), st.orbit.elevation, dv, dvPerMm, cap);
+}
+
+/** ⭐ (2026-10-19) the ring a millimetre of dy buys at the orbit drag's gains (`boxGainPitch` × the leash's × the elevation gain × the four-ring scale). */
+export function orbitDvPerMm(st: SceneState): number {
+  return st.cfg.boxGainPitch * greenDragGains(st).pitch * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
+}
+
 export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
   const g =
     st.boxOrbit === null || st.cameraOrbit === null

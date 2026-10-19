@@ -1361,3 +1361,29 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   it reads `rigNormal` [0, 1, 0], a full dy sweep clean (the up's fastest step the top roll's own, as on a horizontal face).
 * 3 vectors (red on the old code): only the tilt snapped — a tilted top, a tilted underside, a slanted side and a turned piece's side keeping their own
   heading, the 45° tie to the vertical; the piece passing to the opposite side on Piece42's top face; the wiring. ⛔ No device close. 2091 vectors.
+
+### …the TURN GOVERNOR: the camera's turn per mm of dy capped (`1.0.81-`, 2026-10-19)
+
+> *"for the 2D curve when the face supporting the gizmo is horizontal, there is a moment between ring 2 and ring 3 where the camera goes to the azimuth and
+> rolls to the other side of the assembly: during this interval, the angular speed (degrees per mm of input delta) is peaking. Can you smoothen the peak by
+> reducing this angular speed so that the travel of the camera is gentler ? Propose something."* → *"build it. add a slider in the camera orbit around
+> center so I can adjust the governor degree/mm. Also slow the view between rings 2 and 3 on vertical faces: make another slider for that."* → *"update the
+> md files, commit and deploy"* — the owner.
+
+* ⛔ **Measured**, the whole frame's turn (view and roll together) per mm of dy at the shipped gains (dy → 0.0129 of the ring per mm; ring 4 → ring 1 is
+  76 mm of finger): over a HORIZONTAL face **96°/mm** at the top (the top roll's band), 1–6°/mm on rings 1 and 4; on a VERTICAL face **20°/mm** at the
+  waist (the view between rings 2 and 3).
+* ⭐⭐⭐ **The governor** (`input/turn_governor.ts`: `frameTurnDeg`, `turnRatePerV`, `governedRingStep`): the curve and the piece's places unchanged — only how
+  much ring a millimetre of dy buys. The camera's turn rate is read off the curve (the frame the orbit asks for, on the turn now, ±0.001 of the ring);
+  where it exceeds the cap, the dy is cut by `cap / rate` (never below 2 %); the finger's travel walked in 0.1 mm pieces, each read at its middle.
+  Elsewhere the whole step passes (rings 1 and 4 as before). ⭐ The coast after the finger lifts is governed the same way (`governedOrbitDv`,
+  `orbitDvPerMm` in `render/green_box_wiring.ts`; the drag in `pointer_wiring.ts`).
+* ⭐⭐ **Two caps, two sliders** in CAMERA › CAMERA ORBIT AROUND CENTER: *"turn governor, horizontal face (°/mm of dy)"* (`orbitTurnCapDegMm`, **40**) on a
+  curve that passes over the gizmo (`rigSwingNeed` — a horizontal face, a face tilted past 35°), *"turn governor, vertical face (°/mm of dy)"*
+  (`orbitTurnCapVerticalDegMm`, **10** — ⚠ not 20 as first proposed: at the real gain the vertical face peaks at 20, so 20 would change nothing) on any
+  other (a vertical face, no face); both 5–300, validated.
+* After (0.3 mm events, a real pointer's): horizontal face ≤ 42°/mm (96 before), +2 mm of finger over the top; vertical face ≤ 10.6°/mm (20 before), +2 mm.
+  Cost in the app: ~0.2 ms a pointer event over the top, ~0.1 ms elsewhere (desktop; ~3× on an iPhone) — no collision query.
+* 5 vectors (`tests/turn_governor.test.ts`, red without the module): the frame's turn exact for known rotations; the horizontal face held to its cap, the
+  rest untouched; the vertical face held to its; the sliders; the wiring (the drag and the coast). 4 text checks restated for the governed drag / coast.
+  ⛔ No device close. 2096 vectors.

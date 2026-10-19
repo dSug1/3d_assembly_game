@@ -533,6 +533,11 @@ export interface GestureConfig {
   /** ⭐⭐ (2026-10-18, the owner) THE TOP ROLL's band: over a crossing (a horizontal face) the half-round turns only while the view is within this
    * many degrees of straight above (below) — elsewhere the camera stays upright in the curve's vertical plane (°, 2–60). */
   topRollBandDeg: number;
+  /** ⭐⭐ (2026-10-19, the owner) THE TURN GOVERNOR on a curve that passes over the gizmo (a horizontal face): at most this many degrees of camera turn
+   * (view and roll together) per mm of dy — the dy gain lowered where the camera would turn faster (°/mm). */
+  orbitTurnCapDegMm: number;
+  /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
+  orbitTurnCapVerticalDegMm: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
   pinkGizmoVisible: number;
   /** ⭐⭐ (2026-10-15, the owner: *"make a slider for non-yellow quad highlight transparency (edges and fill)"*) the non-yellow quads' edge opacity (0 … 1); their fill a quarter of it (`QUAD_UNLIT_FILL_SHARE`). */
@@ -1058,6 +1063,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   waistIsoConeDeg: 45,
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
+  orbitTurnCapDegMm: 40, // ⭐ (2026-10-19) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
+  orbitTurnCapVerticalDegMm: 10, // ⭐ (2026-10-19) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) halved
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
@@ -1221,6 +1228,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.waistIsoConeDeg >= 0 && cfg.waistIsoConeDeg <= 90)) throw new Error(`waistIsoConeDeg (${cfg.waistIsoConeDeg}) must be in [0, 90]°.`);
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
+  if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
+  if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
   if (!(cfg.hoverDampingRatio > 0 && cfg.hoverDampingRatio <= 2)) throw new Error(`hoverDampingRatio (${cfg.hoverDampingRatio}) must be in (0, 2].`);
   if (!(cfg.hoverFrictionMmS >= 0 && cfg.hoverFrictionMmS <= 500)) throw new Error(`hoverFrictionMmS (${cfg.hoverFrictionMmS}) must be in [0, 500] mm/s.`);
