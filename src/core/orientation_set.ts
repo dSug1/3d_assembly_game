@@ -100,3 +100,25 @@ export const QUADS_SHOWN_FROM_SHARE = 0.65;
 export function quadsShownFromM(dMax: number): number {
   return dMax * QUADS_SHOWN_FROM_SHARE;
 }
+
+/**
+ * ⭐⭐ (2026-10-19, the owner: *"now there are as much quads as there are orientations of faces in the scene. this is too many quads. make the quads as many
+ * as the orientations of the faces of the part which supports the gizmo."* → *"when no part is selected, default to the frozen object's faces orientations.
+ * if no frozen object and not part is selected, default to the gravity and horizontal plans"*) — **WHICH BODIES THE QUADS ARE READ FROM**: the gizmo's HOST
+ * part alone when there is one (`host`, among `bodies`); with none, the FROZEN bodies; with none of those either, nothing (`[]`) — the caller takes the
+ * gravity frames (`GRAVITY_FRAMES`). ⛔ The orbited pieces never (they are not in `bodies`).
+ */
+export function quadSourceIds(bodies: readonly { readonly id: string; readonly frozen: boolean }[], host: string | null): string[] {
+  if (host !== null && bodies.some((b) => b.id === host)) return [host];
+  return bodies.filter((b) => b.frozen).map((b) => b.id);
+}
+
+/** ⭐ (2026-10-19) no host and no frozen body: GRAVITY and the HORIZONTAL plane — up, down and four level directions, the world's axes, each face's axes in it. */
+export const GRAVITY_FRAMES: readonly OrientDirection[] = [
+  { normal: [0, 1, 0], axes: [[1, 0, 0], [0, 0, 1]] },
+  { normal: [0, -1, 0], axes: [[1, 0, 0], [0, 0, 1]] },
+  { normal: [1, 0, 0], axes: [[0, 1, 0], [0, 0, 1]] },
+  { normal: [-1, 0, 0], axes: [[0, 1, 0], [0, 0, 1]] },
+  { normal: [0, 0, 1], axes: [[1, 0, 0], [0, 1, 0]] },
+  { normal: [0, 0, -1], axes: [[1, 0, 0], [0, 1, 0]] },
+];

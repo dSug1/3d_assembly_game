@@ -455,6 +455,8 @@ export interface SceneState {
     readonly centreAt: readonly [number, number, number] | null;
     /** ⭐ (2026-10-16) the face's normal there (world) — the rig's new turn (`retargetGizmo`) */
     readonly centreNormal: readonly [number, number, number] | null;
+    /** ⭐ (2026-10-19) the part pressed (the gizmo's host on a tap — its faces the quads) */
+    readonly centreHost?: string | null;
     /** ⭐ (2026-10-12) the switch without lifting (`holdSwitch`): the second finger's trailing anchor (mm), since when it rests (ms), the first
      * finger's x when it came to rest (px; `null` — lifted), and whether the way in was made (the way out at the second finger's lift). */
     swAnchorMm: number;
@@ -599,7 +601,11 @@ export interface SceneState {
   /** ⭐ (2026-10-13, §11octies) the RING HEIGHT the finger set (only its dy moves it) — the piece returns to it once a slide carried it off. */
   orbitUserV: number | null;
   /** ⭐ (2026-10-13, §11nonies) a press on a placed part: where the gizmo goes IF it is released as a tap (its press sample). */
-  pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; x: number; y: number; t: number } | null;
+  /** ⭐ (2026-10-19) the part the gizmo rests on (its faces alone give the quads — `quadSourceIds`); `null`: none (the scene's faces) */
+  gizmoHost?: string | null;
+  /** ⭐ (2026-10-19) the boot's host (a respawn puts the gizmo back on it) */
+  bootGizmoHost?: string | null;
+  pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; host?: string | null; x: number; y: number; t: number } | null;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m) — the quad's check pauses mid-sweep. */
   pieceFrameStepM: number;
   pieceGuardPeak: number;

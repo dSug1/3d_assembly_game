@@ -1155,3 +1155,20 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
   and §31's 120 ms hold are DELETED. ⭐ A depth-tested ring (real occlusion) was proposed, chosen, then dropped for this — lighter for the game.
 * ⭐ (2026-10-15, *"Set non-yellow quad opacity to 0.130"*) — `quadUnlitAlpha` defaults to **0.13** (the fill a quarter, 0.0325); was 0.1.
 * ⭐⭐ (2026-10-15, the Fable audit) the quads' distance is read from the gizmo's TARGET (`st.centreBlend.targetM`) — ⛔ from the ring's mesh, not placed while the yellow gizmo is hidden: the quads, the tap gate and the resting contour read a stale distance with the slider off.
+
+## 33. The quads from the gizmo's host part (2026-10-19, `1.0.81-`, ⛔ no device close)
+
+> *"now there are as much quads as there are orientations of faces in the scene. this is too many quads. make the quads as many as the orientations of the
+> faces of the part which supports the gizmo."* → *"when no part is selected, default to the frozen object's faces orientations. if no frozen object and not
+> part is selected, default to the gravity and horizontal plans"* — the owner.
+
+* ⛔ **Before**: the quads' directions were read from every SEATED part and every frozen body (§21) — with the two seated frusta (`SCENE_1.md` §10) the
+  scene had 14 distinct face orientations, so 14 quads.
+* ⭐⭐ **Now** (`quadSourceIds`, `core/orientation_set.ts`; `orientationFrames`, `render/green_box_wiring.ts`): the gizmo's HOST part alone — the part the
+  gizmo rests on; with none, the FROZEN bodies (the floor); with none of those either, gravity and the horizontal plane (`GRAVITY_FRAMES`: up, down and
+  four level directions, the world's axes). A box or a frustum host: 6 quads.
+* ⭐ The host is named at every gizmo move — a tap on a placed part (`pendingPartCentre.host`), the held second touch's tap (`st.hold.centreHost`), the boot
+  (`bootGizmoHostOf`: the blue part the boot's gizmo rests on, Piece10), a respawn (back to the boot's) — and kept in `st.gizmoHost`; `retargetGizmo`
+  re-reads the quads when it changes.
+* Measured in the app: 6 quads at boot (Piece10), on Piece42, Piece11 and Piece17; 6 with no host (the floor's). 2 vectors (`tests/quad_sources.test.ts`, red on
+  the old code), 7 text checks restated. 2080 vectors.

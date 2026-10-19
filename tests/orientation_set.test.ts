@@ -35,8 +35,8 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
     expect(code("render/goal_commit_wiring.ts")).toMatch(/const reached = st\.goalCommit\.commit\([^)]*\);\s*(?:\/\/[^\n]*\n\s*)*st\.orientDirty = true;/);
     expect(code("render/orient_cube.ts")).toMatch(/if \(st\.orientDirty\) \{\s*st\.orientDirty = false;\s*st\.orientDirs = distinctDirections\(orientationFrames\(st\)\);/);
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("if (orbited.has(id)) continue;");
-    expect(g).toContain("if (o.frozen !== true && !st.goalCommit.has(id)) continue;");
+    expect(g).toContain("const bodies = [...st.world.objects].filter(([id]) => !orbited.has(id))"); // ⭐ (2026-10-19) never the orbited pieces — then the host alone (`quadSourceIds`)
+    expect(g).toContain("const ids = quadSourceIds(bodies, st.gizmoHost ?? null);"); // ⭐ (2026-10-19) the host part alone, else the frozen bodies, else gravity's frames
   });
   it("⭐⭐ a facet is a VIRTUAL pink face — the resting face sits against it (`alignFaceOf` reads it first); the lit facet tapped again rolls", () => {
     const g = code("render/green_box_wiring.ts");

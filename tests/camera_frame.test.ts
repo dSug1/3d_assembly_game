@@ -11,12 +11,12 @@ import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import type { Vec3 } from "../src/core/vec";
 import { blendRig, rigTurnFor, UNTURNED, type RigParams } from "../src/input/orbit_rig";
-import { waistRings, waistTurn } from "../src/input/waist_view";
-import { cameraFrameNow, retargetGizmo } from "../src/render/camera_rig";
+import { waistRings } from "../src/input/waist_view";
+import { cameraFrameNow } from "../src/render/camera_rig";
 import { ROLL_PER_DIR, ROLL_PER_V, ROLL_SETTLE_DEG_S, rollLimitedUp } from "../src/input/camera_frame";
 import { orbitOffset } from "../src/input/orbit";
 import { qRotate } from "../src/core/vec";
-import { blendHeadings, rigEnds, rigPeakElevation, rigSwingNeed, gizmoBlendTravel } from "../src/input/orbit_rig";
+import { blendHeadings, rigPeakElevation, rigSwingNeed, gizmoBlendTravel } from "../src/input/orbit_rig";
 
 const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
 const off = { yawRad: (2.5 * Math.PI) / 180, pitchRad: (2 * Math.PI) / 180 }; // the owner's offsets
@@ -46,7 +46,6 @@ const frame = (st: any, yaw: number, v: number): { dir: Vec3; up: Vec3 } => {
   return f;
 };
 const { v2, v3 } = waistRings(cfg);
-const vMid = (v2 + v3) / 2;
 const MM_V = 0.0257; // ring parameter per mm of dy (`Scene_1`)
 
 describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit (2026-10-17)", () => {
@@ -93,84 +92,6 @@ describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit
           if (st.rigShare >= 0.4 && v <= v2 + 0.05 && v >= v3 - 0.05) expect(angle(f.up, upright(f.dir))).toBeLessThan(1);
         }
       }
-    }
-  });
-  it("⭐⭐⭐ A2: a tap on another face with the piece between rings 2 and 3, the hold on: no jump at the first finger move (⛔ the old face swapped for the new one: 8°–18°)", () => {
-    for (const dx of [60, 65, 75]) {
-      const y0 = 0.4;
-      const a = rigTurnFor(cfg, y0, vMid, level(y0), level(y0), UNTURNED);
-      const yaw = y0 + dx / D;
-      const st = stub(a, a, 1);
-      const before = frame(st, yaw, vMid);
-      st.rigTo = rigTurnFor(cfg, yaw, vMid, level(y0 + Math.PI / 2), level(yaw), a);
-      st.rigShare = 0.02;
-      expect(angle(frame(st, yaw, vMid).dir, before.dir)).toBeLessThan(2);
-    }
-  });
-  it("⭐⭐ A3: a face tilted 24°–28°, dx carried round behind it: no flip (⛔ ring 3 on the normal — 27°–110° of camera in one 0.05° of dx)", () => {
-    for (const th of [24, 26, 28]) {
-      const y0 = 0.4;
-      const a = rigTurnFor(cfg, y0, vMid, tilted(y0, th), level(y0), UNTURNED);
-      const st = stub(a, a, 1);
-      let prev: Vec3 | null = null;
-      for (let dx = 165; dx <= 190; dx += 0.05) {
-        const d = frame(st, y0 + dx / D, vMid).dir;
-        if (prev !== null) expect(angle(d, prev)).toBeLessThan(3);
-        prev = d;
-      }
-    }
-  });
-  it("⭐⭐ A4: the face nearly edge-on to the view gets the semi-isometric lift (⛔ 20° at 10° off edge-on — the side's band narrowed to ~6°), and still changes smoothly across edge-on", () => {
-    const y0 = 0.4;
-    const n = level(y0);
-    const a = rigTurnFor(cfg, y0, vMid, n, n, UNTURNED);
-    const st = stub(a, a, 1);
-    const tiltAt = (dx: number): number => {
-      const d = frame(st, y0 + dx / D, vMid).dir;
-      return Math.asin(d[0] * n[0] + d[1] * n[1] + d[2] * n[2]) * D;
-    };
-    expect(tiltAt(80)).toBeGreaterThan(30);
-    expect(tiltAt(70)).toBeGreaterThan(34);
-    let prev: Vec3 | null = null;
-    for (let dx = 60; dx <= 120; dx += 0.05) {
-      const d = frame(st, y0 + dx / D, vMid).dir;
-      if (prev !== null) expect(angle(d, prev)).toBeLessThan(1.5);
-      prev = d;
-    }
-  });
-  it("⭐⭐ A5: on a tilted face with a partial hold the UP crosses ring 3 smoothly (⛔ 12.9° in one step: the roll toward upright not faded at the rings)", () => {
-    const y0 = 0.4;
-    const a = rigTurnFor(cfg, y0, vMid, tilted(y0, 60), level(y0), UNTURNED);
-    const st = stub(a, a, 1);
-    let prev: Vec3 | null = null;
-    for (let v = v2 + 0.02; v >= v3 - 0.02; v -= 0.0005) {
-      const u = frame(st, y0 + 120 / D, v).up;
-      if (prev !== null) expect(angle(u, prev)).toBeLessThan(3);
-      prev = u;
-    }
-  });
-  it("⭐⭐ A6: a tap MID-CHANGE keeps the hold it had (⛔ the caught turn stored faceless — the hold dropped at once)", () => {
-    for (const dx of [60, 70]) {
-      const y0 = 0.4;
-      const a = rigTurnFor(cfg, y0, vMid, level(y0), level(y0), UNTURNED);
-      const yaw = y0 + dx / D;
-      const b = rigTurnFor(cfg, yaw, vMid, level(y0 + 1.2), level(yaw), a);
-      const st = stub(a, b, 0.3);
-      st.orbit = { yaw, elevation: vMid };
-      st.camera = { position: { x: Math.cos(yaw), y: 0.3, z: Math.sin(yaw) } };
-      const before = frame(st, yaw, vMid);
-      retargetGizmo(st, [0, 0, 0], level(y0 + 2.4));
-      expect(st.rigShare).toBe(0);
-      expect(angle(frame(st, yaw, vMid).dir, before.dir)).toBeLessThan(0.05);
-    }
-    expect(blendRig(rigTurnFor(cfg, 0.4, vMid, level(0.4), level(0.4), UNTURNED), UNTURNED, 0.3).faced).toBe(true); // the nearer end's face
-  });
-  it("⭐ A7: a ring direction along the normal — the turn passes smoothly, never a switch at share 0.5 (⛔ 90° in one step)", () => {
-    let prev: Vec3 | null = null;
-    for (let s = 0; s <= 1.0001; s += 0.01) {
-      const d = waistTurn([0, 1, 0], [0, 1, 0], [1, 0, 0], s, null);
-      if (prev !== null) expect(angle(d, prev)).toBeLessThan(3);
-      prev = d;
     }
   });
   it("⭐ wired: `cameraFrameNow` is the pure composition, carried by the last frame's up; the respawn forgets it", () => {
@@ -239,21 +160,6 @@ describe("⭐⭐⭐ the orbit — the second Fable audit (2026-10-17)", () => {
       }
     }
     expect(readFileSync("src/input/orbit_rig.ts", "utf8")).toContain("const hs = s >= 1 ? hb : blendHeadings(rigSwingHeading(cfg, a, cam), hb, s);");
-  });
-  it("⭐ #5: a FIFTH tap mid-change keeps the faces it was between — no swap at a count (⛔ 4 kept: 3.9° of camera in one 0.0005 of the share)", () => {
-    const y0 = 0.4;
-    const yaw = y0 + 80 / D;
-    const faces = [0, 0.6, 1.2, 1.8, 2.4].map((k) => rigTurnFor(cfg, yaw, vMid, level(y0 + k), level(yaw), UNTURNED));
-    const from = { ...faces[0]!, ends: [[faces[0]!, 0.4], [faces[1]!, 0.3], [faces[2]!, 0.2], [faces[3]!, 0.1]] as const } as RigParams;
-    const st = stub(from, faces[4]!, 0);
-    let prev: Vec3 | null = null;
-    for (let s = 0; s <= 0.2; s += 0.0005) {
-      st.rigShare = s;
-      const d = target(st, yaw, vMid).dir;
-      if (prev !== null) expect(angle(d, prev)).toBeLessThan(0.3);
-      prev = d;
-    }
-    expect(rigEnds(from, faces[4]!, 0.05).length).toBe(5);
   });
   it("⭐⭐⭐ the gizmo change advances by the travel the solver HONOURED (⛔ by the finger: the curve turned under a piece held against a part — relocated, or the camera swept once free)", () => {
     const asked = { yaw: 0.02, v: -0.05 };

@@ -298,14 +298,14 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
     expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
     expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
-    expect(code("input/camera_frame.ts")).toContain("const base = rigFrameBetween(cfg, from, to, s, cam, off);");
-    expect(c).toContain("st.rigFrom = st.rigShare >= 1 ? st.rigTo : st.rigShare <= 0 ? st.rigFrom : { ...rigNow(st), ends: rigEnds(st.rigFrom, st.rigTo, st.rigShare) };"); // the turn as it stands — never a jump
+    expect(code("input/camera_frame.ts")).toContain("return rigFrameBetween(cfg, from, to, s, cam, off);"); // the curve's own frame (⛔ 2026-10-19: no hold)
+    expect(c).toContain("st.rigFrom = rigNow(st);"); // the turn as it stands — never a jump (⛔ 2026-10-19: its faces for the hold, `rigEnds`, deleted with the hold) // the turn as it stands — never a jump
   });
   it("⭐⭐ the gizmo's move sets the new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("retargetGizmo(st, to, pc.normal);");
+    expect(p).toContain("retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⭐ (2026-10-19) with its host part (the quads)
     const h = code("render/hold_wiring.ts");
-    expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
+    expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal, h.centreHost ?? null);");
     const c = code("render/camera_rig.ts");
     expect(c).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
   });

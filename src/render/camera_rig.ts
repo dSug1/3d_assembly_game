@@ -9,7 +9,7 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendRig, rigEnds, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { blendRig, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -84,17 +84,21 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
  * none): the new turn takes the curve's direction halfway between rings 2 and 3, at the camera's yaw, onto that normal (`rigRotationFor`), the rings'
  * centres beyond the piece as the camera sees it (`rigBetaFor`); blended from the turn it had (the nearer end of a blend in progress).
  */
-export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
+export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, host: string | null = null): void {
   const yaw = st.orbit.yaw;
   const cam = st.camera.position;
-  // ⭐ the turn as it stands, a blend in progress included — never a jump; ⭐ (2026-10-17) caught mid-change, it carries the faces it was between (`rigEnds`)
-  st.rigFrom = st.rigShare >= 1 ? st.rigTo : st.rigShare <= 0 ? st.rigFrom : { ...rigNow(st), ends: rigEnds(st.rigFrom, st.rigTo, st.rigShare) };
+  st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump
   st.rigShare = 0;
   // ⭐ the new near side the way nearer the old one (it only picks which way a swing turns) — a gizmo change never turns it half a round
   // ⭐⭐ (2026-10-16) the nearer of the two turns at this yaw (`rigTurnFor`): the piece stays on its side through the gizmo's change
   // ⭐⭐⭐ (2026-10-18) the curve turned onto the face SNAPPED BY GRAVITY (`snapToGravity`) — two curves only: horizontal, vertical (its own heading)
   st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
   st.centreBlend.retarget(to);
+  // ⭐⭐ (2026-10-19) the part the gizmo now rests on — its faces alone give the quads (`quadSourceIds`)
+  if ((st.gizmoHost ?? null) !== host) {
+    st.gizmoHost = host;
+    st.orientDirty = true;
+  }
   syncCentre(st);
 }
 

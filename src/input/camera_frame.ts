@@ -16,13 +16,8 @@
  */
 import type { GestureConfig } from "./gestureConfig";
 import type { CameraAngleOffset, OrbitAt } from "./follow_camera";
-import { rigEnds, rigFrameBetween, rigPlace, waistV, type RigCameraFrame, type RigParams } from "./orbit_rig";
-import { waistConeWeight, waistHoldDirection, waistPoleFade, waistPrefer, waistRings, waistShare } from "./waist_view";
-import { slerpDir, uprightBlend } from "./hover";
+import { rigFrameBetween, type RigCameraFrame, type RigParams } from "./orbit_rig";
 import type { Vec3 } from "../core/vec";
-
-/** ⭐ The waist's path is read in this many steps. */
-export const WAIST_PATH_STEPS = 8;
 
 /** ⭐ The up's roll toward its target per degree of the view's own turn (`rollLimitedUp` — a jump of the view lets the up follow at once). */
 export const ROLL_PER_DIR = 2;
@@ -86,46 +81,7 @@ const onPlane = (u: Vec3, d: Vec3): Vec3 | null => {
   return unitOf([u[0] - k * d[0], u[1] - k * d[1], u[2] - k * d[2]]);
 };
 
-/** ⭐ The frame the orbit asks for (stateless): the base, and between rings 2 and 3 the hold. */
+/** ⭐ The frame the orbit asks for (stateless) — the curve's own (⛔ 2026-10-19: the semi-isometric hold between rings 2 and 3 deleted). */
 function targetFrame(cfg: GestureConfig, from: RigParams, to: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  const base = rigFrameBetween(cfg, from, to, s, cam, off);
-  const share = waistShare(cfg, cam.v);
-  if (share === null) return base;
-  // ⭐ (A2, A6) every face the turn is blended from, weighted — a tap mid-change carries the faces it was between (`rigEnds`)
-  const ends = rigEnds(from, to, s);
-  const vMid = waistV(cfg);
-  const weights = ends.map(([r]) => {
-    if (r.faced !== true || !r.normal) return 0;
-    return waistConeWeight(rigPlace(cfg, r, cam.yaw, vMid, 1), r.normal, cfg.waistIsoConeDeg);
-  });
-  if (!weights.some((h) => h > 0)) return base;
-  // ⭐ the camera's own path from ring 2 to ring 3 (directions, unheld)
-  const path = waistPath(cfg, from, to, s, cam, off);
-  const d2 = path[0]!;
-  const d3 = path[path.length - 1]!;
-  let dir: Vec3 | null = null;
-  let hold = 0;
-  let sum = 0;
-  ends.forEach(([r, w], i) => {
-    const h = weights[i]! * (weights[i]! > 0 ? waistPoleFade(r.normal!, d2, d3) : 0);
-    let d = base.dir;
-    if (h > 0) {
-      const held = waistHoldDirection(rigPlace(cfg, r, cam.yaw, vMid, 1), r.normal!, d2, d3, share, waistPrefer(cfg, cam.yaw, r.beta), path);
-      d = h < 1 ? slerpDir(base.dir, held, h) : held;
-    }
-    hold += w * h;
-    sum += w;
-    dir = dir === null ? d : slerpDir(dir, d, sum > 0 ? w / sum : 0);
-  });
-  const out = dir ?? base.dir;
-  // ⭐ (A5) the roll toward upright faded with the direction — nothing at either ring, where the frame is the base's exactly (⛔ 12.9° of up at ring 3)
-  return { dir: out, up: uprightBlend(base.up, out, hold * 4 * share * (1 - share)) };
-}
-
-/** ⭐ The camera's directions from ring 2 to ring 3 (unheld), ring 2's first and ring 3's last, in `WAIST_PATH_STEPS` steps. */
-export function waistPath(cfg: GestureConfig, from: RigParams, to: RigParams, s: number, cam: OrbitAt, off: CameraAngleOffset | undefined): Vec3[] {
-  const { v2, v3 } = waistRings(cfg);
-  const out: Vec3[] = [];
-  for (let i = 0; i <= WAIST_PATH_STEPS; i++) out.push(rigFrameBetween(cfg, from, to, s, { yaw: cam.yaw, v: v2 + ((v3 - v2) * i) / WAIST_PATH_STEPS }, off).dir);
-  return out;
+  return rigFrameBetween(cfg, from, to, s, cam, off);
 }

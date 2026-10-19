@@ -34,12 +34,6 @@ export interface RigParams {
   readonly q: Quat;
   readonly yaw0: number;
   readonly beta: number;
-  /** ⭐ (2026-10-17) turned onto a FACE (the gizmo set on one) — the slide view between rings 2 and 3 holds only then (`input/waist_view.ts`) */
-  readonly faced?: boolean;
-  /** ⭐ (2026-10-17) the face's normal as TAPPED (world) — the hold between rings 2 and 3 turns about it (`waistHoldDirection`, `keepInFront`) */
-  readonly normal?: Vec3 | null;
-  /** ⭐ (2026-10-17, the Fable audit's A6) a turn caught mid-change: the faced turns it was blended from, weighted (`rigEnds`) — the hold reads them */
-  readonly ends?: readonly (readonly [RigParams, number])[];
 }
 
 /** ⭐ No turn: the rig as it always was (the boot, a respawn, no face). */
@@ -447,35 +441,7 @@ export function blendRig(a: RigParams, b: RigParams, s: number): RigParams {
   const q = qSlerp(a.q, b.q, s);
   const yaw0 = a.yaw0 + wrapPi(b.yaw0 - a.yaw0) * s;
   // ⭐ the near side ON the blended curve's own plane, the way nearer the blended heading — the near / far split stays clean all the way
-  // ⭐ (2026-10-17, the Fable audit's A6) the NEARER end's face (⛔ none: a tap mid-change stored a faceless `rigFrom` and dropped the hold at once)
-  const e = s < 0.5 ? a : b;
-  return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s), faced: e.faced === true, normal: e.normal ?? null };
-}
-
-/** ⭐ A turn of a caught blend lighter than this is dropped (`rigEnds`; the rest renormalised) — ⛔ a COUNT of 4: a fifth tap swapped faces at once (3.9°). */
-const END_MIN_WEIGHT = 1e-3;
-
-/**
- * ⭐⭐ (2026-10-17, the Fable audit's A2 / A6) the leaf turns a blend from `a` to `b` at `s` stands between, weighted (a turn caught mid-change expanded
- * into its own `ends`) — the hold between rings 2 and 3 is evaluated on each and blended, so a tap mid-change keeps exactly the hold it had.
- */
-export function rigEnds(a: RigParams, b: RigParams, s: number): (readonly [RigParams, number])[] {
-  const w = Math.min(1, Math.max(0, s));
-  const out: [RigParams, number][] = [];
-  const add = (r: RigParams, k: number): void => {
-    if (!(k > 0)) return;
-    for (const [leaf, lw] of r.ends ?? [[r, 1] as const]) {
-      const at = out.find((e) => e[0] === leaf);
-      if (at) at[1] += lw * k;
-      else out.push([leaf, lw * k]);
-    }
-  };
-  add(a, 1 - w);
-  add(b, w);
-  const kept = out.filter((e) => e[1] >= END_MIN_WEIGHT);
-  if (kept.length === out.length) return out;
-  const total = kept.reduce((t, e) => t + e[1], 0);
-  return total > 0 ? kept.map(([r, k]) => [r, k / total] as const) : out;
+  return { q, yaw0, beta: rigBetaFor(q, yaw0, [0, 0, 0], a.beta + wrapPi(b.beta - a.beta) * s) };
 }
 
 /**
@@ -529,7 +495,7 @@ export function rigTurnFor(cfg: GestureConfig, yaw: number, v: number, normal: V
   const q1 = rigRotationFor(cfg, yaw, normal);
   const n = normal === null ? null : normalize(normal);
   for (const q of n === null ? [q1] : [q1, qmul(qFromAxisAngle(n, Math.PI), q1)]) {
-    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta), faced: normal !== null, normal };
+    const cand: RigParams = { q, yaw0: yaw, beta: rigBetaFor(q, yaw, cameraSide, from.beta) };
     const at = rigPlace(cfg, cand, yaw, v, 1);
     const d = Math.hypot(at[0] - here[0], at[1] - here[1], at[2] - here[2]);
     if (d < bestD - 1e-9) {
