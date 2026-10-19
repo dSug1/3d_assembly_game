@@ -64,9 +64,9 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
     expect(sweep(fr, null).peak).toBeGreaterThan(18);
     expect(sweep(fr, 10).peak).toBeLessThan(10.6);
   });
-  it("⭐ two sliders in CAMERA › CAMERA ORBIT AROUND CENTER: 40 and 10°/mm by default, 5–300 validated", () => {
-    expect(DEFAULT_CONFIG.orbitTurnCapDegMm).toBe(40);
-    expect(DEFAULT_CONFIG.orbitTurnCapVerticalDegMm).toBe(10);
+  it("⭐ two sliders in CAMERA › CAMERA ORBIT AROUND CENTER: 12.5 and 12.5°/mm by default, 5–300 validated", () => {
+    expect(DEFAULT_CONFIG.orbitTurnCapDegMm).toBe(12.5); // the owner, 2026-10-19 (first 40)
+    expect(DEFAULT_CONFIG.orbitTurnCapVerticalDegMm).toBe(12.5); // the owner, 2026-10-19 (first 10)
     for (const k of ["orbitTurnCapDegMm", "orbitTurnCapVerticalDegMm"] as const) {
       expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: 4 })).toThrow();
       expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, [k]: 301 })).toThrow();
