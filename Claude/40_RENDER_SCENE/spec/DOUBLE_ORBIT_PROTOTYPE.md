@@ -1390,3 +1390,18 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"* → *"same for vertical faces"*) **both caps 12.5°/mm** (were 40 and 10), the
   sliders stepping 0.5: a horizontal face ≤ 12.5°/mm (96 free), ring 4 → ring 1 88.5 mm of finger (76.5 free, 78.3 at 40); a vertical face ≤ 12.8°/mm (20.4
   free), 77.1 mm.
+
+### ⛔ …the SEMI-ISOMETRIC HOLD deleted (`1.0.81-`, 2026-10-19)
+
+> *"when I set the gizmo on the right face of piece 11 and then approach from more or less perpendicular to the face … the travel between ring 2 and ring 3
+> is not a waist but there is a bump in between the two rings … Explain why"* → (the hold, built 2026-10-17: the camera lifted ~35° over a face seen near
+> edge-on, halfway between rings 2 and 3) → *"remove the semi-isometric function as well as its slider entirely. I don't need it any longer. update the md
+> file. Commit."* — the owner.
+
+* ⛔ **Deleted**: the hold between rings 2 and 3 (`waistHoldDirection`, `waistTurn`, `waistConeWeight`, `keepInFront`, `waistPoleFade`, `waistPrefer`,
+  `waistShare`, `waistPath`, the up's roll toward upright with it) and its slider *"semi-isometric cone (°)"* (`waistIsoConeDeg`); with them what existed only
+  for it — a caught gizmo change's faces (`rigEnds`, the rig's `ends`, `faced`, `normal`). The camera's frame is the curve's own (`targetFrame` =
+  `rigFrameBetween`), its up still carried and rate-bounded (`rollLimitedUp`), the top roll and the turn governor unchanged.
+* ⭐ Kept: rings 2 and 3 at `±r·√2` (`isoWaistHeightM`, `waistRings`, `input/waist_view.ts`), so the camera still passes them at the slide view's tilt.
+* ⛔ The sections of 2026-10-17 on the hold (its cone, its side, its faces through a gizmo change — the Fable audit's A2–A7) are the record. 18 vectors
+  deleted with it, 1 added (the hold and its slider gone, red on the old code). ⛔ No device close. 2078 vectors.
