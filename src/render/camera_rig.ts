@@ -84,7 +84,7 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
  * none): the new turn takes the curve's direction halfway between rings 2 and 3, at the camera's yaw, onto that normal (`rigRotationFor`), the rings'
  * centres beyond the piece as the camera sees it (`rigBetaFor`); blended from the turn it had (the nearer end of a blend in progress).
  */
-export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): void {
+export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, host: string | null = null): void {
   const yaw = st.orbit.yaw;
   const cam = st.camera.position;
   st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump
@@ -94,6 +94,11 @@ export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null): vo
   // ⭐⭐⭐ (2026-10-18) the curve turned onto the face SNAPPED BY GRAVITY (`snapToGravity`) — two curves only: horizontal, vertical (its own heading)
   st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);
   st.centreBlend.retarget(to);
+  // ⭐⭐ (2026-10-19) the part the gizmo now rests on — its faces alone give the quads (`quadSourceIds`)
+  if ((st.gizmoHost ?? null) !== host) {
+    st.gizmoHost = host;
+    st.orientDirty = true;
+  }
   syncCentre(st);
 }
 

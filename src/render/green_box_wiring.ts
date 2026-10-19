@@ -36,6 +36,7 @@ import { add, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "
 import { cameraFrameNow, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
+import { GRAVITY_FRAMES, quadSourceIds } from "../core/orientation_set";
 import { cameraFrameHeld } from "../input/camera_frame";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
@@ -697,6 +698,8 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
 export function respawnStuckPiece(st: SceneState): void {
   spawnOrbitPiece(st, st.orbitPieceKind, false);
   st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);
+  st.gizmoHost = st.bootGizmoHost ?? null; // ⭐ (2026-10-19) back on the boot's host: its faces the quads
+  st.orientDirty = true;
   st.rigFrom = UNTURNED; // ⭐ (2026-10-16) the boot's rig, unturned
   st.rigTo = UNTURNED;
   st.rigShare = 1;
@@ -1575,6 +1578,12 @@ function sweepPoints(st: SceneState, c: Vec3): Vec3[] {
  * green piece's boot direction (the rig's boot yaw and elevation, at the boot zoom), at that face's centre. `null` with no blue
  * piece (the scene's own boot centre then).
  */
+/** ⭐ (2026-10-19) the body the boot's gizmo rests on (`bootTargetOnBlueFace`'s blue part); `null`: none. */
+export function bootGizmoHostOf(st: SceneState): string | null {
+  const blue = st.sceneSpec.bodies.find((b) => b.colour.every((c, i) => c === SCENE_1_PALETTE.MAT_E[i]));
+  return blue !== undefined && st.world.objects.has(blue.id) ? blue.id : null;
+}
+
 export function bootTargetOnBlueFace(st: SceneState): [number, number, number] | null {
   const blue = st.sceneSpec.bodies.find((b) => b.colour.every((c, i) => c === SCENE_1_PALETTE.MAT_E[i]));
   const o = blue === undefined ? undefined : st.world.objects.get(blue.id);
@@ -1629,13 +1638,18 @@ const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]
  * ⭐⭐ (2026-10-12, §21) THE FACE FRAMES THE ORIENTATION CUBE IS BUILT FROM: every face of every SEATED part (placed in its goal — the last
  * commit's) and of every FROZEN body (the floor) — its outward normal and its edge-to-edge axes, in the world. ⛔ Never the orbited pieces.
  * ⚠ A later refinement (the owner): the non-seated parts too — read every frame, as they move.
+ * ⭐⭐ (2026-10-19) only the gizmo's host part's faces when the gizmo rests on one; else the frozen bodies'; else gravity and the horizontal plane (`quadSourceIds`).
  */
 export function orientationFrames(st: SceneState): { readonly normal: Vec3; readonly axes: readonly Vec3[] }[] {
   const out: { normal: Vec3; axes: readonly Vec3[] }[] = [];
   const orbited = new Set(st.orbitPieces.map((o) => o.mesh.name));
-  for (const [id, o] of st.world.objects) {
-    if (orbited.has(id)) continue;
-    if (o.frozen !== true && !st.goalCommit.has(id)) continue;
+  // ⭐⭐ (2026-10-19) the gizmo's HOST part alone (`quadSourceIds`) — ⛔ every seated part and the floor: as many quads as the scene's face orientations
+  // with no host, the frozen bodies' faces; with none of those either, gravity and the horizontal plane (`GRAVITY_FRAMES`)
+  const bodies = [...st.world.objects].filter(([id]) => !orbited.has(id)).map(([id, o]) => ({ id, frozen: o.frozen === true }));
+  const ids = quadSourceIds(bodies, st.gizmoHost ?? null);
+  if (ids.length === 0) return GRAVITY_FRAMES.map((f) => ({ normal: f.normal, axes: f.axes }));
+  for (const id of ids) {
+    const o = st.world.objects.get(id)!;
     for (const f of o.faces) {
       const g = faceGeometry(st, id, f.id);
       if (g !== null) out.push({ normal: g.normal, axes: g.flush });

@@ -303,9 +303,9 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   });
   it("⭐⭐ the gizmo's move sets the new turn from the face's normal at the camera's yaw (both taps: the first touch's, the second's)", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("retargetGizmo(st, to, pc.normal);");
+    expect(p).toContain("retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⭐ (2026-10-19) with its host part (the quads)
     const h = code("render/hold_wiring.ts");
-    expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal);");
+    expect(h).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal, h.centreHost ?? null);");
     const c = code("render/camera_rig.ts");
     expect(c).toContain("st.rigTo = rigTurnFor(st.cfg, yaw, st.orbit.elevation, snapToGravity(normal), [cam.x - to[0], 0, cam.z - to[2]], st.rigFrom);");
   });

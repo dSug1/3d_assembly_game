@@ -48,9 +48,9 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/orbitTargetOnPress\(\s*routed\.role === "OBJECT" && st\.router\.all\(\)\.length === 1,\s*e\.pointerType !== "mouse" \|\| e\.isTrusted,/);
     // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
-    expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: st.idOf.get(mesh) ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); "); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
-    expect(p).toContain("if (to !== null) retargetGizmo(st, to, pc.normal);");
+    expect(p).toContain("if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);");
     expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
   });
 

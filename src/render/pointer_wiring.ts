@@ -125,7 +125,7 @@ export function installPointerHandler(st: SceneState): void {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
         // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
-        if (to !== null) retargetGizmo(st, to, pc.normal);
+        if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
       }
       // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
       st.eventGaps.delete(e.pointerId);
@@ -408,7 +408,7 @@ export function installPointerHandler(st: SceneState): void {
           // left out (an OBJECT pointer, not an outside one), so its drag drove nothing — the locked part's own orbit stops once a second is down
           const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? partFirst(st, e.pointerId);
           const centreN = centreAt !== null ? pick?.getNormal(true) : null;
-          holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null);
+          holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null && pick?.pickedMesh ? (st.idOf.get(pick.pickedMesh) ?? null) : null);
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
@@ -429,7 +429,7 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐ (2026-10-13, *"Piece still locked onto the collided part without possibility to go backwards"* → *"Build"*; §11nonies) NOTED, not moved: the gizmo goes there at the release if it is a TAP — a drag from the part orbits
       // ⭐ (2026-10-16) with the face's normal there (world): the rig's turn when the gizmo moves
       const hitN = newTarget !== null ? pick?.getNormal(true) : null;
-      st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, x: s.x, y: s.y, t: s.t } : null;
+      st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: st.idOf.get(mesh) ?? null, x: s.x, y: s.y, t: s.t } : null;
       // ⭐⭐⭐ `IN3` RULE 2 — *"the hit object is selected and the hit face is selected."*
       //
       // ⛔⛔ FROM THE PICKED **NORMAL**, never from `pickInfo.faceId`: that is a TRIANGLE

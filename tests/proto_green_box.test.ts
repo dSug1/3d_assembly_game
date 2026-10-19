@@ -625,7 +625,7 @@ describe("⭐⭐ prototype — the boot orbit centre is the blue piece's face to
   it("⭐ Scene_1 has ONE blue piece (Piece10); the boot centre is wired to its face, the scene's own centre only without one", () => {
     const blue = SCENE_1.bodies.filter((b) => b.colour.every((c, i) => c === SCENE_1_PALETTE.MAT_E[i]));
     expect(blue.map((b) => b.id)).toEqual(["Piece10"]);
-    expect(code("scene.ts")).toMatch(/new OrbitCentreBlend\(st\.cfg, bootTargetOnBlueFace\(st\) \?\? bootOrbitCentre\(/);
+    expect(code("scene.ts")).toMatch(/const bootOnBlue = bootTargetOnBlueFace\(st\);\s*st\.centreBlend = new OrbitCentreBlend\(st\.cfg, bootOnBlue \?\? bootOrbitCentre\(/); // ⭐ (2026-10-19) its host kept for the quads
     const w = code("green_box_wiring.ts");
     // ⭐ the green piece's orbit is the rings as they are (the zoom moves the camera only, 2026-10-02)
     expect(w).toMatch(/orbitOffset\(st\.cfg, st\.orbit\.yaw, st\.orbit\.elevation, GREEN_PIECE_ORBIT_ZOOM\)\.offsetM;/);

@@ -80,7 +80,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
-import { bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
+import { bootGizmoHostOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
 import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
@@ -894,7 +894,11 @@ export function createScene(
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.
-  st.centreBlend = new OrbitCentreBlend(st.cfg, bootTargetOnBlueFace(st) ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
+  const bootOnBlue = bootTargetOnBlueFace(st);
+  st.centreBlend = new OrbitCentreBlend(st.cfg, bootOnBlue ?? bootOrbitCentre(st.sceneSpec.orbit, ORBIT_START_CENTRE_M));
+  // ⭐ (2026-10-19) the boot's gizmo rests on the blue part: its faces give the quads (`quadSourceIds`)
+  st.bootGizmoHost = bootOnBlue !== null ? bootGizmoHostOf(st) : null;
+  st.gizmoHost = st.bootGizmoHost ?? null;
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   // ⭐ (2026-10-16) the rig as it was designed at boot: no turn until the gizmo moves onto a face
   st.rigFrom = UNTURNED;
