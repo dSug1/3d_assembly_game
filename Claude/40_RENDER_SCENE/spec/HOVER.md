@@ -60,6 +60,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
 6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
 7. ⚠ The hover is not an episode yet (`SCORE.md`).
+12. ⭐ **The turn governor (2026-10-19)**: the camera's turn per mm of dy capped — 40°/mm over a horizontal face (96 before), 10°/mm on a vertical one (20 before), two sliders → `DOUBLE_ORBIT_PROTOTYPE.md`, last section.
 11. ⭐ **The curve snapped by gravity (2026-10-18)**: on a tilted face the orbit takes the horizontal (up / down) or the vertical face's curve — only the tilt snapped, the face's own heading kept, a tie to the vertical → `DOUBLE_ORBIT_PROTOTYPE.md`, last section.
 10. ⭐ **Tilted faces to try (2026-10-18)**: two frusta of the green piece's geometry seated on Piece5's right face (`Piece42`) and under Piece19 (`Piece43`, sunk into the floor) — slanted sides at 32° / 15° → `SCENE_1.md` §10.
 9. ✅ **THE TOP ROLL — built 2026-10-18, ⛔ no device close**: over a horizontal face the camera upright in the curve's vertical plane (the offsets faded when steep), the half-round only within `topRollBandDeg` = 20° of straight above → `DOUBLE_ORBIT_PROTOTYPE.md`, last section.
