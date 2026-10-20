@@ -237,46 +237,6 @@ export function orbitOffset(
 }
 
 /**
- * ⭐⭐⭐ (2026-10-20, the owner: *"merge rings 2 and 3 for the piece 2D curve in case the hosting face is horizontal"*) — **THE CURVE WITH RINGS 2 AND 3
- * MERGED**: through the bottom ring, ONE ring halfway between rings 2 and 3 (their mean radius and height — `Scene_1`: 0.09 m, 0 — at the waist's middle,
- * where the four-ring curve passes the same point) and the top ring; the same monotone cubic (Fritsch–Carlson, here on uneven knots) on the DISTANCE and the
- * ANGLE, so neither turns between rings; the bottom and top rings and the parameter's ends as the four-ring curve's. Read for a turn onto a HORIZONTAL face (`rigCurvePoint`): the piece
- * crosses over the gizmo without dipping to rings 2 and 3 first. With three rings: the curve as it is.
- */
-export function mergedWaistOffset(cfg: GestureConfig, yawRad: number, v: number, zoom: number): OrbitPose {
-  if (cfg.orbitLowerRingOn !== 1) return orbitOffset(cfg, yawRad, v, zoom);
-  const f = fourRingLayout(cfg);
-  const m = (f.knots[1]! + f.knots[2]!) / 2 / f.total;
-  const knots = [0, m, 1];
-  const rs = [cfg.orbitBottomRadiusM, (cfg.orbitLowerRadiusM + cfg.orbitMiddleRadiusM) / 2, cfg.orbitTopRadiusM];
-  const hs = [cfg.orbitBottomHeightM, (cfg.orbitLowerHeightM + cfg.orbitMiddleHeightM) / 2, cfg.orbitTopHeightM];
-  // ⭐⭐ in DISTANCE and ANGLE (⛔ in radius and height, turned onto a horizontal face — where the radius IS the height above the face — the radius reached its
-  // floor first: the piece dipped to 30.5° beside the gizmo before rising over it); each monotone, so the angle from the face only climbs to the merged ring
-  const ds = rs.map((r, k) => Math.hypot(r, hs[k]!));
-  const as = rs.map((r, k) => Math.atan2(hs[k]!, r));
-  const c = Math.min(1, Math.max(0, v));
-  const d = hermiteAt(knots, ds, unevenTangents(knots, ds), c) * zoom;
-  const a = hermiteAt(knots, as, unevenTangents(knots, as), c);
-  const radius = d * Math.cos(a);
-  return { offsetM: [radius * Math.cos(yawRad), d * Math.sin(a), radius * Math.sin(yawRad)], radiusM: d };
-}
-
-/** ⭐ Fritsch–Carlson tangents for knots at any spacing (`evenTangents`' rule: zero where the data turns, else the secants' mean capped at 3 × the shallower). */
-function unevenTangents(knots: readonly number[], ys: readonly number[]): number[] {
-  const n = ys.length - 1;
-  const d = Array.from({ length: n }, (_, k) => (ys[k + 1]! - ys[k]!) / Math.max(1e-12, knots[k + 1]! - knots[k]!));
-  return ys.map((_, k) => {
-    if (k === 0) return d[0]!;
-    if (k === n) return d[n - 1]!;
-    const a = d[k - 1]!;
-    const b = d[k]!;
-    if (!(a * b > 0)) return 0;
-    const avg = (a + b) / 2;
-    return Math.sign(avg) * Math.min(Math.abs(avg), 3 * Math.min(Math.abs(a), Math.abs(b)));
-  });
-}
-
-/**
  * Drives yaw and elevation from one touchpoint's drag.
  *
  * ⭐ A DISPLACEMENT SCALED BY A GAIN — no rate, no baseline, no filter. `IN1` spent
