@@ -1309,7 +1309,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 5. The slider: default 20, validated, in CAMERA ORBIT AROUND CENTER; the band width honoured (B = 10° / 30°).
 6. Kept green: the gizmo change horizontal → vertical (`camera_frame.test.ts`), faces tilted 35°–85° (their crossing now gets the top roll), A1–A7.
 
-### …THE TOP ROLL, built (`1.0.81-`, 2026-10-18)
+### …THE TOP ROLL, built (`1.0.81-`, 2026-10-18; ⭐ over a horizontal face superseded by THE TOP FACE CAMERA RING, 2026-10-20 — last section)
 
 > *"start building, update the md files, deploy"* — the owner.
 
@@ -1405,3 +1405,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⭐ Kept: rings 2 and 3 at `±r·√2` (`isoWaistHeightM`, `waistRings`, `input/waist_view.ts`), so the camera still passes them at the slide view's tilt.
 * ⛔ The sections of 2026-10-17 on the hold (its cone, its side, its faces through a gizmo change — the Fable audit's A2–A7) are the record. 18 vectors
   deleted with it, 1 added (the hold and its slider gone, red on the old code). ⛔ No device close. 2078 vectors.
+
+### …THE TOP FACE CAMERA RING: over a horizontal face the camera goes ROUND the gizmo between rings 3 and 2, never over it (`1.0.82-`, 2026-10-20)
+
+> *"The 2D curve for the horizontal hosting face has the camera rising up to the vertical of the gizmo during the travel between ring 2 and ring 3 with dy
+> input. Can you lower the camera and probably create a dedicated ring for the camera during this portion of the travel so the camera view is lowered from
+> the zenith (that would correspond to what the camera does with a mix of dy and dx during this portion). Take into account the mirror if the camera comes
+> from ring 1 or comes from ring 4. No change for the piece 2D curve, only for the camera on horizontal hosting face case. Propose something before
+> building."* → *"Build option A"* — the owner.
+
+* ⛔ **Measured first** (`Scene_1`, the gizmo on Piece10's top face, the owner's offsets): rings 1 / 4 — the piece 58° up, the camera 60°, 6.0 m off; rings 3 /
+  2 (v 0.43 / 0.57) — 34° / 36°, 0.16 m; halfway (v 0.50) — **90°, the camera straight down**, the piece 0.09 m from the gizmo. The stretch 36° → 90° → 36°
+  is ~11 mm of finger (~14.5 governed), the 180° top roll inside it.
+* ⭐⭐⭐ **The ring** (`topFaceRing`, `horizontalShare`, in `rigFrameBetween`, `input/orbit_rig.ts`): between rings 3 and 2 the camera's direction goes from
+  its frame at ring 3 to its frame at ring 2 HALF ROUND the gizmo — the azimuth by smoothstep (no turn at either ring), the angle above the face lifted to
+  `topFaceCameraRingDeg` midway (sin²: level at either ring) — aimed at the gizmo as ever (the piece, 9–16 cm from it there, stays near the screen's centre)
+  and UPRIGHT: no roll, vertical edges vertical. An underside: the same ring below the face. The piece's curve and the rings unchanged; a vertical face
+  unchanged.
+* ⭐ **Option A — the mirror**: a function of the ring parameter alone — driven from ring 1 or from ring 4 it is the same half-circle, one the reverse of the
+  other; its side the yaw offset's (as the top roll turned). ⛔ Option B (the same handedness from either end, latched at entry) not built.
+* ⭐ **Through a gizmo change** the ring fades by each END turn's share blended at the change's share (⛔ the blended turn's own: it left the horizontal in
+  the first fifth of the change); each end's ring is built on its own curve and turned at rings 3 and 2 onto the blended curve's frames (eased between),
+  so it meets the curve exactly there (⛔ on the blended curve: a waist ring passed straight above and its azimuth spun); the up the mixed view's upright one
+  rolled by what is left of the curve's roll (⛔ the ups mixed as vectors: 1.7° off upright). The share is all within 5° of straight up or down, none past
+  15° — a face snapped by gravity is exactly one or the other; a turn past 15° keeps the curve and its TOP ROLL (now only mid-change).
+* ⭐ **The slider** *"top face camera ring (°)"* in CAMERA › CAMERA ORBIT AROUND CENTER, `topFaceCameraRingDeg` **50**, 35–85 (validated).
+* Measured in the app (dy at 0.25 mm, both ways): 36° at the rings → 50° midway (never above), the azimuth 93° → −87° round, **no roll** (0.00°), the drawn
+  up on the target, the fastest step 3.9° a 0.25 mm (~15.7°/mm free: the 12.5°/mm governor holds it). ⚠ Cost: a gizmo change top → vertical made WHILE dy
+  crosses the stretch turns the view up to 11.5° a 0.25 mm step ungoverned (7.5° before), 3.1° governed.
+* Vectors (3 new, red on the old code): upright all the way and ≤ 50° in the stretch, the drawn up the target's; half a round the yaw offset's way, meeting
+  the curve at both rings, retraced when driven back, the slider honoured, an underside below, a vertical face untouched; the slider. Restated: the top
+  roll's two vectors (a horizontal face) → the ring's; *no azimuth* on a face tilted 70°; the governor's horizontal face (24°/mm free, held to 12.5); A1's
+  step bound 10° → 12°. ⛔ No device close. 2086 vectors.

@@ -47,17 +47,18 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
       expect(frameTurnDeg(a, { dir: qRotate(q, a.dir), up: qRotate(q, a.up) })).toBeCloseTo(deg, 6);
     }
   });
-  it("⭐⭐⭐ over a HORIZONTAL face the turn over the top held to the cap (40°/mm) — ⛔ 96°/mm ungoverned; the rest of the travel untouched", () => {
+  it("⭐⭐⭐ over a HORIZONTAL face the turn between rings 2 and 3 held to the cap (12.5°/mm) — ⭐ (2026-10-20) ~24°/mm ungoverned round the camera ring (⛔ 96°/mm over the top before it); the rest of the travel untouched", () => {
     const fr = curve([0, 1, 0]);
     const free = sweep(fr, null);
-    expect(free.peak).toBeGreaterThan(80);
-    const held = sweep(fr, 40);
-    expect(held.peak).toBeLessThan(42);
+    expect(free.peak).toBeGreaterThan(20);
+    expect(free.peak).toBeLessThan(30);
+    const held = sweep(fr, 12.5);
+    expect(held.peak).toBeLessThan(13.5);
     expect(held.mm).toBeGreaterThan(free.mm); // more finger over the top
     expect(held.mm - free.mm).toBeLessThan(5);
     // near ring 4 the camera turns slowly: the governor gives the finger's whole step
     const dv = -0.3 * dvPerMm;
-    expect(governedRingStep(fr, 0.95, dv, dvPerMm, 40)).toBeCloseTo(dv, 12);
+    expect(governedRingStep(fr, 0.95, dv, dvPerMm, 12.5)).toBeCloseTo(dv, 12);
   });
   it("⭐⭐⭐ on a VERTICAL face the view between rings 2 and 3 slowed to its own cap (10°/mm) — ⛔ 20°/mm ungoverned", () => {
     const fr = curve([Math.cos(yaw), 0, Math.sin(yaw)]);

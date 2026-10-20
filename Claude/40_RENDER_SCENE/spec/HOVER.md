@@ -60,6 +60,7 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
 6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
 7. ⚠ The hover is not an episode yet (`SCORE.md`).
+17. ⭐ **The top face camera ring (2026-10-20)**: over a horizontal face, between rings 3 and 2, the camera goes half round the gizmo at 50° (slider), upright, never over the top; the piece's curve unchanged → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 16. ⭐ **Four quads at most (2026-10-20)**: the biggest frozen body's three planes (else gravity's), then the gizmo face's unless it is one of them, always in that order; the yellow round them every 30° → `RESTING_FACE_ALIGNMENT.md` §35.
 15. ⭐ **The yellow quad by yaw (2026-10-19)**: a loop of the host's quads, neighbour to neighbour, every quad lit every lap (30° each for 6), slider in FACE ALIGNMENT; the reachability alert deleted → `RESTING_FACE_ALIGNMENT.md` §34.
 14. ⭐ **The quads from the gizmo's host part (2026-10-19)**: as many as its face orientations (else the floor's, else gravity's) → `RESTING_FACE_ALIGNMENT.md` §33.
