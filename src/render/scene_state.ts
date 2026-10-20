@@ -487,7 +487,7 @@ export interface SceneState {
   /** ⭐ (2026-10-12) THE PINK DIRECTION: the CANDIDATE (the direction facing the camera most from the resting face; −1 none), and the one last
    * TAPPED (shown instead until the candidate changes — `cand` the candidate then). */
   orientShown: { candidate: number; clicked: { readonly tag: number; readonly cand: number } | null };
-  /** ⭐ (2026-10-19) the yellow quad's loop (`quadCarousel`), for the quads and the slice it was built for */
+  /** ⭐ (2026-10-19) the yellow quad's loop (`fixedCarousel`, over the quads' planes), for the quads and the slice it was built for */
   orientCarousel?: { readonly key: string; readonly c: import("../input/quad_carousel").QuadCarousel } | null;
   /** ⭐ (2026-10-13) the yellow quad's tap checked: what blocks its turn (`null`: free — yellow; else RED), when and for what it was checked. */
   quadTurnCheck: { blockedBy: string | null; key: string; at: number };
@@ -607,6 +607,10 @@ export interface SceneState {
   gizmoHost?: string | null;
   /** ⭐ (2026-10-19) the boot's host (a respawn puts the gizmo back on it) */
   bootGizmoHost?: string | null;
+  /** ⭐ (2026-10-20) the gizmo's supporting face's normal (world) — the fourth quad (`quadFrames`); `null`: none */
+  gizmoNormal?: Vec3 | null;
+  /** ⭐ (2026-10-20) the boot gizmo's face normal (a respawn puts it back) */
+  bootGizmoNormal?: Vec3 | null;
   pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; host?: string | null; x: number; y: number; t: number } | null;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m) — the quad's check pauses mid-sweep. */
   pieceFrameStepM: number;

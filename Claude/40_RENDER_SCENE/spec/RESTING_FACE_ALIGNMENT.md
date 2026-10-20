@@ -1156,7 +1156,7 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
 * ⭐ (2026-10-15, *"Set non-yellow quad opacity to 0.130"*) — `quadUnlitAlpha` defaults to **0.13** (the fill a quarter, 0.0325); was 0.1.
 * ⭐⭐ (2026-10-15, the Fable audit) the quads' distance is read from the gizmo's TARGET (`st.centreBlend.targetM`) — ⛔ from the ring's mesh, not placed while the yellow gizmo is hidden: the quads, the tap gate and the resting contour read a stale distance with the slider off.
 
-## 33. The quads from the gizmo's host part (2026-10-19, `1.0.81-`, ⛔ no device close)
+## 33. The quads from the gizmo's host part (2026-10-19, `1.0.81-`; ⛔ superseded by §35)
 
 > *"now there are as much quads as there are orientations of faces in the scene. this is too many quads. make the quads as many as the orientations of the
 > faces of the part which supports the gizmo."* → *"when no part is selected, default to the frozen object's faces orientations. if no frozen object and not
@@ -1198,3 +1198,27 @@ starts and REFUSED when blocked; and the yellow quad turns **RED** while the tur
   elevation. `input/orient_window.ts` deleted whole (its last rules gone).
 * Measured in the app (a 360° yaw sweep near ring 4): Piece42 and Piece10 both light all 6 quads, 30° each, twice a lap, each switch to a loop neighbour.
   6 vectors (`tests/quad_carousel.test.ts`, red without the module), 3 restated. 2084 vectors.
+
+## 35. Four quads at most — the frozen body's three planes, then the gizmo face's, in that order (2026-10-20, `1.0.81-`, ⛔ no device close)
+
+> *"there are still too many quads. Just keep the three quads of the frozen object's faces orientations (or gravity and horizontal planes) and the
+> orientation of the face which supports the gizmo. that will be max 4 quads. always put them in the same order (3 frozen object's orientations then gizmo
+> face orientation). Same quad switch speed as current."* → *"don't duplicate the quads if the orientation of the face supporting the gizmo is the same as
+> one of the faces of the frozen object (or gravity and horizontal planes)"* — the owner.
+
+* ⛔ **Before** (§33): every face orientation of the gizmo's host part — 6 quads on a box or a frustum; and (§34) a loop over them ordered as the shortest
+  tour, its phase fitted to the sideways quads.
+* ⭐⭐⭐ **The quads** (`quadFrames`, `core/orientation_set.ts`; `orientationFrames`, `render/green_box_wiring.ts`): the PLANES of the BIGGEST frozen body's
+  faces (its bounding sphere; else `GRAVITY_FRAMES`: gravity and the horizontal plane), the most horizontal first then by heading, three at most; then the
+  plane of the face the gizmo rests on — its host's face along the gizmo's normal (1°), with that face's axes. ⭐ **No duplicate**: a gizmo face along one of
+  the three planes (either sense, 1°) adds nothing — 3 quads. Each plane carries both senses (a tap on either side of its quad).
+* ⭐ The gizmo's face normal is kept in `st.gizmoNormal` — set by `retargetGizmo` (the quads re-read when it changes), at the boot (`bootGizmoNormalOf`, the
+  blue part's face toward the piece — `bootBlueFace`, shared with `bootTargetOnBlueFace`) and at a respawn.
+* ⭐⭐ **The yellow** (`fixedCarousel`, `input/quad_carousel.ts`; wired in `render/orient_cube.ts`): the loop over the quads' planes in THEIR order —
+  0, 1, 2, (3), 0, … — anchored on the world's yaw (slice 0 from azimuth 0); its sense the side the camera sees (`quadSide`, the side a tap on that quad would
+  align to — a tap on empty space aligns there). ⛔ `quadTour` and `quadCarousel` deleted.
+* ⭐ **The same switch speed**: `quadSliceMaxDeg` **30** (was 40) — 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° were. The slider stays in FACE
+  ALIGNMENT.
+* Measured in the app (a 360° yaw sweep): at boot (Piece10's front) and on Piece10's front, 3 quads (the floor's), yellow `012012012012`; on Piece42's
+  tilted top, 4 quads, yellow `0123012301230`. 5 vectors (`tests/quad_frames.test.ts`) and 4 (`tests/quad_carousel.test.ts`), red on the old code;
+  `tests/quad_sources.test.ts` deleted with `quadSourceIds`; 3 text checks restated. 2085 vectors.

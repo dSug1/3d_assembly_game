@@ -80,7 +80,7 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
-import { bootGizmoHostOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
+import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
 import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
@@ -898,6 +898,8 @@ export function createScene(
   // ⭐ (2026-10-19) the boot's gizmo rests on the blue part: its faces give the quads (`quadSourceIds`)
   st.bootGizmoHost = bootOnBlue !== null ? bootGizmoHostOf(st) : null;
   st.gizmoHost = st.bootGizmoHost ?? null;
+  st.bootGizmoNormal = bootOnBlue !== null ? bootGizmoNormalOf(st) : null; // ⭐ (2026-10-20) its face: the fourth quad
+  st.gizmoNormal = st.bootGizmoNormal;
   // ⭐ `D169`: the camera boots about the BLEND's centre — it was `Vector3.Zero()`, which ignored a scene's own.
   // ⭐ (2026-10-16) the rig as it was designed at boot: no turn until the gizmo moves onto a face
   st.rigFrom = UNTURNED;

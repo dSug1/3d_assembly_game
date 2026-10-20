@@ -629,7 +629,7 @@ describe("⭐⭐ prototype — the boot orbit centre is the blue piece's face to
     const w = code("green_box_wiring.ts");
     // ⭐ the green piece's orbit is the rings as they are (the zoom moves the camera only, 2026-10-02)
     expect(w).toMatch(/orbitOffset\(st\.cfg, st\.orbit\.yaw, st\.orbit\.elevation, GREEN_PIECE_ORBIT_ZOOM\)\.offsetM;/);
-    expect(w).toMatch(/const face = faceToward\(faces, toward\);/);
+    expect(w).toMatch(/return faceToward\(faces, toward\);/); // ⭐ (2026-10-20) in `bootBlueFace`, shared with the boot gizmo's normal (the fourth quad)
   });
 });
 
