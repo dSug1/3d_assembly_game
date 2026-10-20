@@ -213,14 +213,15 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
           const f = cameraFrameHeld(cfg, top, top, 1, { yaw, v }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
           const e = Math.asin(f.dir[1]) * D;
-          expect(e).toBeGreaterThanOrEqual(50 - 1e-6); // never below the midway ring
+          // ⭐ monotone from ring 1 to the midway ring and on to ring 4, whichever side of ring 1's height it lies (80° by default, above)
+          const towardMid = Math.sign(DEFAULT_CONFIG.topFaceCameraRingDeg - 58.3);
           if (prevE !== null && Math.abs(v - mid) > 0.003) {
-            if (v <= mid) expect(e).toBeLessThanOrEqual(prevE + 1e-9); // down from ring 1 to the midway ring…
-            else expect(e).toBeGreaterThanOrEqual(prevE - 1e-9); // …and up to ring 4: no dip at rings 3 and 2
+            if (v <= mid) expect((e - prevE) * towardMid).toBeGreaterThanOrEqual(-1e-9);
+            else expect((e - prevE) * towardMid).toBeLessThanOrEqual(1e-9); // no dip at rings 3 and 2
           }
           prevE = e;
         }
-        expect(Math.asin(cameraFrameHeld(cfg, top, top, 1, { yaw, v: mid }, o, null).dir[1]) * D).toBeCloseTo(50, 6);
+        expect(Math.asin(cameraFrameHeld(cfg, top, top, 1, { yaw, v: mid }, o, null).dir[1]) * D).toBeCloseTo(DEFAULT_CONFIG.topFaceCameraRingDeg, 6);
       }
     }
   });
@@ -259,13 +260,13 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: mid }, off, null).dir[1]) * D).toBeCloseTo(deg, 1);
     // an underside: the same ring below the face
     const under = rigTurnFor(cfg, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
-    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: mid }, off, null).dir[1]) * D).toBeCloseTo(-50, 1);
+    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: mid }, off, null).dir[1]) * D).toBeCloseTo(-DEFAULT_CONFIG.topFaceCameraRingDeg, 1);
     // a vertical face: untouched by the slider
     const side = rigTurnFor(cfg, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
     for (let v = v3; v <= v2; v += 0.01) expect(angle(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 35 }, side, side, 1, { yaw, v }, off, null).dir, cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 85 }, side, side, 1, { yaw, v }, off, null).dir)).toBeLessThan(1e-5);
   });
-  it("⭐ the ring's slider: CAMERA › CAMERA ORBIT AROUND CENTER, 50° by default, 35–85 validated", () => {
-    expect(DEFAULT_CONFIG.topFaceCameraRingDeg).toBe(50);
+  it("⭐ the ring's slider: CAMERA › CAMERA ORBIT AROUND CENTER, 80° by default (2026-10-20, rings 2 and 3 merged for the piece; 50 before), 35–85 validated", () => {
+    expect(DEFAULT_CONFIG.topFaceCameraRingDeg).toBe(80);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 34 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 86 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");

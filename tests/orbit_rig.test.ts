@@ -14,6 +14,8 @@ import { cameraOffset } from "../src/input/follow_camera";
 import { IDENTITY, qFromAxisAngle, qmul, qRotate, type Vec3 } from "../src/core/vec";
 import { rigFrameBetween, rigTurnFor } from "../src/input/orbit_rig";
 import { topRollWidth } from "../src/input/orbit_rig";
+import { rigCurvePoint } from "../src/input/orbit_rig";
+import { mergedWaistOffset } from "../src/input/orbit";
 import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
 import { fourRingLayout } from "../src/input/orbit";
 
@@ -100,8 +102,8 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
         const c = rigPlace(cfg, p, yaw + 0.001, v, 1);
         const da = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
         const dc = Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]);
-        const ua = orbitOffset(cfg, yaw, v, 1).offsetM, ub = orbitOffset(cfg, yaw, v + 0.001, 1).offsetM;
-        // ⭐ the same step as on the unturned rig (a rotation keeps every distance along the curve)
+        const ua = rigCurvePoint(cfg, p, v, 1), ub = rigCurvePoint(cfg, p, v + 0.001, 1);
+        // ⭐ the same step as on the unturned curve (a rotation keeps every distance along the curve) — ⭐ (2026-10-20) over a top face rings 2 and 3 merged
         expect(da).toBeCloseTo(Math.hypot(ua[0] - ub[0], ua[1] - ub[1], ua[2] - ub[2]), 9);
         worst = Math.max(worst, dc / 0.001);
       }
@@ -113,11 +115,36 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       const p = turnFor(yaw0, n);
       for (const v of [0, 0.4, waistV(cfg), 0.7, 1]) {
         const a = rigPlace(cfg, p, yaw0, v, 1);
-        const b = qRotate(p.q, orbitOffset(cfg, yaw0, v, 1).offsetM);
+        // ⭐ (2026-10-20) the curve before the turn: over a top face rings 2 and 3 merged (`mergedWaistOffset`), else the four rings
+        const b = qRotate(p.q, (n[1] === 1 ? mergedWaistOffset : orbitOffset)(cfg, yaw0, v, 1).offsetM);
         for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(b[i]!, 12);
       }
       expect(angle(rigPlace(cfg, p, yaw0, waistV(cfg), 1), n)).toBeLessThan(1e-4);
     }
+  });
+  it("⭐⭐⭐ (2026-10-20, the owner: *\"merge rings 2 and 3 for the piece 2D curve in case the hosting face is horizontal\"*) over a TOP face the piece's angle above the face CLIMBS from ring 1 to straight above and back down to ring 4 — no dip at rings 2 and 3 (⛔ 34° there); its distance shrinks to the merged ring's 9 cm; a SIDE face keeps its four rings", () => {
+    for (const yaw0 of [0.4, 2.1]) {
+      const p = turnFor(yaw0, [0, 1, 0]);
+      const mid = waistV(cfg);
+      let prevE: number | null = null;
+      let prevD: number | null = null;
+      for (let v = 0; v <= 1 + 1e-9; v += 0.002) {
+        const a = rigPlace(cfg, p, yaw0, v, 1);
+        const d = Math.hypot(a[0], a[1], a[2]);
+        const e = (Math.asin(a[1] / d) * 180) / Math.PI;
+        expect(e).toBeGreaterThan(55); // never down toward the face (⛔ 34° at rings 2 and 3)
+        if (prevE !== null && prevD !== null && Math.abs(v - mid) > 0.003) {
+          if (v < mid) { expect(e).toBeGreaterThanOrEqual(prevE - 1e-9); expect(d).toBeLessThanOrEqual(prevD + 1e-9); }
+          else { expect(e).toBeLessThanOrEqual(prevE + 1e-9); expect(d).toBeGreaterThanOrEqual(prevD - 1e-9); }
+        }
+        prevE = e;
+        prevD = d;
+      }
+      expect(Math.hypot(...rigPlace(cfg, p, yaw0, mid, 1))).toBeCloseTo(0.09, 6);
+      for (const v of [0, 1]) for (let i = 0; i < 3; i++) expect(rigPlace(cfg, p, yaw0, v, 1)[i]).toBeCloseTo(qRotate(p.q, orbitOffset(cfg, yaw0, v, 1).offsetM)[i]!, 9); // rings 1 and 4 as they were
+    }
+    const side = turnFor(0, [0, 0, 1]);
+    for (const v of [0.3, 0.45, 0.5, 0.6]) for (let i = 0; i < 3; i++) expect(rigPlace(cfg, side, 0, v, 1)[i]).toBeCloseTo(qRotate(side.q, orbitOffset(cfg, 0, v, 1).offsetM)[i]!, 12);
   });
   it("⭐⭐ a SIDE face: the rings are today's (their centres on the gizmo's vertical), turned by a yaw", () => {
     const p = turnFor(0, [0, 0, 1]);
@@ -224,7 +251,7 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       const d = (p: RigParams) => { const a = rigPlace(cfg, p, 0.4, v, 1); return Math.hypot(a[0] - here[0], a[1] - here[1], a[2] - here[2]); };
       const q1 = rigRotationFor(cfg, 0.4, [0, 1, 0]);
       for (const q of [q1, qmul(qFromAxisAngle([0, 1, 0], Math.PI), q1)]) expect(d(t)).toBeLessThanOrEqual(d({ q, yaw0: 0.4, beta: rigBetaFor(q, 0.4, [1, 0, 0], 0) }) + 1e-9);
-      if (v > 0.5) expect(d(t)).toBeLessThan(2.5); // ⛔ the piece no longer sent across the gizmo (6.3 m at v 0.9; below the gizmo a top face has no ring)
+      if (v > 0.5) expect(d(t)).toBeLessThan(3); // ⛔ the piece no longer sent across the gizmo (6.3 m at v 0.9; below the gizmo a top face has no ring) — ⭐ (2026-10-20) 2.52 m with rings 2 and 3 merged over the top face
       expect(angle(rigPlace(cfg, t, 0.4, waistV(cfg), 1), [0, 1, 0])).toBeLessThan(1e-4); // halfway on the normal, either way
     }
   });
@@ -274,7 +301,11 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       const m = blendRig(a, b, s);
       for (const v of [0.05, 0.3, 0.6, 0.95]) {
         const place = rigPlace(cfg, m, 0.9, v, 1);
-        expect(Math.hypot(place[0], place[1], place[2])).toBeCloseTo(orbitOffset(cfg, 0, v, 1).radiusM, 9); // on a real curve
+        // on a real curve — ⭐ (2026-10-20) between the four rings' distance and the merged curve's (the top face's), as far as the turn is a top face's
+        const r = Math.hypot(place[0], place[1], place[2]);
+        const r4 = orbitOffset(cfg, 0, v, 1).radiusM, r1 = mergedWaistOffset(cfg, 0, v, 1).radiusM;
+        expect(r).toBeGreaterThanOrEqual(Math.min(r4, r1) - 1e-9);
+        expect(r).toBeLessThanOrEqual(Math.max(r4, r1) + 1e-9);
         expect(angle(rigCameraFrame(cfg, m, { yaw: 0.9, v }, place).dir, place)).toBeLessThan(1e-4); // the camera on it
       }
     }

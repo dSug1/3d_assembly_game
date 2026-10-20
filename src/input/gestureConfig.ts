@@ -1064,7 +1064,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ prototype, the owner 2026-10-08: the WAY IN (`PieceEntry`) — ONE value for the camera's move to the piece orbit's pose and its view
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
-  topFaceCameraRingDeg: 50, // ⭐ (2026-10-20) between ring 2's 36° and ring 1's 60°
+  topFaceCameraRingDeg: 80, // ⭐ (2026-10-20) with rings 2 and 3 merged for the piece (it climbs to 90° straight above), 80°: the piece never further off the screen centre than at ring 1 (11°; 29.5° at 50)
   quadSliceMaxDeg: 30, // ⭐ (2026-10-20, *"Same quad switch speed as current"*) 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° (2026-10-19)
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
