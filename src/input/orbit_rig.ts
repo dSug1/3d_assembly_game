@@ -24,7 +24,7 @@
  * ⛔ ENGINE-FREE. Shortest-arc is textbook (Shoemake 1985): no licence, no patent.
  */
 import type { GestureConfig } from "./gestureConfig";
-import { fourRingLayout, orbitOffset } from "./orbit";
+import { fourRingLayout, mergedWaistOffset, orbitOffset } from "./orbit";
 import { smoothstep01 as smooth, waistRings } from "./waist_view";
 import { mirroredPitchOffset, type CameraAngleOffset, type OrbitAt } from "./follow_camera";
 import { IDENTITY, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, qSlerp, type Quat, type Vec3 } from "../core/vec";
@@ -122,7 +122,20 @@ export function rigBetaFor(q: Quat, yaw0: number, cameraSide: Vec3, preferBeta?:
  * vertical by dx — `yawTurn(yaw − yaw0) · q · orbitOffset(yaw0, v)`. Smooth in both (a rotation of the curve), so the solver's steps never jump.
  */
 export function rigPlace(cfg: GestureConfig, p: RigParams, yaw: number, v: number, zoom: number): Vec3 {
-  return qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM));
+  return qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, rigCurvePoint(cfg, p, v, zoom)));
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-20, the owner: *"merge rings 2 and 3 for the piece 2D curve in case the hosting face is horizontal"*) — the piece's curve point before the turn:
+ * the four rings' (`orbitOffset`), or over a HORIZONTAL face rings 2 and 3 merged into one (`mergedWaistOffset`) — as far as the turn is a horizontal face's
+ * (`horizontalShare`; a gizmo change blends the two curves).
+ */
+export function rigCurvePoint(cfg: GestureConfig, p: RigParams, v: number, zoom: number): Vec3 {
+  const four = orbitOffset(cfg, p.yaw0, v, zoom).offsetM;
+  const hz = horizontalShare(cfg, p);
+  if (hz <= 0) return four;
+  const one = mergedWaistOffset(cfg, p.yaw0, v, zoom).offsetM;
+  return hz >= 1 ? one : [four[0] + (one[0] - four[0]) * hz, four[1] + (one[1] - four[1]) * hz, four[2] + (one[2] - four[2]) * hz];
 }
 
 /**
@@ -278,7 +291,7 @@ const swingByTurn = new WeakMap<RigParams, { readonly rings: string; readonly sw
 
 function solveSwing(cfg: GestureConfig, p: RigParams): RigSwing | null {
   const near = level(p.yaw0 + p.beta);
-  const point = (v: number): Vec3 => qRotate(p.q, orbitOffset(cfg, p.yaw0, v, 1).offsetM);
+  const point = (v: number): Vec3 => qRotate(p.q, rigCurvePoint(cfg, p, v, 1));
   const side = (v: number): number => {
     const c = point(v);
     return c[0] * near[0] + c[2] * near[2];
@@ -424,7 +437,7 @@ export function cameraOffsetAt(dir: Vec3, boxOffset: Vec3, radiusOffsetM: number
 
 /** ⭐ The yaw whose ring place points the piece at `rel` (from the gizmo) at `v` — the rebase at the end of the orbit around the piece. */
 export function rigYawToward(cfg: GestureConfig, p: RigParams, v: number, zoom: number, rel: Vec3): number {
-  const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM);
+  const c = qRotate(p.q, rigCurvePoint(cfg, p, v, zoom));
   if (Math.hypot(c[0], c[2]) < 1e-9 || Math.hypot(rel[0], rel[2]) < 1e-9) return p.yaw0;
   // ⭐ yawTurn(δ) adds δ to the orbit's yaw: the piece's azimuth less the curve point's at yaw0
   return p.yaw0 + Math.atan2(rel[2], rel[0]) - Math.atan2(c[2], c[0]);
