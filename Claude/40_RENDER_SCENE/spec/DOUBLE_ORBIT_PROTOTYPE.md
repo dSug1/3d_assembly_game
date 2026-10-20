@@ -1437,3 +1437,22 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the curve at both rings, retraced when driven back, the slider honoured, an underside below, a vertical face untouched; the slider. Restated: the top
   roll's two vectors (a horizontal face) → the ring's; *no azimuth* on a face tilted 70°; the governor's horizontal face (24°/mm free, held to 12.5); A1's
   step bound 10° → 12°. ⛔ No device close. 2086 vectors.
+
+### ⛔ …two follow-ups to the ring, built, deployed and REVERTED the same day (`1.0.82-`, 2026-10-20)
+
+> *"instead, can the 2D curve of the camera follow rings 1, ring midway (not ring 2 nor ring 3) , ring 4 ? This will avoid a sway of the piece between rings
+> 2 and 3."* → *"deploy"* → *"merge rings 2 and 3 for the piece 2D curve in case the hosting face is horizontal. deploy"* → *"These are worse than before.
+> revert to commit b97b5b5"* — the owner.
+
+* ⛔ **The camera's curve through ring 1, a midway ring and ring 4** (`dfb4741`, live `77df7d0`): its height eased 60° → 50° → 60° with no dip at rings 3 and
+  2 (the half-round between them kept). ⚠ Measured before shipping: the piece's curve still dipped to 34° there, so the camera at ~51° no longer followed it
+  down — the piece's path on the screen between v 0.3 and 0.7 grew 12.5° → 17.8° (3.6° below the centre near rings 3 and 2); no midway height (35°–55°)
+  got under 12.5°.
+* ⛔ **Rings 2 and 3 merged for the piece's curve over a horizontal face** (`8d51330`, live `3f52442`): ring 1, one ring at their mean (0.09 m, 0 — straight
+  above the gizmo), ring 4. In radius and height the piece still dipped (30.5°: turned onto a horizontal face the radius IS the height above the face, and it
+  reached its floor first); in DISTANCE and ANGLE it climbed 58° → 90° with no dip. ⚠ But with the camera's own curve it rode up to 29.5° above the screen
+  centre (off the top) at a 50° midway ring — the default was raised to 80° (11°, ring 1's own offset).
+* ⭐ **Reverted to `b97b5b5`** — the ring as built in the section above (the camera following the curve to rings 3 and 2, half round between them at 50°;
+  the piece's four-ring curve). The code and the vectors are exactly `b97b5b5`'s (2086). ⭐ What the two attempts showed: over a horizontal face the
+  camera and the piece have to be changed TOGETHER — a camera curve that leaves the piece's (or a piece curve the camera does not follow) moves the piece
+  across the screen, which reads worse than the camera's own dip.
