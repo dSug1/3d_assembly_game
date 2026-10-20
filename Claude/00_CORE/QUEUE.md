@@ -26,7 +26,7 @@ resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to t
 ⭐ 10-18 (`1.0.81-`): THE TOP ROLL → `DOUBLE_ORBIT_PROTOTYPE.md`.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **2084 golden vectors, all passing** — MEASURED 2026-10-19 (the count's home; 1619 below: 10-02).
+✅ `npm run verify`: **2085 golden vectors, all passing** — MEASURED 2026-10-20 (the count's home; 1619 below: 10-02).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

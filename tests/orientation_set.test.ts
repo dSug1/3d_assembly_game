@@ -35,8 +35,8 @@ describe("⭐⭐⭐ the orientation cube, wired (2026-10-12, *\"Start with 2, si
     expect(code("render/goal_commit_wiring.ts")).toMatch(/const reached = st\.goalCommit\.commit\([^)]*\);\s*(?:\/\/[^\n]*\n\s*)*st\.orientDirty = true;/);
     expect(code("render/orient_cube.ts")).toMatch(/if \(st\.orientDirty\) \{\s*st\.orientDirty = false;\s*st\.orientDirs = distinctDirections\(orientationFrames\(st\)\);/);
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const bodies = [...st.world.objects].filter(([id]) => !orbited.has(id))"); // ⭐ (2026-10-19) never the orbited pieces — then the host alone (`quadSourceIds`)
-    expect(g).toContain("const ids = quadSourceIds(bodies, st.gizmoHost ?? null);"); // ⭐ (2026-10-19) the host part alone, else the frozen bodies, else gravity's frames
+    expect(g).toContain("if (o.frozen !== true || orbited.has(id)) continue;"); // ⭐ (2026-10-20) never the orbited pieces — the biggest frozen body
+    expect(g).toContain("return quadFrames(base.length > 0 ? base : GRAVITY_FRAMES, gizmo);"); // ⭐ (2026-10-20) its three planes (else gravity's), then the gizmo face's
   });
   it("⭐⭐ a facet is a VIRTUAL pink face — the resting face sits against it (`alignFaceOf` reads it first); the lit facet tapped again rolls", () => {
     const g = code("render/green_box_wiring.ts");
@@ -147,7 +147,7 @@ describe("⛔⛔ the window deleted; the quads carry it (2026-10-12, *\"remove t
   });
   it("⭐⭐ the PINK direction: the candidate (facing the camera most from the resting face), or the one tapped until the candidate changes", () => {
     const c = flat("render/orient_cube.ts");
-    expect(c).toContain("const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);"); // ⭐ (2026-10-19) by yaw
+    expect(c).toContain("const k = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), prevPlane);"); // ⭐ (2026-10-19) by yaw
     expect(c).not.toContain("sh.clicked.cand !== cand"); // ⭐ (2026-10-12) kept until the next drag, not until the candidate changes
     expect(c).toContain("restingQuadsFrame(st, shownTag(st));");
     // ⛔ (2026-10-15) the gizmo's supporting face as the mating direction is deleted: the tapped one, else the candidate
@@ -241,7 +241,7 @@ describe("⛔ the quads' reachability alert deleted (2026-10-19, the owner: *\"r
     expect(existsSync(new URL("../src/input/orient_window.ts", import.meta.url))).toBe(false);
     expect(flat("render/hud_paint.ts")).not.toContain("ringQuadAlert");
     expect(flat("render/orient_cube.ts")).not.toContain("ringQuadCheck");
-    expect(flat("render/orient_cube.ts")).toContain("const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);");
+    expect(flat("render/orient_cube.ts")).toContain("const k = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), prevPlane);");
   });
 });
 

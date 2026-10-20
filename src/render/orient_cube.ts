@@ -30,7 +30,7 @@ import { trackingMetresPerPx } from "../input";
 import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { isTapRelease } from "../input/mode_toggle";
-import { carouselQuad, quadCarousel } from "../input/quad_carousel";
+import { carouselQuad, fixedCarousel } from "../input/quad_carousel";
 import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";
 import { alignRestingFace, orientationFrames, pieceStuckFrame, pieceTurnVerdict, restingPreview, rollRestingFace, sceneSignature } from "./green_box_wiring";
@@ -92,10 +92,16 @@ export function orientCubeFrame(st: SceneState): void {
   // ⭐⭐⭐ (2026-10-19, the owner: *"Propose another logic for the yellow highlight of the quads so that each quad is highlighted at least once in a 360 yaw
   // orbit and the yellow highlight switches from one quad to the other in a progressive way"* → *"build it anchored"*) — THE YELLOW BY YAW (`carouselQuad`):
   // the quads' loop stepped by the camera's azimuth about the gizmo (⛔ the direction facing the camera most: one quad won all round on Piece42's top)
-  const loopKey = `${st.orientDirs.map((d) => d.normal.map((x) => x.toFixed(4)).join(",")).join(";")}|${st.cfg.quadSliceMaxDeg}`;
-  if (st.orientCarousel?.key !== loopKey) st.orientCarousel = { key: loopKey, c: quadCarousel(st.orientDirs.map((d) => d.normal), st.cfg.quadSliceMaxDeg) };
+  // ⭐⭐⭐ (2026-10-20, the owner: *"always put them in the same order (3 frozen object's orientations then gizmo face orientation). Same quad switch speed as
+  // current."*) — the loop over the quads' PLANES in their order (`fixedCarousel`), the yellow's sense the one on the camera's side (`quadSide`, as a tap there)
+  const planes = distinctPlanes(st.orientDirs.map((d) => d.normal));
+  const loopKey = `${planes.length}|${st.cfg.quadSliceMaxDeg}`;
+  if (st.orientCarousel?.key !== loopKey) st.orientCarousel = { key: loopKey, c: fixedCarousel(planes.length, st.cfg.quadSliceMaxDeg) };
   const g = st.orbitCentreM;
-  const cand = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), st.orientShown.candidate);
+  const prevN = st.orientDirs[st.orientShown.candidate]?.normal;
+  const prevPlane = prevN === undefined ? -1 : planes.findIndex((n) => Math.abs(dot(n, prevN)) >= SAME_DIR);
+  const k = at === null ? -1 : carouselQuad(st.orientCarousel.c, Math.atan2(cam.z - g.z, cam.x - g.x), prevPlane);
+  const cand = k < 0 || at === null ? -1 : dirIndex(st, quadSide(planes[k]!, at, [cam.x, cam.y, cam.z]));
   const sh = st.orientShown;
   sh.candidate = cand;
   // ⭐⭐ (2026-10-12, the owner: *"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on

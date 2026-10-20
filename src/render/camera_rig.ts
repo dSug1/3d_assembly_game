@@ -99,6 +99,10 @@ export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, hos
     st.gizmoHost = host;
     st.orientDirty = true;
   }
+  // ⭐⭐⭐ (2026-10-20) and its FACE — the fourth quad (`quadFrames`)
+  const was = st.gizmoNormal ?? null;
+  if ((was === null) !== (normal === null) || (was !== null && normal !== null && was[0] * normal[0] + was[1] * normal[1] + was[2] * normal[2] < Math.cos(Math.PI / 180))) st.orientDirty = true;
+  st.gizmoNormal = normal;
   syncCentre(st);
 }
 

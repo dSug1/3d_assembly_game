@@ -102,18 +102,59 @@ export function quadsShownFromM(dMax: number): number {
 }
 
 /**
- * ⭐⭐ (2026-10-19, the owner: *"now there are as much quads as there are orientations of faces in the scene. this is too many quads. make the quads as many
- * as the orientations of the faces of the part which supports the gizmo."* → *"when no part is selected, default to the frozen object's faces orientations.
- * if no frozen object and not part is selected, default to the gravity and horizontal plans"*) — **WHICH BODIES THE QUADS ARE READ FROM**: the gizmo's HOST
- * part alone when there is one (`host`, among `bodies`); with none, the FROZEN bodies; with none of those either, nothing (`[]`) — the caller takes the
- * gravity frames (`GRAVITY_FRAMES`). ⛔ The orbited pieces never (they are not in `bodies`).
+ * ⭐⭐⭐ (2026-10-20, the owner: *"there are still too many quads. Just keep the three quads of the frozen object's faces orientations (or gravity and horizontal
+ * planes) and the orientation of the face which supports the gizmo. that will be max 4 quads. always put them in the same order (3 frozen object's orientations
+ * then gizmo face orientation)."*) — **THE QUADS' FRAMES**: the PLANES of `base` (the biggest frozen body's faces, else `GRAVITY_FRAMES`), the most horizontal
+ * first then by heading, three at most; then the gizmo's supporting face's plane (`gizmo`) unless it is one of them (1°). Each plane both senses, its axes the
+ * union of both (a tap on either side of its quad). ⛔ (2026-10-19) the gizmo's host part's every face — 6 quads on a box, more on a frustum.
  */
-export function quadSourceIds(bodies: readonly { readonly id: string; readonly frozen: boolean }[], host: string | null): string[] {
-  if (host !== null && bodies.some((b) => b.id === host)) return [host];
-  return bodies.filter((b) => b.frozen).map((b) => b.id);
+export function quadFrames(base: readonly { readonly normal: Vec3; readonly axes: readonly Vec3[] }[], gizmo: { readonly normal: Vec3; readonly axes: readonly Vec3[] } | null, tolDeg = 1): OrientDirection[] {
+  const c = Math.cos((tolDeg * Math.PI) / 180);
+  // ⭐ a plane's normal in one sense: up, else toward +x, else +z — the order and the frames never depend on which face came first
+  const canon = (n: Vec3): Vec3 => {
+    const s = Math.abs(n[1]) > 1e-6 ? n[1] : Math.abs(n[0]) > 1e-6 ? n[0] : n[2];
+    return s < 0 ? scale(n, -1) : n;
+  };
+  const planes: { normal: Vec3; axes: Vec3[] }[] = [];
+  const merge = (p: { normal: Vec3; axes: Vec3[] }, axes: readonly Vec3[]): void => {
+    for (const a of axes) {
+      const u = normalize(sub(a, scale(p.normal, dot(a, p.normal))));
+      if (u !== null && !p.axes.some((x) => Math.abs(dot(x, u)) >= c)) p.axes.push(u);
+    }
+  };
+  for (const f of base) {
+    const n = normalize(f.normal);
+    if (n === null) continue;
+    let p = planes.find((q) => Math.abs(dot(q.normal, n)) >= c);
+    if (p === undefined) {
+      p = { normal: canon(n), axes: [] };
+      planes.push(p);
+    }
+    merge(p, f.axes);
+  }
+  const heading = (n: Vec3): number => Math.atan2(n[2], n[0]);
+  planes.sort((a, b) => Math.abs(b.normal[1]) - Math.abs(a.normal[1]) || heading(a.normal) - heading(b.normal));
+  const kept = planes.slice(0, 3);
+  const g = gizmo === null ? null : normalize(gizmo.normal);
+  if (g !== null && !kept.some((q) => Math.abs(dot(q.normal, g)) >= c)) {
+    const p = { normal: canon(g), axes: [] as Vec3[] };
+    merge(p, gizmo!.axes);
+    if (p.axes.length === 0) {
+      // ⭐ no axes given: two square in its plane
+      const seed: Vec3 = Math.abs(p.normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+      const a = normalize(sub(seed, scale(p.normal, dot(seed, p.normal))))!;
+      const n = p.normal;
+      p.axes.push(a, [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]]);
+    }
+    kept.push(p);
+  }
+  return kept.flatMap((p) => [
+    { normal: p.normal, axes: p.axes },
+    { normal: scale(p.normal, -1), axes: p.axes },
+  ]);
 }
 
-/** ⭐ (2026-10-19) no host and no frozen body: GRAVITY and the HORIZONTAL plane — up, down and four level directions, the world's axes, each face's axes in it. */
+/** ⭐ (2026-10-19) no frozen body: GRAVITY and the HORIZONTAL plane — up, down and four level directions, the world's axes, each face's axes in it. */
 export const GRAVITY_FRAMES: readonly OrientDirection[] = [
   { normal: [0, 1, 0], axes: [[1, 0, 0], [0, 0, 1]] },
   { normal: [0, -1, 0], axes: [[1, 0, 0], [0, 0, 1]] },
