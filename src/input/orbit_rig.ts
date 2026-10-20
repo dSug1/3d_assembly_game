@@ -525,41 +525,59 @@ export function blendHeadings(ha: number, hb: number, s: number): number {
  */
 export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const curve = curveFrameBetween(cfg, a, b, s, cam, off);
-  // ⭐⭐⭐ (2026-10-20) between rings 3 and 2 over a horizontal face: the camera ring (`topFaceRing`), as far as the turn is a horizontal face's
-  const { v2, v3 } = waistRings(cfg);
-  const lo = Math.min(v2, v3);
-  const hi = Math.max(v2, v3);
-  if (!(cam.v > lo && cam.v < hi)) return curve;
+  // ⭐⭐⭐ (2026-10-20) over a horizontal face: the camera's own curve (`topFaceRing`), as far as the turn is a horizontal face's
   // ⭐ each END turn's share, blended at the change's share — the ring fades in or out evenly over the gizmo change (⛔ the blended turn's own: it left the
   // horizontal in the first fifth of the change — the camera turned 12° a 0.25 mm step there, 7.5° without the ring)
   const ha = s >= 1 ? 0 : horizontalShare(cfg, a);
   const hb = s <= 0 ? 0 : horizontalShare(cfg, b);
   const hz = (1 - s) * ha + s * hb;
   if (hz <= 0) return curve;
-  // ⭐ the ring of each END turn on its own curve (⛔ on the blended curve: mid-change a waist ring passed straight above and its azimuth spun the ring round)
-  const t = (cam.v - lo) / (hi - lo);
-  // …turned at each waist ring onto the BLENDED curve's frame there, the two turns eased between (smoothstep) — the ring meets the curve exactly at rings 2 and 3
-  const bLo = s >= 1 || s <= 0 ? null : curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v: lo }, off);
-  const bHi = s >= 1 || s <= 0 ? null : curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v: hi }, off);
-  const ringOf = (r: RigParams): RigCameraFrame => {
-    const rLo = curveFrameBetween(cfg, r, r, 1, { yaw: cam.yaw, v: lo }, off);
-    const rHi = curveFrameBetween(cfg, r, r, 1, { yaw: cam.yaw, v: hi }, off);
-    const f = topFaceRing(cfg, rLo, rHi, t, halfwayUp(cfg, r) >= 0 ? 1 : -1);
-    if (bLo === null || bHi === null) return f;
-    const d = qRotate(qSlerp(rigArc(rLo.dir, bLo.dir), rigArc(rHi.dir, bHi.dir), smooth(t)), f.dir);
-    return { dir: d, up: uprightUp(d) }; // ⭐ upright still (the turn would tilt it)
+  const knots = ringKnots(cfg);
+  const v = Math.min(1, Math.max(0, cam.v));
+  // ⭐ the camera's curve of each END turn, from its own curve's frames at rings 1, 3, 2 and 4 (⛔ on the blended curve: mid-change a waist ring passed straight
+  // above and its azimuth spun the ring round) — turned at each of them onto the BLENDED curve's frame there, eased between: it meets the curve exactly there
+  const blended = s >= 1 || s <= 0 ? null : knots.map((k) => curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v: k }, off));
+  const ringOf = (r: RigParams): Vec3 => {
+    const at = knotFrames(cfg, r, cam.yaw, off, knots);
+    const f = topFaceRing(cfg, at, knots, v, halfwayUp(cfg, r) >= 0 ? 1 : -1);
+    if (blended === null) return f.dir;
+    const { seg, u } = ringSegment(knots, v);
+    return qRotate(qSlerp(rigArc(at[seg]!.dir, blended[seg]!.dir), rigArc(at[seg + 1]!.dir, blended[seg + 1]!.dir), smooth(u)), f.dir);
   };
   const ra = ha > 0 ? ringOf(a) : null;
   const rb = hb > 0 ? ringOf(b) : null;
-  const rd = ra !== null && rb !== null ? mixUnit(ra.dir, rb.dir, (s * hb) / hz) : (ra ?? rb)!.dir;
-  const ring = { dir: rd, up: uprightUp(rd) };
-  if (hz >= 1) return ring;
-  const dir = mixUnit(curve.dir, ring.dir, hz);
+  const rd = ra !== null && rb !== null ? mixUnit(ra, rb, (s * hb) / hz) : (ra ?? rb)!;
+  if (hz >= 1) return { dir: rd, up: uprightUp(rd) }; // ⭐ upright (a turn onto the blended curve would tilt it)
+  const dir = mixUnit(curve.dir, rd, hz);
   // ⭐ the up: the mixed view's upright one, rolled by the curve's own roll off upright (its top roll) scaled by what is left of the curve — an upright curve
   // mixes exactly upright (⛔ the two ups mixed as vectors: 1.7° off upright through rings 2 and 3 mid-change)
   const cu = uprightUp(curve.dir);
   const rho = Math.atan2(dot(cross(cu, curve.up), curve.dir), dot(cu, curve.up)) * (1 - hz);
   return { dir, up: qRotate(qFromAxisAngle(dir, rho), uprightUp(dir)) };
+}
+
+/** ⭐ The camera curve's knots: ring 1's end (0), the waist rings (`waistRings`, lower then higher), ring 4's end (1). */
+function ringKnots(cfg: GestureConfig): readonly number[] {
+  const { v2, v3 } = waistRings(cfg);
+  return [0, Math.min(v2, v3), Math.max(v2, v3), 1];
+}
+
+/** ⭐ The knot segment `v` lies in (0: ring 1 → ring 3, 1: the waist, 2: ring 2 → ring 4) and how far along it (0 → 1). */
+function ringSegment(knots: readonly number[], v: number): { seg: number; u: number } {
+  const seg = v <= knots[1]! ? 0 : v < knots[2]! ? 1 : 2;
+  const span = knots[seg + 1]! - knots[seg]!;
+  return { seg, u: span > 1e-12 ? Math.min(1, Math.max(0, (v - knots[seg]!) / span)) : 1 };
+}
+
+/** ⭐ A turn's curve frames at the knots, kept for the last yaw and offsets asked (the turn governor asks many places a pointer event at one yaw). */
+const knotMemo = new WeakMap<RigParams, { readonly key: string; readonly cfg: GestureConfig; readonly frames: readonly RigCameraFrame[] }>();
+function knotFrames(cfg: GestureConfig, r: RigParams, yaw: number, off: CameraAngleOffset | undefined, knots: readonly number[]): readonly RigCameraFrame[] {
+  const key = `${yaw}|${off?.yawRad ?? 0}|${off?.pitchRad ?? 0}|${knots.join(",")}|${ringKey(cfg)}|${cfg.cameraYawOffsetDeg}`;
+  const m = knotMemo.get(r);
+  if (m !== undefined && m.key === key && m.cfg === cfg) return m.frames;
+  const frames = knots.map((k) => curveFrameBetween(cfg, r, r, 1, { yaw, v: k }, off));
+  knotMemo.set(r, { key, cfg, frames });
+  return frames;
 }
 
 /** ⭐ The curve's own frame on the turn blended at `s` (the swing's heading from each end turn — see `rigFrameBetween`). */
@@ -589,29 +607,35 @@ export function horizontalShare(cfg: GestureConfig, p: RigParams): number {
 /**
  * ⭐⭐⭐ (2026-10-20, the owner: *"The 2D curve for the horizontal hosting face has the camera rising up to the vertical of the gizmo during the travel between
  * ring 2 and ring 3 with dy input. Can you lower the camera and probably create a dedicated ring for the camera during this portion of the travel so the camera
- * view is lowered from the zenith … No change for the piece 2D curve, only for the camera on horizontal hosting face case."* → *"Build option A"*) — **THE TOP
- * FACE CAMERA RING**: between the camera's frames at the two waist rings (`atLo` at the lower ring parameter, `atHi` at the higher; `t` 0 → 1 between them),
- * the camera goes HALF ROUND the gizmo on a level ring — its azimuth from `atLo`'s to `atHi`'s the yaw offset's way (smoothstep: no turn at either ring), its
- * angle from the face from `atLo`'s to `atHi`'s lifted to `topFaceCameraRingDeg` midway (sin²: level at either ring), `side` +1 above the face, −1 below.
- * Upright: no roll, vertical edges vertical. A function of `t` alone: driven back it retraces itself (option A). Aimed at the gizmo as ever — the piece, 9–16
- * cm from it here, stays near the screen's centre.
+ * view is lowered from the zenith … No change for the piece 2D curve, only for the camera on horizontal hosting face case."* → *"Build option A"* → *"instead,
+ * can the 2D curve of the camera follow rings 1, ring midway (not ring 2 nor ring 3) , ring 4 ? This will avoid a sway of the piece between rings 2 and 3."*)
+ * — **THE CAMERA'S OWN CURVE OVER A HORIZONTAL FACE**, from the curve's camera frames at the knots `at` (rings 1, 3, 2, 4 at `knots` 0, lower, higher, 1):
+ * * its ANGLE ABOVE THE FACE through ring 1, the MIDWAY RING (`topFaceCameraRingDeg`, halfway between rings 3 and 2) and ring 4 — eased (smoothstep) from
+ *   ring 1's to the midway ring's and on to ring 4's: no dip at rings 3 and 2 (⛔ 36° there, 50° between: the camera sank and rose — the piece swayed);
+ * * its AZIMUTH the curve's camera's at each knot, HALF ROUND the gizmo between rings 3 and 2 the yaw offset's way (where the piece crosses over the top),
+ *   eased (smoothstep: no turn at a knot);
+ * `side` +1 above the face, −1 below. Upright: no roll, vertical edges vertical. A function of `v` alone: driven back it retraces itself (option A). Aimed at
+ * the gizmo as ever (the piece stays near the screen's centre — 9–16 cm from it between rings 3 and 2, the camera 1.25 m farther off).
  */
-export function topFaceRing(cfg: GestureConfig, atLo: RigCameraFrame, atHi: RigCameraFrame, t: number, side: number): RigCameraFrame {
-  const u = Math.min(1, Math.max(0, t));
+export function topFaceRing(cfg: GestureConfig, at: readonly RigCameraFrame[], knots: readonly number[], v: number, side: number): RigCameraFrame {
   const az = (d: Vec3): number => Math.atan2(d[2], d[0]);
   const el = (d: Vec3): number => Math.asin(Math.max(-1, Math.min(1, d[1])));
-  const a0 = az(atLo.dir);
-  let da = az(atHi.dir) - a0;
-  da -= 2 * Math.PI * Math.floor(da / (2 * Math.PI)); // [0, 2π)
-  if (cfg.cameraYawOffsetDeg < 0 && da > 0) da -= 2 * Math.PI; // ⭐ the yaw offset's way (as the top roll turned)
+  const { seg, u } = ringSegment(knots, v);
+  const a0 = az(at[seg]!.dir);
+  let da = az(at[seg + 1]!.dir) - a0;
+  if (seg === 1) {
+    da -= 2 * Math.PI * Math.floor(da / (2 * Math.PI)); // [0, 2π)
+    if (cfg.cameraYawOffsetDeg < 0 && da > 0) da -= 2 * Math.PI; // ⭐ the yaw offset's way (as the top roll turned)
+  } else da = wrapPi(da);
   const a = a0 + da * smooth(u);
-  const base = el(atLo.dir) + (el(atHi.dir) - el(atLo.dir)) * smooth(u);
-  const b = Math.sin(Math.PI * u) ** 2;
-  const e = base + (side * ((cfg.topFaceCameraRingDeg * Math.PI) / 180) - base) * b;
+  // ⭐ ring 1 → the midway ring → ring 4
+  const vm = (knots[1]! + knots[2]!) / 2;
+  const mid = (side * cfg.topFaceCameraRingDeg * Math.PI) / 180;
+  const e0 = el(at[0]!.dir);
+  const e3 = el(at[3]!.dir);
+  const e = v <= vm ? e0 + (mid - e0) * smooth((v - knots[0]!) / (vm - knots[0]!)) : e3 + (mid - e3) * smooth((knots[3]! - v) / (knots[3]! - vm));
   const dir: Vec3 = [Math.cos(e) * Math.cos(a), Math.sin(e), Math.cos(e) * Math.sin(a)];
-  // ⭐ upright: the world's vertical seen along the view
-  const up: Vec3 = [-Math.sin(e) * Math.cos(a), Math.cos(e), -Math.sin(e) * Math.sin(a)];
-  return { dir, up };
+  return { dir, up: uprightUp(dir) };
 }
 
 /** ⭐ The upright up for a view `d` — the world's vertical laid square to it (straight up or down: +x's). */

@@ -202,16 +202,25 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
   // ⭐⭐⭐ (2026-10-20) a horizontal face now has THE TOP FACE CAMERA RING between rings 3 and 2 — the camera never over the top, so the top roll's two vectors
   // (upright in the curve's plane outside the band; the half-round within it) are restated as the ring's, stronger: upright EVERYWHERE
   const upright = (d: Vec3): Vec3 => unit3([-d[1] * d[0], 1 - d[1] * d[1], -d[1] * d[2]]);
-  it("⭐⭐⭐ the TOP FACE CAMERA RING: over a horizontal face the camera is UPRIGHT all the way, rings 1 → 4 — no roll, vertical edges vertical — and at most the ring's 50° above the face between rings 3 and 2 (⛔ straight down at the top, the picture rolled half a round there)", () => {
+  it("⭐⭐⭐ the TOP FACE CAMERA RING: over a horizontal face the camera is UPRIGHT all the way, rings 1 → 4 — no roll, vertical edges vertical — its height eased from ring 1's to the MIDWAY ring's (50°) and on to ring 4's, never dipping at rings 3 and 2 (⛔ straight down at the top, the picture rolled half a round there; ⛔ 36° at rings 3 and 2, 50° between: the camera sank and rose)", () => {
     for (const yaw of [0.4, 2.0, -1.1]) {
       for (const o of [{ yawRad: 0, pitchRad: 0 }, off]) {
         for (const r of sweep(yaw, o)) expect(r.lag).toBeLessThan(1e-3); // the drawn up IS the target's
         const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
-        for (let v = 0.02; v <= 0.99; v += 0.002) {
+        const mid = (v2 + v3) / 2;
+        let prevE: number | null = null;
+        for (let v = 0; v <= 1 + 1e-9; v += 0.002) {
           const f = cameraFrameHeld(cfg, top, top, 1, { yaw, v }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
-          if (v > v3 && v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(50 + 1e-6);
+          const e = Math.asin(f.dir[1]) * D;
+          expect(e).toBeGreaterThanOrEqual(50 - 1e-6); // never below the midway ring
+          if (prevE !== null && Math.abs(v - mid) > 0.003) {
+            if (v <= mid) expect(e).toBeLessThanOrEqual(prevE + 1e-9); // down from ring 1 to the midway ring…
+            else expect(e).toBeGreaterThanOrEqual(prevE - 1e-9); // …and up to ring 4: no dip at rings 3 and 2
+          }
+          prevE = e;
         }
+        expect(Math.asin(cameraFrameHeld(cfg, top, top, 1, { yaw, v: mid }, o, null).dir[1]) * D).toBeCloseTo(50, 6);
       }
     }
   });
@@ -236,8 +245,10 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     expect(Math.abs(Math.abs(plus) - Math.PI)).toBeLessThan(0.02); // half a round
     const minus = turn({ ...cfg, cameraYawOffsetDeg: -2.5 });
     expect(Math.sign(minus)).toBe(-Math.sign(plus)); // the other way with the offset on the other side
-    // at rings 3 and 2 exactly the curve's camera (just inside = just outside)
+    // continuous through rings 3 and 2; at rings 1 and 4 exactly the curve's camera (the gizmo's other curves' frame there)
     for (const v of [v3, v2]) for (const e of [1e-6, -1e-6]) expect(angle(cameraFrameHeld(cfg, top, top, 1, { yaw, v: v + e }, off, null).dir, cameraFrameHeld(cfg, top, top, 1, { yaw, v: v - e }, off, null).dir)).toBeLessThan(0.01);
+    const side0 = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+    for (const v of [0, 1]) expect(Math.abs(Math.asin(cameraFrameHeld(cfg, side0, side0, 1, { yaw, v }, off, null).dir[1]) * D - Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 80 }, side0, side0, 1, { yaw, v }, off, null).dir[1]) * D)).toBeLessThan(1e-9);
     // driven back: the same frames
     const fwd: Vec3[] = [];
     for (let v = v2; v >= v3; v -= 0.01) fwd.push(cameraFrameHeld(cfg, top, top, 1, { yaw, v }, off, null).dir);
