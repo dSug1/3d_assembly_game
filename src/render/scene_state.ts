@@ -697,6 +697,9 @@ export interface SceneState {
   cameraOrbit: CameraOrbitState | null;
   /** ⭐ Prototype: the camera's angles as SHOWN — `cameraOrbit.cam` eased by the time lag (`cameraLag`). */
   cameraLagged: { readonly yaw: number; readonly v: number } | null;
+  /** ⭐⭐⭐ (2026-10-21) THE TOP FACE PAUSE's share (`input/top_pause.ts`) as the input leaves it, and as the camera draws it (eased by `boxSmoothMs`, as the piece) */
+  topPause: number;
+  topPauseShown: number;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
   /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */

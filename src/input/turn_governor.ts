@@ -49,10 +49,10 @@ export const GOVERNOR_PIECE_MM = 0.1;
  * turn per millimetre — walked in pieces of `GOVERNOR_PIECE_MM`, each at the share `min(1, cap / (rate × dvPerMm))` read at the piece's middle (a first
  * estimate's), never below `GOVERNOR_MIN_SHARE`.
  */
-export function governedRingStep(frameAt: (v: number) => TurnFrame, v: number, dv: number, dvPerMm: number, capDegMm: number): number {
+export function governedRingStep(frameAt: (v: number) => TurnFrame, v: number, dv: number, dvPerMm: number, capDegMm: number, hi = 1): number {
   if (dv === 0 || !(dvPerMm > 0) || !(capDegMm > 0)) return dv;
   const share = (at: number): number => {
-    const degPerMm = turnRatePerV(frameAt, Math.min(1, Math.max(0, at))) * dvPerMm;
+    const degPerMm = turnRatePerV(frameAt, Math.min(hi, Math.max(0, at))) * dvPerMm; // ⭐ (2026-10-21) `hi`: the top face pause's travel runs past 1
     return degPerMm > capDegMm ? Math.max(GOVERNOR_MIN_SHARE, capDegMm / degPerMm) : 1;
   };
   const mm = Math.abs(dv) / dvPerMm;

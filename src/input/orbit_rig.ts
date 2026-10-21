@@ -541,16 +541,18 @@ export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, 
   // …turned at each waist ring onto the BLENDED curve's frame there, the two turns eased between (smoothstep) — the ring meets the curve exactly at rings 2 and 3
   const bLo = s >= 1 || s <= 0 ? null : curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v: lo }, off);
   const bHi = s >= 1 || s <= 0 ? null : curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v: hi }, off);
-  const ringOf = (r: RigParams): RigCameraFrame => {
+  // ⭐ (2026-10-21) `spread`: how far the end's half round goes by the waist itself (the 2026-10-20 ring) rather than by the top face pause — the end fading
+  // out goes over to it as the change goes on, the end fading in comes from it: a piece crossing mid-change gets the gentle turn, and nothing jumps at its start
+  const ringOf = (r: RigParams, spread: number): RigCameraFrame => {
     const rLo = curveFrameBetween(cfg, r, r, 1, { yaw: cam.yaw, v: lo }, off);
     const rHi = curveFrameBetween(cfg, r, r, 1, { yaw: cam.yaw, v: hi }, off);
-    const f = topFaceRing(cfg, rLo, rHi, t, halfwayUp(cfg, r) >= 0 ? 1 : -1);
+    const f = topFaceRing(cfg, rLo, rHi, t, halfwayUp(cfg, r) >= 0 ? 1 : -1, cam.pause, spread);
     if (bLo === null || bHi === null) return f;
     const d = qRotate(qSlerp(rigArc(rLo.dir, bLo.dir), rigArc(rHi.dir, bHi.dir), smooth(t)), f.dir);
     return { dir: d, up: uprightUp(d) }; // ⭐ upright still (the turn would tilt it)
   };
-  const ra = ha > 0 ? ringOf(a) : null;
-  const rb = hb > 0 ? ringOf(b) : null;
+  const ra = ha > 0 ? ringOf(a, s) : null;
+  const rb = hb > 0 ? ringOf(b, 1 - s) : null;
   const rd = ra !== null && rb !== null ? mixUnit(ra.dir, rb.dir, (s * hb) / hz) : (ra ?? rb)!.dir;
   const ring = { dir: rd, up: uprightUp(rd) };
   if (hz >= 1) return ring;
@@ -595,8 +597,11 @@ export function horizontalShare(cfg: GestureConfig, p: RigParams): number {
  * angle from the face from `atLo`'s to `atHi`'s lifted to `topFaceCameraRingDeg` midway (sin²: level at either ring), `side` +1 above the face, −1 below.
  * Upright: no roll, vertical edges vertical. A function of `t` alone: driven back it retraces itself (option A). Aimed at the gizmo as ever — the piece, 9–16
  * cm from it here, stays near the screen's centre.
+ * ⭐⭐⭐ (2026-10-21, THE TOP FACE PAUSE — `input/top_pause.ts`) the half round is driven by `pause` (0 → 1, smoothstep), the piece waiting at the middle; off
+ * the middle it is 0 below and 1 above, so between ring 3 and the middle the camera only rises behind the piece, and on to ring 2 only comes down. `pause`
+ * not given: settled by `t` (⛔ 2026-10-20: the half round spread over rings 3 → 2 by `t` itself, while the piece crossed).
  */
-export function topFaceRing(cfg: GestureConfig, atLo: RigCameraFrame, atHi: RigCameraFrame, t: number, side: number): RigCameraFrame {
+export function topFaceRing(cfg: GestureConfig, atLo: RigCameraFrame, atHi: RigCameraFrame, t: number, side: number, pause?: number, spread = 0): RigCameraFrame {
   const u = Math.min(1, Math.max(0, t));
   const az = (d: Vec3): number => Math.atan2(d[2], d[0]);
   const el = (d: Vec3): number => Math.asin(Math.max(-1, Math.min(1, d[1])));
@@ -604,7 +609,13 @@ export function topFaceRing(cfg: GestureConfig, atLo: RigCameraFrame, atHi: RigC
   let da = az(atHi.dir) - a0;
   da -= 2 * Math.PI * Math.floor(da / (2 * Math.PI)); // [0, 2π)
   if (cfg.cameraYawOffsetDeg < 0 && da > 0) da -= 2 * Math.PI; // ⭐ the yaw offset's way (as the top roll turned)
-  const a = a0 + da * smooth(u);
+  // ⭐ the turn meets the curve at both rings whatever the share (a share left on the wrong side — a gizmo change froze it — is spread over that half):
+  // before the middle the share × an easing 0 at ring 3, after it 1 − (1 − the share) × an easing 0 at ring 2; settled shares give the pause exactly
+  const share = smooth(pause ?? (u < 0.5 ? 0 : u > 0.5 ? 1 : 0.5));
+  const byPause = u <= 0.5 ? share * smooth(2 * u) : 1 - (1 - share) * smooth(2 * (1 - u));
+  const w = Math.min(1, Math.max(0, spread));
+  const turn = (1 - w) * byPause + w * smooth(u); // ⭐ `spread` 1: the half round by the waist itself (a gizmo change's end fading out)
+  const a = a0 + da * turn;
   const base = el(atLo.dir) + (el(atHi.dir) - el(atLo.dir)) * smooth(u);
   const b = Math.sin(Math.PI * u) ** 2;
   const e = base + (side * ((cfg.topFaceCameraRingDeg * Math.PI) / 180) - base) * b;

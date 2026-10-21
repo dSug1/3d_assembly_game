@@ -13,6 +13,7 @@ import type { Vec3 } from "../src/core/vec";
 import { blendRig, rigTurnFor, UNTURNED, type RigParams } from "../src/input/orbit_rig";
 import { waistRings } from "../src/input/waist_view";
 import { cameraFrameNow } from "../src/render/camera_rig";
+import { pauseMid, pauseSpan, placeOf } from "../src/input/top_pause";
 import { ROLL_PER_DIR, ROLL_PER_V, ROLL_SETTLE_DEG_S, rollLimitedUp } from "../src/input/camera_frame";
 import { orbitOffset } from "../src/input/orbit";
 import { qRotate } from "../src/core/vec";
@@ -36,6 +37,7 @@ const stub = (from: RigParams, to: RigParams, s: number): any => ({
   rigTo: to,
   rigShare: s,
   cameraPrev: null,
+  topPauseShown: 1, // ⭐ (2026-10-21) the top face pause's share as the app leaves it: a change starting past the middle (v ≥ 0.65) — settled at 1, then frozen (the pause is off once the change goes to a vertical face)
   centreBlend: { centreM: [0, 0, 0], targetM: [0, 0, 0], retarget: () => undefined },
   centreMarker: { position: { set: () => undefined } },
 });
@@ -65,7 +67,7 @@ describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit
             expect(angle(f.up, prev.up)).toBeLessThanOrEqual(t + Math.max(ROLL_PER_DIR * t, ROLL_PER_V * 0.25 * MM_V) + (ROLL_SETTLE_DEG_S * 1000) / 60 / 1000 + 1e-6);
             // ⭐ (2026-10-20) 12°: the top face camera ring turns up to 7.7° a 0.25 mm step by design, plus its turn onto the blended curve mid-change (the turn
             // governor holds it to 3.1° in the app); 7.5° on the curve alone
-            expect(angle(f.dir, prev.dir)).toBeLessThan(12);
+            expect(angle(f.dir, prev.dir)).toBeLessThan(17); // ⭐ (2026-10-21) 17°: the top face pause's share frozen by the change (the pause is off on a vertical face), the piece driven back across the middle early in it — the half round made over the lower half of the waist: 16.7° measured UNGOVERNED (nf 20, v0 0.65, s 0.15); the turn governor reads these frames: 12.5°/mm in the app
           }
           prev = f;
         }
@@ -98,7 +100,7 @@ describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit
   });
   it("⭐ wired: `cameraFrameNow` is the pure composition, carried by the last frame's up; the respawn forgets it", () => {
     const c = readFileSync("src/render/camera_rig.ts", "utf8");
-    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null, dtMs);");
+    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-21) the top face pause's share as drawn
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
     expect(g).toContain("st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: st.cameraLagged };");
     expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);");
@@ -185,14 +187,18 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
   const unit3 = (a: Vec3): Vec3 => { const l = Math.hypot(...a); return [a[0] / l, a[1] / l, a[2] / l]; };
   const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   // a top face at the orbit's yaw (or `normal`); its curve's plane; dy swept ring 4 → ring 1 at 0.25 mm, the up threaded as the render loop threads it
+  // ⭐ (2026-10-21) along the TRAVEL (`input/top_pause.ts`): over a horizontal face through the top face pause, as the drag goes
+  const span = pauseSpan(cfg), pmid = pauseMid(cfg);
   const sweep = (yaw: number, o: { yawRad: number; pitchRad: number }, c = cfg, normal: Vec3 = [0, 1, 0]) => {
     const top = rigTurnFor(c, yaw, 0.99, normal, level(yaw), UNTURNED);
     const n = unit3(cross3(unit3(rigPlace(c, top, yaw, v2, 1)), unit3(rigPlace(c, top, yaw, v3, 1))));
     const out: { v: number; e: number; roll: number; offPlane: number; lag: number }[] = [];
     let prev: { dir: Vec3; up: Vec3; cam: { yaw: number; v: number } } | null = null;
-    for (let v = 0.99; v >= 0.02; v -= 0.25 * MM_V) {
-      const tgt = cameraFrameHeld(c, top, top, 1, { yaw, v }, o, null);
-      const f = cameraFrameHeld(c, top, top, 1, { yaw, v }, o, prev);
+    for (let u = 0.99 + span; u >= 0.02; u -= 0.25 * MM_V) {
+      const at = { yaw, ...placeOf(u, pmid, span) };
+      const v = at.v;
+      const tgt = cameraFrameHeld(c, top, top, 1, at, o, null);
+      const f = cameraFrameHeld(c, top, top, 1, at, o, prev);
       const inUp = unit3(cross3(f.dir, n));
       out.push({ v, e: Math.asin(Math.min(1, Math.abs(f.dir[1]))) * D, roll: Math.atan2(dot3(cross3(inUp, f.up), f.dir), dot3(inUp, f.up)), offPlane: Math.abs(Math.asin(Math.max(-1, Math.min(1, dot3(f.dir, n))))) * D, lag: angle(f.up, tgt.up) });
       prev = { dir: f.dir, up: f.up, cam: { yaw, v } };
@@ -207,23 +213,25 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
       for (const o of [{ yawRad: 0, pitchRad: 0 }, off]) {
         for (const r of sweep(yaw, o)) expect(r.lag).toBeLessThan(1e-3); // the drawn up IS the target's
         const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
-        for (let v = 0.02; v <= 0.99; v += 0.002) {
-          const f = cameraFrameHeld(cfg, top, top, 1, { yaw, v }, o, null);
+        for (let u = 0.02; u <= 0.99 + span; u += 0.002) {
+          const at = placeOf(u, pmid, span); // ⭐ (2026-10-21) the travel, through the pause
+          const f = cameraFrameHeld(cfg, top, top, 1, { yaw, ...at }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
-          if (v > v3 && v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(50 + 1e-6);
+          if (at.v > v3 && at.v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(50 + 1e-6);
         }
       }
     }
   });
-  it("⭐⭐⭐ the ring goes HALF ROUND the gizmo between rings 3 and 2, the yaw offset's way, meeting the curve's camera at both rings; a function of the ring alone — driven back it retraces itself (option A); the slider honoured", () => {
+  it("⭐⭐⭐ the ring goes HALF ROUND the gizmo DURING THE TOP FACE PAUSE (2026-10-21; between rings 3 and 2 before), the yaw offset's way — behind the piece before it, on the far side after it; meeting the curve's camera at both rings; a function of the travel alone — driven back it retraces itself; the slider honoured", () => {
     const yaw = 0.4;
     const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
-    const az = (c: typeof cfg, v: number) => { const d = cameraFrameHeld(c, top, top, 1, { yaw, v }, off, null).dir; return Math.atan2(d[2], d[0]); };
-    const turn = (c: typeof cfg): number => {
+    const frameU = (c: typeof cfg, u: number) => cameraFrameHeld(c, top, top, 1, { yaw, ...placeOf(u, pmid, span) }, off, null).dir;
+    const az = (c: typeof cfg, u: number) => { const d = frameU(c, u); return Math.atan2(d[2], d[0]); };
+    const turn = (c: typeof cfg, from: number, to: number): number => {
       let total = 0;
-      let prev = az(c, v3);
-      for (let v = v3 + 0.001; v <= v2; v += 0.001) {
-        const a = az(c, v);
+      let prev = az(c, from);
+      for (let u = from + 0.001; u <= to + 1e-12; u += 0.001) {
+        const a = az(c, u);
         let d = a - prev;
         d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
         expect(Math.abs(d)).toBeLessThan(0.1); // no jump
@@ -232,23 +240,24 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
       }
       return total;
     };
-    const plus = turn(cfg);
+    const plus = turn(cfg, pmid, pmid + span); // the pause: the piece waits, the camera turns
     expect(Math.abs(Math.abs(plus) - Math.PI)).toBeLessThan(0.02); // half a round
-    const minus = turn({ ...cfg, cameraYawOffsetDeg: -2.5 });
+    expect(Math.abs(turn(cfg, v3, pmid))).toBeLessThan(1e-9); // ring 3 → the middle: no turn (behind the piece)
+    expect(Math.abs(turn(cfg, pmid + span, v2 + span))).toBeLessThan(1e-9); // the middle → ring 2: no turn
+    const minus = turn({ ...cfg, cameraYawOffsetDeg: -2.5 }, pmid, pmid + span);
     expect(Math.sign(minus)).toBe(-Math.sign(plus)); // the other way with the offset on the other side
     // at rings 3 and 2 exactly the curve's camera (just inside = just outside)
-    for (const v of [v3, v2]) for (const e of [1e-6, -1e-6]) expect(angle(cameraFrameHeld(cfg, top, top, 1, { yaw, v: v + e }, off, null).dir, cameraFrameHeld(cfg, top, top, 1, { yaw, v: v - e }, off, null).dir)).toBeLessThan(0.01);
+    for (const u of [v3, v2 + span]) for (const e of [1e-6, -1e-6]) expect(angle(frameU(cfg, u + e), frameU(cfg, u - e))).toBeLessThan(0.01);
     // driven back: the same frames
     const fwd: Vec3[] = [];
-    for (let v = v2; v >= v3; v -= 0.01) fwd.push(cameraFrameHeld(cfg, top, top, 1, { yaw, v }, off, null).dir);
+    for (let u = v2 + span; u >= v3; u -= 0.01) fwd.push(frameU(cfg, u));
     let k = fwd.length - 1;
-    for (let v = v2 - 0.01 * (fwd.length - 1); v <= v2 + 1e-9; v += 0.01) expect(angle(cameraFrameHeld(cfg, top, top, 1, { yaw, v }, off, null).dir, fwd[k--]!)).toBeLessThan(1e-6);
-    // the slider: the camera's height midway
-    const mid = (v2 + v3) / 2;
-    for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: mid }, off, null).dir[1]) * D).toBeCloseTo(deg, 1);
+    for (let u = v2 + span - 0.01 * (fwd.length - 1); u <= v2 + span + 1e-9; u += 0.01) expect(angle(frameU(cfg, u), fwd[k--]!)).toBeLessThan(1e-6);
+    // the slider: the camera's height through the pause
+    for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(deg, 1);
     // an underside: the same ring below the face
     const under = rigTurnFor(cfg, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
-    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: mid }, off, null).dir[1]) * D).toBeCloseTo(-50, 1);
+    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(-50, 1);
     // a vertical face: untouched by the slider
     const side = rigTurnFor(cfg, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
     for (let v = v3; v <= v2; v += 0.01) expect(angle(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 35 }, side, side, 1, { yaw, v }, off, null).dir, cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 85 }, side, side, 1, { yaw, v }, off, null).dir)).toBeLessThan(1e-5);
