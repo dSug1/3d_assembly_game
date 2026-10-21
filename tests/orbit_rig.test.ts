@@ -258,7 +258,7 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       for (const shareAt of runs) {
         let prev: ReturnType<typeof rigCameraFrame> | null = null;
         for (let v = 0.99; v >= 0.02; v -= 0.002) {
-          const f = rigFrameBetween(cfg, top, front, shareAt(v), { yaw, v }, off);
+          const f = rigFrameBetween(cfg, top, front, shareAt(v), { yaw, v, pause: 1 }, off); // ⭐ (2026-10-21) the top face pause's share frozen as the app leaves it (settled at 1 past the middle; the pause is off once the change goes to a vertical face)
           if (prev !== null) expect(angle(f.up, prev.up)).toBeLessThan(6);
           prev = f;
         }
@@ -297,7 +297,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const c = code("render/camera_rig.ts");
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)
     expect(code("render/green_box_wiring.ts")).toContain("st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);");
-    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
+    expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-17) the whole frame (`input/camera_frame.ts`)
     expect(code("input/camera_frame.ts")).toContain("return rigFrameBetween(cfg, from, to, s, cam, off);"); // the curve's own frame (⛔ 2026-10-19: no hold)
     expect(c).toContain("st.rigFrom = rigNow(st);"); // the turn as it stands — never a jump (⛔ 2026-10-19: its faces for the hold, `rigEnds`, deleted with the hold) // the turn as it stands — never a jump
   });

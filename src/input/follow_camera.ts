@@ -27,6 +27,8 @@ import { orbitOffset, elevationGainScale } from "./orbit";
 export interface OrbitAt {
   readonly yaw: number;
   readonly v: number;
+  /** ⭐ (2026-10-21) over a horizontal face, the TOP FACE PAUSE's share (`input/top_pause.ts`): the camera's half round while the piece waits at the middle */
+  readonly pause?: number;
 }
 
 /** ⭐ A camera glide on one axis: toward where the box ends, exponential with `tauMs = distance / v₀`. */

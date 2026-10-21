@@ -562,6 +562,8 @@ export function createScene(
   st.greenBoxRigM = null;
   st.cameraOrbit = null;
   st.cameraLagged = null;
+  st.topPause = 0;
+  st.topPauseShown = 0;
   st.orbitMotion = null;
   st.orbitSway = null;
   st.orbitSwayKicks = 0;

@@ -1456,3 +1456,42 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the piece's four-ring curve). The code and the vectors are exactly `b97b5b5`'s (2086). ⭐ What the two attempts showed: over a horizontal face the
   camera and the piece have to be changed TOGETHER — a camera curve that leaves the piece's (or a piece curve the camera does not follow) moves the piece
   across the screen, which reads worse than the camera's own dip.
+
+### …THE TOP FACE PAUSE: the piece waits above the gizmo while the camera goes half round (`1.0.82-`, 2026-10-21)
+
+> *"when hosting face is horizontal, on a dy travel, the piece travel is paused when it crosses the gizmo (when it is exactly midway between ring 2 and ring
+> 3), the camera does the half round turn around the gizmo while the piece travel is paused (it maintains its original travel on the 4 ring 2D curve outside
+> this pause of the piece and orbit on the mid-ring during the pause of the piece). If the dy reverse at any time, the travel of the camera or piece is
+> reversed. Propose something"* → *"what is the mm between ring 2 and ring 3 in case the hosting face is vertical ? use that for the pause length. build,
+> update the md files, deploy"* — the owner.
+
+* ⭐ Before it, two other ways were measured and not built (2026-10-20): the camera rings, radii and gains optimised for the piece's swing on the screen (the
+  outer stretches' swing is the camera offsets' own drift — offsets × the piece's distance ÷ the camera's 1.25 m — which no ring, curve or gain changes; a
+  vertical face is already at its floor: 27.3° of path for 27.4° unavoidable), and the half round spread over the whole travel (evenly: the piece 23° off the
+  screen; by the piece's distance: 14.7° of outer swing for 21.4°, but up to 4.8°/mm at the top).
+* ⭐⭐⭐ **ONE TRAVEL** (`input/top_pause.ts`: `pauseSpan`, `pauseMid`, `travelOf`, `placeOf`, `settledPause`): over a horizontal face the drag steps a travel `u`
+  running ring 4 → the middle → THE PAUSE → the middle → ring 1. Off the pause it is the ring parameter `v` (shifted by the pause past it); through it `v`
+  HOLDS at the middle (halfway between rings 3 and 2 — the piece 9 cm straight above the gizmo) while the PAUSE SHARE goes 0 → 1. A function of `u` alone:
+  dy reversed anywhere retraces it — the piece back, or the camera back while the piece waits; the coast records the travel taken and goes on through it.
+* ⭐⭐ **The pause's length** is the waist's own span in `v` (rings 3 → 2) — a vertical face's ring 2 → 3 travel: **11.1 mm** of dy at `Scene_1`'s gains.
+  ⚠ The turn governor (12.5°/mm) holds the camera's half round to **16.3 mm** of finger (the vertical face's waist governs to 12.0 mm): ring 4 → ring 1 is
+  94 mm over a horizontal face.
+* ⭐⭐ **The camera** (`topFaceRing`): the half round is driven by the pause share (smoothstep), on the 50° ring (`topFaceCameraRingDeg`), upright. Off the
+  middle the share is 0 below and 1 above, so between ring 3 and the middle the camera only RISES behind the piece (36° → 50°, its azimuth fixed) and on to
+  ring 2 only comes down on the far side (⛔ 2026-10-20: the half round spread over rings 3 → 2 while the piece crossed). The turn always meets the curve at
+  rings 3 and 2: before the middle it is the share × an easing 0 at ring 3, after it 1 − (1 − the share) × an easing 0 at ring 2.
+* ⭐ **Wiring**: `orbitTravelStep` (`render/green_box_wiring.ts`) — the drag's dy and the coast step the travel, governed ON it (`governedRingStep` takes the
+  travel's top, `1 + span`), the share left in `st.topPause`; `topPauseFrame` each frame settles the share to the piece's side when the ring parameter is off
+  the middle (a respawn, the solver's reset, a gizmo change onto a top face) and eases the drawn share (`st.topPauseShown`, `boxSmoothMs`), which
+  `cameraFrameNow` reads; on while the gizmo's turn is a horizontal face's (`topPauseOn`); the HUD's `elev=` shows `pause=…%` inside it.
+* ⭐ **Through a gizmo change** the pause is off as soon as the change goes to a vertical face — the share frozen; each end's ring hands over between its
+  pause-driven turn and the waist's own (the 2026-10-20 spread) by the change's share, so nothing jumps at its start. ⚠ Cost: driving the piece back across
+  the middle early in a top → vertical change makes the frozen half round over half the waist — 16.7° a 0.25 mm step UNGOVERNED (11.5° before); the governor
+  reads those frames (12.5°/mm in the app).
+* Measured in the app (the gizmo on the floor at (0.85, 0, 0.85), dy at 0.25 mm): the camera behind the piece at 92° rising 36° → 50°; at the middle the piece
+  STOPS at (0.85, 0.111, 0.85) while the camera turns 92° → 166° → −175°; 10 mm back the camera turns back to 93°, then the piece moves; through to the far
+  side at −87°; no error.
+* Vectors (4 new, `tests/top_pause.test.ts`, red without the module): the pause's span and place; the travel ↔ place both ways and held to its ends; over a top
+  face the piece still through the pause, the camera half round at 50°, no turn before or after it, a function of the travel, a vertical face reading nothing
+  of the share; the wiring. Restated: the ring's vectors and the governor's top face along the travel; the gizmo-change sweeps with the share frozen as the app
+  leaves it; A1's step bound 12° → 17° (measured, ungoverned); four text checks. ⛔ No device close. 2090 vectors.

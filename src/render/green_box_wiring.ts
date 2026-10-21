@@ -27,14 +27,15 @@ import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
-import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit } from "../input/follow_camera";
+import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
+import { pauseMid, pauseSpan, placeOf, settledPause, travelOf } from "../input/top_pause";
 import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { cameraOffsetAt, easeShare, gizmoBlendTravel, rigSwingNeed } from "../input/orbit_rig";
+import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld } from "../input/camera_frame";
@@ -700,6 +701,8 @@ export function respawnStuckPiece(st: SceneState): void {
   st.centreBlend.snapTo([st.bootCentreM[0], st.bootCentreM[1], st.bootCentreM[2]]);
   st.gizmoHost = st.bootGizmoHost ?? null; // ⭐ (2026-10-19) back on the boot's host: its faces the quads
   st.gizmoNormal = st.bootGizmoNormal ?? null; // ⭐ (2026-10-20) and its face: the fourth quad
+  st.topPause = settledPause(st.orbit.elevation, 0, pauseMid(st.cfg)); // ⭐ (2026-10-21) the top face pause off: the camera on the piece's side, at once
+  st.topPauseShown = st.topPause;
   st.orientDirty = true;
   st.rigFrom = UNTURNED; // ⭐ (2026-10-16) the boot's rig, unturned
   st.rigTo = UNTURNED;
@@ -924,8 +927,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.orbitMotion === null) st.orbitInertia.stop();
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
-    st.orbit.nudge(d.dYaw, governedOrbitDv(st, d.dV, orbitDvPerMm(st))); // ⭐ (2026-10-19) the coast governed as the finger is
+    st.orbit.nudge(d.dYaw, orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv); // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
+  topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
   // one zoom (wheel, pinch, boot) is held to its range here (`clampGreenZoom`), every frame.
   // ⭐⭐ …never closer than keeps the green piece on screen (`minGreenZoom`, the worst case over the rings) — RECOMPUTED ONLY when
@@ -1615,18 +1619,47 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
  * home: the drag and the HUD read it. (The yaw share while held went with the rotation, 2026-10-04.)
  */
 /**
- * ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR's call (`governedRingStep`, `input/turn_governor.ts`): the ring step `dv` the finger (or the coast) asks for, cut where the
+ * ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR's call (`governedRingStep`, `input/turn_governor.ts`): the step `du` the finger (or the coast) asks for, cut where the
  * camera — the frame the orbit asks for on the turn now — would turn faster than the cap per mm of dy: `orbitTurnCapDegMm` on a curve that passes over
  * the gizmo (a horizontal face — `rigSwingNeed`), `orbitTurnCapVerticalDegMm` on any other. `dvPerMm`: the ring a millimetre of dy buys at the drag's gains.
+ * ⭐⭐⭐ (2026-10-21) THE TOP FACE PAUSE (`input/top_pause.ts`): over a horizontal face the step runs on the TRAVEL — through the middle the ring parameter holds
+ * and the pause share takes the step (the camera's half round, the piece waiting), governed alike; the share is left in `st.topPause`. Returns the ring
+ * step for the orbit (`dv`) and the travel taken (`du`, the coast's record).
  */
-export function governedOrbitDv(st: SceneState, dv: number, dvPerMm: number): number {
-  if (dv === 0) return dv;
+export function orbitTravelStep(st: SceneState, du: number, dvPerMm: number): { readonly dv: number; readonly du: number } {
   const cfg = st.cfg;
   const crossing = rigSwingNeed(cfg, rigNow(st)) > 0.5;
   const cap = crossing ? cfg.orbitTurnCapDegMm : cfg.orbitTurnCapVerticalDegMm;
   const yaw = st.orbit.yaw;
   const off = pieceOrbitAngleOffset(st);
-  return governedRingStep((v) => cameraFrameHeld(cfg, st.rigFrom, st.rigTo, st.rigShare, { yaw, v }, off, null), st.orbit.elevation, dv, dvPerMm, cap);
+  const v = st.orbit.elevation;
+  const frame = (at: OrbitAt) => cameraFrameHeld(cfg, st.rigFrom, st.rigTo, st.rigShare, at, off, null);
+  if (!topPauseOn(st)) {
+    // no pause: the ring step as ever, the camera's share as it stands
+    const dv = du === 0 ? 0 : governedRingStep((x) => frame({ yaw, v: x, pause: st.topPause }), v, du, dvPerMm, cap);
+    return { dv, du: dv };
+  }
+  const span = pauseSpan(cfg);
+  const mid = pauseMid(cfg);
+  const u0 = travelOf(v, st.topPause, mid, span);
+  const got = du === 0 ? 0 : governedRingStep((u) => frame({ yaw, ...placeOf(u, mid, span) }), u0, du, dvPerMm, cap, 1 + span);
+  const to = placeOf(u0 + got, mid, span);
+  st.topPause = to.pause;
+  return { dv: to.v - v, du: got };
+}
+
+/** ⭐ (2026-10-21) the top face pause is on while the gizmo's turn is a horizontal face's (`horizontalShare` of the turn it goes to). */
+export function topPauseOn(st: SceneState): boolean {
+  return horizontalShare(st.cfg, st.rigTo) >= 1;
+}
+
+/**
+ * ⭐ (2026-10-21) every frame: the pause share settled to the piece's side when the ring parameter is off the middle (a respawn, the solver's reset, a gizmo
+ * change onto a horizontal face) — 0 below, 1 above — and the drawn share eased toward it on the piece's own time (`boxSmoothMs`).
+ */
+export function topPauseFrame(st: SceneState, dtMs: number): void {
+  if (topPauseOn(st)) st.topPause = settledPause(st.orbit.elevation, st.topPause, pauseMid(st.cfg));
+  st.topPauseShown = easeShare(st.topPauseShown, st.topPause, dtMs, st.cfg.boxSmoothMs);
 }
 
 /** ⭐ (2026-10-19) the ring a millimetre of dy buys at the orbit drag's gains (`boxGainPitch` × the leash's × the elevation gain × the four-ring scale). */
