@@ -1495,3 +1495,29 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   face the piece still through the pause, the camera half round at 50°, no turn before or after it, a function of the travel, a vertical face reading nothing
   of the share; the wiring. Restated: the ring's vectors and the governor's top face along the travel; the gizmo-change sweeps with the share frozen as the app
   leaves it; A1's step bound 12° → 17° (measured, ungoverned); four text checks. ⛔ No device close. 2090 vectors.
+
+### …THE CAMERA'S CENTRE LIFTED THROUGH THE WAIST: the piece holds its height on the screen (`1.0.82-`, 2026-10-22)
+
+> *"the movement of the piece in screen view between ring 2 and ring 3 is not nice: it looks like the piece goes up between ring 2 and zenith above gizmo,
+> then freeze, then goes down between zenith and ring 3. All the more if top face camera ring is low (35 degrees min slider). Modify the 2D curve of the
+> camera and the top face camera ring so that there is no such jump back and forth of the piece in the screen view around the waist of the dy travel."* →
+> *"update the md files, deploy"* — the owner.
+
+* ⛔ **Measured first**: aimed at the gizmo, the piece 9 cm above it in the pause is seen above the centre — from −0.3° at ring 3 it rose to **+2.6°** at a
+  50° ring (**+3.3°** at 35°, 1.4° at 70°) in ~5 mm of dy, held through the pause, and fell back to −0.3° at ring 2.
+* ⛔ **Tried and dropped**: the camera's HEIGHT solved for the piece's place on the screen (the centre on the gizmo) — the piece rose smoothly, but the camera
+  had to dive to **8°–13°** at ring 3 (60° → 8° → the ring's height): the whole scene would swing.
+* ⭐⭐⭐ **THE CENTRE LIFTED** (`topFaceAimLift`, `pieceScreenY`, `input/orbit_rig.ts`): over a horizontal face, between rings 3 and 2 only, the camera's
+  centre — what it is placed about and aimed at — rises off the gizmo along the vertical (below an underside), SOLVED place by place (a bisection on
+  −0.2 → 0.5 m, its slope's sign read off the ends) so the piece holds on the screen the height it has at ring 3 (eased to ring 2's: the same by the curve's
+  symmetry), at any ring height. 0 at rings 3 and 2 and everywhere else (the camera there exactly as before); ~9–10 cm in the pause — the camera then orbits
+  the WAITING PIECE. The camera's height is the ring's as before (36° at the rings → `topFaceCameraRingDeg` at the middle).
+* ⭐ **The piece as the eye follows it**: its BODY's centre (`placeAt` in `render/green_box_wiring.ts`) — the curve's place at the piece orbit's zoom, its
+  distance clamped (`clampPieceRadiusM`), less the resting face's offset from the mesh's centre turned as the piece stands (⛔ held on the anchor — the
+  resting face's centre — the body drifted 0.2° as the camera rose); the camera's distance the zoom's gap (`gapFull`).
+* Measured — the model (`Scene_1`, a top face): the piece's height on the screen constant to 1e-11° from ring 3 through the pause to ring 2 at 35°, 50°, 70°
+  and 85°, no reversal from ring 1 to the pause; the app (the gizmo on the floor at (0.85, 0, 0.85), a 50° ring): the body at **0.52°** at ring 3, 0.52°
+  through the waist, **0.51°** through the whole pause while the camera turns round, 0.51° driven back mid-pause; the lift 0 → 9.2 cm; no error.
+* Vectors (3 new, `tests/top_face_aim.test.ts`, red on the old code): the hold at four ring heights with no reversal; the lift 0 at rings 3 and 2 and outside
+  the waist, ~9 cm in the pause, below an underside, none on a vertical face; the wiring. Restated: the camera's placement text check (+ lift), the count of
+  `clampPieceRadiusM` calls (+1). ⛔ No device close. 2093 vectors.

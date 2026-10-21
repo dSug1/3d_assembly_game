@@ -390,7 +390,8 @@ describe("⭐⭐ prototype — the green box", () => {
     // ⭐ (2026-10-06) the camera looks at ITS centre — the orbit centre, or the piece once orbiting around it (`piece_orbit.ts`)
     expect(w).toMatch(/st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\)/);
     // around the centre as before: the camera at its offset from the centre, looking at it (`piece_orbit.ts` takes over after an alignment)
-    expect(w).toMatch(/camAt = \[c\.x \+ o\[0\], c\.y \+ o\[1\], c\.z \+ o\[2\]\];\s*lookAt = \[c\.x, c\.y, c\.z\];/);
+    // ⭐ (2026-10-22) the camera's centre the gizmo — lifted through the waist over a horizontal face (`topFaceAimLift`, 0 elsewhere)
+    expect(w).toMatch(/camAt = \[c\.x \+ o\[0\], c\.y \+ lift \+ o\[1\], c\.z \+ o\[2\]\];\s*lookAt = \[c\.x, c\.y \+ lift, c\.z\];/);
     // ⭐ the owner, 2026-10-02: *"remove the billboarding"*
     expect(w).toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_NONE/);
     expect(w).not.toMatch(/box\.billboardMode = Mesh\.BILLBOARDMODE_ALL/);

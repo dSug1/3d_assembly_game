@@ -5,7 +5,7 @@
  * travel of the camera or piece is reversed."* → *"what is the mm between ring 2 and ring 3 in case the hosting face is vertical ? use that for the pause
  * length. build"*) — **THE TOP FACE PAUSE**: over a horizontal face one TRAVEL `u` runs ring 4 → the middle → THE PAUSE → the middle → ring 1. Off the
  * pause it IS the ring parameter `v` (shifted by the pause past it); through the pause `v` holds at the middle (`mid`, halfway between rings 3 and 2 — the
- * piece straight above the gizmo) while the PAUSE SHARE goes 0 → 1 (the camera's half round, `topFaceRing`). The pause's span is the waist's own in `v`
+ * piece straight above the gizmo) while the PAUSE SHARE goes 0 → 1 (the camera's half round, `topFaceFrame`). The pause's span is the waist's own in `v`
  * (`pauseSpan`: rings 3 → 2), so a millimetre of dy buys as much of it as of a vertical face's waist (`Scene_1`: 11.1 mm). A function of `u` alone: dy
  * reversed anywhere retraces it — the piece back, or the camera back while the piece waits.
  * ⛔ ENGINE-FREE.
