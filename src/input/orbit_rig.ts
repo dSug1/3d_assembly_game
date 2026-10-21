@@ -525,9 +525,10 @@ export function blendHeadings(ha: number, hb: number, s: number): number {
  */
 export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const curve = curveFrameBetween(cfg, a, b, s, cam, off);
-  // ⭐⭐⭐ (2026-10-20) between rings 3 and 2 over a horizontal face: the camera's own frame (`topFaceFrame`), as far as the turn is a horizontal face's
+  // ⭐⭐⭐ (2026-10-20) around the waist over a horizontal face: the camera's own frame (`topFaceFrame`), as far as the turn is a horizontal face's —
+  // ⭐ (2026-10-22) from halfway between ring 1 and ring 3 to halfway between ring 2 and ring 4 (eased in and out there)
   const k = topFaceKnots(cfg);
-  if (!(cam.v > k.lo && cam.v < k.hi)) return curve;
+  if (!(cam.v > k.from && cam.v < k.to)) return curve;
   // ⭐ each END turn's share, blended at the change's share — the ring fades in or out evenly over the gizmo change (⛔ the blended turn's own: it left the
   // horizontal in the first fifth of the change — the camera turned 12° a 0.25 mm step there, 7.5° without the ring)
   const ha = s >= 1 ? 0 : horizontalShare(cfg, a);
@@ -535,7 +536,8 @@ export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, 
   const hz = (1 - s) * ha + s * hb;
   if (hz <= 0) return curve;
   // ⭐ the frame of each END turn on its own curve (⛔ on the blended curve: mid-change a waist ring passed straight above and its azimuth spun the ring round),
-  // turned onto the BLENDED curve's frame — the turns at rings 3 and 2 eased between (smoothstep): it meets the curve exactly there
+  // turned onto the BLENDED curve's frame — in the waist the turns at rings 3 and 2 eased between (smoothstep), outside it the turn at the place itself: it
+  // meets the curve exactly wherever it leaves it
   const blended = s >= 1 || s <= 0 ? null : (v: number) => curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v }, off);
   // ⭐ (2026-10-21) `spread`: how far the end's half round goes by the waist itself (the 2026-10-20 ring) rather than by the top face pause — the end fading
   // out goes over to it as the change goes on, the end fading in comes from it: a piece crossing mid-change gets the gentle turn, and nothing jumps at its start
@@ -543,7 +545,10 @@ export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, 
     const curveAt = (v: number) => curveFrameBetween(cfg, r, r, 1, { yaw: cam.yaw, v }, off);
     const d = topFaceFrame(cfg, r, cam, k, curveAt, spread);
     if (blended === null) return d;
-    const q = qSlerp(rigArc(curveAt(k.lo).dir, blended(k.lo).dir), rigArc(curveAt(k.hi).dir, blended(k.hi).dir), smooth((cam.v - k.lo) / (k.hi - k.lo)));
+    const q =
+      cam.v > k.lo && cam.v < k.hi
+        ? qSlerp(rigArc(curveAt(k.lo).dir, blended(k.lo).dir), rigArc(curveAt(k.hi).dir, blended(k.hi).dir), smooth((cam.v - k.lo) / (k.hi - k.lo)))
+        : rigArc(curveAt(cam.v).dir, blended(cam.v).dir);
     return qRotate(q, d);
   };
   const ra = ha > 0 ? ringOf(a, s) : null;
@@ -558,17 +563,19 @@ export function rigFrameBetween(cfg: GestureConfig, a: RigParams, b: RigParams, 
   return { dir, up: qRotate(qFromAxisAngle(dir, rho), uprightUp(dir)) };
 }
 
-/** ⭐ (2026-10-22) the top face camera's places: the waist rings (`lo`, `hi`) and the middle between them. */
+/** ⭐ (2026-10-22) the top face camera's places: halfway between ring 1 and ring 3 (`from`), the waist rings (`lo`, `hi`), the middle between them, halfway between ring 2 and ring 4 (`to`). */
 export interface TopFaceKnots {
+  readonly from: number;
   readonly lo: number;
   readonly mid: number;
   readonly hi: number;
+  readonly to: number;
 }
 export function topFaceKnots(cfg: GestureConfig): TopFaceKnots {
   const { v2, v3 } = waistRings(cfg);
   const lo = Math.min(v2, v3);
   const hi = Math.max(v2, v3);
-  return { lo, mid: (lo + hi) / 2, hi };
+  return { from: lo / 2, lo, mid: (lo + hi) / 2, hi, to: hi + (1 - hi) / 2 };
 }
 
 /** ⭐ The curve's own frame on the turn blended at `s` (the swing's heading from each end turn — see `rigFrameBetween`). */
@@ -602,28 +609,38 @@ export function horizontalShare(cfg: GestureConfig, p: RigParams): number {
  * * its AZIMUTH HALF ROUND the gizmo through the pause (`cam.pause`, smoothstep), the yaw offset's way — before the middle the share × an easing 0 at ring 3,
  *   after it 1 − (1 − the share) × an easing 0 at ring 2, so it meets the curve at both rings whatever the share (`spread`: how far it goes by the waist
  *   itself instead — a gizmo change's handover);
- * * its HEIGHT from ring 3's to ring 2's lifted to `topFaceCameraRingDeg` at the middle (sin²: level at either ring), above the face (or below an underside).
- * Upright. A function of the place alone: driven back it retraces itself. Returns the camera's direction from its centre (the gizmo — lifted through the
+ * * ⭐⭐ (2026-10-22) its HEIGHT one level through the waist and the pause — `topFaceCameraRingDeg` above the face (below an underside) — eased into from
+ *   the curve's halfway between ring 1 and ring 3 (`k.from`) and out to it halfway between ring 2 and ring 4 (`k.to`), smoothstep: no change of speed
+ *   anywhere (⛔ ring 3's 36° lifted to the ring's at the middle: at rings 3 and 2 the camera's height went from ~4°/mm to none);
+ *   outside the waist its azimuth the curve camera's.
+ * Upright. A function of the place alone: driven back it retraces itself. Returns the camera's direction from its centre (the gizmo — lifted around the
  * waist by `topFaceAimLift`).
  */
 export function topFaceFrame(cfg: GestureConfig, r: RigParams, cam: OrbitAt, k: TopFaceKnots, curveAt: (v: number) => RigCameraFrame, spread = 0): Vec3 {
   const azOf = (d: Vec3): number => Math.atan2(d[2], d[0]);
   const elOf = (d: Vec3): number => Math.asin(Math.max(-1, Math.min(1, d[1])));
   const side = halfwayUp(cfg, r) >= 0 ? 1 : -1;
-  const u = Math.min(1, Math.max(0, (cam.v - k.lo) / (k.hi - k.lo)));
-  const atLo = curveAt(k.lo).dir;
-  const atHi = curveAt(k.hi).dir;
-  const a0 = azOf(atLo);
-  let da = azOf(atHi) - a0;
+  const level = (side * cfg.topFaceCameraRingDeg * Math.PI) / 180;
+  const v = cam.v;
+  if (v <= k.lo || v >= k.hi) {
+    // ⭐⭐ (2026-10-22) outside the waist: the curve camera's azimuth, its height eased from the curve's to the waist's level (smoothstep — the same speed
+    // as the curve where it leaves it, none where it reaches the waist)
+    const c = curveAt(v).dir;
+    const t = v <= k.lo ? (k.lo - k.from > 1e-12 ? (v - k.from) / (k.lo - k.from) : 1) : k.to - k.hi > 1e-12 ? (k.to - v) / (k.to - k.hi) : 1;
+    const e = elOf(c) + (level - elOf(c)) * smooth(t);
+    return dirAt(e, azOf(c));
+  }
+  const u = (v - k.lo) / (k.hi - k.lo);
+  const a0 = azOf(curveAt(k.lo).dir);
+  let da = azOf(curveAt(k.hi).dir) - a0;
   da -= 2 * Math.PI * Math.floor(da / (2 * Math.PI)); // [0, 2π)
   if (cfg.cameraYawOffsetDeg < 0 && da > 0) da -= 2 * Math.PI; // ⭐ the yaw offset's way (as the top roll turned)
   const share = smooth(cam.pause ?? (u < 0.5 ? 0 : u > 0.5 ? 1 : 0.5));
   const byPause = u <= 0.5 ? share * smooth(2 * u) : 1 - (1 - share) * smooth(2 * (1 - u));
   const w = Math.min(1, Math.max(0, spread));
-  const a = a0 + da * ((1 - w) * byPause + w * smooth(u));
-  const base = elOf(atLo) + (elOf(atHi) - elOf(atLo)) * smooth(u);
-  const e = base + ((side * cfg.topFaceCameraRingDeg * Math.PI) / 180 - base) * Math.sin(Math.PI * u) ** 2;
-  return dirAt(e, a);
+  // ⭐⭐ (2026-10-22, the owner: *"if the camera stays at the same azimuth between ring 2 and ring 3 (including the half round orbit when the piece is paused)"*)
+  // through the waist the camera's height is ONE level, the ring's (⛔ ring 3's 36° lifted to the ring's at the middle and back: its speed jumped at both rings)
+  return dirAt(level, a0 + da * ((1 - w) * byPause + w * smooth(u)));
 }
 
 const dirAt = (e: number, a: number): Vec3 => [Math.cos(e) * Math.cos(a), Math.sin(e), Math.cos(e) * Math.sin(a)];
@@ -643,17 +660,18 @@ export function pieceScreenY(p: Vec3, dir: Vec3, gap: number, lift = 0): number 
  * ⭐⭐⭐ (2026-10-22, the owner: *"the movement of the piece in screen view between ring 2 and ring 3 is not nice: it looks like the piece goes up between ring 2
  * and zenith above gizmo, then freeze, then goes down between zenith and ring 3. All the more if top face camera ring is low (35 degrees min slider). Modify
  * the 2D curve of the camera and the top face camera ring so that there is no such jump back and forth of the piece in the screen view around the waist"*) —
- * **THE CAMERA'S CENTRE LIFTED THROUGH THE WAIST** over a horizontal face (m, along the vertical: + above a top face, − below an underside): solved place by
- * place so the piece holds on the screen the height it has at ring 3, eased to ring 2's (`pieceScreenY` — the two are the same by the curve's symmetry),
- * whatever the ring's height; 0 at rings 3 and 2 (the camera there as ever), the piece's own height above the gizmo in the pause (`Scene_1`: ~9 cm — the
- * camera then orbits the waiting piece). ⛔ 2026-10-21: aimed at the gizmo, the piece 9 cm above it rose on the screen to 2.6° at a 50° ring (3.3° at 35°)
+ * **THE CAMERA'S CENTRE LIFTED AROUND THE WAIST** over a horizontal face (m, along the vertical: + above a top face, − below an underside): solved place by
+ * place so the piece holds on the screen the height it has at ring 3 with the curve's camera, eased to ring 2's (`pieceScreenY` — the two are the same by
+ * the curve's symmetry), whatever the ring's height; ⭐ (2026-10-22) eased in from the piece's own height halfway between ring 1 and ring 3 and out by halfway
+ * between ring 2 and ring 4 (0 lift there), as the camera's level is (`topFaceFrame`); ~9 cm in the pause at a 50° ring (the camera orbits the waiting
+ * piece). ⛔ 2026-10-21: aimed at the gizmo, the piece 9 cm above it rose on the screen to 2.6° at a 50° ring (3.3° at 35°)
  * in ~5 mm, held through the pause, and fell back in ~5 mm; ⛔ the camera's height solved instead (the centre on the gizmo) dived to 8°–13° at ring 3.
  * As far as the turn is a horizontal face's (each END turn's share, blended at the change's). `gap`: the camera's distance behind the piece (the zoom's);
  * `placeAt`: the piece's place from the gizmo at a ring parameter, as drawn (the curve's at the piece orbit's zoom, its distance clamped) — the curve's by default.
  */
 export function topFaceAimLift(cfg: GestureConfig, a: RigParams, b: RigParams, s: number, cam: OrbitAt, off: CameraAngleOffset | undefined, gap: number, placeAt?: (v: number) => Vec3): number {
   const k = topFaceKnots(cfg);
-  if (!(cam.v > k.lo && cam.v < k.hi)) return 0;
+  if (!(cam.v > k.from && cam.v < k.to)) return 0;
   const hz = (s >= 1 ? 0 : (1 - s) * horizontalShare(cfg, a)) + (s <= 0 ? 0 : s * horizontalShare(cfg, b));
   if (hz <= 0) return 0;
   const p = blendRig(a, b, s);
@@ -661,14 +679,41 @@ export function topFaceAimLift(cfg: GestureConfig, a: RigParams, b: RigParams, s
   const place = placeAt ?? ((v: number): Vec3 => rigPlace(cfg, p, cam.yaw, v, 1));
   const yAt = (v: number, pause: number | undefined, lift: number): number =>
     pieceScreenY(place(v), rigFrameBetween(cfg, a, b, s, pause === undefined ? { yaw: cam.yaw, v } : { yaw: cam.yaw, v, pause }, off).dir, gap, lift);
-  const t = (cam.v - k.lo) / (k.hi - k.lo);
-  const target = yAt(k.lo, 0, 0) * (1 - t) + yAt(k.hi, 1, 0) * t;
+  // ⭐ (2026-10-22) the piece's own height on the screen with the CURVE's camera (no lift) — through the waist held at ring 3's, eased to ring 2's; outside
+  // it eased from its own to that, smoothstep: no change of speed anywhere (⛔ held from ring 3 itself: it stopped dead there, 0.033°/mm → 0)
+  const own = (v: number): number => pieceScreenY(place(v), curveFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v }, off).dir, gap, 0);
+  // ⭐ the height held through the waist: halfway between the piece's as the LEVEL camera sees it at the waist ring and in the pause, no lift — the lift then
+  // evens out only their difference (⛔ ring 3's with the curve's camera: from a camera held at 70°–85° that took the centre 0.4–0.6 m below the gizmo)
+  const seen = (v: number, pause: number): number => pieceScreenY(place(v), rigFrameBetween(cfg, a, b, s, { yaw: cam.yaw, v, pause }, off).dir, gap, 0);
+  const inPause = seen(k.mid, 0.5);
+  const heldLo = (seen(k.lo + 1e-9, 0) + inPause) / 2;
+  const heldHi = (seen(k.hi - 1e-9, 1) + inPause) / 2;
+  const v = cam.v;
+  let target: number;
+  if (v > k.lo && v < k.hi) {
+    const t = (v - k.lo) / (k.hi - k.lo);
+    target = heldLo * (1 - t) + heldHi * t;
+  } else {
+    // ⭐ a MONOTONE ease (a cubic Hermite, its start tangent held to Fritsch–Carlson's 0…3): from the piece's own height and speed where the ease begins to
+    // the held height, level, at the waist ring (⛔ the own height blended into the held one by a smoothstep overshot by 0.002° at a 70°–80° ring)
+    const near = v <= k.lo;
+    const start = near ? k.from : k.to;
+    const span = near ? k.lo - k.from : k.to - k.hi;
+    const t = span > 1e-12 ? (near ? v - k.from : k.to - v) / span : 1;
+    const held = near ? heldLo : heldHi;
+    const y0 = own(start);
+    const dv = 1e-4 * (near ? 1 : -1);
+    const slope = ((own(start + dv) - y0) / 1e-4) * span; // d(own)/dt at the start, toward the waist
+    const m0 = Math.abs(held - y0) > 1e-12 ? Math.min(3, Math.max(0, slope / (held - y0))) : 0;
+    const h = (t * t * t - 2 * t * t + t) * m0 + (-2 * t * t * t + 3 * t * t);
+    target = y0 + (held - y0) * h;
+  }
   const f = (h: number): number => yAt(cam.v, cam.pause, side * h) - target;
-  // ⭐ bisection on [−0.2, 0.5 m] toward the piece (a camera nearly overhead may need the centre a little the other way), the slope's sign read off the
-  // ends (seen from below an underside it is the other way)
+  // ⭐ bisection on [−1, 1 m] along the vertical (a camera held high near ring 3 needs the centre BELOW the gizmo: ~0.35 m at a 70° ring, ~0.8 m at 85°), the slope's
+  // sign read off the ends (seen from below an underside it is the other way)
   if (Math.abs(f(0)) < 1e-12) return 0;
-  let lo = -0.2;
-  let hi = 0.5;
+  let lo = -1;
+  let hi = 1;
   const fLo = f(lo);
   const fHi = f(hi);
   if (fLo > 0 === fHi > 0) return side * hz * (Math.abs(fLo) <= Math.abs(fHi) ? lo : hi);

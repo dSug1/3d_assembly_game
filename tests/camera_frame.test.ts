@@ -265,7 +265,8 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
   it("⭐ the ring's slider: CAMERA › CAMERA ORBIT AROUND CENTER, 50° by default, 35–85 validated", () => {
     expect(DEFAULT_CONFIG.topFaceCameraRingDeg).toBe(50);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 34 })).toThrow();
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 86 })).toThrow();
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 81 })).toThrow(); // ⭐ (2026-10-22) 80 at most (85 before)
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 80 })).not.toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
     const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
     const at = m.indexOf('"topFaceCameraRingDeg"');

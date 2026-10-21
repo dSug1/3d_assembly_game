@@ -1521,3 +1521,32 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Vectors (3 new, `tests/top_face_aim.test.ts`, red on the old code): the hold at four ring heights with no reversal; the lift 0 at rings 3 and 2 and outside
   the waist, ~9 cm in the pause, below an underside, none on a vertical face; the wiring. Restated: the camera's placement text check (+ lift), the count of
   `clampPieceRadiusM` calls (+1). ⛔ No device close. 2093 vectors.
+
+### …the camera at ONE LEVEL around the waist; no kink at rings 3 and 2 (`1.0.82-`, 2026-10-22)
+
+> *"there are two discontinuities in the movement of the piece in the screen view around ring 2 entrance and ring 3 exit. Can the camera 2D curve be modified
+> so that there are no such discontinuities ? for example if the camera stays at the same azimuth between ring 2 and ring 3 (including the half round orbit
+> when the piece is paused) instead of increasing azimuth between ring 2 and the start of the half round orbit / decreasing azimuth between the end of the
+> half round orbit and the ring 3 ?"* → *"update the md files, deploy"* — the owner (the "azimuth" read as the camera's HEIGHT — its direction round the
+> gizmo was already fixed before and after the pause).
+
+* ⛔ **Measured first**: the two were KINKS, not jumps — at ring 3 the camera's height went from ~4°/mm (the curve's camera dipped to 34.6° just before it and
+  climbed back) to none (the ring's profile starts level), and the piece's height on the screen from 0.033°/mm to none (the hold began there): the largest
+  change of speed between two 0.1 mm steps, 2.8°/mm for the camera.
+* ⭐⭐⭐ **ONE LEVEL** (`topFaceFrame`): through the waist and the pause the camera's height is `topFaceCameraRingDeg` (above the face, below an underside) —
+  eased into from the curve's halfway between ring 1 and ring 3 (`topFaceKnots.from`) and out to it halfway between ring 2 and ring 4 (`to`), smoothstep: at
+  50° the camera goes 60° → 52° → 50° held → 60° (⛔ 36° at rings 3 and 2 lifted to the ring's at the middle). Outside the waist its azimuth the curve camera's;
+  in a gizmo change each end's frame turned onto the blended curve at the place itself (in the waist at rings 3 and 2, eased between).
+* ⭐⭐ **The lift eased too** (`topFaceAimLift`, now from `from` to `to`): the piece's height held through the waist is halfway between the piece as the LEVEL
+  camera sees it at the waist ring and in the pause — the lift evens out only their difference (at 50°: −7.5 cm at rings 3 and 2, +7.6 cm in the pause, 0 at
+  `from` and `to`; ⛔ ring 3's height with the curve's camera: from a camera held at 70°–85° that took the centre 0.4–0.6 m below the gizmo); outside the waist
+  a MONOTONE ease (a cubic Hermite, its start tangent held to Fritsch–Carlson's 0…3) from the piece's own height and speed to the held one, level at the
+  waist ring (⛔ a smoothstep blend overshot by 0.002° at 70°–80°); the solve on −1 → 1 m.
+* ⭐ **The slider 35°–80°** (85° before): above 80° the camera held there around ring 3 needs its centre over a metre off the gizmo — the solve breaks (at 70° up
+  to 35 cm, at 80° up to 70 cm; at 50° ~11 cm). The slider renamed *"top face camera ring (°): around the waist, the camera this far up (round the gizmo in the
+  pause)"*.
+* Measured — the model (`Scene_1`, a top face): the largest change of speed between 0.1 mm steps **2.8 → 0.03–0.10°/mm** for the camera's height, **0.022 →
+  0.003–0.03°/mm** for the piece's height on the screen (0.028 at 80°, where the far ease starts), no reversal of its vertical motion at 35°–80°; the app (the
+  gizmo on the floor, a 50° ring): the piece's body −0.23° → 0.39° → 0.83° → 1.02° at ring 3 → 1.01° through the whole pause and driven back; no error.
+* Vectors (restated, red on the old code): the hold now also checks no kink (the camera's height and the piece's) and the camera at one level through the waist
+  at 35°/50°/70°/80°; the lift's values (0 outside `from`…`to`, balanced, mirrored below an underside); the slider's 80°. ⛔ No device close. 2093 vectors.

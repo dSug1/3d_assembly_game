@@ -1230,7 +1230,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
-  if (!(cfg.topFaceCameraRingDeg >= 35 && cfg.topFaceCameraRingDeg <= 85)) throw new Error(`topFaceCameraRingDeg (${cfg.topFaceCameraRingDeg}) must be in [35, 85]°.`);
+  // ⭐ (2026-10-22) 80° at most (85° before): above it the camera held at the ring around the waist needs its centre over a metre off the gizmo to hold the piece on the screen (`topFaceAimLift`)
+  if (!(cfg.topFaceCameraRingDeg >= 35 && cfg.topFaceCameraRingDeg <= 80)) throw new Error(`topFaceCameraRingDeg (${cfg.topFaceCameraRingDeg}) must be in [35, 80]°.`);
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
