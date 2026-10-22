@@ -1550,3 +1550,38 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   gizmo on the floor, a 50° ring): the piece's body −0.23° → 0.39° → 0.83° → 1.02° at ring 3 → 1.01° through the whole pause and driven back; no error.
 * Vectors (restated, red on the old code): the hold now also checks no kink (the camera's height and the piece's) and the camera at one level through the waist
   at 35°/50°/70°/80°; the lift's values (0 outside `from`…`to`, balanced, mirrored below an underside); the slider's 80°. ⛔ No device close. 2093 vectors.
+
+### …THE TOP FACE APPROACH, LOW: at max distance the camera stands where it does over a vertical face (`1.0.82-`, 2026-10-22)
+
+> *"the piece seems to follow the 2D curve in blue in the attachment. Can we modify the 2D curve to follow the black ?"* (blue: a high plateau that plunges into
+> the flat of the waist; black: a gentle bowl) → *"this is likely a mix of travel of the piece and relative travel of the camera … It's a compounded effect of
+> piece travel and camera travel"* → *"there is no such artifact when the supporting face is vertical"* → *"at the max distance, why the offset and angle of the
+> camera is not the same if the gizmo hosting face is horizontal or vertical ? I want the same as for vertical hosting face."* → *"Same in the world"* →
+> *"build it, update the md files, deploy"* — the owner.
+
+* ⭐ **What the blue was** (measured): the piece's APPARENT HEIGHT ABOVE THE FACE on the screen (the piece against the point of the face straight under it, from
+  the real camera) against the finger's travel — over a top face it held at **17°–18° for 20 mm** of dy (even rising), then fell to **2.5° in 12 mm** and turned
+  a corner into the flat of the waist and the pause; over a vertical face an even **36° → 4°**. The piece's path in space is a straight-sided V (58° arms) —
+  not the blue; nor is its height against the travel (an S).
+* ⭐ **Why**: the turned curve put ring 1 58° above a top face and the camera at ~60°, looking down nearly along the piece's line of descent (the eased camera
+  level held it steep near ring 3 too); and the owner's offsets act in the WORLD's frame — the pitch tilts away from the world's horizontal, toward a top face's
+  normal but away from a vertical face's. With the offsets at 0 both faces read the same (25.6° → 3.9°).
+* ⛔ **Tried and dropped**: re-pacing the travel (the far metres faster, the last slower — a log-distance pace): the plateau shortened, the plunge stayed; the
+  offsets in the FACE's frame (the top face an exact rotation of the vertical): the descent even (36.2° → 3.1°), but the camera at max distance still steeper
+  than over a vertical face — the owner chose *"same in the world"*.
+* ⭐⭐⭐ **The low approach** (`topFaceApproach`, in `rigPlace`, `input/orbit_rig.ts`): over a horizontal face, from ring 1 to ring 3 (and ring 2 to ring 4),
+  the piece at the turned curve's DISTANCE and HEADING (the finger's travel, the waist and the pause unchanged) but at an ANGLE ABOVE THE FACE eased
+  (smoothstep) from the vertical face's ring angle above the horizon (`atan2(height, radius)` of the end ring: **31.7°**) to the turned curve's own at the waist
+  ring (35°); below an underside, the same under it; mid-change mixed and kept at the ring's distance. The camera unchanged: behind the piece, the offsets in
+  the world — so at max distance it IS the vertical face's.
+* Measured — the model: at ring 1 the top face's piece 31.7° / camera 33.7° / the piece on the screen (10.0°, −9.3°), the vertical face's the same (⛔ 58° /
+  ~60° / (6.2°, −9.3°)); the apparent descent 34.4 → 33.7 → 32.3 → 30.1 → 26.8 → 21.7 → 14.9 → 7.9 → 3.3° every 4 mm, then the flat, then the mirror; no kink
+  (camera 0.03°/mm, the piece's height on the screen 0.005°/mm). With the camera ring at 37° (the camera's own angle at ring 3) it stays near level
+  throughout (34°–37°); at the owner's 50° it rises 37° → 50° over the last 12 mm — the descent even either way. The app (the gizmo on the floor, then on
+  Piece10's front): at ring 1 both the camera 33.7°, the piece 31.9°, on the screen (10.1°, −8.6°); no error.
+* ⚠ **Cost**: the piece comes in lower over the assembly — 3.15 m above the face at max distance (5.1 m before), ~1 m at 1.7 m out (1.4 m) — so parts near the
+  gizmo stop it more often; the camera at max distance 34° (60° before).
+* Vectors (3 new, `tests/top_face_approach.test.ts`, 2 red on the old code): max distance the vertical face's (the piece's angle, the camera's, the place on the
+  screen; ring 4 above the face); the descent falling from the start and well under way by halfway to ring 3; the waist and the distances unchanged.
+  Restated (`orbit_rig.test.ts`): a top face's rings 1 and 4 low; the turned curve on a top face only in the waist (outside it the same distance and heading,
+  lower far out); the step lengths within 5 % on the outer stretches. ⛔ No device close. 2096 vectors.

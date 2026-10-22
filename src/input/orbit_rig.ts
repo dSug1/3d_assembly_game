@@ -122,7 +122,49 @@ export function rigBetaFor(q: Quat, yaw0: number, cameraSide: Vec3, preferBeta?:
  * vertical by dx — `yawTurn(yaw − yaw0) · q · orbitOffset(yaw0, v)`. Smooth in both (a rotation of the curve), so the solver's steps never jump.
  */
 export function rigPlace(cfg: GestureConfig, p: RigParams, yaw: number, v: number, zoom: number): Vec3 {
-  return qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM));
+  const turned = qRotate(yawTurn(yaw - p.yaw0), qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM));
+  // ⭐⭐⭐ (2026-10-22) over a horizontal face the outer stretches come in LOW (`topFaceApproach`), as far as the turn is a horizontal face's
+  const hz = horizontalShare(cfg, p);
+  if (hz <= 0) return turned;
+  const low = topFaceApproach(cfg, p, v, turned);
+  if (low === null) return turned;
+  if (hz >= 1) return low;
+  // ⭐ mixed mid-change, kept at the ring's distance from the gizmo
+  const m: Vec3 = [turned[0] + (low[0] - turned[0]) * hz, turned[1] + (low[1] - turned[1]) * hz, turned[2] + (low[2] - turned[2]) * hz];
+  const k = Math.hypot(turned[0], turned[1], turned[2]) / (Math.hypot(m[0], m[1], m[2]) || 1);
+  return [m[0] * k, m[1] * k, m[2] * k];
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-22, the owner: *"the piece seems to follow the 2D curve in blue … Can we modify the 2D curve to follow the black ?"* → *"It's a compounded effect
+ * of piece travel and camera travel"* → *"at the max distance, why the offset and angle of the camera is not the same if the gizmo hosting face is horizontal or
+ * vertical ? I want the same as for vertical hosting face."* → *"Same in the world"* → *"build it"*) — **THE TOP FACE APPROACH, LOW**: over a horizontal face,
+ * from ring 1 to ring 3 (and ring 2 to ring 4), the piece at its distance on the turned curve (`turned`: the waist and the finger's travel unchanged), on its
+ * heading, but at an ANGLE ABOVE THE FACE eased from the vertical face's ring 1 angle above the horizon (`atan2(height, radius)` of the end ring: `Scene_1`
+ * 31.7°) to the turned curve's own at the waist ring (35°, smoothstep) — so at max distance the piece and the camera behind it stand where they do over a
+ * vertical face (the camera 33.7°, the piece at the same place on the screen), and it comes down onto the face as it comes in toward a vertical one: the
+ * descent seen evenly (36° → 4° of apparent height). ⛔ The turned curve's 58° at ring 1: the camera ~60°, looking down the piece's line of descent — its
+ * apparent height above the face held at 17°–18° for 20 mm of dy, then fell to 2.5° in 12 mm. Below an underside, the same under it. `null`: in the waist.
+ */
+function topFaceApproach(cfg: GestureConfig, p: RigParams, v: number, turned: Vec3): Vec3 | null {
+  const { v2, v3 } = waistRings(cfg);
+  const lo = Math.min(v2, v3);
+  const hi = Math.max(v2, v3);
+  if (v > lo && v < hi) return null;
+  const near = v <= lo;
+  const span = near ? lo : 1 - hi;
+  if (!(span > 1e-9)) return null;
+  const d = Math.hypot(turned[0], turned[1], turned[2]);
+  const flat = Math.hypot(turned[0], turned[2]);
+  if (!(d > 1e-9) || !(flat > 1e-9)) return null;
+  const side = halfwayUp(cfg, p) >= 0 ? 1 : -1;
+  const edge = qRotate(p.q, orbitOffset(cfg, p.yaw0, near ? lo : hi, 1).offsetM);
+  const eEdge = Math.asin(Math.min(1, Math.abs(edge[1]) / (Math.hypot(edge[0], edge[1], edge[2]) || 1)));
+  const eEnd = near ? Math.atan2(Math.abs(cfg.orbitBottomHeightM), cfg.orbitBottomRadiusM) : Math.atan2(Math.abs(cfg.orbitTopHeightM), cfg.orbitTopRadiusM);
+  const t = near ? v / span : (1 - v) / span;
+  const e = eEnd + (eEdge - eEnd) * smooth(t);
+  const c = (d * Math.cos(e)) / flat;
+  return [turned[0] * c, side * d * Math.sin(e), turned[2] * c];
 }
 
 /**
