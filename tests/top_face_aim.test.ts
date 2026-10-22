@@ -66,17 +66,18 @@ describe("⭐⭐⭐ the camera's centre lifted through the waist (2026-10-22)", 
     }
   });
   it("⭐⭐ the lift is 0 outside halfway ring 1 → ring 3 and halfway ring 2 → ring 4 (the camera there as ever), even about the held height through the waist (at 50°: −7.5 cm at rings 3 and 2, +7.6 cm in the pause), mirrored below an underside; none on a vertical face", () => {
-    const top = rigTurnFor(base, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
-    const k = topFaceKnots(base);
-    for (const v of [0.1, k.from, k.to, 0.9]) expect(topFaceAimLift(base, top, top, 1, { yaw, v }, off, gap)).toBe(0);
-    const atLo = topFaceAimLift(base, top, top, 1, { yaw, v: k.lo }, off, gap);
-    const inPause = topFaceAimLift(base, top, top, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap);
+    const b50 = { ...base, topFaceCameraRingDeg: 50 }; // ⭐ the values below are a 50° ring's (the default 56° since 2026-10-22)
+    const top = rigTurnFor(b50, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+    const k = topFaceKnots(b50);
+    for (const v of [0.1, k.from, k.to, 0.9]) expect(topFaceAimLift(b50, top, top, 1, { yaw, v }, off, gap)).toBe(0);
+    const atLo = topFaceAimLift(b50, top, top, 1, { yaw, v: k.lo }, off, gap);
+    const inPause = topFaceAimLift(b50, top, top, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap);
     expect(atLo).toBeCloseTo(-0.0746, 3);
     expect(inPause).toBeCloseTo(0.0756, 3);
-    const under = rigTurnFor(base, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
-    expect(topFaceAimLift(base, under, under, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap)).toBeCloseTo(-inPause, 6);
-    const side = rigTurnFor(base, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
-    for (const v of [k.lo + 0.01, k.mid, k.hi - 0.01]) expect(topFaceAimLift(base, side, side, 1, { yaw, v }, off, gap)).toBe(0);
+    const under = rigTurnFor(b50, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
+    expect(topFaceAimLift(b50, under, under, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap)).toBeCloseTo(-inPause, 6);
+    const side = rigTurnFor(b50, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
+    for (const v of [k.lo + 0.01, k.mid, k.hi - 0.01]) expect(topFaceAimLift(b50, side, side, 1, { yaw, v }, off, gap)).toBe(0);
   });
   it("⭐ wired: the orbit camera placed and aimed about the lifted centre, read with the drawn pause share and the zoom's gap", () => {
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");

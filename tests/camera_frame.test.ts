@@ -217,7 +217,7 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
           const at = placeOf(u, pmid, span); // ⭐ (2026-10-21) the travel, through the pause
           const f = cameraFrameHeld(cfg, top, top, 1, { yaw, ...at }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
-          if (at.v > v3 && at.v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(50 + 1e-6);
+          if (at.v > v3 && at.v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(cfg.topFaceCameraRingDeg + 1e-6); // the ring (56° by default since 2026-10-22)
         }
       }
     }
@@ -257,13 +257,13 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(deg, 1);
     // an underside: the same ring below the face
     const under = rigTurnFor(cfg, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
-    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(-50, 1);
+    expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(-cfg.topFaceCameraRingDeg, 1);
     // a vertical face: untouched by the slider
     const side = rigTurnFor(cfg, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
     for (let v = v3; v <= v2; v += 0.01) expect(angle(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 35 }, side, side, 1, { yaw, v }, off, null).dir, cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: 85 }, side, side, 1, { yaw, v }, off, null).dir)).toBeLessThan(1e-5);
   });
   it("⭐ the ring's slider: CAMERA › CAMERA ORBIT AROUND CENTER, 50° by default, 35–85 validated", () => {
-    expect(DEFAULT_CONFIG.topFaceCameraRingDeg).toBe(50);
+    expect(DEFAULT_CONFIG.topFaceCameraRingDeg).toBe(56); // the owner, 2026-10-22 (50 before)
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 34 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 81 })).toThrow(); // ⭐ (2026-10-22) 80 at most (85 before)
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topFaceCameraRingDeg: 80 })).not.toThrow();
