@@ -1587,3 +1587,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   lower far out); the step lengths within 5 % on the outer stretches. ⛔ No device close. 2096 vectors.
 * ⭐ (2026-10-22, the owner: *"set the default top face camera ring to 56 degrees"*) `topFaceCameraRingDeg` **56** (50 since 2026-10-20). Four vectors that
   pinned the 50° ring now read the slider's value; the lift's values stay pinned on an explicit 50° fixture. 2096 vectors.
+* ⭐ (2026-10-22, the owner: *"don't recompute the 2D curve, just set the default top face camera ring to 52 degrees (just by moving the slider, nothing
+  else)"*) `topFaceCameraRingDeg` **52** — the slider's default only, nothing else changed. 2096 vectors.
