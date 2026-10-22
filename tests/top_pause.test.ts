@@ -60,7 +60,7 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     for (let u = mid; u <= mid + span + 1e-12; u += span / 40) {
       const p = piece(u);
       expect(Math.hypot(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2])).toBeLessThan(1e-12); // the piece does not move
-      expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(50, 6); // the camera on the 50° ring
+      expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 6); // the camera on the ring (56° by default)
     }
     let turned = az(cam(mid + span)) - az(cam(mid));
     turned -= 2 * Math.PI * Math.round(turned / (2 * Math.PI));

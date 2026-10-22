@@ -1585,3 +1585,5 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   screen; ring 4 above the face); the descent falling from the start and well under way by halfway to ring 3; the waist and the distances unchanged.
   Restated (`orbit_rig.test.ts`): a top face's rings 1 and 4 low; the turned curve on a top face only in the waist (outside it the same distance and heading,
   lower far out); the step lengths within 5 % on the outer stretches. ⛔ No device close. 2096 vectors.
+* ⭐ (2026-10-22, the owner: *"set the default top face camera ring to 56 degrees"*) `topFaceCameraRingDeg` **56** (50 since 2026-10-20). Four vectors that
+  pinned the 50° ring now read the slider's value; the lift's values stay pinned on an explicit 50° fixture. 2096 vectors.
