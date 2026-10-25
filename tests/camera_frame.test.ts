@@ -218,8 +218,11 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
           const at = placeOf(u, pmid, span); // ⭐ (2026-10-21) the travel, through the pause
           const f = cameraFrameHeld(cfg, top, top, 1, { yaw, ...at }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
-          // ⭐ (2026-10-25) off the pause BEHIND THE PIECE (its direction, the offsets within ~3°), in its half round at the ring's height
-          if (at.v > v3 && at.v < v2 && (at.pause === 0 || at.pause === 1)) expect(angle(f.dir, unit3(rigPlace(cfg, top, yaw, at.v, 1)))).toBeLessThan(4);
+          // ⭐ (2026-10-25) off the pause HELD — ring 3's camera before it, ring 2's after (the piece climbs and comes down under it); the pause turns it
+          if (at.v > v3 && at.v < v2 && (at.pause === 0 || at.pause === 1)) {
+            const held = cameraFrameHeld(cfg, top, top, 1, { yaw, v: at.pause === 0 ? v3 : v2 }, o, null).dir;
+            expect(angle(f.dir, held)).toBeLessThan(1e-4);
+          }
         }
       }
     }
@@ -257,7 +260,7 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     let k = fwd.length - 1;
     for (let u = v2 + span - 0.01 * (fwd.length - 1); u <= v2 + span + 1e-9; u += 0.01) expect(angle(frameU(cfg, u), fwd[k--]!)).toBeLessThan(1e-6);
     // the slider: the camera's height through the pause
-    for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(deg, 1);
+    for (const deg of [40, 50, 70]) expect(Math.asin(cameraFrameHeld({ ...cfg, topFaceCameraRingDeg: deg }, top, top, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(deg, 0); // within 0.5° (the pitch offset's correction, `topFaceFrame`)
     // an underside: the same ring below the face
     const under = rigTurnFor(cfg, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
     expect(Math.asin(cameraFrameHeld(cfg, under, under, 1, { yaw, v: pmid, pause: 0.5 }, off, null).dir[1]) * D).toBeCloseTo(-cfg.topFaceCameraRingDeg, 1);

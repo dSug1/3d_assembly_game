@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { elevationGainScale } from "../src/input/orbit";
-import { rigPlace, rigTurnFor, topFacePauseParts, UNTURNED } from "../src/input/orbit_rig";
+import { rigPlace, rigTurnFor, UNTURNED } from "../src/input/orbit_rig";
 import { cameraFrameHeld } from "../src/input/camera_frame";
 import { waistRings } from "../src/input/waist_view";
 import { pauseMid, pauseSpan, placeOf, settledPause, travelOf } from "../src/input/top_pause";
@@ -60,10 +60,9 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     for (let u = mid; u <= mid + span + 1e-12; u += span / 40) {
       const p = piece(u);
       expect(Math.hypot(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2])).toBeLessThan(1e-12); // the piece does not move
-      // ⭐ (2026-10-25) the camera on the ring through the pause's middle part (its half round); down from / up to the zenith in the first and last
-      const [pa, pb] = topFacePauseParts(cfg);
-      const share = (u - mid) / span;
-      if (share >= pa && share <= pa + pb) expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 6);
+      // ⭐ (2026-10-25) the camera at the ring's height at the middle of its half round, never above it
+      expect(Math.asin(cam(u)[1]) * D).toBeLessThan(cfg.topFaceCameraRingDeg + 1e-6);
+      if (Math.abs((u - mid) / span - 0.5) < 1e-6) expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 1);
     }
     let turned = az(cam(mid + span)) - az(cam(mid));
     turned -= 2 * Math.PI * Math.round(turned / (2 * Math.PI));

@@ -1621,3 +1621,29 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   wiring. Restated: the top face camera vectors (behind the piece off the pause, the pause's middle part at the ring, the yaw offset's fade ≤ 3°); vector #1's
   tilts 35°–75° (85° is a horizontal face's share — it pauses); the governor's free peak (≤ 50°/mm) and its governed extra (≤ 12 mm). ⛔ No device close.
   2097 vectors.
+
+### …the camera HELD while the piece climbs; the pause ONE movement — half round and up to the ring together (`1.0.83-`, 2026-10-25)
+
+> *"there are too many camera movements between the ring 2 and 3: the camera rises up towards the vertical of the piece, then goes down to the top face camera
+> ring, then half turn, then goes up to the vertical, then goes down again. I don't need the camera to rise up towards the vertical"* → *"I want the camera to
+> reach the top face camera ring and half turn rotate in the same time"* → *"and this should be done when the piece pauses, so there is no relative movement
+> of the piece and camera"* → *"deploy, update the md files"* — the owner. ⛔ Replaces the section above (the camera behind the piece to its zenith, the pause
+> in three parts), deployed earlier the same day.
+
+* ⭐⭐⭐ **Held** (`topFaceFrame`): over a horizontal face, from ring 3 to the zenith the camera IS ring 3's curve camera (the piece's direction there, the
+  offsets — `frameAtHeading`) and does not move while the piece climbs; from the zenith to ring 2 it is ring 2's, held while the piece comes down. The piece
+  moves only while the camera holds; the camera moves only while the piece waits.
+* ⭐⭐⭐ **The pause, one movement**: HALF ROUND the gizmo, the yaw offset's way (smoothstep), and AT THE SAME TIME up to `topFaceCameraRingDeg` at the middle of the
+  turn and back to ring 2's held height by its end (sin²) — the ring's height reached within ~0.1° (the pitch offset's correction). `topFacePauseParts` deleted.
+* ⭐⭐ **The lift** (`topFaceAimLift`): the camera's centre lifted along the vertical, solved place by place (bisection on −0.6 → 0.6 m, the slope's sign read
+  off the ends) so the piece keeps on the screen the place the camera BEHIND it would give it — measured RELATIVE to its actual place at the waist ring, so the
+  lift starts from exactly 0 (⛔ in the app the held camera, placed from the piece's anchor, and a target from its body were 0.7° apart at ring 3: the piece
+  shifted there); 0 at rings 3 and 2, ~8–9 cm in the pause (the camera orbits the waiting piece). `pieceScreenY` is the app's again.
+* Measured — the model (`Scene_1`, 52°): the camera 37.3° while the piece climbs 35° → 90° (the lift 0 → 8.8 cm, the piece −0.25° → 0.00° on the screen); the
+  pause 37.5° → 52.0° at its middle → 37.8°, −154° → 25° round; the fastest step 3.75° a 0.25 mm (ungoverned). The app (the gizmo on the floor): the piece
+  0.51° at ring 3 → 0.58° → 0.79° → 0.87°, then 0.87° all through the pause while the camera turns and rises; driven back mid-pause, the same; no error.
+* Vectors (`tests/top_face_aim.test.ts` rewritten, 3 of 4 red on the old code): the camera still while the piece climbs and comes down, never toward straight
+  above, at 35°/52°/80°; the pause one movement (the ring's height at the middle of the turn, half round, turning while rising) with no jump along the travel;
+  the piece's place held by the lift (0 at the rings, ~9 cm in the pause, below an underside the other way, none on a vertical face); the wiring. Restated:
+  the top face camera vector (held off the pause), the pause vector (never above the ring, at it mid-turn), the slider's height within 0.5°. ⛔ No device
+  close. 2097 vectors.
