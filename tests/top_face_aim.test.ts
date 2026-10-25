@@ -1,15 +1,15 @@
 /**
- * ⭐⭐⭐ THE CAMERA'S CENTRE LIFTED THROUGH THE WAIST (2026-10-22, the owner: *"the movement of the piece in screen view between ring 2 and ring 3 is not nice: it
- * looks like the piece goes up between ring 2 and zenith above gizmo, then freeze, then goes down between zenith and ring 3. All the more if top face camera
- * ring is low (35 degrees min slider). Modify the 2D curve of the camera and the top face camera ring so that there is no such jump back and forth of the piece
- * in the screen view around the waist of the dy travel."*) — `topFaceAimLift`, `pieceScreenY` (`input/orbit_rig.ts`).
+ * ⭐⭐⭐ THE TOP FACE CAMERA, BEHIND THE PIECE TO ITS ZENITH (2026-10-25, the owner: *"when the gizmo hosting face is horizontal, modify the 2D curve of the camera
+ * so that the camera follows the piece without change (same offset, same behind) until the piece reaches its zenith above the gizmo: at this zenith point, the
+ * piece pauses, the camera rises to reach the top face camera ring degrees and does the half turn"*) — `topFaceFrame`, `topFacePauseParts`, `topFaceAimLift`
+ * (`input/orbit_rig.ts`). ⛔ 2026-10-22: the camera eased to a level from halfway ring 1 → ring 3, the lift solved around the waist.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
-import { pieceScreenY, rigPlace, rigTurnFor, topFaceAimLift, topFaceKnots, UNTURNED } from "../src/input/orbit_rig";
+import { pieceScreenY, rigPlace, rigTurnFor, topFaceAimLift, topFaceKnots, topFacePauseParts, UNTURNED } from "../src/input/orbit_rig";
 import { cameraFrameHeld } from "../src/input/camera_frame";
 import { elevationGainScale } from "../src/input/orbit";
 import { pauseMid, pauseSpan, placeOf } from "../src/input/top_pause";
@@ -21,68 +21,68 @@ const D = 180 / Math.PI;
 const yaw = 0.4;
 const level = (a: number): Vec3 => [Math.cos(a), 0, Math.sin(a)];
 const gap = base.cameraRadiusOffsetMm / 1000;
+const unit = (a: Vec3): Vec3 => { const l = Math.hypot(...a); return [a[0] / l, a[1] / l, a[2] / l]; };
+const angle = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * D;
 
-describe("⭐⭐⭐ the camera's centre lifted through the waist (2026-10-22)", () => {
-  it("⭐⭐⭐ over a top face the piece HOLDS its height on the screen from ring 3 through the pause to ring 2 — at any ring height (35°–80°): no up, freeze, down (⛔ aimed at the gizmo: up 2.6° at 50°, 3.3° at 35°, in ~5 mm, then back); ⭐ (2026-10-22) and NO KINK anywhere — the camera's height and the piece's place change speed smoothly (⛔ at rings 3 and 2 the camera's height went from ~4°/mm to none: 2.8°/mm of change in a 0.1 mm step)", () => {
-    for (const E of [35, 50, 70, 80]) {
+describe("⭐⭐⭐ the top face camera, behind the piece to its zenith (2026-10-25)", () => {
+  it("⭐⭐⭐ between ring 3 and the zenith (and from it to ring 2) the camera is BEHIND THE PIECE — the piece's own direction, the offsets faded only as it climbs — up to ~89° straight above (⛔ eased to the ring's level)", () => {
+    for (const E of [35, 52, 80]) {
       const cfg = { ...base, topFaceCameraRingDeg: E };
       const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
       const k = topFaceKnots(cfg);
-      const span = pauseSpan(cfg), mid = pauseMid(cfg);
-      const yOf = (u: number): number => {
-        const at = { yaw, ...placeOf(u, mid, span) };
-        return pieceScreenY(rigPlace(cfg, top, yaw, at.v, 1), cameraFrameHeld(cfg, top, top, 1, at, off, null).dir, gap, topFaceAimLift(cfg, top, top, 1, at, off, gap)) * D;
-      };
-      const atRing3 = yOf(k.lo);
-      for (let u = k.lo; u <= k.hi + span + 1e-12; u += span / 60) expect(Math.abs(yOf(u) - atRing3)).toBeLessThan(0.05);
-      // and no reversal of its vertical motion from ring 1 to the middle of the pause
-      let dir = 0;
-      let rev = 0;
-      let prev = yOf(0);
-      for (let u = 0.0025; u <= mid + span / 2; u += 0.0025) {
-        const y = yOf(u);
-        if (Math.abs(y - prev) > 1e-3) {
-          const s = Math.sign(y - prev);
-          if (dir !== 0 && s !== dir) rev++;
-          dir = s;
-        }
-        prev = y;
+      for (const [v, pause] of [[k.lo + 0.001, 0], [k.lo + 0.03, 0], [k.mid - 0.01, 0], [k.mid, 0], [k.mid, 1], [k.mid + 0.01, 1], [k.hi - 0.001, 1]] as [number, number][]) {
+        const d = cameraFrameHeld(cfg, top, top, 1, { yaw, v, pause }, off, null).dir;
+        expect(angle(d, unit(rigPlace(cfg, top, yaw, v, 1)))).toBeLessThan(4);
       }
-      expect(rev).toBe(0);
-      // no kink: the largest change of speed between two 0.1 mm steps, the camera's height and the piece's height on the screen
-      const mm = cfg.boxGainPitch * cfg.gainOrbitElevation * elevationGainScale(cfg);
-      const e: number[] = [];
-      const y: number[] = [];
-      for (let u = 0; u <= 1 + span + 1e-9; u += 0.1 * mm) {
-        const at = { yaw, ...placeOf(u, mid, span) };
-        e.push(Math.asin(cameraFrameHeld(cfg, top, top, 1, at, off, null).dir[1]) * D);
-        y.push(yOf(u));
-      }
-      const kink = (a: number[]): number => { let m = 0; for (let i = 2; i < a.length; i++) m = Math.max(m, Math.abs((a[i]! - a[i - 1]!) - (a[i - 1]! - a[i - 2]!)) / 0.1); return m; };
-      expect(kink(e)).toBeLessThan(0.15); // °/mm (2.8 at rings 3 and 2 before)
-      expect(kink(y)).toBeLessThan(0.03); // 0.003–0.008 at 35°–70°; 0.028 at 80° where the far ease starts (its start speed trimmed so it cannot overshoot)
-      // the camera one level through the waist, the pause included (⛔ 36° at the rings lifted to the ring's at the middle)
-      for (let u = k.lo + 1e-6; u <= k.hi + span - 1e-6; u += span / 30) expect(Math.asin(cameraFrameHeld(cfg, top, top, 1, { yaw, ...placeOf(u, mid, span) }, off, null).dir[1]) * D).toBeCloseTo(E, 6);
+      expect(Math.asin(cameraFrameHeld(cfg, top, top, 1, { yaw, v: k.mid, pause: 0 }, off, null).dir[1]) * D).toBeGreaterThan(88); // at the zenith, the camera too
     }
   });
-  it("⭐⭐ the lift is 0 outside halfway ring 1 → ring 3 and halfway ring 2 → ring 4 (the camera there as ever), even about the held height through the waist (at 50°: −7.5 cm at rings 3 and 2, +7.6 cm in the pause), mirrored below an underside; none on a vertical face", () => {
-    const b50 = { ...base, topFaceCameraRingDeg: 50 }; // ⭐ the values below are a 50° ring's (the default 56° since 2026-10-22)
-    const top = rigTurnFor(b50, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
-    const k = topFaceKnots(b50);
-    for (const v of [0.1, k.from, k.to, 0.9]) expect(topFaceAimLift(b50, top, top, 1, { yaw, v }, off, gap)).toBe(0);
-    const atLo = topFaceAimLift(b50, top, top, 1, { yaw, v: k.lo }, off, gap);
-    const inPause = topFaceAimLift(b50, top, top, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap);
-    expect(atLo).toBeCloseTo(-0.0746, 3);
-    expect(inPause).toBeCloseTo(0.0756, 3);
-    const under = rigTurnFor(b50, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
-    expect(topFaceAimLift(b50, under, under, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap)).toBeCloseTo(-inPause, 6);
-    const side = rigTurnFor(b50, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
-    for (const v of [k.lo + 0.01, k.mid, k.hi - 0.01]) expect(topFaceAimLift(b50, side, side, 1, { yaw, v }, off, gap)).toBe(0);
+  it("⭐⭐⭐ the PAUSE in three parts — down to the ring, half round at it, up again — each its share by the angle it turns (52°: 0.2, 0.6, 0.2); no jump anywhere along the travel, the up continuous straight above", () => {
+    const [pa, pb] = topFacePauseParts(base);
+    const e = (base.topFaceCameraRingDeg * Math.PI) / 180;
+    const all = Math.PI - 2 * e + Math.PI * Math.cos(e);
+    expect(pa).toBeCloseTo((Math.PI / 2 - e) / all, 12);
+    expect(pb).toBeCloseTo((Math.PI * Math.cos(e)) / all, 12);
+    const top = rigTurnFor(base, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+    const span = pauseSpan(base), mid = pauseMid(base);
+    const mm = base.boxGainPitch * base.gainOrbitElevation * elevationGainScale(base);
+    let prev: { dir: Vec3; up: Vec3 } | null = null;
+    for (let u = 0; u <= 1 + span + 1e-9; u += 0.1 * mm) {
+      const f = cameraFrameHeld(base, top, top, 1, { yaw, ...placeOf(u, mid, span) }, off, null);
+      if (prev !== null) {
+        expect(angle(f.dir, prev.dir)).toBeLessThan(4); // ° a 0.1 mm step, ungoverned (the turn governor holds it to 12.5°/mm)
+        expect(angle(f.up, prev.up)).toBeLessThan(6);
+      }
+      prev = f;
+    }
   });
-  it("⭐ wired: the orbit camera placed and aimed about the lifted centre, read with the drawn pause share and the zoom's gap", () => {
+  it("⭐⭐ the piece WAITS on the screen through the pause — the camera's centre lifted to it while away from the zenith (0 → its height → 0), so it stays where it is while the camera turns round it", () => {
+    for (const E of [35, 52, 80]) {
+      const cfg = { ...base, topFaceCameraRingDeg: E };
+      const top = rigTurnFor(cfg, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+      const span = pauseSpan(cfg), mid = pauseMid(cfg);
+      const height = rigPlace(cfg, top, yaw, mid, 1)[1];
+      expect(topFaceAimLift(cfg, top, top, 1, { yaw, v: mid, pause: 0 }, off, gap)).toBe(0);
+      expect(topFaceAimLift(cfg, top, top, 1, { yaw, v: mid, pause: 1 }, off, gap)).toBe(0);
+      expect(topFaceAimLift(cfg, top, top, 1, { yaw, v: mid, pause: 0.5 }, off, gap)).toBeCloseTo(height, 9);
+      for (let u = mid; u <= mid + span + 1e-12; u += span / 50) {
+        const at = { yaw, ...placeOf(u, mid, span) };
+        const y = pieceScreenY(rigPlace(cfg, top, yaw, at.v, 1), cameraFrameHeld(cfg, top, top, 1, at, off, null).dir, gap, topFaceAimLift(cfg, top, top, 1, at, off, gap)) * D;
+        expect(Math.abs(y)).toBeLessThan(1); // within 1° of the centre all through the pause
+      }
+    }
+    // 0 off the pause; below an underside the other way; none on a vertical face
+    const top = rigTurnFor(base, yaw, 0.99, [0, 1, 0], level(yaw), UNTURNED);
+    const k = topFaceKnots(base);
+    for (const v of [0.1, k.lo, k.mid - 0.01, k.mid + 0.01, k.hi, 0.9]) expect(topFaceAimLift(base, top, top, 1, { yaw, v, pause: v < k.mid ? 0 : 1 }, off, gap)).toBe(0);
+    const under = rigTurnFor(base, yaw, 0.99, [0, -1, 0], level(yaw), UNTURNED);
+    expect(topFaceAimLift(base, under, under, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap)).toBeLessThan(-0.08);
+    const side = rigTurnFor(base, yaw, 0.99, level(yaw), level(yaw), UNTURNED);
+    expect(topFaceAimLift(base, side, side, 1, { yaw, v: k.mid, pause: 0.5 }, off, gap)).toBe(0);
+  });
+  it("⭐ wired: the orbit camera placed and aimed about the lifted centre, read with the drawn pause share and the piece as drawn", () => {
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
     expect(g).toContain("const lift = topFaceAimLift(st.cfg, st.rigFrom, st.rigTo, st.rigShare, { ...st.cameraLagged, pause: st.topPauseShown }, off, gapFull, placeAt);");
-    expect(g).toContain("const q = ringPlaceNow(st, st.cameraLagged!.yaw, v, st.boxOrbit!.zoom);"); // the piece as drawn: the orbit's zoom, its distance clamped
     expect(g).toContain("camAt = [c.x + o[0], c.y + lift + o[1], c.z + o[2]];");
     expect(g).toContain("lookAt = [c.x, c.y + lift, c.z];");
   });

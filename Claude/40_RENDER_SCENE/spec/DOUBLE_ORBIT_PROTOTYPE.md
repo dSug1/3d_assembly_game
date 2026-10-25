@@ -1589,3 +1589,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   pinned the 50° ring now read the slider's value; the lift's values stay pinned on an explicit 50° fixture. 2096 vectors.
 * ⭐ (2026-10-22, the owner: *"don't recompute the 2D curve, just set the default top face camera ring to 52 degrees (just by moving the slider, nothing
   else)"*) `topFaceCameraRingDeg` **52** — the slider's default only, nothing else changed. 2096 vectors.
+
+### …the camera BEHIND THE PIECE up to its zenith; the pause in three parts there (`1.0.83-`, 2026-10-25)
+
+> *"when the gizmo hosting face is horizontal, modify the 2D curve of the camera so that the camera follows the piece without change (same offset, same
+> behind) until the piece reaches its zenith above the gizmo: at this zenith point, the piece pauses, the camera rises to reach the top face camera ring
+> degrees and does the half turn"* → *"update the md files, deploy"* — the owner (behind a piece straight above the gizmo the camera is straight above too,
+> so it comes DOWN to the ring's height).
+
+* ⭐⭐⭐ **Behind the piece** (`topFaceFrame`, `input/orbit_rig.ts`): over a horizontal face, between ring 3 and the zenith, the camera is the vertical face's
+  rule exactly — the piece's direction with the owner's offsets (`frameAtHeading`; the offsets fade only above 60° as ever) — its heading the NEAR side's,
+  so it climbs with the piece to ~89° straight above without the top roll's half turn of the picture; from the zenith to ring 2 the same on the FAR side.
+  ⛔ Deleted: the camera eased to the ring's level from halfway ring 1 → ring 3 and held there through the waist (2026-10-22).
+* ⭐⭐⭐ **The pause in three parts** (`topFacePauseParts`): from the near side's frame at the zenith DOWN to `topFaceCameraRingDeg` on the near side; HALF
+  ROUND at that height, the yaw offset's way; UP to the far side's frame at the zenith — each its share of the pause by the angle it turns (52°: 0.20, 0.59,
+  0.20), smoothstep each; the up the view's upright one at its own azimuth, defined straight above too, so it meets the near and far sides' frames there.
+* ⭐⭐ **The lift to the waiting piece** (`topFaceAimLift`): 0 off the pause; in it the piece's height above the gizmo (its body as drawn), eased in while the
+  camera comes down, held through the half round, eased out as it goes up — the piece stays where it is on the screen while the camera turns round it.
+  ⛔ Deleted: the lift solved around the waist for the piece's height on the screen (2026-10-22); `pieceScreenY` stays as the vectors' instrument (declared
+  in `unwired_debt.test.ts`).
+* ⭐ **Through a gizmo change** each end's frame hands over to the BLENDED curve's own frame (the end fading out within the first tenth of the change — the two
+  are the same off the zenith and the pause), so a piece crossing the zenith with the pause off never jumps between the near and far sides (their frames
+  meet straight above with opposite ups); no pause share given (a sweep of the ring alone): the curve's frame.
+* Measured — the model (`Scene_1`, a top face, 52°): the camera 37° at ring 3 → 82° → ~89° at the zenith, behind the piece (its direction within the offsets'
+  ~3°); the pause: down to 52° with the lift 0 → 9 cm, half round −154° → 25°, up again; the piece within 0.5° of the screen's centre all through; the
+  fastest step 6.3° a 0.25 mm in the half round (ungoverned; the 12.5°/mm governor holds it — the governed pause ~10.5 mm longer than free, the camera now
+  turning ~187° in it, 111° before). The app (the gizmo on the floor): the camera 37° → 51° → 76° → 89° up to the zenith, then 55° (from the gizmo, about the
+  lifted centre) round the waiting piece, the piece at 0.00° on the screen through the half round, back up toward the zenith driven back; no error.
+* Vectors (`tests/top_face_aim.test.ts` rewritten, 3 of 4 red on the old code): behind the piece up to the zenith at 35°/52°/80°; the pause's parts and no jump
+  along the whole travel; the piece held through the pause by the lift (0 → its height → 0), below an underside the other way, none on a vertical face; the
+  wiring. Restated: the top face camera vectors (behind the piece off the pause, the pause's middle part at the ring, the yaw offset's fade ≤ 3°); vector #1's
+  tilts 35°–75° (85° is a horizontal face's share — it pauses); the governor's free peak (≤ 50°/mm) and its governed extra (≤ 12 mm). ⛔ No device close.
+  2097 vectors.

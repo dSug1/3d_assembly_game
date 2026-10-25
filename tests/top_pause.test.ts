@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { elevationGainScale } from "../src/input/orbit";
-import { rigPlace, rigTurnFor, UNTURNED } from "../src/input/orbit_rig";
+import { rigPlace, rigTurnFor, topFacePauseParts, UNTURNED } from "../src/input/orbit_rig";
 import { cameraFrameHeld } from "../src/input/camera_frame";
 import { waistRings } from "../src/input/waist_view";
 import { pauseMid, pauseSpan, placeOf, settledPause, travelOf } from "../src/input/top_pause";
@@ -60,7 +60,10 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     for (let u = mid; u <= mid + span + 1e-12; u += span / 40) {
       const p = piece(u);
       expect(Math.hypot(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2])).toBeLessThan(1e-12); // the piece does not move
-      expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 6); // the camera on the ring (56° by default)
+      // ⭐ (2026-10-25) the camera on the ring through the pause's middle part (its half round); down from / up to the zenith in the first and last
+      const [pa, pb] = topFacePauseParts(cfg);
+      const share = (u - mid) / span;
+      if (share >= pa && share <= pa + pb) expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 6);
     }
     let turned = az(cam(mid + span)) - az(cam(mid));
     turned -= 2 * Math.PI * Math.round(turned / (2 * Math.PI));
@@ -68,8 +71,9 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     // before the pause the camera does not go round (its azimuth fixed, behind the piece); after it, nor
     const { v2, v3 } = waistRings(cfg);
     const lo = Math.min(v2, v3), hi = Math.max(v2, v3);
-    for (let u = lo; u <= mid; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(lo))))).toBeLessThan(1e-9);
-    for (let u = mid + span; u <= hi + span; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(hi + span))))).toBeLessThan(1e-9);
+    // ⭐ (2026-10-25) behind the piece up to the zenith: only the yaw offset's fade as the camera climbs (≤ 2.5°)
+    for (let u = lo; u <= mid; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(lo))))).toBeLessThan(Math.sin((3 * Math.PI) / 180));
+    for (let u = mid + span; u <= hi + span; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(hi + span))))).toBeLessThan(Math.sin((3 * Math.PI) / 180));
     // the same frames driven back and forth: a function of the travel alone
     for (const u of [0.3, mid + span * 0.37, mid + span * 0.9, 0.7 + span]) {
       const a = cam(u);
