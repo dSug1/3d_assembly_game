@@ -1647,3 +1647,36 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the piece's place held by the lift (0 at the rings, ~9 cm in the pause, below an underside the other way, none on a vertical face); the wiring. Restated:
   the top face camera vector (held off the pause), the pause vector (never above the ring, at it mid-turn), the slider's height within 0.5°. ⛔ No device
   close. 2097 vectors.
+
+### …STARTED AGAIN: the vertical face's curve turned 90°, the camera behind the piece, a ROLL in the pause (`1.0.83-`, 2026-10-25)
+
+> *"i do not like this implementation at all. let's start again from the beginning: for the case when the gizmo hosting face is horizontal: copy the 2D curve
+> of when the gizmo hosting face is vertical, and rotate it 90 degrees. Modify it so that during ring 1 and ring 4 the camera offset is the same in world
+> coordinates as the camera offset when gizmo hosting face is vertical. add a pause when the piece is at the exact middle between ring 2 and ring 3, so that
+> the camera rolls 180 degrees on dy input during this piece pause. That will keep the assembly upside up in the screen view at all times. taylor the roll
+> rotation by dy input mm so that the camera angular speed per dy mm is roughly the same as during orbit. Make sure the roll is reverted if the dy input is
+> reverted."* — the owner. ⛔ Replaces every top face section since 2026-10-20 (the camera ring, the level, the lift, the low approach, the held camera).
+
+* ⭐⭐⭐ **The curve**: over a horizontal face the piece rides the vertical face's 2D curve turned 90° (`rigPlace`, as on 2026-10-16) — ring 1 and ring 4 high on
+  either side, the zenith 9 cm above the gizmo at the middle of rings 2 and 3. ⛔ Deleted: `topFaceApproach` (2026-10-22, the outer stretches low).
+* ⭐⭐⭐ **The camera** (`topFaceFrame`): the vertical face's rule — behind the piece, the owner's offsets in the WORLD's frame (2.5° about the vertical, 2° in
+  elevation, `frameAtHeading`), so at rings 1 and 4 the offset is the vertical face's exactly; the near side's heading up to the zenith, the far side's from it
+  (no half turn of the picture on the way).
+* ⭐⭐⭐ **The roll in the pause** (`input/top_pause.ts`, the pause span as before): straight above the waiting piece the camera ROLLS 180° about its view
+  (smoothstep, the yaw offset's way), from the near side's up to the far side's — the assembly upside up on the screen all the way. Its pace is the orbit's:
+  the turn governor (`orbitTurnCapDegMm`, 12.5°/mm) reads the roll as a turn of the camera, as it reads the dy orbit's (12.6°/mm at its peak; dx 5.1°/mm), so
+  the 180° takes ~16 mm of dy. A function of the travel: dy reversed anywhere unrolls it. `rollLimitedUp` counts the pause share as travel
+  (`ROLL_PER_PAUSE`, 1440°), or the roll crawled at the 30°/s settle.
+* ⛔ Deleted: `topFaceAimLift`, `pieceScreenY`, `topFacePauseParts`, the slider `topFaceCameraRingDeg` (CAMERA › CAMERA ORBIT AROUND CENTER) — the camera has no
+  ring of its own now. Through a gizmo change each end's frame still hands over to the blended curve's (`rigFrameBetween`).
+* Measured — the app (`Scene_1`, the gizmo on the floor, dy in 0.25 mm steps): the camera 36° at ring 3, then 48° → 67° → 88° over the last ~5 mm before the
+  zenith (behind the piece climbing 35° → 90°); the pause 16 mm, the up −87° → 180° → 93° round, the piece still at the screen's centre (≤ 0.07°); upright
+  again after it (36° at ring 2); driven back, the same frames unrolled; no error.
+* ⚠ Open (proposed to the owner): the straight-down view at the zenith is back (the 2026-10-20 complaint), and the camera climbs ~50° in the last ~5 mm before
+  the pause, because rings 2 and 3 sit only 35° above the face — moving them toward the normal over a horizontal face would spread that climb; dx in the
+  pause (straight above, it is a roll too); a gizmo change mid-pause.
+* Vectors: `tests/top_face_approach.test.ts` rewritten (the turned curve at every place; the world offset at rings 1 and 4 — the latter true of the old code
+  too); the roll in the pause (`camera_frame.test.ts`: straight above, half round, the yaw offset's way, no jump at the ends, unrolled driven back, an
+  underside the same below); the pause vector (`top_pause.test.ts`: the view hardly moves, the up half round, behind the piece off it); upright off the pause,
+  behind the piece (restated); the wiring (the last frame's pause share) — 5 red on the old code. `tests/top_face_aim.test.ts` deleted with its subject;
+  `orbit_rig.test.ts`'s low-approach restatements reverted. ⛔ No device close. 2091 vectors.

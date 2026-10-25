@@ -24,6 +24,8 @@ export const ROLL_PER_DIR = 2;
 /** ⭐ …or per unit of the ring parameter travelled (°): 51° per 0.25 mm of dy on `Scene_1` — ⭐ (2026-10-18) THE TOP ROLL's half-round over ±20° of
  * straight above peaks at ~39° a 0.25 mm step (⛔ 2 500: it capped the designed turn — the drawn up 15° behind). */
 export const ROLL_PER_V = 8000;
+/** ⭐ …or per unit of the top face pause's share (°) — ⭐ (2026-10-25) the camera's half-round roll in the pause, with headroom (⛔ the pause moves no ring: the roll crawled at the settle rate). */
+export const ROLL_PER_PAUSE = 1440;
 /** ⭐ …or per degree of dx (°/°). */
 export const ROLL_PER_YAW = 2;
 /** ⭐ …plus this much a SECOND (°), so a camera left still settles upright — whatever the frame rate. */
@@ -60,7 +62,9 @@ export function rollLimitedUp(prev: CameraFramePrev, dir: Vec3, target: Vec3, ca
   if (carried === null || goal === null) return target;
   const turned = Math.acos(Math.max(-1, Math.min(1, dotOf(unitOf(prev.dir) ?? d, d))));
   const travelDeg =
-    cam && prev.cam ? ROLL_PER_V * Math.abs(cam.v - prev.cam.v) + ROLL_PER_YAW * ((Math.abs(wrapPi(cam.yaw - prev.cam.yaw)) * 180) / Math.PI) : 0;
+    cam && prev.cam
+      ? ROLL_PER_V * Math.abs(cam.v - prev.cam.v) + ROLL_PER_YAW * ((Math.abs(wrapPi(cam.yaw - prev.cam.yaw)) * 180) / Math.PI) + ROLL_PER_PAUSE * Math.abs((cam.pause ?? 0) - (prev.cam.pause ?? 0))
+      : 0;
   const allowed = Math.max(ROLL_PER_DIR * turned, (travelDeg * Math.PI) / 180) + (ROLL_SETTLE_DEG_S * Math.max(0, dtMs) * Math.PI) / 180 / 1000;
   const phi = Math.atan2(dotOf(crossOf(carried, goal), d), dotOf(carried, goal));
   if (Math.abs(phi) <= allowed) return goal;
