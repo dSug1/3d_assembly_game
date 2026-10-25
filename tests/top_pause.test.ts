@@ -51,32 +51,31 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     expect(settledPause(0.8, 0.2, mid)).toBe(1);
     expect(settledPause(mid, 0.42, mid)).toBe(0.42);
   });
-  it("⭐⭐⭐ over a top face: the piece WAITS through the pause while the camera goes HALF ROUND (behind the piece before, on the far side after); dy reversed anywhere retraces it", () => {
+  it("⭐⭐⭐ over a top face: the piece WAITS through the pause while the camera, straight above it, ROLLS half round (⭐ 2026-10-25; ⛔ went half round the gizmo on a ring); behind the piece off the pause; dy reversed anywhere retraces it", () => {
     const at = (u: number) => placeOf(u, mid, span);
     const piece = (u: number) => rigPlace(cfg, top, yaw, at(u).v, 1);
-    const cam = (u: number) => cameraFrameHeld(cfg, top, top, 1, { yaw, ...at(u) }, off, null).dir;
-    const az = (d: Vec3) => Math.atan2(d[2], d[0]);
+    const cam = (u: number) => cameraFrameHeld(cfg, top, top, 1, { yaw, ...at(u) }, off, null);
     const p0 = piece(mid);
+    const d0 = cam(mid).dir;
     for (let u = mid; u <= mid + span + 1e-12; u += span / 40) {
       const p = piece(u);
       expect(Math.hypot(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2])).toBeLessThan(1e-12); // the piece does not move
-      // ⭐ (2026-10-25) the camera at the ring's height at the middle of its half round, never above it
-      expect(Math.asin(cam(u)[1]) * D).toBeLessThan(cfg.topFaceCameraRingDeg + 1e-6);
-      if (Math.abs((u - mid) / span - 0.5) < 1e-6) expect(Math.asin(cam(u)[1]) * D).toBeCloseTo(cfg.topFaceCameraRingDeg, 1);
+      const d = cam(u).dir;
+      expect(Math.acos(Math.min(1, d[0] * d0[0] + d[1] * d0[1] + d[2] * d0[2])) * D).toBeLessThan(3); // the view hardly moves: a roll about it
     }
-    let turned = az(cam(mid + span)) - az(cam(mid));
-    turned -= 2 * Math.PI * Math.round(turned / (2 * Math.PI));
-    expect(Math.abs(Math.abs(turned) - Math.PI)).toBeLessThan(0.02); // half round
-    // before the pause the camera does not go round (its azimuth fixed, behind the piece); after it, nor
+    const u0 = cam(mid).up, u1 = cam(mid + span).up;
+    expect(u0[0] * u1[0] + u0[1] * u1[1] + u0[2] * u1[2]).toBeLessThan(-0.99); // the up turned half round
+    // off the pause the camera is behind the piece: its view within the owner's offsets of the piece's direction
     const { v2, v3 } = waistRings(cfg);
     const lo = Math.min(v2, v3), hi = Math.max(v2, v3);
-    // ⭐ (2026-10-25) behind the piece up to the zenith: only the yaw offset's fade as the camera climbs (≤ 2.5°)
-    for (let u = lo; u <= mid; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(lo))))).toBeLessThan(Math.sin((3 * Math.PI) / 180));
-    for (let u = mid + span; u <= hi + span; u += 0.005) expect(Math.abs(Math.sin(az(cam(u)) - az(cam(hi + span))))).toBeLessThan(Math.sin((3 * Math.PI) / 180));
+    for (const u of [lo, (lo + mid) / 2, mid - 1e-6, mid + span + 1e-6, (mid + hi) / 2 + span, hi + span]) {
+      const p = piece(u), n = Math.hypot(...p), d = cam(u).dir;
+      expect(Math.acos(Math.min(1, (p[0] * d[0] + p[1] * d[1] + p[2] * d[2]) / n)) * D).toBeLessThan(3.5);
+    }
     // the same frames driven back and forth: a function of the travel alone
     for (const u of [0.3, mid + span * 0.37, mid + span * 0.9, 0.7 + span]) {
-      const a = cam(u);
-      const b = cam(travelOf(at(u).v, at(u).pause, mid, span));
+      const a = cam(u).up;
+      const b = cam(travelOf(at(u).v, at(u).pause, mid, span)).up;
       expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeLessThan(1e-12);
     }
     // a vertical face: no pause — its frames read nothing of the share

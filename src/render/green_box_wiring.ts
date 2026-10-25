@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed, topFaceAimLift } from "../input/orbit_rig";
+import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
 import { cameraFrameHeld } from "../input/camera_frame";
@@ -1184,24 +1184,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let lookAt: Vec3;
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
   const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);
-  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: st.cameraLagged }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`)
+  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: { ...st.cameraLagged, pause: st.topPauseShown } }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
-    // ⭐⭐⭐ (2026-10-22) over a horizontal face, through the waist, the camera's centre LIFTED off the gizmo so the piece holds its height on the screen (`topFaceAimLift`)
-    // the piece as the eye follows it: its BODY's centre — the anchor (its resting face's centre: the curve's place at the orbit's zoom, its distance clamped)
-    // less the resting face's offset from the mesh's centre, turned as the piece stands
-    const op = st.orbitPieces.find((x) => x.mesh === box);
-    const rq = box.rotationQuaternion;
-    const body: Vec3 = op === undefined || rq === null ? [0, 0, 0] : scale(qRotate([rq.w, rq.x, rq.y, rq.z], op.restingCentre), -1);
-    const placeAt = (v: number): Vec3 => {
-      const q = ringPlaceNow(st, st.cameraLagged!.yaw, v, st.boxOrbit!.zoom);
-      const r = Math.hypot(q[0], q[1], q[2]);
-      const kk = r > 1e-9 ? clampPieceRadiusM(r, st.cfg) / r : 1;
-      return [q[0] * kk + body[0], q[1] * kk + body[1], q[2] * kk + body[2]];
-    };
-    const lift = topFaceAimLift(st.cfg, st.rigFrom, st.rigTo, st.rigShare, { ...st.cameraLagged, pause: st.topPauseShown }, off, gapFull, placeAt);
-    camAt = [c.x + o[0], c.y + lift + o[1], c.z + o[2]];
-    lookAt = [c.x, c.y + lift, c.z];
+    camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
+    lookAt = [c.x, c.y, c.z];
     if (cr !== null) {
       // ⭐⭐ (2026-10-07) the way back: AROUND THE PIECE, its difference from this home pose (seen from the piece) fading out, its view
       // aimed at a point sliding from the piece to the centre — ONE progress, finger travel over `pieceOrbitReturnMm` (60 mm)

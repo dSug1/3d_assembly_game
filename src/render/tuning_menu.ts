@@ -192,7 +192,6 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             // ⭐⭐ (2026-10-17, the owner: *"trigger the semi-isometric view during ring 2 and 3 travel only if the normal of the gizmo-supporting face is beyond a certain cone"*)
             tunable(st, "top roll band (°): the half-turn only this near straight above", "topRollBandDeg", 2, 60, 1),
-            tunable(st, "top face camera ring (°): around the waist, the camera this far up (round the gizmo in the pause)", "topFaceCameraRingDeg", 35, 80, 1),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)

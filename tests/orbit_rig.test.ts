@@ -16,7 +16,6 @@ import { rigFrameBetween, rigTurnFor } from "../src/input/orbit_rig";
 import { topRollWidth } from "../src/input/orbit_rig";
 import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
 import { fourRingLayout } from "../src/input/orbit";
-import { waistRings } from "../src/input/waist_view";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
@@ -102,10 +101,8 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
         const da = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
         const dc = Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]);
         const ua = orbitOffset(cfg, yaw, v, 1).offsetM, ub = orbitOffset(cfg, yaw, v + 0.001, 1).offsetM;
-        // ⭐ the same step as on the unturned rig (a rotation keeps every distance along the curve) — ⭐ (2026-10-22) within 5 % on a top face's outer
-        // stretches, which come in low (`topFaceApproach`: the same distances, a slowly changing angle)
-        const du = Math.hypot(ua[0] - ub[0], ua[1] - ub[1], ua[2] - ub[2]);
-        expect(Math.abs(da - du)).toBeLessThan(0.05 * du + 1e-9);
+        // ⭐ the same step as on the unturned rig (a rotation keeps every distance along the curve) — ⭐ (2026-10-25) a top face's too again (⛔ 2026-10-22: its outer stretches low)
+        expect(da).toBeCloseTo(Math.hypot(ua[0] - ub[0], ua[1] - ub[1], ua[2] - ub[2]), 9);
         worst = Math.max(worst, dc / 0.001);
       }
     }
@@ -117,13 +114,7 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       for (const v of [0, 0.4, waistV(cfg), 0.7, 1]) {
         const a = rigPlace(cfg, p, yaw0, v, 1);
         const b = qRotate(p.q, orbitOffset(cfg, yaw0, v, 1).offsetM);
-        const { v2: w2, v3: w3 } = waistRings(cfg);
-        if (n[1] === 1 && (v <= Math.min(w2, w3) || v >= Math.max(w2, w3))) {
-          // ⭐ (2026-10-22) a top face's outer stretches: the low approach — the turned curve's distance and heading, its own angle above the face
-          expect(Math.hypot(...a)).toBeCloseTo(Math.hypot(...b), 12);
-          expect(Math.atan2(a[2], a[0])).toBeCloseTo(Math.atan2(b[2], b[0]), 9);
-          if (v === 0 || v === 1) expect(a[1]).toBeLessThan(b[1] - 1); // far out much lower (3.15 m above the face, ⛔ 5.1)
-        } else for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(b[i]!, 12);
+        for (let i = 0; i < 3; i++) expect(a[i]).toBeCloseTo(b[i]!, 12); // ⭐ (2026-10-25) a top face's too again (⛔ 2026-10-22: its outer stretches low)
       }
       expect(angle(rigPlace(cfg, p, yaw0, waistV(cfg), 1), n)).toBeLessThan(1e-4);
     }
@@ -138,16 +129,14 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
       }
     }
   });
-  it("⭐⭐⭐ a TOP face: halfway between rings 2 and 3 the piece passes over the gizmo along the face's normal; rings 1 and 4 on either side — ⭐ (2026-10-22) LOW, at the vertical face's ring angle above the face (31.7°, ⛔ 58°), at their distance; rings 2 and 3 just above the face", () => {
+  it("⭐⭐⭐ a TOP face: halfway between rings 2 and 3 the piece passes over the gizmo along the face's normal; rings 1 and 4 high on either side (⭐ 2026-10-25 again: the vertical face's curve turned 90°; ⛔ 2026-10-22 low), rings 2 and 3 just above the face", () => {
     const p = turnFor(0.4, [0, 1, 0]);
     const at = rigPlace(cfg, p, 0.4, waistV(cfg), 1);
     expect(at[1]).toBeCloseTo(0.09, 9); // the waist's radius, along the normal
     expect(Math.hypot(at[0], at[2])).toBeLessThan(1e-9);
     const r1 = rigPlace(cfg, p, 0.4, 1, 1), r4 = rigPlace(cfg, p, 0.4, 0, 1);
-    // ⭐ (2026-10-22) the top face approach, low: the end ring's angle above the horizon, now above the face (`topFaceApproach`); the distance the ring's
-    expect(r1[1]).toBeCloseTo(cfg.orbitTopHeightM, 9);
-    expect(Math.hypot(...r1)).toBeCloseTo(Math.hypot(cfg.orbitTopRadiusM, cfg.orbitTopHeightM), 9);
-    expect(r4[1]).toBeCloseTo(Math.abs(cfg.orbitBottomHeightM), 9);
+    expect(r1[1]).toBeCloseTo(cfg.orbitTopRadiusM, 9);
+    expect(r4[1]).toBeCloseTo(cfg.orbitBottomRadiusM, 9);
     expect(r1[0] * r4[0] + r1[2] * r4[2]).toBeLessThan(0); // on either side
   });
   it("⭐⭐⭐ THE CAMERA DERIVED FROM THE PIECE (the owner: *\"Can you synchronize all movements so that this disappear ?\"*): its direction IS the piece's at EVERY v, through the crossing too — ⛔ a heading of its own swung sideways: the Z-shape", () => {
