@@ -125,7 +125,7 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
     expect(w).toMatch(/st\.orbitInertia\.release\(now\);/);
     expect(w).toMatch(/if \(st\.orbitMotion === null\) st\.orbitInertia\.stop\(\);/);
     expect(w).toMatch(/st\.orbitInertia\.step\(dtSec \* 1000, inertiaTauMs\(st\.greenPieceVolumeM3, st\.cfg\.orbitInertiaGain\)\)/);
-    expect(w).toMatch(/st\.orbit\.nudge\(d\.dYaw, orbitTravelStep\(st, d\.dV, orbitDvPerMm\(st\)\)\.dv\);/); // ⭐ (2026-10-21) on the travel, through the top face pause // ⭐ (2026-10-19) the coast governed
+    expect(w).toMatch(/const dv = orbitTravelStep\(st, d\.dV, orbitDvPerMm\(st\)\)\.dv;\s*st\.orbit\.nudge\(pauseYawStep\(topPauseOn\(st\), st\.topPause, d\.dYaw\), dv\);/); // ⭐ (2026-10-25) dx held mid-roll // ⭐ (2026-10-21) on the travel, through the top face pause // ⭐ (2026-10-19) the coast governed
     // ⭐ the piece in use's volume (2026-10-04: the green frustum's, or the turquoise prism's), set when it is spawned
     expect(w).toMatch(/st\.orbitPieces\.push\(\{ mesh: box, faces: piecesFacesOf\(box\), volumeM3: frustumVolumeM3\(w, h, d, OBJECT_TOP_SCALE\), \.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/st\.greenPieceVolumeM3 = p\.volumeM3;/);

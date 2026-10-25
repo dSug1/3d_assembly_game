@@ -700,6 +700,8 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-10-21) THE TOP FACE PAUSE's share (`input/top_pause.ts`) as the input leaves it, and as the camera draws it (eased by `boxSmoothMs`, as the piece) */
   topPause: number;
   topPauseShown: number;
+  /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
+  gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
   /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */

@@ -290,7 +290,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   });
   it("⭐⭐⭐ the camera DERIVED FROM THE PIECE (`cameraFrameNow` on the same blended turn — `rigNow`), its up set from it", () => {
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);");
+    expect(g).toContain("const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);");
     expect(g).toContain("const o = cameraOffsetAt(camFrame.dir,");
     expect(g.split("const ring = anglesOf(camFrame.dir);").length - 1).toBe(2);
     expect(g).toContain("st.camera.upVector = new Vector3(up[0], up[1], up[2]);");
