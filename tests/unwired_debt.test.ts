@@ -78,6 +78,10 @@ const PENDING: Record<string, string> = {
   connectorWorldPose: "3D2 — a mate is between CONNECTORS, and this places them",
   // ── `3D2`/`3D3`: the mate geometry, built and vectored ahead of the gesture. ──
   testMate: "3D2 — the anti-parallel test a snap must pass before it fires",
+  // ── 2026-10-25: the top face camera's instrument. ──
+  pieceScreenY:
+    "the piece's height on the screen for a camera about the lifted centre — the top face camera's vectors measure the hold with it; its one app caller, " +
+    "the 2026-10-22 lift's solve, was replaced on 2026-10-25 by the lift to the waiting piece (`topFaceAimLift`)",
   mateResidual: "3D3 — breaking reads the RESIDUAL, never the observed gap (rule 4)",
   // ── `D49`: the surface-gap rule. Two halves of it are deliberately ahead. ────
   // ⛔⛔ BOTH ARE *PENDING*, NOT *STALE*, AND THE DISTINCTION IS THIS FILE'S WHOLE POINT.

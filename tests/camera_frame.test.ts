@@ -113,7 +113,8 @@ describe("⭐⭐⭐ the orbit — the second Fable audit (2026-10-17)", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const target = (st: any, yaw: number, v: number): { dir: Vec3; up: Vec3 } => cameraFrameNow({ ...st, cameraPrev: null }, { yaw, v }, off);
   it("⭐⭐⭐ #1: on a face tilted 35°–85° the piece passes over the gizmo and the swing turns the picture — the drawn up KEEPS UP with it (⛔ bounded by the view's turn, which vanishes over the gizmo: 126°–174° behind, unwinding over seconds)", () => {
-    for (const th of [35, 45, 50, 55, 65, 75, 85]) {
+    // ⭐ (2026-10-25) 85° is a HORIZONTAL face's share (within 5° of straight up): it pauses at the zenith, its camera the top face's (`top_face_approach.test.ts`)
+    for (const th of [35, 45, 50, 55, 65, 75]) {
       const y0 = 0.4;
       const a = rigTurnFor(cfg, y0, 0.99, tilted(y0, th), level(y0), UNTURNED);
       const st = stub(a, a, 1);
@@ -208,7 +209,7 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
   // ⭐⭐⭐ (2026-10-20) a horizontal face now has THE TOP FACE CAMERA RING between rings 3 and 2 — the camera never over the top, so the top roll's two vectors
   // (upright in the curve's plane outside the band; the half-round within it) are restated as the ring's, stronger: upright EVERYWHERE
   const upright = (d: Vec3): Vec3 => unit3([-d[1] * d[0], 1 - d[1] * d[1], -d[1] * d[2]]);
-  it("⭐⭐⭐ the TOP FACE CAMERA RING: over a horizontal face the camera is UPRIGHT all the way, rings 1 → 4 — no roll, vertical edges vertical — and at most the ring's 50° above the face between rings 3 and 2 (⛔ straight down at the top, the picture rolled half a round there)", () => {
+  it("⭐⭐⭐ the TOP FACE CAMERA: over a horizontal face the camera is UPRIGHT all the way, rings 1 → 4 — no roll, vertical edges vertical — ⭐ (2026-10-25) behind the piece up to its zenith and from it (⛔ the picture rolled half a round there)", () => {
     for (const yaw of [0.4, 2.0, -1.1]) {
       for (const o of [{ yawRad: 0, pitchRad: 0 }, off]) {
         for (const r of sweep(yaw, o)) expect(r.lag).toBeLessThan(1e-3); // the drawn up IS the target's
@@ -217,7 +218,8 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
           const at = placeOf(u, pmid, span); // ⭐ (2026-10-21) the travel, through the pause
           const f = cameraFrameHeld(cfg, top, top, 1, { yaw, ...at }, o, null);
           expect(angle(f.up, upright(f.dir))).toBeLessThan(0.01);
-          if (at.v > v3 && at.v < v2) expect(Math.asin(f.dir[1]) * D).toBeLessThan(cfg.topFaceCameraRingDeg + 1e-6); // the ring (56° by default since 2026-10-22)
+          // ⭐ (2026-10-25) off the pause BEHIND THE PIECE (its direction, the offsets within ~3°), in its half round at the ring's height
+          if (at.v > v3 && at.v < v2 && (at.pause === 0 || at.pause === 1)) expect(angle(f.dir, unit3(rigPlace(cfg, top, yaw, at.v, 1)))).toBeLessThan(4);
         }
       }
     }
@@ -242,8 +244,9 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     };
     const plus = turn(cfg, pmid, pmid + span); // the pause: the piece waits, the camera turns
     expect(Math.abs(Math.abs(plus) - Math.PI)).toBeLessThan(0.02); // half a round
-    expect(Math.abs(turn(cfg, v3, pmid))).toBeLessThan(1e-9); // ring 3 → the middle: no turn (behind the piece)
-    expect(Math.abs(turn(cfg, pmid + span, v2 + span))).toBeLessThan(1e-9); // the middle → ring 2: no turn
+    // ring 3 → the middle and the middle → ring 2: no turn but the yaw offset's fade as the camera, behind the piece, climbs toward straight above (≤ 2.5°)
+    expect(Math.abs(turn(cfg, v3, pmid))).toBeLessThan((3 * Math.PI) / 180);
+    expect(Math.abs(turn(cfg, pmid + span, v2 + span))).toBeLessThan((3 * Math.PI) / 180);
     const minus = turn({ ...cfg, cameraYawOffsetDeg: -2.5 }, pmid, pmid + span);
     expect(Math.sign(minus)).toBe(-Math.sign(plus)); // the other way with the offset on the other side
     // at rings 3 and 2 exactly the curve's camera (just inside = just outside)

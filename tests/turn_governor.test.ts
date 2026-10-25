@@ -68,11 +68,11 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
     expect(span / dvPerMm).toBeCloseTo(11.11, 1); // the pause: a vertical face's ring 2 → 3 travel
     const free = sweepU(null);
     expect(free.peak).toBeGreaterThan(20);
-    expect(free.peak).toBeLessThan(30);
+    expect(free.peak).toBeLessThan(50); // ⭐ (2026-10-25) ~41°/mm: the camera leaving the zenith for the ring at the pause's start (24 with the level ring)
     const held = sweepU(12.5);
     expect(held.peak).toBeLessThan(13.5);
     expect(held.mm).toBeGreaterThan(free.mm); // more finger through the pause
-    expect(held.mm - free.mm).toBeLessThan(8);
+    expect(held.mm - free.mm).toBeLessThan(12); // ⭐ (2026-10-25) 10.5 mm: the pause turns the camera ~187° (down from the zenith, half round, up again — 111° before)
     const fr = curve([0, 1, 0]);
     // near ring 4 the camera turns slowly: the governor gives the finger's whole step
     const dv = -0.3 * dvPerMm;
