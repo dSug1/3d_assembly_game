@@ -1680,3 +1680,30 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   underside the same below); the pause vector (`top_pause.test.ts`: the view hardly moves, the up half round, behind the piece off it); upright off the pause,
   behind the piece (restated); the wiring (the last frame's pause share) — 5 red on the old code. `tests/top_face_aim.test.ts` deleted with its subject;
   `orbit_rig.test.ts`'s low-approach restatements reverted. ⛔ No device close. 2091 vectors.
+
+### …the roll from the zenith on, even; dx held mid-roll; a gizmo change waits for the roll (`1.0.83-`, 2026-10-25)
+
+> *"there seems to be a pause of the camera movement when the camera is at the zenith and looks straight down towards the piece: the dy does not immediately
+> blend in the roll: it looks like the dy accumulates and then suddenly the roll kicks in and catches up the dy which accumulated from when the camera reached
+> the zenith above the piece. check. also, I agree with your points 2 and 3. build that."* — the owner (points 2 and 3: dx in the pause, a gizmo change
+> mid-pause, proposed in the section above).
+
+* ⛔⛔ **Checked — it was real, and it had TWO causes** (measured in the app, dy in 0.25 mm steps):
+  * **The camera's place crept** (the main one): the camera reads its ring place through the drawn piece's spring and the leash (`st.cameraLagged`), and
+    `topFaceFrame` rolls only once that `v` sits on the middle within 1e-9 — which an exponential approach takes its time to do. Through the first ~2 mm of the
+    pause the input's share went 0 → 0.18 while the camera's up stood at −90°; then it jumped 28° at once. ⭐ **The camera on the travel** (`laggedPlace`,
+    `input/top_pause.ts`; `cameraPlaceNow` in the wiring): its place is the INPUT's travel (its ring place, exactly on the middle through the pause, and the
+    drawn share) less the camera's lag behind it — off the pause exactly the camera's own `v`; through it the camera's own share. It rolls as soon as its
+    travel crosses the zenith.
+  * **A smoothstep**: the roll eased in from rest — ~5° in its first tenth, 14° in the second. ⭐ **Linear in the share** now, so the turn governor holds it at
+    its 12.5°/mm all through (~16.2°/mm ungoverned over the 11.1 mm span; the pause ~14.4 mm of dy).
+  * After both: the camera at 89° at 16.25 mm and rolling at once, −93° → −99° → −107° → −111° → −119° in 0.5 mm steps (~13°/mm), no hold, no jump.
+* ⭐⭐ **dx held while the roll is under way** (`pauseYawStep`): straight above the piece a dx turns the picture like a roll, so the orbit's yaw step is 0 while
+  the share is strictly between 0 and 1 — the drag and the coast; free at the pause's ends and over a vertical face.
+* ⭐⭐ **A gizmo change mid-roll waits** (`retargetGizmo` → `st.gizmoPending`; `pauseEndNearer`, `pauseTowardEnd`): the roll is finished or unwound to its
+  NEARER end at 360°/s (`PAUSE_FINISH_PER_S` = 2 shares/s), then the change is made (`topPauseFrame`). A later tap replaces the waiting one. Measured: asked at
+  share 0.35, unwound in ~200 ms, then the gizmo moved (0.85, 0.85) → (0.30, 0.30); no error.
+* Vectors (`tests/top_pause.test.ts`, 4 new, all red on the old code): the roll even (every twentieth of it 7.5°–10.5°; ⛔ 1.3° in the first); dx held
+  mid-roll (the rule and both wirings); the waiting gizmo change (the nearer end, the pace, landing exactly, the wiring); the camera on the travel (rolling
+  with a camera a hair short of the middle, its own `v` off the pause, a camera lagging into or out of the pause, the wiring). Restated: the governor's free
+  peak in the pause (> 14°/mm, was > 20), the drag's and the coast's text checks, the camera frame's place (`camPlace`). ⛔ No device close. 2095 vectors.

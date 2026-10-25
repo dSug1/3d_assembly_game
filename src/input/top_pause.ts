@@ -55,3 +55,45 @@ export function settledPause(v: number, pause: number, mid: number): number {
   if (v > mid + PAUSE_AT_MID) return 1;
   return Math.min(1, Math.max(0, pause));
 }
+
+/** ⭐ (2026-10-25) the pause part-way: the camera's roll under way (0 and 1 are its ends — the follow camera's frames). */
+export function pauseUnderWay(pauseOn: boolean, pause: number): boolean {
+  return pauseOn && pause > 0 && pause < 1;
+}
+
+/**
+ * ⭐⭐ (2026-10-25, the owner agreeing to *"dx during the pause … block dx while the pause is part-way through"*) — straight above the piece a dx would turn the
+ * picture like a roll: the orbit's yaw step `dYaw` held to 0 while the roll is under way.
+ */
+export function pauseYawStep(pauseOn: boolean, pause: number, dYaw: number): number {
+  return pauseUnderWay(pauseOn, pause) ? 0 : dYaw;
+}
+
+/**
+ * ⭐⭐ (2026-10-25, the owner agreeing to *"a gizmo change mid-pause … finishing or unwinding the roll first"*) — the end of the roll a gizmo change waits for:
+ * the nearer (0: unwound, the near side's camera; 1: finished, the far side's); a tie finishes it.
+ */
+export function pauseEndNearer(pause: number): 0 | 1 {
+  return pause >= 0.5 ? 1 : 0;
+}
+
+/** ⭐ (2026-10-25) the pause share a second, finishing or unwinding the roll for a waiting gizmo change: the half round in half a second (360°/s). */
+export const PAUSE_FINISH_PER_S = 2;
+
+/** ⭐ (2026-10-25) one frame of that: the share `pause` moved toward `end` by `PAUSE_FINISH_PER_S` × `dtMs`, landing on it exactly. */
+export function pauseTowardEnd(pause: number, end: 0 | 1, dtMs: number): number {
+  const step = (PAUSE_FINISH_PER_S * Math.max(0, dtMs)) / 1000;
+  return end === 1 ? Math.min(1, pause + step) : Math.max(0, pause - step);
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-25, the owner: *"there seems to be a pause of the camera movement when the camera is at the zenith … it looks like the dy accumulates and then
+ * suddenly the roll kicks in and catches up"*) — **THE CAMERA ON THE TRAVEL**: the camera follows the piece in the ring parameter (the leash and its glide,
+ * `cameraOrbitStep`, after the drawn piece's spring), so in the pause its `camV` only CREEPS toward the middle while the input waits there — and the roll read
+ * the share only once `camV` sat exactly on it: the share piled up, then landed at once. Now the camera's place is the INPUT's travel (`pieceV` — exactly on the
+ * middle through the pause — and `piecePause`) less the camera's lag behind it (`pieceV − camV`): off the pause exactly `camV`; through it the camera's own
+ * share, rolling as soon as its travel crosses the zenith.
+ */
+export function laggedPlace(pieceV: number, piecePause: number, camV: number, mid: number, span: number): PausePlace {
+  return placeOf(travelOf(pieceV, piecePause, mid, span) - (pieceV - camV), mid, span);
+}

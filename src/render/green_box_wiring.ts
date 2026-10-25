@@ -28,13 +28,13 @@ import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
-import { pauseMid, pauseSpan, placeOf, settledPause, travelOf } from "../input/top_pause";
+import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf, settledPause, travelOf } from "../input/top_pause";
 import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
-import { cameraFrameNow, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
+import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -471,7 +471,7 @@ export function enterPieceOrbit(st: SceneState): boolean {
   // orbit around the piece, `startPieceOrbit`). Recorded now: the camera against the centre orbit's own camera (zero but for a way back
   // cut short), where it looks, its distance from the piece, and the PINK GIZMO's distance (for the record)
   // ⭐ (2026-10-08) the camera's angles round the piece against the rings', and the piece's heading round the gizmo — the orbit's yaw now
-  const ring = anglesOf(cameraFrameNow(st, st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation }, pieceOrbitAngleOffset(st)).dir); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
+  const ring = anglesOf(cameraFrameNow(st, cameraPlaceNow(st), pieceOrbitAngleOffset(st)).dir); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
   // ⭐⭐ (2026-10-08) a WAY OUT cut short gives way — its piece offset still left is taken over and faded out by the way in (no jump)
   const left: Vec3 = st.centreReturn === null ? [0, 0, 0] : returnPieceOffset(st.centreReturn, st.cfg.pieceOrbitReturnMm);
   st.pieceEntry = startPieceEntry([c.x, c.y, c.z], [pos.x, pos.y, pos.z], [cam.x, cam.y, cam.z], [tg.x - cam.x, tg.y - cam.y, tg.z - cam.z], st.centreBlend.targetM, ring, st.boxOrbit?.yaw ?? st.orbit.yaw, left, clampGreenZoom(st.zoom));
@@ -927,7 +927,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.orbitMotion === null) st.orbitInertia.stop();
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
-    st.orbit.nudge(d.dYaw, orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv); // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
+    st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv); // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -1183,8 +1184,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let camAt: Vec3;
   let lookAt: Vec3;
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
-  const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);
-  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: { ...st.cameraLagged, pause: st.topPauseShown } }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
+  const camPlace = cameraPlaceNow(st); // ⭐⭐⭐ (2026-10-25) over a horizontal face on the TRAVEL (`laggedPlace`): the roll as soon as the camera reaches the zenith
+  const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);
+  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
@@ -1648,6 +1650,19 @@ export function orbitTravelStep(st: SceneState, du: number, dvPerMm: number): { 
   return { dv: to.v - v, du: got };
 }
 
+/**
+ * ⭐⭐⭐ (2026-10-25) THE CAMERA'S ORBIT PLACE now: its lagged ring place (the leash, `st.cameraLagged`) with the pause share as drawn — over a horizontal face
+ * carried onto the input's TRAVEL (`laggedPlace`, `input/top_pause.ts`): ⛔ the lagged `v` (the drawn piece's spring, the leash) crept toward the middle and the
+ * roll waited for it to land there exactly, then caught up.
+ */
+export function cameraPlaceNow(st: SceneState): OrbitAt {
+  const c = st.cameraLagged ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  if (!topPauseOn(st)) return { yaw: c.yaw, v: c.v, pause: st.topPauseShown };
+  // ⭐ from the INPUT's ring place (exactly on the middle through the pause — ⛔ the drawn piece's spring and the leash only creep toward it)
+  const p = laggedPlace(st.orbit.elevation, st.topPauseShown, c.v, pauseMid(st.cfg), pauseSpan(st.cfg));
+  return { yaw: c.yaw, v: p.v, pause: p.pause };
+}
+
 /** ⭐ (2026-10-21) the top face pause is on while the gizmo's turn is a horizontal face's (`horizontalShare` of the turn it goes to). */
 export function topPauseOn(st: SceneState): boolean {
   return horizontalShare(st.cfg, st.rigTo) >= 1;
@@ -1659,7 +1674,14 @@ export function topPauseOn(st: SceneState): boolean {
  */
 export function topPauseFrame(st: SceneState, dtMs: number): void {
   if (topPauseOn(st)) st.topPause = settledPause(st.orbit.elevation, st.topPause, pauseMid(st.cfg));
+  // ⭐⭐ (2026-10-25) a gizmo change waiting on the roll: the roll finished or unwound to its nearer end, then the change made (`retargetGizmo`)
+  const pend = st.gizmoPending ?? null;
+  if (pend !== null && topPauseOn(st)) st.topPause = pauseTowardEnd(st.topPause, pend.end, dtMs);
   st.topPauseShown = easeShare(st.topPauseShown, st.topPause, dtMs, st.cfg.boxSmoothMs);
+  if (pend !== null && (!topPauseOn(st) || ((st.topPause === 0 || st.topPause === 1) && Math.abs(st.topPauseShown - st.topPause) < 0.01))) {
+    st.gizmoPending = null;
+    retargetGizmo(st, pend.to, pend.normal, pend.host);
+  }
 }
 
 /** ⭐ (2026-10-19) the ring a millimetre of dy buys at the orbit drag's gains (`boxGainPitch` × the leash's × the elevation gain × the four-ring scale). */

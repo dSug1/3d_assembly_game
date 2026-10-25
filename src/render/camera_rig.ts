@@ -9,7 +9,8 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
 import { type Vec3 } from "../core/vec";
-import { blendRig, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { blendRig, horizontalShare, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
+import { pauseEndNearer, pauseUnderWay } from "../input/top_pause";
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -86,6 +87,12 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
  * centres beyond the piece as the camera sees it (`rigBetaFor`); blended from the turn it had (the nearer end of a blend in progress).
  */
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, host: string | null = null): void {
+  // ⭐⭐ (2026-10-25) the top face pause's roll under way: the change WAITS for its nearer end (`topPauseFrame` finishes or unwinds it, then makes the change)
+  if (pauseUnderWay(horizontalShare(st.cfg, st.rigTo) >= 1, st.topPause)) {
+    st.gizmoPending = { to, normal, host, end: pauseEndNearer(st.topPause) };
+    return;
+  }
+  st.gizmoPending = null;
   const yaw = st.orbit.yaw;
   const cam = st.camera.position;
   st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump

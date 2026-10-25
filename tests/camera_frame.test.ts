@@ -102,8 +102,8 @@ describe("⭐⭐⭐ the camera's frame through rings 2 and 3 — the Fable audit
     const c = readFileSync("src/render/camera_rig.ts", "utf8");
     expect(c).toContain("return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam, off, st.cameraPrev ?? null, dtMs);"); // ⭐ (2026-10-21) the top face pause's share as drawn
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
-    expect(g).toContain("st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: { ...st.cameraLagged, pause: st.topPauseShown } };"); // ⭐ (2026-10-25) with the pause share: the roll in the pause is travel (`rollLimitedUp`, `ROLL_PER_PAUSE`)
-    expect(g).toContain("const camFrame = cameraFrameNow(st, st.cameraLagged, off, dtSec * 1000);");
+    expect(g).toContain("st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace };"); // ⭐ (2026-10-25) the camera's place on the travel (`cameraPlaceNow`) // ⭐ (2026-10-25) with the pause share: the roll in the pause is travel (`rollLimitedUp`, `ROLL_PER_PAUSE`)
+    expect(g).toContain("const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);");
     expect(g).toContain("st.cameraPrev = null; // ⭐ (2026-10-17) a new orbit"); // one home: the spawn's non-boot block — a switch and a respawn both go through it
   });
 });

@@ -619,7 +619,8 @@ export function horizontalShare(cfg: GestureConfig, p: RigParams): number {
  * offsets `off` in the WORLD's frame (the curve camera's rule, `frameAtHeading` — as over a vertical face):
  * * BEHIND THE PIECE up to its zenith, its heading the NEAR side's (⛔ the top roll's crossing: the picture turned half round within 20° of straight above); from
  *   the zenith on, the FAR side's;
- * * in the PAUSE the camera, straight above the waiting piece, ROLLS half round about its view (smoothstep, the yaw offset's way) from the near side's up to the
+ * * in the PAUSE the camera, straight above the waiting piece, ROLLS half round about its view (LINEAR in the share — ⛔ smoothstep: ~5° in its first tenth, the
+ *   camera standing still at the zenith for ~1 mm of dy, then catching up; the yaw offset's way) from the near side's up to the
  *   far side's — so the assembly is never upside down on the screen. Its speed per mm of dy is the orbit's own: the turn governor (`orbitTurnCapDegMm`) reads
  *   the roll as a turn of the camera, as it reads the orbit's.
  * A function of the place alone: driven back it retraces itself, the roll unwound. ⛔ 2026-10-20 → 25: the camera ring, the level, the lift, the hold — deleted.
@@ -643,7 +644,7 @@ export function topFaceFrame(cfg: GestureConfig, r: RigParams, cam: OrbitAt, k: 
   // the pause: the roll about the view, from the near side's up to the far side's, the yaw offset's way
   const start = follow(k.mid, hNear);
   const end = follow(k.mid, hFar);
-  const t = smooth(pause);
+  const t = pause; // ⭐ (2026-10-25) linear: an even roll per mm, the governor's 12.5°/mm all through
   const dir = mixUnit(start.dir, end.dir, t);
   const flat = (u: Vec3): Vec3 => {
     const kk = dot(u, dir);

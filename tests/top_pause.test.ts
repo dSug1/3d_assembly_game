@@ -13,7 +13,7 @@ import { elevationGainScale } from "../src/input/orbit";
 import { rigPlace, rigTurnFor, UNTURNED } from "../src/input/orbit_rig";
 import { cameraFrameHeld } from "../src/input/camera_frame";
 import { waistRings } from "../src/input/waist_view";
-import { pauseMid, pauseSpan, placeOf, settledPause, travelOf } from "../src/input/top_pause";
+import { laggedPlace, pauseEndNearer, pauseMid, pauseSpan, pauseTowardEnd, pauseUnderWay, pauseYawStep, placeOf, settledPause, travelOf, PAUSE_FINISH_PER_S } from "../src/input/top_pause";
 import type { Vec3 } from "../src/core/vec";
 
 const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
@@ -97,5 +97,61 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du);");
     expect(code("render/camera_rig.ts")).toContain("cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam");
+  });
+  it("⭐⭐⭐ (2026-10-25, the owner: *\"there seems to be a pause of the camera movement when the camera is at the zenith … it looks like the dy accumulates and then suddenly the roll kicks in and catches up\"*) the roll EVEN through the pause — every twentieth of it ~9° (⛔ smoothstep: 1.2° in the first, the camera standing still for ~1 mm of dy)", () => {
+    const up = (p: number) => cameraFrameHeld(cfg, top, top, 1, { yaw, v: mid, pause: p }, off, null).up;
+    const ang = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * D;
+    for (let p = 0; p < 1 - 1e-9; p += 0.05) {
+      const step = ang(up(p), up(p + 0.05));
+      expect(step).toBeGreaterThan(7.5);
+      expect(step).toBeLessThan(10.5);
+    }
+  });
+  it("⭐⭐ (2026-10-25) dx HELD while the roll is under way (straight above, a dx turns the picture like a roll); free at its ends and with no pause — the drag and the coast", () => {
+    expect(pauseYawStep(true, 0.4, 0.02)).toBe(0);
+    expect(pauseYawStep(true, 0, 0.02)).toBe(0.02);
+    expect(pauseYawStep(true, 1, -0.02)).toBe(-0.02);
+    expect(pauseYawStep(false, 0.4, 0.02)).toBe(0.02);
+    expect(pauseUnderWay(true, 0.001)).toBe(true);
+    expect(code("render/pointer_wiring.ts")).toContain("st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);");
+    expect(code("render/green_box_wiring.ts")).toContain("st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);");
+  });
+  it("⭐⭐ (2026-10-25) a gizmo change asked for MID-ROLL waits: the roll finished or unwound to its nearer end at 360°/s, then the change made", () => {
+    expect(pauseEndNearer(0.3)).toBe(0);
+    expect(pauseEndNearer(0.5)).toBe(1);
+    expect(pauseEndNearer(0.8)).toBe(1);
+    expect(PAUSE_FINISH_PER_S).toBe(2);
+    expect(pauseTowardEnd(0.3, 0, 50)).toBeCloseTo(0.2, 12);
+    expect(pauseTowardEnd(0.95, 1, 50)).toBe(1); // lands on it exactly
+    expect(pauseTowardEnd(0.05, 0, 50)).toBe(0);
+    let p = 0.6, ms = 0;
+    while (p < 1) { p = pauseTowardEnd(p, 1, 16); ms += 16; }
+    expect(ms).toBeLessThanOrEqual(208); // 0.4 of the half round in ~0.2 s
+    const r = code("render/camera_rig.ts");
+    expect(r).toContain("if (pauseUnderWay(horizontalShare(st.cfg, st.rigTo) >= 1, st.topPause)) { st.gizmoPending = { to, normal, host, end: pauseEndNearer(st.topPause) }; return; } st.gizmoPending = null;");
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("if (pend !== null && topPauseOn(st)) st.topPause = pauseTowardEnd(st.topPause, pend.end, dtMs);");
+    expect(g).toContain("st.gizmoPending = null; retargetGizmo(st, pend.to, pend.normal, pend.host);");
+  });
+  it("⭐⭐⭐ (2026-10-25) THE CAMERA ON THE TRAVEL: its place is the input's travel less its lag behind it — the roll as soon as the camera's own travel crosses the zenith, never waiting for its creeping `v` to land on the middle exactly (⛔ the share piled up, then landed at once)", () => {
+    // the input in the pause, a tenth of the roll done; the camera's v a hair short of the middle (the spring, the leash)
+    const a = laggedPlace(mid, 0.1, mid - 1e-6, mid, span);
+    expect(a.v).toBe(mid);
+    expect(a.pause).toBeCloseTo(0.1 - 1e-6 / span, 9); // rolling with it (⛔ 0: held until v landed)
+    // off the pause: exactly the camera's own v
+    expect(laggedPlace(0.3, 0, 0.29, mid, span)).toEqual({ v: 0.29, pause: 0 });
+    expect(laggedPlace(0.8, 1, 0.81, mid, span).v).toBeCloseTo(0.81, 12);
+    // a camera lagging further than the roll done: still before the zenith
+    const b = laggedPlace(mid, 0.05, mid - 0.2 * span, mid, span);
+    expect(b.pause).toBe(0);
+    expect(b.v).toBeCloseTo(mid - 0.15 * span, 12);
+    // the input past the pause, the camera still behind it: mid-roll
+    const c = laggedPlace(mid + 0.1 * span, 1, mid - 0.2 * span, mid, span);
+    expect(c.v).toBe(mid);
+    expect(c.pause).toBeCloseTo(0.8, 9); // 1.1 spans of travel past the middle, less 0.3 of lag
+    // wired: the camera's frame and its carried up read that place, from the input's ring place
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const p = laggedPlace(st.orbit.elevation, st.topPauseShown, c.v, pauseMid(st.cfg), pauseSpan(st.cfg));");
+    expect(g).toContain("const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000); st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace };");
   });
 });

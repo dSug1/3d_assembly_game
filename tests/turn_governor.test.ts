@@ -67,7 +67,7 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
     };
     expect(span / dvPerMm).toBeCloseTo(11.11, 1); // the pause: a vertical face's ring 2 → 3 travel
     const free = sweepU(null);
-    expect(free.peak).toBeGreaterThan(20);
+    expect(free.peak).toBeGreaterThan(14); // ⭐ (2026-10-25) the even roll: 180° over the 11.1 mm, ~16.2°/mm (⛔ smoothstep ~24 at its middle)
     expect(free.peak).toBeLessThan(50); // ⭐ (2026-10-25) ~41°/mm: the camera leaving the zenith for the ring at the pause's start (24 with the level ring)
     const held = sweepU(12.5);
     expect(held.peak).toBeLessThan(13.5);
@@ -102,9 +102,9 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
     const p = readFileSync("src/render/pointer_wiring.ts", "utf8");
     expect(p).toContain("const travel = dvRaw !== 0 ? orbitTravelStep(st, dvRaw, orbitDvPerMm(st)) : { dv: 0, du: 0 };"); // ⭐ (2026-10-21) on the travel
     expect(p).toContain("const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;");
-    expect(p).toContain("st.orbit.drag(-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag, dyPx * share);");
+    expect(p).toContain("st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);"); // ⭐ (2026-10-25) dx held mid-roll
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
-    expect(g).toContain("st.orbit.nudge(d.dYaw, orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv);");
+    expect(g).toContain("const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;"); expect(g).toContain("st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);"); // ⭐ (2026-10-25) dx held mid-roll
     expect(g).toContain("const cap = crossing ? cfg.orbitTurnCapDegMm : cfg.orbitTurnCapVerticalDegMm;");
   });
 });

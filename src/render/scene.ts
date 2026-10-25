@@ -564,6 +564,7 @@ export function createScene(
   st.cameraLagged = null;
   st.topPause = 0;
   st.topPauseShown = 0;
+  st.gizmoPending = null;
   st.orbitMotion = null;
   st.orbitSway = null;
   st.orbitSwayKicks = 0;
