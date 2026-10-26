@@ -19,7 +19,8 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
-import { pauseYawStep } from "../input/top_pause"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
+import { pauseYawStep } from "../input/top_pause";
+import { endTilt, tiltCurve } from "./tilt_wiring"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -79,6 +80,9 @@ export function installPointerHandler(st: SceneState): void {
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
+    // ⭐⭐ (2026-10-26) Shift with the mouse (or a touchpad): the orbit drag's dy TILTS the curve (`tilt_wiring.ts`); its release ends the tilt gesture
+    st.orbitShift = e.pointerType === "mouse" && e.shiftKey;
+    if (info.type === PointerEventTypes.POINTERUP && e.pointerType === "mouse") endTilt(st);
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it
@@ -1327,7 +1331,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const db = st.orbitMotion.band.step;
     // ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR (`orbitTravelStep`): the dy cut where the camera would turn faster than the cap per mm of finger
     // ⭐⭐⭐ (2026-10-21) …on the TRAVEL: over a horizontal face, through the middle, the dy turns the camera half round while the piece waits (the top face pause)
-    const dyPx = (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
+    // ⭐⭐ (2026-10-26) Shift held: the dy TILTS the curve instead (`tiltCurve`); dx orbits as ever
+    const shiftTilt = st.orbitShift && !dxOnly;
+    if (shiftTilt) tiltCurve(st, db.dy / mmToPx(1));
+    else endTilt(st);
+    const dyPx = (dxOnly || shiftTilt ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
     const travel = dvRaw !== 0 ? orbitTravelStep(st, dvRaw, orbitDvPerMm(st)) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;

@@ -93,6 +93,7 @@ export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, hos
     return;
   }
   st.gizmoPending = null;
+  st.tiltAnchor = null; // ⭐ (2026-10-26) a tap wins over a tilt's ease in flight
   const yaw = st.orbit.yaw;
   const cam = st.camera.position;
   st.rigFrom = rigNow(st); // ⭐ the turn as it stands, a blend in progress included — never a jump

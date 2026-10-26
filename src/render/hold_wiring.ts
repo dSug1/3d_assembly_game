@@ -21,6 +21,8 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { pinchPair, retargetGizmo, updatePinch } from "./camera_rig";
+import { twoFingerKind } from "../input/curve_tilt";
+import { endTilt, tiltCurve, undoTilt } from "./tilt_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -106,6 +108,11 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     updatePinch(st);
     return h.mode;
   }
+  // ⭐⭐ (2026-10-26) the TILT: each finger's dy half of the step — the two fingers' mean
+  if (h.mode === "TILT") {
+    if (pointerId === h.first || pointerId === h.second) tiltCurve(st, pxToMm(_s.y - _prev.y) / 2);
+    return h.mode;
+  }
   if (pointerId !== h.first && pointerId !== h.second) return h.mode;
   if (h.mode === "HELD") {
     // ⛔⛔ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held (=
@@ -116,11 +123,22 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
       return h.mode;
     }
     // ⭐ a finger: the STANDARD PINCH — either finger's travel past the deadband starts it (`pinchStarts`); before, nothing moves
+    const moved = (id: number | null): [number, number] => {
+      const q = id === null ? undefined : st.router.get(id);
+      return q === undefined ? [0, 0] : [pxToMm(q.last.x - q.pressed.x), pxToMm(q.last.y - q.pressed.y)];
+    };
     const travel = (id: number | null): number => {
       const q = id === null ? undefined : st.router.get(id);
       return q === undefined ? 0 : pxToMm(Math.hypot(q.last.x - q.pressed.x, q.last.y - q.pressed.y));
     };
     if (!pinchStarts(travel(h.first), travel(h.second), st.cfg.motionDeadbandMm)) return h.mode;
+    // ⭐⭐ (2026-10-26) both fingers the same way, mostly up or down: the curve TILT (`twoFingerKind`); else the pinch
+    if (twoFingerKind(moved(h.first), moved(h.second), st.cfg.motionDeadbandMm) === "TILT") {
+      h.mode = "TILT";
+      st.lastVerdict = "orbit: two fingers up / down — the curve tilts";
+      st.hudDirty = true;
+      return h.mode;
+    }
     h.mode = "ZOOM";
     startZoom(st);
     st.lastVerdict = "orbit: two fingers — the pinch zoom";
@@ -198,7 +216,9 @@ export function holdRelease(
 // ⏸   }
   // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the pinch is a tap: the zoom it started undone (`holdTapMode`)
   const mode = holdTapMode(h.mode, tapped);
-  if (mode !== h.mode) st.zoom = st.zoomAtPinchStart;
+  if (mode !== h.mode && h.mode === "ZOOM") st.zoom = st.zoomAtPinchStart;
+  if (mode !== h.mode && h.mode === "TILT") undoTilt(st); // ⭐ (2026-10-26) a tapped tilt undone
+  endTilt(st);
   if (mode === "HELD") {
     // ⭐⭐ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the orbit centre (the pink gizmo) to where the press hit the placed part; ⛔ never also the tap roll (`pressActed`)

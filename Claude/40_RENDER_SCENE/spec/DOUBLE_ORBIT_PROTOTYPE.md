@@ -1707,3 +1707,43 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   mid-roll (the rule and both wirings); the waiting gizmo change (the nearer end, the pace, landing exactly, the wiring); the camera on the travel (rolling
   with a camera a hair short of the middle, its own `v` off the pause, a camera lagging into or out of the pause, the wiring). Restated: the governor's free
   peak in the pause (> 14°/mm, was > 20), the drag's and the coast's text checks, the camera frame's place (`camPlace`). ⛔ No device close. 2095 vectors.
+
+### THE CURVE TILT: the 2D curve turned in its own plane by any angle; the gizmo slides over the assembly (`1.0.84-`, 2026-10-26)
+
+> *"the gizmo is both used to orbit the camera and the piece around the assembly and to bring the piece towards the assembly. I want to get rid of the gizmo
+> for bringing the piece towards the assembly"* → *"find a way to maintain the 2D curve current build (dy drives approach and dx drives round the assembly on
+> the 2D curve) by adding a way to rotate the 2D curve (for example, 90 degree rotation currently exist when switching from gizmo hosting vertical to
+> horizontal faces) so that the user can rotate the 2D curve by whichever value he wants and can therefore target any place on the assembly. Propose
+> something"* → (the tilt proposed) *"1: full circle. 2: on by default, with slider 3: keep it. advise what is the role of the gizmo now. 4: acceptable. what
+> happens with the touchpad of a portable computer ? build it"* — the owner.
+
+* ⭐⭐⭐ **The tilt** (`input/curve_tilt.ts`): the turned curve rotated IN ITS OWN PLANE about the plane's normal through the gizmo (`tiltRig`) — the
+  full circle: 0° a vertical face's curve, +90° a top face's (a quarter turn from a vertical face's lands on the top face's curve with ring 1 carried
+  over the top — the half-turned one of the two), −90° an underside's, 180° the curve upside down on the far side. The piece keeps its ring place (its
+  `v`), so it orbits up or down about the gizmo at its distance; the camera behind it as ever.
+* ⭐⭐⭐ **The input**: TWO FINGERS moving the same way up or down (the map apps' tilt gesture) — the held second touch's new mode `TILT`, told from the
+  pinch once either finger passes the deadband (`twoFingerKind`: the common vertical motion beats both the relative motion and the common horizontal one);
+  each finger's dy half the step. DESKTOP and a laptop TOUCHPAD: **Shift + drag** — its dy tilts, its dx orbits as ever (`orbitShift`). Finger DOWN tilts
+  the waist UP (the orbit dy's sense). The pace: the orbit's dx yaw rate (°/mm) × `curveTiltGain` (slider, 1). A TAP that wobbled into the tilt is undone
+  (`holdTapMode`, `undoTilt`), as a tapped pinch's zoom is. ⚠ The touchpad's two-finger SCROLL still zooms (it arrives as the wheel, and a mouse wheel
+  cannot be told from it).
+* ⭐⭐ **The detents** (`tiltDetent`, `curveTiltDetentDeg`, slider, **15° by default**): the CURVE sits on every quarter turn while the input's tilt is
+  within 15° of it; beyond, the rest of the eighth is stretched back over it (continuous, monotone, exact at every 45°) — so the approach lands square to a
+  face, and the top pause and its roll take over on a horizontal curve.
+* ⭐⭐⭐ **The gizmo slides** (`aimPivot`, `aimRay`, `render/tilt_wiring.ts`): fixed for the gesture, a pivot behind the gizmo along the aim, as deep as the
+  assembly's centre (the PLACED parts' bounding box); the FREE aim (the input's tilt, not the detented one) turns about it and its ray finds the gizmo on a
+  placed part — its part and face too (the fourth quad follows, `orientDirty`). So while the curve sits on a detent the gizmo slides over the face square to
+  it: ANY place on the assembly. The centre EASES to each new point (`tiltFrame`, `anchorToward`, τ 90 ms — ⛔ snapped, it jumped 27 cm where the ray
+  crossed an edge onto another part); a tap cancels the ease. No tilt while the top pause's roll is under way.
+* **The gizmo's role now**: no longer what brings the piece to the assembly — the tilt and dx move it; it is the curve's ANCHOR (the point it turns about,
+  on the surface aimed at) and its face still gives the yellow quad and the resting-face alignment. A TAP on a placed part still moves it there at once
+  (kept, the owner's 3).
+* Measured — the app (`Scene_1`, the piece at v 0.35, 0.5 mm steps): the first 15° of input leave the curve at 0° (the detent); the gizmo up Piece10's
+  front face (y 0.279 → 0.372), onto Piece4's top (the face's normal up, the fourth quad's face switched) where the curve sat at 90° from input 77° to 92°,
+  then over to Piece10's back face; driven back, exactly where it started; the camera ~1° per 1° of tilt over the full circle at rings 1 and 3 (model, < 3°
+  a step); no error. ⚠ Past ~120° the curve is upside down and the camera looks nearly straight down (upY ≈ 0 at 139°) — a hand to judge.
+* Vectors (`tests/curve_tilt.test.ts`, 8, red on the old code — the module is new): the tilt read (0°, 90°, −90°); the full circle in 5° steps (exact
+  steps, the distance kept, a quarter turn = a top face's curve, back to the start, 180° upside down); the detents (the zone, the eighths, monotone, the
+  stretch, 0 none, default 15, validation); the free aim's ray through the gizmo and its sweep; two fingers' TILT / ZOOM / undecided and a tapped tilt;
+  the camera through the full circle (< 3° a 1° step); the ease; the wiring. Restated: the pinch's and the drag's text checks. ⛔ No device close.
+  2103 vectors.
