@@ -701,6 +701,17 @@ export interface SceneState {
   topPause: number;
   topPauseShown: number;
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
+  /** ⭐⭐ (2026-10-26) THE CURVE TILT in flight (`tilt_wiring.ts`): the input's free tilt (rad), the aim's pivot (`null`: no assembly), the state a tapped tilt
+   * puts back; `null` between gestures */
+  tiltGesture: {
+    phiIn: number;
+    readonly pivot: { readonly pivot: Vec3; readonly depth: number } | null;
+    readonly undo: { readonly rigFrom: import("../input/orbit_rig").RigParams; readonly rigTo: import("../input/orbit_rig").RigParams; readonly rigShare: number; readonly centre: Vec3; readonly host: string | null; readonly normal: Vec3 | null };
+  } | null;
+  /** ⭐ (2026-10-26) where the tilt's aim landed the gizmo — the centre eased there every frame (`tiltFrame`); `null`: there */
+  tiltAnchor: Vec3 | null;
+  /** ⭐ (2026-10-26) Shift held with the mouse (or a touchpad) on the last pointer event — the orbit drag's dy tilts the curve then */
+  orbitShift: boolean;
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
