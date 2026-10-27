@@ -35,7 +35,6 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { tiltFrame } from "./tilt_wiring";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -931,7 +930,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv); // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
-  tiltFrame(st, dtSec * 1000); // ⭐ (2026-10-26) the gizmo eased to where the curve tilt's aim landed
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
   // one zoom (wheel, pinch, boot) is held to its range here (`clampGreenZoom`), every frame.

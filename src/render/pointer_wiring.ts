@@ -19,8 +19,7 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
-import { pauseYawStep } from "../input/top_pause";
-import { aimStep, endTilt } from "./tilt_wiring"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
+import { pauseYawStep } from "../input/top_pause"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -80,9 +79,6 @@ export function installPointerHandler(st: SceneState): void {
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
-    // ⭐⭐ (2026-10-26) Shift with the mouse (or a touchpad): the orbit drag's dy TILTS the curve (`tilt_wiring.ts`); its release ends the tilt gesture
-    st.orbitShift = e.pointerType === "mouse" && e.shiftKey;
-    if (info.type === PointerEventTypes.POINTERUP && e.pointerType === "mouse") endTilt(st);
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it
@@ -1331,17 +1327,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const db = st.orbitMotion.band.step;
     // ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR (`orbitTravelStep`): the dy cut where the camera would turn faster than the cap per mm of finger
     // ⭐⭐⭐ (2026-10-21) …on the TRAVEL: over a horizontal face, through the middle, the dy turns the camera half round while the piece waits (the top face pause)
-    // ⭐⭐ (2026-10-26) Shift held: the drag AIMS the gizmo instead (`aimStep`) — dy the curve tilt, ⭐ (2026-10-27) dx sideways; ⛔ no orbit (it turned the
-    // aim's yaw: a stray dy re-aimed the gizmo along it — *"sometimes, the gizmo moves, sometimes it does not"*)
-    const shiftTilt = st.orbitShift && !dxOnly;
-    if (shiftTilt) aimStep(st, db.dx / mmToPx(1), db.dy / mmToPx(1));
-    else endTilt(st);
-    const dyPx = (dxOnly || shiftTilt ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
+    const dyPx = (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
     const travel = dvRaw !== 0 ? orbitTravelStep(st, dvRaw, orbitDvPerMm(st)) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftTilt ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).

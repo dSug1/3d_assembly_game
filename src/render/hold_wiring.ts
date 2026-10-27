@@ -21,8 +21,6 @@ import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { pinchPair, retargetGizmo, updatePinch } from "./camera_rig";
-import { twoFingerKind } from "../input/curve_tilt";
-import { aimStep, endTilt, undoTilt } from "./tilt_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -52,7 +50,6 @@ export function holdFirstPress(st: SceneState, first: number, x: number): void {
   const h = st.hold;
   if (h === null) return;
   h.first = first;
-  h.base = null; // ⭐ (2026-10-27) the decision's travel from here
   // ⭐ undecided still: its dx counts from here
   if (h.mode === "HELD") h.firstX0 = x;
   h.swFirstX0 = x; // ⭐ (2026-10-12) the switch's too
@@ -109,11 +106,6 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     updatePinch(st);
     return h.mode;
   }
-  // ⭐⭐ (2026-10-26) the AIM: each finger's step half of it — the two fingers' mean; dy the tilt, ⭐ (2026-10-27) dx sideways
-  if (h.mode === "AIM") {
-    if (pointerId === h.first || pointerId === h.second) aimStep(st, pxToMm(_s.x - _prev.x) / 2, pxToMm(_s.y - _prev.y) / 2);
-    return h.mode;
-  }
   if (pointerId !== h.first && pointerId !== h.second) return h.mode;
   if (h.mode === "HELD") {
     // ⛔⛔ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held (=
@@ -124,32 +116,11 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
       return h.mode;
     }
     // ⭐ a finger: the STANDARD PINCH — either finger's travel past the deadband starts it (`pinchStarts`); before, nothing moves
-    const posOf = (id: number | null): [number, number] | null => {
-      const q = id === null ? undefined : st.router.get(id);
-      return q === undefined ? null : [q.last.x, q.last.y];
-    };
-    const moved = (id: number | null, from: readonly [number, number] | null): [number, number] => {
-      const q = id === null ? undefined : st.router.get(id);
-      return q === undefined || from === null ? [0, 0] : [pxToMm(q.last.x - from[0]), pxToMm(q.last.y - from[1])];
-    };
     const travel = (id: number | null): number => {
       const q = id === null ? undefined : st.router.get(id);
       return q === undefined ? 0 : pxToMm(Math.hypot(q.last.x - q.pressed.x, q.last.y - q.pressed.y));
     };
-    // ⭐⭐ (2026-10-26) both fingers the same way, mostly up or down: the curve TILT (`twoFingerKind`); else the pinch — ⛔⛔ (2026-10-27) judged on the travel
-    // since the two-finger input started, and only once the largest motion is clear (⛔ the pinch's start rule, each finger's travel since ITS press:
-    // a leading finger read as a pinch, the first finger's orbit drag counted — a two-finger dy did nothing)
-    if (h.base === undefined || h.base === null) h.base = { first: posOf(h.first), second: posOf(h.second) };
-    const kind = twoFingerKind(moved(h.first, h.base.first), moved(h.second, h.base.second), st.cfg.motionDeadbandMm);
-    void pinchStarts;
-    void travel;
-    if (kind === null) return h.mode;
-    if (kind === "AIM") {
-      h.mode = "AIM";
-      st.lastVerdict = "orbit: two fingers together — the gizmo aimed (up / down: the curve tilts; sideways: it slides)";
-      st.hudDirty = true;
-      return h.mode;
-    }
+    if (!pinchStarts(travel(h.first), travel(h.second), st.cfg.motionDeadbandMm)) return h.mode;
     h.mode = "ZOOM";
     startZoom(st);
     st.lastVerdict = "orbit: two fingers — the pinch zoom";
@@ -227,9 +198,7 @@ export function holdRelease(
 // ⏸   }
   // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the pinch is a tap: the zoom it started undone (`holdTapMode`)
   const mode = holdTapMode(h.mode, tapped);
-  if (mode !== h.mode && h.mode === "ZOOM") st.zoom = st.zoomAtPinchStart;
-  if (mode !== h.mode && h.mode === "AIM") undoTilt(st); // ⭐ (2026-10-26) a tapped tilt undone
-  endTilt(st);
+  if (mode !== h.mode) st.zoom = st.zoomAtPinchStart;
   if (mode === "HELD") {
     // ⭐⭐ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the orbit centre (the pink gizmo) to where the press hit the placed part; ⛔ never also the tap roll (`pressActed`)

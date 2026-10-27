@@ -565,9 +565,6 @@ export function createScene(
   st.topPause = 0;
   st.topPauseShown = 0;
   st.gizmoPending = null;
-  st.tiltGesture = null;
-  st.tiltAnchor = null;
-  st.orbitShift = false;
   st.orbitMotion = null;
   st.orbitSway = null;
   st.orbitSwayKicks = 0;

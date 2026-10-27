@@ -463,8 +463,6 @@ export interface SceneState {
     swStillSince: number;
     swFirstX0: number | null;
     wayIn: boolean;
-    /** ⭐ (2026-10-27) both fingers' places (px) when the two-finger input started — the TILT / ZOOM decision reads the travel from there (`twoFingerKind`); `null`: taken at the next move */
-    base?: { readonly first: readonly [number, number] | null; readonly second: readonly [number, number] | null } | null;
   } | null;
   /** ⭐⭐ Prototype (2026-10-12, §21): THE ORIENTATION CUBE — the level's distinct face directions (`core/orientation_set.ts`), whether they
    * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
@@ -703,20 +701,6 @@ export interface SceneState {
   topPause: number;
   topPauseShown: number;
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
-  /** ⭐⭐ (2026-10-26) THE CURVE TILT in flight (`tilt_wiring.ts`): the input's free tilt (rad), the aim's pivot (`null`: no assembly), the state a tapped tilt
-   * puts back; `null` between gestures */
-  tiltGesture: {
-    phiIn: number;
-    /** ⭐ (2026-10-27) the orbit's yaw when the gesture started — the aim reads it, never the orbit's live one; and the aim's sideways turn since (rad) */
-    readonly yaw: number;
-    side: number;
-    readonly pivot: { readonly pivot: Vec3; readonly depth: number } | null;
-    readonly undo: { readonly rigFrom: import("../input/orbit_rig").RigParams; readonly rigTo: import("../input/orbit_rig").RigParams; readonly rigShare: number; readonly centre: Vec3; readonly host: string | null; readonly normal: Vec3 | null };
-  } | null;
-  /** ⭐ (2026-10-26) where the tilt's aim landed the gizmo — the centre eased there every frame (`tiltFrame`); `null`: there */
-  tiltAnchor: Vec3 | null;
-  /** ⭐ (2026-10-26) Shift held with the mouse (or a touchpad) on the last pointer event — the orbit drag's dy tilts the curve then */
-  orbitShift: boolean;
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
   orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
