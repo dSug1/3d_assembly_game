@@ -541,6 +541,8 @@ export interface GestureConfig {
   curveTiltDetentDeg: number;
   /** ⭐ (2026-10-26) the curve tilt's pace: × the orbit's dx yaw rate (°/mm) — two fingers' dy, or Shift + drag's. */
   curveTiltGain: number;
+  /** ⭐ (2026-10-27) the gizmo's sideways slide's pace: × the orbit's dx yaw rate (°/mm of the aim's turn) — two fingers' dx, or Shift + drag's. */
+  aimSlideGain: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
   /** ⭐ Prototype (2026-10-11): the PINK GIZMO (the ring at the orbit centre) drawn (1) or hidden (0). */
@@ -1070,6 +1072,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   quadSliceMaxDeg: 30, // ⭐ (2026-10-20, *"Same quad switch speed as current"*) 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° (2026-10-19)
   curveTiltDetentDeg: 15, // ⭐ (2026-10-26) the curve tilt's detents, on by default
   curveTiltGain: 1, // ⭐ (2026-10-26) the tilt at the dx yaw's pace
+  aimSlideGain: 1, // ⭐ (2026-10-27) the gizmo's sideways slide at the dx yaw's pace
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -1236,6 +1239,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
   if (!(cfg.curveTiltDetentDeg >= 0 && cfg.curveTiltDetentDeg <= 40)) throw new Error(`curveTiltDetentDeg (${cfg.curveTiltDetentDeg}) must be in [0, 40]°.`);
+  if (!(cfg.aimSlideGain >= 0.25 && cfg.aimSlideGain <= 4)) throw new Error(`aimSlideGain (${cfg.aimSlideGain}) must be in [0.25, 4].`);
   if (!(cfg.curveTiltGain >= 0.25 && cfg.curveTiltGain <= 4)) throw new Error(`curveTiltGain (${cfg.curveTiltGain}) must be in [0.25, 4].`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);

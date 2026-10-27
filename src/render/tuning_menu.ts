@@ -195,6 +195,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐ (2026-10-26) THE CURVE TILT (two fingers' dy, Shift + drag): its detents and its pace
             tunable(st, "curve tilt detents (°): sticks to every quarter turn", "curveTiltDetentDeg", 0, 40, 1),
             tunable(st, "curve tilt pace (× dx yaw)", "curveTiltGain", 0.25, 4, 0.05),
+            tunable(st, "gizmo sideways slide pace (× dx yaw)", "aimSlideGain", 0.25, 4, 0.05),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)

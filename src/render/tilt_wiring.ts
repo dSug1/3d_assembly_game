@@ -1,12 +1,13 @@
 /**
- * ⭐⭐⭐ prototype — **THE CURVE TILT, WIRED** (2026-10-26; the rules are `input/curve_tilt.ts`'s). Two fingers' common dy (the held second touch's TILT,
+ * ⭐⭐⭐ prototype — **THE CURVE TILT, WIRED** (2026-10-26; the rules are `input/curve_tilt.ts`'s). Two fingers' common dy (the held second touch's AIM,
  * `hold_wiring.ts`) or Shift + drag's dy (a mouse, a touchpad) turns the 2D curve in its own plane by any angle, through the detents; the gizmo slides
- * over the assembly where the free aim's ray meets it (its part and face too — the fourth quad follows). A tilt gesture starts at its first step and ends
+ * over the assembly where the free aim's ray meets it (its part and face too — the fourth quad follows); ⭐ (2026-10-27) their dx slides it SIDEWAYS (the
+ * aim turned about the vertical, the curve's heading kept). A tilt gesture starts at its first step and ends
  * when its input does (`endTilt`); a TAP that wobbled into it is undone (`undoTilt`). ⛔ No rule here.
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { aimDir, aimPivot, aimRay, anchorToward, curveTilt, tiltDetent, tiltRig, tiltStep, wrapTilt } from "../input/curve_tilt";
+import { aimDir, aimPivot, aimRay, aimSideways, anchorToward, curveTilt, sidewaysSign, tiltDetent, tiltRig, tiltStep, wrapTilt } from "../input/curve_tilt";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
 import { rigNow, syncCentre } from "./camera_rig";
@@ -38,9 +39,19 @@ export function tiltDegPerMm(st: SceneState): number {
   return orbitDegPerMm(st.cfg, st.orbit.elevation, greenDragGains(st)).yawDegPerMm * st.cfg.curveTiltGain;
 }
 
-/** ⭐ One step of the tilt: `dyMm` of finger (down positive — the waist UP). */
-export function tiltCurve(st: SceneState, dyMm: number): void {
-  if (dyMm === 0) return;
+/** ⭐ (2026-10-27) the gizmo's sideways slide's pace: the orbit's dx yaw rate × `aimSlideGain` (°/mm of the aim's turn about the vertical). */
+export function slideDegPerMm(st: SceneState): number {
+  return orbitDegPerMm(st.cfg, st.orbit.elevation, greenDragGains(st)).yawDegPerMm * st.cfg.aimSlideGain;
+}
+
+/**
+ * ⭐ One step of THE AIM: `dyMm` of finger (down positive — the curve tilted, its waist UP) and ⭐ (2026-10-27) `dxMm` (right positive — the gizmo slid
+ * RIGHT on the screen: the aim turned about the vertical, the curve's heading kept). ⛔ (2026-10-27, *"when I input shift + dx … sometimes, the gizmo moves,
+ * sometimes it does not"*) the aim read the ORBIT's yaw, which dx had turned — a stray dy step re-aimed the gizmo along it; now the aim keeps the yaw it
+ * started with and turns only by its own dx.
+ */
+export function aimStep(st: SceneState, dxMm: number, dyMm: number): void {
+  if (dyMm === 0 && dxMm === 0) return;
   // ⭐ not while the top face pause's roll is under way (as a gizmo change waits for it)
   if (pauseUnderWay(topPauseOn(st), st.topPause)) return;
   const g = st.centreBlend.targetM;
@@ -53,20 +64,29 @@ export function tiltCurve(st: SceneState, dyMm: number): void {
     st.rigShare = 1;
     const aim = aimDir(st.cfg, now, st.orbit.yaw, 0);
     const centre = assemblyCentre(st);
-    st.tiltGesture = { phiIn: curveTilt(st.cfg, now), pivot: aim !== null && centre !== null ? aimPivot([g[0], g[1], g[2]], aim, centre) : null, undo };
+    st.tiltGesture = {
+      phiIn: curveTilt(st.cfg, now),
+      yaw: st.orbit.yaw,
+      side: 0,
+      pivot: aim !== null && centre !== null ? aimPivot([g[0], g[1], g[2]], aim, centre) : null,
+      undo,
+    };
   }
   const t = st.tiltGesture;
   t.phiIn += tiltStep(dyMm, tiltDegPerMm(st));
   const want = tiltDetent(t.phiIn, (st.cfg.curveTiltDetentDeg * Math.PI) / 180);
   const cam = st.camera.position;
   const side: Vec3 = [cam.x - g[0], 0, cam.z - g[2]];
-  const turned = tiltRig(st.rigTo, wrapTilt(want - curveTilt(st.cfg, st.rigTo)), side);
+  const turned = dyMm === 0 ? st.rigTo : tiltRig(st.rigTo, wrapTilt(want - curveTilt(st.cfg, st.rigTo)), side);
   st.rigFrom = turned;
   st.rigTo = turned;
-  // ⭐ the gizmo where the FREE aim's ray meets the assembly (it slides over a face while the curve sits on a detent)
+  // ⭐ the gizmo where the FREE aim's ray meets the assembly (it slides over a face while the curve sits on a detent), turned sideways by the gesture's dx
   if (t.pivot !== null) {
-    const aim = aimDir(st.cfg, turned, st.orbit.yaw, t.phiIn - want);
-    if (aim !== null) {
+    const base = aimDir(st.cfg, turned, t.yaw, t.phiIn - want);
+    if (base !== null) {
+      const r0 = st.camera.getDirection(new Vector3(1, 0, 0));
+      t.side += sidewaysSign(base, [r0.x, r0.y, r0.z]) * ((dxMm * slideDegPerMm(st) * Math.PI) / 180);
+      const aim = aimSideways(base, t.side);
       const r = aimRay(t.pivot.pivot, aim, t.pivot.depth, AIM_REACH_M);
       const hit = st.scene.pickWithRay(new Ray(new Vector3(...r.origin), new Vector3(...r.dir), r.length), (m) => {
         const id = st.idOf.get(m);
@@ -78,7 +98,7 @@ export function tiltCurve(st: SceneState, dyMm: number): void {
       }
     }
   }
-  st.lastVerdict = `orbit: the curve tilted ${((wrapTilt(want) * 180) / Math.PI).toFixed(0)}° (input ${((wrapTilt(t.phiIn) * 180) / Math.PI).toFixed(0)}°)`;
+  st.lastVerdict = `orbit: the gizmo aimed — the curve tilted ${((wrapTilt(want) * 180) / Math.PI).toFixed(0)}° (input ${((wrapTilt(t.phiIn) * 180) / Math.PI).toFixed(0)}°), sideways ${((t.side * 180) / Math.PI).toFixed(0)}°`;
   st.hudDirty = true;
 }
 
