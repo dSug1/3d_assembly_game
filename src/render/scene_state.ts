@@ -463,6 +463,8 @@ export interface SceneState {
     swStillSince: number;
     swFirstX0: number | null;
     wayIn: boolean;
+    /** ⭐ (2026-10-27) both fingers' places (px) when the two-finger input started — the TILT / ZOOM decision reads the travel from there (`twoFingerKind`); `null`: taken at the next move */
+    base?: { readonly first: readonly [number, number] | null; readonly second: readonly [number, number] | null } | null;
   } | null;
   /** ⭐⭐ Prototype (2026-10-12, §21): THE ORIENTATION CUBE — the level's distinct face directions (`core/orientation_set.ts`), whether they
    * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
@@ -705,6 +707,9 @@ export interface SceneState {
    * puts back; `null` between gestures */
   tiltGesture: {
     phiIn: number;
+    /** ⭐ (2026-10-27) the orbit's yaw when the gesture started — the aim reads it, never the orbit's live one; and the aim's sideways turn since (rad) */
+    readonly yaw: number;
+    side: number;
     readonly pivot: { readonly pivot: Vec3; readonly depth: number } | null;
     readonly undo: { readonly rigFrom: import("../input/orbit_rig").RigParams; readonly rigTo: import("../input/orbit_rig").RigParams; readonly rigShare: number; readonly centre: Vec3; readonly host: string | null; readonly normal: Vec3 | null };
   } | null;

@@ -441,7 +441,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(g.pitch).toBeCloseTo(0.5, 12);
     // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
     // ⭐ dy's sense inverted for the orbit (the owner, 2026-10-04): dy enters with its own sign; dx still negated
-    expect(code("pointer_wiring.ts")).toMatch(/const dyPx = \(dxOnly \|\| shiftTilt \? 0 : db\.dy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag\), dyPx \* share\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // (2026-10-06: × the gain around the piece, 1 otherwise; ⭐ 2026-10-19 the dy through the turn governor)
+    expect(code("pointer_wiring.ts")).toMatch(/const dyPx = \(dxOnly \|\| shiftTilt \? 0 : db\.dy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(shiftTilt \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag\), dyPx \* share\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // (2026-10-06: × the gain around the piece, 1 otherwise; ⭐ 2026-10-19 the dy through the turn governor)
     expect(code("pointer_wiring.ts")).not.toMatch(/-dy \* st\.cfg\.boxGainPitch/);
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });

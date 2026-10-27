@@ -1747,3 +1747,31 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   stretch, 0 none, default 15, validation); the free aim's ray through the gizmo and its sweep; two fingers' TILT / ZOOM / undecided and a tapped tilt;
   the camera through the full circle (< 3° a 1° step); the ease; the wiring. Restated: the pinch's and the drag's text checks. ⛔ No device close.
   2103 vectors.
+
+### …THE AIM: two fingers (or Shift) move the gizmo — up / down the tilt, SIDEWAYS a slide; the two-finger tilt repaired (`1.0.84-`, 2026-10-27)
+
+> *"mobile: two fingers up or down not working: nothing happens"* → *"when I input shift + dx, what happens ? sometimes, the gizmo moves, sometimes it does
+> not. in mobile phone, how to move the gizmo on horizontal axis ?"* → (the proposal: two fingers / Shift move the gizmo, one finger orbits and approaches)
+> *"build, update the md files, deploy"* — the owner.
+
+* ⛔⛔ **The two-finger tilt did nothing — reproduced with real touch events, then fixed.** `twoFingerKind` decided the moment EITHER finger passed the
+  3.5 mm deadband: two fingers never move in step, so the leading one's travel read as a pinch (3.6 mm against 0.5: relative 3.1 > common 2.05) — a zoom
+  with the fingers' distance unchanged, nothing to see; and the first finger's travel was counted from ITS OWN press, its orbit drag before the second
+  landed included. Now both fingers' travel is read from the moment the two-finger input starts (`hold.base`), and the decision waits until the largest
+  motion passes the deadband. Measured (CDP touch, the first finger orbiting first, then both down out of step): the old code zoomed 1.00 → 1.10, no tilt;
+  the new one tilted to 135° through the 0° and 90° detents, no zoom; a real pinch still zooms (1.00 → 0.61, no tilt).
+* ⛔ **Shift + dx moved the gizmo only sometimes**: dx orbited, the orbit's yaw turned, and the next stray dy step re-aimed the gizmo along the NEW yaw — a
+  sideways jump that depended on the drag's wobble. Now the aim keeps the yaw its gesture started with (`tiltGesture.yaw`) and Shift + drag does not orbit.
+* ⭐⭐⭐ **THE AIM** (the held second touch's mode `AIM`, ex-`TILT`; `aimStep`): two fingers moving THE SAME WAY (`twoFingerKind`: the common motion beats
+  the relative one) — or **Shift + drag** on a desktop or a touchpad:
+  * **dy** — the curve tilt, as built 2026-10-26 (the curve through the detents, the gizmo up / down the assembly);
+  * **dx** — the gizmo SLIDES SIDEWAYS: the free aim turned about the vertical through the gesture's pivot (`aimSideways`), its tip toward the screen's
+    right for a finger moving right whichever way it faces (`sidewaysSign`); the gizmo where its ray lands on a placed part (eased, its part and face — the
+    quads follow); the CURVE keeps its heading — the piece comes in from where it was. Pace: the orbit's dx yaw rate × `aimSlideGain` (slider, 1).
+  * Apart or together stays the pinch zoom; ⛔ two fingers sideways together are no longer a zoom (they barely zoomed). One finger: the orbit and the
+    approach, as ever. A tap that wobbled into the aim is undone.
+* Measured — the app (CDP): two fingers right → the gizmo 14.4 cm right (Piece10 → Piece11); Shift + drag left → 31.7 cm left (→ Piece8), then down → the
+  curve tilted 126°; the orbit's yaw −90.0° all through (no orbit under Shift); no error.
+* Vectors (`tests/curve_tilt.test.ts`): the leading finger undecided, then the aim; sideways together the aim; the sideways turn (about the vertical, the
+  height kept, toward the screen's right for four rights); the slider; the wiring (the base, the gesture's own yaw, the sideways turn, Shift without orbit) —
+  red on the old code. Restated: the pinch's text check, the drag's (Shift: no yaw). ⛔ No device close. 2104 vectors.

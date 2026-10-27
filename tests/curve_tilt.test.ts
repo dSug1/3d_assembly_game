@@ -10,7 +10,7 @@ import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { horizontalShare, rigPlace, rigTurnFor, UNTURNED, waistV } from "../src/input/orbit_rig";
 import { cameraFrameHeld } from "../src/input/camera_frame";
-import { aimDir, aimPivot, aimRay, anchorToward, curveTilt, TILT_ANCHOR_TAU_MS, tiltDetent, tiltRig, tiltStep, twoFingerKind, waistDir, wrapTilt } from "../src/input/curve_tilt";
+import { aimDir, aimPivot, aimRay, aimSideways, anchorToward, sidewaysSign, curveTilt, TILT_ANCHOR_TAU_MS, tiltDetent, tiltRig, tiltStep, twoFingerKind, waistDir, wrapTilt } from "../src/input/curve_tilt";
 import { holdTapMode } from "../src/input/hold_gesture";
 import type { Vec3 } from "../src/core/vec";
 
@@ -90,15 +90,20 @@ describe("⭐⭐⭐ the curve tilt (2026-10-26)", () => {
     expect(ang(aimDir(cfg, side, yaw, 30 * R)!, aim)).toBeCloseTo(30, 6);
     expect(aimDir(cfg, side, yaw, 30 * R)![1]).toBeGreaterThan(0.45); // up
   });
-  it("⭐⭐ TWO FINGERS: the same way up or down — TILT; apart, together or sideways — ZOOM; within the deadband — undecided; a tapped tilt is a tap", () => {
-    expect(twoFingerKind([0.2, 4], [-0.3, 4.4], 3.5)).toBe("TILT");
-    expect(twoFingerKind([0, -5], [0.5, -4], 3.5)).toBe("TILT");
+  it("⭐⭐ TWO FINGERS: the same way — up, down ⭐ (2026-10-27) or SIDEWAYS — the AIM; apart or together — ZOOM; within the deadband — undecided; a tapped aim is a tap", () => {
+    expect(twoFingerKind([0.2, 4], [-0.3, 4.4], 3.5)).toBe("AIM");
+    expect(twoFingerKind([0, -5], [0.5, -4], 3.5)).toBe("AIM");
     expect(twoFingerKind([-4, 0], [4, 0], 3.5)).toBe("ZOOM"); // apart
     expect(twoFingerKind([0, 4], [0, -4], 3.5)).toBe("ZOOM"); // apart vertically
-    expect(twoFingerKind([5, 1], [5, 1.2], 3.5)).toBe("ZOOM"); // sideways together: not a tilt
+    expect(twoFingerKind([5, 1], [5, 1.2], 3.5)).toBe("AIM"); // ⭐ (2026-10-27) sideways together: the gizmo slides (⛔ a zoom)
+    expect(twoFingerKind([-6, 0.5], [-5, -0.5], 3.5)).toBe("AIM");
     expect(twoFingerKind([1, 1], [0.5, 2], 3.5)).toBe(null);
-    expect(holdTapMode("TILT", true)).toBe("HELD");
-    expect(holdTapMode("TILT", false)).toBe("TILT");
+    // ⛔⛔ (2026-10-27, *"two fingers up or down not working: nothing happens"*) one finger LEADING (never in step): undecided, not a pinch — then the tilt
+    expect(twoFingerKind([0, 3.6], [0, 0.5], 3.5)).toBe(null);
+    expect(twoFingerKind([0.2, 6], [-0.1, 4], 3.5)).toBe("AIM");
+    expect(twoFingerKind([0, 8], [0, 0], 3.5)).toBe("ZOOM"); // one finger alone: the pinch (its distance changes as much as it moves)
+    expect(holdTapMode("AIM", true)).toBe("HELD");
+    expect(holdTapMode("AIM", false)).toBe("AIM");
     expect(tiltStep(2, 5) * D).toBeCloseTo(10, 12); // finger DOWN: the waist up
   });
   it("⭐⭐ the camera through a full-circle tilt at the far ring and at ring 3: every 1° of tilt turns the camera by ~1° — no jump, no flip", () => {
@@ -117,20 +122,22 @@ describe("⭐⭐⭐ the curve tilt (2026-10-26)", () => {
   });
   it("⭐ wired: two fingers' TILT and Shift + drag step the tilt; a tapped tilt undone; the gizmo slides where the free aim's ray meets a PLACED part; not mid-roll; the sliders", () => {
     const h = code("render/hold_wiring.ts");
-    expect(h).toContain('if (twoFingerKind(moved(h.first), moved(h.second), st.cfg.motionDeadbandMm) === "TILT") { h.mode = "TILT";');
-    expect(h).toContain("if (pointerId === h.first || pointerId === h.second) tiltCurve(st, pxToMm(_s.y - _prev.y) / 2);");
-    expect(h).toContain('if (mode !== h.mode && h.mode === "TILT") undoTilt(st);');
+    expect(h).toContain("if (h.base === undefined || h.base === null) h.base = { first: posOf(h.first), second: posOf(h.second) }; const kind = twoFingerKind(moved(h.first, h.base.first), moved(h.second, h.base.second), st.cfg.motionDeadbandMm);"); expect(h).toContain('if (kind === null) return h.mode; if (kind === "AIM") { h.mode = "AIM";'); expect(h).toContain("h.base = null; // ⭐ (2026-10-27)");
+    expect(h).toContain("if (pointerId === h.first || pointerId === h.second) aimStep(st, pxToMm(_s.x - _prev.x) / 2, pxToMm(_s.y - _prev.y) / 2);");
+    expect(h).toContain('if (mode !== h.mode && h.mode === "AIM") undoTilt(st);');
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain('st.orbitShift = e.pointerType === "mouse" && e.shiftKey;');
-    expect(p).toContain("const shiftTilt = st.orbitShift && !dxOnly; if (shiftTilt) tiltCurve(st, db.dy / mmToPx(1)); else endTilt(st); const dyPx = (dxOnly || shiftTilt ? 0 : db.dy)");
+    expect(p).toContain("const shiftTilt = st.orbitShift && !dxOnly; if (shiftTilt) aimStep(st, db.dx / mmToPx(1), db.dy / mmToPx(1)); else endTilt(st); const dyPx = (dxOnly || shiftTilt ? 0 : db.dy)");
+    expect(p).toContain("st.orbit.drag(shiftTilt ? 0 : pauseYawStep("); // ⭐ (2026-10-27) Shift: no orbit at all
     const t = code("render/tilt_wiring.ts");
     expect(t).toContain("if (pauseUnderWay(topPauseOn(st), st.topPause)) return;");
     expect(t).toContain("const want = tiltDetent(t.phiIn, (st.cfg.curveTiltDetentDeg * Math.PI) / 180);");
-    expect(t).toContain("const aim = aimDir(st.cfg, turned, st.orbit.yaw, t.phiIn - want);");
+    expect(t).toContain("const base = aimDir(st.cfg, turned, t.yaw, t.phiIn - want);"); // ⭐ (2026-10-27) the gesture's own yaw, never the orbit's live one
+    expect(t).toContain("t.side += sidewaysSign(base, [r0.x, r0.y, r0.z]) * ((dxMm * slideDegPerMm(st) * Math.PI) / 180); const aim = aimSideways(base, t.side);");
     expect(t).toContain("return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();");
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
     const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
-    for (const k of ['"curveTiltDetentDeg"', '"curveTiltGain"']) {
+    for (const k of ['"curveTiltDetentDeg"', '"curveTiltGain"', '"aimSlideGain"']) {
       const at = m.indexOf(k);
       expect(at).toBeGreaterThan(sub);
       expect(m.lastIndexOf("title:", at)).toBe(sub);
@@ -150,5 +157,21 @@ describe("⭐⭐⭐ the curve tilt (2026-10-26)", () => {
     expect(code("render/green_box_wiring.ts")).toContain("tiltFrame(st, dtSec * 1000);");
     expect(code("render/tilt_wiring.ts")).toContain("const next = anchorToward(c, to, dtMs); st.centreBlend.snapTo(next);");
     expect(code("render/camera_rig.ts")).toContain("st.tiltAnchor = null; // ⭐ (2026-10-26) a tap wins");
+  });
+  it("⭐⭐ (2026-10-27, *\"in mobile phone, how to move the gizmo on horizontal axis ?\"*) the aim turned SIDEWAYS about the vertical, its tip toward the screen's right for a finger moving right, whichever way the aim faces; its pace a slider", () => {
+    const aim: Vec3 = [Math.cos(0.3) * Math.cos(yaw), Math.sin(0.3), Math.cos(0.3) * Math.sin(yaw)];
+    const turned = aimSideways(aim, 20 * R);
+    expect(turned[1]).toBeCloseTo(aim[1], 12); // about the vertical: its height kept
+    expect(Math.hypot(turned[0], turned[2])).toBeCloseTo(Math.hypot(aim[0], aim[2]), 12);
+    const flat = (v: Vec3): Vec3 => { const n = Math.hypot(v[0], v[2]); return [v[0] / n, 0, v[2] / n]; };
+    expect(ang(flat(aim), flat(turned))).toBeCloseTo(20, 9);
+    expect(aimSideways(aim, 0)).toBe(aim);
+    for (const right of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0.6, 0.2, -0.77]] as Vec3[]) {
+      const sg = sidewaysSign(aim, right);
+      const tip = aimSideways(aim, sg * 1e-3);
+      expect((tip[0] - aim[0]) * right[0] + (tip[1] - aim[1]) * right[1] + (tip[2] - aim[2]) * right[2]).toBeGreaterThan(0);
+    }
+    expect(DEFAULT_CONFIG.aimSlideGain).toBe(1);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, aimSlideGain: 4.1 })).toThrow();
   });
 });

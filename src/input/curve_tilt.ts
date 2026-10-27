@@ -98,16 +98,33 @@ export function aimRay(pivot: Vec3, aim: Vec3, depth: number, reach: number): { 
 }
 
 /**
- * ⭐⭐ (2026-10-26) TWO FINGERS: the TILT (both moving the same way, mostly up or down — the maps' tilt gesture) or the ZOOM (apart or together) — judged once
- * either finger's travel since its press (`d1`, `d2`, mm, screen x right / y down) passes `deadbandMm`; `null`: undecided. The tilt wins when the two
- * fingers' COMMON vertical motion beats both their relative motion (the pinch's) and their common horizontal motion.
+ * ⭐⭐ (2026-10-26) TWO FINGERS: the TILT (both moving the same way, mostly up or down — the maps' tilt gesture) or the ZOOM (apart or together, or sideways),
+ * from each finger's travel SINCE THE SECOND LANDED (`d1`, `d2`, mm, screen x right / y down); `null`: undecided. Of the three motions — the common
+ * vertical one, the RELATIVE one (the pinch's) and the common horizontal one — the largest decides, once it passes `deadbandMm`.
+ * ⛔⛔ (2026-10-27, the owner: *"mobile: two fingers up or down not working: nothing happens"*) — it decided the moment EITHER finger passed the deadband:
+ * two real fingers never move in step, so the leading one's travel read as a pinch (3.6 mm against 0.5: relative 3.1 > common 2.05) — a zoom that did nothing;
+ * and the first finger's travel was counted from ITS OWN press, its whole orbit drag before the second landed included.
  */
-export function twoFingerKind(d1: readonly [number, number], d2: readonly [number, number], deadbandMm: number): "TILT" | "ZOOM" | null {
-  if (!(Math.hypot(d1[0], d1[1]) > deadbandMm || Math.hypot(d2[0], d2[1]) > deadbandMm)) return null;
-  const my = (d1[1] + d2[1]) / 2;
-  const mx = (d1[0] + d2[0]) / 2;
+export function twoFingerKind(d1: readonly [number, number], d2: readonly [number, number], deadbandMm: number): "AIM" | "ZOOM" | null {
+  // ⭐⭐ (2026-10-27, the owner: *"in mobile phone, how to move the gizmo on horizontal axis ?"* → the proposal → *"build"*) the COMMON motion, up / down
+  // AND sideways, is the AIM — the gizmo moved (dy: the tilt, dx: sideways); only the RELATIVE motion (apart, together) is the pinch (⛔ sideways was a zoom)
+  const common = Math.hypot((d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2);
   const rel = Math.hypot(d2[0] - d1[0], d2[1] - d1[1]);
-  return Math.abs(my) > rel && Math.abs(my) > Math.abs(mx) ? "TILT" : "ZOOM";
+  if (!(Math.max(common, rel) > deadbandMm)) return null;
+  return common >= rel ? "AIM" : "ZOOM";
+}
+
+/**
+ * ⭐⭐ (2026-10-27) THE AIM TURNED SIDEWAYS: `aim` turned about the world vertical by `rad` — the gizmo's ray swept across the assembly (the curve itself
+ * keeps its heading: the gizmo slides, the piece comes in from where it was).
+ */
+export function aimSideways(aim: Vec3, rad: number): Vec3 {
+  return rad === 0 ? aim : qRotate(qFromAxisAngle(UP, rad), aim);
+}
+
+/** ⭐ The sign that makes a positive sideways turn move the aim's tip toward the screen's `right` (so finger right, the gizmo right): ±1. */
+export function sidewaysSign(aim: Vec3, right: Vec3): 1 | -1 {
+  return dot(cross(UP, aim), right) >= 0 ? 1 : -1;
 }
 
 /** ⭐ The tilt a step of the two fingers' (or Shift + drag's) dy buys (rad): dy DOWN tilts the waist UP (the orbit's dy sense: finger down, the piece up). */

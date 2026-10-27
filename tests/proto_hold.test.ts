@@ -230,7 +230,8 @@ describe("⛔⛔ the way in, the orbit round the piece and its dx roll COMMENTED
     expect(pinchStarts(3.4, 3.4, DB)).toBe(false);
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(h).toContain("if (h.second === MOUSE_SECOND_ID) { // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out) if (pointerId === h.first) orbitStep(false); return h.mode; }");
-    expect(h).toContain("if (!pinchStarts(travel(h.first), travel(h.second), st.cfg.motionDeadbandMm)) return h.mode;"); expect(h).toContain("h.mode = \"ZOOM\"; startZoom(st);"); // ⭐ (2026-10-26) the TILT judged between them (`twoFingerKind`)
+    expect(h).toContain("const kind = twoFingerKind(moved(h.first, h.base.first), moved(h.second, h.base.second), st.cfg.motionDeadbandMm);"); // ⛔ (2026-10-27) the pinch decided with the tilt, on the travel since the second landed
+    expect(h).toContain("h.mode = \"ZOOM\"; startZoom(st);"); // ⭐ (2026-10-26) the TILT judged between them (`twoFingerKind`)
     const r = code("render/camera_rig.ts");
     expect(r).not.toMatch(/pinchDxOpen|pinchZooms|pinchMotion/);
   });

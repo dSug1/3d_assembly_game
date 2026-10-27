@@ -113,7 +113,7 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     expect(pauseYawStep(true, 1, -0.02)).toBe(-0.02);
     expect(pauseYawStep(false, 0.4, 0.02)).toBe(0.02);
     expect(pauseUnderWay(true, 0.001)).toBe(true);
-    expect(code("render/pointer_wiring.ts")).toContain("st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);");
+    expect(code("render/pointer_wiring.ts")).toContain("st.orbit.drag(shiftTilt ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);");
     expect(code("render/green_box_wiring.ts")).toContain("st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);");
   });
   it("⭐⭐ (2026-10-25) a gizmo change asked for MID-ROLL waits: the roll finished or unwound to its nearer end at 360°/s, then the change made", () => {
