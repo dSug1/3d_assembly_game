@@ -4,9 +4,9 @@
  * is done around the center of the assembly … The gizmo is positioned at the intersection of the sections of the assembly created by the pitch plane and
  * yaw plane at the actual position of the piece orbit … The approach of the piece towards the gizmo is the same as currently built (2D curves …)"* → the
  * answers: the gizmo on the ray toward the centre, wherever the piece is; straight in, the along-the-curve path kept; to the contact, in and back; the
- * gizmo and its face LOCKED when close; pitch ±85°; the camera looking at the centre far out, at the gizmo as the approach goes in; two fingers' dx and
+ * gizmo and its face LOCKED when close; pitch ±85° (⭐ ±90° since 2026-10-29); the camera looking at the centre far out, at the gizmo as the approach goes in; two fingers' dx and
  * Shift + dx nothing; the inertia on the orbit and the approach) — **THE ORBIT AROUND THE ASSEMBLY**:
- * * dx turns the YAW (the full circle), dy the PITCH (`pitchOfV`: the orbit's ring parameter `v` read as −85° … +85°);
+ * * dx turns the YAW (the full circle), dy the PITCH (`pitchOfV`: the orbit's ring parameter `v` read as −90° … +90°);
  * * the piece's direction `u` (`orbitDir`) from the assembly's CENTRE (fixed at the boot); the GIZMO where the ray from the piece toward the centre first
  *   meets the assembly (the render casts it); the piece ON that ray, at the APPROACH's distance from the gizmo (`approachDistance`: the 2D curve's distance
  *   from ring 1 to the waist, then straight to the contact) — so far out it orbits the centre, close in it hugs the assembly's shape;
@@ -21,10 +21,13 @@ import { waistV } from "./orbit_rig";
 import { smoothstep01 as smooth } from "./waist_view";
 import { cross, dot, normalize, qFromAxisAngle, qRotate, type Vec3 } from "../core/vec";
 
-/** ⭐ The pitch's reach either side of the horizon (the owner: ±85°, never the vertical — no roll, never upside down). */
-export const ORBIT_PITCH_MAX_RAD = (85 * Math.PI) / 180;
+/**
+ * ⭐ The pitch's reach either side of the horizon — ±90° (the owner, 2026-10-29: *"can you increase the pitch to -90 +90 degrees ?"* → *"build it with the
+ * clamp and ±90°"*; ⛔ ±85°: never the vertical): straight above / under the centre at the ends, the camera's heading the orbit's yaw there, never over.
+ */
+export const ORBIT_PITCH_MAX_RAD = Math.PI / 2;
 
-/** ⭐ The orbit's ring parameter `v` (0 … 1) read as the PITCH: −85° at 0, level at ½, +85° at 1. */
+/** ⭐ The orbit's ring parameter `v` (0 … 1) read as the PITCH: −90° at 0, level at ½, +90° at 1. */
 export function pitchOfV(v: number): number {
   return (2 * Math.min(1, Math.max(0, v)) - 1) * ORBIT_PITCH_MAX_RAD;
 }
@@ -172,88 +175,5 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   return { dir: qRotate(t, d1), up: qRotate(t, u1) };
 }
 
-/**
- * ⭐⭐⭐ (2026-10-28, the owner: *"i want the gizmo to travel along the section when i orbit (the red or green sections on the sketch when i orbit the red or
- * green circle). So the gizmo shall not be the raycast to the center"* → the proposal → *"Build, with the optional, as recommended"*) — **THE GIZMO CARRIED
- * ALONG THE SECTIONS**: a point on the surface that the orbit MOVES — dx turns it about the assembly's vertical axis by the yaw's step (`yawAbout`), dy about
- * a slide along the yaw plane's section by the pitch's step (`pitchSlide`), each then dropped back onto the surface by the ray `sectionRay` names; the
- * render casts it, and where it misses (past an edge, off the assembly) the RADIAL ray through the turned point finds the next face of the same section.
- */
-export function yawAbout(g: Vec3, c: Vec3, dYaw: number): Vec3 {
-  const q = qFromAxisAngle([0, 1, 0], -dYaw); // ⭐ the orbit's own yaw convention (`yawTurn`)
-  const r = qRotate(q, [g[0] - c[0], g[1] - c[1], g[2] - c[2]]);
-  return [c[0] + r[0], c[1] + r[1], c[2] + r[2]];
-}
-
-/**
- * ⭐⭐ `g` SLID along the red section (the yaw plane at `yaw`) on its face of normal `n` by the pitch's step: an arc of `radiusM` × `dPitch` (the assembly's
- * half-size — ⛔ turned about the centre, a face 2 cm from it moved 2 cm for 51° of pitch), along the face's line in the yaw plane the pitch's turn runs
- * along (`axis × n`: UP a face toward the piece, ACROSS a top away from it, DOWN the far face). A face square to the plane's axis has no such line: `g`.
- */
-export function pitchSlide(g: Vec3, n: Vec3, yaw: number, dPitch: number, radiusM: number): Vec3 {
-  const axis: Vec3 = [-Math.sin(yaw), 0, Math.cos(yaw)];
-  const t = normalize(cross(axis, n));
-  if (t === null) return g;
-  const k = radiusM * dPitch;
-  return [g[0] + t[0] * k, g[1] + t[1] * k, g[2] + t[2] * k];
-}
-
-/** ⭐ A ray: from `origin` along `dir` (unit), `length` long. */
-export interface SectionRay {
-  readonly origin: Vec3;
-  readonly dir: Vec3;
-  readonly length: number;
-}
-
-/**
- * ⭐⭐ THE RAY THAT DROPS THE TURNED GIZMO `p` BACK ONTO THE SURFACE (`reach`: from how far outside): after a YAW step, on a vertical face (`n` within 45° of
- * level) the HORIZONTAL ray at `p`'s height toward the vertical axis through `c` (the green section: at constant height round the assembly), on a top or a
- * bottom face the VERTICAL one down (up) onto it; after a PITCH step, along the face's normal (the red section: up or down the face). `null` when `p` sits on
- * the axis (no horizontal direction).
- */
-export function sectionRay(kind: "YAW" | "PITCH", p: Vec3, n: Vec3, c: Vec3, reach: number): SectionRay | null {
-  if (kind === "PITCH") return { origin: [p[0] + n[0] * reach, p[1] + n[1] * reach, p[2] + n[2] * reach], dir: [-n[0], -n[1], -n[2]], length: reach * 2 };
-  if (Math.abs(n[1]) > Math.SQRT1_2) {
-    const s = n[1] > 0 ? 1 : -1;
-    return { origin: [p[0], p[1] + s * reach, p[2]], dir: [0, -s, 0], length: reach * 2 };
-  }
-  const h = normalize([p[0] - c[0], 0, p[2] - c[2]]);
-  if (h === null) return null;
-  return { origin: [c[0] + h[0] * reach, p[1], c[2] + h[2] * reach], dir: [-h[0], 0, -h[2]], length: reach * 2 };
-}
-
-/** ⭐ The RADIAL ray through `p` toward the centre `c` from `reach` outside — where the section's next face is found past an edge. */
-export function radialRay(p: Vec3, c: Vec3, reach: number): SectionRay | null {
-  const u = normalize([p[0] - c[0], p[1] - c[1], p[2] - c[2]]);
-  if (u === null) return null;
-  return { origin: [c[0] + u[0] * reach, c[1] + u[1] * reach, c[2] + u[2] * reach], dir: [-u[0], -u[1], -u[2]], length: reach * 2 };
-}
-
-/** ⭐ The safety resync: the gizmo's face TURNED AWAY from the piece (its normal against the piece's direction `u`) — it is found again by the ray toward the centre. */
-export function faceTurnedAway(n: Vec3 | null, u: Vec3): boolean {
-  return n !== null && dot(n, u) < 0;
-}
-
-/**
- * ⭐⭐ (the optional) THE SECTIONS DRAWN: the directions of the rays that sample them — the GREEN one (the horizontal plane at the gizmo's height: `count`
- * horizontal directions round the vertical axis) and the RED one (the yaw plane: `count` directions in it about the centre). Each ray comes from outside
- * toward the axis / the centre; its first hit is a point of the section.
- */
-export function greenSectionDirs(count: number): Vec3[] {
-  const out: Vec3[] = [];
-  for (let i = 0; i < count; i++) {
-    const a = (2 * Math.PI * i) / count;
-    out.push([Math.cos(a), 0, Math.sin(a)]);
-  }
-  return out;
-}
-
-export function redSectionDirs(yaw: number, count: number): Vec3[] {
-  const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
-  const out: Vec3[] = [];
-  for (let i = 0; i < count; i++) {
-    const a = (2 * Math.PI * i) / count;
-    out.push([Math.cos(a) * h[0], Math.sin(a), Math.cos(a) * h[2]]);
-  }
-  return out;
-}
+// ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
+// hull now (`input/section_hull.ts`, with `faceTurnedAway` and the drawn sections' samples).

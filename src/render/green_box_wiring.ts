@@ -1677,7 +1677,7 @@ export function cameraPlaceNow(st: SceneState): OrbitAt {
 
 /** ⭐ (2026-10-21) the top face pause is on while the gizmo's turn is a horizontal face's (`horizontalShare` of the turn it goes to). */
 export function topPauseOn(st: SceneState): boolean {
-  if (assemblyOn(st)) return false; // ⭐ (2026-10-28) around the assembly the pitch stops at ±85°: nothing crosses the zenith
+  if (assemblyOn(st)) return false; // ⭐ (2026-10-28) around the assembly the pitch stops at the zenith (±90° since 2026-10-29): nothing crosses it
   return horizontalShare(st.cfg, st.rigTo) >= 1;
 }
 
