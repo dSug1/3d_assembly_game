@@ -20,6 +20,7 @@ import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOn
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
+import { ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -1347,7 +1348,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
     const dyPx = (dxOnly || shiftApproach ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
-    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : db.dy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / 170 : dvRaw;
+    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : db.dy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
     const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;

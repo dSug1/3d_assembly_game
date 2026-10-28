@@ -23,13 +23,6 @@ import {
   LOCK_CONE_RAD,
   lookShare,
   nextLock,
-  yawAbout,
-  pitchSlide,
-  sectionRay,
-  radialRay,
-  faceTurnedAway,
-  greenSectionDirs,
-  redSectionDirs,
   offsetFrame,
   orbitDir,
   ORBIT_PITCH_MAX_RAD,
@@ -46,13 +39,15 @@ const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url)
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
-  it("⭐⭐⭐ dx the YAW (the full circle), dy the PITCH −85° … +85° — never the vertical; the direction unit, on the orbit's own azimuth convention", () => {
-    expect(ORBIT_PITCH_MAX_RAD * D).toBeCloseTo(85, 12);
-    expect(pitchOfV(0) * D).toBeCloseTo(-85, 12);
+  it("⭐⭐⭐ dx the YAW (the full circle), dy the PITCH −90° … +90° (⭐ 2026-10-29, *\"can you increase the pitch to -90 +90 degrees ?\"*; ⛔ ±85°); the direction unit, on the orbit's own azimuth convention", () => {
+    expect(ORBIT_PITCH_MAX_RAD * D).toBeCloseTo(90, 12);
+    expect(pitchOfV(0) * D).toBeCloseTo(-90, 12);
     expect(pitchOfV(0.5)).toBeCloseTo(0, 12);
-    expect(pitchOfV(1) * D).toBeCloseTo(85, 12);
-    expect(pitchOfV(1.4) * D).toBeCloseTo(85, 12); // held to its range
-    for (const p of [-80, -20, 0, 33.5, 85]) expect(pitchOfV(vOfPitch(p / D)) * D).toBeCloseTo(p, 9);
+    expect(pitchOfV(1) * D).toBeCloseTo(90, 12);
+    expect(pitchOfV(1.4) * D).toBeCloseTo(90, 12); // held to its range
+    for (const p of [-90, -80, -20, 0, 33.5, 85, 90]) expect(pitchOfV(vOfPitch(p / D)) * D).toBeCloseTo(p, 9);
+    // ⭐ the pitch's pace on the finger: the whole range over the orbit's own degrees per mm (⛔ 170 — ±85°)
+    expect(code("render/pointer_wiring.ts")).toContain("yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;");
     for (const yaw of [-2, 0.4, 3.1]) {
       for (const v of [0, 0.3, 0.5, 1]) {
         const u = orbitDir(yaw, v);
@@ -198,10 +193,15 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
         const r = split(u, f);
         expect(r[0]).toBeCloseTo(r0[0], 9); // the piece as far below / above the view as level
         expect(r[1]).toBeCloseTo(r0[1], 9); // and as far aside
-        expect(Math.asin(f.dir[1]) * D).toBeLessThan(89); // +85° and its 2°: never over the top
+        expect(Math.asin(f.dir[1]) * D).toBeLessThan(89); // +90° and its 2°: tilted off the vertical by the offset, never over the top
       }
     }
-    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, Math.atan2(u[2], u[0]), o.yawRad, o.pitchRad);");
+    // ⭐ (2026-10-29) at ±90° the direction has no heading: the orbit's yaw (⛔ `atan2(0, 0)` — the camera swung to yaw 0 at the pole)
+    for (const yaw of [-2, 0.4, 2.7]) {
+      const f = offsetFrame([0, 1, 0], yaw, 0, 0);
+      expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
+    }
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, Math.hypot(u[0], u[2]) > 1e-6 ? Math.atan2(u[2], u[0]) : cam.yaw, o.yawRad, o.pitchRad);");
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");
@@ -210,67 +210,9 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(p).toContain('const faceTapHere = st.pieceFaceTap !== null && st.pieceFaceTap.pointerId === e.pointerId && st.hold !== null && st.hold.second === e.pointerId && st.hold.mode === "HELD";');
     expect(p).toContain(') === "SECOND" && !faceTapHere');
   });
-  it("⭐⭐⭐ (2026-10-28, *\"i want the gizmo to travel along the section when i orbit\"*) the YAW step turns the gizmo about the assembly's vertical axis — its height kept (the green section) — and drops it back toward the axis on a vertical face, straight down onto a top face", () => {
-    const c: Vec3 = [0.02, 0.24, -0.03];
-    const g: Vec3 = [0.1, 0.3, -0.06];
-    const t = yawAbout(g, c, 0.5);
-    expect(t[1]).toBeCloseTo(g[1], 12); // its height
-    expect(Math.hypot(t[0] - c[0], t[2] - c[2])).toBeCloseTo(Math.hypot(g[0] - c[0], g[2] - c[2]), 12);
-    // the orbit's own yaw convention: a point in the yaw's direction turned by dYaw is in the direction yaw + dYaw
-    const onYaw: Vec3 = [c[0] + Math.cos(0.3), c[1], c[2] + Math.sin(0.3)];
-    const r = yawAbout(onYaw, c, 0.4);
-    expect(Math.atan2(r[2] - c[2], r[0] - c[0])).toBeCloseTo(0.7, 12);
-    const side = sectionRay("YAW", t, [0, 0, -1], c, 2)!;
-    expect(side.dir[1]).toBe(0); // horizontal
-    expect(side.origin[1]).toBeCloseTo(t[1], 12); // at the gizmo's height
-    expect(side.dir[0] * (t[0] - c[0]) + side.dir[2] * (t[2] - c[2])).toBeLessThan(0); // toward the axis
-    const top = sectionRay("YAW", t, [0, 1, 0], c, 2)!;
-    expect(top.dir[1]).toBe(-1);
-    expect(top.origin[0]).toBeCloseTo(t[0], 12);
-    const under = sectionRay("YAW", t, [0, -1, 0], c, 2)!;
-    expect(under.dir[1]).toBe(1);
-    expect(sectionRay("YAW", [c[0], 0.5, c[2]], [1, 0, 0], c, 2)).toBe(null); // on the axis: no horizontal direction
-  });
-  it("⭐⭐⭐ the PITCH step slides the gizmo along the red section by the assembly's half-size × the step — UP a face toward the piece, ACROSS a top away from it, DOWN the far face (⛔ turned about the centre: 1.5 cm for 51°) — then back along the face's normal; past an edge, the radial ray", () => {
-    const yaw = 0.4;
-    const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
-    const g: Vec3 = [0.1, 0.3, 0.05];
-    const up = pitchSlide(g, h, yaw, 0.1, 0.27); // the face toward the piece
-    expect(up[1] - g[1]).toBeCloseTo(0.027, 12);
-    expect(Math.hypot(up[0] - g[0], up[2] - g[2])).toBeLessThan(1e-12);
-    const across = pitchSlide(g, [0, 1, 0], yaw, 0.1, 0.27); // a top
-    expect(across[1]).toBeCloseTo(g[1], 12);
-    expect((across[0] - g[0]) * h[0] + (across[2] - g[2]) * h[2]).toBeCloseTo(-0.027, 12); // away from the piece's side
-    const down = pitchSlide(g, [-h[0], 0, -h[2]], yaw, 0.1, 0.27); // the far face
-    expect(down[1] - g[1]).toBeCloseTo(-0.027, 12);
-    expect(pitchSlide(g, [-Math.sin(yaw), 0, Math.cos(yaw)], yaw, 0.1, 0.27)).toBe(g); // a face square to the plane's axis: unmoved
-    const n: Vec3 = [0, 0, -1];
-    const ray = sectionRay("PITCH", up, n, [0, 0, 0], 2)!;
-    expect(ray.dir[2]).toBe(1); // along −n
-    expect(Math.abs(ray.dir[0]) + Math.abs(ray.dir[1])).toBe(0);
-    expect(ray.origin[2]).toBeCloseTo(up[2] - 2, 12);
-    const rad = radialRay([0.3, 0.6, 0], [0, 0.2, 0], 2)!;
-    const back = Math.hypot(rad.origin[0], rad.origin[1] - 0.2, rad.origin[2]);
-    expect(back).toBeCloseTo(2, 12);
-    expect(rad.dir[0] * 0.3 + rad.dir[1] * 0.4).toBeLessThan(0); // toward the centre
-    expect(radialRay([0, 0.2, 0], [0, 0.2, 0], 2)).toBe(null);
-  });
-  it("⭐⭐ the safety resync: a face turned away from the piece; the sections drawn — the green round the vertical axis, the red in the yaw plane; the slider", () => {
-    expect(faceTurnedAway([0, 0, -1], [0, 0.5, -0.8])).toBe(false);
-    expect(faceTurnedAway([0, 0, 1], [0, 0.5, -0.8])).toBe(true);
-    expect(faceTurnedAway(null, [0, 0, 1])).toBe(false);
-    const gr = greenSectionDirs(96);
-    expect(gr.length).toBe(96);
-    for (const d of gr) {
-      expect(d[1]).toBe(0);
-      expect(Math.hypot(...d)).toBeCloseTo(1, 12);
-    }
-    const yaw = 0.4;
-    const axis: Vec3 = [-Math.sin(yaw), 0, Math.cos(yaw)];
-    for (const d of redSectionDirs(yaw, 96)) {
-      expect(Math.abs(dot(d, axis))).toBeLessThan(1e-12); // in the yaw plane
-      expect(Math.hypot(...d)).toBeCloseTo(1, 12);
-    }
+  // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) and its resync are deleted — its carrier rides
+  // the section's hull now: `tests/section_hull.test.ts`
+  it("⭐⭐ the sections drawn: the slider, in CAMERA ORBIT AROUND CENTER", () => {
     expect(DEFAULT_CONFIG.sectionLines).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, sectionLines: 2 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
@@ -278,14 +220,5 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     const at = m.indexOf('"sectionLines"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
-  });
-  it("⭐⭐ wired: the gizmo CARRIED by the orbit's step since the last frame (no longer the ray for each direction), the ray only at the start and the resync; every query reads it; the sections drawn", () => {
-    const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("else if (dYaw !== 0 || dPitch !== 0) hit = carryGizmo(st, st.asmG, st.gizmoNormal, q.yaw, dYaw, dPitch);");
-    expect(a).toContain("if (hit !== null && faceTurnedAway(hit.normal, u)) { hit = castGizmo(st, u) ?? hit;");
-    expect(a).toContain("if (st.asmG !== null) return st.asmG;");
-    expect(a).toContain('const h = castRay(st, sectionRay("YAW", turned, face, a.centre, reach)) ?? castRay(st, radialRay(turned, a.centre, reach));');
-    expect(a).toContain("const turned = pitchSlide(p, face, yaw, dPitch, a.radius);");
-    expect(a).toContain("sectionLinesFrame(st, q.yaw);");
   });
 });

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1 as SCENE_1_ALL, SCENE_1_OVERHANG_IDS } from "../src/content/scene_1";
 import { contourDims } from "@core/game_structure";
 import { boxShape } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, type CollisionSetup } from "@core/collision";
@@ -15,6 +15,8 @@ import { IDENTITY, type Vec3 } from "@core/vec";
 import { snapPathBlockedBy } from "@input/snap";
 import { UnsnapHold } from "@input/unsnap";
 
+// ⭐ (2026-10-29) the painting's slots — without the two overhangs (every body here is an upright box)
+const SCENE_1 = { ...SCENE_1_ALL, bodies: SCENE_1_ALL.bodies.filter((b) => !SCENE_1_OVERHANG_IDS.includes(b.id)) };
 const U = SCENE_1.unitM!;
 const fin = new Map(SCENE_1.final!.bodies.map((f) => [f.id, f.position]));
 /** `Scene_1` assembled, in metres — the reproduction's world. */

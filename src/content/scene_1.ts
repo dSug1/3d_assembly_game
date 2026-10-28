@@ -157,6 +157,26 @@ const SEATED_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: 
   { id: "Piece43", slot: "MAT_A", position: [0.555, 0.445 - 0.55 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H, -0.34], quat: [0, 1, 0, 0] },
 ];
 
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"add a seated part somewhere on the vertical and horizontal face to create overhangs (for example, the same shape as the
+ * green piece, small face on top of the horizontal top face, to create an overhang on the top horizontal face, and small face adhered to a vertical face to
+ * create an overhand on a vertical face)"*) — **TWO OVERHANGS**: the same frustum, its SMALL face flush on the host's contour, so its wide face and its
+ * slanted sides hang out over the host — both at the assembly's centre in x (the yaw plane at the boot's yaw cuts them), long axis across the face (the
+ * deeper overhang, ~32° sides):
+ * * `Piece44` on Piece4's TOP (beside the orbited pieces' goal, 6.75 mm clear of it): upside down, its long axis along the depth (z) — its small face
+ *   (0.52 deep) already overhangs the 0.33-deep top by 9 mm each side, its wide top by 35 mm;
+ * * `Piece45` on Piece10's FRONT face (the −z face the boot looks at): its small face onto it, its long axis vertical — the wide face 26 mm over the small
+ *   one above and below, 41 mm out of the face.
+ */
+const OVERHANG_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: readonly [number, number, number, number] }[] = [
+  // Piece4's top at 4.56 + 0.82 / 2, contour + 0.015 → 4.985; a half-turn about (x + z)/√2: body x → z (the long axis along the depth), body +y (the small face) → −y
+  { id: "Piece44", slot: "MAT_A", position: [0.23, 4.56 + 0.82 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, -0.34], quat: [0, S, 0, S] },
+  // Piece10's front face at −0.34 − 0.3 / 2, contour − 0.015 → −0.505; a third of a turn about (1, 1, 1)/√3: body x → y (the long axis vertical), body +y (the small face) → +z (onto the face)
+  { id: "Piece45", slot: "MAT_A", position: [0.23, 1.9, -0.34 - 0.3 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H], quat: [0.5, 0.5, 0.5, 0.5] },
+];
+/** ⭐ The overhangs' ids — kept out of the demo with the seated frusta. */
+export const SCENE_1_OVERHANG_IDS: readonly string[] = OVERHANG_FRUSTA.map((f) => f.id);
+
 export const SCENE_1_FINAL: FinalConfiguration = {
   frame: "RELATIVE",
   bodies: [
@@ -168,7 +188,7 @@ export const SCENE_1_FINAL: FinalConfiguration = {
       kind: `${slot} ${sx}×${sy}×${sz}`,
     })),
     // ⭐ a frustum looks the same only turned half a round about its own taper axis
-    ...SEATED_FRUSTA.map((f) => ({ id: f.id, position: f.position, orientation: { quat: f.quat } as const, symmetry: "yawHalfTurns" as const, kind: `${f.slot} frustum` })),
+    ...[...SEATED_FRUSTA, ...OVERHANG_FRUSTA].map((f) => ({ id: f.id, position: f.position, orientation: { quat: f.quat } as const, symmetry: "yawHalfTurns" as const, kind: `${f.slot} frustum` })),
   ],
 };
 
@@ -192,7 +212,7 @@ const BOOT_MOVES: Readonly<Record<string, { position: Triple; yawDeg: number }>>
   Piece41: { position: [1.323, 0.445, -1.412], yawDeg: 0 },
 };
 
-const frusta: BodySpec[] = SEATED_FRUSTA.map((f) => ({
+const frusta: BodySpec[] = [...SEATED_FRUSTA, ...OVERHANG_FRUSTA].map((f) => ({
   id: f.id,
   position: f.position,
   colour: SCENE_1_PALETTE[f.slot],
@@ -327,9 +347,10 @@ export const SCENE_1: SceneDescriptor = {
   orbitGoals: SCENE_1_ORBIT_GOALS,
 };
 
-/** ⭐ (2026-10-18) `Scene_1` as the owner's TABLE alone — without the seated frusta: what the demo plays and its plan is generated from (`scene1_demo.ts`). */
+/** ⭐ (2026-10-18) `Scene_1` as the owner's TABLE alone — without the seated frusta (nor the overhangs, 2026-10-29): what the demo plays and its plan is generated from (`scene1_demo.ts`). */
+const notTable = (id: string): boolean => SCENE_1_FRUSTUM_IDS.includes(id) || SCENE_1_OVERHANG_IDS.includes(id);
 export const SCENE_1_TABLE: SceneDescriptor = {
   ...SCENE_1,
-  bodies: SCENE_1.bodies.filter((b) => !SCENE_1_FRUSTUM_IDS.includes(b.id)),
-  final: { ...SCENE_1_FINAL, bodies: SCENE_1_FINAL.bodies.filter((b) => !SCENE_1_FRUSTUM_IDS.includes(b.id)) },
+  bodies: SCENE_1.bodies.filter((b) => !notTable(b.id)),
+  final: { ...SCENE_1_FINAL, bodies: SCENE_1_FINAL.bodies.filter((b) => !notTable(b.id)) },
 };

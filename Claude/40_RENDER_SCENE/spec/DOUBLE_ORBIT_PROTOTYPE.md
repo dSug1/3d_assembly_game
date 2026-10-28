@@ -1798,3 +1798,55 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   top / bottom, none on the axis); the pitch's slide (up, across, down, the face square to the plane, along −n, the radial ray); the resync, the sections'
   directions, the slider; the camera's offsets in its own frame (the same split at every pitch, never over the top); the second finger on the piece; the
   wiring. Restated: the two holds' source checks. ⛔ No device close. 2111 vectors.
+
+### …the gizmo's CARRIER ON THE SECTION'S HULL, clamped at ±90°; two overhangs; the sections no longer flicker; the gizmo always where they meet (`1.0.85from1.0.83-`, 2026-10-29)
+
+> *"when the gizmo is on the vertical face of the assembly and I dy in one direction, when the gizmo reaches the extreme edge it jumps back and dy continues
+> its travel until the edge. why is that ?"* → *"can you increase the pitch to -90 +90 degrees ? … it should not be able to move to a face which is turned
+> away from the piece"* → *"why can't each degree of pitch slide it 0.27m * 1 degree and then clamp it between -90 +90 degrees of red section ?"* →
+> *"overhang or concave shape: propose something to drive the gizmo. Same if the overhang or concave is met on the dx yaw orbit."* → the proposal →
+> *"build it with the clamp and ±90°; add a seated part … to create overhangs …; check why the green and red sections are flickering all the time …; check
+> this bug: there are moment when the gizmo is not at the intersection of the green and red sections"* — the owner.
+
+* ⛔ **The jump back** (2026-10-28's carry): up the painting's front face, over the top edge, across its 4 cm in ~8° of pitch, over the back edge onto the
+  back face — turned away from the piece, so the safety resync put the gizmo on the ray toward the centre, mid-face; dy carried it up again, and again.
+* ⭐ **The pitch ±90°** (`ORBIT_PITCH_MAX_RAD`; ⛔ ±85°): straight above / under the centre at the ends. At the pole the camera's heading is the orbit's yaw
+  (⛔ `atan2(0, 0)`: 0); the finger's pace the whole range over the orbit's degrees per mm (⛔ 170). Checked in the app: the camera straight down at +90°,
+  straight up at −90°, a dx there steady; no error.
+* ⭐⭐⭐ **THE CARRIER ON THE SECTION'S HULL** (`input/section_hull.ts`; ⛔ `yawAbout`, `pitchSlide`, `sectionRay`, `radialRay` and the resync deleted):
+  * the RED section is the yaw plane's cut of the placed parts — each part's convex hull cut by the plane (`sectionPoints`; from the meshes' own vertices,
+    cached for the placed set); its CONVEX HULL (`hull2`, Andrew's monotone chain) has no hollow and no overhang; the half facing the piece (`facingChain`)
+    runs from the BOTTOM CENTRE (under the centre) up the piece's side to the TOP CENTRE (over it) — **the clamp**: −90° and +90°'s ends;
+  * **dy** slides the carrier along it by the assembly's half-size per radian (0.28 m in `Scene_1`, the owner's *"0.27m × 1 degree"*), clamped at both
+    centres (it waits there for the rest of the pitch), and it **never ENTERS an edge turned away from the piece** (`facesPiece`: it waits at that edge's
+    start; inside one it is on, free);
+  * **dx** turns the yaw plane: the carrier is found again on the new chain (`remapOnChain`) — on a SIDE at its **height** (round the assembly at constant
+    height: the green section), on a TOP / BOTTOM at its **distance from the axis** (round the axis on the face);
+  * the GIZMO is the carrier **DROPPED** onto the real surface (`dropRay`): on a side horizontally toward the axis at the carrier's height, on a top straight
+    down, on a bottom straight up — so it is ALWAYS in the yaw plane and on a side at its height: **at the red and green sections' intersection, by
+    construction**. A drop that misses, or lands on a face turned away from the piece, holds the gizmo (the carrier goes on). The edge rule, the ease, the
+    lock and the quads unchanged.
+* ⭐⭐ **Overhangs and hollows** — the hull bridges them; the gizmo steps where a face is hidden horizontally (out onto an overhang's front, back in past it),
+  eased by the gizmo's 90 ms; an overhang's underside is never visited (a horizontal ray never lands on it). Measured in the app, the boot's yaw, bottom
+  centre → top centre: Piece43's slanted face, Piece19, Piece15, **out onto Piece45's wide face (4.1 cm)**, back onto Piece10, Piece27, Piece4, **up Piece44's
+  slanted side, onto its top**, the top centre at +38° (held to +90°); down, the bottom centre at −30° (held to −90°); dx at a height all round — the gizmo
+  **0.00 mm off the yaw plane** at every step.
+* ⭐⭐ **TWO OVERHANGS** (`Piece44`, `Piece45` — `SCENE_1.md` §11): the frustum, small face down on Piece4's top, and small face on Piece10's front face.
+* ⛔⛔ **The flicker**: the section lines were a NEW mesh every 100 ms (dispose, create) even at rest, and a new line mesh's material is not ready for its first
+  frames — measured: rebuilt 18 times in 2 s, **missing from 27 of 106 frames**. ✅ Now ONE mesh of a fixed vertex count (96 green segments, 63 red),
+  updated in place (a segment not drawn: collapsed), recast only when the yaw, the carrier or the placed set changed: missing from 0 of 119.
+* ⛔⛔ **The gizmo off the intersection** (the owner's snapshot): after a LOCK (the piece turns about the locked gizmo — the yaw plane turns away from it) or a
+  HOVER (its slide moves it along the face), the gizmo was carried on from the locked point — off the red section from then on (5.5 mm after a 17° locked
+  turn, measured; a hover's slide much more). ✅ A lock or a hover now drops the carrier: back out, it is placed again from the gizmo PROJECTED into the yaw
+  plane as it is then (a step into it, eased).
+* ⭐ **The sections drawn are the gizmo's own paths** (`redSamples`, `greenYaws`): the red the chain's carriers dropped — bottom centre → top centre, the half
+  the gizmo can travel (⛔ the whole section by rays toward the centre); a step in depth breaks it; the green the gizmo's drop at every yaw (a side: at its
+  height; a top: its distance from the axis) — the gizmo on both, exactly (its own arc length and its own yaw among the samples).
+* ⚠ Open: the carrier, not the pitch, says where the gizmo is — path-dependent still (the owner's clamp, as proposed); a tall assembly may reach ±90° before
+  the gizmo reaches the top centre, a short one clamps early.
+* Vectors (`tests/section_hull.test.ts`, 8, red on the old code — the module did not exist): the section of a box, a tilted cut, a miss; the facing chain
+  (its ends at the centres, the overhang bridged, the axis outside); the pitch's step (the clamp, the turned-away edge, free inside one); the yaw's remap
+  (a side's height, a top's distance); the drop (in the plane, at the height); COMPOSED on a slab with an overhang (an engine-free raycast: in the plane,
+  at the height, held only under the bottom; slab → ledge → slab → top); the drawn samples; the wiring (the unlock's reset, the one mesh). Restated: ±90°
+  (and the pole's heading), the frusta's counts (45), `D136` / `D182` without the overhangs (every body there an upright box). ⛔ No device close. 2118
+  vectors.

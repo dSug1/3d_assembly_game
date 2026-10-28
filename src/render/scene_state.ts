@@ -716,6 +716,11 @@ export interface SceneState {
   asmPrevQ: { readonly yaw: number; readonly v: number } | null;
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   asmSectionAt: number;
+  asmSectionKey: string;
+  /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
+  asmCarrier: { readonly s: number; readonly p: readonly [number, number]; readonly kind: import("../input/section_hull").EdgeKind; readonly chain: import("../input/section_hull").SectionChain } | null;
+  asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
+  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;

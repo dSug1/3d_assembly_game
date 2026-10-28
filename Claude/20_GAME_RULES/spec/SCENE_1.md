@@ -188,3 +188,19 @@ air. ⚠ `{ yawDeg }` is a new boot orientation, in the engine's left-handed sen
   pieces); in `SCENE_1_FINAL` where they sit, a frustum the same only turned half a round about its taper axis (`yawHalfTurns`) — the level has **43** pieces.
 * **Not in the demo**: `SCENE_1_TABLE` (the table alone) is what `Scene1_demo` plays and `scripts/gen_demo_plan.ts` reads — its committed plan unchanged.
   The table's own vectors read `SCENE_1_TABLE`; the frusta have theirs (`tests/scene_1_frusta.test.ts`, 5).
+
+## 11. ⭐⭐ Two overhangs — for the gizmo's carrier (2026-10-29, `1.0.85from1.0.83-`, ⛔ no device close)
+
+> *"add a seated part somewhere on the vertical and horizontal face to create overhangs (for example, the same shape as the green piece, small face on top
+> of the horizontal top face, to create an overhang on the top horizontal face, and small face adhered to a vertical face to create an overhand on a
+> vertical face)"* — the owner.
+
+The same frustum as §10 (`SCENE_1_FRUSTUM_SIZE`, `OBJECT_TOP_SCALE`, no contour), its **SMALL** face flush on the host's contour, so its wide face and its
+slanted sides (32° along the long axis) hang out over the host; both at x 0.23 — the assembly's centre, which the boot's yaw plane cuts (`OVERHANG_FRUSTA`
+in `content/scene_1.ts`):
+* **`Piece44`** on **Piece4's TOP** (y 4.985), upside down, its long axis along the DEPTH: the wide top **35 mm** over the front and the back faces, the small
+  face itself 9 mm over both edges of the 0.33-deep top; 6.75 mm clear of the orbited pieces' goal on the same top.
+* **`Piece45`** on **Piece10's FRONT face** (−z, the face the boot looks at; z −0.505), its long axis vertical (y 1.38 … 2.42): the wide face **26 mm** over
+  the small one above and below, 41 mm out of the face.
+* Movable, white, part of the goal (`yawHalfTurns`): the level has **45** pieces. Not in the demo (`SCENE_1_OVERHANG_IDS`, with the frusta, out of
+  `SCENE_1_TABLE`). `D136` / `D182`'s painting worlds leave them out (every body there an upright box). Vectors: `tests/scene_1_frusta.test.ts`, + 2.

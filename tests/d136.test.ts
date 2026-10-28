@@ -14,7 +14,10 @@ import { makeWorld, type SceneObject, type World } from "@core/object_model";
 import { contourDims } from "@core/game_structure";
 import { IDENTITY, type Vec3 } from "@core/vec";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
-import { SCENE_1 } from "../src/content/scene_1";
+import { SCENE_1 as SCENE_1_ALL, SCENE_1_OVERHANG_IDS } from "../src/content/scene_1";
+
+// ⭐ (2026-10-29) the painting's slots — without the two overhangs (`Piece45` sits on Piece10's front face; every body here is an upright box)
+const SCENE_1 = { ...SCENE_1_ALL, bodies: SCENE_1_ALL.bodies.filter((b) => !SCENE_1_OVERHANG_IDS.includes(b.id)) };
 
 const U = SCENE_1.unitM!;
 const GOAL = new Map(SCENE_1.final!.bodies.map((b) => [b.id, b.position]));
