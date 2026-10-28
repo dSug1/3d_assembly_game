@@ -14,6 +14,8 @@ pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the
 |---|---|---|
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) |
+| ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | 1 finger drag | **the orbit around the assembly**: dx the yaw, dy the pitch (±85°); locked close in, round the gizmo within 80° of its face |
+| ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **2 fingers moving together** (`twoFingerKind`) | **the APPROACH** — up: in, toward the gizmo the ray finds, to the contact; down: out; dx nothing. A tap on a part no longer moves the gizmo |
 | nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) — ⭐ (2026-10-14) to the direction SHOWN: the yellow quad, or, the quads hidden, the gizmo's supporting face (yellow) (`RESTING_FACE_ALIGNMENT.md` §28) |
@@ -74,6 +76,7 @@ on entering the capture zone, are deleted.
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
+| ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **Shift + left drag** (a mouse or a touchpad) | **the APPROACH** (dy: up in, down out); dx nothing; no orbit |
 | ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out) |
 | ⛔ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor over a placed part | nothing — ⛔ the key's raycast is deleted (it took the pink face, aligned to it); the key is the held second touch only |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a left click (a first-touch tap) on the orbited piece | the face hit becomes the **resting face**, aligned (§20); ⛔ ALT / CTRL over it does nothing since 2026-10-12 |

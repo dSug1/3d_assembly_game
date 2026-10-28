@@ -463,6 +463,8 @@ export interface SceneState {
     swStillSince: number;
     swFirstX0: number | null;
     wayIn: boolean;
+    /** ⭐ (2026-10-28) both fingers' places (px) when the two-finger input started — the APPROACH / ZOOM decision reads the travel from there; and the approach then (a tapped one undone) */
+    base?: { readonly first: readonly [number, number] | null; readonly second: readonly [number, number] | null; readonly approach: number } | null;
   } | null;
   /** ⭐⭐ Prototype (2026-10-12, §21): THE ORIENTATION CUBE — the level's distinct face directions (`core/orientation_set.ts`), whether they
    * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
@@ -700,6 +702,19 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-10-21) THE TOP FACE PAUSE's share (`input/top_pause.ts`) as the input leaves it, and as the camera draws it (eased by `boxSmoothMs`, as the piece) */
   topPause: number;
   topPauseShown: number;
+  /** ⭐⭐⭐ (2026-10-28) THE ORBIT AROUND THE ASSEMBLY (`assembly_wiring.ts`): the assembly's fixed centre and radius (`null`: not read yet); the lock and
+   * the locked gizmo; the shown gizmo (eased), the camera's look point, the face's point (the edge rule), the frame's ray cache; the approach coordinate
+   * (1 far … the contact) and its coast; Shift with the mouse on the last pointer event */
+  asm: { readonly centre: Vec3; readonly radius: number } | null;
+  asmLocked: boolean;
+  asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null;
+  asmGizmo: Vec3 | null;
+  asmLook: Vec3 | null;
+  asmFacePoint: Vec3 | null;
+  asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
+  approach: number;
+  approachInertia: OrbitInertia;
+  orbitShift: boolean;
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */

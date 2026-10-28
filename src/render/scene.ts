@@ -564,6 +564,16 @@ export function createScene(
   st.cameraLagged = null;
   st.topPause = 0;
   st.topPauseShown = 0;
+  st.asm = null;
+  st.asmLocked = false;
+  st.asmLock = null;
+  st.asmGizmo = null;
+  st.asmLook = null;
+  st.asmFacePoint = null;
+  st.asmRayCache = new Map();
+  st.approach = 1;
+  st.approachInertia = new OrbitInertia();
+  st.orbitShift = false;
   st.gizmoPending = null;
   st.orbitMotion = null;
   st.orbitSway = null;

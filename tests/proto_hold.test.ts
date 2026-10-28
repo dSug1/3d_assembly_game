@@ -256,7 +256,7 @@ describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (
   });
   it("⭐ wired at the second touch's release: the zoom undone, the tap judged in that mode", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("const mode = holdTapMode(h.mode, tapped); if (mode !== h.mode) st.zoom = st.zoomAtPinchStart; if (mode === \"HELD\") {");
+    expect(h).toContain("const mode = holdTapMode(h.mode, tapped); if (mode !== h.mode && h.mode === \"ZOOM\") st.zoom = st.zoomAtPinchStart;"); // ⭐ (2026-10-28) a tapped approach undone too
     expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null,");
   });
 });

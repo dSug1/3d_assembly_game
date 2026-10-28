@@ -399,7 +399,8 @@ export function offsetKeep(e: number): number {
   return 1 - smooth((Math.abs(e) - OFFSET_FADE_RAD) / (OFFSET_GONE_RAD - OFFSET_FADE_RAD));
 }
 
-function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, offIn: CameraAngleOffset, lim: number): RigCameraFrame {
+/** ⭐ The curve camera's rule for a view `d0` at elevation `e`, heading `h` — the owner's offsets, the up upright (exported 2026-10-28: the orbit around the assembly's camera too). */
+export function frameAtHeading(e: number, d0: Vec3, h: number, wz: number, offIn: CameraAngleOffset, lim: number): RigCameraFrame {
   const keep = offsetKeep(e);
   const off = keep >= 1 ? offIn : { yawRad: offIn.yawRad * keep, pitchRad: offIn.pitchRad * keep };
   const heading = level(h);

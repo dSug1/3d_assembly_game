@@ -100,9 +100,9 @@ describe("⭐⭐⭐ the turn governor (2026-10-19)", () => {
   });
   it("⭐ wired: the orbit drag's dy and the coast both go through the governor; the cap by the curve (over the gizmo or not)", () => {
     const p = readFileSync("src/render/pointer_wiring.ts", "utf8");
-    expect(p).toContain("const travel = dvRaw !== 0 ? orbitTravelStep(st, dvRaw, orbitDvPerMm(st)) : { dv: 0, du: 0 };"); // ⭐ (2026-10-21) on the travel
+    expect(p).toContain("const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };"); // ⭐ (2026-10-28) around the assembly: ungoverned (no curve) // ⭐ (2026-10-21) on the travel
     expect(p).toContain("const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;");
-    expect(p).toContain("st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);"); // ⭐ (2026-10-25) dx held mid-roll
+    expect(p).toContain("st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);"); // ⭐ (2026-10-25) dx held mid-roll
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
     expect(g).toContain("const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;"); expect(g).toContain("st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);"); // ⭐ (2026-10-25) dx held mid-roll
     expect(g).toContain("const cap = crossing ? cfg.orbitTurnCapDegMm : cfg.orbitTurnCapVerticalDegMm;");
