@@ -18,7 +18,7 @@
  * ⛔ No engine, no scene: millimetres and milliseconds.
  */
 
-export type HoldMode = "HELD" | "WAY" | "ZOOM";
+export type HoldMode = "HELD" | "WAY" | "ZOOM" | "APPROACH"; // ⭐ (2026-10-28) APPROACH: two fingers' common dy brings the piece in (around the assembly)
 
 /**
  * ⭐ The first touch's dx past the deadband decides what the two touches are doing: the second's x travel past HALF the deadband — it is on
@@ -107,5 +107,5 @@ export function pinchStarts(firstTravelMm: number, secondTravelMm: number, deadb
  * were lost to a zoom. The mode the release is judged in: `HELD` for a tapped `ZOOM` (the caller undoes the zoom it started).
  */
 export function holdTapMode(mode: HoldMode, tapped: boolean): HoldMode {
-  return tapped && mode === "ZOOM" ? "HELD" : mode;
+  return tapped && (mode === "ZOOM" || mode === "APPROACH") ? "HELD" : mode; // ⭐ (2026-10-28) a tapped approach too (the caller undoes it)
 }

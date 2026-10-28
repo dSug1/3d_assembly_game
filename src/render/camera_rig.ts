@@ -11,6 +11,7 @@ import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame,
 import { type Vec3 } from "../core/vec";
 import { blendRig, horizontalShare, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { pauseEndNearer, pauseUnderWay } from "../input/top_pause";
+import { assemblyCameraFrame, assemblyOn, placeOffset } from "./assembly_wiring";
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { WORLD_DOWN } from "../core/object_model";
@@ -71,12 +72,15 @@ export function rigNow(st: SceneState): RigParams {
 
 /** ⭐⭐⭐ (2026-10-16) THE PIECE'S RING PLACE now (from the gizmo): the turned curve swung round the gizmo's vertical (`rigPlace`), on the turn now. */
 export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: number): Vec3 {
+  // ⭐⭐⭐ (2026-10-28) the orbit around the assembly: the piece on its ray from its gizmo (`placeOffset`)
+  if (assemblyOn(st)) return placeOffset(st, yaw, v);
   return rigPlace(st.cfg, rigNow(st), yaw, v, zoom);
 }
 
 /** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn; between rings 2 and 3 the
  * semi-isometric hold — the whole composition is `cameraFrameHeld` (`input/camera_frame.ts`), its up carried from the last frame drawn (`st.cameraPrev` — the ORBIT's frame, whatever camera the screen shows over it: the way in, a hover). */
 export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, dtMs?: number): RigCameraFrame {
+  if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off); // ⭐⭐⭐ (2026-10-28) behind the piece along its direction
   // ⭐⭐⭐ (2026-10-21) over a horizontal face the TOP FACE PAUSE's share as drawn (`st.topPauseShown`) turns the camera half round while the piece waits
   return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam, off, st.cameraPrev ?? null, dtMs);
 }
@@ -87,6 +91,8 @@ export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOf
  * centres beyond the piece as the camera sees it (`rigBetaFor`); blended from the turn it had (the nearer end of a blend in progress).
  */
 export function retargetGizmo(st: SceneState, to: Vec3, normal: Vec3 | null, host: string | null = null): void {
+  // ⭐⭐ (2026-10-28) the orbit around the assembly: the ray places the gizmo — a tap on a part no longer moves it
+  if (assemblyOn(st)) return;
   // ⭐⭐ (2026-10-25) the top face pause's roll under way: the change WAITS for its nearer end (`topPauseFrame` finishes or unwinds it, then makes the change)
   if (pauseUnderWay(horizontalShare(st.cfg, st.rigTo) >= 1, st.topPause)) {
     st.gizmoPending = { to, normal, host, end: pauseEndNearer(st.topPause) };

@@ -285,7 +285,7 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
   it("⭐⭐ every world place the rings give is the turned curve swung round the gizmo's vertical: the piece's anchor (so the solver), the drawn piece, the way in's heading", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const offP = ringPlaceNow(st, o.yaw, o.v, o.zoom);"); // ringAnchorAt
-    expect(g).toContain("const boP = ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);");
+    expect(g).toContain("const boP = assemblyOn(st) ? shownOffset(st, st.boxOrbit.yaw, st.boxOrbit.v) : ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);"); // ⭐ (2026-10-28) the 2D curve's orbit when `orbitMode` is 1
     expect(g).toContain("const be = st.pieceEntry === null ? null : ringPlaceNow(st, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom);");
   });
   it("⭐⭐⭐ the camera DERIVED FROM THE PIECE (`cameraFrameNow` on the same blended turn — `rigNow`), its up set from it", () => {

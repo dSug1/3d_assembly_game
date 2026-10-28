@@ -35,6 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
+import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -928,7 +929,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
-    st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv); // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
+    st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
+    if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -958,6 +961,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.hudDirty = true;
   }
   st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
+  assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28) the orbit around the assembly: the gizmo the ray finds, the lock, the approach's coast
   let rig: OrbitQ = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
   // ⭐ (2026-10-13, the second audit) the stuck and turn checks of the last frame counted too (they run after this frame's mean)
   st.pieceGuardFrameMs = st.pieceGuardCarryMs;
@@ -1060,7 +1064,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
       : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
   st.boxOrbit = st.boxSpring.at;
-  const boP = ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
+  const boP = assemblyOn(st) ? shownOffset(st, st.boxOrbit.yaw, st.boxOrbit.v) : ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`) — ⭐ (2026-10-28) around the assembly: on its ray from the shown gizmo
   const bo = { offsetM: boP, radiusM: Math.hypot(boP[0], boP[1], boP[2]) };
   // ⛔ The piece's own range (`clampPieceRadiusM`, 2026-10-09: its minimum ZERO, no longer the camera's near-plane guard): the clamp only shortens.
   const k = bo.radiusM > 1e-9 ? clampPieceRadiusM(bo.radiusM, st.cfg) / bo.radiusM : 1;
@@ -1191,6 +1195,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
     lookAt = [c.x, c.y, c.z];
+    // ⭐⭐⭐ (2026-10-28) around the assembly: the camera behind the piece about its LOOK POINT — the centre far out, the gizmo close in (`st.asmLook`)
+    if (assemblyOn(st) && st.asmLook !== null) {
+      const L = st.asmLook;
+      const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);
+      camAt = [L[0] + oo[0], L[1] + oo[1], L[2] + oo[2]];
+      lookAt = [L[0], L[1], L[2]];
+    }
     if (cr !== null) {
       // ⭐⭐ (2026-10-07) the way back: AROUND THE PIECE, its difference from this home pose (seen from the piece) fading out, its view
       // aimed at a point sliding from the piece to the centre — ONE progress, finger travel over `pieceOrbitReturnMm` (60 mm)
@@ -1629,6 +1640,7 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
  * step for the orbit (`dv`) and the travel taken (`du`, the coast's record).
  */
 export function orbitTravelStep(st: SceneState, du: number, dvPerMm: number): { readonly dv: number; readonly du: number } {
+  if (assemblyOn(st)) return { dv: du, du }; // ⭐ (2026-10-28) around the assembly: the pitch as asked (no curve to govern)
   const cfg = st.cfg;
   const crossing = rigSwingNeed(cfg, rigNow(st)) > 0.5;
   const cap = crossing ? cfg.orbitTurnCapDegMm : cfg.orbitTurnCapVerticalDegMm;
@@ -1665,6 +1677,7 @@ export function cameraPlaceNow(st: SceneState): OrbitAt {
 
 /** ⭐ (2026-10-21) the top face pause is on while the gizmo's turn is a horizontal face's (`horizontalShare` of the turn it goes to). */
 export function topPauseOn(st: SceneState): boolean {
+  if (assemblyOn(st)) return false; // ⭐ (2026-10-28) around the assembly the pitch stops at ±85°: nothing crosses the zenith
   return horizontalShare(st.cfg, st.rigTo) >= 1;
 }
 

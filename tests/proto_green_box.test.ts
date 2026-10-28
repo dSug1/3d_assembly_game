@@ -441,7 +441,7 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(g.pitch).toBeCloseTo(0.5, 12);
     // ⭐ wired: the orbit drag multiplies each axis by its gain, and the slider has the owner's range
     // ⭐ dy's sense inverted for the orbit (the owner, 2026-10-04): dy enters with its own sign; dx still negated
-    expect(code("pointer_wiring.ts")).toMatch(/const dyPx = \(dxOnly \? 0 : db\.dy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag\), dyPx \* share\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // (2026-10-06: × the gain around the piece, 1 otherwise; ⭐ 2026-10-19 the dy through the turn governor)
+    expect(code("pointer_wiring.ts")).toMatch(/const dyPx = \(dxOnly \|\| shiftApproach \? 0 : db\.dy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(shiftApproach \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag\), dyPx \* share\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // (2026-10-06: × the gain around the piece, 1 otherwise; ⭐ 2026-10-19 the dy through the turn governor)
     expect(code("pointer_wiring.ts")).not.toMatch(/-dy \* st\.cfg\.boxGainPitch/);
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });
@@ -658,7 +658,7 @@ describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (t
     const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
     expect(len(far) - len(near)).toBeCloseTo(2.5 - 0.625, 9);
     const w = code("green_box_wiring.ts");
-    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*let rig: OrbitQ = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
+    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);\s*assemblyFrame\(st, dtSec \* 1000\);[^\n]*\n\s*let rig: OrbitQ = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
     expect(w).toMatch(/const gapFull = cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\);/); // (2026-10-06: scaled around the piece, `scaledGap`)
     expect(code("scene.ts")).toMatch(/st\.greenBox !== null\s*\? wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
   });

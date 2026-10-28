@@ -19,7 +19,9 @@ import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
-import { pauseYawStep } from "../input/top_pause"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
+import { pauseYawStep } from "../input/top_pause";
+import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
+import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, pairPressRevertsToggle, toggleBehaviour, tapTogglesMode, pressMeaning, outsideTapRelease, flatTwistAngle, rollSignFor, rotateAboutAxis, trackingMetresPerPx, SwayWatcher, SpinSwayWatcher, Recognizer, screenPlaneRotation, pitchSense, pressSideFrom, MotionTracker, swayScale, impulseForPeak } from "../input";
@@ -79,6 +81,10 @@ export function installPointerHandler(st: SceneState): void {
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
+    // ⭐⭐ (2026-10-28) Shift with the mouse (or a touchpad): around the assembly the drag's dy is the APPROACH (`approachInput`); the button's release
+    // starts its coast
+    st.orbitShift = e.pointerType === "mouse" && e.shiftKey;
+    if (info.type === PointerEventTypes.POINTERUP && e.pointerType === "mouse" && assemblyOn(st)) approachRelease(st);
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
     // see the raw stream whatever rule the touchpoint turns out to belong to, and it
@@ -1327,12 +1333,22 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const db = st.orbitMotion.band.step;
     // ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR (`orbitTravelStep`): the dy cut where the camera would turn faster than the cap per mm of finger
     // ⭐⭐⭐ (2026-10-21) …on the TRAVEL: over a horizontal face, through the middle, the dy turns the camera half round while the piece waits (the top face pause)
-    const dyPx = (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
+    // ⭐⭐⭐ (2026-10-28) AROUND THE ASSEMBLY: Shift + drag's dy is the APPROACH (and nothing else moves); one finger's dy the PITCH, at the dx yaw's pace
+    // (the owner's default: *"the same °/mm as the dx yaw"*) — 170° of pitch over the ring parameter
+    const asmOn = assemblyOn(st);
+    const shiftApproach = asmOn && st.orbitShift && !dxOnly;
+    if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
+    const dyPx = (dxOnly || shiftApproach ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
-    const travel = dvRaw !== 0 ? orbitTravelStep(st, dvRaw, orbitDvPerMm(st)) : { dv: 0, du: 0 };
+    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : db.dy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / 170 : dvRaw;
+    const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
+    const yawBefore = st.orbit.yaw;
+    const vBefore = st.orbit.elevation;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
+    if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).

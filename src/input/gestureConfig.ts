@@ -535,6 +535,13 @@ export interface GestureConfig {
   quadSliceMaxDeg: number;
   /** ⭐⭐ (2026-10-19, the owner) THE TURN GOVERNOR on a curve that passes over the gizmo (a horizontal face): at most this many degrees of camera turn
    * (view and roll together) per mm of dy — the dy gain lowered where the camera would turn faster (°/mm). */
+  /** ⭐⭐⭐ (2026-10-28, the owner) THE ORBIT: 0 — AROUND THE ASSEMBLY (dx yaw, dy pitch ±85°, two fingers' / Shift + drag's dy the approach to the gizmo the
+   * ray finds — `input/assembly_orbit.ts`); 1 — along the gizmo's 2D curve, as built to 2026-10-25 (kept whole, *"I may revert later on"*). */
+  orbitMode: number;
+  /** ⭐ (2026-10-28) the gizmo and its face LOCK within this distance of the piece (m) — or once the piece is inside the assembly's bounding sphere. */
+  assemblyLockDistM: number;
+  /** ⭐ (2026-10-28) at an edge the gizmo's face switches only once the ray lands this far past it (mm, in the world — an edge is a place on the assembly) — the quads do not flicker. */
+  gizmoEdgeMarginMm: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -1063,6 +1070,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // from the gizmo to the piece, the fingers keeping the centre orbit meanwhile; it replaced a 60 mm fade and a 10 mm slerp
   topRollBandDeg: 20, // ⭐ the owner, 2026-10-17/18
   quadSliceMaxDeg: 30, // ⭐ (2026-10-20, *"Same quad switch speed as current"*) 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° (2026-10-19)
+  orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
+  assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the gizmo locked within 30 cm
+  gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -1228,6 +1238,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
+  if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
+  if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
+  if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);

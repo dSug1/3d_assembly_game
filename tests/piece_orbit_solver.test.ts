@@ -328,7 +328,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
 
     it("⭐⭐ the deadband is wired on the orbit drag (§1.1's per-axis step, not the raw pixels)", () => {
       const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-      expect(p).toContain("const db = st.orbitMotion.band.step;"); expect(p).toContain("const dyPx = (dxOnly ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;"); // ⭐ (2026-10-19) the band's step, then the turn governor
+      expect(p).toContain("const db = st.orbitMotion.band.step;"); expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;"); // ⭐ (2026-10-28) Shift around the assembly: the approach instead // ⭐ (2026-10-19) the band's step, then the turn governor
     });
 
     it("⭐⭐⭐ THE STUCK CHECK SCHEDULED: at most one check every interval, and a verdict is FINAL for its key (⛔ every frame for ever: ~60–90 gap queries a frame at rest)", () => {

@@ -1707,3 +1707,53 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   mid-roll (the rule and both wirings); the waiting gizmo change (the nearer end, the pace, landing exactly, the wiring); the camera on the travel (rolling
   with a camera a hair short of the middle, its own `v` off the pause, a camera lagging into or out of the pause, the wiring). Restated: the governor's free
   peak in the pause (> 14°/mm, was > 20), the drag's and the coast's text checks, the camera frame's place (`camPlace`). ⛔ No device close. 2095 vectors.
+
+### THE ORBIT AROUND THE ASSEMBLY: dx yaw, dy pitch ±85°, two fingers / Shift the approach to a gizmo the ray finds (`1.0.85from1.0.83-`, 2026-10-28)
+
+> *"I want to capitalize the idea you proposed for moving the gizmo, but with a different implementation. Modify the orbits as follow: the piece orbit on dx
+> yaw and dy pitch inputs. The yaw is a full circle, the pitch is half a circle from -90 degrees to + 90 degrees (don't reach beyond 90 degrees to avoid roll
+> and upside down issues) … The double finger or shift + click dy brings the piece towards the gizmo … The gizmo is only used for the approach of the piece
+> … The orbit is done around the center of the assembly (… put the center at the center inside the assembly at boot and don't change it). The gizmo is
+> positioned at the intersection of the sections of the assembly created by the pitch plane and yaw plane at the actual position of the piece orbit … The
+> approach of the piece towards the gizmo is the same as currently built (2D curves …) … no change for the camera"* (with a sketch) → the open points
+> answered: the gizmo on the ray toward the centre, wherever the piece is, the surface continuous; the approach straight in (the along-the-curve path kept),
+> to the contact, in and back; the gizmo and its face locked close in; one far radius; pitch ±85°, the floor no constraint; the camera looking at the centre
+> far out, at the gizmo as the approach goes in; two fingers' dx and Shift + dx nothing; the inertia on both → *"build, update the md files, deploy"* — the
+> owner. Built on `1.0.83-`'s line (the curve tilt / gizmo-drag trial of `1.0.84-` set aside, reverted on `main`).
+
+* ⭐⭐⭐ **The orbit** (`input/assembly_orbit.ts`, `render/assembly_wiring.ts`; `orbitMode` 0, the default): dx the YAW (the full circle), dy the PITCH —
+  the orbit's ring parameter read as −85° … +85° (`pitchOfV`), at the dx yaw's pace (°/mm, ungoverned: no curve crosses the zenith, so no top pause and no
+  roll). The piece's direction `u` from the assembly's CENTRE — the placed parts' bounding box's, read once and fixed (`ensureAssembly`; its radius half the
+  largest dimension); the boot keeps the pitch the piece had on the rings (33.5° in `Scene_1`).
+* ⭐⭐⭐ **The gizmo** = where the ray from the piece toward the centre first meets a PLACED part (`castGizmo`: five rays — the centre one and four 4 mm
+  beside it, the outermost hit taken on the centre ray, so a gap narrower than that, the painting's cores, is bridged — the surface reads continuous); the
+  piece is ON that ray, at the approach's distance from the gizmo. Its point EASED (90 ms: a step in depth never jumps); its FACE by the edge rule
+  (`faceSwitches`: a coplanar neighbour at once, another only once the ray lands `gizmoEdgeMarginMm` — 5 mm, in the world — past the edge; a step at once) —
+  its part and face feed the quads as before. The orbit's centre the rest of the code reads (the hover, the quads, the markers) IS the gizmo, set each frame
+  before the solve; a TAP on a part no longer moves it (`retargetGizmo` is off).
+* ⭐⭐⭐ **The approach** (two fingers moving together on the phone — `twoFingerKind`: their common motion beats their relative one, judged from the
+  second's landing; **Shift + drag** on a desktop or touchpad): finger UP brings the piece IN, at the orbit dy's pace on the 2D curve's coordinate. Its
+  distance (`approachDistance`): the 2D curve's own distance from the gizmo from ring 1 (6 m — the far orbit, one value for both curves) to the waist
+  (9 cm), then straight to the contact — the piece STRAIGHT IN along its ray. Checked against the parts (`approachMove`: in only as far as the gap stays at
+  the resting gap, `pieceGapMm`, the largest free share by halving — the piece stops at the contact); its own coast (`approachInertia`). Apart or together
+  is the pinch zoom; two fingers' dx and Shift + dx do nothing. A tap that wobbled into the approach is undone.
+* ⭐⭐ **The lock** (`nextLock`): once the piece is inside the assembly's bounding sphere, or within `assemblyLockDistM` (0.3 m) of the gizmo, the gizmo
+  and its face LOCK; the piece then turns about the locked gizmo (the same formula — continuous at the lock, its direction from the gizmo IS `u`), never more
+  than 80° from the face's normal (`coneClamp`; a step further out refused, `leavesCone`). Released past both by a margin (×1.05, ×1.25); the gizmo then
+  follows the ray again (eased). Under a HOVER the hover owns the gizmo (taken as the locked one).
+* ⭐⭐ **The camera**: behind the piece along its direction with the owner's world offsets (`frameAtHeading`, upright — no roll), about its LOOK POINT
+  (`lookShare`: the assembly's centre far out, the gizmo at the lock's distance, smoothstep between; locked, the gizmo; eased 120 ms).
+* ⭐ **The gizmo's 2D curve orbit is kept whole**: `orbitMode` 1 (CAMERA › CAMERA ORBIT AROUND CENTER, *"orbit: around the assembly (0) / the gizmo's 2D
+  curve (1)"*, or `?orbitMode=1`) is the orbit as built to 2026-10-25 — the along-the-curve approach, the turned curve, the top pause and roll, the tap.
+  Sliders: *gizmo lock distance (m)*, *gizmo face edge margin (mm)*.
+* Measured — the app (`Scene_1`, CDP touch and Shift + mouse): the centre (0.02, 0.24, −0.03), radius 0.27 m; the boot at pitch 33.5°, the piece 6.01 m from
+  the gizmo on Piece10's front face; dx → yaw 28°, dy down → pitch 85°, the gizmo on Piece4's TOP (its face switched — the quads follow); two fingers up →
+  the piece 6.0 → 2.6 → 0.12 m (locked: *"close in — the gizmo and its face locked"*) → the contact (0.02 m, stopped by the parts), the look point the
+  centre → the gizmo; locked, dy pitched it about the gizmo to 74° off the top's normal, dx round it 28° → 178°; two fingers down → 6 m, unlocked, the gizmo
+  on Piece9's left face along the new ray; Shift + drag up → in to the contact, the yaw unchanged; `?orbitMode=1` → the 2D curve's orbit, no error.
+* ⚠ Open: the assembly is the PLACED parts — `Scene_1` boots with few placed (radius 0.27 m), so the centre and the lock's sphere are theirs; the centre is
+  fixed at the boot and does not grow as pieces are placed (the owner: *"don't change it"* for now); the approach comes in at the orbit's angle, not square
+  to the face (straight in along the ray, as asked).
+* Vectors (`tests/assembly_orbit.test.ts`, 10, red on the old code — the module is new): the pitch's range and the direction; the approach's distance (ring
+  1's, the waist's, the contact, never rising inward, finger up in); the lock and its margins; the cone; the face's edge rule; the rays; the look point; two
+  fingers; the sliders; the wiring. Restated: nine source checks of the drag, the coast, the frame and the hold. ⛔ No device close. 2105 vectors.
