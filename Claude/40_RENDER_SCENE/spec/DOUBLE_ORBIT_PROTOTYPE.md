@@ -1757,3 +1757,44 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Vectors (`tests/assembly_orbit.test.ts`, 10, red on the old code — the module is new): the pitch's range and the direction; the approach's distance (ring
   1's, the waist's, the contact, never rising inward, finger up in); the lock and its margins; the cone; the face's edge rule; the rays; the look point; two
   fingers; the sliders; the wiring. Restated: nine source checks of the drag, the coast, the frame and the hold. ⛔ No device close. 2105 vectors.
+
+### …the gizmo CARRIED ALONG THE SECTIONS; the two-finger approach latching; the camera's offset the same on every face (`1.0.85from1.0.83-`, 2026-10-28)
+
+> *"the double finger is not working reliably: sometimes it latches, sometimes not. i want the gizmo to travel along the section when i orbit (the red or
+> green sections on the sketch when i orbit the red or green circle). So the gizmo shall not be the raycast to the center. Propose a solution. This will
+> enable to see better how the gizmo moves. the camera offset is different depending on the face hosting the gizmo. This is not what i want. I want the
+> offset to be the same whichever the hosting face."* → the proposal → *"Build, with the optional, as recommended, update the md files, deploy"* — the owner.
+
+* ⛔⛔ **The two fingers latched only sometimes**: a second finger was the second touch only OFF the orbited piece — close in the piece fills the screen, a
+  second finger landing on it made a plain pinch (parallel fingers: nothing). Around the assembly a second finger ON the piece is the second touch too; its
+  TAP there still picks the resting face (never the yellow quad). Measured (CDP touch): the second finger on the piece — no hold before; the approach now
+  (0.62 → 0.46).
+* ⛔⛔ **The camera's offset changed with the face**: the owner's offsets were turned in the WORLD's frame and faded from 60° of pitch (the top roll's rule,
+  `frameAtHeading`) — a top face, approached steeply, lost them (the piece dead centre, 0.00° / 0.11°, against 9.97° / −8.69° on a vertical face). Now they
+  turn in the CAMERA's own frame (`offsetFrame`: the pitch about its right, the yaw about its upright up), never faded: 11.90° / −8.79° on a vertical face,
+  12.29° / −9.77° on a top face (far out; within 0.6° close in). ⚠ On a vertical face the piece now sits a little further aside far out (11.9° for 10.0°): the
+  yaw offset turns about the camera's up, not the world's vertical.
+* ⭐⭐⭐ **The gizmo carried along the sections** (`carryGizmo`; ⛔ the ray toward the centre for each direction): a point on the surface the orbit MOVES,
+  once a frame, by the orbit's step since the last frame:
+  * **dx** (`yawAbout`): turned about the assembly's vertical axis by the yaw's step — its height kept — then dropped back (`sectionRay`): on a vertical face by
+    the HORIZONTAL ray toward the axis (round the assembly at constant height — the GREEN section), on a top / bottom face straight down / up onto it;
+  * **dy** (`pitchSlide`): slid along the yaw plane's section by the assembly's half-size × the pitch's step — UP a face toward the piece, ACROSS a top away
+    from it, DOWN the far face (⛔ first turned about the centre: the painting's front face is 2 cm from it — 1.5 cm for 51° of pitch) — then dropped back along
+    the face's normal (the RED section);
+  * a miss (past an edge, off a part): the RADIAL ray through the moved point finds the section's next face; still nothing, the gizmo stays. The edge rule,
+    the ease, the lock unchanged; every query of the piece's place reads the carried gizmo.
+  * **The safety resync** (`faceTurnedAway`): a gizmo whose face turns AWAY from the piece is found again on the ray toward the centre (and at the start). ⚠
+    The gizmo is now path-dependent: round and back at one height returns it; pitch, yaw, pitch back need not.
+* ⭐⭐ **The sections drawn** (the optional; `sectionLines` 1, CAMERA › CAMERA ORBIT AROUND CENTER): the GREEN one (the horizontal plane at the gizmo's height;
+  just under a top face's) and the RED one (the yaw plane through the centre) — 96 rays each from outside, their first hits joined (a miss breaks the line),
+  lifted 2 mm, recast every 100 ms, hidden locked or under a hover; drawn in the transparent pass after the pieces' see-through contours (⛔ opaque, the
+  contours washed them out).
+* Measured — the app (`Scene_1`): dx at pitch 34° — the gizmo at y 0.253 all round, from Piece10's front face to its back face and Piece11's; dy 34° → 85° — up
+  Piece10's front face 0.253 → 0.493, onto Piece4's front-top edge (the pitch's +85° reached there); 194 vertices of section lines, the green one seen across
+  the front at the gizmo's height; no error.
+* ⚠ Open: the pitch's pace is the assembly's half-size per radian (0.27 m in `Scene_1`) — the +85° limit stops the gizmo at the top edge of a tall part; a
+  path-free alternative is the arc length along the red section from the point level with the centre (a full turn of pitch = the section's perimeter).
+* Vectors (`tests/assembly_orbit.test.ts`, + 6, red on the old code): the yaw's turn (its height, its convention, the rays: toward the axis, down / up a
+  top / bottom, none on the axis); the pitch's slide (up, across, down, the face square to the plane, along −n, the radial ray); the resync, the sections'
+  directions, the slider; the camera's offsets in its own frame (the same split at every pitch, never over the top); the second finger on the piece; the
+  wiring. Restated: the two holds' source checks. ⛔ No device close. 2111 vectors.

@@ -711,6 +711,11 @@ export interface SceneState {
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
+  /** ⭐ (2026-10-28) the gizmo CARRIED along the sections (its raw point; `null`: found by the ray next frame), the orbit place it was carried to, the section lines and when they were cast */
+  asmG: Vec3 | null;
+  asmPrevQ: { readonly yaw: number; readonly v: number } | null;
+  asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  asmSectionAt: number;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
