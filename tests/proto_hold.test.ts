@@ -57,7 +57,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the press: the right button or a finger with ONE other down is the SECOND touch (not on the orbited piece); held, a new press is the FIRST again; neither grabs", () => {
     const p = code("render/pointer_wiring.ts");
     // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too; a finger, never on it
-    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|\s*\(!onOrbited &&\s*e\.pointerType !== "mouse" &&\s*\(\(st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\) \|\| partFirst\(st, e\.pointerId\) !== null\)\)\s*\? "SECOND"/);
+    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|[\s\S]*?\(\(!onOrbited \|\| assemblyOn\(st\)\) &&\s*e\.pointerType !== "mouse" &&\s*\(\(st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\) \|\| partFirst\(st, e\.pointerId\) !== null\)\)\s*\? "SECOND"/);
     expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
     // the pink face its press would take — a placed part only
     // ⛔ (2026-10-12, *"Remove the selection of pink face on the seated / placed parts"* — *"Remove the ctrl-alt raycast function in desktop"*) no pink face;
@@ -93,7 +93,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(h.replace(/\s+/g, " ")).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal, h.centreHost ?? null);");
     const p = code("render/pointer_wiring.ts");
     expect(p.replace(/\s+/g, " ")).toContain(
-      'if ( holdRelease( st, e.pointerId, isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)), ) === "SECOND" ) { st.hudDirty = true; return; }',
+      'if ( holdRelease( st, e.pointerId, isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)), ) === "SECOND" && !faceTapHere ) { st.hudDirty = true; return; }', // ⭐ (2026-10-28) a second finger's tap on the piece still picks its resting face
     );
   });
 

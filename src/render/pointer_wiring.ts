@@ -209,7 +209,9 @@ export function installPointerHandler(st: SceneState): void {
               ? "FIRST"
               : null
             : e.pointerId === MOUSE_SECOND_ID ||
-                (!onOrbited &&
+                // ⛔⛔ (2026-10-28, *"the double finger is not working reliably: sometimes it latches, sometimes not"*) — around the assembly a second finger
+                // ON the orbited piece is the second touch too: close in the piece fills the screen, and a second finger landing on it made a plain pinch
+                ((!onOrbited || assemblyOn(st)) &&
                   e.pointerType !== "mouse" &&
                   ((st.router.outside().length === 1 && st.router.objects().length === 0) || partFirst(st, e.pointerId) !== null))
               ? "SECOND" // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too (its press selects the resting face)
@@ -416,6 +418,8 @@ export function installPointerHandler(st: SceneState): void {
           const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? partFirst(st, e.pointerId);
           const centreN = centreAt !== null ? pick?.getNormal(true) : null;
           holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null && pick?.pickedMesh ? (st.idOf.get(pick.pickedMesh) ?? null) : null);
+          // ⭐ (2026-10-28) on the orbited piece its tap is the resting face's, never the yellow quad's
+          if (onOrbited && st.hold !== null) st.hold.pressActed = true;
         } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
         st.hudDirty = true;
         return;
@@ -651,12 +655,15 @@ export function installPointerHandler(st: SceneState): void {
         st.pinch.end();
         // ⭐⭐⭐ (2026-10-11) the held second touch lifted: its input ends (the way out, or the pink face of a press that never pinched)
         // — consumed, not a tap; the first touch lifted while it is held: the input goes on (and a tap on the piece below still counts)
+        // ⭐ (2026-10-28) a second finger's TAP on the orbited piece (around the assembly it is the second touch): its resting-face tap still goes on below
+        const faceTapHere = st.pieceFaceTap !== null && st.pieceFaceTap.pointerId === e.pointerId && st.hold !== null && st.hold.second === e.pointerId && st.hold.mode === "HELD";
         if (
           holdRelease(
             st,
             e.pointerId,
             isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)),
-          ) === "SECOND"
+          ) === "SECOND" &&
+          !faceTapHere
         ) {
           st.hudDirty = true;
           return;

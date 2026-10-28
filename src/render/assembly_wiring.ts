@@ -1,15 +1,18 @@
 /**
  * ⭐⭐⭐ prototype — **THE ORBIT AROUND THE ASSEMBLY, WIRED** (2026-10-28; the rules are `input/assembly_orbit.ts`'s). On while `orbitMode` is 0 (1: the
  * gizmo's 2D curve as built to 2026-10-25, kept whole). The centre the rest of the orbit reads (`orbitCentreM` — the quads, the hover, the markers) IS the
- * GIZMO, moved here every frame: where the ray from the piece toward the assembly's fixed CENTRE (`st.asm`) first meets a placed part (`castGizmo`), eased
- * over a step; LOCKED close in. The piece's place from it (`placeOffset`, read by `ringPlaceNow` — the solver's queries too) is its direction × the
+ * GIZMO, moved here every frame: CARRIED along the assembly's sections by the orbit's steps (`carryGizmo`; first found where the ray from the piece toward
+ * the fixed CENTRE, `st.asm`, meets a placed part — `castGizmo` — and again if its face turns away from the piece), eased over a step; LOCKED close in; the
+ * sections drawn (`sectionLinesFrame`). The piece's place from it (`placeOffset`, read by `ringPlaceNow` — the solver's queries too) is its direction × the
  * approach's distance; the approach (two fingers' dy, Shift + drag's) checked against the parts (`approachMove`), with its own coast. The camera's frame
  * (`assemblyCameraFrame`), its look point (`st.asmLook`: the centre far out, the gizmo close in). ⛔ No rule here.
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, orbitDir, rayOffsets, vOfPitch } from "../input/assembly_orbit";
-import { frameAtHeading, rigPlace, type RigCameraFrame } from "../input/orbit_rig";
+import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, faceTurnedAway, farDistance, greenSectionDirs, lookShare, nextLock, offsetFrame, orbitDir, pitchSlide, pitchOfV, radialRay, rayOffsets, redSectionDirs, sectionRay, vOfPitch, yawAbout, type SectionRay } from "../input/assembly_orbit";
+import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { Color4 } from "@babylonjs/core/Maths/math.color";
+import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
 import { syncCentre } from "./camera_rig";
@@ -60,6 +63,7 @@ export function ensureAssembly(st: SceneState): void {
   if (n > 1e-9) st.orbit.reset(st.orbit.yaw, vOfPitch(Math.asin(p[1] / n)));
   st.asmGizmo = null;
   st.asmLook = null;
+  st.asmG = null;
 }
 
 interface GizmoHit {
@@ -103,13 +107,57 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   return n === null ? u : coneClamp(u, n);
 }
 
-/** ⭐ The gizmo for the direction `u`: locked, the locked point; else the ray's (nothing hit: the gizmo as shown). */
+/**
+ * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else the gizmo CARRIED along the sections (`st.asmG`, moved once a frame by the
+ * orbit's steps — ⛔ 2026-10-28 the ray toward the centre for each direction); none yet, the ray's.
+ */
 function gizmoFor(st: SceneState, u: Vec3): Vec3 {
   if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
+  if (st.asmG !== null) return st.asmG;
   const h = castGizmo(st, u);
   if (h !== null) return h.point;
   const g = st.asmGizmo ?? st.centreBlend.targetM;
   return [g[0], g[1], g[2]];
+}
+
+/** ⭐ A ray cast against the PLACED parts: its first hit — point, normal, part — or `null`. */
+function castRay(st: SceneState, r: SectionRay | null): GizmoHit | null {
+  if (r === null) return null;
+  const hit = st.scene.pickWithRay(new Ray(new Vector3(...r.origin), new Vector3(...r.dir), r.length), (m) => {
+    const id = st.idOf.get(m);
+    return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();
+  });
+  if (!hit?.hit || hit.pickedPoint === null) return null;
+  const nn = hit.getNormal(true);
+  return { point: [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], normal: nn ? [nn.x, nn.y, nn.z] : null, host: hit.pickedMesh ? (st.idOf.get(hit.pickedMesh) ?? null) : null };
+}
+
+/**
+ * ⭐⭐⭐ THE GIZMO CARRIED ALONG THE SECTIONS by one orbit step (`dYaw`, `dPitch`, at `yaw`): turned about the assembly's axes and dropped back onto the surface
+ * (`sectionRay`: the yaw at constant height — the green section — or onto a top face; the pitch along the face's normal — the red section); a miss, the radial
+ * ray through the turned point (the section's next face, past an edge); still nothing, the gizmo stays. Returns the hit (`null`: unchanged).
+ */
+function carryGizmo(st: SceneState, g: Vec3, n: Vec3, yaw: number, dYaw: number, dPitch: number): GizmoHit | null {
+  const a = st.asm!;
+  const reach = a.radius * 2 + 1;
+  let p = g;
+  let face = n;
+  let last: GizmoHit | null = null;
+  if (dYaw !== 0) {
+    const turned = yawAbout(p, a.centre, dYaw);
+    const h = castRay(st, sectionRay("YAW", turned, face, a.centre, reach)) ?? castRay(st, radialRay(turned, a.centre, reach));
+    if (h !== null) {
+      last = h;
+      p = h.point;
+      if (h.normal !== null) face = h.normal;
+    }
+  }
+  if (dPitch !== 0) {
+    const turned = pitchSlide(p, face, yaw, dPitch, a.radius);
+    const h = castRay(st, sectionRay("PITCH", turned, face, a.centre, reach)) ?? castRay(st, radialRay(turned, a.centre, reach));
+    if (h !== null) last = h;
+  }
+  return last;
 }
 
 /**
@@ -163,8 +211,23 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDir(q.yaw, q.v);
   const d = approachDistance(st.cfg, st.approach);
-  const hit = castGizmo(st, u);
-  const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (hit?.point ?? st.asmGizmo ?? a.centre);
+  // ⭐⭐⭐ (2026-10-28) the gizmo CARRIED along the sections by the orbit's step since the last frame (`carryGizmo`); the first frame, and the safety resync
+  // (its face turned away from the piece — `faceTurnedAway`), the ray toward the centre
+  const prev = st.asmPrevQ ?? q;
+  st.asmPrevQ = { yaw: q.yaw, v: q.v };
+  let hit: GizmoHit | null = null;
+  if (!st.asmLocked) {
+    const dYaw = Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw));
+    const dPitch = pitchOfV(q.v) - pitchOfV(prev.v);
+    if (st.asmG === null || st.gizmoNormal === null || st.gizmoNormal === undefined) hit = castGizmo(st, u);
+    else if (dYaw !== 0 || dPitch !== 0) hit = carryGizmo(st, st.asmG, st.gizmoNormal, q.yaw, dYaw, dPitch);
+    if (hit !== null && faceTurnedAway(hit.normal, u)) {
+      hit = castGizmo(st, u) ?? hit;
+      st.lastVerdict = "orbit: the gizmo's face turned away from the piece — found again on the ray toward the centre";
+    }
+    if (hit !== null) st.asmG = hit.point;
+  }
+  const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
   const piece: Vec3 = [g0[0] + u[0] * d, g0[1] + u[1] * d, g0[2] + u[2] * d];
   const toCentre = Math.hypot(piece[0] - a.centre[0], piece[1] - a.centre[1], piece[2] - a.centre[2]);
   const was = st.asmLocked;
@@ -174,8 +237,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmLock = { point: [g0[0], g0[1], g0[2]], normal: st.gizmoNormal ?? hit?.normal ?? null, host: st.gizmoHost ?? hit?.host ?? null };
     st.lastVerdict = "orbit: close in — the gizmo and its face locked";
   } else if (!st.asmLocked && was) {
+    // ⭐ unlocked: carried on from where it was locked
+    st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     st.asmLock = null;
-    st.lastVerdict = "orbit: back out — the gizmo follows the piece's ray again";
+    st.lastVerdict = "orbit: back out — the gizmo carried along the sections again";
   }
   // ⭐ unlocked: the face by the edge rule (the quads read it)
   if (!st.asmLocked && hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
@@ -198,6 +263,70 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
+  sectionLinesFrame(st, q.yaw);
+}
+
+/** ⭐ The section lines' samples a section, and how often they are recast (ms). */
+const SECTION_SAMPLES = 96;
+const SECTION_EVERY_MS = 100;
+/** ⭐ The lines lifted off the surface toward their ray's origin (m) — never in it. */
+const SECTION_LIFT_M = 0.002;
+
+/**
+ * ⭐⭐ (the optional) THE SECTIONS DRAWN — the GREEN one (the horizontal plane at the gizmo's height; just under a top face's, just over a bottom's) and the
+ * RED one (the yaw plane through the centre): `SECTION_SAMPLES` rays each from outside toward the axis / the centre, their first hits joined; recast every
+ * `SECTION_EVERY_MS` while unlocked (`sectionLines` 1), hidden locked, under a hover, or off.
+ */
+function sectionLinesFrame(st: SceneState, yaw: number): void {
+  const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && st.asmG !== null;
+  if (!show) {
+    if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
+    return;
+  }
+  const now = performance.now();
+  if (st.asmSectionLines !== null && now - st.asmSectionAt < SECTION_EVERY_MS) {
+    st.asmSectionLines.isVisible = true;
+    return;
+  }
+  st.asmSectionAt = now;
+  const a = st.asm!;
+  const g = st.asmG!;
+  const n = st.gizmoNormal ?? null;
+  const reach = a.radius * 2 + 1;
+  const y = n !== null && Math.abs(n[1]) > Math.SQRT1_2 ? g[1] - Math.sign(n[1]) * 0.002 : g[1];
+  const loop = (pts: (Vec3 | null)[]): Vector3[][] => {
+    // ⭐ consecutive hits joined; a miss breaks the line (a section that does not close round the assembly)
+    const out: Vector3[][] = [];
+    let run: Vector3[] = [];
+    for (const p of [...pts, pts[0] ?? null]) {
+      if (p === null) {
+        if (run.length > 1) out.push(run);
+        run = [];
+      } else run.push(new Vector3(p[0], p[1], p[2]));
+    }
+    if (run.length > 1) out.push(run);
+    return out;
+  };
+  const green = greenSectionDirs(SECTION_SAMPLES).map((h) => {
+    const r: SectionRay = { origin: [a.centre[0] + h[0] * reach, y, a.centre[2] + h[2] * reach], dir: [-h[0], 0, -h[2]], length: reach * 2 };
+    const hit = castRay(st, r);
+    return hit === null ? null : ([hit.point[0] + h[0] * SECTION_LIFT_M, hit.point[1], hit.point[2] + h[2] * SECTION_LIFT_M] as Vec3);
+  });
+  const red = redSectionDirs(yaw, SECTION_SAMPLES).map((dd) => {
+    const hit = castRay(st, { origin: [a.centre[0] + dd[0] * reach, a.centre[1] + dd[1] * reach, a.centre[2] + dd[2] * reach], dir: [-dd[0], -dd[1], -dd[2]], length: reach * 2 });
+    return hit === null ? null : ([hit.point[0] + dd[0] * SECTION_LIFT_M, hit.point[1] + dd[1] * SECTION_LIFT_M, hit.point[2] + dd[2] * SECTION_LIFT_M] as Vec3);
+  });
+  const lines = [...loop(green), ...loop(red)];
+  const colours = [...loop(green).map((l) => l.map(() => new Color4(0.35, 0.8, 0.35, 1))), ...loop(red).map((l) => l.map(() => new Color4(0.9, 0.25, 0.2, 1)))];
+  st.asmSectionLines?.dispose();
+  st.asmSectionLines = lines.length === 0 ? null : CreateLineSystem("asmSections", { lines, colors: colours }, st.scene);
+  if (st.asmSectionLines !== null) {
+    st.asmSectionLines.isPickable = false;
+    st.asmSectionLines.isVisible = true;
+    // ⭐ in the TRANSPARENT pass, after the pieces' see-through contours (⛔ opaque, the contours drawn over them washed them out); hidden behind solid parts
+    st.asmSectionLines.alpha = 0.99;
+    st.asmSectionLines.alphaIndex = 1000;
+  }
 }
 
 /**
@@ -255,7 +384,9 @@ export function approachRelease(st: SceneState): void {
 /** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
 export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const u = dirAt(st, cam.yaw, cam.v);
-  return frameAtHeading(Math.asin(Math.max(-1, Math.min(1, u[1]))), u, Math.atan2(u[2], u[0]), 0, off ?? { yawRad: 0, pitchRad: 0 }, (89 * Math.PI) / 180);
+  const o = off ?? { yawRad: 0, pitchRad: 0 };
+  // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
+  return offsetFrame(u, Math.atan2(u[2], u[0]), o.yawRad, o.pitchRad);
 }
 
 /** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */

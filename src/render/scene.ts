@@ -570,6 +570,10 @@ export function createScene(
   st.asmGizmo = null;
   st.asmLook = null;
   st.asmFacePoint = null;
+  st.asmG = null;
+  st.asmPrevQ = null;
+  st.asmSectionLines = null;
+  st.asmSectionAt = 0;
   st.asmRayCache = new Map();
   st.approach = 1;
   st.approachInertia = new OrbitInertia();
