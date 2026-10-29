@@ -578,6 +578,8 @@ export function createScene(
   st.asmCarrier = null;
   st.asmChain = null;
   st.asmParts = null;
+  st.asmFlat = 0;
+  st.asmFlatSign = 1;
   st.asmRayCache = new Map();
   st.approach = 1;
   st.approachInertia = new OrbitInertia();

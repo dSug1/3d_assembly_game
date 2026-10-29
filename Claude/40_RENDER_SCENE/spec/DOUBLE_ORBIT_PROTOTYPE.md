@@ -1881,3 +1881,25 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   own; a vertical face (level and straight in at the waist, the rise, level → straight, below → the lower half, ring 1's angle → the old curve exactly, in
   the yaw's plane); a horizontal face (straight over at the waist, toward the piece's side; an inclined top; a bottom); no jump (along the approach no
   faster than the curve's own steepest turn, a yaw step no flip, the 80° cone); the wiring. ⛔ No device close. 2124 vectors.
+
+### …the old 2D curve over the WHOLE approach (`1.0.86-`, 2026-10-29)
+
+> *"I see very minimal change from previous 75eb381cca683780f87d5621edc422a449536da8 implementation."* → the proposal → *"build it, deploy, update the md
+> files"* — the owner.
+
+* ⛔ **Why the change was minimal**: the curve acted inside the lock only (0.3 m — the last ~12 mm of finger); at the boot's 33.6° the piece already sat at
+  ring 1's angle; and the camera, placed behind the piece, turns with it — the curve read as a slight tilt of the assembly.
+* ⭐⭐⭐ **The curve over the whole approach** (`approachDir` → `onCurve`; ⛔ the bend inside the lock only): the piece's elevation `e` off the curve's
+  base from its own angle `p` off it — on the curve's RISE `tan e = tan p × tan curve(a) / tan curve(ring 1)` (bounded under the side axis), on its
+  DESCENT to the waist `e = p × curve(a) / curve(ring 1)` (linear: ⛔ the tan rule all through swung a steep start's whole 85° in the last steps). At ring
+  1 EXACTLY the orbit's own direction (a gizmo move far out never turns the piece); at ring 1's own angle (31.7°) the old curve exactly; below the horizon
+  the mirror; level, straight in.
+* ⭐⭐ **Its plane by the gizmo face's KIND, EASED** (`flatKind`, `st.asmFlat`, τ 100 ms — a glide of ~0.3 s): a vertical face — from the horizontal at the
+  yaw toward up; a horizontal one (within 45°, snapped by gravity) — the curve turned 90°, from the vertical toward the piece's side; locked, the locked
+  face's (it cannot change). The kinds agree at ring 1, so far out the change turns nothing.
+* Measured in the app (`Scene_1`, the boot's vertical face, 33.6°): 33.7° at 6 m, 38° at 1.9 m, 45° at 0.8 m, 54.5° at 0.4 m, 62° at 0.19 m, level at the
+  waist (⛔ 33.6° all the way to 0.3 m before); Piece44's top at 85°: 5° off the vertical far out, 11° at most, straight over at the waist; the camera's
+  largest turn 6° an approach step (0.39 mm of finger); no error. ⚠ The face kind's glide was not reached in the app (vectored only).
+* ⭐ `tests/camera_frame.test.ts`'s stub now runs `orbitMode` 1 — the curve orbit its audits are about (since 2026-10-28 it had run the orbit around the
+  assembly silently, the default). Vectors (`tests/assembly_orbit.test.ts`, the curve's 6 restated, 4 red on the previous build — the far-out identity and
+  the no-jump bounds hold on both, by design). ⛔ No device close. 2124 vectors.
