@@ -718,13 +718,24 @@ export interface SceneState {
   asmSectionAt: number;
   asmSectionKey: string;
   /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
-  asmCarrier: { readonly s: number; readonly p: readonly [number, number]; readonly kind: import("../input/section_hull").EdgeKind; readonly chain: import("../input/section_hull").SectionChain } | null;
+  asmCarrier: {
+    readonly w: Vec3;
+    readonly kind: import("../input/section_hull").EdgeKind;
+    readonly s: number;
+    readonly chain: import("../input/section_hull").SectionChain;
+    readonly origin: Vec3;
+    readonly drop: import("../input/section_hull").SectionRay;
+  } | null;
   asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
+  /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
+  asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
   orbitShift: boolean;
+  /** ⭐⭐ (2026-10-29) the approach key (A) held — `orbitShift` reads it with the mouse (the name kept: the approach's modifier) */
+  orbitApproachKey: boolean;
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */

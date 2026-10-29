@@ -11,17 +11,26 @@ import {
   chainOf,
   chainStep,
   dropRay,
+  greenDrop,
+  greenFaces,
+  greenNormal,
+  greenPace,
+  greenPoints,
+  loopOf,
+  loopStep,
+  nearestOfKind,
+  redOrigin,
+  turnAbout,
+  wrapOn,
   edgeKind,
   edgeNormal,
   facesPiece,
   faceTurnedAway,
   facingChain,
   fromPlane,
-  greenYaws,
   hull2,
   nearestOnChain,
   redSamples,
-  remapOnChain,
   sectionPoints,
   toPlane,
   type P2,
@@ -144,20 +153,6 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(chainAt(ch, 0.3).p[1]).toBeCloseTo(0, 12);
     expect(nearestOnChain(ch, [0.3, 0.05])).toBeCloseTo(0.35, 12);
   });
-  it("⭐⭐⭐ THE YAW'S STEP: on a SIDE the carrier keeps its HEIGHT (the green section — the crossing furthest out), on a TOP its distance from the axis (the highest crossing); none, the nearest point", () => {
-    const ch = chainOf([[0, -0.2], [0.1, -0.2], [0.15, 0], [0.1, 0.2], [0, 0.2]]);
-    const side = chainAt(ch, remapOnChain(ch, [0.02, 0.1], "SIDE")).p;
-    expect(side[1]).toBeCloseTo(0.1, 12);
-    expect(side[0]).toBeCloseTo(0.125, 12); // out on the new side at that height
-    const top = chainAt(ch, remapOnChain(ch, [0.04, 0.9], "TOP")).p;
-    expect(top[0]).toBeCloseTo(0.04, 12);
-    expect(top[1]).toBeCloseTo(0.2, 12);
-    const bottom = chainAt(ch, remapOnChain(ch, [0.06, -0.5], "BOTTOM")).p;
-    expect(bottom).toEqual([0.06, -0.2]);
-    // above every side: the nearest point
-    const high = chainAt(ch, remapOnChain(ch, [0.3, 0.5], "SIDE")).p;
-    expect(high[1]).toBeCloseTo(0.2, 12);
-  });
   it("⭐⭐⭐ THE DROP: a side horizontally toward the axis AT THE CARRIER'S HEIGHT, a top straight down, a bottom straight up — always in the yaw plane, so the gizmo is where the red and green sections meet", () => {
     const yaw = 0.6;
     const ax: Vec3 = [-Math.sin(yaw), 0, Math.cos(yaw)];
@@ -204,29 +199,113 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(s).toBeCloseTo(ch.total, 12);
     expect(hosts).toEqual(["slab", "ledge", "slab", "top"]);
   });
-  it("⭐⭐ THE SECTIONS DRAWN are the gizmo's own paths: the red at the carrier's exact arc length among evenly spread ones, the green from the gizmo's own yaw round the circle", () => {
+  it("⭐⭐ THE SECTIONS DRAWN are the gizmo's own paths: the red at the carrier's exact arc length among evenly spread ones", () => {
     const r = redSamples(0.6, 0.3141, 64);
     expect(r.length).toBe(64);
     expect(r[0]).toBe(0);
     expect(r[63]).toBeCloseTo(0.6, 12);
     expect(r).toContain(0.3141);
     for (let i = 1; i < 64; i++) expect(r[i]!).toBeGreaterThan(r[i - 1]!);
-    const g = greenYaws(0.7, 96);
-    expect(g.length).toBe(96);
-    expect(g[0]).toBe(0.7);
-    expect(g[95]! - g[0]!).toBeCloseTo((2 * Math.PI * 95) / 96, 12);
   });
-  it("⭐⭐ wired: the gizmo each frame from its carrier (the yaw's remap, the pitch's step by the assembly's half-size, the drop); a lock or a hover drops the carrier — found again in the yaw plane (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
+  it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, pitchOfV(q.v) - pitchOfV(prev.v), u);");
-    expect(a).toContain("} else if (c.chain !== chain) c = carrierAt(chain, remapOnChain(chain, c.p, c.kind));");
-    expect(a).toContain("if (dPitch !== 0) c = carrierAt(chain, chainStep(chain, c.s, a.radius * dPitch, pitchOfV(v)));");
-    expect(a).toContain("const h = castRay(st, dropRay(c.p, c.kind, a.centre, yaw, a.radius * 2 + 1));");
-    expect(a).toContain("c = carrierAt(chain, from === null ? chain.total / 2 : nearestOnChain(chain, toPlane(from, a.centre, yaw)));");
+    expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);");
+    expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
+    expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
+    expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
+    expect(a).toContain("const red = onRed(st, yaw, h.point);");
+    expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
     expect(a.split("st.asmCarrier = null;").length - 1).toBe(3); // the hover, the lock, the unlock
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");
-    expect(a).not.toContain("carryGizmo");
+    expect(a).not.toContain("remapOnChain");
+  });
+});
+
+describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
+  it("⭐⭐ THE GREEN SECTION: the horizontal cut of each convex part at a height (a box's rectangle, a frustum's taper read at its height); its hull a closed loop, counter-clockwise in (x, z) — the yaw's own sense; one lap per turn of yaw", () => {
+    const loop = loopOf(hull2(greenPoints([box(SLAB.lo, SLAB.hi)], 0.2)))!;
+    expect(loop.pts[0]).toEqual(loop.pts[loop.pts.length - 1]); // closed
+    expect(loop.total).toBeCloseTo(2 * (0.5 + 0.04), 12);
+    expect(greenPace(loop)).toBeCloseTo(1.08 / (2 * Math.PI), 12);
+    let area = 0;
+    for (let i = 0; i < loop.pts.length - 1; i++) area += loop.pts[i]![0] * loop.pts[i + 1]![1] - loop.pts[i + 1]![0] * loop.pts[i]![1];
+    expect(area).toBeGreaterThan(0); // counter-clockwise in (x, z): the way +yaw turns x toward z
+    // a frustum: its section at mid-height is its taper's width there
+    const fr: Vec3[] = [];
+    for (const [x, y, z] of [[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1]] as Vec3[]) fr.push([x * 0.1, y, z * 0.1]);
+    for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) fr.push([x! * 0.05, 0.2, z! * 0.05]);
+    const mid = hull2(greenPoints([fr], 0.1)).map((p) => p[0]);
+    expect(Math.max(...mid) - Math.min(...mid)).toBeCloseTo(0.15, 12);
+    expect(greenPoints([box(SLAB.lo, SLAB.hi)], 0.7)).toEqual([]);
+    expect(wrapOn(loop, -0.1)).toBeCloseTo(loop.total - 0.1, 12);
+  });
+  it("⭐⭐⭐ (*\"Can't the dx replicate what dy does so that each place can be reached easily ?\"*) COMPOSED on the slab: dx carries the gizmo across the face at the SAME distance per degree everywhere (⛔ the yaw plane's cut: 2 cm × tan(yaw) — 0.35 cm for the first 10°, 7 cm for the 10° before 80°), round the edge, back where it began after a full turn", () => {
+    const loop = loopOf(hull2(greenPoints([box(SLAB.lo, SLAB.hi)], 0.25)))!;
+    const pitch = 20 * D;
+    let yaw = YAW;
+    let s = nearestOnChain(loop, [0, -0.02]); // the front face's middle (−z)
+    const s0 = s;
+    const xs: number[] = [];
+    for (let k = 0; k < 36; k++) {
+      const d = (10 * Math.PI) / 180;
+      s = loopStep(loop, s, greenPace(loop) * d, (i) => greenFaces(greenNormal(loop, i), yaw + d, pitch));
+      yaw += d;
+      const at = chainAt(loop, s);
+      const n = greenNormal(loop, at.edge);
+      const hit = cast([SLAB], greenDrop([at.p[0], 0.25, at.p[1]], n, 2))!;
+      expect(hit.point[1]).toBeCloseTo(0.25, 12); // the green section: at its height
+      xs.push(hit.point[0]);
+    }
+    // across the front face: 10° → the same travel every time (~1.9 cm here)
+    const steps = xs.slice(0, 7).map((x, i) => Math.abs(x - (i === 0 ? 0 : xs[i - 1]!)));
+    for (const d of steps) expect(d).toBeCloseTo(greenPace(loop) * (10 * Math.PI) / 180, 9);
+    // ⛔ the old rule on the same face: 2 cm × tan(yaw) — uneven by a factor of twenty across it
+    const old = [10, 20, 30, 40, 50, 60, 70, 80].map((a) => 0.02 * Math.tan((a * Math.PI) / 180));
+    expect((old[7]! - old[6]!) / old[0]!).toBeGreaterThan(15);
+    expect(wrapOn(loop, s)).toBeCloseTo(s0, 9); // a full turn: back where it began
+  });
+  it("⭐⭐⭐ the yaw's step on the loop never ENTERS an edge turned away from the piece (it waits at its corner; inside one it is on, free); a lap at most; both senses", () => {
+    const loop = chainOf([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]); // a square, counter-clockwise
+    const faces = (bad: number) => (i: number) => i !== bad;
+    expect(loopStep(loop, 0.5, 0.3, faces(-1))).toBeCloseTo(0.8, 12);
+    expect(loopStep(loop, 0.5, 0.8, faces(1))).toBeCloseTo(1, 12); // edge 1 turned away: held at its corner
+    expect(loopStep(loop, 1, 0.3, faces(1))).toBeCloseTo(1, 12); // still waiting there
+    expect(loopStep(loop, 1.2, 0.3, faces(1))).toBeCloseTo(1.5, 12); // inside it already: free
+    expect(loopStep(loop, 3.8, 0.5, faces(-1))).toBeCloseTo(0.3, 12); // round past the start
+    expect(loopStep(loop, 0.3, -0.5, faces(-1))).toBeCloseTo(3.8, 12); // and back
+    expect(loopStep(loop, 2.5, -0.8, faces(1))).toBeCloseTo(2, 12); // backward: held at the corner into edge 1
+    expect(loopStep(loop, 0.5, 9, faces(-1))).toBeCloseTo(0.5, 12); // one lap at most
+    expect(greenNormal(loop, 0)).toEqual([0, 0, -1]); // the bottom edge (z = 0) faces −z
+    expect(greenFaces([0, 0, -1], -Math.PI / 2, 0.3)).toBe(true); // the piece at −z
+    expect(greenFaces([0, 0, 1], -Math.PI / 2, 0.3)).toBe(false);
+    expect(greenFaces([0, 0, 1], -Math.PI / 2, Math.PI / 2)).toBe(true); // straight above: every side
+  });
+  it("⭐⭐ the red section THROUGH the gizmo (`redOrigin`: its plane's point nearest the axis); on a top, dx turns the carrier about the axis at its distance and keeps it on the top — past a narrow top's edge, held at it (`nearestOfKind`)", () => {
+    const yaw = 0.6;
+    const w: Vec3 = [0.3, 0.4, -0.2];
+    const o = redOrigin(w, C, yaw);
+    const axis: Vec3 = [-Math.sin(yaw), 0, Math.cos(yaw)];
+    expect((w[0] - o[0]) * axis[0] + (w[2] - o[2]) * axis[2]).toBeCloseTo(0, 12); // w in the plane
+    expect((o[0] - C[0]) * Math.cos(yaw) + (o[2] - C[2]) * Math.sin(yaw)).toBeCloseTo(0, 12); // the origin square to the heading from the centre
+    const t = turnAbout([C[0] + 0.1, 0.5, C[2]], C, Math.PI / 2);
+    expect(t[0]).toBeCloseTo(C[0], 12);
+    expect(t[2]).toBeCloseTo(C[2] + 0.1, 12); // x toward z: the yaw's own sense
+    expect(t[1]).toBe(0.5);
+    // a chain whose top is narrower than the carrier's distance: held at the top's edge, not taken down the side
+    const ch = chainOf([[0, -0.2], [0.05, -0.2], [0.05, 0.2], [0, 0.2]]);
+    const s = nearestOfKind(ch, [0.09, 0.2], "TOP");
+    expect(chainAt(ch, s).p[0]).toBeCloseTo(0.05, 12);
+    expect(chainAt(ch, s).p[1]).toBeCloseTo(0.2, 12);
+    expect(nearestOfKind(ch, [0.09, 0.0], "TOP")).toBeCloseTo(0.45, 12);
+    expect(nearestOfKind(chainOf([[0, 0], [0.1, 0.5]]), [0.2, 0.2], "TOP")).toBe(nearestOnChain(chainOf([[0, 0], [0.1, 0.5]]), [0.2, 0.2])); // none of that kind
+  });
+  it("⭐⭐ wired: the dx's green loop and the top's turn; the drawn green the loop at the gizmo's height (⛔ vertical drops on a circle — off a thin top they landed on the parts below, the strange forms)", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("const loop = loopOf(hull2(greenPoints(parts.parts, y)));");
+    expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
+    expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
+    expect(a).toContain("const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);");
   });
 });

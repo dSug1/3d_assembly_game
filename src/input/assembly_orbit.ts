@@ -134,7 +134,17 @@ export function lookShare(distM: number, farM: number, lockDistM: number, locked
   return smooth((farM - distM) / (farM - lockDistM));
 }
 
-/** ⭐ The approach step a millimetre of the two fingers' (or Shift + drag's) dy buys: finger UP brings the piece IN (the coordinate down). */
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"On desktop, if I keep shift pressed for a long time, the windows sticky keys message pops up … use a key which will not
+ * trigger a message from Windows, IOS, Linux, etc. if it is pressed for a long time"* → *"A should replace shift"*) — THE APPROACH KEY on the desktop: A
+ * held + drag (⛔ Shift: Windows' Sticky Keys on five presses, Filter Keys on the right Shift held 8 s; macOS and Linux have Shift shortcuts too — a letter
+ * has none). By its LABEL (`KeyboardEvent.key`, either case), so it is the A key on an AZERTY keyboard too.
+ */
+export function isApproachKey(key: string): boolean {
+  return key.toLowerCase() === "a";
+}
+
+/** ⭐ The approach step a millimetre of the two fingers' (or A + drag's) dy buys: finger UP brings the piece IN (the coordinate down). */
 export function approachStep(a: number, dyMm: number, perMm: number, cfg: GestureConfig): number {
   const r = approachRange(cfg);
   return Math.min(r.max, Math.max(r.min, a + dyMm * perMm));

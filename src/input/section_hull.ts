@@ -236,30 +236,7 @@ export function nearestOnChain(ch: SectionChain, p: P2): number {
   return best;
 }
 
-/**
- * ⭐⭐⭐ THE YAW'S STEP: the carrier (at `p`, on an edge of `kind`) found again on the NEW yaw plane's chain — on a SIDE at its HEIGHT (the green section:
- * round the assembly at constant height — the crossing furthest out on a side edge), on a TOP at its distance from the axis (the highest crossing on a
- * top edge), on a BOTTOM the same (the lowest); none of those, the nearest point. Returns its arc length.
- */
-export function remapOnChain(ch: SectionChain, p: P2, kind: EdgeKind): number {
-  let best: { s: number; key: number } | null = null;
-  const along = kind === "SIDE" ? 1 : 0; // the coordinate kept: y on a side, r on a top / bottom
-  const want = p[along];
-  for (let i = 0; i < ch.pts.length - 1; i++) {
-    if (edgeKind(edgeNormal(ch, i)) !== kind) continue;
-    const a = ch.pts[i]!;
-    const b = ch.pts[i + 1]!;
-    const lo = Math.min(a[along], b[along]);
-    const hi = Math.max(a[along], b[along]);
-    if (want < lo - 1e-12 || want > hi + 1e-12 || hi - lo < 1e-12) continue;
-    const t = (want - a[along]) / (b[along] - a[along]);
-    const q: P2 = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-    // ⭐ the one furthest out (a side), the highest (a top), the lowest (a bottom)
-    const key = kind === "SIDE" ? q[0] : kind === "TOP" ? q[1] : -q[1];
-    if (best === null || key > best.key) best = { s: ch.cum[i]! + t * (ch.cum[i + 1]! - ch.cum[i]!), key };
-  }
-  return best !== null ? best.s : nearestOnChain(ch, p);
-}
+// ⛔ (2026-10-29) `remapOnChain` (dx as a turn of the yaw plane through the centre) is deleted — dx goes BY DISTANCE round the green loop (`loopStep`).
 
 /**
  * ⭐⭐ THE DROP: the ray that puts the gizmo on the real surface from the carrier `q` on an edge of `kind` (`reach`: from how far outside) — a SIDE:
@@ -279,8 +256,8 @@ export function faceTurnedAway(n: Vec3 | null, u: Vec3): boolean {
 }
 
 /**
- * ⭐⭐ THE SECTIONS DRAWN — the paths the gizmo takes: the RED one, `count` arc lengths along the chain (the carrier's own `s` in place of the nearest, so
- * the gizmo lies on the line exactly); the GREEN one, `count` yaws round the full circle starting at the gizmo's own `yaw`.
+ * ⭐⭐ THE SECTION DRAWN — the path the gizmo takes: the RED one, `count` arc lengths along the chain (the carrier's own `s` in place of the nearest, so
+ * the gizmo lies on the line exactly). (⛔ `greenYaws` deleted: the green line is the green loop now.)
  */
 export function redSamples(total: number, s: number, count: number): number[] {
   const out: number[] = [];
@@ -288,8 +265,139 @@ export function redSamples(total: number, s: number, count: number): number[] {
   if (count > 1) out[Math.min(count - 1, Math.max(0, Math.round((s / (total || 1)) * (count - 1))))] = Math.min(total, Math.max(0, s));
   return out;
 }
-export function greenYaws(yaw: number, count: number): number[] {
-  const out: number[] = [];
-  for (let k = 0; k < count; k++) out.push(yaw + (2 * Math.PI * k) / count);
+
+/**
+ * ⭐⭐⭐ (2026-10-29, the owner: *"on dy, it is quite easy to reach any place on the vertical axis. On dx, there is a large angular range spent on little
+ * travel in the middle of the face … Can't the dx replicate what dy does so that each place can be reached easily ?"* → *"agreed"*) — **dx BY
+ * DISTANCE ON THE GREEN SECTION** (⛔ the yaw plane's cut at the gizmo's height: 2 cm × tan(yaw) along the painting's face — 0.4 cm at 10°, the edge only at
+ * 87°). The GREEN section is the horizontal cut of the placed parts at height `y` (`greenPoints`: each part's convex hull cut by the plane), its convex
+ * hull (`hull2`, in (x, z) — counter-clockwise turns the way the yaw does); the carrier rides it as a closed loop (`loopStep`) at its perimeter per turn
+ * (`greenPace`) — once round per turn of yaw, so it stays on the piece's side — and never ENTERS an edge turned away from the piece (it waits there).
+ */
+export function greenPoints(parts: readonly (readonly Vec3[])[], y: number): P2[] {
+  const out: P2[] = [];
+  for (const vs of parts) {
+    for (let i = 0; i < vs.length; i++) {
+      const vi = vs[i]!;
+      const di = vi[1] - y;
+      if (Math.abs(di) < 1e-12) out.push([vi[0], vi[2]]);
+      for (let j = i + 1; j < vs.length; j++) {
+        const vj = vs[j]!;
+        const dj = vj[1] - y;
+        if (!((di > 1e-12 && dj < -1e-12) || (di < -1e-12 && dj > 1e-12))) continue;
+        const t = di / (di - dj);
+        out.push([vi[0] + (vj[0] - vi[0]) * t, vi[2] + (vj[2] - vi[2]) * t]);
+      }
+    }
+  }
   return out;
+}
+
+/** ⭐ The green hull as a CLOSED loop (its first point repeated at the end); `null`: no area. */
+export function loopOf(hull: readonly P2[]): SectionChain | null {
+  if (hull.length < 3) return null;
+  return chainOf([...hull, hull[0]!]);
+}
+
+/** ⭐ The pace of dx on a loop: its perimeter per turn of yaw (m per radian). */
+export function greenPace(loop: SectionChain): number {
+  return loop.total / (2 * Math.PI);
+}
+
+/** ⭐ An arc length brought onto the loop's one lap [0, total). */
+export function wrapOn(loop: SectionChain, s: number): number {
+  const t = loop.total;
+  return t > 0 ? ((s % t) + t) % t : 0;
+}
+
+/**
+ * ⭐⭐⭐ THE YAW'S STEP on the closed green loop: the carrier at `s` moved by `ds` (+ the yaw's own sense), round and round — and it never ENTERS an edge
+ * for which `faces` is false (it waits at that edge's start; inside one it is on, free). `ds` held to one lap.
+ */
+export function loopStep(loop: SectionChain, s: number, ds: number, faces: (edge: number) => boolean): number {
+  const edges = loop.pts.length - 1;
+  if (ds === 0 || edges < 1 || !(loop.total > 0)) return wrapOn(loop, s);
+  let left = Math.min(Math.abs(ds), loop.total);
+  const dir = ds > 0 ? 1 : -1;
+  let x = wrapOn(loop, s);
+  // ⭐ at a corner, on the edge it came along — forward the one ending there, backward the one starting there (the next one is ENTERED)
+  let i = 0;
+  if (dir > 0) while (i < edges - 1 && x > loop.cum[i + 1]!) i++;
+  else while (i < edges - 1 && x >= loop.cum[i + 1]!) i++;
+  for (let guard = 0; guard < edges * 2 + 2; guard++) {
+    if (dir > 0) {
+      const room = loop.cum[i + 1]! - x;
+      if (left <= room) return wrapOn(loop, x + left);
+      left -= room;
+      const next = (i + 1) % edges;
+      if (!faces(next)) return wrapOn(loop, loop.cum[i + 1]!);
+      i = next;
+      x = loop.cum[i]!;
+    } else {
+      const room = x - loop.cum[i]!;
+      if (left <= room) return wrapOn(loop, x - left);
+      left -= room;
+      const prev = (i - 1 + edges) % edges;
+      if (!faces(prev)) return wrapOn(loop, loop.cum[i]!);
+      i = prev;
+      x = loop.cum[i + 1]!;
+    }
+  }
+  return wrapOn(loop, x);
+}
+
+/** ⭐ A green edge's outward normal, in the world (horizontal): its 2D normal in (x, z). */
+export function greenNormal(loop: SectionChain, i: number): Vec3 {
+  const n = edgeNormal(loop, i);
+  return [n[0], 0, n[1]];
+}
+
+/** ⭐ Does a green edge of world normal `n` face the piece at `yaw`, `pitch`? (`n · u ≥ 0` — at ±90° every one does) */
+export function greenFaces(n: Vec3, yaw: number, pitch: number): boolean {
+  return Math.cos(pitch) * (n[0] * Math.cos(yaw) + n[2] * Math.sin(yaw)) >= -1e-9;
+}
+
+/** ⭐ The GREEN drop: from the carrier `w` on an edge of normal `n`, the horizontal ray back along `−n` at its height, from `reach` outside. */
+export function greenDrop(w: Vec3, n: Vec3, reach: number): SectionRay {
+  return { origin: [w[0] + n[0] * reach, w[1], w[2] + n[2] * reach], dir: [-n[0], 0, -n[2]], length: reach * 2 };
+}
+
+/** ⭐ `p` turned about the vertical axis through `c` by `dYaw` (the orbit's own sense: x toward z). */
+export function turnAbout(p: Vec3, c: Vec3, dYaw: number): Vec3 {
+  const dx = p[0] - c[0];
+  const dz = p[2] - c[2];
+  const cs = Math.cos(dYaw);
+  const sn = Math.sin(dYaw);
+  return [c[0] + dx * cs - dz * sn, p[1], c[2] + dx * sn + dz * cs];
+}
+
+/**
+ * ⭐⭐ THE RED PLANE THROUGH THE GIZMO: the vertical plane along the piece's heading at `yaw` through `w` — its origin, the point of the plane closest
+ * to the assembly's axis through `c` (its "centre": the clamp's vertical). ⛔ Through the centre: with dx by distance the gizmo leaves it.
+ */
+export function redOrigin(w: Vec3, c: Vec3, yaw: number): Vec3 {
+  const { axis } = yawFrame(yaw);
+  const o = (w[0] - c[0]) * axis[0] + (w[2] - c[2]) * axis[2];
+  return [c[0] + axis[0] * o, c[1], c[2] + axis[2] * o];
+}
+
+/** ⭐ The arc length of the chain's point nearest `p` among its edges of `kind` (a TOP carrier kept on a top: turned past its edge, held at it); none of that kind: `nearestOnChain`. */
+export function nearestOfKind(ch: SectionChain, p: P2, kind: EdgeKind): number {
+  let best: number | null = null;
+  let bd = Infinity;
+  for (let i = 0; i < ch.pts.length - 1; i++) {
+    if (edgeKind(edgeNormal(ch, i)) !== kind) continue;
+    const a = ch.pts[i]!;
+    const b = ch.pts[i + 1]!;
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const l2 = dx * dx + dy * dy;
+    const t = l2 > 0 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0;
+    const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dy * t - p[1]);
+    if (d < bd) {
+      bd = d;
+      best = ch.cum[i]! + t * Math.sqrt(l2);
+    }
+  }
+  return best ?? nearestOnChain(ch, p);
 }

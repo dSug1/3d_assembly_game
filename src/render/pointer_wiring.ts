@@ -20,7 +20,7 @@ import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOn
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
-import { ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
+import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -59,6 +59,17 @@ function unsnapHolds(st: SceneState, pointerId: number): boolean {
 }
 
 export function installPointerHandler(st: SceneState): void {
+  // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
+  const approachKey = (down: boolean) => (e: KeyboardEvent) => {
+    if (!isApproachKey(e.key)) return;
+    if (!down && st.orbitApproachKey && assemblyOn(st)) approachRelease(st);
+    st.orbitApproachKey = down;
+  };
+  window.addEventListener("keydown", approachKey(true));
+  window.addEventListener("keyup", approachKey(false));
+  window.addEventListener("blur", () => {
+    st.orbitApproachKey = false;
+  });
   // ⭐⭐ `D111` — THE GESTURE'S FIRST DOWN, observed BEFORE every rule (`insertFirst`): the model is
   // snapshotted as it stands, so the undo's entry is the scene before anything this gesture did.
   st.scene.onPointerObservable.add(
@@ -82,9 +93,9 @@ export function installPointerHandler(st: SceneState): void {
   st.scene.onPointerObservable.add((info) => {
     const e = info.event as PointerEvent;
     const s = sampleOf(e);
-    // ⭐⭐ (2026-10-28) Shift with the mouse (or a touchpad): around the assembly the drag's dy is the APPROACH (`approachInput`); the button's release
-    // starts its coast
-    st.orbitShift = e.pointerType === "mouse" && e.shiftKey;
+    // ⭐⭐ (2026-10-28) A held with the mouse (or a touchpad) — ⭐ 2026-10-29, ⛔ Shift: around the assembly the drag's dy is the APPROACH
+    // (`approachInput`); the button's release starts its coast
+    st.orbitShift = e.pointerType === "mouse" && st.orbitApproachKey;
     if (info.type === PointerEventTypes.POINTERUP && e.pointerType === "mouse" && assemblyOn(st)) approachRelease(st);
 
     // ⭐ The noise meter runs BEFORE the recognizer and independently of it: it must
@@ -1341,7 +1352,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const db = st.orbitMotion.band.step;
     // ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR (`orbitTravelStep`): the dy cut where the camera would turn faster than the cap per mm of finger
     // ⭐⭐⭐ (2026-10-21) …on the TRAVEL: over a horizontal face, through the middle, the dy turns the camera half round while the piece waits (the top face pause)
-    // ⭐⭐⭐ (2026-10-28) AROUND THE ASSEMBLY: Shift + drag's dy is the APPROACH (and nothing else moves); one finger's dy the PITCH, at the dx yaw's pace
+    // ⭐⭐⭐ (2026-10-28) AROUND THE ASSEMBLY: A + drag's dy (⛔ Shift, 2026-10-29) is the APPROACH (and nothing else moves); one finger's dy the PITCH, at the dx yaw's pace
     // (the owner's default: *"the same °/mm as the dx yaw"*) — 170° of pitch over the ring parameter
     const asmOn = assemblyOn(st);
     const shiftApproach = asmOn && st.orbitShift && !dxOnly;
