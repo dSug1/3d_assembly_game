@@ -82,6 +82,16 @@ export function nextLock(locked: boolean, toCentreM: number, toGizmoM: number, a
 /** ⭐ Locked, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
 export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
 
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"*)
+ * — THE LOCK'S CONE, from where the piece is: at the lock (`cone` `null`) the piece's own angle off the face's normal when it is outside `LOCK_CONE_RAD`
+ * (⛔ the cone at once: at −90° over a vertical face the piece was snapped 10° in one frame — 5.8 cm at the lock's 0.28 m, the camera turned with it);
+ * after that, tightened as the piece comes inward, never below `LOCK_CONE_RAD`.
+ */
+export function lockCone(cone: number | null, angle: number): number {
+  return Math.max(LOCK_CONE_RAD, cone === null ? angle : Math.min(cone, angle));
+}
+
 /** ⭐ `u` turned toward `n` (both unit) until within `maxRad` of it; within already, `u` itself. */
 export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec3 {
   const c = Math.max(-1, Math.min(1, dot(u, n)));
