@@ -262,7 +262,14 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
   for (let guard = 0; guard < 400 && !tiny(rest); guard++) {
     if (queries >= opt.maxQueries) return { q, path, blocked, touched, deferred: true, rest, queries };
     const travel = arcLength(env, q, rest);
-    if (!(travel > 1e-12)) break;
+    // ⭐ (2026-10-29) a step that moves the piece NOWHERE is taken whole — nothing can collide (⛔ dropped: at ±90° around the assembly the yaw moves
+    // the place by 0, so the solved yaw never followed the finger and dx was dead on a top face — the gizmo's carrier reads it)
+    if (!(travel > 1e-12)) {
+      q = plus(q, rest, 1);
+      path.push(q);
+      rest = [0, 0];
+      break;
+    }
     // (0) INSIDE the margin: out by short strides, each one OPENING the gap, never further than the other parts allow — ⭐⭐⭐ (2026-10-15, the
     // owner: *"If I do dy instead, the piece goes through the blue part"*) ⛔ one whole step that ended farther out was taken: from inside a part,
     // through it and out of its far side. Deep inside (no stride opens it): held — the ring's nearest free place is `nearestFree`'s job
@@ -792,6 +799,22 @@ export function quadCheckBudget(keyChanged: boolean, sinceMs: number, everyMs: n
  */
 export function relocationKey(q: OrbitQ, rotation: readonly number[] | null, gizmo: readonly number[], signature: string): string {
   return [q.yaw.toFixed(5), q.v.toFixed(5), rotation === null ? "" : rotation.map((x) => x.toFixed(4)).join(","), gizmo.map((x) => x.toFixed(4)).join(","), signature].join("|");
+}
+
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"the message says the piece is blocked, however I can still slide the piece in the opposite direction than the blocking
+ * part. Why is there such message if there is a way out"* → *"agreed"*) — **A SLIDE IS A WAY OUT**: while a slide on a face is available, a step of
+ * `probeM` each way along the face's two directions (`e1`, `e2`), the piece kept at its gap — free when any one keeps the gap at the margin or more
+ * (`gapAt(offset)`, the piece moved by `offset`). ⛔ The check tried the orbit's steps and the turns only: in a pocket the red pop-up showed while a slide
+ * led out.
+ */
+export function slideProbeFree(gapAt: (offset: Vec3) => number, e1: Vec3, e2: Vec3, probeM: number, hardM: number): boolean {
+  for (const e of [e1, e2]) {
+    for (const k of [1, -1]) {
+      if (gapAt([e[0] * probeM * k, e[1] * probeM * k, e[2] * probeM * k]) >= hardM) return true;
+    }
+  }
+  return false;
 }
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */

@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, greenYaws, hull2, nearestOnChain, redSamples, remapOnChain, sectionPoints, toPlane, type EdgeKind, type P2, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -165,44 +165,99 @@ function placedParts(st: SceneState): { readonly key: string; readonly parts: re
   return st.asmParts;
 }
 
-/** ⭐ The facing half of the hull of the yaw plane's section at `yaw` (`input/section_hull.ts`), cached for the yaw and the placed set; `null`: none. */
-function chainFor(st: SceneState, yaw: number): SectionChain | null {
+/** ⭐ The facing half of the hull of the RED section — the vertical plane at `yaw` through `origin` (`redOrigin`) — cached for the plane and the placed set; `null`: none. */
+function chainFor(st: SceneState, yaw: number, origin: Vec3): SectionChain | null {
   const parts = placedParts(st);
-  const key = `${parts.key}#${yaw.toFixed(9)}`;
+  const key = `${parts.key}#${yaw.toFixed(9)}#${origin[0].toFixed(7)},${origin[2].toFixed(7)}`;
   if (st.asmChain !== null && st.asmChain.key === key) return st.asmChain.chain;
-  const chain = facingChain(hull2(sectionPoints(parts.parts, st.asm!.centre, yaw)));
+  const chain = facingChain(hull2(sectionPoints(parts.parts, origin, yaw)));
   st.asmChain = { key, chain };
   return chain;
 }
 
-/** ⭐ The carrier at arc length `s` of `chain`: its point, its edge's kind. */
-function carrierAt(chain: SectionChain, s: number): { readonly s: number; readonly p: P2; readonly kind: EdgeKind; readonly chain: SectionChain } {
+/** ⭐ The GREEN loop — the hull of the horizontal cut at height `y` (`greenPoints`, `loopOf`) — cached for the height and the placed set; `null`: none. */
+function loopFor(st: SceneState, y: number): SectionChain | null {
+  const parts = placedParts(st);
+  const key = `${parts.key}#${y.toFixed(7)}`;
+  if (st.asmLoop !== null && st.asmLoop.key === key) return st.asmLoop.loop;
+  const loop = loopOf(hull2(greenPoints(parts.parts, y)));
+  st.asmLoop = { key, loop };
+  return loop;
+}
+
+type Carrier = NonNullable<SceneState["asmCarrier"]>;
+
+/** ⭐ The carrier at arc length `s` of the red `chain` (the plane at `yaw` through `origin`): its point, its edge's kind, its drop. */
+function redAt(st: SceneState, yaw: number, chain: SectionChain, origin: Vec3, s: number, want?: EdgeKind): Carrier {
   const at = chainAt(chain, s);
-  return { s: Math.min(chain.total, Math.max(0, s)), p: at.p, kind: edgeKind(edgeNormal(chain, at.edge)), chain };
+  let kind = edgeKind(edgeNormal(chain, at.edge));
+  // ⭐ at a corner shared with an edge of the kind asked for (a top's edge, its side below it), that kind (⛔ the corner read as the side's: off the top)
+  if (want !== undefined && kind !== want && at.edge + 1 < chain.pts.length - 1 && Math.abs(s - chain.cum[at.edge + 1]!) < 1e-9 && edgeKind(edgeNormal(chain, at.edge + 1)) === want) kind = want;
+  return { w: fromPlane(at.p, origin, yaw), kind, s: Math.min(chain.total, Math.max(0, s)), chain, origin, drop: dropRay(at.p, kind, origin, yaw, st.asm!.radius * 2 + 1) };
+}
+
+/** ⭐ The point `w` brought onto the RED section through it (the plane at `yaw` through `w`) — onto its edges of `kind` when given (a top kept on a top); `null`: no section there. */
+function onRed(st: SceneState, yaw: number, w: Vec3, kind?: EdgeKind): Carrier | null {
+  const origin = redOrigin(w, st.asm!.centre, yaw);
+  const chain = chainFor(st, yaw, origin);
+  if (chain === null) return null;
+  const p = toPlane(w, origin, yaw);
+  return redAt(st, yaw, chain, origin, kind === undefined ? nearestOnChain(chain, p) : nearestOfKind(chain, p, kind), kind);
+}
+
+/** ⭐ The carrier carried round the GREEN loop at its height by `dYaw` (`greenPace` per radian, never into an edge turned away), its red section the plane through it. */
+function onGreen(st: SceneState, c: Carrier, yaw: number, pitch: number, dYaw: number): Carrier | null {
+  const loop = loopFor(st, c.w[1]);
+  if (loop === null) return null;
+  const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
+  const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));
+  const at = chainAt(loop, s1);
+  const w: Vec3 = [at.p[0], c.w[1], at.p[1]];
+  const red = onRed(st, yaw, w);
+  return { ...(red ?? c), w, kind: "SIDE", drop: greenDrop(w, greenNormal(loop, at.edge), st.asm!.radius * 2 + 1) };
 }
 
 /**
- * ⭐⭐⭐ (2026-10-29) THE CARRIER'S FRAME (unlocked): the carrier found again on this yaw plane's chain (a yaw step: `remapOnChain`; the start, or after a
- * lock or a hover: from the gizmo as it was, projected into the plane), slid by the pitch's step (`chainStep` — the assembly's half-size per radian,
- * clamped at the bottom and top centres, never into an edge turned away from the piece), then DROPPED onto the real surface (`dropRay`). A drop that
- * misses or lands on a face turned away from the piece leaves the gizmo where it was (the carrier goes on). Returns the hit (`null`: the gizmo held).
+ * ⭐⭐⭐ (2026-10-29) THE CARRIER'S FRAME (unlocked). The start, or after a lock or a hover: from the gizmo as it was, brought onto the red section through
+ * it. dx (`dYaw`) — ⭐ BY DISTANCE (the owner: *"Can't the dx replicate what dy does"*; ⛔ the yaw plane's cut through the centre: 2 cm × tan(yaw) along
+ * the painting's face): on a SIDE round the GREEN loop at its height (`onGreen`), on a TOP / BOTTOM turned about the axis at its distance (`turnAbout`)
+ * and brought onto the red section there; the RED section is the vertical plane along the heading THROUGH the carrier (`redOrigin`). dy (`dPitch`): slid
+ * along that red chain (`chainStep` — the assembly's half-size per radian, clamped at its bottom and top centres, never into an edge turned away). Then
+ * DROPPED onto the real surface (the green drop after a dx on a side, the red one else). A drop that misses or lands on a face turned away from the
+ * piece leaves the gizmo where it was (the carrier goes on). Returns the hit (`null`: the gizmo held).
  */
-function carrierFrame(st: SceneState, yaw: number, v: number, dPitch: number, u: Vec3): GizmoHit | null {
+function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPitch: number, u: Vec3): GizmoHit | null {
   const a = st.asm!;
-  const chain = chainFor(st, yaw);
-  if (chain === null) return castGizmo(st, u);
+  const pitch = pitchOfV(v);
   let c = st.asmCarrier;
   if (c === null) {
     const from = st.asmG ?? castGizmo(st, u)?.point ?? null;
-    c = carrierAt(chain, from === null ? chain.total / 2 : nearestOnChain(chain, toPlane(from, a.centre, yaw)));
-  } else if (c.chain !== chain) c = carrierAt(chain, remapOnChain(chain, c.p, c.kind));
-  if (dPitch !== 0) c = carrierAt(chain, chainStep(chain, c.s, a.radius * dPitch, pitchOfV(v)));
+    if (from === null) return null;
+    c = onRed(st, yaw, from);
+    if (c === null) return castGizmo(st, u);
+  }
+  let green = false;
+  if (dYaw !== 0 && st.asmCarrier !== null) {
+    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);
+    green = next !== null && c.kind === "SIDE";
+    c = next ?? c;
+  }
+  if (dPitch !== 0) {
+    c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));
+    green = false;
+  }
   st.asmCarrier = c;
-  const h = castRay(st, dropRay(c.p, c.kind, a.centre, yaw, a.radius * 2 + 1));
+  const h = castRay(st, c.drop);
   if (h === null) return null;
   if (faceTurnedAway(h.normal, u)) {
     st.lastVerdict = "orbit: the gizmo's drop lands on a face turned away from the piece — held";
     return null;
+  }
+  // ⭐ after a dx on a side, the red section through where the gizmo LANDED (⛔ through the carrier: at a corner the green drop lands aside of it — 10 mm off
+  // the red plane, measured); the carrier itself stays on the green loop
+  if (green) {
+    const red = onRed(st, yaw, h.point);
+    if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s };
   }
   return h;
 }
@@ -259,12 +314,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDir(q.yaw, q.v);
   const d = approachDistance(st.cfg, st.approach);
-  // ⭐⭐⭐ (2026-10-29) the gizmo from its CARRIER on the section's hull (`carrierFrame`): the yaw plane's chain, the pitch's step since the last frame
+  // ⭐⭐⭐ (2026-10-29) the gizmo from its CARRIER on the sections' hulls (`carrierFrame`): the yaw's and the pitch's steps since the last frame
   const prev = st.asmPrevQ ?? q;
   st.asmPrevQ = { yaw: q.yaw, v: q.v };
   let hit: GizmoHit | null = null;
   if (!st.asmLocked) {
-    hit = carrierFrame(st, q.yaw, q.v, pitchOfV(q.v) - pitchOfV(prev.v), u);
+    hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);
     if (hit !== null) st.asmG = hit.point;
   }
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
@@ -317,12 +372,13 @@ const SECTION_EVERY_MS = 100;
 const SECTION_LIFT_M = 0.002;
 
 /**
- * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes (`redSamples`, `greenYaws`): the RED one, the carrier's chain dropped onto the surface
- * (bottom centre → top centre — the half the gizmo can travel); the GREEN one, the gizmo's own drop at every yaw (on a side at its height, on a top / bottom
- * at its distance from the axis) — so the gizmo lies on both lines. Recast only when the yaw, the carrier or the placed set changed (at most every
- * `SECTION_EVERY_MS`); hidden locked, under a hover, or off. ⭐ ONE mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed) —
- * ⛔ (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing from 27 of 106 frames, *"flickering all the
- * time"*.
+ * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes (`redSamples`): the RED one, the carrier's red chain dropped onto the surface (bottom
+ * centre → top centre of the plane through it — the half the gizmo can travel); the GREEN one, where dx takes it — on a side the green loop at its height,
+ * dropped (⛔ 2026-10-29 the yaw plane's cut at every yaw), on a top / bottom its turn about the axis, brought onto each red section and dropped (⛔ vertical
+ * drops on a circle: off a thin top they landed on the parts below, *"the green section can take strange forms"*). Recast only when the yaw, the carrier
+ * or the placed set changed (at most every `SECTION_EVERY_MS`); hidden locked, under a hover, or off. ⭐ ONE mesh of a fixed vertex count, updated in
+ * place (a segment not drawn: collapsed) — ⛔ (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing
+ * from 27 of 106 frames, *"flickering all the time"*.
  */
 function sectionLinesFrame(st: SceneState, yaw: number): void {
   const c = st.asmCarrier;
@@ -331,7 +387,7 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
   }
-  const key = `${st.asmParts?.key ?? ""}#${yaw.toFixed(6)}#${c.s.toFixed(6)}#${c.kind}#${st.asmG![1].toFixed(5)}`;
+  const key = `${st.asmParts?.key ?? ""}#${yaw.toFixed(6)}#${c.w.map((x) => x.toFixed(5)).join(",")}#${c.kind}`;
   const now = performance.now();
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && (key === st.asmSectionKey || now - st.asmSectionAt < SECTION_EVERY_MS)) return;
@@ -346,9 +402,22 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
   const g = st.asmG!;
   const rest = new Vector3(g[0], g[1], g[2]);
   const lines: Vector3[][] = [];
-  // ⭐ green: the gizmo's drop at every yaw (a side: at its height; a top / bottom: at its distance from the axis), a closed loop
-  const at: P2 = c.kind === "SIDE" ? [0, c.p[1]] : [c.p[0], 0];
-  const green = greenYaws(yaw, GREEN_SAMPLES).map((y) => drop(dropRay(at, c.kind, a.centre, y, reach)));
+  // ⭐ green: where dx takes the gizmo, a closed loop starting at the carrier itself
+  let green: (Vector3 | null)[] = [];
+  const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
+  if (loop !== null) {
+    const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
+    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
+      const at = chainAt(loop, wrapOn(loop, s0 + (loop.total * k) / GREEN_SAMPLES));
+      return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));
+    });
+  } else if (c.kind !== "SIDE") {
+    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
+      const dYaw = (2 * Math.PI * k) / GREEN_SAMPLES;
+      const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);
+      return r === null ? null : drop(r.drop);
+    });
+  }
   for (let k = 0; k < GREEN_SAMPLES; k++) {
     const p0 = green[k] ?? null;
     const p1 = green[(k + 1) % GREEN_SAMPLES] ?? null;
@@ -357,10 +426,7 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
   // ⭐ red: the chain's carriers dropped; a step in depth (a hidden stretch skipped) breaks the line
   const ch = c.chain;
   const step = ch.total / (RED_SAMPLES - 1);
-  const red = redSamples(ch.total, c.s, RED_SAMPLES).map((s) => {
-    const k = carrierAt(ch, s);
-    return drop(dropRay(k.p, k.kind, a.centre, yaw, reach));
-  });
+  const red = redSamples(ch.total, c.s, RED_SAMPLES).map((s) => drop(redAt(st, yaw, ch, c.origin, s).drop));
   for (let k = 0; k < RED_SAMPLES - 1; k++) {
     const p0 = red[k] ?? null;
     const p1 = red[k + 1] ?? null;

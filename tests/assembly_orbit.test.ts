@@ -14,6 +14,7 @@ import { waistV } from "../src/input/orbit_rig";
 import {
   angleTo,
   approachDistance,
+  isApproachKey,
   approachRange,
   approachStep,
   coneClamp,
@@ -32,6 +33,7 @@ import {
   vOfPitch,
 } from "../src/input/assembly_orbit";
 import type { Vec3 } from "../src/core/vec";
+import { slideProbeFree, solveOrbitStep } from "../src/input/piece_orbit_solver";
 
 const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
 const D = 180 / Math.PI;
@@ -220,5 +222,39 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     const at = m.indexOf('"sectionLines"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
+  });
+});
+
+describe("⭐⭐ the approach key, the slide as a way out, a step that moves nothing (2026-10-29)", () => {
+  it("⭐⭐ (*\"A should replace shift\"*) the approach on the desktop is A held + drag (by its label, either case — the A key on an AZERTY keyboard too); ⛔ Shift: Sticky Keys on five presses, Filter Keys held", () => {
+    expect(isApproachKey("a")).toBe(true);
+    expect(isApproachKey("A")).toBe(true);
+    expect(isApproachKey("Shift")).toBe(false);
+    expect(isApproachKey("q")).toBe(false);
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toContain("st.orbitShift = e.pointerType === \"mouse\" && st.orbitApproachKey;");
+    expect(p).not.toContain("st.orbitShift = e.pointerType === \"mouse\" && e.shiftKey;");
+    expect(p).toContain("if (!down && st.orbitApproachKey && assemblyOn(st)) approachRelease(st);");
+  });
+  it("⭐⭐ (*\"the message says the piece is blocked, however I can still slide the piece\"*) a slide along the face is a WAY OUT: free when any of its four directions keeps the gap at the margin; blocked only when all four close it", () => {
+    const e1: Vec3 = [1, 0, 0];
+    const e2: Vec3 = [0, 0, 1];
+    // a pocket open toward −x only
+    const open = (o: Vec3) => (o[0] < 0 ? 0.001 : 0);
+    expect(slideProbeFree(open, e1, e2, 0.005, 0.0005)).toBe(true);
+    expect(slideProbeFree(() => 0, e1, e2, 0.005, 0.0005)).toBe(false);
+    const asked: Vec3[] = [];
+    slideProbeFree((o) => (asked.push(o), 0), e1, e2, 0.005, 0.0005);
+    expect(asked.length).toBe(4);
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const face = st.hover !== null ? st.hover.n : (st.hoverReady?.normal ?? null);");
+    expect(g).toContain("if (slideProbeFree(gapAt, e1, e2, STUCK_PROBE_M, opt.gapM / 2)) blocked = false;");
+  });
+  it("⭐⭐ a step that moves the piece NOWHERE is taken whole (⛔ dropped: at ±90° the yaw moved the place by 0, the solved yaw never followed and dx was dead on a top)", () => {
+    const env = { anchor: () => [0, 1, 0] as Vec3, gap: () => 1, normal: () => null };
+    const r = solveOrbitStep({ yaw: 0.2, v: 1, zoom: 1 }, [0.5, 0], env, { gapM: 0.001, maxQueries: 24 });
+    expect(r.q.yaw).toBeCloseTo(0.7, 12);
+    expect(r.blocked).toBe(false);
+    expect(r.rest).toEqual([0, 0]);
   });
 });

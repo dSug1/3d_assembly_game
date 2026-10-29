@@ -1865,3 +1865,47 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
     kind eased — 33.6° at 6 m rising to 62° at 0.19 m, level at the waist — *"I do not like this implementation"*.
 * ⚠ Reverted with them: `tests/camera_frame.test.ts`'s stub on `orbitMode` 1 — its three old-curve audits again run the orbit around the assembly (the
   default) silently. 2118 vectors.
+
+### …dx BY DISTANCE on the green section; A for the approach; a slide as a way out; the sway and the stuck orbit explained (`1.0.86-`, 2026-10-29)
+
+> *"on dy, it is quite easy to reach any place on the vertical axis. On dx, there is a large angular range spent on little travel in the middle of the
+> face … Can't the dx replicate what dy does"*; *"if I keep shift pressed for a long time, the windows sticky keys message pops up"*; *"On the top face,
+> the green section can take strange forms"*; *"the message says the piece is blocked, however I can still slide the piece"*; *"explain why sometimes the
+> scene does not go back to its initial position before the sway"*; *"the orbit blocks … I need to shift + dy the piece away from the surface"* → the
+> answers → *"1- agreed 2- A should replace shift 3- do nothing 4- do nothing. explain … 5- fixed with 1 6- agreed 7- reproduce, and fix only if the logic
+> is at fault"* → *"update the md files, deploy"* — the owner.
+
+* ⛔ **Why dx was uneven**: it turned the yaw plane through the centre, and the gizmo sat where that plane cut the face — on the painting's front face,
+  2 cm from the centre, 2 cm × tan(yaw): 0.4 cm at 10°, 2 cm at 45°, 11 cm at 80°, the edge (25 cm) only at 87°.
+* ⭐⭐⭐ **dx BY DISTANCE** (`input/section_hull.ts`: `greenPoints`, `loopOf`, `loopStep`, `greenPace`, `greenFaces`, `greenDrop`, `turnAbout`,
+  `redOrigin`, `nearestOfKind`; ⛔ `remapOnChain`, `greenYaws` deleted): on a SIDE the carrier rides the GREEN loop — the hull of the horizontal cut at
+  its height — at the loop's **perimeter per turn** (0.17 m per radian in `Scene_1`: once round per turn of yaw, on the piece's side), never into an
+  edge turned away (it waits at its corner); dropped horizontally onto the surface along the edge's normal. On a TOP / BOTTOM it turns about the axis
+  at its distance, kept on the top (past a narrow top's edge, held at it). ⭐ The RED section is now the vertical plane along the heading **through the
+  gizmo** (⛔ through the centre): dy slides along it as before, clamped at its own bottom and top centres; after a dx it is re-laid through where the
+  gizmo landed. Measured: 2.9 cm per 10° of yaw all across the front face, round both edges, along the back, back to the start after 360°; the gizmo
+  0.00 mm off its red plane; on Piece44's top at 90° it goes round the top clamped at its edges.
+* ⭐ **At ±90°** the solver now takes a step that moves the piece nowhere (`solveOrbitStep`; ⛔ dropped: the solved yaw never followed the finger at the
+  pole, so dx was dead on a top face).
+* ⭐ **The green line on a top** (*"strange forms"*): it was drawn by vertical drops on a circle about the axis, which off a thin top landed on the parts
+  below; now it is the gizmo's own dx path (the green loop at its height on a side; the turn kept on the top on a top).
+* ⭐⭐ **A for the approach** (`isApproachKey`; ⛔ Shift — Windows' Sticky Keys on five presses, Filter Keys on the right Shift held 8 s; macOS and Linux
+  have Shift shortcuts too; a letter key has none): **A held + drag**, by its label (the A key on AZERTY too); its release starts the approach's coast.
+* ⭐⭐ **A slide is a way out** (`slideProbeFree`): while a slide is available (the hover on, or ready), the blocked check also tries a slide of the
+  probe's length each way along the face — any free one and the red *"Part is blocked"* pop-up stays off (⛔ it tried the orbit's steps and the quads'
+  turns only).
+* **The sway that stays** (item 4, nothing changed): the sway itself always springs back — critically damped, 70 ms, every frame for every body
+  (`render_loop.ts`); what stays is the **hover view** — the camera's arc to the slide view (the HUD's `[hover view 100 %]`), which goes back only with
+  the ORBIT's travel (12 mm, `pieceOrbitEnterMm`, `HOVER.md` §0).
+* **The stuck orbit** (item 7, reproduced in the app with touch drags): ⭐ at the WAIST (9 cm) the orbit is NOT stuck — dx turned it ~10° a move, dy
+  pitched it (a press first placed outside the page had made it look stuck: a probe's error). ⭐ AT THE CONTACT it is blocked by the rules, not by a
+  defect: locked, the piece turns about the gizmo at the approach's distance (2 cm at the contact), so any pitch sinks it into the face it rests on —
+  and collision refuses penetration (`D136`: contact allowed, penetration refused); the way out is the approach back out (A / two fingers). ⭐ After a
+  SLIDE the orbit does not start from the slid place by the owner's rule of 2026-10-14 (*"The gizmo position shall not be changed by a toggle from hover
+  to orbit"*, `HOVER.md` §0): the orbit's first 12 mm bring the piece back to its ring place, and a part in the way holds it there. ⚠ `hoverGizmoMove` 1
+  (the slide moves the gizmo) makes the orbit start from where the slide left it — not checked in the app (the probe's slide did not start: the resting
+  face was not over the face).
+* Vectors (`tests/section_hull.test.ts` + 5 − 1, `tests/assembly_orbit.test.ts` + 3; 9 red on the previous build): the green section and loop; dx
+  COMPOSED on a slab (the same travel per 10° across the face, against the old rule's 20× spread; a full turn back to the start); the loop step's wait
+  at a turned-away corner, both senses, a lap at most; the red plane through the gizmo, the top kept on the top; the wiring; the A key; the slide probe;
+  the zero-travel step. Restated: `camera_frame.test.ts`'s stub on `orbitMode` 1 (re-applied). ⛔ No device close. 2125 vectors.

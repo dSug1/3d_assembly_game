@@ -33,7 +33,7 @@ import { orbitOffset } from "../input/orbit";
 import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
@@ -48,7 +48,7 @@ const HOVER_FADE_QUERIES = 8;
 import { modelLag, orbitFrameUnderHover, uprightBlend } from "../input/hover";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, relocationKey, slideProbeFree, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle, type CollisionSetup } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
@@ -1462,6 +1462,17 @@ export function pieceStuckFrame(st: SceneState): void {
       const counted: SolverEnv = { anchor: env.anchor, gap: (x) => (n++, env.gap(x)), normal: (x) => (n++, env.normal(x)) };
       blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);
       st.pieceQueriesCarry += n;
+      // ⭐⭐ (2026-10-29) …and a SLIDE along the face, while one is available (the hover on, or ready): any free one is a way out (`slideProbeFree`)
+      const face = st.hover !== null ? st.hover.n : (st.hoverReady?.normal ?? null);
+      if (blocked && face !== null) {
+        const e1 = normalize(cross(face, Math.abs(face[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])) ?? ([1, 0, 0] as Vec3);
+        const e2 = normalize(cross(face, e1)) ?? ([0, 0, 1] as Vec3);
+        const gapAt = (o: Vec3): number => {
+          st.pieceQueriesCarry += 1;
+          return pieceSolverEnv(st, (x) => add(ringAnchorAt(st, x), o)).gap(q);
+        };
+        if (slideProbeFree(gapAt, e1, e2, STUCK_PROBE_M, opt.gapM / 2)) blocked = false;
+      }
     }
     else {
       const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;

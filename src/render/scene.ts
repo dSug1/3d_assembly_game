@@ -577,11 +577,13 @@ export function createScene(
   st.asmSectionKey = "";
   st.asmCarrier = null;
   st.asmChain = null;
+  st.asmLoop = null;
   st.asmParts = null;
   st.asmRayCache = new Map();
   st.approach = 1;
   st.approachInertia = new OrbitInertia();
   st.orbitShift = false;
+  st.orbitApproachKey = false;
   st.gizmoPending = null;
   st.orbitMotion = null;
   st.orbitSway = null;
