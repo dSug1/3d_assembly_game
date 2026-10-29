@@ -721,9 +721,6 @@ export interface SceneState {
   asmCarrier: { readonly s: number; readonly p: readonly [number, number]; readonly kind: import("../input/section_hull").EdgeKind; readonly chain: import("../input/section_hull").SectionChain } | null;
   asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
-  /** ⭐⭐ (2026-10-29) the old 2D curve's plane: the gizmo face's kind as eased (0 vertical … 1 horizontal) and, horizontal, up (1) or down (−1) */
-  asmFlat: number;
-  asmFlatSign: number;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
