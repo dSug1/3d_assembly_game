@@ -196,37 +196,50 @@ export function slerpDir(a: Vec3, b: Vec3, share: number): Vec3 {
   return [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb];
 }
 
+/** ⭐ A face's KIND for the curve: 1 a horizontal one (within 45° of up or down — the curve's face snapped by gravity), 0 a vertical one; none: 0. */
+export function flatKind(n: Vec3 | null): number {
+  return n !== null && Math.abs(n[1]) > Math.SQRT1_2 ? 1 : 0;
+}
+
+/**
+ * ⭐ The direction on one kind's curve: `off`, the piece's own angle off the curve's `base` toward `side`, carried along the curve — `phi` its elevation
+ * there, `phi1` ring 1's. The RISE (`phi ≥ phi1`): `tan e = tan off × tan phi / tan phi1` (bounded under the side axis; at or past it, held); the DESCENT
+ * to the waist (`phi < phi1`): `e = off × phi / phi1` — linear, so a steep start comes down as evenly as the curve does (⛔ the tan rule all through: from
+ * 85° the whole 85° swung in the last few steps). At ring 1's own angle both are the old curve exactly; at ring 1, `off` itself.
+ */
+function onCurve(u: Vec3, base: Vec3, side: Vec3, phi: number, phi1: number): Vec3 {
+  const off = Math.atan2(dot(u, side), dot(u, base));
+  let e: number;
+  if (!(phi1 > 1e-9)) e = off;
+  else if (phi < phi1) e = (off * phi) / phi1;
+  else e = Math.abs(off) < Math.PI / 2 - 1e-6 ? Math.atan((Math.tan(off) * Math.tan(phi)) / Math.tan(phi1)) : off;
+  return [base[0] * Math.cos(e) + side[0] * Math.sin(e), base[1] * Math.cos(e) + side[1] * Math.sin(e), base[2] * Math.cos(e) + side[2] * Math.sin(e)];
+}
+
 /**
  * ⭐⭐⭐ (2026-10-29, the owner: *"instead of the straight in, can I reinstate the old 2D curves ? would that create jumps (of the camera vs. piece) at max
- * distance if the gizmo changes position ?"* → *"these 2D curves would serve only the dy approach (the dx is not used for approach)"* → *"build it"*) —
- * **THE OLD 2D CURVE, CLOSE IN**: the piece's direction from the gizmo at the approach coordinate `a`. Far out — beyond the lock's distance `lockDistM` —
- * the orbit's own `u` (dx yaw, dy pitch: a gizmo change far out moves the piece by the gizmo's step only, never turns it). LOCKED (the face `n` held, so
- * it cannot jump), from the lock's distance in to the waist the direction turns from `u` onto the old curve (smoothly — at the waist wholly on it) — its
- * elevation (`curveElevation`, scaled by the piece's own angle off the curve's base against ring 1's: the full curve at ring 1's angle, straight in when
- * level, the lower half — rings 3 and 4 — below the horizon) in the old curve's own plane: over a VERTICAL face from the horizontal at the orbit's `yaw` toward up (it
- * rises over the face, then comes down level at the waist), over a HORIZONTAL face (within 45° of up or down — the curve's face snapped by gravity) the
- * vertical face's curve turned 90°: from the face's vertical toward the piece's side at `yaw` (straight over the face at the waist); from the waist,
- * straight in along that last direction to the contact. Kept in the lock's cone of `n`. `n` `null` (unlocked): `u`.
+ * distance if the gizmo changes position ?"* → *"these 2D curves would serve only the dy approach"* → built close in only → *"I see very minimal change"* →
+ * the proposal → *"build it"*) — **THE OLD 2D CURVE OVER THE WHOLE APPROACH**: the piece's direction from the gizmo at the approach coordinate `a`, its
+ * elevation `e` off the curve's base from its own angle `p` off it (the orbit's `u`; `onCurve`): on the curve's rise `tan e = tan p × tan curve(a) /
+ * tan curve(ring 1)`, on its descent to the waist `e = p × curve(a) / curve(ring 1)` (`curveElevation`: 31.7° at ring 1 in `Scene_1`, ~57° near ring 2,
+ * 0 at the waist)
+ * — at ring 1 EXACTLY the orbit's own direction (a gizmo move far out carries the piece by its step, never turns it); on the way in it rises over the
+ * face as the old curve did (33.6° → ~59° near ring 2; never past the base's normal); LEVEL at the 9 cm waist, then straight in to the contact; below the
+ * horizon the mirror (the lower half — rings 3 and 4). Its plane by the gizmo face's KIND (`flat`, 0 … 1, eased by the caller over a change so a step
+ * from a vertical face to a horizontal one is a glide): a VERTICAL face — from the horizontal at the orbit's `yaw` toward up; a HORIZONTAL face — the
+ * vertical face's curve turned 90°: from the vertical (`flatSign`: up over a top, down under a bottom) toward the piece's side at `yaw` (straight over
+ * the face at the waist). Locked, kept in the lock's cone of `n` (`coneClamp`).
  */
-export function approachDir(u: Vec3, yaw: number, n: Vec3 | null, cfg: GestureConfig, a: number, lockDistM: number): Vec3 {
-  if (n === null) return u;
-  const d = approachDistance(cfg, a);
-  if (!(d < lockDistM)) return u;
-  // ⭐ the turn onto the curve spread from the lock's distance down to the WAIST (⛔ to the curve's peak: ~23° of camera turn in 4 % of the approach)
-  const waist = approachDistance(cfg, approachRange(cfg).waist);
-  const end = lockDistM > waist ? waist : lockDistM / 2;
-  const share = smooth((lockDistM - d) / (lockDistM - end));
+export function approachDir(u: Vec3, yaw: number, flat: number, flatSign: number, n: Vec3 | null, cfg: GestureConfig, a: number): Vec3 {
+  const r = approachRange(cfg);
+  const phi1 = curveElevation(cfg, r.max);
+  const phi = curveElevation(cfg, Math.min(r.max, a));
   const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
-  const flat = Math.abs(n[1]) > Math.SQRT1_2;
-  const base: Vec3 = flat ? [0, Math.sign(n[1]), 0] : h;
-  const side: Vec3 = flat ? h : [0, 1, 0];
-  // ⭐ the curve's rise follows the piece's own angle off the curve's base (its pitch over a vertical face, its angle off the vertical over a horizontal
-  // one) against ring 1's: at ring 1's angle the old curve exactly, level straight in, below the horizon the lower half (rings 3 and 4) — continuous in dy
-  const off = Math.atan2(dot(u, side), dot(u, base));
-  const k = Math.max(-1, Math.min(1, off / curveElevation(cfg, approachRange(cfg).max)));
-  const e = curveElevation(cfg, a) * k;
-  const c: Vec3 = [base[0] * Math.cos(e) + side[0] * Math.sin(e), base[1] * Math.cos(e) + side[1] * Math.sin(e), base[2] * Math.cos(e) + side[2] * Math.sin(e)];
-  return coneClamp(slerpDir(u, c, share), n);
+  const w = Number.isFinite(flat) ? Math.min(1, Math.max(0, flat)) : 0; // ⭐ no kind known: a vertical face's
+  const vertical = w < 1 ? onCurve(u, h, [0, 1, 0], phi, phi1) : null;
+  const horizontal = w > 0 ? onCurve(u, [0, flatSign < 0 ? -1 : 1, 0], h, phi, phi1) : null;
+  const d = vertical === null ? horizontal! : horizontal === null ? vertical : slerpDir(vertical, horizontal, w);
+  return n === null ? d : coneClamp(d, n);
 }
 
 // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
