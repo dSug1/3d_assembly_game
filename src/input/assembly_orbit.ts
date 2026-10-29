@@ -175,5 +175,59 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   return { dir: qRotate(t, d1), up: qRotate(t, u1) };
 }
 
+/** ⭐ The old 2D curve's ELEVATION at the approach coordinate `a` (ring 1 … the waist): its height over its radius (`orbitOffset` — 31.7° at ring 1 in
+ * `Scene_1`, rising to ~57° near ring 2, 0 at the waist); below the waist, 0 (straight in). */
+export function curveElevation(cfg: GestureConfig, a: number): number {
+  const r = approachRange(cfg);
+  if (a <= r.waist) return 0;
+  const o = orbitOffset(cfg, 0, Math.min(r.max, a), 1).offsetM;
+  return Math.atan2(o[1], Math.hypot(o[0], o[2]));
+}
+
+/** ⭐ The unit direction `share` of the way from `a` to `b` along their great circle (both unit). */
+export function slerpDir(a: Vec3, b: Vec3, share: number): Vec3 {
+  const c = Math.max(-1, Math.min(1, dot(a, b)));
+  const w = Math.acos(c);
+  if (w < 1e-9) return b;
+  const s = Math.sin(w);
+  if (s < 1e-6) return normalize([a[0] + (b[0] - a[0]) * share, a[1] + (b[1] - a[1]) * share, a[2] + (b[2] - a[2]) * share]) ?? b;
+  const ka = Math.sin((1 - share) * w) / s;
+  const kb = Math.sin(share * w) / s;
+  return [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb];
+}
+
+/**
+ * ⭐⭐⭐ (2026-10-29, the owner: *"instead of the straight in, can I reinstate the old 2D curves ? would that create jumps (of the camera vs. piece) at max
+ * distance if the gizmo changes position ?"* → *"these 2D curves would serve only the dy approach (the dx is not used for approach)"* → *"build it"*) —
+ * **THE OLD 2D CURVE, CLOSE IN**: the piece's direction from the gizmo at the approach coordinate `a`. Far out — beyond the lock's distance `lockDistM` —
+ * the orbit's own `u` (dx yaw, dy pitch: a gizmo change far out moves the piece by the gizmo's step only, never turns it). LOCKED (the face `n` held, so
+ * it cannot jump), from the lock's distance in to the waist the direction turns from `u` onto the old curve (smoothly — at the waist wholly on it) — its
+ * elevation (`curveElevation`, scaled by the piece's own angle off the curve's base against ring 1's: the full curve at ring 1's angle, straight in when
+ * level, the lower half — rings 3 and 4 — below the horizon) in the old curve's own plane: over a VERTICAL face from the horizontal at the orbit's `yaw` toward up (it
+ * rises over the face, then comes down level at the waist), over a HORIZONTAL face (within 45° of up or down — the curve's face snapped by gravity) the
+ * vertical face's curve turned 90°: from the face's vertical toward the piece's side at `yaw` (straight over the face at the waist); from the waist,
+ * straight in along that last direction to the contact. Kept in the lock's cone of `n`. `n` `null` (unlocked): `u`.
+ */
+export function approachDir(u: Vec3, yaw: number, n: Vec3 | null, cfg: GestureConfig, a: number, lockDistM: number): Vec3 {
+  if (n === null) return u;
+  const d = approachDistance(cfg, a);
+  if (!(d < lockDistM)) return u;
+  // ⭐ the turn onto the curve spread from the lock's distance down to the WAIST (⛔ to the curve's peak: ~23° of camera turn in 4 % of the approach)
+  const waist = approachDistance(cfg, approachRange(cfg).waist);
+  const end = lockDistM > waist ? waist : lockDistM / 2;
+  const share = smooth((lockDistM - d) / (lockDistM - end));
+  const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
+  const flat = Math.abs(n[1]) > Math.SQRT1_2;
+  const base: Vec3 = flat ? [0, Math.sign(n[1]), 0] : h;
+  const side: Vec3 = flat ? h : [0, 1, 0];
+  // ⭐ the curve's rise follows the piece's own angle off the curve's base (its pitch over a vertical face, its angle off the vertical over a horizontal
+  // one) against ring 1's: at ring 1's angle the old curve exactly, level straight in, below the horizon the lower half (rings 3 and 4) — continuous in dy
+  const off = Math.atan2(dot(u, side), dot(u, base));
+  const k = Math.max(-1, Math.min(1, off / curveElevation(cfg, approachRange(cfg).max)));
+  const e = curveElevation(cfg, a) * k;
+  const c: Vec3 = [base[0] * Math.cos(e) + side[0] * Math.sin(e), base[1] * Math.cos(e) + side[1] * Math.sin(e), base[2] * Math.cos(e) + side[2] * Math.sin(e)];
+  return coneClamp(slerpDir(u, c, share), n);
+}
+
 // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
 // hull now (`input/section_hull.ts`, with `faceTurnedAway` and the drawn sections' samples).

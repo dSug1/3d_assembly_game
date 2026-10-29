@@ -1850,3 +1850,34 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   at the height, held only under the bottom; slab → ledge → slab → top); the drawn samples; the wiring (the unlock's reset, the one mesh). Restated: ±90°
   (and the pole's heading), the frusta's counts (45), `D136` / `D182` without the overhangs (every body there an upright box). ⛔ No device close. 2118
   vectors.
+
+### …the OLD 2D CURVE close in, for the approach (`1.0.86-`, 2026-10-29)
+
+> *"are there still rings 1, 2, 3 and 4? what are the 2D curves in case the gizmo is on horizontal or vertical face? what is the smallest waist the piece
+> can reach closest to the gizmo in both case, assuming no collision ?"* → *"instead of the straight in, can I reinstate the old 2D curves ? would that
+> create jumps (of the camera vs. piece) at max distance if the gizmo changes position ?"* → the proposal (the far end on the orbit, the bend only once
+> locked) → *"these 2D curves would serve only the dy approach (the dx is not used for approach)"* → *"build it, deploy, update the md files"* — the owner.
+
+* Until now around the assembly the rings gave the approach its DISTANCE only (ring 1 6 m → the waist 9 cm, then straight in to the contact, along the
+  orbit's own direction); rings 3 and 4 unused; the same on a horizontal face and a vertical one.
+* ⭐⭐⭐ **THE OLD CURVE, CLOSE IN** (`approachDir`, `curveElevation` in `input/assembly_orbit.ts`; read by `dirAt` — the piece's place, the solver's and the
+  approach's collision check, the drawn piece, the camera's frame):
+  * **far out — beyond the lock's distance (0.3 m)** — the direction is the orbit's own, exactly as before: a gizmo move far out moves the piece by the
+    gizmo's step only, the camera with it (it is placed from the piece) — no jump between them, a face change turns nothing;
+  * **LOCKED, from the lock's distance in to the waist** (the gizmo and its face held — nothing there can jump) the direction turns smoothly from the
+    orbit's onto the old curve, wholly on it at the waist, then straight in to the contact along it;
+  * **its plane**: over a VERTICAL face the old one — from the horizontal at the orbit's yaw toward up (it rises over the face, then comes down LEVEL at
+    the 9 cm waist); over a HORIZONTAL face (within 45° of up / down, snapped by gravity) the vertical face's curve turned 90° — from the vertical toward
+    the piece's own side at the yaw (straight over the face at the waist);
+  * **its rise follows the piece's own angle** off the curve's base (its pitch over a vertical face, its angle off the vertical over a horizontal one)
+    against ring 1's 31.7°: the full old curve (31.7° at ring 1, ~57° near ring 2, 0 at the waist) at ring 1's angle, straight in when level, the LOWER
+    half (rings 3 and 4) below the horizon — continuous in dy (⛔ one curve for all: a piece from −40° swung ~100° up over the last 12 mm);
+  * only the approach (two fingers' dy, Shift + drag's dy) moves along it; one finger's dx / dy stay the orbit — locked, about the gizmo within 80°.
+* Measured in the app (`Scene_1`): the boot's vertical face (33.6°) — locked at 0.27 m, rising 39° → 54° at 0.18 m, down to level at the waist, in to the
+  contact (stopped 3.1 cm short there by Piece45 under the gizmo); Piece44's top at 85° — 5° off the vertical, 7° at most, straight over at the waist, to
+  0.022 m; the camera turning by small steps all the way (≤ 5.7° an approach step of 0.39 mm of finger — the old curve's own swing down to the waist,
+  ~14°/mm; ⚠ the old mode's turn governor, 12.5°/mm, is not applied here); no error.
+* Vectors (`tests/assembly_orbit.test.ts`, + 6, red on the old code): the curve's elevation (31.7°, ~57°, 0); far out and to the lock's edge the orbit's
+  own; a vertical face (level and straight in at the waist, the rise, level → straight, below → the lower half, ring 1's angle → the old curve exactly, in
+  the yaw's plane); a horizontal face (straight over at the waist, toward the piece's side; an inclined top; a bottom); no jump (along the approach no
+  faster than the curve's own steepest turn, a yaw step no flip, the 80° cone); the wiring. ⛔ No device close. 2124 vectors.
