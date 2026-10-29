@@ -60,6 +60,18 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 5. ⏸ **The floor as a host** — parked with two ways forward (gizmo support + unlimited distance, or seat placeholders on the floor) → §11.
 6. ⚠ Headless testing: a synthesised MOUSE drag never reaches the hover (touch does) — staging scripts live in the session scratchpad only.
 7. ⚠ The hover is not an episode yet (`SCORE.md`).
+8. ⛔⛔ **RISK — THE SLIDE DOES NOT ALWAYS LATCH AT THE END OF THE APPROACH** (2026-10-29, the owner: *"capture that in the md files as a risk when I will
+   work on the transition from orbit approach to slide"*; read from the code, ⛔ no sweep in the app yet). With the resting face aligned to the gizmo's
+   face it latches whenever nothing else is in the way (the approach carries the resting face's CENTRE straight to the gizmo, to 1 mm), and onto
+   ANOTHER face when the piece is stopped by a face PARALLEL to the resting face (a step standing out — e.g. Piece45's wide face). It NEVER latches when
+   the piece is stopped by a surface that is NOT parallel (a slanted side, an edge, a perpendicular wall, the floor) while the resting face is still
+   more than `hoverApproachMm` (20 mm) from every aligned face it overlaps: (1) a gizmo within about the piece's half-size of a PROTRUDING part (Piece45's
+   slanted sides, Piece44's sides on the top, Piece42, Piece43); (2) an INNER CORNER (the painting's top beside Piece44); (3) a STEEP approach near the
+   lock's 80° (the piece travels almost along the face — farther neighbours block it); (4) a gizmo low on a face, nearer the FLOOR than about the
+   piece's half-height (the floor is frozen: never a host); (5) the assembly's BOTTOM face (always); (6) a LOOSE piece in the path. ⭐ The fix offered,
+   not built: below the waist the straight-in along the gizmo FACE'S NORMAL (not the orbit's direction) — (1)–(4) would go, leaving what physically
+   covers the landing spot and the bottom face; and a sweep in the app (gizmo positions × an aligned resting face) to confirm the list
+   → `DOUBLE_ORBIT_PROTOTYPE.md`, the section of 2026-10-29 "the slide's latch at the end of the approach".
 29. ⭐ **No jump at the lock (2026-10-29)**: the lock's cone from where the piece is, tightened inward; the camera's heading the orbit's yaw → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 28. ⭐ **A slide is a way out (2026-10-29)**: while a slide is available, the blocked check tries one each way along the face — any free one and the red pop-up stays off; the sway always springs back (what stays is the hover view, left by the orbit's 12 mm); after a slide the orbit first brings the piece back to its ring place (the 2026-10-14 rule) → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 27. ⭐ **The gizmo's carrier on the section's hull (2026-10-29)**: dy slides it, clamped at the top and bottom centres (pitch ±90°), never into an edge turned away; dx keeps its height (a side) or its distance from the axis (a top); dropped onto the surface — always where the sections meet; a lock or a hover places it again in the yaw plane; the lines one mesh (no flicker); two overhangs in `Scene_1` → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.

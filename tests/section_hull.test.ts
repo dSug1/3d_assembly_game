@@ -12,6 +12,7 @@ import {
   chainStep,
   dropRay,
   greenDrop,
+  joins,
   greenFaces,
   greenNormal,
   greenPace,
@@ -307,5 +308,18 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
     expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
     expect(a).toContain("const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);");
+  });
+});
+
+describe("⭐⭐ the drawn sections break at a jump (2026-10-29)", () => {
+  it("⭐⭐ (*\"the green section has a strange shape\"*) two neighbouring points are joined only when no farther apart than 2.5 × the spacing (+ 2 mm) — a drop into a missing piece's slot breaks the line (⛔ the green joined every pair: a straight segment across the face); the green and the red by the one rule", () => {
+    expect(joins([0, 0, 0], [0.009, 0, 0], 0.009)).toBe(true);
+    expect(joins([0, 0, 0], [0.024, 0, 0], 0.009)).toBe(true);
+    expect(joins([0, 0, 0], [0.009, 0.13, 0], 0.009)).toBe(false); // a jump up the face (13 cm)
+    expect(joins([0, 0, 0], [0.009, 0, 0.03], 0.009)).toBe(false); // into a slot 3 cm deep
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), greenStep) ? [p0, p1] : [rest, rest]);");
+    expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), step) ? [p0, p1] : [rest, rest]);");
+    expect(a).toContain("const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);");
   });
 });

@@ -401,3 +401,12 @@ export function nearestOfKind(ch: SectionChain, p: P2, kind: EdgeKind): number {
   }
   return best ?? nearestOnChain(ch, p);
 }
+
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"the green section has a strange shape. Is it OK and playable as such ?"* → *"build that"*) — **A DRAWN SECTION JOINS TWO
+ * NEIGHBOURING POINTS ONLY WHEN THEY ARE NEAR**: no farther apart than 2.5 × the samples' spacing (+ 2 mm) — a step in depth (a drop into a missing piece's
+ * slot, onto another surface) breaks the line. ⛔ The green joined every pair: one jump drew a straight segment across the face. (The red's own rule, shared.)
+ */
+export function joins(a: Vec3, b: Vec3, spacingM: number): boolean {
+  return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) <= 2.5 * spacingM + 0.002;
+}
