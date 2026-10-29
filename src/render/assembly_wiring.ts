@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -425,10 +425,13 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
       return r === null ? null : drop(r.drop);
     });
   }
+  // ⭐ (2026-10-29) a jump between two neighbours breaks it (`joins`) — the spacing: the loop's per sample on a side, the turn's arc on a top / bottom
+  const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);
+  const v3 = (p: Vector3): Vec3 => [p.x, p.y, p.z];
   for (let k = 0; k < GREEN_SAMPLES; k++) {
     const p0 = green[k] ?? null;
     const p1 = green[(k + 1) % GREEN_SAMPLES] ?? null;
-    lines.push(p0 !== null && p1 !== null ? [p0, p1] : [rest, rest]);
+    lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), greenStep) ? [p0, p1] : [rest, rest]);
   }
   // ⭐ red: the chain's carriers dropped; a step in depth (a hidden stretch skipped) breaks the line
   const ch = c.chain;
@@ -437,7 +440,7 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
   for (let k = 0; k < RED_SAMPLES - 1; k++) {
     const p0 = red[k] ?? null;
     const p1 = red[k + 1] ?? null;
-    lines.push(p0 !== null && p1 !== null && Vector3.Distance(p0, p1) <= 2.5 * step + 0.002 ? [p0, p1] : [rest, rest]);
+    lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), step) ? [p0, p1] : [rest, rest]);
   }
   if (st.asmSectionLines === null) {
     const colours = lines.map((_, i) => (i < GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));

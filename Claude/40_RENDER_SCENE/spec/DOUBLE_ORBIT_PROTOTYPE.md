@@ -1925,3 +1925,45 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⚠ The *"orbit stuck"* report at −5° of pitch (the back face, x −0.20) is NOT reproduced: in that configuration, by mouse and by touch, from the floor and
   from the piece, dx, dy and A + drag all moved (yaw 154° → 85°, the approach 0.489 → 0.732).
 * Vectors (`tests/assembly_orbit.test.ts` + 1, red on the previous build; the heading's source check restated). ⛔ No device close. 2126 vectors.
+
+### ⛔ RISK — the slide's latch at the end of the approach (`1.0.86-`, 2026-10-29; for the work on the transition from the orbit's approach to the slide)
+
+> *"check that if the resting face and the gizmo hosting face are aligned, in all cases when I approach the piece towards the assembly the slide mode
+> latches at one point … I want to make sure that the user will always be able to latch the slide mode"* → the answer → *"capture that in the md files as
+> a risk when I will work on the transition from orbit approach to slide"* — the owner.
+
+* **The latch** (`hoverFaceContact`, `input/hover.ts`): some part's face anti-parallel to the resting face within 2°, the resting face's centre within
+  `hoverApproachMm` (20 mm) of its plane (and no more than 1 mm behind it), the part's body within 20 mm, ANY portion of the resting face over that face;
+  frozen bodies (the floor) never host. **The approach** (`placeOffset`, `approachMove`): the resting face's CENTRE carried straight to the gizmo along
+  the orbit's direction, stopped only by a collision, at the 1 mm gap.
+* ✅ **Latches**: with nothing else in the way, the centre reaches the gizmo and the resting face stops 1 mm from the face — at any angle of approach.
+  ⭐ Onto ANOTHER face when the piece is stopped by a face PARALLEL to the resting face (a step standing out of the hosting face — Piece45's wide face).
+* ⛔ **Never latches** when the piece is stopped by a surface NOT parallel to the resting face while the resting face is still more than 20 mm from every
+  aligned face it overlaps:
+  1. a gizmo within about the piece's half-size of a PROTRUDING part — Piece45's slanted sides (above and below it), Piece44's sides on the painting's
+     top, Piece42 (the right edge), Piece43 (underneath);
+  2. an INNER CORNER — the painting's top beside Piece44 (4 cm tall): from the side the piece meets its wall first;
+  3. a STEEP approach near the lock's 80° — the piece travels almost along the face, farther neighbours are in its way;
+  4. a gizmo low on a face, nearer the FLOOR than about the piece's half-height — the floor stops it, and never hosts;
+  5. the assembly's BOTTOM face — always (the floor);
+  6. a LOOSE piece in the path.
+* ⭐ **The fix offered, not built**: below the waist, the straight-in along the gizmo FACE'S NORMAL instead of the orbit's direction (the direction kept
+  from the waist in) — the piece arrives square to the face, only what lies over its landing spot can stop it: (1)–(4) go; left, what physically covers
+  the landing spot (an overhang, a part in front of it) and the bottom face against the floor. ⭐ And a sweep in the app first — gizmo positions across
+  `Scene_1` × an aligned resting face, which latch — to confirm the list.
+* ⚠ Read from the code and the day's measurements (the piece stopped 3.1 cm short by Piece45 under the gizmo); ⛔ no sweep yet, no device close.
+
+### …the drawn green section breaks at a jump (`1.0.86-`, 2026-10-29)
+
+> *"the green section has a strange shape. Is it OK and playable as such ?"* → the answer → *"build that, update the md files, deploy"* — the owner.
+
+* **Playable as such**: the green line is a guide (where dx takes the gizmo); dx itself goes evenly along the outline at the gizmo's height, the gizmo
+  only on faces turned to the piece. ⚠ The owner's exact shape (a long diagonal and a wiggle, the gizmo at y 0.02 on the back face, seen from below) was NOT
+  reproduced: there, a clean rectangle round the bottom row (all points at y 0.020; short on the left — Piece17 is out of the painting); on Piece43
+  (under the painting) dx went round its small outline, just under the floor's surface.
+* ⭐ **The likely cause, fixed** (`joins`, `input/section_hull.ts` — the red line's own rule, now shared): the green line joined every pair of
+  neighbouring samples, so ONE drop landing far from its neighbour (into a missing piece's slot, onto another surface — likeliest with the gizmo
+  very low, where the cut barely clips the bottom row) drew a straight segment across the face. Now two neighbours are joined only when no farther
+  apart than 2.5 × the spacing (+ 2 mm): the loop's per sample on a side, the turn's arc on a top / bottom.
+* ⭐ Offered, not built: the carrier's kind (side / top / bottom) on the HUD's `camera` line, to read which path drew a shape.
+* Vectors (`tests/section_hull.test.ts` + 1, red on the previous build). ⛔ No device close. 2127 vectors.
