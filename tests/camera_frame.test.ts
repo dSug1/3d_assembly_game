@@ -19,8 +19,7 @@ import { orbitOffset } from "../src/input/orbit";
 import { qRotate } from "../src/core/vec";
 import { blendHeadings, rigPeakElevation, rigSwingNeed, gizmoBlendTravel } from "../src/input/orbit_rig";
 
-// ⭐ (2026-10-29) the gizmo's 2D curve orbit these audits are about — `orbitMode` 1 (⛔ the default since 2026-10-28 is 0, the orbit around the assembly: the stub ran that one silently)
-const cfg = sceneConfig({ ...DEFAULT_CONFIG, orbitMode: 1 }, SCENE_1.orbit);
+const cfg = sceneConfig(DEFAULT_CONFIG, SCENE_1.orbit);
 const off = { yawRad: (2.5 * Math.PI) / 180, pitchRad: (2 * Math.PI) / 180 }; // the owner's offsets
 const D = 180 / Math.PI;
 const angle = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * D;

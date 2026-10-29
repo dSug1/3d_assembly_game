@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, approachDir, approachDistance, flatKind, approachStep, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, greenYaws, hull2, nearestOnChain, redSamples, remapOnChain, sectionPoints, toPlane, type EdgeKind, type P2, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -102,17 +102,12 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
   return hit;
 }
 
-/**
- * ⭐ The piece's direction at the orbit place and the approach `approach`: on the OLD 2D CURVE over the whole approach (`approachDir`, 2026-10-29; ⛔
- * straight in along the orbit's direction), its plane by the gizmo face's kind as eased (`st.asmFlat`); locked, kept in the face's cone.
- */
-function dirAt(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
+/** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
+function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
+  const u = orbitDir(yaw, v);
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-  return approachDir(orbitDir(yaw, v), yaw, st.asmFlat, st.asmFlatSign, n, st.cfg, approach);
+  return n === null ? u : coneClamp(u, n);
 }
-
-/** ⭐ The face kind's ease (ms): a step from a vertical face to a horizontal one turns the curve's plane as a glide (~0.3 s), never at once. */
-const FLAT_TAU_MS = 100;
 
 /**
  * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else the CARRIER's (`st.asmG`, moved once a frame — ⛔ 2026-10-28 the ray
@@ -217,7 +212,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dPitch: number, u:
  * own gizmo for that direction + the direction × the approach's distance (`approach`: the state's by default).
  */
 export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
-  const u = dirAt(st, yaw, v, approach);
+  const u = dirAt(st, yaw, v);
   const g = gizmoFor(st, u);
   const d = approachDistance(st.cfg, approach);
   const c = st.orbitCentreM;
@@ -273,14 +268,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     if (hit !== null) st.asmG = hit.point;
   }
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
-  // ⭐ (2026-10-29) the curve's plane by the gizmo face's kind — locked, the locked face's — eased (`FLAT_TAU_MS`)
-  const kindFace = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : (st.gizmoNormal ?? null);
-  const flatTo = flatKind(kindFace);
-  if (kindFace !== null && Math.abs(kindFace[1]) > Math.SQRT1_2) st.asmFlatSign = kindFace[1] < 0 ? -1 : 1;
-  const kf = dtMs > 0 ? 1 - Math.exp(-dtMs / FLAT_TAU_MS) : 1;
-  st.asmFlat = Math.abs(flatTo - st.asmFlat) < 1e-3 ? flatTo : st.asmFlat + (flatTo - st.asmFlat) * kf;
-  const ud = dirAt(st, q.yaw, q.v);
-  const piece: Vec3 = [g0[0] + ud[0] * d, g0[1] + ud[1] * d, g0[2] + ud[2] * d];
+  const piece: Vec3 = [g0[0] + u[0] * d, g0[1] + u[1] * d, g0[2] + u[2] * d];
   const toCentre = Math.hypot(piece[0] - a.centre[0], piece[1] - a.centre[1], piece[2] - a.centre[2]);
   const was = st.asmLocked;
   st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);
