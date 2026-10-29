@@ -707,7 +707,8 @@ export interface SceneState {
    * (1 far … the contact) and its coast; Shift with the mouse on the last pointer event */
   asm: { readonly centre: Vec3; readonly radius: number } | null;
   asmLocked: boolean;
-  asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null;
+  /** ⭐ (2026-10-29) …and its cone (`lockCone`: from where the piece was at the lock, tightened inward; `null`: the default 80°) */
+  asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;

@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -106,7 +106,7 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   const u = orbitDir(yaw, v);
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-  return n === null ? u : coneClamp(u, n);
+  return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);
 }
 
 /**
@@ -302,7 +302,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const t = st.centreBlend.targetM;
     st.asmLocked = true;
     st.asmCarrier = null; // ⭐ (2026-10-29) back out, the carrier found again from the gizmo, in the yaw plane as it is then
-    st.asmLock = { point: [t[0], t[1], t[2]], normal: st.gizmoNormal ?? null, host: st.gizmoHost ?? null };
+    const n = st.gizmoNormal ?? null;
+    const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
     st.asmGizmo = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
     return;
@@ -329,9 +331,14 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);
   if (st.asmLocked && !was) {
     // ⭐ the lock: the gizmo where it is now, its face the one it has
-    st.asmLock = { point: [g0[0], g0[1], g0[2]], normal: st.gizmoNormal ?? hit?.normal ?? null, host: st.gizmoHost ?? hit?.host ?? null };
+    const n = st.gizmoNormal ?? hit?.normal ?? null;
+    // ⭐ (2026-10-29) its cone from where the piece is (`lockCone`) — ⛔ snapped into 80° at once: a jump at the lock
+    st.asmLock = { point: [g0[0], g0[1], g0[2]], normal: n, host: st.gizmoHost ?? hit?.host ?? null, cone: n === null ? null : lockCone(null, angleTo(u, n)) };
     st.asmCarrier = null; // ⭐ (2026-10-29) the piece turns about the locked gizmo: back out, the carrier found again in the yaw plane as it is then
     st.lastVerdict = "orbit: close in — the gizmo and its face locked";
+  } else if (st.asmLocked && st.asmLock !== null && st.asmLock.normal !== null) {
+    // ⭐ (2026-10-29) locked: the cone tightened as the piece comes inward
+    st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };
   } else if (!st.asmLocked && was) {
     // ⭐ unlocked: the carrier found again from the locked gizmo, projected into the yaw plane (⛔ 2026-10-28 carried on from the locked point — off the
     // yaw plane by the locked orbit's turn, or by the hover's slide: the gizmo off the red section from then on)
@@ -501,8 +508,9 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   const u = dirAt(st, cam.yaw, cam.v);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
   // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
-  // ⭐ (2026-10-29) at ±90° the direction has no heading of its own: the orbit's yaw
-  return offsetFrame(u, Math.hypot(u[0], u[2]) > 1e-6 ? Math.atan2(u[2], u[0]) : cam.yaw, o.yawRad, o.pitchRad);
+  // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
+  // face's heading at once: the scene jump-rotated; and at ±90° it has none)
+  return offsetFrame(u, cam.yaw, o.yawRad, o.pitchRad);
 }
 
 /** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */
@@ -510,5 +518,5 @@ export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: numbe
   if (!st.asmLocked || st.asmLock === null || st.asmLock.normal === null) return false;
   const n = st.asmLock.normal;
   const a1 = angleTo(orbitDir(yaw1, v1), n);
-  return a1 > (80 * Math.PI) / 180 && a1 > angleTo(orbitDir(yaw0, v0), n);
+  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);
 }

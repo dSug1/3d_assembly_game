@@ -1909,3 +1909,19 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   COMPOSED on a slab (the same travel per 10° across the face, against the old rule's 20× spread; a full turn back to the start); the loop step's wait
   at a turned-away corner, both senses, a lap at most; the red plane through the gizmo, the top kept on the top; the wiring; the A key; the slide probe;
   the zero-travel step. Restated: `camera_frame.test.ts`'s stub on `orbitMode` 1 (re-applied). ⛔ No device close. 2125 vectors.
+
+### …no jump at the lock: its cone from where the piece is, the camera's heading the orbit's yaw (`1.0.86-`, 2026-10-29)
+
+> *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"* → *"update the md files,
+> deploy"* — the owner (the HUD: `elev=0.00 ⛔LIMIT` — the pitch at −90°).
+
+* ⛔ **The cause**: at −90° over a gizmo on a VERTICAL face the piece is 90° off the face's normal. At the lock (0.3 m) it was turned into the 80° cone in
+  ONE frame — reproduced in the app: the piece 5.8 cm, the camera 7°, its up 18°, in one step — and the camera's heading, taken from the piece's own
+  direction (none at the pole), switched at once to the face's: the whole view swung about the vertical, by as much as the yaw differed from it.
+* ⭐ **The lock's cone from where the piece is** (`lockCone`): at the lock, the piece's own angle off the normal when it lies outside 80°; tightened as it
+  comes inward, never under 80° (a step further out still refused — `leavesCone` reads it).
+* ⭐ **The camera's heading the orbit's yaw, always** (`assemblyCameraFrame`; ⛔ the direction's own, or the yaw at the pole only).
+* Measured after: at the same lock the camera turned 0.0°, its up 0.0°, the piece only the approach's own step, still straight under the gizmo; no error.
+* ⚠ The *"orbit stuck"* report at −5° of pitch (the back face, x −0.20) is NOT reproduced: in that configuration, by mouse and by touch, from the floor and
+  from the piece, dx, dy and A + drag all moved (yaw 154° → 85°, the approach 0.489 → 0.732).
+* Vectors (`tests/assembly_orbit.test.ts` + 1, red on the previous build; the heading's source check restated). ⛔ No device close. 2126 vectors.

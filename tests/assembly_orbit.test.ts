@@ -14,6 +14,7 @@ import { waistV } from "../src/input/orbit_rig";
 import {
   angleTo,
   approachDistance,
+  lockCone,
   isApproachKey,
   approachRange,
   approachStep,
@@ -203,7 +204,8 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
       const f = offsetFrame([0, 1, 0], yaw, 0, 0);
       expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
     }
-    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, Math.hypot(u[0], u[2]) > 1e-6 ? Math.atan2(u[2], u[0]) : cam.yaw, o.yawRad, o.pitchRad);");
+    // ⭐ (2026-10-29) the heading the ORBIT's yaw, always (⛔ the direction's own: locked and turned into the cone at −90° it switched at once)
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, cam.yaw, o.yawRad, o.pitchRad);");
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");
@@ -256,5 +258,25 @@ describe("⭐⭐ the approach key, the slide as a way out, a step that moves not
     expect(r.q.yaw).toBeCloseTo(0.7, 12);
     expect(r.blocked).toBe(false);
     expect(r.rest).toEqual([0, 0]);
+  });
+});
+
+describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
+  it("⭐⭐ (*\"at one point the scene jump rotates\"*) at the lock the cone is the piece's own angle when it lies outside 80° (⛔ snapped into 80° at once: at −90° over a vertical face 10° in one frame — 5.8 cm at 0.28 m, measured); tightened as it comes inward, never under 80°", () => {
+    const deg = Math.PI / 180;
+    expect(lockCone(null, 90 * deg)).toBeCloseTo(90 * deg, 12); // outside: from where it is
+    expect(lockCone(null, 30 * deg)).toBe(LOCK_CONE_RAD); // inside: the usual 80°
+    expect(lockCone(90 * deg, 85 * deg)).toBeCloseTo(85 * deg, 12); // tightened inward
+    expect(lockCone(85 * deg, 88 * deg)).toBeCloseTo(85 * deg, 12); // never widened again
+    expect(lockCone(85 * deg, 40 * deg)).toBe(LOCK_CONE_RAD);
+    // the piece straight under a vertical face's gizmo: unmoved by the lock
+    const u = orbitDir(-1.07, 0);
+    const n: Vec3 = [0, 0, -1];
+    expect(angleTo(coneClamp(u, n, lockCone(null, angleTo(u, n))), u)).toBeLessThan(1e-9);
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("cone: n === null ? null : lockCone(null, angleTo(u, n)) };");
+    expect(a).toContain("st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };");
+    expect(a).toContain("return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
+    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);");
   });
 });
