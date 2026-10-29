@@ -13,7 +13,9 @@ import { orbitOffset } from "../src/input/orbit";
 import { waistV } from "../src/input/orbit_rig";
 import {
   angleTo,
+  approachDir,
   approachDistance,
+  curveElevation,
   approachRange,
   approachStep,
   coneClamp,
@@ -220,5 +222,106 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     const at = m.indexOf('"sectionLines"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
+  });
+});
+
+describe("⭐⭐⭐ the old 2D curve close in (2026-10-29)", () => {
+  const L = DEFAULT_CONFIG.assemblyLockDistM;
+  const r = approachRange(cfg);
+  const angle = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * D;
+  /** the approach coordinate at a distance from the gizmo (the curve's distance falls as the coordinate does) */
+  const aAt = (distM: number) => {
+    let lo = r.min, hi = r.max;
+    for (let i = 0; i < 60; i++) {
+      const m = (lo + hi) / 2;
+      if (approachDistance(cfg, m) < distM) lo = m;
+      else hi = m;
+    }
+    return (lo + hi) / 2;
+  };
+  it("⭐⭐ the old curve's ELEVATION (Scene_1): 31.7° at ring 1, rising to ~57° on the way in, 0 at the waist and below (straight in)", () => {
+    expect(curveElevation(cfg, 1) * D).toBeCloseTo(31.7, 1);
+    let peak = 0;
+    for (let a = r.waist; a <= 1; a += 0.001) peak = Math.max(peak, curveElevation(cfg, a) * D);
+    expect(peak).toBeGreaterThan(55);
+    expect(peak).toBeLessThan(62);
+    expect(curveElevation(cfg, r.waist)).toBe(0);
+    expect(curveElevation(cfg, r.min)).toBe(0);
+  });
+  it("⭐⭐⭐ (*\"would that create jumps … at max distance if the gizmo changes position ?\"*) far out and up to the lock's distance the direction is the ORBIT's own — unlocked, or beyond the lock's distance, exactly `u`; at the lock's edge it starts from `u` (no step)", () => {
+    const u = orbitDir(0.4, 0.62);
+    const n: Vec3 = [Math.cos(0.4), 0, Math.sin(0.4)];
+    expect(approachDir(u, 0.4, null, cfg, 0.55, L)).toBe(u);
+    expect(approachDir(u, 0.4, n, cfg, 1, L)).toBe(u);
+    expect(approachDir(u, 0.4, n, cfg, aAt(L + 0.01), L)).toBe(u);
+    expect(angle(approachDir(u, 0.4, n, cfg, aAt(L - 0.001), L), u)).toBeLessThan(0.05);
+  });
+  it("⭐⭐⭐ over a VERTICAL face the old curve's own plane: the horizontal at the orbit's yaw toward up — it rises over the face, comes down LEVEL at the waist, then straight in", () => {
+    const yaw = 0.4;
+    const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
+    const n: Vec3 = [Math.cos(0.5), 0, Math.sin(0.5)]; // a vertical face 5.7° off the yaw
+    const u = orbitDir(yaw, vOfPitch(20 / D));
+    const at = (distM: number) => approachDir(u, yaw, n, cfg, aAt(distM), L);
+    const waist = approachDistance(cfg, r.waist);
+    expect(angle(approachDir(u, yaw, n, cfg, r.waist, L), h)).toBeLessThan(1e-6); // level at the waist, along the yaw
+    expect(angle(approachDir(u, yaw, n, cfg, r.min, L), h)).toBeLessThan(1e-6); // and straight in
+    // on the way in it rises over the orbit's 20° (the curve's ~57° × 20 / 31.7)
+    const mid = at((L + waist) / 2);
+    expect(Math.asin(mid[1]) * D).toBeGreaterThan(25);
+    // ⭐ the rise follows the piece's own pitch against ring 1's: level — straight in, no rise; below the horizon — the lower half (rings 3 and 4)
+    const level = orbitDir(yaw, 0.5);
+    for (const dd of [L * 0.9, (L + waist) / 2, waist * 1.2]) expect(Math.abs(approachDir(level, yaw, n, cfg, aAt(dd), L)[1])).toBeLessThan(1e-9);
+    const below = approachDir(orbitDir(yaw, vOfPitch(-20 / D)), yaw, n, cfg, aAt((L + waist) / 2), L);
+    expect(Math.asin(below[1]) * D).toBeLessThan(-25); // the mirror of the rise over
+    // at ring 1's own angle, the old curve exactly once wholly on it
+    const ring1 = approachDir(orbitDir(yaw, vOfPitch(curveElevation(cfg, 1))), yaw, n, cfg, aAt(waist * 1.0001), L);
+    expect(Math.asin(ring1[1])).toBeCloseTo(curveElevation(cfg, aAt(waist * 1.0001)), 3);
+    // always in the curve's vertical plane at the yaw once wholly on it (no sideways)
+    const w = approachDir(u, yaw, n, cfg, r.waist + 0.01, L);
+    expect(Math.abs(w[0] * -Math.sin(yaw) + w[2] * Math.cos(yaw))).toBeLessThan(0.02);
+  });
+  it("⭐⭐⭐ over a HORIZONTAL face (within 45° of up — snapped by gravity) the curve turned 90°: from the vertical toward the piece's side at the yaw; straight over the face at the waist and to the contact", () => {
+    const yaw = -1.2;
+    const h: Vec3 = [Math.cos(yaw), 0, Math.sin(yaw)];
+    const u = orbitDir(yaw, vOfPitch(80 / D));
+    for (const n of [[0, 1, 0], [0.53, 0.85, 0]] as Vec3[]) {
+      expect(angle(approachDir(u, yaw, n, cfg, r.waist, L), [0, 1, 0])).toBeLessThan(1e-6);
+      expect(angle(approachDir(u, yaw, n, cfg, r.min, L), [0, 1, 0])).toBeLessThan(1e-6);
+      const mid = approachDir(u, yaw, n, cfg, aAt(0.16), L);
+      expect(dot(mid, h)).toBeGreaterThan(0.2); // tilted toward the piece's own side (⛔ never over to the far side)
+    }
+    // under a bottom face: straight under it at the waist
+    expect(angle(approachDir(orbitDir(yaw, vOfPitch(-80 / D)), yaw, [0, -1, 0], cfg, r.waist, L), [0, -1, 0])).toBeLessThan(1e-6);
+  });
+  it("⭐⭐⭐ NO JUMP: along the whole approach the direction turns by small steps (an approach step of 0.001 ≈ 0.08 mm of finger), and a yaw step turns it no more than itself — no flip of the curve's plane; kept within the lock's 80° cone", () => {
+    const n: Vec3 = [0, 0, -1];
+    let steepest = 0;
+    for (let a = r.max; a > r.min + 0.001; a -= 0.001) steepest = Math.max(steepest, Math.abs(curveElevation(cfg, a) - curveElevation(cfg, a - 0.001)) * D);
+    expect(steepest).toBeLessThan(1.5); // the curve itself: under 1.5° an approach step (~19°/mm of finger at its steepest)
+    for (const [yaw, pitch] of [[-Math.PI / 2, 34], [-Math.PI / 2, -40], [-1.0, 70], [-2.2, 5]] as const) {
+      const u = orbitDir(yaw, vOfPitch(pitch / D));
+      let prev = approachDir(u, yaw, n, cfg, r.max, L);
+      for (let a = r.max; a >= r.min; a -= 0.001) {
+        const d = approachDir(u, yaw, n, cfg, a, L);
+        // ⭐ never faster than the old curve's own steepest turn (its swing down to the waist) and the blend onto it together
+        expect(angle(d, prev)).toBeLessThan(steepest + 0.5);
+        expect(angle(d, n)).toBeLessThan(80 + 1e-6);
+        prev = d;
+      }
+    }
+    for (const a of [aAt(0.2), aAt(0.12), r.waist]) {
+      let prev: Vec3 | null = null;
+      for (let yaw = -2.6; yaw <= -0.6; yaw += 0.01) {
+        const d = approachDir(orbitDir(yaw, vOfPitch(30 / D)), yaw, n, cfg, a, L);
+        if (prev !== null) expect(angle(d, prev)).toBeLessThan(0.01 * D * 1.5);
+        prev = d;
+      }
+    }
+  });
+  it("⭐⭐ wired: the piece's direction (its place — the solver's and the approach's collision check too — the drawn piece, the camera's frame) from the curve, locked", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("return n === null ? u : approachDir(coneClamp(u, n), yaw, n, st.cfg, approach, st.cfg.assemblyLockDistM);");
+    expect(a).toContain("const u = dirAt(st, yaw, v, approach);");
+    expect(a).toContain("const u = dirAt(st, cam.yaw, cam.v);");
   });
 });

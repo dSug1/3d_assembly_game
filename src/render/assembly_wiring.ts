@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, approachDir, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, greenYaws, hull2, nearestOnChain, redSamples, remapOnChain, sectionPoints, toPlane, type EdgeKind, type P2, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -102,11 +102,14 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
   return hit;
 }
 
-/** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
-function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
+/**
+ * ⭐ The piece's direction at the orbit place and the approach `approach` — locked, kept in the face's cone (`coneClamp`) and, inside the lock's distance,
+ * onto the OLD 2D CURVE (`approachDir`, 2026-10-29; ⛔ straight in along the orbit's direction).
+ */
+function dirAt(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
   const u = orbitDir(yaw, v);
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-  return n === null ? u : coneClamp(u, n);
+  return n === null ? u : approachDir(coneClamp(u, n), yaw, n, st.cfg, approach, st.cfg.assemblyLockDistM);
 }
 
 /**
@@ -212,7 +215,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dPitch: number, u:
  * own gizmo for that direction + the direction × the approach's distance (`approach`: the state's by default).
  */
 export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
-  const u = dirAt(st, yaw, v);
+  const u = dirAt(st, yaw, v, approach);
   const g = gizmoFor(st, u);
   const d = approachDistance(st.cfg, approach);
   const c = st.orbitCentreM;
