@@ -544,6 +544,17 @@ export function slideWayOutQ(iso: Vec3, yaw0: number): { yaw: number; v: number 
   // the orbit's `v`: −90° at 0, level at ½, +90° at 1 (`vOfPitch`)
   return { yaw, v: Math.min(1, Math.max(0, (Math.asin(y) / (Math.PI / 2) + 1) / 2)) };
 }
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"I can see a succession of very rapid and small jumps when I slide with my mouse. I don't seem to be able to smooth by
+ * changing the sliders in piece sliding menu"*) — **THE SLIDE CAMERA RIDES THE PIECE AS DRAWN**: the shift of the whole camera rig (its place, its look,
+ * the slide view's target) by the drawn piece's lag behind its solved place (`draw`), while the slide rides the gizmo; none else. ⛔ The camera rode the
+ * SOLVED slide — a mouse's events beat against the frames (125 Hz against the display's rate), so the solved place advanced 1.7 then 4.0 mm on alternate
+ * frames (measured) and the camera with it: the piece drawn smoothly, the assembly behind it stuttering 0.7 / 1.8 px — out of the sliders' reach (they
+ * shape the piece's follower only).
+ */
+export function slideCameraShift(slideMode: boolean, gizmoRides: boolean, draw: Vec3 | null): Vec3 {
+  return slideMode && gizmoRides && draw !== null ? draw : [0, 0, 0];
+}
 /** ⭐ The way out's re-base is due when the orbit's direction is more than this off the slide view's (rad) — under it, already there. */
 export const SLIDE_WAY_OUT_MIN_RAD = (0.5 * Math.PI) / 180;
 
