@@ -78,6 +78,10 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    (⭐ item 6's mouse limit does not hold in the slide mode); two fingers out left it at 20 mm, the gizmo kept where the slide left it, the back-out found
    the carrier from there; A + drag back in latched again. ⚠ What it no longer has: the press on the piece as a choice — within 20 mm of an aligned
    face the one-finger drag slides, it cannot orbit (the approach out first); ⚠ a tap on a placed part does not move the gizmo while it is on.
+10. ⭐⭐ **THE SLIDE MODE'S TWO HOLES, FIXED** (2026-11-01, item 31; ⛔ no device close): a drag starting on a PART now slides (it moved nothing), and the
+   lit contours HOLD the orbit until the latch (a moving finger carried the piece through them) — freed if refused or after 800 ms. ⚠ The owner's
+   *"never latched until a reload"* not reproduced; the HUD's hover line at that moment is the evidence to read.
+31. ⭐⭐ **The slide mode's two holes (2026-11-01)**: any one-finger drag starting on a part slides (in its goal or not); the lit contours hold the orbit (`slideHoldsOrbit`) until the latch, freed when refused or after `SLIDE_WAIT_MAX_MS` 800 ms (`slideRefusedAfter`); A + drag never held → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 30. ⭐⭐⭐ **THE SLIDE MODE (2026-11-01, `1.0.86-`; `orbitMode` 0 only)**: no press — the slide LATCHES by itself as soon as the contours light (the piece settled
    onto the face); it stays on when the finger lifts, and every one-finger drag slides (on the piece or not, touch or mouse); a second finger or A + drag
    is the approach, and taking the resting face beyond 20 mm from the face's plane leaves it; the camera blends in and out over 500 ms; the gizmo always

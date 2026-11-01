@@ -369,6 +369,22 @@ export function hoverEndsOn(holdActive: boolean, placed: boolean, slideMode = fa
 export function slideLatches(ready: boolean, armed: boolean, placed: boolean, on: boolean): boolean {
   return ready && armed && !placed && !on;
 }
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"once, the contour highlight never latched although the faces were aligned"*, *"I can drive away the piece just with dy
+ * and the dx and dy slide never engages although the contour are highlighted"*) — **THE LIT CONTOURS STOP THE ORBIT**: the latch waits for the piece AT
+ * REST, so a finger still dragging (or the orbit's coast) carried the piece through the lit contours and away; now, while the latch may happen, the
+ * orbit is held where the piece is (the finger's steps dropped, the coast stopped) until it latches — unless the latch is REFUSED (or has waited
+ * `SLIDE_WAIT_MAX_MS`: the orbit free again), or A is down (A + drag is the approach).
+ */
+export function slideHoldsOrbit(ready: boolean, armed: boolean, placed: boolean, on: boolean, refused: boolean, approachKey: boolean): boolean {
+  return slideLatches(ready, armed, placed, on) && !refused && !approachKey;
+}
+/** ⭐ (2026-11-01) the longest the held orbit waits for the piece to come to rest before the latch counts as refused (ms). */
+export const SLIDE_WAIT_MAX_MS = 800;
+/** ⭐ (2026-11-01) The latch counts as refused: `hoverStart` said no, or it has been waiting (`waitedMs`) past `SLIDE_WAIT_MAX_MS`. */
+export function slideRefusedAfter(result: boolean | "wait", waitedMs: number): boolean {
+  return result === false || (result === "wait" && waitedMs > SLIDE_WAIT_MAX_MS);
+}
 /** ⭐ (2026-11-01) The slide mode left: the resting face's distance to the hosting face's plane (m) beyond the reach (m) — the contours' own test. */
 export function slideExits(planeGapM: number, reachM: number): boolean {
   return planeGapM > reachM;

@@ -606,6 +606,10 @@ export interface SceneState {
   slideArmed: boolean;
   /** ⭐ (2026-11-01) when the latch was last tried (ms) — at most every 100 ms while it is refused */
   slideTryAt: number;
+  /** ⭐ (2026-11-01) the last latch try was refused (`slideRefusedAfter`) — the lit contours no longer hold the orbit (`slideHoldsOrbit`) */
+  slideRefused: boolean;
+  /** ⭐ (2026-11-01) since when the latch has waited for the piece to come to rest (ms; 0: not waiting) */
+  slideWaitSince: number;
   /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
   hoverReadyWorld: object | null;
   hoverReadyReachMm: number;
