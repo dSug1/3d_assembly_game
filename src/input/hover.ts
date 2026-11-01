@@ -425,7 +425,7 @@ export interface SlideOrbit {
  * **OVER A HORIZONTAL FACE, THE ORBIT'S OWN YAW AND PITCH**: a hosting face within 45° of level (`SLIDE_TOP_COS`, gravity's snap — a top or a bottom) turns
  * the limited orbit as the orbit does: `a[0]` a YAW about the face's normal from the heading the camera had at the latch (`h0`, toward the camera, laid
  * on the face; `s0` its right), clamped at `SLIDE_ORBIT_CLAMP_RAD` each way; `a[1]` the PITCH over the face, between the isometric corner's height
- * (`SLIDE_TOP_CORNER_RAD`, 35.26°) and the orbit's ceiling (`SLIDE_TOP_MAX_RAD`, 85°) — a start outside keeps its own limit, tightened as it turns in.
+ * (`SLIDE_TOP_CORNER_RAD`, 35.26°) and the orbit's ceiling (`SLIDE_TOP_MAX_RAD`, 85°) — a start outside brought inside them (2026-11-01: an edge-on view never slid).
  * ⛔ The two angles off the normal: begun near straight above (the orbit's 85° pitch), the slide carried the camera over or round the top, where the
  * upright up (`uprightBlend`) has no direction to hold — a few millimetres turned the picture up to half a turn. Now the picture turns only by the yaw.
  */
@@ -438,7 +438,13 @@ export interface SlideTop {
   readonly lo: number;
   readonly hi: number;
 }
-/** ⭐ The limited orbit begun where the camera is (`toCam`, from the target), in the face's frame (`n`, `t1`, `t2`); a horizontal face (`up` the world's): by yaw and pitch. */
+/**
+ * ⭐ The limited orbit begun where the camera is (`toCam`, from the target), in the face's frame (`n`, `t1`, `t2`); a horizontal face (`up` the world's): by yaw and pitch.
+ * ⭐⭐⭐ (2026-11-01, the owner: *"in the attached configuration, although the slide contours are highlighted, the slide is blocked. fix it."*) — but never
+ * further off the face's normal than the isometric corner: each angle within the 45° clamp (a top: the pitch at least the corner's 35.26°), the view
+ * turning there over the latch's blend. ⛔ A camera seeing the face nearly EDGE-ON kept its own angle: every finger ray grazed the face (under
+ * `HOVER_RAY_MIN_DEG`), so no drag slid the piece — and the view turns only with a slide: stuck for good.
+ */
 export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3, up: Vec3 = [0, 1, 0]): SlideOrbit {
   const c = unit(toCam) ?? n;
   if (Math.abs(dot(n, up)) >= SLIDE_TOP_COS) {
@@ -450,11 +456,13 @@ export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3, up: Ve
     const kt = dot(t1, h0);
     const s0 = unit([t1[0] - kt * h0[0], t1[1] - kt * h0[1], t1[2] - kt * h0[2]]) ?? unit(cross(h0, n)) ?? t1;
     const p = Math.atan2(k, Math.hypot(hc[0], hc[1], hc[2]));
-    return { a: [0, p], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD], top: { h0, s0, lo: Math.min(SLIDE_TOP_CORNER_RAD, p), hi: Math.max(SLIDE_TOP_MAX_RAD, p) } };
+    const p1 = Math.max(SLIDE_TOP_CORNER_RAD, p);
+    return { a: [0, p1], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD], top: { h0, s0, lo: SLIDE_TOP_CORNER_RAD, hi: Math.max(SLIDE_TOP_MAX_RAD, p1) } };
   }
   const cn = Math.max(1e-3, dot(c, n));
-  const a: [number, number] = [Math.atan2(dot(c, t1), cn), Math.atan2(dot(c, t2), cn)];
-  return { a, lim: [Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[0])), Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[1]))] };
+  const cl = (x: number): number => Math.min(SLIDE_ORBIT_CLAMP_RAD, Math.max(-SLIDE_ORBIT_CLAMP_RAD, x));
+  const a: [number, number] = [cl(Math.atan2(dot(c, t1), cn)), cl(Math.atan2(dot(c, t2), cn))];
+  return { a, lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD] };
 }
 /** ⭐ One slide step: the angles turned by `d` (rad, along `t1` and `t2`), each held in its limit; a limit beyond the clamp tightened to where it turned in. */
 export function slideOrbitStep(o: SlideOrbit, d: readonly [number, number]): SlideOrbit {
@@ -519,18 +527,25 @@ export function slideOrbitTurnOf(o: SlideOrbit, moved: Vec3, t1: Vec3, t2: Vec3,
 }
 
 /**
- * ⭐⭐⭐ (2026-11-01, the owner: *"when I move the piece away from the hosting face after sliding, most of the times there are big travel of the piece
- * outside the screen and then the piece catch up with the camera: why is that? propose a fix (in case the hosting face is horizontal, vertical, angled,
- * etc.)"*) — **THE WAY OUT FOLLOWS THE PIECE**: once the slide is off, the slide view's target (where its camera looks, and what it turns about) is the
- * PIECE as drawn, with the offset it had from it at the slide's end fading (`tauMs`) — so whatever the face, the piece stays where the camera looks
- * while the view turns back to the orbit's. ⛔ The target stayed where the slide left it: the approach carried the piece out along the ORBIT's
- * direction, up to 45° (the limited orbit; 55° the corner before it) off the view's, and its camera kept its distance growing behind it — the piece
- * crossed the screen to its edge in 0.35 s (measured, the painting's face) before the 500 ms blend brought the camera round behind it.
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when going back to orbit mode from the slide and taking the piece away from the hosting face, the piece usually flies to
+ * catch back the orbit 2D curve it had when it first approached the hosting face … Can you propose something to simplify"* → *"build A"*) — **THE WAY
+ * OUT GOES ON FROM THE SLIDE VIEW**: at the approach's first step out of a slide, the orbit's yaw and pitch become the slide view's direction (`iso`,
+ * from what it looks at to its camera), so the piece leaves toward the camera and the orbit's camera stands where the slide's is. ⛔ The orbit kept
+ * the yaw and pitch of the approach IN: the piece went out along that old direction (up to 80° off the face's normal) and the camera swung back to
+ * the old orbit place — the farther the slide, the farther the flight. The yaw kept nearest `yaw0` (no turn of 2π); `null`: no direction.
  */
-export function slideExitTarget(piece: Vec3, offAtEnd: Vec3, sinceMs: number, tauMs: number): Vec3 {
-  const f = tauMs > 0 ? Math.exp(-Math.max(0, sinceMs) / tauMs) : 0;
-  return [piece[0] + offAtEnd[0] * f, piece[1] + offAtEnd[1] * f, piece[2] + offAtEnd[2] * f];
+export function slideWayOutQ(iso: Vec3, yaw0: number): { yaw: number; v: number } | null {
+  const l = Math.hypot(iso[0], iso[1], iso[2]);
+  if (!(l > 1e-9)) return null;
+  const y = Math.max(-1, Math.min(1, iso[1] / l));
+  const h = Math.hypot(iso[0], iso[2]);
+  const yawA = h > 1e-9 ? Math.atan2(iso[2], iso[0]) : yaw0;
+  const yaw = yaw0 + Math.atan2(Math.sin(yawA - yaw0), Math.cos(yawA - yaw0));
+  // the orbit's `v`: −90° at 0, level at ½, +90° at 1 (`vOfPitch`)
+  return { yaw, v: Math.min(1, Math.max(0, (Math.asin(y) / (Math.PI / 2) + 1) / 2)) };
 }
+/** ⭐ The way out's re-base is due when the orbit's direction is more than this off the slide view's (rad) — under it, already there. */
+export const SLIDE_WAY_OUT_MIN_RAD = (0.5 * Math.PI) / 180;
 
 /**
  * ⭐⭐ (2026-11-01, the owner: *"sometimes, the slide is stuck: the contours are highlighted but delta position does not slide the piece"* → *"a to c"*) —

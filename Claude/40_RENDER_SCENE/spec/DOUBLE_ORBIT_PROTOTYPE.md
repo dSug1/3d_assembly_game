@@ -2100,3 +2100,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   Measured on the same exit: the piece at most x 346 of 504, then where the orbit's view puts it.
 * Vectors (`tests/hover.test.ts` + 7, red on the previous build — the spin vector runs the old geometry and fails by 49.5° a 2° step). ⛔ No device
   close. 2148 vectors.
+
+### ⭐⭐⭐ THE SLIDE, THIRD PASS — the way out from the slide view, an edge-on latch that slides, the 3° tilt explained (2026-11-01; `orbitMode` 0)
+
+> *"when going back to orbit mode from the slide and taking the piece away from the hosting face, the piece usually flies to catch back the orbit 2D
+> curve it had when it first approached the hosting face. Why does the piece have to catch the initial 2D approach curve ? … propose something"* →
+> *"build A, but revert the change of the camera looking at the piece (make the camera look at what it was looking before you made this change). Check
+> which part gives the 3degree off vertical face."*; *"in the attached configuration, although the slide contours are highlighted, the slide is
+> blocked. fix it."* — the owner.
+
+* ⛔ **The flight — why**: the orbit's place is two angles, yaw and pitch — the piece on the line from the gizmo along their direction, the camera round the
+  assembly at them. The slide moved the gizmo and turned its own view (the limited orbit, up to 45°), and never touched the two angles: they stayed those
+  of the approach IN. Taken away, the piece went out along that old direction (up to 80° off the face's normal) and the camera swung back to the old orbit
+  place — the farther the slide, the farther apart.
+* ⭐ **A — the way out goes on from the slide view** (`slideWayOutQ`, `slideWayOutRebase`): at the approach's first step OUT while the slide is on, the
+  orbit's yaw and pitch become the slide view's direction (from what it looks at to its camera); the piece's place kept (the curve's difference taken into
+  its own offset, which ways in with the approach's travel — at the contact it is nothing), the gizmo where the slide left it. Any face: it reads only the
+  view. Measured (the painting's face, slid to the corner 45° / −45°): the piece leaves on a straight line toward the camera, x 250 → 193 of 504 on the
+  screen over the whole way out. Cost: the orbit does not come back to where it was before the slide.
+* ⛔ **Reverted**: the previous pass's *the way out follows the piece* (`slideExitTarget` — the slide view's target riding the drawn piece): the target stays
+  where the slide left it again, as before that change.
+* ⛔ **The blocked slide — why** (the owner's screenshot: latched on Piece10's face, the view nearly edge-on): the limited orbit began WHERE THE CAMERA WAS
+  and kept a start beyond the 45° clamp as its own limit. Seen at 83° off the face's normal, every finger ray met the face under `HOVER_RAY_MIN_DEG` (12°)
+  and was refused — nothing slid, and the view turns only with a slide: stuck for good. Reproduced in the app (a steep approach): latched at 82.9°, ten
+  drags, **0 mm**.
+* ⭐ **Fixed twice over**: the slide view starts no further off the normal than the isometric corner (each angle within the 45° clamp; a top face's pitch
+  at least 35.26°), turning there over the latch's blend (`slideOrbitStart`); and a finger whose rays still graze the face has its step read at the
+  SCREEN'S CENTRE, where the slide view looks (`hoverFingerStep`). The same run: latched at 45°, every drag slides.
+* ⭐ **The 3° — which part**: NONE. No part's face is 0.5°–12° off vertical (every mesh's triangles read; 33,064 picks across the painting, each pick's
+  normal equal to its triangle's). The resting face's tilt (`resting n (-0.00, 0.05, 1.00)`) is the PIECE's: the quads' turn is held while its next
+  increment would take the piece into a part (`turnStepHeld` — the yellow quad red), and a turn held short leaves the resting face a few degrees off; over
+  the slide's 2° (`HOVER_ALIGN_DEG`) the contours never light, and a turn still pending refuses the latch. ⛔ Not changed.
+* Vectors (`tests/hover.test.ts`: + 1, the way out's replaced, 3 restated — red on the previous build). ⛔ No device close. 2149 vectors.

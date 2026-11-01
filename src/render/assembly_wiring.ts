@@ -20,7 +20,7 @@ import { goalLocked } from "../input/goal_lock";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
-import { hoverWayInStep } from "./hover_wiring";
+import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import type { Vec3 } from "../core/vec";
 
@@ -473,6 +473,8 @@ function approachMoveTaken(st: SceneState, da: number): number {
   const a0 = st.approach;
   const want = approachStep(a0, da, 1, st.cfg);
   if (want >= a0 || st.pieceQ === null || st.greenBox === null) {
+    // ⭐⭐⭐ (2026-11-01, *"build A"*) a step OUT of a slide: the orbit goes on from the slide's view (`slideWayOutRebase`)
+    if (want > a0) slideWayOutRebase(st);
     st.approach = want;
     return want - a0;
   }
