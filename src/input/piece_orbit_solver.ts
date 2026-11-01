@@ -40,6 +40,8 @@ export interface SolverEnv {
   normal(q: OrbitQ): Vec3 | null;
   /** ⭐ (the third audit) the least gap at `q` to every obstacle OTHER than the nearest (m) — absent: taken as `gap(q)` (no directional gain) */
   secondGap?(q: OrbitQ): number;
+  /** ⭐ (2026-11-01) the nearest obstacle's id at `q` (`null`: none near) — what a blocked slide names on the HUD; absent: unnamed */
+  blocker?(q: OrbitQ): string | null;
 }
 
 export interface SolveOptions {

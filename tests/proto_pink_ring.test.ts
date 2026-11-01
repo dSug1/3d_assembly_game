@@ -17,7 +17,7 @@ describe("⭐⭐⭐ prototype — the yellow gizmo: ALWAYS SEEN while its slider
     expect(w).toMatch(/trackingMetresPerPx\(dist, st\.camera\.fov, st\.canvas\.clientHeight\) \* GIZMO_RING_PX/);
     expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;\s*ring\.renderingGroupId = 2;/);
     expect(w).toMatch(/ring\.isVisible = true;\s*const m = trackingMetresPerPx[^\n]*\n\s*ring\.scaling\.set\(m, m, m\);\s*ring\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);
-    expect(w).toMatch(/if \(st\.cfg\.pinkGizmoVisible !== 1\) \{\s*ring\.isVisible = false;/);
+    expect(w).toMatch(/if \(st\.cfg\.pinkGizmoVisible !== 1 \|\| gizmoHiddenBySlide\(st\.hoverReady !== null, st\.hover !== null\)\) \{\s*ring\.isVisible = false;/); // ⭐ (2026-11-01) and while the contours are lit or the slide is on
     // ⛔ the per-frame ray, its verdict, the translucency behind the piece and the timer are deleted
     expect(w).not.toMatch(/pinkRingVisibility|ringLatch|ringDrawnAt|PINK_EPS_M|PINK_MASKED_ALPHA|multiPickWithRay\(new Ray\(cam\.clone\(\)/);
     const setTarget = w.indexOf("st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));");

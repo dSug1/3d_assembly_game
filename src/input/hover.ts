@@ -417,10 +417,41 @@ export const SLIDE_ORBIT_CLAMP_RAD = Math.PI / 4;
 export interface SlideOrbit {
   readonly a: readonly [number, number];
   readonly lim: readonly [number, number];
+  /** ⭐ (2026-11-01) a horizontal hosting face: the angles are a YAW and a PITCH (`SlideTop`); absent, the two angles off the normal */
+  readonly top?: SlideTop | null;
 }
-/** ⭐ The limited orbit begun where the camera is (`toCam`, from the target), in the face's frame (`n`, `t1`, `t2`). */
-export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3): SlideOrbit {
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when the piece is sliding on horizontal surface, the delta position can send the scene spinning a lot"* → *"option A"*) —
+ * **OVER A HORIZONTAL FACE, THE ORBIT'S OWN YAW AND PITCH**: a hosting face within 45° of level (`SLIDE_TOP_COS`, gravity's snap — a top or a bottom) turns
+ * the limited orbit as the orbit does: `a[0]` a YAW about the face's normal from the heading the camera had at the latch (`h0`, toward the camera, laid
+ * on the face; `s0` its right), clamped at `SLIDE_ORBIT_CLAMP_RAD` each way; `a[1]` the PITCH over the face, between the isometric corner's height
+ * (`SLIDE_TOP_CORNER_RAD`, 35.26°) and the orbit's ceiling (`SLIDE_TOP_MAX_RAD`, 85°) — a start outside keeps its own limit, tightened as it turns in.
+ * ⛔ The two angles off the normal: begun near straight above (the orbit's 85° pitch), the slide carried the camera over or round the top, where the
+ * upright up (`uprightBlend`) has no direction to hold — a few millimetres turned the picture up to half a turn. Now the picture turns only by the yaw.
+ */
+export const SLIDE_TOP_COS = Math.SQRT1_2;
+export const SLIDE_TOP_CORNER_RAD = Math.asin(1 / Math.sqrt(3));
+export const SLIDE_TOP_MAX_RAD = (85 * Math.PI) / 180;
+export interface SlideTop {
+  readonly h0: Vec3;
+  readonly s0: Vec3;
+  readonly lo: number;
+  readonly hi: number;
+}
+/** ⭐ The limited orbit begun where the camera is (`toCam`, from the target), in the face's frame (`n`, `t1`, `t2`); a horizontal face (`up` the world's): by yaw and pitch. */
+export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3, up: Vec3 = [0, 1, 0]): SlideOrbit {
   const c = unit(toCam) ?? n;
+  if (Math.abs(dot(n, up)) >= SLIDE_TOP_COS) {
+    const k = dot(c, n);
+    const hc: Vec3 = [c[0] - k * n[0], c[1] - k * n[1], c[2] - k * n[2]];
+    // straight above: the heading toward the screen's bottom laid on the face (t2 over a top, −t2 under a bottom)
+    const sg = dot(n, up) > 0 ? 1 : -1;
+    const h0 = unit(hc) ?? ([t2[0] * sg, t2[1] * sg, t2[2] * sg] as Vec3);
+    const kt = dot(t1, h0);
+    const s0 = unit([t1[0] - kt * h0[0], t1[1] - kt * h0[1], t1[2] - kt * h0[2]]) ?? unit(cross(h0, n)) ?? t1;
+    const p = Math.atan2(k, Math.hypot(hc[0], hc[1], hc[2]));
+    return { a: [0, p], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD], top: { h0, s0, lo: Math.min(SLIDE_TOP_CORNER_RAD, p), hi: Math.max(SLIDE_TOP_MAX_RAD, p) } };
+  }
   const cn = Math.max(1e-3, dot(c, n));
   const a: [number, number] = [Math.atan2(dot(c, t1), cn), Math.atan2(dot(c, t2), cn)];
   return { a, lim: [Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[0])), Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[1]))] };
@@ -433,6 +464,12 @@ export function slideOrbitStep(o: SlideOrbit, d: readonly [number, number]): Sli
     return [a, Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.min(lim, Math.abs(a)))];
   };
   const [a0, l0] = one(0);
+  const t = o.top ?? null;
+  if (t !== null) {
+    // ⭐ the pitch between its two limits, each tightened toward the corner / the ceiling as it turns in
+    const p = Math.min(t.hi, Math.max(t.lo, o.a[1] + d[1]));
+    return { a: [a0, p], lim: [l0, o.lim[1]], top: { ...t, lo: Math.min(SLIDE_TOP_CORNER_RAD, Math.max(t.lo, p)), hi: Math.max(SLIDE_TOP_MAX_RAD, Math.min(t.hi, p)) } };
+  }
   const [a1, l1] = one(1);
   return { a: [a0, a1], lim: [l0, l1] };
 }
@@ -448,6 +485,84 @@ export function slideOrbitTurn(moved: Vec3, t1: Vec3, t2: Vec3, travelMm: number
   if (m === null || !(travelMm > 0)) return [0, 0];
   const k = (travelMm * degPerMm * Math.PI) / 180;
   return [k * dot(m, t1), k * dot(m, t2)];
+}
+/** ⭐ (2026-11-01) The heading at yaw `y` over a horizontal face (toward the camera, laid on the face) and its right. */
+function topHeading(t: SlideTop, y: number): { h: Vec3; s: Vec3 } {
+  const c = Math.cos(y);
+  const si = Math.sin(y);
+  return {
+    h: [c * t.h0[0] + si * t.s0[0], c * t.h0[1] + si * t.s0[1], c * t.h0[2] + si * t.s0[2]],
+    s: [c * t.s0[0] - si * t.h0[0], c * t.s0[1] - si * t.h0[1], c * t.s0[2] - si * t.h0[2]],
+  };
+}
+/** ⭐ The camera's direction from the target for the orbit's angles `a` — by yaw and pitch over a horizontal face (`o.top`), else `slideOrbitDir`. */
+export function slideOrbitDirOf(o: SlideOrbit, n: Vec3, t1: Vec3, t2: Vec3, a: readonly [number, number]): Vec3 {
+  const t = o.top ?? null;
+  if (t === null) return slideOrbitDir(n, t1, t2, a);
+  const { h } = topHeading(t, a[0]);
+  const cp = Math.cos(a[1]);
+  const sp = Math.sin(a[1]);
+  return unit([sp * n[0] + cp * h[0], sp * n[1] + cp * h[1], sp * n[2] + cp * h[2]]) ?? n;
+}
+/**
+ * ⭐ The turn for a slide step (`slideOrbitTurn`'s) — over a horizontal face in the camera's frame of the moment, as the orbit's: slid along the heading's
+ * right, the yaw round that way; slid toward the camera, the pitch DOWN (the camera goes the way the piece went, lower toward the corner); away, up.
+ */
+export function slideOrbitTurnOf(o: SlideOrbit, moved: Vec3, t1: Vec3, t2: Vec3, travelMm: number, degPerMm: number): [number, number] {
+  const t = o.top ?? null;
+  if (t === null) return slideOrbitTurn(moved, t1, t2, travelMm, degPerMm);
+  const m = unit(moved);
+  if (m === null || !(travelMm > 0)) return [0, 0];
+  const k = (travelMm * degPerMm * Math.PI) / 180;
+  const { h, s } = topHeading(t, o.a[0]);
+  return [k * dot(m, s), -k * dot(m, h)];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when I move the piece away from the hosting face after sliding, most of the times there are big travel of the piece
+ * outside the screen and then the piece catch up with the camera: why is that? propose a fix (in case the hosting face is horizontal, vertical, angled,
+ * etc.)"*) — **THE WAY OUT FOLLOWS THE PIECE**: once the slide is off, the slide view's target (where its camera looks, and what it turns about) is the
+ * PIECE as drawn, with the offset it had from it at the slide's end fading (`tauMs`) — so whatever the face, the piece stays where the camera looks
+ * while the view turns back to the orbit's. ⛔ The target stayed where the slide left it: the approach carried the piece out along the ORBIT's
+ * direction, up to 45° (the limited orbit; 55° the corner before it) off the view's, and its camera kept its distance growing behind it — the piece
+ * crossed the screen to its edge in 0.35 s (measured, the painting's face) before the 500 ms blend brought the camera round behind it.
+ */
+export function slideExitTarget(piece: Vec3, offAtEnd: Vec3, sinceMs: number, tauMs: number): Vec3 {
+  const f = tauMs > 0 ? Math.exp(-Math.max(0, sinceMs) / tauMs) : 0;
+  return [piece[0] + offAtEnd[0] * f, piece[1] + offAtEnd[1] * f, piece[2] + offAtEnd[2] * f];
+}
+
+/**
+ * ⭐⭐ (2026-11-01, the owner: *"sometimes, the slide is stuck: the contours are highlighted but delta position does not slide the piece"* → *"a to c"*) —
+ * **c. A BLOCKED SLIDE GOES ALONG WHAT BLOCKS IT**: the slide step asked (`ask`, the plane's coordinates) pushing into the contact (its normal in the
+ * plane, `nIn`) keeps its part ALONG it — `null` when it pushes nowhere into it, or squarely (the part along it under `SLIDE_ALONG_MIN` of the step).
+ * ⛔ The solver keeps a coordinate's sense (no shake on the orbit's ring), so a drag into a part's CORNER slanted to both coordinates moved nothing
+ * (measured: a corner normal (−0.6, −0.6) in the plane, the step (+4.9, +6.0) mm — 0 mm).
+ */
+export const SLIDE_ALONG_MIN = 0.1;
+export function slideAlong(ask: readonly [number, number], nIn: readonly [number, number]): [number, number] | null {
+  const nl = Math.hypot(nIn[0], nIn[1]);
+  const al = Math.hypot(ask[0], ask[1]);
+  if (!(nl > 1e-9) || !(al > 1e-12)) return null;
+  const nx = nIn[0] / nl;
+  const ny = nIn[1] / nl;
+  const into = ask[0] * nx + ask[1] * ny;
+  if (!(into < 0)) return null;
+  const t: [number, number] = [ask[0] - into * nx, ask[1] - into * ny];
+  return Math.hypot(t[0], t[1]) >= SLIDE_ALONG_MIN * al ? t : null;
+}
+/** ⭐⭐ (2026-11-01, b) **THE BLOCKED SLIDE SAYS WHY** on the HUD's `last` line — the part it pushes into (⛔ the press's own line stood: nothing said it was blocked). */
+export function slideBlockedVerdict(who: string | null): string {
+  return `slide: blocked by ${who ?? "a part"} — drag along it or away from it`;
+}
+
+/**
+ * ⭐⭐ (2026-11-01, the owner: *"hide the gizmo when contours are highlighted and during sliding: the gizmo shall reappear when the piece is taken away from
+ * the hosting face"*) — the yellow gizmo HIDDEN while the contours are lit (`ready`) or the slide is on (`on`); it comes back with the contours' going out
+ * (the piece beyond the reach of a face).
+ */
+export function gizmoHiddenBySlide(ready: boolean, on: boolean): boolean {
+  return ready || on;
 }
 
 /**

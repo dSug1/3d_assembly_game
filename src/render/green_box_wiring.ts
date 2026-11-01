@@ -45,7 +45,7 @@ import { UNTURNED, rigYawToward } from "../input/orbit_rig";
 import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
 /** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
 const HOVER_FADE_QUERIES = 8;
-import { modelLag, orbitFrameUnderHover, uprightBlend } from "../input/hover";
+import { gizmoHiddenBySlide, modelLag, orbitFrameUnderHover, uprightBlend } from "../input/hover";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
 import { orbitFrame, relocationKey, slideProbeFree, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
@@ -886,7 +886,9 @@ export function pinkRingFrame(st: SceneState): void {
   const ring = st.pinkRing;
   if (ring === null) return;
   // ⭐ (2026-10-11, the owner: *"add a slider to hide the pink gizmo"*) hidden by its slider
-  if (st.cfg.pinkGizmoVisible !== 1) {
+  // ⭐⭐ (2026-11-01, the owner: *"hide the gizmo when contours are highlighted and during sliding: the gizmo shall reappear when the piece is taken away from
+  // the hosting face"*) — and while the contours are lit or the slide is on (`gizmoHiddenBySlide`)
+  if (st.cfg.pinkGizmoVisible !== 1 || gizmoHiddenBySlide(st.hoverReady !== null, st.hover !== null)) {
     ring.isVisible = false;
     return;
   }
@@ -1406,6 +1408,7 @@ export function pieceSolverEnv(st: SceneState, anchorOf: (q: OrbitQ) => Vec3 = (
     anchor: anchorOf,
     gap: (q) => at(q).gapM,
     secondGap: (q) => at(q).secondGapM,
+    blocker: (q) => at(q).blocker,
     normal: (q) => {
       const m = at(q);
       return m.blocker === null ? null : contactNormal(m.world, b.name, m.blocker, setup);
