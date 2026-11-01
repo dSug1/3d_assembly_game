@@ -2188,3 +2188,25 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   target — is shifted by the drawn piece's lag behind its solved place (`hoverDraw`), so the camera follows the piece AS DRAWN. Measured, the same slide:
   the assembly **1.0–1.3 px** a frame, steady; the piece still on the screen (0.00 px). The sliders now shape the whole motion.
 * Vectors (`tests/hover.test.ts` + 1, red on the previous build). ⛔ No device close. 2154 vectors.
+
+### ⭐⭐⭐ THE WAY OUT FROM THE SLIDE CAMERA ITSELF — no second, curved move (2026-11-01; `orbitMode` 0)
+
+> *"when I move away the piece after slide, the piece goes towards the camera first, then there is a later movement of the piece on the screen due to the
+> camera taking back its offset position. This is particularly evident if the hosting face is horizontal, but it also happens with a vertical hosting
+> face. Can you propose something"* → *"build A"* (A: the orbit's camera landed where the slide camera already is) — the owner.
+
+* ⛔ **Why**: the third pass re-based the PIECE's direction onto the slide view's; the orbit's camera is not on that line — it is the piece's direction
+  turned by the camera's offsets (`offsetFrame`: `cameraYawOffsetDeg`, `cameraPitchOffsetDeg`) — so once the slide view's time blend (500 ms) ran out, the
+  camera went to its own place: a second move, after the piece's. And near a face the orbit's direction is held in the lock's cone about the GIZMO's face
+  (80°, only ever tightened): a slide on a top with the gizmo on a side (measured: the gizmo's face the painting's front, the slide on a top) had its
+  new direction clamped — the camera off the slide's view after all, most of all over a horizontal face.
+* ⭐ **A — built** (`orbitForCameraDir` in `input/assembly_orbit.ts`, `slideWayOutRebase`): at the way out the orbit's yaw and pitch are SOLVED so that its
+  CAMERA — the offsets included — looks along the slide view's direction (a fixed point on the two angles; exact to 1e-6 rad in the vectors, the yaw kept
+  nearest the orbit's own); and the lock's cone is opened to the new direction. Nothing is left for the camera to take back: the piece leaves on the
+  orbit's line, a few degrees off the view, so it drifts on the screen in one straight run WITH the drag. `slideWayOutQ` (the piece's direction) deleted.
+  Measured (the painting's face, A + drag): the piece's screen path a straight line driven by the approach (249,329 → 155,453), 8 px of settle after the
+  drag; over a top the same.
+* ⚠ **Seen on the way, not changed**: the approach OUT is never checked against the parts (`approachMoveTaken` checks only a step IN) — leaving a top
+  under `Piece44`'s overhang, straight up toward the camera, ran the piece into it (gap 0.00 mm) and the solver's relocation pulled it back down: a jump.
+  Rare (an overhang above the slide), owed a check.
+* Vectors (`tests/hover.test.ts`: the way out's restated — red on the previous build). ⛔ No device close. 2154 vectors.

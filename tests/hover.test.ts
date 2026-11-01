@@ -1381,10 +1381,10 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(body).toContain("st.cameraOrbit = null;");
     expect(body).toContain("st.cameraLagged = null;");
   });
-  it("⭐⭐⭐ THE WAY OUT GOES ON FROM THE SLIDE VIEW (*\"build A\"*): the orbit's yaw and pitch re-based onto the slide view's direction — any face", async () => {
+  it("⭐⭐⭐ THE WAY OUT GOES ON FROM THE SLIDE VIEW (*\"build A\"*, twice): the orbit whose CAMERA — its offsets included — looks along the slide view's direction; any face", async () => {
     const H = await import("../src/input/hover");
-    const { orbitDir } = await import("../src/input/assembly_orbit");
-    expect(H.slideWayOutQ).toBeDefined(); // ⛔ the old: the orbit kept the angles of the approach in
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.orbitForCameraDir).toBeDefined(); // ⛔ the old: the PIECE's direction on the slide's — the camera then swung to its offsets (a second, curved move)
     const dirs: [number, number, number][] = [
       [0.3, 0.2, -0.93], // a vertical face, the camera a little above
       [0.42, 0.82, -0.39], // a top, from the isometric corner up
@@ -1392,21 +1392,26 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
       [-0.6, -0.5, 0.62], // under a bottom face
       [0.7, 0.4, 0.59], // a slanted face
     ];
-    for (const d of dirs) {
-      const l = Math.hypot(...d);
-      const t = H.slideWayOutQ(d, 0)!;
-      const u = orbitDir(t.yaw, t.v);
-      for (let k = 0; k < 3; k++) expect(u[k]).toBeCloseTo(d[k]! / l, 9); // the piece leaves toward the camera
+    for (const [oy, op] of [[2.5, 2], [10, -6], [0, 0]] as const) {
+      const ry = (oy * Math.PI) / 180, rp = (op * Math.PI) / 180;
+      for (const d of dirs) {
+        const l = Math.hypot(...d);
+        if (Math.abs(op) > 3 && Math.abs(d[1] / l) > 0.95) continue; // a camera 6° below the piece cannot look from 85° up: the piece would be past the zenith
+        const t = A.orbitForCameraDir(d, 0, ry, rp)!;
+        const cam = A.offsetFrame(A.orbitDir(t.yaw, t.v), t.yaw, ry, rp).dir;
+        for (let k = 0; k < 3; k++) expect(cam[k]).toBeCloseTo(d[k]! / l, 6); // the orbit's camera where the slide's is: nothing to take back
+      }
     }
     // the yaw kept nearest the orbit's own (no turn of 2π for the eased orbit to unwind)
-    expect(H.slideWayOutQ([1, 0, 0.01], 4 * Math.PI)!.yaw).toBeCloseTo(4 * Math.PI + Math.atan2(0.01, 1), 12);
-    expect(H.slideWayOutQ([0, 0, 0], 1)).toBeNull();
+    expect(A.orbitForCameraDir([1, 0, 0.01], 4 * Math.PI, 0, 0)!.yaw).toBeCloseTo(4 * Math.PI + Math.atan2(0.01, 1), 9);
+    expect(A.orbitForCameraDir([0, 0, 0], 1, 0, 0)).toBeNull();
     expect(H.SLIDE_WAY_OUT_MIN_RAD).toBeCloseTo(Math.PI / 360, 15);
-    // wired: the approach's step OUT, while the slide is on, re-bases the orbit — the piece's place kept by its own offset
+    // wired: the approach's step OUT, while the slide is on, re-bases the orbit — the piece's place kept by its own offset, the lock's cone opened to it
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (want > a0) slideWayOutRebase(st);");
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const t = slideWayOutQ(hv.iso, q.yaw);");
+    expect(h).toContain("const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
+    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };");
     expect(h).toContain("const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];");
     expect(h).toContain("st.orbit.reset(nq.yaw, nq.v);");
     // ⛔ the camera's target no longer follows the piece on the way out (*"revert the change of the camera looking at the piece"*)

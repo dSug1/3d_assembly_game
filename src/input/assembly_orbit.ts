@@ -215,5 +215,35 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   return { dir: qRotate(t, d1), up: qRotate(t, u1) };
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when I move away the piece after slide, the piece goes towards the camera first, then there is a later movement of the
+ * piece on the screen due to the camera taking back its offset position"* → *"build A"*) — **THE ORBIT WHOSE CAMERA LOOKS ALONG `want`**: the yaw and pitch
+ * whose camera direction — the piece's direction turned by the camera's offsets (`offsetFrame`) — is `want` (unit, from what it looks at to the camera);
+ * the yaw kept nearest `yaw0`. Solved by fixed-point on the two angles (the offsets are a near-rigid turn: a few steps); the best found when it cannot
+ * meet it (straight above). `null` for no direction.
+ */
+export function orbitForCameraDir(want: Vec3, yaw0: number, offYawRad: number, offPitchRad: number): { yaw: number; v: number } | null {
+  const w = normalize(want);
+  if (w === null) return null;
+  const LIM = Math.PI / 2 - 1e-4;
+  const angles = (d: Vec3): { yaw: number; p: number } => ({ yaw: Math.atan2(d[2], d[0]), p: Math.asin(Math.max(-1, Math.min(1, d[1]))) });
+  const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+  const aw = angles(w);
+  const flat = Math.hypot(w[0], w[2]) > 1e-9;
+  let yaw = yaw0 + (flat ? wrap(aw.yaw - yaw0) : 0);
+  let p = aw.p;
+  let best = { yaw, p, err: Infinity };
+  for (let i = 0; i < 40; i++) {
+    const d = offsetFrame(orbitDir(yaw, vOfPitch(p)), yaw, offYawRad, offPitchRad).dir;
+    const err = Math.acos(Math.max(-1, Math.min(1, dot(d, w))));
+    if (err < best.err) best = { yaw, p, err };
+    if (err < 1e-9) break;
+    const ad = angles(d);
+    if (flat) yaw += wrap(aw.yaw - ad.yaw);
+    p = Math.max(-LIM, Math.min(LIM, p + (aw.p - ad.p)));
+  }
+  return { yaw: best.yaw, v: vOfPitch(best.p) };
+}
+
 // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
 // hull now (`input/section_hull.ts`, with `faceTurnedAway` and the drawn sections' samples).

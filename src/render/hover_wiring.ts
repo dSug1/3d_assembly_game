@@ -68,13 +68,13 @@ import {
 } from "../input/hover";
 import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
-import { orbitDir } from "../input/assembly_orbit";
+import { angleTo, orbitDir, orbitForCameraDir } from "../input/assembly_orbit";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideCameraShift, slideOrbitDirOf, slideWayOutQ, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
+import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 
@@ -560,7 +560,7 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
 
 /**
  * ⭐⭐⭐ (2026-11-01, *"build A"*) THE WAY OUT GOES ON FROM THE SLIDE VIEW — called by the approach's step OUT while the slide is on: the orbit's yaw and
- * pitch re-based onto the slide view's direction (`slideWayOutQ`), the piece's place unchanged (the curve's difference taken into its own offset, which
+ * pitch re-based so the orbit's CAMERA stands where the slide view's is (`orbitForCameraDir`), the piece's place unchanged (the curve's difference taken into its own offset, which
  * ways in with the approach's travel); the gizmo where the slide left it. ⛔ The orbit kept its angles from the approach in: the piece flew back to
  * that curve.
  */
@@ -568,12 +568,18 @@ export function slideWayOutRebase(st: SceneState): void {
   const hv = st.hoverView;
   const q = st.pieceQ;
   if (!slideModeOn(st) || st.hover === null || hv === null || q === null) return;
-  const t = slideWayOutQ(hv.iso, q.yaw);
+  // ⭐⭐⭐ (2026-11-01, *"build A"*) the orbit whose CAMERA — its offsets included — stands where the slide's is (`orbitForCameraDir`): nothing for the camera
+  // to take back after the blend (⛔ the piece's direction on the slide's: the camera then swung to its offset — a second, curved move on the screen)
+  const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);
   if (t === null) return;
   const u0 = orbitDir(q.yaw, q.v);
   const u1 = orbitDir(t.yaw, t.v);
   if (Math.acos(Math.min(1, dotv(u0, u1))) <= SLIDE_WAY_OUT_MIN_RAD) return;
   const nq: OrbitQ = { ...q, yaw: t.yaw, v: t.v };
+  // ⭐⭐ (2026-11-01) the lock's cone opened to the new direction (`lockCone` only tightens): ⛔ clamped into it, the piece and the camera were turned off the
+  // slide's view after all — the camera's swing back (a slide on a top, the gizmo's face a side's)
+  const lk = st.asmLock;
+  if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };
   const before = ringAnchorAt(st, q);
   const after = ringAnchorAt(st, nq);
   const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];

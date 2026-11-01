@@ -526,24 +526,7 @@ export function slideOrbitTurnOf(o: SlideOrbit, moved: Vec3, t1: Vec3, t2: Vec3,
   return [k * dot(m, s), -k * dot(m, h)];
 }
 
-/**
- * ⭐⭐⭐ (2026-11-01, the owner: *"when going back to orbit mode from the slide and taking the piece away from the hosting face, the piece usually flies to
- * catch back the orbit 2D curve it had when it first approached the hosting face … Can you propose something to simplify"* → *"build A"*) — **THE WAY
- * OUT GOES ON FROM THE SLIDE VIEW**: at the approach's first step out of a slide, the orbit's yaw and pitch become the slide view's direction (`iso`,
- * from what it looks at to its camera), so the piece leaves toward the camera and the orbit's camera stands where the slide's is. ⛔ The orbit kept
- * the yaw and pitch of the approach IN: the piece went out along that old direction (up to 80° off the face's normal) and the camera swung back to
- * the old orbit place — the farther the slide, the farther the flight. The yaw kept nearest `yaw0` (no turn of 2π); `null`: no direction.
- */
-export function slideWayOutQ(iso: Vec3, yaw0: number): { yaw: number; v: number } | null {
-  const l = Math.hypot(iso[0], iso[1], iso[2]);
-  if (!(l > 1e-9)) return null;
-  const y = Math.max(-1, Math.min(1, iso[1] / l));
-  const h = Math.hypot(iso[0], iso[2]);
-  const yawA = h > 1e-9 ? Math.atan2(iso[2], iso[0]) : yaw0;
-  const yaw = yaw0 + Math.atan2(Math.sin(yawA - yaw0), Math.cos(yawA - yaw0));
-  // the orbit's `v`: −90° at 0, level at ½, +90° at 1 (`vOfPitch`)
-  return { yaw, v: Math.min(1, Math.max(0, (Math.asin(y) / (Math.PI / 2) + 1) / 2)) };
-}
+// ⭐⭐⭐ (2026-11-01) the way out's orbit — the one whose CAMERA stands where the slide's is — is `orbitForCameraDir` (`input/assembly_orbit.ts`; ⛔ `slideWayOutQ`, the piece's direction on the slide's, deleted: the camera then swung to its offsets)
 /**
  * ⭐⭐⭐ (2026-11-01, the owner: *"I can see a succession of very rapid and small jumps when I slide with my mouse. I don't seem to be able to smooth by
  * changing the sliders in piece sliding menu"*) — **THE SLIDE CAMERA RIDES THE PIECE AS DRAWN**: the shift of the whole camera rig (its place, its look,
