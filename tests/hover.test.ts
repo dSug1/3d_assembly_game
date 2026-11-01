@@ -1360,6 +1360,18 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(h).toContain("if ((a === null || b === null) && slideModeOn(st)) {");
     expect(h).toContain("b = at(cx + h.finger[0] - from[0], cy + h.finger[1] - from[1]);");
   });
+  it("⭐⭐⭐ THE SLIDE CAMERA RIDES THE PIECE AS DRAWN (the owner: *\"a succession of very rapid and small jumps when I slide with my mouse\"*): the rig shifted by the drawn lag — the assembly no longer stutters 0.7 / 1.8 px", async () => {
+    const H = await import("../src/input/hover");
+    expect(H.slideCameraShift).toBeDefined(); // ⛔ the old: the camera on the SOLVED slide (1.7 / 4.0 mm on alternate frames, measured)
+    expect(H.slideCameraShift(true, true, [0.001, -0.002, 0.0005])).toEqual([0.001, -0.002, 0.0005]);
+    expect(H.slideCameraShift(false, true, [0.001, 0, 0])).toEqual([0, 0, 0]); // the hover outside the slide mode: its own view
+    expect(H.slideCameraShift(true, false, [0.001, 0, 0])).toEqual([0, 0, 0]); // the gizmo not riding: the view does not ride either
+    expect(H.slideCameraShift(true, true, null)).toEqual([0, 0, 0]);
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const shift = slideCameraShift(slideModeOn(st), st.hoverFollow?.gizmo === true, st.hoverDraw);");
+    expect(h).toContain("const camAt = add(camAt0, shift);");
+    expect(h).toContain("let target = add(hv.target, shift);");
+  });
   it("⭐⭐⭐ THE WAY OUT HAS NO ARC (the owner: *\"for a short moment the piece flies away from the camera screen … makes some wide curve before catching back the 2D curve\"*): the eye's spring and the camera's lag re-based with the orbit", () => {
     const h = code("render/hover_wiring.ts");
     const at = h.indexOf("export function slideWayOutRebase(");

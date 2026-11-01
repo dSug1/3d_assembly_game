@@ -74,7 +74,7 @@ import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideOrbitDirOf, slideWayOutQ, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
+import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideCameraShift, slideOrbitDirOf, slideWayOutQ, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 
@@ -835,7 +835,11 @@ export function hoverOffsetFrame(st: SceneState, dtMs: number): void {
  * is (`hoverCameraSwing`), its distance kept — at progress 0 exactly the rings' camera. A retarget (another face) turns the corner from the
  * old one over `HOVER_VIEW_RETARGET_MS`.
  */
-export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { camAt: Vec3; lookAt: Vec3; w: number } {
+export function hoverCameraBlend(st: SceneState, camAt0: Vec3, lookAt0: Vec3): { camAt: Vec3; lookAt: Vec3; w: number } {
+  // ⭐⭐⭐ (2026-11-01, *"a succession of very rapid and small jumps when I slide with my mouse"*) the whole rig rides the piece AS DRAWN (`slideCameraShift`)
+  const shift = slideCameraShift(slideModeOn(st), st.hoverFollow?.gizmo === true, st.hoverDraw);
+  const camAt = add(camAt0, shift);
+  const lookAt = add(lookAt0, shift);
   const hv = st.hoverView;
   if (hv === null) return { camAt, lookAt, w: 0 };
   // ⭐⭐ (2026-10-14, the owner: *"When the piece hovers in desktop, the slide is not smooth but jittery. Also, when toggling back to orbit, the initial movement of the piece is jittery (while it is still close to the hosting face) and comes back very smooth when the piece is far from the hosting face in orbit."*) — the share SHOWN eases after the finger's (critically damped, the orbit's τ): ⛔ it stepped at each
@@ -858,7 +862,7 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   const w = hoverViewWeight(hv.shown);
   if (w <= 0) return { camAt, lookAt, w: 0 };
   let dir = shownDir(hv);
-  let target = hv.target;
+  let target = add(hv.target, shift);
   if (hv.from !== null) {
     const s = retargetShare(performance.now() - hv.from.t0);
     if (s >= 1) hv.from = null;

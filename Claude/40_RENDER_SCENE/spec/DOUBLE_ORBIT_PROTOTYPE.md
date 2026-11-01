@@ -2173,3 +2173,18 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   `cameraLagged` — as the way out round a piece already did) — the piece's place is kept by its own offset, so nothing jumps. The same fast drag: the
   first frame where it was (x 249, y 329), then a straight line toward the camera; the same at half the speed.
 * Vectors (`tests/hover.test.ts` + 1, red on the previous build). ⛔ No device close. 2153 vectors.
+
+### ⭐⭐⭐ THE SLIDE CAMERA RIDES THE PIECE AS DRAWN — no stutter with a mouse (2026-11-01; `orbitMode` 0)
+
+> *"I am not satisfied with the piece movement when it slides: I can see a succession of very rapid and small jumps when I slide with my mouse. I don't
+> seem to be able to smooth by changing the sliders in piece sliding menu. check why the piece movement is not smoothed"* — the owner.
+
+* ⛔ **Why**: the piece is DRAWN smoothed — its follower (`hoverInertiaMs`, `hoverDampingRatio`, `hoverLeadMs`: the sliders) eases it after the solved
+  place — but the slide view's camera rode the SOLVED slide (`hv.target` = where the slide began + the solved slide; the orbit's centre the same). A
+  mouse's events beat against the frames (125 Hz against the display's rate), so the solved place advanced unevenly: measured, a steady mouse slide
+  moved the camera's target **1.7 then 4.0 mm on alternate frames** while the drawn piece moved ~2.8 mm each — the piece smooth, the WHOLE ASSEMBLY behind
+  it stuttering **0.7 / 1.8 px** a frame. The sliders shape the piece's follower only: they could not reach it.
+* ⭐ **Fixed** (`slideCameraShift`, `hoverCameraBlend`): while the slide rides the gizmo, the whole camera rig — its place, its look, the slide view's
+  target — is shifted by the drawn piece's lag behind its solved place (`hoverDraw`), so the camera follows the piece AS DRAWN. Measured, the same slide:
+  the assembly **1.0–1.3 px** a frame, steady; the piece still on the screen (0.00 px). The sliders now shape the whole motion.
+* Vectors (`tests/hover.test.ts` + 1, red on the previous build). ⛔ No device close. 2154 vectors.
