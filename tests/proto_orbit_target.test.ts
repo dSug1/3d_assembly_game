@@ -50,7 +50,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
     expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: st.idOf.get(mesh) ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); "); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
-    expect(p).toContain("if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);");
+    expect(p).toContain("if (to !== null && st.hover === null) retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⭐ (2026-11-01) not in the slide mode
     expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
   });
 

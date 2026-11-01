@@ -117,7 +117,8 @@ describe("⭐ wired", () => {
   it("⭐ the gizmo moved (slider 1) or the piece alone (0); the step solved by the orbit's clearance rule; the camera blended", () => {
     const h = code("render/hover_wiring.ts");
     // ⭐ applied each frame from the FOLLOWED offset (the part translation's follower)
-    expect(h).toContain("if (hf.gizmo) { st.centreBlend.snapTo(add(hf.centre0, w)); syncCentre(st); } else st.hoverOffset = add(hf.offset0, w);");
+    expect(h).toContain("if (hf.gizmo) { st.centreBlend.snapTo(add(hf.centre0, slide)); syncCentre(st); st.hoverOffset = add(hf.offset0, settle);"); // ⭐ (2026-11-01) the settle the piece's own
+    expect(h).toContain("} else st.hoverOffset = add(hf.offset0, add(settle, slide));");
     expect(h).toContain("const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });");
     expect(code("render/green_box_wiring.ts")).toContain("const hb = hoverCameraBlend(st, camAt, lookAt);");
   });
@@ -294,7 +295,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt); st.pieceQueriesCarry += s.queries;");
     // ⭐ (the hover's second audit) the MODEL settled at once; the mesh drawn easing down
-    expect(h).toContain("applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));");
+    expect(h).toContain("applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM), [0, 0, 0]);");
     expect(h).toContain("const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));");
   });
   it("⭐⭐ B: the contact shadow — the resting face's outline laid on the hosting face's plane", async () => {
@@ -363,7 +364,7 @@ describe("⭐⭐⭐ the hover's audit (2026-10-14): the follower drawn only, wha
     expect(hoverEndsOn(false, false)).toBe(false);
     expect(hoverEndsOn(true, false)).toBe(true);
     expect(hoverEndsOn(false, true)).toBe(true);
-    expect(code("render/hover_wiring.ts")).toContain("if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced)) { hoverEndNow(st); return; }");
+    expect(code("render/hover_wiring.ts")).toContain("if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced, slideModeOn(st))) { hoverEndNow(st); return; }");
   });
   it("⭐⭐ D: a hover on another face retargets the view, eased over HOVER_VIEW_RETARGET_MS", async () => {
     const { hoverViewRetargets, retargetShare, HOVER_VIEW_RETARGET_MS } = await import("../src/input/hover");
@@ -862,7 +863,7 @@ describe("⭐⭐⭐ THE CENTRE BOUND (2026-10-15, the owner: *\"No bridging. The
   it("⭐⭐⭐ wired: the hover keeps the boundary it started with (`coplanarBoundary`, the outline's own), and its bound reads the resting face's CENTRE in it", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId)");
-    expect(h).toContain("const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v))); return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));");
+    expect(h).toContain("const p = add(origin, add(scale(h.e1, u), scale(h.e2, v))); return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));"); // ⭐ (2026-11-01) the origin carried by the approach
     expect(h).toContain("const segs = rectsBoundary(bd.rects);"); // the drawn outline from the same rectangles
     expect(h).not.toMatch(/overlapsTriangles\(poly, h\.n/); // ⛔ the overlap of the resting face's outline is no longer the bound
   });
@@ -911,7 +912,7 @@ describe("⭐⭐⭐ the audit of 2026-10-15 (Fable): the hover", () => {
     const s = code("render/scene_state.ts");
     const at = (k: string) => { const i = s.indexOf(k); expect(i).toBeGreaterThan(0); return i; }; // ⚠ the markers must exist (the source is whitespace-collapsed)
     const hover = s.slice(at(" hover: {"), at(" hoverPress:"));
-    expect(hover).toContain("pointerId: number;");
+    expect(hover).toContain("pointerId: number | null;"); // ⭐ (2026-11-01) the slide mode with no finger on it
     expect(hover).not.toMatch(/partId|centre0|offset0/);
     const follow = s.slice(at(" hoverFollow: {"), at(" hoverDraw:"));
     expect(follow).toContain("settleM: number;");
@@ -965,7 +966,7 @@ describe("⭐⭐⭐ the slide stops at the release (2026-10-16, the owner: *\"Af
     expect(rel).toContain("st.hoverFollow = null;");
     expect(rel).toContain("st.hoverDraw = null;");
     expect(rel).toContain("st.hoverSlid = true;");
-    expect(h).toContain("if (!hoverOffered(st.hoverSlid)) return refuse(");
+    expect(h).toContain("if (!slideModeOn(st) && !hoverOffered(st.hoverSlid)) return refuse("); // ⭐ (2026-11-01) the slide mode is not spent by a release
     const orbit = h.slice(h.indexOf("export function hoverOrbitStep"), h.indexOf("export function hoverOffsetFrame"));
     // ⛔⛔ (2026-10-16, the owner: *"It is not working: if I release the press on sliding, the sliding stay. If I press on empty afterwards, the sliding stays"*) —
     // the orbit's first step cleared the spent slide, and the piece, still against the face, re-latched at once (headless: the outline back 3 frames in)
@@ -1126,5 +1127,63 @@ describe("⭐⭐⭐ the slide view UPRIGHT — gravity down the screen (2026-10-
   it("⭐⭐ wired: the slide view's weight rolls the camera's up to upright (`hoverCameraBlend` gives it)", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);");
+  });
+});
+
+describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered directly if the contours highlight (no need to press the piece). A + dy or double finger continues to drive the approach so that the user can exit the sliding mode by moving away the piece"*)', () => {
+  it("⭐⭐ it LATCHES by itself once the contours light — armed, not placed, not on already", async () => {
+    const { slideLatches } = await import("../src/input/hover");
+    expect(slideLatches(true, true, false, false)).toBe(true);
+    expect(slideLatches(false, true, false, false)).toBe(false); // no contours
+    expect(slideLatches(true, false, false, false)).toBe(false); // left, not armed again
+    expect(slideLatches(true, true, true, false)).toBe(false); // the piece placed
+    expect(slideLatches(true, true, false, true)).toBe(false); // on already
+  });
+  it("⭐⭐ it is LEFT when the approach takes the resting face beyond the reach from the hosting face's plane — the contours' own test", async () => {
+    const { slideExits } = await import("../src/input/hover");
+    expect(slideExits(0.001, 0.02)).toBe(false); // settled
+    expect(slideExits(0.02, 0.02)).toBe(false); // at the reach: still lit
+    expect(slideExits(0.0201, 0.02)).toBe(true);
+  });
+  it("⭐⭐ armed again only by an approach step IN or an orbit drag — a coast out at the reach never re-latches it", async () => {
+    const { slideArmedAfter } = await import("../src/input/hover");
+    expect(slideArmedAfter(false, 0.01, 0)).toBe(false); // out
+    expect(slideArmedAfter(false, 0, 0)).toBe(false);
+    expect(slideArmedAfter(false, -0.001, 0)).toBe(true); // in (down is in)
+    expect(slideArmedAfter(false, 0, 0.5)).toBe(true); // an orbit drag
+    expect(slideArmedAfter(true, 0.01, 0)).toBe(true);
+  });
+  it("⭐⭐ a held second touch (the approach) no longer ends the slide in the slide mode — the capture still does", async () => {
+    const { hoverEndsOn } = await import("../src/input/hover");
+    expect(hoverEndsOn(true, false, true)).toBe(false);
+    expect(hoverEndsOn(false, true, true)).toBe(true);
+    expect(hoverEndsOn(true, false, false)).toBe(true); // the gizmo's 2D curve: as ever
+  });
+  it("⭐⭐ the camera BLENDED by time at the latch and at the exit — whole over SLIDE_VIEW_BLEND_MS, eased at both ends", async () => {
+    const { slideViewProgress, SLIDE_VIEW_BLEND_MS } = await import("../src/input/hover");
+    let p = 0;
+    for (let t = 0; t < SLIDE_VIEW_BLEND_MS / 2 - 1e-9; t += 10) p = slideViewProgress(p, 10, true);
+    expect(p).toBeCloseTo(0.5, 9);
+    for (let t = 0; t < SLIDE_VIEW_BLEND_MS; t += 10) p = slideViewProgress(p, 10, true);
+    expect(p).toBe(1);
+    p = slideViewProgress(p, SLIDE_VIEW_BLEND_MS / 4, false);
+    expect(p).toBeCloseTo(0.75, 9);
+    expect(hoverViewWeight(0.02)).toBeLessThan(0.02); // eased in: the shown weight starts slow
+  });
+  it("⭐⭐⭐ wired: the latch with no finger, the finger off on a held second touch or A, the exit by the approach; the gizmo rides the slide; the release keeps it on", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("if (!slideLatches(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false) || now - st.slideTryAt < READY_EVERY_MS) return;");
+    expect(h).toContain("if (hoverStart(st, null) === true) st.slideTryAt = 0;");
+    expect(h).toContain("if (h.pointerId !== null && (st.hold !== null || st.orbitShift)) slideDetach(st);");
+    expect(h).toContain("if (q !== null && slideExits(dotv(ringAnchorAt(st, q), h.n) - h.level, st.cfg.hoverApproachMm / 1000)) {");
+    expect(h).toContain("gizmo: slideModeOn(st) || st.cfg.hoverGizmoMove === 1");
+    expect(h).toContain("if (st.hover?.pointerId === pointerId && slideModeOn(st)) {");
+    expect(h).toContain("if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);");
+    expect(h).toContain("if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);");
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);");
+    expect(a).toContain("if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));");
+    // the coast before the slide's early return: a flick out leaves it
+    expect(a.indexOf("if (st.approachInertia.coasting) {")).toBeLessThan(a.indexOf("if (st.hover !== null) { const t = st.centreBlend.targetM;"));
   });
 });

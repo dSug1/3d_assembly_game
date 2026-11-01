@@ -354,8 +354,37 @@ export function hoverDrawLag(lagU: number, lagV: number, dirU: number, dirV: num
  * ⭐⭐ (2026-10-14, the hover's audit) — **WHAT ENDS A HOVER BESIDES THE LIFT**: a second touch HELD (its own gesture takes over — ⛔ the hover went on, the centre pinned
  * under it) or the piece CAPTURED onto its goal (the pull owns it — ⛔ the hover went on writing the gizmo).
  */
-export function hoverEndsOn(holdActive: boolean, placed: boolean): boolean {
-  return holdActive || placed;
+export function hoverEndsOn(holdActive: boolean, placed: boolean, slideMode = false): boolean {
+  // ⭐⭐⭐ (2026-11-01) in the SLIDE MODE a held second touch is the approach: it takes the finger off the slide, the mode stays on (`slideExits` ends it)
+  return placed || (holdActive && !slideMode);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"sliding is entered directly if the contours highlight (no need to press the piece). A + dy or double finger continues to drive the approach so that the user can exit the sliding mode by moving away the piece"*) — **THE SLIDE MODE** (around the assembly, `orbitMode` 0): the slide LATCHES by itself the moment the
+ * contours light (the resting face within `hoverApproachMm` of an anti-parallel part's face, over it — `hoverFaceContact`), the piece settled onto the face,
+ * no press; it stays on when a finger lifts (every one-finger drag slides); it is left only by the APPROACH taking the piece away — its resting face more
+ * than the reach from the face's plane. ⭐ Re-latched only once ARMED again — an approach step INWARD or an orbit step — so the approach's coast outward,
+ * hovering at the reach, cannot latch and unlatch it frame after frame.
+ */
+export function slideLatches(ready: boolean, armed: boolean, placed: boolean, on: boolean): boolean {
+  return ready && armed && !placed && !on;
+}
+/** ⭐ (2026-11-01) The slide mode left: the resting face's distance to the hosting face's plane (m) beyond the reach (m) — the contours' own test. */
+export function slideExits(planeGapM: number, reachM: number): boolean {
+  return planeGapM > reachM;
+}
+/** ⭐ (2026-11-01) Armed again (after the slide mode was left): an approach step inward (`approachTaken` < 0: down is in) or an orbit drag's travel. */
+export function slideArmedAfter(armed: boolean, approachTaken: number, orbitTravelMm: number): boolean {
+  return armed || approachTaken < 0 || orbitTravelMm > 0;
+}
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"blend the camera movements at entering or exiting the sliding mode - approach mode"*) — the slide view's share by TIME in
+ * the slide mode (the latch has no finger travel to read): toward 1 while it is on, back to 0 once it is off, whole over `SLIDE_VIEW_BLEND_MS`, shown
+ * eased (`hoverViewWeight`). ⛔ (10-14) by the slide drag's travel in and the orbit's out.
+ */
+export const SLIDE_VIEW_BLEND_MS = 500;
+export function slideViewProgress(progress: number, dtMs: number, on: boolean): number {
+  return hoverViewProgress(progress, dtMs, 1 / SLIDE_VIEW_BLEND_MS, on);
 }
 
 /**

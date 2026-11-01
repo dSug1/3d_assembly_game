@@ -680,6 +680,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.wayInDrawn = null;
     st.hoverSpent = null;
     st.hoverSlid = false;
+    st.slideArmed = true;
     st.hoverOffset = null;
     st.hoverWayIn = null;
     st.hoverView = null;

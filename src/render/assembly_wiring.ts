@@ -20,6 +20,8 @@ import { goalLocked } from "../input/goal_lock";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
+import { hoverWayInStep } from "./hover_wiring";
+import { slideArmedAfter } from "../input/hover";
 import type { Vec3 } from "../core/vec";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
@@ -298,6 +300,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   ensureAssembly(st);
   st.asmRayCache.clear();
   const a = st.asm!;
+  // ⭐ the approach's coast — ⭐⭐ (2026-11-01) under the slide mode too: a flick out leaves it
+  if (st.approachInertia.coasting) {
+    const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
+    approachMove(st, s.dV);
+  }
   if (st.hover !== null) {
     const t = st.centreBlend.targetM;
     st.asmLocked = true;
@@ -308,10 +315,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmGizmo = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
     return;
-  }
-  if (st.approachInertia.coasting) {
-    const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
-    approachMove(st, s.dV);
   }
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDir(q.yaw, q.v);
@@ -459,6 +462,13 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
  * (`pieceGapMm`), the largest free share found by halving. Returns the move taken.
  */
 export function approachMove(st: SceneState, da: number): number {
+  const taken = approachMoveTaken(st, da);
+  // ⭐⭐⭐ (2026-11-01) a step IN arms the slide mode again (`slideArmedAfter`) — a step out never: its coast cannot latch it at the reach
+  st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);
+  return taken;
+}
+
+function approachMoveTaken(st: SceneState, da: number): number {
   if (da === 0) return 0;
   const a0 = st.approach;
   const want = approachStep(a0, da, 1, st.cfg);
@@ -498,6 +508,8 @@ export function approachMove(st: SceneState, da: number): number {
 export function approachInput(st: SceneState, dyMm: number): void {
   const taken = approachMove(st, dyMm * orbitDvPerMm(st));
   st.approachInertia.record(performance.now(), 0, taken);
+  // ⭐ (2026-11-01) the slide mode left: the piece's own offset (the slide's settle) ways in by the approach's travel
+  if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));
   st.hudDirty = true;
 }
 

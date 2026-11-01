@@ -507,7 +507,12 @@ export interface SceneState {
   /** ⭐⭐ (2026-10-14, the HOVER) the hover in progress: its finger, the contact face's normal and its plane's axes, where it began (the piece's
    * anchor, the gizmo, the piece-only offset), the solved offset on the plane (m) and the part touched. */
   hover: {
-    pointerId: number;
+    /** ⭐⭐⭐ (2026-11-01) the finger sliding — `null` in the SLIDE MODE with no finger on it (the mode stays on; the next drag takes it) */
+    pointerId: number | null;
+    /** ⭐ (2026-11-01) the hosting face's plane (`n · p`), the slide mode's exit reads the resting face's distance to it (`slideExits`) */
+    level: number;
+    /** ⭐ (2026-11-01) the approach when the slide began: the solve's origin carried by the approach since (`hoverSolve`) */
+    approach0: number;
     n: import("../core/vec").Vec3;
     e1: import("../core/vec").Vec3;
     e2: import("../core/vec").Vec3;
@@ -532,6 +537,8 @@ export interface SceneState {
   hoverBand: { pointerId: number; band: import("../input").MotionTracker; sway: import("../input").SwayWatcher } | null;
   /** ⭐ (2026-10-14) the hover's drawn offset following the solved one (`u`, `v`) on the part translation's follower; the plane, the gizmo or piece. */
   hoverFollow: {
+    /** ⭐ (2026-11-01) the slide view's target when the slide began — the gizmo's slide carries it (`applyHoverModel`) */
+    view0: import("../core/vec").Vec3 | null;
     e1: import("../core/vec").Vec3;
     e2: import("../core/vec").Vec3;
     n: import("../core/vec").Vec3;
@@ -595,6 +602,10 @@ export interface SceneState {
   hoverSpent: number | null;
   /** ⭐ (2026-10-16) a slide just ended: no hover offered until the orbit moves the piece (`hoverOffered`). */
   hoverSlid: boolean;
+  /** ⭐⭐⭐ (2026-11-01) the slide mode may latch (`slideLatches`): false once left, armed again by an approach step inward or an orbit drag (`slideArmedAfter`) */
+  slideArmed: boolean;
+  /** ⭐ (2026-11-01) when the latch was last tried (ms) — at most every 100 ms while it is refused */
+  slideTryAt: number;
   /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
   hoverReadyWorld: object | null;
   hoverReadyReachMm: number;

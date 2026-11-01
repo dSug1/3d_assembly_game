@@ -72,6 +72,16 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    not built: below the waist the straight-in along the gizmo FACE'S NORMAL (not the orbit's direction) — (1)–(4) would go, leaving what physically
    covers the landing spot and the bottom face; and a sweep in the app (gizmo positions × an aligned resting face) to confirm the list
    → `DOUBLE_ORBIT_PROTOTYPE.md`, the section of 2026-10-29 "the slide's latch at the end of the approach".
+   ⚠ (2026-11-01) It weighs more now: the slide mode is entered ONLY by that latch — where it does not light, there is no slide at all.
+9. ⭐⭐⭐ **THE SLIDE MODE** (2026-11-01, item 30; ⛔ no device close). Measured in the app (`Scene_1`, the painting's front face, the resting face turned to
+   it): latched by itself at 7.2 mm (settled 6.2 mm), the slide view whole in 500 ms; touch and MOUSE drags on empty space slid the piece and the gizmo
+   (⭐ item 6's mouse limit does not hold in the slide mode); two fingers out left it at 20 mm, the gizmo kept where the slide left it, the back-out found
+   the carrier from there; A + drag back in latched again. ⚠ What it no longer has: the press on the piece as a choice — within 20 mm of an aligned
+   face the one-finger drag slides, it cannot orbit (the approach out first); ⚠ a tap on a placed part does not move the gizmo while it is on.
+30. ⭐⭐⭐ **THE SLIDE MODE (2026-11-01, `1.0.86-`; `orbitMode` 0 only)**: no press — the slide LATCHES by itself as soon as the contours light (the piece settled
+   onto the face); it stays on when the finger lifts, and every one-finger drag slides (on the piece or not, touch or mouse); a second finger or A + drag
+   is the approach, and taking the resting face beyond 20 mm from the face's plane leaves it; the camera blends in and out over 500 ms; the gizmo always
+   rides the slide, so the approach and the orbit go on from where it was left → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 29. ⭐ **No jump at the lock (2026-10-29)**: the lock's cone from where the piece is, tightened inward; the camera's heading the orbit's yaw → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 28. ⭐ **A slide is a way out (2026-10-29)**: while a slide is available, the blocked check tries one each way along the face — any free one and the red pop-up stays off; the sway always springs back (what stays is the hover view, left by the orbit's 12 mm); after a slide the orbit first brings the piece back to its ring place (the 2026-10-14 rule) → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 27. ⭐ **The gizmo's carrier on the section's hull (2026-10-29)**: dy slides it, clamped at the top and bottom centres (pitch ±90°), never into an edge turned away; dx keeps its height (a side) or its distance from the axis (a top); dropped onto the surface — always where the sections meet; a lock or a hover places it again in the yaw plane; the lines one mesh (no flicker); two overhangs in `Scene_1` → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.

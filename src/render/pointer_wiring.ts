@@ -21,6 +21,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
+import { slideArmedAfter } from "../input/hover";
 import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -144,7 +145,8 @@ export function installPointerHandler(st: SceneState): void {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
         // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
-        if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
+        // ⭐ (2026-11-01) not in the slide mode: the gizmo rides the slide
+        if (to !== null && st.hover === null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
       }
       // ⭐ prototype (green box), 2026-10-03: the green piece is no longer held once its finger lifts
       st.eventGaps.delete(e.pointerId);
@@ -1370,6 +1372,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+    // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
+    if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;
