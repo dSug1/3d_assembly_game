@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, orbitDir, pitchOfV, rayOffsets, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -23,6 +23,8 @@ import type { SceneState } from "./scene_state";
 import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import type { Vec3 } from "../core/vec";
+import { worldPlacementOf } from "../core/object_model";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -76,6 +78,23 @@ interface GizmoHit {
   readonly host: string | null;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-01) A pick on a placed part read on its MODEL pose (`unswayHit`) — ⛔ on the mesh as drawn, swayed by the orbit: the gizmo's face a few
+ * degrees off, kept, and the quads' turn laid the resting face on it (the slide never latched).
+ */
+function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal: Vec3 | null, localN: Vec3 | null = null): { point: Vec3; normal: Vec3 | null } {
+  const id = mesh === null ? undefined : st.idOf.get(mesh);
+  const pose = id === undefined ? null : worldPlacementOf(st.world, id);
+  if (mesh === null || pose === null) return { point, normal };
+  const p = mesh.absolutePosition;
+  const r = mesh.absoluteRotationQuaternion;
+  const at = unswayHit(point, normal, [p.x, p.y, p.z], [r.w, r.x, r.y, r.z], pose.position, pose.orientation);
+  // the normal from the mesh's own local facet (`modelNormal`): exact whatever the sway did between the pick and now
+  if (localN === null) return at;
+  const s = mesh.absoluteScaling;
+  return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };
+}
+
 /** ⭐ Where the ray from outside along `−u` toward the centre first meets a placed part — the outermost of the five (`rayOffsets`); `null`: nothing. */
 function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
   const a = st.asm!;
@@ -90,12 +109,17 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
       const id = st.idOf.get(m);
       return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();
     });
-    if (r?.hit && r.pickedPoint !== null && (best === null || r.distance < best.d)) {
-      // ⭐ the centre ray's own point (on the ray); a beside-ray only says how far out the surface is there
-      const along = r.distance;
-      const point: Vec3 = [a.centre[0] + u[0] * (out - along), a.centre[1] + u[1] * (out - along), a.centre[2] + u[2] * (out - along)];
+    if (r?.hit && r.pickedPoint !== null) {
+      // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose, not its swaying mesh (`modelHit`)
       const nn = r.getNormal(true);
-      best = { d: along, hit: { point, normal: nn ? [nn.x, nn.y, nn.z] : null, host: r.pickedMesh ? (st.idOf.get(r.pickedMesh) ?? null) : null } };
+      const ln = r.getNormal(false, false);
+      const m = modelHit(st, r.pickedMesh, [r.pickedPoint.x, r.pickedPoint.y, r.pickedPoint.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);
+      // ⭐ the centre ray's own point (on the ray); a beside-ray only says how far out the surface is there
+      const along = (from.x - m.point[0]) * u[0] + (from.y - m.point[1]) * u[1] + (from.z - m.point[2]) * u[2];
+      if (best === null || along < best.d) {
+        const point: Vec3 = [a.centre[0] + u[0] * (out - along), a.centre[1] + u[1] * (out - along), a.centre[2] + u[2] * (out - along)];
+        best = { d: along, hit: { point, normal: m.normal, host: r.pickedMesh ? (st.idOf.get(r.pickedMesh) ?? null) : null } };
+      }
     }
   }
   const hit = best?.hit ?? null;
@@ -133,7 +157,10 @@ function castRay(st: SceneState, r: SectionRay | null): GizmoHit | null {
   });
   if (!hit?.hit || hit.pickedPoint === null) return null;
   const nn = hit.getNormal(true);
-  return { point: [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], normal: nn ? [nn.x, nn.y, nn.z] : null, host: hit.pickedMesh ? (st.idOf.get(hit.pickedMesh) ?? null) : null };
+  const ln = hit.getNormal(false, false);
+  // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose, not its swaying mesh (`modelHit`)
+  const m = modelHit(st, hit.pickedMesh, [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);
+  return { point: m.point, normal: m.normal, host: hit.pickedMesh ? (st.idOf.get(hit.pickedMesh) ?? null) : null };
 }
 
 /** ⭐ The placed parts' world vertices (each a convex body — a box, a frustum), cached for the placed set (they do not move). */
@@ -155,11 +182,13 @@ function placedParts(st: SceneState): { readonly key: string; readonly parts: re
     const seen = new Set<string>();
     const vs: Vec3[] = [];
     for (let i = 0; i + 2 < pos.length; i += 3) {
-      const v = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), w);
-      const k = `${v.x.toFixed(6)},${v.y.toFixed(6)},${v.z.toFixed(6)}`;
+      const w0 = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), w);
+      // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose (`modelHit`) — ⛔ cached from the swaying mesh, a hull read mid-sway stayed turned
+      const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;
+      const k = `${v[0].toFixed(6)},${v[1].toFixed(6)},${v[2].toFixed(6)}`;
       if (seen.has(k)) continue;
       seen.add(k);
-      vs.push([v.x, v.y, v.z]);
+      vs.push(v);
     }
     if (vs.length > 0) parts.push(vs);
   }

@@ -2128,7 +2128,31 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   at least 35.26°), turning there over the latch's blend (`slideOrbitStart`); and a finger whose rays still graze the face has its step read at the
   SCREEN'S CENTRE, where the slide view looks (`hoverFingerStep`). The same run: latched at 45°, every drag slides.
 * ⭐ **The 3° — which part**: NONE. No part's face is 0.5°–12° off vertical (every mesh's triangles read; 33,064 picks across the painting, each pick's
-  normal equal to its triangle's). The resting face's tilt (`resting n (-0.00, 0.05, 1.00)`) is the PIECE's: the quads' turn is held while its next
-  increment would take the piece into a part (`turnStepHeld` — the yellow quad red), and a turn held short leaves the resting face a few degrees off; over
-  the slide's 2° (`HOVER_ALIGN_DEG`) the contours never light, and a turn still pending refuses the latch. ⛔ Not changed.
+  normal equal to its triangle's). ⛔⛔ **WITHDRAWN — the explanation given here was WRONG** (*"I did not turn close to another part … I doubt that the
+  explanation you have provided is the correct one"*): a turn held short (`turnStepHeld`) needs the piece within half the contact gap of a part, and the
+  quads show only far from the assembly. The cause is the next section's: the gizmo's face read on the SWAYING meshes.
 * Vectors (`tests/hover.test.ts`: + 1, the way out's replaced, 3 restated — red on the previous build). ⛔ No device close. 2149 vectors.
+
+### ⭐⭐⭐ THE GIZMO READ ON THE MODEL — the 3° tilt's real cause (2026-11-01; `orbitMode` 0)
+
+> *"The 3° face: check what can interrupt the turn. I did not turn close to another part, but I turned away (the quads only highlight far from the
+> assembly). Therefore, I doubt that the explanation you have provided is the correct one. check if a A+dy started during a turn can interrupt the turn.
+> Check other possibilities."* — the owner.
+
+* **What can interrupt the turn** (read in `green_box_wiring.ts`): the turn is a slerp from the shown pose to its target over `REST_ALIGN_MS` (125 ms) —
+  it ALWAYS lands on its target, except while `turnStepHeld` holds it (its next increment taking the piece within HALF the contact gap of a part). A new
+  tap or roll starts a new turn from the pose shown, to a whole target. A respawn or a piece switch resets the pose. ⭐ **A + dy cannot interrupt it**:
+  the approach moves the place, never the rotation, and from where the quads show (far out) it cannot reach contact within 125 ms. The orbited piece is
+  never swayed (it is always the sway's `mover`, excluded). ⛔ So the turn was never cut short: its TARGET was off.
+* ⛔ **The cause — the gizmo's face read on the SWAYING meshes**: the orbit's sway turns the placed parts' MESHES (`orbitSwayDeg` 4.5°, by distance,
+  eased back); the gizmo's ray picked them as drawn, so its normal (`st.gizmoNormal`) took the sway's tilt — and KEPT it once the sway died (it is
+  re-read only when the face changes). The quads' fourth direction is the host part's face within 1° of that normal (its model's — exact), else the raw
+  normal: past 1° the quad itself was tilted, the quads' turn laid the resting face on it, and the slide — which reads the model's faces, within 2° —
+  never lit. Measured, random orbit drags (one run): the gizmo's normal off its face **57 frames, up to 2.0°** (another run 2.4°, the quads' direction
+  **4.4°**), held after the sway.
+* ⭐ **Fixed at the source** (`unswayHit`, `modelNormal`, `modelHit` in `assembly_wiring.ts`): a pick on a placed part is read on its body's MODEL pose —
+  the point brought back by what takes the mesh as drawn to the model, the normal from the mesh's own LOCAL facet turned by the model (exact whatever the
+  sway did between the pick and the read). Both gizmo picks (`castGizmo`, `castRay`) and the sections' hull (`placedParts` — cached from the swaying mesh,
+  a hull read mid-sway stayed turned) go through it. At rest every mesh equals its model (checked, all 46 parts): nothing changes there. Measured, three
+  random runs: **0 frames** off a box's face by more than 0.3°; the frusta read their own slopes (32.1°, 15.3°).
+* Vectors (`tests/assembly_orbit.test.ts` + 3, red on the previous build). ⛔ No device close. 2152 vectors.

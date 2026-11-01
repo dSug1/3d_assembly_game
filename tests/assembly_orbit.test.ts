@@ -280,3 +280,48 @@ describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
     expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);");
   });
 });
+
+describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-01, the owner: *"The 3° face: check what can interrupt the turn … Check other possibilities."*)', () => {
+  const close = (a: readonly number[], b: readonly number[], d = 12) => a.forEach((x, i) => expect(x).toBeCloseTo(b[i]!, d));
+  it("⭐⭐⭐ a hit on a mesh swayed 3° about some pivot comes back onto the face as the model places it — point and normal", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.unswayHit).toBeDefined(); // ⛔ the old: the swayed pick taken as it was (2.4° measured, kept after the sway)
+    const { qFromAxisAngle, qmul, qRotate } = await import("../src/core/vec");
+    const modelPos: [number, number, number] = [0.3, 0.2, -0.05];
+    const modelRot = qFromAxisAngle([0, 1, 0], 0.4);
+    // the sway: 3° about an axis through a pivot off the part
+    const sway = qFromAxisAngle([0.6, 0, 0.8], (3 * Math.PI) / 180);
+    const pivot: [number, number, number] = [0, 0.1, 0];
+    const meshPos = (() => { const r = qRotate(sway, [modelPos[0] - pivot[0], modelPos[1] - pivot[1], modelPos[2] - pivot[2]]); return [r[0] + pivot[0], r[1] + pivot[1], r[2] + pivot[2]] as [number, number, number]; })();
+    const meshRot = qmul(sway, modelRot);
+    // a point and the face's normal on the model, then as the swayed mesh shows them
+    const local: [number, number, number] = [0.02, 0.05, -0.01];
+    const nLocal: [number, number, number] = [0, 0, -1];
+    const pModel = (() => { const r = qRotate(modelRot, local); return [r[0] + modelPos[0], r[1] + modelPos[1], r[2] + modelPos[2]] as [number, number, number]; })();
+    const pMesh = (() => { const r = qRotate(meshRot, local); return [r[0] + meshPos[0], r[1] + meshPos[1], r[2] + meshPos[2]] as [number, number, number]; })();
+    const back = A.unswayHit(pMesh, qRotate(meshRot, nLocal), meshPos, meshRot, modelPos, modelRot);
+    close(back.point, pModel);
+    close(back.normal!, qRotate(modelRot, nLocal));
+    // at rest (mesh = model) nothing moves
+    const rest = A.unswayHit(pModel, [0, 0, -1], modelPos, modelRot, modelPos, modelRot);
+    close(rest.point, pModel);
+    close(rest.normal!, [0, 0, -1]);
+  });
+  it("⭐⭐ the normal from the mesh's own local facet: the model's turn, the scaling's inverse (a stretched box's slanted facet stays square to its face)", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    const { qFromAxisAngle, qRotate } = await import("../src/core/vec");
+    const rot = qFromAxisAngle([0, 0, 1], 0.3);
+    close(A.modelNormal([0, 0, -1], [2, 3, 0.5], rot)!, qRotate(rot, [0, 0, -1]));
+    // a local facet normal (1,1,0)/√2 on a mesh scaled (2,1,1): the world face's normal is (1/2, 1, 0) normalised
+    const n = A.modelNormal([Math.SQRT1_2, Math.SQRT1_2, 0], [2, 1, 1], [1, 0, 0, 0])!;
+    close(n, [0.5 / Math.hypot(0.5, 1), 1 / Math.hypot(0.5, 1), 0]);
+    expect(A.modelNormal([0, 0, 0], [1, 1, 1], [1, 0, 0, 0])).toBeNull();
+  });
+  it("⭐⭐ wired: both gizmo picks and the sections' hull read on the model (`modelHit`)", () => {
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("const m = modelHit(st, r.pickedMesh, [r.pickedPoint.x, r.pickedPoint.y, r.pickedPoint.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
+    expect(w).toContain("const m = modelHit(st, hit.pickedMesh, [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
+    expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
+    expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
+  });
+});
