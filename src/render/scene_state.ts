@@ -737,6 +737,8 @@ export interface SceneState {
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   asmSectionAt: number;
   asmSectionKey: string;
+  /** ⭐⭐ (2026-11-01) the green section's dropped points, kept while its loop is the same (`sectionGreenKey`) — fixed on the loop, a dx leaves them */
+  asmGreenCache: { readonly key: string; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
   /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
   asmCarrier: {
     readonly w: Vec3;

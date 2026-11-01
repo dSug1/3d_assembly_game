@@ -44,6 +44,18 @@ export function orbitDir(yaw: number, v: number): Vec3 {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when I orbit, the red section and the green section seem to jump from one position to another … a succession of small
+ * jumps. can this be improved ?"* → *"build it"*) — **THE GREEN SECTION'S IDENTITY**: on a side the loop at the carrier's height, over a top / under a
+ * bottom the turn at its distance from the axis — both to the millimetre — and the placed parts. Its points are FIXED on it (along the loop from its own
+ * start; at fixed angles round the axis), so a dx — which only carries the gizmo round it — leaves the drawn line exactly as it was. ⛔ The points were
+ * spaced from the carrier: every dx slid each one along the loop, and the shape stepped at every redraw.
+ */
+export function sectionGreenKey(partsKey: string, kind: string, w: Vec3, centre: Vec3): string {
+  const mm = (x: number): string => (Math.round(x * 1000) / 1000).toFixed(3);
+  return kind === "SIDE" ? `${partsKey}#SIDE#${mm(w[1])}` : `${partsKey}#${kind}#${mm(Math.hypot(w[0] - centre[0], w[2] - centre[2]))}#${mm(w[1])}`;
+}
+
+/**
  * ⭐⭐⭐ (2026-11-01, the owner: *"the collision detection shall apply also when moving the piece away from a face (if the collision prevents the moving away
  * of the piece, the user shall find a way out himself as part of the game)"*) — **MAY THE APPROACH TAKE THIS STEP?** In (`out` false): the piece's gap at
  * the step (`gapStep`) at least the gap kept (`gapM`). Out: the same — or, a piece already inside it (still against the face it slid on, `gapNow` < `gapM`),

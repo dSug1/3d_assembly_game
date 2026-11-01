@@ -2255,3 +2255,33 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   met at the refused step); the slide stays on — the player finds the way out. Measured: under the overhang, refused at the first step, `Piece44`
   named, no relocation; on the painting's face the way out unchanged.
 * Vectors (`tests/hover.test.ts` + 1, `tests/assembly_orbit.test.ts` + 2, two restated — red on the previous build). ⛔ No device close. 2157 vectors.
+
+### ⭐⭐⭐ THE SECTIONS WITHOUT STEPS — the red and green lines follow the orbit smoothly (2026-11-01; `orbitMode` 0)
+
+> *"when I orbit, the red section and the green section seem to jump from one position to another (although this is almost not perceptible): this is not a
+> smooth translation of the red and green sections but a succession of small jumps. can this be improved ?"* → *"build it"* — the owner.
+
+* ⛔ **Why**: (1) the lines were recast at most every 100 ms (`SECTION_EVERY_MS`) — under a moving orbit they held, then jumped, ten times a second;
+  (2) the GREEN loop's points were spaced from the carrier, so every dx slid each one along the loop and the shape stepped at corners; (3) the RED's
+  points were evenly spread with the carrier REPLACING the nearest one — as the carrier moved, the replaced index changed and the kink at the gizmo
+  hopped from sample to sample.
+* ⭐ **Fixed**: the lines are redrawn at every change (the cap deleted); the green's points FIXED on its loop — along the loop from its own start on a side,
+  at fixed angles round the axis over a top / under a bottom — and dropped once per loop (`sectionGreenKey`: the height on a side, the distance from the
+  axis over a top, to the millimetre; `st.asmGreenCache`), so a dx leaves the drawn green exactly as it was; the red's `count − 1` samples fixed, the
+  carrier INSERTED among them (`redSamples`). Measured, a slow orbit drag: the lines changed in 44 of 235 frames → every frame the orbit moves; the green's
+  identity unchanged through the drag. ⚠ Cost: the red's 64 drops each frame the orbit moves — watch the HUD's `frame` line on the iPhone (the fallback: a
+  blend between recasts).
+* Vectors (`tests/section_hull.test.ts` + 2, one restated — red on the previous build). ⛔ No device close. 2159 vectors.
+
+### ⛔ OPEN — the contact outline far from the piece: a settle stopped short (2026-11-01; `orbitMode` 0; not changed)
+
+> *"the contour highlights show the resting face far away from the hosting face: how is it possible ?"* → *"just capture that in the md file somewhere for
+> potential later fix"* — the owner (the screenshot: the green piece on the edge of a beige part standing proud of the blue face, the outline above it).
+
+* **Why** (read from the code, ⚠ not reproduced in the app): the slide latches when the resting face is within the reach (`hoverApproachMm`, 20 mm) of a
+  face and SETTLES the piece onto it (`hoverStart` — a solved move down the face's normal). A NEARER part standing in between stops the settle short:
+  the piece then slides at that height, up to 20 mm in front of the face, resting on nothing. The contact outline (`hoverShadow`) is the resting face's
+  outline laid ON the hosting face — seen at an angle, a 20 mm gap reads as a much larger offset on the screen. The tell: the HUD's `last` line at the
+  latch, *"settled X mm onto it"* with X well under the gap.
+* **Possible fixes, not built**: A — a settle stopped by a nearer PARALLEL face latches on that face (the one the piece touches), else no latch (never a
+  slide in the air); B — keep the latch and settle again as soon as the slide carries the piece past what stopped it.

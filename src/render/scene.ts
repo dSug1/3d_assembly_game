@@ -575,6 +575,7 @@ export function createScene(
   st.asmSectionLines = null;
   st.asmSectionAt = 0;
   st.asmSectionKey = "";
+  st.asmGreenCache = null;
   st.asmCarrier = null;
   st.asmChain = null;
   st.asmLoop = null;
