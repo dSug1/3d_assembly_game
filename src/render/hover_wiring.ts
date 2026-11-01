@@ -580,6 +580,13 @@ export function slideWayOutRebase(st: SceneState): void {
   st.hoverOffset = add(st.hoverOffset ?? [0, 0, 0], keep);
   if (st.hoverFollow !== null) st.hoverFollow.offset0 = add(st.hoverFollow.offset0, keep);
   st.pieceQ = nq;
+  // ⭐⭐⭐ (2026-11-01, the owner: *"for a short moment the piece flies away from the camera screen … makes some wide curve before catching back the 2D curve
+  // from the gizmo"*) — the eye's spring and the camera's lag RE-BASED with it (the place is kept by the offset): ⛔ they eased from the old angles
+  // over ~150 ms while a fast A + drag carried the piece metres out — the piece swept a wide arc from the old direction to the new
+  const sp = st.boxSpring;
+  if (sp !== null) st.boxSpring = { at: { yaw: nq.yaw, v: nq.v, zoom: sp.at.zoom }, velYaw: 0, velV: 0, velLnZoom: sp.velLnZoom };
+  st.cameraOrbit = null;
+  st.cameraLagged = null;
   st.orbit.reset(nq.yaw, nq.v);
   st.orbitInertia.stop();
   st.orbitUserV = nq.v;

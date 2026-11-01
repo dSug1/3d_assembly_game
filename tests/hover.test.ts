@@ -1360,6 +1360,15 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(h).toContain("if ((a === null || b === null) && slideModeOn(st)) {");
     expect(h).toContain("b = at(cx + h.finger[0] - from[0], cy + h.finger[1] - from[1]);");
   });
+  it("⭐⭐⭐ THE WAY OUT HAS NO ARC (the owner: *\"for a short moment the piece flies away from the camera screen … makes some wide curve before catching back the 2D curve\"*): the eye's spring and the camera's lag re-based with the orbit", () => {
+    const h = code("render/hover_wiring.ts");
+    const at = h.indexOf("export function slideWayOutRebase(");
+    const body = h.slice(at, h.indexOf("/** ⭐ (2026-11-01) The orbit held where the piece is solved", at));
+    // ⛔ the old: the spring eased from the old angles over ~150 ms while a fast A + drag carried the piece metres out (measured: 140 px off its line, then an arc)
+    expect(body).toContain("if (sp !== null) st.boxSpring = { at: { yaw: nq.yaw, v: nq.v, zoom: sp.at.zoom }, velYaw: 0, velV: 0, velLnZoom: sp.velLnZoom };");
+    expect(body).toContain("st.cameraOrbit = null;");
+    expect(body).toContain("st.cameraLagged = null;");
+  });
   it("⭐⭐⭐ THE WAY OUT GOES ON FROM THE SLIDE VIEW (*\"build A\"*): the orbit's yaw and pitch re-based onto the slide view's direction — any face", async () => {
     const H = await import("../src/input/hover");
     const { orbitDir } = await import("../src/input/assembly_orbit");
