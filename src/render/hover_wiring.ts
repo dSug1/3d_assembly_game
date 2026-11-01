@@ -74,7 +74,7 @@ import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
+import { hoverSwayDeg, slideAlong, slideBlockedVerdict, orbitBandSpent, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 
@@ -294,6 +294,13 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
  * frame by `hoverFrame`, inside the frame's budget.
  */
 export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
+  const took = hoverDragTake(st, pointerId, s, prev);
+  // ⭐⭐⭐ (2026-11-01, *"A is pressed again: the piece flies away"*) a move the slide took spends the orbit's band for this pointer (`orbitBandSpent`)
+  if (orbitBandSpent(took, st.orbitMotion?.pointerId ?? null, pointerId)) st.orbitMotion = null;
+  return took;
+}
+
+function hoverDragTake(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
   // ⭐⭐ (2026-10-14, the hover's second audit) a hover that ended in a CAPTURE spends its finger: it moves nothing more until it lifts (`D139`: a snap stops the drag that made it)
   if (st.hoverSpent === pointerId) return true;
   // ⭐⭐⭐ (2026-11-01) the lit contours HOLD the orbit (`slideHoldsOrbit`): the finger's orbit step dropped until the slide latches (it takes this finger then)

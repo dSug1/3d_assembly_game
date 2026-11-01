@@ -538,6 +538,16 @@ export function slideOrbitTurnOf(o: SlideOrbit, moved: Vec3, t1: Vec3, t2: Vec3,
 export function slideCameraShift(slideMode: boolean, gizmoRides: boolean, draw: Vec3 | null): Vec3 {
   return slideMode && gizmoRides && draw !== null ? draw : [0, 0, 0];
 }
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"A + left click and delta position dy to approach the piece until slide latches - left click remains pressed, A is released,
+ * the piece is slided with delta position - left click remains pressed, A is pressed again: the piece flies away"*) — **A MOVE THE SLIDE TOOK SPENDS THE
+ * ORBIT'S BAND FOR THAT POINTER**: dropped, the orbit starts its band again from where the pointer is when it gets the drag back. ⛔ Kept, the band's
+ * anchor stayed where the orbit last read the pointer — before the slide — and the first A + drag step after it was the WHOLE slide's travel: the
+ * approach took it at once, the piece flew out. (Released and pressed again, the band was new: no flight.)
+ */
+export function orbitBandSpent(tookBySlide: boolean, bandPointer: number | null, pointerId: number): boolean {
+  return tookBySlide && bandPointer === pointerId;
+}
 /** ⭐ The way out's re-base is due when the orbit's direction is more than this off the slide view's (rad) — under it, already there. */
 export const SLIDE_WAY_OUT_MIN_RAD = (0.5 * Math.PI) / 180;
 

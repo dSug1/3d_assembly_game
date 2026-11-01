@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -487,7 +487,7 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
 }
 
 /**
- * ⭐⭐ THE APPROACH MOVED by `da` (the coordinate; down: in): out freely; in only as far as the parts allow — the piece's gap kept at its resting gap
+ * ⭐⭐ THE APPROACH MOVED by `da` (the coordinate; down: in): ⭐⭐⭐ (2026-11-01) in AND out only as far as the parts allow (`approachStepFree`) — the piece's gap kept at its resting gap
  * (`pieceGapMm`), the largest free share found by halving. Returns the move taken.
  */
 export function approachMove(st: SceneState, da: number): number {
@@ -501,24 +501,29 @@ function approachMoveTaken(st: SceneState, da: number): number {
   if (da === 0) return 0;
   const a0 = st.approach;
   const want = approachStep(a0, da, 1, st.cfg);
-  if (want >= a0 || st.pieceQ === null || st.greenBox === null) {
-    // ⭐⭐⭐ (2026-11-01, *"build A"*) a step OUT of a slide: the orbit goes on from the slide's view (`slideWayOutRebase`)
-    if (want > a0) slideWayOutRebase(st);
+  if (want === a0) return 0;
+  const out = want > a0;
+  // ⭐⭐⭐ (2026-11-01, *"build A"*) a step OUT of a slide: the orbit goes on from the slide's view (`slideWayOutRebase`)
+  if (out) slideWayOutRebase(st);
+  if (st.pieceQ === null || st.greenBox === null) {
     st.approach = want;
     return want - a0;
   }
   const q = st.pieceQ;
   const gapM = pieceSolveOptions(st).gapM;
-  const free = (cand: number): boolean => {
-    const env = pieceSolverEnv(st, (qq) => {
+  const envAt = (cand: number) =>
+    pieceSolverEnv(st, (qq) => {
       const keep = st.approach;
       st.approach = cand;
       const p = ringAnchorAt(st, qq);
       st.approach = keep;
       return p;
     });
-    return env.gap(q) >= gapM;
-  };
+  const gapAt = (cand: number): number => envAt(cand).gap(q);
+  // ⭐⭐⭐ (2026-11-01, *"the collision detection shall apply also when moving the piece away from a face"*) — out checked too (`approachStepFree`); blocked, the
+  // player finds the way out (a slide, the orbit)
+  const gapNow = out ? gapAt(a0) : gapM;
+  const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);
   if (free(want)) {
     st.approach = want;
     return want - a0;
@@ -532,6 +537,11 @@ function approachMoveTaken(st: SceneState, da: number): number {
   }
   st.approach = a0 + (want - a0) * lo;
   if (lo < 1) st.approachInertia.stop();
+  if (out && lo < 1) {
+    const blocker = envAt(a0 + (want - a0) * hi).blocker?.(q) ?? null; // the part met at the step refused
+    st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? "a part"} — slide or orbit to find a way out`;
+    st.hudDirty = true;
+  }
   return st.approach - a0;
 }
 
