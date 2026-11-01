@@ -85,7 +85,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the release: the second — the way out (if the way in had started), else a TAP: on a placed part the orbit centre moved there, else the roll; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
     expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), t0: performance\.now\(\), pressActed: centreAt !== null, centreAt, centreNormal, centreHost, swAnchorMm: pxToMm\(x\), swStillSince: performance\.now\(\), swFirstX0: xOf\(st, first\), wayIn: false \};/);
-    expect(h.replace(/\s+/g, " ")).toContain("if (pointerId === h.first) { h.first = null;");
+    expect(h.replace(/\s+/g, " ")).toContain('return "FIRST"; } h.first = null; st.hudDirty = true; return "FIRST";'); // ⛔ (2026-11-01) the approach ended first (`hover.test.ts`)
     // ⛔ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the ONE place the second touch moves the orbit centre: its TAP on a placed part, at its release
     expect(h).not.toMatch(/recomputeOrbitCentre/);

@@ -2022,3 +2022,20 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Measured in the app: drags starting on Piece17 (not in its goal) and Piece8 (in its goal) slid 13–45 mm, both ways; a forced mid-drag lighting
   held the piece (y 0.104), latched, and the same finger (`on(16)`) slid it; a random run, 8 slide tests, 0 stuck.
 * Vectors (`tests/hover.test.ts` + 3, red on the previous build; 1 source check restated). ⛔ No device close. 2136 vectors.
+
+### ⛔⛔ THE APPROACH IS TWO FINGERS — either one lifting ends it (2026-11-01)
+
+> *"I approach with 2 fingers, the contours highlight, i release the second finger while the first finger stays pressed, and with the first finger dy I
+> can then drive the piece away. This should not be possible as the dy should drive the slide, not the approach away."* — *"when i pressed the two
+> fingers on the screen at the same time, there is no way to know which one is the first or the second finger"* — the owner (four screenshots: the
+> slide latched with `pointers 2`, then `pointers 1`, then *"slide: off — the approach took the piece away"* with one finger down).
+
+* ⛔ **The cause** (`holdRelease`): the held input remembers which touch came FIRST; the SECOND lifting ended it, the FIRST lifting kept it on
+  (*"the input goes on"*, 2026-10-11) — so in the APPROACH the finger left alone drove the approach with its dy, out of the slide. Two fingers
+  pressed together, the hand cannot know which is which: it read as *"sometimes"*.
+* ✅ **Now** either finger lifting ends the APPROACH (its coast starts); the finger left is a plain one-finger drag — in the slide mode it slides.
+  ⚠ The other held modes (the first touch on a part with the second held) keep the 2026-10-11 rule.
+* ⭐ Reproduced in the app before the fix (the first-pressed finger lifted: the approach 0.459 → 0.595, the slide off); after it, either finger
+  lifted, the one left slid the piece on the face (the slide on, y 0.104 → 0.06).
+* ⭐ Tried and dropped on the way: the latch's 800 ms wait running out under the approach — not the cause, reverted.
+* Vectors (`tests/hover.test.ts` + 1, red on the previous build; `tests/proto_hold.test.ts` 1 restated). ⛔ No device close. 2137 vectors.
