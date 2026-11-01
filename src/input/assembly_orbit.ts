@@ -43,6 +43,19 @@ export function orbitDir(yaw: number, v: number): Vec3 {
   return [Math.cos(p) * Math.cos(yaw), Math.sin(p), Math.cos(p) * Math.sin(yaw)];
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"the collision detection shall apply also when moving the piece away from a face (if the collision prevents the moving away
+ * of the piece, the user shall find a way out himself as part of the game)"*) — **MAY THE APPROACH TAKE THIS STEP?** In (`out` false): the piece's gap at
+ * the step (`gapStep`) at least the gap kept (`gapM`). Out: the same — or, a piece already inside it (still against the face it slid on, `gapNow` < `gapM`),
+ * no CLOSER to any part than it is. ⛔ Out was never checked: leaving a top under `Piece44`'s overhang ran the piece into it, the solver's relocation
+ * then pulled it back down — a jump.
+ */
+/** ⭐ (2026-11-01) the rounding a step out may lose against a part it moves along (m) — 0.01 mm: a slide against a stopper, then out parallel to it. */
+export const APPROACH_OUT_TOL_M = 1e-5;
+export function approachStepFree(gapStep: number, gapNow: number, gapM: number, out: boolean): boolean {
+  return gapStep >= (out ? Math.min(gapM, gapNow) - APPROACH_OUT_TOL_M : gapM);
+}
+
 /** ⭐ The approach coordinate's floor: the CONTACT — below the waist (`waistV`) by this much, the last stretch straight to it. */
 export const APPROACH_CONTACT_SPAN = 0.05;
 

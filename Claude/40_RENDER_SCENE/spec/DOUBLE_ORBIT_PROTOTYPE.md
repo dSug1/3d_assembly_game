@@ -2206,7 +2206,52 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   orbit's line, a few degrees off the view, so it drifts on the screen in one straight run WITH the drag. `slideWayOutQ` (the piece's direction) deleted.
   Measured (the painting's face, A + drag): the piece's screen path a straight line driven by the approach (249,329 → 155,453), 8 px of settle after the
   drag; over a top the same.
-* ⚠ **Seen on the way, not changed**: the approach OUT is never checked against the parts (`approachMoveTaken` checks only a step IN) — leaving a top
+* ⚠ **Seen on the way, not changed** (⭐ fixed the same day — *THE WAY OUT CHECKED AGAINST THE PARTS*, below): the approach OUT is never checked against the parts (`approachMoveTaken` checks only a step IN) — leaving a top
   under `Piece44`'s overhang, straight up toward the camera, ran the piece into it (gap 0.00 mm) and the solver's relocation pulled it back down: a jump.
   Rare (an overhang above the slide), owed a check.
 * Vectors (`tests/hover.test.ts`: the way out's restated — red on the previous build). ⛔ No device close. 2154 vectors.
+
+### ⛔ OPEN — the gizmo off the red section, its drop held (2026-11-01; `orbitMode` 0; not changed)
+
+> *"in the attached configuration, the gizmo is not on the red section. why ?"* (the green piece already in its goal, the camera orbited on, `elev=0.94`)
+> → *"capture that in the md file. I will modify later on the orbit for the horizontal face so this issue shall disappear later one."* — the owner.
+
+* **What the HUD said**: *"orbit: the gizmo's drop lands on a face turned away from the piece — held"*.
+* **Why** (`carrierFrame`, `input/assembly_wiring.ts`): each frame the gizmo's CARRIER moves along the red section's hull, then is DROPPED onto the real
+  surface; a drop landing on a face turned away from the piece (`faceTurnedAway`) is refused and the gizmo is HELD where it was — while the carrier, and
+  the red line drawn from it, go on with the orbit. The two part.
+* **Where it was seen**: nearly straight above (`elev=0.94`): the drop goes almost straight down, and the likely face is an underside — `Piece44`'s
+  overhang on `Piece4`'s top, its slanted sides facing outward and down (`SCENE_1.md` §11). ⚠ Read from the code and the HUD, not reproduced in the app.
+* **Possible fix, not built**: on a refused drop, the gizmo at the nearest point of the red section whose face looks at the piece, instead of held.
+  ⏸ The owner will rework the orbit over a horizontal face, which is expected to remove it.
+
+### ⭐⭐⭐ A AGAIN MID-DRAG — the orbit's band spent by the slide (2026-11-01; `orbitMode` 0)
+
+> *"I run this sequence: A + left click and delta position dy to approach the piece until slide latches - left click remains pressed, A is released, the
+> piece is slided with delta position - left click remains pressed, A is pressed again: the piece flies away … (this issue does not appear if I release
+> the left click before engaging again the A + left click …). I did not check with the two fingers on mobile: check if the same issue happens and fix it
+> also."* — the owner.
+
+* ⛔ **Why**: the orbit's drag keeps a deadband ANCHOR per pointer (`st.orbitMotion.band`); while the slide took the pointer's moves, the orbit never read
+  them, so its anchor stayed where it last saw the pointer — before the slide. With A again, the orbit's first step was the WHOLE slide's travel since,
+  and A + drag's dy is the approach: taken at once. Reproduced (headless, the mouse held throughout, a slide 100 px down): the first 4 px with A again
+  took the approach **0.458 → 0.782**, the piece **2.4 m** out. Released and pressed again, the band is new — no flight.
+* ⭐ **Fixed** (`orbitBandSpent`, `hoverDragStep`): a move the slide takes spends the orbit's band for that pointer; the orbit starts it again from where
+  the pointer is when it gets the drag back. The same sequence: 4 px → nothing, 60 px → 0.639, the approach's own pace.
+* **Two fingers on a phone**: the same sequence (two fingers in until the latch, the second lifted, the first slides, the second down again, both out)
+  was already clean — the two-finger approach reads each finger's step from its own last event, nothing kept across the slide. Checked headless with
+  real touch pointer events, before and after: 4 px → nothing, 64 px → 0.634.
+
+### ⭐⭐⭐ THE WAY OUT CHECKED AGAINST THE PARTS (2026-11-01; `orbitMode` 0)
+
+> *"Fix the bug: the collision detection shall apply also when moving the piece away from a face (if the collision prevents the moving away of the piece,
+> the user shall find a way out himself as part of the game)."* — the owner.
+
+* ⛔ **Why**: `approachMoveTaken` checked a step IN only (the gap kept); a step OUT was taken whole. Leaving a top under `Piece44`'s overhang straight
+  toward the camera ran the piece into it (gap 0.00 mm, measured), and the solver's relocation pulled it back down: a jump.
+* ⭐ **Fixed** (`approachStepFree`): a step out is checked too, halved down to the largest free share like a step in. Its rule: the gap kept — or, a piece
+  already inside it (still against the face it slid on), no CLOSER to any part than it is (to `APPROACH_OUT_TOL_M`, 0.01 mm: out along a stopper it
+  slid against). Refused, it stays, the coast stops, and the HUD says *"the way out is blocked by PieceN — slide or orbit to find a way out"* (the part
+  met at the refused step); the slide stays on — the player finds the way out. Measured: under the overhang, refused at the first step, `Piece44`
+  named, no relocation; on the painting's face the way out unchanged.
+* Vectors (`tests/hover.test.ts` + 1, `tests/assembly_orbit.test.ts` + 2, two restated — red on the previous build). ⛔ No device close. 2157 vectors.

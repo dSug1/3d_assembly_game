@@ -167,7 +167,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(g).toContain("if (assemblyOn(st)) return { dv: du, du };");
     expect(g).toContain("const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("return env.gap(q) >= gapM;");
+    expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
     expect(a).toContain("return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();");
     expect(a).toContain("st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);");
     const p = code("render/pointer_wiring.ts");
@@ -323,5 +323,26 @@ describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-0
     expect(w).toContain("const m = modelHit(st, hit.pickedMesh, [hit.pickedPoint.x, hit.pickedPoint.y, hit.pickedPoint.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
     expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
     expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
+  });
+});
+
+describe('⭐⭐⭐ THE WAY OUT CHECKED AGAINST THE PARTS (2026-11-01, the owner: *"the collision detection shall apply also when moving the piece away from a face"*)', () => {
+  it("⭐⭐⭐ a step out that would bring the piece within the gap kept is refused; a piece already inside it may leave as long as it gets no closer", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.approachStepFree).toBeDefined(); // ⛔ the old: out never checked — under Piece44's overhang the piece ran into it, then the relocation jumped it back
+    const gapM = 0.001;
+    expect(A.approachStepFree(0.0005, 0.003, gapM, true)).toBe(false); // into the overhang
+    expect(A.approachStepFree(0.002, 0.003, gapM, true)).toBe(true);
+    expect(A.approachStepFree(0.0006, 0.0005, gapM, true)).toBe(true); // still against the face it slid on: away from it
+    expect(A.approachStepFree(0.0004, 0.0005, gapM, true)).toBe(false); // …but never closer
+    expect(A.approachStepFree(0.0005 - A.APPROACH_OUT_TOL_M / 2, 0.0005, gapM, true)).toBe(true); // along a stopper: the rounding
+    expect(A.approachStepFree(0.0009, 0.0005, gapM, false)).toBe(false); // in: the gap kept, as before
+    expect(A.approachStepFree(0.001, 0.0005, gapM, false)).toBe(true);
+  });
+  it("⭐⭐ wired: out checked too, and a blocked way out names its part on the HUD", () => {
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);");
+    expect(w).toContain("st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? \"a part\"} — slide or orbit to find a way out`;");
+    expect(w).not.toContain("if (want >= a0 || st.pieceQ === null || st.greenBox === null) {");
   });
 });

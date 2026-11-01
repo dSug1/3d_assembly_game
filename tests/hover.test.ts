@@ -1360,6 +1360,17 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(h).toContain("if ((a === null || b === null) && slideModeOn(st)) {");
     expect(h).toContain("b = at(cx + h.finger[0] - from[0], cy + h.finger[1] - from[1]);");
   });
+  it("⭐⭐⭐ A AGAIN MID-DRAG (the owner: *\"left click remains pressed, A is pressed again: the piece flies away\"*): a move the slide took spends the orbit's band for that pointer", async () => {
+    const H = await import("../src/input/hover");
+    expect(H.orbitBandSpent).toBeDefined(); // ⛔ the old: the band kept its anchor from before the slide — the first A + drag step was the whole slide (measured: the approach 0.458 → 0.782 on 4 px, the piece 2.4 m out)
+    expect(H.orbitBandSpent(true, 1, 1)).toBe(true);
+    expect(H.orbitBandSpent(true, 2, 1)).toBe(false); // another pointer's band: kept
+    expect(H.orbitBandSpent(false, 1, 1)).toBe(false); // the orbit's own move: kept
+    expect(H.orbitBandSpent(true, null, 1)).toBe(false);
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const took = hoverDragTake(st, pointerId, s, prev);");
+    expect(h).toContain("if (orbitBandSpent(took, st.orbitMotion?.pointerId ?? null, pointerId)) st.orbitMotion = null;");
+  });
   it("⭐⭐⭐ THE SLIDE CAMERA RIDES THE PIECE AS DRAWN (the owner: *\"a succession of very rapid and small jumps when I slide with my mouse\"*): the rig shifted by the drawn lag — the assembly no longer stutters 0.7 / 1.8 px", async () => {
     const H = await import("../src/input/hover");
     expect(H.slideCameraShift).toBeDefined(); // ⛔ the old: the camera on the SOLVED slide (1.7 / 4.0 mm on alternate frames, measured)
@@ -1408,7 +1419,7 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(H.SLIDE_WAY_OUT_MIN_RAD).toBeCloseTo(Math.PI / 360, 15);
     // wired: the approach's step OUT, while the slide is on, re-bases the orbit — the piece's place kept by its own offset, the lock's cone opened to it
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (want > a0) slideWayOutRebase(st);");
+    expect(a).toContain("if (out) slideWayOutRebase(st);"); // ⭐ (2026-11-01) `out` = want > a0, the step then checked too
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
     expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };");
