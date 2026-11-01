@@ -68,12 +68,13 @@ import {
 } from "../input/hover";
 import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
+import { orbitDir } from "../input/assembly_orbit";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideExitTarget, slideOrbitDirOf, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
+import { hoverSwayDeg, slideAlong, slideBlockedVerdict, slideOrbitDirOf, slideWayOutQ, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 
@@ -277,9 +278,9 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
     // ⭐⭐⭐ (2026-11-01, *"option A"*) over a horizontal face by the orbit's own yaw and pitch (`SlideTop`) — ⛔ near straight above the picture spun
     const iso = orbit !== null ? slideOrbitDirOf(orbit, c.normal, plane.e1, plane.e2, orbit.a) : corner.dir;
     const orbitShown: [number, number] = orbit !== null ? [orbit.a[0], orbit.a[1]] : [0, 0];
-    if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: null, orbit, orbitShown, exit: null };
+    if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: null, orbit, orbitShown };
     else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))
-      st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: { target: hv0.target, iso: shownDir(hv0), t0: performance.now() }, orbit, orbitShown, exit: null };
+      st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: { target: hv0.target, iso: shownDir(hv0), t0: performance.now() }, orbit, orbitShown };
   }
   st.hoverFollow.view0 = st.hoverView === null ? null : [st.hoverView.target[0], st.hoverView.target[1], st.hoverView.target[2]];
   st.lastVerdict = `${pointerId === null ? "slide: on — latched" : "hover:"} on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.hoverFollow.gizmo ? "gizmo and the piece" : "piece"}`;
@@ -386,8 +387,18 @@ function hoverFingerStep(st: SceneState, h: NonNullable<SceneState["hover"]>, fr
     const ray = st.scene.createPickingRay(x, y, null, st.camera);
     return rayPlaneCoords([ray.origin.x, ray.origin.y, ray.origin.z], [ray.direction.x, ray.direction.y, ray.direction.z], h.origin, h.n, h.e1, h.e2);
   };
-  const a = at(from[0], from[1]);
-  const b = at(h.finger[0], h.finger[1]);
+  let a = at(from[0], from[1]);
+  let b = at(h.finger[0], h.finger[1]);
+  if ((a === null || b === null) && slideModeOn(st)) {
+    // ⭐⭐⭐ (2026-11-01, the owner: *"although the slide contours are highlighted, the slide is blocked. fix it."*) — the finger's rays grazing the face
+    // (a finger far off the piece on a steep view): the same step taken at the SCREEN'S CENTRE, where the slide view looks (at the face from its corner
+    // at most, `slideOrbitStart`) — ⛔ nothing moved, and nothing turned the view
+    const cv = st.scene.getEngine().getRenderingCanvas();
+    const cx = (cv?.clientWidth ?? 0) / 2;
+    const cy = (cv?.clientHeight ?? 0) / 2;
+    a = at(cx, cy);
+    b = at(cx + h.finger[0] - from[0], cy + h.finger[1] - from[1]);
+  }
   if (a === null || b === null) return false;
   const g = st.cfg.hoverGain;
   // ⭐⭐ (2026-10-16, the owner: *"can you also add some friction ? (different from inertia)"* → *"Kinetic (drag)"*) — the step scaled by the kinetic
@@ -430,15 +441,6 @@ function slideOrbitMove(st: SceneState, watcher: SwayWatcher, s: Sample, moved: 
   if (axis === null || impulse <= 0) return;
   swingBlock(st, b, { x: pivot[0], y: pivot[1], z: pivot[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
   st.orbitSwayKicks++;
-}
-
-/** ⭐ (2026-11-01) The orbited piece's resting face centre as DRAWN (its mesh), `null` without one. */
-function drawnAnchor(st: SceneState): Vec3 | null {
-  const b = st.greenBox;
-  const p = st.orbitPieces.find((o) => o.mesh === b);
-  if (b === null || p === undefined) return null;
-  const r = b.rotationQuaternion ?? Quaternion.Identity();
-  return add([b.position.x, b.position.y, b.position.z], qRotate([r.w, r.x, r.y, r.z], p.restingCentre));
 }
 
 /** ⭐ (2026-11-01) The view's direction as SHOWN: the slide's limited orbit at its shown angles, else the corner. */
@@ -554,6 +556,36 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
     st.lastVerdict = "slide: off — the approach took the piece away; the approach and the orbit go on from the gizmo where the slide left it";
     st.hudDirty = true;
   }
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01, *"build A"*) THE WAY OUT GOES ON FROM THE SLIDE VIEW — called by the approach's step OUT while the slide is on: the orbit's yaw and
+ * pitch re-based onto the slide view's direction (`slideWayOutQ`), the piece's place unchanged (the curve's difference taken into its own offset, which
+ * ways in with the approach's travel); the gizmo where the slide left it. ⛔ The orbit kept its angles from the approach in: the piece flew back to
+ * that curve.
+ */
+export function slideWayOutRebase(st: SceneState): void {
+  const hv = st.hoverView;
+  const q = st.pieceQ;
+  if (!slideModeOn(st) || st.hover === null || hv === null || q === null) return;
+  const t = slideWayOutQ(hv.iso, q.yaw);
+  if (t === null) return;
+  const u0 = orbitDir(q.yaw, q.v);
+  const u1 = orbitDir(t.yaw, t.v);
+  if (Math.acos(Math.min(1, dotv(u0, u1))) <= SLIDE_WAY_OUT_MIN_RAD) return;
+  const nq: OrbitQ = { ...q, yaw: t.yaw, v: t.v };
+  const before = ringAnchorAt(st, q);
+  const after = ringAnchorAt(st, nq);
+  const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];
+  st.hoverOffset = add(st.hoverOffset ?? [0, 0, 0], keep);
+  if (st.hoverFollow !== null) st.hoverFollow.offset0 = add(st.hoverFollow.offset0, keep);
+  st.pieceQ = nq;
+  st.orbit.reset(nq.yaw, nq.v);
+  st.orbitInertia.stop();
+  st.orbitUserV = nq.v;
+  st.orbitRawPrev = { yaw: nq.yaw, v: nq.v };
+  st.lastVerdict = "slide: the way out — the orbit goes on from the slide's view";
+  st.hudDirty = true;
 }
 
 /** ⭐ (2026-11-01) The orbit held where the piece is solved — its target there, its coast stopped (the lit contours waiting for the latch). */
@@ -815,17 +847,6 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
   if (hv.orbit !== null) {
     const k = 1 - Math.exp(-dt / hoverDrawTau(st));
     hv.orbitShown = [hv.orbitShown[0] + (hv.orbit.a[0] - hv.orbitShown[0]) * k, hv.orbitShown[1] + (hv.orbit.a[1] - hv.orbitShown[1]) * k];
-  }
-  // ⭐⭐⭐ (2026-11-01, the owner: *"when I move the piece away from the hosting face after sliding … big travel of the piece outside the screen and then
-  // the piece catch up with the camera"*) — THE WAY OUT FOLLOWS THE PIECE: the slide off, the target is the piece as drawn, its offset at the slide's end
-  // fading (`slideExitTarget`) — ⛔ left where the slide ended, the piece went out along the orbit's direction, 45° off the view's, to the screen's edge
-  if (st.hover !== null) hv.exit = null;
-  else {
-    const piece = drawnAnchor(st);
-    if (piece !== null) {
-      if (hv.exit === null) hv.exit = { off: [hv.target[0] - piece[0], hv.target[1] - piece[1], hv.target[2] - piece[2]], t0: now };
-      hv.target = slideExitTarget(piece, hv.exit.off, now - hv.exit.t0, hoverDrawTau(st) * 1000);
-    }
   }
   const w = hoverViewWeight(hv.shown);
   if (w <= 0) return { camAt, lookAt, w: 0 };

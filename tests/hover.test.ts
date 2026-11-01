@@ -623,7 +623,8 @@ describe("⭐⭐⭐ the hover view: the NEAREST isometric corner, an arc from th
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("return { ...hoverCameraSwing(camAt, lookAt, target, dir, w), w };"); // ⭐ (2026-10-16) with its weight: the up rolls to upright by it
     // a finger STEP: two rays from the camera of the moment — a camera turning under a resting finger moves nothing
-    expect(h).toContain("const a = at(from[0], from[1]); const b = at(h.finger[0], h.finger[1]); if (a === null || b === null) return false;");
+    expect(h).toContain("let a = at(from[0], from[1]); let b = at(h.finger[0], h.finger[1]);"); // ⭐⭐⭐ (2026-11-01) grazing in the slide mode: read at the screen's centre
+    expect(h).toContain("if (a === null || b === null) return false;");
     expect(h).toContain("h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);"); // ⭐ (2026-10-16) × the kinetic friction: under the finger only with it at 0
     expect(h).not.toContain("h.base");
   });
@@ -1225,14 +1226,15 @@ describe('⭐⭐⭐ THE SLIDE\'S LIMITED ORBIT (2026-11-01, the owner: *"remove 
   const n: [number, number, number] = [0, 0, -1];
   const t1: [number, number, number] = [1, 0, 0];
   const t2: [number, number, number] = [0, -1, 0]; // n × t1
-  it("⭐ begun where the camera is: its two angles off the face's normal — a start beyond the 45° clamp keeps its own limit", async () => {
+  it("⭐ begun where the camera is: its two angles off the face's normal — ⭐⭐⭐ (2026-11-01) a start beyond the 45° clamp brought onto it (⛔ edge-on: no slide)", async () => {
     const { slideOrbitStart, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");
     const o = slideOrbitStart(n, t1, t2, [Math.tan(0.2), -Math.tan(0.1), -1]);
     expect(o.a[0]).toBeCloseTo(0.2, 9);
     expect(o.a[1]).toBeCloseTo(0.1, 9); // the camera below along y: toward t2 (down)
     expect(o.lim).toEqual([SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD]);
     const far = slideOrbitStart(n, t1, t2, [Math.tan(1.2), 0, -1]);
-    expect(far.lim[0]).toBeCloseTo(1.2, 9); // no jump at the latch
+    expect(far.a[0]).toBeCloseTo(SLIDE_ORBIT_CLAMP_RAD, 12); // ⛔ the old: 1.2 rad kept (the view turns there over the latch's blend)
+    expect(far.lim).toEqual([SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD]);
   });
   it("⭐⭐ the slide turns it the way the piece goes, clamped at the isometric corner; a limit beyond the clamp tightens as it turns in", async () => {
     const { slideOrbitStep, slideOrbitTurn, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");
@@ -1319,28 +1321,75 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     expect(o.a[1]).toBeCloseTo(SLIDE_TOP_CORNER_RAD, 12);
     for (let i = 0; i < 40; i++) o = slideOrbitStep(o, [0, 0.1]);
     expect(o.a[1]).toBeCloseTo(SLIDE_TOP_MAX_RAD, 12);
-    // a start over 85° keeps its own ceiling, lowered as it comes down; one under the corner its own floor
+    // a start over 85° keeps its own ceiling, lowered as it comes down; ⭐⭐⭐ (2026-11-01) one under the corner brought up to it (⛔ kept: edge-on, no slide)
     let hi = slideOrbitStart(up, t1, t2, [0, 1, -0.02]);
     expect(hi.top!.hi).toBeGreaterThan(SLIDE_TOP_MAX_RAD);
     hi = slideOrbitStep(hi, [0, -0.2]); // down below 85°
     expect(hi.top!.hi).toBeCloseTo(SLIDE_TOP_MAX_RAD, 12); // the ceiling back to 85°, never out again
     expect(slideOrbitStep(hi, [0, 0.5]).a[1]).toBeCloseTo(SLIDE_TOP_MAX_RAD, 12);
     const lo = slideOrbitStart(up, t1, t2, [0, 0.2, -1]);
-    expect(lo.top!.lo).toBeCloseTo(Math.atan2(0.2, 1), 9);
+    expect(lo.top!.lo).toBeCloseTo(SLIDE_TOP_CORNER_RAD, 12);
+    expect(lo.a[1]).toBeCloseTo(SLIDE_TOP_CORNER_RAD, 12);
     // a vertical face keeps the two angles off its normal (no `top`)
     expect(slideOrbitStart([0, 0, -1], t1, [0, -1, 0], [0.1, 0, -1]).top ?? null).toBeNull();
   });
-  it("⭐⭐⭐ THE WAY OUT FOLLOWS THE PIECE: the target is the piece as drawn, the offset at the slide's end fading — wired in the camera's blend", async () => {
-    const { slideExitTarget } = await import("../src/input/hover");
-    const t0 = slideExitTarget([1, 2, 3], [0.02, 0, -0.01], 0, 60);
-    expect(t0).toEqual([1.02, 2, 2.99]); // no jump at the slide's end
-    const t1x = slideExitTarget([1, 2, 3], [0.02, 0, -0.01], 60, 60);
-    expect(t1x[0]).toBeCloseTo(1 + 0.02 / Math.E, 12);
-    const late = slideExitTarget([5, 5, 5], [0.02, 0, -0.01], 2000, 60);
-    for (let i = 0; i < 3; i++) expect(late[i]).toBeCloseTo(5, 12); // the piece itself
+  it("⭐⭐⭐ AN EDGE-ON VIEW STILL SLIDES (the owner: *\"although the slide contours are highlighted, the slide is blocked\"*): the start's view sees the face at the corner's angle at least; the grazing finger's step read at the screen's centre", async () => {
+    const H = await import("../src/input/hover");
+    const dirOf = H.slideOrbitDirOf ?? ((_o: unknown, n: [number, number, number], a1: [number, number, number], a2: [number, number, number], a: readonly [number, number]) => H.slideOrbitDir(n, a1, a2, a));
+    const faces: [[number, number, number], [number, number, number], [number, number, number]][] = [
+      [[0, 0, -1], [1, 0, 0], [0, -1, 0]], // a vertical face
+      [[0, 1, 0], [1, 0, 0], [0, 0, -1]], // a top
+      [[0.6, 0, -0.8], [0.8, 0, 0.6], [0, -1, 0]], // a slanted vertical one
+    ];
+    const minToPlane = Math.asin(Math.cos(Math.atan(Math.SQRT2))); // the isometric corner's 35.26° to the face
+    for (const [n, a1, a2] of faces) {
+      for (let k = 0; k < 24; k++) {
+        const th = (k / 24) * 2 * Math.PI;
+        // a camera 3° off the face's plane, all round
+        const side: [number, number, number] = [Math.cos(th) * a1[0] + Math.sin(th) * a2[0], Math.cos(th) * a1[1] + Math.sin(th) * a2[1], Math.cos(th) * a1[2] + Math.sin(th) * a2[2]];
+        const e = (3 * Math.PI) / 180;
+        const toCam: [number, number, number] = [side[0] * Math.cos(e) + n[0] * Math.sin(e), side[1] * Math.cos(e) + n[1] * Math.sin(e), side[2] * Math.cos(e) + n[2] * Math.sin(e)];
+        const o = H.slideOrbitStart(n, a1, a2, toCam);
+        const d = dirOf(o, n, a1, a2, o.a);
+        const toPlane = Math.asin(Math.abs(d[0] * n[0] + d[1] * n[1] + d[2] * n[2]));
+        expect(toPlane).toBeGreaterThanOrEqual(minToPlane - 1e-9); // ⛔ the old: 3° — every ray under HOVER_RAY_MIN_DEG
+        expect(toPlane).toBeGreaterThan((H.HOVER_RAY_MIN_DEG * Math.PI) / 180);
+      }
+    }
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("if (st.hover !== null) hv.exit = null;");
-    expect(h).toContain("hv.target = slideExitTarget(piece, hv.exit.off, now - hv.exit.t0, hoverDrawTau(st) * 1000);");
+    expect(h).toContain("if ((a === null || b === null) && slideModeOn(st)) {");
+    expect(h).toContain("b = at(cx + h.finger[0] - from[0], cy + h.finger[1] - from[1]);");
+  });
+  it("⭐⭐⭐ THE WAY OUT GOES ON FROM THE SLIDE VIEW (*\"build A\"*): the orbit's yaw and pitch re-based onto the slide view's direction — any face", async () => {
+    const H = await import("../src/input/hover");
+    const { orbitDir } = await import("../src/input/assembly_orbit");
+    expect(H.slideWayOutQ).toBeDefined(); // ⛔ the old: the orbit kept the angles of the approach in
+    const dirs: [number, number, number][] = [
+      [0.3, 0.2, -0.93], // a vertical face, the camera a little above
+      [0.42, 0.82, -0.39], // a top, from the isometric corner up
+      [0.05, 0.996, -0.07], // a top, near straight above (85°)
+      [-0.6, -0.5, 0.62], // under a bottom face
+      [0.7, 0.4, 0.59], // a slanted face
+    ];
+    for (const d of dirs) {
+      const l = Math.hypot(...d);
+      const t = H.slideWayOutQ(d, 0)!;
+      const u = orbitDir(t.yaw, t.v);
+      for (let k = 0; k < 3; k++) expect(u[k]).toBeCloseTo(d[k]! / l, 9); // the piece leaves toward the camera
+    }
+    // the yaw kept nearest the orbit's own (no turn of 2π for the eased orbit to unwind)
+    expect(H.slideWayOutQ([1, 0, 0.01], 4 * Math.PI)!.yaw).toBeCloseTo(4 * Math.PI + Math.atan2(0.01, 1), 12);
+    expect(H.slideWayOutQ([0, 0, 0], 1)).toBeNull();
+    expect(H.SLIDE_WAY_OUT_MIN_RAD).toBeCloseTo(Math.PI / 360, 15);
+    // wired: the approach's step OUT, while the slide is on, re-bases the orbit — the piece's place kept by its own offset
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("if (want > a0) slideWayOutRebase(st);");
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const t = slideWayOutQ(hv.iso, q.yaw);");
+    expect(h).toContain("const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];");
+    expect(h).toContain("st.orbit.reset(nq.yaw, nq.v);");
+    // ⛔ the camera's target no longer follows the piece on the way out (*"revert the change of the camera looking at the piece"*)
+    expect(h).not.toContain("slideExitTarget");
   });
   it("⭐⭐ a — the slide mode's drag taken at its FIRST move from the press (⛔ held 8 mm as a possible tap)", () => {
     const h = code("render/hover_wiring.ts");
