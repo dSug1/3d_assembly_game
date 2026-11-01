@@ -568,7 +568,6 @@ export function createScene(
   st.asmLocked = false;
   st.asmLock = null;
   st.asmGizmo = null;
-  st.asmGizmoAt = null;
   st.asmLook = null;
   st.asmFacePoint = null;
   st.asmG = null;
@@ -576,7 +575,6 @@ export function createScene(
   st.asmSectionLines = null;
   st.asmSectionAt = 0;
   st.asmSectionKey = "";
-  st.asmGreenCache = null;
   st.asmCarrier = null;
   st.asmChain = null;
   st.asmLoop = null;
