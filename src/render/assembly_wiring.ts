@@ -68,6 +68,7 @@ export function ensureAssembly(st: SceneState): void {
   const n = Math.hypot(p[0], p[1], p[2]);
   if (n > 1e-9) st.orbit.reset(st.orbit.yaw, vOfPitch(Math.asin(p[1] / n)));
   st.asmGizmo = null;
+  st.asmGizmoAt = null;
   st.asmLook = null;
   st.asmG = null;
 }
@@ -342,6 +343,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
     st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
     st.asmGizmo = [t[0], t[1], t[2]];
+    st.asmGizmoAt = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
     return;
   }
@@ -393,6 +395,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐ the shown gizmo eased to its point; the orbit's centre IS it
   const target = st.asmLocked && st.asmLock !== null ? st.asmLock.point : g0;
   st.asmGizmo = st.asmGizmo === null ? [target[0], target[1], target[2]] : easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS);
+  st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-01) where the ring is drawn: the sections' intersection (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   // ⭐ the look point: the centre far out, the gizmo close in

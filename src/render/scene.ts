@@ -568,6 +568,7 @@ export function createScene(
   st.asmLocked = false;
   st.asmLock = null;
   st.asmGizmo = null;
+  st.asmGizmoAt = null;
   st.asmLook = null;
   st.asmFacePoint = null;
   st.asmG = null;

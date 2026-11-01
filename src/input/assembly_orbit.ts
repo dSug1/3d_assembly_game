@@ -44,6 +44,17 @@ export function orbitDir(yaw: number, v: number): Vec3 {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"I do not like the fact that the gizmo now lags the intersection of the green and red sections. fix that so that the gizmo
+ * is always at the intersection."*) — **WHERE THE GIZMO IS DRAWN**: its EXACT point this frame (`exact` — the carrier's drop, where the red and green
+ * sections meet; locked, the lock's point), else the eased one. The orbit's centre (the piece, the camera) keeps its ease (`GIZMO_TAU_MS`): a drop that
+ * changes surface does not jump the piece. ⛔ The ring was drawn at the EASED point, 90 ms behind — invisible while the lines were recast every 100 ms,
+ * seen once they followed every frame.
+ */
+export function gizmoShownAt(exact: Vec3 | null, eased: Vec3): Vec3 {
+  return exact ?? eased;
+}
+
+/**
  * ⭐⭐⭐ (2026-11-01, the owner: *"when I orbit, the red section and the green section seem to jump from one position to another … a succession of small
  * jumps. can this be improved ?"* → *"build it"*) — **THE GREEN SECTION'S IDENTITY**: on a side the loop at the carrier's height, over a top / under a
  * bottom the turn at its distance from the axis — both to the millimetre — and the placed parts. Its points are FIXED on it (along the loop from its own
