@@ -1173,7 +1173,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
   it("⭐⭐⭐ wired: the latch with no finger, the finger off on a held second touch or A, the exit by the approach; the gizmo rides the slide; the release keeps it on", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("if (!slideLatches(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false) || now - st.slideTryAt < READY_EVERY_MS) return;");
-    expect(h).toContain("if (hoverStart(st, null) === true) st.slideTryAt = 0;");
+    expect(h).toContain("if (r === true) st.slideTryAt = 0;");
     expect(h).toContain("if (h.pointerId !== null && (st.hold !== null || st.orbitShift)) slideDetach(st);");
     expect(h).toContain("if (q !== null && slideExits(dotv(ringAnchorAt(st, q), h.n) - h.level, st.cfg.hoverApproachMm / 1000)) {");
     expect(h).toContain("gizmo: slideModeOn(st) || st.cfg.hoverGizmoMove === 1");
@@ -1185,5 +1185,31 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(a).toContain("if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));");
     // the coast before the slide's early return: a flick out leaves it
     expect(a.indexOf("if (st.approachInertia.coasting) {")).toBeLessThan(a.indexOf("if (st.hover !== null) { const t = st.centreBlend.targetM;"));
+  });
+  it('⭐⭐⭐ THE LIT CONTOURS HOLD THE ORBIT until the slide latches (*"I can drive away the piece just with dy and the dx and dy slide never engages although the contour are highlighted"*) — not when refused, nor on A', async () => {
+    const { slideHoldsOrbit } = await import("../src/input/hover");
+    expect(slideHoldsOrbit(true, true, false, false, false, false)).toBe(true);
+    expect(slideHoldsOrbit(false, true, false, false, false, false)).toBe(false); // no contours: the orbit as ever
+    expect(slideHoldsOrbit(true, false, false, false, false, false)).toBe(false); // left, not armed again: the orbit may take it away
+    expect(slideHoldsOrbit(true, true, false, true, false, false)).toBe(false); // on: the slide has the finger
+    expect(slideHoldsOrbit(true, true, false, false, true, false)).toBe(false); // the latch refused: never frozen
+    expect(slideHoldsOrbit(true, true, false, false, false, true)).toBe(false); // A + drag: the approach
+  });
+  it("⭐⭐ the held orbit waits SLIDE_WAIT_MAX_MS for the piece to come to rest, then counts as refused — never frozen for good", async () => {
+    const { slideRefusedAfter, SLIDE_WAIT_MAX_MS } = await import("../src/input/hover");
+    expect(slideRefusedAfter(false, 0)).toBe(true);
+    expect(slideRefusedAfter(true, 0)).toBe(false);
+    expect(slideRefusedAfter("wait", SLIDE_WAIT_MAX_MS - 1)).toBe(false);
+    expect(slideRefusedAfter("wait", SLIDE_WAIT_MAX_MS + 1)).toBe(true);
+  });
+  it("⭐⭐⭐ wired: the hold in the frame (the coast) and in the drag (the finger's step); a drag begun on a PLACED PART slides too (⛔ it only orbited — held under the slide, nothing moved)", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("if (slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false, st.slideRefused, st.orbitShift)) slideHoldOrbit(st);");
+    expect(h).toContain("st.slideRefused = slideRefusedAfter(r, r === \"wait\" ? now - st.slideWaitSince : 0);");
+    expect(h).toContain("if (slideModeOn(st) && slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, st.hover !== null, st.slideRefused, st.orbitShift)) {");
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toContain("if (st.router.objects().length === 1 && st.router.outside().length === 0 && hoverDragStep(st, e.pointerId, s, grip.prev)) {");
+    // before the locked part's orbit and the gate that returns
+    expect(p.indexOf("hoverDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal && st.router.objects().length === 1"));
   });
 });

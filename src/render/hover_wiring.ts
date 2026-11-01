@@ -61,7 +61,9 @@ import {
   hoverOffered,
   hoverSlidAfterLook,
   slideExits,
+  slideHoldsOrbit,
   slideLatches,
+  slideRefusedAfter,
   slideViewProgress,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
@@ -287,6 +289,11 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
 export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
   // ⭐⭐ (2026-10-14, the hover's second audit) a hover that ended in a CAPTURE spends its finger: it moves nothing more until it lifts (`D139`: a snap stops the drag that made it)
   if (st.hoverSpent === pointerId) return true;
+  // ⭐⭐⭐ (2026-11-01) the lit contours HOLD the orbit (`slideHoldsOrbit`): the finger's orbit step dropped until the slide latches (it takes this finger then)
+  if (slideModeOn(st) && slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, st.hover !== null, st.slideRefused, st.orbitShift)) {
+    slideHoldOrbit(st);
+    return true;
+  }
   const slide = slideModeOn(st) && st.hover !== null;
   // ⭐⭐⭐ (2026-11-01) in the slide mode A + drag is the approach: the finger off the slide, the drag to the orbit's (its dy the approach)
   if (slide && st.orbitShift) {
@@ -459,9 +466,20 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
   if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);
   const h = st.hover;
   if (h === null) {
+    if (st.hoverReady === null) {
+      st.slideRefused = false;
+      st.slideWaitSince = 0;
+    }
+    // ⭐⭐⭐ (2026-11-01) the lit contours HOLD the orbit (`slideHoldsOrbit`): its coast stopped where the piece is, so it comes to rest and latches
+    // (⛔ the latch waited for the piece at rest while a finger or the coast carried it through the lit contours and away)
+    if (slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false, st.slideRefused, st.orbitShift)) slideHoldOrbit(st);
     if (!slideLatches(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false) || now - st.slideTryAt < READY_EVERY_MS) return;
     st.slideTryAt = now;
-    if (hoverStart(st, null) === true) st.slideTryAt = 0;
+    const r = hoverStart(st, null);
+    if (r === "wait" && st.slideWaitSince === 0) st.slideWaitSince = now;
+    st.slideRefused = slideRefusedAfter(r, r === "wait" ? now - st.slideWaitSince : 0);
+    if (r !== "wait") st.slideWaitSince = 0;
+    if (r === true) st.slideTryAt = 0;
     return;
   }
   if (h.pointerId !== null && (st.hold !== null || st.orbitShift)) slideDetach(st);
@@ -474,6 +492,15 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
     st.lastVerdict = "slide: off — the approach took the piece away; the approach and the orbit go on from the gizmo where the slide left it";
     st.hudDirty = true;
   }
+}
+
+/** ⭐ (2026-11-01) The orbit held where the piece is solved — its target there, its coast stopped (the lit contours waiting for the latch). */
+function slideHoldOrbit(st: SceneState): void {
+  const q = st.pieceQ;
+  if (q === null) return;
+  st.orbit.reset(q.yaw, q.v);
+  st.orbitInertia.stop();
+  st.orbitUserV = q.v;
 }
 
 /** ⭐ (2026-11-01) The slide mode's finger taken off it (a held second touch, A): the mode stays on, the piece where it was solved. */

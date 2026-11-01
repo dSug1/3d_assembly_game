@@ -1999,3 +1999,26 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   down left it (the approach 0.454 → 0.798), the gizmo kept at its slid place, the back-out on the sections from there; A + drag back in latched again
   (on Piece13's face, the slid spot). At the boot's top face it does not latch — the piece stops 36 mm above it (the latch risk, `HOVER.md` Open 8).
 * Vectors (`tests/hover.test.ts` + 6, red on the previous build; 7 source checks restated). ⛔ No device close. 2133 vectors.
+
+### ⭐⭐ THE SLIDE MODE'S TWO HOLES — a drag on a part, a finger through the contours (2026-11-01)
+
+> *"I tried on mobile: once, the contour highlight never latched although the faces were aligned. Then i reloaded the app and the contour highlights
+> latched properly. Check what is wrong."* — *"Also, sometimes when the contour highlights latch, I can drive away the piece just with dy and the dx and
+> dy slide never engages although the contour are highlighted"* — the owner.
+
+* ⛔ **(A) A drag that started on a PART moved nothing.** Only a press on empty space (OUTSIDE) or on the piece reached `hoverDragStep`; a press on a
+  part is a grip — on a part in its goal it went to the orbit (held while sliding), on one not in its goal (Piece17) nowhere. In the slide view the
+  assembly fills most of a phone's glass, so most drags start on a part: the slide *"never engages"*. Measured before the fix: 0 mm of slide.
+  ✅ The grip's move tries `hoverDragStep` first (one finger, no second touch), for any part — in its goal or not.
+* ⛔ **(B) A moving finger orbited through the lit contours.** The latch waits for the piece at REST (`pieceShownAtRest`), and while the finger still
+  drags — or the orbit's coast runs after it lifts — the piece never rests: the contours lit while dy carried it on and away. ✅ **The lit contours
+  HOLD the orbit** (`slideHoldsOrbit`: lit, armed, not placed, not on, not refused, not A): the orbit reset onto the piece's place, its inertia
+  stopped, the drag step consumed — so the piece rests, latches, and the SAME finger goes on as the slide. ⭐ Freed when the latch is REFUSED
+  (`hoverStart` false) or has waited more than `SLIDE_WAIT_MAX_MS` 800 ms (`slideRefusedAfter`) — a hold must never trap the orbit; reset when the
+  contours go out. A + drag / two fingers are the approach and are never held.
+* ⚠ **The first report — "never latched until a reload"** — not reproduced: no refusal that persists was found (180 random gestures). Most likely (A)
+  or (B) as seen by a hand — both depend on where the drag starts and whether the finger still moves, and a reload only put the piece back at boot.
+  ⚠ If it comes back, the HUD's hover line at that moment is the evidence to read.
+* Measured in the app: drags starting on Piece17 (not in its goal) and Piece8 (in its goal) slid 13–45 mm, both ways; a forced mid-drag lighting
+  held the piece (y 0.104), latched, and the same finger (`on(16)`) slid it; a random run, 8 slide tests, 0 stuck.
+* Vectors (`tests/hover.test.ts` + 3, red on the previous build; 1 source check restated). ⛔ No device close. 2136 vectors.

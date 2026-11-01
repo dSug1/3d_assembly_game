@@ -636,6 +636,8 @@ export function createScene(
   st.hoverReadyWorld = null;
   st.slideArmed = true;
   st.slideTryAt = 0;
+  st.slideRefused = false;
+  st.slideWaitSince = 0;
   st.hoverReadyReachMm = 0;
   st.hoverDraw = null;
   st.wayInDrawn = null;

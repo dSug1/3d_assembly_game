@@ -903,6 +903,13 @@ export function installPointerHandler(st: SceneState): void {
         st.hudDirty = true;
         return;
       }
+      // ⭐⭐⭐ (2026-11-01) THE SLIDE MODE takes a drag begun on ANY part, in its goal or not (`hoverDragStep`) — ⛔ only the orbit had it (in its goal) or
+      // nothing (not): held under the slide, a drag begun on a part moved nothing
+      if (st.router.objects().length === 1 && st.router.outside().length === 0 && hoverDragStep(st, e.pointerId, s, grip.prev)) {
+        grip.prev = s;
+        st.hudDirty = true;
+        return;
+      }
       if (lockedInGoal && st.router.objects().length === 1 && st.router.outside().length === 0) {
         orbitDragStep(st, e.pointerId, s, grip.prev);
       }
