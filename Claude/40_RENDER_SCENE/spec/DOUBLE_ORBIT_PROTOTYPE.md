@@ -2156,3 +2156,20 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   a hull read mid-sway stayed turned) go through it. At rest every mesh equals its model (checked, all 46 parts): nothing changes there. Measured, three
   random runs: **0 frames** off a box's face by more than 0.3°; the frusta read their own slopes (32.1°, 15.3°).
 * Vectors (`tests/assembly_orbit.test.ts` + 3, red on the previous build). ⛔ No device close. 2152 vectors.
+
+### ⭐⭐⭐ THE WAY OUT HAS NO ARC — the springs re-based with the orbit (2026-11-01; `orbitMode` 0)
+
+> *"when the piece leaves a face, there is still a large fly of the piece before the piece comes back into the camera view. your fix has not solved the
+> issue"*; *"this happens both on vertical and horizontal faces"*; *"I use A + drag. It seems for a short moment the piece flies away from the camera
+> screen, and then catch the 2D curve from the gizmo … a very short lap when the piece flies literally very far away, makes some wide curve before
+> catching back the 2D curve from the gizmo"* — the owner.
+
+* ⛔ **Why the third pass did not fix it**: its re-base set the orbit's yaw and pitch (`pieceQ`, the orbit) at once — but the piece is DRAWN at the eye's
+  spring (`boxSpring`, τ = `boxSmoothMs` / 2), and the camera's angles lag on their own (`cameraLagged`). Both eased from the OLD angles over ~150 ms,
+  while a fast A + drag carried the piece metres out along whatever direction the spring held: a wide arc from the approach's old direction onto the new.
+  My earlier checks were SLOW drags — the spring had converged before the piece was far. Reproduced with a fast A + drag (300 px in 5 steps): the first
+  frame 140 px off the piece's line, along the old direction, then the arc.
+* ⭐ **Fixed**: `slideWayOutRebase` re-bases the eye's spring onto the new angles (no velocity) and restarts the camera's lag (`cameraOrbit`,
+  `cameraLagged` — as the way out round a piece already did) — the piece's place is kept by its own offset, so nothing jumps. The same fast drag: the
+  first frame where it was (x 249, y 329), then a straight line toward the camera; the same at half the speed.
+* Vectors (`tests/hover.test.ts` + 1, red on the previous build). ⛔ No device close. 2153 vectors.
