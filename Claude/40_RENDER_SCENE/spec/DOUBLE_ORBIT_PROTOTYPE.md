@@ -2039,3 +2039,29 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   lifted, the one left slid the piece on the face (the slide on, y 0.104 → 0.06).
 * ⭐ Tried and dropped on the way: the latch's 800 ms wait running out under the approach — not the cause, reverted.
 * Vectors (`tests/hover.test.ts` + 1, red on the previous build; `tests/proto_hold.test.ts` 1 restated). ⛔ No device close. 2137 vectors.
+
+### ⭐⭐⭐ THE SLIDE'S LIMITED ORBIT — the camera goes round with the slide (2026-11-01; `orbitMode` 0)
+
+> *"When I slide, i want to remove the translation sway of the assembly and the camera position freeze and replace that with a limited orbit of the camera
+> as shown in attachment: the camera orbits gradually with the delta position until it reaches the clamped position (which corresponds to the current
+> semi-isometric view the camera is adopting when the sliding mode is on). Also, apply the orbit sway of the assembly as for the normal orbit (i think
+> there is an attenuation gain based on the distance of the piece from the gizmo)."* — the owner, with a sketch: four cubes, the piece on a face,
+> slid right / left / up / down, the camera going round the same way.
+
+* ⭐ **No frozen corner** (`hoverStart`, the slide mode): the view's direction is the LIMITED ORBIT (`SlideOrbit`, `input/hover.ts`) — two angles off the
+  hosting face's normal, toward `e1` (the screen's right laid on the face) and `e2 = n × e1`, the direction `n + tan a0·e1 + tan a1·e2` normalised.
+  Begun WHERE THE CAMERA IS (`slideOrbitStart`): the 500 ms blend in moves the look and the upright roll, not the camera's direction.
+* ⭐ **The slide turns it the way the piece goes** (`slideOrbitTurn`, `slideOrbitMove`): `slideOrbitDegPerMm` (2°/mm of finger, ⚠ a guess with a slider,
+  OBJECT TRANSLATION next to *hover amplitude*; the orbit's own yaw is ~5.1°/mm) along the slide step's direction on `e1` / `e2` — right: round to the
+  right; up: the camera rises; down: below. **Clamped** at `SLIDE_ORBIT_CLAMP_RAD` 45° each way (`slideOrbitStep`) — both there, exactly the isometric
+  corner the view used to freeze on. Reversible. A latch with the camera beyond 45° (a steep approach) keeps that angle as the limit, tightened as the
+  slide turns it inward (no jump). The angles SHOWN ease after the slide's on the orbit's τ (`orbitShown`). The exit blends back as before.
+* ⭐ **The sway as for the orbit** (⛔ the slide's own translation-driven sway, `hoverSway`, is no longer used in the slide mode): the orbit's trigger
+  (one kick as a brisk drag starts or turns), `orbitSwayDegAt` by the piece's distance to the gizmo, about the placed parts' barycentre, in the sense
+  the camera goes round — only while the camera still turns (none once clamped). ⚠ Sliding, the piece sits on the gizmo: the attenuation gives its
+  floor, 0.1° — the size of the old slide sway.
+* ⚠ Seen obliquely, a horizontal drag low on the screen moves the piece a little up / down the face too (the finger's ray on the plane) — the camera now
+  follows that as well.
+* Measured in the app (`Scene_1`, the painting's front face): latched at 2.5° / −2.0°; right 60 px → 17.3°; on → 45° (clamped); left → −45°; up → the
+  camera above (clamped); down → below (clamped); a sway kick at each brisk drag's start.
+* Vectors (`tests/hover.test.ts` + 4, red on the previous build). ⛔ No device close. 2141 vectors.

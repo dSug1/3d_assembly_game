@@ -326,6 +326,8 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐ (2026-10-14) the HOVER: a drag starting on the orbited piece slides it on the face it rests against (`HOVER.md`)
             tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
             tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
+            // ⭐⭐⭐ (2026-11-01) the slide's limited orbit: the camera's turn per mm of finger, up to the isometric corner
+            tunable(st, "slide camera orbit (°/mm of finger, up to the isometric corner)", "slideOrbitDegPerMm", 0, 10, 0.1),
             tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
             tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world

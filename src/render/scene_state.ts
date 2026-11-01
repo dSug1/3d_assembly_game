@@ -584,6 +584,10 @@ export interface SceneState {
     signs: [number, number];
     /** ⭐ (2026-10-14, the hover's audit) the view it RETARGETED from (a hover on another face), eased out over `HOVER_VIEW_RETARGET_MS` */
     from: { target: import("../core/vec").Vec3; iso: import("../core/vec").Vec3; t0: number } | null;
+    /** ⭐⭐⭐ (2026-11-01) the slide mode's LIMITED ORBIT (`SlideOrbit`: its angles toward `e1` / `e2`, clamped) — `iso` is its direction; `null` off the slide mode */
+    orbit: import("../input/hover").SlideOrbit | null;
+    /** ⭐ (2026-11-01) its angles SHOWN, eased after the slide's on the orbit's τ (the camera never steps with a pointer event) */
+    orbitShown: [number, number];
   } | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
   orbitPiecePlaced: boolean;
