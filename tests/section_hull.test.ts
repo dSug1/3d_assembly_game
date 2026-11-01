@@ -347,3 +347,17 @@ describe('⭐⭐⭐ THE SECTIONS WITHOUT STEPS (2026-11-01, the owner: *"the red
     expect(w).not.toContain("SECTION_EVERY_MS");
   });
 });
+
+describe('⭐⭐⭐ THE GIZMO AT THE INTERSECTION (2026-11-01, the owner: *"I do not like the fact that the gizmo now lags the intersection of the green and red sections"*)', () => {
+  it("⭐⭐⭐ the ring drawn at the gizmo's EXACT point — the eased one only before there is any; the orbit's centre keeps its ease", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.gizmoShownAt).toBeDefined(); // ⛔ the old: the ring at the eased point, 90 ms behind the lines (measured: 15.9 mm off the red line at the median, 24 mm at most)
+    expect(A.gizmoShownAt([1, 2, 3], [0, 0, 0])).toEqual([1, 2, 3]);
+    expect(A.gizmoShownAt(null, [0, 0, 0])).toEqual([0, 0, 0]);
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM) : st.centreBlend.targetM;");
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("st.asmGizmoAt = [target[0], target[1], target[2]];");
+    expect(w).toContain("easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS)"); // the centre still eased: a drop changing surface does not jump the piece
+  });
+});

@@ -2285,3 +2285,17 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   latch, *"settled X mm onto it"* with X well under the gap.
 * **Possible fixes, not built**: A — a settle stopped by a nearer PARALLEL face latches on that face (the one the piece touches), else no latch (never a
   slide in the air); B — keep the latch and settle again as soon as the slide carries the piece past what stopped it.
+
+### ⭐⭐⭐ THE GIZMO AT THE INTERSECTION (2026-11-01; `orbitMode` 0)
+
+> *"I do not like the fact that the gizmo now lags the intersection of the green and red sections. fix that so that the gizmo is always at the
+> intersection."* — the owner.
+
+* ⛔ **Why**: the yellow ring was drawn at the orbit's centre — the gizmo EASED toward its point (`GIZMO_TAU_MS`, 90 ms). While the lines were recast every
+  100 ms they lagged as much and the two agreed; once the lines followed every frame (*the sections without steps*), the ring trailed behind their
+  intersection. Measured, an orbit drag: the ring **15.9 mm** off the red line at the median, **24 mm** at most.
+* ⭐ **Fixed** (`gizmoShownAt`, `st.asmGizmoAt`): the ring is drawn at the gizmo's EXACT point this frame — the carrier's drop, where the sections meet
+  (locked, the lock's point; under a slide the slid one). The orbit's centre keeps its ease, so the piece and the camera still do not jump where a drop
+  changes surface. The same drag: the ring **2.0 mm** from the red line at the median (the lines' own lift off the surface), 6.3 mm at most; 2.0 mm from
+  the green, as before.
+* Vectors (`tests/section_hull.test.ts` + 1, red on the previous build). ⛔ No device close. 2160 vectors.

@@ -729,6 +729,8 @@ export interface SceneState {
   /** ⭐ (2026-10-29) …and its cone (`lockCone`: from where the piece was at the lock, tightened inward; `null`: the default 80°) */
   asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-01) the gizmo's EXACT point this frame (the sections' intersection; locked, the lock's) — where the ring is drawn (`gizmoShownAt`) */
+  asmGizmoAt: Vec3 | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
   /** ⭐ (2026-10-28) the gizmo CARRIED along the sections (its raw point; `null`: found by the ray next frame), the orbit place it was carried to, the section lines and when they were cast */
