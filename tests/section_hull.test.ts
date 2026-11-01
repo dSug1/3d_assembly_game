@@ -307,7 +307,7 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     expect(a).toContain("const loop = loopOf(hull2(greenPoints(parts.parts, y)));");
     expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
     expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
-    expect(a).toContain("const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);");
+    expect(a).toContain("const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind);"); // ⭐ (2026-11-01) at fixed angles round the axis (`sectionGreenKey`)
   });
 });
 
@@ -321,5 +321,29 @@ describe("⭐⭐ the drawn sections break at a jump (2026-10-29)", () => {
     expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), greenStep) ? [p0, p1] : [rest, rest]);");
     expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), step) ? [p0, p1] : [rest, rest]);");
     expect(a).toContain("const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);");
+  });
+});
+
+describe('⭐⭐⭐ THE SECTIONS WITHOUT STEPS (2026-11-01, the owner: *"the red section and the green section seem to jump from one position to another … a succession of small jumps"* → *"build it"*)', () => {
+  it("⭐⭐⭐ red: the carrier INSERTED among fixed samples — moved, nothing else moves (⛔ it replaced the nearest: the kink hopped from sample to sample)", () => {
+    const a = redSamples(0.6, 0.3141, 64);
+    const b = redSamples(0.6, 0.3199, 64); // the carrier moved past where the old rule switched index
+    const fixedA = a.filter((x) => x !== 0.3141);
+    const fixedB = b.filter((x) => x !== 0.3199);
+    expect(fixedA).toEqual(fixedB); // ⛔ the old: one evenly spread sample came back, another left
+    expect(fixedA.length).toBe(63);
+    expect(redSamples(0.6, -1, 64)[0]).toBe(0);
+    expect(redSamples(0.6, 2, 64)[63]).toBeCloseTo(0.6, 12);
+  });
+  it("⭐⭐ green: its identity the loop's height on a side, the distance from the axis over a top, to the millimetre — a dx keeps it; the lines redrawn at every change", async () => {
+    const { sectionGreenKey } = await import("../src/input/assembly_orbit");
+    expect(sectionGreenKey("P", "SIDE", [0.1, 0.2681, 0.3], [0, 0, 0])).toBe(sectionGreenKey("P", "SIDE", [-0.4, 0.26812, 0.05], [0, 0, 0])); // round the loop: the same
+    expect(sectionGreenKey("P", "SIDE", [0.1, 0.268, 0.3], [0, 0, 0])).not.toBe(sectionGreenKey("P", "SIDE", [0.1, 0.27, 0.3], [0, 0, 0]));
+    expect(sectionGreenKey("P", "TOP", [0.3, 0.5, 0.4], [0, 0, 0])).toBe(sectionGreenKey("P", "TOP", [0.5, 0.5, 0], [0, 0, 0])); // turned about the axis: the same
+    expect(sectionGreenKey("P", "TOP", [0.3, 0.5, 0.4], [0, 0, 0])).not.toBe(sectionGreenKey("Q", "TOP", [0.3, 0.5, 0.4], [0, 0, 0])); // another placed set
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("if (st.asmSectionLines !== null && key === st.asmSectionKey) return;");
+    expect(w).toContain("const at = chainAt(loop, wrapOn(loop, (loop.total * k) / GREEN_SAMPLES));");
+    expect(w).not.toContain("SECTION_EVERY_MS");
   });
 });

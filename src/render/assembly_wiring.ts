@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, nextLock, sectionGreenKey, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -403,10 +403,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   sectionLinesFrame(st, q.yaw);
 }
 
-/** ⭐ The section lines' samples (the green round the circle, the red along the chain), and how often they may be recast (ms). */
+/** ⭐ The section lines' samples (the green round the circle, the red along the chain). */
 const GREEN_SAMPLES = 96;
 const RED_SAMPLES = 64;
-const SECTION_EVERY_MS = 100;
 /** ⭐ The lines lifted off the surface toward their ray's origin (m) — never in it. */
 const SECTION_LIFT_M = 0.002;
 
@@ -415,7 +414,7 @@ const SECTION_LIFT_M = 0.002;
  * centre → top centre of the plane through it — the half the gizmo can travel); the GREEN one, where dx takes it — on a side the green loop at its height,
  * dropped (⛔ 2026-10-29 the yaw plane's cut at every yaw), on a top / bottom its turn about the axis, brought onto each red section and dropped (⛔ vertical
  * drops on a circle: off a thin top they landed on the parts below, *"the green section can take strange forms"*). Recast only when the yaw, the carrier
- * or the placed set changed (at most every `SECTION_EVERY_MS`); hidden locked, under a hover, or off. ⭐ ONE mesh of a fixed vertex count, updated in
+ * or the placed set changed (⭐ 2026-11-01 at every change — ⛔ at most every 100 ms: they jumped); hidden locked, under a hover, or off. ⭐ ONE mesh of a fixed vertex count, updated in
  * place (a segment not drawn: collapsed) — ⛔ (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing
  * from 27 of 106 frames, *"flickering all the time"*.
  */
@@ -429,7 +428,9 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
   const key = `${st.asmParts?.key ?? ""}#${yaw.toFixed(6)}#${c.w.map((x) => x.toFixed(5)).join(",")}#${c.kind}`;
   const now = performance.now();
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
-  if (st.asmSectionLines !== null && (key === st.asmSectionKey || now - st.asmSectionAt < SECTION_EVERY_MS)) return;
+  // ⭐⭐⭐ (2026-11-01, *"a succession of small jumps"* → *"build it"*) redrawn at every change — ⛔ at most every 100 ms: the lines held, then
+  // jumped, ten times a second under a moving orbit
+  if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionAt = now;
   st.asmSectionKey = key;
   const a = st.asm!;
@@ -441,21 +442,26 @@ function sectionLinesFrame(st: SceneState, yaw: number): void {
   const g = st.asmG!;
   const rest = new Vector3(g[0], g[1], g[2]);
   const lines: Vector3[][] = [];
-  // ⭐ green: where dx takes the gizmo, a closed loop starting at the carrier itself
-  let green: (Vector3 | null)[] = [];
+  // ⭐ green: where dx takes the gizmo, a closed loop — ⭐⭐⭐ (2026-11-01) its points FIXED on it (`sectionGreenKey`), dropped once per loop: a dx leaves it
+  // as it is (⛔ spaced from the carrier, they slid along the loop at every dx)
   const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
-  if (loop !== null) {
-    const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
-    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
-      const at = chainAt(loop, wrapOn(loop, s0 + (loop.total * k) / GREEN_SAMPLES));
-      return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));
-    });
-  } else if (c.kind !== "SIDE") {
-    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
-      const dYaw = (2 * Math.PI * k) / GREEN_SAMPLES;
-      const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);
-      return r === null ? null : drop(r.drop);
-    });
+  const gKey = sectionGreenKey(st.asmParts?.key ?? "", c.kind, c.w, a.centre);
+  let green: readonly (Vector3 | null)[] = [];
+  if (st.asmGreenCache !== null && st.asmGreenCache.key === gKey) green = st.asmGreenCache.pts;
+  else {
+    if (loop !== null) {
+      green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
+        const at = chainAt(loop, wrapOn(loop, (loop.total * k) / GREEN_SAMPLES));
+        return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));
+      });
+    } else if (c.kind !== "SIDE") {
+      green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
+        const th = (2 * Math.PI * k) / GREEN_SAMPLES; // fixed angles round the axis: the carrier turned there from where it is
+        const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind);
+        return r === null ? null : drop(r.drop);
+      });
+    }
+    st.asmGreenCache = { key: gKey, pts: green };
   }
   // ⭐ (2026-10-29) a jump between two neighbours breaks it (`joins`) — the spacing: the loop's per sample on a side, the turn's arc on a top / bottom
   const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);

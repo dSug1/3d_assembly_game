@@ -256,13 +256,19 @@ export function faceTurnedAway(n: Vec3 | null, u: Vec3): boolean {
 }
 
 /**
- * ⭐⭐ THE SECTION DRAWN — the path the gizmo takes: the RED one, `count` arc lengths along the chain (the carrier's own `s` in place of the nearest, so
- * the gizmo lies on the line exactly). (⛔ `greenYaws` deleted: the green line is the green loop now.)
+ * ⭐⭐ THE SECTION DRAWN — the path the gizmo takes: the RED one, `count` arc lengths along the chain, the carrier's own `s` among them, so the gizmo lies
+ * on the line exactly. (⛔ `greenYaws` deleted: the green line is the green loop now.) ⭐⭐⭐ (2026-11-01, *"a succession of small jumps"* → *"build it"*)
+ * `count − 1` of them FIXED, evenly spread, the carrier's INSERTED among them — ⛔ it replaced the nearest one: as the carrier moved, the replaced index
+ * changed and the kink at the gizmo hopped from sample to sample.
  */
 export function redSamples(total: number, s: number, count: number): number[] {
+  if (count <= 1) return [0];
+  const sc = Math.min(total, Math.max(0, s));
   const out: number[] = [];
-  for (let k = 0; k < count; k++) out.push(count > 1 ? (total * k) / (count - 1) : 0);
-  if (count > 1) out[Math.min(count - 1, Math.max(0, Math.round((s / (total || 1)) * (count - 1))))] = Math.min(total, Math.max(0, s));
+  for (let k = 0; k < count - 1; k++) out.push(count > 2 ? (total * k) / (count - 2) : 0);
+  let i = 0;
+  while (i < out.length && out[i]! < sc) i++;
+  out.splice(i, 0, sc);
   return out;
 }
 
