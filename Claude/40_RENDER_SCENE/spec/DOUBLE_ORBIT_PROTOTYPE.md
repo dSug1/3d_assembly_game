@@ -1967,3 +1967,35 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   apart than 2.5 × the spacing (+ 2 mm): the loop's per sample on a side, the turn's arc on a top / bottom.
 * ⭐ Offered, not built: the carrier's kind (side / top / bottom) on the HUD's `camera` line, to read which path drew a shape.
 * Vectors (`tests/section_hull.test.ts` + 1, red on the previous build). ⛔ No device close. 2127 vectors.
+
+### ⭐⭐⭐ THE SLIDE MODE — from the approach to the slide with no press (`1.0.86-`, 2026-11-01; `orbitMode` 0)
+
+> *"I want to work on the transition between approach and sliding. … - sliding is entered directly if the contours highlight (no need to press the piece). A + dy or double finger continues to drive the approach so that the user can exit the sliding mode by moving away the piece
+> - blend the camera movements at entering or exiting the sliding mode - approach mode - gizmo moves with the sliding so the exit of the sliding mode shall be from the new gizmo position … Update the md files. Deploy"* — the owner.
+
+* ⭐ **The latch** (`slideFrame`, `slideLatches`): the moment the contours light (`hoverReady`: the resting face within `hoverApproachMm` 20 mm of an
+  anti-parallel part's face, over it), the slide starts by itself — `hoverStart` with no finger: the piece SETTLED onto the face (solved, drawn over
+  150 ms), the orbit held. A held second touch no longer refuses it (two fingers ARE the approach). Tried at most every 100 ms while refused (the piece
+  still easing: it waits).
+* ⭐ **On**: `st.hover` with no finger (`pointerId` `null`). The finger's lift keeps it on (⛔ 10-16: the slide stopped and was spent); ANY one-finger drag
+  — on the piece or on empty space, touch or mouse — takes it past the tap's slop through the orbit band's deadband; a held second touch or A takes the
+  finger off it (`hoverEndsOn`: in the slide mode only the capture ends it). ⚠ So within 20 mm of an aligned face the one-finger drag cannot orbit — the
+  approach out first.
+* ⭐ **The approach under it**: two fingers' dy, A + drag (and its coast, now stepped under the slide too — a flick out leaves it); the piece goes in or
+  out along its direction from where it stands; the slide's solve origin carried by the approach since the latch (`hoverSolve`).
+* ⭐ **Left** (`slideExits`): the resting face more than 20 mm from the hosting face's plane — the contours' own test. ⭐ **Re-armed** (`slideArmedAfter`)
+  only by an approach step INWARD or an orbit drag — the coast outward, hovering at 20 mm, cannot latch and unlatch it frame after frame.
+* ⭐ **The camera blended** (`slideViewProgress`): the slide view's share by TIME — toward 1 while on, back to 0 once left, whole over
+  `SLIDE_VIEW_BLEND_MS` 500 ms, eased at both ends (`hoverViewWeight`; ⛔ by the slide drag's travel in and the orbit's out — the latch has no travel).
+  The view's target rides the gizmo's slide (⛔ it stayed where the slide began: a long slide left the screen).
+* ⭐ **The gizmo rides the slide** (`hoverGizmoMove` 1, always in the slide mode): the slide moves the orbit's centre, so the lock's point; the SETTLE is
+  the piece's own offset (⛔ with the gizmo it sank up to 20 mm into the face) and ways in by the approach's travel once the mode is left. Left, still
+  locked, the approach and the orbit turn about the new gizmo; backed out past the lock, the carrier is found again from it (`assemblyFrame`'s unlock).
+  ⚠ A tap on a placed part does not move the gizmo while the slide mode is on.
+* ⛔ `orbitMode` 1 (the gizmo's 2D curve) keeps the press on the piece, the spent slide, the view by travel — untouched (but its `hoverGizmoMove` 1 settles
+  by the piece's offset too).
+* Measured in the app (`Scene_1`, the painting's front face, the resting face turned to +z): latched by itself 7.2 mm out (settled 6.2), the view 0.23 →
+  0.51 → 0.82 → 1.00 at 0 / 100 / 250 / 500 ms; touch dx / dy and a mouse dx on empty space slid the piece and the gizmo together; two fingers 120 px
+  down left it (the approach 0.454 → 0.798), the gizmo kept at its slid place, the back-out on the sections from there; A + drag back in latched again
+  (on Piece13's face, the slid spot). At the boot's top face it does not latch — the piece stops 36 mm above it (the latch risk, `HOVER.md` Open 8).
+* Vectors (`tests/hover.test.ts` + 6, red on the previous build; 7 source checks restated). ⛔ No device close. 2133 vectors.

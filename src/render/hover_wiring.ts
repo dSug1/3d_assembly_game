@@ -60,6 +60,9 @@ import {
   HOVER_OVERSHOOT_M,
   hoverOffered,
   hoverSlidAfterLook,
+  slideExits,
+  slideLatches,
+  slideViewProgress,
 } from "../input/hover";
 import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
@@ -79,6 +82,16 @@ const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
 const dotv = (p: Vec3, q: Vec3): number => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
 const lerp3 = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"sliding is entered directly if the contours highlight (no need to press the piece). A + dy or double finger continues to drive the approach so that the user can exit the sliding mode by moving away the piece"*) — **THE SLIDE MODE** is the orbit around the assembly's (`orbitMode` 0): the slide latches by itself
+ * (`slideFrame`), stays on when the finger lifts, every one-finger drag slides; the approach leaves it. ⛔ The gizmo's 2D curve (`orbitMode` 1) keeps the
+ * press on the piece.
+ */
+export function slideModeOn(st: SceneState): boolean {
+  return st.cfg.orbitMode === 0;
+}
 
 /** ⭐ A first touch (or left press) on the orbited piece: noted — the drag that follows hovers if the piece may (decided past the tap's slop). */
 export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): void {
@@ -98,7 +111,10 @@ export function hoverPressNote(st: SceneState, pointerId: number, s: Sample): vo
 
 /** ⭐ The finger lifted: the hover ends (the camera stays in the hover view until the orbit comes back). */
 export function hoverRelease(st: SceneState, pointerId: number): void {
-  if (st.hover?.pointerId === pointerId) {
+  if (st.hover?.pointerId === pointerId && slideModeOn(st)) {
+    // ⭐⭐⭐ (2026-11-01) THE SLIDE MODE stays on: the finger let go of it (the piece where it was solved); the next one-finger drag slides again
+    st.hover.pointerId = null;
+  } else if (st.hover?.pointerId === pointerId) {
     st.hover = null;
     // ⭐⭐⭐ (2026-10-16, *"After a slide, when the press is released, the slide and highlights shall immediately stop. The next press then drives the orbit."*) — the
     // piece drawn where it was SOLVED at once (⛔ it eased on after the lift), and no hover offered until the orbit moved it (`hoverOffered`)
@@ -169,7 +185,7 @@ function coplanarFaces(st: SceneState, n: Vec3, level: number): { id: string; fa
  * ⭐ May the drag hover? The resting face looking at a part's face, anti-parallel, within reach, over it (`hoverFaceContact`); then the hover
  * starts. `"wait"`: the shown piece is still easing onto its solved place — the drag does nothing yet and asks again.
  */
-function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
+function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" {
   const b = st.greenBox;
   const p = st.orbitPieces.find((o) => o.mesh === b);
   // ⭐ (2026-10-14, *"I can't hover translate in the attached configuration. Make sure the threshold distance is between resting face and collision face. Or check what else is bugging. The green piece should hover translate on the blue part's vertical face."*) every refusal SAYS why on the HUD's `last` line
@@ -179,12 +195,13 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
     return false;
   };
   if (b === null || p === undefined || p.restingFace === null || st.pieceAnchor === null) return refuse("no orbited piece with a resting face");
-  if (!hoverOffered(st.hoverSlid)) return refuse("the slide just ended");
+  if (!slideModeOn(st) && !hoverOffered(st.hoverSlid)) return refuse("the slide just ended");
   if (st.orbitPiecePlaced) return refuse("the piece is placed in its goal");
   const q = st.pieceQ;
   if (q === null) return refuse("the piece is not on its ring (the way in or out round a piece)");
   if (st.pieceOrbit !== null || st.pieceEntry !== null || st.centreReturn !== null) return refuse("the orbit round the piece is on");
-  if (st.hold !== null) return refuse("a second touch is held");
+  // ⭐ (2026-11-01) in the slide mode a held second touch is the approach: the slide may latch under it
+  if (st.hold !== null && !slideModeOn(st)) return refuse("a second touch is held");
   if (st.restAlign !== null) return refuse("a turn is playing");
   // ⭐⭐ (2026-10-14, the hover's second audit) the shown piece AT REST on its solved place — the hover starts from where the piece IS (still easing: wait)
   if (!pieceShownAtRest(st, q)) {
@@ -238,10 +255,12 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
   const level = c.normal[0] * c.centre[0] + c.normal[1] * c.centre[1] + c.normal[2] * c.centre[2]; // the FACE's own plane
   const behind = bodiesBehindPlane(st.world, setup, c.normal, level, behindToleranceM(c.gapM - settleM, opt.gapM / 2));
   behind.delete(b.name);
-  st.hover = { pointerId, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], speedMmS: 0, behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
+  st.hover = { pointerId, level, approach0: st.approach, n: c.normal, e1: plane.e1, e2: plane.e2, origin: settled, u: 0, v: 0, pending: [0, 0], finger: [0, 0], speedMmS: 0, behind, bound: coplanarBoundary(st, c.normal, c.centre, c.id, c.faceId) };
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
-  st.hoverFollow = { e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
-  applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM));
+  // ⭐⭐⭐ (2026-11-01, the owner: *"gizmo moves with the sliding so the exit of the sliding mode shall be from the new gizmo position"*) — in the slide mode the
+  // gizmo always rides the slide (`hoverGizmoMove` 1); the approach and the orbit go on from where it left it
+  st.hoverFollow = { view0: null, e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: slideModeOn(st) || st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
+  applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM), [0, 0, 0]);
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
   // ⭐⭐ (2026-10-14, the hover's audit) a hover on ANOTHER face retargets the view, eased from the one it leaves (`hoverViewRetargets`)
@@ -254,7 +273,8 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
     else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))
       st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
   }
-  st.lastVerdict = `hover: on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.cfg.hoverGizmoMove === 1 ? "gizmo and the piece" : "piece"}`;
+  st.hoverFollow.view0 = st.hoverView === null ? null : [st.hoverView.target[0], st.hoverView.target[1], st.hoverView.target[2]];
+  st.lastVerdict = `${pointerId === null ? "slide: on — latched" : "hover:"} on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.hoverFollow.gizmo ? "gizmo and the piece" : "piece"}`;
   st.hudDirty = true;
   return true;
 }
@@ -267,12 +287,33 @@ function hoverStart(st: SceneState, pointerId: number): boolean | "wait" {
 export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): boolean {
   // ⭐⭐ (2026-10-14, the hover's second audit) a hover that ended in a CAPTURE spends its finger: it moves nothing more until it lifts (`D139`: a snap stops the drag that made it)
   if (st.hoverSpent === pointerId) return true;
+  const slide = slideModeOn(st) && st.hover !== null;
+  // ⭐⭐⭐ (2026-11-01) in the slide mode A + drag is the approach: the finger off the slide, the drag to the orbit's (its dy the approach)
+  if (slide && st.orbitShift) {
+    if (st.hover!.pointerId === pointerId) slideDetach(st);
+    if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
+    return false;
+  }
+  // ⭐⭐⭐ (2026-11-01) THE SLIDE MODE ON with no finger on it: ANY one-finger drag takes it (pressed on the piece or not) — its deadband from here
+  if (slide && st.hover!.pointerId === null && st.hoverPress?.pointerId !== pointerId) {
+    hoverPressNote(st, pointerId, s);
+    return true;
+  }
   const hb = st.hoverBand?.pointerId === pointerId ? st.hoverBand : null;
   if (hb !== null) hb.band.push(s);
   if (st.hover?.pointerId !== pointerId) {
     const hp = st.hoverPress;
     if (hp === null || hp.pointerId !== pointerId) return false;
     if (Math.hypot(s.x - hp.x, s.y - hp.y) < mmToPx(st.cfg.doubleTapSlop)) return true; // still a possible tap: nothing moves
+    if (slide && st.hover!.pointerId === null) {
+      // ⭐⭐⭐ (2026-11-01) the slide mode's finger: the slide as it stands, this finger's place the base
+      const h0 = st.hover!;
+      h0.pointerId = pointerId;
+      h0.finger = [s.x, s.y];
+      h0.speedMmS = 0;
+      st.hoverPress = null;
+      return true;
+    }
     const ok = hoverStart(st, pointerId);
     if (ok === "wait") return true; // the piece still easing: asked again on the next move
     st.hoverPress = null;
@@ -306,8 +347,9 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
   // ⭐⭐ (*"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the other parts SWAY at the least angle — a hover is a slide along a part (`hoverSwayDeg`), about the placed parts
   if (hb !== null && onPlane) hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
   // the camera eases toward the hover view with the finger's travel
+  // ⭐ (2026-11-01) in the slide mode by time (`slideFrame`)
   const hv = st.hoverView;
-  if (hv !== null) hv.progress = hoverViewProgress(hv.progress, Math.hypot(dx, dy) / mmToPx(1), 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), true);
+  if (hv !== null && !slideModeOn(st)) hv.progress = hoverViewProgress(hv.progress, Math.hypot(dx, dy) / mmToPx(1), 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), true);
   st.hudDirty = true;
   return true;
 }
@@ -367,8 +409,9 @@ function hoverSway(st: SceneState, watcher: SwayWatcher, s: Sample, moved: Vec3,
  */
 export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
   if (st.hoverBand !== null) st.hoverBand.band.tick(now);
-  // ⭐⭐ (2026-10-14, the hover's audit) a held second touch, or the capture: the hover ends now, at its solved place
-  if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced)) {
+  if (slideModeOn(st)) slideFrame(st, now, dtSec);
+  // ⭐⭐ (2026-10-14, the hover's audit) a held second touch, or the capture: the hover ends now, at its solved place (⭐ 2026-11-01 in the slide mode the capture only)
+  if ((st.hover !== null || st.hoverFollow !== null) && hoverEndsOn(st.hold !== null, st.orbitPiecePlaced, slideModeOn(st))) {
     hoverEndNow(st);
     return;
   }
@@ -407,6 +450,40 @@ export function hoverFrame(st: SceneState, now: number, dtSec: number): void {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"sliding is entered directly if the contours highlight (no need to press the piece). A + dy or double finger continues to drive the approach so that the user can exit the sliding mode by moving away the piece"*) — **THE SLIDE MODE, EACH FRAME**: the slide view's share by time (`slideViewProgress`); off, it LATCHES as
+ * soon as the contours light (`slideLatches` — `hoverStart` with no finger, at most every 100 ms while refused); on, a held second touch or A takes the
+ * finger off it, and the APPROACH that carries the resting face beyond the reach from the hosting face's plane leaves it (`slideExits`).
+ */
+function slideFrame(st: SceneState, now: number, dtSec: number): void {
+  const hv = st.hoverView;
+  if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);
+  const h = st.hover;
+  if (h === null) {
+    if (!slideLatches(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false) || now - st.slideTryAt < READY_EVERY_MS) return;
+    st.slideTryAt = now;
+    if (hoverStart(st, null) === true) st.slideTryAt = 0;
+    return;
+  }
+  if (h.pointerId !== null && (st.hold !== null || st.orbitShift)) slideDetach(st);
+  const q = st.pieceQ;
+  if (q !== null && slideExits(dotv(ringAnchorAt(st, q), h.n) - h.level, st.cfg.hoverApproachMm / 1000)) {
+    st.hover = null;
+    st.hoverPress = null;
+    st.hoverBand = null;
+    st.slideArmed = false;
+    st.lastVerdict = "slide: off — the approach took the piece away; the approach and the orbit go on from the gizmo where the slide left it";
+    st.hudDirty = true;
+  }
+}
+
+/** ⭐ (2026-11-01) The slide mode's finger taken off it (a held second touch, A): the mode stays on, the piece where it was solved. */
+function slideDetach(st: SceneState): void {
+  if (st.hover !== null) st.hover.pointerId = null;
+  st.hoverBand = null;
+  st.hoverPress = null;
+}
+
+/**
  * ⭐⭐⭐ (2026-10-14, the hover's second audit) The hover's pending target solved ONCE this frame, with what the frame's work cap has left (`hoverQueryBudget`) — the orbit
  * solves nothing under a hover, so the cap is the hover's; a solve the cap cut keeps its target (`hoverPendingAfter`).
  */
@@ -422,9 +499,19 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   // ⭐⭐⭐ (2026-10-15, the owner: *"No bridging. The boundary is drawn when sliding is allowed. Clamp the sliding so that the center of the resting face remains within the boundary."*) — the resting face's CENTRE within the
   // drawn boundary (`insideRects`, the outline's own rectangles) — ⛔ the edge margin (an overlap of its outline) is deleted
   // ⭐⭐⭐ (2026-10-15) the centre's DISTANCE to the boundary, never to grow (`boundStep`, `holdOffBound`) — ⛔ an in/out test left a hover starting outside free
+  // ⭐⭐ (2026-11-01) in the slide mode the origin carried by the approach since the slide began (the piece taken in or out along its direction)
+  let origin = h.origin;
+  const q0 = st.pieceQ;
+  if (slideModeOn(st) && q0 !== null && st.approach !== h.approach0) {
+    const keep = st.approach;
+    st.approach = h.approach0;
+    const a0 = ringAnchorAt(st, q0);
+    st.approach = keep;
+    origin = add(h.origin, sub(ringAnchorAt(st, q0), a0));
+  }
   const dist = (u: number, v: number): number => {
     if (h.bound === null) return 0;
-    const p = add(h.origin, add(scale(h.e1, u), scale(h.e2, v)));
+    const p = add(origin, add(scale(h.e1, u), scale(h.e2, v)));
     return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));
   };
   h.pending = boundStep([h.u, h.v], h.pending, dist);
@@ -436,7 +523,7 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   // ⭐ solved by the orbit's clearance rule, its two coordinates the plane's (the second offset into the solver's 0 … 1)
   const base = pieceCollisionSetup(st);
   const setup: CollisionSetup = { ...base, exempt: (x, y) => (base.exempt?.(x, y) ?? false) || h.behind.has(x) || h.behind.has(y) };
-  const env = pieceSolverEnv(st, (q) => add(h.origin, add(scale(h.e1, q.yaw), scale(h.e2, (q.v - 0.5) * HOVER_SPAN_M))), setup);
+  const env = pieceSolverEnv(st, (q) => add(origin, add(scale(h.e1, q.yaw), scale(h.e2, (q.v - 0.5) * HOVER_SPAN_M))), setup);
   const r = solveOrbitStep({ yaw: h.u, v: 0.5 + h.v / HOVER_SPAN_M, zoom: 1 }, [h.pending[0] - h.u, (h.pending[1] - h.v) / HOVER_SPAN_M], env, { ...pieceSolveOptions(st), maxQueries: budget });
   st.pieceQueries += r.queries;
   st.pieceSolveQueries += r.queries; // ⭐⭐ (2026-10-15, the Fable audit) the quads' turn check reads it: ⛔ under a hover it read 0 and spent the 24 again
@@ -458,7 +545,7 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   hf.u = nu;
   hf.v = nv;
   // ⭐⭐⭐ (2026-10-14, the hover's audit) the MODEL: the solved offset
-  applyHoverModel(st, hf, add(scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v))));
+  applyHoverModel(st, hf, scale(hf.n, -hf.settleM), add(scale(hf.e1, hf.u), scale(hf.e2, hf.v)));
 }
 
 /** ⭐ (2026-10-14) the hover's and the way in's drawn ease: the orbit's spring (s). */
@@ -496,11 +583,17 @@ export function wayInDrawFrame(st: SceneState, dtMs: number): void {
   st.hoverDraw = lag;
 }
 
-function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, w: Vec3): void {
+/**
+ * ⭐ The hover's MODEL: the settle (down the face's normal) and the slide (in its plane). The gizmo riding the slide (`hf.gizmo`): the slide moves the
+ * centre — ⭐⭐ (2026-11-01) and the slide view's target with it; the settle the piece's own (⛔ the gizmo sunk up to 20 mm into the face with it).
+ */
+function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow"]>, settle: Vec3, slide: Vec3): void {
   if (hf.gizmo) {
-    st.centreBlend.snapTo(add(hf.centre0, w));
+    st.centreBlend.snapTo(add(hf.centre0, slide));
     syncCentre(st);
-  } else st.hoverOffset = add(hf.offset0, w);
+    st.hoverOffset = add(hf.offset0, settle);
+    if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);
+  } else st.hoverOffset = add(hf.offset0, add(settle, slide));
 }
 
 /**
@@ -523,17 +616,29 @@ function hoverEndNow(st: SceneState): void {
  */
 export function hoverOrbitStep(st: SceneState, travelMm: number): void {
   if (travelMm <= 0) return;
-  // ⛔⛔ (2026-10-16) the orbit no longer clears the spent slide: the piece, still against the face, re-latched at once (`hoverSlidAfterLook`)
-  // ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece ways in by this travel — the gizmo untouched
-  if (st.hoverOffset !== null) {
-    const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
-    st.hoverWayIn = { ...w, rawMm: w.rawMm + travelMm };
+  // ⭐⭐⭐ (2026-11-01) in the slide mode: nothing under it (the drag is the approach's); off, the piece's own offset ways in — A + drag's way in is the
+  // approach's (`approachInput`); the view by time (`slideFrame`)
+  if (slideModeOn(st)) {
+    if (st.hover === null && !st.orbitShift) hoverWayInStep(st, travelMm);
+    return;
   }
+  // ⛔⛔ (2026-10-16) the orbit no longer clears the spent slide: the piece, still against the face, re-latched at once (`hoverSlidAfterLook`)
+  hoverWayInStep(st, travelMm);
   const hv = st.hoverView;
   if (hv !== null) {
     hv.progress = hoverViewProgress(hv.progress, travelMm, 1 / Math.max(1e-6, st.cfg.pieceOrbitEnterMm), false);
     // ⭐ (2026-10-14) the view itself ends once its SHOWN share is back to 0 (`hoverCameraBlend`) — ⛔ dropped at once, it jumped
   }
+}
+
+/**
+ * ⭐⭐ (2026-10-14, *"After a hover which has moved the piece, the orbit shall way in smoothly (same as the previous way in way out of the piece orbit) so the piece does not jump. The gizmo position shall not be changed by a toggle from hover to orbit."*) the piece's own offset ways in by
+ * this travel (mm) — the gizmo untouched. ⭐ (2026-11-01) the approach's travel too, once the slide mode is left (`approachInput`).
+ */
+export function hoverWayInStep(st: SceneState, travelMm: number): void {
+  if (travelMm <= 0 || st.hoverOffset === null) return;
+  const w = st.hoverWayIn ?? startHoverWayIn(st.hoverOffset);
+  st.hoverWayIn = { ...w, rawMm: w.rawMm + travelMm };
 }
 
 /**
