@@ -1212,4 +1212,10 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     // before the locked part's orbit and the gate that returns
     expect(p.indexOf("hoverDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal && st.router.objects().length === 1"));
   });
+  it('⛔⛔ THE APPROACH IS TWO FINGERS: either one lifting ends it (*"i release the second finger while the first finger stays pressed, and with the first finger dy I can then drive the piece away"*) — the finger left slides', () => {
+    const h = code("render/hold_wiring.ts");
+    // the FIRST touch lifting in the approach ends the input too (⛔ it kept it on: the finger left drove the approach alone)
+    expect(h).toContain('if (pointerId === h.first) { // ⛔⛔');
+    expect(h).toContain('if (h.mode === "APPROACH") { approachRelease(st); st.hold = null; st.hudDirty = true; return "FIRST"; } h.first = null;');
+  });
 });

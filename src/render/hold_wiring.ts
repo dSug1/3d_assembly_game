@@ -202,7 +202,7 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
 }
 
 /**
- * ⭐ A release. `"SECOND"` — the input ended (the way out, a centre moved, a roll); `"FIRST"` — the first touch lifted, the input goes on;
+ * ⭐ A release. `"SECOND"` — the input ended (the way out, a centre moved, a roll); `"FIRST"` — the first touch lifted, the input goes on (⛔ not the approach: ended);
  * `null` — not the input's.
  */
 export function holdRelease(
@@ -214,6 +214,16 @@ export function holdRelease(
   const h = st.hold;
   if (h === null) return null;
   if (pointerId === h.first) {
+    // ⛔⛔ (2026-11-01, the owner: *"I approach with 2 fingers, the contours highlight, i release the second finger while the first finger stays pressed,
+    // and with the first finger dy I can then drive the piece away. This should not be possible as the dy should drive the slide, not the approach
+    // away."*) — the APPROACH is TWO fingers: either one lifting ends it (its coast starts), the finger left is a one-finger drag (the slide's, the
+    // orbit's). ⛔ The first one lifting kept the input on: the finger left drove the approach alone, out of the slide
+    if (h.mode === "APPROACH") {
+      approachRelease(st);
+      st.hold = null;
+      st.hudDirty = true;
+      return "FIRST";
+    }
     h.first = null;
     st.hudDirty = true;
     return "FIRST";

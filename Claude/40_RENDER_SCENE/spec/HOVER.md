@@ -81,6 +81,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 10. ⭐⭐ **THE SLIDE MODE'S TWO HOLES, FIXED** (2026-11-01, item 31; ⛔ no device close): a drag starting on a PART now slides (it moved nothing), and the
    lit contours HOLD the orbit until the latch (a moving finger carried the piece through them) — freed if refused or after 800 ms. ⚠ The owner's
    *"never latched until a reload"* not reproduced; the HUD's hover line at that moment is the evidence to read.
+11. ⛔⛔ **THE APPROACH IS TWO FINGERS** (2026-11-01, item 32; ⛔ no device close): either finger lifting ends it — the FIRST-pressed one lifting kept it
+   on, and the finger left drove the piece out of the slide with its dy (two fingers pressed together: no way to know which is first).
+32. ⛔⛔ **The approach is two fingers (2026-11-01)**: either finger lifting ends it (`holdRelease`) — the first-pressed one lifting kept it on, the finger left drove the approach out of the slide → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 31. ⭐⭐ **The slide mode's two holes (2026-11-01)**: any one-finger drag starting on a part slides (in its goal or not); the lit contours hold the orbit (`slideHoldsOrbit`) until the latch, freed when refused or after `SLIDE_WAIT_MAX_MS` 800 ms (`slideRefusedAfter`); A + drag never held → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 30. ⭐⭐⭐ **THE SLIDE MODE (2026-11-01, `1.0.86-`; `orbitMode` 0 only)**: no press — the slide LATCHES by itself as soon as the contours light (the piece settled
    onto the face); it stays on when the finger lifts, and every one-finger drag slides (on the piece or not, touch or mouse); a second finger or A + drag
