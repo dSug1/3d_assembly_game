@@ -19,7 +19,7 @@ import type { GestureConfig } from "./gestureConfig";
 import { orbitOffset } from "./orbit";
 import { waistV } from "./orbit_rig";
 import { smoothstep01 as smooth } from "./waist_view";
-import { cross, dot, normalize, qFromAxisAngle, qRotate, type Vec3 } from "../core/vec";
+import { add, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
 
 /**
  * ⭐ The pitch's reach either side of the horizon — ±90° (the owner, 2026-10-29: *"can you increase the pitch to -90 +90 degrees ?"* → *"build it with the
@@ -104,6 +104,26 @@ export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec
 /** ⭐ The angle between `u` and `n` (unit). */
 export function angleTo(u: Vec3, n: Vec3): number {
   return Math.acos(Math.max(-1, Math.min(1, dot(u, n))));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"The 3° face: check what can interrupt the turn … Check other possibilities."*) — A HIT ON A SWAYING MESH, BROUGHT ONTO
+ * ITS BODY'S MODEL POSE: the point and the normal turned by what takes the mesh as drawn (`meshPos`, `meshRot`) to the body as the model places it
+ * (`modelPos`, `modelRot`). ⛔ The orbit's sway turns the placed parts' MESHES (4.5°, eased back): a gizmo found on them took the swayed normal — up to
+ * 2.4° off the face, measured — and kept it after the sway died; off its host's faces by more than 1°, the quads took it raw (4.4° off, measured), the
+ * quads' turn laid the resting face on it, and the slide (2°, read from the model) never lit.
+ */
+export function unswayHit(point: Vec3, normal: Vec3 | null, meshPos: Vec3, meshRot: Quat, modelPos: Vec3, modelRot: Quat): { point: Vec3; normal: Vec3 | null } {
+  const d = qmul(modelRot, qconj(meshRot)); // the mesh undone, then the model
+  return { point: add(modelPos, qRotate(d, sub(point, meshPos))), normal: normal === null ? null : qRotate(d, normal) };
+}
+/**
+ * ⭐⭐⭐ (2026-11-01) A face's normal on its body's MODEL pose from the mesh's own LOCAL facet normal (`localN`) and its scaling (`s`, per axis — the
+ * normal scaled by its inverse): exact whatever the mesh was drawn at when it was picked. `null` for a null normal.
+ */
+export function modelNormal(localN: Vec3, s: Vec3, modelRot: Quat): Vec3 | null {
+  const k = normalize([localN[0] / (s[0] || 1), localN[1] / (s[1] || 1), localN[2] / (s[2] || 1)]);
+  return k === null ? null : qRotate(modelRot, k);
 }
 
 /**
