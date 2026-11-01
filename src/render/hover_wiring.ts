@@ -66,14 +66,14 @@ import {
   slideRefusedAfter,
   slideViewProgress,
 } from "../input/hover";
-import { pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
+import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
-import { ORBIT_SWAY_MIN_DEG, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg } from "../input/hover";
+import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
+import { hoverSwayDeg, slideOrbitDir, slideOrbitStart, slideOrbitStep, slideOrbitTurn } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 
@@ -269,11 +269,16 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
   // ⭐⭐⭐ (2026-10-14, *"I am not satisfied with the camera movements when toggling back and forth between hover and orbit. There is too much mismatch between the camera position in hover and the rings and as a consequence when toggling into hover the piece flies away from the press and when toggling into orbit the camera has a very complex move. Disregard the requirement of camera placement during hover. I want to implement a camera position during hover which provides a good isometric view of the piece and sliding surface with minimum movement from the orbit ring (therefore during hover the camera can be on the left or the right of the piece, on the bottom or on the top of the piece) and also which can simply smoothly easily blend back into orbit rings."*) the NEAREST ISOMETRIC CORNER of the hosting face, on the side the camera already is
   const cam = st.camera.position;
   const hv0 = st.hoverView;
-  const corner = hoverCornerDirection(c.normal, [right.x, right.y, right.z], [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]], hv0?.signs ?? null);
+  const toCam: Vec3 = [cam.x - anchor[0], cam.y - anchor[1], cam.z - anchor[2]];
+  const corner = hoverCornerDirection(c.normal, [right.x, right.y, right.z], toCam, hv0?.signs ?? null);
   if (corner !== null) {
-    if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: null };
+    // ⭐⭐⭐ (2026-11-01) THE SLIDE MODE: no frozen corner — the LIMITED ORBIT begun where the camera is (`slideOrbitStart`), turned by the slide (`slideOrbitMove`)
+    const orbit = slideModeOn(st) ? slideOrbitStart(c.normal, plane.e1, plane.e2, toCam) : null;
+    const iso = orbit !== null ? slideOrbitDir(c.normal, plane.e1, plane.e2, orbit.a) : corner.dir;
+    const orbitShown: [number, number] = orbit !== null ? [orbit.a[0], orbit.a[1]] : [0, 0];
+    if (hv0 === null) st.hoverView = { progress: 0, shown: 0, shownVel: 0, at: performance.now(), target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: null, orbit, orbitShown };
     else if (hoverViewRetargets(hv0.n, c.normal, hv0.target, [anchor[0], anchor[1], anchor[2]]))
-      st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso: corner.dir, signs: corner.signs, from: { target: hv0.target, iso: hv0.iso, t0: performance.now() } };
+      st.hoverView = { progress: hv0.progress, shown: hv0.shown, shownVel: hv0.shownVel, at: hv0.at, target: [anchor[0], anchor[1], anchor[2]], n: c.normal, e1: plane.e1, e2: plane.e2, iso, signs: corner.signs, from: { target: hv0.target, iso: shownDir(hv0), t0: performance.now() }, orbit, orbitShown };
   }
   st.hoverFollow.view0 = st.hoverView === null ? null : [st.hoverView.target[0], st.hoverView.target[1], st.hoverView.target[2]];
   st.lastVerdict = `${pointerId === null ? "slide: on — latched" : "hover:"} on ${c.id}'s face (${(c.gapM * 1000).toFixed(1)} mm${settleM > 0 ? `, settled ${(settleM * 1000).toFixed(1)} mm onto it` : ""}) — the drag slides the ${st.hoverFollow.gizmo ? "gizmo and the piece" : "piece"}`;
@@ -352,7 +357,12 @@ export function hoverDragStep(st: SceneState, pointerId: number, s: Sample, prev
   const onPlane = hoverFingerStep(st, h, from);
   const asked = add(scale(h.e1, h.pending[0] - was[0]), scale(h.e2, h.pending[1] - was[1]));
   // ⭐⭐ (*"Finger / mouse noise: add the deadband. Also, use the lerp that we implemented on other parts translation. Sway on hover translation: toggle the sway of other parts to minimum value (i don't know what this value shall be) when hover translation"*) the other parts SWAY at the least angle — a hover is a slide along a part (`hoverSwayDeg`), about the placed parts
-  if (hb !== null && onPlane) hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
+  // ⭐⭐⭐ (2026-11-01, the owner: *"When I slide, i want to remove the translation sway of the assembly and the camera position freeze and replace that with a limited orbit of the camera"*) — in the slide
+  // mode the step turns the camera's limited orbit, and the assembly sways as for the orbit (`slideOrbitMove`)
+  if (hb !== null && onPlane) {
+    if (slideModeOn(st)) slideOrbitMove(st, hb.sway, s, asked, Math.hypot(dx, dy));
+    else hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
+  }
   // the camera eases toward the hover view with the finger's travel
   // ⭐ (2026-11-01) in the slide mode by time (`slideFrame`)
   const hv = st.hoverView;
@@ -382,6 +392,46 @@ function hoverFingerStep(st: SceneState, h: NonNullable<SceneState["hover"]>, fr
   const k = hoverFrictionScale(h.speedMmS, st.cfg.hoverFrictionMmS);
   h.pending = clampDisc(h.pending[0] + k * g * (b[0] - a[0]), h.pending[1] + k * g * (b[1] - a[1]), st.cfg.hoverAmplitudeMm);
   return true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01) THE SLIDE'S LIMITED ORBIT, one step: the camera's angles turned the way the piece went (`slideOrbitTurn`, `slideOrbitDegPerMm` per mm of
+ * finger), clamped at the isometric corner (`slideOrbitStep`); while the camera turns, the assembly SWAYS AS FOR THE ORBIT (*"apply the orbit sway of the
+ * assembly as for the normal orbit (i think there is an attenuation gain based on the distance of the piece from the gizmo)"*): the orbit's trigger,
+ * its angle by the piece's distance to the gizmo (`orbitSwayDegAt`), about the placed parts' barycentre, in the sense the camera goes round.
+ */
+function slideOrbitMove(st: SceneState, watcher: SwayWatcher, s: Sample, moved: Vec3, travelPx: number): void {
+  const hv = st.hoverView;
+  const kick = watcher.push(s, travelPx > 0, true);
+  if (hv === null || hv.orbit === null) return;
+  const before = hv.iso;
+  hv.orbit = slideOrbitStep(hv.orbit, slideOrbitTurn(moved, hv.e1, hv.e2, travelPx / mmToPx(1), st.cfg.slideOrbitDegPerMm));
+  hv.iso = slideOrbitDir(hv.n, hv.e1, hv.e2, hv.orbit.a);
+  const b = st.greenBox;
+  if (!kick || b === null || !(st.cfg.orbitSwayDeg > 0) || Math.hypot(hv.iso[0] - before[0], hv.iso[1] - before[1], hv.iso[2] - before[2]) < 1e-9) return;
+  const c = st.orbitCentreM;
+  const a = st.pieceAnchor ?? [b.position.x, b.position.y, b.position.z];
+  const range = pieceRingRangeM(st);
+  const deg = orbitSwayDegAt(st.cfg.orbitSwayDeg, Math.hypot(a[0] - c.x, a[1] - c.y, a[2] - c.z), range.minM, range.maxM, false);
+  const placed: Vec3[] = [];
+  for (const id of st.world.objects.keys()) {
+    if (!st.goalCommit.has(id)) continue;
+    const w = worldPlacementOf(st.world, id);
+    if (w !== null) placed.push(w.position);
+  }
+  const pivot = placedBarycentre(placed) ?? st.centreBlend.targetM;
+  const cam = st.camera.position;
+  const d = Math.hypot(cam.x - hv.target[0], cam.y - hv.target[1], cam.z - hv.target[2]);
+  const axis = orbitSwingAxis(pivot, add(hv.target, scale(before, d)), add(hv.target, scale(hv.iso, d)));
+  const impulse = impulseForPeak(((deg * Math.PI) / 180) * swayScale(kick.speedMmPerS, st.cfg.swayReferenceSpeedMmPerS), st.cfg.orbitSwayTauMs / 1000);
+  if (axis === null || impulse <= 0) return;
+  swingBlock(st, b, { x: pivot[0], y: pivot[1], z: pivot[2] }, axis, impulse, st.cfg.orbitSwayTauMs);
+  st.orbitSwayKicks++;
+}
+
+/** ⭐ (2026-11-01) The view's direction as SHOWN: the slide's limited orbit at its shown angles, else the corner. */
+function shownDir(hv: NonNullable<SceneState["hoverView"]>): Vec3 {
+  return hv.orbit !== null ? slideOrbitDir(hv.n, hv.e1, hv.e2, hv.orbitShown) : hv.iso;
 }
 
 /** ⭐ The hover's sway kick: the held body's own trigger on the hover finger, the swing at `hoverSwayDeg`, carried the way the piece moves. */
@@ -725,9 +775,14 @@ export function hoverCameraBlend(st: SceneState, camAt: Vec3, lookAt: Vec3): { c
     st.hoverView = null;
     return { camAt, lookAt, w: 0 };
   }
+  // ⭐ (2026-11-01) the limited orbit's angles SHOWN, eased after the slide's (the orbit's τ)
+  if (hv.orbit !== null) {
+    const k = 1 - Math.exp(-dt / hoverDrawTau(st));
+    hv.orbitShown = [hv.orbitShown[0] + (hv.orbit.a[0] - hv.orbitShown[0]) * k, hv.orbitShown[1] + (hv.orbit.a[1] - hv.orbitShown[1]) * k];
+  }
   const w = hoverViewWeight(hv.shown);
   if (w <= 0) return { camAt, lookAt, w: 0 };
-  let dir = hv.iso;
+  let dir = shownDir(hv);
   let target = hv.target;
   if (hv.from !== null) {
     const s = retargetShare(performance.now() - hv.from.t0);

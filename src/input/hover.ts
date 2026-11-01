@@ -404,6 +404,53 @@ export function slideViewProgress(progress: number, dtMs: number, on: boolean): 
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"When I slide, i want to remove the translation sway of the assembly and the camera position freeze and replace that
+ * with a limited orbit of the camera as shown in attachment: the camera orbits gradually with the delta position until it reaches the clamped position
+ * (which corresponds to the current semi-isometric view the camera is adopting when the sliding mode is on)"*) — **THE SLIDE'S LIMITED ORBIT**: the
+ * camera's direction from the slide's target read as two angles off the face's normal `n` — `a[0]` toward `t1` (the screen's right laid on the face),
+ * `a[1]` toward `t2 = n × t1` — the direction `(n + tan a0·t1 + tan a1·t2)` normalised. The slide turns them THE WAY THE PIECE GOES (slid right, the
+ * camera goes round to the right; up, it rises — the owner's sketch), each clamped at `SLIDE_ORBIT_CLAMP_RAD` (45°: both there, exactly the
+ * isometric corner the slide view was frozen on). Begun where the camera is (no jump); a start beyond the clamp keeps that angle as its own limit,
+ * tightened as the slide turns it inward (`slideOrbitStep`).
+ */
+export const SLIDE_ORBIT_CLAMP_RAD = Math.PI / 4;
+export interface SlideOrbit {
+  readonly a: readonly [number, number];
+  readonly lim: readonly [number, number];
+}
+/** ⭐ The limited orbit begun where the camera is (`toCam`, from the target), in the face's frame (`n`, `t1`, `t2`). */
+export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3): SlideOrbit {
+  const c = unit(toCam) ?? n;
+  const cn = Math.max(1e-3, dot(c, n));
+  const a: [number, number] = [Math.atan2(dot(c, t1), cn), Math.atan2(dot(c, t2), cn)];
+  return { a, lim: [Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[0])), Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.abs(a[1]))] };
+}
+/** ⭐ One slide step: the angles turned by `d` (rad, along `t1` and `t2`), each held in its limit; a limit beyond the clamp tightened to where it turned in. */
+export function slideOrbitStep(o: SlideOrbit, d: readonly [number, number]): SlideOrbit {
+  const one = (i: 0 | 1): [number, number] => {
+    const lim = o.lim[i];
+    const a = Math.min(lim, Math.max(-lim, o.a[i] + d[i]));
+    return [a, Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.min(lim, Math.abs(a)))];
+  };
+  const [a0, l0] = one(0);
+  const [a1, l1] = one(1);
+  return { a: [a0, a1], lim: [l0, l1] };
+}
+/** ⭐ The camera's direction from the target for these angles. */
+export function slideOrbitDir(n: Vec3, t1: Vec3, t2: Vec3, a: readonly [number, number]): Vec3 {
+  const x = Math.tan(a[0]);
+  const y = Math.tan(a[1]);
+  return unit([n[0] + x * t1[0] + y * t2[0], n[1] + x * t1[1] + y * t2[1], n[2] + x * t1[2] + y * t2[2]]) ?? n;
+}
+/** ⭐ The turn (rad, along `t1` and `t2`) for a slide step `moved` (world) and `travelMm` of finger, at `degPerMm`: the way the piece went. */
+export function slideOrbitTurn(moved: Vec3, t1: Vec3, t2: Vec3, travelMm: number, degPerMm: number): [number, number] {
+  const m = unit(moved);
+  if (m === null || !(travelMm > 0)) return [0, 0];
+  const k = (travelMm * degPerMm * Math.PI) / 180;
+  return [k * dot(m, t1), k * dot(m, t2)];
+}
+
+/**
  * ⭐⭐ (2026-10-14, the hover's audit) — **THE HOVER VIEW FOLLOWS A NEW FACE**: a hover begun on a face turned from the view's own (more than ~2.6°) RETARGETS the view
  * — ⛔ it stayed on the first face, so a hover on a side face after one on a top face was watched from above. Eased from the view it leaves
  * over `HOVER_VIEW_RETARGET_MS`.

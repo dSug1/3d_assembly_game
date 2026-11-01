@@ -347,6 +347,11 @@ export interface GestureConfig {
   /** ⭐ (2026-10-14) the hover's reach from where it began (mm, in the world) — *"from 10mm to 500 mm (in this last case … unlimited)"*. */
   hoverAmplitudeMm: number;
   /**
+   * ⭐⭐⭐ (2026-11-01, the owner: *"the camera orbits gradually with the delta position until it reaches the clamped position"*) — the slide's LIMITED ORBIT:
+   * the camera's turn per mm of finger (°/mm), the way the piece slides, up to the isometric corner (45° each way, `SLIDE_ORBIT_CLAMP_RAD`).
+   */
+  slideOrbitDegPerMm: number;
+  /**
    * ⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world
    * translation."* → *"build the inertia. place the sliders in object translation under subfolder piece sliding"*) — the slide's drawn piece on the part
    * translation's follower: its inertia (ms), its damping ratio (< 1 overshoots a little) and its phantom lead (ms) — 60 ms / 0.5 / 0.2 by default (measured: the part's 7.6 ms smoothed nothing).
@@ -947,6 +952,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   hoverGizmoMove: 0,
   // ⚠ guesses with sliders
   hoverAmplitudeMm: 500,
+  // ⚠ a guess with a slider: 45° in ~22 mm of finger (the orbit's own yaw is ~5.1°/mm — "gradually")
+  slideOrbitDegPerMm: 2,
   // ⭐ (2026-10-16) MEASURED on a touch slide (headless): the part translation's 7.6 ms / 0.2 smoothed nothing — the per-frame solved steps showed through,
   // 42 mm in one frame; 60 ms / 0.5: the largest step 11.8 mm, an overshoot of 2.6 mm (under the 3 mm cap). The lead is the part's.
   // ⭐ (2026-10-16, the owner: *"set default slide inertia = 40 ms, slide damping ratio = 0.93, slide phantom lead raise the slider"*) — 40 ms / 0.93
@@ -1252,6 +1259,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.hoverFrictionMmS >= 0 && cfg.hoverFrictionMmS <= 500)) throw new Error(`hoverFrictionMmS (${cfg.hoverFrictionMmS}) must be in [0, 500] mm/s.`);
   if (!(cfg.hoverLeadMs >= 0 && cfg.hoverLeadMs <= 200)) throw new Error(`hoverLeadMs (${cfg.hoverLeadMs}) must be in [0, 200] ms.`);
   if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
+  if (!(cfg.slideOrbitDegPerMm >= 0 && cfg.slideOrbitDegPerMm <= 10)) throw new Error(`slideOrbitDegPerMm (${cfg.slideOrbitDegPerMm}) must be in [0, 10] °/mm.`);
   if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
   if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);

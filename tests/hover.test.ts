@@ -1219,3 +1219,57 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(h).toContain('if (h.mode === "APPROACH") { approachRelease(st); st.hold = null; st.hudDirty = true; return "FIRST"; } h.first = null;');
   });
 });
+
+describe('⭐⭐⭐ THE SLIDE\'S LIMITED ORBIT (2026-11-01, the owner: *"remove the translation sway of the assembly and the camera position freeze and replace that with a limited orbit of the camera … the camera orbits gradually with the delta position until it reaches the clamped position"*)', () => {
+  const n: [number, number, number] = [0, 0, -1];
+  const t1: [number, number, number] = [1, 0, 0];
+  const t2: [number, number, number] = [0, -1, 0]; // n × t1
+  it("⭐ begun where the camera is: its two angles off the face's normal — a start beyond the 45° clamp keeps its own limit", async () => {
+    const { slideOrbitStart, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");
+    const o = slideOrbitStart(n, t1, t2, [Math.tan(0.2), -Math.tan(0.1), -1]);
+    expect(o.a[0]).toBeCloseTo(0.2, 9);
+    expect(o.a[1]).toBeCloseTo(0.1, 9); // the camera below along y: toward t2 (down)
+    expect(o.lim).toEqual([SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD]);
+    const far = slideOrbitStart(n, t1, t2, [Math.tan(1.2), 0, -1]);
+    expect(far.lim[0]).toBeCloseTo(1.2, 9); // no jump at the latch
+  });
+  it("⭐⭐ the slide turns it the way the piece goes, clamped at the isometric corner; a limit beyond the clamp tightens as it turns in", async () => {
+    const { slideOrbitStep, slideOrbitTurn, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");
+    const right = slideOrbitTurn([0.01, 0, 0], t1, t2, 10, 2);
+    expect(right[0]).toBeCloseTo((20 * Math.PI) / 180, 9); // 10 mm × 2°/mm, along t1
+    expect(right[1]).toBeCloseTo(0, 12);
+    const up = slideOrbitTurn([0, 0.01, 0], t1, t2, 5, 2); // the piece UP: toward −t2 (t2 is down here)
+    expect(up[1]).toBeCloseTo((-10 * Math.PI) / 180, 9);
+    expect(slideOrbitTurn([0, 0, 0], t1, t2, 5, 2)).toEqual([0, 0]);
+    expect(slideOrbitTurn([1, 0, 0], t1, t2, 0, 2)).toEqual([0, 0]);
+    const o = slideOrbitStep({ a: [0.7, 0], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD] }, [0.3, -0.1]);
+    expect(o.a[0]).toBeCloseTo(SLIDE_ORBIT_CLAMP_RAD, 12); // clamped
+    expect(o.a[1]).toBeCloseTo(-0.1, 12);
+    const back = slideOrbitStep({ a: [-SLIDE_ORBIT_CLAMP_RAD, 0], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD] }, [0.2, 0]);
+    expect(back.a[0]).toBeCloseTo(-SLIDE_ORBIT_CLAMP_RAD + 0.2, 12); // reversible
+    const wide = slideOrbitStep({ a: [1.2, 0], lim: [1.2, SLIDE_ORBIT_CLAMP_RAD] }, [-0.1, 0]);
+    expect(wide.a[0]).toBeCloseTo(1.1, 12);
+    expect(wide.lim[0]).toBeCloseTo(1.1, 12); // tightened inward, never back out
+    expect(slideOrbitStep(wide, [0.5, 0]).a[0]).toBeCloseTo(1.1, 12);
+  });
+  it("⭐ at 45° both ways the direction IS the isometric corner the slide view was frozen on", async () => {
+    const { slideOrbitDir, hoverCornerDirection, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");
+    const d = slideOrbitDir(n, t1, t2, [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD]);
+    const c = hoverCornerDirection(n, t1, [1, -1, -1])!;
+    for (let i = 0; i < 3; i++) expect(d[i]).toBeCloseTo(c.dir[i]!, 9);
+    expect(slideOrbitDir(n, t1, t2, [0, 0])).toEqual(n);
+  });
+  it("⭐⭐⭐ wired: the slide mode's view begun as the limited orbit, the drag turns it and sways the assembly AS FOR THE ORBIT (⛔ the translation sway); its slider", async () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("const orbit = slideModeOn(st) ? slideOrbitStart(c.normal, plane.e1, plane.e2, toCam) : null;");
+    expect(h).toContain("if (slideModeOn(st)) slideOrbitMove(st, hb.sway, s, asked, Math.hypot(dx, dy)); else hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));");
+    expect(h).toContain("hv.orbit = slideOrbitStep(hv.orbit, slideOrbitTurn(moved, hv.e1, hv.e2, travelPx / mmToPx(1), st.cfg.slideOrbitDegPerMm));");
+    expect(h).toContain("const deg = orbitSwayDegAt(st.cfg.orbitSwayDeg, Math.hypot(a[0] - c.x, a[1] - c.y, a[2] - c.z), range.minM, range.maxM, false);");
+    expect(h).toContain("let dir = shownDir(hv);");
+    const { DEFAULT_CONFIG, validateGestureConfig } = await import("../src/input/gestureConfig");
+    expect(DEFAULT_CONFIG.slideOrbitDegPerMm).toBe(2);
+    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, slideOrbitDegPerMm: 11 })).toThrow(/slideOrbitDegPerMm/);
+    expect(code("render/tuning_menu.ts")).toContain('"slideOrbitDegPerMm", 0, 10, 0.1)');
+  });
+});
+
