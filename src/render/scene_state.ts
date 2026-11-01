@@ -588,6 +588,8 @@ export interface SceneState {
     orbit: import("../input/hover").SlideOrbit | null;
     /** ⭐ (2026-11-01) its angles SHOWN, eased after the slide's on the orbit's τ (the camera never steps with a pointer event) */
     orbitShown: [number, number];
+    /** ⭐⭐⭐ (2026-11-01) the WAY OUT: the slide off, the target follows the piece as drawn — its offset from it at the slide's end (`off`), fading from `t0` (`slideExitTarget`) */
+    exit: { off: import("../core/vec").Vec3; t0: number } | null;
   } | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
   orbitPiecePlaced: boolean;

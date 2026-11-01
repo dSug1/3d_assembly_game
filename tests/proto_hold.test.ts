@@ -156,7 +156,7 @@ describe("⭐ prototype — the pink gizmo's switch (2026-10-11, *\"add a slider
     expect(DEFAULT_CONFIG.pinkGizmoVisible).toBe(1);
     expect(code("render/tuning_menu.ts")).toContain('"pinkGizmoVisible", 0, 1, 1)');
     const w = code("render/green_box_wiring.ts").replace(/\s+/g, " ");
-    expect(w).toContain("if (st.cfg.pinkGizmoVisible !== 1) { ring.isVisible = false; return; }");
+    expect(w).toContain("if (st.cfg.pinkGizmoVisible !== 1 || gizmoHiddenBySlide(st.hoverReady !== null, st.hover !== null)) { ring.isVisible = false; return; }"); // ⭐ (2026-11-01) and hidden while the contours are lit or the slide is on
   });
 });
 

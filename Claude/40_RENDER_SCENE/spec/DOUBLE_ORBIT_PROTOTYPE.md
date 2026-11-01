@@ -2065,3 +2065,38 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * Measured in the app (`Scene_1`, the painting's front face): latched at 2.5° / −2.0°; right 60 px → 17.3°; on → 45° (clamped); left → −45°; up → the
   camera above (clamped); down → below (clamped); a sway kick at each brisk drag's start.
 * Vectors (`tests/hover.test.ts` + 4, red on the previous build). ⛔ No device close. 2141 vectors.
+
+### ⭐⭐⭐ THE SLIDE, SECOND PASS — no spin over a top, never stuck silently, the gizmo hidden, the way out on the piece (2026-11-01; `orbitMode` 0)
+
+> *"when the piece is sliding on horizontal surface, the delta position can send the scene spinning a lot … propose something"*; *"sometimes, the slide is
+> stuck: the contours are highlighted but delta position does not slide the piece (this was tested in desktop when hosting face is vertical)"* → *"item 1:
+> option A, item 2: a to c. Also: hide the gizmo when contours are highlighted and during sliding: the gizmo shall reappear when the piece is taken away
+> from the hosting face. Also, when I move the piece away from the hosting face after sliding, most of the times there are big travel of the piece
+> outside the screen and then the piece catch up with the camera: why is that? propose a fix (in case the hosting face is horizontal, vertical, angled,
+> etc. so that all configurations are covered …)"* — the owner.
+
+* ⛔ **The spin — why**: the limited orbit begins where the camera is, and over a top face the orbit's pitch had it near STRAIGHT ABOVE (the owner's HUD:
+  `elev=1.00⛔LIMIT`). Its two angles off the normal carried the camera over or round the top, where the upright roll (gravity down the screen) has no
+  direction to hold: measured on `Piece44`'s top latched at 85.8°, a slide away turned the picture **178.6° in one frame** (22 frames over 10°).
+* ⭐ **A — over a horizontal face, the orbit's own yaw and pitch** (`SlideTop`, `slideOrbitDirOf`, `slideOrbitTurnOf`; a face within 45° of level —
+  gravity's snap, a top or a bottom): slid along the screen's right the camera YAWS round the face's normal that way (±45° from the latch), slid toward
+  the camera its PITCH goes down, away up — between the isometric corner's height (35.26°) and the orbit's ceiling (85°); a start outside keeps its
+  own limit, tightened as it turns in. The picture now turns only by the yaw: measured, **4.1° a frame at most**. Vertical faces as before.
+* ⛔ **Stuck — why** (five runs of ~30 random mouse drags on the painting's face, headless): never jammed for good; two things felt like it. (1) Every slide drag
+  was held **8 mm** as a possible tap (`doubleTapSlop`) before it slid — a careful drag under ~30 px moved nothing. (2) A drag INTO a part (a stopper's
+  corner, or a part at the face's edge) moved **0 mm**: the solver keeps each coordinate's sense, so a push slanted into a corner (its normal (−0.6,
+  −0.6) in the plane, the step (+4.9, +6.0) mm) did not slide along it — and nothing on the HUD said so.
+* ⭐ **a** — the slide mode's drag is taken at its FIRST move, from the press (the band's 2.3 mm deadband alone): measured, a 24 px drag slides 5 mm.
+  **b** — a slide that moves nothing writes *slide: blocked by PieceN — drag along it or away from it* on the HUD's `last` line (`slideBlockedVerdict`;
+  the solver env names its nearest obstacle, `blocker`). **c** — a blocked slide is solved again ALONG what blocks it (`slideAlong`: the step's part
+  along the contact's normal in the plane; none when it pushes squarely in, under 10 % of the step) within the frame's 24 queries.
+* ⭐ **The gizmo hidden** while the contours are lit or the slide is on (`gizmoHiddenBySlide`, `pinkRingFrame`); back once the contours go out — the
+  piece taken beyond a face's reach.
+* ⛔ **The way out — why**: the slide view's target stayed where the slide left it. The approach carries the piece out along the ORBIT's direction —
+  up to 45° off the slide view's (the limited orbit; 55° the frozen corner before it) — while the view's camera kept its distance growing behind the
+  piece's: the piece crossed the screen to its EDGE in 0.35 s (x 498 of 504, measured) before the 500 ms blend brought the camera round behind it.
+* ⭐ **The way out follows the piece** (`slideExitTarget`, `hoverCameraBlend`): once the slide is off, the view's target IS the piece as drawn, the
+  offset it had at the slide's end fading on the orbit's τ — so on any face (top, side, slanted), the camera turns back to the orbit's AROUND THE PIECE.
+  Measured on the same exit: the piece at most x 346 of 504, then where the orbit's view puts it.
+* Vectors (`tests/hover.test.ts` + 7, red on the previous build — the spin vector runs the old geometry and fails by 49.5° a 2° step). ⛔ No device
+  close. 2148 vectors.
