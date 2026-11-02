@@ -25,6 +25,7 @@ import { slideArmedAfter } from "../input/hover";
 import type { Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { tiltAngles, tiltDirO, tiltDirW, tiltPointO, tiltPointW, tiltQuat, tiltRollShare, tiltRollUp, tiltWanted, type TiltKind } from "../input/orbit_tilt";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -130,7 +131,7 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
 
 /** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
-  const u = orbitDir(yaw, v);
+  const u = tiltDirW(st.asmTilt.q, orbitDir(yaw, v)); // ⭐⭐⭐ (2026-11-02) the orbit's frame, tilted onto a horizontal face (`input/orbit_tilt.ts`)
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
   return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);
 }
@@ -151,7 +152,10 @@ function gizmoFor(st: SceneState, u: Vec3): Vec3 {
 /** ⭐ A ray cast against the PLACED parts: its first hit — point, normal, part — or `null`. */
 function castRay(st: SceneState, r: SectionRay | null): GizmoHit | null {
   if (r === null) return null;
-  const hit = st.scene.pickWithRay(new Ray(new Vector3(...r.origin), new Vector3(...r.dir), r.length), (m) => {
+  // ⭐⭐⭐ (2026-11-02) the ray is the orbit frame's (the sections'): into the world first
+  const o = tiltPointW(st.asmTilt.q, st.asm!.centre, r.origin);
+  const d = tiltDirW(st.asmTilt.q, r.dir);
+  const hit = st.scene.pickWithRay(new Ray(new Vector3(...o), new Vector3(...d), r.length), (m) => {
     const id = st.idOf.get(m);
     return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();
   });
@@ -196,9 +200,20 @@ function placedParts(st: SceneState): { readonly key: string; readonly parts: re
   return st.asmParts;
 }
 
+/** ⭐⭐⭐ (2026-11-02) The placed parts' vertices IN THE ORBIT'S FRAME (`tiltPointO`), cached per placed set and tilt — what the sections read. */
+function partsO(st: SceneState): { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } {
+  const w = placedParts(st);
+  const q = st.asmTilt.q;
+  const key = `${w.key}@${q.map((x) => x.toFixed(9)).join(",")}`;
+  if (st.asmPartsO !== null && st.asmPartsO.key === key) return st.asmPartsO;
+  const c = st.asm!.centre;
+  st.asmPartsO = { key, parts: st.asmTilt.kind === 0 ? w.parts : w.parts.map((vs) => vs.map((v) => tiltPointO(q, c, v))) };
+  return st.asmPartsO;
+}
+
 /** ⭐ The facing half of the hull of the RED section — the vertical plane at `yaw` through `origin` (`redOrigin`) — cached for the plane and the placed set; `null`: none. */
 function chainFor(st: SceneState, yaw: number, origin: Vec3): SectionChain | null {
-  const parts = placedParts(st);
+  const parts = partsO(st);
   const key = `${parts.key}#${yaw.toFixed(9)}#${origin[0].toFixed(7)},${origin[2].toFixed(7)}`;
   if (st.asmChain !== null && st.asmChain.key === key) return st.asmChain.chain;
   const chain = facingChain(hull2(sectionPoints(parts.parts, origin, yaw)));
@@ -208,7 +223,7 @@ function chainFor(st: SceneState, yaw: number, origin: Vec3): SectionChain | nul
 
 /** ⭐ The GREEN loop — the hull of the horizontal cut at height `y` (`greenPoints`, `loopOf`) — cached for the height and the placed set; `null`: none. */
 function loopFor(st: SceneState, y: number): SectionChain | null {
-  const parts = placedParts(st);
+  const parts = partsO(st);
   const key = `${parts.key}#${y.toFixed(7)}`;
   if (st.asmLoop !== null && st.asmLoop.key === key) return st.asmLoop.loop;
   const loop = loopOf(hull2(greenPoints(parts.parts, y)));
@@ -264,7 +279,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
   if (c === null) {
     const from = st.asmG ?? castGizmo(st, u)?.point ?? null;
     if (from === null) return null;
-    c = onRed(st, yaw, from);
+    c = onRed(st, yaw, tiltPointO(st.asmTilt.q, a.centre, from)); // ⭐ (2026-11-02) into the orbit's frame
     if (c === null) return castGizmo(st, u);
   }
   let green = false;
@@ -287,7 +302,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
   // ⭐ after a dx on a side, the red section through where the gizmo LANDED (⛔ through the carrier: at a corner the green drop lands aside of it — 10 mm off
   // the red plane, measured); the carrier itself stays on the green loop
   if (green) {
-    const red = onRed(st, yaw, h.point);
+    const red = onRed(st, yaw, tiltPointO(st.asmTilt.q, a.centre, h.point));
     if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s };
   }
   return h;
@@ -341,14 +356,14 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmShown = null;
     const n = st.gizmoNormal ?? null;
     const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
+    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(tiltDirW(st.asmTilt.q, orbitDir(q0.yaw, q0.v)), n)) };
     st.asmGizmo = [t[0], t[1], t[2]];
     st.asmGizmoAt = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
     return;
   }
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const u = orbitDir(q.yaw, q.v);
+  const u = tiltDirW(st.asmTilt.q, orbitDir(q.yaw, q.v));
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-10-29) the gizmo from its CARRIER on the sections' hulls (`carrierFrame`): the yaw's and the pitch's steps since the last frame
   const prev = st.asmPrevQ ?? q;
@@ -398,6 +413,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.gizmoNormal = hit.normal;
     st.asmFacePoint = hit.point;
   } else if (!st.asmLocked && hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
+  // ⭐⭐⭐ (2026-11-02) THE TILT the gizmo's face asks for (`tiltWanted`: within 40° of horizontal on, back past 50°) — switched here, unlocked
+  if (!st.asmLocked) {
+    const want = tiltWanted(st.gizmoNormal ?? null, st.asmTilt.kind);
+    if (want !== st.asmTilt.kind) switchTilt(st, want);
+  }
   // ⭐ the shown gizmo eased to its point; the orbit's centre IS it
   const target = st.asmLocked && st.asmLock !== null ? st.asmLock.point : g0;
   st.asmGizmo = st.asmGizmo === null ? [target[0], target[1], target[2]] : easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS);
@@ -452,11 +472,13 @@ function sectionLinesFrame(st: SceneState): void {
   const c = sh.c;
   const yaw = sh.yaw;
   const a = st.asm!;
-  const parts = st.asmParts?.key ?? "";
+  const parts = partsO(st).key;
   const reach = a.radius * 2 + 1;
+  const tq = st.asmTilt.q;
   const drop = (r: SectionRay): Vector3 | null => {
     const h = castRay(st, r);
-    return h === null ? null : new Vector3(h.point[0] - r.dir[0] * SECTION_LIFT_M, h.point[1] - r.dir[1] * SECTION_LIFT_M, h.point[2] - r.dir[2] * SECTION_LIFT_M);
+    const dw = tiltDirW(tq, r.dir);
+    return h === null ? null : new Vector3(h.point[0] - dw[0] * SECTION_LIFT_M, h.point[1] - dw[1] * SECTION_LIFT_M, h.point[2] - dw[2] * SECTION_LIFT_M);
   };
   // the red's fixed samples (per yaw and origin)
   const ch = c.chain;
@@ -478,7 +500,8 @@ function sectionLinesFrame(st: SceneState): void {
     } else st.asmGreenCache = { key: gKey, params: [], pts: [] };
   }
   // ⭐⭐⭐ the gizmo's EXACT point — the accepted drop — inserted in both: the ring is a vertex of each line, at every frame
-  const gv = new Vector3(g[0] - c.drop.dir[0] * SECTION_LIFT_M, g[1] - c.drop.dir[1] * SECTION_LIFT_M, g[2] - c.drop.dir[2] * SECTION_LIFT_M);
+  const gd = tiltDirW(tq, c.drop.dir);
+  const gv = new Vector3(g[0] - gd[0] * SECTION_LIFT_M, g[1] - gd[1] * SECTION_LIFT_M, g[2] - gd[2] * SECTION_LIFT_M);
   const key = `${rKey}|${gKey}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
@@ -604,6 +627,14 @@ export function approachRelease(st: SceneState): void {
 export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const u = dirAt(st, cam.yaw, cam.v);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
+  // ⭐⭐⭐ (2026-11-02) in the orbit's frame (tilted onto a horizontal face), back to the world; at a switch the screen's roll over the drag's travel (`tiltRollUp`)
+  const tq = st.asmTilt.q;
+  const f = offsetFrame(tiltDirO(tq, u), cam.yaw, o.yawRad, o.pitchRad);
+  const dir = tiltDirW(tq, f.dir);
+  const up = tiltDirW(tq, f.up);
+  const roll = st.asmTiltRoll;
+  if (roll !== null) return { dir, up: tiltRollUp(roll.fromUp, up, dir, roll.share) };
+  return { dir, up };
   // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
   // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
   // face's heading at once: the scene jump-rotated; and at ±90° it has none)
@@ -614,6 +645,56 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
 export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number): boolean {
   if (!st.asmLocked || st.asmLock === null || st.asmLock.normal === null) return false;
   const n = st.asmLock.normal;
-  const a1 = angleTo(orbitDir(yaw1, v1), n);
-  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);
+  const a1 = angleTo(tiltDirW(st.asmTilt.q, orbitDir(yaw1, v1)), n);
+  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(tiltDirW(st.asmTilt.q, orbitDir(yaw0, v0)), n);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-02) THE ORBIT'S TILT SWITCHED (`input/orbit_tilt.ts`): its new rotation from the camera's heading now (`tiltQuat`); the orbit's angles
+ * RE-BASED in the new frame on the piece's direction as it is (`tiltAngles` — nothing swings: the piece and the gizmo stay, only the axes the next dx and dy
+ * follow change), the eye's spring and the camera's lag with them; the carrier found again in the new frame; the screen's roll started (`asmTiltRoll`).
+ */
+function switchTilt(st: SceneState, kind: TiltKind): void {
+  const a = st.asm!;
+  const cam = st.camera.position;
+  const p = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: 1 };
+  // ⭐ the heading: the orbit's yaw when it is upright (the camera's heading always is — ⛔ read from the camera's place, near straight above it was
+  // anywhere: 29° off, measured); from a tilt, the camera's place
+  const heading: Vec3 = st.asmTilt.kind === 0 ? [-Math.cos(p.yaw), 0, -Math.sin(p.yaw)] : [a.centre[0] - cam.x, 0, a.centre[2] - cam.z];
+  const qNew = tiltQuat(kind, heading);
+  const uW = tiltDirW(st.asmTilt.q, orbitDir(p.yaw, p.v));
+  const fromUp: Vec3 = st.cameraPrev?.up ?? [st.camera.upVector.x, st.camera.upVector.y, st.camera.upVector.z];
+  const qOld = st.asmTilt.q;
+  // ⭐ each eased set of angles carried over on its OWN direction (⛔ snapped to the solved one, the drawn piece jumped by the eye's lag — 0.9 m far out)
+  const carry = (y: number, v: number): { yaw: number; v: number } | null => tiltAngles(tiltDirO(qNew, tiltDirW(qOld, orbitDir(y, v))), y);
+  const t = tiltAngles(tiltDirO(qNew, uW), p.yaw);
+  const sp = st.boxSpring;
+  const spT = sp === null ? null : carry(sp.at.yaw, sp.at.v);
+  const lag = st.cameraLagged;
+  const lagT = lag === null ? null : carry(lag.yaw, lag.v);
+  st.asmTilt = { kind, q: qNew };
+  if (t !== null) {
+    st.pieceQ = { ...p, yaw: t.yaw, v: t.v };
+    st.orbit.reset(t.yaw, t.v);
+    st.orbitInertia.stop();
+    st.orbitUserV = t.v;
+    st.orbitRawPrev = { yaw: t.yaw, v: t.v };
+    st.asmPrevQ = { yaw: t.yaw, v: t.v };
+    if (sp !== null && spT !== null) st.boxSpring = { at: { yaw: spT.yaw, v: spT.v, zoom: sp.at.zoom }, velYaw: 0, velV: 0, velLnZoom: sp.velLnZoom };
+    st.cameraOrbit = null;
+    st.cameraLagged = lagT;
+  }
+  st.asmCarrier = null;
+  st.asmShown = null;
+  st.asmTiltRoll = st.cfg.orbitTiltBlendMm > 0 ? { fromUp, share: 0 } : null;
+  st.lastVerdict = kind === 0 ? "orbit: back on a vertical face — the orbit upright" : `orbit: on a ${kind === 1 ? "top" : "bottom"} — the orbit tilted onto it (dx across, dy toward / away)`;
+  st.hudDirty = true;
+}
+
+/** ⭐⭐⭐ (2026-11-02) The screen's roll at a tilt's switch, by `travelMm` of the finger (`orbitTiltBlendMm`); done, it ends. */
+export function tiltRollStep(st: SceneState, travelMm: number): void {
+  const r = st.asmTiltRoll;
+  if (r === null || !(travelMm > 0)) return;
+  const share = tiltRollShare(r.share, travelMm, st.cfg.orbitTiltBlendMm);
+  st.asmTiltRoll = share >= 1 ? null : { ...r, share };
 }

@@ -579,6 +579,9 @@ export function createScene(
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
   st.asmCarrier = null;
+  st.asmTilt = { kind: 0, q: [1, 0, 0, 0] };
+  st.asmPartsO = null;
+  st.asmTiltRoll = null;
   st.asmChain = null;
   st.asmLoop = null;
   st.asmParts = null;

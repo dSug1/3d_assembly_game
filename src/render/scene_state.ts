@@ -756,6 +756,11 @@ export interface SceneState {
   /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
   asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) THE ORBIT'S TILT (`input/orbit_tilt.ts`): none, over a top, under a bottom — its rotation (the orbit's frame → the world); the placed parts
+   * in that frame (cached per tilt); the screen's roll at a switch, over the drag's travel (`orbitTiltBlendMm`) */
+  asmTilt: { readonly kind: import("../input/orbit_tilt").TiltKind; readonly q: import("../core/vec").Quat };
+  asmPartsO: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  asmTiltRoll: { readonly fromUp: Vec3; readonly share: number } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
