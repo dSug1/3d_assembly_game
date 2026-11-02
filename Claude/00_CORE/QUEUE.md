@@ -29,7 +29,7 @@ resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to t
 ⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION, ALIGNMENT, SNAP AND UNDO ARE DELETED** — only the orbited piece moves
 (orbit, approach, slide); the code before: **`d8134eb`**; ⏳ the parts get its properties later, `Scene_0` the orbit and the slide →
 [`2026-11-02_parts_translation_rotation_deleted.md`](../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md).
-✅ `npm run verify`: **1648 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 1619 below: 10-02).
+✅ `npm run verify`: **1651 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 1619 below: 10-02).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

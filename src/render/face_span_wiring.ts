@@ -16,6 +16,7 @@ import { faceWorld } from "../core/object_model";
 import { goalLocked } from "../input/goal_lock";
 import { frameSteps, fromFrame, rollSense, signOnScreen } from "../input/orbit_frame";
 import { orbitDegPerMm } from "../input/follow_camera";
+import { pitchOfV } from "../input/assembly_orbit";
 import {
   coveredTop,
   fromP2,
@@ -39,7 +40,10 @@ import {
   spanPolyline,
   spanRegion,
   spanSolids,
-  spanStepFromDir,
+  axisSense,
+  faceAxes,
+  greenPaceOf,
+  spanAxisStep,
   toP2,
   toPlaneDir,
   wrapCandidate,
@@ -81,8 +85,16 @@ export interface SpanState {
   motion: SpanMotion;
   /** the ridden height shown (m in front of the plane) */
   ride: number;
-  /** the piece's SOLVED direction last frame (world) — the gizmo moves by its step */
+  /** the piece's SOLVED direction last frame (world) — a crossing reads it */
   uPrev: Vec3 | null;
+  /** ⭐⭐⭐ (third pass) the orbit's solved place last frame and the orbit's frame it was read in (a re-base moves nothing: no step read across it) */
+  qPrev: { readonly yaw: number; readonly v: number; readonly frame: string } | null;
+  /** the face's level axes (`faceAxes`), their senses for the orbit's yaw and pitch steps, and ff2fca2's paces (m/rad) */
+  eH: Vec3;
+  eV: Vec3;
+  sh: 1 | -1;
+  sv: 1 | -1;
+  paceH: number;
   /** this frame: the gizmo (world), the finger's travel the orbit's step was worth (mm), the lines' axes (the orbit's yaw and pitch steps laid on the face) */
   g: Vec3;
   stepMm: number;
@@ -215,7 +227,10 @@ export function spanEngage(st: SceneState, g: Vec3, n: Vec3 | null, u: Vec3): bo
   const at = intoRegion(region, toP2(pl, g), regionInside(region));
   const solids = spanSolids(pl, partsOf(sf));
   const ride = coveredTop(solids, at);
-  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, g: fromP2(pl, at, ride), stepMm: 0, eYaw: [1, 0, 0], ePitch: [0, 1, 0], zen: null, slid: false, signHold: false };
+  const ax = faceAxes(pl.n, screenAxes(st)?.right ?? [1, 0, 0]);
+  const paceH = greenPaceOf(sf.faces.flatMap((f) => f.tris.flatMap((t) => [...t])));
+  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, slid: false, signHold: false };
+  spanSenses(st, st.span);
   setGizmoFace(st, pl.n, sf.owners[i]!.id);
   st.lastVerdict = `face-span: on ${sf.owners[i]!.id}'s face — the gizmo moves on its coplanar faces (${region.members.length})`;
   st.hudDirty = true;
@@ -241,6 +256,13 @@ function gizmoSteps(st: SceneState, n: Vec3): { yaw: Vec3 | null; pitch: Vec3 | 
   return { yaw: onPlane(yawW, n), pitch: onPlane(pitchW, n), yawW, pitchW };
 }
 
+/** ⭐⭐⭐ (third pass) The level axes' senses for the orbit's yaw and pitch steps at the solved place (`axisSense`). */
+function spanSenses(st: SceneState, sp: SpanState): void {
+  const g = gizmoSteps(st, sp.plane.n);
+  sp.sh = axisSense(sp.sh, sp.eH, g.yawW);
+  sp.sv = axisSense(sp.sv, sp.eV, g.pitchW);
+}
+
 /**
  * ⭐⭐⭐ THE SCREEN WINS (the owner: *"screen direction shall win"*): the finger's signs read off the screen — finger right → the gizmo's step to the screen's
  * right, finger down → its step to the screen's up (the 2026-10-04 convention) — with `signOnScreen`'s dead band near square (no flicker). ⚠ Read only on a
@@ -249,12 +271,20 @@ function gizmoSteps(st: SceneState, n: Vec3): { yaw: Vec3 | null; pitch: Vec3 | 
 export function spanScreenSigns(st: SceneState, n: Vec3): void {
   const scr = screenAxes(st);
   if (scr === null) return;
+  const sp = st.span;
+  if (sp !== null) {
+    // ⭐⭐⭐ (third pass) the gizmo's own steps: along its level axes, in their senses
+    const yawG: Vec3 = [sp.eH[0] * sp.sh, sp.eH[1] * sp.sh, sp.eH[2] * sp.sh];
+    const pitchG: Vec3 = [sp.eV[0] * sp.sv, sp.eV[1] * sp.sv, sp.eV[2] * sp.sv];
+    st.asmSign = { yaw: signOnScreen(st.asmSign.yaw, yawG, scr.right), v: signOnScreen(st.asmSign.v, pitchG, scr.up) };
+    return;
+  }
   const g = gizmoSteps(st, n);
   st.asmSign = { yaw: signOnScreen(st.asmSign.yaw, g.yaw ?? g.yawW, scr.right), v: signOnScreen(st.asmSign.v, g.pitch ?? g.pitchW, scr.up) };
 }
 
 /**
- * ⭐⭐⭐ ONE FRAME of the face-span: the gizmo moved by the orbit's SOLVED step since the last frame (`spanStepFromDir`, the piece's direction from `dirOf`),
+ * ⭐⭐⭐ ONE FRAME of the face-span: the gizmo moved by the orbit's SOLVED yaw and pitch steps since the last frame along the face's level axes (`spanAxisStep` — ff2fca2's relation),
  * checked against the parts for the piece (`gapAt` — the queries the caller counts: never closer to a part than the gap kept), clamped by the region, caught
  * at the edge, onto the face across; the tops ridden; the zenith's roll kept (its cone); the finger's signs off the screen.
  */
@@ -263,11 +293,18 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   const q = st.pieceQ;
   if (sp === null || q === null || st.asm === null) return;
   const u1 = dirOf(q.yaw, q.v);
-  const u0 = sp.uPrev ?? u1;
   sp.uPrev = u1;
+  // ⭐⭐⭐ (third pass) ff2fca2's relation: the orbit's solved YAW and PITCH steps since the last frame (none across a re-base of its frame)
+  const frame = st.asmOrbit.map((x) => x.toFixed(9)).join(",");
+  const qp = sp.qPrev;
+  const dYaw = qp !== null && qp.frame === frame ? Math.atan2(Math.sin(q.yaw - qp.yaw), Math.cos(q.yaw - qp.yaw)) : 0;
+  const dPitch = qp !== null && qp.frame === frame ? pitchOfV(q.v) - pitchOfV(qp.v) : 0;
+  sp.qPrev = { yaw: q.yaw, v: q.v, frame };
+  spanSenses(st, sp);
+  // ⭐ the zenith's cone kept BEFORE the step (⛔ after it: a thin top is crossed in a frame or two — its far edge's wait came a frame too late)
+  spanZenithKeep(st, sp, dirOf(st.orbit.yaw, st.orbit.elevation));
   const degPerMm = Math.abs(orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm);
-  const ang = Math.acos(Math.max(-1, Math.min(1, u0[0] * u1[0] + u0[1] * u1[1] + u0[2] * u1[2])));
-  const mm = spanMmOf(ang, 0, degPerMm);
+  const mm = spanMmOf(dYaw, dPitch, degPerMm);
   sp.stepMm = mm;
   const atRest = st.router.size === 0 && !st.orbitInertia.coasting && !st.approachInertia.coasting;
   const travel = Math.max(st.asmTravelFrameMm, mm);
@@ -275,7 +312,7 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   const sf = spanFacesOf(st);
   const pl = sp.plane;
   const n = pl.n;
-  const step = toPlaneDir(pl, spanStepFromDir(u0, u1, n, st.asm.radius));
+  const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, sp.paceH, st.asm.radius, sp.eH, sp.eV, sp.sh, sp.sv));
   const exclude = new Set(sp.region.members);
   const findNext = (at: P2, out: P2) => {
     const D: Vec3 = [pl.a[0] * out[0] + pl.b[0] * out[1], pl.a[1] * out[0] + pl.b[1] * out[1], pl.a[2] * out[0] + pl.b[2] * out[1]];
@@ -333,11 +370,9 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   // ⭐ the tops ridden, eased by the travel
   sp.ride = rideStep(sp.ride, coveredTop(sp.solids, sp.motion.at), travel, cfg.faceSpanRideMm, dtMs, atRest);
   sp.g = fromP2(sp.plane, sp.motion.at, sp.ride);
-  // ⭐ the lines' axes: the orbit's steps on the face
-  const gs = gizmoSteps(st, sp.plane.n);
-  sp.eYaw = gs.yaw ?? sp.eYaw;
-  sp.ePitch = gs.pitch ?? sp.ePitch;
-  spanZenithKeep(st, sp, dirOf(st.orbit.yaw, st.orbit.elevation));
+  // ⭐ the lines' axes: the face's level axes (green the level line, red the steepest on a wall)
+  sp.eYaw = sp.eH;
+  sp.ePitch = sp.eV;
   // ⭐⭐⭐ the screen wins — on a settled picture, the camera facing the hosting face (⛔ grazing it, from over the top, its up the face's turned over: the signs
   // flipped mid-drag, back and forth)
   const scr = screenAxes(st);
@@ -360,6 +395,12 @@ function spanCommit(st: SceneState, sp: SpanState, sf: NonNullable<SceneState["s
   sp.motion = { at: intoRegion(region, toP2(pl, g), regionInside(region)), overMm: 0 };
   sp.ride = Math.max(0, heightOf(pl, g));
   sp.zen = null;
+  if (sp.uPrev !== null) spanZenithKeep(st, sp, sp.uPrev); // ⭐ a top entered: its cone at once
+  // ⭐⭐⭐ (third pass) the new face's level axes (a top's latched off the screen now), their senses read again
+  const ax = faceAxes(pl.n, screenAxes(st)?.right ?? sp.eH);
+  sp.eH = ax.h;
+  sp.eV = ax.v;
+  spanSenses(st, sp);
   setGizmoFace(st, pl.n, sp.host);
   st.lastVerdict = `face-span: across the edge (${kind.toLowerCase()}) onto ${sp.host}'s face (${region.members.length} coplanar)`;
   st.hudDirty = true;
@@ -471,6 +512,7 @@ export function spanAfterSlide(st: SceneState, at: Vec3, u: Vec3): void {
   if (sp === null) return;
   sp.slid = false;
   sp.uPrev = null;
+  sp.qPrev = null;
   const n = st.gizmoNormal ?? null;
   const same = n !== null && n[0] * sp.plane.n[0] + n[1] * sp.plane.n[1] + n[2] * sp.plane.n[2] > 0.999 && Math.abs(heightOf(sp.plane, at)) < 0.004;
   if (same) {
