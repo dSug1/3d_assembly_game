@@ -1421,8 +1421,8 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (out) slideWayOutRebase(st);"); // ⭐ (2026-11-01) `out` = want > a0, the step then checked too
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
-    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };");
+    expect(h).toContain("const t = orbitForCameraDir(tiltDirO(st.asmTilt.q, hv.iso), q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);"); // ⭐ (2026-11-02) in the orbit's frame (its tilt)
+    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(tiltDirW(st.asmTilt.q, orbitDir(nq.yaw, nq.v)), lk.normal)) };");
     expect(h).toContain("const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];");
     expect(h).toContain("st.orbit.reset(nq.yaw, nq.v);");
     // ⛔ the camera's target no longer follows the piece on the way out (*"revert the change of the camera looking at the piece"*)

@@ -251,9 +251,9 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
     expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
     expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
-    expect(a).toContain("const red = onRed(st, yaw, h.point);");
+    expect(a).toContain("const red = onRed(st, yaw, tiltPointO(st.asmTilt.q, a.centre, h.point));"); // ⭐ (2026-11-02) into the orbit's frame (its tilt)
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
-    expect(a.split("st.asmCarrier = null;").length - 1).toBe(3); // the hover, the lock, the unlock
+    expect(a.split("st.asmCarrier = null;").length - 1).toBe(4); // the hover, the lock, the unlock — ⭐ (2026-11-02) and the tilt's switch (the carrier found again in the new frame)
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");

@@ -2305,3 +2305,42 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   green (the lines' own 2 mm lift); before, up to **157 mm** and **108 mm**. ⚠ Cost: 64 drops a frame under a dx (the red), 96 under a dy on a side (the
   green), both on a diagonal — watch the HUD's `frame` line on the iPhone; the fallback is a blend between less frequent recasts.
 * Vectors (`tests/section_hull.test.ts`: `redSamples`'s replaced, + 2 new, 3 restated — red on the previous build). ⛔ No device close. 2159 vectors.
+
+### ⭐⭐⭐ THE ORBIT TILTED ONTO A HORIZONTAL FACE — x-y on a top, not polar (2026-11-02, branch `1.0.88-`; `orbitMode` 0)
+
+> *"When the orbit gizmo reaches a horizontal face (or a face close to horizontal …), I would like to rotate the full orbit so that the orbit replicates on
+> the horizontal face what it does on the vertical face … it is easy to reach any place on the horizontal face rather than being limited by the +/-90degrees
+> clamp. The concept is to rotate the full orbit so the gizmo is always driven on a x-y system … not a theta-radius polar system … Propose something before
+> you build, to make sure the rotation of the orbit impacts only the gizmo positioning and has no impact on the rest (2D curve for approach and away,
+> sliding, etc.)"* → *"1- yes 2- yes 3- yes 4- dy travel with a slider in CAMERA ORBIT AROUND CENTER"* — the owner (two sketches: a vertical face with its
+> red and green crossing at the gizmo; a horizontal slab with the same cross on its top, the green running on over the edge).
+
+* **Before**: the orbit had one up, the world's; the gizmo's two sections were read from it (the green the horizontal cut at its height, the red the
+  vertical plane along the heading through it). On a vertical face that is x-y; on a top it is POLAR — dx swings round the vertical axis, dy toward / away
+  from it, the ±90° pitch a pole in the middle of the top.
+* ⭐ **The tilt** (`input/orbit_tilt.ts`): on a face whose normal is within **40°** of the vertical (on; off past **50°** — no flicker at 45°: Piece44's
+  32° slanted sides count as horizontal), the orbit's up is TIPPED 90° about the screen's horizontal axis — FORWARD over a top (its up then points AWAY
+  across it: the table view), BACKWARD under a bottom (`tiltQuat`). To the orbit the face is then a vertical face facing the camera: dx sideways across it,
+  dy toward / away, each line on over its edges, the pole at the middle of the front and back faces. Fixed while the gizmo stays on that face (it does not
+  follow the yaw — the lines stay straight); upright again on a vertical face. Its heading is the orbit's yaw (the camera's heading always is — ⛔ read
+  from the camera's place, near straight above it came out 29° off, measured).
+* ⭐ **Only the orbit's own geometry moves into the tilted frame** (`tiltPointO` / `tiltPointW` about the assembly's centre, `tiltDirO` / `tiltDirW`): the
+  piece's direction (`dirAt`), the rays the sections cast (`castRay`), the placed parts the sections cut (`partsO`, cached per tilt), the carrier, the camera's
+  frame and offsets (`assemblyCameraFrame`), the lock's cone angles (`leavesCone`), the way out of a slide (`orbitForCameraDir` solved in the frame). The
+  section code itself is untouched — a tilted top simply reads as a SIDE. Unchanged: the approach (straight in) and its distance curve, the way out and its
+  collision check, the lock, the slide, the quads and the turn, the collision solver.
+* ⭐ **The switch moves nothing** (`switchTilt`, `tiltAngles`): where the gizmo's face changes, the orbit's angles are RE-BASED in the new frame on the piece's
+  direction as it is — and the eye's spring and the camera's lag each on its OWN direction (⛔ snapped to the solved one, the drawn piece jumped by the eye's
+  lag: 0.9 m far out, measured) — so the piece and the gizmo stay; only the axes the next dx and dy follow change. The carrier is found again in the new
+  frame. ⭐ The screen's ROLL to the new frame (its up toward "away across the top") is the one visible change: over the finger's travel, eased
+  (`tiltRollUp`, `orbitTiltBlendMm` 10 mm — CAMERA › CAMERA ORBIT AROUND CENTER, *horizontal face tilt: the screen's roll over*). ⚠ Fed by the orbit drag's
+  whole travel (dx and dy): a switch made by a dx would otherwise wait for a dy.
+* **Measured** (headless, `Scene_1`, the gizmo pushed up the painting's front onto `Piece44`'s top): the tilt on at the top, the orbit re-based (−90° /
+  0.500 — the old pole is the new equator), dy then carrying the gizmo STRAIGHT across the top (x fixed at 0.023, z −0.079 → 0.001) with the piece moving
+  steadily, 0.15–0.2 m a frame far out, through both switches (on at the top, off on the back face). The approach, the slide's latch and the blocked way out
+  on that top as before.
+* ⚠ **On this painting, worth judging by hand**: its tops are narrow strips (3 cm), so under the tilt the green loop is the painting's whole OUTLINE seen from
+  the front (the cut square to the heading) — dx carries the gizmo across the top, then down the side, along the bottom, at one loop per turn as round a
+  vertical face's cut, but that loop is about twice as long: dx moves the gizmo ~5× faster than on the front face (0.5 m against 0.11 m per 33 px, measured);
+  and the camera follows it round — below the floor under the bottom, as the upright orbit's dy already can.
+* Vectors (`tests/orbit_tilt.test.ts`, 5; three restated — red on the previous build). ⛔ No device close. 2164 vectors.

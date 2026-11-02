@@ -22,7 +22,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
-import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, leavesCone, tiltRollStep } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -1379,6 +1379,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+    // ⭐⭐⭐ (2026-11-02) the screen's roll at a tilt's switch goes on with the finger's travel (`orbitTiltBlendMm`)
+    tiltRollStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
     if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
