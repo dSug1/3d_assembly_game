@@ -64,6 +64,7 @@ import {
   slideHoldsOrbit,
   slideLatches,
   slideRefusedAfter,
+  slideWaitMaxMs,
   slideViewProgress,
 } from "../input/hover";
 import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
@@ -550,7 +551,7 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
     st.slideTryAt = now;
     const r = hoverStart(st, null);
     if (r === "wait" && st.slideWaitSince === 0) st.slideWaitSince = now;
-    st.slideRefused = slideRefusedAfter(r, r === "wait" ? now - st.slideWaitSince : 0);
+    st.slideRefused = slideRefusedAfter(r, r === "wait" ? now - st.slideWaitSince : 0, slideWaitMaxMs(st.cfg.boxSmoothMs));
     if (r !== "wait") st.slideWaitSince = 0;
     if (r === true) st.slideTryAt = 0;
     return;
@@ -584,7 +585,7 @@ export function slideWayOutRebase(st: SceneState): void {
   if (t === null) return;
   const u0 = orbitDir(q.yaw, q.v);
   const u1 = orbitDir(t.yaw, t.v);
-  if (Math.acos(Math.min(1, dotv(u0, u1))) <= SLIDE_WAY_OUT_MIN_RAD) return;
+  if (Math.acos(Math.max(-1, Math.min(1, dotv(u0, u1)))) <= SLIDE_WAY_OUT_MIN_RAD) return;
   const nq: OrbitQ = { ...q, yaw: t.yaw, v: t.v };
   // ⭐⭐ (2026-11-01) the lock's cone opened to the new direction (`lockCone` only tightens): ⛔ clamped into it, the piece and the camera were turned off the
   // slide's view after all — the camera's swing back (a slide on a top, the gizmo's face a side's)
@@ -593,6 +594,17 @@ export function slideWayOutRebase(st: SceneState): void {
   const before = ringAnchorAt(st, q);
   const after = ringAnchorAt(st, nq);
   const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];
+  // ⭐ (2026-11-02, the third audit's B9) the slide's solver origin taken as it stands NOW (at the old direction), the approach's reference with it — ⛔ rebuilt
+  // after from `approach0` along the NEW direction, the env's anchor was off the real piece by the two directions' difference × the approach since the latch
+  const h = st.hover;
+  if (st.approach !== h.approach0) {
+    const keepA = st.approach;
+    st.approach = h.approach0;
+    const a0 = ringAnchorAt(st, q);
+    st.approach = keepA;
+    h.origin = add(h.origin, sub(before, a0));
+    h.approach0 = st.approach;
+  }
   st.hoverOffset = add(st.hoverOffset ?? [0, 0, 0], keep);
   if (st.hoverFollow !== null) st.hoverFollow.offset0 = add(st.hoverFollow.offset0, keep);
   st.pieceQ = nq;

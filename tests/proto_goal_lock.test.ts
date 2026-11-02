@@ -26,15 +26,16 @@ describe("⭐⭐⭐ prototype — a piece in its goal cannot be moved", () => {
     expect(new GoalCommit().has("Piece1")).toBe(false); // nothing committed yet
   });
 
-  it("⭐ on by default, with a 0/1 switch in OBJECT TRANSLATION — the methods it gates are intact", () => {
-    expect(DEFAULT_CONFIG.lockPlacedPieces).toBe(1);
-    expect(code("render/tuning_menu.ts")).toMatch(/"lockPlacedPieces", 0, 1, 1\)/);
+  it("⛔ (2026-11-02, the third audit's C3) always on — the 0/1 switch is deleted: no part is moved by a finger, so 'free' freed nothing", () => {
+    expect((DEFAULT_CONFIG as unknown as Record<string, unknown>).lockPlacedPieces).toBeUndefined();
+    expect(code("render/tuning_menu.ts")).not.toContain('"lockPlacedPieces"');
+    expect(code("render/assembly_wiring.ts")).not.toContain("lockPlacedPieces");
   });
 
   it("⭐⭐ wired: a placed part is where a tap moves the gizmo — the first touch's and the held second's (⛔ 2026-11-02: the drag, the second finger and the alignment it gated are deleted with the parts' translation, rotation and alignment, `d8134eb`)", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1), hitAt);");
-    expect(p).toContain("const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1);");
+    expect(p).toContain("goalLocked(hitId, st.goalCommit, true), hitAt);");
+    expect(p).toContain("const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, true);");
     expect(p).not.toContain("lockedInGoal");
   });
 });

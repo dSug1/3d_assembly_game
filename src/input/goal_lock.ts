@@ -9,7 +9,8 @@
  * * it can be PRESSED — a HitFace, a Pioneer others align to, the double-tap undo (which may take it out again);
  * * it is CARRIED by its seated assembly when another member is dragged (only a drag ON it is refused);
  * * ⛔ it cannot be a FOLLOWER: an alignment would turn it out of its goal.
- * ⭐ Re-enabled by `lockPlacedPieces = 0` — every method it gates is intact.
+ * ⛔ (2026-11-02, the third audit's C3) the `lockPlacedPieces` switch is deleted with the parts' inputs (`d8134eb`): a part is never moved by a finger, so
+ * "free" freed nothing — the lock is always on (`enabled` is passed `true`).
  *
  * ⛔ ENGINE-FREE.
  */
@@ -25,7 +26,7 @@ export function goalLocked(id: string | undefined, placed: PlacedSet, enabled: b
 /**
  * ⭐⭐ prototype (green box) — **THE ORBIT TARGET ON A PRESS ON A PIECE IN ITS GOAL** (the owner, 2026-10-01): the FIRST touch,
  * or the LEFT button (never the right, the mouse's HitFace), pressed on a piece LOCKED in its goal moves the yellow orbit target
- * to where the ray hits it. `null`: the target stays. ⚠ Tied to the lock: with `lockPlacedPieces = 0` a placed piece is a
+ * to where the ray hits it. `null`: the target stays. ⚠ Tied to the lock (always on since 2026-11-02): unlocked, a placed piece was a
  * piece like any other and a press on it drags it.
  */
 export function orbitTargetOnPress(

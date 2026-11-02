@@ -109,11 +109,13 @@ export function chainOf(pts: readonly P2[]): SectionChain {
 /**
  * ⭐⭐ THE HALF OF THE HULL FACING THE PIECE: the hull clipped to `r ≥ r0` (`r0` 0 — the vertical through the centre — or the hull's own nearest side to
  * the piece when the axis lies outside it), walked counter-clockwise from the BOTTOM point on the cut to the TOP one — up the piece's side, the clamp at
- * both ends (the ±90° of pitch: under the centre, over it). `null`: no area.
+ * both ends (the ±90° of pitch: under the centre, over it). `null`: no area. ⭐ (2026-11-02, the third audit's A5) `from`: a point's `r` the chain must
+ * reach — a gizmo behind the axis (a slide onto a top's far half) keeps its place (⛔ clipped at `r = 0`, the carrier found again there: the gizmo and the
+ * piece jumped sideways by up to the top's half-depth at the unlock).
  */
-export function facingChain(hull: readonly P2[]): SectionChain | null {
+export function facingChain(hull: readonly P2[], from = 0): SectionChain | null {
   if (hull.length < 3) return null;
-  const r0 = Math.max(0, Math.min(...hull.map((p) => p[0])));
+  const r0 = Math.max(Math.min(0, from), Math.min(...hull.map((p) => p[0])));
   // ⭐ Sutherland–Hodgman against the one half-plane r ≥ r0
   const clip: P2[] = [];
   for (let i = 0; i < hull.length; i++) {
@@ -275,8 +277,11 @@ export function sectionFixed(total: number, n: number, closed: boolean): number[
  * ⭐⭐ (2026-11-02) The segments drawn around the gizmo's vertex: each neighbour by the line's own rule (`joinsPrev`, `joinsNext` — `joins`); cut off on
  * BOTH sides (it sits across a jump), the NEARER neighbour joined anyway — the ring always on a drawn line (measured: 2 frames of 953 left it 30 mm off).
  */
-export function gizmoJoins(joinsPrev: boolean, joinsNext: boolean, distPrev: number, distNext: number): [boolean, boolean] {
+export function gizmoJoins(joinsPrev: boolean, joinsNext: boolean, distPrev: number, distNext: number, maxForced: number = Infinity): [boolean, boolean] {
   if (joinsPrev || joinsNext) return [joinsPrev, joinsNext];
+  // ⭐ (2026-11-02, the owner's attachments: *"the green or red sections are strange"*) the forced join only within `maxForced` — ⛔ forced at any length,
+  // a gizmo off its line (a held drop, a step in depth) drew a long stray segment across the parts
+  if (!(Math.min(distPrev, distNext) <= maxForced)) return [false, false];
   return distPrev <= distNext ? [true, false] : [false, true];
 }
 /** ⭐ Where `p` goes among the sorted `params`: after every one not past it. */

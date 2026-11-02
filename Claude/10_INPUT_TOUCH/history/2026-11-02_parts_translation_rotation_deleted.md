@@ -64,7 +64,8 @@ goal capture.
   `tests/unwired_debt.test.ts` for the pieces that will get the orbited pieces' properties (`3D2`).
 * `isTapRelease` (→ `recognizer.ts`), `ScreenFrame` (→ `gravity_frame.ts`), `CameraPose` (→ `orbit.ts`), `GIZMO_RING_PX` (→
   `scene_state.ts`); the `Recognizer` class (unwired; `TapHistory`'s vectors run through it); `grabbed` (empty now: a part is judged by
-  the never-grabbed goal margins until it can be moved again).
+  the never-grabbed goal margins until it can be moved again — ⛔ deleted the same day with `lockPlacedPieces`, the third audit's C2 / C3:
+  `00_CORE/queue_notes/AUDIT_2026-11-02.md`).
 
 ## The vectors
 

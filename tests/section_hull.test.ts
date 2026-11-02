@@ -247,13 +247,14 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
   });
   it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("hit = carrierFrame(st, sAng.yaw, sAng.v, Math.abs(dYaw) > Math.PI / 2 ? 0 : dYaw, pitchOfV(sAng.v) - pitchOfV(prev.v), u);"); // ⭐ (2026-11-02) read in the face's frame; a pole crossed: no yaw step
+    expect(a).toContain("hit = carrierFrame(st, sAng.yaw, sAng.v, pole ? 0 : dYaw, pole ? 0 : pitchOfV(sAng.v) - pitchOfV(prev.v), u);"); // ⭐ (2026-11-02, A7) a pole crossed: the carrier found again
+    expect(a).toContain("const pole = Math.abs(dYaw) > Math.PI / 2;"); // ⭐ (2026-11-02) read in the face's frame; a pole crossed: no yaw step
     expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
     expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
     expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
     expect(a).toContain("const red = onRed(st, yaw, toFramePoint(st.asmFace.q, a.centre, h.point));");
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
-    expect(a.split("st.asmCarrier = null;").length - 1).toBe(4); // the hover, the lock, the unlock, a switch of the face's frame
+    expect(a.split("st.asmCarrier = null;").length - 1).toBe(5); // the hover, the lock, the unlock, a switch of the face's frame, ⭐ (2026-11-02, A7) a pole crossed
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");

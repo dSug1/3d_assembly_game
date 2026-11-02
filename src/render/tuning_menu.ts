@@ -92,9 +92,9 @@ export function installTuningMenu(st: SceneState): void {
       // ⛔ `D186` (the owner, 2026-09-30: *"remove the slider scene (0=scene_0,...)"*): the scene switch is deleted — a
       // scene is chosen from the level menu (`?flow=1`) or `?sceneIndex=N`, as the pause menu's *Quit to menu* leads.
       sliders: [
-        // ⭐ `D183`: how near a piece NEVER GRABBED must sit to its goal to count (a grabbed one: the snap's margins).
-        tunable(st, "never-grabbed goal (mm on glass)", "ungrabbedGoalMm", 0.5, 10, 0.5),
-        tunable(st, "never-grabbed goal (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
+        // ⭐ `D183`: how near a part must sit to its goal to count — ⭐ (2026-11-02) every part's now: no part is grabbed since the parts' inputs went (`d8134eb`).
+        tunable(st, "a part's goal margin (mm on glass)", "ungrabbedGoalMm", 0.5, 10, 0.5),
+        tunable(st, "a part's goal margin (°)", "ungrabbedGoalDeg", 0.5, 15, 0.5),
         // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
         tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
         // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
@@ -194,7 +194,9 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-02) the orbit tilted onto a horizontal face: the screen's roll; the shell
-            tunable(st, "screen roll at a tilt / over the top (mm of travel)", "orbitTiltBlendMm", 0, 40, 1),
+            tunable(st, "a face frame's switch waits half this travel (mm)", "orbitTiltBlendMm", 0, 40, 1),
+            tunable(st, "view turn cap (× the dx yaw's °/mm) — a roll takes the travel at it", "orbitViewTurnCap", 0.25, 4, 0.05),
+            tunable(st, "gizmo travel cap (mm per mm of finger)", "gizmoMmPerMm", 5, 400, 5),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
@@ -242,7 +244,6 @@ export function installTuningMenu(st: SceneState): void {
       title: "OBJECT TRANSLATION",
       sliders: [
         // ⭐ prototype (green box): a piece in its goal cannot be moved or turned — 0 re-enables it (`goal_lock.ts`).
-        tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
         // ⭐ (2026-10-10) the sliders read only when a scene PART is dragged moved to TRANSLATION IN WORLDSPACE › OBJECT TRANSLATION;
         // these stay — the orbit finger's motion state (the camera's follow, a tap from a pinch) and the orbit's sway trigger and size.
         // ⭐ How parallel the two fingers must be to read as ONE common drag, and over
@@ -304,8 +305,8 @@ export function installTuningMenu(st: SceneState): void {
     {
       // ⭐⭐ prototype — **TRANSLATION IN WORLDSPACE** (the owner, 2026-10-10: *"create a submenu TRANSLATION IN WORLDSPACE and move to this
       // submenu all the sliders which we do not use in the current movement of the green and turquoise pieces and their effect on the other
-      // pieces of the scene"* → *"put it at the bottom, with the moved sections nested inside it under their current names"*): the sliders read
-      // only when a scene PART is grabbed — dragged, rotated, aligned, snapped. Moved as they were, values and keys unchanged.
+      // pieces of the scene"* → *"put it at the bottom, with the moved sections nested inside it under their current names"*). ⛔ (2026-11-02, the
+      // third audit's C6) the parts' own sliders went with their inputs (`d8134eb`); what is left here serves the orbit's sway, the hover and the collision.
       title: "TRANSLATION IN WORLDSPACE",
       sliders: [],
       subsections: [

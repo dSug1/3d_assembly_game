@@ -157,7 +157,7 @@ export interface SceneState {
     /** ⭐ (2026-10-10) its resting face's EDGE-TO-EDGE symmetry axes (`faceFlushAxes`), its own frame — what a roll lines up with the pink face's. */
     readonly restingFlush: readonly Vec3[];
   }[];
-  /** ⭐ Prototype: the resting face of every scene part not seated (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
+  /** ⭐ Prototype: the resting face of every scene part (none is seated by a finger since 2026-11-02) (`resting_face_wiring.ts`), by object id; each SHAPE's answer,
    * cached; the parts seated last frame (`null` until the boot pass); the part asked last (the HUD). */
   restingFaces: Map<ObjectId, RestingEntry>;
   restingShapes: Map<string, RestingResult>;
@@ -496,12 +496,19 @@ export interface SceneState {
   asmSign: { readonly yaw: 1 | -1; readonly v: 1 | -1 };
   /** ⭐⭐⭐ (2026-11-02) the screen's up shown last frame (before the offsets), and a ROLL under way from one to the next (its share, 0 … 1) */
   asmUp: Vec3 | null;
-  asmRoll: { readonly from: Vec3; readonly share: number } | null;
+  asmRoll: { readonly from: Vec3; readonly share: number; readonly sense: 1 | -1 } | null;
+  /** ⭐⭐⭐ (2026-11-02, the third audit's follow-up) the finger's orbit travel this frame (mm) — the shown gizmo's step is held to it (`gizmoStepCap`) */
+  asmTravelFrameMm: number;
+  /** ⭐ (2026-11-02, A10) the section lines' and the gizmo's ray picks this frame — on the HUD's frame line, to be read on the device */
+  asmPicks: number;
   /** ⭐⭐⭐ (2026-11-02) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
+  /** ⭐⭐ (2026-11-02, the third audit's A4 / B4) the approach's dy gathered since the last frame (mm), and its gap queries this frame */
+  approachPendingMm: number;
+  approachQueries: number;
   orbitShift: boolean;
   /** ⭐⭐ (2026-10-29) the approach key (A) held — `orbitShift` reads it with the mouse (the name kept: the approach's modifier) */
   orbitApproachKey: boolean;
@@ -565,8 +572,6 @@ export interface SceneState {
   /** ⭐ `D189`: the pieces placed at the last COMPLETED action, and the model they were read from. */
   goalCommit: GoalCommit;
   goalCommitWorld: World | null;
-  /** ⭐ `D183`: every piece a finger or the mouse has GRABBED this level — a piece never grabbed is judged strictly. */
-  grabbed: Set<string>;
   /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
   levelEnd: LevelEnd;
   /** ⭐ `D180`: told once, on the frame the level completes (`main.ts` shows the results screen). */

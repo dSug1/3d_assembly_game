@@ -184,7 +184,8 @@ describe("⭐⭐ `D183` — wired (⛔ (2026-11-02) the parts' alignment, seats 
 
   it("⛔ no press grabs a part any more — a part is judged by the never-grabbed margins until it can be moved again", () => {
     for (const f of ["pointer_wiring.ts", "goal_capture_wiring.ts", "render_loop.ts"]) expect(src(f)).not.toMatch(/st\.grabbed\.add\(/);
-    expect(src("goal_capture_wiring.ts")).toContain("st.grabbed.has(id) ? loose : strict");
+    expect(src("goal_capture_wiring.ts")).toContain("orbited : strict);"); // ⭐ (2026-11-02, C2) `grabbed` deleted: every part the strict margins
+    expect(src("goal_capture_wiring.ts")).not.toContain("st.grabbed");
   });
 
   it("⭐ one set of margins everywhere: the HUD and the level end read `goalTolOf`", () => {

@@ -18,6 +18,7 @@ import { pxToMm } from "../core/units";
 import { holdTapMode, holdTapTapsYellow, pinchStarts, type HoldMode } from "../input/hold_gesture";
 // ⏸ (2026-10-12) with the way in, commented out: import { holdDecision, holdSwitch, trailAnchor } from "../input/hold_gesture";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
+import { slideModeOn } from "./hover_wiring";
 import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { pinchPair, retargetGizmo, updatePinch } from "./camera_rig";
@@ -119,8 +120,9 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     // ⛔⛔ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held (=
     // left click held while CTRL/ALT is held) … Simplify the zoom so that this reverts back to the standard zoom input design for mobile"*)
     if (h.second === MOUSE_SECOND_ID) {
-      // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out)
-      if (pointerId === h.first) orbitStep(false);
+      // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out); ⭐ (2026-11-02, the third audit's
+      // B6) not while the slide is on: the key detached the slide and the frame throws the orbit away there — ⛔ a dead orbit that still kicked the sway
+      if (pointerId === h.first && !(slideModeOn(st) && st.hover !== null)) orbitStep(false);
       return h.mode;
     }
     // ⭐ a finger: the STANDARD PINCH — either finger's travel past the deadband starts it (`pinchStarts`); before, nothing moves
@@ -202,15 +204,16 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
 }
 
 /**
- * ⭐ A release. `"SECOND"` — the input ended (the way out, a centre moved, a roll); `"FIRST"` — the first touch lifted, the input goes on (⛔ not the approach: ended);
- * `null` — not the input's.
+ * ⭐ A release. `"SECOND"` — the input ended (the way out, a centre moved, a roll); `"FIRST"` — the first touch lifted, the input goes on; `"ENDED"` — the
+ * first touch lifted and ENDED the approach (consumed: ⛔ 2026-11-02, the third audit's B1 — it fell through to the tap below, a short approach turned the
+ * piece onto the yellow quad); `null` — not the input's.
  */
 export function holdRelease(
   st: SceneState,
   pointerId: number,
   /** ⭐ (2026-10-11) this release ends a TAP (`isTapRelease`) */
   tapped = false,
-): "SECOND" | "FIRST" | null {
+): "SECOND" | "FIRST" | "ENDED" | null {
   const h = st.hold;
   if (h === null) return null;
   if (pointerId === h.first) {
@@ -222,7 +225,7 @@ export function holdRelease(
       approachRelease(st);
       st.hold = null;
       st.hudDirty = true;
-      return "FIRST";
+      return "ENDED";
     }
     h.first = null;
     st.hudDirty = true;

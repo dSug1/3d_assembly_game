@@ -78,10 +78,9 @@ export function paint(st: SceneState) {
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
     // what is on the glass. The rules read `activeCount`, which excludes them.
     pointers: st.router.size,
-    // ⛔ Straight off the recognizer that made the decision. Never recomputed here:
-    // a readout that derives its own answer is a second implementation, and it can
-    // disagree with the product while showing green. See `METHOD`.
-    phase: "—",
+    // ⭐ (2026-11-02, the third audit's A10) what the orbit costs a frame, to be read on the iPhone: its ray picks (the gizmo, the section lines) and the
+    // approach's gap queries; ⭐ (C4) the mouse layer's own counters
+    rays: `picks=${st.asmPicks} approach q=${st.approachQueries} | mouse ${(() => { const m = st.mouseLayer.stats(); return `${m.seen}/${m.sent} ${m.last}`; })()}`,
     motion: st.orbitMotion === null ? "—" : st.orbitMotion.tracker.current,
     green: greenReadout(st),
     lastVerdict: st.lastVerdict,

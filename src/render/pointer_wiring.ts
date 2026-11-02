@@ -12,7 +12,7 @@ import { orientTapShown, restingQuadPointer, shownDirection } from "./orient_cub
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
 import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_wiring";
 import { worldPlacementOf } from "../core/object_model";
-import { hoverDragStep, hoverOrbitStep, hoverPressNote, hoverRelease } from "./hover_wiring";
+import { hoverDragStep, hoverOrbitStep, hoverPressNote, hoverRelease, slideModeOn } from "./hover_wiring";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
@@ -21,7 +21,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
-import { approachInput, approachRelease, assemblyOn, leavesCone, orbitTravelMm } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, leavesCone, orbitTravelMm, viewTurnGoverned } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -93,10 +93,13 @@ export function installPointerHandler(st: SceneState): void {
       }
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
+    let partTap = false;
     if (info.type === PointerEventTypes.POINTERUP) {
       hoverRelease(st, e.pointerId); // ⭐ (2026-10-14) the finger lifted: the hover ends — back to the orbit
       // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
       const pc = st.pendingPartCentre;
+      // ⭐ (2026-11-02, the third audit's C1) this release is the placed part's tap — never the cube's below as well
+      partTap = pc !== null && pc.pointerId === e.pointerId;
       if (pc !== null && pc.pointerId === e.pointerId) {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
@@ -139,6 +142,10 @@ export function installPointerHandler(st: SceneState): void {
         st.pieceFaceTap = restingFaceTap(onOrbited, true, false) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
         // ⭐⭐ (2026-10-14, the HOVER) the first touch on the piece: its drag may slide (`hoverDragStep`, decided past the tap's slop)
         if (holdRole === null) hoverPressNote(st, e.pointerId, s);
+      } else if (holdRole === null && e.pointerId !== MOUSE_SECOND_ID && slideModeOn(st) && st.hover !== null && st.hover.pointerId === null) {
+        // ⭐ (2026-11-02, the third audit's B10) the slide on with no finger on it: a first press anywhere noted NOW — its drag slides from the press, its
+        // deadband paid once (⛔ noted at its first move: the press → first-move travel lost, a second band paid)
+        hoverPressNote(st, e.pointerId, s);
       }
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⛔⛔ (2026-11-02, *"remove the translation and the rotation of the parts … I will only keep orbit and sliding"*) — NO PRESS HOLDS A PART:
@@ -155,7 +162,7 @@ export function installPointerHandler(st: SceneState): void {
       const hitMesh = pick?.hit === true && pick.pickedMesh !== null && pick.pickedMesh !== st.greenBox ? pick.pickedMesh : null;
       const hitId = hitMesh === null ? undefined : st.idOf.get(hitMesh);
       const hitAt = hitMesh !== null && pick?.pickedPoint ? ([pick.pickedPoint.x, pick.pickedPoint.y, pick.pickedPoint.z] as Vec3) : null;
-      const newTarget = orbitTargetOnPress(hitId !== undefined && st.router.all().length === 1 && holdRole === null, e.pointerType !== "mouse" || e.isTrusted, goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1), hitAt);
+      const newTarget = orbitTargetOnPress(hitId !== undefined && st.router.all().length === 1 && holdRole === null, e.pointerType !== "mouse" || e.isTrusted, goalLocked(hitId, st.goalCommit, true), hitAt);
       const hitN = newTarget !== null ? pick?.getNormal(true) : null;
       st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: hitId ?? null, x: s.x, y: s.y, t: s.t } : null;
 
@@ -177,7 +184,7 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐⭐ (2026-10-11) the held second touch's input starts — or the first touch pressed again while it is held. ⭐ A FINGER's press on a PLACED
       // part notes where: its TAP moves the orbit centre there (`holdRelease`), as a first touch's press does
       if (holdRole === "SECOND") {
-        const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1);
+        const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, true);
         const centreAt: [number, number, number] | null = onPlaced && hitAt !== null ? [hitAt[0], hitAt[1], hitAt[2]] : null;
         const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
         const centreN = centreAt !== null ? pick?.getNormal(true) : null;
@@ -213,7 +220,8 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐⭐ (2026-10-11) the held second touch lifted: its input ends — consumed, not a tap; ⭐ (2026-10-28) a second finger's TAP on the orbited
       // piece (around the assembly it is the second touch): its resting-face tap still goes on below
       const faceTapHere = st.pieceFaceTap !== null && st.pieceFaceTap.pointerId === e.pointerId && st.hold !== null && st.hold.second === e.pointerId && st.hold.mode === "HELD";
-      if (holdRelease(st, e.pointerId, tapped) === "SECOND" && !faceTapHere) {
+      const held = holdRelease(st, e.pointerId, tapped);
+      if ((held === "SECOND" && !faceTapHere) || held === "ENDED") {
         st.hudDirty = true;
         return;
       }
@@ -237,7 +245,7 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
-      } else if (st.hold === null && e.pointerId !== MOUSE_SECOND_ID && tapped) {
+      } else if (st.hold === null && e.pointerId !== MOUSE_SECOND_ID && tapped && !partTap) {
         // ⭐⭐ (2026-10-12, *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink face"*) —
         // a TAP elsewhere taps the cube's face SHOWN
         orientTapShown(st);
@@ -319,17 +327,32 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
     // ⭐⭐⭐ (2026-11-02) the finger's axes' signs on the orbit (`st.asmSign`: kept through a re-base of its frame — the same finger the same way in the world)
     const sg = asmOn ? st.asmSign : { yaw: 1, v: 1 };
-    st.orbit.drag(shiftApproach ? 0 : sg.yaw * pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share * sg.v);
+    const travelMm = Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
+    // ⭐⭐⭐ (2026-11-02) the screen's roll and the next switch's wait go on with the orbit's travel (`orbitTravelMm`) — ⭐⭐⭐ a roll under way TAKES it first,
+    // at the view's cap: the piece waits while the camera rolls (the owner: *"smoothed … by travel of the camera and piece with delta position"*)
+    const left = asmOn && !shiftApproach ? orbitTravelMm(st, travelMm) : travelMm;
+    const kRoll = travelMm > 0 ? left / travelMm : 1;
+    const dxArg = shiftApproach ? 0 : sg.yaw * pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag) * kRoll;
+    const dyArg = dyPx * share * sg.v * kRoll;
+    st.orbit.drag(dxArg, dyArg);
+    // ⭐⭐⭐ (2026-11-02, *"clamping the angular travel per mm input for any face"*) the view's turn held to the cap per mm (`viewTurnGoverned`): the step cut
+    if (asmOn && !shiftApproach) {
+      const k = viewTurnGoverned(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation, left);
+      if (k < 1) {
+        st.orbit.reset(yawBefore, vBefore);
+        st.orbit.drag(dxArg * k, dyArg * k);
+      }
+    }
     // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
-    hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
-    // ⭐⭐⭐ (2026-11-02) the screen's roll and the next switch's wait go on with the orbit's travel (`orbitTravelMm`)
-    if (asmOn && !shiftApproach) orbitTravelMm(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+    hoverOrbitStep(st, travelMm);
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
     if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
-    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
+    // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause; ⭐⭐ (2026-11-02, the third audit's A2) around the assembly the pitch APPLIED, its
+    // sign (`asmSign.v`) and the governor's cut in it — ⛔ the unsigned want: after the view went over the top a flick coasted the wrong way
+    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, asmOn ? st.orbit.elevation - vBefore : travel.du);
     void v0;
     // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
     // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —

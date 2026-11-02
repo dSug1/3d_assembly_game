@@ -19,7 +19,7 @@ and so is the code (`git show d8134eb:src/...`). ⏳ Later: the parts will be gi
 | holding | input | does |
 |---|---|---|
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
-| ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) |
+| ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) — ⭐ (2026-11-02) its TAP only that: never the cube's tap as well (`partTap`) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | 1 finger drag | **the orbit around the assembly**: dx the yaw, dy the pitch (±90°, 2026-10-29) — ⭐ the gizmo's CARRIER on the section's hull (dy: up the piece's side, clamped at the top and bottom centres, never into a face turned away; ⭐ dx BY DISTANCE, 2026-10-29: round the green loop at its height at its perimeter per turn, or round the axis on a top), dropped onto the surface — where the green and red sections meet, both drawn; locked close in, round the gizmo within 80° of its face; ⭐⭐⭐ (2026-11-02) on a face within 40° of horizontal the orbit TILTED onto it (dx across, dy toward / away — x-y, not polar; the sections still vertical), no pole (a continued dy goes on round, under the floor too), the screen's verticals kept (gravity's up; a jump of it rolled over `orbitTiltBlendMm` of travel), the piece's distance read off a smooth shell (`orbitShellOffsetMm`) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **2 fingers moving together** (`twoFingerKind`; ⭐ the second may land ON the piece) | **the APPROACH** — up: in, toward the gizmo the ray finds, to the contact; down: out; dx nothing. A tap on a part no longer moves the gizmo |
 | nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
@@ -51,7 +51,7 @@ contour shown instead (`D196`).
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **A held + left drag** (a mouse or a touchpad; ⭐ 2026-10-29, ⛔ Shift — Windows' Sticky Keys) | **the APPROACH** (dy: up in, down out); dx nothing; no orbit |
-| ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out) |
+| ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out); ⛔ (2026-11-02) nothing while the slide is on (the key detaches the slide) |
 | ⛔ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor over a placed part | nothing — ⛔ the key's raycast is deleted (it took the pink face, aligned to it); the key is the held second touch only |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a left click (a first-touch tap) on the orbited piece | the face hit becomes the **resting face**, aligned (§20); ⛔ ALT / CTRL over it does nothing since 2026-10-12 |
 | ⭐ the orbited piece (prototype, 2026-10-13) | left held (empty space or a part) + an ALT / CTRL TAP | as the touch: the YELLOW quad tapped — aligned to it, or the roll when already aligned there (the key looks at nothing) |

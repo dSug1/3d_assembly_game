@@ -94,8 +94,8 @@ describe("⭐⭐⭐ the orbit tilted onto a horizontal face (2026-11-02)", () =>
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 0), [0, 1, 0]);
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 1), [1, 0, 0]);
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 0.5), [Math.SQRT1_2, Math.SQRT1_2, 0]);
-    expect(T.rollShare(0, 5, 10)).toBeCloseTo(0.5, 12);
-    expect(T.rollShare(0, 1, 0)).toBe(1);
+    // ⛔ (2026-11-02) `rollShare` deleted: a roll takes the travel at the view's cap (`rollTakes`, below)
+    expect((T as Record<string, unknown>).rollShare).toBeUndefined();
     expect(T.SWITCH_HOLD_SHARE).toBe(0.5);
     expect(T.ROLL_REST_MS).toBe(300);
     // the camera's offsets about the screen's up (⛔ about each frame's own: 436 px at every switch back)
@@ -151,6 +151,8 @@ describe("⭐⭐⭐ the shell (2026-11-02)", () => {
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitTiltBlendMm: 61 })).toThrow();
     const m = code("render/tuning_menu.ts");
     expect(m).toContain('"orbitTiltBlendMm", 0, 40, 1)');
+    expect(m).toContain('"orbitViewTurnCap", 0.25, 4, 0.05)');
+    expect(m).toContain('"gizmoMmPerMm", 5, 400, 5)');
     expect(m).toContain('"orbitShellOffsetMm", 5, 300, 5)');
     expect(m.indexOf('"orbitShellOffsetMm"')).toBeGreaterThan(m.indexOf("CAMERA ORBIT AROUND CENTER"));
   });
@@ -169,22 +171,23 @@ describe("⭐⭐⭐ wired (2026-11-02)", () => {
   });
   it("⭐⭐⭐ the two frames each frame: a switch where the face asks for it, waiting half its roll; the anti-pole; back on the face's at rest; every re-base carrying the spring with its velocity, the lag, the leash and the finger's signs", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (want !== st.asmFace.kind && st.asmSwitchMm >= st.cfg.orbitTiltBlendMm * SWITCH_HOLD_SHARE) switchFace(st, want);");
+    expect(a).toContain("if (want !== st.asmFace.kind && (st.asmSwitchMm >= st.cfg.orbitTiltBlendMm * SWITCH_HOLD_SHARE || orbitAtRest(st))) switchFace(st, want);"); // ⭐ (2026-11-02, A8) or at rest
     expect(a).toContain("const aq = antiPoleQuat(st.asmOrbit, pq.yaw, pq.v); if (aq !== null) rebaseOrbit(st, aq);");
     expect(a).toContain("if (f !== null && Math.abs(pitchOfV(f.v)) < ANTI_POLE_RAD) rebaseOrbit(st, st.asmFace.q);");
-    expect(a).toContain("const q = tiltQuat(kind, [f.x + up.x, 0, f.z + up.z]);");
+    expect(a).toContain("const q = tiltQuat(kind, faceHeading(kind, [f.x, f.y, f.z], [up.x, up.y, up.z]));"); // ⭐ (2026-11-02, A1) under a bottom f − up
     expect(a).toContain("st.boxSpring = { at: { yaw: spT.yaw, v: spT.v, zoom: sp.at.zoom }, velYaw: vel.vy, velV: vel.vv, velLnZoom: sp.velLnZoom };");
-    expect(a).toContain("st.cameraOrbit = co === null || coT === null ? null : cameraOrbitAt({ ...co.cam, yaw: coT.yaw, v: coT.v }, performance.now(), st.cfg);");
+    // ⭐ (2026-11-02, A6) the leash re-read in place — its speeds and glides kept
+    expect(a).toContain("st.cameraOrbit = { ...co, cam: { ...co.cam, yaw: coT.yaw, v: coT.v }, yaw: { ...co.yaw, lastBox: box.yaw, lastDriver: drv.yaw }, pitch: { ...co.pitch, lastBox: box.v, lastDriver: drv.v } };");
     expect(a).toContain("yaw: signAfter(st.asmSign.yaw, fromFrame(qOld, so.yaw), fromFrame(qNew, sn.yaw)),");
     expect(a).toContain("st.asmSign = { yaw: signOnScreen(st.asmSign.yaw, fromFrame(st.asmOrbit, steps.yaw), right), v: signOnScreen(st.asmSign.v, fromFrame(st.asmOrbit, steps.pitch), cp.up) };");
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("if (asmOn && !shiftApproach) orbitTravelMm(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));");
+    expect(p).toContain("const left = asmOn && !shiftApproach ? orbitTravelMm(st, travelMm) : travelMm;"); // ⭐ (2026-11-02) the roll takes the travel first
   });
   it("⭐⭐⭐ the camera: its offsets about the screen's up — gravity's, the face's looking steeply, a jump rolled; the way out of a slide solved on that same camera in the orbit's frame; the floor never in the way (the piece orbits under it, the camera follows)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const target = screenUpTarget(u, fromFrame(st.asmFace.q, [0, 1, 0]), st.asmUp);");
-    expect(a).toContain("const base = st.asmRoll === null ? target : rollUp(st.asmRoll.from, target, u, st.asmRoll.share);");
-    expect(a).toContain("if (upAngle(shown, screenUpTarget(u, fromFrame(st.asmFace.q, [0, 1, 0]), shown), u) > ROLL_START_RAD) st.asmRoll = { from: shown, share: 0 };");
+    expect(a).toContain("const base = st.asmRoll === null ? target : rollUp(st.asmRoll.from, target, u, st.asmRoll.share, st.asmRoll.sense);"); // ⭐ (2026-11-02) its way round latched
+    expect(a).toContain("if (upAngle(shown, to, u) > ROLL_START_RAD) st.asmRoll = { from: shown, share: 0, sense: rollSense(shown, to, u) };"); // ⭐ (2026-11-02) its way round latched
     expect(code("render/green_box_wiring.ts")).toContain("st.asmUp = camFrame.base ?? null;");
     expect(code("render/hover_wiring.ts")).toContain("const t = orbitForCameraDir(toFrame(st.asmOrbit, hv.iso), q.yaw, (y, v) => cameraDirInOrbit(st, y, v));");
     expect(code("render/green_box_wiring.ts")).not.toContain("aboveFloor");

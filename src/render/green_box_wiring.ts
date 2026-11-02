@@ -685,6 +685,24 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.hoverView = null;
     st.orbitRawPrev = null;
     st.orbitUserV = null;
+    // ⭐⭐ (2026-11-02, the third audit's B2) the orbit around the assembly back to its boot state as well: the approach out, the lock off, the gizmo found
+    // again, the lit contours and the latch's wait forgotten — ⛔ kept, a piece respawned at the contact came back at the contact, still locked (the stuck
+    // piece's way out re-stuck it)
+    st.approach = 1;
+    st.approachInertia.stop();
+    st.approachPendingMm = 0;
+    st.asmLocked = false;
+    st.asmLock = null;
+    st.asmG = null;
+    st.asmGizmo = null;
+    st.asmCarrier = null;
+    st.asmShown = null;
+    st.asmPrevQ = null;
+    st.hoverReady = null;
+    st.hoverReadyWorld = null;
+    st.slideRefused = false;
+    st.slideWaitSince = 0;
+    st.slideTryAt = 0;
   }
   // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
   // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
@@ -968,7 +986,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let rig: OrbitQ = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
   // ⭐ (2026-10-13, the second audit) the stuck and turn checks of the last frame counted too (they run after this frame's mean)
   st.pieceGuardFrameMs = st.pieceGuardCarryMs;
-  st.pieceQueries = st.pieceQueriesCarry;
+  st.pieceQueries = st.pieceQueriesCarry + st.approachQueries;
   st.pieceGuardCarryMs = 0;
   st.pieceQueriesCarry = 0;
   st.pieceDeferred = false;
@@ -985,7 +1003,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐ (2026-10-14) the way in after a hover keeps its share of the frame's cap (`HOVER_FADE_QUERIES`): near the hosting face the orbit's slide
     // took it all and the way in advanced in bursts
     const opt0 = pieceSolveOptions(st);
-    const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;
+    // ⭐⭐ (2026-11-02, the third audit's A4 / B4) …and the approach's step this frame takes its queries off the orbit's (`approachQueries`)
+    const capped = st.approachQueries > 0 ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - st.approachQueries) } : opt0;
+    const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...capped, maxQueries: Math.max(4, capped.maxQueries - HOVER_FADE_QUERIES) } : capped;
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
     }

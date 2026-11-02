@@ -1,5 +1,6 @@
 /**
- * THE RENDER LOOP — the per-frame order: snaps, cascades, seats, the follower, the markers, the HUD, then `scene.render()`.
+ * THE RENDER LOOP — the per-frame order: the demo's poses, the goal capture and commit, the resting faces, the level end, the follower, the HUD, then
+ * `scene.render()`. ⛔ (2026-11-02) the snaps, cascades, seats and markers went with the parts' inputs (`d8134eb`).
  *
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
@@ -52,30 +53,16 @@ export function startRenderLoop(st: SceneState): void {
     ) {
       const p = st.pendingCentre;
       st.pendingCentre = null;
-      // ⚠ BOTH conditions re-checked at commit time, not only at press: within the grace
-      // a second finger could have arrived and left, or a finger could have landed on an
-      // object and turned the whole gesture into a translation.
+      // ⚠ Re-checked at commit time, not only at press: within the grace a second finger could have arrived and left. (⛔ 2026-11-02 no press holds an
+      // object any more — `objects()` is always empty; kept as the rule's own guard.)
       if (st.router.outside().length === 1 && st.router.objects().length === 0) {
         recomputeOrbitCentre(st, { clientX: p.x, clientY: p.y });
       }
     }
 
-    // ⛔⛔⛔ **THE MODEL WRITERS RUN BEFORE THE VIEW READS THE MODEL — reordered by audit,
-    // 2026-09-17.** The alignment slerp and the Pioneer cascade both WRITE orientations, and
-    // they used to run AFTER the follower loop below, which READS the model and sets every
-    // mesh transform. ⚠ So a snapping or a cascading body was drawn one frame behind its own
-    // model, for the whole length of the animation.
-    // ⭐ The slerp's own comment claimed it ran *"before anything reads an orientation this
-    // frame"* — true of the Pioneer watch and the markers that followed it, and false of the
-    // loop that actually draws the scene.
-    // ⭐⭐ `METHOD`: *a claim about ORDER has to name what it is ordered against.*
-
-    // ⭐⭐ THE ALIGNMENT'S SLERP, ADVANCED BEFORE ANYTHING READS AN ORIENTATION this frame —
-    // the Pioneer watch below compares orientations, the markers are drawn from them, and
-    // since 2026-09-17 the follower loop that writes every mesh runs after it too.
-    // ⚠ `easeInOut` is the camera reset's own easing, imported rather than re-derived: two
-    // eased snaps in one product should not accelerate differently for no reason.
-    // ⚠ EVERY live snap, not one: see `alignSnaps` where it is declared.
+    // ⛔⛔⛔ **THE MODEL WRITERS RUN BEFORE THE VIEW READS THE MODEL** (the 2026-09-17 audit): the demo's replay and the goal's pull WRITE poses, the
+    // follower loop below READS the model and sets every mesh — a writer after it drew its body one frame behind. ⭐⭐ `METHOD`: *a claim about ORDER has
+    // to name what it is ordered against.* (The alignment's slerp and the Pioneer cascades this was written for went with the parts' inputs, `d8134eb`.)
     // ⭐ `D170`: a demo scene's replay writes its poses (and the camera) first, as the other model writers do.
     advanceDemoFrame(st, dtSec);
 
@@ -86,7 +73,8 @@ export function startRenderLoop(st: SceneState): void {
     goalCaptureFrame(st, now);
     // ⭐⭐ `D189`: the goal is COMMITTED when the scene comes to rest after a change — never midway through a movement.
     goalCommitFrame(st);
-    // ⭐⭐ the resting faces: the boot pass once the goal's baseline exists, then every part the frame UNSEATED (`resting_face_wiring.ts`).
+    // ⭐⭐ the resting faces: the boot pass once the goal's baseline exists, then every part whose resting state changed (`resting_face_wiring.ts`; no part is
+    // seated or unseated by a finger since 2026-11-02).
     restingFaceFrame(st);
     // ⭐⭐ `D180`: the level end — asked only while the scene is at rest; once, it freezes the scene and tells `main.ts`.
     levelEndFrame(st, now);

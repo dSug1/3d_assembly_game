@@ -19,6 +19,10 @@
  * | ⭐⭐ **any touchpoint of a gesture that changed NOTHING** — a press and release on a body, a Space click
  * |   cancelled, a double tap that does not land (`D157`) | ⛔ — ZERO (`D158`: the gesture lands nothing) | — |
  * | an **undo** double tap | ⭐ ONE — the first tap changed nothing, the second's gesture undid (`D111`, by `D158`) | — |
+ *
+ * ⛔ (2026-11-02, the third audit's C5) since the parts' inputs went (`d8134eb`) every press is `OUTSIDE` with nothing held — the rows above for a held body,
+ * an align press, an unsnap, Free Flow and the undo are the RECORD: unreachable, kept for the pieces that get the orbited pieces' properties. What lands
+ * an episode today is an ACTION (a resting-face tap, a quad tap: `episodes.touch(…, true, true)`).
  */
 import type { PointerRole } from "./router";
 
