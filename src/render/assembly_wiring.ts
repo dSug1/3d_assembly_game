@@ -29,7 +29,7 @@ import type { Quat, Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { spanEngaged, spanEngageM } from "../input/face_span";
-import { spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease } from "./face_span_wiring";
+import { spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanZenithStep, spanZenithUp } from "./face_span_wiring";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -156,8 +156,8 @@ export function orbitDirWorld(st: SceneState, yaw: number, v: number): Vec3 {
 
 /** ⭐ The piece's direction at the orbit place (the world's) — locked, kept in the face's cone (`coneClamp`; `clamp` false: not — the way out's solve). */
 function dirAt(st: SceneState, yaw: number, v: number, clamp = true): Vec3 {
-  // ⭐⭐⭐ (2026-11-02) FACE-SPAN: the piece straight out along the face's normal (turned by a wrap, blended at the engage) — the orbit's angles held
-  if (st.span !== null) return st.span.w;
+  // ⭐⭐⭐ (2026-11-02, second pass, the owner: *"I want to keep what was done for commit ff2fca2 in terms of gizmo leading"*) in the face-span too the piece is
+  // on the ORBIT's direction from its gizmo (⛔ straight out along the face's normal, the orbit held: the gizmo read as trailing the piece)
   const u = orbitDirWorld(st, yaw, v);
   const n = clamp && st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
   return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);
@@ -440,14 +440,15 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const t = st.centreBlend.targetM;
     st.asmLocked = false;
     st.asmLock = null;
-    spanAfterSlide(st, [t[0], t[1], t[2]], st.span.w);
+    const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    spanAfterSlide(st, [t[0], t[1], t[2]], orbitDirWorld(st, q0.yaw, q0.v));
   }
   const engageM = spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg));
-  if (st.span !== null && st.span.motion.wrap === null && !spanEngaged(true, d, engageM)) spanRelease(st);
+  if (st.span !== null && !spanEngaged(true, d, engageM)) spanRelease(st);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDirWorld(st, q.yaw, q.v);
   if (st.span === null && !st.asmLocked && spanEngaged(false, d, engageM) && st.asmG !== null && st.pieceQ !== null) {
-    if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, st.gizmoHost ?? null, u, st.pieceQ)) {
+    if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, u)) {
       st.asmCarrier = null;
       st.asmShown = null;
       st.asmPrevQ = null;
@@ -566,7 +567,7 @@ function spanGapAt(st: SceneState, g: Vec3): number {
  */
 function spanTail(st: SceneState, dtMs: number, d: number): void {
   const a = st.asm!;
-  spanFrame(st, dtMs, pieceSolveOptions(st).gapM, (g) => spanGapAt(st, g));
+  spanFrame(st, dtMs, pieceSolveOptions(st).gapM, (g) => spanGapAt(st, g), (y, v) => orbitDirWorld(st, y, v));
   const sp = st.span!;
   st.asmG = sp.g;
   st.asmLocked = false;
@@ -585,15 +586,40 @@ function spanTail(st: SceneState, dtMs: number, d: number): void {
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
+  // ⭐⭐⭐ (second pass) the orbit's own frames as far out (the anti-pole re-tilt, the face's frame) — its signs are the face-span's (`spanScreenSigns`)
+  const q = st.pieceQ;
+  if (q !== null) framesFrame(st, orbitDirWorld(st, q.yaw, q.v), false);
   screenUpFrame(st, dtMs);
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
   spanLinesFrame(st);
 }
 
-/** ⭐ The screen's up wanted along the view `u`: the face-span's (a wall's the world's, a top's the up carried in) — else the far orbit's (`screenUpTarget`). */
+/**
+ * ⭐ The screen's up wanted along the view `u`: the far orbit's rule (`screenUpTarget` — gravity's, the face's frame's looking steeply) in the face-span too —
+ * ⭐⭐⭐ (second pass) except within a top's zenith cone: there the roll of branch 1.0.83 (`spanZenithUp` — from the up at the cone, half a turn by its share).
+ */
 function upTarget(st: SceneState, u: Vec3, prev: Vec3 | null): Vec3 {
-  if (st.span !== null) return st.span.up;
+  const z = spanZenithUp(st);
+  if (z !== null) return rollUp(z.from, z.to, u, z.share, z.sense);
   return screenUpTarget(u, fromFrame(st.asmFace.q, [0, 1, 0]), prev);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-02, second pass) After an orbit step from (`yaw0`, `v0`) worth `travelMm` of finger (the drag's, the coast's): over a top in the face-span, the
+ * zenith's roll of branch 1.0.83 (`spanZenithStep` — the step held at the zenith while it rolls the camera).
+ */
+export function orbitZenithStep(st: SceneState, yaw0: number, v0: number, travelMm: number): void {
+  if (st.span === null) return;
+  spanZenithStep(st, yaw0, v0, travelMm, (y, v) => orbitDirWorld(st, y, v));
+}
+
+/** ⭐ …the coast's step: its travel read off the step itself at the orbit's pace. */
+export function orbitZenithCoast(st: SceneState, yaw0: number, v0: number): void {
+  if (st.span === null) return;
+  const dy = Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0));
+  const dp = pitchOfV(st.orbit.elevation) - pitchOfV(v0);
+  const degPerMm = Math.abs(orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm);
+  orbitZenithStep(st, yaw0, v0, degPerMm > 0 ? Math.hypot(dy, dp) / ((degPerMm * Math.PI) / 180) : 0);
 }
 
 /** ⭐ `to` from `from`, the step at most `capM` long. */
@@ -615,7 +641,7 @@ function orbitAtRest(st: SceneState): boolean {
  * roll's travel since the last switch (`SWITCH_HOLD_SHARE`: no ping-pong at an edge); the ORBIT's own re-tilted past 60° of pitch (`antiPoleQuat`: no pole),
  * and back on the face's once at rest within it (so dx goes round at its height again on a vertical face). Every re-base moves nothing (`rebaseOrbit`).
  */
-function framesFrame(st: SceneState, u: Vec3): void {
+function framesFrame(st: SceneState, u: Vec3, signs = true): void {
   if (st.asmLocked) return;
   const want = tiltWanted(st.gizmoNormal ?? null, st.asmFace.kind);
   // ⭐ (2026-11-02, the third audit's A8) …or at rest (no ping-pong to fear): ⛔ at the boot over a top, or after a coast, the switch waited for the next drag
@@ -630,7 +656,7 @@ function framesFrame(st: SceneState, u: Vec3): void {
   }
   // ⭐ at rest, the screen upright again (no roll under way): the finger's signs read off the screen — dx its right, dy its up (`signOnScreen`)
   const cp = st.cameraPrev;
-  if (orbitAtRest(st) && st.asmRoll === null && cp !== null && cp !== undefined) {
+  if (signs && orbitAtRest(st) && st.asmRoll === null && cp !== null && cp !== undefined) {
     const q = st.pieceQ ?? pq;
     const steps = frameSteps(q.yaw, q.v);
     const right: Vec3 = [cp.dir[1] * cp.up[2] - cp.dir[2] * cp.up[1], cp.dir[2] * cp.up[0] - cp.dir[0] * cp.up[2], cp.dir[0] * cp.up[1] - cp.dir[1] * cp.up[0]];
@@ -716,14 +742,22 @@ function screenUpFrame(st: SceneState, dtMs: number): void {
   const shown = st.asmUp;
   const cam = st.cameraLagged ?? st.pieceQ;
   if (shown === null || cam === null) return;
-  const u = st.span !== null ? st.span.w : orbitDirWorld(st, cam.yaw, cam.v);
+  const u = orbitDirWorld(st, cam.yaw, cam.v);
+  if (spanZenithUp(st) !== null) {
+    st.asmRoll = null; // ⭐⭐⭐ (second pass) the zenith's roll owns the up there
+    return;
+  }
   if (st.asmRoll === null) {
     const to = upTarget(st, u, shown);
     // ⭐⭐ (2026-11-02) its way round latched at its start (`rollSense`): ⛔ a half turn's sign was the rounding's, the up flipped 177° in one frame
     if (upAngle(shown, to, u) > ROLL_START_RAD) st.asmRoll = { from: shown, share: 0, sense: rollSense(shown, to, u) };
     return;
   }
-  if (st.router.size === 0) st.asmRoll = { ...st.asmRoll, share: st.asmRoll.share + dtMs / ROLL_REST_MS };
+  // ⭐⭐⭐ (2026-11-02, second pass) …and by time while the finger is held STILL too (⛔ only with no finger on the glass: a finger resting left the view tilted —
+  // on a frustum's small faces the travel never came to finish it)
+  const om = st.orbitMotion;
+  const still = st.router.size === 0 || (om !== null && om.tracker.axes.x !== "MOVING" && om.tracker.axes.y !== "MOVING");
+  if (still) st.asmRoll = { ...st.asmRoll, share: st.asmRoll.share + dtMs / ROLL_REST_MS };
   if (st.asmRoll.share >= 1) st.asmRoll = null;
 }
 
@@ -755,7 +789,7 @@ export function orbitTravelMm(st: SceneState, travelMm: number): number {
  * and a dy tipping it over the edge are held to it. A jump of the up (a roll) is the roll's (`orbitTravelMm`), not counted here.
  */
 export function viewTurnGoverned(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number, travelMm: number): number {
-  if (!assemblyOn(st) || st.asmUp === null || st.span !== null) return 1; // ⭐⭐⭐ (2026-11-02) the face-span turns no view: its step is the gizmo's
+  if (!assemblyOn(st) || st.asmUp === null) return 1;
   const fu = fromFrame(st.asmFace.q, [0, 1, 0]);
   const u0 = orbitDirWorld(st, yaw0, v0);
   const u1 = orbitDirWorld(st, yaw1, v1);
@@ -991,9 +1025,11 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   const u = dirAt(st, cam.yaw, cam.v, clamp);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
   const target = upTarget(st, u, st.asmUp);
+  // ⭐⭐⭐ (2026-11-02, second pass) the zenith's roll IS the roll there: no second one chasing it
+  if (spanZenithUp(st) !== null) st.asmRoll = null;
   // ⭐⭐ (2026-11-02) the camera's own frame (not a solve's): a jump of the up from the one shown starts the roll HERE — ⛔ checked only before the camera
   // moved in the frame (`screenUpFrame`), a flip arriving with the move was shown whole: 179° in one frame over the top
-  if (clamp && st.asmRoll === null && st.asmUp !== null && upAngle(st.asmUp, target, u) > ROLL_START_RAD) st.asmRoll = { from: st.asmUp, share: 0, sense: rollSense(st.asmUp, target, u) };
+  if (clamp && spanZenithUp(st) === null && st.asmRoll === null && st.asmUp !== null && upAngle(st.asmUp, target, u) > ROLL_START_RAD) st.asmRoll = { from: st.asmUp, share: 0, sense: rollSense(st.asmUp, target, u) };
   const base = st.asmRoll === null ? target : rollUp(st.asmRoll.from, target, u, st.asmRoll.share, st.asmRoll.sense);
   const f = offsetAbout(u, base, o.yawRad, o.pitchRad);
   return { dir: f.dir, up: f.up, base };

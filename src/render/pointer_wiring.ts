@@ -21,7 +21,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
-import { approachInput, approachRelease, assemblyOn, leavesCone, orbitTravelMm, viewTurnGoverned } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, leavesCone, orbitTravelMm, orbitZenithStep, viewTurnGoverned } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -345,6 +345,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     }
     // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
+    // ⭐⭐⭐ (2026-11-02, the owner: *"do the roll as it was previously implemented on branch 1.0.83"*) over a top in the face-span, the step held at the zenith
+    // while the camera rolls
+    if (asmOn && !shiftApproach) orbitZenithStep(st, yawBefore, vBefore, left);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, travelMm);
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)

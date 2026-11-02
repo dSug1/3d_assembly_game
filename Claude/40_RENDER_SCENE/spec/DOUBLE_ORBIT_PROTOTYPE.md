@@ -2406,3 +2406,20 @@ dx … 4- … gizmo following the orbit … I want to keep this behavior. 5- Giz
 * ⚠ The far orbit (6 → 5.4 m) keeps its carrier, frames and sections unchanged. Measured headless: the gizmo over `Piece45` (41 mm) and back, no jump; a
   dy round the bottom onto the back face (two wraps, one 180° roll), a dx round the right side onto the back. Vectors `tests/face_span.test.ts` (21, red on
   `8548714`). ⛔ No device close. 1645 vectors.
+
+## 2026-11-02 — on 1.0.90-: the face-span, second pass — the orbit kept (ff2fca2's relation), the 1.0.83 roll on a top, the screen wins
+
+The owner, after a device look on the first pass: *"this is much better. however, some things still need improvement"*, then: *"I want to keep what was
+done for commit ff2fca2 … in terms of gizmo leading … Tilting the face and face-span should not impact the behavior of the gizmo and the behavior of the
+piece and the camera relative to the gizmo"*, *"do the roll as it was previously implemented on branch 1.0.83"*, *"slide shall latch only on placed
+parts"*, *"slanted parts should stay faces the gizmo can stand on"*, *"screen direction shall win"* → [`FACE_SPAN_2026-11-02.md`](../../00_CORE/queue_notes/FACE_SPAN_2026-11-02.md), last section.
+
+* ⭐⭐⭐ **The orbit is no longer held in the face-span**: the piece on its direction from the gizmo, the camera as far out; the gizmo moved by the orbit's
+  SOLVED step on the face (`spanStepFromDir`), across an edge at once after the catch. Measured: the ring / piece on the screen 9 / 27 px for a 24 px drag
+  (ff2fca2 7 / 20, the first pass 17 / 51).
+* ⭐⭐⭐ **Over a top / bottom, branch 1.0.83's roll at the zenith**: the step held there, the travel rolls the camera half a turn over `faceSpanRollMm`
+  (16 mm), reversible, dx held, the coast stopped. Walls never roll; a roll completes by time with the finger still.
+* ⭐⭐ **Glued faces** (a seated part's contact face) hidden, a step onto one lands on the face it stands on — off Piece43 onto Piece19's bottom.
+* ⭐⭐ **The screen wins** every frame on a settled picture, at the release and the engage; ⏳ `signHold` (a drag through a zenith roll keeps its sense until
+  the lift) awaits the owner's confirmation.
+* Slide hosts placed parts only; `assemblyLockDistM` relabelled (the look point only). Vectors 1648. ⛔ No device close.

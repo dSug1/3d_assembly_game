@@ -4,6 +4,7 @@
  * each step solved by the orbit's own clearance rule (the other faces stop and slide it). The camera eases toward the HOVER VIEW with the drag's
  * travel, and back as the orbit comes back. ⛔ No rule here: the decisions are `input/hover.ts`'s and the solver's.
  */
+import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -134,10 +135,14 @@ export function hoverRelease(st: SceneState, pointerId: number): void {
   if (st.hoverSpent === pointerId) st.hoverSpent = null;
 }
 
-/** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test). */
+/**
+ * ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test).
+ * ⭐⭐⭐ (2026-11-02, the owner: *"slide shall latch only on placed parts"*) — PLACED parts only (`goalLocked`): ⛔ any body, a loose piece hovering at its
+ * table height beside the painting lit the contours far from the assembly.
+ */
 function hoverCandidates(st: SceneState, reachM: number, setup: CollisionSetup) {
   const b = st.greenBox!;
-  return bodiesWithin(st.world, b.name, setup, reachM).map((x) => {
+  return bodiesWithin(st.world, b.name, setup, reachM).filter((x) => goalLocked(x.id, st.goalCommit, true)).map((x) => {
     const obj = st.world.objects.get(x.id);
     const faces = (obj?.faces ?? []).flatMap((f) => {
       const w = faceWorld(st.world, x.id, f.id);

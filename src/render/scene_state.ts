@@ -507,7 +507,7 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO (`input/face_span.ts`, `render/face_span_wiring.ts`; `null`: the far orbit) */
   span: import("./face_span_wiring").SpanState | null;
   /** ⭐⭐⭐ (2026-11-02) the placed parts' faces (normal, triangles on the model pose) and their owners — per placed set */
-  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[] } | null;
+  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly hostable: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[]; readonly partner: readonly number[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the face-span's red and green lines (one mesh, a fixed vertex count, updated in place) and what they were drawn for */
   spanLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   spanLinesKey: string;
