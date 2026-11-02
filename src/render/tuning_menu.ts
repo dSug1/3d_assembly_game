@@ -190,7 +190,9 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "top roll band (°): the half-turn only this near straight above", "topRollBandDeg", 2, 60, 1),
             // ⭐⭐⭐ (2026-10-28) THE ORBIT AROUND THE ASSEMBLY — or the gizmo's 2D curve (kept)
             tunable(st, "orbit: around the assembly (0) / the gizmo's 2D curve (1)", "orbitMode", 0, 1, 1),
-            tunable(st, "gizmo lock distance (m)", "assemblyLockDistM", 0.05, 2, 0.05),
+            // ⭐⭐⭐ (2026-11-02, the owner: *"lock slider: do what is best"*) — relabelled: within the face-span (4.5 m) the lock is never reached; what it still does is
+            // where the camera looks — the assembly's centre far out, the gizmo from this distance in (`lookShare`)
+            tunable(st, "camera looks at the gizmo within (m) — the centre beyond", "assemblyLockDistM", 0.05, 2, 0.05),
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
             // ⭐⭐⭐ (2026-11-02) the orbit tilted onto a horizontal face: the screen's roll; the shell
@@ -201,7 +203,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO
             tunable(st, "face-span engages within (m of the gizmo; out past 1.2 ×)", "faceSpanEngageM", 0.1, 6, 0.1),
             tunable(st, "face-span catch at an edge (mm of push)", "faceSpanCatchMm", 0, 30, 0.5),
-            tunable(st, "face-span turn across an edge / onto the face (mm)", "faceSpanTurnMm", 0, 60, 1),
+            tunable(st, "face-span: the top face's half turn at the zenith (mm of finger)", "faceSpanRollMm", 0, 60, 1),
             tunable(st, "face-span ride over a protrusion (mm)", "faceSpanRideMm", 0, 40, 1),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),

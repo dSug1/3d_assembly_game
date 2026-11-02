@@ -1,33 +1,32 @@
 /**
  * GOLDEN VECTORS — **THE FACE-SPAN GIZMO** (2026-11-02, `1.0.90-`; `input/face_span.ts`, `render/face_span_wiring.ts`, `FACE_SPAN_2026-11-02.md`).
  *
- * The owner: *"I find it extremely difficult to control the gizmo: the red and green sections have strange contours, sometimes the contours stop somewhere in
- * the face, the gizmo do not follow the delta position input, the gizmo jumps, the protruding parts further complicate the red and green sections, the
- * scene gets slanted vs. the face … once the orbit is tilted to follow a face orientation, the red and green sections do not need to fully circumference the
- * assembly, but they only need to span the hosting coplanar faces"* → the design, then: *"1- Leaving a face: Option B. Design the tilt and catch
- * properly"*, *"2- … make a slider. I prefer to engage as far as reasonably possible"*, *"3- constant gizmo speed, which shall follow the current orbit
- * angular speed on dy and dx"*, *"4- … gizmo following the orbit … I want to keep this behavior"*, *"5- Gizmo shall pass over the protruding part. Blend
- * the movements to avoid jumps"*, *"6- Roll freeze: I liked what was implemented in 65a691a"*.
+ * The owner: *"I find it extremely difficult to control the gizmo … once the orbit is tilted to follow a face orientation, the red and green sections do not
+ * need to fully circumference the assembly, but they only need to span the hosting coplanar faces"* → the first build (`3286ed5`); then, on the device:
+ * *"1- I don't want sliding, I want orbit … I want to keep what was done for commit ff2fca2 in terms of gizmo leading … Tilting the face and face-span should
+ * not impact the behavior of the gizmo and the behavior of the piece and the camera relative to the gizmo"*, *"2- do the roll as it was previously implemented
+ * on branch 1.0.83"*, *"4- slide shall latch only on placed parts"*, *"5- slanted parts should stay faces the gizmo can stand on. implement the fix"*,
+ * *"6- screen direction shall win"*.
  *
- * ⭐ Every vector here was shown RED against `8548714` (the module and its wiring did not exist; the centre was read before the world matrices; the roll
- * took the travel first). The geometry is SYNTHETIC on purpose — boxes 3 mm apart (the painting's cores), a 16 mm empty slot (an unplaced piece), a
- * protrusion 41 mm out (Piece45) — so a fixture where the quantity under test is zero cannot pass for one where it is not.
+ * ⭐ The first pass's vectors were shown RED against `8548714`; the second pass's against `3286ed5` (the gizmo moved by the held orbit's step, the piece
+ * along the face's normal, the wrap turned about the edge, the glued small face of a frustum taken as the face across, any body a slide's host, the roll's
+ * time only with no finger). The geometry is SYNTHETIC on purpose — boxes 3 mm apart (the painting's cores), a 16 mm empty slot, a protrusion 41 mm out
+ * (Piece45), a frustum glued under a box (Piece43) — so a fixture where the quantity under test is zero cannot pass for one where it is not.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
 import {
-  axisOnScreen,
   closestOnTriangle,
   coveredTop,
   fromP2,
+  gluedPartners,
+  hiddenGlued,
   isWall,
   regionDistance,
   regionRun,
   rideStep,
   SPAN_RELEASE_FACTOR,
-  spanAxes,
-  spanDirection,
   spanEngaged,
   spanEngageM,
   spanMmOf,
@@ -35,13 +34,12 @@ import {
   spanPlane,
   spanPolyline,
   spanRegion,
-  spanShareAfter,
   spanSolids,
-  spanStepOf,
-  spanUp,
+  spanStepFromDir,
   toP2,
   wrapCandidate,
-  wrapTurn,
+  zenithCrossing,
+  zenithRollStep,
   type SpanFace,
   type SpanMotion,
   type Tri,
@@ -119,78 +117,56 @@ describe("⭐⭐⭐ the region — the hosting coplanar faces, never round the a
   });
 });
 
-describe("⭐⭐⭐ the gizmo's step — the orbit's own, constant, clamped, caught at the edge", () => {
-  it("⭐⭐ constant speed: the orbit's angle × the assembly's radius, on a wall and on a top alike (no per-face pace)", () => {
-    const wall = spanStepOf(0.1, 0, 0.283, [1, 0, 0], [0, 1, 0]);
-    const top = spanStepOf(0.1, 0, 0.283, [0, 0, 1], [1, 0, 0]);
-    expect(Math.hypot(...wall)).toBeCloseTo(0.0283, 12);
-    expect(Math.hypot(...top)).toBeCloseTo(0.0283, 12);
-    expect(Math.hypot(...spanStepOf(0.06, 0.08, 0.283, [1, 0, 0], [0, 1, 0]))).toBeCloseTo(0.0283, 12);
-    expect(spanMmOf((5.1 * Math.PI) / 180, 0, 5.1)).toBeCloseTo(1, 12); // the step read back as the finger's mm at the orbit's pace
-  });
-  it("⭐⭐⭐ the gizmo FOLLOWS THE ORBIT (the owner's 65a691a): its axes are where the orbit's yaw and pitch steps moved it — each keeping its sense", () => {
-    // front face looking along −n = −z; the orbit's yaw step +x, its pitch step +y: the gizmo the same way
-    const a = spanAxes([0, 0, 1], [1, 0, 0], [0, 1, 0], [1, 0, 0], [0, 1, 0]);
-    expect(a.eYaw).toEqual([1, 0, 0]);
-    expect(a.ePitch).toEqual([0, 1, 0]);
-    // the orbit's steps reversed (its signs, `asmSign`, are the finger's): the axes reversed — never re-signed by the screen at the engage
-    const b = spanAxes([0, 0, 1], [-1, 0, 0], [0, -1, 0], [1, 0, 0], [0, 1, 0]);
-    near(b.eYaw, [-1, 0, 0]);
-    near(b.ePitch, [0, -1, 0]);
-  });
-  it("⭐ VERTICALS RESPECTED: on a wall the axes are levelled (horizontal / the wall's up), their senses kept; a top keeps the orbit's", () => {
-    const s = Math.SQRT1_2;
-    const a = spanAxes([0, 0, 1], [s, s, 0], [-s, s, 0], [1, 0, 0], [0, 1, 0]);
-    expect(a.eYaw[0]).toBeCloseTo(1, 12);
-    expect(a.eYaw[1]).toBeCloseTo(0, 12);
-    expect(a.ePitch[1]).toBeCloseTo(1, 12);
-    expect(isWall([0, 0, 1])).toBe(true);
-    expect(isWall([0, 1, 0])).toBe(false);
-    const t = spanAxes([0, 1, 0], [s, 0, s], [-s, 0, s], [1, 0, 0], [0, 0, 1]);
-    expect(t.eYaw[0]).toBeCloseTo(s, 12);
-    expect(t.eYaw[2]).toBeCloseTo(s, 12);
+
+describe("⭐⭐⭐ the gizmo's step — the ORBIT's solved step (ff2fca2's relation), clamped, caught at the edge", () => {
+  const deg = Math.PI / 180;
+  const dir = (yawDeg: number, pitchDeg: number): Vec3 => [Math.cos(pitchDeg * deg) * Math.sin(yawDeg * deg), Math.sin(pitchDeg * deg), Math.cos(pitchDeg * deg) * Math.cos(yawDeg * deg)];
+  it("⭐⭐⭐ the gizmo goes the way the piece's direction went — the angle × the assembly's radius along the step laid on the face (constant speed)", () => {
+    const s = spanStepFromDir(dir(0, 0), dir(5, 0), [0, 0, 1], 0.283);
+    expect(Math.hypot(...s)).toBeCloseTo(5 * deg * 0.283, 9);
+    expect(s[0]).toBeGreaterThan(0); // the piece's direction swung toward +x: the gizmo too
+    expect(Math.abs(s[1])).toBeLessThan(1e-12);
+    // off the face's normal (the piece 40° to the side) the same angle moves the gizmo as far: no per-face pace
+    expect(Math.hypot(...spanStepFromDir(dir(40, 0), dir(45, 0), [0, 0, 1], 0.283))).toBeCloseTo(5 * deg * 0.283, 9);
+    const up = spanStepFromDir(dir(0, 0), dir(0, 3), [0, 0, 1], 0.283);
+    expect(up[1]).toBeCloseTo(3 * deg * 0.283, 6);
+    expect(spanStepFromDir(dir(0, 0), dir(0, 0), [0, 0, 1], 0.283)).toEqual([0, 0, 0]);
+    expect(spanMmOf((5.1 * Math.PI) / 180, 0, 5.1)).toBeCloseTo(1, 12);
   });
   it("⭐⭐ clamped to the region: a push past the edge holds it ON the edge, slides along it, and is CAUGHT (mm of finger); one step back moves at once", () => {
     const a = painting([0.003, 0.003]);
     const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
     const dist = (p: readonly [number, number]) => regionDistance(r, p);
     const none = () => null;
-    const m0: SpanMotion = { at: P(0.3, 0.1), overMm: 0, wrap: null };
+    const m0: SpanMotion = { at: P(0.3, 0.1), overMm: 0 };
     const right = toP2(FRONT, [0.02, 0.01, 0]);
-    const m1 = spanMove(m0, right, 2, dist, 3, 18, none);
+    const m1 = spanMove(m0, right, 2, dist, 3, none);
     const x1 = fromP2(FRONT, m1.motion.at);
     expect(x1[0]).toBeCloseTo(0.3076, 6); // on the edge (0.306 + the grow)
     expect(x1[1]).toBeCloseTo(0.11, 9); // slid along it
-    expect(m1.motion.overMm).toBeCloseTo((2 * 0.0124) / Math.hypot(0.02, 0.01), 9); // the refused share of the step's 2 mm
-    const m2 = spanMove(m1.motion, right, 4, dist, 3, 18, none);
+    expect(m1.motion.overMm).toBeCloseTo((2 * 0.0124) / Math.hypot(0.02, 0.01), 9);
+    const m2 = spanMove(m1.motion, right, 4, dist, 3, none);
     expect(m2.held).toBe(true); // caught, nothing across: the edge holds
     expect(m2.motion.overMm).toBe(3);
-    const back = spanMove(m2.motion, toP2(FRONT, [-0.01, 0, 0]), 1, dist, 3, 18, none);
+    const back = spanMove(m2.motion, toP2(FRONT, [-0.01, 0, 0]), 1, dist, 3, none);
     expect(fromP2(FRONT, back.motion.at)[0]).toBeCloseTo(0.2976, 6);
     expect(back.motion.overMm).toBe(0);
   });
-  it("⭐⭐⭐ THE WRAP: past the catch the face across is asked for; its share is the finger's travel along the push over the turn; back to 0 returns, 1 commits", () => {
+  it("⭐⭐⭐ past the catch the gizmo goes onto the face across AT ONCE — no wrap left pending (the piece and the camera are the orbit's: nothing turns about the edge)", () => {
     const a = painting([0.003, 0.003]);
     const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
     const dist = (p: readonly [number, number]) => regionDistance(r, p);
     const cand = { index: 5, normal: [1, 0, 0] as Vec3, kind: "CONVEX" as const, dist: 0 };
     const right = toP2(FRONT, [0.01, 0, 0]);
-    let m: SpanMotion = { at: P(0.3076, 0.1), overMm: 0, wrap: null }; // on the edge
-    m = spanMove(m, right, 2, dist, 3, 18, () => cand).motion;
-    expect(m.wrap).toBeNull(); // 2 mm caught
-    expect(m.overMm).toBeCloseTo(2, 9);
-    const w = spanMove(m, right, 10, dist, 3, 18, () => cand);
-    expect(w.motion.wrap).not.toBeNull();
-    expect(w.motion.wrap!.share).toBeCloseTo((2 + 10 - 3) / 18, 9);
-    const back = spanMove(w.motion, toP2(FRONT, [-0.01, 0, 0]), 20, dist, 3, 18, () => cand);
-    expect(back.motion.wrap).toBeNull(); // pushed back: onto this face again, the edge point kept
-    expect(back.motion.at).toEqual(w.motion.at);
-    const on = spanMove(w.motion, right, 9, dist, 3, 18, () => cand);
-    expect(on.commit).toBe(true);
+    const m1 = spanMove({ at: P(0.3076, 0.1), overMm: 0 }, right, 2, dist, 3, () => cand);
+    expect(m1.next).toBeNull();
+    const m2 = spanMove(m1.motion, right, 2, dist, 3, () => cand);
+    expect(m2.next).toEqual(cand);
+    expect(m2.motion.overMm).toBe(0);
   });
 });
 
-describe("⭐⭐⭐ the edge — the face across (convex, concave), the turn", () => {
+describe("⭐⭐⭐ the edge — the face across (convex, concave), glued faces", () => {
   it("⭐ convex: at the top edge pushing up, the boxes' TOP faces; at an inner corner a wall standing on the plane; nothing: null", () => {
     const a = painting([0.003, 0.003]);
     const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
@@ -198,7 +174,6 @@ describe("⭐⭐⭐ the edge — the face across (convex, concave), the turn", (
     const top = wrapCandidate(a.faces, ex, [0.05, 0.2016, 0], [0, 0, 1], [0, 1, 0]);
     expect(top!.kind).toBe("CONVEX");
     expect(top!.normal).toEqual([0, 1, 0]);
-    // a tall wall standing on the front plane just right of the painting (an inner corner)
     const wall = box([0.307, 0, 0], [0.33, 0.2, 0.1]);
     const faces = [...a.faces, ...wall.faces];
     const inner = wrapCandidate(faces, ex, [0.3076, 0.1, 0], [0, 0, 1], [1, 0, 0]);
@@ -206,23 +181,94 @@ describe("⭐⭐⭐ the edge — the face across (convex, concave), the turn", (
     expect(inner!.normal).toEqual([-1, 0, 0]);
     expect(wrapCandidate(a.faces.slice(0, 1), new Set([0]), [0.05, 0.2016, 0], [0, 0, 1], [0, 1, 0])).toBeNull();
   });
-  it("⭐ the turn: the normal onto the next one about the edge; the piece's direction turned by the wrap's share, slerped from the far orbit's at the engage", () => {
-    const t = wrapTurn([0, 0, 1], [0, 1, 0])!;
-    expect(t.angle).toBeCloseTo(Math.PI / 2, 12);
-    const half = spanDirection([0, 0, 1], { ...t, share: 0.5 }, null, 1);
-    expect(half[1]).toBeCloseTo(Math.SQRT1_2, 9);
-    expect(half[2]).toBeCloseTo(Math.SQRT1_2, 9);
-    const u0: Vec3 = [1, 0, 0];
-    expect(spanDirection([0, 0, 1], null, u0, 0)).toEqual(u0);
-    const mid = spanDirection([0, 0, 1], null, u0, 0.5);
-    expect(mid[0]).toBeCloseTo(Math.SQRT1_2, 9);
-    expect(spanDirection([0, 0, 1], null, u0, 1)).toEqual([0, 0, 1]);
+  // ⭐ a frustum glued (1.5 mm off) under a wide box — Piece43 under Piece19: its small face up against the box's bottom
+  const base = box([-0.1, 0, -0.05], [0.1, 0.05, 0]);
+  const t = 0.0015;
+  const sm = 0.02;
+  const wd = 0.04;
+  const h = 0.04;
+  const top: Vec3[] = [[-sm, -t, -0.04], [sm, -t, -0.04], [sm, -t, -0.01], [-sm, -t, -0.01]];
+  const bot: Vec3[] = [[-wd, -t - h, -0.04], [wd, -t - h, -0.04], [wd, -t - h, -0.01], [-wd, -t - h, -0.01]];
+  const quad = (p: Vec3[], idx: number[]): Tri[] => [[p[idx[0]!]!, p[idx[1]!]!, p[idx[2]!]!], [p[idx[0]!]!, p[idx[2]!]!, p[idx[3]!]!]];
+  const unit = (v: Vec3): Vec3 => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
+  const all = [...top, ...bot];
+  const fr: SpanFace[] = [
+    { normal: [0, 1, 0], tris: quad(all, [0, 3, 2, 1]) }, // the small face, glued
+    { normal: [0, -1, 0], tris: quad(all, [4, 5, 6, 7]) },
+    { normal: unit([h, wd - sm, 0]), tris: quad(all, [1, 2, 6, 5]) }, // the +x slanted side
+    { normal: unit([-h, wd - sm, 0]), tris: quad(all, [0, 4, 7, 3]) },
+    { normal: [0, 0, -1], tris: quad(all, [0, 1, 5, 4]) },
+    { normal: [0, 0, 1], tris: quad(all, [3, 7, 6, 2]) },
+  ];
+  const faces = [...base.faces, ...fr];
+  const owner = [...base.faces.map(() => "box"), ...fr.map(() => "frustum")];
+  it("⭐⭐ GLUED: the frustum's small face is pressed against the box's bottom (and the bottom against it) — no other face is", () => {
+    const p = gluedPartners(faces, owner);
+    expect(p[6]).toBe(3); // the small face → the box's bottom (index 3)
+    expect(p[3]).toBe(6);
+    expect(p.filter((x) => x >= 0).length).toBe(2);
+  });
+  it("⭐⭐ which of a glued pair is HIDDEN: the one whose coplanar region is the smaller — the face a part stands on stays (⛔ the smaller FACE: Piece43's top is wider than Piece19's bottom)", () => {
+    const p = gluedPartners(faces, owner);
+    const area = (i: number) => (i === 3 ? 0.2 : i === 6 ? 0.0036 : 0.01); // the box's bottom a large region, the small face alone
+    const h = hiddenGlued(p, area);
+    expect(h[6]).toBe(true);
+    expect(h[3]).toBe(false);
+    expect(hiddenGlued([1, 0], () => 1)).toEqual([true, true]); // two neighbours' touching sides: both
+  });
+  it("⛔⛔ OFF A FRUSTUM'S SLANTED SIDE toward the part it stands on: the box's bottom (the glued small face's partner) — ⛔ the frustum's own hidden face, round and round", () => {
+    const p = gluedPartners(faces, owner);
+    const side = fr[2]!;
+    const n = side.normal;
+    // the side's top edge (y = −t, x = sm), pushing up along the side
+    const B: Vec3 = [sm, -t, -0.025];
+    const Dv = [-n[1], n[0], 0] as Vec3; // in the side's plane, toward +y
+    const D: Vec3 = Dv[1] > 0 ? Dv : [-Dv[0], -Dv[1], 0];
+    const without = wrapCandidate(faces, new Set([8]), B, n, D);
+    expect(without!.index).toBe(6); // the old answer: the glued small face itself
+    const c = wrapCandidate(faces, new Set([8]), B, n, D, undefined, p.map((x, i) => (hiddenGlued(p, (j) => (j === 3 ? 0.2 : 0.004))[i] ? x : -1)));
+    expect(c!.index).toBe(3);
+    expect(c!.normal).toEqual([0, -1, 0]);
+  });
+  it("⭐ a concave face is judged NEAR the edge: a face straddling the plane far from it is not refused for that", () => {
+    // a wall at the region's right edge: in front of the plane near the edge, reaching far BEHIND it 30 cm away (it straddles the plane)
+    const a = painting([0.003, 0.003]);
+    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
+    const wall: SpanFace = { normal: [-1, 0, 0], tris: [[[0.308, 0.09, 0], [0.308, 0.11, 0], [0.308, 0.11, -0.3]], [[0.308, 0.09, 0], [0.308, 0.11, -0.3], [0.308, 0.09, -0.3]], [[0.308, 0.09, 0], [0.308, 0.11, 0.1], [0.308, 0.11, 0]]] };
+    const c = wrapCandidate([...a.faces.slice(0, 24), wall], new Set(r.members), [0.3076, 0.1, 0], [0, 0, 1], [1, 0, 0]);
+    expect(c).not.toBeNull();
   });
   it("⭐ the closest point on a triangle (Ericson): a vertex, an edge, the inside", () => {
-    const t: Tri = [[0, 0, 0], [1, 0, 0], [0, 1, 0]];
-    expect(closestOnTriangle([-1, -1, 0], t)).toEqual([0, 0, 0]);
-    expect(closestOnTriangle([0.5, -1, 0], t)).toEqual([0.5, 0, 0]);
-    near(closestOnTriangle([0.2, 0.2, 3], t), [0.2, 0.2, 0]);
+    const tr: Tri = [[0, 0, 0], [1, 0, 0], [0, 1, 0]];
+    expect(closestOnTriangle([-1, -1, 0], tr)).toEqual([0, 0, 0]);
+    expect(closestOnTriangle([0.5, -1, 0], tr)).toEqual([0.5, 0, 0]);
+    near(closestOnTriangle([0.2, 0.2, 3], tr), [0.2, 0.2, 0]);
+  });
+});
+
+describe("⭐⭐⭐ the top face's roll at the zenith — branch 1.0.83's pause", () => {
+  const n: Vec3 = [0, 1, 0];
+  const e: Vec3 = [0, 0, 1];
+  const d = (z: number): Vec3 => { const l = Math.hypot(z, 1); return [0, 1 / l, z / l]; };
+  it("⭐ a step across the zenith: where (its share) and onto which side; none away from it, none leaving it, none outside the cone", () => {
+    const c = zenithCrossing(d(-0.1), d(0.1), n, e)!;
+    expect(c.k).toBeCloseTo(0.5, 9);
+    expect(c.side).toBe(1);
+    expect(zenithCrossing(d(0.1), d(-0.3), n, e)!.side).toBe(-1);
+    expect(zenithCrossing(d(0.1), d(0.2), n, e)).toBeNull();
+    expect(zenithCrossing(d(0), d(0.2), n, e)).toBeNull();
+    expect(zenithCrossing([1, 0.1, -0.1], [1, 0.1, 0.1], n, e)).toBeNull(); // crossing far below the cone (looking along the face)
+  });
+  it("⭐⭐ the roll's share by the travel along the axis over the half turn's millimetres — linear, reversible, the travel left over once it lands", () => {
+    expect(zenithRollStep(0, 8, 16)).toEqual({ share: 0.5, leftMm: 0 });
+    expect(zenithRollStep(0.5, -4, 16)).toEqual({ share: 0.25, leftMm: 0 });
+    const end = zenithRollStep(0.9, 4, 16);
+    expect(end.share).toBe(1);
+    expect(end.leftMm).toBeCloseTo(2.4, 9);
+    expect(zenithRollStep(0.1, -4, 16).share).toBe(0);
+    expect(zenithRollStep(0.3, 0, 16)).toEqual({ share: 0.3, leftMm: 0 }); // a dx: held mid-roll
+    expect(isWall([0, 1, 0])).toBe(false);
+    expect(isWall([0.847, -0.531, 0])).toBe(true); // a frustum's slanted side is a wall: it never rolls
   });
 });
 
@@ -263,7 +309,7 @@ describe("⭐⭐⭐ the protrusion — ridden over, blended (the owner's item 5)
   });
 });
 
-describe("⭐⭐ engage, release, the screen", () => {
+describe("⭐⭐ engage, release", () => {
   it("⭐ engage within the slider's distance, out only past 1.2 × it; the slider held so the far orbit stays reachable", () => {
     expect(SPAN_RELEASE_FACTOR).toBe(1.2);
     expect(spanEngaged(false, 4.5, 4.5)).toBe(true);
@@ -273,21 +319,6 @@ describe("⭐⭐ engage, release, the screen", () => {
     expect(spanEngageM(4.5, 6)).toBe(4.5);
     expect(spanEngageM(6, 6) * SPAN_RELEASE_FACTOR).toBeLessThan(6);
   });
-  it("⭐ the engage's and the wrap's shares by travel, whole at once with a zero span, by time at rest", () => {
-    expect(spanShareAfter(0, 9, 18, 16, false)).toBeCloseTo(0.5, 12);
-    expect(spanShareAfter(0, 0, 0, 0, false)).toBe(1);
-    expect(spanShareAfter(0, 0, 18, 150, true)).toBeCloseTo(0.5, 12);
-  });
-  it("⭐ the screen's up: a wall's the world's; a top's the up carried in, laid on it", () => {
-    expect(spanUp([0, 0, 1], [0.3, 0.9, 0.1])).toEqual([0, 1, 0]);
-    const u = spanUp([0, 1, 0], [0, 0.2, 0.9]);
-    expect(u[2]).toBeCloseTo(1, 12);
-  });
-  it("⭐ at rest an axis read off the screen as the orbit's own rule does (after a roll the finger moves the gizmo the screen's way)", () => {
-    near(axisOnScreen([1, 0, 0], 1, [-1, 0, 0]), [-1, 0, 0]);
-    expect(axisOnScreen([1, 0, 0], -1, [-1, 0, 0])).toEqual([1, 0, 0]);
-    expect(axisOnScreen([1, 0, 0], 1, [0.1, 1, 0])).toEqual([1, 0, 0]); // near square: kept
-  });
 });
 
 describe("⭐⭐⭐ wired", () => {
@@ -296,30 +327,49 @@ describe("⭐⭐⭐ wired", () => {
     expect(a).toContain("const box = placedVertexBox(st) ?? placedBox(st);");
     expect(a).toContain("const vs = placedParts(st).parts.flat();");
   });
-  it("⭐⭐ the face-span in the frame: engaged within the slider's distance from the far gizmo's face, released past 1.2 ×, the piece along its direction, the gizmo its point", () => {
+  it("⭐⭐⭐ the ORBIT runs in the face-span (ff2fca2's relation): never held, the piece on its direction, the gizmo moved by its SOLVED step; engaged / released by the slider", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const engageM = spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg));");
-    expect(a).toContain("if (st.span !== null && st.span.motion.wrap === null && !spanEngaged(true, d, engageM)) spanRelease(st);");
-    expect(a).toContain("if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, st.gizmoHost ?? null, u, st.pieceQ)) {");
-    expect(a).toContain("if (st.span !== null) return st.span.w;");
+    expect(a).toContain("if (st.span !== null && !spanEngaged(true, d, engageM)) spanRelease(st);");
+    expect(a).toContain("if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, u)) {");
+    expect(a).not.toContain("return st.span.w");
     expect(a).toContain("if (st.span !== null) return st.span.g;");
-    expect(a).toContain("if (st.span !== null) return st.span.up;");
-    // no view governor in the face-span (its step turns no view); the far sections' drops bridged
-    expect(a).toContain("if (!assemblyOn(st) || st.asmUp === null || st.span !== null) return 1;");
+    expect(a).toContain("if (!assemblyOn(st) || st.asmUp === null) return 1;"); // the governor as far out
     expect(a).toContain("const h = castCovered(st, r);");
-    // the orbit's place held, no solve, while the face-span reads its step
-    expect(code("render/green_box_wiring.ts")).toContain("} else if (st.span !== null) {");
+    expect(code("render/green_box_wiring.ts")).not.toContain("} else if (st.span !== null) {"); // no hold: the solver runs
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("st.orbit.reset(q.yaw, q.v);");
-    expect(w).toContain("const stepW = spanStepOf(dYaw, dPitch, st.asm.radius, sp.eYaw, sp.ePitch);");
+    expect(w).not.toContain("st.orbit.reset(q.yaw, q.v);");
+    expect(w).toContain("const step = toPlaneDir(pl, spanStepFromDir(u0, u1, n, st.asm.radius));");
+    expect(w).toContain("const u1 = dirOf(q.yaw, q.v);");
   });
-  it("⭐ the sliders (CAMERA ORBIT AROUND CENTER) and their defaults", () => {
+  it("⭐⭐⭐ the screen wins on a settled picture — every frame in the face-span, at the release (⛔ `signAfter` carried an inversion out)", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("if (sp.zen === null && st.asmRoll === null && facing && !sp.signHold) spanScreenSigns(st, sp.plane.n);");
+    // ⭐ facing: the frame's `dir` points from the look point TOWARD the camera (⛔ read as the view's: the rule never ran — measured, the signs stayed inverted)
+    expect(w).toContain("const facing = scr !== null && scr.dir[0] * sp.plane.n[0] + scr.dir[1] * sp.plane.n[1] + scr.dir[2] * sp.plane.n[2] >= SPAN_FACING_COS;");
+    // ⭐ the one exception: a drag that rolled over a top keeps its sense until the finger lifts
+    expect(w).toContain("if (st.router.size === 0) sp.signHold = false;");
+    expect(w).not.toContain("signAfter(");
+  });
+  it("⭐⭐⭐ the zenith's roll: the drag's and the coast's steps, the up within the cone; an unfinished roll completes by time with the finger STILL", () => {
+    expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) orbitZenithStep(st, yawBefore, vBefore, left);");
+    expect(code("render/green_box_wiring.ts")).toContain("orbitZenithCoast(st, y0, v0);");
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("if (z !== null) return rollUp(z.from, z.to, u, z.share, z.sense);");
+    expect(a).toContain('const still = st.router.size === 0 || (om !== null && om.tracker.axes.x !== "MOVING" && om.tracker.axes.y !== "MOVING");');
+  });
+  it("⭐⭐ a slide latches on PLACED parts only (⛔ a loose piece hovering beside the painting)", () => {
+    expect(code("render/hover_wiring.ts")).toContain("bodiesWithin(st.world, b.name, setup, reachM).filter((x) => goalLocked(x.id, st.goalCommit, true))");
+  });
+  it("⭐ the sliders (CAMERA ORBIT AROUND CENTER) and their defaults; the lock slider relabelled (it only places the look point now)", () => {
     const m = code("render/tuning_menu.ts");
-    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanTurnMm", "faceSpanRideMm"]) expect(m).toContain(`"${k}"`);
+    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanRollMm", "faceSpanRideMm"]) expect(m).toContain(`"${k}"`);
+    expect(m).not.toContain('"faceSpanTurnMm"');
+    expect(m).toContain('"camera looks at the gizmo within (m) — the centre beyond", "assemblyLockDistM"');
     const c = code("input/gestureConfig.ts");
     expect(c).toContain("faceSpanEngageM: 4.5,");
     expect(c).toContain("faceSpanCatchMm: 3,");
-    expect(c).toContain("faceSpanTurnMm: 18,");
+    expect(c).toContain("faceSpanRollMm: 16,");
     expect(c).toContain("faceSpanRideMm: 3,");
   });
 });

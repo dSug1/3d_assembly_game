@@ -1,23 +1,19 @@
 /**
  * ⭐⭐⭐ (2026-11-02, branch `1.0.90-`) **THE FACE-SPAN GIZMO** — engine-free (the owner: *"once the orbit is tilted to follow a face orientation, the red and
- * green sections do not need to fully circumference the assembly, but they only need to span the hosting coplanar faces: this way, this will avoid
- * intricate green and red contours and jumps of gizmo over singularities such as edge, etc."* → the design `FACE_SPAN_2026-11-02.md`, built on the owner's
- * answers: *"1- Leaving a face: Option B. Design the tilt and catch properly so the movements of the piece and camera are blended properly"*, *"2- …
- * make a slider. I prefer to engage as far as reasonably possible"*, *"3- constant gizmo speed, which shall follow the current orbit angular speed on dy
- * and dx"*, *"4- … the behavior of the gizmo in commit 65a691a was OK (gizmo following the orbit). I want to keep this behavior."*, *"5- Gizmo shall pass
- * over the protruding part. Blend the movements to avoid jumps"*).
+ * green sections do not need to fully circumference the assembly, but they only need to span the hosting coplanar faces"* → `FACE_SPAN_2026-11-02.md`).
  *
- * Within the engage distance the gizmo is a POINT IN A PLANE: the plane of the hosting face, the REGION the connected coplanar faces of the placed parts
- * (`spanRegion`, each face's convex hull, joined within `SPAN_GROW_M` — the 3 mm between two cores bridged), the gizmo moved by the orbit's own step
- * (`spanStepOf`: the orbit's yaw and pitch × the assembly's radius, along the directions the orbit moved it at the engage — `spanAxes`), clamped to the
- * region (`boundStep`: slides along its edge), riding over what stands on the plane (`coveredTop`, a protrusion's top read off its triangles — no ray
- * pick), eased by travel (`rideStep`). At the region's edge a push goes on into a CATCH (`spanMove`, `clampSlide`: `catchMm` of the finger), then the WRAP onto the face
- * across the edge (`wrapCandidate` — convex or concave), turned by the finger's travel (`turnMm`), reversible. The red and green lines: the run of the
- * region through the gizmo along each input axis, over the tops (`regionRun`, `spanPolyline` — steps drawn as near-vertical connectors, never a stray
- * segment). Textbook geometry only: convex hulls, point–segment and point–triangle distances (Ericson), barycentric heights, bisection.
+ * Within the engage distance the gizmo is a POINT IN A PLANE: the hosting face's, its REGION the connected coplanar faces of the placed parts (`spanRegion`,
+ * each face's convex hull, joined within `SPAN_GROW_M` — the 3 mm between two cores bridged). ⭐⭐⭐ (second pass, the owner: *"I want to keep what was done
+ * for commit ff2fca2 in terms of gizmo leading … face-span should not impact the behavior of the gizmo and the behavior of the piece and the camera relative
+ * to the gizmo"*) the ORBIT runs as it always did and moves the gizmo by its SOLVED step (`spanStepFromDir`: the angle × the assembly's radius, along the
+ * step laid on the face), clamped to the region (`clampSlide`), riding over what stands on it (`coveredTop`, `rideStep`), caught at its edge then onto the
+ * face across (`spanMove`, `wrapCandidate` — convex, concave judged near the edge, a GLUED contact face replaced by the face it stands on, `gluedPartners`,
+ * `hiddenGlued`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`, `zenithRollStep`). The red and green lines: the region's
+ * run through the gizmo (`regionRun`, `spanPolyline`). Textbook geometry only: convex hulls, point–segment and point–triangle distances (Ericson),
+ * barycentric heights, bisection, golden section.
  */
-import { cross, dot, normalize, qFromAxisAngle, qRotate, type Vec3 } from "../core/vec";
-import { boundStep, convexHull2D, convexOverlap2D, slerpDir } from "./hover";
+import { cross, dot, normalize, type Vec3 } from "../core/vec";
+import { boundStep, convexHull2D, convexOverlap2D } from "./hover";
 
 export type P2 = readonly [number, number];
 export type Tri = readonly [Vec3, Vec3, Vec3];
@@ -369,7 +365,7 @@ export function spanPolyline(solids: readonly SpanSolid[], p: P2, d: P2, t0: num
   return out;
 }
 
-// ───────────────────────────── the input ─────────────────────────────
+// ───────────────────────────── the input — the ORBIT's own step ─────────────────────────────
 
 /** ⭐ A wall: within 40° of vertical (its normal within 50° of horizontal). */
 export function isWall(n: Vec3): boolean {
@@ -381,47 +377,17 @@ export function onPlane(v: Vec3, n: Vec3): Vec3 | null {
   return normalize(sub3(v, mul3(n, dot(v, n))));
 }
 
-/** ⭐ On a wall the input axes LEVELLED — the yaw's horizontal, the pitch's along the wall's up, each keeping its sense (verticals respected). */
-export function levelAxes(n: Vec3, eYaw: Vec3, ePitch: Vec3): { eYaw: Vec3; ePitch: Vec3 } {
-  const h = normalize(cross([0, 1, 0], n));
-  const v = onPlane([0, 1, 0], n);
-  if (h === null || v === null) return { eYaw, ePitch };
-  return { eYaw: dot(eYaw, h) < 0 ? mul3(h, -1) : h, ePitch: dot(ePitch, v) < 0 ? mul3(v, -1) : v };
-}
-
 /**
- * ⭐⭐⭐ THE INPUT AXES at the engage — the owner's *"gizmo following the orbit"*: the directions the orbit's yaw and pitch steps moved the piece (and the
- * gizmo under it) — `yawStep`, `pitchStep` (world, per radian) — laid on the plane, square to each other (the yaw's first), each keeping its sense; one
- * that lies across the view falls back on the screen's right / up. On a wall, levelled (`levelAxes`).
+ * ⭐⭐⭐ (2026-11-02, the owner: *"I want to keep what was done for commit ff2fca2 in terms of gizmo leading … Tilting the face and face-span should not impact
+ * the behavior of the gizmo and the behavior of the piece and the camera relative to the gizmo"*) — **THE GIZMO'S STEP FROM THE ORBIT'S SOLVED STEP**: the
+ * piece's direction went from `u0` to `u1` (the orbit's solved place, frame to frame — as ff2fca2's carrier read `pieceQ`); the gizmo goes the angle × the
+ * assembly's radius along that step laid on the face (constant speed: the orbit's own). `[0, 0, 0]` for no step or one square to the face.
  */
-export function spanAxes(n: Vec3, yawStep: Vec3, pitchStep: Vec3, screenRight: Vec3, screenUp: Vec3): { eYaw: Vec3; ePitch: Vec3 } {
-  const py = sub3(yawStep, mul3(n, dot(yawStep, n)));
-  const pp = sub3(pitchStep, mul3(n, dot(pitchStep, n)));
-  const ly = Math.hypot(...py);
-  const lp = Math.hypot(...pp);
-  let eYaw: Vec3;
-  let ePitch: Vec3;
-  if (ly >= lp * 0.2 && ly > 1e-6) {
-    eYaw = mul3(py, 1 / ly);
-    const s = cross(n, eYaw);
-    const ref = lp > 1e-6 ? pp : (onPlane(screenUp, n) ?? s);
-    ePitch = dot(s, ref) < 0 ? mul3(s, -1) : s;
-  } else if (lp > 1e-6) {
-    ePitch = mul3(pp, 1 / lp);
-    const s = cross(ePitch, n);
-    const ref = onPlane(screenRight, n) ?? s;
-    eYaw = dot(s, ref) < 0 ? mul3(s, -1) : s;
-  } else {
-    eYaw = onPlane(screenRight, n) ?? normalize(cross([0, 1, 0], n)) ?? [1, 0, 0];
-    const s = cross(n, eYaw);
-    ePitch = dot(s, screenUp) < 0 ? mul3(s, -1) : s;
-  }
-  return isWall(n) ? levelAxes(n, eYaw, ePitch) : { eYaw, ePitch };
-}
-
-/** ⭐ The gizmo's step (m, world) for an orbit step of `dYaw` and `dPitch` (rad): the orbit's angular speed × the assembly's radius — constant. */
-export function spanStepOf(dYaw: number, dPitch: number, radiusM: number, eYaw: Vec3, ePitch: Vec3): Vec3 {
-  return add3(mul3(eYaw, dYaw * radiusM), mul3(ePitch, dPitch * radiusM));
+export function spanStepFromDir(u0: Vec3, u1: Vec3, n: Vec3, radiusM: number): Vec3 {
+  const a = Math.acos(Math.max(-1, Math.min(1, dot(u0, u1))));
+  if (!(a > 1e-12)) return [0, 0, 0];
+  const t = onPlane(sub3(u1, u0), n);
+  return t === null ? [0, 0, 0] : mul3(t, a * radiusM);
 }
 
 /** ⭐ An orbit step read as the finger's travel (mm) at the orbit's pace (`degPerMm`). */
@@ -429,21 +395,38 @@ export function spanMmOf(dYaw: number, dPitch: number, degPerMm: number): number
   return degPerMm > 0 ? Math.hypot(dYaw, dPitch) / ((degPerMm * Math.PI) / 180) : 0;
 }
 
+// ───────────────────────────── the top face's roll — branch 1.0.83's, at the zenith ─────────────────────────────
+
+/** ⭐ The zenith's cone: a crossing counts within this of the face's normal (rad). */
+export const SPAN_ZENITH_CONE_RAD = (30 * Math.PI) / 180;
+
 /**
- * ⭐ An axis's sense read off the screen, at rest: the axis (as the finger drives it — `sign` × it) going against the screen's way (`screenAxis`, its right
- * for the yaw, its up for the pitch) is turned round — after the screen rolled (a back face reached over the top), the finger again moves the gizmo the
- * way the orbit's own rule would (`signOnScreen`'s). Near square, kept.
+ * ⭐⭐⭐ (2026-11-02, the owner: *"do the roll as it was previously implemented on branch 1.0.83"* — its top face pause: *"the piece travel is paused when it
+ * crosses the gizmo … the camera does the half round turn … If the dy reverse at any time, the travel of the camera or piece is reversed"*) — **WHERE THE
+ * ORBIT STEP CROSSES THE ZENITH** over a top / bottom: the piece's direction from `u0` to `u1`, the face's normal `n`, the crossing axis `e` (in the plane):
+ * the step's share `k` (0 … 1) where the direction passes the plane square to `e` through `n` (`u·e` = 0), and the side it goes to (+1 / −1); `null`: no
+ * crossing in this step (leaving the zenith itself is none), or outside the zenith's cone.
  */
-export function axisOnScreen(e: Vec3, sign: 1 | -1, screenAxis: Vec3): Vec3 {
-  const l = Math.hypot(...screenAxis);
-  if (!(l > 1e-9)) return e;
-  return (sign * dot(e, screenAxis)) / l < -0.2 ? mul3(e, -1) : e;
+export function zenithCrossing(u0: Vec3, u1: Vec3, n: Vec3, e: Vec3, cone = SPAN_ZENITH_CONE_RAD): { readonly k: number; readonly side: 1 | -1 } | null {
+  const s0 = dot(u0, e);
+  const s1 = dot(u1, e);
+  if (s0 === 0 || s0 === s1 || s0 * s1 > 0) return null;
+  const k = s0 / (s0 - s1);
+  const at = normalize(add3(mul3(u0, 1 - k), mul3(u1, k)));
+  if (at === null || dot(at, n) < Math.cos(cone)) return null;
+  return { k, side: s1 > 0 ? 1 : -1 };
 }
 
-/** ⭐ The screen's up on a face: a wall's the world's (laid on the view square to it), else the up carried in (`upRef`) laid on the plane. */
-export function spanUp(n: Vec3, upRef: Vec3): Vec3 {
-  if (isWall(n)) return onPlane([0, 1, 0], n) ?? upRef;
-  return onPlane(upRef, n) ?? upRef;
+/**
+ * ⭐⭐ THE ROLL'S SHARE STEPPED by the finger's travel `alongMm` (signed: toward the rolled side positive — a dx is 0: held mid-roll) over `rollMm` (half a
+ * turn at the orbit's pace): held to [0, 1]; the travel left over once it lands at an end (the orbit goes on with it — reversible anywhere).
+ */
+export function zenithRollStep(share: number, alongMm: number, rollMm: number): { readonly share: number; readonly leftMm: number } {
+  if (!(rollMm > 0)) return { share: alongMm > 0 ? 1 : alongMm < 0 ? 0 : share, leftMm: alongMm };
+  const want = share + alongMm / rollMm;
+  if (want >= 1) return { share: 1, leftMm: (want - 1) * rollMm };
+  if (want <= 0) return { share: 0, leftMm: want * rollMm };
+  return { share: want, leftMm: 0 };
 }
 
 // ───────────────────────────── the edge: catch and wrap ─────────────────────────────
@@ -493,11 +476,53 @@ export function distanceToTris(p: Vec3, tris: readonly Tri[]): number {
 }
 
 /**
+ * ⭐⭐ (2026-11-02, the owner: *"slanted parts should stay faces the gizmo can stand on. implement the fix"*) — GLUED FACES: a face pressed against another
+ * part's face (anti-parallel within ~1.1°, every vertex of the other within `SPAN_TOUCH_M` of its plane, overlapping on it) — each face's partner (the
+ * largest); which of a pair is HIDDEN (never a host; a step onto it lands on its partner — the face the part stands on) is the caller's: the one whose
+ * coplanar region is the smaller (`hiddenGlued`). ⛔ Off a seated frustum's side the face across its top edge was its own hidden small face:
+ * the gizmo went round the frustum's faces for ever (36 of 36 exits, measured). `owner[i]`: the part of face `i`. Each face's partner, `-1` for none.
+ */
+export function gluedPartners(faces: readonly SpanFace[], owner: readonly string[]): number[] {
+  const out = faces.map(() => -1);
+  const areaOf = (h: readonly P2[]): number => {
+    let a = 0;
+    for (let q = 0; q < h.length; q++) {
+      const p0 = h[q]!;
+      const p1 = h[(q + 1) % h.length]!;
+      a += p0[0] * p1[1] - p0[1] * p1[0];
+    }
+    return Math.abs(a) / 2;
+  };
+  faces.forEach((f, i) => {
+    if (f.tris.length === 0) return;
+    const pl = spanPlane(f.normal, f.tris[0]![0]);
+    const hull = convexHull2D(f.tris.flatMap((t) => t.map((p) => toP2(pl, p))));
+    let best = -1;
+    let bestArea = -1;
+    faces.forEach((g, j) => {
+      if (j === i || owner[j] === owner[i] || g.tris.length === 0 || dot(f.normal, g.normal) > -SPAN_COPLANAR_COS) return;
+      if (!g.tris.every((t) => t.every((p) => Math.abs(heightOf(pl, p)) <= SPAN_TOUCH_M))) return;
+      const h2 = convexHull2D(g.tris.flatMap((t) => t.map((p) => toP2(pl, p))));
+      if (!(hull.length >= 3 && h2.length >= 3 && convexOverlap2D(hull, h2))) return;
+      const area = areaOf(h2);
+      if (area > bestArea) {
+        bestArea = area;
+        best = j;
+      }
+    });
+    out[i] = best;
+  });
+  return out;
+}
+
+/**
  * ⭐⭐⭐ THE FACE ACROSS THE EDGE at the edge point `B` (world), the push going along `D` (world, in the plane of `n`): among the faces not in the region
  * (`exclude`), within `reach` of `B` — CONVEX, a face turned toward the push lying behind the plane (a box's next side); CONCAVE, a face turned against the
- * push standing in front of it (an inner corner's wall). The nearest; a tie to the one more square to the push. `null`: nothing there (the edge stops).
+ * push standing in front of it NEAR THE EDGE (⭐ 2026-11-02: its vertices within 5 cm of `B` — ⛔ every vertex: a large face a part stands on straddled a
+ * slanted side's plane and was refused). A GLUED face (`partner[i]` ≥ 0) is replaced by its partner (never itself). The nearest; a tie to the one more
+ * square to the push. `null`: nothing there (the edge stops).
  */
-export function wrapCandidate(faces: readonly SpanFace[], exclude: ReadonlySet<number>, B: Vec3, n: Vec3, D: Vec3, reach = SPAN_WRAP_REACH_M): SpanCandidate | null {
+export function wrapCandidate(faces: readonly SpanFace[], exclude: ReadonlySet<number>, B: Vec3, n: Vec3, D: Vec3, reach = SPAN_WRAP_REACH_M, partner: readonly number[] = []): SpanCandidate | null {
   let best: SpanCandidate | null = null;
   let bestScore = Infinity;
   faces.forEach((f, i) => {
@@ -505,45 +530,37 @@ export function wrapCandidate(faces: readonly SpanFace[], exclude: ReadonlySet<n
     const m = f.normal;
     if (dot(m, n) > 0.98 || dot(m, n) < -0.98) return;
     const md = dot(m, D);
-    const hs = f.tris.flatMap((t) => t.map((p) => dot(sub3(p, B), n)));
+    const vs = f.tris.flatMap((t) => [...t]);
+    const hs = vs.map((p) => dot(sub3(p, B), n));
+    const near = vs.filter((p) => Math.hypot(p[0] - B[0], p[1] - B[1], p[2] - B[2]) <= 0.05).map((p) => dot(sub3(p, B), n));
     let kind: "CONVEX" | "CONCAVE" | null = null;
     if (md > 0.3 && Math.max(...hs) <= 0.002) kind = "CONVEX";
-    else if (md < -0.3 && Math.min(...hs) >= -0.002) kind = "CONCAVE";
+    else if (md < -0.3 && (near.length > 0 ? Math.min(...near) : Math.min(...hs)) >= -0.002) kind = "CONCAVE";
     if (kind === null) return;
     const d = distanceToTris(B, f.tris);
     if (d > reach) return;
+    const p = partner[i] ?? -1;
+    if (p >= 0 && exclude.has(p)) return; // glued onto the region itself: no way out there
     const score = d - 1e-4 * Math.abs(md);
     if (score < bestScore) {
       bestScore = score;
-      best = { index: i, normal: m, kind, dist: d };
+      best = p >= 0 ? { index: p, normal: faces[p]!.normal, kind: "CONCAVE", dist: d } : { index: i, normal: m, kind, dist: d };
     }
   });
   return best;
 }
 
-/** ⭐ The turn that takes `from` (a face's normal) onto `to` — about the edge, `angle` (rad); `null` for parallel ones. */
-export function wrapTurn(from: Vec3, to: Vec3): { readonly axis: Vec3; readonly angle: number } | null {
-  const axis = normalize(cross(from, to));
-  if (axis === null) return null;
-  return { axis, angle: Math.acos(Math.max(-1, Math.min(1, dot(from, to)))) };
-}
-
-export function turnVec(v: Vec3, axis: Vec3, angle: number): Vec3 {
-  return qRotate(qFromAxisAngle(axis, angle), v);
-}
-
-/** ⭐ The gizmo's motion in the plane: where it is; the finger pushed past the edge (mm — the catch); a wrap under way. */
+/** ⭐ The gizmo's motion in the plane: where it is; the finger pushed past the edge (mm — the catch). */
 export interface SpanMotion {
   readonly at: P2;
   readonly overMm: number;
-  readonly wrap: { readonly dir: P2; readonly share: number; readonly to: SpanCandidate } | null;
 }
 
 /**
- * ⭐⭐⭐ ONE STEP OF THE GIZMO — `step` (m, plane coordinates) for `stepMm` of the finger: inside, clamped by the region (`spanClampStep` — slid along the
- * edge); the part the edge refuses goes into the CATCH (`overMm`, back to 0 once the step leaves the edge); past `catchMm` the face across is asked for
- * (`findNext`, the edge point and the push's way out) — none, the edge holds; else the WRAP starts, its share the finger's travel along the push over
- * `turnMm` (back the other way: back to 0, onto this face again — reversible). `commit`: the wrap is whole (the caller moves onto the next face).
+ * ⭐⭐⭐ ONE STEP OF THE GIZMO — `step` (m, plane coordinates) for `stepMm` of the finger: inside, clamped by the region (`clampSlide` — slid along the edge);
+ * the part the edge refuses goes into the CATCH (`overMm`, back to 0 once the step leaves the edge); past `catchMm` the face across is asked for
+ * (`findNext`) — `next`: the gizmo goes onto it at once (the piece and the camera are the orbit's: nothing turns about the edge, no wrap is ever left
+ * pending); none, the edge holds (`held`).
  */
 export function spanMove(
   m: SpanMotion,
@@ -551,33 +568,33 @@ export function spanMove(
   stepMm: number,
   dist: (q: P2) => number,
   catchMm: number,
-  turnMm: number,
   findNext: (at: P2, out: P2) => SpanCandidate | null,
-): { readonly motion: SpanMotion; readonly commit: boolean; readonly held: boolean } {
+): { readonly motion: SpanMotion; readonly next: SpanCandidate | null; readonly held: boolean } {
   const len = Math.hypot(step[0], step[1]);
-  if (!(len > 1e-12) || !(stepMm > 0)) return { motion: m, commit: false, held: false };
-  if (m.wrap !== null) {
-    const along = ((step[0] * m.wrap.dir[0] + step[1] * m.wrap.dir[1]) / len) * stepMm;
-    const share = m.wrap.share + (turnMm > 0 ? along / turnMm : Math.sign(along));
-    if (share >= 1) return { motion: { ...m, wrap: { ...m.wrap, share: 1 } }, commit: true, held: false };
-    if (share <= 0) return { motion: { at: m.at, overMm: 0, wrap: null }, commit: false, held: false };
-    return { motion: { ...m, wrap: { ...m.wrap, share } }, commit: false, held: false };
-  }
+  if (!(len > 1e-12) || !(stepMm > 0)) return { motion: m, next: null, held: false };
   const to: P2 = [m.at[0] + step[0], m.at[1] + step[1]];
   const nb = clampSlide(m.at, step, dist);
   const bl: P2 = [to[0] - nb[0], to[1] - nb[1]];
   const bll = Math.hypot(bl[0], bl[1]);
-  if (bll <= 1e-9 * Math.max(1, len) || bll <= 1e-9) return { motion: { at: nb, overMm: 0, wrap: null }, commit: false, held: false };
+  if (bll <= 1e-9 * Math.max(1, len) || bll <= 1e-9) return { motion: { at: nb, overMm: 0 }, next: null, held: false };
   const out: P2 = [bl[0] / bll, bl[1] / bll];
   const over = m.overMm + (stepMm * bll) / len;
-  if (over < catchMm) return { motion: { at: nb, overMm: over, wrap: null }, commit: false, held: false };
+  if (over < catchMm) return { motion: { at: nb, overMm: over }, next: null, held: false };
   const next = findNext(nb, out);
-  if (next === null) return { motion: { at: nb, overMm: catchMm, wrap: null }, commit: false, held: true };
-  const share = turnMm > 0 ? (over - catchMm) / turnMm : 1;
-  return { motion: { at: nb, overMm: catchMm, wrap: { dir: out, share: Math.min(1, share), to: next } }, commit: share >= 1, held: false };
+  if (next === null) return { motion: { at: nb, overMm: catchMm }, next: null, held: true };
+  return { motion: { at: nb, overMm: 0 }, next, held: false };
 }
 
-// ───────────────────────────── engage, direction, share ─────────────────────────────
+/**
+ * ⭐⭐ WHICH GLUED FACES ARE HIDDEN: a face with a partner whose coplanar region is no smaller (`regionAreaOf(i)`, the region seeded at face `i` in its own
+ * plane) — so a seated part's contact face goes (Piece43's top under the painting's bottom, Piece45's under Piece10's front) and the face it stands on stays;
+ * two neighbours' touching sides (equal) both go. ⛔ A face-level rule (the smaller face hidden) kept Piece43's top: it is wider than Piece19's bottom.
+ */
+export function hiddenGlued(partner: readonly number[], regionAreaOf: (i: number) => number): boolean[] {
+  return partner.map((p, i) => p >= 0 && regionAreaOf(i) <= regionAreaOf(p) * 1.05);
+}
+
+// ───────────────────────────── engage ─────────────────────────────
 
 /** ⭐ In face-span? On within `engageM` of the gizmo, off only past `SPAN_RELEASE_FACTOR` × it. */
 export function spanEngaged(on: boolean, distM: number, engageM: number): boolean {
@@ -587,19 +604,4 @@ export function spanEngaged(on: boolean, distM: number, engageM: number): boolea
 /** ⭐ The engage distance used: the slider's, held so its release stays within the far orbit's reach (`farM` — else the far orbit could never come back). */
 export function spanEngageM(sliderM: number, farM: number): number {
   return Math.max(0.05, Math.min(sliderM, farM / (SPAN_RELEASE_FACTOR * 1.02)));
-}
-
-/** ⭐ A blend's share after `travelMm` more of the finger over `spanMm` (0: whole at once), and by time at rest. */
-export function spanShareAfter(share: number, travelMm: number, spanMm: number, dtMs: number, atRest: boolean): number {
-  if (!(spanMm > 0)) return 1;
-  return Math.min(1, share + Math.max(0, travelMm) / spanMm + (atRest ? Math.max(0, dtMs) / SPAN_REST_MS : 0));
-}
-
-/**
- * ⭐⭐ THE PIECE'S DIRECTION in face-span: the face's normal — turned about the edge by a wrap's share — and, while the engage's blend is under way, slerped
- * from the far orbit's direction at the engage (`u0`) by its share. The camera stands behind the piece along it: square to the face, no slant.
- */
-export function spanDirection(n: Vec3, wrap: { readonly axis: Vec3; readonly angle: number; readonly share: number } | null, u0: Vec3 | null, engageShare: number): Vec3 {
-  const f = wrap === null ? n : turnVec(n, wrap.axis, wrap.angle * wrap.share);
-  return u0 !== null && engageShare < 1 ? slerpDir(u0, f, Math.max(0, engageShare)) : f;
 }

@@ -34,7 +34,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, leavesCone, orbitZenithCoast, shownOffset } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -953,7 +953,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
-    if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); }
+    orbitZenithCoast(st, y0, v0); // ⭐⭐⭐ (2026-11-02) over a top in the face-span: the coast stops at the zenith (its roll is the finger's) // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -1022,11 +1023,6 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       st.pieceQ = held.q;
       st.pieceSolveQueries = held.queries;
       rig = { ...held.q };
-      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    } else if (st.span !== null) {
-      // ⭐⭐⭐ (2026-11-02) FACE-SPAN: the orbit's step was the gizmo's this frame (`spanFrame` read it and put the orbit back) — the orbit place held, no solve
-      rig = { ...st.pieceQ };
-      st.orbitUserV = st.pieceQ.v;
       st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
     } else {
     const rr = b0!.rotationQuaternion; // `pieceSolveRuns`: the green box exists

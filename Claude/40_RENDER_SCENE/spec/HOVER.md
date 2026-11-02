@@ -75,7 +75,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    ⚠ (2026-11-01) It weighs more now: the slide mode is entered ONLY by that latch — where it does not light, there is no slide at all.
    ⭐⭐ (2026-11-02, `1.0.90-`) **The offered fix is in, by the FACE-SPAN** (`FACE_SPAN_2026-11-02.md`): within 4.5 m the piece comes straight in along the
    gizmo FACE'S NORMAL (never the orbit's direction), so causes (1)–(3) should go; (4) the floor, (5) the bottom face and (6) a loose piece stand. ⛔ No sweep
-   of the latch yet.
+   of the latch yet. ⛔ (second pass, the owner: *"I want orbit"*) REVERSED: the piece is on the orbit's direction again, so (1)–(3) stand as before.
+   ⭐⭐ (second pass, the owner: *"slide shall latch only on placed parts"*) a slide's hosts are PLACED parts only (`hoverCandidates` with `goalLocked`)
+   — (6) a loose piece no longer lights the contours.
 9. ⭐⭐⭐ **THE SLIDE MODE** (2026-11-01, item 30; ⛔ no device close). Measured in the app (`Scene_1`, the painting's front face, the resting face turned to
    it): latched by itself at 7.2 mm (settled 6.2 mm), the slide view whole in 500 ms; touch and MOUSE drags on empty space slid the piece and the gizmo
    (⭐ item 6's mouse limit does not hold in the slide mode); two fingers out left it at 20 mm, the gizmo kept where the slide left it, the back-out found

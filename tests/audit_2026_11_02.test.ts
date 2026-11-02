@@ -52,7 +52,8 @@ describe("⭐⭐⭐ the roll over the top — one way round, latched", () => {
     const ups = views.map((d) => screenUpTarget(d, [0, 1, 0], prev));
     expect(ups[0]![0] * ups[1]![0] + ups[0]![1] * ups[1]![1] + ups[0]![2] * ups[1]![2]).toBeGreaterThan(0.999); // ⛔ before: opposite sides of the roll
     // and the camera's own frame starts the roll where the up is computed
-    expect(code("render/assembly_wiring.ts")).toContain("if (clamp && st.asmRoll === null && st.asmUp !== null && upAngle(st.asmUp, target, u) > ROLL_START_RAD) st.asmRoll =");
+    // ⭐⭐⭐ (2026-11-02, second pass — restated) …except while a top's zenith roll owns the up (`spanZenithUp`)
+    expect(code("render/assembly_wiring.ts")).toContain("if (clamp && spanZenithUp(st) === null && st.asmRoll === null && st.asmUp !== null && upAngle(st.asmUp, target, u) > ROLL_START_RAD) st.asmRoll =");
   });
   it("⭐ the roll is linear in its share (the share goes at the cap)", () => {
     const r = rollUp([0, 1, 0], [1, 0, 0], [0, 0, 1], 0.25);
