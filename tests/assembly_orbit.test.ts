@@ -277,7 +277,7 @@ describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
     expect(a).toContain("cone: n === null ? null : lockCone(null, angleTo(u, n)) };");
     expect(a).toContain("st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };");
     expect(a).toContain("return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(tiltDirW(st.asmTilt.q, orbitDir(yaw0, v0)), n);"); // ⭐ (2026-11-02) the orbit's direction in the world (its tilt)
+    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(tiltDirW(st.asmOrbit, orbitDir(yaw0, v0)), n);"); // ⭐ (2026-11-02) the orbit's direction in the world (its tilt)
   });
 });
 

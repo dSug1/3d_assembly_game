@@ -581,7 +581,10 @@ export function createScene(
   st.asmCarrier = null;
   st.asmTilt = { kind: 0, q: [1, 0, 0, 0] };
   st.asmPartsO = null;
+  st.asmOrbit = [1, 0, 0, 0];
   st.asmTiltRoll = null;
+  st.asmBaseUp = null;
+  st.asmSign = { yaw: 1, v: 1 };
   st.asmChain = null;
   st.asmLoop = null;
   st.asmParts = null;

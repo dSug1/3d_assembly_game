@@ -63,15 +63,87 @@ describe('⭐⭐⭐ THE ORBIT TILTED ONTO A HORIZONTAL FACE (2026-11-02, the own
   });
   it("⭐⭐ wired: the orbit's own geometry in the tilted frame — the piece's direction, the rays, the parts the sections read, the camera's frame; the switch where the gizmo's face changes", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const u = tiltDirW(st.asmTilt.q, orbitDir(yaw, v));");
+    expect(a).toContain("const u = tiltDirW(st.asmOrbit, orbitDir(yaw, v));"); // ⭐ the orbit's own frame (re-tilted before a pole)
     expect(a).toContain("const o = tiltPointW(st.asmTilt.q, st.asm!.centre, r.origin);");
     expect(a).toContain("const parts = partsO(st);");
-    expect(a).toContain("const f = offsetFrame(tiltDirO(tq, u), cam.yaw, o.yawRad, o.pitchRad);");
+    expect(a).toContain("const own = screenUpTarget(u, tiltDirW(st.asmTilt.q, [0, 1, 0]), st.asmBaseUp);"); // ⭐ the screen's up: gravity's, the face's looking steeply
+    expect(a).toContain("const f = offsetAbout(u, base, o.yawRad, o.pitchRad);");
     expect(a).toContain("const want = tiltWanted(st.gizmoNormal ?? null, st.asmTilt.kind);");
     expect(a).toContain("st.cameraLagged = lagT;");
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("tiltRollStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));");
     expect(code("render/tuning_menu.ts")).toContain('"orbitTiltBlendMm", 0, 40, 1)');
-    expect(code("render/hover_wiring.ts")).toContain("const t = orbitForCameraDir(tiltDirO(st.asmTilt.q, hv.iso),");
+    expect(code("render/hover_wiring.ts")).toContain("const t = orbitForCameraDir(tiltDirO(st.asmOrbit, hv.iso),");
+  });
+  it("⭐⭐⭐ the finger's axes kept through a switch: a sign flips where the new frame's step points the other way (⛔ over a narrow top the gizmo rocked: 13 switches under one drag)", async () => {
+    const T = await import("../src/input/orbit_tilt");
+    expect(T.tiltSignAfter).toBeDefined();
+    expect(T.tiltSignAfter(1, [0, 0, 1], [0, 0.1, 0.9])).toBe(1);
+    expect(T.tiltSignAfter(1, [0, 0, 1], [0, 0.1, -0.9])).toBe(-1);
+    expect(T.tiltSignAfter(-1, [0, 0, 1], [0, 0, -1])).toBe(1);
+    expect(T.tiltSignAfter(1, [0, 0, 0.01], [0, 0, -1])).toBe(1); // no direction there (the yaw at a pole): kept
+    // the steps are orbitDir's derivatives
+    const { orbitDir } = await import("../src/input/assembly_orbit");
+    const e = 1e-6, y = 0.7, v = 0.63;
+    const s = T.orbitDirSteps(y, v);
+    const dp = (Math.PI) * 2 * e; // dv = e is a pitch step of π·e
+    const a = orbitDir(y, v), b = orbitDir(y, v + e), c = orbitDir(y + e, v);
+    close([(b[0] - a[0]) / (dp / 2), (b[1] - a[1]) / (dp / 2), (b[2] - a[2]) / (dp / 2)], s.pitch, 4);
+    close([(c[0] - a[0]) / e, (c[1] - a[1]) / e, (c[2] - a[2]) / e], s.yaw, 4);
+  });
+  it("⭐⭐⭐ the camera's offsets about the screen's up as it is (`offsetAbout`) — `offsetFrame` its own up's case; a switch moves no camera (⛔ 436 px)", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.offsetAbout).toBeDefined();
+    const u: [number, number, number] = [0.3, 0.8, -0.52];
+    const f = A.offsetFrame(u, -1.2, 0.04, 0.035);
+    const f0 = A.offsetFrame(u, -1.2, 0, 0);
+    const g = A.offsetAbout(u, f0.up, 0.04, 0.035);
+    close(g.dir, f.dir, 12);
+    close(g.up, f.up, 12);
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("const base = roll === null ? own : tiltRollUp(roll.fromUp, own, u, roll.share);");
+    expect(a).toContain("st.cameraOrbit = co === null || coT === null ? null : cameraOrbitAt({ ...co.cam, yaw: coT.yaw, v: coT.v }, performance.now(), st.cfg);");
+    expect(code("render/pointer_wiring.ts")).toContain("dyPx * share * sg.v);");
+  });
+  it("⭐⭐⭐ NO GIMBAL LOCK: past 60° of pitch the orbit's own frame re-tilted so the piece's direction lies on its equator — the same direction in the world", async () => {
+    const T = await import("../src/input/orbit_tilt");
+    const { orbitDir } = await import("../src/input/assembly_orbit");
+    expect(T.antiPoleQuat).toBeDefined(); // ⛔ the old: the angles ran into the pole — dx meaningless, dy stopped (the camera stuck under the floor, measured)
+    expect(T.antiPoleQuat([1, 0, 0, 0], 0.4, 0.7)).toBeNull(); // 36°: kept
+    for (const [yaw, v] of [[0.4, 0.95], [-2, 0.04], [1.1, 0.7 + 0.2]] as const) {
+      const q = T.antiPoleQuat([1, 0, 0, 0], yaw, v)!;
+      expect(q).not.toBeNull();
+      const u = orbitDir(yaw, v);
+      const t = T.tiltAngles(T.tiltDirO(q, u), yaw)!;
+      expect(Math.abs(t.v - 0.5)).toBeLessThan(1e-6); // on the new equator
+      close(T.tiltDirW(q, orbitDir(t.yaw, t.v)), u, 9); // nothing moves
+    }
+  });
+  it("⭐⭐⭐ THE SCREEN'S UP: gravity's while the view is more than 30° off the vertical, the face's within 10°; a reversal (over the top of the view) rolled, never in a frame", async () => {
+    const T = await import("../src/input/orbit_tilt");
+    const away: [number, number, number] = [0, 0, 1];
+    const level: [number, number, number] = [0.6, 0.2, -0.77];
+    const lu = T.screenUpTarget(level, away, null);
+    expect(lu[1]).toBeGreaterThan(0.95); // ⛔ the old: the tilted frame's up — off a top the world's vertical lay slanted
+    const down: [number, number, number] = [0, 1, 0]; // looking straight down at a top
+    close(T.screenUpTarget(down, away, null), away);
+    expect(T.screenUpTarget([0, 1, 0], [0, 1, 0], [1, 0, 0])).toEqual([1, 0, 0]); // neither defined: the one before
+    expect(T.upTurn([0, 1, 0], [0, -1, 0], [1, 0, 0])).toBeCloseTo(Math.PI, 9);
+    expect(T.upTurn([0, 1, 0], [0, 1, 0.1], [1, 0, 0])).toBeLessThan(T.UP_FLIP_RAD);
+    expect(T.TILT_HOLD_SHARE).toBe(0.5);
+  });
+  it("⭐⭐⭐ a gizmo's step IN DEPTH taken into the approach: the piece stays where it is (an overhang's edge)", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
+    expect(A.gizmoDepthStep).toBeDefined(); // ⛔ the old: the piece stepped with the gizmo
+    const u: [number, number, number] = [0, 0, -1];
+    expect(A.gizmoDepthStep([0, 0, -0.05], [0, 0, -0.092], u, 0.005)).toBeCloseTo(0.042, 12); // Piece45's 4.2 cm
+    expect(A.gizmoDepthStep([0, 0, -0.05], [0.01, 0.01, -0.052], u, 0.005)).toBe(0); // the ordinary travel
+    const r = A.approachRange(DEFAULT_CONFIG);
+    for (const a of [r.min + 0.01, r.waist - 0.01, 0.35, 0.7, 0.95]) expect(A.approachOfDistance(DEFAULT_CONFIG, A.approachDistance(DEFAULT_CONFIG, a), a + 0.003)).toBeCloseTo(a, 6); // on the stretch it is on (the distance dips past the waist)
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("st.approach = approachOfDistance(st.cfg, Math.max(0, d - step), st.approach);");
+    expect(w).toContain("const aq = pq === null ? null : antiPoleQuat(st.asmOrbit, pq.yaw, pq.v);");
+    expect(w).toContain("const own = screenUpTarget(u, tiltDirW(st.asmTilt.q, [0, 1, 0]), st.asmBaseUp);");
   });
 });

@@ -2344,3 +2344,45 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   vertical face's cut, but that loop is about twice as long: dx moves the gizmo ~5× faster than on the front face (0.5 m against 0.11 m per 33 px, measured);
   and the camera follows it round — below the floor under the bottom, as the upright orbit's dy already can.
 * Vectors (`tests/orbit_tilt.test.ts`, 5; three restated — red on the previous build). ⛔ No device close. 2164 vectors.
+
+### ⭐⭐⭐ THE TILT, SECOND PASS — no jump at a switch, no gimbal lock, gravity on the screen, no step at a discontinuity (2026-11-02, branch `1.0.88-`)
+
+> *"on horizontal face, sometimes the piece jumps from one place to another on the screen … when there are discontinuities in the face cut by the red or
+> green section (for example the red section cutting a overhang), the piece jumps when the gizmo travels the section … some configurations where the orbit
+> is stuck at some edge"*; *"on a lot of occasions when i keep traveling the gizmo on one section, the camera view end up completely tilted until it
+> restores its verticality"*; *"make sure you avoid gimbal lock in this implementation of the orbit tilt when the gizmo keeps being traveled"* → *"Build all
+> three"* — the owner (phone screenshots: a held drop, the view rolled ~45°).
+
+* ⛔ **The jumps at a switch — why** (traced frame by frame, headless, the gizmo pushed up the painting's front onto its top and on): (1) the camera's small
+  offsets (`cameraYawOffsetDeg` 2.5°, `cameraPitchOffsetDeg` 2°) were applied about each frame's OWN up, and over a top the upright and the tilted frames'
+  ups are opposite: the offsets flipped side — ~6°, the camera 0.75 m, the piece **436 px** in one frame at every switch back; (2) the camera's leash was
+  dropped and restarted at the piece; (3) the eye's spring kept its place but lost its velocity — the drawn piece fell behind, ~40 px.
+* ⛔ **The stuck orbit — why**: (a) over a NARROW top (the painting's are 3 cm strips) each switch re-expressed the orbit in the other frame, where the
+  same finger meant the opposite way — under one dy the gizmo rocked over the top and back, **13 switches**, the camera swinging with it; at an edge the
+  frames even ping-ponged frame after frame (the drop landing on the other face after each switch); (b) the orbit's two angles have POLES — down the back
+  face to the painting's foot the orbit stopped dead at the lower pole, the camera under the floor: the gimbal lock.
+* ⛔ **The tilted view — why**: under the tilt the screen's up was the tilted frame's everywhere — off a top the world's vertical lay slanted, until the
+  switch back and 10 mm more.
+* ⭐ **Built**:
+  * **TWO FRAMES**: the FACE's (`asmTilt` — the sections, the carrier, the rays: x-y on the face, as before) and the ORBIT's OWN (`asmOrbit` — the frame its
+    angles are read in). The carrier is driven from the piece's direction read in the face's frame (`tiltAngles`; a turn of more than a quarter in a frame
+    is a pole crossed — no yaw step).
+  * **NO GIMBAL LOCK** (`antiPoleQuat`): past **60°** of pitch the orbit's own frame is re-tilted about the yaw's axis at the piece so its direction lies on
+    the equator again — the angles never reach a pole. A continuous dy now carries the gizmo up the front, over the top, down the back, under and up again
+    without a stop (measured).
+  * **NOTHING MOVES AT A RE-BASE** (`rebaseOrbit`): the angles, the eye's spring WITH its velocity, the camera's lag and its leash, each carried on its own
+    direction; the **finger's axes kept** (`tiltSignAfter`, `asmSign`: a sign flips where the new frame's step points the other way — the same finger the
+    same way in the world). No ping-pong: a switch of the face's frame waits for half the roll it started (`TILT_HOLD_SHARE`). Measured: 4 switches over a
+    long dy (13 before), the piece's largest step on the screen 37 px against 436 — the remaining larger steps all inside the half-turn roll below.
+  * **THE SCREEN'S UP: GRAVITY'S** (`screenUpTarget`): the world's up laid square to the view while it is more than 30° off the vertical (gravity straight
+    down the screen); within 30° … 10° blended to the face's frame up (over a top the way away across it), within 10° that one. The camera's offsets are
+    applied about that up (`offsetAbout`) — continuous through every switch. A REVERSAL of it (the view passing over the top of the assembly: gravity's up
+    turned over) is rolled over the drag's travel, never in a frame (`UP_FLIP_RAD` 60°, `orbitTiltBlendMm`).
+  * **A STEP IN DEPTH TAKEN INTO THE APPROACH** (`gizmoDepthStep`, `approachOfDistance`): where the gizmo steps more than 5 mm along the piece's direction in
+    one frame (an overhang's edge — `Piece45`'s 4.2 cm), the approach distance takes it, so the piece stays where it is; the shown gizmo is stepped with it;
+    a sideways part eases on the gizmo's 90 ms. ⚠ `approachOfDistance` keeps to the stretch the approach is on: the distance is not monotonic in the
+    coordinate (it dips past the waist, 0.65 → 0.36 → 1.14 m). ⚠ Headless from mid-distance the crossing read alike before and after (the piece's own
+    travel, 15–20 mm a frame, hides it) — the rule is pinned by vectors; a hand judges it close in.
+* ⚠ **Worth judging by hand**: the over-the-top half-turn roll (10 mm of travel by default — the slider); the camera can go under the floor on a continued
+  dy (no stop by design now); the slide's latch, the approach and the way out on a top checked unchanged (headless).
+* Vectors (`tests/orbit_tilt.test.ts` + 5; restated where the wiring's lines changed — red on the previous build). ⛔ No device close. 2169 vectors.

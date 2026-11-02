@@ -760,7 +760,14 @@ export interface SceneState {
    * in that frame (cached per tilt); the screen's roll at a switch, over the drag's travel (`orbitTiltBlendMm`) */
   asmTilt: { readonly kind: import("../input/orbit_tilt").TiltKind; readonly q: import("../core/vec").Quat };
   asmPartsO: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) THE ORBIT'S OWN FRAME — the one its angles (yaw, pitch) are read in: the face's (`asmTilt`) at a switch, re-tilted on its own
+   * before a pole (`antiPoleQuat`: no gimbal lock) */
+  asmOrbit: import("../core/vec").Quat;
   asmTiltRoll: { readonly fromUp: Vec3; readonly share: number } | null;
+  /** ⭐⭐⭐ (2026-11-02) the up the camera's offsets were applied about last frame (`RigCameraFrame.base`) — a tilt's switch rolls from it */
+  asmBaseUp: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-02) the finger's axes' signs on the orbit (`tiltSignAfter`) — the same finger goes on the same way in the world through a tilt's switch */
+  asmSign: { readonly yaw: 1 | -1; readonly v: 1 | -1 };
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
