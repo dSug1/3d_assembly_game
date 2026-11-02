@@ -41,6 +41,16 @@ export function tiltQuat(kind: TiltKind, heading: Vec3): Quat {
   return axis === null ? IDENTITY : qFromAxisAngle(axis, Math.PI / 2);
 }
 
+/**
+ * ⭐⭐ (2026-11-02, the third audit's A1) THE FACE FRAME'S HEADING from the camera — its forward `f` and its screen up `up`, laid on the ground: over a top
+ * `f + up` (looking down, the up is the way away), under a bottom `f − up` (looking up, the up's ground part points BACK: ⛔ `f + up` there is
+ * `(cos a − sin a)·h` — nothing at 45°, reversed beyond: the frame's up flipped and the screen rolled uncontrollably under an overhang).
+ */
+export function faceHeading(kind: TiltKind, f: Vec3, up: Vec3): Vec3 {
+  const k = kind === -1 ? -1 : 1;
+  return [f[0] + k * up[0], 0, f[2] + k * up[2]];
+}
+
 /** ⭐ A direction into a frame `q` from the world, and back. */
 export function toFrame(q: Quat, d: Vec3): Vec3 {
   return qRotate(qconj(q), d);
@@ -138,13 +148,42 @@ export function screenUpTarget(dir: Vec3, faceUp: Vec3, prev: Vec3 | null): Vec3
   const s = x * x * (3 - 2 * x);
   if (w.v === null || s <= 0) return f ?? w.v ?? pv ?? [0, 1, 0];
   if (f === null || s >= 1) return w.v;
+  // ⭐⭐ (2026-11-02) near a half turn between the two the way round is the one nearer the up before (`prev`) — ⛔ the rounding's: just past straight
+  // above (the face's up there the one before, gravity's the opposite) the blend's way round flipped frame to frame, the screen's up 179° in one frame
+  if (pv !== null && Math.abs(signedTurn(f, w.v, dir)) > Math.PI - HALF_TURN_BAND_RAD) {
+    const a = turnToward(f, w.v, dir, s, 1);
+    const b = turnToward(f, w.v, dir, s, -1);
+    return dot(a, pv) >= dot(b, pv) ? a : b;
+  }
   return turnToward(f, w.v, dir, s);
 }
 
-/** ⭐ The unit `a` turned about `dir` toward `b` (both square to it) by `share` of the angle between them. */
-function turnToward(a: Vec3, b: Vec3, dir: Vec3, share: number): Vec3 {
+/** ⭐ The unit `a` turned about `dir` toward `b` (both square to it) by `share` of the angle between them — near a half turn, the way `sense` says. */
+function turnToward(a: Vec3, b: Vec3, dir: Vec3, share: number, sense: 1 | -1 | 0 = 0): Vec3 {
+  return qRotate(qFromAxisAngle(dir, signedTurn(a, b, dir, sense) * share), a);
+}
+
+/** ⭐ Within this of a half turn (rad) the way round is the latched `sense`'s, never the sign the rounding gives. */
+export const HALF_TURN_BAND_RAD = (30 * Math.PI) / 180;
+
+/**
+ * ⭐⭐ (2026-11-02, the owner: *"a small dy … looks like a jump of the piece with a roll of the camera"*) THE SIGNED TURN from `a` to `b` about `dir` — near
+ * a half turn the way `sense` says. ⛔ The sign of a turn of ~180° is the rounding's: going over the top the roll's way round flipped from one frame to
+ * the next, the screen's up turned 177° in one frame (measured headless).
+ */
+export function signedTurn(a: Vec3, b: Vec3, dir: Vec3, sense: 1 | -1 | 0 = 0): number {
+  let ang = Math.atan2(dot(cross(a, b), dir), dot(a, b));
+  if (sense !== 0 && Math.abs(ang) > Math.PI - HALF_TURN_BAND_RAD && Math.sign(ang) !== sense) ang += sense * 2 * Math.PI;
+  return ang;
+}
+
+/** ⭐ A roll's way round, latched at its start: the shorter one, a half turn counted positive. */
+export function rollSense(from: Vec3, to: Vec3, dir: Vec3): 1 | -1 {
+  const a = square(from, dir).v;
+  const b = square(to, dir).v;
+  if (a === null || b === null) return 1;
   const ang = Math.atan2(dot(cross(a, b), dir), dot(a, b));
-  return qRotate(qFromAxisAngle(dir, ang * share), a);
+  return Math.abs(ang) > Math.PI - 1e-6 || ang >= 0 ? 1 : -1;
 }
 
 /** ⭐ The angle between two ups laid square to the view `dir` (rad); π if either is along it. */
@@ -158,20 +197,71 @@ export function upAngle(a: Vec3, b: Vec3, dir: Vec3): number {
 /** ⭐ An up that jumps by more than this from one frame to the next (rad) — a switch looking steeply, the view over the top — is ROLLED, never shown at once. */
 export const ROLL_START_RAD = (8 * Math.PI) / 180;
 
-/** ⭐ The screen's up during a roll: from `from` to `to` about the view `dir` by `share` (0 … 1, eased). */
-export function rollUp(from: Vec3, to: Vec3, dir: Vec3, share: number): Vec3 {
+/**
+ * ⭐ The screen's up during a roll: from `from` to `to` about the view `dir` by `share` (0 … 1), the way `sense` latched (a half turn kept one way).
+ * ⭐ (2026-11-02) LINEAR in the share — the share goes at the view's cap per mm (`rollTakes`), so the picture turns at the cap (⛔ eased, mid-roll it
+ * turned 1.5× the cap: 10° a frame against the orbit's 7°).
+ */
+export function rollUp(from: Vec3, to: Vec3, dir: Vec3, share: number, sense: 1 | -1 | 0 = 0): Vec3 {
   const a = square(from, dir).v;
   const b = square(to, dir).v;
   if (b === null) return to;
   if (a === null) return b;
-  const x = Math.min(1, Math.max(0, share));
-  return turnToward(a, b, dir, x * x * (3 - 2 * x));
+  return turnToward(a, b, dir, Math.min(1, Math.max(0, share)), sense);
 }
 
-/** ⭐ A roll's share after `travelMm` more of the finger's travel over `spanMm` (0: at once). */
-export function rollShare(share: number, travelMm: number, spanMm: number): number {
-  return spanMm > 0 ? Math.min(1, share + Math.max(0, travelMm) / spanMm) : 1;
+/**
+ * ⭐⭐⭐ (2026-11-02, the owner: *"Can also the angular travel per mm input on horizontal face made the same as the angular travel per mm input on vertical
+ * face … clamping the angular travel per mm input for any face"*) — **THE VIEW'S TURN**: the angle of the rotation that takes the camera frame (`dir0`,
+ * `up0`) to (`dir1`, `up1`) — its look and its roll together, as the eye sees the picture turn (a yaw about the vertical at any pitch is its own angle;
+ * a spin of the picture straight above counts whole). `null` for a frame with no direction.
+ */
+export function frameTurn(dir0: Vec3, up0: Vec3, dir1: Vec3, up1: Vec3): number | null {
+  const f = (d: Vec3, u: Vec3): [Vec3, Vec3, Vec3] | null => {
+    const z = normalize(d);
+    if (z === null) return null;
+    const y = square(u, z).v;
+    if (y === null) return null;
+    return [cross(y, z), y, z];
+  };
+  const a = f(dir0, up0);
+  const b = f(dir1, up1);
+  if (a === null || b === null) return null;
+  // trace(B·Aᵀ) = Σ dot(b_i, a_i)
+  const tr = dot(a[0], b[0]) + dot(a[1], b[1]) + dot(a[2], b[2]);
+  return Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2)));
 }
+
+/** ⭐ The share of a step the governor lets through: its view turn `turnRad` held to `capRad` (1: within it). */
+export function viewTurnScale(turnRad: number, capRad: number): number {
+  if (!(turnRad > capRad)) return 1;
+  return capRad > 0 ? capRad / turnRad : 0;
+}
+
+/**
+ * ⭐⭐ A ROLL TAKES THE FINGER'S TRAVEL FIRST, at the cap (`capRadPerMm`): of `travelMm`, what the roll left of `angleRad` at `share` takes — its new share,
+ * and the travel left for the orbit. The piece waits while the camera rolls (⛔ the roll ran over `orbitTiltBlendMm` whatever its angle: half a turn in
+ * 10 mm while the orbit went on).
+ */
+export function rollTakes(share: number, angleRad: number, travelMm: number, capRadPerMm: number): { readonly share: number; readonly left: number } {
+  const t = Math.max(0, travelMm);
+  if (!(angleRad > 1e-9) || !(capRadPerMm > 0)) return { share: 1, left: t };
+  const needMm = ((1 - Math.min(1, Math.max(0, share))) * angleRad) / capRadPerMm;
+  const take = Math.min(t, needMm);
+  return { share: take >= needMm ? 1 : share + (take * capRadPerMm) / angleRad, left: t - take };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-02, the owner: *"smoothed … by travel of the camera and piece with delta position and limitation of delta position input to the gizmo"*)
+ * **THE SHOWN GIZMO'S STEP HELD TO THE FINGER**: at most `mmPerMm` of gizmo per mm of the finger's travel this frame, plus `restMps` by time (so a gizmo
+ * left behind still arrives, at a walk). ⛔ Over a thin top or under the bottom the gizmo leapt 0.35–0.5 m in one frame, eased over 90 ms: the piece
+ * and the camera with it. (m)
+ */
+export function gizmoStepCap(travelMm: number, dtMs: number, mmPerMm: number, restMps: number): number {
+  return (Math.max(0, travelMm) * Math.max(0, mmPerMm)) / 1000 + (Math.max(0, restMps) * Math.max(0, dtMs)) / 1000;
+}
+
+// ⛔ (2026-11-02) `rollShare` (a roll over `orbitTiltBlendMm` whatever its angle) is deleted — a roll takes the travel at the view's cap (`rollTakes`)
 
 /** ⭐ With no finger on the glass a roll goes on by time: its whole in this (ms) — ⛔ a coast's switch held its roll half done until the next drag. */
 export const ROLL_REST_MS = 300;

@@ -556,6 +556,10 @@ export function createScene(
   st.asmShell = null;
   st.asmRayCache = new Map();
   st.approach = 1;
+  st.approachPendingMm = 0;
+  st.approachQueries = 0;
+  st.asmTravelFrameMm = 0;
+  st.asmPicks = 0;
   st.approachInertia = new OrbitInertia();
   st.orbitShift = false;
   st.orbitApproachKey = false;
@@ -723,7 +727,6 @@ export function createScene(
   st.goalLastPose = new Map();
   st.goalCommit = new GoalCommit();
   st.goalCommitWorld = null;
-  st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
   st.topOutlines = new Map();
   st.onLevelEnd = null;

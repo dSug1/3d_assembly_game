@@ -37,7 +37,7 @@ describe("⭐⭐ prototype — TRANSLATION IN WORLDSPACE", () => {
     ])
       expect(key(k), k).toBeGreaterThan(ws);
     for (const k of [
-      "lockPlacedPieces", "motionDeadbandMm", "restConfirmMs", "restGapFactor", "swayTurnDeg", "swayReferenceSpeedMmPerS", "highlightLiftMm",
+      "motionDeadbandMm", "restConfirmMs", "restGapFactor", "swayTurnDeg", "swayReferenceSpeedMmPerS", "highlightLiftMm",
       "orbitCentreGraceMs", "ungrabbedGoalMm", "ungrabbedGoalDeg",
     ])
       expect(key(k), k).toBeLessThan(ws);

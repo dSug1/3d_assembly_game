@@ -3,12 +3,11 @@
  * reached its goal. ⛔ The rule (what *reached* means) is `input/goal_commit.ts`'s.
  *
  * ⭐ An action COMPLETES — and the goal is committed — when:
- * * the scene comes to REST after a change: no finger down, no snap, pull, alignment or rotation-increment chase animating, and the model is not the
- *   one last committed (`goalCommitFrame`, every frame — cheap: `World` is immutable, so "unchanged" is one comparison);
- * * a snap LANDS, a goal pull LANDS, a couple DISSOLVES (their wiring calls `commitGoal`) — mid-gesture, since a snap stops
- *   the drag that made it (`D139`).
- * ⛔ Never midway through a movement: the HUD's `goal n/41` and the score bar read the COMMITTED count.
- * ⚠ An UNDO commits silently (its restore is not an achievement), and a DEMO shows no pop-up.
+ * * the scene comes to REST after a change: no finger down, no pull animating, and the model is not the one last committed (`goalCommitFrame`, every
+ *   frame — cheap: `World` is immutable, so "unchanged" is one comparison);
+ * * a goal pull LANDS (its wiring calls `commitGoal`).
+ * ⛔ Never midway through a movement: the HUD's `goal n/41` and the score bar read the COMMITTED count. ⚠ A DEMO shows no pop-up.
+ * ⛔ (2026-11-02, the third audit's C6) the snap, the dissolve and the undo it also served went with the parts' inputs (`d8134eb`).
  */
 import { liveFinal } from "./goal_capture_wiring";
 import { placedReport } from "./goal_capture_wiring";

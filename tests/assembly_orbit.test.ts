@@ -169,7 +169,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(g).toContain("const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);");
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
-    expect(a).toContain("return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();");
+    expect(a).toContain("return id !== undefined && goalLocked(id, st.goalCommit, true) && m.isPickable && m.isEnabled();");
     expect(a).toContain("st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);");
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
@@ -210,7 +210,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(p).toContain("((!onOrbited || assemblyOn(st)) &&");
     expect(p).toContain("if (onOrbited && st.hold !== null) st.hold.pressActed = true;");
     expect(p).toContain('const faceTapHere = st.pieceFaceTap !== null && st.pieceFaceTap.pointerId === e.pointerId && st.hold !== null && st.hold.second === e.pointerId && st.hold.mode === "HELD";');
-    expect(p).toContain(') === "SECOND" && !faceTapHere');
+    expect(p).toContain('(held === "SECOND" && !faceTapHere) || held === "ENDED"');
   });
   // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) and its resync are deleted — its carrier rides
   // the section's hull now: `tests/section_hull.test.ts`

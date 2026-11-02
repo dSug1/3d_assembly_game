@@ -21,7 +21,8 @@ export interface HudFields {
   /** ⭐ `D112`: the episode count and the timer — the FIRST line, the owner's instruction. */
   readonly score: string;
   readonly pointers: number;
-  readonly phase: string;
+  /** ⭐ (2026-11-02, the third audit's C5 / A10) the dead `phase` line replaced: the orbit's ray picks and the approach's gap queries this frame */
+  readonly rays: string;
   readonly motion: string;
   /** ⭐ Prototype: the green piece's distance to the yellow orbit target (`greenReadout`). */
   readonly green: string;
@@ -157,7 +158,7 @@ export function createHud(parent: HTMLElement = document.body): Hud {
       box.textContent = [
         `score     ${f.score}`,
         `pointers  ${f.pointers}`,
-        `phase     ${f.phase}`,
+        `rays      ${f.rays}`,
         `motion    ${f.motion}`,
         // ⭐ prototype (green box), the owner 2026-10-02: *"in the HUD, after motion, add a line with the distance of the green
         // piece to yellow orbit center"*.

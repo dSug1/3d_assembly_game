@@ -379,11 +379,19 @@ export function slideLatches(ready: boolean, armed: boolean, placed: boolean, on
 export function slideHoldsOrbit(ready: boolean, armed: boolean, placed: boolean, on: boolean, refused: boolean, approachKey: boolean): boolean {
   return slideLatches(ready, armed, placed, on) && !refused && !approachKey;
 }
-/** ⭐ (2026-11-01) the longest the held orbit waits for the piece to come to rest before the latch counts as refused (ms). */
+/** ⭐ (2026-11-01) the longest the held orbit waits for the piece to come to rest before the latch counts as refused (ms) — at the least. */
 export const SLIDE_WAIT_MAX_MS = 800;
-/** ⭐ (2026-11-01) The latch counts as refused: `hoverStart` said no, or it has been waiting (`waitedMs`) past `SLIDE_WAIT_MAX_MS`. */
-export function slideRefusedAfter(result: boolean | "wait", waitedMs: number): boolean {
-  return result === false || (result === "wait" && waitedMs > SLIDE_WAIT_MAX_MS);
+/**
+ * ⭐⭐ (2026-11-02, the third audit's B3) THE WAIT FROM THE EYE'S SPRING: the drawn piece rests (`pieceShownAtRest`) only after some 12–16 of its time
+ * constants (`boxSmoothMs / 2`) — at the shipped 60 ms ~400 ms, at 120 ms ~900 ms, at the slider's 300 ms ~2.3 s. ⛔ A fixed 800 ms ran out first above
+ * 120 ms: the lit contours let the orbit go before the latch and the moving finger carried the piece through (`HOVER.md` item 31's hole, back).
+ */
+export function slideWaitMaxMs(boxSmoothMs: number): number {
+  return Math.max(SLIDE_WAIT_MAX_MS, 18 * (Math.max(0, boxSmoothMs) / 2));
+}
+/** ⭐ (2026-11-01) The latch counts as refused: `hoverStart` said no, or it has been waiting (`waitedMs`) past `maxMs` (`slideWaitMaxMs`). */
+export function slideRefusedAfter(result: boolean | "wait", waitedMs: number, maxMs: number = SLIDE_WAIT_MAX_MS): boolean {
+  return result === false || (result === "wait" && waitedMs > maxMs);
 }
 /** ⭐ (2026-11-01) The slide mode left: the resting face's distance to the hosting face's plane (m) beyond the reach (m) — the contours' own test. */
 export function slideExits(planeGapM: number, reachM: number): boolean {
@@ -410,8 +418,9 @@ export function slideViewProgress(progress: number, dtMs: number, on: boolean): 
  * camera's direction from the slide's target read as two angles off the face's normal `n` — `a[0]` toward `t1` (the screen's right laid on the face),
  * `a[1]` toward `t2 = n × t1` — the direction `(n + tan a0·t1 + tan a1·t2)` normalised. The slide turns them THE WAY THE PIECE GOES (slid right, the
  * camera goes round to the right; up, it rises — the owner's sketch), each clamped at `SLIDE_ORBIT_CLAMP_RAD` (45°: both there, exactly the
- * isometric corner the slide view was frozen on). Begun where the camera is (no jump); a start beyond the clamp keeps that angle as its own limit,
- * tightened as the slide turns it inward (`slideOrbitStep`).
+ * isometric corner the slide view was frozen on). Begun where the camera is (no jump), brought within the clamp (`slideOrbitStart`, 2026-11-01).
+ * ⭐ (2026-11-02, the third audit's B7) off a horizontal face the limits are the clamp, always — the "start beyond the clamp tightened inward" rule
+ * went with the start's clamp; only a top's pitch ceiling still tightens.
  */
 export const SLIDE_ORBIT_CLAMP_RAD = Math.PI / 4;
 export interface SlideOrbit {
@@ -464,12 +473,11 @@ export function slideOrbitStart(n: Vec3, t1: Vec3, t2: Vec3, toCam: Vec3, up: Ve
   const a: [number, number] = [cl(Math.atan2(dot(c, t1), cn)), cl(Math.atan2(dot(c, t2), cn))];
   return { a, lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD] };
 }
-/** ⭐ One slide step: the angles turned by `d` (rad, along `t1` and `t2`), each held in its limit; a limit beyond the clamp tightened to where it turned in. */
+/** ⭐ One slide step: the angles turned by `d` (rad, along `t1` and `t2`), each held in its limit (the clamp). */
 export function slideOrbitStep(o: SlideOrbit, d: readonly [number, number]): SlideOrbit {
   const one = (i: 0 | 1): [number, number] => {
     const lim = o.lim[i];
-    const a = Math.min(lim, Math.max(-lim, o.a[i] + d[i]));
-    return [a, Math.max(SLIDE_ORBIT_CLAMP_RAD, Math.min(lim, Math.abs(a)))];
+    return [Math.min(lim, Math.max(-lim, o.a[i] + d[i])), lim];
   };
   const [a0, l0] = one(0);
   const t = o.top ?? null;

@@ -23,13 +23,14 @@ round a yellow gizmo on rings, the camera follows; merged into `main`, served at
 resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to the hover; the orbited piece has goals on Piece4 (x/42).
 ⭐⭐⭐ **CURRENT THREAD — THE HOVER** → [`HOVER.md` §0](../40_RENDER_SCENE/spec/HOVER.md) (the hover as it stands, and what is open). Built
 2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand.
-⭐ 10-18 (`1.0.81-`): THE TOP ROLL → `DOUBLE_ORBIT_PROTOTYPE.md`.
+⭐⭐ 11-02 (`1.0.90-`): the third Fable audit's fixes; the view's turn held to the dx yaw's pace on every face →
+[`AUDIT_2026-11-02.md`](queue_notes/AUDIT_2026-11-02.md).
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
 ⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION, ALIGNMENT, SNAP AND UNDO ARE DELETED** — only the orbited piece moves
 (orbit, approach, slide); the code before: **`d8134eb`**; ⏳ the parts get its properties later, `Scene_0` the orbit and the slide →
 [`2026-11-02_parts_translation_rotation_deleted.md`](../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md).
-✅ `npm run verify`: **1607 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 2171 before the parts went; 1619 below: 10-02).
+✅ `npm run verify`: **1624 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 1619 below: 10-02).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

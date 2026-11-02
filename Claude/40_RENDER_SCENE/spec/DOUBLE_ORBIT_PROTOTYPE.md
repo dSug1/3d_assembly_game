@@ -2354,3 +2354,30 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⚠ **Worth judging by hand**: the roll's travel (10 mm), the shell's offset (60 mm), a lateral jump of the gizmo where the carrier crosses onto
   `Piece44`'s overhang (18 cm, eased over 90 ms — the base carrier's, unchanged).
 * Vectors (`tests/orbit_frame.test.ts`, 12 — red on the reverted base; the rest restated). ⛔ No device close. 2171 vectors.
+
+## 2026-11-02 — on 1.0.90-: the third Fable audit; the view's turn held to the finger on every face
+
+The owner: *"build everything except B5"*, then on the top face: *"a small dy pushes the piece from one screenshot position to the other with a 180
+degree roll of the camera … Can this be smoothed, for example by travel of the camera and piece with delta position and limitation of delta position
+input to the gizmo … clamping the angular travel per mm input for any face"*. The whole table → [`AUDIT_2026-11-02.md`](../../00_CORE/queue_notes/AUDIT_2026-11-02.md).
+
+* ⭐⭐⭐ **THE VIEW'S TURN GOVERNED** (`viewTurnGoverned`, `frameTurn`): an orbit step's look AND roll together held to `orbitViewTurnCap` × the dx yaw's
+  own °/mm (1: a vertical face's pace) — a yaw on a vertical face is never cut; straight above a thin top a dx spinning the picture and a dy tipping it
+  over the edge are.
+* ⭐⭐⭐ **A ROLL TAKES THE TRAVEL FIRST, AT THAT CAP** (`rollTakes`, `orbitTravelMm` returns what is left): the piece waits while the camera rolls; the
+  roll linear in its share (⛔ eased: 1.5× the cap mid-roll); its way round LATCHED (`rollSense`, `signedTurn`), the target's blend between the face's
+  up and gravity's choosing the side nearer the up before, the roll started where the camera's up is computed (`assemblyCameraFrame`) — ⛔ measured
+  headless: over the top the screen's up turned **177°–179° in ONE frame** (the rounding chose the way round; the roll was checked before the camera
+  moved). Now: half a turn over ~35 mm of finger at 4.9°/mm, no frame over 10°.
+* ⭐⭐⭐ **THE SHOWN GIZMO HELD TO THE FINGER** (`gizmoStepCap`): `gizmoMmPerMm` (40) × the finger's travel that frame + a 0.5 m/s walk at rest — ⛔ over
+  the thin top or under the bottom it leapt 347–525 mm in one frame (eased over 90 ms, the piece and the camera with it); now 50–70 mm at most.
+* ⭐⭐ **THE SECTIONS** (the owner's attachments: *"the green or red sections are strange"*): the gizmo's vertex was always joined to its nearer
+  neighbour, at any length — a held drop or a step in depth drew a long stray segment; now only within twice a join's reach (`gizmoJoins`' `maxForced`).
+  ⚠ Not reproduced exactly headless.
+* The audit's A1–A9: under a bottom the face frame's heading `f − up` (`faceHeading`); the coast records the pitch applied (its sign); the way out
+  solved unclamped; ONE approach step a frame, counted in the 24; the chain reaches a gizmo behind the axis (`facingChain`'s `from`); a re-base keeps
+  the solver's backlog and the leash's speed; a pole crossed finds the carrier again; a switch at rest; the lock on the shell's distance.
+* The HUD's `phase` line is now `rays` — the frame's ray picks (A10, ~100 a moving frame: read it on the iPhone), the approach's gap queries, the
+  mouse layer's counters. `orbitTiltBlendMm` now only gates a frame switch.
+* Vectors `tests/audit_2026_11_02.test.ts` (16, red on `5515502`). ⛔ No device close. 1624 vectors.
+

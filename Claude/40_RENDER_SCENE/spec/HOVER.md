@@ -94,6 +94,9 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 20. ⛔ **OPEN — A SETTLE STOPPED SHORT** (2026-11-01; not changed): a nearer part between the piece and the latched face stops the settle — the piece
    slides up to 20 mm off the face, its contact outline far from it on the screen. Fixes proposed (latch on the face it touches / settle again) →
    `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
+20. ⭐⭐⭐ **THE THIRD FABLE AUDIT** (2026-11-02, `1.0.90-`, item 42; ⛔ no device close): the held orbit's wait from the eye's spring, the respawn's reset,
+   the approach's first finger lifting consumed, ALT / CTRL inert while the slide is on, the way out's anchor, the slide's press noted at the press →
+   [`AUDIT_2026-11-02.md`](../../00_CORE/queue_notes/AUDIT_2026-11-02.md).
 19. ⭐⭐⭐ **A AGAIN MID-DRAG; THE WAY OUT CHECKED** (2026-11-01, items 40–41; ⛔ no device close): a move the slide takes spends the orbit's band for that
    pointer (⛔ A pressed again with the click held flew the piece out by the whole slide); the approach OUT is checked against the parts, a blocked one named.
 18. ⭐⭐⭐ **THE WAY OUT FROM THE SLIDE CAMERA ITSELF** (2026-11-01, item 39; ⛔ no device close): the orbit re-based so its CAMERA (offsets included) stands
@@ -104,6 +107,14 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    — a fast A + drag swept the piece on a wide arc from the old direction while they eased.
 15. ⭐⭐⭐ **THE GIZMO READ ON THE MODEL** (2026-11-01, item 36; ⛔ no device close): the 3° tilt was the gizmo's face picked on the SWAYING parts — the quad
    tilted with it, the turn laid the resting face on it, the slide never lit; the picks and the sections' hull now read the parts' model poses.
+42. ⭐⭐⭐ **The third Fable audit's slide fixes (2026-11-02, `1.0.90-`)**: B1 — two fingers approaching, the FIRST lifting first ends the approach and is
+   CONSUMED (`holdRelease` → `"ENDED"`; ⛔ it fell through to the tap: a short approach turned the piece onto the yellow quad); B2 — a respawn / piece
+   switch resets the approach, the lock, the lit contours and the latch's wait (⛔ a piece stuck at the contact came back there, still locked); B3 — the
+   held orbit waits `slideWaitMaxMs` = max(800 ms, 18 × the eye's τ) (⛔ a fixed 800 ms ran out first above `boxSmoothMs` 120: item 31's hole back); B6 —
+   ALT / CTRL + drag while the slide is on moves nothing (⛔ a dead orbit that kicked the sway); B7 — the dead "limit tightened inward" off a top removed;
+   B9 — the way out takes the slide's solver origin and `approach0` anew; B10 — the slide on, a first press anywhere is noted AT the press (⛔ at its first
+   move: a second band). ⛔ B5 (a slide under a bottom sends the camera under the floor) NOT built — the owner: the floor is see-through from below →
+   [`AUDIT_2026-11-02.md`](../../00_CORE/queue_notes/AUDIT_2026-11-02.md).
 41. ⭐⭐⭐ **The way out checked against the parts (2026-11-01)**: a step OUT is checked like a step in (`approachStepFree`: the gap kept, or no closer for a piece still against its face); refused, the HUD names the part and the player finds the way out (⛔ under `Piece44`'s overhang the piece ran into it and was jumped back) → `DOUBLE_ORBIT_PROTOTYPE.md`.
 40. ⭐⭐⭐ **A again mid-drag (2026-11-01)**: a move the slide takes spends the orbit's band for that pointer (`orbitBandSpent`) — ⛔ with the click held, A pressed again after a slide gave the approach the whole slide's travel at once (0.458 → 0.782 on 4 px, the piece 2.4 m out); two fingers were already clean → `DOUBLE_ORBIT_PROTOTYPE.md`.
 39. ⭐⭐⭐ **The way out from the slide camera itself (2026-11-01)**: item 35's re-base put the PIECE's direction on the slide view's; the orbit's camera is that direction turned by its offsets, and near a face the direction is held in the lock's cone about the gizmo's face — so after the 500 ms blend the camera went to its own place (a second, curved move, most of all over a top). Now the orbit's angles are solved so its CAMERA looks along the slide view's (`orbitForCameraDir`), the cone opened to it → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.

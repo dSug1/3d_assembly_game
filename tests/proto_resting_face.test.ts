@@ -214,7 +214,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
 
   it("⭐⭐ wired: after the goal commit each frame; the orbited pieces' resting face at creation, chosen from the BOOT pose, filled YELLOW", () => {
     const loop = code("render/render_loop.ts");
-    expect(loop).toMatch(/goalCommitFrame\(st\);\s*\/\/[^\n]*\n\s*restingFaceFrame\(st\);/);
+    expect(loop).toMatch(/goalCommitFrame\(st\);\s*(\/\/[^\n]*\n\s*)+restingFaceFrame\(st\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/const restingFace = resting\.winner === null \? null : chooseInGroup\(resting\.winner, greenBootOrientation\(st\.sceneSpec\.id\)\);/);
     // ⭐ 2026-10-06: PINK, the pink ring's own constant (it was yellow) — the fill and its see-through twin

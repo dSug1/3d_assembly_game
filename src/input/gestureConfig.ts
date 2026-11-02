@@ -182,8 +182,8 @@ export interface GestureConfig {
   shadowsOn: number;
   /** ⭐ `D138`: the median frame time, ms, a device must beat to keep AUTO shadows — 33 ≈ 30 fps. */
   autoShadowBudgetMs: number;
-  // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
-  // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
+  // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece was placed within the snap's own margins; one never grabbed within
+  // the two below — ⭐ (2026-11-02) every part's now: no part is grabbed since the parts' inputs went (`d8134eb`).
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
   ungrabbedGoalMm: number;
   /** ⭐ `D183`: degrees a piece never grabbed may be turned from its goal and count as placed (the owner: 1°). */
@@ -424,8 +424,14 @@ export interface GestureConfig {
   gizmoEdgeMarginMm: number;
   /** ⭐ (2026-10-28, the optional) the sections the gizmo travels along drawn — green the horizontal one, red the yaw plane's (1 on, 0 off). */
   sectionLines: number;
-  /** ⭐⭐⭐ (2026-11-02) the screen's roll at a jump of its up (a switch of the orbit's tilt looking steeply, the view over the top), over this much of the finger's travel (mm) */
+  /** ⭐⭐⭐ (2026-11-02) a switch of the face's frame waits for half this much of the finger's travel since the last one (mm) — ⛔ (2026-11-02, later) no longer the
+   * roll's span: a roll goes at the view's cap (`orbitViewTurnCap`) */
   orbitTiltBlendMm: number;
+  /** ⭐⭐⭐ (2026-11-02, the owner: *"clamping the angular travel per mm input for any face"*) the view's turn per mm of finger (its look and its roll) held to
+   * this × the dx yaw's own °/mm — a roll takes the travel at it, the piece waiting */
+  orbitViewTurnCap: number;
+  /** ⭐⭐⭐ (2026-11-02, *"limitation of delta position input to the gizmo"*) the shown gizmo moves at most this many mm per mm of the finger's travel (+ a walk at rest) */
+  gizmoMmPerMm: number;
   /** ⭐⭐⭐ (2026-11-02) THE SHELL's offset (mm): within it the piece comes down onto its gizmo, beyond it rides the smooth shell round the parts' box */
   orbitShellOffsetMm: number;
   orbitTurnCapDegMm: number;
@@ -458,8 +464,6 @@ export interface GestureConfig {
   boxGainInsideLeash: number;
   /** ⭐ Prototype: the zoom the scene BOOTS at (the owner, 2026-10-01: *"set the default zoom at 1.5"*). `0` = the derived rule (half the maximum radius). */
   bootZoom: number;
-  /** ⭐ Prototype: `1` — a piece in its goal cannot be moved or turned (`goal_lock.ts`); `0` re-enables it. */
-  lockPlacedPieces: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
   /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
@@ -832,7 +836,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the gizmo locked within 30 cm
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
-  orbitTiltBlendMm: 10, // ⭐⭐⭐ (2026-11-02) the screen's roll over 10 mm of travel
+  orbitTiltBlendMm: 10, // ⭐⭐⭐ (2026-11-02) a face frame's switch waits 5 mm of travel
+  orbitViewTurnCap: 1, // ⭐⭐⭐ (2026-11-02) the view turns at most the dx yaw's pace, on every face
+  gizmoMmPerMm: 40, // ⭐⭐⭐ (2026-11-02) the gizmo 40 mm per mm of finger at most (a side's loop is ~30)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-02) the shell's offset
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
@@ -861,7 +867,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
   bootZoom: 1, // ⭐ the owner, 2026-10-02: 1.00, with Scene_1's rings ×1.5 so the scene is unchanged (was 1.5)
-  lockPlacedPieces: 1,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
@@ -986,6 +991,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
   if (!(cfg.orbitTiltBlendMm >= 0 && cfg.orbitTiltBlendMm <= 60)) throw new Error(`orbitTiltBlendMm (${cfg.orbitTiltBlendMm}) must be in [0, 60] mm.`);
+  if (!(cfg.orbitViewTurnCap >= 0.25 && cfg.orbitViewTurnCap <= 4)) throw new Error(`orbitViewTurnCap (${cfg.orbitViewTurnCap}) must be in [0.25, 4].`);
+  if (!(cfg.gizmoMmPerMm >= 5 && cfg.gizmoMmPerMm <= 400)) throw new Error(`gizmoMmPerMm (${cfg.gizmoMmPerMm}) must be in [5, 400] mm/mm.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
@@ -1031,9 +1038,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (!(cfg.boxGainYaw > 0 && cfg.boxGainYaw <= 4) || !(cfg.boxGainPitch > 0 && cfg.boxGainPitch <= 4)) {
     throw new Error(`boxGainYaw / boxGainPitch (${cfg.boxGainYaw} / ${cfg.boxGainPitch}) must be in (0, 4].`);
-  }
-  if (!(cfg.lockPlacedPieces === 0 || cfg.lockPlacedPieces === 1)) {
-    throw new Error(`lockPlacedPieces (${cfg.lockPlacedPieces}) must be 0 or 1.`);
   }
   if (!(cfg.bootZoom === 0 || (cfg.bootZoom >= 0.1 && cfg.bootZoom <= 20))) {
     throw new Error(`bootZoom (${cfg.bootZoom}) must be 0 (derived) or in [0.1, 20].`);

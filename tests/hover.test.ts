@@ -112,7 +112,8 @@ describe("⭐ wired", () => {
     expect(p).toContain("if (holdRole === null) hoverPressNote(st, e.pointerId, s);"); // ⛔ (2026-11-02) the edge band deleted (`d8134eb`)
     expect(p).toContain("else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
     expect(p).toContain("hoverRelease(st, e.pointerId);");
-    expect(p).toContain("hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));");
+    expect(p).toContain("const travelMm = Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);");
+    expect(p).toContain("hoverOrbitStep(st, travelMm);");
   });
   it("⭐ the gizmo moved (slider 1) or the piece alone (0); the step solved by the orbit's clearance rule; the camera blended", () => {
     const h = code("render/hover_wiring.ts");
@@ -178,7 +179,7 @@ describe("⭐⭐⭐ the orbited pieces' GOALS and their capture (2026-10-14: *\"
     expect(g).toContain("return f === null ? null : liveFinalOf(f, st.sceneSpec.orbitGoals, st.greenBox?.name ?? null);");
     // ⭐ (the hover's second audit) the dead "always grabbed" line removed: `goalTolOf` answers the orbited piece's own margins first
     expect(g).not.toContain("st.grabbed.add(st.greenBox.name)");
-    expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);");
+    expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);");
     expect(g).toContain("if (id === st.greenBox?.name) st.orbitPiecePlaced = true;");
     expect(code("render/level_end_wiring.ts")).toContain("const final = liveFinal(st);"); // ⛔ (2026-11-02) the dissolve deleted (`d8134eb`)
     const w = code("render/green_box_wiring.ts");
@@ -269,7 +270,7 @@ describe("⭐⭐ the orbited piece's goal margins IN THE WORLD (2026-10-14, the 
     expect(asPart.inPlaceIds.includes("green-box")).toBe(true);
   });
   it("⭐ wired: the shown orbited piece judged by its own margins", () => {
-    expect(code("render/goal_capture_wiring.ts")).toContain('return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);');
+    expect(code("render/goal_capture_wiring.ts")).toContain('return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);');
   });
 });
 
@@ -750,7 +751,9 @@ describe("⭐⭐⭐ the hover bounded by the hosting faces, the smooth draw (202
     expect(h).toContain("const f = advanceFollow({ x: hv.shown, v: hv.shownVel }, hv.progress, hoverDrawTau(st), 1, dt);");
     expect(h).toContain("const w = hoverViewWeight(hv.shown);");
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;");
+    expect(g).toContain("const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...capped, maxQueries: Math.max(4, capped.maxQueries - HOVER_FADE_QUERIES) } : capped;");
+    // ⭐ (2026-11-02, A4 / B4) the approach's queries this frame taken off the orbit's share first
+    expect(g).toContain("const capped = st.approachQueries > 0 ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - st.approachQueries) } : opt0;");
     expect(g).toContain("wayInDrawFrame(st, dtSec * 1000);");
     const q = code("render/orient_cube.ts");
     expect(q).not.toContain("mirrorQuadShare"); // ⛔ (2026-10-14) the mirror growth deleted: the yellows are full size
@@ -1207,7 +1210,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
   it("⭐⭐⭐ wired: the hold in the frame (the coast) and in the drag (the finger's step); a drag begun on a PLACED PART slides too (⛔ it only orbited — held under the slide, nothing moved)", () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("if (slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, false, st.slideRefused, st.orbitShift)) slideHoldOrbit(st);");
-    expect(h).toContain("st.slideRefused = slideRefusedAfter(r, r === \"wait\" ? now - st.slideWaitSince : 0);");
+    expect(h).toContain("st.slideRefused = slideRefusedAfter(r, r === \"wait\" ? now - st.slideWaitSince : 0, slideWaitMaxMs(st.cfg.boxSmoothMs));");
     expect(h).toContain("if (slideModeOn(st) && slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, st.hover !== null, st.slideRefused, st.orbitShift)) {");
     const p = code("render/pointer_wiring.ts");
     // ⛔ (2026-11-02, `d8134eb`) a press on a part is OUTSIDE like any other — one path, the slide before the orbit
@@ -1218,7 +1221,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     const h = code("render/hold_wiring.ts");
     // the FIRST touch lifting in the approach ends the input too (⛔ it kept it on: the finger left drove the approach alone)
     expect(h).toContain('if (pointerId === h.first) { // ⛔⛔');
-    expect(h).toContain('if (h.mode === "APPROACH") { approachRelease(st); st.hold = null; st.hudDirty = true; return "FIRST"; } h.first = null;');
+    expect(h).toContain('if (h.mode === "APPROACH") { approachRelease(st); st.hold = null; st.hudDirty = true; return "ENDED"; } h.first = null;'); // ⭐ (2026-11-02, B1) consumed: never a tap
   });
 });
 
@@ -1250,10 +1253,16 @@ describe('⭐⭐⭐ THE SLIDE\'S LIMITED ORBIT (2026-11-01, the owner: *"remove 
     expect(o.a[1]).toBeCloseTo(-0.1, 12);
     const back = slideOrbitStep({ a: [-SLIDE_ORBIT_CLAMP_RAD, 0], lim: [SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD] }, [0.2, 0]);
     expect(back.a[0]).toBeCloseTo(-SLIDE_ORBIT_CLAMP_RAD + 0.2, 12); // reversible
-    const wide = slideOrbitStep({ a: [1.2, 0], lim: [1.2, SLIDE_ORBIT_CLAMP_RAD] }, [-0.1, 0]);
-    expect(wide.a[0]).toBeCloseTo(1.1, 12);
-    expect(wide.lim[0]).toBeCloseTo(1.1, 12); // tightened inward, never back out
-    expect(slideOrbitStep(wide, [0.5, 0]).a[0]).toBeCloseTo(1.1, 12);
+    // ⭐ (2026-11-02, the third audit's B7) the start is within the clamp, so the limit is the clamp and stays it — no "tightened inward" rule left
+    expect(slideOrbitStep(o, [0.5, 0.2]).lim).toEqual([SLIDE_ORBIT_CLAMP_RAD, SLIDE_ORBIT_CLAMP_RAD]);
+  });
+  it("⭐⭐ (2026-11-02, the third audit's B3) the held orbit's wait follows the eye's spring — 800 ms at least, eighteen time constants above", async () => {
+    const { slideWaitMaxMs, slideRefusedAfter } = await import("../src/input/hover");
+    expect(slideWaitMaxMs(60)).toBe(800);
+    expect(slideWaitMaxMs(120)).toBeGreaterThanOrEqual(900); // the spring rests after ~900 ms there (the audit's measure): ⛔ 800 ran out first
+    expect(slideWaitMaxMs(300)).toBeGreaterThanOrEqual(1800);
+    expect(slideRefusedAfter("wait", 1000, slideWaitMaxMs(300))).toBe(false);
+    expect(slideRefusedAfter("wait", 1000)).toBe(true); // the old fixed wait
   });
   it("⭐ at 45° both ways the direction IS the isometric corner the slide view was frozen on", async () => {
     const { slideOrbitDir, hoverCornerDirection, SLIDE_ORBIT_CLAMP_RAD } = await import("../src/input/hover");

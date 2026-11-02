@@ -1,14 +1,12 @@
 /**
  * ⭐⭐⭐ **THE GOAL CAPTURE, WIRED** (`D183`) — each frame: which pieces MOVED, which are inside their goal margins
  * (`core/goal.ts`), which the rule offers to the pull (`input/goal_capture.ts`); a pull starts only if its flight is
- * CLEAR (`D182`'s path check), releases the piece's alignment or seat, stops the drag that made it (`D139`), and lands on
- * the exact goal pose with the pop-up. ⛔ No rule here.
- * ⭐ Run BEFORE `syncSeats`: the goal wins over the snap.
+ * CLEAR (`D182`'s path check), and lands on the exact goal pose with the pop-up. ⛔ No rule here.
  *
- * ⭐⭐ **TWO MARGINS** (the owner, 2026-09-30): a GRABBED piece — pressed by a finger or the mouse, or dragged as an
- * assembly's root — within the snap's own (`captureOffsetMm` on the glass at the camera NOW, `snapConeDeg`), so the goal
- * feels as the snap does; a piece NEVER grabbed within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm, 1°), so zooming
- * out cannot place a piece nobody moved. ⭐ One report serves the capture, the HUD, the dissolve and the level end.
+ * ⭐⭐ **THE MARGINS** (the owner, 2026-09-30): a PART within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm on the glass, 1°), so zooming out cannot place a
+ * part nobody moved; the ORBITED piece within its own (`orbitGoalMm` / `orbitGoalDeg`). ⛔ (2026-11-02, the third audit's C2 / C6) the GRABBED piece's
+ * looser margins, the alignment's / seat's release and `D139`'s stopped drag went with the parts' inputs (`d8134eb`): no part is grabbed any more. The
+ * snap's margins still serve `goalReport`'s frame fit. ⭐ One report serves the capture, the HUD and the level end.
  */
 import { goalReport, liveFinalOf, orbitGoalTolerance, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
 import { worldPlacementOf } from "../core/object_model";
@@ -39,14 +37,13 @@ function strictTolerance(st: SceneState): GoalTolerance {
   };
 }
 
-/** ⭐ Each piece's margins: loose once grabbed, strict before. */
+/** ⭐ Each piece's margins: ⭐ (2026-11-02, the third audit's C2) a part's the strict ones — no part is grabbed since the parts' inputs went (`d8134eb`). */
 export function goalTolOf(st: SceneState): (id: string) => GoalTolerance {
-  const loose = looseTolerance(st);
   const strict = strictTolerance(st);
   // ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) the ORBITED piece by its own margins, in the world (`orbitGoalTolerance`)
   const orbited = orbitGoalTolerance(st.cfg.orbitGoalMm, st.cfg.orbitGoalDeg);
   const shown = st.greenBox?.name ?? null;
-  return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);
+  return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);
 }
 
 /** ⭐⭐ (2026-10-14) the goal LIVE: the level's and the SHOWN orbited piece's (`liveFinalOf`) — `null` for a scene with no goal. */
