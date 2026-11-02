@@ -46,9 +46,10 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     expect(c).toMatch(/st\.world\.objects\.get\(id\)\?\.frozen !== true/);
     expect(c).not.toMatch(/const c = orbitCentre\(/);
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/orbitTargetOnPress\(\s*routed\.role === "OBJECT" && st\.router\.all\(\)\.length === 1,\s*e\.pointerType !== "mouse" \|\| e\.isTrusted,/);
+    // ⛔ (2026-11-02, `d8134eb`) no press holds a part: a press on a part is OUTSIDE, its hit read off the pick
+    expect(p).toContain("const newTarget = orbitTargetOnPress(hitId !== undefined && st.router.all().length === 1 && holdRole === null, e.pointerType !== \"mouse\" || e.isTrusted,");
     // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
-    expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: st.idOf.get(mesh) ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: hitId ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); "); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p).toContain("if (to !== null && st.hover === null) retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⭐ (2026-11-01) not in the slide mode
     expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
@@ -60,17 +61,14 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
 
   it("⭐⭐ a drag from a piece LOCKED in its goal ORBITS — the same step as empty space, and the green box's camera hears that finger", () => {
     const p = code("render/pointer_wiring.ts");
-    // one step, two callers: empty space and the locked piece
-    // (a third since 2026-10-05: the orbit finger keeps orbiting while a second touch is still a possible tap)
-    // (a fourth since 2026-10-11: the locked piece's finger as the held second touch's first touch — `holdMove`'s orbit step)
-    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(4);
-    expect(p).toMatch(/if \(lockedInGoal && st\.router\.objects\(\)\.length === 1 && st\.router\.outside\(\)\.length === 0\) \{\s*orbitDragStep\(st, e\.pointerId, s, grip\.prev\);/);
-    // its locked-piece call comes BEFORE the gate returns
-    expect(p.indexOf("orbitDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal || unsnapHolds("));
+    // ⛔ (2026-11-02, `d8134eb`) one step, two callers: a single finger anywhere — a part is empty space — and the held second touch's first
+    expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(2);
+    expect(p).toContain("else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
+    expect(p).not.toContain("lockedInGoal");
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
     // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only
     expect(code("render/green_box_wiring.ts")).toMatch(
-      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \|\| h\.mode === "HELD" \? h\.first : null\)[^\n]*\n\s*: out\.length === 1 && objs\.length === 0\s*\? out\[0\]!\.id\s*: lockedHolder\s*\? objs\[0\]!\.id\s*: null;/,
+      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \|\| h\.mode === "HELD" \? h\.first : null\)[^\n]*\n\s*: out\.length === 1\s*\? out\[0\]!\.id\s*: null;/,
     );
   });
 });

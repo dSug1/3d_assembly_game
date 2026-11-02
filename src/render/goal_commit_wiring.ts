@@ -61,10 +61,7 @@ export function goalCommitFrame(st: SceneState): void {
     commitGoal(st, true);
     return;
   }
-  const atRest =
-    st.gestureSpan.active === 0 && st.alignSnaps.size === 0 && st.seatSnaps.size === 0 && st.goalPulls.size === 0 &&
-    st.rotationFollower.size === 0;
+  const atRest = st.gestureSpan.active === 0 && st.goalPulls.size === 0;
   if (!atRest || st.world === st.goalCommitWorld) return;
-  commitGoal(st, st.goalCommitQuiet);
-  st.goalCommitQuiet = false;
+  commitGoal(st);
 }

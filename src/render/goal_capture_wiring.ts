@@ -11,19 +11,20 @@
  * out cannot place a piece nobody moved. ⭐ One report serves the capture, the HUD, the dissolve and the level end.
  */
 import { goalReport, liveFinalOf, orbitGoalTolerance, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
-import { rootOf } from "../core/collision";
 import { worldPlacementOf } from "../core/object_model";
 import { qAngle, qconj, qmul, sub, length } from "../core/vec";
-import { snapPathBlockedBy } from "../input/snap";
 import { magnetEase } from "../input/seat_snap";
-import { captureOffsetM } from "../input/highlight";
+import { captureOffsetM, snapPathBlockedBy } from "../input/goal_capture";
 import { collisionSetup } from "./collision_wiring";
-import { releaseAlignmentOf } from "./alignment_wiring";
 import { setModelPose } from "./bodies";
 import { commitGoal } from "./goal_commit_wiring";
-import { offsetRadiusM } from "./seat_wiring";
 import type { SceneState } from "./scene_state";
 import type { FinalConfiguration } from "../core/game_structure";
+
+/** ⭐ The capture offset on the glass (`captureOffsetMm`) in the world at the camera NOW (`captureOffsetM`) — ⭐ (2026-11-02) moved here from the deleted seat wiring. */
+function offsetRadiusM(st: SceneState): number {
+  return captureOffsetM(st.cfg.captureOffsetMm, st.camera.radius, st.camera.fov, st.canvas.clientHeight);
+}
 
 /** ⭐ A GRABBED piece's margins — the snap's, at the camera NOW. */
 export function looseTolerance(st: SceneState): GoalTolerance {
@@ -72,14 +73,6 @@ export function goalCaptureFrame(st: SceneState, nowMs: number): void {
   const final = liveFinal(st);
   // ⛔ A demo plays itself; a finished level is frozen.
   if (!final || st.demo !== null || st.levelEnd.result !== null) return;
-  // ⭐ A grip grabs its body and, for a translation forwarded to it, the assembly's root.
-  for (const grip of st.held.values()) {
-    const id = st.idOf.get(grip.mesh);
-    if (id !== undefined) {
-      st.grabbed.add(id);
-      st.grabbed.add(rootOf(st.world, id));
-    }
-  }
   const moved = new Set<string>();
   for (const b of final.bodies) {
     const p = worldPlacementOf(st.world, b.id);
@@ -104,8 +97,7 @@ function startPull(st: SceneState, id: string, report: GoalReport, nowMs: number
   const from = worldPlacementOf(st.world, id);
   if (!g || !from || st.world.objects.get(id)?.frozen === true) return;
   // ⭐⭐ `D182`'s rule: only a flight that is CLEAR starts — a blocked one waits, pending, and holds nothing.
-  const pioneer = st.links.pioneerFor(id)?.objectId ?? null;
-  const blocker = snapPathBlockedBy(st.world, id, g.target, collisionSetup(st, pioneer === null ? null : [id, pioneer]));
+  const blocker = snapPathBlockedBy(st.world, id, g.target, collisionSetup(st, null));
   if (blocker !== null) {
     const wait = `goal: ${id} waits — ${blocker} is in its way`;
     if (st.lastVerdict !== wait) {
@@ -114,22 +106,10 @@ function startPull(st: SceneState, id: string, report: GoalReport, nowMs: number
     }
     return;
   }
-  // ⭐ The goal wins: a snap in flight is dropped, the alignment (and its seat) released — the piece keeps its pose.
-  st.seatSnaps.cancel(id);
-  st.rotationFollower.cancel(id);
-  if (pioneer !== null) releaseAlignmentOf(st, id);
   st.goalCapture.captured(id);
   st.goalPulls.start(id, from, g.target, nowMs);
   // ⭐⭐ (2026-10-14, *"Piece stays placed"*) the orbited piece captured: out of the orbit — the pull places it and it stays (a switch or a respawn brings a piece back)
   if (id === st.greenBox?.name) st.orbitPiecePlaced = true;
-  // ⭐⭐ `D139`: the drag that made the capture STOPS — a grip on the piece keeps the roll alone until its finger lifts.
-  for (const [pointerId, grip] of st.held) {
-    const on = st.idOf.get(grip.mesh) === id || st.rawPressedBody.get(pointerId) === id;
-    if (on && !grip.seatLocked) {
-      grip.seatLocked = true;
-      grip.seatSeq = Math.max(-1, ...st.router.all().map((p) => p.seq));
-    }
-  }
   st.lastVerdict = `goal: ${id} captured (${(g.positionM * 1000).toFixed(0)} mm, ${((g.angleRad * 180) / Math.PI).toFixed(1)}°)`;
   st.hudDirty = true;
 }

@@ -100,7 +100,7 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece. When
         // toggled, the piece shall be spawn as per boot"*
         tunable(st, "orbited piece (0 = green, 1 = turquoise)", "orbitPieceKind", 0, 1, 1),
-        // ⭐ the owner, 2026-10-05: the ONE tap time (every tap: the undo, the unalign, the align, the orbit tap) — Unity's 200 ms
+        // ⭐ the owner, 2026-10-05: the ONE tap time (every tap: the orbit tap, the quads, the resting face) — Unity's 200 ms
         tunable(st, "tap max duration (ms)", "tapMaxDuration", 100, 400, 10),
       ],
     },
@@ -108,12 +108,8 @@ export function installTuningMenu(st: SceneState): void {
       title: "CAMERA",
       // ⭐⭐ The owner, 2026-09-26: *"in CAMERA menu, create a subfolder CAMERA ORBIT"*. ⛔ Its sibling,
       // CAMERA APPROACH SWING AT CAPTURE, is deleted with the swing (`D120`).
-      // ⭐ `D113` (the owner, 2026-09-27: *"Put a slider for the band width"*): at the TOP of CAMERA,
-      // not inside a subsection — the strip that is always empty space, 0 = off.
-      // ⭐ `D114`: the width it opens to when NO empty space is left on the glass — 0 otherwise.
-      sliders: [
-        tunable(st, "edge band width when no empty space (mm, 0 = never)", "edgeBandMm", 0, 20, 1),
-      ],
+      // ⛔ (2026-11-02) the edge band's width (`D113`/`D114`) is deleted with the band (commit `d8134eb`).
+      sliders: [],
       // ⭐ prototype (green box), the owner 2026-10-02: *"there are too many rows directly under CAMERA menu. Create submenus
       // depending on what the slider tunes (green piece, camera offset, etc.)"* — one subsection per subject; no slider changed.
       subsections: [
@@ -228,8 +224,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),
             // ⭐ prototype (2026-10-12, *"Build with the 150ms rest"*)
             tunable(st, "zoom → roll: the second finger's rest before the first finger rolls (ms)", "holdSwitchRestMs", 0, 600, 10),
-            // ⭐ How long the double-tap reset takes to fly home. 0 snaps.
-            tunable(st, "reset time (ms)", "cameraResetMs", 0, 2000, 50),
             // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
             // per pixel — a pixel means something different on a phone and a tablet.
             tunable(st, "yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
@@ -336,19 +330,6 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
             tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1.5, 30, 0.5),
             tunable(st, "orbited piece goal margin (°)", "orbitGoalDeg", 0.5, 15, 0.5),
-            // ⭐⭐ 1.0 IS THE CORRECT VALUE, NOT A PREFERRED ONE — the object sits exactly
-            // under the finger at every camera distance. The slider exists so that claim
-            // can be DISPROVED by finger, and so the owner can judge whether direct
-            // manipulation actually feels best; it is not there because the number is
-            // unknown. ⚠ Every other gain on this project was guessed too slow; this is the
-            // first one that was computed. See input/translate.ts.
-            tunable(st, 
-              "screen-plane gain (1 = under finger)",
-              "gainTranslateScreen",
-              0.1,
-              3,
-              0.05,
-            ),
             // ⭐ 0 pins the object to the fingertip — the behaviour before inertia existed,
             // and the only setting that can be checked against the tracking factor.
             // ⚠ 1–20 ms in steps of 0.2, and 0.1–0.5 for the ratio: the owner's ranges after
@@ -375,25 +356,6 @@ export function installTuningMenu(st: SceneState): void {
             // whatever the two sliders above are set to, so this one has a landmark rather
             // than a range of equally arbitrary numbers.
             tunable(st, "phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
-            // ⭐ The sympathetic sway: how far the OTHER objects drift when this one sets
-            // off, and how lazily they spring back. ⛔ 0 mm disables it exactly.
-            // ⭐⭐ AMENDMENT A6 — DEPTH TRANSLATION. 1.0 moves the object as far INTO the
-            // scene as rule 6 moves it ACROSS, for the same finger travel: one gain, one
-            // computed tracking factor, two directions. ⛔ Not a metres-per-millimetre
-            // constant — rule 6 proved that cannot serve both ends of a 20x zoom clamp.
-            // ⛔⛔ THE DEFAULT IS 3.0, NOT THE COMPUTED 1.0 — set by a hand on 2026-09-15.
-            // Depth is visually foreshortened, so equal WORLD motion is not equal PERCEIVED
-            // motion, and the eye is what is being served. ⚠ The range was widened to 0.5–5
-            // in the same breath, which is itself a reading: the owner wanted room ABOVE the
-            // old ceiling of 3, so 3 may not be the end of the movement either.
-            tunable(st, 
-              "depth gain (1 = as far as a drag)",
-              "gainTranslateDepth",
-              0.5,
-              5,
-              0.05,
-            ),
-            tunable(st, "roll drag gain (deg/mm)", "gainRollDrag", 0.25, 12, 0.25),
             // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
             // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
             tunable(st, "sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
@@ -409,52 +371,7 @@ export function installTuningMenu(st: SceneState): void {
             {
               title: "ROTATION IN WORLD COORDINATES",
               sliders: [
-                // ⚠ §2bis's own gain, in radians per MILLIMETRE of finger travel, chosen on the
-                // device. `IN3` inherits it — the rotation is real, only its plumbing is not.
-                tunable(st, 
-                  "yaw/pitch gain (rad/mm)",
-                  "gainRotateFree",
-                  0.005,
-                  0.15,
-                  0.005,
-                ),
-                // ⭐ `D185`: past this angle out of the glass the maroon pitch turns like a wheel seen from the camera — the
-                // pressed side follows the finger up.
-                tunable(st, "pitch: wheel past (deg out of screen)", "pitchSideConeDeg", 0, 80, 5),
-                // ⭐⭐ 2sexte's twist about a constraint axis (`D34`). ⚠ Defaulted EQUAL to the free
-                // gain so one DOF does not feel like a different control from three — a guess, and
-                // the range is the same as the free gain's so a hand can compare them directly.
-                tunable(st, 
-                  "anchored twist gain (rad/mm)",
-                  "gainRotateConstrained",
-                  0.005,
-                  0.15,
-                  0.005,
-                ),
-                // ⭐⭐⭐ **THE ROTATION INCREMENT (trial, 2026-09-22)** — a turn ENDS on a multiple of
-                // this, slerped into place. ⛔ **`0` is the current build, no change.** ⚠ Only the END
-                // is quantised: the drag itself keeps every gain, deadband and smoothing it has now,
-                // because the earlier formulation that quantised the turn as it happened was rejected
-                // on the device for lagging the finger.
-                tunable(st, 
-                  "rotation increment (deg, 0=off)",
-                  "rotationIncrementDeg",
-                  0,
-                  45,
-                  5,
-                ),
-                // ⭐ The sympathetic swing: the rest of the scene turns as a block about this
-                // object's centre when it starts turning or turns the other way.
-                tunable(st, "sway of others (deg)", "rotateSwayDeg", 0, 8, 0.1),
                 tunable(st, "sway softness (ms)", "rotateSwayTauMs", 40, 600, 20),
-                tunable(st, "sway re-trigger turn (deg)", "rotateSwayTurnDeg", 15, 170, 5),
-                tunable(st, 
-                  "sway reference turn (deg/s)",
-                  "rotateSwayReferenceDegPerS",
-                  20,
-                  400,
-                  10,
-                ),
               ],
             },
           ],
@@ -465,83 +382,28 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ `D165` — the owner, 2026-09-29: *"provide a slider for that below highlight offset slider"*.
             tunable(st, "face highlight opacity (cyan / amber fills)", "faceHighlightAlpha", 0, 1, 0.05),
           ],
-          // ⭐⭐ **TWO FOLDERS, ONE PER FACE OF THE PAIR** — the owner, 2026-09-26.
+          // ⛔ (2026-11-02, *"remove the translation and the rotation of the parts"*) the PIONEERFACECURSOR and FOLLOWERFACE folders are deleted with
+          // the parts' alignment (commit `d8134eb`); the capture's margins stay — the goal capture reads them (`D183`).
           subsections: [
             {
-              title: "PIONEERFACECURSOR",
+              title: "GOAL CAPTURE",
               sliders: [
-                // ⭐⭐ **FREE FLOW MODE** — the owner, 2026-09-26: the player leaves the SCORE and builds
-                // freely, and moving the PioneerFaceCursor is its first freedom (`20_GAME_RULES/spec/SCORE.md`).
-                // ⚠ `0` keeps the ring drawn and hands every press on it back to the ordinary rules.
-                // ⛔ The config key is unchanged, so `?pioneerCursorDrag=1` still works.
-                tunable(st, 
-                  "Free Flow mode (PioneerFaceCursor drag on/off)",
-                  "pioneerCursorDrag",
-                  0,
-                  1,
-                  1,
-                ),
-                // ⭐⭐ The owner's 1–10 ring radii a TOUCH may press from the ring and still grab it.
-                // ⚠ Touch only: the mouse must click INSIDE the ring, whatever this says.
-                tunable(st, 
-                  "PioneerFaceCursor sensitivity (radii)",
-                  "pioneerCursorGrabRadii",
-                  1,
-                  10,
-                  0.5,
-                ),
-              ],
-            },
-            {
-              title: "FOLLOWERFACE",
-              sliders: [
-                // ⭐ prototype (green box): the HitFace's fuchsia contour, off by default (the owner, 2026-10-01).
-                tunable(st, "HitFace fuchsia contour (1 = shown, 0 = hidden)", "showHitFaceContour", 0, 1, 1),
-                // ⭐⭐ See the FollowerFace THROUGH its own body. ⛔ `0` is off and is the build before
-                // the flag; anything above draws an x-ray twin at that opacity.
-                tunable(st, 
-                  "FollowerFace x-ray opacity (0=off)",
-                  "followerFaceXrayAlpha",
-                  0,
-                  1,
-                  0.05,
-                ),
-              ],
-              subsections: [
-                {
-                  // ⭐⭐ THE OWNER ASKED FOR THIS SLIDER BY NAME (`D49`): *"I want the offset distance to be
-                  // manually adjustable by slider."* ⛔ The standing *do not inflate the tuning menu* rule
-                  // is set aside where a hand says it wants to tune something — the same exception §8 of the
-                  // spec grants `BreakThreshold`.
-                  // ⚠⚠ IT IS MILLIMETRES ON THE GLASS, NOT IN THE WORLD. The world gap it authorises grows
-                  // with the camera distance, so the same slider value means the same APPARENT clearance at
-                  // every zoom — which is what the owner asked for.
-                  title: "⭐ CAPTURE (D49)",
-                  sliders: [
-                    // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
-                    // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
-                    // ends visibly WRONG on the glass, because a slider whose every value looks plausible
-                    // teaches a hand nothing.
-                    tunable(st, "capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
-                    // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
-                    tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
-                    // ⭐ The UNSNAP's rapid move — the two numbers kept from the deleted eviction shake (`D107`).
-                    tunable(st, "unsnap window (ms)", "unsnapWindowMs", 200, 1200, 50),
-                    tunable(st, "unsnap leg (mm)", "unsnapLegMm", 3, 25, 1),
-                    // ⭐⭐ `D109` (the owner, 2026-09-27): *"Fuchsia cone is used for snap: rename it snap
-                    // cone angle and move it to snap slider"* — how far from anti-parallel the two faces
-                    // may be and still snap. ⚠ The owner asked for 0–45 in steps of 5 when it was the
-                    // fuchsia offer's cone.
-                    tunable(st, "snap cone angle (deg)", "snapConeDeg", 0, 45, 5),
-                    // ⚠ Blender's 5°. Below it the exact mapping is abandoned for the fixed-rate push; at 0
-                    // there is no fallback and a level camera sends the body a very long way.
-                    tunable(st, "axis tracking cone (deg)", "axisTrackingConeDeg", 0, 30, 1),
-                    // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
-                    // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
-                    // one pixel — so a width tunable would be a slider that does nothing, which is the
-                    // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
-                  ],
-                },
+                // ⚠ 1–40 mm: below ~2 mm two bodies must essentially touch before white appears, and
+                // above ~40 mm the whole scene captures at the boot zoom. ⛔ A range chosen to make both
+                // ends visibly WRONG on the glass, because a slider whose every value looks plausible
+                // teaches a hand nothing.
+                tunable(st, "capture offset (mm on glass)", "captureOffsetMm", 1, 40, 0.5),
+                // ⭐ The magnet's pull: how long the face centre takes to reach the cursor (`D100`).
+                tunable(st, "snap time (ms, 0 = at once)", "snapMs", 0, 400, 10),
+                // ⭐⭐ `D109` (the owner, 2026-09-27): *"Fuchsia cone is used for snap: rename it snap
+                // cone angle and move it to snap slider"* — how far from anti-parallel the two faces
+                // may be and still snap. ⚠ The owner asked for 0–45 in steps of 5 when it was the
+                // fuchsia offer's cone.
+                tunable(st, "snap cone angle (deg)", "snapConeDeg", 0, 45, 5),
+                // ⛔⛔ **THE `mesh contour width` SLIDER IS DELETED**, with the edge renderer it
+                // controlled. ⚠ The second white is a `CreateLines` polyline now, which WebGL pins at
+                // one pixel — so a width tunable would be a slider that does nothing, which is the
+                // shape `config_debt.test.ts` exists to refuse. ⭐ *Deleted, not disabled.*
               ],
             },
           ],

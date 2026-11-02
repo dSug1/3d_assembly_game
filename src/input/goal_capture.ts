@@ -13,6 +13,11 @@
  * ⛔ ENGINE-FREE. The margins and the flight's path check are the caller's; this holds the arming and the animation.
  */
 import { qSlerp, type Vec3 } from "../core/vec";
+import { mmToPx } from "../core/units";
+import { resolveMove, type CollisionSetup } from "../core/collision";
+import type { ObjectId, World } from "../core/object_model";
+import type { Placed } from "../core/mate_connector";
+import { trackingMetresPerPx } from "./translate";
 import type { Pose } from "../core/goal";
 
 /** One piece this frame: is it inside its margins, and did it move since the last frame? */
@@ -129,4 +134,60 @@ export class GoalPulls {
     }
     return out;
   }
+}
+
+/**
+ * ⛔ (2026-11-02) moved here from `input/highlight.ts`, deleted with the parts' translation, rotation and alignment (commit `d8134eb`).
+ *
+ * ⭐⭐⭐ **THE CAPTURE OFFSET IN WORLD METRES, FROM A DISTANCE ON THE GLASS** (`D49`, the owner:
+ * *"the offset distance shall depend on the camera position and focus … or more or less the
+ * same in pixels although I do not want to use pixel since this may vary depending on device
+ * screens"*).
+ *
+ * ⭐⭐ **THAT REQUEST HAS AN EXACT ANSWER ALREADY IN THIS CODEBASE.** `trackingMetresPerPx` is
+ * the world displacement that keeps an object under a moving finger — computed from the
+ * camera's field of view, its distance and the viewport height. ⛔ Composing it with `mmToPx`
+ * turns *millimetres of finger travel* into *metres of world*, which is precisely
+ * *"the same apparent size at every zoom, authored in millimetres and never in pixels"*:
+ *
+ * * **close camera ⇒ a smaller world offset**, far camera ⇒ larger, proportionally;
+ * * **device-independent**, because the viewport height and field of view are in the formula —
+ *   which is the half of the request raw pixels could not satisfy;
+ * * ⭐ **no new constant.** `referenceCameraDistance`'s ratio form was deliberately superseded
+ *   for rule 6 by this same computation (`translate.ts`), and the sway already scales this way
+ *   so it looks the same size at every zoom. Three rules, one factor.
+ *
+ * ⚠⚠ **THE DISTANCE IS THE CAMERA'S TO ITS FOCUS, NOT TO EACH BODY** — which is what the owner
+ * asked for (*"camera and focus"*) and is one number for the whole scene. ⛔ A per-body distance
+ * would make two bodies at different depths capture at different world gaps, so a pair could be
+ * *in range* measured from one and *out of range* measured from the other — a rule with two
+ * answers. ⭐ Stated because it is a modelling choice, not an approximation.
+ *
+ * ⭐ Its reader today is the goal capture (`D183`: the snap's margins).
+ * ⛔ Returns 0 for a degenerate viewport or camera, which reads as *nothing captures* — the
+ * safe direction, and the same convention `trackingMetresPerPx` already uses.
+ */
+export function captureOffsetM(
+  offsetMm: number,
+  cameraDistanceM: number,
+  fovRad: number,
+  viewportHeightPx: number,
+): number {
+  if (!(offsetMm > 0)) return 0;
+  return mmToPx(offsetMm) * trackingMetresPerPx(cameraDistanceM, fovRad, viewportHeightPx);
+}
+
+/**
+ * ⛔ (2026-11-02) moved here from `input/snap.ts`, deleted with the parts' translation, rotation and alignment (commit `d8134eb`).
+ *
+ * ⭐⭐⭐ `D182` — **A SNAP STARTS ONLY IF ITS FLIGHT IS CLEAR** (the owner, 2026-09-30: *"Build the fix"*, after the
+ * reproduction). Which body — or wall — would stop the follower's straight flight to its seat, or `null` when the path is
+ * free, judged by the one collision rule (`resolveMove`: along the path, the couple exempt through `setup`).
+ * ⛔ The cause it removes: a snap started from beside a zero-clearance slot flew into a neighbour, was CANCELLED, and the
+ * cancel HELD the couple off until it left the capture radius — so a piece slid in horizontally, sitting on its Pioneer,
+ * never snapped (measured on `Scene_1`'s Piece1/Piece22: 28 steps held; a lift re-armed it). ⭐ Now a blocked flight is
+ * never started, and nothing is held: the snap fires on the first frame its path is clear, from any direction.
+ */
+export function snapPathBlockedBy(world: World, followerId: ObjectId, seat: Placed, setup: CollisionSetup): ObjectId | null {
+  return resolveMove(world, followerId, seat, setup).blockedBy;
 }

@@ -12,8 +12,7 @@ import { boxShape } from "@core/collision_shape";
 import { boundsFromShapes, hullAtSpawn, type CollisionSetup } from "@core/collision";
 import { makeWorld, setWorldPlacement, type World } from "@core/object_model";
 import { IDENTITY, type Vec3 } from "@core/vec";
-import { snapPathBlockedBy } from "@input/snap";
-import { UnsnapHold } from "@input/unsnap";
+import { snapPathBlockedBy } from "@input/goal_capture";
 
 // ⭐ (2026-10-29) the painting's slots — without the two overhangs (every body here is an upright box)
 const SCENE_1 = { ...SCENE_1_ALL, bodies: SCENE_1_ALL.bodies.filter((b) => !SCENE_1_OVERHANG_IDS.includes(b.id)) };
@@ -58,40 +57,10 @@ describe("⭐⭐⭐ `D182` — a snap starts only if its flight to the seat is C
     expect(from([0, 0.04, 0])).toBeNull(); // the gravity approach
   });
 
-  it("⭐⭐ in the wiring, only an UNSNAP still holds a couple off — a cancelled flight no longer does", () => {
-    const src = readFileSync(new URL("../src/render/seat_wiring.ts", import.meta.url), "utf8");
-    expect(src.match(/snapArming\.holdOff\(/g)).toHaveLength(1); // the unsnap's (the undo's is in undo_wiring.ts)
+  it("⭐⭐ in the wiring, the goal capture's pull checks its flight (⛔ (2026-11-02) the parts' alignment, seats and undo deleted (commit `d8134eb`): the snap and its hold-off with them)", () => {
+    const src = readFileSync(new URL("../src/render/goal_capture_wiring.ts", import.meta.url), "utf8");
     expect(src).toContain("snapPathBlockedBy(");
-  });
-});
-
-describe("⭐⭐⭐ `D182` — the unsnap gesture holds the Pioneer still until a finger lifts", () => {
-  const down = new Set([1, 2, 3]);
-  const isDown = (id: number) => down.has(id);
-
-  it("⭐ nothing is held before two touches form an unsnap couple", () => {
-    expect(new UnsnapHold().holds(1, isDown)).toBe(false);
-  });
-
-  it("⭐⭐ once formed, BOTH touches drive nothing — and any other touch is untouched", () => {
-    const h = new UnsnapHold();
-    h.form(1, 2);
-    expect([h.holds(1, isDown), h.holds(2, isDown), h.holds(3, isDown)]).toEqual([true, true, false]);
-  });
-
-  it("⭐ the first lift ends it — for both fingers, for good", () => {
-    const h = new UnsnapHold();
-    h.form(1, 2);
-    const afterLift = (id: number) => id !== 2 && down.has(id);
-    expect(h.holds(1, afterLift)).toBe(false);
-    expect(h.holds(1, isDown)).toBe(false); // ⭐ not resumed if the id is seen down again
-  });
-
-  it("⭐⭐ in the wiring, BOTH touches are gated: the second's lift/spin and the first's translation or turn", () => {
-    const src = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8");
-    expect(src.match(/unsnapHolds\(st, e\.pointerId\)/g)).toHaveLength(2);
-    const seat = readFileSync(new URL("../src/render/seat_wiring.ts", import.meta.url), "utf8");
-    expect(seat).toContain("st.unsnapHold.form(first.id, second.id)");
+    expect(src).not.toMatch(/snapArming/);
   });
 });
 
@@ -108,7 +77,7 @@ describe("⭐⭐ `D182` — a released Follower cannot be pushed INTO its former
   });
 
   it("⭐⭐ in the wiring, no grace exempts a pair any more", () => {
-    for (const f of ["collision_wiring.ts", "alignment_wiring.ts", "render_loop.ts", "scene_state.ts", "scene.ts"]) {
+    for (const f of ["collision_wiring.ts", "render_loop.ts", "scene_state.ts", "scene.ts"]) {
       const src = readFileSync(new URL(`../src/render/${f}`, import.meta.url), "utf8");
       expect({ f, grace: /collisionGrace\b|graceAfterUnsnap\(|pruneCollisionGrace\(/.test(src.replace(/^\s*(\*|\/\/).*$/gm, "")) }).toEqual({ f, grace: false });
     }

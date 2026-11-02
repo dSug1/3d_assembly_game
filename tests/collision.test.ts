@@ -22,8 +22,20 @@ import {
 } from "@core/collision";
 import { boxShape, gapBetween, overlapAlong } from "@core/collision_shape";
 import { attach, makeWorld, worldPlacementOf, type SceneObject, type World } from "@core/object_model";
-import { surfaceGap } from "@core/proximity";
-import { IDENTITY, qAngle, qFromAxisAngle, qmul, type Quat, type Vec3 } from "@core/vec";
+import { IDENTITY, add, qAngle, qFromAxisAngle, qRotate, qmul, type Quat, type Vec3 } from "@core/vec";
+
+/** The gap between two bodies' surfaces (the model's poses) — ⛔ (2026-11-02) `core/proximity.ts`'s, deleted with the parts' capture (`d8134eb`). */
+function surfaceGap(world: World, a: string, b: string): number | null {
+  const pts = (id: string): Vec3[] | null => {
+    const o = world.objects.get(id);
+    const at = worldPlacementOf(world, id);
+    if (!o?.shape || o.shape.points.length === 0 || !at) return null;
+    return o.shape.points.map((p) => add(at.position, qRotate(at.orientation, p)));
+  };
+  const pa = pts(a);
+  const pb = pts(b);
+  return pa && pb ? gapBetween(pa, pb) : null;
+}
 
 const body = (
   id: string,

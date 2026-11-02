@@ -26,17 +26,14 @@ resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to t
 ⭐ 10-18 (`1.0.81-`): THE TOP ROLL → `DOUBLE_ORBIT_PROTOTYPE.md`.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **2171 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 1619 below: 10-02).
+⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION, ALIGNMENT, SNAP AND UNDO ARE DELETED** — only the orbited piece moves
+(orbit, approach, slide); the code before: **`d8134eb`**; ⏳ the parts get its properties later, `Scene_0` the orbit and the slide →
+[`2026-11-02_parts_translation_rotation_deleted.md`](../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md).
+✅ `npm run verify`: **1607 golden vectors, all passing** — MEASURED 2026-11-02 (the count's home; 2171 before the parts went; 1619 below: 10-02).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 
-⭐ The `D181`–`D196` line moved → [`history/2026-10-14_queue_spent_blocks.md`](history/2026-10-14_queue_spent_blocks.md).
-
-⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
-(played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
-*Level select*) as a bottom sheet; every screen now styled by a swappable UI THEME (`night`, `paper`, `?uiTheme=`) →
-[`LEVEL_END.md`](../20_GAME_RULES/spec/LEVEL_END.md). ✅✅ Closed by a device look (*"Tested, ok"*, `a796ac0`). ⭐ The owner closed the device look on
-everything since `D106` (2026-09-30) and kept the demo's portrait start as it is.
+⭐ The `D181`–`D196` line and `D180`'s block moved → [`history/2026-10-14_queue_spent_blocks.md`](history/2026-10-14_queue_spent_blocks.md).
 
 ⭐ The 2026-09-28 – `1.0.52-` lines (`D129`–`D148`) moved → [`history/2026-10-14_queue_spent_blocks.md`](history/2026-10-14_queue_spent_blocks.md).
 ⏸ **PAUSED for `Scene_1`** → [`SCENE_1.md`](../20_GAME_RULES/spec/SCENE_1.md). ⛔⛔⛔ **THE PLAYABILITY PROGRAM**: **`3D6`

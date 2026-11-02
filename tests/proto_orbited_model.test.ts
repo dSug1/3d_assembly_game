@@ -4,12 +4,12 @@
  * faces can be tracked"*). The orbit places them; the model follows (faces and resting face tracked); until their own collision is built
  * they are nobody's obstacle, their pose is no action, and a touch on them stays empty space.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { boundsFromShapes, hullAtSpawn, resolveMove, type CollisionSetup } from "../src/core/collision";
 import { boxShape } from "../src/core/collision_shape";
 import { faceWorld, makeWorld, restingFaceWorld, setLocalPlacement, type SceneObject } from "../src/core/object_model";
-import { worldsDiffer } from "../src/core/undo_history";
+import { worldsDiffer } from "../src/core/gesture";
 import { IDENTITY, type Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -83,9 +83,8 @@ describe("⭐⭐ prototype — the orbited pieces in the object model", () => {
   });
 
   it("⭐ wired: a touch or click on it stays EMPTY SPACE; the gizmo lines pass it; the demo leaves its pickability; the resting pass skips it", () => {
-    expect(code("render/empty_space_probe.ts")).toMatch(/if \(id === undefined \|\| st\.world\.objects\.get\(id\)\?\.orbited === true\) \{/);
-    expect(code("render/scene.ts")).toMatch(/return id === undefined \|\| st\.world\.objects\.get\(id\)\?\.orbited === true \? null :/);
-    expect(code("render/gizmo.ts")).toMatch(/id !== undefined && st\.world\.objects\.get\(id\)\?\.orbited !== true && m\.isPickable/);
+    // ⛔ (2026-11-02, `d8134eb`) the empty-space probe, the Space click and the part gizmo deleted: every press is the orbit's
+    for (const f of ["render/empty_space_probe.ts", "render/gizmo.ts"]) expect(existsSync(new URL(`../src/${f}`, import.meta.url))).toBe(false);
     expect(code("render/demo_wiring.ts").match(/if \(st\.world\.objects\.get\(id\)\?\.orbited !== true\) mesh\.isPickable = (?:true|false)/g)?.length).toBe(2);
     const rf = code("render/resting_face_wiring.ts");
     expect(rf).toMatch(/if \(o\.orbited === true\) continue;/);

@@ -15,7 +15,7 @@ import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { type PosePort } from "../input";
-import { type Quat, type Vec3 } from "../core/vec";
+import { type Quat } from "../core/vec";
 import { setWorldPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { type Placed } from "../core/mate_connector";
 import { taperTop } from "../core/frustum";
@@ -417,15 +417,4 @@ return ({
 /** The model's orientation for a held object. ⚠ Never the mesh's — that carries sway. */
 export function modelOrientation(st: SceneState, mesh: AbstractMesh) : Quat {
 return requirePose(st, mesh).orientation;
-}
-
-export function setModelOrientation(st: SceneState, mesh: AbstractMesh, q: Quat, collide = true) : void {
-  setModelPose(st, mesh, {
-    position: requirePose(st, mesh).position,
-    orientation: q,
-  }, collide);
-}
-
-export function asVec3(v: Vector3) : Vec3 {
-return [v.x, v.y, v.z];
 }

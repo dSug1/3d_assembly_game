@@ -1,5 +1,6 @@
 /**
- * ⭐⭐⭐ **THE MOUSE ADAPTER — the only file that knows a mouse exists.**
+ * ⭐⭐⭐ **THE MOUSE ADAPTER — the only file that knows a mouse exists** (the left button, ALT / CTRL, the wheel; ⛔ 2026-11-02 the parts'
+ * Space, Shift and right-button inputs deleted, commit `d8134eb`).
  *
  * ⛔⛔⛔ **IT NEVER TOUCHES A DOM POINTER EVENT — NOT TO STOP ONE, NOT TO CREATE ONE.** The build
  * this replaces did both, and each was a round on the glass: intercepting the real events froze
@@ -28,31 +29,13 @@
  * This file carries no numbers of its own so that line stays visible.
  */
 import type { Scene } from "@babylonjs/core/scene";
-import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import {
-  PointerEventTypes,
-  PointerInfo,
-} from "@babylonjs/core/Events/pointerEvents";
-import {
-  MouseSecondTouch,
-  MOUSE_SECOND_ID,
-  orbitModifiers,
-  type MouseAction,
-  type MouseInput,
-} from "../input/mouse_second_touch";
+import { PointerEventTypes, PointerInfo } from "@babylonjs/core/Events/pointerEvents";
+import { MouseSecondTouch, MOUSE_SECOND_ID, type MouseAction, type MouseInput } from "../input/mouse_second_touch";
 import { wheelNotches } from "../input/mouse_wheel_zoom";
 
 export interface MouseSecondTouchHandle {
   /** ⚠ Diagnostics: real mouse events seen, synthetic actions delivered, the last one. */
   stats(): { seen: number; sent: number; last: string };
-  /**
-   * ⭐ Is Shift held NOW? — read off every mouse event and every Shift key press/release, so a
-   * Shift let go on a still mouse is seen at once. ⚠ A rule asks this, not the Shift touchpoint's
-   * presence: that touchpoint outlives Shift until the left button lifts (`aligned_axes.ts`).
-   */
-  shiftHeld(): boolean;
-  /** ⭐ `D162`: is the second touch a LATCHED HitFace — its click already released? */
-  secondLatched(): boolean;
 }
 
 export function attachMouseSecondTouch(
@@ -63,197 +46,75 @@ export function attachMouseSecondTouch(
    * `applyCamera()`; this file only translates the wheel into notches — `input/mouse_wheel_zoom.ts`.
    */
   onWheelNotches?: (notches: number) => void,
-  /**
-   * ⭐ `D154`: the body under a client point — a pick, read only at a press. `null` for empty space.
-   * ⛔ The scene owns the ids; this file never learns what a body is.
-   */
-  bodyAt?: (clientX: number, clientY: number) => { id: string; frozen: boolean } | null,
-  /**
-   * ⭐ `D155`: the body the mouse's pointer holds, for a Space freeze — its id, whether it is frozen, a
-   * client point on it, and its mesh. ⛔ Asking also hands its pressed face to the scene, so the second
-   * touch that takes over inherits it. `null` when the pointer holds no body.
-   */
-  freezeHeld?: (pointerId: number) => { id: string; frozen: boolean; x: number; y: number; mesh: AbstractMesh } | null,
-  /**
-   * ⭐ `D159`: a freeze IS happening — the scene hands the held face over and carries the gesture's count
-   * across the drag's release. ⛔ Called only when the model emitted a freeze, never merely because Space
-   * went down: a carry left set with no freeze would stop every later gesture from landing.
-   */
-  beginFreeze?: (pointerId: number) => void,
-  /** ⭐ `D167`: a Shift tap while a part is pressed — the scene decides whether the mode toggles. */
-  onShiftTap?: () => void,
-  /** ⭐ `D167`: the longest Shift press that is still a tap — the scene's `tapMaxDuration`. */
-  tapMaxMs = 250,
-  /** ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) does the scene orbit a piece — ALT / CTRL then the HELD SECOND TOUCH, the right button nothing? */
+  /** ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) does the scene orbit a piece — ALT / CTRL then the HELD SECOND TOUCH? */
   orbitSecond?: () => boolean,
 ): MouseSecondTouchHandle {
-  const model = new MouseSecondTouch(tapMaxMs);
+  const model = new MouseSecondTouch();
   let seen = 0;
   let sent = 0;
   let last = "—";
-  let shift = false;
-  /** ⭐ `D154`: Space, from the keyboard — a pointer event does not carry it. */
-  let space = false;
-  // ⭐ The mouse's own pointer id, read off every real event — a `REAL` action re-issues THAT
-  // pointer at its own position, so it must carry the same id the scene latched a role for.
-  let realId = 1;
-  /** ⭐ `D155`: the mesh an inheriting second touch must press — its pick is restricted to it. */
-  let inheritMesh: AbstractMesh | null = null;
 
   /** Deliver one synthetic action straight to the scene's handler. */
   const deliver = (a: MouseAction): void => {
-    const type =
-      a.kind === "DOWN"
-        ? PointerEventTypes.POINTERDOWN
-        : a.kind === "MOVE"
-          ? PointerEventTypes.POINTERMOVE
-          : PointerEventTypes.POINTERUP;
-    const evt = new PointerEvent(
-      a.kind === "DOWN" ? "pointerdown" : a.kind === "MOVE" ? "pointermove" : "pointerup",
-      {
-        pointerId: a.target === "SECOND" ? MOUSE_SECOND_ID : realId,
-        // ⭐ #2 is `touch`; a re-issued real pointer stays `mouse`. ⚠ Neither passes through the
-        // pre-observer — `notifyObservers` goes straight to the scene's handler.
-        pointerType: a.target === "SECOND" ? "touch" : "mouse",
-        clientX: a.x,
-        clientY: a.y,
-        buttons: a.kind === "UP" ? 0 : 1,
-      },
-    );
-    // ⛔ Canvas-relative for `scene.pick`, which works in the engine's coordinates while the event
-    // carries client ones. ⚠ The press path reads `info.pickInfo` to resolve the face.
+    const type = a.kind === "DOWN" ? PointerEventTypes.POINTERDOWN : a.kind === "MOVE" ? PointerEventTypes.POINTERMOVE : PointerEventTypes.POINTERUP;
+    const evt = new PointerEvent(a.kind === "DOWN" ? "pointerdown" : a.kind === "MOVE" ? "pointermove" : "pointerup", {
+      pointerId: MOUSE_SECOND_ID,
+      // ⭐ #2 is `touch`. ⚠ It does not pass through the pre-observer — `notifyObservers` goes straight to the scene's handler.
+      pointerType: "touch",
+      clientX: a.x,
+      clientY: a.y,
+      buttons: a.kind === "UP" ? 0 : 1,
+    });
+    // ⛔ Canvas-relative for `scene.pick`, which works in the engine's coordinates while the event carries client ones: its press is a raycast.
     const rect = canvas.getBoundingClientRect();
-    // ⛔ An anchor-only action is delivered with NO pick, so the scene routes it `OUTSIDE` — a
-    // Shift-made second touch must never become the holder of whatever lies under the cursor.
-    const pick =
-      a.anchorOnly === true
-        ? null
-        : a.inherit === true && inheritMesh !== null
-          ? scene.pick(a.x - rect.left, a.y - rect.top, (m) => m === inheritMesh)
-          : scene.pick(a.x - rect.left, a.y - rect.top);
-    scene.onPointerObservable.notifyObservers(new PointerInfo(type, evt, pick), type);
+    scene.onPointerObservable.notifyObservers(new PointerInfo(type, evt, scene.pick(a.x - rect.left, a.y - rect.top)), type);
     sent++;
     last = `${a.target}.${a.kind}@${a.x.toFixed(0)},${a.y.toFixed(0)}`;
   };
 
   const apply = (input: MouseInput, pi?: { skipOnPointerObservable: boolean }): void => {
     const v = model.step(input);
-    // ⭐ `D159`: the scene learns of a freeze BEFORE the drag's release is delivered.
-    if (v.emit.some((a) => a.inherit === true)) beginFreeze?.(realId);
-    // ⭐ `D167`: a Shift tap — the scene toggles the mode if a free part is held.
-    if (v.toggleMode === true) onShiftTap?.();
-    // ⭐ Delivered FIRST: this runs before Babylon processes the real event, so a lift the model
-    // owes reaches the scene before the event that revealed it.
+    // ⭐ Delivered FIRST: this runs before Babylon processes the real event.
     for (const a of v.emit) deliver(a);
     if (v.skip && pi !== undefined) pi.skipOnPointerObservable = true;
   };
 
+  /** ⭐ (2026-10-11) is the key-made second touch down (ALT or CTRL held, in the orbit)? */
+  let modDown = false;
   scene.onPrePointerObservable.add((pi) => {
     const e = pi.event as PointerEvent;
     if (e.pointerType !== "mouse") return;
-    const type =
-      pi.type === PointerEventTypes.POINTERDOWN
-        ? "DOWN"
-        : pi.type === PointerEventTypes.POINTERUP
-          ? "UP"
-          : pi.type === PointerEventTypes.POINTERMOVE
-            ? "MOVE"
-            : null;
+    const type = pi.type === PointerEventTypes.POINTERDOWN ? "DOWN" : pi.type === PointerEventTypes.POINTERUP ? "UP" : pi.type === PointerEventTypes.POINTERMOVE ? "MOVE" : null;
     if (type === null) return;
     seen++;
-    realId = e.pointerId;
-    shift = e.shiftKey;
     if (modDown && !e.altKey && !e.ctrlKey) modDown = false; // ⭐ (2026-10-11) the model lifts it (`mod: false`)
-    // ⭐⭐ (2026-10-11, *"switch Space (and probably Shift + drag) off in the orbit"*) — `orbitModifiers`
-    const keys = orbitModifiers(orbitSecond !== undefined && orbitSecond(), e.shiftKey, space);
-    apply(
-      {
-        type,
-        button: e.button,
-        buttons: e.buttons,
-        shift: keys.shift,
-        x: e.clientX,
-        y: e.clientY,
-        space: keys.space,
-        t: performance.now(),
-        mod: e.altKey || e.ctrlKey,
-        // ⭐ `D159`: on EVERY press — a plain click completes a latched HitFace's action too.
-        ...(type === "DOWN" && bodyAt !== undefined ? { onBody: bodyAt(e.clientX, e.clientY) } : {}),
-        // ⭐⭐ (2026-10-11) a RIGHT press: the scene says whether it orbits a piece — the right button then does nothing
-        ...(type === "DOWN" && e.button === 2 && orbitSecond !== undefined ? { orbitSecond: orbitSecond() } : {}),
-      },
-      pi,
-    );
+    apply({ type, button: e.button, buttons: e.buttons, x: e.clientX, y: e.clientY, mod: e.altKey || e.ctrlKey }, pi);
   });
 
-  // ⭐ The two non-pointer DOM listeners this needs: Esc and a lost window lift #2, and the OS
-  // context menu must not open on a button that is a touchpoint — anywhere on the page, since the
-  // HUD sits over the canvas and a menu opened there swallows the click that dismisses it.
-  const cancel = () => {
-    shift = false;
-    space = false;
-    apply({ type: "CANCEL", button: -1, buttons: 0, shift: false, x: 0, y: 0 });
-  };
-  /** ⭐ (2026-10-11) is the key-made second touch down (ALT or CTRL held, in the orbit)? */
-  let modDown = false;
+  // ⭐ The non-pointer DOM listeners this needs: the keys, Esc, and the OS context menu must not open on a button (anywhere on the page, since the
+  // HUD sits over the canvas and a menu opened there swallows the click that dismisses it).
   const modKey = (k: string) => k === "Alt" || k === "Control";
   const onKey = (e: KeyboardEvent) => {
     // ⭐⭐ (2026-10-11, the owner: *"build with ALT and CTRL"*) ALT or CTRL — the orbit's HELD SECOND TOUCH (either: Option on a Mac, where
     // CTRL + click is the system's right click; CTRL on Linux, where ALT + drag moves the window)
     if (modKey(e.key) && !e.repeat && !modDown && orbitSecond !== undefined && orbitSecond()) {
       modDown = true;
-      apply({ type: "MOD_DOWN", button: -1, buttons: 0, shift, x: 0, y: 0, t: performance.now() });
+      apply({ type: "MOD_DOWN", button: -1, buttons: 0, x: 0, y: 0 });
     }
-    // ⭐⭐ `D167`: Alt and F10 must not hand the keyboard to the BROWSER's menu (Chrome, Edge and Firefox on Windows
-    // focus it on Alt's release) — the page would lose focus mid-gesture. ⚠ Safari's Option key has no such role.
+    // ⭐⭐ `D167`: Alt and F10 must not hand the keyboard to the BROWSER's menu (Chrome, Edge and Firefox on Windows focus it on Alt's release)
     if (e.key === "Alt" || e.key === "F10") e.preventDefault();
-    if (e.key === "Shift") {
-      shift = true;
-      // ⭐ `D167`: a fresh press (not the key's repeat) may begin a Shift TAP.
-      if (!e.repeat) apply({ type: "SHIFT_DOWN", button: -1, buttons: 0, shift: true, x: 0, y: 0, t: performance.now() });
-    }
-    if (e.key === "Escape") cancel();
-    // ⭐ `D154`: Space is a modifier here — ⛔ and must not scroll the page or press a focused button.
-    if (e.code === "Space") {
-      space = true;
-      e.preventDefault();
-      // ⭐⭐ `D155`: a FRESH press (not the key's auto-repeat) freezes a left hold on a body into the
-      // HitFace, or only re-arms Space after an alignment.
-      // ⭐⭐ (2026-10-11) off in the orbit (`orbitModifiers`): no freeze, no HitFace — it only keeps the page from scrolling
-      if (!e.repeat && orbitModifiers(orbitSecond !== undefined && orbitSecond(), false, true).space) {
-        const held = freezeHeld?.(realId) ?? null;
-        inheritMesh = held?.mesh ?? null;
-        apply({
-          type: "SPACE",
-          button: -1,
-          buttons: 0,
-          shift,
-          space: true,
-          x: held?.x ?? 0,
-          y: held?.y ?? 0,
-          onBody: held === null ? null : { id: held.id, frozen: held.frozen },
-        });
-        inheritMesh = null;
-      }
-    }
+    if (e.key === "Escape") apply({ type: "CANCEL", button: -1, buttons: 0, x: 0, y: 0 });
   };
-  // ⭐ Shift's release must be seen WITHOUT waiting for the mouse to move.
   const onKeyUp = (e: KeyboardEvent) => {
     if (e.key === "Alt" || e.key === "F10") e.preventDefault(); // ⭐ `D167`: the menu activates on the RELEASE
     // ⭐ (2026-10-11) the key-made second touch lifts when NEITHER key is held any more
     if (modKey(e.key) && modDown && !e.altKey && !e.ctrlKey) {
       modDown = false;
-      apply({ type: "MOD_UP", button: -1, buttons: 0, shift, x: 0, y: 0, t: performance.now() });
+      apply({ type: "MOD_UP", button: -1, buttons: 0, x: 0, y: 0 });
     }
-    if (e.key === "Shift") {
-      shift = false;
-      apply({ type: "SHIFT_UP", button: -1, buttons: 0, shift: false, x: 0, y: 0, t: performance.now() });
-    }
-    if (e.code === "Space") space = false;
   };
   const onMenu = (e: Event) => e.preventDefault();
-  // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⚠ A `wheel` event, not a pointer event, so the
-  // rule above is untouched. ⛔ `passive: false` and `preventDefault`, or the page scrolls instead.
+  // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⛔ `passive: false` and `preventDefault`, or the page scrolls instead.
   const onWheel = (e: WheelEvent) => {
     if (onWheelNotches === undefined) return;
     e.preventDefault();
@@ -263,18 +124,12 @@ export function attachMouseSecondTouch(
   canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);
-  // ⭐⭐ `D167` (the owner: *"disable the page loss of focus"*): no page can stop the window losing focus (Alt+Tab,
-  // another window, a notification) — but losing it no longer DOES anything in the game. ⛔ It used to run Esc's
-  // cancel, lifting a latched HitFace and the Shift touch. Only the held keys are forgotten: their releases will
-  // never arrive, and a Shift or Space believed held for ever would be the worse state.
+  // ⭐⭐ `D167`: a lost window changes nothing in the game — only a held key is forgotten (its release will never arrive): the key-made second touch
+  // lifts now (the way out, as a release)
   const lostFocus = () => {
-    shift = false;
-    space = false;
-    // ⭐ (2026-10-11) a key release that will never arrive: the key-made second touch lifts now (the way out, as a release)
-    if (modDown) {
-      modDown = false;
-      apply({ type: "MOD_UP", button: -1, buttons: 0, shift: false, x: 0, y: 0, t: performance.now() });
-    }
+    if (!modDown) return;
+    modDown = false;
+    apply({ type: "MOD_UP", button: -1, buttons: 0, x: 0, y: 0 });
   };
   window.addEventListener("blur", lostFocus);
   window.addEventListener("contextmenu", onMenu);
@@ -284,8 +139,7 @@ export function attachMouseSecondTouch(
     window.removeEventListener("blur", lostFocus);
     window.removeEventListener("contextmenu", onMenu);
     canvas.removeEventListener("wheel", onWheel);
-    cancel();
   });
 
-  return { stats: () => ({ seen, sent, last }), shiftHeld: () => shift, secondLatched: () => model.isSecondLatched };
+  return { stats: () => ({ seen, sent, last }) };
 }

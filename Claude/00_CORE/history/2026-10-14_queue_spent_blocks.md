@@ -15,3 +15,10 @@ holds; no Pioneer sway → `ALIGNMENT_RULES.md` §24. **`D183`** (`1.0.57-`) the
 wheel from the press side → §26. **`D186`–`D188`** HUD button, live episodes, score bar → `LEVEL_END` §6. **`D189`** the goal
 count/pop-up move when an action ends → §5bis. **`D190`** only moved pieces re-judged → §5ter **`D191`–`D194`** demo heaps → `DEMO_SCENE`. **`D195`** no depth ceiling with a play volume → `COLLISION`. **`D196`** floor from below: contour → §16. ⛔ `D182`–`D196` unjudged. Next: `3D2`.
 
+## Moved 2026-11-02 — `D180`'s block (the level end)
+
+⭐⭐⭐ **2026-09-30, `1.0.56-`: `D180` — THE LEVEL END** (`GM1`'s last item): complete = the goal met AND the scene at rest
+(played, or a demo done); the clock and the count stop; a results card (moves · time · pieces; *Next level* · *Retry* ·
+*Level select*) as a bottom sheet; every screen now styled by a swappable UI THEME (`night`, `paper`, `?uiTheme=`) →
+[`LEVEL_END.md`](../../20_GAME_RULES/spec/LEVEL_END.md). ✅✅ Closed by a device look (*"Tested, ok"*, `a796ac0`). ⭐ The owner closed the device look on
+everything since `D106` (2026-09-30) and kept the demo's portrait start as it is.

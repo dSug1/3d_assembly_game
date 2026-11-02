@@ -109,8 +109,8 @@ describe("⭐⭐ the hover view — the camera along the face's normal, at the b
 describe("⭐ wired", () => {
   it("⭐ a drag that pressed ON the piece hovers, else orbits; the release ends it; the orbit's travel takes the camera out", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("if (holdRole === null && !inBand) hoverPressNote(st, e.pointerId, s);");
-    expect(p).toContain("if (!hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
+    expect(p).toContain("if (holdRole === null) hoverPressNote(st, e.pointerId, s);"); // ⛔ (2026-11-02) the edge band deleted (`d8134eb`)
+    expect(p).toContain("else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
     expect(p).toContain("hoverRelease(st, e.pointerId);");
     expect(p).toContain("hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));");
   });
@@ -180,7 +180,7 @@ describe("⭐⭐⭐ the orbited pieces' GOALS and their capture (2026-10-14: *\"
     expect(g).not.toContain("st.grabbed.add(st.greenBox.name)");
     expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);");
     expect(g).toContain("if (id === st.greenBox?.name) st.orbitPiecePlaced = true;");
-    for (const f of ["render/goal_dissolve_wiring.ts", "render/level_end_wiring.ts"]) expect(code(f)).toContain("const final = liveFinal(st);");
+    expect(code("render/level_end_wiring.ts")).toContain("const final = liveFinal(st);"); // ⛔ (2026-11-02) the dissolve deleted (`d8134eb`)
     const w = code("render/green_box_wiring.ts");
     expect(w).toContain("if (!st.orbitPiecePlaced) box.position.set(pp[0], pp[1], pp[2]);");
     expect(w).toContain("st.orbitPiecePlaced = false; // ⭐ (2026-10-14) a switch or a respawn brings a piece back to the orbit");
@@ -1210,9 +1210,9 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(h).toContain("st.slideRefused = slideRefusedAfter(r, r === \"wait\" ? now - st.slideWaitSince : 0);");
     expect(h).toContain("if (slideModeOn(st) && slideHoldsOrbit(st.hoverReady !== null, st.slideArmed, st.orbitPiecePlaced, st.hover !== null, st.slideRefused, st.orbitShift)) {");
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("if (st.router.objects().length === 1 && st.router.outside().length === 0 && hoverDragStep(st, e.pointerId, s, grip.prev)) {");
-    // before the locked part's orbit and the gate that returns
-    expect(p.indexOf("hoverDragStep(st, e.pointerId, s, grip.prev)")).toBeLessThan(p.indexOf("if (lockedInGoal && st.router.objects().length === 1"));
+    // ⛔ (2026-11-02, `d8134eb`) a press on a part is OUTSIDE like any other — one path, the slide before the orbit
+    expect(p).toContain("else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
+    expect(p).not.toContain("lockedInGoal");
   });
   it('⛔⛔ THE APPROACH IS TWO FINGERS: either one lifting ends it (*"i release the second finger while the first finger stays pressed, and with the first finger dy I can then drive the piece away"*) — the finger left slides', () => {
     const h = code("render/hold_wiring.ts");

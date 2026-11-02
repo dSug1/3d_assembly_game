@@ -51,11 +51,8 @@ export function collisionSetup(
     exempt: (a, b) => {
       if (alsoExempt !== null && pairKey(a, b) === pairKey(alsoExempt[0], alsoExempt[1])) return true;
       // ⭐ (2026-10-13, *"Build case 3"*) the orbited piece SHOWN is an obstacle; the other one, hidden, never
-      if (hiddenOrbited(st, a) || hiddenOrbited(st, b)) return true;
-      // ⭐ SNAPPING: the couple is MEANT to meet at gap 0 (`COLLISION.md` §5).
-      const snapping = (f: ObjectId, p: ObjectId) =>
-        st.seatSnaps.has(f) && st.links.pioneerFor(f)?.objectId === p;
-      return snapping(a, b) || snapping(b, a);
+      // ⛔ (2026-11-02) a snapping couple's exemption is deleted with the parts' snap (commit `d8134eb`)
+      return hiddenOrbited(st, a) || hiddenOrbited(st, b);
     },
   };
 }

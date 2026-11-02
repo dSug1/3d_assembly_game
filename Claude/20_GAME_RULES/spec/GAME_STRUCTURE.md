@@ -19,7 +19,7 @@ are `GM6`–`GM8` there, and this file is their dossier.
 |---|---|---|
 | **the flow** — `INTRO → MENU → WORLDS → LEVELS → PLAY`, `back()`, the menu's *Free Flow* | `core/game_structure.ts` `GameFlow` | ✅ built, 5 vectors; refuses unknown ids |
 | **the content model** — `GameContent › WorldSpec › LevelSpec › SceneDescriptor › BodySpec` | `core/game_structure.ts` | ✅ built |
-| **`Scene_0`** — the workbench (`D93`), as DATA: four `BodySpec`s replacing four `make(...)` calls | `content/scene_0.ts` | ✅ built, vectored against the boot's facts |
+| **`Scene_0`** — the workbench (`D93`), as DATA: four `BodySpec`s replacing four `make(...)` calls | `content/scene_0.ts` | ✅ built, vectored against the boot's facts · ⏳ **TO BE UPDATED** with the orbit and the slide: its parts were moved by the translation / rotation / alignment, deleted 2026-11-02 (`d8134eb`; the owner: *"leave as it is"* for now) |
 | **the content** — `World_0` › `Level_0` › `Scene_0` | `content/worlds.ts` | ✅ built — ⛔ **a placeholder catalogue** · ⭐ `D144`: the ONE scene list — the slider's index is derived from it (§4) |
 | **the shell** — the screens as a DOM overlay; PLAY starts the scene once | `render/screens.ts` | ✅ built — ⛔ **no art, no settings, no back from PLAY** · ⭐ `D144`: PLAY now LOADS the level's URL, and the ⏸ pause menu is the way back (§4) |
 | **the JSON seam** — `parseSceneDescriptor` (every bad field NAMED) / `serializeSceneDescriptor` | `core/game_structure.ts` | ✅ built, round-trip vectored |

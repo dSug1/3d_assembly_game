@@ -159,12 +159,11 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     const cube = topoOf(CreateBox("c2", { size: 2 }, scene));
     const obj = (id: string, frozen = false) => ({ id, local: { position: [0, 0, 0] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], constraints: [], frozen });
     const ids = ["A", "B", "C", "floor"];
-    const seated = new Set(["B"]); // B seated on a Pioneer
-    const placed = new Set(["C"]); // C placed in its goal
+    // ⛔ (2026-11-02) a part seated on a Pioneer is gone with the parts' snap (`d8134eb`): seated = placed in its goal
+    const placed = new Set(["B", "C"]); // B and C placed in their goals
     let never = true;
     const st = {
       world: { objects: new Map(ids.map((id) => [id, obj(id, id === "floor")])) },
-      links: { isSeated: (id: string) => seated.has(id) },
       goalCommit: { has: (id: string) => placed.has(id), get never() { return never; } },
       sceneSpec: { final: {} },
       meshOf: new Map(ids.map((id) => [id, {}])),
@@ -194,7 +193,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     }
     restingFaceFrame(st as never);
     expect(st.restingFaces.size).toBe(4); // nothing changed: nothing asked again
-    seated.delete("B"); // B unseated (an unsnap, an unalign, an undo — whichever)
+    placed.delete("B"); // B leaves its goal
     restingFaceFrame(st as never);
     expect(st.restingFaces.get("B").why).toBe("UNSEATED");
     expect((st.world.objects.get("B") as { restingFace?: RestingFace }).restingFace?.why).toBe("UNSEATED");

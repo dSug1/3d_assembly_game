@@ -11,29 +11,28 @@
  * recording the result as a measurement.
  */
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
+import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import { parseConfigOverrides } from "../src/input/config_override";
 import { MotionTracker } from "../src/input/motion";
 
 describe("URL tunable overrides", () => {
   it("applies a numeric override and reports it", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=45");
-    expect(r.config.gainRotateFree).toBe(45);
-    expect(r.applied).toEqual(["gainRotateFree=45"]);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=45");
+    expect(r.config.pieceOrbitReturnMm).toBe(45);
+    expect(r.applied).toEqual(["pieceOrbitReturnMm=45"]);
     expect(r.rejected).toEqual([]);
   });
 
   it("applies several, and leaves everything else alone", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "gainRotateFree=45&gainRollDrag=0");
-    expect(r.config.gainRotateFree).toBe(45);
-    expect(r.config.gainRollDrag).toBe(0);
-    expect(r.config.gainTranslateScreen).toBe(DEFAULT_CONFIG.gainTranslateScreen);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "pieceOrbitReturnMm=45&pieceOrbitEnterMm=0");
+    expect(r.config.pieceOrbitReturnMm).toBe(45);
+    expect(r.config.pieceOrbitEnterMm).toBe(0);
+    expect(r.config.orbitShellOffsetMm).toBe(DEFAULT_CONFIG.orbitShellOffsetMm);
   });
 
   it("⭐ ZERO is a legitimate value, not an absent one", () => {
-    // ⛔ `gainRollDrag=0` is exactly the setting the 1€ paper's procedure starts
-    // from. A parser that treated 0 as missing would make the recipe untestable.
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?gainRollDrag=0").config.gainRollDrag).toBe(0);
+    // ⛔ `pieceOrbitEnterMm=0` is a real setting (the way in at once). A parser that treated 0 as missing would make it unreachable.
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitEnterMm=0").config.pieceOrbitEnterMm).toBe(0);
   });
 
   it("⛔ REFUSES an unknown key, loudly", () => {
@@ -42,21 +41,15 @@ describe("URL tunable overrides", () => {
     expect(r.rejected[0]).toMatch(/rollAngel/);
   });
 
-  it("⛔ REFUSES a non-numeric tunable rather than mangling it", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?axisMappingMode=direct");
-    expect(r.rejected.length).toBe(1);
-    expect(r.config.axisMappingMode).toBe(DEFAULT_CONFIG.axisMappingMode);
-  });
-
   it("⛔ REFUSES an empty value — it is a typo, not a request for zero", () => {
     // `Number("")` is 0, which would silently set a tunable to zero.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=");
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=");
     expect(r.applied).toEqual([]);
-    expect(r.config.gainRotateFree).toBe(DEFAULT_CONFIG.gainRotateFree);
+    expect(r.config.pieceOrbitReturnMm).toBe(DEFAULT_CONFIG.pieceOrbitReturnMm);
   });
 
   it("⛔ REFUSES a non-number", () => {
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=fast").applied).toEqual([]);
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=fast").applied).toEqual([]);
   });
 
   it("ignores the cache-busting parameters this URL routinely carries", () => {
@@ -134,10 +127,10 @@ describe("URL tunable overrides", () => {
   it("⛔⛔ ONE bad key does not cost the GOOD ones in the same URL", () => {
     // ⚠ The device loop is A/B by URL: losing a whole query because one value was refused
     // would mean a session testing a set of numbers that was never in force.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?gainRotateFree=45&motionDeadbandMm=0.5");
-    expect(r.config.gainRotateFree).toBe(45);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=45&motionDeadbandMm=0.5");
+    expect(r.config.pieceOrbitReturnMm).toBe(45);
     expect(r.config.motionDeadbandMm).toBe(DEFAULT_CONFIG.motionDeadbandMm);
-    expect(r.applied).toEqual(["gainRotateFree=45"]);
+    expect(r.applied).toEqual(["pieceOrbitReturnMm=45"]);
     expect(r.rejected.length).toBe(1);
   });
 });
@@ -174,37 +167,4 @@ describe("⛔⛔ durations and noise cannot be negative or zero", () => {
       expect(() => new MotionTracker(r.config)).not.toThrow();
     });
   }
-});
-
-describe("⭐⭐ the FollowerFace x-ray — a flag and its number in ONE control", () => {
-  // ⛔ The owner, 2026-09-23: *"Add a flag to see the followerface through the object even if it
-  // is occluded."* ⚠ `0` is the OFF position and the build before the flag, so the range check is
-  // what keeps *off* reachable and *broken* unreachable.
-  it("accepts the whole range, including the OFF end", () => {
-    for (const v of [0, 0.01, 0.45, 1]) {
-      expect(() =>
-        validateGestureConfig({ ...DEFAULT_CONFIG, followerFaceXrayAlpha: v }),
-      ).not.toThrow();
-    }
-  });
-
-  it("⛔ refuses a value outside [0, 1], and NaN with it", () => {
-    // ⚠ Above 1 Babylon clamps and the mesh stops blending altogether, which reads as *the flag
-    // stopped working* rather than as a bad number — the failure this rule exists to prevent.
-    for (const v of [-0.1, 1.5, Number.NaN]) {
-      expect(() =>
-        validateGestureConfig({ ...DEFAULT_CONFIG, followerFaceXrayAlpha: v }),
-      ).toThrow(/followerFaceXrayAlpha/);
-    }
-  });
-
-  it("⭐ it is reachable from the URL, which is how a hand judges it without a rebuild", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?followerFaceXrayAlpha=0.2");
-    expect(r.config.followerFaceXrayAlpha).toBe(0.2);
-    expect(r.rejected).toEqual([]);
-    // ⛔ And a bad one is REPORTED, never silently ignored.
-    const bad = parseConfigOverrides(DEFAULT_CONFIG, "?followerFaceXrayAlpha=3");
-    expect(bad.config.followerFaceXrayAlpha).toBe(DEFAULT_CONFIG.followerFaceXrayAlpha);
-    expect(bad.rejected.join(" ")).toContain("followerFaceXrayAlpha");
-  });
 });

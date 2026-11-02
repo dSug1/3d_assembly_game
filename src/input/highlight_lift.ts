@@ -25,14 +25,3 @@ export function highlightLiftM(
 ): number {
   return trackingMetresPerPx(cameraDistanceM, fovRad, viewportHeightPx) * mmToPx(liftMm);
 }
-
-/**
- * ⭐ An outline's offset is BAKED into its line geometry (a face offset of a hull is not a scale), so
- * it is rebuilt only when the wanted offset leaves `±tolerance` of the one it was built with — in
- * practice, during a zoom. ⚠ `null`: never built.
- */
-export function outlineOffsetStale(builtM: number | null, wantM: number, tolerance = 0.05): boolean {
-  if (builtM === null) return true;
-  if (!(wantM > 0)) return builtM !== wantM;
-  return Math.abs(builtM - wantM) > tolerance * wantM;
-}

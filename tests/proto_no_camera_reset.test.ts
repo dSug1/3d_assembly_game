@@ -1,7 +1,7 @@
 /**
  * ⛔ prototype — **NO CAMERA RESET** (the owner, 2026-10-10: *"remove the camera reset"*): a double tap (first touch) or double click
  * (left button) on empty space no longer flies the camera home — in this build the orbit rig places the orbited piece, so the reset threw
- * the piece back to its boot spot on the rings. The tap itself is still recorded and may still toggle the mode.
+ * the piece back to its boot spot on the rings. ⛔ (2026-11-02) the mode it could toggle is deleted.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -16,7 +16,10 @@ describe("⛔ prototype — no camera reset on a double tap", () => {
       expect(s, f).not.toMatch(/new CameraResetAnimation\(/);
     }
   });
-  it("a tap on empty space is still recorded and may still toggle (noteTap is still called with tapTogglesMode)", () => {
-    expect(code("render/pointer_wiring.ts")).toMatch(/noteTap\(\s*st,\s*routed\.pressed,\s*s,\s*e\.pointerId,\s*tapTogglesMode\(/);
+  it("⛔ (2026-11-02, `d8134eb`) the mode toggle deleted with the parts' translation and rotation — a tap on empty space taps the cube's face shown", () => {
+    const p = code("render/pointer_wiring.ts");
+    expect(p).not.toMatch(/noteTap\(|tapTogglesMode\(/);
+    expect(p).toContain("orientTapShown(st);");
   });
+
 });
