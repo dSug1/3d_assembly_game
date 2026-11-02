@@ -87,6 +87,43 @@ export function approachDistance(cfg: GestureConfig, a: number): number {
   return (dist(r.waist) * (x - r.min)) / (r.waist - r.min);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-02, the owner: *"when there are discontinuities in the face cut by the red or green section (for example the red section cutting a overhang),
+ * the piece jumps when the gizmo travels the section"*) — **THE APPROACH COORDINATE FOR A DISTANCE** (`approachDistance`'s inverse, by halving): a gizmo's
+ * step in depth is taken into the approach so the piece stays where it is (`gizmoDepthStep`).
+ */
+export function approachOfDistance(cfg: GestureConfig, d: number, near: number): number {
+  // ⚠ the distance is not monotonic in the coordinate (it dips past the waist — the 2D curve's): the stretch that holds `near`, then halving on it
+  const r = approachRange(cfg);
+  const N = 400;
+  const at = (i: number): number => r.min + ((r.max - r.min) * i) / N;
+  const f = (i: number): number => approachDistance(cfg, at(i));
+  const dir = (i: number): number => Math.sign(f(Math.min(N, i + 1)) - f(i)) || 1;
+  const i0 = Math.min(N - 1, Math.max(0, Math.floor(((near - r.min) / (r.max - r.min)) * N)));
+  const sg = dir(i0);
+  let lo = i0;
+  let hi = i0 + 1;
+  while (lo > 0 && dir(lo - 1) === sg) lo--;
+  while (hi < N && dir(hi) === sg) hi++;
+  let a0 = at(lo);
+  let a1 = at(hi);
+  const d0 = f(lo);
+  const d1 = f(hi);
+  if ((d - d0) * sg <= 0) return a0;
+  if ((d - d1) * sg >= 0) return a1;
+  for (let k = 0; k < 40; k++) {
+    const m = (a0 + a1) / 2;
+    if ((approachDistance(cfg, m) - d) * sg < 0) a0 = m;
+    else a1 = m;
+  }
+  return (a0 + a1) / 2;
+}
+/** ⭐ The gizmo's step from `g0` to `g1` along the piece's direction `u` (m) when it is a step IN DEPTH (over `minM` in a frame — a discontinuity); else 0. */
+export function gizmoDepthStep(g0: Vec3, g1: Vec3, u: Vec3, minM: number): number {
+  const along = (g1[0] - g0[0]) * u[0] + (g1[1] - g0[1]) * u[1] + (g1[2] - g0[2]) * u[2];
+  return Math.abs(along) > minM ? along : 0;
+}
+
 /** ⭐ The far orbit's distance from the gizmo (ring 1's — one value for both curves, the owner's 5). */
 export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
@@ -229,6 +266,15 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, u);
   const up0 = normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
+  return offsetAbout(u, up0, yawRad, pitchRad);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-02) The camera's offsets applied about a GIVEN up (`up0`, square to `u`): the pitch toward it, the yaw about it — `offsetFrame`'s second half.
+ * The orbit's tilt applies them about the screen's up as it is (continuous through a switch — ⛔ about each frame's own up they flipped side over a top:
+ * ~6°, the camera 0.75 m, the piece 436 px on the screen, measured).
+ */
+export function offsetAbout(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
   const sn = Math.sin(pitchRad);
   const d1: Vec3 = [c * u[0] + sn * up0[0], c * u[1] + sn * up0[1], c * u[2] + sn * up0[2]];

@@ -1374,7 +1374,9 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    // ⭐⭐⭐ (2026-11-02) the finger's axes' signs kept through the orbit's tilt (`asmSign`; 1 upright and never switched)
+    const sg = asmOn ? st.asmSign : { yaw: 1, v: 1 };
+    st.orbit.drag(shiftApproach ? 0 : sg.yaw * pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share * sg.v);
     // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
