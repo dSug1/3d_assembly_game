@@ -545,8 +545,6 @@ export interface SceneState {
     settleM: number;
     settleT0: number;
     centre0: import("../core/vec").Vec3;
-    /** ⭐⭐⭐ (2026-11-02) the shell's slide carry when the slide began (`asmCarry` — the slide adds to it) */
-    carry0: import("../core/vec").Vec3;
     offset0: import("../core/vec").Vec3;
     gizmo: boolean;
     u: number;
@@ -727,34 +725,37 @@ export interface SceneState {
    * the locked gizmo; the shown gizmo (eased), the camera's look point, the face's point (the edge rule), the frame's ray cache; the approach coordinate
    * (1 far … the contact) and its coast; Shift with the mouse on the last pointer event */
   asm: { readonly centre: Vec3; readonly radius: number } | null;
+  asmLocked: boolean;
+  /** ⭐ (2026-10-29) …and its cone (`lockCone`: from where the piece was at the lock, tightened inward; `null`: the default 80°) */
+  asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
-  /** ⭐ the gizmo's exact point (`null`: none found yet) — ⭐⭐⭐ (2026-11-02) a READOUT: where the ray from the centre through the piece meets the parts */
+  /** ⭐ (2026-10-28) the gizmo CARRIED along the sections (its raw point; `null`: found by the ray next frame), the orbit place it was carried to, the section lines and when they were cast */
   asmG: Vec3 | null;
+  asmPrevQ: { readonly yaw: number; readonly v: number } | null;
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   asmSectionKey: string;
-  /** ⭐⭐⭐ (2026-11-02) each line's samples (the gizmo's paths under dy and dx — along the screen's up and right on the shell), the base point and the
-   * axis they were marched from: recast when the gizmo moves across the line */
-  asmRedCache: { readonly key: string; readonly origin: Vec3; readonly axis: Vec3; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
-  asmGreenCache: { readonly key: string; readonly origin: Vec3; readonly axis: Vec3; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) the carrier of the gizmo's last ACCEPTED drop and the yaw it was found at — the lines are drawn from it (a held drop holds them too) */
+  asmShown: { readonly c: NonNullable<SceneState["asmCarrier"]>; readonly yaw: number } | null;
+  /** ⭐⭐⭐ (2026-11-02) each line's fixed samples, dropped once per line (`sectionRedKey`, `sectionGreenKey`) */
+  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
+  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
-  /** ⭐ the placed parts' vertices (model pose), per placed set */
+  /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
+  asmCarrier: {
+    readonly w: Vec3;
+    readonly kind: import("../input/section_hull").EdgeKind;
+    readonly s: number;
+    readonly chain: import("../input/section_hull").SectionChain;
+    readonly origin: Vec3;
+    readonly drop: import("../input/section_hull").SectionRay;
+  } | null;
+  asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
+  /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
+  asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
-  /** ⭐⭐⭐ (2026-11-02) THE SHELL (`input/orbit_shell.ts`): its box per placed set; the real surface under the piece's footprint (a plane and its lag) */
-  asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox } | null;
-  asmGround: import("../input/orbit_shell").GroundPlane | null;
-  /** ⭐⭐⭐ (2026-11-02) a slide's carry (world, m) still to be taken into the orbit's angles, and the way out's camera turn still to be undone — both by the travel (`asmTravelStep`) */
-  asmCarry: Vec3 | null;
-  /** ⭐⭐⭐ (2026-11-02) how far the piece's body reaches past its resting face's centre toward the parts (`bodyDepth`) — the approach measures the body */
-  asmBodyDepth: number;
-  asmCamTurn: import("../core/vec").Quat | null;
-  /** ⭐⭐⭐ (2026-11-02) THE ORBIT'S OWN FRAME — the one its angles (yaw, pitch) are read in: re-tilted before a pole (`antiPoleQuat`: no gimbal lock) */
-  asmOrbit: import("../core/vec").Quat;
-  /** ⭐⭐⭐ (2026-11-02) the screen's up last frame (before the offsets) and the view it was square to — the next frame's carried from them (`carryUp`) */
-  asmBaseUp: Vec3 | null;
-  asmBaseDir: Vec3 | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;

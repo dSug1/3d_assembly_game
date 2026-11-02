@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, shownOffset } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -936,7 +936,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
-    void y0; void v0; // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -1195,9 +1195,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
   const camPlace = cameraPlaceNow(st); // ⭐⭐⭐ (2026-10-25) over a horizontal face on the TRAVEL (`laggedPlace`): the roll as soon as the camera reaches the zenith
   const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);
-  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace };
-  st.asmBaseUp = camFrame.base ?? null; // ⭐⭐⭐ (2026-11-02) the next frame's up carried from it (`carryUp`)
-  st.asmBaseDir = camFrame.baseDir ?? null; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
+  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];
