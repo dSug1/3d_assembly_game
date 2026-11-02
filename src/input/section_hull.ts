@@ -256,14 +256,46 @@ export function faceTurnedAway(n: Vec3 | null, u: Vec3): boolean {
 }
 
 /**
- * ⭐⭐ THE SECTION DRAWN — the path the gizmo takes: the RED one, `count` arc lengths along the chain (the carrier's own `s` in place of the nearest, so
- * the gizmo lies on the line exactly). (⛔ `greenYaws` deleted: the green line is the green loop now.)
+ * ⭐⭐⭐ (2026-11-02, the owner: *"propose another way to smooth the travel of the red and green section without compromising the fact that the gizmo is always
+ * at the intersection of the green and red sections, even through discontinuities such as edges"* → *"build it (option A, symetric)"*) — **THE SECTIONS
+ * DRAWN THROUGH THE GIZMO**. Each line's own samples are FIXED on it — `n` evenly spread parameters (`sectionFixed`: arc lengths along an open red chain,
+ * ends included; along a closed green loop, or angles round the axis over a top) — and dropped once per line (`sectionRedKey`, `sectionGreenKey`): a dx
+ * reshapes only the red, a dy only the green. The gizmo's EXACT point is then INSERTED in both (`insertIndex`), every frame — so the ring is a vertex of
+ * both lines by construction, through edges and held drops alike. ⛔ (2026-11-01, reverted) the lines and the ring were three separate drops: the carrier's
+ * own replaced a sample, the green's started at the carrier, and they parted wherever the drops differed (an edge, a held drop).
  */
-export function redSamples(total: number, s: number, count: number): number[] {
+export function sectionFixed(total: number, n: number, closed: boolean): number[] {
   const out: number[] = [];
-  for (let k = 0; k < count; k++) out.push(count > 1 ? (total * k) / (count - 1) : 0);
-  if (count > 1) out[Math.min(count - 1, Math.max(0, Math.round((s / (total || 1)) * (count - 1))))] = Math.min(total, Math.max(0, s));
+  if (n <= 0) return out;
+  if (closed) for (let k = 0; k < n; k++) out.push((total * k) / n);
+  else for (let k = 0; k < n; k++) out.push(n > 1 ? (total * k) / (n - 1) : 0);
   return out;
+}
+/**
+ * ⭐⭐ (2026-11-02) The segments drawn around the gizmo's vertex: each neighbour by the line's own rule (`joinsPrev`, `joinsNext` — `joins`); cut off on
+ * BOTH sides (it sits across a jump), the NEARER neighbour joined anyway — the ring always on a drawn line (measured: 2 frames of 953 left it 30 mm off).
+ */
+export function gizmoJoins(joinsPrev: boolean, joinsNext: boolean, distPrev: number, distNext: number): [boolean, boolean] {
+  if (joinsPrev || joinsNext) return [joinsPrev, joinsNext];
+  return distPrev <= distNext ? [true, false] : [false, true];
+}
+/** ⭐ Where `p` goes among the sorted `params`: after every one not past it. */
+export function insertIndex(params: readonly number[], p: number): number {
+  let i = 0;
+  while (i < params.length && params[i]! <= p) i++;
+  return i;
+}
+/** ⭐ The red line's identity: the placed set, the plane's yaw and the origin it goes through — a dy (along the same chain) keeps it. */
+export function sectionRedKey(partsKey: string, yaw: number, origin: Vec3): string {
+  return `${partsKey}#${yaw.toFixed(6)}#${origin.map((x) => x.toFixed(6)).join(",")}`;
+}
+/**
+ * ⭐ The green line's identity: the placed set and, on a side, the loop's height (exact — a dx keeps it, a dy moves it); over a top / under a bottom, the
+ * distance from the axis and the height to the millimetre (the carrier's projection drifts it by less under a dx).
+ */
+export function sectionGreenKey(partsKey: string, kind: string, w: Vec3, centre: Vec3): string {
+  const mm = (x: number): string => (Math.round(x * 1000) / 1000).toFixed(3);
+  return kind === "SIDE" ? `${partsKey}#SIDE#${w[1].toFixed(6)}` : `${partsKey}#${kind}#${mm(Math.hypot(w[0] - centre[0], w[2] - centre[2]))}#${mm(w[1])}`;
 }
 
 /**

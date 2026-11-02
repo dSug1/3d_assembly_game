@@ -31,7 +31,6 @@ import {
   fromPlane,
   hull2,
   nearestOnChain,
-  redSamples,
   sectionPoints,
   toPlane,
   type P2,
@@ -200,13 +199,51 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(s).toBeCloseTo(ch.total, 12);
     expect(hosts).toEqual(["slab", "ledge", "slab", "top"]);
   });
-  it("⭐⭐ THE SECTIONS DRAWN are the gizmo's own paths: the red at the carrier's exact arc length among evenly spread ones", () => {
-    const r = redSamples(0.6, 0.3141, 64);
-    expect(r.length).toBe(64);
-    expect(r[0]).toBe(0);
-    expect(r[63]).toBeCloseTo(0.6, 12);
-    expect(r).toContain(0.3141);
-    for (let i = 1; i < 64; i++) expect(r[i]!).toBeGreaterThan(r[i - 1]!);
+  it("⭐⭐⭐ THE SECTIONS DRAWN THROUGH THE GIZMO (2026-11-02, *\"build it (option A, symetric)\"*): fixed samples, the gizmo inserted — moved, nothing else moves", async () => {
+    const H = await import("../src/input/section_hull");
+    expect(H.sectionFixed).toBeDefined(); // ⛔ the old: the carrier REPLACED the nearest red sample (the kink hopped), the green started at the carrier (every point slid)
+    const red = H.sectionFixed(0.6, 63, false);
+    expect(red.length).toBe(63);
+    expect(red[0]).toBe(0);
+    expect(red[62]).toBeCloseTo(0.6, 12);
+    const loop = H.sectionFixed(2, 96, true);
+    expect(loop.length).toBe(96);
+    expect(loop[0]).toBe(0);
+    expect(loop[95]).toBeCloseTo(2 - 2 / 96, 12); // closed: no repeat of the start
+    // the gizmo inserted where it falls; moved along, the fixed samples are the same and only its slot changes
+    const i1 = H.insertIndex(red, 0.3141), i2 = H.insertIndex(red, 0.3199);
+    expect(red[i1 - 1]!).toBeLessThanOrEqual(0.3141);
+    expect(red[i1]!).toBeGreaterThan(0.3141);
+    expect(i2 - i1).toBeLessThanOrEqual(1);
+    expect(H.insertIndex(red, -1)).toBe(0);
+    expect(H.insertIndex(red, 5)).toBe(63);
+    // each line's identity: a dx keeps the green (on a side: the height), a dy keeps the red (the plane's yaw and origin)
+    expect(H.sectionGreenKey("P", "SIDE", [0.1, 0.268, 0.3], [0, 0, 0])).toBe(H.sectionGreenKey("P", "SIDE", [-0.4, 0.268, 0.05], [0, 0, 0]));
+    expect(H.sectionGreenKey("P", "SIDE", [0.1, 0.268, 0.3], [0, 0, 0])).not.toBe(H.sectionGreenKey("P", "SIDE", [0.1, 0.2681, 0.3], [0, 0, 0]));
+    expect(H.sectionGreenKey("P", "TOP", [0.3, 0.5, 0.4], [0, 0, 0])).toBe(H.sectionGreenKey("P", "TOP", [0.5, 0.5, 0], [0, 0, 0])); // turned about the axis
+    expect(H.sectionRedKey("P", 0.4, [0.1, 0.2, 0.3])).toBe(H.sectionRedKey("P", 0.4, [0.1, 0.2, 0.3]));
+    expect(H.sectionRedKey("P", 0.4, [0.1, 0.2, 0.3])).not.toBe(H.sectionRedKey("P", 0.41, [0.1, 0.2, 0.3]));
+  });
+  it("⭐⭐ the gizmo's vertex never left alone: cut off on both sides (across a jump), the nearer neighbour joined anyway", async () => {
+    const H = await import("../src/input/section_hull");
+    expect(H.gizmoJoins(true, false, 1, 9)).toEqual([true, false]); // the line's own rule where it joins
+    expect(H.gizmoJoins(false, false, 0.03, 0.05)).toEqual([true, false]); // ⛔ the old rule: both cut — the ring 30 mm off the drawn red
+    expect(H.gizmoJoins(false, false, 0.05, 0.03)).toEqual([false, true]);
+  });
+  it("⭐⭐⭐ wired: the lines from the carrier of the gizmo's last ACCEPTED drop, the gizmo's exact point a vertex of both, the ring there", async () => {
+    const A = await import("../src/input/assembly_orbit");
+    expect(A.gizmoShownAt([1, 2, 3], [0, 0, 0])).toEqual([1, 2, 3]);
+    expect(A.gizmoShownAt(null, [0, 0, 0])).toEqual([0, 0, 0]);
+    const w = code("render/assembly_wiring.ts");
+    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
+    expect(w).toContain("const gi = insertIndex(gc.params, gParam);");
+    expect(w).toContain("if (green.length > 0) green.splice(gi, 0, gv);");
+    expect(w).toContain("const ri = insertIndex(rc.params, c.s);");
+    expect(w).toContain("red.splice(ri, 0, gv);");
+    expect(w).toContain("st.asmGizmoAt = [target[0], target[1], target[2]];");
+    expect(w).not.toContain("SECTION_EVERY_MS");
+    const g = code("render/green_box_wiring.ts");
+    expect(g).toContain("const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM) : st.centreBlend.targetM;");
   });
   it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
@@ -307,7 +344,7 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     expect(a).toContain("const loop = loopOf(hull2(greenPoints(parts.parts, y)));");
     expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
     expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
-    expect(a).toContain("const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);");
+    expect(a).toContain("const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind);"); // ⭐ (2026-11-02) at fixed angles round the axis (`sectionFixed`)
   });
 });
 
@@ -318,8 +355,8 @@ describe("⭐⭐ the drawn sections break at a jump (2026-10-29)", () => {
     expect(joins([0, 0, 0], [0.009, 0.13, 0], 0.009)).toBe(false); // a jump up the face (13 cm)
     expect(joins([0, 0, 0], [0.009, 0, 0.03], 0.009)).toBe(false); // into a slot 3 cm deep
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), greenStep) ? [p0, p1] : [rest, rest]);");
-    expect(a).toContain("lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), step) ? [p0, p1] : [rest, rest]);");
+    expect(a).toContain("lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), greenStep)) ? [p0, p1] : [rest, rest]);"); // ⭐ (2026-11-02) the gizmo's own segments by `gizmoJoins`
+    expect(a).toContain("lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), step)) ? [p0, p1] : [rest, rest]);");
     expect(a).toContain("const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);");
   });
 });

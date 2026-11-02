@@ -2280,3 +2280,28 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   latch, *"settled X mm onto it"* with X well under the gap.
 * **Possible fixes, not built**: A — a settle stopped by a nearer PARALLEL face latches on that face (the one the piece touches), else no latch (never a
   slide in the air); B — keep the latch and settle again as soon as the slide carries the piece past what stopped it.
+
+### ⭐⭐⭐ THE SECTIONS DRAWN THROUGH THE GIZMO — smooth, the ring always at their intersection (2026-11-02; `orbitMode` 0)
+
+> *"propose another way to smooth the travel of the red and green section without compromising the fact that the gizmo is always at the intersection of
+> the green and red sections, even through discontinuities such as edges, etc."* → *"why is there a difference of treatment between red section and green
+> section ?"* → *"build it (option A, symetric)"* — the owner.
+
+* **The geometry, symmetric**: the RED section is the vertical plane along the heading through the gizmo — it turns with the yaw, so a dx reshapes it and a
+  dy only moves the gizmo along it; the GREEN is the cut at the gizmo's height (a side) or the circle at its distance from the axis (a top) — a dy reshapes
+  it and a dx only moves the gizmo round it. Each line is therefore recast only when its OWN definition changes.
+* ⭐ **Built** (`sectionFixed`, `insertIndex`, `sectionRedKey`, `sectionGreenKey`, `gizmoJoins` in `input/section_hull.ts`; `gizmoShownAt`;
+  `sectionLinesFrame`):
+  * **ONE SOURCE** — the lines are drawn from the carrier of the gizmo's last ACCEPTED drop (`st.asmShown`): a drop held on a face turned away holds the
+    lines with the gizmo (⛔ the carrier went on and the lines with it: the owner's screenshot, the ring off them).
+  * **FIXED SAMPLES** — each line's samples are fixed on it (the red along its chain, ends included; the green along its loop from its own start, or at
+    fixed angles round the axis over a top), dropped once per line (`st.asmRedCache` per yaw and origin, `st.asmGreenCache` per height — exact — on a side,
+    per distance from the axis to the millimetre over a top).
+  * **THE GIZMO A VERTEX OF BOTH** — its exact point (the accepted drop, lifted as the lines are) is INSERTED into both every frame; where the line's own
+    rule would cut it off on both sides (it sits across a jump), the nearer neighbour is joined anyway (`gizmoJoins`). The ring is drawn at that point
+    (`st.asmGizmoAt`); the orbit's centre keeps its 90 ms ease, so the piece and the camera do not jump where a drop changes surface.
+  * Redrawn at every change (⛔ at most every 100 ms: they held, then jumped).
+* **Measured** (headless, dx, dy, a diagonal and back, 934 frames, crossing edges): the ring **2.0 mm** from the red line at most and **2.2 mm** from the
+  green (the lines' own 2 mm lift); before, up to **157 mm** and **108 mm**. ⚠ Cost: 64 drops a frame under a dx (the red), 96 under a dy on a side (the
+  green), both on a diagonal — watch the HUD's `frame` line on the iPhone; the fallback is a blend between less frequent recasts.
+* Vectors (`tests/section_hull.test.ts`: `redSamples`'s replaced, + 2 new, 3 restated — red on the previous build). ⛔ No device close. 2159 vectors.

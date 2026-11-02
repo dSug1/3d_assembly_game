@@ -44,6 +44,15 @@ export function orbitDir(yaw: number, v: number): Vec3 {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-02, *"the gizmo is always at the intersection of the green and red sections"*) — **WHERE THE RING IS DRAWN**: the gizmo's EXACT point this
+ * frame (`exact` — the accepted drop the two lines are drawn through; locked, the lock's point), else the eased one. The orbit's centre (the piece, the
+ * camera) keeps its ease: a drop that changes surface does not jump the piece. ⛔ The ring at the eased point trailed the lines by 90 ms.
+ */
+export function gizmoShownAt(exact: Vec3 | null, eased: Vec3): Vec3 {
+  return exact ?? eased;
+}
+
+/**
  * ⭐⭐⭐ (2026-11-01, the owner: *"the collision detection shall apply also when moving the piece away from a face (if the collision prevents the moving away
  * of the piece, the user shall find a way out himself as part of the game)"*) — **MAY THE APPROACH TAKE THIS STEP?** In (`out` false): the piece's gap at
  * the step (`gapStep`) at least the gap kept (`gapM`). Out: the same — or, a piece already inside it (still against the face it slid on, `gapNow` < `gapM`),

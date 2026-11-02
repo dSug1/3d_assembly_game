@@ -36,6 +36,7 @@ import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
 import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
+import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -892,7 +893,8 @@ export function pinkRingFrame(st: SceneState): void {
     ring.isVisible = false;
     return;
   }
-  const t = st.centreBlend.targetM;
+  // ⭐⭐⭐ (2026-11-02, *"the gizmo is always at the intersection"*) around the assembly at its EXACT point — the vertex both lines go through (`gizmoShownAt`)
+  const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM) : st.centreBlend.targetM;
   const cam = st.camera.position;
   const dir = new Vector3(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
   const dist = dir.length();

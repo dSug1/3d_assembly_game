@@ -735,8 +735,14 @@ export interface SceneState {
   asmG: Vec3 | null;
   asmPrevQ: { readonly yaw: number; readonly v: number } | null;
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
-  asmSectionAt: number;
   asmSectionKey: string;
+  /** ⭐⭐⭐ (2026-11-02) the carrier of the gizmo's last ACCEPTED drop and the yaw it was found at — the lines are drawn from it (a held drop holds them too) */
+  asmShown: { readonly c: NonNullable<SceneState["asmCarrier"]>; readonly yaw: number } | null;
+  /** ⭐⭐⭐ (2026-11-02) each line's fixed samples, dropped once per line (`sectionRedKey`, `sectionGreenKey`) */
+  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
+  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
+  asmGizmoAt: Vec3 | null;
   /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
   asmCarrier: {
     readonly w: Vec3;

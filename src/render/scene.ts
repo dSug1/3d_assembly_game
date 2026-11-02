@@ -573,8 +573,11 @@ export function createScene(
   st.asmG = null;
   st.asmPrevQ = null;
   st.asmSectionLines = null;
-  st.asmSectionAt = 0;
   st.asmSectionKey = "";
+  st.asmShown = null;
+  st.asmRedCache = null;
+  st.asmGreenCache = null;
+  st.asmGizmoAt = null;
   st.asmCarrier = null;
   st.asmChain = null;
   st.asmLoop = null;

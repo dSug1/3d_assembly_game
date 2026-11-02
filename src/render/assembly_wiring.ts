@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, redSamples, sectionPoints, toPlane, turnAbout, wrapOn, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -338,10 +338,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const t = st.centreBlend.targetM;
     st.asmLocked = true;
     st.asmCarrier = null; // ⭐ (2026-10-29) back out, the carrier found again from the gizmo, in the yaw plane as it is then
+    st.asmShown = null;
     const n = st.gizmoNormal ?? null;
     const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
     st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
     st.asmGizmo = [t[0], t[1], t[2]];
+    st.asmGizmoAt = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
     return;
   }
@@ -354,7 +356,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   let hit: GizmoHit | null = null;
   if (!st.asmLocked) {
     hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);
-    if (hit !== null) st.asmG = hit.point;
+    if (hit !== null) {
+      st.asmG = hit.point;
+      // ⭐⭐⭐ (2026-11-02) the lines are drawn from the carrier of this ACCEPTED drop — a held one holds them with the gizmo (⛔ they went on with the carrier)
+      st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };
+    }
   }
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
   const piece: Vec3 = [g0[0] + u[0] * d, g0[1] + u[1] * d, g0[2] + u[2] * d];
@@ -367,6 +373,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // ⭐ (2026-10-29) its cone from where the piece is (`lockCone`) — ⛔ snapped into 80° at once: a jump at the lock
     st.asmLock = { point: [g0[0], g0[1], g0[2]], normal: n, host: st.gizmoHost ?? hit?.host ?? null, cone: n === null ? null : lockCone(null, angleTo(u, n)) };
     st.asmCarrier = null; // ⭐ (2026-10-29) the piece turns about the locked gizmo: back out, the carrier found again in the yaw plane as it is then
+    st.asmShown = null;
     st.lastVerdict = "orbit: close in — the gizmo and its face locked";
   } else if (st.asmLocked && st.asmLock !== null && st.asmLock.normal !== null) {
     // ⭐ (2026-10-29) locked: the cone tightened as the piece comes inward
@@ -376,6 +383,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // yaw plane by the locked orbit's turn, or by the hover's slide: the gizmo off the red section from then on)
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     st.asmCarrier = null;
+    st.asmShown = null;
     st.asmLock = null;
     st.lastVerdict = "orbit: back out — the gizmo on the sections again";
   }
@@ -393,6 +401,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐ the shown gizmo eased to its point; the orbit's centre IS it
   const target = st.asmLocked && st.asmLock !== null ? st.asmLock.point : g0;
   st.asmGizmo = st.asmGizmo === null ? [target[0], target[1], target[2]] : easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS);
+  st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   // ⭐ the look point: the centre far out, the gizmo close in
@@ -400,82 +409,114 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
-  sectionLinesFrame(st, q.yaw);
+  sectionLinesFrame(st);
 }
 
-/** ⭐ The section lines' samples (the green round the circle, the red along the chain), and how often they may be recast (ms). */
+/** ⭐ The section lines' fixed samples (the green round its loop, the red along its chain — the gizmo's vertex added to each). */
 const GREEN_SAMPLES = 96;
 const RED_SAMPLES = 64;
-const SECTION_EVERY_MS = 100;
 /** ⭐ The lines lifted off the surface toward their ray's origin (m) — never in it. */
 const SECTION_LIFT_M = 0.002;
 
 /**
- * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes (`redSamples`): the RED one, the carrier's red chain dropped onto the surface (bottom
- * centre → top centre of the plane through it — the half the gizmo can travel); the GREEN one, where dx takes it — on a side the green loop at its height,
- * dropped (⛔ 2026-10-29 the yaw plane's cut at every yaw), on a top / bottom its turn about the axis, brought onto each red section and dropped (⛔ vertical
- * drops on a circle: off a thin top they landed on the parts below, *"the green section can take strange forms"*). Recast only when the yaw, the carrier
- * or the placed set changed (at most every `SECTION_EVERY_MS`); hidden locked, under a hover, or off. ⭐ ONE mesh of a fixed vertex count, updated in
- * place (a segment not drawn: collapsed) — ⛔ (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing
- * from 27 of 106 frames, *"flickering all the time"*.
+ * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes: the RED one, the carrier's red chain dropped onto the surface (bottom centre → top
+ * centre of the plane through it — the half the gizmo can travel); the GREEN one, where dx takes it — on a side the green loop at its height, dropped
+ * (⛔ 2026-10-29 the yaw plane's cut at every yaw), on a top / bottom its turn about the axis, brought onto each red section and dropped (⛔ vertical drops
+ * on a circle: off a thin top they landed on the parts below, *"the green section can take strange forms"*). Hidden locked, under a hover, or off.
+ * ⭐⭐⭐ (2026-11-02, *"build it (option A, symetric)"*) DRAWN THROUGH THE GIZMO (`sectionFixed`, `insertIndex`): from the carrier of the gizmo's last
+ * ACCEPTED drop (`st.asmShown` — a held drop holds the lines with it), each line's fixed samples dropped once per line (the red per yaw and origin, the
+ * green per height / distance — a dx reshapes the red only, a dy the green only), the gizmo's EXACT point inserted in both every frame; redrawn at every
+ * change (⛔ at most every 100 ms: they held, then jumped). ⭐ ONE mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed) — ⛔
+ * (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing from 27 of 106 frames.
  */
-function sectionLinesFrame(st: SceneState, yaw: number): void {
-  const c = st.asmCarrier;
-  const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && st.asmG !== null && c !== null;
+/** ⭐ (2026-11-02) the gizmo's vertex `i` joined to its neighbours `prev` / `next` (`gizmoJoins`: the nearer one at least). */
+function around(pts: readonly (Vector3 | null)[], i: number, prev: number, next: number, spacing: number): [boolean, boolean] {
+  const g = pts[i];
+  const a = prev >= 0 ? (pts[prev] ?? null) : null;
+  const b = next < pts.length ? (pts[next] ?? null) : null;
+  if (g === null || g === undefined) return [false, false];
+  const d = (p: Vector3 | null): number => (p === null ? Infinity : Vector3.Distance(g, p));
+  const v = (p: Vector3): Vec3 => [p.x, p.y, p.z];
+  const j = gizmoJoins(a !== null && joins(v(g), v(a), spacing), b !== null && joins(v(g), v(b), spacing), d(a), d(b));
+  return [j[0] && a !== null, j[1] && b !== null];
+}
+
+function sectionLinesFrame(st: SceneState): void {
+  const sh = st.asmShown;
+  const g = st.asmG;
+  const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && g !== null && sh !== null;
   if (!show) {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
   }
-  const key = `${st.asmParts?.key ?? ""}#${yaw.toFixed(6)}#${c.w.map((x) => x.toFixed(5)).join(",")}#${c.kind}`;
-  const now = performance.now();
-  if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
-  if (st.asmSectionLines !== null && (key === st.asmSectionKey || now - st.asmSectionAt < SECTION_EVERY_MS)) return;
-  st.asmSectionAt = now;
-  st.asmSectionKey = key;
+  const c = sh.c;
+  const yaw = sh.yaw;
   const a = st.asm!;
+  const parts = st.asmParts?.key ?? "";
   const reach = a.radius * 2 + 1;
   const drop = (r: SectionRay): Vector3 | null => {
     const h = castRay(st, r);
     return h === null ? null : new Vector3(h.point[0] - r.dir[0] * SECTION_LIFT_M, h.point[1] - r.dir[1] * SECTION_LIFT_M, h.point[2] - r.dir[2] * SECTION_LIFT_M);
   };
-  const g = st.asmG!;
-  const rest = new Vector3(g[0], g[1], g[2]);
-  const lines: Vector3[][] = [];
-  // ⭐ green: where dx takes the gizmo, a closed loop starting at the carrier itself
-  let green: (Vector3 | null)[] = [];
-  const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
-  if (loop !== null) {
-    const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
-    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
-      const at = chainAt(loop, wrapOn(loop, s0 + (loop.total * k) / GREEN_SAMPLES));
-      return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));
-    });
-  } else if (c.kind !== "SIDE") {
-    green = Array.from({ length: GREEN_SAMPLES }, (_, k) => {
-      const dYaw = (2 * Math.PI * k) / GREEN_SAMPLES;
-      const r = onRed(st, yaw + dYaw, turnAbout(c.w, a.centre, dYaw), c.kind);
-      return r === null ? null : drop(r.drop);
-    });
+  // the red's fixed samples (per yaw and origin)
+  const ch = c.chain;
+  const rKey = sectionRedKey(parts, yaw, c.origin);
+  if (st.asmRedCache === null || st.asmRedCache.key !== rKey) {
+    const params = sectionFixed(ch.total, RED_SAMPLES - 1, false);
+    st.asmRedCache = { key: rKey, params, pts: params.map((x) => drop(redAt(st, yaw, ch, c.origin, x).drop)) };
   }
+  // the green's fixed samples (per height on a side, per distance from the axis over a top)
+  const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
+  const gKey = sectionGreenKey(parts, c.kind, c.w, a.centre);
+  if (st.asmGreenCache === null || st.asmGreenCache.key !== gKey) {
+    if (loop !== null) {
+      const params = sectionFixed(loop.total, GREEN_SAMPLES, true);
+      st.asmGreenCache = { key: gKey, params, pts: params.map((x) => { const at = chainAt(loop, x); return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach)); }) };
+    } else if (c.kind !== "SIDE") {
+      const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
+      st.asmGreenCache = { key: gKey, params, pts: params.map((th) => { const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind); return r === null ? null : drop(r.drop); }) };
+    } else st.asmGreenCache = { key: gKey, params: [], pts: [] };
+  }
+  // ⭐⭐⭐ the gizmo's EXACT point — the accepted drop — inserted in both: the ring is a vertex of each line, at every frame
+  const gv = new Vector3(g[0] - c.drop.dir[0] * SECTION_LIFT_M, g[1] - c.drop.dir[1] * SECTION_LIFT_M, g[2] - c.drop.dir[2] * SECTION_LIFT_M);
+  const key = `${rKey}|${gKey}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
+  if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
+  if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
+  st.asmSectionKey = key;
+  const v3 = (p: Vector3): Vec3 => [p.x, p.y, p.z];
+  const rest = gv;
+  const lines: Vector3[][] = [];
+  // green: a closed loop through the gizmo (its own parameter: the carrier's arc length on a side, the plane's yaw over a top)
+  const gc = st.asmGreenCache;
+  const gParam = loop !== null ? nearestOnChain(loop, [c.w[0], c.w[2]]) : ((yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const green: (Vector3 | null)[] = gc.pts.length === 0 ? [] : [...gc.pts];
+  const gi = insertIndex(gc.params, gParam);
+  if (green.length > 0) green.splice(gi, 0, gv);
   // ⭐ (2026-10-29) a jump between two neighbours breaks it (`joins`) — the spacing: the loop's per sample on a side, the turn's arc on a top / bottom
   const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);
-  const v3 = (p: Vector3): Vec3 => [p.x, p.y, p.z];
-  for (let k = 0; k < GREEN_SAMPLES; k++) {
+  const n = green.length;
+  const gJoin = n === 0 ? [false, false] : around(green, gi, (gi - 1 + n) % n, (gi + 1) % n, greenStep);
+  for (let k = 0; k <= GREEN_SAMPLES; k++) {
     const p0 = green[k] ?? null;
-    const p1 = green[(k + 1) % GREEN_SAMPLES] ?? null;
-    lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), greenStep) ? [p0, p1] : [rest, rest]);
+    const p1 = n === 0 ? null : (green[(k + 1) % n] ?? null);
+    const forced = n > 0 && ((k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null);
+    lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), greenStep)) ? [p0, p1] : [rest, rest]);
   }
-  // ⭐ red: the chain's carriers dropped; a step in depth (a hidden stretch skipped) breaks the line
-  const ch = c.chain;
-  const step = ch.total / (RED_SAMPLES - 1);
-  const red = redSamples(ch.total, c.s, RED_SAMPLES).map((s) => drop(redAt(st, yaw, ch, c.origin, s).drop));
+  // red: the chain through the gizmo; a step in depth (a hidden stretch skipped) breaks the line
+  const rc = st.asmRedCache;
+  const red: (Vector3 | null)[] = [...rc.pts];
+  const ri = insertIndex(rc.params, c.s);
+  red.splice(ri, 0, gv);
+  const step = ch.total / (RED_SAMPLES - 2);
+  const rJoin = around(red, ri, ri - 1, ri + 1, step);
   for (let k = 0; k < RED_SAMPLES - 1; k++) {
     const p0 = red[k] ?? null;
     const p1 = red[k + 1] ?? null;
-    lines.push(p0 !== null && p1 !== null && joins(v3(p0), v3(p1), step) ? [p0, p1] : [rest, rest]);
+    const forced = k + 1 === ri ? rJoin[0] : k === ri ? rJoin[1] : null;
+    lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), step)) ? [p0, p1] : [rest, rest]);
   }
   if (st.asmSectionLines === null) {
-    const colours = lines.map((_, i) => (i < GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
+    const colours = lines.map((_, i) => (i <= GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);
     st.asmSectionLines.isPickable = false;
     st.asmSectionLines.alwaysSelectAsActiveMesh = true;
