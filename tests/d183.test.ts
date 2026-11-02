@@ -173,32 +173,26 @@ describe("⭐⭐ `D183` — the pull lands EXACTLY on the goal pose", () => {
   });
 });
 
-describe("⭐⭐ `D183` — wired: before the seats, a press grabs, an undo re-sights", () => {
+describe("⭐⭐ `D183` — wired (⛔ (2026-11-02) the parts' alignment, seats and undo deleted (commit `d8134eb`))", () => {
   const src = (f: string) => readFileSync(new URL(`../src/render/${f}`, import.meta.url), "utf8");
 
-  it("⭐ the goal wins: its frame runs BEFORE `syncSeats`", () => {
+  it("⭐ the goal's frame runs every frame; ⛔ no seat to run before any more", () => {
     const loop = src("render_loop.ts");
     expect(loop.indexOf("goalCaptureFrame(st, now)")).toBeGreaterThan(0);
-    expect(loop.indexOf("goalCaptureFrame(st, now)")).toBeLessThan(loop.indexOf("syncSeats(st, now)"));
+    expect(loop).not.toContain("syncSeats(");
   });
 
-  it("⭐ a press marks its body grabbed; an undo forgets the arming and drops the pulls", () => {
-    expect(src("pointer_wiring.ts")).toMatch(/st\.grabbed\.add\(rawHitId\)/);
-    const undo = src("undo_wiring.ts");
-    expect(undo).toMatch(/st\.goalCapture\.forget\(\)/);
-    expect(undo).toMatch(/st\.goalPulls\.cancel\(id\)/);
+  it("⛔ no press grabs a part any more — a part is judged by the never-grabbed margins until it can be moved again", () => {
+    for (const f of ["pointer_wiring.ts", "goal_capture_wiring.ts", "render_loop.ts"]) expect(src(f)).not.toMatch(/st\.grabbed\.add\(/);
+    expect(src("goal_capture_wiring.ts")).toContain("st.grabbed.has(id) ? loose : strict");
   });
 
-  it("⭐ one set of margins everywhere: the HUD, the dissolve and the level end read `goalTolOf`", () => {
-    for (const f of ["goal_dissolve_wiring.ts", "level_end_wiring.ts"]) expect(src(f)).toMatch(/goalTolOf\(st\)/);
+  it("⭐ one set of margins everywhere: the HUD and the level end read `goalTolOf`", () => {
+    expect(src("level_end_wiring.ts")).toMatch(/goalTolOf\(st\)/);
     // ⭐ `D188`: the HUD reads `placedReport`, the same margins, shared with the score bar.
     expect(src("hud_paint.ts")).toMatch(/placedReport\(st\)/);
     expect(src("goal_capture_wiring.ts")).toMatch(/looseTolerance\(st\), goalTolOf\(st\)/);
     expect(src("level_end_wiring.ts")).toMatch(/st\.goalPulls\.size > 0/);
-  });
-
-  it("⛔ a dissolve is its capture — one pop-up, not two (found in the real app)", () => {
-    expect(src("goal_dissolve_wiring.ts")).toMatch(/releaseAlignmentOf\(st, f\);[\s\S]{0,200}st\.goalCapture\.captured\(f\)/);
   });
 
   it("⭐ a start blocked on the way WAITS — the snap's own path check", () => {

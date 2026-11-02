@@ -46,14 +46,8 @@ const PENDING: Readonly<Record<string, string>> = {
   // so passing this flag today would be a read that changes nothing, which is the
   // slider-that-does-nothing shape this project has already paid for once.
   matePriorityOverAnchor: "3D2 / §4 6quater — the first rule that pushes a MATE",
-  // §1.2 — gains for rules that are not built.
-  // ⚠ NOT rule 6 any more. Rule 6 computes the exact tracking factor from the camera's
-  // field of view, distance and viewport height (`input/translate.ts`), which subsumes
-  // this ratio AND removes its device dependence. It survives for 6bis/6ter/6quater,
-  // and if those compute their factors the same way it should be DELETED, not kept.
-  referenceCameraDistance: "IN4 — rules 6bis/6ter/6quater, if they still want a ratio",
-  gainTranslateAxis: "IN4 — rule 6bis",
-  gainTranslateMutual: "IN4 — rule 6ter",
+  // ⛔ (2026-11-02) `referenceCameraDistance`, `gainTranslateAxis`, `gainTranslateMutual` and `axisMappingMode` (rules 6bis/6ter/6quater)
+  // are DELETED with the parts' translation (commit `d8134eb`), not left pending.
   // ⭐ `matePriorityOverAnchor` LEFT THIS LIST on 2026-09-16: `IN3`'s 2ter/2quater now pass
   // it to `pushObjectConstraint`, so it is READ. ⛔ The guard caught the stale entry the
   // moment it was wired — the second direction it checks, and the same thing `gainRoll` did.
@@ -63,8 +57,6 @@ const PENDING: Readonly<Record<string, string>> = {
   mateFacingCos: "3D2 — snap/seat; the anti-parallel test",
   mateBreakLinear: "3D3 — break on residual",
   mateBreakAngular: "3D3 — break on residual",
-  // §6bis A/B flag.
-  axisMappingMode: "IN4 — rule 6bis 'rotated' vs 'direct'",
 };
 
 function walk(dir: string): string[] {
@@ -133,7 +125,7 @@ describe("⭐⭐ config debt", () => {
     // ⚠ `rollAngle` was this example until the roll was deleted (2026-09-16). The example
     // has to be a tunable something genuinely READS, or the guard's positive half proves
     // nothing — so it moves with the code rather than being dropped.
-    expect(isRead("gainRotateFree")).toBe(true);
+    expect(isRead("motionDeadbandMm")).toBe(true); // ⛔ (2026-11-02) `gainRotateFree` deleted with the parts' rotation
   });
 
   it("⛔ and prose in a comment cannot make a tunable look used", () => {

@@ -11,6 +11,9 @@ C* that is HISTORY; what changed is the name of the thing a session opens.
 > **READ IF** · you are building or judging the ALIGNMENT (the tap-to-align model)
 > **LAST VERIFIED** · 2026-09-27
 
+⛔⛔⛔ **DELETED 2026-11-02 (`1.0.89-`)** — no part is aligned, snapped or translated by any input any more; this file is the record.
+The code as it stood: commit **`d8134eb`** → [`../history/2026-11-02_parts_translation_rotation_deleted.md`](../history/2026-11-02_parts_translation_rotation_deleted.md).
+
 ⛔ **CURRENT (2026-09-27)**: the shake, the re-press/re-tap undo and `tapMeaning` are **deleted**
 (`D107`); `FOLLOW` is deleted (`D106`); the flick is deleted (`D110`). To **unalign**: tap empty
 space while holding the aligned body, or align it elsewhere — holding a Pioneer, that tap releases

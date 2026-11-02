@@ -29,7 +29,7 @@ import { mmToPx } from "../core/units";
 import { trackingMetresPerPx } from "../input";
 import { pieceDistanceRange } from "../input/orbit";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
-import { isTapRelease } from "../input/mode_toggle";
+import { isTapRelease } from "../input/recognizer";
 import { carouselQuad, fixedCarousel } from "../input/quad_carousel";
 import { blockedMessage, pieceRespawnArmed } from "../input/piece_orbit_solver";
 import { showBlockedPopup } from "./goal_popup";

@@ -59,19 +59,17 @@ describe("⭐⭐⭐ `D189` — a piece REACHES its goal only if it was not place
 
 describe("⭐⭐ `D189` — wired: only the commit pops up, and the count shown is the committed one", () => {
   it("⛔ neither the goal pull nor the dissolve pops up on its own any more — they commit", () => {
-    for (const f of ["goal_capture_wiring.ts", "goal_dissolve_wiring.ts"]) {
-      expect(code(f)).not.toMatch(/showGoalPopup/);
-      expect(code(f)).toMatch(/commitGoal\(st\)/);
-    }
-    expect(code("seat_wiring.ts")).toMatch(/commitGoal\(st\)/);
+    // ⛔ (2026-11-02) the parts' alignment, seats and undo deleted (commit `d8134eb`): the dissolve and the seat with them
+    expect(code("goal_capture_wiring.ts")).not.toMatch(/showGoalPopup/);
+    expect(code("goal_capture_wiring.ts")).toMatch(/commitGoal\(st\)/);
   });
 
-  it("⭐ the scene at rest after a change commits — every frame, never mid-gesture; an undo commits silently", () => {
+  it("⭐ the scene at rest after a change commits — every frame, never mid-gesture (⛔ (2026-11-02) the parts' alignment, seats and undo deleted (commit `d8134eb`): no silent undo commit)", () => {
     expect(code("render_loop.ts")).toMatch(/goalCommitFrame\(st\)/);
     const w = code("goal_commit_wiring.ts");
     expect(w).toMatch(/st\.gestureSpan\.active === 0/);
     expect(w).toMatch(/st\.world === st\.goalCommitWorld/);
-    expect(code("undo_wiring.ts")).toMatch(/st\.goalCommitQuiet = true/);
+    expect(w).not.toMatch(/goalCommitQuiet/);
   });
 
   it("⭐ the HUD's `goal n/41` and the score bar read the COMMITTED count", () => {

@@ -47,14 +47,14 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     // ⭐⭐ (2026-10-11) ANY touch on the orbited piece — the first's (the second held or not) and the SECOND's (*"add the possibility of
     // selecting another resting face by second touch tap on the green or turquoise piece"*); a press elsewhere leaves a pending one alone
     // ⭐ (2026-10-11) …except the desktop's key, which selects at its PRESS (its raycast), never as a tap
-    expect(p).toMatch(/if \(onOrbited && e\.pointerId !== MOUSE_SECOND_ID\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, inBand\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;[\s\S]{0,300}?if \(holdRole === null && !inBand\) hoverPressNote\(st, e\.pointerId, s\);\s*\}/); // ⭐ (2026-10-14) + the hover's press
-    expect(p.indexOf("st.pieceFaceTap = restingFaceTap(onOrbited, true, inBand)")).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, hit);"));
+    expect(p).toMatch(/if \(onOrbited && e\.pointerId !== MOUSE_SECOND_ID\) \{\s*const n = pick\?\.getNormal\(true\);[\s\S]{0,200}?st\.pieceFaceTap = restingFaceTap\(onOrbited, true, false\) && face !== null \? \{ pointerId: e\.pointerId, faceId: face\.faceId \} : null;[\s\S]{0,300}?if \(holdRole === null\) hoverPressNote\(st, e\.pointerId, s\);\s*\}/); // ⭐ (2026-10-14) + the hover's press
+    expect(p.indexOf("st.pieceFaceTap = restingFaceTap(onOrbited, true, false)")).toBeLessThan(p.indexOf("const routed = st.router.press(e.pointerId, s, null);")); // ⛔ (2026-11-02) the edge band and the part's hold deleted (`d8134eb`)
     // a TAP whatever else is down
     expect(p).toMatch(/const tapped =\s*isTapRelease\(routed\.pressed\.t, routed\.pressed\.x, routed\.pressed\.y, s\.t, s\.x, s\.y, st\.cfg\.tapMaxDuration, mmToPx\(st\.cfg\.doubleTapSlop\)\);/);
     expect(p).not.toMatch(/const first = st\.router\.all\(\)\.length === 0/);
     // ⭐ (2026-10-11) through ONE helper — the tap's release and the desktop key's press over the piece
     expect(p).toMatch(/if \(action === "FACE" && selectRestingFace\(st, ft\.faceId\)\) \{/);
-    expect(p.indexOf("selectRestingFace(st, ft.faceId)")).toBeLessThan(p.indexOf("ONE call, ONE record: it judges the tap"));
+    expect(p.indexOf("selectRestingFace(st, ft.faceId)")).toBeLessThan(p.indexOf("orientTapShown(st);")); // ⛔ (2026-11-02) the mode toggle's tap deleted (`d8134eb`)
     expect(p).toMatch(/if \(!\(restOnTappedFace\(st, faceId\) && alignRestingFace\(st, performance\.now\(\), carry\)\)\) return false;\s*st\.episodes\.touch\(--st\.episodeSeq, true, true\);/);
     const w = code("render/green_box_wiring.ts");
     const fn = w.slice(w.indexOf("export function restOnTappedFace"), w.indexOf("export function restTargetKey"));

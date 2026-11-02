@@ -31,29 +31,10 @@ describe("⭐⭐⭐ prototype — a piece in its goal cannot be moved", () => {
     expect(code("render/tuning_menu.ts")).toMatch(/"lockPlacedPieces", 0, 1, 1\)/);
   });
 
-  it("⭐⭐ wired at the three gates: the holder's drag, the second finger, the alignment's FOLLOWER", () => {
+  it("⭐⭐ wired: a placed part is where a tap moves the gizmo — the first touch's and the held second's (⛔ 2026-11-02: the drag, the second finger and the alignment it gated are deleted with the parts' translation, rotation and alignment, `d8134eb`)", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/const lockedInGoal = goalLocked\(st\.idOf\.get\(grip\.mesh\), st\.goalCommit, st\.cfg\.lockPlacedPieces === 1\);/);
-    expect(p).toMatch(/if \(lockedInGoal \|\| unsnapHolds\(/);
-    const d = code("render/drive.ts");
-    const depth = d.slice(d.indexOf("export function applyDepthDrag"));
-    expect(depth.indexOf("goalLocked(st.idOf.get(grip.mesh), st.goalCommit")).toBeGreaterThan(0);
-    expect(depth.indexOf("goalLocked(")).toBeLessThan(depth.indexOf("new MotionTracker"));
-    const a = code("render/alignment_wiring.ts");
-    expect(a).toMatch(/if \(goalLocked\(followerId, st\.goalCommit, st\.cfg\.lockPlacedPieces === 1\)\) \{/);
-    // ⭐ only a drag ON the piece: the translation step itself is not gated — a seated assembly still carries it
-    const step = d.slice(d.indexOf("export function applyWorldStep"), d.indexOf("export function applyDepthStep"));
-    expect(step).not.toMatch(/goalLocked/);
-  });
-});
-
-describe("⭐ prototype — the HitFace's fuchsia contour is toggled OFF, not deleted", () => {
-  it("⭐ ships hidden; a 0/1 switch in FOLLOWERFACE draws it again; the drawing is gated, the HitFace itself untouched", () => {
-    expect(DEFAULT_CONFIG.showHitFaceContour).toBe(0);
-    expect(code("render/tuning_menu.ts")).toContain('"showHitFaceContour", 0, 1, 1)');
-    const loop = code("render/render_loop.ts");
-    expect(loop).toContain("if (hitFace !== null && st.cfg.showHitFaceContour === 1) {");
-    expect(loop).toContain("m.loop.color.copyFrom(CANDIDATE_COLOUR)"); // the method is intact
-    expect(loop).toContain("const hitFace = hitFaceNow(st);");
+    expect(p).toContain("goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1), hitAt);");
+    expect(p).toContain("const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1);");
+    expect(p).not.toContain("lockedInGoal");
   });
 });

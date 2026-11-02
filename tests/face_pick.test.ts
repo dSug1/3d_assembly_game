@@ -18,11 +18,9 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  alignedFaceOf,
   faceFromPickedNormal,
 } from "@core/face_pick";
 import { makeWorld, type SceneObject } from "@core/object_model";
-import type { Constraint } from "@core/constraint_stack";
 import { qFromAxisAngle, type Vec3 } from "@core/vec";
 
 /** A unit box with the six faces `3D1` already gives every object. */
@@ -181,75 +179,3 @@ function qRotateForTest(o: SceneObject, v: Vec3): Vec3 {
 // that are not the normal in ascending order, which swaps `2L` and `3L` on the ±x faces.
 // ⭐ `METHOD`: a composition is a thing to MEASURE.
 // ══════════════════════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ⭐⭐⭐ WHICH FACE CARRIES THE ALIGNMENT — the owner, 2026-09-17: *"when an object is aligned,
-// always maintain its FollowerFace highlighted (even if the touchpoints later select other
-// objects) until its alignment is broken."*
-//
-// ⛔⛔ THE DEFECT THIS REPLACES: one remembered `selectedFace` record, so aligning a SECOND
-// object wiped the FIRST object's highlight — defeating the exact purpose the owner wants it
-// for, which is seeing *which objects* are aligned, plural.
-// ══════════════════════════════════════════════════════════════════════════════
-describe("⛔⛔ alignedFaceOf — derived from the stack, so it cannot outlive the alignment", () => {
-  const L = 0.08;
-  const body = (id: string, constraints: readonly Constraint[]): SceneObject => ({
-    id,
-    local: { position: [0, 0, 0], orientation: [1, 0, 0, 0] },
-    parent: null,
-    faces: [
-      { id: "+x", centre: [L / 2, 0, 0], normal: [1, 0, 0] },
-      { id: "-x", centre: [-L / 2, 0, 0], normal: [-1, 0, 0] },
-      { id: "+y", centre: [0, L, 0], normal: [0, 1, 0] },
-      { id: "-y", centre: [0, -L, 0], normal: [0, -1, 0] },
-      { id: "+z", centre: [0, 0, 1.5 * L], normal: [0, 0, 1] },
-      { id: "-z", centre: [0, 0, -1.5 * L], normal: [0, 0, -1] },
-    ],
-    connectors: [],
-    constraints,
-  });
-  const align = (localNormal: Vec3): Constraint[] => [
-    { kind: "FACE_ALIGN", localNormal, targetWorld: [0, 1, 0] },
-  ];
-
-  it("⭐ the face whose LOCAL normal the alignment constrains", () => {
-    const w = makeWorld([body("a", align([0, 0, 1]))]);
-    expect(alignedFaceOf(w, "a")).toBe("+z");
-  });
-
-  it("⛔⛔ SIGNED, NOT |dot| — `-x` must not light up for a `+x` alignment", () => {
-    // ⭐⭐ `+x` and `-x` are one AXIS but two FACES. ⚠ An `|dot|` test would light the opposite
-    // face roughly half the time, and on a cuboid that is immediately visible to a hand — the
-    // highlight appears on the far side of the body from the finger that made it.
-    expect(alignedFaceOf(makeWorld([body("a", align([1, 0, 0]))]), "a")).toBe("+x");
-    expect(alignedFaceOf(makeWorld([body("a", align([-1, 0, 0]))]), "a")).toBe("-x");
-    expect(alignedFaceOf(makeWorld([body("a", align([0, -1, 0]))]), "a")).toBe("-y");
-  });
-
-  it("⛔⛔ NO ALIGNMENT ⇒ null, WHICH IS WHAT MAKES THE HIGHLIGHT SELF-CLEARING", () => {
-    // ⭐ This is the whole reason the function reads the model instead of a remembered record:
-    // the moment an unalign tap, an undo or a turned Pioneer evicts the constraint, the highlight has
-    // nothing to draw. ⛔ No cleanup path to forget, and no way for the marker to survive the
-    // thing it reports.
-    expect(alignedFaceOf(makeWorld([body("a", [])]), "a")).toBeNull();
-  });
-
-  it("⛔ a MATE is not an alignment — a seat must not wear the alignment's highlight", () => {
-    const mate: Constraint[] = [
-      { kind: "MATE", localNormal: [0, 0, 1], targetWorld: [0, 0, -1], otherObjectId: "b" },
-    ];
-    expect(alignedFaceOf(makeWorld([body("a", mate)]), "a")).toBeNull();
-  });
-
-  it("⭐⭐ TWO OBJECTS ALIGNED AT ONCE, each reporting its OWN face", () => {
-    // ⭐⭐⭐ THE VECTOR FOR THE OWNER'S ACTUAL REQUEST. ⛔ The old single-record design could not
-    // express this state at all: whichever object was aligned second owned the only highlight.
-    const w = makeWorld([body("a", align([0, 0, 1])), body("b", align([0, 1, 0]))]);
-    expect(alignedFaceOf(w, "a")).toBe("+z");
-    expect(alignedFaceOf(w, "b")).toBe("+y");
-  });
-
-  it("⚠ a missing object answers null rather than throwing in a per-frame query", () => {
-    expect(alignedFaceOf(makeWorld([body("a", align([0, 0, 1]))]), "gone")).toBeNull();
-  });
-});

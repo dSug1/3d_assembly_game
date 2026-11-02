@@ -6,6 +6,10 @@
 > **LAST VERIFIED** · 2026-09-27
 
 ⭐⭐⭐ **WHAT A FINGER DOES TODAY, BOTH DEVICES → [`spec/INPUTS_TABLE.md`](spec/INPUTS_TABLE.md).**
+⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION AND ALIGNMENT ARE DELETED** — snap, unsnap, undo, edge band, mode
+toggle, HitFace and PioneerFaceCursor with them; only the orbited piece moves (orbit, approach, slide), and every press is the orbit's.
+⭐ The code before: commit **`d8134eb`**. ⏳ Later: the parts get the orbited pieces' properties; `Scene_0` gets the orbit and the slide.
+What went, what stayed → [`history/2026-11-02_parts_translation_rotation_deleted.md`](history/2026-11-02_parts_translation_rotation_deleted.md). ⚠ Everything below about the parts is the record.
 ⛔⛔ **THE INPUTS WERE SIMPLIFIED ON 2026-09-27** (`D106`–`D124`): deleted — `FOLLOW`, both shakes, the
 re-press undo, the flick and its rotation reset, the pinned Pioneer, `worldAxisB=0`, the `CHANNELS`
 mapping, the fuchsia offer, the white capture highlights and the approach swing. ⭐ Now: an aligned body is

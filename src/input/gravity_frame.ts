@@ -144,3 +144,18 @@ export function gravityFrame(viewAxis: Vec3, gravityDown: Vec3): GravityFrame | 
   return { right, up, depth, towardGravity: dot(v, g) };
 }
 
+/**
+ * ⛔ (2026-11-02) moved here from `input/screen_rotate.ts`, deleted with the parts' translation, rotation and alignment (commit `d8134eb`).
+ *
+ * The CAMERA's own screen axes, in WORLD space, latched at press.
+ * ⚠ `viewAxis` points AWAY from the viewer, into the screen — a camera forward.
+ *
+ * ⛔ Still needed, and NOT interchangeable with `GravityFrame`: amendment A3's handover
+ * asks for the angle between the TRUE view axis and a constraint axis, and a flattened one
+ * would answer a different question. ⚠ Two frames, two purposes.
+ */
+export interface ScreenFrame {
+  readonly right: Vec3;
+  readonly up: Vec3;
+  readonly viewAxis: Vec3;
+}

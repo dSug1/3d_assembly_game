@@ -96,7 +96,7 @@ describe("⭐⭐ prototype — the painting SWINGS when the green piece orbits (
     expect(code("render/hud_paint.ts")).toContain("orbitSway×${st.orbitSwayKicks}");
     expect(code("render/tuning_menu.ts")).toContain('"orbitSwayDeg", 0, 10, 0.1)');
     // ⭐ the rotation sway of a held piece goes through the SAME block swing
-    expect(code("render/sway_pass.ts")).toMatch(/swingBlock\(st, grip\.mesh, grip\.mesh\.position, kick\.axis, impulse, st\.cfg\.rotateSwayTauMs\);/);
+    expect(code("render/sway_pass.ts")).toContain("export function swingBlock("); // ⛔ (2026-11-02) a part's own turn deleted (`d8134eb`): the orbit and the slide swing
     expect(code("render/sway_pass.ts")).toMatch(/f\.swayRotTauMs = tauMs;/);
     expect(code("render/render_loop.ts")).toMatch(/const rotTau = f\.swayRotTauMs \/ 1000;/);
   });

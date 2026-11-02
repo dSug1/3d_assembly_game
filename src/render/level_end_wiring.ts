@@ -15,7 +15,7 @@ export function levelEndFrame(st: SceneState, nowMs: number): void {
   const final = liveFinal(st); // ⭐ (2026-10-14) the shown orbited piece's goal too
   if (!final || st.levelEnd.result !== null) return;
   const pointersDown = st.gestureSpan.active;
-  const animating = st.alignSnaps.size > 0 || st.seatSnaps.size > 0 || st.goalPulls.size > 0;
+  const animating = st.goalPulls.size > 0;
   const demo: LevelEndFacts["demo"] = st.demo === null ? "NONE" : st.demo.done ? "DONE" : "PLAYING";
   if (pointersDown > 0 || animating || demo === "PLAYING" || (demo === "NONE" && st.sceneStartMs === null)) return;
   // ⭐ `D183`: PLACED — the snap's margins, or the never-grabbed ones.

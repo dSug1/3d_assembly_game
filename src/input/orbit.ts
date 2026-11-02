@@ -530,3 +530,14 @@ export function pieceDistanceRange(cfg: GestureConfig, steps = 400): { readonly 
   }
   return { minM, maxM };
 }
+
+/** The orbit's parameters as a pose. ⛔ (2026-11-02) moved here from `input/camera_reset.ts`, deleted with the parts' translation, rotation and alignment (commit `d8134eb`). */
+export interface CameraPose {
+  /** Radians, unbounded — it accumulates as the finger drags. */
+  readonly yawRad: number;
+  /** 0 at the bottom ring, 1 at the top. */
+  readonly elevation: number;
+  /** Multiplier on the orbit surface. ⚠ Strictly positive. */
+  readonly zoom: number;
+  readonly centreM: Vec3;
+}
