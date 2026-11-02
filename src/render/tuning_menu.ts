@@ -195,10 +195,11 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-10-28) THE ORBIT AROUND THE ASSEMBLY — or the gizmo's 2D curve (kept)
             tunable(st, "orbit: around the assembly (0) / the gizmo's 2D curve (1)", "orbitMode", 0, 1, 1),
             tunable(st, "gizmo lock distance (m)", "assemblyLockDistM", 0.05, 2, 0.05),
-            // ⭐⭐⭐ (2026-11-02, *"dy travel with a slider in CAMERA ORBIT AROUND CENTER"*) the orbit tilted onto a horizontal face: the screen's roll's travel
-            tunable(st, "the shell's offset: the piece hugs the parts within it, rides the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-02) the orbit tilted onto a horizontal face: the screen's roll; the shell
+            tunable(st, "screen roll at a tilt / over the top (mm of travel)", "orbitTiltBlendMm", 0, 40, 1),
+            tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)

@@ -10,7 +10,8 @@
  * * the piece's direction `u` (`orbitDir`) from the assembly's CENTRE (fixed at the boot); the GIZMO where the ray from the piece toward the centre first
  *   meets the assembly (the render casts it); the piece ON that ray, at the APPROACH's distance from the gizmo (`approachDistance`: the 2D curve's distance
  *   from ring 1 to the waist, then straight to the contact) — so far out it orbits the centre, close in it hugs the assembly's shape;
- * * ⛔ (2026-11-02) the lock close in is deleted — the piece rides the shell (`input/orbit_shell.ts`);
+ * * CLOSE IN (`nextLock`) the gizmo and its face LOCK: the piece then turns about the locked gizmo (the same formula, the gizmo held — continuous at the
+ *   lock), kept within `LOCK_CONE_RAD` of the face's normal (`coneClamp`);
  * * the gizmo's FACE switches at an edge only once the ray lands past it by a margin (`faceSwitches`), so the quads do not flicker on an edge.
  * ⛔ ENGINE-FREE. Spherical angles, a ray, hysteresis — textbook; no licence, no patent.
  */
@@ -86,9 +87,73 @@ export function approachDistance(cfg: GestureConfig, a: number): number {
   return (dist(r.waist) * (x - r.min)) / (r.waist - r.min);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-02) THE APPROACH COORDINATE FOR A DISTANCE — `approachDistance`'s inverse ON THE STRETCH `near` IS ON: the distance is not monotonic in
+ * the coordinate (it dips past the waist — the 2D curve's), so the monotonic stretch holding `near` is found first, then halved on; held to its ends.
+ */
+export function approachOfDistance(cfg: GestureConfig, d: number, near: number): number {
+  const r = approachRange(cfg);
+  const N = 400;
+  const at = (i: number): number => r.min + ((r.max - r.min) * i) / N;
+  const f = (i: number): number => approachDistance(cfg, at(i));
+  const sense = (i: number): number => Math.sign(f(Math.min(N, i + 1)) - f(i)) || 1;
+  const i0 = Math.min(N - 1, Math.max(0, Math.floor(((near - r.min) / (r.max - r.min)) * N)));
+  const sg = sense(i0);
+  let lo = i0;
+  let hi = i0 + 1;
+  while (lo > 0 && sense(lo - 1) === sg) lo--;
+  while (hi < N && sense(hi) === sg) hi++;
+  if ((d - f(lo)) * sg <= 0) return at(lo);
+  if ((d - f(hi)) * sg >= 0) return at(hi);
+  let a0 = at(lo);
+  let a1 = at(hi);
+  for (let k = 0; k < 40; k++) {
+    const m = (a0 + a1) / 2;
+    if ((approachDistance(cfg, m) - d) * sg < 0) a0 = m;
+    else a1 = m;
+  }
+  return (a0 + a1) / 2;
+}
+
 /** ⭐ The far orbit's distance from the gizmo (ring 1's — one value for both curves, the owner's 5). */
 export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
+}
+
+/**
+ * ⭐⭐ THE LOCK: on when the piece comes inside the assembly's bounding sphere (closer to the centre than `assemblyRadiusM`, half its largest dimension —
+ * the orbit circle smaller than the assembly) or within `lockDistM` of the gizmo; off only past both by a margin (×1.25 the distance, ×1.05 the radius).
+ */
+export function nextLock(locked: boolean, toCentreM: number, toGizmoM: number, assemblyRadiusM: number, lockDistM: number): boolean {
+  if (!locked) return toCentreM < assemblyRadiusM || toGizmoM < lockDistM;
+  return !(toCentreM > assemblyRadiusM * 1.05 && toGizmoM > lockDistM * 1.25);
+}
+
+/** ⭐ Locked, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
+export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
+
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"*)
+ * — THE LOCK'S CONE, from where the piece is: at the lock (`cone` `null`) the piece's own angle off the face's normal when it is outside `LOCK_CONE_RAD`
+ * (⛔ the cone at once: at −90° over a vertical face the piece was snapped 10° in one frame — 5.8 cm at the lock's 0.28 m, the camera turned with it);
+ * after that, tightened as the piece comes inward, never below `LOCK_CONE_RAD`.
+ */
+export function lockCone(cone: number | null, angle: number): number {
+  return Math.max(LOCK_CONE_RAD, cone === null ? angle : Math.min(cone, angle));
+}
+
+/** ⭐ `u` turned toward `n` (both unit) until within `maxRad` of it; within already, `u` itself. */
+export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec3 {
+  const c = Math.max(-1, Math.min(1, dot(u, n)));
+  const a = Math.acos(c);
+  if (a <= maxRad) return u;
+  const axis = normalize(cross(n, u)) ?? normalize(cross(n, [0, 1, 0])) ?? [1, 0, 0];
+  return qRotate(qFromAxisAngle(axis, maxRad), n);
+}
+
+/** ⭐ The angle between `u` and `n` (unit). */
+export function angleTo(u: Vec3, n: Vec3): number {
+  return Math.acos(Math.max(-1, Math.min(1, dot(u, n))));
 }
 
 /**
@@ -181,9 +246,10 @@ export function twoFingerKind(d1: readonly [number, number], d2: readonly [numbe
 }
 
 /**
- * ⭐⭐⭐ (2026-11-02) The camera's offsets applied about a GIVEN up (`up0`, square to `u`): the pitch toward it, the yaw about it — `offsetFrame`'s second half.
- * The orbit's tilt applies them about the screen's up as it is (continuous through a switch — ⛔ about each frame's own up they flipped side over a top:
- * ~6°, the camera 0.75 m, the piece 436 px on the screen, measured).
+ * ⭐⭐ (2026-10-28, the owner: *"the camera offset is different depending on the face hosting the gizmo. This is not what i want"*) — THE CAMERA'S OFFSETS
+ * IN ITS OWN FRAME, never faded, the same whichever face hosts the gizmo — ⭐⭐⭐ (2026-11-02) about the SCREEN'S UP as it is (`up0`, square to `u`): the pitch
+ * toward it, the yaw about it. ⛔ About an upright up of the orbit's own heading (`offsetFrame`, deleted): with the orbit tilted the two ups opposed over a
+ * top — the offsets flipped side, the piece 436 px on the screen at every switch back.
  */
 export function offsetAbout(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
@@ -194,7 +260,35 @@ export function offsetAbout(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number
   return { dir: qRotate(t, d1), up: qRotate(t, u1) };
 }
 
-// ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) was deleted for a carrier on the sections'
-// hulls — ⛔ (2026-11-02, *"Build the shell"*) itself deleted: the piece rides the shell (`input/orbit_shell.ts`), the gizmo is a readout; and with it the
-// lock close in (`nextLock`, `lockCone`, `coneClamp`), the way out's re-solved angles (`orbitForCameraDir` — a camera turn now, `st.asmCamTurn`), the
-// depth step taken into the approach (`gizmoDepthStep`, `approachOfDistance` — the ground's lag now) and the upright camera frame (`offsetFrame`).
+/**
+ * ⭐⭐⭐ (2026-11-01, the owner: *"when I move away the piece after slide, the piece goes towards the camera first, then there is a later movement of the
+ * piece on the screen due to the camera taking back its offset position"* → *"build A"*) — **THE ORBIT WHOSE CAMERA LOOKS ALONG `want`**: the yaw and pitch
+ * whose camera direction (`camDir` — the caller's own rule: its frame, its up, its offsets; ⭐ 2026-11-02 the screen's up as it is, never an assumed
+ * upright one) is `want` (unit, from what it looks at to the camera, in the orbit's frame); the yaw kept nearest `yaw0`. Fixed-point on the two angles
+ * (the camera is a near-rigid turn of the direction: a few steps); the best found when it cannot meet it. `null` for no direction.
+ */
+export function orbitForCameraDir(want: Vec3, yaw0: number, camDir: (yaw: number, v: number) => Vec3): { yaw: number; v: number } | null {
+  const w = normalize(want);
+  if (w === null) return null;
+  const LIM = Math.PI / 2 - 1e-4;
+  const angles = (d: Vec3): { yaw: number; p: number } => ({ yaw: Math.atan2(d[2], d[0]), p: Math.asin(Math.max(-1, Math.min(1, d[1]))) });
+  const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+  const aw = angles(w);
+  const flat = Math.hypot(w[0], w[2]) > 1e-9;
+  let yaw = yaw0 + (flat ? wrap(aw.yaw - yaw0) : 0);
+  let p = aw.p;
+  let best = { yaw, p, err: Infinity };
+  for (let i = 0; i < 40; i++) {
+    const d = camDir(yaw, vOfPitch(p));
+    const err = Math.acos(Math.max(-1, Math.min(1, dot(d, w))));
+    if (err < best.err) best = { yaw, p, err };
+    if (err < 1e-9) break;
+    const ad = angles(d);
+    if (flat) yaw += wrap(aw.yaw - ad.yaw);
+    p = Math.max(-LIM, Math.min(LIM, p + (aw.p - ad.p)));
+  }
+  return { yaw: best.yaw, v: vOfPitch(best.p) };
+}
+
+// ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
+// hull now (`input/section_hull.ts`, with `faceTurnedAway` and the drawn sections' samples).

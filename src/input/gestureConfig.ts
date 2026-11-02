@@ -545,13 +545,14 @@ export interface GestureConfig {
   orbitMode: number;
   /** ⭐ (2026-10-28) the gizmo and its face LOCK within this distance of the piece (m) — or once the piece is inside the assembly's bounding sphere. */
   assemblyLockDistM: number;
-  /** ⭐⭐⭐ (2026-11-02, *"4- dy travel with a slider in CAMERA ORBIT AROUND CENTER"*) the orbit's TILT onto a horizontal face: the screen's roll to the new frame over this much of
-   * the finger's travel (mm; 0: at once) — `input/orbit_tilt.ts` */
-  orbitShellOffsetMm: number;
   /** ⭐ (2026-10-28) at an edge the gizmo's face switches only once the ray lands this far past it (mm, in the world — an edge is a place on the assembly) — the quads do not flicker. */
   gizmoEdgeMarginMm: number;
   /** ⭐ (2026-10-28, the optional) the sections the gizmo travels along drawn — green the horizontal one, red the yaw plane's (1 on, 0 off). */
   sectionLines: number;
+  /** ⭐⭐⭐ (2026-11-02) the screen's roll at a jump of its up (a switch of the orbit's tilt looking steeply, the view over the top), over this much of the finger's travel (mm) */
+  orbitTiltBlendMm: number;
+  /** ⭐⭐⭐ (2026-11-02) THE SHELL's offset (mm): within it the piece comes down onto its gizmo, beyond it rides the smooth shell round the parts' box */
+  orbitShellOffsetMm: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -1084,9 +1085,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   quadSliceMaxDeg: 30, // ⭐ (2026-10-20, *"Same quad switch speed as current"*) 3 or 4 quads → 12 slices of 30°, as 6 quads at 40° (2026-10-19)
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the gizmo locked within 30 cm
-  orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-02, *"Add a slider for the shell offset"*) within 60 mm of the parts the piece hugs them, beyond it rides the smooth shell
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
+  orbitTiltBlendMm: 10, // ⭐⭐⭐ (2026-11-02) the screen's roll over 10 mm of travel
+  orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-02) the shell's offset
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -1254,8 +1256,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
-  if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
+  if (!(cfg.orbitTiltBlendMm >= 0 && cfg.orbitTiltBlendMm <= 60)) throw new Error(`orbitTiltBlendMm (${cfg.orbitTiltBlendMm}) must be in [0, 60] mm.`);
+  if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
