@@ -756,6 +756,19 @@ export interface SceneState {
   /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
   asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) THE FACE'S FRAME (`input/orbit_frame.ts`: upright, or tilted onto a top / bottom) — the sections, the carrier and their rays are read
+   * in it; the placed parts in it (per frame); the travel since its last switch (a switch waits for half its roll) */
+  asmFace: { readonly kind: import("../input/orbit_frame").TiltKind; readonly q: import("../core/vec").Quat };
+  asmFaceParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  asmSwitchMm: number;
+  /** ⭐⭐⭐ (2026-11-02) THE ORBIT'S OWN FRAME — its angles are read in it (the face's after a switch, re-tilted before a pole) — and the finger's axes' signs */
+  asmOrbit: import("../core/vec").Quat;
+  asmSign: { readonly yaw: 1 | -1; readonly v: 1 | -1 };
+  /** ⭐⭐⭐ (2026-11-02) the screen's up shown last frame (before the offsets), and a ROLL under way from one to the next (its share, 0 … 1) */
+  asmUp: Vec3 | null;
+  asmRoll: { readonly from: Vec3; readonly share: number } | null;
+  /** ⭐⭐⭐ (2026-11-02) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
+  asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;

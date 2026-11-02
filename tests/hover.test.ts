@@ -1394,6 +1394,7 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
   });
   it("⭐⭐⭐ THE WAY OUT GOES ON FROM THE SLIDE VIEW (*\"build A\"*, twice): the orbit whose CAMERA — its offsets included — looks along the slide view's direction; any face", async () => {
     const H = await import("../src/input/hover");
+    const F = await import("../src/input/orbit_frame");
     const A = await import("../src/input/assembly_orbit");
     expect(A.orbitForCameraDir).toBeDefined(); // ⛔ the old: the PIECE's direction on the slide's — the camera then swung to its offsets (a second, curved move)
     const dirs: [number, number, number][] = [
@@ -1407,22 +1408,24 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
       const ry = (oy * Math.PI) / 180, rp = (op * Math.PI) / 180;
       for (const d of dirs) {
         const l = Math.hypot(...d);
-        if (Math.abs(op) > 3 && Math.abs(d[1] / l) > 0.95) continue; // a camera 6° below the piece cannot look from 85° up: the piece would be past the zenith
-        const t = A.orbitForCameraDir(d, 0, ry, rp)!;
-        const cam = A.offsetFrame(A.orbitDir(t.yaw, t.v), t.yaw, ry, rp).dir;
+        if (Math.abs(d[1] / l) > 0.95) continue; // a camera 6° below the piece cannot look from 85° up: the piece would be past the zenith
+        // ⭐⭐⭐ (2026-11-02) on the camera's own rule — its offsets about the screen's up (gravity's)
+        const camDir = (y: number, v: number) => { const u = A.orbitDir(y, v); return A.offsetAbout(u, F.screenUpTarget(u, [0, 1, 0], null), ry, rp).dir; };
+        const t = A.orbitForCameraDir(d, 0, camDir)!;
+        const cam = camDir(t.yaw, t.v);
         for (let k = 0; k < 3; k++) expect(cam[k]).toBeCloseTo(d[k]! / l, 6); // the orbit's camera where the slide's is: nothing to take back
       }
     }
     // the yaw kept nearest the orbit's own (no turn of 2π for the eased orbit to unwind)
-    expect(A.orbitForCameraDir([1, 0, 0.01], 4 * Math.PI, 0, 0)!.yaw).toBeCloseTo(4 * Math.PI + Math.atan2(0.01, 1), 9);
-    expect(A.orbitForCameraDir([0, 0, 0], 1, 0, 0)).toBeNull();
+    expect(A.orbitForCameraDir([1, 0, 0.01], 4 * Math.PI, (y, v) => A.orbitDir(y, v))!.yaw).toBeCloseTo(4 * Math.PI + Math.atan2(0.01, 1), 9);
+    expect(A.orbitForCameraDir([0, 0, 0], 1, (y, v) => A.orbitDir(y, v))).toBeNull();
     expect(H.SLIDE_WAY_OUT_MIN_RAD).toBeCloseTo(Math.PI / 360, 15);
     // wired: the approach's step OUT, while the slide is on, re-bases the orbit — the piece's place kept by its own offset, the lock's cone opened to it
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (out) slideWayOutRebase(st);"); // ⭐ (2026-11-01) `out` = want > a0, the step then checked too
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
-    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };");
+    expect(h).toContain("const t = orbitForCameraDir(toFrame(st.asmOrbit, hv.iso), q.yaw, (y, v) => cameraDirInOrbit(st, y, v));"); // ⭐⭐⭐ (2026-11-02) the orbit's frame, the camera's own rule
+    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDirWorld(st, nq.yaw, nq.v), lk.normal)) };");
     expect(h).toContain("const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];");
     expect(h).toContain("st.orbit.reset(nq.yaw, nq.v);");
     // ⛔ the camera's target no longer follows the piece on the way out (*"revert the change of the camera looking at the piece"*)

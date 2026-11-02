@@ -1195,7 +1195,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
   const camPlace = cameraPlaceNow(st); // ⭐⭐⭐ (2026-10-25) over a horizontal face on the TRAVEL (`laggedPlace`): the roll as soon as the camera reaches the zenith
   const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);
-  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
+  st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace };
+  st.asmUp = camFrame.base ?? null; // ⭐⭐⭐ (2026-11-02) the screen's up shown (before the offsets) — the next frame's reference (a jump of it is rolled) // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
   if (po === null) {
     const o = cameraOffsetAt(camFrame.dir, [bo.offsetM[0] * k, bo.offsetM[1] * k, bo.offsetM[2] * k], gapFull);
     camAt = [c.x + o[0], c.y + o[1], c.z + o[2]];

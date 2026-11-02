@@ -87,6 +87,34 @@ export function approachDistance(cfg: GestureConfig, a: number): number {
   return (dist(r.waist) * (x - r.min)) / (r.waist - r.min);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-02) THE APPROACH COORDINATE FOR A DISTANCE — `approachDistance`'s inverse ON THE STRETCH `near` IS ON: the distance is not monotonic in
+ * the coordinate (it dips past the waist — the 2D curve's), so the monotonic stretch holding `near` is found first, then halved on; held to its ends.
+ */
+export function approachOfDistance(cfg: GestureConfig, d: number, near: number): number {
+  const r = approachRange(cfg);
+  const N = 400;
+  const at = (i: number): number => r.min + ((r.max - r.min) * i) / N;
+  const f = (i: number): number => approachDistance(cfg, at(i));
+  const sense = (i: number): number => Math.sign(f(Math.min(N, i + 1)) - f(i)) || 1;
+  const i0 = Math.min(N - 1, Math.max(0, Math.floor(((near - r.min) / (r.max - r.min)) * N)));
+  const sg = sense(i0);
+  let lo = i0;
+  let hi = i0 + 1;
+  while (lo > 0 && sense(lo - 1) === sg) lo--;
+  while (hi < N && sense(hi) === sg) hi++;
+  if ((d - f(lo)) * sg <= 0) return at(lo);
+  if ((d - f(hi)) * sg >= 0) return at(hi);
+  let a0 = at(lo);
+  let a1 = at(hi);
+  for (let k = 0; k < 40; k++) {
+    const m = (a0 + a1) / 2;
+    if ((approachDistance(cfg, m) - d) * sg < 0) a0 = m;
+    else a1 = m;
+  }
+  return (a0 + a1) / 2;
+}
+
 /** ⭐ The far orbit's distance from the gizmo (ring 1's — one value for both curves, the owner's 5). */
 export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
@@ -218,17 +246,12 @@ export function twoFingerKind(d1: readonly [number, number], d2: readonly [numbe
 }
 
 /**
- * ⭐⭐ (2026-10-28, the owner: *"the camera offset is different depending on the face hosting the gizmo. This is not what i want. I want the offset to be
- * the same whichever the hosting face"*) — THE CAMERA'S FRAME around the assembly: behind the piece along `u`, upright at the heading `h`, the owner's
- * offsets (`yawRad`, `pitchRad`) turned in the CAMERA'S OWN frame — the pitch about its right (toward its up), the yaw about its upright up — the same at
- * every pitch. ⛔ In the world's frame and faded from 60° of pitch (`frameAtHeading` — the top roll's rule): a top face, approached steeply, lost them.
+ * ⭐⭐ (2026-10-28, the owner: *"the camera offset is different depending on the face hosting the gizmo. This is not what i want"*) — THE CAMERA'S OFFSETS
+ * IN ITS OWN FRAME, never faded, the same whichever face hosts the gizmo — ⭐⭐⭐ (2026-11-02) about the SCREEN'S UP as it is (`up0`, square to `u`): the pitch
+ * toward it, the yaw about it. ⛔ About an upright up of the orbit's own heading (`offsetFrame`, deleted): with the orbit tilted the two ups opposed over a
+ * top — the offsets flipped side, the piece 436 px on the screen at every switch back.
  */
-export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
-  const e = Math.asin(Math.max(-1, Math.min(1, u[1])));
-  const heading: Vec3 = [Math.cos(h), 0, Math.sin(h)];
-  const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
-  const k = dot(raw, u);
-  const up0 = normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
+export function offsetAbout(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
   const sn = Math.sin(pitchRad);
   const d1: Vec3 = [c * u[0] + sn * up0[0], c * u[1] + sn * up0[1], c * u[2] + sn * up0[2]];
@@ -240,11 +263,11 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
 /**
  * ⭐⭐⭐ (2026-11-01, the owner: *"when I move away the piece after slide, the piece goes towards the camera first, then there is a later movement of the
  * piece on the screen due to the camera taking back its offset position"* → *"build A"*) — **THE ORBIT WHOSE CAMERA LOOKS ALONG `want`**: the yaw and pitch
- * whose camera direction — the piece's direction turned by the camera's offsets (`offsetFrame`) — is `want` (unit, from what it looks at to the camera);
- * the yaw kept nearest `yaw0`. Solved by fixed-point on the two angles (the offsets are a near-rigid turn: a few steps); the best found when it cannot
- * meet it (straight above). `null` for no direction.
+ * whose camera direction (`camDir` — the caller's own rule: its frame, its up, its offsets; ⭐ 2026-11-02 the screen's up as it is, never an assumed
+ * upright one) is `want` (unit, from what it looks at to the camera, in the orbit's frame); the yaw kept nearest `yaw0`. Fixed-point on the two angles
+ * (the camera is a near-rigid turn of the direction: a few steps); the best found when it cannot meet it. `null` for no direction.
  */
-export function orbitForCameraDir(want: Vec3, yaw0: number, offYawRad: number, offPitchRad: number): { yaw: number; v: number } | null {
+export function orbitForCameraDir(want: Vec3, yaw0: number, camDir: (yaw: number, v: number) => Vec3): { yaw: number; v: number } | null {
   const w = normalize(want);
   if (w === null) return null;
   const LIM = Math.PI / 2 - 1e-4;
@@ -256,7 +279,7 @@ export function orbitForCameraDir(want: Vec3, yaw0: number, offYawRad: number, o
   let p = aw.p;
   let best = { yaw, p, err: Infinity };
   for (let i = 0; i < 40; i++) {
-    const d = offsetFrame(orbitDir(yaw, vOfPitch(p)), yaw, offYawRad, offPitchRad).dir;
+    const d = camDir(yaw, vOfPitch(p));
     const err = Math.acos(Math.max(-1, Math.min(1, dot(d, w))));
     if (err < best.err) best = { yaw, p, err };
     if (err < 1e-9) break;

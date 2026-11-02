@@ -582,6 +582,14 @@ export function createScene(
   st.asmChain = null;
   st.asmLoop = null;
   st.asmParts = null;
+  st.asmFace = { kind: 0, q: [1, 0, 0, 0] };
+  st.asmFaceParts = null;
+  st.asmSwitchMm = 0;
+  st.asmOrbit = [1, 0, 0, 0];
+  st.asmSign = { yaw: 1, v: 1 };
+  st.asmUp = null;
+  st.asmRoll = null;
+  st.asmShell = null;
   st.asmRayCache = new Map();
   st.approach = 1;
   st.approachInertia = new OrbitInertia();

@@ -89,6 +89,8 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    move; a blocked slide named on the HUD and slid along what blocks it; the gizmo hidden while lit / sliding; the way out turns about the piece (⛔ reverted, item 35).
 14. ⭐⭐⭐ **THE SLIDE, THIRD PASS** (2026-11-01, item 35; ⛔ no device close): the way out goes on from the slide view (the orbit's yaw and pitch re-based);
    an edge-on latch slides (the view within the corner, a grazing finger read at the screen's centre); the 3° tilt — ⛔ not a turn held short (withdrawn), item 36.
+21. ⭐⭐⭐ **THE WAY OUT ON THE CAMERA'S OWN RULE** (2026-11-02; ⛔ no device close): with the orbit tilted, the way out's angles solved in the orbit's own frame on
+   the orbit camera's own rule — its screen up, never an assumed upright one (`cameraDirInOrbit`) → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 20. ⛔ **OPEN — A SETTLE STOPPED SHORT** (2026-11-01; not changed): a nearer part between the piece and the latched face stops the settle — the piece
    slides up to 20 mm off the face, its contact outline far from it on the screen. Fixes proposed (latch on the face it touches / settle again) →
    `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.

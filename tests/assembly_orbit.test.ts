@@ -10,6 +10,7 @@ import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfi
 import { SCENE_1 } from "../src/content/scene_1";
 import { sceneConfig } from "@input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
+import { screenUpTarget } from "../src/input/orbit_frame";
 import { waistV } from "../src/input/orbit_rig";
 import {
   angleTo,
@@ -25,7 +26,7 @@ import {
   LOCK_CONE_RAD,
   lookShare,
   nextLock,
-  offsetFrame,
+  offsetAbout,
   orbitDir,
   ORBIT_PITCH_MAX_RAD,
   pitchOfV,
@@ -179,6 +180,8 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
   });
   it("⭐⭐⭐ (2026-10-28, *\"I want the offset to be the same whichever the hosting face\"*) the camera's offsets in its OWN frame: the same angle off the piece's direction, the same split up / sideways, at every pitch — never faded (⛔ gone above 60°: a top face's steep approach lost them)", () => {
     const yawOff = (2.5 * Math.PI) / 180, pitchOff = (2 * Math.PI) / 180;
+    // ⭐⭐⭐ (2026-11-02) about the screen's up — gravity's (`screenUpTarget`)
+    const offsetFrame = (u: Vec3, _yaw: number, yo: number, po: number) => offsetAbout(u, screenUpTarget(u, [0, 1, 0], null), yo, po);
     const ref = (() => { const u = orbitDir(0.4, 0.5); return offsetFrame(u, 0.4, yawOff, pitchOff); })();
     const split = (u: Vec3, f: { dir: Vec3; up: Vec3 }) => {
       const right: Vec3 = [f.dir[1] * f.up[2] - f.dir[2] * f.up[1], f.dir[2] * f.up[0] - f.dir[0] * f.up[2], f.dir[0] * f.up[1] - f.dir[1] * f.up[0]];
@@ -187,7 +190,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     const r0 = split(orbitDir(0.4, 0.5), ref);
     expect(Math.abs(r0[0])).toBeGreaterThan(1.5);
     expect(Math.abs(r0[1])).toBeGreaterThan(2);
-    for (const v of [0.02, 0.2, 0.69, 0.9, 0.98, 1]) {
+    for (const v of [0.18, 0.2, 0.5, 0.69, 0.82]) { // the orbit's pitch within ±60° (`antiPoleQuat` re-tilts it past)
       for (const yaw of [-2, 0.4, 2.7]) {
         const u = orbitDir(yaw, v);
         const f = offsetFrame(u, yaw, yawOff, pitchOff);
@@ -199,13 +202,8 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
         expect(Math.asin(f.dir[1]) * D).toBeLessThan(89); // +90° and its 2°: tilted off the vertical by the offset, never over the top
       }
     }
-    // ⭐ (2026-10-29) at ±90° the direction has no heading: the orbit's yaw (⛔ `atan2(0, 0)` — the camera swung to yaw 0 at the pole)
-    for (const yaw of [-2, 0.4, 2.7]) {
-      const f = offsetFrame([0, 1, 0], yaw, 0, 0);
-      expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
-    }
-    // ⭐ (2026-10-29) the heading the ORBIT's yaw, always (⛔ the direction's own: locked and turned into the cone at −90° it switched at once)
-    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, cam.yaw, o.yawRad, o.pitchRad);");
+    // ⭐⭐⭐ (2026-11-02) about the screen's up: gravity's, the face's frame's looking steeply, a jump of it rolled — verticals kept
+    expect(code("render/assembly_wiring.ts")).toContain("const f = offsetAbout(u, base, o.yawRad, o.pitchRad);");
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");
@@ -277,7 +275,7 @@ describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
     expect(a).toContain("cone: n === null ? null : lockCone(null, angleTo(u, n)) };");
     expect(a).toContain("st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };");
     expect(a).toContain("return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);");
+    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDirWorld(st, yaw0, v0), n);"); // ⭐ (2026-11-02) the orbit's own frame
   });
 });
 

@@ -235,7 +235,7 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(A.gizmoShownAt([1, 2, 3], [0, 0, 0])).toEqual([1, 2, 3]);
     expect(A.gizmoShownAt(null, [0, 0, 0])).toEqual([0, 0, 0]);
     const w = code("render/assembly_wiring.ts");
-    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
+    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: sAng.yaw };"); // ⭐ (2026-11-02) the face's frame's yaw
     expect(w).toContain("const gi = insertIndex(gc.params, gParam);");
     expect(w).toContain("if (green.length > 0) green.splice(gi, 0, gv);");
     expect(w).toContain("const ri = insertIndex(rc.params, c.s);");
@@ -247,13 +247,13 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
   });
   it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);");
+    expect(a).toContain("hit = carrierFrame(st, sAng.yaw, sAng.v, Math.abs(dYaw) > Math.PI / 2 ? 0 : dYaw, pitchOfV(sAng.v) - pitchOfV(prev.v), u);"); // ⭐ (2026-11-02) read in the face's frame; a pole crossed: no yaw step
     expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
     expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
     expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
-    expect(a).toContain("const red = onRed(st, yaw, h.point);");
+    expect(a).toContain("const red = onRed(st, yaw, toFramePoint(st.asmFace.q, a.centre, h.point));");
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
-    expect(a.split("st.asmCarrier = null;").length - 1).toBe(3); // the hover, the lock, the unlock
+    expect(a.split("st.asmCarrier = null;").length - 1).toBe(4); // the hover, the lock, the unlock, a switch of the face's frame
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");

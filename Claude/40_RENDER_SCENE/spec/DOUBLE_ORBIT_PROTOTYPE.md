@@ -2305,3 +2305,52 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   green (the lines' own 2 mm lift); before, up to **157 mm** and **108 mm**. ⚠ Cost: 64 drops a frame under a dx (the red), 96 under a dy on a side (the
   green), both on a diagonal — watch the HUD's `frame` line on the iPhone; the fallback is a blend between less frequent recasts.
 * Vectors (`tests/section_hull.test.ts`: `redSamples`'s replaced, + 2 new, 3 restated — red on the previous build). ⛔ No device close. 2159 vectors.
+
+### ⭐⭐⭐ THE ORBIT TILT, BUILT AGAIN CLEANLY — two frames, verticals kept, the shell a distance (2026-11-02, branch `1.0.88-`)
+
+> *"I don't like at all this last implementation: the red and green sections roll tilted most of the around the assembly and do not respect gravity
+> vertical orientation for the red section plane, the camera rolls uncontrollably and the verticals are almost never respected, the piece disappears under
+> the floor, etc. Revert to commit ff2fca2 …, then build the orbit tilt again with all the characteristics that matter … verticals are maintained in camera
+> view as much as possible. Make a clean design including the lessons learned, avoid patching and copy paste from reverted commits"*; *"the piece can orbit
+> below the floor as the floor is transparent from below view and does not collide. Don't make the floor interfere with the orbit"* — the owner.
+
+* **Reverted to `ff2fca2`** (commit `65a691a`): the tilt (`2ad47b7`), its second pass (`b1d86b1`) and the shell as the piece's drive (`08a48e5`) undone, then
+  built again in two engine-free modules and one wiring pass.
+* ⭐ **`input/orbit_frame.ts` — THE TWO FRAMES AND THE SCREEN'S UP**:
+  * **The face's frame** (`tiltQuat`): upright on a vertical face; on a face within **40°** of horizontal (off past **50°**, `tiltWanted`) tipped 90° about
+    the screen's horizontal axis — forward over a top (the table view), backward under a bottom. The sections, the carrier and their rays are read in it
+    (the placed parts brought into it, `faceParts`; a ray back out, `castRay`) — the section code itself untouched: a tilted top reads to it as a side, the
+    gizmo goes x-y there, not polar. ⭐ Both section planes stay VERTICAL in the world at the switch (the red along the camera's heading, the green across
+    it): gravity kept. Its heading the camera's view laid on the ground — forward + up (⛔ read from the camera's place, near straight above it was 29° off).
+    A switch waits for half its roll's travel since the last (`SWITCH_HOLD_SHARE`: ⛔ at an edge the frames ping-ponged).
+  * **The orbit's own frame** (`st.asmOrbit`): its angles are read in it — the face's after a switch, re-tilted past **60°** of pitch so no pole is ever
+    reached (`antiPoleQuat`: no gimbal lock, a continued dy goes on round), back on the face's at rest (dx round at its height again on a vertical face).
+  * **A re-base moves nothing** (`rebaseOrbit`): every orbit place — the solved one, the eye's spring WITH its velocity, the camera's lag, its leash — re-read
+    on its OWN direction (`frameAngles`; ⛔ snapped to the solved one the drawn piece jumped 0.9 m far out; the leash dropped, 436 px). The finger's axes
+    KEPT across it (`signAfter`; ⛔ over a narrow top the gizmo rocked, 13 switches in one drag) and READ OFF THE SCREEN at rest (`signOnScreen`; ⛔ kept for
+    good, after the view went over the top and rolled upright again a dy went the wrong way — found headless in this build).
+  * **VERTICALS KEPT — the screen's up** (`screenUpTarget`): gravity's while the view is more than 30° off the vertical, the face's frame's up within 10°
+    (over a top the way away across it), blended between; the camera's offsets about it (`offsetAbout` — ⛔ about each frame's own up they flipped side over
+    a top, 436 px; `offsetFrame` deleted). A jump of it of more than 8° from one frame to the next (a switch looking steeply, the view over the top) is
+    ROLLED (`rollUp`): over `orbitTiltBlendMm` (10 mm, CAMERA › CAMERA ORBIT AROUND CENTER) of the finger's travel, by time with no finger (300 ms — ⛔ a
+    coast's switch held its roll half done until the next drag).
+* ⭐ **`input/orbit_shell.ts` — THE SHELL, A DISTANCE**: the piece stays on the ray from its gizmo along its direction (the camera behind it, the sections
+  under it — as before); how FAR along it is read off a smooth shell round the placed parts' bounding box (the Euclidean distance to it — flat over a face,
+  round over an edge): beyond the offset (`orbitShellOffsetMm`, 60 mm, CAMERA ORBIT AROUND CENTER) where the ray reaches the shell at the approach's
+  distance — so a gizmo stepping in depth (an overhang's edge) leaves the piece where it is; within the offset down onto the gizmo, on it at the contact
+  (`pieceAlong`). A step in depth close in is taken into the approach (`alongToDistance`, `approachOfDistance` on the stretch it is on — the distance dips
+  past the waist). ⛔ **The lesson of the reverted shell**: placing the piece on the shell by the orbit's direction from the centre, the finger moving it
+  along the screen and the gizmo a readout, made the red section's plane and the camera's up roll off the vertical — the shell decides a DISTANCE, nothing
+  else.
+* ⭐ **The gizmo's drop bridges a core's gap** (`castCovered`: five rays `RAY_COVER_M` apart, the outermost, as the ray toward the centre's — ⛔ one ray: over
+  the narrow top it fell between the cores onto a part at the bottom, the gizmo 47 cm down and back; found headless in this build).
+* ⭐ **The way out of a slide** solved in the orbit's own frame on the orbit camera's own rule (`orbitForCameraDir` takes the camera's direction as a
+  function, `cameraDirInOrbit` — its screen up, never an assumed upright one).
+* ⚠ **The floor never interferes**: see-through from below and colliding with nothing, the piece orbits under it, the camera follows (a floor guard was
+  built this pass and removed at once — the owner).
+* **Measured** (headless, `Scene_1`): far out a continued dy goes over the top and down the back, the screen's vertical within 0.1–1.7° of the world's
+  (steep views excepted, by design), the largest step 17 px in a fast probe drag; at mid distance over the narrow top 2 switches (on, off), 1 roll, 14.5 px;
+  two loops under and over: 8 switches, 3 rolls, 28 px; the signs upright again at rest; close in the lock as before; the way out to the far orbit clean.
+* ⚠ **Worth judging by hand**: the roll's travel (10 mm), the shell's offset (60 mm), a lateral jump of the gizmo where the carrier crosses onto
+  `Piece44`'s overhang (18 cm, eased over 90 ms — the base carrier's, unchanged).
+* Vectors (`tests/orbit_frame.test.ts`, 12 — red on the reverted base; the rest restated). ⛔ No device close. 2171 vectors.
