@@ -2381,3 +2381,28 @@ input to the gizmo … clamping the angular travel per mm input for any face"*. 
   mouse layer's counters. `orbitTiltBlendMm` now only gates a frame switch.
 * Vectors `tests/audit_2026_11_02.test.ts` (16, red on `5515502`). ⛔ No device close. 1624 vectors.
 
+## 2026-11-02 — on 1.0.90-: THE FACE-SPAN GIZMO — the gizmo a point on the hosting coplanar faces; the roll with the orbit again
+
+The owner: *"I find it extremely difficult to control the gizmo … once the orbit is tilted to follow a face orientation, the red and green sections do not
+need to fully circumference the assembly, but they only need to span the hosting coplanar faces"* — then, on the design: *"1- Leaving a face: Option B …
+2- … make a slider. I prefer to engage as far as reasonably possible … 3- constant gizmo speed, which shall follow the current orbit angular speed on dy and
+dx … 4- … gizmo following the orbit … I want to keep this behavior. 5- Gizmo shall pass over the protruding part. Blend the movements to avoid jumps …
+6- Roll freeze: I liked what was implemented in 65a691a"*. The whole record → [`FACE_SPAN_2026-11-02.md`](../../00_CORE/queue_notes/FACE_SPAN_2026-11-02.md).
+
+* ⭐⭐⭐ **WITHIN `faceSpanEngageM` (4.5 m; out past 1.2 ×) THE GIZMO IS A POINT ON A PLANE** (`input/face_span.ts`, `render/face_span_wiring.ts`): the
+  hosting face's plane, its REGION the coplanar faces of the placed parts joined across the cores' 3 mm (convex hulls, `spanRegion`); moved by the ORBIT's
+  own step × the assembly's radius (`spanStepOf` — ~25 mm per mm on `Scene_1`, constant on every face), along the directions the orbit moved it at the
+  engage (`spanAxes`; a wall's levelled); clamped to the region and slid along its edge (`clampSlide`); riding over what stands on the plane
+  (`coveredTop`, eased by `faceSpanRideMm`); no raycast, no hull, no carrier.
+* ⭐⭐⭐ **THE PIECE STRAIGHT OUT ALONG THE FACE'S NORMAL, THE CAMERA SQUARE BEHIND IT** (`spanDirection`: blended from the far orbit's direction at the
+  engage over `faceSpanTurnMm`): a dx / dy is a PAN — no turn, no roll, no slant; a wall's screen up the world's, a top's the up carried in (`spanUp`).
+* ⭐⭐⭐ **THE LINES**: the region's run through the gizmo along each axis (`regionRun`), over the tops (`spanPolyline`, a step a near-vertical connector) —
+  green the dx's, red the dy's; never round the assembly, never stopping inside a face.
+* ⭐⭐⭐ **THE EDGE — CATCH AND WRAP** (`spanMove`, `wrapCandidate`): past the edge a catch (`faceSpanCatchMm`, 3 mm), then the face across (convex or
+  concave) turned to by the finger's travel (`faceSpanTurnMm`, 18 mm for 90°), reversible; the axes and the up turned with it about the edge.
+* ⭐⭐ **THE ROLL GOES ON WITH THE ORBIT AGAIN** (`rollShare` over `orbitTiltBlendMm`): ⛔ `rollTakes` (the piece waiting — *"the roll freeze"*) unwired.
+* ⛔ **The assembly's centre was read before the world matrices existed** — (0, 0, 0), 0.2415; now (0.023, 0.257, −0.037), 0.283 (`placedVertexBox`). The
+  far sections' drops bridged (`castCovered`).
+* ⚠ The far orbit (6 → 5.4 m) keeps its carrier, frames and sections unchanged. Measured headless: the gizmo over `Piece45` (41 mm) and back, no jump; a
+  dy round the bottom onto the back face (two wraps, one 180° roll), a dx round the right side onto the back. Vectors `tests/face_span.test.ts` (21, red on
+  `8548714`). ⛔ No device close. 1645 vectors.

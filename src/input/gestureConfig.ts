@@ -434,6 +434,15 @@ export interface GestureConfig {
   gizmoMmPerMm: number;
   /** ⭐⭐⭐ (2026-11-02) THE SHELL's offset (mm): within it the piece comes down onto its gizmo, beyond it rides the smooth shell round the parts' box */
   orbitShellOffsetMm: number;
+  /** ⭐⭐⭐ (2026-11-02, the owner: *"Face-span engages: make a slider. I prefer to engage as far as reasonably possible"*) THE FACE-SPAN engages within this
+   * distance of the gizmo (m; out past 1.2 × it — held below the far orbit's distance / 1.22 so the far orbit stays reachable, `spanEngageM`) */
+  faceSpanEngageM: number;
+  /** ⭐⭐⭐ (2026-11-02, *"Design the tilt and catch properly"*) the CATCH: the finger's push past a face's edge before the wrap starts (mm) */
+  faceSpanCatchMm: number;
+  /** ⭐⭐⭐ (2026-11-02) the WRAP's turn across an edge — and the engage's turn onto the face — over this much of the finger's travel (mm) */
+  faceSpanTurnMm: number;
+  /** ⭐⭐⭐ (2026-11-02, *"Gizmo shall pass over the protruding part. Blend the movements"*) a ridden height change taken over this travel (mm) */
+  faceSpanRideMm: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -840,6 +849,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitViewTurnCap: 1, // ⭐⭐⭐ (2026-11-02) the view turns at most the dx yaw's pace, on every face
   gizmoMmPerMm: 40, // ⭐⭐⭐ (2026-11-02) the gizmo 40 mm per mm of finger at most (a side's loop is ~30)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-02) the shell's offset
+  faceSpanEngageM: 4.5, // ⭐⭐⭐ (2026-11-02) the face-span from 4.5 m (out past 5.4 m — the far orbit at 6 m, Scene_1's ring 1)
+  faceSpanCatchMm: 3, // ⭐⭐⭐ (2026-11-02) a short catch: 3 mm of push past an edge (the painting's 33 mm top is ~1.3 mm of finger at 25 mm/mm)
+  faceSpanTurnMm: 18, // ⭐⭐⭐ (2026-11-02) a wrap's 90° over 18 mm of finger — the orbit's own pace (5.1°/mm on Scene_1)
+  faceSpanRideMm: 3, // ⭐⭐⭐ (2026-11-02) a protrusion's step ridden over ~3 mm of finger (95 % of it; ~75 mm of gizmo at 25 mm/mm)
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -994,6 +1007,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.orbitViewTurnCap >= 0.25 && cfg.orbitViewTurnCap <= 4)) throw new Error(`orbitViewTurnCap (${cfg.orbitViewTurnCap}) must be in [0.25, 4].`);
   if (!(cfg.gizmoMmPerMm >= 5 && cfg.gizmoMmPerMm <= 400)) throw new Error(`gizmoMmPerMm (${cfg.gizmoMmPerMm}) must be in [5, 400] mm/mm.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
+  if (!(cfg.faceSpanEngageM >= 0.05 && cfg.faceSpanEngageM <= 10)) throw new Error(`faceSpanEngageM (${cfg.faceSpanEngageM}) must be in [0.05, 10] m.`);
+  if (!(cfg.faceSpanCatchMm >= 0 && cfg.faceSpanCatchMm <= 30)) throw new Error(`faceSpanCatchMm (${cfg.faceSpanCatchMm}) must be in [0, 30] mm.`);
+  if (!(cfg.faceSpanTurnMm >= 0 && cfg.faceSpanTurnMm <= 60)) throw new Error(`faceSpanTurnMm (${cfg.faceSpanTurnMm}) must be in [0, 60] mm.`);
+  if (!(cfg.faceSpanRideMm >= 0 && cfg.faceSpanRideMm <= 40)) throw new Error(`faceSpanRideMm (${cfg.faceSpanRideMm}) must be in [0, 40] mm.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);

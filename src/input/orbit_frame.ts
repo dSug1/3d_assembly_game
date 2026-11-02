@@ -261,7 +261,14 @@ export function gizmoStepCap(travelMm: number, dtMs: number, mmPerMm: number, re
   return (Math.max(0, travelMm) * Math.max(0, mmPerMm)) / 1000 + (Math.max(0, restMps) * Math.max(0, dtMs)) / 1000;
 }
 
-// ⛔ (2026-11-02) `rollShare` (a roll over `orbitTiltBlendMm` whatever its angle) is deleted — a roll takes the travel at the view's cap (`rollTakes`)
+/**
+ * ⭐⭐⭐ (2026-11-02, the owner: *"Roll freeze: I liked what was implemented in 65a691a. I am OK to have the 180 roll, provided this is not too often"*) — A
+ * ROLL'S SHARE after `travelMm` more of the finger's travel over `spanMm` (`orbitTiltBlendMm`; 0: at once): the roll goes on WITH the orbit — the piece never
+ * waits. ⛔ `rollTakes` (the roll taking the travel first at the view's cap, the piece waiting — the "roll freeze") is no longer wired; kept for its vectors.
+ */
+export function rollShare(share: number, travelMm: number, spanMm: number): number {
+  return spanMm > 0 ? Math.min(1, share + Math.max(0, travelMm) / spanMm) : 1;
+}
 
 /** ⭐ With no finger on the glass a roll goes on by time: its whole in this (ms) — ⛔ a coast's switch held its roll half done until the next drag. */
 export const ROLL_REST_MS = 300;

@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-11-02 (`1.0.89-`: the parts' translation, rotation and alignment deleted)
+> **LAST VERIFIED** · 2026-11-02 (`1.0.90-`: the face-span gizmo; `1.0.89-`: the parts' translation, rotation and alignment deleted)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.
@@ -21,6 +21,7 @@ and so is the code (`git show d8134eb:src/...`). ⏳ Later: the parts will be gi
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) — ⭐ (2026-11-02) its TAP only that: never the cube's tap as well (`partTap`) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | 1 finger drag | **the orbit around the assembly**: dx the yaw, dy the pitch (±90°, 2026-10-29) — ⭐ the gizmo's CARRIER on the section's hull (dy: up the piece's side, clamped at the top and bottom centres, never into a face turned away; ⭐ dx BY DISTANCE, 2026-10-29: round the green loop at its height at its perimeter per turn, or round the axis on a top), dropped onto the surface — where the green and red sections meet, both drawn; locked close in, round the gizmo within 80° of its face; ⭐⭐⭐ (2026-11-02) on a face within 40° of horizontal the orbit TILTED onto it (dx across, dy toward / away — x-y, not polar; the sections still vertical), no pole (a continued dy goes on round, under the floor too), the screen's verticals kept (gravity's up; a jump of it rolled over `orbitTiltBlendMm` of travel), the piece's distance read off a smooth shell (`orbitShellOffsetMm`) |
+| ⭐⭐⭐ the orbited piece (2026-11-02, `1.0.90-`; within `faceSpanEngageM` 4.5 m of the gizmo) | 1 finger drag | **THE FACE-SPAN** (`FACE_SPAN_2026-11-02.md`): the gizmo moves ON the hosting coplanar faces — dx / dy the orbit's own step × the assembly's radius (~25 mm per mm), the way the orbit moved it; the piece straight out along the face's normal, the camera square behind it (a pan, no turn); clamped to the faces' edge and slid along it; over a protrusion, ridden; past an edge a 3 mm **catch**, then the **wrap** onto the face across (convex or concave), 18 mm of push for 90°, back to return; the coast too |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **2 fingers moving together** (`twoFingerKind`; ⭐ the second may land ON the piece) | **the APPROACH** — up: in, toward the gizmo the ray finds, to the contact; down: out; dx nothing. A tap on a part no longer moves the gizmo |
 | nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
@@ -50,6 +51,7 @@ contour shown instead (`D196`).
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | zoom |
+| ⭐⭐⭐ the orbited piece (2026-11-02; within `faceSpanEngageM`) | left drag | **the FACE-SPAN** — as the touch row (the gizmo on the coplanar faces, the catch and the wrap at an edge) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **A held + left drag** (a mouse or a touchpad; ⭐ 2026-10-29, ⛔ Shift — Windows' Sticky Keys) | **the APPROACH** (dy: up in, down out); dx nothing; no orbit |
 | ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out); ⛔ (2026-11-02) nothing while the slide is on (the key detaches the slide) |
 | ⛔ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor over a placed part | nothing — ⛔ the key's raycast is deleted (it took the pink face, aligned to it); the key is the held second touch only |
