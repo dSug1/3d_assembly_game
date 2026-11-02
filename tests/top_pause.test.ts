@@ -95,7 +95,7 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     expect(g).toContain("topPauseFrame(st, dtSec * 1000);");
     expect(g).toContain("st.topPause = settledPause(st.orbit.elevation, 0, pauseMid(st.cfg));");
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du);");
+    expect(p).toContain("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, asmStep !== null ? asmStep.dV : asmOn ? 0 : travel.du);");
     expect(code("render/camera_rig.ts")).toContain("cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam");
   });
   it("⭐⭐⭐ (2026-10-25, the owner: *\"there seems to be a pause of the camera movement when the camera is at the zenith … it looks like the dy accumulates and then suddenly the roll kicks in and catches up\"*) the roll EVEN through the pause — every twentieth of it ~9° (⛔ smoothstep: 1.2° in the first, the camera standing still for ~1 mm of dy)", () => {
@@ -113,7 +113,7 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     expect(pauseYawStep(true, 1, -0.02)).toBe(-0.02);
     expect(pauseYawStep(false, 0.4, 0.02)).toBe(0.02);
     expect(pauseUnderWay(true, 0.001)).toBe(true);
-    expect(code("render/pointer_wiring.ts")).toContain("st.orbit.drag(shiftApproach ? 0 : sg.yaw * pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share * sg.v);");
+    expect(code("render/pointer_wiring.ts")).toContain("} else if (!asmOn) st.orbit.drag(pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);");
     expect(code("render/green_box_wiring.ts")).toContain("st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);");
   });
   it("⭐⭐ (2026-10-25) a gizmo change asked for MID-ROLL waits: the roll finished or unwound to its nearer end at 360°/s, then the change made", () => {

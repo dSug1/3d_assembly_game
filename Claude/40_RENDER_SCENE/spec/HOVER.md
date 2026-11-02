@@ -92,6 +92,10 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 20. ⛔ **OPEN — A SETTLE STOPPED SHORT** (2026-11-01; not changed): a nearer part between the piece and the latched face stops the settle — the piece
    slides up to 20 mm off the face, its contact outline far from it on the screen. Fixes proposed (latch on the face it touches / settle again) →
    `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
+21. ⭐⭐⭐ **THE SHELL — THE NO-MAN'S-LAND CLOSED** (2026-11-02; ⛔ no device close): the piece rides a smooth shell round the parts' box; a protrusion
+   anywhere under its footprint (+3 cm ahead) lifts it before its side meets it, the approach measuring its BODY — under `Piece44`'s overhang a dy up now
+   carries it over onto the top, where the slide latches by itself. The slide carries the piece by the shell's carry; the way out TURNS the orbit's
+   camera onto the slide view (the angles untouched — ⛔ item 39's re-solve deleted) → `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
 19. ⭐⭐⭐ **A AGAIN MID-DRAG; THE WAY OUT CHECKED** (2026-11-01, items 40–41; ⛔ no device close): a move the slide takes spends the orbit's band for that
    pointer (⛔ A pressed again with the click held flew the piece out by the whole slide); the approach OUT is checked against the parts, a blocked one named.
 18. ⭐⭐⭐ **THE WAY OUT FROM THE SLIDE CAMERA ITSELF** (2026-11-01, item 39; ⛔ no device close): the orbit re-based so its CAMERA (offsets included) stands

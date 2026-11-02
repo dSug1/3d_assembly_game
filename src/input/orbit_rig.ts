@@ -340,8 +340,10 @@ export interface RigAngles {
 export interface RigCameraFrame {
   readonly dir: Vec3;
   readonly up: Vec3;
-  /** ⭐⭐⭐ (2026-11-02) around the assembly: the up the offsets were applied about (before them) — the next switch of the tilt rolls from it */
+  /** ⭐⭐⭐ (2026-11-02) around the assembly: the up the offsets were applied about (before them) — the next frame's carried from it */
   readonly base?: Vec3;
+  /** ⭐⭐⭐ (2026-11-02) …and the view it is square to (the next frame carries the up from it: `carryUp`) */
+  readonly baseDir?: Vec3;
 }
 
 /** ⭐ (2026-10-17) 1 between rings 2 and 3, fading to 0 over `WAIST_GATE_FADE` of their span beyond them — the swing's heading's gate. */

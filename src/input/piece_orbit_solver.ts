@@ -150,12 +150,17 @@ export function ringJacobian(env: SolverEnv, q: OrbitQ): [Vec3, Vec3] {
  * independent active constraints leave no freedom) — every candidate tried, the feasible one of least cost kept: an exact active set, corners
  * included. (⛔ The sequential projection it replaces could, at a crease, undo one constraint while honouring the next.)
  */
+/** ⭐⭐⭐ (2026-11-02) A step's displacement into a contact below this (m) is along it — far below anything the gap checks see (the gap kept: 1 mm). */
+export const TANGENT_TOL_M = 1e-9;
+
 export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: readonly Vec3[]): QStep {
   const m11 = dot3(J[0], J[0]);
   const m12 = dot3(J[0], J[1]);
   const m22 = dot3(J[1], J[1]);
   const A = normals.map((n) => [dot3(n, J[0]), dot3(n, J[1])] as const);
-  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -1e-12 * (Math.abs(a[0]) + Math.abs(a[1])));
+  // ⭐⭐⭐ (2026-11-02) at most `TANGENT_TOL_M` into a contact counts as along it — ⛔ relative only, a step exactly along a face (the shell's: 1e-13 m into
+  // it) read as INTO it, and its projection (a metric of 1e-26) gave nothing: the orbit blocked against a face it slid along
+  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -Math.max(TANGENT_TOL_M, 1e-12 * (Math.abs(a[0]) + Math.abs(a[1]))));
   // ⭐⭐⭐ (2026-10-17, the owner: *"after the sliding is toggled off, the orbit is blocked and I need to go a lot of back and forth to unlock the green
   // piece"*) — a step that pushes into NO contact is the step, whatever the metric: asked FIRST. ⛔ The singular metric was refused before — the way back
   // after a slide has one coordinate (its share), so a way back starting in contact (every slide ends at the kept gap) was blocked on its first step,
@@ -203,7 +208,7 @@ export function keepSense(s: QStep, dq: QStep, J: readonly [Vec3, Vec3], normals
   for (const n of normals) {
     const a0 = dot3(n, J[0]);
     const a1 = dot3(n, J[1]);
-    if (a0 * k[0] + a1 * k[1] < -1e-12 * (Math.abs(a0) + Math.abs(a1))) return [0, 0];
+    if (a0 * k[0] + a1 * k[1] < -Math.max(TANGENT_TOL_M, 1e-12 * (Math.abs(a0) + Math.abs(a1)))) return [0, 0];
   }
   return k;
 }
