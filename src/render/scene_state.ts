@@ -504,6 +504,13 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
+  /** ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO (`input/face_span.ts`, `render/face_span_wiring.ts`; `null`: the far orbit) */
+  span: import("./face_span_wiring").SpanState | null;
+  /** ⭐⭐⭐ (2026-11-02) the placed parts' faces (normal, triangles on the model pose) and their owners — per placed set */
+  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[] } | null;
+  /** ⭐⭐⭐ (2026-11-02) the face-span's red and green lines (one mesh, a fixed vertex count, updated in place) and what they were drawn for */
+  spanLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  spanLinesKey: string;
   approach: number;
   approachInertia: OrbitInertia;
   /** ⭐⭐ (2026-11-02, the third audit's A4 / B4) the approach's dy gathered since the last frame (mm), and its gap queries this frame */

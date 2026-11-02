@@ -254,7 +254,7 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
     expect(a).toContain("const red = onRed(st, yaw, toFramePoint(st.asmFace.q, a.centre, h.point));");
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
-    expect(a.split("st.asmCarrier = null;").length - 1).toBe(5); // the hover, the lock, the unlock, a switch of the face's frame, ⭐ (2026-11-02, A7) a pole crossed
+    expect(a.split("st.asmCarrier = null;").length - 1).toBe(7); // the hover, the lock, the unlock, a switch of the face's frame, ⭐ (2026-11-02, A7) a pole crossed; ⭐⭐⭐ (2026-11-02, restated) the face-span's engage and its frame
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");

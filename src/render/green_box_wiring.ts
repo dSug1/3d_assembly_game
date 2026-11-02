@@ -698,6 +698,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.asmCarrier = null;
     st.asmShown = null;
     st.asmPrevQ = null;
+    st.span = null; // ⭐⭐⭐ (2026-11-02) the face-span left: the respawned piece starts far out
     st.hoverReady = null;
     st.hoverReadyWorld = null;
     st.slideRefused = false;
@@ -1021,6 +1022,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       st.pieceQ = held.q;
       st.pieceSolveQueries = held.queries;
       rig = { ...held.q };
+      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    } else if (st.span !== null) {
+      // ⭐⭐⭐ (2026-11-02) FACE-SPAN: the orbit's step was the gizmo's this frame (`spanFrame` read it and put the orbit back) — the orbit place held, no solve
+      rig = { ...st.pieceQ };
+      st.orbitUserV = st.pieceQ.v;
       st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
     } else {
     const rr = b0!.rotationQuaternion; // `pieceSolveRuns`: the green box exists

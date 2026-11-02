@@ -96,7 +96,10 @@ describe("⭐⭐⭐ the view's turn per mm — the governor and the roll's pace"
     expect(p).toContain("const left = asmOn && !shiftApproach ? orbitTravelMm(st, travelMm) : travelMm;");
     expect(p).toContain("const k = viewTurnGoverned(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation, left);");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const t = rollTakes(r.share, angle, travelMm, viewTurnCapRadPerMm(st));");
+    // ⭐⭐⭐ (2026-11-02, later — restated, the owner: *"Roll freeze: I liked what was implemented in 65a691a"*) the roll goes on WITH the orbit over
+    // `orbitTiltBlendMm` (`rollShare`); ⛔ `rollTakes` (the piece waiting) is no longer wired
+    expect(a).toContain("const share = rollShare(r.share, travelMm, st.cfg.orbitTiltBlendMm);");
+    expect(a).not.toContain("rollTakes(");
     expect(a).toContain("return (orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm * st.cfg.orbitViewTurnCap * Math.PI) / 180;");
   });
 });

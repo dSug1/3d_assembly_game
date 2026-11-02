@@ -94,8 +94,11 @@ describe("⭐⭐⭐ the orbit tilted onto a horizontal face (2026-11-02)", () =>
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 0), [0, 1, 0]);
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 1), [1, 0, 0]);
     close(T.rollUp([0, 1, 0], [1, 0, 0], dir, 0.5), [Math.SQRT1_2, Math.SQRT1_2, 0]);
-    // ⛔ (2026-11-02) `rollShare` deleted: a roll takes the travel at the view's cap (`rollTakes`, below)
-    expect((T as Record<string, unknown>).rollShare).toBeUndefined();
+    // ⭐⭐⭐ (2026-11-02, later — restated) `rollShare` BACK (the owner: *"Roll freeze: I liked what was implemented in 65a691a"*): a roll over the travel's span, the
+    // orbit going on (⛔ `rollTakes`, the piece waiting, unwired)
+    expect(T.rollShare(0, 5, 10)).toBeCloseTo(0.5, 12);
+    expect(T.rollShare(0.8, 5, 10)).toBe(1);
+    expect(T.rollShare(0.3, 5, 0)).toBe(1);
     expect(T.SWITCH_HOLD_SHARE).toBe(0.5);
     expect(T.ROLL_REST_MS).toBe(300);
     // the camera's offsets about the screen's up (⛔ about each frame's own: 436 px at every switch back)
@@ -185,7 +188,9 @@ describe("⭐⭐⭐ wired (2026-11-02)", () => {
   });
   it("⭐⭐⭐ the camera: its offsets about the screen's up — gravity's, the face's looking steeply, a jump rolled; the way out of a slide solved on that same camera in the orbit's frame; the floor never in the way (the piece orbits under it, the camera follows)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const target = screenUpTarget(u, fromFrame(st.asmFace.q, [0, 1, 0]), st.asmUp);");
+    // ⭐⭐⭐ (2026-11-02, restated) through `upTarget`: the face-span's up within it, the far orbit's `screenUpTarget` else
+    expect(a).toContain("const target = upTarget(st, u, st.asmUp);");
+    expect(a).toContain("return screenUpTarget(u, fromFrame(st.asmFace.q, [0, 1, 0]), prev);");
     expect(a).toContain("const base = st.asmRoll === null ? target : rollUp(st.asmRoll.from, target, u, st.asmRoll.share, st.asmRoll.sense);"); // ⭐ (2026-11-02) its way round latched
     expect(a).toContain("if (upAngle(shown, to, u) > ROLL_START_RAD) st.asmRoll = { from: shown, share: 0, sense: rollSense(shown, to, u) };"); // ⭐ (2026-11-02) its way round latched
     expect(code("render/green_box_wiring.ts")).toContain("st.asmUp = camFrame.base ?? null;");

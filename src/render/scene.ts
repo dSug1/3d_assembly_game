@@ -538,6 +538,10 @@ export function createScene(
   st.asmPrevQ = null;
   st.asmSectionLines = null;
   st.asmSectionKey = "";
+  st.span = null;
+  st.spanFaces = null;
+  st.spanLines = null;
+  st.spanLinesKey = "";
   st.asmShown = null;
   st.asmRedCache = null;
   st.asmGreenCache = null;
