@@ -2386,3 +2386,64 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⚠ **Worth judging by hand**: the over-the-top half-turn roll (10 mm of travel by default — the slider); the camera can go under the floor on a continued
   dy (no stop by design now); the slide's latch, the approach and the way out on a top checked unchanged (headless).
 * Vectors (`tests/orbit_tilt.test.ts` + 5; restated where the wiring's lines changed — red on the previous build). ⛔ No device close. 2169 vectors.
+
+### ⭐⭐⭐ THE SHELL — the piece driven on a smooth shell, the finger along the screen, the gizmo a readout (2026-11-02, branch `1.0.88-`)
+
+> *"if the piece is orbiting close to the assembly and pass next to a protruding part, the orbit stops because the piece becomes close to the part but the
+> sliding does not trigger: it's a no-man's-land"*; *"I do not like the fact that there is no continuity in the movement of the piece if I keep orbiting in
+> one direction … the orbit direction can be thrown off quite a bit despite the user keeping a constant delta position direction and pace"* → the shell
+> proposed → *"Build the shell"*; *"Add a slider for the shell offset in the camera orbit around center menu"* — the owner.
+
+* ⛔ **Why — the no-man's-land**: the orbit's solve had two coordinates, the angles — never the distance; against a protrusion's SIDE (square to the
+  travel) the slide along it left nothing and the orbit stopped; the slide could not latch (the resting face looked at the face beside, not at that
+  side). The depth step taken into the approach (the second pass) made it likelier: the piece no longer rose with the gizmo onto a protrusion.
+* ⛔ **Why — the direction thrown off**: the gizmo travelled the sections ALONG THE SURFACE (up a side, flat across a top, back in under an overhang) and
+  the piece rode it; the face's frame switched on the geometry (a 40° face), each switch changing what dx and dy meant; over the top the screen rolled
+  half a turn under the finger — read as a yaw.
+* ⭐ **Built** (`input/orbit_shell.ts`):
+  * **THE SHELL**: the points `s` from the placed parts' BOUNDING BOX — the Euclidean distance (flat over a face, a cylinder over an edge, a sphere over a
+    corner): convex and smooth at every level, its levels parallel — no overhang, no step, no inner corner. ⛔ (built first) the norm of a 26-sided
+    bound's overshoots: away from the assembly a point stands in front of half its planes — the level counted ~2× the distance (the piece at 3.2 m for 6).
+  * **THE BASE POINT**: the orbit's direction (its angles, in its own frame re-tilted before a pole — no gimbal lock) spread by the box's proportions at
+    the OFFSET (`chartDir`: the painting's front covered within 39° of its normal — ⛔ from its centre the ray grazed it, 87° for a 27 cm half-face), on the
+    shell at the approach's distance beyond the offset, at the offset within it, with the shell's normal there. The spread fixed at the offset: the approach
+    keeps to ONE ray (⛔ spread at its own level, the ray turned as the piece came in — it landed 22 cm aside of the gizmo).
+  * **THE PIECE**: the base point beyond the offset (far out a near-sphere: ⛔ built first 6 m out along a 6 cm rounding's normal, the piece swung round a
+    whole edge in a few centimetres — 23° a frame); within it along the normal, blended (smoothstep) toward the REAL surface under it, on it at the
+    contact (`placeAlong`) — the approach goes straight in along the shell's normal, the geometry changes how far along it only.
+  * **THE GROUND**: under the base point at the offset — of the parts whose outline across the normal overlaps the piece's disc (its own radius + 3 cm
+    ahead), the outermost along the normal (`footprintHeight`, from the parts' vertices: ⛔ rays in rings first — `Piece44`'s 4 cm overhang passed between
+    them); a plane, its change carried as a LAG and eased out — 40 ms where the surface comes OUT toward the piece (it rises over a protrusion before its
+    side meets it), 150 ms where it recedes, and only where the parts allow it (one query; ⛔ unchecked, the piece eased into a face it stood against).
+    Nothing under the piece (beyond the box's corner): the box's own face.
+  * **THE BODY**: the approach measures the piece's BODY — how far it reaches past its resting face's centre along the normal is added (`bodyDepth`; ⛔ a
+    piece turned on its side came 2.5 cm closer than measured, its side met the overhang).
+  * **THE FINGER ALONG THE SCREEN** (`asmDragStep`): dx moves the piece along the screen's right, dy along its up, laid along the shell, at the yaw's
+    °/mm × (the assembly's half-size + the approach's distance) — the orbit's angles solved for the point reached. Never a latitude, a pole's turn or a
+    frame's switch: the same finger the same way, at the same pace, over any geometry.
+  * **THE SCREEN'S UP CARRIED** (`carryUp`): no roll while anything moves — over the top the view goes on as a loop (the assembly upside down down the back);
+    levelled to gravity at rest unless the view is within 30° of the vertical (`levelUp`, `easeUp`, 150 ms).
+  * **THE CAMERA**: from the centre far out, along the shell's NORMAL close in (by the look's share) — square to the face it looks at, never grazing it.
+  * **THE GIZMO, A READOUT**: where the ray down the shell's normal from the base point at the offset meets the parts (10 cm below the offset at most:
+    ⛔ from far out along the normal, beyond the box's corner it met a part 20 cm off); the quads, the hover and the look point read it as before. **THE
+    LINES**: its paths — red along the screen's up, green along its right, marched on the shell both ways and dropped down the normal; the gizmo a
+    vertex of both; a line recast only when the gizmo moves across it.
+  * **THE SLIDE** carries the piece by a CARRY (`st.asmCarry`: the gizmo no longer places it), taken into the orbit's angles over the next 40 mm of travel
+    (`asmTravelStep`: the piece stays, its base point comes under it). **THE WAY OUT**: the orbit's camera TURNED onto the slide view's direction
+    (`st.asmCamTurn`), the angles and the piece untouched, the turn applied by the look's share (none far out — ⛔ whole, the camera looked at the centre
+    from the slide's direction, the piece off the screen) and undone over the travel. ⛔ `orbitForCameraDir` deleted: on the shell the piece's place
+    moved with re-solved angles.
+  * **THE COLLISION SOLVER ALONG A FACE**: a step at most 1 nm into a contact is along it (`TANGENT_TOL_M`; ⛔ relative only, the shell's exactly tangential
+    step — 1e-13 m into the face — read as INTO it and its projection gave nothing: the orbit blocked against the face it slid along).
+  * **The slider**: CAMERA › CAMERA ORBIT AROUND CENTER, *the shell's offset* (`orbitShellOffsetMm`, 60 mm, 5–300): within it the piece hugs the parts,
+    beyond it rides the smooth shell. The tilt's roll slider (`orbitTiltBlendMm`) is deleted.
+* ⛔ **Deleted with it**: the carrier on the sections' hulls (`section_hull.ts` → `section_lines.ts`, the lines' three rules), the tilt onto a horizontal
+  face and its switch, roll, signs and screen-up rule, the lock close in and its cone, the depth step taken into the approach, `offsetFrame`.
+* **Measured** (headless, `Scene_1`): far out a continued dy goes round and round, the piece steady on the screen (largest step 0.9–2 px, its direction
+  turning 1.9° a frame — the circle's own); close in dx carries the piece across the face and round the painting's side to the back and back; after the
+  approach under `Piece44` the piece stands in front of its overhang, a dy up carries it over onto its top and the slide latches by itself; the way out:
+  the carry taken in (99 → 7 mm), the camera back on the orbit's own direction far out.
+* ⚠ **Worth judging by hand**: the pace close in (the old carrier's, ~24 mm of piece a mm of finger); the loop over the top (no roll mid-drag, levelled at
+  rest); the offset's default (60 mm); a piece can still go under the floor (as before); the drawn lines' look.
+* Vectors (`tests/orbit_shell.test.ts`, 12 — red on the previous build; `tests/section_hull.test.ts` and the tilt's deleted with their code; the rest
+  restated). ⛔ No device close. 2155 vectors.

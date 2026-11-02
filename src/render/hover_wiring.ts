@@ -15,7 +15,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { SceneState } from "./scene_state";
 import type { Sample } from "../input";
 import { mmToPx } from "../core/units";
-import { qRotate, type Quat, type Vec3 } from "../core/vec";
+import { IDENTITY, qAngle, qmul, qRotate, shortestArc, type Quat, type Vec3 } from "../core/vec";
 import { bodiesBehindPlane, bodiesWithin, type CollisionSetup } from "../core/collision";
 import { composePlacement, faceWorld, invertPlacement } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -68,8 +68,6 @@ import {
 } from "../input/hover";
 import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
-import { angleTo, orbitDir, orbitForCameraDir } from "../input/assembly_orbit";
-import { tiltDirO, tiltDirW } from "../input/orbit_tilt";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
@@ -263,7 +261,7 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
   // ⭐ the drawn offset FOLLOWS the solved one, as a translated part's mesh follows its model (`render_loop`'s follower)
   // ⭐⭐⭐ (2026-11-01, the owner: *"gizmo moves with the sliding so the exit of the sliding mode shall be from the new gizmo position"*) — in the slide mode the
   // gizmo always rides the slide (`hoverGizmoMove` 1); the approach and the orbit go on from where it left it
-  st.hoverFollow = { view0: null, e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, offset0: st.hoverOffset ?? [0, 0, 0], gizmo: slideModeOn(st) || st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
+  st.hoverFollow = { view0: null, e1: plane.e1, e2: plane.e2, n: c.normal, settleM, settleT0: performance.now(), centre0, carry0: st.asmCarry ?? [0, 0, 0], offset0: st.hoverOffset ?? [0, 0, 0], gizmo: slideModeOn(st) || st.cfg.hoverGizmoMove === 1, u: 0, v: 0, fu: { x: 0, v: 0 }, fv: { x: 0, v: 0 }, vu: 0, vv: 0, lu: 0, lv: 0, du: 0, dv: 0 };
   applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM), [0, 0, 0]);
   st.hoverDraw = scale(c.normal, settleM);
   st.hoverWayIn = null; // a new hover takes the offset as it stands
@@ -567,45 +565,18 @@ function slideFrame(st: SceneState, now: number, dtSec: number): void {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-01, *"build A"*) THE WAY OUT GOES ON FROM THE SLIDE VIEW — called by the approach's step OUT while the slide is on: the orbit's yaw and
- * pitch re-based so the orbit's CAMERA stands where the slide view's is (`orbitForCameraDir`), the piece's place unchanged (the curve's difference taken into its own offset, which
- * ways in with the approach's travel); the gizmo where the slide left it. ⛔ The orbit kept its angles from the approach in: the piece flew back to
- * that curve.
+ * ⭐⭐⭐ (2026-11-01, *"build A"*) THE WAY OUT GOES ON FROM THE SLIDE VIEW — called by the approach's step OUT while the slide is on. ⭐⭐⭐ (2026-11-02, the
+ * shell) the orbit's CAMERA turned onto the slide view's direction (`st.asmCamTurn`, its offsets included — nothing for the camera to take back after the
+ * blend), the orbit's angles and the piece's place untouched; the turn undone by the travel that follows (`asmTravelStep`), the camera coming round with
+ * the finger. ⛔ (2026-11-01) the orbit's angles re-solved for that camera: on the shell the piece's place moved with them — its difference had to way in.
  */
 export function slideWayOutRebase(st: SceneState): void {
   const hv = st.hoverView;
-  const q = st.pieceQ;
-  if (!slideModeOn(st) || st.hover === null || hv === null || q === null) return;
-  // ⭐⭐⭐ (2026-11-01, *"build A"*) the orbit whose CAMERA — its offsets included — stands where the slide's is (`orbitForCameraDir`): nothing for the camera
-  // to take back after the blend (⛔ the piece's direction on the slide's: the camera then swung to its offset — a second, curved move on the screen)
-  // ⭐⭐⭐ (2026-11-02) solved in the orbit's frame (tilted onto a horizontal face: `tiltDirO`)
-  const t = orbitForCameraDir(tiltDirO(st.asmOrbit, hv.iso), q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);
-  if (t === null) return;
-  const u0 = orbitDir(q.yaw, q.v);
-  const u1 = orbitDir(t.yaw, t.v);
-  if (Math.acos(Math.min(1, dotv(u0, u1))) <= SLIDE_WAY_OUT_MIN_RAD) return;
-  const nq: OrbitQ = { ...q, yaw: t.yaw, v: t.v };
-  // ⭐⭐ (2026-11-01) the lock's cone opened to the new direction (`lockCone` only tightens): ⛔ clamped into it, the piece and the camera were turned off the
-  // slide's view after all — the camera's swing back (a slide on a top, the gizmo's face a side's)
-  const lk = st.asmLock;
-  if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(tiltDirW(st.asmOrbit, orbitDir(nq.yaw, nq.v)), lk.normal)) };
-  const before = ringAnchorAt(st, q);
-  const after = ringAnchorAt(st, nq);
-  const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];
-  st.hoverOffset = add(st.hoverOffset ?? [0, 0, 0], keep);
-  if (st.hoverFollow !== null) st.hoverFollow.offset0 = add(st.hoverFollow.offset0, keep);
-  st.pieceQ = nq;
-  // ⭐⭐⭐ (2026-11-01, the owner: *"for a short moment the piece flies away from the camera screen … makes some wide curve before catching back the 2D curve
-  // from the gizmo"*) — the eye's spring and the camera's lag RE-BASED with it (the place is kept by the offset): ⛔ they eased from the old angles
-  // over ~150 ms while a fast A + drag carried the piece metres out — the piece swept a wide arc from the old direction to the new
-  const sp = st.boxSpring;
-  if (sp !== null) st.boxSpring = { at: { yaw: nq.yaw, v: nq.v, zoom: sp.at.zoom }, velYaw: 0, velV: 0, velLnZoom: sp.velLnZoom };
-  st.cameraOrbit = null;
-  st.cameraLagged = null;
-  st.orbit.reset(nq.yaw, nq.v);
-  st.orbitInertia.stop();
-  st.orbitUserV = nq.v;
-  st.orbitRawPrev = { yaw: nq.yaw, v: nq.v };
+  const cp = st.cameraPrev;
+  if (!slideModeOn(st) || st.hover === null || hv === null || cp === null || cp === undefined) return;
+  const turn = shortestArc(cp.dir, hv.iso);
+  if (qAngle(turn) <= SLIDE_WAY_OUT_MIN_RAD) return;
+  st.asmCamTurn = qmul(turn, st.asmCamTurn ?? IDENTITY);
   st.lastVerdict = "slide: the way out — the orbit goes on from the slide's view";
   st.hudDirty = true;
 }
@@ -758,6 +729,8 @@ function applyHoverModel(st: SceneState, hf: NonNullable<SceneState["hoverFollow
   if (hf.gizmo) {
     st.centreBlend.snapTo(add(hf.centre0, slide));
     syncCentre(st);
+    // ⭐⭐⭐ (2026-11-02, the shell) the piece rides the slide by the shell's CARRY — the gizmo no longer places it (`placeOffset`)
+    st.asmCarry = add(hf.carry0, slide);
     st.hoverOffset = add(hf.offset0, settle);
     if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);
   } else st.hoverOffset = add(hf.offset0, add(settle, slide));

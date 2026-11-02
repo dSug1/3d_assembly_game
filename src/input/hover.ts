@@ -526,7 +526,8 @@ export function slideOrbitTurnOf(o: SlideOrbit, moved: Vec3, t1: Vec3, t2: Vec3,
   return [k * dot(m, s), -k * dot(m, h)];
 }
 
-// ⭐⭐⭐ (2026-11-01) the way out's orbit — the one whose CAMERA stands where the slide's is — is `orbitForCameraDir` (`input/assembly_orbit.ts`; ⛔ `slideWayOutQ`, the piece's direction on the slide's, deleted: the camera then swung to its offsets)
+// ⭐⭐⭐ (2026-11-01) the way out's camera stands where the slide's is — ⭐⭐⭐ (2026-11-02) by a turn of the orbit's camera (`st.asmCamTurn`, `render/hover_wiring.ts`'s
+// `slideWayOutRebase`; ⛔ `orbitForCameraDir`, the orbit's angles re-solved, deleted: on the shell the piece's place moved with them)
 /**
  * ⭐⭐⭐ (2026-11-01, the owner: *"I can see a succession of very rapid and small jumps when I slide with my mouse. I don't seem to be able to smooth by
  * changing the sliders in piece sliding menu"*) — **THE SLIDE CAMERA RIDES THE PIECE AS DRAWN**: the shift of the whole camera rig (its place, its look,
