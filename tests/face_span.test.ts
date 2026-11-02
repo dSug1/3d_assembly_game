@@ -35,7 +35,10 @@ import {
   spanPolyline,
   spanRegion,
   spanSolids,
-  spanStepFromDir,
+  spanAxisStep,
+  faceAxes,
+  axisSense,
+  greenPaceOf,
   toP2,
   wrapCandidate,
   zenithCrossing,
@@ -118,19 +121,55 @@ describe("⭐⭐⭐ the region — the hosting coplanar faces, never round the a
 });
 
 
-describe("⭐⭐⭐ the gizmo's step — the ORBIT's solved step (ff2fca2's relation), clamped, caught at the edge", () => {
+describe("⭐⭐⭐ the gizmo's step — ff2fca2's relation: dx along the face's level line, dy along its steepest (third pass)", () => {
   const deg = Math.PI / 180;
-  const dir = (yawDeg: number, pitchDeg: number): Vec3 => [Math.cos(pitchDeg * deg) * Math.sin(yawDeg * deg), Math.sin(pitchDeg * deg), Math.cos(pitchDeg * deg) * Math.cos(yawDeg * deg)];
-  it("⭐⭐⭐ the gizmo goes the way the piece's direction went — the angle × the assembly's radius along the step laid on the face (constant speed)", () => {
-    const s = spanStepFromDir(dir(0, 0), dir(5, 0), [0, 0, 1], 0.283);
-    expect(Math.hypot(...s)).toBeCloseTo(5 * deg * 0.283, 9);
-    expect(s[0]).toBeGreaterThan(0); // the piece's direction swung toward +x: the gizmo too
-    expect(Math.abs(s[1])).toBeLessThan(1e-12);
-    // off the face's normal (the piece 40° to the side) the same angle moves the gizmo as far: no per-face pace
-    expect(Math.hypot(...spanStepFromDir(dir(40, 0), dir(45, 0), [0, 0, 1], 0.283))).toBeCloseTo(5 * deg * 0.283, 9);
-    const up = spanStepFromDir(dir(0, 0), dir(0, 3), [0, 0, 1], 0.283);
-    expect(up[1]).toBeCloseTo(3 * deg * 0.283, 6);
-    expect(spanStepFromDir(dir(0, 0), dir(0, 0), [0, 0, 1], 0.283)).toEqual([0, 0, 0]);
+  const yawStep = (yawDeg: number): Vec3 => [-Math.sin(yawDeg * deg), 0, Math.cos(yawDeg * deg)]; // the orbit's +yaw at an untilted frame (orbitDir: x cos, z sin)
+  it("⭐⭐⭐ ON A WALL a dx moves the gizmo EXACTLY horizontally and a dy EXACTLY vertically — the piece seen at an oblique yaw and pitch (⛔ second pass: the orbit's step laid on the face, tilted)", () => {
+    const n: Vec3 = [0, 0, -1]; // the painting's front
+    const ax = faceAxes(n, [0.7, 0.3, 0.64]); // a screen's right off any level
+    near(ax.h, [-1, 0, 0]);
+    near(ax.v, [0, 1, 0]);
+    // the piece 40° to the side and 35° up: the orbit's yaw step has a z part, its pitch step an x and a z part — the gizmo's steps stay level
+    const yawW = yawStep(-50);
+    const pitchW: Vec3 = [-Math.sin(35 * deg) * Math.cos(-50 * deg), Math.cos(35 * deg), -Math.sin(35 * deg) * Math.sin(-50 * deg)];
+    const sh = axisSense(1, ax.h, yawW);
+    const sv = axisSense(1, ax.v, pitchW);
+    const dx = spanAxisStep(0.1, 0, 0.17, 0.283, ax.h, ax.v, sh, sv);
+    const dy = spanAxisStep(0, 0.1, 0.17, 0.283, ax.h, ax.v, sh, sv);
+    expect(dx[1]).toBe(0);
+    expect(Math.abs(dx[2])).toBeLessThan(1e-15);
+    expect(Math.hypot(...dx)).toBeCloseTo(0.017, 12); // the green loop's pace × the yaw
+    expect(dy[0]).toBe(0);
+    expect(Math.abs(dy[2])).toBeLessThan(1e-15);
+    expect(dy[1]).toBeCloseTo(0.0283, 12); // the radius × the pitch, UP for +pitch
+  });
+  it("⭐⭐ a slanted wall (a seated frustum's side): horizontal its level line, vertical its steepest line", () => {
+    const l = Math.hypot(0.847, 0.531);
+    const n: Vec3 = [0.847 / l, -0.531 / l, 0];
+    const ax = faceAxes(n, [1, 0, 0]);
+    expect(ax.h[1]).toBe(0);
+    expect(Math.abs(ax.h[0] * n[0] + ax.h[2] * n[2])).toBeLessThan(1e-12);
+    expect(ax.v[1]).toBeGreaterThan(0.8);
+    expect(Math.abs(ax.v[0] * n[0] + ax.v[1] * n[1] + ax.v[2] * n[2])).toBeLessThan(1e-12);
+  });
+  it("⭐⭐ ON A TOP both axes horizontal and at 90° — the screen's right laid on it, and square to it", () => {
+    const ax = faceAxes([0, 1, 0], [0.8, 0.5, 0.33]);
+    expect(Math.abs(ax.h[1])).toBeLessThan(1e-12);
+    expect(Math.abs(ax.v[1])).toBeLessThan(1e-12);
+    expect(Math.abs(ax.h[0] * ax.v[0] + ax.h[2] * ax.v[2])).toBeLessThan(1e-12);
+    expect(ax.h[0]).toBeGreaterThan(0.9);
+  });
+  it("⭐⭐⭐ ff2fca2's parity on an upright front view: +yaw goes the way the yaw turns round the green loop (+x on the front), +pitch up the red chain; the paces the green loop's perimeter / 2π and the radius", () => {
+    const ax = faceAxes([0, 0, -1], [1, 0, 0]);
+    const sh = axisSense(-1, ax.h, yawStep(-90)); // the piece in front (yaw −90°): the yaw step is +x
+    const sv = axisSense(-1, ax.v, [0, 1, 0]);
+    const s = spanAxisStep(0.05, 0.02, 0.17, 0.283, ax.h, ax.v, sh, sv);
+    expect(s[0]).toBeCloseTo(0.05 * 0.17, 12);
+    expect(s[1]).toBeCloseTo(0.02 * 0.283, 12);
+    expect(axisSense(1, ax.h, [0.1, 0, 0.99])).toBe(1); // near square: kept
+    // a 0.49 m × 0.033 m painting: the green loop's pace ≈ 0.167 m/rad (ff2fca2: `greenPace`)
+    const pts: Vec3[] = [[-0.24, 0, -0.05], [0.25, 0, -0.05], [0.25, 0, -0.017], [-0.24, 0, -0.017], [0, 0.5, -0.03]];
+    expect(greenPaceOf(pts)).toBeCloseTo((2 * 0.49 + 2 * 0.033) / (2 * Math.PI), 12);
     expect(spanMmOf((5.1 * Math.PI) / 180, 0, 5.1)).toBeCloseTo(1, 12);
   });
   it("⭐⭐ clamped to the region: a push past the edge holds it ON the edge, slides along it, and is CAUGHT (mm of finger); one step back moves at once", () => {
@@ -339,7 +378,10 @@ describe("⭐⭐⭐ wired", () => {
     expect(code("render/green_box_wiring.ts")).not.toContain("} else if (st.span !== null) {"); // no hold: the solver runs
     const w = code("render/face_span_wiring.ts");
     expect(w).not.toContain("st.orbit.reset(q.yaw, q.v);");
-    expect(w).toContain("const step = toPlaneDir(pl, spanStepFromDir(u0, u1, n, st.asm.radius));");
+    // ⭐⭐⭐ (third pass, restated) the gizmo by the orbit's solved yaw and pitch steps along the face's level axes — ff2fca2's relation
+    expect(w).toContain("const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, sp.paceH, st.asm.radius, sp.eH, sp.eV, sp.sh, sp.sv));");
+    expect(w).toContain("sp.eYaw = sp.eH;");
+    expect(w).toContain("sp.ePitch = sp.eV;");
     expect(w).toContain("const u1 = dirOf(q.yaw, q.v);");
   });
   it("⭐⭐⭐ the screen wins on a settled picture — every frame in the face-span, at the release (⛔ `signAfter` carried an inversion out)", () => {

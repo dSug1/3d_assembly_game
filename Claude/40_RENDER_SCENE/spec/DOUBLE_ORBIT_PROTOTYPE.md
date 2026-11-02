@@ -2423,3 +2423,12 @@ parts"*, *"slanted parts should stay faces the gizmo can stand on"*, *"screen di
 * ⭐⭐ **The screen wins** every frame on a settled picture, at the release and the engage; ⏳ `signHold` (a drag through a zenith roll keeps its sense until
   the lift) awaits the owner's confirmation.
 * Slide hosts placed parts only; `assemblyLockDistM` relabelled (the look point only). Vectors 1648. ⛔ No device close.
+
+## 2026-11-02 — on 1.0.90-: the face-span gizmo on the face's level axes (third pass)
+
+* ⭐⭐⭐ The owner: *"when the hosting face is vertical, a dy shall move the gizmo vertically and a dx shall move the gizmo horizontally … horizontal,
+  both … on the horizontal plane at 90 degrees each … analyze how the gizmo moved … in ff2fca2"* — the gizmo moves along the face's level line (dx, at
+  ff2fca2's green-loop pace) and its steepest line (dy, at the radius), on a top along two level axes at 90°; the orbit's solved steps decide how far;
+  the lines level / vertical (⛔ the second pass laid the orbit's step on the face: the lines leant). Measured 0.00° on a wall seen obliquely; the gizmo
+  leads as at ff2fca2 (7 / 20 px, 201 ms). → `queue_notes/FACE_SPAN_2026-11-02.md`, third pass. 1651 vectors. ⛔ No device close.
+

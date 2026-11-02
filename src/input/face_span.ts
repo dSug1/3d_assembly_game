@@ -5,8 +5,8 @@
  * Within the engage distance the gizmo is a POINT IN A PLANE: the hosting face's, its REGION the connected coplanar faces of the placed parts (`spanRegion`,
  * each face's convex hull, joined within `SPAN_GROW_M` — the 3 mm between two cores bridged). ⭐⭐⭐ (second pass, the owner: *"I want to keep what was done
  * for commit ff2fca2 in terms of gizmo leading … face-span should not impact the behavior of the gizmo and the behavior of the piece and the camera relative
- * to the gizmo"*) the ORBIT runs as it always did and moves the gizmo by its SOLVED step (`spanStepFromDir`: the angle × the assembly's radius, along the
- * step laid on the face), clamped to the region (`clampSlide`), riding over what stands on it (`coveredTop`, `rideStep`), caught at its edge then onto the
+ * to the gizmo"*) the ORBIT runs as it always did and moves the gizmo by its SOLVED yaw and pitch steps along the face's LEVEL AXES (third pass, ff2fca2's relation:
+ * `faceAxes`, `axisSense`, `spanAxisStep`, `greenPaceOf`), clamped to the region (`clampSlide`), riding over what stands on it (`coveredTop`, `rideStep`), caught at its edge then onto the
  * face across (`spanMove`, `wrapCandidate` — convex, concave judged near the edge, a GLUED contact face replaced by the face it stands on, `gluedPartners`,
  * `hiddenGlued`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`, `zenithRollStep`). The red and green lines: the region's
  * run through the gizmo (`regionRun`, `spanPolyline`). Textbook geometry only: convex hulls, point–segment and point–triangle distances (Ericson),
@@ -378,16 +378,53 @@ export function onPlane(v: Vec3, n: Vec3): Vec3 | null {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-02, the owner: *"I want to keep what was done for commit ff2fca2 in terms of gizmo leading … Tilting the face and face-span should not impact
- * the behavior of the gizmo and the behavior of the piece and the camera relative to the gizmo"*) — **THE GIZMO'S STEP FROM THE ORBIT'S SOLVED STEP**: the
- * piece's direction went from `u0` to `u1` (the orbit's solved place, frame to frame — as ff2fca2's carrier read `pieceQ`); the gizmo goes the angle × the
- * assembly's radius along that step laid on the face (constant speed: the orbit's own). `[0, 0, 0]` for no step or one square to the face.
+ * ⭐⭐⭐ (2026-11-02, third pass, the owner: *"when the hosting face is vertical, a dy shall move the gizmo vertically and a dx shall move the gizmo
+ * horizontally. when the hosting face is horizontal, both dy and dx shall move the gizmo on the horizontal plane at 90 degrees each … analyze how the gizmo
+ * moved with the dy and dx inputs of the orbit in ff2fca2 … this is what I want"*) — **THE FACE'S LEVEL AXES**: on a wall (the slanted frusta included) `h`
+ * its level line (horizontal) and `v` its steepest line (up); on a top / bottom `h` the screen's right laid on it (latched by the caller) and `v` square to
+ * it in the plane. ⛔ (second pass) the gizmo moved along the orbit's step laid on the face — on an oblique view the lines and the steps came out tilted.
  */
-export function spanStepFromDir(u0: Vec3, u1: Vec3, n: Vec3, radiusM: number): Vec3 {
-  const a = Math.acos(Math.max(-1, Math.min(1, dot(u0, u1))));
-  if (!(a > 1e-12)) return [0, 0, 0];
-  const t = onPlane(sub3(u1, u0), n);
-  return t === null ? [0, 0, 0] : mul3(t, a * radiusM);
+export function faceAxes(n: Vec3, right: Vec3): { readonly h: Vec3; readonly v: Vec3 } {
+  if (isWall(n)) {
+    const h = normalize(cross([0, 1, 0], n)) ?? onPlane(right, n) ?? [1, 0, 0];
+    const v = onPlane([0, 1, 0], n) ?? normalize(cross(n, h)) ?? [0, 1, 0];
+    return { h, v };
+  }
+  const h = onPlane(right, n) ?? onPlane([1, 0, 0], n) ?? [0, 0, 1];
+  return { h, v: normalize(cross(n, h)) ?? [0, 0, 1] };
+}
+
+/**
+ * ⭐ An axis's SENSE for an orbit step: +1 when the orbit's step (`stepW`, world — its yaw's or its pitch's) goes along `e`, −1 against; kept (`prev`) near
+ * square (no flicker). On an upright front view this is ff2fca2's: +yaw round the green loop the way the yaw turns, +pitch up the red chain.
+ */
+export function axisSense(prev: 1 | -1, e: Vec3, stepW: Vec3): 1 | -1 {
+  const l = Math.hypot(stepW[0], stepW[1], stepW[2]);
+  if (!(l > 1e-9)) return prev;
+  const c = dot(e, stepW) / l;
+  return Math.abs(c) < 0.2 ? prev : c > 0 ? 1 : -1;
+}
+
+/**
+ * ⭐⭐⭐ THE GIZMO'S STEP — ff2fca2's relation: the orbit's yaw step `dYaw` (rad) moves it along `h` at `paceH` (m/rad — ff2fca2's green loop: its
+ * perimeter / 2π), its pitch step `dPitch` along `v` at `paceV` (m/rad — ff2fca2's red chain: the assembly's radius), each in its sense.
+ */
+export function spanAxisStep(dYaw: number, dPitch: number, paceH: number, paceV: number, h: Vec3, v: Vec3, sh: 1 | -1, sv: 1 | -1): Vec3 {
+  const a = dYaw * paceH * sh;
+  const b = dPitch * paceV * sv;
+  return [h[0] * a + v[0] * b, h[1] * a + v[1] * b, h[2] * a + v[2] * b];
+}
+
+/** ⭐ ff2fca2's dx pace: the perimeter of the placed parts' horizontal convex hull / 2π (m per radian of yaw) — the green loop's, taken at the hull. */
+export function greenPaceOf(points: readonly Vec3[]): number {
+  const hull = convexHull2D(points.map((p) => [p[0], p[2]] as [number, number]));
+  let per = 0;
+  for (let i = 0; i < hull.length; i++) {
+    const a = hull[i]!;
+    const b = hull[(i + 1) % hull.length]!;
+    per += Math.hypot(b[0] - a[0], b[1] - a[1]);
+  }
+  return per / (2 * Math.PI);
 }
 
 /** ⭐ An orbit step read as the finger's travel (mm) at the orbit's pace (`degPerMm`). */
