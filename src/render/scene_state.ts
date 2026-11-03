@@ -494,6 +494,9 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02) THE ORBIT'S OWN FRAME — its angles are read in it (the face's after a switch, re-tilted before a pole) — and the finger's axes' signs */
   asmOrbit: import("../core/vec").Quat;
   asmSign: { readonly yaw: 1 | -1; readonly v: 1 | -1 };
+  /** ⭐⭐⭐ (2026-11-03) the gizmo's steps for a +yaw and a +pitch as the screen shows them ((right, up), unit — `fingerOnAxes`), read each frame, held through a
+   * zenith roll */
+  asmAxes: { readonly yaw: readonly [number, number]; readonly pitch: readonly [number, number] } | null;
   /** ⭐⭐⭐ (2026-11-02) the screen's up shown last frame (before the offsets), and a ROLL under way from one to the next (its share, 0 … 1) */
   asmUp: Vec3 | null;
   asmRoll: { readonly from: Vec3; readonly share: number; readonly sense: 1 | -1 } | null;

@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-11-02 (`1.0.90-`: the face-span gizmo, third pass; `1.0.89-`: the parts' translation, rotation and alignment deleted)
+> **LAST VERIFIED** · 2026-11-03 (`1.0.90-`: the face-span gizmo, fifth pass — the finger on the gizmo's axes as the screen shows them, through every roll; `1.0.89-`: the parts' translation, rotation and alignment deleted)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.

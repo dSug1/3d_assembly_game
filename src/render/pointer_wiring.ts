@@ -21,6 +21,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
+import { fingerOnAxes } from "../input/orbit_frame";
 import { approachInput, approachRelease, assemblyOn, leavesCone, orbitTravelMm, orbitZenithStep, viewTurnGoverned } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -317,23 +318,29 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const asmOn = assemblyOn(st);
     const shiftApproach = asmOn && st.orbitShift && !dxOnly;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
-    const dyPx = (dxOnly || shiftApproach ? 0 : db.dy) * st.cfg.boxGainPitch * g.pitch;
+    // ⭐⭐⭐ (2026-11-02) the finger's axes' signs on the orbit (`st.asmSign`: kept through a re-base of its frame — the same finger the same way in the world)
+    const sg = asmOn ? st.asmSign : { yaw: 1, v: 1 };
+    // ⭐⭐⭐ (2026-11-03, the owner: *"after a camera roll, the delta position direction on the screen and the gizmo direction are always the same. Blend that
+    // properly during the camera roll"*) around the assembly the finger laid on the gizmo's axes AS THE SCREEN SHOWS THEM (`fingerOnAxes`, read each frame:
+    // through a roll the gizmo never goes against the finger — ⛔ the signs, read before a roll and kept through it, sent the piece out on the far side of
+    // a bottom with its dy reversed); the signs' rule where they lie along the screen's
+    const ax = asmOn && !shiftApproach && !dxOnly ? st.asmAxes : null;
+    const fd = ax !== null ? fingerOnAxes(db.dx, db.dy, ax.yaw, ax.pitch) : { yaw: sg.yaw * db.dx, pitch: sg.v * db.dy };
+    const dyPx = (dxOnly || shiftApproach ? 0 : fd.pitch) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
-    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : db.dy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
+    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fd.pitch) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
     const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    // ⭐⭐⭐ (2026-11-02) the finger's axes' signs on the orbit (`st.asmSign`: kept through a re-base of its frame — the same finger the same way in the world)
-    const sg = asmOn ? st.asmSign : { yaw: 1, v: 1 };
     const travelMm = Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
     // ⭐⭐⭐ (2026-11-02) the screen's roll and the next switch's wait go on with the orbit's travel (`orbitTravelMm`) — ⭐⭐⭐ a roll under way TAKES it first,
     // at the view's cap: the piece waits while the camera rolls (the owner: *"smoothed … by travel of the camera and piece with delta position"*)
     const left = asmOn && !shiftApproach ? orbitTravelMm(st, travelMm) : travelMm;
     const kRoll = travelMm > 0 ? left / travelMm : 1;
-    const dxArg = shiftApproach ? 0 : sg.yaw * pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag) * kRoll;
-    const dyArg = dyPx * share * sg.v * kRoll;
+    const dxArg = shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -fd.yaw * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag) * kRoll;
+    const dyArg = dyPx * share * kRoll;
     st.orbit.drag(dxArg, dyArg);
     // ⭐⭐⭐ (2026-11-02, *"clamping the angular travel per mm input for any face"*) the view's turn held to the cap per mm (`viewTurnGoverned`): the step cut
     if (asmOn && !shiftApproach) {
