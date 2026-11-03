@@ -19,12 +19,15 @@
  * discontinuity). Also, a slanted face shall behave as its projection … Also, no tilt of the curve"*; *"a step but the gizmo acts as a break"*; *"the far
  * orbit too"*. The region, the glued faces, the wrap onto any face, the ride and the release are DELETED with their vectors; the shadow's were shown RED
  * against `67893d7` (none of `shadowMap`, `shadowAt`, `shadowRun`, `boxDirs`, `snapDir` existed; the wiring read the solved steps and released far out).
+ *
+ * ⭐⭐⭐ (2026-11-03, eighth pass) **THE WORLD'S PLANES, THE MAIN FACE** — the owner: *"I do not want sections which plan is not aligned with … the three plans
+ * which define x y z axis in world coordinates"*; *"If one face is not connected, it should not be included in the section"*. `boxDirs` deleted (`WORLD_DIRS`),
+ * a top's axes the world's x / z, a face cut off by a step deeper than `shadowStepMm` out of the shadow — shown RED against `f8965ff`.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
 import {
-  boxDirs,
   fromP2,
   heightOf,
   isWall,
@@ -51,6 +54,7 @@ import {
   type SpanFace,
   type SpanMotion,
   type Tri,
+  WORLD_DIRS,
 } from "../src/input/face_span";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -168,28 +172,58 @@ describe("⭐⭐⭐ (2026-11-03) THE SHADOW — the assembly as seen along a bas
   });
 });
 
-describe("⭐⭐⭐ (2026-11-03) the assembly's BOX — six bases, the wrap at 90° (the owner: *\"no tilt of the curve if the orbit is following this single-plane contour section\"*)", () => {
-  it("⭐⭐ the plan's smallest rectangle: a box square to the world keeps the world's axes; a plan turned 30° gives its own sides; the vertical always", () => {
-    const sq: Vec3[] = [[-0.25, 0, -0.05], [0.25, 0, -0.05], [0.25, 0.5, 0], [-0.25, 0.5, 0]];
-    const d = boxDirs(sq);
-    near(d[0]!, [1, 0, 0]);
-    near(d[2]!, [0, 0, 1]);
-    near(d[4]!, [0, 1, 0]);
-    near(d[5]!, [0, -1, 0]);
-    const c = Math.cos(Math.PI / 6);
-    const s = Math.sin(Math.PI / 6);
-    const rot = (x: number, z: number): Vec3 => [x * c - z * s, 0, x * s + z * c];
-    const r = boxDirs([rot(-0.25, -0.05), rot(0.25, -0.05), rot(0.25, 0.05), rot(-0.25, 0.05), rot(0, 0)]);
-    near(r[0]!, [c, 0, s]);
-    near(r[1]!, [-c, 0, -s]);
-    expect(Math.abs(r[2]![0] * c + r[2]![2] * s)).toBeLessThan(1e-12);
+describe("⭐⭐⭐ (2026-11-03, eighth pass) THE WORLD'S SIX BASES — the wrap at 90° (the owner: *\"those are the three plans which define x y z axis in world coordinates … Otherwise, the movement of the gizmo is very hard to control\"*)", () => {
+  it("⭐⭐⭐ the bases are the world's ±x, ±z, ±y — whatever the assembly's plan (⛔ seventh pass: its smallest rectangle — a plan turned 30° gave turned bases)", () => {
+    expect(WORLD_DIRS).toEqual([[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]);
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("dirs: WORLD_DIRS };");
+    expect(w).not.toContain("boxDirs");
   });
-  it("⭐⭐⭐ a slanted face snaps to the box's nearest base; the next base across the outline is the push's, never the base itself nor its opposite", () => {
-    const d = boxDirs([[-0.25, 0, -0.05], [0.25, 0, -0.05], [0.25, 0.5, 0], [-0.25, 0.5, 0]]);
+  it("⭐⭐⭐ a slanted face snaps to the nearest world base; the next base across the outline is the push's, never the base itself nor its opposite", () => {
+    const d = WORLD_DIRS;
     near(snapDir([0.2, 0.55, -0.81], d)!, [0, 0, -1]); // a frustum's side, 34° up: its base the front
     near(snapDir([0.1, 0.9, -0.42], d)!, [0, 1, 0]); // steeper: the top
     near(snapDir([0.9, 0.1, -0.4], d, [1, 0, 0])!, [0, 0, -1]); // ±x excluded
+    near(snapDir([0.8, 0, 0.6], d)!, [1, 0, 0]); // a wall turned 37°: the world's x, never its own
     expect(snapDir([0, 0, 0], d)).toBeNull();
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-03, eighth pass) THE MAIN FACE — a face not connected is not in the section (the owner: *\"If one face is not connected, it should not be included in the section\"*)", () => {
+  // Scene_1 seen from its +x side: the painting's side strip (z −0.05…−0.018) at x 0.248, Piece42 41 mm prouder (x 0.289) on its upper part, Piece45 on the
+  // back (z −0.092…−0.05) with its +x side at x 0.046 — 20 cm behind
+  const painting1 = box([-0.242, 0.015, -0.05], [0.248, 0.499, -0.018]);
+  const p42 = box([0.247, 0.404, -0.057], [0.289, 0.508, -0.011]);
+  const p45 = box([0, 0.138, -0.092], [0.046, 0.242, -0.05]);
+  const parts = [painting1.tris, p42.tris, p45.tris];
+  it("⭐⭐⭐ a step within `shadowStepMm` (60 mm) is the main face's — Piece42, 41 mm proud, a jump; Piece45's side, 20 cm deep, CUT OFF (⛔ seventh pass: the gizmo jumped onto it and back)", () => {
+    const m = shadowMap([1, 0, 0], parts, 0.03, 0.004, 0.06)!;
+    const P = (y: number, z: number) => toP2(m.plane, [0, y, z]);
+    expect(shadowAt(m, P(0.3, -0.03))!.h).toBeCloseTo(-0.041, 9); // the painting's side
+    expect(shadowAt(m, P(0.45, -0.03))!.h).toBeCloseTo(0, 9); // Piece42
+    expect(shadowAt(m, P(0.45, -0.055))!.h).toBeCloseTo(0, 9); // Piece42 beyond the strip: connected through itself
+    expect(shadowAt(m, P(0.19, -0.07))).toBeNull(); // Piece45's side: not connected
+    expect(shadowAt(m, P(0.19, -0.0505))).toBeNull(); // right at its border with the strip
+    expect(shadowAt(m, P(0.19, -0.0495))!.h).toBeCloseTo(-0.041, 9); // the strip at that border
+    // without the step (seventh pass) Piece45 was in the shadow
+    const all = shadowMap([1, 0, 0], parts, 0.03)!;
+    expect(shadowAt(all, toP2(all.plane, [0, 0.19, -0.07]))!.h).toBeCloseTo(-0.243, 9);
+  });
+  it("⭐⭐ the run along the side stops at the cut-off face: the green line across the strip only", () => {
+    const m = shadowMap([1, 0, 0], parts, 0.03, 0.004, 0.06)!;
+    const g = toP2(m.plane, [0, 0.19, -0.03]);
+    const d = toP2(m.plane, [0, 0, 1]);
+    const run = shadowRun(m, g, [d[0], d[1]]);
+    const zs = run.map((t) => fromP2(m.plane, [g[0] + d[0] * t, g[1] + d[1] * t])[2]).sort((x, y) => x - y);
+    expect(zs[0]).toBeCloseTo(-0.05, 3);
+    expect(zs[1]).toBeCloseTo(-0.018, 3);
+  });
+  it("⭐⭐ the plane at the MAIN face's outermost extent: a disconnected part standing prouder neither moves the foot nor is reached", () => {
+    const far = box([0.1, 0.6, -0.3], [0.5, 0.65, -0.25]); // a part away from the side, 21 cm prouder in x than the strip, not touching it
+    const m = shadowMap([1, 0, 0], [painting1.tris, far.tris], 0.03, 0.004, 0.06)!;
+    expect(heightOf(m.plane, [0.248, 0, 0])).toBeCloseTo(0, 9);
+    expect(shadowAt(m, toP2(m.plane, [0, 0.62, -0.27]))).toBeNull();
+    expect(shadowAt(m, toP2(m.plane, [0, 0.3, -0.03]))!.h).toBeCloseTo(0, 9);
   });
 });
 
@@ -224,12 +258,13 @@ describe("⭐⭐⭐ the gizmo's step — ff2fca2's relation: dx along the face's
     expect(ax.v[1]).toBeGreaterThan(0.8);
     expect(Math.abs(ax.v[0] * n[0] + ax.v[1] * n[1] + ax.v[2] * n[2])).toBeLessThan(1e-12);
   });
-  it("⭐⭐ ON A TOP both axes horizontal and at 90° — the screen's right laid on it, and square to it", () => {
+  it("⭐⭐⭐ ON A TOP both axes the WORLD's x and z — the one nearer the screen's right, and square to it (eighth pass; ⛔ the right itself: a green section at any angle over the top)", () => {
     const ax = faceAxes([0, 1, 0], [0.8, 0.5, 0.33]);
-    expect(Math.abs(ax.h[1])).toBeLessThan(1e-12);
-    expect(Math.abs(ax.v[1])).toBeLessThan(1e-12);
-    expect(Math.abs(ax.h[0] * ax.v[0] + ax.h[2] * ax.v[2])).toBeLessThan(1e-12);
-    expect(ax.h[0]).toBeGreaterThan(0.9);
+    near(ax.h, [1, 0, 0]);
+    expect(Math.abs(ax.v[0])).toBeLessThan(1e-12);
+    expect(Math.abs(Math.abs(ax.v[2]) - 1)).toBeLessThan(1e-12);
+    near(faceAxes([0, 1, 0], [-0.3, 0.2, -0.9]).h, [0, 0, -1]);
+    near(faceAxes([0, -1, 0], [-0.9, 0, 0.4]).h, [-1, 0, 0]);
   });
   it("⭐⭐⭐ ff2fca2's parity on an upright front view: +yaw goes the way the yaw turns round the green loop (+x on the front), +pitch up the red chain; the paces the green loop's perimeter / 2π and the radius", () => {
     const ax = faceAxes([0, 0, -1], [1, 0, 0]);
@@ -372,7 +407,7 @@ describe("⭐⭐⭐ wired", () => {
   });
   it("⭐ the sliders (CAMERA ORBIT AROUND CENTER) and their defaults; the lock slider relabelled (it only places the look point now)", () => {
     const m = code("render/tuning_menu.ts");
-    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanRollMm", "shadowBridgeMm"]) expect(m).toContain(`"${k}"`);
+    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanRollMm", "shadowBridgeMm", "shadowStepMm"]) expect(m).toContain(`"${k}"`);
     expect(m).not.toContain('"faceSpanRideMm"');
     expect(m).not.toContain('"faceSpanTurnMm"');
     expect(m).toContain('"camera looks at the gizmo within (m) — the centre beyond", "assemblyLockDistM"');
@@ -381,6 +416,7 @@ describe("⭐⭐⭐ wired", () => {
     expect(c).toContain("faceSpanCatchMm: 3,");
     expect(c).toContain("faceSpanRollMm: 16,");
     expect(c).toContain("shadowBridgeMm: 30,");
+    expect(c).toContain("shadowStepMm: 60,");
   });
 });
 

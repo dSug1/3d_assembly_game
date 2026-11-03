@@ -205,6 +205,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "face-span catch at an edge (mm of push)", "faceSpanCatchMm", 0, 30, 0.5),
             tunable(st, "face-span: the top face's half turn at the zenith (mm of finger)", "faceSpanRollMm", 0, 60, 1),
             tunable(st, "the gizmo's shadow: gaps narrower than this bridged (mm on the assembly)", "shadowBridgeMm", 0, 100, 1),
+            tunable(st, "the gizmo's shadow: a face deeper than this from its neighbour is cut off (mm)", "shadowStepMm", 5, 500, 5),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)
