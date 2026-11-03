@@ -2305,3 +2305,17 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   green (the lines' own 2 mm lift); before, up to **157 mm** and **108 mm**. ⚠ Cost: 64 drops a frame under a dx (the red), 96 under a dy on a side (the
   green), both on a diagonal — watch the HUD's `frame` line on the iPhone; the fallback is a blend between less frequent recasts.
 * Vectors (`tests/section_hull.test.ts`: `redSamples`'s replaced, + 2 new, 3 restated — red on the previous build). ⛔ No device close. 2159 vectors.
+
+## 2026-11-03 — on 1.0.93from1.0.87- (from `ff2fca2`): THE TILTED ORBIT TO BE REBUILT
+
+* ⭐⭐⭐ The owner: *"there has been a lot of patches since we created the tilted orbit from commit ff2fca2 … I will rebuild the tilted orbit from commit
+  ff2fca2"*; *"The behavior in commit ff2fca2 was the correct one: sections always plane and horizontal/vertical, no jumps, no change of direction, delta
+  position drives gizmo which drives the orbit of the piece and camera, same direction of gizmo and delta position input. I want to keep those behaviors intact
+  at all times while proceeding step by step for the build of the tilted orbit."*
+* The branch starts at `ff2fca2` (this file's previous section is the orbit as it stands); the parts' translation, rotation and alignment deleted again
+  (`5515502` replayed — `INPUTS_TABLE.md`, `10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md`).
+* ⛔ SUSPENDED on `1.0.92-Tilted-orbit-suspended`: the tilt built again (`d8134eb`), the third Fable audit's build (`8548714`), the face-span's nine passes, the
+  shadow gizmo, the world's planes, one input one loop — and their records (`queue_notes/FACE_SPAN_2026-11-02.md`, the future improvements R1–R6). Read them
+  there for what was learned; ⛔ do not merge them.
+* ⏳ NEXT: the rebuild's scope prompt (the owner reviews it before anything is built).
+
