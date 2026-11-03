@@ -41,7 +41,10 @@ import {
   spanRegion,
   spanSolids,
   axisSense,
+  calmWeight,
+  edgeShare,
   faceAxes,
+  shownDir,
   greenPaceOf,
   spanAxisStep,
   toP2,
@@ -67,6 +70,21 @@ export interface SpanZenith {
   share: number;
   from: Vec3;
   sense: 1 | -1;
+}
+
+/** ⭐⭐⭐ (fourth pass) The calm of the shares comes in over this much travel after the engage (mm), or this long at rest (ms) — the far orbit's direction never jumps. */
+const CALM_RAMP_MM = 20;
+const CALM_REST_MS = 300;
+
+/**
+ * ⭐⭐⭐ (fourth pass) THE PIECE'S SHOWN DIRECTION in the face-span for the orbit's direction `u` (`shownDir`): the shares of its angles off the face's normal
+ * — calm in the middle of a face, whole at its edges and across them — weighted by the engage's ramp and the distance (whole at the release: no jump either
+ * way). `distM`: the approach's distance; `engageM`: the face-span's.
+ */
+export function spanShownDir(sp: SpanState, u: Vec3, distM: number, engageM: number, releaseFactor: number): Vec3 {
+  const w = calmWeight(sp.calmRamp, distM, engageM, releaseFactor);
+  if (!(w > 0)) return u;
+  return shownDir(u, sp.plane.n, sp.eH, sp.eV, 1 - (1 - sp.shareH) * w, 1 - (1 - sp.shareV) * w);
 }
 
 /** ⭐ The piece no longer in front of its hosting face below this (cos of its direction from the face's normal): the gizmo goes across the edge. */
@@ -102,6 +120,10 @@ export interface SpanState {
   ePitch: Vec3;
   /** over a top / bottom within the zenith's cone: its roll */
   zen: SpanZenith | null;
+  /** ⭐⭐⭐ (fourth pass) the orbit's angle's shares shown along h and v (`edgeShare`), and the engage's ramp of their calm (0 → 1 by travel) */
+  shareH: number;
+  shareV: number;
+  calmRamp: number;
   /** a slide took the gizmo meanwhile (found again on its return) */
   slid: boolean;
   /** a drag that went over a top through its roll keeps its sense until the finger lifts (⚠ else the screen's rule sends it straight back over the top) */
@@ -229,7 +251,7 @@ export function spanEngage(st: SceneState, g: Vec3, n: Vec3 | null, u: Vec3): bo
   const ride = coveredTop(solids, at);
   const ax = faceAxes(pl.n, screenAxes(st)?.right ?? [1, 0, 0]);
   const paceH = greenPaceOf(sf.faces.flatMap((f) => f.tris.flatMap((t) => [...t])));
-  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, slid: false, signHold: false };
+  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, shareH: 1, shareV: 1, calmRamp: 0, slid: false, signHold: false };
   spanSenses(st, st.span);
   setGizmoFace(st, pl.n, sf.owners[i]!.id);
   st.lastVerdict = `face-span: on ${sf.owners[i]!.id}'s face — the gizmo moves on its coplanar faces (${region.members.length})`;
@@ -373,6 +395,17 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   // ⭐ the lines' axes: the face's level axes (green the level line, red the steepest on a wall)
   sp.eYaw = sp.eH;
   sp.ePitch = sp.eV;
+  // ⭐⭐⭐ (fourth pass) the shares of the orbit's angle shown, from the gizmo's place on its runs (the nearer end); the calm ramped in from the engage
+  const shareOf = (e: Vec3, interior: number, zonePct: number, zoneMinCm: number): number => {
+    const d0 = toPlaneDir(sp.plane, e);
+    const l = Math.hypot(d0[0], d0[1]);
+    if (!(l > 1e-9)) return 1;
+    const run = regionRun(sp.region, sp.motion.at, [d0[0] / l, d0[1] / l]);
+    return edgeShare(Math.min(-run[0], run[1]), run[1] - run[0], interior, zonePct, zoneMinCm / 100);
+  };
+  sp.shareH = shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm);
+  sp.shareV = cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1;
+  sp.calmRamp = Math.min(1, sp.calmRamp + travel / CALM_RAMP_MM + (atRest ? dtMs / CALM_REST_MS : 0));
   // ⭐⭐⭐ the screen wins — on a settled picture, the camera facing the hosting face (⛔ grazing it, from over the top, its up the face's turned over: the signs
   // flipped mid-drag, back and forth)
   const scr = screenAxes(st);

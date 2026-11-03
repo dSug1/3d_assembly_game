@@ -28,8 +28,8 @@ import { slideArmedAfter } from "../input/hover";
 import type { Quat, Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { spanEngaged, spanEngageM } from "../input/face_span";
-import { spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanZenithStep, spanZenithUp } from "./face_span_wiring";
+import { SPAN_RELEASE_FACTOR, spanEngaged, spanEngageM } from "../input/face_span";
+import { spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanShownDir, spanZenithStep, spanZenithUp } from "./face_span_wiring";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -159,6 +159,9 @@ function dirAt(st: SceneState, yaw: number, v: number, clamp = true): Vec3 {
   // ⭐⭐⭐ (2026-11-02, second pass, the owner: *"I want to keep what was done for commit ff2fca2 in terms of gizmo leading"*) in the face-span too the piece is
   // on the ORBIT's direction from its gizmo (⛔ straight out along the face's normal, the orbit held: the gizmo read as trailing the piece)
   const u = orbitDirWorld(st, yaw, v);
+  // ⭐⭐⭐ (2026-11-03, fourth pass, the owner: *"add some slide of the gizmo and follow by the piece and camera as per 3286ed5 … so that the gizmo can reach close
+  // to the edges without the camera view being too slanted"*) the piece and the camera on the SHOWN direction — the orbit's angle calm in the middle of a face
+  if (st.span !== null) return spanShownDir(st.span, u, approachDistance(st.cfg, st.approach), spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), SPAN_RELEASE_FACTOR);
   const n = clamp && st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
   return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);
 }

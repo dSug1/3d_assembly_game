@@ -442,6 +442,16 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-02, the owner: *"do the roll as it was previously implemented on branch 1.0.83"*) over a top / bottom, the camera's half turn at the zenith
    * (the piece waiting) over this much of the finger's travel (mm) */
   faceSpanRollMm: number;
+  /** ⭐⭐⭐ (2026-11-03, the owner: *"a mix of the slide of the gizmo of commit 3286ed5 and this implementation of commit 46ee3a2"*) THE FACE-SPAN ORBIT SHARE: the
+   * share of the orbit's angle shown along dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
+  faceSpanShareH: number;
+  faceSpanZoneHPct: number;
+  faceSpanZoneMinHCm: number;
+  /** ⭐⭐⭐ (2026-11-03, *"make a slider to toggle on or off the dy … and 3 sliders to regulate the dy, with the same default setting as those for dx"*) — dy's (1 on, 0 off) */
+  faceSpanShareVOn: number;
+  faceSpanShareV: number;
+  faceSpanZoneVPct: number;
+  faceSpanZoneMinVCm: number;
   /** ⭐⭐⭐ (2026-11-02, *"Gizmo shall pass over the protruding part. Blend the movements"*) a ridden height change taken over this travel (mm) */
   faceSpanRideMm: number;
   orbitTurnCapDegMm: number;
@@ -853,6 +863,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanEngageM: 4.5, // ⭐⭐⭐ (2026-11-02) the face-span from 4.5 m (out past 5.4 m — the far orbit at 6 m, Scene_1's ring 1)
   faceSpanCatchMm: 3, // ⭐⭐⭐ (2026-11-02) a short catch: 3 mm of push past an edge (the painting's 33 mm top is ~1.3 mm of finger at 25 mm/mm)
   faceSpanRollMm: 16, // ⭐⭐⭐ (2026-11-02) the top face's half turn at the zenith over 16 mm of finger — branch 1.0.83's pause, the orbit's pace
+  faceSpanShareH: 0.25, // ⭐⭐⭐ (2026-11-03, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
+  faceSpanZoneHPct: 25, // ⭐⭐⭐ (2026-11-03, *"2- ok as recommended"*) the edge zone a quarter of the run
+  faceSpanZoneMinHCm: 3, // …at least 3 cm
+  faceSpanShareVOn: 1, // ⭐⭐⭐ (2026-11-03, *"3- make a slider to toggle on or off the dy"*) dy's angle compressed too
+  faceSpanShareV: 0.25, // …with dx's defaults
+  faceSpanZoneVPct: 25,
+  faceSpanZoneMinVCm: 3,
   faceSpanRideMm: 3, // ⭐⭐⭐ (2026-11-02) a protrusion's step ridden over ~3 mm of finger (95 % of it; ~75 mm of gizmo at 25 mm/mm)
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
@@ -1011,6 +1028,10 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.faceSpanEngageM >= 0.05 && cfg.faceSpanEngageM <= 10)) throw new Error(`faceSpanEngageM (${cfg.faceSpanEngageM}) must be in [0.05, 10] m.`);
   if (!(cfg.faceSpanCatchMm >= 0 && cfg.faceSpanCatchMm <= 30)) throw new Error(`faceSpanCatchMm (${cfg.faceSpanCatchMm}) must be in [0, 30] mm.`);
   if (!(cfg.faceSpanRollMm >= 0 && cfg.faceSpanRollMm <= 60)) throw new Error(`faceSpanRollMm (${cfg.faceSpanRollMm}) must be in [0, 60] mm.`);
+  for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
+  for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
+  for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);
+  if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
   if (!(cfg.faceSpanRideMm >= 0 && cfg.faceSpanRideMm <= 40)) throw new Error(`faceSpanRideMm (${cfg.faceSpanRideMm}) must be in [0, 40] mm.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
