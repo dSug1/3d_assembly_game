@@ -874,7 +874,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanZoneVPct: 25,
   faceSpanZoneMinVCm: 3,
   shadowBridgeMm: 30, // ⭐⭐⭐ (2026-11-03) the owner chose 30 mm
-  shadowStepMm: 60, // ⭐⭐⭐ (2026-11-03, eighth pass) the orbit shell's offset: Scene_1's protrusions (~41 mm) kept, Piece45's side 20 cm behind the painting's cut off
+  shadowStepMm: 150, // ⭐⭐⭐ (2026-11-03, ninth pass) Scene_1: the notches (85–126 mm) kept — their faces on the loops; Piece45's side 20 cm behind the painting's cut off (eighth pass: 60)
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)

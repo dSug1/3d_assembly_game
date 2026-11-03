@@ -2477,3 +2477,11 @@ edges without the camera view being too slanted … but I like the smooth transi
   no jump of the piece or the camera left. ⏳ Open: rolls on walls off a top / bottom sideways, and the orbit's frame kept tilted after a pole through a long
   drag → `FACE_SPAN_2026-11-02.md`, eighth pass, second part. 1669 vectors.
 
+## 2026-11-03 — on 1.0.92-: ONE INPUT, ONE LOOP (the face-span's ninth pass)
+
+* ⭐⭐⭐ The owner: *"I want the sections to be a plane which the gizmo will loop over and over if the delta position is the same (unless it is blocked by a camera
+  roll … or … a discontinuity belonging to this initial section contour)"* — the finger's axes latched for a drag (whole screen axes; a zenith roll reverses
+  them); round an edge the plane carried over (the moving axis onto the old normal's opposite, the other kept; the landing along the section); each axis at its
+  loop's pace (`loopPace`); held at the section's outline the orbit held too; `shadowStepMm` 150. → `queue_notes/FACE_SPAN_2026-11-02.md`, ninth pass.
+  1674 vectors. ⛔ No device close.
+

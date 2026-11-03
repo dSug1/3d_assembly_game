@@ -98,7 +98,8 @@ describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (202
   it("⭐⭐⭐ a zenith roll ended at its other end in a drag: the step back over the zenith held until the lift (no rocking)", () => {
     const w = code("render/face_span_wiring.ts");
     expect(w).toContain("if (z.block && st.router.size > 0) {");
-    expect(w).toContain("if ((z.share === 0 || z.share === 1) && z.share !== z.start && st.router.size > 0) z.block = true;");
+    expect(w).toContain("if ((z.share === 0 || z.share === 1) && z.share !== z.start && st.router.size > 0) {");
+    expect(w).toContain("z.block = true;");
     expect(w).toContain("if (st.router.size === 0 && sp.zen !== null) sp.zen.block = false;");
   });
 });
@@ -139,7 +140,7 @@ describe("⭐⭐⭐ (2026-11-03) HELD TO THE SCREEN'S AXIS IT DRIVES (the owner:
   });
   it("⭐⭐⭐ wired: each axis held to its screen axis (the pair never on one), the last ones kept", () => {
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("const yh = ys === null ? null : holdToScreen(ys, was?.yawC ?? null);");
+    expect(w).toContain("const yh = whole(ys === null ? null : holdToScreen(ys, was?.yawC ?? null));");
     expect(w).toContain("if (yh !== null && ph !== null && yh.c % 2 === ph.c % 2) {");
   });
 });
