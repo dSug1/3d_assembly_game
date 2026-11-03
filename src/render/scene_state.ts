@@ -496,7 +496,7 @@ export interface SceneState {
   asmSign: { readonly yaw: 1 | -1; readonly v: 1 | -1 };
   /** ⭐⭐⭐ (2026-11-03) the gizmo's steps for a +yaw and a +pitch as the screen shows them ((right, up), unit — `fingerOnAxes`), read each frame, held through a
    * zenith roll */
-  asmAxes: { readonly yaw: readonly [number, number]; readonly pitch: readonly [number, number] } | null;
+  asmAxes: { readonly yaw: readonly [number, number]; readonly pitch: readonly [number, number]; readonly yawC?: number | null; readonly pitchC?: number | null } | null;
   /** ⭐⭐⭐ (2026-11-02) the screen's up shown last frame (before the offsets), and a ROLL under way from one to the next (its share, 0 … 1) */
   asmUp: Vec3 | null;
   asmRoll: { readonly from: Vec3; readonly share: number; readonly sense: 1 | -1 } | null;
@@ -510,7 +510,9 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO (`input/face_span.ts`, `render/face_span_wiring.ts`; `null`: the far orbit) */
   span: import("./face_span_wiring").SpanState | null;
   /** ⭐⭐⭐ (2026-11-02) the placed parts' faces (normal, triangles on the model pose) and their owners — per placed set */
-  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly hostable: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[]; readonly partner: readonly number[] } | null;
+  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[]; readonly partIds: readonly string[]; readonly parts: readonly (readonly import("../input/face_span").Tri[])[]; readonly dirs: readonly import("../core/vec").Vec3[] } | null;
+  /** ⭐⭐⭐ (2026-11-03) the shadows on the box's bases, per placed set (cleared with `spanFaces`) and bridge */
+  spanShadows: Map<string, import("../input/face_span").ShadowMap | null>;
   /** ⭐⭐⭐ (2026-11-02) the face-span's red and green lines (one mesh, a fixed vertex count, updated in place) and what they were drawn for */
   spanLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   spanLinesKey: string;

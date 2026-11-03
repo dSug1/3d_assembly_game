@@ -1,43 +1,26 @@
 /**
- * ⭐⭐⭐ (2026-11-02, branch `1.0.90-`) **THE FACE-SPAN GIZMO** — engine-free (the owner: *"once the orbit is tilted to follow a face orientation, the red and
- * green sections do not need to fully circumference the assembly, but they only need to span the hosting coplanar faces"* → `FACE_SPAN_2026-11-02.md`).
- *
- * Within the engage distance the gizmo is a POINT IN A PLANE: the hosting face's, its REGION the connected coplanar faces of the placed parts (`spanRegion`,
- * each face's convex hull, joined within `SPAN_GROW_M` — the 3 mm between two cores bridged). ⭐⭐⭐ (second pass, the owner: *"I want to keep what was done
- * for commit ff2fca2 in terms of gizmo leading … face-span should not impact the behavior of the gizmo and the behavior of the piece and the camera relative
- * to the gizmo"*) the ORBIT runs as it always did and moves the gizmo by its SOLVED yaw and pitch steps along the face's LEVEL AXES (third pass, ff2fca2's relation:
- * `faceAxes`, `axisSense`, `spanAxisStep`, `greenPaceOf`), clamped to the region (`clampSlide`), riding over what stands on it (`coveredTop`, `rideStep`), caught at its edge then onto the
- * face across (`spanMove`, `wrapCandidate` — convex, concave judged near the edge, a GLUED contact face replaced by the face it stands on, `gluedPartners`,
- * `hiddenGlued`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`, `zenithRollStep`). The red and green lines: the region's
- * run through the gizmo (`regionRun`, `spanPolyline`). Textbook geometry only: convex hulls, point–segment and point–triangle distances (Ericson),
- * barycentric heights, bisection, golden section.
+ * ⭐⭐⭐ (2026-11-02, branch `1.0.90-`) **THE FACE-SPAN GIZMO** — engine-free (`FACE_SPAN_2026-11-02.md`). ⭐⭐⭐ (2026-11-03, branch `1.0.91-`, the owner: *"I
+ * want to make the red and green contours strictly in their respectively single plan which strictly corresponds to the section cut of the assembly by a vertical
+ * or horizontal plane … if a overhanging face would be hidden if the camera view was anti-aligned with the normal of the face, the red or green contour shall
+ * ignore this face and the gizmo shall behave like a shadow (ie jumping over the discontinuity). Also, a slanted face shall behave as its projection … Also,
+ * no tilt of the curve"*) — **THE SHADOW GIZMO**, close in and far out alike: the gizmo is a POINT ON A BASE — one of the six directions of the assembly's box
+ * (`boxDirs`: the vertical and the two axes of its plan's smallest rectangle) — moved by the orbit's SOLVED yaw and pitch steps along the base's LEVEL AXES
+ * (ff2fca2's relation: `faceAxes`, `axisSense`, `spanAxisStep`, `greenPaceOf`) in straight lines; its depth the SHADOW's (`shadowMap`, `shadowAt`: the
+ * frontmost surface along the base's normal, a gap narrower than the bridge filled) — a step in it is a jump; clamped to the shadow's outline (`clampSlide`),
+ * caught there, then onto the next base at 90° (`spanMove`, `snapDir`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`,
+ * `zenithRollStep`). The red and green lines: the shadow's profile through the gizmo in the level and the vertical plane (`shadowRun`, `spanPolyline` — a step a
+ * connector). Textbook geometry only: convex hulls, rotating calipers, barycentric heights, a raster's one-dimensional closing, bisection.
  */
 import { cross, dot, normalize, type Vec3 } from "../core/vec";
-import { boundStep, convexHull2D, convexOverlap2D } from "./hover";
+import { convexHull2D } from "./hover";
 
 export type P2 = readonly [number, number];
 export type Tri = readonly [Vec3, Vec3, Vec3];
 
-/** ⭐ Out of face-span past this × the engage distance (the hysteresis — no flicker at the threshold). */
+/** ⭐ The calm's weight falls to 0 at this × the engage distance (`calmWeight`). */
 export const SPAN_RELEASE_FACTOR = 1.2;
-/** ⭐ The faces joined when this close (each side, m) — the painting's cores stand 3 mm apart (`OUTLINE_GROW_M`'s value). */
-export const SPAN_GROW_M = 0.0016;
-/** ⭐ Coplanar: normals within ~1.1° and planes within 0.5 mm (the hover's `coplanarFaces`). */
-export const SPAN_COPLANAR_COS = 0.9998;
-export const SPAN_COPLANAR_M = 0.0005;
 /** ⭐ A face within 40° of vertical is a WALL: its input axes levelled, the screen's up the world's (`TILT_ON_DEG`'s complement). */
 export const SPAN_VERTICAL_SIN = Math.sin((50 * Math.PI) / 180);
-/** ⭐ A part counts as standing on the plane (ridden over) when it reaches this far in front of it (m), TOUCHES it (its nearest point within
- * `SPAN_TOUCH_M` of the plane — ⛔ a part across a 16 mm empty slot read as a protrusion: the gizmo leapt onto its far side) and lies within the slab. */
-export const SPAN_RIDE_MIN_M = 0.0005;
-export const SPAN_TOUCH_M = 0.0025; // a seated part stands one contour margin (1.5 mm on Scene_1) off its host's core
-export const SPAN_RIDE_SLAB_M = 0.25;
-/** ⭐ The tops read beside the point this far each way (m) — a gap between a protrusion's cores bridged. */
-export const SPAN_COVER_M = 0.002;
-/** ⭐ The face across an edge: within this of the edge point (m). */
-export const SPAN_WRAP_REACH_M = 0.008;
-/** ⭐ With no finger, a blend (the engage's turn, the ride) goes on by time: about whole in this (ms). */
-export const SPAN_REST_MS = 300;
 /** ⭐ The lines lifted off the surface (m) — never in it. */
 export const SPAN_LINE_LIFT_M = 0.002;
 
@@ -47,7 +30,7 @@ const mul3 = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
 
 // ───────────────────────────── the plane ─────────────────────────────
 
-/** ⭐ The hosting plane: a point on it, its normal, two in-plane axes (`a` horizontal where it can be). */
+/** ⭐ The base plane: a point on it, its normal, two in-plane axes (`a` horizontal where it can be). */
 export interface SpanPlane {
   readonly origin: Vec3;
   readonly n: Vec3;
@@ -75,113 +58,308 @@ export function toPlaneDir(pl: SpanPlane, v: Vec3): [number, number] {
   return [dot(v, pl.a), dot(v, pl.b)];
 }
 
-// ───────────────────────────── the region ─────────────────────────────
-
 /** ⭐ A face of a placed part: its normal and its triangles (the world's, on the part's model pose). */
 export interface SpanFace {
   readonly normal: Vec3;
   readonly tris: readonly Tri[];
 }
 
-/** ⭐ The region: the plane, the member faces' convex hulls on it (CCW), joined within `grow` (each side). */
-export interface SpanRegion {
-  readonly plane: SpanPlane;
-  readonly polys: readonly (readonly P2[])[];
-  readonly members: readonly number[];
-  readonly grow: number;
-}
+// ───────────────────────────── the assembly's box: the six base directions ─────────────────────────────
 
-/** ⭐ The faces lying in the plane (normal within `SPAN_COPLANAR_COS`, every vertex within `SPAN_COPLANAR_M`). */
-export function coplanarIndices(faces: readonly SpanFace[], pl: SpanPlane): number[] {
-  const out: number[] = [];
-  faces.forEach((f, i) => {
-    if (dot(f.normal, pl.n) < SPAN_COPLANAR_COS || f.tris.length === 0) return;
-    if (f.tris.every((t) => t.every((p) => Math.abs(heightOf(pl, p)) <= SPAN_COPLANAR_M))) out.push(i);
-  });
-  return out;
-}
-
-/** ⭐ A point's distance to a convex polygon (CCW): 0 inside or on it. */
-export function polyDistance(poly: readonly P2[], p: P2): number {
-  const n = poly.length;
-  if (n === 0) return Infinity;
-  if (n === 1) return Math.hypot(p[0] - poly[0]![0], p[1] - poly[0]![1]);
-  let inside = n >= 3;
-  let best = Infinity;
-  for (let i = 0; i < n; i++) {
-    const a = poly[i]!;
-    const b = poly[(i + 1) % n]!;
-    const ex = b[0] - a[0];
-    const ey = b[1] - a[1];
-    if (ex * (p[1] - a[1]) - ey * (p[0] - a[0]) < -1e-12) inside = false;
-    const l2 = ex * ex + ey * ey;
-    const t = l2 > 0 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / l2)) : 0;
-    best = Math.min(best, Math.hypot(p[0] - a[0] - ex * t, p[1] - a[1] - ey * t));
+/**
+ * ⭐⭐⭐ (2026-11-03, the owner: *"the red and green contours strictly in their respectively single plan which strictly corresponds to the section cut of the
+ * assembly by a vertical or horizontal plane"*) — **THE SIX BASES**: the gizmo's face is always one of the assembly's BOX's — the vertical, and the two
+ * horizontal axes of the smallest rectangle round the placed parts' plan (rotating calipers over its convex hull, textbook) — so its normal never tilts
+ * with a slanted face (no frame switch, no roll). Order: +x, −x, +z, −z, +y, −y. No plan (fewer than three points apart): the world's axes.
+ */
+export function boxDirs(points: readonly Vec3[]): Vec3[] {
+  const hull = convexHull2D(points.map((p) => [p[0], p[2]] as [number, number]));
+  let best: { area: number; e: [number, number] } | null = null;
+  for (let i = 0; i < hull.length && hull.length >= 3; i++) {
+    const p = hull[i]!;
+    const q = hull[(i + 1) % hull.length]!;
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (!(l > 1e-9)) continue;
+    const e: [number, number] = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const r of hull) {
+      const a = r[0] * e[0] + r[1] * e[1];
+      const b = -r[0] * e[1] + r[1] * e[0];
+      a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+    }
+    const area = (a1 - a0) * (b1 - b0);
+    if (best === null || area < best.area - 1e-12) best = { area, e };
   }
-  return inside ? 0 : best;
+  // the axis nearer the world's x first (a box already square to the world keeps its axes as they are)
+  let e = best?.e ?? [1, 0];
+  const cands: [number, number][] = [e, [-e[1], e[0]], [-e[0], -e[1]], [e[1], -e[0]]];
+  e = cands.reduce((m, c) => (c[0] > m[0] + 1e-12 ? c : m), cands[0]!);
+  const x: Vec3 = [e[0], 0, e[1]];
+  const z: Vec3 = [-e[1], 0, e[0]];
+  return [x, mul3(x, -1), z, mul3(z, -1), [0, 1, 0], [0, -1, 0]];
 }
 
-/** ⭐ The gap between two convex polygons: 0 when they overlap or touch. */
-export function polyGap(a: readonly P2[], b: readonly P2[]): number {
-  if (a.length >= 3 && b.length >= 3 && convexOverlap2D(a, b, -1e-12)) return 0;
-  let best = Infinity;
-  for (const p of a) best = Math.min(best, polyDistance(b, p));
-  for (const p of b) best = Math.min(best, polyDistance(a, p));
+/** ⭐ The base direction nearest `v` among `dirs` — none within 25° of `not` (or its opposite): a wrap turns to another base. `null`: `v` zero. */
+export function snapDir(v: Vec3, dirs: readonly Vec3[], not: Vec3 | null = null): Vec3 | null {
+  let best: Vec3 | null = null;
+  let bd = -Infinity;
+  for (const d of dirs) {
+    if (not !== null && Math.abs(dot(d, not)) > 0.9) continue;
+    const c = dot(d, v);
+    if (c > bd) {
+      bd = c;
+      best = d;
+    }
+  }
+  return Math.hypot(v[0], v[1], v[2]) > 1e-12 ? best : null;
+}
+
+// ───────────────────────────── the shadow ─────────────────────────────
+
+/** ⭐ A triangle not edge-on seen along the base (plane coordinates and the height in front of the plane), its world normal and its part. */
+export interface ShadowTri {
+  readonly p: readonly [readonly [number, number, number], readonly [number, number, number], readonly [number, number, number]];
+  readonly box: readonly [number, number, number, number];
+  readonly n: Vec3;
+  readonly owner: number;
+}
+
+/**
+ * ⭐⭐⭐ **THE SHADOW** of the placed parts on a base (the owner: *"if an overhanging face would be hidden if the camera view was anti-aligned with the normal of
+ * the face, the red or green contour shall ignore this face and the gizmo shall behave like a shadow … a slanted face shall behave as its projection"*): what a
+ * ray along −n from outside meets first — the FRONTMOST height over each point of the plane. Its plane at the parts' outermost extent along `n` (heights ≤ 0),
+ * its triangles bucketed; and a raster of it (`cell` m) on which the gaps narrower than `bridgeM` along either axis of the plane are BRIDGED — a cell whose
+ * nearest higher cells each side stand no farther apart than `bridgeM` is filled to the lower of the two (the owner: *"ignore gaps narrower than a slider
+ * value"*). Exact on the real surface (`shadowAt` reads the triangles), a point over nothing measured on them too; the raster only fills a recess.
+ */
+export interface ShadowMap {
+  readonly plane: SpanPlane;
+  readonly tris: readonly ShadowTri[];
+  readonly x0: number;
+  readonly y0: number;
+  readonly cell: number;
+  readonly nx: number;
+  readonly ny: number;
+  readonly raw: Float64Array;
+  readonly closed: Float64Array;
+  /** the bridge (m) — a point over nothing is measured on the triangles themselves (`shadowAt`) */
+  readonly bridge: number;
+  readonly buckets: readonly (readonly number[])[];
+  readonly bx: number;
+  readonly by: number;
+  readonly bcell: number;
+}
+
+/** ⭐ Below this (|cos| with the base's normal) a triangle is edge-on: it hides nothing. */
+const SHADOW_FACING = 1e-4;
+/** ⭐ A cell filled by less than this (m) is not a gap: the exact surface is read there. */
+const SHADOW_FILL_TOL_M = 0.001;
+/** ⭐ The raster's cells per side at most. */
+const SHADOW_MAX_CELLS = 200;
+const BUCKETS = 48;
+
+export function shadowMap(n0: Vec3, parts: readonly (readonly Tri[])[], bridgeM: number, cell = 0.004): ShadowMap | null {
+  const n = normalize(n0);
+  if (n === null) return null;
+  let top = -Infinity;
+  for (const tris of parts) for (const t of tris) for (const p of t) top = Math.max(top, dot(p, n));
+  if (!Number.isFinite(top)) return null;
+  const plane = spanPlane(n, mul3(n, top));
+  const tris: ShadowTri[] = [];
+  parts.forEach((pt, owner) => {
+    for (const t of pt) {
+      // ⭐ either winding (⛔ the inward-wound meshes' BACK faces were taken: the gizmo 33 mm inside the painting, its lines hidden) — a closed part's frontmost
+      // surface along the base is its front, whichever way its triangles turn; the normal turned toward the base
+      const n0 = normalize(cross(sub3(t[1], t[0]), sub3(t[2], t[0])));
+      if (n0 === null || Math.abs(dot(n0, n)) <= SHADOW_FACING) continue;
+      const nn = dot(n0, n) > 0 ? n0 : mul3(n0, -1);
+      const p = t.map((v) => { const q = toP2(plane, v); return [q[0], q[1], heightOf(plane, v)] as const; }) as unknown as ShadowTri["p"];
+      const xs = p.map((v) => v[0]);
+      const ys = p.map((v) => v[1]);
+      tris.push({ p, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], n: nn, owner });
+    }
+  });
+  if (tris.length === 0) return null;
+  const pad = Math.max(0, bridgeM) + 0.01;
+  const lo = [Math.min(...tris.map((t) => t.box[0])) - pad, Math.min(...tris.map((t) => t.box[1])) - pad];
+  const hi = [Math.max(...tris.map((t) => t.box[2])) + pad, Math.max(...tris.map((t) => t.box[3])) + pad];
+  const c = Math.max(cell, (hi[0]! - lo[0]!) / SHADOW_MAX_CELLS, (hi[1]! - lo[1]!) / SHADOW_MAX_CELLS);
+  const nx = Math.max(1, Math.ceil((hi[0]! - lo[0]!) / c));
+  const ny = Math.max(1, Math.ceil((hi[1]! - lo[1]!) / c));
+  const bcell = Math.max((hi[0]! - lo[0]!) / BUCKETS, (hi[1]! - lo[1]!) / BUCKETS, 1e-6);
+  const bx = Math.ceil((hi[0]! - lo[0]!) / bcell);
+  const by = Math.ceil((hi[1]! - lo[1]!) / bcell);
+  const buckets: number[][] = Array.from({ length: bx * by }, () => []);
+  tris.forEach((t, i) => {
+    const i0 = Math.max(0, Math.floor((t.box[0] - lo[0]!) / bcell));
+    const i1 = Math.min(bx - 1, Math.floor((t.box[2] - lo[0]!) / bcell));
+    const j0 = Math.max(0, Math.floor((t.box[1] - lo[1]!) / bcell));
+    const j1 = Math.min(by - 1, Math.floor((t.box[3] - lo[1]!) / bcell));
+    for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) buckets[j * bx + k]!.push(i);
+  });
+  const m0 = { plane, tris, x0: lo[0]!, y0: lo[1]!, cell: c, nx, ny, buckets, bx, by, bcell };
+  const raw = new Float64Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) raw[j * nx + i] = frontRaw(m0, [lo[0]! + (i + 0.5) * c, lo[1]! + (j + 0.5) * c]).h;
+  const closed = new Float64Array(raw);
+  if (bridgeM > 0) {
+    // ⭐ along each axis: the nearest cell each side standing HIGHER (any cell, over nothing); the gap between them no wider than the bridge — filled to the
+    // lower of the two (⛔ a window of the bridge each side filled gaps twice as wide: the middle of a 50 mm gap saw both walls within 30 mm)
+    const k = Math.ceil(bridgeM / c) + 1;
+    const pass = (len: number, at: (s: number) => number): void => {
+      for (let s0 = 0; s0 < len; s0++) {
+        const f = raw[at(s0)]!;
+        const higher = (v: number): boolean => (f === -Infinity ? v > -Infinity : v > f + SHADOW_FILL_TOL_M);
+        let ql = 0;
+        let qr = 0;
+        let hl = -Infinity;
+        let hr = -Infinity;
+        for (let q = 1; q <= k && s0 - q >= 0; q++) if (higher(raw[at(s0 - q)]!)) { ql = q; hl = raw[at(s0 - q)]!; break; }
+        if (ql === 0) continue;
+        for (let q = 1; q <= k && s0 + q < len; q++) if (higher(raw[at(s0 + q)]!)) { qr = q; hr = raw[at(s0 + q)]!; break; }
+        if (qr === 0 || (ql + qr - 1) * c > bridgeM) continue;
+        const fill = Math.min(hl, hr);
+        if (fill > closed[at(s0)]!) closed[at(s0)] = fill;
+      }
+    };
+    for (let j = 0; j < ny; j++) pass(nx, (s0) => j * nx + s0);
+    for (let i = 0; i < nx; i++) pass(ny, (s0) => s0 * nx + i);
+  }
+  return { ...m0, raw, closed, bridge: Math.max(0, bridgeM) };
+}
+
+/** ⭐ The exact frontmost height over `q` (−∞: nothing there) and its triangle (−1: none). */
+function frontRaw(m: Pick<ShadowMap, "tris" | "buckets" | "x0" | "y0" | "bx" | "by" | "bcell">, q: P2): { h: number; tri: number } {
+  const i = Math.floor((q[0] - m.x0) / m.bcell);
+  const j = Math.floor((q[1] - m.y0) / m.bcell);
+  if (i < 0 || j < 0 || i >= m.bx || j >= m.by) return { h: -Infinity, tri: -1 };
+  let best = -Infinity;
+  let tri = -1;
+  for (const ti of m.buckets[j * m.bx + i]!) {
+    const t = m.tris[ti]!;
+    if (q[0] < t.box[0] - 1e-9 || q[0] > t.box[2] + 1e-9 || q[1] < t.box[1] - 1e-9 || q[1] > t.box[3] + 1e-9) continue;
+    const [a, b, c] = t.p;
+    const d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(d) < 1e-14) continue;
+    const l1 = ((b[1] - c[1]) * (q[0] - c[0]) + (c[0] - b[0]) * (q[1] - c[1])) / d;
+    const l2 = ((c[1] - a[1]) * (q[0] - c[0]) + (a[0] - c[0]) * (q[1] - c[1])) / d;
+    const l3 = 1 - l1 - l2;
+    if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue;
+    const h = l1 * a[2] + l2 * b[2] + l3 * c[2];
+    if (h > best) {
+      best = h;
+      tri = ti;
+    }
+  }
+  return { h: best, tri };
+}
+
+/**
+ * ⭐⭐⭐ THE SHADOW AT `q`: its height in front of the base's plane and the triangle there (`tri` −1: a bridged gap — its height the bridge's); `null`: nothing
+ * (beyond the assembly's outline seen along the base). Exact on the real surface; a gap's fill read off the raster's cell.
+ */
+export function shadowAt(m: ShadowMap, q: P2): { readonly h: number; readonly tri: number } | null {
+  const r = frontRaw(m, q);
+  if (r.tri < 0) return gapAt(m, q);
+  const i = Math.floor((q[0] - m.x0) / m.cell);
+  const j = Math.floor((q[1] - m.y0) / m.cell);
+  const inGrid = i >= 0 && j >= 0 && i < m.nx && j < m.ny;
+  const rawC = inGrid ? m.raw[j * m.nx + i]! : -Infinity;
+  const cl = inGrid ? m.closed[j * m.nx + i]! : -Infinity;
+  // a recess narrower than the bridge (the raster's): filled to the lower of its two sides
+  if (cl - rawC > SHADOW_FILL_TOL_M && cl - r.h > SHADOW_FILL_TOL_M) return { h: cl, tri: -1 };
+  return r;
+}
+
+/** ⭐ The triangles' step (m) a point over nothing is measured at — a joint narrower than the raster's cell (the painting's 3 mm) is seen. */
+const GAP_STEP_M = 0.002;
+
+/**
+ * ⭐ A point OVER NOTHING, measured on the triangles: along each axis of the plane the nearest surface each side; the gap between them no wider than the
+ * bridge — bridged, at the lower of the two; else nothing (beyond the outline: one side has none — the outline never grows outward).
+ */
+function gapAt(m: ShadowMap, q: P2): { readonly h: number; readonly tri: number } | null {
+  if (!(m.bridge > 0)) return null;
+  const k = Math.ceil(m.bridge / GAP_STEP_M) + 1;
+  let best = -Infinity;
+  for (const e of [[1, 0], [0, 1]] as const) {
+    const side = (sg: 1 | -1): { q: number; h: number } | null => {
+      for (let i = 1; i <= k; i++) {
+        const h = frontRaw(m, [q[0] + e[0] * sg * i * GAP_STEP_M, q[1] + e[1] * sg * i * GAP_STEP_M]).h;
+        if (h > -Infinity) return { q: i, h };
+      }
+      return null;
+    };
+    const l = side(-1);
+    if (l === null) continue;
+    const r = side(1);
+    if (r === null || (l.q + r.q - 1) * GAP_STEP_M > m.bridge) continue;
+    best = Math.max(best, Math.min(l.h, r.h));
+  }
+  return best > -Infinity ? { h: best, tri: -1 } : null;
+}
+
+/** ⭐ Is `q` in the shadow (on the assembly as seen along the base, a bridged gap included)? */
+export function shadowCovers(m: ShadowMap, q: P2): boolean {
+  return shadowAt(m, q) !== null;
+}
+
+/** ⭐ The nearest point of the shadow to `q` (itself when covered): the raster's covered cells, nearest first, its centre. `null`: no shadow. */
+export function nearestCovered(m: ShadowMap, q: P2): [number, number] | null {
+  if (shadowCovers(m, q)) return [q[0], q[1]];
+  let best: [number, number] | null = null;
+  let bd = Infinity;
+  for (let j = 0; j < m.ny; j++)
+    for (let i = 0; i < m.nx; i++) {
+      if (!(m.closed[j * m.nx + i]! > -Infinity)) continue;
+      const c: [number, number] = [m.x0 + (i + 0.5) * m.cell, m.y0 + (j + 0.5) * m.cell];
+      const d = Math.hypot(c[0] - q[0], c[1] - q[1]);
+      if (d < bd && shadowCovers(m, c)) {
+        bd = d;
+        best = c;
+      }
+    }
   return best;
 }
 
 /**
- * ⭐⭐ THE REGION seeded at face `seed`: the coplanar faces' hulls, the ones joined to the seed's step by step (a gap of at most twice `grow`). `null`
- * when the seed does not lie in the plane.
+ * ⭐⭐ THE RUN through `p` (covered) along the unit `d`: the interval [t0, t1] of the line `p + t·d` in the shadow and connected to `t = 0` — marched a cell
+ * at a time, its ends bisected. `[0, 0]` when `p` is not covered.
  */
-export function spanRegion(faces: readonly SpanFace[], seed: number, pl: SpanPlane, grow: number = SPAN_GROW_M): SpanRegion | null {
-  const idx = coplanarIndices(faces, pl);
-  if (!idx.includes(seed)) return null;
-  const hulls = new Map<number, P2[]>();
-  for (const i of idx) hulls.set(i, convexHull2D(faces[i]!.tris.flatMap((t) => t.map((p) => toP2(pl, p)))));
-  const inSet = new Set<number>([seed]);
-  const stack = [seed];
-  while (stack.length > 0) {
-    const i = stack.pop()!;
-    for (const j of idx) {
-      if (inSet.has(j)) continue;
-      if (polyGap(hulls.get(i)!, hulls.get(j)!) <= 2 * grow + 1e-9) {
-        inSet.add(j);
-        stack.push(j);
+export function shadowRun(m: ShadowMap, p: P2, d: P2, reach = 4): [number, number] {
+  const at = (t: number): P2 => [p[0] + d[0] * t, p[1] + d[1] * t];
+  if (!shadowCovers(m, p)) return [0, 0];
+  const end = (s: 1 | -1): number => {
+    let t = 0;
+    for (;;) {
+      const t1 = t + s * m.cell;
+      if (Math.abs(t1) > reach) return s * reach;
+      if (!shadowCovers(m, at(t1))) {
+        let a = t;
+        let b = t1;
+        for (let k = 0; k < 12; k++) {
+          const c = (a + b) / 2;
+          if (shadowCovers(m, at(c))) a = c;
+          else b = c;
+        }
+        return a;
       }
+      t = t1;
     }
-  }
-  const members = [...inSet].sort((x, y) => x - y);
-  return { plane: pl, polys: members.map((i) => hulls.get(i)!), members, grow };
+  };
+  return [end(-1), end(1)];
 }
 
-/** ⭐ The region's area (m², its members' hulls summed — they do not overlap on a real assembly). */
-export function regionArea(r: SpanRegion): number {
-  let s = 0;
-  for (const poly of r.polys) {
-    for (let i = 0; i < poly.length; i++) {
-      const a = poly[i]!;
-      const b = poly[(i + 1) % poly.length]!;
-      s += a[0] * b[1] - a[1] * b[0];
-    }
-  }
-  return Math.abs(s) / 2;
-}
-
-/** ⭐ A point's distance to the region (plane coordinates): 0 inside (within `grow` of a member). */
-export function regionDistance(r: SpanRegion, p: P2): number {
-  let best = Infinity;
-  for (const poly of r.polys) best = Math.min(best, polyDistance(poly, p));
-  return Math.max(0, best - r.grow);
+/** ⭐ A step clamped to the shadow's covered points (`clampSlide`'s distance: 0 in it, 1 out). */
+export function shadowDist(m: ShadowMap): (q: P2) => number {
+  return (q) => (shadowCovers(m, q) ? 0 : 1);
 }
 
 /**
- * ⭐⭐ A STEP CLAMPED TO THE REGION from `from` (inside): as far along it as it stays inside, then what is left slid along each plane axis in turn (the
- * longer first) — a slanted push reaches the edge and slides along it. ⛔ `boundStep`'s axis slide alone held a slanted push short of the edge for good
- * (the slide along the axis that stayed inside won, every frame). From outside: `boundStep` (never farther out).
+ * ⭐⭐ A STEP CLAMPED TO THE SHADOW from `from` (inside): as far along it as it stays inside, then what is left slid along each plane axis in turn (the longer
+ * first) — a slanted push reaches the edge and slides along it. From outside: not moved.
  */
 export function clampSlide(from: P2, step: P2, dist: (q: P2) => number): [number, number] {
-  if (dist(from) > 0) return boundStep(from, [from[0] + step[0], from[1] + step[1]], (u, v) => dist([u, v]));
+  if (dist(from) > 0) return [from[0], from[1]];
   const far = (p: P2, d: P2): number => {
     if (dist([p[0] + d[0], p[1] + d[1]]) <= 0) return 1;
     let lo = 0;
@@ -205,137 +383,12 @@ export function clampSlide(from: P2, step: P2, dist: (q: P2) => number): [number
   return p;
 }
 
-/** ⭐ A point brought into the region: itself inside, else bisected toward `inside` (a point known inside). */
-export function intoRegion(r: SpanRegion, p: P2, inside: P2): [number, number] {
-  if (regionDistance(r, p) <= 0) return [p[0], p[1]];
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 40; i++) {
-    const m = (lo + hi) / 2;
-    if (regionDistance(r, [inside[0] + (p[0] - inside[0]) * m, inside[1] + (p[1] - inside[1]) * m]) <= 0) lo = m;
-    else hi = m;
-  }
-  return [inside[0] + (p[0] - inside[0]) * lo, inside[1] + (p[1] - inside[1]) * lo];
-}
-
-/** ⭐ A point inside the region: the first member hull's centroid. */
-export function regionInside(r: SpanRegion): [number, number] {
-  const poly = r.polys[0] ?? [];
-  if (poly.length === 0) return [0, 0];
-  return [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
-}
-
-/**
- * ⭐⭐ THE RUN through `p` along the unit `d`: the interval [t0, t1] of the line `p + t·d` inside the region and connected to `t = 0` — each member's own
- * interval (its distance minus `grow` is convex along a line: its minimum by golden section, its two roots by bisection), merged outward from 0. `[0, 0]`
- * when `p` is outside.
- */
-export function regionRun(r: SpanRegion, p: P2, d: P2, reach = 4): [number, number] {
-  const ivs: [number, number][] = [];
-  for (const poly of r.polys) {
-    const f = (t: number): number => polyDistance(poly, [p[0] + d[0] * t, p[1] + d[1] * t]) - r.grow;
-    let a = -reach;
-    let b = reach;
-    const g = (Math.sqrt(5) - 1) / 2;
-    let c = b - g * (b - a);
-    let e = a + g * (b - a);
-    for (let i = 0; i < 80; i++) {
-      if (f(c) <= f(e)) b = e;
-      else a = c;
-      c = b - g * (b - a);
-      e = a + g * (b - a);
-    }
-    const tm = (a + b) / 2;
-    if (f(tm) > 1e-9) continue;
-    const root = (lo: number, hi: number, insideAtHi: boolean): number => {
-      for (let i = 0; i < 60; i++) {
-        const m = (lo + hi) / 2;
-        if ((f(m) <= 0) === insideAtHi) hi = m;
-        else lo = m;
-      }
-      return insideAtHi ? hi : lo;
-    };
-    ivs.push([f(-reach) <= 0 ? -reach : root(-reach, tm, true), f(reach) <= 0 ? reach : root(tm, reach, false)]);
-  }
-  const at0 = ivs.filter((iv) => iv[0] <= 1e-9 && iv[1] >= -1e-9);
-  if (at0.length === 0) return [0, 0];
-  let lo = Math.min(...at0.map((iv) => iv[0]));
-  let hi = Math.max(...at0.map((iv) => iv[1]));
-  for (let grew = true; grew; ) {
-    grew = false;
-    for (const iv of ivs) {
-      if (iv[1] >= lo - 1e-9 && iv[0] <= hi + 1e-9 && (iv[0] < lo - 1e-12 || iv[1] > hi + 1e-12)) {
-        lo = Math.min(lo, iv[0]);
-        hi = Math.max(hi, iv[1]);
-        grew = true;
-      }
-    }
-  }
-  return [Math.min(0, lo), Math.max(0, hi)];
-}
-
-// ───────────────────────────── the tops ridden over ─────────────────────────────
-
-/** ⭐ A part standing on the plane, in plane coordinates (x, y, height): its 2-D box and its triangles. */
-export interface SpanSolid {
-  readonly box: readonly [number, number, number, number];
-  readonly tris: readonly (readonly [readonly [number, number, number], readonly [number, number, number], readonly [number, number, number]])[];
-}
-
-/** ⭐ The placed parts (each its closed triangles) that stand on the plane: reaching more than `SPAN_RIDE_MIN_M` in front, touching it (`SPAN_TOUCH_M`), within the slab. */
-export function spanSolids(pl: SpanPlane, parts: readonly (readonly Tri[])[]): SpanSolid[] {
-  const out: SpanSolid[] = [];
-  for (const tris of parts) {
-    if (tris.length === 0) continue;
-    const pts = tris.map((t) => t.map((p) => { const q = toP2(pl, p); return [q[0], q[1], heightOf(pl, p)] as const; }) as unknown as readonly [readonly [number, number, number], readonly [number, number, number], readonly [number, number, number]]);
-    const hs = pts.flatMap((t) => t.map((p) => p[2]));
-    if (!(Math.max(...hs) > SPAN_RIDE_MIN_M) || Math.min(...hs) > SPAN_TOUCH_M || Math.min(...hs) < -SPAN_RIDE_SLAB_M) continue;
-    const xs = pts.flatMap((t) => t.map((p) => p[0]));
-    const ys = pts.flatMap((t) => t.map((p) => p[1]));
-    out.push({ box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], tris: pts });
-  }
-  return out;
-}
-
-/** ⭐ The FRONTMOST height over plane point `q` (≥ 0: the plane itself) — the highest triangle above it (barycentric), of the parts standing on it. */
-export function topAt(solids: readonly SpanSolid[], q: P2): number {
-  let best = 0;
-  for (const s of solids) {
-    if (q[0] < s.box[0] - 1e-9 || q[0] > s.box[2] + 1e-9 || q[1] < s.box[1] - 1e-9 || q[1] > s.box[3] + 1e-9) continue;
-    for (const [a, b, c] of s.tris) {
-      const d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
-      if (Math.abs(d) < 1e-14) continue;
-      const l1 = ((b[1] - c[1]) * (q[0] - c[0]) + (c[0] - b[0]) * (q[1] - c[1])) / d;
-      const l2 = ((c[1] - a[1]) * (q[0] - c[0]) + (a[0] - c[0]) * (q[1] - c[1])) / d;
-      const l3 = 1 - l1 - l2;
-      if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue;
-      best = Math.max(best, l1 * a[2] + l2 * b[2] + l3 * c[2]);
-    }
-  }
-  return best;
-}
-
-/** ⭐ The top read at `q` and `SPAN_COVER_M` beside it each way — the highest: a gap between a protrusion's cores bridged. */
-export function coveredTop(solids: readonly SpanSolid[], q: P2, cover = SPAN_COVER_M): number {
-  let h = topAt(solids, q);
-  for (const o of [[cover, 0], [-cover, 0], [0, cover], [0, -cover]] as const) h = Math.max(h, topAt(solids, [q[0] + o[0], q[1] + o[1]]));
-  return h;
-}
-
-/** ⭐ The ridden height shown, eased toward `target` by the finger's travel (`rideMm`) and, at rest, by time — never a jump. */
-export function rideStep(shown: number, target: number, travelMm: number, rideMm: number, dtMs: number, atRest: boolean): number {
-  const kt = rideMm > 0 ? 1 - Math.exp((-3 * Math.max(0, travelMm)) / rideMm) : 1;
-  const kr = atRest ? 1 - Math.exp((-3 * Math.max(0, dtMs)) / SPAN_REST_MS) : 0;
-  const k = Math.min(1, kt + kr - kt * kr);
-  return shown + (target - shown) * k;
-}
-
 /**
  * ⭐⭐ THE LINE along a run: (t, height) points from `t0` to `t1` through `t = 0` (the gizmo, exact), `spacingM` apart, a step in height of more than
- * `stepTolM` refined by halving down to ~0.1 mm — a step comes out a near-vertical connector, a slope a fine slope; at most `maxPts`.
+ * `stepTolM` refined by halving down to ~0.1 mm — ⭐⭐⭐ (2026-11-03, the owner: *"a step but the gizmo acts as a break"*) a step comes out a near-vertical
+ * connector in the line's own plane, a slope a fine slope; at most `maxPts`.
  */
-export function spanPolyline(solids: readonly SpanSolid[], p: P2, d: P2, t0: number, t1: number, spacingM: number, stepTolM = 0.001, maxPts = 400): [number, number][] {
-  const h = (t: number): number => coveredTop(solids, [p[0] + d[0] * t, p[1] + d[1] * t]);
+export function spanPolyline(h: (t: number) => number, t0: number, t1: number, spacingM: number, stepTolM = 0.001, maxPts = 400): [number, number][] {
   const ts: number[] = [];
   const n0 = Math.max(1, Math.ceil(-t0 / spacingM));
   for (let i = n0; i >= 1; i--) ts.push(t0 * (i / n0));
@@ -513,123 +566,9 @@ export function zenithRollStep(share: number, alongMm: number, rollMm: number): 
 
 // ───────────────────────────── the edge: catch and wrap ─────────────────────────────
 
-/** ⭐ The face across an edge. */
+/** ⭐ The base across the outline: its normal (one of the box's, `snapDir`). */
 export interface SpanCandidate {
-  readonly index: number;
   readonly normal: Vec3;
-  readonly kind: "CONVEX" | "CONCAVE";
-  readonly dist: number;
-}
-
-/** ⭐ The closest point of triangle `t` to `p` (Ericson, *Real-Time Collision Detection* §5.1.5). */
-export function closestOnTriangle(p: Vec3, t: Tri): Vec3 {
-  const [a, b, c] = t;
-  const ab = sub3(b, a);
-  const ac = sub3(c, a);
-  const ap = sub3(p, a);
-  const d1 = dot(ab, ap);
-  const d2 = dot(ac, ap);
-  if (d1 <= 0 && d2 <= 0) return a;
-  const bp = sub3(p, b);
-  const d3 = dot(ab, bp);
-  const d4 = dot(ac, bp);
-  if (d3 >= 0 && d4 <= d3) return b;
-  const vc = d1 * d4 - d3 * d2;
-  if (vc <= 0 && d1 >= 0 && d3 <= 0) return add3(a, mul3(ab, d1 / (d1 - d3)));
-  const cp = sub3(p, c);
-  const d5 = dot(ab, cp);
-  const d6 = dot(ac, cp);
-  if (d6 >= 0 && d5 <= d6) return c;
-  const vb = d5 * d2 - d1 * d6;
-  if (vb <= 0 && d2 >= 0 && d6 <= 0) return add3(a, mul3(ac, d2 / (d2 - d6)));
-  const va = d3 * d6 - d5 * d4;
-  if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) return add3(b, mul3(sub3(c, b), (d4 - d3) / (d4 - d3 + (d5 - d6))));
-  const den = 1 / (va + vb + vc);
-  return add3(a, add3(mul3(ab, vb * den), mul3(ac, vc * den)));
-}
-
-export function distanceToTris(p: Vec3, tris: readonly Tri[]): number {
-  let best = Infinity;
-  for (const t of tris) {
-    const q = closestOnTriangle(p, t);
-    best = Math.min(best, Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]));
-  }
-  return best;
-}
-
-/**
- * ⭐⭐ (2026-11-02, the owner: *"slanted parts should stay faces the gizmo can stand on. implement the fix"*) — GLUED FACES: a face pressed against another
- * part's face (anti-parallel within ~1.1°, every vertex of the other within `SPAN_TOUCH_M` of its plane, overlapping on it) — each face's partner (the
- * largest); which of a pair is HIDDEN (never a host; a step onto it lands on its partner — the face the part stands on) is the caller's: the one whose
- * coplanar region is the smaller (`hiddenGlued`). ⛔ Off a seated frustum's side the face across its top edge was its own hidden small face:
- * the gizmo went round the frustum's faces for ever (36 of 36 exits, measured). `owner[i]`: the part of face `i`. Each face's partner, `-1` for none.
- */
-export function gluedPartners(faces: readonly SpanFace[], owner: readonly string[]): number[] {
-  const out = faces.map(() => -1);
-  const areaOf = (h: readonly P2[]): number => {
-    let a = 0;
-    for (let q = 0; q < h.length; q++) {
-      const p0 = h[q]!;
-      const p1 = h[(q + 1) % h.length]!;
-      a += p0[0] * p1[1] - p0[1] * p1[0];
-    }
-    return Math.abs(a) / 2;
-  };
-  faces.forEach((f, i) => {
-    if (f.tris.length === 0) return;
-    const pl = spanPlane(f.normal, f.tris[0]![0]);
-    const hull = convexHull2D(f.tris.flatMap((t) => t.map((p) => toP2(pl, p))));
-    let best = -1;
-    let bestArea = -1;
-    faces.forEach((g, j) => {
-      if (j === i || owner[j] === owner[i] || g.tris.length === 0 || dot(f.normal, g.normal) > -SPAN_COPLANAR_COS) return;
-      if (!g.tris.every((t) => t.every((p) => Math.abs(heightOf(pl, p)) <= SPAN_TOUCH_M))) return;
-      const h2 = convexHull2D(g.tris.flatMap((t) => t.map((p) => toP2(pl, p))));
-      if (!(hull.length >= 3 && h2.length >= 3 && convexOverlap2D(hull, h2))) return;
-      const area = areaOf(h2);
-      if (area > bestArea) {
-        bestArea = area;
-        best = j;
-      }
-    });
-    out[i] = best;
-  });
-  return out;
-}
-
-/**
- * ⭐⭐⭐ THE FACE ACROSS THE EDGE at the edge point `B` (world), the push going along `D` (world, in the plane of `n`): among the faces not in the region
- * (`exclude`), within `reach` of `B` — CONVEX, a face turned toward the push lying behind the plane (a box's next side); CONCAVE, a face turned against the
- * push standing in front of it NEAR THE EDGE (⭐ 2026-11-02: its vertices within 5 cm of `B` — ⛔ every vertex: a large face a part stands on straddled a
- * slanted side's plane and was refused). A GLUED face (`partner[i]` ≥ 0) is replaced by its partner (never itself). The nearest; a tie to the one more
- * square to the push. `null`: nothing there (the edge stops).
- */
-export function wrapCandidate(faces: readonly SpanFace[], exclude: ReadonlySet<number>, B: Vec3, n: Vec3, D: Vec3, reach = SPAN_WRAP_REACH_M, partner: readonly number[] = []): SpanCandidate | null {
-  let best: SpanCandidate | null = null;
-  let bestScore = Infinity;
-  faces.forEach((f, i) => {
-    if (exclude.has(i) || f.tris.length === 0) return;
-    const m = f.normal;
-    if (dot(m, n) > 0.98 || dot(m, n) < -0.98) return;
-    const md = dot(m, D);
-    const vs = f.tris.flatMap((t) => [...t]);
-    const hs = vs.map((p) => dot(sub3(p, B), n));
-    const near = vs.filter((p) => Math.hypot(p[0] - B[0], p[1] - B[1], p[2] - B[2]) <= 0.05).map((p) => dot(sub3(p, B), n));
-    let kind: "CONVEX" | "CONCAVE" | null = null;
-    if (md > 0.3 && Math.max(...hs) <= 0.002) kind = "CONVEX";
-    else if (md < -0.3 && (near.length > 0 ? Math.min(...near) : Math.min(...hs)) >= -0.002) kind = "CONCAVE";
-    if (kind === null) return;
-    const d = distanceToTris(B, f.tris);
-    if (d > reach) return;
-    const p = partner[i] ?? -1;
-    if (p >= 0 && exclude.has(p)) return; // glued onto the region itself: no way out there
-    const score = d - 1e-4 * Math.abs(md);
-    if (score < bestScore) {
-      bestScore = score;
-      best = p >= 0 ? { index: p, normal: faces[p]!.normal, kind: "CONCAVE", dist: d } : { index: i, normal: m, kind, dist: d };
-    }
-  });
-  return best;
 }
 
 /** ⭐ The gizmo's motion in the plane: where it is; the finger pushed past the edge (mm — the catch). */
@@ -667,21 +606,7 @@ export function spanMove(
   return { motion: { at: nb, overMm: 0 }, next, held: false };
 }
 
-/**
- * ⭐⭐ WHICH GLUED FACES ARE HIDDEN: a face with a partner whose coplanar region is no smaller (`regionAreaOf(i)`, the region seeded at face `i` in its own
- * plane) — so a seated part's contact face goes (Piece43's top under the painting's bottom, Piece45's under Piece10's front) and the face it stands on stays;
- * two neighbours' touching sides (equal) both go. ⛔ A face-level rule (the smaller face hidden) kept Piece43's top: it is wider than Piece19's bottom.
- */
-export function hiddenGlued(partner: readonly number[], regionAreaOf: (i: number) => number): boolean[] {
-  return partner.map((p, i) => p >= 0 && regionAreaOf(i) <= regionAreaOf(p) * 1.05);
-}
-
 // ───────────────────────────── engage ─────────────────────────────
-
-/** ⭐ In face-span? On within `engageM` of the gizmo, off only past `SPAN_RELEASE_FACTOR` × it. */
-export function spanEngaged(on: boolean, distM: number, engageM: number): boolean {
-  return on ? distM <= engageM * SPAN_RELEASE_FACTOR : distM <= engageM;
-}
 
 /** ⭐ The engage distance used: the slider's, held so its release stays within the far orbit's reach (`farM` — else the far orbit could never come back). */
 export function spanEngageM(sliderM: number, farM: number): number {

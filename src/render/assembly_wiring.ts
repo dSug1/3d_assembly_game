@@ -28,8 +28,8 @@ import { slideArmedAfter } from "../input/hover";
 import type { Quat, Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { SPAN_RELEASE_FACTOR, spanEngaged, spanEngageM } from "../input/face_span";
-import { fingerAxesFrame, spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanShownDir, spanZenithStep, spanZenithUp } from "./face_span_wiring";
+import { SPAN_RELEASE_FACTOR, spanEngageM } from "../input/face_span";
+import { fingerAxesFrame, spanAfterSlide, spanAnchor, spanEngage, spanFrame, spanInputAdd, spanLinesFrame, spanShownDir, spanTiltNormal, spanZenithStep, spanZenithUp } from "./face_span_wiring";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -171,7 +171,8 @@ function dirAt(st: SceneState, yaw: number, v: number, clamp = true): Vec3 {
  * toward the centre for each direction); none yet, the ray's.
  */
 function gizmoFor(st: SceneState, u: Vec3): Vec3 {
-  if (st.span !== null) return st.span.g;
+  // ⭐⭐⭐ (2026-11-03) the shadow gizmo's FOOT (`spanAnchor`): a jump of the shadow moves neither the piece nor the camera
+  if (st.span !== null) return spanAnchor(st.span, approachDistance(st.cfg, st.approach), st.cfg.orbitShellOffsetMm / 1000);
   if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
   if (st.asmG !== null) return st.asmG;
   const h = castGizmo(st, u);
@@ -437,8 +438,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     return;
   }
   let d = approachDistance(st.cfg, st.approach);
-  // ⭐⭐⭐ (2026-11-02) THE FACE-SPAN (`face_span_wiring.ts`): back from a slide, the gizmo where it left it; out past the engage's hysteresis (never mid-wrap),
-  // the far orbit from the piece's direction now; in within the engage distance, the far gizmo's face taken
+  // ⭐⭐⭐ (2026-11-02) THE FACE-SPAN (`face_span_wiring.ts`): back from a slide, the gizmo where it left it — ⭐⭐⭐ (2026-11-03, the owner: *"the far orbit
+  // too"*) THE SHADOW GIZMO AT EVERY DISTANCE: engaged as soon as there is a gizmo (the far carrier's, else the ray toward the centre), never released
   if (st.span !== null && st.span.slid) {
     const t = st.centreBlend.targetM;
     st.asmLocked = false;
@@ -446,12 +447,13 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
     spanAfterSlide(st, [t[0], t[1], t[2]], orbitDirWorld(st, q0.yaw, q0.v));
   }
-  const engageM = spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg));
-  if (st.span !== null && !spanEngaged(true, d, engageM)) spanRelease(st);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDirWorld(st, q.yaw, q.v);
-  if (st.span === null && !st.asmLocked && spanEngaged(false, d, engageM) && st.asmG !== null && st.pieceQ !== null) {
-    if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, u)) {
+  if (st.span === null && st.pieceQ !== null) {
+    const g = st.asmG ?? castGizmo(st, u)?.point ?? null;
+    if (g !== null && spanEngage(st, g, st.asmG !== null ? (st.gizmoNormal ?? null) : null, u)) {
+      st.asmLocked = false;
+      st.asmLock = null;
       st.asmCarrier = null;
       st.asmShown = null;
       st.asmPrevQ = null;
@@ -554,13 +556,16 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
 }
 
 /** ⭐⭐⭐ (2026-11-02) The piece's gap to the parts with the face-span's gizmo at `g` — one gap query, counted in the frame's cap (`approachQueries`). */
-function spanGapAt(st: SceneState, g: Vec3): number {
+function spanGapAt(st: SceneState, g: Vec3, foot: Vec3): number {
   const sp = st.span!;
   const q = st.pieceQ!;
   const keep = sp.g;
+  const keepFoot = sp.foot;
   sp.g = g;
+  sp.foot = foot;
   const anchor = ringAnchorAt(st, q);
   sp.g = keep;
+  sp.foot = keepFoot;
   st.approachQueries++;
   return pieceSolverEnv(st, () => anchor).gap(q);
 }
@@ -571,7 +576,7 @@ function spanGapAt(st: SceneState, g: Vec3): number {
  */
 function spanTail(st: SceneState, dtMs: number, d: number): void {
   const a = st.asm!;
-  spanFrame(st, dtMs, pieceSolveOptions(st).gapM, (g) => spanGapAt(st, g), (y, v) => orbitDirWorld(st, y, v));
+  spanFrame(st, dtMs, pieceSolveOptions(st).gapM, (g, foot) => spanGapAt(st, g, foot), (y, v) => orbitDirWorld(st, y, v));
   const sp = st.span!;
   st.asmG = sp.g;
   st.asmLocked = false;
@@ -579,11 +584,12 @@ function spanTail(st: SceneState, dtMs: number, d: number): void {
   st.asmCarrier = null;
   st.asmShown = null;
   st.asmPrevQ = null;
-  const target = sp.g;
+  // ⭐⭐⭐ (2026-11-03) the orbit's centre (the piece's, the camera's) the gizmo's FOOT (`spanAnchor`): the shadow's jump moves neither; the ring at the gizmo
+  const target = spanAnchor(sp, d, st.cfg.orbitShellOffsetMm / 1000);
   const travel = Math.max(st.asmTravelFrameMm, sp.stepMm);
   st.asmGizmo = st.asmGizmo === null ? [target[0], target[1], target[2]] : capStep(st.asmGizmo, easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS), gizmoStepCap(travel, dtMs, st.cfg.gizmoMmPerMm, GIZMO_REST_MPS));
   st.asmTravelFrameMm = 0;
-  st.asmGizmoAt = [target[0], target[1], target[2]];
+  st.asmGizmoAt = [sp.g[0], sp.g[1], sp.g[2]];
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM, false);
@@ -616,6 +622,7 @@ function upTarget(st: SceneState, u: Vec3, prev: Vec3 | null): Vec3 {
 export function orbitZenithStep(st: SceneState, yaw0: number, v0: number, travelMm: number): void {
   if (st.span === null) return;
   spanZenithStep(st, yaw0, v0, travelMm, (y, v) => orbitDirWorld(st, y, v));
+  spanInputAdd(st, yaw0, v0); // ⭐⭐⭐ (2026-11-03) the finger's step, the zenith's hold in, for the gizmo
 }
 
 /** ⭐ …the coast's step: its travel read off the step itself at the orbit's pace. */
@@ -648,7 +655,8 @@ function orbitAtRest(st: SceneState): boolean {
  */
 function framesFrame(st: SceneState, u: Vec3, signs = true): void {
   if (st.asmLocked) return;
-  const want = tiltWanted(st.gizmoNormal ?? null, st.asmFace.kind);
+  // ⭐⭐⭐ (2026-11-03) the shadow gizmo's BASE (`spanTiltNormal`) — ⛔ the real face's: a slanted part tilted the orbit and rolled the camera
+  const want = tiltWanted(spanTiltNormal(st), st.asmFace.kind);
   // ⭐ (2026-11-02, the third audit's A8) …or at rest (no ping-pong to fear): ⛔ at the boot over a top, or after a coast, the switch waited for the next drag
   if (want !== st.asmFace.kind && (st.asmSwitchMm >= st.cfg.orbitTiltBlendMm * SWITCH_HOLD_SHARE || orbitAtRest(st))) switchFace(st, want);
   const pq = st.pieceQ;

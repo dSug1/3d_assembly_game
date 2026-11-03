@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cross, dot, normalize, qFromAxisAngle, qRotate, type Vec3 } from "../src/core/vec";
-import { fingerOnAxes, screenDir, signOnScreen } from "../src/input/orbit_frame";
+import { fingerOnAxes, holdToScreen, screenDir, signOnScreen } from "../src/input/orbit_frame";
 
 const code = (p: string): string => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
 
@@ -100,5 +100,46 @@ describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (202
     expect(w).toContain("if (z.block && st.router.size > 0) {");
     expect(w).toContain("if ((z.share === 0 || z.share === 1) && z.share !== z.start && st.router.size > 0) z.block = true;");
     expect(w).toContain("if (st.router.size === 0 && sp.zen !== null) sp.zen.block = false;");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-03) HELD TO THE SCREEN'S AXIS IT DRIVES (the owner: *\"a straight horizontal or vertical line (which I expect if the gizmo would faithfully follow the dy and dx orbit inputs)\"*)", () => {
+  const deg = Math.PI / 180;
+  const at = (a: number): [number, number] => [Math.cos(a * deg), Math.sin(a * deg)];
+  const ang = (d: readonly [number, number]) => Math.atan2(d[1], d[0]) / deg;
+  it("⭐⭐⭐ a wall's level line drawn 55° off the screen's horizontal (seen from above and aside): still EXACTLY the screen's horizontal — a dx a straight level line (⛔ as shown: a dy moved the gizmo 11 cm sideways)", () => {
+    const h = holdToScreen(at(-55), 0);
+    expect(h.c).toBe(0);
+    expect(h.dir[0]).toBeCloseTo(1, 12);
+    expect(h.dir[1]).toBeCloseTo(0, 12);
+    const f = fingerOnAxes(0, -10, h.dir, holdToScreen(at(90), 1).dir); // a pure dy
+    expect(f.yaw).toBeCloseTo(0, 12);
+    expect(holdToScreen(at(40), null).c).toBe(0); // first read: the nearest
+  });
+  it("⭐⭐ a roll swings it on: between 60° and 75° off, linearly onto the next screen axis, then that one is its own — continuous, and never more than 15° off the axis as shown past the hold", () => {
+    expect(ang(holdToScreen(at(67.5), 0).dir)).toBeCloseTo(45, 9);
+    const sw = holdToScreen(at(76), 0);
+    expect(sw.c).toBe(1);
+    expect(ang(sw.dir)).toBeCloseTo(90, 9);
+    // a whole turn of the picture, a degree a frame: the screen axis it drives carried along, the output continuous, never against the axis as shown
+    let c: number | null = 0;
+    let prev = holdToScreen(at(0), 0).dir;
+    for (let a = 1; a <= 360; a++) {
+      const h = holdToScreen(at(a), c);
+      c = h.c;
+      const turn = Math.acos(Math.min(1, h.dir[0] * prev[0] + h.dir[1] * prev[1])) / deg;
+      expect(turn).toBeLessThanOrEqual(6.01);
+      const s = at(a);
+      expect(h.dir[0] * s[0] + h.dir[1] * s[1]).toBeGreaterThan(0.49);
+      prev = h.dir;
+    }
+    // back the other way: the hysteresis — it swings back only 60° past the new axis
+    expect(holdToScreen(at(30), 1).c).toBe(1);
+    expect(holdToScreen(at(14), 1).c).toBe(0);
+  });
+  it("⭐⭐⭐ wired: each axis held to its screen axis (the pair never on one), the last ones kept", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("const yh = ys === null ? null : holdToScreen(ys, was?.yawC ?? null);");
+    expect(w).toContain("if (yh !== null && ph !== null && yh.c % 2 === ph.c % 2) {");
   });
 });

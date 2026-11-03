@@ -12,29 +12,32 @@
  * along the face's normal, the wrap turned about the edge, the glued small face of a frustum taken as the face across, any body a slide's host, the roll's
  * time only with no finger). The geometry is SYNTHETIC on purpose — boxes 3 mm apart (the painting's cores), a 16 mm empty slot, a protrusion 41 mm out
  * (Piece45), a frustum glued under a box (Piece43) — so a fixture where the quantity under test is zero cannot pass for one where it is not.
+ *
+ * ⭐⭐⭐ (2026-11-03, branch `1.0.91-`) **THE SHADOW GIZMO** — the owner: *"I want to make the red and green contours strictly in their respectively single plan
+ * which strictly corresponds to the section cut of the assembly by a vertical or horizontal plane … if a overhanging face would be hidden if the camera view
+ * was anti-aligned with the normal of the face, the red or green contour shall ignore this face and the gizmo shall behave like a shadow (ie jumping over the
+ * discontinuity). Also, a slanted face shall behave as its projection … Also, no tilt of the curve"*; *"a step but the gizmo acts as a break"*; *"the far
+ * orbit too"*. The region, the glued faces, the wrap onto any face, the ride and the release are DELETED with their vectors; the shadow's were shown RED
+ * against `67893d7` (none of `shadowMap`, `shadowAt`, `shadowRun`, `boxDirs`, `snapDir` existed; the wiring read the solved steps and released far out).
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
 import {
-  closestOnTriangle,
-  coveredTop,
+  boxDirs,
   fromP2,
-  gluedPartners,
-  hiddenGlued,
+  heightOf,
   isWall,
-  regionDistance,
-  regionRun,
-  rideStep,
   SPAN_RELEASE_FACTOR,
-  spanEngaged,
+  shadowAt,
+  shadowDist,
+  shadowMap,
+  shadowRun,
+  snapDir,
   spanEngageM,
   spanMmOf,
   spanMove,
-  spanPlane,
   spanPolyline,
-  spanRegion,
-  spanSolids,
   spanAxisStep,
   faceAxes,
   axisSense,
@@ -43,7 +46,6 @@ import {
   shownDir,
   calmWeight,
   toP2,
-  wrapCandidate,
   zenithCrossing,
   zenithRollStep,
   type SpanFace,
@@ -86,43 +88,110 @@ function painting(gaps: number[]): { faces: SpanFace[]; parts: Tri[][]; front: n
   return { faces, parts, front };
 }
 
-const FRONT = spanPlane([0, 0, 1], [0, 0, 0]);
-const P = (x: number, y: number) => toP2(FRONT, [x, y, 0]);
 
-describe("⭐⭐⭐ the region — the hosting coplanar faces, never round the assembly", () => {
-  it("⭐ boxes 3 mm apart (the painting's cores) are ONE region; 16 mm apart (an unplaced slot) two", () => {
+describe("⭐⭐⭐ (2026-11-03) THE SHADOW — the assembly as seen along a base (the owner: *\"if a overhanging face would be hidden if the camera view was anti-aligned with the normal of the face … the gizmo shall behave like a shadow\"*)", () => {
+  const BASE: Vec3 = [0, 0, 1]; // looking at the painting's front (z = 0) from +z
+  it("⭐⭐⭐ the frontmost surface: a part in front HIDES the face behind it (an overhang's shadow), a step in it is a JUMP; the plane at the parts' outermost extent", () => {
     const a = painting([0.003, 0.003]);
-    expect(spanRegion(a.faces, a.front[0]!, FRONT)!.members).toEqual(a.front);
-    const b = painting([0.003, 0.016]);
-    expect(spanRegion(b.faces, b.front[0]!, FRONT)!.members).toEqual(b.front.slice(0, 2));
+    const over = box([0, 0.1, 0], [0.1, 0.2, 0.06]); // in front of the first box's upper half
+    const low = box([0, 0.05, 0], [0.1, 0.15, 0.03]); // its front half-hidden behind `over` (y 0.10–0.15)
+    const m = shadowMap(BASE, [...a.parts, over.tris, low.tris], 0.03)!;
+    expect(m.plane.n).toEqual([0, 0, 1]);
+    expect(heightOf(m.plane, [0, 0, 0.06])).toBeCloseTo(0, 12); // the plane at the outermost front
+    const S = (x: number, y: number) => toP2(m.plane, [x, y, 0]);
+    expect(shadowAt(m, S(0.05, 0.12))!.h).toBeCloseTo(0, 9); // `over`'s front — ⛔ never `low`'s (hidden behind it)
+    expect(shadowAt(m, S(0.05, 0.07))!.h).toBeCloseTo(-0.03, 9); // `low`'s front below it
+    expect(shadowAt(m, S(0.05, 0.02))!.h).toBeCloseTo(-0.06, 9); // the painting's face below both
+    expect(shadowAt(m, S(0.15, 0.12))!.h).toBeCloseTo(-0.06, 9); // beside them: the face
   });
-  it("⭐ distance 0 inside, across a joint too; positive beyond the edge (by the joint's half-width less)", () => {
-    const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    expect(regionDistance(r, P(0.05, 0.1))).toBe(0);
-    expect(regionDistance(r, P(0.1015, 0.1))).toBe(0); // in the 3 mm joint
-    expect(regionDistance(r, P(0.3102, 0.1))).toBeCloseTo(0.0026, 6); // 4.2 mm past the last edge less the 1.6 mm grow
+  it("⭐⭐⭐ A SLANTED FACE IS ITS PROJECTION: the shadow's height runs linearly up a frustum's slanted side; its triangle's normal (the real face — the quads') turned toward the base", () => {
+    const a = painting([]);
+    // a wedge on the face: its front slanted from z = 0.04 at y = 0.05 to z = 0 at y = 0.15
+    const p: Vec3[] = [[0.02, 0.05, 0], [0.08, 0.05, 0], [0.08, 0.05, 0.04], [0.02, 0.05, 0.04], [0.02, 0.15, 0], [0.08, 0.15, 0]];
+    const wedge: Tri[] = [[p[0]!, p[1]!, p[2]!], [p[0]!, p[2]!, p[3]!], [p[3]!, p[2]!, p[5]!], [p[3]!, p[5]!, p[4]!], [p[0]!, p[3]!, p[4]!], [p[1]!, p[5]!, p[2]!], [p[0]!, p[4]!, p[5]!], [p[0]!, p[5]!, p[1]!]];
+    const m = shadowMap(BASE, [...a.parts, wedge], 0.03)!;
+    const S = (x: number, y: number) => toP2(m.plane, [x, y, 0]);
+    const at = (y: number) => shadowAt(m, S(0.05, y))!;
+    expect(at(0.075).h - at(0.125).h).toBeCloseTo(0.02, 9); // 0.04 over 0.1: 0.02 over 0.05
+    const n = m.tris[at(0.1).tri]!.n;
+    expect(n[2]).toBeGreaterThan(0.9); // toward the base
+    expect(n[1]).toBeGreaterThan(0.3); // and the slant's own (up)
   });
-  it("⛔⛔ THE LINES NEVER STOP INSIDE THE FACE: the run through the gizmo spans the region edge to edge across every joint; it stops at a hole's edge", () => {
+  it("⭐⭐ GAPS BRIDGED (the slider, 30 mm): 3 mm and 16 mm between cores bridged, 50 mm not; filled to the LOWER side; the outline exact — never grown outward", () => {
+    const a = painting([0.003, 0.016, 0.05]);
+    const m = shadowMap(BASE, a.parts, 0.03)!;
+    const S = (x: number, y: number) => toP2(m.plane, [x, y, 0]);
+    expect(shadowAt(m, S(0.1015, 0.1))!.tri).toBe(-1); // the 3 mm joint: a bridge
+    expect(shadowAt(m, S(0.1015, 0.1))!.h).toBeCloseTo(0, 9);
+    expect(shadowAt(m, S(0.211, 0.1))).not.toBeNull(); // the 16 mm slot
+    expect(shadowAt(m, S(0.344, 0.1))).toBeNull(); // the 50 mm gap
+    expect(shadowAt(m, S(0.3185, 0.1))).not.toBeNull(); // 0.5 mm inside the third box's edge (0.319)
+    expect(shadowAt(m, S(0.3195, 0.1))).toBeNull(); // 0.5 mm outside it
+    expect(shadowAt(m, S(-0.0005, 0.1))).toBeNull(); // the outline's other end
+    // two depths: the gap filled to the lower of the two sides
+    const b = painting([0.01]);
+    const deep = box([0, 0, -0.03], [0.1, 0.2, 0.02]); // the first box 2 cm prouder
+    const m2 = shadowMap(BASE, [deep.tris, b.parts[1]!], 0.03)!;
+    expect(shadowAt(m2, toP2(m2.plane, [0.105, 0.1, 0]))!.h).toBeCloseTo(-0.02, 9);
+  });
+  it("⭐⭐ THE RUN on the outline: across the bridged joints edge to edge, stopping at a gap wider than the bridge; none off the shadow", () => {
+    const a = painting([0.003, 0.016, 0.05]);
+    const m = shadowMap(BASE, a.parts, 0.03)!;
+    const g = toP2(m.plane, [0.05, 0.1, 0]);
+    const d = toP2(m.plane, [1, 0, 0]);
+    const run = shadowRun(m, g, [d[0], d[1]]);
+    const xs = run.map((t) => fromP2(m.plane, [g[0] + d[0] * t, g[1] + d[1] * t])[0]).sort((x, y) => x - y);
+    expect(xs[0]).toBeCloseTo(0, 4);
+    expect(xs[1]).toBeCloseTo(0.319, 4);
+    const up = toP2(m.plane, [0, 1, 0]);
+    const v = shadowRun(m, g, [up[0], up[1]]);
+    expect(v[1] - v[0]).toBeCloseTo(0.2, 4);
+    expect(shadowRun(m, toP2(m.plane, [0.344, 0.1, 0]), [d[0], d[1]])).toEqual([0, 0]);
+  });
+  it("⭐⭐⭐ THE LINE IS ONE PLANE'S: the profile through the gizmo along the level axis — a step a near-vertical connector in that plane, never a point off it (the gizmo jumps it)", () => {
     const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    const g = P(0.05, 0.1);
-    const d = toP2(FRONT, [1, 0, 0]);
-    const run = regionRun(r, g, [d[0], d[1]]);
-    const ends = [fromP2(FRONT, [g[0] + d[0] * run[0], g[1] + d[1] * run[0]])[0], fromP2(FRONT, [g[0] + d[0] * run[1], g[1] + d[1] * run[1]])[0]].sort((x, y) => x - y);
-    expect(ends[0]).toBeCloseTo(-0.0016, 5);
-    expect(ends[1]).toBeCloseTo(0.306 + 0.0016, 5);
-    const up = toP2(FRONT, [0, 1, 0]);
-    const v = regionRun(r, g, [up[0], up[1]]);
-    expect(v[1] - v[0]).toBeCloseTo(0.2 + 0.0032, 5);
-    // a hole (a missing middle piece): the run stops at its edge
-    const b = painting([0.12, 0.003]);
-    const rb = spanRegion(b.faces, b.front[0]!, FRONT)!;
-    const rr = regionRun(rb, g, [d[0], d[1]]);
-    expect(Math.max(...[rr[0], rr[1]].map((t) => fromP2(FRONT, [g[0] + d[0] * t, g[1] + d[1] * t])[0]))).toBeCloseTo(0.1016, 5);
+    const p45 = box([0.12, 0.05, 0], [0.18, 0.15, 0.041]); // Piece45's protrusion
+    const m = shadowMap(BASE, [...a.parts, p45.tris], 0.03)!;
+    const g = toP2(m.plane, [0.05, 0.1, 0]);
+    const d = toP2(m.plane, [1, 0, 0]);
+    const run = shadowRun(m, g, [d[0], d[1]]);
+    const pts = spanPolyline((t) => shadowAt(m, [g[0] + d[0] * t, g[1] + d[1] * t])!.h, run[0], run[1], 0.004);
+    expect(pts.some(([t]) => t === 0)).toBe(true);
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i]![0]).toBeGreaterThan(pts[i - 1]![0]);
+      const dh = Math.abs(pts[i]![1] - pts[i - 1]![1]);
+      if (dh > 0.001) expect(pts[i]![0] - pts[i - 1]![0]).toBeLessThan(0.0002);
+    }
+    const world = pts.map(([t, h]) => fromP2(m.plane, [g[0] + d[0] * t, g[1] + d[1] * t], h));
+    for (const w of world) expect(w[1]).toBeCloseTo(0.1, 12); // every point in the level plane y = 0.1
+    expect(Math.max(...pts.map((p) => p[1]))).toBeCloseTo(0, 9); // the protrusion's front
   });
 });
 
+describe("⭐⭐⭐ (2026-11-03) the assembly's BOX — six bases, the wrap at 90° (the owner: *\"no tilt of the curve if the orbit is following this single-plane contour section\"*)", () => {
+  it("⭐⭐ the plan's smallest rectangle: a box square to the world keeps the world's axes; a plan turned 30° gives its own sides; the vertical always", () => {
+    const sq: Vec3[] = [[-0.25, 0, -0.05], [0.25, 0, -0.05], [0.25, 0.5, 0], [-0.25, 0.5, 0]];
+    const d = boxDirs(sq);
+    near(d[0]!, [1, 0, 0]);
+    near(d[2]!, [0, 0, 1]);
+    near(d[4]!, [0, 1, 0]);
+    near(d[5]!, [0, -1, 0]);
+    const c = Math.cos(Math.PI / 6);
+    const s = Math.sin(Math.PI / 6);
+    const rot = (x: number, z: number): Vec3 => [x * c - z * s, 0, x * s + z * c];
+    const r = boxDirs([rot(-0.25, -0.05), rot(0.25, -0.05), rot(0.25, 0.05), rot(-0.25, 0.05), rot(0, 0)]);
+    near(r[0]!, [c, 0, s]);
+    near(r[1]!, [-c, 0, -s]);
+    expect(Math.abs(r[2]![0] * c + r[2]![2] * s)).toBeLessThan(1e-12);
+  });
+  it("⭐⭐⭐ a slanted face snaps to the box's nearest base; the next base across the outline is the push's, never the base itself nor its opposite", () => {
+    const d = boxDirs([[-0.25, 0, -0.05], [0.25, 0, -0.05], [0.25, 0.5, 0], [-0.25, 0.5, 0]]);
+    near(snapDir([0.2, 0.55, -0.81], d)!, [0, 0, -1]); // a frustum's side, 34° up: its base the front
+    near(snapDir([0.1, 0.9, -0.42], d)!, [0, 1, 0]); // steeper: the top
+    near(snapDir([0.9, 0.1, -0.4], d, [1, 0, 0])!, [0, 0, -1]); // ±x excluded
+    expect(snapDir([0, 0, 0], d)).toBeNull();
+  });
+});
 
 describe("⭐⭐⭐ the gizmo's step — ff2fca2's relation: dx along the face's level line, dy along its steepest (third pass)", () => {
   const deg = Math.PI / 180;
@@ -175,116 +244,37 @@ describe("⭐⭐⭐ the gizmo's step — ff2fca2's relation: dx along the face's
     expect(greenPaceOf(pts)).toBeCloseTo((2 * 0.49 + 2 * 0.033) / (2 * Math.PI), 12);
     expect(spanMmOf((5.1 * Math.PI) / 180, 0, 5.1)).toBeCloseTo(1, 12);
   });
-  it("⭐⭐ clamped to the region: a push past the edge holds it ON the edge, slides along it, and is CAUGHT (mm of finger); one step back moves at once", () => {
+  it("⭐⭐ clamped to the shadow's outline: a push past the edge holds it ON the edge, slides along it, and is CAUGHT (mm of finger); one step back moves at once", () => {
     const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    const dist = (p: readonly [number, number]) => regionDistance(r, p);
+    const m = shadowMap([0, 0, 1], a.parts, 0.03)!;
+    const dist = shadowDist(m);
     const none = () => null;
-    const m0: SpanMotion = { at: P(0.3, 0.1), overMm: 0 };
-    const right = toP2(FRONT, [0.02, 0.01, 0]);
+    const Q = (x: number, y: number) => toP2(m.plane, [x, y, 0]);
+    const m0: SpanMotion = { at: Q(0.3, 0.1), overMm: 0 };
+    const right = toP2(m.plane, [0.02, 0.01, 0]);
     const m1 = spanMove(m0, right, 2, dist, 3, none);
-    const x1 = fromP2(FRONT, m1.motion.at);
-    expect(x1[0]).toBeCloseTo(0.3076, 6); // on the edge (0.306 + the grow)
+    const x1 = fromP2(m.plane, m1.motion.at);
+    expect(x1[0]).toBeCloseTo(0.306, 6); // on the outline (exact: never grown)
     expect(x1[1]).toBeCloseTo(0.11, 9); // slid along it
-    expect(m1.motion.overMm).toBeCloseTo((2 * 0.0124) / Math.hypot(0.02, 0.01), 9);
+    expect(m1.motion.overMm).toBeCloseTo((2 * 0.014) / Math.hypot(0.02, 0.01), 6);
     const m2 = spanMove(m1.motion, right, 4, dist, 3, none);
     expect(m2.held).toBe(true); // caught, nothing across: the edge holds
     expect(m2.motion.overMm).toBe(3);
-    const back = spanMove(m2.motion, toP2(FRONT, [-0.01, 0, 0]), 1, dist, 3, none);
-    expect(fromP2(FRONT, back.motion.at)[0]).toBeCloseTo(0.2976, 6);
+    const back = spanMove(m2.motion, toP2(m.plane, [-0.01, 0, 0]), 1, dist, 3, none);
+    expect(fromP2(m.plane, back.motion.at)[0]).toBeCloseTo(0.296, 6);
     expect(back.motion.overMm).toBe(0);
   });
-  it("⭐⭐⭐ past the catch the gizmo goes onto the face across AT ONCE — no wrap left pending (the piece and the camera are the orbit's: nothing turns about the edge)", () => {
+  it("⭐⭐⭐ past the catch the gizmo goes onto the next base AT ONCE — no wrap left pending (the piece and the camera are the orbit's: nothing turns about the edge)", () => {
     const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    const dist = (p: readonly [number, number]) => regionDistance(r, p);
-    const cand = { index: 5, normal: [1, 0, 0] as Vec3, kind: "CONVEX" as const, dist: 0 };
-    const right = toP2(FRONT, [0.01, 0, 0]);
-    const m1 = spanMove({ at: P(0.3076, 0.1), overMm: 0 }, right, 2, dist, 3, () => cand);
+    const m = shadowMap([0, 0, 1], a.parts, 0.03)!;
+    const dist = shadowDist(m);
+    const cand = { normal: [1, 0, 0] as Vec3 };
+    const right = toP2(m.plane, [0.01, 0, 0]);
+    const m1 = spanMove({ at: toP2(m.plane, [0.306, 0.1, 0]), overMm: 0 }, right, 2, dist, 3, () => cand);
     expect(m1.next).toBeNull();
     const m2 = spanMove(m1.motion, right, 2, dist, 3, () => cand);
     expect(m2.next).toEqual(cand);
     expect(m2.motion.overMm).toBe(0);
-  });
-});
-
-describe("⭐⭐⭐ the edge — the face across (convex, concave), glued faces", () => {
-  it("⭐ convex: at the top edge pushing up, the boxes' TOP faces; at an inner corner a wall standing on the plane; nothing: null", () => {
-    const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    const ex = new Set(r.members);
-    const top = wrapCandidate(a.faces, ex, [0.05, 0.2016, 0], [0, 0, 1], [0, 1, 0]);
-    expect(top!.kind).toBe("CONVEX");
-    expect(top!.normal).toEqual([0, 1, 0]);
-    const wall = box([0.307, 0, 0], [0.33, 0.2, 0.1]);
-    const faces = [...a.faces, ...wall.faces];
-    const inner = wrapCandidate(faces, ex, [0.3076, 0.1, 0], [0, 0, 1], [1, 0, 0]);
-    expect(inner!.kind).toBe("CONCAVE");
-    expect(inner!.normal).toEqual([-1, 0, 0]);
-    expect(wrapCandidate(a.faces.slice(0, 1), new Set([0]), [0.05, 0.2016, 0], [0, 0, 1], [0, 1, 0])).toBeNull();
-  });
-  // ⭐ a frustum glued (1.5 mm off) under a wide box — Piece43 under Piece19: its small face up against the box's bottom
-  const base = box([-0.1, 0, -0.05], [0.1, 0.05, 0]);
-  const t = 0.0015;
-  const sm = 0.02;
-  const wd = 0.04;
-  const h = 0.04;
-  const top: Vec3[] = [[-sm, -t, -0.04], [sm, -t, -0.04], [sm, -t, -0.01], [-sm, -t, -0.01]];
-  const bot: Vec3[] = [[-wd, -t - h, -0.04], [wd, -t - h, -0.04], [wd, -t - h, -0.01], [-wd, -t - h, -0.01]];
-  const quad = (p: Vec3[], idx: number[]): Tri[] => [[p[idx[0]!]!, p[idx[1]!]!, p[idx[2]!]!], [p[idx[0]!]!, p[idx[2]!]!, p[idx[3]!]!]];
-  const unit = (v: Vec3): Vec3 => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
-  const all = [...top, ...bot];
-  const fr: SpanFace[] = [
-    { normal: [0, 1, 0], tris: quad(all, [0, 3, 2, 1]) }, // the small face, glued
-    { normal: [0, -1, 0], tris: quad(all, [4, 5, 6, 7]) },
-    { normal: unit([h, wd - sm, 0]), tris: quad(all, [1, 2, 6, 5]) }, // the +x slanted side
-    { normal: unit([-h, wd - sm, 0]), tris: quad(all, [0, 4, 7, 3]) },
-    { normal: [0, 0, -1], tris: quad(all, [0, 1, 5, 4]) },
-    { normal: [0, 0, 1], tris: quad(all, [3, 7, 6, 2]) },
-  ];
-  const faces = [...base.faces, ...fr];
-  const owner = [...base.faces.map(() => "box"), ...fr.map(() => "frustum")];
-  it("⭐⭐ GLUED: the frustum's small face is pressed against the box's bottom (and the bottom against it) — no other face is", () => {
-    const p = gluedPartners(faces, owner);
-    expect(p[6]).toBe(3); // the small face → the box's bottom (index 3)
-    expect(p[3]).toBe(6);
-    expect(p.filter((x) => x >= 0).length).toBe(2);
-  });
-  it("⭐⭐ which of a glued pair is HIDDEN: the one whose coplanar region is the smaller — the face a part stands on stays (⛔ the smaller FACE: Piece43's top is wider than Piece19's bottom)", () => {
-    const p = gluedPartners(faces, owner);
-    const area = (i: number) => (i === 3 ? 0.2 : i === 6 ? 0.0036 : 0.01); // the box's bottom a large region, the small face alone
-    const h = hiddenGlued(p, area);
-    expect(h[6]).toBe(true);
-    expect(h[3]).toBe(false);
-    expect(hiddenGlued([1, 0], () => 1)).toEqual([true, true]); // two neighbours' touching sides: both
-  });
-  it("⛔⛔ OFF A FRUSTUM'S SLANTED SIDE toward the part it stands on: the box's bottom (the glued small face's partner) — ⛔ the frustum's own hidden face, round and round", () => {
-    const p = gluedPartners(faces, owner);
-    const side = fr[2]!;
-    const n = side.normal;
-    // the side's top edge (y = −t, x = sm), pushing up along the side
-    const B: Vec3 = [sm, -t, -0.025];
-    const Dv = [-n[1], n[0], 0] as Vec3; // in the side's plane, toward +y
-    const D: Vec3 = Dv[1] > 0 ? Dv : [-Dv[0], -Dv[1], 0];
-    const without = wrapCandidate(faces, new Set([8]), B, n, D);
-    expect(without!.index).toBe(6); // the old answer: the glued small face itself
-    const c = wrapCandidate(faces, new Set([8]), B, n, D, undefined, p.map((x, i) => (hiddenGlued(p, (j) => (j === 3 ? 0.2 : 0.004))[i] ? x : -1)));
-    expect(c!.index).toBe(3);
-    expect(c!.normal).toEqual([0, -1, 0]);
-  });
-  it("⭐ a concave face is judged NEAR the edge: a face straddling the plane far from it is not refused for that", () => {
-    // a wall at the region's right edge: in front of the plane near the edge, reaching far BEHIND it 30 cm away (it straddles the plane)
-    const a = painting([0.003, 0.003]);
-    const r = spanRegion(a.faces, a.front[0]!, FRONT)!;
-    const wall: SpanFace = { normal: [-1, 0, 0], tris: [[[0.308, 0.09, 0], [0.308, 0.11, 0], [0.308, 0.11, -0.3]], [[0.308, 0.09, 0], [0.308, 0.11, -0.3], [0.308, 0.09, -0.3]], [[0.308, 0.09, 0], [0.308, 0.11, 0.1], [0.308, 0.11, 0]]] };
-    const c = wrapCandidate([...a.faces.slice(0, 24), wall], new Set(r.members), [0.3076, 0.1, 0], [0, 0, 1], [1, 0, 0]);
-    expect(c).not.toBeNull();
-  });
-  it("⭐ the closest point on a triangle (Ericson): a vertex, an edge, the inside", () => {
-    const tr: Tri = [[0, 0, 0], [1, 0, 0], [0, 1, 0]];
-    expect(closestOnTriangle([-1, -1, 0], tr)).toEqual([0, 0, 0]);
-    expect(closestOnTriangle([0.5, -1, 0], tr)).toEqual([0.5, 0, 0]);
-    near(closestOnTriangle([0.2, 0.2, 3], tr), [0.2, 0.2, 0]);
   });
 });
 
@@ -314,50 +304,9 @@ describe("⭐⭐⭐ the top face's roll at the zenith — branch 1.0.83's pause"
   });
 });
 
-describe("⭐⭐⭐ the protrusion — ridden over, blended (the owner's item 5)", () => {
-  const a = painting([0.003, 0.003]);
-  // Piece45: 41 mm out, seated one contour margin (1.5 mm) off the face
-  const p45 = box([0.12, 0.05, 0.0015], [0.18, 0.15, 0.041]);
-  // a part across a 16 mm gap in front (never touching the plane): not a protrusion
-  const far = box([0.22, 0.05, 0.016], [0.26, 0.15, 0.06]);
-  const solids = spanSolids(FRONT, [...a.parts, p45.tris, far.tris]);
-  it("⭐ the frontmost height: the protrusion's top over it, the plane off it; ⛔ a part not touching the plane is no protrusion (the gizmo leapt across a slot)", () => {
-    expect(solids.length).toBe(1);
-    expect(coveredTop(solids, P(0.15, 0.1))).toBeCloseTo(0.041, 9);
-    expect(coveredTop(solids, P(0.05, 0.1))).toBe(0);
-    expect(coveredTop(solids, P(0.24, 0.1))).toBe(0);
-  });
-  it("⭐ the line over it: through the gizmo exactly, its step a near-vertical connector — never a stray segment", () => {
-    const g = P(0.05, 0.1);
-    const d = toP2(FRONT, [1, 0, 0]);
-    const pts = spanPolyline(solids, g, [d[0], d[1]], -0.05, 0.25, 0.004);
-    expect(pts.some(([t]) => t === 0)).toBe(true);
-    for (let i = 1; i < pts.length; i++) {
-      expect(pts[i]![0]).toBeGreaterThan(pts[i - 1]![0]);
-      const dh = Math.abs(pts[i]![1] - pts[i - 1]![1]);
-      if (dh > 0.001) expect(pts[i]![0] - pts[i - 1]![0]).toBeLessThan(0.0002);
-    }
-    expect(Math.max(...pts.map((p) => p[1]))).toBeCloseTo(0.041, 9);
-  });
-  it("⭐ the ride eased by the finger's travel (no jump), and by time at rest", () => {
-    const one = rideStep(0, 0.041, 0.25, 3, 16, false);
-    expect(one).toBeGreaterThan(0);
-    expect(one).toBeLessThan(0.041 * 0.25);
-    let h = 0;
-    for (let i = 0; i < 4; i++) h = rideStep(h, 0.041, 1, 3, 16, false);
-    expect(h).toBeGreaterThan(0.041 * 0.95);
-    expect(rideStep(0.041, 0, 0, 3, 300, true)).toBeLessThan(0.041 * 0.06);
-    expect(rideStep(0.02, 0.041, 0, 3, 16, false)).toBe(0.02); // no travel, no time: held
-  });
-});
-
-describe("⭐⭐ engage, release", () => {
-  it("⭐ engage within the slider's distance, out only past 1.2 × it; the slider held so the far orbit stays reachable", () => {
+describe("⭐⭐ the engage distance — now the calm's", () => {
+  it("⭐ the slider held so its 1.2 × stays within the far orbit (the calm of the shares fades out by then)", () => {
     expect(SPAN_RELEASE_FACTOR).toBe(1.2);
-    expect(spanEngaged(false, 4.5, 4.5)).toBe(true);
-    expect(spanEngaged(false, 4.6, 4.5)).toBe(false);
-    expect(spanEngaged(true, 5.3, 4.5)).toBe(true);
-    expect(spanEngaged(true, 5.5, 4.5)).toBe(false);
     expect(spanEngageM(4.5, 6)).toBe(4.5);
     expect(spanEngageM(6, 6) * SPAN_RELEASE_FACTOR).toBeLessThan(6);
   });
@@ -369,25 +318,38 @@ describe("⭐⭐⭐ wired", () => {
     expect(a).toContain("const box = placedVertexBox(st) ?? placedBox(st);");
     expect(a).toContain("const vs = placedParts(st).parts.flat();");
   });
-  it("⭐⭐⭐ the ORBIT runs in the face-span (ff2fca2's relation): never held, the piece on its direction, the gizmo moved by its SOLVED step; engaged / released by the slider", () => {
+  it("⭐⭐⭐ the ORBIT runs (ff2fca2's relation): never held, the piece on its direction; ⭐⭐⭐ (2026-11-03) the SHADOW GIZMO AT EVERY DISTANCE — engaged as soon as there is a gizmo, never released; the piece and the camera read its FOOT; the gizmo moved by the FINGER's steps", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const engageM = spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg));");
-    expect(a).toContain("if (st.span !== null && !spanEngaged(true, d, engageM)) spanRelease(st);");
-    expect(a).toContain("if (spanEngage(st, st.asmG, st.gizmoNormal ?? null, u)) {");
-    expect(a).not.toContain("return st.span.w");
-    expect(a).toContain("if (st.span !== null) return st.span.g;");
+    expect(a).toContain("if (st.span === null && st.pieceQ !== null) {");
+    expect(a).toContain("const g = st.asmG ?? castGizmo(st, u)?.point ?? null;");
+    expect(a).not.toContain("spanRelease(");
+    expect(a).not.toContain("spanEngaged(");
+    expect(a).toContain("if (st.span !== null) return spanAnchor(st.span, approachDistance(st.cfg, st.approach), st.cfg.orbitShellOffsetMm / 1000);");
+    expect(a).toContain("const target = spanAnchor(sp, d, st.cfg.orbitShellOffsetMm / 1000);");
+    expect(a).toContain("st.asmGizmoAt = [sp.g[0], sp.g[1], sp.g[2]];"); // the ring at the gizmo itself: it jumps
+    // ⭐⭐⭐ the orbit's face frame from the BASE (no tilt, no roll from a slanted face)
+    expect(a).toContain("const want = tiltWanted(spanTiltNormal(st), st.asmFace.kind);");
+    expect(a).toContain("spanInputAdd(st, yaw0, v0);");
     expect(a).toContain("if (!assemblyOn(st) || st.asmUp === null) return 1;"); // the governor as far out
     expect(a).toContain("const h = castCovered(st, r);");
     expect(code("render/green_box_wiring.ts")).not.toContain("} else if (st.span !== null) {"); // no hold: the solver runs
     const w = code("render/face_span_wiring.ts");
     expect(w).not.toContain("st.orbit.reset(q.yaw, q.v);");
-    // ⭐⭐⭐ (third pass, restated) the gizmo by the orbit's solved yaw and pitch steps along the face's level axes — ff2fca2's relation
+    // ⭐⭐⭐ (third pass, restated 2026-11-03) the gizmo by the FINGER's yaw and pitch steps along the base's level axes — ⛔ the solved ones: a piece sliding down
+    // a part under a pure dx took the gizmo 16 cm down with it
+    expect(w).toContain("const dYaw = sp.input.frame === frame ? sp.input.yaw : 0;");
+    expect(w).toContain("const dPitch = sp.input.frame === frame ? sp.input.pitch : 0;");
     expect(w).toContain("const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, sp.paceH, st.asm.radius, sp.eH, sp.eV, sp.sh, sp.sv));");
+    // the depth the shadow's at once (a jump), the next base the box's along the push
+    expect(w).toContain("const hit = shadowAt(sp.map, sp.motion.at);");
+    expect(w).not.toContain("rideStep");
+    expect(w).toContain("const next = snapDir(D, sp.dirs, n);");
+    expect(w).toContain("return st.span !== null ? st.span.plane.n : (st.gizmoNormal ?? null);");
     expect(w).toContain("sp.eYaw = sp.eH;");
     expect(w).toContain("sp.ePitch = sp.eV;");
     expect(w).toContain("const u1 = dirOf(q.yaw, q.v);");
   });
-  it("⭐⭐⭐ the screen wins on a settled picture — every frame in the face-span, at the release (⛔ `signAfter` carried an inversion out)", () => {
+  it("⭐⭐⭐ the screen wins on a settled picture — every frame in the face-span (⛔ `signAfter` carried an inversion out)", () => {
     const w = code("render/face_span_wiring.ts");
     // ⭐⭐⭐ (2026-11-03, restated) mid-drag too, inside the zenith's cone too — only a roll under way waits (the finger turns with the picture meanwhile)
     expect(w).toContain("if (!zenithRolling(st) && st.asmRoll === null && facing) spanScreenSigns(st, sp.plane.n);");
@@ -410,14 +372,15 @@ describe("⭐⭐⭐ wired", () => {
   });
   it("⭐ the sliders (CAMERA ORBIT AROUND CENTER) and their defaults; the lock slider relabelled (it only places the look point now)", () => {
     const m = code("render/tuning_menu.ts");
-    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanRollMm", "faceSpanRideMm"]) expect(m).toContain(`"${k}"`);
+    for (const k of ["faceSpanEngageM", "faceSpanCatchMm", "faceSpanRollMm", "shadowBridgeMm"]) expect(m).toContain(`"${k}"`);
+    expect(m).not.toContain('"faceSpanRideMm"');
     expect(m).not.toContain('"faceSpanTurnMm"');
     expect(m).toContain('"camera looks at the gizmo within (m) — the centre beyond", "assemblyLockDistM"');
     const c = code("input/gestureConfig.ts");
     expect(c).toContain("faceSpanEngageM: 4.5,");
     expect(c).toContain("faceSpanCatchMm: 3,");
     expect(c).toContain("faceSpanRollMm: 16,");
-    expect(c).toContain("faceSpanRideMm: 3,");
+    expect(c).toContain("shadowBridgeMm: 30,");
   });
 });
 

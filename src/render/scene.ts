@@ -540,6 +540,7 @@ export function createScene(
   st.asmSectionKey = "";
   st.span = null;
   st.spanFaces = null;
+  st.spanShadows = new Map();
   st.spanLines = null;
   st.spanLinesKey = "";
   st.asmShown = null;
