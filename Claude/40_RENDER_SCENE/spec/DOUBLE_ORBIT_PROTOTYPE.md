@@ -2485,3 +2485,15 @@ edges without the camera view being too slanted … but I like the smooth transi
   loop's pace (`loopPace`); held at the section's outline the orbit held too; `shadowStepMm` 150. → `queue_notes/FACE_SPAN_2026-11-02.md`, ninth pass.
   1674 vectors. ⛔ No device close.
 
+## ⏳ FUTURE IMPROVEMENTS — the orbit far out (captured 2026-11-03, not built)
+
+* **R1 — off a top / bottom sideways**: a dx over a top's side edge onto a wall leaves the view rolled up to ~60°, set upright over ~10 frames after the switch.
+  ❓ The roll before the edge, at it (like the zenith roll) or after it (now)?
+* **R2 — a pole's tilt kept through a long drag**: past ~60° of pitch `antiPoleQuat` re-tilts the orbit's frame, kept until rest; the piece and the gizmo drift
+  apart, a carry re-joins them (top ↔ wall switch-backs). Leads: the re-tilt about a world axis, or the frame taken from the gizmo's loop.
+* **R3 — a section through an overhang alone** (x = 0.25 cuts only Piece42): the gizmo stops at its bottom edge (its underside cut off from the bottom's
+  shadow); the true section is a small loop round Piece42 itself.
+* **R4 — a section exactly on the painting's back plane** (z = −0.050, Piece44 and Piece45 proud of it): up to 33 mm off the plane after a few loops.
+* **R5 — the slide mode close in**: latched on a face, then blocked by a part — a constant input stops there (the slide's, not the orbit's).
+* **R6 — a dx during a half-finished zenith roll is held**, by design (only the dy drives the roll).
+* → `queue_notes/FACE_SPAN_2026-11-02.md`, "FUTURE IMPROVEMENTS — the orbit far out" and "— one input, one loop".
