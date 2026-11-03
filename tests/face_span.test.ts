@@ -39,6 +39,9 @@ import {
   faceAxes,
   axisSense,
   greenPaceOf,
+  edgeShare,
+  shownDir,
+  calmWeight,
   toP2,
   wrapCandidate,
   zenithCrossing,
@@ -413,5 +416,64 @@ describe("⭐⭐⭐ wired", () => {
     expect(c).toContain("faceSpanCatchMm: 3,");
     expect(c).toContain("faceSpanRollMm: 16,");
     expect(c).toContain("faceSpanRideMm: 3,");
+  });
+});
+
+describe("⭐⭐⭐ the fourth pass — the slide's calm in the middle of a face, the orbit's whole angle at its edges (the owner: *\"a mix of the slide of the gizmo of commit 3286ed5 and this implementation of commit 46ee3a2\"*)", () => {
+  const deg = Math.PI / 180;
+  const n: Vec3 = [0, 0, -1];
+  const h: Vec3 = [1, 0, 0];
+  const v: Vec3 = [0, 1, 0];
+  const dir = (aDeg: number, bDeg: number): Vec3 => [Math.cos(bDeg * deg) * Math.sin(aDeg * deg), Math.sin(bDeg * deg), -Math.cos(bDeg * deg) * Math.cos(aDeg * deg)];
+  const off = (w: Vec3) => Math.acos(Math.max(-1, Math.min(1, w[0] * n[0] + w[1] * n[1] + w[2] * n[2]))) / deg;
+  it("⭐⭐ the share: the interior value in the middle, rising by a smoothstep to 1 within the edge zone (25 % of the run, at least 3 cm), 1 at the edge; a thin face 1 everywhere", () => {
+    expect(edgeShare(0.245, 0.49, 0.25, 25, 0.03)).toBe(0.25); // the middle of the painting's 0.49 m front
+    expect(edgeShare(0, 0.49, 0.25, 25, 0.03)).toBe(1); // at the edge
+    expect(edgeShare(0.1225, 0.49, 0.25, 25, 0.03)).toBe(0.25); // the zone's inner end (0.1225 m)
+    const mid = edgeShare(0.06125, 0.49, 0.25, 25, 0.03);
+    expect(mid).toBeCloseTo(0.25 + 0.75 * 0.5, 12); // halfway through the zone: the smoothstep's half
+    expect(edgeShare(0.01, 0.033, 0.25, 25, 0.03)).toBe(1); // the 33 mm top: thin — the orbit's whole angle (the zenith's roll unchanged)
+    expect(edgeShare(0.1, 0.4, 0.25, 0, 0.03)).toBe(0.25); // the zone's minimum governs a small percentage
+    let prev = 2;
+    for (let d = 0; d <= 0.245; d += 0.005) { const s2 = edgeShare(d, 0.49, 0.25, 25, 0.03); expect(s2).toBeLessThanOrEqual(prev + 1e-12); prev = s2; } // monotonic inward
+  });
+  it("⭐⭐⭐ IN THE MIDDLE OF A LARGE FACE the view stays near square: a 60° orbit offset shows 15° (⛔ 46ee3a2: the whole 60°); AT THE EDGE exactly the orbit's", () => {
+    const u = dir(60, 0);
+    expect(off(shownDir(u, n, h, v, 0.25, 0.25))).toBeCloseTo(15, 9);
+    expect(off(shownDir(dir(40, 30), n, h, v, 0.25, 0.25))).toBeLessThan(20);
+    expect(shownDir(u, n, h, v, 1, 1)).toBe(u); // the edge and the crossing: 46ee3a2's direction itself
+  });
+  it("⭐⭐ dy OFF (`faceSpanShareVOn` 0): the vertical angle shown whole, the horizontal still calmed", () => {
+    const w = shownDir(dir(40, 30), n, h, v, 0.25, 1);
+    expect(Math.asin(w[1]) / deg).toBeCloseTo(30, 9);
+    expect(Math.atan2(w[0], -w[2]) / deg).toBeCloseTo(10, 9);
+  });
+  it("⭐⭐ continuous in the orbit's direction (a small orbit step a small shown step — never more), and the same place and direction give the same view (reversible)", () => {
+    for (const [a, b] of [[10, 5], [50, -20], [-70, 40]] as const) {
+      const w0 = shownDir(dir(a, b), n, h, v, 0.25, 0.25);
+      const w1 = shownDir(dir(a + 0.5, b + 0.5), n, h, v, 0.25, 0.25);
+      expect(Math.acos(Math.min(1, w0[0] * w1[0] + w0[1] * w1[1] + w0[2] * w1[2])) / deg).toBeLessThanOrEqual(0.71);
+    }
+    expect(shownDir(dir(33, 12), n, h, v, 0.4, 0.6)).toEqual(shownDir(dir(33, 12), n, h, v, 0.4, 0.6));
+  });
+  it("⭐ the calm's weight: none just after the engage (the far orbit's direction never jumps), whole by 0.8 × the engage distance, none at the release", () => {
+    expect(calmWeight(0, 3, 4.5, 1.2)).toBe(0);
+    expect(calmWeight(1, 3.6, 4.5, 1.2)).toBe(1);
+    expect(calmWeight(1, 5.4, 4.5, 1.2)).toBe(0);
+    expect(calmWeight(1, 4.5, 4.5, 1.2)).toBeGreaterThan(0);
+  });
+  it("⭐⭐⭐ wired: the piece, the camera, the approach and the solve on the shown direction; the shares from the gizmo's runs; SEVEN sliders in a new submenu", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("if (st.span !== null) return spanShownDir(st.span, u, approachDistance(st.cfg, st.approach), spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), SPAN_RELEASE_FACTOR);");
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("sp.shareH = shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm);");
+    expect(w).toContain("sp.shareV = cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1;");
+    const m = code("render/tuning_menu.ts");
+    const i = m.indexOf('title: "FACE-SPAN ORBIT SHARE"');
+    expect(i).toBeGreaterThan(m.indexOf('title: "CAMERA ORBIT AROUND CENTER"'));
+    const sub = m.slice(i, m.indexOf("],", i));
+    for (const k of ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]) expect(sub).toContain(`"${k}"`);
+    const c = code("input/gestureConfig.ts");
+    for (const d of ["faceSpanShareH: 0.25,", "faceSpanZoneHPct: 25,", "faceSpanZoneMinHCm: 3,", "faceSpanShareVOn: 1,", "faceSpanShareV: 0.25,", "faceSpanZoneVPct: 25,", "faceSpanZoneMinVCm: 3,"]) expect(c).toContain(d);
   });
 });

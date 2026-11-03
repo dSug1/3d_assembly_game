@@ -2432,3 +2432,13 @@ parts"*, *"slanted parts should stay faces the gizmo can stand on"*, *"screen di
   the lines level / vertical (⛔ the second pass laid the orbit's step on the face: the lines leant). Measured 0.00° on a wall seen obliquely; the gizmo
   leads as at ff2fca2 (7 / 20 px, 201 ms). → `queue_notes/FACE_SPAN_2026-11-02.md`, third pass. 1651 vectors. ⛔ No device close.
 
+## 2026-11-03 — on 1.0.90-: the face-span, fourth pass — the slide's calm in the middle of a face
+
+The owner: *"I want a mix of the slide of the gizmo of commit 3286ed5 and this implementation of commit 46ee3a2 … so that the gizmo can reach close to the
+edges without the camera view being too slanted … but I like the smooth transition over the edge as done in commit 46ee3a2"*.
+
+* ⭐⭐⭐ **The piece's SHOWN direction** (`shownDir`, `edgeShare`, `spanShownDir`): the orbit's angle off the hosting face's normal shown at a share — a quarter in
+  the middle of a face, rising to the whole within the edge zone (25 % of the gizmo's run, at least 3 cm), whole at the edge and across it; dx's and dy's
+  apart (dy's on / off). The gizmo, the crossing, the zenith's roll: 46ee3a2's. Measured: the view off the normal in the middle of the front 10° on average
+  (46ee3a2: 40°), the same at the edges; the gizmo leads (the piece 55 ms behind it).
+* Seven sliders in **CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE** → `queue_notes/FACE_SPAN_2026-11-02.md`, fourth pass. 1657 vectors. ⛔ No device close.

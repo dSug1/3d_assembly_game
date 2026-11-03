@@ -427,6 +427,51 @@ export function greenPaceOf(points: readonly Vec3[]): number {
   return per / (2 * Math.PI);
 }
 
+// ───────────────────────────── the shown direction — the slide's calm in the middle of a face (fourth pass) ─────────────────────────────
+
+/**
+ * ⭐⭐⭐ (2026-11-03, fourth pass, the owner: *"I want a mix of the slide of the gizmo of commit 3286ed5 and this implementation of commit 46ee3a2 … add some
+ * slide of the gizmo and follow by the piece and camera as per 3286ed5 … so that the gizmo can reach close to the edges without the camera view being too
+ * slanted … but I like the smooth transition over the edge as done in commit 46ee3a2"*) — **THE SHARE OF THE ORBIT'S ANGLE SHOWN** along one axis of the
+ * face, from the gizmo's distance to the NEARER end of its run along that axis (`dEdgeM`) and the run's length (`runM`): `interior` in the middle, rising by
+ * a smoothstep to 1 within the edge zone (`zonePct` % of the run, at least `zoneMinM`); 1 at the edge — so the crossing is exactly the orbit's. A face too
+ * thin for two zones: 1 everywhere. Position only: reversible, no hysteresis.
+ */
+export function edgeShare(dEdgeM: number, runM: number, interior: number, zonePct: number, zoneMinM: number): number {
+  const zone = Math.max((Math.max(0, zonePct) / 100) * runM, Math.max(0, zoneMinM));
+  if (!(runM > 2 * zone)) return 1;
+  const x = Math.min(1, Math.max(0, 1 - Math.max(0, dEdgeM) / zone));
+  const k = Math.min(1, Math.max(0, interior));
+  return k + (1 - k) * x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ THE PIECE'S SHOWN DIRECTION: the orbit's direction `u` read as two angles off the face's normal `n` — `α` toward `h` (dx's axis), `β` toward `v`
+ * (dy's) — and shown at `sH·α`, `sV·β` (`edgeShare`'s). Both shares 1: `u` itself (46ee3a2 exactly). The piece, the camera, the approach and the solve
+ * read it; the gizmo is still moved by the orbit's own angles.
+ */
+export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: number): Vec3 {
+  if (sH >= 1 && sV >= 1) return u;
+  const a = Math.atan2(dot(u, h), dot(u, n));
+  const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
+  const a1 = a * Math.min(1, Math.max(0, sH));
+  const b1 = b * Math.min(1, Math.max(0, sV));
+  const cb = Math.cos(b1);
+  return [
+    n[0] * cb * Math.cos(a1) + h[0] * cb * Math.sin(a1) + v[0] * Math.sin(b1),
+    n[1] * cb * Math.cos(a1) + h[1] * cb * Math.sin(a1) + v[1] * Math.sin(b1),
+    n[2] * cb * Math.cos(a1) + h[2] * cb * Math.sin(a1) + v[2] * Math.sin(b1),
+  ];
+}
+
+/** ⭐ How much of the shares' calm is applied (0 … 1): the engage's ramp (`ramp`, by travel) × the distance's (0 at the release, 1 from 0.8 × the engage in). */
+export function calmWeight(ramp: number, distM: number, engageM: number, releaseFactor: number): number {
+  const top = engageM * releaseFactor;
+  const low = engageM * 0.8;
+  const x = Math.min(1, Math.max(0, (top - distM) / Math.max(1e-9, top - low)));
+  return Math.min(1, Math.max(0, ramp)) * x * x * (3 - 2 * x);
+}
+
 /** ⭐ An orbit step read as the finger's travel (mm) at the orbit's pace (`degPerMm`). */
 export function spanMmOf(dYaw: number, dPitch: number, degPerMm: number): number {
   return degPerMm > 0 ? Math.hypot(dYaw, dPitch) / ((degPerMm * Math.PI) / 180) : 0;
