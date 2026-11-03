@@ -4,12 +4,13 @@
  * or horizontal plane … if a overhanging face would be hidden if the camera view was anti-aligned with the normal of the face, the red or green contour shall
  * ignore this face and the gizmo shall behave like a shadow (ie jumping over the discontinuity). Also, a slanted face shall behave as its projection … Also,
  * no tilt of the curve"*) — **THE SHADOW GIZMO**, close in and far out alike: the gizmo is a POINT ON A BASE — one of the six directions of the assembly's box
- * (`boxDirs`: the vertical and the two axes of its plan's smallest rectangle) — moved by the orbit's SOLVED yaw and pitch steps along the base's LEVEL AXES
+ * (`WORLD_DIRS`: the world's ±x, ±z, ±y since the eighth pass) — moved by the finger's yaw and pitch steps along the base's LEVEL AXES
  * (ff2fca2's relation: `faceAxes`, `axisSense`, `spanAxisStep`, `greenPaceOf`) in straight lines; its depth the SHADOW's (`shadowMap`, `shadowAt`: the
  * frontmost surface along the base's normal, a gap narrower than the bridge filled) — a step in it is a jump; clamped to the shadow's outline (`clampSlide`),
  * caught there, then onto the next base at 90° (`spanMove`, `snapDir`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`,
  * `zenithRollStep`). The red and green lines: the shadow's profile through the gizmo in the level and the vertical plane (`shadowRun`, `spanPolyline` — a step a
- * connector). Textbook geometry only: convex hulls, rotating calipers, barycentric heights, a raster's one-dimensional closing, bisection.
+ * connector); ⭐⭐⭐ (eighth pass) a face not CONNECTED to the assembly's main face on the base (a step deeper than `shadowStepMm`) is not in the shadow.
+ * Textbook geometry only: barycentric heights, a raster's one-dimensional closing, a flood fill, bisection.
  */
 import { cross, dot, normalize, type Vec3 } from "../core/vec";
 import { convexHull2D } from "./hover";
@@ -67,37 +68,14 @@ export interface SpanFace {
 // ───────────────────────────── the assembly's box: the six base directions ─────────────────────────────
 
 /**
- * ⭐⭐⭐ (2026-11-03, the owner: *"the red and green contours strictly in their respectively single plan which strictly corresponds to the section cut of the
- * assembly by a vertical or horizontal plane"*) — **THE SIX BASES**: the gizmo's face is always one of the assembly's BOX's — the vertical, and the two
- * horizontal axes of the smallest rectangle round the placed parts' plan (rotating calipers over its convex hull, textbook) — so its normal never tilts
- * with a slanted face (no frame switch, no roll). Order: +x, −x, +z, −z, +y, −y. No plan (fewer than three points apart): the world's axes.
+ * ⭐⭐⭐ (2026-11-03, eighth pass, the owner: *"I do not want sections which plan is not aligned with: vertical gravity and z depth axis, horizontal z depth and
+ * its horizontal perpendicular, vertical gravity and horizontal perpendicular to z depth axis (those are the three plans which define x y z axis in world
+ * coordinates) … Otherwise, the movement of the gizmo is very hard to control because the sections always change plans"*) — **THE SIX BASES ARE THE
+ * WORLD'S**: ±x, ±z, ±y — every base, every section plane and every gizmo axis one of the world's (⛔ seventh pass: the assembly's box by rotating calipers,
+ * and a top's axes off the screen — a green section at any angle over the top). ⏳ Other planes may come back when the assembly is no longer near a box.
+ * Order: +x, −x, +z, −z, +y, −y.
  */
-export function boxDirs(points: readonly Vec3[]): Vec3[] {
-  const hull = convexHull2D(points.map((p) => [p[0], p[2]] as [number, number]));
-  let best: { area: number; e: [number, number] } | null = null;
-  for (let i = 0; i < hull.length && hull.length >= 3; i++) {
-    const p = hull[i]!;
-    const q = hull[(i + 1) % hull.length]!;
-    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    if (!(l > 1e-9)) continue;
-    const e: [number, number] = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
-    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
-    for (const r of hull) {
-      const a = r[0] * e[0] + r[1] * e[1];
-      const b = -r[0] * e[1] + r[1] * e[0];
-      a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
-    }
-    const area = (a1 - a0) * (b1 - b0);
-    if (best === null || area < best.area - 1e-12) best = { area, e };
-  }
-  // the axis nearer the world's x first (a box already square to the world keeps its axes as they are)
-  let e = best?.e ?? [1, 0];
-  const cands: [number, number][] = [e, [-e[1], e[0]], [-e[0], -e[1]], [e[1], -e[0]]];
-  e = cands.reduce((m, c) => (c[0] > m[0] + 1e-12 ? c : m), cands[0]!);
-  const x: Vec3 = [e[0], 0, e[1]];
-  const z: Vec3 = [-e[1], 0, e[0]];
-  return [x, mul3(x, -1), z, mul3(z, -1), [0, 1, 0], [0, -1, 0]];
-}
+export const WORLD_DIRS: readonly Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]];
 
 /** ⭐ The base direction nearest `v` among `dirs` — none within 25° of `not` (or its opposite): a wrap turns to another base. `null`: `v` zero. */
 export function snapDir(v: Vec3, dirs: readonly Vec3[], not: Vec3 | null = null): Vec3 | null {
@@ -144,6 +122,9 @@ export interface ShadowMap {
   readonly closed: Float64Array;
   /** the bridge (m) — a point over nothing is measured on the triangles themselves (`shadowAt`) */
   readonly bridge: number;
+  /** ⭐⭐⭐ (eighth pass) the MAIN face's cells (1) — the raster's largest region whose neighbours differ by no more than `step` in depth; `null`: all */
+  readonly main: Uint8Array | null;
+  readonly step: number;
   readonly buckets: readonly (readonly number[])[];
   readonly bx: number;
   readonly by: number;
@@ -158,12 +139,26 @@ const SHADOW_FILL_TOL_M = 0.001;
 const SHADOW_MAX_CELLS = 200;
 const BUCKETS = 48;
 
-export function shadowMap(n0: Vec3, parts: readonly (readonly Tri[])[], bridgeM: number, cell = 0.004): ShadowMap | null {
+export function shadowMap(n0: Vec3, parts: readonly (readonly Tri[])[], bridgeM: number, cell = 0.004, stepM = Infinity): ShadowMap | null {
   const n = normalize(n0);
   if (n === null) return null;
   let top = -Infinity;
   for (const tris of parts) for (const t of tris) for (const p of t) top = Math.max(top, dot(p, n));
   if (!Number.isFinite(top)) return null;
+  const m = shadowBuild(n, top, parts, bridgeM, cell, stepM);
+  if (m === null || m.main === null) return m;
+  // ⭐ the plane at the MAIN face's outermost extent (a part not connected to it may stand prouder): built again there
+  let top2 = -Infinity;
+  for (const t of m.tris) {
+    const c: P2 = [(t.p[0][0] + t.p[1][0] + t.p[2][0]) / 3, (t.p[0][1] + t.p[1][1] + t.p[2][1]) / 3];
+    const hc = (t.p[0][2] + t.p[1][2] + t.p[2][2]) / 3;
+    const r = frontRaw(m, c);
+    if (r.tri >= 0 && Math.abs(r.h - hc) < 1e-6 && inMain(m, c, hc)) top2 = Math.max(top2, t.p[0][2], t.p[1][2], t.p[2][2]);
+  }
+  return Number.isFinite(top2) && top2 < -1e-6 ? shadowBuild(n, top + top2, parts, bridgeM, cell, stepM) : m;
+}
+
+function shadowBuild(n: Vec3, top: number, parts: readonly (readonly Tri[])[], bridgeM: number, cell: number, stepM: number): ShadowMap | null {
   const plane = spanPlane(n, mul3(n, top));
   const tris: ShadowTri[] = [];
   parts.forEach((pt, owner) => {
@@ -224,7 +219,46 @@ export function shadowMap(n0: Vec3, parts: readonly (readonly Tri[])[], bridgeM:
     for (let j = 0; j < ny; j++) pass(nx, (s0) => j * nx + s0);
     for (let i = 0; i < nx; i++) pass(ny, (s0) => s0 * nx + i);
   }
-  return { ...m0, raw, closed, bridge: Math.max(0, bridgeM) };
+  // ⭐⭐⭐ (eighth pass, the owner: *"If one face is not connected, it should not be included in the section"*) — the MAIN face: the raster flooded across
+  // neighbours no more than `stepM` apart in depth, its largest region kept (⛔ seventh pass: Piece45's side, 20 cm behind the painting's, was in the side's
+  // shadow — the gizmo jumped onto it and back)
+  let main: Uint8Array | null = null;
+  if (Number.isFinite(stepM) && stepM > 0) {
+    const lab = new Int32Array(nx * ny).fill(-1);
+    let best = -1;
+    let bestN = 0;
+    let label = 0;
+    const stack: number[] = [];
+    for (let s0 = 0; s0 < nx * ny; s0++) {
+      if (lab[s0] !== -1 || !(closed[s0]! > -Infinity)) continue;
+      let cnt = 0;
+      lab[s0] = label;
+      stack.push(s0);
+      while (stack.length > 0) {
+        const k = stack.pop()!;
+        cnt++;
+        const i = k % nx;
+        const j = (k - i) / nx;
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const i2 = i + di;
+          const j2 = j + dj;
+          if (i2 < 0 || j2 < 0 || i2 >= nx || j2 >= ny) continue;
+          const k2 = j2 * nx + i2;
+          if (lab[k2] !== -1 || !(closed[k2]! > -Infinity) || Math.abs(closed[k2]! - closed[k]!) > stepM) continue;
+          lab[k2] = label;
+          stack.push(k2);
+        }
+      }
+      if (cnt > bestN) {
+        bestN = cnt;
+        best = label;
+      }
+      label++;
+    }
+    main = new Uint8Array(nx * ny);
+    for (let k = 0; k < nx * ny; k++) main[k] = lab[k] === best ? 1 : 0;
+  }
+  return { ...m0, raw, closed, bridge: Math.max(0, bridgeM), main, step: stepM };
 }
 
 /** ⭐ The exact frontmost height over `q` (−∞: nothing there) and its triangle (−1: none). */
@@ -258,6 +292,29 @@ function frontRaw(m: Pick<ShadowMap, "tris" | "buckets" | "x0" | "y0" | "bx" | "
  * (beyond the assembly's outline seen along the base). Exact on the real surface; a gap's fill read off the raster's cell.
  */
 export function shadowAt(m: ShadowMap, q: P2): { readonly h: number; readonly tri: number } | null {
+  const r = shadowAll(m, q);
+  return r === null || !inMain(m, q, r.h) ? null : r;
+}
+
+/**
+ * ⭐⭐⭐ (eighth pass) Is the shadow's point at `q`, `h` deep, on the MAIN face? — a cell of it among the 3 × 3 round `q` standing within the step of `h` (the
+ * raster's cell centres miss the outline's own points; a face cut off by a deeper step finds none).
+ */
+function inMain(m: Pick<ShadowMap, "main" | "step" | "closed" | "x0" | "y0" | "cell" | "nx" | "ny">, q: P2, h: number): boolean {
+  if (m.main === null) return true;
+  const i0 = Math.floor((q[0] - m.x0) / m.cell);
+  const j0 = Math.floor((q[1] - m.y0) / m.cell);
+  for (let j = j0 - 1; j <= j0 + 1; j++)
+    for (let i = i0 - 1; i <= i0 + 1; i++) {
+      if (i < 0 || j < 0 || i >= m.nx || j >= m.ny) continue;
+      const k = j * m.nx + i;
+      if (m.main[k] === 1 && Math.abs(m.closed[k]! - h) <= m.step + 1e-9) return true;
+    }
+  return false;
+}
+
+/** ⭐ The shadow at `q`, every face (the main one's or not). */
+function shadowAll(m: ShadowMap, q: P2): { readonly h: number; readonly tri: number } | null {
   const r = frontRaw(m, q);
   if (r.tri < 0) return gapAt(m, q);
   const i = Math.floor((q[0] - m.x0) / m.cell);
@@ -310,7 +367,7 @@ export function nearestCovered(m: ShadowMap, q: P2): [number, number] | null {
   let bd = Infinity;
   for (let j = 0; j < m.ny; j++)
     for (let i = 0; i < m.nx; i++) {
-      if (!(m.closed[j * m.nx + i]! > -Infinity)) continue;
+      if (!(m.closed[j * m.nx + i]! > -Infinity) || (m.main !== null && m.main[j * m.nx + i] !== 1)) continue;
       const c: [number, number] = [m.x0 + (i + 0.5) * m.cell, m.y0 + (j + 0.5) * m.cell];
       const d = Math.hypot(c[0] - q[0], c[1] - q[1]);
       if (d < bd && shadowCovers(m, c)) {
@@ -434,8 +491,8 @@ export function onPlane(v: Vec3, n: Vec3): Vec3 | null {
  * ⭐⭐⭐ (2026-11-02, third pass, the owner: *"when the hosting face is vertical, a dy shall move the gizmo vertically and a dx shall move the gizmo
  * horizontally. when the hosting face is horizontal, both dy and dx shall move the gizmo on the horizontal plane at 90 degrees each … analyze how the gizmo
  * moved with the dy and dx inputs of the orbit in ff2fca2 … this is what I want"*) — **THE FACE'S LEVEL AXES**: on a wall (the slanted frusta included) `h`
- * its level line (horizontal) and `v` its steepest line (up); on a top / bottom `h` the screen's right laid on it (latched by the caller) and `v` square to
- * it in the plane. ⛔ (second pass) the gizmo moved along the orbit's step laid on the face — on an oblique view the lines and the steps came out tilted.
+ * its level line (horizontal) and `v` its steepest line (up); on a top / bottom `h` the screen's right laid on it — ⭐⭐⭐ (eighth pass) snapped to the
+ * world's x or z on a level one — (latched by the caller) and `v` square to it in the plane. ⛔ (second pass) the gizmo moved along the orbit's step laid on the face — on an oblique view the lines and the steps came out tilted.
  */
 export function faceAxes(n: Vec3, right: Vec3): { readonly h: Vec3; readonly v: Vec3 } {
   if (isWall(n)) {
@@ -443,7 +500,9 @@ export function faceAxes(n: Vec3, right: Vec3): { readonly h: Vec3; readonly v: 
     const v = onPlane([0, 1, 0], n) ?? normalize(cross(n, h)) ?? [0, 1, 0];
     return { h, v };
   }
-  const h = onPlane(right, n) ?? onPlane([1, 0, 0], n) ?? [0, 0, 1];
+  const r = onPlane(right, n) ?? onPlane([1, 0, 0], n) ?? [0, 0, 1];
+  // ⭐⭐⭐ (eighth pass) a level top / bottom: `h` the world's x or z nearer the screen's right (⛔ the right itself: a green section at any angle over the top)
+  const h: Vec3 = Math.abs(n[1]) > 0.999 ? (Math.abs(r[0]) >= Math.abs(r[2]) ? [r[0] >= 0 ? 1 : -1, 0, 0] : [0, 0, r[2] >= 0 ? 1 : -1]) : r;
   return { h, v: normalize(cross(n, h)) ?? [0, 0, 1] };
 }
 

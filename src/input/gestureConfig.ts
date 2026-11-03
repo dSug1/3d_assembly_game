@@ -455,6 +455,8 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-03, the owner: *"ignore gaps narrower than a slider value"*) the shadow gizmo's gaps between parts narrower than this bridged (mm ON THE
    * ASSEMBLY — a place on it, as the edge margin; ⛔ the ride over a protrusion, `faceSpanRideMm`, deleted: a step of the shadow is a jump) */
   shadowBridgeMm: number;
+  /** ⭐⭐⭐ (2026-11-03, eighth pass) a face standing deeper than this (mm) from its neighbour on the base is NOT CONNECTED: out of the shadow (the main face's flood) */
+  shadowStepMm: number;
   orbitTurnCapDegMm: number;
   /** ⭐⭐ (2026-10-19) …and on any other curve (a vertical face, no face): the view between rings 2 and 3 slowed to this (°/mm). */
   orbitTurnCapVerticalDegMm: number;
@@ -872,6 +874,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceSpanZoneVPct: 25,
   faceSpanZoneMinVCm: 3,
   shadowBridgeMm: 30, // ⭐⭐⭐ (2026-11-03) the owner chose 30 mm
+  shadowStepMm: 60, // ⭐⭐⭐ (2026-11-03, eighth pass) the orbit shell's offset: Scene_1's protrusions (~41 mm) kept, Piece45's side 20 cm behind the painting's cut off
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
   pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
@@ -1034,6 +1037,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);
   if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
   if (!(cfg.shadowBridgeMm >= 0 && cfg.shadowBridgeMm <= 100)) throw new Error(`shadowBridgeMm (${cfg.shadowBridgeMm}) must be in [0, 100] mm.`);
+  if (!(cfg.shadowStepMm >= 5 && cfg.shadowStepMm <= 500)) throw new Error(`shadowStepMm (${cfg.shadowStepMm}) must be in [5, 500] mm.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);

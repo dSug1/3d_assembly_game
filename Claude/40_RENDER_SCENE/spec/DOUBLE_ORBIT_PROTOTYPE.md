@@ -2466,3 +2466,10 @@ edges without the camera view being too slanted … but I like the smooth transi
   regions, the glued faces, the wraps onto any face, the ride and the release deleted. → `queue_notes/FACE_SPAN_2026-11-02.md`, seventh pass. 1661 vectors.
   ⛔ No device close.
 
+## 2026-11-03 — on 1.0.92-: THE WORLD'S PLANES, THE MAIN FACE (the face-span's eighth pass)
+
+* ⭐⭐⭐ The owner: *"If one face is not connected, it should not be included in the section"*; *"I do not want sections which plan is not aligned with … the
+  three plans which define x y z axis in world coordinates"*; *"valid both for face-span and orbit from far distances"* — the six bases are the world's ±x,
+  ±z, ±y, a top's axes the world's x and z; the shadow keeps only the main face (a step deeper than `shadowStepMm` 60 mm cuts a face off). ⏳ Other planes
+  later, for a less box-like assembly. → `queue_notes/FACE_SPAN_2026-11-02.md`, eighth pass. 1664 vectors. ⛔ No device close.
+

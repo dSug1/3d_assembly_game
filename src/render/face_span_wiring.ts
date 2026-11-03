@@ -20,7 +20,6 @@ import { frameSteps, fromFrame, holdToScreen, rollSense, screenDir, signOnScreen
 import { orbitDegPerMm } from "../input/follow_camera";
 import { pitchOfV } from "../input/assembly_orbit";
 import {
-  boxDirs,
   fromP2,
   isWall,
   nearestCovered,
@@ -52,6 +51,7 @@ import {
   type SpanMotion,
   type SpanPlane,
   type Tri,
+  WORLD_DIRS,
 } from "../input/face_span";
 import { gizmoShare } from "../input/orbit_shell";
 import { faceTrianglesWorld } from "./hover_wiring";
@@ -130,7 +130,7 @@ export interface SpanState {
   slid: boolean;
 }
 
-/** ⭐ The placed parts' faces (normal, triangles on the model pose) and owners, the parts as closed triangle sets, the box's six directions — per placed set. */
+/** ⭐ The placed parts' faces (normal, triangles on the model pose) and owners, the parts as closed triangle sets, the six bases (the world's) — per placed set. */
 export function spanFacesOf(st: SceneState): NonNullable<SceneState["spanFaces"]> {
   const ids: string[] = [];
   for (const [mesh, id] of st.idOf) if (goalLocked(id, st.goalCommit, true) && mesh.isEnabled()) ids.push(id);
@@ -158,17 +158,17 @@ export function spanFacesOf(st: SceneState): NonNullable<SceneState["spanFaces"]
   });
   const partIds = [...by.keys()];
   const parts = partIds.map((id) => by.get(id)!);
-  st.spanFaces = { key, faces, owners, partIds, parts, dirs: boxDirs(parts.flatMap((t) => t.flatMap((x) => [...x]))) };
+  st.spanFaces = { key, faces, owners, partIds, parts, dirs: WORLD_DIRS };
   st.spanShadows.clear();
   return st.spanFaces;
 }
 
-/** ⭐ The shadow on the base `n` (one of the box's), per placed set and bridge (`shadowBridgeMm`); `null`: no parts. */
+/** ⭐ The shadow on the base `n` (one of the world's six), per placed set, bridge (`shadowBridgeMm`) and step (`shadowStepMm`: its main face only); `null`: no parts. */
 function shadowOf(st: SceneState, n: Vec3): ShadowMap | null {
   const sf = spanFacesOf(st);
-  const key = `${n.map((x) => x.toFixed(6)).join(",")}|${st.cfg.shadowBridgeMm}`;
+  const key = `${n.map((x) => x.toFixed(6)).join(",")}|${st.cfg.shadowBridgeMm}|${st.cfg.shadowStepMm}`;
   if (st.spanShadows.has(key)) return st.spanShadows.get(key)!;
-  const m = shadowMap(n, sf.parts, st.cfg.shadowBridgeMm / 1000);
+  const m = shadowMap(n, sf.parts, st.cfg.shadowBridgeMm / 1000, 0.004, st.cfg.shadowStepMm / 1000);
   st.spanShadows.set(key, m);
   return m;
 }
@@ -617,7 +617,7 @@ export function spanLinesFrame(st: SceneState): void {
   }
   const p = sp.plane;
   const at = sp.motion.at;
-  const key = `${p.n.map((x) => x.toFixed(4)).join(",")}|${st.cfg.shadowBridgeMm}|${at[0].toFixed(5)},${at[1].toFixed(5)}|${sp.eYaw.map((x) => x.toFixed(3)).join(",")}|${sp.ePitch.map((x) => x.toFixed(3)).join(",")}`;
+  const key = `${p.n.map((x) => x.toFixed(4)).join(",")}|${st.cfg.shadowBridgeMm}|${st.cfg.shadowStepMm}|${at[0].toFixed(5)},${at[1].toFixed(5)}|${sp.eYaw.map((x) => x.toFixed(3)).join(",")}|${sp.ePitch.map((x) => x.toFixed(3)).join(",")}`;
   if (st.spanLines !== null && key === st.spanLinesKey) {
     st.spanLines.isVisible = true;
     return;
