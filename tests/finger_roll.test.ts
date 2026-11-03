@@ -13,10 +13,11 @@ import { fingerOnAxes, screenDir, signOnScreen } from "../src/input/orbit_frame"
 const code = (p: string): string => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
 
 /**
- * The orbit drag's own terms (`pointer_wiring.ts`): a yaw amount `y` (as a dx) moves the gizmo along +yawW by `y`, a pitch amount `p` (as a dy) along −pitchW
- * — so the signs' rule (`sign.yaw · dx`, `sign.v · dy`, `signOnScreen` on the screen's right and up) puts a dx on the screen's right and a finger up on its up.
+ * The orbit drag's own terms (`pointer_wiring.ts`), MEASURED in the app (2026-11-03): a yaw amount `y` (as a dx) moves the gizmo along +yawW by `y`, a pitch
+ * amount `p` (as a dy) along +pitchW — so the old signs' rule (`sign.yaw · dx`, `sign.v · dy`, `signOnScreen` on the screen's right and up) put a dx on the
+ * screen's right and a finger DOWN on its UP (2026-10-04's inverted dy). ⛔ The first build of `fingerOnAxes` modelled the pitch along −pitchW.
  */
-const gizmoStep = (yawW: Vec3, pitchW: Vec3, y: number, p: number): Vec3 => [yawW[0] * y - pitchW[0] * p, yawW[1] * y - pitchW[1] * p, yawW[2] * y - pitchW[2] * p];
+const gizmoStep = (yawW: Vec3, pitchW: Vec3, y: number, p: number): Vec3 => [yawW[0] * y + pitchW[0] * p, yawW[1] * y + pitchW[1] * p, yawW[2] * y + pitchW[2] * p];
 
 describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (2026-11-03)", () => {
   // a camera looking down-forward; the gizmo on a wall: its level line and its vertical
@@ -50,15 +51,15 @@ describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (202
     }
   });
 
-  it("⛔ the signs read before a half turn and kept through it: a finger down sends the gizmo up the screen — the defect", () => {
+  it("⛔ the signs read before a half turn and kept through it: a dx sends the gizmo left on the screen — the defect", () => {
     const r0 = right(up0);
     const sg = { yaw: signOnScreen(1, yawW, r0), v: signOnScreen(1, pitchW, up0) };
     const up = rolled(180);
-    const w = gizmoStep(yawW, pitchW, sg.yaw * 0, sg.v * 1); // finger down
-    expect(-dot(w, up)).toBeLessThan(0); // on the screen, up
+    const w = gizmoStep(yawW, pitchW, sg.yaw * 1, sg.v * 0); // finger right
+    expect(dot(w, right(up))).toBeLessThan(0); // on the screen, left
   });
 
-  it("⭐ where the axes lie along the screen's, exactly the signs' rule (the feel unchanged)", () => {
+  it("⭐⭐⭐ (the owner: *\"dy goes down and gizmo goes up\"*) where the axes lie along the screen's: the dx the signs' rule, the dy REVERSED from it — with the finger", () => {
     const up: Vec3 = [0, 1, 0];
     const r: Vec3 = [1, 0, 0];
     for (const s of [1, -1] as const) {
@@ -69,7 +70,7 @@ describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (202
       for (const [dx, dy] of fingers) {
         const f = fingerOnAxes(dx, dy, a.yaw, a.pitch);
         expect(f.yaw).toBeCloseTo(sg.yaw * dx, 12);
-        expect(f.pitch).toBeCloseTo(sg.v * dy, 12);
+        expect(f.pitch).toBeCloseTo(-sg.v * dy, 12);
       }
     }
   });
@@ -86,7 +87,7 @@ describe("⭐⭐⭐ the finger on the gizmo's axes as the screen shows them (202
 
   it("⭐⭐⭐ wired: the orbit drag's dx and dy laid on the axes (not the approach's dy); the axes read each frame, held through a zenith roll", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const fd = ax !== null ? fingerOnAxes(db.dx, db.dy, ax.yaw, ax.pitch) : { yaw: sg.yaw * db.dx, pitch: sg.v * db.dy };");
+    expect(p).toContain("const fd = ax !== null ? fingerOnAxes(db.dx, db.dy, ax.yaw, ax.pitch) : { yaw: sg.yaw * db.dx, pitch: (asmOn ? -sg.v : sg.v) * db.dy };");
     expect(p).toContain("const ax = asmOn && !shiftApproach && !dxOnly ? st.asmAxes : null;");
     expect(p).toContain("if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
     const w = code("render/face_span_wiring.ts");

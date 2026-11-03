@@ -2451,3 +2451,9 @@ edges without the camera view being too slanted … but I like the smooth transi
   waits); a roll ended in a drag is not rolled straight back until the lift. ⛔ `signHold` deleted. → `queue_notes/FACE_SPAN_2026-11-02.md`, fifth pass.
   1663 vectors. ⛔ No device close.
 
+## 2026-11-03 (later) — on 1.0.90-: the dy with the finger around the assembly (the face-span's sixth pass)
+
+* ⛔ *"dx goes to the right and gizmo goes to the left"*, *"dy goes down and gizmo goes up"* (the glass, after turns and rolls): the fifth pass laid the pitch
+  the wrong way (measured: a pitch amount moves the gizmo along +pitchW). Fixed, and **2026-10-04's inverted dy is gone around the assembly** — finger
+  down, the gizmo down. → `queue_notes/FACE_SPAN_2026-11-02.md`, sixth pass. 1663 vectors. ⛔ No device close.
+
