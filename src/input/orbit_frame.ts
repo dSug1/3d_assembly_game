@@ -203,14 +203,15 @@ export function screenDir(stepW: Vec3, right: Vec3, up: Vec3, minShare = 0.15): 
  * ⭐⭐⭐ (2026-11-03, the owner: *"Make sure that after a camera roll, the delta position direction on the screen and the gizmo direction are always the
  * same. Blend that properly during the camera roll"*) — **THE FINGER ON THE GIZMO'S AXES AS THE SCREEN SHOWS THEM**: a finger's step (`dx` right, `dy`
  * down, px) laid onto the screen directions (`screenDir`, (right, up)) of the gizmo's steps for a +yaw (`yawS`) and a +pitch (`pitchS`) of the orbit —
- * the yaw and pitch amounts in the orbit drag's own terms (the yaw's as a dx, the pitch's as a dy). The gizmo then goes along the finger's own shadow on
- * its two axes: never against the finger on the screen, through a roll whatever its angle (a quarter turn in, a dx drives the pitch), and exactly the
- * signs' rule (`signOnScreen`) where the axes lie along the screen's.
+ * the yaw and pitch amounts in the orbit drag's own terms (each moves the gizmo along its step: the yaw's as a dx, the pitch's as a dy). The gizmo then
+ * goes along the finger's own shadow on its two axes: WITH the finger on the screen, through a roll whatever its angle (a quarter turn in, a dx drives the
+ * pitch). ⭐⭐⭐ (2026-11-03, the owner on the glass: *"dy goes down and gizmo goes up"*) a dy too — ⛔ 2026-10-04's inverted dy (finger down, the gizmo up)
+ * is gone around the assembly: ⛔ the first build laid the pitch the other way, and once the axes turned on the screen that spoiled the dx as well.
  */
 export function fingerOnAxes(dx: number, dy: number, yawS: readonly [number, number], pitchS: readonly [number, number]): { yaw: number; pitch: number } {
   const fr = dx;
   const fu = -dy;
-  return { yaw: fr * yawS[0] + fu * yawS[1], pitch: -(fr * pitchS[0] + fu * pitchS[1]) };
+  return { yaw: fr * yawS[0] + fu * yawS[1], pitch: fr * pitchS[0] + fu * pitchS[1] };
 }
 
 /** ⭐ The angle between two ups laid square to the view `dir` (rad); π if either is along it. */

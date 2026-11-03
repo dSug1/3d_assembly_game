@@ -325,7 +325,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // through a roll the gizmo never goes against the finger — ⛔ the signs, read before a roll and kept through it, sent the piece out on the far side of
     // a bottom with its dy reversed); the signs' rule where they lie along the screen's
     const ax = asmOn && !shiftApproach && !dxOnly ? st.asmAxes : null;
-    const fd = ax !== null ? fingerOnAxes(db.dx, db.dy, ax.yaw, ax.pitch) : { yaw: sg.yaw * db.dx, pitch: sg.v * db.dy };
+    // (before the first frame's axes: the signs — around the assembly a dy with the finger too, `fingerOnAxes`)
+    const fd = ax !== null ? fingerOnAxes(db.dx, db.dy, ax.yaw, ax.pitch) : { yaw: sg.yaw * db.dx, pitch: (asmOn ? -sg.v : sg.v) * db.dy };
     const dyPx = (dxOnly || shiftApproach ? 0 : fd.pitch) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
     const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fd.pitch) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
