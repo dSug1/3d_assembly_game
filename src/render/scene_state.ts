@@ -510,7 +510,7 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO (`input/face_span.ts`, `render/face_span_wiring.ts`; `null`: the far orbit) */
   span: import("./face_span_wiring").SpanState | null;
   /** ⭐⭐⭐ (2026-11-02) the placed parts' faces (normal, triangles on the model pose) and their owners — per placed set */
-  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[]; readonly partIds: readonly string[]; readonly parts: readonly (readonly import("../input/face_span").Tri[])[]; readonly dirs: readonly import("../core/vec").Vec3[] } | null;
+  spanFaces: { readonly key: string; readonly faces: readonly import("../input/face_span").SpanFace[]; readonly owners: readonly { readonly id: string; readonly faceId: string }[]; readonly partIds: readonly string[]; readonly parts: readonly (readonly import("../input/face_span").Tri[])[]; readonly dirs: readonly import("../core/vec").Vec3[]; readonly ext: import("../core/vec").Vec3 } | null;
   /** ⭐⭐⭐ (2026-11-03) the shadows on the box's bases, per placed set (cleared with `spanFaces`) and bridge */
   spanShadows: Map<string, import("../input/face_span").ShadowMap | null>;
   /** ⭐⭐⭐ (2026-11-02) the face-span's red and green lines (one mesh, a fixed vertex count, updated in place) and what they were drawn for */

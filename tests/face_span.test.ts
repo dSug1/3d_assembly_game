@@ -45,7 +45,8 @@ import {
   spanAxisStep,
   faceAxes,
   axisSense,
-  greenPaceOf,
+  loopPace,
+  boxExtent,
   edgeShare,
   shownDir,
   calmWeight,
@@ -177,7 +178,7 @@ describe("⭐⭐⭐ (2026-11-03, eighth pass) THE WORLD'S SIX BASES — the wrap
   it("⭐⭐⭐ the bases are the world's ±x, ±z, ±y — whatever the assembly's plan (⛔ seventh pass: its smallest rectangle — a plan turned 30° gave turned bases)", () => {
     expect(WORLD_DIRS).toEqual([[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]);
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("dirs: WORLD_DIRS };");
+    expect(w).toContain("dirs: WORLD_DIRS, ext: boxExtent(");
     expect(w).not.toContain("boxDirs");
   });
   it("⭐⭐⭐ a slanted face snaps to the nearest world base; the next base across the outline is the push's, never the base itself nor its opposite", () => {
@@ -197,7 +198,7 @@ describe("⭐⭐⭐ (2026-11-03, eighth pass) THE MAIN FACE — a face not conne
   const p42 = box([0.247, 0.404, -0.057], [0.289, 0.508, -0.011]);
   const p45 = box([0, 0.138, -0.092], [0.046, 0.242, -0.05]);
   const parts = [painting1.tris, p42.tris, p45.tris];
-  it("⭐⭐⭐ a step within `shadowStepMm` (60 mm) is the main face's — Piece42, 41 mm proud, a jump; Piece45's side, 20 cm deep, CUT OFF (⛔ seventh pass: the gizmo jumped onto it and back)", () => {
+  it("⭐⭐⭐ a step within `shadowStepMm` (60 mm here; the default 150 since the ninth pass) is the main face's — Piece42, 41 mm proud, a jump; Piece45's side, 20 cm deep, CUT OFF (⛔ seventh pass: the gizmo jumped onto it and back)", () => {
     const m = shadowMap([1, 0, 0], parts, 0.03, 0.004, 0.06)!;
     const P = (y: number, z: number) => toP2(m.plane, [0, y, z]);
     expect(shadowAt(m, P(0.3, -0.03))!.h).toBeCloseTo(-0.041, 9); // the painting's side
@@ -275,9 +276,14 @@ describe("⭐⭐⭐ the gizmo's step — ff2fca2's relation: dx along the face's
     expect(s[0]).toBeCloseTo(0.05 * 0.17, 12);
     expect(s[1]).toBeCloseTo(0.02 * 0.283, 12);
     expect(axisSense(1, ax.h, [0.1, 0, 0.99])).toBe(1); // near square: kept
-    // a 0.49 m × 0.033 m painting: the green loop's pace ≈ 0.167 m/rad (ff2fca2: `greenPace`)
+    // ⭐⭐⭐ (ninth pass) the paces the LOOPS': a 0.49 × 0.5 × 0.033 m painting — round it at a height (dx on a wall) its box's plan perimeter / 2π, over
+    // its top and under it (dy on the front) its thin section's perimeter / 2π (⛔ the radius, 0.283 m/rad: a 1.03 m loop went round in 208° of orbit)
     const pts: Vec3[] = [[-0.24, 0, -0.05], [0.25, 0, -0.05], [0.25, 0, -0.017], [-0.24, 0, -0.017], [0, 0.5, -0.03]];
-    expect(greenPaceOf(pts)).toBeCloseTo((2 * 0.49 + 2 * 0.033) / (2 * Math.PI), 12);
+    const ext = boxExtent(pts);
+    near(ext, [0.49, 0.5, 0.033]);
+    expect(loopPace([1, 0, 0], [0, 0, -1], ext)).toBeCloseTo((2 * 0.49 + 2 * 0.033) / (2 * Math.PI), 12);
+    expect(loopPace([0, 1, 0], [0, 0, -1], ext)).toBeCloseTo((2 * 0.5 + 2 * 0.033) / (2 * Math.PI), 12);
+    expect(loopPace([0, 0, 1], [0, 1, 0], ext)).toBeCloseTo((2 * 0.5 + 2 * 0.033) / (2 * Math.PI), 12); // the same loop seen from its top
     expect(spanMmOf((5.1 * Math.PI) / 180, 0, 5.1)).toBeCloseTo(1, 12);
   });
   it("⭐⭐ clamped to the shadow's outline: a push past the edge holds it ON the edge, slides along it, and is CAUGHT (mm of finger); one step back moves at once", () => {
@@ -363,10 +369,10 @@ describe("⭐⭐⭐ (2026-11-03, eighth pass) RANDOM LONG TRAVELS — the jumps 
     expect(w).toContain("if (sp.input.from === null) sp.input.from = { yaw: yaw0, v: v0 };");
     expect(w).toContain("st.orbit.reset(from.yaw + dy * found, from.v + (st.orbit.elevation - from.v) * found);");
   });
-  it("⭐⭐⭐ a wrap lands NEXT to the gizmo or not at all (⛔ under Piece42's bottom edge the bottom's nearest point was the painting's corner 40 cm below)", () => {
+  it("⭐⭐⭐ a wrap lands NEXT to the gizmo or not at all (⛔ under Piece42's bottom edge the bottom's nearest point was the painting's corner 40 cm below) — ⭐⭐⭐ (ninth pass) ON ITS SECTION", () => {
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("return next === null || !wrapLands(st, sp, at, next) ? null : { normal: next };");
-    expect(w).toContain("return Math.hypot(w[0] - l.g[0], w[1] - l.g[1], w[2] - l.g[2]) <= SPAN_WRAP_REACH_M;");
+    expect(w).toContain("return next === null || wrapLanding(st, sp, at, next, D) === null ? null : { normal: next };");
+    expect(w).toContain("for (let t = 0; t <= SPAN_WRAP_REACH_M + 1e-9; t += 0.001) {");
     expect(w).toContain("const SPAN_WRAP_REACH_M = 0.06;");
   });
   it("⭐⭐⭐ the orbit gone over the base's edge carries the gizmo only when AHEAD of it and from near the outline (⛔ a lagging orbit carried it straight back — round and back every few frames)", () => {
@@ -374,12 +380,35 @@ describe("⭐⭐⭐ (2026-11-03, eighth pass) RANDOM LONG TRAVELS — the jumps 
     expect(w).toContain("if (toward !== null && !lagging) {");
     expect(w).toContain("const SPAN_BEHIND_REACH_M = 0.06;");
     expect(w).toContain("const SPAN_BEHIND_DEEP_COS = -0.3;");
-    expect(w).toContain("sp.cameFrom = sp.plane.n;");
+    expect(w).toContain("sp.cameFrom = n0;");
   });
   it("⭐⭐⭐ the calm's shares FOLLOW their targets, a whole swing over 10 mm of finger (⛔ read at once: a run's end jumped at Piece44's column, the shown pitch 5.5° in a frame, the camera 15 cm)", () => {
     const w = code("render/face_span_wiring.ts");
     expect(w).toContain("const SHARE_SLEW_MM = 10;");
     expect(w).toContain("sp.shareH = follow(sp.shareH, shareOf(");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-03, ninth pass) ONE INPUT, ONE LOOP — the owner: *\"when I keep on with one delta position input (same dx or dy input direction forever), I expect the orbit to continue always in the same direction and around the same section (unless it is blocked by a camera roll, which rightly requires an inversion of the input direction to continue the same orbit or unless it is blocked by a discontinuity belonging to this initial section contour)\"*", () => {
+  const w = code("render/face_span_wiring.ts");
+  it("⭐⭐⭐ the finger's axes LATCHED for a drag and its coast, each a WHOLE screen axis (⛔ re-read every frame: the camera swung round saw the level axis end-on, the dx went to the pitch; ⛔ a blend in the swing band sent a pure dx to both)", () => {
+    expect(w).toContain("if (spanDragging(st) && st.asmAxes !== null && !rolled) return;");
+    expect(w).toContain("return st.orbitMotion !== null || st.orbitInertia.coasting;");
+    expect(w).toContain("h === null ? null : { dir: [Math.round(Math.cos((h.c * Math.PI) / 2)), Math.round(Math.sin((h.c * Math.PI) / 2))], c: h.c };");
+  });
+  it("⭐⭐⭐ a zenith roll REVERSES each finger axis (a half turn of the picture) — the same finger holds, the reversed one goes on round the same loop (⛔ read off the rolled picture: the axes swapped screens, the dy took the yaw)", () => {
+    expect(w).toContain("st.asmAxes = { yaw: [-w.yaw[0], -w.yaw[1]], pitch: [-w.pitch[0], -w.pitch[1]], yawC: turn(w.yawC), pitchC: turn(w.pitchC) };");
+  });
+  it("⭐⭐⭐ round an edge the PLANE carried over — the moving axis onto the old normal's opposite, the other kept; the senses the orbit's (⛔ the new base's axes read again: the loop turned onto another plane)", () => {
+    expect(w).toContain("const Fnew: Vec3 = [-n0[0] * s, -n0[1] * s, -n0[2] * s];");
+    expect(w).not.toContain("const ax = faceAxes(map.plane.n, screenAxes(st)?.right ?? sp.eH);");
+    expect(w).toContain("if (!spanDragging(st)) spanSenses(st, sp);");
+  });
+  it("⭐⭐⭐ the carry of a gizmo the orbit went past only along its MOVING axis (⛔ along the piece's direction laid on the base: the held coordinate moved)", () => {
+    expect(w).toContain("const mv = Math.abs(dYaw * paceH) >= Math.abs(dPitch * paceV) ? sp.eH : sp.eV;");
+  });
+  it("⭐⭐⭐ held at its section's outline, the ORBIT held too — but over a thin top's far edge, waiting for the zenith (⛔ the orbit went on alone over the top while the gizmo waited at a notch)", () => {
+    expect(w).toContain("if (res.held && !zenithWait && from !== null) {");
   });
 });
 
@@ -410,7 +439,8 @@ describe("⭐⭐⭐ wired", () => {
     // a part under a pure dx took the gizmo 16 cm down with it
     expect(w).toContain("const dYaw = sp.input.frame === frame ? sp.input.yaw : 0;");
     expect(w).toContain("const dPitch = sp.input.frame === frame ? sp.input.pitch : 0;");
-    expect(w).toContain("const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, sp.paceH, st.asm.radius, sp.eH, sp.eV, sp.sh, sp.sv));");
+    expect(w).toContain("const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, paceH, paceV, sp.eH, sp.eV, sp.sh, sp.sv));");
+    expect(w).toContain("const paceV = loopPace(sp.eV, pl.n, sp.ext);");
     // the depth the shadow's at once (a jump), the next base the box's along the push
     expect(w).toContain("const hit = shadowAt(sp.map, sp.motion.at);");
     expect(w).not.toContain("rideStep");
@@ -452,7 +482,7 @@ describe("⭐⭐⭐ wired", () => {
     expect(c).toContain("faceSpanCatchMm: 3,");
     expect(c).toContain("faceSpanRollMm: 16,");
     expect(c).toContain("shadowBridgeMm: 30,");
-    expect(c).toContain("shadowStepMm: 60,");
+    expect(c).toContain("shadowStepMm: 150,");
   });
 });
 

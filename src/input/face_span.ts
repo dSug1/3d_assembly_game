@@ -5,7 +5,7 @@
  * ignore this face and the gizmo shall behave like a shadow (ie jumping over the discontinuity). Also, a slanted face shall behave as its projection … Also,
  * no tilt of the curve"*) — **THE SHADOW GIZMO**, close in and far out alike: the gizmo is a POINT ON A BASE — one of the six directions of the assembly's box
  * (`WORLD_DIRS`: the world's ±x, ±z, ±y since the eighth pass) — moved by the finger's yaw and pitch steps along the base's LEVEL AXES
- * (ff2fca2's relation: `faceAxes`, `axisSense`, `spanAxisStep`, `greenPaceOf`) in straight lines; its depth the SHADOW's (`shadowMap`, `shadowAt`: the
+ * (ff2fca2's relation: `faceAxes`, `axisSense`, `spanAxisStep`; the paces the loop's, `loopPace`) in straight lines; its depth the SHADOW's (`shadowMap`, `shadowAt`: the
  * frontmost surface along the base's normal, a gap narrower than the bridge filled) — a step in it is a jump; clamped to the shadow's outline (`clampSlide`),
  * caught there, then onto the next base at 90° (`spanMove`, `snapDir`). Over a top / bottom the roll of branch 1.0.83 at the zenith (`zenithCrossing`,
  * `zenithRollStep`). The red and green lines: the shadow's profile through the gizmo in the level and the vertical plane (`shadowRun`, `spanPolyline` — a step a
@@ -13,7 +13,6 @@
  * Textbook geometry only: barycentric heights, a raster's one-dimensional closing, a flood fill, bisection.
  */
 import { cross, dot, normalize, type Vec3 } from "../core/vec";
-import { convexHull2D } from "./hover";
 
 export type P2 = readonly [number, number];
 export type Tri = readonly [Vec3, Vec3, Vec3];
@@ -527,16 +526,28 @@ export function spanAxisStep(dYaw: number, dPitch: number, paceH: number, paceV:
   return [h[0] * a + v[0] * b, h[1] * a + v[1] * b, h[2] * a + v[2] * b];
 }
 
-/** ⭐ ff2fca2's dx pace: the perimeter of the placed parts' horizontal convex hull / 2π (m per radian of yaw) — the green loop's, taken at the hull. */
-export function greenPaceOf(points: readonly Vec3[]): number {
-  const hull = convexHull2D(points.map((p) => [p[0], p[2]] as [number, number]));
-  let per = 0;
-  for (let i = 0; i < hull.length; i++) {
-    const a = hull[i]!;
-    const b = hull[(i + 1) % hull.length]!;
-    per += Math.hypot(b[0] - a[0], b[1] - a[1]);
+/** ⭐ The placed parts' box: its size along the world's x, y, z (m). */
+export function boxExtent(points: readonly Vec3[]): Vec3 {
+  if (points.length === 0) return [0, 0, 0];
+  const lo: [number, number, number] = [Infinity, Infinity, Infinity];
+  const hi: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (const p of points) for (let k = 0; k < 3; k++) {
+    lo[k] = Math.min(lo[k]!, p[k]!);
+    hi[k] = Math.max(hi[k]!, p[k]!);
   }
-  return per / (2 * Math.PI);
+  return [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-03, the ninth pass, the owner: *"I want the sections to be a plane which the gizmo will loop over and over if the delta position is the same"*)
+ * — **THE LOOP'S PACE** (m per radian of the orbit) for the gizmo moving along `e` on the base `n`: the perimeter of the assembly's box in the loop's plane
+ * (spanned by `e` and `n`) / 2π — one loop of the gizmo round its section is one turn of the orbit, for the dx and the dy alike. ⛔ (third pass) the dy at the
+ * assembly's radius (ff2fca2's red chain): round the painting's thin dimension (a 1.03 m loop) the gizmo went round in 208° of orbit, ahead of the piece and
+ * the camera — the zenith never reached, the gizmo on the far face with the piece still on the near one.
+ */
+export function loopPace(e: Vec3, n: Vec3, ext: Vec3): number {
+  const along = (v: Vec3): number => Math.abs(v[0]) * ext[0] + Math.abs(v[1]) * ext[1] + Math.abs(v[2]) * ext[2];
+  return (along(e) + along(n)) / Math.PI;
 }
 
 // ───────────────────────────── the shown direction — the slide's calm in the middle of a face (fourth pass) ─────────────────────────────
