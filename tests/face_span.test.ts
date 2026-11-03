@@ -389,11 +389,13 @@ describe("⭐⭐⭐ wired", () => {
   });
   it("⭐⭐⭐ the screen wins on a settled picture — every frame in the face-span, at the release (⛔ `signAfter` carried an inversion out)", () => {
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("if (sp.zen === null && st.asmRoll === null && facing && !sp.signHold) spanScreenSigns(st, sp.plane.n);");
+    // ⭐⭐⭐ (2026-11-03, restated) mid-drag too, inside the zenith's cone too — only a roll under way waits (the finger turns with the picture meanwhile)
+    expect(w).toContain("if (!zenithRolling(st) && st.asmRoll === null && facing) spanScreenSigns(st, sp.plane.n);");
     // ⭐ facing: the frame's `dir` points from the look point TOWARD the camera (⛔ read as the view's: the rule never ran — measured, the signs stayed inverted)
     expect(w).toContain("const facing = scr !== null && scr.dir[0] * sp.plane.n[0] + scr.dir[1] * sp.plane.n[1] + scr.dir[2] * sp.plane.n[2] >= SPAN_FACING_COS;");
-    // ⭐ the one exception: a drag that rolled over a top keeps its sense until the finger lifts
-    expect(w).toContain("if (st.router.size === 0) sp.signHold = false;");
+    // ⛔ (2026-11-03) no drag keeps its sense through a roll until the lift (`signHold`): the piece came out on the far side with a dy reversed on the screen
+    expect(w).not.toContain("signHold");
+    expect(w).toContain("if (st.router.size === 0 && sp.zen !== null) sp.zen.block = false;");
     expect(w).not.toContain("signAfter(");
   });
   it("⭐⭐⭐ the zenith's roll: the drag's and the coast's steps, the up within the cone; an unfinished roll completes by time with the finger STILL", () => {

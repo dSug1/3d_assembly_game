@@ -14,7 +14,7 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import type { Vec3 } from "../core/vec";
 import { faceWorld } from "../core/object_model";
 import { goalLocked } from "../input/goal_lock";
-import { frameSteps, fromFrame, rollSense, signOnScreen } from "../input/orbit_frame";
+import { frameSteps, fromFrame, rollSense, screenDir, signOnScreen } from "../input/orbit_frame";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { pitchOfV } from "../input/assembly_orbit";
 import {
@@ -70,6 +70,11 @@ export interface SpanZenith {
   share: number;
   from: Vec3;
   sense: 1 | -1;
+  /** ⭐⭐⭐ (2026-11-03) a roll ended at its other end in this drag: the step back over the zenith is held until the finger lifts — the screen's sense
+   * reversed by the half turn, the same finger going on would roll it straight back (and again: the picture rocking) */
+  block: boolean;
+  /** the end (0 / 1) the roll under way started from */
+  start: number;
 }
 
 /** ⭐⭐⭐ (fourth pass) The calm of the shares comes in over this much travel after the engage (mm), or this long at rest (ms) — the far orbit's direction never jumps. */
@@ -126,8 +131,6 @@ export interface SpanState {
   calmRamp: number;
   /** a slide took the gizmo meanwhile (found again on its return) */
   slid: boolean;
-  /** a drag that went over a top through its roll keeps its sense until the finger lifts (⚠ else the screen's rule sends it straight back over the top) */
-  signHold: boolean;
 }
 
 /** ⭐ The placed parts' faces (normal, triangles on the model pose), owners and glued partners — per placed set. */
@@ -226,6 +229,39 @@ function screenAxes(st: SceneState): { right: Vec3; up: Vec3; dir: Vec3 } | null
   return { right: [d[1] * u[2] - d[2] * u[1], d[2] * u[0] - d[0] * u[2], d[0] * u[1] - d[1] * u[0]], up: u, dir: d };
 }
 
+/** ⭐ A zenith roll under way (the piece waits, the camera rolls). */
+function zenithRolling(st: SceneState): boolean {
+  const z = st.span?.zen ?? null;
+  return z !== null && z.share > 0 && z.share < 1;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-03) EACH FRAME, THE GIZMO'S AXES AS THE SCREEN SHOWS THEM (`screenDir`, `fingerOnAxes`): its steps for a +yaw and a +pitch — the face-span's
+ * along the face's level axes in their senses, far out the orbit's steps laid on the gizmo's face — on the picture shown, so the finger follows the picture
+ * through every roll (the screen's up's, a frame switch's). ⭐ HELD through a ZENITH roll: the piece waits there, nothing to follow on the screen, and the
+ * roll's drive is the finger as it was (⛔ turned with the picture, a dy stalled the roll at a quarter turn). An axis seen end-on keeps the one before.
+ */
+export function fingerAxesFrame(st: SceneState): void {
+  if (zenithRolling(st)) return;
+  const scr = screenAxes(st);
+  if (scr === null) return;
+  const sp = st.span;
+  let yawW: Vec3;
+  let pitchW: Vec3;
+  if (sp !== null) {
+    yawW = [sp.eH[0] * sp.sh, sp.eH[1] * sp.sh, sp.eH[2] * sp.sh];
+    pitchW = [sp.eV[0] * sp.sv, sp.eV[1] * sp.sv, sp.eV[2] * sp.sv];
+  } else {
+    const g = gizmoSteps(st, st.gizmoNormal ?? [0, 1, 0]);
+    yawW = g.yaw ?? g.yawW;
+    pitchW = g.pitch ?? g.pitchW;
+  }
+  const was = st.asmAxes;
+  const y = screenDir(yawW, scr.right, scr.up) ?? was?.yaw ?? null;
+  const p = screenDir(pitchW, scr.right, scr.up) ?? was?.pitch ?? null;
+  st.asmAxes = y !== null && p !== null ? { yaw: y, pitch: p } : was;
+}
+
 /** ⭐ The plane through face `i` at the point `g` (its own plane, `g` projected onto it). */
 function planeAt(sf: NonNullable<SceneState["spanFaces"]>, i: number, g: Vec3): SpanPlane {
   const f = sf.faces[i]!;
@@ -251,7 +287,7 @@ export function spanEngage(st: SceneState, g: Vec3, n: Vec3 | null, u: Vec3): bo
   const ride = coveredTop(solids, at);
   const ax = faceAxes(pl.n, screenAxes(st)?.right ?? [1, 0, 0]);
   const paceH = greenPaceOf(sf.faces.flatMap((f) => f.tris.flatMap((t) => [...t])));
-  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, shareH: 1, shareV: 1, calmRamp: 0, slid: false, signHold: false };
+  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, shareH: 1, shareV: 1, calmRamp: 0, slid: false };
   spanSenses(st, st.span);
   setGizmoFace(st, pl.n, sf.owners[i]!.id);
   st.lastVerdict = `face-span: on ${sf.owners[i]!.id}'s face — the gizmo moves on its coplanar faces (${region.members.length})`;
@@ -406,12 +442,14 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   sp.shareH = shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm);
   sp.shareV = cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1;
   sp.calmRamp = Math.min(1, sp.calmRamp + travel / CALM_RAMP_MM + (atRest ? dtMs / CALM_REST_MS : 0));
-  // ⭐⭐⭐ the screen wins — on a settled picture, the camera facing the hosting face (⛔ grazing it, from over the top, its up the face's turned over: the signs
-  // flipped mid-drag, back and forth)
+  // ⭐⭐⭐ the screen wins — on a settled picture (no roll under way), the camera facing the hosting face (⛔ grazing it, from over the top, its up the face's
+  // turned over: the signs flipped mid-drag, back and forth); ⭐⭐⭐ (2026-11-03) mid-drag too, inside the zenith's cone too, a roll just ended at once — ⛔ held
+  // until the lift: after the roll under a bottom the piece came out on the far side with a dy reversed on the screen. Whatever the signs,
+  // the finger is laid on the gizmo's axes as shown (`fingerAxesFrame`)
   const scr = screenAxes(st);
   const facing = scr !== null && scr.dir[0] * sp.plane.n[0] + scr.dir[1] * sp.plane.n[1] + scr.dir[2] * sp.plane.n[2] >= SPAN_FACING_COS; // `dir`: from the look point toward the camera
-  if (st.router.size === 0) sp.signHold = false;
-  if (sp.zen === null && st.asmRoll === null && facing && !sp.signHold) spanScreenSigns(st, sp.plane.n);
+  if (st.router.size === 0 && sp.zen !== null) sp.zen.block = false;
+  if (!zenithRolling(st) && st.asmRoll === null && facing) spanScreenSigns(st, sp.plane.n);
 }
 
 /** ⭐⭐ ONTO THE FACE ACROSS: its plane, region and tops; the gizmo where it stood, laid on it. */
@@ -462,7 +500,7 @@ function spanZenithKeep(st: SceneState, sp: SpanState, u: Vec3): void {
     if (back === null || from === null) return;
     const e: Vec3 = [-back[0], -back[1], -back[2]];
     const neg: Vec3 = [-from[0], -from[1], -from[2]];
-    sp.zen = { e, share: 0, from, sense: rollSense(from, neg, scr?.dir ?? [-n[0], -n[1], -n[2]]) };
+    sp.zen = { e, share: 0, from, sense: rollSense(from, neg, scr?.dir ?? [-n[0], -n[1], -n[2]]), block: false, start: 0 };
     return;
   }
   if (c < Math.cos(SPAN_ZENITH_CONE_RAD + ZENITH_EXIT_RAD) && (sp.zen.share === 0 || sp.zen.share === 1)) sp.zen = null;
@@ -488,9 +526,8 @@ export function spanZenithStep(st: SceneState, yaw0: number, v0: number, travelM
   if (z.share > 0 && z.share < 1) {
     // ⭐ mid-roll: the orbit held, the travel along the axis rolls (a dx: nothing)
     st.orbit.reset(yaw0, v0);
-    const was = z.share;
     z.share = zenithRollStep(z.share, along, rollMm).share;
-    if (z.share !== was) sp.signHold = true;
+    rollEnded(st, z);
     st.orbitInertia.stop();
     st.hudDirty = true;
     return;
@@ -503,12 +540,22 @@ export function spanZenithStep(st: SceneState, yaw0: number, v0: number, travelM
   const k = cr === null ? 0 : cr.k;
   const dy = Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0));
   st.orbit.reset(yaw0 + dy * k, v0 + (st.orbit.elevation - v0) * k);
-  const was = z.share;
-  z.share = zenithRollStep(z.share, along * (1 - k), rollMm).share;
-  if (z.share !== was) sp.signHold = true;
   st.orbitInertia.stop();
-  st.lastVerdict = "face-span: over the top — the piece waits, the camera rolls (back to unroll)";
   st.hudDirty = true;
+  // ⭐⭐⭐ (2026-11-03) a roll ended in this drag: no roll straight back — held at the zenith (the finger the other way goes on; lifted, it may roll back)
+  if (z.block && st.router.size > 0) {
+    st.lastVerdict = "face-span: rolled — drag the other way on the screen to go on (lift, then back over the top to unroll)";
+    return;
+  }
+  z.start = z.share;
+  z.share = zenithRollStep(z.share, along * (1 - k), rollMm).share;
+  rollEnded(st, z);
+  st.lastVerdict = "face-span: over the top — the piece waits, the camera rolls (back to unroll)";
+}
+
+/** ⭐⭐⭐ (2026-11-03) A zenith roll ended at its OTHER end with a finger on the glass: the step back held until the lift (`SpanZenith.block`). */
+function rollEnded(st: SceneState, z: SpanZenith): void {
+  if ((z.share === 0 || z.share === 1) && z.share !== z.start && st.router.size > 0) z.block = true;
 }
 
 /** ⭐ The screen's up the zenith's roll shows (`null`: no roll latched). */

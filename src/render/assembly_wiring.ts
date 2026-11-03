@@ -29,7 +29,7 @@ import type { Quat, Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { SPAN_RELEASE_FACTOR, spanEngaged, spanEngageM } from "../input/face_span";
-import { spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanShownDir, spanZenithStep, spanZenithUp } from "./face_span_wiring";
+import { fingerAxesFrame, spanAfterSlide, spanEngage, spanFrame, spanLinesFrame, spanRelease, spanShownDir, spanZenithStep, spanZenithUp } from "./face_span_wiring";
 
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
@@ -548,6 +548,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
   screenUpFrame(st, dtMs);
+  fingerAxesFrame(st);
   sectionLinesFrame(st);
   spanLinesFrame(st); // ⭐⭐⭐ (2026-11-02) hidden out of the face-span
 }
@@ -593,6 +594,7 @@ function spanTail(st: SceneState, dtMs: number, d: number): void {
   const q = st.pieceQ;
   if (q !== null) framesFrame(st, orbitDirWorld(st, q.yaw, q.v), false);
   screenUpFrame(st, dtMs);
+  fingerAxesFrame(st);
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
   spanLinesFrame(st);
 }

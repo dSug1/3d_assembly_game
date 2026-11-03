@@ -555,6 +555,7 @@ export function createScene(
   st.asmSwitchMm = 0;
   st.asmOrbit = [1, 0, 0, 0];
   st.asmSign = { yaw: 1, v: 1 };
+  st.asmAxes = null;
   st.asmUp = null;
   st.asmRoll = null;
   st.asmShell = null;

@@ -2442,3 +2442,12 @@ edges without the camera view being too slanted … but I like the smooth transi
   apart (dy's on / off). The gizmo, the crossing, the zenith's roll: 46ee3a2's. Measured: the view off the normal in the middle of the front 10° on average
   (46ee3a2: 40°), the same at the edges; the gizmo leads (the piece 55 ms behind it).
 * Seven sliders in **CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE** → `queue_notes/FACE_SPAN_2026-11-02.md`, fourth pass. 1657 vectors. ⛔ No device close.
+
+## 2026-11-03 — on 1.0.90-: the finger on the gizmo's axes as the screen shows them (the face-span's fifth pass)
+
+* ⭐⭐⭐ The owner: *"after a camera roll, the delta position direction on the screen and the gizmo direction are always the same. Blend that properly during
+  the camera roll"* — each frame the gizmo's +yaw and +pitch steps are read as the picture shows them (`screenDir`) and the finger is laid onto them
+  (`fingerOnAxes`): never against the finger, through any roll; the signs' rule where the axes lie along the screen's. Held through a zenith roll (the piece
+  waits); a roll ended in a drag is not rolled straight back until the lift. ⛔ `signHold` deleted. → `queue_notes/FACE_SPAN_2026-11-02.md`, fifth pass.
+  1663 vectors. ⛔ No device close.
+
