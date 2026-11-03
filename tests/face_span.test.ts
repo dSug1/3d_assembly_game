@@ -27,6 +27,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { Vec3 } from "../src/core/vec";
+import { faceHeading } from "../src/input/orbit_frame";
 import {
   fromP2,
   heightOf,
@@ -347,6 +348,41 @@ describe("⭐⭐ the engage distance — now the calm's", () => {
   });
 });
 
+describe("⭐⭐⭐ (2026-11-03, eighth pass) RANDOM LONG TRAVELS — the jumps and the ping-pong found by the probe (face-span and far orbit)", () => {
+  it("⭐⭐⭐ the tilted orbit's heading SNAPPED to the world's x or z, its length kept: dx and dy along the gizmo's world axes (⛔ the camera's own heading: a pure dy under a bottom turned the piece toward −x while the gizmo went along z — 18 cm round onto the side and back)", () => {
+    const h = faceHeading(1, [0.5, -0.8, 0.33], [0.2, 0.6, 0.77]);
+    expect(h[0]).toBe(0);
+    expect(h[1]).toBe(0);
+    expect(h[2]).toBeCloseTo(Math.hypot(0.7, 1.1), 12);
+    const b = faceHeading(-1, [-0.9, 0.4, 0.1], [0.3, 0.9, -0.3]);
+    expect(b[2]).toBe(0);
+    expect(b[0]).toBeCloseTo(-Math.hypot(1.2, 0.4), 12);
+  });
+  it("⭐⭐⭐ the ORBIT held with a gizmo held by a part — the finger's step taken by neither (⛔ the orbit went on alone: past the face's edge the gizmo was carried 20 cm across it, the camera 1.4 m in a frame)", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("if (sp.input.from === null) sp.input.from = { yaw: yaw0, v: v0 };");
+    expect(w).toContain("st.orbit.reset(from.yaw + dy * found, from.v + (st.orbit.elevation - from.v) * found);");
+  });
+  it("⭐⭐⭐ a wrap lands NEXT to the gizmo or not at all (⛔ under Piece42's bottom edge the bottom's nearest point was the painting's corner 40 cm below)", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("return next === null || !wrapLands(st, sp, at, next) ? null : { normal: next };");
+    expect(w).toContain("return Math.hypot(w[0] - l.g[0], w[1] - l.g[1], w[2] - l.g[2]) <= SPAN_WRAP_REACH_M;");
+    expect(w).toContain("const SPAN_WRAP_REACH_M = 0.06;");
+  });
+  it("⭐⭐⭐ the orbit gone over the base's edge carries the gizmo only when AHEAD of it and from near the outline (⛔ a lagging orbit carried it straight back — round and back every few frames)", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("if (toward !== null && !lagging) {");
+    expect(w).toContain("const SPAN_BEHIND_REACH_M = 0.06;");
+    expect(w).toContain("const SPAN_BEHIND_DEEP_COS = -0.3;");
+    expect(w).toContain("sp.cameFrom = sp.plane.n;");
+  });
+  it("⭐⭐⭐ the calm's shares FOLLOW their targets, a whole swing over 10 mm of finger (⛔ read at once: a run's end jumped at Piece44's column, the shown pitch 5.5° in a frame, the camera 15 cm)", () => {
+    const w = code("render/face_span_wiring.ts");
+    expect(w).toContain("const SHARE_SLEW_MM = 10;");
+    expect(w).toContain("sp.shareH = follow(sp.shareH, shareOf(");
+  });
+});
+
 describe("⭐⭐⭐ wired", () => {
   it("⭐ the assembly's centre from the placed parts' vertices on their MODEL poses (⛔ bounding boxes read before the world matrices: (0, 0, 0), 0.2415)", () => {
     const a = code("render/assembly_wiring.ts");
@@ -467,8 +503,8 @@ describe("⭐⭐⭐ the fourth pass — the slide's calm in the middle of a face
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (st.span !== null) return spanShownDir(st.span, u, approachDistance(st.cfg, st.approach), spanEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), SPAN_RELEASE_FACTOR);");
     const w = code("render/face_span_wiring.ts");
-    expect(w).toContain("sp.shareH = shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm);");
-    expect(w).toContain("sp.shareV = cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1;");
+    expect(w).toContain("sp.shareH = follow(sp.shareH, shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm));"); // (eighth pass: followed, never at once)
+    expect(w).toContain("sp.shareV = follow(sp.shareV, cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1);");
     const m = code("render/tuning_menu.ts");
     const i = m.indexOf('title: "FACE-SPAN ORBIT SHARE"');
     expect(i).toBeGreaterThan(m.indexOf('title: "CAMERA ORBIT AROUND CENTER"'));
