@@ -2472,4 +2472,8 @@ edges without the camera view being too slanted … but I like the smooth transi
   three plans which define x y z axis in world coordinates"*; *"valid both for face-span and orbit from far distances"* — the six bases are the world's ±x,
   ±z, ±y, a top's axes the world's x and z; the shadow keeps only the main face (a step deeper than `shadowStepMm` 60 mm cuts a face off). ⏳ Other planes
   later, for a less box-like assembly. → `queue_notes/FACE_SPAN_2026-11-02.md`, eighth pass. 1664 vectors. ⛔ No device close.
+* ⭐⭐⭐ **Random long travels** (a headless probe, far out and close in): five flaws fixed — the orbit held with a gizmo held by a part, the tilted orbit's
+  heading snapped to the world's x / z (`faceHeading`), a wrap landing within 6 cm, no carry back for a lagging orbit, the calm's shares followed over 10 mm;
+  no jump of the piece or the camera left. ⏳ Open: rolls on walls off a top / bottom sideways, and the orbit's frame kept tilted after a pole through a long
+  drag → `FACE_SPAN_2026-11-02.md`, eighth pass, second part. 1669 vectors.
 

@@ -45,10 +45,16 @@ export function tiltQuat(kind: TiltKind, heading: Vec3): Quat {
  * ⭐⭐ (2026-11-02, the third audit's A1) THE FACE FRAME'S HEADING from the camera — its forward `f` and its screen up `up`, laid on the ground: over a top
  * `f + up` (looking down, the up is the way away), under a bottom `f − up` (looking up, the up's ground part points BACK: ⛔ `f + up` there is
  * `(cos a − sin a)·h` — nothing at 45°, reversed beyond: the frame's up flipped and the screen rolled uncontrollably under an overhang).
+ * ⭐⭐⭐ (2026-11-03, the face-span's eighth pass — the world's planes) SNAPPED to the world's x or z, its length kept: the tilted orbit's dx and dy go along
+ * the world's axes as the gizmo's do (`faceAxes`) — ⛔ at the camera's own heading a pure dy under a bottom turned the piece toward −x while the gizmo went
+ * along z: the two parted and the gizmo was carried 18 cm round onto the side, then back.
  */
 export function faceHeading(kind: TiltKind, f: Vec3, up: Vec3): Vec3 {
   const k = kind === -1 ? -1 : 1;
-  return [f[0] + k * up[0], 0, f[2] + k * up[2]];
+  const x = f[0] + k * up[0];
+  const z = f[2] + k * up[2];
+  const l = Math.hypot(x, z);
+  return Math.abs(x) > Math.abs(z) ? [Math.sign(x) * l, 0, 0] : [0, 0, Math.sign(z) * l];
 }
 
 /** ⭐ A direction into a frame `q` from the world, and back. */
