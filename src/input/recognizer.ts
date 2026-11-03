@@ -344,3 +344,37 @@ export class Recognizer<P> {
     };
   }
 }
+
+/**
+ * ⛔ (2026-11-02) moved here from `input/mode_toggle.ts`, deleted with the parts' translation, rotation and alignment (commit `d8134eb`).
+ *
+ * §1.3's tap test, in **one** place.
+ *
+ * ⛔ It was inlined in the camera-reset branch, and the toggle needs the identical question
+ * at a second site. ⭐ *"A tap is a tap whatever it lands on"* — that comment was already in
+ * the code, and two copies of the arithmetic would be two definitions free to disagree
+ * (`CONSTRAINTS` §4).
+ *
+ * ⚠ **A touchpoint that was CARRYING an object does not come through here**: it goes through
+ * the §1.3 recognizer, which has already recorded its tap in the shared `TapHistory`. That
+ * path reads the recognizer's own `TAP`/`DOUBLE_TAP` verdict instead — judging the same tap
+ * twice would corrupt the double-tap pairing for every consumer, the camera reset included.
+ *
+ * @param slopPx the slop already converted to pixels. ⚠ Converted by the CALLER, because
+ *   `mmToPx` needs the device and this file is engine-free and device-free.
+ */
+export function isTapRelease(
+  pressedT: number,
+  pressedX: number,
+  pressedY: number,
+  releaseT: number,
+  releaseX: number,
+  releaseY: number,
+  maxDurationMs: number,
+  slopPx: number,
+): boolean {
+  return (
+    releaseT - pressedT <= maxDurationMs &&
+    Math.hypot(releaseX - pressedX, releaseY - pressedY) <= slopPx
+  );
+}

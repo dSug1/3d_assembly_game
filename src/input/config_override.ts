@@ -63,7 +63,7 @@ function safeDecode(raw: string): string | null {
 /**
  * ⚠ `search` is the raw query string, with or without its leading `?`.
  * Unknown keys are REPORTED, not ignored — including ones that exist in the config
- * but are not numeric, so `axisMappingMode=direct` fails loudly rather than quietly.
+ * but are not numeric, so a non-numeric key fails loudly rather than quietly.
  *
  * ⛔⛔⛔ **AND THE RESULT IS VALIDATED HERE, WHICH IT WAS NOT UNTIL 2026-09-17.**
  * `validateGestureConfig` ran in `MotionTracker`'s constructor — and a `MotionTracker` is

@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { holdDecision, holdSwitch, holdTapMode, holdTapTapsYellow, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
-import { orbitModifiers } from "../src/input/mouse_second_touch";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 const DB = 3.5;
@@ -57,14 +56,16 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
   it("⭐⭐ the press: the right button or a finger with ONE other down is the SECOND touch (not on the orbited piece); held, a new press is the FIRST again; neither grabs", () => {
     const p = code("render/pointer_wiring.ts");
     // ⭐ (2026-10-11) the desktop's key is the second touch over the orbited piece too; a finger, never on it
-    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\|[\s\S]*?\(\(!onOrbited \|\| assemblyOn\(st\)\) &&\s*e\.pointerType !== "mouse" &&\s*\(\(st\.router\.outside\(\)\.length === 1 && st\.router\.objects\(\)\.length === 0\) \|\| partFirst\(st, e\.pointerId\) !== null\)\)\s*\? "SECOND"/);
-    expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
+    expect(p).toMatch(/: st\.hold !== null\s*\? st\.hold\.first === null && e\.pointerId !== st\.hold\.second\s*\? "FIRST"\s*: null\s*: e\.pointerId === MOUSE_SECOND_ID \|\| \(\(!onOrbited \|\| assemblyOn\(st\)\) && e\.pointerType !== "mouse" && st\.router\.outside\(\)\.length === 1\)\s*\? "SECOND"/);
+    // ⛔ (2026-11-02, the parts' translation and rotation deleted, `d8134eb`) no press holds a part: every press is the orbit's
+    expect(p).toContain("const routed = st.router.press(e.pointerId, s, null);");
+    expect(p).not.toMatch(/throughGreenBox|partFirst|rayHit/);
     // the pink face its press would take — a placed part only
     // ⛔ (2026-10-12, *"Remove the selection of pink face on the seated / placed parts"* — *"Remove the ctrl-alt raycast function in desktop"*) no pink face;
     // a finger's press on a PLACED part notes where (its tap moves the orbit centre); the key looks at nothing
     expect(p).not.toContain("pinkCandidate");
-    expect(p.replace(/\s+/g, " ")).toContain("const hitObj = e.pointerId === MOUSE_SECOND_ID || inBand || pick?.hit !== true || pick.pickedMesh === null ? undefined : st.idOf.get(pick.pickedMesh);");
-    expect(p).toContain("holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null && pick?.pickedMesh ? (st.idOf.get(pick.pickedMesh) ?? null) : null);"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(p).toContain("const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1);");
+    expect(p).toContain("holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null ? (hitId ?? null) : null);"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p).toMatch(/holdSecondPress\(st, e\.pointerId, s\.x, firstNow,/);
     expect(p).toMatch(/\} else if \(holdRole === "FIRST"\) holdFirstPress\(st, e\.pointerId, s\.x\);/);
     // ⛔ the old second-touch taps and the yaw / pitch are gone
@@ -92,9 +93,8 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(h.split("retargetGizmo(").length - 1).toBe(1); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(h.replace(/\s+/g, " ")).toContain("retargetGizmo(st, [h.centreAt[0], h.centreAt[1], h.centreAt[2]], h.centreNormal, h.centreHost ?? null);");
     const p = code("render/pointer_wiring.ts");
-    expect(p.replace(/\s+/g, " ")).toContain(
-      'if ( holdRelease( st, e.pointerId, isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)), ) === "SECOND" && !faceTapHere ) { st.hudDirty = true; return; }', // ⭐ (2026-10-28) a second finger's tap on the piece still picks its resting face
-    );
+    expect(p).toContain("const tapped = isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));");
+    expect(p.replace(/\s+/g, " ")).toContain('if (holdRelease(st, e.pointerId, tapped) === "SECOND" && !faceTapHere) { st.hudDirty = true; return; }'); // ⭐ (2026-10-28) a second finger's tap on the piece still picks its resting face
   });
 
   it("⛔⛔ (2026-10-11, *\"the object systematically translates towards the world's negative depth axis when second touch is lifted\"*) the way out and the way in read the ANCHOR, never the mesh's origin", () => {
@@ -122,9 +122,9 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(a).toContain('const modKey = (k: string) => k === "Alt" || k === "Control";');
     expect(a).toContain('if (modKey(e.key) && !e.repeat && !modDown && orbitSecond !== undefined && orbitSecond()) { modDown = true; apply({ type: "MOD_DOWN"');
     expect(a).toContain('if (modKey(e.key) && modDown && !e.altKey && !e.ctrlKey) { modDown = false; apply({ type: "MOD_UP"');
-    expect(a).toContain("mod: e.altKey || e.ctrlKey,");
+    expect(a).toContain("mod: e.altKey || e.ctrlKey }");
     // a lost focus lifts it (the way out, as a release)
-    expect(a).toContain('if (modDown) { modDown = false; apply({ type: "MOD_UP", button: -1, buttons: 0, shift: false');
+    expect(a).toContain('if (!modDown) return; modDown = false; apply({ type: "MOD_UP", button: -1, buttons: 0, x: 0, y: 0 });');
     // the wheel never zooms the page nor walks the history: blocked on the canvas, whatever key
     expect(a).toContain("const onWheel = (e: WheelEvent) => { if (onWheelNotches === undefined) return; e.preventDefault();");
     const p = code("render/pointer_wiring.ts");
@@ -135,7 +135,6 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     expect(p).not.toContain('holdRole === "FIRST" && e.pointerType === "mouse"');
     expect(p).not.toContain("if (onOrbited && e.pointerId === MOUSE_SECOND_ID && st.greenBox !== null) {"); // ⛔ (2026-10-12) the key's raycast removed
     expect(p).not.toMatch(/if \(pf !== null && selectRestingFace\(st, pf\.faceId\) && st\.hold !== null\) st\.hold\.shown = true;/); // ⛔ (2026-10-12) the key's raycast removed
-    expect(code("input/mouse_second_touch.ts")).toMatch(/return s\.shiftMade\s*\? \{ target: "SECOND", kind, x: s\.x, y: s\.y, anchorOnly: true \}/);
     // ⭐⭐ (2026-10-11, *"immediately when left button is pressed. Same for the mobile input"*) the pink face taken AT THE PRESS — the key
     // held + a left press (the way in started or not, never in a zoom), and a second finger's press on a part
     expect(code("render/hold_wiring.ts")).not.toContain("takePink"); // ⛔ (2026-10-12) no pink face from a part — the key takes nothing
@@ -160,28 +159,13 @@ describe("⭐ prototype — the pink gizmo's switch (2026-10-11, *\"add a slider
   });
 });
 
-describe("⭐⭐ prototype — the keyboard in the orbit (2026-10-11, *\"switch Space (and probably Shift + drag) off in the orbit. leave shift tap for the moment\"*)", () => {
-  it("⭐ orbiting: Space and Shift reach the mouse model as up — no Space HitFace, no Shift-made second touch; elsewhere unchanged", () => {
-    expect(orbitModifiers(true, true, true)).toEqual({ shift: false, space: false });
-    expect(orbitModifiers(false, true, true)).toEqual({ shift: true, space: true });
-    expect(orbitModifiers(false, false, true)).toEqual({ shift: false, space: true });
-    const a = code("render/mouse_adapter.ts");
-    expect(a).toMatch(/const keys = orbitModifiers\(/);
-    expect(a).toMatch(/shift: keys\.shift,/);
-    expect(a).toMatch(/space: keys\.space,/);
-    expect(a).toMatch(/if \(!e\.repeat && orbitModifiers\(/); // the SPACE event (`D155`'s freeze) not sent
-  });
-});
-
 describe("⭐⭐ prototype — a first touch held on a PLACED part is the held input's first touch (2026-10-11, *\"the drag freezes the scene … I think this should enable the roll to the next axis\"*)", () => {
-  it("⭐ the second touch's press takes it as `first`, its moves go to `holdMove`, its release to `holdRelease`", () => {
+  it("⭐ (2026-11-02, the parts' translation deleted, `d8134eb`) a press on a part is OUTSIDE like any other: the second touch's press takes it as `first`", () => {
     const w = code("render/pointer_wiring.ts");
-    expect(w).toMatch(/function partFirst\(st: SceneState, except: number \| null = null\)/);
-    expect(w).toContain("?.id ?? partFirst(st, e.pointerId);");
-    expect(w).toContain("|| partFirst(st, e.pointerId) !== null))"); // a finger too, after one held on a part
-    expect(w).toContain("return grip !== undefined && grip.mesh !== st.greenBox ? objs[0]!.id : null;"); // ⭐ placed in its goal or not
-    expect(w).toMatch(/if \(st\.hold !== null && e\.pointerId === st\.hold\.first\) \{\s*(?:\/\/[^\n]*\n\s*)+const from = grip\.prev;\s*holdMove\([^\n]*\n\s*grip\.prev = s;\s*st\.hudDirty = true;\s*return;/);
-    expect(w).toContain("if (st.hold !== null && e.pointerId === st.hold.first) holdRelease(st, e.pointerId);");
+    expect(w).toContain("const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;");
+    expect(w).not.toContain("partFirst");
+    expect(w).toMatch(/if \(st\.hold !== null && \(e\.pointerId === st\.hold\.first \|\| e\.pointerId === st\.hold\.second\)\) \{\s*holdMove\(/);
+    expect(w).toContain("if (holdRelease(st, e.pointerId, tapped) === \"SECOND\" && !faceTapHere) {");
   });
 });
 
@@ -239,7 +223,7 @@ describe("⛔⛔ the way in, the orbit round the piece and its dx roll COMMENTED
 describe("⭐⭐ a first touch / left TAP on EMPTY space = a tap on the cube's pink face (2026-10-12, *\"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink face\"*)", () => {
   it("⭐ wired at the release: not the orbited piece, no second touch held, not the key; the face shown tapped", () => {
     const p = code("render/pointer_wiring.ts").replace(/\s+/g, " ");
-    expect(p).toContain("(ft === null || ft.pointerId !== e.pointerId) && st.hold === null && e.pointerId !== MOUSE_SECOND_ID &&");
+    expect(p).toContain("} else if (st.hold === null && e.pointerId !== MOUSE_SECOND_ID && tapped) {"); // ⭐ (2026-11-02) after the piece's own tap; a part is empty space now
     expect(p).toContain("orientTapShown(st)");
     expect(code("render/orient_cube.ts")).toContain("return tag >= 0 && orientCubeTap(st, tag);"); // ⭐ (2026-10-12) the pink direction, the window deleted
   });

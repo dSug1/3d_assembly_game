@@ -46,50 +46,37 @@ import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import { levelElevation, elevationAtDistance } from "../input/orbit";
 import { EpisodeTally } from "../input/episode_ledger";
-import { GestureSpan, UndoHistory } from "../core/undo_history";
-import { type SceneSnapshot } from "./undo_wiring";
+import { GestureSpan } from "../core/gesture";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { startDemo } from "./demo_wiring";
 import { bootOrbitCentre, sceneConfig } from "../input/scene_rig";
-import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, initialBehaviour, TapHistory } from "../input";
+import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
 import { FrameMeter } from "../core/frame_meter";
 import { makeWorld, type ObjectId } from "../core/object_model";
 import { CAMERA_NEAR_PLANE_M } from "../input/gestureConfig";
-import { RotationFollower, RotationTally } from "../input/rotation_increment";
 import { seededRotations } from "../core/random_pose";
 import { contourDims, resolveBootOrientation, type SceneDescriptor } from "../core/game_structure";
 import { SCENE_0 } from "../content/scene_0";
-import { AlignmentLinks } from "../core/alignment_links";
-import { PioneerFaceCursors } from "../core/pioneer_face_cursors";
-import { SnapArming } from "../input/snap";
-import { UnsnapDetector, UnsnapHold } from "../input/unsnap";
-import { SeatSnaps } from "../input/seat_snap";
-import { AlignSnaps } from "../input/align_snap";
 import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
-import { type GizmoChannels } from "../input/axis_translate";
 import { createHud } from "./hud";
 import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
 import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { wheelZoom } from "../input/mouse_wheel_zoom";
-import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type AxisGizmo, type BodyOutlines, type FaceMarker, type Follow, type Held, type SceneState, type TurnAxes } from "./scene_state";
+import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type Follow, type SceneState } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
-import { applyCamera, requireGestureFrame, syncCentre } from "./camera_rig";
-import { shiftTapTogglesMode, toggleBehaviour } from "../input/mode_toggle";
-import { alignedFaceOf } from "../core/face_pick";
+import { applyCamera, syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
@@ -364,7 +351,6 @@ export function createScene(
   st.shadowKey = -1;
   st.shadowLevelSeen = null;
 
-  st.faceMarkers = new Map<string, FaceMarker>();
 
   /**
    * ⭐⭐⭐ **THE PIONEERFACECURSORS** — the owner, 2026-09-25: an amber ring at the PioneerFace
@@ -380,8 +366,6 @@ export function createScene(
    * ever made. ⚠ The material is SHARED and survives, so a dispose frees the mesh's buffers only.
    * ⛔ PARENTED to the Pioneer (defect 46) and BILLBOARDED — always in the screen view plane.
    */
-  st.pioneerCursors = new PioneerFaceCursors();
-  st.pioneerCursorMeshes = new Map<string, Mesh>();
   // ⭐ `D166`: the cursor is a line ring now, coloured on the line — the torus's shared material is gone.
 
   /**
@@ -436,7 +420,6 @@ export function createScene(
    * the need for every release path — an unalign tap, an undo, a turned Pioneer, eviction — to
    * remember to call `unlink`.
    */
-  st.links = new AlignmentLinks();
 
   /**
    * ⭐⭐⭐ **THE SNAP AND THE SEAT** (`D100`, the owner, 2026-09-26). The DECISIONS are pure —
@@ -449,18 +432,12 @@ export function createScene(
    * body. ⛔ Its own translation is refused (`applyWorldStep`); the cascades skip it; a re-align, a
    * release or a prune un-parents it (`unseatWorld`).
    */
-  st.snapArming = new SnapArming();
-  st.seatSnaps = new SeatSnaps<ObjectId>();
-  st.unsnapDetectors = new Map<string, UnsnapDetector>();
-  st.unsnapHold = new UnsnapHold();
   /**
    * ⭐ The body each pointer pressed, and its pointer type — the unsnap reads the pair (*first the
    * Pioneer, second the Follower*) and the device off these, because a `SECOND` touchpoint has no
    * grip to carry them. Both dropped at release.
    */
-  st.rawPressedBody = new Map<number, ObjectId>();
   st.pointerTypeOf = new Map<number, string>();
-  st.outlines = new Map<ObjectId, BodyOutlines>();
 
   // ⭐⭐⭐ `D145`: `bootObjectAxes` stood here — the boot camera's translation axes. A translation
   // runs along the LIVE camera's axes now (`axesOf`), so there is no state to keep.
@@ -468,7 +445,6 @@ export function createScene(
    * ⭐ The gravity frame at scene boot — what a FREE body is turned about (`WorldAxisB`, `D109`).
    * ⚠ Filled at the very bottom of this file — `requireGestureFrame` is declared below (a TDZ).
    */
-  st.bootGestureFrame = null;
   // ⚠ `lastTravelDir` and the LeadingFace ray it aimed are deleted; what persists between frames
   // is the SHOWN axes and their senses.
   /**
@@ -476,21 +452,18 @@ export function createScene(
    * if the delta position triggers a translation in this direction."* ⛔ The decision is
    * `displayedAxes`'s; this only remembers its answer, so a pause does not blank the gizmo.
    */
-  st.gizmoAxes = new Map<ObjectId, GizmoChannels>();
   /**
    * ⭐ Bodies a ROLL has turned during their CURRENT hold — what *"the roll rotation is ongoing"*
    * means for an aligned Follower's green axis (`aligned_axes.ts`). ⚠ `gizmoAxes` keeps its answer
    * across holds, so the grey line alone cannot say whether the roll belongs to THIS gesture.
    * Dropped when the body leaves the gizmo.
    */
-  st.rolledThisHold = new Set<ObjectId>();
   /**
    * ⭐ ONE place both `axisTravel` call sites report to — the holder's drag and the second
    * touchpoint's push. ⛔ The owner, 2026-09-23: *"make sure the delta position on the second
    * touch triggers the gizmo in the same way as the delta positions of the first touch."*
    */
   /** ⚠ WHICH CHANNELS pushed this body THIS FRAME, over both fingers. Consumed by the gizmo. */
-  st.frameAxisDriven = new Map<ObjectId, [boolean, boolean, boolean]>();
   /**
    * ⭐⭐ **THE AXES THE BODY IS BEING TURNED ABOUT**, world, this frame, one slot per turn channel.
    *
@@ -500,9 +473,7 @@ export function createScene(
    * computed at the gizmo would be free to draw a line the body is **not** turning about, which is
    * exactly the class of defect `scene.ts`-resident rules keep producing.
    */
-  st.frameTurnAxes = new Map<ObjectId, TurnAxes>();
   /** ⭐ The last axis each channel turned about — kept so a pause does not blank its line. */
-  st.gizmoTurnAxes = new Map<ObjectId, TurnAxes>();
   /**
    * ⭐⭐ WHAT THE LAST TRANSLATION ACTUALLY BOUGHT — reported by the rule, never recomputed
    * here. ⛔ `1.0` means the body is exactly under the finger; a large number means the plane is
@@ -510,11 +481,7 @@ export function createScene(
    * abandoned for the fixed-rate push. ⚠ Without these, *"it went much too far"* and *"it barely
    * moved"* are one symptom with two causes, and the camera pose is what separates them.
    */
-  st.lastTrackGain = 0;
-  st.edgeOnNow = false;
 
-  // ⛔ `CameraOffsetZoneEnter`, its flag and the zone ENTER/EXIT state are deleted (`D109`/`D120`).
-  st.axisGizmos = new Map<ObjectId, AxisGizmo>();
   /**
    * ⭐⭐⭐ **TWO RINGS, ONE PER FAMILY** — the owner, 2026-09-23: *"there can be a grey ring for the
    * rotation and a white ring for the vertical translation if both are driven on an aligned
@@ -532,9 +499,6 @@ export function createScene(
    * one there. That is honest — one pivot, drawn twice — and the alternative, hiding one, would
    * have made the marker's meaning depend on the alignment state.
    */
-  st.gizmoRings = new Map<ObjectId, LinesMesh>();
-  st.gizmoHitRings = new Map<string, LinesMesh>();
-  st.gizmoTurnRings = new Map<ObjectId, LinesMesh>();
 
   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
   // Without it the barycentre selection is invisible, and "it seems to orbit the right
@@ -545,10 +509,10 @@ export function createScene(
     { diameter: 0.012 },
     st.scene,
   );
-  st.markerMat = new StandardMaterial("orbit-centre-mat", st.scene);
-  st.markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
-  st.markerMat.disableLighting = true;
-  st.centreMarker.material = st.markerMat;
+  const markerMat = new StandardMaterial("orbit-centre-marker-mat", st.scene);
+  markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
+  markerMat.disableLighting = true;
+  st.centreMarker.material = markerMat;
   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
   // exists to display.
   st.centreMarker.isPickable = false;
@@ -692,24 +656,9 @@ export function createScene(
   st.hud = createHud();
   // ⭐ `D188`: the score bar, painted with the HUD.
   st.scoreOverlay = createScoreOverlay();
-  // ⭐ `D113`: a faint dashed line at the edge band's inner edge, so a hand can SEE the strip that
-  // is always empty space. ⛔ `pointer-events: none` — the readout must not take the touches it shows.
-  st.edgeBandEl = document.createElement("div");
-  Object.assign(st.edgeBandEl.style, {
-    position: "fixed",
-    pointerEvents: "none",
-    border: "1px dashed rgba(255,255,255,0.18)",
-    boxSizing: "border-box",
-    zIndex: "1",
-  });
-  document.body.appendChild(st.edgeBandEl);
-  st.edgeBandKey = "";
-  st.tapFace = new Map();
   st.lastCollision = "";
   st.lastCollisionAt = -Infinity;
-  st.emptySpaceVisible = true;
-  st.lastEmptyProbeMs = -Infinity;
-  // ⭐⭐⭐ **THE RIGHT MOUSE BUTTON IS THE SECOND TOUCH** (the owner, 2026-09-25). ⛔ One call, at
+  // ⭐⭐⭐ **THE MOUSE'S SECOND TOUCH** (ALT / CTRL, the orbit's held one) and the wheel. ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
   st.mouseLayer = attachMouseSecondTouch(st.canvas, st.scene, (notches) => {
@@ -726,60 +675,7 @@ export function createScene(
     st.zoomAtPinchStart = st.zoom;
     applyCamera(st);
   },
-  // ⭐ `D154`: the body under a Space click — the scene's own pick, the scene's own ids.
-  (clientX, clientY) => {
-    const rect = st.canvas.getBoundingClientRect();
-    const mesh = st.scene.pick(clientX - rect.left, clientY - rect.top)?.pickedMesh ?? null;
-    const id = mesh === null ? undefined : st.idOf.get(mesh);
-    // ⭐ prototype: an ORBITED piece is empty space to a click
-    return id === undefined || st.world.objects.get(id)?.orbited === true ? null : { id, frozen: st.world.objects.get(id)?.frozen === true };
-  },
-  // ⭐ `D155`: a Space freeze — the body the mouse's grip holds, a client point on it (its centre,
-  // projected), and its pressed face handed over for the second touch that takes the hold.
-  (pointerId) => {
-    const grip = st.held.get(pointerId);
-    const id = grip === undefined ? undefined : st.idOf.get(grip.mesh);
-    if (grip === undefined || id === undefined) return null;
-    const w = st.engine.getRenderWidth();
-    const h = st.engine.getRenderHeight();
-    const p = Vector3.Project(grip.mesh.getAbsolutePosition(), Matrix.Identity(), st.scene.getTransformMatrix(), st.camera.viewport.toGlobal(w, h));
-    const rect = st.canvas.getBoundingClientRect();
-    return {
-      id,
-      frozen: st.world.objects.get(id)?.frozen === true,
-      x: rect.left + (p.x * rect.width) / w,
-      y: rect.top + (p.y * rect.height) / h,
-      mesh: grip.mesh,
-    };
-  },
-  // ⭐⭐ `D159`: a freeze is happening — hand the drag's pressed face to the second touch that takes over,
-  // and CARRY the gesture across the drag's release, so the whole action lands once at its end.
-  (pointerId) => {
-    const grip = st.held.get(pointerId);
-    if (grip === undefined) return;
-    st.inheritPressFace = { mesh: grip.mesh, pressFace: grip.pressFace };
-    st.freezeCarry = true;
-  },
-  // ⭐⭐ `D167`: a Shift tap while a part is pressed toggles translation / rotation — on the tablet's own conditions
-  // (one free body held, no followers). ⛔ Not an episode: no touchpoint is involved.
-  () => {
-    const holder = st.router.objects()[0];
-    const grip = holder === undefined ? undefined : st.held.get(holder.id);
-    const heldId = grip === undefined ? undefined : st.idOf.get(grip.mesh);
-    if (
-      !shiftTapTogglesMode({
-        heldObjectCount: st.router.objects().length,
-        heldIsAligned: heldId !== undefined && alignedFaceOf(st.world, heldId) !== null,
-        heldFollowerCount: heldId !== undefined ? st.links.followersOf(heldId).length : 0,
-      })
-    )
-      return;
-    st.behaviour = toggleBehaviour(st.behaviour);
-    st.lastVerdict = `Shift tap → ${st.behaviour}`;
-    st.hudDirty = true;
-  },
-  st.cfg.tapMaxDuration,
-  // ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) the right button is the orbit's HELD SECOND TOUCH whenever a piece is orbited
+  // ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) ALT / CTRL is the orbit's HELD SECOND TOUCH whenever a piece is orbited
   () => st.greenBox !== null);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
   // DEVICE without a rebuild — e.g. `?rollFilterBeta=0&rollAngle=45`. Every value
@@ -795,7 +691,6 @@ export function createScene(
    * unreachable exactly when it is needed. ⚠ With one history a double-tap that straddles
    * an object's edge still counts, which is what a hand meant by it.
    */
-  st.taps = new TapHistory(st.cfg);
   st.pieceTaps = new TapHistory(st.cfg);
   /**
    * ⭐⭐ `IN2`: THE ROLES LIVE IN `src/input/router.ts`, NOT HERE. This file used to keep
@@ -805,16 +700,13 @@ export function createScene(
    * per-gesture state a role cannot carry.
    */
   st.router = new PointerRouter<AbstractMesh>();
-  st.held = new Map<number, Held>();
 
   st.followers = new Map<AbstractMesh, Follow>();
-  st.undo = new UndoHistory<SceneSnapshot>();
   // ⭐ DEV ONLY — the scene state on `window` for a CDP harness to read. ⛔ `import.meta.env.DEV` is
   // false in `npm run build`, so the production bundle carries no hook.
   if (import.meta.env.DEV) (window as unknown as { __st?: unknown }).__st = st;
   st.gestureSpan = new GestureSpan();
   st.gestureBefore = null;
-  st.gestureUndid = false;
   st.episodes = new EpisodeTally();
   st.sceneStartMs = null;
   st.levelEnd = new LevelEnd();
@@ -823,17 +715,11 @@ export function createScene(
   st.goalLastPose = new Map();
   st.goalCommit = new GoalCommit();
   st.goalCommitWorld = null;
-  st.goalCommitQuiet = false;
   st.grabbed = new Set();
   st.playVolume = playVolumeOf(st.sceneSpec);
   st.topOutlines = new Map();
   st.onLevelEnd = null;
   st.hudSecond = -1;
-  st.episodeFacts = new Map();
-  st.episodeUnaligned = new Set<number>();
-  st.inheritPressFace = null;
-  st.freezeCarry = false;
-  st.episodeContinued = new Set<number>();
   st.episodeKey = new Map();
   st.episodeSeq = 0;
   st.gestureChanged = false;
@@ -872,7 +758,6 @@ export function createScene(
    * would fight the hand for the camera, and the hand would lose — the reset writes the
    * whole pose every frame.
    */
-  st.cameraReset = null;
   // ⭐ `Scene_1`'s LEVEL view, found on the rig; every other scene keeps the rig's own start.
   // ⭐ prototype (green box): `"TOP"` boots on the top ring.
   // ⭐ prototype (2026-10-12, *"double rings 1 and 4, keep the piece at 3m boot view as it is"*): `"TOP"` with a boot distance — the elevation
@@ -1016,14 +901,6 @@ export function createScene(
    * ⭐ Which also retired the cost I had stated against this model — rotation no longer
    * costs a tap every time, only when switching.
    */
-  // ⭐⭐ **THE SESSION BOOTS IN `TRANSLATE`** (`D71`, 2026-09-22: *"set the default to translation
-  // mode at scene boot"*, and re-confirmed 2026-09-25 with the boot alignment's removal).
-  // ⛔⛔ **THIS COMMENT SAID `initialBehaviour()` RETURNS `ROTATE` UNTIL 2026-09-25, AND IT HAD
-  // BEEN FALSE SINCE `D71`.** ⚠ That is the exact shape the 2026-09-17 audit found and named: a
-  // DISAGREEMENT between a human sentence and the code, where the tell is *whether any instruction
-  // still asks for the other mode*. ⭐ None does — so the comment was the thing that was wrong,
-  // and it is the comment that moved.
-  st.behaviour = initialBehaviour();
 
   // ⛔⛔⛔ **`pioneerFace` AND `alignMode` WERE DELETED HERE, 2026-09-17 — AND DELETED, NOT
   // LEFT.** They were the ACTIVE alignment's Pioneer face and its mode: one of each, for the
@@ -1064,16 +941,6 @@ export function createScene(
    * rule reads, and a stack that lags the gesture would make the twist and the readout
    * briefly wrong. The pose catches up and lands EXACTLY on the solved orientation.
    */
-  // ⛔⛔⛔ **ONE SNAP PER BODY — IT WAS A SINGLE GLOBAL SLOT UNTIL 2026-09-17.** An audit
-  // found that a second alignment on ANY body overwrote the slot and abandoned the first body
-  // **mid-arc**, keeping its constraint, its marker and its outline while its face was not on
-  // the target and nothing would ever re-solve it. ⚠ The window is 129 ms at the shipped
-  // numbers and 571 ms at the slider maximum, and two-handed play is the owner own model for
-  // the fine approach — so a tap inside another body snap is the intended posture.
-  // ⭐⭐ The bookkeeping moved to `input/align_snap.ts` so it can be INTERROGATED: the
-  // ride-along, the cancel and the landing were three scattered statements in this frame
-  // handler, and `pioneer_cascade.ts` already paid for that lesson.
-  st.alignSnaps = new AlignSnaps<ObjectId>();
   // ⚠ LATCHED, not per-frame: a jump is over in one frame and a hand cannot look up in time.
   // ⭐ The verdict in force when it happened is captured with it — that is the half that says
   // WHICH rule was running, which is what the owner could not see.
@@ -1094,7 +961,6 @@ export function createScene(
    * was written to fix: a settle would silently overwrite a travelling alignment and leave that
    * body stranded mid-arc with its constraint still claiming it had landed.
    */
-  st.rotationTally = new RotationTally<ObjectId>();
   /**
    * ⭐⭐⭐ **THE CHASE TOWARD THE CURRENT DETENT — an exponential approach, not a timed arc.**
    *
@@ -1105,7 +971,6 @@ export function createScene(
    * newly crossed increment restarted it at `t = 0` — so crossing several detents relaunched the
    * body from a standstill again and again. ⭐ An exponential has no clock to restart.
    */
-  st.rotationFollower = new RotationFollower<ObjectId>();
 
   // ⛔⛔ **`settleAlignAnim` WAS DELETED HERE, 2026-09-17, AND ITS ABSENCE IS THE FIX.** It
   // landed an in-flight snap so a rule could write the orientation itself — and the twist
@@ -1123,7 +988,6 @@ export function createScene(
    * a tap consumed by an alignment toggled nothing, and undoing it would flip the mode the hand
    * had. ⚠ Written at every tap release, both paths, so it cannot describe an older gesture.
    */
-  st.lastTapToggled = false;
   /**
    * ⭐⭐ `D68` — presses that already spent their toggle by REVERTING the first tap's. ⛔ Their
    * own release must add nothing, or a full double tap would end up flipped by one.
@@ -1131,7 +995,6 @@ export function createScene(
    * a press that UNDOES, which is what keeps `D28`'s *two taps revert* true when the second half
    * never lifts.
    */
-  st.pairReverted = new Set<number>();
 
   /**
    * ⭐⭐⭐ **A PIONEERFACECURSOR IS DRAGGED ALONG ITS PIONEERFACE** — the owner, 2026-09-25:
@@ -1150,7 +1013,6 @@ export function createScene(
    * not flat). ⚠ The drag is RELATIVE — the grab offset is kept — so a touch pressed several radii
    * away moves the ring without making it jump under the finger.
    */
-  st.cursorDrags = new Map<number, { key: string; dx: number; dy: number }>();
   installPointerHandler(st);
 
   paint(st);
@@ -1158,18 +1020,6 @@ export function createScene(
   st.frames = 0;
   /** ⚠ One clock, `performance.now()`, as everywhere else in this file. */
   st.lastFrameMs = null;
-  // ⭐⭐⭐ **THE AXES ARE BORN HERE, AT BOOT, FROM THE BOOT CAMERA** — *"at scene boot, all
-  // object axis are updated based on camera quaternion at scene boot"* (the owner, 2026-09-22),
-  // and they are *"fixed forever for this scene"* (`WorldAxisB`, the only frame since `D109`).
-  //
-  // ⛔⛔ **AT THE FOOT OF THE FACTORY AND NOT AT THE TOP, DELIBERATELY.** `requireGestureFrame`
-  // is a `const` declared half way down this file; reading it from an initialiser above its
-  // declaration is a TEMPORAL DEAD ZONE crash at boot — which this project has already shipped
-  // once, on 2026-09-19, and which takes the whole page down with a blank screen.
-  // ⚠ Every body inherits this basis through `axesOf`'s fallback rather than by a loop over
-  // the scene: a body created later (an import, a spawn) then gets the same answer, where a
-  // one-time loop would leave it with none.
-  st.bootGestureFrame = requireGestureFrame(st);
 
   /**
    * ⭐⭐ Feed the unsnap detector with the two holders' positions, in mm on the glass; act when it
@@ -1183,8 +1033,6 @@ export function createScene(
    * the path intact, so this prints the step it actually reached — `METHOD`: *when a defect resists
    * several correct-looking analyses, stop modelling the code and ask which READOUT moves.*
    */
-  st.unsnapTrace = "—";
-  st.lastFedPointer = -1;
   startRenderLoop(st);
   window.addEventListener("resize", () => st.engine.resize());
 

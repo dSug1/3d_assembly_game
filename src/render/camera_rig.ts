@@ -7,16 +7,15 @@
 import { pinchAllowed } from "../input/pinch";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, nearestPairCentre, gravityFrame, type GravityFrame, type CameraPose, type Sample, type ScreenFrame } from "../input";
+import { clampCameraRadiusM, nearestPairCentre, type Sample } from "../input";
 import { type Vec3 } from "../core/vec";
 import { blendRig, horizontalShare, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { pauseEndNearer, pauseUnderWay } from "../input/top_pause";
 import { assemblyCameraFrame, assemblyOn, placeOffset } from "./assembly_wiring";
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
-import { WORLD_DOWN } from "../core/object_model";
 import { type SceneState } from "./scene_state";
-import { asVec3, modelPose } from "./bodies";
+import { modelPose } from "./bodies";
 
 /**
  * §2 rule 1's orbit centre: the barycentre nearest the touchpoint's ray.
@@ -137,17 +136,6 @@ export function syncCentre(st: SceneState) {
 
 /** Put the camera where the rig surface says, clamped away from the near plane. */
 
-/** Put the camera exactly at a pose. Shared by the reset's every frame and its end. */
-export function applyCameraPose(st: SceneState, p: CameraPose) : void {
-  st.orbit.reset(p.yawRad, p.elevation);
-  st.zoom = p.zoom;
-  st.zoomAtPinchStart = p.zoom;
-  st.centreBlend.snapTo(p.centreM);
-  syncCentre(st);
-  applyCamera(st);
-}
-
-
 /**
  * ⭐ Write the orbit rig's pose onto the camera — the one writer every camera event calls (reset,
  * startup, pinch, a slider, the orbit drag, the wheel).
@@ -206,36 +194,3 @@ export function updatePinch(st: SceneState) {
   applyCamera(st);
 }
 
-
-/**
- * The camera's screen axes in WORLD space. ⚠ Latched at press, not recomputed per
- * frame: rule 1's camera orbit must not silently redefine the axes half-way
- * through a gesture. Same lesson as §1.4's `WORLD_AXIS_ALIGN`.
- */
-/**
- * The gesture basis (A7). ⛔ Throws rather than guessing if the camera ever looks exactly
- * along gravity: there is no horizontal heading to call "depth" there, and every
- * direction across the screen would be equally entitled to the name.
- * ⭐ Unreachable by construction — §2 rule 1's orbit surface clamps the elevation to its
- * rings and never reaches a pole — and `requirePose`'s reasoning applies: a guard that
- * turns a broken state into silence is worse than a failure.
- */
-export function requireGestureFrame(st: SceneState) : GravityFrame {
-  const g = gravityFrame(screenFrame(st).viewAxis, WORLD_DOWN);
-  if (!g) {
-    throw new Error(
-      "the camera is looking exactly along gravity, so there is no gesture frame. " +
-        "The orbit surface is supposed to make this unreachable — see A7.",
-    );
-  }
-  return g;
-}
-
-
-export function screenFrame(st: SceneState) : ScreenFrame {
-return ({
-  right: asVec3(st.camera.getDirection(Vector3.Right())),
-  up: asVec3(st.camera.getDirection(Vector3.Up())),
-  viewAxis: asVec3(st.camera.getDirection(Vector3.Forward())),
-});
-}

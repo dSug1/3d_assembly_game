@@ -88,7 +88,7 @@ describe("⭐⭐⭐ `D187` — an episode lands when its action is TRIGGERED", (
     expect(pw).toMatch(/st\.episodes\.touch\(\s*key,/);
     expect(pw).toMatch(/st\.episodes\.sync\(gestureChangedSoFar\(st\)\)/);
     expect(src("render_loop.ts")).toMatch(/st\.episodes\.sync\(gestureChangedSoFar\(st\)\)/);
-    expect(src("undo_wiring.ts")).toMatch(/st\.gestureChanged = false/);
+    expect(src("gesture_wiring.ts")).toMatch(/st\.gestureChanged = false/); // ⛔ (2026-11-02) the parts' alignment, seats and undo deleted (commit `d8134eb`): \`undo_wiring.ts\` → \`gesture_wiring.ts\`
   });
 });
 

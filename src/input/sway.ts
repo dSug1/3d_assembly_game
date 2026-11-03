@@ -23,9 +23,7 @@
  * ⛔ ENGINE-FREE, and it decides nothing about what the sway looks like: it says WHEN and
  * HOW HARD, and `follow.ts`'s `impulseForPeak` says what that does.
  */
-import { canon, qconj, qmul, type Quat, type Vec3 } from "../core/vec";
 import { pxToMm } from "../core/units";
-import type { GravityFrame } from "./gravity_frame";
 import type { Sample } from "./motion";
 
 /**
@@ -88,48 +86,6 @@ export function swayScale(speedMmPerS: number, referenceMmPerS: number): number 
   if (!(referenceMmPerS > 0) || !Number.isFinite(speedMmPerS)) return 1;
   const raw = Math.abs(speedMmPerS) / referenceMmPerS;
   return Math.min(SWAY_SCALE_MAX, Math.max(SWAY_SCALE_MIN, raw));
-}
-
-/**
- * WHERE THE OTHER OBJECTS GO — **the same way** the held object set off.
- *
- * ⚠ It went opposite for one build, on a request the owner then corrected: *"my mistake:
- * they shall translate in the same direction."* Recorded because the sign is the whole
- * character of the effect and there is no way to tell from the code which was meant —
- * alongside reads as the scene being carried along with the object, against would read
- * as it being displaced by it.
- *
- * ⛔⛔ AND IT IS A TRUE 3-VECTOR, NOT A SCREEN DIRECTION. Today rule 6 moves the
- * object in the camera's view plane, so the world direction is exactly
- * `right·dx + up·(−dy)` — but rules **6bis/6ter** translate along **depth** as well, and
- * when they arrive the sway must follow the REAL displacement, not its shadow on the
- * glass. ⭐ **This function is the one place that mapping lives**: give it the depth
- * component when there is one and everything downstream follows, because it already
- * returns a world vector rather than a pair of screen numbers.
- *
- * @param dirX,dirY the drag's unit direction on screen. ⚠ `y` grows DOWNWARD.
- * @param depth     travel along the camera's view axis, for the rules that will have it.
- *   ⛔ Not reachable yet and deliberately not left implicit: a caller that starts moving
- *   in depth gets the right answer by passing it, instead of silently getting a wrong one.
- */
-export function swayWorldDirection(
-  frame: GravityFrame,
-  dirX: number,
-  dirY: number,
-  depth = 0,
-): Vec3 {
-  const v: Vec3 = [
-    frame.right[0] * dirX - frame.up[0] * dirY + frame.depth[0] * depth,
-    frame.right[1] * dirX - frame.up[1] * dirY + frame.depth[1] * depth,
-    frame.right[2] * dirX - frame.up[2] * dirY + frame.depth[2] * depth,
-  ];
-  const len = Math.hypot(v[0], v[1], v[2]);
-  // ⚠ No direction in a zero vector. A zero back, never a normalise-by-zero: one NaN
-  // written into a position never washes out of the scene.
-  if (!(len > 0)) return [0, 0, 0];
-  // ⭐ THE SIGN. It is here and nowhere else, so there is exactly one place to look when
-  // the effect reads backwards on the glass.
-  return [v[0] / len, v[1] / len, v[2] / len];
 }
 
 /** Degrees between two screen directions. Both are assumed non-zero. */
@@ -227,103 +183,6 @@ export class SwayWatcher {
 // sliding past each other rather than as one scene reacting.
 
 /**
- * The rotation vector of `q` — axis × angle, radians. ⚠ Canonical first, so it is always
- * the SHORT way round: a 350° turn is a −10° turn, and nothing here should ever be told
- * the scene swung most of a revolution.
- */
-export function rotationVector(q: Quat): Vec3 {
-  const [w, x, y, z] = canon(q);
-  const s = Math.sqrt(x * x + y * y + z * z);
-  // ⛔ At the identity the axis is UNDEFINED, not small. Zero is the correct limit, and
-  // it avoids the 0/0 — an object that is being tracked perfectly sits here every frame.
-  if (s < 1e-12) return [0, 0, 0];
-  const angle = 2 * Math.atan2(s, w);
-  return [(x / s) * angle, (y / s) * angle, (z / s) * angle];
-}
-
-export interface SpinSwayKick {
-  /** Unit axis the held object is turning about, world frame, right-handed. */
-  readonly axis: Vec3;
-  /** How fast it is turning, degrees per second, over the measured window. */
-  readonly degPerS: number;
-}
-
-/**
- * The rotation window is LONGER than the translation one.
- * ⛔ Because rotation's noise is worse: pointer jitter reaches the pose multiplied by
- * `gainRotateFree`, so the device's measured 0.761 mm becomes about 3° of orientation
- * noise per sample. A 60 ms window would be asking a ~4° noise floor to resolve the 5°
- * a slow deliberate turn covers. ⚠ 100 ms costs a little latency on a reversal and buys
- * the signal-to-noise back.
- */
-const SPIN_WINDOW_MS = 100;
-
-export class SpinSwayWatcher {
-  private readonly window: { q: Quat; t: number }[] = [];
-  private wasTurning = false;
-  private kicked: Vec3 = [0, 0, 0];
-  private hasKicked = false;
-  private armed = false;
-
-  /**
-   * @param turnDeg      how far the AXIS must swing before the scene reacts again. ⚠ A
-   *   reversal is a 180° axis change, so anything under that catches a change of hand.
-   * @param minTravelDeg how much the object must actually have turned across the window
-   *   before a direction is claimed. ⭐ Derived by the caller from the MEASURED pointer
-   *   noise and the rotation gain — it is a property of the glass, not a preference.
-   */
-  constructor(
-    private readonly turnDeg: number,
-    private readonly minTravelDeg: number,
-  ) {}
-
-  /**
-   * @param q       the object's orientation this frame.
-   * @param turning whether the gesture is currently rotating at all.
-   */
-  push(q: Quat, t: number, turning: boolean): SpinSwayKick | null {
-    this.window.push({ q, t });
-    while (this.window.length > 1 && t - this.window[0]!.t > SPIN_WINDOW_MS) {
-      this.window.shift();
-    }
-
-    if (turning && !this.wasTurning) this.armed = true;
-    this.wasTurning = turning;
-    if (!turning) return null;
-
-    const first = this.window[0]!;
-    const dtSec = (t - first.t) / 1000;
-    if (!(dtSec > 0)) return null;
-
-    // The NET rotation across the window, not a sum of steps: a hand that wobbled out
-    // and back has gone nowhere, and should not be read as having turned twice.
-    const net = rotationVector(qmul(q, qconj(first.q)));
-    const angle = Math.hypot(net[0], net[1], net[2]);
-    const deg = (angle * 180) / Math.PI;
-    if (!(deg > this.minTravelDeg)) return null;
-
-    const axis: Vec3 = [net[0] / angle, net[1] / angle, net[2] / angle];
-    const turned =
-      this.hasKicked && turnDegrees3(axis, this.kicked) > this.turnDeg;
-    if (!this.armed && !turned) return null;
-    this.armed = false;
-
-    this.kicked = axis;
-    this.hasKicked = true;
-    return { axis, degPerS: deg / dtSec };
-  }
-}
-
-/** Degrees between two 3-vectors. ⚠ Zero for a zero vector, never a NaN. */
-export function turnDegrees3(a: Vec3, b: Vec3): number {
-  const la = Math.hypot(a[0], a[1], a[2]);
-  const lb = Math.hypot(b[0], b[1], b[2]);
-  if (!(la > 0) || !(lb > 0)) return 0;
-  const cos = Math.min(1, Math.max(-1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb)));
-  return (Math.acos(cos) * 180) / Math.PI;
-}
-
-/**
  * ⭐⭐⭐ **WHO THE SYMPATHETIC SWAY MAY MOVE — one predicate, both writers.**
  *
  * > *"The frozen objects should not wobble."* — the owner, 2026-09-17
@@ -354,51 +213,11 @@ export function turnDegrees3(a: Vec3, b: Vec3): number {
  * @param isAnchored `anchoredToFrozen`'s answer: a body seated — directly or down a chain — on a
  *   FROZEN body never sways (the owner, 2026-09-26), whatever moved.
  */
-export function receivesSway(
-  body: { readonly id: string; readonly frozen?: boolean } | null,
-  heldId: string | null,
-  isGrasped: (id: string) => boolean = () => false,
-  pioneerOfMover: string | null = null,
-  inMoverAssembly: (id: string) => boolean = () => false,
-  isAnchored: (id: string) => boolean = () => false,
-): boolean {
+export function receivesSway(body: { readonly id: string; readonly frozen?: boolean } | null, heldId: string | null): boolean {
   if (body === null) return false;
-  // ⚠ The MOVER is excluded because it is already going that way — the sway is what the
-  // REST of the scene does about it.
+  // ⚠ The MOVER is excluded because it is already going that way — the sway is what the REST of the scene does about it.
   if (heldId !== null && body.id === heldId) return false;
-  // ⭐⭐⭐ **AND NEITHER IS ANY BODY A FINGER IS ON** — the owner, 2026-09-18: *"while a
-  // touchpoint is pressed on an object, disable its sway: it shall not be swayed by the move
-  // of any other object."*
-  //
-  // ⛔⛔ **IT IS A DIFFERENT EXCLUSION FROM THE ONE ABOVE, AND THE DIFFERENCE IS THE POINT.**
-  // That one is about the body that CAUSED the kick; this one is about any body a hand is
-  // holding, whether or not it moved. ⚠ Two fingers on two bodies means each is the other's
-  // mover, and before this only the kicker was spared — so a held body was shoved by the one
-  // in the user's other hand.
-  // ⭐ The argument is the same one `frozen` won on: **a body under a finger is a thing the
-  // hand is placing**, and decoration that nudges it is fighting the placement. ⚠ The sway is
-  // a DISPLAY offset, so it never moved the model — which makes it worse, not better: the
-  // part would drift back after the finger lifted, with nothing to say why.
-  if (isGrasped(body.id)) return false;
-  // ⭐⭐⭐ **AND NEITHER IS THE MOVER'S OWN PIONEER** — the owner, 2026-09-26: *"make sure the
-  // pioneer object does not sway when its follower object moves (we set this as a rule previously
-  // but it has been somehow forgotten)."*
-  //
-  // ⛔⛔ **NO EARLIER TEXT OF IT SURVIVES** — not in the docs, the code, the git history or the
-  // saved transcripts — so whatever form it had, it never reached a vector, and that is how it
-  // lapsed with nothing going red. ⭐ It is a vector now (`tests/sway.test.ts`).
-  // ⭐ The Pioneer is what the Follower is being assembled TO: a target that recoils from the
-  // part approaching it makes the approach unreadable, and the capture gap it shows would move for
-  // a reason that is not the hand's.
-  // ⛔ *(Superseded record:)* **WITHIN THREE CAPTURE OFFSETS ONLY** — the owner, later the same day: *"the sway of pioneer
-  // shall not be allowed if the follower is within three times the offset radius. It shall trigger otherwise."*
-  // ⭐⭐ `D182` (the owner, 2026-09-30: *"a rapid translation of a follower can push a pioneer … Fix that"*): **AT ANY
-  // DISTANCE.** A far Follower's quick move swayed its Pioneer, and on the glass a sway IS a push. The radius, its
-  // slider (`pioneerSwayRadii`) and `pioneerSwaySuppressed` are deleted.
-  if (pioneerOfMover !== null && body.id === pioneerOfMover) return false;
-  if (inMoverAssembly(body.id)) return false;
-  // ⭐⭐ Fixed to the plate, it is part of the plate: *"itself and its snapped children objects
-  // cannot sway when a third object is moved"* (the owner, 2026-09-26).
-  if (isAnchored(body.id)) return false;
+  // ⛔⛔ (2026-11-02) the exclusions of a PART under a finger, the mover's Pioneer, its seated assembly and a body seated on a frozen one are deleted
+  // with the parts' translation, rotation and alignment (commit `d8134eb`)
   return body.frozen !== true;
 }

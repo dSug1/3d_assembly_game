@@ -15,28 +15,16 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
 import { applyShadowLevel } from "./lighting";
 import { FrameMeter } from "../core/frame_meter";
-import { bandMmNow, probeEmptySpace } from "./empty_space_probe";
-import { mmToPx } from "../core/units";
-import { advanceFollow, displayPose, exponentialSmooth, phantomTarget, easeInOut } from "../input";
+import { advanceFollow, displayPose, exponentialSmooth, phantomTarget } from "../input";
 import { worldPlacementOf } from "../core/object_model";
-import { planeEdgeOn } from "../input/axis_translate";
-import { alignedFaceOf } from "../core/face_pick";
-import { followerLinksFrom, followerMoveLinksFrom, resolvePioneerMoves, resolvePioneerTurns } from "../input/pioneer_cascade";
-import { ALIGN_SNAP_FRACTION, CANDIDATE_COLOUR, FOLLOWER_COLOUR, PIONEER_COLOUR, type SceneState } from "./scene_state";
-import { followerFor, guardDraw, modelOrientation, modelPose, setModelOrientation, shapeOfBody, writePose } from "./bodies";
-import { faceMarkerFor, hitFaceNow, liftHighlights, outlinesFor, syncPioneerCursors } from "./markers";
-import { pressedPioneerFaceKeys } from "../input/pioneer_press";
-import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
-import { advanceRotation, releaseAlignmentOf, unseatWorld } from "./alignment_wiring";
-import { axesOf, refreshAxisGizmo } from "./gizmo";
-import { applyCameraPose, recomputeOrbitCentre, screenFrame } from "./camera_rig";
+import { type SceneState } from "./scene_state";
+import { followerFor, guardDraw, modelPose, shapeOfBody, writePose } from "./bodies";
+import { recomputeOrbitCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
-import { syncSeats } from "./seat_wiring";
-import { dissolveOnGoal } from "./goal_dissolve_wiring";
 import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
 import { levelEndFrame } from "./level_end_wiring";
-import { gestureChangedSoFar } from "./undo_wiring";
+import { gestureChangedSoFar } from "./gesture_wiring";
 import { greenBoxFrame, syncOrbitPieceModel } from "./green_box_wiring";
 import { restingFaceFrame } from "./resting_face_wiring";
 
@@ -54,40 +42,6 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ The frame meter: every render-loop interval, so the HUD reports what THIS device takes.
     if (st.lastFrameMs !== null) st.frameMeter.push(now - st.lastFrameMs);
     st.lastFrameMs = now;
-
-    // ⛔⛔⛔ ADVANCE THE MOTION CLOCK FOR EVERY LIVE TOUCHPOINT, EVERY FRAME.
-    //
-    // A still finger emits NO `pointermove`, and `MotionTracker` is otherwise driven only
-    // by those events — so without this line a finger held deliberately still stays
-    // `MOVING` for ever, and A10's depth gate never opens. ⚠ Reported from the device three
-    // times before it was found: *"passing from x/y translation to depth translation
-    // (sometimes, it is blocked) while passing from depth translation to x/y translation is
-    // smooth and instantaneous."*
-    //
-    // ⭐ The asymmetry was structural: `MOVING` is entered by an event that necessarily
-    // exists, `STATIONARY` by one that by definition may not arrive. ⭐⭐ Elapsed time with
-    // no sample is the strongest evidence of stillness there is — it simply has to be asked
-    // for, and the render loop is the clock everything visible already runs on.
-    for (const grip of st.held.values()) {
-      grip.rec.tick(now);
-      for (const tracker of grip.anchorMotion.values()) tracker.tick(now);
-    }
-
-    // ⛔⛔ The capture highlight pass (`A16`) is DELETED with its white outlines, and the approach
-    // camera swing with it (`D120`).
-
-    // ⭐ The axis gizmo, redrawn every frame from the body's current axes.
-    refreshAxisGizmo(st);
-
-    // ⭐ Advance every follower, whether or not a finger is still down — the tail of the
-    // deceleration is the part that makes it feel like mass. The step is unconditionally
-    // stable, so a stalled frame simply arrives rather than exploding.
-    // ⭐ The double-tap reset, flying home. ⛔ Advanced here and not on a timer: the loop
-    // is the clock everything visible already runs on, and there is no callback to leak.
-    if (st.cameraReset !== null) {
-      applyCameraPose(st, st.cameraReset.advance(dtSec * 1000));
-      if (st.cameraReset.done) st.cameraReset = null;
-    }
 
     // ⭐ The deferred orbit centre, committed once its grace has passed with no second
     // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
@@ -125,154 +79,11 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ `D170`: a demo scene's replay writes its poses (and the camera) first, as the other model writers do.
     advanceDemoFrame(st, dtSec);
 
-    for (const step of st.alignSnaps.advance(
-      now,
-      st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION,
-      easeInOut,
-      (id) => st.meshOf.has(id),
-    )) {
-      const mesh = st.meshOf.get(step.id);
-      // ⚠ `3D6`: the ALIGNMENT turn is the constraint being satisfied, not a gesture — it does not
-      // collide (`COLLISION.md` §4). A body it turns into a neighbour can only move OUT.
-      if (mesh) setModelOrientation(st, mesh, step.orientation, false);
-    }
+    // ⛔⛔ (2026-11-02) the alignment's slerp, the rotation increments' chase, the Pioneer's turn and move cascades are deleted with the parts'
+    // translation and rotation (the code is at commit `d8134eb`)
 
-    // ⭐⭐⭐ **WHICH INCREMENT IS EACH HELD BODY IN NOW?** Asked once per frame, per grip.
-    //
-    // ⛔ HERE RATHER THAN IN THE POINTER HANDLER, deliberately: the rotation paths return early
-    // in four places (the refusal, the twist, the roll, the free drag), and a check bolted to
-    // each of them is four chances to forget one. ⭐ The render loop sees every grip, every
-    // frame, whatever the gesture did: *ask the state, not the gesture.*
-    //
-    // ⚠ No edge-trigger and no rest test. A frame in which nothing crossed a boundary advances
-    // nothing, so asking every frame costs a comparison and cannot repeat a step.
-    for (const g of st.held.values()) advanceRotation(st, st.idOf.get(g.mesh));
-
-    // ⭐⭐ **THE INCREMENT'S CHASE** — an exponential approach, advanced with the alignment
-    // snaps. ⚠ A body cannot be in both: `advanceRotation` refuses to start one while an
-    // alignment is travelling, so these two never write the same orientation in one frame.
-    //
-    // ⭐⭐⭐ **τ IS THE ALIGNMENT SNAP'S WINDOW OVER THREE**, so *essentially arrived* still takes
-    // about that window — an exponential covers 95% in 3τ. ⛔ Borrowed rather than added, and
-    // borrowable because it is the same KIND of number: how long a discrete, hand-requested
-    // settle should take. ⚠ At `0` the slider means *arrive at once*, as it does everywhere.
-    {
-      // ⛔⛔ **`dtSec` IS THE LOOP'S OWN, NOT A SECOND CLOCK.** The first draft declared its own
-      // `lastFrameMs` here — which the render loop had already advanced sixty lines above, so
-      // `now - lastFrameMs` would have been **zero every frame** and the follower would never
-      // have moved at all. ⚠ A silent freeze, caught by the compiler refusing the redeclaration
-      // rather than by anything looking. ⭐ *One clock, `performance.now()`, as everywhere else.*
-      for (const step of st.rotationFollower.advance(
-        dtSec * 1000,
-        (st.cfg.cameraResetMs * ALIGN_SNAP_FRACTION) / 3,
-        (id) => {
-          const m = st.meshOf.get(id);
-          return m ? modelOrientation(st, m) : null;
-        },
-        (id) => st.meshOf.has(id),
-      )) {
-        const mesh = st.meshOf.get(step.id);
-        if (mesh) setModelOrientation(st, mesh, step.orientation);
-      }
-    }
-
-    // ⭐⭐⭐ **THE PIONEER'S OBJECT WAS TURNED** — `D41`'s C1, checked once per frame.
-    //
-    // ⛔⛔ THE CASE HAD NO RULE AT ALL UNTIL 2026-09-17, AND ITS ABSENCE WAS INVISIBLE: an
-    // alignment stores a FROZEN world direction, so turning the object that direction was read
-    // FROM leaves the Follower obeying a target nothing on the glass corresponds to.
-    // ⭐⭐⭐ **EVERY UNSEATED FOLLOWER WATCHES ITS OWN PIONEER, EVERY FRAME**, and is released when
-    // it turns (the owner, 2026-09-17: *"if the pioneer object is rotated … the alignment of the
-    // initial follower object shall be released"*). ⛔ C2 — the FOLLOW that rotated its followers —
-    // is deleted (`D106`); a SEATED follower is carried by the tree instead.
-    //
-    // ⚠ CHECKED AGAINST THE MODEL, never at a pointer event: a Pioneer can be turned by a drag,
-    // a twist, a slerp or a seat. ⭐ Comparing poses catches all of them without enumerating any
-    // — *ask the state, not the gesture.*
-    //
-    // ⚠⚠ ONE FRAME OF LAG IS POSSIBLE IN A CHAIN AND IS ACCEPTED: the links are visited in
-    // insertion order, so a follower processed before its Pioneer rotates sees the turn on the
-    // next frame instead. ⛔ It cannot be MISSED, because the baseline is only re-set after the
-    // turn has been accounted for — which is why this loop compares against a remembered pose
-    // rather than a per-frame delta.
-    // ⭐⭐ THE PLAN COMES FROM `input/pioneer_cascade.ts`, WHICH HAS VECTORS. ⛔ This block used
-    // to BE the rule, inside the render loop, where nothing could interrogate it — and when a
-    // hand reported the release *"not working"* there was no way to ask the code what it
-    // believed. ⚠ Now the rule is a pure function with 14 vectors and this is only the part
-    // that reads the world and applies the result.
-    // ⚠ The ASSEMBLY moved out too, 2026-09-17: it was an inline `flatMap` here, so the wiring
-    // test had to re-type it and its copy used one mode for every link. See `followerLinksFrom`.
-    const cascade = resolvePioneerTurns(
-      followerLinksFrom(
-        st.links.alignedObjects(),
-        (f) => st.links.pioneerFor(f),
-        (f) => st.links.isSeated(f),
-      ),
-      // ⚠ WORLD orientation, through the parent chain — never `local`, which is measured in
-      // someone else's frame the moment an assembly exists.
-      (id) => worldPlacementOf(st.world, id)?.orientation ?? null,
-    );
-
-    // ⚠ Anything the cascade decides must reach the readout in the SAME frame — see `hudDirty`.
-    if (cascade.steps.length > 0) st.hudDirty = true;
-    for (const step of cascade.steps) {
-      // ⭐ C1: *"releases the first object alignment (but not rotate the first object)"* — the
-      // pose is left exactly as the hand left it, and only the RULE goes. ⛔ C2 (`FOLLOW`) is
-      // deleted (`D106`): a seat carries its follower through the tree instead.
-      const ref = st.links.pioneerFor(step.follower);
-      releaseAlignmentOf(st, step.follower);
-      st.lastVerdict =
-        `align: ${ref?.objectId ?? "pioneer"} turned, ` +
-        `alignment released on ${step.follower}`;
-    }
-    // ⛔ RE-BASELINE LAST, from the plan. ⚠ A released follower is deliberately absent from
-    // `baselines`, so this cannot resurrect a link `releaseAlignmentOf` has just removed.
-    for (const [follower, orientation] of cascade.baselines) {
-      st.links.noteOrientation(follower, orientation);
-    }
-
-    // ⭐⭐⭐ **`D69` — AND A TRANSLATED PIONEER CARRIES ITS FOLLOWERS, ALL OF THEM.**
-    //
-    // > *"Currently, if in rotation mode, a rotation of the pioneer controls the same rotation
-    // > of all the orange follower objects. Do the same with translation: a translation of
-    // > pioneer controls the same translation of all the follower objects."* — the owner
-    // ⚠ History: the orange FOLLOW is deleted (`D106`) and `D70` below releases an UNSEATED
-    // follower instead; a SEATED one rides the tree.
-    //
-    // ⛔ Run AFTER the turn cascade and read the same index. ⚠ The two cannot fight: a turn is
-    // about a body's orientation and a move about its position, and a rotation about a body's
-    // own centre leaves that position alone.
-    // ⛔⛔ THE DECISION IS `resolvePioneerMoves`'s — *a rule in a render file is a rule nothing
-    // can interrogate*, which this branch has paid for seven times.
-    const moves = resolvePioneerMoves(
-      followerMoveLinksFrom(
-        st.links.alignedObjects(),
-        (f) => st.links.pioneerFor(f),
-        (f) => st.links.isSeated(f),
-      ),
-      (id) => worldPlacementOf(st.world, id)?.position ?? null,
-    );
-    if (moves.steps.length > 0) st.hudDirty = true;
-    for (const step of moves.steps) {
-      // ⭐⭐⭐ **`D70` — A MOVED PIONEER RELEASES AN UNSEATED FOLLOWER**, exactly as a turned one
-      // does — through the SAME `releaseAlignmentOf`, so the two channels cannot end differently.
-      const ref = st.links.pioneerFor(step.follower);
-      releaseAlignmentOf(st, step.follower);
-      st.lastVerdict =
-        `align: ${ref?.objectId ?? "pioneer"} moved, ` +
-        `alignment released on ${step.follower}`;
-    }
-    for (const [follower, position] of moves.baselines) {
-      st.links.notePosition(follower, position);
-    }
-
-    // ⭐⭐⭐ **THE SNAP AND THE SEATS, EVERY FRAME** (`D100`) — after the cascades, which may have
-    // moved a Pioneer, and before the meshes are written.
-    // ⭐⭐⭐ `D183`: a piece moved into its goal margins is pulled onto its goal — BEFORE the seats: the goal wins.
+    // ⭐⭐⭐ `D183`: a piece moved into its goal margins is pulled onto its goal, before the meshes are written.
     goalCaptureFrame(st, now);
-    syncSeats(st, now);
-    // ⭐⭐ `D142`: a seated follower in its goal pose lets go of its Pioneer (with a pop-up).
-    dissolveOnGoal(st);
     // ⭐⭐ `D189`: the goal is COMMITTED when the scene comes to rest after a change — never midway through a movement.
     goalCommitFrame(st);
     // ⭐⭐ the resting faces: the boot pass once the goal's baseline exists, then every part the frame UNSEATED (`resting_face_wiring.ts`).
@@ -418,201 +229,8 @@ export function startRenderLoop(st: SceneState): void {
       mesh.position.set(pose.position[0], pose.position[1], pose.position[2]);
     }
 
-    // ⭐⭐⭐ THE FACE HIGHLIGHT, placed from the MESH's world matrix — not from the model.
-    //
-    // ⛔⛔ THAT CHOICE IS THE WHOLE CORRECTNESS OF IT. What the eye sees is
-    // `displayPose = SWAY ∘ FOLLOW ∘ model`, so a highlight positioned from the MODEL would
-    // sit where the object *is* while the object is drawn where it is *going* — lagging by
-    // the follower's time constant during every drag and by the sway's excursion after it.
-    // ⭐ Reading the mesh's matrix makes the two agree by construction, which is the same
-    // reason the barycentre subtracts the sway rather than compensating for it.
-    // ⚠ The local face centre and normal come from the MODEL, which is where faces live.
-    // ⭐⭐ BOTH MARKERS, ONE PATH — the filled quad on the Follower, the contour on the
-    // Pioneer, each drawn only while the state that MEANS something is present.
-    // ⭐⭐⭐ **EVERY ALIGNED OBJECT KEEPS ITS FOLLOWERFACE**, asked of the MODEL, every frame
-    // (`selectedFace`, the one active-alignment record, is deleted).
-    //
-    // ⭐⭐ **THIS LOOP COSTS *ALIGNED BODIES*, NOT *SCENE BODIES*, AND THAT IS DELIBERATE.** It
-    // ran over `world.objects.keys()` when there were three; at sixty frames a second the shape
-    // that stops working as the scene grows is the one that walks everything to find the two
-    // that matter. ⚠ `links.prune` reconciles the index against the model and RETURNS what it
-    // dropped, so retiring a released body's markers needs no second sweep either.
-    // ⛔ `prune` reconciles the index against the model — it catches releases that evict a
-    // constraint WITHOUT unlinking. ⚠ Its return
-    // value is deliberately NOT used to decide what to hide; see below.
-    for (const id of st.links.prune((f) => alignedFaceOf(st.world, f) !== null)) {
-      unseatWorld(st, id);
-      // ⚠ A pruned link is a state change with no pointer event behind it. See `hudDirty`.
-      st.hudDirty = true;
-    }
-
-    // ⛔⛔⛔ **HIDE BY SET MEMBERSHIP, NEVER BY WHAT `prune` HAPPENED TO DROP — DEVICE BUG,
-    // 2026-09-17.**
-    //
-    // > *"the rotation of the pioneer currently removes the highlight of the pioneer but does
-    // > not release the alignment of the cyan follower object"*, then the clue that cracked it:
-    // > *"if the highlight of the pioneer is toggled off, the shake on the cyan follower is not
-    // > working any longer"* (the shake is deleted since, `D107`)
-    //
-    // ⚠⚠ **THE RELEASE WAS WORKING ALL ALONG.** The constraint was evicted and the link
-    // removed; what failed is that the follower's markers were never HIDDEN, so the body still
-    // LOOKED aligned — and a shake on it then answered *"nothing to release"*, which read as a
-    // second bug. ⭐ One stale quad produced two false reports and sent me hunting the rule,
-    // which was correct and is now vectored twice over.
-    //
-    // ⛔⛔ THE CAUSE WAS THE SHAPE OF THE LOOP: it hid only what `prune` dropped, and
-    // `releaseAlignmentOf` unlinks DIRECTLY — so for every release that went through it (then:
-    // the shake sweep, the re-tap, the rotation reset, a turned Pioneer, the cycle guard) `prune`
-    // never saw the body and nothing ever hid its markers.
-    // ⭐⭐ `METHOD`: *prefer the structure that cannot express the defect.* Hiding everything
-    // not currently wanted is correct **whatever** removed the link, and needs no cooperation
-    // from the paths that remove them. ⚠ I used exactly this pattern for the Pioneer contours
-    // twenty lines below and the wrong one here, in the same edit — which is why the Pioneer's
-    // highlight DID disappear and the follower's did not, the asymmetry the report describes.
-    const alignedNow = new Set(st.links.alignedObjects());
-    // ⛔⛔ THE FUCHSIA CANDIDATES ARE DELETED (`D109`, 2026-09-27); the HitFace keeps its contour.
-    const hitFace = hitFaceNow(st);
-    // ⭐⭐ `D162`: the Pioneer faces of the aligned parts PRESSED now — a finger or a button down. ⛔ A HitFace
-    // latched past its click (Space, a released right click) is not pressed.
-    const pressedPioneer = pressedPioneerFaceKeys(
-      [...st.held.entries()]
-        .filter(([pid]) => !(pid === MOUSE_SECOND_ID && st.mouseLayer.secondLatched()))
-        .map(([, g]) => st.idOf.get(g.mesh))
-        .filter((id): id is string => id !== undefined),
-      (f) => st.links.pioneerFor(f),
-    );
-    guardDraw(st, "alignmentMarkers", () => {
-      // ⛔⛔ **RETIRED BY SET MEMBERSHIP, WHATEVER REMOVED THE LINK.** The 2026-09-17 bug was the
-      // other pattern — hiding only what `prune` dropped, so `releaseAlignmentOf` left markers
-      // behind and produced TWO false defect reports against a rule that was correct.
-      // ⭐ `METHOD`: *prefer the structure that cannot express the defect.*
-      for (const [key, q] of st.faceMarkers) {
-        const id = key.slice(0, key.indexOf("/"));
-        const faceId = key.slice(key.indexOf("/") + 1);
-        const wanted =
-          (alignedNow.has(id) && alignedFaceOf(st.world, id) === faceId) || pressedPioneer.has(key);
-        if (wanted) continue;
-        q.fill.isVisible = false;
-        // ⛔⛔ **RETIRED BY THE SAME MEMBERSHIP TEST, IN THE SAME LOOP.** The twin must not outlive
-        // the marker it doubles: a stale highlight produced TWO false device reports in one day
-        // (*"the release is not working"*, *"the shake is not working"*) against rules that were
-        // correct, and the cause was one pool retired by membership and another by what changed.
-        q.xray.isVisible = false;
-      }
-      for (const [id, o] of st.outlines) {
-        if (alignedNow.has(id)) continue;
-        // ⛔ THE PAIR IS ATOMIC. A body outline left behind by a released alignment would claim
-        // the body is still aligned — the readout-that-lies shape this file guards against.
-        o.align.isVisible = false;
-      }
-
-      for (const id of alignedNow) {
-        const faceId = alignedFaceOf(st.world, id);
-        // ⚠ `prune` just guaranteed this, so the guard is for the types rather than the logic.
-        if (faceId === null) continue;
-        // ⭐ One colour since `D106`: every alignment is a snapshot.
-        const want = FOLLOWER_COLOUR;
-        // ⭐⭐⭐ THE FOLLOWER FACE, DRAWN FROM ITS OWN TRIANGLES (`D50`) — so a triangular or an
-        // L-shaped face marks itself correctly instead of wearing a rectangle.
-        const marker = faceMarkerFor(st, id, faceId);
-        if (marker !== null) {
-          // ⚠ Written only on CHANGE, not blindly per frame.
-          if (!marker.mat.emissiveColor.equals(want))
-            marker.mat.emissiveColor.copyFrom(want);
-          // ⭐ `D165`: the fill's opacity is a slider — written every frame so the slider acts under the finger.
-          marker.mat.alpha = st.cfg.faceHighlightAlpha;
-          marker.fill.isVisible = true;
-          // ⭐ `0` means the twin is not drawn AT ALL, which is the build before this flag — not an
-          // invisible mesh still costing a draw call and still able to come back wrong.
-          const xrayOn = st.cfg.followerFaceXrayAlpha > 0;
-          if (xrayOn) {
-            if (!marker.xrayMat.emissiveColor.equals(want))
-              marker.xrayMat.emissiveColor.copyFrom(want);
-            // ⚠ Written every frame because it is a SLIDER: a hand turning it must see the overlay
-            // change under the finger, which is the whole point of shipping the number with the rule.
-            marker.xrayMat.alpha = st.cfg.followerFaceXrayAlpha;
-          }
-          marker.xray.isVisible = xrayOn;
-        }
-        // ⭐⭐ AND THE WHOLE BODY, in the alignment's colour — its own mesh edges.
-        const o = outlinesFor(st, id);
-        if (o !== null) {
-          if (!o.align.color.equals(want)) o.align.color.copyFrom(want);
-          o.align.isVisible = true;
-        }
-      }
-
-      // ⭐⭐ `D162`: a pressed aligned part's Pioneer face is FILLED amber, over its contour, until the press
-      // ends — then the retire above hides the fill and the contour below stays with the couple.
-      for (const key of pressedPioneer) {
-        const slash = key.indexOf("/");
-        const m = faceMarkerFor(st, key.slice(0, slash), key.slice(slash + 1));
-        if (m === null) continue;
-        if (!m.mat.emissiveColor.equals(PIONEER_COLOUR)) m.mat.emissiveColor.copyFrom(PIONEER_COLOUR);
-        m.mat.alpha = st.cfg.faceHighlightAlpha; // ⭐ `D165`
-        m.fill.isVisible = true;
-      }
-
-      // ⛔⛔ **EVERY PIONEER FACE THAT SOMETHING IS ALIGNED TO**, from the index.
-      //
-      // ⭐ THE PAIR IS ATOMIC BY STRUCTURE: a Pioneer face is drawn only because a link names it,
-      // and a link exists only while its follower's constraint does (`links.prune`, above).
-      // ⚠ The old form was `selectedFace !== null && pioneerFace !== null && …` — two records
-      // kept in step by hand, and defect 44 was exactly them falling out of step.
-      const wantedPioneerKeys = new Set<string>();
-      for (const ref of st.links.pioneerFaces()) {
-        const key = `${ref.objectId}/${ref.faceId}`;
-        wantedPioneerKeys.add(key);
-        const m = faceMarkerFor(st, ref.objectId, ref.faceId);
-        // ⭐ The Pioneer face is OUTLINED, not filled — *which face it was aimed at*, against the
-        // Follower's fill for *which face moved*. `D39`'s distinction, now on real face boundaries.
-        if (m !== null) {
-          if (!m.loop.color.equals(PIONEER_COLOUR))
-            m.loop.color.copyFrom(PIONEER_COLOUR);
-          m.loop.renderingGroupId = 0;
-          m.loop.isVisible = true;
-        }
-      }
-      // ⭐⭐⭐ **THE HITFACE WEARS A FUCHSIA CONTOUR WHILE IT IS ACTIVE** (`CANDIDATE_COLOUR`, which
-      // colours nothing else since `D109`) — the owner, 2026-09-25: *"when active, highlight the
-      // contour of the hitface in fuchsia."*
-      //
-      // ⭐ OUTLINED, not filled, and that is the existing grammar rather than a new one: a FILL
-      // says *this face moved* (the Follower); a CONTOUR says *this face is the one being aimed*.
-      // ⛔ It joins `wantedPioneerKeys` rather than getting a pool of its own: one set, one retire,
-      // the same discipline the fills are under.
-      // ⭐ prototype (green box), the owner 2026-10-01: *"toggle off the fuchsia highlight (hitface) - don't delete the method"* —
-      // drawn only when `showHitFaceContour` is 1 (it ships 0). The HitFace itself is unchanged: it still aligns.
-      if (hitFace !== null && st.cfg.showHitFaceContour === 1) {
-        const key = `${hitFace.objectId}/${hitFace.faceId}`;
-        const m = faceMarkerFor(st, hitFace.objectId, hitFace.faceId);
-        if (m !== null) {
-          // ⚠ A Pioneer contour on the same face KEEPS its amber: an established relation outranks
-          // the HitFace.
-          if (!wantedPioneerKeys.has(key)) {
-            if (!m.loop.color.equals(CANDIDATE_COLOUR))
-              m.loop.color.copyFrom(CANDIDATE_COLOUR);
-            // ⭐⭐ `D163`: FUCHSIA OVERRIDES CYAN — the contour shares its edges with the aligned part's cyan
-            // outline, and at one depth the two fight; a later rendering group draws it on top, always.
-            m.loop.renderingGroupId = 1;
-            m.loop.isVisible = true;
-          }
-          wantedPioneerKeys.add(key);
-        }
-      }
-      // ⚠ Hidden rather than disposed: a body can be re-aligned to the same face seconds later,
-      // and churning meshes per gesture is how a render loop acquires a stall.
-      for (const [key, q] of st.faceMarkers) {
-        if (!wantedPioneerKeys.has(key)) {
-          q.loop.isVisible = false;
-          q.loop.renderingGroupId = 0;
-        }
-      }
-      // ⭐⭐⭐ THE PIONEERFACECURSORS, reconciled against the same links the contours read.
-      syncPioneerCursors(st);
-      // ⭐ Every highlight one pixel off what it marks, at this frame's zoom.
-      liftHighlights(st);
-    });
+    // ⛔⛔ (2026-11-02) the alignment's markers (the Follower face's fill, the Pioneer face's contour, the HitFace, the PioneerFaceCursors) are
+    // deleted with the parts' alignment (commit `d8134eb`)
 
     // ⛔⛔⛔ **THE HUD IS REPAINTED WHEN THE *LOOP* CHANGES SOMETHING** — audit fix, 2026-09-17.
     //
@@ -625,13 +243,10 @@ export function startRenderLoop(st: SceneState): void {
     // rule was itself stale.
     // ⚠ Guarded by a DIRTY FLAG rather than painted every frame: the HUD writes text into the
     // DOM, and 60 unconditional layout-invalidating writes a second is a cost with no reader.
-    // ⭐ `D113`: the edge band's outline follows the canvas and the slider. ⚠ Laid out every frame
-    // from the canvas rectangle — a rotation or a resize must not leave it drawn in the wrong place.
     {
       // ⭐ `D128`: a frozen body the camera sees from BELOW disappears — its material untouched.
       // ⚠ `isVisible` is what Babylon's default pick reads too, so a press goes through it to
       // what is behind. ⛔ Not inherited: the coloured core (`D125`) is hidden with it.
-    {
       const cam: [number, number, number] = [st.camera.position.x, st.camera.position.y, st.camera.position.z];
       for (const [fid, o] of st.world.objects) {
         if (o.frozen !== true) continue;
@@ -676,35 +291,10 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
-    // ⭐ `D134`: EDGE-ON is the CAMERA's, so it is read every frame — a click or an orbit changes it
-    // with no drag. ⚠ Same test as the rule (`planeEdgeOn`), same axes; the HUD repaints on change.
-    {
-      const edge = planeEdgeOn(screenFrame(st), axesOf(st), st.cfg.axisTrackingConeDeg);
-      if (edge !== st.edgeOnNow) {
-        st.edgeOnNow = edge;
-        st.hudDirty = true;
-      }
-    }
-    // ⭐ `D114`: the band is 0 while a first touch has somewhere empty to land.
-      probeEmptySpace(st, performance.now());
-      const r = st.canvas.getBoundingClientRect();
-      const b = mmToPx(bandMmNow(st));
-      // ⚠ Written only on CHANGE: a style write per frame is a layout invalidation with no reader.
-      const key = `${r.left},${r.top},${r.width},${r.height},${b}`;
-      if (key !== st.edgeBandKey) {
-        st.edgeBandKey = key;
-        const el = st.edgeBandEl.style;
-        el.display = b > 0 ? "block" : "none";
-        el.left = `${r.left + b}px`;
-        el.top = `${r.top + b}px`;
-        el.width = `${Math.max(0, r.width - 2 * b)}px`;
-        el.height = `${Math.max(0, r.height - 2 * b)}px`;
-      }
-    }
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame. ⛔ On the wall clock, not the
     // score's: counted from the first press, it never ticked before a touch — and the `frame` line
     // (and `D138`'s shadow verdict) sat at `—` on an untouched page.
-    // ⭐⭐ `D187`: an episode lands the frame its action changes the model — a drag's first step, a snap, an undo.
+    // ⭐⭐ `D187`: an episode lands the frame its action changes the model — a drag's first step, a capture.
     if (st.gestureBefore !== null && st.episodes.sync(gestureChangedSoFar(st)) > 0) st.hudDirty = true;
     const second = Math.floor(performance.now() / 1000);
     if (second !== st.hudSecond) {

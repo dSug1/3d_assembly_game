@@ -30,7 +30,6 @@ import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
 import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf, settledPause, travelOf } from "../input/top_pause";
 import { orbitOffset } from "../input/orbit";
-import { goalLocked } from "../input/goal_lock";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
@@ -651,7 +650,6 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
   if (!atBoot) {
     st.orbit = new OrbitController(st.cfg, ORBIT_START_YAW_RAD, st.bootElevation);
     st.zoom = st.orbitStartZoom;
-    st.cameraReset = null;
     st.orbitInertia.stop();
     st.orbitMotion = null;
     st.boxSpring = null;
@@ -828,7 +826,7 @@ export function createGreenBox(st: SceneState): void {
   const mat = new StandardMaterial("green-box-mat", st.scene);
   mat.diffuseColor = GREEN;
   box.material = mat;
-  // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space (`throughGreenBox`).
+  // ⭐ prototype (green box), 2026-10-01: PICKABLE, so it stops the ray — a press on it is empty space.
   box.isPickable = true;
   // ⭐ prototype (green box): NOT billboarded (the owner, 2026-10-02: *"remove the billboarding"* — it had been since *"the green
   // cube shall billboard the camera"*). It keeps the world's axes: its width along x, its tapered height up y, its depth along z.
@@ -845,7 +843,7 @@ export function createGreenBox(st: SceneState): void {
   const hm = new StandardMaterial("turquoise-piece-mat", st.scene);
   hm.diffuseColor = TURQUOISE;
   hex.material = hm;
-  hex.isPickable = true; // as the green piece: a press on it is empty space (`throughGreenBox`, the piece in use)
+  hex.isPickable = true; // as the green piece: a press on it is empty space (the piece in use)
   hex.billboardMode = Mesh.BILLBOARDMODE_NONE;
   st.orbitPieces.push({ mesh: hex, faces: piecesFacesOf(hex), volumeM3: hexPrismVolumeM3(ts.diameterM, ts.lengthM), ...restingOf(st, hex) });
   spawnOrbitPiece(st, st.cfg.orbitPieceKind, true);
@@ -1120,20 +1118,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   const at = { yaw: st.boxOrbit.yaw, v: st.boxOrbit.v };
   // ⭐ The orbit finger, if one is down and orbiting: ticked (a still finger sends no event), and asked per axis.
   const out = st.router.outside();
-  const objs = st.router.objects();
-  // ⭐ prototype (green box): or ONE finger on a piece locked in its goal — its drag orbits too (`orbitDragStep`).
-  const lockedHolder =
-    out.length === 0 && objs.length === 1 && st.held.get(objs[0]!.id) !== undefined &&
-    goalLocked(st.idOf.get(st.held.get(objs[0]!.id)!.mesh), st.goalCommit, st.cfg.lockPlacedPieces === 1);
-  // ⭐⭐ (2026-10-11) the HELD SECOND TOUCH's input: the first touch orbits only on the way in / round the piece (`WAY`)
+  // ⭐⭐ (2026-10-11) the HELD SECOND TOUCH's input: the first touch orbits only on the way in / round the piece (`WAY`) — ⛔ (2026-11-02) a finger on
+  // a part is the orbit's like any other (no press holds a part)
   const h = st.hold;
   const orbiting = h !== null
     ? (h.mode === "WAY" || h.mode === "HELD" ? h.first : null) // ⭐ (2026-10-11) undecided, it orbits the centre: the camera follows it
-    : out.length === 1 && objs.length === 0
+    : out.length === 1
       ? out[0]!.id
-      : lockedHolder
-        ? objs[0]!.id
-        : null;
+      : null;
   // ⭐ The finger leaving the orbit (lifted, or a second finger down) is a RELEASE: the camera realigns.
   const released = st.orbitMotion !== null && st.orbitMotion.pointerId !== orbiting;
   if (released) {

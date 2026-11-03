@@ -68,9 +68,21 @@ const PENDING: Record<string, string> = {
   // DELETED since (`screenTranslation`, `depthTranslate`, `D109`), so no entry stands for them here.
   // ⚠ `trackingMetresPerPx` and `depthLimits` are still WIRED — the factor and the bounds were
   // always the derived parts, and the new rule reads both.
-  constrainedDragAngle:
-    "retired 2026-09-22 by D57 reaching the first touchpoint; awaiting the device verdict on " +
-    "the dy trade, then delete with its vectors or restore",
+  // ── 2026-11-02 (the owner: *"remove the translation and the rotation of the parts … I will only keep orbit and sliding"*): the MODEL's
+  // seat and constraints stay — the parts will be given the orbited pieces' properties later, and the mate is `3D2`'s. ──────────────
+  attach: "3D2 — the seat in the assembly tree; its gesture (the snap) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  detach: "3D2 — the unseat; its gesture (the unsnap) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  pushObjectConstraint: "3D2 — a constraint onto an object's stack; its writer (the alignment) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  clearObjectConstraints: "3D2 — clears an object's stack; its writer (the unalign) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  evictObjectConstraints: "3D2 — the stack's eviction; its writer went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  solve: "3D2 — the constraint stack's solve; its reader (the aligned drag) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  rotationChannel: "3D2 — the constrained rotation's channel; its reader went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  singleAlignment: "3D2 — the one-alignment cap; its reader went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  // ── 2026-11-02, kept for the vectors that measure through them. ──
+  WORLD_DOWN: "the gravity the orbit's vectors compose the gravity frame with; its product reader (the parts' gesture frame) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  Recognizer: "IN1 — §1.3's per-touchpoint recognizer; its carrier (a held part) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`); `TapHistory`'s vectors run through it",
+  neutralLeadSec: "IN4 — the phantom lead's landmark (2·ζ·τ) the follower's vectors are written against; its HUD readout went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
+  offsetPositions: "the shell's offset geometry — the drawn shell deleted (`D120`); the topology vectors measure OUTWARD through it",
   // ── `3D2`: the seat. The assembly tree exists; nothing is assembled yet. ──────
   reroot: "3D2 — `parent ≠ root`, needed the first time an assembly is re-hung",
   parseSceneDescriptor: "GM8 — loading a scene from a local JSON file in Free Flow (the seam exists, the button does not)",
@@ -81,11 +93,6 @@ const PENDING: Record<string, string> = {
   mateResidual: "3D3 — breaking reads the RESIDUAL, never the observed gap (rule 4)",
   // ── `D49`: the surface-gap rule. Two halves of it are deliberately ahead. ────
   // ⛔⛔ BOTH ARE *PENDING*, NOT *STALE*, AND THE DISTINCTION IS THIS FILE'S WHOLE POINT.
-  centreDistance:
-    "the APPROACH (`D46` §4b.1) — the capture DISTANCE moved to surfaces (`D49`) and the " +
-    "approach DIRECTION deliberately did not: a face-to-face direction collapses to noise at " +
-    "contact, which is the degeneracy the mechanism was redesigned to remove. Centres cannot " +
-    "meet, so this is the measure 4b.1 projects the finger onto",
   // ⛔⛔ **`A3`'s SECOND CHART, RETIRED FROM ITS ONLY CHANNEL BY `D52`** (2026-09-18).
   // ⛔⛔ THE TWO SWAPPED PLACES ON 2026-09-18, AND THE SWAP IS THE POINT. `shapeFromVertices`
   // LEFT this list when `scene.ts` started reading real mesh vertices — the guard caught the
@@ -101,8 +108,6 @@ const PENDING: Record<string, string> = {
   vForPitch: "pitch → ring position by a search that assumes the pitch rises monotonically — false on a waist (the stair); kept for its vectors",
   // ⭐ prototype (green box), 2026-10-01: the empty-space press reads `nearestPairCentre` on this branch only.
   orbitCentre: "§2 rule 1's subset barycentre — replaced on the prototype branch by `nearestPairCentre`; the main line still calls it",
-  // ⭐ `D182`: its two product callers went with the Pioneer-sway radius and the unsnap grace.
-  surfaceGap: "`D49`'s surface gap — the clearance instrument of the collision and highlight vectors; no product caller since `D182`",
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",

@@ -34,9 +34,9 @@ function shapeKey(t: MeshTopology): string {
   return `${t.faces.length}|${t.positions.map((p) => p.map((x) => Math.round(x * 1e6)).join(",")).join(";")}`;
 }
 
-/** ⭐ Is the part seated — on a Pioneer, or placed in its goal (the owner: *"for me, this is a seated part"*)? */
+/** ⭐ Is the part seated — placed in its goal (the owner: *"for me, this is a seated part"*; ⛔ on a Pioneer: deleted with the parts' snap)? */
 export function isSeatedPart(st: SceneState, id: ObjectId): boolean {
-  return st.links.isSeated(id) || st.goalCommit.has(id);
+  return st.goalCommit.has(id);
 }
 
 /** ⭐ The selector for ONE part, now: its shape's answer (cached) and the face chosen from its pose. `null` with no mesh. */

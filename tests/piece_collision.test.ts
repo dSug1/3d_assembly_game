@@ -55,7 +55,7 @@ describe("⭐⭐⭐ the rule is `resolveMove`'s, with the piece's own setup — 
   });
   it("⭐ the wiring: the shown piece an obstacle, the hidden one exempt (`hiddenOrbited`) — for the parts and for the piece", () => {
     const c = flat("render/collision_wiring.ts");
-    expect(c).toContain("if (hiddenOrbited(st, a) || hiddenOrbited(st, b)) return true;");
+    expect(c).toContain("return hiddenOrbited(st, a) || hiddenOrbited(st, b);"); // ⛔ (2026-11-02) the snapping couples' exemptions deleted (`d8134eb`)
     expect(c).toContain("const hiddenOrbited = (st: SceneState, id: ObjectId): boolean => st.world.objects.get(id)?.orbited === true && id !== st.greenBox?.name;");
     expect(code("core/collision.ts")).not.toContain("if (world.objects.get(o)?.orbited === true) continue;");
   });

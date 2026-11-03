@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { sizeM, smallestOfColour, throughGreenBox } from "@input/green_box";
+import { sizeM, smallestOfColour } from "@input/green_box";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, springOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
@@ -405,20 +405,12 @@ describe("⭐⭐ prototype — the green box", () => {
   });
 
   it("⭐⭐ prototype: a press on the green box is EMPTY SPACE — the box stops the ray, and its hit is a miss (the owner: *\"the raycast hits the piece behind\"*)", () => {
-    const box = { name: "green-box" };
-    const piece = { name: "Piece10" };
-    expect(throughGreenBox(box, box)).toBeNull(); // the box in front: a miss, never the piece behind
-    expect(throughGreenBox(piece, box)).toBe(piece); // a piece hit first is still a piece
-    expect(throughGreenBox(null, box)).toBeNull();
-    expect(throughGreenBox(piece, null)).toBe(piece); // a scene with no box
-    // ⭐ wired: the box is PICKABLE (so the ray stops on it), and every pick the router reads goes through the filter
+    // ⭐ wired: the box is PICKABLE (so the ray stops on it), and a hit on it is never a part's (⛔ 2026-11-02 `throughGreenBox` deleted with the
+    // parts' hold, `d8134eb`: every press is the orbit's)
     expect(code("green_box_wiring.ts")).toMatch(/box\.isPickable = true/);
     const p = code("pointer_wiring.ts");
-    // ⭐ 2026-10-05: unless it is a second touch while the first orbits — then empty space outright (it never grabs); ⭐ (2026-10-11) the held
-    // second touch, and the first touch pressed again while it is held
-    expect(p).toMatch(/const rayHit =\s*holdRole !== null \? null : throughGreenBox\(/);
-    expect(p).not.toMatch(/st\.router\.move\(e\.pointerId, s, info\.pickInfo\?\.pickedMesh \?\? null\)/);
-    expect((p.match(/throughGreenBox\(info\.pickInfo\?\.pickedMesh \?\? null, st\.greenBox\)/g) ?? []).length).toBe(4);
+    expect(p).toContain("const hitMesh = pick?.hit === true && pick.pickedMesh !== null && pick.pickedMesh !== st.greenBox ? pick.pickedMesh : null;");
+    expect(p).toContain("const routed = st.router.press(e.pointerId, s, null);");
   });
 
   it("⭐⭐ prototype: the box is SLOWER inside the leash and at full speed beyond — a smooth ramp, no step at the edge", () => {
@@ -485,12 +477,12 @@ describe("⭐⭐ prototype — the green box", () => {
 });
 
 describe("⭐ prototype — the CAMERA menu has subsections (the owner, 2026-10-02: *\"too many rows directly under CAMERA menu\"*)", () => {
-  it("⭐ only the edge band sits directly under CAMERA; each slider under the subject it tunes", () => {
+  it("⭐ nothing sits directly under CAMERA (⛔ 2026-11-02 the edge band deleted, `d8134eb`); each slider under the subject it tunes", () => {
     const m = readFileSync(new URL("../src/render/tuning_menu.ts", import.meta.url), "utf8");
     const cam = m.slice(m.indexOf('title: "CAMERA"'), m.indexOf('title: "OBJECT TRANSLATION"'));
     const top = cam.slice(0, cam.indexOf("subsections:"));
-    expect(top).toContain('"edgeBandMm"');
-    expect((top.match(/tunable\(|Slider\(st\)/g) ?? []).length).toBe(1);
+    expect(top).not.toContain('"edgeBandMm"');
+    expect((top.match(/tunable\(|Slider\(st\)/g) ?? []).length).toBe(0);
     const under = (title: string, keys: string[]) => {
       const at = cam.indexOf(`title: "${title}"`);
       expect(at).toBeGreaterThan(0);
