@@ -2457,3 +2457,12 @@ edges without the camera view being too slanted … but I like the smooth transi
   the wrong way (measured: a pitch amount moves the gizmo along +pitchW). Fixed, and **2026-10-04's inverted dy is gone around the assembly** — finger
   down, the gizmo down. → `queue_notes/FACE_SPAN_2026-11-02.md`, sixth pass. 1663 vectors. ⛔ No device close.
 
+## 2026-11-03 — on 1.0.91-: THE SHADOW GIZMO (the face-span's seventh pass)
+
+* ⭐⭐⭐ The owner: *"the red and green contours strictly in their respectively single plan … the gizmo shall behave like a shadow … a slanted face shall behave
+  as its projection … no tilt of the curve"*, *"the far orbit too"* — the gizmo on one of the assembly's box's six bases at every distance, its depth the
+  shadow along it (a jump at a step, gaps under `shadowBridgeMm` bridged), straight lines, 90° turns at the outline; the orbit's face frame from the base (no
+  tilt, no roll); the piece and the camera from the gizmo's foot; the gizmo by the finger's steps; each axis held to its screen axis. ⛔ The coplanar
+  regions, the glued faces, the wraps onto any face, the ride and the release deleted. → `queue_notes/FACE_SPAN_2026-11-02.md`, seventh pass. 1661 vectors.
+  ⛔ No device close.
+

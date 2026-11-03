@@ -199,6 +199,32 @@ export function screenDir(stepW: Vec3, right: Vec3, up: Vec3, minShare = 0.15): 
   return s > minShare * l ? [x / s, y / s] : null;
 }
 
+/** ⭐ An axis within this of the screen's horizontal / vertical it drives is laid on it exactly (rad); past it, it swings onto the next one by `SCREEN_SWING_RAD`. */
+export const SCREEN_HOLD_RAD = (60 * Math.PI) / 180;
+export const SCREEN_SWING_RAD = (75 * Math.PI) / 180;
+
+/**
+ * ⭐⭐⭐ (2026-11-03, the owner: *"a straight horizontal or vertical line (which I expect if the gizmo would faithfully follow the dy and dx orbit inputs)"*) —
+ * **AN AXIS ON THE SCREEN, HELD TO THE SCREEN'S AXIS IT DRIVES**: `s` (unit, (right, up)) the gizmo's axis as shown, `prev` the screen axis it drove (0 right,
+ * 1 up, 2 left, 3 down; `null`: the nearest). Within `SCREEN_HOLD_RAD` of it: that screen axis EXACTLY — a dx a straight level line however obliquely the face is
+ * seen (⛔ laid on the axes as shown, a wall's level line drawn 55° off the screen's horizontal from above and aside: a dy moved the gizmo 11 cm sideways);
+ * between it and `SCREEN_SWING_RAD` swung linearly onto the next — continuous; past it, the next one is the axis's (`c`). A roll turns the picture past the
+ * hold and the finger follows it; the hold's width is its hysteresis (no flicker). Never more than 15° off the axis as shown past the hold — never against the finger.
+ */
+export function holdToScreen(s: readonly [number, number], prev: number | null): { readonly dir: [number, number]; readonly c: number } {
+  const a = Math.atan2(s[1], s[0]);
+  const wrap = (x: number): number => Math.atan2(Math.sin(x), Math.cos(x));
+  let c = prev ?? ((Math.round(a / (Math.PI / 2)) % 4) + 4) % 4;
+  let m = wrap(a - (c * Math.PI) / 2);
+  if (Math.abs(m) > SCREEN_SWING_RAD) {
+    c = ((Math.round(a / (Math.PI / 2)) % 4) + 4) % 4;
+    m = wrap(a - (c * Math.PI) / 2);
+  }
+  const k = Math.abs(m) <= SCREEN_HOLD_RAD ? 0 : ((Math.abs(m) - SCREEN_HOLD_RAD) / (SCREEN_SWING_RAD - SCREEN_HOLD_RAD)) * (Math.PI / 2);
+  const b = (c * Math.PI) / 2 + Math.sign(m) * k;
+  return { dir: [Math.cos(b), Math.sin(b)], c };
+}
+
 /**
  * ⭐⭐⭐ (2026-11-03, the owner: *"Make sure that after a camera roll, the delta position direction on the screen and the gizmo direction are always the
  * same. Blend that properly during the camera roll"*) — **THE FINGER ON THE GIZMO'S AXES AS THE SCREEN SHOWS THEM**: a finger's step (`dx` right, `dy`

@@ -4,7 +4,9 @@
  * *"I want to keep what was done for commit ff2fca2 in terms of gizmo leading … Tilting the face and face-span should not impact the behavior of the gizmo
  * and the behavior of the piece and the camera relative to the gizmo"*) the ORBIT runs as it always did — its target from the finger, its place solved, the
  * piece on its direction from the gizmo, the camera behind it with its leash and lag — and the face-span decides only WHERE the gizmo is: moved by the
- * orbit's SOLVED step (as ff2fca2's carrier read `pieceQ`) × the assembly's radius, on the coplanar faces, over the tops, across an edge after a catch. Over
+ * orbit's SOLVED step (as ff2fca2's carrier read `pieceQ`) × the assembly's radius — ⭐⭐⭐ (2026-11-03, branch `1.0.91-`) as the assembly's SHADOW on one of
+ * its box's six bases, close in and far out alike (`input/face_span.ts`): straight lines on the base, a step in depth a jump (the piece and the camera read its
+ * foot, `spanAnchor`), round the outline onto the next base at 90° after a catch, the base's normal the orbit frame's (`spanTiltNormal`: no tilt). Over
  * a top / bottom the roll of branch 1.0.83 at the zenith (`spanZenithStep`). The finger's sense read off the screen whenever the picture is settled (the
  * owner: *"screen direction shall win"*). ⛔ No rule here.
  */
@@ -14,32 +16,25 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import type { Vec3 } from "../core/vec";
 import { faceWorld } from "../core/object_model";
 import { goalLocked } from "../input/goal_lock";
-import { frameSteps, fromFrame, rollSense, screenDir, signOnScreen } from "../input/orbit_frame";
+import { frameSteps, fromFrame, holdToScreen, rollSense, screenDir, signOnScreen } from "../input/orbit_frame";
 import { orbitDegPerMm } from "../input/follow_camera";
 import { pitchOfV } from "../input/assembly_orbit";
 import {
-  coveredTop,
+  boxDirs,
   fromP2,
-  gluedPartners,
-  heightOf,
-  hiddenGlued,
-  intoRegion,
   isWall,
+  nearestCovered,
   onPlane,
-  regionArea,
-  regionDistance,
-  regionInside,
-  regionRun,
-  rideStep,
+  shadowAt,
+  shadowDist,
+  shadowMap,
+  shadowRun,
+  snapDir,
   SPAN_LINE_LIFT_M,
-  SPAN_RIDE_SLAB_M,
   SPAN_ZENITH_CONE_RAD,
   spanMmOf,
   spanMove,
-  spanPlane,
   spanPolyline,
-  spanRegion,
-  spanSolids,
   axisSense,
   calmWeight,
   edgeShare,
@@ -49,17 +44,16 @@ import {
   spanAxisStep,
   toP2,
   toPlaneDir,
-  wrapCandidate,
   zenithCrossing,
   zenithRollStep,
   type P2,
+  type ShadowMap,
   type SpanFace,
   type SpanMotion,
   type SpanPlane,
-  type SpanRegion,
-  type SpanSolid,
   type Tri,
 } from "../input/face_span";
+import { gizmoShare } from "../input/orbit_shell";
 import { faceTrianglesWorld } from "./hover_wiring";
 import type { SceneState } from "./scene_state";
 
@@ -99,27 +93,30 @@ const SPAN_FACING_COS = Math.cos((75 * Math.PI) / 180);
 
 /** ⭐ The face-span's state (`st.span`). */
 export interface SpanState {
+  /** ⭐⭐⭐ (2026-11-03) the BASE: one of the assembly's box's six directions (`dirs`), its plane at the parts' outermost extent, the shadow on it */
   plane: SpanPlane;
-  region: SpanRegion;
-  solids: SpanSolid[];
-  /** the face it was seeded on (an index into `st.spanFaces`) and its part */
-  face: number;
+  map: ShadowMap;
+  dirs: readonly Vec3[];
+  /** the part under the gizmo (the shadow's triangle there; kept across a bridged gap) */
   host: string;
   motion: SpanMotion;
-  /** the ridden height shown (m in front of the plane) */
-  ride: number;
+  /** the shadow's height at the gizmo (m in front of the plane, ≤ 0) — a step in it a jump */
+  h: number;
   /** the piece's SOLVED direction last frame (world) — a crossing reads it */
   uPrev: Vec3 | null;
-  /** ⭐⭐⭐ (third pass) the orbit's solved place last frame and the orbit's frame it was read in (a re-base moves nothing: no step read across it) */
-  qPrev: { readonly yaw: number; readonly v: number; readonly frame: string } | null;
-  /** the face's level axes (`faceAxes`), their senses for the orbit's yaw and pitch steps, and ff2fca2's paces (m/rad) */
+  /** ⭐⭐⭐ (2026-11-03) the orbit's steps the FINGER gave since the last frame (the drag's, the coast's — what the target took: the governor's, the cone's and
+   * the zenith's cuts in), in the orbit's frame they were read in (a re-base moves nothing: none read across it) */
+  input: { yaw: number; pitch: number; frame: string };
+  /** the base's level axes (`faceAxes`), their senses for the orbit's yaw and pitch steps, and ff2fca2's paces (m/rad) */
   eH: Vec3;
   eV: Vec3;
   sh: 1 | -1;
   sv: 1 | -1;
   paceH: number;
-  /** this frame: the gizmo (world), the finger's travel the orbit's step was worth (mm), the lines' axes (the orbit's yaw and pitch steps laid on the face) */
+  /** this frame: the gizmo (world, on the shadow), its FOOT (on the base's plane — the piece and the camera are read from it, `spanAnchor`), the finger's
+   * travel the orbit's step was worth (mm), the lines' axes */
   g: Vec3;
+  foot: Vec3;
   stepMm: number;
   eYaw: Vec3;
   ePitch: Vec3;
@@ -133,7 +130,7 @@ export interface SpanState {
   slid: boolean;
 }
 
-/** ⭐ The placed parts' faces (normal, triangles on the model pose), owners and glued partners — per placed set. */
+/** ⭐ The placed parts' faces (normal, triangles on the model pose) and owners, the parts as closed triangle sets, the box's six directions — per placed set. */
 export function spanFacesOf(st: SceneState): NonNullable<SceneState["spanFaces"]> {
   const ids: string[] = [];
   for (const [mesh, id] of st.idOf) if (goalLocked(id, st.goalCommit, true) && mesh.isEnabled()) ids.push(id);
@@ -152,72 +149,38 @@ export function spanFacesOf(st: SceneState): NonNullable<SceneState["spanFaces"]
       owners.push({ id, faceId: f.id });
     }
   }
-  const partner = gluedPartners(faces, owners.map((o) => o.id));
-  // ⭐ a glued face whose coplanar region is the smaller is hidden: never a host (no triangles for the regions)
-  const areas = new Map<number, number>();
-  const regionAreaOf = (i: number): number => {
-    const known = areas.get(i);
-    if (known !== undefined) return known;
-    const f = faces[i]!;
-    const r = spanRegion(faces, i, spanPlane(f.normal, f.tris[0]![0]));
-    const a = r === null ? 0 : regionArea(r);
-    areas.set(i, a);
-    return a;
-  };
-  const hidden = hiddenGlued(partner, regionAreaOf);
-  const hostable = faces.map((f, i) => (hidden[i] ? { normal: f.normal, tris: [] } : f));
-  // ⭐ a step onto a hidden face lands on its partner; onto a kept one, on itself
-  for (let i = 0; i < partner.length; i++) if (!hidden[i]) partner[i] = -1;
-  st.spanFaces = { key, faces, hostable, owners, partner };
-  return st.spanFaces;
-}
-
-/** ⭐ The placed parts as closed triangle sets (their faces' triangles, grouped by owner). */
-function partsOf(sf: NonNullable<SceneState["spanFaces"]>): Tri[][] {
   const by = new Map<string, Tri[]>();
-  sf.faces.forEach((f, i) => {
-    const id = sf.owners[i]!.id;
+  faces.forEach((f, i) => {
+    const id = owners[i]!.id;
     const a = by.get(id) ?? [];
     a.push(...f.tris);
     by.set(id, a);
   });
-  return [...by.values()];
+  const partIds = [...by.keys()];
+  const parts = partIds.map((id) => by.get(id)!);
+  st.spanFaces = { key, faces, owners, partIds, parts, dirs: boxDirs(parts.flatMap((t) => t.flatMap((x) => [...x]))) };
+  st.spanShadows.clear();
+  return st.spanFaces;
+}
+
+/** ⭐ The shadow on the base `n` (one of the box's), per placed set and bridge (`shadowBridgeMm`); `null`: no parts. */
+function shadowOf(st: SceneState, n: Vec3): ShadowMap | null {
+  const sf = spanFacesOf(st);
+  const key = `${n.map((x) => x.toFixed(6)).join(",")}|${st.cfg.shadowBridgeMm}`;
+  if (st.spanShadows.has(key)) return st.spanShadows.get(key)!;
+  const m = shadowMap(n, sf.parts, st.cfg.shadowBridgeMm / 1000);
+  st.spanShadows.set(key, m);
+  return m;
 }
 
 /**
- * ⭐ The BASE face under the far gizmo `g`: a placed, hostable face turned like `n` (or toward the piece, `u`) whose plane lies at `g` or behind it within the
- * ride's slab, `g` over its region — the LARGEST region (a gizmo found on a protrusion's front, Piece45's, is on the painting's face, riding over it). A tie:
- * the nearer plane.
+ * ⭐⭐⭐ (2026-11-03) WHERE THE PIECE AND THE CAMERA ARE READ FROM (the owner: *"the gizmo jumps but nothing happens to the piece nor the camera (they follow the
+ * orbit)"*): the gizmo's FOOT on the base's plane — so a jump of the shadow moves neither — brought onto the gizmo itself within the shell's offset
+ * (`gizmoShare`: at the contact the piece is on the real surface). `d`: the approach's distance.
  */
-function faceUnder(sf: NonNullable<SceneState["spanFaces"]>, g: Vec3, n: Vec3 | null, u: Vec3): number {
-  let best = -1;
-  let bestArea = -1;
-  let bestH = Infinity;
-  const seen = new Set<string>();
-  sf.hostable.forEach((f, i) => {
-    if (f.tris.length === 0) return;
-    const m = f.normal;
-    if (n !== null ? m[0] * n[0] + m[1] * n[1] + m[2] * n[2] < 0.999 : m[0] * u[0] + m[1] * u[1] + m[2] * u[2] <= 0.05) return;
-    const pl = spanPlane(m, f.tris[0]![0]);
-    const h = heightOf(pl, g);
-    if (h < -0.004 || h > SPAN_RIDE_SLAB_M) return;
-    const r = spanRegion([f], 0, pl);
-    if (r === null || regionDistance(r, toP2(pl, g)) > 0.03) return;
-    const plane = spanPlane(m, [g[0] - m[0] * h, g[1] - m[1] * h, g[2] - m[2] * h]);
-    const reg = spanRegion(sf.hostable, i, plane);
-    if (reg === null) return;
-    const key = reg.members.join(",");
-    if (seen.has(key)) return;
-    seen.add(key);
-    if (regionDistance(reg, toP2(plane, g)) > 0.006) return;
-    const area = regionArea(reg);
-    if (area > bestArea * 1.0001 || (Math.abs(area - bestArea) <= bestArea * 1e-4 && Math.abs(h) < bestH)) {
-      best = i;
-      bestArea = area;
-      bestH = Math.abs(h);
-    }
-  });
-  return best;
+export function spanAnchor(sp: SpanState, d: number, offsetM: number): Vec3 {
+  const w = gizmoShare(d, offsetM);
+  return [sp.foot[0] + (sp.g[0] - sp.foot[0]) * w, sp.foot[1] + (sp.g[1] - sp.foot[1]) * w, sp.foot[2] + (sp.g[2] - sp.foot[2]) * w];
 }
 
 /** ⭐ The camera's right and up as last drawn, and `dir` — from the look point TOWARD the camera (the frame's) (null: none yet) — the orbit's own convention (`framesFrame`'s). */
@@ -257,42 +220,66 @@ export function fingerAxesFrame(st: SceneState): void {
     pitchW = g.pitch ?? g.pitchW;
   }
   const was = st.asmAxes;
-  const y = screenDir(yawW, scr.right, scr.up) ?? was?.yaw ?? null;
-  const p = screenDir(pitchW, scr.right, scr.up) ?? was?.pitch ?? null;
-  st.asmAxes = y !== null && p !== null ? { yaw: y, pitch: p } : was;
-}
-
-/** ⭐ The plane through face `i` at the point `g` (its own plane, `g` projected onto it). */
-function planeAt(sf: NonNullable<SceneState["spanFaces"]>, i: number, g: Vec3): SpanPlane {
-  const f = sf.faces[i]!;
-  const m = f.normal;
-  const v0 = f.tris[0]![0];
-  const k = m[0] * (g[0] - v0[0]) + m[1] * (g[1] - v0[1]) + m[2] * (g[2] - v0[2]);
-  return spanPlane(m, [g[0] - m[0] * k, g[1] - m[1] * k, g[2] - m[2] * k]);
+  // ⭐⭐⭐ (2026-11-03) each held to the screen's axis it drives (`holdToScreen`): a dx a straight level line, a dy a straight vertical, however obliquely the
+  // face is seen; a roll swings them on
+  const ys = screenDir(yawW, scr.right, scr.up);
+  const ps = screenDir(pitchW, scr.right, scr.up);
+  const yh = ys === null ? null : holdToScreen(ys, was?.yawC ?? null);
+  let ph = ps === null ? null : holdToScreen(ps, was?.pitchC ?? null);
+  // the two never on one screen axis (⛔ both receding alike: a dx drove both, a dy nothing) — the pitch's the one square to the yaw's, on its side
+  if (yh !== null && ph !== null && yh.c % 2 === ph.c % 2) {
+    const c = (yh.c + (ps![0] * -Math.sin((yh.c * Math.PI) / 2) + ps![1] * Math.cos((yh.c * Math.PI) / 2) >= 0 ? 1 : 3)) % 4;
+    ph = { dir: [Math.round(Math.cos((c * Math.PI) / 2)), Math.round(Math.sin((c * Math.PI) / 2))], c };
+  }
+  const y = yh?.dir ?? was?.yaw ?? null;
+  const p = ph?.dir ?? was?.pitch ?? null;
+  st.asmAxes = y !== null && p !== null ? { yaw: y, pitch: p, yawC: yh?.c ?? was?.yawC ?? null, pitchC: ph?.c ?? was?.pitchC ?? null } : was;
 }
 
 /**
- * ⭐⭐⭐ ENGAGE: the far gizmo `g` (on the face `n`) becomes the face-span's — the base face's plane, its region, its tops; the orbit's solved direction `u`
- * the reference its next step is read from. `false`: no placed face found there (the far orbit goes on).
+ * ⭐⭐⭐ ENGAGE: the gizmo found at `g` (its face `n`, else the piece's direction `u`) becomes the shadow gizmo's — on the box's base nearest that face (a
+ * slanted face its projection), the nearest point of its shadow. `false`: no shadow there (the far carrier goes on).
  */
 export function spanEngage(st: SceneState, g: Vec3, n: Vec3 | null, u: Vec3): boolean {
   const sf = spanFacesOf(st);
-  const i = faceUnder(sf, g, n, u);
-  if (i < 0) return false;
-  const pl = planeAt(sf, i, g);
-  const region = spanRegion(sf.hostable, i, pl);
-  if (region === null) return false;
-  const at = intoRegion(region, toP2(pl, g), regionInside(region));
-  const solids = spanSolids(pl, partsOf(sf));
-  const ride = coveredTop(solids, at);
+  const base = snapDir(n ?? u, sf.dirs);
+  if (base === null) return false;
+  const map = shadowOf(st, base);
+  if (map === null) return false;
+  const pl = map.plane;
+  const at = nearestCovered(map, toP2(pl, g));
+  if (at === null) return false;
+  const hit = shadowAt(map, at)!;
   const ax = faceAxes(pl.n, screenAxes(st)?.right ?? [1, 0, 0]);
   const paceH = greenPaceOf(sf.faces.flatMap((f) => f.tris.flatMap((t) => [...t])));
-  st.span = { plane: pl, region, solids, face: i, host: sf.owners[i]!.id, motion: { at, overMm: 0 }, ride, uPrev: u, qPrev: null, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, ride), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, shareH: 1, shareV: 1, calmRamp: 0, slid: false };
+  st.span = { plane: pl, map, dirs: sf.dirs, host: st.gizmoHost ?? "", motion: { at, overMm: 0 }, h: hit.h, uPrev: u, input: { yaw: 0, pitch: 0, frame: "" }, eH: ax.h, eV: ax.v, sh: 1, sv: 1, paceH, g: fromP2(pl, at, hit.h), foot: fromP2(pl, at, 0), stepMm: 0, eYaw: ax.h, ePitch: ax.v, zen: null, shareH: 1, shareV: 1, calmRamp: 0, slid: false };
   spanSenses(st, st.span);
-  setGizmoFace(st, pl.n, sf.owners[i]!.id);
-  st.lastVerdict = `face-span: on ${sf.owners[i]!.id}'s face — the gizmo moves on its coplanar faces (${region.members.length})`;
+  spanHitFace(st, st.span, hit.tri);
+  st.lastVerdict = `face-span: the gizmo's shadow on the assembly's ${baseName(pl.n)}`;
   st.hudDirty = true;
   return true;
+}
+
+/** ⭐ The base's name for the HUD. */
+function baseName(n: Vec3): string {
+  return n[1] > 0.7 ? "top" : n[1] < -0.7 ? "bottom" : "side";
+}
+
+/**
+ * ⭐⭐ The face the quads and the slide read (`gizmoNormal`, `gizmoHost`): the REAL face under the gizmo (the shadow's triangle) — the piece lands on it;
+ * across a bridged gap the one before. The orbit's frame reads the BASE (`spanTiltNormal`): no tilt.
+ */
+function spanHitFace(st: SceneState, sp: SpanState, tri: number): void {
+  if (tri < 0) return;
+  const t = sp.map.tris[tri]!;
+  const host = spanFacesOf(st).partIds[t.owner] ?? sp.host;
+  sp.host = host;
+  setGizmoFace(st, t.n, host);
+}
+
+/** ⭐⭐⭐ (2026-11-03) The normal the orbit's FACE FRAME reads (`tiltWanted`): in the face-span the base's — a slanted face never tilts the orbit nor rolls the camera. */
+export function spanTiltNormal(st: SceneState): Vec3 | null {
+  return st.span !== null ? st.span.plane.n : (st.gizmoNormal ?? null);
 }
 
 function setGizmoFace(st: SceneState, n: Vec3, host: string): void {
@@ -341,23 +328,43 @@ export function spanScreenSigns(st: SceneState, n: Vec3): void {
   st.asmSign = { yaw: signOnScreen(st.asmSign.yaw, g.yaw ?? g.yawW, scr.right), v: signOnScreen(st.asmSign.v, g.pitch ?? g.pitchW, scr.up) };
 }
 
+/** ⭐ The orbit's frame as a key (its steps are read in it). */
+function orbitFrameKey(st: SceneState): string {
+  return st.asmOrbit.map((x) => x.toFixed(9)).join(",");
+}
+
 /**
- * ⭐⭐⭐ ONE FRAME of the face-span: the gizmo moved by the orbit's SOLVED yaw and pitch steps since the last frame along the face's level axes (`spanAxisStep` — ff2fca2's relation),
- * checked against the parts for the piece (`gapAt` — the queries the caller counts: never closer to a part than the gap kept), clamped by the region, caught
- * at the edge, onto the face across; the tops ridden; the zenith's roll kept (its cone); the finger's signs off the screen.
+ * ⭐⭐⭐ (2026-11-03) THE FINGER'S ORBIT STEP, gathered for the gizmo: the orbit's target from (`yaw0`, `v0`) to where the drag or the coast left it (its cuts in).
+ * A re-base of the orbit's frame since drops what was gathered.
  */
-export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g: Vec3) => number, dirOf: (yaw: number, v: number) => Vec3): void {
+export function spanInputAdd(st: SceneState, yaw0: number, v0: number): void {
+  const sp = st.span;
+  if (sp === null) return;
+  const frame = orbitFrameKey(st);
+  if (sp.input.frame !== frame) sp.input = { yaw: 0, pitch: 0, frame };
+  sp.input.yaw += Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0));
+  sp.input.pitch += pitchOfV(st.orbit.elevation) - pitchOfV(v0);
+}
+
+/**
+ * ⭐⭐⭐ ONE FRAME of the shadow gizmo: moved by the FINGER's orbit steps since the last frame along the base's level axes (`spanAxisStep` —
+ * ff2fca2's relation), in straight lines; checked against the parts for the piece (`gapAt` — the queries the caller counts: never closer to a part than the
+ * gap kept), clamped to the shadow's outline, caught there, then onto the next base at 90°; its depth the shadow's at once (a jump — the piece and the camera
+ * read its foot); the zenith's roll kept (its cone); the finger's signs off the screen.
+ */
+export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g: Vec3, foot: Vec3) => number, dirOf: (yaw: number, v: number) => Vec3): void {
   const sp = st.span;
   const q = st.pieceQ;
   if (sp === null || q === null || st.asm === null) return;
   const u1 = dirOf(q.yaw, q.v);
   sp.uPrev = u1;
-  // ⭐⭐⭐ (third pass) ff2fca2's relation: the orbit's solved YAW and PITCH steps since the last frame (none across a re-base of its frame)
-  const frame = st.asmOrbit.map((x) => x.toFixed(9)).join(",");
-  const qp = sp.qPrev;
-  const dYaw = qp !== null && qp.frame === frame ? Math.atan2(Math.sin(q.yaw - qp.yaw), Math.cos(q.yaw - qp.yaw)) : 0;
-  const dPitch = qp !== null && qp.frame === frame ? pitchOfV(q.v) - pitchOfV(qp.v) : 0;
-  sp.qPrev = { yaw: q.yaw, v: q.v, frame };
+  // ⭐⭐⭐ (third pass) ff2fca2's relation: the orbit's YAW and PITCH steps since the last frame — ⭐⭐⭐ (2026-11-03, the owner: *"a straight horizontal or
+  // vertical line (which I expect if the gizmo would faithfully follow the dy and dx orbit inputs)"*) the FINGER's (`spanInputAdd`), ⛔ the SOLVED ones: a piece
+  // touching a part slid down it under a pure dx and the gizmo went 16 cm down with it; none across a re-base of the orbit's frame
+  const frame = orbitFrameKey(st);
+  const dYaw = sp.input.frame === frame ? sp.input.yaw : 0;
+  const dPitch = sp.input.frame === frame ? sp.input.pitch : 0;
+  sp.input = { yaw: 0, pitch: 0, frame };
   spanSenses(st, sp);
   // ⭐ the zenith's cone kept BEFORE the step (⛔ after it: a thin top is crossed in a frame or two — its far edge's wait came a frame too late)
   spanZenithKeep(st, sp, dirOf(st.orbit.yaw, st.orbit.elevation));
@@ -367,35 +374,36 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   const atRest = st.router.size === 0 && !st.orbitInertia.coasting && !st.approachInertia.coasting;
   const travel = Math.max(st.asmTravelFrameMm, mm);
   const cfg = st.cfg;
-  const sf = spanFacesOf(st);
   const pl = sp.plane;
   const n = pl.n;
+  const map = sp.map;
   const step = toPlaneDir(pl, spanAxisStep(dYaw, dPitch, sp.paceH, st.asm.radius, sp.eH, sp.eV, sp.sh, sp.sv));
-  const exclude = new Set(sp.region.members);
-  const findNext = (at: P2, out: P2) => {
+  const findNext = (_at: P2, out: P2): { normal: Vec3 } | null => {
     const D: Vec3 = [pl.a[0] * out[0] + pl.b[0] * out[1], pl.a[1] * out[0] + pl.b[1] * out[1], pl.a[2] * out[0] + pl.b[2] * out[1]];
     // ⭐⭐ over a top, its far edge waits for the orbit to cross the zenith toward it (the roll first, then down the far side — ⛔ off the thin top before
     // the zenith, the orbit still rising pushed the gizmo back up the far face: back and forth over the top)
     const z = sp.zen;
     if (z !== null && Math.sign(D[0] * z.e[0] + D[1] * z.e[1] + D[2] * z.e[2]) !== Math.sign(u1[0] * z.e[0] + u1[1] * z.e[1] + u1[2] * z.e[2])) return null;
-    return wrapCandidate(sf.faces, exclude, fromP2(pl, at), n, D, undefined, sf.partner);
+    // ⭐⭐⭐ (2026-11-03) the next base: the box's direction along the push — at 90°, never a slanted face's
+    const next = snapDir(D, sp.dirs, n);
+    return next === null ? null : { normal: next };
   };
-  const dist = (p: P2) => regionDistance(sp.region, p);
+  const dist = shadowDist(map);
   const moveBy = (k: number) => spanMove(sp.motion, [step[0] * k, step[1] * k], mm * k, dist, cfg.faceSpanCatchMm, findNext);
   let res = moveBy(1);
   // ⭐ the piece moved with the gizmo along the face: never closer to a part than the gap kept (or than it is, already inside it) — the step halved
   const moved = res.next === null && Math.hypot(res.motion.at[0] - sp.motion.at[0], res.motion.at[1] - sp.motion.at[1]) > 1e-7;
   if (moved) {
-    const gOf = (at: P2): Vec3 => fromP2(pl, at, Math.max(sp.ride, coveredTop(sp.solids, at)));
-    const g1 = gapAt(gOf(res.motion.at));
+    const gapOf = (at: P2): number => gapAt(fromP2(pl, at, shadowAt(map, at)?.h ?? sp.h), fromP2(pl, at, 0));
+    const g1 = gapOf(res.motion.at);
     if (g1 < gapM) {
-      const g0 = gapAt(gOf(sp.motion.at));
+      const g0 = gapOf(sp.motion.at);
       const ok = (g: number): boolean => g >= Math.min(gapM, g0) - 1e-5;
       if (!ok(g1)) {
         let found = false;
         for (const k of [0.5, 0.25, 0.125]) {
           const r = moveBy(k);
-          if (ok(gapAt(gOf(r.motion.at)))) {
+          if (ok(gapOf(r.motion.at))) {
             res = r;
             found = true;
             break;
@@ -407,28 +415,34 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
     }
   }
   if (res.held && sp.motion.overMm < cfg.faceSpanCatchMm && res.motion.overMm >= cfg.faceSpanCatchMm) {
-    st.lastVerdict = "face-span: the edge — nothing across it";
+    st.lastVerdict = "face-span: the outline — nothing across it";
     st.hudDirty = true;
   }
   sp.motion = res.motion;
-  if (res.next !== null) spanCommit(st, sp, sf, res.next.index, res.next.kind);
+  if (res.next !== null) spanCommit(st, sp, res.next.normal);
   else if (u1[0] * n[0] + u1[1] * n[1] + u1[2] * n[2] <= SPAN_BEHIND_COS) {
-    // ⭐⭐ the piece no longer in front of the hosting face (the orbit gone over its edge — a thin assembly's face is crossed by the orbit faster than its
-    // radius × angle): the gizmo carried to that edge and across at once (no catch)
+    // ⭐⭐ the piece no longer in front of the base (the orbit gone over its edge — a thin assembly's side is crossed by the orbit faster than its radius ×
+    // angle): the gizmo carried to that outline and across at once (no catch)
     const toward = onPlane(u1, n);
     if (toward !== null) {
       const far = toPlaneDir(pl, toward);
       const r2 = spanMove(sp.motion, [far[0] * 2, far[1] * 2], 1e6, dist, 0, findNext);
       if (r2.next !== null) {
         sp.motion = r2.motion;
-        spanCommit(st, sp, sf, r2.next.index, r2.next.kind);
+        spanCommit(st, sp, r2.next.normal);
       }
     }
   }
-  // ⭐ the tops ridden, eased by the travel
-  sp.ride = rideStep(sp.ride, coveredTop(sp.solids, sp.motion.at), travel, cfg.faceSpanRideMm, dtMs, atRest);
-  sp.g = fromP2(sp.plane, sp.motion.at, sp.ride);
-  // ⭐ the lines' axes: the face's level axes (green the level line, red the steepest on a wall)
+  // ⭐⭐⭐ (2026-11-03) the shadow at the gizmo: its depth AT ONCE (the owner: *"the gizmo shall behave like a shadow (ie jumping over the discontinuity)"*),
+  // its real face for the quads; the foot on the base's plane
+  const hit = shadowAt(sp.map, sp.motion.at);
+  if (hit !== null) {
+    sp.h = hit.h;
+    spanHitFace(st, sp, hit.tri);
+  }
+  sp.g = fromP2(sp.plane, sp.motion.at, sp.h);
+  sp.foot = fromP2(sp.plane, sp.motion.at, 0);
+  // ⭐ the lines' axes: the base's level axes (green the level line, red the vertical on a side)
   sp.eYaw = sp.eH;
   sp.ePitch = sp.eV;
   // ⭐⭐⭐ (fourth pass) the shares of the orbit's angle shown, from the gizmo's place on its runs (the nearer end); the calm ramped in from the engage
@@ -436,13 +450,13 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
     const d0 = toPlaneDir(sp.plane, e);
     const l = Math.hypot(d0[0], d0[1]);
     if (!(l > 1e-9)) return 1;
-    const run = regionRun(sp.region, sp.motion.at, [d0[0] / l, d0[1] / l]);
+    const run = shadowRun(sp.map, sp.motion.at, [d0[0] / l, d0[1] / l]);
     return edgeShare(Math.min(-run[0], run[1]), run[1] - run[0], interior, zonePct, zoneMinCm / 100);
   };
   sp.shareH = shareOf(sp.eH, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm);
   sp.shareV = cfg.faceSpanShareVOn === 1 ? shareOf(sp.eV, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm) : 1;
   sp.calmRamp = Math.min(1, sp.calmRamp + travel / CALM_RAMP_MM + (atRest ? dtMs / CALM_REST_MS : 0));
-  // ⭐⭐⭐ the screen wins — on a settled picture (no roll under way), the camera facing the hosting face (⛔ grazing it, from over the top, its up the face's
+  // ⭐⭐⭐ the screen wins — on a settled picture (no roll under way), the camera facing the base (⛔ grazing it, from over the top, its up the face's
   // turned over: the signs flipped mid-drag, back and forth); ⭐⭐⭐ (2026-11-03) mid-drag too, inside the zenith's cone too, a roll just ended at once — ⛔ held
   // until the lift: after the roll under a bottom the piece came out on the far side with a dy reversed on the screen. Whatever the signs,
   // the finger is laid on the gizmo's axes as shown (`fingerAxesFrame`)
@@ -452,28 +466,33 @@ export function spanFrame(st: SceneState, dtMs: number, gapM: number, gapAt: (g:
   if (!zenithRolling(st) && st.asmRoll === null && facing) spanScreenSigns(st, sp.plane.n);
 }
 
-/** ⭐⭐ ONTO THE FACE ACROSS: its plane, region and tops; the gizmo where it stood, laid on it. */
-function spanCommit(st: SceneState, sp: SpanState, sf: NonNullable<SceneState["spanFaces"]>, i: number, kind: string): void {
-  const g = fromP2(sp.plane, sp.motion.at, sp.ride);
-  const pl = planeAt(sf, i, g);
-  const region = spanRegion(sf.hostable, i, pl);
-  if (region === null) return;
-  sp.plane = pl;
-  sp.region = region;
-  sp.solids = spanSolids(pl, partsOf(sf));
-  sp.face = i;
-  sp.host = sf.owners[i]!.id;
-  sp.motion = { at: intoRegion(region, toP2(pl, g), regionInside(region)), overMm: 0 };
-  sp.ride = Math.max(0, heightOf(pl, g));
+/**
+ * ⭐⭐⭐ (2026-11-03) ROUND THE OUTLINE onto the next base (`n2`, one of the box's, at 90°): its shadow; the gizmo where it stood, a hair inside the base it
+ * leaves, laid on it (the nearest point of its shadow); its level axes and their senses read again.
+ */
+function spanCommit(st: SceneState, sp: SpanState, n2: Vec3): void {
+  const map = shadowOf(st, n2);
+  if (map === null) return;
+  const n0 = sp.plane.n;
+  const inside: Vec3 = [sp.g[0] - n0[0] * 0.002, sp.g[1] - n0[1] * 0.002, sp.g[2] - n0[2] * 0.002];
+  const at = nearestCovered(map, toP2(map.plane, inside));
+  if (at === null) return;
+  const hit = shadowAt(map, at)!;
+  sp.plane = map.plane;
+  sp.map = map;
+  sp.motion = { at, overMm: 0 };
+  sp.h = hit.h;
+  sp.g = fromP2(map.plane, at, hit.h);
+  sp.foot = fromP2(map.plane, at, 0);
   sp.zen = null;
   if (sp.uPrev !== null) spanZenithKeep(st, sp, sp.uPrev); // ⭐ a top entered: its cone at once
-  // ⭐⭐⭐ (third pass) the new face's level axes (a top's latched off the screen now), their senses read again
-  const ax = faceAxes(pl.n, screenAxes(st)?.right ?? sp.eH);
+  // ⭐⭐⭐ (third pass) the new base's level axes (a top's latched off the screen now), their senses read again
+  const ax = faceAxes(map.plane.n, screenAxes(st)?.right ?? sp.eH);
   sp.eH = ax.h;
   sp.eV = ax.v;
   spanSenses(st, sp);
-  setGizmoFace(st, pl.n, sp.host);
-  st.lastVerdict = `face-span: across the edge (${kind.toLowerCase()}) onto ${sp.host}'s face (${region.members.length} coplanar)`;
+  spanHitFace(st, sp, hit.tri);
+  st.lastVerdict = `face-span: round the outline onto the assembly's ${baseName(map.plane.n)}`;
   st.hudDirty = true;
 }
 
@@ -565,42 +584,18 @@ export function spanZenithUp(st: SceneState): { from: Vec3; to: Vec3; share: num
   return { from: z.from, to: [-z.from[0], -z.from[1], -z.from[2]], share: z.share, sense: z.sense };
 }
 
-/**
- * ⭐⭐⭐ RELEASE (the approach out past the engage's hysteresis): the far orbit simply goes on (it never stopped); the far gizmo found again from the
- * face-span's; the finger's signs read off the screen by the far orbit's own rule (⛔ `signAfter`: an inversion carried out of the face-span).
- */
-export function spanRelease(st: SceneState): void {
-  const sp = st.span;
-  st.span = null;
-  if (sp === null) return;
-  const scr = screenAxes(st);
-  if (scr !== null) {
-    const g = gizmoSteps(st, sp.plane.n);
-    st.asmSign = { yaw: signOnScreen(st.asmSign.yaw, g.yawW, scr.right), v: signOnScreen(st.asmSign.v, g.pitchW, scr.up) };
-  }
-  st.asmG = sp.g;
-  st.asmCarrier = null;
-  st.asmShown = null;
-  st.asmPrevQ = null;
-  st.lastVerdict = "face-span: out — the far orbit around the assembly";
-  st.hudDirty = true;
-}
-
-/** ⭐ Back from a slide: the gizmo where the slide left it — on this plane, taken in; else the face-span engaged again there. */
+/** ⭐ Back from a slide: the shadow gizmo found again where the slide left it (its real face snapped to the box, else the piece's direction); the calm kept. */
 export function spanAfterSlide(st: SceneState, at: Vec3, u: Vec3): void {
   const sp = st.span;
   if (sp === null) return;
   sp.slid = false;
   sp.uPrev = null;
-  sp.qPrev = null;
-  const n = st.gizmoNormal ?? null;
-  const same = n !== null && n[0] * sp.plane.n[0] + n[1] * sp.plane.n[1] + n[2] * sp.plane.n[2] > 0.999 && Math.abs(heightOf(sp.plane, at)) < 0.004;
-  if (same) {
-    sp.motion = { at: intoRegion(sp.region, toP2(sp.plane, at), regionInside(sp.region)), overMm: 0 };
-    sp.ride = 0;
+  sp.input = { yaw: 0, pitch: 0, frame: "" };
+  if (!spanEngage(st, at, st.gizmoNormal ?? null, u)) {
+    st.span = sp;
     return;
   }
-  if (!spanEngage(st, at, n, u)) st.span = sp;
+  st.span!.calmRamp = sp.calmRamp;
 }
 
 /** ⭐ The lines' points per line (a fixed vertex count — the mesh updated in place). */
@@ -609,9 +604,9 @@ const GREEN = new Color4(0.35, 0.8, 0.35, 1);
 const RED = new Color4(0.9, 0.25, 0.2, 1);
 
 /**
- * ⭐⭐⭐ THE RED AND GREEN LINES of the face-span: through the gizmo along the orbit's two steps laid on the face (green the yaw's, red the pitch's), across the
- * region's run (`regionRun` — the coplanar faces, never round the assembly), over the tops (`spanPolyline`: a step drawn as its connector), lifted 2 mm.
- * Hidden with the sections' slider, under a slide, out of the face-span.
+ * ⭐⭐⭐ THE RED AND GREEN LINES: ⭐⭐⭐ (2026-11-03) each the SHADOW's profile through the gizmo in ONE plane — green the level plane along the base's level
+ * axis, red the vertical plane along its vertical (a top: the two vertical planes at 90°) — across its run on the outline (`shadowRun`), a step drawn as its
+ * connector in the plane (`spanPolyline`; the gizmo itself jumps it), lifted 2 mm. Hidden with the sections' slider, under a slide.
  */
 export function spanLinesFrame(st: SceneState): void {
   const sp = st.span;
@@ -622,7 +617,7 @@ export function spanLinesFrame(st: SceneState): void {
   }
   const p = sp.plane;
   const at = sp.motion.at;
-  const key = `${sp.face}|${sp.region.members.length}|${at[0].toFixed(5)},${at[1].toFixed(5)}|${sp.eYaw.map((x) => x.toFixed(3)).join(",")}|${sp.ePitch.map((x) => x.toFixed(3)).join(",")}`;
+  const key = `${p.n.map((x) => x.toFixed(4)).join(",")}|${st.cfg.shadowBridgeMm}|${at[0].toFixed(5)},${at[1].toFixed(5)}|${sp.eYaw.map((x) => x.toFixed(3)).join(",")}|${sp.ePitch.map((x) => x.toFixed(3)).join(",")}`;
   if (st.spanLines !== null && key === st.spanLinesKey) {
     st.spanLines.isVisible = true;
     return;
@@ -633,15 +628,16 @@ export function spanLinesFrame(st: SceneState): void {
     const l = Math.hypot(d0[0], d0[1]);
     if (!(l > 1e-9)) return [];
     const d: P2 = [d0[0] / l, d0[1] / l];
-    const run = regionRun(sp.region, at, d);
-    const pts = spanPolyline(sp.solids, at, d, run[0], run[1], Math.max(0.004, (run[1] - run[0]) / 120), 0.001, SPAN_LINE_PTS);
-    return pts.map(([t, h]) => {
-      const w = fromP2(p, [at[0] + d[0] * t, at[1] + d[1] * t], h + SPAN_LINE_LIFT_M);
+    const run = shadowRun(sp.map, at, d);
+    const h = (t: number): number => shadowAt(sp.map, [at[0] + d[0] * t, at[1] + d[1] * t])?.h ?? sp.h;
+    const pts = spanPolyline(h, run[0], run[1], Math.max(0.004, (run[1] - run[0]) / 120), 0.001, SPAN_LINE_PTS);
+    return pts.map(([t, hh]) => {
+      const w = fromP2(p, [at[0] + d[0] * t, at[1] + d[1] * t], hh + SPAN_LINE_LIFT_M);
       return new Vector3(w[0], w[1], w[2]);
     });
   };
   const pad = (pts: Vector3[]): Vector3[] => {
-    const g = fromP2(p, at, sp.ride + SPAN_LINE_LIFT_M);
+    const g = fromP2(p, at, sp.h + SPAN_LINE_LIFT_M);
     const out = pts.length > 0 ? pts.slice(0, SPAN_LINE_PTS) : [new Vector3(g[0], g[1], g[2])];
     while (out.length < SPAN_LINE_PTS) out.push(out[out.length - 1]!.clone());
     return out;

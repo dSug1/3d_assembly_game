@@ -201,10 +201,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "gizmo travel cap (mm per mm of finger)", "gizmoMmPerMm", 5, 400, 5),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             // ⭐⭐⭐ (2026-11-02) THE FACE-SPAN GIZMO
-            tunable(st, "face-span engages within (m of the gizmo; out past 1.2 ×)", "faceSpanEngageM", 0.1, 6, 0.1),
+            tunable(st, "face-span: the calm of the shares within (m of the gizmo; none past 1.2 ×)", "faceSpanEngageM", 0.1, 6, 0.1),
             tunable(st, "face-span catch at an edge (mm of push)", "faceSpanCatchMm", 0, 30, 0.5),
             tunable(st, "face-span: the top face's half turn at the zenith (mm of finger)", "faceSpanRollMm", 0, 60, 1),
-            tunable(st, "face-span ride over a protrusion (mm)", "faceSpanRideMm", 0, 40, 1),
+            tunable(st, "the gizmo's shadow: gaps narrower than this bridged (mm on the assembly)", "shadowBridgeMm", 0, 100, 1),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)
