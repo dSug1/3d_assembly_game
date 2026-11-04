@@ -539,6 +539,7 @@ export function createScene(
   st.asmSectionLines = null;
   st.asmSectionKey = "";
   st.asmShown = null;
+  st.asmCalm = null;
   st.asmRedCache = null;
   st.asmGreenCache = null;
   st.asmGizmoAt = null;

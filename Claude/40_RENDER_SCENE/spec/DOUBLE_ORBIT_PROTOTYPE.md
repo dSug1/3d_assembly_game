@@ -2337,3 +2337,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   slice of the turn, crossed linearly; out of step closed in angle, `syncStep`) — always on a face facing the piece (⛔ by distance it waited at corners,
   slipped a rounding step onto a face turned away: the red gone after an edge, then a snap). The by-distance rule kept for the fallback; the calm
   (`58d86ff`) is Step 9 (scope §13). 1614 vectors. ⛔ No device close.
+* ✅ **The calm of `58d86ff`, ported (2026-11-04, `1.0.95-`)**, the owner: *"It shall stay"* — the piece's shown direction at a quarter of the orbit's angle
+  off the face's normal in its middle, whole at its edges (`input/orbit_calm.ts`; 58d86ff's rules and seven sliders), within 3.6–5.4 m of the gizmo; the
+  runs from the carrier, the shares and the face eased, the camera's heading turned with it. Close in, dx: 55° → 28° off square in the middle (scope §13).
+  1625 vectors. ⛔ No device close.

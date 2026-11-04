@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, redPace, syncStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, chainRun, facetRunToward, redPace, syncStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -23,6 +23,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
+import { alignedShare, calmEngageM, calmHeading, calmWeight, CALM_RELEASE_FACTOR, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
 import type { Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -135,7 +136,62 @@ function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   const u = orbitDir(yaw, v);
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-  return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);
+  // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
+  // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
+  return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);
+}
+
+/**
+ * ⭐⭐⭐ (58d86ff's `spanShownDir`, ported) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u`: its angles off the gizmo's face's normal shown at the
+ * eased shares (`st.asmCalm`), weighted by the distance (whole within 0.8 × `faceSpanEngageM`, none at 1.2 ×: no jump in or out).
+ */
+function calmDir(st: SceneState, u: Vec3): Vec3 {
+  const k = st.asmCalm;
+  if (k === null) return u;
+  const w = calmWeight(1, approachDistance(st.cfg, st.approach), calmEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), CALM_RELEASE_FACTOR);
+  if (!(w > 0)) return u;
+  return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame, from the gizmo's carrier (the accepted drop's): on a SIDE the facet of the green loop
+ * facing the way of the real face under it, nearest it (`facetRunToward` — dx's run, the face's normal) and its in-line stretch of the red chain (dy's run) — `edgeShare` of each (58d86ff's); over a top / under a bottom the orbit's
+ * whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED toward them (`easeToward`, `easeNormal`) — the face at a
+ * height changes with the height (a bridged protrusion, the funnel): read at once, the camera would jump.
+ */
+function calmFrame(st: SceneState, dtMs: number): void {
+  const c = st.asmShown?.c ?? null;
+  const cfg = st.cfg;
+  let n: Vec3 | null = null;
+  let sH = 1;
+  let sV = 1;
+  const hn = st.asmShown?.n ?? null;
+  if (c !== null && c.kind === "SIDE" && hn !== null && Math.abs(hn[1]) < Math.SQRT1_2) {
+    const loop = loopFor(st, c.w[1]);
+    const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], hn);
+    if (f !== null) {
+      n = f.n;
+      sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
+      const r = cfg.faceSpanShareVOn === 1 ? chainRun(c.chain, c.s) : null;
+      sV = r === null ? 1 : edgeShare(r.dEdge, r.run, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+    }
+  }
+  const k = st.asmCalm;
+  if (k === null) {
+    // ⭐ from none: the shares come in from 1 (the orbit's whole angle) — never a jump at the start
+    if (n !== null) st.asmCalm = { n, sH: easeToward(1, sH, dtMs), sV: easeToward(1, sV, dtMs) };
+    return;
+  }
+  if (n !== null) {
+    // ⭐ both shares whole: the normal changes nothing — taken at once (⛔ eased from a stale face 175° away while the shares fell: a 271 mm camera jump)
+    k.n = k.sH > 0.999 && k.sV > 0.999 ? n : easeNormal(k.n, n, dtMs);
+    // ⭐ the calm only as far as the normal has caught up with the face's
+    const al = k.n[0] * n[0] + k.n[2] * n[2];
+    sH = alignedShare(sH, al);
+    sV = alignedShare(sV, al);
+  }
+  k.sH = easeToward(k.sH, sH, dtMs);
+  k.sV = easeToward(k.sV, sV, dtMs);
 }
 
 /**
@@ -423,9 +479,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     if (hit !== null) {
       st.asmG = hit.point;
       // ⭐⭐⭐ (2026-11-02) the lines are drawn from the carrier of this ACCEPTED drop — a held one holds them with the gizmo (⛔ they went on with the carrier)
-      st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };
+      st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw, n: hit.normal };
     }
   }
+  calmFrame(st, dtMs);
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
   // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (a); the owner: *"deleting the lock at step 1 is cleaner"*) — THE CLOSE-IN LOCK DELETED: the
   // carrier runs at EVERY distance (⛔ the old lock: within 30 cm of the gizmo, or inside the assembly's sphere, the gizmo and its face were held — one
@@ -663,7 +720,9 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
   // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
   // face's heading at once: the scene jump-rotated; and at ±90° it has none)
-  return offsetFrame(u, cam.yaw, o.yawRad, o.pitchRad);
+  // ⭐⭐⭐ (2026-11-04, `1.0.95-`) under the CALM the heading turned as the direction was (`calmHeading`) — ⛔ the orbit's yaw with the calm's direction:
+  // the up built from another heading than the direction's own, the camera ROLLED on a wall (probed: 222 frames over 5° on one close-in dx leg)
+  return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
 }
 
 /** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */

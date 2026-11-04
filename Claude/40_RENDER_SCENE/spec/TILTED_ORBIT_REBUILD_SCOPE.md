@@ -1,7 +1,7 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit (§13) — ⛔ no device close
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) — ⛔ no device close
 > on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
@@ -323,13 +323,41 @@ step on the square and the painting's shape) and the wiring; 4 RED against `1.0.
 Steps 5–6); a dy from a top whose snapped plane runs 1.5 mm behind the painting's back face — the drop lands 246 mm off on the far side (likely the owner's
 *"the gizmo and sections can be thrown off to a face opposite to the piece due to slanted geometries"*, not yet diagnosed).
 
-**⭐ The calm is NOT in this rebuild yet** — the owner asked to keep *"the behavior to avoid seeing the gizmo close to vertical edges of vertical face at a too
-slanted camera view by modulating the slide of gizmo around the middle of the face"*: it is the face-span's FOURTH PASS (`58d86ff`, 2026-11-03, on
-`1.0.92-Tilted-orbit-suspended`, `queue_notes/FACE_SPAN_2026-11-02.md` there) — the piece's SHOWN direction at a quarter of the orbit's angle off the
-face's normal in the middle of a face, rising by a smoothstep to the whole angle within an edge zone (25 % of the gizmo's run, 3 cm at least), seven
-sliders (CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE); measured on the front: 4–16° off square in the middle against 17–56°. It went with the
-rebuild from `ff2fca2`; this file plans it as **Step 9**. ⭐ The synchronized dx keeps it buildable as it was: the calm bends only the SHOWN direction (the
-piece, the camera), the gizmo is still placed from the orbit's yaw.
+**⭐⭐⭐ THE CALM, PORTED** (the owner: *"the behavior to avoid seeing the gizmo close to vertical edges of vertical face at a too slanted camera view by
+modulating the slide of gizmo around the middle of the face … i am referring to this calm behavior of commit 58d86ff… It shall stay"*). It was the
+face-span's FOURTH PASS (`58d86ff`, 2026-11-03, on `1.0.92-Tilted-orbit-suspended`, `queue_notes/FACE_SPAN_2026-11-02.md` there) and went with the rebuild
+from `ff2fca2` (planned back as Step 9) — now in `input/orbit_calm.ts`, wired in `render/assembly_wiring.ts` (`calmDir`, `calmFrame`):
+
+* `edgeShare`, `shownDir`, `calmWeight` are 58d86ff's, unchanged: the piece's SHOWN direction (the piece, the camera, the approach, the solve — `dirAt`) at
+  a quarter of the orbit's angle off the face's normal in the middle of a face, rising by a smoothstep to the whole angle within an edge zone (25 % of the
+  run, 3 cm at least), whole at the edge and through the crossing and on a face too thin for two zones (the 33 mm side, a top); the gizmo is still moved by
+  the orbit's own direction. Whole within 0.8 × `faceSpanEngageM` (4.5 m) of the gizmo, none at 1.2 × (the far orbit at 6 m: none, as at 58d86ff). The seven
+  sliders in CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE, their keys and defaults 58d86ff's, + the distance (`faceSpanEngageM`).
+* ⭐ **The runs from the carrier**: dx's — the facet of the green loop FACING the way of the real face under the gizmo (the accepted drop's normal, within
+  45°), nearest it (`facetRunToward`; ⛔ the nearest facet alone: where a part sticks out of the front, 0.145–0.217 m, the hull bridges to it and the gizmo
+  on the real front is inside it, nearer the BACK — the calm took the back's normal, the camera swung behind the painting, 121° off the front, probed); dy's
+  — the in-line stretch of the red chain (`chainRun`).
+* ⭐ **Eased, never read at once** (`CALM_TAU_MS` 120 ms — Step 9's *"the shares FOLLOWING their targets"*): the face at a height changes with the height,
+  which 58d86ff's coplanar region never did. Both shares whole: a new normal taken at once; else the calm only as far as the eased normal has caught up
+  (none beyond 30°, whole within 5°, `alignedShare`; ⛔ a share calming while the normal swung across from a stale face 175° away: a 271 mm camera jump).
+* ⭐ **The camera's heading turned as the calm turned the direction** (`calmHeading`; ⛔ the orbit's yaw with the calm's direction: the camera's up built from
+  another heading — the camera ROLLED on a wall, 222 frames over 5° on one close-in dx leg). Under the slide's lock: the orbit's yaw, as before.
+
+Vectors: `tests/orbit_calm.test.ts` 11 (58d86ff's five unchanged, the runs, the ease, the aligned share, the camera's heading, the wiring and the sliders);
+RED against Step 4b (the module absent). **1625** (1614 + 11).
+
+**The probes, close in (APPR 140)** — the view (camera − gizmo) off the face's normal on the painting's front / back, min / mean / max:
+
+| | Step 4b | + the calm |
+|---|---|---|
+| dx at mid-height: the face's middle | 35 / 55 / 67° | **17 / 28 / 44°** |
+| …near its edges | 68 / 73 / 79° | 29 / 53 / 69° |
+| sides at 12 headings: the middle (mean) | 32° | **20°** |
+| far out (6 m): the middle (mean) | 58° | 58° (no calm there) |
+| jumps piece / camera, close in (dx, sides, standard, seeds 3 and 7) | 0 / 0 | 0 / 0 |
+| rolled on a wall: dx / sides / standard | 1030 / 142 / 12 | **0** / 88 / 8 |
+
+⛔ Not judged by a hand: the defaults are 58d86ff's (*"ok as recommended"*), the ease (120 ms) and the alignment (30° / 5°) new.
 
 **⭐ The fallback, if the owner does not like `1.0.95-`** (the owner: *"capture in the md file the alternative improvement you suggested, as a possible
 fallback"*), as proposed: *"A possible improvement (not built): give dx the same catch-up Step 3 gave dy. Step 3 paces the gizmo by what's left of the red

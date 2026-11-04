@@ -422,6 +422,18 @@ export interface GestureConfig {
   assemblyLockDistM: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE SHELL's offset (mm): the piece and the camera on the smooth shell round the placed parts' box beyond it, onto the gizmo within it (`input/orbit_shell.ts`). */
   orbitShellOffsetMm: number;
+  /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
+   * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
+  faceSpanShareH: number;
+  faceSpanZoneHPct: number;
+  faceSpanZoneMinHCm: number;
+  /** ⭐⭐⭐ …dy's (1 on, 0 off), with dx's defaults */
+  faceSpanShareVOn: number;
+  faceSpanShareV: number;
+  faceSpanZoneVPct: number;
+  faceSpanZoneMinVCm: number;
+  /** ⭐⭐⭐ …the calm whole within 0.8 × this distance of the piece from the gizmo, gone at 1.2 × it (m; 58d86ff's face-span engage) */
+  faceSpanEngageM: number;
   /** ⭐ (2026-10-28) at an edge the gizmo's face switches only once the ray lands this far past it (mm, in the world — an edge is a place on the assembly) — the quads do not flicker. */
   gizmoEdgeMarginMm: number;
   /** ⭐ (2026-10-28, the optional) the sections the gizmo travels along drawn — green the horizontal one, red the yaw plane's (1 on, 0 off). */
@@ -829,6 +841,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
+  faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
+  faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
+  faceSpanZoneMinHCm: 3, // …at least 3 cm
+  faceSpanShareVOn: 1, // ⭐⭐⭐ (58d86ff, *"3- make a slider to toggle on or off the dy"*) dy's angle compressed too
+  faceSpanShareV: 0.25, // …with dx's defaults
+  faceSpanZoneVPct: 25,
+  faceSpanZoneMinVCm: 3,
+  faceSpanEngageM: 4.5, // ⭐⭐⭐ (58d86ff's face-span engage) the calm whole within 3.6 m, gone at 5.4 m (the far orbit at 6 m, Scene_1's ring 1)
   gizmoEdgeMarginMm: 5, // ⭐ (2026-10-28) the face's switch 5 mm past an edge
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
@@ -982,6 +1002,11 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
+  for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
+  for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
+  for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);
+  if (cfg.faceSpanShareVOn !== 0 && cfg.faceSpanShareVOn !== 1) throw new Error(`faceSpanShareVOn (${cfg.faceSpanShareVOn}) must be 0 or 1.`);
+  if (!(cfg.faceSpanEngageM >= 0.05 && cfg.faceSpanEngageM <= 10)) throw new Error(`faceSpanEngageM (${cfg.faceSpanEngageM}) must be in [0.05, 10] m.`);
   if (cfg.sectionLines !== 0 && cfg.sectionLines !== 1) throw new Error(`sectionLines (${cfg.sectionLines}) must be 0 or 1.`);
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);

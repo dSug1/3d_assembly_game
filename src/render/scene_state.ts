@@ -467,7 +467,10 @@ export interface SceneState {
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   asmSectionKey: string;
   /** ⭐⭐⭐ (2026-11-02) the carrier of the gizmo's last ACCEPTED drop and the yaw it was found at — the lines are drawn from it (a held drop holds them too) */
-  asmShown: { readonly c: NonNullable<SceneState["asmCarrier"]>; readonly yaw: number } | null;
+  asmShown: { readonly c: NonNullable<SceneState["asmCarrier"]>; readonly yaw: number; readonly n?: Vec3 | null } | null;
+  /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
+   * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
+  asmCalm: { n: Vec3; sH: number; sV: number } | null;
   /** ⭐⭐⭐ (2026-11-02) each line's fixed samples, dropped once per line (`sectionRedKey`, `sectionGreenKey`) */
   asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
   asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;

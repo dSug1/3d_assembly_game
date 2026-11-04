@@ -240,7 +240,7 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(A.gizmoShownAt([1, 2, 3], [0, 0, 0])).toEqual([1, 2, 3]);
     expect(A.gizmoShownAt(null, [0, 0, 0])).toEqual([0, 0, 0]);
     const w = code("render/assembly_wiring.ts");
-    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
+    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw, n: hit.normal };");
     expect(w).toContain("const gi = insertIndex(gc.params, gParam);");
     expect(w).toContain("if (green.length > 0) green.splice(gi, 0, gv);");
     expect(w).toContain("const ri = insertIndex(rc.params, c.s);");
