@@ -658,8 +658,8 @@ sphere). ⚠ The first answer here (D1 below as first written: *the walk, or sta
   §15) the GIZMO is at the real surface under it — the slot's bottom (⛔ the face's depth across the mouth, Step 4c-bis); the ORBIT does not follow it in:
   the piece and the camera go on on the shell (Step 2 — a depth step moves the gizmo, never them). The APPROACH (A + dy, two fingers) brings the piece
   INTO the depth, toward that gizmo, until it collides (the solver, as today) or meets the orbit's centre. → built with Step 5 (the face map on facets).
-  ⚠ *"the center of the orbit"* read as the GIZMO (the orbit's centre the piece turns about — `orbitCentreM`); ⏳ the owner to say if the assembly's
-  centre (`st.asm`) was meant. The closed regions still choose the FRONTMOST face and keep the gizmo continuous across a slot's rim (no lateral jump); only
+  ✅ *"the center of the orbit"* is the GIZMO (the orbit's centre the piece turns about — `orbitCentreM`) — the owner, 2026-11-04: *"center of the orbit =
+  gizmo."* The closed regions still choose the FRONTMOST face and keep the gizmo continuous across a slot's rim (no lateral jump); only
   the depth is the real one (the ray along the normal, no longer refused beyond 25 mm of the region's plane); a slot through the whole assembly (no
   surface behind): the region's plane, as today.
 * ✅ **D4 — DECIDED (2026-11-04, *"Edge stretch defaults: OK"*):** `faceEdgeSlideMm` 10, `faceEdgeSlideDeg` 10 stand.
