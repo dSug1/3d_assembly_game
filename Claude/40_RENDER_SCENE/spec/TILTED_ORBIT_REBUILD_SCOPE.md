@@ -79,6 +79,13 @@ numbers recorded in its dossier, and the owner's device look (rule 5). A step th
    assembly is multi-faceted, the orbit is always in front of the face it orbits around"*: 90° on a box (the top reached as a vertical face is), 60° at
    each edge of a horizontally extruded hexagon. §4.1–§4.3's rolls are the camera's side of the same turns: on a box the half roll after the far edge
    and the quarter roll off a top's side edge; in general, the roll owed is what brings the camera's up back to the world's on a face where I6 asks it.
+5. ⭐⭐⭐ **THE SCENE UPSIDE UP ON EVERY FACE THAT IS NOT PURELY HORIZONTAL** (the owner, 2026-11-04: *"the camera roll shall keep the scene upside up if the face is not purely horizontal (for example, a series of walks around the edges of the rectangle faces of an horizontally extruded hexagon could end up with the scene upside down and when the orbit would tilt to be in front of the hexagonal face it should be gravity axis aligned with screen vertical axis)"*). The facet frames are CARRIED from
+   edge to edge (parallel transport), so a series of crossings can bring the camera round with the scene UPSIDE DOWN — walking round the rectangle faces
+   of a horizontally extruded hexagon and then turning to face its hexagonal end, the carried up can point down the world. So: **on any facet that is not
+   purely horizontal the roll owed brings the GRAVITY axis onto the SCREEN's vertical** (the world's down down the screen), whatever the path that led
+   there; only on a purely horizontal face (a top, a bottom) is the up the carried one (the screen's up along the travel, §4.1). The roll is taken at the
+   crossing that enters such a facet, over the input's travel, the piece waiting (§4.1's rule) — never mid-face. It generalises I6 (*"the camera upright
+   everywhere but where §4 says a roll is owed"*) from the walls to every non-horizontal facet.
 
 ## 5. The steps (each keeps I1–I6)
 
@@ -160,10 +167,11 @@ several headings, the clamp the only stop; a dy back down the edge turns the fra
 **Step 7 — Crossing on, every edge the same rule.** Open the clamps: over a top's FAR edge (the frame turns again; the camera's half roll there, §4.1;
 the input reversed after it, §4.2 — the same finger held at the edge, the reversed one goes on down the far side) and over a top's SIDE edge onto a wall
 (the quarter roll, §4.3, the piece waiting); on a non-box contour each crossing turns by its own dihedral, the roll owed the one that brings the camera's
-up back to the world's where I6 asks it. Round a VERTEX the frame comes back turned by the vertex's angle defect (90° at a box's corner, a diagonal path):
+up back to the world's where I6 asks it — ⭐ on EVERY facet that is not purely horizontal, gravity onto the screen's vertical whatever the path (§4.5, the
+owner: a walk round a horizontal hexagonal prism's faces must not leave its hexagonal end upside down). Round a VERTEX the frame comes back turned by the vertex's angle defect (90° at a box's corner, a diagonal path):
 the frame snapped to the facet's own axes on entering it, the roll owed taken in that crossing. Gate: a constant dy loops the vertical section (stopped
 only by the far edge's roll); a constant dx started on a top loops its section (stopped only by the side edge's roll); I1 throughout; the hexagonal prism
-looped both ways in the vectors.
+looped both ways in the vectors; ⭐ a long walk round the prism's rectangle faces, then onto its hexagonal end: the scene upside up there (§4.5).
 
 **Step 8 — What the faces contour misses; the shell on the facets.** ⚠ (2026-11-04) See also the SLIDE wedged under an overhang (`HOVER.md` §0, item 21) —
 a future improvement of the slide, not of the orbit; a candidate gate here: *no slide ends where no way out is free*. What the facet frames' face map does
@@ -663,6 +671,7 @@ sphere). ⚠ The first answer here (D1 below as first written: *the walk, or sta
   the depth is the real one (the ray along the normal, no longer refused beyond 25 mm of the region's plane); a slot through the whole assembly (no
   surface behind): the region's plane, as today.
 * ✅ **D4 — DECIDED (2026-11-04, *"Edge stretch defaults: OK"*):** `faceEdgeSlideMm` 10, `faceEdgeSlideDeg` 10 stand.
+* ✅ **D6 — DECIDED (2026-11-04): THE SCENE UPSIDE UP ON EVERY NON-HORIZONTAL FACE** — *"the camera roll shall keep the scene upside up if the face is not purely horizontal (for example, a series of walks around the edges of the rectangle faces of an horizontally extruded hexagon could end up with the scene upside down and when the orbit would tilt to be in front of the hexagonal face it should be gravity axis aligned with screen vertical axis)"* → §4.5, §5 Step 7 (its roll rule and its gate).
 
 ### 16.2 The amendments — applied 2026-11-04
 
