@@ -398,3 +398,12 @@ with a vertical share of 0.53 bent the piece off its gizmo's face (657 frames "b
 ⚠ A dy (not a dx) at 4 m: the vertical share follows the gizmo's height, eased 120 ms — at the finger's release the piece settles ~2° on (two flags, the
 calm off none). Vectors: `tests/orbit_calm.test.ts` 12 (the bounce, the pole, the vertical share never aligned — RED against `ccc0852`). **1626**.
 
+### 13.2 The piece's lag behind the ring — two sliders (2026-11-04, `1.0.95-`)
+
+The owner: *"why there is a lag of the piece vs. gizmo during dx input? Is it due to green piece inertia"* — no: the ring is drawn at the gizmo's exact
+point, while the piece and the camera follow it twice smoothed — the gizmo's position (its foot on the shell) eased 90 ms, and the orbit's angles on a
+critically damped spring of 30 ms (half `boxSmoothMs`): ~100–120 ms behind the ring. *"add a slider for gizmo position and one for orbit angles"* → CAMERA
+ORBIT AROUND CENTER: **`gizmoEaseMs`** (90, the former `GIZMO_TAU_MS`) and **`orbitSpringMs`** (30, the orbit's spring and the travel counts that share it —
+the piece's entry, its aim, the centre's return; the hover and the rig's share keep `boxSmoothMs`). 0: at once. Defaults unchanged. `tests/orbit_lag.test.ts`.
+⏳ Next (the owner): *"Instead of a ms ease, can you reject jumps of gizmo?"*
+

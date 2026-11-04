@@ -552,7 +552,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(r.travelledMm).toBeGreaterThan(0);
     expect(r.travelledMm).toBeLessThan(4);
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.pieceAim !== null\) st\.pieceAim = smoothTravel\(st\.pieceAim, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\);[\s\S]{0,400}?const po = st\.pieceOrbit;/);
+    expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = smoothTravel\(st\.pieceEntry, dtSec \* 1000, st\.cfg\.orbitSpringMs\);\s*if \(st\.pieceAim !== null\) st\.pieceAim = smoothTravel\(st\.pieceAim, dtSec \* 1000, st\.cfg\.orbitSpringMs\);\s*if \(st\.centreReturn !== null\) st\.centreReturn = smoothTravel\(st\.centreReturn, dtSec \* 1000, st\.cfg\.orbitSpringMs\);[\s\S]{0,400}?const po = st\.pieceOrbit;/);
   });
 
   it("⭐ the piece ON the centre: the fallback direction, never a NaN", () => {

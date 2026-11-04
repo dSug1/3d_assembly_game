@@ -1062,10 +1062,11 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     syncCentre(st);
   }
   st.rigShare = easeShare(st.rigShare, st.centreBlend.progress, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  // ⭐⭐ (2026-11-04) the orbit's angles on their own slider, `orbitSpringMs` (was boxSmoothMs / 2)
   st.boxSpring =
     st.boxSpring === null
       ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 }
-      : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+      : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs);
   st.boxOrbit = st.boxSpring.at;
   const boP = assemblyOn(st) ? shownOffset(st, st.boxOrbit.yaw, st.boxOrbit.v) : ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`) — ⭐ (2026-10-28) around the assembly: on its ray from the shown gizmo
   const bo = { offsetM: boP, radiusM: Math.hypot(boP[0], boP[1], boP[2]) };
@@ -1075,9 +1076,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // centre at the rings' distance (dy as fast as before; dx no longer moves it) — else on the rings as before
   // ⭐⭐ (2026-10-07) *"Smooth the movement of the camera at start and end of piece orbit"* — the travel the transitions read eases toward
   // the finger's on the orbit's own spring (`smoothTravel`, τ = `boxSmoothMs` / 2), every frame
-  if (st.pieceEntry !== null) st.pieceEntry = smoothTravel(st.pieceEntry, dtSec * 1000, st.cfg.boxSmoothMs / 2);
-  if (st.pieceAim !== null) st.pieceAim = smoothTravel(st.pieceAim, dtSec * 1000, st.cfg.boxSmoothMs / 2);
-  if (st.centreReturn !== null) st.centreReturn = smoothTravel(st.centreReturn, dtSec * 1000, st.cfg.boxSmoothMs / 2);
+  if (st.pieceEntry !== null) st.pieceEntry = smoothTravel(st.pieceEntry, dtSec * 1000, st.cfg.orbitSpringMs);
+  if (st.pieceAim !== null) st.pieceAim = smoothTravel(st.pieceAim, dtSec * 1000, st.cfg.orbitSpringMs);
+  if (st.centreReturn !== null) st.centreReturn = smoothTravel(st.centreReturn, dtSec * 1000, st.cfg.orbitSpringMs);
   // ⭐⭐ (2026-10-08) THE PIVOT HANDED OVER GRADUALLY: the piece carried round the gizmo by the share of the orbit's yaw LEFT of the way in
   // (`carryHeading`) — the camera turning round it with all of it (`entryCamera`)
   if (st.pieceEntry !== null) st.pieceEntry = carryHeading(st.pieceEntry, st.boxOrbit.yaw, cfg.pieceOrbitEnterMm);

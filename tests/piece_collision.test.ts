@@ -93,7 +93,7 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
   });
   it("⭐⭐ the eye eases toward the SOLVED place, never a refused target — no pull-back (the spring chased the raw target before)", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2)");
+    expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs)");
     const solved = g.indexOf("st.pieceQ = fr.q; rig = { ...fr.q };");
     expect(solved).toBeGreaterThan(0); // ⭐ (the third audit) the line must exist — its indexOf of −1 passed for ever
     expect(solved).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));

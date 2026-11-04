@@ -31,7 +31,6 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 /** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
 const RAY_COVER_M = 0.004;
 /** ⭐ The shown gizmo's ease to a new point (ms) — a step in depth eased, never a jump; the look point's. */
-const GIZMO_TAU_MS = 90;
 /** ⭐ (2026-11-04, Step 4) how far a dy's plane re-taken over a top may move the carrier (m) */
 const RETAKE_M = 0.01;
 const LOOK_TAU_MS = 120;
@@ -516,7 +515,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // camera); the ring at the gizmo itself, on the real surface
   const target = g0;
   const foot = footOf(st, target, u, d);
-  st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, GIZMO_TAU_MS);
+  st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);

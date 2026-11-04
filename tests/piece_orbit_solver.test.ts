@@ -244,7 +244,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
   it("⭐ wired: the eye's spring aims at the SOLVED place — the follower and its path are deleted", () => {
     const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
-    expect(g).toContain("st.boxSpring = st.boxSpring === null ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 } : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.boxSmoothMs / 2); st.boxOrbit = st.boxSpring.at;");
+    expect(g).toContain("st.boxSpring = st.boxSpring === null ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 } : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs); st.boxOrbit = st.boxSpring.at;");
     expect(g).not.toMatch(/followPath|followSpring|piecePath/);
   });
 

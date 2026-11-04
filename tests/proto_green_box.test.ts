@@ -384,7 +384,7 @@ describe("⭐⭐ prototype — the green box", () => {
     const w = code("green_box_wiring.ts");
     expect(w).toMatch(/cameraOrbitStep\(\s*st\.cameraOrbit,\s*at,/);
     // ⭐ 2026-10-02: on a critically damped spring (it was `easeOrbit`, one exponential)
-    expect(w).toMatch(/springOrbit\(st\.boxSpring, rig, dtSec \* 1000, st\.cfg\.boxSmoothMs \/ 2\)/);
+    expect(w).toMatch(/springOrbit\(st\.boxSpring, rig, dtSec \* 1000, st\.cfg\.orbitSpringMs\)/);
     expect(w).toMatch(/st\.boxOrbit = st\.boxSpring\.at;/);
     // ⭐ the owner: the camera looks at the yellow target — the orbit centre
     // ⭐ (2026-10-06) the camera looks at ITS centre — the orbit centre, or the piece once orbiting around it (`piece_orbit.ts`)
