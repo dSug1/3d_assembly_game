@@ -100,6 +100,11 @@ const PENDING: Record<string, string> = {
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ (2026-11-04, `1.0.95-`) dx SYNCHRONIZED with the orbit (`loopAtYaw`, `syncStep`): the by-distance rule unwired, kept for the owner's fallback —
+  // TILTED_ORBIT_REBUILD_SCOPE.md §13 (by distance, paced to reach each corner as its face starts facing the piece) would wire all three again.
+  loopStep: "dx by distance round the green loop (2026-10-29) — unwired by the synchronized dx; the fallback's step (scope §13)",
+  greenPace: "dx by distance's pace (the loop's perimeter per turn) — unwired by the synchronized dx; the fallback's pace (scope §13)",
+  greenFaces: "dx by distance's gate (never enter an edge turned away) — unwired: the synchronized place is always on a facing edge; the fallback's (scope §13)",
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
   smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
   // ⭐ prototype (green box), 2026-10-02: the box follows the rig on a spring now (`springOrbit`) — no speed jump per event.

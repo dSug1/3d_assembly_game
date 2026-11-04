@@ -1,8 +1,8 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
-> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) — ⛔ no device close on any; the half roll moved
-> to the far edge (Q6, §4.1). Step 5 next.
+> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit (§13) — ⛔ no device close
+> on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -277,4 +277,63 @@ against Step 3). The probe records the carrier's `heading` (`cs[4]`).
 | random (seeds 3, 7) | — | off-section 0, reverse 0, stuck 0; the piece behind 0 / 4; no piece / camera jump |
 
 ⚠ Left for Step 5: the top's polar dx — a turn about the axis, whose planes miss a thin top (the painting's top strip is 33 mm deep, the axis on its back edge).
+
+## 13. Step 4b — dx synchronized with the orbit — built (2026-11-04, branch `1.0.95-`)
+
+**Why.** The owner, on the device (`1.0.94-`): *"Sometimes, not all the times, when i orbit on dx, the red section disappears after the crossing of the edge
+… And then when i continue, the gizmo snaps back to the red section when it appears around the previous edge"*. The cause (probed, then replayed offline on
+the placed parts): dx BY DISTANCE (`loopStep`, `greenPace`, 2026-10-29) is only loosely in step with the yaw — a face's share of the loop's length is not its
+share of the turn, and a dy onto another height's loop re-finds the carrier from its point — so the carrier reaches some corners EARLY and waits there for the
+next face to face the piece. Re-found each frame from its point (`nearestOnChain`), it came back one rounding step short of the corner (0.4976450641787913
+against 0.49764506417879134), read as INSIDE the edge turned away, and ran free along it: every drop turned away (the HUD's *"a face turned away — held"*),
+the gizmo and both lines held at the corner (the red along the face just left, edge-on: gone from view), then a snap when it landed. ✅ Fixed first on
+`1.0.94-` (`ccf2c80`: a position within 1e-9 of a corner is ON it). Then the owner: *"why the gizmo cannot be synchronized with the orbit? I am ok if the
+linear speed of the gizmo is not constant"*.
+
+**As built** (`input/section_hull.ts`, `render/assembly_wiring.ts` `onGreen`):
+
+* ⭐⭐⭐ **The place from the yaw alone** (`loopAtYaw`): the green loop at the gizmo's height cut into FACETS (its edges in line — one normal — are one facet:
+  ⛔ a 0.9 mm sliver beside the funnel's 100 mm side read as a full turn, the slices no longer tiled the circle, a 49 mm jump for 2.9°, probed); each facet
+  owns a SLICE of the turn, from halfway between its normal and the previous facet's to halfway between its normal and the next one's; inside its slice the
+  carrier crosses the facet linearly with the yaw. ⭐ The same yaw is always the same place (nothing to drift), a corner is reached exactly as the yaw crosses
+  into the next slice, and **the facet under the gizmo always faces the piece** (the yaw within half an exterior angle of its normal) — no corner wait, no
+  face turned away, no rounding slip. ⚠ The speed along the loop is uneven, by the owner's leave: on `Scene_1`'s painting the 50 cm front and the 33 mm side
+  each get ~90° (5.4 against 0.4 mm per degree).
+* ⭐⭐ **Out of step, no jump** (`syncStep`, `yawAtLoop`): after a dy onto another height's loop, the boot or the slide, the carrier is not where the yaw
+  says. The gap is read as an ANGLE (the carrier's own yaw, `yawAtLoop`, the inverse) and closed in that angle — ahead, its yaw turns at 0.5 of the finger's
+  step, behind at 1.5 (`SYNC_CATCH`) — so it never jumps, never stops, never goes against the finger, and closes a 20° gap in ~40° of drag whatever the
+  face's width. ⛔ First built as "ahead: wait, behind: hurry" in arc length — the composed vector caught it: the gizmo held ~150° while the orbit went on
+  (I4), and on a 33 mm side a gap closed by millimetres per 90°.
+* The by-distance rule (`loopStep`, `greenPace`, `greenFaces`) is unwired, kept for the fallback below (declared debt). dy (`redPace`), the red plane
+  (Step 4) and a top / bottom (the polar turn, Step 5) unchanged.
+
+**Vectors**: `tests/section_hull.test.ts` + 4 (the place from the yaw, the split face, the facing edge on 40 random convex loops, the step in and out of
+step on the square and the painting's shape) and the wiring; 4 RED against `1.0.94-`. **1614** (1610 + 4).
+
+**The probes** (Step 4 → Step 4b):
+
+| | Step 4 | Step 4b |
+|---|---|---|
+| sides at 12 headings | jumps piece 1 / camera 5 / gizmo 19; off-section 285; stuck 40; **the piece behind its face 2000**; against the finger 10 of 504 | jumps 0 / 0 / 19; off-section 365; stuck 7; **the piece behind 161**; against 14 of 1263 |
+| standard legs far / close in | gizmo jumps 18 / 18; off-section 899 / 901; the piece behind 15 / 23; against 18 / 16 | 14 / 13; 899 / 899; 12 / 20; 18 / 37 (⚠ the +21: one dx leg on the TOP — the polar turn, Step 5; the state it is reached in differs) |
+| random seeds 3 / 7 | piece behind 0 / 4; against 7 / 6 | 0 / 3; 7 / 5 |
+| dx only at mid-height, both ways (4200 px) | clean | clean (a camera flag at a dy's release, before any dx) |
+
+⚠ Left: the top's polar dx (Step 5); the piece straight below / above (v at 0 / 1: every edge "faces", a drop's cos(±90°) of 6e-17 reads "turned away" —
+Steps 5–6); a dy from a top whose snapped plane runs 1.5 mm behind the painting's back face — the drop lands 246 mm off on the far side (likely the owner's
+*"the gizmo and sections can be thrown off to a face opposite to the piece due to slanted geometries"*, not yet diagnosed).
+
+**⭐ The calm is NOT in this rebuild yet** — the owner asked to keep *"the behavior to avoid seeing the gizmo close to vertical edges of vertical face at a too
+slanted camera view by modulating the slide of gizmo around the middle of the face"*: it is the face-span's FOURTH PASS (`58d86ff`, 2026-11-03, on
+`1.0.92-Tilted-orbit-suspended`, `queue_notes/FACE_SPAN_2026-11-02.md` there) — the piece's SHOWN direction at a quarter of the orbit's angle off the
+face's normal in the middle of a face, rising by a smoothstep to the whole angle within an edge zone (25 % of the gizmo's run, 3 cm at least), seven
+sliders (CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE); measured on the front: 4–16° off square in the middle against 17–56°. It went with the
+rebuild from `ff2fca2`; this file plans it as **Step 9**. ⭐ The synchronized dx keeps it buildable as it was: the calm bends only the SHOWN direction (the
+piece, the camera), the gizmo is still placed from the orbit's yaw.
+
+**⭐ The fallback, if the owner does not like `1.0.95-`** (the owner: *"capture in the md file the alternative improvement you suggested, as a possible
+fallback"*), as proposed: *"A possible improvement (not built): give dx the same catch-up Step 3 gave dy. Step 3 paces the gizmo by what's left of the red
+line over what's left of the pitch, so it reaches the top exactly as the orbit hits +90°. For dx, the gizmo would be paced by what's left of the current face
+over what's left of the turn until the next face starts facing the piece. It would arrive at each corner exactly as it should, never wait, and never drift,
+while keeping an even speed within a face."* — `loopStep`, `greenPace`, `greenFaces` are kept (unwired) for it.
 

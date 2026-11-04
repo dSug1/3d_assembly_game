@@ -2333,3 +2333,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ✅ **Step 4 (2026-11-04, `1.0.94-`)**: the red section a WORLD plane square to the face's level axis (`redHeading`) — a dy straight up / down a side at
   any heading (⛔ the yaw plane: 136 mm across the painting's back face); round a vertical edge the plane turns with the face; a hull wholly behind the axis
   keeps a facing chain (Scene_1's axis on the painting's back face). 1610 vectors. ⛔ No device close.
+* ✅ **Step 4b (2026-11-04, `1.0.95-`)**: dx SYNCHRONIZED with the orbit — the gizmo's place on the green loop from the yaw alone (`loopAtYaw`: each facet a
+  slice of the turn, crossed linearly; out of step closed in angle, `syncStep`) — always on a face facing the piece (⛔ by distance it waited at corners,
+  slipped a rounding step onto a face turned away: the red gone after an edge, then a snap). The by-distance rule kept for the fallback; the calm
+  (`58d86ff`) is Step 9 (scope §13). 1614 vectors. ⛔ No device close.

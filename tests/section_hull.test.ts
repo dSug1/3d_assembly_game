@@ -19,6 +19,10 @@ import {
   greenPoints,
   loopOf,
   loopStep,
+  loopAtYaw,
+  syncStep,
+  yawAtLoop,
+  SYNC_CATCH,
   nearestOfKind,
   redOrigin,
   turnAbout,
@@ -249,8 +253,9 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
   it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);");
-    expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);');
-    expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
+    expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);');
+    expect(a).toContain("const s1 = syncStep(loop, s0, yaw, dYaw);");
+    expect(a).not.toContain("loopStep(loop");
     expect(a).toContain("c = redAt(st, c.heading, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch));");
     expect(a).toContain("const red = onRed(st, c.heading, h.point);");
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, heading);");
@@ -259,6 +264,83 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
     expect(a).not.toContain("st.asmSectionLines?.dispose();");
     expect(a).not.toContain("remapOnChain");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) dx SYNCHRONIZED WITH THE ORBIT (the owner: *\"why the gizmo cannot be synchronized with the orbit? I am ok if the linear speed of the gizmo is not constant\"*)", () => {
+  const sq = () => chainOf([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]); // a square, counter-clockwise; edge 0 faces −z (yaw −90°)
+  it("⭐⭐⭐ the place from the yaw alone: each edge a slice of the turn (halfway between its normal and its neighbours'), crossed linearly — the slice's start its start corner, its end its end corner", () => {
+    const loop = sq();
+    expect(loopAtYaw(loop, -90 * D)).toBeCloseTo(0.5, 12); // facing edge 0 squarely: its middle
+    expect(loopAtYaw(loop, -135 * D)).toBeCloseTo(0, 12); // its slice's start: its start corner
+    expect(loopAtYaw(loop, -45 * D + 1e-12)).toBeCloseTo(1, 9); // its slice's end: the corner into edge 1
+    expect(loopAtYaw(loop, -67.5 * D)).toBeCloseTo(0.75, 12);
+    expect(loopAtYaw(loop, 0)).toBeCloseTo(1.5, 12);
+    expect(loopAtYaw(loop, 180 * D)).toBeCloseTo(3.5, 12);
+    expect(loopAtYaw(loop, -180 * D)).toBeCloseTo(3.5, 12); // the same yaw a turn away: the same place
+    // ⭐ the painting's shape — 50 cm wide, 33 mm deep: the front's slice and the side's are both 90° (the speed along it uneven, ×15)
+    const thin = chainOf([[-0.25, -0.05], [0.25, -0.05], [0.25, -0.017], [-0.25, -0.017], [-0.25, -0.05]]);
+    const per = (a: number, b: number) => Math.abs(loopAtYaw(thin, b * D) - loopAtYaw(thin, a * D)) / ((b - a) * D);
+    expect(per(-100, -80)).toBeCloseTo(0.5 / (Math.PI / 2), 9);
+    expect(per(-10, 10)).toBeCloseTo(0.033 / (Math.PI / 2), 9);
+  });
+  it("⭐⭐ a face split in two in line (a sliver beside it: the funnel's 0.9 mm by its 100 mm side) — the two share its slice, the place continuous (⛔ the zero turn between them read as a full turn: the slices no longer tiled the circle, a 49 mm jump for 2.9°, probed)", () => {
+    const split = chainOf([[0, 0], [0.999, 0], [1, 0], [1, 1], [0, 1], [0, 0]]);
+    expect(loopAtYaw(split, -90 * D)).toBeCloseTo(0.5, 9);
+    expect(loopAtYaw(split, -45 * D + 1e-12)).toBeCloseTo(1, 6);
+    expect(loopAtYaw(split, 0)).toBeCloseTo(1.5, 9);
+    let prev = loopAtYaw(split, -180 * D + 1e-9);
+    for (let a = -179; a < 180; a += 1) {
+      const s1 = loopAtYaw(split, a * D);
+      const step = wrapOn(split, s1 - prev + 1e-9) - 1e-9; // round the loop's start the short way
+      expect(step).toBeGreaterThanOrEqual(-1e-9);
+      expect(step).toBeLessThan(0.02); // 1°: under 2 cm on a 4 m loop — no jump
+      prev = s1;
+    }
+  });
+  it("⭐⭐⭐ the edge under the gizmo ALWAYS faces the piece — any convex loop, any yaw (⛔ by distance it ran ahead, waited at a corner, and a rounding step short of one ran onto a face turned away: the gizmo and the sections held, then a snap)", () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let k = 0; k < 40; k++) {
+      const pts: [number, number][] = [];
+      for (let j = 0; j < 12; j++) pts.push([rnd() * (0.2 + rnd()), rnd() * 0.1]);
+      const loop = loopOf(hull2(pts));
+      if (loop === null) continue;
+      for (let y = -Math.PI; y < Math.PI; y += 0.013) {
+        const at = chainAt(loop, loopAtYaw(loop, y));
+        expect(greenFaces(greenNormal(loop, at.edge), y, 0)).toBe(true);
+      }
+    }
+  });
+  it("⭐⭐⭐ the step: in step it IS the yaw's place; out of step (another height's loop, the boot, the slide) the gap read as an ANGLE and closed at half the yaw's step — never a jump, never a stop, never against the finger (⛔ waiting ahead held it ~150° while the orbit went on)", () => {
+    const loop = sq();
+    expect(yawAtLoop(loop, 0.5)).toBeCloseTo(-90 * D, 12);
+    expect(yawAtLoop(loop, 1.5)).toBeCloseTo(0, 12);
+    for (const y of [-170, -100, -45, 10, 95, 170]) expect(wrapOn(loop, loopAtYaw(loop, yawAtLoop(loop, loopAtYaw(loop, y * D))))).toBeCloseTo(loopAtYaw(loop, y * D), 9);
+    // in step: exactly the yaw's place
+    expect(syncStep(loop, loopAtYaw(loop, -90 * D), -80 * D, 10 * D)).toBeCloseTo(loopAtYaw(loop, -80 * D), 12);
+    // ahead by 20° (its own yaw −70°, the yaw −90° → −80°): it moves on at half the step — −65°
+    expect(syncStep(loop, loopAtYaw(loop, -70 * D), -80 * D, 10 * D)).toBeCloseTo(loopAtYaw(loop, -65 * D), 12);
+    // behind by 20°: at one and a half — −95°
+    expect(syncStep(loop, loopAtYaw(loop, -110 * D), -80 * D, 10 * D)).toBeCloseTo(loopAtYaw(loop, -95 * D), 12);
+    // composed, from far out of step (2.2 against 0.5: 153° ahead), a constant dx on the painting's thin shape and the square: always the finger's way,
+    // never a stop, in step once the gap is spent (153° at half the step: 306°), then exactly the yaw's place
+    for (const L of [loop, chainOf([[-0.25, -0.05], [0.25, -0.05], [0.25, -0.017], [-0.25, -0.017], [-0.25, -0.05]])]) {
+      let s = wrapOn(L, loopAtYaw(L, -90 * D) + 1.7 * (L.total / 4));
+      let yaw = -90 * D;
+      const ang = (a: number) => Math.abs(Math.atan2(Math.sin(a), Math.cos(a)));
+      const gap0 = ang(yawAtLoop(L, s) - yaw);
+      for (let k = 0; k < 144; k++) {
+        const d = 5 * D;
+        yaw += d;
+        const n = syncStep(L, s, yaw, d);
+        const g = wrapOn(L, n - s);
+        expect(g).toBeGreaterThan(0); // moved, the finger's way
+        expect(g).toBeLessThan(L.total / 2);
+        s = n;
+        if ((k + 1) * 5 * D * SYNC_CATCH > gap0 + 1e-9) expect(Math.abs(wrapOn(L, s - loopAtYaw(L, yaw) + L.total / 2) - L.total / 2)).toBeLessThan(1e-9);
+      }
+    }
   });
 });
 

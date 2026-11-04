@@ -370,9 +370,108 @@ export function wrapOn(loop: SectionChain, s: number): number {
   return t > 0 ? ((s % t) + t) % t : 0;
 }
 
+/** ⭐ An angle brought into (−π, π]. */
+function wrapPi(a: number): number {
+  const t = 2 * Math.PI;
+  const r = ((a % t) + t) % t;
+  return r > Math.PI ? r - t : r;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, branch `1.0.95-`, the owner: *"why the gizmo cannot be synchronized with the orbit? I am ok if the linear speed of the gizmo is not
+ * constant"*) THE GIZMO'S PLACE ON THE GREEN LOOP FROM THE YAW ALONE — each edge owns a SLICE of the turn: from halfway between its outward normal and the
+ * previous edge's to halfway between its normal and the next one's (the slices tile the turn: a convex loop's normals go once round, in order). Inside its
+ * slice the carrier crosses the edge linearly with the yaw — at the slice's start the edge's start corner, at its end the edge's end. ⭐ The same yaw is
+ * always the same place (nothing to drift), a corner reached exactly as the yaw crosses into the next edge's slice, and the edge it is on always FACES the
+ * piece (inside its slice the yaw is less than half an exterior angle — under 90° — from the edge's normal). ⚠ The speed along the loop is not even: a wide
+ * face and a narrow one get slices of the same order (on a box, 90° each). Returns the arc length.
+ */
+export function loopAtYaw(loop: SectionChain, yaw: number): number {
+  const fs = loopFacets(loop);
+  if (fs === null) return 0;
+  let best = 0;
+  let bestOut = Infinity;
+  for (let j = 0; j < fs.length; j++) {
+    const f = fs[j]!;
+    const lo = -f.din / 2;
+    const hi = f.dout / 2;
+    const x = wrapPi(yaw - f.th);
+    if (x >= lo && x < hi) return wrapOn(loop, f.s0 + ((x - lo) / (hi - lo)) * f.len);
+    const out = x < lo ? lo - x : x - hi;
+    if (out < bestOut) { bestOut = out; best = j; }
+  }
+  // ⭐ a rounding gap between two slices: the nearer slice's own end
+  const f = fs[best]!;
+  return wrapOn(loop, wrapPi(yaw - f.th) < 0 ? f.s0 : f.s0 + f.len);
+}
+
+/** ⭐ A FACET of the loop: its edges in line (one normal — a face split by slivers is one facet), its normal's angle, where it starts, its length, the
+ * turn from the previous facet's normal to its own (`din`) and on to the next's (`dout`), counter-clockwise, in (0, π). */
+interface Facet { readonly th: number; readonly s0: number; len: number; readonly din: number; dout: number }
+
+function loopFacets(loop: SectionChain): Facet[] | null {
+  const edges = loop.pts.length - 1;
+  if (edges < 1 || !(loop.total > 0)) return null;
+  const th = Array.from({ length: edges }, (_, i) => { const n = edgeNormal(loop, i); return Math.atan2(n[1], n[0]); });
+  // ⭐ two edges in line (a face split by a sliver: the funnel's 0.9 mm next to its 100 mm side) turn by 0 and make ONE facet, their slice shared by length —
+  // ⛔ the zero turn read as a full turn (2π): the slices no longer tiled the circle, the carrier jumped 49 mm for 2.9° (probed); ⛔ as two slices: the
+  // sliver got half the face's turn
+  const d = th.map((t, i) => { const g = wrapPi(t - th[(i - 1 + edges) % edges]!); return g < -1e-6 ? g + 2 * Math.PI : g; });
+  const first = d.findIndex((g) => g > 1e-6);
+  if (first < 0) return null;
+  const fs: Facet[] = [];
+  for (let k = 0; k < edges; k++) {
+    const i = (first + k) % edges;
+    const len = loop.cum[i + 1]! - loop.cum[i]!;
+    if (d[i]! > 1e-6) fs.push({ th: th[i]!, s0: loop.cum[i]!, len, din: d[i]!, dout: 0 });
+    else fs[fs.length - 1]!.len += len;
+  }
+  for (let j = 0; j < fs.length; j++) fs[j]!.dout = fs[(j + 1) % fs.length]!.din;
+  return fs;
+}
+
+/** ⭐ The inverse of `loopAtYaw`: the yaw whose place is the arc length `s` (a corner: the boundary of its two slices). */
+export function yawAtLoop(loop: SectionChain, s: number): number {
+  const fs = loopFacets(loop);
+  if (fs === null) return 0;
+  const x = wrapOn(loop, s);
+  let best = fs[0]!;
+  let bestOut = Infinity;
+  for (const f of fs) {
+    const rel = wrapOn(loop, x - f.s0);
+    const out = rel <= f.len ? 0 : Math.min(rel - f.len, loop.total - rel);
+    if (out < bestOut) { bestOut = out; best = f; }
+    if (out === 0) break;
+  }
+  // inside it, its share; a rounding step outside it, the nearer end
+  const rel = wrapOn(loop, x - best.s0);
+  const t = best.len > 0 ? (rel <= best.len ? rel / best.len : rel - best.len < loop.total - rel ? 1 : 0) : 0;
+  return best.th - best.din / 2 + (t * (best.din + best.dout)) / 2;
+}
+
+/** ⭐ (2026-11-04, `1.0.95-`) Out of step, the share of the yaw's step the gizmo's own yaw gains on it (or gives back) a frame. */
+export const SYNC_CATCH = 0.5;
+
+/**
+ * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE YAW'S STEP, SYNCHRONIZED — the carrier at `s`, the yaw turned by `dYaw` to `yaw`. In step it IS the yaw's place
+ * (`loopAtYaw`). Out of step (after a dy onto another height's loop, the boot, the slide) the gap is read as an ANGLE — the carrier's own yaw (`yawAtLoop`)
+ * against the yaw — and closed in that angle: ahead, its yaw turns at (1 − `SYNC_CATCH`) of the yaw's step, behind at (1 + `SYNC_CATCH`), until they meet.
+ * ⭐ So it never jumps, never stops (⛔ a wait ahead held it half a turn while the orbit went on), never goes against the finger, and closes a gap at the
+ * same rate in angle whatever the face's width (⛔ in arc length: millimetres per 90° along a 33 mm side).
+ */
+export function syncStep(loop: SectionChain, s: number, yaw: number, dYaw: number): number {
+  if (dYaw === 0 || !(loop.total > 0)) return wrapOn(loop, s);
+  const gap = wrapPi(yawAtLoop(loop, s) - (yaw - dYaw));
+  if (Math.abs(gap) < 1e-9) return loopAtYaw(loop, yaw);
+  const left = gap - Math.sign(gap) * Math.min(Math.abs(gap), SYNC_CATCH * Math.abs(dYaw));
+  return loopAtYaw(loop, yaw + left);
+}
+
 /**
  * ⭐⭐⭐ THE YAW'S STEP on the closed green loop: the carrier at `s` moved by `ds` (+ the yaw's own sense), round and round — and it never ENTERS an edge
  * for which `faces` is false (it waits at that edge's start; inside one it is on, free). `ds` held to one lap.
+ * ⚠ (2026-11-04, `1.0.95-`) NOT WIRED — dx is `loopAtYaw` + `syncStep` now; kept for the fallback (TILTED_ORBIT_REBUILD_SCOPE.md §13: by distance, paced to
+ * reach each corner as its face starts facing the piece).
  */
 export function loopStep(loop: SectionChain, s: number, ds: number, faces: (edge: number) => boolean): number {
   const edges = loop.pts.length - 1;

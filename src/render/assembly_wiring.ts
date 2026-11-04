@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, redPace, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, redPace, syncStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -286,12 +286,17 @@ function onRedNear(st: SceneState, heading: number, w: Vec3, kind?: EdgeKind, in
   return null;
 }
 
-/** ⭐ The carrier carried round the GREEN loop at its height by `dYaw` (`greenPace` per radian, never into an edge turned away), its red section the plane through it. */
-function onGreen(st: SceneState, c: Carrier, yaw: number, pitch: number, dYaw: number): Carrier | null {
+/**
+ * ⭐ The carrier carried round the GREEN loop at its height by the yaw's step, its red section the plane through it. ⭐⭐⭐ (2026-11-04, `1.0.95-`)
+ * SYNCHRONIZED WITH THE ORBIT: its place is the yaw's own (`loopAtYaw` — each edge a slice of the turn), reached without a jump when out of step
+ * (`syncStep`) — ⛔ by distance (`loopStep`, `greenPace`), it ran ahead of or behind the yaw, waited at corners, and a rounding step short of one ran onto
+ * a face turned away.
+ */
+function onGreen(st: SceneState, c: Carrier, yaw: number, dYaw: number): Carrier | null {
   const loop = loopFor(st, c.w[1]);
   if (loop === null) return null;
   const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
-  const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));
+  const s1 = syncStep(loop, s0, yaw, dYaw);
   const at = chainAt(loop, s1);
   const w: Vec3 = [at.p[0], c.w[1], at.p[1]];
   // ⭐⭐⭐ (2026-11-04, Step 4) the red plane square to the face's level axis there (round a vertical edge it turns with the face: the plane carried over)
@@ -320,7 +325,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
   }
   let green = false;
   if (dYaw !== 0 && st.asmCarrier !== null) {
-    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);
+    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);
     green = next !== null && c.kind === "SIDE";
     c = next ?? c;
   }
