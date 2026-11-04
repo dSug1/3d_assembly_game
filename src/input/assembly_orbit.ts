@@ -141,6 +141,18 @@ export function unswayHit(point: Vec3, normal: Vec3 | null, meshPos: Vec3, meshR
   return { point: add(modelPos, qRotate(d, sub(point, meshPos))), normal: normal === null ? null : qRotate(d, normal) };
 }
 /**
+ * ⭐⭐⭐ (2026-11-04, Step 4c, the owner: *"make sure the orbit slide (the pieces translate the way the green box orbits) does not pollute the gizmo"*) — A RAY
+ * IN THE MODEL'S SPACE, MOVED ONTO A BODY AS DRAWN: `unswayHit`'s inverse (the model undone, then the mesh), for the ray's `origin` and `dir`. Cast against
+ * the swaying mesh it meets what the same ray meets on the body at its model pose — the hit, mapped back by `unswayHit`, is where the ray meets the body at
+ * rest. ⛔ A ray cast in the world against the swayed meshes, its hit only mapped back: a part swayed across the ray was hit (or missed) where it was
+ * drawn — the gizmo off its red plane by the sway, a section sample on the wrong part.
+ */
+export function swayRay(origin: Vec3, dir: Vec3, meshPos: Vec3, meshRot: Quat, modelPos: Vec3, modelRot: Quat): { origin: Vec3; dir: Vec3 } {
+  const d = qmul(meshRot, qconj(modelRot)); // the model undone, then the mesh
+  return { origin: add(meshPos, qRotate(d, sub(origin, modelPos))), dir: qRotate(d, dir) };
+}
+
+/**
  * ⭐⭐⭐ (2026-11-01) A face's normal on its body's MODEL pose from the mesh's own LOCAL facet normal (`localN`) and its scaling (`s`, per axis — the
  * normal scaled by its inverse): exact whatever the mesh was drawn at when it was picked. `null` for a null normal.
  */

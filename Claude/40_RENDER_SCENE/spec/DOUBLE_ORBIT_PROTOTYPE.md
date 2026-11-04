@@ -2347,3 +2347,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   1626 vectors. ⛔ No device close.
 * ✅ **The same calm at every distance (2026-11-04, `1.0.95-`, Q3 amended)** — 58d86ff's distance gate curved the A + dy approach; deleted with its slider.
   The gizmo's ease 55 ms (`gizmoEaseMs`). The lag's two sliders: `gizmoEaseMs`, `orbitSpringMs` (scope §13.2–§13.3). 1627 vectors. ⛔ No device close.
+* ✅ **Step 4c (2026-11-04, `1.0.95-`): THE SIDE DECIDES, THE PARTS AT REST** — the common root of the device glitches (the red not a plane / not vertical
+  / cut, the gizmo stuck then jumping): the hull's facets decided about faces. Now each world side of the green loop is a slice of the turn, its axis the
+  red plane's heading, the drop's direction and the calm's normal; a drop on a side is never held (a miss stands on the hull); every ray is cast in the
+  model's space (`modelCast` / `swayRay`) — the orbit's sway never moves the gizmo. Holds 69 → 11, the gizmo off its red plane: never. The gizmo's ease
+  62 ms. 1632 vectors (scope §14). ⛔ No device close.

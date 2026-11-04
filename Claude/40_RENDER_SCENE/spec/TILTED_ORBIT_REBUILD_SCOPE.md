@@ -1,7 +1,7 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) — ⛔ no device close
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) — ⛔ no device close
 > on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
@@ -412,10 +412,62 @@ the piece's entry, its aim, the centre's return; the hover and the rig's share k
   whole within 3.6 m of the gizmo, none from 5.4 m): an approach from 6.9 to 3.8 m faded the calm in, turning the piece's direction toward the face's normal
   as it came — a curve. *"modify the scope Q3: same calm at every distance"* → the weight is the pole's alone (`poleWeight`); `calmWeight`, `calmEngageM`,
   `CALM_RELEASE_FACTOR` and the slider `faceSpanEngageM` deleted. ⚠ Far out (6 m) the calm now applies too: the view near square in a face's middle there.
-* *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55** (was 90).
+* *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55** (was 90); then *"update the lag the gizmo's position the piece follows to 62 ms"* → **62**.
 * ⏳ Open, the diagnosis given to the owner (not built): every glitch reported (the red not a plane / not vertical / cut, the gizmo stuck then jumping, the
   red gone after an edge, the bounce) comes from the CONVEX HULL deciding about faces — the carrier's facet (bridging grooves, gaps, protrusions, cutting
   slanted blocks) sets the red plane's heading, the drop's direction and the calm's face, while the gizmo lands on the REAL face; a disagreement is a drop
   "turned away — held" while the carrier goes on (stuck, then a jump: 110 frames in one probe on the slanted block). Proposed Step 4c: every face-dependent
   decision from the real face the gizmo landed on; no hold while the carrier goes on. ⏳ The owner's *"Instead of a ms ease, can you reject jumps of gizmo?"*
+
+## 14. Step 4c — the side decides; the parts read at rest — built (2026-11-04, branch `1.0.95-`)
+
+**Why.** The owner, after a run of device reports (the red section not a plane, not vertical, cut; the gizmo *"stuck for a while … until it unlatches and
+jump to the accumulated delta position"*; the red gone after an edge; the bounce): *"try to find common root causes for all these glitches instead of
+patching one by one. There must be something wrong in the logic."* — then *"go ahead as step 4c. clean the previous patches accordingly"*.
+
+**The common root cause: the CONVEX HULL decided about faces.** The carrier rides the hull of the sections (the green loop, the red chain) — and the hull
+bridges the grooves between pieces, the gaps, the protruding parts, and cuts across slanted blocks. Every face-dependent decision was read off the hull
+FACET under the carrier: its own slice of the turn (Step 4b), the red plane's heading (its normal snapped, Step 4), the drop's direction (its raw normal —
+not snapped), the calm's face. Where a facet is not the real face, the gizmo landed OFF its red plane (the red line through it kinked — up to 74 mm,
+probed), into a groove's wall or a face turned away — refused and HELD while the carrier went on: stuck, then a jump (163 frames in one random run, 110 on
+the slanted block). Probed per frame (`scratchpad/holds.js`, `rootcause.js`): the holds, and the gizmo off its own red plane.
+
+**As built** (`input/section_hull.ts`, `render/assembly_wiring.ts`):
+
+* ⭐⭐⭐ **THE SIDE DECIDES** (`loopSides`, `sideAt`): the green loop's facets grouped by their world axis (the front, the right, the back, the left — a
+  groove's bridge, a slanted block, a sliver belong to their side). Each SIDE a slice of the turn (`loopAtYaw` / `yawAtLoop` on sides — ⛔ Step 4b's per
+  facet: a 45 mm bridge had its own 10.6° slice); its axis is the red plane's heading AND the drop's direction (`greenDrop` along it — ⛔ the facet's raw
+  normal) and the calm's normal (from the carrier's heading — ⛔ the hit's normal). The drop along the side's axis lands exactly where the green plane and
+  the red plane meet, on a face facing the ray (a groove's bottom, never its wall).
+* ⭐⭐⭐ **NEVER HELD ON A SIDE**: the drop is taken whatever it hits; a miss (a gap through the assembly) puts the gizmo on the carrier itself (the hull spans
+  it) — the gizmo never stops while the carrier moves. `faceTurnedAway` DELETED; the re-take of the red plane through the landing point DELETED (the drop
+  lands in it). ⚠ Over a top / under a bottom the polar turn (until Step 5) still holds on a miss or a face turned away (taken there: 26 reversals and 6
+  piece jumps on the top's dx legs, probed).
+* ⭐⭐ **The drawn sections**: each green sample dropped along ITS side's axis; a sample's miss stands on the hull (⛔ `null`: the line cut there).
+* ⭐⭐⭐ **THE PARTS READ AT REST** (the owner: *"make sure the orbit slide (the pieces translate the way the green box orbits) does not pollute the gizmo"*):
+  `ffcb744` (2026-11-01) brought a hit on a swaying mesh back onto its model pose (`modelHit`) — but the RAY was cast in the world against the meshes as
+  drawn: a part swayed across it was met, or missed, where it was drawn (5 mm off the ray, out of the red plane; near an edge, missed). Now every ray —
+  the drop (`castRay`), the gizmo's first place (`castGizmo`), every section sample — is **cast in the model's space** (`modelCast`): against each placed
+  part, the ray moved onto it as drawn (`swayRay`, `input/assembly_orbit.ts` — `unswayHit`'s inverse: the sway's translation and turn), the nearest hit
+  kept and brought back (`modelHit`). The hulls, the loops, the chains and the shell's box already read the model (`placedParts`, 2026-11-01). No
+  `pickWithRay` is left in the orbit's wiring.
+* Cleaned: Step 4b's facet slices → sides; `facetRunToward` on sides; `asmShown.n` (the hit's normal for the calm) deleted. Kept: `loopStep`, `greenPace`,
+  `greenFaces` (the owner's fallback, §13).
+
+**Vectors**: `tests/section_hull.test.ts` + 2 (the sides of a bridged front; the drop along the side's axis in both planes, onto a groove's bottom — RED
+against `370f547`: 8 with the calm's), `tests/sway_cast.test.ts` 3 (a part swayed 5 mm across the drop: on the ray at rest — ⛔ the old cast 5 mm off,
+near the edge missed; the turn's round trip; no pick on the swaying meshes — RED: `swayRay` absent). **1632.**
+
+**The probes** — the deployed `370f547` (B) against Step 4c (E), the same input:
+
+| | B | Step 4c |
+|---|---|---|
+| holds (the carrier moving, the gizmo not): sides / standard close in / far / seed 7 / seed 11 / seed 13 | 69 / 25 / 25 / 163 / 18 / 11 | **11 / 6 / 7 / 56 / 1 / 0** (what is left: over the top — Step 5) |
+| the gizmo off its own red plane (> 5 mm; max) | 4–16 frames a run (max 74 mm) | **0 in every run** |
+| sides: off-section | 359 | 275 |
+| standard legs: reversals / against the finger | 2 / 37–38 | 15–16 / 21–42 — ⚠ all on the TOP's dx (the polar turn: which drops land on the 33 mm top changed with the parts at rest; Step 5) |
+| dx at mid-height, the blue at 4 m | clean | clean |
+
+⚠ Seed 11 (8 presses): "the piece behind its face" 0 → 261 — every frame at v = 0 (the piece straight below): the piece's direction square to every
+vertical face, the sign float noise (the analyser's border; the same at the bottom pole before).
 

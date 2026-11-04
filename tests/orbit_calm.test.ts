@@ -142,8 +142,8 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("const w = poleWeight(u[1]);");
     expect(a).not.toContain("calmWeight(");
     expect(a).toContain("sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
-    expect(a).toContain("const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], hn);");
-    expect(a).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw, n: hit.normal };");
+    expect(a).toContain("const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], [Math.cos(c.heading), 0, Math.sin(c.heading)]);"); // ⭐ (Step 4c) the carrier's side, not the hit's normal
+    expect(a).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
     expect(a).toContain("const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");

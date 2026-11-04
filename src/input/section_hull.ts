@@ -254,10 +254,9 @@ export function dropRay(q: P2, kind: EdgeKind, c: Vec3, yaw: number, reach: numb
   return { origin: fromPlane([reach, q[1]], c, yaw), dir: [-h[0], 0, -h[2]], length: reach * 2 };
 }
 
-/** ⭐ The gizmo's real face TURNED AWAY from the piece (its normal against the piece's direction `u`) — the gizmo then holds where it was. */
-export function faceTurnedAway(n: Vec3 | null, u: Vec3): boolean {
-  return n !== null && n[0] * u[0] + n[1] * u[1] + n[2] * u[2] < 0;
-}
+/* ⛔ (2026-11-04, Step 4c) `faceTurnedAway` DELETED: a drop on a face turned away from the piece held the gizmo while the carrier went on — stuck, then a
+ * jump to where the carrier had got (the owner: *"the gizmo is stuck for a while in this position until it unlatches and jump to the accumulated delta
+ * position"*). The drop goes along the side's own axis now, onto faces that face it; the hit is taken whatever it is. */
 
 /**
  * ⭐⭐⭐ (2026-11-02, the owner: *"propose another way to smooth the travel of the red and green section without compromising the fact that the gizmo is always
@@ -379,15 +378,16 @@ function wrapPi(a: number): number {
 
 /**
  * ⭐⭐⭐ (2026-11-04, branch `1.0.95-`, the owner: *"why the gizmo cannot be synchronized with the orbit? I am ok if the linear speed of the gizmo is not
- * constant"*) THE GIZMO'S PLACE ON THE GREEN LOOP FROM THE YAW ALONE — each edge owns a SLICE of the turn: from halfway between its outward normal and the
- * previous edge's to halfway between its normal and the next one's (the slices tile the turn: a convex loop's normals go once round, in order). Inside its
- * slice the carrier crosses the edge linearly with the yaw — at the slice's start the edge's start corner, at its end the edge's end. ⭐ The same yaw is
- * always the same place (nothing to drift), a corner reached exactly as the yaw crosses into the next edge's slice, and the edge it is on always FACES the
- * piece (inside its slice the yaw is less than half an exterior angle — under 90° — from the edge's normal). ⚠ The speed along the loop is not even: a wide
- * face and a narrow one get slices of the same order (on a box, 90° each). Returns the arc length.
+ * constant"*) THE GIZMO'S PLACE ON THE GREEN LOOP FROM THE YAW ALONE — ⭐⭐⭐ (Step 4c) each SIDE (`loopSides`: the facets facing one world axis — the front,
+ * the right, the back, the left; a groove's bridge, a slanted block, a sliver belong to their side) owns a SLICE of the turn: from halfway between its axis
+ * and the previous side's to halfway between its axis and the next one's (the slices tile the turn). Inside its slice the carrier crosses the side linearly
+ * with the yaw — at the slice's start the side's start corner, at its end its end. ⭐ The same yaw is always the same place (nothing to drift), a corner
+ * reached exactly as the yaw crosses into the next side's slice, and the side faces the piece (the yaw within ~45° of its axis). ⛔ Step 4b's slices per
+ * FACET: a hull edge bridging a groove or a protrusion was a face of its own — its own slice, its own drop direction, its own red plane. ⚠ The speed along
+ * the loop is not even (on a box, 90° each side). Returns the arc length.
  */
 export function loopAtYaw(loop: SectionChain, yaw: number): number {
-  const fs = loopFacets(loop);
+  const fs = loopSides(loop);
   if (fs === null) return 0;
   let best = 0;
   let bestOut = Infinity;
@@ -430,6 +430,49 @@ function loopFacets(loop: SectionChain): Facet[] | null {
   return fs;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-04, Step 4c) THE LOOP'S SIDES: its facets grouped by their heading snapped to the nearest world axis (`snapHeading` — Step 4's red plane),
+ * consecutive ones of one axis joined; each a `Facet` whose `th` is that AXIS. The hull decides nothing about faces beyond this: the side's axis is the
+ * drop's direction, the red plane's heading and the calm's normal. A loop with fewer than two axes: its facets.
+ */
+export function loopSides(loop: SectionChain): Facet[] | null {
+  const fs = loopFacets(loop);
+  if (fs === null) return null;
+  const same = (a: number, b: number): boolean => Math.abs(wrapPi(a - b)) < 1e-6;
+  const ax = fs.map((f) => snapHeading(f.th));
+  const k0 = ax.findIndex((h, j) => !same(h, ax[(j - 1 + ax.length) % ax.length]!));
+  if (k0 < 0) return fs;
+  const out: Facet[] = [];
+  for (let k = 0; k < fs.length; k++) {
+    const j = (k0 + k) % fs.length;
+    const g = out[out.length - 1];
+    if (g !== undefined && same(g.th, ax[j]!)) g.len += fs[j]!.len;
+    else out.push({ th: ax[j]!, s0: fs[j]!.s0, len: fs[j]!.len, din: 0, dout: 0 });
+  }
+  const n = out.length;
+  const turn = (a: number, b: number): number => { const g = wrapPi(b - a); return g <= 1e-9 ? g + 2 * Math.PI : g; };
+  const sides = out.map((g, i) => ({ ...g, din: n > 1 ? turn(out[(i - 1 + n) % n]!.th, g.th) : 2 * Math.PI, dout: 0 }));
+  for (let i = 0; i < n; i++) sides[i]!.dout = sides[(i + 1) % n]!.din;
+  return sides;
+}
+
+/** ⭐⭐⭐ (2026-11-04, Step 4c) The SIDE at arc length `s`: its world axis's heading, the carrier's distance to its nearer end, its length. */
+export function sideAt(loop: SectionChain, s: number): { h: number; dEdge: number; run: number } | null {
+  const fs = loopSides(loop);
+  if (fs === null) return null;
+  const x = wrapOn(loop, s);
+  let best = fs[0]!;
+  let bestOut = Infinity;
+  for (const f of fs) {
+    const rel = wrapOn(loop, x - f.s0);
+    const out = rel <= f.len + 1e-12 ? 0 : Math.min(rel - f.len, loop.total - rel);
+    if (out < bestOut) { bestOut = out; best = f; }
+    if (out === 0) break;
+  }
+  const rel = Math.min(best.len, wrapOn(loop, x - best.s0));
+  return { h: best.th, dEdge: Math.min(rel, best.len - rel), run: best.len };
+}
+
 /** ⭐ A RUN of the gizmo along a face: its distance to the run's nearer end, the run's length, the face's outward normal (horizontal, world). */
 export interface FaceRun { readonly dEdge: number; readonly run: number; readonly n: Vec3 }
 
@@ -442,26 +485,14 @@ export interface FaceRun { readonly dEdge: number; readonly run: number; readonl
  * ⛔ the nearest facet alone: the gizmo inside a bridged hull read the BACK's normal (the camera behind the painting).
  */
 export function facetRunToward(loop: SectionChain, p: P2, nWant: Vec3): FaceRun | null {
-  const fs = loopFacets(loop);
-  if (fs === null) return null;
+  const sides = loopSides(loop);
+  if (sides === null) return null;
   if (!(Math.hypot(nWant[0], nWant[2]) > 1e-9)) return null;
   const want = snapHeading(Math.atan2(nWant[2], nWant[0]));
-  const same = (a: number, b: number): boolean => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 1e-6;
-  const side = fs.map((f) => snapHeading(f.th));
-  // the sides: runs of consecutive facets with one snapped heading (the loop's start inside one: it is joined round)
-  const k0 = side.findIndex((h, j) => !same(h, side[(j - 1 + side.length) % side.length]!));
-  if (k0 < 0) return null; // one heading all round: no sides
-  const groups: { h: number; s0: number; len: number }[] = [];
-  for (let k = 0; k < fs.length; k++) {
-    const j = (k0 + k) % fs.length;
-    const g = groups[groups.length - 1];
-    if (g !== undefined && same(g.h, side[j]!)) g.len += fs[j]!.len;
-    else groups.push({ h: side[j]!, s0: fs[j]!.s0, len: fs[j]!.len });
-  }
   let best: FaceRun | null = null;
   let bestD = Infinity;
-  for (const g of groups) {
-    if (!same(g.h, want)) continue;
+  for (const g of sides) {
+    if (Math.abs(wrapPi(g.th - want)) > 1e-6) continue;
     // the gizmo's place along the side: the nearest of its points, sampled every 2 mm (a side is a few facets)
     const n = Math.max(2, Math.ceil(g.len / 0.002));
     for (let i = 0; i <= n; i++) {
@@ -470,7 +501,7 @@ export function facetRunToward(loop: SectionChain, p: P2, nWant: Vec3): FaceRun 
       const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
       if (d < bestD) {
         bestD = d;
-        best = { dEdge: Math.min(t, g.len - t), run: g.len, n: [Math.cos(g.h), 0, Math.sin(g.h)] };
+        best = { dEdge: Math.min(t, g.len - t), run: g.len, n: [Math.cos(g.th), 0, Math.sin(g.th)] };
       }
     }
   }
@@ -479,7 +510,7 @@ export function facetRunToward(loop: SectionChain, p: P2, nWant: Vec3): FaceRun 
 
 /** ⭐ The inverse of `loopAtYaw`: the yaw whose place is the arc length `s` (a corner: the boundary of its two slices). */
 export function yawAtLoop(loop: SectionChain, s: number): number {
-  const fs = loopFacets(loop);
+  const fs = loopSides(loop);
   if (fs === null) return 0;
   const x = wrapOn(loop, s);
   let best = fs[0]!;

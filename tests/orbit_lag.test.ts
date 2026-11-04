@@ -9,8 +9,8 @@ import { easePoint } from "../src/input/assembly_orbit";
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
 describe("⭐⭐ the piece's lag behind the ring — two sliders", () => {
-  it("⭐ the defaults: the gizmo's ease 55 ms (the owner; was 90), the orbit's spring 30 ms; in [0, 500] ms; 0 follows at once", () => {
-    expect(DEFAULT_CONFIG.gizmoEaseMs).toBe(55); // the owner: *"set the default gizmo ease at 55 ms"* (was 90)
+  it("⭐ the defaults: the gizmo's ease 62 ms (the owner; 55, 90 before), the orbit's spring 30 ms; in [0, 500] ms; 0 follows at once", () => {
+    expect(DEFAULT_CONFIG.gizmoEaseMs).toBe(62); // the owner: *"update the lag the gizmo's position the piece follows to 62 ms"* (55 before, 90 at first)
     expect(DEFAULT_CONFIG.orbitSpringMs).toBe(30);
     expect(DEFAULT_CONFIG.orbitSpringMs).toBe(DEFAULT_CONFIG.boxSmoothMs / 2); // unchanged feel at the defaults
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoEaseMs: -1 })).toThrow();

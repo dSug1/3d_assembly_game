@@ -20,6 +20,8 @@ import {
   loopOf,
   loopStep,
   loopAtYaw,
+  sideAt,
+  loopSides,
   syncStep,
   yawAtLoop,
   SYNC_CATCH,
@@ -30,7 +32,6 @@ import {
   edgeKind,
   edgeNormal,
   facesPiece,
-  faceTurnedAway,
   facingChain,
   fromPlane,
   hull2,
@@ -172,15 +173,11 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(toPlane(t.origin, C, yaw)[0]).toBeCloseTo(0.04, 12);
     expect(inPlane(t.origin)).toBeCloseTo(0, 12);
     expect(dropRay([0.04, 0.1], "BOTTOM", C, yaw, 2).dir).toEqual([0, 1, 0]);
-    expect(faceTurnedAway([0, 0, -1], [0, 0.5, -0.8])).toBe(false);
-    expect(faceTurnedAway([0, -1, 0], [0, 0.5, -0.8])).toBe(true);
-    expect(faceTurnedAway(null, [0, 0, 1])).toBe(false);
   });
-  it("⭐⭐⭐ COMPOSED on a slab with an OVERHANG, bottom centre → top centre at +30°: the gizmo ALWAYS in the yaw plane, at the carrier's height on a side, held only under the bottom (turned away) (the overhang's underside skipped: up the slab, a step out onto the ledge's front, back in, onto the top)", () => {
+  it("⭐⭐⭐ COMPOSED on a slab with an OVERHANG, bottom centre → top centre at +30°: the gizmo ALWAYS in the yaw plane, at the carrier's height on a side — ⭐ (Step 4c) never held, the bottom's drop taken too (the overhang's underside skipped: up the slab, a step out onto the ledge's front, back in, onto the top)", () => {
     const boxes = [SLAB, LEDGE];
     const ch = facingChain(hull2(sectionPoints(boxes.map((b) => box(b.lo, b.hi)), C, YAW)))!;
     const pitch = 30 * D;
-    const u: Vec3 = [Math.cos(pitch) * Math.cos(YAW), Math.sin(pitch), Math.cos(pitch) * Math.sin(YAW)];
     const ax: Vec3 = [-Math.sin(YAW), 0, Math.cos(YAW)];
     const hosts: string[] = [];
     let s = 0;
@@ -190,14 +187,8 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
       const kind = edgeKind(edgeNormal(ch, at.edge));
       const hit = cast(boxes, dropRay(at.p, kind, C, YAW, 2))!;
       expect(hit).not.toBe(null);
-      // ⭐ starting under the centre above the horizon: the bottom is turned away — the gizmo held there (the wiring's rule), and only there
-      if (faceTurnedAway(hit.normal, u)) {
-        expect(kind).toBe("BOTTOM");
-        continue;
-      }
       expect((hit.point[0] - C[0]) * ax[0] + (hit.point[2] - C[2]) * ax[2]).toBeCloseTo(0, 12); // the red section
       if (kind === "SIDE") expect(hit.point[1]).toBeCloseTo(C[1] + at.p[1], 12); // the green one
-      expect(faceTurnedAway(hit.normal, u)).toBe(false);
       const host = hit.normal[1] > 0.5 ? "top" : hit.point[2] < -0.05 ? "ledge" : "slab";
       if (hosts[hosts.length - 1] !== host) hosts.push(host);
     }
@@ -240,7 +231,7 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(A.gizmoShownAt([1, 2, 3], [0, 0, 0])).toEqual([1, 2, 3]);
     expect(A.gizmoShownAt(null, [0, 0, 0])).toEqual([0, 0, 0]);
     const w = code("render/assembly_wiring.ts");
-    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw, n: hit.normal };");
+    expect(w).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
     expect(w).toContain("const gi = insertIndex(gc.params, gParam);");
     expect(w).toContain("if (green.length > 0) green.splice(gi, 0, gv);");
     expect(w).toContain("const ri = insertIndex(rc.params, c.s);");
@@ -257,7 +248,8 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(a).toContain("const s1 = syncStep(loop, s0, yaw, dYaw);");
     expect(a).not.toContain("loopStep(loop");
     expect(a).toContain("c = redAt(st, c.heading, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch));");
-    expect(a).toContain("const red = onRed(st, c.heading, h.point);");
+    expect(a).not.toContain("const red = onRed(st, c.heading, h.point);"); // ⛔ (Step 4c) the re-take through the landing deleted: the drop lands IN the red plane
+    expect(a).toContain('if (c.kind === "SIDE") return h ?? { point: [c.w[0], c.w[1], c.w[2]], normal: null, host: null };'); // on a side never held (a top: Step 5)
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, heading);");
     expect(a.split("st.asmCarrier = null;").length - 1).toBe(2); // the hover, off the slide (⛔ 2026-11-04 the close-in lock deleted, Step 1)
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
@@ -308,7 +300,11 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) dx SYNCHRONIZED WITH THE ORBIT (the 
       if (loop === null) continue;
       for (let y = -Math.PI; y < Math.PI; y += 0.013) {
         const at = chainAt(loop, loopAtYaw(loop, y));
-        expect(greenFaces(greenNormal(loop, at.edge), y, 0)).toBe(true);
+        // ⭐⭐⭐ (Step 4c) the SIDE under the gizmo faces the piece (its axis within 90° of the yaw) — a slanted facet inside a side may not, its drop goes
+        // along the side's axis anyway
+        const sd = sideAt(loop, loopAtYaw(loop, y))!;
+        expect(Math.cos(y - sd.h)).toBeGreaterThan(0);
+        void at;
       }
     }
   });
@@ -340,6 +336,46 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) dx SYNCHRONIZED WITH THE ORBIT (the 
         s = n;
         if ((k + 1) * 5 * D * SYNC_CATCH > gap0 + 1e-9) expect(Math.abs(wrapOn(L, s - loopAtYaw(L, yaw) + L.total / 2) - L.total / 2)).toBeLessThan(1e-9);
       }
+    }
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-04, Step 4c) THE SIDE DECIDES — the hull decides nothing about faces (the owner: *\"try to find common root causes for all these glitches instead of patching one by one\"*)", () => {
+  // Scene_1's outline at 0.2216 m: the front bridged to a part sticking out (z −0.092) — three hull edges, normals −99.6°, −90°, −78.5°
+  const bridged = chainOf([[-0.2425, -0.0505], [0.0005, -0.0918], [0.0455, -0.0918], [0.2475, -0.0505], [0.2475, -0.0175], [-0.2425, -0.0175], [-0.2425, -0.0505]]);
+  it("⭐⭐⭐ the loop's SIDES: its facets by their world axis — the bridged front ONE side (−z), the right, the back, the left; each a slice of the turn (⛔ Step 4b: per facet — a bridge its own slice, its own drop, its own red plane)", () => {
+    const sides = loopSides(bridged)!;
+    expect(sides.map((f) => [Math.round(Math.cos(f.th)) + 0, Math.round(Math.sin(f.th)) + 0])).toEqual([[0, -1], [1, 0], [0, 1], [-1, 0]]); // −z, +x, +z, −x
+    expect(sides[0]!.len).toBeCloseTo(0.2465 * 1 + 0.045 + 0.2061, 3); // the whole front, its bridges included
+    // the front's slice: −135° … −45°, its middle the front's middle (by arc length)
+    const mid = loopAtYaw(bridged, -90 * D);
+    expect(mid).toBeCloseTo(sides[0]!.s0 + sides[0]!.len / 2, 9);
+    expect(sideAt(bridged, mid)!.h).toBeCloseTo(-Math.PI / 2, 12);
+    // ⛔ per facet the middle of the turn sat on the 45 mm bridge's top (a 10.6° slice): the front's left half swept in 45° for 25 cm, its middle in 10°
+    expect(sideAt(bridged, loopAtYaw(bridged, -100 * D))!.h).toBeCloseTo(-Math.PI / 2, 12);
+    expect(sideAt(bridged, loopAtYaw(bridged, -10 * D))!.h).toBeCloseTo(0, 12); // the right side's slice
+  });
+  it("⭐⭐⭐ THE DROP ALONG THE SIDE'S AXIS lands exactly where the green plane and the red plane meet — on a bridge, a slanted block, a groove (⛔ along the facet's own normal: off the red plane, into a groove's wall — turned away, held, then a jump)", () => {
+    // a front with a GROOVE (3 mm wide, 15 mm deep) behind the bridge — the carrier on the bridge above it
+    const front: { lo: Vec3; hi: Vec3 } = { lo: [-0.25, 0, -0.05], hi: [-0.0015, 0.5, -0.017] };
+    const front2: { lo: Vec3; hi: Vec3 } = { lo: [0.0015, 0, -0.05], hi: [0.25, 0.5, -0.017] };
+    const groove: { lo: Vec3; hi: Vec3 } = { lo: [-0.0015, 0, -0.035], hi: [0.0015, 0.5, -0.017] };
+    const knob: { lo: Vec3; hi: Vec3 } = { lo: [0.0, 0.2, -0.092], hi: [0.045, 0.24, -0.05] };
+    const boxes = [front, front2, groove, knob];
+    const loop = loopOf(hull2(greenPoints(boxes.map((b) => box(b.lo, b.hi)), 0.1)))!;
+    for (const y of [-120, -100, -91, -90, -89, -70, -50]) {
+      const s = loopAtYaw(loop, y * D);
+      const sd = sideAt(loop, s)!;
+      const at = chainAt(loop, s);
+      const w: Vec3 = [at.p[0], 0.1, at.p[1]];
+      const n: Vec3 = [Math.cos(sd.h), 0, Math.sin(sd.h)];
+      const hit = cast(boxes, greenDrop(w, n, 2))!;
+      expect(hit).not.toBe(null);
+      // in the red plane (vertical, along the side's axis through the carrier) and the green one (the carrier's height)
+      expect((hit.point[0] - w[0]) * -n[2] + (hit.point[2] - w[2]) * n[0]).toBeCloseTo(0, 12);
+      expect(hit.point[1]).toBeCloseTo(0.1, 12);
+      // facing the ray — the face the drop lands on faces the side's way (a groove's bottom, never its wall)
+      expect(hit.normal[0] * n[0] + hit.normal[2] * n[2]).toBeGreaterThan(0.99);
     }
   });
 });
@@ -430,7 +466,7 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const loop = loopOf(hull2(greenPoints(parts.parts, y)));");
     expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
-    expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
+    expect(a).toContain("const sd = sideAt(loop, x); const n: Vec3 = sd !== null ? [Math.cos(sd.h), 0, Math.sin(sd.h)] : greenNormal(loop, at.edge); const w: Vec3 = [at.p[0], c.w[1], at.p[1]]; return drop(greenDrop(w, n, reach), w);"); // ⭐ (Step 4c) each sample along its side's axis, a miss on the hull
     expect(a).toContain("const r = onRed(st, redHeading(null, th), turnAbout(c.w, a.centre, th - yaw), c.kind);"); // ⭐ (2026-11-02) at fixed angles round the axis (`sectionFixed`)
   });
 });
@@ -529,11 +565,12 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4) THE RED SEC
   });
   it("⭐⭐ wired: round a vertical edge the plane taken from the green edge it is on; at the start from the gizmo's face; a top's dx and the dy over it the yaw's world plane (re-taken only within 10 mm)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const red = onRed(st, redHeading(greenNormal(loop, at.edge), yaw), w);");
+    expect(a).toContain("const h = side !== null ? side.h : redHeading(greenNormal(loop, at.edge), yaw);"); // ⭐ (Step 4c) the side's axis
+    expect(a).toContain("const red = onRed(st, h, w);");
     expect(a).toContain("c = onRed(st, redHeading(st.asmG !== null ? (st.gizmoNormal ?? null) : (castGizmo(st, u)?.normal ?? null), yaw), from);");
     expect(a).toContain('if (c.kind !== "SIDE" && redHeading(null, yaw) !== c.heading) { const r = onRedNear(st, redHeading(null, yaw), c.w, c.kind, true);');
     expect(a).toContain("if (r !== null && Math.hypot(r.w[0] - c.w[0], r.w[1] - c.w[1], r.w[2] - c.w[2]) <= RETAKE_M) c = r;");
     expect(a).toContain("const rKey = sectionRedKey(parts, c.heading, c.origin);");
-    expect(a).toContain("if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s, heading: red.heading };");
+    // ⛔ (Step 4c) the landing's re-take of the red plane deleted (the drop lands in it)
   });
 });
