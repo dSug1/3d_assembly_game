@@ -55,7 +55,7 @@ export interface ConvexShape {
 /**
  * ⚠ The default cap on a shape's point count — see `reducePoints`.
  *
- * ⭐ 64 is chosen so that **nothing in today's scene is touched**: a box is 8 corners, and the
+ * ⭐ 64 is chosen so that **nothing in today's scene is touched**: a box is 8 corners (Babylon hands it 24 split vertices — still under the cap), and the
  * reduction only engages for imported geometry, which is `3D4`'s row. ⛔ Not a `GestureConfig`
  * field: it is a geometry budget, not a number a hand judges on the glass, and a tunable
  * nobody can feel is what `config_debt.test.ts` exists to refuse.

@@ -33,7 +33,7 @@ describe("⭐⭐ prototype — TRANSLATION IN WORLDSPACE", () => {
     for (const k of [
       // ⛔ (2026-11-02) the parts' own gains, increment, cursor and HitFace sliders deleted with their translation, rotation and alignment (`d8134eb`)
       "collisionSkinMm", "translateInertiaMs", "translateDampingRatio", "translateLeadMs",
-      "translateSwayMm", "translateSwayTauMs", "faceHighlightAlpha", "captureOffsetMm", "snapConeDeg",
+      "translateSwayTauMs", "faceHighlightAlpha", "captureOffsetMm", "snapConeDeg",
     ])
       expect(key(k), k).toBeGreaterThan(ws);
     for (const k of [

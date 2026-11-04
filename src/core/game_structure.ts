@@ -64,7 +64,7 @@ export interface FinalPose {
  * reach — what the player achieves in the fewest touchpoint episodes and the least time
  * (`SCORE.md`). ⭐ `frame` (`D130`): `"ABSOLUTE"` — at these very poses; `"RELATIVE"` — the bodies
  * sit correctly relative to EACH OTHER, the whole anywhere (*"painting can sit anywhere"*). The
- * check is `core/goal.ts`. ⛔ Level end is not built.
+ * check is `core/goal.ts`; the level end is `core/level_end.ts` (`D180`).
  */
 export interface FinalConfiguration {
   readonly frame: "ABSOLUTE" | "RELATIVE";

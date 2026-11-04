@@ -330,12 +330,6 @@ export function rigSwingShare(cfg: GestureConfig, p: RigParams, v: number): numb
   return Math.min(1, Math.max(0, share));
 }
 
-/** ⭐ The camera's angles round the gizmo (azimuth, elevation) — `piece_orbit.ts`'s `AroundAngles`. */
-export interface RigAngles {
-  readonly az: number;
-  readonly el: number;
-}
-
 /** ⭐ The camera's direction (from the gizmo toward it, unit) and its UP. */
 export interface RigCameraFrame {
   readonly dir: Vec3;

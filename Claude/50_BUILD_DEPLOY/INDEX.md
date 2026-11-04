@@ -30,7 +30,7 @@ that cost an evening: IPv6-only binding, a stuck ADB handshake that only the rea
 | `npm run dev -- --host` | dev server, reachable from a phone on the LAN |
 | `npm run verify` | typecheck + golden vectors. ⭐ **The gate before any commit** |
 | `npm run build` | typechecks, then bundles to `dist/` |
-| `npm run cap:sync` | build + push into the native shells (once `DEP2` lands) |
+| `npm run verify:quick` | ⭐ (2026-11-04) the gate without the two demo-plan generator vectors (~27 s, not ~125 s) — the local loop; CI runs the whole `verify` |
 
 ⚠ `base: "./"` in `vite.config.ts` is load-bearing: a build must work from a
 `file://` path and inside a Capacitor webview, not only from a web-server root.

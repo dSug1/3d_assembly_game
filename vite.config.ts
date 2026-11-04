@@ -94,9 +94,34 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // ⭐ (2026-11-04, the audit) Babylon in its OWN chunk: its hash stands across app edits, so a
+        // deploy re-downloads only the app (~103 kB gz) on the iPhone, not the whole 376 kB gz.
+        // ⚠ only what the page imports STATICALLY: Babylon's lazily imported shaders and texture loaders keep their own chunks (⛔ forced in here, the
+        // first load grew from 376 to 449 kB gz)
+        manualChunks(id: string, { getModuleInfo }) {
+          if (!id.includes("node_modules/@babylonjs/")) return undefined;
+          // reached from the entry by STATIC imports alone — a shader include imported only by a lazy shader stays with it
+          const seen = new Map<string, boolean>();
+          const staticallyReached = (m: string): boolean => {
+            const known = seen.get(m);
+            if (known !== undefined) return known;
+            seen.set(m, false); // a cycle reaches nothing new
+            const info = getModuleInfo(m);
+            const yes = info !== null && (info.isEntry || info.importers.some(staticallyReached));
+            seen.set(m, yes);
+            return yes;
+          };
+          return staticallyReached(id) ? "babylon" : undefined;
+        },
+      },
+    },
   },
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // ⭐ (2026-11-04, the audit) threads, not forks: 42 s of the run was worker start-up.
+    pool: "threads",
   },
 });

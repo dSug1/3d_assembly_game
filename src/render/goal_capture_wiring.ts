@@ -5,16 +5,17 @@
  * the exact goal pose with the pop-up. ⛔ No rule here.
  * ⭐ Run BEFORE `syncSeats`: the goal wins over the snap.
  *
- * ⭐⭐ **TWO MARGINS** (the owner, 2026-09-30): a GRABBED piece — pressed by a finger or the mouse, or dragged as an
- * assembly's root — within the snap's own (`captureOffsetMm` on the glass at the camera NOW, `snapConeDeg`), so the goal
- * feels as the snap does; a piece NEVER grabbed within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm, 1°), so zooming
- * out cannot place a piece nobody moved. ⭐ One report serves the capture, the HUD, the dissolve and the level end.
+ * ⭐⭐ **THE MARGINS** (the owner, 2026-09-30): a piece within `ungrabbedGoalMm` / `ungrabbedGoalDeg` (1 mm, 1°) of its goal, so zooming out cannot
+ * place a piece nobody moved; the orbited piece by its own (`orbitGoalTolerance`); the frame fit reads the snap's (`captureOffsetMm` on the glass at
+ * the camera NOW, `snapConeDeg`). ⛔ (2026-11-04, the audit) the GRABBED margin is deleted: since the parts' moves were deleted (`5515502`) no press
+ * grabs a part, and `st.grabbed` was never filled. ⭐ One report serves the capture, the HUD, the commit and the level end — computed once per
+ * (world, goal, margins) (`placedReport`).
  */
 import { goalReport, liveFinalOf, orbitGoalTolerance, type GoalReport, type GoalTolerance, type Pose } from "../core/goal";
 import { worldPlacementOf } from "../core/object_model";
 import { qAngle, qconj, qmul, sub, length } from "../core/vec";
 import { magnetEase } from "../input/seat_snap";
-import { captureOffsetM, snapPathBlockedBy } from "../input/goal_capture";
+import { captureOffsetM, goalReportKey, sameGoalReportKey, snapPathBlockedBy } from "../input/goal_capture";
 import { collisionSetup } from "./collision_wiring";
 import { setModelPose } from "./bodies";
 import { commitGoal } from "./goal_commit_wiring";
@@ -26,12 +27,12 @@ function offsetRadiusM(st: SceneState): number {
   return captureOffsetM(st.cfg.captureOffsetMm, st.camera.radius, st.camera.fov, st.canvas.clientHeight);
 }
 
-/** ⭐ A GRABBED piece's margins — the snap's, at the camera NOW. */
+/** ⭐ The frame fit's margins — the snap's, at the camera NOW. */
 export function looseTolerance(st: SceneState): GoalTolerance {
   return { positionM: offsetRadiusM(st), angleRad: (st.cfg.snapConeDeg * Math.PI) / 180 };
 }
 
-/** ⭐ A piece NEVER grabbed: `ungrabbedGoalMm` on the glass at the camera NOW, `ungrabbedGoalDeg`. */
+/** ⭐ A piece's margins: `ungrabbedGoalMm` on the glass at the camera NOW, `ungrabbedGoalDeg`. */
 function strictTolerance(st: SceneState): GoalTolerance {
   return {
     positionM: captureOffsetM(st.cfg.ungrabbedGoalMm, st.camera.radius, st.camera.fov, st.canvas.clientHeight),
@@ -39,14 +40,13 @@ function strictTolerance(st: SceneState): GoalTolerance {
   };
 }
 
-/** ⭐ Each piece's margins: loose once grabbed, strict before. */
+/** ⭐ Each piece's margins: the orbited piece's own, every other the strict ones. */
 export function goalTolOf(st: SceneState): (id: string) => GoalTolerance {
-  const loose = looseTolerance(st);
   const strict = strictTolerance(st);
   // ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) the ORBITED piece by its own margins, in the world (`orbitGoalTolerance`)
   const orbited = orbitGoalTolerance(st.cfg.orbitGoalMm, st.cfg.orbitGoalDeg);
   const shown = st.greenBox?.name ?? null;
-  return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);
+  return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);
 }
 
 /** ⭐⭐ (2026-10-14) the goal LIVE: the level's and the SHOWN orbited piece's (`liveFinalOf`) — `null` for a scene with no goal. */
@@ -55,11 +55,22 @@ export function liveFinal(st: SceneState): FinalConfiguration | null {
   return f === null ? null : liveFinalOf(f, st.sceneSpec.orbitGoals, st.greenBox?.name ?? null);
 }
 
-/** ⭐ The goal as it stands NOW — `null` for a scene with no goal. */
+/**
+ * ⭐ The goal as it stands NOW — `null` for a scene with no goal. ⭐⭐ (2026-11-04, the audit) REMEMBERED for its inputs (`goalReportKey`): the world (immutable —
+ * one reference per change), the shown piece and the margins in force. ⛔ Recomputed (the slot fit and every body, ~0.7 ms on a desktop) by the level end on
+ * every resting frame, by the HUD on every pointer event's frame and by the capture — up to three times a frame for nothing new.
+ */
 export function placedReport(st: SceneState): GoalReport | null {
   const final = liveFinal(st);
   if (!final) return null;
-  return goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
+  const loose = looseTolerance(st);
+  const strict = strictTolerance(st);
+  const key = goalReportKey(st.world, st.greenBox?.name ?? null, loose, strict, st.cfg.orbitGoalMm, st.cfg.orbitGoalDeg);
+  const memo = st.goalReportMemo;
+  if (memo !== null && sameGoalReportKey(memo.key, key)) return memo.report;
+  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), loose, goalTolOf(st));
+  st.goalReportMemo = { key, report };
+  return report;
 }
 
 const MOVED_M = 1e-7;
@@ -73,6 +84,13 @@ export function goalCaptureFrame(st: SceneState, nowMs: number): void {
   const final = liveFinal(st);
   // ⛔ A demo plays itself; a finished level is frozen.
   if (!final || st.demo !== null || st.levelEnd.result !== null) return;
+  // ⭐ (2026-11-04, the audit) the world unchanged since the last frame (immutable — one reference per change) and nothing pending: nothing moved, nothing
+  // to offer — only the pulls advance (⛔ every body's pose read and compared, every frame)
+  if (st.world === st.goalCaptureWorld && !st.goalCapture.hasPending() && !st.goalCapture.needsSight()) {
+    advancePulls(st, nowMs);
+    return;
+  }
+  st.goalCaptureWorld = st.world;
   const moved = new Set<string>();
   for (const b of final.bodies) {
     const p = worldPlacementOf(st.world, b.id);

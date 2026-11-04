@@ -2,7 +2,7 @@
  * ⭐⭐⭐ **THE GOAL CHECK — is the level-completed configuration reached?** (`D130`, the owner,
  * 2026-09-28: *"goal completed when parts sit correctly relative to each other … painting can sit
  * anywhere for this Scene_01"*, and *"their respective goal can be achieved by two way: face aligned
- * or opposite face aligned"*). `GM1`'s detector, read from the model. ⛔ Level end is not built.
+ * or opposite face aligned"*). `GM1`'s detector, read from the model; the level end reads it (`core/level_end.ts`, `D180`).
  *
  * ## ⭐⭐ RELATIVE: the best rigid motion first, then every body against it
  *

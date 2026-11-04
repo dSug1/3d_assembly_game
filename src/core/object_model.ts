@@ -128,7 +128,7 @@ export interface SceneObject {
    * ⭐⭐ prototype — **AN ORBITED PIECE** (the green frustum, the turquoise prism; the owner, 2026-10-09: *"add the object model to the green
    * and turquoise pieces so their faces can be tracked"*). In the model for its FACES and its resting face — tracked, read in the world
    * by `faceWorld` / `restingFaceWorld` — while the ORBIT places it: its placement is copied FROM its mesh each frame
-   * (`syncOrbitPieceModel`), never written back. ⛔ Until its own collision is built it is nobody's obstacle (`core/collision.ts`),
+   * (`syncOrbitPieceModel`), never written back. ⭐ (2026-10-13) the SHOWN piece is an obstacle like any body (`core/collision.ts`); the hidden one is exempted by the caller's setup,
    * its pose is no scene change (the undo, the goal commit), and a touch on it stays empty space.
    */
   readonly orbited?: boolean;
@@ -337,6 +337,9 @@ export function setWorldPlacement(world: World, id: ObjectId, target: Placed): W
   // throwing: this runs inside a render loop, and a throw would take the scene down for a
   // finger resting on the base plate.
   if (o.frozen === true) return world;
+  // ⛔⛔ (2026-11-04, the audit) A NON-FINITE PLACEMENT IS REFUSED HERE, the one writer: a NaN pose read as "nothing within reach" to the orbit's
+  // solver (`nearestObstacle`) while `poseFree` called it blocked — unchanged, as a frozen body is
+  if (!finitePlaced(target)) return world;
   if (o.parent === null) return withObject(world, { ...o, local: target });
   const parentWorld = worldPlacementOf(world, o.parent);
   if (!parentWorld) return world;
@@ -522,3 +525,8 @@ export function evictObjectConstraints(
 
 /** Unused re-export guard: `Quat` is part of this module's surface via `Placed`. */
 export type { Quat };
+
+/** ⭐ (2026-11-04, the audit) every coordinate of a placement finite. */
+export function finitePlaced(p: Placed): boolean {
+  return p.position.every(Number.isFinite) && p.orientation.every(Number.isFinite);
+}

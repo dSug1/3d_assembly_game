@@ -129,7 +129,7 @@ export const DEMO_TAIL_DEG = 15;
  */
 export const DEMO_START_BEFORE_DEG = 50;
 
-/** ⭐ `D175`: the whole orbit, degrees — one turn and the 15° it starts before. */
+/** ⭐ `D175`: the whole orbit, degrees — one turn and the 50° it starts before (`DEMO_START_BEFORE_DEG`, `D192`). */
 const DEMO_ORBIT_DEG = 360 * DEMO_ORBIT_TURNS + DEMO_START_BEFORE_DEG;
 
 /**

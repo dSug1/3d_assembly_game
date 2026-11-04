@@ -10,7 +10,7 @@
  * * the piece's direction `u` (`orbitDir`) from the assembly's CENTRE (fixed at the boot); the GIZMO where the ray from the piece toward the centre first
  *   meets the assembly (the render casts it); the piece ON that ray, at the APPROACH's distance from the gizmo (`approachDistance`: the 2D curve's distance
  *   from ring 1 to the waist, then straight to the contact) — so far out it orbits the centre, close in it hugs the assembly's shape;
- * * ⛔ (2026-11-04, Step 1 of the rebuild) the CLOSE-IN LOCK is deleted (`nextLock`): the gizmo's carrier runs at every distance; under the SLIDE the
+ * * ⛔ (2026-11-04, Step 1 of the rebuild) the CLOSE-IN LOCK is deleted (`nextLock`): the gizmo is the same at every distance (Step 4c-bis: the face map, `input/face_map.ts`); under the SLIDE the
  *   gizmo is held, the piece kept within its cone of the face's normal (`lockCone`, `coneClamp`);
  * * the gizmo's FACE switches at an edge only once the ray lands past it by a margin (`faceSwitches`), so the quads do not flicker on an edge.
  * ⛔ ENGINE-FREE. Spherical angles, a ray, hysteresis — textbook; no licence, no patent.
@@ -267,5 +267,5 @@ export function orbitForCameraDir(want: Vec3, yaw0: number, offYawRad: number, o
   return { yaw: best.yaw, v: vOfPitch(best.p) };
 }
 
-// ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — its carrier rides the section's
-// hull now (`input/section_hull.ts`, with `faceTurnedAway` and the drawn sections' samples).
+// ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — and its successor, the carrier on the
+// sections' hull, with it (Step 4c-bis): the gizmo is a function of the orbit's angles (`input/face_map.ts`).

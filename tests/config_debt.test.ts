@@ -57,6 +57,9 @@ const PENDING: Readonly<Record<string, string>> = {
   mateFacingCos: "3D2 — snap/seat; the anti-parallel test",
   mateBreakLinear: "3D3 — break on residual",
   mateBreakAngular: "3D3 — break on residual",
+  // ⏸ (2026-11-04, the audit) read only by the way in and the piece orbit the owner switched off and KEPT (2026-10-12: *"don't remove it, as it may be
+  // useful later on"*, `render/hold_wiring.ts`); a comment no longer makes it look read
+  holdSwitchRestMs: "IN3 — the ⏸ way in / piece orbit (hold_wiring.ts), if it is switched back on",
 };
 
 function walk(dir: string): string[] {
@@ -80,8 +83,17 @@ function walk(dir: string): string[] {
  */
 function sourceToScan(): string {
   return walk("src")
-    .map((f) => readFileSync(f, "utf8"))
+    .map((f) => stripComments(readFileSync(f, "utf8")))
     .join("\n");
+}
+
+/**
+ * ⛔⛔ (2026-11-04, the audit) COMMENTS STRIPPED BEFORE THE MATCH. `holdSwitchRestMs` passed for a month on `// ⏸  st.cfg.holdSwitchRestMs,` — a
+ * commented-out line IS a property access to a regex, so a tunable read only by code that was switched off looked used. ⚠ A `//` after `:` or a
+ * quote (a URL in a string) is kept.
+ */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1");
 }
 
 describe("⭐⭐ config debt", () => {
@@ -116,6 +128,14 @@ describe("⭐⭐ config debt", () => {
     for (const [key, owner] of Object.entries(PENDING)) {
       expect(owner, key).toMatch(/^(IN|3D|RND|DEP|SEC|GAME)\d/);
     }
+  });
+
+  it("⛔ (2026-11-04, the audit) a tunable read only in a COMMENT is not read", () => {
+    const src = stripComments("const a = 1; // ⏸  st.cfg.onlyInAComment,\n/* st.cfg.inABlock */ const u = \"https://x\"; st.cfg.reallyRead;");
+    expect(/\.onlyInAComment\b/.test(src)).toBe(false);
+    expect(/\.inABlock\b/.test(src)).toBe(false);
+    expect(/\.reallyRead\b/.test(src)).toBe(true);
+    expect(src).toContain("https://x");
   });
 
   it("⭐ the guard can FAIL — a fabricated dead tunable is caught", () => {

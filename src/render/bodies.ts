@@ -14,7 +14,6 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { type PosePort } from "../input";
 import { type Quat } from "../core/vec";
 import { setWorldPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { type Placed } from "../core/mate_connector";
@@ -22,7 +21,7 @@ import { taperTop } from "../core/frustum";
 import { OBJECT_DIMS_M } from "../core/scene_dims";
 import { shapeFromVertices, type ConvexShape } from "../core/collision_shape";
 import { meshTopology, type MeshTopology } from "../core/mesh_topology";
-import { type DiagnosticPose, type Follow, type SceneState } from "./scene_state";
+import { type Follow, type SceneState } from "./scene_state";
 
 /**
  * ⭐⭐ **TURN A BUILT BOX INTO A TRUNCATED PYRAMID BY MOVING ITS VERTICES.**
@@ -80,7 +79,6 @@ export function make(st: SceneState, name: string,
    * collision shape, faces) is `dims`; the core is a child drawn inside it, and never picked.
    */
   coreDims?: readonly [number, number, number],) {
-  st.dimsOf.set(name, dims);
   // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
   const mesh = CreateBox(
     name,
@@ -239,6 +237,8 @@ export function guardDraw(st: SceneState, where: string, fn: () => void) : void 
       // ⚠ Console too — the HUD has no room for a stack, and over the USB loop a tablet's
       // console is reachable through `chrome://inspect`.
       console.error("[draw]", where, err);
+      // ⛔ (2026-11-04, the audit) the HUD's own paint failed: the DRAWFAULT line it would have drawn is written straight into the box
+      if (where === "hud") st.hud.fault(st.drawFault);
     }
   }
 }
@@ -376,45 +376,5 @@ export function writePose(mesh: AbstractMesh, q: Quat) : void {
  * capture whatever the sway happened to be doing, and restoring it would write a
  * decoration back into the object's real pose — permanently.
  */
-/**
- * ⛔⛔ THERE IS NO FALLBACK TO THE MESH, DELIBERATELY. Every pickable object is in the
- * model by construction, so a miss here is a programming error — and the tempting
- * `?? readPose(mesh)` would answer it by silently writing the object's real pose into
- * a display transform instead, where the next frame overwrites it. The object would
- * stop responding for reasons nothing could explain.
- * ⭐ `METHOD`: *a guard that turns a broken state into silence is worse than a failure*,
- * and `validateGestureConfig` and `testMate` both throw for the same reason.
- */
-export function requirePose(st: SceneState, mesh: AbstractMesh) : Placed {
-  const mp = modelPose(st, mesh);
-  if (!mp) {
-    throw new Error(
-      `"${mesh.name}" is being manipulated but is not in the object model. Every ` +
-        "pickable object must be registered in the world model — see 3D1.",
-    );
-  }
-  return mp;
-}
-
-
-/**
- * ⭐ §1.3's provisional-motion rollback, on the MODEL. ⛔ Snapshotting the mesh would
- * capture whatever the sway happened to be doing, and restoring it would write a
- * decoration back into the object's real pose — permanently.
- */
-export function poseOf(st: SceneState, mesh: AbstractMesh) : PosePort<DiagnosticPose> {
-return ({
-  snapshot: () => requirePose(st, mesh).orientation,
-  restore: (q) =>
-    setModelPose(st, mesh, {
-      position: requirePose(st, mesh).position,
-      orientation: q,
-    }),
-});
-}
-
-
-/** The model's orientation for a held object. ⚠ Never the mesh's — that carries sway. */
-export function modelOrientation(st: SceneState, mesh: AbstractMesh) : Quat {
-return requirePose(st, mesh).orientation;
-}
+// ⛔ (2026-11-04, the audit) `requirePose`, `poseOf` and `modelOrientation` deleted: their one reader, the recognizer's pose port, has had no
+// caller since the parts' moves were deleted (`5515502`).

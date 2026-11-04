@@ -178,7 +178,7 @@ describe("⭐⭐⭐ the orbited pieces' GOALS and their capture (2026-10-14: *\"
     expect(g).toContain("return f === null ? null : liveFinalOf(f, st.sceneSpec.orbitGoals, st.greenBox?.name ?? null);");
     // ⭐ (the hover's second audit) the dead "always grabbed" line removed: `goalTolOf` answers the orbited piece's own margins first
     expect(g).not.toContain("st.grabbed.add(st.greenBox.name)");
-    expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);");
+    expect(g).toContain("return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);");
     expect(g).toContain("if (id === st.greenBox?.name) st.orbitPiecePlaced = true;");
     expect(code("render/level_end_wiring.ts")).toContain("const final = liveFinal(st);"); // ⛔ (2026-11-02) the dissolve deleted (`d8134eb`)
     const w = code("render/green_box_wiring.ts");
@@ -269,7 +269,7 @@ describe("⭐⭐ the orbited piece's goal margins IN THE WORLD (2026-10-14, the 
     expect(asPart.inPlaceIds.includes("green-box")).toBe(true);
   });
   it("⭐ wired: the shown orbited piece judged by its own margins", () => {
-    expect(code("render/goal_capture_wiring.ts")).toContain('return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : st.grabbed.has(id) ? loose : strict);');
+    expect(code("render/goal_capture_wiring.ts")).toContain('return (id) => (id === shown && st.sceneSpec.orbitGoals !== undefined ? orbited : strict);');
   });
 });
 

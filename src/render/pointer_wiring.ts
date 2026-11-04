@@ -48,8 +48,11 @@ export function installPointerHandler(st: SceneState): void {
   };
   window.addEventListener("keydown", approachKey(true));
   window.addEventListener("keyup", approachKey(false));
-  window.addEventListener("blur", () => {
-    st.orbitApproachKey = false;
+  // ⛔⛔ (2026-11-04, the audit) A LOST WINDOW RELEASES EVERY POINTER (`forgetPointers`): a pointerup lost to a blur or a hidden tab left a pointer
+  // latched in the router for good — the next press read two down and PINCHED (the open risk *"a stale grip kills orbit and zoom"*)
+  window.addEventListener("blur", () => forgetPointers(st));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") forgetPointers(st);
   });
   // ⭐⭐ THE GESTURE'S FIRST DOWN, observed BEFORE every rule (`insertFirst`): the model is snapshotted as it stands, so the score can tell a gesture
   // that changed something from one that did not (`D158`).
@@ -259,6 +262,31 @@ export function installPointerHandler(st: SceneState): void {
     st.hudDirty = true;
     if (st.gestureSpan.release(e.pointerId)) st.episodes.gestureEnded(endGesture(st));
   });
+}
+
+/**
+ * ⛔⛔ (2026-11-04, the audit) **THE WINDOW LOST: EVERY POINTER RELEASED** — as its POINTERUP would have (the hold, the hover, the approach's coast, the
+ * gesture's end), then the router cleared, the pinch ended, the orbit drag's tracker dropped. ⚠ No tap is read: a lost release is never a tap.
+ */
+export function forgetPointers(st: SceneState): void {
+  st.orbitApproachKey = false;
+  for (const p of st.router.all()) {
+    holdRelease(st, p.id, false);
+    hoverRelease(st, p.id);
+    st.episodeKey.delete(p.id);
+    st.eventGaps.delete(p.id);
+    st.pointerTypeOf.delete(p.id);
+    if (st.gestureSpan.release(p.id)) st.episodes.gestureEnded(endGesture(st));
+  }
+  if (assemblyOn(st)) approachRelease(st);
+  st.router.clear();
+  st.pinch.end();
+  st.hold = null;
+  st.orbitMotion = null;
+  st.pendingPartCentre = null;
+  st.pieceFaceTap = null;
+  st.noisePointer = null;
+  st.hudDirty = true;
 }
 
 /**

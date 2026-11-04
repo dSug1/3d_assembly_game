@@ -5,6 +5,7 @@
  * jump to a new barycentre). ⛔ No rule here.
  * ⛔ Not pickable (a touch goes through it to what is behind), not in the model: no collision, no goal, no score.
  */
+import { finiteCamera } from "../input/finite";
 import { restingContourShown } from "../input/quad_gate";
 import { RESTING_FACE_COLOUR } from "./colours";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
@@ -984,7 +985,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const env = pieceSolverEnv(st);
     // ⭐ (2026-10-14) the way in after a hover keeps its share of the frame's cap (`HOVER_FADE_QUERIES`): near the hosting face the orbit's slide
     // took it all and the way in advanced in bursts
-    const opt0 = pieceSolveOptions(st);
+    // ⭐ (2026-11-04, the audit) the frame's cap less what the last frame's checks carried in (⛔ the carry was counted, never taken off: the frame's total
+    // could reach the cap plus the carry)
+    const opt0 = { ...pieceSolveOptions(st), maxQueries: st.cfg.pieceSolverQueries - st.pieceQueries };
     const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
@@ -1286,6 +1289,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
   // ⭐⭐⭐ (2026-10-16, *"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen"*) — rolled to upright by the slide view's weight
   const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);
+  // ⛔ (2026-11-04, the audit) a non-finite camera is THROWN, never written: a NaN blanked the glass with nothing to say why — thrown, `guardDraw` names it
+  if (!finiteCamera(camAt, lookAt, up)) throw new Error("camera not finite");
   if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);
   st.camera.setPosition(new Vector3(camAt[0], camAt[1], camAt[2]));
   st.camera.setTarget(new Vector3(lookAt[0], lookAt[1], lookAt[2]));

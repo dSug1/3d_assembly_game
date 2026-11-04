@@ -70,7 +70,9 @@ describe("⭐⭐⭐ the gizmo reads the parts AT REST — the orbit's sway (its 
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const h = modelCast(st, o, [-n[0], -n[1], -n[2]], map.box.hi[s.axis] - map.box.lo[s.axis] + 2 * MAP_OUT_M);");
     expect(a).toContain("const m = mapGizmo(st, yw, pt);"); // the sections' samples: the gizmo's own function
-    expect(a).toContain("const m = swayRay(origin, dir, [p.x, p.y, p.z], [r.w, r.x, r.y, r.z], pose.position, pose.orientation);");
+    // ⭐ (2026-11-04, the audit) the drawn place and turn read once a frame (`castParts`), the ray moved onto each part as drawn
+    expect(a).toContain("const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);");
+    expect(a).toContain("parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z]");
     // the comments stripped on the RAW file (⛔ on the whitespace-collapsed one, the first `//` took the rest of the file: the check was empty)
     const raw = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
     expect(raw).toContain("function modelCast(st"); // the strip kept the code

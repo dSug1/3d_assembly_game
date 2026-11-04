@@ -6,7 +6,7 @@
   "description": "Touchscreen 3D assembly game -- objects joined by mate connectors.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run test",
-    "cap:sync": "npm run build && cap sync"
+    "test:quick": "vitest run --exclude tests/d170_regenerate.test.ts --exclude tests/d170_fresh_plan.test.ts",
+    "verify:quick": "npm run typecheck && npm run test:quick"
   },
   "dependencies": {
     "@babylonjs/core": "^7.54.0"

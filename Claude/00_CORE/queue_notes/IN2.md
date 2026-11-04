@@ -193,3 +193,11 @@ a part to it, so filtering that one would delete the plate from the alignment mo
 ⛔ The row stays in the queue; only its essay came here, to pay for `D87`–`D92`.
 
 ✅✅ **CLOSED 2026-09-14**, 22 + 8 vectors, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque object handle. Three roles latched at press for the touchpoint's lifetime; §0 order-independence keyed by pointer id. ⭐⭐ **ITS LATCH HAS NO EXCEPTIONS AGAIN** since `D54` deleted `A15`'s orphan unselect. ⭐ **A second touch on a FROZEN body is filtered to a MISS before the latch** (`input/frozen_pick.ts`, 2026-09-23) — the router still knows nothing about the model, and the finger becomes a working `OUTSIDE` touchpoint. ⛔⛔ **OPEN RISK, 2026-09-18**: a **stale grip** kills orbit AND zoom together — tell: *both camera rules dead, `active=` non-zero, no finger down*. ⚠ Unfixed, reload clears it (this file)
+
+## ⭐ 2026-11-04 — THE STALE GRIP FIXED (the Fable audit, `AUDIT_2026-11-04.md` §2 item 5)
+
+⛔ The open risk of 2026-09-18 (*both camera rules dead, `active=` non-zero, no finger down*) had one cause the audit found by reading: a POINTERUP lost
+to a window `blur` or a hidden tab — Babylon turns a `pointercancel` into a release, a lost focus into nothing. The router kept the pointer for good,
+`PointerRouter.clear()` had no caller, and the next press read two pointers down and took the PINCH path. ✅ `forgetPointers`
+(`render/pointer_wiring.ts`) on `blur` and `visibilitychange → hidden`: every pointer released as its POINTERUP would (the hold, the hover, the approach's
+coast, the gesture's end), then the router cleared, the pinch ended, the orbit drag dropped. Vectored (`tests/audit_2026_11_04.test.ts`); ⛔ no device close.

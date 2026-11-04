@@ -5,11 +5,13 @@
 //   APPR=300    — an approach first (A + drag up, px); 0: far out
 //   PRE=3       — seeded random legs first (a lead-in), then MODE's
 //   LEGMAX=1400 — the random dx legs' longest (px; default 600 — 150 … 600); LEGMAXY=250 — the dy / diagonal legs' (40 … it; default LEGMAX)
-//   DROP=1      — also record the carrier's drop ray re-cast (a diagnosis)
+//   DROP=1      — also record the carrier's drop ray re-cast (a diagnosis; ⛔ the carrier is deleted since Step 4c-bis — it records null)
 //   OUT=name    — the recording `<PROBE_DIR>/<name>.json` (PROBE_DIR: default the OS temp dir); then `node scripts/probes/analyse_orbit.mjs <file>`
 // ⛔ Never clamps a leg at the viewport's edge (a clamped leg sends one move backwards — read as a rocking roll): it ends the leg. ⭐ Its own Chrome profile,
 // removed in `finally` (nothing left on the disk). ⚠ The viewport is the page's (`innerWidth` / `innerHeight`), not the window's.
-import { spawn } from "node:child_process";
+// ⭐ (2026-11-04, the audit) never waits for ever: every DevTools call times out (`SEND_MS`, default 20 s), a closed socket fails what is pending, and a
+// watchdog ends the run (`WATCHDOG_MIN`, default 20 min); on Windows Chrome's whole process tree is killed, and a profile left behind is NAMED.
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,22 +26,56 @@ const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed
 const port = 9300 + Math.floor(Math.random() * 600);
 const prof = join(tmpdir(), `orbit_probe_profile_${OUT}_${process.pid}`);
 const chromePath = env.CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const SEND_MS = +(env.SEND_MS ?? 20000);
+// ⭐ the watchdog: a run that hangs (a frame that never comes, a dead tab) is ended — `finally` cannot run from inside a wait that never returns
+const watchdog = setTimeout(() => {
+  console.error(`WATCHDOG: the probe ran past ${+(env.WATCHDOG_MIN ?? 20)} min — killing Chrome and exiting`);
+  killChrome();
+  removeProfile();
+  process.exit(2);
+}, +(env.WATCHDOG_MIN ?? 20) * 60_000);
+watchdog.unref();
+function killChrome() {
+  // ⚠ on Windows `kill()` ends the browser process only — its renderer / GPU children keep the profile open; `taskkill /T` ends the tree
+  if (process.platform === "win32" && chrome.pid !== undefined) spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" });
+  else chrome.kill();
+}
+function removeProfile() {
+  for (let i = 0; i < 6; i++) {
+    try {
+      rmSync(prof, { recursive: true, force: true });
+      return;
+    } catch (e) {
+      if (i === 5) console.error(`⚠ the probe's Chrome profile was NOT removed: ${prof} (${e})`);
+      else spawnSync(process.execPath, ["-e", "setTimeout(() => {}, 500)"]);
+    }
+  }
+}
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, "about:blank"], { stdio: "ignore" });
 try {
   let targets = null;
   for (let i = 0; i < 60 && !targets; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch {} }
-  const ws = new WebSocket(targets.find((t) => t.type === "page").webSocketDebuggerUrl);
+  const page = targets?.find((t) => t.type === "page");
+  if (!page) throw new Error(`Chrome's DevTools did not answer on port ${port} (CHROME=${chromePath})`);
+  const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((r) => ws.addEventListener("open", r, { once: true }));
   let id = 0;
   const pending = new Map();
   let errors = 0;
   ws.addEventListener("message", (ev) => {
     const m = JSON.parse(ev.data);
-    if (m.id && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
+    if (m.id && pending.has(m.id)) { pending.get(m.id).resolve(m.result); pending.delete(m.id); }
     if (m.method === "Runtime.exceptionThrown") { errors++; console.log("EXCEPTION", JSON.stringify(m.params.exceptionDetails).slice(0, 600)); }
     if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") { errors++; console.log("CONSOLE", JSON.stringify(m.params.args).slice(0, 300)); }
   });
-  const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+  // ⭐ a closed socket fails every call still waiting (⛔ it hung for ever: Chrome gone, the run never reached `finally`)
+  ws.addEventListener("close", () => { for (const p of pending.values()) p.reject(new Error("the DevTools socket closed")); pending.clear(); });
+  const send = (method, params = {}) => new Promise((resolve, reject) => {
+    const i = ++id;
+    const timer = setTimeout(() => { pending.delete(i); reject(new Error(`${method} timed out after ${SEND_MS} ms`)); }, SEND_MS);
+    pending.set(i, { resolve: (v) => { clearTimeout(timer); resolve(v); }, reject: (e) => { clearTimeout(timer); reject(e); } });
+    ws.send(JSON.stringify({ id: i, method, params }));
+  });
   const ev = async (expr) => (await send("Runtime.evaluate", { returnByValue: true, awaitPromise: true, expression: expr }))?.result?.value;
   await send("Runtime.enable");
   await send("Page.navigate", { url: env.URL ?? "http://127.0.0.1:5173/" });
@@ -99,7 +135,8 @@ try {
   console.log(`${OUT}: ${rows.length} frames, ${errors} page errors → ${file}`);
   ws.close();
 } finally {
-  chrome.kill();
+  clearTimeout(watchdog);
+  killChrome();
   await sleep(700);
-  try { rmSync(prof, { recursive: true, force: true }); } catch {}
+  removeProfile();
 }

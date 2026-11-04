@@ -33,7 +33,8 @@ const CDP_PORT = Number(process.env.MIRROR_CDP_PORT ?? 9222);
 /** ⚠ adb is NOT on this machine's PATH — `DEVICE_TESTING_USB.md` records that trap. */
 const ADB_CANDIDATES = [
   process.env.ADB ?? "",
-  "C:/Users/sugit/platform-tools-sdk/platform-tools/adb.exe",
+  // ⭐ (2026-11-04, the audit) from the user's profile, as `device-loop.ps1` derives it — never one machine's hardcoded path
+  process.env.USERPROFILE ? `${process.env.USERPROFILE.replaceAll("\\", "/")}/platform-tools-sdk/platform-tools/adb.exe` : "",
   "adb",
 ].filter(Boolean);
 const adbPath = ADB_CANDIDATES.find((p) => p === "adb" || existsSync(p)) ?? "adb";
