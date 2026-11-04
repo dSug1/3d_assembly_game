@@ -9,7 +9,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, nextLock, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { chainAt, chainStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -363,29 +363,19 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     }
   }
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
-  const piece: Vec3 = [g0[0] + u[0] * d, g0[1] + u[1] * d, g0[2] + u[2] * d];
-  const toCentre = Math.hypot(piece[0] - a.centre[0], piece[1] - a.centre[1], piece[2] - a.centre[2]);
+  // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (a); the owner: *"deleting the lock at step 1 is cleaner"*) — THE CLOSE-IN LOCK DELETED: the
+  // carrier runs at EVERY distance (⛔ the old lock: within 30 cm of the gizmo, or inside the assembly's sphere, the gizmo and its face were held — one
+  // behaviour far out, another close in). `st.asmLocked` is now the SLIDE's hold only (set under a hover, above).
   const was = st.asmLocked;
-  st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);
-  if (st.asmLocked && !was) {
-    // ⭐ the lock: the gizmo where it is now, its face the one it has
-    const n = st.gizmoNormal ?? hit?.normal ?? null;
-    // ⭐ (2026-10-29) its cone from where the piece is (`lockCone`) — ⛔ snapped into 80° at once: a jump at the lock
-    st.asmLock = { point: [g0[0], g0[1], g0[2]], normal: n, host: st.gizmoHost ?? hit?.host ?? null, cone: n === null ? null : lockCone(null, angleTo(u, n)) };
-    st.asmCarrier = null; // ⭐ (2026-10-29) the piece turns about the locked gizmo: back out, the carrier found again in the yaw plane as it is then
-    st.asmShown = null;
-    st.lastVerdict = "orbit: close in — the gizmo and its face locked";
-  } else if (st.asmLocked && st.asmLock !== null && st.asmLock.normal !== null) {
-    // ⭐ (2026-10-29) locked: the cone tightened as the piece comes inward
-    st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };
-  } else if (!st.asmLocked && was) {
-    // ⭐ unlocked: the carrier found again from the locked gizmo, projected into the yaw plane (⛔ 2026-10-28 carried on from the locked point — off the
-    // yaw plane by the locked orbit's turn, or by the hover's slide: the gizmo off the red section from then on)
+  st.asmLocked = false;
+  if (was) {
+    // ⭐ off the slide: the carrier found again from the slide's gizmo, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
+    // yaw plane by the slide: the gizmo off the red section from then on)
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     st.asmCarrier = null;
     st.asmShown = null;
     st.asmLock = null;
-    st.lastVerdict = "orbit: back out — the gizmo on the sections again";
+    st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
   }
   // ⭐ unlocked: the face by the edge rule (the quads read it)
   if (!st.asmLocked && hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
@@ -404,7 +394,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
-  // ⭐ the look point: the centre far out, the gizmo close in
+  // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing; the slide: the gizmo)
   const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM, st.asmLocked);
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];

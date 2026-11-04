@@ -2321,3 +2321,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ✅ **Step 0 (2026-11-04)**: the probes in `scripts/probes/` (constant input and random travel, the I1–I6 analyser); the baseline at `ff2fca2` recorded
   (§8 there: the dx loops one horizontal plane both ways; the polar clamp holds the gizmo while the orbit goes on — the piece behind its face); ⭐ the dy WITH
   the finger around the assembly (`orbitDy` — ⛔ the 2026-10-04 inversion: 29 of 30 frames against the finger; after, 4 of 908). 1596 vectors. ⛔ No device close.
+* ✅ **Step 1 (2026-11-04)**: the close-in LOCK deleted (`nextLock` — the carrier runs at every distance; `asmLocked` is the slide's hold only), the slide on
+  PLACED parts only (`goalLocked`); ⛔ open: close in (0.08–0.3 m) the piece meets the parts — the solver's contact moves the pitch, a part stops the orbit
+  (scope §9 — Step 2's shell). ⭐ The scope's half roll moved from the zenith to the face's FAR EDGE (the owner, Q6). 1597 vectors. ⛔ No device close.

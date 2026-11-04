@@ -10,8 +10,8 @@
  * * the piece's direction `u` (`orbitDir`) from the assembly's CENTRE (fixed at the boot); the GIZMO where the ray from the piece toward the centre first
  *   meets the assembly (the render casts it); the piece ON that ray, at the APPROACH's distance from the gizmo (`approachDistance`: the 2D curve's distance
  *   from ring 1 to the waist, then straight to the contact) — so far out it orbits the centre, close in it hugs the assembly's shape;
- * * CLOSE IN (`nextLock`) the gizmo and its face LOCK: the piece then turns about the locked gizmo (the same formula, the gizmo held — continuous at the
- *   lock), kept within `LOCK_CONE_RAD` of the face's normal (`coneClamp`);
+ * * ⛔ (2026-11-04, Step 1 of the rebuild) the CLOSE-IN LOCK is deleted (`nextLock`): the gizmo's carrier runs at every distance; under the SLIDE the
+ *   gizmo is held, the piece kept within its cone of the face's normal (`lockCone`, `coneClamp`);
  * * the gizmo's FACE switches at an edge only once the ray lands past it by a margin (`faceSwitches`), so the quads do not flicker on an edge.
  * ⛔ ENGINE-FREE. Spherical angles, a ray, hysteresis — textbook; no licence, no patent.
  */
@@ -102,16 +102,7 @@ export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
 }
 
-/**
- * ⭐⭐ THE LOCK: on when the piece comes inside the assembly's bounding sphere (closer to the centre than `assemblyRadiusM`, half its largest dimension —
- * the orbit circle smaller than the assembly) or within `lockDistM` of the gizmo; off only past both by a margin (×1.25 the distance, ×1.05 the radius).
- */
-export function nextLock(locked: boolean, toCentreM: number, toGizmoM: number, assemblyRadiusM: number, lockDistM: number): boolean {
-  if (!locked) return toCentreM < assemblyRadiusM || toGizmoM < lockDistM;
-  return !(toCentreM > assemblyRadiusM * 1.05 && toGizmoM > lockDistM * 1.25);
-}
-
-/** ⭐ Locked, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
+/** ⭐ Under the slide, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
 export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
 
 /**

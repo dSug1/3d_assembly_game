@@ -24,7 +24,6 @@ import {
   farDistance,
   LOCK_CONE_RAD,
   lookShare,
-  nextLock,
   offsetFrame,
   orbitDir,
   ORBIT_PITCH_MAX_RAD,
@@ -82,14 +81,6 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(approachStep(0.8, 2, 0.01, cfg)).toBeCloseTo(0.82, 12);
     expect(approachStep(0.999, 2, 0.01, cfg)).toBe(1);
     expect(approachStep(r.min + 0.001, -2, 0.01, cfg)).toBe(r.min);
-  });
-  it("⭐⭐ THE LOCK: inside the assembly's bounding sphere or within the lock distance of the gizmo; released only past both, with a margin", () => {
-    expect(nextLock(false, 2.0, 1.0, 1.0, 0.3)).toBe(false);
-    expect(nextLock(false, 0.9, 1.0, 1.0, 0.3)).toBe(true); // the orbit circle smaller than the assembly
-    expect(nextLock(false, 2.0, 0.25, 1.0, 0.3)).toBe(true); // close to the gizmo
-    expect(nextLock(true, 1.02, 0.5, 1.0, 0.3)).toBe(true); // within the radius's margin
-    expect(nextLock(true, 2.0, 0.35, 1.0, 0.3)).toBe(true); // within the distance's margin
-    expect(nextLock(true, 1.06, 0.38, 1.0, 0.3)).toBe(false);
   });
   it("⭐⭐ LOCKED, the piece within 80° of the face's normal: inside the cone untouched; outside, brought onto its edge in the same plane", () => {
     expect(LOCK_CONE_RAD * D).toBeCloseTo(80, 12);
@@ -170,7 +161,6 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
     expect(a).toContain("return id !== undefined && goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) && m.isPickable && m.isEnabled();");
-    expect(a).toContain("st.asmLocked = nextLock(was, toCentre, d, a.radius, st.cfg.assemblyLockDistM);");
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
     expect(p).toContain("if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);");
@@ -275,8 +265,7 @@ describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
     const n: Vec3 = [0, 0, -1];
     expect(angleTo(coneClamp(u, n, lockCone(null, angleTo(u, n))), u)).toBeLessThan(1e-9);
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("cone: n === null ? null : lockCone(null, angleTo(u, n)) };");
-    expect(a).toContain("st.asmLock = { ...st.asmLock, cone: lockCone(st.asmLock.cone ?? null, angleTo(u, st.asmLock.normal)) };");
+    expect(a).toContain("cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };"); // the slide's hold
     expect(a).toContain("return n === null ? u : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
     expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);");
   });
@@ -360,5 +349,21 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0) THE dy WITH
     expect(p).toContain("const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1))");
     // the approach (A + drag) keeps the finger's own dy: finger up brings the piece in
     expect(p).toContain("if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1) ONE BEHAVIOUR AT EVERY DISTANCE, AND THE SLIDE ON PLACED PARTS", () => {
+  it("⭐⭐⭐ (a) the close-in LOCK deleted (the owner: *\"deleting the lock at step 1 is cleaner\"*): the carrier runs at every distance — the hold is the slide's only", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).not.toContain("nextLock");
+    expect(a).not.toContain("orbit: close in — the gizmo and its face locked");
+    expect(a).toContain(" const was = st.asmLocked; st.asmLocked = false; if (was) {");
+    expect(a).toContain('st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";');
+    expect(code("input/assembly_orbit.ts")).not.toContain("export function nextLock");
+    expect(code("render/tuning_menu.ts")).toContain('"look at the gizmo within (m)"');
+  });
+  it("⭐⭐⭐ (b) the slide latches on PLACED parts only (the owner: *\"slide shall latch only on placed parts\"*) — ⛔ a loose piece lit the contours", () => {
+    const h = code("render/hover_wiring.ts");
+    expect(h).toContain("return bodiesWithin(st.world, b.name, setup, reachM).filter((x) => goalLocked(x.id, st.goalCommit, true)).map((x) => {");
   });
 });

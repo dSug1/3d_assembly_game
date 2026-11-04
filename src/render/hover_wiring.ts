@@ -77,6 +77,7 @@ import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } 
 import { hoverSwayDeg, slideAlong, slideBlockedVerdict, orbitBandSpent, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
+import { goalLocked } from "../input/goal_lock";
 
 /** ⭐ how far the hover looks for a part's face, to name the nearest when it refuses (m) */
 const HOVER_LOOK_M = 0.01;
@@ -134,7 +135,9 @@ export function hoverRelease(st: SceneState, pointerId: number): void {
 /** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test). */
 function hoverCandidates(st: SceneState, reachM: number, setup: CollisionSetup) {
   const b = st.greenBox!;
-  return bodiesWithin(st.world, b.name, setup, reachM).map((x) => {
+  // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (b); the owner: *"slide shall latch only on placed parts"*, Q4) — PLACED parts only (`goalLocked`):
+  // ⛔ any body — a loose piece beside the painting lit the contours far from the assembly. Sliding along the placed parts' contours: unchanged.
+  return bodiesWithin(st.world, b.name, setup, reachM).filter((x) => goalLocked(x.id, st.goalCommit, true)).map((x) => {
     const obj = st.world.objects.get(x.id);
     const faces = (obj?.faces ?? []).flatMap((f) => {
       const w = faceWorld(st.world, x.id, f.id);

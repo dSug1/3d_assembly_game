@@ -1,7 +1,7 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
-> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` · ✅ **Step 0 built** (2026-11-04, §8) — ⛔ no device close;
-> Step 1 next, after the owner's look.
+> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
+> (2026-11-04, §9) — ⛔ no device close on either; the half roll moved to the far edge (Q6, §4.1). Step 2 next, after the owner's look.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -52,14 +52,18 @@ numbers recorded in its dossier, and the owner's device look (rule 5). A step th
 
 ## 4. The consequences of tilting — stated, not discovered
 
-1. **Over a top or under a bottom the camera ROLLS to stay upside up.** Going on over the zenith (a dy past the top), the piece's direction passes straight
-   above the gizmo; on the far side the world's up would be upside down on the screen. **The camera rolls half a turn AT the zenith** — the piece WAITS
-   there while the input's travel rolls the camera (branch 1.0.83's roll: linear, reversible anywhere, a dx held mid-roll).
+1. **Over a top or under a bottom the camera ROLLS to stay upside up — AT THE FAR EDGE, never mid-face** (the owner, 2026-11-04: *"the camera roll is
+   performed when the gizmo reaches the limit edge at the end of the face, not in the middle of the face travel"*). Across the top the gizmo travels the
+   WHOLE face with NO roll: the camera looks down on it with the screen's up along the travel (the way the dy came up), the piece passing straight above the
+   gizmo at the zenith with nothing turning. Going on down the far wall without a roll, the world's up would be upside down on the screen. **So the camera
+   rolls half a turn when the gizmo REACHES THE FAR EDGE** — the gizmo and the piece WAIT at that edge while the input's travel rolls the camera (branch
+   1.0.83's roll: linear, reversible anywhere, a dx held mid-roll); then the gizmo goes on down the far wall, upright. The same under a bottom. ⛔ Not at the
+   zenith: a roll in the middle of the face stops the travel there and turns the picture under a gizmo that is on a flat face, with no edge to explain it.
 2. **After a half roll the input direction is reversed.** The picture has turned 180°: to go on round the same loop the finger goes the OTHER way (the
-   owner: *"a camera roll … rightly requires an inversion of the input direction to continue the same orbit"*). The same finger kept on is HELD at the zenith
+   owner: *"a camera roll … rightly requires an inversion of the input direction to continue the same orbit"*). The same finger kept on is HELD at the far edge
    (it would roll straight back); the reversed one goes on down the far side. Lifted, the finger may roll back.
 3. **Off a top's side edge (a dx over it onto a wall) a quarter roll, AT THE EDGE** (the owner, Q2: *"at it"*): on the top the screen's up points across it;
-   on the wall the vertical lies across the screen. The piece WAITS at the edge while the input's travel rolls the camera a quarter turn, as at the zenith;
+   on the wall the vertical lies across the screen. The piece WAITS at the edge while the input's travel rolls the camera a quarter turn, as at the far edge of §4.1;
    then the gizmo goes on down the wall in the SAME plane. ⚠ After a quarter roll the finger's dx is drawn along the screen's vertical: the finger's axes
    turn a quarter with the picture (the dx keeps driving the same loop) — the build states, measures and shows the owner which it is.
 4. **The orbit's frame tilts** onto a top / bottom (dx across, dy toward / away): its yaw and pitch must stay the gizmo's world axes there — never a
@@ -101,13 +105,14 @@ along the section only). Gate: I1 on every side, every heading.
 
 **Step 5 — x / z on a top or bottom (no polar).** Over a top / bottom the gizmo moves along the world's x and z lines through it (a dy across the top
 along the plane it came up in; a dx along the other), the orbit's frame tilted onto the face (§4.4: its heading the world's x or z, the gizmo's), switched
-at the edge with nothing moving (a re-base: the spring, the lag, the leash re-read). **Still clamped**: the dy stops at the far edge (no zenith yet); a dx
+at the edge with nothing moving (a re-base: the spring, the lag, the leash re-read). **Still clamped**: the dy stops at the far edge (no crossing, no roll yet); a dx
 stops at the side edges (no going over yet). Gate: I1–I6 with the clamp as the only stop.
 
-**Step 6 — The zenith crossing (dy over the top / under the bottom).** Open the dy's clamp: the half roll AT the zenith (§4.1), the input reversed after
-it (§4.2), the gizmo down the far side in the SAME plane. The finger's axes LATCHED for a drag (and its coast), each a whole screen axis; the zenith roll
-REVERSES them (never re-read off the rolled picture — looking down a top the axes swap screens). Gate: a constant dy loops the vertical plane, stopped only by
-the roll; reversed, it goes on; I1 throughout.
+**Step 6 — The crossing over the top / under the bottom (dy).** Open the dy's clamp: the gizmo across the WHOLE top with no roll (the zenith passed
+with nothing turning), the half roll AT THE FAR EDGE (§4.1), the input reversed after it (§4.2), the gizmo down the far side in the SAME plane. The finger's
+axes LATCHED for a drag (and its coast), each a whole screen axis; the edge roll REVERSES them (never re-read off the rolled picture — looking down a top the
+axes swap screens). Gate: a constant dy loops the vertical plane, stopped only by the roll at the far edge (no roll, no stop mid-face); reversed, it goes on;
+I1 throughout.
 
 **Step 7 — The side crossing (dx over a top's side edge).** Open the dx's clamp: the quarter roll AT the edge, the piece waiting (§4.3, Q2); the plane
 carried over. Gate: a constant dx started on a top loops the vertical plane across it, stopped only by the roll.
@@ -152,6 +157,8 @@ never makes a jump at an edge, a face switch, the zenith or under an approach.
 * **Q4** — the slide: *"implement the modifications we did to avoid the issue of sliding on un-seated part. For sliding on seated parts contour, no change"*
   → Step 1 (b).
 * **Q5** — the lock: *"deleting the lock at step 1 is cleaner"* → Step 1 (a).
+* **Q6 (2026-11-04)** — where the half roll happens: *"the camera roll is performed when the gizmo reaches the limit edge at the end of the face, not in
+  the middle of the face travel"* → §4.1, Step 6 (the zenith roll moved to the far edge).
 * **The shell offset**: *"include the concept of the shell offset: it was good to filter out the bumps due to protrusions or holes on the section
   contours"* → §1.4, I2, Step 2.
 
@@ -183,4 +190,26 @@ against the finger. After: **4 of 908** far out (at a held drop and its jump), 2
 | page errors | 0 | 0 |
 
 ⇒ Steps 1–5 remove the polar clamp's I4 breaks and the close-in latch's stops; the dx's horizontal loop is the reference every later step keeps.
+
+## 9. Step 1 — built (2026-11-04)
+
+**(a) The close-in lock deleted** (Q5): `nextLock` and its vector gone; the carrier runs at EVERY distance — the approach no longer holds the gizmo
+(close in, 102 held frames at Step 0's approach → 0). `st.asmLocked` is now the SLIDE's hold only (the slide holds the gizmo; leaving it finds the carrier
+again on the red section — *"orbit: off the slide — the gizmo on the sections again"*); `lockCone` / `coneClamp` / `leavesCone` serve the slide alone. The
+look point's share kept, its slider relabelled *look at the gizmo within (m)* (`assemblyLockDistM`, the name kept). **(b) The slide latches on PLACED parts
+only** (Q4): `hoverCandidates` filtered with `goalLocked`; sliding along the placed parts' contours unchanged. 1597 vectors (−1 the lock's, +2; both red
+against `feb9c05`).
+
+**The probes** (constant legs, Scene_1; the approach's px → the piece's distance from the gizmo):
+
+| approach | piece–gizmo | result |
+|---|---|---|
+| 0 (far) | 3.0 m | = Step 0: the dx loops the walls in one plane both ways; the dy's polar clamp (piece behind its face in the R leg, 711) — Steps 3–5 |
+| 110 px | 0.55–0.63 m | = far out, exactly (the same flags, the same counts) ✅ |
+| 135 / 150 px | 0.08–0.30 m (the old lock's zone) | ⛔ **the piece meets the parts**: the collision solver moves the pitch at a contact (v 0.686 → 0.59) — the gizmo leaves its plane (y 0.035 → 0.110: off-section ~2000 frames, reverse 21–29, the wall roll 15–60 frames); a part STOPS the orbit (c3R held at yaw −28.86 to the end). No piece jump. |
+| 250 px (to the contact) | — | the SLIDE latches at once on Piece43 (a placed part — kept, Q4) and stops at its hosting face's edge, as at Step 0 |
+
+⇒ ⛔ **OPEN for Step 2**: close in, the piece's path round a MOVING gizmo crosses the parts' protrusions — what the lock hid by holding the gizmo. The shell
+(Step 2: the piece and the camera on the gizmo's FOOT on a smooth shell 60 mm off the box) is the step meant to carry the piece clear of them; Step 2's gate
+adds these two probes (135 / 150 px): no off-section from a contact, no stop but a section's own discontinuity.
 
