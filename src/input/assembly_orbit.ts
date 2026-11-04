@@ -173,21 +173,8 @@ export function faceSwitches(curNormal: Vec3 | null, curPoint: Vec3 | null, hitN
   return Math.abs(dot(off, curNormal)) > marginM;
 }
 
-/**
- * ⭐ The rays that find the gizmo: the one along `−u` and four beside it `coverM` away (square to it) — the outermost hit wins, so a gap narrower than that
- * between the parts (the painting's cores) is bridged: the surface reads continuous.
- */
-export function rayOffsets(u: Vec3, coverM: number): Vec3[] {
-  const a = normalize(cross(u, [0, 1, 0])) ?? normalize(cross(u, [1, 0, 0])) ?? [1, 0, 0];
-  const b = normalize(cross(u, a)) ?? [0, 0, 1];
-  return [
-    [0, 0, 0],
-    [a[0] * coverM, a[1] * coverM, a[2] * coverM],
-    [-a[0] * coverM, -a[1] * coverM, -a[2] * coverM],
-    [b[0] * coverM, b[1] * coverM, b[2] * coverM],
-    [-b[0] * coverM, -b[1] * coverM, -b[2] * coverM],
-  ];
-}
+/** ⛔ (2026-11-04, Step 4c-bis) `rayOffsets` — the five rays that found the gizmo toward the centre (`castGizmo`) — DELETED with it: the face map's closed
+ * regions bridge the joints (`input/face_map.ts`). */
 
 /**
  * ⭐ How far the camera looks at the gizmo rather than the centre (0 … 1): 0 far out (at ring 1's distance), 1 at the lock's distance (smoothstep between);

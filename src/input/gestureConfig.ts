@@ -428,6 +428,11 @@ export interface GestureConfig {
   /** ⭐⭐ …and the orbit's angles (yaw, pitch, zoom), on a critically damped spring of this time constant (ms; 0: at once) — the travel counts that share the
    * orbit's spring with it (the piece's entry, its aim, the centre's return) */
   orbitSpringMs: number;
+  /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4c-bis — the owner: *"let the gizmo move slowly over the last and first few mm of the two faces during
+   * the arc"*) THE FACE MAP's slow stretch through an edge: the last / first this of each face (mm)… */
+  faceEdgeSlideMm: number;
+  /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
+  faceEdgeSlideDeg: number;
   /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
    * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
   faceSpanShareH: number;
@@ -847,6 +852,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
+  faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
+  faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
   faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
   faceSpanZoneMinHCm: 3, // …at least 3 cm
@@ -1008,6 +1015,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   for (const k of ["gizmoEaseMs", "orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
+  if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
+  if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
   for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
   for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);

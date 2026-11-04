@@ -1,16 +1,18 @@
 /**
  * ⭐⭐⭐ prototype — **THE ORBIT AROUND THE ASSEMBLY, WIRED** (2026-10-28; the rules are `input/assembly_orbit.ts`'s). On while `orbitMode` is 0 (1: the
  * gizmo's 2D curve as built to 2026-10-25, kept whole). The centre the rest of the orbit reads (`orbitCentreM` — the quads, the hover, the markers) IS the
- * GIZMO, moved here every frame: a CARRIER on the convex hull of the yaw plane's section, DROPPED onto the real surface (`carrierFrame`, the rules
- * `input/section_hull.ts`'s; first placed from where the ray from the piece toward the fixed CENTRE, `st.asm`, meets a placed part — `castGizmo` — and
- * again after a lock or a hover), eased over a step; LOCKED close in; the sections drawn (`sectionLinesFrame`: one mesh, updated in place). The piece's place from it (`placeOffset`, read by `ringPlaceNow` — the solver's queries too) is its direction × the
- * approach's distance; the approach (two fingers' dy, Shift + drag's) checked against the parts (`approachMove`), with its own coast. The camera's frame
- * (`assemblyCameraFrame`), its look point (`st.asmLook`: the centre far out, the gizmo close in). ⛔ No rule here.
+ * GIZMO, moved here every frame: ⭐⭐⭐ (2026-11-04, STEP 4c-bis) a FUNCTION of the orbit's angles — THE FACE MAP (`input/face_map.ts`: the angles' place on
+ * the placed parts' box, the ray along the box face's axis onto the frontmost of the slide's coplanar regions, holes closed; `mapGizmo`) — ⛔ the carrier on
+ * the sections' hull (2026-10-29 … Step 4c) deleted; the sections DRAWN from the same function (`sectionLinesFrame`). The piece's place from it (`placeOffset`,
+ * read by `ringPlaceNow` — the solver's queries too) is its direction × the approach's distance; the approach (two fingers' dy, Shift + drag's) checked
+ * against the parts (`approachMove`), with its own coast. The camera's frame (`assemblyCameraFrame`), its look point (`st.asmLook`: the centre far out, the
+ * gizmo close in). ⛔ No rule here.
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, facetRunToward, redPace, sideAt, syncStep, dropRay, edgeKind, edgeNormal, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
+import { buildFaceMap, edgeBlend, mapAngles, mapTarget, planeAxes, stackDepthAt, stackOfNormal, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -21,19 +23,21 @@ import { pieceReach, shellAnchor, shellBox, type ShellBox } from "../input/orbit
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
-import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
+import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
 import type { Vec3 } from "../core/vec";
-import { worldPlacementOf } from "../core/object_model";
+import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
-/** ⭐ The ray's beside-rays' distance (m): a gap between parts narrower than this is bridged (the painting's cores sit 3 mm apart). */
-const RAY_COVER_M = 0.004;
-/** ⭐ The shown gizmo's ease to a new point (ms) — a step in depth eased, never a jump; the look point's. */
-/** ⭐ (2026-11-04, Step 4) how far a dy's plane re-taken over a top may move the carrier (m) */
-const RETAKE_M = 0.01;
+/** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
+/** ⭐⭐⭐ (Step 4c-bis) the ray along the axis is taken for the exact surface within this of its group's plane (m) — a slanted block; else the plane. */
+const MAP_REFINE_M = 0.025;
+/** ⭐ …cast from this far outside the box (m). */
+const MAP_OUT_M = 0.05;
+/** ⭐ (Step 4c-bis) out of step after the slide: the map's angles close on the orbit's at 1 ± this of the orbit's step (`syncAngle`). */
+const MAP_CATCH_UP = 0.5;
 
 /** ⭐ Is the orbit the one around the assembly? */
 export function assemblyOn(st: SceneState): boolean {
@@ -131,33 +135,6 @@ function modelCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): Giz
   return { point: m.point, normal: m.normal, host: st.idOf.get(best.mesh) ?? null };
 }
 
-/** ⭐ Where the ray from outside along `−u` toward the centre first meets a placed part — the outermost of the five (`rayOffsets`); `null`: nothing. */
-function castGizmo(st: SceneState, u: Vec3): GizmoHit | null {
-  const a = st.asm!;
-  const key = `${u[0].toFixed(7)},${u[1].toFixed(7)},${u[2].toFixed(7)}`;
-  const cached = st.asmRayCache.get(key);
-  if (cached !== undefined) return cached;
-  const out = a.radius * 2 + 1;
-  let best: { d: number; hit: GizmoHit } | null = null;
-  for (const o of rayOffsets(u, RAY_COVER_M)) {
-    const from = new Vector3(a.centre[0] + u[0] * out + o[0], a.centre[1] + u[1] * out + o[1], a.centre[2] + u[2] * out + o[2]);
-    // ⭐⭐⭐ (2026-11-04, Step 4c) cast in the model's space (`modelCast`) — ⛔ (2026-11-01) picked on the swaying meshes, the hit only mapped back
-    const m = modelCast(st, [from.x, from.y, from.z], [-u[0], -u[1], -u[2]], out + a.radius * 2);
-    if (m !== null) {
-      // ⭐ the centre ray's own point (on the ray); a beside-ray only says how far out the surface is there
-      const along = (from.x - m.point[0]) * u[0] + (from.y - m.point[1]) * u[1] + (from.z - m.point[2]) * u[2];
-      if (best === null || along < best.d) {
-        const point: Vec3 = [a.centre[0] + u[0] * (out - along), a.centre[1] + u[1] * (out - along), a.centre[2] + u[2] * (out - along)];
-        best = { d: along, hit: { point, normal: m.normal, host: m.host } };
-      }
-    }
-  }
-  const hit = best?.hit ?? null;
-  if (st.asmRayCache.size > 512) st.asmRayCache.clear();
-  st.asmRayCache.set(key, hit);
-  return hit;
-}
-
 /** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   const u = orbitDir(yaw, v);
@@ -181,30 +158,27 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame, from the gizmo's carrier (the accepted drop's): on a SIDE the side of the green loop
- * of its red plane's heading, nearest it (`facetRunToward` — dx's run, the side's axis; Step 4c) and its height in the placed parts' box (dy's run) — `edgeShare` of each (58d86ff's); over a top / under a bottom the orbit's
- * whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED toward them (`easeToward`, `easeNormal`) — the face at a
- * height changes with the height (a bridged protrusion, the funnel): read at once, the camera would jump.
+ * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame — ⭐⭐⭐ (Step 4c-bis) from the FACE MAP's place (`st.asmShown.t`): on a SIDE the side the yaw
+ * is in (its axis — the calm's normal), the place across it in the box's span (dx's run) and its height in the placed parts' box (dy's run) — `edgeShare`
+ * of each (58d86ff's); over a top / under a bottom the orbit's whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED
+ * toward them (`easeToward`, `easeNormal`).
  */
 function calmFrame(st: SceneState, dtMs: number): void {
-  const c = st.asmShown?.c ?? null;
+  const t = st.asmShown?.t ?? null;
   const cfg = st.cfg;
   let n: Vec3 | null = null;
   let sH = 1;
   let sV = 1;
-  if (c !== null && c.kind === "SIDE") {
-    const loop = loopFor(st, c.w[1]);
-    // ⭐⭐⭐ (Step 4c) the carrier's SIDE (its red plane's heading — the side's axis), never the hit's normal (a groove's wall, a slanted block)
-    const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], [Math.cos(c.heading), 0, Math.sin(c.heading)]);
-    if (f !== null) {
-      n = f.n;
-      sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
-      // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
-      // wall under the gizmo: its top differed from the front to the side at the same height — 0.33 to 1 round the corner, the piece swung up to the
-      // orbit's whole pitch, the camera back: the owner's bounce, probed)
-      const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;
-      sV = box === null ? 1 : edgeShare(Math.min(c.w[1] - box.lo[1], box.hi[1] - c.w[1]), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
-    }
+  if (t !== null && t.band === "SIDE") {
+    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block)
+    n = t.normal;
+    const L = t.across;
+    sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
+    // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
+    // wall under the gizmo: its top differed from the front to the side at the same height — the owner's bounce, probed)
+    const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;
+    const y = t.surface[1];
+    sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
   }
   const k = st.asmCalm;
   if (k === null) {
@@ -225,24 +199,17 @@ function calmFrame(st: SceneState, dtMs: number): void {
 }
 
 /**
- * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else the CARRIER's (`st.asmG`, moved once a frame — ⛔ 2026-10-28 the ray
- * toward the centre for each direction); none yet, the ray's.
+ * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else this frame's (`st.asmG`, the face map's); none yet, the map's at the
+ * orbit's angles.
  */
-function gizmoFor(st: SceneState, u: Vec3): Vec3 {
+function gizmoFor(st: SceneState): Vec3 {
   if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
   if (st.asmG !== null) return st.asmG;
-  const h = castGizmo(st, u);
-  if (h !== null) return h.point;
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const m = mapGizmo(st, q.yaw, pitchOfV(q.v));
+  if (m !== null) return m.hit.point;
   const g = st.asmGizmo ?? st.centreBlend.targetM;
   return [g[0], g[1], g[2]];
-}
-
-/** ⭐ A ray cast against the PLACED parts: its first hit — point, normal, part — or `null`. */
-function castRay(st: SceneState, r: SectionRay | null): GizmoHit | null {
-  if (r === null) return null;
-  // ⭐⭐⭐ (2026-11-04, Step 4c) cast in the model's space (`modelCast`): the parts at rest, the orbit's sway undone — ⛔ (2026-11-01) picked on the swaying
-  // meshes, only the hit mapped back
-  return modelCast(st, r.origin, r.dir, r.length);
 }
 
 /** ⭐ The placed parts' world vertices (each a convex body — a box, a frustum), cached for the placed set (they do not move). */
@@ -305,137 +272,89 @@ function placedParts(st: SceneState): { readonly key: string; readonly parts: re
   return st.asmParts;
 }
 
-/** ⭐ The facing half of the hull of the RED section — the vertical plane at `yaw` through `origin` (`redOrigin`) — cached for the plane and the placed set; `null`: none. */
-function chainFor(st: SceneState, yaw: number, origin: Vec3): SectionChain | null {
+/** ⭐⭐⭐ (Step 4c-bis) the face map's knobs: the slow stretch through an edge (mm on each face) and the yaw / pitch it is crossed in (deg). */
+function mapOpts(st: SceneState): MapOpts {
+  return { edgeMm: st.cfg.faceEdgeSlideMm, edgeDeg: st.cfg.faceEdgeSlideDeg };
+}
+
+/**
+ * ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`) — the placed parts' faces on their MODEL pose (the slide's own: `faceWorld`,
+ * `faceTrianglesWorld`), per placed set; `null` with no box.
+ */
+function faceMapOf(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
-  const key = `${parts.key}#${yaw.toFixed(9)}#${origin[0].toFixed(7)},${origin[2].toFixed(7)}`;
-  if (st.asmChain !== null && st.asmChain.key === key) return st.asmChain.chain;
-  const chain = facingChain(hull2(sectionPoints(parts.parts, origin, yaw)));
-  st.asmChain = { key, chain };
-  return chain;
-}
-
-/** ⭐ The GREEN loop — the hull of the horizontal cut at height `y` (`greenPoints`, `loopOf`) — cached for the height and the placed set; `null`: none. */
-function loopFor(st: SceneState, y: number): SectionChain | null {
-  const parts = placedParts(st);
-  const key = `${parts.key}#${y.toFixed(7)}`;
-  if (st.asmLoop !== null && st.asmLoop.key === key) return st.asmLoop.loop;
-  const loop = loopOf(hull2(greenPoints(parts.parts, y)));
-  st.asmLoop = { key, loop };
-  return loop;
-}
-
-type Carrier = NonNullable<SceneState["asmCarrier"]>;
-
-/** ⭐ The carrier at arc length `s` of the red `chain` (the plane at `yaw` through `origin`): its point, its edge's kind, its drop. */
-function redAt(st: SceneState, heading: number, chain: SectionChain, origin: Vec3, s: number, want?: EdgeKind): Carrier {
-  const at = chainAt(chain, s);
-  let kind = edgeKind(edgeNormal(chain, at.edge));
-  // ⭐ at a corner shared with an edge of the kind asked for (a top's edge, its side below it), that kind (⛔ the corner read as the side's: off the top)
-  if (want !== undefined && kind !== want && at.edge + 1 < chain.pts.length - 1 && Math.abs(s - chain.cum[at.edge + 1]!) < 1e-9 && edgeKind(edgeNormal(chain, at.edge + 1)) === want) kind = want;
-  return { w: fromPlane(at.p, origin, heading), kind, s: Math.min(chain.total, Math.max(0, s)), chain, origin, heading, drop: dropRay(at.p, kind, origin, heading, st.asm!.radius * 2 + 1) };
-}
-
-/**
- * ⭐ The point `w` brought onto the RED section through it (the vertical plane at `heading` through `w` — ⭐⭐⭐ Step 4: a WORLD plane, `redHeading`) — onto
- * its edges of `kind` when given (a top kept on a top); `null`: no section there.
- */
-function onRed(st: SceneState, heading: number, w: Vec3, kind?: EdgeKind): Carrier | null {
-  const origin = redOrigin(w, st.asm!.centre, heading);
-  const chain = chainFor(st, heading, origin);
-  if (chain === null) return null;
-  const p = toPlane(w, origin, heading);
-  return redAt(st, heading, chain, origin, kind === undefined ? nearestOnChain(chain, p) : nearestOfKind(chain, p, kind), kind);
-}
-
-/**
- * ⭐⭐ (2026-11-04, Step 4) `onRed` — and when the plane through `w` grazes the parts (a point on a thin top's very edge: the painting's top strip is 33 mm
- * deep), through `w` moved toward the assembly's axis by 2, 5, 10 mm; still nothing: `null`. `inFirst`: 10 mm in FIRST (a plane taken once, at a heading's
- * change: ⛔ through the point itself it grazed the painting's back edge, 0.5 mm outside, and cut only a part behind it) — never for a step taken every frame
- * (the plane would creep to the axis).
- */
-function onRedNear(st: SceneState, heading: number, w: Vec3, kind?: EdgeKind, inFirst = false): Carrier | null {
-  const c = st.asm!.centre;
-  const r = Math.hypot(c[0] - w[0], c[2] - w[2]);
-  for (const k of inFirst ? [0.01, 0.005, 0.002, 0] : [0, 0.002, 0.005, 0.01]) {
-    const t = r > 0 ? Math.min(1, k / r) : 0;
-    const out = onRed(st, heading, [w[0] + (c[0] - w[0]) * t, w[1], w[2] + (c[2] - w[2]) * t], kind);
-    if (out !== null) return out;
-  }
-  return null;
-}
-
-/**
- * ⭐ The carrier carried round the GREEN loop at its height by the yaw's step, its red section the plane through it. ⭐⭐⭐ (2026-11-04, `1.0.95-`)
- * SYNCHRONIZED WITH THE ORBIT: its place is the yaw's own (`loopAtYaw` — each edge a slice of the turn), reached without a jump when out of step
- * (`syncStep`) — ⛔ by distance (`loopStep`, `greenPace`), it ran ahead of or behind the yaw, waited at corners, and a rounding step short of one ran onto
- * a face turned away.
- */
-function onGreen(st: SceneState, c: Carrier, yaw: number, dYaw: number): Carrier | null {
-  const loop = loopFor(st, c.w[1]);
-  if (loop === null) return null;
-  const s0 = nearestOnChain(loop, [c.w[0], c.w[2]]);
-  const s1 = syncStep(loop, s0, yaw, dYaw);
-  const at = chainAt(loop, s1);
-  const w: Vec3 = [at.p[0], c.w[1], at.p[1]];
-  // ⭐⭐⭐ (2026-11-04, Step 4c) THE SIDE decides — its world axis (`sideAt`): the red plane's heading AND the drop's direction, so the gizmo lands exactly where
-  // the green plane (its height) and the red plane meet (⛔ Step 4: the red plane from the facet's axis, the drop along the facet's own normal — off the red
-  // plane on a bridge or a slanted block, into a groove's wall: "turned away", held, then a jump; the red line through the gizmo kinked)
-  const side = sideAt(loop, s1);
-  const h = side !== null ? side.h : redHeading(greenNormal(loop, at.edge), yaw);
-  const red = onRed(st, h, w);
-  return { ...(red ?? c), w, kind: "SIDE", drop: greenDrop(w, [Math.cos(h), 0, Math.sin(h)], st.asm!.radius * 2 + 1) };
-}
-
-/**
- * ⭐⭐⭐ (2026-10-29) THE CARRIER'S FRAME (unlocked). The start, or after a lock or a hover: from the gizmo as it was, brought onto the red section through
- * it. dx (`dYaw`) — ⭐ BY DISTANCE (the owner: *"Can't the dx replicate what dy does"*; ⛔ the yaw plane's cut through the centre: 2 cm × tan(yaw) along
- * the painting's face): on a SIDE round the GREEN loop at its height (`onGreen`), on a TOP / BOTTOM turned about the axis at its distance (`turnAbout`)
- * and brought onto the red section there; the RED section is the vertical plane along the heading THROUGH the carrier (`redOrigin`). dy (`dPitch`): slid
- * along that red chain (`chainStep` — the assembly's half-size per radian, clamped at its bottom and top centres, never into an edge turned away). Then
- * DROPPED onto the real surface (the green drop after a dx on a side, the red one else) — ⭐ (Step 4c) along the side's axis, taken whatever it hits, a miss on
- * the carrier itself: never held. Returns the hit.
- */
-function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPitch: number, u: Vec3): GizmoHit | null {
-  const a = st.asm!;
-  const pitch = pitchOfV(v);
-  let c = st.asmCarrier;
-  if (c === null) {
-    const from = st.asmG ?? castGizmo(st, u)?.point ?? null;
-    if (from === null) return null;
-    c = onRed(st, redHeading(st.asmG !== null ? (st.gizmoNormal ?? null) : (castGizmo(st, u)?.normal ?? null), yaw), from);
-    if (c === null) return castGizmo(st, u);
-  }
-  if (dYaw !== 0 && st.asmCarrier !== null) {
-    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);
-    c = next ?? c;
-  }
-  if (dPitch !== 0) {
-    // ⭐⭐⭐ (2026-11-04, Step 4) over a top / under a bottom, the dy's plane the yaw's world plane (`redHeading`) — ⛔ a plane kept from an earlier heading took
-    // the gizmo down a face the piece did not look at (the front, the piece at −x: every drop turned away, held)
-    // — taken only where it keeps the carrier within 10 mm (⛔ the new plane through a thin top's edge, past gaps, put it on another part 68 mm off: the
-    // gizmo jumped 270 mm; the polar turn that led there is Step 5's)
-    if (c.kind !== "SIDE" && redHeading(null, yaw) !== c.heading) {
-      const r = onRedNear(st, redHeading(null, yaw), c.w, c.kind, true);
-      if (r !== null && Math.hypot(r.w[0] - c.w[0], r.w[1] - c.w[1], r.w[2] - c.w[2]) <= RETAKE_M) c = r;
+  const box = shellOf(st);
+  if (box === null) return null;
+  if (st.asmFaceMap !== null && st.asmFaceMap.key === parts.key) return st.asmFaceMap.map;
+  const faces: MapFace[] = [];
+  for (const [id, obj] of st.world.objects) {
+    if (obj.orbited === true || obj.frozen === true || !goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) continue;
+    const mesh = st.meshOf.get(id);
+    if (mesh === undefined || !mesh.isEnabled()) continue;
+    for (const f of obj.faces) {
+      const w = faceWorld(st.world, id, f.id);
+      const tris = faceTrianglesWorld(st, id, f.id);
+      if (w === null || tris === null || tris.length === 0) continue;
+      faces.push({ normal: w.normal, centre: w.centre, tris });
     }
-    c = redAt(st, c.heading, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch)); // ⭐⭐⭐ (2026-11-04, Step 3) the loop's pace
   }
-  st.asmCarrier = c;
-  // ⭐⭐⭐ (2026-11-04, Step 4c) THE DROP IS TAKEN, NEVER HELD — ⛔ a hit on a face turned away from the piece held the gizmo while the carrier went on: stuck,
-  // then a jump to where the carrier had got (the owner); a miss (a gap through the whole assembly) puts the gizmo on the carrier itself (the hull spans it)
-  // — the gizmo never stops while the carrier moves. (⛔ the re-take of the red plane through the landing point deleted with it: the drop along the side's
-  // axis lands IN the red plane.)
-  const h = castRay(st, c.drop);
-  if (c.kind === "SIDE") return h ?? { point: [c.w[0], c.w[1], c.w[2]], normal: null, host: null };
-  // ⚠ over a TOP / under a BOTTOM the polar turn (until Step 5): its planes can miss a thin top or land on a part behind — a miss or a face turned away
-  // from the piece still holds the gizmo there (⛔ taken: 26 reversals and 6 piece jumps on the top's dx legs, probed)
-  if (h === null) return null;
-  if (h.normal !== null && h.normal[0] * u[0] + h.normal[1] * u[1] + h.normal[2] * u[2] < 0) {
-    st.lastVerdict = "orbit: over a top, the gizmo's drop lands on a face turned away from the piece — held (Step 5)";
-    return null;
+  const map = buildFaceMap(faces, box);
+  st.asmFaceMap = { key: parts.key, map };
+  return map;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place on the box (`mapTarget`), the stack its face
+ * looks along, the FRONTMOST closed region there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along
+ * the axis from outside the box for the exact surface (`modelCast` — the parts at rest), taken within `MAP_REFINE_M` of the region's plane. The point keeps
+ * the place's two other coordinates EXACTLY: on a side the green's height and the red's plane, by construction.
+ */
+function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+  const map = faceMapOf(st);
+  if (map === null) return null;
+  const t = mapTarget(map.core, yaw, pitch, mapOpts(st));
+  const s = map.stacks[t.stack]!;
+  const [i0, i1] = planeAxes(s.axis);
+  const at = stackDepthAt(s, t.surface[i0]!, t.surface[i1]!);
+  const n = t.normal;
+  if (at === null) return { hit: { point: t.surface, normal: n, host: null }, t };
+  const p: [number, number, number] = [t.surface[0], t.surface[1], t.surface[2]];
+  p[s.axis] = at.depth * s.sign;
+  if (at.inside) {
+    const face = s.sign > 0 ? map.box.hi[s.axis] : map.box.lo[s.axis];
+    const o: [number, number, number] = [p[0], p[1], p[2]];
+    o[s.axis] = face + s.sign * MAP_OUT_M;
+    const h = modelCast(st, o, [-n[0], -n[1], -n[2]], map.box.hi[s.axis] - map.box.lo[s.axis] + 2 * MAP_OUT_M);
+    if (h !== null && Math.abs(h.point[s.axis] * s.sign - at.depth) <= MAP_REFINE_M) {
+      p[s.axis] = h.point[s.axis];
+      return { hit: { point: p, normal: h.normal ?? n, host: h.host }, t };
+    }
   }
-  return h;
+  return { hit: { point: p, normal: n, host: null }, t };
+}
+
+/**
+ * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP (`edgeBlend`): in an edge band, the face's gizmo (`rawGizmo`) blended toward the next face's
+ * first one — up / down a side (`v`) and across a side's end (`h`, of the up / down blends at both yaws) — to their middle at the slice's end. Its normal,
+ * host and place: the face's own.
+ */
+function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+  const here = rawGizmo(st, yaw, pitch);
+  if (here === null) return null;
+  const eb = edgeBlend(yaw, pitch, mapOpts(st));
+  if (eb.h === null && eb.v === null) return here;
+  const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
+  const upDown = (yw: number, at: Vec3): Vec3 => {
+    if (eb.v === null) return at;
+    const o = rawGizmo(st, yw, eb.v.pitchThere);
+    return o === null ? at : mix(at, o.hit.point, eb.v.w);
+  };
+  let p = upDown(yaw, here.hit.point);
+  if (eb.h !== null) {
+    const o = rawGizmo(st, eb.h.yawThere, pitch);
+    if (o !== null) p = mix(p, upDown(eb.h.yawThere, o.hit.point), eb.h.w);
+  }
+  return { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
 }
 
 /**
@@ -445,7 +364,7 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
 export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
   const u = dirAt(st, yaw, v);
   const d = approachDistance(st.cfg, approach);
-  const g = footOf(st, gizmoFor(st, u), u, d); // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell
+  const g = footOf(st, gizmoFor(st), u, d); // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell
   const c = st.orbitCentreM;
   return [g[0] + u[0] * d - c.x, g[1] + u[1] * d - c.y, g[2] + u[2] * d - c.z];
 }
@@ -482,8 +401,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.hover !== null) {
     const t = st.centreBlend.targetM;
     st.asmLocked = true;
-    st.asmCarrier = null; // ⭐ (2026-10-29) back out, the carrier found again from the gizmo, in the yaw plane as it is then
-    st.asmShown = null;
+    st.asmShown = null; // ⭐ (Step 4c-bis) back out: the map's angles put where the slide leaves the gizmo
     const n = st.gizmoNormal ?? null;
     const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
     st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
@@ -495,16 +413,25 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = orbitDir(q.yaw, q.v);
   const d = approachDistance(st.cfg, st.approach);
-  // ⭐⭐⭐ (2026-10-29) the gizmo from its CARRIER on the sections' hulls (`carrierFrame`): the yaw's and the pitch's steps since the last frame
+  // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
+  // angles' steps (2026-10-29 … Step 4c): it could wait, be held, drift and jump. The map's angles ARE the orbit's — out of step only after the slide (put
+  // where the slide left the gizmo), then closing on the orbit's with its own steps (`syncAngle`: never against the finger, never a jump)
   const prev = st.asmPrevQ ?? q;
   st.asmPrevQ = { yaw: q.yaw, v: q.v };
   let hit: GizmoHit | null = null;
   if (!st.asmLocked) {
-    hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);
-    if (hit !== null) {
+    const pitch = pitchOfV(q.v);
+    const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
+    const mq = {
+      yaw: syncAngle(m0.yaw, q.yaw, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), MAP_CATCH_UP, true),
+      pitch: syncAngle(m0.pitch, pitch, pitch - pitchOfV(prev.v), MAP_CATCH_UP, false),
+    };
+    st.asmMapQ = mq;
+    const m = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m !== null) {
+      hit = m.hit;
       st.asmG = hit.point;
-      // ⭐⭐⭐ (2026-11-02) the lines are drawn from the carrier of this ACCEPTED drop — a held one holds them with the gizmo (⛔ they went on with the carrier)
-      st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };
+      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
     }
   }
   calmFrame(st, dtMs);
@@ -518,7 +445,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // ⭐ off the slide: the carrier found again from the slide's gizmo, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
     // yaw plane by the slide: the gizmo off the red section from then on)
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
-    st.asmCarrier = null;
+    // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)
+    const map = faceMapOf(st);
+    st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map.core, st.asmG, stackOfNormal(st.gizmoNormal ?? null, st.asmG, map.core), mapOpts(st)) : null;
     st.asmShown = null;
     st.asmLock = null;
     st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
@@ -550,34 +479,43 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   sectionLinesFrame(st);
 }
 
-/** ⭐ The section lines' fixed samples (the green round its loop, the red along its chain — the gizmo's vertex added to each). */
-const GREEN_SAMPLES = 96;
-const RED_SAMPLES = 64;
-/** ⭐ The lines lifted off the surface toward their ray's origin (m) — never in it. */
-const SECTION_LIFT_M = 0.002;
-
 /**
- * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes: the RED one, the carrier's red chain dropped onto the surface (bottom centre → top
- * centre of the plane through it — the half the gizmo can travel); the GREEN one, where dx takes it — on a side the green loop at its height, dropped
- * (⛔ 2026-10-29 the yaw plane's cut at every yaw), on a top / bottom its turn about the axis, brought onto each red section and dropped (⛔ vertical drops
- * on a circle: off a thin top they landed on the parts below, *"the green section can take strange forms"*). Hidden locked, under a hover, or off.
- * ⭐⭐⭐ (2026-11-02, *"build it (option A, symetric)"*) DRAWN THROUGH THE GIZMO (`sectionFixed`, `insertIndex`): from the carrier of the gizmo's last
- * ACCEPTED drop (`st.asmShown` — a held drop holds the lines with it), each line's fixed samples dropped once per line (the red per yaw and origin, the
- * green per height / distance — a dx reshapes the red only, a dy the green only), the gizmo's EXACT point inserted in both every frame; redrawn at every
- * change (⛔ at most every 100 ms: they held, then jumped). ⭐ ONE mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed) — ⛔
- * (2026-10-29) rebuilt every 100 ms, its new material was not ready for its first frames: the lines missing from 27 of 106 frames.
+ * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes. ⭐⭐⭐ (2026-11-04, STEP 4c-bis) FROM THE FACE MAP ITSELF (`mapGizmo`): the GREEN, the
+ * gizmo at every yaw at the map's pitch (round the assembly — on a side at its height, over a top / under a bottom round the centre); the RED, at every
+ * pitch at the map's yaw (bottom centre → top centre, on a side in the world's vertical plane square to it). So the lines are the gizmo's own paths, and
+ * the gizmo's EXACT point is a vertex of both (`insertIndex`) — by construction. Each line's samples computed once per line (a dx reshapes the red only, a
+ * dy the green only); a step between two neighbours far beyond the box's own step there (a depth step: a protrusion, a recess) breaks the line. ⭐ ONE
+ * mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed). Hidden under the slide, or off.
  */
 /** ⭐ (2026-11-02) the gizmo's vertex `i` joined to its neighbours `prev` / `next` (`gizmoJoins`: the nearer one at least). */
-function around(pts: readonly (Vector3 | null)[], i: number, prev: number, next: number, spacing: number): [boolean, boolean] {
+function around(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, prev: number, next: number): [boolean, boolean] {
   const g = pts[i];
+  if (g === null || g === undefined) return [false, false];
   const a = prev >= 0 ? (pts[prev] ?? null) : null;
   const b = next < pts.length ? (pts[next] ?? null) : null;
-  if (g === null || g === undefined) return [false, false];
   const d = (p: Vector3 | null): number => (p === null ? Infinity : Vector3.Distance(g, p));
-  const v = (p: Vector3): Vec3 => [p.x, p.y, p.z];
-  const j = gizmoJoins(a !== null && joins(v(g), v(a), spacing), b !== null && joins(v(g), v(b), spacing), d(a), d(b));
+  const ja = a !== null && sampleJoins(pts, surf, prev, i);
+  const jb = b !== null && sampleJoins(pts, surf, i, next);
+  const j = gizmoJoins(ja, jb, d(a), d(b));
   return [j[0] && a !== null, j[1] && b !== null];
 }
+
+/** ⭐ (Step 4c-bis) two neighbouring samples joined: their step no more than 2.5 × the box's own step between their places (+ 2 mm) — a depth step breaks it. */
+function sampleJoins(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, j: number): boolean {
+  const a = pts[i] ?? null;
+  const b = pts[j] ?? null;
+  const sa = surf[i] ?? null;
+  const sb = surf[j] ?? null;
+  if (a === null || b === null || sa === null || sb === null) return false;
+  const box = Math.hypot(sb[0] - sa[0], sb[1] - sa[1], sb[2] - sa[2]);
+  return Vector3.Distance(a, b) <= 2.5 * box + 0.002;
+}
+
+/** ⭐ The section lines' samples (the green round the yaw, the red along the pitch — the gizmo's vertex added to each). */
+const GREEN_SAMPLES = 96;
+const RED_SAMPLES = 64;
+/** ⭐ The lines lifted off the surface along its face's axis (m) — never in it. */
+const SECTION_LIFT_M = 0.002;
 
 function sectionLinesFrame(st: SceneState): void {
   const sh = st.asmShown;
@@ -587,73 +525,70 @@ function sectionLinesFrame(st: SceneState): void {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
   }
-  const c = sh.c;
-  const yaw = sh.yaw;
-  const a = st.asm!;
   const parts = st.asmParts?.key ?? "";
-  const reach = a.radius * 2 + 1;
-  // ⭐⭐⭐ (Step 4c) a sample's drop that misses (a gap through the assembly) stands on the hull (`hull`), as the gizmo does — ⛔ `null`: the line cut there
-  const drop = (r: SectionRay, hull?: Vec3): Vector3 | null => {
-    const h = castRay(st, r);
-    const q = h !== null ? h.point : (hull ?? null);
-    return q === null ? null : new Vector3(q[0] - r.dir[0] * SECTION_LIFT_M, q[1] - r.dir[1] * SECTION_LIFT_M, q[2] - r.dir[2] * SECTION_LIFT_M);
+  const o = mapOpts(st);
+  const optKey = `${o.edgeMm}|${o.edgeDeg}`;
+  const lift = (q: Vec3, n: Vec3): Vector3 => new Vector3(q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M);
+  const samples = (at: (x: number) => readonly [number, number], params: readonly number[]) => {
+    const pts: (Vector3 | null)[] = [];
+    const surf: (Vec3 | null)[] = [];
+    for (const x of params) {
+      const [yw, pt] = at(x);
+      const m = mapGizmo(st, yw, pt);
+      pts.push(m === null ? null : lift(m.hit.point, m.t.normal));
+      surf.push(m === null ? null : m.t.surface);
+    }
+    return { pts, surf };
   };
-  // the red's fixed samples (per yaw and origin)
-  const ch = c.chain;
-  const rKey = sectionRedKey(parts, c.heading, c.origin);
+  // the red's samples (per the map's yaw): the pitch from −90° to +90°
+  const rKey = `${parts}#R#${sh.yaw.toFixed(7)}#${optKey}`;
   if (st.asmRedCache === null || st.asmRedCache.key !== rKey) {
-    const params = sectionFixed(ch.total, RED_SAMPLES - 1, false);
-    st.asmRedCache = { key: rKey, params, pts: params.map((x) => { const r = redAt(st, c.heading, ch, c.origin, x); return drop(r.drop, r.w); }) };
+    const params = sectionFixed(Math.PI, RED_SAMPLES - 1, false);
+    st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };
   }
-  // the green's fixed samples (per height on a side, per distance from the axis over a top)
-  const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
-  const gKey = sectionGreenKey(parts, c.kind, c.w, a.centre);
+  // the green's samples (per the map's pitch): the yaw round the circle
+  const gKey = `${parts}#G#${sh.pitch.toFixed(7)}#${optKey}`;
   if (st.asmGreenCache === null || st.asmGreenCache.key !== gKey) {
-    if (loop !== null) {
-      const params = sectionFixed(loop.total, GREEN_SAMPLES, true);
-      st.asmGreenCache = { key: gKey, params, pts: params.map((x) => { const at = chainAt(loop, x); const sd = sideAt(loop, x); const n: Vec3 = sd !== null ? [Math.cos(sd.h), 0, Math.sin(sd.h)] : greenNormal(loop, at.edge); const w: Vec3 = [at.p[0], c.w[1], at.p[1]]; return drop(greenDrop(w, n, reach), w); }) };
-    } else if (c.kind !== "SIDE") {
-      const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
-      st.asmGreenCache = { key: gKey, params, pts: params.map((th) => { const r = onRed(st, redHeading(null, th), turnAbout(c.w, a.centre, th - yaw), c.kind); return r === null ? null : drop(r.drop); }) };
-    } else st.asmGreenCache = { key: gKey, params: [], pts: [] };
+    const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
+    st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };
   }
-  // ⭐⭐⭐ the gizmo's EXACT point — the accepted drop — inserted in both: the ring is a vertex of each line, at every frame
-  const gv = new Vector3(g[0] - c.drop.dir[0] * SECTION_LIFT_M, g[1] - c.drop.dir[1] * SECTION_LIFT_M, g[2] - c.drop.dir[2] * SECTION_LIFT_M);
+  // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame
+  const gv = lift(g, sh.t.normal);
   const key = `${rKey}|${gKey}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
-  const v3 = (p: Vector3): Vec3 => [p.x, p.y, p.z];
   const rest = gv;
   const lines: Vector3[][] = [];
-  // green: a closed loop through the gizmo (its own parameter: the carrier's arc length on a side, the plane's yaw over a top)
+  // green: a closed loop through the gizmo (its parameter the map's yaw)
   const gc = st.asmGreenCache;
-  const gParam = loop !== null ? nearestOnChain(loop, [c.w[0], c.w[2]]) : ((yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  const green: (Vector3 | null)[] = gc.pts.length === 0 ? [] : [...gc.pts];
+  const gParam = ((sh.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const green = [...gc.pts];
+  const gSurf = [...gc.surf];
   const gi = insertIndex(gc.params, gParam);
-  if (green.length > 0) green.splice(gi, 0, gv);
-  // ⭐ (2026-10-29) a jump between two neighbours breaks it (`joins`) — the spacing: the loop's per sample on a side, the turn's arc on a top / bottom
-  const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);
+  green.splice(gi, 0, gv);
+  gSurf.splice(gi, 0, sh.t.surface);
   const n = green.length;
-  const gJoin = n === 0 ? [false, false] : around(green, gi, (gi - 1 + n) % n, (gi + 1) % n, greenStep);
+  const gJoin = around(green, gSurf, gi, (gi - 1 + n) % n, (gi + 1) % n);
   for (let k = 0; k <= GREEN_SAMPLES; k++) {
     const p0 = green[k] ?? null;
-    const p1 = n === 0 ? null : (green[(k + 1) % n] ?? null);
-    const forced = n > 0 && ((k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null);
-    lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), greenStep)) ? [p0, p1] : [rest, rest]);
+    const p1 = green[(k + 1) % n] ?? null;
+    const forced = (k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null;
+    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(green, gSurf, k, (k + 1) % n)) ? [p0, p1] : [rest, rest]);
   }
-  // red: the chain through the gizmo; a step in depth (a hidden stretch skipped) breaks the line
+  // red: bottom centre → top centre through the gizmo (its parameter the map's pitch + 90°)
   const rc = st.asmRedCache;
-  const red: (Vector3 | null)[] = [...rc.pts];
-  const ri = insertIndex(rc.params, c.s);
+  const red = [...rc.pts];
+  const rSurf = [...rc.surf];
+  const ri = insertIndex(rc.params, sh.pitch + Math.PI / 2);
   red.splice(ri, 0, gv);
-  const step = ch.total / (RED_SAMPLES - 2);
-  const rJoin = around(red, ri, ri - 1, ri + 1, step);
+  rSurf.splice(ri, 0, sh.t.surface);
+  const rJoin = around(red, rSurf, ri, ri - 1, ri + 1);
   for (let k = 0; k < RED_SAMPLES - 1; k++) {
     const p0 = red[k] ?? null;
     const p1 = red[k + 1] ?? null;
     const forced = k + 1 === ri ? rJoin[0] : k === ri ? rJoin[1] : null;
-    lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), step)) ? [p0, p1] : [rest, rest]);
+    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(red, rSurf, k, k + 1)) ? [p0, p1] : [rest, rest]);
   }
   if (st.asmSectionLines === null) {
     const colours = lines.map((_, i) => (i <= GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));

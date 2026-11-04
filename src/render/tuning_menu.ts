@@ -195,6 +195,9 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
             tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
+            // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
+            tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
+            tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),

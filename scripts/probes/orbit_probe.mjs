@@ -4,6 +4,7 @@
 //   MODE=random SEED=3 PRESSES=5               — seeded random legs, mostly pure dx or dy
 //   APPR=300    — an approach first (A + drag up, px); 0: far out
 //   PRE=3       — seeded random legs first (a lead-in), then MODE's
+//   LEGMAX=1400 — the random dx legs' longest (px; default 600 — 150 … 600); LEGMAXY=250 — the dy / diagonal legs' (40 … it; default LEGMAX)
 //   DROP=1      — also record the carrier's drop ray re-cast (a diagnosis)
 //   OUT=name    — the recording `<PROBE_DIR>/<name>.json` (PROBE_DIR: default the OS temp dir); then `node scripts/probes/analyse_orbit.mjs <file>`
 // ⛔ Never clamps a leg at the viewport's edge (a clamped leg sends one move backwards — read as a rocking roll): it ends the leg. ⭐ Its own Chrome profile,
@@ -49,7 +50,7 @@ try {
     st.scene.onAfterRenderObservable.add(() => { try { const c = st.camera; const t = c.getTarget ? c.getTarget() : c.target;
       window.__rec.push({ leg: window.__leg, ts: performance.now(), g: v3(st.asmGizmoAt ?? st.asmG ?? null), gn: v3(st.gizmoNormal ?? null),
         p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
-        ov: [st.orbit.yaw, st.orbit.elevation], lk: st.asmLocked ?? null, cs: st.asmCarrier ? [st.asmCarrier.s, st.asmCarrier.chain?.total ?? null, st.asmCarrier.kind, st.asmCarrier.w, st.asmCarrier.heading ?? null] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, dr: ${env.DROP ? `(() => { const d = st.asmCarrier?.drop; if (!d) return null; const Ray = c.getForwardRay(1).constructor; const V = c.position.constructor; const h = st.scene.pickWithRay(new Ray(new V(...d.origin), new V(...d.dir), d.length), (m) => { const id = st.idOf.get(m); return id !== undefined && st.goalCommit.placed.has(id) && m.isPickable && m.isEnabled(); }); const n = h?.hit ? h.getNormal(true) : null; return h?.hit ? [h.pickedMesh.name, h.pickedPoint.x, h.pickedPoint.y, h.pickedPoint.z, n ? n.y : null, d.origin, d.dir] : ["miss", d.origin, d.dir]; })()` : "null"}, rc: st.asmRedCache ? [st.asmRedCache.pts.filter(Boolean).length, st.asmRedCache.pts.length] : null, sh: st.asmShown ? [st.asmShown.c.w, st.asmShown.c.heading] : null, cm: st.asmCalm ? [st.asmCalm.n, st.asmCalm.sH, st.asmCalm.sV] : null, ap: st.approach, hv: st.hover != null, v: String(st.lastVerdict ?? "").slice(0, 90) });
+        ov: [st.orbit.yaw, st.orbit.elevation], lk: st.asmLocked ?? null, cs: st.asmCarrier ? [st.asmCarrier.s, st.asmCarrier.chain?.total ?? null, st.asmCarrier.kind, st.asmCarrier.w, st.asmCarrier.heading ?? null] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, dr: ${env.DROP ? `(() => { const d = st.asmCarrier?.drop; if (!d) return null; const Ray = c.getForwardRay(1).constructor; const V = c.position.constructor; const h = st.scene.pickWithRay(new Ray(new V(...d.origin), new V(...d.dir), d.length), (m) => { const id = st.idOf.get(m); return id !== undefined && st.goalCommit.placed.has(id) && m.isPickable && m.isEnabled(); }); const n = h?.hit ? h.getNormal(true) : null; return h?.hit ? [h.pickedMesh.name, h.pickedPoint.x, h.pickedPoint.y, h.pickedPoint.z, n ? n.y : null, d.origin, d.dir] : ["miss", d.origin, d.dir]; })()` : "null"}, rc: st.asmRedCache ? [st.asmRedCache.pts.filter(Boolean).length, st.asmRedCache.pts.length] : null, sh: st.asmShown ? (st.asmShown.t ? [st.asmShown.t.surface, st.asmShown.t.band, st.asmShown.t.side] : [st.asmShown.c.w, st.asmShown.c.heading]) : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null, cm: st.asmCalm ? [st.asmCalm.n, st.asmCalm.sH, st.asmCalm.sV] : null, ap: st.approach, hv: st.hover != null, v: String(st.lastVerdict ?? "").slice(0, 90) });
     } catch (e) { window.__recErr = String(e); } }); return true; })()`);
   if (!ok) throw new Error("no window.__st — is this the dev server (import.meta.env.DEV)?");
   const vp = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));
@@ -75,8 +76,10 @@ try {
     await move("mouseReleased", m, 0); await send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 }); await sleep(1500);
   }
   const randomLeg = async (tag) => {
-    const r = rnd(); const L = 150 + rnd() * 450; const s = rnd() < 0.5 ? -1 : 1;
+    const r = rnd(); const u = rnd(); const s = rnd() < 0.5 ? -1 : 1;
     const d = r < 0.45 ? [s, 0] : r < 0.9 ? [0, s] : [s * 0.7, (rnd() < 0.5 ? -1 : 1) * 0.7];
+    // a dx leg up to LEGMAX, a dy (or diagonal) leg up to LEGMAXY — a long dy only parks the pitch at ±90° (~0.67° a px)
+    const L = d[1] === 0 ? 150 + u * (+(env.LEGMAX ?? 600) - 150) : 40 + u * (+(env.LEGMAXY ?? env.LEGMAX ?? 600) - 40);
     const from = [W / 2 - d[0] * Math.min(W / 2 - 20, L / 2), (top + H) / 2 - d[1] * Math.min((H - top) / 2 - 10, L / 2)];
     await leg(`${tag}[${(d[0] * L).toFixed(0)},${(d[1] * L).toFixed(0)}]`, from, [d[0] * 3, d[1] * 3], Math.round(L / 3));
   };

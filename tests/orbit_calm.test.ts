@@ -3,9 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { alignedShare, calmHeading, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
-import { chainOf, edgeNormal, facetRunToward, nearestOnChain, chainAt } from "../src/input/section_hull";
+import { mapTarget } from "../src/input/face_map";
 
-const nearestFacetNormalZ = (loop: ReturnType<typeof chainOf>, p: [number, number]) => edgeNormal(loop, chainAt(loop, nearestOnChain(loop, p)).edge)[1];
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
 
@@ -50,32 +49,26 @@ describe("⭐⭐⭐ THE CALM (58d86ff) — the piece and the camera near square 
 });
 
 describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from the carrier, the shares and the face EASED (the face at a height changes with the height)", () => {
-  it("⭐⭐⭐ dx's run: the facet FACING the way of the real face under the gizmo, nearest it (edges in line one facet) — ⛔ the nearest facet alone: a part sticking out of the front bridges the hull, the gizmo on the real front is inside it, nearer the BACK — the calm took the back's normal, the camera swung behind (probed, 121°)", () => {
-    const thin = chainOf([[-0.25, -0.05], [0.0, -0.05], [0.25, -0.05], [0.25, -0.017], [-0.25, -0.017], [-0.25, -0.05]]);
-    const f = facetRunToward(thin, [-0.15, -0.05], [0, 0, -1])!; // on the front, 10 cm from its left end — the front split in two in line: one run of 0.5 m
-    expect(f.run).toBeCloseTo(0.5, 12);
-    expect(f.dEdge).toBeCloseTo(0.1, 3); // sampled every 2 mm
-    expect(f.n[2]).toBeCloseTo(-1, 12);
-    const side = facetRunToward(thin, [0.25, -0.04], [1, 0, 0])!;
-    expect(side.run).toBeCloseTo(0.033, 9);
-    expect(side.n[0]).toBeCloseTo(1, 12);
-    // Scene_1 at 0.145–0.217 m: the front bridged to a part at z −0.092 (x 0 … 0.046); the gizmo on the real front (0, −0.05)
-    const bridged = chainOf([[-0.243, -0.051], [0, -0.092], [0.046, -0.092], [0.248, -0.051], [0.248, -0.018], [-0.243, -0.018], [-0.243, -0.051]]);
-    const fb = facetRunToward(bridged, [0, -0.05], [0, 0, -1])!;
-    expect(fb.n[2]).toBeLessThan(-0.95); // a front facet — ⛔ the nearest one alone: the back (+z)
-    expect(nearestFacetNormalZ(bridged, [0, -0.05])).toBeGreaterThan(0.95); // what the nearest alone picks
-  });
-  it("⭐⭐⭐ THE BOUNCE (the owner: *\"after the gizmo has crossed the grey part to the right, it seems to bounce back\"*): a small slanted block at the front's end belongs to the front's run, and a slanted piece of a wall to the wall's — ⛔ read as faces of their own (runs of a few cm, the shares whole), a pure dx swung the piece up to the orbit's whole pitch and the camera back 70 cm (probed)", () => {
-    // the front (−z) ending in a slanted block (normal ≈ (0.26, 0, −0.96)) before the right side (+x): Scene_1 at 0.466 m
-    const loop = chainOf([[-0.24, -0.05], [0.255, -0.05], [0.289, -0.041], [0.289, -0.018], [-0.24, -0.018], [-0.24, -0.05]]);
-    const onBlock = facetRunToward(loop, [0.284, -0.047], [0.26, 0, -0.96])!;
-    expect(onBlock.run).toBeGreaterThan(0.5); // the whole front, not the 3.5 cm block
-    expect(onBlock.n).toEqual([expect.closeTo(0, 9), 0, expect.closeTo(-1, 9)]); // the front's world normal
-    expect(onBlock.dEdge).toBeLessThan(0.01); // at its right end: the share near whole, continuous with the middle's
-    // dy's run: the gizmo's height in the placed parts' box — one top and bottom on every face (⛔ the wall under the gizmo: its top differed from the
-    // front to the side at the same height, the share 0.33 → 1 round the corner)
+  it("⭐⭐⭐ (Step 4c-bis) dx's run: THE SIDE the face map's yaw is in, across the CORE box — a slanted block at the front's end, a part bridged to it belong to the front's run (⛔ read as faces of their own — runs of a few cm, the shares whole — a pure dx swung the piece up to the orbit's whole pitch and the camera back 70 cm: the owner's bounce, probed); the calm's normal the side's world axis", () => {
+    const core = { lo: [-0.243, 0, -0.051] as [number, number, number], hi: [0.248, 0.54, -0.018] as [number, number, number] };
+    const opts = { edgeMm: 10, edgeDeg: 10 };
+    const D = Math.PI / 180;
+    // the −z front's slice (225° … 315°): at its middle, near its right end, at the slice's very end — one run, the front's whole width
+    for (const yaw of [270, 300, 314.9]) {
+      const t = mapTarget(core, yaw * D, 0, opts);
+      expect(t.band).toBe("SIDE");
+      expect(t.across.hi - t.across.lo).toBeCloseTo(0.491, 9);
+      expect(t.normal).toEqual([0, 0, -1]);
+    }
+    const end = mapTarget(core, 314.9 * D, 0, opts);
+    expect(Math.min(end.across.L - end.across.lo, end.across.hi - end.across.L)).toBeLessThan(0.001); // at its end: the share near whole
+    // the right side (+x): its own run, the painting's 33 mm
+    const side = mapTarget(core, 0, 0, opts);
+    expect(side.across.hi - side.across.lo).toBeCloseTo(0.033, 9);
+    expect(side.normal).toEqual([1, 0, 0]);
+    // dy's run: the gizmo's height in the placed parts' box — one top and bottom on every face
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("sV = box === null ? 1 : edgeShare(Math.min(c.w[1] - box.lo[1], box.hi[1] - c.w[1]), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("chainRun(");
   });
   it("⭐⭐⭐ the shares and the face's normal FOLLOW their targets (an exponential, 120 ms) — a target that changes at once (another height's face) never moves them at once", () => {
@@ -141,9 +134,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     // ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight — ⛔ 58d86ff's gate curved the A + dy approach
     expect(a).toContain("const w = poleWeight(u[1]);");
     expect(a).not.toContain("calmWeight(");
-    expect(a).toContain("sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
-    expect(a).toContain("const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], [Math.cos(c.heading), 0, Math.sin(c.heading)]);"); // ⭐ (Step 4c) the carrier's side, not the hit's normal
-    expect(a).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw };");
+    expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
+    expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
+    expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");

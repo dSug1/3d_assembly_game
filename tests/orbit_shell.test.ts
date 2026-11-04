@@ -44,7 +44,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 2) THE SHELL (the owner: *\"it was good to
   });
   it("⭐⭐⭐ wired: the orbit's centre and the solver's places read the gizmo's FOOT; the ring stays at the gizmo; the slide unchanged; a slider", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const g = footOf(st, gizmoFor(st, u), u, d);");
+    expect(a).toContain("const g = footOf(st, gizmoFor(st), u, d);");
     expect(a).toContain("const foot = footOf(st, target, u, d); st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs);");
     expect(a).toContain("st.asmGizmoAt = [target[0], target[1], target[2]];");
     expect(a).toContain("if (st.asmLocked) return g; return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));");

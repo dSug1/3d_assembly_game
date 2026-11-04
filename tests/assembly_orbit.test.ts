@@ -28,7 +28,6 @@ import {
   orbitDir,
   ORBIT_PITCH_MAX_RAD,
   pitchOfV,
-  rayOffsets,
   twoFingerKind,
   vOfPitch,
   orbitDy,
@@ -101,16 +100,6 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(faceSwitches(front, at, [0, 1, 0], [0, 0.5, -0.047], 0.005)).toBe(false); // over the edge by 3 mm
     expect(faceSwitches(front, at, [0, 1, 0], [0, 0.5, -0.04], 0.005)).toBe(true); // by 10 mm
     expect(faceSwitches(front, at, [0, 0, -1], [0, 0.4, 0.2], 0.005)).toBe(true); // a step (same direction): at once
-  });
-  it("⭐ the rays that find the gizmo: the centre one and four beside it at the cover's distance, square to it (a narrower gap bridged)", () => {
-    const u = orbitDir(0.7, 0.62);
-    const rs = rayOffsets(u, 0.004);
-    expect(rs.length).toBe(5);
-    expect(rs[0]).toEqual([0, 0, 0]);
-    for (const o of rs.slice(1)) {
-      expect(Math.hypot(...o)).toBeCloseTo(0.004, 12);
-      expect(Math.abs(dot(o, u))).toBeLessThan(1e-12);
-    }
   });
   it("⭐⭐ the camera's LOOK POINT: the centre far out, the gizmo at the lock's distance, smoothly between; locked, the gizmo", () => {
     expect(lookShare(6, 6, 0.3, false)).toBe(0);
@@ -311,7 +300,7 @@ describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-0
     const w = code("render/assembly_wiring.ts");
     // ⭐⭐⭐ (2026-11-04, Step 4c) both picks now ONE cast in the model's space (`modelCast`, `tests/sway_cast.test.ts`), its hit still brought back by `modelHit`
     expect(w).toContain("const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
-    expect(w).toContain("return modelCast(st, r.origin, r.dir, r.length);");
+    expect(w).toContain("const h = modelCast(st, o, [-n[0], -n[1], -n[2]], map.box.hi[s.axis] - map.box.lo[s.axis] + 2 * MAP_OUT_M);"); // ⭐ (Step 4c-bis) the face map's ray
     expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
     expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
   });

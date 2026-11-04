@@ -2352,3 +2352,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   red plane's heading, the drop's direction and the calm's normal; a drop on a side is never held (a miss stands on the hull); every ray is cast in the
   model's space (`modelCast` / `swayRay`) — the orbit's sway never moves the gizmo. Holds 69 → 11, the gizmo off its red plane: never. The gizmo's ease
   45 ms (the owner, after 55 and 62). 1632 vectors (scope §14). ⛔ No device close.
+* ✅ **Step 4c-bis (2026-11-04, `1.0.96-`): THE FACE MAP — the gizmo a function of the orbit's angles** (the owner: *"propose another way to construct
+  the gizmo so it truly reflects the dy and dx inputs"*): the angles' place on the core box (each side a slice of the turn, ±45° of pitch on the sides,
+  the top's / bottom's quarters beyond), the ray along the box face's axis onto the frontmost of the slide's coplanar regions (holes closed), slowly
+  through an edge (10 mm in 10°, sliders) and blended across it; the sections drawn from the same function. ⛔ The carrier (2026-10-29 … Step 4c) deleted,
+  with its hulls, holds and syncs (`input/section_hull.ts` keeps the lines' samples). 1613 vectors (scope §15). ⛔ No device close.

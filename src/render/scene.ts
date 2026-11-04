@@ -543,9 +543,8 @@ export function createScene(
   st.asmRedCache = null;
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
-  st.asmCarrier = null;
-  st.asmChain = null;
-  st.asmLoop = null;
+  st.asmMapQ = null;
+  st.asmFaceMap = null;
   st.asmParts = null;
   st.asmShell = null;
   st.asmRayCache = new Map();

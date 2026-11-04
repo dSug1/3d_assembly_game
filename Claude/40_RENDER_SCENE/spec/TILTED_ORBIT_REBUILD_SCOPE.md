@@ -1,8 +1,8 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
-> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) — ⛔ no device close
-> on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
+> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
+> function of the orbit's angles, the carrier deleted (§15) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -103,6 +103,13 @@ dy reaches the top centre as the orbit reaches 90°.
 any heading); the green the horizontal plane at the gizmo's height (as now). The gizmo's motion along the face's level and vertical axes, its carrier on
 the plane. Round a vertical edge (dx) the PLANE carried over (I1: the axis moved on turns onto the old normal's opposite, the other kept; the landing searched
 along the section only). Gate: I1 on every side, every heading.
+
+**Step 4c-bis — THE FACE MAP (inserted 2026-11-04, the owner; built, §15).** The gizmo a FUNCTION of the orbit's angles, no carrier: the angles' place on
+the core box (each side a slice of the turn, the sides' band ±45° of pitch, the top's and the bottom's quarters beyond), the ray along the box face's axis
+onto the frontmost of the slide's coplanar regions (holes closed), slowly through an edge (the last / first 10 mm in the last / first 10°), blended across
+it (no jump); the sections drawn from the same function. ⚠ What it changes for the steps below: Step 5 starts from the face map's top quarters (concentric
+squares, not the polar turn), and Steps 5–7 must replace the angles' pole — the map's place then needs a state of its own on the box (the walk discussed
+2026-11-04: a point on the shell and its carried frame), which is where the crossings and the rolls of §4 belong.
 
 **Step 5 — x / z on a top or bottom (no polar).** Over a top / bottom the gizmo moves along the world's x and z lines through it (a dy across the top
 along the plane it came up in; a dx along the other), the orbit's frame tilted onto the face (§4.4: its heading the world's x or z, the gizmo's), switched
@@ -471,3 +478,81 @@ near the edge missed; the turn's round trip; no pick on the swaying meshes — R
 ⚠ Seed 11 (8 presses): "the piece behind its face" 0 → 261 — every frame at v = 0 (the piece straight below): the piece's direction square to every
 vertical face, the sign float noise (the analyser's border; the same at the bottom pole before).
 
+## 15. Step 4c-bis — THE FACE MAP: the gizmo a function of the orbit's angles — built (2026-11-04, branch `1.0.96-Step4c-bis-of-polar-orbit`)
+
+**Why.** The owner: *"I am really struggling with the gizmo travel. propose another way to construct the gizmo so it truly reflects the dy and dx inputs: I am
+thinking at raycast from camera view towards assembly center to position the gizmo, the orbit is defined by dy and dx inputs modulated by the calm and the
+tilt, the red and green sections are computed after the gizmo is updated based on the geometry of the faces contour. Advise if this would be a simpler
+approach."* The answer given: yes — the carrier (Steps 2–4c) is STATE that drifts, waits, is held and jumps whenever the hull and the real face disagree;
+a gizmo computed from the angles has none. But not from the CAMERA toward the CENTRE (the 2026-10-28 build): rays to one point sweep a cone (the green not a
+plane), an oblique ray skips the shadow behind a protrusion (a sideways jump), and the camera carries the calm, the offsets and the lag (a feedback loop).
+Instead: the place on the box, the ray along the box face's axis. Then *"can we use the contours used for the slide (the ones which highlight during a
+slide) to avoid the holes or gaps ?"* — yes, as the surface the ray lands on. The owner's decisions: *"let the gizmo move slowly over the last and first few
+mm of the two faces during the arc"*, *"close the holes for the moment"*, then *"Do the write-up for what we have scoped above as a new Step 4c-bis and
+build, update the md files, deploy, test with random long dy and dx travels at different elevations, pitch, yaw and green piece distance."*
+
+**As built** (`input/face_map.ts`, engine-free; wired in `render/assembly_wiring.ts` — `faceMapOf`, `rawGizmo`, `mapGizmo`, `sectionLinesFrame`):
+
+1. ⭐⭐⭐ **THE STACKS** (`buildFaceMap`): the placed parts' faces (their model pose — the slide's own `faceWorld` / `faceTrianglesWorld`) sorted by the
+   world axis they face (±x, ±y, ±z, within 20° — the slanted block faces −z), each axis's faces grouped by plane (0.5 mm) and by contact (each face's
+   rectangle on the plane's axes grown 1.6 mm: the slide's `coplanarBoundary` regions — the 3 mm joints close), and **every hole inside a group CLOSED**
+   (`filledRegion`: a flood fill from outside; an empty slot is filled, a notch open to the outside is not). Per placed set.
+2. ⭐⭐⭐ **THE PLACE ON THE CORE BOX** (`mapTarget`): the orbit's angles read on the CORE box (`coreBox`: each side at its stack's MAIN face — the largest
+   closed region; ⛔ the parts' whole box: a part sticking out of the front widened it, and at the corner the side's ray passed in front of the painting and
+   met that part's side 25 cm in — probed): each side a slice of the turn (its normal ± 45° of yaw — as Step 4b / 4c's sides), the sides' band ± 45° of
+   pitch over the box's height, the top's and the bottom's quarters beyond — concentric squares to the top / bottom centre at ±90°. On a side a dx keeps
+   the height (the GREEN a horizontal plane) and a dy the place across (the RED the world's vertical plane square to the side) — **by construction**.
+3. ⭐⭐⭐ **THE GIZMO** (`stackDepthAt`, `rawGizmo`): on the stack the place faces, the FRONTMOST group whose closed region holds it (a protrusion's face over
+   the face behind it); none, the NEAREST group's plane (beside the real face, in its plane). Inside a region the ray along the axis from outside the box
+   (`modelCast` — the parts at rest) for the exact surface, taken within 25 mm of the region's plane. The place's two other coordinates are kept exactly.
+4. ⭐⭐⭐ **THROUGH AN EDGE, SLOWLY** (the owner's decision; `edgeMap`, `topIn`, sliders `faceEdgeSlideMm` 10 and `faceEdgeSlideDeg` 10 in CAMERA ORBIT AROUND
+   CENTER): in the last 10° of a slice the place crosses the face's last 10 mm, in the next slice's first 10° the next face's first 10 mm (a thin face keeps a
+   third in its middle) — the gizmo always moves, slowly, through a corner; never a wait.
+5. ⭐⭐⭐ **NO JUMP AT AN EDGE** (`edgeBlend`, `mapGizmo`): the real outline at a height is not the core box's (a column standing out 45 mm, a top 41 mm above
+   the core's — probed), so the face's last gizmo and the next face's first can differ. In the edge band the gizmo is BLENDED toward the next face's first
+   point (a smoothstep to ½ at the slice's end, where both sides meet) — across a side's end and up / down to a top / bottom: the gizmo crosses the corner
+   continuously.
+6. ⭐⭐ **THE SECTIONS ARE THE GIZMO'S OWN PATHS** (`sectionLinesFrame`): the green the gizmo at every yaw at the map's pitch, the red at every pitch at the
+   map's yaw — the same function, so the ring is a vertex of both by construction; a step far beyond the box's own step between neighbours (a depth step)
+   breaks a line.
+7. ⭐⭐ **AFTER THE SLIDE** (`mapAngles`, `syncAngle`): the map's angles put where the slide left the gizmo, then closing on the orbit's by the orbit's own
+   steps (× 1.5 while it runs away, × 0.5 while it comes back — never against the finger, never a jump; caught up, exactly the orbit's). Otherwise the map's
+   angles ARE the orbit's.
+8. The CALM (§13) reads the map's place: on a side, its axis the calm's normal, the place across the core box's span (dx's run), the height in the box (dy's).
+
+⛔ **Deleted**: the carrier and everything it needed — `carrierFrame`, `onGreen`, `onRed`, `redAt`, `castGizmo` and its five rays (`rayOffsets`), `castRay`,
+the chain and loop caches; in `input/section_hull.ts` the sections' cuts and hulls, the chain's steps and paces (Step 3's `redPace`, Step 4b's `loopAtYaw` /
+`syncStep`), the sides (Step 4c's `loopSides` / `sideAt` / `facetRunToward`), the drops, the polar turn over a top (`turnAbout`), the red plane's heading
+(Step 4's `redHeading`), the by-distance fallback (§13: `loopStep`, `greenPace`, `greenFaces`). They stand at `da020af` — **the fallback is Step 4c, that
+commit**. Kept in `section_hull.ts`: the lines' samples (`sectionFixed`, `insertIndex`, `gizmoJoins`). Kept: the shell (Step 2), the calm (§13), the
+parts read at rest (`modelCast`, `swayRay`, Step 4c).
+
+**What it does NOT do (stated, not discovered)**:
+* **A silhouette that steps with the height** (a column lower than its neighbour): the ray along the axis meets what is really there — above the lower
+  column, the taller one's side, deeper in. The gizmo steps in DEPTH there (the shell keeps the piece and the camera — Step 2). Where the outline at a
+  height is narrower than the core box, the gizmo stands in the face's plane beside the real face (no part there).
+* **Over a top / under a bottom** the quarters converge to the centre: the red is a vertical plane through the centre, square to a world axis only through the
+  middle; a dx at ±90° does not move the gizmo (the centre). Both are Step 5's (x / z on a top). Under a bottom the ray from below meets an overhang's
+  underside where nothing else is.
+* **Holes closed** within a coplanar group: over an empty slot the gizmo rides the closed region at the face's depth — the approach toward it stops at the
+  slot's mouth plane, not its bottom. ⏳ To confirm with the owner: the approach reading the real depth under the gizmo in a slot (proposed 2026-11-04).
+* Frame cost: a section line recomputed (each frame of a dx for the red, of a dy for the green) casts 64 / 96 samples, up to four rays each in the edge
+  bands — not measured on the iPhone.
+
+**Vectors**: `tests/face_map.test.ts` 10 (the holes closed; the stacks — joints, frontmost, nearest, the slanted face; the core box and its corner; the
+planes on a side; no jump anywhere on the box, the poles; the slow stretch through an edge; the blend at a slice's end; the angles back; out of step; the
+wiring) — RED against `da020af` (the module absent). The carrier's vectors deleted with it (`section_hull.test.ts` 29 → 2; `orbit_calm.test.ts`'s two
+facet-run vectors replaced by one on the map's side; `assembly_orbit.test.ts`'s `rayOffsets`). **1613** (1632 − 29 carrier vectors and the like + 10).
+
+**The probes** — Step 4c (`da020af`, B) against Step 4c-bis (E), the same input, `scripts/probes/` (⭐ `LEGMAXY` added: a dy leg of 1400 px only parks the
+pitch at ±90°, ~0.67° a px): random legs after three random lead-ins (dx up to 1400 px — two to three turns —, dy / diagonal up to 250 px), seeds 3, 7,
+11, 13, the piece far out (APPR 0), mid (80) and close in (140); and constant legs (L 1400, D 120, R 1400, U 240, L 1400) after two random lead-ins
+(seeds 5, 9), far and close in.
+
+⏳ The matrix is RUNNING at the deploy (2026-11-04); its table lands here. First results — the constant legs far out (`E_const`): off-section 0, reverse
+0, the piece and the camera no jump, the gizmo 6 depth steps (a part's side standing out — the shell keeps the piece), stuck only at the ±90° clamps; the
+first random run (seed 3, far out), B → Step 4c-bis: against the finger 46 → 3 of ~1600 moving frames, rolled on a wall 1335 → 0, the piece behind its
+face 9 → 0, the gizmo's jumps 9 → 26 (each a 42 mm DEPTH step between two tops of different heights under a dx near the top — the ray down meets what is
+there; the piece and the camera kept by the shell).
+
+⛔ No device close.

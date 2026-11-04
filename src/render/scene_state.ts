@@ -466,30 +466,20 @@ export interface SceneState {
   asmPrevQ: { readonly yaw: number; readonly v: number } | null;
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
   asmSectionKey: string;
-  /** ⭐⭐⭐ (2026-11-02) the carrier of the gizmo's last ACCEPTED drop and the yaw it was found at — the lines are drawn from it (a held drop holds them too) */
-  asmShown: { readonly c: NonNullable<SceneState["asmCarrier"]>; readonly yaw: number } | null;
+  /** ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map's place for the gizmo of this frame and the map's angles it was found at — the lines and the calm read it */
+  asmShown: { readonly t: import("../input/face_map").MapTarget; readonly yaw: number; readonly pitch: number } | null;
+  /** ⭐⭐⭐ (Step 4c-bis) the face map's angles — the orbit's, but after the slide (put where it left the gizmo, closing on the orbit's: `syncAngle`); `null`: the orbit's */
+  asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
+  /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
+  asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;
-  /** ⭐⭐⭐ (2026-11-02) each line's fixed samples, dropped once per line (`sectionRedKey`, `sectionGreenKey`) */
-  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
-  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[] } | null;
+  /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
+  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
+  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
-  /** ⭐⭐ (2026-10-29) the gizmo's CARRIER on the section's hull (`input/section_hull.ts`; `null`: placed again from the gizmo next frame), the chain cache, the placed parts' vertices */
-  asmCarrier: {
-    readonly w: Vec3;
-    readonly kind: import("../input/section_hull").EdgeKind;
-    readonly s: number;
-    readonly chain: import("../input/section_hull").SectionChain;
-    readonly origin: Vec3;
-    /** ⭐⭐⭐ (2026-11-04, Step 4) the red plane's heading — a world axis (`redHeading`) */
-    readonly heading: number;
-    readonly drop: import("../input/section_hull").SectionRay;
-  } | null;
-  asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
-  /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
-  asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
   /** ⭐⭐⭐ (2026-11-04, Step 2) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;

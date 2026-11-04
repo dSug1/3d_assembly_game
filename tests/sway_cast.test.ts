@@ -66,10 +66,10 @@ describe("⭐⭐⭐ the gizmo reads the parts AT REST — the orbit's sway (its 
     expect(Math.hypot(...r.dir)).toBeCloseTo(1, 12);
     void qRotate;
   });
-  it("⭐⭐⭐ wired: every ray the gizmo and the sections read — the drop (`castRay`), the gizmo's first place (`castGizmo`) — is cast in the model's space (`modelCast`); no pick on the swaying meshes is left", () => {
+  it("⭐⭐⭐ wired: every ray the gizmo and the sections read — ⭐ (Step 4c-bis) the face map's ray along the axis (`rawGizmo`), the lines' samples through it — is cast in the model's space (`modelCast`); no pick on the swaying meshes is left", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("return modelCast(st, r.origin, r.dir, r.length);");
-    expect(a).toContain("const m = modelCast(st, [from.x, from.y, from.z], [-u[0], -u[1], -u[2]], out + a.radius * 2);");
+    expect(a).toContain("const h = modelCast(st, o, [-n[0], -n[1], -n[2]], map.box.hi[s.axis] - map.box.lo[s.axis] + 2 * MAP_OUT_M);");
+    expect(a).toContain("const m = mapGizmo(st, yw, pt);"); // the sections' samples: the gizmo's own function
     expect(a).toContain("const m = swayRay(origin, dir, [p.x, p.y, p.z], [r.w, r.x, r.y, r.z], pose.position, pose.orientation);");
     // the comments stripped on the RAW file (⛔ on the whitespace-collapsed one, the first `//` took the rest of the file: the check was empty)
     const raw = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
