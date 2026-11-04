@@ -2327,3 +2327,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ✅ **Step 2 (2026-11-04)**: THE SHELL (`input/orbit_shell.ts`) — the piece and the camera on the gizmo's FOOT on a smooth shell round the placed parts'
   box (60 mm offset, slider), the blend onto the gizmo read from the piece's SURFACE (`pieceReach`); close in now = far out (scope §10). ⛔ A future
   improvement for the SLIDE: wedged under an overhang (`HOVER.md` §0 item 21). 1602 vectors. ⛔ No device close.
+* ✅ **Step 3 (2026-11-04)**: the pitch at its loop's pace (`redPace`) — the gizmo reaches the top / bottom centre exactly as the orbit reaches ±90°
+  (⛔ ff2fca2's half-size per radian: half way up the face at +90°); the chain's ends 1 mm inside (a drop grazing the painting's back top edge missed).
+  ⚠ A dx at the top centre stalls (the polar turn) until Step 5. 1605 vectors. ⛔ No device close.

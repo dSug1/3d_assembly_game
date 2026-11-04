@@ -336,6 +336,30 @@ export function greenPace(loop: SectionChain): number {
   return loop.total / (2 * Math.PI);
 }
 
+/** ⭐ (2026-11-04, Step 3) The pitch's pace keeps the carrier this far inside the red chain's ends (m): a drop never grazes the edge an end lies on. */
+export const RED_END_INSET_M = 0.001;
+
+/**
+ * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 3) THE PITCH'S PACE ON THE RED CHAIN — the arc length a pitch step `dPitch` (from `pitchBefore`) asks
+ * of the carrier at `s`: what is LEFT of the chain toward the end it goes to (the top centre up, the bottom centre down) over what is left of the pitch to
+ * ±90° — so the gizmo reaches the top centre exactly as the orbit reaches +90° (the bottom at −90°), whatever it started from. In step with the pitch it is
+ * the chain's length per half turn (`total / π`: one loop of the gizmo one turn of the orbit, as dx's `greenPace`). ⛔ (ff2fca2) the assembly's half-size per
+ * radian: on a thin section the gizmo went round in less than the orbit's turn, on a wide one it never reached the top centre at 90°.
+ */
+export function redPace(ch: SectionChain, s: number, pitchBefore: number, dPitch: number): number {
+  if (dPitch === 0) return 0;
+  // ⭐ the ends kept RED_END_INSET_M inside the chain — ⛔ (probed, Scene_1) the top centre lay exactly on the painting's back top edge (the assembly's
+  // centre line, its box's): the drop grazed the edge and found nothing, the gizmo held 29 mm short of it
+  const lo = Math.min(RED_END_INSET_M, ch.total / 2);
+  const hi = ch.total - lo;
+  const x = Math.min(ch.total, Math.max(0, s));
+  const room = dPitch > 0 ? Math.PI / 2 - pitchBefore : pitchBefore + Math.PI / 2;
+  const left = dPitch > 0 ? Math.max(0, hi - x) : Math.max(0, x - lo);
+  if (!(room > 1e-9)) return dPitch > 0 ? left : -left;
+  const share = Math.min(1, Math.abs(dPitch) / room);
+  return (dPitch > 0 ? 1 : -1) * left * share;
+}
+
 /** ⭐ An arc length brought onto the loop's one lap [0, total). */
 export function wrapOn(loop: SectionChain, s: number): number {
   const t = loop.total;

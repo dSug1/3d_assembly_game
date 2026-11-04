@@ -1,7 +1,8 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). Step 3 next.
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) — ⛔ no device close on any; the half roll moved
+> to the far edge (Q6, §4.1). Step 4 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -236,4 +237,20 @@ stood 81 % on the shell, the piece 14–30 mm off the face: **the slide never la
 
 ⚠ Still open (Steps 3–5): the dy's polar clamp at the top / bottom (*"the gizmo's drop lands on a face turned away from the piece — held"*: the piece behind its
 face ~660–730 frames, far and close alike).
+
+## 11. Step 3 — built (2026-11-04)
+
+**The pitch at its loop's pace** (`redPace`, `input/section_hull.ts`): a pitch step asks of the carrier what is LEFT of the red chain toward the end it goes
+to (the top centre up, the bottom centre down) over what is left of the pitch to ±90° — in step with the pitch that is the chain's length per half turn
+(`total / π`, as dx's `greenPace` is the green loop's per turn); out of step it catches up without a jump, and **the gizmo reaches the top centre exactly
+as the orbit reaches +90°, the bottom centre at −90°**, whatever it started from (⛔ `ff2fca2`: the assembly's half-size per radian — from the boot place a
+dy reached +90° with the gizmo half way up the face, y 0.27 m of 0.5). ⭐ The ends kept 1 mm inside the chain (`RED_END_INSET_M`) — ⛔ probed: in Scene_1
+the top centre (the vertical through the assembly's box centre) lies exactly on the painting's back top edge (z −0.0175): the drop grazed it and found
+nothing, the gizmo held 29 mm short, silently. The probe's `DROP=1` re-casts the carrier's drop each frame (how it was found). 1605 vectors (+3).
+
+**The probes**: long dy legs (700 px, up / down / down / up), far and at 140 px — **every leg ends at the top / bottom centre as the pitch reaches its
+limit**, on the top / bottom face; no jump; the piece behind its face 0 (Step 2: 264–279 on these legs). The standard legs: the piece behind its face
+**731 → 3**; ⚠ the dy (380 px) now REACHES the top centre, where the clamp holds it (until Step 6) and the next dx stalls there — the top's polar turn has no
+radius at its centre (the baseline's *"a dx at the bottom's centre moves nothing"*, now reached from the top): off-section 17 → ~1160 (the stall's
+jitter on the top), stuck. ⇒ Step 5 (x / z on a top, no polar) removes it.
 

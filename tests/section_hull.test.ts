@@ -35,6 +35,7 @@ import {
   toPlane,
   type P2,
   type SectionRay,
+ redPace, RED_END_INSET_M,
 } from "../src/input/section_hull";
 import type { Vec3 } from "../src/core/vec";
 
@@ -250,7 +251,7 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
     expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);");
     expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
     expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
-    expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, a.radius * dPitch, pitch));");
+    expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch));");
     expect(a).toContain("const red = onRed(st, yaw, h.point);");
     expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
     expect(a.split("st.asmCarrier = null;").length - 1).toBe(2); // the hover, off the slide (⛔ 2026-11-04 the close-in lock deleted, Step 1)
@@ -358,5 +359,42 @@ describe("⭐⭐ the drawn sections break at a jump (2026-10-29)", () => {
     expect(a).toContain("lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), greenStep)) ? [p0, p1] : [rest, rest]);"); // ⭐ (2026-11-02) the gizmo's own segments by `gizmoJoins`
     expect(a).toContain("lines.push(p0 !== null && p1 !== null && (forced ?? joins(v3(p0), v3(p1), step)) ? [p0, p1] : [rest, rest]);");
     expect(a).toContain("const greenStep = loop !== null ? loop.total / GREEN_SAMPLES : Math.max(0.005, (2 * Math.PI * Math.hypot(c.w[0] - a.centre[0], c.w[2] - a.centre[2])) / GREEN_SAMPLES);");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 3) THE PITCH AT ITS LOOP'S PACE (`redPace`)", () => {
+  // the red chain of a box 0.5 m deep, 1 m high: up its side and over half its top — 1.25 m
+  const ch = chainOf([[0.5, -0.5], [0.5, 0.5], [0, 0.5]]);
+  it("⭐⭐⭐ in step with the pitch, the chain's length per half turn (one loop of the gizmo one turn of the orbit — ⛔ ff2fca2: the half-size per radian)", () => {
+    const s = ch.total / 2; // at the pitch 0
+    expect(redPace(ch, s, 0, 0.01)).toBeCloseTo(((ch.total / 2 - RED_END_INSET_M) * 0.01) / (Math.PI / 2), 9);
+    expect(redPace(ch, s, 0, 0)).toBe(0);
+  });
+  it("⭐⭐⭐ whatever it starts from, the gizmo reaches the top centre AS the orbit reaches +90° (the bottom at −90°) — never before, never after", () => {
+    for (const [s0, p0] of [[0.05, 0.6], [1.1, -1.2], [0.6, 0]] as const) {
+      let s: number = s0;
+      let p: number = p0;
+      const dp = 0.013;
+      while (p < Math.PI / 2) {
+        const step = Math.min(dp, Math.PI / 2 - p);
+        s = chainStep(ch, s, redPace(ch, s, p, step), p + step);
+        p += step;
+        if (p < Math.PI / 2 - 1e-9) expect(s).toBeLessThan(ch.total - RED_END_INSET_M - 1e-9);
+      }
+      expect(s).toBeCloseTo(ch.total - RED_END_INSET_M, 9);
+      while (p > -Math.PI / 2) {
+        const step = Math.min(dp, p + Math.PI / 2);
+        s = chainStep(ch, s, redPace(ch, s, p, -step), p - step);
+        p -= step;
+      }
+      expect(s).toBeCloseTo(RED_END_INSET_M, 9);
+    }
+  });
+  it("⭐⭐ the ends kept 1 mm inside the chain (⛔ probed: the top centre on the painting's back top edge — the drop grazed it and missed, the gizmo held 29 mm short)", () => {
+    expect(RED_END_INSET_M).toBe(0.001);
+    expect(redPace(ch, ch.total, 1.0, 0.1)).toBe(0);
+    expect(redPace(ch, ch.total - 0.0005, 1.0, 0.1)).toBe(0);
+    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+    expect(a).toContain("chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch)");
   });
 });
