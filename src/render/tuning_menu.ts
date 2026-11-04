@@ -237,7 +237,7 @@ export function installTuningMenu(st: SceneState): void {
             ),
           ],
           // ⭐⭐⭐ THE CALM (58d86ff, the owner: *"Make all these seven sliders in a new submenu inside the camera orbit around center menu"*; ported
-          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — and its distance (58d86ff's face-span engage)
+          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — the same calm at every distance (the owner, Q3)
           subsections: [
             {
               title: "FACE-SPAN ORBIT SHARE",
@@ -249,7 +249,6 @@ export function installTuningMenu(st: SceneState): void {
                 tunable(st, "dy: the orbit's angle shown in the middle of a face (share)", "faceSpanShareV", 0, 1, 0.05),
                 tunable(st, "dy: the edge zone (% of the gizmo's run)", "faceSpanZoneVPct", 0, 50, 1),
                 tunable(st, "dy: the edge zone's minimum (cm)", "faceSpanZoneMinVCm", 0, 30, 0.5),
-                tunable(st, "the calm whole within 0.8 × / gone at 1.2 × this distance (m)", "faceSpanEngageM", 0.05, 10, 0.05),
               ],
             },
           ],

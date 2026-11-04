@@ -23,7 +23,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { alignedShare, calmEngageM, calmHeading, poleWeight, calmWeight, CALM_RELEASE_FACTOR, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
+import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
 import type { Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -142,12 +142,13 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
 
 /**
  * ⭐⭐⭐ (58d86ff's `spanShownDir`, ported) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u`: its angles off the gizmo's face's normal shown at the
- * eased shares (`st.asmCalm`), weighted by the distance (whole within 0.8 × `faceSpanEngageM`, none at 1.2 ×: no jump in or out).
+ * eased shares (`st.asmCalm`) — ⭐⭐⭐ the SAME at every distance (the owner: *"modify the scope Q3: same calm at every distance"* — ⛔ 58d86ff's distance gate,
+ * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
  */
 function calmDir(st: SceneState, u: Vec3): Vec3 {
   const k = st.asmCalm;
   if (k === null) return u;
-  const w = calmWeight(1, approachDistance(st.cfg, st.approach), calmEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), CALM_RELEASE_FACTOR) * poleWeight(u[1]);
+  const w = poleWeight(u[1]);
   if (!(w > 0)) return u;
   return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);
 }

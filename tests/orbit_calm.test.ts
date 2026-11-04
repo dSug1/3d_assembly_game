@@ -2,7 +2,7 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, calmEngageM, calmHeading, poleWeight, calmWeight, CALM_RELEASE_FACTOR, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
+import { alignedShare, calmHeading, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
 import { chainOf, edgeNormal, facetRunToward, nearestOnChain, chainAt } from "../src/input/section_hull";
 
 const nearestFacetNormalZ = (loop: ReturnType<typeof chainOf>, p: [number, number]) => edgeNormal(loop, chainAt(loop, nearestOnChain(loop, p)).edge)[1];
@@ -46,15 +46,6 @@ describe("⭐⭐⭐ THE CALM (58d86ff) — the piece and the camera near square 
       expect(Math.acos(Math.min(1, w0[0] * w1[0] + w0[1] * w1[1] + w0[2] * w1[2])) / deg).toBeLessThanOrEqual(0.71);
     }
     expect(shownDir(dir(33, 12), n, h, v, 0.4, 0.6)).toEqual(shownDir(dir(33, 12), n, h, v, 0.4, 0.6));
-  });
-  it("⭐ (58d86ff) the calm's weight: whole by 0.8 × the distance, none at the release (1.2 ×) — far out (Scene_1's 6 m) none; the distance kept inside the far orbit's", () => {
-    expect(calmWeight(0, 3, 4.5, 1.2)).toBe(0);
-    expect(calmWeight(1, 3.6, 4.5, 1.2)).toBe(1);
-    expect(calmWeight(1, 5.4, 4.5, 1.2)).toBe(0);
-    expect(calmWeight(1, 4.5, 4.5, 1.2)).toBeGreaterThan(0);
-    expect(CALM_RELEASE_FACTOR).toBe(1.2);
-    expect(calmEngageM(4.5, 6)).toBe(4.5);
-    expect(calmEngageM(9, 6)).toBeCloseTo(6 / (1.2 * 1.02), 12);
   });
 });
 
@@ -143,11 +134,13 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
       expect(Math.asin(w[1])).toBeCloseTo(12.5 * deg, 9);
     }
   });
-  it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; the eight sliders (58d86ff's seven + its distance) in the submenu", () => {
+  it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; 58d86ff's seven sliders (its distance deleted, Q3) in the submenu", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
     expect(a).toContain("return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);");
-    expect(a).toContain("const w = calmWeight(1, approachDistance(st.cfg, st.approach), calmEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), CALM_RELEASE_FACTOR) * poleWeight(u[1]);");
+    // ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight — ⛔ 58d86ff's gate curved the A + dy approach
+    expect(a).toContain("const w = poleWeight(u[1]);");
+    expect(a).not.toContain("calmWeight(");
     expect(a).toContain("sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
     expect(a).toContain("const f = loop === null ? null : facetRunToward(loop, [c.w[0], c.w[2]], hn);");
     expect(a).toContain("st.asmShown = st.asmCarrier === null ? null : { c: st.asmCarrier, yaw: q.yaw, n: hit.normal };");
@@ -158,9 +151,10 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const i = m.indexOf('title: "FACE-SPAN ORBIT SHARE"');
     expect(i).toBeGreaterThan(m.indexOf('title: "CAMERA ORBIT AROUND CENTER"'));
     const sub = m.slice(i, m.indexOf("],", i));
-    for (const k of ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm", "faceSpanEngageM"]) expect(sub).toContain(`"${k}"`);
+    for (const k of ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]) expect(sub).toContain(`"${k}"`);
     const d = DEFAULT_CONFIG;
-    expect([d.faceSpanShareH, d.faceSpanZoneHPct, d.faceSpanZoneMinHCm, d.faceSpanShareVOn, d.faceSpanShareV, d.faceSpanZoneVPct, d.faceSpanZoneMinVCm, d.faceSpanEngageM]).toEqual([0.25, 25, 3, 1, 0.25, 25, 3, 4.5]);
+    expect([d.faceSpanShareH, d.faceSpanZoneHPct, d.faceSpanZoneMinHCm, d.faceSpanShareVOn, d.faceSpanShareV, d.faceSpanZoneVPct, d.faceSpanZoneMinVCm]).toEqual([0.25, 25, 3, 1, 0.25, 25, 3]);
+    expect("faceSpanEngageM" in d).toBe(false); // the distance gate deleted (Q3)
     expect(() => validateGestureConfig({ ...d, faceSpanShareVOn: 0.5 })).toThrow();
     expect(() => validateGestureConfig({ ...d, faceSpanShareH: 1.5 })).toThrow();
   });

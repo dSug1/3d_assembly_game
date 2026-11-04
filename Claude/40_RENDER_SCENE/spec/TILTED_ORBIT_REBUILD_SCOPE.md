@@ -18,7 +18,7 @@ The tilted orbit adds to `ff2fca2`:
    not round the vertical axis at a radius as at `ff2fca2`.
 2. **The piece and the camera near square to the face in its middle, the full orbit near its edges and through the crossing** (an edge, the zenith).
 3. **One behaviour at every distance**: no close-in orbit apart from a far one (`ff2fca2`'s lock, the suspended branch's face-span). Only the near-square
-   calm's strength depends on the distance (§5 Step 9).
+   ⛔ ~~calm's strength depends on the distance~~ — the same calm at every distance (Q3, amended 2026-11-04: a distance-dependent calm curves the approach).
 4. **The shell offset**: the piece and the camera ride a smooth SHELL round the assembly; the gizmo stays on the real surface — bumps and holes of the section
    contours (protrusions, gaps, notches under the offset) move the gizmo, never the piece nor the camera.
 
@@ -126,12 +126,10 @@ across all of Scene_1's protrusions; no stop that is not a discontinuity of the 
 
 **Step 9 — Near square in the middle, the full orbit at the edges, at every distance.** The piece's SHOWN direction calmed toward the face's normal in
 its middle (a share of the orbit's angle), whole within an edge zone and through every crossing (the suspended branch's fourth pass, its sliders), the shares
-FOLLOWING their targets (never read at once — a column of another height moved the camera 15 cm). **At every distance, ATTENUATED by a proportional gain as
-the distance grows** (the owner, Q3). ⭐ Recommended (to be judged on the device): the full calm close in, falling smoothly to a FLOOR — about half the calm
-— at the far distance, never to none: close in a square view is what lands the piece; far out the whole assembly is on the screen, a square view flattens
-it (the gizmo's place on the face reads well, its depth and the edges' nearness less), a part-slanted one keeps the sense of turning round a solid. The gain
-a smooth function of the distance — an approach (A + drag) then turns the view smoothly, never a jump; the floor a slider. Gate: I2 above all — the calm
-never makes a jump at an edge, a face switch, the zenith or under an approach.
+FOLLOWING their targets (never read at once — a column of another height moved the camera 15 cm). ⭐⭐⭐ **THE SAME CALM AT EVERY DISTANCE** (the owner,
+Q3 amended 2026-11-04: *"modify the scope Q3: same calm at every distance"*) — ⛔ the attenuation by distance (and 58d86ff's gate, whole within 3.6 m, none
+from 5.4 m) turned the piece's direction while A + dy approached: the approach curved (*"why is there a 2D curve not straight when I approach the piece with
+A + dy"*). Gate: I2 above all — the calm never makes a jump at an edge, a face switch, the zenith or under an approach. ✅ Built early, in Step 4b (§13).
 
 ## 6. Lessons carried from the suspended branch (`1.0.92-Tilted-orbit-suspended`) — read before building
 
@@ -153,9 +151,9 @@ never makes a jump at an edge, a face switch, the zenith or under an approach.
 
 * **Q1** — the dy's direction: *"same direction as the input wins"* → I5, Step 0.
 * **Q2** — the quarter roll off a top's side edge: *"at it"* → §4.3, Step 7.
-* **Q3** — the calm: *"near-square calm at every distance, probably attenuated with a proportional gain when the distance increases (I don't know if this helps
-  viewing better from a far distance the place of the gizmo when the gizmo is close to the edge vs. a slanted view: advise what is best)"* → Step 9 (the
-  advice: a floor of about half, a slider, judged on the device).
+* **Q3** — the calm: ⭐⭐⭐ **AMENDED 2026-11-04: *"modify the scope Q3: same calm at every distance."*** (a calm that changes with the distance curves the
+  A + dy approach). ~~*"near-square calm at every distance, probably attenuated with a proportional gain when the distance increases"* → a floor of about
+  half~~ — superseded.
 * **Q4** — the slide: *"implement the modifications we did to avoid the issue of sliding on un-seated part. For sliding on seated parts contour, no change"*
   → Step 1 (b).
 * **Q5** — the lock: *"deleting the lock at step 1 is cleaner"* → Step 1 (a).
@@ -331,8 +329,9 @@ from `ff2fca2` (planned back as Step 9) — now in `input/orbit_calm.ts`, wired 
 * `edgeShare`, `shownDir`, `calmWeight` are 58d86ff's, unchanged: the piece's SHOWN direction (the piece, the camera, the approach, the solve — `dirAt`) at
   a quarter of the orbit's angle off the face's normal in the middle of a face, rising by a smoothstep to the whole angle within an edge zone (25 % of the
   run, 3 cm at least), whole at the edge and through the crossing and on a face too thin for two zones (the 33 mm side, a top); the gizmo is still moved by
-  the orbit's own direction. Whole within 0.8 × `faceSpanEngageM` (4.5 m) of the gizmo, none at 1.2 × (the far orbit at 6 m: none, as at 58d86ff). The seven
-  sliders in CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE, their keys and defaults 58d86ff's, + the distance (`faceSpanEngageM`).
+  the orbit's own direction. ⛔ First ported with 58d86ff's distance gate (whole within 3.6 m, none from 5.4 m) — it curved the A + dy approach; ⭐ now **the
+  same calm at every distance** (Q3 amended; `calmWeight`, `calmEngageM` and the distance slider deleted). The seven sliders in CAMERA ORBIT AROUND CENTER
+  › FACE-SPAN ORBIT SHARE, their keys and defaults 58d86ff's.
 * ⭐ **The runs from the carrier**: dx's — the facet of the green loop FACING the way of the real face under the gizmo (the accepted drop's normal, within
   45°), nearest it (`facetRunToward`; ⛔ the nearest facet alone: where a part sticks out of the front, 0.145–0.217 m, the hull bridges to it and the gizmo
   on the real front is inside it, nearer the BACK — the calm took the back's normal, the camera swung behind the painting, 121° off the front, probed); dy's
@@ -405,5 +404,18 @@ point, while the piece and the camera follow it twice smoothed — the gizmo's p
 critically damped spring of 30 ms (half `boxSmoothMs`): ~100–120 ms behind the ring. *"add a slider for gizmo position and one for orbit angles"* → CAMERA
 ORBIT AROUND CENTER: **`gizmoEaseMs`** (90, the former `GIZMO_TAU_MS`) and **`orbitSpringMs`** (30, the orbit's spring and the travel counts that share it —
 the piece's entry, its aim, the centre's return; the hover and the rig's share keep `boxSmoothMs`). 0: at once. Defaults unchanged. `tests/orbit_lag.test.ts`.
-⏳ Next (the owner): *"Instead of a ms ease, can you reject jumps of gizmo?"*
+⭐ The owner: *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55**. ⏳ Next (the owner): *"Instead of a ms ease, can you reject jumps of gizmo?"*
+
+### 13.3 The same calm at every distance; the gizmo's ease 55 ms (2026-11-04, `1.0.95-`)
+
+* The owner: *"why is there a 2D curve not straight when I approach the piece with A + dy in this configuration?"* — the calm's distance gate (58d86ff's:
+  whole within 3.6 m of the gizmo, none from 5.4 m): an approach from 6.9 to 3.8 m faded the calm in, turning the piece's direction toward the face's normal
+  as it came — a curve. *"modify the scope Q3: same calm at every distance"* → the weight is the pole's alone (`poleWeight`); `calmWeight`, `calmEngageM`,
+  `CALM_RELEASE_FACTOR` and the slider `faceSpanEngageM` deleted. ⚠ Far out (6 m) the calm now applies too: the view near square in a face's middle there.
+* *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55** (was 90).
+* ⏳ Open, the diagnosis given to the owner (not built): every glitch reported (the red not a plane / not vertical / cut, the gizmo stuck then jumping, the
+  red gone after an edge, the bounce) comes from the CONVEX HULL deciding about faces — the carrier's facet (bridging grooves, gaps, protrusions, cutting
+  slanted blocks) sets the red plane's heading, the drop's direction and the calm's face, while the gizmo lands on the REAL face; a disagreement is a drop
+  "turned away — held" while the carrier goes on (stuck, then a jump: 110 frames in one probe on the slanted block). Proposed Step 4c: every face-dependent
+  decision from the real face the gizmo landed on; no hold while the carrier goes on. ⏳ The owner's *"Instead of a ms ease, can you reject jumps of gizmo?"*
 

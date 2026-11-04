@@ -4,8 +4,8 @@
  * Built first as the face-span's FOURTH PASS (`58d86ff`, 2026-11-03, branch `1.0.90-`, suspended with it on `1.0.92-Tilted-orbit-suspended`), the owner:
  * *"add some slide of the gizmo and follow by the piece and camera as per 3286ed5 … so that the gizmo can reach close to the edges without the camera view
  * being too slanted (which prevents seeing properly where the gizmo is on the face). but I like the smooth transition over the edge"*. ⭐⭐⭐ Ported to the
- * rebuild (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*): `edgeShare`, `shownDir` and
- * `calmWeight` are 58d86ff's, unchanged; the runs they read are the CARRIER's (its facet of the green loop, its stretch of the red chain) — and, new, the
+ * rebuild (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*): `edgeShare` and `shownDir` are
+ * 58d86ff's, unchanged (its distance gate deleted: the same calm at every distance, Q3); the runs they read are the CARRIER's (its facet of the green loop, its stretch of the red chain) — and, new, the
  * shares and the face's frame are EASED (`easeToward`), never read at once: the gizmo's face at a height can change with the height (a protrusion bridged,
  * the funnel), which 58d86ff's coplanar region never did (TILTED_ORBIT_REBUILD_SCOPE.md Step 9: *"the shares FOLLOWING their targets — a column of another
  * height moved the camera 15 cm"*).
@@ -48,21 +48,9 @@ export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: num
   ];
 }
 
-/** ⭐ (58d86ff) How much of the shares' calm is applied (0 … 1): `ramp` × the distance's (0 at the release, `engageM` × `releaseFactor`; 1 from 0.8 × the engage in). */
-export function calmWeight(ramp: number, distM: number, engageM: number, releaseFactor: number): number {
-  const top = engageM * releaseFactor;
-  const low = engageM * 0.8;
-  const x = Math.min(1, Math.max(0, (top - distM) / Math.max(1e-9, top - low)));
-  return Math.min(1, Math.max(0, ramp)) * x * x * (3 - 2 * x);
-}
-
-/** ⭐ (58d86ff's `SPAN_RELEASE_FACTOR`) the calm gone at this × its distance. */
-export const CALM_RELEASE_FACTOR = 1.2;
-
-/** ⭐ (58d86ff's `spanEngageM`) the calm's distance, kept inside the far orbit's (whatever the slider). */
-export function calmEngageM(sliderM: number, farM: number): number {
-  return Math.max(0.05, Math.min(sliderM, farM / (CALM_RELEASE_FACTOR * 1.02)));
-}
+/* ⛔ (2026-11-04, the owner: *"modify the scope Q3: same calm at every distance"*) 58d86ff's `calmWeight` (the calm whole within 0.8 × its distance, none at
+ * 1.2 ×), `CALM_RELEASE_FACTOR` and `calmEngageM` DELETED with its distance slider: a calm that changes with the distance turns the piece's direction while
+ * A + dy approaches — the approach curved (*"why is there a 2D curve not straight when I approach the piece with A + dy"*). */
 
 /** ⭐ (2026-11-04, `1.0.95-`) The shares and the face's frame follow their targets with this time constant (ms) — never read at once. */
 export const CALM_TAU_MS = 120;
