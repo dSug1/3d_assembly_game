@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, redPace, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, redPace, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenFaces, greenNormal, greenPace, greenPoints, hull2, loopOf, loopStep, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -31,6 +31,8 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 const RAY_COVER_M = 0.004;
 /** ⭐ The shown gizmo's ease to a new point (ms) — a step in depth eased, never a jump; the look point's. */
 const GIZMO_TAU_MS = 90;
+/** ⭐ (2026-11-04, Step 4) how far a dy's plane re-taken over a top may move the carrier (m) */
+const RETAKE_M = 0.01;
 const LOOK_TAU_MS = 120;
 
 /** ⭐ Is the orbit the one around the assembly? */
@@ -247,21 +249,41 @@ function loopFor(st: SceneState, y: number): SectionChain | null {
 type Carrier = NonNullable<SceneState["asmCarrier"]>;
 
 /** ⭐ The carrier at arc length `s` of the red `chain` (the plane at `yaw` through `origin`): its point, its edge's kind, its drop. */
-function redAt(st: SceneState, yaw: number, chain: SectionChain, origin: Vec3, s: number, want?: EdgeKind): Carrier {
+function redAt(st: SceneState, heading: number, chain: SectionChain, origin: Vec3, s: number, want?: EdgeKind): Carrier {
   const at = chainAt(chain, s);
   let kind = edgeKind(edgeNormal(chain, at.edge));
   // ⭐ at a corner shared with an edge of the kind asked for (a top's edge, its side below it), that kind (⛔ the corner read as the side's: off the top)
   if (want !== undefined && kind !== want && at.edge + 1 < chain.pts.length - 1 && Math.abs(s - chain.cum[at.edge + 1]!) < 1e-9 && edgeKind(edgeNormal(chain, at.edge + 1)) === want) kind = want;
-  return { w: fromPlane(at.p, origin, yaw), kind, s: Math.min(chain.total, Math.max(0, s)), chain, origin, drop: dropRay(at.p, kind, origin, yaw, st.asm!.radius * 2 + 1) };
+  return { w: fromPlane(at.p, origin, heading), kind, s: Math.min(chain.total, Math.max(0, s)), chain, origin, heading, drop: dropRay(at.p, kind, origin, heading, st.asm!.radius * 2 + 1) };
 }
 
-/** ⭐ The point `w` brought onto the RED section through it (the plane at `yaw` through `w`) — onto its edges of `kind` when given (a top kept on a top); `null`: no section there. */
-function onRed(st: SceneState, yaw: number, w: Vec3, kind?: EdgeKind): Carrier | null {
-  const origin = redOrigin(w, st.asm!.centre, yaw);
-  const chain = chainFor(st, yaw, origin);
+/**
+ * ⭐ The point `w` brought onto the RED section through it (the vertical plane at `heading` through `w` — ⭐⭐⭐ Step 4: a WORLD plane, `redHeading`) — onto
+ * its edges of `kind` when given (a top kept on a top); `null`: no section there.
+ */
+function onRed(st: SceneState, heading: number, w: Vec3, kind?: EdgeKind): Carrier | null {
+  const origin = redOrigin(w, st.asm!.centre, heading);
+  const chain = chainFor(st, heading, origin);
   if (chain === null) return null;
-  const p = toPlane(w, origin, yaw);
-  return redAt(st, yaw, chain, origin, kind === undefined ? nearestOnChain(chain, p) : nearestOfKind(chain, p, kind), kind);
+  const p = toPlane(w, origin, heading);
+  return redAt(st, heading, chain, origin, kind === undefined ? nearestOnChain(chain, p) : nearestOfKind(chain, p, kind), kind);
+}
+
+/**
+ * ⭐⭐ (2026-11-04, Step 4) `onRed` — and when the plane through `w` grazes the parts (a point on a thin top's very edge: the painting's top strip is 33 mm
+ * deep), through `w` moved toward the assembly's axis by 2, 5, 10 mm; still nothing: `null`. `inFirst`: 10 mm in FIRST (a plane taken once, at a heading's
+ * change: ⛔ through the point itself it grazed the painting's back edge, 0.5 mm outside, and cut only a part behind it) — never for a step taken every frame
+ * (the plane would creep to the axis).
+ */
+function onRedNear(st: SceneState, heading: number, w: Vec3, kind?: EdgeKind, inFirst = false): Carrier | null {
+  const c = st.asm!.centre;
+  const r = Math.hypot(c[0] - w[0], c[2] - w[2]);
+  for (const k of inFirst ? [0.01, 0.005, 0.002, 0] : [0, 0.002, 0.005, 0.01]) {
+    const t = r > 0 ? Math.min(1, k / r) : 0;
+    const out = onRed(st, heading, [w[0] + (c[0] - w[0]) * t, w[1], w[2] + (c[2] - w[2]) * t], kind);
+    if (out !== null) return out;
+  }
+  return null;
 }
 
 /** ⭐ The carrier carried round the GREEN loop at its height by `dYaw` (`greenPace` per radian, never into an edge turned away), its red section the plane through it. */
@@ -272,7 +294,8 @@ function onGreen(st: SceneState, c: Carrier, yaw: number, pitch: number, dYaw: n
   const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));
   const at = chainAt(loop, s1);
   const w: Vec3 = [at.p[0], c.w[1], at.p[1]];
-  const red = onRed(st, yaw, w);
+  // ⭐⭐⭐ (2026-11-04, Step 4) the red plane square to the face's level axis there (round a vertical edge it turns with the face: the plane carried over)
+  const red = onRed(st, redHeading(greenNormal(loop, at.edge), yaw), w);
   return { ...(red ?? c), w, kind: "SIDE", drop: greenDrop(w, greenNormal(loop, at.edge), st.asm!.radius * 2 + 1) };
 }
 
@@ -292,17 +315,25 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
   if (c === null) {
     const from = st.asmG ?? castGizmo(st, u)?.point ?? null;
     if (from === null) return null;
-    c = onRed(st, yaw, from);
+    c = onRed(st, redHeading(st.asmG !== null ? (st.gizmoNormal ?? null) : (castGizmo(st, u)?.normal ?? null), yaw), from);
     if (c === null) return castGizmo(st, u);
   }
   let green = false;
   if (dYaw !== 0 && st.asmCarrier !== null) {
-    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);
+    const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);
     green = next !== null && c.kind === "SIDE";
     c = next ?? c;
   }
   if (dPitch !== 0) {
-    c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch)); // ⭐⭐⭐ (2026-11-04, Step 3) the loop's pace
+    // ⭐⭐⭐ (2026-11-04, Step 4) over a top / under a bottom, the dy's plane the yaw's world plane (`redHeading`) — ⛔ a plane kept from an earlier heading took
+    // the gizmo down a face the piece did not look at (the front, the piece at −x: every drop turned away, held)
+    // — taken only where it keeps the carrier within 10 mm (⛔ the new plane through a thin top's edge, past gaps, put it on another part 68 mm off: the
+    // gizmo jumped 270 mm; the polar turn that led there is Step 5's)
+    if (c.kind !== "SIDE" && redHeading(null, yaw) !== c.heading) {
+      const r = onRedNear(st, redHeading(null, yaw), c.w, c.kind, true);
+      if (r !== null && Math.hypot(r.w[0] - c.w[0], r.w[1] - c.w[1], r.w[2] - c.w[2]) <= RETAKE_M) c = r;
+    }
+    c = redAt(st, c.heading, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch)); // ⭐⭐⭐ (2026-11-04, Step 3) the loop's pace
     green = false;
   }
   st.asmCarrier = c;
@@ -315,8 +346,8 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
   // ⭐ after a dx on a side, the red section through where the gizmo LANDED (⛔ through the carrier: at a corner the green drop lands aside of it — 10 mm off
   // the red plane, measured); the carrier itself stays on the green loop
   if (green) {
-    const red = onRed(st, yaw, h.point);
-    if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s };
+    const red = onRed(st, c.heading, h.point);
+    if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s, heading: red.heading };
   }
   return h;
 }
@@ -480,10 +511,10 @@ function sectionLinesFrame(st: SceneState): void {
   };
   // the red's fixed samples (per yaw and origin)
   const ch = c.chain;
-  const rKey = sectionRedKey(parts, yaw, c.origin);
+  const rKey = sectionRedKey(parts, c.heading, c.origin);
   if (st.asmRedCache === null || st.asmRedCache.key !== rKey) {
     const params = sectionFixed(ch.total, RED_SAMPLES - 1, false);
-    st.asmRedCache = { key: rKey, params, pts: params.map((x) => drop(redAt(st, yaw, ch, c.origin, x).drop)) };
+    st.asmRedCache = { key: rKey, params, pts: params.map((x) => drop(redAt(st, c.heading, ch, c.origin, x).drop)) };
   }
   // the green's fixed samples (per height on a side, per distance from the axis over a top)
   const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;
@@ -494,7 +525,7 @@ function sectionLinesFrame(st: SceneState): void {
       st.asmGreenCache = { key: gKey, params, pts: params.map((x) => { const at = chainAt(loop, x); return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach)); }) };
     } else if (c.kind !== "SIDE") {
       const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
-      st.asmGreenCache = { key: gKey, params, pts: params.map((th) => { const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind); return r === null ? null : drop(r.drop); }) };
+      st.asmGreenCache = { key: gKey, params, pts: params.map((th) => { const r = onRed(st, redHeading(null, th), turnAbout(c.w, a.centre, th - yaw), c.kind); return r === null ? null : drop(r.drop); }) };
     } else st.asmGreenCache = { key: gKey, params: [], pts: [] };
   }
   // ⭐⭐⭐ the gizmo's EXACT point — the accepted drop — inserted in both: the ring is a vertex of each line, at every frame

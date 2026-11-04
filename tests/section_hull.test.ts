@@ -35,7 +35,7 @@ import {
   toPlane,
   type P2,
   type SectionRay,
- redPace, RED_END_INSET_M,
+ redPace, RED_END_INSET_M, redHeading, snapHeading,
 } from "../src/input/section_hull";
 import type { Vec3 } from "../src/core/vec";
 
@@ -249,11 +249,11 @@ describe("⭐⭐⭐ the gizmo's carrier on the section's hull (2026-10-29)", () 
   it("⭐⭐ wired: the gizmo each frame from its carrier (dx round the green loop on a side, turned on a top; dy along the red chain through it; the drop); a lock or a hover drops the carrier — found again on the red section through the gizmo (⛔ carried on from the locked point, off the red section); the lines ONE mesh updated in place (⛔ rebuilt every 100 ms: missing from a quarter of the frames)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("hit = carrierFrame(st, q.yaw, q.v, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitchOfV(q.v) - pitchOfV(prev.v), u);");
-    expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRed(st, yaw, turnAbout(c.w, a.centre, dYaw), c.kind);');
+    expect(a).toContain('const next = c.kind === "SIDE" ? onGreen(st, c, yaw, pitch, dYaw) : onRedNear(st, redHeading(null, yaw), turnAbout(c.w, a.centre, dYaw), c.kind);');
     expect(a).toContain("const s1 = loopStep(loop, s0, greenPace(loop) * dYaw, (i) => greenFaces(greenNormal(loop, i), yaw, pitch));");
-    expect(a).toContain("c = redAt(st, yaw, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch));");
-    expect(a).toContain("const red = onRed(st, yaw, h.point);");
-    expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, yaw);");
+    expect(a).toContain("c = redAt(st, c.heading, c.chain, c.origin, chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch));");
+    expect(a).toContain("const red = onRed(st, c.heading, h.point);");
+    expect(a).toContain("const origin = redOrigin(w, st.asm!.centre, heading);");
     expect(a.split("st.asmCarrier = null;").length - 1).toBe(2); // the hover, off the slide (⛔ 2026-11-04 the close-in lock deleted, Step 1)
     expect(a).toContain('st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);');
     expect(a).toContain('} else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });');
@@ -345,7 +345,7 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     expect(a).toContain("const loop = loopOf(hull2(greenPoints(parts.parts, y)));");
     expect(a).toContain('const loop = c.kind === "SIDE" ? loopFor(st, c.w[1]) : null;');
     expect(a).toContain("return drop(greenDrop([at.p[0], c.w[1], at.p[1]], greenNormal(loop, at.edge), reach));");
-    expect(a).toContain("const r = onRed(st, th, turnAbout(c.w, a.centre, th - yaw), c.kind);"); // ⭐ (2026-11-02) at fixed angles round the axis (`sectionFixed`)
+    expect(a).toContain("const r = onRed(st, redHeading(null, th), turnAbout(c.w, a.centre, th - yaw), c.kind);"); // ⭐ (2026-11-02) at fixed angles round the axis (`sectionFixed`)
   });
 });
 
@@ -396,5 +396,58 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 3) THE PITCH A
     expect(redPace(ch, ch.total - 0.0005, 1.0, 0.1)).toBe(0);
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("chainStep(c.chain, c.s, redPace(c.chain, c.s, pitch - dPitch, dPitch), pitch)");
+  });
+});
+describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4) THE RED SECTION A WORLD PLANE, SQUARE TO THE FACE'S LEVEL AXIS (`redHeading`, I1)", () => {
+  it("⭐ a heading snapped onto the world's four horizontal axes", () => {
+    expect(snapHeading(10 * D)).toBe(0);
+    expect(snapHeading(50 * D)).toBeCloseTo(Math.PI / 2, 12);
+    expect(snapHeading(-541 * D)).toBeCloseTo(-3 * Math.PI, 12);
+  });
+  it("⭐⭐⭐ on a side the plane along the face's normal snapped — whatever the piece's heading; over a top / under a bottom (or no face) the yaw snapped", () => {
+    for (const yaw of [-90, -10, 40, 85, 170, 260].map((x) => x * D)) {
+      expect(Math.cos(redHeading([0, 0, 1], yaw))).toBeCloseTo(0, 12); // a +z face: the plane x = c (heading ±z)
+      expect(Math.sin(redHeading([0, 0, 1], yaw))).toBeCloseTo(1, 12);
+      expect(Math.cos(redHeading([-1, 0, 0], yaw))).toBeCloseTo(-1, 12); // a −x face: the plane z = c
+      expect(Math.cos(redHeading([0.9, 0.1, 0.42], yaw))).toBeCloseTo(1, 12); // a slanted, mostly level normal: its nearest axis
+      expect(redHeading([0, 1, 0], yaw)).toBe(snapHeading(yaw));
+      expect(redHeading([0.3, -0.95, 0], yaw)).toBe(snapHeading(yaw));
+      expect(redHeading(null, yaw)).toBe(snapHeading(yaw));
+    }
+  });
+  it("⭐⭐⭐ a dy down a +z face with the piece heading ALONG it (yaw 170°) stays in the plane x = c — ⛔ ff2fca2's yaw plane: the chain ran across the face (136 mm sideways down the painting's back face, probed)", () => {
+    const parts = [box([-0.5, 0, -0.05], [0.5, 0.5, -0.02])]; // a painting: its back face +z at z = −0.02
+    const w: Vec3 = [0.1, 0.3, -0.025]; // the plane through a point just inside the back face (exactly on it, the yaw plane at 170° grazes it)
+    const centre: Vec3 = [0, 0.25, -0.035];
+    const yaw = 170 * D;
+    const h = redHeading([0, 0, 1], yaw);
+    const origin = redOrigin(w, centre, h);
+    const ch = facingChain(hull2(sectionPoints(parts, origin, h)))!;
+    expect(ch.total).toBeGreaterThan(0.5); // up the back face, the half of the bottom and the top
+    for (const q of ch.pts) expect(fromPlane(q, origin, h)[0]).toBeCloseTo(0.1, 9); // every point of the chain on x = 0.1
+    // ⛔ the yaw plane through the gizmo: its cut runs ACROSS the face (17 cm in x)
+    const o2 = redOrigin(w, centre, yaw);
+    const old = hull2(sectionPoints(parts, o2, yaw)).map((q) => fromPlane(q, o2, yaw)[0]);
+    expect(Math.max(...old) - Math.min(...old)).toBeGreaterThan(0.15);
+  });
+  it("⭐⭐⭐ the hull wholly BEHIND the axis (Scene_1: the axis on the painting's back face, seen from +z) still has a facing chain — up its near face, from the middle of its bottom to the middle of its top (⛔ `null`: the carrier kept a stale plane, every drop held)", () => {
+    const ch = facingChain([[-0.033, -0.25], [0, -0.25], [0, 0.25], [-0.033, 0.25]])!;
+    expect(ch).not.toBeNull();
+    expect(ch.pts[0]![0]).toBeCloseTo(-0.0165, 12);
+    expect(ch.pts[0]![1]).toBeCloseTo(-0.25, 12);
+    expect(ch.pts.at(-1)![1]).toBeCloseTo(0.25, 12);
+    expect(ch.total).toBeCloseTo(0.5 + 0.033, 12);
+    // the axis inside or behind the piece's side: unchanged
+    expect(facingChain([[-0.1, -0.25], [0.1, -0.25], [0.1, 0.25], [-0.1, 0.25]])!.pts[0]![0]).toBe(0);
+    expect(facingChain([[0.2, -0.25], [0.3, -0.25], [0.3, 0.25], [0.2, 0.25]])!.pts[0]![0]).toBe(0.2);
+  });
+  it("⭐⭐ wired: round a vertical edge the plane taken from the green edge it is on; at the start from the gizmo's face; a top's dx and the dy over it the yaw's world plane (re-taken only within 10 mm)", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("const red = onRed(st, redHeading(greenNormal(loop, at.edge), yaw), w);");
+    expect(a).toContain("c = onRed(st, redHeading(st.asmG !== null ? (st.gizmoNormal ?? null) : (castGizmo(st, u)?.normal ?? null), yaw), from);");
+    expect(a).toContain('if (c.kind !== "SIDE" && redHeading(null, yaw) !== c.heading) { const r = onRedNear(st, redHeading(null, yaw), c.w, c.kind, true);');
+    expect(a).toContain("if (r !== null && Math.hypot(r.w[0] - c.w[0], r.w[1] - c.w[1], r.w[2] - c.w[2]) <= RETAKE_M) c = r;");
+    expect(a).toContain("const rKey = sectionRedKey(parts, c.heading, c.origin);");
+    expect(a).toContain("if (red !== null) st.asmCarrier = { ...c, chain: red.chain, origin: red.origin, s: red.s, heading: red.heading };");
   });
 });

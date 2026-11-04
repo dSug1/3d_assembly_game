@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-11-04 (`1.0.93from1.0.87-`: the dy reaches the top / bottom centre at ±90° (Step 3); the orbit's piece and camera on the shell (Step 2); the slide on placed parts only, the close-in lock deleted; around the assembly the dy WITH the finger — finger down, the gizmo down; `1.0.89-`: the parts' translation, rotation and alignment deleted)
+> **LAST VERIFIED** · 2026-11-04 (`1.0.94-`: the dy up / down a side in a world plane (Step 4); `1.0.93from1.0.87-`: the dy reaches the top / bottom centre at ±90° (Step 3); the orbit's piece and camera on the shell (Step 2); the slide on placed parts only, the close-in lock deleted; around the assembly the dy WITH the finger — finger down, the gizmo down; `1.0.89-`: the parts' translation, rotation and alignment deleted)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.

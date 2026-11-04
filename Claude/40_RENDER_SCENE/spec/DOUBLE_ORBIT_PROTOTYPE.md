@@ -2330,3 +2330,6 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ✅ **Step 3 (2026-11-04)**: the pitch at its loop's pace (`redPace`) — the gizmo reaches the top / bottom centre exactly as the orbit reaches ±90°
   (⛔ ff2fca2's half-size per radian: half way up the face at +90°); the chain's ends 1 mm inside (a drop grazing the painting's back top edge missed).
   ⚠ A dx at the top centre stalls (the polar turn) until Step 5. 1605 vectors. ⛔ No device close.
+* ✅ **Step 4 (2026-11-04, `1.0.94-`)**: the red section a WORLD plane square to the face's level axis (`redHeading`) — a dy straight up / down a side at
+  any heading (⛔ the yaw plane: 136 mm across the painting's back face); round a vertical edge the plane turns with the face; a hull wholly behind the axis
+  keeps a facing chain (Scene_1's axis on the painting's back face). 1610 vectors. ⛔ No device close.

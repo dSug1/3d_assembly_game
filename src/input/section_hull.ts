@@ -108,12 +108,16 @@ export function chainOf(pts: readonly P2[]): SectionChain {
 
 /**
  * ⭐⭐ THE HALF OF THE HULL FACING THE PIECE: the hull clipped to `r ≥ r0` (`r0` 0 — the vertical through the centre — or the hull's own nearest side to
- * the piece when the axis lies outside it), walked counter-clockwise from the BOTTOM point on the cut to the TOP one — up the piece's side, the clamp at
+ * the piece when the axis lies outside it; its middle when the axis lies beyond its far side), walked counter-clockwise from the BOTTOM point on the cut to the TOP one — up the piece's side, the clamp at
  * both ends (the ±90° of pitch: under the centre, over it). `null`: no area.
  */
 export function facingChain(hull: readonly P2[]): SectionChain | null {
   if (hull.length < 3) return null;
-  const r0 = Math.max(0, Math.min(...hull.map((p) => p[0])));
+  // ⭐⭐⭐ (2026-11-04, Step 4) the whole hull BEHIND the axis (its far side toward the piece at r ≤ 0): clipped at its middle — ⛔ `null`: in Scene_1 the
+  // axis lies on the painting's back face, a world plane x = c seen from +z had no facing area, the carrier kept a stale plane, every drop held
+  const rMin = Math.min(...hull.map((p) => p[0]));
+  const rMax = Math.max(...hull.map((p) => p[0]));
+  const r0 = rMax > 1e-9 ? Math.max(0, rMin) : (rMin + rMax) / 2;
   // ⭐ Sutherland–Hodgman against the one half-plane r ≥ r0
   const clip: P2[] = [];
   for (let i = 0; i < hull.length; i++) {
@@ -435,6 +439,23 @@ export function redOrigin(w: Vec3, c: Vec3, yaw: number): Vec3 {
   const { axis } = yawFrame(yaw);
   const o = (w[0] - c[0]) * axis[0] + (w[2] - c[2]) * axis[2];
   return [c[0] + axis[0] * o, c[1], c[2] + axis[2] * o];
+}
+
+/** ⭐ A heading (the orbit's azimuth convention: x = cos, z = sin) snapped onto the nearest of the world's four horizontal axes (±x, ±z). */
+export function snapHeading(a: number): number {
+  return Math.round(a / (Math.PI / 2)) * (Math.PI / 2);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4) — **THE RED PLANE'S HEADING: A WORLD PLANE, SQUARE TO THE FACE'S LEVEL AXIS** (scope §5 Step 4,
+ * I1). On a side (a face normal `n` more level than steep) the vertical plane along `n` snapped onto a world axis — the plane `x = c` on a ±z face, `z = c`
+ * on a ±x face — so a dy goes straight up / down the face whatever the piece's heading; over a top / under a bottom (or no face) the orbit's `yaw` snapped
+ * (until Step 5's x / z lines). ⛔ `ff2fca2`: the yaw plane at the piece's heading — at a heading along the face the dy slid the gizmo ACROSS it (136 mm
+ * sideways down the painting's back face, probed).
+ */
+export function redHeading(n: Vec3 | null, yaw: number): number {
+  if (n !== null && Math.hypot(n[0], n[2]) > Math.abs(n[1])) return snapHeading(Math.atan2(n[2], n[0]));
+  return snapHeading(yaw);
 }
 
 /** ⭐ The arc length of the chain's point nearest `p` among its edges of `kind` (a TOP carrier kept on a top: turned past its edge, held at it); none of that kind: `nearestOnChain`. */

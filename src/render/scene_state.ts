@@ -480,6 +480,8 @@ export interface SceneState {
     readonly s: number;
     readonly chain: import("../input/section_hull").SectionChain;
     readonly origin: Vec3;
+    /** ⭐⭐⭐ (2026-11-04, Step 4) the red plane's heading — a world axis (`redHeading`) */
+    readonly heading: number;
     readonly drop: import("../input/section_hull").SectionRay;
   } | null;
   asmChain: { readonly key: string; readonly chain: import("../input/section_hull").SectionChain | null } | null;
