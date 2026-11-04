@@ -412,7 +412,7 @@ the piece's entry, its aim, the centre's return; the hover and the rig's share k
   whole within 3.6 m of the gizmo, none from 5.4 m): an approach from 6.9 to 3.8 m faded the calm in, turning the piece's direction toward the face's normal
   as it came — a curve. *"modify the scope Q3: same calm at every distance"* → the weight is the pole's alone (`poleWeight`); `calmWeight`, `calmEngageM`,
   `CALM_RELEASE_FACTOR` and the slider `faceSpanEngageM` deleted. ⚠ Far out (6 m) the calm now applies too: the view near square in a face's middle there.
-* *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55** (was 90); then *"update the lag the gizmo's position the piece follows to 62 ms"* → **62**.
+* *"set the default gizmo ease at 55 ms"* → `gizmoEaseMs` **55** (was 90); then *"update the lag the gizmo's position the piece follows to 62 ms"* → 62; then *"…to 45ms"* → **45** (2026-11-04).
 * ⏳ Open, the diagnosis given to the owner (not built): every glitch reported (the red not a plane / not vertical / cut, the gizmo stuck then jumping, the
   red gone after an edge, the bounce) comes from the CONVEX HULL deciding about faces — the carrier's facet (bridging grooves, gaps, protrusions, cutting
   slanted blocks) sets the red plane's heading, the drop's direction and the calm's face, while the gizmo lands on the REAL face; a disagreement is a drop

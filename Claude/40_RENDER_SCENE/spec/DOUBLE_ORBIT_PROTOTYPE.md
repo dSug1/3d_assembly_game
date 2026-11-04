@@ -2351,4 +2351,4 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   / cut, the gizmo stuck then jumping): the hull's facets decided about faces. Now each world side of the green loop is a slice of the turn, its axis the
   red plane's heading, the drop's direction and the calm's normal; a drop on a side is never held (a miss stands on the hull); every ray is cast in the
   model's space (`modelCast` / `swayRay`) — the orbit's sway never moves the gizmo. Holds 69 → 11, the gizmo off its red plane: never. The gizmo's ease
-  62 ms. 1632 vectors (scope §14). ⛔ No device close.
+  45 ms (the owner, after 55 and 62). 1632 vectors (scope §14). ⛔ No device close.

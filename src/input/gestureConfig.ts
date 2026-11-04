@@ -845,7 +845,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
-  gizmoEaseMs: 62, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 62 ms"*; 55 before, the former GIZMO_TAU_MS 90)
+  gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
   faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
