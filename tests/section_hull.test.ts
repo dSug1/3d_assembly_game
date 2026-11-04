@@ -316,6 +316,10 @@ describe("⭐⭐⭐ dx BY DISTANCE on the green section (2026-10-29)", () => {
     expect(loopStep(loop, 0.3, -0.5, faces(-1))).toBeCloseTo(3.8, 12); // and back
     expect(loopStep(loop, 2.5, -0.8, faces(1))).toBeCloseTo(2, 12); // backward: held at the corner into edge 1
     expect(loopStep(loop, 0.5, 9, faces(-1))).toBeCloseTo(0.5, 12); // one lap at most
+    // ⭐⭐⭐ (2026-11-04) a carrier waiting at a corner, re-found a rounding step off it, still waits — ⛔ read as inside the edge turned away, it ran free
+    // along it (the device: the red section gone after an edge, the gizmo held, then snapping onto it)
+    expect(loopStep(loop, 2 - 1e-15, -0.3, faces(1))).toBeCloseTo(2, 12); // backward, a hair inside edge 1
+    expect(loopStep(loop, 1 + 1e-15, 0.3, faces(1))).toBeCloseTo(1, 12); // forward, a hair inside edge 1
     expect(greenNormal(loop, 0)).toEqual([0, 0, -1]); // the bottom edge (z = 0) faces −z
     expect(greenFaces([0, 0, -1], -Math.PI / 2, 0.3)).toBe(true); // the piece at −z
     expect(greenFaces([0, 0, 1], -Math.PI / 2, 0.3)).toBe(false);

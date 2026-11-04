@@ -380,6 +380,10 @@ export function loopStep(loop: SectionChain, s: number, ds: number, faces: (edge
   let left = Math.min(Math.abs(ds), loop.total);
   const dir = ds > 0 ? 1 : -1;
   let x = wrapOn(loop, s);
+  // ⭐⭐⭐ (2026-11-04) within 1e-9 of a corner: ON it — ⛔ the carrier waiting at a corner is re-found each frame from its point (`nearestOnChain`), which
+  // came back one rounding step short (0.4976450641787913 against the corner's 0.49764506417879134, probed): read as INSIDE the edge turned away, it ran
+  // free along it — every drop turned away, the gizmo and the sections held at the corner behind it (the red gone from view), then a jump when it landed
+  for (let k = 0; k <= edges; k++) if (Math.abs(x - loop.cum[k]!) < 1e-9) x = k === edges ? 0 : loop.cum[k]!;
   // ⭐ at a corner, on the edge it came along — forward the one ending there, backward the one starting there (the next one is ENTERED)
   let i = 0;
   if (dir > 0) while (i < edges - 1 && x > loop.cum[i + 1]!) i++;
