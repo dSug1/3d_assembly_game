@@ -549,10 +549,23 @@ pitch at ±90°, ~0.67° a px): random legs after three random lead-ins (dx up t
 11, 13, the piece far out (APPR 0), mid (80) and close in (140); and constant legs (L 1400, D 120, R 1400, U 240, L 1400) after two random lead-ins
 (seeds 5, 9), far and close in.
 
-⏳ The matrix is RUNNING at the deploy (2026-11-04); its table lands here. First results — the constant legs far out (`E_const`): off-section 0, reverse
-0, the piece and the camera no jump, the gizmo 6 depth steps (a part's side standing out — the shell keeps the piece), stuck only at the ±90° clamps; the
-first random run (seed 3, far out), B → Step 4c-bis: against the finger 46 → 3 of ~1600 moving frames, rolled on a wall 1335 → 0, the piece behind its
-face 9 → 0, the gizmo's jumps 9 → 26 (each a 42 mm DEPTH step between two tops of different heights under a dx near the top — the ray down meets what is
-there; the piece and the camera kept by the shell).
+| summed over the runs | Step 4c (B) | Step 4c-bis |
+|---|---|---|
+| random — 12 runs (4 seeds × far / mid / close): the piece behind its gizmo's face | 4214 frames | **0** |
+| …against the finger (of the frames the gizmo moves) | 991 of 16974 (5.8 %) | **33 of 11809 (0.3 %)** |
+| …the camera rolled on a wall | 4172 | **24** |
+| …jumps: piece / camera / gizmo | 30 / 19 / 160 | 3 / 30 / 133 |
+| constant legs — 4 runs (L 1400, D 120, R 1400, U 240, L 1400 after lead-ins; far / close): off-section | 8548 | 2884 — **on a side 44, all an analyser artefact** (the leg's plane taken under the bottom; on the side the gizmo kept its red plane, x 0.202 m); the rest under the bottom (2768) and on the top (28) |
+| …reverse / stuck | 120 / 76 | 58 / 14 — reverse **on a side 2**, the rest under the bottom; stuck only at the ±90° clamps and under the bottom |
+| …against the finger | 893 of 4380 | **6 of 2536** |
+| …the piece behind / rolled on a wall | 202 / 17 | **0** / 4 |
+| …jumps: piece / camera / gizmo | 31 / 5 / 122 | **0** / 1 / 46 |
+
+⭐ Read: on the sides the face map holds I1–I5 (its residual flags are the analyser's: a leg's plane read under the bottom; a camera "jump" is the frame
+an input lands after two or three without one — the probe's cadence under load, the step itself regular, B has the same). The gizmo's own jumps are DEPTH
+steps (42 mm between two tops of different heights under a dx near the top; a part's side standing out) — the shell keeps the piece and the camera.
+⚠ What is left is UNDER THE BOTTOM (and over the top, less): the quarters are concentric squares, not planes, and a ray from below meets overhangs'
+undersides — Step 5's. ⚠ The matrix's moving frames are fewer for Step 4c-bis (11809 against 16974) for the same input: B's carrier moves (a polar
+turn, holds released) where the map's place does not — at ±90° the centre.
 
 ⛔ No device close.
