@@ -2317,5 +2317,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
 * ⛔ SUSPENDED on `1.0.92-Tilted-orbit-suspended`: the tilt built again (`d8134eb`), the third Fable audit's build (`8548714`), the face-span's nine passes, the
   shadow gizmo, the world's planes, one input one loop — and their records (`queue_notes/FACE_SPAN_2026-11-02.md`, the future improvements R1–R6). Read them
   there for what was learned; ⛔ do not merge them.
-* ⏳ NEXT: the rebuild's scope prompt (the owner reviews it before anything is built).
-
+* ⭐ The rebuild's scope: [`TILTED_ORBIT_REBUILD_SCOPE.md`](TILTED_ORBIT_REBUILD_SCOPE.md) — approved 2026-11-04 (six invariants, ten steps).
+* ✅ **Step 0 (2026-11-04)**: the probes in `scripts/probes/` (constant input and random travel, the I1–I6 analyser); the baseline at `ff2fca2` recorded
+  (§8 there: the dx loops one horizontal plane both ways; the polar clamp holds the gizmo while the orbit goes on — the piece behind its face); ⭐ the dy WITH
+  the finger around the assembly (`orbitDy` — ⛔ the 2026-10-04 inversion: 29 of 30 frames against the finger; after, 4 of 908). 1596 vectors. ⛔ No device close.

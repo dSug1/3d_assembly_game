@@ -1,0 +1,186 @@
+# THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
+
+> **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` · ✅ **Step 0 built** (2026-11-04, §8) — ⛔ no device close;
+> Step 1 next, after the owner's look.
+> **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
+
+## 1. The goal
+
+Rebuild the **tilted orbit** on top of the orbit as it stands at `ff2fca2`, **step by step**, keeping `ff2fca2`'s good behaviour intact at every step. The
+owner: *"The behavior in commit ff2fca2 was the correct one: sections always plane and horizontal/vertical, no jumps, no change of direction, delta position
+drives gizmo which drives the orbit of the piece and camera, same direction of gizmo and delta position input. I want to keep those behaviors intact at all
+times while proceeding step by step for the build of the tilted orbit."*
+
+The tilted orbit adds to `ff2fca2`:
+
+1. **x / y / z sections instead of polar-radius**: on a top or bottom face the gizmo moves along the world's x and z lines (the sections are world planes),
+   not round the vertical axis at a radius as at `ff2fca2`.
+2. **The piece and the camera near square to the face in its middle, the full orbit near its edges and through the crossing** (an edge, the zenith).
+3. **One behaviour at every distance**: no close-in orbit apart from a far one (`ff2fca2`'s lock, the suspended branch's face-span). Only the near-square
+   calm's strength depends on the distance (§5 Step 9).
+4. **The shell offset**: the piece and the camera ride a smooth SHELL round the assembly; the gizmo stays on the real surface — bumps and holes of the section
+   contours (protrusions, gaps, notches under the offset) move the gizmo, never the piece nor the camera.
+
+## 2. The invariants — hold at EVERY step (each step is refused if one breaks)
+
+| | Invariant | Measured by |
+|---|---|---|
+| **I1** | **The sections are planes, horizontal or vertical — the world's.** The green (dx) and red (dy) lines lie each in ONE plane of the world (`x = c`, `y = c` or `z = c`), drawn through the gizmo. | the constant-input probe: the gizmo within 3 mm of the leg's plane |
+| **I2** | **No jumps** — of the piece, the camera, the gizmo's ring, the look point. A step never more than ~2.5× its neighbours' (smooth input). A step in the assembly's depth may move the GIZMO (a break), never the piece nor the camera (the shell, §1.4). | the random-travel probe |
+| **I3** | **No change of direction under a constant input.** The same dx (dy) held forever keeps the gizmo going the same way round the SAME section loop — over and over — unless stopped by (a) a camera roll (then the reversed input goes on, §4) or (b) a discontinuity of that section's own contour. | the constant-input probe: no REVERSE, no STUCK but (a) / (b), no section change |
+| **I4** | **The finger drives the gizmo, the gizmo drives the orbit** of the piece and the camera — the piece and the camera never go one way while the gizmo goes the other, nor on while it is held. | both probes: the piece's direction vs the gizmo's face |
+| **I5** | **The gizmo goes the finger's way on the screen** — dx right, the gizmo right; dy down, the gizmo down (the owner, Q1: *"same direction as the input wins"* — over the 2026-10-04 inversion if it still stands at `ff2fca2`). | the probe: the gizmo's screen step · the finger's |
+| **I6** | **The camera upright** (the screen's up the world's) everywhere but where §4 says a roll is owed. | the random-travel probe: the up within 5° of the vertical on a wall |
+
+**Every step lands with**: its golden vectors (shown RED against the step before), both probes run far out AND close in AND after random lead-ins, the
+numbers recorded in its dossier, and the owner's device look (rule 5). A step that breaks an invariant is reverted, not patched.
+
+## 3. Where `ff2fca2` stands (the starting point — read the code)
+
+`render/assembly_wiring.ts`, `input/assembly_orbit.ts`, `input/section_hull.ts`; `DOUBLE_ORBIT_PROTOTYPE.md` up to its `ff2fca2` section.
+
+* **The orbit around the assembly**: dx yaw about the world's vertical, dy pitch, **clamped at ±90°** about the assembly's fixed centre (`st.asm`).
+* **The gizmo is a CARRIER on the section's hull**, dropped onto the real surface (`carrierFrame`): dx round the GREEN loop at its height on a side (its
+  pace the loop's perimeter / 2π, `greenPace`), turned about the vertical axis at its distance on a top / bottom (`turnAbout` — **POLAR**); dy along the RED
+  chain of the yaw plane (the assembly's half-size per radian), clamped at the bottom and top centres; a drop on a face turned away holds it.
+* **The piece** on the orbit's direction from the gizmo × the approach's distance (`placeOffset`); **the camera** behind it, upright, its heading the
+  orbit's yaw (`assemblyCameraFrame`, `offsetFrame`); the look point the centre far out, the gizmo close in (`lookShare`).
+* **Close in, LOCKED** (`nextLock`, `assemblyLockDistM`): the gizmo and its face frozen, the orbit kept within a cone of the face (`lockCone`, `leavesCone`).
+* **The approach** (two fingers / A + drag), its coast; **the slide mode** (latches when the contours light, `HOVER.md`) — on ANY body near the piece;
+  the solver, the sway, the quads.
+* The parts' translation, rotation and alignment are deleted (every press is the orbit's).
+
+## 4. The consequences of tilting — stated, not discovered
+
+1. **Over a top or under a bottom the camera ROLLS to stay upside up.** Going on over the zenith (a dy past the top), the piece's direction passes straight
+   above the gizmo; on the far side the world's up would be upside down on the screen. **The camera rolls half a turn AT the zenith** — the piece WAITS
+   there while the input's travel rolls the camera (branch 1.0.83's roll: linear, reversible anywhere, a dx held mid-roll).
+2. **After a half roll the input direction is reversed.** The picture has turned 180°: to go on round the same loop the finger goes the OTHER way (the
+   owner: *"a camera roll … rightly requires an inversion of the input direction to continue the same orbit"*). The same finger kept on is HELD at the zenith
+   (it would roll straight back); the reversed one goes on down the far side. Lifted, the finger may roll back.
+3. **Off a top's side edge (a dx over it onto a wall) a quarter roll, AT THE EDGE** (the owner, Q2: *"at it"*): on the top the screen's up points across it;
+   on the wall the vertical lies across the screen. The piece WAITS at the edge while the input's travel rolls the camera a quarter turn, as at the zenith;
+   then the gizmo goes on down the wall in the SAME plane. ⚠ After a quarter roll the finger's dx is drawn along the screen's vertical: the finger's axes
+   turn a quarter with the picture (the dx keeps driving the same loop) — the build states, measures and shows the owner which it is.
+4. **The orbit's frame tilts** onto a top / bottom (dx across, dy toward / away): its yaw and pitch must stay the gizmo's world axes there — never a
+   camera-derived heading (the suspended branch: the piece went −x while the gizmo went z).
+
+## 5. The steps (each keeps I1–I6)
+
+Each step is small enough for one device look; the probes at its end are the gate.
+
+**Step 0 — The harness and the baseline.** Move the probes into the repo (`scripts/probes/`: the constant-input probe, the random-travel probe, their
+analysers — one Chrome profile per run, removed in `finally`; the window's real viewport; never clamp a leg). Add the screen-direction check (I5) and the
+uprightness check (I6). Run them on `ff2fca2` as it is — **far out, close in, after random lead-ins** — and record the baseline here. Expected at `ff2fca2`:
+the dy clamped at ±90° (a constant dy stops at the top / bottom centre — `ff2fca2`'s polar orbit, not a fault). Nothing in the product changes, except:
+**if the dy's screen direction is opposite the finger's, it is turned (I5, Q1) in this step**, with its vector.
+
+**Step 1 — One behaviour at every distance, and the slide on placed parts.** (a) Delete the close-in LOCK (`asmLocked`, `lockCone`, `leavesCone`, the
+lock's verdicts) — the carrier runs at every distance (the owner, Q5: *"deleting the lock at step 1 is cleaner"*); the look point's share kept (it frames the
+view, it switches nothing; its slider relabelled). ⚠ Close in the piece then turns about a MOVING gizmo: I2 / I4 checked close in with care (the solver's
+contacts). (b) **The slide latches on PLACED parts only** (`hoverCandidates` filtered with `goalLocked` — the suspended branch's Decision 4, the owner: *"slide
+shall latch only on placed parts"*; ⛔ a loose piece beside the painting lit the contours). Sliding along the seated parts' contours: **unchanged** (the
+owner, Q4). Gate: the probes close in = far out; the slide never latches on a loose piece.
+
+**Step 2 — The shell.** The piece and the camera read the gizmo's FOOT on a smooth SHELL round the assembly — the parts' box offset by
+`orbitShellOffsetMm` (60 mm, a slider; the suspended branch's `input/orbit_shell.ts` and `spanAnchor` / `gizmoShare`): flat over a face, round over an edge;
+the gizmo itself on the real surface, its ring there. A protrusion, a gap, a notch shallower than the offset moves the gizmo, never the piece nor the
+camera (the owner: *"it was good to filter out the bumps due to protrusions or holes on the section contours"*). Brought onto the gizmo within the offset
+(at the contact the piece is on the real surface). Gate: I2 across Piece42, Piece44, Piece45, Piece43 and the left column's notches — the gizmo may step,
+the piece and the camera never.
+
+**Step 3 — The loops' paces.** Each axis at its LOOP's pace: the perimeter of the assembly's box (the shell's) in the loop's plane / 2π (`loopPace`,
+suspended branch) — dx as `ff2fca2` already does on a side, dy the same instead of the half-size per radian. One loop of the gizmo is one turn of the orbit,
+for both axes (⛔ suspended branch: at the half-size the gizmo went round a thin section in 208° of orbit, ahead of the piece). Gate: within its ±90°, the
+dy reaches the top centre as the orbit reaches 90°.
+
+**Step 4 — World planes on the sides.** The red section through the gizmo the world's vertical plane square to the face's level axis (not the yaw plane at
+any heading); the green the horizontal plane at the gizmo's height (as now). The gizmo's motion along the face's level and vertical axes, its carrier on
+the plane. Round a vertical edge (dx) the PLANE carried over (I1: the axis moved on turns onto the old normal's opposite, the other kept; the landing searched
+along the section only). Gate: I1 on every side, every heading.
+
+**Step 5 — x / z on a top or bottom (no polar).** Over a top / bottom the gizmo moves along the world's x and z lines through it (a dy across the top
+along the plane it came up in; a dx along the other), the orbit's frame tilted onto the face (§4.4: its heading the world's x or z, the gizmo's), switched
+at the edge with nothing moving (a re-base: the spring, the lag, the leash re-read). **Still clamped**: the dy stops at the far edge (no zenith yet); a dx
+stops at the side edges (no going over yet). Gate: I1–I6 with the clamp as the only stop.
+
+**Step 6 — The zenith crossing (dy over the top / under the bottom).** Open the dy's clamp: the half roll AT the zenith (§4.1), the input reversed after
+it (§4.2), the gizmo down the far side in the SAME plane. The finger's axes LATCHED for a drag (and its coast), each a whole screen axis; the zenith roll
+REVERSES them (never re-read off the rolled picture — looking down a top the axes swap screens). Gate: a constant dy loops the vertical plane, stopped only by
+the roll; reversed, it goes on; I1 throughout.
+
+**Step 7 — The side crossing (dx over a top's side edge).** Open the dx's clamp: the quarter roll AT the edge, the piece waiting (§4.3, Q2); the plane
+carried over. Gate: a constant dx started on a top loops the vertical plane across it, stopped only by the roll.
+
+**Step 8 — The overhangs and the steps of the sections.** What a section meets beyond a flat box: an overhang's hidden faces (the shadow along the face),
+gaps under `shadowBridgeMm`, a face cut off by a step deeper than `shadowStepMm` (150 mm in Scene_1 — the notches kept, Piece45's side cut), a section
+through an overhang alone (R3), a section exactly on an outline (R4) — the gizmo jumping steps, the piece and the camera on the shell (Step 2). Gate: I1–I4
+across all of Scene_1's protrusions; no stop that is not a discontinuity of the section's own contour.
+
+**Step 9 — Near square in the middle, the full orbit at the edges, at every distance.** The piece's SHOWN direction calmed toward the face's normal in
+its middle (a share of the orbit's angle), whole within an edge zone and through every crossing (the suspended branch's fourth pass, its sliders), the shares
+FOLLOWING their targets (never read at once — a column of another height moved the camera 15 cm). **At every distance, ATTENUATED by a proportional gain as
+the distance grows** (the owner, Q3). ⭐ Recommended (to be judged on the device): the full calm close in, falling smoothly to a FLOOR — about half the calm
+— at the far distance, never to none: close in a square view is what lands the piece; far out the whole assembly is on the screen, a square view flattens
+it (the gizmo's place on the face reads well, its depth and the edges' nearness less), a part-slanted one keeps the sense of turning round a solid. The gain
+a smooth function of the distance — an approach (A + drag) then turns the view smoothly, never a jump; the floor a slider. Gate: I2 above all — the calm
+never makes a jump at an edge, a face switch, the zenith or under an approach.
+
+## 6. Lessons carried from the suspended branch (`1.0.92-Tilted-orbit-suspended`) — read before building
+
+* **The finger's axes latched for a drag** (and its coast), each a WHOLE screen axis — ⛔ re-read every frame, a level axis seen end-on handed the dx to the
+  pitch; ⛔ a blend between screen axes sent a pure dx to both, diagonally.
+* **Round an edge the PLANE carries over**: the axis moved on turns onto the old normal's opposite, the other is KEPT; the landing searched ALONG the section
+  only — ⛔ the next face's axes read again, ⛔ its nearest point anywhere (40 cm away under Piece42).
+* **The gizmo and the orbit move together or not at all**: held by a part or at the section's outline, the orbit is held too (⛔ the orbit went on alone:
+  later the gizmo was carried 20 cm, the camera 1.4 m in a frame). No "catch-up carry" that moves the gizmo off its plane.
+* **The tilted frame's heading the world's x or z** (⛔ the camera's heading: the piece and the gizmo parted). ⚠ A frame re-tilted at a pole (`antiPoleQuat`)
+  and kept through a long drag was never solved (R2) — prefer a frame taken from the gizmo's loop (its held axis as the frame's up: the piece in front of any
+  face on the frame's equator — no pole).
+* **The probes lie in known ways**: a leg clamped at the window's edge sends one move backwards (read as a rocking roll); the real viewport is 734 px high
+  in the 830 px window; a mean of neighbours reads an every-other-frame input as a jump — compare with the LARGEST neighbour; a probe's recorder that reads
+  a field the code under test lacks records nothing.
+* **Open there** (R1–R6, `queue_notes/FACE_SPAN_2026-11-02.md` on that branch): R1 is now decided (§4.3), R3 / R4 belong to Step 8, R5 to Step 1 (b).
+
+## 7. The owner's decisions (2026-11-03)
+
+* **Q1** — the dy's direction: *"same direction as the input wins"* → I5, Step 0.
+* **Q2** — the quarter roll off a top's side edge: *"at it"* → §4.3, Step 7.
+* **Q3** — the calm: *"near-square calm at every distance, probably attenuated with a proportional gain when the distance increases (I don't know if this helps
+  viewing better from a far distance the place of the gizmo when the gizmo is close to the edge vs. a slanted view: advise what is best)"* → Step 9 (the
+  advice: a floor of about half, a slider, judged on the device).
+* **Q4** — the slide: *"implement the modifications we did to avoid the issue of sliding on un-seated part. For sliding on seated parts contour, no change"*
+  → Step 1 (b).
+* **Q5** — the lock: *"deleting the lock at step 1 is cleaner"* → Step 1 (a).
+* **The shell offset**: *"include the concept of the shell offset: it was good to filter out the bumps due to protrusions or holes on the section
+  contours"* → §1.4, I2, Step 2.
+
+## 8. Step 0 — built (2026-11-04)
+
+**The harness** — `scripts/probes/orbit_probe.mjs` (the probe: `MODE=const LEGS=…` or `MODE=random SEED= PRESSES=`, `APPR=` an approach first, `PRE=` a
+lead-in; one move per rendered frame; the page's own viewport; a leg ENDS at its edge, never clamped; its own Chrome profile, removed) and
+`scripts/probes/analyse_orbit.mjs` (I1–I6 per leg). Run on the dev server (`npm run dev:usb`):
+
+```bash
+MODE=const APPR=0   OUT=far  node scripts/probes/orbit_probe.mjs   # far out: L 1400, U 380, R 1400, D 380 px
+MODE=const APPR=250 OUT=near node scripts/probes/orbit_probe.mjs   # close in, after an approach
+MODE=random SEED=3 PRESSES=6 OUT=rand node scripts/probes/orbit_probe.mjs
+node scripts/probes/analyse_orbit.mjs <PROBE_DIR or the OS temp dir>/orbit_probe/far.json
+```
+
+**The product change** — I5 (the owner, Q1): around the assembly the finger's dy enters the orbit REVERSED (`orbitDy`, `input/assembly_orbit.ts`) —
+finger down, the pitch down, the gizmo down the face. ⛔ The 2026-10-04 inversion stood around the assembly: **29 of 30** moving frames had the gizmo
+against the finger. After: **4 of 908** far out (at a held drop and its jump), 2 of 86 close in (the slide), 2 of 79 at random — the rings' sense kept.
+1596 vectors (+1, red against `bb85a7f`).
+
+**The baseline at `ff2fca2`** (after the dy's turn; Scene_1, headless, 3 px a frame):
+
+| | far out | close in (APPR 250) |
+|---|---|---|
+| dx left / right, 1400 px | ✅ loops the walls in ONE horizontal plane, both ways (−z → ±x → +z …), no off-section, no reverse; the gizmo steps 15–19 mm at protrusions (its own jumps, 15) | the SLIDE latches at once (on Piece43, a placed part) and stops at the hosting face's edge (*"hover: at the edge of the hosting faces"*) — STUCK; the camera's blend into the slide view 48 cm over a few frames |
+| dy up / down, 380 px | ✅ straight up / down the face (plane x = const, tilt 0°); ⛔ at the bottom / top the POLAR clamp: *"the gizmo's drop lands on a face turned away from the piece — held"* — the gizmo held while the orbit goes on: **the piece behind its gizmo's face in 691 frames** (I4), off-section 38, stuck 7 | inside the slide |
+| a dx at the bottom's centre | ⛔ nothing moves (polar: no radius to turn about) | — |
+| page errors | 0 | 0 |
+
+⇒ Steps 1–5 remove the polar clamp's I4 breaks and the close-in latch's stops; the dx's horizontal loop is the reference every later step keeps.
+

@@ -27,6 +27,16 @@ import { add, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, 
  */
 export const ORBIT_PITCH_MAX_RAD = Math.PI / 2;
 
+/**
+ * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0 — the owner: *"same direction of gizmo and delta position input"*, *"same direction as the input
+ * wins"*) THE FINGER'S dy ON THE ORBIT AROUND THE ASSEMBLY: finger DOWN (`dyPx` > 0, screen coordinates) → the pitch DOWN → the gizmo down the face, the way
+ * the finger goes (`TILTED_ORBIT_REBUILD_SCOPE.md` I5). ⛔ The 2026-10-04 rule (*"invert the sense of the delta position y input"*, finger down raised the
+ * piece) stood around the assembly: the probe measured the gizmo against the finger in 29 of 30 moving frames. Elsewhere (the rings) unchanged.
+ */
+export function orbitDy(dyPx: number, aroundAssembly: boolean): number {
+  return aroundAssembly ? -dyPx : dyPx;
+}
+
 /** ⭐ The orbit's ring parameter `v` (0 … 1) read as the PITCH: −90° at 0, level at ½, +90° at 1. */
 export function pitchOfV(v: number): number {
   return (2 * Math.min(1, Math.max(0, v)) - 1) * ORBIT_PITCH_MAX_RAD;

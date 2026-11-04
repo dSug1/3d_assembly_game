@@ -32,6 +32,7 @@ import {
   rayOffsets,
   twoFingerKind,
   vOfPitch,
+  orbitDy,
 } from "../src/input/assembly_orbit";
 import type { Vec3 } from "../src/core/vec";
 import { slideProbeFree, solveOrbitStep } from "../src/input/piece_orbit_solver";
@@ -344,5 +345,20 @@ describe('⭐⭐⭐ THE WAY OUT CHECKED AGAINST THE PARTS (2026-11-01, the owner
     expect(w).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);");
     expect(w).toContain("st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? \"a part\"} — slide or orbit to find a way out`;");
     expect(w).not.toContain("if (want >= a0 || st.pieceQ === null || st.greenBox === null) {");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0) THE dy WITH THE FINGER around the assembly (the owner: *\"same direction as the input wins\"*)", () => {
+  it("⭐⭐⭐ finger DOWN (dy > 0 on the screen) lowers the orbit's pitch around the assembly — the gizmo down the face; on the rings the 2026-10-04 sense kept", () => {
+    expect(orbitDy(5, true)).toBe(-5);
+    expect(orbitDy(-3, true)).toBe(3);
+    expect(orbitDy(5, false)).toBe(5);
+    // ⛔ (measured at ff2fca2) the gizmo went against the finger in 29 of 30 moving frames: the dy entered the orbit with its own sign
+    const p = code("render/pointer_wiring.ts");
+    expect(p).toContain("const fdy = orbitDy(db.dy, asmOn);");
+    expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch * g.pitch;");
+    expect(p).toContain("const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1))");
+    // the approach (A + drag) keeps the finger's own dy: finger up brings the piece in
+    expect(p).toContain("if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
   });
 });
