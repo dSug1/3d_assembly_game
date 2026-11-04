@@ -2341,3 +2341,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   off the face's normal in its middle, whole at its edges (`input/orbit_calm.ts`; 58d86ff's rules and seven sliders), within 3.6–5.4 m of the gizmo; the
   runs from the carrier, the shares and the face eased, the camera's heading turned with it. Close in, dx: 55° → 28° off square in the middle (scope §13).
   1625 vectors. ⛔ No device close.
+* ✅ **The bounce fixed (2026-11-04, `1.0.95-`)**: under a dx right the piece and camera went back at the front's end — the calm's vertical share read per
+  small face (0.35 → 1 on a slanted block, round a corner). Now the gizmo's height in the placed parts' box (never changed by a dx), dx's run a world side,
+  the vertical share never waiting on the face's normal, the calm fading toward ±90°. Close in: 0 frames back; the view 55° → 26° off square (scope §13.1).
+  1626 vectors. ⛔ No device close.

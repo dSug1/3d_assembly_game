@@ -434,52 +434,47 @@ function loopFacets(loop: SectionChain): Facet[] | null {
 export interface FaceRun { readonly dEdge: number; readonly run: number; readonly n: Vec3 }
 
 /**
- * ⭐⭐ (2026-11-04, `1.0.95-`, the calm) dx's run for the calm (`orbit_calm.ts`): among the green loop's facets (its edges in line one facet) FACING the way
- * of the real face under the gizmo (`nWant`, the accepted drop's normal — within 45°), the one nearest the gizmo `p` (x, z); its distance to the nearer end,
- * its length, its normal. ⛔ The nearest facet alone: where a part sticks out of the front (Scene_1, z −0.092 at 0.145–0.217 m) the hull bridges to it and
- * the gizmo on the real front (z −0.05) is INSIDE the hull, nearer its BACK (3.2 cm against 4): the calm took the back's normal, the camera swung behind
- * the painting (probed, 121° off the front's normal).
+ * ⭐⭐ (2026-11-04, `1.0.95-`, the calm) dx's run for the calm (`orbit_calm.ts`): the SIDE of the green loop the gizmo is on — its consecutive facets facing
+ * the same world side (each facet's heading snapped to the nearest world axis, `snapHeading`: Step 4's red plane) — that of the real face under the gizmo
+ * (`nWant`, the accepted drop's normal, snapped) nearest it (`p`, x z); the gizmo's distance along the side to its nearer end, the side's length, the
+ * side's world normal. ⛔ Facet by facet: a small slanted block at the front's end (Scene_1's top right, normal (0.26, 0, −0.96)) or a bridged protrusion
+ * was a face of its own — a run of a few cm, its share whole: the camera swung back and up under a pure dx (the owner: *"it seems to bounce back"*, probed);
+ * ⛔ the nearest facet alone: the gizmo inside a bridged hull read the BACK's normal (the camera behind the painting).
  */
 export function facetRunToward(loop: SectionChain, p: P2, nWant: Vec3): FaceRun | null {
   const fs = loopFacets(loop);
   if (fs === null) return null;
-  const nl = Math.hypot(nWant[0], nWant[2]);
-  if (!(nl > 1e-9)) return null;
+  if (!(Math.hypot(nWant[0], nWant[2]) > 1e-9)) return null;
+  const want = snapHeading(Math.atan2(nWant[2], nWant[0]));
+  const same = (a: number, b: number): boolean => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 1e-6;
+  const side = fs.map((f) => snapHeading(f.th));
+  // the sides: runs of consecutive facets with one snapped heading (the loop's start inside one: it is joined round)
+  const k0 = side.findIndex((h, j) => !same(h, side[(j - 1 + side.length) % side.length]!));
+  if (k0 < 0) return null; // one heading all round: no sides
+  const groups: { h: number; s0: number; len: number }[] = [];
+  for (let k = 0; k < fs.length; k++) {
+    const j = (k0 + k) % fs.length;
+    const g = groups[groups.length - 1];
+    if (g !== undefined && same(g.h, side[j]!)) g.len += fs[j]!.len;
+    else groups.push({ h: side[j]!, s0: fs[j]!.s0, len: fs[j]!.len });
+  }
   let best: FaceRun | null = null;
   let bestD = Infinity;
-  for (const f of fs) {
-    const c = Math.cos(f.th);
-    const sn = Math.sin(f.th);
-    if ((c * nWant[0] + sn * nWant[2]) / nl < Math.SQRT1_2) continue;
-    const a = chainAt(loop, f.s0).p;
-    const e = chainAt(loop, wrapOn(loop, f.s0 + f.len - 1e-12)).p;
-    const dx = e[0] - a[0];
-    const dz = e[1] - a[1];
-    const l2 = dx * dx + dz * dz;
-    const t = l2 > 0 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2)) : 0;
-    const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dz * t - p[1]);
-    if (d < bestD) {
-      bestD = d;
-      best = { dEdge: Math.min(t, 1 - t) * f.len, run: f.len, n: [c, 0, sn] };
+  for (const g of groups) {
+    if (!same(g.h, want)) continue;
+    // the gizmo's place along the side: the nearest of its points, sampled every 2 mm (a side is a few facets)
+    const n = Math.max(2, Math.ceil(g.len / 0.002));
+    for (let i = 0; i <= n; i++) {
+      const t = (g.len * i) / n;
+      const q = chainAt(loop, wrapOn(loop, g.s0 + Math.min(t, g.len - 1e-12))).p;
+      const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (d < bestD) {
+        bestD = d;
+        best = { dEdge: Math.min(t, g.len - t), run: g.len, n: [Math.cos(g.h), 0, Math.sin(g.h)] };
+      }
     }
   }
   return best;
-}
-
-/** ⭐⭐ (2026-11-04, `1.0.95-`, the calm) The stretch of the red chain at `s` whose edges are in line (one normal) — dy's run for the calm. */
-export function chainRun(ch: SectionChain, s: number): { dEdge: number; run: number } | null {
-  const edges = ch.pts.length - 1;
-  if (edges < 1) return null;
-  const at = chainAt(ch, s);
-  const inLine = (i: number, j: number): boolean => { const a = edgeNormal(ch, i); const b = edgeNormal(ch, j); return Math.abs(a[0] * b[1] - a[1] * b[0]) < 1e-6 && a[0] * b[0] + a[1] * b[1] > 0; };
-  let i0 = at.edge;
-  while (i0 > 0 && inLine(i0 - 1, at.edge)) i0--;
-  let i1 = at.edge;
-  while (i1 < edges - 1 && inLine(i1 + 1, at.edge)) i1++;
-  const lo = ch.cum[i0]!;
-  const hi = ch.cum[i1 + 1]!;
-  const x = Math.min(hi, Math.max(lo, s));
-  return { dEdge: Math.min(x - lo, hi - x), run: hi - lo };
 }
 
 /** ⭐ The inverse of `loopAtYaw`: the yaw whose place is the arc length `s` (a corner: the boundary of its two slices). */

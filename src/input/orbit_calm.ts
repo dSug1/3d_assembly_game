@@ -103,3 +103,16 @@ export function alignedShare(target: number, cosAngle: number): number {
   const x = Math.min(1, Math.max(0, (cosAngle - lo) / (hi - lo)));
   return 1 - (1 - target) * x * x * (3 - 2 * x);
 }
+
+/**
+ * ⭐⭐⭐ (2026-11-04, `1.0.95-`) The calm's weight by the orbit's PITCH (`uY`, the up component of its direction): whole below 60°, none from 85° (a
+ * smoothstep) — straight above / below a face's normal means nothing, the dy has turned over the edge (Step 3). ⛔ At the bottom pole a stale side normal with
+ * a share of 0.53 bent the piece off its gizmo's face (probed: the piece behind its face in 657 frames).
+ */
+export function poleWeight(uY: number): number {
+  const p = Math.asin(Math.min(1, Math.abs(uY)));
+  const lo = (60 * Math.PI) / 180;
+  const hi = (85 * Math.PI) / 180;
+  const x = Math.min(1, Math.max(0, (hi - p) / (hi - lo)));
+  return x * x * (3 - 2 * x);
+}

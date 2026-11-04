@@ -10,7 +10,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, rayOffsets, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { chainAt, chainStep, chainRun, facetRunToward, redPace, syncStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
+import { chainAt, chainStep, facetRunToward, redPace, syncStep, dropRay, edgeKind, edgeNormal, faceTurnedAway, facingChain, joins, nearestOfKind, fromPlane, greenDrop, greenNormal, greenPoints, hull2, loopOf, nearestOnChain, redHeading, redOrigin, gizmoJoins, insertIndex, sectionFixed, sectionGreenKey, sectionPoints, sectionRedKey, toPlane, turnAbout, type EdgeKind, type SectionChain, type SectionRay } from "../input/section_hull";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -23,7 +23,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { alignedShare, calmEngageM, calmHeading, calmWeight, CALM_RELEASE_FACTOR, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
+import { alignedShare, calmEngageM, calmHeading, poleWeight, calmWeight, CALM_RELEASE_FACTOR, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
 import type { Vec3 } from "../core/vec";
 import { worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -148,14 +148,14 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
 function calmDir(st: SceneState, u: Vec3): Vec3 {
   const k = st.asmCalm;
   if (k === null) return u;
-  const w = calmWeight(1, approachDistance(st.cfg, st.approach), calmEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), CALM_RELEASE_FACTOR);
+  const w = calmWeight(1, approachDistance(st.cfg, st.approach), calmEngageM(st.cfg.faceSpanEngageM, farDistance(st.cfg)), CALM_RELEASE_FACTOR) * poleWeight(u[1]);
   if (!(w > 0)) return u;
   return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);
 }
 
 /**
  * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame, from the gizmo's carrier (the accepted drop's): on a SIDE the facet of the green loop
- * facing the way of the real face under it, nearest it (`facetRunToward` — dx's run, the face's normal) and its in-line stretch of the red chain (dy's run) — `edgeShare` of each (58d86ff's); over a top / under a bottom the orbit's
+ * facing the way of the real face under it, nearest it (`facetRunToward` — dx's run, the face's normal) and its height in the placed parts' box (dy's run) — `edgeShare` of each (58d86ff's); over a top / under a bottom the orbit's
  * whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED toward them (`easeToward`, `easeNormal`) — the face at a
  * height changes with the height (a bridged protrusion, the funnel): read at once, the camera would jump.
  */
@@ -172,8 +172,11 @@ function calmFrame(st: SceneState, dtMs: number): void {
     if (f !== null) {
       n = f.n;
       sH = edgeShare(f.dEdge, f.run, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
-      const r = cfg.faceSpanShareVOn === 1 ? chainRun(c.chain, c.s) : null;
-      sV = r === null ? 1 : edgeShare(r.dEdge, r.run, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+      // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
+      // wall under the gizmo: its top differed from the front to the side at the same height — 0.33 to 1 round the corner, the piece swung up to the
+      // orbit's whole pitch, the camera back: the owner's bounce, probed)
+      const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;
+      sV = box === null ? 1 : edgeShare(Math.min(c.w[1] - box.lo[1], box.hi[1] - c.w[1]), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
     }
   }
   const k = st.asmCalm;
@@ -183,12 +186,12 @@ function calmFrame(st: SceneState, dtMs: number): void {
     return;
   }
   if (n !== null) {
-    // ⭐ both shares whole: the normal changes nothing — taken at once (⛔ eased from a stale face 175° away while the shares fell: a 271 mm camera jump)
-    k.n = k.sH > 0.999 && k.sV > 0.999 ? n : easeNormal(k.n, n, dtMs);
-    // ⭐ the calm only as far as the normal has caught up with the face's
-    const al = k.n[0] * n[0] + k.n[2] * n[2];
-    sH = alignedShare(sH, al);
-    sV = alignedShare(sV, al);
+    // ⭐ the horizontal share whole: the normal changes nothing (the pitch is the world's up's, the heading the orbit's own) — taken at once (⛔ eased from
+    // a stale face 175° away while the shares fell: a 271 mm camera jump)
+    k.n = k.sH > 0.999 ? n : easeNormal(k.n, n, dtMs);
+    // ⭐ the HORIZONTAL calm only as far as the normal has caught up with the face's — the vertical one never waits on it (⛔ both released at every corner:
+    // the pitch swung up and the camera back under a pure dx — the owner's bounce, probed)
+    sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);
   }
   k.sH = easeToward(k.sH, sH, dtMs);
   k.sV = easeToward(k.sV, sV, dtMs);

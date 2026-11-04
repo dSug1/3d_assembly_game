@@ -365,3 +365,36 @@ line over what's left of the pitch, so it reaches the top exactly as the orbit h
 over what's left of the turn until the next face starts facing the piece. It would arrive at each corner exactly as it should, never wait, and never drift,
 while keeping an even speed within a face."* — `loopStep`, `greenPace`, `greenFaces` are kept (unwired) for it.
 
+### 13.1 The bounce — fixed (2026-11-04, `1.0.95-`, after `ccc0852`)
+
+The owner, on the device: *"a dx orbit to the right in the middle of the blue part's front face: after the gizmo has crossed the grey part to the right, it
+seems to bounce back when it reaches the vertical edges"* (+ *"Reproduce with random travel and check what is the bug"*). Reproduced close in (APPR 140,
+dx at 0.466 m): the gizmo reaching the front's right end, the PIECE went back 5 cm in x and the CAMERA back 70 cm and up, for ~12 frames, under a pure dx
+to the right. ⭐ **The calm's VERTICAL share was the cause, three ways** — each found by the next probe:
+
+1. **dy's run read per small face**: the in-line stretch of the red chain under the gizmo — on the small slanted block at the front's top-right end (normal
+   (0.26, 0, −0.96)) a few cm, the share whole (1) against 0.35 on the front: the piece swung up to the orbit's whole pitch, and at the same yaw back in x.
+   Then **the wall under the gizmo** (its SIDE edges bottom to top): its top differed from the front's plane to the side's at the same height — 0.33 → 1
+   round the corner. ✅ **dy's run is the gizmo's HEIGHT within the placed parts' box** (`shellOf` — one top and bottom on every face): a pure dx never
+   changes it.
+2. **dx's run per facet**: ✅ the SIDE of the green loop — consecutive facets facing one world side (headings snapped to the nearest axis, Step 4's red
+   plane): the slanted block, a bridged protrusion, a sliver belong to the front's run; the calm's normal is that side's world axis (`facetRunToward`).
+3. **Both shares released at a corner** while the normal turned (`alignedShare` on both): ✅ the HORIZONTAL share only — with it whole the face's normal
+   cancels out (the pitch is the world up's, the heading the orbit's own), so the vertical calm never waits on it, and the normal is taken at once.
+
+⭐ And **the calm fades toward straight above / below** (`poleWeight`: whole under 60° of pitch, none from 85°) — ⛔ at the bottom pole a stale side normal
+with a vertical share of 0.53 bent the piece off its gizmo's face (657 frames "behind", seed 7 × 8 presses).
+
+**The probes — the same code, the calm on and off** (`?faceSpanShareH=1&faceSpanShareV=1` — the probe's `URL`):
+
+| | calm off | calm on |
+|---|---|---|
+| the bounce: frames the piece / camera go back under a dx right (0.466 m close in; 0.36 / 0.43 m at 4–5 m) | 0 | **0** (76 at `ccc0852`) |
+| dx close in: the view off square in the face's middle (mean) | 54.9° | **25.6°** |
+| sides at 12 headings: the middle (mean) | 32.2° | **17.3°** |
+| rolled on a wall: dx close in / sides / dx at 4–5 m | 1032 / 148 / 1086 | **0 / 78 / 0** |
+| random seeds 3 / 7 (8 presses), standard legs: the piece behind | 148 / 7 / 20 | 146 / 8 / 20 |
+
+⚠ A dy (not a dx) at 4 m: the vertical share follows the gizmo's height, eased 120 ms — at the finger's release the piece settles ~2° on (two flags, the
+calm off none). Vectors: `tests/orbit_calm.test.ts` 12 (the bounce, the pole, the vertical share never aligned — RED against `ccc0852`). **1626**.
+
