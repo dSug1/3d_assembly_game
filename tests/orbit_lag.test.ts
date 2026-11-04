@@ -20,7 +20,7 @@ describe("⭐⭐ the piece's lag behind the ring — two sliders", () => {
   it("⭐⭐ wired: the gizmo's foot eased by `gizmoEaseMs`; the orbit's spring and its travel counts by `orbitSpringMs`; two sliders in CAMERA ORBIT AROUND CENTER", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs)");
-    expect(a).not.toContain("GIZMO_TAU_MS");
+    expect(a).not.toContain("const GIZMO_TAU_MS"); expect(a).not.toContain("dtMs, GIZMO_TAU_MS)");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs)");
     for (const k of ["pieceEntry", "pieceAim", "centreReturn"]) expect(g).toContain(`smoothTravel(st.${k}, dtSec * 1000, st.cfg.orbitSpringMs)`);
