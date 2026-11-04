@@ -92,6 +92,13 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 20. ⛔ **OPEN — A SETTLE STOPPED SHORT** (2026-11-01; not changed): a nearer part between the piece and the latched face stops the settle — the piece
    slides up to 20 mm off the face, its contact outline far from it on the screen. Fixes proposed (latch on the face it touches / settle again) →
    `DOUBLE_ORBIT_PROTOTYPE.md`, the last section.
+21. ⛔ **A FUTURE IMPROVEMENT FOR THE SLIDE — WEDGED UNDER AN OVERHANG** (the owner's phone, 2026-11-04, build `ef9b021`; *"capture that … as a future
+   potential improvement for the slide"*): the piece slid on a placed part's top partly UNDER an overhang (`Piece44`, `SCENE_1.md` §11) — the slide blocked
+   by it (*"slide blocked by Piece44 — slide along it or away"*), the way out (the approach OUT, along the top's normal) refused by it too (item 41), the red
+   *Part is blocked* pop-up. Today's way out: slide it back out from under the overhang with one finger, then two fingers out; or double-tap to restart.
+   Candidate fixes (none chosen — the slide was kept unchanged, Q4 of the tilted orbit's rebuild): (a) the slide refuses to carry the piece under a part
+   it could not leave by its way out; (b) the way out, when straight off the face is blocked, goes sideways — back along the slide's last free direction,
+   then out; (c) a gate of the rebuild's Step 8 (overhangs): *no slide ends where no way out is free*.
 19. ⭐⭐⭐ **A AGAIN MID-DRAG; THE WAY OUT CHECKED** (2026-11-01, items 40–41; ⛔ no device close): a move the slide takes spends the orbit's band for that
    pointer (⛔ A pressed again with the click held flew the piece out by the whole slide); the approach OUT is checked against the parts, a blocked one named.
 18. ⭐⭐⭐ **THE WAY OUT FROM THE SLIDE CAMERA ITSELF** (2026-11-01, item 39; ⛔ no device close): the orbit re-based so its CAMERA (offsets included) stands

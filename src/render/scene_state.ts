@@ -486,6 +486,8 @@ export interface SceneState {
   /** ⭐ (2026-10-29) the green loop's cache (dx by distance) */
   asmLoop: { readonly key: string; readonly loop: import("../input/section_hull").SectionChain | null } | null;
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  /** ⭐⭐⭐ (2026-11-04, Step 2) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
+  asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;

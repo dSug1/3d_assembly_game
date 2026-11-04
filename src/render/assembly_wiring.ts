@@ -17,6 +17,7 @@ import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
+import { pieceReach, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
@@ -164,6 +165,33 @@ function castRay(st: SceneState, r: SectionRay | null): GizmoHit | null {
 }
 
 /** ⭐ The placed parts' world vertices (each a convex body — a box, a frustum), cached for the placed set (they do not move). */
+/** ⭐⭐⭐ (2026-11-04, Step 2) The shell's box (`input/orbit_shell.ts`) — the placed parts' extent, per placed set. */
+function shellOf(st: SceneState): ShellBox | null {
+  const parts = placedParts(st);
+  if (st.asmShell !== null && st.asmShell.key === parts.key) return st.asmShell.box;
+  const box = shellBox(parts.parts);
+  st.asmShell = { key: parts.key, box };
+  return box;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE GIZMO'S FOOT (`shellAnchor`) — the orbit's centre the piece and the camera read: on the
+ * smooth shell round the placed parts' box beyond `orbitShellOffsetMm`, onto the gizmo within it. A protrusion, a recess, a notch moves the gizmo, never
+ * the foot. Under the slide: the slide's gizmo itself (the slide unchanged).
+ */
+function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
+  if (st.asmLocked) return g;
+  return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
+}
+
+/** ⭐ The piece's reach toward the gizmo along `−u` (`pieceReach`, its hull at its pose); none: 0. */
+function reachOf(st: SceneState, u: Vec3): number {
+  const id = st.greenBox?.name;
+  const pts = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
+  const place = id === undefined ? null : worldPlacementOf(st.world, id);
+  return pts === undefined || place === null ? 0 : pieceReach(pts, place.orientation, u);
+}
+
 function placedParts(st: SceneState): { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } {
   const ids: string[] = [];
   const meshes: import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh[] = [];
@@ -299,8 +327,8 @@ function carrierFrame(st: SceneState, yaw: number, v: number, dYaw: number, dPit
  */
 export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
   const u = dirAt(st, yaw, v);
-  const g = gizmoFor(st, u);
   const d = approachDistance(st.cfg, approach);
+  const g = footOf(st, gizmoFor(st, u), u, d); // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell
   const c = st.orbitCentreM;
   return [g[0] + u[0] * d - c.x, g[1] + u[1] * d - c.y, g[2] + u[2] * d - c.z];
 }
@@ -388,9 +416,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.gizmoNormal = hit.normal;
     st.asmFacePoint = hit.point;
   } else if (!st.asmLocked && hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
-  // ⭐ the shown gizmo eased to its point; the orbit's centre IS it
-  const target = st.asmLocked && st.asmLock !== null ? st.asmLock.point : g0;
-  st.asmGizmo = st.asmGizmo === null ? [target[0], target[1], target[2]] : easePoint(st.asmGizmo, target, dtMs, GIZMO_TAU_MS);
+  // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
+  // camera); the ring at the gizmo itself, on the real surface
+  const target = g0;
+  const foot = footOf(st, target, u, d);
+  st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, GIZMO_TAU_MS);
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);

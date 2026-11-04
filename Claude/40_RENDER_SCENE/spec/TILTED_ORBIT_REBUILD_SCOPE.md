@@ -1,7 +1,7 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
-> (2026-11-04, §9) — ⛔ no device close on either; the half roll moved to the far edge (Q6, §4.1). Step 2 next, after the owner's look.
+> (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). Step 3 next.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -117,7 +117,8 @@ I1 throughout.
 **Step 7 — The side crossing (dx over a top's side edge).** Open the dx's clamp: the quarter roll AT the edge, the piece waiting (§4.3, Q2); the plane
 carried over. Gate: a constant dx started on a top loops the vertical plane across it, stopped only by the roll.
 
-**Step 8 — The overhangs and the steps of the sections.** What a section meets beyond a flat box: an overhang's hidden faces (the shadow along the face),
+**Step 8 — The overhangs and the steps of the sections.** ⚠ (2026-11-04) See also the SLIDE wedged under an overhang (`HOVER.md` §0, item 21) — a
+future improvement of the slide, not of the orbit; a candidate gate here: *no slide ends where no way out is free*. What a section meets beyond a flat box: an overhang's hidden faces (the shadow along the face),
 gaps under `shadowBridgeMm`, a face cut off by a step deeper than `shadowStepMm` (150 mm in Scene_1 — the notches kept, Piece45's side cut), a section
 through an overhang alone (R3), a section exactly on an outline (R4) — the gizmo jumping steps, the piece and the camera on the shell (Step 2). Gate: I1–I4
 across all of Scene_1's protrusions; no stop that is not a discontinuity of the section's own contour.
@@ -212,4 +213,27 @@ against `feb9c05`).
 ⇒ ⛔ **OPEN for Step 2**: close in, the piece's path round a MOVING gizmo crosses the parts' protrusions — what the lock hid by holding the gizmo. The shell
 (Step 2: the piece and the camera on the gizmo's FOOT on a smooth shell 60 mm off the box) is the step meant to carry the piece clear of them; Step 2's gate
 adds these two probes (135 / 150 px): no off-section from a contact, no stop but a section's own discontinuity.
+
+## 10. Step 2 — built (2026-11-04)
+
+**The shell** (`input/orbit_shell.ts`, ported from the suspended branch): the piece and the camera read the gizmo's FOOT (`shellAnchor`) — the piece's
+place on the smooth shell round the placed parts' box (`shellBox`, `shellLevel`: flat over a face, round over an edge) less the approach's distance — so
+the piece is `foot + u·d`; the gizmo, its ring, stay on the real surface (`st.asmGizmoAt`). Beyond `orbitShellOffsetMm` (60 mm, slider *the shell's
+offset*) the piece is on the shell; within it, onto the gizmo (`gizmoShare`). ⭐ **The share read from the piece's SURFACE**: its REACH toward the gizmo
+(`pieceReach`, the support of its hull along −u) taken off `d` — ⛔ built first from its centre: at the contact `d` is the piece's thickness (43 mm), the foot
+stood 81 % on the shell, the piece 14–30 mm off the face: **the slide never latched** and the piece jumped 40 mm / the camera 25 cm with the held gizmo (probed);
+⛔ a cap of the foot's shift at the offset did not cure it (reverted). Under the slide: the slide's gizmo itself (the slide unchanged). 1602 vectors (+5).
+
+**The probes** (constant legs; Step 1 → Step 2):
+
+| approach | piece–gizmo | Step 1 | Step 2 |
+|---|---|---|---|
+| far (0) | 6.0 → 6.3 m | off-section 17, reverse 1, piece jumps 0 | the same (the piece on the shell: +0.3 m where the gizmo is recessed) |
+| 110 px | ~0.6 m | = far | = far |
+| 135 / 150 px | 0.08–0.5 m | ⛔ off-section ~2000, reverse 21–29, wall rolls 15–60, an orbit stopped by a part | ✅ **= far** (off-section 17, reverse 1, no piece / camera jump) — §9's open item closed |
+| 250 px (contact) | 43 mm | the slide latches on Piece43 | the slide latches on Piece43 (19.1 mm), as before |
+| random, 140 px | — | — | gizmo jumps 12, piece / camera 0 (the shell filters them) |
+
+⚠ Still open (Steps 3–5): the dy's polar clamp at the top / bottom (*"the gizmo's drop lands on a face turned away from the piece — held"*: the piece behind its
+face ~660–730 frames, far and close alike).
 
