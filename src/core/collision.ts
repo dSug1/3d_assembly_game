@@ -86,7 +86,7 @@ export function boundsFromShapes(shapes: CollisionShapeSource): BoundsSource {
 export interface CollisionSetup {
   readonly shapes: CollisionShapeSource;
   readonly bounds: BoundsSource;
-  /** The distance every pair is kept apart, world metres. */
+  /** How far a body may SINK into another, world metres (`D136`: contact allowed, only penetration refused) — and every substep's longest travel. */
   readonly skinM: number;
   /** Pairs that never collide — the render layer's snapping and just-unsnapped couples. */
   readonly exempt?: (a: ObjectId, b: ObjectId) => boolean;
@@ -212,6 +212,16 @@ function worldBoxOnce(world: World, id: ObjectId, bounds: BoundsSource): Aabb | 
     }
   }
   return { min, max };
+}
+
+/** ⭐ (2026-11-04, the audit) the least distance between two boxes — 0 overlapping; a LOWER bound on any gap between what they hold. */
+export function boxGap(a: Aabb, b: Aabb): number {
+  let s = 0;
+  for (let i = 0; i < 3; i++) {
+    const d = Math.max(a.min[i]! - b.max[i]!, b.min[i]! - a.max[i]!, 0);
+    s += d * d;
+  }
+  return Math.sqrt(s);
 }
 
 function boxesNear(a: Aabb, b: Aabb, margin: number): boolean {
@@ -441,7 +451,14 @@ export function nearestObstacle(
   // compound) would have left its other parts unbounded
   let second = maxM;
   const per = new Map<string, { o: ObjectId; g: number }>();
-  for (const [m, o] of candidates(world, moving, rootOf(world, id), setup, maxM)) {
+  // ⭐⭐ (2026-11-04, the audit) NEAREST BOXES FIRST, AND STOP: the pairs sorted by their boxes' gap (a lower bound on any part's), and once a box is no
+  // nearer than the SECOND least gap found, no pair left can change the answer (the least nor the second). ⛔ Every body within reach was run through
+  // GJK — 45 a query in `Scene_1`, 24 queries a frame
+  const pairs = candidates(world, moving, rootOf(world, id), setup, maxM)
+    .map(([m, o]) => ({ m, o, b: boxGap(worldBox(world, m, setup.bounds)!, worldBox(world, o, setup.bounds)!) }))
+    .sort((x, y) => x.b - y.b);
+  for (const { m, o, b } of pairs) {
+    if (b > CONTACT_M && b >= secondLeast(per.values(), maxM)) break;
     const ma = worldParts(world, m, setup.shapes);
     const oa = worldParts(world, o, setup.shapes);
     if (!ma || !oa) continue;
@@ -449,7 +466,8 @@ export function nearestObstacle(
       const g = partsGap(ma, [pb]);
       if (g === null) return;
       const k = o + "#" + j;
-      const gg = g <= CONTACT_M ? 0 : g;
+      // ⭐ (2026-11-04, the audit) a gap that is not a number reads as CONTACT, the safe side (⛔ it read as "nothing within reach")
+      const gg = !(g > CONTACT_M) ? 0 : g;
       if (gg < (per.get(k)?.g ?? Infinity)) per.set(k, { o, g: gg });
     });
   }
@@ -461,6 +479,19 @@ export function nearestObstacle(
     } else second = Math.min(second, g);
   }
   return { gapM: best, blocker, secondGapM: second };
+}
+
+/** ⭐ The second least gap of the parts found so far (`maxM` with fewer than two) — `nearestObstacle`'s stop. */
+function secondLeast(found: Iterable<{ g: number }>, maxM: number): number {
+  let a = maxM;
+  let b = maxM;
+  for (const { g } of found) {
+    if (g < a) {
+      b = a;
+      a = g;
+    } else if (g < b) b = g;
+  }
+  return b;
 }
 
 /**
@@ -511,7 +542,7 @@ const sameQuat = (a: readonly number[], b: readonly number[]): boolean =>
   a.every((v, i) => Math.abs(v - b[i]!) <= 1e-12);
 
 /** ⛔ The most substeps one move is cut into — a bound on the work, stated. */
-export const MAX_SUBSTEPS = 64;
+export const MAX_SUBSTEPS = 1024;
 
 /**
  * ⭐⭐ **HOW FAR ALONG `from → to` THE SUBTREE MAY GO** — checked ALONG THE PATH, never at the
@@ -538,6 +569,8 @@ function advance(
   }
   const d = qmul(to.orientation, [from.orientation[0], -from.orientation[1], -from.orientation[2], -from.orientation[3]]);
   const travel = length(sub(to.position, from.position)) + qAngle(d) * reach;
+  // ⛔⛔ (2026-11-04, the audit) the cap was 64: past ~8 cm at the boot camera each substep grew LONGER than the skin, and a thin bar could be jumped
+  // end to end. Now 1024 (~1.2 m of skins at the boot camera) — a bound on the work only a move no gesture makes reaches.
   const n = Math.min(MAX_SUBSTEPS, Math.max(1, Math.ceil(travel / Math.max(setup.skinM, 1e-12))));
   let prev = 0;
   let prevWorld = world;

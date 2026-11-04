@@ -418,7 +418,7 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-10-28, the owner) THE ORBIT: 0 — AROUND THE ASSEMBLY (dx yaw, dy pitch ±85°, two fingers' / Shift + drag's dy the approach to the gizmo the
    * ray finds — `input/assembly_orbit.ts`); 1 — along the gizmo's 2D curve, as built to 2026-10-25 (kept whole, *"I may revert later on"*). */
   orbitMode: number;
-  /** ⭐ (2026-10-28) the gizmo and its face LOCK within this distance of the piece (m) — or once the piece is inside the assembly's bounding sphere. */
+  /** ⭐ (2026-10-28) the look point is the gizmo within this distance of the piece (m) (`lookShare`) — ⛔ the close-in LOCK it once set is deleted (Step 1). */
   assemblyLockDistM: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE SHELL's offset (mm): the piece and the camera on the smooth shell round the placed parts' box beyond it, onto the gizmo within it (`input/orbit_shell.ts`). */
   orbitShellOffsetMm: number;
@@ -1285,7 +1285,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   // ⭐ The FRAME wins, because the degeneracy is real: directly overhead, the view axis is the
   // world vertical, the roll axis *"flattened onto the ground"* is the zero vector, and there
   // is no horizontal heading to call depth. No gain can repair a basis that does not exist.
-  // ⚠ So the surface is kept away from the pole instead, which is what `A7` already claimed.
+  // ⚠ So the surface is kept away from the pole instead, which is what `A7` already claimed. ⛔ (2026-11-04, the audit) `gravity_frame.ts` is deleted
+  // (nothing read it since the parts' moves went, `5515502`); the rule stays — a camera straight overhead has no heading either.
   for (const [name, r] of [
     ["orbitBottomRadiusM", cfg.orbitBottomRadiusM],
     ["orbitMiddleRadiusM", cfg.orbitMiddleRadiusM],
@@ -1296,8 +1297,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       throw new Error(
         `${name} (${r} m) must be POSITIVE: a ring of radius zero sits on the vertical axis ` +
           "through the target, where the camera looks exactly along gravity. There the " +
-          "gesture frame has no roll axis and no depth heading, so gravityFrame returns null " +
-          "and every press throws — see A7.",
+          "camera has no horizontal heading (no up to roll about) — see A7.",
       );
     }
   }

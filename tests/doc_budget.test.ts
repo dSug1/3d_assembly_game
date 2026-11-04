@@ -84,6 +84,13 @@ describe("⛔ the documentation budget — bytes, because a line is not a unit o
   });
 });
 
+describe("⭐ (2026-11-04, the audit) CLAUDE.md — the LARGEST front door, loaded at every session's start, was unbudgeted", () => {
+  // ⚠ Apart from the mandatory load above (that sum is the router's recipe; CLAUDE.md is the harness's). A RATCHET from ~99 KB: lower it, never raise it.
+  it("CLAUDE.md is within 100 KB", () => {
+    expect(bytesOf("CLAUDE.md")).toBeLessThanOrEqual(100_000);
+  });
+});
+
 describe("⭐ and the LINE caps README has always stated", () => {
   // ⛔ Kept as well as the bytes, not instead: they bound how much a reader must SCROLL,
   // which is a different failure from how much a session must LOAD. Both are real.

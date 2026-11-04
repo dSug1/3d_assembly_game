@@ -493,7 +493,13 @@ export class MotionTracker {
     this.lastStep = { dx, dy };
     // ⭐ The RAW sample feeds the speed window — the deadband is a travel rule, and subtracting
     // it here would make this finger read slower than the same finger on a Recognizer.
-    this.buffer = trimBuffer([...this.buffer, s], this.cfg);
+    // ⭐ (2026-11-04, the audit) appended and trimmed IN PLACE — the same window as `trimBuffer` (the samples within `flickWindow` of the last), without
+    // the copy and the filter every pointer event made (⛔ `trimBuffer([...this.buffer, s])`)
+    this.buffer.push(s);
+    const cutoff = s.t - this.cfg.flickWindow;
+    let drop = 0;
+    while (drop < this.buffer.length && this.buffer[drop]!.t < cutoff) drop++;
+    if (drop > 0) this.buffer.splice(0, drop);
     return this.current;
   }
 }

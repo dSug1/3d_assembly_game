@@ -60,7 +60,7 @@ export function collisionSetup(
 /**
  * ⭐⭐⭐ prototype (2026-10-13, *"Now we need to work on the collision of the green-turquoise piece with the other parts"* → *"Build"*; `COLLISION.md` §11) — the ORBITED PIECE's setup: the same rule and skin, against the placed and loose
  * parts only — ⛔ never the FROZEN bodies (the floor: the 3rd and 4th rings pass under it) nor the PLAY VOLUME (2 × 2 × 1 m against a 6 m
- * orbit), the owner's choice; the other orbited piece is never an obstacle (`candidates` skips orbited bodies).
+ * orbit), the owner's choice; the other (hidden) orbited piece is never an obstacle (exempted by this setup — `candidates` itself skips no orbited body since 2026-10-13).
  */
 export function pieceCollisionSetup(st: SceneState, skin: number = skinM(st)): CollisionSetup {
   const frozen = (id: ObjectId): boolean => st.world.objects.get(id)?.frozen === true;

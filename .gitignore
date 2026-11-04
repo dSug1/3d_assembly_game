@@ -10,9 +10,9 @@ build/
 .vite/
 *.tsbuildinfo
 
-# native shells (generated -- `npx cap add` recreates them)
-/android/
-/ios/
+# Blender autosave copies
+*.blend1
+*.blend2
 
 # test + coverage
 coverage/

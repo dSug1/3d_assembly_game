@@ -34,6 +34,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # ⭐ (2026-10-10) off Node 20: the v5 actions run on Node 24, and the build on Node 22 (the deploy run warned since 2026-10-02)
       - uses: actions/checkout@v5
@@ -51,7 +52,8 @@ jobs:
       - name: Typecheck and golden vectors
         run: npm run verify
 
-      - run: npm run build
+      # ⭐ (2026-11-04, the audit) `vite build` alone: `npm run verify` above already typechecked.
+      - run: npx vite build
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -61,6 +63,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

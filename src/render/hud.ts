@@ -67,6 +67,8 @@ export interface HudFields {
 
 export interface Hud {
   update(fields: HudFields): void;
+  /** ⛔ (2026-11-04, the audit) a fault in the HUD's OWN paint, written straight into the box — `update` is what failed. */
+  fault(text: string): void;
 }
 
 /**
@@ -153,6 +155,10 @@ export function createHud(parent: HTMLElement = document.body): Hud {
   parent.appendChild(toggle);
 
   return {
+    fault(text) {
+      box.textContent = `${box.textContent ?? ""}
+DRAWFAULT ${text}`;
+    },
     update(f) {
       box.textContent = [
         `score     ${f.score}`,

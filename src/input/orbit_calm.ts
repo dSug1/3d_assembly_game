@@ -5,7 +5,7 @@
  * *"add some slide of the gizmo and follow by the piece and camera as per 3286ed5 … so that the gizmo can reach close to the edges without the camera view
  * being too slanted (which prevents seeing properly where the gizmo is on the face). but I like the smooth transition over the edge"*. ⭐⭐⭐ Ported to the
  * rebuild (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*): `edgeShare` and `shownDir` are
- * 58d86ff's, unchanged (its distance gate deleted: the same calm at every distance, Q3); the runs they read are the CARRIER's (its facet of the green loop, its stretch of the red chain) — and, new, the
+ * 58d86ff's, unchanged (its distance gate deleted: the same calm at every distance, Q3); the runs they read are the FACE MAP's (Step 4c-bis: the place across the core box's side, the height in the box — ⛔ the carrier's facet and chain before) — and, new, the
  * shares and the face's frame are EASED (`easeToward`), never read at once: the gizmo's face at a height can change with the height (a protrusion bridged,
  * the funnel), which 58d86ff's coplanar region never did (TILTED_ORBIT_REBUILD_SCOPE.md Step 9: *"the shares FOLLOWING their targets — a column of another
  * height moved the camera 15 cm"*).

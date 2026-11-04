@@ -202,7 +202,8 @@ describe("⭐⭐ prototype — zoom ↔ way in + roll WITHOUT LIFTING (2026-10-1
     expect(holdSwitch("ZOOM", true, 999, 50, 3, 150)).toBe("ZOOM"); // both moving: a pinch
     expect(holdSwitch("HELD", true, 999, 50, 3, 150)).toBe("HELD"); // undecided is `holdDecision`'s
     expect(DEFAULT_CONFIG.holdSwitchRestMs).toBe(150);
-    expect(code("render/tuning_menu.ts")).toContain('"holdSwitchRestMs", 0, 600, 10)');
+    // ⛔ (2026-11-04, the audit) its slider removed — only the ⏸ way in reads the tunable (`config_debt`'s PENDING)
+    expect(code("render/tuning_menu.ts")).not.toContain('"holdSwitchRestMs", 0, 600, 10)');
   });
 });
 

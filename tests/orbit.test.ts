@@ -23,8 +23,6 @@ import {
 import { MotionTracker } from "../src/input/motion";
 import { mmToPx } from "../src/core/units";
 import type { Vec3 } from "../src/core/vec";
-import { gravityFrame } from "../src/input/gravity_frame";
-import { WORLD_DOWN } from "../src/core/object_model";
 
 const cfg = DEFAULT_CONFIG;
 
@@ -175,27 +173,8 @@ describe("⛔ the ring config is validated", () => {
  * gravity frame directly.
  */
 describe("⭐⭐ the orbit surface NEVER reaches a pole — the frame exists everywhere on it", () => {
-  it("⛔ gravityFrame is non-null at every (yaw, elevation, zoom) the surface can produce", () => {
-    for (let yawStep = 0; yawStep < 12; yawStep++) {
-      const yaw = (yawStep / 12) * 2 * Math.PI;
-      for (let vStep = 0; vStep <= 40; vStep++) {
-        // ⚠ Deliberately driven OUTSIDE [0, 1] as well: the clamp is part of what is claimed.
-        const v = -0.25 + (vStep / 40) * 1.5;
-        for (const zoom of [0.5, 1, 2]) {
-          const pose = orbitOffset(cfg, yaw, v, zoom);
-          // ⭐ The camera sits at `offsetM` from the target and looks back at it.
-          const viewAxis: [number, number, number] = [
-            -pose.offsetM[0],
-            -pose.offsetM[1],
-            -pose.offsetM[2],
-          ];
-          const frame = gravityFrame(viewAxis, WORLD_DOWN);
-          expect(frame, `yaw=${yaw.toFixed(2)} v=${v.toFixed(3)} zoom=${zoom}`).not.toBeNull();
-        }
-      }
-    }
-  });
-
+  // ⛔ (2026-11-04, the audit) the sweep through `gravityFrame` is deleted with `gravity_frame.ts` (unreachable since `5515502`); the horizontal reach
+  // below is the property it rested on, and stays.
   it("⭐ and the horizontal reach never collapses, which is WHY the frame exists", () => {
     // ⚠ The frame dies when the view axis is vertical, i.e. when the horizontal offset is
     // zero. ⛔ Stating it as a DISTANCE makes the margin visible instead of binary.

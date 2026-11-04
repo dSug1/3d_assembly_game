@@ -5,11 +5,9 @@
  * ⭐ The goal is asked only while the scene is AT REST — no finger down, no snap animating — which is the only time the
  * rule can say yes, so a drag does not pay for a goal check every frame.
  */
-import { goalReport } from "../core/goal";
-import { worldPlacementOf } from "../core/object_model";
 import type { LevelEndFacts } from "../core/level_end";
 import type { SceneState } from "./scene_state";
-import { goalTolOf, looseTolerance , liveFinal } from "./goal_capture_wiring";
+import { liveFinal, placedReport } from "./goal_capture_wiring";
 
 export function levelEndFrame(st: SceneState, nowMs: number): void {
   const final = liveFinal(st); // ⭐ (2026-10-14) the shown orbited piece's goal too
@@ -18,8 +16,9 @@ export function levelEndFrame(st: SceneState, nowMs: number): void {
   const animating = st.goalPulls.size > 0;
   const demo: LevelEndFacts["demo"] = st.demo === null ? "NONE" : st.demo.done ? "DONE" : "PLAYING";
   if (pointersDown > 0 || animating || demo === "PLAYING" || (demo === "NONE" && st.sceneStartMs === null)) return;
-  // ⭐ `D183`: PLACED — the snap's margins, or the never-grabbed ones.
-  const report = goalReport(final, st.sceneSpec.unitM ?? 1, (id) => worldPlacementOf(st.world, id), looseTolerance(st), goalTolOf(st));
+  // ⭐ `D183`: PLACED within the margins — ⭐ (2026-11-04, the audit) the report remembered for its inputs (`placedReport`): ⛔ a full goal fit on every
+  // resting frame
+  const report = placedReport(st)!;
   const result = st.levelEnd.frame(
     {
       goalMet: report.met,

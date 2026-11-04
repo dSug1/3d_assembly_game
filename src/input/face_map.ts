@@ -48,7 +48,6 @@ export interface FilledRegion {
 /** ⭐ One plane's group: its level along the stack's axis (outward +), its grown rectangles, its closed region. */
 export interface MapGroup {
   readonly depth: number;
-  readonly rects: readonly Rect2[];
   readonly region: FilledRegion;
 }
 
@@ -259,7 +258,7 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox): FaceMap 
         });
         for (const comp of components(rects)) {
           const rs = comp.map((k) => rects[k]!);
-          groups.push({ depth: p.level, rects: rs, region: filledRegion(rs) });
+          groups.push({ depth: p.level, region: filledRegion(rs) });
         }
       }
       groups.sort((a, b) => b.depth - a.depth);

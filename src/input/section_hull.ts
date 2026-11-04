@@ -13,7 +13,7 @@
  * ⭐⭐⭐ (2026-11-02, the owner: *"propose another way to smooth the travel of the red and green section without compromising the fact that the gizmo is always
  * at the intersection of the green and red sections, even through discontinuities such as edges"* → *"build it (option A, symetric)"*) — **THE SECTIONS
  * DRAWN THROUGH THE GIZMO**. Each line's own samples are FIXED on it — `n` evenly spread parameters (`sectionFixed`: arc lengths along an open red chain,
- * ends included; along a closed green loop, or angles round the axis over a top) — and dropped once per line (`sectionRedKey`, `sectionGreenKey`): a dx
+ * ends included; along a closed green loop, or angles round the axis over a top) — and computed once per line (each line's own key, `sectionLinesFrame`): a dx
  * reshapes only the red, a dy only the green. The gizmo's EXACT point is then INSERTED in both (`insertIndex`), every frame — so the ring is a vertex of
  * both lines by construction, through edges and held drops alike. ⛔ (2026-11-01, reverted) the lines and the ring were three separate drops: the carrier's
  * own replaced a sample, the green's started at the carrier, and they parted wherever the drops differed (an edge, a held drop).

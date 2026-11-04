@@ -2,7 +2,6 @@ export * from "./gestureConfig";
 export * from "./config_override";
 export * from "./motion";
 export * from "./flick";
-export * from "./gravity_frame";
 export * from "./pinch";
 export * from "./barycentre";
 export * from "./orbit";

@@ -245,12 +245,20 @@ export const AT_CONTACT_M = 0.0002;
 export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: SolveOptions): SolveResult {
   const hard = opt.gapM / 2;
   let queries = 0;
-  const gapAt = (q: OrbitQ): number => {
+  // ⭐⭐ (2026-11-04, the audit) THE CAP IS HARD past the first iteration: a query beyond `maxQueries` ABORTS the iteration it is in (`OVER_BUDGET`), which
+  // is undone whole — the solve returns where the last complete iteration left it (`deferred`). ⛔ The cap was read only at the loop's head: one
+  // iteration of (2) could spend ~10 queries past it. ⚠ The FIRST iteration always completes (the solve must progress, however small the budget).
+  let completed = 0;
+  const spend = (): void => {
+    if (completed > 0 && queries >= opt.maxQueries) throw OVER_BUDGET;
     queries++;
+  };
+  const gapAt = (q: OrbitQ): number => {
+    spend();
     return env.gap(q);
   };
   const normalAt = (q: OrbitQ): Vec3 | null => {
-    queries++;
+    spend();
     return env.normal(q);
   };
   const path: OrbitQ[] = [q0];
@@ -261,8 +269,10 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
   let blocked = false;
   let g = gapAt(q);
   let normals: Vec3[] = [];
-  for (let guard = 0; guard < 400 && !tiny(rest); guard++) {
-    if (queries >= opt.maxQueries) return { q, path, blocked, touched, deferred: true, rest, queries };
+  for (let guard = 0; guard < 400 && !tiny(rest); guard++, completed++) {
+    if (completed > 0 && queries >= opt.maxQueries) return { q, path, blocked, touched, deferred: true, rest, queries };
+    const at0 = { q, rest, touched, blocked, n: path.length };
+    try {
     const travel = arcLength(env, q, rest);
     // ⭐ (2026-10-29) a step that moves the piece NOWHERE is taken whole — nothing can collide (⛔ dropped: at ±90° around the assembly the yaw moves
     // the place by 0, so the solved yaw never followed the finger and dx was dead on a top face — the gizmo's carrier reads it)
@@ -430,9 +440,18 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
     path.push(q);
     rest = [s[0] * (1 - u), s[1] * (1 - u)];
     g = gn;
+    } catch (e) {
+      if (e !== OVER_BUDGET) throw e;
+      // the iteration undone whole: the solve stands where the last complete one left it
+      path.length = at0.n;
+      return { q: at0.q, path, blocked: at0.blocked, touched: at0.touched, deferred: true, rest: at0.rest, queries };
+    }
   }
   return { q, path, blocked, touched, deferred: false, rest: [0, 0], queries };
 }
+
+/** ⭐ (2026-11-04, the audit) thrown by a query past the cap — caught by `solveOrbitStep` alone. */
+const OVER_BUDGET: unique symbol = Symbol("OVER_BUDGET");
 
 /**
  * ⭐⭐ **STUCK, asked of the same solver**: a small step (`probeM` of anchor travel) each way along both ring coordinates — stuck only if not one
@@ -448,7 +467,9 @@ export function stuckProbe(q: OrbitQ, env: SolverEnv, opt: SolveOptions, probeM:
   if (lv > 1e-9) steps.push([0, probeM / lv], [0, -probeM / lv]);
   // ⭐ a move is a quarter of the probe or more — settling within the margin is not a way out
   // ⭐ (the fourth audit) the four solves SHARE the cap — each was given all of it (96 in theory)
-  const each = { ...opt, maxQueries: Math.max(4, Math.ceil(opt.maxQueries / Math.max(1, steps.length))) };
+  // ⭐ (2026-11-04, the audit) an even share, no floor: each solve's first iteration completes anyway (⛔ `max(4, …)` — 6 each at a cap of 24, each
+  // overshooting: ~60 for one check)
+  const each = { ...opt, maxQueries: Math.floor(opt.maxQueries / Math.max(1, steps.length)) };
   return steps.every((s) => dist(env.anchor(solveOrbitStep(q, s, env, each).q), a0) < probeM / 4);
 }
 
@@ -664,7 +685,8 @@ export function orbitFrame(
     }
   }
   const asked = !same(target, q);
-  const r = solveOrbitStep(q, [target.yaw - q.yaw, target.v - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - extra) });
+  // ⭐ (2026-11-04, the audit) what the cap leaves — no floor: the solve's first iteration completes anyway (⛔ `max(4, …)` spent past the cap)
+  const r = solveOrbitStep(q, [target.yaw - q.yaw, target.v - q.v], env, { ...opt, maxQueries: opt.maxQueries - extra });
   let queries = extra + r.queries;
   q = r.q;
   if (r.deferred) {
@@ -673,8 +695,9 @@ export function orbitFrame(
     target = q;
     if (same(r.q, r.path[0]!)) stopCoast = true;
     if (Math.abs(dvIn) > 1e-12) userV = q.v; // the finger's own dy pushed in: the height asked is where it stopped
-  } else if (!r.touched && Math.abs(userV - q.v) > 1e-6) {
-    const back = solveOrbitStep(q, [0, userV - q.v], env, { ...opt, maxQueries: Math.max(4, opt.maxQueries - queries) });
+  } else if (!r.touched && Math.abs(userV - q.v) > 1e-6 && opt.maxQueries - queries > 0) {
+    // ⭐ (2026-11-04, the audit) the way back only within what the cap leaves (⛔ `max(4, …)`: four more past it, every frame it ran)
+    const back = solveOrbitStep(q, [0, userV - q.v], env, { ...opt, maxQueries: opt.maxQueries - queries });
     queries += back.queries;
     if (!back.touched && !back.deferred) {
       q = back.q;

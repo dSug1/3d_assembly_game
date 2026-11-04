@@ -29,6 +29,7 @@ import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShar
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -111,21 +112,23 @@ function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal
  */
 function modelCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): GizmoHit | null {
   let best: { d: number; mesh: AbstractMesh; info: import("@babylonjs/core/Collisions/pickingInfo").PickingInfo } | null = null;
-  for (const [mesh, id] of st.idOf) {
-    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;
-    const pose = worldPlacementOf(st.world, id);
+  for (const c of castParts(st)) {
+    // ⭐⭐ (2026-11-04, the audit) the slab pre-reject in the MODEL's space: a part the ray misses is never tested (⛔ every placed mesh, every sample —
+    // 6–25k mesh tests a drag frame)
+    if (c.box !== null && !rayMeetsBox(origin, dir, length, c.box, CAST_BOX_MARGIN_M)) continue;
     let o = origin;
     let d = dir;
-    if (pose !== null) {
-      const p = mesh.absolutePosition;
-      const r = mesh.absoluteRotationQuaternion;
-      const m = swayRay(origin, dir, [p.x, p.y, p.z], [r.w, r.x, r.y, r.z], pose.position, pose.orientation);
+    if (c.pose !== null) {
+      const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);
       o = m.origin;
       d = m.dir;
     }
-    const info = new Ray(new Vector3(o[0], o[1], o[2]), new Vector3(d[0], d[1], d[2]), length).intersectsMesh(mesh, false);
+    CAST_RAY.origin.copyFromFloats(o[0], o[1], o[2]);
+    CAST_RAY.direction.copyFromFloats(d[0], d[1], d[2]);
+    CAST_RAY.length = length;
+    const info = CAST_RAY.intersectsMesh(c.mesh, false);
     if (!info.hit || info.pickedPoint === null) continue;
-    if (best === null || info.distance < best.d) best = { d: info.distance, mesh, info };
+    if (best === null || info.distance < best.d) best = { d: info.distance, mesh: c.mesh, info };
   }
   if (best === null) return null;
   const pp = best.info.pickedPoint!;
@@ -133,6 +136,32 @@ function modelCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): Giz
   const ln = best.info.getNormal(false, false);
   const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);
   return { point: m.point, normal: m.normal, host: st.idOf.get(best.mesh) ?? null };
+}
+
+/** ⭐ (2026-11-04, the audit) one scratch ray for every cast (⛔ a `Ray` and two `Vector3` per mesh per cast) */
+const CAST_RAY = new Ray(new Vector3(), new Vector3(0, 0, 1), 1);
+/** ⭐ the pre-reject's margin — a box grown 2 mm: a hit on its skin is never refused */
+const CAST_BOX_MARGIN_M = 0.002;
+
+type CastPart = NonNullable<SceneState["asmCast"]>["parts"][number];
+
+/**
+ * ⭐⭐ (2026-11-04, the audit) THE PARTS A CAST READS, ONCE A FRAME (`st.frames`, the world, the placed count): each placed mesh, its model pose, its drawn
+ * place and turn (the sway) and its model-space box. ⛔ Read per mesh per cast: ~10 allocations and an ancestry walk, every sample.
+ */
+function castParts(st: SceneState): readonly CastPart[] {
+  const c = st.asmCast;
+  if (c !== null && c.frame === st.frames && c.world === st.world && c.count === st.goalCommit.count) return c.parts;
+  const boxes = placedParts(st).boxes;
+  const parts: CastPart[] = [];
+  for (const [mesh, id] of st.idOf) {
+    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;
+    const p = mesh.absolutePosition;
+    const r = mesh.absoluteRotationQuaternion;
+    parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z], box: boxes.get(mesh) ?? null });
+  }
+  st.asmCast = { frame: st.frames, world: st.world, count: st.goalCommit.count, parts };
+  return parts;
 }
 
 /** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
@@ -212,7 +241,6 @@ function gizmoFor(st: SceneState): Vec3 {
   return [g[0], g[1], g[2]];
 }
 
-/** ⭐ The placed parts' world vertices (each a convex body — a box, a frustum), cached for the placed set (they do not move). */
 /** ⭐⭐⭐ (2026-11-04, Step 2) The shell's box (`input/orbit_shell.ts`) — the placed parts' extent, per placed set. */
 function shellOf(st: SceneState): ShellBox | null {
   const parts = placedParts(st);
@@ -240,17 +268,16 @@ function reachOf(st: SceneState, u: Vec3): number {
   return pts === undefined || place === null ? 0 : pieceReach(pts, place.orientation, u);
 }
 
-function placedParts(st: SceneState): { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } {
-  const ids: string[] = [];
-  const meshes: import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh[] = [];
-  for (const [mesh, id] of st.idOf) {
-    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isEnabled()) continue;
-    ids.push(`${id}/${mesh.name}`);
-    meshes.push(mesh);
-  }
-  const key = ids.sort().join("|");
+/**
+ * ⭐ The placed parts' world vertices on their MODEL pose (each a convex body — a box, a frustum) and each mesh's model-space box, cached for the placed set
+ * (they do not move). ⭐ (2026-11-04, the audit) the set's KEY read once a frame (`placedKey`) — ⛔ rebuilt (every mesh, sorted, joined) on every call:
+ * ~1300 times a drag frame (every solver query's foot, every section sample).
+ */
+function placedParts(st: SceneState): PlacedParts {
+  const { key, meshes } = placedKey(st);
   if (st.asmParts !== null && st.asmParts.key === key) return st.asmParts;
   const parts: Vec3[][] = [];
+  const boxes = new Map<AbstractMesh, Box3>();
   for (const m of meshes) {
     const pos = m.getVerticesData(VertexBuffer.PositionKind);
     if (pos === null) continue;
@@ -266,10 +293,30 @@ function placedParts(st: SceneState): { readonly key: string; readonly parts: re
       seen.add(k);
       vs.push(v);
     }
-    if (vs.length > 0) parts.push(vs);
+    if (vs.length === 0) continue;
+    parts.push(vs);
+    const b = boxOf(vs);
+    if (b !== null) boxes.set(m, b);
   }
-  st.asmParts = { key, parts };
+  st.asmParts = { key, parts, boxes };
   return st.asmParts;
+}
+
+type PlacedParts = NonNullable<SceneState["asmParts"]>;
+
+/** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame (`st.frames`, the world, the placed count). */
+function placedKey(st: SceneState): { readonly key: string; readonly meshes: readonly AbstractMesh[] } {
+  const k = st.asmKey;
+  if (k !== null && k.frame === st.frames && k.world === st.world && k.count === st.goalCommit.count) return k;
+  const ids: string[] = [];
+  const meshes: AbstractMesh[] = [];
+  for (const [mesh, id] of st.idOf) {
+    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isEnabled()) continue;
+    ids.push(`${id}/${mesh.name}`);
+    meshes.push(mesh);
+  }
+  st.asmKey = { frame: st.frames, world: st.world, count: st.goalCommit.count, key: ids.sort().join("|"), meshes };
+  return st.asmKey;
 }
 
 /** ⭐⭐⭐ (Step 4c-bis) the face map's knobs: the slow stretch through an edge (mm on each face) and the yaw / pitch it is crossed in (deg). */
@@ -391,7 +438,6 @@ function edgeMarginM(st: SceneState): number {
 export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (!assemblyOn(st) || st.greenBox === null) return;
   ensureAssembly(st);
-  st.asmRayCache.clear();
   const a = st.asm!;
   // ⭐ the approach's coast — ⭐⭐ (2026-11-01) under the slide mode too: a flick out leaves it
   if (st.approachInertia.coasting) {
@@ -442,7 +488,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const was = st.asmLocked;
   st.asmLocked = false;
   if (was) {
-    // ⭐ off the slide: the carrier found again from the slide's gizmo, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
+    // ⭐ off the slide: the map's angles put at the slide's gizmo (`mapAngles`) — before Step 4c-bis the carrier found again, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
     // yaw plane by the slide: the gizmo off the red section from then on)
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)

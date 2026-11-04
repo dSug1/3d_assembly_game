@@ -51,14 +51,6 @@ import { type CentreReturn, type PieceAim, type PieceEntry, type PieceOrbit } fr
 export const CAMERA_RADIUS_M = 0.6;
 
 /**
- * ⛔⛔ A QUATERNION, NOT EULER ANGLES. Device-reported 2026-09-13: *"the yaw is in
- * the world coordinates while the pitch is in the object coordinates."* That is what
- * `mesh.rotation` does — Euler components are applied in a FIXED ORDER, so the second
- * angle acts inside the frame the first one just made, and the cube tumbles. ⛔ (2026-11-02) its
- * composition lived in `input/screen_rotate.ts`, deleted with the parts' rotation (commit `d8134eb`).
- */
-export type DiagnosticPose = Quat;
-/**
  * RULE 6's INERTIA. ⭐ The finger drives a TARGET; the mesh follows it under a
  * critically damped law (`input/follow.ts`), so it accelerates out of rest and
  * decelerates into place instead of being pinned to the fingertip.
@@ -461,7 +453,7 @@ export interface SceneState {
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
-  /** ⭐ (2026-10-28) the gizmo CARRIED along the sections (its raw point; `null`: found by the ray next frame), the orbit place it was carried to, the section lines and when they were cast */
+  /** ⭐ (2026-10-28) the gizmo's raw point (Step 4c-bis: the face map's, `mapGizmo`; `null`: none yet) and the orbit place it was read at */
   asmG: Vec3 | null;
   asmPrevQ: { readonly yaw: number; readonly v: number } | null;
   asmSectionLines: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
@@ -480,10 +472,19 @@ export interface SceneState {
   asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
-  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[] } | null;
+  /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
+  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
+  /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
+  asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
+  /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */
+  asmCast: {
+    readonly frame: number;
+    readonly world: import("../core/object_model").World;
+    readonly count: number;
+    readonly parts: readonly { readonly mesh: AbstractMeshT; readonly pose: import("../core/mate_connector").Placed | null; readonly drawnAt: Vec3; readonly drawnQ: import("../core/vec").Quat; readonly box: import("../input/ray_box").Box3 | null }[];
+  } | null;
   /** ⭐⭐⭐ (2026-11-04, Step 2) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
-  asmRayCache: Map<string, { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null } | null>;
   approach: number;
   approachInertia: OrbitInertia;
   orbitShift: boolean;
@@ -515,7 +516,6 @@ export interface SceneState {
   scene: Scene;
   camera: ArcRotateCamera;
   light: HemisphericLight;
-  dimsOf: Map<ObjectId, readonly [number, number, number]>;
   /** ⭐ `D125`: every contour material, so the slider reaches them all; empty in a scene without one. */
   contourMats: StandardMaterial[];
   untaperedBodies: string[];
@@ -550,7 +550,10 @@ export interface SceneState {
   goalCommit: GoalCommit;
   goalCommitWorld: World | null;
   /** ⭐ `D183`: every piece a finger or the mouse has GRABBED this level — a piece never grabbed is judged strictly. */
-  grabbed: Set<string>;
+  /** ⭐ (2026-11-04, the audit) the goal report and the inputs it was computed for (`placedReport`) */
+  /** ⭐ (2026-11-04, the audit) the world the goal capture last read (`goalCaptureFrame`) */
+  goalCaptureWorld: import("../core/object_model").World | null;
+  goalReportMemo: { readonly key: import("../input/goal_capture").GoalReportKey; readonly report: import("../core/goal").GoalReport } | null;
   /** ⭐ `D180`: the level end's latch — its `result` is the frozen result once the level is complete. */
   levelEnd: LevelEnd;
   /** ⭐ `D180`: told once, on the frame the level completes (`main.ts` shows the results screen). */
@@ -671,3 +674,5 @@ export { ORBIT_START_YAW_RAD } from "../core/scene_dims";
 export const ORBIT_START_ELEVATION = 0.62;
 
 export const ORBIT_START_CENTRE_M: Vec3 = [0, 0, 0];
+
+type AbstractMeshT = import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh;

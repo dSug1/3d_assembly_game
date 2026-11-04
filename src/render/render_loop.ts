@@ -303,7 +303,9 @@ export function startRenderLoop(st: SceneState): void {
     }
     if (st.hudDirty) {
       st.hudDirty = false;
-      paint(st);
+      // ⛔⛔ (2026-11-04, the audit) the HUD GUARDED ON ITS OWN: a throw in `paint` skipped `scene.render()` every frame — a frozen glass, and the
+      // DRAWFAULT line it latched was written only by `paint` itself
+      guardDraw(st, "hud", () => paint(st));
     }
 
     // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.

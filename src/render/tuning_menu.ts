@@ -227,7 +227,7 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐ (2026-10-12, *"instead of power 3 for the quad scale, use a logarythm curve so that the quads and resting face grow faster when they are small"*) — the log curve's steepness (0 = a straight line)
             tunable(st, "resting-face quads: growth steepness (log curve) with the gizmo's distance", "quadGrowthLogK", 0, 50, 0.5),
             // ⭐ prototype (2026-10-12, *"Build with the 150ms rest"*)
-            tunable(st, "zoom → roll: the second finger's rest before the first finger rolls (ms)", "holdSwitchRestMs", 0, 600, 10),
+            // ⛔ (2026-11-04, the audit) the "zoom → roll" rest slider (`holdSwitchRestMs`) removed: only the ⏸ way in reads it (`config_debt`'s PENDING)
             // ⛔ Radians (and elevation-parameter) per MILLIMETRE of finger travel, never
             // per pixel — a pixel means something different on a phone and a tablet.
             tunable(st, "yaw gain ←→ (rad/mm)", "gainOrbitYaw", 0.002, 0.06, 0.002),
@@ -378,7 +378,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "phantom lead (ms)", "translateLeadMs", 0, 1.5, 0.1),
             // ⭐⭐⭐ A14: how long a lift-and-replace of the second touchpoint stays ONE
             // gesture. ⛔ 0 restores the old behaviour exactly, which is how to A/B it.
-            tunable(st, "sway of others (mm)", "translateSwayMm", 0, 8, 0.1),
+            // ⛔ (2026-11-04, the audit) "sway of others (mm)" (`translateSwayMm`) removed: the one sway call passes its own amplitude
             tunable(st, "sway softness (ms)", "translateSwayTauMs", 40, 600, 20),
           ],
         },

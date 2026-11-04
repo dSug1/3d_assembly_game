@@ -159,7 +159,6 @@ export function createScene(
    * the white capture contour, deleted `D120`) — and a single constant would have drawn them
    * at the parts' size on a plate seventy times their volume.
    */
-  st.dimsOf = new Map<ObjectId, readonly [number, number, number]>();
   st.contourMats = [];
   /** ⚠ Bodies whose taper was refused — reported on the HUD, never silently a box. */
   st.untaperedBodies = [];
@@ -547,7 +546,8 @@ export function createScene(
   st.asmFaceMap = null;
   st.asmParts = null;
   st.asmShell = null;
-  st.asmRayCache = new Map();
+  st.asmKey = null;
+  st.asmCast = null;
   st.approach = 1;
   st.approachInertia = new OrbitInertia();
   st.orbitShift = false;
@@ -716,7 +716,8 @@ export function createScene(
   st.goalLastPose = new Map();
   st.goalCommit = new GoalCommit();
   st.goalCommitWorld = null;
-  st.grabbed = new Set();
+  st.goalReportMemo = null;
+  st.goalCaptureWorld = null;
   st.playVolume = playVolumeOf(st.sceneSpec);
   st.topOutlines = new Map();
   st.onLevelEnd = null;

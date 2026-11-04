@@ -184,14 +184,17 @@ describe("⭐⭐ `D183` — wired (⛔ (2026-11-02) the parts' alignment, seats 
 
   it("⛔ no press grabs a part any more — a part is judged by the never-grabbed margins until it can be moved again", () => {
     for (const f of ["pointer_wiring.ts", "goal_capture_wiring.ts", "render_loop.ts"]) expect(src(f)).not.toMatch(/st\.grabbed\.add\(/);
-    expect(src("goal_capture_wiring.ts")).toContain("st.grabbed.has(id) ? loose : strict");
+    // ⭐ (2026-11-04, the audit) the grabbed margin deleted with `st.grabbed` (never filled): every part the strict margins
+    expect(src("goal_capture_wiring.ts")).toContain("orbited : strict);");
+    expect(src("scene_state.ts")).not.toMatch(/grabbed: Set</);
   });
 
-  it("⭐ one set of margins everywhere: the HUD and the level end read `goalTolOf`", () => {
-    expect(src("level_end_wiring.ts")).toMatch(/goalTolOf\(st\)/);
+  it("⭐ one set of margins everywhere: the HUD and the level end read `goalTolOf` — ⭐ (2026-11-04) through the one remembered report (`placedReport`)", () => {
+    expect(src("level_end_wiring.ts")).toMatch(/placedReport\(st\)/);
+    expect(src("level_end_wiring.ts")).not.toMatch(/goalReport\(/);
     // ⭐ `D188`: the HUD reads `placedReport`, the same margins, shared with the score bar.
     expect(src("hud_paint.ts")).toMatch(/placedReport\(st\)/);
-    expect(src("goal_capture_wiring.ts")).toMatch(/looseTolerance\(st\), goalTolOf\(st\)/);
+    expect(src("goal_capture_wiring.ts")).toMatch(/loose, goalTolOf\(st\)/);
     expect(src("level_end_wiring.ts")).toMatch(/st\.goalPulls\.size > 0/);
   });
 

@@ -191,3 +191,40 @@ export function captureOffsetM(
 export function snapPathBlockedBy(world: World, followerId: ObjectId, seat: Placed, setup: CollisionSetup): ObjectId | null {
   return resolveMove(world, followerId, seat, setup).blockedBy;
 }
+
+/**
+ * ⭐⭐ (2026-11-04, the audit) **WHAT A GOAL REPORT DEPENDS ON** — the world (immutable: a change is a new reference), the shown orbited piece, and the
+ * margins in force (the frame fit's and a piece's, both on the glass at the camera NOW, and the orbited piece's own). The same key: the same report.
+ */
+export interface GoalReportKey {
+  readonly world: object;
+  readonly shown: string | null;
+  readonly loose: { readonly positionM: number; readonly angleRad: number };
+  readonly strict: { readonly positionM: number; readonly angleRad: number };
+  readonly orbitMm: number;
+  readonly orbitDeg: number;
+}
+
+export function goalReportKey(
+  world: object,
+  shown: string | null,
+  loose: { readonly positionM: number; readonly angleRad: number },
+  strict: { readonly positionM: number; readonly angleRad: number },
+  orbitMm: number,
+  orbitDeg: number,
+): GoalReportKey {
+  return { world, shown, loose, strict, orbitMm, orbitDeg };
+}
+
+export function sameGoalReportKey(a: GoalReportKey, b: GoalReportKey): boolean {
+  return (
+    a.world === b.world &&
+    a.shown === b.shown &&
+    a.loose.positionM === b.loose.positionM &&
+    a.loose.angleRad === b.loose.angleRad &&
+    a.strict.positionM === b.strict.positionM &&
+    a.strict.angleRad === b.strict.angleRad &&
+    a.orbitMm === b.orbitMm &&
+    a.orbitDeg === b.orbitDeg
+  );
+}
