@@ -2,7 +2,9 @@
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
-> function of the orbit's angles, the carrier deleted (§15) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). Step 5 next.
+> function of the orbit's angles, the carrier deleted (§15) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
+> (2026-11-04, §16.1): Step 5 may be built.
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -26,10 +28,10 @@ The tilted orbit adds to `ff2fca2`:
 
 | | Invariant | Measured by |
 |---|---|---|
-| **I1** | **The sections are planes, horizontal or vertical — the world's.** The green (dx) and red (dy) lines lie each in ONE plane of the world (`x = c`, `y = c` or `z = c`), drawn through the gizmo. | the constant-input probe: the gizmo within 3 mm of the leg's plane |
+| **I1** | **The sections are planes — the FACET FRAME's** (⭐ restated 2026-11-04 for the facet frames, §16 — accepted with Step 5): on a face the green (dx) runs along the edge it would cross, the red (dy) square to it, each in ONE plane of the face's frame through the gizmo. On faces square to the world's axes (a box — `Scene_1`) these are the world's planes (`x = c`, `y = c` or `z = c`): horizontal or vertical, as first written. | the constant-input probe: the gizmo within 3 mm of the leg's plane |
 | **I2** | **No jumps** — of the piece, the camera, the gizmo's ring, the look point. A step never more than ~2.5× its neighbours' (smooth input). A step in the assembly's depth may move the GIZMO (a break), never the piece nor the camera (the shell, §1.4). | the random-travel probe |
 | **I3** | **No change of direction under a constant input.** The same dx (dy) held forever keeps the gizmo going the same way round the SAME section loop — over and over — unless stopped by (a) a camera roll (then the reversed input goes on, §4) or (b) a discontinuity of that section's own contour. | the constant-input probe: no REVERSE, no STUCK but (a) / (b), no section change |
-| **I4** | **The finger drives the gizmo, the gizmo drives the orbit** of the piece and the camera — the piece and the camera never go one way while the gizmo goes the other, nor on while it is held. | both probes: the piece's direction vs the gizmo's face |
+| **I4** | **The finger drives the orbit, and the gizmo, the piece and the camera all follow from it** (⭐ reworded 2026-11-04, §16 A1 — since Step 4c-bis the gizmo is a function of the orbit's state, no longer its driver) — the piece and the camera never go one way while the gizmo goes the other, nor on while it is held. | both probes: the piece's direction vs the gizmo's face |
 | **I5** | **The gizmo goes the finger's way on the screen** — dx right, the gizmo right; dy down, the gizmo down (the owner, Q1: *"same direction as the input wins"* — over the 2026-10-04 inversion if it still stands at `ff2fca2`). | the probe: the gizmo's screen step · the finger's |
 | **I6** | **The camera upright** (the screen's up the world's) everywhere but where §4 says a roll is owed. | the random-travel probe: the up within 5° of the vertical on a wall |
 
@@ -37,6 +39,9 @@ The tilted orbit adds to `ff2fca2`:
 numbers recorded in its dossier, and the owner's device look (rule 5). A step that breaks an invariant is reverted, not patched.
 
 ## 3. Where `ff2fca2` stands (the starting point — read the code)
+
+> ⚠ (2026-11-04, §16 A2) **THE HISTORY.** The rebuild started here; the code to build on is now §15 (the face map, the shell, the calm, the parts at
+> rest) — the carrier, the polar turn and the lock below are deleted.
 
 `render/assembly_wiring.ts`, `input/assembly_orbit.ts`, `input/section_hull.ts`; `DOUBLE_ORBIT_PROTOTYPE.md` up to its `ff2fca2` section.
 
@@ -68,7 +73,12 @@ numbers recorded in its dossier, and the owner's device look (rule 5). A step th
    then the gizmo goes on down the wall in the SAME plane. ⚠ After a quarter roll the finger's dx is drawn along the screen's vertical: the finger's axes
    turn a quarter with the picture (the dx keeps driving the same loop) — the build states, measures and shows the owner which it is.
 4. **The orbit's frame tilts** onto a top / bottom (dx across, dy toward / away): its yaw and pitch must stay the gizmo's world axes there — never a
-   camera-derived heading (the suspended branch: the piece went −x while the gizmo went z).
+   camera-derived heading (the suspended branch: the piece went −x while the gizmo went z). ⭐⭐⭐ (2026-11-04, the owner — THE FACET FRAMES) **at every
+   crossing the frame turns about the edge crossed by the DIHEDRAL** — *"the pitch rotating shall be done by the value of the angle between the normals
+   of the current faces contour and the next faces contour projected in the plane orthogonal to the edge between those contours. This way, if the
+   assembly is multi-faceted, the orbit is always in front of the face it orbits around"*: 90° on a box (the top reached as a vertical face is), 60° at
+   each edge of a horizontally extruded hexagon. §4.1–§4.3's rolls are the camera's side of the same turns: on a box the half roll after the far edge
+   and the quarter roll off a top's side edge; in general, the roll owed is what brings the camera's up back to the world's on a face where I6 asks it.
 
 ## 5. The steps (each keeps I1–I6)
 
@@ -107,38 +117,77 @@ along the section only). Gate: I1 on every side, every heading.
 **Step 4c-bis — THE FACE MAP (inserted 2026-11-04, the owner; built, §15).** The gizmo a FUNCTION of the orbit's angles, no carrier: the angles' place on
 the core box (each side a slice of the turn, the sides' band ±45° of pitch, the top's and the bottom's quarters beyond), the ray along the box face's axis
 onto the frontmost of the slide's coplanar regions (holes closed), slowly through an edge (the last / first 10 mm in the last / first 10°), blended across
-it (no jump); the sections drawn from the same function. ⚠ What it changes for the steps below: Step 5 starts from the face map's top quarters (concentric
-squares, not the polar turn), and Steps 5–7 must replace the angles' pole — the map's place then needs a state of its own on the box (the walk discussed
-2026-11-04: a point on the shell and its carried frame), which is where the crossings and the rolls of §4 belong.
+it (no jump); the sections drawn from the same function. ⚠ What it leaves for the steps below: ONE angle frame for the whole assembly has a POLE —
+over a top every yaw is the top centre (the quarters are concentric squares, a dx at ±90° moves nothing) and the pitch stops there; the crossings of §4
+cannot be built on it. ⭐ The answer (the owner, 2026-11-04): **the facet frames** — Steps 5–8 below, rewritten (§16).
 
-**Step 5 — x / z on a top or bottom (no polar).** Over a top / bottom the gizmo moves along the world's x and z lines through it (a dy across the top
-along the plane it came up in; a dx along the other), the orbit's frame tilted onto the face (§4.4: its heading the world's x or z, the gizmo's), switched
-at the edge with nothing moving (a re-base: the spring, the lag, the leash re-read). **Still clamped**: the dy stops at the far edge (no crossing, no roll yet); a dx
-stops at the side edges (no going over yet). Gate: I1–I6 with the clamp as the only stop.
+⭐⭐⭐ **THE NEXT STEPS — THE FACET FRAMES** (rewritten 2026-11-04 for the owner's design, §4.4, §16; ⛔ the first Steps 5–8 — x / z on a top by a tilted
+frame re-based at the edge, the two crossings with the carrier, the hull's overhangs — are superseded; they stand in the history of this file). **The
+model**: the assembly's FACES CONTOUR — its outline's main faces (facets), each with its normal and its edges to its neighbours; a FRAME per facet (its
+normal, and the axes along and across each edge); the orbit's state the current facet, its frame and the orbit's angles in it. Crossing an edge — by dx or
+by dy, the same rule — the frame turns about that edge by the DIHEDRAL (the angle between the two normals, in the plane square to the edge): 90° at
+every edge of a box (`Scene_1`), 60° round a hexagonal section. So the orbit is always in front of the facet it goes round, and no frame is ever used
+near its pole: a turn is taken at every edge, ±45° of a box face's slice — the concentric squares and the dead centre of Step 4c-bis are never reached.
+It is the WALK discussed on 2026-11-04 (a point on the shell, its frame carried), discrete on the facets: parallel transport across a polyhedron's edges.
 
-**Step 6 — The crossing over the top / under the bottom (dy).** Open the dy's clamp: the gizmo across the WHOLE top with no roll (the zenith passed
-with nothing turning), the half roll AT THE FAR EDGE (§4.1), the input reversed after it (§4.2), the gizmo down the far side in the SAME plane. The finger's
-axes LATCHED for a drag (and its coast), each a whole screen axis; the edge roll REVERSES them (never re-read off the rolled picture — looking down a top the
-axes swap screens). Gate: a constant dy loops the vertical plane, stopped only by the roll at the far edge (no roll, no stop mid-face); reversed, it goes on;
-I1 throughout.
+**Step 5 — The faces contour; the face map on facets (no new crossing).** Generalise the face map (§15) from the CORE BOX to the FACES CONTOUR:
+* the facets: the CONVEX outline of the placed parts (never a re-entrant edge: a constant input turns one way round — I3), its facets MERGED within an
+  angle and kept only above a share of real face area behind them (D5) — ⛔ every hull facet a frame would tilt the orbit 15° for 3 cm over a slanted
+  block and back (the owner's bounce again — the hull deciding about faces, Step 4c's root cause); on a box exactly the core box's six faces;
+* a stack per facet normal (today six world axes), the slide's coplanar regions in that facet's plane (holes closed), the frontmost along the normal;
+* dx's slices per facet round the loop it is on (each facet the turn from halfway to each neighbour's normal — Step 4b's facets; on a box 4 × 90°); the
+  place across a facet and up it, the slow stretch and the blend at each facet edge (§15 items 4–5);
+* the calm's normal the facet's (§13, A6);
+* ⭐ **D3 (the owner, 2026-11-04): the gizmo at the REAL depth under it** — over an empty slot its bottom (the closed region still chooses the face and
+  keeps the gizmo continuous across the rim; only the depth is the real one); the piece and the camera orbit on (the shell); the APPROACH (A + dy) brings
+  the piece into the depth until it collides or meets the orbit's centre.
+The orbit stays in the UPRIGHT frame (the world's vertical; no frame turn yet), so tops and bottoms still read as today. Gate: `Scene_1` exactly as Step
+4c-bis on the sides (the probes' numbers, both matrices of §15) but over an empty slot (D3: the gizmo at its bottom, the piece and the camera unmoved by
+it; an A + dy there goes in to the contact); the vectors on a synthetic horizontal hexagonal prism and a box; I1 in the facet frame.
 
-**Step 7 — The side crossing (dx over a top's side edge).** Open the dx's clamp: the quarter roll AT the edge, the piece waiting (§4.3, Q2); the plane
-carried over. Gate: a constant dx started on a top loops the vertical plane across it, stopped only by the roll.
+**Step 6 — The frame turn at a crossing: up onto a top, down onto a bottom.** At a top / bottom edge's threshold the orbit's frame TURNS about the edge by
+the dihedral (90° on a box): the top becomes a face of the new frame, orbited as a vertical face is — a dx along the edge, a dy across the top toward the
+far edge, the sections the facet frame's planes (I1: on a box the world's x / z lines). The turn RE-BASES with nothing moving: the piece's direction is the
+same vector read in the new frame's angles (the spring, the lag, the leash re-read), the gizmo's place taken over by `mapAngles` / `syncAngle` (as after
+the slide — no jump). The camera ROLL owed at the turn is the orbit's heading off the edge's normal (none when square to the edge, at most half a slice),
+taken over the input's travel, the piece waiting (§4.1's rule). A margin against a finger dithering on the threshold (no turn back before it is passed
+back by a few degrees). The finger's axes LATCHED for a drag (and its coast), each a whole screen axis (§6). **Still clamped**: on the top the dy stops at
+the far edge and the dx at the side edges (no second crossing, no half / quarter roll yet). ⭐ **The bottom a face to orbit as the others** (D2, the
+owner: *"remember that the floor can be crossed by the camera and is invisible from below"*): reached and orbited exactly as the top — the piece and the
+camera under the floor's top; ⚠ checked here: the play volume and the solver's contacts never stop the orbited piece's orbit there. Gate: I1–I6 on a top reached at
+several headings, the clamp the only stop; a dy back down the edge turns the frame back with nothing moving.
 
-**Step 8 — The overhangs and the steps of the sections.** ⚠ (2026-11-04) See also the SLIDE wedged under an overhang (`HOVER.md` §0, item 21) — a
-future improvement of the slide, not of the orbit; a candidate gate here: *no slide ends where no way out is free*. What a section meets beyond a flat box: an overhang's hidden faces (the shadow along the face),
-gaps under `shadowBridgeMm`, a face cut off by a step deeper than `shadowStepMm` (150 mm in Scene_1 — the notches kept, Piece45's side cut), a section
-through an overhang alone (R3), a section exactly on an outline (R4) — the gizmo jumping steps, the piece and the camera on the shell (Step 2). Gate: I1–I4
-across all of Scene_1's protrusions; no stop that is not a discontinuity of the section's own contour.
+**Step 7 — Crossing on, every edge the same rule.** Open the clamps: over a top's FAR edge (the frame turns again; the camera's half roll there, §4.1;
+the input reversed after it, §4.2 — the same finger held at the edge, the reversed one goes on down the far side) and over a top's SIDE edge onto a wall
+(the quarter roll, §4.3, the piece waiting); on a non-box contour each crossing turns by its own dihedral, the roll owed the one that brings the camera's
+up back to the world's where I6 asks it. Round a VERTEX the frame comes back turned by the vertex's angle defect (90° at a box's corner, a diagonal path):
+the frame snapped to the facet's own axes on entering it, the roll owed taken in that crossing. Gate: a constant dy loops the vertical section (stopped
+only by the far edge's roll); a constant dx started on a top loops its section (stopped only by the side edge's roll); I1 throughout; the hexagonal prism
+looped both ways in the vectors.
+
+**Step 8 — What the faces contour misses; the shell on the facets.** ⚠ (2026-11-04) See also the SLIDE wedged under an overhang (`HOVER.md` §0, item 21) —
+a future improvement of the slide, not of the orbit; a candidate gate here: *no slide ends where no way out is free*. What the facet frames' face map does
+not reach or reads wrongly (A5): a face more than the merge angle off every facet (`MAP_AXIS_DEG` today); a face no facet's ray reaches (an undercut, the
+inside of a U — the orbit goes round the convex outline, the ray lands in a pocket only where it opens toward a facet); an outline narrower at a height
+than its facet (the gizmo in the facet's plane beside the real face, no part there); a ray from below on an overhang's underside (D2); two regions
+competing for a facet's main plane. ⛔ (`shadowBridgeMm`, `shadowStepMm`, R3, R4 belonged to the deleted hull.) And THE SHELL on the facets: today the
+parts' BOX offset (Step 2) — round a hexagon the piece would ride a box's corner past the slanted facets; the offset of the faces contour instead, when a
+non-box assembly exists. Gate: I1–I4 across `Scene_1`'s protrusions and the prism's; the gizmo's DEPTH steps accepted (the shell, Step 2).
 
 **Step 9 — Near square in the middle, the full orbit at the edges, at every distance.** The piece's SHOWN direction calmed toward the face's normal in
 its middle (a share of the orbit's angle), whole within an edge zone and through every crossing (the suspended branch's fourth pass, its sliders), the shares
 FOLLOWING their targets (never read at once — a column of another height moved the camera 15 cm). ⭐⭐⭐ **THE SAME CALM AT EVERY DISTANCE** (the owner,
 Q3 amended 2026-11-04: *"modify the scope Q3: same calm at every distance"*) — ⛔ the attenuation by distance (and 58d86ff's gate, whole within 3.6 m, none
 from 5.4 m) turned the piece's direction while A + dy approached: the approach curved (*"why is there a 2D curve not straight when I approach the piece with
-A + dy"*). Gate: I2 above all — the calm never makes a jump at an edge, a face switch, the zenith or under an approach. ✅ Built early, in Step 4b (§13).
+A + dy"*). Gate: I2 above all — the calm never makes a jump at an edge, a face switch, the zenith or under an approach. ✅ Built early, in Step 4b (§13);
+⭐ (2026-11-04, §16 A6) its targets read the face map's place since Step 4c-bis (the side's axis, the span across the core box, the height in the box), and
+the FACET's normal and span from Step 5.
 
 ## 6. Lessons carried from the suspended branch (`1.0.92-Tilted-orbit-suspended`) — read before building
+
+* ⭐⭐⭐ (2026-11-04, the rebuild's own, §16 A7) **DERIVE the gizmo, do not CARRY it**: a state that drifts, waits, is held and re-syncs was the root of
+  the device glitches of Steps 2–4c (the carrier); Step 4c-bis made the gizmo a function of the orbit's state. ⚠ Its limit: one angle frame has a pole —
+  a state is still needed where a function of the angles is singular, and the facet frames (§5, Steps 5–7) are that state, turned at every edge.
 
 * **The finger's axes latched for a drag** (and its coast), each a WHOLE screen axis — ⛔ re-read every frame, a level axis seen end-on handed the dx to the
   pitch; ⛔ a blend between screen axes sent a pure dx to both, diagonally.
@@ -569,3 +618,64 @@ undersides — Step 5's. ⚠ The matrix's moving frames are fewer for Step 4c-bi
 turn, holds released) where the map's place does not — at ±90° the centre.
 
 ⛔ No device close.
+
+## 16. Before Step 5 — the amendments and decisions Step 4c-bis made necessary (2026-11-04)
+
+> The owner: *"do I need to modify the specifications for the next steps, given the change we have implemented on step4c-bis ?"* → *"capture all that in
+> the md file as amendments required to be done or decided before proceeding to next steps"* → *"explain me why we cannot tilt the orbit when the dy
+> reaches certain thresholds … Wasn't it the purpose of step 5 ? Isn't it possible after step 4c-bis ?"* → *"let's go one step further: … the pitch rotating
+> shall be done by the value of the angle between the normals of the current faces contour and the next faces contour projected in the plane orthogonal to
+> the edge between those contours. This way, if the assembly is multi-faceted, the orbit is always in front of the face it orbits around."* → *"update the md
+> files by rewriting the next steps in line with this new design."*
+
+**Why.** Steps 5–8 were written for the CARRIER (§3), a stateful point on the sections' hulls. Step 4c-bis deleted it: the gizmo is a FUNCTION of the
+orbit's angles (§15). One angle frame for the whole assembly has a pole (a top's centre), so the crossings could not be built on it as it stood — but ONE
+frame was the limit, not the angles: frames switched at the edges cover the assembly without ever reaching a pole (an atlas, as no single chart covers a
+sphere). ⚠ The first answer here (D1 below as first written: *the walk, or stay on the angles*) overstated that the walk was needed.
+
+### 16.1 The decisions
+
+* ✅ **D1 — DECIDED (2026-11-04): THE FACET FRAMES.** The owner's design (quoted above): at every crossing the orbit's frame turns about the edge by the
+  dihedral between the faces — 90° on a box, the facet's own angle on a multi-faceted assembly. It supersedes both first options (a smooth walk on the
+  shell; staying on one angle frame) — it IS the walk, discrete on the facets, and keeps the orbit's angles (the camera, the spring, the solver's queries
+  and the slide's re-base all read angles today). → §4.4, §5 Steps 5–8 rewritten.
+> *"step 5: ok. Step 6: the bottom is a face to orbit as the others (remember that the floor can be crossed by the camera and is invisible from below)
+> Approach into an empty slot: the gizmo shall read the real depth under the gizmo, but the piece shall not go in (it shall continue its orbit). However,
+> the A + dy shall be able to bring the piece inside the depth up to where it collides or where it meets the center of the orbit. Edge stretch defaults:
+> OK."* — the owner, 2026-11-04.
+
+* ✅ **D5 — DECIDED (2026-11-04, *"step 5: ok"*): the facets as proposed.** Merged within 20° (today's `MAP_AXIS_DEG`), kept only above a minimum share
+  of real face area behind them — so a slanted block, a chamfer or a hull bridge never tilts the orbit; on a box the six faces exactly. Both sliders;
+  ⚠ the area share had no number in the proposal — Step 5 sets its default so that `Scene_1` keeps exactly its six faces (the gate), and reports it.
+* ✅ **I1's restated wording — ACCEPTED with Step 5 (*"step 5: ok"*)**: the sections are the FACET FRAME's planes (§2); the world's horizontal / vertical on a
+  box.
+* ✅ **D2 — DECIDED (2026-11-04): THE BOTTOM IS A FACE TO ORBIT AS THE OTHERS** — *"remember that the floor can be crossed by the camera and is invisible from
+  below"* (the frozen floor seen from below is not drawn, `D128`; its top contour shown instead, `D196`). → Step 6: the bottom reached and orbited exactly
+  as the top. ⚠ To check there, not assume: the piece under the assembly goes below the floor's top — the play volume (`D181`, the pieces kept on the
+  floor) and the solver's contacts must not stop the ORBITED piece's orbit there (the floor is no host, `HOVER.md` §11), and the camera under the floor
+  sees the assembly from below through it.
+* ✅ **D3 — DECIDED (2026-11-04): THE GIZMO READS THE REAL DEPTH; THE PIECE ORBITS ON; A + dy GOES IN.** Over an empty slot (a hole closed in its region,
+  §15) the GIZMO is at the real surface under it — the slot's bottom (⛔ the face's depth across the mouth, Step 4c-bis); the ORBIT does not follow it in:
+  the piece and the camera go on on the shell (Step 2 — a depth step moves the gizmo, never them). The APPROACH (A + dy, two fingers) brings the piece
+  INTO the depth, toward that gizmo, until it collides (the solver, as today) or meets the orbit's centre. → built with Step 5 (the face map on facets).
+  ⚠ *"the center of the orbit"* read as the GIZMO (the orbit's centre the piece turns about — `orbitCentreM`); ⏳ the owner to say if the assembly's
+  centre (`st.asm`) was meant. The closed regions still choose the FRONTMOST face and keep the gizmo continuous across a slot's rim (no lateral jump); only
+  the depth is the real one (the ray along the normal, no longer refused beyond 25 mm of the region's plane); a slot through the whole assembly (no
+  surface behind): the region's plane, as today.
+* ✅ **D4 — DECIDED (2026-11-04, *"Edge stretch defaults: OK"*):** `faceEdgeSlideMm` 10, `faceEdgeSlideDeg` 10 stand.
+
+### 16.2 The amendments — applied 2026-11-04
+
+* ✅ **A1** — I4 reworded (§2): the finger drives the orbit; the gizmo, the piece and the camera follow from it.
+* ✅ **A1′** — I1 restated in the facet frame (§2) — accepted with Step 5 (16.1).
+* ✅ **A2** — §3 marked as the history; the code to build on is §15.
+* ✅ **A3 / A4** — §5 Steps 5–7 rewritten: the faces contour and the face map on facets (Step 5), the frame turn at a crossing up onto a top / down onto a
+  bottom (Step 6), crossing on with every edge the same rule — the half and quarter rolls of §4 its camera's side (Step 7); §4.4 states the rule.
+* ✅ **A5** — §5 Step 8 rewritten: what the faces contour misses, and the shell on the facets.
+* ✅ **A6** — §5 Step 9 noted: built; its targets the face map's, the facet's from Step 5.
+* ✅ **A7** — §6: *derive the gizmo, do not carry it*, and its limit (the pole → the facet frames).
+
+### 16.3 Carried, not blocking
+
+* No device close on Steps 0–4c-bis (rule 5). The owner tests `b373acb` (deployed 2026-11-04) — its findings may add to D4 or A5.
+* The frame cost of the drawn sections (64 / 96 samples, up to four rays each in the edge bands) is not measured on the iPhone (§15).
