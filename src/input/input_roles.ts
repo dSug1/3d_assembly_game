@@ -6,10 +6,11 @@
  * finger axis (beyond `ROLE_MIN_COS`) passes nothing.
  * ⭐⭐⭐ (§21.5 F4) the roles are a FACE's — read once, at the crossing onto it, from its own square view (never the rolling camera's: §21.5 cause 5);
  * ⭐⭐⭐ (§21.5 F1, the owner: *"if the delta position would drive the gizmo in an opposite direction, hold the input … this overrules anything else"*)
- * R4's HOLD (`holdAtCrossing`, `throughHold`): at a face change, a finger component that the new roles would send the OPPOSITE way along the axis it
- * was driving — or onto the other axis — is HELD: it passes nothing until it reverses (or the drag ends); the other component goes on.
+ * R4's HOLD (`holdByMotion`, `throughHold`): at a change of the finger's motion, a finger component that would now send the gizmo the OPPOSITE way in the
+ * WORLD (the new face unfolded onto the old — §21.6) is HELD: it passes nothing until it reverses (or the drag ends); the other component goes on.
  * ⛔ ENGINE-FREE.
  */
+import { dot, qRotate, shortestArc, type Vec3 } from "../core/vec";
 
 /** ⭐ The least |cos| between an axis's screen direction and its finger axis for the axis to move (≈ 70°). */
 export const ROLE_MIN_COS = 0.35;
@@ -62,17 +63,32 @@ export const HOLD_NONE: FingerHold = { x: 0, y: 0 };
 
 const sgn = (v: number): -1 | 0 | 1 => (v > 0 ? 1 : v < 0 ? -1 : 0);
 
+/** ⭐ (§21.6) What the finger does to the gizmo on a face: the face's world normal, the gizmo's world direction for a finger right (`mx`) and up (`my`) —
+ * unit, `null` where that component drives nothing. */
+export interface FingerMotion {
+  readonly n: Vec3;
+  readonly mx: Vec3 | null;
+  readonly my: Vec3 | null;
+}
+
 /**
- * ⭐⭐⭐ AT A FACE CHANGE (`prev` → `next` roles) with the finger moving (`fx`, `fy` — what each component was passing): a component is held when the new
- * roles would drive it on ANOTHER orbit axis or the OPPOSITE way along its own — the gizmo would reverse or turn under a finger kept on. Held ones stay so.
+ * ⭐⭐⭐ R4 (the owner: *"if the delta position would drive the gizmo in an opposite direction, hold the input … this overrules anything else"*) — at a
+ * change of the finger's motion (a crossing, the roll mark, a frame turn) with the finger moving (`fx`, `fy`): a component is HELD when the gizmo it drove
+ * along `prev.m` would now go the OPPOSITE way — the new face's direction UNFOLDED onto the old one about their edge (`shortestArc(next.n, prev.n)`), so
+ * the dihedral never reads as a reversal — and REVERSED means turned past 120° (`HOLD_REVERSED_COS`): a quarter roll's 90° is R3's roles read again (dx
+ * then runs along the edge), never a hold (⛔ `dot < 0`: at exactly 90° rounding decided, a dx held for good — probed). Held ones stay so. ⭐⭐⭐ (2026-11-05, §21.6) In the WORLD, never in the orbit's axes: ⛔ v2 compared the roles
+ * (which orbit axis, which sign) — a frame turned on the same face renamed the axes, the dx was held with the gizmo going the finger's way on the screen,
+ * the finger never reversing it: the 900-frame stalls (probed).
  */
-export function holdAtCrossing(prev: Roles, next: Roles, fx: number, fy: number, h: FingerHold): FingerHold {
-  const sx = sgn(fx);
-  const sy = sgn(fy);
-  const turns = (pa: 0 | 1, ps: number, pOk: boolean, na: 0 | 1, ns: number, s: number): boolean => s !== 0 && pOk && (na !== pa || ns * s !== ps * s);
+/** ⭐ (§21.6) A finger component's motion counts as REVERSED when turned past 120° (cos −½) — a half roll (180°) is, a quarter roll (90°) is not. */
+export const HOLD_REVERSED_COS = -0.5;
+
+export function holdByMotion(prev: FingerMotion, next: FingerMotion, fx: number, fy: number, h: FingerHold): FingerHold {
+  const q = shortestArc(next.n, prev.n);
+  const opposite = (a: Vec3 | null, b: Vec3 | null, s: number): boolean => s !== 0 && a !== null && b !== null && dot(a, qRotate(q, b)) < HOLD_REVERSED_COS;
   return {
-    x: h.x !== 0 ? h.x : turns(prev.xAxis, prev.xSign, prev.xOk, next.xAxis, next.xSign, sx) ? sx : 0,
-    y: h.y !== 0 ? h.y : turns(prev.yAxis, prev.ySign, prev.yOk, next.yAxis, next.ySign, sy) ? sy : 0,
+    x: h.x !== 0 ? h.x : opposite(prev.mx, next.mx, fx) ? sgn(fx) : 0,
+    y: h.y !== 0 ? h.y : opposite(prev.my, next.my, fy) ? sgn(fy) : 0,
   };
 }
 

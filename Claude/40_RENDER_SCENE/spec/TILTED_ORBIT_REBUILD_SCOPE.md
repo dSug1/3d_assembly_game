@@ -1154,3 +1154,27 @@ builds too), ~15 jumps in the slide.
 * **F6 — THE ROLL MARKED ON THE PLACE**: entering an edge's `cameraRollMm` band moving toward it MARKS the face as rolled for that edge; the mark stays while
   the place is in that band whatever the input, and clears only when the place leaves the band by distance (or the face changes). The camera's up and the
   roles read the mark — never the last step's direction. ⛔ The per-frame anticipation along `asmTravelDir` — replaced.
+
+### 21.7 F5 and F6 built — and R4 in the world (2026-11-05, branch `1.0.101-`; deployed for the owner's look, ⛔ no device close)
+
+* **F5** (`input/orbit_calm.ts` rewritten — `calmDir`, `polyDistance`, `calmWeight`, `calmZone`): the piece's direction the field over the upright contour at
+  the map's place for the angles (`calmAt`, `calmPlace`, no cast); the shares mixed by ANGLES (58d86ff's: 60° off shows 15° in a face's middle) — ⛔ by
+  vectors, with the orbit square to the field turned to a cap, the normal part vanished and noise was normalised to 45°. `asmCalm`, `calmFrame`, the turn's
+  carry, `sharesShowing`, the eases and the pole fade deleted. Measured: the piece jumps at a turn / face change 35 (to 3.3 m) → 10 (at most 484 mm).
+* **F6** (`input/roll_mark.ts` `nextRollMark`): as specified. ⛔ It did NOT remove the stalls — the series showed their real cause:
+* **R4 compared the ORBIT'S AXES, not the gizmo's motion**: a frame turned on the SAME face (the top read in another frame) renamed yaw ↔ pitch, the roles
+  "changed", the dx was held with the gizmo going the finger's way on the screen — the finger never reversing, 900 frames. Now `holdByMotion`
+  (`input/input_roles.ts`): each face carries the gizmo's WORLD direction for a finger right / up (`mx`, `my`); a component is held when that motion turns
+  past 120° (`HOLD_REVERSED_COS`), the new face UNFOLDED onto the old about their edge — a half roll holds, a quarter roll (R3: dx then along the edge) never
+  (⛔ `< 0`: at exactly 90° rounding decided). ⛔ `holdAtCrossing` deleted. And **an uncompleted crossing leaves no trace**: the face state (`st.asmFace`, the
+  mark) restored — ⛔ the face looked at was read as arrived, the cap's axis re-derived from it: a 90° roll for nothing.
+
+| (21 runs) | §21 v2 | F5 + F6 | **+ R4 in the world** (3 runs: hf, cf, cm) |
+|---|---|---|---|
+| moving frames | 6758 | 5266 | 8268 (21 runs, before the 120° rule) |
+| stalls ≥ 300 frames (orbit's own) | ~13 | ~18 | **0** (the slide's stops apart) |
+| up steps over twice the roll's pace | 1 | 0 | 0 |
+| upside-down / tilted frames | 11 / 34 | 0 / 21 | 0 / 11 |
+
+The camera "jumps" counted on top are, for ~85 %, the camera's offsets swinging with a paced roll (the piece still) — at the probe's ~10 fps 40° a frame,
+6° on a device. Left: ~200-frame stops at a cap's far edge (R4's intended hold of dy kept up after the half roll); small back-and-forths (9–16 mm) at turns.

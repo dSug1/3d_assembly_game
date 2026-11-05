@@ -471,13 +471,13 @@ export interface SceneState {
   asmUpShown: import("../core/vec").Vec3 | null;
   asmUpBand: boolean;
   /** ⭐⭐⭐ (§21.5 F4) the travel's face (the target's place): its normal, a cap's carried axis, the finger's roles on it — read once per face */
-  asmFace: { readonly key: string; readonly n: import("../core/vec").Vec3; readonly cap: boolean; readonly axis: import("../core/vec").Vec3 | null; readonly roles: import("../input/input_roles").Roles; readonly mPerRad: readonly [number, number]; readonly ahead: import("../core/vec").Vec3 | null } | null;
+  asmFace: { readonly key: string; readonly n: import("../core/vec").Vec3; readonly cap: boolean; readonly axis: import("../core/vec").Vec3 | null; readonly roles: import("../input/input_roles").Roles; readonly mPerRad: readonly [number, number]; readonly ahead: import("../core/vec").Vec3 | null; readonly mx: import("../core/vec").Vec3 | null; readonly my: import("../core/vec").Vec3 | null } | null;
   /** ⭐⭐⭐ (§21.5 F1) R4's hold: the finger components held at a crossing until they reverse; the way the finger last travelled (orbit steps, rad) */
   asmHold: import("../input/input_roles").FingerHold;
   asmTravelDir: readonly [number, number] | null;
-  /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
-   * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
-  asmCalm: { n: Vec3; sH: number; sV: number } | null;
+  /** ⭐⭐⭐ (2026-11-05, §21.6 F6) THE ROLL MARKED ON THE PLACE: the face the travel is on (`on`, its world normal) rolled for its edge onto the face `to`
+   * (world normal) — set entering that edge's `cameraRollMm` band on the way, kept while the place is in it whatever the input; `null`: none */
+  asmRollMark: import("../input/roll_mark").RollMark | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */

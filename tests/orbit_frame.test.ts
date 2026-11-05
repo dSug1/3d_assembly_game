@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildFaceMap, columnAt, mapAngles, mapTarget, type FaceMap } from "../src/input/face_map";
 import { CROSS_EPS_RAD, UPRIGHT, anglesOf, dirOf, frameStep, rebaseAngles, snapFrame, stepToBoundary, toFrame, toWorld, type OrbitFrame } from "../src/input/orbit_frame";
-import { sharesShowing, shownDir } from "../src/input/orbit_calm";
 import { shellBox, type ShellBox } from "../src/input/orbit_shell";
 import type { Vec3 } from "../src/core/vec";
 
@@ -136,27 +135,12 @@ describe("⭐⭐⭐ Step 6 — the orbit's frame turned at a crossing", () => {
     expect(snapFrame(odd)).toBe(odd);
   });
 
-  it("⭐⭐⭐ THE CALM CARRIED THROUGH A TURN (`sharesShowing`): the shares that show a given direction — `shownDir`'s inverse; the same direction shown about the new normal (⛔ the shares kept off square: the piece stepped 35 mm, probed)", () => {
-    const n: Vec3 = [0, 0, -1];
-    const h: Vec3 = [-n[2], 0, n[0]];
-    const v: Vec3 = [0, 1, 0];
-    for (const [y, p, sH, sV] of [[FRONT + 0.4, 0.3, 0.25, 0.8], [FRONT - 0.2, -0.5, 0.6, 0.4], [FRONT + 0.1, 0.05, 1, 1]] as const) {
-      const u = dirOf(y, p);
-      const shown = shownDir(u, n, h, v, sH, sV);
-      const back = sharesShowing(u, shown, n, h, v, 1);
-      expect(back.sH).toBeCloseTo(sH, 9);
-      expect(back.sV).toBeCloseTo(sV, 9);
-      near(shownDir(u, n, h, v, back.sH, back.sV), shown, 1e-12);
-    }
-    // under the pole's weight: the RAW shares that, weighted, show it
-    const u = dirOf(FRONT + 0.3, 1.2);
-    const w = 0.5;
-    const shown = shownDir(u, n, h, v, 1 - (1 - 0.3) * w, 1 - (1 - 0.6) * w);
-    const s = sharesShowing(u, shown, n, h, v, w);
-    expect(s.sH).toBeCloseTo(0.3, 9);
-    expect(s.sV).toBeCloseTo(0.6, 9);
+  it("⭐⭐⭐ (§21.6 F5) THE TURN CARRIES NOTHING FOR THE CALM: a function of the place, the same in every frame (⛔ its shares re-expressed at the turn — `sharesShowing`: kept one direction, its lagging neighbours jumped)", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const sh = sharesShowing(u, toFrame(to, shownOld), k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], poleWeight(u[1]));");
+    const turn = a.slice(a.indexOf("function orbitFrameTurn("), a.indexOf("function gizmoAnglesAt("));
+    expect(turn.length).toBeGreaterThan(100);
+    expect(turn).not.toContain("calm");
+    expect(turn).not.toContain("shares");
   });
 
   it("⭐ the column the yaw is in decides the edge: the front's slice turns about x, the +x side's about z", () => {

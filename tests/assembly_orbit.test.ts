@@ -255,7 +255,7 @@ describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
     expect(angleTo(coneClamp(u, n, lockCone(null, angleTo(u, n))), u)).toBeLessThan(1e-9);
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(toWorld(st.orbitFrame, orbitDir(q0.yaw, q0.v)), n)) };"); // the slide's hold
-    expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
+    expect(a).toContain("return n === null ? calmAt(st, yaw, v, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
     expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(toWorld(F, orbitDir(yaw0, v0)), n);");
   });
 });

@@ -24,12 +24,13 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { alignedShare, capEdgeEnd, edgeShareTo, poleWeight, easeNormal, easeToward, sharesShowing, shownDir } from "../input/orbit_calm";
-import { cross, type Vec3 } from "../core/vec";
+import { calmDir, calmZone, polyDistance, type CalmFacet, type CalmOpts } from "../input/orbit_calm";
+import { cross, normalize, type Vec3 } from "../core/vec";
 import { cutLoop, insidePlane, planeThrough, type Plane } from "../input/plane_cut";
-import { HOLD_NONE, holdAtCrossing, rolesFor, stepsFor, throughHold, type Roles } from "../input/input_roles";
+import { HOLD_NONE, holdByMotion, rolesFor, stepsFor, throughHold, type FingerMotion, type Roles } from "../input/input_roles";
 import { CROSS_EPS_RAD, UPRIGHT, frameStep, rebaseAngles, stepToBoundary, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
 import { capAxis, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
+import { nextRollMark } from "../input/roll_mark";
 import { cameraOrbitAt } from "../input/follow_camera";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -169,134 +170,75 @@ function castParts(st: SceneState): readonly CastPart[] {
   return parts;
 }
 
-/** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
+/**
+ * ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`); ⭐⭐⭐ (2026-11-05, §21.6 F5) else THE CALM — A FUNCTION OF
+ * THE PLACE (`calmAt`).
+ */
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   // ⭐⭐⭐ (2026-11-05, STEP 6) the orbit's angles read in ITS FRAME (`st.orbitFrame`: upright, or turned onto a top / a bottom)
   const u = toWorld(st.orbitFrame, orbitDir(yaw, v));
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-  // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
-  // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
-  return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);
+  return n === null ? calmAt(st, yaw, v, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);
 }
 
 /**
- * ⭐⭐⭐ (58d86ff's `spanShownDir`, ported) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u`: its angles off the gizmo's face's normal shown at the
- * eased shares (`st.asmCalm`) — ⭐⭐⭐ the SAME at every distance (the owner: *"modify the scope Q3: same calm at every distance"* — ⛔ 58d86ff's distance gate,
- * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
+ * ⭐⭐⭐ (2026-11-05, §21.6 F5, the owner: *"do all"*) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u` at the angles `yaw`, `v`: the calm's FIELD
+ * (`input/orbit_calm.ts` `calmDir`) at the map's PLACE for those angles (`calmPlace`: the face map's place on the contour, no cast) — the facets' normals
+ * weighted by the place's distance to each, a cap winning its zone, the orbit's angle at the interior shares. Read in the WORLD on the upright contour: the
+ * same at any frame, continuous wherever the place is. ⛔ The shares as a state about the current face (58d86ff's, F3's): jumps at a corner (§21.6).
  */
-function calmDir(st: SceneState, uw: Vec3): Vec3 {
-  const k = st.asmCalm;
-  if (k === null) return uw;
-  // ⭐⭐⭐ (Step 6) in the orbit's frame: its up, its level normal (`k.n` is the frame's)
-  const F = st.orbitFrame;
-  const u = toFrame(F, uw);
-  const w = poleWeight(u[1]);
-  if (!(w > 0)) return uw;
-  return toWorld(F, shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w));
+function calmAt(st: SceneState, yaw: number, v: number, u: Vec3): Vec3 {
+  const c = calmContour(st);
+  const p = c === null ? null : calmPlace(st, yaw, v);
+  return c === null || p === null ? u : calmDir(p, c.facets, u, [0, 1, 0], c.opts);
 }
 
-/**
- * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame — ⭐⭐⭐ (Step 4c-bis) from the FACE MAP's place (`st.asmShown.t`): on a SIDE the side the yaw
- * is in (its axis — the calm's normal), the place across it in the box's span (dx's run) and its height in the placed parts' box (dy's run) — `edgeShare`
- * of each (58d86ff's); over a top / under a bottom the orbit's whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED
- * toward them (`easeToward`, `easeNormal`).
- */
-function calmFrame(st: SceneState, dtMs: number): void {
-  const t = st.asmShown?.t ?? null;
+/** ⭐ (§21.6 F5) The field's contour — the UPRIGHT map's facets (the world's; a cap within 45° of the vertical) — and its knobs (the calm's sliders). */
+function calmContour(st: SceneState): { readonly facets: readonly CalmFacet[]; readonly opts: CalmOpts } | null {
+  const map = faceMapOf(st, UPRIGHT);
+  if (map === null) return null;
   const cfg = st.cfg;
-  let n: Vec3 | null = null;
-  let sH = 1;
-  let sV = 1;
-  // ⭐⭐⭐ (2026-11-05, the redesign §20) PAST A COLUMN'S BAND — onto a cap's quarter (in a turned frame: the 3° before a crossing back) — the calm of the
-  // column's facet whose edge the place has just passed: its normal, its across-share, the vertical whole (as at its edge) — ⛔ none (both shares whole):
-  // the targets FLIPPED at the band's edge; a contact sliding the place across it (−44° ↔ −45°) swung the camera 100–127 mm every few frames (probed)
-  const capBand = t !== null && t.band !== "SIDE";
-  const colFacet = capBand ? (() => {
-    const map = faceMapOf(st);
-    const col = map?.columns[t.side];
-    return map === null || col === undefined ? null : map.facets[t.band === "TOP" ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-  })() : null;
-  if (t !== null && (t.band === "SIDE" || colFacet !== null)) {
-    const map = faceMapOf(st)!;
-    const F = st.orbitFrame;
-    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block) — ⭐⭐⭐ (Step 5) the FACET's normal, read level (the
-    // calm's frame turns about the frame's up: a facet sloping up a column, its heading)
-    const nf = colFacet === null ? t.normal : colFacet.n;
-    const h = Math.hypot(nf[0], nf[2]);
-    n = h > 1e-9 ? [nf[0] / h, 0, nf[2] / h] : nf;
-    const angle = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
-    // ⭐⭐⭐ (2026-11-05, §21.5 F3, the owner: *"as you recommend"*) ON A CAP the camera SQUARE to it — both shares 0 (the cap's normal)
-    if (isCap(toWorld(F, nf))) {
-      sH = 0;
-      sV = 0;
-    } else {
-      // ⭐⭐⭐ (§21.5 F3) toward an edge onto a CAP the share rises past 1 to the one showing the cap's normal at the edge (`capEdgeEnd`, `edgeShareTo`) —
-      // the view passes the zenith at the cap's edge (⛔ mid-cap: upside down from the middle to the far edge, §21.5 cause 2)
-      const capTo = (fi: number | undefined): Vec3 | null => {
-        const g = fi === undefined ? undefined : map.facets[fi];
-        return g === undefined || !isCap(toWorld(F, g.n)) ? null : g.n;
-      };
-      const L = t.across;
-      const col = map.columns[t.side];
-      const off = col === undefined || st.asmShown === null ? 0 : Math.atan2(Math.sin(st.asmShown.yaw - col.mid), Math.cos(st.asmShown.yaw - col.mid));
-      const sgn = off >= 0 ? 1 : -1;
-      let endH = 1;
-      if (col !== undefined && st.asmShown !== null) {
-        const beyond = mapTarget(map, col.mid + sgn * (col.hw + 1e-3), st.asmShown.pitch, mapOpts(st));
-        const cn = capTo(beyond.stack);
-        const heading = Math.atan2(nf[2], nf[0]);
-        const edge = col.mid + sgn * col.hw;
-        endH = capEdgeEnd(cn === null ? null : angle(nf, cn), Math.atan2(Math.sin(edge - heading), Math.cos(edge - heading)));
-      }
-      sH = edgeShareTo(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100, endH);
-      // ⭐⭐⭐ dy's run: the gizmo's place UP ITS FACET (`b`) within the facet's span — the same span on every side of a contour of one height, so a pure dx
-      // never changes it (⛔ the wall under the gizmo: its top differed from the front to the side at the same height — the owner's bounce, probed);
-      // ⛔ the placed parts' BOX (Step 6: the piece jumped 2.8 m at a crossing). Past the band (transient): whole, as at its edge
-      const fv = !capBand ? (map.facets[t.stack] ?? null) : null;
-      if (fv === null || col === undefined) sV = 1;
-      else {
-        const b = t.surface[0] * fv.b[0] + t.surface[1] * fv.b[1] + t.surface[2] * fv.b[2];
-        const i = col.facets.indexOf(t.stack);
-        const upper = fv.bHi - b < b - fv.bLo;
-        const pitchN = Math.asin(Math.max(-1, Math.min(1, nf[1])));
-        const nb = upper ? (i + 1 < col.facets.length ? col.facets[i + 1] : map.top) : i > 0 ? col.facets[i - 1] : map.bottom;
-        const cn = capTo(nb);
-        const edgeP = upper ? col.bounds[i + 1] : col.bounds[i];
-        const endV = edgeP === undefined ? 1 : capEdgeEnd(cn === null ? null : angle(nf, cn), edgeP - pitchN);
-        const interior = cfg.faceSpanShareVOn === 1 ? cfg.faceSpanShareV : 1;
-        sV = edgeShareTo(Math.min(b - fv.bLo, fv.bHi - b), fv.bHi - fv.bLo, interior, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100, endV);
-      }
-    }
-  }
-  const k = st.asmCalm;
-  if (k === null) {
-    // ⭐ from none: the shares come in from 1 (the orbit's whole angle) — never a jump at the start
-    if (n !== null) st.asmCalm = { n, sH: easeToward(1, sH, dtMs), sV: easeToward(1, sV, dtMs) };
-    return;
-  }
-  // ⭐⭐⭐ (§21.5 F3) A FACE CHANGE WITHOUT A TURN (a dx over a vertical edge): the calm carried as at a turn — its normal the new face's, its shares the ones
-  // showing the piece's direction now (`sharesShowing`) — ⛔ the cap's 0 shares kept about a wall's normal: the direction swung 90°, 4 m far out (probed)
-  if (n !== null && Math.abs(n[0] - k.n[0]) + Math.abs(n[2] - k.n[2]) > 1e-3 && st.boxOrbit !== null) {
-    const F = st.orbitFrame;
-    const uW = toWorld(F, orbitDir(st.boxOrbit.yaw, st.boxOrbit.v));
-    const shown = toFrame(F, calmDir(st, uW));
-    const u = toFrame(F, uW);
-    const sh = sharesShowing(u, shown, n, [-n[2], 0, n[0]], [0, 1, 0], poleWeight(u[1]));
-    k.n = n;
-    k.sH = sh.sH;
-    k.sV = sh.sV;
-  }
-  if (n !== null) {
-    // ⭐ the horizontal share whole: the normal changes nothing (the pitch is the world's up's, the heading the orbit's own) — taken at once (⛔ eased from
-    // a stale face 175° away while the shares fell: a 271 mm camera jump)
-    k.n = Math.abs(k.sH - 1) < 1e-3 ? n : easeNormal(k.n, n, dtMs);
-    // ⭐ the HORIZONTAL calm only as far as the normal has caught up with the face's — the vertical one never waits on it (⛔ both released at every corner:
-    // the pitch swung up and the camera back under a pure dx — the owner's bounce, probed)
-    sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);
-  }
-  k.sH = easeToward(k.sH, sH, dtMs);
-  k.sV = easeToward(k.sV, sV, dtMs);
+  const key = `${cfg.faceSpanShareH}#${cfg.faceSpanShareVOn}#${cfg.faceSpanShareV}#${cfg.faceSpanZoneHPct}#${cfg.faceSpanZoneMinHCm}#${cfg.faceSpanZoneVPct}#${cfg.faceSpanZoneMinVCm}`;
+  const memo = CALM_CONTOURS.get(map);
+  if (memo !== undefined && memo.key === key) return memo;
+  const c = map.core;
+  const opts: CalmOpts = {
+    shareH: cfg.faceSpanShareH,
+    shareV: cfg.faceSpanShareVOn === 1 ? cfg.faceSpanShareV : 1,
+    // ⭐ the zones from the core box's runs — dx's across the wider horizontal side, dy's up its height: one per contour, so the field is one function
+    zoneH: calmZone(Math.max(c.hi[0] - c.lo[0], c.hi[2] - c.lo[2]), cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100),
+    zoneV: calmZone(c.hi[1] - c.lo[1], cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100),
+  };
+  const r = { key, facets: map.facets.map((f) => ({ n: f.n, poly: f.poly, cap: isCap(f.n) })), opts };
+  CALM_CONTOURS.set(map, r);
+  return r;
 }
+const CALM_CONTOURS = new WeakMap<FaceMap, { readonly key: string; readonly facets: readonly CalmFacet[]; readonly opts: CalmOpts }>();
+
+/**
+ * ⭐ (§21.6 F5) THE MAP'S PLACE (world) for the orbit's angles `yaw`, `v` — the face map's place on the contour (`mapTarget`, no cast), out of step after the
+ * slide by the frame's own lag (as `gizmoAtAngles`). Memoised for the frame.
+ */
+function calmPlace(st: SceneState, yaw: number, v: number): Vec3 | null {
+  const map = faceMapOf(st);
+  if (map === null) return null;
+  let memo = PLACE_MEMO.get(st);
+  if (memo === undefined || memo.frame !== st.frames || memo.fk !== st.orbitFrame.key) {
+    memo = { frame: st.frames, fk: st.orbitFrame.key, at: new Map() };
+    PLACE_MEMO.set(st, memo);
+  }
+  const key = `${yaw}|${v}`;
+  const known = memo.at.get(key);
+  if (known !== undefined) return known;
+  const q0 = st.asmPrevQ;
+  const mq = st.asmMapQ;
+  const dy = q0 === null || mq === null ? 0 : Math.atan2(Math.sin(mq.yaw - q0.yaw), Math.cos(mq.yaw - q0.yaw));
+  const dp = q0 === null || mq === null ? 0 : mq.pitch - pitchOfV(q0.v);
+  const p = toWorld(st.orbitFrame, mapTarget(map, yaw + dy, pitchOfV(v) + dp, mapOpts(st)).surface);
+  if (memo.at.size < 512) memo.at.set(key, p);
+  return p;
+}
+const PLACE_MEMO = new WeakMap<SceneState, { frame: number; fk: string; at: Map<string, Vec3> }>();
 
 /**
  * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else this frame's (`st.asmG`, the face map's); none yet, the map's at the
@@ -645,7 +587,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
     }
   }
-  calmFrame(st, dtMs);
   const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
   // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (a); the owner: *"deleting the lock at step 1 is cleaner"*) — THE CLOSE-IN LOCK DELETED: the
   // carrier runs at EVERY distance (⛔ the old lock: within 30 cm of the gizmo, or inside the assembly's sphere, the gizmo and its face were held — one
@@ -831,7 +772,7 @@ function sectionLinesFrame(st: SceneState): void {
 }
 
 /** ⭐ The face the TRAVEL is on: the face map's place at the orbit's TARGET (where the finger drives), its world normal, a cap or a wall, a key. */
-interface TravelFace {
+interface TravelFace extends FingerMotion {
   readonly key: string;
   readonly n: Vec3;
   readonly cap: boolean;
@@ -847,7 +788,7 @@ interface TravelFace {
 
 /**
  * ⭐⭐⭐ (§21.5 F2) THE NEXT FACE ON THE WAY: the travel's place advanced `cameraRollMm` along the way the finger last travelled (`st.asmTravelDir`, by the
- * face's metres per radian) — its world normal when it is another face, else `null`.
+ * face's metres per radian) — its world normal when it is another face, else `null`. ⭐⭐⭐ (§21.6 F6) Read only to SET the roll mark (`rollMark`).
  */
 function aheadNormal(st: SceneState, map: FaceMap, n: Vec3, yaw: number, pitch: number): Vec3 | null {
   const d = st.asmTravelDir;
@@ -860,6 +801,21 @@ function aheadNormal(st: SceneState, map: FaceMap, n: Vec3, yaw: number, pitch: 
   const t = mapTarget(map, yaw + d[0] * k, pitch + d[1] * k, mapOpts(st));
   const na = toWorld(st.orbitFrame, t.normal);
   return na[0] * n[0] + na[1] * n[1] + na[2] * n[2] > 0.999 ? null : [Math.round(na[0] * 1e3) / 1e3, Math.round(na[1] * 1e3) / 1e3, Math.round(na[2] * 1e3) / 1e3];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05, §21.6 F6) THE ROLL MARKED ON THE PLACE (`input/roll_mark.ts` `nextRollMark`) for the travel's face (world normal `n`) at its place
+ * (`place`, world): the distance to a face the calm's contour's (`polyDistance`), the way ahead `aheadNormal`'s.
+ */
+function rollMark(st: SceneState, map: FaceMap, n: Vec3, yaw: number, pitch: number, place: Vec3): Vec3 | null {
+  const c = calmContour(st);
+  const distTo = (to: Vec3): number => {
+    let d = Infinity;
+    for (const f of c?.facets ?? []) if (f.n[0] * to[0] + f.n[1] * to[1] + f.n[2] * to[2] > 0.999) d = Math.min(d, polyDistance(place, f.poly, f.n));
+    return d;
+  };
+  st.asmRollMark = nextRollMark(st.asmRollMark, n, st.cfg.cameraRollMm / 1000, st.asmLocked, distTo, () => aheadNormal(st, map, n, yaw, pitch));
+  return st.asmRollMark === null ? null : st.asmRollMark.to;
 }
 
 /** ⭐⭐⭐ (§21.5 F2) THE UP for the view `u` on a face (normal `n`, a cap's `axis`) with the next face `nAhead` on the way: onto a wall, ITS up (the roll
@@ -883,7 +839,7 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
   const o = mapOpts(st);
   const t = mapTarget(map, yaw, pitch, o);
   const n = toWorld(F, t.normal);
-  const nAhead = aheadNormal(st, map, n, yaw, pitch);
+  const nAhead = rollMark(st, map, n, yaw, pitch, toWorld(F, t.surface));
   const key = `${F.key}|${t.band}|${t.side}|${t.stack}|${nAhead === null ? "-" : nAhead.map((x) => x.toFixed(3)).join(",")}`;
   const f0 = st.asmFace;
   if (f0 !== null && f0.key === key) return { face: f0, changed: false };
@@ -907,7 +863,14 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
     return [d[0] * right[0] + d[1] * right[1] + d[2] * right[2], d[0] * up[0] + d[1] * up[1] + d[2] * up[2]];
   };
   const len = (p: Vec3): number => Math.hypot(p[0] - g0[0], p[1] - g0[1], p[2] - g0[2]) / H;
-  const face: TravelFace = { key, n, cap, axis, roles: rolesFor(on(gy), on(gp)), mPerRad: mPerRad0 ?? [len(gy), len(gp)], ahead: nAhead };
+  const roles = rolesFor(on(gy), on(gp));
+  // ⭐⭐⭐ (§21.6) the gizmo's WORLD direction for a finger right / up — what R4 compares (`holdByMotion`)
+  const motion = (fx: number, fy: number): Vec3 | null => {
+    const [a, b] = stepsFor(roles, fx, fy);
+    const m: Vec3 = [a * (gy[0] - g0[0]) + b * (gp[0] - g0[0]), a * (gy[1] - g0[1]) + b * (gp[1] - g0[1]), a * (gy[2] - g0[2]) + b * (gp[2] - g0[2])];
+    return normalize(m);
+  };
+  const face: TravelFace = { key, n, cap, axis, roles, mx: motion(1, 0), my: motion(0, 1), mPerRad: mPerRad0 ?? [len(gy), len(gp)], ahead: nAhead };
   st.asmFace = face;
   return { face, changed: true };
 }
@@ -921,7 +884,7 @@ export function asmFaceRoles(st: SceneState): Roles | null {
  * ⭐⭐⭐ (2026-11-05, §21.5 F1) THE FINGER'S TRAVEL — ONE CROSSING EVENT: the finger (`fx` right, `fy` up, mm; `rate` rad per mm) through R4's hold
  * (`throughHold`), mapped by the face's roles (`stepsFor`) onto the orbit's target, the step SPLIT at the first face change on its way
  * (`stepToBoundary`): there, once and in this order — the frame turned if it is a cap's bound (`frameAtTarget`), the new face's roles read (`travelFace`),
- * R4 (`holdAtCrossing`: a component now driven the opposite way or onto the other axis HELD, the owner: *"this overrules anything else"*) — and the rest
+ * R4 (`holdByMotion`: a component now driving the gizmo the opposite way in the world HELD, the owner: *"this overrules anything else"*) — and the rest
  * of the finger re-mapped. Under the slide (locked): no crossing. The orbit steps taken (rad) returned (the coast records them).
  */
 export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: number): { readonly dYaw: number; readonly dPitch: number } {
@@ -944,9 +907,11 @@ export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: nu
     sy += dYaw * s.t;
     sp += dPitch * s.t;
     st.asmTravelDir = [dYaw, dPitch];
+    // ⭐⭐⭐ (§21.6) the face state before the crossing — kept whole if it is not completed (below)
+    const kept = { face: st.asmFace, mark: st.asmRollMark };
     if (s.crossing) frameAtTarget(st);
     const next = travelFace(st).face;
-    if (next !== null && next.key !== face.key) st.asmHold = holdAtCrossing(face.roles, next.roles, rx, ry, st.asmHold);
+    if (next !== null && next.key !== face.key) st.asmHold = holdByMotion(face, next, rx, ry, st.asmHold);
     if (!s.crossing) break;
     const h = throughHold(st.asmHold, rx * (1 - s.t), ry * (1 - s.t));
     st.asmHold = h.h;
@@ -956,7 +921,10 @@ export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: nu
     if (h.fx === 0 && h.fy === 0 && next !== null && next.key !== face.key) {
       st.orbit.nudge(-Math.sign(dYaw) * CROSS_EPS_RAD * (dYaw !== 0 ? 2 : 0), (-Math.sign(dPitch) * CROSS_EPS_RAD * (dPitch !== 0 ? 2 : 0)) / (2 * ORBIT_PITCH_MAX_RAD));
       frameAtTarget(st);
-      travelFace(st);
+      // ⭐⭐⭐ (§21.6) …and the face state as it was: the next face only looked at (⛔ read as arrived: the cap's axis re-derived from the wall just looked
+      // at — a 90° roll for nothing, then the dx held, probed)
+      st.asmFace = kept.face;
+      st.asmRollMark = kept.mark;
       break;
     }
     rx = h.fx;
@@ -1093,8 +1061,7 @@ function frameAtTarget(st: SceneState): void {
 /**
  * ⭐⭐⭐ (STEP 6) THE TURN — NOTHING MOVES: every angle of the orbit re-read in the new frame as the same direction (`rebaseAngles` — the target, the solved
  * place, the eye's spring, the camera's leash and lag, the solver's last raw input and height kept, the gizmo's sync); the face map's angles put on the
- * gizmo (`gizmoAnglesAt`); the calm carried (its normal the facet now faced, its shares the ones showing the same direction — `sharesShowing`). The camera
- * needs nothing: its up is the view's (§20).
+ * gizmo (`gizmoAnglesAt`). ⭐⭐⭐ (§21.6 F5) The calm needs nothing: a function of the place, the same in every frame (⛔ its shares re-expressed here). The camera needs nothing: its up is its own (§21.5 F2).
  */
 function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
   const from = st.orbitFrame;
@@ -1102,10 +1069,6 @@ function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
     const r = rebaseAngles(from, to, a.yaw, pitchOfV(a.v));
     return { ...a, yaw: r.yaw, v: vOfPitch(r.pitch) };
   };
-  // the piece's SHOWN direction now (the calm in the old frame) — kept through the turn
-  const shownAt = st.boxOrbit;
-  const uOld = shownAt === null ? null : toWorld(from, orbitDir(shownAt.yaw, shownAt.v));
-  const shownOld = uOld === null ? null : calmDir(st, uOld);
   const target = rb({ yaw: st.orbit.yaw, v: st.orbit.elevation });
   st.orbit.reset(target.yaw, target.v);
   if (st.pieceQ !== null) {
@@ -1122,21 +1085,6 @@ function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
   // the gizmo where it is: the facet it is on (the shown place's, out of the old frame) read in the new frame's map
   const nW = st.asmShown === null ? (st.gizmoNormal ?? null) : toWorld(from, st.asmShown.t.normal);
   st.orbitFrame = to;
-  // ⭐ the calm carried through: its normal the facet now faced, read level in the new frame — onto a cap the cap, back upright the wall it is on
-  const k = st.asmCalm;
-  const nn = to.cap !== null ? (to.capN === null ? null : toFrame(to, to.capN)) : nW;
-  const nh = nn === null ? 0 : Math.hypot(nn[0], nn[2]);
-  if (k !== null && nn !== null && nh > 1e-9) {
-    k.n = [nn[0] / nh, 0, nn[2] / nh];
-    // ⭐ the shares that show the same direction about the new normal (`sharesShowing`) — they ease to their targets from there (⛔ kept: off square the
-    // angles read in the new axes differ — the piece stepped 35 mm)
-    if (uOld !== null && shownOld !== null) {
-      const u = toFrame(to, uOld);
-      const sh = sharesShowing(u, toFrame(to, shownOld), k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], poleWeight(u[1]));
-      k.sH = sh.sH;
-      k.sV = sh.sV;
-    }
-  }
   st.asmShown = null;
   const map = faceMapOf(st);
   if (map !== null && st.asmG !== null) {
