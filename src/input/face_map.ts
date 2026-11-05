@@ -40,11 +40,15 @@ export interface MapFace {
   readonly tris: readonly (readonly [Vec3, Vec3, Vec3])[];
 }
 
-/** ⭐ A group's region with its holes closed: the cells between its rectangles' edges, each filled (in a rectangle, or enclosed by them) or not. */
+/**
+ * ⭐ A group's region with its holes closed: the cells between its rectangles' edges, each filled (in a rectangle, or enclosed by them) or not; `real` the
+ * cells in a rectangle (a face is there — a filled cell not real is a hole, a void closed all round).
+ */
 export interface FilledRegion {
   readonly xs: readonly number[];
   readonly ys: readonly number[];
   readonly filled: Uint8Array;
+  readonly real: Uint8Array;
 }
 
 /** ⭐ One plane's group: its level along the facet's normal (outward +), its closed region on the facet's (`t`, `b`). */
@@ -110,7 +114,7 @@ const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
  * from outside (a flood fill from a border round them all) are the outside — every other cell is FILLED: in a rectangle, or a hole enclosed by them.
  */
 export function filledRegion(rects: readonly Rect2[]): FilledRegion {
-  if (rects.length === 0) return { xs: [], ys: [], filled: new Uint8Array(0) };
+  if (rects.length === 0) return { xs: [], ys: [], filled: new Uint8Array(0), real: new Uint8Array(0) };
   const x0 = Math.min(...rects.map((r) => r.x0)) - 1;
   const y0 = Math.min(...rects.map((r) => r.y0)) - 1;
   const x1 = Math.max(...rects.map((r) => r.x1)) + 1;
@@ -154,7 +158,7 @@ export function filledRegion(rects: readonly Rect2[]): FilledRegion {
   }
   const filled = new Uint8Array(nx * ny);
   for (let k = 0; k < nx * ny; k++) filled[k] = outside[k] === 1 ? 0 : 1;
-  return { xs, ys, filled };
+  return { xs, ys, filled, real: inRect };
 }
 
 /** ⭐ The cell index of `v` among the sorted cuts `cs` (the cell `[cs[i], cs[i+1]]` holding it; on a cut, the cell after it); −1 outside. */
@@ -182,6 +186,48 @@ export function regionContains(r: FilledRegion, x: number, y: number): boolean {
   const onX = Math.abs(x - r.xs[i]!) < 1e-12;
   const onY = Math.abs(y - r.ys[j]!) < 1e-12;
   return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
+}
+
+/** ⭐ Is a FACE at (`x`, `y`) — a cell in one of the region's rectangles (not a hole)? On a cell's edge, either neighbour counts. */
+export function regionReal(r: FilledRegion, x: number, y: number): boolean {
+  const i = cellOf(r.xs, x);
+  const j = cellOf(r.ys, y);
+  if (i < 0 || j < 0) return false;
+  const ny = r.ys.length - 1;
+  const at = (a: number, b: number): boolean => a >= 0 && b >= 0 && a < r.xs.length - 1 && b < ny && r.real[a * ny + b] === 1;
+  if (at(i, j)) return true;
+  const onX = Math.abs(x - r.xs[i]!) < 1e-12;
+  const onY = Math.abs(y - r.ys[j]!) < 1e-12;
+  return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05) THE VOID CLOSED ON A TRAVEL: the regions `rs` (one plane's) hold (`x`, `y`) between them along `x` — a filled cell before it and one
+ * after it on the line `y` — or along `y` (the line `x`). On a facet `x` is its `t` (the green's travel on a side) and `y` its `b` (the red's).
+ */
+export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): { readonly x: boolean; readonly y: boolean } {
+  let xLo = false;
+  let xHi = false;
+  let yLo = false;
+  let yHi = false;
+  for (const r of rs) {
+    const ny = r.ys.length - 1;
+    const i = cellOf(r.xs, x);
+    const j = cellOf(r.ys, y);
+    if (j >= 0)
+      for (let a = 0; a < r.xs.length - 1; a++) {
+        if (r.filled[a * ny + j] !== 1) continue;
+        if (r.xs[a]! < x) xLo = true;
+        if (r.xs[a + 1]! > x) xHi = true;
+      }
+    if (i >= 0)
+      for (let b = 0; b < ny; b++) {
+        if (r.filled[i * ny + b] !== 1) continue;
+        if (r.ys[b]! < y) yLo = true;
+        if (r.ys[b + 1]! > y) yHi = true;
+      }
+  }
+  return { x: xLo && xHi, y: yLo && yHi };
 }
 
 /** ⭐ The distance from (`x`, `y`) to the region (its holes closed): 0 inside, else to its nearest filled cell. */
@@ -541,9 +587,32 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
 /**
  * ⭐⭐ THE GIZMO'S PLANE on a facet's stack at (`x`, `y`) (its `t`, `b` coordinates): the FRONTMOST group whose closed region holds the point (`inside`);
  * none, the NEAREST group (ties: the frontmost) — the gizmo beside the real face, in its plane. `null`: no face in that stack.
+ * ⭐⭐⭐ (2026-11-05, the owner: *"in attachment 2 the void is closed on the green section travel so the green section and the gizmo shall go through"*) —
+ * THE VOID ON THE FACET'S PLANE (`e`: the main group's level — the facet's plane): no protrusion there and no face of that plane under the point, but the
+ * plane's faces on both sides of it along `t` or along `b` (`closedAlong` — a hole, a slot, a notch closed on the green's or the red's travel): the gizmo
+ * goes STRAIGHT THROUGH on the facet's plane (`bridged`, never cast — ⛔ D3 put it at the void's bottom: the green dipped and climbed back). A void open
+ * on both travels keeps its depth until the frame turn (Steps 6–7: the orbit tilts at the real edge).
  */
-export function stackDepthAt(s: { readonly groups: readonly MapGroup[] }, x: number, y: number): { readonly depth: number; readonly group: number; readonly inside: boolean } | null {
-  for (let g = 0; g < s.groups.length; g++) if (regionContains(s.groups[g]!.region, x, y)) return { depth: s.groups[g]!.depth, group: g, inside: true };
+export function stackDepthAt(
+  s: { readonly groups: readonly MapGroup[]; readonly e?: number },
+  x: number,
+  y: number,
+): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true } | null {
+  let front = -1;
+  for (let g = 0; g < s.groups.length; g++)
+    if (regionContains(s.groups[g]!.region, x, y)) {
+      front = g;
+      break;
+    }
+  const e = s.e;
+  if (e !== undefined && (front < 0 || s.groups[front]!.depth <= e + MAP_COPLANAR_M)) {
+    const mine = s.groups.map((gr, g) => ({ gr, g })).filter((q) => Math.abs(q.gr.depth - e) <= MAP_COPLANAR_M);
+    if (mine.length > 0 && !mine.some((q) => regionReal(q.gr.region, x, y))) {
+      const c = closedAlong(mine.map((q) => q.gr.region), x, y);
+      if (c.x || c.y) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
+    }
+  }
+  if (front >= 0) return { depth: s.groups[front]!.depth, group: front, inside: true };
   let best: { depth: number; group: number; d: number } | null = null;
   s.groups.forEach((gr, g) => {
     const d = regionDistance(gr.region, x, y);
@@ -781,23 +850,60 @@ export function edgeBlend(
  * ⭐⭐⭐ THE PLACE THROUGH AN EDGE, NO JUMP (`edgeBlend` applied): `here` (the point at the angles) blended toward the next facet's first point — up / down
  * a column (`v`) and across a slice's end (`h`, of the up / down blends at both yaws, each read in ITS column — a column's pitch bounds are its own) — to
  * their middle at the end. `at`: the point at other angles (the wiring's gizmo, a vector's place); `null` there leaves the point as it is.
+ * ⭐⭐⭐ (2026-11-05, the probes: a close-in dx stalled 630 frames at `Scene_1`'s front-left corner) — **A BLENDED PLACE IS A PLACE; ITS DEPTH IS CAST**:
+ * the two points are on two REAL faces (the D3 depth), and where the real outline stands out past the contour's edge (Piece3, 45 mm proud of the −x side)
+ * their CHORD runs through the part — the gizmo 2.8 mm inside it, the piece riding it close in, blocked. `cast` (the wiring's ray along the blended
+ * normal onto the blended place, from `reach` in front of it — half the chord, the deepest a chord can cut, + 5 mm: never a part standing far out): a
+ * surface IN FRONT of the chord takes the gizmo — never deeper (a concave chord stays in the air; a void stays bridged). Both sides of an edge blend to the
+ * same place and normal: no jump.
  */
-export function blendThroughEdges(map: FaceMap, yaw: number, pitch: number, opts: MapOpts, here: Vec3, at: (yaw: number, pitch: number) => Vec3 | null): Vec3 {
+export function blendThroughEdges(
+  map: FaceMap,
+  yaw: number,
+  pitch: number,
+  opts: MapOpts,
+  here: Vec3,
+  at: (yaw: number, pitch: number) => Vec3 | null,
+  cast?: (p: Vec3, n: Vec3, reach: number) => Vec3 | null,
+): Vec3 {
   const eb = edgeBlend(map, yaw, pitch, opts);
   if (eb.h === null && eb.v === null) return here;
   const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
-  const upDown = (yw: number, q: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): Vec3 => {
-    if (v === null) return q;
-    const o = at(yw, v.pitchThere);
-    return o === null ? q : mix(q, o, v.w);
+  const nAt = (yw: number, pt: number): Vec3 => mapTarget(map, yw, pt, opts).normal;
+  let chord = 0; // the longest chord blended across — the sagitta's bound: a part the chord cuts lies within half of it in front
+  const span = (a: Vec3, b: Vec3): void => {
+    chord = Math.max(chord, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
   };
-  let p = upDown(yaw, here, eb.v);
+  const upDown = (yw: number, q: Vec3, n: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): { p: Vec3; n: Vec3 } => {
+    if (v === null) return { p: q, n };
+    const o = at(yw, v.pitchThere);
+    if (o === null) return { p: q, n };
+    span(q, o);
+    return { p: mix(q, o, v.w), n: mix(n, nAt(yw, v.pitchThere), v.w) };
+  };
+  let r = upDown(yaw, here, nAt(yaw, pitch), eb.v);
   if (eb.h !== null) {
     const o = at(eb.h.yawThere, pitch);
-    if (o !== null) p = mix(p, upDown(eb.h.yawThere, o, edgeBlend(map, eb.h.yawThere, pitch, opts).v), eb.h.w);
+    if (o !== null) {
+      const there = upDown(eb.h.yawThere, o, nAt(eb.h.yawThere, pitch), edgeBlend(map, eb.h.yawThere, pitch, opts).v);
+      span(r.p, there.p);
+      r = { p: mix(r.p, there.p, eb.h.w), n: mix(r.n, there.n, eb.h.w) };
+    }
   }
-  return p;
+  if (cast !== undefined) {
+    const l = Math.hypot(r.n[0], r.n[1], r.n[2]);
+    if (l > 1e-9) {
+      const nb: Vec3 = [r.n[0] / l, r.n[1] / l, r.n[2] / l];
+      const h = chord > 0 ? cast(r.p, nb, chord / 2 + BLEND_REACH_M) : null;
+      if (h !== null && dot([h[0] - r.p[0], h[1] - r.p[1], h[2] - r.p[2]], nb) > BLEND_FRONT_M) return h;
+    }
+  }
+  return r.p;
 }
+/** ⭐ (2026-11-05) a cast's hit takes a blended place only this far (m) in front of it — the chord itself on a face is kept. */
+export const BLEND_FRONT_M = 0.0001;
+/** ⭐ …and the cast reaches this far (m) beyond half the chord — never a part standing far out along the blended normal (a jump onto it). */
+export const BLEND_REACH_M = 0.005;
 
 /** ⭐ The facet a gizmo's face is on: the facet whose normal is nearest its normal (the slide's face); no normal — the facet whose plane is nearest `p`. */
 export function facetOfNormal(map: FaceMap, n: Vec3 | null, p: Vec3): number {
