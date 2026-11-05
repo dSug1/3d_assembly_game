@@ -40,7 +40,7 @@
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
 import { UPRIGHT } from "../input/orbit_frame";
-import { UP_FRESH } from "../input/camera_up";
+import { HOLD_NONE } from "../input/input_roles";
 import { UNTURNED } from "../input/orbit_rig";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import { attachOrbitedShadows, attachShadows, buildLighting } from "./lighting";
@@ -540,15 +540,16 @@ export function createScene(
   st.asmSectionLines = null;
   st.asmSectionKey = "";
   st.asmShown = null;
-  st.asmCalm = null;
-  st.asmRedCache = null;
-  st.asmGreenCache = null;
+  st.asmRollMark = null;
   st.asmGizmoAt = null;
   st.asmMapQ = null;
   st.asmFaceMap = null;
   st.orbitFrame = UPRIGHT;
-  st.asmUpCarry = UP_FRESH;
-  st.orbitHold = null;
+  st.asmUpShown = null;
+  st.asmUpBand = false;
+  st.asmFace = null;
+  st.asmHold = HOLD_NONE;
+  st.asmTravelDir = null;
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;

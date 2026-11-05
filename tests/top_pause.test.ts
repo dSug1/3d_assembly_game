@@ -95,7 +95,7 @@ describe("⭐⭐⭐ the top face pause (2026-10-21)", () => {
     expect(g).toContain("topPauseFrame(st, dtSec * 1000);");
     expect(g).toContain("st.topPause = settledPause(st.orbit.elevation, 0, pauseMid(st.cfg));");
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du);");
+    expect(p).toContain("st.orbitInertia.record(s.t, roles ? asmDyaw : st.orbit.yaw - yaw0, roles ? asmDv : travel.du);");
     expect(code("render/camera_rig.ts")).toContain("cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam");
   });
   it("⭐⭐⭐ (2026-10-25, the owner: *\"there seems to be a pause of the camera movement when the camera is at the zenith … it looks like the dy accumulates and then suddenly the roll kicks in and catches up\"*) the roll EVEN through the pause — every twentieth of it ~9° (⛔ smoothstep: 1.2° in the first, the camera standing still for ~1 mm of dy)", () => {

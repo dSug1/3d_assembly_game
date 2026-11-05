@@ -35,8 +35,8 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
-import { gizmoShownAt } from "../input/assembly_orbit";
+import { asmAxesTravel, assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
+import { gizmoShownAt, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -934,7 +934,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
-    st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
+    // ⭐⭐⭐ (2026-11-05, §21.5 F1) around the assembly the coast travels as the finger does: split at each face change, the frame turned there
+    if (assemblyOn(st)) asmAxesTravel(st, d.dYaw, d.dV * 2 * ORBIT_PITCH_MAX_RAD);
+    else st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
     if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn

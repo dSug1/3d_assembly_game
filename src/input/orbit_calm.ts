@@ -1,114 +1,115 @@
 /**
- * ⭐⭐⭐ THE CALM — the piece and the camera near square to a face in its middle, the orbit's whole angle near its edges and through the crossing.
+ * ⭐⭐⭐ THE CALM — the piece and the camera near square to a face in its middle, turning over an edge — ⭐⭐⭐ (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md`
+ * §21.6 F5, the owner: *"do all"*) A FUNCTION OF THE PLACE: a field over the faces contour.
  *
- * Built first as the face-span's FOURTH PASS (`58d86ff`, 2026-11-03, branch `1.0.90-`, suspended with it on `1.0.92-Tilted-orbit-suspended`), the owner:
- * *"add some slide of the gizmo and follow by the piece and camera as per 3286ed5 … so that the gizmo can reach close to the edges without the camera view
- * being too slanted (which prevents seeing properly where the gizmo is on the face). but I like the smooth transition over the edge"*. ⭐⭐⭐ Ported to the
- * rebuild (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*): `edgeShare` and `shownDir` are
- * 58d86ff's, unchanged (its distance gate deleted: the same calm at every distance, Q3); the runs they read are the FACE MAP's (Step 4c-bis: the place across the core box's side, the height in the box — ⛔ the carrier's facet and chain before) — and, new, the
- * shares and the face's frame are EASED (`easeToward`), never read at once: the gizmo's face at a height can change with the height (a protrusion bridged,
- * the funnel), which 58d86ff's coplanar region never did (TILTED_ORBIT_REBUILD_SCOPE.md Step 9: *"the shares FOLLOWING their targets — a column of another
- * height moved the camera 15 cm"*).
+ * Each facet's normal weighted by the place's distance to its polygon (`calmWeight`: 1 on it, falling by a smoothstep to 0 over its edge zone), summed —
+ * a face's normal in its middle, the two normals' bisector on an edge, a corner's normals summed: the SAME from every side, so continuous wherever the place
+ * is, whatever face it is on, whatever frame the orbit reads it in. ⭐ A CAP (a top, a bottom) wins its zone (F3, the camera square to a cap): the walls'
+ * weights scaled by `1 − K` of the caps' — the cap's normal on the cap and at its edges, turning to the wall's over the zone below. The orbit's own direction
+ * `u` mixed in by the INTERIOR SHARES (58d86ff's calm: a quarter of the orbit's angle shown in a face's middle — the sliders), a cap's share 0.
  *
- * ⛔ No engine import (`tests/boundary.test.ts`).
+ * ⛔ The calm's SHARES as a state about the current face's normal (58d86ff's `shownDir`, ported 2026-11-04; F3's `capEdgeEnd` / `edgeShareTo`): a share
+ * multiplies the orbit's angle, and at a corner the face changed to has none to multiply — the direction jumped (up to 3.3 m far out, §21.6); their eases,
+ * `sharesShowing` (re-expressed at a turn), the pole fade — DELETED.
+ * ⛔ No engine import (`tests/boundary.test.ts`). Distances to convex polygons, smoothsteps — textbook.
  */
-import type { Vec3 } from "../core/vec";
+import { cross, dot, normalize, type Vec3 } from "../core/vec";
 
-const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const HALF_PI = Math.PI / 2;
 
-/**
- * ⭐⭐⭐ (58d86ff) THE SHARE OF THE ORBIT'S ANGLE SHOWN along one axis of the face, from the gizmo's distance to the NEARER end of its run along that axis
- * (`dEdgeM`) and the run's length (`runM`): `interior` in the middle, rising by a smoothstep to 1 within the edge zone (`zonePct` % of the run, at least
- * `zoneMinM`); 1 at the edge — so the crossing is exactly the orbit's. A face too thin for two zones: 1 everywhere. Position only: reversible.
- */
-export function edgeShare(dEdgeM: number, runM: number, interior: number, zonePct: number, zoneMinM: number): number {
-  const zone = Math.max((Math.max(0, zonePct) / 100) * runM, Math.max(0, zoneMinM));
-  if (!(runM > 2 * zone)) return 1;
-  const x = Math.min(1, Math.max(0, 1 - Math.max(0, dEdgeM) / zone));
-  const k = Math.min(1, Math.max(0, interior));
-  return k + (1 - k) * x * x * (3 - 2 * x);
+/** ⭐ A facet of the contour as the field reads it: its outward normal (unit), its convex polygon (on its plane), a cap or a wall. */
+export interface CalmFacet {
+  readonly n: Vec3;
+  readonly poly: readonly Vec3[];
+  readonly cap: boolean;
+}
+
+/** ⭐ The field's knobs: the interior shares of the orbit's angle (dx's, dy's) on a wall; the edge zones (m) of a wall's and a cap's influence. */
+export interface CalmOpts {
+  readonly shareH: number;
+  readonly shareV: number;
+  readonly zoneH: number;
+  readonly zoneV: number;
+}
+
+/** ⭐ The distance from `p` to a convex polygon `poly` (normal `n`): to its plane when `p` projects inside it, else to its nearest edge. */
+export function polyDistance(p: Vec3, poly: readonly Vec3[], n: Vec3): number {
+  if (poly.length === 0) return Infinity;
+  const h = dot([p[0] - poly[0]![0], p[1] - poly[0]![1], p[2] - poly[0]![2]], n);
+  const q: Vec3 = [p[0] - h * n[0], p[1] - h * n[1], p[2] - h * n[2]];
+  let inside = poly.length >= 3;
+  let sgn = 0;
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+    const e: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const aq: Vec3 = [q[0] - a[0], q[1] - a[1], q[2] - a[2]];
+    const s = dot(cross(e, aq), n);
+    if (s !== 0) {
+      if (sgn === 0) sgn = Math.sign(s);
+      else if (Math.sign(s) !== sgn) inside = false;
+    }
+    const ee = dot(e, e);
+    const t = ee > 0 ? Math.min(1, Math.max(0, dot([p[0] - a[0], p[1] - a[1], p[2] - a[2]], e) / ee)) : 0;
+    best = Math.min(best, Math.hypot(p[0] - a[0] - t * e[0], p[1] - a[1] - t * e[1], p[2] - a[2] - t * e[2]));
+  }
+  return inside ? Math.abs(h) : best;
+}
+
+/** ⭐ A facet's weight at the distance `d` from it, over its edge zone `zone`: 1 on it, a smoothstep down to 0 at the zone's end (none: on it only). */
+export function calmWeight(d: number, zone: number): number {
+  if (!(zone > 0)) return d <= 1e-9 ? 1 : 0;
+  const x = Math.min(1, Math.max(0, d / zone));
+  return 1 - x * x * (3 - 2 * x);
 }
 
 /**
- * ⭐⭐⭐ (58d86ff) THE PIECE'S SHOWN DIRECTION: the orbit's direction `u` read as two angles off the face's normal `n` — `α` toward `h` (dx's axis), `β`
- * toward `v` (dy's) — and shown at `sH·α`, `sV·β`. Both shares 1: `u` itself. The piece, the camera, the approach and the solve read it; the gizmo is still
- * moved by the orbit's own angles.
+ * ⭐⭐⭐ THE PIECE'S DIRECTION at the place `p` on the contour (`facets`), for the orbit's direction `u` (unit; both in one space — `up` the world's vertical
+ * there): the field's normal `N` (the walls' weights scaled by the caps' complement), the orbit's angle off it shown at the weighted interior shares (a cap
+ * 0) — its heading across `N` (dx's) and its elevation (dy's), each × its share, within ±90°. Unit.
  */
-export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: number): Vec3 {
-  if (sH >= 1 && sV >= 1) return u;
-  const a = Math.atan2(dot(u, h), dot(u, n));
+export function calmDir(p: Vec3, facets: readonly CalmFacet[], u: Vec3, up: Vec3, o: CalmOpts): Vec3 {
+  const w = facets.map((f) => calmWeight(polyDistance(p, f.poly, f.n), f.cap ? o.zoneV : o.zoneH));
+  let free = 1;
+  facets.forEach((f, i) => {
+    if (f.cap) free *= 1 - w[i]!;
+  });
+  let sum: [number, number, number] = [0, 0, 0];
+  let kH = 0;
+  let kV = 0;
+  let total = 0;
+  facets.forEach((f, i) => {
+    const wi = f.cap ? w[i]! : w[i]! * free;
+    if (!(wi > 0)) return;
+    sum = [sum[0] + wi * f.n[0], sum[1] + wi * f.n[1], sum[2] + wi * f.n[2]];
+    if (!f.cap) {
+      kH += wi * o.shareH;
+      kV += wi * o.shareV;
+    }
+    total += wi;
+  });
+  const N = normalize(sum);
+  if (N === null || !(total > 0)) return u;
+  kH /= total;
+  kV /= total;
+  const h = normalize(cross(up, N));
+  if (h === null) return N;
+  const v = cross(N, h);
+  // ⭐ the orbit's angles off `N` (58d86ff's: its heading across, its elevation up) shown at the shares — ⛔ mixed as vectors: with `u` square to `N` (the
+  // field turned to a cap, the orbit level) the normal part vanished and the shares' few millionths were normalised to 45° (vectored)
+  const a = Math.atan2(dot(u, h), dot(u, N));
   const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
-  const a1 = a * Math.min(1, Math.max(0, sH));
-  const b1 = b * Math.min(1, Math.max(0, sV));
+  const a1 = Math.max(-HALF_PI, Math.min(HALF_PI, a * kH));
+  const b1 = Math.max(-HALF_PI, Math.min(HALF_PI, b * kV));
   const cb = Math.cos(b1);
-  return [
-    n[0] * cb * Math.cos(a1) + h[0] * cb * Math.sin(a1) + v[0] * Math.sin(b1),
-    n[1] * cb * Math.cos(a1) + h[1] * cb * Math.sin(a1) + v[1] * Math.sin(b1),
-    n[2] * cb * Math.cos(a1) + h[2] * cb * Math.sin(a1) + v[2] * Math.sin(b1),
-  ];
+  const ca = cb * Math.cos(a1);
+  const sa = cb * Math.sin(a1);
+  const sb = Math.sin(b1);
+  return [N[0] * ca + h[0] * sa + v[0] * sb, N[1] * ca + h[1] * sa + v[1] * sb, N[2] * ca + h[2] * sa + v[2] * sb];
 }
 
-/**
- * ⭐⭐⭐ (2026-11-05, STEP 6) THE SHARES THAT SHOW `shown` for the orbit's direction `u` (both in the frame's coordinates) about the face `n`, `h`, `v`, under
- * the pole's weight `w` (`poleWeight`) — `shownDir`'s inverse. At a frame turn the angles off the faced normal are read in other axes (off square, 28.7°
- * against 25° on `Scene_1`): the shares kept would show another direction (the piece stepped 35 mm, probed) — these show the same one, then ease to their
- * targets as ever. An angle near 0 (nothing to share): whole. Each in [0, 1].
- */
-export function sharesShowing(u: Vec3, shown: Vec3, n: Vec3, h: Vec3, v: Vec3, w: number): { readonly sH: number; readonly sV: number } {
-  const a = Math.atan2(dot(u, h), dot(u, n));
-  const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
-  const as = Math.atan2(dot(shown, h), dot(shown, n));
-  const bs = Math.asin(Math.max(-1, Math.min(1, dot(shown, v))));
-  const eff = (x: number, xs: number): number => (Math.abs(x) > 1e-6 ? Math.min(1, Math.max(0, xs / x)) : 1);
-  const raw = (e: number): number => (w > 1e-6 ? Math.min(1, Math.max(0, 1 - (1 - e) / w)) : 1);
-  return { sH: raw(eff(a, as)), sV: raw(eff(b, bs)) };
-}
-
-/* ⛔ (2026-11-04, the owner: *"modify the scope Q3: same calm at every distance"*) 58d86ff's `calmWeight` (the calm whole within 0.8 × its distance, none at
- * 1.2 ×), `CALM_RELEASE_FACTOR` and `calmEngageM` DELETED with its distance slider: a calm that changes with the distance turns the piece's direction while
- * A + dy approaches — the approach curved (*"why is there a 2D curve not straight when I approach the piece with A + dy"*). */
-
-/** ⭐ (2026-11-04, `1.0.95-`) The shares and the face's frame follow their targets with this time constant (ms) — never read at once. */
-export const CALM_TAU_MS = 120;
-
-/** ⭐ A value eased toward its target over `dtMs` (an exponential, `CALM_TAU_MS`). */
-export function easeToward(x: number, target: number, dtMs: number): number {
-  return x + (target - x) * (1 - Math.exp(-Math.max(0, dtMs) / CALM_TAU_MS));
-}
-
-/** ⭐ A horizontal unit normal eased toward its target (the angle between them, the short way) — the face's frame turned, never switched. */
-export function easeNormal(n: Vec3, target: Vec3, dtMs: number): Vec3 {
-  const a0 = Math.atan2(n[2], n[0]);
-  const a1 = Math.atan2(target[2], target[0]);
-  const d = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
-  const a = easeToward(a0, a0 + d, dtMs);
-  return [Math.cos(a), 0, Math.sin(a)];
-}
-
-/* ⛔ (2026-11-05, §20) `calmHeading` DELETED — the camera's up is the view's (`input/camera_up.ts`: gravity's up for the shown direction itself, its own
- * heading by construction), no heading is passed any more. */
-
-/**
- * ⭐⭐⭐ (2026-11-04, `1.0.95-`) A share's target held toward 1 while the eased normal has not caught up with its own (`cosAngle`, between them): whole calm
- * within 5°, none beyond 30° (a smoothstep). ⛔ A share calming while the normal still swung across from a stale face (175° away, off a top onto the funnel's
- * slanted side): the camera jumped 271 mm in a frame (probed).
- */
-export function alignedShare(target: number, cosAngle: number): number {
-  const lo = Math.cos((30 * Math.PI) / 180);
-  const hi = Math.cos((5 * Math.PI) / 180);
-  const x = Math.min(1, Math.max(0, (cosAngle - lo) / (hi - lo)));
-  return 1 - (1 - target) * x * x * (3 - 2 * x);
-}
-
-/**
- * ⭐⭐⭐ (2026-11-04, `1.0.95-`) The calm's weight by the orbit's PITCH (`uY`, the up component of its direction): whole below 60°, none from 85° (a
- * smoothstep) — straight above / below a face's normal means nothing, the dy has turned over the edge (Step 3). ⛔ At the bottom pole a stale side normal with
- * a share of 0.53 bent the piece off its gizmo's face (probed: the piece behind its face in 657 frames).
- */
-export function poleWeight(uY: number): number {
-  const p = Math.asin(Math.min(1, Math.abs(uY)));
-  const lo = (60 * Math.PI) / 180;
-  const hi = (85 * Math.PI) / 180;
-  const x = Math.min(1, Math.max(0, (hi - p) / (hi - lo)));
-  return x * x * (3 - 2 * x);
+/** ⭐ An edge zone (m): `pct` % of the run, at least `minM`. */
+export function calmZone(runM: number, pct: number, minM: number): number {
+  return Math.max((Math.max(0, pct) / 100) * Math.max(0, runM), Math.max(0, minM));
 }

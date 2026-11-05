@@ -237,8 +237,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(a).toContain("const t = mapTarget(map, yaw, pitch, mapOpts(st));");
     expect(a).toContain("const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);");
     expect(a).toContain("const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));");
-    expect(a).toContain("st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };");
-    expect(a).toContain("st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };");
+    // ⭐⭐⭐ (§21) the sections the PLANE CUTS through the gizmo's place (⛔ the sweeps of the face map)
+    expect(a).toContain("const loop = cutLoop(facets, insidePlane(plane, facets));");
+    expect(a).toContain("return { a: planeThrough(c, up), b: Math.hypot(r[0], r[1], r[2]) > 1e-6 ? planeThrough(c, r) : null };");
     expect(a).toContain("st.asmMapQ = map !== null && gF !== null ? mapAngles(map, gF, facetOfNormal(map, nF, gF), mapOpts(st)) : null;");
     for (const gone of ["carrierFrame(", "onGreen(", "facingChain(", "loopFor(", "faceTurnedAway", "castGizmo("]) expect(a).not.toContain(gone);
     expect(DEFAULT_CONFIG.faceEdgeSlideMm).toBe(10);

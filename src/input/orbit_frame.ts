@@ -5,13 +5,13 @@
  * (`shortestArc`: 90° on a box): the cap is then a facet of the new frame's column at the same heading, orbited as a wall is (a dx along the edge, a dy
  * across toward the far edge — the facet frame's planes: I1, the world's x / z lines on a box). Nothing moves at the turn: the piece's direction is the
  * same vector read in the new frame's angles (`rebaseAngles`).
- ⭐⭐⭐ (2026-11-05, THE REDESIGN — §20; the owner on Step 6: *"jumps, back-and-forth, stuck, camera views upside down, slanted camera views"*): the frame is
- * ONLY the orbit's angles — the camera's up is the view's (`input/camera_up.ts`), never the frame's; a cap is LEFT by any edge past `margin` and every
- * wall is orbited UPRIGHT (`capExit`, `frameStep`) — ⛔ Step 6's clamps at the far and side edges, its roll owed and its waits DELETED; the drag that left
- * a cap over its far edge is held at it (`holdPitch`, §4.2). The way back is the crossing's band edge passed by `margin` (no dithering on a threshold).
+ * ⭐⭐⭐ (2026-11-05, §21 rebuilt — §21.5 F1) the frame is ONLY the travel's chart; it TURNS at the crossing itself — the finger's step SPLIT at the first
+ * face change on its way (`stepToBoundary`), the frame turned exactly AT the bound (no margin: nothing moves at a turn, so a turn back costs nothing), the
+ * roles and R4's hold read there (`input_roles.ts`), the rest of the step re-mapped. Its axes snapped onto the world's (`snapFrame`). ⛔ §19 / §20's caps,
+ * exits to upright, clamps, roll owed and hold; ⛔ §21's first build's turn at the bound + 3° on the SOLVED place (§21.5 cause 4) — deleted.
  * ⛔ ENGINE-FREE. Rotations, a piecewise test — textbook.
  */
-import { dot, qconj, qmul, qRotate, shortestArc, type Quat, type Vec3 } from "../core/vec";
+import { qconj, qmul, qRotate, shortestArc, type Quat, type Vec3 } from "../core/vec";
 import { columnAt, type FaceMap } from "./face_map";
 
 /** ⭐ The orbit's frame: its rotation (world from frame); the cap turned onto and the facet crossed from (world normals); which way is back. */
@@ -30,8 +30,6 @@ export interface OrbitFrame {
 
 export const UPRIGHT: OrbitFrame = { q: [1, 0, 0, 0], cap: null, capN: null, fromN: null, backLow: true, key: "U" };
 
-/** ⭐ The way back's margin (rad): the band's edge passed back by this much before the frame turns back (3°). */
-export const FRAME_BACK_MARGIN_RAD = (3 * Math.PI) / 180;
 
 export const toWorld = (f: OrbitFrame, v: Vec3): Vec3 => qRotate(f.q, v);
 export const toFrame = (f: OrbitFrame, v: Vec3): Vec3 => qRotate(qconj(f.q), v);
@@ -55,82 +53,83 @@ export function rebaseAngles(from: OrbitFrame, to: OrbitFrame, yaw: number, pitc
   return anglesOf(toFrame(to, toWorld(from, dirOf(yaw, pitch))), yaw);
 }
 
-/** ⭐ The facet of `map` whose normal is nearest `n` (frame coordinates). */
-function facetNear(map: FaceMap, n: Vec3): number {
-  let best = { i: 0, d: -Infinity };
-  map.facets.forEach((f, i) => {
-    const d = dot(f.n, n);
-    if (d > best.d) best = { i, d };
+/**
+ * ⭐ A frame's rotation SNAPPED: each of its axes within 1e-6 of a world axis put exactly on it (a box's turns are 90° about world axes — many crossings
+ * must not drift the sections off the world's planes); else as it is.
+ */
+export function snapFrame(q: Quat): Quat {
+  const ax = [qRotate(q, [1, 0, 0]), qRotate(q, [0, 1, 0]), qRotate(q, [0, 0, 1])];
+  const snapped = ax.map((v) => {
+    const k = [0, 1, 2].reduce((m, j) => (Math.abs(v[j]!) > Math.abs(v[m]!) ? j : m), 0);
+    if (Math.abs(Math.abs(v[k]!) - 1) > 1e-6) return null;
+    const r: [number, number, number] = [0, 0, 0];
+    r[k] = v[k]! > 0 ? 1 : -1;
+    return r as Vec3;
   });
-  return best.i;
-}
-
-/** ⭐ A turned frame's cap: its facet in `map` (the map built IN that frame), its column and its band (`lo`, `hi` — the pitch bounds there). */
-export function capBand(f: OrbitFrame, map: FaceMap): { readonly facet: number; readonly column: number; readonly lo: number; readonly hi: number } | null {
-  if (f.capN === null) return null;
-  const fi = facetNear(map, toFrame(f, f.capN));
-  for (let k = 0; k < map.columns.length; k++) {
-    const c = map.columns[k]!;
-    const i = c.facets.indexOf(fi);
-    if (i >= 0) return { facet: fi, column: k, lo: c.bounds[i]!, hi: c.bounds[i + 1]! };
+  if (snapped.some((v) => v === null)) return q;
+  const [X, Y, Z] = snapped as Vec3[];
+  // the rotation matrix's columns X, Y, Z → a quaternion (Shepperd)
+  const m00 = X![0], m10 = X![1], m20 = X![2], m01 = Y![0], m11 = Y![1], m21 = Y![2], m02 = Z![0], m12 = Z![1], m22 = Z![2];
+  const tr = m00 + m11 + m22;
+  let w: number, x: number, y: number, z: number;
+  if (tr > 0) {
+    const S = Math.sqrt(tr + 1) * 2;
+    w = 0.25 * S; x = (m21 - m12) / S; y = (m02 - m20) / S; z = (m10 - m01) / S;
+  } else if (m00 > m11 && m00 > m22) {
+    const S = Math.sqrt(1 + m00 - m11 - m22) * 2;
+    w = (m21 - m12) / S; x = 0.25 * S; y = (m01 + m10) / S; z = (m02 + m20) / S;
+  } else if (m11 > m22) {
+    const S = Math.sqrt(1 + m11 - m00 - m22) * 2;
+    w = (m02 - m20) / S; x = (m01 + m10) / S; y = 0.25 * S; z = (m12 + m21) / S;
+  } else {
+    const S = Math.sqrt(1 + m22 - m00 - m11) * 2;
+    w = (m10 - m01) / S; x = (m02 + m20) / S; y = (m12 + m21) / S; z = 0.25 * S;
   }
-  return null;
-}
-
-/** ⭐ Where a turned frame's solved place leaves its cap: `BACK` (the edge crossed onto it), `FAR` (the opposite edge), `SIDE` (a side edge) — each past
- * `margin`; `null` still on it (or upright). */
-export function capExit(f: OrbitFrame, map: FaceMap, yaw: number, pitch: number, margin: number = FRAME_BACK_MARGIN_RAD): "BACK" | "FAR" | "SIDE" | null {
-  if (f.cap === null) return null;
-  const b = capBand(f, map);
-  if (b === null) return "BACK";
-  const lowOut = pitch < b.lo - margin;
-  const highOut = pitch > b.hi + margin;
-  if (lowOut || highOut) return lowOut === f.backLow ? "BACK" : "FAR";
-  const col = map.columns[b.column]!;
-  const d = Math.atan2(Math.sin(yaw - col.mid), Math.cos(yaw - col.mid));
-  return Math.abs(d) > col.hw + margin ? "SIDE" : null;
+  return w < 0 ? [-w, -x, -y, -z] : [w, x, y, z];
 }
 
 /**
- * ⭐⭐⭐ THE FRAME'S STEP for the orbit's solved place (`yaw`, `pitch`, in frame `f`, its face map `map` built in it): upright, past a column's top / bottom
- * bound — the frame turned onto that cap about the edge between the column's facet and the cap (`shortestArc` of their world normals) — unless the cap is
- * HELD (`hold`, §4.2: the drag that left it over its far edge); turned, off the cap by ANY edge past `margin` (`capExit`) — upright again: every wall is
- * orbited upright (⭐ the redesign, §20 — ⛔ Step 6 clamped the far and side edges: dead ends, 118 blockages in the matrix). Else `null` (stay).
+ * ⭐⭐⭐ THE FRAME'S STEP (§21 — every crossing turns, the frame never resets): the orbit's place (`yaw`, `pitch`, in frame `f`, its face map `map` built
+ * in it) PAST its column's top / bottom bound — the frame TURNED about the edge between the column's facet and the facet beyond (the frame's cap there) by
+ * their dihedral (`shortestArc`: 90° on a box), whatever frame it is in. A dx never turns it: every facet square to the frame's up is one of its columns
+ * (the green loop, a world plane on a box). `null`: stay.
  */
-export function frameStep(f: OrbitFrame, map: FaceMap, yaw: number, pitch: number, margin: number = FRAME_BACK_MARGIN_RAD, hold: "TOP" | "BOTTOM" | null = null): OrbitFrame | null {
-  if (f.cap === null) {
-    const col = map.columns[columnAt(map, yaw).k];
-    if (col === undefined) return null;
-    const B = col.bounds;
-    const up = pitch > B[B.length - 1]!;
-    const down = pitch < B[0]!;
-    if (!up && !down) return null;
-    if (hold === (up ? "TOP" : "BOTTOM")) return null;
-    const side = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-    const cap = map.facets[up ? map.top : map.bottom]!;
-    const fromN = toWorld(f, side.n);
-    const capN = toWorld(f, cap.n);
-    const turn = shortestArc(fromN, capN);
-    const q = qmul(turn, f.q);
-    const g: OrbitFrame = { q, cap: up ? "TOP" : "BOTTOM", capN, fromN, backLow: true, key: "" };
-    // the way back: where the side crossed from lies in the new frame — below the cap's band (onto a top) or above it
-    const backLow = toFrame(g, fromN)[1] < 0;
-    return { ...g, backLow, key: `${up ? "T" : "B"}|${q.map((x) => x.toFixed(6)).join(",")}` };
-  }
-  return capExit(f, map, yaw, pitch, margin) === null ? null : UPRIGHT;
-}
-
-/**
- * ⭐⭐ (§4.2, the redesign §20) THE HOLD, UPRIGHT: the drag that left a cap over its FAR edge (the camera's half roll) is held at that cap's bound — the same
- * finger kept on would go straight back over the cap; the reversed one goes on down the far wall; lifted, released (the wiring). The orbit's pitch at
- * `yaw` held under (over) the column's top (bottom) bound; `held` whether it moved.
- */
-export function holdPitch(map: FaceMap, hold: "TOP" | "BOTTOM", yaw: number, pitch: number): { readonly pitch: number; readonly held: boolean } {
+export function frameStep(f: OrbitFrame, map: FaceMap, yaw: number, pitch: number): OrbitFrame | null {
   const col = map.columns[columnAt(map, yaw).k];
-  if (col === undefined) return { pitch, held: false };
+  if (col === undefined) return null;
   const B = col.bounds;
-  // ⭐ under the bound by the margin — where the crossing landed (⛔ ON the bound: the next dx ran along the top's rim, where the side, the top and the
-  // vertical edges all blend — at each corner the gizmo's path folded back against the finger, probed)
-  const p = hold === "TOP" ? Math.min(pitch, B[B.length - 1]! - FRAME_BACK_MARGIN_RAD) : Math.max(pitch, B[0]! + FRAME_BACK_MARGIN_RAD);
-  return { pitch: p, held: p !== pitch };
+  const up = pitch > B[B.length - 1]!;
+  const down = pitch < B[0]!;
+  if (!up && !down) return null;
+  const side = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
+  const cap = map.facets[up ? map.top : map.bottom]!;
+  const fromN = toWorld(f, side.n);
+  const capN = toWorld(f, cap.n);
+  const q = snapFrame(qmul(shortestArc(fromN, capN), f.q));
+  return { q, cap: up ? "TOP" : "BOTTOM", capN, fromN, backLow: up, key: q.map((x) => x.toFixed(6)).join(",") };
+}
+
+/** ⭐ How far past a face change a split step lands (rad) — on the next face, by a hair. */
+export const CROSS_EPS_RAD = 1e-7;
+
+/**
+ * ⭐⭐⭐ (§21.5 F1) THE STEP'S FIRST FACE CHANGE: the share `t` (0 … 1] of the step (`dYaw`, `dPitch`) from (`yaw`, `pitch`) that reaches the first
+ * boundary on its way — the column's yaw edges (`mid ± hw`), its stacked facets' pitch bounds (`bounds`, the top and bottom ones the frame's turn) — plus
+ * `CROSS_EPS_RAD` past it; 1: none within the step. `crossing`: a boundary is met.
+ */
+export function stepToBoundary(map: FaceMap, yaw: number, pitch: number, dYaw: number, dPitch: number): { readonly t: number; readonly crossing: boolean } {
+  const col = map.columns[columnAt(map, yaw).k];
+  if (col === undefined) return { t: 1, crossing: false };
+  let t = Infinity;
+  if (dYaw !== 0) {
+    const off = Math.atan2(Math.sin(yaw - col.mid), Math.cos(yaw - col.mid));
+    const to = Math.sign(dYaw) * col.hw - off; // the yaw left to the edge it moves toward
+    if (to >= 0) t = Math.min(t, (Math.abs(to) + CROSS_EPS_RAD) / Math.abs(dYaw));
+  }
+  if (dPitch !== 0) {
+    const B = col.bounds;
+    const next = dPitch > 0 ? B.find((b) => b > pitch) : [...B].reverse().find((b) => b < pitch);
+    if (next !== undefined) t = Math.min(t, (Math.abs(next - pitch) + CROSS_EPS_RAD) / Math.abs(dPitch));
+  }
+  return t < 1 ? { t, crossing: true } : { t: 1, crossing: false };
 }
