@@ -163,7 +163,10 @@ back by a few degrees). The finger's axes LATCHED for a drag (and its coast), ea
 the far edge and the dx at the side edges (no second crossing, no half / quarter roll yet). ⭐ **The bottom a face to orbit as the others** (D2, the
 owner: *"remember that the floor can be crossed by the camera and is invisible from below"*): reached and orbited exactly as the top — the piece and the
 camera under the floor's top; ⚠ checked here: the play volume and the solver's contacts never stop the orbited piece's orbit there. Gate: I1–I6 on a top reached at
-several headings, the clamp the only stop; a dy back down the edge turns the frame back with nothing moving.
+several headings, the clamp the only stop; a dy back down the edge turns the frame back with nothing moving. ⭐ **To check here (§18, found by the
+traversal probes 2026-11-05)**: **§18-C2** — over the top at ~70°, close in, a dy against Piece44: the slide's yaw no longer swings ±7.5° an input
+frame (the camera 33 mm back and forth; `b_d17c`, seed 17 `DIAG`, frames ~2086–2106) — no back-and-forth there; **§18-C3** — the camera's roll under the
+bottom (−64° … −73°) within I6, and a dx at ±90° moves the gizmo; **§18-C6** — the matrix re-run.
 
 **Step 7 — Crossing on, every edge the same rule.** Open the clamps: over a top's FAR edge (the frame turns again; the camera's half roll there, §4.1;
 the input reversed after it, §4.2 — the same finger held at the edge, the reversed one goes on down the far side) and over a top's SIDE edge onto a wall
@@ -173,6 +176,9 @@ owner: a walk round a horizontal hexagonal prism's faces must not leave its hexa
 the frame snapped to the facet's own axes on entering it, the roll owed taken in that crossing. Gate: a constant dy loops the vertical section (stopped
 only by the far edge's roll); a constant dx started on a top loops its section (stopped only by the side edge's roll); I1 throughout; the hexagonal prism
 looped both ways in the vectors; ⭐ a long walk round the prism's rectangle faces, then onto its hexagonal end: the scene upside up there (§4.5).
+⭐ **To check here (§18)**: **§18-C4** — a void OPEN on a section's travel (the owner's attachment 1: a notch open on the red's): the red no longer runs
+straight up into the air — at the notch's real edge the orbit tilts and the gizmo follows the red onto the next face; a void CLOSED on the travel still
+bridged straight (§18, `void_bridge.test.ts`); **§18-C6** — the matrix re-run.
 
 **Step 8 — What the faces contour misses; the shell on the facets.** ⚠ (2026-11-04) See also the SLIDE wedged under an overhang (`HOVER.md` §0, item 21) —
 a future improvement of the slide, not of the orbit; a candidate gate here: *no slide ends where no way out is free*. What the facet frames' face map does
@@ -182,6 +188,11 @@ than its facet (the gizmo in the facet's plane beside the real face, no part the
 competing for a facet's main plane. ⛔ (`shadowBridgeMm`, `shadowStepMm`, R3, R4 belonged to the deleted hull.) And THE SHELL on the facets: today the
 parts' BOX offset (Step 2) — round a hexagon the piece would ride a box's corner past the slanted facets; the offset of the faces contour instead, when a
 non-box assembly exists. Gate: I1–I4 across `Scene_1`'s protrusions and the prism's; the gizmo's DEPTH steps accepted (the shell, Step 2).
+⭐ **To check here (§18)**: **§18-C1** — close in, the piece no longer placed from the gizmo's one point: (a) at a protrusion's depth step (Piece9's
+edge on the −x side, 95 mm) the piece's place does not jump and the solver never freezes with the finger's orbit running on (`b_d17c` frame ~836,
+`b_hc` ~1681: 17 of §18's 36 blockages); (b) a part beside the gizmo (Piece44 over the top) is gone over, not run into (13 of the 36). The
+proposal (§18): the place along the ray where the piece clears the parts' boxes inflated by its own by the approach's distance (sphere-traced, no
+collision query). ⚠ Its cost read on the iPhone. **§18-C6** — the matrix re-run, the blockages near 0 but the touching ones the player's.
 
 **Step 9 — Near square in the middle, the full orbit at the edges, at every distance.** The piece's SHOWN direction calmed toward the face's normal in
 its middle (a share of the orbit's angle), whole within an edge zone and through every crossing (the suspended branch's fourth pass, its sliders), the shares
@@ -809,7 +820,10 @@ the poles; random mixed legs, seeds 3 / 7 / 11 / 13 / 17; random pure legs, seed
 | the piece behind its gizmo's face | 0 | **0** |
 | back-and-forth | 6 | 11 — all the camera's, over the top at ~70° (below) |
 
-**Found, NOT built — the owner decides** (each a root cause, each named where it lives):
+**Found, NOT built — the owner decides** (each a root cause, each named where it lives). ⭐ (the owner, 2026-11-05: *"capture that in the md files; if
+the issues will be addressed by the next steps' builds, capture to check that during the next steps' builds"*) — each one's step is named and the
+CHECK is written into that step's gate (§5): ⭐ **§18-C1** Step 8, **§18-C2** and **§18-C3** Step 6, **§18-C4** Step 7, **§18-C5** the hover, **§18-C6** every
+step (the matrix re-run against §18's table):
 
 * ⛔ **CLOSE IN, THE PIECE IS PLACED FROM ONE SURFACE POINT** — within the shell's offset (60 mm) the foot comes down onto the gizmo, so (a) where a part
   stands out the gizmo's depth STEPS (95 mm at Piece9's edge on the −x side) and the piece's place jumps (61 mm in 0.001 of `v`): the solver, built on
@@ -817,12 +831,18 @@ the poles; random mixed legs, seeds 3 / 7 / 11 / 13 / 17; random pure legs, seed
   17 of the 36 blockages); (b) a part rising BESIDE the gizmo (Piece44, 41 mm above the top) meets the piece's 10 cm body before the gizmo reaches it —
   blocked, touching (13 of the 36). ⭐ Proposed: the piece's place read from what its FOOTPRINT meets — along the ray, the outermost point where the
   piece clears the parts' boxes by the approach's distance (the boxes inflated by the piece's own, sphere-traced: no collision query, continuous) — the
-  shell of Step 8 built from the parts instead of their box.
+  shell of Step 8 built from the parts instead of their box. → **§18-C1, Step 8's gate.**
 * ⛔ **THE POLE** — over the top at ~70°, close in, against Piece44 with a dy: the slide's yaw swings ±7.5° every input frame (the piece 2.5 mm, the camera
-  33 mm): near the pole the yaw is a cheap coordinate and the contact's side flips — Step 6's frame turn. The camera's roll under the bottom (−64° … −73°)
-  and the dx at ±90° are Step 6–7's too.
+  33 mm): near the pole the yaw is a cheap coordinate and the contact's side flips — Step 6's frame turn. → **§18-C2, Step 6's gate.** The camera's roll
+  under the bottom (−64° … −73°: 119 frames over 5° in the matrix) and the dx at ±90° (nothing moves at the top centre) → **§18-C3, Step 6's gate**
+  (Step 7's for the roll on a slanted facet).
+* ⛔ **A VOID OPEN ON A TRAVEL** (the owner's attachment 1 — the red runs straight up through a notch open on its travel, in the air, then meets the next
+  face): the gizmo stays a function of the angles, so it cannot turn at the notch's real edge — *"the orbit tilt shall take over once it is built"*.
+  → **§18-C4, Step 7's gate** (every crossing the same rule — a crossing at a REAL edge, not only at the contour's).
 * ⛔ **THE SLIDE IN A SLOT** — latched in the top's slot (before the void rule led the piece there), every drag was refused (*"at the edge of the hosting
-  faces"*) — the hover (`HOVER.md` §0) waits; the void rule removes the way in.
+  faces"*) — the hover (`HOVER.md` §0) waits; the void rule removes the way in. → **§18-C5, `HOVER.md` §0 item 22** (not a step of this rebuild).
+* ⭐ **§18-C6 — EVERY STEP**: the thirteen-run matrix (`orbit_probe.mjs` with `DIAG=1` / `AFTER=`, `analyse_orbit.mjs` with I7 — the runs' settings in
+  §18's probe paragraph) re-run at each step's close, its totals against §18's *after* column: no line worse without a named cause.
 
 **Vectors**: `place_at_angles` 3, `void_bridge` 7, `edge_surface` 4 — each RED on the code before it; `face_map`, `facets`, `orbit_shell` wiring strings
 updated. **1636** (1622 + 3 + 7 + 4). ⛔ No device close.
