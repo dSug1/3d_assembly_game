@@ -939,8 +939,12 @@ patches over patches"*)
   earlier left the top over its far edge, so the hold refused it): *"I do not want any hold."* → **remove the hold** (`holdPitch`, `st.orbitHold`, the
   `exit === "FAR"` latch in `orbitFrameStep`, `frameStep`'s `hold` argument, their vectors). The behaviour accepted instead: **a finger kept on loops over the
   top back and forth, the camera half-rolling at each far edge** (no direction is refused; the dy goes the finger's way on the screen, I5).
-* ⚠ Still open from the redesign, the owner's choice (proposed, not decided): onto a top OFF SQUARE nothing rolls at the crossing, so the camera keeps its
-  entry orientation while dx / dy move along the top's own axes — the gizmo up to the entry angle off the finger's direction (most of the 1.6 %). Options:
-  (a) the finger's screen direction drives the gizmo on a cap (I5 kept, I1 loosened there — recommended); (b) a roll at the crossing (what Step 6 did);
-  (c) as is.
+* ✅ **OFF SQUARE ONTO A TOP / A BOTTOM — (b), A ROLL AT THE CROSSING** (2026-11-05, the owner: *"(b) A roll at the crossing: align the camera with the
+  top's axes as you cross"*). The problem: onto a top off square nothing rolls at the crossing (§20 item 1), so the camera keeps its entry orientation while
+  dx / dy move along the top's own axes — the gizmo up to the entry angle off the finger's direction (most of the 1.6 % against the finger). The choice:
+  as the piece crosses onto a top or a bottom, the camera ROLLS to align with the cap's axes (the screen's up along the cap's dy axis, its right along its
+  dx axis), so I5 and I1 both hold on the cap. ⚠ To settle when it is built: the roll's pace (over the crossing's edge stretch, or over the input's travel
+  with the piece waiting — Step 6's roll owed waited; the owner rejected the waits), and how it composes with §20's view rule (the carried up starts
+  aligned with the cap instead of as gravity's). The other options were (a) the finger's screen direction driving the gizmo on a cap (I1 loosened there)
+  and (c) as is.
 * ⚠ The HUD's verdict *"held at the edge until the finger lifts or reverses"* — wrong (only lifting released it); goes with the hold.
