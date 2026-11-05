@@ -3,9 +3,9 @@
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
 > function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
-> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) · ✅ **Step 6 built** (2026-11-05, branch `1.0.101-`, §19 — the frame turned onto a top / a bottom at its crossing, nothing moving; the far and side edges clamp) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
-> (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17). **Next: Step 6.**
+> (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17); ✅ Step 6 built (§19). **Next: Step 7.**
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -153,7 +153,7 @@ The orbit stays in the UPRIGHT frame (the world's vertical; no frame turn yet), 
 4c-bis on the sides (the probes' numbers, both matrices of §15) but over an empty slot (D3: the gizmo at its bottom, the piece and the camera unmoved by
 it; an A + dy there goes in to the contact); the vectors on a synthetic horizontal hexagonal prism and a box; I1 in the facet frame.
 
-**Step 6 — The frame turn at a crossing: up onto a top, down onto a bottom.** At a top / bottom edge's threshold the orbit's frame TURNS about the edge by
+**Step 6 — The frame turn at a crossing: up onto a top, down onto a bottom.** ✅ **Built 2026-11-05 (§19).** At a top / bottom edge's threshold the orbit's frame TURNS about the edge by
 the dihedral (90° on a box): the top becomes a face of the new frame, orbited as a vertical face is — a dx along the edge, a dy across the top toward the
 far edge, the sections the facet frame's planes (I1: on a box the world's x / z lines). The turn RE-BASES with nothing moving: the piece's direction is the
 same vector read in the new frame's angles (the spring, the lag, the leash re-read), the gizmo's place taken over by `mapAngles` / `syncAngle` (as after
@@ -846,3 +846,64 @@ step (the matrix re-run against §18's table):
 
 **Vectors**: `place_at_angles` 3, `void_bridge` 7, `edge_surface` 4 — each RED on the code before it; `face_map`, `facets`, `orbit_shell` wiring strings
 updated. **1636** (1622 + 3 + 7 + 4). ⛔ No device close.
+
+## 19. Step 6 — the frame turn at a crossing: up onto a top, down onto a bottom — built (2026-11-05, branch `1.0.101-`)
+
+**As built** (`input/orbit_frame.ts`, engine-free; wired in `render/assembly_wiring.ts`, the slide's re-base in `render/hover_wiring.ts`, the solved place's
+bound in `render/green_box_wiring.ts`):
+
+1. ⭐⭐⭐ **THE FRAME** (`OrbitFrame`, `st.orbitFrame`): a rotation (world from frame); upright, the world's. EVERY angle of the orbit is read in it — the
+   piece's direction (`dirAt`: `toWorld(frame, orbitDir)`), the calm (`calmDir` in the frame's axes), the camera (`assemblyCameraFrame`: built in the frame,
+   its up the frame's), the face map (`faceMapOf`: the placed faces and the parts' box read IN the frame, a few maps kept), the gizmo (`mapGizmoF` in the
+   frame's coordinates, its casts out to the world and back — `frameCast`; `mapGizmo` turns its result out for the probes, the lines, the solver's places).
+2. ⭐⭐⭐ **THE TURN** (`frameStep`, for the SOLVED place): upright, past a column's top (bottom) bound — the frame turned about the edge between the column's
+   top (bottom) facet and the cap by their dihedral (`shortestArc` of their normals: 90° on a box); the cap is then the facet at the same heading in the
+   new frame's map. Turned, past the cap's band on the way back by 3° (`FRAME_BACK_MARGIN_RAD`) — upright again: no dithering on the threshold.
+3. ⭐⭐⭐ **NOTHING MOVES AT THE TURN** (`orbitFrameTurn`, `rebaseAngles`): the target, the solved place, the eye's spring, the camera's leash and lag, the
+   solver's last raw input and its height kept, the gizmo's sync — each re-read as the SAME direction; the gizmo's map angles put on the gizmo
+   (`mapAngles`, then Gauss–Newton on the two angles with backtracking — `gizmoAnglesAt`: an edge's gizmo is a blend of two facets' points, on neither
+   plane); the calm carried (its normal the facet now faced, its shares the ones that show the same direction — `sharesShowing`).
+4. ⭐⭐ **STEP 6's CLAMPS** (`frameClamp`): in a turned frame the far edge and the side edges hold (no second crossing — Step 7), and the way back is
+   bounded just past its threshold (`FRAME_BACK_REACH_RAD`, the margin + 1°); the clamps bound the TARGET (`orbitFrameStep`) and the SOLVED place
+   (`frameClampSolved` — the place held becomes the solver's target and height kept).
+5. ⭐⭐ **THE ROLL OWED** (`rollOwed`, `rollStep`, `st.orbitRoll`): crossing off square, the camera's upright up differs in the two frames (40–54° on
+   `Scene_1`'s diagonals); the old up is shown, the difference taken off LINEARLY by the dy's travel AWAY from the edge just crossed (`dir`), the piece
+   waiting, a dx held; back past its start, the frame turns back to the one it came from. Square to the edge: none.
+6. ⭐ **D2 — THE BOTTOM AS THE TOP**: reached and orbited the same way; the floor (frozen, exempt) and the play volume (not in the orbited piece's
+   collision) never stop it; the camera goes under the floor's top (probed: y −1.0 … −1.3 m).
+7. ⭐ **THE CALM'S VERTICAL RUN ON THE FACET'S SPAN** (`calmFrame`): ⛔ on the placed parts' BOX — `Scene_1`'s parts rise 41 mm above the top face, so at
+   the front's top EDGE, where the frame turns, the calm still held the piece 8° under the orbit (share 0.82); restarted at the turn, the piece jumped
+   2.8 m far out. The facet's span is whole at its edges and the same on every side of a box (the bounce stays fixed).
+
+**Found by the probes in the first build, fixed before it landed** (root causes, not patches): the calm's run on the box (item 7 — the piece 2.8 m at a
+turn); the roll's travel read in the frame's own sense and its way back always upright (a turn back down off a top: the camera rolled 53° in a frame);
+the clamps on the target only (a slide along Piece44 carried the piece past a side edge, the clamp pulled it back — the camera 33 mm back and forth); the
+way back unbounded (a dy back ran the target to the turned frame's own pole, the turn back re-based it onto another world direction — 834 mm of camera in a
+frame); the gizmo's angles put by projection only (24 mm off — item 3); the calm's shares kept through an off-square turn (the piece 35 mm).
+
+**The probes** (`orbit_probe.mjs` now records the frame `fr` and the roll left `rl`; eight runs: a square dy over the top, dx to both side edges, a dy
+down the whole assembly to the bottom and back up — far and close; the same off square — mid and close; mixed random legs, seeds 3 / 7 / 13; pure random,
+seed 5):
+
+| | Step 6 |
+|---|---|
+| turns per constant run | 2–5, each with the piece, the camera and the up continuous (the square turn onto the top: piece 45 mm in a frame of 400 mm far out, the up 0.4°) |
+| I1 on a cap (the gizmo's spread across a leg's other axis) | 0.0 mm (a dx on the top keeps z, a dy keeps x) |
+| back-and-forth | 0–1 a run |
+| the camera's up turned most in a frame | 4.8–7.6° (36° in the first build) |
+| the piece behind its gizmo's face | 0 (one frame, 6.6 mm, under Piece42's slanted overhang at the front-right corner — Step 8's) |
+| §18-C2 (seed 17, close in: the slide's yaw over the top against Piece44) | **back-and-forth 5 → 0, camera jumps 1 → 0** |
+| §18-C3 (the roll under the bottom, a dx at ±90°) | by construction: the orbit turns at 45°, the poles never reached |
+
+⚠ The analyser's I6 (*the camera upright on a wall*) flags frames IN a turned frame or while a roll is owed — the frame's up by design; none upright
+without a roll. Its BLOCKED / STUCK flags are the clamps (the far and side edges) and the roll's wait — Step 6's stops.
+
+**What it does NOT do / left**: no second crossing (the far edge and the side edges hold — Step 7, with the half and quarter rolls); off square, the
+gizmo's map angles (on the gizmo) and the orbit's (on the piece's direction) differ by a few degrees after the turn — the sync closes them at 1.5 × the
+orbit's step, so for one input frame the gizmo moves 24–46 mm instead of ~13 (continuous, fast); a roll owed waits for the dy's travel (a dx alone does
+not take it — a pause). ⛔ No device close.
+
+**Vectors**: `tests/orbit_frame.test.ts` 9 (the turn onto the top / bottom / about a side's edge; nothing moves; I1 on the top in the turned frame; the
+gizmo kept by `mapAngles`; the clamps and the way back; the roll owed and its steps; the calm carried — `sharesShowing`; the wiring) — RED against
+`3c00d35` (the module absent); `orbit_calm` (the facet's span), `face_map`, `facets`, `assembly_orbit`, `hover`, `sway_cast`, `piece_collision`,
+`piece_orbit_solver` wiring strings updated. **1645** (1636 + 9).
