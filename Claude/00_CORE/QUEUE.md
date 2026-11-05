@@ -14,7 +14,7 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-05, branch `1.0.99-`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-05, branch `1.0.99-Polar-orbit-finalized` — renamed from `1.0.99-`)
 
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
 merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per

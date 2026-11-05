@@ -2,7 +2,7 @@
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
-> function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
+> function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
 > D5's two sliders (§17) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
 > (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17). **Next: Step 6.**
@@ -690,7 +690,7 @@ sphere). ⚠ The first answer here (D1 below as first written: *the walk, or sta
 * No device close on Steps 0–4c-bis (rule 5). The owner tests `b373acb` (deployed 2026-11-04) — its findings may add to D4 or A5.
 * The frame cost of the drawn sections (64 / 96 samples, up to four rays each in the edge bands) is not measured on the iPhone (§15).
 
-## 17. Step 5 — THE FACES CONTOUR: the face map on facets — built (2026-11-05, branch `1.0.99-`)
+## 17. Step 5 — THE FACES CONTOUR: the face map on facets — built (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`)
 
 **As built** (`input/face_map.ts`, engine-free; wired in `render/assembly_wiring.ts` — `faceMapOf`, `rawGizmo`, `mapGizmo`):
 

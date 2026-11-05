@@ -2357,7 +2357,7 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   the top's / bottom's quarters beyond), the ray along the box face's axis onto the frontmost of the slide's coplanar regions (holes closed), slowly
   through an edge (10 mm in 10°, sliders) and blended across it; the sections drawn from the same function. ⛔ The carrier (2026-10-29 … Step 4c) deleted,
   with its hulls, holds and syncs (`input/section_hull.ts` keeps the lines' samples). 1613 vectors (scope §15). ⛔ No device close.
-* ✅ **Step 5 (2026-11-05, `1.0.99-`): THE FACES CONTOUR — the face map on facets** (scope §5, §16.1 D3 / D5): the placed parts' faces clustered into
+* ✅ **Step 5 (2026-11-05, `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`): THE FACES CONTOUR — the face map on facets** (scope §5, §16.1 D3 / D5): the placed parts' faces clustered into
   facets (within 20°), each at its main region's plane, taken largest first and kept while its real face covers a quarter of its polygon (`facetMergeDeg`,
   `facetMinShare` — `Scene_1` exactly its six faces); the columns (the facets by heading, each a slice of the yaw from halfway to each neighbour's), the
   facets stacked by elevation in a column (each a band of the pitch), the caps; the place in each facet's own frame (I1 there); the blend through an edge
