@@ -22,7 +22,7 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-✅ **Step 6** (§19: the frame turned onto a top / bottom) — ⛔ no device close on any. ⛔ §18-C1, C4–C6 open (Steps 7–8). **Next: Step 7**. ⏸ The hover waits.
+✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Next: §21, the sections as plane cuts** (approved; awaiting the owner's go). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
 ✅ `npm run verify`: **1645 golden vectors, all passing** — MEASURED 2026-11-05 (the count's home; the scope's §19).

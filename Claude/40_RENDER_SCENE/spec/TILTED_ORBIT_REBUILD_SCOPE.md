@@ -3,7 +3,7 @@
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
 > function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
-> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) · ✅ **Step 6 built**, then ⭐ **REDESIGNED** (§20 — the camera's up from the view, a cap left by any edge; ⛔ the hold to be removed, §20.1) (2026-11-05, branch `1.0.101-`, §19 — the frame turned onto a top / a bottom at its crossing, nothing moving; the far and side edges clamp) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) · ✅ **Step 6 built**, then ⭐ **REDESIGNED** (§20 — the camera's up from the view, a cap left by any edge; ⛔ the hold to be removed, §20.1) · ⭐⭐⭐ **NEXT: THE SECTIONS AS PLANE CUTS** (§21 — approved 2026-11-05, supersedes the facet frames of §5 Steps 6–7; ⛔ not built, awaiting the owner's go) (2026-11-05, branch `1.0.101-`, §19 — the frame turned onto a top / a bottom at its crossing, nothing moving; the far and side edges clamp) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
 > (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17); ✅ Step 6 built (§19). **Next: Step 7.**
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
@@ -153,7 +153,7 @@ The orbit stays in the UPRIGHT frame (the world's vertical; no frame turn yet), 
 4c-bis on the sides (the probes' numbers, both matrices of §15) but over an empty slot (D3: the gizmo at its bottom, the piece and the camera unmoved by
 it; an A + dy there goes in to the contact); the vectors on a synthetic horizontal hexagonal prism and a box; I1 in the facet frame.
 
-**Step 6 — The frame turn at a crossing: up onto a top, down onto a bottom.** ✅ **Built 2026-11-05 (§19).** At a top / bottom edge's threshold the orbit's frame TURNS about the edge by
+**Step 6 — The frame turn at a crossing: up onto a top, down onto a bottom.** ✅ **Built 2026-11-05 (§19), redesigned (§20); ⛔ SUPERSEDED with Step 7 by §21 (the sections as plane cuts — approved, not built).** At a top / bottom edge's threshold the orbit's frame TURNS about the edge by
 the dihedral (90° on a box): the top becomes a face of the new frame, orbited as a vertical face is — a dx along the edge, a dy across the top toward the
 far edge, the sections the facet frame's planes (I1: on a box the world's x / z lines). The turn RE-BASES with nothing moving: the piece's direction is the
 same vector read in the new frame's angles (the spring, the lag, the leash re-read), the gizmo's place taken over by `mapAngles` / `syncAngle` (as after
@@ -948,3 +948,75 @@ patches over patches"*)
   aligned with the cap instead of as gravity's). The other options were (a) the finger's screen direction driving the gizmo on a cap (I1 loosened there)
   and (c) as is.
 * ⚠ The HUD's verdict *"held at the edge until the finger lifts or reverses"* — wrong (only lifting released it); goes with the hold.
+
+## 21. THE SECTIONS AS PLANE CUTS — the gizmo travels on them (approved design 2026-11-05; ⛔ NOT BUILT — awaiting the owner's go)
+
+> The owner: *"I agree to build your Proposal: the sections as plane cuts, and the gizmo travels on them. One thing: I insist the contours shall be closed
+> loops and cannot be infinite loops due to throw off by singularities or slanted faces … I also believe the camera shall roll at each edge crossing to
+> align the camera view with the contour line of the next face … update the specifications for the tilted orbit. Await my authorization to build."*
+> It supersedes §5's Steps 6–7 (the facet frames turned at each edge) and §19 / §20's frame machinery; §20.1's decisions stand (no hold; (b) the camera
+> aligned with a cap's axes — here by construction, item 4).
+
+### 21.1 Why (the owner on the device, 2026-11-05)
+
+The lines drawn were SWEEPS of the current frame's face map (the green: the gizmo at every yaw at the pitch held; the red: at every pitch at the yaw held).
+The map is a polar grid about the frame's axis: a sweep is straight only across the faces that frame maps as its columns — over the frame's caps or the
+next frame's faces it bends or slants (the red slanted on the wall while on a top); it ignores the frame turn a real travel takes at each edge (so it
+shows paths no input follows — the owner's attachments 3 and 4: *"not real because no combination of delta position travels can follow those two
+contours"*); it is re-drawn in the new frame at every turn (the line snapped at the crossing); near a frame's pole it can run off unclosed. The root: the
+lines come from the angle grid, the travel from a turn rule the grid does not hold.
+
+### 21.2 The design
+
+1. ⭐⭐⭐ **THE SECTIONS ARE PLANE CUTS of the faces contour** (Step 5's convex outline): the GREEN — the plane through the gizmo spanned by the face's
+   normal and its dx axis (`t`, level); the RED — the plane through the gizmo spanned by the normal and its dy axis (`b`, up the face). On a box
+   (`Scene_1`) world planes (`x = c`, `y = c`, `z = c`): every line an append of world-axis segments.
+2. ⭐⭐⭐ **ALWAYS A CLOSED LOOP, NEVER INFINITE** (the owner's condition — confirmed): a plane through the inside of a CONVEX solid cuts it in exactly ONE
+   closed convex polygon, one side per face crossed — finite, closed by construction; a slanted face only adds or reshapes a side; no angle, so no pole
+   to throw it off. ⭐ The degenerate case — the gizmo on an edge, the plane lying along the neighbouring face (`x = c` at the box's side itself) — is
+   excluded by placing every cutting plane at least **1 mm inside** the contour (vectored). The real surface (D3's depth, a protrusion, §18's bridged void)
+   offsets the DRAWN line along the face's normal; the PATH is the convex loop.
+3. ⭐⭐⭐ **THE GIZMO TRAVELS THE LINE DRAWN**: a dx moves it along the green polygon, a dy along the red, by arc length at the orbit's pace (mm on the
+   contour per mm of finger); through an edge it simply goes on along the same polygon (the edge's slow stretch kept) — a sustained dx or dy loops the
+   same closed section for ever (I3); the line is the path, exactly. The finger read on the SCREEN: dx (dy) moves the gizmo along its polygon in the
+   sense that goes the finger's way on the screen at the gizmo (I5) — so after a half roll the same finger kept on comes back (§20.1: *"a finger kept on
+   loops over the top back and forth, the camera half-rolling at each far edge"*), the reversed one goes on down the far side; no hold.
+4. ⭐⭐ **THE LINES CHANGE ONLY WITH THE INPUT**: under a pure dx the green is fixed (the gizmo rides it) and the red, through the gizmo, slides along with
+   it (each position a world-axis plane cut); under a pure dy the reverse; a mixed input moves the gizmo off both — both slide with it, their shape
+   world-axis. Nothing is re-drawn at an edge or a singularity: a plane cut has neither.
+5. ⭐⭐ **THE CAMERA'S ROLL — at exactly two kinds of crossing** (the owner proposed *"a roll at each edge crossing to align the camera view with the
+   contour line of the next face"* — infirmed as a rule for EVERY crossing, kept as the principle): on a box every plane cut meets every edge SQUARELY (a
+   dx line runs level across vertical edges, a dy line vertical across horizontal ones), so turning about the edge already leaves the next face's line
+   straight on the screen — no roll. A roll is owed only where that turn leaves the view at odds with the next face's line: **a quarter roll from a top
+   (bottom) onto a wall over a SIDE edge by dx** (§4.3 — the wall upright); **a half roll over a top's (bottom's) FAR edge by dy** (§4.1 — the far wall
+   not upside down). Onto a top or a bottom nothing rolls: the crossing is square and the camera's up already lies along the cap's axes — §20.1's choice
+   (b) by construction. On a non-box contour (slanted faces, a hexagonal prism) a line can meet an edge obliquely: the rule generalises to *roll so the
+   next face's line is straight on the screen*, the roll that angle. ⭐ Each roll taken over the edge's slow stretch (the last 10 mm), the piece never
+   waiting (the owner rejected the waits). On every face that is not purely horizontal the scene upright (§4.5) — on a box it follows from the two rolls.
+6. ⭐⭐ **THE PIECE AND THE CAMERA FROM THE PLACE**: the piece's direction the face's normal at the gizmo, turned through the dihedral over the edge's slow
+   stretch, the calm kept (§13); the shell (Step 2) and the support lift (§18) unchanged; the camera behind the piece, its up the face's dy axis (the
+   red's direction on the screen — gravity on a wall, the cap's axis on a cap), rolled per item 5.
+7. ⭐⭐ **THE COLLISION SOLVER, RE-ADDRESSED** (unchanged in what it does): it takes where the finger wants the piece, tries small moves, measures the
+   distance to the parts and stops or slides along a part. Today it writes the piece's place as two numbers (round the assembly, up it); here the two
+   numbers become the arc lengths along the green and the red. The solver never reads their meaning (its moves and measures are numerical) — no new
+   collision rule, the same 24-query budget. What moves to the new pair is the bookkeeping that stores or eases the place: the finger's target, the eye's
+   spring, the camera's lag, the height kept after a contact, the slide's way out.
+8. **DELETED**: the face map's angle grid as the travel (columns, cap quarters, pitch bands — kept, if at all, only to find the facets), the frame turns
+   (`orbit_frame.ts`: `frameStep`, `capExit`, `holdPitch`, the re-bases, `gizmoAnglesAt`), the map's angles and their sync (`asmMapQ`, `syncAngle`), the
+   hold. ⚠ It resembles the carrier deleted at Step 4c-bis — but that carrier rode the HULLS of the real sections (bridging grooves and gaps: it waited,
+   held, drifted and jumped); this one rides the CONVEX faces contour, whose plane cuts are exact closed polygons; the real surface only offsets the depth.
+
+### 21.3 Build order and gates (each with its vectors, RED on the code before it, and the probes)
+
+1. **The cut** (engine-free): a convex contour × a plane → its closed polygon (ordered, closed, finite; 1 mm inside); arc length ↔ point; the face, its
+   normal and its axes at a point. Vectors: a box (world-axis loops), a horizontal and a vertical hexagonal prism (slanted faces), a plane on an edge
+   (the 1 mm rule), every loop closed, no length beyond the contour's girth.
+2. **The travel**: the state (the place, the green and red planes); dx / dy along their polygons by arc length, read on the screen (I5); the edge's slow
+   stretch; the lines drawn from the same polygons (real depth along the normal).
+3. **The piece and the camera from the place**: the direction, the calm, the rolls of item 5 over the slow stretch.
+4. **The solver re-addressed**: the two arc lengths; the bookkeeping moved (target, spring, lag, height kept, slide's way out).
+5. **The deletions** (item 8).
+Gates: the 13-run traversal matrix and the off-square set (`orbit_probe.mjs`, `analyse_orbit.mjs`, the tilt check) — tilted / upside-down 0; every line
+closed (a new check: the drawn polygons' closure and length); I1 (the gizmo within 3 mm of its plane on constant legs — every face, the caps included); I3
+(no reverse, no stuck but the half roll's reversal); back-and-forth, blockages, jumps and against-the-finger at or under §20's. ⛔ No device close until the
+owner's look.
