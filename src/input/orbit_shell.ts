@@ -97,3 +97,17 @@ export function shellAnchor(g: Vec3, u: Vec3, d: number, offsetM: number, b: She
   const e = pieceAlong(g, u, d, offsetM, b, reachM) - d;
   return [g[0] + u[0] * e, g[1] + u[1] * e, g[2] + u[2] * e];
 }
+
+/**
+ * ⭐⭐⭐ (2026-11-05, branch `1.0.100-`) **THE PIECE'S PLACE FOR THE ORBIT'S ANGLES — around the gizmo AT THOSE ANGLES** (`gizmoAt`), its foot on the
+ * shell (`foot`), along the angles' direction (`dirAt`) at the approach's distance `d`. ⛔ Since Step 4c-bis the gizmo is a function of the angles, but the
+ * place was read around the gizmo of the FRAME's angles: every angle the solver tried stood round the last frame's gizmo — its world moved with its own
+ * result. On the phone, a dx along a part: a step met the part and slid down the ring, the gizmo was re-read lower, the way back to the height kept was
+ * then tried round that lower gizmo — a place lower than the real one, free — and taken; the gizmo went up again, the next step met the part: down and
+ * up every two frames (the owner: *"the gizmo goes to the black face then jumps back and forth"*). Now an angle's place is a function of the angle alone.
+ */
+export function placeAtAngles<Q>(q: Q, gizmoAt: (q: Q) => Vec3, dirAt: (q: Q) => Vec3, foot: (g: Vec3, u: Vec3) => Vec3, d: number): Vec3 {
+  const u = dirAt(q);
+  const f = foot(gizmoAt(q), u);
+  return [f[0] + u[0] * d, f[1] + u[1] * d, f[2] + u[2] * d];
+}

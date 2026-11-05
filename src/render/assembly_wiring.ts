@@ -19,7 +19,7 @@ import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
-import { pieceReach, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
+import { pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
@@ -404,12 +404,39 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
  * own gizmo for that direction + the direction × the approach's distance (`approach`: the state's by default).
  */
 export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
-  const u = dirAt(st, yaw, v);
   const d = approachDistance(st.cfg, approach);
-  const g = footOf(st, gizmoFor(st), u, d); // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell
+  // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell — ⭐⭐⭐ (2026-11-05) the gizmo AT THESE ANGLES (`placeAtAngles`, `gizmoAtAngles`): ⛔ the
+  // frame's gizmo, read from the last frame's angles — the solver's world moved with its own result (the back-and-forth on the phone)
+  const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u) => footOf(st, g, u, d), d);
   const c = st.orbitCentreM;
-  return [g[0] + u[0] * d - c.x, g[1] + u[1] * d - c.y, g[2] + u[2] * d - c.z];
+  return [p[0] - c.x, p[1] - c.y, p[2] - c.z];
 }
+
+/**
+ * ⭐⭐⭐ (2026-11-05) THE GIZMO AT THE ORBIT'S ANGLES `yaw`, `v` (`mapGizmo`) — out of step after the slide by the frame's own lag (`st.asmMapQ` against
+ * `st.asmPrevQ`, `syncAngle`); at the frame's own angles exactly the frame's gizmo (`st.asmG`). Under the slide: its held gizmo. Memoised for the frame
+ * (the solver asks the same angles several times).
+ */
+function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
+  if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
+  const q0 = st.asmPrevQ;
+  const mq = st.asmMapQ;
+  if (q0 === null || mq === null) return gizmoFor(st);
+  if (yaw === q0.yaw && v === q0.v && st.asmG !== null) return st.asmG;
+  let memo = GIZMO_MEMO.get(st);
+  if (memo === undefined || memo.frame !== st.frames) {
+    memo = { frame: st.frames, at: new Map() };
+    GIZMO_MEMO.set(st, memo);
+  }
+  const key = `${yaw}|${v}`;
+  const known = memo.at.get(key);
+  if (known !== undefined) return known;
+  const m = mapGizmo(st, yaw + Math.atan2(Math.sin(mq.yaw - q0.yaw), Math.cos(mq.yaw - q0.yaw)), pitchOfV(v) + (mq.pitch - pitchOfV(q0.v)));
+  const g = m === null ? gizmoFor(st) : m.hit.point;
+  if (memo.at.size < 512) memo.at.set(key, g);
+  return g;
+}
+const GIZMO_MEMO = new WeakMap<SceneState, { frame: number; at: Map<string, Vec3> }>();
 
 /** ⭐ The DRAWN piece's place from the shown gizmo: along its direction at the approach's distance (the gizmo's ease carries it — never a jump). */
 export function shownOffset(st: SceneState, yaw: number, v: number): Vec3 {

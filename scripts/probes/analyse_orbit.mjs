@@ -5,6 +5,8 @@
 //   I4 the piece on the gizmo's face's side (never behind it)
 //   I5 the gizmo's step on the screen the finger's way
 //   I6 the camera upright on a wall (the up within 5° of the world's)
+//   I7 (2026-11-05) no BACK-AND-FORTH of the gizmo / the piece / the camera (a step > 8 mm that comes back within 6 frames to within 4 mm of where it left),
+//      no BLOCKAGE on any leg (the finger moving, the gizmo AND the piece still 15 frames — the pitch at ±89.5° excepted: the pole's own stop)
 // Usage: node scripts/probes/analyse_orbit.mjs <recording.json> [--frames]   (--frames: every flagged frame, else grouped)
 import { readFileSync } from "node:fs";
 
@@ -27,7 +29,7 @@ const fingerOf = (leg) => {
   return null;
 };
 const legs = [...new Set(rows.map((r) => r.leg))].filter((l) => /^(c\d+[LRUD]|r\d+\[|pre\d+\[)/.test(l));
-const total = { frames: rows.length, jumpsPiece: 0, jumpsCamera: 0, jumpsGizmo: 0, against: 0, moving: 0, offSection: 0, reverse: 0, stuck: 0, behind: 0, roll: 0 };
+const total = { flicker: 0, blocked: 0, frames: rows.length, jumpsPiece: 0, jumpsCamera: 0, jumpsGizmo: 0, against: 0, moving: 0, offSection: 0, reverse: 0, stuck: 0, behind: 0, roll: 0 };
 const stepOf = (R, k, key) => (k > 0 && R[k][key] && R[k - 1][key] ? len(sub(R[k][key], R[k - 1][key])) : NaN);
 console.log(`${process.argv[2]}: ${rows.length} frames, viewport ${rec.viewport}, page errors ${rec.errors}${rec.recorderError ? `, RECORDER ERROR ${rec.recorderError}` : ""}`);
 for (const leg of legs) {
@@ -92,6 +94,25 @@ for (const leg of legs) {
       if (w && Math.hypot(s6.f[0], s6.f[2]) > 0.3) { const a = deg(Math.acos(Math.max(-1, Math.min(1, dot(w, s6.up))))); if (a > 5) { total.roll++; flag(k, `ROLL ${a.toFixed(0)}° on a wall`); } }
     }
   }
+  // I7: the back-and-forth, every leg
+  for (const [key, name] of [["g", "GIZMO"], ["p", "PIECE"], ["c", "CAMERA"]]) {
+    for (let i = 1; i < R.length; i++) {
+      if (len(sub(R[i][key], R[i - 1][key])) < 0.008) continue;
+      for (let k = i + 1; k <= i + 6 && k < R.length; k++)
+        if (len(sub(R[k][key], R[i - 1][key])) < 0.004 && len(sub(R[k][key], R[i][key])) > 0.0056) { total.flicker++; flag(i, `${name} BACK-AND-FORTH ${(len(sub(R[i][key], R[i - 1][key])) * 1000).toFixed(0)} mm, back at +${k - i}`); break; }
+    }
+  }
+  // I7: the blockage, every leg (the probe moves the finger every frame of a leg)
+  {
+    let run = 0, from = 0;
+    const end = (k) => { if (run >= 15) { total.blocked++; flag(from, `BLOCKED ${run} frames (gizmo and piece still, the finger moving)${R[from].tc ? " — touching" : ""}`); } run = 0; };
+    for (let k = 1; k < R.length; k++) {
+      const pole = R[k].mq && Math.abs(R[k].mq[1]) > (89.5 * Math.PI) / 180;
+      const still = len(sub(R[k].g, R[k - 1].g)) < 2e-4 && len(sub(R[k].p, R[k - 1].p)) < 2e-4;
+      if (still && !pole) { if (run === 0) from = k; run++; } else end(k);
+    }
+    end(R.length);
+  }
   if (constant && still >= 15) { total.stuck++; flag(stillFrom, `STUCK to the end (${still} frames)`); }
   const travel = len(sub(R[R.length - 1].g, R[0].g));
   console.log(`${leg}: ${R.length} frames, faces ${faces.join(" → ")}${plane ? `, plane ${plane.ax} at ${plane.held.toFixed(3)} (tilt ${plane.tilt.toFixed(0)}°)` : ""}, gizmo net ${(travel * 1000).toFixed(0)} mm`);
@@ -102,4 +123,4 @@ for (const leg of legs) {
     if (n) console.log(`     … ×${n} more`);
   }
 }
-console.log(`TOTAL: jumps piece ${total.jumpsPiece} / camera ${total.jumpsCamera} / gizmo ${total.jumpsGizmo}; off-section ${total.offSection}; reverse ${total.reverse}; stuck ${total.stuck}; piece behind ${total.behind}; against the finger ${total.against} of ${total.moving} moving frames; rolled on a wall ${total.roll}`);
+console.log(`TOTAL: back-and-forth ${total.flicker}; blocked ${total.blocked}; jumps piece ${total.jumpsPiece} / camera ${total.jumpsCamera} / gizmo ${total.jumpsGizmo}; off-section ${total.offSection}; reverse ${total.reverse}; stuck ${total.stuck}; piece behind ${total.behind}; against the finger ${total.against} of ${total.moving} moving frames; rolled on a wall ${total.roll}`);
