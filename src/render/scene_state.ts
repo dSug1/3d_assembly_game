@@ -464,19 +464,6 @@ export interface SceneState {
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
-  /** ⭐⭐⭐ (2026-11-05, STEP 6) THE ORBIT'S FRAME (`input/orbit_frame.ts`): upright, or turned onto a top / a bottom at its crossing — every angle of the orbit is
-   * read in it */
-  orbitFrame: import("../input/orbit_frame").OrbitFrame;
-  /** ⭐⭐⭐ (Step 6) the ROLL OWED at a turn off square: its whole (`owed`), what is left, the orbit's target held while it is taken (the piece waits) */
-  orbitRoll: {
-    readonly owed: number;
-    left: number;
-    readonly held: { readonly yaw: number; readonly v: number };
-    /** the pitch's sense AWAY from the edge just crossed, in the new frame (+1 up, −1 down) */
-    readonly dir: 1 | -1;
-    /** the frame the turn came from — back past the roll's start, the frame turns back to it */
-    readonly back: import("../input/orbit_frame").OrbitFrame;
-  } | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;

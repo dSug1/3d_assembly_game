@@ -67,12 +67,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const side = mapTarget(core, 0, 0, opts);
     expect(side.across.hi - side.across.lo).toBeCloseTo(0.033, 9);
     expect(side.normal).toEqual([1, 0, 0]);
-    // dy's run: ⭐⭐⭐ (2026-11-05, Step 6) the place up its FACET within the facet's span — one span on every side of the box (no bounce), whole at its edge
-    // (⛔ the parts' box: above the top face on `Scene_1`, the calm still at work at the edge where the frame turns — the piece jumped at the turn)
-    const spans = core.facets.filter((f) => f.kind === "SIDE").map((f) => [f.bLo, f.bHi]);
-    for (const sp of spans) expect(sp).toEqual([expect.closeTo(spans[0]![0]!, 12), expect.closeTo(spans[0]![1]!, 12)]);
+    // dy's run: the gizmo's height in the placed parts' box — one top and bottom on every face
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("sV = fv === null ? 1 : edgeShare(Math.min(b - fv.bLo, fv.bHi - b), fv.bHi - fv.bLo, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("chainRun(");
   });
   it("⭐⭐⭐ the shares and the face's normal FOLLOW their targets (an exponential, 120 ms) — a target that changes at once (another height's face) never moves them at once", () => {
@@ -100,7 +97,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(rollOf(offsetFrame(u, calmHeading(yaw, u0, u), 0, 0))).toBeLessThan(1e-6); // upright
     expect(rollOf(offsetFrame(u, yaw, 0, 0))).toBeGreaterThan(5); // ⛔ the orbit's yaw: rolled
     expect(calmHeading(yaw, [0, 1, 0], u)).toBe(yaw);
-    expect(code("render/assembly_wiring.ts")).toContain("const c = offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);");
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);");
   });
   it("⭐⭐⭐ the calm fades out toward straight above / below: whole under 60° of pitch, none from 85° (⛔ at the bottom pole a stale side normal, a share of 0.53: the piece bent off its gizmo's face, 657 frames behind it, probed)", () => {
     const s = (deg: number) => Math.sin((deg * Math.PI) / 180);
@@ -134,14 +131,14 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
   it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; 58d86ff's seven sliders (its distance deleted, Q3) in the submenu", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return toWorld(F, shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w));");
+    expect(a).toContain("return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);");
     // ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight — ⛔ 58d86ff's gate curved the A + dy approach
     expect(a).toContain("const w = poleWeight(u[1]);");
     expect(a).not.toContain("calmWeight(");
     expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
     expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
-    expect(a).toContain("const fv = cfg.faceSpanShareVOn === 1 ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;");
+    expect(a).toContain("const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
     const m = code("render/tuning_menu.ts");

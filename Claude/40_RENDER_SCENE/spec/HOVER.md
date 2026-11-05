@@ -99,10 +99,6 @@ the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
    Candidate fixes (none chosen — the slide was kept unchanged, Q4 of the tilted orbit's rebuild): (a) the slide refuses to carry the piece under a part
    it could not leave by its way out; (b) the way out, when straight off the face is blocked, goes sideways — back along the slide's last free direction,
    then out; (c) a gate of the rebuild's Step 8 (overhangs): *no slide ends where no way out is free*.
-22. ⛔ **THE SLIDE STUCK IN A SLOT** (the traversal probes, 2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §18-C5; not changed): led by D3's gizmo into the
-   top's slot (y 0.470 against the top's 0.4985), the slide latched on Piece30 inside it, then refused a dx AND the dy back (*"at the edge of the hosting
-   faces — reverse to come back"*): 1 200 frames still (`a_cc`, the close constant legs at `f1618e7`). §18's void rule removes that way in (the gizmo
-   bridged over the slot). ⭐ To check when the hover is taken up again: a slide latched in a recess always has one drag that moves it (item 21's (c)).
 19. ⭐⭐⭐ **A AGAIN MID-DRAG; THE WAY OUT CHECKED** (2026-11-01, items 40–41; ⛔ no device close): a move the slide takes spends the orbit's band for that
    pointer (⛔ A pressed again with the click held flew the piece out by the whole slide); the approach OUT is checked against the parts, a blocked one named.
 18. ⭐⭐⭐ **THE WAY OUT FROM THE SLIDE CAMERA ITSELF** (2026-11-01, item 39; ⛔ no device close): the orbit re-based so its CAMERA (offsets included) stands

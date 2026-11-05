@@ -48,22 +48,6 @@ export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: num
   ];
 }
 
-/**
- * ⭐⭐⭐ (2026-11-05, STEP 6) THE SHARES THAT SHOW `shown` for the orbit's direction `u` (both in the frame's coordinates) about the face `n`, `h`, `v`, under
- * the pole's weight `w` (`poleWeight`) — `shownDir`'s inverse. At a frame turn the angles off the faced normal are read in other axes (off square, 28.7°
- * against 25° on `Scene_1`): the shares kept would show another direction (the piece stepped 35 mm, probed) — these show the same one, then ease to their
- * targets as ever. An angle near 0 (nothing to share): whole. Each in [0, 1].
- */
-export function sharesShowing(u: Vec3, shown: Vec3, n: Vec3, h: Vec3, v: Vec3, w: number): { readonly sH: number; readonly sV: number } {
-  const a = Math.atan2(dot(u, h), dot(u, n));
-  const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
-  const as = Math.atan2(dot(shown, h), dot(shown, n));
-  const bs = Math.asin(Math.max(-1, Math.min(1, dot(shown, v))));
-  const eff = (x: number, xs: number): number => (Math.abs(x) > 1e-6 ? Math.min(1, Math.max(0, xs / x)) : 1);
-  const raw = (e: number): number => (w > 1e-6 ? Math.min(1, Math.max(0, 1 - (1 - e) / w)) : 1);
-  return { sH: raw(eff(a, as)), sV: raw(eff(b, bs)) };
-}
-
 /* ⛔ (2026-11-04, the owner: *"modify the scope Q3: same calm at every distance"*) 58d86ff's `calmWeight` (the calm whole within 0.8 × its distance, none at
  * 1.2 ×), `CALM_RELEASE_FACTOR` and `calmEngageM` DELETED with its distance slider: a calm that changes with the distance turns the piece's direction while
  * A + dy approaches — the approach curved (*"why is there a 2D curve not straight when I approach the piece with A + dy"*). */
