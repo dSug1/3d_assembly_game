@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { capAxis, paceUp, upTarget, wallUp } from "../src/input/camera_up";
+import { ZENITH_FLIP_RAD, capAxis, capAxisPastZenith, paceUp, upTarget, wallUp } from "../src/input/camera_up";
 import type { Vec3 } from "../src/core/vec";
 
 const D = Math.PI / 180;
@@ -65,6 +65,25 @@ describe("the camera's up (§21.4 R2 / R3, §21.5 F2)", () => {
     expect(n).toBeGreaterThanOrEqual(29);
     expect(n).toBeLessThanOrEqual(31);
     expect(paceUp(null, [0, 0, 1], TOP, 6 * D).up).toEqual([0, 0, 1]);
+  });
+
+  it("⭐⭐⭐ (§21.8, B) THE HALF ROLL AT THE ZENITH: a cap's carried axis flips once the view leans 3° past straight above toward it — never before; flipped, it flips back only 3° past the other way (6° of hysteresis); wired in the travel's face, so the roles are read again (R4)", () => {
+    const axis: Vec3 = [0, 0, 1];
+    const lean = (deg: number): Vec3 => [0, Math.cos(deg * D), Math.sin(deg * D)]; // + toward the axis
+    expect(capAxisPastZenith(axis, lean(-30))).toBe(axis); // on the near side: up the screen to the far edge
+    expect(capAxisPastZenith(axis, lean(2.9))).toBe(axis);
+    expect(capAxisPastZenith(axis, lean(3.1))).toEqual([-0, -0, -1]); // past the zenith: the far side's up
+    const flipped: Vec3 = [0, 0, -1];
+    expect(capAxisPastZenith(flipped, lean(-2.9))).toBe(flipped);
+    expect(capAxisPastZenith(flipped, lean(-3.1))).toEqual([-0, -0, 1]);
+    expect(ZENITH_FLIP_RAD).toBeCloseTo(3 * D, 12);
+    // ⭐ an orbited cap leant 40° SIDEWAYS (a dx over the top): gravity's up, never the axis 90° off it (⛔ 1406 tilted frames, probed); square: the axis
+    const side = unit([Math.sin(40 * D), Math.cos(40 * D), 0]);
+    const g = unit([-side[1] * side[0], 1 - side[1] * side[1], -side[1] * side[2]]);
+    expect(angle(upTarget(side, TOP, axis), g)).toBeLessThan(1e-6);
+    expect(angle(upTarget(TOP, TOP, axis), axis)).toBeLessThan(1e-9);
+    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+    expect(a).toContain("const axis = carried === null ? null : capAxisPastZenith(carried, dirAt(st, yaw, st.orbit.elevation));");
   });
 
   it("⭐ wired: the camera's up from the travel face's target (`upTargetNow` → `upFor`), paced by `cameraRollDegPerS`; the roles read with the same up", () => {

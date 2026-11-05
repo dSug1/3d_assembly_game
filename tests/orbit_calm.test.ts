@@ -1,142 +1,141 @@
 /**
- * ⭐⭐⭐ THE CALM — A FUNCTION OF THE PLACE (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §21.6 F5, the owner: *"do all"*): `src/input/orbit_calm.ts`, wired in
- * `render/assembly_wiring.ts`. The piece's direction a field over the faces contour — a face's normal in its middle (the orbit's angle at the interior
- * share), a bisector on an edge, a cap's normal on the cap and at its edges (F3) — the SAME approached from every side: continuous wherever the place is.
- * RED against `600518c` (`calmDir(p, facets, u, up, o)`, `polyDistance`, `calmWeight`, `calmZone` absent: the calm two shares as a state about the current
- * face — at a corner the face changed to had no angle to multiply, the piece jumped up to 3.3 m far out, §21.6).
+ * ⭐⭐⭐ THE CALM — ONE SMOOTH PROFILE OVER EVERY FACE (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §21.8, the owner: *"it is almost as if there is orbit
+ * then slide then orbit when I travel with dy or dx through a vertical face … B. build the smooth profile"*): `src/input/orbit_calm.ts`, wired in
+ * `render/assembly_wiring.ts`. The shown angle across a face `Θ·(s·x + (1 − s)·x³)` of the orbit's pace share `x`; the face's gnomonic direction — the
+ * same vector from both faces at an edge, from the three at a corner; a top orbited as a wall (B). RED against `f2aa456` (`calmProfile`, `calmFacets`,
+ * `calmDir(p, facets, o)` absent: §21.6 F5's normals weighted over a zone — a dx across the front turned 1.1° a step in its middle, then 30° in one step
+ * near a third from each side, 71° at the edge; a top a pure slide).
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { calmDir, calmWeight, calmZone, polyDistance, type CalmFacet, type CalmOpts } from "../src/input/orbit_calm";
+import { calmDir, calmFacets, calmProfile, polyDistance, type CalmOpts } from "../src/input/orbit_calm";
+import { buildFaceMap, mapTarget } from "../src/input/face_map";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
-const deg = Math.PI / 180;
-const UP: Vec3 = [0, 1, 0];
-const ang = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) / deg;
+const D = 180 / Math.PI;
+const ang = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) * D;
 const unit = (u: Vec3): Vec3 => {
   const l = Math.hypot(...u);
   return [u[0] / l, u[1] / l, u[2] / l];
 };
+const O: CalmOpts = { shareH: 0.25, shareV: 0.25, edgeRad: 10 / D, edgeM: 0.01 };
+const opts = { edgeMm: 10, edgeDeg: 10 };
+/** `Scene_1`'s painting (50 × 48 × 3.3 cm) and a deep box (a 50 cm deep top) */
+const THIN = { lo: [-0.25, 0, -0.05] as Vec3, hi: [0.25, 0.48, -0.017] as Vec3 };
+const DEEP = { lo: [-0.25, 0, -0.5] as Vec3, hi: [0.25, 0.48, 0] as Vec3 };
 
-/** a box's six facets (`Scene_1`'s painting: 50 cm wide, 48 cm high, 7 cm deep) */
-function box(lo: Vec3, hi: Vec3): CalmFacet[] {
-  const f: CalmFacet[] = [];
-  for (let a = 0; a < 3; a++)
-    for (const s of [-1, 1]) {
-      const b = (a + 1) % 3;
-      const e = (a + 2) % 3;
-      const n = [0, 0, 0];
-      n[a] = s;
-      const poly: Vec3[] = [];
-      for (const [p, q] of [[0, 0], [1, 0], [1, 1], [0, 1]] as const) {
-        const v = [0, 0, 0];
-        v[a] = s > 0 ? hi[a]! : lo[a]!;
-        v[b] = p ? hi[b]! : lo[b]!;
-        v[e] = q ? hi[e]! : lo[e]!;
-        poly.push(v as unknown as Vec3);
-      }
-      f.push({ n: n as unknown as Vec3, poly, cap: a === 1 });
-    }
-  return f;
-}
-const LO: Vec3 = [-0.25, 0, -0.07];
-const HI: Vec3 = [0.25, 0.48, 0];
-const B = box(LO, HI);
-const O: CalmOpts = { shareH: 0.25, shareV: 0.25, zoneH: calmZone(0.5, 25, 0.03), zoneV: calmZone(0.48, 25, 0.03) };
-const FRONT: Vec3 = [0, 0, -1];
-/** the orbit's direction `a` round from the front, `b` up */
-const dir = (a: number, b: number): Vec3 => [Math.cos(b * deg) * Math.sin(a * deg), Math.sin(b * deg), -Math.cos(b * deg) * Math.cos(a * deg)];
-
-describe("⭐⭐⭐ THE CALM — a function of the place (§21.6 F5)", () => {
-  it("⭐ the distance to a facet's polygon: to its plane over it, to its nearest edge beside it; the weight 1 on it, 0 past its zone, a smoothstep between", () => {
-    const front = B.find((f) => f.n[2] === -1)!;
-    expect(polyDistance([0, 0.2, -0.1], front.poly, front.n)).toBeCloseTo(0.03, 12);
-    expect(polyDistance([0.3, 0.2, -0.07], front.poly, front.n)).toBeCloseTo(0.05, 12);
-    expect(polyDistance([0.3, 0.6, -0.07], front.poly, front.n)).toBeCloseTo(Math.hypot(0.05, 0.12), 12);
-    expect(calmWeight(0, 0.1)).toBe(1);
-    expect(calmWeight(0.1, 0.1)).toBe(0);
-    expect(calmWeight(0.05, 0.1)).toBeCloseTo(0.5, 12);
-    expect(calmWeight(0, 0)).toBe(1);
-    expect(calmZone(0.48, 25, 0.03)).toBeCloseTo(0.12, 12);
-    expect(calmZone(0.07, 25, 0.03)).toBe(0.03);
-  });
-
-  it("⭐⭐⭐ IN THE MIDDLE OF A FACE near square: the orbit's angle at the interior share (58d86ff's: a 60° offset shows 15°); square on, exactly the face's normal", () => {
-    const mid: Vec3 = [0, 0.24, -0.07];
-    expect(ang(calmDir(mid, B, FRONT, UP, O), FRONT)).toBeLessThan(1e-9);
-    const s = calmDir(mid, B, dir(60, 0), UP, O);
-    expect(ang(s, FRONT)).toBeCloseTo(15, 9);
-    // dy off (`faceSpanShareVOn` 0 → the vertical share 1): the vertical angle shown whole, the horizontal still calmed
-    const w = calmDir(mid, B, dir(0, 40), UP, { ...O, shareV: 1 });
-    expect(Math.asin(w[1]) / deg).toBeCloseTo(40, 9);
-  });
-
-  it("⭐⭐⭐ CONTINUOUS ACROSS AN EDGE AND A CORNER: approached from each face the same direction (an edge's bisector; the top's normal at the top's corners) — for any orbit direction", () => {
-    const e = 1e-7;
-    for (const u of [dir(0, 0), dir(40, 20), dir(-70, -30), dir(100, 10)]) {
-      // the front ↔ the +x side's vertical edge, mid-height
-      const a = calmDir([0.25 - e, 0.24, -0.07], B, u, UP, O);
-      const b = calmDir([0.25, 0.24, -0.07 + e], B, u, UP, O);
-      expect(ang(a, b)).toBeLessThan(1e-3);
-      // the top's corner over the front and the +x side, from the three faces
-      const c1 = calmDir([0.25 - e, 0.48 - e, -0.07], B, u, UP, O);
-      const c2 = calmDir([0.25, 0.48 - e, -0.07 + e], B, u, UP, O);
-      const c3 = calmDir([0.25 - e, 0.48, -0.07 + e], B, u, UP, O);
-      expect(ang(c1, c2)).toBeLessThan(1e-3);
-      expect(ang(c1, c3)).toBeLessThan(1e-3);
-      expect(ang(c3, UP)).toBeLessThan(1e-3);
-    }
-    // a deep box (no face within the zone behind): with the orbit along it, the vertical edge's direction is the two normals' bisector
-    const m = calmDir([0.25, 0.24, -0.25], box([-0.25, 0, -0.25], [0.25, 0.48, 0.25]), unit([1, 0, -1]), UP, O);
-    expect(ang(m, unit([1, 0, -1]))).toBeLessThan(1e-5);
-  });
-
-  it("⭐⭐⭐ (F3) THE CAMERA SQUARE TO A CAP: on the top its normal whatever the orbit; at the top's edge too; turning to the wall's over the zone below", () => {
-    for (const u of [dir(0, 10), dir(30, 70), dir(-20, 95)]) {
-      expect(ang(calmDir([0.1, 0.48, -0.03], B, u, UP, O), UP)).toBeLessThan(1e-9);
-      expect(ang(calmDir([0.1, 0.48, -0.07], B, u, UP, O), UP)).toBeLessThan(1e-9);
-    }
+describe("⭐⭐⭐ THE CALM — one smooth profile over every face (§21.8)", () => {
+  it("⭐⭐⭐ THE PROFILE: odd, ±1 at the edges, the middle's share as its pace there, 3 − 2s at the edges — growing all the way (no flat stretch, no bump)", () => {
+    expect(calmProfile(1, 0.25)).toBe(1);
+    expect(calmProfile(-1, 0.25)).toBe(-1);
+    expect(calmProfile(0, 0.25)).toBe(0);
+    expect(calmProfile(1.5, 0.25)).toBe(1);
+    const slope = (x: number) => (calmProfile(x + 1e-6, 0.25) - calmProfile(x - 1e-6, 0.25)) / 2e-6;
+    expect(slope(0)).toBeCloseTo(0.25, 6);
+    expect(slope(1 - 1e-6)).toBeCloseTo(2.5, 4);
     let prev = 0;
-    for (let d = 0; d <= 0.13; d += 0.01) {
-      const tilt = ang(calmDir([0, 0.48 - d, -0.07], B, FRONT, UP, O), UP);
-      expect(tilt).toBeGreaterThanOrEqual(prev - 1e-9);
-      prev = tilt;
+    for (let x = 0; x <= 1; x += 0.05) {
+      expect(slope(Math.min(x, 1 - 1e-6))).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = slope(Math.min(x, 1 - 1e-6));
     }
-    expect(prev).toBeCloseTo(90, 9);
+    expect(calmProfile(0.4, 1)).toBeCloseTo(0.4, 12); // share 1: the plain orbit
   });
 
-  it("⭐⭐⭐ NO STEP ANYWHERE: a walk up the front, over the top, down the back, and round the +x side and back onto the front — no turn over 3° per mm (⛔ the shares' state: 3.3 m far out at a corner)", () => {
-    const path: Vec3[] = [];
-    for (let y = 0.05; y <= 0.48; y += 0.001) path.push([0.24, y, -0.07]);
-    for (let z = -0.07; z <= 0; z += 0.001) path.push([0.24, 0.48, z]);
-    for (let y = 0.48; y >= 0.3; y -= 0.001) path.push([0.24, y, 0]);
-    for (let x = 0.24; x <= 0.25; x += 0.001) path.push([x, 0.3, 0]);
-    for (let z = 0; z >= -0.07; z -= 0.001) path.push([0.25, 0.3, z]);
-    for (let x = 0.25; x >= 0.15; x -= 0.001) path.push([x, 0.3, -0.07]);
-    for (const u of [dir(10, 15), dir(80, -20)]) {
+  it("⭐⭐⭐ A dx ACROSS THE FRONT (the owner's report): the camera's pace grows evenly from the middle to the edges — each step's turn at least the one before it toward the edge, the edge at the bisector (45°), the middle square (⛔ F5: 1.1° then 30° in one step, 71° at the edge)", () => {
+    const map = buildFaceMap([], THIN);
+    const F = calmFacets(map.facets);
+    const col = map.columns.find((c) => mapTarget(map, c.mid, 0, opts).normal[2] < -0.9)!;
+    const heading = (k: number) => {
+      const w = calmDir(mapTarget(map, col.mid + (k / 10) * col.hw, 0, opts).surface, F, O)!;
+      return Math.atan2(w[0], -w[2]) * D;
+    };
+    expect(heading(0)).toBeCloseTo(0, 9);
+    expect(heading(10)).toBeCloseTo(45, 6);
+    expect(heading(-10)).toBeCloseTo(-45, 6);
+    let prev = 0;
+    for (let k = 1; k <= 10; k++) {
+      const step = heading(k) - heading(k - 1);
+      expect(step).toBeGreaterThanOrEqual(prev - 1e-6);
+      expect(step).toBeLessThan(12);
+      prev = step;
+    }
+  });
+
+  it("⭐⭐⭐ (B) A dy UP THE FRONT AND OVER A DEEP TOP: the same profile up the wall, ON at the same pace across the edge (C1), straight above at the top's middle (⛔ F3: the 90° crammed into the wall's last cm, then a slide)", () => {
+    const map = buildFaceMap([], DEEP);
+    const F = calmFacets(map.facets);
+    const col = map.columns.find((c) => mapTarget(map, c.mid, 0, opts).normal[2] < -0.9)!;
+    const elev = (p: number) => {
+      const w = calmDir(mapTarget(map, col.mid, p / D, opts).surface, F, O)!;
+      return Math.atan2(w[1], -w[2]) * D;
+    };
+    expect(elev(45)).toBeCloseTo(45, 6);
+    expect(elev(90)).toBeCloseTo(90, 6);
+    const before = elev(45) - elev(40.5);
+    const after = elev(49.5) - elev(45);
+    expect(Math.abs(after - before)).toBeLessThan(0.5); // the same pace on both sides of the edge
+    let worst = 0;
+    for (let p = -45; p < 90; p += 4.5) worst = Math.max(worst, elev(p + 4.5) - elev(p));
+    expect(worst).toBeLessThan(12);
+  });
+
+  it("⭐⭐⭐ CONTINUOUS ACROSS EVERY EDGE AND CORNER: the gnomonic direction is the same vector from each face (on a box `n_A + n_B` plus the same along the edge)", () => {
+    const F = calmFacets(buildFaceMap([], DEEP).facets);
+    const e = 1e-7;
+    const near = (p: Vec3, q: Vec3) => expect(ang(calmDir(p, F, O)!, calmDir(q, F, O)!)).toBeLessThan(1e-3);
+    near([0.25 - e, 0.3, -0.5], [0.25, 0.3, -0.5 + e]); // the front ↔ the +x side
+    near([0.1, 0.48 - e, -0.5], [0.1, 0.48, -0.5 + e]); // the front ↔ the top
+    near([0.25, 0.48 - e, -0.2], [0.25 - e, 0.48, -0.2]); // the +x side ↔ the top
+    const c = [calmDir([0.25 - e, 0.48 - e, -0.5], F, O)!, calmDir([0.25, 0.48 - e, -0.5 + e], F, O)!, calmDir([0.25 - e, 0.48, -0.5 + e], F, O)!];
+    expect(ang(c[0]!, c[1]!)).toBeLessThan(1e-3);
+    expect(ang(c[0]!, c[2]!)).toBeLessThan(1e-3);
+    expect(ang(c[0]!, unit([1, 1, -1]))).toBeLessThan(1e-3); // a box's corner: the three normals' diagonal
+  });
+
+  it("⭐⭐⭐ NO STEP ANYWHERE on `Scene_1`'s thin painting: up the front, over the top, down the back, round the +x side and back — every turn shrinks with the step (a quarter of the step: under a third of the turn — continuous), within the orbit's own pace over a 3.3 cm face", () => {
+    const F = calmFacets(buildFaceMap([], THIN).facets);
+    const worstAt = (h: number) => {
+      const path: Vec3[] = [];
+      for (let y = 0.05; y <= 0.48; y += h) path.push([0.2, y, -0.05]);
+      for (let z = -0.05; z <= -0.017; z += h) path.push([0.2, 0.48, z]);
+      for (let y = 0.48; y >= 0.3; y -= h) path.push([0.2, y, -0.017]);
+      for (let x = 0.2; x <= 0.25; x += h) path.push([x, 0.3, -0.017]);
+      for (let z = -0.017; z >= -0.05; z -= h) path.push([0.25, 0.3, z]);
+      for (let x = 0.25; x >= 0.15; x -= h) path.push([x, 0.3, -0.05]);
       let worst = 0;
-      for (let i = 1; i < path.length; i++) worst = Math.max(worst, ang(calmDir(path[i - 1]!, B, u, UP, O), calmDir(path[i]!, B, u, UP, O)));
-      expect(worst).toBeLessThan(3);
-    }
+      for (let i = 1; i < path.length; i++) worst = Math.max(worst, ang(calmDir(path[i - 1]!, F, O)!, calmDir(path[i]!, F, O)!));
+      return worst;
+    };
+    const w1 = worstAt(0.001);
+    expect(w1).toBeLessThan(10);
+    expect(worstAt(0.00025)).toBeLessThan(w1 / 3);
   });
 
-  it("⭐⭐⭐ wired: the piece and the camera on the field at the map's place (the gizmo on the orbit's own); the contour the upright map's; ⛔ the shares' state, its eases and re-expressions deleted; the seven sliders kept", () => {
+  it("⭐ the facets' neighbours: a box's every side 45° away; the distance to a polygon", () => {
+    const F = calmFacets(buildFaceMap([], DEEP).facets);
+    for (const f of F) for (const h of [f.half.tLo, f.half.tHi, f.half.bLo, f.half.bHi]) expect(h * D).toBeCloseTo(45, 6);
+    const front = F.find((f) => f.n[2] < -0.9)!;
+    expect(polyDistance([0, 0.2, -0.6], front.poly, front.n)).toBeCloseTo(0.1, 12);
+  });
+
+  it("⭐⭐⭐ wired: the piece and the camera on the profile at the map's place; ⛔ the field's zones and F3's cap slide deleted; three sliders (the middle's shares)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("return n === null ? calmAt(st, yaw, v, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return c === null || p === null ? u : calmDir(p, c.facets, u, [0, 1, 0], c.opts);");
-    expect(a).toContain("const map = faceMapOf(st, UPRIGHT);");
+    expect(a).toContain("return (c === null || p === null ? null : calmDir(p, c.facets, c.opts)) ?? u;");
+    expect(a).toContain("const r = { key, facets: calmFacets(map.facets), opts };");
     expect(a).toContain("const p = toWorld(st.orbitFrame, mapTarget(map, yaw + dy, pitchOfV(v) + dp, mapOpts(st)).surface);");
-    for (const gone of ["sharesShowing", "calmFrame(", "asmCalm", "edgeShareTo", "poleWeight"]) expect(a).not.toContain(gone);
-    expect(code("render/scene_state.ts")).not.toContain("asmCalm");
+    for (const gone of ["sharesShowing", "calmFrame(", "asmCalm", "edgeShareTo", "poleWeight", "calmZone", "faceSpanZone"]) expect(a).not.toContain(gone);
     const m = code("render/tuning_menu.ts");
     const i = m.indexOf('title: "FACE-SPAN ORBIT SHARE"');
     expect(i).toBeGreaterThan(m.indexOf('title: "CAMERA ORBIT AROUND CENTER"'));
     const sub = m.slice(i, m.indexOf("],", i));
-    for (const k of ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]) expect(sub).toContain(`"${k}"`);
+    for (const k of ["faceSpanShareH", "faceSpanShareVOn", "faceSpanShareV"]) expect(sub).toContain(`"${k}"`);
+    expect(sub).not.toContain("faceSpanZone");
     const d = DEFAULT_CONFIG;
-    expect([d.faceSpanShareH, d.faceSpanZoneHPct, d.faceSpanZoneMinHCm, d.faceSpanShareVOn, d.faceSpanShareV, d.faceSpanZoneVPct, d.faceSpanZoneMinVCm]).toEqual([0.25, 25, 3, 1, 0.25, 25, 3]);
+    expect([d.faceSpanShareH, d.faceSpanShareVOn, d.faceSpanShareV]).toEqual([0.25, 1, 0.25]);
+    expect("faceSpanZoneHPct" in d).toBe(false);
     expect(() => validateGestureConfig({ ...d, faceSpanShareVOn: 0.5 })).toThrow();
     expect(() => validateGestureConfig({ ...d, faceSpanShareH: 1.5 })).toThrow();
   });

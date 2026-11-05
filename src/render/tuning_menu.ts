@@ -245,18 +245,15 @@ export function installTuningMenu(st: SceneState): void {
             ),
           ],
           // ⭐⭐⭐ THE CALM (58d86ff, the owner: *"Make all these seven sliders in a new submenu inside the camera orbit around center menu"*; ported
-          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — the same calm at every distance (the owner, Q3)
+          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — the same calm at every distance (the owner, Q3); ⭐ (§21.8) one smooth profile: the middle's
+          // shares only (⛔ the four edge-zone sliders deleted)
           subsections: [
             {
               title: "FACE-SPAN ORBIT SHARE",
               sliders: [
                 tunable(st, "dx: the orbit's angle shown in the middle of a face (share)", "faceSpanShareH", 0, 1, 0.05),
-                tunable(st, "dx: the edge zone (% of the gizmo's run)", "faceSpanZoneHPct", 0, 50, 1),
-                tunable(st, "dx: the edge zone's minimum (cm)", "faceSpanZoneMinHCm", 0, 30, 0.5),
                 tunable(st, "dy: compressed too (1 on, 0 off — the full orbit angle)", "faceSpanShareVOn", 0, 1, 1),
                 tunable(st, "dy: the orbit's angle shown in the middle of a face (share)", "faceSpanShareV", 0, 1, 0.05),
-                tunable(st, "dy: the edge zone (% of the gizmo's run)", "faceSpanZoneVPct", 0, 50, 1),
-                tunable(st, "dy: the edge zone's minimum (cm)", "faceSpanZoneMinVCm", 0, 30, 0.5),
               ],
             },
           ],
