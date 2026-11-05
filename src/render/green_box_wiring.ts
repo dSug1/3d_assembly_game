@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, frameClampSolved, leavesCone, shownOffset } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -1040,10 +1040,8 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
       syncCentre(st);
     }
     st.orbitUserV = fr.userV;
-    // ⭐⭐⭐ (2026-11-05, Step 6) the frame's edges bound the SOLVED place too (`frameClampSolved`) — ⛔ the target only: a slide along a part carried the piece
-    // past a side edge, the next frame's clamp pulled it back (the camera 33 mm back and forth, probed)
-    st.pieceQ = assemblyOn(st) ? frameClampSolved(st, q0, fr.q, env, opt.gapM) : fr.q;
-    rig = { ...st.pieceQ };
+    st.pieceQ = fr.q;
+    rig = { ...fr.q };
     st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
     }
     st.pieceGuardFrameMs += performance.now() - t0;

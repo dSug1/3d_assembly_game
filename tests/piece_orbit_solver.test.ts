@@ -27,6 +27,7 @@ import {
   stuckProbe,
   type OrbitQ,
   type SolverEnv,
+  wayBackStep,
 } from "../src/input/piece_orbit_solver";
 
 // ⭐ (the sixth audit) the whole-budget sweep — `turnSweep` with all of its budget (never PENDING then; read as refused if it were)
@@ -243,7 +244,7 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
   });
   it("⭐ wired: the eye's spring aims at the SOLVED place — the follower and its path are deleted", () => {
     const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(g).toContain("st.pieceQ = assemblyOn(st) ? frameClampSolved(st, q0, fr.q, env, opt.gapM) : fr.q; rig = { ...st.pieceQ };");
+    expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
     expect(g).toContain("st.boxSpring = st.boxSpring === null ? { at: rig, velYaw: 0, velV: 0, velLnZoom: 0 } : springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs); st.boxOrbit = st.boxSpring.at;");
     expect(g).not.toMatch(/followPath|followSpring|piecePath/);
   });
@@ -292,15 +293,24 @@ describe("⭐⭐⭐ §12 — the orbited piece's solver", () => {
       expect(r.target).toEqual(r.q);
       expect(r.userV).toBeCloseTo(r.q.v, 9);
     });
-    it("⭐⭐ ONE FRAME: the height kept — back to it when the way is free, waiting when it is not", () => {
+    it("⭐⭐ ONE FRAME: the height kept — back to it when the way is free, ⭐⭐⭐ (2026-11-05, §20) PACED BY THE INPUT (`wayBackStep`: never more than the finger's own travel — ⛔ whole in one frame: the camera 120 mm, probed); waiting when it is not free", () => {
       const e = env([]);
-      const r = orbitFrame(F(q(0, 0.5), q(0, 0.5), 0.4, 0.5), e, OPT, relocate);
-      expect(r.q.v).toBeCloseTo(0.4, 12);
-      expect(r.target.v).toBeCloseTo(0.4, 12);
-      // a ball just below: the way down is not free — it waits
+      // no input: no way back (⛔ taken whole, idle)
+      const idle = orbitFrame(F(q(0, 0.5), q(0, 0.5), 0.4, 0.5), e, OPT, relocate);
+      expect(idle.q.v).toBeCloseTo(0.5, 12);
+      // a dx of 0.2 rad: 0.2 / π of v this frame toward the height kept
+      const r = orbitFrame({ q: q(0, 0.5), target: q(0.2, 0.5), userV: 0.4, prevRaw: { yaw: 0, v: 0.5 } }, e, OPT, relocate);
+      expect(r.q.v).toBeCloseTo(0.5 - 0.2 / Math.PI, 9);
+      expect(r.target.v).toBeCloseTo(r.q.v, 12);
+      // a dy as large as the gap: all of it
+      expect(wayBackStep(-0.1, 0, 0.2)).toBeCloseTo(-0.1, 12);
+      expect(Math.abs(wayBackStep(-0.1, 0, 0))).toBe(0);
+      // a ball just below: the paced way down stops short of it, never into it
       const below = env([{ c: [1, 0.26, 0], r: 0.1 }]); // v 0.5 → anchor y 0.5, 0.24 from the ball (free); at v 0.35, 0.09 (into it)
-      const w = orbitFrame(F(q(0, 0.5), q(0, 0.5), 0.35, 0.5), below, OPT, relocate);
-      expect(w.q.v).toBeCloseTo(0.5, 12);
+      let w = orbitFrame({ q: q(0, 0.5), target: q(0.3, 0.5), userV: 0.35, prevRaw: { yaw: 0, v: 0.5 } }, below, OPT, relocate);
+      for (let k = 0; k < 20; k++) w = orbitFrame({ q: w.q, target: { ...w.q, yaw: w.q.yaw + 0.3 }, userV: w.userV, prevRaw: { yaw: w.q.yaw, v: w.q.v } }, below, OPT, relocate);
+      expect(below.gap(w.q)).toBeGreaterThanOrEqual(GAP / 2);
+      expect(w.q.v).toBeLessThan(0.5);
     });
 
     it("⭐⭐⭐ a finger's wobble on a sloped slide, DEADBANDED at the source, advances EVERY event (⛔ raw, it advanced every other one)", () => {

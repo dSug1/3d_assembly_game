@@ -140,7 +140,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
   it("⭐⭐ wired: the piece's place (the solver's too) and the camera's frame from the assembly's orbit; the gizmo each frame before the solve; a tap no longer moves it; no top pause, no governor; the approach checked against the parts; Shift and two fingers approach; locked, never behind the face", () => {
     const r = code("render/camera_rig.ts");
     expect(r).toContain("if (assemblyOn(st)) return placeOffset(st, yaw, v);");
-    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off);");
+    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off, dtMs !== undefined);"); // ⭐ (§20) the frame's own camera carries its up
     expect(r).toContain("a tap on a part no longer moves it if (assemblyOn(st)) return;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28)");
@@ -185,7 +185,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
       expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
     }
     // ⭐ (2026-10-29) the heading the ORBIT's yaw, always (⛔ the direction's own: locked and turned into the cone at −90° it switched at once)
-    expect(code("render/assembly_wiring.ts")).toContain("const c = offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);"); // ⭐ (2026-11-04) the calm's heading; locked the orbit's yaw; ⭐ (Step 6) in the orbit's frame
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetWithUp(u, r.up, o.yawRad, o.pitchRad);"); // ⭐ (§20) the offsets about the view's up (`cameraUp`)
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");

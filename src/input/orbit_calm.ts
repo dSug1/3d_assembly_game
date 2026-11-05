@@ -85,16 +85,8 @@ export function easeNormal(n: Vec3, target: Vec3, dtMs: number): Vec3 {
   return [Math.cos(a), 0, Math.sin(a)];
 }
 
-/**
- * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CAMERA'S HEADING under the calm: the orbit's `yaw` turned as the calm turned the direction (`u0` the orbit's, `u` the
- * shown) — so the camera's up is built from the shown direction's own heading (⛔ from the orbit's yaw: the camera ROLLED on a wall). Straight above /
- * below (no heading to read) the yaw itself.
- */
-export function calmHeading(yaw: number, u0: Vec3, u: Vec3): number {
-  if (Math.hypot(u0[0], u0[2]) < 1e-3 || Math.hypot(u[0], u[2]) < 1e-3) return yaw;
-  const d = Math.atan2(u[2], u[0]) - Math.atan2(u0[2], u0[0]);
-  return yaw + Math.atan2(Math.sin(d), Math.cos(d));
-}
+/* ⛔ (2026-11-05, §20) `calmHeading` DELETED — the camera's up is the view's (`input/camera_up.ts`: gravity's up for the shown direction itself, its own
+ * heading by construction), no heading is passed any more. */
 
 /**
  * ⭐⭐⭐ (2026-11-04, `1.0.95-`) A share's target held toward 1 while the eased normal has not caught up with its own (`cosAngle`, between them): whole calm

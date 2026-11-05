@@ -2,11 +2,12 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, calmHeading, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
+import { alignedShare, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
 import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
+import { UP_FRESH, cameraUp } from "../src/input/camera_up";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -86,7 +87,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(Math.hypot(...e)).toBeCloseTo(1, 12);
   });
   it("⭐⭐⭐ the camera's heading turned as the calm turned the direction — its up from the shown direction's own heading (⛔ the orbit's yaw: the camera rolled on a wall, 222 frames over 5° on one close-in dx leg, probed); straight above / below the yaw itself", async () => {
-    const { offsetFrame } = await import("../src/input/assembly_orbit");
+    const { offsetFrame, offsetWithUp } = await import("../src/input/assembly_orbit");
     const deg = Math.PI / 180;
     const yaw = -30 * deg; // 60° round from the front's normal (−z), 55° up — the probe's close-in dx
     const u0: Vec3 = [Math.cos(55 * deg) * Math.cos(yaw), Math.sin(55 * deg), Math.cos(55 * deg) * Math.sin(yaw)];
@@ -97,10 +98,10 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
       const l = Math.hypot(...w);
       return Math.acos(Math.min(1, (w[0] * f.up[0] + w[1] * f.up[1] + w[2] * f.up[2]) / l)) / deg;
     };
-    expect(rollOf(offsetFrame(u, calmHeading(yaw, u0, u), 0, 0))).toBeLessThan(1e-6); // upright
+    // ⭐ (2026-11-05, §20) the up the shown direction's OWN (`cameraUp` → gravity's for it — `calmHeading` deleted): upright on the wall
+    expect(rollOf(offsetWithUp(u, cameraUp(u, UP_FRESH).up, 0, 0))).toBeLessThan(1e-6); // upright
     expect(rollOf(offsetFrame(u, yaw, 0, 0))).toBeGreaterThan(5); // ⛔ the orbit's yaw: rolled
-    expect(calmHeading(yaw, [0, 1, 0], u)).toBe(yaw);
-    expect(code("render/assembly_wiring.ts")).toContain("const c = offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);");
+    expect(code("render/assembly_wiring.ts")).toContain("const r = cameraUp(u, st.asmUpCarry);");
   });
   it("⭐⭐⭐ the calm fades out toward straight above / below: whole under 60° of pitch, none from 85° (⛔ at the bottom pole a stale side normal, a share of 0.53: the piece bent off its gizmo's face, 657 frames behind it, probed)", () => {
     const s = (deg: number) => Math.sin((deg * Math.PI) / 180);
@@ -141,7 +142,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
     expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
-    expect(a).toContain("const fv = cfg.faceSpanShareVOn === 1 ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;");
+    expect(a).toContain("const fv = cfg.faceSpanShareVOn === 1 && !capBand ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;");
+    // ⭐⭐⭐ (2026-11-05, §20) past a column's band the calm of the facet just passed (⛔ none: the targets flipped at the band's edge — the camera swung 100–127 mm)
+    expect(a).toContain("const nf = colFacet === null ? t.normal : colFacet.n;");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
     const m = code("render/tuning_menu.ts");

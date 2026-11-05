@@ -7,8 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildFaceMap, columnAt, mapAngles, mapTarget, type FaceMap } from "../src/input/face_map";
-import { FRAME_BACK_MARGIN_RAD, FRAME_BACK_REACH_RAD, UPRIGHT, anglesOf, capBand, dirOf, frameClamp, frameStep, rebaseAngles, rollOwed, rollStep, toFrame, toWorld, type OrbitFrame } from "../src/input/orbit_frame";
-import { offsetFrame } from "../src/input/assembly_orbit";
+import { FRAME_BACK_MARGIN_RAD, UPRIGHT, anglesOf, capBand, capExit, dirOf, frameStep, holdPitch, rebaseAngles, toFrame, toWorld, type OrbitFrame } from "../src/input/orbit_frame";
 import { sharesShowing, shownDir } from "../src/input/orbit_calm";
 import { shellBox, type ShellBox } from "../src/input/orbit_shell";
 import type { Vec3 } from "../src/core/vec";
@@ -104,55 +103,41 @@ describe("⭐⭐⭐ Step 6 — the orbit's frame turned at a crossing", () => {
     near(toWorld(t, mapTarget(m, a2.yaw, a2.pitch, opts).surface), g2, 1e-6);
   });
 
-  it("⭐⭐⭐ STEP 6's CLAMPS: the far edge (45° in the frame) and the side edges (the top's slice) hold; the WAY BACK only past the band by the margin (3°)", () => {
+  it("⭐⭐⭐ (§20) A CAP IS LEFT BY ANY EDGE — the way back, the FAR edge, a SIDE edge — past the margin (3°), upright again (⛔ Step 6 clamped the far and side edges: dead ends, 118 blockages); inside: stay", () => {
     const t = frameStep(UPRIGHT, up, FRONT, 46 * D)!;
     const m = mapIn(t);
     const col = m.columns[capBand(t, m)!.column]!;
-    expect(frameClamp(t, m, col.mid, 30 * D)).toEqual({ yaw: col.mid, pitch: 30 * D, held: false });
-    const far = frameClamp(t, m, col.mid, 70 * D);
-    expect(far.pitch).toBeCloseTo(45 * D, 9);
-    expect(far.held).toBe(true);
-    const side = frameClamp(t, m, col.mid + col.hw + 0.2, 0);
-    expect(side.yaw).toBeCloseTo(col.mid + col.hw, 12);
-    // the back side: just past the way back's threshold (⛔ free: the target ran to the turned frame's pole, the turn back re-based it elsewhere — 834 mm)
-    expect(frameClamp(t, m, col.mid, -60 * D).pitch).toBeCloseTo(-45 * D - FRAME_BACK_REACH_RAD, 12);
-    expect(frameClamp(t, m, col.mid, -46 * D).pitch).toBeCloseTo(-46 * D, 12);
-    expect(-45 * D - FRAME_BACK_REACH_RAD).toBeLessThan(-45 * D - FRAME_BACK_MARGIN_RAD); // past it: the frame does turn back
+    expect(capExit(t, m, col.mid, 30 * D)).toBeNull();
     expect(frameStep(t, m, col.mid, -46 * D)).toBeNull(); // inside the margin: no turn
-    expect(frameStep(t, m, col.mid, -45 * D - FRAME_BACK_MARGIN_RAD - 1e-6)).toBe(UPRIGHT);
-    expect(frameStep(t, m, col.mid, 44 * D)).toBeNull();
+    expect(capExit(t, m, col.mid, -45 * D - FRAME_BACK_MARGIN_RAD - 1e-6)).toBe("BACK");
+    expect(capExit(t, m, col.mid, 45 * D + FRAME_BACK_MARGIN_RAD + 1e-6)).toBe("FAR");
+    expect(capExit(t, m, col.mid + col.hw + FRAME_BACK_MARGIN_RAD + 1e-6, 0)).toBe("SIDE");
+    expect(capExit(t, m, col.mid + col.hw + FRAME_BACK_MARGIN_RAD - 1e-3, 0)).toBeNull();
+    for (const [y, p] of [[col.mid, -50], [col.mid, 50], [col.mid - col.hw - 0.1, 0]] as const) expect(frameStep(t, m, y, p * D)).toBe(UPRIGHT);
     // on the bottom the far edge is LOW
     const b = frameStep(UPRIGHT, up, FRONT, -46 * D)!;
     const mb = mapIn(b);
-    expect(frameClamp(b, mb, mb.columns[capBand(b, mb)!.column]!.mid, -70 * D).pitch).toBeCloseTo(-45 * D, 9);
-    expect(frameStep(b, mb, mb.columns[capBand(b, mb)!.column]!.mid, 45 * D + FRAME_BACK_MARGIN_RAD + 1e-6)).toBe(UPRIGHT);
-    // a turn and straight back: no dithering — upright again at 42°, under the 45° that turns it
-    const r = rebaseAngles(t, UPRIGHT, col.mid, -48 * D);
+    const cb = mb.columns[capBand(b, mb)!.column]!;
+    expect(capExit(b, mb, cb.mid, -45 * D - FRAME_BACK_MARGIN_RAD - 1e-6)).toBe("FAR");
+    expect(capExit(b, mb, cb.mid, 45 * D + FRAME_BACK_MARGIN_RAD + 1e-6)).toBe("BACK");
+    // no dithering: back upright off the far edge at the back wall's 42°, under the 45° that would turn onto the top again
+    const r = rebaseAngles(t, UPRIGHT, col.mid, 48 * D);
+    expect(r.pitch).toBeCloseTo(42 * D, 9);
     expect(frameStep(UPRIGHT, up, r.yaw, r.pitch)).toBeNull();
+    // …off a side edge likewise (the side wall's 42°)
+    const rs = rebaseAngles(t, UPRIGHT, col.mid + col.hw + FRAME_BACK_MARGIN_RAD, 0);
+    expect(rs.pitch).toBeCloseTo(42 * D, 9);
+    expect(frameStep(UPRIGHT, up, rs.yaw, rs.pitch)).toBeNull();
   });
 
-  it("⭐⭐ THE ROLL OWED: none crossing square to the edge, some off square (`rollOwed`); taken linearly by the input's travel, reversible (`rollStep`)", () => {
-    const t = frameStep(UPRIGHT, up, FRONT, 46 * D)!;
-    const camUp = (f: OrbitFrame, y: number, p: number): { dir: Vec3; up: Vec3 } => {
-      const u = toFrame(f, toWorld(UPRIGHT, dirOf(y, p)));
-      const a = anglesOf(u, y);
-      const c = offsetFrame(u, a.yaw, 0, 0);
-      return { dir: toWorld(f, c.dir), up: toWorld(f, c.up) };
-    };
-    const sq0 = camUp(UPRIGHT, FRONT, 45 * D);
-    const sq1 = camUp(t, FRONT, 45 * D);
-    expect(Math.abs(rollOwed(sq1.dir, sq0.up, sq1.up))).toBeLessThan(1e-9);
-    const off0 = camUp(UPRIGHT, FRONT + 30 * D, 45 * D);
-    const off1 = camUp(t, FRONT + 30 * D, 45 * D);
-    const owed = rollOwed(off1.dir, off0.up, off1.up);
-    expect(Math.abs(owed)).toBeGreaterThan(10 * D);
-    expect(-rollOwed(off1.dir, off1.up, off0.up)).toBeCloseTo(owed, 12);
-    // linear, reversible
-    expect(rollStep(owed, owed, 0)).toEqual({ left: owed, back: false });
-    expect(rollStep(owed, owed, Math.abs(owed) / 2).left).toBeCloseTo(owed / 2, 12);
-    expect(rollStep(owed, owed / 2, -Math.abs(owed) / 4).left).toBeCloseTo((3 * owed) / 4, 12);
-    expect(rollStep(owed, owed / 2, Math.abs(owed)).left).toBe(0);
-    expect(rollStep(owed, owed, -0.01).back).toBe(true);
+  it("⭐⭐ (§4.2) THE HOLD: the drag that left the top over its FAR edge is not turned onto it again — held under its bound upright (`holdPitch`); the bottom's untouched", () => {
+    expect(frameStep(UPRIGHT, up, 90 * D, 46 * D, FRAME_BACK_MARGIN_RAD, "TOP")).toBeNull();
+    expect(frameStep(UPRIGHT, up, 90 * D, -46 * D, FRAME_BACK_MARGIN_RAD, "TOP")!.cap).toBe("BOTTOM");
+    // held 3° UNDER the bound, where the crossing landed (⛔ on it: the next dx ran along the top's rim, folding back at its corners — probed)
+    expect(holdPitch(up, "TOP", 90 * D, 60 * D)).toEqual({ pitch: expect.closeTo(45 * D - FRAME_BACK_MARGIN_RAD, 9), held: true });
+    expect(holdPitch(up, "TOP", 90 * D, 44 * D).held).toBe(true);
+    expect(holdPitch(up, "TOP", 90 * D, 20 * D)).toEqual({ pitch: 20 * D, held: false });
+    expect(holdPitch(up, "BOTTOM", 90 * D, -60 * D).pitch).toBeCloseTo(-45 * D + FRAME_BACK_MARGIN_RAD, 9);
   });
 
   it("⭐⭐⭐ THE CALM CARRIED THROUGH A TURN (`sharesShowing`): the shares that show a given direction — `shownDir`'s inverse; the same direction shown about the new normal (⛔ the shares kept off square: the piece stepped 35 mm, probed)", () => {
@@ -182,29 +167,20 @@ describe("⭐⭐⭐ Step 6 — the orbit's frame turned at a crossing", () => {
     expect(columnAt(up, FRONT).k).not.toBe(columnAt(up, 0).k);
   });
 
-  it("⭐⭐ WIRED (`render/assembly_wiring.ts`): the frame's step before the solve, every angle read in the frame, the face map built in it, the camera's up the frame's and the roll owed; the slide's re-base in the frame", () => {
+  it("⭐⭐ WIRED (`render/assembly_wiring.ts`): the frame's step before the solve, every angle read in the frame, the face map built in it; the exits, the hold; ⛔ the clamps and the roll owed gone; the slide's re-base in the frame", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("orbitFrameStep(st); const q = st.pieceQ ?? st.boxOrbit");
     expect(a).toContain("const u = toWorld(st.orbitFrame, orbitDir(yaw, v));");
     expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#${F.key}`;");
-    expect(a).toContain("const next = frameStep(st.orbitFrame, map, q.yaw, pitchOfV(q.v), FRAME_BACK_MARGIN_RAD);");
-    expect(a).toContain("const c = frameClamp(F, map2, st.orbit.yaw, pitchOfV(st.orbit.elevation));");
-    expect(a).toContain("return { dir: fr.dir, up: qRotate(qFromAxisAngle(fr.dir, -r.left), fr.up) };");
-    expect(a).toContain("const owed = rollOwed(after.dir, before.up, after.up);");
-    // ⭐ the roll's travel AWAY from the edge just crossed, and back past its start to the frame it came from (⛔ the frame's own sense, always upright:
-    // a turn back down off a top undid the roll at once — 53° in a frame, probed)
-    expect(a).toContain("const travel = (pitchOfV(st.orbit.elevation) - pitchOfV(r.held.v)) * r.dir;");
-    expect(a).toContain("orbitFrameTurn(st, r.back);");
-    // ⭐ the frame's edges bound the SOLVED place too (⛔ the target only: a slide along a part carried the piece past a side edge, pulled back next frame —
-    // the camera 33 mm back and forth, probed)
-    expect(a).toContain("const c = frameClamp(F, map, q.yaw, pitchOfV(q.v));");
-    expect(a).toContain("const held = env.gap(at) >= gapM / 2 ? at : q0;");
-    expect(a).toContain("st.orbit.reset(held.yaw, held.v); st.orbitUserV = held.v;"); // ⭐ the held place the solver's own state (⛔ the way back fought the clamp)
+    expect(a).toContain("const next = frameStep(F, map, q.yaw, pitchOfV(q.v), FRAME_BACK_MARGIN_RAD, st.orbitHold);");
+    expect(a).toContain('if (exit === "FAR" && F.cap !== null) st.orbitHold = F.cap;');
+    expect(a).toContain("if (st.orbitHold !== null && st.router.size === 0 && !st.orbitInertia.coasting) st.orbitHold = null;");
+    expect(a).toContain("const h = holdPitch(map2, st.orbitHold, st.orbit.yaw, pitchOfV(st.orbit.elevation));");
     // ⭐ the gizmo's map angles at a turn SOLVED onto the gizmo (an edge's gizmo is a blend — the projection alone: 24 mm off, probed)
     expect(a).toContain("st.asmMapQ = gizmoAnglesAt(st, gF, mapAngles(map, gF,");
+    for (const gone of ["frameClamp(", "rollOwed(", "rollStep(", "st.orbitRoll", "frameClampSolved("]) expect(a).not.toContain(gone);
     const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(g).toContain("st.pieceQ = assemblyOn(st) ? frameClampSolved(st, q0, fr.q, env, opt.gapM) : fr.q;");
-    expect(a).toContain("const dir: 1 | -1 = to.cap !== null ? (to.backLow ? 1 : -1) : from.backLow ? -1 : 1;");
+    expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
     const h = readFileSync(new URL("../src/render/hover_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(h).toContain("const t = orbitForCameraDir(toFrame(st.orbitFrame, hv.iso), q.yaw,");
   });
