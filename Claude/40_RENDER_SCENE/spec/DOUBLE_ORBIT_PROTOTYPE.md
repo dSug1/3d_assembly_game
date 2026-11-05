@@ -2370,3 +2370,8 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   resting face's centre (`faceLift`). Thirteen traversal probes: blockages 51 → 36, against the finger 2.3 % → 1.2 %, reversals 74 → 14. ⛔ Found, the
   owner's: close in the piece is placed from one surface point (frozen at a protrusion's depth step, blocked by a part beside the gizmo — Step 8's
   shell from the parts proposed); the pole's slide swing (Step 6). 1636 vectors. ⛔ No device close.
+* ✅ **Step 6 (2026-11-05, `1.0.101-`): THE FRAME TURN AT A CROSSING** (scope §19, `input/orbit_frame.ts`): past a column's top / bottom bound the
+  orbit's frame turns about the edge by the dihedral (90° on a box) — the top (the bottom, D2) orbited as a wall, a dx along the edge, a dy across (the
+  world's x / z lines); every angle re-read as the same direction (nothing moves), the gizmo's map angles solved onto it, the calm carried; the far and
+  side edges clamp (Step 7 crosses them), the way back by 3°; off square the roll owed taken over the dy's travel, the piece waiting. The calm's vertical
+  run now the facet's span (⛔ the parts' box: the piece jumped 2.8 m at a turn). 1645 vectors. ⛔ No device close.
