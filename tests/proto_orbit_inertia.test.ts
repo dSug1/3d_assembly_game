@@ -120,12 +120,12 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
   });
 
   it("⭐ wired: recorded at each orbit step, released when the finger leaves, stepped with no finger down, stopped by a new touch", () => {
-    expect(code("render/pointer_wiring.ts")).toMatch(/st\.orbitInertia\.record\(s\.t, st\.orbit\.yaw - yaw0, travel\.du\);/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/st\.orbitInertia\.record\(s\.t, roles \? asmDyaw : st\.orbit\.yaw - yaw0, roles \? asmDv : travel\.du\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/st\.orbitInertia\.release\(now\);/);
     expect(w).toMatch(/if \(st\.orbitMotion === null\) st\.orbitInertia\.stop\(\);/);
     expect(w).toMatch(/st\.orbitInertia\.step\(dtSec \* 1000, inertiaTauMs\(st\.greenPieceVolumeM3, st\.cfg\.orbitInertiaGain\)\)/);
-    expect(w).toMatch(/const dv = orbitTravelStep\(st, d\.dV, orbitDvPerMm\(st\)\)\.dv;\s*const y0 = st\.orbit\.yaw, v0 = st\.orbit\.elevation;\s*st\.orbit\.nudge\(pauseYawStep\(topPauseOn\(st\), st\.topPause, d\.dYaw\), dv\);/); // ⭐ (2026-10-28) the locked cone checked after // ⭐ (2026-10-25) dx held mid-roll // ⭐ (2026-10-21) on the travel, through the top face pause // ⭐ (2026-10-19) the coast governed
+    expect(w).toMatch(/const dv = orbitTravelStep\(st, d\.dV, orbitDvPerMm\(st\)\)\.dv;\s*const y0 = st\.orbit\.yaw, v0 = st\.orbit\.elevation;\s*\/\/[^\n]*\s*if \(assemblyOn\(st\)\) asmAxesTravel\(st, d\.dYaw, d\.dV \* 2 \* ORBIT_PITCH_MAX_RAD\);\s*else st\.orbit\.nudge\(pauseYawStep\(topPauseOn\(st\), st\.topPause, d\.dYaw\), dv\);/); // ⭐ (§21.5 F1) around the assembly the coast splits at crossings // ⭐ (2026-10-28) the locked cone checked after // ⭐ (2026-10-25) dx held mid-roll // ⭐ (2026-10-21) on the travel, through the top face pause // ⭐ (2026-10-19) the coast governed
     // ⭐ the piece in use's volume (2026-10-04: the green frustum's, or the turquoise prism's), set when it is spawned
     expect(w).toMatch(/st\.orbitPieces\.push\(\{ mesh: box, faces: piecesFacesOf\(box\), volumeM3: frustumVolumeM3\(w, h, d, OBJECT_TOP_SCALE\), \.\.\.restingOf\(st, box\) \}\);/);
     expect(w).toMatch(/st\.greenPieceVolumeM3 = p\.volumeM3;/);

@@ -68,9 +68,9 @@ describe("⭐⭐⭐ the gizmo reads the parts AT REST — the orbit's sway (its 
   });
   it("⭐⭐⭐ wired: every ray the gizmo and the sections read — ⭐ (Step 4c-bis) the face map's ray along the axis (`rawGizmo`), the lines' samples through it — is cast in the model's space (`modelCast`); no pick on the swaying meshes is left", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const h = frameCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);"); // ⭐ (Step 6) the frame's cast is a model-space cast
+    expect(a).toContain("const h = cast(o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);"); // ⭐ (§21) the gizmo's cast is the frame's, the lines' the model's
+    expect(a).toContain("const r = realAt(st, map, f, c, f.n, (o, d, l) => modelCast(st, o, d, l)).point;"); // ⭐ (Step 6) the frame's cast is a model-space cast
     expect(a).toContain("const h = modelCast(st, toWorld(F, origin), toWorld(F, dir), length);"); // (Step 5) along the facet's normal
-    expect(a).toContain("const m = mapGizmo(st, yw, pt);"); // the sections' samples: the gizmo's own function
     // ⭐ (2026-11-04, the audit) the drawn place and turn read once a frame (`castParts`), the ray moved onto each part as drawn
     expect(a).toContain("const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);");
     expect(a).toContain("parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z]");

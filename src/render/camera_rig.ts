@@ -79,7 +79,7 @@ export function ringPlaceNow(st: SceneState, yaw: number, v: number, zoom: numbe
 /** ⭐⭐⭐ (2026-10-16) THE CAMERA'S FRAME now — derived from the piece's place at the camera's orbit place, on the same turn; between rings 2 and 3 the
  * semi-isometric hold — the whole composition is `cameraFrameHeld` (`input/camera_frame.ts`), its up carried from the last frame drawn (`st.cameraPrev` — the ORBIT's frame, whatever camera the screen shows over it: the way in, a hover). */
 export function cameraFrameNow(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, dtMs?: number): RigCameraFrame {
-  if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off, dtMs !== undefined); // ⭐⭐⭐ (2026-10-28) behind the piece along its direction — ⭐ (§20) the frame's own camera (`dtMs`) carries its up
+  if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off, dtMs); // ⭐⭐⭐ (2026-10-28) behind the piece along its direction — ⭐ (§20) the frame's own camera (`dtMs`) carries its up
   // ⭐⭐⭐ (2026-10-21) over a horizontal face the TOP FACE PAUSE's share as drawn (`st.topPauseShown`) turns the camera half round while the piece waits
   return cameraFrameHeld(st.cfg, st.rigFrom, st.rigTo, st.rigShare, cam.pause === undefined ? { ...cam, pause: st.topPauseShown } : cam, off, st.cameraPrev ?? null, dtMs);
 }

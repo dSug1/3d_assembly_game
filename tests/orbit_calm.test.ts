@@ -2,12 +2,12 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
+import { alignedShare, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShareTo, capEdgeEnd, shownDir } from "../src/input/orbit_calm";
 import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
-import { UP_FRESH, cameraUp } from "../src/input/camera_up";
+import { upTarget } from "../src/input/camera_up";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -18,15 +18,27 @@ describe("⭐⭐⭐ THE CALM (58d86ff) — the piece and the camera near square 
   const v: Vec3 = [0, 1, 0];
   const dir = (aDeg: number, bDeg: number): Vec3 => [Math.cos(bDeg * deg) * Math.sin(aDeg * deg), Math.sin(bDeg * deg), -Math.cos(bDeg * deg) * Math.cos(aDeg * deg)];
   const off = (w: Vec3) => Math.acos(Math.max(-1, Math.min(1, w[0] * n[0] + w[1] * n[1] + w[2] * n[2]))) / deg;
+  it("⭐⭐⭐ (§21.5 F3) AN EDGE ONTO A CAP: the share rises past 1 to the one showing the cap's normal (2 on a box: 90° shown for the orbit's 45°); an ordinary edge 1; the shown angle within ±90°. RED against `ba47b75` (`capEdgeEnd`, `edgeShareTo` absent; the shares clamped to 1)", () => {
+    expect(capEdgeEnd(Math.PI / 2, Math.PI / 4)).toBeCloseTo(2, 12);
+    expect(capEdgeEnd(null, Math.PI / 4)).toBe(1);
+    expect(edgeShareTo(0, 0.49, 0.25, 25, 0.03, 2)).toBe(2);
+    expect(edgeShareTo(0.245, 0.49, 0.25, 25, 0.03, 2)).toBe(0.25);
+    const u: [number, number, number] = [0, Math.SQRT1_2, -Math.SQRT1_2]; // 45° up off the front's normal
+    const s = shownDir(u, [0, 0, -1], [1, 0, 0], [0, 1, 0], 1, 2);
+    expect(s[1]).toBeCloseTo(1, 12); // straight up: the top's normal
+    expect(shownDir(u, [0, 0, -1], [1, 0, 0], [0, 1, 0], 1, 4)[1]).toBeCloseTo(1, 12); // never past ±90°
+    expect(shownDir(u, [0, 0, -1], [1, 0, 0], [0, 1, 0], 0, 0)).toEqual([0, 0, -1]); // a cap: its normal
+  });
+
   it("⭐⭐ (58d86ff) the share: the interior value in the middle, rising by a smoothstep to 1 within the edge zone (25 % of the run, at least 3 cm), 1 at the edge; a thin face 1 everywhere", () => {
-    expect(edgeShare(0.245, 0.49, 0.25, 25, 0.03)).toBe(0.25);
-    expect(edgeShare(0, 0.49, 0.25, 25, 0.03)).toBe(1);
-    expect(edgeShare(0.1225, 0.49, 0.25, 25, 0.03)).toBe(0.25);
-    expect(edgeShare(0.06125, 0.49, 0.25, 25, 0.03)).toBeCloseTo(0.25 + 0.75 * 0.5, 12);
-    expect(edgeShare(0.01, 0.033, 0.25, 25, 0.03)).toBe(1); // the 33 mm side / top: the orbit's whole angle
-    expect(edgeShare(0.1, 0.4, 0.25, 0, 0.03)).toBe(0.25);
+    expect(edgeShareTo(0.245, 0.49, 0.25, 25, 0.03, 1)).toBe(0.25);
+    expect(edgeShareTo(0, 0.49, 0.25, 25, 0.03, 1)).toBe(1);
+    expect(edgeShareTo(0.1225, 0.49, 0.25, 25, 0.03, 1)).toBe(0.25);
+    expect(edgeShareTo(0.06125, 0.49, 0.25, 25, 0.03, 1)).toBeCloseTo(0.25 + 0.75 * 0.5, 12);
+    expect(edgeShareTo(0.01, 0.033, 0.25, 25, 0.03, 1)).toBe(1); // the 33 mm side / top: the orbit's whole angle
+    expect(edgeShareTo(0.1, 0.4, 0.25, 0, 0.03, 1)).toBe(0.25);
     let prev = 2;
-    for (let d = 0; d <= 0.245; d += 0.005) { const s2 = edgeShare(d, 0.49, 0.25, 25, 0.03); expect(s2).toBeLessThanOrEqual(prev + 1e-12); prev = s2; }
+    for (let d = 0; d <= 0.245; d += 0.005) { const s2 = edgeShareTo(d, 0.49, 0.25, 25, 0.03, 1); expect(s2).toBeLessThanOrEqual(prev + 1e-12); prev = s2; }
   });
   it("⭐⭐⭐ (58d86ff) IN THE MIDDLE OF A LARGE FACE the view stays near square: a 60° orbit offset shows 15°; AT THE EDGE exactly the orbit's", () => {
     const u = dir(60, 0);
@@ -73,7 +85,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const spans = core.facets.filter((f) => f.kind === "SIDE").map((f) => [f.bLo, f.bHi]);
     for (const sp of spans) expect(sp).toEqual([expect.closeTo(spans[0]![0]!, 12), expect.closeTo(spans[0]![1]!, 12)]);
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("sV = fv === null ? 1 : edgeShare(Math.min(b - fv.bLo, fv.bHi - b), fv.bHi - fv.bLo, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("sV = edgeShareTo(Math.min(b - fv.bLo, fv.bHi - b), fv.bHi - fv.bLo, interior, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100, endV);"); // ⭐ (§21.5 F3) to the cap edge's end
     expect(a).not.toContain("chainRun(");
   });
   it("⭐⭐⭐ the shares and the face's normal FOLLOW their targets (an exponential, 120 ms) — a target that changes at once (another height's face) never moves them at once", () => {
@@ -99,9 +111,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
       return Math.acos(Math.min(1, (w[0] * f.up[0] + w[1] * f.up[1] + w[2] * f.up[2]) / l)) / deg;
     };
     // ⭐ (2026-11-05, §20) the up the shown direction's OWN (`cameraUp` → gravity's for it — `calmHeading` deleted): upright on the wall
-    expect(rollOf(offsetWithUp(u, cameraUp(u, UP_FRESH).up, 0, 0))).toBeLessThan(1e-6); // upright
+    expect(rollOf(offsetWithUp(u, upTarget(u, [0, 0, -1], null), 0, 0))).toBeLessThan(1e-6); // upright on a wall
     expect(rollOf(offsetFrame(u, yaw, 0, 0))).toBeGreaterThan(5); // ⛔ the orbit's yaw: rolled
-    expect(code("render/assembly_wiring.ts")).toContain("const r = cameraUp(u, st.asmUpCarry);");
+    expect(code("render/assembly_wiring.ts")).toContain("const target = upTargetNow(st, u);");
   });
   it("⭐⭐⭐ the calm fades out toward straight above / below: whole under 60° of pitch, none from 85° (⛔ at the bottom pole a stale side normal, a share of 0.53: the piece bent off its gizmo's face, 657 frames behind it, probed)", () => {
     const s = (deg: number) => Math.sin((deg * Math.PI) / 180);
@@ -120,7 +132,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(mid).toBeGreaterThan(0.25);
     expect(mid).toBeLessThan(1);
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("k.n = k.sH > 0.999 ? n : easeNormal(k.n, n, dtMs);");
+    expect(a).toContain("k.n = Math.abs(k.sH - 1) < 1e-3 ? n : easeNormal(k.n, n, dtMs);");
     expect(a).toContain("sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);");
     expect(a).not.toContain("sV = alignedShare("); // ⛔ the vertical share released at every corner: the bounce
     // ⭐ with the horizontal share whole the face's normal cancels out — only the pitch is calmed, the heading is the orbit's own
@@ -139,10 +151,10 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     // ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight — ⛔ 58d86ff's gate curved the A + dy approach
     expect(a).toContain("const w = poleWeight(u[1]);");
     expect(a).not.toContain("calmWeight(");
-    expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
-    expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
+    expect(a).toContain("sH = edgeShareTo(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100, endH);");
+    expect(a).toContain("const nf = colFacet === null ? t.normal : colFacet.n;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
-    expect(a).toContain("const fv = cfg.faceSpanShareVOn === 1 && !capBand ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;");
+    expect(a).toContain("const fv = !capBand ? (map.facets[t.stack] ?? null) : null;"); // ⭐ (§21.5 F3) the facet always read: its edge onto a cap rises past 1 even with the vertical calm off
     // ⭐⭐⭐ (2026-11-05, §20) past a column's band the calm of the facet just passed (⛔ none: the targets flipped at the band's edge — the camera swung 100–127 mm)
     expect(a).toContain("const nf = colFacet === null ? t.normal : colFacet.n;");
     expect(a).toContain("calmFrame(st, dtMs);");

@@ -1104,3 +1104,53 @@ roll by the nearest edge of any kind; the frame turn by the angle beyond the bou
 * **F4 — THE ROLES PER FACE, not per frame**: each face's dx / dy from the loop's direction on THAT face, seen by its upright (or carried) view; read again
   only at a crossing (F1's order). R4 compares against the face the gizmo is on — never a step into a face seen edge-on (cause 5).
 * They REPLACE the band latch, the nearest-edge rule, the angle-driven frame turn and the per-frame screen read — none added over them.
+
+### 21.6 The rebuild (v2) — built on F1–F4; its travel series; two regressions; F5 and F6 (2026-11-05, branch `1.0.101-`; the owner: *"do all"*)
+
+**What v2 is.** The orbit's angles and the face map kept (the frame turned at every crossing); on them, F1–F4 as decided:
+* **F1 — one crossing event**: the finger's step SPLIT at the first bound on its way (`stepToBoundary`, `input/orbit_frame.ts`), and there, once: the frame
+  turned at the TARGET exactly at the bound (`frameStep`, strict — the 3° margin deleted), the new face's roles read, R4 (`holdAtCrossing`,
+  `throughHold`, `input/input_roles.ts`: a component driven the opposite way or onto the other axis HELD until the finger reverses it). A crossing
+  everything holds is not completed: the target stays on the face it came from. The coast splits the same way (`asmAxesTravel`), without roles.
+* **F2 — the up a TARGET, paced by the camera** (`input/camera_up.ts`): a wall's gravity (near the vertical, the wall's own up carried by the view's tilt —
+  never the side the view leans); a cap's AXIS, the wall's up turned over the edge crossed (`capAxis`); the shown up turned toward it at most
+  `cameraRollDegPerS` (a new slider, 360 °/s) — `paceUp`. Within `cameraRollMm` of the next face on the finger's way, that face's up (the roll starts).
+* **F3 — the camera square to a cap**: the calm's shares 0 on a cap; on a wall toward a cap's edge they rise past 1 to the share showing the cap's normal at
+  the edge (`capEdgeEnd`, `edgeShareTo`, `input/orbit_calm.ts`).
+* **F4 — the roles per face** (`travelFace`): read square to the face with the up the camera turns to; a role change is an R4 event like a crossing.
+
+**Its travel series** (the same 21 runs; `an9.mjs`):
+
+| | before Step 6 | the redesign | §21 v1 | **§21 v2** |
+|---|---|---|---|---|
+| the gizmo against the finger (frames) | 39 | 93 | 680 | **33** |
+| back-and-forth | 11 | 28 | 95 | **11** |
+| the up jumping (> 8° and > 450 °/s) | 0 | 31 | 741 | **20** |
+| upside-down / tilted frames | 0 / 0 | 559 / 949 | 3256 / 8262 | **11 / 34** |
+| camera jumps | 5 | 7 | 13 | ⛔ **104** |
+| blocked stretches | 36 | 26 | 51 | ⛔ **110** (the longest ~950 frames) |
+
+The owner's walk works: up the front, the tilt over the top, straight above at the far edge, the half roll there, dy kept up held. ⛔ Two regressions:
+
+1. **STALLS — R4 held by its own anticipation** (`w_hf@2805`, 964 frames, and the other longest): the anticipated roll near an edge read the way the finger
+   LAST travelled (`st.asmTravelDir`); a dy that had brought the gizmo near the far edge, then a dx — the direction changed, the anticipation dropped, the
+   camera rolled back, the roles flipped, and the flip, an R4 event, HELD the dx; the finger never reversing, stuck. **Root cause: the roles depended on the
+   direction, the hold on the roles** — the three-measures shape of §21.5 again (a crossing's view decided from a direction, not from the place).
+2. **PIECE JUMPS far out, up to 3.3 m, at a frame turn or a face change near a corner** (28; `w_sqf@2216`): the calm is two SHARES multiplying the orbit's
+   angles about the current face's normal. F3's lean toward a cap cannot be re-expressed about another face whose own angle is near zero (a corner: three
+   faces) — multiplication cannot make an offset from nothing; `sharesShowing` at each face change kept one direction and not its lagging neighbours.
+   Before F3 the shares were 1 at every edge, which hid it. **Root cause: the piece's direction a function of the ANGLES and a per-face state, not of the
+   place.**
+
+Not v2's: 33 blockages the slide's own stop (*"at the edge of the hosting faces"*), ~44 small camera-only jumps (40–170 mm, the piece still — in the earlier
+builds too), ~15 jumps in the slide.
+
+**The fixes (the owner: *"do all"*) — each replacing, nothing added over:**
+* **F5 — THE PIECE'S DIRECTION FROM THE PLACE** (item 6 at last): a field over the faces contour — each facet's normal weighted by the place's distance to its
+  polygon (1 on it, falling to 0 over its edge zone), summed: a face's normal in its middle, the bisector on an edge, the three normals' sum at a corner —
+  the same from every side, so continuous by construction; the orbit's own direction mixed in by the interior shares (the calm's sliders, a cap's 0 — F3);
+  read at any angles from the map's place (no cast), so the solver, the camera and the drawn piece read one function. ⛔ The shares' state, their eases,
+  `sharesShowing`, the re-expression at a turn or a face change, the pole fade — deleted.
+* **F6 — THE ROLL MARKED ON THE PLACE**: entering an edge's `cameraRollMm` band moving toward it MARKS the face as rolled for that edge; the mark stays while
+  the place is in that band whatever the input, and clears only when the place leaves the band by distance (or the face changes). The camera's up and the
+  roles read the mark — never the last step's direction. ⛔ The per-frame anticipation along `asmTravelDir` — replaced.
