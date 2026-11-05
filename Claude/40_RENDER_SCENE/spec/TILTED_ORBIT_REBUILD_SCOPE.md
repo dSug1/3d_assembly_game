@@ -1178,3 +1178,27 @@ builds too), ~15 jumps in the slide.
 
 The camera "jumps" counted on top are, for ~85 %, the camera's offsets swinging with a paced roll (the piece still) — at the probe's ~10 fps 40° a frame,
 6° on a device. Left: ~200-frame stops at a cap's far edge (R4's intended hold of dy kept up after the half roll); small back-and-forths (9–16 mm) at turns.
+
+### 21.8 One smooth profile over every face; a top orbited as a wall (choice B) (2026-11-05, branch `1.0.101-`; ⛔ no device close)
+
+> The owner (on `f2aa456`): *"when I travel on dx on the vertical front contour, the orbit is fast on the left, then it reaches around the third of the face
+> where it switches to almost slide until the 2nd third of the face then it resumes another fast orbit … same thing when I travel dy. We need to better
+> blend the orbit and slide … B. build the smooth profile. then update the md files, deploy"*.
+
+**Why it changed (measured, a dx across `Scene_1`'s front, the orbit 4.5° a step):** 0736134's calm already had the shape — a flat middle at a quarter of
+the orbit's pace (1.1°/step), then a bump in an edge zone (11°/step); §21.6 F5 made the bump a cliff (30° in ONE step near a third from each side, the edge
+at 71° — the back face of a 3.3 cm assembly inside the zone pulled the front's normal), and F3 made a top a pure slide (0°/step) with the 90° crammed into
+the wall's last centimetres (32–36°/step). **Common cause: a flat middle plus an edge zone is, to the eye, orbit – slide – orbit.**
+
+**The profile** (`input/orbit_calm.ts` rewritten — `calmProfile`, `calmFacets`, `calmDir(p, facets, o)`): across a face the shown angle is
+`Θ·(s·x + (1 − s)·x³)` — `x` the place's share of the orbit's turn across the face (the face map's edge stretch undone, `edgeUnmap`), `Θ` the half-dihedral
+toward that edge's neighbour (45° on a box), `s` the middle's share (dx's across a wall, dy's up it; a top / a bottom dx's both ways). The pace grows
+evenly from `s` in the middle to `3 − 2s` at the edges: on the front 1.2, 1.4, 1.8, 2.4, 3.2, 4.2, 5.4, 6.8, 8.4, 10.3°/step, then on across the edge at the
+same pace. The direction is the face's GNOMONIC one, `n + t·tan θt + b·tan θb` — on a box `n_A + n_B` from both faces at an edge, the three normals'
+diagonal at a corner: continuous by construction, a function of the place in every frame. ⛔ F5's weighted normals, its zones and the four edge-zone sliders
+DELETED (FACE-SPAN ORBIT SHARE keeps the middle's shares).
+**B — a top / a bottom orbited as a wall**: the view passes straight above at its MIDDLE; the half roll there (`camera_up.ts` `capAxisPastZenith`: the cap's
+carried axis flipped once the view leans 3° past the zenith toward it, 6° of hysteresis; the roles read again — R4 holds a dy kept up, as at the far edge
+before). On a cap the up is the wall's rule: gravity's on the screen once the view leans past 20°, the carried axis blended within 5–20° of the vertical
+(⛔ the axis whatever the lean: a dx over an orbited top leant sideways, the axis 90° off gravity — 1406 tilted frames, probed). ⛔ §21.5 F3 superseded.
+Probe (4 runs): upside-down frames 0 (557 before the cap rule), tilted 285 — all in the 9–20° near-vertical band over a top, the axis blended by design.

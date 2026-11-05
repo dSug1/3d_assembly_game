@@ -1,35 +1,52 @@
 /**
- * ⭐⭐⭐ THE CALM — the piece and the camera near square to a face in its middle, turning over an edge — ⭐⭐⭐ (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md`
- * §21.6 F5, the owner: *"do all"*) A FUNCTION OF THE PLACE: a field over the faces contour.
+ * ⭐⭐⭐ THE CALM — the piece and the camera near square to a face in its middle, the orbit's pace growing smoothly to its edges — ⭐⭐⭐ (2026-11-05,
+ * `TILTED_ORBIT_REBUILD_SCOPE.md` §21.8, the owner: *"We need to better blend the orbit and slide: it is almost as if there is orbit then slide then
+ * orbit … B. build the smooth profile"*) ONE SMOOTH PROFILE OVER EVERY FACE, a function of the place.
  *
- * Each facet's normal weighted by the place's distance to its polygon (`calmWeight`: 1 on it, falling by a smoothstep to 0 over its edge zone), summed —
- * a face's normal in its middle, the two normals' bisector on an edge, a corner's normals summed: the SAME from every side, so continuous wherever the place
- * is, whatever face it is on, whatever frame the orbit reads it in. ⭐ A CAP (a top, a bottom) wins its zone (F3, the camera square to a cap): the walls'
- * weights scaled by `1 − K` of the caps' — the cap's normal on the cap and at its edges, turning to the wall's over the zone below. The orbit's own direction
- * `u` mixed in by the INTERIOR SHARES (58d86ff's calm: a quarter of the orbit's angle shown in a face's middle — the sliders), a cap's share 0.
- *
- * ⛔ The calm's SHARES as a state about the current face's normal (58d86ff's `shownDir`, ported 2026-11-04; F3's `capEdgeEnd` / `edgeShareTo`): a share
- * multiplies the orbit's angle, and at a corner the face changed to has none to multiply — the direction jumped (up to 3.3 m far out, §21.6); their eases,
- * `sharesShowing` (re-expressed at a turn), the pole fade — DELETED.
- * ⛔ No engine import (`tests/boundary.test.ts`). Distances to convex polygons, smoothsteps — textbook.
+ * Across a face the shown angle is `Θ · (s·x + (1 − s)·x³)` (`calmProfile`): `x` the place's share of the orbit's turn across the face (−1 … 1 — the face
+ * map's edge stretch undone, `edgeUnmap`, so the finger's pace is the orbit's), `Θ` the half-dihedral toward that edge's neighbour (45° on a box), `s` the
+ * middle's share (the sliders: dx's across a wall, dy's up it; a top / a bottom dx's both ways — every wall meets a cap along its own horizontal). The
+ * pace `Θ·(s + 3(1 − s)x²)` grows from the middle to the edges with no flat stretch and no bump (⛔ 58d86ff's flat middle + an edge zone, and §21.6 F5's
+ * normals blended over a zone: orbit, slide, orbit — the owner). The direction is the face's GNOMONIC one (a cube map's): `n + t·tan θt + b·tan θb` — at
+ * an edge both faces give the same vector (on a box `n_A + n_B` and the same along the edge), at a corner the three: continuous by construction, in every
+ * frame. ⭐ A top / a bottom orbited as a wall (the owner's choice B): the view passes straight above at its middle (the half roll there, `camera_up.ts`).
+ * ⛔ §21.6 F3 (the camera square to a cap — a slide on it, 90° crammed into the wall's last cm), F5's weighted normals and its zones — DELETED.
+ * ⛔ No engine import (`tests/boundary.test.ts`). Gnomonic projection, a cubic — textbook.
  */
 import { cross, dot, normalize, type Vec3 } from "../core/vec";
+import { edgeUnmap } from "./face_map";
 
-const HALF_PI = Math.PI / 2;
-
-/** ⭐ A facet of the contour as the field reads it: its outward normal (unit), its convex polygon (on its plane), a cap or a wall. */
+/** ⭐ A facet of the contour as the calm reads it: its outward normal, its in-plane axes (`t` level on a wall, `b` = `t × n`), their spans, its convex
+ * polygon; a cap or a wall; the half-dihedral (rad) toward the neighbour beyond each of its four sides. */
 export interface CalmFacet {
   readonly n: Vec3;
+  readonly t: Vec3;
+  readonly b: Vec3;
+  readonly tLo: number;
+  readonly tHi: number;
+  readonly bLo: number;
+  readonly bHi: number;
   readonly poly: readonly Vec3[];
   readonly cap: boolean;
+  readonly half: { readonly tLo: number; readonly tHi: number; readonly bLo: number; readonly bHi: number };
 }
 
-/** ⭐ The field's knobs: the interior shares of the orbit's angle (dx's, dy's) on a wall; the edge zones (m) of a wall's and a cap's influence. */
+/** ⭐ The calm's knobs: the middle's shares (dx's, dy's); the face map's edge stretch (its angle, rad, and its length, m) — undone to read the pace. */
 export interface CalmOpts {
   readonly shareH: number;
   readonly shareV: number;
-  readonly zoneH: number;
-  readonly zoneV: number;
+  readonly edgeRad: number;
+  readonly edgeM: number;
+}
+
+/** ⭐ A facet is a CAP (a top, a bottom) when its normal is within 45° of the vertical. */
+const isCapN = (n: Vec3): boolean => Math.abs(n[1]) > Math.SQRT1_2;
+
+/** ⭐⭐⭐ THE PROFILE: the shown share of an edge's angle at `x` (−1 … 1) across a face, the middle's share `s` — odd, monotone, ±1 at the edges. */
+export function calmProfile(x: number, s: number): number {
+  const c = Math.min(1, Math.max(-1, x));
+  const k = Math.min(1, Math.max(0, s));
+  return k * c + (1 - k) * c * c * c;
 }
 
 /** ⭐ The distance from `p` to a convex polygon `poly` (normal `n`): to its plane when `p` projects inside it, else to its nearest edge. */
@@ -44,8 +61,7 @@ export function polyDistance(p: Vec3, poly: readonly Vec3[], n: Vec3): number {
     const a = poly[i]!;
     const b = poly[(i + 1) % poly.length]!;
     const e: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    const aq: Vec3 = [q[0] - a[0], q[1] - a[1], q[2] - a[2]];
-    const s = dot(cross(e, aq), n);
+    const s = dot(cross(e, [q[0] - a[0], q[1] - a[1], q[2] - a[2]]), n);
     if (s !== 0) {
       if (sgn === 0) sgn = Math.sign(s);
       else if (Math.sign(s) !== sgn) inside = false;
@@ -57,59 +73,75 @@ export function polyDistance(p: Vec3, poly: readonly Vec3[], n: Vec3): number {
   return inside ? Math.abs(h) : best;
 }
 
-/** ⭐ A facet's weight at the distance `d` from it, over its edge zone `zone`: 1 on it, a smoothstep down to 0 at the zone's end (none: on it only). */
-export function calmWeight(d: number, zone: number): number {
-  if (!(zone > 0)) return d <= 1e-9 ? 1 : 0;
-  const x = Math.min(1, Math.max(0, d / zone));
-  return 1 - x * x * (3 - 2 * x);
+/** ⭐ The facets as the calm reads them: each side's neighbour the facet whose normal leans most that way, its half-dihedral (none: 45°). */
+export function calmFacets(
+  fs: readonly { readonly n: Vec3; readonly t: Vec3; readonly b: Vec3; readonly tLo: number; readonly tHi: number; readonly bLo: number; readonly bHi: number; readonly poly: readonly Vec3[] }[],
+): CalmFacet[] {
+  const halfToward = (i: number, d: Vec3): number => {
+    let best = 0.1;
+    let g: Vec3 | null = null;
+    fs.forEach((o, j) => {
+      const c = dot(o.n, d);
+      if (j !== i && c > best) {
+        best = c;
+        g = o.n;
+      }
+    });
+    if (g === null) return Math.PI / 4;
+    const c = Math.max(-1, Math.min(1, dot(fs[i]!.n, g)));
+    return Math.acos(c) / 2;
+  };
+  return fs.map((f, i) => ({
+    n: f.n,
+    t: f.t,
+    b: f.b,
+    tLo: f.tLo,
+    tHi: f.tHi,
+    bLo: f.bLo,
+    bHi: f.bHi,
+    poly: f.poly,
+    cap: isCapN(f.n),
+    half: {
+      tLo: halfToward(i, [-f.t[0], -f.t[1], -f.t[2]]),
+      tHi: halfToward(i, f.t),
+      bLo: halfToward(i, [-f.b[0], -f.b[1], -f.b[2]]),
+      bHi: halfToward(i, f.b),
+    },
+  }));
+}
+
+/** ⭐ The face map's edge band for an angle span (its `bandFor`). */
+const bandFor = (E: number, half: number): number => (half > 1e-12 ? Math.min(0.5, Math.max(0, E / half)) : 0);
+
+/** ⭐ The share of the orbit's turn at `off` from the middle of a span (`lo` … `hi`) whose edges are `hLo`, `hHi` away in angle — the stretch undone. */
+function paceShare(off: number, lo: number, hi: number, hLo: number, hHi: number, o: CalmOpts): number {
+  const half = (hi - lo) / 2;
+  if (!(half > 1e-12)) return 0;
+  return edgeUnmap(off, bandFor(o.edgeRad, (hLo + hHi) / 2), half, o.edgeM);
 }
 
 /**
- * ⭐⭐⭐ THE PIECE'S DIRECTION at the place `p` on the contour (`facets`), for the orbit's direction `u` (unit; both in one space — `up` the world's vertical
- * there): the field's normal `N` (the walls' weights scaled by the caps' complement), the orbit's angle off it shown at the weighted interior shares (a cap
- * 0) — its heading across `N` (dx's) and its elevation (dy's), each × its share, within ±90°. Unit.
+ * ⭐⭐⭐ THE PIECE'S DIRECTION at the place `p` on the contour: the facet it is on (the nearest), the place's pace share across it each way, the profile
+ * of each, the gnomonic direction. Unit; `null` with no facet.
  */
-export function calmDir(p: Vec3, facets: readonly CalmFacet[], u: Vec3, up: Vec3, o: CalmOpts): Vec3 {
-  const w = facets.map((f) => calmWeight(polyDistance(p, f.poly, f.n), f.cap ? o.zoneV : o.zoneH));
-  let free = 1;
-  facets.forEach((f, i) => {
-    if (f.cap) free *= 1 - w[i]!;
-  });
-  let sum: [number, number, number] = [0, 0, 0];
-  let kH = 0;
-  let kV = 0;
-  let total = 0;
-  facets.forEach((f, i) => {
-    const wi = f.cap ? w[i]! : w[i]! * free;
-    if (!(wi > 0)) return;
-    sum = [sum[0] + wi * f.n[0], sum[1] + wi * f.n[1], sum[2] + wi * f.n[2]];
-    if (!f.cap) {
-      kH += wi * o.shareH;
-      kV += wi * o.shareV;
+export function calmDir(p: Vec3, facets: readonly CalmFacet[], o: CalmOpts): Vec3 | null {
+  let f: CalmFacet | null = null;
+  let d = Infinity;
+  for (const g of facets) {
+    const e = polyDistance(p, g.poly, g.n);
+    if (e < d) {
+      d = e;
+      f = g;
     }
-    total += wi;
-  });
-  const N = normalize(sum);
-  if (N === null || !(total > 0)) return u;
-  kH /= total;
-  kV /= total;
-  const h = normalize(cross(up, N));
-  if (h === null) return N;
-  const v = cross(N, h);
-  // ⭐ the orbit's angles off `N` (58d86ff's: its heading across, its elevation up) shown at the shares — ⛔ mixed as vectors: with `u` square to `N` (the
-  // field turned to a cap, the orbit level) the normal part vanished and the shares' few millionths were normalised to 45° (vectored)
-  const a = Math.atan2(dot(u, h), dot(u, N));
-  const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
-  const a1 = Math.max(-HALF_PI, Math.min(HALF_PI, a * kH));
-  const b1 = Math.max(-HALF_PI, Math.min(HALF_PI, b * kV));
-  const cb = Math.cos(b1);
-  const ca = cb * Math.cos(a1);
-  const sa = cb * Math.sin(a1);
-  const sb = Math.sin(b1);
-  return [N[0] * ca + h[0] * sa + v[0] * sb, N[1] * ca + h[1] * sa + v[1] * sb, N[2] * ca + h[2] * sa + v[2] * sb];
-}
-
-/** ⭐ An edge zone (m): `pct` % of the run, at least `minM`. */
-export function calmZone(runM: number, pct: number, minM: number): number {
-  return Math.max((Math.max(0, pct) / 100) * Math.max(0, runM), Math.max(0, minM));
+  }
+  if (f === null) return null;
+  const sT = o.shareH;
+  const sB = f.cap ? o.shareH : o.shareV;
+  const xt = paceShare(dot(p, f.t) - (f.tLo + f.tHi) / 2, f.tLo, f.tHi, f.half.tLo, f.half.tHi, o);
+  const xb = paceShare(dot(p, f.b) - (f.bLo + f.bHi) / 2, f.bLo, f.bHi, f.half.bLo, f.half.bHi, o);
+  const at = (xt >= 0 ? f.half.tHi : f.half.tLo) * calmProfile(xt, sT);
+  const ab = (xb >= 0 ? f.half.bHi : f.half.bLo) * calmProfile(xb, sB);
+  const kt = Math.tan(at);
+  const kb = Math.tan(ab);
+  return normalize([f.n[0] + f.t[0] * kt + f.b[0] * kb, f.n[1] + f.t[1] * kt + f.b[1] * kb, f.n[2] + f.t[2] * kt + f.b[2] * kb]);
 }

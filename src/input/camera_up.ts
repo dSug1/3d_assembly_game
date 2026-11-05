@@ -1,6 +1,6 @@
 /**
  * ⭐⭐⭐ (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §21.4 R2 / R3, §21.5 F2) **THE CAMERA'S UP — A TARGET FROM THE FACE, TAKEN AT THE CAMERA'S PACE**:
- * * the TARGET (`upTarget`): on a WALL (a facet more than 45° from horizontal) gravity's up on the screen — the scene upside up (R2); looking (nearly)
+ * * the TARGET (`upTarget`): ⭐⭐⭐ (§21.8) on a wall AND on a cap gravity's up on the screen — the scene upside up (R2); looking (nearly)
  *   straight down / up at it, the wall's own up CARRIED by the view's tilt (`wallUp` turned by `shortestArc(n, u)` — gravity's projection there depends
  *   on which side the view leans: a slanted up, probed), blended in so the target never flips; on a CAP (a top, a bottom) the AXIS carried onto it
  *   (`capAxis`: the wall's up turned over the edge — §20.1's choice (b), the camera aligned with the cap's axes; no roll at a crossing onto a cap). So the
@@ -35,13 +35,11 @@ const smooth = (x: number): number => {
  * `axis` (none yet: the wall rule's). Unit, square to `u`.
  */
 export function upTarget(u: Vec3, n: Vec3, axis: Vec3 | null): Vec3 {
-  if (isCap(n) && axis !== null) {
-    const a = onScreen(axis, u);
-    if (a !== null) return a;
-  }
   const g = onScreen([0, 1, 0], u);
-  // looking (nearly) straight down / up: the wall's up carried from its square view by the view's tilt — independent of the side the view leans
-  const lim = onScreen(qRotate(shortestArc(n, u), wallUp(n)), u);
+  // looking (nearly) straight down / up: the wall's up carried from its square view by the view's tilt — independent of the side the view leans;
+  // ⭐⭐⭐ (§21.8, B) over a CAP its carried axis (flipped at the zenith, `capAxisPastZenith`) — and, like a wall, gravity's up once the view leans more
+  // than 20° (⛔ the axis whatever the lean: a dx over an orbited top leant the view sideways, the axis 90° off gravity — 1406 tilted frames, probed)
+  const lim = isCap(n) && axis !== null ? onScreen(axis, u) : onScreen(qRotate(shortestArc(n, u), wallUp(n)), u);
   const tilt = Math.acos(Math.min(1, Math.abs(u[1])));
   const k = 1 - smooth((tilt - NEAR_VERTICAL_LO) / (NEAR_VERTICAL_HI - NEAR_VERTICAL_LO));
   if (g === null) return lim ?? onScreen([0, 0, 1], u) ?? [0, 1, 0];
@@ -85,4 +83,17 @@ export function paceUp(prev: Vec3 | null, target: Vec3, u: Vec3, maxRad: number)
   if (Math.abs(a) <= maxRad) return { up: target, rolling: false };
   const step = Math.sign(a) * Math.max(0, maxRad);
   return { up: qRotate(qFromAxisAngle(u, step), p), rolling: Math.abs(a - step) > UP_SAME_RAD };
+}
+
+/** ⭐ (§21.8, B) How far past straight above (rad) the view leans before a cap's carried axis flips — 6° of hysteresis between the two flips. */
+export const ZENITH_FLIP_RAD = (3 * Math.PI) / 180;
+
+/**
+ * ⭐⭐⭐ (2026-11-05, §21.8, the owner's choice B: a top / a bottom orbited as a wall) THE HALF ROLL AT THE ZENITH: the cap's carried `axis` (up the screen)
+ * flipped once the view `u` (from the gizmo toward the camera) leans past straight above TOWARD it by `ZENITH_FLIP_RAD` — the camera is then beyond the
+ * cap's middle, and its up the other way keeps the scene upside up (R2); the camera takes it at its pace (`paceUp`), the roles are read again (R4).
+ * ⛔ §21.5 F3's half roll at the far edge — the view no longer square to the cap, it passes the zenith at the cap's middle.
+ */
+export function capAxisPastZenith(axis: Vec3, u: Vec3): Vec3 {
+  return dot(u, axis) > Math.sin(ZENITH_FLIP_RAD) ? [-axis[0], -axis[1], -axis[2]] : axis;
 }

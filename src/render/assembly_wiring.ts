@@ -24,12 +24,12 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { calmDir, calmZone, polyDistance, type CalmFacet, type CalmOpts } from "../input/orbit_calm";
+import { calmDir, calmFacets, polyDistance, type CalmFacet, type CalmOpts } from "../input/orbit_calm";
 import { cross, normalize, type Vec3 } from "../core/vec";
 import { cutLoop, insidePlane, planeThrough, type Plane } from "../input/plane_cut";
 import { HOLD_NONE, holdByMotion, rolesFor, stepsFor, throughHold, type FingerMotion, type Roles } from "../input/input_roles";
 import { CROSS_EPS_RAD, UPRIGHT, frameStep, rebaseAngles, stepToBoundary, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
-import { capAxis, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
+import { capAxis, capAxisPastZenith, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
 import { nextRollMark } from "../input/roll_mark";
 import { cameraOrbitAt } from "../input/follow_camera";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -182,34 +182,34 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-05, §21.6 F5, the owner: *"do all"*) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u` at the angles `yaw`, `v`: the calm's FIELD
- * (`input/orbit_calm.ts` `calmDir`) at the map's PLACE for those angles (`calmPlace`: the face map's place on the contour, no cast) — the facets' normals
- * weighted by the place's distance to each, a cap winning its zone, the orbit's angle at the interior shares. Read in the WORLD on the upright contour: the
- * same at any frame, continuous wherever the place is. ⛔ The shares as a state about the current face (58d86ff's, F3's): jumps at a corner (§21.6).
+ * ⭐⭐⭐ (2026-11-05, §21.8, the owner: *"B. build the smooth profile"*) THE PIECE'S SHOWN DIRECTION at the angles `yaw`, `v`: the calm's SMOOTH PROFILE
+ * (`input/orbit_calm.ts` `calmDir`) at the map's PLACE for those angles (`calmPlace`: the face map's place on the contour, no cast) — near square in a
+ * face's middle, the orbit's pace growing smoothly to its edges, a top / a bottom orbited as a wall. Read in the WORLD on the upright contour: the same in
+ * any frame, continuous wherever the place is. No contour: the orbit's own `u`. ⛔ §21.6 F5's normals weighted over a zone and F3's cap slide (orbit,
+ * slide, orbit — the owner).
  */
 function calmAt(st: SceneState, yaw: number, v: number, u: Vec3): Vec3 {
   const c = calmContour(st);
   const p = c === null ? null : calmPlace(st, yaw, v);
-  return c === null || p === null ? u : calmDir(p, c.facets, u, [0, 1, 0], c.opts);
+  return (c === null || p === null ? null : calmDir(p, c.facets, c.opts)) ?? u;
 }
 
-/** ⭐ (§21.6 F5) The field's contour — the UPRIGHT map's facets (the world's; a cap within 45° of the vertical) — and its knobs (the calm's sliders). */
+/** ⭐ The calm's contour — the UPRIGHT map's facets (the world's) with their neighbours' half-dihedrals (`calmFacets`) — and its knobs. */
 function calmContour(st: SceneState): { readonly facets: readonly CalmFacet[]; readonly opts: CalmOpts } | null {
   const map = faceMapOf(st, UPRIGHT);
   if (map === null) return null;
   const cfg = st.cfg;
-  const key = `${cfg.faceSpanShareH}#${cfg.faceSpanShareVOn}#${cfg.faceSpanShareV}#${cfg.faceSpanZoneHPct}#${cfg.faceSpanZoneMinHCm}#${cfg.faceSpanZoneVPct}#${cfg.faceSpanZoneMinVCm}`;
+  const key = `${cfg.faceSpanShareH}#${cfg.faceSpanShareVOn}#${cfg.faceSpanShareV}#${cfg.faceEdgeSlideDeg}#${cfg.faceEdgeSlideMm}`;
   const memo = CALM_CONTOURS.get(map);
   if (memo !== undefined && memo.key === key) return memo;
-  const c = map.core;
   const opts: CalmOpts = {
     shareH: cfg.faceSpanShareH,
     shareV: cfg.faceSpanShareVOn === 1 ? cfg.faceSpanShareV : 1,
-    // ⭐ the zones from the core box's runs — dx's across the wider horizontal side, dy's up its height: one per contour, so the field is one function
-    zoneH: calmZone(Math.max(c.hi[0] - c.lo[0], c.hi[2] - c.lo[2]), cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100),
-    zoneV: calmZone(c.hi[1] - c.lo[1], cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100),
+    // ⭐ the face map's own edge stretch, undone: a share of the face is a share of the orbit's turn
+    edgeRad: (Math.max(0, cfg.faceEdgeSlideDeg) * Math.PI) / 180,
+    edgeM: Math.max(0, cfg.faceEdgeSlideMm) / 1000,
   };
-  const r = { key, facets: map.facets.map((f) => ({ n: f.n, poly: f.poly, cap: isCap(f.n) })), opts };
+  const r = { key, facets: calmFacets(map.facets), opts };
   CALM_CONTOURS.set(map, r);
   return r;
 }
@@ -840,14 +840,16 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
   const t = mapTarget(map, yaw, pitch, o);
   const n = toWorld(F, t.normal);
   const nAhead = rollMark(st, map, n, yaw, pitch, toWorld(F, t.surface));
-  const key = `${F.key}|${t.band}|${t.side}|${t.stack}|${nAhead === null ? "-" : nAhead.map((x) => x.toFixed(3)).join(",")}`;
   const f0 = st.asmFace;
-  if (f0 !== null && f0.key === key) return { face: f0, changed: false };
   const cap = isCap(n);
-  // a cap's axis: kept on the same cap (a key change on it — a column, a frame turn), else the wall's up turned over the edge crossed (`capAxis`)
+  // a cap's axis: kept on the same cap (a key change on it — a column, a frame turn), else the wall's up turned over the edge crossed (`capAxis`) —
+  // ⭐⭐⭐ (§21.8, B) flipped past the zenith (`capAxisPastZenith`: the half roll at the cap's middle, where the view passes straight above)
   const sameFace = f0 !== null && f0.n[0] * n[0] + f0.n[1] * n[1] + f0.n[2] * n[2] > 0.999;
   const sameCap = sameFace && f0!.cap;
-  const axis = !cap ? null : sameCap ? f0!.axis : capAxis(n, f0 === null || f0.cap ? null : f0.n, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);
+  const carried = !cap ? null : sameCap ? f0!.axis : capAxis(n, f0 === null || f0.cap ? null : f0.n, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);
+  const axis = carried === null ? null : capAxisPastZenith(carried, dirAt(st, yaw, st.orbit.elevation));
+  const key = `${F.key}|${t.band}|${t.side}|${t.stack}|${nAhead === null ? "-" : nAhead.map((x) => x.toFixed(3)).join(",")}|${axis === null ? "w" : axis.map((x) => x.toFixed(3)).join(",")}`;
+  if (f0 !== null && f0.key === key) return { face: f0, changed: false };
   const mPerRad0 = sameFace ? f0!.mPerRad : null;
   const H = 1e-3;
   const g0 = toWorld(F, t.surface);
