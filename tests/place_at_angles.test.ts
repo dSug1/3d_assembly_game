@@ -94,7 +94,7 @@ describe("⭐⭐⭐ the piece's place for the orbit's angles — round the gizmo
   });
   it("⭐ wired: `placeOffset` — every caller's place (the solver's queries, the camera, the slide) — reads the gizmo at its own angles", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u) => footOf(st, g, u, d), d);");
+    expect(a).toContain("const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));");
     expect(a).toContain("if (yaw === q0.yaw && v === q0.v && st.asmG !== null) return st.asmG;"); // the frame's own angles: the frame's gizmo exactly
     expect(a).not.toContain("const g = footOf(st, gizmoFor(st), u, d);"); // ⛔ the frame's gizmo for every angle
   });

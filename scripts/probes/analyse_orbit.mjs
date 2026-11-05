@@ -102,8 +102,8 @@ for (const leg of legs) {
         if (len(sub(R[k][key], R[i - 1][key])) < 0.004 && len(sub(R[k][key], R[i][key])) > 0.0056) { total.flicker++; flag(i, `${name} BACK-AND-FORTH ${(len(sub(R[i][key], R[i - 1][key])) * 1000).toFixed(0)} mm, back at +${k - i}`); break; }
     }
   }
-  // I7: the blockage, every leg (the probe moves the finger every frame of a leg)
-  {
+  // I7: the blockage, every leg (the probe moves the finger every frame of a leg — not its release)
+  if (!leg.endsWith("_rel")) {
     let run = 0, from = 0;
     const end = (k) => { if (run >= 15) { total.blocked++; flag(from, `BLOCKED ${run} frames (gizmo and piece still, the finger moving)${R[from].tc ? " — touching" : ""}`); } run = 0; };
     for (let k = 1; k < R.length; k++) {

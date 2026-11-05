@@ -7,6 +7,7 @@
 //   DIAG=1      — every random leg a mix of dx and dy (a random direction)
 //   LEGMAX=1400 — the random dx legs' longest (px; default 600 — 150 … 600); LEGMAXY=250 — the dy / diagonal legs' (40 … it; default LEGMAX)
 //   DROP=1      — also record the carrier's drop ray re-cast (a diagnosis; ⛔ the carrier is deleted since Step 4c-bis — it records null)
+//   AFTER=expr  — (2026-11-05) a page expression evaluated after the legs (a diagnosis: the solver's blocker, the gizmo at given angles), printed
 //   OUT=name    — the recording `<PROBE_DIR>/<name>.json` (PROBE_DIR: default the OS temp dir); then `node scripts/probes/analyse_orbit.mjs <file>`
 // ⛔ Never clamps a leg at the viewport's edge (a clamped leg sends one move backwards — read as a rocking roll): it ends the leg. ⭐ Its own Chrome profile,
 // removed in `finally` (nothing left on the disk). ⚠ The viewport is the page's (`innerWidth` / `innerHeight`), not the window's.
@@ -131,6 +132,7 @@ try {
   } else {
     for (let k = 1; k <= +(env.PRESSES ?? 5); k++) await randomLeg(`r${k}`);
   }
+  if (env.AFTER) console.log("AFTER", await ev(env.AFTER));
   const rows = JSON.parse(await ev("JSON.stringify(window.__rec)"));
   const file = join(DIR, `${OUT}.json`);
   writeFileSync(file, JSON.stringify({ viewport: vp, recorderError: (await ev("window.__recErr ?? null")) ?? null, errors, rows }));

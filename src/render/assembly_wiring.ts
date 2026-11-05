@@ -19,7 +19,7 @@ import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
-import { pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
+import { faceLift, pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
@@ -38,6 +38,8 @@ const LOOK_TAU_MS = 120;
 const MAP_OUT_M = 0.05;
 /** ⭐ (Step 4c-bis) out of step after the slide: the map's angles close on the orbit's at 1 ± this of the orbit's step (`syncAngle`). */
 const MAP_CATCH_UP = 0.5;
+/** ⭐ (2026-11-05) over a bridged void a cast's hit counts only this far (m) in front of the facet's plane — a part rising out of it, not the plane's own rim. */
+const MAP_BRIDGE_FRONT_M = 0.0005;
 
 /** ⭐ Is the orbit the one around the assembly? */
 export function assemblyOn(st: SceneState): boolean {
@@ -261,6 +263,15 @@ function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
   return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
 }
 
+/** ⭐⭐⭐ (2026-11-05) The piece's lift along `u` (`faceLift`): its hull past its resting face's centre toward the gizmo, at its pose; none: 0. */
+function liftOf(st: SceneState, u: Vec3): number {
+  const id = st.greenBox?.name;
+  const pts = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
+  const place = id === undefined ? null : worldPlacementOf(st.world, id);
+  const rc = st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingCentre;
+  return pts === undefined || place === null || rc === undefined ? 0 : faceLift(pts, place.orientation, rc, u);
+}
+
 /** ⭐ The piece's reach toward the gizmo along `−u` (`pieceReach`, its hull at its pose); none: 0. */
 function reachOf(st: SceneState, u: Vec3): number {
   const id = st.greenBox?.name;
@@ -359,6 +370,8 @@ function faceMapOf(st: SceneState): FaceMap | null {
  * construction. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — the facet's stack, its normal, its frame (`t`, `b`); ⭐⭐⭐ (D3) the ray's hit taken WHATEVER its depth:
  * over an empty slot (a hole the region closes) the gizmo at its BOTTOM — the region still chooses the face and keeps the gizmo continuous across the rim,
  * only the depth is the real one; a slot through the whole assembly (no hit): the region's plane. The piece and the camera ride the shell (Step 2).
+ * ⭐⭐⭐ (2026-11-05, the owner) D3 AMENDED — a void CLOSED on the green's or the red's travel (`stackDepthAt`'s `bridged`): the gizmo straight through on
+ * the facet's plane, the lines with it; a void open on both keeps its depth until the frame turn (Steps 6–7).
  */
 function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const map = faceMapOf(st);
@@ -376,13 +389,15 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
     return [sf[0] + n[0] * k, sf[1] + n[1] * k, sf[2] + n[2] * k];
   };
   const p = onto(at.depth);
-  if (at.inside) {
+  // ⭐⭐⭐ (2026-11-05) over a void closed on a travel (`at.bridged`): straight through on the facet's plane — the cast kept only for what stands IN FRONT of
+  // it (a part rising out of the void), never for its bottom
+  if (at.inside || at.bridged === true) {
     const b = map.box;
     const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
     const out = sup(1) + MAP_OUT_M;
     const o: Vec3 = [p[0] + n[0] * (out - level(p)), p[1] + n[1] * (out - level(p)), p[2] + n[2] * (out - level(p))];
     const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
-    if (h !== null) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
+    if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
   }
   return { hit: { point: p, normal: n, host: null }, t };
 }
@@ -395,8 +410,17 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
   const here = rawGizmo(st, yaw, pitch);
   const map = faceMapOf(st);
   if (here === null || map === null) return null;
-  const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null);
+  const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));
   return p === here.hit.point ? here : { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05) A BLENDED PLACE'S DEPTH (`blendThroughEdges`' `cast`): the ray along the blended normal `nb` from `reach` in front of the place `q`
+ * onto it (`modelCast` — the parts at rest); its hit, or none. Only a surface in front of `q` is met (the ray stops at it).
+ */
+function blendCast(st: SceneState, q: Vec3, nb: Vec3, reach: number): Vec3 | null {
+  const h = modelCast(st, [q[0] + nb[0] * reach, q[1] + nb[1] * reach, q[2] + nb[2] * reach], [-nb[0], -nb[1], -nb[2]], reach);
+  return h === null ? null : h.point;
 }
 
 /**
@@ -407,7 +431,8 @@ export function placeOffset(st: SceneState, yaw: number, v: number, approach: nu
   const d = approachDistance(st.cfg, approach);
   // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell — ⭐⭐⭐ (2026-11-05) the gizmo AT THESE ANGLES (`placeAtAngles`, `gizmoAtAngles`): ⛔ the
   // frame's gizmo, read from the last frame's angles — the solver's world moved with its own result (the back-and-forth on the phone)
-  const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u) => footOf(st, g, u, d), d);
+  // ⭐⭐⭐ (2026-11-05) the piece's SUPPORT at the gizmo (`liftOf`, `faceLift`) — ⛔ its resting face's centre: round an edge the face went into the part
+  const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));
   const c = st.orbitCentreM;
   return [p[0] - c.x, p[1] - c.y, p[2] - c.z];
 }
@@ -441,7 +466,7 @@ const GIZMO_MEMO = new WeakMap<SceneState, { frame: number; at: Map<string, Vec3
 /** ⭐ The DRAWN piece's place from the shown gizmo: along its direction at the approach's distance (the gizmo's ease carries it — never a jump). */
 export function shownOffset(st: SceneState, yaw: number, v: number): Vec3 {
   const u = dirAt(st, yaw, v);
-  const d = approachDistance(st.cfg, st.approach);
+  const d = approachDistance(st.cfg, st.approach) + liftOf(st, u);
   return [u[0] * d, u[1] * d, u[2] * d];
 }
 
@@ -534,7 +559,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
   // camera); the ring at the gizmo itself, on the real surface
   const target = g0;
-  const foot = footOf(st, target, u, d);
+  const foot = footOf(st, target, u, d + liftOf(st, u));
   st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);

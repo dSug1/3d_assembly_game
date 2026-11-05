@@ -106,8 +106,32 @@ export function shellAnchor(g: Vec3, u: Vec3, d: number, offsetM: number, b: She
  * then tried round that lower gizmo — a place lower than the real one, free — and taken; the gizmo went up again, the next step met the part: down and
  * up every two frames (the owner: *"the gizmo goes to the black face then jumps back and forth"*). Now an angle's place is a function of the angle alone.
  */
-export function placeAtAngles<Q>(q: Q, gizmoAt: (q: Q) => Vec3, dirAt: (q: Q) => Vec3, foot: (g: Vec3, u: Vec3) => Vec3, d: number): Vec3 {
+export function placeAtAngles<Q>(
+  q: Q,
+  gizmoAt: (q: Q) => Vec3,
+  dirAt: (q: Q) => Vec3,
+  foot: (g: Vec3, u: Vec3, d: number) => Vec3,
+  d: number,
+  lift: (u: Vec3) => number = () => 0,
+): Vec3 {
   const u = dirAt(q);
-  const f = foot(gizmoAt(q), u);
-  return [f[0] + u[0] * d, f[1] + u[1] * d, f[2] + u[2] * d];
+  const dd = d + Math.max(0, lift(u));
+  const f = foot(gizmoAt(q), u, dd);
+  return [f[0] + u[0] * dd, f[1] + u[1] * dd, f[2] + u[2] * dd];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05, the probes: a close-in dx stalled at `Scene_1`'s front-left corner, the piece against Piece3's front) — **THE PIECE'S SUPPORT AT THE
+ * GIZMO, NOT ITS RESTING FACE'S CENTRE**: the piece is placed by its resting face's centre (`placeByFaceCentre`), and the approach's end put that centre ON
+ * the gizmo whatever the direction — a contact only while the direction is the face's normal (a face's middle, the calm). Round an edge the direction
+ * turns, the resting face not yet: its centre on a side's gizmo, the rest of the face behind the front's plane — in the part. The lift: how far the
+ * piece's hull (`points`, its frame, turned by `q`) reaches past its resting face's centre `rc` toward the gizmo (along `−u`) — 0 square to the face
+ * (unchanged in a face's middle), the face's overhang as the direction tilts: the piece's nearest point, not its face's centre, is the approach's
+ * distance from the gizmo. A convex edge is then rounded with the piece's support on it — never into the next face. Smooth in `u`: no jump.
+ */
+export function faceLift(points: readonly Vec3[], q: Quat, rc: Vec3, u: Vec3): number {
+  const l = qRotate(qconj(q), [-u[0], -u[1], -u[2]]); // −u in the piece's frame
+  let m = 0;
+  for (const p of points) m = Math.max(m, (p[0] - rc[0]) * l[0] + (p[1] - rc[1]) * l[1] + (p[2] - rc[2]) * l[2]);
+  return m;
 }
