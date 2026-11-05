@@ -14,19 +14,17 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-10-15, branch `1.0.78-`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-05, branch `1.0.99-`)
 
-⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE (green frustum / turquoise hex prism)
-round a yellow gizmo on rings, the camera follows; merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per change —, `PIECE_ORBIT.md`,
-`RESTING_FACE_ALIGNMENT.md`, `HOVER.md`) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
-⭐⭐ **The child's sequence** (`GREEN_PIECE_PHASES.md`): pick the face → approach (the orbit, its dy) → roll the long axis into line (the
-resting-face QUADS) → **HOVER** → seat (the goal capture). ✅ Built up to the hover; the orbited piece has goals on Piece4 (x/42).
-⭐⭐⭐ **CURRENT THREAD — THE HOVER** → [`HOVER.md` §0](../40_RENDER_SCENE/spec/HOVER.md) (the hover as it stands, and what is open). Built
-2026-10-14 (`1.0.75-`–`1.0.76-`), two Fable audits fixed, ⛔ unjudged as a whole by a hand.
-⭐ 10-18 (`1.0.81-`): THE TOP ROLL → `DOUBLE_ORBIT_PROTOTYPE.md`.
+⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
+merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per
+change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
+⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
+(six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
+depth, D5's two sliders) built — ⛔ no device close on any. **Next: Step 6** (the frame turn onto a top / a bottom). ⏸ The hover (`HOVER.md` §0) waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1616 golden vectors, all passing** — MEASURED 2026-11-04 (the count's home; the audit: `queue_notes/AUDIT_2026-11-04.md`).
+✅ `npm run verify`: **1622 golden vectors, all passing** — MEASURED 2026-11-05 (the count's home; Step 5: the scope's §17).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 
