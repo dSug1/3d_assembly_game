@@ -3,7 +3,7 @@
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
 > function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
-> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) · ✅ **Step 6 built** (2026-11-05, branch `1.0.101-`, §19 — the frame turned onto a top / a bottom at its crossing, nothing moving; the far and side edges clamp) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) · ✅ **Step 6 built**, then ⭐ **REDESIGNED** (§20 — the camera's up from the view, a cap left by any edge; ⛔ the hold to be removed, §20.1) (2026-11-05, branch `1.0.101-`, §19 — the frame turned onto a top / a bottom at its crossing, nothing moving; the far and side edges clamp) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
 > (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17); ✅ Step 6 built (§19). **Next: Step 7.**
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
@@ -907,3 +907,40 @@ not take it — a pause). ⛔ No device close.
 gizmo kept by `mapAngles`; the clamps and the way back; the roll owed and its steps; the calm carried — `sharesShowing`; the wiring) — RED against
 `3c00d35` (the module absent); `orbit_calm` (the facet's span), `face_map`, `facets`, `assembly_orbit`, `hover`, `sway_cast`, `piece_collision`,
 `piece_orbit_solver` wiring strings updated. **1645** (1636 + 9).
+
+## 20. The frame turn REDESIGNED — deployed (2026-11-05, branch `1.0.101-`, build `9595f4d`); the owner debugging it
+
+**Why** (the owner on §19's Step 6, on the device: *"This implementation is full of bugs: jumps, back-and-forth, stuck, camera views upside down, slanted
+camera views"*). The 13-run traversal matrix against the one before Step 6: every run that reached a top or a bottom tilted (13 / 13), 12 upside down;
+blockages 36 → 118. Root causes: (1) the camera's up was the turned FRAME's for every view — gravity only along the crossing, 90° off at a top's side
+edges, 135–180° past its middle; (2) Step 6's clamps at the far and side edges made dead ends, and the roll owed made the piece wait; (3) off square the
+orbit's angles and the face map's disagree after a turn (the gizmo's catch-up). `main` was put back to `ef5fa8f` while the redesign was built, then
+redeployed with it (`9595f4d`).
+
+**As deployed**:
+1. ⭐⭐⭐ **THE CAMERA'S UP FROM THE VIEW** (`input/camera_up.ts`): beyond 45° of the vertical GRAVITY's up (every wall, from any path); within 35° CARRIED
+   (no roll at a crossing, square or not); between, the carried up rolled onto gravity — the half roll in the last 10° before a cap's far edge, the
+   quarter before a side edge, none back the way it came.
+2. ⭐⭐ **A CAP LEFT BY ANY EDGE** (`capExit`): every wall orbited upright; Step 6's clamps, roll owed and waits deleted.
+3. ⭐ **THE HOLD** (`holdPitch`, §4.2): the drag that left a cap over its far edge held 3° under that cap's bound until the finger lifts. ⛔ **TO BE REMOVED —
+   see below.**
+4. Fixed on the way, at their roots: the calm's targets flipped at a band's edge (now the facet just passed — the camera swung 100–127 mm); the hold ON the
+   bound (a dx then ran the top's rim, folding at its corners); the solver's way back to the height kept taken whole in one frame (`wayBackStep`: never
+   faster than the finger — the camera 120 mm). `calmHeading` deleted.
+
+Matrix (13 runs, moving frames 4 259 / 4 563 / 11 779 — the redesign travels further, no clamps): before Step 6 / Step 6 / the redesign — tilted runs
+0 / 13 / **0**, upside down 0 / 12 / **0**, blockages 36 / 118 / **42**, back-and-forth 11 / 4 / **36**, against the finger 1.2 % / 1.4 % / **1.6 %**,
+jumps piece 4 / 9 / **17**, camera 4 / 9 / **13**. **1650 vectors.** ⛔ No device close.
+
+### 20.1 The owner's decisions while debugging — NOT BUILT YET (the owner: *"I will keep debugging so do not build anything yet as I do not want to add
+patches over patches"*)
+
+* ⛔ **NO HOLD** (2026-11-05, the owner — on the device a dy up a wall was refused while another dy up the same wall turned onto the top: the first drag had
+  earlier left the top over its far edge, so the hold refused it): *"I do not want any hold."* → **remove the hold** (`holdPitch`, `st.orbitHold`, the
+  `exit === "FAR"` latch in `orbitFrameStep`, `frameStep`'s `hold` argument, their vectors). The behaviour accepted instead: **a finger kept on loops over the
+  top back and forth, the camera half-rolling at each far edge** (no direction is refused; the dy goes the finger's way on the screen, I5).
+* ⚠ Still open from the redesign, the owner's choice (proposed, not decided): onto a top OFF SQUARE nothing rolls at the crossing, so the camera keeps its
+  entry orientation while dx / dy move along the top's own axes — the gizmo up to the entry angle off the finger's direction (most of the 1.6 %). Options:
+  (a) the finger's screen direction drives the gizmo on a cap (I5 kept, I1 loosened there — recommended); (b) a roll at the crossing (what Step 6 did);
+  (c) as is.
+* ⚠ The HUD's verdict *"held at the edge until the finger lifts or reverses"* — wrong (only lifting released it); goes with the hold.
