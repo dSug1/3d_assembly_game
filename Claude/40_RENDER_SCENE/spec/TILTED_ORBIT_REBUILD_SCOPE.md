@@ -2,9 +2,10 @@
 
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
-> function of the orbit's angles, the carrier deleted (§15) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
+> D5's two sliders (§17) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
-> (2026-11-04, §16.1): Step 5 may be built.
+> (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17). **Next: Step 6.**
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
 
 ## 1. The goal
@@ -137,7 +138,7 @@ every edge of a box (`Scene_1`), 60° round a hexagonal section. So the orbit is
 near its pole: a turn is taken at every edge, ±45° of a box face's slice — the concentric squares and the dead centre of Step 4c-bis are never reached.
 It is the WALK discussed on 2026-11-04 (a point on the shell, its frame carried), discrete on the facets: parallel transport across a polyhedron's edges.
 
-**Step 5 — The faces contour; the face map on facets (no new crossing).** Generalise the face map (§15) from the CORE BOX to the FACES CONTOUR:
+**Step 5 — The faces contour; the face map on facets (no new crossing).** ✅ **Built 2026-11-05 (§17).** Generalise the face map (§15) from the CORE BOX to the FACES CONTOUR:
 * the facets: the CONVEX outline of the placed parts (never a re-entrant edge: a constant input turns one way round — I3), its facets MERGED within an
   angle and kept only above a share of real face area behind them (D5) — ⛔ every hull facet a frame would tilt the orbit 15° for 3 cm over a slanted
   block and back (the owner's bounce again — the hull deciding about faces, Step 4c's root cause); on a box exactly the core box's six faces;
@@ -688,3 +689,74 @@ sphere). ⚠ The first answer here (D1 below as first written: *the walk, or sta
 
 * No device close on Steps 0–4c-bis (rule 5). The owner tests `b373acb` (deployed 2026-11-04) — its findings may add to D4 or A5.
 * The frame cost of the drawn sections (64 / 96 samples, up to four rays each in the edge bands) is not measured on the iPhone (§15).
+
+## 17. Step 5 — THE FACES CONTOUR: the face map on facets — built (2026-11-05, branch `1.0.99-`)
+
+**As built** (`input/face_map.ts`, engine-free; wired in `render/assembly_wiring.ts` — `faceMapOf`, `rawGizmo`, `mapGizmo`):
+
+1. ⭐⭐⭐ **THE FACETS** (`buildFaceMap`): the placed parts' faces clustered by normal — the largest face first, every face within `facetMergeDeg` (20°) of
+   a seed joins it (a normal within 1e-9 of a world axis snapped onto it). Each cluster a CANDIDATE: its stack (`stackOf` — Step 4c-bis's per axis, now per
+   normal: by plane, by contact, holes closed), its plane the MAIN group's (the largest closed region — the core box's rule, generalised). Its POLYGON on
+   the contour: the half-spaces' intersection, bounded by the parts' box (`facetPolygon`, Sutherland–Hodgman). ⭐ **D5, GREEDY**: the candidates taken by
+   their real face, largest first; one is kept when its real face covers `facetMinShare` (¼) of its polygon AND every one kept still does. ⛔ Built first
+   as *all at once, then the worst dropped*: on `Scene_1` a frustum's slanted plane cut the painting's front away whole (its share 0 — dropped first), the
+   contour three slanted planes — probed by the grid. ⭐ `Scene_1`: **exactly its six faces** (shares 1 / 1 / 1 / 1 / 0.78 / 0.77; the frusta's slanted
+   sides refused).
+2. ⭐⭐ **THE UPRIGHT FRAME, generalised** (no frame turn — Step 6's): the CAPS, the facet nearest straight up / down beyond 45° (else a virtual one at the
+   box); the COLUMNS, the other facets by heading (within `facetMergeDeg`), each a slice of the yaw from halfway to each neighbour's heading; in a column
+   the facets stacked by elevation, each a band of the pitch from halfway to each neighbour's (±90° for the caps). On a box: 4 × 90°, ±45° — Step 4c-bis.
+3. ⭐⭐⭐ **THE PLACE IN THE FACET'S FRAME** (`mapTarget`, `facetFrame`): `t` the way the yaw turns across it (level), `b = t × n` up its slope — across it
+   by the yaw, up it by the pitch (`edgeMap` each, the slow stretch kept). **I1 in the facet frame by construction**: a dx moves the place along `t` only
+   (the green: the plane of `t` and `n`), a dy along `b` only (the red: the plane of `b` and `n`). Over a cap, the column's top / bottom facet's edge drawn in
+   toward the cap's centre — ⭐ the rim across the CAP'S EDGE toward the facet (`capSpan`; ⛔ the facet's own width: a hexagon's end is ±R wide at
+   mid-height, its bottom edge ±R/2 — the quarter ran over its neighbour's, probed by the round trip; ⛔ the whole cap's extent: on a vertical hexagon twice
+   the facet's edge).
+4. ⭐⭐ **THE BLEND THROUGH AN EDGE MOVED INTO `src/input`** (`blendThroughEdges`; the 2026-09-19 lesson: a rule in a render file is a rule nothing can
+   interrogate) — vectored on a non-box contour: ⭐ the slice-end blend at EVERY pitch where the next column's caps start at another pitch (a hexagon's end
+   column tops out at 45°, its slanted one at 60° — their quarters' places parted at the slice's end); ⭐ a column's bottom bound read on the facet's side,
+   as `mapTarget` puts it (⛔ read as the cap's: 41 mm on the hexagon's end). On a box both rules are Step 4c-bis's.
+5. ⭐⭐⭐ **D3 — THE GIZMO AT THE REAL DEPTH** (`rawGizmo`): the ray along the facet's normal from outside the box taken WHATEVER its depth — over an empty slot
+   its bottom, over an overhang its real surface; the closed region still chooses the face (no lateral jump at a rim); no hit (a slot through the whole
+   assembly): the region's plane. ⛔ `MAP_REFINE_M` (25 mm) deleted. The piece and the camera ride the shell (Step 2).
+6. The calm's normal the facet's, read level (`calmFrame`); after the slide, `mapAngles` on facets and `facetOfNormal` (the facet nearest the slide's face).
+7. The knobs (D5): `facetMergeDeg` 20, `facetMinShare` 0.25 — CAMERA ORBIT AROUND CENTER sliders, in the map's cache key.
+
+**Vectors**: `tests/facets.test.ts` 6 (D5 on a box with an overhang's slanted plane crossing it — six facets at ¼, seven at a tenth, six merged within 35°;
+a VERTICAL hexagonal prism — six columns of 60°, the facet always facing the yaw, I1, no jump; a HORIZONTAL hexagonal prism — four columns, two facets
+stacked at ±30°, the bands [−60°, 0, 60°], I1 on a slanted facet; no jump through every edge and the caps' quarters; the round trip on facets; the wiring
+and the sliders) — RED against `81e5ba2` (the facets absent); five mutants (the slice-end blend at Step 4c-bis's pitches only, the cap's rim over the
+facet's width, the bottom bound read as the cap's, the whole cap's extent, no share asked) each turn one RED. `face_map.test.ts` and `orbit_calm.test.ts`
+ported to the facets (the box map: `buildFaceMap([], box)`) — all their box vectors pass unchanged. **1622** (1616 + 6).
+
+**The gate — `Scene_1` exactly as Step 4c-bis** (`scripts/probes/map_grid.mjs`: the gizmo `mapGizmo` gives over yaw × pitch every 2°, 16 380 angles, read
+in the page; `COMPARE=a,b`): against `81e5ba2`, **15 745 identical** (< 0.1 mm); the 635 others are D3's — 625 purely along the facet's normal, the 10 left
+in edge-blend bands (a neighbour's depth blended in): over the TOP 117 deeper by 32–41 mm (beside Piece44 onto Piece4's top; into the orbited piece's goal
+slot), under the BOTTOM 57 deeper (58 mm, a slot) and 336 outward (17–61 mm, the overhang Piece43's underside), on the +x side 110 outward (12–29 mm,
+Piece42), the front 5 deeper (41 mm).
+
+**The probes** (`orbit_probe.mjs` / `analyse_orbit.mjs`, §15's matrix — random legs after three lead-ins, seeds 3 / 7 / 11 / 13 × far / mid / close;
+constant legs L 1400, D 120, R 1400, U 240, L 1400 after two lead-ins, seeds 5 / 9 × far / close):
+
+| summed over the runs | Step 4c-bis (§15) | Step 5 |
+|---|---|---|
+| random — the piece behind its gizmo's face | 0 | **0** |
+| …against the finger | 33 of 11 809 (0.3 %) | **11 of 6 630 (0.17 %)** |
+| …the camera rolled on a wall | 24 | 32 (6–7°, a few frames each) |
+| …jumps: piece / camera / gizmo | 3 / 30 / 133 | **0 / 4 / 55** |
+| constant — off-section | 2 884 | 2 542 (under the bottom and over the top, as before) |
+| …reverse / stuck | 58 / 14 | 9 / 34 — **every stuck frame at the ±90° clamps (the polar centre) or under the bottom near −80°** (Step 6) |
+| …against the finger / the piece behind / rolled | 6 of 2 536 / 0 / 4 | **2 of 2 342 / 0 / 0** |
+| …jumps: piece / camera / gizmo | 0 / 1 / 46 | **0 / 0 / 8** |
+
+⚠ The moving frames are fewer for the same input (the machine's cadence under load — Step 4c-bis's numbers are §15's, not re-run). 0 page errors.
+
+**D3's approach** (a scratch probe: the orbit set over the goal slot, yaw 114° / 130°, pitch 72° / 78° — the gizmo at the slot's bottom, y 0.4665 against the
+top's 0.4985; then A + drag up): the piece comes straight in and STOPS at Piece44 — the overhang frustum 6.75 mm beside the slot — the slide latching on its
+face at 1 mm (the piece's lowest point 0.5408). ⚠ So on `Scene_1` the piece entering a slot is NOT shown: its footprint meets Piece44 first (*"until it
+collides"*). A slot with nothing beside it is owed a look.
+
+**What it does NOT do** (stated, not discovered): the frame does not turn (Step 6 — the caps' quarters still converge to their centres, the dx at ±90°
+moves nothing); the shell is still the parts' BOX (Step 8 — round a hexagon the piece would ride a box's corner); a ray from below meets an overhang's
+underside (Piece43 — now taken, D3; Step 8 decides); `buildFaceMap` runs once per placed set (greedy, O(n²) polygon clips — unmeasured on the iPhone).
+
+⛔ No device close.

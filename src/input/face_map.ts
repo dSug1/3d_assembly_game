@@ -1,30 +1,32 @@
 /**
  * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, STEP 4c-bis; the owner: *"propose another way to construct the gizmo so it truly reflects the dy and dx
- * inputs: … raycast … to position the gizmo, the orbit is defined by dy and dx inputs modulated by the calm and the tilt, the red and green sections are
- * computed after the gizmo is updated based on the geometry of the faces contour"* → *"can we use the contours used for the slide … to avoid the holes or
- * gaps ?"* → *"let the gizmo move slowly over the last and first few mm of the two faces during the arc"*, *"close the holes for the moment"*) — **THE FACE
- * MAP**: the gizmo a FUNCTION of the orbit's angles, no carrier, no state.
+ * inputs …"* → *"close the holes for the moment"*) — **THE FACE MAP**: the gizmo a FUNCTION of the orbit's angles, no carrier, no state.
+ * ⭐⭐⭐ (2026-11-04, STEP 5 — scope §5, §16.1 D3 / D5; the owner: *"step 5: ok"*) **ON THE FACES CONTOUR, NO LONGER THE CORE BOX**:
  *
- * 1. **The stacks** (`buildFaceMap`): the placed parts' faces sorted by the world axis they face (±x, ±y, ±z — within `MAP_AXIS_DEG`), each axis's faces
- *    grouped by plane (`MAP_COPLANAR_M`) and, in a plane, by contact — the slide's own regions (`coplanarBoundary`'s rectangles: each face's extent on
- *    the plane's axes, grown `MAP_GROW_M` so the 3 mm joints between the coloured cores close) — and **every hole inside a group CLOSED** (`filledRegion`:
- *    an empty slot, a gap the ray would fall through).
- * 2. **The place on the box** (`mapTarget`): the orbit's angles read on the placed parts' BOX — each side a slice of the turn (its normal ± 45° of yaw), the
- *    sides' band ± 45° of pitch, the top's and the bottom's quarters beyond (concentric squares to the top / bottom centre at ±90°). Inside a slice the
- *    place goes linearly across the face; within `edgeDeg` of a slice's end it goes over the face's LAST `edgeMm` (and the next face's FIRST): through an
- *    edge the gizmo moves slowly — never a wait. The same angles, the same place: nothing to drift, nothing to hold.
- * 3. **The gizmo** (`stackDepthAt`): on the stack the place faces — the FRONTMOST group whose closed region holds it (a protrusion's face over the face
- *    behind it); none: the NEAREST group's plane (the gizmo beside the real face, in its plane, never into the assembly). The wiring then casts the ray
- *    along the axis for the exact surface (a slanted block).
- * So on a side a dx keeps the gizmo's height (the green: a horizontal plane) and a dy its place across the face (the red: the world's vertical plane
- * square to the face) — by construction; the sections are DRAWN from the same function (`render/assembly_wiring.ts`).
- * ⛔ ENGINE-FREE. Rectangles, a flood fill, piecewise-linear maps — textbook; no licence, no patent.
+ * 1. **The facets** (`buildFaceMap`): the placed parts' faces clustered by normal (within `mergeDeg`, the largest face's normal first — snapped onto a world
+ *    axis when it is one); each cluster a candidate FACET: its STACK — every face within `mergeDeg` of its normal, grouped by plane (`MAP_COPLANAR_M`) and,
+ *    in a plane, by contact (the slide's own regions, grown `MAP_GROW_M`), **every hole inside a group CLOSED** (`filledRegion`) — and its plane the MAIN
+ *    group's (the largest closed region: the painting's front, never a part sticking out of it — Step 4c-bis's core box, generalised). The contour is the
+ *    intersection of the facets' half-spaces (CONVEX by construction — a constant input turns one way round, I3), bounded by the parts' box; each facet's
+ *    polygon on it. ⭐ A facet is kept only when its real face (its main region) covers `minShare` of its polygon (D5) — a frustum's slanted side, whose
+ *    plane cuts across the contour, never tilts the orbit; on a box exactly the six faces.
+ * 2. **The upright frame** (Step 5: no frame turn yet): the CAPS — the facet nearest straight up / down (a virtual one at the box's top / bottom if none);
+ *    the COLUMNS — the other facets clustered by heading (`mergeDeg`), each column a SLICE of the yaw from halfway to each neighbour's heading (Step 4b's
+ *    slices; on a box 4 × 90°), its facets stacked by elevation, each a band of the pitch from halfway to each neighbour's elevation (on a box ±45°); the
+ *    caps' quarters beyond, concentric to the top / bottom centre at ±90° — as Step 4c-bis.
+ * 3. **The place** (`mapTarget`): in the facet's own frame — `t` the way the yaw turns across it (horizontal), `b` up its slope (`t × n`), `n` out —
+ *    across it by the yaw (`edgeMap`), up it by the pitch (`edgeMap`); within `edgeDeg` of a slice's / band's end over the facet's last `edgeMm`: through an
+ *    edge the gizmo moves slowly — never a wait. So a dx moves the place along `t` (the green: the plane of `t` and `n`) and a dy along `b` (the red: the
+ *    plane of `b` and `n`) — I1 in the facet frame, by construction; on a vertical facet the world's horizontal and vertical.
+ * 4. **The gizmo** (`stackDepthAt`): on the facet's stack, the FRONTMOST group whose closed region holds the place; none: the NEAREST group's plane (the gizmo
+ *    beside the real face, in its plane). The wiring then casts the ray along the normal for the REAL depth (D3: over an empty slot its bottom).
+ * ⛔ ENGINE-FREE. Rectangles, a flood fill, convex polygon clipping (Sutherland–Hodgman, 1974), piecewise-linear maps — textbook; no licence, no patent.
  */
 import type { Vec3 } from "../core/vec";
 import type { ShellBox } from "./orbit_shell";
 import type { Rect2 } from "./hover";
 
-/** ⭐ A face within this angle of a world axis faces it (deg) — `Scene_1`'s slanted block (15° off −z) faces −z. */
+/** ⭐ The default merge angle (deg) — `facetMergeDeg`'s default: `Scene_1`'s slanted block (15° off −z) is the front's. */
 export const MAP_AXIS_DEG = 20;
 /** ⭐ Two faces on one plane: their levels this close (m) — the slide's `COPLANAR_M`. */
 export const MAP_COPLANAR_M = 0.0005;
@@ -45,37 +47,63 @@ export interface FilledRegion {
   readonly filled: Uint8Array;
 }
 
-/** ⭐ One plane's group: its level along the stack's axis (outward +), its grown rectangles, its closed region. */
+/** ⭐ One plane's group: its level along the facet's normal (outward +), its closed region on the facet's (`t`, `b`). */
 export interface MapGroup {
   readonly depth: number;
   readonly region: FilledRegion;
 }
 
-/** ⭐ The faces facing one world axis (`axis` 0 x / 1 y / 2 z, `sign` ±1), their groups FRONTMOST first. */
-export interface MapStack {
-  readonly axis: 0 | 1 | 2;
-  readonly sign: 1 | -1;
-  readonly groups: readonly MapGroup[];
+/** ⭐ The faces contour's knobs (D5): the merge angle (deg) and the real face share a facet needs (0 … 1). */
+export interface FacetOpts {
+  readonly mergeDeg: number;
+  readonly minShare: number;
 }
+export const DEFAULT_FACET_OPTS: FacetOpts = { mergeDeg: MAP_AXIS_DEG, minShare: 0.25 };
 
 /**
- * ⭐ The face map: the placed parts' box, the six stacks (`stackIndex`), and the CORE box the angles are read on (`coreBox`: each side at its MAIN face).
+ * ⭐⭐⭐ A FACET of the faces contour: its outward normal `n`, its frame (`t` the way the yaw turns across it — horizontal —, `b` = `t × n` up its slope),
+ * its plane `n·p = e`, its stack (`groups`, frontmost first), its polygon on the contour and that polygon's extents along `t` and `b`, the share of it real
+ * face covers; `kind` the band it serves; `real` false for a virtual cap.
  */
+export interface Facet {
+  readonly n: Vec3;
+  readonly t: Vec3;
+  readonly b: Vec3;
+  readonly e: number;
+  readonly kind: "SIDE" | "TOP" | "BOTTOM";
+  readonly groups: readonly MapGroup[];
+  readonly poly: readonly Vec3[];
+  readonly tLo: number;
+  readonly tHi: number;
+  readonly bLo: number;
+  readonly bHi: number;
+  readonly share: number;
+  readonly real: boolean;
+}
+
+/** ⭐ A COLUMN of facets: its slice of the yaw (`mid` ± `hw`), its facets bottom → top and the pitch bands' bounds between them (one more than facets). */
+export interface Column {
+  readonly mid: number;
+  readonly hw: number;
+  readonly facets: readonly number[];
+  readonly bounds: readonly number[];
+}
+
+/** ⭐ The face map: the placed parts' box, the contour's bounding box (`core` — Step 4c-bis's core box on a box), the facets, the columns, the caps. */
 export interface FaceMap {
   readonly box: ShellBox;
   readonly core: ShellBox;
-  readonly stacks: readonly MapStack[];
+  readonly facets: readonly Facet[];
+  readonly columns: readonly Column[];
+  readonly top: number;
+  readonly bottom: number;
 }
 
-/** ⭐ The stack of `axis` (0 x, 1 y, 2 z) and `sign`: +x 0, −x 1, +y 2, −y 3, +z 4, −z 5. */
-export function stackIndex(axis: 0 | 1 | 2, sign: 1 | -1): number {
-  return axis * 2 + (sign > 0 ? 0 : 1);
-}
-
-/** ⭐ A stack's plane coordinates: the two other world axes, in order (x: y, z — y: x, z — z: x, y). */
-export function planeAxes(axis: 0 | 1 | 2): readonly [number, number] {
-  return axis === 0 ? [1, 2] : axis === 1 ? [0, 2] : [0, 1];
-}
+const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const Q = Math.PI / 4;
+const H = Math.PI / 2;
+const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
 /**
  * ⭐⭐ THE REGION, ITS HOLES CLOSED: the rectangles' edges cut the plane into cells; a cell is in a rectangle or not; the cells not in one and reachable
@@ -179,36 +207,6 @@ export function regionArea(r: FilledRegion): number {
   return a;
 }
 
-/**
- * ⭐⭐⭐ THE CORE BOX — the angles are read on it (`mapTarget`): on each axis, each side at the plane of its stack's MAIN group (the largest closed region —
- * the painting's front, never a part sticking out of it), so a slice's end is the main body's REAL corner. ⛔ Read on the parts' whole box, a protrusion
- * widened the front: at the corner the side's ray passed in front of the painting and met that part's side, 25 cm in (probed). A side with no face, or
- * sides crossing: the whole box's.
- */
-export function coreBox(stacks: readonly MapStack[], box: ShellBox): ShellBox {
-  const lo: number[] = [box.lo[0], box.lo[1], box.lo[2]];
-  const hi: number[] = [box.hi[0], box.hi[1], box.hi[2]];
-  for (const axis of [0, 1, 2] as const) {
-    const main = (sign: 1 | -1): number | null => {
-      const s = stacks[stackIndex(axis, sign)];
-      if (s === undefined || s.groups.length === 0) return null;
-      let best: { a: number; d: number } | null = null;
-      for (const g of s.groups) {
-        const a = regionArea(g.region);
-        if (best === null || a > best.a + 1e-12) best = { a, d: g.depth };
-      }
-      return best === null ? null : best.d * sign;
-    };
-    const h = main(1);
-    const l = main(-1);
-    if (h !== null && l !== null && h - l > 1e-6) {
-      lo[axis] = l;
-      hi[axis] = h;
-    }
-  }
-  return { lo: [lo[0]!, lo[1]!, lo[2]!], hi: [hi[0]!, hi[1]!, hi[2]!] };
-}
-
 /** ⭐ The rectangles joined to each other (touching or overlapping, grown already) — the connected groups, as index lists. */
 function components(rects: readonly Rect2[]): number[][] {
   const touch = (a: Rect2, b: Rect2) => a.x0 <= b.x1 + 1e-9 && b.x0 <= a.x1 + 1e-9 && a.y0 <= b.y1 + 1e-9 && b.y0 <= a.y1 + 1e-9;
@@ -227,86 +225,6 @@ function components(rects: readonly Rect2[]): number[][] {
     out.push(comp);
   }
   return out;
-}
-
-/**
- * ⭐⭐⭐ THE STACKS: each face to the world axis it faces (within `MAP_AXIS_DEG`; others — a face along no axis — to none), by plane (`MAP_COPLANAR_M`, a
- * face's level at its centre), each plane's faces by contact (their rectangles grown `MAP_GROW_M`); each group's region closed (`filledRegion`). A group's
- * depth: its plane's level along the stack's outward axis. Frontmost first.
- */
-export function buildFaceMap(faces: readonly MapFace[], box: ShellBox): FaceMap {
-  const cosMax = Math.cos((MAP_AXIS_DEG * Math.PI) / 180);
-  const stacks: MapStack[] = [];
-  for (const axis of [0, 1, 2] as const)
-    for (const sign of [1, -1] as const) {
-      const [i0, i1] = planeAxes(axis);
-      const mine = faces.filter((f) => f.normal[axis] * sign >= cosMax && f.tris.length > 0);
-      // by plane: levels within MAP_COPLANAR_M of a plane's first face
-      const planes: { level: number; faces: MapFace[] }[] = [];
-      for (const f of mine) {
-        const level = f.centre[axis] * sign;
-        const p = planes.find((q) => Math.abs(q.level - level) <= MAP_COPLANAR_M);
-        if (p === undefined) planes.push({ level, faces: [f] });
-        else p.faces.push(f);
-      }
-      const groups: MapGroup[] = [];
-      for (const p of planes) {
-        const rects: Rect2[] = p.faces.map((f) => {
-          const xs = f.tris.flatMap((t) => t.map((v) => v[i0]!));
-          const ys = f.tris.flatMap((t) => t.map((v) => v[i1]!));
-          return { x0: Math.min(...xs) - MAP_GROW_M, x1: Math.max(...xs) + MAP_GROW_M, y0: Math.min(...ys) - MAP_GROW_M, y1: Math.max(...ys) + MAP_GROW_M };
-        });
-        for (const comp of components(rects)) {
-          const rs = comp.map((k) => rects[k]!);
-          groups.push({ depth: p.level, region: filledRegion(rs) });
-        }
-      }
-      groups.sort((a, b) => b.depth - a.depth);
-      stacks[stackIndex(axis, sign)] = { axis, sign, groups };
-    }
-  return { box, core: coreBox(stacks, box), stacks };
-}
-
-/**
- * ⭐⭐ THE GIZMO'S PLANE on a stack at (`x`, `y`) (the stack's plane coordinates): the FRONTMOST group whose closed region holds the point (`inside`); none,
- * the NEAREST group (ties: the frontmost) — the gizmo beside the real face, in its plane. `null`: no face faces that axis.
- */
-export function stackDepthAt(s: MapStack, x: number, y: number): { readonly depth: number; readonly group: number; readonly inside: boolean } | null {
-  for (let g = 0; g < s.groups.length; g++) if (regionContains(s.groups[g]!.region, x, y)) return { depth: s.groups[g]!.depth, group: g, inside: true };
-  let best: { depth: number; group: number; d: number } | null = null;
-  s.groups.forEach((gr, g) => {
-    const d = regionDistance(gr.region, x, y);
-    if (best === null || d < best.d - 1e-9) best = { depth: gr.depth, group: g, d };
-  });
-  const b = best as { depth: number; group: number; d: number } | null;
-  return b === null ? null : { depth: b.depth, group: b.group, inside: false };
-}
-
-/** ⭐ The map's knobs: the edge's slow stretch on each face (`edgeMm`) and the angle (deg) before a slice's end it is crossed in. */
-export interface MapOpts {
-  readonly edgeMm: number;
-  readonly edgeDeg: number;
-}
-
-/** ⭐ A side's frame: its outward normal `n` and the way the yaw turns across it `t` (both horizontal), its stack. */
-export function sideFrame(k: number): { readonly n: Vec3; readonly t: Vec3; readonly stack: number } {
-  const c = [1, 0, -1, 0][k & 3]!;
-  const s = [0, 1, 0, -1][k & 3]!;
-  const n: Vec3 = [c, 0, s];
-  const t: Vec3 = [-s, 0, c];
-  return { n, t, stack: c !== 0 ? stackIndex(0, c > 0 ? 1 : -1) : stackIndex(2, s > 0 ? 1 : -1) };
-}
-
-/** ⭐ The box's extent along a horizontal unit axis `a` (a world axis or its opposite): [lo, hi]. */
-function extentAlong(box: ShellBox, a: Vec3): readonly [number, number] {
-  const p = a[0] * box.lo[0] + a[2] * box.lo[2];
-  const q = a[0] * box.hi[0] + a[2] * box.hi[2];
-  return p <= q ? [p, q] : [q, p];
-}
-
-/** ⭐ The angle's share of a slice's end it is crossed in: `edgeDeg` of the slice's 45°, at most half. */
-function bandOf(opts: MapOpts): number {
-  return Math.min(0.5, Math.max(0, opts.edgeDeg / 45));
 }
 
 /**
@@ -353,113 +271,6 @@ export function topOut(g: number, band: number, keM: number, dMin: number): numb
   return band + ((x - k) / (1 - k)) * (1 - band);
 }
 
-/** ⭐ Where the angles put the gizmo on the box: the band, the side's slice, the stack it faces, the box's point, and across the side (for the calm). */
-export interface MapTarget {
-  readonly band: "SIDE" | "TOP" | "BOTTOM";
-  /** the side whose slice the yaw is in (0 +x, 1 +z, 2 −x, 3 −z) */
-  readonly side: number;
-  readonly stack: number;
-  /** the outward axis of the stack */
-  readonly normal: Vec3;
-  /** the place on the box's surface */
-  readonly surface: Vec3;
-  /** across the side: its place `L` in the face's span `lo` … `hi` (the side's axis `t`) */
-  readonly across: { readonly L: number; readonly lo: number; readonly hi: number };
-}
-
-const Q = Math.PI / 4;
-const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
-
-/** ⭐ The yaw's side (0 … 3, its normal at k·90°) and its place across the slice (−1 … 1). */
-export function sideOfYaw(yaw: number): { readonly k: number; readonly a: number } {
-  const w = ((yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  const k = Math.round(w / (2 * Q)) & 3;
-  return { k, a: Math.max(-1, Math.min(1, wrapPi(yaw - k * 2 * Q) / Q)) };
-}
-
-/**
- * ⭐⭐⭐ THE PLACE ON THE BOX for the orbit's `yaw` and `pitch` (the orbit's convention: x = cos, z = sin; pitch up +) — see the module's header. A side:
- * across it by the yaw (`edgeMap`), up it by the pitch over the box's height (`edgeMap`, ±45°); a top / bottom: the side's rim point at the yaw, drawn in
- * toward the centre by the pitch beyond 45° (`topIn`) — at ±90° the centre, whatever the yaw.
- */
-export function mapTarget(box: ShellBox, yaw: number, pitch: number, opts: MapOpts): MapTarget {
-  const band = bandOf(opts);
-  const ke = Math.max(0, opts.edgeMm) / 1000;
-  const { k, a } = sideOfYaw(yaw);
-  const { n, t, stack } = sideFrame(k);
-  const [lo, hi] = extentAlong(box, t);
-  const half = (hi - lo) / 2;
-  const mid = (lo + hi) / 2;
-  const L = mid + edgeMap(a, band, half, ke);
-  const e = extentAlong(box, n)[1];
-  const across = { L, lo, hi };
-  const rim = (y: number): Vec3 => [n[0] * e + t[0] * L, y, n[2] * e + t[2] * L];
-  const p = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-  if (Math.abs(p) <= Q + 1e-12) {
-    const yh = (box.hi[1] - box.lo[1]) / 2;
-    const y = (box.lo[1] + box.hi[1]) / 2 + edgeMap(p / Q, band, yh, ke);
-    return { band: "SIDE", side: k, stack, normal: n, surface: rim(y), across };
-  }
-  const up = p > 0;
-  const cx = (box.lo[0] + box.hi[0]) / 2;
-  const cz = (box.lo[2] + box.hi[2]) / 2;
-  const dMin = Math.min(box.hi[0] - box.lo[0], box.hi[2] - box.lo[2]) / 2;
-  const g = topIn((Math.abs(p) - Q) / Q, band, ke, dMin);
-  const y = up ? box.hi[1] : box.lo[1];
-  const r = rim(y);
-  return {
-    band: up ? "TOP" : "BOTTOM",
-    side: k,
-    stack: stackIndex(1, up ? 1 : -1),
-    normal: [0, up ? 1 : -1, 0],
-    surface: [cx + (r[0] - cx) * (1 - g), y, cz + (r[2] - cz) * (1 - g)],
-    across,
-  };
-}
-
-/**
- * ⭐⭐ …AND BACK: the angles whose place is nearest `p` on the face of stack `stack` (a point on the box's surface or in a face's plane) — after the slide,
- * the map is put where the slide left the gizmo (no jump). A side: across and up it (`edgeUnmap`); a top / bottom: the quarter it is in (the side whose
- * rim it is most toward), its share of the way in, its place across.
- */
-export function mapAngles(box: ShellBox, p: Vec3, stack: number, opts: MapOpts): { readonly yaw: number; readonly pitch: number } {
-  const band = bandOf(opts);
-  const ke = Math.max(0, opts.edgeMm) / 1000;
-  const unmapAcross = (k: number, L: number): number => {
-    const { t } = sideFrame(k);
-    const [lo, hi] = extentAlong(box, t);
-    return edgeUnmap(L - (lo + hi) / 2, band, (hi - lo) / 2, ke);
-  };
-  if (stack === stackIndex(1, 1) || stack === stackIndex(1, -1)) {
-    const up = stack === stackIndex(1, 1);
-    const cx = (box.lo[0] + box.hi[0]) / 2;
-    const cz = (box.lo[2] + box.hi[2]) / 2;
-    const qx = p[0] - cx;
-    const qz = p[2] - cz;
-    let best = { k: 0, r: -Infinity };
-    for (let k = 0; k < 4; k++) {
-      const { n } = sideFrame(k);
-      const D = extentAlong(box, n)[1] - (n[0] * cx + n[2] * cz);
-      const r = D > 1e-12 ? (qx * n[0] + qz * n[2]) / D : -Infinity;
-      if (r > best.r) best = { k, r };
-    }
-    const r = Math.min(1, Math.max(0, best.r));
-    const { t } = sideFrame(best.k);
-    const ct = t[0] * cx + t[2] * cz;
-    const L = r > 1e-9 ? ct + (qx * t[0] + qz * t[2]) / r : ct;
-    const dMin = Math.min(box.hi[0] - box.lo[0], box.hi[2] - box.lo[2]) / 2;
-    const f = topOut(1 - r, band, ke, dMin);
-    const pitch = (up ? 1 : -1) * (Q + f * Q);
-    return { yaw: best.k * 2 * Q + unmapAcross(best.k, L) * Q, pitch };
-  }
-  const k = [stackIndex(0, 1), stackIndex(2, 1), stackIndex(0, -1), stackIndex(2, -1)].indexOf(stack);
-  const side = k < 0 ? 0 : k;
-  const { t } = sideFrame(side);
-  const yh = (box.hi[1] - box.lo[1]) / 2;
-  const b = edgeUnmap(p[1] - (box.lo[1] + box.hi[1]) / 2, band, yh, ke);
-  return { yaw: side * 2 * Q + unmapAcross(side, t[0] * p[0] + t[2] * p[2]) * Q, pitch: b * Q };
-}
-
 /**
  * ⭐⭐ OUT OF STEP, NO JUMP (after the slide — the map's angles put where the slide left the gizmo): the map's angle `m` follows the orbit's `target` by
  * the orbit's own step `d`, faster (× 1 + `catchUp`) while the orbit runs away from it, slower (× 1 − `catchUp`) while it comes back — never against the
@@ -475,51 +286,532 @@ export function syncAngle(m: number, target: number, d: number, catchUp: number,
   // the gap closed or crossed: on the orbit
   return Math.sign(gapOf(m2)) !== Math.sign(gap) ? target : m2;
 }
+/** ⭐ A normal within 1e-9 of a world axis: that axis EXACTLY (a box's face read on a turned pose carries 1e-16 of noise — the box's numbers kept exact). */
+export function snapAxis(n: Vec3): Vec3 {
+  const l = Math.hypot(n[0], n[1], n[2]);
+  if (!(l > 1e-12)) return [0, 1, 0];
+  const u: Vec3 = [n[0] / l, n[1] / l, n[2] / l];
+  for (const k of [0, 1, 2] as const)
+    if (Math.abs(u[k]) > 1 - 1e-9) {
+      const r: [number, number, number] = [0, 0, 0];
+      r[k] = u[k] > 0 ? 1 : -1;
+      return r;
+    }
+  return u;
+}
 
 /**
- * ⭐⭐⭐ THROUGH AN EDGE, NO JUMP (the edge bands — `edgeDeg` before a slice's end): the gizmo of the face being left and the gizmo where the next face starts
- * can differ — the real outline at that height is not the core box's (a column standing out 45 mm, a top 41 mm above the core's: probed on `Scene_1`). In
- * the band the gizmo is BLENDED toward the next face's first point, `w` rising (smoothstep) to ½ at the slice's end — where both sides meet: the gizmo
- * crosses the corner continuously, never jumps. `h`: across a side's end (the yaw `yawThere` just inside the next side); `v`: up a side to the top / down
- * to the bottom (`pitchThere` just past the band's end) or back from it. `null`: not in that band (or no band).
+ * ⭐⭐ A FACET'S FRAME: `t` horizontal, the way the yaw turns across it (`n × ŷ`, normalised — on a box Step 4c-bis's side axis), `b = t × n` up its slope
+ * (on a vertical facet the world's up). Straight up / down (a cap): `t` = +x.
  */
-export function edgeBlend(yaw: number, pitch: number, opts: MapOpts): { readonly h: { readonly w: number; readonly yawThere: number } | null; readonly v: { readonly w: number; readonly pitchThere: number } | null } {
-  const band = bandOf(opts);
-  if (!(band > 0)) return { h: null, v: null };
+export function facetFrame(n: Vec3): { readonly t: Vec3; readonly b: Vec3 } {
+  const h = Math.hypot(n[0], n[2]);
+  const t: Vec3 = h > 1e-6 ? [-n[2] / h + 0, 0, n[0] / h + 0] : [1, 0, 0];
+  return { t, b: cross(t, n) };
+}
+
+/** ⭐ A face's area (m²): its triangles'. */
+function faceArea(f: MapFace): number {
+  let a = 0;
+  for (const [p, q, r] of f.tris) {
+    const c = cross([q[0] - p[0], q[1] - p[1], q[2] - p[2]], [r[0] - p[0], r[1] - p[1], r[2] - p[2]]);
+    a += Math.hypot(c[0], c[1], c[2]) / 2;
+  }
+  return a;
+}
+
+/**
+ * ⭐⭐⭐ A FACET'S STACK (Step 4c-bis's per axis, now per facet): every face within the merge angle of `n` (`cosMax`), by plane (`MAP_COPLANAR_M`, a face's
+ * level at its centre), each plane's faces by contact (their rectangles on (`t`, `b`) grown `MAP_GROW_M`); each group's region closed (`filledRegion`). A
+ * group's depth: its plane's level along `n`. Frontmost first.
+ */
+export function stackOf(faces: readonly MapFace[], n: Vec3, t: Vec3, b: Vec3, cosMax: number): MapGroup[] {
+  const mine = faces.filter((f) => dot(f.normal, n) >= cosMax && f.tris.length > 0);
+  const planes: { level: number; faces: MapFace[] }[] = [];
+  for (const f of mine) {
+    const level = dot(f.centre, n);
+    const p = planes.find((q) => Math.abs(q.level - level) <= MAP_COPLANAR_M);
+    if (p === undefined) planes.push({ level, faces: [f] });
+    else p.faces.push(f);
+  }
+  const groups: MapGroup[] = [];
+  for (const p of planes) {
+    const rects: Rect2[] = p.faces.map((f) => {
+      const xs = f.tris.flatMap((tr) => tr.map((v) => dot(v, t)));
+      const ys = f.tris.flatMap((tr) => tr.map((v) => dot(v, b)));
+      return { x0: Math.min(...xs) - MAP_GROW_M, x1: Math.max(...xs) + MAP_GROW_M, y0: Math.min(...ys) - MAP_GROW_M, y1: Math.max(...ys) + MAP_GROW_M };
+    });
+    for (const comp of components(rects)) groups.push({ depth: p.level, region: filledRegion(comp.map((k) => rects[k]!)) });
+  }
+  groups.sort((a, c) => c.depth - a.depth);
+  return groups;
+}
+
+/** ⭐ The MAIN group of a stack: the largest closed region (ties: the frontmost) — its depth is the facet's plane; its area the real face behind it. */
+function mainOf(groups: readonly MapGroup[]): { readonly depth: number; readonly area: number } | null {
+  let best: { depth: number; area: number } | null = null;
+  for (const g of groups) {
+    const a = regionArea(g.region);
+    if (best === null || a > best.area + 1e-12) best = { depth: g.depth, area: a };
+  }
+  return best;
+}
+
+interface Plane {
+  readonly n: Vec3;
+  readonly e: number;
+}
+
+/** ⭐ The parts' box as six half-spaces (`n·p ≤ e`) — every facet's polygon is bounded by it. */
+function boxPlanes(box: ShellBox): Plane[] {
+  return [
+    { n: [1, 0, 0], e: box.hi[0] },
+    { n: [-1, 0, 0], e: -box.lo[0] },
+    { n: [0, 1, 0], e: box.hi[1] },
+    { n: [0, -1, 0], e: -box.lo[1] },
+    { n: [0, 0, 1], e: box.hi[2] },
+    { n: [0, 0, -1], e: -box.lo[2] },
+  ];
+}
+
+/**
+ * ⭐⭐ A FACET'S POLYGON ON THE CONTOUR: a square of side `2·size` in its plane, clipped by every other half-space (Sutherland–Hodgman, 1974 — a convex
+ * polygon by a plane; a point within 1e-9 of a plane kept).
+ */
+export function facetPolygon(n: Vec3, e: number, planes: readonly Plane[], size: number): Vec3[] {
+  const { t, b } = facetFrame(n);
+  const c: Vec3 = [n[0] * e, n[1] * e, n[2] * e];
+  let poly: Vec3[] = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ].map(([x, y]) => [c[0] + (t[0] * x! + b[0] * y!) * size, c[1] + (t[1] * x! + b[1] * y!) * size, c[2] + (t[2] * x! + b[2] * y!) * size] as Vec3);
+  for (const pl of planes) {
+    if (poly.length === 0) break;
+    const out: Vec3[] = [];
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i]!;
+      const q = poly[(i + 1) % poly.length]!;
+      const dp = dot(pl.n, p) - pl.e;
+      const dq = dot(pl.n, q) - pl.e;
+      const ip = dp <= 1e-9;
+      if (ip) out.push(p);
+      if (ip !== dq <= 1e-9) {
+        const s = dp / (dp - dq);
+        out.push([p[0] + (q[0] - p[0]) * s, p[1] + (q[1] - p[1]) * s, p[2] + (q[2] - p[2]) * s]);
+      }
+    }
+    poly = out;
+  }
+  return poly;
+}
+
+/** ⭐ A planar polygon's area along its normal `n` (m²). */
+export function polygonArea(poly: readonly Vec3[], n: Vec3): number {
+  let s: Vec3 = [0, 0, 0];
+  for (let i = 0; i < poly.length; i++) {
+    const c = cross(poly[i]!, poly[(i + 1) % poly.length]!);
+    s = [s[0] + c[0], s[1] + c[1], s[2] + c[2]];
+  }
+  return Math.abs(dot(s, n)) / 2;
+}
+
+interface Candidate {
+  readonly n: Vec3;
+  readonly e: number;
+  readonly groups: readonly MapGroup[];
+  readonly area: number;
+  readonly real: boolean;
+}
+
+/**
+ * ⭐⭐⭐ THE FACES CONTOUR AND ITS MAP (scope §5 Step 5) — see the module's header: the faces clustered into candidate facets (largest face first, within
+ * `mergeDeg`), each at its main group's plane; the half-spaces' intersection in the box; the candidates taken largest real face first, each kept only
+ * while every kept one's real face covers `minShare` of its polygon (a plane cutting across the contour covers little of its own); the caps (the
+ * facet nearest straight up / down beyond 45°, else a virtual one at the box), the columns (the rest by heading, their yaw slices and pitch bands). No
+ * side facet at all: the box's four sides, virtual. `core`: the polygons' bounding box.
+ */
+export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: FacetOpts = DEFAULT_FACET_OPTS): FaceMap {
+  const cosM = Math.cos((Math.max(0, fo.mergeDeg) * Math.PI) / 180);
+  const bp = boxPlanes(box);
+  const size = 2 * Math.hypot(box.hi[0] - box.lo[0], box.hi[1] - box.lo[1], box.hi[2] - box.lo[2]) + 1;
+  const sized = faces.filter((f) => f.tris.length > 0).map((f) => ({ f, a: faceArea(f), n: snapAxis(f.normal) }));
+  sized.sort((x, y) => y.a - x.a);
+  const seeds: Vec3[] = [];
+  for (const w of sized) if (!seeds.some((s) => dot(s, w.n) >= cosM)) seeds.push(w.n);
+  const candOf = (n: Vec3, real: boolean, fallbackE: number): Candidate => {
+    const { t, b } = facetFrame(n);
+    const groups = stackOf(faces, n, t, b, cosM);
+    const m = mainOf(groups);
+    return { n, e: m === null ? fallbackE : m.depth, groups, area: m === null ? 0 : m.area, real };
+  };
+  const cands = seeds.map((n) => candOf(n, true, 0));
+  const polyOf = (c: Candidate, others: readonly Candidate[]): Vec3[] =>
+    facetPolygon(c.n, c.e, [...others.filter((o) => o !== c).map((o) => ({ n: o.n, e: o.e })), ...bp], size);
+  const shareOf = (c: Candidate, poly: readonly Vec3[]): number => {
+    const A = polygonArea(poly, c.n);
+    return A > 1e-12 ? Math.min(1, c.area / A) : 0;
+  };
+  // ⭐ D5, GREEDY: the candidates by their real face, largest first; one is ACCEPTED when its real face covers `minShare` of its polygon among those
+  // accepted and every one accepted still does (⛔ all at once, then the worst dropped: on `Scene_1` a frustum's slanted plane cut the painting's front away
+  // whole — its share 0, the front dropped first, the contour three slanted planes)
+  const kept: Candidate[] = [];
+  for (const c of [...cands].sort((x, y) => y.area - x.area)) {
+    const trial = [...kept, c];
+    if (trial.every((k) => shareOf(k, polyOf(k, trial)) >= Math.max(fo.minShare, 1e-9))) kept.push(c);
+  }
+  // the caps: the facet nearest straight up / down beyond 45° — else a virtual one at the box (its stack still read)
+  const elev = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
+  const capOf = (up: boolean): Candidate => {
+    let best: Candidate | null = null;
+    for (const c of kept) if ((up ? elev(c.n) : -elev(c.n)) > Q + 1e-12 && (best === null || (up ? c.n[1] > best.n[1] : c.n[1] < best.n[1]))) best = c;
+    if (best !== null) return best;
+    // ⭐ virtual: AT THE BOX (⛔ at a dropped candidate's own plane — the plane D5 refused would cut the contour again)
+    return { ...candOf([0, up ? 1 : -1, 0], false, 0), e: up ? box.hi[1] : -box.lo[1] };
+  };
+  const capT = capOf(true);
+  const capB = capOf(false);
+  let sides = kept.filter((c) => c !== capT && c !== capB);
+  if (sides.length === 0)
+    sides = ([[1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1]] as Vec3[]).map((n) => {
+      const c = candOf(n, false, 0);
+      return { ...c, e: n[0] > 0 ? box.hi[0] : n[0] < 0 ? -box.lo[0] : n[2] > 0 ? box.hi[2] : -box.lo[2] };
+    });
+  const all: Candidate[] = [...sides, capT, capB];
+  const planes = all;
+  const facets: Facet[] = all.map((c, i) => {
+    const { t, b } = facetFrame(c.n);
+    const poly = facetPolygon(c.n, c.e, [...planes.filter((o) => o !== c).map((o) => ({ n: o.n, e: o.e })), ...bp], size);
+    const ts = poly.map((v) => dot(v, t));
+    const bs = poly.map((v) => dot(v, b));
+    const ext = (xs: number[], lo: boolean): number => (xs.length === 0 ? 0 : lo ? Math.min(...xs) : Math.max(...xs));
+    return {
+      n: c.n,
+      t,
+      b,
+      e: c.e,
+      kind: i < sides.length ? "SIDE" : c === capT ? "TOP" : "BOTTOM",
+      groups: c.groups,
+      poly,
+      tLo: ext(ts, true),
+      tHi: ext(ts, false),
+      bLo: ext(bs, true),
+      bHi: ext(bs, false),
+      share: shareOf(c, poly),
+      real: c.real,
+    };
+  });
+  // ⭐ the columns: the side facets by heading (the largest real face first, within `mergeDeg`); each a slice of the yaw from halfway to each neighbour's
+  const heading = (n: Vec3): number => {
+    const h = Math.atan2(n[2], n[0]);
+    return h < 0 ? h + 2 * Math.PI : h;
+  };
+  const order = sides.map((_, i) => i).sort((x, y) => sides[y]!.area - sides[x]!.area);
+  const cols: { h: number; members: number[] }[] = [];
+  const mergeRad = (Math.max(0, fo.mergeDeg) * Math.PI) / 180;
+  for (const i of order) {
+    const h = heading(sides[i]!.n);
+    const c = cols.find((k) => Math.abs(wrapPi(h - k.h)) <= mergeRad + 1e-12);
+    if (c === undefined) cols.push({ h, members: [i] });
+    else c.members.push(i);
+  }
+  cols.sort((x, y) => x.h - y.h);
+  const columns: Column[] = cols.map((c, k) => {
+    const prev = cols.length === 1 ? c.h - 2 * Math.PI : k === 0 ? cols[cols.length - 1]!.h - 2 * Math.PI : cols[k - 1]!.h;
+    const next = cols.length === 1 ? c.h + 2 * Math.PI : k === cols.length - 1 ? cols[0]!.h + 2 * Math.PI : cols[k + 1]!.h;
+    const lo = (prev + c.h) / 2;
+    const hi = (c.h + next) / 2;
+    const fs = [...c.members].sort((x, y) => elev(sides[x]!.n) - elev(sides[y]!.n));
+    const els = fs.map((i) => elev(sides[i]!.n));
+    const bounds = [(-H + els[0]!) / 2, ...els.slice(1).map((e, j) => (els[j]! + e) / 2), (els[els.length - 1]! + H) / 2];
+    return { mid: (lo + hi) / 2, hw: (hi - lo) / 2, facets: fs, bounds };
+  });
+  const vs = facets.flatMap((f) => f.poly);
+  const core: ShellBox =
+    vs.length === 0
+      ? box
+      : {
+          lo: [Math.min(...vs.map((v) => v[0])), Math.min(...vs.map((v) => v[1])), Math.min(...vs.map((v) => v[2]))],
+          hi: [Math.max(...vs.map((v) => v[0])), Math.max(...vs.map((v) => v[1])), Math.max(...vs.map((v) => v[2]))],
+        };
+  return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1 };
+}
+
+/**
+ * ⭐⭐ THE GIZMO'S PLANE on a facet's stack at (`x`, `y`) (its `t`, `b` coordinates): the FRONTMOST group whose closed region holds the point (`inside`);
+ * none, the NEAREST group (ties: the frontmost) — the gizmo beside the real face, in its plane. `null`: no face in that stack.
+ */
+export function stackDepthAt(s: { readonly groups: readonly MapGroup[] }, x: number, y: number): { readonly depth: number; readonly group: number; readonly inside: boolean } | null {
+  for (let g = 0; g < s.groups.length; g++) if (regionContains(s.groups[g]!.region, x, y)) return { depth: s.groups[g]!.depth, group: g, inside: true };
+  let best: { depth: number; group: number; d: number } | null = null;
+  s.groups.forEach((gr, g) => {
+    const d = regionDistance(gr.region, x, y);
+    if (best === null || d < best.d - 1e-9) best = { depth: gr.depth, group: g, d };
+  });
+  const b = best as { depth: number; group: number; d: number } | null;
+  return b === null ? null : { depth: b.depth, group: b.group, inside: false };
+}
+
+/** ⭐ The map's knobs: the edge's slow stretch on each face (`edgeMm`) and the angle (deg) before a slice's end it is crossed in. */
+export interface MapOpts {
+  readonly edgeMm: number;
+  readonly edgeDeg: number;
+}
+
+/** ⭐ The share of a span (its half-width `half`, rad) an edge band of `E` rad takes: at most half. */
+function bandFor(E: number, half: number): number {
+  return half > 1e-12 ? Math.min(0.5, Math.max(0, E / half)) : 0;
+}
+
+/** ⭐ The facet's point at `L` along `t` and `s` along `b`, in its plane. */
+function facetAt(f: Facet, L: number, s: number): Vec3 {
+  return [f.n[0] * f.e + f.t[0] * L + f.b[0] * s, f.n[1] * f.e + f.t[1] * L + f.b[1] * s, f.n[2] * f.e + f.t[2] * L + f.b[2] * s];
+}
+
+/** ⭐ Where the angles put the gizmo: the band, the column (`side`), the facet (`stack`), its normal, the place on its plane, and across it (the calm). */
+export interface MapTarget {
+  readonly band: "SIDE" | "TOP" | "BOTTOM";
+  /** the column whose slice the yaw is in */
+  readonly side: number;
+  /** the facet the place is on (`FaceMap.facets`) */
+  readonly stack: number;
+  /** the facet's outward normal */
+  readonly normal: Vec3;
+  /** the place on the facet's plane */
+  readonly surface: Vec3;
+  /** across the column's facet: its place `L` in the facet's span `lo` … `hi` (along its `t`) */
+  readonly across: { readonly L: number; readonly lo: number; readonly hi: number };
+}
+
+/** ⭐ The yaw's column (its index) and its place across the column's slice (−1 … 1). */
+export function columnAt(map: FaceMap, yaw: number): { readonly k: number; readonly a: number } {
+  let best = { k: 0, a: 0, r: Infinity };
+  map.columns.forEach((c, k) => {
+    const d = wrapPi(yaw - c.mid);
+    const r = Math.abs(d) / c.hw;
+    if (r < best.r - 1e-12) best = { k, a: Math.max(-1, Math.min(1, d / c.hw)), r };
+  });
+  return { k: best.k, a: best.a };
+}
+
+/**
+ * ⭐⭐ THE CAP'S EDGE ACROSS A COLUMN'S FACET: the cap's EDGE toward the facet (its vertices outermost along the facet's level normal — on the facet's
+ * plane where they meet) and that edge's extent along the facet's `t` — the rim of the cap's quarter runs over it, not over the facet's own width (⛔ a
+ * hexagonal end is ±R wide at mid-height, its bottom edge ±R/2: the quarter ran outside the cap, over its neighbour's — probed by the round trip; ⛔ the
+ * whole cap's extent: on a vertical hexagon twice the facet's edge, the quarters' corners parted — probed, 176 mm). `toCap` / `fromCap` map a place
+ * across the facet onto it and back — on a box the same extent: unchanged.
+ */
+function capSpan(map: FaceMap, f: Facet, cap: Facet): { readonly toCap: (L: number) => number; readonly fromCap: (L: number) => number } {
+  const nh = Math.hypot(f.n[0], f.n[2]);
+  const out = (v: Vec3): number => (nh > 1e-9 ? (v[0] * f.n[0] + v[2] * f.n[2]) / nh : 0);
+  const m = cap.poly.length === 0 ? 0 : Math.max(...cap.poly.map(out));
+  const ts = cap.poly.filter((v) => out(v) >= m - 1e-6).map((v) => dot(v, f.t));
+  const lo = ts.length === 0 ? f.tLo : Math.min(...ts);
+  const hi = ts.length === 0 ? f.tHi : Math.max(...ts);
+  const same = Math.abs(lo - f.tLo) < 1e-9 && Math.abs(hi - f.tHi) < 1e-9;
+  const w = f.tHi - f.tLo;
+  if (same || !(w > 1e-12) || !(hi - lo > 1e-12)) return { toCap: (L) => L, fromCap: (L) => L };
+  void map;
+  return { toCap: (L) => lo + ((L - f.tLo) / w) * (hi - lo), fromCap: (L) => f.tLo + ((L - lo) / (hi - lo)) * w };
+}
+
+/** ⭐ The cap's centre the quarters converge to: the contour's middle in x / z, on the cap's plane. */
+function capCentre(map: FaceMap, cap: Facet): Vec3 {
+  const cx = (map.core.lo[0] + map.core.hi[0]) / 2;
+  const cz = (map.core.lo[2] + map.core.hi[2]) / 2;
+  const cy = Math.abs(cap.n[1]) > 1e-9 ? (cap.e - cap.n[0] * cx - cap.n[2] * cz) / cap.n[1] : (map.core.lo[1] + map.core.hi[1]) / 2;
+  return [cx, cy, cz];
+}
+
+/**
+ * ⭐⭐⭐ THE PLACE ON THE FACES CONTOUR for the orbit's `yaw` and `pitch` (the orbit's convention: x = cos, z = sin; pitch up +) — see the module's header. In
+ * a column's band: across the facet by the yaw, up it by the pitch (`edgeMap` each — the slow stretch through an edge). Beyond the column's top / bottom
+ * band: the column's top (bottom) facet's edge at the yaw, drawn in toward the cap's centre by the pitch (`topIn`) — at ±90° the centre, whatever the yaw.
+ * On a box exactly Step 4c-bis's core box map.
+ */
+export function mapTarget(map: FaceMap, yaw: number, pitch: number, opts: MapOpts): MapTarget {
+  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
+  const ke = Math.max(0, opts.edgeMm) / 1000;
+  const { k, a } = columnAt(map, yaw);
+  const col = map.columns[k]!;
+  const bandY = bandFor(E, col.hw);
+  const B = col.bounds;
+  const lo = B[0]!;
+  const hi = B[B.length - 1]!;
+  const p = Math.max(-H, Math.min(H, pitch));
+  const across = (f: Facet): number => (f.tLo + f.tHi) / 2 + edgeMap(a, bandY, (f.tHi - f.tLo) / 2, ke);
+  if (p <= hi + 1e-12 && p >= lo - 1e-12) {
+    let i = 0;
+    while (i < col.facets.length - 1 && p > B[i + 1]!) i++;
+    const fi = col.facets[i]!;
+    const f = map.facets[fi]!;
+    const L = across(f);
+    const pm = (B[i]! + B[i + 1]!) / 2;
+    const ph = (B[i + 1]! - B[i]!) / 2;
+    const s = (f.bLo + f.bHi) / 2 + edgeMap(ph > 1e-12 ? (p - pm) / ph : 0, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke);
+    return { band: "SIDE", side: k, stack: fi, normal: f.n, surface: facetAt(f, L, s), across: { L, lo: f.tLo, hi: f.tHi } };
+  }
+  const up = p > hi;
+  const f = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
+  const L = across(f);
+  const capI = up ? map.top : map.bottom;
+  const cap = map.facets[capI]!;
+  const rim = facetAt(f, capSpan(map, f, cap).toCap(L), up ? f.bHi : f.bLo);
+  const C = capCentre(map, cap);
+  const span = up ? H - hi : lo + H;
+  const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
+  const g = topIn(span > 1e-12 ? (up ? p - hi : lo - p) / span : 1, bandFor(E, span), ke, dMin);
+  return {
+    band: up ? "TOP" : "BOTTOM",
+    side: k,
+    stack: capI,
+    normal: cap.n,
+    surface: [C[0] + (rim[0] - C[0]) * (1 - g), C[1] + (rim[1] - C[1]) * (1 - g), C[2] + (rim[2] - C[2]) * (1 - g)],
+    across: { L, lo: f.tLo, hi: f.tHi },
+  };
+}
+
+/**
+ * ⭐⭐ …AND BACK: the angles whose place is nearest `p` on facet `fi` (a point on its plane) — after the slide, the map is put where the slide left the gizmo
+ * (no jump). A column's facet: across and up it (`edgeUnmap`); a cap: the quarter it is in (the column whose edge it is most toward), its share of the way
+ * in, its place across.
+ */
+export function mapAngles(map: FaceMap, p: Vec3, fi: number, opts: MapOpts): { readonly yaw: number; readonly pitch: number } {
+  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
+  const ke = Math.max(0, opts.edgeMm) / 1000;
+  const yawOf = (col: Column, f: Facet, L: number): number => col.mid + edgeUnmap(L - (f.tLo + f.tHi) / 2, bandFor(E, col.hw), (f.tHi - f.tLo) / 2, ke) * col.hw;
+  if (fi === map.top || fi === map.bottom) {
+    const up = fi === map.top;
+    const cap = map.facets[fi]!;
+    const C = capCentre(map, cap);
+    const qx = p[0] - C[0];
+    const qz = p[2] - C[2];
+    let best = { k: 0, r: -Infinity };
+    map.columns.forEach((col, k) => {
+      const s = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
+      const nh = Math.hypot(s.n[0], s.n[2]);
+      if (!(nh > 1e-9)) return;
+      const R = facetAt(s, (s.tLo + s.tHi) / 2, up ? s.bHi : s.bLo);
+      const D = (s.n[0] * (R[0] - C[0]) + s.n[2] * (R[2] - C[2])) / nh;
+      const r = D > 1e-12 ? (qx * s.n[0] + qz * s.n[2]) / nh / D : -Infinity;
+      if (r > best.r) best = { k, r };
+    });
+    const col = map.columns[best.k]!;
+    const s = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
+    const r = Math.min(1, Math.max(0, best.r));
+    const ct = s.t[0] * C[0] + s.t[2] * C[2];
+    const L = capSpan(map, s, cap).fromCap(r > 1e-9 ? ct + (qx * s.t[0] + qz * s.t[2]) / r : ct);
+    const B = col.bounds;
+    const edge = up ? B[B.length - 1]! : B[0]!;
+    const span = up ? H - edge : edge + H;
+    const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
+    const g = topOut(1 - r, bandFor(E, span), ke, dMin);
+    return { yaw: yawOf(col, s, L), pitch: up ? edge + g * span : edge - g * span };
+  }
+  const f = map.facets[fi]!;
+  for (const col of map.columns) {
+    const i = col.facets.indexOf(fi);
+    if (i < 0) continue;
+    const pm = (col.bounds[i]! + col.bounds[i + 1]!) / 2;
+    const ph = (col.bounds[i + 1]! - col.bounds[i]!) / 2;
+    const s = dot(f.b, p);
+    return { yaw: yawOf(col, f, dot(f.t, p)), pitch: pm + edgeUnmap(s - (f.bLo + f.bHi) / 2, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke) * ph };
+  }
+  return { yaw: 0, pitch: 0 };
+}
+
+/**
+ * ⭐⭐⭐ THROUGH AN EDGE, NO JUMP (the edge bands — `edgeDeg` before a slice's / band's end): the gizmo of the facet being left and the gizmo where the next
+ * one starts can differ — the real outline is not the contour's (a column standing out 45 mm, a top 41 mm above the core's: probed on `Scene_1`). In the
+ * band the gizmo is BLENDED toward the next facet's first point, `w` rising (smoothstep) to ½ at the end — where both sides meet: the gizmo crosses the edge
+ * continuously. `h`: across the column's slice end (the yaw `yawThere` just inside the next column); `v`: across a pitch bound of the column — a facet to the
+ * next up / down it, or a cap (`pitchThere` just past it). `null`: not in that band (or no band).
+ */
+export function edgeBlend(
+  map: FaceMap,
+  yaw: number,
+  pitch: number,
+  opts: MapOpts,
+): { readonly h: { readonly w: number; readonly yawThere: number } | null; readonly v: { readonly w: number; readonly pitchThere: number } | null } {
+  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
+  if (!(E > 0)) return { h: null, v: null };
   const ease = (u: number): number => {
     const x = Math.min(1, Math.max(0, u));
     return 0.5 * x * x * (3 - 2 * x);
   };
-  const E = 1e-7;
-  const p = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+  const EPS = 1e-7;
+  const p = Math.max(-H, Math.min(H, pitch));
+  const { k, a } = columnAt(map, yaw);
+  const col = map.columns[k]!;
+  const B = col.bounds;
+  const lo = B[0]!;
+  const hi = B[B.length - 1]!;
+  const spanT = H - hi;
+  const spanB = lo + H;
   let h: { w: number; yawThere: number } | null = null;
-  // across: in a side's band, and over a top / under a bottom while still in its first band (the side's end is blended in there)
-  if (Math.abs(p) <= Q * (1 + band) + 1e-12) {
-    const { k, a } = sideOfYaw(yaw);
-    if (Math.abs(a) > 1 - band) {
-      const sg = a < 0 ? -1 : 1;
-      h = { w: ease((Math.abs(a) - (1 - band)) / band), yawThere: k * 2 * Q + sg * (Q + E) };
-    }
+  // across: in the column's bands, and over a cap while still in its first band (the slice's end is blended in there) — ⭐ (Step 5) at EVERY pitch where
+  // the next column's caps start at another pitch (a hexagonal prism's end column tops out at 45°, its slanted one at 60°: their quarters' places differ
+  // at the slice's end, so the blend carries them through; on a box the bounds are equal — Step 4c-bis's rule, unchanged)
+  const bandY = bandFor(E, col.hw);
+  if (bandY > 0 && Math.abs(a) > 1 - bandY) {
+    const sg = a < 0 ? -1 : 1;
+    const yawThere = col.mid + sg * (col.hw + EPS);
+    const nb = map.columns[columnAt(map, yawThere).k]!.bounds;
+    const same = Math.abs(nb[0]! - lo) < 1e-12 && Math.abs(nb[nb.length - 1]! - hi) < 1e-12;
+    if (!same || (p <= hi + Math.min(0.5 * spanT, E) + 1e-12 && p >= lo - Math.min(0.5 * spanB, E) - 1e-12))
+      h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
   }
   let v: { w: number; pitchThere: number } | null = null;
-  const sg = p < 0 ? -1 : 1;
-  const b = Math.abs(p) / Q;
-  if (b <= 1 && b > 1 - band) v = { w: ease((b - (1 - band)) / band), pitchThere: sg * (Q + E) };
-  else if (b > 1 && b < 1 + band) v = { w: ease((1 + band - b) / band), pitchThere: sg * (Q - E) };
+  for (let j = 0; j < B.length && v === null; j++) {
+    const sb = j === 0 ? spanB : (B[j]! - B[j - 1]!) / 2;
+    const sa = j === B.length - 1 ? spanT : (B[j + 1]! - B[j]!) / 2;
+    const db = Math.min(0.5 * sb, E);
+    const da = Math.min(0.5 * sa, E);
+    // ⭐ the bound itself on the side `mapTarget` puts it: the facet below an inner bound and the top's, the facet ABOVE the bottom's (⛔ read as the
+    // bottom cap's: on a hexagonal end, whose bottom edge is narrower than the end, a 41 mm step there — probed)
+    const below = j === 0 ? p < B[j]! : p <= B[j]!;
+    if (db > 0 && below && p > B[j]! - db) v = { w: ease((p - (B[j]! - db)) / db), pitchThere: B[j]! + EPS };
+    else if (da > 0 && !below && p < B[j]! + da) v = { w: ease((B[j]! + da - p) / da), pitchThere: B[j]! - EPS };
+  }
   return { h, v };
 }
 
-/** ⭐ The stack a gizmo's face is on: its normal's nearest world axis (the slide's face); no normal — the box's face nearest `p`. */
-export function stackOfNormal(n: Vec3 | null, p: Vec3, box: ShellBox): number {
-  if (n !== null && Math.hypot(n[0], n[1], n[2]) > 1e-9) {
-    const ax = ([0, 1, 2] as const).reduce<0 | 1 | 2>((m, k) => (Math.abs(n[k]) > Math.abs(n[m]) ? k : m), 0);
-    return stackIndex(ax, n[ax] >= 0 ? 1 : -1);
+/**
+ * ⭐⭐⭐ THE PLACE THROUGH AN EDGE, NO JUMP (`edgeBlend` applied): `here` (the point at the angles) blended toward the next facet's first point — up / down
+ * a column (`v`) and across a slice's end (`h`, of the up / down blends at both yaws, each read in ITS column — a column's pitch bounds are its own) — to
+ * their middle at the end. `at`: the point at other angles (the wiring's gizmo, a vector's place); `null` there leaves the point as it is.
+ */
+export function blendThroughEdges(map: FaceMap, yaw: number, pitch: number, opts: MapOpts, here: Vec3, at: (yaw: number, pitch: number) => Vec3 | null): Vec3 {
+  const eb = edgeBlend(map, yaw, pitch, opts);
+  if (eb.h === null && eb.v === null) return here;
+  const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
+  const upDown = (yw: number, q: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): Vec3 => {
+    if (v === null) return q;
+    const o = at(yw, v.pitchThere);
+    return o === null ? q : mix(q, o, v.w);
+  };
+  let p = upDown(yaw, here, eb.v);
+  if (eb.h !== null) {
+    const o = at(eb.h.yawThere, pitch);
+    if (o !== null) p = mix(p, upDown(eb.h.yawThere, o, edgeBlend(map, eb.h.yawThere, pitch, opts).v), eb.h.w);
   }
-  let best = { k: 0, d: Infinity };
-  for (const ax of [0, 1, 2] as const)
-    for (const sg of [1, -1] as const) {
-      const d = Math.abs(p[ax] - (sg > 0 ? box.hi[ax] : box.lo[ax]));
-      if (d < best.d) best = { k: stackIndex(ax, sg), d };
-    }
-  return best.k;
+  return p;
+}
+
+/** ⭐ The facet a gizmo's face is on: the facet whose normal is nearest its normal (the slide's face); no normal — the facet whose plane is nearest `p`. */
+export function facetOfNormal(map: FaceMap, n: Vec3 | null, p: Vec3): number {
+  let best = { i: 0, s: -Infinity };
+  if (n !== null && Math.hypot(n[0], n[1], n[2]) > 1e-9) {
+    map.facets.forEach((f, i) => {
+      const s = dot(n, f.n);
+      if (s > best.s) best = { i, s };
+    });
+    return best.i;
+  }
+  map.facets.forEach((f, i) => {
+    const s = -Math.abs(dot(f.n, p) - f.e);
+    if (s > best.s) best = { i, s };
+  });
+  return best.i;
 }

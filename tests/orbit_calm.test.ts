@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { alignedShare, calmHeading, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
-import { mapTarget } from "../src/input/face_map";
+import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
@@ -50,7 +50,8 @@ describe("⭐⭐⭐ THE CALM (58d86ff) — the piece and the camera near square 
 
 describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from the carrier, the shares and the face EASED (the face at a height changes with the height)", () => {
   it("⭐⭐⭐ (Step 4c-bis) dx's run: THE SIDE the face map's yaw is in, across the CORE box — a slanted block at the front's end, a part bridged to it belong to the front's run (⛔ read as faces of their own — runs of a few cm, the shares whole — a pure dx swung the piece up to the orbit's whole pitch and the camera back 70 cm: the owner's bounce, probed); the calm's normal the side's world axis", () => {
-    const core = { lo: [-0.243, 0, -0.051] as [number, number, number], hi: [0.248, 0.54, -0.018] as [number, number, number] };
+    // ⭐ (Step 5) the core box as a faces contour with no face: its six sides, virtual
+    const core = buildFaceMap([], { lo: [-0.243, 0, -0.051] as [number, number, number], hi: [0.248, 0.54, -0.018] as [number, number, number] });
     const opts = { edgeMm: 10, edgeDeg: 10 };
     const D = Math.PI / 180;
     // the −z front's slice (225° … 315°): at its middle, near its right end, at the slice's very end — one run, the front's whole width

@@ -12,7 +12,7 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
-import { buildFaceMap, edgeBlend, mapAngles, mapTarget, planeAxes, stackDepthAt, stackOfNormal, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, facetOfNormal, mapAngles, mapTarget, stackDepthAt, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -33,9 +33,8 @@ import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
-/** ⭐⭐⭐ (Step 4c-bis) the ray along the axis is taken for the exact surface within this of its group's plane (m) — a slanted block; else the plane. */
-const MAP_REFINE_M = 0.025;
-/** ⭐ …cast from this far outside the box (m). */
+/** ⭐ (Step 4c-bis) the ray along the facet's normal for the real surface, cast from this far outside the box (m). ⭐⭐⭐ (Step 5, D3) taken WHATEVER its
+ * depth — over an empty slot its bottom (⛔ Step 4c-bis: refused beyond 25 mm of the region's plane, the gizmo across the slot's mouth). */
 const MAP_OUT_M = 0.05;
 /** ⭐ (Step 4c-bis) out of step after the slide: the map's angles close on the orbit's at 1 ± this of the orbit's step (`syncAngle`). */
 const MAP_CATCH_UP = 0.5;
@@ -199,8 +198,10 @@ function calmFrame(st: SceneState, dtMs: number): void {
   let sH = 1;
   let sV = 1;
   if (t !== null && t.band === "SIDE") {
-    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block)
-    n = t.normal;
+    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block) — ⭐⭐⭐ (Step 5) the FACET's normal, read level (the
+    // calm's frame turns about the world's up: a facet sloping up a column, its heading)
+    const h = Math.hypot(t.normal[0], t.normal[2]);
+    n = h > 1e-9 ? [t.normal[0] / h, 0, t.normal[2] / h] : t.normal;
     const L = t.across;
     sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
     // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
@@ -326,13 +327,14 @@ function mapOpts(st: SceneState): MapOpts {
 
 /**
  * ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`) — the placed parts' faces on their MODEL pose (the slide's own: `faceWorld`,
- * `faceTrianglesWorld`), per placed set; `null` with no box.
+ * `faceTrianglesWorld`), per placed set; `null` with no box. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — its two knobs (D5) sliders, in the cache's key.
  */
 function faceMapOf(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
   if (box === null) return null;
-  if (st.asmFaceMap !== null && st.asmFaceMap.key === parts.key) return st.asmFaceMap.map;
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
+  if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
   const faces: MapFace[] = [];
   for (const [id, obj] of st.world.objects) {
     if (obj.orbited === true || obj.frozen === true || !goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) continue;
@@ -345,63 +347,56 @@ function faceMapOf(st: SceneState): FaceMap | null {
       faces.push({ normal: w.normal, centre: w.centre, tris });
     }
   }
-  const map = buildFaceMap(faces, box);
-  st.asmFaceMap = { key: parts.key, map };
+  const map = buildFaceMap(faces, box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  st.asmFaceMap = { key, map };
   return map;
 }
 
 /**
- * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place on the box (`mapTarget`), the stack its face
- * looks along, the FRONTMOST closed region there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along
- * the axis from outside the box for the exact surface (`modelCast` — the parts at rest), taken within `MAP_REFINE_M` of the region's plane. The point keeps
- * the place's two other coordinates EXACTLY: on a side the green's height and the red's plane, by construction.
+ * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place (`mapTarget`), the FRONTMOST closed region
+ * there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along the normal from outside the box
+ * (`modelCast` — the parts at rest) for the real surface. The point keeps the place's two other coordinates EXACTLY: the green's and the red's planes, by
+ * construction. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — the facet's stack, its normal, its frame (`t`, `b`); ⭐⭐⭐ (D3) the ray's hit taken WHATEVER its depth:
+ * over an empty slot (a hole the region closes) the gizmo at its BOTTOM — the region still chooses the face and keeps the gizmo continuous across the rim,
+ * only the depth is the real one; a slot through the whole assembly (no hit): the region's plane. The piece and the camera ride the shell (Step 2).
  */
 function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const map = faceMapOf(st);
   if (map === null) return null;
-  const t = mapTarget(map.core, yaw, pitch, mapOpts(st));
-  const s = map.stacks[t.stack]!;
-  const [i0, i1] = planeAxes(s.axis);
-  const at = stackDepthAt(s, t.surface[i0]!, t.surface[i1]!);
+  const t = mapTarget(map, yaw, pitch, mapOpts(st));
+  const f = map.facets[t.stack]!;
   const n = t.normal;
-  if (at === null) return { hit: { point: t.surface, normal: n, host: null }, t };
-  const p: [number, number, number] = [t.surface[0], t.surface[1], t.surface[2]];
-  p[s.axis] = at.depth * s.sign;
+  const sf = t.surface;
+  const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);
+  if (at === null) return { hit: { point: sf, normal: n, host: null }, t };
+  const level = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
+  // along the normal onto the group's plane — the place's two other coordinates kept
+  const onto = (d: number): Vec3 => {
+    const k = d - level(sf);
+    return [sf[0] + n[0] * k, sf[1] + n[1] * k, sf[2] + n[2] * k];
+  };
+  const p = onto(at.depth);
   if (at.inside) {
-    const face = s.sign > 0 ? map.box.hi[s.axis] : map.box.lo[s.axis];
-    const o: [number, number, number] = [p[0], p[1], p[2]];
-    o[s.axis] = face + s.sign * MAP_OUT_M;
-    const h = modelCast(st, o, [-n[0], -n[1], -n[2]], map.box.hi[s.axis] - map.box.lo[s.axis] + 2 * MAP_OUT_M);
-    if (h !== null && Math.abs(h.point[s.axis] * s.sign - at.depth) <= MAP_REFINE_M) {
-      p[s.axis] = h.point[s.axis];
-      return { hit: { point: p, normal: h.normal ?? n, host: h.host }, t };
-    }
+    const b = map.box;
+    const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
+    const out = sup(1) + MAP_OUT_M;
+    const o: Vec3 = [p[0] + n[0] * (out - level(p)), p[1] + n[1] * (out - level(p)), p[2] + n[2] * (out - level(p))];
+    const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
+    if (h !== null) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
   }
   return { hit: { point: p, normal: n, host: null }, t };
 }
 
 /**
- * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP (`edgeBlend`): in an edge band, the face's gizmo (`rawGizmo`) blended toward the next face's
- * first one — up / down a side (`v`) and across a side's end (`h`, of the up / down blends at both yaws) — to their middle at the slice's end. Its normal,
- * host and place: the face's own.
+ * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP: in an edge band, the facet's gizmo (`rawGizmo`) blended toward the next facet's first one —
+ * ⭐ (Step 5) the rule in `input/face_map.ts` (`blendThroughEdges`, `edgeBlend`), vectored on a non-box contour. Its normal, host and place: the facet's own.
  */
-function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const here = rawGizmo(st, yaw, pitch);
-  if (here === null) return null;
-  const eb = edgeBlend(yaw, pitch, mapOpts(st));
-  if (eb.h === null && eb.v === null) return here;
-  const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
-  const upDown = (yw: number, at: Vec3): Vec3 => {
-    if (eb.v === null) return at;
-    const o = rawGizmo(st, yw, eb.v.pitchThere);
-    return o === null ? at : mix(at, o.hit.point, eb.v.w);
-  };
-  let p = upDown(yaw, here.hit.point);
-  if (eb.h !== null) {
-    const o = rawGizmo(st, eb.h.yawThere, pitch);
-    if (o !== null) p = mix(p, upDown(eb.h.yawThere, o.hit.point), eb.h.w);
-  }
-  return { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
+  const map = faceMapOf(st);
+  if (here === null || map === null) return null;
+  const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null);
+  return p === here.hit.point ? here : { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
 }
 
 /**
@@ -493,7 +488,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)
     const map = faceMapOf(st);
-    st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map.core, st.asmG, stackOfNormal(st.gizmoNormal ?? null, st.asmG, map.core), mapOpts(st)) : null;
+    st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map, st.asmG, facetOfNormal(map, st.gizmoNormal ?? null, st.asmG), mapOpts(st)) : null;
     st.asmShown = null;
     st.asmLock = null;
     st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";

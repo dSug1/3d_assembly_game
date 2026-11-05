@@ -433,6 +433,12 @@ export interface GestureConfig {
   faceEdgeSlideMm: number;
   /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
   faceEdgeSlideDeg: number;
+  /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, STEP 5 — D5, the owner: *"step 5: ok"*) THE FACES CONTOUR: the placed parts' faces within this angle of
+   * a facet's normal are that facet's (deg — `Scene_1`'s slanted block, 15° off −z, is the front's)… */
+  facetMergeDeg: number;
+  /** ⭐⭐⭐ …and a facet is kept only when the real face area in its plane (its main region, holes closed) is at least this share of its own polygon on the
+   * contour (0 … 1) — a frustum's slanted side, a plane cutting the contour across, never tilts the orbit; `Scene_1` keeps exactly its six faces */
+  facetMinShare: number;
   /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
    * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
   faceSpanShareH: number;
@@ -854,6 +860,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
   faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
+  facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
+  facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
   faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
   faceSpanZoneMinHCm: 3, // …at least 3 cm
@@ -1017,6 +1025,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   for (const k of ["gizmoEaseMs", "orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
   if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
   if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
+  if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
+  if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);
   for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
   for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);

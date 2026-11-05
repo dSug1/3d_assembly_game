@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   buildFaceMap,
-  coreBox,
+  columnAt,
   edgeBlend,
   edgeMap,
   edgeUnmap,
@@ -14,13 +14,14 @@ import {
   mapTarget,
   regionArea,
   regionContains,
-  sideOfYaw,
+  facetFrame,
+  facetOfNormal,
   stackDepthAt,
-  stackIndex,
-  stackOfNormal,
+  stackOf,
   syncAngle,
   topIn,
   topOut,
+  type FaceMap,
   type MapFace,
 } from "../src/input/face_map";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
@@ -33,6 +34,15 @@ const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b
 const opts = { edgeMm: 10, edgeDeg: 10 };
 /** a painting-like box: 0.5 m wide (x), 0.6 m high (y), 33 mm deep (z) */
 const box: ShellBox = { lo: [-0.25, 0, -0.05], hi: [0.25, 0.6, -0.017] };
+/** ⭐ (Step 5) the box as a faces contour with no face: its six sides, virtual — Step 4c-bis's core box map */
+const bm = buildFaceMap([], box);
+/** ⭐ the facet facing `n` (a world axis) */
+const facing = (fm: FaceMap, n: Vec3): number => fm.facets.findIndex((f) => dist(f.n, n) < 1e-9);
+/** ⭐ a point's (t, b) on a facet */
+const tb = (fm: FaceMap, i: number, p: Vec3): [number, number] => {
+  const f = fm.facets[i]!;
+  return [p[0] * f.t[0] + p[1] * f.t[1] + p[2] * f.t[2], p[0] * f.b[0] + p[1] * f.b[1] + p[2] * f.b[2]];
+};
 
 /** an axis-aligned rectangle face, normal `n` (a world axis), at `level` along it, spanning [a0, a1] × [b0, b1] on the plane's two axes in order */
 function rectFace(axis: 0 | 1 | 2, sign: 1 | -1, level: number, a0: number, a1: number, b0: number, b1: number): MapFace {
@@ -71,11 +81,12 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
   it("⭐⭐ the stacks: faces by the axis they face, by plane, by contact — a 3 mm joint closes (the slide's 1.6 mm growth), 10 mm does not; the FRONTMOST region holds the point, else the NEAREST group's plane", () => {
     const front = (x0: number, x1: number) => rectFace(2, -1, -0.05, x0, x1, 0, 0.6);
     // two faces of the front, their cores 3 mm apart → ONE group; 10 mm apart → two
-    expect(buildFaceMap([front(-0.25, 0), front(0.003, 0.25)], box).stacks[stackIndex(2, -1)]!.groups.length).toBe(1);
-    expect(buildFaceMap([front(-0.25, 0), front(0.01, 0.25)], box).stacks[stackIndex(2, -1)]!.groups.length).toBe(2);
+    const groupsOf = (fm: FaceMap) => fm.facets[facing(fm, [0, 0, -1])]!.groups.length;
+    expect(groupsOf(buildFaceMap([front(-0.25, 0), front(0.003, 0.25)], box))).toBe(1);
+    expect(groupsOf(buildFaceMap([front(-0.25, 0), front(0.01, 0.25)], box))).toBe(2);
     // a part sticking out of the front (z = −0.09) over x 0 … 0.1, y 0.2 … 0.3
     const fm = buildFaceMap([front(-0.25, 0.25), rectFace(2, -1, -0.09, 0, 0.1, 0.2, 0.3)], { lo: [-0.25, 0, -0.09], hi: [0.25, 0.6, -0.017] });
-    const s = fm.stacks[stackIndex(2, -1)]!;
+    const s = fm.facets[facing(fm, [0, 0, -1])]!; // its (t, b): x, y
     expect(stackDepthAt(s, 0.05, 0.25)).toEqual({ depth: 0.09, group: 0, inside: true }); // on the protrusion (frontmost first: depth = −z)
     expect(stackDepthAt(s, -0.1, 0.25)!.depth).toBeCloseTo(0.05, 12); // on the painting
     const off = stackDepthAt(s, -0.4, 0.5)!; // beside the painting: its plane, not inside
@@ -83,8 +94,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(off.depth).toBeCloseTo(0.05, 12);
     // a face 15° off −z (the slanted block) faces −z; one 30° off faces none
     const slant = (deg: number): MapFace => ({ ...front(-0.1, 0.1), normal: [Math.sin(deg * D), 0, -Math.cos(deg * D)] });
-    expect(buildFaceMap([slant(15)], box).stacks[stackIndex(2, -1)]!.groups.length).toBe(1);
-    expect(buildFaceMap([slant(30)], box).stacks[stackIndex(2, -1)]!.groups.length).toBe(0);
+    const { t: ft, b: fb } = facetFrame([0, 0, -1]);
+    expect(stackOf([slant(15)], [0, 0, -1], ft, fb, Math.cos(20 * D)).length).toBe(1);
+    expect(stackOf([slant(30)], [0, 0, -1], ft, fb, Math.cos(20 * D)).length).toBe(0);
   });
 
   it("⭐⭐⭐ the CORE box: each side at its MAIN face — a part sticking out of the front does not widen it (⛔ the whole box: at the corner the side's ray met that part's side, 25 cm in — probed)", () => {
@@ -102,24 +114,27 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(fm.core.lo[2]).toBeCloseTo(-0.05, 12); // the painting's front, not the protrusion's −0.09
     expect(fm.core.hi[2]).toBeCloseTo(-0.017, 12);
     expect(fm.core.lo[0]).toBeCloseTo(-0.25, 12);
-    expect(coreBox([], whole)).toEqual(whole); // no faces: the whole box
+    const none = buildFaceMap([], whole).core; // no faces: the whole box
+    for (const k of [0, 1, 2]) expect([none.lo[k], none.hi[k]]).toEqual([expect.closeTo(whole.lo[k]!, 12), expect.closeTo(whole.hi[k]!, 12)]);
     // at the corner (the slice's end) the −x side's place is the painting's real corner: its ray meets the left side, not the protrusion's side at x = 0
-    const t = mapTarget(fm.core, 225 * D - 1e-9, 0, opts); // the −z side's slice end toward −x
-    const at = stackDepthAt(fm.stacks[stackIndex(0, -1)]!, t.surface[1], t.surface[2])!;
+    const t = mapTarget(fm, 225 * D - 1e-9, 0, opts); // the −z side's slice end toward −x
+    const ix = facing(fm, [-1, 0, 0]);
+    expect(t.stack).toBe(ix);
+    const at = stackDepthAt(fm.facets[ix]!, ...tb(fm, ix, t.surface))!;
     expect(at.depth * -1).toBeCloseTo(-0.25, 12);
   });
 
   it("⭐⭐⭐ ON A SIDE the green is a HORIZONTAL plane (a dx keeps the height) and the red the WORLD's vertical plane square to the side (a dy keeps the place across it) — by construction (I1)", () => {
     for (const pitch of [-40, -20, 0, 10, 33, 44]) {
-      const y0 = mapTarget(box, 0, pitch * D, opts).surface[1];
-      for (let yaw = 0; yaw < 360; yaw += 0.5) expect(mapTarget(box, yaw * D, pitch * D, opts).surface[1]).toBeCloseTo(y0, 12);
+      const y0 = mapTarget(bm, 0, pitch * D, opts).surface[1];
+      for (let yaw = 0; yaw < 360; yaw += 0.5) expect(mapTarget(bm, yaw * D, pitch * D, opts).surface[1]).toBeCloseTo(y0, 12);
     }
     for (const yaw of [-170, -100, -44, 0, 12, 80, 135, 200, 300]) {
-      const t0 = mapTarget(box, yaw * D, 0, opts);
+      const t0 = mapTarget(bm, yaw * D, 0, opts);
       const lat = (p: Vec3) => p[0] * t0.normal[2] - p[2] * t0.normal[0]; // across the side (⟂ its normal, horizontal)
       const dep = (p: Vec3) => p[0] * t0.normal[0] + p[2] * t0.normal[2];
       for (let pitch = -45; pitch <= 45; pitch += 0.5) {
-        const t = mapTarget(box, yaw * D, pitch * D, opts);
+        const t = mapTarget(bm, yaw * D, pitch * D, opts);
         expect(lat(t.surface)).toBeCloseTo(lat(t0.surface), 12);
         expect(dep(t.surface)).toBeCloseTo(dep(t0.surface), 12);
         expect(t.band).toBe("SIDE");
@@ -131,19 +146,19 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     const step = 0.25 * D;
     let worst = 0;
     for (let pitch = -90; pitch <= 90; pitch += 7.5)
-      for (let yaw = 0; yaw < 2 * Math.PI; yaw += step) worst = Math.max(worst, dist(mapTarget(box, yaw, pitch * D, opts).surface, mapTarget(box, yaw + step, pitch * D, opts).surface));
+      for (let yaw = 0; yaw < 2 * Math.PI; yaw += step) worst = Math.max(worst, dist(mapTarget(bm, yaw, pitch * D, opts).surface, mapTarget(bm, yaw + step, pitch * D, opts).surface));
     for (let yaw = 0; yaw < 360; yaw += 7.5)
-      for (let p = -90; p < 90; p += 0.25) worst = Math.max(worst, dist(mapTarget(box, yaw * D, p * D, opts).surface, mapTarget(box, yaw * D, (p + 0.25) * D, opts).surface));
+      for (let p = -90; p < 90; p += 0.25) worst = Math.max(worst, dist(mapTarget(bm, yaw * D, p * D, opts).surface, mapTarget(bm, yaw * D, (p + 0.25) * D, opts).surface));
     expect(worst).toBeLessThan(0.006); // the steepest: the 0.6 m side over 70° of pitch, 0.25° → 2.1 mm; the 0.5 m front → 1.8 mm
     for (const yaw of [0, 33, 90, 181, 270])
       for (const sg of [1, -1]) {
-        const c = mapTarget(box, yaw * D, (sg * Math.PI) / 2, opts).surface;
+        const c = mapTarget(bm, yaw * D, (sg * Math.PI) / 2, opts).surface;
         expect(dist(c, [0, sg > 0 ? 0.6 : 0, -0.0335])).toBeLessThan(1e-12);
       }
   });
 
   it("⭐⭐⭐ THROUGH AN EDGE, SLOWLY (the owner: *\"let the gizmo move slowly over the last and first few mm of the two faces during the arc\"*): the slice's last 10° cross the face's last 10 mm, the next face's first 10° its first 10 mm — never a wait", () => {
-    const at = (yaw: number) => mapTarget(box, yaw * D, 0, opts).surface;
+    const at = (yaw: number) => mapTarget(bm, yaw * D, 0, opts).surface;
     // the −z front (its slice 225° … 315°): its last 10° before 315° cross its last 10 mm (x 0.24 … 0.25)
     expect(at(305)[0]).toBeCloseTo(0.24, 9);
     expect(at(315 - 1e-9)[0]).toBeCloseTo(0.25, 6);
@@ -159,24 +174,24 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     for (const s of [-1, -0.95, -0.5, 0, 0.3, 0.8, 0.85, 0.999, 1]) expect(edgeUnmap(edgeMap(s, 0.25, 0.3, 0.01), 0.25, 0.3, 0.01)).toBeCloseTo(s, 12);
     for (const f of [0, 0.1, 0.22, 0.5, 1]) expect(topOut(topIn(f, 0.22, 0.01, 0.0165), 0.22, 0.01, 0.0165)).toBeCloseTo(f, 12);
     // no band: no stretch (linear, the corner at the slice's end)
-    expect(mapTarget(box, 305 * D, 0, { edgeMm: 10, edgeDeg: 0 }).surface[0]).toBeCloseTo(0.25 * (35 / 45), 12);
+    expect(mapTarget(bm, 305 * D, 0, { edgeMm: 10, edgeDeg: 0 }).surface[0]).toBeCloseTo(0.25 * (35 / 45), 12);
   });
 
   it("⭐⭐⭐ THE BLEND THROUGH AN EDGE (`edgeBlend`): ½ at a slice's end from either side (both sides meet there), rising from 0 at the band's start; the same up a side to the top", () => {
-    const b = (yaw: number, pitch = 0) => edgeBlend(yaw * D, pitch * D, opts);
+    const b = (yaw: number, pitch = 0) => edgeBlend(bm, yaw * D, pitch * D, opts);
     expect(b(270).h).toBeNull();
     expect(b(305 - 1e-6).h).toBeNull();
     expect(b(315 - 1e-9).h!.w).toBeCloseTo(0.5, 6);
     expect(b(315 + 1e-9).h!.w).toBeCloseTo(0.5, 6);
-    expect(sideOfYaw(b(315 - 1e-9).h!.yawThere).k).toBe(0); // toward the +x side
-    expect(sideOfYaw(b(315 + 1e-9).h!.yawThere).k).toBe(3); // back toward the −z front
+    expect(columnAt(bm, b(315 - 1e-9).h!.yawThere).k).toBe(0); // toward the +x side
+    expect(columnAt(bm, b(315 + 1e-9).h!.yawThere).k).toBe(3); // back toward the −z front
     expect(b(310).h!.w).toBeGreaterThan(0);
     expect(b(310).h!.w).toBeLessThan(0.5);
     expect(b(0, 45 - 1e-9).v!.w).toBeCloseTo(0.5, 6);
     expect(b(0, 45 + 1e-9).v!.w).toBeCloseTo(0.5, 6);
     expect(b(0, 20).v).toBeNull();
     expect(b(0, 60).v).toBeNull();
-    expect(edgeBlend(0, 44.99 * D, { edgeMm: 10, edgeDeg: 0 })).toEqual({ h: null, v: null });
+    expect(edgeBlend(bm, 0, 44.99 * D, { edgeMm: 10, edgeDeg: 0 })).toEqual({ h: null, v: null });
   });
 
   it("⭐⭐ AND BACK (`mapAngles` — after the slide the map's angles put where it left the gizmo): every place on the box read back to its own angles", () => {
@@ -185,12 +200,12 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     for (let k = 0; k < 400; k++) {
       const yaw = rnd() * 2 * Math.PI;
       const pitch = (rnd() * 2 - 1) * (Math.PI / 2 - 1e-3);
-      const t = mapTarget(box, yaw, pitch, opts);
-      const back = mapAngles(box, t.surface, t.stack, opts);
-      expect(dist(mapTarget(box, back.yaw, back.pitch, opts).surface, t.surface)).toBeLessThan(1e-9);
+      const t = mapTarget(bm, yaw, pitch, opts);
+      const back = mapAngles(bm, t.surface, t.stack, opts);
+      expect(dist(mapTarget(bm, back.yaw, back.pitch, opts).surface, t.surface)).toBeLessThan(1e-9);
     }
-    expect(stackOfNormal([0.1, 0.05, -0.99], [0, 0, 0], box)).toBe(stackIndex(2, -1));
-    expect(stackOfNormal(null, [0.26, 0.3, -0.033], box)).toBe(stackIndex(0, 1));
+    expect(facetOfNormal(bm, [0.1, 0.05, -0.99], [0, 0, 0])).toBe(facing(bm, [0, 0, -1]));
+    expect(facetOfNormal(bm, null, [0.26, 0.3, -0.033])).toBe(facing(bm, [1, 0, 0]));
   });
 
   it("⭐⭐ OUT OF STEP, NO JUMP (`syncAngle`): the map's angle follows the orbit's step faster while it runs away, slower while it comes back — never against the finger, never a jump; caught up, exactly the orbit's", () => {
@@ -219,12 +234,12 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
   it("⭐⭐⭐ WIRED (`render/assembly_wiring.ts`): the gizmo from the face map at the map's angles (`mapGizmo` → `rawGizmo`, `edgeBlend`), the sections drawn from the same function; ⛔ the carrier, its hulls and its held drops gone; the knobs are sliders", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const m = mapGizmo(st, mq.yaw, mq.pitch);");
-    expect(a).toContain("const t = mapTarget(map.core, yaw, pitch, mapOpts(st));");
-    expect(a).toContain("const at = stackDepthAt(s, t.surface[i0]!, t.surface[i1]!);");
-    expect(a).toContain("const eb = edgeBlend(yaw, pitch, mapOpts(st));");
+    expect(a).toContain("const t = mapTarget(map, yaw, pitch, mapOpts(st));");
+    expect(a).toContain("const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);");
+    expect(a).toContain("const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null);");
     expect(a).toContain("st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };");
     expect(a).toContain("st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };");
-    expect(a).toContain("st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map.core, st.asmG,");
+    expect(a).toContain("st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map, st.asmG, facetOfNormal(map,");
     for (const gone of ["carrierFrame(", "onGreen(", "facingChain(", "loopFor(", "faceTurnedAway", "castGizmo("]) expect(a).not.toContain(gone);
     expect(DEFAULT_CONFIG.faceEdgeSlideMm).toBe(10);
     expect(DEFAULT_CONFIG.faceEdgeSlideDeg).toBe(10);
