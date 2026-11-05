@@ -2364,3 +2364,9 @@ line**, `/proto/` and `PROTO_BRANCH` retired → `50_BUILD_DEPLOY/DEPLOY_GITHUB_
   moved into `input/face_map.ts` (`blendThroughEdges`); ⭐ D3 — the gizmo at the REAL depth under it: a slot's bottom, an overhang's surface (⛔ the 25 mm
   refusal deleted). `Scene_1`'s gizmo over 16 380 angles identical to Step 4c-bis but for D3's depths. Vectored on a vertical and a horizontal hexagonal
   prism (scope §17). ⛔ No device close.
+* ✅ **The voids, the edges, the piece's support (2026-11-05, `1.0.100-`)** (scope §18): the back-and-forth on a dx + dy mix (every angle the solver
+  tried placed round the LAST frame's gizmo — `placeAtAngles`); a void closed on the green's or the red's travel bridged straight on the facet's plane
+  (D3 amended; open on both: Steps 6–7); a blended place's depth cast (the chord ran inside Piece3); the piece placed by its SUPPORT at the gizmo, not its
+  resting face's centre (`faceLift`). Thirteen traversal probes: blockages 51 → 36, against the finger 2.3 % → 1.2 %, reversals 74 → 14. ⛔ Found, the
+  owner's: close in the piece is placed from one surface point (frozen at a protrusion's depth step, blocked by a part beside the gizmo — Step 8's
+  shell from the parts proposed); the pole's slide swing (Step 6). 1636 vectors. ⛔ No device close.

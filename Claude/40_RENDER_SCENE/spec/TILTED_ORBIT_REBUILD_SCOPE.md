@@ -3,7 +3,7 @@
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
 > function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
-> D5's two sliders (§17) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
+> D5's two sliders (§17) · ✅ **the voids, the edges, the piece's support** (2026-11-05, branch `1.0.100-`, §18 — D3 amended: a void closed on a travel bridged; four root causes from the traversal probes; two more found, the owner's) — ⛔ no device close on any; the half roll moved to the far edge (Q6, §4.1). ⭐⭐⭐ **THE NEXT STEPS REWRITTEN for THE FACET FRAMES** (2026-11-04, the
 > owner — §5 Steps 5–8, §16): the orbit's frame turned at every crossing by the dihedral between the faces. ✅ D2–D5 and I1 decided
 > (2026-11-04, §16.1): Step 5 may be built — ✅ built (§17). **Next: Step 6.**
 > **Reader** · the session that will build it, after the owner has approved this file. Read it whole before the first line of code.
@@ -760,3 +760,69 @@ moves nothing); the shell is still the parts' BOX (Step 8 — round a hexagon th
 underside (Piece43 — now taken, D3; Step 8 decides); `buildFaceMap` runs once per placed set (greedy, O(n²) polygon clips — unmeasured on the iPhone).
 
 ⛔ No device close.
+
+## 18. The voids, the edges, the piece's support — built (2026-11-05, branch `1.0.100-`)
+
+**The owner's asks** (2026-11-05): *"gizmo over a void: the gizmo stays on the red and green contour intersection … No dashed lines"*; *"when I move with
+a mix of dx and dy the gizmo goes to the black face then jumps back and forth … find the true original logic flaw"*; then, on the void: *"it depends if the
+void is open or closed on the section travel: in attachment 1 the void is open on the red section travel so the orbit tilt shall take over once it is
+built, in attachment 2 the void is closed on the green section travel so the green section and the gizmo shall go through"*; and *"run a series of dx and
+dy and mixed dx-dy across the assembly … check jumps + back-and-forth + blockages … analyze the root causes before proposing fixes"*.
+
+**Built — four root causes, one fix each** (no patch: each at the one point every caller shares):
+
+1. ⭐⭐⭐ **THE BACK-AND-FORTH** (`placeAtAngles`, `gizmoAtAngles`; `tests/place_at_angles.test.ts`): since Step 4c-bis the gizmo is a function of the
+   angles, but every angle the SOLVER tried was placed round the gizmo of the FRAME's angles (the last frame's result) — its world moved with its own
+   result. A step met a part and slid the piece down; the gizmo was re-read lower; the way back to the height kept was tried round that lower gizmo — a
+   place lower than the real one, free — and taken: down and up every two frames (probed, seed 7 `DIAG`: v 0.6865 ↔ 0.6808 at the pointer's cadence). Now
+   an angle's place is a function of the angle alone. Probes: 27 back-and-forth → 0.
+2. ⭐⭐⭐ **THE VOID CLOSED ON A TRAVEL** (`stackDepthAt`'s `bridged`, `closedAlong`, `regionReal`; `tests/void_bridge.test.ts`) — **D3 AMENDED**: on the
+   facet's plane (its main group's), no face of that plane under the point but its faces on both sides along `t` (the green's travel on a side) or `b`
+   (the red's): the gizmo and both lines go STRAIGHT THROUGH on the plane, never cast to the void's bottom; a cast still takes what stands IN FRONT of the
+   plane (a part rising out of the void). A void open on both travels keeps its depth until the frame turn (Steps 6–7) — the owner's attachment 1.
+   `Scene_1`'s gizmo grid (`map_grid.mjs`): 1401 of 16 380 angles change — 1174 over the top and 79 under the bottom out to the face's plane (16–58 mm), the
+   148 others side angles in the edge-blend bands following the caps; nothing deeper, no protrusion flattened. ⚠ Cost: A + dy no longer goes into a slot
+   bridged over (D3's *"A + dy going in to the contact"* — on `Scene_1` it never did: Piece44 stops the piece first, §17).
+3. ⭐⭐⭐ **A BLENDED PLACE IS A PLACE; ITS DEPTH IS CAST** (`blendThroughEdges`' `cast`, `blendCast`; `tests/edge_surface.test.ts`): through an edge the
+   gizmo was the CHORD between two real-surface points; where the real outline stands out past the contour's edge (Piece3, 45 mm proud of the −x side) the
+   chord ran through the part — the gizmo 2.8 mm inside it, the close-in dx stalled 630 frames at the front-left corner. Now the ray along the blended
+   normal from half the chord + 5 mm in front: a surface in front of the chord takes the gizmo, never deeper (a concave chord stays in the air, a void
+   stays bridged); both sides of an edge blend to the same place and normal.
+4. ⭐⭐⭐ **THE PIECE'S SUPPORT AT THE GIZMO, NOT ITS RESTING FACE'S CENTRE** (`faceLift`, `placeAtAngles`' lift; the solver's place, the drawn one, the
+   foot): the piece is placed by its resting face's centre (`placeByFaceCentre`) — its BOTTOM — and the approach's end put that centre on the gizmo
+   whatever the direction: in front of a wall half its body behind the wall's plane (only the collision kept it out), round an edge into the next face.
+   Now the piece's nearest point along the direction is the approach's distance from the gizmo: 0 square to the face, its overhang as the direction tilts,
+   smooth. After 3 and 4 the close-in dx goes round the whole assembly four times (it stopped at the first corner).
+
+**The probes** (`orbit_probe.mjs` + `analyse_orbit.mjs`, which now also counts **I7: back-and-forth** — a step > 8 mm back within 6 frames — and **blockages
+on every leg** — the finger moving, the gizmo and the piece still 15 frames, the ±89.5° pole excepted; `DIAG=1` legs mix dx and dy at random angles;
+`AFTER=` evaluates a page expression after the legs). Thirteen runs: constant legs round and over the assembly far / mid / close, at three heights, over
+the poles; random mixed legs, seeds 3 / 7 / 11 / 13 / 17; random pure legs, seeds 5 / 9. `f1618e7` (the back-and-forth fixed) against `0736134`:
+
+| summed over the 13 runs | before | after |
+|---|---|---|
+| blockages (15+ frames) | 51 | **36** |
+| against the finger | 73 of 3 218 (2.3 %) | **51 of 4 259 (1.2 %)** |
+| reversals on one face | 74 | **14** |
+| jumps: piece / camera | 4 / 10 | **4 / 4** |
+| the camera rolled on a wall | 221 | **126** |
+| the piece behind its gizmo's face | 0 | **0** |
+| back-and-forth | 6 | 11 — all the camera's, over the top at ~70° (below) |
+
+**Found, NOT built — the owner decides** (each a root cause, each named where it lives):
+
+* ⛔ **CLOSE IN, THE PIECE IS PLACED FROM ONE SURFACE POINT** — within the shell's offset (60 mm) the foot comes down onto the gizmo, so (a) where a part
+  stands out the gizmo's depth STEPS (95 mm at Piece9's edge on the −x side) and the piece's place jumps (61 mm in 0.001 of `v`): the solver, built on
+  a continuous ring, shrinks every stride below the jump — the piece FROZEN, nothing touched, while the finger's orbit runs on (three turns, probed:
+  17 of the 36 blockages); (b) a part rising BESIDE the gizmo (Piece44, 41 mm above the top) meets the piece's 10 cm body before the gizmo reaches it —
+  blocked, touching (13 of the 36). ⭐ Proposed: the piece's place read from what its FOOTPRINT meets — along the ray, the outermost point where the
+  piece clears the parts' boxes by the approach's distance (the boxes inflated by the piece's own, sphere-traced: no collision query, continuous) — the
+  shell of Step 8 built from the parts instead of their box.
+* ⛔ **THE POLE** — over the top at ~70°, close in, against Piece44 with a dy: the slide's yaw swings ±7.5° every input frame (the piece 2.5 mm, the camera
+  33 mm): near the pole the yaw is a cheap coordinate and the contact's side flips — Step 6's frame turn. The camera's roll under the bottom (−64° … −73°)
+  and the dx at ±90° are Step 6–7's too.
+* ⛔ **THE SLIDE IN A SLOT** — latched in the top's slot (before the void rule led the piece there), every drag was refused (*"at the edge of the hosting
+  faces"*) — the hover (`HOVER.md` §0) waits; the void rule removes the way in.
+
+**Vectors**: `place_at_angles` 3, `void_bridge` 7, `edge_surface` 4 — each RED on the code before it; `face_map`, `facets`, `orbit_shell` wiring strings
+updated. **1636** (1622 + 3 + 7 + 4). ⛔ No device close.
