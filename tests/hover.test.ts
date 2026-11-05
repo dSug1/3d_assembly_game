@@ -405,7 +405,8 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
     const { orbitFrame } = await import("../src/input/piece_orbit_solver");
     const { orbitFrameUnderHover } = await import("../src/input/hover");
     const q: OrbitQ = { yaw: 1, v: 0.4, zoom: 1 };
-    const fr = orbitFrame({ q, target: q, userV: 0.6, prevRaw: null }, free, { gapM: 0.001, maxQueries: 24 }, { stepM: 0.01, maxM: 0.1 });
+    // ⭐ (2026-11-05, §20) with the finger moving — the way back is paced by the input
+    const fr = orbitFrame({ q, target: q, userV: 0.6, prevRaw: { yaw: q.yaw - 0.3, v: q.v } }, free, { gapM: 0.001, maxQueries: 24 }, { stepM: 0.01, maxM: 0.1 });
     expect(fr.q.v).toBeGreaterThan(0.45); // ⛔ what ran under the hover: the piece taken off the hover's plane
     const held = orbitFrameUnderHover(q);
     expect(held.q).toEqual(q);

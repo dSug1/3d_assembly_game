@@ -10,7 +10,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetWithUp, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, facetOfNormal, mapAngles, mapTarget, stackDepthAt, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -25,9 +25,10 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShare, sharesShowing, shownDir } from "../input/orbit_calm";
-import { qFromAxisAngle, qRotate, type Vec3 } from "../core/vec";
-import { FRAME_BACK_MARGIN_RAD, frameClamp, frameStep, rebaseAngles, rollOwed, rollStep, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
+import { alignedShare, poleWeight, easeNormal, easeToward, edgeShare, sharesShowing, shownDir } from "../input/orbit_calm";
+import type { Vec3 } from "../core/vec";
+import { FRAME_BACK_MARGIN_RAD, capExit, frameStep, holdPitch, rebaseAngles, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
+import { cameraUp } from "../input/camera_up";
 import { cameraOrbitAt } from "../input/follow_camera";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -205,11 +206,21 @@ function calmFrame(st: SceneState, dtMs: number): void {
   let n: Vec3 | null = null;
   let sH = 1;
   let sV = 1;
-  if (t !== null && t.band === "SIDE") {
+  // ⭐⭐⭐ (2026-11-05, the redesign §20) PAST A COLUMN'S BAND — onto a cap's quarter (in a turned frame: the 3° before a crossing back) — the calm of the
+  // column's facet whose edge the place has just passed: its normal, its across-share, the vertical whole (as at its edge) — ⛔ none (both shares whole):
+  // the targets FLIPPED at the band's edge; a contact sliding the place across it (−44° ↔ −45°) swung the camera 100–127 mm every few frames (probed)
+  const capBand = t !== null && t.band !== "SIDE";
+  const colFacet = capBand ? (() => {
+    const map = faceMapOf(st);
+    const col = map?.columns[t.side];
+    return map === null || col === undefined ? null : map.facets[t.band === "TOP" ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
+  })() : null;
+  if (t !== null && (t.band === "SIDE" || colFacet !== null)) {
     // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block) — ⭐⭐⭐ (Step 5) the FACET's normal, read level (the
     // calm's frame turns about the world's up: a facet sloping up a column, its heading)
-    const h = Math.hypot(t.normal[0], t.normal[2]);
-    n = h > 1e-9 ? [t.normal[0] / h, 0, t.normal[2] / h] : t.normal;
+    const nf = colFacet === null ? t.normal : colFacet.n;
+    const h = Math.hypot(nf[0], nf[2]);
+    n = h > 1e-9 ? [nf[0] / h, 0, nf[2] / h] : nf;
     const L = t.across;
     sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
     // ⭐⭐⭐ dy's run: the gizmo's place UP ITS FACET (`b`) within the facet's span — the same span on every side of a contour of one height, so a pure dx
@@ -217,7 +228,7 @@ function calmFrame(st: SceneState, dtMs: number): void {
     // ⭐⭐⭐ (2026-11-05, Step 6) ⛔ the placed parts' BOX: `Scene_1`'s parts rise 41 mm above the top face, so at the front's top EDGE — where the frame turns —
     // the calm still held the piece 8° under the orbit (share 0.82); the turn restarted it whole: the piece jumped 2.8 m far out (probed). The facet's span
     // is whole at its edges: the calm whole at every crossing, on both sides of it
-    const fv = cfg.faceSpanShareVOn === 1 ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;
+    const fv = cfg.faceSpanShareVOn === 1 && !capBand ? (faceMapOf(st)?.facets[t.stack] ?? null) : null; // past the band: whole, as at its edge
     const b = fv === null ? 0 : t.surface[0] * fv.b[0] + t.surface[1] * fv.b[1] + t.surface[2] * fv.b[2];
     sV = fv === null ? 1 : edgeShare(Math.min(b - fv.bLo, fv.bHi - b), fv.bHi - fv.bLo, cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
   }
@@ -821,67 +832,44 @@ export function approachRelease(st: SceneState): void {
   st.approachInertia.release(performance.now());
 }
 
-/** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
-export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  // ⭐⭐⭐ (2026-11-05, STEP 6) built in the ORBIT'S FRAME (its up the frame's), turned out to the world; the roll still owed at a turn off square applied
-  // about the view (`st.orbitRoll` — the old frame's up shown, taken off over the input's travel)
-  const F = st.orbitFrame;
-  const fr = assemblyCameraFrameIn(st, F, cam, off);
-  const r = st.orbitRoll;
-  if (r === null || r.left === 0) return fr;
-  return { dir: fr.dir, up: qRotate(qFromAxisAngle(fr.dir, -r.left), fr.up) };
-}
-
-function assemblyCameraFrameIn(st: SceneState, F: OrbitFrame, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  const u = toFrame(F, dirAt(st, cam.yaw, cam.v));
+/**
+ * ⭐ THE CAMERA'S FRAME: behind the piece along its direction, the owner's offsets about it (`offsetWithUp`) — ⭐⭐⭐ (2026-11-05, the redesign §20) its UP
+ * from ONE rule tied to the view (`cameraUp`: gravity off the vertical, carried near it, rolled onto gravity in the band — the half and quarter rolls at a
+ * cap's edges), never the orbit's frame (⛔ Step 6: the frame's up at every view — slanted at a top's side edges, upside down past its middle). `commit`:
+ * the frame's own camera carries its up to the next frame (`st.asmUpCarry`); the others read it.
+ */
+export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset, commit: boolean = false): RigCameraFrame {
+  const u = dirAt(st, cam.yaw, cam.v);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
-  // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
-  // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
-  // face's heading at once: the scene jump-rotated; and at ±90° it has none)
-  // ⭐⭐⭐ (2026-11-04, `1.0.95-`) under the CALM the heading turned as the direction was (`calmHeading`) — ⛔ the orbit's yaw with the calm's direction:
-  // the up built from another heading than the direction's own, the camera ROLLED on a wall (probed: 222 frames over 5° on one close-in dx leg)
-  const c = offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
-  return F.cap === null ? c : { dir: toWorld(F, c.dir), up: toWorld(F, c.up) };
+  const r = cameraUp(u, st.asmUpCarry);
+  if (commit) st.asmUpCarry = r.next;
+  return offsetWithUp(u, r.up, o.yawRad, o.pitchRad);
 }
 
 /**
- * ⭐⭐⭐ (2026-11-05, STEP 6 — `TILTED_ORBIT_REBUILD_SCOPE.md` §19) THE ORBIT'S FRAME, EACH FRAME (before the solve reads the target):
- * * a ROLL OWED under way: the orbit's target held (the piece waits, a dx held too), the input's pitch travel taking the roll off (`rollStep` — linear,
- *   reversible; back past its start, the frame turns back);
- * * else the frame's step for the SOLVED place (`frameStep`): past a column's top / bottom bound the frame turned onto the cap; back past the cap's band,
- *   upright (`orbitFrameTurn` — nothing moves);
- * * Step 6's CLAMPS on the target in a turned frame (`frameClamp`): the far edge, the side edges.
+ * ⭐⭐⭐ (2026-11-05, Step 6 → THE REDESIGN §20) THE ORBIT'S FRAME, EACH FRAME (before the solve reads the target): the frame's step for the SOLVED place
+ * (`frameStep`: past a column's top / bottom bound onto the cap; off a cap by any edge, upright — `orbitFrameTurn`, nothing moves); ⭐ the HOLD (§4.2): the
+ * drag that left a cap over its FAR edge is held under that cap's bound upright (`holdPitch`) — the same finger kept on would go straight back over the
+ * cap; lifted (no finger, no coast), released.
  */
 function orbitFrameStep(st: SceneState): void {
-  const r = st.orbitRoll;
-  if (r !== null) {
-    // ⭐ the travel AWAY from the edge just crossed (⛔ read as the frame's own sense: a turn back down off a top took the travel up — the roll undone
-    // at once, the camera rolled 53° in a frame, probed)
-    const travel = (pitchOfV(st.orbit.elevation) - pitchOfV(r.held.v)) * r.dir;
-    const s = rollStep(r.owed, r.left, travel);
-    if (s.back) {
-      st.orbitRoll = null;
-      orbitFrameTurn(st, r.back); // ⭐ back past the roll's start: the frame it came from (⛔ always upright)
-      return;
-    }
-    r.left = s.left;
-    if (r.left === 0) st.orbitRoll = null;
-    st.orbit.reset(r.held.yaw, r.held.v);
-    st.hudDirty = true;
-    return;
-  }
+  if (st.orbitHold !== null && st.router.size === 0 && !st.orbitInertia.coasting) st.orbitHold = null;
   const map = faceMapOf(st);
   const q = st.pieceQ;
   if (map !== null && q !== null) {
-    const next = frameStep(st.orbitFrame, map, q.yaw, pitchOfV(q.v), FRAME_BACK_MARGIN_RAD);
-    if (next !== null) orbitFrameTurn(st, next);
+    const F = st.orbitFrame;
+    const exit = capExit(F, map, q.yaw, pitchOfV(q.v), FRAME_BACK_MARGIN_RAD);
+    const next = frameStep(F, map, q.yaw, pitchOfV(q.v), FRAME_BACK_MARGIN_RAD, st.orbitHold);
+    if (next !== null) {
+      if (exit === "FAR" && F.cap !== null) st.orbitHold = F.cap;
+      orbitFrameTurn(st, next);
+    }
   }
-  const F = st.orbitFrame;
-  const map2 = F.cap === null ? null : faceMapOf(st);
-  if (map2 !== null) {
-    const c = frameClamp(F, map2, st.orbit.yaw, pitchOfV(st.orbit.elevation));
-    if (c.held) {
-      st.orbit.reset(c.yaw, vOfPitch(c.pitch));
+  const map2 = st.orbitFrame.cap === null && st.orbitHold !== null ? faceMapOf(st) : null;
+  if (map2 !== null && st.orbitHold !== null) {
+    const h = holdPitch(map2, st.orbitHold, st.orbit.yaw, pitchOfV(st.orbit.elevation));
+    if (h.held) {
+      st.orbit.reset(st.orbit.yaw, vOfPitch(h.pitch));
       st.orbitInertia.stop();
     }
   }
@@ -889,14 +877,12 @@ function orbitFrameStep(st: SceneState): void {
 
 /**
  * ⭐⭐⭐ (STEP 6) THE TURN — NOTHING MOVES: every angle of the orbit re-read in the new frame as the same direction (`rebaseAngles` — the target, the solved
- * place, the eye's spring, the camera's leash and lag, the solver's last raw input and height kept, the gizmo's sync); the face map's angles put where the
- * gizmo is (`mapAngles` — as after the slide; `syncAngle` closes on the orbit's); the calm restarted whole (at an edge it is whole). The camera's upright up
- * in the two frames compared (`rollOwed`): off square, the difference is owed and taken over the input's travel (`st.orbitRoll`).
+ * place, the eye's spring, the camera's leash and lag, the solver's last raw input and height kept, the gizmo's sync); the face map's angles put on the
+ * gizmo (`gizmoAnglesAt`); the calm carried (its normal the facet now faced, its shares the ones showing the same direction — `sharesShowing`). The camera
+ * needs nothing: its up is the view's (§20).
  */
 function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
   const from = st.orbitFrame;
-  const camBefore = st.cameraLagged ?? st.boxOrbit;
-  const before = camBefore === null ? null : assemblyCameraFrame(st, camBefore);
   const rb = <T extends { readonly yaw: number; readonly v: number }>(a: T): T => {
     const r = rebaseAngles(from, to, a.yaw, pitchOfV(a.v));
     return { ...a, yaw: r.yaw, v: vOfPitch(r.pitch) };
@@ -921,10 +907,9 @@ function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
   // the gizmo where it is: the facet it is on (the shown place's, out of the old frame) read in the new frame's map
   const nW = st.asmShown === null ? (st.gizmoNormal ?? null) : toWorld(from, st.asmShown.t.normal);
   st.orbitFrame = to;
-  // ⭐ the calm carried through (whole at the crossing's edge — `calmFrame`): its normal the facet now faced, read level in the new frame (⛔ restarted
-  // whole: a calm still at work jumped off)
+  // ⭐ the calm carried through: its normal the facet now faced, read level in the new frame — onto a cap the cap, back upright the wall it is on
   const k = st.asmCalm;
-  const nn = to.cap !== null ? (to.capN === null ? null : toFrame(to, to.capN)) : from.fromN;
+  const nn = to.cap !== null ? (to.capN === null ? null : toFrame(to, to.capN)) : nW;
   const nh = nn === null ? 0 : Math.hypot(nn[0], nn[2]);
   if (k !== null && nn !== null && nh > 1e-9) {
     k.n = [nn[0] / nh, 0, nn[2] / nh];
@@ -943,36 +928,11 @@ function orbitFrameTurn(st: SceneState, to: OrbitFrame): void {
     const gF = toFrame(to, st.asmG);
     st.asmMapQ = gizmoAnglesAt(st, gF, mapAngles(map, gF, facetOfNormal(map, nW === null ? null : toFrame(to, nW), gF), mapOpts(st)));
   }
-  // the roll owed: the camera's up in the old frame (any roll still shown) against the new frame's upright one
-  st.orbitRoll = null;
-  const camAfter = st.cameraLagged ?? st.boxOrbit;
-  if (before !== null && camAfter !== null) {
-    const after = assemblyCameraFrameIn(st, to, camAfter);
-    const owed = rollOwed(after.dir, before.up, after.up);
-    // the sense away from the edge: onto a cap, toward its far edge; back upright, on down (up) the side left from the top (bottom)
-    const dir: 1 | -1 = to.cap !== null ? (to.backLow ? 1 : -1) : from.backLow ? -1 : 1;
-    if (Math.abs(owed) > ROLL_MIN_RAD) st.orbitRoll = { owed, left: owed, held: { yaw: target.yaw, v: target.v }, dir, back: from };
-  }
-  st.lastVerdict = to.cap === null ? "orbit: back upright — the frame turned back" : `orbit: the frame turned onto the ${to.cap === "TOP" ? "top" : "bottom"}${st.orbitRoll !== null ? ` — the camera rolls ${((Math.abs(st.orbitRoll.owed) * 180) / Math.PI).toFixed(0)}° with the input, the piece waits` : ""}`;
+  st.lastVerdict =
+    to.cap === null
+      ? `orbit: back upright${st.orbitHold !== null ? " — held at the edge until the finger lifts or reverses" : ""}`
+      : `orbit: the frame turned onto the ${to.cap === "TOP" ? "top" : "bottom"}`;
   st.hudDirty = true;
-}
-/**
- * ⭐⭐⭐ (STEP 6) THE FRAME'S EDGES BOUND THE SOLVED PLACE (`frameClamp`): a solve that went past a clamp (a slide along a part carries the yaw — the
- * coordinate the input pushes least) is held at it — there if the piece is free there (one gap query), else where the frame started. Inside: unchanged.
- */
-export function frameClampSolved<Q extends { readonly yaw: number; readonly v: number }>(st: SceneState, q0: Q, q: Q, env: { gap(q: Q): number }, gapM: number): Q {
-  const F = st.orbitFrame;
-  const map = F.cap === null ? null : faceMapOf(st);
-  if (map === null) return q;
-  const c = frameClamp(F, map, q.yaw, pitchOfV(q.v));
-  if (!c.held) return q;
-  const at: Q = { ...q, yaw: c.yaw, v: vOfPitch(c.pitch) };
-  const held = env.gap(at) >= gapM / 2 ? at : q0;
-  // ⭐ the place held IS the solver's state: its target and its height kept there (⛔ the target alone: the way back to the height kept slid along a part
-  // and carried the yaw back off the edge, the input out again — the camera back and forth every frame, probed)
-  st.orbit.reset(held.yaw, held.v);
-  st.orbitUserV = held.v;
-  return held;
 }
 
 /**
@@ -1024,8 +984,6 @@ function gizmoAnglesAt(st: SceneState, gF: Vec3, a0: { readonly yaw: number; rea
   return a;
 }
 
-/** ⭐ (Step 6) a roll owed below this (rad) is not taken — square enough. */
-const ROLL_MIN_RAD = (0.5 * Math.PI) / 180;
 
 /** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */
 export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number): boolean {

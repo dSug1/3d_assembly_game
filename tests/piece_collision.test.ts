@@ -87,14 +87,14 @@ describe("⭐⭐⭐ §12 — ONE SOLVE A FRAME, ONE AUTHORITY (2026-10-13, the a
     // ⭐ (the second audit) the frame DECIDED in `orbitFrame` (vectored on behaviour in piece_orbit_solver.test.ts); the render applies it
     expect(g).toContain("const fr = orbitFrame( { q: st.pieceQ, target: rig, userV: st.orbitUserV, prevRaw: st.orbitRawPrev }, env, opt, { stepM: RELOCATE_STEP_M, maxM: RELOCATE_MAX_M, from: st.relocateCursor.from }, );");
     expect(g).toContain("if (!sameQ(fr.target, rig)) st.orbit.reset(fr.target.yaw, fr.target.v); if (fr.stopCoast) st.orbitInertia.stop();");
-    expect(g).toContain("st.pieceQ = assemblyOn(st) ? frameClampSolved(st, q0, fr.q, env, opt.gapM) : fr.q; rig = { ...st.pieceQ };");
+    expect(g).toContain("st.pieceQ = fr.q; rig = { ...fr.q };");
     // ⛔ the layers it replaces: the target guard, the safety net on the spring, the held anchor, the unlock, the clock budget
     expect(g).not.toMatch(/guardOrbitPath|guardOrbitStep|heldAnchor|pieceUnlocked|GUARD_BUDGET_MS|orbitTargetGuarded|fromRingInPart/);
   });
   it("⭐⭐ the eye eases toward the SOLVED place, never a refused target — no pull-back (the spring chased the raw target before)", () => {
     const g = flat("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs)");
-    const solved = g.indexOf("st.pieceQ = assemblyOn(st) ? frameClampSolved(st, q0, fr.q, env, opt.gapM) : fr.q; rig = { ...st.pieceQ };");
+    const solved = g.indexOf("st.pieceQ = fr.q; rig = { ...fr.q };");
     expect(solved).toBeGreaterThan(0); // ⭐ (the third audit) the line must exist — its indexOf of −1 passed for ever
     expect(solved).toBeLessThan(g.indexOf("springOrbit(st.boxSpring, rig,"));
   });

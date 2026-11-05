@@ -229,6 +229,11 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, u);
   const up0 = normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
+  return offsetWithUp(u, up0, yawRad, pitchRad);
+}
+
+/** ⭐ (2026-11-05, §20) The owner's offsets about the piece's direction `u` given the camera's UP for it (`up0`, square to `u`) — `offsetFrame`'s second half. */
+export function offsetWithUp(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
   const sn = Math.sin(pitchRad);
   const d1: Vec3 = [c * u[0] + sn * up0[0], c * u[1] + sn * up0[1], c * u[2] + sn * up0[2]];
