@@ -7,7 +7,7 @@ import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
-import { UP_FRESH, cameraUp } from "../src/input/camera_up";
+import { UP_FRESH, placeUp } from "../src/input/camera_up";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -99,9 +99,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
       return Math.acos(Math.min(1, (w[0] * f.up[0] + w[1] * f.up[1] + w[2] * f.up[2]) / l)) / deg;
     };
     // ⭐ (2026-11-05, §20) the up the shown direction's OWN (`cameraUp` → gravity's for it — `calmHeading` deleted): upright on the wall
-    expect(rollOf(offsetWithUp(u, cameraUp(u, UP_FRESH).up, 0, 0))).toBeLessThan(1e-6); // upright
+    expect(rollOf(offsetWithUp(u, placeUp(u, { cap: null, edges: [] }, UP_FRESH, 0.01).up, 0, 0))).toBeLessThan(1e-6); // upright on a wall
     expect(rollOf(offsetFrame(u, yaw, 0, 0))).toBeGreaterThan(5); // ⛔ the orbit's yaw: rolled
-    expect(code("render/assembly_wiring.ts")).toContain("const r = cameraUp(u, st.asmUpCarry);");
+    expect(code("render/assembly_wiring.ts")).toContain("const r = placeUp(u, st.asmUpPlace, st.asmUpState, st.cfg.cameraRollMm / 1000);");
   });
   it("⭐⭐⭐ the calm fades out toward straight above / below: whole under 60° of pitch, none from 85° (⛔ at the bottom pole a stale side normal, a share of 0.53: the piece bent off its gizmo's face, 657 frames behind it, probed)", () => {
     const s = (deg: number) => Math.sin((deg * Math.PI) / 180);
@@ -140,7 +140,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("const w = poleWeight(u[1]);");
     expect(a).not.toContain("calmWeight(");
     expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
-    expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
+    expect(a).toContain("const nf = colFacet === null ? t.normal : colFacet.n;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("const fv = cfg.faceSpanShareVOn === 1 && !capBand ? (faceMapOf(st)?.facets[t.stack] ?? null) : null;");
     // ⭐⭐⭐ (2026-11-05, §20) past a column's band the calm of the facet just passed (⛔ none: the targets flipped at the band's edge — the camera swung 100–127 mm)

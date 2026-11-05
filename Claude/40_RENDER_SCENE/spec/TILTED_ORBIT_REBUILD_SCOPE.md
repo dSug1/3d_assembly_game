@@ -949,7 +949,7 @@ patches over patches"*)
   and (c) as is.
 * ⚠ The HUD's verdict *"held at the edge until the finger lifts or reverses"* — wrong (only lifting released it); goes with the hold.
 
-## 21. THE SECTIONS AS PLANE CUTS — the gizmo travels on them (approved design 2026-11-05; ⛔ NOT BUILT — awaiting the owner's go)
+## 21. THE SECTIONS AS PLANE CUTS — the gizmo travels on them (approved design 2026-11-05; ⛔ the first build FAILED and was reverted — §21.5; to be rebuilt)
 
 > The owner: *"I agree to build your Proposal: the sections as plane cuts, and the gizmo travels on them. One thing: I insist the contours shall be closed
 > loops and cannot be infinite loops due to throw off by singularities or slanted faces … I also believe the camera shall roll at each edge crossing to
@@ -1052,3 +1052,55 @@ closed (a new check: the drawn polygons' closure and length); I1 (the gizmo with
 (no reverse, no stuck but the half roll's reversal and R4's stops); ⭐ R1's alignment angle at every frame (the red's screen direction against the
 screen's up — new); the scene upright on every wall (the tilt check); back-and-forth, blockages, jumps and against-the-finger at or under §20's. ⛔ No device close until the
 owner's look.
+
+### 21.5 The first build — its travel series FAILED; committed, then REVERTED (2026-11-05, branch `1.0.101-`); the owner's decisions for the rebuild
+
+> The owner: *"F1: if the delta position would drive the gizmo in an opposite direction, hold the input as I previously specified and this overrules
+> anything else. F3: as you recommend. don't patch. update the md files to capture the issues, commit what you have built now, then revert while keeping
+> the captured issues, then re-build §21 properly to avoid patching the fixes."*
+
+**What the first build was.** The plane cuts (`input/plane_cut.ts`: closed loops, the 1 mm rule), the screen roles (`input/input_roles.ts`), the camera's
+up from the place (`input/camera_up.ts` `placeUp`: gravity on a wall, the carried axis on a cap, rolled over `cameraRollMm` near a cap ↔ wall edge) and
+the slider *camera roll at a top's / bottom's edge* (`cameraRollMm`, 10 mm) — ⛔ but **the travel was NOT moved onto the loops**: the orbit's angles, the
+face map's columns and the frame turned at every crossing (`frameStep` at the bound + 3°) were kept, the plane cuts only DRAWN (items 3, 7, 8 not built).
+1658 vectors green. Committed for the record, then reverted (the docs kept).
+
+**The travel series** (21 runs — the 13-run matrix and the off-square set; `an9.mjs`: the up and camera steps against their neighbours, the gizmo's motion
+on the screen against the finger, the tilt by place; checked on three earlier builds first):
+
+| | before Step 6 | Step 6 | the redesign | **§21, first build** |
+|---|---|---|---|---|
+| the gizmo against the finger (frames) | 39 | 28 | 93 | **680** |
+| the camera's up jumping (> 8° a frame) | 2 | 9 | 195 | **1486** |
+| camera jumps | 5 | 30 | 7 | 13 |
+| blocked / back-and-forth | 36 / 11 | — | 26 / 28 | **51 / 95** (one stuck 940 frames) |
+| upside-down views (frames) | 0 | ~15 800 | 559 | ~3 200 (most on the caps) |
+
+**The root causes — ONE common flaw: a crossing was decided THREE times, from three different measures, none of them the loop the finger travels** (the
+roll by the nearest edge of any kind; the frame turn by the angle beyond the bound; the roles by the screen, every frame):
+1. **The roll's band read the NEAREST edge, not the travel's.** `Scene_1`'s top is ~7 cm deep: the gizmo is always within mm of a SIDE edge, so a dy over
+   the top fired a quarter roll onto an edge it never crossed (`q_cm` 1155: the axis +z, the view tilted 93–117°).
+2. **On a cap the view passes the zenith MID-CAP, the half roll waited for the far edge**: from the middle to the far edge the scene upside down (`q_cm`
+   1111–1131: 91° → 158°). Gravity's sense on the screen is the VIEW's, not the gizmo's place.
+3. **The roll spread over the GIZMO's millimetres**: a drag moves it 10–20 mm a frame, so the 10 mm half roll was a step of one or two frames — the 1486 up
+   jumps (`q_cf` 1049 → 1051: ~100° in a frame).
+4. **The far edge decided out of order**: the frame turned onto the far wall (the angle) before the roll was committed (the place); there, gravity's up made
+   dy up CLIMB, the roles read again sent the gizmo back — a dip onto the far wall and two turns per bounce (most of the 95 back-and-forths, the 125
+   turns; ~410 of the 680 against-the-finger frames on a cap mid-roll).
+5. **R4's stop could DEADLOCK**: it tested the gizmo's next step on the screen; at an edge whose next face is seen edge-on that step points into the screen
+   → stopped; nothing moving, the camera never turned to show the face (`q_cc` 1441, dx right on the top's side edge: 940 frames).
+
+**The rebuild — the owner's decisions (2026-11-05):**
+* **F1 — ONE CROSSING EVENT, on the loop travelled.** The gizmo's place is its ARC LENGTH along the loop it travels (item 3 as written, at last); an edge
+  counts only where THAT loop crosses it (cause 1). At a crossing, once, in this order: the next face's view (tilt, and the roll R3 requires) → the roles
+  read for that face (F4) → R4. ⭐⭐⭐ **R4 OVERRULES EVERYTHING** (the owner): if the finger's input would now drive the gizmo the OPPOSITE way along its
+  loop, the input is HELD — the gizmo waits at the edge — until the finger reverses or the other input moves it the finger's way. ⛔ No reflection: at a
+  cap's far edge, after the half roll, dy kept up is held (⛔ 21.4's *"dy kept up sends the gizmo back along its previous track"* and §20.1's back-and-forth
+  loop over the top are SUPERSEDED); dy down goes on down the far wall. A new drag has no direction to oppose. No frame turned by an angle (cause 4).
+* **F2 — THE ROLL PACED BY THE CAMERA, not the gizmo**: the crossing starts it, the camera takes it over its own motion, capped in degrees a frame — a fast
+  finger cannot make it a step (cause 3). `cameraRollMm` sets where it starts.
+* **F3 — THE CAMERA SQUARE TO A CAP** (the owner: *"as you recommend"*): over a top / a bottom the view passes the zenith at the far edge, where the half roll
+  is — R2 and the far-edge roll agree by construction; the orbit's tilt (the calm) taken on the walls and at the edges (cause 2).
+* **F4 — THE ROLES PER FACE, not per frame**: each face's dx / dy from the loop's direction on THAT face, seen by its upright (or carried) view; read again
+  only at a crossing (F1's order). R4 compares against the face the gizmo is on — never a step into a face seen edge-on (cause 5).
+* They REPLACE the band latch, the nearest-edge rule, the angle-driven frame turn and the per-frame screen read — none added over them.

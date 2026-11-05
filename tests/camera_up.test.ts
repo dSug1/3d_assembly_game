@@ -1,106 +1,107 @@
 /**
- * ⭐⭐⭐ THE CAMERA'S UP — ONE RULE TIED TO THE VIEW (2026-11-05, the redesign — `TILTED_ORBIT_REBUILD_SCOPE.md` §20; the owner on Step 6: *"camera views
- * upside down … slanted camera views"*): `src/input/camera_up.ts`, wired in `render/assembly_wiring.ts`. Off the vertical (> 45°) gravity's up; near it
- * (< 35°) the up carried; between, the carried up rolled onto gravity — the half roll at a cap's far edge, the quarter at a side edge, none back the way it
- * came; never a jump. RED against `d68312f` (the module absent; the camera's up the turned frame's).
+ * ⭐⭐⭐ THE CAMERA'S UP FROM THE PLACE (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §21.4 R2 / R3 — the owner: *"always maintain the scene upside up: for that,
+ * tilt or roll the camera at the edge crossing as required"*): `src/input/camera_up.ts`, wired in `render/assembly_wiring.ts`. On a wall gravity's up; on a cap
+ * its axis (the up of the edge it came over — no roll at a square crossing); within `cameraRollMm` of a cap ↔ wall edge the up rolled toward that edge's up,
+ * committed at it — a HALF roll at a cap's far edge, a QUARTER at its side edge; never a jump. RED against `8dfa635` (§20's view rule: `placeUp` absent).
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { UP_CONE_HI, UP_CONE_LO, UP_FRESH, cameraUp, fromVertical, gravityUp, type UpCarry } from "../src/input/camera_up";
+import { UP_FRESH, placeUp, type UpPlace, type UpState } from "../src/input/camera_up";
 import type { Vec3 } from "../src/core/vec";
 
 const D = Math.PI / 180;
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const angle = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, dot(a, b))));
-/** the direction from the gizmo out toward the piece / the camera, `deg` from the front's normal (−z) over the top toward the back (+z), `side` turning it toward +x */
-const over = (deg: number, side = 0): Vec3 => {
-  const a = deg * D;
-  const s = side * D;
-  const u: Vec3 = [Math.sin(s) * Math.cos(a), Math.sin(a) * Math.cos(s), -Math.cos(a) * Math.cos(s)];
+const unit = (u: Vec3): Vec3 => {
   const l = Math.hypot(...u);
   return [u[0] / l, u[1] / l, u[2] / l];
 };
-/** a walk: the up each frame along the views, carried */
-function walk(views: readonly Vec3[]): { ups: Vec3[]; carry: UpCarry } {
-  let carry = UP_FRESH;
+const ROLL = 0.01;
+const TOP: Vec3 = [0, 1, 0];
+/** a 0.2 m top centred on the origin: the front edge at z = −0.1 (its up toward +z, back over the top), the back at +0.1 (up −z), the sides at x = ±0.1 (up ∓x) */
+const topAt = (x: number, z: number): UpPlace => ({
+  cap: TOP,
+  edges: [
+    { dist: z + 0.1, t: [0, 0, 1] },
+    { dist: 0.1 - z, t: [0, 0, -1] },
+    { dist: x + 0.1, t: [1, 0, 0] },
+    { dist: 0.1 - x, t: [-1, 0, 0] },
+  ],
+});
+/** the view from straight above, tilted a little toward the front (so +z is up the screen's way when the axis is +z) */
+const above: Vec3 = unit([0, 1, -0.3]);
+/** walk the gizmo's places; the up each step, the state carried */
+function walk(places: readonly UpPlace[], u: Vec3 = above, s0: UpState = UP_FRESH): { ups: Vec3[]; s: UpState } {
+  let s = s0;
   const ups: Vec3[] = [];
-  for (const u of views) {
-    const r = cameraUp(u, carry);
+  for (const p of places) {
+    const r = placeUp(u, p, s, ROLL);
     ups.push(r.up);
-    carry = r.next;
+    s = r.next;
   }
-  return { ups, carry };
+  return { ups, s };
 }
+const worstStep = (ups: readonly Vec3[]) => ups.slice(1).reduce((w, v, i) => Math.max(w, angle(v, ups[i]!)), 0);
 
-describe("⭐⭐⭐ the camera's up — one rule tied to the view (§20)", () => {
-  it("⭐⭐⭐ off the vertical (on every wall, from any path) the up is GRAVITY's — whatever was carried", () => {
-    for (const deg of [0, 20, 40, -40]) {
-      const u = over(deg, 25);
-      expect(fromVertical(u)).toBeGreaterThan(UP_CONE_HI);
-      const tilted: UpCarry = { up: [1, 0, 0], phi: null };
-      const r = cameraUp(u, tilted);
-      expect(angle(r.up, gravityUp(u)!)).toBeLessThan(1e-7);
-    }
+describe("the camera's up from the place (§21.4 R2 / R3)", () => {
+  it("⭐ on a WALL, gravity's up on the screen; out of the band no roll", () => {
+    const u = unit([0.3, 0.2, -1]);
+    const r = placeUp(u, { cap: null, edges: [{ dist: 0.05, t: [0, 0, 1] }] }, UP_FRESH, ROLL);
+    expect(r.band).toBe(false);
+    const g = unit([-u[1] * u[0], 1 - u[1] * u[1], -u[1] * u[2]]);
+    expect(angle(r.up, g)).toBeLessThan(1e-9);
   });
 
-  it("⭐⭐⭐ OVER A TOP AND DOWN THE FAR WALL: continuous, the HALF ROLL only in the last 10° before the far edge, upright again on the far wall (⛔ Step 6: upside down past the top's middle)", () => {
-    const views: Vec3[] = [];
-    for (let a = 0; a <= 180; a += 0.25) views.push(over(a, 0.0001));
-    const { ups } = walk(views);
-    let worst = 0;
-    for (let i = 1; i < ups.length; i++) worst = Math.max(worst, angle(ups[i]!, ups[i - 1]!));
-    expect(worst).toBeLessThan(10 * D); // no jump (the band's steepest: 180° over 10° of view, a smoothstep — ~4.5° a quarter degree)
-    // on the front wall and the far wall: gravity's up (upright)
-    for (const a of [10, 40, 140, 170]) {
-      const i = Math.round(a / 0.25);
-      expect(angle(ups[i]!, gravityUp(views[i]!)!)).toBeLessThan(1e-6);
-    }
-    // over the top (within 35° of the vertical: 55° … 125°) the up carried — no roll there: it turns only with the view
-    const top = ups.slice(Math.round(60 / 0.25), Math.round(120 / 0.25));
-    for (let i = 1; i < top.length; i++) expect(angle(top[i]!, top[i - 1]!)).toBeLessThan(0.5 * D);
-    // the half roll between 125° and 135° (the band before the far edge) — and none between 45° and 55° (the way in, square: gravity = carried)
-    const rolled = (from: number, to: number) => {
-      let s = 0;
-      for (let i = Math.round(from / 0.25) + 1; i <= Math.round(to / 0.25); i++) s += angle(ups[i]!, ups[i - 1]!);
-      return s / D;
-    };
-    expect(rolled(45, 55)).toBeLessThan(15);
-    expect(rolled(125, 135)).toBeGreaterThan(150);
+  it("⭐⭐ ON A CAP ENTERED SQUARE: its axis the edge's up — no roll (up the screen the way it was); the axis carried across the cap", () => {
+    const { ups, s } = walk([-0.0999, -0.095, -0.09, -0.05, 0, 0.05].map((z) => topAt(0, z)));
+    expect(s.axis).toEqual([0, 0, 1]);
+    for (const up of ups) expect(up[2]).toBeGreaterThan(0.9); // +z up the screen (the view from above, a little toward the front)
   });
 
-  it("⭐⭐ ONTO A TOP OFF SQUARE and back: NO ROLL at the crossing (the carried up starts as gravity's) and none coming back the way it came", () => {
-    const views: Vec3[] = [];
-    for (let a = 0; a <= 70; a += 0.25) views.push(over(a, 30));
-    for (let a = 70; a >= 0; a -= 0.25) views.push(over(a, 30));
-    const { ups } = walk(views);
-    for (let i = 1; i < ups.length; i++) expect(angle(ups[i]!, ups[i - 1]!)).toBeLessThan(2 * D);
-    expect(angle(ups[ups.length - 1]!, gravityUp(views[views.length - 1]!)!)).toBeLessThan(1e-6);
+  it("⭐⭐⭐ THE FAR EDGE: a HALF roll over the last `cameraRollMm`, committed AT the edge — the axis then −z; no step over 2·(180°/steps); going back NOT undone", () => {
+    const zs: number[] = [];
+    for (let z = -0.05; z <= 0.1 + 1e-9; z += 0.0002) zs.push(z);
+    const { ups, s } = walk(zs.map((z) => topAt(0, z)), above, { axis: [0, 0, 1] });
+    expect(s.axis).toEqual([0, 0, -1]);
+    expect(ups[0]![2]).toBeGreaterThan(0.9);
+    expect(ups[ups.length - 1]![2]).toBeLessThan(-0.9);
+    expect(worstStep(ups)).toBeLessThan(6 * D); // 180° over 50 steps, smoothstep's peak 1.5×
+    // the roll starts only in the band
+    const i9 = zs.findIndex((z) => z > 0.1 - ROLL - 1e-9);
+    for (let i = 0; i < i9; i++) expect(ups[i]![2]).toBeGreaterThan(0.9);
+    // back the other way: the axis kept (−z), until the FRONT edge — a half roll there again
+    const back = walk(zs.slice().reverse().map((z) => topAt(0, z - 0.05)), above, s);
+    expect(back.ups[1]![2]).toBeLessThan(-0.9);
   });
 
-  it("⭐⭐ ACROSS A TOP TO A SIDE EDGE: the QUARTER ROLL in the band before it, upright on the side wall", () => {
-    // up onto the top square, then sideways over the +x edge
-    const views: Vec3[] = [];
-    for (let a = 0; a <= 90; a += 0.25) views.push(over(a, 0.0001));
-    const top = over(90, 0.0001);
-    for (let s = 0; s <= 80; s += 0.25) {
-      const r = s * D;
-      const u: Vec3 = [Math.sin(r), Math.cos(r) * top[1], Math.cos(r) * top[2]];
-      const l = Math.hypot(...u);
-      views.push([u[0] / l, u[1] / l, u[2] / l]);
-    }
-    const { ups } = walk(views);
-    let worst = 0;
-    for (let i = 1; i < ups.length; i++) worst = Math.max(worst, angle(ups[i]!, ups[i - 1]!));
-    expect(worst).toBeLessThan(10 * D);
-    const last = views[views.length - 1]!;
-    expect(angle(ups[ups.length - 1]!, gravityUp(last)!)).toBeLessThan(1e-6);
-    expect(UP_CONE_LO).toBeLessThan(UP_CONE_HI);
+  it("⭐⭐ A SIDE EDGE: a QUARTER roll; the axis committed to the side's up", () => {
+    const xs: number[] = [];
+    for (let x = 0; x <= 0.1 + 1e-9; x += 0.0002) xs.push(x);
+    const u = TOP;
+    const { ups, s } = walk(xs.map((x) => topAt(x, 0)), u, { axis: [0, 0, 1] });
+    expect(s.axis).toEqual([-1, 0, 0]);
+    expect(angle(ups[0]!, [0, 0, 1])).toBeLessThan(1e-9);
+    expect(angle(ups[ups.length - 1]!, [-1, 0, 0])).toBeLessThan(1e-9);
+    expect(worstStep(ups)).toBeLessThan(3 * D);
   });
 
-  it("⭐ wired: the camera's frame from the view's up (`cameraUp`, `offsetWithUp`), the frame's own camera carrying it; ⛔ the turned frame's up and the roll owed gone", () => {
+  it("⭐ on the WALL's side of an off-square edge, gravity rolled toward the edge's up over the band — continuous with the cap's side", () => {
+    const u = unit([0.5, 0, -1]); // a view off square to the front
+    const t: Vec3 = [0, 0, 1];
+    const far = placeUp(u, { cap: null, edges: [{ dist: ROLL * 2, t }] }, UP_FRESH, ROLL);
+    const at = placeUp(u, { cap: null, edges: [{ dist: 0, t }] }, UP_FRESH, ROLL);
+    expect(far.band).toBe(false);
+    expect(at.band).toBe(true);
+    const tc = unit([t[0] - dot(t, u) * u[0], t[1] - dot(t, u) * u[1], t[2] - dot(t, u) * u[2]]);
+    expect(angle(at.up, tc)).toBeLessThan(1e-6);
+    expect(angle(far.up, [0, 1, 0])).toBeLessThan(1e-9);
+  });
+
+  it("⭐ wired: the camera's frame from the place (`placeUp`, `offsetWithUp`), the frame's own camera committing it; the place read after the gizmo", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const r = cameraUp(u, st.asmUpCarry); if (commit) st.asmUpCarry = r.next; return offsetWithUp(u, r.up, o.yawRad, o.pitchRad);");
-    expect(a).not.toContain("assemblyCameraFrameIn(");
+    expect(a).toContain("const r = placeUp(u, st.asmUpPlace, st.asmUpState, st.cfg.cameraRollMm / 1000); if (commit) { st.asmUpState = r.next; st.asmUpBand = r.band; } return offsetWithUp(u, r.up, o.yawRad, o.pitchRad);");
+    expect(a).toContain("st.asmUpPlace = upPlaceOf(st);");
+    expect(a).not.toContain("cameraUp(");
     const c = readFileSync(new URL("../src/render/camera_rig.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(c).toContain("return assemblyCameraFrame(st, cam, off, dtMs !== undefined);");
   });
