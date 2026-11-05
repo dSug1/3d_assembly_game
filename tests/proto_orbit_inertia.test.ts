@@ -120,7 +120,7 @@ describe("⭐⭐ prototype — the green piece's orbit has inertia", () => {
   });
 
   it("⭐ wired: recorded at each orbit step, released when the finger leaves, stepped with no finger down, stopped by a new touch", () => {
-    expect(code("render/pointer_wiring.ts")).toMatch(/st\.orbitInertia\.record\(s\.t, st\.orbit\.yaw - yaw0, roles !== null \? asmDv : travel\.du\);/);
+    expect(code("render/pointer_wiring.ts")).toMatch(/st\.orbitInertia\.record\(s\.t, st\.orbit\.yaw - yaw0, travel\.du\);/);
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/st\.orbitInertia\.release\(now\);/);
     expect(w).toMatch(/if \(st\.orbitMotion === null\) st\.orbitInertia\.stop\(\);/);

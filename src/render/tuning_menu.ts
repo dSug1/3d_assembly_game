@@ -197,7 +197,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
-            tunable(st, "camera roll at a top's / bottom's edge: over the last (mm)", "cameraRollMm", 0, 100, 1),
             tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),

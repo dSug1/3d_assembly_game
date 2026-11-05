@@ -467,15 +467,16 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-05, STEP 6) THE ORBIT'S FRAME (`input/orbit_frame.ts`): upright, or turned onto a top / a bottom at its crossing — every angle of the orbit is
    * read in it */
   orbitFrame: import("../input/orbit_frame").OrbitFrame;
-  /** ⭐⭐⭐ (2026-11-05, §21.4 R2 / R3) the camera's up from the place (`input/camera_up.ts`): where the gizmo is as it reads it, what it carries (the cap's
-   * axis), whether a roll is under way (the finger's roles then held — `asmRoleLatch`) */
-  asmUpPlace: import("../input/camera_up").UpPlace;
-  asmUpState: import("../input/camera_up").UpState;
-  asmUpBand: boolean;
-  asmRoleLatch: import("../input/input_roles").Roles | null;
+  /** ⭐⭐⭐ (2026-11-05, the redesign §20) the camera's up carried from frame to frame (`input/camera_up.ts`) — the view's, never the frame's */
+  asmUpCarry: import("../input/camera_up").UpCarry;
+  /** ⭐⭐ (§20, §4.2) the cap the current drag left over its FAR edge — held under its bound upright until the finger lifts; `null`: none */
+  orbitHold: "TOP" | "BOTTOM" | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;
+  /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
+  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
+  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */

@@ -21,8 +21,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
-import { approachInput, approachRelease, asmInputRoles, assemblyOn, leavesCone } from "./assembly_wiring";
-import { stepsFor } from "../input/input_roles";
+import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -347,20 +346,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
-    // ⭐⭐⭐ (2026-11-05, §21.4 R1 / R4) AROUND THE ASSEMBLY THE FINGER IS READ ON THE SCREEN (`asmInputRoles`, `stepsFor`): dx drives the orbit axis whose
-    // gizmo step is the more horizontal on the screen, dy the other, each the finger's way; an axis too far off its finger axis stopped — both at the
-    // dx yaw's pace (`orbitDegPerMm`). ⛔ The orbit's own axes (yaw ← dx, pitch ← dy) whatever the camera: after a turn or a roll the gizmo went against
-    // the finger
-    const roles = asmOn && !shiftApproach ? asmInputRoles(st) : null;
-    let asmDv = 0;
-    if (roles !== null) {
-      const rate = (orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm * Math.PI) / 180;
-      const [sYaw, sPitch] = stepsFor(roles, db.dx / mmToPx(1), dxOnly ? 0 : -db.dy / mmToPx(1));
-      asmDv = (sPitch * rate) / (2 * ORBIT_PITCH_MAX_RAD);
-      st.orbit.nudge(sYaw * rate, asmDv);
-    }
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    else st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
     // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
@@ -368,7 +355,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
     if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
-    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, roles !== null ? asmDv : travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
+    st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;
     // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
     // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —
