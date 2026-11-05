@@ -978,13 +978,11 @@ lines come from the angle grid, the travel from a turn rule the grid does not ho
    offsets the DRAWN line along the face's normal; the PATH is the convex loop.
 3. ⭐⭐⭐ **THE GIZMO TRAVELS THE LINE DRAWN**: a dx moves it along the green polygon, a dy along the red, by arc length at the orbit's pace (mm on the
    contour per mm of finger); through an edge it simply goes on along the same polygon (the edge's slow stretch kept) — a sustained dx or dy loops the
-   same closed section for ever (I3); the line is the path, exactly. The finger read on the SCREEN: dx (dy) moves the gizmo along its polygon in the
-   sense that goes the finger's way on the screen at the gizmo (I5) — so after a half roll the same finger kept on comes back (§20.1: *"a finger kept on
-   loops over the top back and forth, the camera half-rolling at each far edge"*), the reversed one goes on down the far side; no hold.
+   same closed section for ever (I3); the line is the path, exactly. The finger read on the SCREEN — see 21.4 (the roles, the camera, the stop).
 4. ⭐⭐ **THE LINES CHANGE ONLY WITH THE INPUT**: under a pure dx the green is fixed (the gizmo rides it) and the red, through the gizmo, slides along with
    it (each position a world-axis plane cut); under a pure dy the reverse; a mixed input moves the gizmo off both — both slide with it, their shape
    world-axis. Nothing is re-drawn at an edge or a singularity: a plane cut has neither.
-5. ⭐⭐ **THE CAMERA'S ROLL — at exactly two kinds of crossing** (the owner proposed *"a roll at each edge crossing to align the camera view with the
+5. ⭐⭐ (⚠ refined by 21.4, which governs) **THE CAMERA'S ROLL — at exactly two kinds of crossing** (the owner proposed *"a roll at each edge crossing to align the camera view with the
    contour line of the next face"* — infirmed as a rule for EVERY crossing, kept as the principle): on a box every plane cut meets every edge SQUARELY (a
    dx line runs level across vertical edges, a dy line vertical across horizontal ones), so turning about the edge already leaves the next face's line
    straight on the screen — no roll. A roll is owed only where that turn leaves the view at odds with the next face's line: **a quarter roll from a top
@@ -1006,17 +1004,51 @@ lines come from the angle grid, the travel from a turn rule the grid does not ho
    hold. ⚠ It resembles the carrier deleted at Step 4c-bis — but that carrier rode the HULLS of the real sections (bridging grooves and gaps: it waited,
    held, drifted and jumped); this one rides the CONVEX faces contour, whose plane cuts are exact closed polygons; the real surface only offsets the depth.
 
+### 21.4 THE FINGER, THE CAMERA AND THE STOP — the owner's rules (2026-11-05), governing items 3 and 5
+
+> The owner: *"always align the dy with red section travel and dx with green section travel and always maintain the scene upside up: for that, tilt or
+> roll the camera at the edge crossing as required. If at one point the delta input is inverted (dx to the right would send gizmo to the left, dy upwards
+> would send gizmo downwards), stop the delta input until the user reverse the delta input or chooses the other delta input (if it is sending the gizmo in
+> the correct direction)."* — and, on the screenshot of a wall seen at a yaw: *"a roll is required to align the camera view with the horizontal portion of
+> the red section so that the rule to align delta position input and gizmo travel is complied with"*.
+
+* **R1 — THE ROLES ARE THE SCREEN'S.** At every moment the RED is the plane cut whose line at the gizmo runs along the screen's vertical, the GREEN the one
+  along its horizontal; **dy travels the red, dx the green, each the finger's way on the screen** (I5 always). ⭐ Measured by a probe check at every frame:
+  the angle between the red line's screen direction at the gizmo and the screen's up (and the green's and the screen's right).
+* **R2 — THE SCENE UPSIDE UP.** On every face that is not purely horizontal the world's up is the screen's up (§4.5); on a top / a bottom (looking down /
+  up) the up is the one the camera carried over the edge it crossed.
+* **R3 — TILT OR ROLL AT THE EDGE, AS REQUIRED.** Crossing an edge the camera TILTS about it (the view swings over the edge — the image does not spin).
+  The camera is built in the face's OWN axes (the dx line, the dy line, the normal; its sideways angle measured about the face's dy line, never the world's
+  vertical), so a square crossing maps the view of one face onto the next by the same rotation and R1 holds with the yaw kept — ⚠ the owner's screenshot
+  is TODAY's orbit, whose yaw is about the world's vertical: there a roll is owed (Step 6's roll owed); here it comes out as zero. Wherever the tilt leaves
+  R1 or R2 broken, the camera ROLLS over the edge's slow stretch (the last 10 mm, tied to the place in the stretch — reversible, no wait): on a box a HALF
+  roll at a top's / bottom's FAR edge (the far wall upright), a QUARTER roll at its SIDE edge (the side wall upright); on a non-box contour whatever angle
+  makes the next face's line screen-straight. ⭐ After a roll R1's roles are READ AGAIN — a line may change colour: after the quarter roll at a side edge
+  the loop the dx was following runs along the screen's vertical, so it is now the RED (continued by dy down the side wall), and the screen's horizontal
+  line through the gizmo the green.
+* **R4 — THE STOP.** Whenever the finger's input would move the gizmo against the finger on the screen (inverted, or with no component along its line —
+  mid-roll, a role just changed), that input is STOPPED: the gizmo waits — until the finger reverses, or the other input moves it the finger's way. ⭐ A
+  test at every step, never a latch: it lifts at once (⛔ not §20's hold, which refused a cap for the rest of a drag — the owner's *"no hold"* stands).
+* **What it gives, on a box** (the owner's walk): up the front by dy → TILT over the top edge, dy still up the screen across the top, the yaw kept, no roll
+  → at the FAR edge the HALF roll over the last 10 mm; read again, the red line through the gizmo runs back across the top up the screen: dy kept up sends
+  the gizmo back along its previous track (the owner: *"the dy upwards will need to send back the gizmo to the previous track (otherwise, the scene will
+  end up upside down)"*), dy down crosses the far edge, the camera tilts down over it, the far wall upright. By dx toward a top's SIDE edge → the QUARTER
+  roll; the dx then stops there (R4: its line is vertical on the screen) and dy down goes on down the side wall (the same loop, now the red); dy up back
+  across the top. ⛔ This supersedes item 3's earlier *"after a half roll the same finger kept on comes back … no hold"* where it differs (the stop is R4's)
+  and §20.1's open side-edge question.
+
 ### 21.3 Build order and gates (each with its vectors, RED on the code before it, and the probes)
 
 1. **The cut** (engine-free): a convex contour × a plane → its closed polygon (ordered, closed, finite; 1 mm inside); arc length ↔ point; the face, its
    normal and its axes at a point. Vectors: a box (world-axis loops), a horizontal and a vertical hexagonal prism (slanted faces), a plane on an edge
    (the 1 mm rule), every loop closed, no length beyond the contour's girth.
-2. **The travel**: the state (the place, the green and red planes); dx / dy along their polygons by arc length, read on the screen (I5); the edge's slow
-   stretch; the lines drawn from the same polygons (real depth along the normal).
-3. **The piece and the camera from the place**: the direction, the calm, the rolls of item 5 over the slow stretch.
+2. **The travel**: the state (the place, the green and red planes); dx / dy along their polygons by arc length, read on the screen with R1's roles and
+   R4's stop; the edge's slow stretch; the lines drawn from the same polygons (real depth along the normal).
+3. **The piece and the camera from the place**: the direction, the calm, the camera in the face's own axes, R3's tilt and rolls over the slow stretch, R2.
 4. **The solver re-addressed**: the two arc lengths; the bookkeeping moved (target, spring, lag, height kept, slide's way out).
 5. **The deletions** (item 8).
 Gates: the 13-run traversal matrix and the off-square set (`orbit_probe.mjs`, `analyse_orbit.mjs`, the tilt check) — tilted / upside-down 0; every line
 closed (a new check: the drawn polygons' closure and length); I1 (the gizmo within 3 mm of its plane on constant legs — every face, the caps included); I3
-(no reverse, no stuck but the half roll's reversal); back-and-forth, blockages, jumps and against-the-finger at or under §20's. ⛔ No device close until the
+(no reverse, no stuck but the half roll's reversal and R4's stops); ⭐ R1's alignment angle at every frame (the red's screen direction against the
+screen's up — new); the scene upright on every wall (the tilt check); back-and-forth, blockages, jumps and against-the-finger at or under §20's. ⛔ No device close until the
 owner's look.
