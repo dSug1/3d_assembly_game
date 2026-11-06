@@ -25,7 +25,7 @@ depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the ed
 ✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: the second rebuild (`1.0.104-` from `8dfa635`) — scope §26 – §27** (deployed; 1620 vectors; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1645 golden vectors, all passing** — MEASURED 2026-11-05 (the count's home; the scope's §19).
+✅ `npm run verify`: **1620 golden vectors, all passing** — MEASURED 2026-11-06 (the count's home; the scope's §27).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 
