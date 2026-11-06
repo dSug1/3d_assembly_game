@@ -6,7 +6,8 @@
  * 1. **The facets** (`buildFaceMap`): the placed parts' faces clustered by normal (within `mergeDeg`, the largest face's normal first — snapped onto a world
  *    axis when it is one); each cluster a candidate FACET: its STACK — every face within `mergeDeg` of its normal, grouped by plane (`MAP_COPLANAR_M`) and,
  *    in a plane, by contact (the slide's own regions, grown `MAP_GROW_M`), **every hole inside a group CLOSED** (`filledRegion`) — and its plane the MAIN
- *    group's (the largest closed region: the painting's front, never a part sticking out of it — Step 4c-bis's core box, generalised). The contour is the
+ *    group's (the largest closed region: the painting's front, never a part sticking out of it — Step 4c-bis's core box, generalised) — ⭐⭐⭐ (§24.1) then
+ *    pushed out to the parts' support along its normal: the contour clear of every part. The contour is the
  *    intersection of the facets' half-spaces (CONVEX by construction — a constant input turns one way round, I3), bounded by the parts' box; each facet's
  *    polygon on it. ⭐ A facet is kept only when its real face (its main region) covers `minShare` of its polygon (D5) — a frustum's slanted side, whose
  *    plane cuts across the contour, never tilts the orbit; on a box exactly the six faces.
@@ -442,7 +443,19 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       const c = candOf(n, false, 0);
       return { ...c, e: n[0] > 0 ? box.hi[0] : n[0] < 0 ? -box.lo[0] : n[2] > 0 ? box.hi[2] : -box.lo[2] };
     });
-  const all: Candidate[] = [...sides, capT, capB];
+  // ⭐⭐⭐ (2026-11-06, scope §24.1, the owner: *"build it"*) THE CONTOUR CLEAR OF EVERY PART: each chosen facet's plane pushed out to the placed parts'
+  // SUPPORT along its normal (the farthest vertex) — the same normals (D5's choice of facets kept: no tilt), convex, every part inside it by construction:
+  // the orbit's path never meets a part (⛔ at the main region's plane, a part proud of the face — `Scene_1`'s Piece44 over the front, Piece3 off the −x
+  // side — stood across the piece's path close in: the solver pinned it, *"almost stuck"*). The approach goes on in, below it, to the real contact (§22 (a)).
+  const supportOf = (n: Vec3): number => {
+    let m = -Infinity;
+    for (const f of faces) for (const tr of f.tris) for (const v of tr) m = Math.max(m, dot(n, v));
+    return m;
+  };
+  const all: Candidate[] = [...sides, capT, capB].map((c) => {
+    const sup = supportOf(c.n);
+    return Number.isFinite(sup) && sup > c.e ? { ...c, e: sup } : c;
+  });
   const planes = all;
   const facets: Facet[] = all.map((c, i) => {
     const { t, b } = facetFrame(c.n);
@@ -455,7 +468,7 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       t,
       b,
       e: c.e,
-      kind: i < sides.length ? "SIDE" : c === capT ? "TOP" : "BOTTOM",
+      kind: i < sides.length ? "SIDE" : i === sides.length ? "TOP" : "BOTTOM",
       groups: c.groups,
       poly,
       tLo: ext(ts, true),

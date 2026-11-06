@@ -89,7 +89,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(s.groups.map((g) => g.depth)).toEqual([expect.closeTo(0.09, 12), expect.closeTo(0.05, 12)]);
     expect(regionContains(s.groups[0]!.region, 0.05, 0.25)).toBe(true);
     expect(regionContains(s.groups[0]!.region, -0.1, 0.25)).toBe(false);
-    expect(s.e).toBeCloseTo(0.05, 12);
+    expect(s.e).toBeCloseTo(0.09, 12); // ⭐⭐⭐ (§24.1) the facet's plane pushed out to the parts' support: the protrusion's front (its main region still the painting)
     // a face 15° off −z (the slanted block) faces −z; one 30° off faces none
     const slant = (deg: number): MapFace => ({ ...front(-0.1, 0.1), normal: [Math.sin(deg * D), 0, -Math.cos(deg * D)] });
     const { t: ft, b: fb } = facetFrame([0, 0, -1]);
@@ -97,7 +97,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(stackOf([slant(30)], [0, 0, -1], ft, fb, Math.cos(20 * D)).length).toBe(0);
   });
 
-  it("⭐⭐⭐ the CORE box: each side at its MAIN face — a part sticking out of the front does not widen it (⛔ the whole box: at the corner the side's ray met that part's side, 25 cm in — probed)", () => {
+  it("⭐⭐⭐ (§24.1) THE CONTOUR CLEAR OF EVERY PART: the facets CHOSEN by their main face (a part sticking out of the front makes no facet), each plane then at the parts' SUPPORT — the front at the protrusion's −0.09 (⛔ at the main face's −0.05: close in the piece's path ran through the part, pinned by the solver)", () => {
     const faces = [
       rectFace(2, -1, -0.05, -0.25, 0.25, 0, 0.6), // the front
       rectFace(2, -1, -0.09, 0, 0.1, 0.2, 0.3), // a protrusion's front
@@ -109,7 +109,8 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     ];
     const whole: ShellBox = { lo: [-0.25, 0, -0.09], hi: [0.25, 0.6, -0.017] };
     const fm = buildFaceMap(faces, whole);
-    expect(fm.core.lo[2]).toBeCloseTo(-0.05, 12); // the painting's front, not the protrusion's −0.09
+    expect(fm.facets.length).toBe(6); // no facet of its own
+    expect(fm.core.lo[2]).toBeCloseTo(-0.09, 12); // the protrusion's front: every part inside the contour
     expect(fm.core.hi[2]).toBeCloseTo(-0.017, 12);
     expect(fm.core.lo[0]).toBeCloseTo(-0.25, 12);
     const none = buildFaceMap([], whole).core; // no faces: the whole box

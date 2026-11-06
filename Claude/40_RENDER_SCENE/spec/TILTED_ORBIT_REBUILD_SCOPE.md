@@ -1316,7 +1316,7 @@ drag's travel; at a boot and a new orbit it starts disarmed. An orbit drag keeps
 mid-drag. To slide: approach in. Probed (close-in runs): the dx across the front — the slide never latched, the piece 4–5 mm a frame all the way, 0 stalled
 frames (2340 before); the stalls left are §24.1's contact.
 
-**The close-in stall — diagnosed, not built (§24.1).** A dy up near the front's top edge, close in: the finger's target drifts SIDEWAYS (the yaw
+**The close-in stall — diagnosed; its fix built (§24.1).** A dy up near the front's top edge, close in: the finger's target drifts SIDEWAYS (the yaw
 −1.571 → −1.459 while the pitch hardly moves), the piece TOUCHING every other frame; the blocker is **Piece44** — the overhang above the front, proud of the
 contour. The piece solver refuses each step into it and slides the piece along the ring (`orbitFrame` resets the target to the solved place): *almost
 stuck*, and sideways. The TOP ↔ upright flicker at that edge (the frame turned four times in four frames) is the same: the target pulled back below the
@@ -1324,8 +1324,20 @@ bound, the frame turned back. ⭐ ONE ROOT: the contour is not the parts' envelo
 front's top, Piece3 45 mm off the −x side), and (a) puts the piece's path at the contour's depth — through them. Before §22 the real gizmo stepped onto them
 (the piece rode over, jittering); since §22 the collision stops it.
 
-### 24.1 Proposed (not built): the orbit's contour CLEAR OF EVERY PART
+### 24.1 ✅ BUILT (the owner: *"build it"*): the orbit's contour CLEAR OF EVERY PART
 Each facet's plane pushed out to the farthest placed-part vertex along its normal (its support): the same normals (no tilt — D5's purpose kept), convex,
 and every part inside it by construction — the piece's orbit path never meets a part; the approach (a) goes on in, below it, to the real contact. Cost:
 on a face with a proud part the whole face is orbited that far off it (`Scene_1`: the front by Piece44's overhang, the −x side by Piece3's 45 mm); the
 real surface is still shown (the ring, the lines) and reached by the approach.
+
+Built (`input/face_map.ts` `buildFaceMap`): the facets CHOSEN as before (D5 on the main regions — the same normals, the same columns), then each plane
+pushed out to the placed parts' SUPPORT along its normal (`supportOf`: the farthest vertex of their faces) — every part inside the contour. Vectors: the
+stack's facet at the protrusion's front (`face_map.test.ts`), the core box at the protrusion (§24.1's own vector, rewritten from *"a part sticking out does
+not widen it"*), an overhang hanging in front of the top-front edge pushes the front and the top out, a slanted facet chosen (a tenth) lies at the support
+and no longer cuts the contour (`facets.test.ts`) — RED against `76ce2d5` (3). 1658 in all.
+Probed (8 runs, ~16 500 frames, 0 page errors): `Scene_1`'s contour pushed out — the front 42 mm (Piece44's overhang), the top 42–60 mm (the overhangs
+above it), the ±x sides to Piece3's and the right part's extent. Close-in dx across the front: 5 mm a frame, 0 stalls, 0 back-and-forth (the slide never
+latched); close-in dy: the piece no longer pinned against Piece44 (0 camera jumps, 0 back-and-forth, was 3 and 122); camera jumps 14, piece jumps 11
+over all 8 runs. ⚠ Open: (1) at a top's far edge, held, the CAMERA leans ~11° past straight above — the piece's direction stops at the zenith, the camera
+stands at its pitch offset above-behind it (`r5c`: 260 tilted frames there, the probe pushing on); the rule should bind the camera, not the piece's
+direction; (2) close in at the front's bottom the piece touches the FLOOR and a dy down stops (the floor is real — the play volume, `D181`).
