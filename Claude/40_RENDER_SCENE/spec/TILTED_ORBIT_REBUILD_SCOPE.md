@@ -1202,3 +1202,62 @@ carried axis flipped once the view leans 3° past the zenith toward it, 6° of h
 before). On a cap the up is the wall's rule: gravity's on the screen once the view leans past 20°, the carried axis blended within 5–20° of the vertical
 (⛔ the axis whatever the lean: a dx over an orbited top leant sideways, the axis 90° off gravity — 1406 tilted frames, probed). ⛔ §21.5 F3 superseded.
 Probe (4 runs): upside-down frames 0 (557 before the cap rule), tilted 285 — all in the 9–20° near-vertical band over a top, the axis blended by design.
+
+### 21.9 ⛔ OPEN — the orbit STOPS over a top on a dy (B's zenith roll against R4) (reported 2026-11-06 on `f0e8bd7`; the owner: *"we will fix it later on"*)
+
+> The owner: *"build f0e8bd7 : the orbit is stuck in the position as per attachment (dy travel)"* — far out (r 7.5 m), looking down on the top, the HUD
+> *"orbit: the frame turned over an edge (up)"*.
+
+**Reproduced** (probes, a dy up the front repeated, 3 and 12 px a frame, close and far): EVERY leg stops on the top within a few frames. A dump (12 px, far):
+frame 7 the frame turns onto the top (the front's top edge); frames 8–12 the gizmo moves on the 3.3 cm top; frame 13 the view passes 3° beyond straight above,
+`capAxisPastZenith` flips the cap's carried axis (`ua` (0,0,1) → (0,0,−1)) and the paced half roll starts; from frame 17 the gizmo and the piece are frozen
+for the rest of the leg.
+**Cause**: the flip is in the travel face's key, so the roles are read again; after the half roll *up the screen* points back toward the front, a dy kept up
+would drive the gizmo backward, and R4 (`holdByMotion`) holds it until the finger reverses. Before B the same hold came at the top's FAR edge, where a stop
+read as the end of the face; B moved the roll to the cap's MIDDLE — on `Scene_1`'s slim tops reached almost at once — so every pass over a top stops halfway.
+⚠ The conflict between B and R4 was not named when B was proposed.
+**Options recorded (not chosen)**: (a) the roles LATCHED for the drag under way — the roll still at the zenith, the drag goes on driving the gizmo the same way
+on the assembly until the finger lifts (over the far half the gizmo moves down the screen while the finger goes up — R1 waived for that drag only, read again
+at the next press); (b) the hold kept (today: continue with dy down after the roll); (c) the roll back at the far edge (no stop mid-top, but the scene
+upside down between the middle and the far edge — R2, §21.5). Proposed: (a).
+
+## 22. ONE GEOMETRY FOR WHAT MOVES — the contour; the real surface shown and reached by the approach (2026-11-06, branch `1.0.101-`; ⛔ no device close)
+
+> The owner (on `f2aa456`, five reports): *"why the red section does not pass through the black face ? … why the red contour extends into the void instead
+> of adhering to the horizontal black face ? which rule imposes that ? … the travel with dy at this exact position creates some jitter of the view … some
+> back and forth of the view between somewhere on the white part and the middle of the black face … dy run the red section loop around the assembly: lot
+> of back-and-forth of gizmo (especially at high dy speed) and sways of the piece and camera … Analyze the common root cause. Propose common fixes instead
+> of patching each single issue."* → *"build with contour's normal and (a) close in"*.
+
+**The common root cause — two geometries reconciled per place.** The travel, the frame turns, the calm, R4 and the plane cuts ran on the CONTOUR (convex,
+smooth); the gizmo's point, the lines' depth and the piece's support were read on the REAL surface by a cast along the facet's normal at every place, every
+frame, with a growing set of rules (`stackDepthAt`'s frontmost group, the void bridged on a travel — §18's D3 amended —, the cast for what stands in front,
+the blend's cast through an edge). Wherever the real surface steps (a protrusion, an overhang, a recess, a void), the cast lands on one surface or the other:
+its depth jumps, and the piece's place, the orbit's centre, the look point and the face (the quads, the piece's turn) all read it — the jitter, the
+back-and-forth, the sways. The lines read the same rules: the bridged void kept them on the contour's plane, in the air (report 2 — the rule: §18 D3
+amended), and off the black face below the contour's plane (report 1).
+
+**The fix — each geometry one job** (not a rule more):
+1. **What MOVES reads the contour only** (`input/face_map.ts` `contourPlace`: the map's place, blended through an edge, pushed out onto the contour's own
+   surface along the blended normal — `contourExit`, the chord across an edge runs inside it): the piece's place and the solver's, the orbit's centre (the
+   foot on the shell), the look point, the face and its normal (**the contour's normal** — the owner's choice: the quads, the piece's turn), R4.
+2. **The real surface is SHOWN** (`realOn`: the frontmost surface along the face's normal from outside the parts' box): the ring, and each line's samples —
+   on the parts' faces whatever their depth, broken at a step and over a void through. The quads' host is the ring's part when its face is the contour's
+   (never a protrusion's side).
+3. **(a) Close in, the piece keeps its depth** — the approach goes on IN below the contour (`assembly_orbit.ts`: `approachRange().floor`, the distance
+   negative to `APPROACH_SINK_M` = 0.3 m, at the last stretch's pace): into a slot, onto a face below the contour, stopped by the parts' collision at the real
+   contact; a dx / dy close in keeps that depth (the collision stops or slides the piece at a step). The slide's way out keeps its depth (`approachAt`: the
+   gizmo's depth below / above the contour taken into the approach) — the piece leaves the slide where it is.
+4. **Deleted**: `realAt`, `rawGizmo`, `frameCast`, `blendCast`, `MAP_BRIDGE_FRONT_M`; in `face_map.ts` `stackDepthAt` (the frontmost group, the bridged
+   void), `closedAlong`, `regionReal`, `regionDistance`, `regionContains`; `tests/void_bridge.test.ts` (its rule is gone). §16.1 D3 ("the gizmo at the real
+   depth") is now a display and approach rule, no longer an orbit rule.
+Vectors: `tests/contour_place.test.ts` (RED against `2b4643d`: 3 of 3), the approach's floor in `assembly_orbit.test.ts`; 1660 in all.
+
+**The travel series** (12 runs each, the same legs — dx, dy at 3 and 12 px a frame, mixed random, far / mid / close; the baseline `2b4643d` on a worktree,
+~22 400 frames each, 0 page errors): the gizmo against the finger 57 → 21, the piece's back-and-forth 29 → 16, the camera's 330 → 298, camera jumps
+41 → 25, piece jumps 22 → 17, upside-down frames 11 → 7, up jumps 4 → 2. ⚠ Stalled frames 6849 → 12956 — two causes, neither new code failing:
+(1) the open §21.9 stop over the top (every dy-up leg, both builds); (2) ⚠ **NEW — THE SLIDE LATCHES ON A PART PROUD OF THE CONTOUR, CLOSE IN**: the
+contour is not the parts' envelope (D5: a part sticking out of a face never makes a facet — Piece3 stands 45 mm proud of `Scene_1`'s −x side); close in
+the piece keeps the contour's depth (a), meets Piece3, the slide latches on it (*"latched on Piece3's face (13.3 mm)"*) and the dx then stops at that
+face's edge (*"at the edge of the hosting faces — reverse"*) — before, the real gizmo stepped onto Piece3 and the piece rode over it. (a) as decided;
+the owner to judge it on the device. ⚠ Reports 1–2 (the lines) are a look, not a number; the dy loop round the assembly could not be run (§21.9).

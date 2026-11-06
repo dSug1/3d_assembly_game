@@ -10,8 +10,8 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetWithUp, modelNormal, ORBIT_PITCH_MAX_RAD, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { blendThroughEdges, buildFaceMap, facetOfNormal, mapAngles, mapTarget, stackDepthAt, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { angleTo, lockCone, approachAt, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetWithUp, modelNormal, ORBIT_PITCH_MAX_RAD, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { buildFaceMap, contourPlace, facetOfNormal, mapAngles, mapTarget, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -38,13 +38,11 @@ import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
-/** ⭐ (Step 4c-bis) the ray along the facet's normal for the real surface, cast from this far outside the box (m). ⭐⭐⭐ (Step 5, D3) taken WHATEVER its
- * depth — over an empty slot its bottom (⛔ Step 4c-bis: refused beyond 25 mm of the region's plane, the gizmo across the slot's mouth). */
+/** ⭐ (Step 4c-bis) the ray along the face's normal for the real surface, cast from this far outside the box (m) — ⭐⭐⭐ (§22) for what is SHOWN (the ring,
+ * the lines), the frontmost surface whatever its depth. */
 const MAP_OUT_M = 0.05;
 /** ⭐ (Step 4c-bis) out of step after the slide: the map's angles close on the orbit's at 1 ± this of the orbit's step (`syncAngle`). */
 const MAP_CATCH_UP = 0.5;
-/** ⭐ (2026-11-05) over a bridged void a cast's hit counts only this far (m) in front of the facet's plane — a part rising out of it, not the plane's own rim. */
-const MAP_BRIDGE_FRONT_M = 0.0005;
 
 /** ⭐ Is the orbit the one around the assembly? */
 export function assemblyOn(st: SceneState): boolean {
@@ -393,58 +391,34 @@ function faceMapOf(st: SceneState, frame?: OrbitFrame): FaceMap | null {
 const FACE_MAPS = new WeakMap<SceneState, Map<string, FaceMap>>();
 
 /**
- * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place (`mapTarget`), the FRONTMOST closed region
- * there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along the normal from outside the box
- * (`modelCast` — the parts at rest) for the real surface. The point keeps the place's two other coordinates EXACTLY: the green's and the red's planes, by
- * construction. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — the facet's stack, its normal, its frame (`t`, `b`); ⭐⭐⭐ (D3) the ray's hit taken WHATEVER its depth:
- * over an empty slot (a hole the region closes) the gizmo at its BOTTOM — the region still chooses the face and keeps the gizmo continuous across the rim,
- * only the depth is the real one; a slot through the whole assembly (no hit): the region's plane. The piece and the camera ride the shell (Step 2).
- * ⭐⭐⭐ (2026-11-05, the owner) D3 AMENDED — a void CLOSED on the green's or the red's travel (`stackDepthAt`'s `bridged`): the gizmo straight through on
- * the facet's plane, the lines with it; a void open on both keeps its depth until the frame turn (Steps 6–7).
+ * ⭐⭐⭐ (2026-11-06, scope §22, the owner: *"build with contour's normal and (a) close in"*) — **THE GIZMO FOR THE ORBIT'S ANGLES: THE CONTOUR ALONE** (the
+ * orbit frame's coordinates): the face map's place (`contourPlace`: through an edge blended, on the contour's surface), the facet's normal, no host. What
+ * MOVES reads it — the piece's place, the orbit's centre, the look point, the face (the quads, the piece's turn), R4. ⛔ The real surface read here per
+ * place (`realAt`: the stack's frontmost group, the void bridged on a travel, the cast for what stands in front; `blendCast`; D3 in the orbit): every step
+ * in it — a protrusion, an overhang, a recess, a void — moved the piece and the camera (the owner's five reports, 2026-11-06). The real surface is SHOWN
+ * (`realOn`: the ring, the lines) and reached by the approach (the collision), nothing else.
  */
-function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
-  // ⭐⭐⭐ (Step 6) everything here in the ORBIT FRAME's coordinates — the map's; a cast goes out to the world and back (`frameCast`)
+function mapGizmoF(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const map = faceMapOf(st);
   if (map === null) return null;
-  const t = mapTarget(map, yaw, pitch, mapOpts(st));
-  return { hit: realAt(st, map, map.facets[t.stack]!, t.surface, t.normal, (o, d, l) => frameCast(st, o, d, l)), t };
+  const o = mapOpts(st);
+  const t = mapTarget(map, yaw, pitch, o);
+  return { hit: { point: contourPlace(map, yaw, pitch, o), normal: t.normal, host: null }, t };
 }
 
 /**
- * ⭐⭐⭐ (2026-11-05, §21 — `rawGizmo`'s body, shared with the plane-cut lines) THE REAL SURFACE at the contour's point `sf` on facet `f` (its normal `n`, the
- * map's coordinates; `cast` a ray in them): the facet's stack there (`stackDepthAt` — the frontmost group, a bridged void), the ray along the normal for the
- * real depth (D3); the place's two other coordinates kept.
+ * ⭐⭐⭐ (2026-11-06, §22) THE REAL SURFACE SHOWN at the place `p` of a face whose outward normal is `n` (world, unit): the FRONTMOST surface of the placed
+ * parts along `−n` through `p` (a ray from outside their box — `modelCast`, the parts at rest); none (a void through): `null`. Read by the ring and the
+ * lines only.
  */
-function realAt(st: SceneState, map: FaceMap, f: FaceMap["facets"][number], sf: Vec3, n: Vec3, cast: (o: Vec3, d: Vec3, l: number) => GizmoHit | null): GizmoHit {
-  void st;
-  const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);
-  if (at === null) return { point: sf, normal: n, host: null };
+function realOn(st: SceneState, p: Vec3, n: Vec3): GizmoHit | null {
+  const b = shellOf(st);
+  if (b === null) return null;
   const level = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
-  // along the normal onto the group's plane — the place's two other coordinates kept
-  const onto = (d: number): Vec3 => {
-    const k = d - level(sf);
-    return [sf[0] + n[0] * k, sf[1] + n[1] * k, sf[2] + n[2] * k];
-  };
-  const p = onto(at.depth);
-  // ⭐⭐⭐ (2026-11-05) over a void closed on a travel (`at.bridged`): straight through on the facet's plane — the cast kept only for what stands IN FRONT of
-  // it (a part rising out of the void), never for its bottom
-  if (at.inside || at.bridged === true) {
-    const b = map.box;
-    const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
-    const out = sup(1) + MAP_OUT_M;
-    const o: Vec3 = [p[0] + n[0] * (out - level(p)), p[1] + n[1] * (out - level(p)), p[2] + n[2] * (out - level(p))];
-    const h = cast(o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
-    if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host };
-  }
-  return { point: p, normal: n, host: null };
-}
-
-/** ⭐⭐⭐ (Step 6) A cast in the orbit frame's coordinates: out to the world (`modelCast`), its hit back in the frame. */
-function frameCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): GizmoHit | null {
-  const F = st.orbitFrame;
-  if (F.cap === null) return modelCast(st, origin, dir, length);
-  const h = modelCast(st, toWorld(F, origin), toWorld(F, dir), length);
-  return h === null ? null : { point: toFrame(F, h.point), normal: h.normal === null ? null : toFrame(F, h.normal), host: h.host };
+  const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
+  const out = sup(1) + MAP_OUT_M;
+  const k = out - level(p);
+  return modelCast(st, [p[0] + n[0] * k, p[1] + n[1] * k, p[2] + n[2] * k], [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
 }
 
 /**
@@ -458,27 +432,6 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
   return { hit: worldHit(F, m.hit), t: { ...m.t, normal: toWorld(F, m.t.normal), surface: toWorld(F, m.t.surface) } };
 }
 const worldHit = (F: OrbitFrame, h: GizmoHit): GizmoHit => (F.cap === null ? h : { point: toWorld(F, h.point), normal: h.normal === null ? null : toWorld(F, h.normal), host: h.host });
-
-/**
- * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP: in an edge band, the facet's gizmo (`rawGizmo`) blended toward the next facet's first one —
- * ⭐ (Step 5) the rule in `input/face_map.ts` (`blendThroughEdges`, `edgeBlend`), vectored on a non-box contour. Its normal, host and place: the facet's own.
- */
-function mapGizmoF(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
-  const here = rawGizmo(st, yaw, pitch);
-  const map = faceMapOf(st);
-  if (here === null || map === null) return null;
-  const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));
-  return p === here.hit.point ? here : { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
-}
-
-/**
- * ⭐⭐⭐ (2026-11-05) A BLENDED PLACE'S DEPTH (`blendThroughEdges`' `cast`): the ray along the blended normal `nb` from `reach` in front of the place `q`
- * onto it (`modelCast` — the parts at rest); its hit, or none. Only a surface in front of `q` is met (the ray stops at it).
- */
-function blendCast(st: SceneState, q: Vec3, nb: Vec3, reach: number): Vec3 | null {
-  const h = frameCast(st, [q[0] + nb[0] * reach, q[1] + nb[1] * reach, q[2] + nb[2] * reach], [-nb[0], -nb[1], -nb[2]], reach);
-  return h === null ? null : h.point;
-}
 
 /**
  * ⭐⭐ THE PIECE'S PLACE from the orbit's centre (the shown gizmo) at an orbit place — `ringPlaceNow`'s in this mode, the solver's queries included: its
@@ -572,6 +525,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const prev = st.asmPrevQ ?? q;
   st.asmPrevQ = { yaw: q.yaw, v: q.v };
   let hit: GizmoHit | null = null;
+  let ring: GizmoHit | null = null;
   if (!st.asmLocked) {
     const pitch = pitchOfV(q.v);
     const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
@@ -584,6 +538,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     if (m !== null) {
       hit = worldHit(st.orbitFrame, m.hit); // ⭐ (Step 6) the world's point; the frame's place kept for the calm
       st.asmG = hit.point;
+      // ⭐⭐⭐ (§22) the real surface under the place: SHOWN (the ring), its part the quads' host when its face is the contour's (⛔ a protrusion's side)
+      ring = hit.normal === null ? null : realOn(st, hit.point, hit.normal);
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
     }
   }
@@ -602,14 +558,27 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const gF = st.asmG === null ? null : toFrame(st.orbitFrame, st.asmG);
     const nF = st.gizmoNormal == null ? null : toFrame(st.orbitFrame, st.gizmoNormal);
     st.asmMapQ = map !== null && gF !== null ? mapAngles(map, gF, facetOfNormal(map, nF, gF), mapOpts(st)) : null;
+    // ⭐⭐⭐ (2026-11-06, §22) the slide's depth KEPT: its gizmo is on the real surface, the orbit's place on the contour — the difference along the face's
+    // normal taken into the approach (below the contour: into a slot; above: on a protrusion), so the piece leaves the slide where it is
+    const m = st.asmMapQ === null || st.asmG === null ? null : mapGizmoF(st, st.asmMapQ.yaw, st.asmMapQ.pitch);
+    if (m !== null && m.hit.normal !== null && st.asmG !== null) {
+      const w = worldHit(st.orbitFrame, m.hit);
+      const n = w.normal!;
+      const g = st.asmG;
+      const depth = (w.point[0] - g[0]) * n[0] + (w.point[1] - g[1]) * n[1] + (w.point[2] - g[2]) * n[2];
+      const cos = Math.max(0.5, u[0] * n[0] + u[1] * n[1] + u[2] * n[2]);
+      st.approach = approachAt(st.cfg, approachDistance(st.cfg, st.approach) - depth / cos);
+      st.asmG = w.point;
+    }
     st.asmShown = null;
     st.asmLock = null;
     st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
   }
   // ⭐ unlocked: the face by the edge rule (the quads read it)
+  const host = ring !== null && ring.normal !== null && hit !== null && hit.normal !== null && ring.normal[0] * hit.normal[0] + ring.normal[1] * hit.normal[1] + ring.normal[2] * hit.normal[2] > Math.cos(Math.PI / 180) ? ring.host : (st.gizmoHost ?? null);
   if (!st.asmLocked && hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
-    if ((st.gizmoHost ?? null) !== hit.host) {
-      st.gizmoHost = hit.host;
+    if ((st.gizmoHost ?? null) !== host) {
+      st.gizmoHost = host;
       st.orientDirty = true;
     }
     const n0 = st.gizmoNormal ?? null;
@@ -617,12 +586,13 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.gizmoNormal = hit.normal;
     st.asmFacePoint = hit.point;
   } else if (!st.asmLocked && hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
-  // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
-  // camera); the ring at the gizmo itself, on the real surface
+  // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell; ⭐⭐⭐ §22: from the contour's place); the ring on the real surface
   const target = g0;
   const foot = footOf(st, target, u, d + liftOf(st, u));
   st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
-  st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
+  // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`) — ⭐⭐⭐ (§22) on the real surface (`realOn`), shown only
+  const shown = st.asmLocked || ring === null ? target : ring.point;
+  st.asmGizmoAt = [shown[0], shown[1], shown[2]];
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing; the slide: the gizmo)
@@ -638,7 +608,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
  * through the gizmo's place (`cutLoop`): the one square to the orbit frame's up (the frame's dx loop) and the one through that up and the facet's normal
  * (its dy loop) — on a box world planes, ONE CLOSED LOOP each by construction (a plane through a convex solid; 1 mm inside any facet it is parallel to —
  * `insidePlane`), never thrown off by a pole or a slanted face. The gizmo travels exactly them (the face map's columns in the frame ARE these cuts); each
- * drawn on the REAL surface (`realAt`: the stack, the bridged void, the cast along the facet's normal), broken at a depth step; the gizmo's exact point a
+ * drawn on the REAL surface (⭐⭐⭐ §22 `realOn`: the frontmost along the facet's normal), broken at a depth step and over a void through; the gizmo's exact point a
  * vertex of both. COLOURED BY THE SCREEN (§21.4 R1): the line the dx drives green, the dy's red (`asmInputRoles`) — a line may change colour after a roll.
  * Each line recomputed only when its plane moves (under a pure dx the frame's dx loop is fixed). ⭐ ONE mesh of a fixed vertex count, updated in place.
  * ⛔ The sweeps of the face map (2026-11-04 … §20): straight only on the frame's own columns, re-drawn at every frame turn, paths no input follows.
@@ -665,6 +635,8 @@ function cutLine(st: SceneState, plane: Plane): { readonly pts: readonly Vec3[];
     if (loop !== null) {
       let prevC: Vec3 | null = null;
       let prevR: Vec3 | null = null;
+      let prevHit = false;
+      let firstHit: boolean | null = null;
       const N = loop.pts.length;
       for (let i = 0; i < N; i++) {
         const A = loop.pts[i]!;
@@ -676,19 +648,28 @@ function cutLine(st: SceneState, plane: Plane): { readonly pts: readonly Vec3[];
         for (let j = 0; j <= k; j++) {
           const s = j / k;
           const c: Vec3 = [A[0] + (B[0] - A[0]) * s, A[1] + (B[1] - A[1]) * s, A[2] + (B[2] - A[2]) * s];
-          const r = realAt(st, map, f, c, f.n, (o, d, l) => modelCast(st, o, d, l)).point;
+          // ⭐⭐⭐ (§22) the FRONTMOST real surface along the facet's normal (`realOn`) — on the parts' faces, whatever their depth (⛔ the stack's group and
+          // the bridged void: the line on the contour's plane, in the air); none (a void through): no line there
+          const h = realOn(st, c, f.n);
+          const r = h === null ? c : h.point;
+          if (firstHit === null) firstHit = h !== null;
           const lifted: Vec3 = [r[0] + f.n[0] * SECTION_LIFT_M, r[1] + f.n[1] * SECTION_LIFT_M, r[2] + f.n[2] * SECTION_LIFT_M];
           // a depth step breaks the line: the real step far beyond the contour's (2.5 × + 2 mm)
           const join =
-            prevC !== null && prevR !== null && Math.hypot(r[0] - prevR[0], r[1] - prevR[1], r[2] - prevR[2]) <= 2.5 * Math.hypot(c[0] - prevC[0], c[1] - prevC[1], c[2] - prevC[2]) + 0.002;
+            h !== null &&
+            prevHit &&
+            prevC !== null &&
+            prevR !== null &&
+            Math.hypot(r[0] - prevR[0], r[1] - prevR[1], r[2] - prevR[2]) <= 2.5 * Math.hypot(c[0] - prevC[0], c[1] - prevC[1], c[2] - prevC[2]) + 0.002;
           if (pts.length > 0) joins.push(join);
           pts.push(lifted);
           prevC = c;
           prevR = r;
+          prevHit = h !== null;
         }
       }
-      // closed: the last joined to the first
-      if (pts.length > 1) joins.push(true);
+      // closed: the last joined to the first (both on the parts)
+      if (pts.length > 1) joins.push(prevHit && firstHit === true);
     }
   }
   const out = { pts, joins };
@@ -712,7 +693,7 @@ function cutPlanes(st: SceneState): { readonly a: Plane; readonly b: Plane | nul
 
 function sectionLinesFrame(st: SceneState): void {
   const sh = st.asmShown;
-  const g = st.asmG;
+  const g = st.asmGizmoAt ?? st.asmG; // ⭐⭐⭐ (§22) the ring: on the real surface
   const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && g !== null && sh !== null;
   if (!show) {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;

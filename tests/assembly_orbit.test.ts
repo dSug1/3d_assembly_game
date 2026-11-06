@@ -68,9 +68,13 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(farDistance(cfg)).toBeCloseTo(6, 1);
     expect(approachDistance(cfg, r.waist)).toBeCloseTo(0.09, 6);
     expect(approachDistance(cfg, r.min)).toBe(0);
-    expect(approachDistance(cfg, r.min - 1)).toBe(0); // held to its range
+    // ⭐⭐⭐ (§22) below the contact on the contour: on IN, negative, at the last stretch's pace, to `APPROACH_SINK_M` deep — then held
+    expect(approachDistance(cfg, r.floor)).toBeCloseTo(-0.3, 9);
+    expect(approachDistance(cfg, r.floor - 1)).toBeCloseTo(-0.3, 9);
+    expect(approachDistance(cfg, r.min - (r.min - r.floor) / 3)).toBeCloseTo(-0.1, 9);
+    expect(approachStep(r.min, -1000, 0.01, cfg)).toBe(r.floor);
     let prev = Infinity;
-    for (let a = 1; a >= r.min - 1e-12; a -= 0.002) {
+    for (let a = 1; a >= r.floor - 1e-12; a -= 0.002) {
       const d = approachDistance(cfg, a);
       expect(d).toBeLessThanOrEqual(prev + 1e-9);
       prev = d;
@@ -79,7 +83,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(approachStep(0.8, -2, 0.01, cfg)).toBeCloseTo(0.78, 12);
     expect(approachStep(0.8, 2, 0.01, cfg)).toBeCloseTo(0.82, 12);
     expect(approachStep(0.999, 2, 0.01, cfg)).toBe(1);
-    expect(approachStep(r.min + 0.001, -2, 0.01, cfg)).toBe(r.min);
+    expect(approachStep(r.floor + 0.001, -2, 0.01, cfg)).toBe(r.floor); // ⭐⭐⭐ (§22) the floor below the contour
   });
   it("⭐⭐ LOCKED, the piece within 80° of the face's normal: inside the cone untouched; outside, brought onto its edge in the same plane", () => {
     expect(LOCK_CONE_RAD * D).toBeCloseTo(80, 12);
@@ -300,9 +304,8 @@ describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-0
     const w = code("render/assembly_wiring.ts");
     // ⭐⭐⭐ (2026-11-04, Step 4c) both picks now ONE cast in the model's space (`modelCast`, `tests/sway_cast.test.ts`), its hit still brought back by `modelHit`
     expect(w).toContain("const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
-    expect(w).toContain("const h = cast(o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);"); // ⭐ (§21) `realAt`, the cast passed in
-    expect(w).toContain("return { hit: realAt(st, map, map.facets[t.stack]!, t.surface, t.normal, (o, d, l) => frameCast(st, o, d, l)), t };"); // ⭐ (Step 6) through the frame: out to the world (`modelCast`) and back
-    expect(w).toContain("const h = modelCast(st, toWorld(F, origin), toWorld(F, dir), length);"); // ⭐ (Step 4c-bis) the face map's ray — (Step 5) along the facet's normal
+    // ⭐⭐⭐ (§22) the real surface SHOWN only: `realOn`'s ray from outside the box, in the model's space
+    expect(w).toContain("return modelCast(st, [p[0] + n[0] * k, p[1] + n[1] * k, p[2] + n[2] * k], [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);");
     expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
     expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
   });
