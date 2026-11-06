@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { buildFaceMap, type MapFace } from "../src/input/face_map";
+import { buildFaceMap, shellExit, type MapFace } from "../src/input/face_map";
 import type { Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -26,7 +26,7 @@ function rect(axis: 0 | 1 | 2, sign: 1 | -1, level: number, a0: number, a1: numb
 }
 
 describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
-  it("⭐⭐⭐ G1 (§22.1) — CLEAR OF EVERY PART: a part proud of the front makes no facet of its own, the front's plane at its support; every part's vertex inside every facet's half-space", () => {
+  it("⭐⭐⭐ G1 / G1s (§27.2) — THE TRACK AT THE REAL FACE, THE SHELL CLEAR OF EVERY PART: a part proud of the front makes no facet of its own; the front's track at its real face (50 mm), its shell at the support (90 mm); every part's vertex inside every facet's SHELL half-space (⛔ §22.1: the track itself at the support — strips with no face under them)", () => {
     const faces = [
       rect(2, -1, -0.05, -0.25, 0.25, 0, 0.6), // the front
       rect(2, -1, -0.09, 0, 0.1, 0.2, 0.3), // a part proud of it, 40 mm
@@ -41,8 +41,18 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     const fm = buildFaceMap(faces, { lo: [-0.25, 0, -0.09], hi: [0.25, 0.6, -0.017] });
     expect(fm.facets.length).toBe(6);
     const front = fm.facets.find((f) => f.n[2] < -0.9)!;
-    expect(front.e).toBeCloseTo(0.09, 12);
-    for (const f of fm.facets) for (const fc of faces) for (const tr of fc.tris) for (const v of tr) expect(f.n[0] * v[0] + f.n[1] * v[1] + f.n[2] * v[2]).toBeLessThanOrEqual(f.e + 1e-12);
+    expect(front.e).toBeCloseTo(0.05, 12);
+    expect(front.es).toBeCloseTo(0.09, 12);
+    for (const f of fm.facets) for (const fc of faces) for (const tr of fc.tris) for (const v of tr) expect(f.n[0] * v[0] + f.n[1] * v[1] + f.n[2] * v[2]).toBeLessThanOrEqual(f.es + 1e-12);
+    // P1 reads the shell: from the front's track straight out, the shell is left 40 mm on; slantwise, farther
+    expect(shellExit(fm.facets, [0, 0.3, -0.05], [0, 0, -1])).toBeCloseTo(0.04, 12);
+    expect(shellExit(fm.facets, [0, 0.3, -0.05], [0, Math.SQRT1_2, -Math.SQRT1_2])).toBeCloseTo(0.04 * Math.SQRT2, 9);
+  });
+  it("⭐⭐⭐ P1 / Gz2 (§27.2) wired — the piece from where the view leaves the SHELL; the lines' ends at the face's edge (halved), never the last sample", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("const t0 = shellExit(L.map.facets, L.p, u);");
+    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
+    expect(a).toContain("const e = edgeBetween(prevArc, a);");
   });
 
   it("⭐⭐⭐ T6 — ONLY THE FINGER MOVES THE TRAVEL: the drag and the coast call `loopFinger` (dx right, dy up, mm); the orbit's angles follow the shown direction; ⛔ the frame turns and the angle-grid gizmo gone", () => {
@@ -65,7 +75,7 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
 
   it("⭐⭐⭐ A1 / A2 — the approach above G1 along the direction, below it straight toward the gizmo; the depth the slide's only arm; below G1 the orbit takes no drag", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (d >= 0) return [u[0] * (d + lift), u[1] * (d + lift), u[2] * (d + lift)];");
+    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
     expect(a).toContain("const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;");
     expect(a).toContain("st.slideArmed = d < 0;");
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");

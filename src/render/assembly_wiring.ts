@@ -18,7 +18,7 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { buildFaceMap, type FaceMap, type MapFace } from "../input/face_map";
+import { buildFaceMap, shellExit, type FaceMap, type MapFace } from "../input/face_map";
 import { gizmoCase, mainGroup } from "../input/gizmo_rule";
 import type { RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
@@ -369,13 +369,15 @@ function offsetAt(st: SceneState, approach: number): Vec3 {
   const u = L.u;
   const d = approachDistance(st.cfg, approach);
   const lift = Math.max(0, liftOf(st, u));
-  if (d >= 0) return [u[0] * (d + lift), u[1] * (d + lift), u[2] * (d + lift)];
-  // A1 — below G1: from the contact with G1 straight toward the gizmo (its depth below the place), as far in as `−d`
+  // ⭐⭐⭐ (§27.2 G1s) P1 — from the track's place along the view out to where the SHELL is left, then the approach's distance
+  const t0 = shellExit(L.map.facets, L.p, u);
+  if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];
+  // A1 — below the shell: from where the view leaves it straight toward the gizmo, as far in as `−d`
   const g = st.asmGizmoAt ?? L.p;
-  const v: Vec3 = [g[0] - L.p[0], g[1] - L.p[1], g[2] - L.p[2]];
+  const v: Vec3 = [g[0] - L.p[0] - u[0] * t0, g[1] - L.p[1] - u[1] * t0, g[2] - L.p[2] - u[2] * t0];
   const lv = Math.hypot(v[0], v[1], v[2]);
   const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;
-  return [u[0] * lift + v[0] * k, u[1] * lift + v[1] * k, u[2] * lift + v[2] * k];
+  return [u[0] * (t0 + lift) + v[0] * k, u[1] * (t0 + lift) + v[1] * k, u[2] * (t0 + lift) + v[2] * k];
 }
 
 /** ⭐ The piece's place from the orbit's centre (the shown place on G1) — the solver's and the approach's queries (the angles unused: P1). */
@@ -484,7 +486,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const k = mf.e - dot(mf.n, g);
     const p: Vec3 = [g[0] + mf.n[0] * k, g[1] + mf.n[1] * k, g[2] + mf.n[2] * k];
     const pieceNow = st.greenBox.getAbsolutePosition();
-    const depth = dot([pieceNow.x - p[0], pieceNow.y - p[1], pieceNow.z - p[2]], mf.n) - Math.max(0, liftOf(st, mf.n));
+    // its depth below the SHELL (§27.2 G1s: the approach is measured from the shell)
+    const depth = dot([pieceNow.x - p[0], pieceNow.y - p[1], pieceNow.z - p[2]], mf.n) - Math.max(0, liftOf(st, mf.n)) - (mf.es - mf.e);
     L.travel = travelAt(L.facets, p, fi);
     L.p = p;
     st.approach = approachAt(st.cfg, depth);
@@ -573,18 +576,45 @@ function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown): void {
       arcs.push(0);
       arcs.sort((a, b) => a - b);
     }
-    let prev: Vector3 | null = null;
-    for (const a of arcs) {
-      let v: Vector3 | null;
-      if (Math.abs(a) < 1e-9) v = gv;
-      else {
-        const q = loopPoint(r.loop, r.s0 + a);
-        const h = surfaceAt(st, L, q.p, q.facet, comp);
-        const nn = L.facets[q.facet]!.n;
-        v = h === null ? null : new Vector3(h.point[0] + nn[0] * SECTION_LIFT_M, h.point[1] + nn[1] * SECTION_LIFT_M, h.point[2] + nn[2] * SECTION_LIFT_M);
+    const at = (a: number): Vector3 | null => {
+      if (Math.abs(a) < 1e-9) return gv;
+      const q = loopPoint(r.loop, r.s0 + a);
+      const h = surfaceAt(st, L, q.p, q.facet, comp);
+      const nn = L.facets[q.facet]!.n;
+      return h === null ? null : new Vector3(h.point[0] + nn[0] * SECTION_LIFT_M, h.point[1] + nn[1] * SECTION_LIFT_M, h.point[2] + nn[2] * SECTION_LIFT_M);
+    };
+    // ⭐⭐⭐ (§27.2 Gz2) a line's end AT THE FACE's EDGE: between a sample on a face (`on`) and one in a gap, halved to under a mm (⛔ the last sample — a
+    // gizmo on a strip narrower than one sample joined no segment: 14 – 16 mm off the red line)
+    const edgeBetween = (on: number, off: number): Vector3 | null => {
+      let a0 = on;
+      let a1 = off;
+      let v: Vector3 | null = null;
+      for (let k = 0; k < 5; k++) {
+        const m = (a0 + a1) / 2;
+        const w = at(m);
+        if (w !== null) {
+          a0 = m;
+          v = w;
+        } else a1 = m;
       }
-      if (v !== null && prev !== null) out.push([prev, v]);
+      return v;
+    };
+    let prev: Vector3 | null = null;
+    let prevArc = Number.NaN;
+    for (const a of arcs) {
+      const v = at(a);
+      if (!Number.isNaN(prevArc)) {
+        if (v !== null && prev !== null) out.push([prev, v]);
+        else if (v === null && prev !== null) {
+          const e = edgeBetween(prevArc, a);
+          if (e !== null) out.push([prev, e]);
+        } else if (v !== null && prev === null) {
+          const e = edgeBetween(a, prevArc);
+          if (e !== null) out.push([e, v]);
+        }
+      }
       prev = v;
+      prevArc = a;
     }
     return out;
   };

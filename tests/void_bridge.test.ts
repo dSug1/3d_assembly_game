@@ -49,16 +49,45 @@ describe("⭐⭐⭐ the void closed on a travel — the gizmo straight through o
   });
   it("⭐⭐⭐ (§26.4 Gz0) THE VOID PER LINE — a void with the face's plane both sides along x (the green's travel) but OPEN upward to the face's edge (the red's): BRIDGED for the green, a GAP for the red — its floor never counts as the face (⛔ `1.0.103-`: the parts' nearest point there); closed both ways: bridged for both; on a real face SURFACE; beyond the face a GAP", () => {
     const openTop = facetOf(painting({ top: true }));
-    expect(gizmoCase(openTop.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
-    expect(gizmoCase(openTop.groups, 0.05, 0.35, "y")).toBe("GAP");
+    // ⭐⭐⭐ (§27.2) the notch reaches the face's edge and a face of this normal lies behind it: a DEPORTED face, landed on by both lines
+    expect(gizmoCase(openTop.groups, 0.05, 0.35, "x")).toBe("SURFACE");
+    expect(gizmoCase(openTop.groups, 0.05, 0.35, "y")).toBe("SURFACE");
+    // …and above its floor, nothing of this normal: a GAP for both
+    expect(gizmoCase(openTop.groups, 0.05, 0.5, "x")).toBe("GAP");
+    expect(gizmoCase(openTop.groups, 0.05, 0.5, "y")).toBe("GAP");
     const closed = facetOf(painting({}));
     expect(gizmoCase(closed.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
     expect(gizmoCase(closed.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
     const openRight = facetOf(painting({ right: true }));
-    expect(gizmoCase(openRight.groups, 0.05, 0.35, "x")).toBe("GAP");
-    expect(gizmoCase(openRight.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
+    expect(gizmoCase(openRight.groups, 0.05, 0.35, "x")).toBe("SURFACE"); // (§27.2) open to the right edge, its floor behind: deported
+    expect(gizmoCase(openRight.groups, 0.05, 0.35, "y")).toBe("SURFACE");
     expect(gizmoCase(closed.groups, -0.2, 0.3, "x")).toBe("SURFACE");
     expect(gizmoCase(closed.groups, -0.5, 0.3, "y")).toBe("GAP");
     expect(mainGroup(closed.groups)!.depth).toBeCloseTo(0.05, 12);
+  });
+  it("⭐⭐⭐ (§27.2 Gz0) THE DEPORTED FACE — the owner's black bars: a band of the same normal 8 mm behind the face along its top edge (not enclosed by it) is the face at its own depth for both lines (⛔ a GAP: the gizmo waited, the black top never reached); a pocket of the same depth ENCLOSED by the face stays a hole", () => {
+    const fm = buildFaceMap(
+      [
+        front(0.05, -0.3, 0.3, 0, 0.5), // the face
+        front(0.042, -0.3, 0.3, 0.5, 0.6), // the band along its top edge, 8 mm behind
+        front(0.05, -0.3, -0.1, 0.1, 0.3),
+      ],
+      BOX,
+    );
+    const f = facetOf(fm);
+    for (const comp of ["x", "y"] as const) expect(gizmoCase(f.groups, 0, 0.55, comp)).toBe("SURFACE");
+    const holed = facetOf(
+      buildFaceMap(
+        [
+          front(0.05, -0.3, 0.3, 0, 0.2),
+          front(0.05, -0.3, 0.3, 0.3, 0.6),
+          front(0.05, -0.3, -0.1, 0.2, 0.3),
+          front(0.05, 0.1, 0.3, 0.2, 0.3),
+          front(0.042, -0.1, 0.1, 0.2, 0.3), // the pocket's floor
+        ],
+        BOX,
+      ),
+    );
+    expect(gizmoCase(holed.groups, 0, 0.25, "x")).toBe("BRIDGE");
   });
 });
