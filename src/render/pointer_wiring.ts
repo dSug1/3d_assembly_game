@@ -365,7 +365,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
-    // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
+    // ⭐⭐⭐ (§24) an orbit step DISARMS the slide mode (`slideArmedAfter`; A + drag's is the approach's, which arms it going in)
     if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, roles ? asmDyaw : st.orbit.yaw - yaw0, roles ? asmDv : travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
