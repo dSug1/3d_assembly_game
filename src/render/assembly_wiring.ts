@@ -1,17 +1,15 @@
 /**
- * ⭐⭐⭐ (2026-11-06, THE REBUILD — `TILTED_ORBIT_REBUILD_SCOPE.md` §22) **THE ORBIT AROUND THE ASSEMBLY, WIRED** — on while `orbitMode` is 0. No rule here:
- * the travel is `input/loop_travel.ts` (T1 – T6), the piece's direction `input/loop_calm.ts` (P2), the camera's up `input/loop_camera.ts` (C2 – C3), the
- * cut `input/plane_cut.ts`, G1 `input/face_map.ts`. This file holds the state and the calls:
+ * ⭐⭐⭐ (2026-11-06, THE SECOND REBUILD — `TILTED_ORBIT_REBUILD_SCOPE.md` §26, on §22) **THE ORBIT AROUND THE ASSEMBLY, WIRED** — on while `orbitMode` is 0.
+ * No rule here: the travel is `input/loop_travel.ts` (T1 – T6), the view `input/loop_view.ts` (V1 – V6, T5's test), what a face is for a line
+ * `input/gizmo_rule.ts` (Gz0), the cut `input/plane_cut.ts`, G1 `input/face_map.ts`. This file holds the state and the calls:
  * * G1 — the face map's facets of the placed parts (their planes at the parts' support); the travel's place on it (`st.loop`), moved ONLY by the finger
- *   and its coast (`loopFinger` — T6); the shown place and direction eased toward it every frame (`assemblyFrame`).
- * * P1 — the piece outside G1 along its direction at the approach's distance (`shownOffset` / `placeOffset`: the same function) — the orbit cannot touch a
- *   part, no solver (`green_box_wiring.ts` skips it in this mode).
- * * C1 – C3 — the camera along the shown direction with the owner's offsets, its up toward the face's target at the camera's pace, never past a cap's zenith.
- * * Gz0 – Gz3 — the gizmo SHOWN on the real parts (`gizmoFor`): on a face the cast along its normal (a void closed along the line travelled: straight
- *   across on the face's plane); beyond (or a void open along it) the parts' nearest point; the lines the gizmo's paths along the two loops.
- * * A1 – A2 — the approach: above G1 along the direction, below it straight toward the gizmo, collision-checked; below G1 the slide owns the drag (its arm
- *   the depth alone).
- * ⛔ The frame turns, the face map's angle grid as the travel, the shell, the calm's state, §20's up from the view — deleted (scope §22.7).
+ *   and its coast (`loopFinger` — T6), a face crossed only where the view is continuous (T5); the shown place and view eased toward it every frame.
+ * * P1 — the piece outside G1 along the shown view at the approach's distance (`shownOffset` / `placeOffset`: the same function) — no solver.
+ * * V5 — the camera along the shown view (world yaw and pitch, never roll), the owner's offsets, never past the zenith.
+ * * Gz0 – Gz3 — the gizmo SHOWN on the real parts at the shown place (in a gap it waits where it last was on a face); the lines the two planes' cuts of
+ *   the real parts THROUGH the gizmo, each only as far as the travel can carry it.
+ * * A1 – A2 — the approach: above G1 along the view, below it straight toward the gizmo, collision-checked; below G1 the slide owns the drag.
+ * ⛔ `1.0.103-`'s calm direction, the camera's cone and carried up, the view's hold, the nearest-point gizmo, the lines as the gizmo's paths (§26.5).
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -19,7 +17,7 @@ import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, offsetWithUp, orbitDir, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { buildFaceMap, type FaceMap, type MapFace } from "../input/face_map";
 import { gizmoCase, mainGroup } from "../input/gizmo_rule";
 import type { RigCameraFrame } from "../input/orbit_rig";
@@ -31,12 +29,10 @@ import { syncCentre } from "./camera_rig";
 import { greenDragGains, pieceSolveOptions, pieceSolverEnv, ringAnchorAt, orbitDvPerMm } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
-import { calmDir, calmFacets, type CalmFacet, type CalmOpts } from "../input/loop_calm";
-import { capCameraClamp, nextCarried, paceUp, upTarget, viewAllowed } from "../input/loop_camera";
-import { HOLD_FREE, isCapNormal, travelAt, travelLoops, travelStep, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
-import { loopArc, loopLength, loopPoint, type CutLoop } from "../input/plane_cut";
-import { separationBetween } from "../core/collision_shape";
-import { dot, normalize, type Vec3 } from "../core/vec";
+import { cameraView, sameView, viewAt, viewDir, viewFacets, type View, type ViewFacet, type ViewOpts } from "../input/loop_view";
+import { HOLD_FREE, isCapNormal, travelAt, travelReach, travelStep, type CrossOk, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
+import { loopLength, loopPoint, onContour, planeThrough } from "../input/plane_cut";
+import { cross, dot, normalize, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 
@@ -48,8 +44,8 @@ const CAST_OUT_M = 0.05;
 const LINE_STEP_M = 0.012;
 const LINE_MAX = 700;
 const SECTION_LIFT_M = 0.002;
-/** ⭐ The HUD's word for T5's hold. */
-const VIEW_HELD = "orbit: held — beyond, the view would be slanted or upside down (travel back; the far faces by dx round the walls)";
+/** ⭐ The HUD's word for T5's stop. */
+const EDGE_HELD = "orbit: held at the edge — the face beyond is not reachable this way (its view would roll or turn over); the far faces by dx round the walls";
 const BELOW_G1 = "orbit: brought in — a drag takes the piece back out to orbit (the slide where the resting face looks at the face)";
 
 /** ⭐ Is the orbit the one around the assembly? */
@@ -57,26 +53,30 @@ export function assemblyOn(st: SceneState): boolean {
   return st.cfg.orbitMode === 0;
 }
 
-/** ⭐ The rebuild's state: G1 (its key, facets, the calm's facets), the travel, the shown place / direction / up, the gizmo's part (Gz2's tie). */
+/** ⭐ The gizmo shown (Gz1): its point on the real parts, the face's normal there, its part, and the travel at its own place (the lines' — Gz2). */
+interface GizmoShown {
+  readonly point: Vec3;
+  readonly normal: Vec3 | null;
+  readonly host: string | null;
+  readonly travel: Travel;
+}
+
+/** ⭐ The rebuild's state: G1 (its key, facets, the view's facets and knobs), the travel, the shown place and view (and their spring velocities), the gizmo. */
 export interface LoopState {
   readonly key: string;
   readonly map: FaceMap;
   readonly facets: readonly TravelFacet[];
-  readonly calm: { readonly facets: readonly CalmFacet[]; readonly opts: CalmOpts };
+  readonly view: { readonly facets: readonly ViewFacet[]; readonly opts: ViewOpts };
   travel: Travel;
   last: "x" | "y";
   p: Vec3;
-  u: Vec3;
-  /** the shown place's and direction's spring velocities */
   pVel: Vec3;
-  uVel: Vec3;
-  upShown: Vec3 | null;
-  /** ⭐⭐⭐ (§22.2 T5, §22.4 C2) the up carried by the view rule — along the travel (the hold's), and along the shown direction (the camera's) */
-  viewCarried: Vec3 | null;
-  camCarried: Vec3 | null;
+  shown: View;
+  shownVel: Vec3;
+  /** the shown view's direction (the piece's offset and the approach read it) */
+  u: Vec3;
   dtMs: number;
-  gzPart: number | null;
-  lineKey: string;
+  gz: GizmoShown | null;
 }
 
 /** ⭐ The placed parts' world bounding box, `null` with none. */
@@ -282,8 +282,8 @@ function loopOf(st: SceneState): LoopState | null {
   if (L !== null && L.key === key) return L;
   const facets: TravelFacet[] = map.facets.map((f) => ({ n: f.n, poly: f.poly, cap: isCapNormal(f.n) }));
   const cfg = st.cfg;
-  const calm = {
-    facets: calmFacets(map.facets),
+  const view = {
+    facets: viewFacets(map.facets),
     opts: {
       shareH: cfg.faceSpanShareH,
       shareV: cfg.faceSpanShareVOn === 1 ? cfg.faceSpanShareV : 1,
@@ -308,16 +308,19 @@ function loopOf(st: SceneState): LoopState | null {
   const k = f.e - dot(f.n, from);
   const p: Vec3 = [from[0] + f.n[0] * k, from[1] + f.n[1] * k, from[2] + f.n[2] * k];
   const travel = travelAt(facets, p, fi);
-  const u = L !== null ? L.u : calmDir(p, calm.facets, calm.opts, f.n) ?? f.n;
-  st.loop = { key, map, facets, calm, travel, last: "x", p, u, pVel: [0, 0, 0], uVel: [0, 0, 0], upShown: L?.upShown ?? null, viewCarried: L?.viewCarried ?? null, camCarried: L?.camCarried ?? null, dtMs: 16, gzPart: null, lineKey: "" };
+  const shown = L !== null ? L.shown : viewAt(view.facets, fi, p, travel.entry, view.opts);
+  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null };
   return st.loop;
 }
 
-/** ⭐ P2 — the piece's direction at a travel's place (the calm's profile; a cap's from its entry wall, a wall's its own normal). */
-function dirOf(L: LoopState, t: Travel): Vec3 {
-  const f = L.facets[t.facet]!;
-  const entry = f.cap ? t.entry : f.n;
-  return calmDir(t.p, L.calm.facets, L.calm.opts, entry) ?? f.n;
+/** ⭐ V3 – V4 — the view at a travel's place (a cap's from its entry wall). */
+function viewOf(L: LoopState, t: Travel): View {
+  return viewAt(L.view.facets, t.facet, t.p, t.entry, L.view.opts);
+}
+
+/** ⭐⭐⭐ T5 — a crossing taken only where the view just before the edge is the view just after it (`sameView`). */
+function crossOkOf(L: LoopState): CrossOk {
+  return (from, to) => sameView(viewOf(L, from), viewOf(L, to));
 }
 
 /**
@@ -339,17 +342,16 @@ export function loopFinger(st: SceneState, fx: number, fy: number): boolean {
   }
   const o = travelOpts(st);
   let moved = false;
-  // ⭐⭐⭐ T5 — the view's rule at every place a step reaches (the up carried along the travel so far)
-  const allowed = (t: Travel): boolean => viewAllowed(dirOf(L, t), L.viewCarried);
+  // ⭐⭐⭐ T5 — a face crossed only where the view is continuous
+  const crossOk = crossOkOf(L);
   for (const [comp, mm] of [["x", fx], ["y", fy]] as const) {
     if (mm === 0) continue;
-    const r = travelStep(L.facets, L.travel, comp, mm, o, allowed);
+    const r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);
     if (r.travel !== L.travel) moved = true;
     L.travel = r.travel;
-    L.viewCarried = nextCarried(L.viewCarried, dirOf(L, L.travel));
     L.last = comp;
-    if (r.held === "VIEW" && st.lastVerdict !== VIEW_HELD) {
-      st.lastVerdict = VIEW_HELD;
+    if (r.held === "EDGE" && st.lastVerdict !== EDGE_HELD) {
+      st.lastVerdict = EDGE_HELD;
       st.hudDirty = true;
     }
     if (r.crossed > 0) {
@@ -387,26 +389,24 @@ export function shownOffset(st: SceneState, _yaw: number, _v: number): Vec3 {
 }
 
 /**
- * ⭐⭐⭐ Gz0 – Gz2 — THE GIZMO SHOWN at a place `p` on G1 (its facet `fi`) for the line `comp` travels: inside the face's closed region on a real face — the
- * frontmost real surface along the face's normal; on a void closed along the line — straight across on the face's plane; a void open along it, or beyond
- * the face — the parts' nearest point (where the piece would land). The host part when on a real face.
+ * ⭐⭐⭐ Gz0 – Gz1 — THE REAL SURFACE at a place `p` on G1 (its facet `fi`) for the line `comp` travels: a face (or a void's floor inside the face's closed
+ * region) — the frontmost real surface along the face's normal; a void closed along the line — straight across on the face's plane; a GAP (a void open
+ * at the edge, beyond the face) — `null`: no section there.
  */
-function gizmoAt(st: SceneState, L: LoopState, p: Vec3, fi: number, comp: "x" | "y"): GizmoHit {
+function surfaceAt(st: SceneState, L: LoopState, p: Vec3, fi: number, comp: "x" | "y"): { point: Vec3; normal: Vec3 | null; host: string | null } | null {
   const mf = L.map.facets[fi];
-  if (mf === undefined) return { point: p, normal: null, host: null };
-  const x = dot(p, mf.t);
-  const y = dot(p, mf.b);
-  const c = gizmoCase(mf.groups, x, y, comp);
-  if (c === "REAL") {
+  if (mf === undefined) return null;
+  const c = gizmoCase(mf.groups, dot(p, mf.t), dot(p, mf.b), comp);
+  if (c === "SURFACE") {
     const b = shellOf(st);
-    const h = b === null ? null : realAlong(st, p, mf.n, b);
-    if (h !== null) return h;
-  } else if (c === "BRIDGE") {
+    return b === null ? null : realAlong(st, p, mf.n, b);
+  }
+  if (c === "BRIDGE") {
     const main = mainGroup(mf.groups)!;
     const k = main.depth - dot(p, mf.n);
     return { point: [p[0] + mf.n[0] * k, p[1] + mf.n[1] * k, p[2] + mf.n[2] * k], normal: mf.n, host: null };
   }
-  return nearestPoint(st, L, p);
+  return null;
 }
 
 /** ⭐ The frontmost real surface along `−n` through `p` (a ray from outside the parts' box); none: `null`. */
@@ -418,25 +418,21 @@ function realAlong(st: SceneState, p: Vec3, n: Vec3, b: ShellBox): GizmoHit | nu
   return modelCast(st, [p[0] + n[0] * k, p[1] + n[1] * k, p[2] + n[2] * k], [-n[0], -n[1], -n[2]], out - sup(-1) + CAST_OUT_M);
 }
 
-/** ⭐ Gz2 — THE PARTS' NEAREST POINT to `p` (GJK: a point against each part's hull); its part kept until another is nearer by the collision skin. */
-function nearestPoint(st: SceneState, L: LoopState, p: Vec3): GizmoHit {
-  const parts = placedParts(st).parts;
-  let best: { i: number; d: number; q: Vec3 } | null = null;
-  let kept: { i: number; d: number; q: Vec3 } | null = null;
-  parts.forEach((hull, i) => {
-    const v = separationBetween([p], hull);
-    if (v === null) return;
-    const d = Math.hypot(v[0], v[1], v[2]);
-    const q: Vec3 = [p[0] - v[0], p[1] - v[1], p[2] - v[2]];
-    if (best === null || d < best.d) best = { i, d, q };
-    if (i === L.gzPart) kept = { i, d, q };
-  });
-  const skin = pieceSolveOptions(st).gapM;
-  const b = best as { i: number; d: number; q: Vec3 } | null;
-  const k = kept as { i: number; d: number; q: Vec3 } | null;
-  const pick = k !== null && b !== null && k.d <= b.d + skin ? k : b;
-  if (pick === null) return { point: p, normal: null, host: null };
-  return { point: pick.q, normal: normalize([p[0] - pick.q[0], p[1] - pick.q[1], p[2] - pick.q[2]]), host: null };
+/**
+ * ⭐⭐⭐ Gz1 – Gz2 — THE GIZMO'S OWN PLACE: the shown place moved along the two cutting planes' common line onto G1 (`onContour`) — both planes pass through
+ * it, so the gizmo is a vertex of both lines in every frame (⛔ the notch: the lines cut through the travel's target). Its travel: the target's, at that
+ * place, the planes through it.
+ */
+function gizmoTravel(L: LoopState): Travel {
+  const t = L.travel;
+  const n0 = t.planes[0].n;
+  const n1 = t.planes[1].n;
+  let d = normalize(cross(n0, n1)) ?? L.facets[t.facet]!.n;
+  const fn = L.facets[t.facet]!.n;
+  if (dot(d, fn) < 0) d = [-d[0], -d[1], -d[2]];
+  const c = onContour(L.map.facets, L.p, d);
+  if (c === null) return t;
+  return { ...t, p: c.p, facet: c.facet, planes: [planeThrough(c.p, n0), planeThrough(c.p, n1)] };
 }
 
 /**
@@ -496,23 +492,26 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.lastVerdict = "orbit: off the slide — the travel from where the slide left the piece";
   }
   if (st.router.size === 0 && !st.orbitInertia.coasting && (L.travel.hold.x !== 0 || L.travel.hold.y !== 0)) L.travel = { ...L.travel, hold: HOLD_FREE };
-  // the shown place and direction follow the travel's on the orbit's critically damped spring (no speed jump at a pointer event)
+  // V6 — the shown place and view follow the travel's on the orbit's critically damped spring (no speed jump at a pointer event)
   const tau = st.cfg.orbitSpringMs;
-  const uT = dirOf(L, L.travel);
-  if (L.viewCarried === null) L.viewCarried = nextCarried(null, uT);
+  const vT = viewOf(L, L.travel);
   const sp = springPoint(L.p, L.pVel, L.travel.p, dtMs, tau);
   L.p = sp.at;
   L.pVel = sp.vel;
-  const su = springPoint(L.u, L.uVel, uT, dtMs, tau);
-  L.u = normalize(su.at) ?? uT;
-  L.uVel = su.vel;
-  // the orbit's angles follow the shown direction (the HUD, the probes, the slide's way out read them)
-  const yaw = Math.atan2(L.u[2], L.u[0]);
-  const pitch = Math.asin(Math.max(-1, Math.min(1, L.u[1])));
-  st.orbit.reset(yaw, vOfPitch(pitch));
-  // the gizmo (Gz) for the line last travelled; the face for the quads: G1's facet (P3), the host the gizmo's part when on that face
-  const g = gizmoAt(st, L, L.p, L.travel.facet, L.last);
-  const fN = L.facets[L.travel.facet]!.n;
+  const hT = L.shown.h + Math.atan2(Math.sin(vT.h - L.shown.h), Math.cos(vT.h - L.shown.h));
+  const sv = springPoint([L.shown.h, L.shown.e, 0], L.shownVel, [hT, vT.e, 0], dtMs, tau);
+  L.shown = { h: Math.atan2(Math.sin(sv.at[0]), Math.cos(sv.at[0])), e: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, sv.at[1])) };
+  L.shownVel = sv.vel;
+  L.u = viewDir(L.shown);
+  // the orbit's angles ARE the shown view (the HUD, the probes, the slide's way out read them)
+  st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));
+  // Gz1 — the gizmo at its own place for the line last travelled; in a gap it waits where it last was on a face
+  const gt = gizmoTravel(L);
+  const hit = surfaceAt(st, L, gt.p, gt.facet, L.last);
+  if (hit !== null) L.gz = { point: hit.point, normal: hit.normal, host: hit.host, travel: gt };
+  else if (L.gz === null) L.gz = { point: gt.p, normal: null, host: null, travel: gt };
+  const g = L.gz;
+  const fN = L.facets[g.travel.facet]!.n;
   if (st.gizmoNormal === null || st.gizmoNormal === undefined || dot(st.gizmoNormal, fN) < Math.cos(Math.PI / 180)) {
     st.gizmoNormal = fN;
     st.orientDirty = true;
@@ -530,7 +529,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const w = lookShare(Math.max(0, d), farDistance(st.cfg), st.cfg.assemblyLockDistM, false);
   const lt: Vec3 = [a.centre[0] + (L.p[0] - a.centre[0]) * w, a.centre[1] + (L.p[1] - a.centre[1]) * w, a.centre[2] + (L.p[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
-  sectionLinesFrame(st, L, g.point);
+  sectionLinesFrame(st, L, g);
 }
 
 function hideLines(st: SceneState): void {
@@ -538,35 +537,55 @@ function hideLines(st: SceneState): void {
 }
 
 /**
- * ⭐⭐⭐ Gz3 — THE LINES ARE THE GIZMO's PATHS: along each loop through the travel's place (the green the dx's, the red the dy's), at every sample the gizmo
- * for THAT line (`gizmoAt`), solid, the gizmo's exact point a vertex of both. Each line recomputed only when its plane moves. ONE mesh, updated in place.
+ * ⭐⭐⭐ Gz2 – Gz3 — THE LINES: the two planes' cuts of the REAL parts THROUGH THE GIZMO (its own travel) — the green the dx plane, the red the dy plane —
+ * each drawn from the gizmo both ways only as far as the travel can carry it (`travelReach`: T5's edges, R4's stops), at every sample the real surface
+ * by Gz0 for THAT line, nothing in a gap; the gizmo's exact point a vertex of both. Rebuilt only when the gizmo or its planes move. ONE mesh, updated in
+ * place.
  */
-function sectionLinesFrame(st: SceneState, L: LoopState, gp: Vec3): void {
+function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown): void {
   if (st.cfg.sectionLines !== 1) {
     hideLines(st);
     return;
   }
-  const { green, red } = travelLoops(L.facets, L.travel);
-  const pl = L.travel.planes;
+  const gp = g.point;
+  const pl = g.travel.planes;
   const key = `${pl[0].n.map((x) => x.toFixed(5)).join(",")}|${pl[0].d.toFixed(5)}|${pl[1].n.map((x) => x.toFixed(5)).join(",")}|${pl[1].d.toFixed(5)}|${gp.map((x) => x.toFixed(5)).join(",")}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
   const gv = new Vector3(gp[0], gp[1], gp[2]);
-  const path = (loop: CutLoop | null, comp: "x" | "y"): Vector3[][] => {
+  const o = travelOpts(st);
+  const crossOk = crossOkOf(L);
+  const path = (comp: "x" | "y"): Vector3[][] => {
     const out: Vector3[][] = [];
-    if (loop === null) return out;
-    const total = loopLength(loop);
-    const n = Math.max(3, Math.min(LINE_MAX - 2, Math.ceil(total / LINE_STEP_M)));
-    const s0 = loopArc(loop, L.travel.p);
-    const pts: Vector3[] = [];
-    for (let k = 0; k <= n; k++) {
-      const q = loopPoint(loop, s0 + (k / n) * total);
-      const h = k === 0 || k === n ? { point: gp, normal: null } : gizmoAt(st, L, q.p, q.facet, comp);
-      const nn = L.facets[q.facet]!.n;
-      pts.push(k === 0 || k === n ? gv : new Vector3(h.point[0] + nn[0] * SECTION_LIFT_M, h.point[1] + nn[1] * SECTION_LIFT_M, h.point[2] + nn[2] * SECTION_LIFT_M));
+    const r = travelReach(L.facets, g.travel, comp, o, crossOk);
+    if (r === null) return out;
+    const total = loopLength(r.loop);
+    const closed = r.fwd + r.back >= total - 1e-6;
+    const from = closed ? -total / 2 : -r.back;
+    const to = closed ? total / 2 : r.fwd;
+    const span = to - from;
+    const n = Math.max(2, Math.min(LINE_MAX - 2, Math.ceil(span / LINE_STEP_M)));
+    // the samples, the gizmo's own arc one of them (its exact point)
+    const arcs: number[] = [];
+    for (let k = 0; k <= n; k++) arcs.push(from + (k / n) * span);
+    if (!arcs.some((a) => Math.abs(a) < 1e-9)) {
+      arcs.push(0);
+      arcs.sort((a, b) => a - b);
     }
-    for (let k = 0; k < pts.length - 1; k++) out.push([pts[k]!, pts[k + 1]!]);
+    let prev: Vector3 | null = null;
+    for (const a of arcs) {
+      let v: Vector3 | null;
+      if (Math.abs(a) < 1e-9) v = gv;
+      else {
+        const q = loopPoint(r.loop, r.s0 + a);
+        const h = surfaceAt(st, L, q.p, q.facet, comp);
+        const nn = L.facets[q.facet]!.n;
+        v = h === null ? null : new Vector3(h.point[0] + nn[0] * SECTION_LIFT_M, h.point[1] + nn[1] * SECTION_LIFT_M, h.point[2] + nn[2] * SECTION_LIFT_M);
+      }
+      if (v !== null && prev !== null) out.push([prev, v]);
+      prev = v;
+    }
     return out;
   };
   const pad = (segs: Vector3[][]): Vector3[][] => {
@@ -574,7 +593,7 @@ function sectionLinesFrame(st: SceneState, L: LoopState, gp: Vec3): void {
     while (s.length < LINE_MAX) s.push([gv, gv]);
     return s;
   };
-  const lines = [...pad(path(green, "x")), ...pad(path(red, "y"))];
+  const lines = [...pad(path("x")), ...pad(path("y"))];
   if (st.asmSectionLines === null) {
     const colours = lines.map((_, i) => (i < LINE_MAX ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);
@@ -646,29 +665,13 @@ export function approachRelease(st: SceneState): void {
 }
 
 /**
- * ⭐⭐⭐ C1 – C3 — THE CAMERA'S FRAME: along the SHOWN direction (the travel's — never the orbit's angles: no pole), the owner's offsets about it; its up
- * toward the face's target (`upTarget`: a wall's gravity, a cap's carried axis) at the camera's pace (`paceUp`); on a cap never past its zenith
- * (`capCameraClamp`). `commit`: the frame's own camera carries its up to the next frame.
+ * ⭐⭐⭐ V5 — THE CAMERA'S FRAME: along the SHOWN view (world yaw and pitch — never a roll), the owner's offsets in its own frame, the pitch never past ±90°
+ * (never past the zenith) — `cameraView`. No state: the up is the view's own (V2).
  */
-export function assemblyCameraFrame(st: SceneState, _cam: OrbitAt, off?: CameraAngleOffset, commit: boolean = false): RigCameraFrame {
+export function assemblyCameraFrame(st: SceneState, _cam: OrbitAt, off?: CameraAngleOffset, _commit: boolean = false): RigCameraFrame {
   const L = st.loop;
   const o = off ?? { yawRad: 0, pitchRad: 0 };
-  if (L === null) return offsetWithUp([0, 0, -1], [0, 1, 0], o.yawRad, o.pitchRad);
-  const u = L.u;
-  const f = L.facets[L.travel.facet]!;
-  const target = upTarget(u, L.camCarried);
-  let up = target;
-  if (commit) {
-    L.camCarried = nextCarried(L.camCarried, u);
-    const r = paceUp(L.upShown, target, u, ((st.cfg.cameraRollDegPerS * Math.PI) / 180) * (Math.max(0, L.dtMs) / 1000));
-    L.upShown = r.up;
-    up = r.up;
-  } else if (L.upShown !== null) {
-    const k = dot(L.upShown, u);
-    up = normalize([L.upShown[0] - k * u[0], L.upShown[1] - k * u[1], L.upShown[2] - k * u[2]]) ?? target;
-  }
-  const fr = offsetWithUp(u, up, o.yawRad, o.pitchRad);
-  return f.cap ? capCameraClamp(fr.dir, fr.up, f.n, L.travel.entry) : fr;
+  return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);
 }
 
 /** ⭐ The slide's cone (the slide's own): never a constraint on the orbit — the orbit's angles are the travel's. */

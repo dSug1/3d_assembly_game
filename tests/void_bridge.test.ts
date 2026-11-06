@@ -47,18 +47,18 @@ describe("⭐⭐⭐ the void closed on a travel — the gizmo straight through o
     expect(closedAlong([frame], 0.15, 0.15)).toEqual({ x: true, y: true });
     expect(closedAlong([frame], 0.4, 0.15)).toEqual({ x: false, y: false });
   });
-  it("⭐⭐⭐ (§22.5 Gz0) THE VOID PER LINE — a void with the face's plane both sides along x (the green's travel) but OPEN upward (the red's): BRIDGED for the green, the LANDING for the red (⛔ bridged for both); closed both ways: bridged for both; on a real face REAL; beyond the face LAND", () => {
+  it("⭐⭐⭐ (§26.4 Gz0) THE VOID PER LINE — a void with the face's plane both sides along x (the green's travel) but OPEN upward to the face's edge (the red's): BRIDGED for the green, a GAP for the red — its floor never counts as the face (⛔ `1.0.103-`: the parts' nearest point there); closed both ways: bridged for both; on a real face SURFACE; beyond the face a GAP", () => {
     const openTop = facetOf(painting({ top: true }));
     expect(gizmoCase(openTop.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
-    expect(gizmoCase(openTop.groups, 0.05, 0.35, "y")).toBe("LAND");
+    expect(gizmoCase(openTop.groups, 0.05, 0.35, "y")).toBe("GAP");
     const closed = facetOf(painting({}));
     expect(gizmoCase(closed.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
     expect(gizmoCase(closed.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
     const openRight = facetOf(painting({ right: true }));
-    expect(gizmoCase(openRight.groups, 0.05, 0.35, "x")).toBe("LAND");
+    expect(gizmoCase(openRight.groups, 0.05, 0.35, "x")).toBe("GAP");
     expect(gizmoCase(openRight.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
-    expect(gizmoCase(closed.groups, -0.2, 0.3, "x")).toBe("REAL");
-    expect(gizmoCase(closed.groups, -0.5, 0.3, "y")).toBe("LAND");
+    expect(gizmoCase(closed.groups, -0.2, 0.3, "x")).toBe("SURFACE");
+    expect(gizmoCase(closed.groups, -0.5, 0.3, "y")).toBe("GAP");
     expect(mainGroup(closed.groups)!.depth).toBeCloseTo(0.05, 12);
   });
 });

@@ -70,7 +70,7 @@ describe("⭐⭐⭐ the gizmo reads the parts AT REST — the orbit's sway (its 
     const a = code("render/assembly_wiring.ts");
     // ⭐⭐⭐ (the rebuild, §22.5) the gizmo's and the lines' real surface: a model-space cast (`realAlong` → `modelCast`); the lines' samples the gizmo's own rule
     expect(a).toContain("return modelCast(st, [p[0] + n[0] * k, p[1] + n[1] * k, p[2] + n[2] * k], [-n[0], -n[1], -n[2]], out - sup(-1) + CAST_OUT_M);");
-    expect(a).toContain("const h = k === 0 || k === n ? { point: gp, normal: null } : gizmoAt(st, L, q.p, q.facet, comp);");
+    expect(a).toContain("const h = surfaceAt(st, L, q.p, q.facet, comp);"); // ⭐⭐⭐ (§26.4) the lines' samples: the real surface by the gizmo's own rule, cast in the model's space
     // ⭐ (2026-11-04, the audit) the drawn place and turn read once a frame (`castParts`), the ray moved onto each part as drawn
     expect(a).toContain("const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);");
     expect(a).toContain("parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z]");

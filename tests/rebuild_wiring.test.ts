@@ -51,9 +51,9 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (!loopFinger(st, d.dYaw, d.dV) && (d.dYaw !== 0 || d.dV !== 0)) st.orbitInertia.stop();");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const r = travelStep(L.facets, L.travel, comp, mm, o, allowed);");
-    expect(a).toContain("const allowed = (t: Travel): boolean => viewAllowed(dirOf(L, t), L.viewCarried);");
-    expect(a).toContain("st.orbit.reset(yaw, vOfPitch(pitch));");
+    expect(a).toContain("const r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);"); // ⭐⭐⭐ (§26.3) T5 a crossing test
+    expect(a).toContain("return (from, to) => sameView(viewOf(L, from), viewOf(L, to));");
+    expect(a).toContain("st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));"); // ⭐⭐⭐ (§26.2 V1) the orbit's angles ARE the shown view
     for (const gone of ["frameStep", "orbitFrameTurn", "mapGizmo", "syncAngle", "shellAnchor", "calmFrame", "cameraUp("]) expect(a).not.toContain(gone);
   });
 
@@ -71,11 +71,16 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");
   });
 
-  it("⭐⭐⭐ C1 – C3 and Gz0 – Gz3 — the camera along the SHOWN direction (no angles: no pole), its up paced toward the face's target, never past a cap's zenith; the gizmo by `gizmoCase`, the lines its paths", () => {
+  it("⭐⭐⭐ (§26) V5 and Gz0 – Gz3 — the camera from the SHOWN view alone (world yaw and pitch, never past the zenith); the gizmo by `gizmoCase` at its own place, the lines the planes' cuts through it, followable only", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const target = upTarget(u, L.camCarried);");
-    expect(a).toContain("return f.cap ? capCameraClamp(fr.dir, fr.up, f.n, L.travel.entry) : fr;");
-    expect(a).toContain("const c = gizmoCase(mf.groups, x, y, comp);");
-    expect(a).toContain("const v = separationBetween([p], hull);");
+    // ⭐⭐⭐ (§26.2 V5) the camera from the shown view alone — no cone, no carried up, no pace
+    expect(a).toContain("return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);");
+    for (const gone of ["upTarget", "nextCarried", "viewAllowed", "paceUp", "capCameraClamp", "separationBetween", "nearestPoint", "calmDir"]) expect(a).not.toContain(gone);
+    // ⭐⭐⭐ (§26.4) Gz0 per line; the gizmo at its own place (the planes' common line onto G1); in a gap it waits; the lines through it, followable only
+    expect(a).toContain("const c = gizmoCase(mf.groups, dot(p, mf.t), dot(p, mf.b), comp);");
+    expect(a).toContain("const c = onContour(L.map.facets, L.p, d);");
+    expect(a).toContain("if (hit !== null) L.gz = { point: hit.point, normal: hit.normal, host: hit.host, travel: gt };");
+    expect(a).toContain("const r = travelReach(L.facets, g.travel, comp, o, crossOk);");
+    expect(a).toContain("if (v !== null && prev !== null) out.push([prev, v]);");
   });
 });

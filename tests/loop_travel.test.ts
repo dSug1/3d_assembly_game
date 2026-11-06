@@ -5,7 +5,7 @@
  * of the orbit's angles, the frame turned at a crossing).
  */
 import { describe, expect, it } from "vitest";
-import { capAxis, travelAt, travelLoops, travelStep, type Travel, type TravelFacet, type TravelOpts } from "../src/input/loop_travel";
+import { capAxis, loopOf, travelAt, travelStep, type Travel, type TravelFacet, type TravelOpts } from "../src/input/loop_travel";
 import { loopLength } from "../src/input/plane_cut";
 import type { Vec3 } from "../src/core/vec";
 
@@ -97,7 +97,8 @@ describe("⭐⭐⭐ the travel on the loops (§22.2)", () => {
 
   it("⭐ the loops through the place: the green level, the red vertical through it; each closed (the box's girth)", () => {
     const t0 = at(PAINT, [0.05, 0.3, -0.05]);
-    const { green, red } = travelLoops(PAINT, t0);
+    const green = loopOf(PAINT, t0.planes[0]);
+    const red = loopOf(PAINT, t0.planes[1]);
     expect(loopLength(green!)).toBeCloseTo(2 * (0.5 + 0.033), 6);
     expect(loopLength(red!)).toBeCloseTo(2 * (0.48 + 0.033), 6);
     for (const q of green!.pts) expect(q[1]).toBeCloseTo(0.3, 9);
