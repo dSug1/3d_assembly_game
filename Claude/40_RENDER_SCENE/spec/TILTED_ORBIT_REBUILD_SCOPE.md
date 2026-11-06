@@ -1068,7 +1068,7 @@ owner's look.
 
 ## 22. ⭐⭐⭐ THE CLEAN SPECIFICATION — the rebuild of the sections as plane cuts (2026-11-06, branch `1.0.103-` from `8dfa635`; the owner: *"proceed with rebuild"* — BEING BUILT, step by step)
 
-> ⭐⭐⭐ **§27 (the track and the shell; deported faces) amends G1, P1 and Gz0 – Gz2.** ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
+> ⛔⛔ **§28 (the deep debug, NOT BUILT): RC4 – RC5 put G1 (one plane per face) and the cast-built sections in question (RC6 withdrawn) — read it before touching them.** ⭐⭐⭐ **§27 (the track and the shell; deported faces) amends G1, P1 and Gz0 – Gz2.** ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
 
 > The owner (2026-11-06): *"I do not want fixes with logics which contradict each other. There are lot of proposed fixes with new rules and this seems to
 > create such risk. I would prefer a full rebuild without adding new rules for fixes"* → *"I would rebuild from 8dfa635 with a clean specification in the
@@ -1481,3 +1481,64 @@ faces reachable, the tops and bottoms landed on.
   the approach can follow it in; when the slide is worked on, one gives. (2) **The floor as a host** (`HOVER.md` item 5, parked) would contradict *the
   floor is ignored* (§25) if revived. (3) **(i) at a cap's corners** — a top's dy 45° off the screen's vertical there; the rule to change is V4's (i) if it
   is disliked on the device.
+
+## 28. ⭐⭐⭐ THE DEEP DEBUG — LONG WALKS WITH CHANGES OF INPUT DIRECTION (2026-11-06, build `9fdb829`; ⛔ NOTHING BUILT — the owner: *"capture that in the md files, but don't build the fixes. I want to deepen the analysis of the root cause before"*)
+
+> The owner: *"a series of random walks with dx, dy, mix dx + dy, changes of input direction … several orbit tilts each walk, at several distances,
+> walking through singularities-corners-protruding parts-recessed faces-slanted faces … We have never tested changes of input directions during long walks
+> and this is where I see risk"*. Mid-run, on the device: on the top, the green section blocked between the two black faces' edges and the gizmo stuck on
+> dx although the grey parts' tops are coplanar with the black ones (*"same for the red section … whatever the zoom"*); dy down a side, the gizmo jumping
+> over the red part's bottom face to near the black part, the red section broken; the green section broken left and right on the front; the red section
+> broken on the black face.
+
+### 28.1 The walks (`scripts/probes/orbit_probe.mjs`, `MODE=walk`)
+One press per walk, 8000 px of drag, its direction changed mid-drag — each segment another kind (dx / dy / a mix), 3 px a frame (a quarter FAST, 8 px); a
+change at a random length (60 – 600 px) or 0 – 11 steps after an EVENT (the travel's face changed; a hold, a crossing, a gap); the pointer kept in the
+viewport by a lift and a re-press at the centre. 4 distances (the approach 0 / 150 / 300 / 900) × 4 seeds: **16 walks, 108 651 frames in presses, 880
+changes of direction, 0 page errors.** Analysed per change (the 45 frames after it) and input-normalised per frame (each jump against the travel's own step).
+
+### 28.2 What was measured
+| check | result |
+|---|---|
+| the travel's place against the new finger direction after a change | **0** of 880 |
+| stuck (the place still, no hold, ≥ 30 frames) · back-and-forth | **0 · 0** |
+| ⛔ the gizmo jumping in DEPTH (30 – 99 mm in a frame, the travel moving ~3 mm) | **481 frames** — the red-part report |
+| ⛔ the gizmo jumping SIDEWAYS (35 – 135 mm) | **282 frames** — a wait resumed; line samples landing away from the travel's place near the sides |
+| ⛔ the gizmo still while the travel moves 45 – 137 mm | **41 runs** (19 walls, 22 caps) — strips with no face |
+| the up turning 6 – 15° a frame while the view direction turns < 1° | 355 frames — ✅ **NOT A DEFECT** (§28.3 RC6, withdrawn): looking near straight down / up, a yaw turns the picture about the view; the same dx yaw as on a wall |
+| camera / piece 0.5 – 2.5 m in a frame | ⚠ an ARTEFACT: far out (5 m), ~10 fps under four browsers, the input in bursts (one large step, two small) |
+
+⭐ **The changes of direction are not the defect**: every issue above occurs mid-segment too; a change only reaches the bad places more often.
+
+### 28.3 The root causes — FIRST READING (to be deepened before any rule changes)
+| | root cause | evidence | the rules in conflict |
+|---|---|---|---|
+| **RC4** | **A track with ONE plane per face cannot fit stepped faces.** §22 (the outermost part) gave strips with no face under them (the waits); §27 (the face's largest region) puts `Scene_1`'s side walls at INNER faces (x = −0.148 / +0.214, the outer sides ±0.25; `es` 0.2425 / 0.2888): the top's track ends at those planes — the grey blocks' tops unreachable (the top-face report); the front's loops run THROUGH the parts near the sides (samples 10 cm away — the green / red breaks); a 3 cm strip along the front's top (the blocks' tops 0.4985, the real front lower) is a GAP — a wait, then a 131 mm jump | §27.2 G1 (the track at the main group) × the owner's *"every face reachable"* and *"the sections are planes"*; any single convex track either leaves strips or cuts faces off |
+| **RC5** | **A section is a DEPTH MAP, not a plane cut.** Every line sample and the gizmo are a cast straight in along the facet's normal (`surfaceAt`): a face PARALLEL to that ray (the red part's bottom seen from the front) is never landed on — the gizmo jumps across it, the line breaks | the 481 depth jumps (some are §27.2 Gz0 3's designed jump onto a deported face — ⏳ not yet split) | §26.4 *"the lines the planes' cuts of the real parts"* × the cast that builds them |
+| ~~RC6~~ | ⛔ **WITHDRAWN** (the owner: *"I can't reproduce … I can see no issue on far edges nor at corners"*; re-read on the frames): the 355 "spinning" frames are the dx YAW the view is meant to take (V3 – V4: the yaw follows the entry wall's across its width) seen from near straight above / below (`w0_s11` 455 – 462: on the top, e = 87°, dx −, the yaw 82° → 49° over 7 frames) — looking down, a yaw IS a turn of the picture about the view, which my metric (the up's turn against the view direction's) counted as a spin; per frame it is inflated by the probe's bursty input (a 9° frame, then two of 0°). The 45° dy at a top's corner (§27.1) arises only with the dx held at the cap's side edge and a finger mostly sideways: the small dy left is the only motion — real, too small to be seen. | — |
+
+### 28.4 Proposals — ⛔ NOT ADOPTED, NOT BUILT (the owner deepens the analysis first)
+* **For RC4 + RC5 — the gizmo travels ON the real sections.** The green and red sections the TRUE plane cuts of the placed parts (their outer outline in
+  each plane); dx moves the gizmo along the green outline, dy along the red, by arc length, at the travel's pace — a step walked along, never jumped;
+  faces at every depth on the outline (none cut off), no strips, the gizmo always where the two outlines meet. The void rules map onto it: a void closed
+  along the line → a straight segment across it; open at the edge → the outline goes round the edge (the orbit tilts on). The convex shell (G1s) then
+  serves only the piece's place and the view. ⚠ It replaces the travel's track (T1 – T2, G1): a rebuild of the travel; the cost to measure is the plane
+  cuts per step on the iPhone (cached per plane). ⚠⚠ **ITS TWO NEIGHBOURS WERE BUILT AND DROPPED — this one never was** (the owner asked, 2026-11-06):
+  (1) **the carrier on the section's HULL** (`75eb381`, `1.0.85-`, `section_hull.ts`): the gizmo rode the CONVEX HULL of the real cut in the yaw plane —
+  the hull bridges grooves and gaps, so the gizmo waited, held, drifted and jumped; deleted at Step 4c-bis (§15) for the face map; (2) **§21 / §22's
+  travel on plane cuts of the CONVEX contour** — today's track (§21 item 8 named the difference from (1): exact closed polygons; the real surface only
+  offsets the depth — that offset IS RC5's cast). Neither followed the TRUE, non-convex outline. ⛔ What made both convex is the owner's condition at §21:
+  *"the contours shall be closed loops and cannot be infinite loops due to throw off by singularities or slanted faces"* — a convex cut is ONE closed
+  polygon by construction; the true cut of the parts can be SEVERAL loops (a separate part, an overhang, a slot through), with holes, and must be
+  reduced to its outer outline (which loop, which way round) before it is a path. That, and a dx walking up every step's side (the view must not follow
+  those turns), are what §28.5 must settle before this is proposed again.
+* ~~For RC6~~ — withdrawn with RC6.
+
+### 28.5 To deepen before deciding (open)
+1. Split the 481 depth jumps: Gz0 3's designed jumps onto a deported face against RC5's skipped parallel faces — and the parallel faces by part.
+2. Split the 282 sideways jumps: a wait resumed (RC4's strips) against a sample landing off the travel's place (RC4's loops through the parts).
+3. Map `Scene_1`'s facets: which walls' main groups are inner, and how much of each real face lies beyond its facet's plane (what RC4 cuts off).
+4. ~~RC6~~ — withdrawn (the yaw seen from above, §28.3).
+5. The true outline as a path: one closed loop from a cut that may give several (parts apart, an overhang, a slot through), holes, the way round; a dx
+   walking up a step's side (the gizmo along it, the view not) — and the owner's §21 closed-loop condition met by construction, not by a guard.
+6. Replay each of the owner's four mid-run reports in the app with the travel's state (`lt`) — confirm the cause named above for each, not by inference.

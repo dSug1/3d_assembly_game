@@ -89,6 +89,7 @@ try {
       window.__rec.push({ leg: window.__leg, ts: performance.now(), g: v3(st.asmGizmoAt ?? st.asmG ?? null), gm: v3(st.asmG ?? null), gn: v3(st.gizmoNormal ?? null),
         p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
         ov: [st.orbit.yaw, st.orbit.elevation], lk: st.asmLocked ?? null, cs: st.asmCarrier ? [st.asmCarrier.s, st.asmCarrier.chain?.total ?? null, st.asmCarrier.kind, st.asmCarrier.w, st.asmCarrier.heading ?? null] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, tc: st.pieceTouching ?? null, uv: st.orbitUserV ?? null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null, ms: st.asmShown ? [st.asmShown.t.stack, st.asmShown.t.band, st.asmShown.t.side] : null, dr: ${env.DROP ? `(() => { const d = st.asmCarrier?.drop; if (!d) return null; const Ray = c.getForwardRay(1).constructor; const V = c.position.constructor; const h = st.scene.pickWithRay(new Ray(new V(...d.origin), new V(...d.dir), d.length), (m) => { const id = st.idOf.get(m); return id !== undefined && st.goalCommit.placed.has(id) && m.isPickable && m.isEnabled(); }); const n = h?.hit ? h.getNormal(true) : null; return h?.hit ? [h.pickedMesh.name, h.pickedPoint.x, h.pickedPoint.y, h.pickedPoint.z, n ? n.y : null, d.origin, d.dir] : ["miss", d.origin, d.dir]; })()` : "null"}, rc: st.asmRedCache ? [st.asmRedCache.pts.filter(Boolean).length, st.asmRedCache.pts.length] : null, sh: st.asmShown ? (st.asmShown.t ? [st.asmShown.t.surface, st.asmShown.t.band, st.asmShown.t.side] : [st.asmShown.c.w, st.asmShown.c.heading]) : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null, cm: st.asmCalm ? [st.asmCalm.n, st.asmCalm.sH, st.asmCalm.sV] : null, ap: st.approach, hv: st.hover != null, fr: st.orbitFrame ? st.orbitFrame.cap : null, rl: st.asmUpBand ?? null, ua: st.asmFace?.axis ?? null, fq: st.orbitFrame ? st.orbitFrame.q : null, hd: st.orbitHold ?? null, v: String(st.lastVerdict ?? "").slice(0, 90),
+        cz: window.__cause ?? null,
         lt: st.loop ? [st.loop.travel.facet, st.loop.travel.entry, st.loop.travel.planes.map((q) => q.n.map((x) => +x.toFixed(3))), st.loop.last, +st.loop.shown.h.toFixed(3), +st.loop.shown.e.toFixed(3)] : null,
         sk: st.asmSectionKey ?? null, lc: st.lastCollision ? String(st.lastCollision).slice(0, 60) : null,
         ld: (() => { const m = st.asmSectionLines; const g = st.asmGizmoAt; if (!m || !m.isVisible || !g) return null; const P = m.getVerticesData("position"); if (!P) return null; const half = P.length / 2;
@@ -136,6 +137,63 @@ try {
     const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
     let k = 0;
     for (const [d, px] of JSON.parse(env.LEGS ?? '[["L",1400],["U",380],["R",1400],["D",380]]')) { k++; await leg(`c${k}${d}`, starts[d], dirs[d], Math.round(px / v)); }
+  } else if (mode === "walk") {
+    // ⭐⭐⭐ (2026-11-06, the owner: *"changes of input direction during long walks … at or just after singularities"*) LONG WALKS: one press per walk,
+    // its direction changed mid-drag — every segment a different KIND (dx / dy / a mix) at 3 px a frame (a quarter of them FAST, 8 px); a change at a
+    // random length (60 … 600 px) or 0 … 11 steps after an EVENT (the travel's face changed; the verdict a hold, a crossing, a gap). The pointer kept in the
+    // viewport by a lift and a re-press at the centre (the direction kept). Segments tagged `r<n>[dx,dy]` (the analysers' random legs); `cz` the cause.
+    const kinds = ["dx", "dy", "mix"];
+    let kind = null;
+    const pick = () => {
+      const k = kinds.filter((x) => x !== kind)[Math.floor(rnd() * 2)];
+      kind = k;
+      const sg = rnd() < 0.5 ? -1 : 1;
+      if (k === "dx") return [sg, 0];
+      if (k === "dy") return [0, sg];
+      const a = (rnd() < 0.5 ? 1 : -1) * (0.25 + rnd() * 0.5) * (Math.PI / 2) + (rnd() < 0.5 ? 0 : Math.PI);
+      return [Math.cos(a), Math.sin(a)];
+    };
+    const center = [W / 2, (top + H) / 2];
+    for (let w = 1; w <= +(env.WALKS ?? 1); w++) {
+      let m = center;
+      let seg = 0;
+      let d = pick();
+      let speed = rnd() < 0.25 ? 8 : 3;
+      let left = 60 + rnd() * 540;
+      let pending = -1;
+      let cause = "start";
+      let lastFacet = null;
+      let lastV = "";
+      const tagIt = async () => {
+        seg++;
+        await ev(`window.__leg = ${JSON.stringify(`r${w * 1000 + seg}[${Math.round(d[0] * 100)},${Math.round(d[1] * 100)}]`)}; window.__cause = ${JSON.stringify(cause)}`);
+      };
+      await tagIt();
+      await move("mousePressed", m, 1); await frame();
+      let px = 0;
+      const total = +(env.WALKPX ?? 8000);
+      while (px < total) {
+        const st = JSON.parse(await ev(`JSON.stringify([window.__st.loop ? window.__st.loop.travel.facet : null, String(window.__st.lastVerdict ?? "")])`));
+        if (pending < 0 && lastFacet !== null && st[0] !== lastFacet) { pending = Math.floor(rnd() * 12); cause = "face"; }
+        else if (pending < 0 && st[1] !== lastV && /held|onto|brought|gap/.test(st[1])) { pending = Math.floor(rnd() * 12); cause = /held/.test(st[1]) ? "held" : /onto/.test(st[1]) ? "cross" : "other"; }
+        lastFacet = st[0];
+        lastV = st[1];
+        if (pending === 0 || left <= 0) {
+          if (pending !== 0) cause = "random";
+          d = pick(); speed = rnd() < 0.25 ? 8 : 3; left = 60 + rnd() * 540; pending = -1;
+          await tagIt();
+        } else if (pending > 0) pending--;
+        const m2 = [m[0] + d[0] * speed, m[1] + d[1] * speed];
+        if (!inside(m2)) {
+          await move("mouseReleased", m, 0); await frame(); m = center; await move("mousePressed", m, 1); await frame();
+          continue;
+        }
+        m = m2; await move("mouseMoved", m, 1); await frame();
+        px += speed; left -= speed;
+      }
+      await ev(`window.__leg = "w${w}_rel"`);
+      await move("mouseReleased", m, 0); await sleep(1500);
+    }
   } else {
     for (let k = 1; k <= +(env.PRESSES ?? 5); k++) await randomLeg(`r${k}`);
   }
