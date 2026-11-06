@@ -1340,4 +1340,30 @@ above it), the ±x sides to Piece3's and the right part's extent. Close-in dx ac
 latched); close-in dy: the piece no longer pinned against Piece44 (0 camera jumps, 0 back-and-forth, was 3 and 122); camera jumps 14, piece jumps 11
 over all 8 runs. ⚠ Open: (1) at a top's far edge, held, the CAMERA leans ~11° past straight above — the piece's direction stops at the zenith, the camera
 stands at its pitch offset above-behind it (`r5c`: 260 tilted frames there, the probe pushing on); the rule should bind the camera, not the piece's
-direction; (2) close in at the front's bottom the piece touches the FLOOR and a dy down stops (the floor is real — the play volume, `D181`).
+direction; (2) ~~close in at the front's bottom the piece touches the FLOOR~~ ⛔ WRONG (§25): it rests on **Piece41**, a LOOSE piece lying on the floor in
+front of the painting (the blocker read on the solver) — the floor never stops the orbited piece.
+
+## 25. The camera never past a cap's zenith; THE FLOOR IGNORED (2026-11-06, branch `1.0.102-`; ⛔ no device close)
+
+> The owner: *"built the camera never past the zenith. The floor should not stop orbit nor slide: its function is purely decorative at the moment, and seen
+> from the bottom view it is transparent: update the md files accordingly and relax the constraints which are currently imposed by the floor: the floor
+> shall be ignored entirely (until we change this rule later on maybe)"*.
+
+**The camera never past a cap's zenith** (`camera_up.ts` `capCameraClamp`, wired in `assemblyCameraFrame`): on a cap, the camera's direction (from the
+look point) kept on the ENTRY side — its component along the entry wall's normal laid in the cap's plane never negative; beyond, taken off (straight above /
+below, the sideways lean kept), the up made square to it. ⛔ §23 bound the piece's direction only: the camera's pitch offset above-behind the piece carried
+it ~11° past straight above at a held far edge.
+
+**⭐⭐⭐ THE FLOOR IS IGNORED — A RULE, until the owner changes it.** The floor (`Scene_1`'s frozen 2 m × 5 mm × 2 m plate) is DECORATIVE: nothing the
+orbited piece does reads it, and seen from below it is not drawn (`D128`). Checked in the code, every path — none imposed a constraint:
+* the orbited piece's collision — the orbit's solver, the approach, its way out (`pieceCollisionSetup`): frozen bodies exempt, the PLAY VOLUME exempt
+  (2026-10-13, `COLLISION.md` §11);
+* the slide: its hosting faces skip frozen bodies (`hover_wiring.ts`); the face map, the contour and its support (§24.1), the ring's and the lines' casts
+  (`castParts`): placed parts only;
+* the camera crosses it (§16.1: the bottom orbited as the others).
+⚠ What it still does — orientation, never a stop: its planes give the quads' reference frames and a spawned piece's resting face is turned against it
+(`bootRestAlign`). ⚠ The play volume (`D181`, its floor at the plate's top) still binds the OTHER pieces' gestures, not the orbited piece.
+⛔ The close-in dy down that stopped at the front's bottom (§24.1, open (2)) was **Piece41**, a loose piece on the floor in front of the painting — a part,
+an obstacle by the rules (*"collision allows contact; only penetration is refused"*, `D136`), not the floor.
+Probed (4 runs, held at the tops' far edges): the camera's lean toward the far edge exactly 0 there (~11° before); the frames counted "tilted" there are
+the camera's sideways (yaw) offset, ~12° off the vertical — inside the 5–20° band where the up follows the cap's axis by design (§21.8). 1659 vectors.

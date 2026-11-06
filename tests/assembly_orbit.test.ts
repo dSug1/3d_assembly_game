@@ -189,7 +189,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
       expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
     }
     // ⭐ (2026-10-29) the heading the ORBIT's yaw, always (⛔ the direction's own: locked and turned into the cone at −90° it switched at once)
-    expect(code("render/assembly_wiring.ts")).toContain("return offsetWithUp(u, up, o.yawRad, o.pitchRad);"); // ⭐ (§21.5 F2) the offsets about the paced up
+    expect(code("render/assembly_wiring.ts")).toContain("const f = offsetWithUp(u, up, o.yawRad, o.pitchRad);"); // ⭐ (§21.5 F2) the offsets about the paced up (§25: then the cap clamp)
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");

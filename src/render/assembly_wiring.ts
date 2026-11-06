@@ -29,7 +29,7 @@ import { cross, normalize, type Vec3 } from "../core/vec";
 import { cutLoop, insidePlane, planeThrough, type Plane } from "../input/plane_cut";
 import { HOLD_NONE, holdByMotion, rolesFor, stepsFor, throughHold, type FingerMotion, type Roles } from "../input/input_roles";
 import { CROSS_EPS_RAD, UPRIGHT, frameStep, rebaseAngles, stepToBoundary, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
-import { capAxis, capEntry, capExitRefused, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
+import { capAxis, capCameraClamp, capEntry, capExitRefused, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
 import { cameraOrbitAt } from "../input/follow_camera";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -1024,7 +1024,10 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     st.asmUpBand = r.rolling;
     up = r.up;
   } else up = (st.asmUpShown === null ? null : onScreen(st.asmUpShown, u)) ?? target;
-  return offsetWithUp(u, up, o.yawRad, o.pitchRad);
+  // ⭐⭐⭐ (§25) the camera itself never past a cap's zenith (its offsets carried it beyond the piece's direction)
+  const f = offsetWithUp(u, up, o.yawRad, o.pitchRad);
+  const face = st.asmFace;
+  return face === null || !face.cap ? f : capCameraClamp(f.dir, f.up, face.n, face.entry);
 }
 
 /**

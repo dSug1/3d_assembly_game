@@ -862,3 +862,9 @@ the held anchor (a pose off the ring), the unlock, the 4 ms clock budget, the he
   with the turn (they are one progress — kept so: a centre moving without the turn moves the piece just the same).
 * Vector to write first (red today): a stub world with a part beside the piece's place at share 0.4 — sweep the share 0 → 1 with the piece still: no frame
   may place it with a negative gap, and `orbitFrame` must never report `relocated`.
+
+## 13. ⭐⭐⭐ THE FLOOR IGNORED — a rule (2026-11-06, the owner: *"the floor shall be ignored entirely (until we change this rule later on maybe)"*)
+The floor is DECORATIVE: the orbited piece's collision (the orbit's solver, the approach, its way out) exempts frozen bodies and the play volume (§11), the
+slide never hosts on it, the orbit's contour and its casts never read it, the camera crosses it, and from below it is not drawn (`D128`). It still gives
+orientation only (the quads' frames, a spawned piece's resting face). The play volume (§10) still binds the OTHER pieces' gestures. →
+`40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md` §25.

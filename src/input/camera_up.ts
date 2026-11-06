@@ -113,3 +113,21 @@ export function capEntry(capN: Vec3, axis: Vec3, walls: readonly Vec3[]): Vec3 |
   }
   return best;
 }
+
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §25, the owner: *"build the camera never past the zenith"*) **THE CAMERA NEVER PAST A CAP'S ZENITH**: on a cap (normal `capN`)
+ * entered from the wall `entry`, the camera's direction `dir` (from what it looks at toward the camera, unit) kept on the entry side — its component
+ * along the entry wall's normal laid in the cap's plane never negative: beyond, that component taken off (straight above / below the look point in that
+ * plane, the sideways lean kept). The camera's `up` made square to the new direction. ⛔ The rule bound the piece's direction only (§23 `capProfile`):
+ * the camera's pitch offset above-behind the piece carried it ~11° past straight above at a held far edge (probed). Not a cap, no entry: unchanged.
+ */
+export function capCameraClamp(dir: Vec3, up: Vec3, capN: Vec3, entry: Vec3 | null): { readonly dir: Vec3; readonly up: Vec3 } {
+  if (!isCap(capN) || entry === null) return { dir, up };
+  const e = onScreen(entry, capN);
+  if (e === null) return { dir, up };
+  const k = dot(dir, e);
+  if (k >= 0) return { dir, up };
+  const d = normalize([dir[0] - k * e[0], dir[1] - k * e[1], dir[2] - k * e[2]]);
+  if (d === null) return { dir, up };
+  return { dir: d, up: onScreen(up, d) ?? up };
+}
