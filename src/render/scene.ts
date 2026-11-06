@@ -540,7 +540,6 @@ export function createScene(
   st.asmSectionLines = null;
   st.asmSectionKey = "";
   st.asmShown = null;
-  st.asmRollMark = null;
   st.asmGizmoAt = null;
   st.asmMapQ = null;
   st.asmFaceMap = null;
@@ -549,7 +548,6 @@ export function createScene(
   st.asmUpBand = false;
   st.asmFace = null;
   st.asmHold = HOLD_NONE;
-  st.asmTravelDir = null;
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;

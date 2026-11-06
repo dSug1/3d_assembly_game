@@ -1203,7 +1203,7 @@ before). On a cap the up is the wall's rule: gravity's on the screen once the vi
 (⛔ the axis whatever the lean: a dx over an orbited top leant sideways, the axis 90° off gravity — 1406 tilted frames, probed). ⛔ §21.5 F3 superseded.
 Probe (4 runs): upside-down frames 0 (557 before the cap rule), tilted 285 — all in the 9–20° near-vertical band over a top, the axis blended by design.
 
-### 21.9 ⛔ OPEN — the orbit STOPS over a top on a dy (B's zenith roll against R4) (reported 2026-11-06 on `f0e8bd7`; the owner: *"we will fix it later on"*)
+### 21.9 ✅ RESOLVED by §23 (a cap a terminus, no roll) — the orbit STOPPED over a top on a dy (B's zenith roll against R4) (reported 2026-11-06 on `f0e8bd7`; the owner: *"we will fix it later on"*)
 
 > The owner: *"build f0e8bd7 : the orbit is stuck in the position as per attachment (dy travel)"* — far out (r 7.5 m), looking down on the top, the HUD
 > *"orbit: the frame turned over an edge (up)"*.
@@ -1261,3 +1261,41 @@ contour is not the parts' envelope (D5: a part sticking out of a face never make
 the piece keeps the contour's depth (a), meets Piece3, the slide latches on it (*"latched on Piece3's face (13.3 mm)"*) and the dx then stops at that
 face's edge (*"at the edge of the hosting faces — reverse"*) — before, the real gizmo stepped onto Piece3 and the piece rode over it. (a) as decided;
 the owner to judge it on the device. ⚠ Reports 1–2 (the lines) are a look, not a number; the dy loop round the assembly could not be run (§21.9).
+
+## 23. A CAP IS A TERMINUS — no roll anywhere (2026-11-06, branch `1.0.102-`; resolves §21.9; ⛔ no device close)
+
+> The owner: *"for the stop over the top: I will simplify the logic: when we reach the top or bottom faces … do not roll the camera anywhere: just extend
+> the slide portion of the orbit up to the furthermost far edge and then hold the dy further so the gizmo cannot cross the edge and enter the next face
+> (which would be camera view upside down since there was no camera roll) but the user can dy back to re-travel the face in the reverse direction. This
+> way, it means all the faces between -90 and +90 degrees camera view can be travelled on a red section, but if the user wants to reach the opposite faces,
+> he will have to dx 180 degrees on the vertical faces … Advise how to build this simplification: is a re-build required or only a modification … Avoid
+> patches"*.
+
+**The advice given — a modification, mostly deletions, no rebuild.** Everything it needs already exists: the face map and the frame turn carry the travel
+onto a cap and across it to the far edge (the turned frame's column), the one crossing event (`stepToBoundary`, §21.5 F1) is the single place a face change
+happens, the calm is a function of the place, the cap's carried axis keeps the camera's up continuous over the entry edge (§20.1 (b)). What made the rolls —
+B's flip at the zenith (§21.8), the roll marked ahead of an edge (F6, §21.7), the far / side exits off a cap — is DELETED, and ONE rule takes their place,
+at the crossing event: **a cap's only way out is its entry wall**.
+
+**Built:**
+1. **The terminus** (`camera_up.ts` `capExitRefused`, wired at the crossing in `asmFingerTravel` and the coast `asmAxesTravel` — `capHolds`, `holdAtEdge`):
+   from a cap, a crossing onto any face but its ENTRY wall (or another cap) HOLDS the travel `CROSS_EPS_RAD` short of the edge — the far edge and the side
+   edges alike (both would need a roll); the rest of the finger dropped; a dy (dx) back goes. The HUD: *"orbit: the cap's edge — held (travel back; the far
+   faces by dx round the walls)"*. The entry wall carried on the travel's face (`TravelFace.entry`: the wall crossed from; a boot or a slide's way out onto a
+   cap — read off the carried axis, `capEntry`).
+2. **The slide extended to the far edge** (`orbit_calm.ts` `capProfile`, `calmDir(p, facets, o, entry)`): along the side a cap was entered by, the shown
+   angle is `Θ·(s·y + (1 − s)·y^m)` from the entry edge (`y` 1 — the bisector, the wall's own profile's end, at its pace: `m = (6 − 5s)/(1 − s)`, C1) to the
+   far edge (`y` 0) — straight above (below) ONLY there, a slide over most of the cap; the view never passes the zenith. Sideways on the cap: the face's own
+   odd profile, as before.
+3. **Deleted**: B (`capAxisPastZenith`, `ZENITH_FLIP_RAD`); F6 (`input/roll_mark.ts`, `aheadNormal`, `rollMark`, `upFor`, `st.asmRollMark`,
+   `st.asmTravelDir`, the slider `cameraRollMm`); their vectors (`tests/roll_mark.test.ts`). The camera's up is the travel face's target (`upTarget`), still
+   taken at `cameraRollDegPerS` (`paceUp`: a gravity / axis blend near the vertical is never a step). R4 unchanged (the owner's rule).
+Vectors: the terminus and the entry (`camera_up.test.ts`), the cap's profile (`orbit_calm.test.ts`) — RED against `3e7877f` (5); 1658 in all.
+
+**The travel series** (the same 12 runs; against §22's, ~22 300 frames each, 0 page errors): tilted views 292 → 57, upside-down 7 → 6, up jumps 2 → 1,
+camera jumps 25 → 22, piece jumps 17 → 13, the piece's back-and-forth 16 → 13, the camera's 298 → 280; the gizmo against the finger 21 → 25. Every dy over a
+top now ends HELD at its far edge (*"the cap's edge — held"*) — the probe keeps pushing, so those are stalls by design; the dy back goes on at once.
+⚠ Open, measured: (1) the upside-down frames are ONE diagonal leg held at the top's far corner — the view straight down, then one frame swinging 55°
+(130° off upright), two frames; (2) ⚠ **PRE-EXISTING** (in `2b4643d`, §22 and §23 alike), close in only: a dy up stalls at the front's top edge after the
+frame has turned onto the top and back (no hold on the HUD), and a dx on the top stalls (`r5c`) — the orbit's target itself stops; not yet diagnosed;
+(3) §22's slide latching on Piece3 close in, unchanged.

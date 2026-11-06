@@ -431,9 +431,6 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4c-bis — the owner: *"let the gizmo move slowly over the last and first few mm of the two faces during
    * the arc"*) THE FACE MAP's slow stretch through an edge: the last / first this of each face (mm)… */
   faceEdgeSlideMm: number;
-  /** ⭐⭐⭐ (2026-11-05, §21.4 R3 — the owner: *"is there a slider for the 10mm for the camera roll to catch up ? if not, make one"*) the camera's roll at a cap ↔
-   * wall edge taken over this much of the gizmo's way to the edge (mm). */
-  cameraRollMm: number;
   /** ⭐⭐⭐ (2026-11-05, §21.5 F2) the camera's roll taken at most this fast (°/s) — at the camera's pace, never a step under a fast finger. */
   cameraRollDegPerS: number;
   /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
@@ -861,7 +858,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
-  cameraRollMm: 10, // ⭐⭐⭐ (2026-11-05, §21.4 R3, §21.5 F2) the camera's roll STARTS this far before the next face on the finger's way
   cameraRollDegPerS: 360, // ⭐⭐⭐ (§21.5 F2) …and is taken at most this fast: a half roll in 0.5 s
   faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
@@ -1024,7 +1020,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   for (const k of ["gizmoEaseMs", "orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
   if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
-  if (!(cfg.cameraRollMm >= 0 && cfg.cameraRollMm <= 100)) throw new Error(`cameraRollMm (${cfg.cameraRollMm}) must be in [0, 100] mm.`);
   if (!(cfg.cameraRollDegPerS >= 30 && cfg.cameraRollDegPerS <= 2000)) throw new Error(`cameraRollDegPerS (${cfg.cameraRollDegPerS}) must be in [30, 2000] °/s.`);
   if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);

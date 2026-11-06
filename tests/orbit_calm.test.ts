@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { calmDir, calmFacets, calmProfile, polyDistance, type CalmOpts } from "../src/input/orbit_calm";
+import { calmDir, calmFacets, calmProfile, capProfile, polyDistance, type CalmOpts } from "../src/input/orbit_calm";
 import { buildFaceMap, mapTarget } from "../src/input/face_map";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
@@ -63,7 +63,7 @@ describe("⭐⭐⭐ THE CALM — one smooth profile over every face (§21.8)", (
     }
   });
 
-  it("⭐⭐⭐ (B) A dy UP THE FRONT AND OVER A DEEP TOP: the same profile up the wall, ON at the same pace across the edge (C1), straight above at the top's middle (⛔ F3: the 90° crammed into the wall's last cm, then a slide)", () => {
+  it("⭐⭐ (no entry known — a boot on a cap) A dy UP THE FRONT AND OVER A DEEP TOP: the same profile up the wall, ON at the same pace across the edge (C1), straight above at the top's middle (⛔ F3: the 90° crammed into the wall's last cm, then a slide)", () => {
     const map = buildFaceMap([], DEEP);
     const F = calmFacets(map.facets);
     const col = map.columns.find((c) => mapTarget(map, c.mid, 0, opts).normal[2] < -0.9)!;
@@ -79,6 +79,39 @@ describe("⭐⭐⭐ THE CALM — one smooth profile over every face (§21.8)", (
     let worst = 0;
     for (let p = -45; p < 90; p += 4.5) worst = Math.max(worst, elev(p + 4.5) - elev(p));
     expect(worst).toBeLessThan(12);
+  });
+
+  it("⭐⭐⭐ (§23) A CAP IS A TERMINUS — entered from the front: up the front as before, ON across the edge at the same pace (C1), then a SLIDE reaching straight above ONLY at the far edge — never past it (no roll); the top's sideways profile unchanged (⛔ §21.8 B: straight above at the middle, past it beyond)", () => {
+    const map = buildFaceMap([], DEEP);
+    const F = calmFacets(map.facets);
+    const FRONT: Vec3 = [0, 0, -1];
+    const col = map.columns.find((c) => mapTarget(map, c.mid, 0, opts).normal[2] < -0.9)!;
+    const elevAt = (p: Vec3) => {
+      const w = calmDir(p, F, O, FRONT)!;
+      return Math.atan2(w[1], -w[2]) * D;
+    };
+    const elev = (p: number) => elevAt(mapTarget(map, col.mid, p / D, opts).surface);
+    expect(elev(45)).toBeCloseTo(45, 6); // the edge: the bisector, as the front's own profile ends
+    // the same pace on both sides of the edge (the upright map's top quarter: 45° of pitch over the cap's half depth, as the front's 45° over its half)
+    const before = elev(45) - elev(44.5);
+    const after = elev(45.5) - elev(45);
+    expect(Math.abs(after - before)).toBeLessThan(0.1 * before);
+    // over the top along its depth (z from the front edge −0.5 to the far edge 0)
+    const top = (z: number) => elevAt([0, 0.48, z]);
+    expect(top(-0.25)).toBeLessThan(89); // the middle: not yet straight above
+    expect(top(-1e-9)).toBeCloseTo(90, 6); // the far edge: straight above
+    let prev = top(-0.5);
+    for (let z = -0.5; z <= 0; z += 0.005) {
+      const e = top(z);
+      expect(e).toBeGreaterThanOrEqual(prev - 1e-9);
+      expect(e).toBeLessThanOrEqual(90 + 1e-9);
+      prev = e;
+    }
+    // the cap's profile: 1 at the entry edge, 0 at the far edge, monotone, the far edge's pace the middle's share
+    expect(capProfile(1, 0.25)).toBeCloseTo(1, 12);
+    expect(capProfile(0, 0.25)).toBe(0);
+    expect((capProfile(1e-6, 0.25) - capProfile(0, 0.25)) / 1e-6).toBeCloseTo(0.25, 4);
+    expect((capProfile(1, 0.25) - capProfile(1 - 1e-6, 0.25)) / 1e-6).toBeCloseTo(2 * 2.5, 3); // twice the wall's edge pace over the half span: C1
   });
 
   it("⭐⭐⭐ CONTINUOUS ACROSS EVERY EDGE AND CORNER: the gnomonic direction is the same vector from each face (on a box `n_A + n_B` plus the same along the edge)", () => {
@@ -123,7 +156,8 @@ describe("⭐⭐⭐ THE CALM — one smooth profile over every face (§21.8)", (
   it("⭐⭐⭐ wired: the piece and the camera on the profile at the map's place; ⛔ the field's zones and F3's cap slide deleted; three sliders (the middle's shares)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("return n === null ? calmAt(st, yaw, v, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return (c === null || p === null ? null : calmDir(p, c.facets, c.opts)) ?? u;");
+    expect(a).toContain("return (c === null || p === null ? null : calmDir(p, c.facets, c.opts, entry)) ?? u;");
+    expect(a).toContain("const entry = f === null ? null : f.cap ? f.entry : f.n;");
     expect(a).toContain("const r = { key, facets: calmFacets(map.facets), opts };");
     expect(a).toContain("const p = toWorld(st.orbitFrame, mapTarget(map, yaw + dy, pitchOfV(v) + dp, mapOpts(st)).surface);");
     for (const gone of ["sharesShowing", "calmFrame(", "asmCalm", "edgeShareTo", "poleWeight", "calmZone", "faceSpanZone"]) expect(a).not.toContain(gone);
