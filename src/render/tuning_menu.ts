@@ -193,10 +193,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "look at the gizmo within (m)", "assemblyLockDistM", 0.05, 2, 0.05),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
-            tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
+            tunable(st, "camera up: its pace (°/s)", "cameraRollDegPerS", 30, 2000, 10),
             tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
@@ -249,12 +249,8 @@ export function installTuningMenu(st: SceneState): void {
               title: "FACE-SPAN ORBIT SHARE",
               sliders: [
                 tunable(st, "dx: the orbit's angle shown in the middle of a face (share)", "faceSpanShareH", 0, 1, 0.05),
-                tunable(st, "dx: the edge zone (% of the gizmo's run)", "faceSpanZoneHPct", 0, 50, 1),
-                tunable(st, "dx: the edge zone's minimum (cm)", "faceSpanZoneMinHCm", 0, 30, 0.5),
                 tunable(st, "dy: compressed too (1 on, 0 off — the full orbit angle)", "faceSpanShareVOn", 0, 1, 1),
                 tunable(st, "dy: the orbit's angle shown in the middle of a face (share)", "faceSpanShareV", 0, 1, 0.05),
-                tunable(st, "dy: the edge zone (% of the gizmo's run)", "faceSpanZoneVPct", 0, 50, 1),
-                tunable(st, "dy: the edge zone's minimum (cm)", "faceSpanZoneMinVCm", 0, 30, 0.5),
               ],
             },
           ],

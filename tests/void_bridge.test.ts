@@ -5,10 +5,12 @@
  * but that plane's faces on both sides of it along `t` (the green's travel on a side) or `b` (the red's) — the gizmo on the facet's plane (`bridged`),
  * never cast to the void's bottom (⛔ D3: the green dipped into the slot and climbed back). Open on both travels: its depth kept (Steps 6–7's tilt).
  * RED against `f1618e7` (`regionReal` / `closedAlong` absent; the slot's bottom read).
+ * ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.5 Gz0) THE RULE PER LINE (`input/gizmo_rule.ts` `gizmoCase`): a void bridged only for the line it is closed
+ * along — RED against `8dfa635` (the module absent; `stackDepthAt` bridged it for both lines when closed along either).
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { buildFaceMap, closedAlong, filledRegion, mapTarget, regionReal, stackDepthAt, type FaceMap, type MapFace } from "../src/input/face_map";
+import { buildFaceMap, closedAlong, filledRegion, regionReal, type FaceMap, type MapFace } from "../src/input/face_map";
+import { gizmoCase, mainGroup } from "../src/input/gizmo_rule";
 import type { Vec3 } from "../src/core/vec";
 import type { ShellBox } from "../src/input/orbit_shell";
 
@@ -33,40 +35,6 @@ function painting(open: { top?: boolean; right?: boolean }): FaceMap {
 }
 
 describe("⭐⭐⭐ the void closed on a travel — the gizmo straight through on the facet's plane (2026-11-05)", () => {
-  it("⭐⭐⭐ a SLOT closed all round (attachment 2): on the plane, bridged — ⛔ D3's cast to its bottom", () => {
-    const s = facetOf(painting({}));
-    expect(s.e).toBeCloseTo(0.05, 12);
-    const at = stackDepthAt(s, 0.05, 0.35)!;
-    expect(at.depth).toBeCloseTo(0.05, 12);
-    expect(at.bridged).toBe(true);
-    expect(at.inside).toBe(false); // never cast
-  });
-  it("⭐⭐⭐ a slot OPEN UPWARD (closed on the green's travel, open on the red's): bridged on the plane — ⛔ the slot's bottom (0.02)", () => {
-    const s = facetOf(painting({ top: true }));
-    const at = stackDepthAt(s, 0.05, 0.35)!;
-    expect(at.depth).toBeCloseTo(0.05, 12);
-    expect(at.bridged).toBe(true);
-    // the green across it: one depth all the way (straight)
-    for (let x = -0.25; x <= 0.25; x += 0.01) expect(stackDepthAt(s, x, 0.35)!.depth).toBeCloseTo(0.05, 12);
-  });
-  it("⭐⭐ a slot open to the RIGHT and closed up / down (closed on the red's travel): bridged too", () => {
-    const s = facetOf(painting({ right: true }));
-    expect(closedAlong(s.groups.filter((g) => Math.abs(g.depth - 0.05) < 1e-6).map((g) => g.region), 0.2, 0.35)).toEqual({ x: false, y: true }); // open to the right, closed up / down
-    const at = stackDepthAt(s, 0.2, 0.35)!; // in the open run to the right edge: the plane's faces above and below
-    expect(at.depth).toBeCloseTo(0.05, 12);
-    expect(at.bridged).toBe(true);
-  });
-  it("⭐⭐ a corner notch OPEN ON BOTH travels keeps its depth (the tilt's, Steps 6–7); a protrusion and the real face unchanged", () => {
-    const fm = buildFaceMap([front(0.05, -0.3, 0.2, 0, 0.6), front(0.05, 0.2, 0.3, 0, 0.5), front(0.02, 0.2, 0.3, 0.5, 0.6), front(0.09, -0.2, -0.1, 0.1, 0.2)], { ...BOX, lo: [-0.3, 0, -0.09] });
-    const s = facetOf(fm);
-    const corner = stackDepthAt(s, 0.25, 0.55)!; // the notch at the top right corner: open up and right
-    expect(corner.bridged).toBeUndefined();
-    expect(corner.depth).toBeCloseTo(0.02, 12);
-    expect(stackDepthAt(s, -0.15, 0.15)).toEqual({ depth: 0.09, group: 0, inside: true }); // the protrusion
-    const face = stackDepthAt(s, 0, 0.3)!;
-    expect(face.inside).toBe(true); // on the real face: cast (D3 for what is not parallel)
-    expect(face.bridged).toBeUndefined();
-  });
   it("⭐ `regionReal`: a face, not a hole; `closedAlong` reads one line each way", () => {
     const frame = filledRegion([
       { x0: 0, x1: 0.3, y0: 0, y1: 0.1 },
@@ -79,24 +47,18 @@ describe("⭐⭐⭐ the void closed on a travel — the gizmo straight through o
     expect(closedAlong([frame], 0.15, 0.15)).toEqual({ x: true, y: true });
     expect(closedAlong([frame], 0.4, 0.15)).toEqual({ x: false, y: false });
   });
-  it("⭐⭐ through the map: a dx at the slot's height keeps the gizmo's depth on the facet (the green straight)", () => {
-    const fm = painting({ top: true });
-    const s = facetOf(fm);
-    const k = fm.facets.indexOf(s);
-    let n = 0;
-    for (let yaw = 225; yaw <= 315; yaw += 0.5) {
-      const t = mapTarget(fm, (yaw * Math.PI) / 180, 0.2, { edgeMm: 10, edgeDeg: 10 });
-      if (t.stack !== k) continue;
-      const y = t.surface[1];
-      if (y < 0.3 || y > 0.4) continue;
-      n++;
-      expect(stackDepthAt(s, t.surface[0], y)!.depth).toBeCloseTo(0.05, 12);
-    }
-    expect(n).toBeGreaterThan(0);
-  });
-  it("⭐ wired: a bridged void is never cast to its bottom — only what stands in front of the plane", () => {
-    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("if (at.inside || at.bridged === true) {");
-    expect(a).toContain("if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return");
+  it("⭐⭐⭐ (§22.5 Gz0) THE VOID PER LINE — a void with the face's plane both sides along x (the green's travel) but OPEN upward (the red's): BRIDGED for the green, the LANDING for the red (⛔ bridged for both); closed both ways: bridged for both; on a real face REAL; beyond the face LAND", () => {
+    const openTop = facetOf(painting({ top: true }));
+    expect(gizmoCase(openTop.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
+    expect(gizmoCase(openTop.groups, 0.05, 0.35, "y")).toBe("LAND");
+    const closed = facetOf(painting({}));
+    expect(gizmoCase(closed.groups, 0.05, 0.35, "x")).toBe("BRIDGE");
+    expect(gizmoCase(closed.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
+    const openRight = facetOf(painting({ right: true }));
+    expect(gizmoCase(openRight.groups, 0.05, 0.35, "x")).toBe("LAND");
+    expect(gizmoCase(openRight.groups, 0.05, 0.35, "y")).toBe("BRIDGE");
+    expect(gizmoCase(closed.groups, -0.2, 0.3, "x")).toBe("REAL");
+    expect(gizmoCase(closed.groups, -0.5, 0.3, "y")).toBe("LAND");
+    expect(mainGroup(closed.groups)!.depth).toBeCloseTo(0.05, 12);
   });
 });
