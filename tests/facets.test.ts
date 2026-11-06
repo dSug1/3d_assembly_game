@@ -58,7 +58,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     expect(fm.facets.length).toBe(6);
     expect(fm.facets.every((f) => f.real && [0, 1, 2].some((k) => Math.abs(Math.abs(f.n[k]!) - 1) < 1e-12))).toBe(true);
     expect(facetCount(fm)).toEqual({ sides: 4, columns: 4, real: 6 });
-    // ⭐⭐⭐ (§24.1) the box's six planes, the front and the top pushed out to the overhang's support (it hangs in front of the top-front edge)
+    // ⭐⭐⭐ (§27.2) the box's six planes: the TRACK at the real faces, the SHELL — the front and the top — pushed out to the overhang's support
     const sv = slant.tris.flatMap((tr) => [...tr]);
     const front = Math.min(...sv.map((p) => p[2]));
     const top = Math.max(...sv.map((p) => p[1]));
@@ -66,17 +66,17 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     const whole: ShellBox = { lo: [box.lo[0], box.lo[1], Math.min(box.lo[2], front)], hi: [box.hi[0], Math.max(box.hi[1], top), box.hi[2]] };
     const fw = buildFaceMap(faces, whole, { mergeDeg: 20, minShare: 0.25 });
     expect(fw.facets.length).toBe(6);
-    expect(fw.core.lo[2]).toBeCloseTo(front, 12);
-    expect(fw.core.hi[1]).toBeCloseTo(Math.max(box.hi[1], top), 12);
-    for (const [k, lo] of [[0, true], [0, false], [1, true], [2, false]] as const) expect(lo ? fw.core.lo[k] : fw.core.hi[k]).toBeCloseTo(lo ? box.lo[k]! : box.hi[k]!, 12);
+    for (const [k, lo] of [[0, true], [0, false], [1, true], [1, false], [2, true], [2, false]] as const) expect(lo ? fw.core.lo[k] : fw.core.hi[k]).toBeCloseTo(lo ? box.lo[k]! : box.hi[k]!, 12);
+    expect(fw.facets.find((f) => f.n[2] < -0.9)!.es).toBeCloseTo(-front, 12);
+    expect(fw.facets.find((f) => f.n[1] > 0.9)!.es).toBeCloseTo(Math.max(box.hi[1], top), 12);
     // a share of a tenth asked: the slanted plane is CHOSEN as a facet (its real face ~14 % of its polygon) — ⭐⭐⭐ (§24.1) then pushed out to the parts'
     // support: through the box's top-front corner, it no longer cuts the contour into a part
     const all = buildFaceMap(faces, box, { mergeDeg: 20, minShare: 0.1 });
     expect(all.facets.length).toBe(7);
     const slanted = all.facets.find((f) => dot(f.n, n) > 0.999)!;
     const sup = Math.max(...[...faces.flatMap((f) => f.tris.flatMap((tr) => [...tr]))].map((p) => dot(n, p)));
-    expect(slanted.e).toBeCloseTo(sup, 12);
-    expect(slanted.e).toBeGreaterThanOrEqual(dot(n, [0, 0.6, -0.05]) - 1e-12);
+    expect(slanted.es).toBeCloseTo(sup, 12);
+    expect(slanted.es).toBeGreaterThanOrEqual(dot(n, [0, 0.6, -0.05]) - 1e-12);
     // and merged within 35°, the slanted face is the top's (its normal 32° off +y): six again
     expect(buildFaceMap(faces, box, { mergeDeg: 35, minShare: 0 }).facets.length).toBe(6);
   });

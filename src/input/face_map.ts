@@ -84,6 +84,8 @@ export interface Facet {
   readonly bHi: number;
   readonly share: number;
   readonly real: boolean;
+  /** ⭐⭐⭐ (§27.2 G1s) THE SHELL's plane offset: this facet pushed out to the placed parts' support (`n·p = es`, `es ≥ e`) — the piece's place reads it. */
+  readonly es: number;
 }
 
 /** ⭐ A COLUMN of facets: its slice of the yaw (`mid` ± `hw`), its facets bottom → top and the pitch bands' bounds between them (one more than facets). */
@@ -474,18 +476,19 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       const c = candOf(n, false, 0);
       return { ...c, e: n[0] > 0 ? box.hi[0] : n[0] < 0 ? -box.lo[0] : n[2] > 0 ? box.hi[2] : -box.lo[2] };
     });
-  // ⭐⭐⭐ (2026-11-06, scope §22.1 G1 — the owner: *"build it"*, then the rebuild) THE CONTOUR CLEAR OF EVERY PART: each chosen facet's plane pushed out to the placed parts'
-  // SUPPORT along its normal (the farthest vertex) — the same normals (D5's choice of facets kept: no tilt), convex, every part inside it by construction:
-  // the orbit's path never meets a part (⛔ at the main region's plane, a part proud of the face — `Scene_1`'s Piece44 over the front, Piece3 off the −x
-  // side — stood across the piece's path close in: the solver pinned it, *"almost stuck"*). The approach alone goes in, to the real contact (§22.6).
+  // ⭐⭐⭐ (2026-11-06, scope §27.2) THE TRACK AND THE SHELL: each chosen facet at ITS REAL FACE's plane (its main group) — the track the travel, the view,
+  // the gizmo and the lines read; and its SHELL offset, the placed parts' SUPPORT along its normal (the farthest vertex) — convex, every part inside it:
+  // the piece's place alone reads it (P1). ⛔ (§22.1) the track itself pushed to the support: long strips of it with no real face under them, the gizmo
+  // waiting there (*"gizmo stuck in the position while the dy orbit is working"*).
   const supportOf = (n: Vec3): number => {
     let m = -Infinity;
     for (const f of faces) for (const tr of f.tris) for (const v of tr) m = Math.max(m, dot(n, v));
     return m;
   };
-  const all: Candidate[] = [...sides, capT, capB].map((c) => {
+  const all: Candidate[] = [...sides, capT, capB];
+  const shellE = all.map((c) => {
     const sup = supportOf(c.n);
-    return Number.isFinite(sup) && sup > c.e ? { ...c, e: sup } : c;
+    return Number.isFinite(sup) && sup > c.e ? sup : c.e;
   });
   const planes = all;
   const facets: Facet[] = all.map((c, i) => {
@@ -508,6 +511,7 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       bHi: ext(bs, false),
       share: shareOf(c, poly),
       real: c.real,
+      es: shellE[i]!,
     };
   });
   // ⭐ the columns: the side facets by heading (the largest real face first, within `mergeDeg`); each a slice of the yaw from halfway to each neighbour's
@@ -567,3 +571,16 @@ export interface MapTarget {
   readonly across: { readonly L: number; readonly lo: number; readonly hi: number };
 }
 
+
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §27.2 G1s, P1) WHERE THE SHELL IS LEFT along `u` (unit) from `p` (on the track, inside the shell): the distance (m, ≥ 0) to the
+ * first shell plane the ray crosses — the piece's place starts there. None crossed: 0.
+ */
+export function shellExit(facets: readonly { readonly n: Vec3; readonly es: number }[], p: Vec3, u: Vec3): number {
+  let t = Infinity;
+  for (const f of facets) {
+    const k = dot(f.n, u);
+    if (k > 1e-9) t = Math.min(t, (f.es - dot(f.n, p)) / k);
+  }
+  return Number.isFinite(t) ? Math.max(0, t) : 0;
+}

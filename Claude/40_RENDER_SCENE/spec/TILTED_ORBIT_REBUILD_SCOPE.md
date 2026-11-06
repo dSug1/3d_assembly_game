@@ -1055,7 +1055,7 @@ owner's look.
 
 ## 22. ⭐⭐⭐ THE CLEAN SPECIFICATION — the rebuild of the sections as plane cuts (2026-11-06, branch `1.0.103-` from `8dfa635`; the owner: *"proceed with rebuild"* — BEING BUILT, step by step)
 
-> ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
+> ⭐⭐⭐ **§27 (the track and the shell; deported faces) amends G1, P1 and Gz0 – Gz2.** ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
 
 > The owner (2026-11-06): *"I do not want fixes with logics which contradict each other. There are lot of proposed fixes with new rules and this seems to
 > create such risk. I would prefer a full rebuild without adding new rules for fixes"* → *"I would rebuild from 8dfa635 with a clean specification in the
@@ -1398,3 +1398,48 @@ nearest edge of each kind, or the loops' ends weighted by their length).
 | 11-06 | *"(i) The heading follows the wall's at the same left/right position"* | V4 |
 | 11-06 | *"Rebuild from 8dfa635 making sure you capture all my feedbacks"* | this section + §22.11 (every earlier item, still where it lives unless named above) |
 | 11-06 | (the series on the view rule read on the camera's view — built on `1.0.103-`, not committed) | superseded: no cone, no carried up (V2) |
+
+## 27. ⭐⭐⭐ THE TRACK AND THE SHELL; DEPORTED FACES; THE LINES' ENDS (2026-11-06, branch `1.0.104-`, on §26)
+
+> The owner, on `3578bea` (17 attachments): the gizmo stuck while the orbit goes on, then jumping to catch it (att. 1–3, 9, 11, 12, 17); the green section
+> switching mid-dx (att. 4–5); the red section a strange contour after crossing onto a face (att. 6–8); the black part's top not a face of its own (att. 10:
+> *"we need to define a rule for the faces which are a deport of the contour face (same normal, continuity of edges when projected by the normal to the
+> contour face, different depth)"*); the black top and bottom not reachable by dy (att. 13–16) → *"Do not patch these bugs one by one, but analyze the
+> common root causes"* → *"I accept the deported-face rule. Proceed with the specifications, the rebuild"*.
+
+### 27.1 The root causes (the analysis the owner asked for)
+| root cause | the rules in conflict | the reports |
+|---|---|---|
+| **RC1 — ONE SURFACE, TWO JOBS**: G1 was both the travel's track and the piece's clearance shell, so it was pushed out to every part's support (`Scene_1`: the top at 0.54 for the real 0.48, the front at −0.09 for −0.05, the front 6 cm wider than its real face) — long strips of track with no real face under them, where the gizmo WAITED (§26 Gz1) | §22.1 G1 at the support (mine, for P1) × the owner's gizmo rule (on the faces, where the piece lands, never hidden) — reconciled first by the nearest point (rejected), then by the wait (it made every strip a stuck gizmo and a jump) | 1–3, 9, 11, 12, 17 (stuck, then a jump); 4 → 5 (the green from the waiting gizmo's old place); 6–8 (the waiting gizmo's planes were the left face's: its red plane parallel to the front — the outline all round it); the series' "thrown" sections |
+| **RC2 — A FACE HAD ONE DEPTH** (its largest coplanar group): `Scene_1`'s faces are stepped (the black bars, the parts' tops and bottoms at other depths) — a recessed face was a void: bridged over (the gizmo in the air above it) or a gap (the gizmo waiting) | Gz0's main depth × the real assembly; no rule for a face at another depth that is not a hole | 10, 13–16 (the black top / bottom never landed on — the travel reached the cap: *"onto a cap"*) |
+| **RC3 — A LINE ENDED AT ITS LAST SAMPLE** (every 12 mm) | — | the ring 14–16 mm off the red line on a strip narrower than a sample (the series) |
+
+**"Against the finger" at a top's corner — real, not a reversal** (the owner could not reproduce it; replayed in the app with the travel's state recorded,
+105 frames): on a top entered from the right wall, at its front-left corner, a finger mostly LEFT and slightly down: the dx is refused at the cap's side edge
+(T5 — right), only the small dy moves the place, back toward the entry wall; at that corner the camera's yaw is the right wall's corner yaw (V4, the
+owner's (i): 45°), so the cap's dy runs 45° off the screen's vertical — the gizmo slides down-right while the finger pushes left against a held edge. A
+consequence of (i) at a cap's corners; noted, not changed.
+
+### 27.2 The rules (replacing §22.1's G1, P1's reading of it, §26.4 Gz0 – Gz2 where they differ)
+* **G1 — THE TRACK** (owner: `face_map.ts`): the faces contour with each facet at ITS REAL FACE's plane (its main group — Step 5's, D5's facets): what the
+  travel (T1 – T6), the view (V1 – V5), the gizmo and the lines read. ⛔ The track pushed to the parts' support.
+* **G1s — THE SHELL** (owner: `face_map.ts`, the facet's `es`): the same facets pushed out to the placed parts' SUPPORT — convex, every part inside. Read by
+  ONE rule: **P1, the piece's place** — from the track's place along the view, out to where the shell is left, then the approach's distance (above the
+  shell: along the view; below it: toward the gizmo — A1). The orbit still cannot touch a part (P1 kept, no solver).
+* **Gz0 — WHAT A FACE IS, PER LINE** (amended with the owner's DEPORTED FACE): at a place of a facet, for the line travelled —
+  1. a real face at the face's plane or proud of it → the face (the frontmost real surface along the normal);
+  2. **inside the face's closed region** (a hole of the face, enclosed): closed along the line → crossed on the face's plane; open along it → its real floor (D3);
+  3. **outside it — a DEPORTED FACE**: a real face of the same normal at another depth whose outline continues the face's outline (not enclosed by the
+     face) → the face, at its own depth — the gizmo goes onto it (a jump in depth), the piece stays on the shell (the owner: *"reached with a jump of the
+     gizmo while the green piece stays on its offset shell"*);
+  4. nothing of that normal under the place (a void open at the edge, beyond the face) → a GAP: no section; the gizmo waits on the face, the orbit tilts on.
+  ⚠ A notch reaching the face's edge WITH a face of that normal behind it is a deported face (3), for both lines — no longer a bridge for the line it is
+  closed along (`1.0.100-` §18's fixture amended).
+* **Gz2 — THE LINES END AT THE FACE's EDGE**: each line's end found where the face ends between a sample on a face and one in a gap (halved to 1 mm) —
+  never at the last sample; the gizmo a vertex of both lines in every frame.
+
+### 27.3 Build and gates
+The track / shell split in `buildFaceMap` (`e` the real face's plane, `es` the support); P1's place from the shell's exit (`shellExit`); Gz0's deported
+face (`gizmoCase`); the lines' ends. The series — the usual 16 runs and §22.10 / §26.6's gates, every report since `8dfa635` checked: upside-down / slanted
+(walls, caps), jumps, stuck (the gizmo still while the place moves on a face), slowed, the ring off a line, back-and-forth, sections thrown, the far
+faces reachable, the tops and bottoms landed on.
