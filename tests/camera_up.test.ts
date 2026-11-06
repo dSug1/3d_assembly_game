@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { capAxis, capEntry, capExitRefused, paceUp, upTarget, wallUp } from "../src/input/camera_up";
+import { capAxis, capCameraClamp, capEntry, capExitRefused, paceUp, upTarget, wallUp } from "../src/input/camera_up";
 import type { Vec3 } from "../src/core/vec";
 
 const D = Math.PI / 180;
@@ -88,6 +88,26 @@ describe("the camera's up (§21.4 R2 / R3, §21.5 F2)", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).not.toContain("capAxisPastZenith");
     expect(a).toContain("const axis = !cap ? null : sameCap ? f0!.axis : capAxis(n, fromWall, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);");
+  });
+
+  it("⭐⭐⭐ (§25) THE CAMERA NEVER PAST A CAP'S ZENITH: over a top entered from the front, a camera leaning 11° beyond straight above (toward the far edge) is brought back to straight above, its sideways lean kept, its up square to it; on the near side, on a wall or with no entry: unchanged", () => {
+    const D11 = 11 * D;
+    const past: Vec3 = [0, Math.cos(D11), Math.sin(D11)]; // from the look point to the camera: beyond the zenith, toward +z (the far edge)
+    const r = capCameraClamp(past, [0, 0, 1], TOP, FRONT);
+    expect(angle(r.dir, TOP)).toBeLessThan(1e-9);
+    expect(Math.abs(dot(r.up, r.dir))).toBeLessThan(1e-9);
+    const side = unit([Math.sin(5 * D), Math.cos(D11), Math.sin(D11)]); // leaning 5° sideways as well: kept
+    const rs = capCameraClamp(side, [0, 0, 1], TOP, FRONT);
+    expect(rs.dir[2]).toBeCloseTo(0, 12);
+    expect(rs.dir[0]).toBeGreaterThan(0.08);
+    const near: Vec3 = [0, Math.cos(D11), -Math.sin(D11)];
+    expect(capCameraClamp(near, [0, 0, 1], TOP, FRONT).dir).toBe(near);
+    expect(capCameraClamp(past, [0, 0, 1], FRONT, FRONT).dir).toBe(past);
+    expect(capCameraClamp(past, [0, 0, 1], TOP, null).dir).toBe(past);
+    const below: Vec3 = [0, -Math.cos(D11), Math.sin(D11)]; // a bottom entered from the front: past the nadir, toward +z
+    expect(angle(capCameraClamp(below, [0, 0, 1], [0, -1, 0], FRONT).dir, [0, -1, 0])).toBeLessThan(1e-9);
+    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
+    expect(a).toContain("return face === null || !face.cap ? f : capCameraClamp(f.dir, f.up, face.n, face.entry);");
   });
 
   it("⭐ wired: the camera's up from the travel face's target (`upTargetNow` → `upFor`), paced by `cameraRollDegPerS`; the roles read with the same up", () => {
