@@ -13,10 +13,8 @@ import {
   mapAngles,
   mapTarget,
   regionArea,
-  regionContains,
   facetFrame,
   facetOfNormal,
-  stackDepthAt,
   stackOf,
   syncAngle,
   topIn,
@@ -36,14 +34,14 @@ const opts = { edgeMm: 10, edgeDeg: 10 };
 const box: ShellBox = { lo: [-0.25, 0, -0.05], hi: [0.25, 0.6, -0.017] };
 /** ⭐ (Step 5) the box as a faces contour with no face: its six sides, virtual — Step 4c-bis's core box map */
 const bm = buildFaceMap([], box);
+/** ⭐ is (`x`, `y`) in the region's filled cells (a hole closed counts) — the test's own reader of `filledRegion` (§22: the product reads no region) */
+const regionContains = (r: { xs: readonly number[]; ys: readonly number[]; filled: Uint8Array }, x: number, y: number): boolean => {
+  const i = r.xs.findIndex((v, k) => k < r.xs.length - 1 && x >= v && x <= r.xs[k + 1]!);
+  const j = r.ys.findIndex((v, k) => k < r.ys.length - 1 && y >= v && y <= r.ys[k + 1]!);
+  return i >= 0 && j >= 0 && r.filled[i * (r.ys.length - 1) + j] === 1;
+};
 /** ⭐ the facet facing `n` (a world axis) */
 const facing = (fm: FaceMap, n: Vec3): number => fm.facets.findIndex((f) => dist(f.n, n) < 1e-9);
-/** ⭐ a point's (t, b) on a facet */
-const tb = (fm: FaceMap, i: number, p: Vec3): [number, number] => {
-  const f = fm.facets[i]!;
-  return [p[0] * f.t[0] + p[1] * f.t[1] + p[2] * f.t[2], p[0] * f.b[0] + p[1] * f.b[1] + p[2] * f.b[2]];
-};
-
 /** an axis-aligned rectangle face, normal `n` (a world axis), at `level` along it, spanning [a0, a1] × [b0, b1] on the plane's two axes in order */
 function rectFace(axis: 0 | 1 | 2, sign: 1 | -1, level: number, a0: number, a1: number, b0: number, b1: number): MapFace {
   const [i0, i1] = axis === 0 ? [1, 2] : axis === 1 ? [0, 2] : [0, 1];
@@ -87,11 +85,11 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     // a part sticking out of the front (z = −0.09) over x 0 … 0.1, y 0.2 … 0.3
     const fm = buildFaceMap([front(-0.25, 0.25), rectFace(2, -1, -0.09, 0, 0.1, 0.2, 0.3)], { lo: [-0.25, 0, -0.09], hi: [0.25, 0.6, -0.017] });
     const s = fm.facets[facing(fm, [0, 0, -1])]!; // its (t, b): x, y
-    expect(stackDepthAt(s, 0.05, 0.25)).toEqual({ depth: 0.09, group: 0, inside: true }); // on the protrusion (frontmost first: depth = −z)
-    expect(stackDepthAt(s, -0.1, 0.25)!.depth).toBeCloseTo(0.05, 12); // on the painting
-    const off = stackDepthAt(s, -0.4, 0.5)!; // beside the painting: its plane, not inside
-    expect(off.inside).toBe(false);
-    expect(off.depth).toBeCloseTo(0.05, 12);
+    // frontmost first: the protrusion (depth = −z), then the painting — the facet's plane the painting's (its main region)
+    expect(s.groups.map((g) => g.depth)).toEqual([expect.closeTo(0.09, 12), expect.closeTo(0.05, 12)]);
+    expect(regionContains(s.groups[0]!.region, 0.05, 0.25)).toBe(true);
+    expect(regionContains(s.groups[0]!.region, -0.1, 0.25)).toBe(false);
+    expect(s.e).toBeCloseTo(0.05, 12);
     // a face 15° off −z (the slanted block) faces −z; one 30° off faces none
     const slant = (deg: number): MapFace => ({ ...front(-0.1, 0.1), normal: [Math.sin(deg * D), 0, -Math.cos(deg * D)] });
     const { t: ft, b: fb } = facetFrame([0, 0, -1]);
@@ -120,8 +118,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     const t = mapTarget(fm, 225 * D - 1e-9, 0, opts); // the −z side's slice end toward −x
     const ix = facing(fm, [-1, 0, 0]);
     expect(t.stack).toBe(ix);
-    const at = stackDepthAt(fm.facets[ix]!, ...tb(fm, ix, t.surface))!;
-    expect(at.depth * -1).toBeCloseTo(-0.25, 12);
+    expect(t.surface[0]).toBeCloseTo(-0.25, 12); // on the −x side's plane
   });
 
   it("⭐⭐⭐ ON A SIDE the green is a HORIZONTAL plane (a dx keeps the height) and the red the WORLD's vertical plane square to the side (a dy keeps the place across it) — by construction (I1)", () => {
@@ -234,9 +231,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
   it("⭐⭐⭐ WIRED (`render/assembly_wiring.ts`): the gizmo from the face map at the map's angles (`mapGizmo` → `rawGizmo`, `edgeBlend`), the sections drawn from the same function; ⛔ the carrier, its hulls and its held drops gone; the knobs are sliders", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const m = mapGizmoF(st, mq.yaw, mq.pitch);"); // ⭐ (Step 6) in the orbit's frame
-    expect(a).toContain("const t = mapTarget(map, yaw, pitch, mapOpts(st));");
-    expect(a).toContain("const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);");
-    expect(a).toContain("const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));");
+    expect(a).toContain("const t = mapTarget(map, yaw, pitch, o);");
+    // ⭐⭐⭐ (§22) the gizmo's place the CONTOUR alone (`contourPlace`), the facet's normal, no host
+    expect(a).toContain("return { hit: { point: contourPlace(map, yaw, pitch, o), normal: t.normal, host: null }, t };");
     // ⭐⭐⭐ (§21) the sections the PLANE CUTS through the gizmo's place (⛔ the sweeps of the face map)
     expect(a).toContain("const loop = cutLoop(facets, insidePlane(plane, facets));");
     expect(a).toContain("return { a: planeThrough(c, up), b: Math.hypot(r[0], r[1], r[2]) > 1e-6 ? planeThrough(c, r) : null };");

@@ -78,23 +78,44 @@ export function approachStepFree(gapStep: number, gapNow: number, gapM: number, 
 /** ⭐ The approach coordinate's floor: the CONTACT — below the waist (`waistV`) by this much, the last stretch straight to it. */
 export const APPROACH_CONTACT_SPAN = 0.05;
 
-/** ⭐ The approach coordinate's range: 1 far out (ring 1's distance), `waistV` at the waist, the floor at the contact. */
-export function approachRange(cfg: GestureConfig): { readonly min: number; readonly waist: number; readonly max: number } {
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §22, the owner: *"(a) close in"*) THE APPROACH BELOW THE CONTOUR: past the contact on the contour (the coordinate's `min`, the
+ * distance 0) the approach goes on IN along the piece's ray, at the last stretch's pace, up to this deep (m) — into a slot, onto a face below the contour
+ * (the parts' collision stops it at the real contact). The orbit then keeps that depth: a dx / dy close in never reads the real surface.
+ */
+export const APPROACH_SINK_M = 0.3;
+
+/** ⭐ The approach coordinate's range: 1 far out (ring 1's distance), `waistV` at the waist, the contact on the contour at `min`, the deepest at `floor`. */
+export function approachRange(cfg: GestureConfig): { readonly min: number; readonly waist: number; readonly max: number; readonly floor: number } {
   const w = waistV(cfg);
-  return { min: w - APPROACH_CONTACT_SPAN, waist: w, max: 1 };
+  const min = w - APPROACH_CONTACT_SPAN;
+  const perUnit = orbitOffset(cfg, 0, w, 1).radiusM / APPROACH_CONTACT_SPAN; // the last stretch's metres per unit
+  return { min, waist: w, max: 1, floor: perUnit > 1e-9 ? min - APPROACH_SINK_M / perUnit : min };
 }
 
 /**
  * ⭐⭐ THE APPROACH'S DISTANCE from the gizmo at the approach coordinate `a`: from 1 (ring 1's distance — the far orbit) down to the waist, the 2D curve's
  * own distance from the gizmo (`orbitOffset` — the same for a vertical face's curve and a horizontal face's, a rotation); below the waist, straight to 0
- * (the contact). The piece goes STRAIGHT IN along its ray (the owner: *"make it straight in"*).
+ * (the contact on the contour) — ⭐⭐⭐ (§22) and on below it, NEGATIVE, to `floor` (`APPROACH_SINK_M`). The piece goes STRAIGHT IN along its ray (the
+ * owner: *"make it straight in"*).
  */
 export function approachDistance(cfg: GestureConfig, a: number): number {
   const r = approachRange(cfg);
-  const x = Math.min(r.max, Math.max(r.min, a));
+  const x = Math.min(r.max, Math.max(r.floor, a));
   const dist = (v: number): number => orbitOffset(cfg, 0, v, 1).radiusM;
   if (x >= r.waist) return dist(x);
   return (dist(r.waist) * (x - r.min)) / (r.waist - r.min);
+}
+
+/**
+ * ⭐⭐ (§22) The approach coordinate whose distance is `distM` on the STRAIGHT stretch (`approachDistance` inverted below the waist — linear; the curve above
+ * it is not monotone): held to `floor` … `waist`. Read at the slide's way out (the depth kept), well inside the stretch.
+ */
+export function approachAt(cfg: GestureConfig, distM: number): number {
+  const r = approachRange(cfg);
+  const dw = orbitOffset(cfg, 0, r.waist, 1).radiusM;
+  if (!(dw > 1e-12)) return r.min;
+  return Math.min(r.waist, Math.max(r.floor, r.min + (distM / dw) * (r.waist - r.min)));
 }
 
 /** ⭐ The far orbit's distance from the gizmo (ring 1's — one value for both curves, the owner's 5). */
@@ -199,7 +220,7 @@ export function isApproachKey(key: string): boolean {
 /** ⭐ The approach step a millimetre of the two fingers' (or A + drag's) dy buys: finger UP brings the piece IN (the coordinate down). */
 export function approachStep(a: number, dyMm: number, perMm: number, cfg: GestureConfig): number {
   const r = approachRange(cfg);
-  return Math.min(r.max, Math.max(r.min, a + dyMm * perMm));
+  return Math.min(r.max, Math.max(r.floor, a + dyMm * perMm));
 }
 
 /** ⭐ One frame of an ease of a point toward another (`1 − exp(−dt/τ)`), landing on it within 0.1 mm. */

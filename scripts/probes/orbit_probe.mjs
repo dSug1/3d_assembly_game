@@ -86,7 +86,7 @@ try {
   const ok = await ev(`(() => { const st = window.__st; if (!st) return false; window.__rec = []; window.__leg = "boot";
     const v3 = (x) => (x && x.length === 3 ? [x[0], x[1], x[2]] : x && typeof x.x === "number" ? [x.x, x.y, x.z] : null);
     st.scene.onAfterRenderObservable.add(() => { try { const c = st.camera; const t = c.getTarget ? c.getTarget() : c.target;
-      window.__rec.push({ leg: window.__leg, ts: performance.now(), g: v3(st.asmGizmoAt ?? st.asmG ?? null), gn: v3(st.gizmoNormal ?? null),
+      window.__rec.push({ leg: window.__leg, ts: performance.now(), g: v3(st.asmGizmoAt ?? st.asmG ?? null), gm: v3(st.asmG ?? null), gn: v3(st.gizmoNormal ?? null),
         p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
         ov: [st.orbit.yaw, st.orbit.elevation], lk: st.asmLocked ?? null, cs: st.asmCarrier ? [st.asmCarrier.s, st.asmCarrier.chain?.total ?? null, st.asmCarrier.kind, st.asmCarrier.w, st.asmCarrier.heading ?? null] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, tc: st.pieceTouching ?? null, uv: st.orbitUserV ?? null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null, ms: st.asmShown ? [st.asmShown.t.stack, st.asmShown.t.band, st.asmShown.t.side] : null, dr: ${env.DROP ? `(() => { const d = st.asmCarrier?.drop; if (!d) return null; const Ray = c.getForwardRay(1).constructor; const V = c.position.constructor; const h = st.scene.pickWithRay(new Ray(new V(...d.origin), new V(...d.dir), d.length), (m) => { const id = st.idOf.get(m); return id !== undefined && st.goalCommit.placed.has(id) && m.isPickable && m.isEnabled(); }); const n = h?.hit ? h.getNormal(true) : null; return h?.hit ? [h.pickedMesh.name, h.pickedPoint.x, h.pickedPoint.y, h.pickedPoint.z, n ? n.y : null, d.origin, d.dir] : ["miss", d.origin, d.dir]; })()` : "null"}, rc: st.asmRedCache ? [st.asmRedCache.pts.filter(Boolean).length, st.asmRedCache.pts.length] : null, sh: st.asmShown ? (st.asmShown.t ? [st.asmShown.t.surface, st.asmShown.t.band, st.asmShown.t.side] : [st.asmShown.c.w, st.asmShown.c.heading]) : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null, cm: st.asmCalm ? [st.asmCalm.n, st.asmCalm.sH, st.asmCalm.sV] : null, ap: st.approach, hv: st.hover != null, fr: st.orbitFrame ? st.orbitFrame.cap : null, rl: st.asmUpBand ?? null, ua: st.asmFace?.axis ?? null, fq: st.orbitFrame ? st.orbitFrame.q : null, hd: st.orbitHold ?? null, v: String(st.lastVerdict ?? "").slice(0, 90) });
     } catch (e) { window.__recErr = String(e); } }); return true; })()`);
@@ -126,9 +126,10 @@ try {
   const mode = env.MODE ?? "const";
   if (mode === "const") {
     const starts = { L: [W - 20, (top + H) / 2], R: [20, (top + H) / 2], U: [W / 2, H - 15], D: [W / 2, top + 10] };
-    const dirs = { L: [-3, 0], R: [3, 0], U: [0, -3], D: [0, 3] };
+    const v = +(env.PXSTEP ?? 3); // px a frame (a fast finger: 10+)
+    const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
     let k = 0;
-    for (const [d, px] of JSON.parse(env.LEGS ?? '[["L",1400],["U",380],["R",1400],["D",380]]')) { k++; await leg(`c${k}${d}`, starts[d], dirs[d], Math.round(px / 3)); }
+    for (const [d, px] of JSON.parse(env.LEGS ?? '[["L",1400],["U",380],["R",1400],["D",380]]')) { k++; await leg(`c${k}${d}`, starts[d], dirs[d], Math.round(px / v)); }
   } else {
     for (let k = 1; k <= +(env.PRESSES ?? 5); k++) await randomLeg(`r${k}`);
   }

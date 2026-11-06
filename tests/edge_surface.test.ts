@@ -75,9 +75,10 @@ describe("⭐⭐⭐ the piece round an edge, on the surface (2026-11-05)", () =>
     expect(placeAtAngles(0, () => [0, 0, 0], () => [1, 0, 0], (g) => g, 0.1)).toEqual([0.1, 0, 0]); // no lift: unchanged
   });
 
-  it("⭐ wired: the gizmo's blend cast (`blendCast`) and the piece's lift in every place — the solver's, the drawn one, the foot", () => {
+  const code2 = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
+  it("⭐ wired: the gizmo's blend cast (§22: onto the contour, `contourExit`) and the piece's lift in every place — the solver's, the drawn one, the foot", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("(q, nb, reach) => blendCast(st, q, nb, reach));");
+    expect(code2("input/face_map.ts")).toContain("return blendThroughEdges(map, yaw, pitch, opts, at(yaw, pitch), at, (q, nb) => contourExit(map, q, nb));"); // ⭐⭐⭐ (§22) the contour's own surface
     expect(a).toContain("(g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));");
     expect(a).toContain("const d = approachDistance(st.cfg, st.approach) + liftOf(st, u);");
     expect(a).toContain("const foot = footOf(st, target, u, d + liftOf(st, u));");

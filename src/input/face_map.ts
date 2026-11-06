@@ -18,8 +18,10 @@
  *    across it by the yaw (`edgeMap`), up it by the pitch (`edgeMap`); within `edgeDeg` of a slice's / band's end over the facet's last `edgeMm`: through an
  *    edge the gizmo moves slowly — never a wait. So a dx moves the place along `t` (the green: the plane of `t` and `n`) and a dy along `b` (the red: the
  *    plane of `b` and `n`) — I1 in the facet frame, by construction; on a vertical facet the world's horizontal and vertical.
- * 4. **The gizmo** (`stackDepthAt`): on the facet's stack, the FRONTMOST group whose closed region holds the place; none: the NEAREST group's plane (the gizmo
- *    beside the real face, in its plane). The wiring then casts the ray along the normal for the REAL depth (D3: over an empty slot its bottom).
+ * 4. **The gizmo's PLACE** (`contourPlace`, 2026-11-06, scope §22): the place on the contour, blended through an edge and pushed out along the blended
+ *    normal onto the contour's own surface (`contourExit` — the chord across an edge runs inside it). THE CONTOUR ALONE: the piece, the camera, the orbit's
+ *    centre and the face read it; the real surface (the ring, the lines, the approach's contact) is the wiring's cast. ⛔ The stack's depth rule
+ *    (`stackDepthAt` — the frontmost group, the void bridged on a travel, D3 in the orbit) DELETED: a step in the real surface moved everything.
  * ⛔ ENGINE-FREE. Rectangles, a flood fill, convex polygon clipping (Sutherland–Hodgman, 1974), piecewise-linear maps — textbook; no licence, no patent.
  */
 import type { Vec3 } from "../core/vec";
@@ -159,90 +161,6 @@ export function filledRegion(rects: readonly Rect2[]): FilledRegion {
   const filled = new Uint8Array(nx * ny);
   for (let k = 0; k < nx * ny; k++) filled[k] = outside[k] === 1 ? 0 : 1;
   return { xs, ys, filled, real: inRect };
-}
-
-/** ⭐ The cell index of `v` among the sorted cuts `cs` (the cell `[cs[i], cs[i+1]]` holding it; on a cut, the cell after it); −1 outside. */
-function cellOf(cs: readonly number[], v: number): number {
-  if (cs.length < 2 || v < cs[0]! || v > cs[cs.length - 1]!) return -1;
-  let lo = 0;
-  let hi = cs.length - 1;
-  while (hi - lo > 1) {
-    const m = (lo + hi) >> 1;
-    if (cs[m]! <= v) lo = m;
-    else hi = m;
-  }
-  return lo;
-}
-
-/** ⭐ Is (`x`, `y`) in the region (its holes closed)? On a cell's edge, either neighbour filled counts. */
-export function regionContains(r: FilledRegion, x: number, y: number): boolean {
-  const i = cellOf(r.xs, x);
-  const j = cellOf(r.ys, y);
-  if (i < 0 || j < 0) return false;
-  const ny = r.ys.length - 1;
-  const at = (a: number, b: number): boolean => a >= 0 && b >= 0 && a < r.xs.length - 1 && b < ny && r.filled[a * ny + b] === 1;
-  if (at(i, j)) return true;
-  // on a cut: the cell before it too
-  const onX = Math.abs(x - r.xs[i]!) < 1e-12;
-  const onY = Math.abs(y - r.ys[j]!) < 1e-12;
-  return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
-}
-
-/** ⭐ Is a FACE at (`x`, `y`) — a cell in one of the region's rectangles (not a hole)? On a cell's edge, either neighbour counts. */
-export function regionReal(r: FilledRegion, x: number, y: number): boolean {
-  const i = cellOf(r.xs, x);
-  const j = cellOf(r.ys, y);
-  if (i < 0 || j < 0) return false;
-  const ny = r.ys.length - 1;
-  const at = (a: number, b: number): boolean => a >= 0 && b >= 0 && a < r.xs.length - 1 && b < ny && r.real[a * ny + b] === 1;
-  if (at(i, j)) return true;
-  const onX = Math.abs(x - r.xs[i]!) < 1e-12;
-  const onY = Math.abs(y - r.ys[j]!) < 1e-12;
-  return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
-}
-
-/**
- * ⭐⭐⭐ (2026-11-05) THE VOID CLOSED ON A TRAVEL: the regions `rs` (one plane's) hold (`x`, `y`) between them along `x` — a filled cell before it and one
- * after it on the line `y` — or along `y` (the line `x`). On a facet `x` is its `t` (the green's travel on a side) and `y` its `b` (the red's).
- */
-export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): { readonly x: boolean; readonly y: boolean } {
-  let xLo = false;
-  let xHi = false;
-  let yLo = false;
-  let yHi = false;
-  for (const r of rs) {
-    const ny = r.ys.length - 1;
-    const i = cellOf(r.xs, x);
-    const j = cellOf(r.ys, y);
-    if (j >= 0)
-      for (let a = 0; a < r.xs.length - 1; a++) {
-        if (r.filled[a * ny + j] !== 1) continue;
-        if (r.xs[a]! < x) xLo = true;
-        if (r.xs[a + 1]! > x) xHi = true;
-      }
-    if (i >= 0)
-      for (let b = 0; b < ny; b++) {
-        if (r.filled[i * ny + b] !== 1) continue;
-        if (r.ys[b]! < y) yLo = true;
-        if (r.ys[b + 1]! > y) yHi = true;
-      }
-  }
-  return { x: xLo && xHi, y: yLo && yHi };
-}
-
-/** ⭐ The distance from (`x`, `y`) to the region (its holes closed): 0 inside, else to its nearest filled cell. */
-export function regionDistance(r: FilledRegion, x: number, y: number): number {
-  if (regionContains(r, x, y)) return 0;
-  const ny = r.ys.length - 1;
-  let best = Infinity;
-  for (let i = 0; i < r.xs.length - 1; i++)
-    for (let j = 0; j < ny; j++) {
-      if (r.filled[i * ny + j] !== 1) continue;
-      const dx = Math.max(r.xs[i]! - x, 0, x - r.xs[i + 1]!);
-      const dy = Math.max(r.ys[j]! - y, 0, y - r.ys[j + 1]!);
-      best = Math.min(best, Math.hypot(dx, dy));
-    }
-  return best;
 }
 
 /** ⭐ A closed region's area (m²): its filled cells'. */
@@ -584,44 +502,6 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1 };
 }
 
-/**
- * ⭐⭐ THE GIZMO'S PLANE on a facet's stack at (`x`, `y`) (its `t`, `b` coordinates): the FRONTMOST group whose closed region holds the point (`inside`);
- * none, the NEAREST group (ties: the frontmost) — the gizmo beside the real face, in its plane. `null`: no face in that stack.
- * ⭐⭐⭐ (2026-11-05, the owner: *"in attachment 2 the void is closed on the green section travel so the green section and the gizmo shall go through"*) —
- * THE VOID ON THE FACET'S PLANE (`e`: the main group's level — the facet's plane): no protrusion there and no face of that plane under the point, but the
- * plane's faces on both sides of it along `t` or along `b` (`closedAlong` — a hole, a slot, a notch closed on the green's or the red's travel): the gizmo
- * goes STRAIGHT THROUGH on the facet's plane (`bridged`, never cast — ⛔ D3 put it at the void's bottom: the green dipped and climbed back). A void open
- * on both travels keeps its depth until the frame turn (Steps 6–7: the orbit tilts at the real edge).
- */
-export function stackDepthAt(
-  s: { readonly groups: readonly MapGroup[]; readonly e?: number },
-  x: number,
-  y: number,
-): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true } | null {
-  let front = -1;
-  for (let g = 0; g < s.groups.length; g++)
-    if (regionContains(s.groups[g]!.region, x, y)) {
-      front = g;
-      break;
-    }
-  const e = s.e;
-  if (e !== undefined && (front < 0 || s.groups[front]!.depth <= e + MAP_COPLANAR_M)) {
-    const mine = s.groups.map((gr, g) => ({ gr, g })).filter((q) => Math.abs(q.gr.depth - e) <= MAP_COPLANAR_M);
-    if (mine.length > 0 && !mine.some((q) => regionReal(q.gr.region, x, y))) {
-      const c = closedAlong(mine.map((q) => q.gr.region), x, y);
-      if (c.x || c.y) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
-    }
-  }
-  if (front >= 0) return { depth: s.groups[front]!.depth, group: front, inside: true };
-  let best: { depth: number; group: number; d: number } | null = null;
-  s.groups.forEach((gr, g) => {
-    const d = regionDistance(gr.region, x, y);
-    if (best === null || d < best.d - 1e-9) best = { depth: gr.depth, group: g, d };
-  });
-  const b = best as { depth: number; group: number; d: number } | null;
-  return b === null ? null : { depth: b.depth, group: b.group, inside: false };
-}
-
 /** ⭐ The map's knobs: the edge's slow stretch on each face (`edgeMm`) and the angle (deg) before a slice's end it is crossed in. */
 export interface MapOpts {
   readonly edgeMm: number;
@@ -850,12 +730,10 @@ export function edgeBlend(
  * ⭐⭐⭐ THE PLACE THROUGH AN EDGE, NO JUMP (`edgeBlend` applied): `here` (the point at the angles) blended toward the next facet's first point — up / down
  * a column (`v`) and across a slice's end (`h`, of the up / down blends at both yaws, each read in ITS column — a column's pitch bounds are its own) — to
  * their middle at the end. `at`: the point at other angles (the wiring's gizmo, a vector's place); `null` there leaves the point as it is.
- * ⭐⭐⭐ (2026-11-05, the probes: a close-in dx stalled 630 frames at `Scene_1`'s front-left corner) — **A BLENDED PLACE IS A PLACE; ITS DEPTH IS CAST**:
- * the two points are on two REAL faces (the D3 depth), and where the real outline stands out past the contour's edge (Piece3, 45 mm proud of the −x side)
- * their CHORD runs through the part — the gizmo 2.8 mm inside it, the piece riding it close in, blocked. `cast` (the wiring's ray along the blended
- * normal onto the blended place, from `reach` in front of it — half the chord, the deepest a chord can cut, + 5 mm: never a part standing far out): a
- * surface IN FRONT of the chord takes the gizmo — never deeper (a concave chord stays in the air; a void stays bridged). Both sides of an edge blend to the
- * same place and normal: no jump.
+ * ⭐⭐⭐ (2026-11-05) A BLENDED PLACE IS A PLACE; ITS DEPTH IS `cast`'s: the chord between two facets' points runs inside a convex edge — `cast` (along the
+ * blended normal, from `reach` — half the chord + 5 mm — in front) takes it onto a surface IN FRONT of the chord, never deeper. ⭐⭐⭐ (2026-11-06, §22) the
+ * wiring's cast is the contour's own surface (`contourPlace` → `contourExit`), no longer the real parts'. Both sides of an edge blend to the same place
+ * and normal: no jump.
  */
 export function blendThroughEdges(
   map: FaceMap,
@@ -920,4 +798,35 @@ export function facetOfNormal(map: FaceMap, n: Vec3 | null, p: Vec3): number {
     if (s > best.s) best = { i, s };
   });
   return best.i;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §22) THE CONTOUR'S SURFACE ALONG `n` FROM `p`: the point where the ray from `p` along the unit `n` leaves the contour (the facets'
+ * half-spaces `n_f·x ≤ e_f`, bounded by its core box) — `p` itself when it is already on or outside it. Continuous in `p` and `n` (a convex set).
+ */
+function contourExit(map: FaceMap, p: Vec3, n: Vec3): Vec3 {
+  let t = Infinity;
+  const plane = (m: Vec3, e: number): void => {
+    const c = dot(n, m);
+    if (c > 1e-9) t = Math.min(t, (e - dot(p, m)) / c);
+  };
+  for (const f of map.facets) plane(f.n, f.e);
+  const { lo, hi } = map.core;
+  for (let k = 0; k < 3; k++) {
+    const ax: Vec3 = [k === 0 ? 1 : 0, k === 1 ? 1 : 0, k === 2 ? 1 : 0];
+    plane(ax, hi[k]!);
+    plane([-ax[0], -ax[1], -ax[2]], -lo[k]!);
+  }
+  if (!(t > 0) || !Number.isFinite(t)) return p;
+  return [p[0] + n[0] * t, p[1] + n[1] * t, p[2] + n[2] * t];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-06, the owner: *"build with contour's normal and (a) close in"*, scope §22) **THE GIZMO'S PLACE — THE CONTOUR ALONE**: the place for the
+ * orbit's angles (`mapTarget`), through an edge blended toward the next facet's (`blendThroughEdges`), pushed out onto the contour's surface along the
+ * blended normal (`contourExit`). No cast, no real depth: a protrusion, an overhang, a recess or a void under it moves nothing that reads it.
+ */
+export function contourPlace(map: FaceMap, yaw: number, pitch: number, opts: MapOpts): Vec3 {
+  const at = (y: number, q: number): Vec3 => mapTarget(map, y, q, opts).surface;
+  return blendThroughEdges(map, yaw, pitch, opts, at(yaw, pitch), at, (q, nb) => contourExit(map, q, nb));
 }

@@ -199,7 +199,8 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
 
   it("⭐⭐⭐ WIRED: the gizmo on the facets (`mapTarget(map, …)`, the facet's stack in its own frame); ⭐ D3 — the ray's hit taken WHATEVER its depth (over an empty slot its bottom; ⛔ `MAP_REFINE_M`, 25 mm, deleted); the two knobs (D5) sliders, in the map's key", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host };"); // ⭐ (2026-11-05) D3 amended: a bridged void is not cast to its bottom
+    const raw = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    for (const gone of ["bridged", "MAP_BRIDGE_FRONT_M", "stackDepthAt", "realAt(", "blendCast("]) expect(raw).not.toContain(gone); // ⭐⭐⭐ (§22) D3 out of the orbit: no depth rule left
     expect(a).not.toContain("MAP_REFINE_M");
     expect(a).toContain("const map = buildFaceMap(faces, boxF, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });");
     expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#${upright ? \"U\" : F.key}`;"); // ⭐ (§21) one upright map for any frame upright

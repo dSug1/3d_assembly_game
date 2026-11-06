@@ -46,7 +46,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 2) THE SHELL (the owner: *\"it was good to
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("(g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));"); // ⭐ (2026-11-05) the foot of the gizmo AT the angles (`place_at_angles.test.ts`)
     expect(a).toContain("const foot = footOf(st, target, u, d + liftOf(st, u)); st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs);");
-    expect(a).toContain("st.asmGizmoAt = [target[0], target[1], target[2]];");
+    expect(a).toContain("st.asmGizmoAt = [shown[0], shown[1], shown[2]];"); // ⭐⭐⭐ (§22) the ring on the real surface (`realOn`), the foot from the contour
     expect(a).toContain("if (st.asmLocked) return g; return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));");
     expect(DEFAULT_CONFIG.orbitShellOffsetMm).toBe(60);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitShellOffsetMm: 2 })).toThrow();
