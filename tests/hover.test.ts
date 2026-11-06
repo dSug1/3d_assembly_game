@@ -1153,8 +1153,14 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(slideArmedAfter(false, 0.01, 0)).toBe(false); // out
     expect(slideArmedAfter(false, 0, 0)).toBe(false);
     expect(slideArmedAfter(false, -0.001, 0)).toBe(true); // in (down is in)
-    expect(slideArmedAfter(false, 0, 0.5)).toBe(true); // an orbit drag
+    // ⭐⭐⭐ (§24, *"Build A"*) an orbit drag DISARMS it — the slide latches only when the piece is brought in (⛔ it armed it: ~10× slower mid-drag)
+    expect(slideArmedAfter(false, 0, 0.5)).toBe(false);
+    expect(slideArmedAfter(true, 0, 0.5)).toBe(false);
+    expect(slideArmedAfter(true, -0.001, 0.5)).toBe(true); // in, whatever else
     expect(slideArmedAfter(true, 0.01, 0)).toBe(true);
+    const sc = readFileSync(new URL("../src/render/scene.ts", import.meta.url), "utf8");
+    expect(sc).toContain("st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in");
+    expect(readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8")).toContain("st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in");
   });
   it("⭐⭐ a held second touch (the approach) no longer ends the slide in the slide mode — the capture still does", async () => {
     const { hoverEndsOn } = await import("../src/input/hover");

@@ -1299,3 +1299,33 @@ top now ends HELD at its far edge (*"the cap's edge — held"*) — the probe ke
 (130° off upright), two frames; (2) ⚠ **PRE-EXISTING** (in `2b4643d`, §22 and §23 alike), close in only: a dy up stalls at the front's top edge after the
 frame has turned onto the top and back (no hold on the HUD), and a dx on the top stalls (`r5c`) — the orbit's target itself stops; not yet diagnosed;
 (3) §22's slide latching on Piece3 close in, unchanged.
+
+## 24. The slide latches only when the piece is brought in (A); the close-in stall diagnosed (2026-11-06, branch `1.0.102-`; ⛔ no device close)
+
+> The owner (on `77e56dc`): *"When the piece is close to the hosting face or close to the protruding part, the movement is very much slowed down. Why? I
+> don't like at all this feel"* → *"Build A. Then diagnoze the still open."* — and, on the phone: *"In the attached configuration the movement is almost
+> stuck"* (close in on the front, *"orbit: the frame turned over an edge (down)"*).
+
+**Why it slowed (measured, close-in dx):** the SLIDE took the drag over. It latched by itself whenever the piece's resting face came within
+`hoverApproachMm` (20 mm) of a face it is parallel to, and an orbit drag ARMED it (2026-11-01). In the slide the piece moves 1 mm a mm of finger
+(`hoverGain` 1, a kinetic friction): ~0.6 mm a frame against the orbit's ~6 — ten times slower — then it stops at the face's edge (*"at the edge of the
+hosting faces — reverse"*). Since §22 the piece close in keeps the contour's depth, nearer the hosting face and the parts proud of it: the latch caught
+~95 % of the close-in drag (before §22: none).
+**A — built** (`input/hover.ts` `slideArmedAfter`): the slide is armed ONLY by an approach step inward (A + dy, two fingers) and DISARMED by an orbit
+drag's travel; at a boot and a new orbit it starts disarmed. An orbit drag keeps the orbit's pace at every distance — never switched into the slide
+mid-drag. To slide: approach in. Probed (close-in runs): the dx across the front — the slide never latched, the piece 4–5 mm a frame all the way, 0 stalled
+frames (2340 before); the stalls left are §24.1's contact.
+
+**The close-in stall — diagnosed, not built (§24.1).** A dy up near the front's top edge, close in: the finger's target drifts SIDEWAYS (the yaw
+−1.571 → −1.459 while the pitch hardly moves), the piece TOUCHING every other frame; the blocker is **Piece44** — the overhang above the front, proud of the
+contour. The piece solver refuses each step into it and slides the piece along the ring (`orbitFrame` resets the target to the solved place): *almost
+stuck*, and sideways. The TOP ↔ upright flicker at that edge (the frame turned four times in four frames) is the same: the target pulled back below the
+bound, the frame turned back. ⭐ ONE ROOT: the contour is not the parts' envelope (D5: a part proud of a face never makes a facet — Piece44 on the
+front's top, Piece3 45 mm off the −x side), and (a) puts the piece's path at the contour's depth — through them. Before §22 the real gizmo stepped onto them
+(the piece rode over, jittering); since §22 the collision stops it.
+
+### 24.1 Proposed (not built): the orbit's contour CLEAR OF EVERY PART
+Each facet's plane pushed out to the farthest placed-part vertex along its normal (its support): the same normals (no tilt — D5's purpose kept), convex,
+and every part inside it by construction — the piece's orbit path never meets a part; the approach (a) goes on in, below it, to the real contact. Cost:
+on a face with a proud part the whole face is orbited that far off it (`Scene_1`: the front by Piece44's overhang, the −x side by Piece3's 45 mm); the
+real surface is still shown (the ring, the lines) and reached by the approach.

@@ -606,7 +606,7 @@ export function createScene(
   st.hoverSpent = null;
   st.hoverSlid = false;
   st.hoverReadyWorld = null;
-  st.slideArmed = true;
+  st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in
   st.slideTryAt = 0;
   st.slideRefused = false;
   st.slideWaitSince = 0;
