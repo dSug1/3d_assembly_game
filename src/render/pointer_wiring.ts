@@ -21,7 +21,7 @@ import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOn
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
 import { slideArmedAfter } from "../input/hover";
-import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, leavesCone, loopFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -337,6 +337,18 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const asmOn = assemblyOn(st);
     const shiftApproach = asmOn && st.orbitShift && !dxOnly;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
+    // ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.2 T6) AROUND THE ASSEMBLY THE FINGER MOVES THE TRAVEL, nothing else: dx right, dy up (mm, through the
+    // deadband); its coast replays the same millimetres (`loopFinger`). ⛔ The orbit's angles, the cone, the slide's arming by an orbit drag — not here.
+    if (asmOn) {
+      if (!shiftApproach) {
+        const fx = db.dx / mmToPx(1);
+        const fy = dxOnly ? 0 : -db.dy / mmToPx(1);
+        loopFinger(st, fx, fy);
+        st.orbitInertia.record(s.t, fx, fy);
+      }
+      hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+      return;
+    }
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
     const fdy = orbitDy(db.dy, asmOn);
     const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch * g.pitch;

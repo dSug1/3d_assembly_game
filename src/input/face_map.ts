@@ -6,7 +6,8 @@
  * 1. **The facets** (`buildFaceMap`): the placed parts' faces clustered by normal (within `mergeDeg`, the largest face's normal first — snapped onto a world
  *    axis when it is one); each cluster a candidate FACET: its STACK — every face within `mergeDeg` of its normal, grouped by plane (`MAP_COPLANAR_M`) and,
  *    in a plane, by contact (the slide's own regions, grown `MAP_GROW_M`), **every hole inside a group CLOSED** (`filledRegion`) — and its plane the MAIN
- *    group's (the largest closed region: the painting's front, never a part sticking out of it — Step 4c-bis's core box, generalised). The contour is the
+ *    group's (the largest closed region: the painting's front, never a part sticking out of it — Step 4c-bis's core box, generalised) — ⭐⭐⭐ (§22.1 G1) then
+ *    pushed out to the parts' support along its normal: the contour clear of every part. The contour is the
  *    intersection of the facets' half-spaces (CONVEX by construction — a constant input turns one way round, I3), bounded by the parts' box; each facet's
  *    polygon on it. ⭐ A facet is kept only when its real face (its main region) covers `minShare` of its polygon (D5) — a frustum's slanted side, whose
  *    plane cuts across the contour, never tilts the orbit; on a box exactly the six faces.
@@ -230,21 +231,6 @@ export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): 
   return { x: xLo && xHi, y: yLo && yHi };
 }
 
-/** ⭐ The distance from (`x`, `y`) to the region (its holes closed): 0 inside, else to its nearest filled cell. */
-export function regionDistance(r: FilledRegion, x: number, y: number): number {
-  if (regionContains(r, x, y)) return 0;
-  const ny = r.ys.length - 1;
-  let best = Infinity;
-  for (let i = 0; i < r.xs.length - 1; i++)
-    for (let j = 0; j < ny; j++) {
-      if (r.filled[i * ny + j] !== 1) continue;
-      const dx = Math.max(r.xs[i]! - x, 0, x - r.xs[i + 1]!);
-      const dy = Math.max(r.ys[j]! - y, 0, y - r.ys[j + 1]!);
-      best = Math.min(best, Math.hypot(dx, dy));
-    }
-  return best;
-}
-
 /** ⭐ A closed region's area (m²): its filled cells'. */
 export function regionArea(r: FilledRegion): number {
   const ny = r.ys.length - 1;
@@ -296,42 +282,6 @@ export function edgeUnmap(off: number, band: number, half: number, keM: number):
   return sg * Math.min(1, 1 - band + (ke > 1e-12 ? ((a - (half - ke)) / ke) * band : band));
 }
 
-/**
- * ⭐ Over a top / under a bottom: `f` (0 at the edge, 1 at the centre) to the share of the way in — its first `band` over the first `ke` of the shortest
- * way in (`dMin`), the rest linear; the same share for every side (the quarters meet on their diagonals).
- */
-export function topIn(f: number, band: number, keM: number, dMin: number): number {
-  const x = Math.min(1, Math.max(0, f));
-  const k = band > 0 && dMin > 1e-9 ? Math.min(keM / dMin, 1 / 3) : 0;
-  if (k === 0) return x;
-  if (x <= band) return (x / band) * k;
-  return k + ((x - band) / (1 - band)) * (1 - k);
-}
-
-/** ⭐ …and back. */
-export function topOut(g: number, band: number, keM: number, dMin: number): number {
-  const x = Math.min(1, Math.max(0, g));
-  const k = band > 0 && dMin > 1e-9 ? Math.min(keM / dMin, 1 / 3) : 0;
-  if (k === 0) return x;
-  if (x <= k) return (x / k) * band;
-  return band + ((x - k) / (1 - k)) * (1 - band);
-}
-
-/**
- * ⭐⭐ OUT OF STEP, NO JUMP (after the slide — the map's angles put where the slide left the gizmo): the map's angle `m` follows the orbit's `target` by
- * the orbit's own step `d`, faster (× 1 + `catchUp`) while the orbit runs away from it, slower (× 1 − `catchUp`) while it comes back — never against the
- * finger, never a jump; caught up, exactly the orbit's. `wrap`: a yaw (the gap read round the circle).
- */
-export function syncAngle(m: number, target: number, d: number, catchUp: number, wrap: boolean): number {
-  const gapOf = (x: number): number => (wrap ? wrapPi(target - x) : target - x);
-  const gap = gapOf(m);
-  if (Math.abs(gap) < 1e-9) return target;
-  if (d === 0) return m;
-  const f = Math.sign(d) === Math.sign(gap) ? 1 + catchUp : 1 - catchUp;
-  const m2 = m + d * f;
-  // the gap closed or crossed: on the orbit
-  return Math.sign(gapOf(m2)) !== Math.sign(gap) ? target : m2;
-}
 /** ⭐ A normal within 1e-9 of a world axis: that axis EXACTLY (a box's face read on a turned pose carries 1e-16 of noise — the box's numbers kept exact). */
 export function snapAxis(n: Vec3): Vec3 {
   const l = Math.hypot(n[0], n[1], n[2]);
@@ -524,7 +474,19 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       const c = candOf(n, false, 0);
       return { ...c, e: n[0] > 0 ? box.hi[0] : n[0] < 0 ? -box.lo[0] : n[2] > 0 ? box.hi[2] : -box.lo[2] };
     });
-  const all: Candidate[] = [...sides, capT, capB];
+  // ⭐⭐⭐ (2026-11-06, scope §22.1 G1 — the owner: *"build it"*, then the rebuild) THE CONTOUR CLEAR OF EVERY PART: each chosen facet's plane pushed out to the placed parts'
+  // SUPPORT along its normal (the farthest vertex) — the same normals (D5's choice of facets kept: no tilt), convex, every part inside it by construction:
+  // the orbit's path never meets a part (⛔ at the main region's plane, a part proud of the face — `Scene_1`'s Piece44 over the front, Piece3 off the −x
+  // side — stood across the piece's path close in: the solver pinned it, *"almost stuck"*). The approach alone goes in, to the real contact (§22.6).
+  const supportOf = (n: Vec3): number => {
+    let m = -Infinity;
+    for (const f of faces) for (const tr of f.tris) for (const v of tr) m = Math.max(m, dot(n, v));
+    return m;
+  };
+  const all: Candidate[] = [...sides, capT, capB].map((c) => {
+    const sup = supportOf(c.n);
+    return Number.isFinite(sup) && sup > c.e ? { ...c, e: sup } : c;
+  });
   const planes = all;
   const facets: Facet[] = all.map((c, i) => {
     const { t, b } = facetFrame(c.n);
@@ -537,7 +499,7 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       t,
       b,
       e: c.e,
-      kind: i < sides.length ? "SIDE" : c === capT ? "TOP" : "BOTTOM",
+      kind: i < sides.length ? "SIDE" : i === sides.length ? "TOP" : "BOTTOM",
       groups: c.groups,
       poly,
       tLo: ext(ts, true),
@@ -584,58 +546,10 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1 };
 }
 
-/**
- * ⭐⭐ THE GIZMO'S PLANE on a facet's stack at (`x`, `y`) (its `t`, `b` coordinates): the FRONTMOST group whose closed region holds the point (`inside`);
- * none, the NEAREST group (ties: the frontmost) — the gizmo beside the real face, in its plane. `null`: no face in that stack.
- * ⭐⭐⭐ (2026-11-05, the owner: *"in attachment 2 the void is closed on the green section travel so the green section and the gizmo shall go through"*) —
- * THE VOID ON THE FACET'S PLANE (`e`: the main group's level — the facet's plane): no protrusion there and no face of that plane under the point, but the
- * plane's faces on both sides of it along `t` or along `b` (`closedAlong` — a hole, a slot, a notch closed on the green's or the red's travel): the gizmo
- * goes STRAIGHT THROUGH on the facet's plane (`bridged`, never cast — ⛔ D3 put it at the void's bottom: the green dipped and climbed back). A void open
- * on both travels keeps its depth until the frame turn (Steps 6–7: the orbit tilts at the real edge).
- */
-export function stackDepthAt(
-  s: { readonly groups: readonly MapGroup[]; readonly e?: number },
-  x: number,
-  y: number,
-): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true } | null {
-  let front = -1;
-  for (let g = 0; g < s.groups.length; g++)
-    if (regionContains(s.groups[g]!.region, x, y)) {
-      front = g;
-      break;
-    }
-  const e = s.e;
-  if (e !== undefined && (front < 0 || s.groups[front]!.depth <= e + MAP_COPLANAR_M)) {
-    const mine = s.groups.map((gr, g) => ({ gr, g })).filter((q) => Math.abs(q.gr.depth - e) <= MAP_COPLANAR_M);
-    if (mine.length > 0 && !mine.some((q) => regionReal(q.gr.region, x, y))) {
-      const c = closedAlong(mine.map((q) => q.gr.region), x, y);
-      if (c.x || c.y) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
-    }
-  }
-  if (front >= 0) return { depth: s.groups[front]!.depth, group: front, inside: true };
-  let best: { depth: number; group: number; d: number } | null = null;
-  s.groups.forEach((gr, g) => {
-    const d = regionDistance(gr.region, x, y);
-    if (best === null || d < best.d - 1e-9) best = { depth: gr.depth, group: g, d };
-  });
-  const b = best as { depth: number; group: number; d: number } | null;
-  return b === null ? null : { depth: b.depth, group: b.group, inside: false };
-}
-
 /** ⭐ The map's knobs: the edge's slow stretch on each face (`edgeMm`) and the angle (deg) before a slice's end it is crossed in. */
 export interface MapOpts {
   readonly edgeMm: number;
   readonly edgeDeg: number;
-}
-
-/** ⭐ The share of a span (its half-width `half`, rad) an edge band of `E` rad takes: at most half. */
-function bandFor(E: number, half: number): number {
-  return half > 1e-12 ? Math.min(0.5, Math.max(0, E / half)) : 0;
-}
-
-/** ⭐ The facet's point at `L` along `t` and `s` along `b`, in its plane. */
-function facetAt(f: Facet, L: number, s: number): Vec3 {
-  return [f.n[0] * f.e + f.t[0] * L + f.b[0] * s, f.n[1] * f.e + f.t[1] * L + f.b[1] * s, f.n[2] * f.e + f.t[2] * L + f.b[2] * s];
 }
 
 /** ⭐ Where the angles put the gizmo: the band, the column (`side`), the facet (`stack`), its normal, the place on its plane, and across it (the calm). */
@@ -653,271 +567,3 @@ export interface MapTarget {
   readonly across: { readonly L: number; readonly lo: number; readonly hi: number };
 }
 
-/** ⭐ The yaw's column (its index) and its place across the column's slice (−1 … 1). */
-export function columnAt(map: FaceMap, yaw: number): { readonly k: number; readonly a: number } {
-  let best = { k: 0, a: 0, r: Infinity };
-  map.columns.forEach((c, k) => {
-    const d = wrapPi(yaw - c.mid);
-    const r = Math.abs(d) / c.hw;
-    if (r < best.r - 1e-12) best = { k, a: Math.max(-1, Math.min(1, d / c.hw)), r };
-  });
-  return { k: best.k, a: best.a };
-}
-
-/**
- * ⭐⭐ THE CAP'S EDGE ACROSS A COLUMN'S FACET: the cap's EDGE toward the facet (its vertices outermost along the facet's level normal — on the facet's
- * plane where they meet) and that edge's extent along the facet's `t` — the rim of the cap's quarter runs over it, not over the facet's own width (⛔ a
- * hexagonal end is ±R wide at mid-height, its bottom edge ±R/2: the quarter ran outside the cap, over its neighbour's — probed by the round trip; ⛔ the
- * whole cap's extent: on a vertical hexagon twice the facet's edge, the quarters' corners parted — probed, 176 mm). `toCap` / `fromCap` map a place
- * across the facet onto it and back — on a box the same extent: unchanged.
- */
-function capSpan(map: FaceMap, f: Facet, cap: Facet): { readonly toCap: (L: number) => number; readonly fromCap: (L: number) => number } {
-  const nh = Math.hypot(f.n[0], f.n[2]);
-  const out = (v: Vec3): number => (nh > 1e-9 ? (v[0] * f.n[0] + v[2] * f.n[2]) / nh : 0);
-  const m = cap.poly.length === 0 ? 0 : Math.max(...cap.poly.map(out));
-  const ts = cap.poly.filter((v) => out(v) >= m - 1e-6).map((v) => dot(v, f.t));
-  const lo = ts.length === 0 ? f.tLo : Math.min(...ts);
-  const hi = ts.length === 0 ? f.tHi : Math.max(...ts);
-  const same = Math.abs(lo - f.tLo) < 1e-9 && Math.abs(hi - f.tHi) < 1e-9;
-  const w = f.tHi - f.tLo;
-  if (same || !(w > 1e-12) || !(hi - lo > 1e-12)) return { toCap: (L) => L, fromCap: (L) => L };
-  void map;
-  return { toCap: (L) => lo + ((L - f.tLo) / w) * (hi - lo), fromCap: (L) => f.tLo + ((L - lo) / (hi - lo)) * w };
-}
-
-/** ⭐ The cap's centre the quarters converge to: the contour's middle in x / z, on the cap's plane. */
-function capCentre(map: FaceMap, cap: Facet): Vec3 {
-  const cx = (map.core.lo[0] + map.core.hi[0]) / 2;
-  const cz = (map.core.lo[2] + map.core.hi[2]) / 2;
-  const cy = Math.abs(cap.n[1]) > 1e-9 ? (cap.e - cap.n[0] * cx - cap.n[2] * cz) / cap.n[1] : (map.core.lo[1] + map.core.hi[1]) / 2;
-  return [cx, cy, cz];
-}
-
-/**
- * ⭐⭐⭐ THE PLACE ON THE FACES CONTOUR for the orbit's `yaw` and `pitch` (the orbit's convention: x = cos, z = sin; pitch up +) — see the module's header. In
- * a column's band: across the facet by the yaw, up it by the pitch (`edgeMap` each — the slow stretch through an edge). Beyond the column's top / bottom
- * band: the column's top (bottom) facet's edge at the yaw, drawn in toward the cap's centre by the pitch (`topIn`) — at ±90° the centre, whatever the yaw.
- * On a box exactly Step 4c-bis's core box map.
- */
-export function mapTarget(map: FaceMap, yaw: number, pitch: number, opts: MapOpts): MapTarget {
-  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
-  const ke = Math.max(0, opts.edgeMm) / 1000;
-  const { k, a } = columnAt(map, yaw);
-  const col = map.columns[k]!;
-  const bandY = bandFor(E, col.hw);
-  const B = col.bounds;
-  const lo = B[0]!;
-  const hi = B[B.length - 1]!;
-  const p = Math.max(-H, Math.min(H, pitch));
-  const across = (f: Facet): number => (f.tLo + f.tHi) / 2 + edgeMap(a, bandY, (f.tHi - f.tLo) / 2, ke);
-  if (p <= hi + 1e-12 && p >= lo - 1e-12) {
-    let i = 0;
-    while (i < col.facets.length - 1 && p > B[i + 1]!) i++;
-    const fi = col.facets[i]!;
-    const f = map.facets[fi]!;
-    const L = across(f);
-    const pm = (B[i]! + B[i + 1]!) / 2;
-    const ph = (B[i + 1]! - B[i]!) / 2;
-    const s = (f.bLo + f.bHi) / 2 + edgeMap(ph > 1e-12 ? (p - pm) / ph : 0, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke);
-    return { band: "SIDE", side: k, stack: fi, normal: f.n, surface: facetAt(f, L, s), across: { L, lo: f.tLo, hi: f.tHi } };
-  }
-  const up = p > hi;
-  const f = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-  const L = across(f);
-  const capI = up ? map.top : map.bottom;
-  const cap = map.facets[capI]!;
-  const rim = facetAt(f, capSpan(map, f, cap).toCap(L), up ? f.bHi : f.bLo);
-  const C = capCentre(map, cap);
-  const span = up ? H - hi : lo + H;
-  const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
-  const g = topIn(span > 1e-12 ? (up ? p - hi : lo - p) / span : 1, bandFor(E, span), ke, dMin);
-  return {
-    band: up ? "TOP" : "BOTTOM",
-    side: k,
-    stack: capI,
-    normal: cap.n,
-    surface: [C[0] + (rim[0] - C[0]) * (1 - g), C[1] + (rim[1] - C[1]) * (1 - g), C[2] + (rim[2] - C[2]) * (1 - g)],
-    across: { L, lo: f.tLo, hi: f.tHi },
-  };
-}
-
-/**
- * ⭐⭐ …AND BACK: the angles whose place is nearest `p` on facet `fi` (a point on its plane) — after the slide, the map is put where the slide left the gizmo
- * (no jump). A column's facet: across and up it (`edgeUnmap`); a cap: the quarter it is in (the column whose edge it is most toward), its share of the way
- * in, its place across.
- */
-export function mapAngles(map: FaceMap, p: Vec3, fi: number, opts: MapOpts): { readonly yaw: number; readonly pitch: number } {
-  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
-  const ke = Math.max(0, opts.edgeMm) / 1000;
-  const yawOf = (col: Column, f: Facet, L: number): number => col.mid + edgeUnmap(L - (f.tLo + f.tHi) / 2, bandFor(E, col.hw), (f.tHi - f.tLo) / 2, ke) * col.hw;
-  if (fi === map.top || fi === map.bottom) {
-    const up = fi === map.top;
-    const cap = map.facets[fi]!;
-    const C = capCentre(map, cap);
-    const qx = p[0] - C[0];
-    const qz = p[2] - C[2];
-    let best = { k: 0, r: -Infinity };
-    map.columns.forEach((col, k) => {
-      const s = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-      const nh = Math.hypot(s.n[0], s.n[2]);
-      if (!(nh > 1e-9)) return;
-      const R = facetAt(s, (s.tLo + s.tHi) / 2, up ? s.bHi : s.bLo);
-      const D = (s.n[0] * (R[0] - C[0]) + s.n[2] * (R[2] - C[2])) / nh;
-      const r = D > 1e-12 ? (qx * s.n[0] + qz * s.n[2]) / nh / D : -Infinity;
-      if (r > best.r) best = { k, r };
-    });
-    const col = map.columns[best.k]!;
-    const s = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-    const r = Math.min(1, Math.max(0, best.r));
-    const ct = s.t[0] * C[0] + s.t[2] * C[2];
-    const L = capSpan(map, s, cap).fromCap(r > 1e-9 ? ct + (qx * s.t[0] + qz * s.t[2]) / r : ct);
-    const B = col.bounds;
-    const edge = up ? B[B.length - 1]! : B[0]!;
-    const span = up ? H - edge : edge + H;
-    const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
-    const g = topOut(1 - r, bandFor(E, span), ke, dMin);
-    return { yaw: yawOf(col, s, L), pitch: up ? edge + g * span : edge - g * span };
-  }
-  const f = map.facets[fi]!;
-  for (const col of map.columns) {
-    const i = col.facets.indexOf(fi);
-    if (i < 0) continue;
-    const pm = (col.bounds[i]! + col.bounds[i + 1]!) / 2;
-    const ph = (col.bounds[i + 1]! - col.bounds[i]!) / 2;
-    const s = dot(f.b, p);
-    return { yaw: yawOf(col, f, dot(f.t, p)), pitch: pm + edgeUnmap(s - (f.bLo + f.bHi) / 2, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke) * ph };
-  }
-  return { yaw: 0, pitch: 0 };
-}
-
-/**
- * ⭐⭐⭐ THROUGH AN EDGE, NO JUMP (the edge bands — `edgeDeg` before a slice's / band's end): the gizmo of the facet being left and the gizmo where the next
- * one starts can differ — the real outline is not the contour's (a column standing out 45 mm, a top 41 mm above the core's: probed on `Scene_1`). In the
- * band the gizmo is BLENDED toward the next facet's first point, `w` rising (smoothstep) to ½ at the end — where both sides meet: the gizmo crosses the edge
- * continuously. `h`: across the column's slice end (the yaw `yawThere` just inside the next column); `v`: across a pitch bound of the column — a facet to the
- * next up / down it, or a cap (`pitchThere` just past it). `null`: not in that band (or no band).
- */
-export function edgeBlend(
-  map: FaceMap,
-  yaw: number,
-  pitch: number,
-  opts: MapOpts,
-): { readonly h: { readonly w: number; readonly yawThere: number } | null; readonly v: { readonly w: number; readonly pitchThere: number } | null } {
-  const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
-  if (!(E > 0)) return { h: null, v: null };
-  const ease = (u: number): number => {
-    const x = Math.min(1, Math.max(0, u));
-    return 0.5 * x * x * (3 - 2 * x);
-  };
-  const EPS = 1e-7;
-  const p = Math.max(-H, Math.min(H, pitch));
-  const { k, a } = columnAt(map, yaw);
-  const col = map.columns[k]!;
-  const B = col.bounds;
-  const lo = B[0]!;
-  const hi = B[B.length - 1]!;
-  const spanT = H - hi;
-  const spanB = lo + H;
-  let h: { w: number; yawThere: number } | null = null;
-  // across: in the column's bands, and over a cap while still in its first band (the slice's end is blended in there) — ⭐ (Step 5) at EVERY pitch where
-  // the next column's caps start at another pitch (a hexagonal prism's end column tops out at 45°, its slanted one at 60°: their quarters' places differ
-  // at the slice's end, so the blend carries them through; on a box the bounds are equal — Step 4c-bis's rule, unchanged)
-  const bandY = bandFor(E, col.hw);
-  if (bandY > 0 && Math.abs(a) > 1 - bandY) {
-    const sg = a < 0 ? -1 : 1;
-    const yawThere = col.mid + sg * (col.hw + EPS);
-    const nb = map.columns[columnAt(map, yawThere).k]!.bounds;
-    const same = Math.abs(nb[0]! - lo) < 1e-12 && Math.abs(nb[nb.length - 1]! - hi) < 1e-12;
-    if (!same || (p <= hi + Math.min(0.5 * spanT, E) + 1e-12 && p >= lo - Math.min(0.5 * spanB, E) - 1e-12))
-      h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
-  }
-  let v: { w: number; pitchThere: number } | null = null;
-  for (let j = 0; j < B.length && v === null; j++) {
-    const sb = j === 0 ? spanB : (B[j]! - B[j - 1]!) / 2;
-    const sa = j === B.length - 1 ? spanT : (B[j + 1]! - B[j]!) / 2;
-    const db = Math.min(0.5 * sb, E);
-    const da = Math.min(0.5 * sa, E);
-    // ⭐ the bound itself on the side `mapTarget` puts it: the facet below an inner bound and the top's, the facet ABOVE the bottom's (⛔ read as the
-    // bottom cap's: on a hexagonal end, whose bottom edge is narrower than the end, a 41 mm step there — probed)
-    const below = j === 0 ? p < B[j]! : p <= B[j]!;
-    if (db > 0 && below && p > B[j]! - db) v = { w: ease((p - (B[j]! - db)) / db), pitchThere: B[j]! + EPS };
-    else if (da > 0 && !below && p < B[j]! + da) v = { w: ease((B[j]! + da - p) / da), pitchThere: B[j]! - EPS };
-  }
-  return { h, v };
-}
-
-/**
- * ⭐⭐⭐ THE PLACE THROUGH AN EDGE, NO JUMP (`edgeBlend` applied): `here` (the point at the angles) blended toward the next facet's first point — up / down
- * a column (`v`) and across a slice's end (`h`, of the up / down blends at both yaws, each read in ITS column — a column's pitch bounds are its own) — to
- * their middle at the end. `at`: the point at other angles (the wiring's gizmo, a vector's place); `null` there leaves the point as it is.
- * ⭐⭐⭐ (2026-11-05, the probes: a close-in dx stalled 630 frames at `Scene_1`'s front-left corner) — **A BLENDED PLACE IS A PLACE; ITS DEPTH IS CAST**:
- * the two points are on two REAL faces (the D3 depth), and where the real outline stands out past the contour's edge (Piece3, 45 mm proud of the −x side)
- * their CHORD runs through the part — the gizmo 2.8 mm inside it, the piece riding it close in, blocked. `cast` (the wiring's ray along the blended
- * normal onto the blended place, from `reach` in front of it — half the chord, the deepest a chord can cut, + 5 mm: never a part standing far out): a
- * surface IN FRONT of the chord takes the gizmo — never deeper (a concave chord stays in the air; a void stays bridged). Both sides of an edge blend to the
- * same place and normal: no jump.
- */
-export function blendThroughEdges(
-  map: FaceMap,
-  yaw: number,
-  pitch: number,
-  opts: MapOpts,
-  here: Vec3,
-  at: (yaw: number, pitch: number) => Vec3 | null,
-  cast?: (p: Vec3, n: Vec3, reach: number) => Vec3 | null,
-): Vec3 {
-  const eb = edgeBlend(map, yaw, pitch, opts);
-  if (eb.h === null && eb.v === null) return here;
-  const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
-  const nAt = (yw: number, pt: number): Vec3 => mapTarget(map, yw, pt, opts).normal;
-  let chord = 0; // the longest chord blended across — the sagitta's bound: a part the chord cuts lies within half of it in front
-  const span = (a: Vec3, b: Vec3): void => {
-    chord = Math.max(chord, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
-  };
-  const upDown = (yw: number, q: Vec3, n: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): { p: Vec3; n: Vec3 } => {
-    if (v === null) return { p: q, n };
-    const o = at(yw, v.pitchThere);
-    if (o === null) return { p: q, n };
-    span(q, o);
-    return { p: mix(q, o, v.w), n: mix(n, nAt(yw, v.pitchThere), v.w) };
-  };
-  let r = upDown(yaw, here, nAt(yaw, pitch), eb.v);
-  if (eb.h !== null) {
-    const o = at(eb.h.yawThere, pitch);
-    if (o !== null) {
-      const there = upDown(eb.h.yawThere, o, nAt(eb.h.yawThere, pitch), edgeBlend(map, eb.h.yawThere, pitch, opts).v);
-      span(r.p, there.p);
-      r = { p: mix(r.p, there.p, eb.h.w), n: mix(r.n, there.n, eb.h.w) };
-    }
-  }
-  if (cast !== undefined) {
-    const l = Math.hypot(r.n[0], r.n[1], r.n[2]);
-    if (l > 1e-9) {
-      const nb: Vec3 = [r.n[0] / l, r.n[1] / l, r.n[2] / l];
-      const h = chord > 0 ? cast(r.p, nb, chord / 2 + BLEND_REACH_M) : null;
-      if (h !== null && dot([h[0] - r.p[0], h[1] - r.p[1], h[2] - r.p[2]], nb) > BLEND_FRONT_M) return h;
-    }
-  }
-  return r.p;
-}
-/** ⭐ (2026-11-05) a cast's hit takes a blended place only this far (m) in front of it — the chord itself on a face is kept. */
-export const BLEND_FRONT_M = 0.0001;
-/** ⭐ …and the cast reaches this far (m) beyond half the chord — never a part standing far out along the blended normal (a jump onto it). */
-export const BLEND_REACH_M = 0.005;
-
-/** ⭐ The facet a gizmo's face is on: the facet whose normal is nearest its normal (the slide's face); no normal — the facet whose plane is nearest `p`. */
-export function facetOfNormal(map: FaceMap, n: Vec3 | null, p: Vec3): number {
-  let best = { i: 0, s: -Infinity };
-  if (n !== null && Math.hypot(n[0], n[1], n[2]) > 1e-9) {
-    map.facets.forEach((f, i) => {
-      const s = dot(n, f.n);
-      if (s > best.s) best = { i, s };
-    });
-    return best.i;
-  }
-  map.facets.forEach((f, i) => {
-    const s = -Math.abs(dot(f.n, p) - f.e);
-    if (s > best.s) best = { i, s };
-  });
-  return best.i;
-}

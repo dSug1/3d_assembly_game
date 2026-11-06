@@ -467,8 +467,6 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-05, STEP 6) THE ORBIT'S FRAME (`input/orbit_frame.ts`): upright, or turned onto a top / a bottom at its crossing — every angle of the orbit is
    * read in it */
   orbitFrame: import("../input/orbit_frame").OrbitFrame;
-  /** ⭐⭐⭐ (2026-11-05, the redesign §20) the camera's up carried from frame to frame (`input/camera_up.ts`) — the view's, never the frame's */
-  asmUpCarry: import("../input/camera_up").UpCarry;
   /** ⭐⭐ (§20, §4.2) the cap the current drag left over its FAR edge — held under its bound upright until the finger lifts; `null`: none */
   orbitHold: "TOP" | "BOTTOM" | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
@@ -484,6 +482,8 @@ export interface SceneState {
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
   asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
   /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */
+  /** ⭐⭐⭐ (2026-11-06, the rebuild — scope §22) the travel on G1, the shown place / direction / up (`assembly_wiring.ts`); `null`: none yet */
+  loop: import("./assembly_wiring").LoopState | null;
   asmCast: {
     readonly frame: number;
     readonly world: import("../core/object_model").World;

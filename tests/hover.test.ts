@@ -1184,7 +1184,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(h).toContain("if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);");
     expect(h).toContain("if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);");
+    expect(a).toContain("st.slideArmed = d < 0;"); // ⭐⭐⭐ (the rebuild, §22.6 A2) the depth arms the slide, nothing else
     expect(a).toContain("if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));");
     // the coast before the slide's early return: a flick out leaves it
     expect(a.indexOf("if (st.approachInertia.coasting) {")).toBeLessThan(a.indexOf("if (st.hover !== null) { const t = st.centreBlend.targetM;"));

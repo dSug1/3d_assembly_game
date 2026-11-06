@@ -8,43 +8,13 @@
  * RED against `f1618e7` (`cast` ignored, `faceLift` absent, `placeAtAngles` without a lift).
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { BLEND_REACH_M, blendThroughEdges, buildFaceMap, edgeBlend, mapTarget } from "../src/input/face_map";
-import { faceLift, placeAtAngles } from "../src/input/orbit_shell";
+import { faceLift } from "../src/input/orbit_shell";
 import type { Quat, Vec3 } from "../src/core/vec";
-import type { ShellBox } from "../src/input/orbit_shell";
 
 const D = Math.PI / 180;
-const box: ShellBox = { lo: [-0.25, 0, -0.05], hi: [0.25, 0.6, -0.017] };
-const bm = buildFaceMap([], box);
-const opts = { edgeMm: 10, edgeDeg: 10 };
 const I: Quat = [1, 0, 0, 0];
 
 describe("⭐⭐⭐ the piece round an edge, on the surface (2026-11-05)", () => {
-  it("⭐⭐⭐ the blended place's depth CAST: a surface in front of the chord takes the gizmo — ⛔ the chord through the part", () => {
-    // the −z front's slice end toward −x (yaw 225°): in the edge band
-    const yaw = 224 * D;
-    expect(edgeBlend(bm, yaw, 0, opts).h).not.toBeNull();
-    const at = (y: number, p: number): Vec3 => mapTarget(bm, y, p, opts).surface;
-    const here = at(yaw, 0);
-    const chord = blendThroughEdges(bm, yaw, 0, opts, here, at);
-    const seen: { reach: number; n: Vec3 }[] = [];
-    const front: Vec3 = [chord[0] - 0.002, chord[1], chord[2] - 0.002];
-    const out = blendThroughEdges(bm, yaw, 0, opts, here, at, (_p, n, reach) => (seen.push({ reach, n }), front));
-    expect(out).toEqual(front); // ✅ the surface in front of the chord
-    expect(seen.length).toBe(1);
-    expect(seen[0]!.reach).toBeGreaterThan(BLEND_REACH_M); // half the chord + 5 mm
-    expect(seen[0]!.n[2]).toBeLessThan(0); // the blended normal: between −z and −x
-    expect(seen[0]!.n[0]).toBeLessThan(0);
-    // a hit BEHIND the chord (a concave corner, a void): the chord kept
-    const behind: Vec3 = [chord[0] + 0.002, chord[1], chord[2] + 0.002];
-    expect(blendThroughEdges(bm, yaw, 0, opts, here, at, () => behind)).toEqual(chord);
-    // no hit: the chord; out of any band: never cast
-    expect(blendThroughEdges(bm, yaw, 0, opts, here, at, () => null)).toEqual(chord);
-    let called = 0;
-    blendThroughEdges(bm, 270 * D, 0, opts, at(270 * D, 0), at, () => (called++, null));
-    expect(called).toBe(0);
-  });
 
   it("⭐⭐⭐ `faceLift`: 0 square to the resting face, the piece's overhang past its centre as the direction tilts", () => {
     // a 0.1 × 0.04 × 0.045 box, its resting face its bottom (centre at y −0.02)
@@ -65,21 +35,5 @@ describe("⭐⭐⭐ the piece round an edge, on the surface (2026-11-05)", () =>
     }
   });
 
-  it("⭐⭐ `placeAtAngles` with the lift: the foot read at the lifted distance, the place along the direction past it", () => {
-    const feet: number[] = [];
-    const p = placeAtAngles(0, () => [0, 0, 0], () => [1, 0, 0], (g, _u, dd) => (feet.push(dd), g), 0.1, () => 0.02);
-    expect(p[0]).toBeCloseTo(0.12, 12);
-    expect([p[1], p[2]]).toEqual([0, 0]);
-    expect(feet.length).toBe(1);
-    expect(feet[0]).toBeCloseTo(0.12, 12);
-    expect(placeAtAngles(0, () => [0, 0, 0], () => [1, 0, 0], (g) => g, 0.1)).toEqual([0.1, 0, 0]); // no lift: unchanged
-  });
 
-  it("⭐ wired: the gizmo's blend cast (`blendCast`) and the piece's lift in every place — the solver's, the drawn one, the foot", () => {
-    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("(q, nb, reach) => blendCast(st, q, nb, reach));");
-    expect(a).toContain("(g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));");
-    expect(a).toContain("const d = approachDistance(st.cfg, st.approach) + liftOf(st, u);");
-    expect(a).toContain("const foot = footOf(st, target, u, d + liftOf(st, u));");
-  });
 });
