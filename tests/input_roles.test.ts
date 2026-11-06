@@ -72,8 +72,8 @@ describe("the finger read on the screen (§21.4 R1 / R4)", () => {
     expect(holdByMotion(top, { n: [0, 1, 0], mx: [c, 0, Math.sin((125 * Math.PI) / 180)], my: [0, 0, 1] }, 2, 0, HOLD_NONE)).toEqual({ x: 1, y: 0 });
     expect(HOLD_REVERSED_COS).toBe(-0.5);
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const kept = { face: st.asmFace, mark: st.asmRollMark };");
-    expect(a).toContain("st.asmFace = kept.face; st.asmRollMark = kept.mark; break;");
+    expect(a).toContain("const kept = st.asmFace;");
+    expect(a).toContain("st.asmFace = kept; break;");
   });
 
   it("⭐ wired: around the assembly the finger TRAVELS the face (`asmFingerTravel`): roles, the split at a crossing, the frame turned there, R4 read there; a crossing completed only by motion onto the new face", () => {
@@ -82,7 +82,7 @@ describe("the finger read on the screen (§21.4 R1 / R4)", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("const s = st.asmLocked ? { t: 1, crossing: false } : stepToBoundary(map, st.orbit.yaw, pitchOfV(st.orbit.elevation), dYaw, dPitch);");
     expect(a).toContain("if (next !== null && next.key !== face.key) st.asmHold = holdByMotion(face, next, rx, ry, st.asmHold);");
-    expect(a).toContain("const face: TravelFace = { key, n, cap, axis, roles, mx: motion(1, 0), my: motion(0, 1), mPerRad: mPerRad0 ?? [len(gy), len(gp)], ahead: nAhead };");
+    expect(a).toContain("const face: TravelFace = { key, n, cap, axis, roles, mx: motion(1, 0), my: motion(0, 1), mPerRad: mPerRad0 ?? [len(gy), len(gp)], entry };");
     expect(a).toContain("if (h.fx === 0 && h.fy === 0 && next !== null && next.key !== face.key) {");
     const g = readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(g).toContain("if (assemblyOn(st)) asmAxesTravel(st, d.dYaw, d.dV * 2 * ORBIT_PITCH_MAX_RAD);");

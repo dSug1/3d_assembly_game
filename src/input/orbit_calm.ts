@@ -9,7 +9,8 @@
  * pace `Θ·(s + 3(1 − s)x²)` grows from the middle to the edges with no flat stretch and no bump (⛔ 58d86ff's flat middle + an edge zone, and §21.6 F5's
  * normals blended over a zone: orbit, slide, orbit — the owner). The direction is the face's GNOMONIC one (a cube map's): `n + t·tan θt + b·tan θb` — at
  * an edge both faces give the same vector (on a box `n_A + n_B` and the same along the edge), at a corner the three: continuous by construction, in every
- * frame. ⭐ A top / a bottom orbited as a wall (the owner's choice B): the view passes straight above at its middle (the half roll there, `camera_up.ts`).
+ * frame. ⭐⭐⭐ (§23) A top / a bottom a TERMINUS: from its entry edge the view rises to straight above (below) only at its far edge (`capProfile`) — no
+ * roll anywhere (⛔ §21.8's choice B: the view past the zenith at the cap's middle, a half roll there — R4 then stopped every dy over a top, §21.9).
  * ⛔ §21.6 F3 (the camera square to a cap — a slide on it, 90° crammed into the wall's last cm), F5's weighted normals and its zones — DELETED.
  * ⛔ No engine import (`tests/boundary.test.ts`). Gnomonic projection, a cubic — textbook.
  */
@@ -121,10 +122,25 @@ function paceShare(off: number, lo: number, hi: number, hLo: number, hHi: number
 }
 
 /**
- * ⭐⭐⭐ THE PIECE'S DIRECTION at the place `p` on the contour: the facet it is on (the nearest), the place's pace share across it each way, the profile
- * of each, the gnomonic direction. Unit; `null` with no facet.
+ * ⭐⭐⭐ (2026-11-06, scope §23, the owner: *"extend the slide portion of the orbit up to the furthermost far edge"*) THE CAP'S PROFILE from its entry edge
+ * (`y` 1) to its far edge (`y` 0): `s·y + (1 − s)·y^m` — the middle's share `s` as the far edge's pace, the wall's edge pace (`3 − 2s` over the half span)
+ * at the entry edge (`m = (6 − 5s)/(1 − s)`): C1 with the wall it comes from, then a slide reaching straight above only at the far edge. Monotone, 0 … 1.
  */
-export function calmDir(p: Vec3, facets: readonly CalmFacet[], o: CalmOpts): Vec3 | null {
+export function capProfile(y: number, s: number): number {
+  const c = Math.min(1, Math.max(0, y));
+  const k = Math.min(1, Math.max(0, s));
+  if (k >= 1) return c;
+  const m = Math.max(1, (6 - 5 * k) / (1 - k));
+  return k * c + (1 - k) * Math.pow(c, m);
+}
+
+/**
+ * ⭐⭐⭐ THE PIECE'S DIRECTION at the place `p` on the contour: the facet it is on (the nearest), the place's pace share across it each way, the profile
+ * of each, the gnomonic direction. Unit; `null` with no facet. ⭐⭐⭐ (§23) On a CAP entered from the wall `entry` (its outward normal): along the side it
+ * was entered by, the cap's profile (`capProfile`) — leaning toward that wall at the entry edge as the wall's own profile ends, straight above (below) only at
+ * the far edge: the view never passes the cap's zenith (no roll). No entry (or a wall): the face's own odd profile both ways.
+ */
+export function calmDir(p: Vec3, facets: readonly CalmFacet[], o: CalmOpts, entry: Vec3 | null = null): Vec3 | null {
   let f: CalmFacet | null = null;
   let d = Infinity;
   for (const g of facets) {
@@ -139,8 +155,17 @@ export function calmDir(p: Vec3, facets: readonly CalmFacet[], o: CalmOpts): Vec
   const sB = f.cap ? o.shareH : o.shareV;
   const xt = paceShare(dot(p, f.t) - (f.tLo + f.tHi) / 2, f.tLo, f.tHi, f.half.tLo, f.half.tHi, o);
   const xb = paceShare(dot(p, f.b) - (f.bLo + f.bHi) / 2, f.bLo, f.bHi, f.half.bLo, f.half.bHi, o);
-  const at = (xt >= 0 ? f.half.tHi : f.half.tLo) * calmProfile(xt, sT);
-  const ab = (xb >= 0 ? f.half.bHi : f.half.bLo) * calmProfile(xb, sB);
+  // the cap's entry side: the in-plane axis (and its sign) the entry wall's normal leans most along
+  const et = f.cap && entry !== null ? dot(entry, f.t) : 0;
+  const eb = f.cap && entry !== null ? dot(entry, f.b) : 0;
+  const along = (x: number, s: number, hLo: number, hHi: number, e: number, mine: boolean): number => {
+    if (!mine || Math.abs(e) < 1e-9) return (x >= 0 ? hHi : hLo) * calmProfile(x, s);
+    const sg = e > 0 ? 1 : -1; // the entry edge at x = sg
+    return sg * (sg > 0 ? hHi : hLo) * capProfile((1 + sg * x) / 2, s);
+  };
+  const tMine = Math.abs(et) >= Math.abs(eb);
+  const at = along(xt, sT, f.half.tLo, f.half.tHi, et, tMine);
+  const ab = along(xb, sB, f.half.bLo, f.half.bHi, eb, !tMine);
   const kt = Math.tan(at);
   const kb = Math.tan(ab);
   return normalize([f.n[0] + f.t[0] * kt + f.b[0] * kb, f.n[1] + f.t[1] * kt + f.b[1] * kb, f.n[2] + f.t[2] * kt + f.b[2] * kb]);

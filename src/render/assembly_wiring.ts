@@ -24,13 +24,12 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { calmDir, calmFacets, polyDistance, type CalmFacet, type CalmOpts } from "../input/orbit_calm";
+import { calmDir, calmFacets, type CalmFacet, type CalmOpts } from "../input/orbit_calm";
 import { cross, normalize, type Vec3 } from "../core/vec";
 import { cutLoop, insidePlane, planeThrough, type Plane } from "../input/plane_cut";
 import { HOLD_NONE, holdByMotion, rolesFor, stepsFor, throughHold, type FingerMotion, type Roles } from "../input/input_roles";
 import { CROSS_EPS_RAD, UPRIGHT, frameStep, rebaseAngles, stepToBoundary, toFrame, toWorld, type OrbitFrame } from "../input/orbit_frame";
-import { capAxis, capAxisPastZenith, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
-import { nextRollMark } from "../input/roll_mark";
+import { capAxis, capEntry, capExitRefused, isCap, onScreen, paceUp, upTarget } from "../input/camera_up";
 import { cameraOrbitAt } from "../input/follow_camera";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -189,7 +188,10 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
 function calmAt(st: SceneState, yaw: number, v: number, u: Vec3): Vec3 {
   const c = calmContour(st);
   const p = c === null ? null : calmPlace(st, yaw, v);
-  return (c === null || p === null ? null : calmDir(p, c.facets, c.opts)) ?? u;
+  // ⭐⭐⭐ (§23) on a cap its entry wall; on a wall the wall itself (a cap queried next is entered from it)
+  const f = st.asmFace;
+  const entry = f === null ? null : f.cap ? f.entry : f.n;
+  return (c === null || p === null ? null : calmDir(p, c.facets, c.opts, entry)) ?? u;
 }
 
 /** ⭐ The calm's contour — the UPRIGHT map's facets (the world's) with their neighbours' half-dihedrals (`calmFacets`) — and its knobs. */
@@ -763,46 +765,8 @@ interface TravelFace extends FingerMotion {
   readonly roles: Roles;
   /** the gizmo's travel per radian of each orbit axis on this face (m) */
   readonly mPerRad: readonly [number, number];
-  /** the next face on the finger's way within `cameraRollMm` (its world normal), else `null` */
-  readonly ahead: Vec3 | null;
-}
-
-/**
- * ⭐⭐⭐ (§21.5 F2) THE NEXT FACE ON THE WAY: the travel's place advanced `cameraRollMm` along the way the finger last travelled (`st.asmTravelDir`, by the
- * face's metres per radian) — its world normal when it is another face, else `null`. ⭐⭐⭐ (§21.6 F6) Read only to SET the roll mark (`rollMark`).
- */
-function aheadNormal(st: SceneState, map: FaceMap, n: Vec3, yaw: number, pitch: number): Vec3 | null {
-  const d = st.asmTravelDir;
-  const ahead = st.cfg.cameraRollMm / 1000;
-  const m = st.asmFace?.mPerRad ?? null;
-  if (d === null || m === null || !(ahead > 0) || st.asmLocked) return null;
-  const l = Math.hypot(d[0] * m[0], d[1] * m[1]);
-  if (!(l > 1e-12)) return null;
-  const k = ahead / l;
-  const t = mapTarget(map, yaw + d[0] * k, pitch + d[1] * k, mapOpts(st));
-  const na = toWorld(st.orbitFrame, t.normal);
-  return na[0] * n[0] + na[1] * n[1] + na[2] * n[2] > 0.999 ? null : [Math.round(na[0] * 1e3) / 1e3, Math.round(na[1] * 1e3) / 1e3, Math.round(na[2] * 1e3) / 1e3];
-}
-
-/**
- * ⭐⭐⭐ (2026-11-05, §21.6 F6) THE ROLL MARKED ON THE PLACE (`input/roll_mark.ts` `nextRollMark`) for the travel's face (world normal `n`) at its place
- * (`place`, world): the distance to a face the calm's contour's (`polyDistance`), the way ahead `aheadNormal`'s.
- */
-function rollMark(st: SceneState, map: FaceMap, n: Vec3, yaw: number, pitch: number, place: Vec3): Vec3 | null {
-  const c = calmContour(st);
-  const distTo = (to: Vec3): number => {
-    let d = Infinity;
-    for (const f of c?.facets ?? []) if (f.n[0] * to[0] + f.n[1] * to[1] + f.n[2] * to[2] > 0.999) d = Math.min(d, polyDistance(place, f.poly, f.n));
-    return d;
-  };
-  st.asmRollMark = nextRollMark(st.asmRollMark, n, st.cfg.cameraRollMm / 1000, st.asmLocked, distTo, () => aheadNormal(st, map, n, yaw, pitch));
-  return st.asmRollMark === null ? null : st.asmRollMark.to;
-}
-
-/** ⭐⭐⭐ (§21.5 F2) THE UP for the view `u` on a face (normal `n`, a cap's `axis`) with the next face `nAhead` on the way: onto a wall, ITS up (the roll
- * starts); onto a cap or none, the face's own (`upTarget`). One rule for the camera and the roles. */
-function upFor(u: Vec3, n: Vec3, axis: Vec3 | null, nAhead: Vec3 | null): Vec3 {
-  return nAhead !== null && !isCap(nAhead) ? upTarget(u, nAhead, null) : upTarget(u, n, axis);
+  /** ⭐⭐⭐ (§23) a cap's ENTRY wall (its outward normal) — the cap's only way out; a wall: `null` */
+  readonly entry: Vec3 | null;
 }
 
 /**
@@ -820,16 +784,16 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
   const o = mapOpts(st);
   const t = mapTarget(map, yaw, pitch, o);
   const n = toWorld(F, t.normal);
-  const nAhead = rollMark(st, map, n, yaw, pitch, toWorld(F, t.surface));
   const f0 = st.asmFace;
   const cap = isCap(n);
-  // a cap's axis: kept on the same cap (a key change on it — a column, a frame turn), else the wall's up turned over the edge crossed (`capAxis`) —
-  // ⭐⭐⭐ (§21.8, B) flipped past the zenith (`capAxisPastZenith`: the half roll at the cap's middle, where the view passes straight above)
+  // a cap's axis: kept on the same cap (a key change on it — a column, a frame turn), else the wall's up turned over the edge crossed (`capAxis`) — never
+  // flipped (⭐⭐⭐ §23: a cap is a terminus, no roll); ⭐⭐⭐ (§23) and its ENTRY wall, its only way out (arrived from a wall: that wall; else read off the axis)
   const sameFace = f0 !== null && f0.n[0] * n[0] + f0.n[1] * n[1] + f0.n[2] * n[2] > 0.999;
   const sameCap = sameFace && f0!.cap;
-  const carried = !cap ? null : sameCap ? f0!.axis : capAxis(n, f0 === null || f0.cap ? null : f0.n, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);
-  const axis = carried === null ? null : capAxisPastZenith(carried, dirAt(st, yaw, st.orbit.elevation));
-  const key = `${F.key}|${t.band}|${t.side}|${t.stack}|${nAhead === null ? "-" : nAhead.map((x) => x.toFixed(3)).join(",")}|${axis === null ? "w" : axis.map((x) => x.toFixed(3)).join(",")}`;
+  const fromWall = f0 !== null && !f0.cap ? f0.n : null;
+  const axis = !cap ? null : sameCap ? f0!.axis : capAxis(n, fromWall, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);
+  const entry = !cap || axis === null ? null : sameCap ? f0!.entry : (fromWall ?? capEntry(n, axis, (calmContour(st)?.facets ?? []).map((c) => c.n)));
+  const key = `${F.key}|${t.band}|${t.side}|${t.stack}|${axis === null ? "w" : axis.map((x) => x.toFixed(3)).join(",")}`;
   if (f0 !== null && f0.key === key) return { face: f0, changed: false };
   const mPerRad0 = sameFace ? f0!.mPerRad : null;
   const H = 1e-3;
@@ -837,9 +801,8 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
   const gy = toWorld(F, mapTarget(map, yaw + H, pitch, o).surface);
   const gp = toWorld(F, mapTarget(map, yaw, pitch + H, o).surface);
   const f: Vec3 = [-n[0], -n[1], -n[2]];
-  // ⭐⭐⭐ (§21.5 F1 / F4) read with the up the camera is turning to — the next face's when within `cameraRollMm` of it on the way (`upFor`): the roles
-  // and the camera's roll agree, and the roles' change there is an R4 event like a crossing
-  const up = upFor(n, n, axis, nAhead);
+  // ⭐⭐⭐ (§21.5 F1 / F4) read with the face's own up (`upTarget` — the camera's target): the roles and the camera agree
+  const up = upTarget(n, n, axis);
   const right = cross(up, f);
   const on = (p: Vec3): [number, number] => {
     const d: Vec3 = [p[0] - g0[0], p[1] - g0[1], p[2] - g0[2]];
@@ -853,7 +816,7 @@ function travelFace(st: SceneState): { readonly face: TravelFace | null; readonl
     const m: Vec3 = [a * (gy[0] - g0[0]) + b * (gp[0] - g0[0]), a * (gy[1] - g0[1]) + b * (gp[1] - g0[1]), a * (gy[2] - g0[2]) + b * (gp[2] - g0[2])];
     return normalize(m);
   };
-  const face: TravelFace = { key, n, cap, axis, roles, mx: motion(1, 0), my: motion(0, 1), mPerRad: mPerRad0 ?? [len(gy), len(gp)], ahead: nAhead };
+  const face: TravelFace = { key, n, cap, axis, roles, mx: motion(1, 0), my: motion(0, 1), mPerRad: mPerRad0 ?? [len(gy), len(gp)], entry };
   st.asmFace = face;
   return { face, changed: true };
 }
@@ -886,12 +849,19 @@ export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: nu
     const dPitch = b * rate;
     if (dYaw === 0 && dPitch === 0) break;
     const s = st.asmLocked ? { t: 1, crossing: false } : stepToBoundary(map, st.orbit.yaw, pitchOfV(st.orbit.elevation), dYaw, dPitch);
+    // ⭐⭐⭐ (§23) A CAP IS A TERMINUS: a crossing off it but back onto its entry wall HOLDS the travel at the edge (the rest of the finger dropped; a dy back
+    // goes) — no roll anywhere
+    if (s.crossing && capHolds(st, map, face, dYaw * s.t, dPitch * s.t)) {
+      const back = holdAtEdge(st, dYaw, dPitch, s.t);
+      sy += back[0];
+      sp += back[1];
+      break;
+    }
     st.orbit.nudge(dYaw * s.t, (dPitch * s.t) / (2 * ORBIT_PITCH_MAX_RAD));
     sy += dYaw * s.t;
     sp += dPitch * s.t;
-    st.asmTravelDir = [dYaw, dPitch];
     // ⭐⭐⭐ (§21.6) the face state before the crossing — kept whole if it is not completed (below)
-    const kept = { face: st.asmFace, mark: st.asmRollMark };
+    const kept = st.asmFace;
     if (s.crossing) frameAtTarget(st);
     const next = travelFace(st).face;
     if (next !== null && next.key !== face.key) st.asmHold = holdByMotion(face, next, rx, ry, st.asmHold);
@@ -906,8 +876,7 @@ export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: nu
       frameAtTarget(st);
       // ⭐⭐⭐ (§21.6) …and the face state as it was: the next face only looked at (⛔ read as arrived: the cap's axis re-derived from the wall just looked
       // at — a 90° roll for nothing, then the dx held, probed)
-      st.asmFace = kept.face;
-      st.asmRollMark = kept.mark;
+      st.asmFace = kept;
       break;
     }
     rx = h.fx;
@@ -916,6 +885,29 @@ export function asmFingerTravel(st: SceneState, fx: number, fy: number, rate: nu
   return { dYaw: sy, dPitch: sp };
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §23) Does the step (`dYaw`, `dPitch` — up to the face change `stepToBoundary` found) cross from a CAP (the travel's `face`) onto a
+ * face other than its entry wall (`capExitRefused`)? The face beyond: the map's facet at the step's end (the frame's cap past a column's bound).
+ */
+function capHolds(st: SceneState, map: FaceMap, face: TravelFace, dYaw: number, dPitch: number): boolean {
+  if (!face.cap) return false;
+  const next = toWorld(st.orbitFrame, mapTarget(map, st.orbit.yaw + dYaw, pitchOfV(st.orbit.elevation) + dPitch, mapOpts(st)).normal);
+  return capExitRefused(face.n, next, face.entry);
+}
+
+/** ⭐⭐⭐ (§23) The travel HELD at a cap's edge: the step taken up to `CROSS_EPS_RAD` short of it (never onto the next face); the steps taken (rad). */
+function holdAtEdge(st: SceneState, dYaw: number, dPitch: number, t: number): [number, number] {
+  const l = Math.hypot(dYaw, dPitch);
+  const k = l > 0 ? Math.max(0, t - (2 * CROSS_EPS_RAD) / l) : 0;
+  st.orbit.nudge(dYaw * k, (dPitch * k) / (2 * ORBIT_PITCH_MAX_RAD));
+  if (st.lastVerdict !== CAP_HELD) {
+    st.lastVerdict = CAP_HELD;
+    st.hudDirty = true;
+  }
+  return [dYaw * k, dPitch * k];
+}
+const CAP_HELD = "orbit: the cap's edge — held (travel back; the far faces by dx round the walls)";
+
 /** ⭐ (§21.5 F1) The coast's travel (orbit steps, rad): split at each face change as the finger's is, the frame turned there; no roles, no hold. */
 export function asmAxesTravel(st: SceneState, dYaw: number, dPitch: number): void {
   let ry = dYaw;
@@ -923,6 +915,12 @@ export function asmAxesTravel(st: SceneState, dYaw: number, dPitch: number): voi
   for (let k = 0; k < 6 && (ry !== 0 || rp !== 0); k++) {
     const map = faceMapOf(st);
     const s = map === null || st.asmLocked ? { t: 1, crossing: false } : stepToBoundary(map, st.orbit.yaw, pitchOfV(st.orbit.elevation), ry, rp);
+    const face = travelFace(st).face;
+    if (s.crossing && map !== null && face !== null && capHolds(st, map, face, ry * s.t, rp * s.t)) {
+      holdAtEdge(st, ry, rp, s.t);
+      st.orbitInertia.stop();
+      break;
+    }
     st.orbit.nudge(ry * s.t, (rp * s.t) / (2 * ORBIT_PITCH_MAX_RAD));
     if (!s.crossing) break;
     frameAtTarget(st);
@@ -934,7 +932,7 @@ export function asmAxesTravel(st: SceneState, dYaw: number, dPitch: number): voi
 /** ⭐⭐⭐ (§21.5 F2) THE CAMERA'S TARGET UP for the view `u`: the travel face's (`upFor` — the roles read with the same). */
 function upTargetNow(st: SceneState, u: Vec3): Vec3 {
   const face = travelFace(st).face;
-  return face === null ? upTarget(u, [0, 0, -1], null) : upFor(u, face.n, face.axis, face.ahead);
+  return face === null ? upTarget(u, [0, 0, -1], null) : upTarget(u, face.n, face.axis);
 }
 
 /**

@@ -37,7 +37,7 @@ const smooth = (x: number): number => {
 export function upTarget(u: Vec3, n: Vec3, axis: Vec3 | null): Vec3 {
   const g = onScreen([0, 1, 0], u);
   // looking (nearly) straight down / up: the wall's up carried from its square view by the view's tilt — independent of the side the view leans;
-  // ⭐⭐⭐ (§21.8, B) over a CAP its carried axis (flipped at the zenith, `capAxisPastZenith`) — and, like a wall, gravity's up once the view leans more
+  // ⭐⭐⭐ (§21.8) over a CAP its carried axis (⭐⭐⭐ §23: never flipped — a cap is a terminus, the view never passes its zenith) — and, like a wall, gravity's up once the view leans more
   // than 20° (⛔ the axis whatever the lean: a dx over an orbited top leant the view sideways, the axis 90° off gravity — 1406 tilted frames, probed)
   const lim = isCap(n) && axis !== null ? onScreen(axis, u) : onScreen(qRotate(shortestArc(n, u), wallUp(n)), u);
   const tilt = Math.acos(Math.min(1, Math.abs(u[1])));
@@ -85,15 +85,31 @@ export function paceUp(prev: Vec3 | null, target: Vec3, u: Vec3, maxRad: number)
   return { up: qRotate(qFromAxisAngle(u, step), p), rolling: Math.abs(a - step) > UP_SAME_RAD };
 }
 
-/** ⭐ (§21.8, B) How far past straight above (rad) the view leans before a cap's carried axis flips — 6° of hysteresis between the two flips. */
-export const ZENITH_FLIP_RAD = (3 * Math.PI) / 180;
+/**
+ * ⭐⭐⭐ (2026-11-06, scope §23, the owner: *"do not roll the camera anywhere … hold the dy further so the gizmo cannot cross the edge and enter the next face
+ * … the user can dy back"*) **A CAP IS A TERMINUS**: from a cap (normal `here`) the travel may cross onto another face (`next`) only back onto the wall it
+ * came from (`entry`, its outward normal — within 45°) or onto another cap; every other edge — the far one, the sides — would show the next wall upside
+ * down or rolled without a roll: the travel HOLDS there. No entry known: nothing refused.
+ */
+export function capExitRefused(here: Vec3, next: Vec3, entry: Vec3 | null): boolean {
+  if (!isCap(here) || isCap(next) || dot(here, next) > 0.999 || entry === null) return false;
+  return dot(next, entry) < Math.SQRT1_2;
+}
 
 /**
- * ⭐⭐⭐ (2026-11-05, §21.8, the owner's choice B: a top / a bottom orbited as a wall) THE HALF ROLL AT THE ZENITH: the cap's carried `axis` (up the screen)
- * flipped once the view `u` (from the gizmo toward the camera) leans past straight above TOWARD it by `ZENITH_FLIP_RAD` — the camera is then beyond the
- * cap's middle, and its up the other way keeps the scene upside up (R2); the camera takes it at its pace (`paceUp`), the roles are read again (R4).
- * ⛔ §21.5 F3's half roll at the far edge — the view no longer square to the cap, it passes the zenith at the cap's middle.
+ * ⭐⭐ (§23) THE WALL A CAP (normal `capN`) WAS ENTERED FROM, read off its carried `axis` (a boot or a slide's way out onto a cap — no crossing seen): of the
+ * `walls`' outward normals, the one whose up turned over the edge (`capAxis`) is the axis; none: `null`.
  */
-export function capAxisPastZenith(axis: Vec3, u: Vec3): Vec3 {
-  return dot(u, axis) > Math.sin(ZENITH_FLIP_RAD) ? [-axis[0], -axis[1], -axis[2]] : axis;
+export function capEntry(capN: Vec3, axis: Vec3, walls: readonly Vec3[]): Vec3 | null {
+  let best: Vec3 | null = null;
+  let s = Math.SQRT1_2;
+  for (const w of walls) {
+    if (isCap(w)) continue;
+    const c = dot(capAxis(capN, w, axis), axis);
+    if (c > s) {
+      s = c;
+      best = w;
+    }
+  }
+  return best;
 }

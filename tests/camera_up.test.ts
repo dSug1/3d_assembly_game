@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { ZENITH_FLIP_RAD, capAxis, capAxisPastZenith, paceUp, upTarget, wallUp } from "../src/input/camera_up";
+import { capAxis, capEntry, capExitRefused, paceUp, upTarget, wallUp } from "../src/input/camera_up";
 import type { Vec3 } from "../src/core/vec";
 
 const D = Math.PI / 180;
@@ -67,30 +67,34 @@ describe("the camera's up (§21.4 R2 / R3, §21.5 F2)", () => {
     expect(paceUp(null, [0, 0, 1], TOP, 6 * D).up).toEqual([0, 0, 1]);
   });
 
-  it("⭐⭐⭐ (§21.8, B) THE HALF ROLL AT THE ZENITH: a cap's carried axis flips once the view leans 3° past straight above toward it — never before; flipped, it flips back only 3° past the other way (6° of hysteresis); wired in the travel's face, so the roles are read again (R4)", () => {
-    const axis: Vec3 = [0, 0, 1];
-    const lean = (deg: number): Vec3 => [0, Math.cos(deg * D), Math.sin(deg * D)]; // + toward the axis
-    expect(capAxisPastZenith(axis, lean(-30))).toBe(axis); // on the near side: up the screen to the far edge
-    expect(capAxisPastZenith(axis, lean(2.9))).toBe(axis);
-    expect(capAxisPastZenith(axis, lean(3.1))).toEqual([-0, -0, -1]); // past the zenith: the far side's up
-    const flipped: Vec3 = [0, 0, -1];
-    expect(capAxisPastZenith(flipped, lean(-2.9))).toBe(flipped);
-    expect(capAxisPastZenith(flipped, lean(-3.1))).toEqual([-0, -0, 1]);
-    expect(ZENITH_FLIP_RAD).toBeCloseTo(3 * D, 12);
-    // ⭐ an orbited cap leant 40° SIDEWAYS (a dx over the top): gravity's up, never the axis 90° off it (⛔ 1406 tilted frames, probed); square: the axis
-    const side = unit([Math.sin(40 * D), Math.cos(40 * D), 0]);
-    const g = unit([-side[1] * side[0], 1 - side[1] * side[1], -side[1] * side[2]]);
-    expect(angle(upTarget(side, TOP, axis), g)).toBeLessThan(1e-6);
-    expect(angle(upTarget(TOP, TOP, axis), axis)).toBeLessThan(1e-9);
+  it("⭐⭐⭐ (§23) A CAP IS A TERMINUS: off a top only back onto its entry wall — the far wall and the side walls HELD (they would show upside down / rolled without a roll); a wall → anything free; no entry known: nothing held", () => {
+    expect(capExitRefused(TOP, FRONT, FRONT)).toBe(false); // back down the front
+    expect(capExitRefused(TOP, FAR, FRONT)).toBe(true); // the far edge
+    expect(capExitRefused(TOP, SIDE, FRONT)).toBe(true); // a side edge
+    expect(capExitRefused(TOP, FRONT, FAR)).toBe(true); // entered from the back: the front is its far edge
+    expect(capExitRefused(FRONT, SIDE, null)).toBe(false); // a wall: round the walls freely
+    expect(capExitRefused(FRONT, TOP, null)).toBe(false); // onto a cap
+    expect(capExitRefused(TOP, FAR, null)).toBe(false);
+    const BOTTOM: Vec3 = [0, -1, 0];
+    expect(capExitRefused(BOTTOM, FAR, FRONT)).toBe(true);
+    expect(capExitRefused(BOTTOM, FRONT, FRONT)).toBe(false);
+  });
+
+  it("⭐⭐ (§23) the entry wall read off a cap's carried axis (no crossing seen): the wall whose up turned over the edge is the axis; ⛔ no axis flip at the zenith (§21.8 B deleted)", () => {
+    const walls: Vec3[] = [FRONT, FAR, SIDE, [-1, 0, 0], TOP];
+    expect(capEntry(TOP, capAxis(TOP, FRONT, [1, 0, 0]), walls)).toEqual(FRONT);
+    expect(capEntry(TOP, capAxis(TOP, SIDE, [1, 0, 0]), walls)).toEqual(SIDE);
+    expect(capEntry([0, -1, 0], capAxis([0, -1, 0], FAR, [1, 0, 0]), walls)).toEqual(FAR);
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const axis = carried === null ? null : capAxisPastZenith(carried, dirAt(st, yaw, st.orbit.elevation));");
+    expect(a).not.toContain("capAxisPastZenith");
+    expect(a).toContain("const axis = !cap ? null : sameCap ? f0!.axis : capAxis(n, fromWall, st.asmUpShown ?? st.cameraPrev?.up ?? [0, 0, 1]);");
   });
 
   it("⭐ wired: the camera's up from the travel face's target (`upTargetNow` → `upFor`), paced by `cameraRollDegPerS`; the roles read with the same up", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("const r = paceUp(st.asmUpShown, target, u, ((st.cfg.cameraRollDegPerS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000));");
-    expect(a).toContain("return face === null ? upTarget(u, [0, 0, -1], null) : upFor(u, face.n, face.axis, face.ahead);");
-    expect(a).toContain("const up = upFor(n, n, axis, nAhead);");
+    expect(a).toContain("return face === null ? upTarget(u, [0, 0, -1], null) : upTarget(u, face.n, face.axis);");
+    expect(a).toContain("const up = upTarget(n, n, axis);");
     const c = readFileSync(new URL("../src/render/camera_rig.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(c).toContain("return assemblyCameraFrame(st, cam, off, dtMs);");
   });
