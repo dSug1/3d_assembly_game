@@ -1153,14 +1153,8 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(slideArmedAfter(false, 0.01, 0)).toBe(false); // out
     expect(slideArmedAfter(false, 0, 0)).toBe(false);
     expect(slideArmedAfter(false, -0.001, 0)).toBe(true); // in (down is in)
-    // ⭐⭐⭐ (§24, *"Build A"*) an orbit drag DISARMS it — the slide latches only when the piece is brought in (⛔ it armed it: ~10× slower mid-drag)
-    expect(slideArmedAfter(false, 0, 0.5)).toBe(false);
-    expect(slideArmedAfter(true, 0, 0.5)).toBe(false);
-    expect(slideArmedAfter(true, -0.001, 0.5)).toBe(true); // in, whatever else
+    expect(slideArmedAfter(false, 0, 0.5)).toBe(true); // an orbit drag
     expect(slideArmedAfter(true, 0.01, 0)).toBe(true);
-    const sc = readFileSync(new URL("../src/render/scene.ts", import.meta.url), "utf8");
-    expect(sc).toContain("st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in");
-    expect(readFileSync(new URL("../src/render/green_box_wiring.ts", import.meta.url), "utf8")).toContain("st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in");
   });
   it("⭐⭐ a held second touch (the approach) no longer ends the slide in the slide mode — the capture still does", async () => {
     const { hoverEndsOn } = await import("../src/input/hover");
@@ -1190,7 +1184,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(h).toContain("if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);");
     expect(h).toContain("if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);");
+    expect(a).toContain("st.slideArmed = d < 0;"); // ⭐⭐⭐ (the rebuild, §22.6 A2) the depth arms the slide, nothing else
     expect(a).toContain("if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));");
     // the coast before the slide's early return: a flick out leaves it
     expect(a.indexOf("if (st.approachInertia.coasting) {")).toBeLessThan(a.indexOf("if (st.hover !== null) { const t = st.centreBlend.targetM;"));

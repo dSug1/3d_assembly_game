@@ -2,11 +2,11 @@
  * ⭐⭐⭐ THE SECTIONS AS PLANE CUTS (2026-11-05, `TILTED_ORBIT_REBUILD_SCOPE.md` §21 — the owner: *"the contours shall be closed loops and cannot be infinite
  * loops due to throw off by singularities or slanted faces"*): `src/input/plane_cut.ts`, wired in `render/assembly_wiring.ts`. A plane through the inside of a
  * convex contour cuts ONE closed loop, a side per facet crossed; on a box a world-axis plane gives world-axis sides; a plane lying along a facet is kept 1 mm
- * inside it. RED against `8dfa635` (the module absent; the sections swept by the face map's angles).
+ * inside it. ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.2 T2) the loop is the travel's path by ARC LENGTH. RED against `8dfa635` (the module absent; the
+ * sections swept by the face map's angles).
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { CUT_INSIDE_M, cutLoop, insidePlane, planeThrough, type CutFacet } from "../src/input/plane_cut";
+import { CUT_INSIDE_M, cutLoop, insidePlane, loopArc, loopLength, loopPoint, planeThrough, type CutFacet } from "../src/input/plane_cut";
 import type { Vec3 } from "../src/core/vec";
 
 /** a box's six facets (outward normals, polygons) */
@@ -92,9 +92,26 @@ describe("the sections as plane cuts (§21)", () => {
     expect(cutLoop(B, planeThrough([0.5, 0, 0], [1, 0, 0]))).toBeNull();
   });
 
-  it("⭐ wired: the lines the cuts through the gizmo's place (the frame's up, then the up and the facet's normal), each on the real surface", () => {
-    const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const loop = cutLoop(facets, insidePlane(plane, facets));");
-    expect(a).not.toContain("section_hull");
+  it("⭐⭐⭐ (§22.2 T2) THE TRAVEL BY ARC LENGTH: a box's level loop is its perimeter; a point at any arc length is on the loop, round and round (closed — `s` and `s` + the length the same point); the arc of a loop point read back; a step of 1 mm moves 1 mm, through the corners too", () => {
+    const B = box([0.3, 0.2, 0.1]);
+    const L = cutLoop(B, planeThrough([0, 0.05, 0], [0, 1, 0]))!;
+    expect(loopLength(L)).toBeCloseTo(2 * (0.6 + 0.2), 12);
+    const total = loopLength(L);
+    for (const s of [0, 0.13, 0.6, 0.79, 1.4, 1.599]) {
+      const q = loopPoint(L, s);
+      expect(closeTo(q.p, loopPoint(L, s + total).p)).toBe(true);
+      expect(closeTo(q.p, loopPoint(L, s - 3 * total).p)).toBe(true);
+      expect(q.p[1]).toBeCloseTo(0.05, 12);
+      expect(loopArc(L, q.p)).toBeCloseTo(s % total, 9);
+      expect(L.facet).toContain(q.facet);
+    }
+    let prev = loopPoint(L, 0).p;
+    for (let s = 0.001; s < 2 * total; s += 0.001) {
+      const p = loopPoint(L, s).p;
+      const d = Math.hypot(p[0] - prev[0], p[1] - prev[1], p[2] - prev[2]);
+      expect(d).toBeLessThanOrEqual(0.001 + 1e-9);
+      expect(d).toBeGreaterThan(0.0007); // ⭐ never stalls at a corner (a corner cut: the chord ≥ 1/√2 of the step)
+      prev = p;
+    }
   });
 });

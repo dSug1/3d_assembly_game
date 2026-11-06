@@ -467,13 +467,14 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-05, STEP 6) THE ORBIT'S FRAME (`input/orbit_frame.ts`): upright, or turned onto a top / a bottom at its crossing — every angle of the orbit is
    * read in it */
   orbitFrame: import("../input/orbit_frame").OrbitFrame;
-  /** ⭐⭐⭐ (2026-11-05, §21.5 F2) the camera's SHOWN up (world), paced toward the travel's face's target (`input/camera_up.ts`); a roll under way */
-  asmUpShown: import("../core/vec").Vec3 | null;
-  asmUpBand: boolean;
-  /** ⭐⭐⭐ (§21.5 F4) the travel's face (the target's place): its normal, a cap's carried axis, the finger's roles on it — read once per face */
-  asmFace: { readonly key: string; readonly n: import("../core/vec").Vec3; readonly cap: boolean; readonly axis: import("../core/vec").Vec3 | null; readonly roles: import("../input/input_roles").Roles; readonly mPerRad: readonly [number, number]; readonly entry: import("../core/vec").Vec3 | null; readonly mx: import("../core/vec").Vec3 | null; readonly my: import("../core/vec").Vec3 | null } | null;
-  /** ⭐⭐⭐ (§21.5 F1) R4's hold: the finger components held at a crossing until they reverse */
-  asmHold: import("../input/input_roles").FingerHold;
+  /** ⭐⭐ (§20, §4.2) the cap the current drag left over its FAR edge — held under its bound upright until the finger lifts; `null`: none */
+  orbitHold: "TOP" | "BOTTOM" | null;
+  /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
+   * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
+  asmCalm: { n: Vec3; sH: number; sV: number } | null;
+  /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
+  asmRedCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
+  asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
@@ -481,6 +482,8 @@ export interface SceneState {
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
   asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
   /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */
+  /** ⭐⭐⭐ (2026-11-06, the rebuild — scope §22) the travel on G1, the shown place / direction / up (`assembly_wiring.ts`); `null`: none yet */
+  loop: import("./assembly_wiring").LoopState | null;
   asmCast: {
     readonly frame: number;
     readonly world: import("../core/object_model").World;

@@ -19,7 +19,7 @@ import type { GestureConfig } from "./gestureConfig";
 import { orbitOffset } from "./orbit";
 import { waistV } from "./orbit_rig";
 import { smoothstep01 as smooth } from "./waist_view";
-import { add, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
 
 /**
  * ⭐ The pitch's reach either side of the horizon — ±90° (the owner, 2026-10-29: *"can you increase the pitch to -90 +90 degrees ?"* → *"build it with the
@@ -123,28 +123,6 @@ export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
 }
 
-/** ⭐ Under the slide, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
-export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
-
-/**
- * ⭐⭐ (2026-10-29, the owner: *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"*)
- * — THE LOCK'S CONE, from where the piece is: at the lock (`cone` `null`) the piece's own angle off the face's normal when it is outside `LOCK_CONE_RAD`
- * (⛔ the cone at once: at −90° over a vertical face the piece was snapped 10° in one frame — 5.8 cm at the lock's 0.28 m, the camera turned with it);
- * after that, tightened as the piece comes inward, never below `LOCK_CONE_RAD`.
- */
-export function lockCone(cone: number | null, angle: number): number {
-  return Math.max(LOCK_CONE_RAD, cone === null ? angle : Math.min(cone, angle));
-}
-
-/** ⭐ `u` turned toward `n` (both unit) until within `maxRad` of it; within already, `u` itself. */
-export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec3 {
-  const c = Math.max(-1, Math.min(1, dot(u, n)));
-  const a = Math.acos(c);
-  if (a <= maxRad) return u;
-  const axis = normalize(cross(n, u)) ?? normalize(cross(n, [0, 1, 0])) ?? [1, 0, 0];
-  return qRotate(qFromAxisAngle(axis, maxRad), n);
-}
-
 /** ⭐ The angle between `u` and `n` (unit). */
 export function angleTo(u: Vec3, n: Vec3): number {
   return Math.acos(Math.max(-1, Math.min(1, dot(u, n))));
@@ -180,18 +158,6 @@ export function swayRay(origin: Vec3, dir: Vec3, meshPos: Vec3, meshRot: Quat, m
 export function modelNormal(localN: Vec3, s: Vec3, modelRot: Quat): Vec3 | null {
   const k = normalize([localN[0] / (s[0] || 1), localN[1] / (s[1] || 1), localN[2] / (s[2] || 1)]);
   return k === null ? null : qRotate(modelRot, k);
-}
-
-/**
- * ⭐⭐ THE FACE AT AN EDGE: does the gizmo take the face the ray now hits (`hitNormal`, at `hitPoint`) over the one it has (`curNormal`, through `curPoint`)?
- * The same direction (within 1° — a coplanar neighbour): at once; another: only once the hit lies `marginM` off the current face's plane — past the edge by
- * that much (a step in depth: at once, it is far off the plane). None yet: at once.
- */
-export function faceSwitches(curNormal: Vec3 | null, curPoint: Vec3 | null, hitNormal: Vec3, hitPoint: Vec3, marginM: number): boolean {
-  if (curNormal === null || curPoint === null) return true;
-  if (dot(curNormal, hitNormal) > Math.cos(Math.PI / 180)) return true;
-  const off = [hitPoint[0] - curPoint[0], hitPoint[1] - curPoint[1], hitPoint[2] - curPoint[2]] as Vec3;
-  return Math.abs(dot(off, curNormal)) > marginM;
 }
 
 /** ⛔ (2026-11-04, Step 4c-bis) `rayOffsets` — the five rays that found the gizmo toward the centre (`castGizmo`) — DELETED with it: the face map's closed

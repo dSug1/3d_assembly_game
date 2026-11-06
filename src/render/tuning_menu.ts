@@ -193,11 +193,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "look at the gizmo within (m)", "assemblyLockDistM", 0.05, 2, 0.05),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
-            tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
-            tunable(st, "camera roll: speed (°/s)", "cameraRollDegPerS", 30, 2000, 10),
+            tunable(st, "camera up: its pace (°/s)", "cameraRollDegPerS", 30, 2000, 10),
             tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
@@ -244,8 +243,7 @@ export function installTuningMenu(st: SceneState): void {
             ),
           ],
           // ⭐⭐⭐ THE CALM (58d86ff, the owner: *"Make all these seven sliders in a new submenu inside the camera orbit around center menu"*; ported
-          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — the same calm at every distance (the owner, Q3); ⭐ (§21.8) one smooth profile: the middle's
-          // shares only (⛔ the four edge-zone sliders deleted)
+          // 2026-11-04 `1.0.95-`, *"It shall stay"*) — the same calm at every distance (the owner, Q3)
           subsections: [
             {
               title: "FACE-SPAN ORBIT SHARE",

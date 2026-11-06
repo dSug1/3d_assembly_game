@@ -35,8 +35,8 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { asmAxesTravel, assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
-import { gizmoShownAt, ORBIT_PITCH_MAX_RAD } from "../input/assembly_orbit";
+import { assemblyFrame, assemblyOn, leavesCone, loopFinger, shownOffset } from "./assembly_wiring";
+import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
@@ -680,7 +680,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.wayInDrawn = null;
     st.hoverSpent = null;
     st.hoverSlid = false;
-    st.slideArmed = false; // ⭐⭐⭐ (§24) armed only by the approach going in
+    st.slideArmed = true;
     st.hoverOffset = null;
     st.hoverWayIn = null;
     st.hoverView = null;
@@ -932,12 +932,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.orbitMotion === null) st.orbitInertia.stop();
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
+    // ⭐⭐⭐ (the rebuild, T6) around the assembly the coast replays the finger's millimetres through the travel
+    if (assemblyOn(st)) {
+      if (!loopFinger(st, d.dYaw, d.dV) && (d.dYaw !== 0 || d.dV !== 0)) st.orbitInertia.stop();
+    } else {
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
-    // ⭐⭐⭐ (2026-11-05, §21.5 F1) around the assembly the coast travels as the finger does: split at each face change, the frame turned there
-    if (assemblyOn(st)) asmAxesTravel(st, d.dYaw, d.dV * 2 * ORBIT_PITCH_MAX_RAD);
-    else st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
+    st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
     if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    }
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -997,7 +1000,13 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
     // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
-    if (st.hover !== null) {
+    if (st.hover === null && assemblyOn(st)) {
+      // ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.3 P1) AROUND THE ASSEMBLY NO SOLVER: the piece outside G1, which encloses every placed part — the
+      // orbit cannot touch one (⛔ its refusals, slides and relocations moved the place behind the travel's back: stuck, sideways, front↔back hops)
+      st.pieceQ = rig;
+      st.pieceTouching = false;
+      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    } else if (st.hover !== null) {
       // ⭐⭐⭐ (2026-10-14, the hover's second audit) THE ORBIT HOLDS STILL UNDER A HOVER (`orbitFrameUnderHover`): no backlog, no way back to the height, no relocation
       const held = orbitFrameUnderHover(st.pieceQ);
       if (!sameQ(held.target, rig)) st.orbit.reset(held.target.yaw, held.target.v);

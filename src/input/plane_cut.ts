@@ -4,6 +4,8 @@
  * inside of a convex solid; no angle, so no pole to throw it off — the owner: *"the contours shall be closed loops and cannot be infinite loops due to
  * throw off by singularities or slanted faces"*). The one degenerate case — the plane lying along a facet (`x = c` at the box's side itself) — is excluded
  * by keeping the plane at least `CUT_INSIDE_M` (1 mm) inside every facet it is parallel to (`insidePlane`).
+ * ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.2 T1 / T2) the loop is the TRAVEL's path: a place on it is its ARC LENGTH (`loopLength`, `loopPoint`,
+ * `loopArc`) — a dx / dy moves it along by millimetres, round and round (closed).
  * ⛔ ENGINE-FREE. Signed distances, polygon clipping, chaining — textbook.
  */
 import type { Vec3 } from "../core/vec";
@@ -107,4 +109,55 @@ export function cutLoop(facets: readonly CutFacet[], plane: Plane): CutLoop | nu
   }
   if (len(sub(end, pts[0]!)) > eps) return null; // not closed
   return { pts, facet };
+}
+
+/** ⭐ (§22.2 T2) A loop's length (m) — the perimeter of its closed polygon. */
+export function loopLength(L: CutLoop): number {
+  let s = 0;
+  for (let i = 0; i < L.pts.length; i++) s += len(sub(L.pts[(i + 1) % L.pts.length]!, L.pts[i]!));
+  return s;
+}
+
+/**
+ * ⭐⭐ (§22.2 T2) THE POINT AT ARC LENGTH `s` round the loop (from its first point, the way its sides run; `s` taken round the loop — any real number):
+ * the point, the side it is on and that side's facet.
+ */
+export function loopPoint(L: CutLoop, s: number): { readonly p: Vec3; readonly side: number; readonly facet: number } {
+  const n = L.pts.length;
+  const total = loopLength(L);
+  let r = total > 0 ? ((s % total) + total) % total : 0;
+  for (let i = 0; i < n; i++) {
+    const a = L.pts[i]!;
+    const b = L.pts[(i + 1) % n]!;
+    const l = len(sub(b, a));
+    if (r <= l || i === n - 1) {
+      const t = l > 0 ? Math.min(1, r / l) : 0;
+      return { p: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t], side: i, facet: L.facet[i]! };
+    }
+    r -= l;
+  }
+  return { p: L.pts[0]!, side: 0, facet: L.facet[0]! };
+}
+
+/** ⭐⭐ (§22.2 T2) THE ARC LENGTH of the loop's point nearest `p` (from its first point, in [0, length)). */
+export function loopArc(L: CutLoop, p: Vec3): number {
+  const n = L.pts.length;
+  let best = Infinity;
+  let at = 0;
+  let acc = 0;
+  for (let i = 0; i < n; i++) {
+    const a = L.pts[i]!;
+    const b = L.pts[(i + 1) % n]!;
+    const e = sub(b, a);
+    const l2 = dot(e, e);
+    const t = l2 > 0 ? Math.min(1, Math.max(0, dot(sub(p, a), e) / l2)) : 0;
+    const q: Vec3 = [a[0] + e[0] * t, a[1] + e[1] * t, a[2] + e[2] * t];
+    const d = len(sub(p, q));
+    if (d < best - 1e-12) {
+      best = d;
+      at = acc + t * Math.sqrt(l2);
+    }
+    acc += Math.sqrt(l2);
+  }
+  return acc > 0 ? at % acc : 0;
 }

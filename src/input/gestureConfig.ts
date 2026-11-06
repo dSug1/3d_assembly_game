@@ -422,16 +422,13 @@ export interface GestureConfig {
   assemblyLockDistM: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE SHELL's offset (mm): the piece and the camera on the smooth shell round the placed parts' box beyond it, onto the gizmo within it (`input/orbit_shell.ts`). */
   orbitShellOffsetMm: number;
-  /** ⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"add a slider for gizmo position and one for orbit angles"*) THE PIECE'S LAG BEHIND THE GIZMO, in two parts:
-   * the gizmo's position the piece and the camera follow (its foot on the shell), eased with this time constant (ms; 0: at once — the ring is never eased) */
-  gizmoEaseMs: number;
   /** ⭐⭐ …and the orbit's angles (yaw, pitch, zoom), on a critically damped spring of this time constant (ms; 0: at once) — the travel counts that share the
    * orbit's spring with it (the piece's entry, its aim, the centre's return) */
   orbitSpringMs: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4c-bis — the owner: *"let the gizmo move slowly over the last and first few mm of the two faces during
    * the arc"*) THE FACE MAP's slow stretch through an edge: the last / first this of each face (mm)… */
   faceEdgeSlideMm: number;
-  /** ⭐⭐⭐ (2026-11-05, §21.5 F2) the camera's roll taken at most this fast (°/s) — at the camera's pace, never a step under a fast finger. */
+  /** ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.4 C2) the camera's up turned toward its target at most this fast (°/s) — never a step. */
   cameraRollDegPerS: number;
   /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
   faceEdgeSlideDeg: number;
@@ -442,8 +439,7 @@ export interface GestureConfig {
    * contour (0 … 1) — a frustum's slanted side, a plane cutting the contour across, never tilts the orbit; `Scene_1` keeps exactly its six faces */
   facetMinShare: number;
   /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
-   * dx's axis in the middle of a face (0 … 1) — ⭐⭐⭐ (§21.8) the middle's share of ONE SMOOTH PROFILE over the face (`orbit_calm.ts`: the pace growing to
-   * the edges, no zone — ⛔ the edge zone's two sliders deleted) */
+   * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
   faceSpanShareH: number;
   /** ⭐⭐⭐ …dy's (1 on, 0 off), with dx's defaults */
   faceSpanShareVOn: number;
@@ -855,10 +851,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitMode: 0, // ⭐⭐⭐ (2026-10-28) the orbit around the assembly
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
-  gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
+  cameraRollDegPerS: 360, // ⭐⭐⭐ (the rebuild, C2) the up's pace: a half turn in 0.5 s at most
   faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
-  cameraRollDegPerS: 360, // ⭐⭐⭐ (§21.5 F2) …and is taken at most this fast: a half roll in 0.5 s
   faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
@@ -1018,9 +1013,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
-  for (const k of ["gizmoEaseMs", "orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
-  if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
+  for (const k of ["orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
   if (!(cfg.cameraRollDegPerS >= 30 && cfg.cameraRollDegPerS <= 2000)) throw new Error(`cameraRollDegPerS (${cfg.cameraRollDegPerS}) must be in [30, 2000] °/s.`);
+  if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
   if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
   if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);

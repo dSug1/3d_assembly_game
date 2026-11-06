@@ -949,7 +949,7 @@ patches over patches"*)
   and (c) as is.
 * ⚠ The HUD's verdict *"held at the edge until the finger lifts or reverses"* — wrong (only lifting released it); goes with the hold.
 
-## 21. THE SECTIONS AS PLANE CUTS — the gizmo travels on them (approved design 2026-11-05; ⛔ the first build FAILED and was reverted — §21.5; to be rebuilt)
+## 21. THE SECTIONS AS PLANE CUTS — the gizmo travels on them (approved design 2026-11-05; ⛔ NOT BUILT — awaiting the owner's go)
 
 > The owner: *"I agree to build your Proposal: the sections as plane cuts, and the gizmo travels on them. One thing: I insist the contours shall be closed
 > loops and cannot be infinite loops due to throw off by singularities or slanted faces … I also believe the camera shall roll at each edge crossing to
@@ -1053,317 +1053,219 @@ closed (a new check: the drawn polygons' closure and length); I1 (the gizmo with
 screen's up — new); the scene upright on every wall (the tilt check); back-and-forth, blockages, jumps and against-the-finger at or under §20's. ⛔ No device close until the
 owner's look.
 
-### 21.5 The first build — its travel series FAILED; committed, then REVERTED (2026-11-05, branch `1.0.101-`); the owner's decisions for the rebuild
+## 22. ⭐⭐⭐ THE CLEAN SPECIFICATION — the rebuild of the sections as plane cuts (2026-11-06, branch `1.0.103-` from `8dfa635`; the owner: *"proceed with rebuild"* — BEING BUILT, step by step)
 
-> The owner: *"F1: if the delta position would drive the gizmo in an opposite direction, hold the input as I previously specified and this overrules
-> anything else. F3: as you recommend. don't patch. update the md files to capture the issues, commit what you have built now, then revert while keeping
-> the captured issues, then re-build §21 properly to avoid patching the fixes."*
+> The owner (2026-11-06): *"I do not want fixes with logics which contradict each other. There are lot of proposed fixes with new rules and this seems to
+> create such risk. I would prefer a full rebuild without adding new rules for fixes"* → *"I would rebuild from 8dfa635 with a clean specification in the
+> md file"* → on the gizmo: *"I want the gizmo to be on the assembly faces, representing faithfully where the piece would land if I approach it with A + dy
+> until collision. I do not want hidden gizmo nor gizmo floating in the air … (I do not mean by that the voids inside a face or at the edge of a face, for
+> which we have already set rules for)"* → *"proceed"*.
 
-**What the first build was.** The plane cuts (`input/plane_cut.ts`: closed loops, the 1 mm rule), the screen roles (`input/input_roles.ts`), the camera's
-up from the place (`input/camera_up.ts` `placeUp`: gravity on a wall, the carried axis on a cap, rolled over `cameraRollMm` near a cap ↔ wall edge) and
-the slider *camera roll at a top's / bottom's edge* (`cameraRollMm`, 10 mm) — ⛔ but **the travel was NOT moved onto the loops**: the orbit's angles, the
-face map's columns and the frame turned at every crossing (`frameStep` at the bound + 3°) were kept, the plane cuts only DRAWN (items 3, 7, 8 not built).
-1658 vectors green. Committed for the record, then reverted (the docs kept).
+### 22.0 Method — one owner per rule
+Every behaviour below has ONE rule and ONE owner (a module), and no rule overrides another. A defect found later is fixed by changing the rule that owns
+it — never by a second rule beside it. The build that followed `8dfa635` (branch `1.0.102-`, its record in that branch's §21.5 … §25 — kept there, not
+here) failed by doing the opposite: the collision solver, the coast and the slide's way out each moved the orbit beside the travel's rules; two geometries
+(the contour and the real parts) each decided where the piece may be; and each defect got a rule of its own (the shell's blend, the depth kept below the
+contour, the contour pushed out, the slide's arming, the zenith flip, the roll mark…), each mending one case and breaking another.
+§21.1 – §21.4 stand as the design's origin; what follows SUPERSEDES them where it differs (named in each rule).
 
-**The travel series** (21 runs — the 13-run matrix and the off-square set; `an9.mjs`: the up and camera steps against their neighbours, the gizmo's motion
-on the screen against the finger, the tilt by place; checked on three earlier builds first):
+### 22.1 The two geometries — one job each
+* **G1 — THE TRAVEL CONTOUR** (owner: `input/face_map.ts`): Step 5's faces contour (the facets chosen by their main real face, D5 — the same normals, no
+  tilt), each facet's plane then at the placed parts' SUPPORT along its normal (the farthest vertex): convex, closed, EVERY placed part inside it. It is
+  what MOVES reads: the travel (22.2), the piece (22.3), the camera (22.4). (From `1.0.102-` §24.1.)
+* **G2 — THE REAL SURFACE**: the placed parts on their model pose. It is what is SHOWN and REACHED: the gizmo and the lines (22.5), the approach's contact
+  and the slide (22.6).
+* **THE FLOOR IS IGNORED** by both — decorative; not drawn from below (`D128`). (From `1.0.102-` §25.) ⚠ The owner's decision D-1 (22.9): the LOOSE pieces.
 
-| | before Step 6 | Step 6 | the redesign | **§21, first build** |
-|---|---|---|---|---|
-| the gizmo against the finger (frames) | 39 | 28 | 93 | **680** |
-| the camera's up jumping (> 8° a frame) | 2 | 9 | 195 | **1486** |
-| camera jumps | 5 | 30 | 7 | 13 |
-| blocked / back-and-forth | 36 / 11 | — | 26 / 28 | **51 / 95** (one stuck 940 frames) |
-| upside-down views (frames) | 0 | ~15 800 | 559 | ~3 200 (most on the caps) |
+### 22.2 The travel — who moves the orbit (owner: the travel module, engine-free)
+* **T1 — THE SECTIONS ARE PLANE CUTS OF G1** (§21.2 items 1–2): through the travel's place, the GREEN plane spanned by the face's normal and its level axis
+  `t`, the RED by the normal and its up axis `b`; each cuts the convex G1 in ONE closed convex polygon (1 mm inside; on a box, world-axis loops).
+* **T2 — THE PLACE TRAVELS THE LOOPS** (§21.2 item 3): dx along the green, dy along the red, by arc length at the orbit's pace (mm on G1 per mm of
+  finger), through an edge on along the same polygon. The roles are READ PER FACE (which loop is the screen's horizontal / vertical, seen square to the
+  face with the face's own up — `1.0.102-` §21.5 F4), never from the rolling camera.
+* **T3 — ONE CROSSING EVENT**: a finger's step is SPLIT at the first face change on its way; there, once and in this order: T5 (may the travel leave this
+  face here?), the new face's roles read (T2), R4 (T4); then the rest of the step. (`1.0.102-` §21.5 F1.)
+* **T4 — R4, THE STOP** (§21.4): an input that would move the gizmo against the finger is stopped until the finger reverses or the other input moves it
+  the finger's way — compared on the gizmo's WORLD motion, the new face unfolded onto the old (`1.0.102-` §21.7). A test, never a latch.
+* **T5 — THE VIEW HOLDS** (rewritten 2026-11-06 — the owner: *"any face contour that would result in upside down slanted camera view cannot be reached …
+  the vertical faces would be reachable from the vertical face through dx"*): a step whose place would show the scene slanted or upside down is cut back
+  to the last place that would not (`loop_travel.ts` `travelStep(…, allowed)`, `loop_camera.ts` `viewAllowed`) — the view leaving the 20° near-vertical
+  cone where gravity's up would differ from the up carried in by more than 20°; every place a step ends on is checked (R4's stop too). On `Scene_1`: a dy
+  over a top held just past its far edge (the far wall would be upside down), a dx along a top held where the view would leave the cone sideways; walls
+  always upright, always free; the far faces by dx round the walls. ⭐ Vectored on five shapes (`view_reach.test.ts`: the painting, a vertical and a
+  horizontal hexagonal prism, the green piece's frustum, a squat pyramid whose sides are all "caps" by their normals): every facet reached from a wall,
+  no view reached slanted past the margin; without the rule the same search reaches views 60°+ off. ⛔ (§23) A cap a terminus by its edges — blind to the
+  view's lean ON the cap (the scene turned up to 90° on a top) and to a squat pyramid (held on its first side).
+* **T6 — ONLY THE FINGER MOVES THE PLACE**: the finger's steps through T3, and its coast replayed through T3 as further steps. Nothing else writes the
+  place — no collision solver, no relocation, no re-base, no slide way-out moving it behind the travel's back. (Supersedes §21.2 item 7.)
 
-**The root causes — ONE common flaw: a crossing was decided THREE times, from three different measures, none of them the loop the finger travels** (the
-roll by the nearest edge of any kind; the frame turn by the angle beyond the bound; the roles by the screen, every frame):
-1. **The roll's band read the NEAREST edge, not the travel's.** `Scene_1`'s top is ~7 cm deep: the gizmo is always within mm of a SIDE edge, so a dy over
-   the top fired a quarter roll onto an edge it never crossed (`q_cm` 1155: the axis +z, the view tilted 93–117°).
-2. **On a cap the view passes the zenith MID-CAP, the half roll waited for the far edge**: from the middle to the far edge the scene upside down (`q_cm`
-   1111–1131: 91° → 158°). Gravity's sense on the screen is the VIEW's, not the gizmo's place.
-3. **The roll spread over the GIZMO's millimetres**: a drag moves it 10–20 mm a frame, so the 10 mm half roll was a step of one or two frames — the 1486 up
-   jumps (`q_cf` 1049 → 1051: ~100° in a frame).
-4. **The far edge decided out of order**: the frame turned onto the far wall (the angle) before the roll was committed (the place); there, gravity's up made
-   dy up CLIMB, the roles read again sent the gizmo back — a dip onto the far wall and two turns per bounce (most of the 95 back-and-forths, the 125
-   turns; ~410 of the 680 against-the-finger frames on a cap mid-roll).
-5. **R4's stop could DEADLOCK**: it tested the gizmo's next step on the screen; at an edge whose next face is seen edge-on that step points into the screen
-   → stopped; nothing moving, the camera never turned to show the face (`q_cc` 1441, dx right on the top's side edge: 940 frames).
+### 22.3 The piece (owner: the placement module)
+* **P1 — OUTSIDE G1, ALWAYS**: the piece is placed from the travel's place along its direction at the approach's distance, its nearest point (its support
+  toward G1 — §18 item 4's lift) never inside G1. G1 enclosing every placed part, THE ORBIT CANNOT TOUCH A PART: no collision solver in the orbit
+  (supersedes §21.2 item 7's re-addressed solver). ⛔ The shell (Step 2) and its foot blend deleted — G1 is already the smooth enclosing surface.
+* **P2 — ITS DIRECTION, A FUNCTION OF THE PLACE** (the owner, 2026-11-05: *"when I travel on dx on the vertical front contour, the orbit is fast on the
+  left, then … switches to almost slide until the 2nd third of the face then it resumes another fast orbit … same thing when I travel dy. We need to
+  better blend the orbit and slide"* → *"B. build the smooth profile"*): the smooth profile (`1.0.102-` §21.8: the shown angle `Θ·(s·x + (1 − s)·x³)` of the pace share, the
+  face's gnomonic direction — continuous at every edge and corner). On a cap, along its entry side, the cap's profile — from the entry edge's bisector (C1
+  with the wall) to straight above / below ONLY at the far edge (`1.0.102-` §23); across a cap its own odd profile (the gnomonic continuity at every edge).
+* **P3 — ITS RESTING FACE TURNED BY G1's FACE NORMAL** (`1.0.102-` §22, the owner's choice: the contour's normal).
 
-**The rebuild — the owner's decisions (2026-11-05):**
-* **F1 — ONE CROSSING EVENT, on the loop travelled.** The gizmo's place is its ARC LENGTH along the loop it travels (item 3 as written, at last); an edge
-  counts only where THAT loop crosses it (cause 1). At a crossing, once, in this order: the next face's view (tilt, and the roll R3 requires) → the roles
-  read for that face (F4) → R4. ⭐⭐⭐ **R4 OVERRULES EVERYTHING** (the owner): if the finger's input would now drive the gizmo the OPPOSITE way along its
-  loop, the input is HELD — the gizmo waits at the edge — until the finger reverses or the other input moves it the finger's way. ⛔ No reflection: at a
-  cap's far edge, after the half roll, dy kept up is held (⛔ 21.4's *"dy kept up sends the gizmo back along its previous track"* and §20.1's back-and-forth
-  loop over the top are SUPERSEDED); dy down goes on down the far wall. A new drag has no direction to oppose. No frame turned by an angle (cause 4).
-* **F2 — THE ROLL PACED BY THE CAMERA, not the gizmo**: the crossing starts it, the camera takes it over its own motion, capped in degrees a frame — a fast
-  finger cannot make it a step (cause 3). `cameraRollMm` sets where it starts.
-* **F3 — THE CAMERA SQUARE TO A CAP** (the owner: *"as you recommend"*): over a top / a bottom the view passes the zenith at the far edge, where the half roll
-  is — R2 and the far-edge roll agree by construction; the orbit's tilt (the calm) taken on the walls and at the edges (cause 2).
-* **F4 — THE ROLES PER FACE, not per frame**: each face's dx / dy from the loop's direction on THAT face, seen by its upright (or carried) view; read again
-  only at a crossing (F1's order). R4 compares against the face the gizmo is on — never a step into a face seen edge-on (cause 5).
-* They REPLACE the band latch, the nearest-edge rule, the angle-driven frame turn and the per-frame screen read — none added over them.
+### 22.4 The camera (owner: the camera module)
+* **C1** — behind the piece along its direction, the owner's yaw / pitch offsets about it.
+* **C2 — ITS UP, FROM THE VIEW** (rewritten 2026-11-06 with T5): outside the 20° near-vertical cone gravity's up — the scene upright on any face, a slanted
+  one or a steep top alike; inside the cone the up carried in from where the view entered it (`upTarget`, `nextCarried`) — no roll; turned at the
+  camera's pace (`cameraRollDegPerS`). ⛔ A cap's carried axis whatever the view's lean (the scene turned on a top's side, R2 against P2).
+* **C3 — NEVER PAST A CAP'S ZENITH**: the camera itself (its offsets included) never beyond straight above / below toward the far edge (`1.0.102-` §25).
 
-### 21.6 The rebuild (v2) — built on F1–F4; its travel series; two regressions; F5 and F6 (2026-11-05, branch `1.0.101-`; the owner: *"do all"*)
+### 22.5 The gizmo and the lines — SHOWN, never moving anything (owner: the display module)
+* **Gz0 — WHAT A FACE IS, PER LINE** (the owner, 2026-11-05: *"it depends if the void is open or closed on the section travel: … the void is open on the red
+  section travel so the orbit tilt shall take over … the void is closed on the green section travel so the green section and the gizmo shall go
+  through"*): a face's region with its holes closed (the face map's one existing test) — and a void is part of the face FOR A LINE only when it is closed
+  ALONG THAT LINE's travel (faces of that plane on both sides of it along the line: the green's `t`, the red's `b`). Open along a line, the void is
+  BEYOND the face for that line. ⛔ The `1.0.102-` build bridged a void for BOTH lines when it was closed along EITHER — the owner's *"why the red
+  contour extends into the void instead of adhering to the horizontal black face?"* (`f2aa456`, att. 2).
+* **Gz1 — ON A FACE** (for the line travelled): the gizmo on the real surface under the place along the face's normal; over a void closed along that
+  line — **straight across on the face's plane** (the owner: *"the green section and the gizmo shall go through"*); a slot's bottom when the slot is open
+  along both lines and the place is inside the face's closed region (D3).
+* **Gz2 — BEYOND A FACE** (for the line travelled: past the face's rim, or into a void open along it — and the strips G1 adds where no face of that side
+  exists): the gizmo is **WHERE THE PIECE WOULD LAND — the nearest point of the assembly to the piece** (moved straight toward it, the piece first
+  touches there — nothing else is nearer). On a real face, edge or corner; never hidden, never in the air (the owner: *"representing faithfully where the
+  piece would land if I approach it with A + dy until collision"*). ⭐ Continuous with Gz1: just past a rim the nearest point IS the rim; into a void open
+  along the line it turns onto the void's real faces — *"the orbit tilt shall take over"*. Where two parts are equally near (a ridge) the landing really
+  changes and the gizmo with it; it keeps its part until the other is nearer by the collision skin (the existing tolerance).
+* **Gz3 — THE LINES ARE THE GIZMO's PATHS** (§21.2 item 3: *"the line is the path, exactly"*; the owner: *"the gizmo stays on the red and green contour
+  intersection … No dashed lines"*): the GREEN line is where a dx would carry the gizmo, the RED where a dy would — each by Gz0–Gz2 for its own line,
+  through the gizmo, solid. The ring on BOTH lines by construction. ⚠ The owner's decision D-4 (22.9): the gizmo inside a void closed along one line and
+  open along the other.
 
-**What v2 is.** The orbit's angles and the face map kept (the frame turned at every crossing); on them, F1–F4 as decided:
-* **F1 — one crossing event**: the finger's step SPLIT at the first bound on its way (`stepToBoundary`, `input/orbit_frame.ts`), and there, once: the frame
-  turned at the TARGET exactly at the bound (`frameStep`, strict — the 3° margin deleted), the new face's roles read, R4 (`holdAtCrossing`,
-  `throughHold`, `input/input_roles.ts`: a component driven the opposite way or onto the other axis HELD until the finger reverses it). A crossing
-  everything holds is not completed: the target stays on the face it came from. The coast splits the same way (`asmAxesTravel`), without roles.
-* **F2 — the up a TARGET, paced by the camera** (`input/camera_up.ts`): a wall's gravity (near the vertical, the wall's own up carried by the view's tilt —
-  never the side the view leans); a cap's AXIS, the wall's up turned over the edge crossed (`capAxis`); the shown up turned toward it at most
-  `cameraRollDegPerS` (a new slider, 360 °/s) — `paceUp`. Within `cameraRollMm` of the next face on the finger's way, that face's up (the roll starts).
-* **F3 — the camera square to a cap**: the calm's shares 0 on a cap; on a wall toward a cap's edge they rise past 1 to the share showing the cap's normal at
-  the edge (`capEdgeEnd`, `edgeShareTo`, `input/orbit_calm.ts`).
-* **F4 — the roles per face** (`travelFace`): read square to the face with the up the camera turns to; a role change is an R4 event like a crossing.
+### 22.6 Contact — the approach and the slide (owner: the contact module)
+* **A1 — THE APPROACH** (A + dy, two fingers): straight from the piece to the gizmo — along the face's normal under Gz1, toward the nearest point under
+  Gz2 — collision-checked (1-D: in until contact, out back to G1). It ends at the gizmo: over a void bridged by Gz1 it does not go into the slot (§18's
+  stated cost, kept).
+* **A2 — THE DEPTH DECIDES THE MODE, NOTHING ELSE**: the piece outside G1 — a drag ORBITS (22.2); brought in by the approach — a drag SLIDES on the face it
+  touches (`HOVER.md`'s slide), left only by the approach out. ⛔ Supersedes the slide's auto-latch, its arming / disarming (`1.0.102-` §24 A) and the
+  depth kept below the contour (`1.0.102-` §22 (a)): there is no orbit below G1.
 
-**Its travel series** (the same 21 runs; `an9.mjs`):
+### 22.7 Deleted from the base (`8dfa635`)
+The frame turns and their machinery (`orbit_frame.ts`: `frameStep`, `capExit`, `holdPitch`, the roll owed, the re-bases, `gizmoAnglesAt`); the face map's
+angle grid as the travel (`mapTarget` as the place, `asmMapQ`, `syncAngle` — the facets and regions kept); §20's up from the view; the shell and its
+foot; the piece-orbit solver in the assembly orbit (its slides, relocations and target resets — kept only where `orbitMode` 1 uses it); the slide's
+auto-latch; the stack's frontmost-group depth rule where Gz1 / Gz2 replace it; every slider whose rule is deleted.
 
-| | before Step 6 | the redesign | §21 v1 | **§21 v2** |
-|---|---|---|---|---|
-| the gizmo against the finger (frames) | 39 | 93 | 680 | **33** |
-| back-and-forth | 11 | 28 | 95 | **11** |
-| the up jumping (> 8° and > 450 °/s) | 0 | 31 | 741 | **20** |
-| upside-down / tilted frames | 0 / 0 | 559 / 949 | 3256 / 8262 | **11 / 34** |
-| camera jumps | 5 | 7 | 13 | ⛔ **104** |
-| blocked stretches | 36 | 26 | 51 | ⛔ **110** (the longest ~950 frames) |
+### 22.8 Every issue reported since §21, and the rule that removes it by construction
+| reported (branch `1.0.102-`) | root | removed by |
+|---|---|---|
+| the red misses the black face; the red into the void (`f2aa456` att. 1–2) | lines on the contour's plane; a void bridged for both lines when closed along one | Gz0 (a void per line), Gz3 (the lines the gizmo's paths, on the real surface) |
+| jitter, back-and-forth, sways at protrusions and overhangs (att. 3–5) | the real depth moved the piece | P1 (the piece on G1 only), Gz (display only) |
+| dy stops over a top (§21.9); a roll on a top; a leak off a top's side edge | B's zenith flip against R4; the up's gravity rule on a cap; the terminus checked for the finger only | T5 at T3 (one event), C2 (R2 on a cap), T6 |
+| slowed movement close in (the slide ~10× slower mid-drag) | the slide's auto-latch | A2 |
+| *"almost stuck"*, blocked dx / dy, sideways drift, the red section jumping, front↔back hops (`77e56dc`, `ad5d1b1` att. 1–3, 7–8) | the solver refusing / sliding / relocating against parts proud of the face; the depth kept below the contour | P1 (no solver in the orbit), A2 (no orbit below G1), T6 |
+| the gizmo 30 cm down, or outside the top / bottom face (`ad5d1b1` att. 6, far and near) | the ring cast to whatever lay below G1's strips | Gz2 (the landing) |
+| the gizmo jumping back to the previous edge on the slanted part; the frame flicker at an edge | the solver resetting the target against the terminus and the frame | T6 |
+| the camera ~11° past the zenith at a held far edge | the offsets beyond the piece's direction | C3 |
 
-The owner's walk works: up the front, the tilt over the top, straight above at the far edge, the half roll there, dy kept up held. ⛔ Two regressions:
+### 22.9 The owner's decisions — the proposals ADOPTED as defaults at the owner's *"proceed with rebuild"* (2026-11-06), each revisable on the device
+* **D-1 — THE LOOSE PIECES** (on the floor, not placed — `Piece41`): G1 encloses the PLACED parts only. ⭐ Proposed: the orbit ignores them like the floor
+  (they lie away from the assembly); the approach (A1) and the slide collide with them. The alternative brings a solver back into the orbit (against P1).
+* **D-2 — ⛔ WITHDRAWN while building Step 3 (2026-11-06; the R2 / P2 conflict it aimed at resolved by T5 / C2 rewritten on the view)**: *no sideways lean on a cap* contradicted P2 — a dy crossing onto a top off the face's middle
+  would see the wall's sideways lean drop to 0 at the edge (the gnomonic continuity broken). The owner's own R2 (§21.4 — on a cap the up carried over the
+  edge) removes the roll instead, with no new rule: C2.
+* **D-3 — THE PACE ALONG THE LOOPS**: arc length on G1 per mm of finger at the orbit's present pace (`Scene_1`: the same speed far and close), with the
+  edge's slow stretch (§15) and the smooth profile's pace (P2) — or a slider.
+* **D-4 — THE GIZMO IN A VOID CLOSED ALONG ONE LINE, OPEN ALONG THE OTHER**: the line TRAVELLED decides (the owner: *"if the green line goes straight
+  through the void the gizmo goes straight through, if the red line turns to the other face the orbit tilt occurs and the gizmo follows the red line"*);
+  the other line is drawn through the gizmo. ⭐ Proposed: a switch of input inside such a void carries the gizmo onto the new line's place at its first
+  step (the only place two lines can disagree; a visible step there, nowhere else).
 
-1. **STALLS — R4 held by its own anticipation** (`w_hf@2805`, 964 frames, and the other longest): the anticipated roll near an edge read the way the finger
-   LAST travelled (`st.asmTravelDir`); a dy that had brought the gizmo near the far edge, then a dx — the direction changed, the anticipation dropped, the
-   camera rolled back, the roles flipped, and the flip, an R4 event, HELD the dx; the finger never reversing, stuck. **Root cause: the roles depended on the
-   direction, the hold on the roles** — the three-measures shape of §21.5 again (a crossing's view decided from a direction, not from the place).
-2. **PIECE JUMPS far out, up to 3.3 m, at a frame turn or a face change near a corner** (28; `w_sqf@2216`): the calm is two SHARES multiplying the orbit's
-   angles about the current face's normal. F3's lean toward a cap cannot be re-expressed about another face whose own angle is near zero (a corner: three
-   faces) — multiplication cannot make an offset from nothing; `sharesShowing` at each face change kept one direction and not its lagging neighbours.
-   Before F3 the shares were 1 at every edge, which hid it. **Root cause: the piece's direction a function of the ANGLES and a per-face state, not of the
-   place.**
+### 22.10 Build steps and gates (each step: its vectors RED on the code before it; the series at its close)
+1. **G1 and the cut** (engine-free): the support planes; a convex contour × a plane → its closed polygon; arc length ↔ point; the face and its axes at a
+   point (§21.3 step 1's vectors, and G1 encloses every part).
+2. **The travel** T1–T6: the place, the two planes, the roles per face, the one crossing event, R4, the terminus, the coast through T3.
+3. **The piece and the camera** P1–P3, C1–C3.
+4. **The gizmo and the lines** Gz1–Gz3 (the nearest point: the existing GJK distance query).
+5. **Contact** A1–A2; the solver out of the assembly orbit.
+6. **The deletions** (22.7).
 
-Not v2's: 33 blockages the slide's own stop (*"at the edge of the hosting faces"*), ~44 small camera-only jumps (40–170 mm, the piece still — in the earlier
-builds too), ~15 jumps in the slide.
+**The series at every close** (`orbit_probe.mjs` — now recording the ring's distance to both drawn lines, the cutting planes and the collision verdicts —
+and its analyser): 4 distances (far, mid, close, VERY CLOSE — at the contact) × dx, dy at 3 and 12 px a frame, mixed; across the edges, voids,
+protrusions, overhangs, the slanted part, the corners, the tops and the bottoms. **Gates** (the owner's checklist, 2026-11-05 / 06): upside-down 0;
+slanted (tilted) views on a wall 0; jumps of the piece or the camera only at a Gz2 ridge (named); stuck — stalls only at T5's holds and R4's stops;
+SLOWED movement — none (the piece's pace close in that of far out: no slide mid-drag, no solver); the gizmo not at the red / green intersection (the ring
+over 3 mm off a drawn line) 0; the gizmo back-and-forth 0; a section thrown to another place on the face (a cutting plane > 20 mm in a frame, the same
+normal) 0; relocations 0; touching during an orbit 0; the camera's up stepping (> 8° a frame) 0; THE CALM — on a dx across a wall and a dy up it, and on a
+top / a bottom: the shown angle's step grows evenly from the face's middle to its edges and on across the edge at the same pace (no orbit – slide –
+orbit). Then the root causes analysed in common before any fix — a fix changes the rule that owns the cause (22.0). ⛔ No device close until the owner's
+look.
 
-**The fixes (the owner: *"do all"*) — each replacing, nothing added over:**
-* **F5 — THE PIECE'S DIRECTION FROM THE PLACE** (item 6 at last): a field over the faces contour — each facet's normal weighted by the place's distance to its
-  polygon (1 on it, falling to 0 over its edge zone), summed: a face's normal in its middle, the bisector on an edge, the three normals' sum at a corner —
-  the same from every side, so continuous by construction; the orbit's own direction mixed in by the interior shares (the calm's sliders, a cap's 0 — F3);
-  read at any angles from the map's place (no cast), so the solver, the camera and the drawn piece read one function. ⛔ The shares' state, their eases,
-  `sharesShowing`, the re-expression at a turn or a face change, the pole fade — deleted.
-* **F6 — THE ROLL MARKED ON THE PLACE**: entering an edge's `cameraRollMm` band moving toward it MARKS the face as rolled for that edge; the mark stays while
-  the place is in that band whatever the input, and clears only when the place leaves the band by distance (or the face changes). The camera's up and the
-  roles read the mark — never the last step's direction. ⛔ The per-frame anticipation along `asmTravelDir` — replaced.
+**Build status (2026-11-06, `1.0.103-`, uncommitted)** — the engine-free foundation first; nothing wired yet (the app still runs `8dfa635`'s orbit):
+* ✅ **Step 1** — G1 (`face_map.ts` `buildFaceMap`: each chosen facet's plane at the parts' support, ported from `00c9514`) and the cut (`plane_cut.ts`,
+  ported from `d999080`, + the loop by ARC LENGTH: `loopLength`, `loopPoint`, `loopArc`). Vectors RED against `8dfa635`: G1's three (the base's planes
+  at the main face), `plane_cut` (absent).
+* ✅ **Step 2, engine-free** — `loop_travel.ts`: the face's frame (a wall's gravity, a cap's carried axis), the component's loop read per face (T2), the
+  pace (each side its slice of the turn, the edge's slow stretch), one crossing event (T3), R4 (T4, the world motion unfolded), the terminus (T5); the
+  other plane re-derived square to the loop. Vectors: dx round the walls (a quarter turn per face, the height kept, back to the start), dy onto the top
+  and held at its far edge, the top's side edges held, the slow stretch, the loops closed. ⚠ R4 cannot fire on a box under T5 (no crossing turns a
+  component past 120°) — its vector waits for a slanted contour case in Step 2's wiring.
+* ✅ **Step 3, engine-free** — `loop_calm.ts` (P2: the smooth profile, the cap's profile — ported from `1.0.102-`), `loop_camera.ts` (C2: ⭐ on a cap the
+  carried axis whatever the lean; the pace; C3 the zenith clamp — ported; T5's copies deleted there: `loop_travel.ts` their one owner). D-2 withdrawn.
+* ✅ **Steps 3 – 6, wired** (the owner: *"build all the rebuild"*) — `render/assembly_wiring.ts` rewritten: G1 and the travel's state (`st.loop`); the
+  finger the ONLY mover (`loopFinger` from the drag and the coast — T6); the shown place and direction on the orbit's critically damped spring
+  (`springPoint`, `follow_camera.ts`: ⛔ a plain exponential showed each pointer event's step); P1 — the piece outside G1, the collision solver skipped
+  in this mode (`green_box_wiring.ts`); C1 – C3 — the camera along the SHOWN direction (never the orbit's angles: no pole), its up paced toward the face's
+  target, clamped at a cap's zenith; Gz0 – Gz3 — the gizmo by `input/gizmo_rule.ts` `gizmoCase` (⭐ a real face counts only AT the face's plane or proud of
+  it — never a void's floor behind it, vectored), the parts' nearest point by GJK (`separationBetween` of a point and a hull), the lines the gizmo's paths
+  along the two loops; A1 — the approach above G1 along the direction, below it straight toward the gizmo (`approachRange().floor`, `approachAt` from
+  `1.0.102-` §22); A2 — the depth arms the slide; ⭐ **A2 completed while probing**: below G1 the orbit never runs — without a slide (it latches only where
+  the resting face looks at a face: at a wall with the resting face down, never) a drag takes the piece back OUT to G1 at the drag's pace, then orbits
+  (⛔ the drag refused: every close-in run DEAD). ⭐ The boot place on the facet the orbit's boot direction faces (⛔ the spawned piece's position, far out
+  on −x before the orbit placed it). **Deleted** (22.7): `orbit_frame.ts`'s turns (its upright frame kept — the slide reads it), `section_hull.ts`, the old
+  `orbit_calm.ts`, §20's `camera_up.ts`, the shell's foot (`orbit_shell.ts` keeps `shellBox`, `faceLift`), the face map's angle grid (`mapTarget`,
+  `mapAngles`, `blendThroughEdges`, `stackDepthAt`, `syncAngle` …), the lock cone and the face switch (`assembly_orbit.ts`), the sliders
+  `gizmoEaseMs` and `faceSpanZone*`; the slider `cameraRollDegPerS` added (C2's pace). Vectors: `rebuild_wiring.test.ts`, `void_bridge.test.ts`'s Gz0 per
+  line; the dead vectors of the deleted rules removed with them.
 
-### 21.7 F5 and F6 built — and R4 in the world (2026-11-05, branch `1.0.101-`; deployed for the owner's look, ⛔ no device close)
+**The travel series on the rebuild** (16 runs: far / mid / close / at the contact × dx, dy at 3 and 12 px a frame, mixed; ~27 000 frames, 0 page errors;
+the analyser now counts the tilt on a WALL apart from a cap's, and a section "thrown" only beyond the gizmo place's own motion along its plane's normal —
+a plane slides with the place by design). First run: every close-in run DEAD (A2's gap, above) and the boot on the −x side; fixed, second run:
 
-* **F5** (`input/orbit_calm.ts` rewritten — `calmDir`, `polyDistance`, `calmWeight`, `calmZone`): the piece's direction the field over the upright contour at
-  the map's place for the angles (`calmAt`, `calmPlace`, no cast); the shares mixed by ANGLES (58d86ff's: 60° off shows 15° in a face's middle) — ⛔ by
-  vectors, with the orbit square to the field turned to a cap, the normal part vanished and noise was normalised to 45°. `asmCalm`, `calmFrame`, the turn's
-  carry, `sharesShowing`, the eases and the pole fade deleted. Measured: the piece jumps at a turn / face change 35 (to 3.3 m) → 10 (at most 484 mm).
-* **F6** (`input/roll_mark.ts` `nextRollMark`): as specified. ⛔ It did NOT remove the stalls — the series showed their real cause:
-* **R4 compared the ORBIT'S AXES, not the gizmo's motion**: a frame turned on the SAME face (the top read in another frame) renamed yaw ↔ pitch, the roles
-  "changed", the dx was held with the gizmo going the finger's way on the screen — the finger never reversing, 900 frames. Now `holdByMotion`
-  (`input/input_roles.ts`): each face carries the gizmo's WORLD direction for a finger right / up (`mx`, `my`); a component is held when that motion turns
-  past 120° (`HOLD_REVERSED_COS`), the new face UNFOLDED onto the old about their edge — a half roll holds, a quarter roll (R3: dx then along the edge) never
-  (⛔ `< 0`: at exactly 90° rounding decided). ⛔ `holdAtCrossing` deleted. And **an uncompleted crossing leaves no trace**: the face state (`st.asmFace`, the
-  mark) restored — ⛔ the face looked at was read as arrived, the cap's axis re-derived from it: a 90° roll for nothing.
+| gate | result |
+|---|---|
+| upside-down on a wall / slanted (> 30°) on a wall | **0 / 5** frames (mixed legs, 30–41°) |
+| the ring off a drawn line (> 3 mm) · a section thrown · relocations · touching during the orbit | **0 · 0 · 0 · 0** |
+| back-and-forth: piece / camera / the gizmo's place | **0 / 0 / 0**; the shown ring 22 (its depth on the real surface) |
+| the up stepping (> 8° a frame) | **0** |
+| against the finger | 3 |
+| stalls | T5's holds only, and ~43 frames when a drag first takes the piece out to G1 (A2) |
+| the pace close in | 4–9 mm a frame (no slide mid-drag, no solver) |
+| camera / piece jumps | 45 / 19 — on the fast dy far out (2–3.6 m at 6 m): the input arrives in bursts in the headless browser (80–180 ms frames), the spring smooths most |
 
-| (21 runs) | §21 v2 | F5 + F6 | **+ R4 in the world** (3 runs: hf, cf, cm) |
-|---|---|---|---|
-| moving frames | 6758 | 5266 | 8268 (21 runs, before the 120° rule) |
-| stalls ≥ 300 frames (orbit's own) | ~13 | ~18 | **0** (the slide's stops apart) |
-| up steps over twice the roll's pace | 1 | 0 | 0 |
-| upside-down / tilted frames | 11 / 34 | 0 / 21 | 0 / 11 |
+✅ **RESOLVED (2026-11-06, T5 / C2 rewritten on the VIEW)** — was open, R2 against P2 on a cap: with a dx along a top the view leans sideways (P2's smooth profile, up to the bisector at the
+side edge) while the up stays the axis carried over the entry edge (R2, no roll): seen from the side the scene appears turned up to ~90° — 999 frames
+past 90° and 6 338 past 30° against gravity, all on caps. Removing the lean (D-2) breaks P2's continuity at an off-middle crossing; gravity's up there
+brings the roll back. **1620 vectors.**
 
-The camera "jumps" counted on top are, for ~85 %, the camera's offsets swinging with a paced roll (the piece still) — at the probe's ~10 fps 40° a frame,
-6° on a device. Left: ~200-frame stops at a cap's far edge (R4's intended hold of dy kept up after the half roll); small back-and-forths (9–16 mm) at turns.
-
-### 21.8 One smooth profile over every face; a top orbited as a wall (choice B) (2026-11-05, branch `1.0.101-`; ⛔ no device close)
-
-> The owner (on `f2aa456`): *"when I travel on dx on the vertical front contour, the orbit is fast on the left, then it reaches around the third of the face
-> where it switches to almost slide until the 2nd third of the face then it resumes another fast orbit … same thing when I travel dy. We need to better
-> blend the orbit and slide … B. build the smooth profile. then update the md files, deploy"*.
-
-**Why it changed (measured, a dx across `Scene_1`'s front, the orbit 4.5° a step):** 0736134's calm already had the shape — a flat middle at a quarter of
-the orbit's pace (1.1°/step), then a bump in an edge zone (11°/step); §21.6 F5 made the bump a cliff (30° in ONE step near a third from each side, the edge
-at 71° — the back face of a 3.3 cm assembly inside the zone pulled the front's normal), and F3 made a top a pure slide (0°/step) with the 90° crammed into
-the wall's last centimetres (32–36°/step). **Common cause: a flat middle plus an edge zone is, to the eye, orbit – slide – orbit.**
-
-**The profile** (`input/orbit_calm.ts` rewritten — `calmProfile`, `calmFacets`, `calmDir(p, facets, o)`): across a face the shown angle is
-`Θ·(s·x + (1 − s)·x³)` — `x` the place's share of the orbit's turn across the face (the face map's edge stretch undone, `edgeUnmap`), `Θ` the half-dihedral
-toward that edge's neighbour (45° on a box), `s` the middle's share (dx's across a wall, dy's up it; a top / a bottom dx's both ways). The pace grows
-evenly from `s` in the middle to `3 − 2s` at the edges: on the front 1.2, 1.4, 1.8, 2.4, 3.2, 4.2, 5.4, 6.8, 8.4, 10.3°/step, then on across the edge at the
-same pace. The direction is the face's GNOMONIC one, `n + t·tan θt + b·tan θb` — on a box `n_A + n_B` from both faces at an edge, the three normals'
-diagonal at a corner: continuous by construction, a function of the place in every frame. ⛔ F5's weighted normals, its zones and the four edge-zone sliders
-DELETED (FACE-SPAN ORBIT SHARE keeps the middle's shares).
-**B — a top / a bottom orbited as a wall**: the view passes straight above at its MIDDLE; the half roll there (`camera_up.ts` `capAxisPastZenith`: the cap's
-carried axis flipped once the view leans 3° past the zenith toward it, 6° of hysteresis; the roles read again — R4 holds a dy kept up, as at the far edge
-before). On a cap the up is the wall's rule: gravity's on the screen once the view leans past 20°, the carried axis blended within 5–20° of the vertical
-(⛔ the axis whatever the lean: a dx over an orbited top leant sideways, the axis 90° off gravity — 1406 tilted frames, probed). ⛔ §21.5 F3 superseded.
-Probe (4 runs): upside-down frames 0 (557 before the cap rule), tilted 285 — all in the 9–20° near-vertical band over a top, the axis blended by design.
-
-### 21.9 ✅ RESOLVED by §23 (a cap a terminus, no roll) — the orbit STOPPED over a top on a dy (B's zenith roll against R4) (reported 2026-11-06 on `f0e8bd7`; the owner: *"we will fix it later on"*)
-
-> The owner: *"build f0e8bd7 : the orbit is stuck in the position as per attachment (dy travel)"* — far out (r 7.5 m), looking down on the top, the HUD
-> *"orbit: the frame turned over an edge (up)"*.
-
-**Reproduced** (probes, a dy up the front repeated, 3 and 12 px a frame, close and far): EVERY leg stops on the top within a few frames. A dump (12 px, far):
-frame 7 the frame turns onto the top (the front's top edge); frames 8–12 the gizmo moves on the 3.3 cm top; frame 13 the view passes 3° beyond straight above,
-`capAxisPastZenith` flips the cap's carried axis (`ua` (0,0,1) → (0,0,−1)) and the paced half roll starts; from frame 17 the gizmo and the piece are frozen
-for the rest of the leg.
-**Cause**: the flip is in the travel face's key, so the roles are read again; after the half roll *up the screen* points back toward the front, a dy kept up
-would drive the gizmo backward, and R4 (`holdByMotion`) holds it until the finger reverses. Before B the same hold came at the top's FAR edge, where a stop
-read as the end of the face; B moved the roll to the cap's MIDDLE — on `Scene_1`'s slim tops reached almost at once — so every pass over a top stops halfway.
-⚠ The conflict between B and R4 was not named when B was proposed.
-**Options recorded (not chosen)**: (a) the roles LATCHED for the drag under way — the roll still at the zenith, the drag goes on driving the gizmo the same way
-on the assembly until the finger lifts (over the far half the gizmo moves down the screen while the finger goes up — R1 waived for that drag only, read again
-at the next press); (b) the hold kept (today: continue with dy down after the roll); (c) the roll back at the far edge (no stop mid-top, but the scene
-upside down between the middle and the far edge — R2, §21.5). Proposed: (a).
-
-## 22. ONE GEOMETRY FOR WHAT MOVES — the contour; the real surface shown and reached by the approach (2026-11-06, branch `1.0.101-`; ⛔ no device close)
-
-> The owner (on `f2aa456`, five reports): *"why the red section does not pass through the black face ? … why the red contour extends into the void instead
-> of adhering to the horizontal black face ? which rule imposes that ? … the travel with dy at this exact position creates some jitter of the view … some
-> back and forth of the view between somewhere on the white part and the middle of the black face … dy run the red section loop around the assembly: lot
-> of back-and-forth of gizmo (especially at high dy speed) and sways of the piece and camera … Analyze the common root cause. Propose common fixes instead
-> of patching each single issue."* → *"build with contour's normal and (a) close in"*.
-
-**The common root cause — two geometries reconciled per place.** The travel, the frame turns, the calm, R4 and the plane cuts ran on the CONTOUR (convex,
-smooth); the gizmo's point, the lines' depth and the piece's support were read on the REAL surface by a cast along the facet's normal at every place, every
-frame, with a growing set of rules (`stackDepthAt`'s frontmost group, the void bridged on a travel — §18's D3 amended —, the cast for what stands in front,
-the blend's cast through an edge). Wherever the real surface steps (a protrusion, an overhang, a recess, a void), the cast lands on one surface or the other:
-its depth jumps, and the piece's place, the orbit's centre, the look point and the face (the quads, the piece's turn) all read it — the jitter, the
-back-and-forth, the sways. The lines read the same rules: the bridged void kept them on the contour's plane, in the air (report 2 — the rule: §18 D3
-amended), and off the black face below the contour's plane (report 1).
-
-**The fix — each geometry one job** (not a rule more):
-1. **What MOVES reads the contour only** (`input/face_map.ts` `contourPlace`: the map's place, blended through an edge, pushed out onto the contour's own
-   surface along the blended normal — `contourExit`, the chord across an edge runs inside it): the piece's place and the solver's, the orbit's centre (the
-   foot on the shell), the look point, the face and its normal (**the contour's normal** — the owner's choice: the quads, the piece's turn), R4.
-2. **The real surface is SHOWN** (`realOn`: the frontmost surface along the face's normal from outside the parts' box): the ring, and each line's samples —
-   on the parts' faces whatever their depth, broken at a step and over a void through. The quads' host is the ring's part when its face is the contour's
-   (never a protrusion's side).
-3. **(a) Close in, the piece keeps its depth** — the approach goes on IN below the contour (`assembly_orbit.ts`: `approachRange().floor`, the distance
-   negative to `APPROACH_SINK_M` = 0.3 m, at the last stretch's pace): into a slot, onto a face below the contour, stopped by the parts' collision at the real
-   contact; a dx / dy close in keeps that depth (the collision stops or slides the piece at a step). The slide's way out keeps its depth (`approachAt`: the
-   gizmo's depth below / above the contour taken into the approach) — the piece leaves the slide where it is.
-4. **Deleted**: `realAt`, `rawGizmo`, `frameCast`, `blendCast`, `MAP_BRIDGE_FRONT_M`; in `face_map.ts` `stackDepthAt` (the frontmost group, the bridged
-   void), `closedAlong`, `regionReal`, `regionDistance`, `regionContains`; `tests/void_bridge.test.ts` (its rule is gone). §16.1 D3 ("the gizmo at the real
-   depth") is now a display and approach rule, no longer an orbit rule.
-Vectors: `tests/contour_place.test.ts` (RED against `2b4643d`: 3 of 3), the approach's floor in `assembly_orbit.test.ts`; 1660 in all.
-
-**The travel series** (12 runs each, the same legs — dx, dy at 3 and 12 px a frame, mixed random, far / mid / close; the baseline `2b4643d` on a worktree,
-~22 400 frames each, 0 page errors): the gizmo against the finger 57 → 21, the piece's back-and-forth 29 → 16, the camera's 330 → 298, camera jumps
-41 → 25, piece jumps 22 → 17, upside-down frames 11 → 7, up jumps 4 → 2. ⚠ Stalled frames 6849 → 12956 — two causes, neither new code failing:
-(1) the open §21.9 stop over the top (every dy-up leg, both builds); (2) ⚠ **NEW — THE SLIDE LATCHES ON A PART PROUD OF THE CONTOUR, CLOSE IN**: the
-contour is not the parts' envelope (D5: a part sticking out of a face never makes a facet — Piece3 stands 45 mm proud of `Scene_1`'s −x side); close in
-the piece keeps the contour's depth (a), meets Piece3, the slide latches on it (*"latched on Piece3's face (13.3 mm)"*) and the dx then stops at that
-face's edge (*"at the edge of the hosting faces — reverse"*) — before, the real gizmo stepped onto Piece3 and the piece rode over it. (a) as decided;
-the owner to judge it on the device. ⚠ Reports 1–2 (the lines) are a look, not a number; the dy loop round the assembly could not be run (§21.9).
-
-## 23. A CAP IS A TERMINUS — no roll anywhere (2026-11-06, branch `1.0.102-`; resolves §21.9; ⛔ no device close)
-
-> The owner: *"for the stop over the top: I will simplify the logic: when we reach the top or bottom faces … do not roll the camera anywhere: just extend
-> the slide portion of the orbit up to the furthermost far edge and then hold the dy further so the gizmo cannot cross the edge and enter the next face
-> (which would be camera view upside down since there was no camera roll) but the user can dy back to re-travel the face in the reverse direction. This
-> way, it means all the faces between -90 and +90 degrees camera view can be travelled on a red section, but if the user wants to reach the opposite faces,
-> he will have to dx 180 degrees on the vertical faces … Advise how to build this simplification: is a re-build required or only a modification … Avoid
-> patches"*.
-
-**The advice given — a modification, mostly deletions, no rebuild.** Everything it needs already exists: the face map and the frame turn carry the travel
-onto a cap and across it to the far edge (the turned frame's column), the one crossing event (`stepToBoundary`, §21.5 F1) is the single place a face change
-happens, the calm is a function of the place, the cap's carried axis keeps the camera's up continuous over the entry edge (§20.1 (b)). What made the rolls —
-B's flip at the zenith (§21.8), the roll marked ahead of an edge (F6, §21.7), the far / side exits off a cap — is DELETED, and ONE rule takes their place,
-at the crossing event: **a cap's only way out is its entry wall**.
-
-**Built:**
-1. **The terminus** (`camera_up.ts` `capExitRefused`, wired at the crossing in `asmFingerTravel` and the coast `asmAxesTravel` — `capHolds`, `holdAtEdge`):
-   from a cap, a crossing onto any face but its ENTRY wall (or another cap) HOLDS the travel `CROSS_EPS_RAD` short of the edge — the far edge and the side
-   edges alike (both would need a roll); the rest of the finger dropped; a dy (dx) back goes. The HUD: *"orbit: the cap's edge — held (travel back; the far
-   faces by dx round the walls)"*. The entry wall carried on the travel's face (`TravelFace.entry`: the wall crossed from; a boot or a slide's way out onto a
-   cap — read off the carried axis, `capEntry`).
-2. **The slide extended to the far edge** (`orbit_calm.ts` `capProfile`, `calmDir(p, facets, o, entry)`): along the side a cap was entered by, the shown
-   angle is `Θ·(s·y + (1 − s)·y^m)` from the entry edge (`y` 1 — the bisector, the wall's own profile's end, at its pace: `m = (6 − 5s)/(1 − s)`, C1) to the
-   far edge (`y` 0) — straight above (below) ONLY there, a slide over most of the cap; the view never passes the zenith. Sideways on the cap: the face's own
-   odd profile, as before.
-3. **Deleted**: B (`capAxisPastZenith`, `ZENITH_FLIP_RAD`); F6 (`input/roll_mark.ts`, `aheadNormal`, `rollMark`, `upFor`, `st.asmRollMark`,
-   `st.asmTravelDir`, the slider `cameraRollMm`); their vectors (`tests/roll_mark.test.ts`). The camera's up is the travel face's target (`upTarget`), still
-   taken at `cameraRollDegPerS` (`paceUp`: a gravity / axis blend near the vertical is never a step). R4 unchanged (the owner's rule).
-Vectors: the terminus and the entry (`camera_up.test.ts`), the cap's profile (`orbit_calm.test.ts`) — RED against `3e7877f` (5); 1658 in all.
-
-**The travel series** (the same 12 runs; against §22's, ~22 300 frames each, 0 page errors): tilted views 292 → 57, upside-down 7 → 6, up jumps 2 → 1,
-camera jumps 25 → 22, piece jumps 17 → 13, the piece's back-and-forth 16 → 13, the camera's 298 → 280; the gizmo against the finger 21 → 25. Every dy over a
-top now ends HELD at its far edge (*"the cap's edge — held"*) — the probe keeps pushing, so those are stalls by design; the dy back goes on at once.
-⚠ Open, measured: (1) the upside-down frames are ONE diagonal leg held at the top's far corner — the view straight down, then one frame swinging 55°
-(130° off upright), two frames; (2) ⚠ **PRE-EXISTING** (in `2b4643d`, §22 and §23 alike), close in only: a dy up stalls at the front's top edge after the
-frame has turned onto the top and back (no hold on the HUD), and a dx on the top stalls (`r5c`) — the orbit's target itself stops; not yet diagnosed;
-(3) §22's slide latching on Piece3 close in, unchanged.
-
-## 24. The slide latches only when the piece is brought in (A); the close-in stall diagnosed (2026-11-06, branch `1.0.102-`; ⛔ no device close)
-
-> The owner (on `77e56dc`): *"When the piece is close to the hosting face or close to the protruding part, the movement is very much slowed down. Why? I
-> don't like at all this feel"* → *"Build A. Then diagnoze the still open."* — and, on the phone: *"In the attached configuration the movement is almost
-> stuck"* (close in on the front, *"orbit: the frame turned over an edge (down)"*).
-
-**Why it slowed (measured, close-in dx):** the SLIDE took the drag over. It latched by itself whenever the piece's resting face came within
-`hoverApproachMm` (20 mm) of a face it is parallel to, and an orbit drag ARMED it (2026-11-01). In the slide the piece moves 1 mm a mm of finger
-(`hoverGain` 1, a kinetic friction): ~0.6 mm a frame against the orbit's ~6 — ten times slower — then it stops at the face's edge (*"at the edge of the
-hosting faces — reverse"*). Since §22 the piece close in keeps the contour's depth, nearer the hosting face and the parts proud of it: the latch caught
-~95 % of the close-in drag (before §22: none).
-**A — built** (`input/hover.ts` `slideArmedAfter`): the slide is armed ONLY by an approach step inward (A + dy, two fingers) and DISARMED by an orbit
-drag's travel; at a boot and a new orbit it starts disarmed. An orbit drag keeps the orbit's pace at every distance — never switched into the slide
-mid-drag. To slide: approach in. Probed (close-in runs): the dx across the front — the slide never latched, the piece 4–5 mm a frame all the way, 0 stalled
-frames (2340 before); the stalls left are §24.1's contact.
-
-**The close-in stall — diagnosed; its fix built (§24.1).** A dy up near the front's top edge, close in: the finger's target drifts SIDEWAYS (the yaw
-−1.571 → −1.459 while the pitch hardly moves), the piece TOUCHING every other frame; the blocker is **Piece44** — the overhang above the front, proud of the
-contour. The piece solver refuses each step into it and slides the piece along the ring (`orbitFrame` resets the target to the solved place): *almost
-stuck*, and sideways. The TOP ↔ upright flicker at that edge (the frame turned four times in four frames) is the same: the target pulled back below the
-bound, the frame turned back. ⭐ ONE ROOT: the contour is not the parts' envelope (D5: a part proud of a face never makes a facet — Piece44 on the
-front's top, Piece3 45 mm off the −x side), and (a) puts the piece's path at the contour's depth — through them. Before §22 the real gizmo stepped onto them
-(the piece rode over, jittering); since §22 the collision stops it.
-
-### 24.1 ✅ BUILT (the owner: *"build it"*): the orbit's contour CLEAR OF EVERY PART
-Each facet's plane pushed out to the farthest placed-part vertex along its normal (its support): the same normals (no tilt — D5's purpose kept), convex,
-and every part inside it by construction — the piece's orbit path never meets a part; the approach (a) goes on in, below it, to the real contact. Cost:
-on a face with a proud part the whole face is orbited that far off it (`Scene_1`: the front by Piece44's overhang, the −x side by Piece3's 45 mm); the
-real surface is still shown (the ring, the lines) and reached by the approach.
-
-Built (`input/face_map.ts` `buildFaceMap`): the facets CHOSEN as before (D5 on the main regions — the same normals, the same columns), then each plane
-pushed out to the placed parts' SUPPORT along its normal (`supportOf`: the farthest vertex of their faces) — every part inside the contour. Vectors: the
-stack's facet at the protrusion's front (`face_map.test.ts`), the core box at the protrusion (§24.1's own vector, rewritten from *"a part sticking out does
-not widen it"*), an overhang hanging in front of the top-front edge pushes the front and the top out, a slanted facet chosen (a tenth) lies at the support
-and no longer cuts the contour (`facets.test.ts`) — RED against `76ce2d5` (3). 1658 in all.
-Probed (8 runs, ~16 500 frames, 0 page errors): `Scene_1`'s contour pushed out — the front 42 mm (Piece44's overhang), the top 42–60 mm (the overhangs
-above it), the ±x sides to Piece3's and the right part's extent. Close-in dx across the front: 5 mm a frame, 0 stalls, 0 back-and-forth (the slide never
-latched); close-in dy: the piece no longer pinned against Piece44 (0 camera jumps, 0 back-and-forth, was 3 and 122); camera jumps 14, piece jumps 11
-over all 8 runs. ⚠ Open: (1) at a top's far edge, held, the CAMERA leans ~11° past straight above — the piece's direction stops at the zenith, the camera
-stands at its pitch offset above-behind it (`r5c`: 260 tilted frames there, the probe pushing on); the rule should bind the camera, not the piece's
-direction; (2) ~~close in at the front's bottom the piece touches the FLOOR~~ ⛔ WRONG (§25): it rests on **Piece41**, a LOOSE piece lying on the floor in
-front of the painting (the blocker read on the solver) — the floor never stops the orbited piece.
-
-## 25. The camera never past a cap's zenith; THE FLOOR IGNORED (2026-11-06, branch `1.0.102-`; ⛔ no device close)
-
-> The owner: *"built the camera never past the zenith. The floor should not stop orbit nor slide: its function is purely decorative at the moment, and seen
-> from the bottom view it is transparent: update the md files accordingly and relax the constraints which are currently imposed by the floor: the floor
-> shall be ignored entirely (until we change this rule later on maybe)"*.
-
-**The camera never past a cap's zenith** (`camera_up.ts` `capCameraClamp`, wired in `assemblyCameraFrame`): on a cap, the camera's direction (from the
-look point) kept on the ENTRY side — its component along the entry wall's normal laid in the cap's plane never negative; beyond, taken off (straight above /
-below, the sideways lean kept), the up made square to it. ⛔ §23 bound the piece's direction only: the camera's pitch offset above-behind the piece carried
-it ~11° past straight above at a held far edge.
-
-**⭐⭐⭐ THE FLOOR IS IGNORED — A RULE, until the owner changes it.** The floor (`Scene_1`'s frozen 2 m × 5 mm × 2 m plate) is DECORATIVE: nothing the
-orbited piece does reads it, and seen from below it is not drawn (`D128`). Checked in the code, every path — none imposed a constraint:
-* the orbited piece's collision — the orbit's solver, the approach, its way out (`pieceCollisionSetup`): frozen bodies exempt, the PLAY VOLUME exempt
-  (2026-10-13, `COLLISION.md` §11);
-* the slide: its hosting faces skip frozen bodies (`hover_wiring.ts`); the face map, the contour and its support (§24.1), the ring's and the lines' casts
-  (`castParts`): placed parts only;
-* the camera crosses it (§16.1: the bottom orbited as the others).
-⚠ What it still does — orientation, never a stop: its planes give the quads' reference frames and a spawned piece's resting face is turned against it
-(`bootRestAlign`). ⚠ The play volume (`D181`, its floor at the plate's top) still binds the OTHER pieces' gestures, not the orbited piece.
-⛔ The close-in dy down that stopped at the front's bottom (§24.1, open (2)) was **Piece41**, a loose piece on the floor in front of the painting — a part,
-an obstacle by the rules (*"collision allows contact; only penetration is refused"*, `D136`), not the floor.
-Probed (4 runs, held at the tops' far edges): the camera's lean toward the far edge exactly 0 there (~11° before); the frames counted "tilted" there are
-the camera's sideways (yaw) offset, ~12° off the vertical — inside the 5–20° band where the up follows the cap's axis by design (§21.8). 1659 vectors.
+### 22.11 The owner's feedback since `8dfa635` — each captured, or what superseded it
+| when | the owner | where it lives now |
+|---|---|---|
+| 11-05 14:49 | *"is there a slider for the 10mm for the camera roll to catch up ?"* | ⛔ no roll anywhere (T5); the up's own pace keeps its slider `cameraRollDegPerS` (C2) |
+| 11-05 16:00 | *"F1: if the delta position would drive the gizmo in an opposite direction, hold the input … this overrules anything else. F3: as you recommend … don't patch … re-build §21 properly"* | F1 → T3 (one crossing event) + T4 (R4: no other rule moves the gizmo against the finger — T6 removes every other mover); F3 (the camera square to a cap) superseded by P2's cap profile (the owner's B, then §23) |
+| 11-05 16:00 | *(mid-turn)* *"when you have finished … perform the same travel series … analyze the common logic flaw root causes, propose fixes avoiding patching"* | 22.10's series and gates, at every step's close; 22.0 |
+| 11-05 18:34 | *"do all"* (F5 the direction from the place, F6 the roll mark) | F5 → P2 (a function of the place); F6 ⛔ superseded (no roll) |
+| 11-05 20:18 – 20:22 | the calm: orbit – slide – orbit on dx and dy; *"check if this is the same"* on a horizontal face; *"B. build the smooth profile"* | P2 (the smooth profile), its gate in 22.10 (walls and caps); B's zenith roll ⛔ superseded by T5 |
+| 11-06 05:21 | *"the stop over the top: we will fix it later on"*; the geometry fixes: *"patches … or … re-build ?"* | T5 (no stop mid-top: no roll to stop for); 22.0 |
+| 11-06 (`f2aa456`, mid-turn) | att. 1 *"why the red section does not pass through the black face"*; att. 2 *"why the red contour extends into the void … which rule imposes that"*; att. 3–4 jitter and back-and-forth under an overhang; *"Analyze the common root cause. Propose common fixes"* | Gz0, Gz3 (att. 1–2); P1 + G1 (att. 3–4: the real surface never moves the piece) |
+| 11-06 (mid-turn) | *"dy run the red section loop around the assembly … back-and-forth of gizmo (especially at high dy speed) and sways of the piece and camera"* | P1, T6, the gate *back-and-forth 0* at 12 px a frame |
+| 11-06 (mid-turn) | *"build f0e8bd7 : the orbit is stuck … (dy travel)"* | T5 (no zenith roll to hold behind) |
+| 11-06 05:33 | *"build with contour's normal and (a) close in"* | the contour's normal → P3; (a) ⛔ superseded by A2 (no orbit below G1 — it caused the close-in stalls) |
+| 11-06 (mid-turn) | the cap simplification: *"do not roll the camera anywhere: just extend the slide portion of the orbit up to the furthermost far edge and then hold the dy further … the user can dy back … to reach the opposite faces … dx 180 degrees on the vertical faces"* | T5 + P2's cap profile |
+| 11-06 06:47 | *"When the piece is close to the hosting face or close to the protruding part, the movement is very much slowed down … I don't like at all this feel"* | A2 (no slide mid-drag), P1 (no solver in the orbit); the gate *no slowed movement* |
+| 11-06 06:48 | *"In the attached configuration the movement is almost stuck"* | P1, T6 |
+| 11-06 (mid-turn) | *"Build A"* (the slide latches only from the approach) | A2 (the depth is the mode — stronger than A, no arming) |
+| 11-06 07:57 | *"build it"* (the contour clear of every part) | G1 |
+| 11-06 08:35 | *"the camera never past the zenith"*; *"the floor shall be ignored entirely"* | C3; 22.1 (the floor ignored) |
+| 11-06 09:32 | dx blocked (att. 1–3); the slide latching by itself (att. 4) — *"can we avoid that by setting some slider value?"*; the gizmo jumping on the slanted part (att. 5); out of the bottom face, the green line gone (att. 6); back-and-forth and stuck (att. 7); the red section jumping, *"as if the piece was frictionning"* (att. 8) | 22.8's rows: P1 / A2 / T6 (1–3, 7, 8); A2 (4: no auto-latch to tune); T6 (5); Gz2 (6) |
+| 11-06 (mid-turn) | *"same issue of the gizmo outside the bottom face at further distance"*; *"… outside the top face"*; *"when I cross the slanted part with dx … the gizmo jumps backwards to the previous edge"* | Gz2; T6 |
+| 11-06 (mid-turn) | *"there is no stop of the camera roll when I cross the horizontal faces … there should not be a camera roll and the dy hold should be done before the camera roll"* | T5 at T3 (the hold decided at the one crossing event, before anything turns), C2 (R2 on a cap: no roll), T6 (nothing crosses behind the finger) |
+| 11-06 09:44 | the series checklist: *"jumps, upside down or slanted camera views, stuck, slowed movement, gizmo not at red and green sections intersections, gizmo back and forth, red or green sections thrown off to different place on the face"*; *"several distances including very close distance"* | 22.10's gates, one each |
+| 11-06 09:46 | *"I do not want fixes with logics which contradict each other … a full rebuild without adding new rules for fixes"* | 22.0 |
+| 11-06 09:53 – 09:54 | the gizmo *"on the assembly faces, representing faithfully where the piece would land if I approach it with A + dy until collision … not hidden … not floating"*; *"(I do not mean by that the voids inside a face or at the edge of a face, for which we have already set rules for)"* | Gz2; Gz0 – Gz1 (the void rules kept, per line) |

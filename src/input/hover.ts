@@ -389,17 +389,9 @@ export function slideRefusedAfter(result: boolean | "wait", waitedMs: number): b
 export function slideExits(planeGapM: number, reachM: number): boolean {
   return planeGapM > reachM;
 }
-/**
- * ⭐⭐⭐ (2026-11-06, scope §24, the owner: *"When the piece is close to the hosting face or close to the protruding part, the movement is very much slowed
- * down … I don't like at all this feel"* → *"Build A"*) — **THE SLIDE LATCHES ONLY WHEN THE PIECE IS BROUGHT IN**: armed by an approach step inward
- * (`approachTaken` < 0: down is in), DISARMED by an orbit drag's travel (`orbitTravelMm` > 0) — an orbit drag keeps the orbit's pace at every distance,
- * never switched mid-drag into the slide (1 mm of piece per mm of finger: ~10× slower, then stopped at the face's edge — measured). ⛔ (2026-11-01) an orbit
- * drag ARMED it: since §22 the piece close in keeps the contour's depth, the latch caught nearly every close-in drag.
- */
+/** ⭐ (2026-11-01) Armed again (after the slide mode was left): an approach step inward (`approachTaken` < 0: down is in) or an orbit drag's travel. */
 export function slideArmedAfter(armed: boolean, approachTaken: number, orbitTravelMm: number): boolean {
-  if (approachTaken < 0) return true;
-  if (orbitTravelMm > 0) return false;
-  return armed;
+  return armed || approachTaken < 0 || orbitTravelMm > 0;
 }
 /**
  * ⭐⭐⭐ (2026-11-01, the owner: *"blend the camera movements at entering or exiting the sliding mode - approach mode"*) — the slide view's share by TIME in
