@@ -329,6 +329,25 @@ function arcAt(L: CutLoop, i: number): number {
 export { loopLength };
 
 /**
+ * ⭐⭐⭐ (2026-11-07, §30 G — F2: both lines through the gizmo) A LINE's TRAVEL MOVED ACROSS ONTO `a`: `comp`'s plane (its loop's) moved through `a`, its normal
+ * kept; the place moved along that normal into it — its own way ALONG the line (its arc 0) kept, only the coordinate ACROSS the line taken from `a`.
+ * ⛔ The place projected onto the shell along the facet's normal: the way along the line taken from `a` too — a window's shift applied twice.
+ */
+export function travelAcross(facets: readonly TravelFacet[], tr: Travel, a: Vec3, comp: "x" | "y"): Travel {
+  const f = facets[tr.facet]!;
+  const fr = faceFrame(f.n, f.cap, tr.axis);
+  const want = comp === "x" ? fr.right : fr.up;
+  const pi = Math.abs(dot(tr.planes[0].n, want)) <= Math.abs(dot(tr.planes[1].n, want)) ? 0 : 1;
+  const n = tr.planes[pi]!.n;
+  const k = dot(n, a) - dot(n, tr.p);
+  if (Math.abs(k) < 1e-12) return tr;
+  const p: Vec3 = [tr.p[0] + n[0] * k, tr.p[1] + n[1] * k, tr.p[2] + n[2] * k];
+  const moved = planeThrough(a, n);
+  const planes: readonly [Plane, Plane] = pi === 0 ? [moved, tr.planes[1]] : [tr.planes[0], moved];
+  return { ...tr, p, planes };
+}
+
+/**
  * ⭐⭐⭐ (§26.2 V3 – V4) WHERE THE PLACE `p` STANDS ON A LOOP's SIDE of facet `fi` — the loop the plane cuts (the travel's own), the side's two ends, the
  * TURN's share from its start `a` to its end `b` (0 … 1, the pace's — the edge stretch included: the travel's `sideAngle`), and the facets beyond its two
  * ends (the faces this loop's travel reaches next). `null`: no loop, or the loop does not run over `fi` there.

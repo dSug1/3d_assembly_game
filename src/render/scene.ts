@@ -550,7 +550,6 @@ export function createScene(
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;
-  st.asmCast = null;
   st.loop = null;
   st.approach = 1;
   st.approachInertia = new OrbitInertia();

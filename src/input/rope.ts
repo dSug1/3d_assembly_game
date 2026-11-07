@@ -16,6 +16,12 @@
  * * R5 — THE GIZMO NEVER WAITS: its place on the rope is the rope's length at `s`; where the rope advances slower than `MIN_PACE` of the track (a corner the
  *   rope wraps: zero length for the strip of track beyond the real face), the length is spread over a window round it (≤ `WINDOW_MAX_M` each side) so the
  *   gizmo slows there but always moves; outside every window it is exactly the landing at `s`.
+ * ⭐⭐⭐ (2026-11-07, §30.3) the owner's D1 – D6:
+ * * R3 — a void now means a place OUTSIDE its face's run as well (S2, the wiring's `land`): the rope rounds the edge to the next face's first landing.
+ * * R6 — A VOID WITH A PATH BEYOND (D2a, Q2b): bridged LEVEL at the depth of the landing it leaves — the one nearer arc 0 (outward from the gizmo; a void
+ *   under the gizmo: the outer one) — then a step along the normal at the far side, jumped (⛔ §29's straight chord: a slanted line).
+ * * R7 — A NARROW RECESS (Q1c): a dip below the landing it leaves that comes back up within less than `w` (the piece's width) along the face is bridged
+ *   at that level (both rims: the nearer arc 0's; under the gizmo: the outer one).
  * ⛔ ENGINE-FREE.
  */
 import { dot, type Vec3 } from "../core/vec";
@@ -64,7 +70,7 @@ type Sample = { s: number; q: RopePlace; L: Landing | null };
  * ⭐⭐⭐ THE ROPE over the arc `[from, to]` of a loop of length `total` (`closed`: the reach is the whole loop): `at(s)` the place, `land(q)` its landing.
  * Sampled every `step`, refined (halvings) only where a step or a void's edge lies between two samples.
  */
-export function buildRope(at: (s: number) => RopePlace, land: (q: RopePlace) => Landing | null, from: number, to: number, step: number, total: number): Rope {
+export function buildRope(at: (s: number) => RopePlace, land: (q: RopePlace) => Landing | null, from: number, to: number, step: number, total: number, w: number = 0): Rope {
   const sample = (s: number): Sample => {
     const q = at(s);
     return { s, q, L: land(q) };
@@ -109,21 +115,35 @@ export function buildRope(at: (s: number) => RopePlace, land: (q: RopePlace) => 
     refine(base[i - 1]!, base[i]!, 0, fine);
     fine.push(base[i]!);
   }
-  // the vertices: the landings in order; a step's corner (R2); a void spanned straight (R3)
+  if (w > 0) bridgeNarrow(fine, w);
+  // the vertices: the landings in order; a step's corner (R2); a void across (R6: level, then the far side's step) or round the edge (R3)
   const verts: RopeVertex[] = [];
   let last: Sample | null = null;
   let inVoid = false;
+  const lift = (L: Landing, n: Vec3, dd: number): Vec3 => [L.point[0] + n[0] * dd, L.point[1] + n[1] * dd, L.point[2] + n[2] * dd];
   for (const x of fine) {
     if (x.L === null) {
       if (last !== null) inVoid = true;
       continue;
     }
-    if (last !== null && !inVoid && last.L !== null && last.q.facet === x.q.facet) {
+    if (last !== null && last.L !== null && last.q.facet === x.q.facet) {
       const dd = depthGap(last, x);
-      if (Math.abs(dd) > STEP_TOL_M) {
-        const n = last.q.n;
-        const c: Vec3 = [last.L.point[0] + n[0] * dd, last.L.point[1] + n[1] * dd, last.L.point[2] + n[2] * dd];
-        verts.push({ p: c, s: last.s, n, host: null, void: false });
+      const n = last.q.n;
+      if (!inVoid) {
+        if (Math.abs(dd) > STEP_TOL_M) verts.push({ p: lift(last.L, n, dd), s: last.s, n, host: null, void: false });
+      } else if (Math.abs(dd) > STEP_TOL_M) {
+        // R6 — level at the depth of the landing it leaves (the one nearer arc 0; under the gizmo the outer one), the step at the far side
+        const leaveLast = last.s >= 0 ? true : x.s <= 0 ? false : dd < 0;
+        if (leaveLast) {
+          verts.push({ p: lift(x.L, n, -dd), s: x.s, n, host: null, void: true });
+          verts.push({ p: x.L.point, s: x.s, n: x.q.n, host: x.L.host, void: false });
+        } else {
+          verts.push({ p: lift(last.L, n, dd), s: last.s, n, host: null, void: false });
+          verts.push({ p: x.L.point, s: x.s, n: x.q.n, host: x.L.host, void: true });
+        }
+        inVoid = false;
+        last = x;
+        continue;
       }
     }
     verts.push({ p: x.L.point, s: x.s, n: x.q.n, host: x.L.host, void: inVoid });
@@ -131,6 +151,46 @@ export function buildRope(at: (s: number) => RopePlace, land: (q: RopePlace) => 
     last = x;
   }
   return { verts, from, to };
+}
+
+/**
+ * ⭐⭐ R7 — the narrow recesses bridged (in place): a run of samples below the landing before it (or voids) on one face, closed by a landing back above
+ * the run within `w` of the rim, is lifted to the rim's level — the rim nearer arc 0; a run holding arc 0: the outer rim.
+ */
+function bridgeNarrow(fine: Sample[], w: number): void {
+  const level = (x: Sample): number => (x.L === null ? -Infinity : dot(x.L.point, x.q.n));
+  for (let i = 0; i + 2 < fine.length; i++) {
+    const a = fine[i]!;
+    if (a.L === null) continue;
+    const la = level(a);
+    const first = fine[i + 1]!;
+    if (first.q.facet !== a.q.facet || !(first.L === null || level(first) < la - STEP_TOL_M)) continue;
+    // the run below the rim: closed by a STEP back up (a landing above the sample before it by more than a step — the rim beyond, even lower than `a`)
+    let closed = -1;
+    for (let k = i + 2; k < fine.length; k++) {
+      const x = fine[k]!;
+      if (x.q.facet !== a.q.facet || x.s - a.s >= w) break;
+      if (x.L === null) continue;
+      const prev = fine[k - 1]!;
+      if (level(x) >= la - STEP_TOL_M || prev.L === null || level(x) > level(prev) + STEP_TOL_M) {
+        closed = k;
+        break;
+      }
+    }
+    if (closed < 0) continue;
+    const b = fine[closed]!;
+    const lb = level(b);
+    // the rim it leaves: nearer arc 0 (a run holding arc 0: the outer)
+    const rim = a.s >= 0 ? la : b.s <= 0 ? lb : Math.max(la, lb);
+    for (let j = i + 1; j < closed; j++) {
+      const x = fine[j]!;
+      const n = x.q.n;
+      const base = x.L === null ? x.q.p : x.L.point;
+      const dd = rim - dot(base, n);
+      fine[j] = { s: x.s, q: x.q, L: { point: [base[0] + n[0] * dd, base[1] + n[1] * dd, base[2] + n[2] * dd], host: x.L?.host ?? a.L.host } };
+    }
+    i = closed - 1;
+  }
 }
 
 /** ⭐ The rope's cumulative length at each vertex. */
@@ -211,10 +271,10 @@ function pointAtLength(r: Rope, lam: readonly number[], l: number): { p: Vec3; i
  * ⭐⭐⭐ THE GIZMO ON THE ROPE at the track's arc `s` (R5): the rope's length there (spread over the slow windows), its point; the part when it lies on a
  * landing's segment (not a void's); `null`: a rope with no landing at all.
  */
-export function ropeAt(r: Rope, s: number): { readonly p: Vec3; readonly n: Vec3; readonly host: string | null; readonly overVoid: boolean } | null {
+export function ropeAt(r: Rope, s: number): { readonly p: Vec3; readonly n: Vec3; readonly host: string | null; readonly overVoid: boolean; readonly sOn: number } | null {
   const v = r.verts;
   if (v.length === 0) return null;
-  if (v.length === 1) return { p: v[0]!.p, n: v[0]!.n, host: v[0]!.host, overVoid: false };
+  if (v.length === 1) return { p: v[0]!.p, n: v[0]!.n, host: v[0]!.host, overVoid: false, sOn: v[0]!.s };
   const lam = lengths(r);
   let l = lamAt(r, lam, s);
   for (const w of windows(r, lam)) {
@@ -227,7 +287,11 @@ export function ropeAt(r: Rope, s: number): { readonly p: Vec3; readonly n: Vec3
   }
   const at = pointAtLength(r, lam, l);
   const end = v[at.i]!;
-  return { p: at.p, n: end.n, host: end.void ? null : end.host, overVoid: end.void };
+  // the arc of the point ON the rope (where the drawn line holds it — a window moves it along the rope, off arc `s`)
+  const i0 = Math.max(0, at.i - 1);
+  const seg = lam[at.i]! - lam[i0]!;
+  const sOn = seg > 1e-12 ? v[i0]!.s + ((end.s - v[i0]!.s) * (l - lam[i0]!)) / seg : end.s;
+  return { p: at.p, n: end.n, host: end.void ? null : end.host, overVoid: end.void, sOn };
 }
 
 /** ⭐ The rope as drawn: its polyline clipped to the reach `[from, to]` (a segment crossing an end cut there, by arc). */

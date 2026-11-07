@@ -1604,3 +1604,102 @@ front while the place crossed the top, on the rope's chord between that landing 
 landings by R1 (and deported faces by the owner's §27 definition — same normal, edges continuous in projection), so R3's void rule never applies there:
 the rope does not round the edge, it plunges. ⏳ **The owner's decision**: what may be landed on — a depth limit below the facet's real face (a slider),
 the cast restricted to the facet's own face region, or as built.
+
+### 29.4 The sections' shapes on the device's build (`24eadc1`) — the owner: *"the behaviors (gizmo, piece, camera) are very good now. However, the red and green sections are absolutely intricate and violate all the times the rule that they should be planes"*
+The probe now records each rope every frame (`rs`: vertices, steps, voids, the deepest landing below the track, the gizmo's distance to each line, the
+longest chord) and screenshots (`SHOT_EVERY`, `SHOT_END`). 16 long walks (s46, 108 861 frames) and 4 × 4000 px close in (s47), the ropes dumped and
+plotted in their planes:
+* Every rope point lies in its plane (within 1 mm) and steps are rare (> 5 in 1 – 4 % of frames) — the planes are right; what breaks them on the screen:
+* **M1 — PLUNGES** (the red's 94 % of frames, median 455 mm): on a cap or a side most of the shell is a strip beyond the real face, and R1 lands there on a
+  part far below (the bottom row's protrusion 48 cm under the top) — the rope runs down in front of the painting and back: a second line beside the first.
+* **M2 — THE OTHER LINE MISSES THE GIZMO** (> 30 mm in 88 % of frames): the gizmo is on the rope it travels, but over a strip there is no landing under the
+  place — R3 / R5 put the gizmo on a chord or a corner 50 – 240 mm (median, caps) from the place, while the other line's plane goes through the place:
+  the line is joined to the gizmo by a diagonal connector. By face: front / back 39 %, sides 65 %, tops 94 %, bottoms 96 %.
+* ⭐ **The root: `Scene_1` is a 33 mm painting with parts proud of it; its shell's top and bottom are 110 mm deep** — under ~70 % of a cap there is nothing
+  within reach. A box track cannot be narrower there (RC4 again, in its strip form).
+* Measured on a temporary build (reverted): **F1 a depth limit** (a landing more than 80 mm below the track is a void) — plunges 94 % → **0 %**; **F2 both
+  lines through the gizmo** (their planes through it, not through the place) — the other line off the gizmo on the front / back 39 % → **4 %**; on the caps
+  still 87 – 93 % (the strip). ⏳ The owner's decision on F3 (the caps).
+
+## 30. ⭐⭐⭐ THE RULE SET — D1 – D6 (2026-11-07, branch `1.0.106-` from `d926b88`; the owner: *"write the D1-D6 specifications, then proceed with build (or rebuild if this is required to avoid patching with contradicting rules)"*)
+The decisions were taken on two pages: the rule set (artifact `T6SSU3jKxpQYEb4szbBUMN`, section 0) and the four questions (artifact `VzRiV6YqvksPr2BYcnJLZ2`,
+each answered *"as recommended"*). This section is the specification; §29's R1 (*"any surface, at any depth"*) and R3's straight chord over a void are
+superseded by it.
+
+### 30.1 The fundamental rules (they bind every rule below)
+* **F1** The gizmo follows dx and dy: the finger's way, never waits, never goes back.
+* **F2** The red and green sections are cuts of the assembly by world-axis planes through the gizmo; they show where dy / dx would take it; both pass through it.
+* **F3** The gizmo is where A + dy AIMS (the owner: *"I don't care if the piece is stopped by another part during the A + dy"*).
+* **F4** The camera is never upside down — the built edge crossings and tilts are NOT revisited (the owner).
+* **F5** The piece never goes into a part (contact allowed). **F6** The piece and camera follow smoothly, the scene the finger's way. **F7** No dead ends.
+
+### 30.2 The decisions
+* **D1 — what the finger moves.** The gizmo, along the two sections. ⚠ **Realised as:** the finger still moves the travel's place on the shell with the
+  BUILT pace (each face in its share of the turn, T2 – T5 of §22 / §26 unchanged) — the view and the camera read that place, exactly as built (F4: not
+  revisited; the camera cannot regress). The gizmo is a function of the place that runs along the section without ever going back or waiting (S2, R5),
+  so dx / dy move it along the section at the built pace, not by millimetres of line. The shell is no longer cast from for a landing outside its run (S2).
+* **D2 — voids** (the owner's own rules): D2a a void with a path beyond it on the same section is bridged; D2b1 a void at the contour's edge that the
+  other section bridges is filled up to and including that section (it reaches the gap's lower lip — Q3 confirmed), the tilt there; D2b2 any other void
+  at the contour's edge: the section rounds the last face's edges.
+* **D3 — protrusions**: the line climbs over them, the step drawn along the normal, the gizmo jumps it (§29 R2, kept).
+* **D4 — the approach**: far out as built (the feel kept); inside the shell straight along the normal to the gizmo — no sideways back-and-forth.
+* **D5 — the shell following the piece in**: not needed — nothing is cast from the shell (S1), the lines lie on the real parts.
+* **D6 — edges**: the section rounds the outline's corner, the gizmo follows; the view is the place's (D1), so it has nothing to blend.
+* **Q1 (c)** a recess at least as wide as the piece is followed at any depth (its floor a landing); a narrower one is bridged. **Q2 (b)** a bridge stays
+  at the level it leaves, the step at the far side (jumped). **Q3** confirmed (above). **Q4 (b)** an overhang's underside is a step, drawn and jumped
+  (aimed at only from the bottom loop).
+
+### 30.3 The rules as built (owner: `input/section.ts` S1 – S3, `input/rope.ts` R1 – R7; the wiring holds the calls)
+* **S1 — THE SECTION, EXACT.** Each placed part is convex: its cut by a section's plane is the convex hull of the crossings of its vertex pairs (exact);
+  a cast is the first crossing of a line in the plane with those polygons (exact) — the ropes no longer pick meshes.
+* **S2 — EACH FACE OWNS ITS RUN (fixes §29.4 M1, the plunges).** A side of the travel's loop (facet `f`, its corners with the facets before / after)
+  owns the part of the section between the section's SUPPORT POINTS in the two corners' bisector directions (`(n_f + n_prev)`, `(n_f + n_next)` —
+  extreme points of the cut and of the fill, S3); a place whose coordinate along the side lies outside that run casts nothing: it is a void at the
+  contour's edge (R3 rounds). ⭐ The back face's protrusion 48 cm below a top is in the BACK's run, never the top's.
+* **S3 — THE FILL (D2b1).** A point of the plane is filled when parts lie on both sides of it along the plane's normal (the other section's way) and
+  either the line through it along the horizontal axis of the plane facing the wall (the other section's wall normal) is clear of parts — a void the
+  other section bridges (D2a) — or the gap along the normal is narrower than the piece (`w`) — the other section bridges it (Q1c). A cast lands on the
+  first of a part or the fill.
+* **R1 — a landing** (kept): the first surface (S1 – S3) straight in along the facet's normal, within the run (S2).
+* **R2 — a step** (kept, D3, Q4b): drawn along the normal, the gizmo jumps it.
+* **R3 — a void at the contour's edge** (kept, D2b2): the rope goes from the last landing to the next face's first — round the edge.
+* **R4 — a track edge** (kept).
+* **R5 — the gizmo never waits** (kept): the slow windows.
+* **R6 — a void with a path beyond (D2a, Q2b)**: bridged LEVEL at the depth of the landing it leaves (outward from the gizmo: the one nearer arc 0), then a
+  step along the normal at the far side (the gizmo jumps it). ⛔ §29's straight chord (a slanted line).
+* **R7 — a narrow recess (Q1c)**: a dip below the level it leaves that comes back up within less than the piece's width `w` along the run is bridged at
+  that level. `w` = the shorter side of the piece's resting face.
+* **G — F2**: the other section's plane goes through the GIZMO (⛔ through the place): its loop is cut through the gizmo's projection onto the shell along
+  the facet's normal; where the gizmo lies on a surface both ropes meet there exactly; over a void the gizmo is a vertex of both (as built).
+* **A1 – A3 — the approach (D4)**: far out the piece is along the view from the GIZMO (⛔ from the place) at the approach's distance; below the shell it is
+  on the gizmo's normal line, blended in from the view's line over the first 20 mm; the approach and a drag back out move it along that line only. The
+  gizmo does not move during an approach (nothing moves the place). ⚠ The camera's look point is the place's, as built (F4).
+* ⚠ **P4 (the slide on what the piece rests on)**: measured again before any change — the §29 probes' "22 mm above the gizmo" was the piece's CENTRE
+  (its resting face at contact); the latch reach is 20 mm.
+
+### 30.4 Built (2026-11-07, branch `1.0.106-`) — what changed against §30.3, and why
+* **Owners.** `input/section.ts` (S1 – S3: `buildSection`, `sectionCast`, `sectionSupport`, `sectionRuns`, `sectionLanding`, `fillAxis`, `faceWidth`);
+  `input/rope.ts` (R6, R7 — `bridgeNarrow`; `ropeAt` gives the gizmo's arc on the rope, `sOn`, where the drawn line holds it); `input/loop_travel.ts`
+  (`travelAcross`, below). The wiring holds the calls: the parts' model-pose vertices and ids (`placedParts`), the sections cached by plane, the piece's
+  width, a few ropes per line by key. ⛔ Deleted: the mesh cast (`modelCast`, `realAlong`, `castParts`, the scratch ray), `swayRay`, `rayMeetsBox` and
+  `st.asmCast` — nothing picks a mesh for a line or the gizmo any more.
+* ⭐⭐⭐ **G, as built — BOTH lines through the gizmo** (the first walks, s51: with only the OTHER line moved through the gizmo, a dy on a top over the
+  strip BEHIND the painting cut the green through the place — only an overhang (`Piece44`) in that plane — and pulled the gizmo 78 mm sideways; IN FRONT
+  of it the green landed on the protrusions 30 – 56 cm below). Each rope keeps the place's own way ALONG it (its arc 0) and takes the coordinate ACROSS
+  it from the other line (`travelAcross`: the plane moved through a point along its own normal, the place with it): the travelled line at the place →
+  the other line across onto that → the travelled line again across onto the other's: THE GIZMO; the other line drawn through it.
+* **S2's tolerance INWARD** (a place nearer a run's end than 0.5 mm is out — ⛔ outward: a cast at a top's very edge passed beside `Piece44`'s tip onto
+  `Piece45`, 30 cm below — three vertices, a sliver of plunge).
+* ⚠ **Deviations to know.** D1: the gizmo moves along its line at the BUILT pace (the faces' shares of the turn), not by millimetres of line — the
+  camera's rules are not touched (F4). R6 / R7 "the level it leaves" is read OUTWARD FROM THE GIZMO (the side nearer arc 0), so a bridge's step moves to
+  the other side when the gizmo crosses the void. S3's narrow test uses each part's whole extent along the plane's normal (exact for boxes). The piece's
+  width `w` is its resting face's narrowest width (`faceWidth`), for both lines.
+* **Measured before the deploy** (headless, the dev server): the gizmo and both lines cost 0.9 ms a frame (p50), 2.3 ms (p90), 4.1 ms (p99) — four
+  ropes read a frame, the sections cached by plane. The back-and-forth (the five §30 sequences: up onto a top or a bottom, A + dy, then drags and A + dy
+  alternating): each drag 77 – 203 mm sideways → **0 – 5 mm**; A + dy straight down the normal, the piece's centre 22 mm above the gizmo (its resting face
+  at contact). Two walks (s52, 4 258 frames): the other line > 30 mm off the gizmo — red 88 % → 0 %, green 88 % → 14 %; the green's landings > 100 mm
+  below its shell 1 % (⚠ that measure counts the real ragged ends too — `Scene_1`'s right end is a column 0.44 m lower than the shell's top).
+* **Vectors** (1632): `section.test.ts` (11 — S1, S2's run and the plunge refused, S3's fill to the lower lip and the slot by the piece's width,
+  `faceWidth`, `travelAcross`), `rope.test.ts` R6 × 2, R7 × 1; `sway_cast.test.ts` rewritten (the model pose, exact); the wiring strings moved
+  (`rebuild_wiring`, `assembly_orbit`); the audit's finding-1 vectors deleted with `rayMeetsBox`. Mutants, each RED: R6 off (the chord), R7 off, S2 off
+  (any depth), S3 off (no fill), the support without the fill, `travelAcross` projecting along the facet's normal.

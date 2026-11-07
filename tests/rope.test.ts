@@ -92,6 +92,34 @@ describe("⭐⭐⭐ §29 THE ROPE — the sections tightened round the assembly,
     }
   });
 
+  it("⭐⭐⭐ §30 R6 (Q2b) — A VOID TO A DEEPER FACE: bridged LEVEL at the depth it leaves (the side nearer the gizmo), the step at the far side, jumped; the gizmo over the void at the near depth (⛔ `d926b88`: a slanted chord — 50 mm at the middle)", () => {
+    const { at, land } = front((x) => (x < 0.1 ? 0.08 : x < 0.2 ? null : 0.02));
+    const r = buildRope(at, land, -0.3, 0.3, STEP, 10);
+    // the corner at the far side: x = 0.2 (the first landing beyond), at the near depth
+    expect(r.verts.some((v) => Math.abs(v.p[0] - 0.2) < 0.0003 && Math.abs(v.p[2] - 0.08) < 1e-9)).toBe(true);
+    for (const s of [0.12, 0.15, 0.19]) expect(ropeAt(r, s)!.p[2]).toBeCloseTo(0.08, 9);
+    // no slanted segment anywhere
+    const d = ropeDrawn(r);
+    for (let i = 1; i < d.length; i++) expect(Math.abs(d[i - 1]!.p[2] - d[i]!.p[2]) < 1e-9 || Math.abs(d[i - 1]!.p[0] - d[i]!.p[0]) < 3e-4).toBe(true);
+  });
+
+  it("⭐⭐ §30 R6 — the same void seen from the far side (the gizmo beyond it): the level is the gizmo's side's, the step at the side away from it", () => {
+    const { at, land } = front((x) => (x < -0.2 ? 0.02 : x < -0.1 ? null : 0.08));
+    const r = buildRope(at, land, -0.3, 0.3, STEP, 10);
+    expect(r.verts.some((v) => Math.abs(v.p[0] + 0.2) < 0.0003 && Math.abs(v.p[2] - 0.08) < 1e-9)).toBe(true);
+    for (const s of [-0.12, -0.15, -0.19]) expect(ropeAt(r, s)!.p[2]).toBeCloseTo(0.08, 9);
+  });
+
+  it("⭐⭐⭐ §30 R7 (Q1c) — A RECESS NARROWER THAN THE PIECE is bridged at the level it leaves; as wide as the piece or wider, followed to its floor (⛔ `d926b88`: every recess followed)", () => {
+    const { at, land } = front((x) => (x > 0.1 && x < 0.13 ? 0.02 : 0.08)); // a 30 mm recess, 60 mm deep
+    const bridged = buildRope(at, land, -0.3, 0.3, STEP, 10, 0.05); // the piece 50 mm
+    for (const v of ropeDrawn(bridged)) expect(v.p[2]).toBeCloseTo(0.08, 9);
+    expect(ropeAt(bridged, 0.115)!.p[2]).toBeCloseTo(0.08, 9);
+    const followed = buildRope(at, land, -0.3, 0.3, STEP, 10, 0.02); // the piece 20 mm: it fits
+    expect(ropeDrawn(followed).some((v) => Math.abs(v.p[2] - 0.02) < 1e-9)).toBe(true);
+    expect(ropeAt(followed, 0.115)!.p[2]).toBeCloseTo(0.02, 9);
+  });
+
   it("⭐ a slanted face is no step: the rope follows it, no corner inserted", () => {
     const { at, land } = front((x) => 0.05 - 0.5 * Math.max(0, x)); // a 27° slope from x = 0
     const r = buildRope(at, land, -0.2, 0.2, STEP, 10);
