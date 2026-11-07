@@ -1604,3 +1604,19 @@ front while the place crossed the top, on the rope's chord between that landing 
 landings by R1 (and deported faces by the owner's §27 definition — same normal, edges continuous in projection), so R3's void rule never applies there:
 the rope does not round the edge, it plunges. ⏳ **The owner's decision**: what may be landed on — a depth limit below the facet's real face (a slider),
 the cast restricted to the facet's own face region, or as built.
+
+### 29.4 The sections' shapes on the device's build (`24eadc1`) — the owner: *"the behaviors (gizmo, piece, camera) are very good now. However, the red and green sections are absolutely intricate and violate all the times the rule that they should be planes"*
+The probe now records each rope every frame (`rs`: vertices, steps, voids, the deepest landing below the track, the gizmo's distance to each line, the
+longest chord) and screenshots (`SHOT_EVERY`, `SHOT_END`). 16 long walks (s46, 108 861 frames) and 4 × 4000 px close in (s47), the ropes dumped and
+plotted in their planes:
+* Every rope point lies in its plane (within 1 mm) and steps are rare (> 5 in 1 – 4 % of frames) — the planes are right; what breaks them on the screen:
+* **M1 — PLUNGES** (the red's 94 % of frames, median 455 mm): on a cap or a side most of the shell is a strip beyond the real face, and R1 lands there on a
+  part far below (the bottom row's protrusion 48 cm under the top) — the rope runs down in front of the painting and back: a second line beside the first.
+* **M2 — THE OTHER LINE MISSES THE GIZMO** (> 30 mm in 88 % of frames): the gizmo is on the rope it travels, but over a strip there is no landing under the
+  place — R3 / R5 put the gizmo on a chord or a corner 50 – 240 mm (median, caps) from the place, while the other line's plane goes through the place:
+  the line is joined to the gizmo by a diagonal connector. By face: front / back 39 %, sides 65 %, tops 94 %, bottoms 96 %.
+* ⭐ **The root: `Scene_1` is a 33 mm painting with parts proud of it; its shell's top and bottom are 110 mm deep** — under ~70 % of a cap there is nothing
+  within reach. A box track cannot be narrower there (RC4 again, in its strip form).
+* Measured on a temporary build (reverted): **F1 a depth limit** (a landing more than 80 mm below the track is a void) — plunges 94 % → **0 %**; **F2 both
+  lines through the gizmo** (their planes through it, not through the place) — the other line off the gizmo on the front / back 39 % → **4 %**; on the caps
+  still 87 – 93 % (the strip). ⏳ The owner's decision on F3 (the caps).
