@@ -1,5 +1,8 @@
 # `IN3` — rules 1–3 (one touchpoint)
 
+> ⛔⛔ **CURRENT STATE (2026-11-06) — RETIRED.** The parts' translation, rotation and alignment were deleted on 2026-11-02 (every press is the orbit's:
+> [`../../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md`](../../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md)). This dossier is the record of what was built and judged.
+
 > ⛔ **CURRENT STATE (2026-09-27)** — the row is BUILT; this dossier is its record. Deleted since:
 > `FOLLOW` (`D106`), eviction, both shakes, `shake.ts` and the re-press undo (`D107`), the flick and
 > the rotation reset (`D110`), the fuchsia offer and the pinned Pioneer (`D109`). Unalign = tap empty

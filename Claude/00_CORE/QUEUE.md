@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · what gets built next, for the whole project
 > **READ IF** · you are starting any build, or wondering where an item stands
-> **LAST VERIFIED** · 2026-09-28
+> **LAST VERIFIED** · 2026-11-06
 
 ⛔ **THIS IS THE ONLY QUEUE.** Do not start a second list anywhere else, and do not reorder it.
 
@@ -22,10 +22,10 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: the second rebuild (`1.0.104-` from `8dfa635`) — scope §26 – §27** (deployed; 1620 vectors; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
+✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: the second rebuild (`1.0.104-` from `8dfa635`) — scope §26 – §29** (1622 vectors; ⭐ §29 the track the shell, the sections ropes, the gizmo never waits — branch `1.0.105-`; §28 the deep debug, nothing built; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1645 golden vectors, all passing** — MEASURED 2026-11-05 (the count's home; the scope's §19).
+✅ `npm run verify`: **1622 golden vectors, all passing** — MEASURED 2026-11-07 (the count's home; the scope's §29).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 
@@ -292,8 +292,8 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | IN0 | Units, motion states, flick test (⛔ flick deleted, `D110`) | IN | feature | ✅ **CLOSED**, and §1.1 has had **FOUR formulations** — the first three all broke on a real pointer. ⭐ Now a **per-axis position deadband** (`A11`): time-free, exact, and robust by construction rather than by a threshold above a measurement. ⚠ `motionDeadbandMm` is the most load-bearing number in the input layer. ⭐⭐ **The most instructive file in the project** → [`queue_notes/IN0.md`](queue_notes/IN0.md) | — |
 | IN1 | ⭐⭐ The recognizer state machine — PRESSED / COMMITTED_CONTINUOUS / TAP, provisional motion + rollback, release-time priority | IN | feature | ✅ **CLOSED 2026-09-14.** **7 device passes, 14 defects none of which a green suite could see** → [`queue_notes/IN1.md`](queue_notes/IN1.md) | IN0 |
 | IN2 | Pointer plumbing: two touchpoints, roles latched at press (§4) | IN | feature | ✅✅ **CLOSED 2026-09-14**, confirmed by finger — `src/input/router.ts`, engine-free and generic over an opaque handle. ⭐⭐ **ITS LATCH HAS NO EXCEPTIONS AGAIN** since `D54`. ⭐ The 2026-09-18 **stale grip** (orbit AND zoom dead): ✅ fixed 2026-11-04 — a lost window releases every pointer (`forgetPointers`, the audit) → [`queue_notes/IN2.md`](queue_notes/IN2.md) | IN1, IN8 |
-| IN3 | Rules 1–3 (one touchpoint): select, free rotate, flick-to-align, roll, constrained rotate | IN | feature | ✅✅ **THE ALIGNMENT MODEL IS CLOSED BY A DEVICE LOOK (2026-09-17)** — tap-to-align (**anti-parallel** since `D78`, capped at one), both faces marked, the twist, an eased slerp. ⛔ Since judged away: `FOLLOW` (`D106`), both undos (`D107`), the flick (`D110`). ⛔ **NOT built**: `TargetPosition`, its gizmo, the orbit, the approach. ✅✅ `D73`’s increments closed 2026-09-22, shipping at **0**. ⛔ **`D87`/`D90` (the inverted roles, the swap) are BUILT AND UNJUDGED**; the fuchsia offer is deleted (`D109`) — spec §11 → [`queue_notes/IN3.md`](queue_notes/IN3.md) | IN1, 3D1 |
-| IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach, mate flick | IN | feature | ✅✅ **RULE 6 CLOSED 2026-09-15** — by finger, its gain **computed**. ⛔⛔ **ITS SCREEN-PLANE FORM IS SUPERSEDED** (`D75`/`D76`): a body translates along **its own axes**, the finger’s delta solved onto both horizontal ones. ⛔ `D145`: along the LIVE camera's right and view, flattened. ⚠ Unjudged again; `screenTranslation`/`depthTranslate` are deleted (`D109`). ⛔ 6bis onward still wait on face centres → [`queue_notes/IN4.md`](queue_notes/IN4.md) | IN2, 3D1 (6bis onward only) |
+| IN3 | Rules 1–3 (one touchpoint): select, free rotate, align, roll | IN | feature | ⛔ **RETIRED 2026-11-02** — the parts' translation, rotation and alignment deleted (every press is the orbit's) → [`../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md`](../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md); the record → [`queue_notes/IN3.md`](queue_notes/IN3.md) | — |
+| IN4 | Rules 4–6 (two touchpoints): zoom, translate, mutual approach | IN | feature | ⛔ **RETIRED 2026-11-02** with the parts' moves; the zoom lives on (`IN9`), the approach is the orbited piece's (scope §22.6 A1) → [`queue_notes/IN4.md`](queue_notes/IN4.md) | — |
 | IN5 | ⚠ **MEASURE every config default on a real device.** None is derived | IN | measurement | queued, ⭐⭐ **practical without a rebuild**: every tunable overrides from the URL. ✅ `pointerNoiseMm` = **0.761 mm** is the one number MEASURED, and measuring it exposed a defect eight device passes had accepted. ⛔⛔ **A TRAP TO READ BEFORE BOOKING A SESSION**: several tunables are READ but sit OFF the gesture path, so `config_debt` sees them used while they change nothing → [`queue_notes/IN5.md`](queue_notes/IN5.md) | IN3 |
 | IN6 | Undo: pose snapshot stack per object (§6) | IN | feature | ✅ **BUILT as one scene history** (`D111`): a double tap undoes the last action — ⭐ only on a body that action MOVED (`D141`) — `core/undo_history.ts`, `render/undo_wiring.ts`. ⛔ Unjudged ⭐ A gesture that changes nothing costs 0 (`D157`/`D158`) → [`queue_notes/IN6.md`](queue_notes/IN6.md) | IN1 |
 | IN7 | Haptics: lock / mate / rejected patterns (§6) | IN | feature | queued. ⛔⛔ **iOS Safari has NO Vibration API** — on iOS this needs the native Capacitor Haptics plugin, so §6's haptic requirement is not deliverable on web-iOS at all | IN1, DEP2 |
@@ -310,8 +310,8 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 |---|---|---|---|---|---|
 | 3D0 | Mate connectors + residual; constraint stack + solver | 3D | feature | ✅ **built 2026-09-13**, carried and covered | — |
 | 3D1 | The object model: id, placement, connectors, assembly tree (parent ≠ root) | 3D | feature | ✅✅ **CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `core/object_model.ts`, engine-free. ⭐⭐ Its vectors were written FIRST and **falsified on purpose** — breaking the composition turns 14 of 42 red → [`queue_notes/3D1.md`](queue_notes/3D1.md) | 3D0 |
-| 3D2 | Snap transform + capture radius + seat | 3D | feature | ✅ **SNAP, SEAT, UNSNAP BUILT 2026-09-26** (`D100`, §11.13), ⛔ unjudged by a hand. ⚠ Owed: the approach and the mate connector → [`queue_notes/3D2.md`](queue_notes/3D2.md) | 3D1 |
-| 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⭐⭐ **THE BREAK GESTURE IS SPECIFIED** (`D47`): two fingers, one on each mated object, pulling **apart along the centre→centre direction** past a `BreakThreshold` (slider). ⭐ `3D2`'s **seat** now exists (`D100`), so a mate holds POSITION and a break is no longer *moving*; ⛔ the break itself is not built → [`../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md`](../10_INPUT_TOUCH/spec/APPROACH_AND_MATE.md) §8 | 3D2 |
+| 3D2 | The approach to the goal + the mate (snap, seat) | 3D | feature | ⏳ **TO REWRITE round the ORBITED PIECE** (2026-11-06): its snap / seat / unsnap (`D100`) served the deleted alignment; next after the hover (`HOVER.md` §0) → [`queue_notes/3D2.md`](queue_notes/3D2.md) | the hover |
+| 3D3 | Break on residual, and re-arm on exit | 3D | feature | ⛔ **RETIRED 2026-11-02** — a break between mated PARTS; the parts no longer move → [`queue_notes/3D3.md`](queue_notes/3D3.md) | — |
 | 3D4 | Real 3D file import (glTF) | 3D | feature | queued → `30_OBJECTS_3D/spec/MATERIALS_AND_IMPORT.md` | 3D1 |
 | 3D5 | ⚠ The tree has never held more than two objects | 3D | risk | carried, unclosed | 3D1 |
 | 3D6 | ⛔⛔⛔ **COLLISION — no penetration** (build #1): stop+slide on translation, same-axis clamp on rotation, snapping/seated rules, broad phase | 3D | feature | ✅ **BUILT 2026-09-27**; defect 72 fixed; ⭐ `D136`: contact allowed, only penetration refused (the slots of `Scene_1` were unreachable); ⛔ unjudged; feedback beyond the HUD is `GM9` → `COLLISION.md` §8–§9 | 3D1 |
@@ -324,8 +324,8 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | # | Item | Sub | Kind | Status | Dep |
 |---|---|---|---|---|---|
 | RND0 | Scene stub: camera, **three boxes**, face picking | RND | feature | ✅ built 2026-09-13 — diagnostic only. ⚠ **Three, not two** (`objectA`/`B`/`C`), and the third is deliberately **off-axis and off-plane**: three collinear objects put every barycentre on one line where the ray cannot tell them apart, so §2 rule 1 would look tested while exercising nothing. `2³ − 3 − 1 = 4` candidates | — |
-| RND1 | Constraint visibility: per-entry glyphs, hard vs soft (§6) | RND | render | queued | 3D1 |
-| RND2 | Mate preview: ghost + drop line | RND | render | queued | 3D2 |
+| RND1 | Constraint visibility: per-entry glyphs, hard vs soft (§6) | RND | render | ⛔ **RETIRED 2026-11-02** — no part is constrained any more → [`queue_notes/RND1.md`](queue_notes/RND1.md) | — |
+| RND2 | Mate preview: ghost + drop line | RND | render | ⏳ to rewrite with `3D2` (the orbited piece's goal) → [`queue_notes/RND2.md`](queue_notes/RND2.md) | 3D2 |
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
 

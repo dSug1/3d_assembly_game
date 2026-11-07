@@ -26,7 +26,7 @@ function rect(axis: 0 | 1 | 2, sign: 1 | -1, level: number, a0: number, a1: numb
 }
 
 describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
-  it("⭐⭐⭐ G1 / G1s (§27.2) — THE TRACK AT THE REAL FACE, THE SHELL CLEAR OF EVERY PART: a part proud of the front makes no facet of its own; the front's track at its real face (50 mm), its shell at the support (90 mm); every part's vertex inside every facet's SHELL half-space (⛔ §22.1: the track itself at the support — strips with no face under them)", () => {
+  it("⭐⭐⭐ G1 (§29) — THE TRACK IS THE SHELL, CLEAR OF EVERY PART: a part proud of the front makes no facet of its own; the front's track at the parts' support (90 mm — ⛔ §27: at its real face, 50 mm: faces beyond an inner plane cut off); every part's vertex inside every facet's half-space", () => {
     const faces = [
       rect(2, -1, -0.05, -0.25, 0.25, 0, 0.6), // the front
       rect(2, -1, -0.09, 0, 0.1, 0.2, 0.3), // a part proud of it, 40 mm
@@ -41,18 +41,21 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     const fm = buildFaceMap(faces, { lo: [-0.25, 0, -0.09], hi: [0.25, 0.6, -0.017] });
     expect(fm.facets.length).toBe(6);
     const front = fm.facets.find((f) => f.n[2] < -0.9)!;
-    expect(front.e).toBeCloseTo(0.05, 12);
-    expect(front.es).toBeCloseTo(0.09, 12);
+    expect(front.e).toBeCloseTo(0.09, 12);
+    expect(front.es).toBe(front.e);
     for (const f of fm.facets) for (const fc of faces) for (const tr of fc.tris) for (const v of tr) expect(f.n[0] * v[0] + f.n[1] * v[1] + f.n[2] * v[2]).toBeLessThanOrEqual(f.es + 1e-12);
-    // P1 reads the shell: from the front's track straight out, the shell is left 40 mm on; slantwise, farther
-    expect(shellExit(fm.facets, [0, 0.3, -0.05], [0, 0, -1])).toBeCloseTo(0.04, 12);
-    expect(shellExit(fm.facets, [0, 0.3, -0.05], [0, Math.SQRT1_2, -Math.SQRT1_2])).toBeCloseTo(0.04 * Math.SQRT2, 9);
+    // P1: the place IS on the shell — it is left at once, straight out or slantwise
+    expect(shellExit(fm.facets, [0, 0.3, -0.09], [0, 0, -1])).toBeCloseTo(0, 12);
+    expect(shellExit(fm.facets, [0, 0.3, -0.09], [0, Math.SQRT1_2, -Math.SQRT1_2])).toBeCloseTo(0, 9);
   });
-  it("⭐⭐⭐ P1 / Gz2 (§27.2) wired — the piece from where the view leaves the SHELL; the lines' ends at the face's edge (halved), never the last sample", () => {
+  it("⭐⭐⭐ P1 / §29 wired — the piece from the shell along the view; THE ROPES: every place's landing straight in, the gizmo on the rope of the line last travelled at its own place (never waiting), the lines the ropes (⛔ `gizmoCase`'s gap: the gizmo waited)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const t0 = shellExit(L.map.facets, L.p, u);");
     expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
-    expect(a).toContain("const e = edgeBetween(prevArc, a);");
+    expect(a).toContain("return buildRope(at, (q) => landingOf(st, q), from, to, LINE_STEP_M, total);");
+    expect(a).toContain("const on = own === null ? null : ropeAt(own, 0);");
+    expect(a).toContain("const pts = ropeDrawn(r);");
+    for (const gone of ["gizmoCase", "edgeBetween", "surfaceAt", "else if (L.gz === null)"]) expect(a).not.toContain(gone);
   });
 
   it("⭐⭐⭐ T6 — ONLY THE FINGER MOVES THE TRAVEL: the drag and the coast call `loopFinger` (dx right, dy up, mm); the orbit's angles follow the shown direction; ⛔ the frame turns and the angle-grid gizmo gone", () => {
@@ -81,16 +84,14 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");
   });
 
-  it("⭐⭐⭐ (§26) V5 and Gz0 – Gz3 — the camera from the SHOWN view alone (world yaw and pitch, never past the zenith); the gizmo by `gizmoCase` at its own place, the lines the planes' cuts through it, followable only", () => {
+  it("⭐⭐⭐ (§26) V5 and (§29) the ropes — the camera from the SHOWN view alone (world yaw and pitch, never past the zenith); the gizmo at its own place (the planes' common line onto G1), the ropes through it, followable only", () => {
     const a = code("render/assembly_wiring.ts");
     // ⭐⭐⭐ (§26.2 V5) the camera from the shown view alone — no cone, no carried up, no pace
     expect(a).toContain("return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);");
     for (const gone of ["upTarget", "nextCarried", "viewAllowed", "paceUp", "capCameraClamp", "separationBetween", "nearestPoint", "calmDir"]) expect(a).not.toContain(gone);
-    // ⭐⭐⭐ (§26.4) Gz0 per line; the gizmo at its own place (the planes' common line onto G1); in a gap it waits; the lines through it, followable only
-    expect(a).toContain("const c = gizmoCase(mf.groups, dot(p, mf.t), dot(p, mf.b), comp);");
+    // ⭐⭐⭐ the gizmo at its own place (the planes' common line onto G1); the ropes through it, followable only (the travel's reach)
     expect(a).toContain("const c = onContour(L.map.facets, L.p, d);");
-    expect(a).toContain("if (hit !== null) L.gz = { point: hit.point, normal: hit.normal, host: hit.host, travel: gt };");
-    expect(a).toContain("const r = travelReach(L.facets, g.travel, comp, o, crossOk);");
-    expect(a).toContain("if (v !== null && prev !== null) out.push([prev, v]);");
+    expect(a).toContain("const r = travelReach(L.facets, gt, comp, o, crossOk);");
+    expect(a).toContain("const R = ropesOf(st, L, g.travel);");
   });
 });

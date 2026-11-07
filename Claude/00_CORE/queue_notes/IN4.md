@@ -1,5 +1,8 @@
 # `IN4` — rules 4–6 (two touchpoints)
 
+> ⛔⛔ **CURRENT STATE (2026-11-06) — RETIRED** with the parts' moves (2026-11-02). The pinch zoom lives on (`IN9`); the approach is the orbited
+> piece's (`TILTED_ORBIT_REBUILD_SCOPE.md` §22.6 A1). The text below is the record.
+
 > ⛔ **CURRENT STATE (2026-09-27)**: `D109` deleted `worldAxisB=0`, the `CHANNELS` mapping
 > (`translatePairing`), `screenTranslation`, `depthTranslate`, the zone-enter hook and the pinned
 > Pioneer; the boot frame and the solved `PLANE` mapping are the only rules. `D123`: a free body's
