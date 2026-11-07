@@ -58,7 +58,8 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     expect(fm.facets.length).toBe(6);
     expect(fm.facets.every((f) => f.real && [0, 1, 2].some((k) => Math.abs(Math.abs(f.n[k]!) - 1) < 1e-12))).toBe(true);
     expect(facetCount(fm)).toEqual({ sides: 4, columns: 4, real: 6 });
-    // ⭐⭐⭐ (§27.2) the box's six planes: the TRACK at the real faces, the SHELL — the front and the top — pushed out to the overhang's support
+    // ⭐⭐⭐ (§29) the box's six planes: THE TRACK IS THE SHELL — the front and the top pushed out to the overhang's support (⛔ §27: the track at the real
+    // faces, the overhang outside it)
     const sv = slant.tris.flatMap((tr) => [...tr]);
     const front = Math.min(...sv.map((p) => p[2]));
     const top = Math.max(...sv.map((p) => p[1]));
@@ -66,7 +67,8 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     const whole: ShellBox = { lo: [box.lo[0], box.lo[1], Math.min(box.lo[2], front)], hi: [box.hi[0], Math.max(box.hi[1], top), box.hi[2]] };
     const fw = buildFaceMap(faces, whole, { mergeDeg: 20, minShare: 0.25 });
     expect(fw.facets.length).toBe(6);
-    for (const [k, lo] of [[0, true], [0, false], [1, true], [1, false], [2, true], [2, false]] as const) expect(lo ? fw.core.lo[k] : fw.core.hi[k]).toBeCloseTo(lo ? box.lo[k]! : box.hi[k]!, 12);
+    for (const [k, lo] of [[0, true], [0, false], [1, true], [1, false], [2, true], [2, false]] as const) expect(lo ? fw.core.lo[k] : fw.core.hi[k]).toBeCloseTo(lo ? whole.lo[k]! : whole.hi[k]!, 12);
+    for (const f of fw.facets) expect(f.e).toBe(f.es);
     expect(fw.facets.find((f) => f.n[2] < -0.9)!.es).toBeCloseTo(-front, 12);
     expect(fw.facets.find((f) => f.n[1] > 0.9)!.es).toBeCloseTo(Math.max(box.hi[1], top), 12);
     // a share of a tenth asked: the slanted plane is CHOSEN as a facet (its real face ~14 % of its polygon) — ⭐⭐⭐ (§24.1) then pushed out to the parts'

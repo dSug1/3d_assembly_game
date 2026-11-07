@@ -164,75 +164,6 @@ export function filledRegion(rects: readonly Rect2[]): FilledRegion {
   return { xs, ys, filled, real: inRect };
 }
 
-/** ⭐ The cell index of `v` among the sorted cuts `cs` (the cell `[cs[i], cs[i+1]]` holding it; on a cut, the cell after it); −1 outside. */
-function cellOf(cs: readonly number[], v: number): number {
-  if (cs.length < 2 || v < cs[0]! || v > cs[cs.length - 1]!) return -1;
-  let lo = 0;
-  let hi = cs.length - 1;
-  while (hi - lo > 1) {
-    const m = (lo + hi) >> 1;
-    if (cs[m]! <= v) lo = m;
-    else hi = m;
-  }
-  return lo;
-}
-
-/** ⭐ Is (`x`, `y`) in the region (its holes closed)? On a cell's edge, either neighbour filled counts. */
-export function regionContains(r: FilledRegion, x: number, y: number): boolean {
-  const i = cellOf(r.xs, x);
-  const j = cellOf(r.ys, y);
-  if (i < 0 || j < 0) return false;
-  const ny = r.ys.length - 1;
-  const at = (a: number, b: number): boolean => a >= 0 && b >= 0 && a < r.xs.length - 1 && b < ny && r.filled[a * ny + b] === 1;
-  if (at(i, j)) return true;
-  // on a cut: the cell before it too
-  const onX = Math.abs(x - r.xs[i]!) < 1e-12;
-  const onY = Math.abs(y - r.ys[j]!) < 1e-12;
-  return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
-}
-
-/** ⭐ Is a FACE at (`x`, `y`) — a cell in one of the region's rectangles (not a hole)? On a cell's edge, either neighbour counts. */
-export function regionReal(r: FilledRegion, x: number, y: number): boolean {
-  const i = cellOf(r.xs, x);
-  const j = cellOf(r.ys, y);
-  if (i < 0 || j < 0) return false;
-  const ny = r.ys.length - 1;
-  const at = (a: number, b: number): boolean => a >= 0 && b >= 0 && a < r.xs.length - 1 && b < ny && r.real[a * ny + b] === 1;
-  if (at(i, j)) return true;
-  const onX = Math.abs(x - r.xs[i]!) < 1e-12;
-  const onY = Math.abs(y - r.ys[j]!) < 1e-12;
-  return (onX && at(i - 1, j)) || (onY && at(i, j - 1)) || (onX && onY && at(i - 1, j - 1));
-}
-
-/**
- * ⭐⭐⭐ (2026-11-05) THE VOID CLOSED ON A TRAVEL: the regions `rs` (one plane's) hold (`x`, `y`) between them along `x` — a filled cell before it and one
- * after it on the line `y` — or along `y` (the line `x`). On a facet `x` is its `t` (the green's travel on a side) and `y` its `b` (the red's).
- */
-export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): { readonly x: boolean; readonly y: boolean } {
-  let xLo = false;
-  let xHi = false;
-  let yLo = false;
-  let yHi = false;
-  for (const r of rs) {
-    const ny = r.ys.length - 1;
-    const i = cellOf(r.xs, x);
-    const j = cellOf(r.ys, y);
-    if (j >= 0)
-      for (let a = 0; a < r.xs.length - 1; a++) {
-        if (r.filled[a * ny + j] !== 1) continue;
-        if (r.xs[a]! < x) xLo = true;
-        if (r.xs[a + 1]! > x) xHi = true;
-      }
-    if (i >= 0)
-      for (let b = 0; b < ny; b++) {
-        if (r.filled[i * ny + b] !== 1) continue;
-        if (r.ys[b]! < y) yLo = true;
-        if (r.ys[b + 1]! > y) yHi = true;
-      }
-  }
-  return { x: xLo && xHi, y: yLo && yHi };
-}
-
 /** ⭐ A closed region's area (m²): its filled cells'. */
 export function regionArea(r: FilledRegion): number {
   const ny = r.ys.length - 1;
@@ -476,20 +407,21 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       const c = candOf(n, false, 0);
       return { ...c, e: n[0] > 0 ? box.hi[0] : n[0] < 0 ? -box.lo[0] : n[2] > 0 ? box.hi[2] : -box.lo[2] };
     });
-  // ⭐⭐⭐ (2026-11-06, scope §27.2) THE TRACK AND THE SHELL: each chosen facet at ITS REAL FACE's plane (its main group) — the track the travel, the view,
-  // the gizmo and the lines read; and its SHELL offset, the placed parts' SUPPORT along its normal (the farthest vertex) — convex, every part inside it:
-  // the piece's place alone reads it (P1). ⛔ (§22.1) the track itself pushed to the support: long strips of it with no real face under them, the gizmo
-  // waiting there (*"gizmo stuck in the position while the dy orbit is working"*).
+  // ⭐⭐⭐ (2026-11-07, scope §29 — the owner: *"the shell: each face at the outermost point can work if the cast from P to G is properly done"*) THE TRACK
+  // IS THE SHELL: each chosen facet (its normal by D5, its main group's real face) at the placed parts' SUPPORT along its normal (the farthest vertex) —
+  // convex, closed, every part inside it; the travel, the view and the piece read it; the gizmo and the lines are the landings of casts from it
+  // (`input/rope.ts`). ⛔ (§27) the track at each face's largest flat region: faces beyond an inner neighbour's plane cut off, loops through the parts.
   const supportOf = (n: Vec3): number => {
     let m = -Infinity;
     for (const f of faces) for (const tr of f.tris) for (const v of tr) m = Math.max(m, dot(n, v));
     return m;
   };
-  const all: Candidate[] = [...sides, capT, capB];
-  const shellE = all.map((c) => {
+  const chosen: Candidate[] = [...sides, capT, capB];
+  const all: Candidate[] = chosen.map((c) => {
     const sup = supportOf(c.n);
-    return Number.isFinite(sup) && sup > c.e ? sup : c.e;
+    return Number.isFinite(sup) && sup > c.e ? { ...c, e: sup } : c;
   });
+  const shellE = all.map((c) => c.e);
   const planes = all;
   const facets: Facet[] = all.map((c, i) => {
     const { t, b } = facetFrame(c.n);

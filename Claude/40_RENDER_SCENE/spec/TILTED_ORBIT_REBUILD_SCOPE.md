@@ -1068,7 +1068,7 @@ owner's look.
 
 ## 22. ⭐⭐⭐ THE CLEAN SPECIFICATION — the rebuild of the sections as plane cuts (2026-11-06, branch `1.0.103-` from `8dfa635`; the owner: *"proceed with rebuild"* — BEING BUILT, step by step)
 
-> ⛔⛔ **§28 (the deep debug, NOT BUILT): RC4 – RC5 put G1 (one plane per face) and the cast-built sections in question (RC6 withdrawn) — read it before touching them.** ⭐⭐⭐ **§27 (the track and the shell; deported faces) amends G1, P1 and Gz0 – Gz2.** ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
+> ⭐⭐⭐ **§29 (2026-11-07, BUILT): the track is the shell, the sections are ropes, the gizmo never waits — it supersedes §27.2 (G1 / G1s / Gz0 / Gz2) and §28.4.** ⛔⛔ **§28 (the deep debug): RC4 – RC5 put G1 (one plane per face) and the cast-built sections in question (RC6 withdrawn) — read it before touching them.** ⭐⭐⭐ **§27 (the track and the shell; deported faces) amends G1, P1 and Gz0 – Gz2.** ⭐⭐⭐ **§26 (the second rebuild, branch `1.0.104-` from `8dfa635`) REPLACES P2, C1 – C3, T5, Gz2 and Gz3 below** — the view by world yaw and pitch (no roll), the sections as plane cuts of the real parts, followable only.
 
 > The owner (2026-11-06): *"I do not want fixes with logics which contradict each other. There are lot of proposed fixes with new rules and this seems to
 > create such risk. I would prefer a full rebuild without adding new rules for fixes"* → *"I would rebuild from 8dfa635 with a clean specification in the
@@ -1433,7 +1433,7 @@ nearest edge of each kind, or the loops' ends weighted by their length).
 owner's (i): 45°), so the cap's dy runs 45° off the screen's vertical — the gizmo slides down-right while the finger pushes left against a held edge. A
 consequence of (i) at a cap's corners; noted, not changed.
 
-### 27.2 The rules (replacing §22.1's G1, P1's reading of it, §26.4 Gz0 – Gz2 where they differ)
+### 27.2 ⛔ SUPERSEDED BY §29 (the track at the support again; the landing and the rope instead of Gz0) — The rules (replacing §22.1's G1, P1's reading of it, §26.4 Gz0 – Gz2 where they differ)
 * **G1 — THE TRACK** (owner: `face_map.ts`): the faces contour with each facet at ITS REAL FACE's plane (its main group — Step 5's, D5's facets): what the
   travel (T1 – T6), the view (V1 – V5), the gizmo and the lines read. ⛔ The track pushed to the parts' support.
 * **G1s — THE SHELL** (owner: `face_map.ts`, the facet's `es`): the same facets pushed out to the placed parts' SUPPORT — convex, every part inside. Read by
@@ -1517,7 +1517,7 @@ changes of direction, 0 page errors.** Analysed per change (the 45 frames after 
 | **RC5** | **A section is a DEPTH MAP, not a plane cut.** Every line sample and the gizmo are a cast straight in along the facet's normal (`surfaceAt`): a face PARALLEL to that ray (the red part's bottom seen from the front) is never landed on — the gizmo jumps across it, the line breaks | the 481 depth jumps (some are §27.2 Gz0 3's designed jump onto a deported face — ⏳ not yet split) | §26.4 *"the lines the planes' cuts of the real parts"* × the cast that builds them |
 | ~~RC6~~ | ⛔ **WITHDRAWN** (the owner: *"I can't reproduce … I can see no issue on far edges nor at corners"*; re-read on the frames): the 355 "spinning" frames are the dx YAW the view is meant to take (V3 – V4: the yaw follows the entry wall's across its width) seen from near straight above / below (`w0_s11` 455 – 462: on the top, e = 87°, dx −, the yaw 82° → 49° over 7 frames) — looking down, a yaw IS a turn of the picture about the view, which my metric (the up's turn against the view direction's) counted as a spin; per frame it is inflated by the probe's bursty input (a 9° frame, then two of 0°). The 45° dy at a top's corner (§27.1) arises only with the dx held at the cap's side edge and a finger mostly sideways: the small dy left is the only motion — real, too small to be seen. | — |
 
-### 28.4 Proposals — ⛔ NOT ADOPTED, NOT BUILT (the owner deepens the analysis first)
+### 28.4 Proposals — ⛔ NOT ADOPTED; the owner chose instead the shell with a proper cast (§29)
 * **For RC4 + RC5 — the gizmo travels ON the real sections.** The green and red sections the TRUE plane cuts of the placed parts (their outer outline in
   each plane); dx moves the gizmo along the green outline, dy along the red, by arc length, at the travel's pace — a step walked along, never jumped;
   faces at every depth on the outline (none cut off), no strips, the gizmo always where the two outlines meet. The void rules map onto it: a void closed
@@ -1542,3 +1542,65 @@ changes of direction, 0 page errors.** Analysed per change (the 45 frames after 
 5. The true outline as a path: one closed loop from a cut that may give several (parts apart, an overhang, a slot through), holes, the way round; a dx
    walking up a step's side (the gizmo along it, the view not) — and the owner's §21 closed-loop condition met by construction, not by a guard.
 6. Replay each of the owner's four mid-run reports in the app with the travel's state (`lt`) — confirm the cause named above for each, not by inference.
+
+## 29. ⭐⭐⭐ THE TRACK IS THE SHELL; THE SECTIONS ARE ROPES; THE GIZMO NEVER WAITS (2026-11-07, branch `1.0.105-`; supersedes §27.2 and §28.4)
+
+> The owner (2026-11-06/07): *"I think the shell: each face at the outermost point can work if the cast from P to G is properly done and we define properly
+> what face it is casted on or not casted on. At the end, the gizmo shall indicate to the user where would the piece land with A + dy so a recess or a face
+> far behind is still a valid landing point, the movement of the gizmo shall be in line with the delta position inputs … and the green and red sections
+> illustrate where the gizmo would be if the dx or dy were continuously followed (they shall be world axis planes and intersect at the gizmo)"* → the four
+> points decided: *"1- jump across the bottom segment 2- gizmo is a point, not the piece's footprint 3- nothing to land on: the gizmo shall not wait: it
+> shall follow the red or green section even if there is nothing to land. Remember: the red or green sections are like ropes tightened around the
+> assembly: if there is a void but the section can cross and continue behind the void then the section shall continue through the void and the gizmo shall
+> travel over the void, if the void is at the edge and there is nothing the rope can tighten to, the rope shall round around the edge and not be suspended
+> in the void … The gizmo therefore travels the red or green section and never waits (it looks like a bug for the user if the gizmo waits) 4- track's
+> corners: no issue if the gizmo jumps slightly from one face to the other face over the edge"* → *"Update the md files. Build"*.
+
+### 29.1 The rules (owner: `input/face_map.ts` G1, `input/rope.ts` R1 – R5; the wiring holds the calls)
+* **G1 — THE TRACK IS THE SHELL**: each facet (its normal by D5, as before) at the placed parts' SUPPORT along its normal (the outermost point) — convex,
+  closed, every part inside it. The travel (T1 – T6), the view (V1 – V6) and the piece (P1: on the shell, so it leaves it at once; A1) read it. ⛔ §27.2's
+  split (the track at the largest flat region — faces cut off, loops through the parts, RC4) and its `es` offset (now equal to `e`).
+* **R1 — THE LANDING**: at every place of a loop, a cast straight in along the facet's normal; the first real surface hit — any surface, at any depth (a
+  recess, a face far behind) — is where the piece would land with A + dy. A POINT, not the piece's footprint (decision 2). None: a VOID.
+* **R2 — A STEP** (a face parallel to the cast — the red part's bottom seen from the front): the rope draws the step along the normal (the landing before →
+  its corner at the next landing's depth → the next landing); the gizmo JUMPS across it (decision 1). Found by halving the sample interval (6 times:
+  0.19 mm) wherever two landings on one facet differ in depth by more than 2 mm — a slanted face converges, a step does not.
+* **R3 — A VOID**: the rope goes STRAIGHT from the last landing before it to the first after it — across the void when the line continues beyond it (the
+  gizmo travels over it), ROUND THE EDGE when it is open at the edge (the first landing after is the next face's: the rope wraps the corner, never hangs in
+  the air). A void reaching the drawn reach's end looks on along the loop for its landing. ⛔ Gz0's four cases (face / hole / deported / gap), D3's floor
+  for an open hole, the bridge on the face's plane — the landing and the rope decide every case.
+* **R4 — OVER A TRACK EDGE** the landings are joined as they are; the gizmo may jump slightly from one face to the other (decision 4).
+* **R5 — THE GIZMO NEVER WAITS**: it is the point of the rope of the line last travelled at its own place (arc 0), by the rope's length; where the rope
+  advances slower than 0.35 of the track's pace (a corner it wraps — zero length for the strip of shell beyond the real face), that length is spread over a
+  window round it (≤ 50 mm each side): the gizmo slows there and always moves; outside every window it is exactly the landing at the place.
+* **THE LINES** are the two ropes through the gizmo's own place (the planes' common line onto G1, as before), each drawn only as far as the travel
+  reaches (T5's edges, R4's stops); the gizmo a vertex of both. ⛔ §27.2 Gz2's line ends halved at a face's edge (no gap left to end at).
+* ⚠ **A consequence to judge on the device**: over a void the two ropes need not meet (the green spanning a notch in the air, the red wrapping the notch's
+  floor edge) — the gizmo is on the rope it travels, the other line is drawn through it (a short connector). Where both land, they meet exactly.
+
+### 29.2 Build and vectors
+`input/rope.ts` (`buildRope`, `ropeAt`, `ropeDrawn`), `face_map.ts` (the facets at the support), the wiring (`landingOf`, `ropesOf`, the gizmo on the rope,
+`sectionLinesFrame` from the ropes). Deleted: `input/gizmo_rule.ts` (`gizmoCase`, `mainGroup`), `surfaceAt`, the gizmo's wait, `edgeBetween`, the face
+map's `regionContains` / `regionReal` / `closedAlong` and `tests/void_bridge.test.ts`. Vectors: `tests/rope.test.ts` (5 — the step drawn along the normal
+and jumped, a void crossed, a void at the edge rounded with the gizmo never waiting, a void past the reach's end, a slope that is no step; four mutants
+each RED: no step corner, no window, no look past the reach, a void kept as a gap); `facets` / `rebuild_wiring` / `sway_cast` moved to G1 at the support
+and the ropes; **1622 vectors**.
+
+### 29.3 The long walks on §29 (`1.0.105-`, uncommitted; the s44 seeds — 16 walks × 8000 px, 107 140 frames, 881 changes, 0 page errors)
+| check | s44 (`9fdb829`, §27) | s45 (§29) |
+|---|---|---|
+| against the finger after a change · stuck · back-and-forth | 0 · 0 · 0 | **0 · 0 · 0** |
+| the gizmo still while the travel moves ≥ 20 mm — walls | 19 runs | **3** |
+| — caps | 22 | 32, all in a HELD context (the travel stopped at an edge) |
+| the gizmo jumping sideways / in depth (> 15 mm, > 3 × the travel's step) | 282 / 481 | ⛔ **1 172 / 1 304** |
+| the gizmo more than 100 mm below the track — front / back · top · sides · bottom | 0 everywhere | ⛔ **0 % · 42 % · 69 % · 70 %** (median 40 · 57 · 244 · 165 mm) |
+| frame time (median, four headless browsers) | 99 ms | 104 ms |
+
+⛔⛔ **THE FINDING — R1's "any surface, at any depth" on a shell much wider than the faces.** `Scene_1` is a thin painting (33 mm between its front and back
+planes) with parts proud of both (the shell's front at z = −0.092, its back at +0.018: 110 mm deep). On a top or a bottom most of the shell lies OUTSIDE
+the painting's real top / bottom, and the cast there goes past the face's edge onto whatever protrudes below / above — a proud part 25 – 48 cm away
+(replayed: dy up the front onto the top at x = 0.104 — the top's casts at z < −0.0505 land at y = 0.0155, 48 cm below the top; the gizmo then ran DOWN the
+front while the place crossed the top, on the rope's chord between that landing and the top's). The same on the sides (ragged ends 75 mm apart). These are
+landings by R1 (and deported faces by the owner's §27 definition — same normal, edges continuous in projection), so R3's void rule never applies there:
+the rope does not round the edge, it plunges. ⏳ **The owner's decision**: what may be landed on — a depth limit below the facet's real face (a slider),
+the cast restricted to the facet's own face region, or as built.
