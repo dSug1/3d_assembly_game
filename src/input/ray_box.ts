@@ -1,7 +1,6 @@
 /**
- * ⭐⭐ (2026-11-04, the audit) **DOES A RAY SEGMENT MEET A BOX?** — the slab test, the face map's pre-reject: a section line casts up to ~600 rays a frame,
- * each against every placed part (`modelCast`, `render/assembly_wiring.ts`); a part whose model-space box the ray misses is skipped before any mesh test.
- * ⚠ CONSERVATIVE by `margin` (a hit on the box's skin is never refused); a zero direction component is a slab the origin must lie in.
+ * ⭐ (2026-11-04, the audit) THE BOX ROUND A SET OF POINTS — each placed part's model-space box. ⛔ (2026-11-07, §30 S1) `rayMeetsBox`, the mesh casts'
+ * slab pre-reject — DELETED with the casts (the sections are exact cuts of the parts' vertices).
  *
  * ⛔ ENGINE-FREE.
  */
@@ -24,27 +23,4 @@ export function boxOf(points: readonly Vec3[]): Box3 | null {
     }
   }
   return { lo, hi };
-}
-
-/** ⭐ `true` when the segment `origin + t·dir`, `t ∈ [0, length]` (`dir` a unit vector), meets `box` grown by `margin`. */
-export function rayMeetsBox(origin: Vec3, dir: Vec3, length: number, box: Box3, margin: number): boolean {
-  let t0 = 0;
-  let t1 = length;
-  for (let i = 0; i < 3; i++) {
-    const lo = box.lo[i]! - margin;
-    const hi = box.hi[i]! + margin;
-    const o = origin[i]!;
-    const d = dir[i]!;
-    if (Math.abs(d) < 1e-12) {
-      if (o < lo || o > hi) return false;
-      continue;
-    }
-    let a = (lo - o) / d;
-    let b = (hi - o) / d;
-    if (a > b) [a, b] = [b, a];
-    if (a > t0) t0 = a;
-    if (b < t1) t1 = b;
-    if (t0 > t1) return false;
-  }
-  return true;
 }

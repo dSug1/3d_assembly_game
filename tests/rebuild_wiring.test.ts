@@ -50,9 +50,12 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
   });
   it("⭐⭐⭐ P1 / §29 wired — the piece from the shell along the view; THE ROPES: every place's landing straight in, the gizmo on the rope of the line last travelled at its own place (never waiting), the lines the ropes (⛔ `gizmoCase`'s gap: the gizmo waited)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const t0 = shellExit(L.map.facets, L.p, u);");
-    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
-    expect(a).toContain("return buildRope(at, (q) => landingOf(st, q), from, to, LINE_STEP_M, total);");
+    // ⭐⭐⭐ (§30 A1) the piece from the shell along the view — from the GIZMO (⛔ from the place)
+    expect(a).toContain("const t0 = shellExit(L.map.facets, g, u);");
+    expect(a).toContain("if (d >= 0) return [S[0] + u[0] * d - L.p[0], S[1] + u[1] * d - L.p[1], S[2] + u[2] * d - L.p[2]];");
+    // ⭐⭐⭐ (§30 S1 – S3, R6, R7) each place's landing in its face's run on the exact section, the narrow recesses at the piece's width
+    expect(a).toContain("const runs = sectionRuns(sec, r.loop, L.facets);");
+    expect(a).toContain("rope = buildRope(at, (q) => sectionLanding(sec, runs.get(q.facet), L.facets[q.facet]!.cap, q, ids), from, to, LINE_STEP_M, total, sec.w);");
     expect(a).toContain("const on = own === null ? null : ropeAt(own, 0);");
     expect(a).toContain("const pts = ropeDrawn(r);");
     for (const gone of ["gizmoCase", "edgeBetween", "surfaceAt", "else if (L.gz === null)"]) expect(a).not.toContain(gone);
@@ -76,10 +79,12 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(g).toContain("st.pieceQ = rig; st.pieceTouching = false;");
   });
 
-  it("⭐⭐⭐ A1 / A2 — the approach above G1 along the direction, below it straight toward the gizmo; the depth the slide's only arm; below G1 the orbit takes no drag", () => {
+  it("⭐⭐⭐ A1 / A2 (§30 D4) — the approach above the shell along the view from the gizmo, below it on the GIZMO's NORMAL line (blended in over 20 mm) — never sideways (⛔ straight toward the gizmo from the view's exit: on a top 77 – 300 mm sideways a drag, back and forth); the depth the slide's only arm; below G1 the orbit takes no drag", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
-    expect(a).toContain("const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;");
+    expect(a).toContain("const T: Vec3 = [g[0] + n[0] * hS, g[1] + n[1] * hS, g[2] + n[2] * hS];");
+    expect(a).toContain("const w = Math.min(1, -d / NORMAL_BLEND_M);");
+    expect(a).toContain("const down = Math.min(hS, -d) * ws;");
+    expect(a).not.toContain("const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;");
     expect(a).toContain("st.slideArmed = d < 0;");
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");
   });
@@ -91,7 +96,11 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     for (const gone of ["upTarget", "nextCarried", "viewAllowed", "paceUp", "capCameraClamp", "separationBetween", "nearestPoint", "calmDir"]) expect(a).not.toContain(gone);
     // ⭐⭐⭐ the gizmo at its own place (the planes' common line onto G1); the ropes through it, followable only (the travel's reach)
     expect(a).toContain("const c = onContour(L.map.facets, L.p, d);");
-    expect(a).toContain("const r = travelReach(L.facets, gt, comp, o, crossOk);");
-    expect(a).toContain("const R = ropesOf(st, L, g.travel);");
+    expect(a).toContain("const r = travelReach(L.facets, tr, comp, travelOpts(st), crossOkOf(L));");
+    // ⭐⭐⭐ (§30 G, F2) BOTH lines through the gizmo: the travelled line at the place, the other across onto it, the travelled one again across onto the
+    // other's — the gizmo; the other drawn through the gizmo (⛔ through the place: over a strip the line missed the gizmo by 50 – 240 mm, or cut only an overhang)
+    expect(a).toContain("const r2 = ropeOf(st, L, travelAcross(L.facets, gt, g1, otherComp), otherComp);");
+    expect(a).toContain("const own = ropeOf(st, L, travelAcross(L.facets, gt, g2, ownComp), ownComp);");
+    expect(a).toContain("const other = ropeOf(st, L, travelAcross(L.facets, gt, gp, otherComp), otherComp);");
   });
 });

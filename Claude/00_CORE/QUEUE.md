@@ -22,10 +22,10 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: the second rebuild (`1.0.104-` from `8dfa635`) — scope §26 – §29** (1622 vectors; ⭐ §29 the track the shell, the sections ropes, the gizmo never waits — branch `1.0.105-`; §28 the deep debug, nothing built; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
+✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: the second rebuild (`1.0.104-` from `8dfa635`) — scope §26 – §30** (1632 vectors; ⭐ §30 the rule set D1 – D6: the sections exact, each face its run, the fill, both lines through the gizmo, the approach on the normal — branch `1.0.106-`; §29 the ropes `1.0.105-`; §28 the deep debug, nothing built; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1622 golden vectors, all passing** — MEASURED 2026-11-07 (the count's home; the scope's §29).
+✅ `npm run verify`: **1632 golden vectors, all passing** — MEASURED 2026-11-07 (the count's home; the scope's §30).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

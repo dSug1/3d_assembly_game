@@ -92,7 +92,7 @@ try {
         cz: window.__cause ?? null,
         lt: st.loop ? [st.loop.travel.facet, st.loop.travel.entry, st.loop.travel.planes.map((q) => q.n.map((x) => +x.toFixed(3))), st.loop.last, +st.loop.shown.h.toFixed(3), +st.loop.shown.e.toFixed(3)] : null,
         rs: (() => { const L = st.loop; if (!L || !L.ropes || !L.gz) return null; const pl = L.gz.travel.planes; const out = {};
-          for (const c of ["x", "y"]) { const r = L.ropes[c]; if (!r) { out[c] = null; continue; }
+          for (const c of ["x", "y"]) { const r = L.gz.ropes ? L.gz.ropes[c] : null; if (!r) { out[c] = null; continue; }
             const v = r.verts.filter((q, i, a) => q.s >= r.from - 1e-9 && q.s <= r.to + 1e-9);
             let steps = 0, voids = 0, deep = 0, len = 0, turns = 0, off = [0, 0];
             for (let i = 0; i < v.length; i++) { const q = v[i];
@@ -116,6 +116,20 @@ try {
           return [seg(0, half), seg(half, P.length)]; })() });
     } catch (e) { window.__recErr = String(e); } }); return true; })()`);
   if (!ok) throw new Error("no window.__st — is this the dev server (import.meta.env.DEV)?");
+  // LAND_EVERY=px (walk mode): every so many px, the approach SIMULATED in place (A + dy straight in until the parts stop it), where it stops against the
+  // gizmo, then the approach restored — one synchronous page task, no frame between
+  if (env.LAND_EVERY) await ev(`(async () => { window.__AW = await import("/src/render/assembly_wiring.ts"); window.__GB = await import("/src/render/green_box_wiring.ts"); window.__land = []; return 1; })()`);
+  const landTest = () => ev(`(() => { const st = window.__st, L = st.loop, AW = window.__AW, GB = window.__GB; if (!L || !L.gz || !st.pieceQ || st.hover !== null) return 0;
+    const G = st.asmGizmoAt.slice(), P = L.p.slice(), n = L.facets[L.gz.travel.facet].n, cap = !!L.facets[L.gz.travel.facet].cap, a0 = st.approach;
+    let zero = 0, it = 0; for (; it < 4000 && zero < 4; it++) { const m = AW.approachMove(st, -0.5 * GB.orbitDvPerMm(st)); zero = Math.abs(m) < 1e-9 ? zero + 1 : 0; }
+    const A = GB.ringAnchorAt(st, st.pieceQ); const v = [A[0] - G[0], A[1] - G[1], A[2] - G[2]]; const al = v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
+    const lat = Math.hypot(v[0] - al * n[0], v[1] - al * n[1], v[2] - al * n[2]);
+    const w = [G[0] - P[0], G[1] - P[1], G[2] - P[2]]; const wl = w[0] * n[0] + w[1] * n[1] + w[2] * n[2]; const gLat = Math.hypot(w[0] - wl * n[0], w[1] - wl * n[1], w[2] - wl * n[2]);
+    let blk = null; try { blk = GB.pieceSolverEnv(st).blocker?.(st.pieceQ) ?? null; } catch (e) { blk = "err"; }
+    const S = GB.ringAnchorAt(st, st.pieceQ);
+    st.approach = a0; st.approachInertia.stop();
+    window.__land.push({ leg: window.__leg, cap, n, ov: L.gz.normal === null, host: L.gz.host, G, P, A, miss: Math.hypot(...v) * 1000, along: al * 1000, lat: lat * 1000, gLat: gLat * 1000, gDepth: -wl * 1000, it, blk });
+    return 1; })()`);
   const vp = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));
   const [W, H] = vp;
   const top = Math.round(H * 0.42); // under the HUD
@@ -155,6 +169,23 @@ try {
     const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
     let k = 0;
     for (const [d, px] of JSON.parse(env.LEGS ?? '[["L",1400],["U",380],["R",1400],["D",380]]')) { k++; await leg(`c${k}${d}`, starts[d], dirs[d], Math.round(px / v)); }
+  } else if (mode === "seq") {
+    // MODE=seq SEQ='[["U",600],["A",300],["R",40],["A",60]]' — drags (L R U D, px) and approaches (A: A + drag up = in; AO: A + drag down = out), in order
+    const v = +(env.PXSTEP ?? 3);
+    const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
+    const starts = { L: [W - 20, (top + H) / 2], R: [20, (top + H) / 2], U: [W / 2, H - 15], D: [W / 2, top + 10] };
+    let k = 0;
+    for (const [d, px] of JSON.parse(env.SEQ)) {
+      k++;
+      if (d === "A" || d === "AO") {
+        await ev(`window.__leg = ${JSON.stringify(`s${k}${d}`)}`);
+        await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 });
+        let m = d === "A" ? [60, H - 40] : [60, top + 10]; await move("mousePressed", m, 1); await frame();
+        for (let j = 0; j < Math.round(px / v); j++) { m = [m[0], m[1] + (d === "A" ? -v : v)]; if (!inside(m)) break; await move("mouseMoved", m, 1); await frame(); }
+        await move("mouseReleased", m, 0); await send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 }); await sleep(1500);
+      } else await leg(`s${k}${d}`, starts[d], dirs[d], Math.round(px / v));
+      if (env.SHOT_SEQ) { const shot = await send("Page.captureScreenshot", { format: "jpeg", quality: 70 }); if (shot?.data) writeFileSync(join(DIR, `${OUT}_s${k}.jpg`), Buffer.from(shot.data, "base64")); }
+    }
   } else if (mode === "walk") {
     // ⭐⭐⭐ (2026-11-06, the owner: *"changes of input direction during long walks … at or just after singularities"*) LONG WALKS: one press per walk,
     // its direction changed mid-drag — every segment a different KIND (dx / dy / a mix) at 3 px a frame (a quarter of them FAST, 8 px); a change at a
@@ -208,6 +239,7 @@ try {
         }
         m = m2; await move("mouseMoved", m, 1); await frame();
         px += speed; left -= speed;
+        if (env.LAND_EVERY && Math.floor(px / +env.LAND_EVERY) !== Math.floor((px - speed) / +env.LAND_EVERY)) await landTest();
         // SHOT_EVERY=px: a screenshot every so many px of drag (the sections' shapes, looked at)
         if (env.SHOT_EVERY && Math.floor(px / +env.SHOT_EVERY) !== Math.floor((px - speed) / +env.SHOT_EVERY)) {
           const shot = await send("Page.captureScreenshot", { format: "jpeg", quality: 70 });
@@ -228,6 +260,7 @@ try {
     if (shot?.data) writeFileSync(join(DIR, `${OUT}_end.png`), Buffer.from(shot.data, "base64"));
   }
   if (env.AFTER) console.log("AFTER", await ev(env.AFTER));
+  if (env.LAND_EVERY) writeFileSync(join(DIR, `${OUT}_land.json`), await ev("JSON.stringify(window.__land)"));
   const rows = JSON.parse(await ev("JSON.stringify(window.__rec)"));
   const file = join(DIR, `${OUT}.json`);
   writeFileSync(file, JSON.stringify({ viewport: vp, recorderError: (await ev("window.__recErr ?? null")) ?? null, errors, rows }));
