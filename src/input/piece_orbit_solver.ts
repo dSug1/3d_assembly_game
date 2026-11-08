@@ -130,6 +130,38 @@ export function fitStride(env: SolverEnv, q: OrbitQ, s: QStep, t: number, maxM: 
   return 0;
 }
 
+/** ⭐⭐⭐ (2026-11-09, R4) A jump of the anchor at least this long (m) between two places of the ring a hair apart is a DISCONTINUITY, not travel. */
+export const RING_JUMP_M = 0.005;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R4) **WHERE THE RING JUMPS**: in the step `s` from `q`, past the share `lo` the stride already fitted, the
+ * place where the ANCHOR is discontinuous — bisected on the anchors alone (no gap query): each halving keeps the half whose chord is the longer, until the
+ * interval is a hair wide; a chord still ≥ `RING_JUMP_M` there is a jump. The share just past it is returned when the ring up to it fits `maxM` (the part
+ * before the jump is travel like any other); else `null` (no jump, or a smooth ring too long for the stride). ⛔ The conservative advancement treated a
+ * jump as travel: every stride holding it was longer than the clearance, so the stride shrank below it and the piece CONVERGED onto it, never crossing
+ * (the cube's 90° seam: 350 – 2100 frames still, every distance).
+ */
+export function ringJump(env: SolverEnv, q: OrbitQ, s: QStep, lo: number, maxM: number): number | null {
+  let a = lo;
+  let b = 1;
+  if (!(b > a)) return null;
+  let pa = env.anchor(plus(q, s, a));
+  let pb = env.anchor(plus(q, s, b));
+  for (let i = 0; i < 40 && b - a > 1e-9; i++) {
+    const m = (a + b) / 2;
+    const pm = env.anchor(plus(q, s, m));
+    if (dist(pa, pm) >= dist(pm, pb)) {
+      b = m;
+      pb = pm;
+    } else {
+      a = m;
+      pa = pm;
+    }
+  }
+  if (!(dist(pa, pb) >= RING_JUMP_M)) return null;
+  return arcLength(env, q, [s[0] * a, s[1] * a]) <= maxM ? b : null;
+}
+
 /** ⭐ The ring's Jacobian at `q`: how far the anchor moves per radian of yaw and per unit of `v` (metres) — finite differences. */
 export function ringJacobian(env: SolverEnv, q: OrbitQ): [Vec3, Vec3] {
   const h = 1e-4;
@@ -321,11 +353,23 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
       const tS = fitStride(env, q, rest, Math.min(1, (spare / travel) * 0.9), spare * 0.9);
       let t = tS;
       let gl: number | null = null;
+      // ⭐⭐⭐ (2026-11-09, R4) A RING DISCONTINUITY IS NOT A WALL: the stride fitted less than a quarter of its allowance — a jump of the anchor ahead
+      // (`ringJump`, anchors only) is crossed when the ring up to it fits and its LANDING is admissible (one query: admissibility reads the pose alone)
+      if (tS < 1 && arcLength(env, q, [rest[0] * tS, rest[1] * tS]) < spare * 0.9 * 0.25) {
+        const tj = ringJump(env, q, rest, tS, spare * 0.9);
+        if (tj !== null) {
+          const gj = gapAt(plus(q, rest, tj));
+          if (gj >= opt.gapM) {
+            t = tj;
+            gl = gj;
+          }
+        }
+      }
       // ⭐⭐ (2026-10-13, the third audit: *"the orbit slows down when the piece approaches another part"* — it crept PARALLEL to a part, 22 mrad
       // of a 1 rad swipe at 2 mm) the DIRECTIONAL stride: the gap to the NEAREST part along a straight translation is convex, its slope the
       // contact normal's — so it cannot close faster than `approach` per metre; every OTHER part is held to its own gap. Near a part only,
       // ≤ `DIRECTIONAL_MAX_M`, the landing (≥ the gap kept) and the midpoint (≥ half of it) checked — the ring's arc is not a straight line.
-      if (spare * 0.9 < DIRECTIONAL_MAX_M) {
+      if (gl === null && spare * 0.9 < DIRECTIONAL_MAX_M) {
         const n = normalAt(q);
         if (n !== null) {
           const J = ringJacobian(env, q);
@@ -690,7 +734,11 @@ export function orbitFrame(
   let queries = extra + r.queries;
   q = r.q;
   if (r.deferred) {
-    target = { yaw: q.yaw + r.rest[0], v: clampV(q.v + r.rest[1]), zoom: target.zoom };
+    // ⭐⭐⭐ (2026-11-09, R4) a deferred solve that made NO progress keeps no backlog beyond this frame's own input — ⛔ the whole rest kept: parked on a
+    // ring jump, the target ran hundreds of degrees ahead of the piece and a dy was carried in one vector with that yaw backlog (dead too)
+    const moved = !same(r.q, r.path[0]!);
+    const cap = (x: number, d: number): number => (moved ? x : Math.sign(x) * Math.min(Math.abs(x), Math.abs(d)));
+    target = { yaw: q.yaw + cap(r.rest[0], dyawIn), v: clampV(q.v + cap(r.rest[1], dvIn)), zoom: target.zoom };
   } else if (r.blocked) {
     target = q;
     if (same(r.q, r.path[0]!)) stopCoast = true;
