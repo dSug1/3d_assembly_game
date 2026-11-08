@@ -3,7 +3,7 @@
  * least gap, over every APPROACH's start, from the approaching piece to any other body then.
  * ⚠ A helper, not a test file — it holds no `it`.
  */
-import { SCENE_1 } from "../../src/content/scene_1";
+import { SCENE_1_TABLE as SCENE_1 } from "../../src/content/scene_1"; // ⭐ (2026-11-08) the demo plays the painting, not the level's cube
 import type { DemoPlan } from "@core/demo_plan";
 import { contourDims } from "@core/game_structure";
 import { gapBetween } from "@core/collision_shape";

@@ -45,6 +45,10 @@ function painting(id: string, at: (slot: Vec3) => Vec3): { world: World; slot: V
   return { world, slot };
 }
 
+/** ⭐ (2026-11-08, the cube) 5 cm CLEAR in front of Piece10's slot: its depth plus 5 cm (the painting's 3 cm-deep piece started 5 cm in front — a
+ * 48 cm-deep one starting 5 cm in front would already be in its slot, where a misaligned start is a 0 → 0 contact the rule allows). */
+const APART = contourDims(SCENE_1.bodies.find((b) => b.id === "Piece10")!)[2] * U + 0.05;
+
 const setup = (skinM: number): CollisionSetup => ({
   shapes: hullAtSpawn,
   bounds: boundsFromShapes(hullAtSpawn),
@@ -54,7 +58,7 @@ const setup = (skinM: number): CollisionSetup => ({
 describe("⭐⭐⭐ `D136` — a piece goes back into its ZERO-clearance slot", () => {
   it("⭐⭐ Piece10, pushed straight back from 5 cm in front, arrives (RED: stopped 33 mm short, blocked by Piece27)", () => {
     for (const skin of [0.001, 0.0003]) {
-      const { world, slot } = painting("Piece10", (s) => [s[0], s[1], s[2] - 0.05]);
+      const { world, slot } = painting("Piece10", (s) => [s[0], s[1], s[2] - APART]);
       const v = resolveMove(world, "Piece10", { position: slot, orientation: IDENTITY }, setup(skin));
       expect(v.blockedBy).toBeNull();
       expect(v.t).toBe(1);
@@ -63,21 +67,21 @@ describe("⭐⭐⭐ `D136` — a piece goes back into its ZERO-clearance slot", 
 
   it("⛔ a piece lined up WORSE than the tolerance is still refused — penetration, not contact", () => {
     // 2 mm too far left: it would sink 2 mm into Piece31, twice the 1 mm tolerance.
-    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.002, s[1], s[2] - 0.05]);
+    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.002, s[1], s[2] - APART]);
     const v = resolveMove(world, "Piece10", { position: [slot[0] - 0.002, slot[1], slot[2]], orientation: IDENTITY }, setup(0.001));
     expect(v.blockedBy).not.toBeNull();
     expect(v.t).toBeLessThan(1);
   });
 
   it("⭐ …and lined up WITHIN it, it slides in: the tolerance is what a hand has to hit", () => {
-    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.0005, s[1], s[2] - 0.05]);
+    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.0005, s[1], s[2] - APART]);
     const v = resolveMove(world, "Piece10", { position: [slot[0] - 0.0005, slot[1], slot[2]], orientation: IDENTITY }, setup(0.001));
     expect(v.blockedBy).toBeNull();
     expect(v.t).toBe(1);
   });
 
   it("⭐ the SLIDER sets that tolerance: a 3 mm allowance takes the 2 mm misalignment", () => {
-    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.002, s[1], s[2] - 0.05]);
+    const { world, slot } = painting("Piece10", (s) => [s[0] - 0.002, s[1], s[2] - APART]);
     const v = resolveMove(world, "Piece10", { position: [slot[0] - 0.002, slot[1], slot[2]], orientation: IDENTITY }, setup(0.003));
     expect(v.blockedBy).toBeNull();
   });

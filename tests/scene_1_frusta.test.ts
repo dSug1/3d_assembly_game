@@ -113,9 +113,11 @@ describe("⭐⭐ the overhangs of Scene_1 (2026-10-29)", () => {
     expect(Math.abs(qRotate(q, [1, 0, 0])[2])).toBeCloseTo(1, 9); // the long axis along the depth
     expect(b.position[1] - h).toBeCloseTo(host.position[1] + host.dims[1] / 2 + SCENE_1_CONTOUR_MARGIN, 9); // flush on the contour
     expect(b.position[2]).toBeCloseTo(host.position[2], 9);
+    // ⭐ (2026-11-08, the cube) the top is 483 mm deep now: the frustum stands within it, centred, and overhangs its OWN small face — the wide top
+    // 25.9 mm over it at the front and the back (it hung 35 mm over the painting's 33 mm-deep top)
     const hostDepth = host.dims[2] + 2 * SCENE_1_CONTOUR_MARGIN;
-    expect(((b.dims[0] - hostDepth) / 2) * 0.1 * 1000).toBeCloseTo(35.25, 6); // the overhang, mm (the wide face over the host's depth)
-    expect(b.dims[0] * OBJECT_TOP_SCALE).toBeGreaterThan(hostDepth); // the small face already over both edges
+    expect(((b.dims[0] - b.dims[0] * OBJECT_TOP_SCALE) / 2) * 0.1 * 1000).toBeCloseTo(25.875, 6);
+    expect(b.dims[0]).toBeLessThan(hostDepth); // within the cube's top
     // 6.75 mm clear of the orbited pieces' goal on the same top (the green piece: 1.035 long along x, centred at 1.04)
     expect((1.04 - 1.035 / 2 - (b.position[0] + b.dims[2] / 2)) * 0.1 * 1000).toBeCloseTo(6.75, 6);
   });
