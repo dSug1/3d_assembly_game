@@ -63,7 +63,7 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
 
   it("⭐⭐⭐ T6 — ONLY THE FINGER MOVES THE TRAVEL: the drag and the coast call `loopFinger` (dx right, dy up, mm); the orbit's angles follow the shown direction; ⛔ the frame turns and the angle-grid gizmo gone", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const fy = dxOnly ? 0 : -db.dy / mmToPx(1); loopFinger(st, fx, fy); st.orbitInertia.record(s.t, fx, fy);");
+    expect(p).toContain("const fy = dxOnly ? 0 : reverseBandStep(rv.y, -db.dy / mmToPx(1), st.cfg.orbitDeadbandMm); loopFinger(st, fx, fy); st.orbitInertia.record(s.t, fx, fy);"); // ⭐ (§32.13) through the reverse band
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (!loopFinger(st, d.dYaw, d.dV) && (d.dYaw !== 0 || d.dV !== 0)) st.orbitInertia.stop();");
     const a = code("render/assembly_wiring.ts");

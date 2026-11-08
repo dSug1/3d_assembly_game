@@ -152,7 +152,18 @@ try {
     await ev(`window.__leg = ${JSON.stringify(tag)}`);
     let m = from;
     await move("mousePressed", m, 1); await frame();
-    for (let j = 0; j < n; j++) { const m2 = [m[0] + step[0], m[1] + step[1]]; if (!inside(m2)) break; m = m2; await move("mouseMoved", m, 1); await frame(); }
+    // ⭐ (2026-11-08) WOBBLE=px: a real finger — a perpendicular wobble of this amplitude (a seeded jitter), the drag's own way kept
+    const wob = +(env.WOBBLE ?? 0);
+    const sl = Math.hypot(step[0], step[1]) || 1;
+    let off = 0;
+    for (let j = 0; j < n; j++) {
+      const o2 = wob > 0 ? wob * Math.sin(j * 0.9) + (rnd() - 0.5) * wob : 0;
+      // WOBBLEX=px: a jitter ALONG the drag (a finger's tremble on its own axis — it may step back)
+      const ax = +(env.WOBBLEX ?? 0) > 0 ? (rnd() - 0.5) * 2 * +env.WOBBLEX : 0;
+      const m2 = [m[0] + step[0] + (step[0] / sl) * ax - (step[1] / sl) * (o2 - off), m[1] + step[1] + (step[1] / sl) * ax + (step[0] / sl) * (o2 - off)];
+      off = o2;
+      if (!inside(m2)) break; m = m2; await move("mouseMoved", m, 1); await frame();
+    }
     await ev(`window.__leg = ${JSON.stringify(tag + "_rel")}`);
     await move("mouseReleased", m, 0); await sleep(1500);
   };
