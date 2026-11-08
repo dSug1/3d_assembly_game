@@ -1955,3 +1955,31 @@ Moved: `rebuild_wiring` (the chart's wiring), `sway_cast` (the hulls from model-
 approach as a walk segment, in or out, the landing simulated after it with `LAND_EVERY`; the `ci` field: close in, the chart, its cells, the gizmo shown,
 its uv; `ap` the approach), `analyse_closein.mjs` (jumps within a chart, against, waits, the stop, the lines' planarity and the gizmo's distance to them,
 the piece / camera steps against the place's, the landing across / along the normal, a gizmo far out), `run_series_closein.sh` (the series).
+
+### 32.7 ⏳ Later — to do
+* **THE ATLAS UPDATED WHEN A NEW PART IS SEATED** (the owner, 2026-11-08: *"we need to include a pass update of the atlas when a new part is seated"*). As
+  built, a change of the placed set rebuilds everything at once: the shell (G1), every facet's boot pass (K2) and the hulls; an open chart is dropped and
+  re-anchored at the next close in. To do: (1) an UPDATE pass when a part is seated — only the facets the new part changes re-cast (the others' accepted
+  landings kept), spread over frames like the fill (no stall on the iPhone at the moment of the seat); (2) the open chart refreshed, not dropped, when its
+  facet survives (its region re-grown round the gizmo so the gizmo does not vanish under the piece just seated); (3) check that "seated" and the placed
+  set agree (`goalLocked`, `lockPlacedPieces`) so a seated part is always in the atlas; (4) vectors: a part seated onto a facet changes that facet's
+  landings and region, leaves the others untouched, and keeps the gizmo continuous.
+
+### 32.8 The series on `16b38c4` (2026-11-08 — `run_series_closein.sh`: 12 walks × 6 000 px at four start distances + 4 walks × 4 000 px started close in, approaches mixed into every walk; 78 711 frames, 0 page errors)
+| check (`analyse_closein.mjs`) | result |
+|---|---|
+| a gizmo far out | **0** frames (49 876 close-in frames, gizmo shown in all but 14 — the anchoring frame) |
+| the lines' planarity · the gizmo's distance to each line | **0.00 mm** in every frame (max 0.00) · **2.00 mm** (the lift) in every frame |
+| the gizmo against the place · waiting while the place moves | **0 · 0** |
+| the gizmo "jumping" within a chart (> 15 mm, > 3× the place's step) | 56 — ⚠ all the headless input's bursts: the travel's place moves 65 – 85 mm on one event every third frame and the shown place springs after it; the gizmo moves exactly with the piece (35 / 29 / 10 mm against 36 / 29 / 9) |
+| the piece / camera steps | the same bursts (the camera 2 – 3 frames behind the place's step); none with the place still outside an approach |
+| the A + dy landing (simulated after every approach in) | across the gizmo's normal: median **0.00 mm**, p95 0.07, max 8.8 (1 of 58); along: the piece's resting point 24 – 77 mm (the piece's own half-depth and its lift) |
+| the stop (K6) | 51 of 158 close-in drag segments wholly stopped — each checked at a REAL edge: the front's bottom row, its right edge (the facet's), a column of parts at x = −0.147 (reproduced offline), the bottom cap (its region 8.6 cm² — its parts' steps) |
+
+⛔⛔ **OPEN — INHERITED FROM `d926b88` (`1.0.105-`), NOT FROM THE CHART: THE SLIDE'S LATCH LOOP ON A TOP.** A + dy held in onto `Piece4`'s top: the slide
+latches (*"on — latched on Piece4's face (1.2 mm)"*), on the next frame the piece stands ~40 mm higher, the slide reads it as *"off — the approach took the
+piece away"*, the way out re-derives the approach from the piece's height (0.428 → 0.4615, above the shell) and the approach comes in again — every 10
+frames for as long as A + dy is held (18 reversals on seed 22; the same seed on `d926b88` in a worktree: **12**, the same verdicts). ⭐ Found only now
+because the walks include approaches. ⛔ A first reading (the drag's coast fighting the approach below the shell, `approachInput` stopping the coast) was
+built, measured — the same 18 reversals — and REVERTED (measure or revert). ⏳ To diagnose: what moves the piece 40 mm at the latch (`hoverStart`'s settle /
+`applyHoverModel` against `offsetAt`'s offset from `L.p` while the slide holds the centre) — `HOVER.md` §0's slide, not §32.
