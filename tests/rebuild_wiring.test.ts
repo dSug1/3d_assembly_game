@@ -87,6 +87,11 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(a).toContain("if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];");
     expect(a).toContain("const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;");
     expect(a).toContain("st.slideArmed = d < 0;");
+    // ⭐⭐⭐ (§32.9) under the slide the gizmo rides it at its offset from the centre at the latch (⛔ the centre itself: the latch loop on a top)
+    expect(a).toContain("if (L.slideG === null) { const g0 = st.asmGizmoAt ?? t; L.slideG = [g0[0] - t[0], g0[1] - t[1], g0[2] - t[2]]; }");
+    expect(a).toContain("st.asmGizmoAt = [t[0] + L.slideG[0], t[1] + L.slideG[1], t[2] + L.slideG[2]];");
+    expect(a).not.toContain("st.asmGizmoAt = [t[0], t[1], t[2]];");
+    expect(a).toContain("L.slideG = null; if (st.asmLocked) {");
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");
   });
 

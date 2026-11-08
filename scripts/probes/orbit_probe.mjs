@@ -113,6 +113,7 @@ try {
         ci: (() => { const L = st.loop; if (!L || L.closeIn === undefined) return null; const C = L.chart;
           return [L.closeIn ? 1 : 0, C ? C.facet : -1, C ? +C.u0.toFixed(4) : null, C ? +C.v0.toFixed(4) : null, C ? C.cells.size : 0, C ? (C.head >= C.queue.length ? 1 : 0) : 0, st.asmGizmoOn ? 1 : 0, L.gz ? [+L.gz.uv[0].toFixed(4), +L.gz.uv[1].toFixed(4)] : null]; })(),
         ap: st.approach ?? null,
+        x: window.__x ? (() => { try { return window.__x(st); } catch (e) { return String(e).slice(0, 80); } })() : null,
         lp: (() => { const m = st.asmSectionLines; if (!m || !m.isVisible) return null; const P = m.getVerticesData("position"); if (!P) return null; const half = P.length / 2;
           const plan = (from, to) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9]; let n = 0;
             for (let i = from; i + 5 < to; i += 6) { if (P[i] === P[i + 3] && P[i + 1] === P[i + 4] && P[i + 2] === P[i + 5]) continue; n++; for (let k = 0; k < 6; k++) { const a = k % 3; lo[a] = Math.min(lo[a], P[i + k]); hi[a] = Math.max(hi[a], P[i + k]); } }
@@ -125,6 +126,8 @@ try {
           return [seg(0, half), seg(half, P.length)]; })() });
     } catch (e) { window.__recErr = String(e); } }); return true; })()`);
   if (!ok) throw new Error("no window.__st — is this the dev server (import.meta.env.DEV)?");
+  // ⭐ (2026-11-08) XPRE=expr: a page expression run once before the legs (it may set `window.__x = (st) => …`, recorded every frame as `x`)
+  if (env.XPRE) console.log("XPRE", await ev(env.XPRE));
   // LAND_EVERY=px (walk mode): every so many px, the approach SIMULATED in place (A + dy straight in until the parts stop it), where it stops against the
   // gizmo, then the approach restored — one synchronous page task, no frame between
   if (env.LAND_EVERY) await ev(`(async () => { window.__AW = await import("/src/render/assembly_wiring.ts"); window.__GB = await import("/src/render/green_box_wiring.ts"); window.__land = []; return 1; })()`);
