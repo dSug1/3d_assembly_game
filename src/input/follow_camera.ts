@@ -403,15 +403,6 @@ function springChannel(x: number, vel: number, dtMs: number, tauMs: number): { x
 }
 
 /**
- * ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.3) THE SAME SPRING ON A POINT (each coordinate `springChannel`): the travel's SHOWN place and direction follow it
- * — no speed jump at a pointer event (the travel steps once per event; a plain exponential showed each step).
- */
-export function springPoint(at: readonly [number, number, number], vel: readonly [number, number, number], target: readonly [number, number, number], dtMs: number, tauMs: number): { at: [number, number, number]; vel: [number, number, number] } {
-  const c = [0, 1, 2].map((k) => springChannel(at[k]! - target[k]!, vel[k]!, dtMs, tauMs));
-  return { at: [target[0] + c[0]!.x, target[1] + c[1]!.x, target[2] + c[2]!.x], vel: [c[0]!.vel, c[1]!.vel, c[2]!.vel] };
-}
-
-/**
  * ⭐⭐ prototype (green box) — **THE BOX FOLLOWS THE RIG ON A CRITICALLY DAMPED SPRING** (the owner, 2026-10-02: *"the camera lag
  * at 30 ms create jitter in the green box visualization. can you improve"*). ⛔ `easeOrbit` (one exponential) moves the box at a
  * speed that JUMPS at every pointer event — the rig steps once per event (47–68 ms on the tablet) — so its speed pulses at the

@@ -256,8 +256,69 @@ export function facetAccept(parts: readonly HullPart[], f: ChartFacet, cell: num
 /** ⭐ K3's cell (m), the step allowed between neighbours (m — a slope to ~50° on 2.5 mm). */
 export const CELL_M = 0.0025;
 export const STEP_TOL_M = 0.003;
-/** ⭐ The casts a chart may spend per fill call. */
+/** ⭐ The casts a chart (or the atlas's background fill) may spend per call, and the cells a chart's flood may visit per call (cast-free from the atlas). */
 export const CASTS_PER_FILL = 600;
+export const VISITS_PER_FILL = 40000;
+
+/**
+ * ⭐⭐⭐ (2026-11-08, §32.10 — the owner: *"I was expecting a ring which directly shows up and encompasses the limited area when the piece crosses the
+ * offset"*) THE ATLAS'S GRID of one facet: every `CELL_M` node of the facet's extent cast once, in the background, frame after frame (`fillGrid`), after
+ * the boot pass — so a chart anchored on it floods the cached landings with no cast: its region whole in the frame close in is entered.
+ */
+export interface FacetGrid {
+  readonly f: ChartFacet;
+  readonly nu: number;
+  readonly nv: number;
+  readonly len: number;
+  /** 0 not cast yet, 1 a landing, 2 none */
+  readonly state: Uint8Array;
+  readonly depth: Float32Array;
+  readonly normal: Float32Array;
+  readonly id: (string | null)[];
+  next: number;
+}
+
+/** ⭐ A facet's atlas grid, nothing cast yet. */
+export function facetGrid(parts: readonly HullPart[], f: ChartFacet): FacetGrid {
+  const nu = Math.max(1, Math.floor((f.tHi - f.tLo) / CELL_M + 1e-9) + 1);
+  const nv = Math.max(1, Math.floor((f.bHi - f.bLo) / CELL_M + 1e-9) + 1);
+  const n = nu * nv;
+  return { f, nu, nv, len: castDepth(parts, f), state: new Uint8Array(n), depth: new Float32Array(n), normal: new Float32Array(3 * n), id: new Array<string | null>(n).fill(null), next: 0 };
+}
+
+/** ⭐ Cast the grid's node `k` (stored). */
+function castNode(G: FacetGrid, parts: readonly HullPart[], k: number): void {
+  const a = k % G.nu;
+  const b = (k - a) / G.nu;
+  const c = castAt(parts, G.f, G.f.tLo + a * CELL_M, G.f.bLo + b * CELL_M, G.len);
+  if (c === null) G.state[k] = 2;
+  else {
+    G.state[k] = 1;
+    G.depth[k] = c.depth;
+    G.normal[3 * k] = c.hit.normal[0];
+    G.normal[3 * k + 1] = c.hit.normal[1];
+    G.normal[3 * k + 2] = c.hit.normal[2];
+    G.id[k] = c.hit.id;
+  }
+}
+
+/** ⭐ The background fill: up to `budget` nodes cast in order (those a chart already cast skipped). Returns the casts spent. */
+export function fillGrid(G: FacetGrid, parts: readonly HullPart[], budget: number = CASTS_PER_FILL): number {
+  let n = 0;
+  while (G.next < G.state.length && n < budget) {
+    if (G.state[G.next] === 0) {
+      castNode(G, parts, G.next);
+      n++;
+    }
+    G.next++;
+  }
+  return n;
+}
+
+/** ⭐ Is the whole grid cast? */
+export function gridDone(G: FacetGrid): boolean {
+  return G.next >= G.state.length;
+}
 
 /** ⭐ A region cell: its depth below the shell plane, its part and face normal (`null` over a bridge — K4). */
 interface Cell {
@@ -284,6 +345,16 @@ export interface Chart {
   head: number;
   /** grows with every cell added (the outline redrawn on a change) */
   version: number;
+  /** §32.10 the facet's atlas grid the chart reads (its cell (0, 0) the grid's node (`gi0`, `gj0`)), `null`: its own casts; the casts it spent */
+  readonly grid: FacetGrid | null;
+  readonly gi0: number;
+  readonly gj0: number;
+  casts: number;
+  /** ⭐⭐⭐ §32.10 THE RING, cast when close in is entered and fixed until it is left: its centre (the gizmo then — chart coordinates) and radius (m); the
+   *  close-in area is the region INSIDE it (Infinity: no ring) */
+  readonly cu: number;
+  readonly cv: number;
+  readonly ringR: number;
 }
 
 const OFF = 32768;
@@ -293,12 +364,30 @@ const ijOf = (k: number): [number, number] => {
   return [Math.round((k - (j + OFF)) / 65536) - OFF, j];
 };
 
+/** ⭐ (§32.10) Is the chart's cell (i, j) inside its ring? */
+function inRing(C: Chart, i: number, j: number): boolean {
+  return Math.hypot(C.u0 + i * CELL_M - C.cu, C.v0 + j * CELL_M - C.cv) <= C.ringR;
+}
+
 /** ⭐ The place's `t`, `b` coordinates on the chart's facet (the shift applied — K5). */
 export function chartUV(C: Chart, p: Vec3): [number, number] {
   return [dot(p, C.f.t) + C.shift[0], dot(p, C.f.b) + C.shift[1]];
 }
 
 function rawAt(C: Chart, parts: readonly HullPart[], i: number, j: number): { depth: number; id: string | null; normal: Vec3 } | null {
+  const G = C.grid;
+  if (G !== null) {
+    const a = C.gi0 + i;
+    const b = C.gj0 + j;
+    if (a < 0 || b < 0 || a >= G.nu || b >= G.nv) return null;
+    const g = b * G.nu + a;
+    if (G.state[g] === 0) {
+      castNode(G, parts, g);
+      C.casts++;
+    }
+    if (G.state[g] !== 1 || G.depth[g]! > C.maxDepth) return null;
+    return { depth: G.depth[g]!, id: G.id[g] ?? null, normal: [G.normal[3 * g]!, G.normal[3 * g + 1]!, G.normal[3 * g + 2]!] };
+  }
   const k = keyOf(i, j);
   if (C.raw.has(k)) return C.raw.get(k)!;
   const u = C.u0 + i * CELL_M;
@@ -306,6 +395,7 @@ function rawAt(C: Chart, parts: readonly HullPart[], i: number, j: number): { de
   let r: { depth: number; id: string | null; normal: Vec3 } | null = null;
   if (u >= C.f.tLo - 1e-9 && u <= C.f.tHi + 1e-9 && v >= C.f.bLo - 1e-9 && v <= C.f.bHi + 1e-9) {
     const c = castAt(parts, C.f, u, v, C.len);
+    C.casts++;
     if (c !== null && c.depth <= C.maxDepth) r = { depth: c.depth, id: c.hit.id, normal: c.hit.normal };
   }
   C.raw.set(k, r);
@@ -316,12 +406,19 @@ function rawAt(C: Chart, parts: readonly HullPart[], i: number, j: number): { de
  * ⭐⭐⭐ K5 — ANCHOR A CHART at the place `p` on facet `fi`: P's own landing when accepted (K2), else the nearest accepted coarse landing (the chart shifted so
  * the place gives it). `null`: the facet has no accepted landing.
  */
-export function anchorChart(parts: readonly HullPart[], fi: number, f: ChartFacet, acc: FacetAccept, p: Vec3, bridgeM: number): Chart | null {
+export function anchorChart(parts: readonly HullPart[], fi: number, f: ChartFacet, acc: FacetAccept, p: Vec3, bridgeM: number, grid: FacetGrid | null = null, ringR: number = Infinity): Chart | null {
   if (!Number.isFinite(acc.maxDepth) || acc.cells.length === 0) return null;
-  const len = castDepth(parts, f);
+  const len = grid?.len ?? castDepth(parts, f);
   const pu = dot(p, f.t);
   const pv = dot(p, f.b);
-  const mk = (u0: number, v0: number, shift: [number, number]): Chart => ({ facet: fi, f, u0, v0, shift, maxDepth: acc.maxDepth, bridgeM, len, cells: new Map(), raw: new Map(), queue: [], head: 0, version: 0 });
+  // §32.10 on an atlas grid the chart's cells ARE its nodes: the origin snapped to the nearest node
+  const mk = (uu: number, vv: number, shift: [number, number]): Chart => {
+    const ring = { cu: pu + shift[0], cv: pv + shift[1], ringR };
+    if (grid === null) return { facet: fi, f, u0: uu, v0: vv, shift, maxDepth: acc.maxDepth, bridgeM, len, cells: new Map(), raw: new Map(), queue: [], head: 0, version: 0, grid: null, gi0: 0, gj0: 0, casts: 0, ...ring };
+    const gi0 = Math.max(0, Math.min(grid.nu - 1, Math.round((uu - f.tLo) / CELL_M)));
+    const gj0 = Math.max(0, Math.min(grid.nv - 1, Math.round((vv - f.bLo) / CELL_M)));
+    return { facet: fi, f, u0: f.tLo + gi0 * CELL_M, v0: f.bLo + gj0 * CELL_M, shift, maxDepth: acc.maxDepth, bridgeM, len, cells: new Map(), raw: new Map(), queue: [], head: 0, version: 0, grid, gi0, gj0, casts: 0, ...ring };
+  };
   const inside = pu >= f.tLo && pu <= f.tHi && pv >= f.bLo && pv <= f.bHi;
   let C: Chart | null = null;
   if (inside) {
@@ -354,10 +451,11 @@ export function anchorChart(parts: readonly HullPart[], fi: number, f: ChartFace
  * `STEP_TOL_M` of the cell it is reached from; else a landing within `STEP_TOL_M` met further along the same way, no farther than `bridgeM`, bridges the cells
  * between (their depth interpolated — K4). Returns the casts spent.
  */
-export function fillChart(C: Chart, parts: readonly HullPart[], budget: number = CASTS_PER_FILL): number {
-  const before = C.raw.size;
+export function fillChart(C: Chart, parts: readonly HullPart[], budget: number = CASTS_PER_FILL, visits: number = VISITS_PER_FILL): number {
+  const before = C.casts;
   const steps = Math.max(1, Math.ceil(C.bridgeM / CELL_M));
-  while (C.head < C.queue.length && C.raw.size - before < budget) {
+  let seen = 0;
+  while (C.head < C.queue.length && C.casts - before < budget && seen++ < visits) {
     const k = C.queue[C.head]!;
     const [i, j] = ijOf(k);
     const c = C.cells.get(k)!;
@@ -365,7 +463,7 @@ export function fillChart(C: Chart, parts: readonly HullPart[], budget: number =
       const a = i + di;
       const b = j + dj;
       const q = keyOf(a, b);
-      if (C.cells.has(q)) continue;
+      if (C.cells.has(q) || !inRing(C, a, b)) continue;
       const r = rawAt(C, parts, a, b);
       if (r !== null && Math.abs(r.depth - c.depth) <= STEP_TOL_M) {
         C.cells.set(q, { depth: r.depth, id: r.id, normal: r.normal });
@@ -375,6 +473,7 @@ export function fillChart(C: Chart, parts: readonly HullPart[], budget: number =
       }
       // K4 — a bridge: the first landing further along this way within STEP_TOL_M of this cell, no farther than the piece's width
       for (let m = 2; m <= steps; m++) {
+        if (!inRing(C, i + di * m, j + dj * m)) break; // a bridge never leaves the ring
         const rm = rawAt(C, parts, i + di * m, j + dj * m);
         const km = keyOf(i + di * m, j + dj * m);
         if (rm === null) {
@@ -404,7 +503,7 @@ export function fillChart(C: Chart, parts: readonly HullPart[], budget: number =
     }
     C.head++;
   }
-  return C.raw.size - before;
+  return C.casts - before;
 }
 
 /** ⭐ Is the fill done (the whole region reached)? */
@@ -414,7 +513,7 @@ export function chartFilled(C: Chart): boolean {
 
 /** ⭐ K6 — may the place be at `(u, v)` (chart coordinates, shift applied)? Its nearest cell is in the region. */
 export function chartAllows(C: Chart, u: number, v: number): boolean {
-  return C.cells.has(keyOf(Math.round((u - C.u0) / CELL_M), Math.round((v - C.v0) / CELL_M)));
+  return Math.hypot(u - C.cu, v - C.cv) <= C.ringR && C.cells.has(keyOf(Math.round((u - C.u0) / CELL_M), Math.round((v - C.v0) / CELL_M)));
 }
 
 /** ⭐ The gizmo's point at chart coordinates `(u, v)` — bilinear over the region's corner cells (their weights renormalised) — its normal and part. */
@@ -469,21 +568,90 @@ export function chartLines(C: Chart, u: number, v: number, half: number): { read
   return { green: run(1, 0), red: run(0, 1) };
 }
 
-/** ⭐⭐ K8 — THE OUTLINE: each region cell's border with a cell not in the region, at that cell's depth — segments (pairs of world points). */
-export function chartOutline(C: Chart): [Vec3, Vec3][] {
-  const out: [Vec3, Vec3][] = [];
-  const hh = CELL_M / 2;
-  for (const [k, c] of C.cells) {
-    const [i, j] = ijOf(k);
-    const u = C.u0 + i * CELL_M;
-    const v = C.v0 + j * CELL_M;
-    const P = (a: number, b: number): Vec3 => chartPoint(C, u + a, v + b, c.depth);
-    if (!C.cells.has(keyOf(i + 1, j))) out.push([P(hh, -hh), P(hh, hh)]);
-    if (!C.cells.has(keyOf(i - 1, j))) out.push([P(-hh, -hh), P(-hh, hh)]);
-    if (!C.cells.has(keyOf(i, j + 1))) out.push([P(-hh, hh), P(hh, hh)]);
-    if (!C.cells.has(keyOf(i, j - 1))) out.push([P(-hh, -hh), P(hh, -hh)]);
+
+/** ⭐ Marching squares' segments per corner code (bottom 0, right 1, top 2, left 3 — corners (i,j) 1, (i+1,j) 2, (i+1,j+1) 4, (i,j+1) 8; the saddles 5 and
+ *  10 split: a diagonal pair is not 4-connected, as the flood is not). */
+const MS_SEGMENTS: readonly (readonly (readonly [number, number])[])[] = [
+  [], [[3, 0]], [[0, 1]], [[3, 1]], [[1, 2]], [[3, 0], [1, 2]], [[0, 2]], [[3, 2]],
+  [[2, 3]], [[0, 2]], [[0, 1], [2, 3]], [[1, 2]], [[1, 3]], [[0, 1]], [[3, 0]], [],
+];
+
+/**
+ * ⭐⭐⭐ (§32.10 — the owner: *"a ring which directly shows up and encompasses the limited area … the ring shall be always the same radius (slider to be
+ * added) so the user feeling is better, unless the limited area is smaller than what the ring usually covers"*) K8 — THE RING: the border of the disk of
+ * radius `R` round `(uc, vc)` (the gizmo) INSIDE the region — a circle where the region holds it, the region's own border where the region is nearer —
+ * traced as closed contours by marching squares over the field `min(R − distance, ±half a cell)` (+ in the region, − outside): the circle interpolated
+ * exactly, the region's border on its cells' edges; each point at the inside cell's depth; smoothed (Chaikin, `smooth` passes).
+ */
+export function chartRing(C: Chart, uc: number, vc: number, R: number, smooth: number = 1): Vec3[][] {
+  if (C.cells.size === 0 || !(R > 0)) return [];
+  const ci = (uc - C.u0) / CELL_M;
+  const cj = (vc - C.v0) / CELL_M;
+  const r = R / CELL_M;
+  const i0 = Math.floor(ci - r) - 1;
+  const i1 = Math.ceil(ci + r) + 1;
+  const j0 = Math.floor(cj - r) - 1;
+  const j1 = Math.ceil(cj + r) + 1;
+  const F = (i: number, j: number): number => Math.min(r - Math.hypot(i - ci, j - cj), C.cells.has(keyOf(i, j)) ? 0.5 : -0.5);
+  // the field's zero on the lattice edge from (ai,aj) to (bi,bj), at the inside end's depth (both inside: interpolated)
+  const cross = (ai: number, aj: number, bi: number, bj: number): Vec3 => {
+    const fa = F(ai, aj);
+    const fb = F(bi, bj);
+    const t = Math.max(0, Math.min(1, fa / (fa - fb)));
+    const ca = C.cells.get(keyOf(ai, aj));
+    const cb = C.cells.get(keyOf(bi, bj));
+    const depth = ca !== undefined && cb !== undefined ? ca.depth + (cb.depth - ca.depth) * t : (ca ?? cb)!.depth;
+    return chartPoint(C, C.u0 + (ai + (bi - ai) * t) * CELL_M, C.v0 + (aj + (bj - aj) * t) * CELL_M, depth);
+  };
+  // an edge of the lattice: the horizontal (i,j)–(i+1,j) is `2·key`, the vertical (i,j)–(i,j+1) `2·key + 1`
+  const at = (e: number): Vec3 => {
+    const [i, j] = ijOf(Math.floor(e / 2));
+    return e % 2 === 0 ? cross(i, j, i + 1, j) : cross(i, j, i, j + 1);
+  };
+  const adj = new Map<number, number[]>();
+  const link = (a: number, b: number): void => {
+    let la = adj.get(a);
+    if (la === undefined) adj.set(a, (la = []));
+    la.push(b);
+    let lb = adj.get(b);
+    if (lb === undefined) adj.set(b, (lb = []));
+    lb.push(a);
+  };
+  for (let i = i0; i < i1; i++)
+    for (let j = j0; j < j1; j++) {
+      const code = (F(i, j) > 0 ? 1 : 0) | (F(i + 1, j) > 0 ? 2 : 0) | (F(i + 1, j + 1) > 0 ? 4 : 0) | (F(i, j + 1) > 0 ? 8 : 0);
+      const E = [keyOf(i, j) * 2, keyOf(i + 1, j) * 2 + 1, keyOf(i, j + 1) * 2, keyOf(i, j) * 2 + 1];
+      for (const [a, b] of MS_SEGMENTS[code]!) link(E[a]!, E[b]!);
+    }
+  const loops: Vec3[][] = [];
+  const used = new Set<number>();
+  for (const start of adj.keys()) {
+    if (used.has(start)) continue;
+    let L: Vec3[] = [];
+    let prev = -1;
+    let cur = start;
+    for (let guard = 0; guard <= adj.size; guard++) {
+      used.add(cur);
+      L.push(at(cur));
+      const nb = adj.get(cur)!;
+      const next = nb[0] !== prev ? nb[0]! : (nb[1] ?? nb[0]!);
+      prev = cur;
+      cur = next;
+      if (cur === start) break;
+    }
+    for (let s = 0; s < smooth && L.length >= 3; s++) {
+      const out: Vec3[] = [];
+      for (let k = 0; k < L.length; k++) {
+        const a = L[k]!;
+        const b = L[(k + 1) % L.length]!;
+        out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25, a[2] * 0.75 + b[2] * 0.25]);
+        out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75, a[2] * 0.25 + b[2] * 0.75]);
+      }
+      L = out;
+    }
+    loops.push(L);
   }
-  return out;
+  return loops;
 }
 
 /** ⭐ The distance (m) from `(u, v)` to the region's border, searched up to `maxM` (beyond: `maxM`). */
@@ -491,7 +659,8 @@ export function chartEdgeDistance(C: Chart, u: number, v: number, maxM: number):
   const ci = Math.round((u - C.u0) / CELL_M);
   const cj = Math.round((v - C.v0) / CELL_M);
   const R = Math.ceil(maxM / CELL_M);
-  let best = maxM;
+  // the ring's own border (§32.10) as well as the region's
+  let best = Math.min(maxM, Math.max(0, C.ringR - Math.hypot(u - C.cu, v - C.cv)));
   for (let a = -R; a <= R; a++)
     for (let b = -R; b <= R; b++) {
       if (C.cells.has(keyOf(ci + a, cj + b))) continue;

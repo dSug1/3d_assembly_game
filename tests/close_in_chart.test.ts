@@ -2,7 +2,7 @@
 // RED against `d926b88` (the module did not exist; §29's ropes cast per place). Each rule has its counter-case; mutants run 2026-11-08 (scope §32.6):
 // the step test removed, the bridge removed, the shift dropped, the hysteresis removed, the accepted depth unlimited — each RED here.
 import { describe, expect, it } from "vitest";
-import { allowedShare, anchorChart, castHulls, chartAllows, chartFilled, chartGizmo, chartLines, chartOutline, chartUV, CLOSE_IN_HYST_M, closeInDir, closeInNext, facetAccept, fillChart, hullParts, hullPlanes, type Chart, type ChartFacet, type HullPart } from "../src/input/close_in_chart";
+import { allowedShare, anchorChart, castHulls, chartAllows, chartFilled, chartGizmo, chartLines, chartRing, chartUV, CLOSE_IN_HYST_M, closeInDir, closeInNext, facetAccept, facetGrid, fillChart, fillGrid, gridDone, hullParts, hullPlanes, type Chart, type ChartFacet, type HullPart } from "../src/input/close_in_chart";
 import type { Vec3 } from "../src/core/vec";
 
 const box = (lo: Vec3, hi: Vec3): Vec3[] => [0, 1, 2, 3, 4, 5, 6, 7].map((c) => [c & 1 ? hi[0] : lo[0], c & 2 ? hi[1] : lo[1], c & 4 ? hi[2] : lo[2]]);
@@ -97,10 +97,64 @@ describe("⭐⭐⭐ K3 – K6 — the region: continuous by construction; the si
     // ends at the region's edge: the red runs down to the painting's bottom (y 0) and stops
     expect(Math.min(...L.red.map((p) => p[1]))).toBeGreaterThan(-0.002);
   });
-  it("⭐⭐ K8 — the outline: segments only on the region's border (none inside the painting's open face)", () => {
-    const segs = chartOutline(C);
-    expect(segs.length).toBeGreaterThan(50);
-    for (const [a] of segs) expect(!(a[0] > 0.02 && a[0] < 0.08 && a[1] > 0.02 && a[1] < 0.28)).toBe(true);
+  it("⭐⭐⭐ (§32.10) K8 — THE RING: in the open painting ONE closed circle of the radius round the gizmo; near the region's border cut by it — never outside the region", () => {
+    // the gizmo in the painting's open left face (x 0 … 0.1 — the groove bridged beyond): a 30 mm ring is a circle
+    const open = chartRing(C, 0.05, 0.15, 0.03);
+    expect(open.length).toBe(1);
+    const g = chartGizmo(C, 0.05, 0.15)!.point;
+    for (const p of open[0]!) expect(Math.hypot(p[0] - g[0], p[1] - g[1])).toBeGreaterThan(0.0285);
+    for (const p of open[0]!) expect(Math.hypot(p[0] - g[0], p[1] - g[1])).toBeLessThan(0.0301);
+    for (const p of open[0]!) expect(p[2]).toBeCloseTo(0, 9); // on the painting's face
+    // near the painting's bottom edge (y 0): the ring cut flat there — no point below the region's border, the rest the circle
+    const cut = chartRing(C, 0.05, 0.01, 0.03);
+    expect(cut.length).toBe(1);
+    expect(Math.min(...cut[0]!.map((p) => p[1]))).toBeGreaterThan(-0.0026);
+    expect(Math.max(...cut[0]!.map((p) => p[1]))).toBeGreaterThan(0.038);
+    // a region smaller than the ring (the proud part's top, 100 × 100 mm, a 200 mm ring): the ring is the region's own border
+    const P = filled(anchorChart(hulls, 0, F, acc, on(0.35, 0.15), W)!);
+    const small = chartRing(P, 0.35, 0.15, 0.2);
+    expect(small.length).toBe(1);
+    const xs = small[0]!.map((p) => p[0]);
+    const ys = small[0]!.map((p) => p[1]);
+    expect(Math.min(...xs)).toBeGreaterThan(0.297);
+    expect(Math.max(...xs)).toBeLessThan(0.403);
+    expect(Math.min(...ys)).toBeGreaterThan(0.097);
+    expect(Math.max(...ys)).toBeLessThan(0.203);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0.095);
+  });
+  it("⭐⭐⭐ (§32.10) THE ATLAS: the facet's grid cast in the background; a chart on it floods the cached landings with NO cast, its region the same as by its own casts", () => {
+    const G = facetGrid(hulls, F);
+    let n = 0;
+    while (!gridDone(G)) n += fillGrid(G, hulls, 5000);
+    expect(n).toBe(G.nu * G.nv);
+    const A = anchorChart(hulls, 0, F, acc, on(0.05, 0.15), W, G)!;
+    const spent = fillChart(A, hulls, 600);
+    expect(spent).toBe(0);
+    expect(chartFilled(A)).toBe(true); // whole in ONE call (⛔ grown 600 casts a frame: a diamond growing on the glass)
+    expect(Math.abs(A.cells.size - C.cells.size)).toBeLessThan(C.cells.size * 0.01);
+    for (const [x, y] of [[0.05, 0.15], [0.15, 0.25], [0.35, 0.15], [0.23, 0.15]] as const) expect(chartAllows(A, x, y)).toBe(chartAllows(C, x, y));
+  });
+  it("⭐⭐⭐ (§32.10) THE RING FIXED WHERE CLOSE IN WAS ENTERED — the area is the region INSIDE it: the gizmo, the lines and the stop end at the ring (⛔ the whole region: the patch's far border)", () => {
+    const R = 0.04;
+    const K = filled(anchorChart(hulls, 0, F, acc, on(0.05, 0.15), W, null, R)!);
+    expect(K.cu).toBeCloseTo(0.05, 12);
+    expect(K.cv).toBeCloseTo(0.15, 12);
+    expect(chartAllows(K, 0.05 + 0.039, 0.15)).toBe(true);
+    expect(chartAllows(K, 0.05 + 0.041, 0.15)).toBe(false); // ⛔ inside the region, outside the ring
+    expect(chartAllows(C, 0.05 + 0.041, 0.15)).toBe(true); // (the region without a ring holds it)
+    expect(K.cells.size).toBeLessThan((Math.PI * R * R) / (0.0025 * 0.0025) + 100); // the flood stays in the ring
+    // the lines from a gizmo moved off the centre stop at the ring, not at ±50 mm nor at the region's far border
+    const Ls = chartLines(K, 0.07, 0.15, 0.05);
+    expect(Math.max(...Ls.green.map((p) => p[0]))).toBeLessThan(0.05 + R + 1e-9);
+    expect(Math.max(...Ls.green.map((p) => p[0]))).toBeGreaterThan(0.05 + R - 0.003);
+    // the ring drawn is the anchor's circle, whatever the gizmo's place now
+    const ring = chartRing(K, K.cu, K.cv, K.ringR);
+    expect(ring.length).toBe(1);
+    for (const p of ring[0]!) expect(Math.abs(Math.hypot(p[0] - 0.05, p[1] - 0.15) - R)).toBeLessThan(0.0015);
+    // a region smaller than the ring: the area is the region (the proud part's top inside a 200 mm ring)
+    const P = filled(anchorChart(hulls, 0, F, acc, on(0.35, 0.15), W, null, 0.2)!);
+    expect(chartAllows(P, 0.39, 0.19)).toBe(true);
+    expect(chartAllows(P, 0.45, 0.15)).toBe(false);
   });
   it("⭐⭐⭐ the singularity is reached by ANOTHER chart: anchored over the proud part, its top is the region (the painting around it out)", () => {
     const P = filled(anchorChart(hulls, 0, F, acc, on(0.35, 0.15), W)!);

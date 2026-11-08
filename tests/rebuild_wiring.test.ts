@@ -55,7 +55,7 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(a).toContain("if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];");
     expect(a).toContain("L.closeIn = closeInNext(L.closeIn, d, inM);");
     expect(a).toContain("if (!L.closeIn) L.chart = null;");
-    expect(a).toContain("L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st));");
+    expect(a).toContain("L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st), L.grids[fi] ?? null, Math.max(0.001, st.cfg.closeInRingMm / 1000));");
     expect(a).toContain("if (C !== null && !chartFilled(C)) fillChart(C, L.hulls);");
     expect(a).toContain("const accept = map.facets.map((mf) => facetAccept(hulls, mf));"); // ⭐ K2 the boot pass, per placed set
     for (const gone of ["gizmoCase", "edgeBetween", "surfaceAt", "buildRope", "ropeAt", "ropesOf", "landingOf", "modelCast"]) expect(a).not.toContain(gone);
@@ -103,7 +103,11 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     // ⭐⭐⭐ (§32 K7 – K8) close in only: the lines through the gizmo inside the region, at most LINE_HALF_M each side; the region's outline
     expect(a).toContain("if (st.cfg.sectionLines !== 1 || g === null || C === null) { hideLines(st); return; }");
     expect(a).toContain("const ls = chartLines(C, g.uv[0], g.uv[1], LINE_HALF_M);");
-    expect(a).toContain("const lines = chartOutline(C).map(([a, b]) => [lift(a), lift(b)]);");
+    // ⭐⭐⭐ (§32.10) THE RING fixed where close in was entered, shown only once its area is whole; the chart anchored on the atlas with the ring's radius
+    expect(a).toContain("if (st.cfg.sectionLines !== 1 || g === null || C === null || !chartFilled(C)) {");
+    expect(a).toContain("for (const loop of chartRing(C, C.cu, C.cv, C.ringR)) for");
+    expect(a).toContain("pieceWidth(st), L.grids[fi] ?? null, Math.max(0.001, st.cfg.closeInRingMm / 1000));");
+    expect(a).toContain("budget -= fillGrid(G, L.hulls, budget);");
     // ⭐ far out the gizmo hidden (its ring reads `gizmoShowing`)
     expect(code("render/green_box_wiring.ts")).toContain("const shown = gizmoShowing(st, performance.now()); if (shown <= 0) { ring.isVisible = false; return; }");
   });
