@@ -336,6 +336,32 @@ export function syncAngle(m: number, target: number, d: number, catchUp: number,
   // the gap closed or crossed: on the orbit
   return Math.sign(gapOf(m2)) !== Math.sign(gap) ? target : m2;
 }
+/** ⭐⭐⭐ (2026-11-09) the most the map's catch-up may move the gizmo BY ITSELF in a frame (m) — the solver's own `RING_JUMP_M` (a jump, not travel). */
+export const MAP_SYNC_HOLD_M = 0.005;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §6 — a regression R4 exposed) **THE MAP'S ANGLES, ONE FRAME**: `syncAngle` on both (the orbit's step `d`,
+ * the catch-up after the slide) — UNLESS the catch-up alone moves the gizmo (`gizmoAt`) more than `MAP_SYNC_HOLD_M` from where the held offset puts it:
+ * then the offset is HELD this frame (the map's angles move by the orbit's step exactly). ⛔ The catch-up changed the ring between frames: the piece's place
+ * for the same solved angles moved — across a groove's edge, a place the solver had just landed on (admissible) was in the wall the next frame, the
+ * relocation put it back, the solver crossed again: 32 mm up and down every frame at Piece1's groove (the walks, `random_4`).
+ */
+export function mapAnglesStep(
+  m0: { readonly yaw: number; readonly pitch: number },
+  q: { readonly yaw: number; readonly pitch: number },
+  d: { readonly yaw: number; readonly pitch: number },
+  catchUp: number,
+  gizmoAt: (yaw: number, pitch: number) => Vec3 | null,
+): { readonly yaw: number; readonly pitch: number } {
+  const synced = { yaw: syncAngle(m0.yaw, q.yaw, d.yaw, catchUp, true), pitch: syncAngle(m0.pitch, q.pitch, d.pitch, catchUp, false) };
+  const held = { yaw: m0.yaw + d.yaw, pitch: m0.pitch + d.pitch };
+  if (Math.abs(wrapPi(synced.yaw - held.yaw)) + Math.abs(synced.pitch - held.pitch) < 1e-12) return synced;
+  const a = gizmoAt(synced.yaw, synced.pitch);
+  const b = gizmoAt(held.yaw, held.pitch);
+  if (a === null || b === null) return synced;
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > MAP_SYNC_HOLD_M ? held : synced;
+}
+
 /** ⭐ A normal within 1e-9 of a world axis: that axis EXACTLY (a box's face read on a turned pose carries 1e-16 of noise — the box's numbers kept exact). */
 export function snapAxis(n: Vec3): Vec3 {
   const l = Math.hypot(n[0], n[1], n[2]);
