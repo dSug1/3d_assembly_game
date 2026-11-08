@@ -14,7 +14,7 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-08, branch `1.0.108from1.0.100-`, from `3c00d35`)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-08, branch `1.0.110-`, the clean-up)
 
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
 merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per
@@ -22,7 +22,7 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-⛔ no device close on any. ⭐⭐⭐ **Now: THE CLEAN-UP** (I1 – I10, F1 – F8, not built; ⚠ `Scene_1` a cube: `SCENE_1.md` §12) → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md). ⏸ The hover waits.
+⛔ no device close on any. ⭐⭐⭐ **Now: THE CLEAN-UP** (I1 – I14, F1 – F10, not built; ⚠ `Scene_1` a cube: `SCENE_1.md` §12) → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §0. ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
 ✅ `npm run verify`: **1642 golden vectors, all passing** — MEASURED 2026-11-08 (the count's home; the cube).
