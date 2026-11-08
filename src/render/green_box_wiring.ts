@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, gizmoShowing, leavesCone, loopFinger, shownOffset } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, leavesCone, shownOffset } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -892,13 +892,6 @@ export function pinkRingFrame(st: SceneState): void {
     ring.isVisible = false;
     return;
   }
-  // ⭐⭐⭐ (2026-11-08, scope §32 C1) around the assembly the gizmo only close in, faded in
-  const shown = gizmoShowing(st, performance.now());
-  if (shown <= 0) {
-    ring.isVisible = false;
-    return;
-  }
-  ring.visibility = shown;
   // ⭐⭐⭐ (2026-11-02, *"the gizmo is always at the intersection"*) around the assembly at its EXACT point — the vertex both lines go through (`gizmoShownAt`)
   const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM) : st.centreBlend.targetM;
   const cam = st.camera.position;
@@ -939,15 +932,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     if (st.orbitMotion === null) st.orbitInertia.stop();
   } else if (st.orbitInertia.coasting) {
     const d = st.orbitInertia.step(dtSec * 1000, inertiaTauMs(st.greenPieceVolumeM3, st.cfg.orbitInertiaGain));
-    // ⭐⭐⭐ (the rebuild, T6) around the assembly the coast replays the finger's millimetres through the travel
-    if (assemblyOn(st)) {
-      if (!loopFinger(st, d.dYaw, d.dV) && (d.dYaw !== 0 || d.dV !== 0)) st.orbitInertia.stop();
-    } else {
     const dv = orbitTravelStep(st, d.dV, orbitDvPerMm(st)).dv;
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
     if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
-    }
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -1007,13 +995,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
     // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
-    if (st.hover === null && assemblyOn(st)) {
-      // ⭐⭐⭐ (2026-11-06, the rebuild — scope §22.3 P1) AROUND THE ASSEMBLY NO SOLVER: the piece outside G1, which encloses every placed part — the
-      // orbit cannot touch one (⛔ its refusals, slides and relocations moved the place behind the travel's back: stuck, sideways, front↔back hops)
-      st.pieceQ = rig;
-      st.pieceTouching = false;
-      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    } else if (st.hover !== null) {
+    if (st.hover !== null) {
       // ⭐⭐⭐ (2026-10-14, the hover's second audit) THE ORBIT HOLDS STILL UNDER A HOVER (`orbitFrameUnderHover`): no backlog, no way back to the height, no relocation
       const held = orbitFrameUnderHover(st.pieceQ);
       if (!sameQ(held.target, rig)) st.orbit.reset(held.target.yaw, held.target.v);

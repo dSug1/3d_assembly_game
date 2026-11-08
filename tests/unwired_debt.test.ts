@@ -38,7 +38,6 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
-  // ── the rebuild (2026-11-06, branch `1.0.103-`, scope §22.10): the engine-free modules built first (Steps 1–3), wired by Steps 3–5. ──
   // ── prototype 2026-10-12: the way in / the orbit round the piece / its dx roll / the zoom ↔ roll switch, commented out, KEPT. ──
   enterPieceOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
   returnToCentreOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",

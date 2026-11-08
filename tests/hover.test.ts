@@ -405,8 +405,7 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
     const { orbitFrame } = await import("../src/input/piece_orbit_solver");
     const { orbitFrameUnderHover } = await import("../src/input/hover");
     const q: OrbitQ = { yaw: 1, v: 0.4, zoom: 1 };
-    // ⭐ (2026-11-05, §20) with the finger moving — the way back is paced by the input
-    const fr = orbitFrame({ q, target: q, userV: 0.6, prevRaw: { yaw: q.yaw - 0.3, v: q.v } }, free, { gapM: 0.001, maxQueries: 24 }, { stepM: 0.01, maxM: 0.1 });
+    const fr = orbitFrame({ q, target: q, userV: 0.6, prevRaw: null }, free, { gapM: 0.001, maxQueries: 24 }, { stepM: 0.01, maxM: 0.1 });
     expect(fr.q.v).toBeGreaterThan(0.45); // ⛔ what ran under the hover: the piece taken off the hover's plane
     const held = orbitFrameUnderHover(q);
     expect(held.q).toEqual(q);
@@ -1184,7 +1183,7 @@ describe('⭐⭐⭐ THE SLIDE MODE (2026-11-01, the owner: *"sliding is entered 
     expect(h).toContain("if (hv !== null && dtSec > 0) hv.progress = slideViewProgress(hv.progress, dtSec * 1000, st.hover !== null);");
     expect(h).toContain("if (hf.view0 !== null && st.hoverView !== null) st.hoverView.target = add(hf.view0, slide);");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("st.slideArmed = d < 0;"); // ⭐⭐⭐ (the rebuild, §22.6 A2) the depth arms the slide, nothing else
+    expect(a).toContain("st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);");
     expect(a).toContain("if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));");
     // the coast before the slide's early return: a flick out leaves it
     expect(a.indexOf("if (st.approachInertia.coasting) {")).toBeLessThan(a.indexOf("if (st.hover !== null) { const t = st.centreBlend.targetM;"));
@@ -1422,8 +1421,8 @@ describe('⭐⭐⭐ THE SLIDE, SECOND PASS (2026-11-01, the owner: *"item 1: opt
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (out) slideWayOutRebase(st);"); // ⭐ (2026-11-01) `out` = want > a0, the step then checked too
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const t = orbitForCameraDir(toFrame(st.orbitFrame, hv.iso), q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
-    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(toWorld(st.orbitFrame, orbitDir(nq.yaw, nq.v)), lk.normal)) };");
+    expect(h).toContain("const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);");
+    expect(h).toContain("if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };");
     expect(h).toContain("const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];");
     expect(h).toContain("st.orbit.reset(nq.yaw, nq.v);");
     // ⛔ the camera's target no longer follows the piece on the way out (*"revert the change of the camera looking at the piece"*)

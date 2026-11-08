@@ -12,11 +12,17 @@ import { sceneConfig } from "@input/scene_rig";
 import { orbitOffset } from "../src/input/orbit";
 import { waistV } from "../src/input/orbit_rig";
 import {
+  angleTo,
   approachDistance,
+  lockCone,
   isApproachKey,
   approachRange,
   approachStep,
+  coneClamp,
+  easePoint,
+  faceSwitches,
   farDistance,
+  LOCK_CONE_RAD,
   lookShare,
   offsetFrame,
   orbitDir,
@@ -62,11 +68,9 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(farDistance(cfg)).toBeCloseTo(6, 1);
     expect(approachDistance(cfg, r.waist)).toBeCloseTo(0.09, 6);
     expect(approachDistance(cfg, r.min)).toBe(0);
-    // ⭐⭐⭐ (the rebuild, §22.6 A1) below the contact with G1 the approach goes on in, negative, to `APPROACH_SINK_M` (0.3 m) — then held
-    expect(approachDistance(cfg, r.floor)).toBeCloseTo(-0.3, 9);
-    expect(approachDistance(cfg, r.floor - 1)).toBeCloseTo(-0.3, 9);
+    expect(approachDistance(cfg, r.min - 1)).toBe(0); // held to its range
     let prev = Infinity;
-    for (let a = 1; a >= r.floor - 1e-12; a -= 0.002) {
+    for (let a = 1; a >= r.min - 1e-12; a -= 0.002) {
       const d = approachDistance(cfg, a);
       expect(d).toBeLessThanOrEqual(prev + 1e-9);
       prev = d;
@@ -75,7 +79,27 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(approachStep(0.8, -2, 0.01, cfg)).toBeCloseTo(0.78, 12);
     expect(approachStep(0.8, 2, 0.01, cfg)).toBeCloseTo(0.82, 12);
     expect(approachStep(0.999, 2, 0.01, cfg)).toBe(1);
-    expect(approachStep(r.floor + 0.001, -2, 0.01, cfg)).toBe(r.floor);
+    expect(approachStep(r.min + 0.001, -2, 0.01, cfg)).toBe(r.min);
+  });
+  it("⭐⭐ LOCKED, the piece within 80° of the face's normal: inside the cone untouched; outside, brought onto its edge in the same plane", () => {
+    expect(LOCK_CONE_RAD * D).toBeCloseTo(80, 12);
+    const n: Vec3 = [0, 1, 0];
+    const inside = orbitDir(0.3, vOfPitch(40 / D));
+    expect(coneClamp(inside, n)).toBe(inside);
+    const out = orbitDir(0.3, vOfPitch(-20 / D)); // 110° from up
+    const c = coneClamp(out, n);
+    expect(angleTo(c, n) * D).toBeCloseTo(80, 9);
+    expect(Math.atan2(c[2], c[0])).toBeCloseTo(Math.atan2(out[2], out[0]), 9); // the same plane (its azimuth kept)
+    expect(Math.hypot(...c)).toBeCloseTo(1, 12);
+  });
+  it("⭐⭐ THE FACE AT AN EDGE: a coplanar neighbour at once; another face only once the ray lands past the edge by the margin; a step at once", () => {
+    const front: Vec3 = [0, 0, -1];
+    const at: Vec3 = [0, 0.4, -0.05];
+    expect(faceSwitches(null, null, front, at, 0.005)).toBe(true);
+    expect(faceSwitches(front, at, [0, 0, -1], [0.3, 0.4, -0.05], 0.005)).toBe(true); // coplanar
+    expect(faceSwitches(front, at, [0, 1, 0], [0, 0.5, -0.047], 0.005)).toBe(false); // over the edge by 3 mm
+    expect(faceSwitches(front, at, [0, 1, 0], [0, 0.5, -0.04], 0.005)).toBe(true); // by 10 mm
+    expect(faceSwitches(front, at, [0, 0, -1], [0, 0.4, 0.2], 0.005)).toBe(true); // a step (same direction): at once
   });
   it("⭐⭐ the camera's LOOK POINT: the centre far out, the gizmo at the lock's distance, smoothly between; locked, the gizmo", () => {
     expect(lookShare(6, 6, 0.3, false)).toBe(0);
@@ -94,6 +118,9 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(twoFingerKind([0, 4], [0, -4], 3.5)).toBe("ZOOM");
     expect(twoFingerKind([0, 3.6], [0, 0.5], 3.5)).toBe(null);
     expect(twoFingerKind([0, 8], [0, 0], 3.5)).toBe("ZOOM");
+    const e = easePoint([0, 0, 0], [1, 0, 0], 16, 90);
+    expect(e[0]).toBeCloseTo(1 - Math.exp(-16 / 90), 12);
+    expect(easePoint([0.99995, 0, 0], [1, 0, 0], 16, 90)).toEqual([1, 0, 0]);
   });
   it("⭐ the mode a slider (0 around the assembly by default, 1 the gizmo's 2D curve kept); the lock distance and the edge margin sliders; validated", () => {
     expect(DEFAULT_CONFIG.orbitMode).toBe(0);
@@ -113,7 +140,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
   it("⭐⭐ wired: the piece's place (the solver's too) and the camera's frame from the assembly's orbit; the gizmo each frame before the solve; a tap no longer moves it; no top pause, no governor; the approach checked against the parts; Shift and two fingers approach; locked, never behind the face", () => {
     const r = code("render/camera_rig.ts");
     expect(r).toContain("if (assemblyOn(st)) return placeOffset(st, yaw, v);");
-    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off, dtMs !== undefined);"); // ⭐ (§20) the frame's own camera carries its up
+    expect(r).toContain("if (assemblyOn(st)) return assemblyCameraFrame(st, cam, off);");
     expect(r).toContain("a tap on a part no longer moves it if (assemblyOn(st)) return;");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28)");
@@ -122,7 +149,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(g).toContain("const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);");
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
-    expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isEnabled()) continue;"); // ⭐ (Step 4c) the placed parts — ⭐ (§32) their hulls the chart's casts
+    expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;"); // ⭐ (Step 4c) the placed parts, cast one by one in the model's space (`modelCast`)
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
     expect(p).toContain("if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);");
@@ -158,7 +185,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
       expect(f.up[0] * Math.cos(yaw) + f.up[2] * Math.sin(yaw)).toBeCloseTo(-1, 12); // its up away from the piece's side, as just below the pole
     }
     // ⭐ (2026-10-29) the heading the ORBIT's yaw, always (⛔ the direction's own: locked and turned into the cone at −90° it switched at once)
-    expect(code("render/assembly_wiring.ts")).toContain("return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);"); // ⭐⭐⭐ (§26.2 V5) the offsets in the camera's own frame about the view's up (`cameraView`)
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);"); // ⭐ (2026-11-04) the calm's heading; locked the orbit's yaw
   });
   it("⭐⭐ (2026-10-28, *\"the double finger is not working reliably: sometimes it latches, sometimes not\"*) around the assembly a second finger ON the orbited piece is the second touch too — its tap there still picks the resting face, never the yellow quad", () => {
     const p = code("render/pointer_wiring.ts");
@@ -214,6 +241,25 @@ describe("⭐⭐ the approach key, the slide as a way out, a step that moves not
   });
 });
 
+describe("⭐⭐ the lock's cone from where the piece is (2026-10-29)", () => {
+  it("⭐⭐ (*\"at one point the scene jump rotates\"*) at the lock the cone is the piece's own angle when it lies outside 80° (⛔ snapped into 80° at once: at −90° over a vertical face 10° in one frame — 5.8 cm at 0.28 m, measured); tightened as it comes inward, never under 80°", () => {
+    const deg = Math.PI / 180;
+    expect(lockCone(null, 90 * deg)).toBeCloseTo(90 * deg, 12); // outside: from where it is
+    expect(lockCone(null, 30 * deg)).toBe(LOCK_CONE_RAD); // inside: the usual 80°
+    expect(lockCone(90 * deg, 85 * deg)).toBeCloseTo(85 * deg, 12); // tightened inward
+    expect(lockCone(85 * deg, 88 * deg)).toBeCloseTo(85 * deg, 12); // never widened again
+    expect(lockCone(85 * deg, 40 * deg)).toBe(LOCK_CONE_RAD);
+    // the piece straight under a vertical face's gizmo: unmoved by the lock
+    const u = orbitDir(-1.07, 0);
+    const n: Vec3 = [0, 0, -1];
+    expect(angleTo(coneClamp(u, n, lockCone(null, angleTo(u, n))), u)).toBeLessThan(1e-9);
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };"); // the slide's hold
+    expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
+    expect(a).toContain("return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);");
+  });
+});
+
 describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-01, the owner: *"The 3° face: check what can interrupt the turn … Check other possibilities."*)', () => {
   const close = (a: readonly number[], b: readonly number[], d = 12) => a.forEach((x, i) => expect(x).toBeCloseTo(b[i]!, d));
   it("⭐⭐⭐ a hit on a mesh swayed 3° about some pivot comes back onto the face as the model places it — point and normal", async () => {
@@ -252,7 +298,9 @@ describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-0
   });
   it("⭐⭐ wired: both gizmo picks and the sections' hull read on the model (`modelHit`)", () => {
     const w = code("render/assembly_wiring.ts");
-    // ⭐⭐⭐ (§32) the gizmo's casts against hulls of the parts' vertices brought back onto the model (`tests/sway_cast.test.ts`)
+    // ⭐⭐⭐ (2026-11-04, Step 4c) both picks now ONE cast in the model's space (`modelCast`, `tests/sway_cast.test.ts`), its hit still brought back by `modelHit`
+    expect(w).toContain("const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);");
+    expect(w).toContain("const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);"); // ⭐ (Step 4c-bis) the face map's ray — (Step 5) along the facet's normal
     expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
     expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
   });
@@ -274,7 +322,7 @@ describe('⭐⭐⭐ THE WAY OUT CHECKED AGAINST THE PARTS (2026-11-01, the owner
   it("⭐⭐ wired: out checked too, and a blocked way out names its part on the HUD", () => {
     const w = code("render/assembly_wiring.ts");
     expect(w).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);");
-    expect(w).toContain("st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? \"a part\"} — slide to find a way out`;");
+    expect(w).toContain("st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? \"a part\"} — slide or orbit to find a way out`;");
     expect(w).not.toContain("if (want >= a0 || st.pieceQ === null || st.greenBox === null) {");
   });
 });
@@ -299,9 +347,8 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1) ONE BEHAVIO
     const a = code("render/assembly_wiring.ts");
     expect(a).not.toContain("nextLock");
     expect(a).not.toContain("orbit: close in — the gizmo and its face locked");
-    // ⭐⭐⭐ (the rebuild, §22.6 A2) off the slide: the travel from where the slide left the piece
-    expect(a).toContain("if (st.asmLocked) { // ⭐ off the slide");
-    expect(a).toContain('st.lastVerdict = "orbit: off the slide — the travel from where the slide left the piece";');
+    expect(a).toContain(" const was = st.asmLocked; st.asmLocked = false; if (was) {");
+    expect(a).toContain('st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";');
     expect(code("input/assembly_orbit.ts")).not.toContain("export function nextLock");
     expect(code("render/tuning_menu.ts")).toContain('"look at the gizmo within (m)"');
   });

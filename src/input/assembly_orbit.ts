@@ -19,7 +19,7 @@ import type { GestureConfig } from "./gestureConfig";
 import { orbitOffset } from "./orbit";
 import { waistV } from "./orbit_rig";
 import { smoothstep01 as smooth } from "./waist_view";
-import { add, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
 
 /**
  * ⭐ The pitch's reach either side of the horizon — ±90° (the owner, 2026-10-29: *"can you increase the pitch to -90 +90 degrees ?"* → *"build it with the
@@ -78,49 +78,50 @@ export function approachStepFree(gapStep: number, gapNow: number, gapM: number, 
 /** ⭐ The approach coordinate's floor: the CONTACT — below the waist (`waistV`) by this much, the last stretch straight to it. */
 export const APPROACH_CONTACT_SPAN = 0.05;
 
-/**
- * ⭐⭐⭐ (2026-11-06, scope §22, the owner: *"(a) close in"*) THE APPROACH BELOW THE CONTOUR: past the contact on the contour (the coordinate's `min`, the
- * distance 0) the approach goes on IN along the piece's ray, at the last stretch's pace, up to this deep (m) — into a slot, onto a face below the contour
- * (the parts' collision stops it at the real contact). The orbit then keeps that depth: a dx / dy close in never reads the real surface.
- */
-export const APPROACH_SINK_M = 0.3;
-
-/** ⭐ The approach coordinate's range: 1 far out (ring 1's distance), `waistV` at the waist, the contact on the contour at `min`, the deepest at `floor`. */
-export function approachRange(cfg: GestureConfig): { readonly min: number; readonly waist: number; readonly max: number; readonly floor: number } {
+/** ⭐ The approach coordinate's range: 1 far out (ring 1's distance), `waistV` at the waist, the floor at the contact. */
+export function approachRange(cfg: GestureConfig): { readonly min: number; readonly waist: number; readonly max: number } {
   const w = waistV(cfg);
-  const min = w - APPROACH_CONTACT_SPAN;
-  const perUnit = orbitOffset(cfg, 0, w, 1).radiusM / APPROACH_CONTACT_SPAN; // the last stretch's metres per unit
-  return { min, waist: w, max: 1, floor: perUnit > 1e-9 ? min - APPROACH_SINK_M / perUnit : min };
+  return { min: w - APPROACH_CONTACT_SPAN, waist: w, max: 1 };
 }
 
 /**
  * ⭐⭐ THE APPROACH'S DISTANCE from the gizmo at the approach coordinate `a`: from 1 (ring 1's distance — the far orbit) down to the waist, the 2D curve's
  * own distance from the gizmo (`orbitOffset` — the same for a vertical face's curve and a horizontal face's, a rotation); below the waist, straight to 0
- * (the contact on the contour) — ⭐⭐⭐ (§22) and on below it, NEGATIVE, to `floor` (`APPROACH_SINK_M`). The piece goes STRAIGHT IN along its ray (the
- * owner: *"make it straight in"*).
+ * (the contact). The piece goes STRAIGHT IN along its ray (the owner: *"make it straight in"*).
  */
 export function approachDistance(cfg: GestureConfig, a: number): number {
   const r = approachRange(cfg);
-  const x = Math.min(r.max, Math.max(r.floor, a));
+  const x = Math.min(r.max, Math.max(r.min, a));
   const dist = (v: number): number => orbitOffset(cfg, 0, v, 1).radiusM;
   if (x >= r.waist) return dist(x);
   return (dist(r.waist) * (x - r.min)) / (r.waist - r.min);
 }
 
-/**
- * ⭐⭐ (§22) The approach coordinate whose distance is `distM` on the STRAIGHT stretch (`approachDistance` inverted below the waist — linear; the curve above
- * it is not monotone): held to `floor` … `waist`. Read at the slide's way out (the depth kept), well inside the stretch.
- */
-export function approachAt(cfg: GestureConfig, distM: number): number {
-  const r = approachRange(cfg);
-  const dw = orbitOffset(cfg, 0, r.waist, 1).radiusM;
-  if (!(dw > 1e-12)) return r.min;
-  return Math.min(r.waist, Math.max(r.floor, r.min + (distM / dw) * (r.waist - r.min)));
-}
-
 /** ⭐ The far orbit's distance from the gizmo (ring 1's — one value for both curves, the owner's 5). */
 export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
+}
+
+/** ⭐ Under the slide, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
+export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
+
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"*)
+ * — THE LOCK'S CONE, from where the piece is: at the lock (`cone` `null`) the piece's own angle off the face's normal when it is outside `LOCK_CONE_RAD`
+ * (⛔ the cone at once: at −90° over a vertical face the piece was snapped 10° in one frame — 5.8 cm at the lock's 0.28 m, the camera turned with it);
+ * after that, tightened as the piece comes inward, never below `LOCK_CONE_RAD`.
+ */
+export function lockCone(cone: number | null, angle: number): number {
+  return Math.max(LOCK_CONE_RAD, cone === null ? angle : Math.min(cone, angle));
+}
+
+/** ⭐ `u` turned toward `n` (both unit) until within `maxRad` of it; within already, `u` itself. */
+export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec3 {
+  const c = Math.max(-1, Math.min(1, dot(u, n)));
+  const a = Math.acos(c);
+  if (a <= maxRad) return u;
+  const axis = normalize(cross(n, u)) ?? normalize(cross(n, [0, 1, 0])) ?? [1, 0, 0];
+  return qRotate(qFromAxisAngle(axis, maxRad), n);
 }
 
 /** ⭐ The angle between `u` and `n` (unit). */
@@ -139,6 +140,17 @@ export function unswayHit(point: Vec3, normal: Vec3 | null, meshPos: Vec3, meshR
   const d = qmul(modelRot, qconj(meshRot)); // the mesh undone, then the model
   return { point: add(modelPos, qRotate(d, sub(point, meshPos))), normal: normal === null ? null : qRotate(d, normal) };
 }
+/**
+ * ⭐⭐⭐ (2026-11-04, Step 4c, the owner: *"make sure the orbit slide (the pieces translate the way the green box orbits) does not pollute the gizmo"*) — A RAY
+ * IN THE MODEL'S SPACE, MOVED ONTO A BODY AS DRAWN: `unswayHit`'s inverse (the model undone, then the mesh), for the ray's `origin` and `dir`. Cast against
+ * the swaying mesh it meets what the same ray meets on the body at its model pose — the hit, mapped back by `unswayHit`, is where the ray meets the body at
+ * rest. ⛔ A ray cast in the world against the swayed meshes, its hit only mapped back: a part swayed across the ray was hit (or missed) where it was
+ * drawn — the gizmo off its red plane by the sway, a section sample on the wrong part.
+ */
+export function swayRay(origin: Vec3, dir: Vec3, meshPos: Vec3, meshRot: Quat, modelPos: Vec3, modelRot: Quat): { origin: Vec3; dir: Vec3 } {
+  const d = qmul(meshRot, qconj(modelRot)); // the model undone, then the mesh
+  return { origin: add(meshPos, qRotate(d, sub(origin, modelPos))), dir: qRotate(d, dir) };
+}
 
 /**
  * ⭐⭐⭐ (2026-11-01) A face's normal on its body's MODEL pose from the mesh's own LOCAL facet normal (`localN`) and its scaling (`s`, per axis — the
@@ -147,6 +159,18 @@ export function unswayHit(point: Vec3, normal: Vec3 | null, meshPos: Vec3, meshR
 export function modelNormal(localN: Vec3, s: Vec3, modelRot: Quat): Vec3 | null {
   const k = normalize([localN[0] / (s[0] || 1), localN[1] / (s[1] || 1), localN[2] / (s[2] || 1)]);
   return k === null ? null : qRotate(modelRot, k);
+}
+
+/**
+ * ⭐⭐ THE FACE AT AN EDGE: does the gizmo take the face the ray now hits (`hitNormal`, at `hitPoint`) over the one it has (`curNormal`, through `curPoint`)?
+ * The same direction (within 1° — a coplanar neighbour): at once; another: only once the hit lies `marginM` off the current face's plane — past the edge by
+ * that much (a step in depth: at once, it is far off the plane). None yet: at once.
+ */
+export function faceSwitches(curNormal: Vec3 | null, curPoint: Vec3 | null, hitNormal: Vec3, hitPoint: Vec3, marginM: number): boolean {
+  if (curNormal === null || curPoint === null) return true;
+  if (dot(curNormal, hitNormal) > Math.cos(Math.PI / 180)) return true;
+  const off = [hitPoint[0] - curPoint[0], hitPoint[1] - curPoint[1], hitPoint[2] - curPoint[2]] as Vec3;
+  return Math.abs(dot(off, curNormal)) > marginM;
 }
 
 /** ⛔ (2026-11-04, Step 4c-bis) `rayOffsets` — the five rays that found the gizmo toward the centre (`castGizmo`) — DELETED with it: the face map's closed
@@ -175,7 +199,14 @@ export function isApproachKey(key: string): boolean {
 /** ⭐ The approach step a millimetre of the two fingers' (or A + drag's) dy buys: finger UP brings the piece IN (the coordinate down). */
 export function approachStep(a: number, dyMm: number, perMm: number, cfg: GestureConfig): number {
   const r = approachRange(cfg);
-  return Math.min(r.max, Math.max(r.floor, a + dyMm * perMm));
+  return Math.min(r.max, Math.max(r.min, a + dyMm * perMm));
+}
+
+/** ⭐ One frame of an ease of a point toward another (`1 − exp(−dt/τ)`), landing on it within 0.1 mm. */
+export function easePoint(cur: Vec3, target: Vec3, dtMs: number, tauMs: number): Vec3 {
+  const k = tauMs > 0 && dtMs > 0 ? 1 - Math.exp(-dtMs / tauMs) : 1;
+  const next: Vec3 = [cur[0] + (target[0] - cur[0]) * k, cur[1] + (target[1] - cur[1]) * k, cur[2] + (target[2] - cur[2]) * k];
+  return Math.hypot(target[0] - next[0], target[1] - next[1], target[2] - next[2]) < 1e-4 ? target : next;
 }
 
 /** ⭐ The two fingers' kind (from each finger's travel since the SECOND landed, mm): their COMMON motion — the approach; their RELATIVE — the pinch. */
@@ -198,11 +229,6 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, u);
   const up0 = normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
-  return offsetWithUp(u, up0, yawRad, pitchRad);
-}
-
-/** ⭐ (2026-11-05, §20) The owner's offsets about the piece's direction `u` given the camera's UP for it (`up0`, square to `u`) — `offsetFrame`'s second half. */
-export function offsetWithUp(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
   const sn = Math.sin(pitchRad);
   const d1: Vec3 = [c * u[0] + sn * up0[0], c * u[1] + sn * up0[1], c * u[2] + sn * up0[2]];

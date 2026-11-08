@@ -697,28 +697,14 @@ export function orbitFrame(
     if (Math.abs(dvIn) > 1e-12) userV = q.v; // the finger's own dy pushed in: the height asked is where it stopped
   } else if (!r.touched && Math.abs(userV - q.v) > 1e-6 && opt.maxQueries - queries > 0) {
     // ⭐ (2026-11-04, the audit) the way back only within what the cap leaves (⛔ `max(4, …)`: four more past it, every frame it ran)
-    // ⭐⭐⭐ (2026-11-05, the redesign §20) PACED BY THE INPUT — never more pitch this frame than the finger's own travel (`wayBackStep`) — ⛔ taken whole:
-    // a contact that slid the piece 5–6° down was undone in ONE frame once free, the camera 120 mm (probed, close in along a top's edge)
-    const wb = wayBackStep(userV - q.v, dyawIn, dvIn);
-    const back = wb === 0 ? null : solveOrbitStep(q, [0, wb], env, { ...opt, maxQueries: opt.maxQueries - queries });
-    if (back !== null) {
-      queries += back.queries;
-      if (!back.touched && !back.deferred) {
-        q = back.q;
-        target = q;
-      }
+    const back = solveOrbitStep(q, [0, userV - q.v], env, { ...opt, maxQueries: opt.maxQueries - queries });
+    queries += back.queries;
+    if (!back.touched && !back.deferred) {
+      q = back.q;
+      target = q;
     }
   }
   return { q, target, userV, blocked: asked ? r.blocked : null, deferred: r.deferred, relocated, stopCoast, touched: r.touched, queries, relocateNext, relocateExhausted };
-}
-
-/**
- * ⭐⭐⭐ (2026-11-05, §20) THE WAY BACK'S STEP (ring `v`) toward the height kept (`gap`, `userV − v`): at most the input's own travel this frame — its yaw
- * (rad) and its `v` read as one angle (`v` spans π of pitch) — so it moves only as the finger moves, never faster. No input: none.
- */
-export function wayBackStep(gap: number, dyawIn: number, dvIn: number): number {
-  const pace = (Math.abs(dyawIn) + Math.PI * Math.abs(dvIn)) / Math.PI;
-  return Math.max(-pace, Math.min(pace, gap));
 }
 
 /**

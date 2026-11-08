@@ -26,3 +26,25 @@ export function boxOf(points: readonly Vec3[]): Box3 | null {
   return { lo, hi };
 }
 
+/** ⭐ `true` when the segment `origin + t·dir`, `t ∈ [0, length]` (`dir` a unit vector), meets `box` grown by `margin`. */
+export function rayMeetsBox(origin: Vec3, dir: Vec3, length: number, box: Box3, margin: number): boolean {
+  let t0 = 0;
+  let t1 = length;
+  for (let i = 0; i < 3; i++) {
+    const lo = box.lo[i]! - margin;
+    const hi = box.hi[i]! + margin;
+    const o = origin[i]!;
+    const d = dir[i]!;
+    if (Math.abs(d) < 1e-12) {
+      if (o < lo || o > hi) return false;
+      continue;
+    }
+    let a = (lo - o) / d;
+    let b = (hi - o) / d;
+    if (a > b) [a, b] = [b, a];
+    if (a > t0) t0 = a;
+    if (b < t1) t1 = b;
+    if (t0 > t1) return false;
+  }
+  return true;
+}

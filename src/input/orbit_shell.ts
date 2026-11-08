@@ -33,6 +33,93 @@ export function shellBox(parts: readonly (readonly Vec3[])[]): ShellBox | null {
   return lo === null || hi === null ? null : { lo: [lo[0]!, lo[1]!, lo[2]!], hi: [hi[0]!, hi[1]!, hi[2]!] };
 }
 
+/** ⭐ The shell's level at `p`: its Euclidean distance to the box (0 inside it). */
+export function shellLevel(p: Vec3, b: ShellBox): number {
+  let s = 0;
+  for (let k = 0; k < 3; k++) {
+    const o = p[k]! > b.hi[k]! ? p[k]! - b.hi[k]! : p[k]! < b.lo[k]! ? p[k]! - b.lo[k]! : 0;
+    s += o * o;
+  }
+  return Math.sqrt(s);
+}
+
+/**
+ * ⭐ How far along the unit `u` from `g` the shell reaches `level` (m) — the level only grows along a ray leaving the box, so by halving between 0 and where
+ * the box's own extent plus the level is surely passed; `g` already beyond it: 0.
+ */
+export function rayToLevel(g: Vec3, u: Vec3, b: ShellBox, level: number): number {
+  if (shellLevel(g, b) >= level) return 0;
+  const diag = Math.hypot(b.hi[0] - b.lo[0], b.hi[1] - b.lo[1], b.hi[2] - b.lo[2]);
+  let lo = 0;
+  let hi = level + diag;
+  for (let k = 0; k < 40; k++) {
+    const m = (lo + hi) / 2;
+    if (shellLevel([g[0] + u[0] * m, g[1] + u[1] * m, g[2] + u[2] * m], b) < level) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
+/** ⭐ The piece's REACH toward the gizmo — the farthest of its hull's points (`points`, the piece's frame, turned by `q`) along `−u`; none: 0. */
+export function pieceReach(points: readonly Vec3[], q: Quat, u: Vec3): number {
+  const l = qRotate(qconj(q), [-u[0], -u[1], -u[2]]); // −u in the piece's frame
+  let m = 0;
+  for (const p of points) m = Math.max(m, p[0] * l[0] + p[1] * l[1] + p[2] * l[2]);
+  return m;
+}
+
+/** ⭐ The gizmo's share of the piece's distance at the approach's distance `d`: 1 at the contact, 0 from the shell's offset out (smoothstep). */
+export function gizmoShare(d: number, offsetM: number): number {
+  if (!(offsetM > 0)) return d <= 0 ? 1 : 0;
+  const x = Math.min(1, Math.max(0, d / offsetM));
+  return 1 - x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐ HOW FAR ALONG `u` FROM THE GIZMO `g` THE PIECE STANDS at the approach's distance `d`: the ray reaching the shell at `max(d, offset)`, blended within
+ * the offset onto `d` itself (the gizmo's share) — on the gizmo at the contact. No box: `d` (the old rule). ⭐ The share read from the piece's SURFACE:
+ * `reachM` (the piece's own extent toward the gizmo) taken off `d` — ⛔ (2026-11-04, probed) read from its centre, at the contact (`d` 43 mm, the piece's
+ * thickness) the foot stood 81 % on the shell: the piece 14–30 mm off the face, the slide never latched, the piece jumped with the held gizmo.
+ */
+export function pieceAlong(g: Vec3, u: Vec3, d: number, offsetM: number, b: ShellBox | null, reachM: number = 0): number {
+  if (b === null) return d;
+  const w = gizmoShare(Math.max(0, d - Math.max(0, reachM)), offsetM);
+  return (1 - w) * rayToLevel(g, u, b, Math.max(d, offsetM)) + w * d;
+}
+
+/**
+ * ⭐⭐⭐ THE GIZMO'S FOOT — the orbit's centre the piece and the camera read: the piece's place on the shell (`pieceAlong`) less the approach's distance
+ * along `u` — so the piece is `foot + u·d` as before, and a step of the gizmo in depth moves the gizmo, never the foot. ⭐ The foot's shift CAPPED at the
+ * offset (the scope: *"a notch shallower than the offset"*): ⛔ uncapped, a direction grazing the gizmo's face (a drop held on a face turned away, at the
+ * contact) ran the ray through the box — the foot swung with the direction, the piece jumped 40 mm, the camera 25 cm (probed, Scene_1).
+ */
+export function shellAnchor(g: Vec3, u: Vec3, d: number, offsetM: number, b: ShellBox | null, reachM: number = 0): Vec3 {
+  const e = pieceAlong(g, u, d, offsetM, b, reachM) - d;
+  return [g[0] + u[0] * e, g[1] + u[1] * e, g[2] + u[2] * e];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05, branch `1.0.100-`) **THE PIECE'S PLACE FOR THE ORBIT'S ANGLES — around the gizmo AT THOSE ANGLES** (`gizmoAt`), its foot on the
+ * shell (`foot`), along the angles' direction (`dirAt`) at the approach's distance `d`. ⛔ Since Step 4c-bis the gizmo is a function of the angles, but the
+ * place was read around the gizmo of the FRAME's angles: every angle the solver tried stood round the last frame's gizmo — its world moved with its own
+ * result. On the phone, a dx along a part: a step met the part and slid down the ring, the gizmo was re-read lower, the way back to the height kept was
+ * then tried round that lower gizmo — a place lower than the real one, free — and taken; the gizmo went up again, the next step met the part: down and
+ * up every two frames (the owner: *"the gizmo goes to the black face then jumps back and forth"*). Now an angle's place is a function of the angle alone.
+ */
+export function placeAtAngles<Q>(
+  q: Q,
+  gizmoAt: (q: Q) => Vec3,
+  dirAt: (q: Q) => Vec3,
+  foot: (g: Vec3, u: Vec3, d: number) => Vec3,
+  d: number,
+  lift: (u: Vec3) => number = () => 0,
+): Vec3 {
+  const u = dirAt(q);
+  const dd = d + Math.max(0, lift(u));
+  const f = foot(gizmoAt(q), u, dd);
+  return [f[0] + u[0] * dd, f[1] + u[1] * dd, f[2] + u[2] * dd];
+}
+
 /**
  * ⭐⭐⭐ (2026-11-05, the probes: a close-in dx stalled at `Scene_1`'s front-left corner, the piece against Piece3's front) — **THE PIECE'S SUPPORT AT THE
  * GIZMO, NOT ITS RESTING FACE'S CENTRE**: the piece is placed by its resting face's centre (`placeByFaceCentre`), and the approach's end put that centre ON

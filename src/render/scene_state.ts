@@ -5,7 +5,6 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { type EpisodeTally } from "../input/episode_ledger";
-import type { ReverseBand } from "../input/reverse_band";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import type { CameraOrbitState, OrbitSpring, OrbitZoom } from "../input/follow_camera";
@@ -465,11 +464,6 @@ export interface SceneState {
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
-  /** ⭐⭐⭐ (2026-11-05, STEP 6) THE ORBIT'S FRAME (`input/orbit_frame.ts`): upright, or turned onto a top / a bottom at its crossing — every angle of the orbit is
-   * read in it */
-  orbitFrame: import("../input/orbit_frame").OrbitFrame;
-  /** ⭐⭐ (§20, §4.2) the cap the current drag left over its FAR edge — held under its bound upright until the finger lifts; `null`: none */
-  orbitHold: "TOP" | "BOTTOM" | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;
@@ -478,18 +472,17 @@ export interface SceneState {
   asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
-  /** ⭐⭐⭐ (scope §32 C1) the gizmo shown (close in only) and since when (ms — its fade in) */
-  asmGizmoOn: boolean;
-  asmGizmoSince: number;
-  /** ⭐⭐⭐ (scope §32 K8) the close-in area's outline, and the chart version it was drawn for */
-  asmOutline: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
-  asmOutlineKey: string;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
-  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly (string | null)[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
+  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
   asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
-  /** ⭐⭐⭐ (2026-11-06, the rebuild — scope §22) the travel on G1, the shown place / direction / up (`assembly_wiring.ts`); `null`: none yet */
-  loop: import("./assembly_wiring").LoopState | null;
+  /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */
+  asmCast: {
+    readonly frame: number;
+    readonly world: import("../core/object_model").World;
+    readonly count: number;
+    readonly parts: readonly { readonly mesh: AbstractMeshT; readonly pose: import("../core/mate_connector").Placed | null; readonly drawnAt: Vec3; readonly drawnQ: import("../core/vec").Quat; readonly box: import("../input/ray_box").Box3 | null }[];
+  } | null;
   /** ⭐⭐⭐ (2026-11-04, Step 2) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   approach: number;
@@ -500,7 +493,7 @@ export interface SceneState {
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
-  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker; /** ⭐⭐⭐ §32.13 the reverse band per component (`input/reverse_band.ts`) */ readonly rev: { readonly x: ReverseBand; readonly y: ReverseBand } } | null;
+  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
   /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */
   orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
   /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */

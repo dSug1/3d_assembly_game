@@ -39,7 +39,6 @@
  * and the play volume are all physical — so the near plane moves, not the scale.
  * ⚠ Any future camera must set `minZ` too. It is a per-camera property, not a scene one.
  */
-import { UPRIGHT } from "../input/orbit_frame";
 import { UNTURNED } from "../input/orbit_rig";
 import { STUCK_FRESH } from "../input/piece_orbit_solver";
 import { attachOrbitedShadows, attachShadows, buildLighting } from "./lighting";
@@ -543,18 +542,12 @@ export function createScene(
   st.asmRedCache = null;
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
-  st.asmGizmoOn = false;
-  st.asmGizmoSince = 0;
-  st.asmOutline = null;
-  st.asmOutlineKey = "";
   st.asmMapQ = null;
   st.asmFaceMap = null;
-  st.orbitFrame = UPRIGHT;
-  st.orbitHold = null;
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;
-  st.loop = null;
+  st.asmCast = null;
   st.approach = 1;
   st.approachInertia = new OrbitInertia();
   st.orbitShift = false;

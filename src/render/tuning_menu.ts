@@ -193,6 +193,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "look at the gizmo within (m)", "assemblyLockDistM", 0.05, 2, 0.05),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
+            tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),
             // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
@@ -202,10 +203,6 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
-            // ⭐⭐⭐ (2026-11-08, scope §32 C1) close in: the gizmo, its lines and the area's outline within this of the shell
-            tunable(st, "close in: the gizmo and its area within (mm of the shell)", "closeInMm", 10, 600, 5),
-            // ⭐⭐⭐ (2026-11-08, scope §32.10) the ring round the gizmo, cut by the area's border where the area is smaller
-            tunable(st, "close in: the ring round the gizmo (radius, mm)", "closeInRingMm", 5, 300, 5),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)
@@ -252,8 +249,12 @@ export function installTuningMenu(st: SceneState): void {
               title: "FACE-SPAN ORBIT SHARE",
               sliders: [
                 tunable(st, "dx: the orbit's angle shown in the middle of a face (share)", "faceSpanShareH", 0, 1, 0.05),
+                tunable(st, "dx: the edge zone (% of the gizmo's run)", "faceSpanZoneHPct", 0, 50, 1),
+                tunable(st, "dx: the edge zone's minimum (cm)", "faceSpanZoneMinHCm", 0, 30, 0.5),
                 tunable(st, "dy: compressed too (1 on, 0 off — the full orbit angle)", "faceSpanShareVOn", 0, 1, 1),
                 tunable(st, "dy: the orbit's angle shown in the middle of a face (share)", "faceSpanShareV", 0, 1, 0.05),
+                tunable(st, "dy: the edge zone (% of the gizmo's run)", "faceSpanZoneVPct", 0, 50, 1),
+                tunable(st, "dy: the edge zone's minimum (cm)", "faceSpanZoneMinVCm", 0, 30, 0.5),
               ],
             },
           ],

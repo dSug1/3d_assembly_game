@@ -1,105 +1,49 @@
 /**
- * ⭐⭐⭐ (2026-11-08, `TILTED_ORBIT_REBUILD_SCOPE.md` §32, rebuilt from `d926b88` — `1.0.105-`'s travel, view, piece and camera, §29's ropes deleted)
- * **THE ORBIT AROUND THE ASSEMBLY, WIRED** — on while `orbitMode` is 0. No rule here: the travel is `input/loop_travel.ts` (T1 – T6), the view
- * `input/loop_view.ts` (V1 – V6, T5's test), the close-in chart `input/close_in_chart.ts` (K1 – K8, C1 – C4), the cut `input/plane_cut.ts`, G1
- * `input/face_map.ts`. This file holds the state and the calls:
- * * G1 — the face map's facets of the placed parts (their planes at the parts' support — the shell); the travel's place on it (`st.loop`), moved ONLY by the
- *   finger and its coast (`loopFinger` — T6), a face crossed only where the view is continuous (T5); the shown place and view eased toward it every frame.
- * * P1 — the piece outside G1 along the shown view at the approach's distance (`shownOffset` / `placeOffset`: the same function) — no solver; close in
- *   (C4) its direction turned onto the chart's normal as it nears the shell, so A + dy lands on the gizmo.
- * * V5 — the camera along the shown view (world yaw and pitch, never roll), the owner's offsets, never past the zenith.
- * * §32 CLOSE IN (C1): within `closeInMm` of the shell ONE chart is anchored on the facet the place is on (K5) and frozen; the gizmo is the place carried
- *   straight in along the facet's normal onto the parts (K1 – K4: the region continuous by construction); the place is held inside the region (K6 — the HUD
- *   names it; A + dy out and back in anchors anew); the lines short (K7), the region's outline drawn (K8). Far out: no gizmo, no lines.
- * * A1 – A2 — the approach: above G1 along the piece's direction, below it straight toward the gizmo, collision-checked; below G1 the slide owns the drag.
+ * ⭐⭐⭐ prototype — **THE ORBIT AROUND THE ASSEMBLY, WIRED** (2026-10-28; the rules are `input/assembly_orbit.ts`'s). On while `orbitMode` is 0 (1: the
+ * gizmo's 2D curve as built to 2026-10-25, kept whole). The centre the rest of the orbit reads (`orbitCentreM` — the quads, the hover, the markers) IS the
+ * GIZMO, moved here every frame: ⭐⭐⭐ (2026-11-04, STEP 4c-bis) a FUNCTION of the orbit's angles — THE FACE MAP (`input/face_map.ts`: the angles' place on
+ * the placed parts' box, the ray along the box face's axis onto the frontmost of the slide's coplanar regions, holes closed; `mapGizmo`) — ⛔ the carrier on
+ * the sections' hull (2026-10-29 … Step 4c) deleted; the sections DRAWN from the same function (`sectionLinesFrame`). The piece's place from it (`placeOffset`,
+ * read by `ringPlaceNow` — the solver's queries too) is its direction × the approach's distance; the approach (two fingers' dy, Shift + drag's) checked
+ * against the parts (`approachMove`), with its own coast. The camera's frame (`assemblyCameraFrame`), its look point (`st.asmLook`: the centre far out, the
+ * gizmo close in). ⛔ No rule here.
  */
+import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
+import { blendThroughEdges, buildFaceMap, facetOfNormal, mapAngles, mapTarget, stackDepthAt, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
-import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { approachAt, approachDistance, approachStep, approachStepFree, farDistance, lookShare, modelNormal, orbitDir, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { buildFaceMap, shellExit, type FaceMap, type MapFace } from "../input/face_map";
-import { CASTS_PER_FILL, allowedShare, anchorChart, chartAllows, chartEdgeDistance, chartFilled, chartGizmo, chartLines, chartRing, chartUV, closeInDir, closeInNext, facetAccept, facetGrid, fillChart, fillGrid, gridDone, hullParts, type Chart, type FacetAccept, type FacetGrid, type HullPart } from "../input/close_in_chart";
-import type { RigCameraFrame } from "../input/orbit_rig";
+import { Color4 } from "@babylonjs/core/Maths/math.color";
+import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
-import { orbitDegPerMm } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
-import { faceLift, shellBox, type ShellBox } from "../input/orbit_shell";
+import { faceLift, pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
-import { greenDragGains, pieceSolveOptions, pieceSolverEnv, ringAnchorAt, orbitDvPerMm } from "./green_box_wiring";
+import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
-import { calmShare, cameraView, sameView, viewAt, viewDir, viewFacets, type View, type ViewFacet, type ViewOpts } from "../input/loop_view";
-import { HOLD_FREE, isCapNormal, travelAt, travelStep, type CrossOk, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
-import { dot, type Vec3 } from "../core/vec";
+import { slideArmedAfter } from "../input/hover";
+import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
+import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
-import { boxOf, type Box3 } from "../input/ray_box";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 
-/** ⭐⭐ (§32 K7) the lines' reach each side of the gizmo (m — "limited to a small surface locally"), their segments' cap, their lift off the surface (m). */
-const LINE_HALF_M = 0.05;
-const LINE_MAX = 48;
-const SECTION_LIFT_M = 0.002;
-/** ⭐ (§32 K8) the outline's lift (m), its redraw interval while the fill grows (frames), the edge's nearness that brightens it (m). */
-const OUTLINE_LIFT_M = 0.0015;
-const RING_MAX = 1024;
-const OUTLINE_NEAR_M = 0.02;
-/** ⭐ (§32) the gizmo's fade in (ms). */
-const GIZMO_FADE_MS = 150;
-
-/** ⭐⭐⭐ (§32 C1) Is the gizmo shown (around the assembly: close in only), and its opacity (its fade in)? Elsewhere always, opaque. */
-export function gizmoShowing(st: SceneState, nowMs: number): number {
-  if (!assemblyOn(st)) return 1;
-  if (!st.asmGizmoOn) return 0;
-  return Math.max(0.05, Math.min(1, (nowMs - st.asmGizmoSince) / GIZMO_FADE_MS));
-}
-/** ⭐ The HUD's word for T5's stop. */
-const EDGE_HELD = "orbit: held at the edge — the face beyond is not reachable this way (its view would roll or turn over); the far faces by dx round the walls";
-const BELOW_G1 = "orbit: brought in — a drag takes the piece back out to orbit (the slide where the resting face looks at the face)";
-/** ⭐ (§32 K6) The HUD's word for the close-in area's stop. */
-const AREA_HELD = "orbit: the edge of the close-in area — bring the piece out (A + dy) and back in to move on";
+/** ⭐ The look point's ease (ms). */
+const LOOK_TAU_MS = 120;
+/** ⭐ (Step 4c-bis) the ray along the facet's normal for the real surface, cast from this far outside the box (m). ⭐⭐⭐ (Step 5, D3) taken WHATEVER its
+ * depth — over an empty slot its bottom (⛔ Step 4c-bis: refused beyond 25 mm of the region's plane, the gizmo across the slot's mouth). */
+const MAP_OUT_M = 0.05;
+/** ⭐ (Step 4c-bis) out of step after the slide: the map's angles close on the orbit's at 1 ± this of the orbit's step (`syncAngle`). */
+const MAP_CATCH_UP = 0.5;
+/** ⭐ (2026-11-05) over a bridged void a cast's hit counts only this far (m) in front of the facet's plane — a part rising out of it, not the plane's own rim. */
+const MAP_BRIDGE_FRONT_M = 0.0005;
 
 /** ⭐ Is the orbit the one around the assembly? */
 export function assemblyOn(st: SceneState): boolean {
   return st.cfg.orbitMode === 0;
-}
-
-/** ⭐ The gizmo shown (§32): its point on the real parts, the face's normal there (`null` over a bridge), its part, its chart coordinates. */
-interface GizmoShown {
-  readonly point: Vec3;
-  readonly normal: Vec3 | null;
-  readonly host: string | null;
-  readonly uv: readonly [number, number];
-}
-
-/** ⭐ The rebuild's state: G1 (its key, facets, the view's facets and knobs), the travel, the shown place and view (and their spring velocities), the gizmo. */
-export interface LoopState {
-  readonly key: string;
-  readonly map: FaceMap;
-  readonly facets: readonly TravelFacet[];
-  readonly view: { readonly facets: readonly ViewFacet[]; readonly opts: ViewOpts };
-  /** ⭐⭐⭐ §32.12 the view's knobs NOW: the calm's shares faded by the piece's distance (`calmShare` — none at the farthest, the sliders' at close in) */
-  calm: ViewOpts;
-  travel: Travel;
-  last: "x" | "y";
-  p: Vec3;
-  pVel: Vec3;
-  shown: View;
-  shownVel: Vec3;
-  /** the shown view's direction (the piece's offset and the approach read it) */
-  u: Vec3;
-  dtMs: number;
-  gz: GizmoShown | null;
-  /** ⭐⭐⭐ §32 K1 — the placed parts' convex hulls (the casts), K2 — each facet's accepted landings (the boot pass, per placed set) */
-  readonly hulls: readonly HullPart[];
-  readonly accept: readonly FacetAccept[];
-  /** ⭐⭐⭐ §32 C1 — close in, and its chart (anchored on entering, frozen until left) */
-  closeIn: boolean;
-  chart: Chart | null;
-  /** ⭐⭐⭐ §32.10 THE ATLAS: each facet's grid of landings, cast in the background after the boot pass (: the facet has no accepted landing) */
-  readonly grids: readonly (FacetGrid | null)[];
-  /** ⭐⭐⭐ §32.9 — under the slide, the gizmo's offset from the orbit's centre at the latch (the gizmo rides the slide); `null` off the slide */
-  slideG: Vec3 | null;
 }
 
 /** ⭐ The placed parts' world bounding box, `null` with none. */
@@ -117,7 +61,10 @@ function placedBox(st: SceneState): { lo: Vec3; hi: Vec3 } | null {
   return lo === null || hi === null ? null : { lo, hi };
 }
 
-/** ⭐ THE ASSEMBLY, once: its centre (the placed parts' box's — fixed for the scene) and radius. */
+/**
+ * ⭐ THE ASSEMBLY, once: its centre (the placed parts' box's — inside the assembly; fixed for the scene, the owner: *"put the center at the center inside the
+ * assembly at boot and don't change it"*), its radius (half its largest dimension); and the boot's pitch the piece had on the rings.
+ */
 export function ensureAssembly(st: SceneState): void {
   if (st.asm !== null) return;
   const box = placedBox(st);
@@ -125,12 +72,25 @@ export function ensureAssembly(st: SceneState): void {
   const centre: Vec3 = box === null ? [t[0], t[1], t[2]] : [(box.lo[0] + box.hi[0]) / 2, (box.lo[1] + box.hi[1]) / 2, (box.lo[2] + box.hi[2]) / 2];
   const radius = box === null ? 0.5 : Math.max(box.hi[0] - box.lo[0], box.hi[1] - box.lo[1], box.hi[2] - box.lo[2]) / 2;
   st.asm = { centre, radius };
+  // ⭐ the piece at the pitch it had on the rings at the boot (its ring place's elevation from the gizmo)
+  const p = rigPlace(st.cfg, st.rigTo, st.orbit.yaw, st.orbit.elevation, 1);
+  const n = Math.hypot(p[0], p[1], p[2]);
+  if (n > 1e-9) st.orbit.reset(st.orbit.yaw, vOfPitch(Math.asin(p[1] / n)));
   st.asmGizmo = null;
   st.asmLook = null;
   st.asmG = null;
 }
 
-/** ⭐ A pick on a placed part read on its MODEL pose (`unswayHit`) — never on the mesh as swayed by the orbit. */
+interface GizmoHit {
+  readonly point: Vec3;
+  readonly normal: Vec3 | null;
+  readonly host: string | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-01) A pick on a placed part read on its MODEL pose (`unswayHit`) — ⛔ on the mesh as drawn, swayed by the orbit: the gizmo's face a few
+ * degrees off, kept, and the quads' turn laid the resting face on it (the slide never latched).
+ */
 function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal: Vec3 | null, localN: Vec3 | null = null): { point: Vec3; normal: Vec3 | null } {
   const id = mesh === null ? undefined : st.idOf.get(mesh);
   const pose = id === undefined ? null : worldPlacementOf(st.world, id);
@@ -138,12 +98,153 @@ function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal
   const p = mesh.absolutePosition;
   const r = mesh.absoluteRotationQuaternion;
   const at = unswayHit(point, normal, [p.x, p.y, p.z], [r.w, r.x, r.y, r.z], pose.position, pose.orientation);
+  // the normal from the mesh's own local facet (`modelNormal`): exact whatever the sway did between the pick and now
   if (localN === null) return at;
   const s = mesh.absoluteScaling;
   return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };
 }
 
-/** ⭐ The parts' box (the face map's bound). */
+/**
+ * ⭐⭐⭐ (2026-11-04, Step 4c, the owner: *"make sure the orbit slide (the pieces translate the way the green box orbits) does not pollute the gizmo"*) — A RAY
+ * CAST IN THE MODEL'S SPACE: against each placed part, the ray moved onto the part as drawn (`swayRay` — its sway, translation and turn, undone), the nearest
+ * hit kept and brought back onto the part's model pose (`modelHit`). The gizmo, its drop and every section sample read the parts AT REST, whatever the orbit's
+ * sway does to the meshes. ⛔ `pickWithRay` in the world, its hit only mapped back (2026-11-01): a part swayed across the ray was met — or missed — where it
+ * was DRAWN.
+ */
+function modelCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): GizmoHit | null {
+  let best: { d: number; mesh: AbstractMesh; info: import("@babylonjs/core/Collisions/pickingInfo").PickingInfo } | null = null;
+  for (const c of castParts(st)) {
+    // ⭐⭐ (2026-11-04, the audit) the slab pre-reject in the MODEL's space: a part the ray misses is never tested (⛔ every placed mesh, every sample —
+    // 6–25k mesh tests a drag frame)
+    if (c.box !== null && !rayMeetsBox(origin, dir, length, c.box, CAST_BOX_MARGIN_M)) continue;
+    let o = origin;
+    let d = dir;
+    if (c.pose !== null) {
+      const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);
+      o = m.origin;
+      d = m.dir;
+    }
+    CAST_RAY.origin.copyFromFloats(o[0], o[1], o[2]);
+    CAST_RAY.direction.copyFromFloats(d[0], d[1], d[2]);
+    CAST_RAY.length = length;
+    const info = CAST_RAY.intersectsMesh(c.mesh, false);
+    if (!info.hit || info.pickedPoint === null) continue;
+    if (best === null || info.distance < best.d) best = { d: info.distance, mesh: c.mesh, info };
+  }
+  if (best === null) return null;
+  const pp = best.info.pickedPoint!;
+  const nn = best.info.getNormal(true);
+  const ln = best.info.getNormal(false, false);
+  const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);
+  return { point: m.point, normal: m.normal, host: st.idOf.get(best.mesh) ?? null };
+}
+
+/** ⭐ (2026-11-04, the audit) one scratch ray for every cast (⛔ a `Ray` and two `Vector3` per mesh per cast) */
+const CAST_RAY = new Ray(new Vector3(), new Vector3(0, 0, 1), 1);
+/** ⭐ the pre-reject's margin — a box grown 2 mm: a hit on its skin is never refused */
+const CAST_BOX_MARGIN_M = 0.002;
+
+type CastPart = NonNullable<SceneState["asmCast"]>["parts"][number];
+
+/**
+ * ⭐⭐ (2026-11-04, the audit) THE PARTS A CAST READS, ONCE A FRAME (`st.frames`, the world, the placed count): each placed mesh, its model pose, its drawn
+ * place and turn (the sway) and its model-space box. ⛔ Read per mesh per cast: ~10 allocations and an ancestry walk, every sample.
+ */
+function castParts(st: SceneState): readonly CastPart[] {
+  const c = st.asmCast;
+  if (c !== null && c.frame === st.frames && c.world === st.world && c.count === st.goalCommit.count) return c.parts;
+  const boxes = placedParts(st).boxes;
+  const parts: CastPart[] = [];
+  for (const [mesh, id] of st.idOf) {
+    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;
+    const p = mesh.absolutePosition;
+    const r = mesh.absoluteRotationQuaternion;
+    parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z], box: boxes.get(mesh) ?? null });
+  }
+  st.asmCast = { frame: st.frames, world: st.world, count: st.goalCommit.count, parts };
+  return parts;
+}
+
+/** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
+function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
+  const u = orbitDir(yaw, v);
+  const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
+  // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
+  // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
+  return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);
+}
+
+/**
+ * ⭐⭐⭐ (58d86ff's `spanShownDir`, ported) THE PIECE'S SHOWN DIRECTION for the orbit's direction `u`: its angles off the gizmo's face's normal shown at the
+ * eased shares (`st.asmCalm`) — ⭐⭐⭐ the SAME at every distance (the owner: *"modify the scope Q3: same calm at every distance"* — ⛔ 58d86ff's distance gate,
+ * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
+ */
+function calmDir(st: SceneState, u: Vec3): Vec3 {
+  const k = st.asmCalm;
+  if (k === null) return u;
+  const w = poleWeight(u[1]);
+  if (!(w > 0)) return u;
+  return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM's targets, each frame — ⭐⭐⭐ (Step 4c-bis) from the FACE MAP's place (`st.asmShown.t`): on a SIDE the side the yaw
+ * is in (its axis — the calm's normal), the place across it in the box's span (dx's run) and its height in the placed parts' box (dy's run) — `edgeShare`
+ * of each (58d86ff's); over a top / under a bottom the orbit's whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED
+ * toward them (`easeToward`, `easeNormal`).
+ */
+function calmFrame(st: SceneState, dtMs: number): void {
+  const t = st.asmShown?.t ?? null;
+  const cfg = st.cfg;
+  let n: Vec3 | null = null;
+  let sH = 1;
+  let sV = 1;
+  if (t !== null && t.band === "SIDE") {
+    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block) — ⭐⭐⭐ (Step 5) the FACET's normal, read level (the
+    // calm's frame turns about the world's up: a facet sloping up a column, its heading)
+    const h = Math.hypot(t.normal[0], t.normal[2]);
+    n = h > 1e-9 ? [t.normal[0] / h, 0, t.normal[2] / h] : t.normal;
+    const L = t.across;
+    sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
+    // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
+    // wall under the gizmo: its top differed from the front to the side at the same height — the owner's bounce, probed)
+    const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;
+    const y = t.surface[1];
+    sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+  }
+  const k = st.asmCalm;
+  if (k === null) {
+    // ⭐ from none: the shares come in from 1 (the orbit's whole angle) — never a jump at the start
+    if (n !== null) st.asmCalm = { n, sH: easeToward(1, sH, dtMs), sV: easeToward(1, sV, dtMs) };
+    return;
+  }
+  if (n !== null) {
+    // ⭐ the horizontal share whole: the normal changes nothing (the pitch is the world's up's, the heading the orbit's own) — taken at once (⛔ eased from
+    // a stale face 175° away while the shares fell: a 271 mm camera jump)
+    k.n = k.sH > 0.999 ? n : easeNormal(k.n, n, dtMs);
+    // ⭐ the HORIZONTAL calm only as far as the normal has caught up with the face's — the vertical one never waits on it (⛔ both released at every corner:
+    // the pitch swung up and the camera back under a pure dx — the owner's bounce, probed)
+    sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);
+  }
+  k.sH = easeToward(k.sH, sH, dtMs);
+  k.sV = easeToward(k.sV, sV, dtMs);
+}
+
+/**
+ * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else this frame's (`st.asmG`, the face map's); none yet, the map's at the
+ * orbit's angles.
+ */
+function gizmoFor(st: SceneState): Vec3 {
+  if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
+  if (st.asmG !== null) return st.asmG;
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const m = mapGizmo(st, q.yaw, pitchOfV(q.v));
+  if (m !== null) return m.hit.point;
+  const g = st.asmGizmo ?? st.centreBlend.targetM;
+  return [g[0], g[1], g[2]];
+}
+
+/** ⭐⭐⭐ (2026-11-04, Step 2) The shell's box (`input/orbit_shell.ts`) — the placed parts' extent, per placed set. */
 function shellOf(st: SceneState): ShellBox | null {
   const parts = placedParts(st);
   if (st.asmShell !== null && st.asmShell.key === parts.key) return st.asmShell.box;
@@ -152,7 +253,17 @@ function shellOf(st: SceneState): ShellBox | null {
   return box;
 }
 
-/** ⭐ The piece's lift along `u` (`faceLift`): its hull past its resting face's centre toward the assembly; none: 0. */
+/**
+ * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE GIZMO'S FOOT (`shellAnchor`) — the orbit's centre the piece and the camera read: on the
+ * smooth shell round the placed parts' box beyond `orbitShellOffsetMm`, onto the gizmo within it. A protrusion, a recess, a notch moves the gizmo, never
+ * the foot. Under the slide: the slide's gizmo itself (the slide unchanged).
+ */
+function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
+  if (st.asmLocked) return g;
+  return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
+}
+
+/** ⭐⭐⭐ (2026-11-05) The piece's lift along `u` (`faceLift`): its hull past its resting face's centre toward the gizmo, at its pose; none: 0. */
 function liftOf(st: SceneState, u: Vec3): number {
   const id = st.greenBox?.name;
   const pts = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
@@ -161,14 +272,23 @@ function liftOf(st: SceneState, u: Vec3): number {
   return pts === undefined || place === null || rc === undefined ? 0 : faceLift(pts, place.orientation, rc, u);
 }
 
-type PlacedParts = NonNullable<SceneState["asmParts"]>;
+/** ⭐ The piece's reach toward the gizmo along `−u` (`pieceReach`, its hull at its pose); none: 0. */
+function reachOf(st: SceneState, u: Vec3): number {
+  const id = st.greenBox?.name;
+  const pts = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
+  const place = id === undefined ? null : worldPlacementOf(st.world, id);
+  return pts === undefined || place === null ? 0 : pieceReach(pts, place.orientation, u);
+}
 
-/** ⭐ The placed parts' world vertices on their MODEL pose (each a convex body) and each mesh's model-space box, per placed set. */
+/**
+ * ⭐ The placed parts' world vertices on their MODEL pose (each a convex body — a box, a frustum) and each mesh's model-space box, cached for the placed set
+ * (they do not move). ⭐ (2026-11-04, the audit) the set's KEY read once a frame (`placedKey`) — ⛔ rebuilt (every mesh, sorted, joined) on every call:
+ * ~1300 times a drag frame (every solver query's foot, every section sample).
+ */
 function placedParts(st: SceneState): PlacedParts {
   const { key, meshes } = placedKey(st);
   if (st.asmParts !== null && st.asmParts.key === key) return st.asmParts;
   const parts: Vec3[][] = [];
-  const ids: (string | null)[] = [];
   const boxes = new Map<AbstractMesh, Box3>();
   for (const m of meshes) {
     const pos = m.getVerticesData(VertexBuffer.PositionKind);
@@ -178,6 +298,7 @@ function placedParts(st: SceneState): PlacedParts {
     const vs: Vec3[] = [];
     for (let i = 0; i + 2 < pos.length; i += 3) {
       const w0 = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), w);
+      // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose (`modelHit`) — ⛔ cached from the swaying mesh, a hull read mid-sway stayed turned
       const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;
       const k = `${v[0].toFixed(6)},${v[1].toFixed(6)},${v[2].toFixed(6)}`;
       if (seen.has(k)) continue;
@@ -186,15 +307,16 @@ function placedParts(st: SceneState): PlacedParts {
     }
     if (vs.length === 0) continue;
     parts.push(vs);
-    ids.push(st.idOf.get(m) ?? null);
     const b = boxOf(vs);
     if (b !== null) boxes.set(m, b);
   }
-  st.asmParts = { key, parts, ids, boxes };
+  st.asmParts = { key, parts, boxes };
   return st.asmParts;
 }
 
-/** ⭐ The placed set's key and meshes, once a frame. */
+type PlacedParts = NonNullable<SceneState["asmParts"]>;
+
+/** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame (`st.frames`, the world, the placed count). */
 function placedKey(st: SceneState): { readonly key: string; readonly meshes: readonly AbstractMesh[] } {
   const k = st.asmKey;
   if (k !== null && k.frame === st.frames && k.world === st.world && k.count === st.goalCommit.count) return k;
@@ -209,7 +331,15 @@ function placedKey(st: SceneState): { readonly key: string; readonly meshes: rea
   return st.asmKey;
 }
 
-/** ⭐ G1 — the face map of the placed parts (upright, the world's), its facets' planes at the parts' support. */
+/** ⭐⭐⭐ (Step 4c-bis) the face map's knobs: the slow stretch through an edge (mm on each face) and the yaw / pitch it is crossed in (deg). */
+function mapOpts(st: SceneState): MapOpts {
+  return { edgeMm: st.cfg.faceEdgeSlideMm, edgeDeg: st.cfg.faceEdgeSlideDeg };
+}
+
+/**
+ * ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`) — the placed parts' faces on their MODEL pose (the slide's own: `faceWorld`,
+ * `faceTrianglesWorld`), per placed set; `null` with no box. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — its two knobs (D5) sliders, in the cache's key.
+ */
 function faceMapOf(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
@@ -233,356 +363,332 @@ function faceMapOf(st: SceneState): FaceMap | null {
   return map;
 }
 
-/** ⭐ The travel's knobs from the sliders: the orbit's pace (°/mm of finger), the edge's slow stretch. */
-function travelOpts(st: SceneState): TravelOpts {
-  return {
-    degPerMm: orbitDegPerMm(st.cfg, 0.5, greenDragGains(st)).yawDegPerMm,
-    edgeM: Math.max(0, st.cfg.faceEdgeSlideMm) / 1000,
-    edgeRad: (Math.max(0, st.cfg.faceEdgeSlideDeg) * Math.PI) / 180,
-  };
-}
-
 /**
- * ⭐⭐⭐ THE REBUILD's STATE, kept for the placed set: G1 and its facets; the travel — at the boot on the facet facing the piece, at the boot gizmo's place
- * projected onto it; on a new placed set (G1 changed) the place carried onto the new G1's nearest facet. `null`: no assembly.
+ * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place (`mapTarget`), the FRONTMOST closed region
+ * there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along the normal from outside the box
+ * (`modelCast` — the parts at rest) for the real surface. The point keeps the place's two other coordinates EXACTLY: the green's and the red's planes, by
+ * construction. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — the facet's stack, its normal, its frame (`t`, `b`); ⭐⭐⭐ (D3) the ray's hit taken WHATEVER its depth:
+ * over an empty slot (a hole the region closes) the gizmo at its BOTTOM — the region still chooses the face and keeps the gizmo continuous across the rim,
+ * only the depth is the real one; a slot through the whole assembly (no hit): the region's plane. The piece and the camera ride the shell (Step 2).
+ * ⭐⭐⭐ (2026-11-05, the owner) D3 AMENDED — a void CLOSED on the green's or the red's travel (`stackDepthAt`'s `bridged`): the gizmo straight through on
+ * the facet's plane, the lines with it; a void open on both keeps its depth until the frame turn (Steps 6–7).
  */
-function loopOf(st: SceneState): LoopState | null {
+function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const map = faceMapOf(st);
   if (map === null) return null;
-  const key = st.asmFaceMap?.key ?? "";
-  const L = st.loop;
-  if (L !== null && L.key === key) return L;
-  const facets: TravelFacet[] = map.facets.map((f) => ({ n: f.n, poly: f.poly, cap: isCapNormal(f.n) }));
-  const cfg = st.cfg;
-  const view = {
-    facets: viewFacets(map.facets),
-    opts: {
-      shareH: cfg.faceSpanShareH,
-      shareV: cfg.faceSpanShareVOn === 1 ? cfg.faceSpanShareV : 1,
-      edgeRad: (Math.max(0, cfg.faceEdgeSlideDeg) * Math.PI) / 180,
-      edgeM: Math.max(0, cfg.faceEdgeSlideMm) / 1000,
-    },
+  const t = mapTarget(map, yaw, pitch, mapOpts(st));
+  const f = map.facets[t.stack]!;
+  const n = t.normal;
+  const sf = t.surface;
+  const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);
+  if (at === null) return { hit: { point: sf, normal: n, host: null }, t };
+  const level = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
+  // along the normal onto the group's plane — the place's two other coordinates kept
+  const onto = (d: number): Vec3 => {
+    const k = d - level(sf);
+    return [sf[0] + n[0] * k, sf[1] + n[1] * k, sf[2] + n[2] * k];
   };
-  // the place: the old one (a new placed set) or the boot gizmo — onto the facet the piece's direction faces most (at the boot the orbit's boot direction —
-  // ⛔ the spawned piece's position: far out before the orbit placed it), on its plane
-  const from: Vec3 = L !== null ? L.travel.p : [st.centreBlend.targetM[0], st.centreBlend.targetM[1], st.centreBlend.targetM[2]];
-  const toward: Vec3 = L !== null ? L.u : orbitDir(st.orbit.yaw, st.orbit.elevation);
-  let fi = 0;
-  let best = -Infinity;
-  facets.forEach((f, i) => {
-    const s = dot(f.n, toward);
-    if (!f.cap && s > best) {
-      best = s;
-      fi = i;
-    }
-  });
-  const f = map.facets[fi]!;
-  const k = f.e - dot(f.n, from);
-  const p: Vec3 = [from[0] + f.n[0] * k, from[1] + f.n[1] * k, from[2] + f.n[2] * k];
-  const travel = travelAt(facets, p, fi);
-  const shown = L !== null ? L.shown : viewAt(view.facets, fi, p, travel.entry, view.opts);
-  // ⭐⭐⭐ §32 K1 – K2 — the hulls the chart casts against, and THE BOOT PASS: each facet's accepted landings (per placed set — rerun when a piece is placed)
-  const pp = placedParts(st);
-  const hulls = hullParts(pp.parts, pp.ids);
-  const accept = map.facets.map((mf) => facetAccept(hulls, mf));
-  const grids = map.facets.map((mf, i) => (Number.isFinite(accept[i]!.maxDepth) ? facetGrid(hulls, mf) : null));
-  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, grids, slideG: null, calm: view.opts };
-  return st.loop;
-}
-
-/** ⭐ V3 – V4 — the view at a travel's place (a cap's from its entry wall). */
-function viewOf(L: LoopState, t: Travel): View {
-  return viewAt(L.view.facets, t.facet, t.p, t.entry, L.calm);
-}
-
-/** ⭐⭐⭐ §32.12 THE CALM BY DISTANCE: the view's shares at the piece's distance now (the farthest: none; the close-in distance and nearer: the sliders'). */
-function calmNow(st: SceneState, L: LoopState): void {
-  const o = L.view.opts;
-  const d = approachDistance(st.cfg, st.approach);
-  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
-  const far = farDistance(st.cfg);
-  L.calm = { ...o, shareH: calmShare(o.shareH, d, inM, far), shareV: calmShare(o.shareV, d, inM, far) };
-}
-
-/** ⭐⭐⭐ T5 — a crossing taken only where the view just before the edge is the view just after it (`sameView`). */
-function crossOkOf(L: LoopState): CrossOk {
-  return (from, to) => sameView(viewOf(L, from), viewOf(L, to));
+  const p = onto(at.depth);
+  // ⭐⭐⭐ (2026-11-05) over a void closed on a travel (`at.bridged`): straight through on the facet's plane — the cast kept only for what stands IN FRONT of
+  // it (a part rising out of the void), never for its bottom
+  if (at.inside || at.bridged === true) {
+    const b = map.box;
+    const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
+    const out = sup(1) + MAP_OUT_M;
+    const o: Vec3 = [p[0] + n[0] * (out - level(p)), p[1] + n[1] * (out - level(p)), p[2] + n[2] * (out - level(p))];
+    const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
+    if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
+  }
+  return { hit: { point: p, normal: n, host: null }, t };
 }
 
 /**
- * ⭐⭐⭐ T6 — THE FINGER'S STEP (and its coast's): `fx` right, `fy` up (mm) through the travel (`travelStep`, dx then dy); its holds named on the HUD. Below
- * G1 (A2) the orbit takes no drag — the slide owns it. Returns whether anything moved.
+ * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP: in an edge band, the facet's gizmo (`rawGizmo`) blended toward the next facet's first one —
+ * ⭐ (Step 5) the rule in `input/face_map.ts` (`blendThroughEdges`, `edgeBlend`), vectored on a non-box contour. Its normal, host and place: the facet's own.
  */
-export function loopFinger(st: SceneState, fx: number, fy: number): boolean {
-  const L = loopOf(st);
-  if (L === null || st.asmLocked) return false;
-  // ⭐⭐⭐ A2 — below G1 the orbit never runs: without a slide (it latches only where the resting face looks at a face) the drag takes the piece back OUT
-  // to G1 first, at the drag's own pace (the approach out, checked against the parts), then orbits (⛔ the drag refused: dead at a contact)
-  if (approachDistance(st.cfg, st.approach) < 0) {
-    approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));
-    if (st.lastVerdict !== BELOW_G1) {
-      st.lastVerdict = BELOW_G1;
-      st.hudDirty = true;
-    }
-    return true;
-  }
-  calmNow(st, L);
-  const o = travelOpts(st);
-  let moved = false;
-  // ⭐⭐⭐ T5 — a face crossed only where the view is continuous
-  const crossOk = crossOkOf(L);
-  const C = L.chart;
-  // ⭐⭐⭐ §32 K6 — close in, the place stays inside the chart's region (and on its facet): a step cut back to the region's edge, named on the HUD
-  const inArea = (t: Travel): boolean => C === null || (t.facet === C.facet && chartAllows(C, ...chartUV(C, t.p)));
-  for (const [comp, mm] of [["x", fx], ["y", fy]] as const) {
-    if (mm === 0) continue;
-    let r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);
-    if (C !== null && !inArea(r.travel)) {
-      const k = allowedShare((m) => inArea(travelStep(L.facets, L.travel, comp, mm * m, o, crossOk).travel));
-      r = k > 0 ? travelStep(L.facets, L.travel, comp, mm * k, o, crossOk) : { travel: L.travel, held: null, crossed: 0 };
-      if (st.lastVerdict !== AREA_HELD) {
-        st.lastVerdict = AREA_HELD;
-        st.hudDirty = true;
-      }
-    }
-    if (r.travel !== L.travel) moved = true;
-    L.travel = r.travel;
-    L.last = comp;
-    if (r.held === "EDGE" && st.lastVerdict !== EDGE_HELD) {
-      st.lastVerdict = EDGE_HELD;
-      st.hudDirty = true;
-    }
-    if (r.crossed > 0) {
-      st.lastVerdict = `orbit: onto ${L.facets[L.travel.facet]!.cap ? "a cap" : "a wall"}`;
-      st.hudDirty = true;
-    }
-  }
-  return moved;
-}
-
-/** ⭐ The piece's offset from the shown place (P1, A1) at the approach coordinate `approach`: above G1 along the direction, below it toward the gizmo. */
-function offsetAt(st: SceneState, approach: number): Vec3 {
-  const L = st.loop;
-  if (L === null) return [0, 0, 0];
-  const d = approachDistance(st.cfg, approach);
-  // ⭐⭐⭐ §32 C4 — close in, the piece's direction turns from the view onto the chart's normal as it nears the shell, and its foot from the place onto the
-  // shifted place (K5) — so at the shell it stands straight above the gizmo and A + dy goes straight in onto it; continuous at the close-in distance
-  const C = L.chart;
-  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
-  const s = C === null ? 1 : Math.max(0, Math.min(1, d / inM));
-  const u = C === null ? L.u : closeInDir(L.u, C.f.n, s);
-  const w = 1 - s * s * (3 - 2 * s);
-  const base: Vec3 = C === null ? L.p : [L.p[0] + (C.f.t[0] * C.shift[0] + C.f.b[0] * C.shift[1]) * w, L.p[1] + (C.f.t[1] * C.shift[0] + C.f.b[1] * C.shift[1]) * w, L.p[2] + (C.f.t[2] * C.shift[0] + C.f.b[2] * C.shift[1]) * w];
-  const o: Vec3 = [base[0] - L.p[0], base[1] - L.p[1], base[2] - L.p[2]];
-  const lift = Math.max(0, liftOf(st, u));
-  // ⭐⭐⭐ (§27.2 G1s) P1 — from the foot along the direction out to where the SHELL is left, then the approach's distance
-  const t0 = shellExit(L.map.facets, base, u);
-  if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];
-  // A1 — below the shell: from where the direction leaves it straight toward the gizmo, as far in as `−d`
-  const g = st.asmGizmoAt ?? base;
-  const v: Vec3 = [g[0] - base[0] - u[0] * t0, g[1] - base[1] - u[1] * t0, g[2] - base[2] - u[2] * t0];
-  const lv = Math.hypot(v[0], v[1], v[2]);
-  const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;
-  return [o[0] + u[0] * (t0 + lift) + v[0] * k, o[1] + u[1] * (t0 + lift) + v[1] * k, o[2] + u[2] * (t0 + lift) + v[2] * k];
-}
-
-/** ⭐ The piece's place from the orbit's centre (the shown place on G1) — the solver's and the approach's queries (the angles unused: P1). */
-export function placeOffset(st: SceneState, _yaw: number, _v: number, approach: number = st.approach): Vec3 {
-  return offsetAt(st, approach);
-}
-
-/** ⭐ The DRAWN piece's place from the shown place. */
-export function shownOffset(st: SceneState, _yaw: number, _v: number): Vec3 {
-  return offsetAt(st, st.approach);
+export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+  const here = rawGizmo(st, yaw, pitch);
+  const map = faceMapOf(st);
+  if (here === null || map === null) return null;
+  const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));
+  return p === here.hit.point ? here : { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
 }
 
 /**
- * ⭐⭐ EVERY FRAME (before the piece is placed): the approach's coast; the slide's hold; the R4 hold freed with the drag; the shown place and direction
- * eased toward the travel's; the gizmo (Gz); the face for the quads (P3: G1's facet normal); the centre the orbit reads (the shown place); the look point;
- * the lines.
+ * ⭐⭐⭐ (2026-11-05) A BLENDED PLACE'S DEPTH (`blendThroughEdges`' `cast`): the ray along the blended normal `nb` from `reach` in front of the place `q`
+ * onto it (`modelCast` — the parts at rest); its hit, or none. Only a surface in front of `q` is met (the ray stops at it).
+ */
+function blendCast(st: SceneState, q: Vec3, nb: Vec3, reach: number): Vec3 | null {
+  const h = modelCast(st, [q[0] + nb[0] * reach, q[1] + nb[1] * reach, q[2] + nb[2] * reach], [-nb[0], -nb[1], -nb[2]], reach);
+  return h === null ? null : h.point;
+}
+
+/**
+ * ⭐⭐ THE PIECE'S PLACE from the orbit's centre (the shown gizmo) at an orbit place — `ringPlaceNow`'s in this mode, the solver's queries included: its
+ * own gizmo for that direction + the direction × the approach's distance (`approach`: the state's by default).
+ */
+export function placeOffset(st: SceneState, yaw: number, v: number, approach: number = st.approach): Vec3 {
+  const d = approachDistance(st.cfg, approach);
+  // ⭐⭐⭐ (2026-11-04, Step 2) from the gizmo's FOOT on the shell — ⭐⭐⭐ (2026-11-05) the gizmo AT THESE ANGLES (`placeAtAngles`, `gizmoAtAngles`): ⛔ the
+  // frame's gizmo, read from the last frame's angles — the solver's world moved with its own result (the back-and-forth on the phone)
+  // ⭐⭐⭐ (2026-11-05) the piece's SUPPORT at the gizmo (`liftOf`, `faceLift`) — ⛔ its resting face's centre: round an edge the face went into the part
+  const p = placeAtAngles({ yaw, v }, (q) => gizmoAtAngles(st, q.yaw, q.v), (q) => dirAt(st, q.yaw, q.v), (g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));
+  const c = st.orbitCentreM;
+  return [p[0] - c.x, p[1] - c.y, p[2] - c.z];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-05) THE GIZMO AT THE ORBIT'S ANGLES `yaw`, `v` (`mapGizmo`) — out of step after the slide by the frame's own lag (`st.asmMapQ` against
+ * `st.asmPrevQ`, `syncAngle`); at the frame's own angles exactly the frame's gizmo (`st.asmG`). Under the slide: its held gizmo. Memoised for the frame
+ * (the solver asks the same angles several times).
+ */
+function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
+  if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
+  const q0 = st.asmPrevQ;
+  const mq = st.asmMapQ;
+  if (q0 === null || mq === null) return gizmoFor(st);
+  if (yaw === q0.yaw && v === q0.v && st.asmG !== null) return st.asmG;
+  let memo = GIZMO_MEMO.get(st);
+  if (memo === undefined || memo.frame !== st.frames) {
+    memo = { frame: st.frames, at: new Map() };
+    GIZMO_MEMO.set(st, memo);
+  }
+  const key = `${yaw}|${v}`;
+  const known = memo.at.get(key);
+  if (known !== undefined) return known;
+  const m = mapGizmo(st, yaw + Math.atan2(Math.sin(mq.yaw - q0.yaw), Math.cos(mq.yaw - q0.yaw)), pitchOfV(v) + (mq.pitch - pitchOfV(q0.v)));
+  const g = m === null ? gizmoFor(st) : m.hit.point;
+  if (memo.at.size < 512) memo.at.set(key, g);
+  return g;
+}
+const GIZMO_MEMO = new WeakMap<SceneState, { frame: number; at: Map<string, Vec3> }>();
+
+/** ⭐ The DRAWN piece's place from the shown gizmo: along its direction at the approach's distance (the gizmo's ease carries it — never a jump). */
+export function shownOffset(st: SceneState, yaw: number, v: number): Vec3 {
+  const u = dirAt(st, yaw, v);
+  const d = approachDistance(st.cfg, st.approach) + liftOf(st, u);
+  return [u[0] * d, u[1] * d, u[2] * d];
+}
+
+/**
+ * ⭐ The gizmo face's edge margin (m): `gizmoEdgeMarginMm` in the WORLD — an edge is a place on the assembly, not on the glass (⛔ on the glass at the
+ * camera's 7.5 m it was 26 cm: wider than the assembly's half — the face never switched).
+ */
+function edgeMarginM(st: SceneState): number {
+  return st.cfg.gizmoEdgeMarginMm / 1000;
+}
+
+/**
+ * ⭐⭐ EVERY FRAME (before the piece is placed): the lock, the gizmo (its point eased, its face by the edge rule — the quads follow), the centre the orbit
+ * reads set to it, the look point eased; the approach's coast. Under a HOVER the hover owns the gizmo: it is taken as the locked one.
  */
 export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (!assemblyOn(st) || st.greenBox === null) return;
   ensureAssembly(st);
-  const L = loopOf(st);
-  if (L === null) return;
-  L.dtMs = dtMs;
-  calmNow(st, L);
   const a = st.asm!;
+  // ⭐ the approach's coast — ⭐⭐ (2026-11-01) under the slide mode too: a flick out leaves it
   if (st.approachInertia.coasting) {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
     approachMove(st, s.dV);
   }
-  // A2 — the depth decides: below G1 the slide may latch (armed by the depth alone)
-  const d = approachDistance(st.cfg, st.approach);
-  st.slideArmed = d < 0;
   if (st.hover !== null) {
     const t = st.centreBlend.targetM;
     st.asmLocked = true;
+    st.asmShown = null; // ⭐ (Step 4c-bis) back out: the map's angles put where the slide leaves the gizmo
     const n = st.gizmoNormal ?? null;
-    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: null };
+    const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(orbitDir(q0.yaw, q0.v), n)) };
     st.asmGizmo = [t[0], t[1], t[2]];
-    // ⭐⭐⭐ (2026-11-08, scope §32.9) the gizmo RIDES THE SLIDE at its offset from the centre at the latch — below the shell the piece's offset aims at it
-    // (`offsetAt`). ⛔ Set to the centre (the shell's place): on a face 40 mm below the shell the piece jumped back up to the shell at the latch, the slide
-    // read it as taken away and let go, the way out re-derived the approach above the shell, A + dy brought it in again — a latch loop every 10 frames
-    // (`d926b88` too: 12 reversals on seed 22, 18 on `16b38c4`; 0 with the fix)
-    if (L.slideG === null) {
-      const g0 = st.asmGizmoAt ?? t;
-      L.slideG = [g0[0] - t[0], g0[1] - t[1], g0[2] - t[2]];
-    }
-    st.asmGizmoAt = [t[0] + L.slideG[0], t[1] + L.slideG[1], t[2] + L.slideG[2]];
+    st.asmGizmoAt = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
-    st.asmGizmoOn = false;
-    hideLines(st);
-    // §32.10 the ring hidden with the gizmo and its lines while the slide holds the piece
-    if (st.asmOutline !== null) st.asmOutline.isVisible = false;
     return;
   }
-  L.slideG = null;
-  if (st.asmLocked) {
-    // ⭐ off the slide: the travel's place where the slide left the piece — on G1's facet facing it, the approach kept at the piece's depth below G1
-    st.asmLocked = false;
-    const g = st.asmLock?.point ?? L.p;
-    const n = st.asmLock?.normal ?? null;
-    let fi = L.travel.facet;
-    let bestS = -Infinity;
-    if (n !== null)
-      L.facets.forEach((f, i) => {
-        const s = dot(f.n, n);
-        if (s > bestS) {
-          bestS = s;
-          fi = i;
-        }
-      });
-    const mf = L.map.facets[fi]!;
-    const k = mf.e - dot(mf.n, g);
-    const p: Vec3 = [g[0] + mf.n[0] * k, g[1] + mf.n[1] * k, g[2] + mf.n[2] * k];
-    const pieceNow = st.greenBox.getAbsolutePosition();
-    // its depth below the SHELL (§27.2 G1s: the approach is measured from the shell)
-    const depth = dot([pieceNow.x - p[0], pieceNow.y - p[1], pieceNow.z - p[2]], mf.n) - Math.max(0, liftOf(st, mf.n)) - (mf.es - mf.e);
-    L.travel = travelAt(L.facets, p, fi);
-    L.p = p;
-    st.approach = approachAt(st.cfg, depth);
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const u = orbitDir(q.yaw, q.v);
+  const d = approachDistance(st.cfg, st.approach);
+  // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
+  // angles' steps (2026-10-29 … Step 4c): it could wait, be held, drift and jump. The map's angles ARE the orbit's — out of step only after the slide (put
+  // where the slide left the gizmo), then closing on the orbit's with its own steps (`syncAngle`: never against the finger, never a jump)
+  const prev = st.asmPrevQ ?? q;
+  st.asmPrevQ = { yaw: q.yaw, v: q.v };
+  let hit: GizmoHit | null = null;
+  if (!st.asmLocked) {
+    const pitch = pitchOfV(q.v);
+    const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
+    const mq = {
+      yaw: syncAngle(m0.yaw, q.yaw, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), MAP_CATCH_UP, true),
+      pitch: syncAngle(m0.pitch, pitch, pitch - pitchOfV(prev.v), MAP_CATCH_UP, false),
+    };
+    st.asmMapQ = mq;
+    const m = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m !== null) {
+      hit = m.hit;
+      st.asmG = hit.point;
+      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+    }
+  }
+  calmFrame(st, dtMs);
+  const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
+  // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (a); the owner: *"deleting the lock at step 1 is cleaner"*) — THE CLOSE-IN LOCK DELETED: the
+  // carrier runs at EVERY distance (⛔ the old lock: within 30 cm of the gizmo, or inside the assembly's sphere, the gizmo and its face were held — one
+  // behaviour far out, another close in). `st.asmLocked` is now the SLIDE's hold only (set under a hover, above).
+  const was = st.asmLocked;
+  st.asmLocked = false;
+  if (was) {
+    // ⭐ off the slide: the map's angles put at the slide's gizmo (`mapAngles`) — before Step 4c-bis the carrier found again, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
+    // yaw plane by the slide: the gizmo off the red section from then on)
+    st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
+    // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)
+    const map = faceMapOf(st);
+    st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map, st.asmG, facetOfNormal(map, st.gizmoNormal ?? null, st.asmG), mapOpts(st)) : null;
+    st.asmShown = null;
     st.asmLock = null;
-    // §32 — a new chart from where the slide left the piece
-    L.chart = null;
-    L.closeIn = false;
-    st.lastVerdict = "orbit: off the slide — the travel from where the slide left the piece";
+    st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
   }
-  if (st.router.size === 0 && !st.orbitInertia.coasting && (L.travel.hold.x !== 0 || L.travel.hold.y !== 0)) L.travel = { ...L.travel, hold: HOLD_FREE };
-  // ⭐⭐⭐ V6 (2026-11-08, §32.11 — the owner: *"i don't like the way the piece movement springs during the orbit … Now that the gizmo is not used for
-  // orbit, i think a spring is unwarranted. There was no such spring in the finalized polar orbit movement"*) the shown place and view ARE the travel's,
-  // at once — the piece and the camera with them. ⛔ The critically damped spring (`orbitSpringMs`, 30 ms): the piece trailed the travel 40 – 50 mm while
-  // moving and caught up ~200 ms after the finger stopped — a rubber band.
-  const vT = viewOf(L, L.travel);
-  L.p = [L.travel.p[0], L.travel.p[1], L.travel.p[2]];
-  L.pVel = [0, 0, 0];
-  L.shown = vT;
-  L.shownVel = [0, 0, 0];
-  L.u = viewDir(L.shown);
-  // the orbit's angles ARE the shown view (the HUD, the probes, the slide's way out read them)
-  st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));
-  // ⭐⭐⭐ §32 C1 — CLOSE IN (the piece within `closeInMm` of the shell, left 30 mm further out): a chart anchored on the facet the place is on (K5), frozen
-  // until close in is left; filled a budget of casts a frame (K3 – K4). Far out: no chart, no gizmo, no lines.
-  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
-  L.closeIn = closeInNext(L.closeIn, d, inM);
-  if (!L.closeIn) L.chart = null;
-  else if (L.chart === null) {
-    const fi = L.travel.facet;
-    L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st), L.grids[fi] ?? null, Math.max(0.001, st.cfg.closeInRingMm / 1000));
-  }
-  const C = L.chart;
-  if (C !== null && !chartFilled(C)) fillChart(C, L.hulls);
-  // ⭐⭐⭐ §32.10 THE ATLAS in the background: the facet the place is on first, then the others — a budget of casts a frame, none once all are cast
-  else {
-    const order = [L.travel.facet, ...L.grids.map((_, i) => i).filter((i) => i !== L.travel.facet)];
-    let budget = CASTS_PER_FILL;
-    for (const i of order) {
-      const G = L.grids[i];
-      if (G === null || G === undefined || gridDone(G)) continue;
-      budget -= fillGrid(G, L.hulls, budget);
-      if (budget <= 0) break;
+  // ⭐ unlocked: the face by the edge rule (the quads read it)
+  if (!st.asmLocked && hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
+    if ((st.gizmoHost ?? null) !== hit.host) {
+      st.gizmoHost = hit.host;
+      st.orientDirty = true;
     }
-  }
-  // the gizmo: the shown place carried in (K1 – K3), else the travel's own place, else where it last was (the shown place trailing outside the region)
-  let gz: GizmoShown | null = null;
-  if (C !== null)
-    for (const at of [L.p, L.travel.p]) {
-      const uv = chartUV(C, at);
-      const q = chartGizmo(C, uv[0], uv[1]);
-      if (q !== null) {
-        gz = { ...q, uv };
-        break;
-      }
-    }
-  if (gz === null && C !== null && L.gz !== null) gz = L.gz;
-  L.gz = C === null ? null : gz;
-  const g = L.gz;
-  if (g !== null && !st.asmGizmoOn) st.asmGizmoSince = performance.now();
-  st.asmGizmoOn = g !== null;
-  const fN = L.facets[L.travel.facet]!.n;
-  if (st.gizmoNormal === null || st.gizmoNormal === undefined || dot(st.gizmoNormal, fN) < Math.cos(Math.PI / 180)) {
-    st.gizmoNormal = fN;
-    st.orientDirty = true;
-  }
-  if (g !== null && g.host !== null && g.normal !== null && dot(g.normal, fN) > Math.cos(Math.PI / 180) && (st.gizmoHost ?? null) !== g.host) {
-    st.gizmoHost = g.host;
-    st.orientDirty = true;
-  }
-  st.asmG = [L.travel.p[0], L.travel.p[1], L.travel.p[2]];
-  st.asmGizmoAt = g === null ? null : [g.point[0], g.point[1], g.point[2]];
-  st.asmGizmo = [L.p[0], L.p[1], L.p[2]];
+    const n0 = st.gizmoNormal ?? null;
+    if (n0 === null || n0[0] * hit.normal[0] + n0[1] * hit.normal[1] + n0[2] * hit.normal[2] < Math.cos(Math.PI / 180)) st.orientDirty = true;
+    st.gizmoNormal = hit.normal;
+    st.asmFacePoint = hit.point;
+  } else if (!st.asmLocked && hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
+  // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
+  // camera); the ring at the gizmo itself, on the real surface
+  const target = g0;
+  const foot = footOf(st, target, u, d + liftOf(st, u));
+  st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
+  st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
-  // the look point: the assembly's centre far out, the shown place close in
-  const w = lookShare(Math.max(0, d), farDistance(st.cfg), st.cfg.assemblyLockDistM, false);
-  const lt: Vec3 = [a.centre[0] + (L.p[0] - a.centre[0]) * w, a.centre[1] + (L.p[1] - a.centre[1]) * w, a.centre[2] + (L.p[2] - a.centre[2]) * w];
-  // ⭐⭐⭐ (§32.12) NOT EASED: the camera tied to the piece at every distance, as far out (⛔ eased 120 ms while the piece is not: at a middle distance the look
-  // trailed the place 85 – 100 mm — the piece sawed −3° … −5° on the screen at each event and slid back 4.4° over ~200 ms after the release)
-  st.asmLook = lt;
-  sectionLinesFrame(st, L, g);
-  outlineFrame(st, L, g);
-}
-
-function hideLines(st: SceneState): void {
-  if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
+  // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing; the slide: the gizmo)
+  const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM, st.asmLocked);
+  const g = st.asmGizmo;
+  const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
+  st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
+  sectionLinesFrame(st);
 }
 
 /**
- * ⭐⭐⭐ §32 K7 — THE LINES, SHORT: the green along the chart's `t`, the red along its `b`, through the gizmo, each in its plane `(t, n)` / `(b, n)` through
- * the gizmo exactly, as far as the region goes, at most `LINE_HALF_M` each side (`chartLines`); the gizmo a vertex of both. ONE mesh, updated in place.
- * Far out (no gizmo): hidden.
+ * ⭐⭐ (the optional) THE SECTIONS DRAWN — the paths the gizmo takes. ⭐⭐⭐ (2026-11-04, STEP 4c-bis) FROM THE FACE MAP ITSELF (`mapGizmo`): the GREEN, the
+ * gizmo at every yaw at the map's pitch (round the assembly — on a side at its height, over a top / under a bottom round the centre); the RED, at every
+ * pitch at the map's yaw (bottom centre → top centre, on a side in the world's vertical plane square to it). So the lines are the gizmo's own paths, and
+ * the gizmo's EXACT point is a vertex of both (`insertIndex`) — by construction. Each line's samples computed once per line (a dx reshapes the red only, a
+ * dy the green only); a step between two neighbours far beyond the box's own step there (a depth step: a protrusion, a recess) breaks the line. ⭐ ONE
+ * mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed). Hidden under the slide, or off.
  */
-function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown | null): void {
-  const C = L.chart;
-  if (st.cfg.sectionLines !== 1 || g === null || C === null) {
-    hideLines(st);
+/** ⭐ (2026-11-02) the gizmo's vertex `i` joined to its neighbours `prev` / `next` (`gizmoJoins`: the nearer one at least). */
+function around(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, prev: number, next: number): [boolean, boolean] {
+  const g = pts[i];
+  if (g === null || g === undefined) return [false, false];
+  const a = prev >= 0 ? (pts[prev] ?? null) : null;
+  const b = next < pts.length ? (pts[next] ?? null) : null;
+  const d = (p: Vector3 | null): number => (p === null ? Infinity : Vector3.Distance(g, p));
+  const ja = a !== null && sampleJoins(pts, surf, prev, i);
+  const jb = b !== null && sampleJoins(pts, surf, i, next);
+  const j = gizmoJoins(ja, jb, d(a), d(b));
+  return [j[0] && a !== null, j[1] && b !== null];
+}
+
+/** ⭐ (Step 4c-bis) two neighbouring samples joined: their step no more than 2.5 × the box's own step between their places (+ 2 mm) — a depth step breaks it. */
+function sampleJoins(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, j: number): boolean {
+  const a = pts[i] ?? null;
+  const b = pts[j] ?? null;
+  const sa = surf[i] ?? null;
+  const sb = surf[j] ?? null;
+  if (a === null || b === null || sa === null || sb === null) return false;
+  const box = Math.hypot(sb[0] - sa[0], sb[1] - sa[1], sb[2] - sa[2]);
+  return Vector3.Distance(a, b) <= 2.5 * box + 0.002;
+}
+
+/** ⭐ The section lines' samples (the green round the yaw, the red along the pitch — the gizmo's vertex added to each). */
+const GREEN_SAMPLES = 96;
+const RED_SAMPLES = 64;
+/** ⭐ The lines lifted off the surface along its face's axis (m) — never in it. */
+const SECTION_LIFT_M = 0.002;
+
+function sectionLinesFrame(st: SceneState): void {
+  const sh = st.asmShown;
+  const g = st.asmG;
+  const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && g !== null && sh !== null;
+  if (!show) {
+    if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
   }
-  const key = `${C.version}|${g.uv[0].toFixed(5)}|${g.uv[1].toFixed(5)}`;
+  const parts = st.asmParts?.key ?? "";
+  const o = mapOpts(st);
+  const optKey = `${o.edgeMm}|${o.edgeDeg}`;
+  const lift = (q: Vec3, n: Vec3): Vector3 => new Vector3(q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M);
+  const samples = (at: (x: number) => readonly [number, number], params: readonly number[]) => {
+    const pts: (Vector3 | null)[] = [];
+    const surf: (Vec3 | null)[] = [];
+    for (const x of params) {
+      const [yw, pt] = at(x);
+      const m = mapGizmo(st, yw, pt);
+      pts.push(m === null ? null : lift(m.hit.point, m.t.normal));
+      surf.push(m === null ? null : m.t.surface);
+    }
+    return { pts, surf };
+  };
+  // the red's samples (per the map's yaw): the pitch from −90° to +90°
+  const rKey = `${parts}#R#${sh.yaw.toFixed(7)}#${optKey}`;
+  if (st.asmRedCache === null || st.asmRedCache.key !== rKey) {
+    const params = sectionFixed(Math.PI, RED_SAMPLES - 1, false);
+    st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };
+  }
+  // the green's samples (per the map's pitch): the yaw round the circle
+  const gKey = `${parts}#G#${sh.pitch.toFixed(7)}#${optKey}`;
+  if (st.asmGreenCache === null || st.asmGreenCache.key !== gKey) {
+    const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
+    st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };
+  }
+  // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame
+  const gv = lift(g, sh.t.normal);
+  const key = `${rKey}|${gKey}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
-  const n = C.f.n;
-  const gv = new Vector3(g.point[0] + n[0] * SECTION_LIFT_M, g.point[1] + n[1] * SECTION_LIFT_M, g.point[2] + n[2] * SECTION_LIFT_M);
-  const ls = chartLines(C, g.uv[0], g.uv[1], LINE_HALF_M);
-  const segs = (pts: readonly Vec3[]): Vector3[][] => {
-    const vs = pts.map((p) => new Vector3(p[0] + n[0] * SECTION_LIFT_M, p[1] + n[1] * SECTION_LIFT_M, p[2] + n[2] * SECTION_LIFT_M));
-    const out: Vector3[][] = [];
-    for (let k = 1; k < vs.length; k++) out.push([vs[k - 1]!, vs[k]!]);
-    return out;
-  };
-  const pad = (s: Vector3[][]): Vector3[][] => {
-    const o = s.slice(0, LINE_MAX);
-    while (o.length < LINE_MAX) o.push([gv, gv]);
-    return o;
-  };
-  const lines = [...pad(segs(ls.green)), ...pad(segs(ls.red))];
+  const rest = gv;
+  const lines: Vector3[][] = [];
+  // green: a closed loop through the gizmo (its parameter the map's yaw)
+  const gc = st.asmGreenCache;
+  const gParam = ((sh.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const green = [...gc.pts];
+  const gSurf = [...gc.surf];
+  const gi = insertIndex(gc.params, gParam);
+  green.splice(gi, 0, gv);
+  gSurf.splice(gi, 0, sh.t.surface);
+  const n = green.length;
+  const gJoin = around(green, gSurf, gi, (gi - 1 + n) % n, (gi + 1) % n);
+  for (let k = 0; k <= GREEN_SAMPLES; k++) {
+    const p0 = green[k] ?? null;
+    const p1 = green[(k + 1) % n] ?? null;
+    const forced = (k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null;
+    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(green, gSurf, k, (k + 1) % n)) ? [p0, p1] : [rest, rest]);
+  }
+  // red: bottom centre → top centre through the gizmo (its parameter the map's pitch + 90°)
+  const rc = st.asmRedCache;
+  const red = [...rc.pts];
+  const rSurf = [...rc.surf];
+  const ri = insertIndex(rc.params, sh.pitch + Math.PI / 2);
+  red.splice(ri, 0, gv);
+  rSurf.splice(ri, 0, sh.t.surface);
+  const rJoin = around(red, rSurf, ri, ri - 1, ri + 1);
+  for (let k = 0; k < RED_SAMPLES - 1; k++) {
+    const p0 = red[k] ?? null;
+    const p1 = red[k + 1] ?? null;
+    const forced = k + 1 === ri ? rJoin[0] : k === ri ? rJoin[1] : null;
+    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(red, rSurf, k, k + 1)) ? [p0, p1] : [rest, rest]);
+  }
   if (st.asmSectionLines === null) {
-    const colours = lines.map((_, i) => (i < LINE_MAX ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
+    const colours = lines.map((_, i) => (i <= GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);
     st.asmSectionLines.isPickable = false;
     st.asmSectionLines.alwaysSelectAsActiveMesh = true;
+    // ⭐ in the TRANSPARENT pass, after the pieces' see-through contours (⛔ opaque, the contours drawn over them washed them out); hidden behind solid parts
     st.asmSectionLines.alpha = 0.99;
     st.asmSectionLines.alphaIndex = 1000;
   } else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });
@@ -590,78 +696,23 @@ function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown | null): 
 }
 
 /**
- * ⭐⭐⭐ §32.10 K8 — THE RING (the owner: *"the ring is cast when the piece crosses the offset and is then fixed (until the piece goes back away). The gizmo
- * and red/green sections (and therefore inputs) are constrained within that ring"*): the disk of `closeInRingMm` round the gizmo where close in was
- * entered, inside the region (`chartRing` — a circle, cut by the region's border where the region is smaller), a light neutral line just off the surface,
- * shown at once with the gizmo (its area flooded from the atlas in that frame; until whole, not shown), FIXED until close in is left; brighter when the
- * gizmo is within `OUTLINE_NEAR_M` of its border (the stop is near). Far out: hidden.
+ * ⭐⭐ THE APPROACH MOVED by `da` (the coordinate; down: in): ⭐⭐⭐ (2026-11-01) in AND out only as far as the parts allow (`approachStepFree`) — the piece's gap kept at its resting gap
+ * (`pieceGapMm`), the largest free share found by halving. Returns the move taken.
  */
-function outlineFrame(st: SceneState, L: LoopState, g: GizmoShown | null): void {
-  const C = L.chart;
-  if (st.cfg.sectionLines !== 1 || g === null || C === null || !chartFilled(C)) {
-    if (st.asmOutline !== null) st.asmOutline.isVisible = false;
-    return;
-  }
-  // ⭐⭐⭐ the ring FIXED where close in was entered (its centre and radius the chart's): drawn once, when its area is whole
-  const key = `${C.facet}|${C.u0}|${C.v0}|${C.cu}|${C.cv}|${C.ringR}|${C.version}`;
-  if (key !== st.asmOutlineKey || st.asmOutline === null) {
-    st.asmOutlineKey = key;
-    const n = C.f.n;
-    const lift = (p: Vec3): Vector3 => new Vector3(p[0] + n[0] * OUTLINE_LIFT_M, p[1] + n[1] * OUTLINE_LIFT_M, p[2] + n[2] * OUTLINE_LIFT_M);
-    const segs: Vector3[][] = [];
-    for (const loop of chartRing(C, C.cu, C.cv, C.ringR)) for (let k = 0; k < loop.length; k++) segs.push([lift(loop[k]!), lift(loop[(k + 1) % loop.length]!)]);
-    const pin = lift(g.point);
-    const lines = segs.slice(0, RING_MAX);
-    while (lines.length < RING_MAX) lines.push([pin, pin]);
-    if (st.asmOutline === null) {
-      st.asmOutline = CreateLineSystem("asmOutline", { lines, updatable: true }, st.scene);
-      st.asmOutline.isPickable = false;
-      st.asmOutline.alwaysSelectAsActiveMesh = true;
-      st.asmOutline.alphaIndex = 999;
-    } else CreateLineSystem("asmOutline", { lines, instance: st.asmOutline });
-  }
-  const o = st.asmOutline;
-  o.isVisible = true;
-  const near = chartEdgeDistance(C, g.uv[0], g.uv[1], OUTLINE_NEAR_M) < OUTLINE_NEAR_M;
-  o.color = near ? new Color3(1, 1, 1) : new Color3(0.82, 0.84, 0.88);
-  o.alpha = near ? 1 : 0.55;
-}
-
-/** ⭐ (§32 K4) the piece's resting face's narrowest width (m): recesses and gaps narrower than this are bridged; none: 45 mm. */
-function pieceWidth(st: SceneState): number {
-  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
-  const pts = p?.restingEdges.flat() ?? [];
-  const n = p?.restingFace?.normal;
-  if (pts.length < 3 || n === undefined) return 0.045;
-  const a = Math.abs(n[0]) < 0.9 ? normalizeOr([0, n[2], -n[1]]) : normalizeOr([-n[2], 0, n[0]]);
-  const b: Vec3 = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
-  let w = Infinity;
-  for (let k = 0; k < 36; k++) {
-    const t = (k * Math.PI) / 36;
-    const dir: Vec3 = [a[0] * Math.cos(t) + b[0] * Math.sin(t), a[1] * Math.cos(t) + b[1] * Math.sin(t), a[2] * Math.cos(t) + b[2] * Math.sin(t)];
-    let lo = Infinity;
-    let hi = -Infinity;
-    for (const q of pts) {
-      const s = dot(q, dir);
-      lo = Math.min(lo, s);
-      hi = Math.max(hi, s);
-    }
-    w = Math.min(w, hi - lo);
-  }
-  return Number.isFinite(w) && w > 1e-4 ? w : 0.045;
-}
-const normalizeOr = (v: Vec3): Vec3 => {
-  const l = Math.hypot(v[0], v[1], v[2]);
-  return l > 1e-12 ? [v[0] / l, v[1] / l, v[2] / l] : [1, 0, 0];
-};
-
-/** ⭐⭐ THE APPROACH MOVED by `da` (the coordinate; down: in) — in and out only as far as the parts allow (`approachStepFree`). Returns the move taken. */
 export function approachMove(st: SceneState, da: number): number {
+  const taken = approachMoveTaken(st, da);
+  // ⭐⭐⭐ (2026-11-01) a step IN arms the slide mode again (`slideArmedAfter`) — a step out never: its coast cannot latch it at the reach
+  st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);
+  return taken;
+}
+
+function approachMoveTaken(st: SceneState, da: number): number {
   if (da === 0) return 0;
   const a0 = st.approach;
   const want = approachStep(a0, da, 1, st.cfg);
   if (want === a0) return 0;
   const out = want > a0;
+  // ⭐⭐⭐ (2026-11-01, *"build A"*) a step OUT of a slide: the orbit goes on from the slide's view (`slideWayOutRebase`)
   if (out) slideWayOutRebase(st);
   if (st.pieceQ === null || st.greenBox === null) {
     st.approach = want;
@@ -678,6 +729,8 @@ export function approachMove(st: SceneState, da: number): number {
       return p;
     });
   const gapAt = (cand: number): number => envAt(cand).gap(q);
+  // ⭐⭐⭐ (2026-11-01, *"the collision detection shall apply also when moving the piece away from a face"*) — out checked too (`approachStepFree`); blocked, the
+  // player finds the way out (a slide, the orbit)
   const gapNow = out ? gapAt(a0) : gapM;
   const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);
   if (free(want)) {
@@ -694,17 +747,18 @@ export function approachMove(st: SceneState, da: number): number {
   st.approach = a0 + (want - a0) * lo;
   if (lo < 1) st.approachInertia.stop();
   if (out && lo < 1) {
-    const blocker = envAt(a0 + (want - a0) * hi).blocker?.(q) ?? null;
-    st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? "a part"} — slide to find a way out`;
+    const blocker = envAt(a0 + (want - a0) * hi).blocker?.(q) ?? null; // the part met at the step refused
+    st.lastVerdict = `orbit: the way out is blocked by ${blocker ?? "a part"} — slide or orbit to find a way out`;
     st.hudDirty = true;
   }
   return st.approach - a0;
 }
 
-/** ⭐ An approach input: `dyMm` of finger (UP brings the piece IN); recorded for the coast. */
+/** ⭐ An approach input: `dyMm` of finger (UP brings the piece IN), at the orbit dy's pace on the curve's coordinate; recorded for the coast. */
 export function approachInput(st: SceneState, dyMm: number): void {
   const taken = approachMove(st, dyMm * orbitDvPerMm(st));
   st.approachInertia.record(performance.now(), 0, taken);
+  // ⭐ (2026-11-01) the slide mode left: the piece's own offset (the slide's settle) ways in by the approach's travel
   if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));
   st.hudDirty = true;
 }
@@ -714,17 +768,22 @@ export function approachRelease(st: SceneState): void {
   st.approachInertia.release(performance.now());
 }
 
-/**
- * ⭐⭐⭐ V5 — THE CAMERA'S FRAME: along the SHOWN view (world yaw and pitch — never a roll), the owner's offsets in its own frame, the pitch never past ±90°
- * (never past the zenith) — `cameraView`. No state: the up is the view's own (V2).
- */
-export function assemblyCameraFrame(st: SceneState, _cam: OrbitAt, off?: CameraAngleOffset, _commit: boolean = false): RigCameraFrame {
-  const L = st.loop;
+/** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
+export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
+  const u = dirAt(st, cam.yaw, cam.v);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
-  return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);
+  // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
+  // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
+  // face's heading at once: the scene jump-rotated; and at ±90° it has none)
+  // ⭐⭐⭐ (2026-11-04, `1.0.95-`) under the CALM the heading turned as the direction was (`calmHeading`) — ⛔ the orbit's yaw with the calm's direction:
+  // the up built from another heading than the direction's own, the camera ROLLED on a wall (probed: 222 frames over 5° on one close-in dx leg)
+  return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
 }
 
-/** ⭐ The slide's cone (the slide's own): never a constraint on the orbit — the orbit's angles are the travel's. */
-export function leavesCone(_st: SceneState, _yaw0: number, _v0: number, _yaw1: number, _v1: number): boolean {
-  return false;
+/** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */
+export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number): boolean {
+  if (!st.asmLocked || st.asmLock === null || st.asmLock.normal === null) return false;
+  const n = st.asmLock.normal;
+  const a1 = angleTo(orbitDir(yaw1, v1), n);
+  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);
 }
