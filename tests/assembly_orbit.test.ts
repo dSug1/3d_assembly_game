@@ -16,7 +16,6 @@ import {
   isApproachKey,
   approachRange,
   approachStep,
-  easePoint,
   farDistance,
   lookShare,
   offsetFrame,
@@ -95,9 +94,6 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(twoFingerKind([0, 4], [0, -4], 3.5)).toBe("ZOOM");
     expect(twoFingerKind([0, 3.6], [0, 0.5], 3.5)).toBe(null);
     expect(twoFingerKind([0, 8], [0, 0], 3.5)).toBe("ZOOM");
-    const e = easePoint([0, 0, 0], [1, 0, 0], 16, 90);
-    expect(e[0]).toBeCloseTo(1 - Math.exp(-16 / 90), 12);
-    expect(easePoint([0.99995, 0, 0], [1, 0, 0], 16, 90)).toEqual([1, 0, 0]);
   });
   it("⭐ the mode a slider (0 around the assembly by default, 1 the gizmo's 2D curve kept); the lock distance and the edge margin sliders; validated", () => {
     expect(DEFAULT_CONFIG.orbitMode).toBe(0);

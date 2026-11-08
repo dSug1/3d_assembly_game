@@ -4,7 +4,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
-import { easePoint } from "../src/input/assembly_orbit";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
 
@@ -14,7 +13,6 @@ describe("⭐⭐ the piece's lag behind the orbit — its slider", () => {
     expect(DEFAULT_CONFIG.orbitSpringMs).toBe(DEFAULT_CONFIG.boxSmoothMs / 2);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitSpringMs: 501 })).toThrow();
     expect("gizmoEaseMs" in DEFAULT_CONFIG).toBe(false);
-    expect(easePoint([0, 0, 0], [1, 2, 3], 16, 0)).toEqual([1, 2, 3]);
   });
   it("⭐⭐ wired: the travel's shown place and direction eased by `orbitSpringMs`; the orbit's spring too; the slider in CAMERA ORBIT AROUND CENTER", () => {
     const a = code("render/assembly_wiring.ts");

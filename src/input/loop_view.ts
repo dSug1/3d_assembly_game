@@ -84,6 +84,17 @@ export function calmProfile(x: number, s: number): number {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-08, §32.12 — the owner: *"make the calm inversely proportional to the distance: at max distance, there should be no calm (only pure circular
+ * orbit), at the crossing of close in the calm should be as currently set up"*) THE CALM BY DISTANCE: the middle's share `share` (the sliders') at the
+ * close-in distance and nearer, 1 (the profile linear — no calm, a pure circular orbit) at the farthest, linear in the piece's distance between.
+ */
+export function calmShare(share: number, distM: number, closeInM: number, farM: number): number {
+  if (!(farM > closeInM)) return share;
+  const k = clamp((distM - closeInM) / (farM - closeInM), 0, 1);
+  return share + (1 - share) * k;
+}
+
+/**
  * ⭐⭐⭐ (`1.0.102-` §23) THE CAP'S PROFILE from its far edge (`c` 0) to its entry edge (`c` 1): `s·c + (1 − s)·c^m` — the far edge's pace `s`, the wall's
  * edge pace at the entry edge (`m = (6 − 5s)/(1 − s)`): C1 with the wall it comes from. Monotone, 0 … 1.
  */

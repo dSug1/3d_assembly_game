@@ -2036,3 +2036,22 @@ built, measured — the same 18 reversals — and REVERTED (measure or revert). 
 * ⚠ The cost: on the slow tablet (pointer events 47 – 68 ms apart, every 3 – 4 frames) the piece steps per event; the iPhone dispatches every frame.
 * `springPoint` deleted (no caller); `orbitSpringMs` still drives the other orbits' spring (`springOrbit`). Vector: `orbit_lag` (no spring around the
   assembly).
+
+### 32.12 ✅ THE CAMERA TIED TO THE PIECE AT EVERY DISTANCE; THE CALM BY DISTANCE (2026-11-08)
+* **The owner** (on `3da8f2a`, a screenshot at a middle distance): *"the piece movement jitters and has some spring — inversely, the camera and assembly
+  movement in screen view are smooth and i like them. Why at this distance the feeling is not right, while it is right at maximum distance after your
+  previous fix?"* → *"Go ahead, also, make the "calm" inversely proportional to the distance: at max distance, there should be no calm (only pure circular
+  orbit), at the crossing of close in the calm should be as currently set up"*.
+* **Diagnosed** (the probe's per-frame hook, the piece's angle on the screen): the camera looks at a LOOK POINT — the assembly's centre far out, the place
+  within 30 cm, blended by distance between (`lookShare`) — and that point was EASED (120 ms) while, since §32.11, the piece follows the place at once.
+  Far out the look point is the fixed centre: the camera rigid to the piece. Between, the look point trailed the place 85 – 100 mm: at each pointer event
+  the piece jumped on the screen and the aim caught up (a sawtooth −3.1° → −4.6° → −3.7° → −5.0°), and after the release it slid back 4.4° over ~200 ms.
+* **The look point NOT eased** (`st.asmLook = lt`): the camera tied to the piece at every distance, as far out. Measured at 584 mm from the shell: the piece
+  on the screen −1.19° … −1.24° while dragging, −1.27° unmoved after the release. ⚠ The camera and the assembly now move exactly with the finger at every
+  distance (on the slow tablet: stepped per pointer event).
+* **THE CALM BY DISTANCE** (`calmShare`, `input/loop_view.ts`): the view profile's middle share (`faceSpanShareH` / `V`) the sliders' at the close-in
+  distance and nearer, **1 — no calm, the profile linear: a pure circular orbit — at the farthest** (ring 1's distance, 6 m on `Scene_1`), linear in the
+  piece's distance between; applied every frame and every finger step (the view, the camera, T5's crossing test read it). Measured (slider 0.25): 6 m →
+  1, 3.1 m → 0.63, 575 mm → 0.31, close in → 0.25. ⚠ An approach at a face's off-centre place now turns the view as the calm grows.
+* Vectors 1632 (`calm_distance.test.ts` 3 — the share's ends and line, share 1 linear, the wiring; RED on `3da8f2a`). Deleted with their last callers:
+  `easePoint` (and `LOOK_TAU_MS`).

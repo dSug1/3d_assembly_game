@@ -18,7 +18,7 @@ import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { approachAt, approachDistance, approachStep, approachStepFree, farDistance, lookShare, modelNormal, orbitDir, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { buildFaceMap, shellExit, type FaceMap, type MapFace } from "../input/face_map";
 import { CASTS_PER_FILL, allowedShare, anchorChart, chartAllows, chartEdgeDistance, chartFilled, chartGizmo, chartLines, chartRing, chartUV, closeInDir, closeInNext, facetAccept, facetGrid, fillChart, fillGrid, gridDone, hullParts, type Chart, type FacetAccept, type FacetGrid, type HullPart } from "../input/close_in_chart";
 import type { RigCameraFrame } from "../input/orbit_rig";
@@ -30,14 +30,12 @@ import { syncCentre } from "./camera_rig";
 import { greenDragGains, pieceSolveOptions, pieceSolverEnv, ringAnchorAt, orbitDvPerMm } from "./green_box_wiring";
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
-import { cameraView, sameView, viewAt, viewDir, viewFacets, type View, type ViewFacet, type ViewOpts } from "../input/loop_view";
+import { calmShare, cameraView, sameView, viewAt, viewDir, viewFacets, type View, type ViewFacet, type ViewOpts } from "../input/loop_view";
 import { HOLD_FREE, isCapNormal, travelAt, travelStep, type CrossOk, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
 import { dot, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import { boxOf, type Box3 } from "../input/ray_box";
 
-/** ⭐ The look point's ease (ms). */
-const LOOK_TAU_MS = 120;
 /** ⭐⭐ (§32 K7) the lines' reach each side of the gizmo (m — "limited to a small surface locally"), their segments' cap, their lift off the surface (m). */
 const LINE_HALF_M = 0.05;
 const LINE_MAX = 48;
@@ -80,6 +78,8 @@ export interface LoopState {
   readonly map: FaceMap;
   readonly facets: readonly TravelFacet[];
   readonly view: { readonly facets: readonly ViewFacet[]; readonly opts: ViewOpts };
+  /** ⭐⭐⭐ §32.12 the view's knobs NOW: the calm's shares faded by the piece's distance (`calmShare` — none at the farthest, the sliders' at close in) */
+  calm: ViewOpts;
   travel: Travel;
   last: "x" | "y";
   p: Vec3;
@@ -286,13 +286,22 @@ function loopOf(st: SceneState): LoopState | null {
   const hulls = hullParts(pp.parts, pp.ids);
   const accept = map.facets.map((mf) => facetAccept(hulls, mf));
   const grids = map.facets.map((mf, i) => (Number.isFinite(accept[i]!.maxDepth) ? facetGrid(hulls, mf) : null));
-  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, grids, slideG: null };
+  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, grids, slideG: null, calm: view.opts };
   return st.loop;
 }
 
 /** ⭐ V3 – V4 — the view at a travel's place (a cap's from its entry wall). */
 function viewOf(L: LoopState, t: Travel): View {
-  return viewAt(L.view.facets, t.facet, t.p, t.entry, L.view.opts);
+  return viewAt(L.view.facets, t.facet, t.p, t.entry, L.calm);
+}
+
+/** ⭐⭐⭐ §32.12 THE CALM BY DISTANCE: the view's shares at the piece's distance now (the farthest: none; the close-in distance and nearer: the sliders'). */
+function calmNow(st: SceneState, L: LoopState): void {
+  const o = L.view.opts;
+  const d = approachDistance(st.cfg, st.approach);
+  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
+  const far = farDistance(st.cfg);
+  L.calm = { ...o, shareH: calmShare(o.shareH, d, inM, far), shareV: calmShare(o.shareV, d, inM, far) };
 }
 
 /** ⭐⭐⭐ T5 — a crossing taken only where the view just before the edge is the view just after it (`sameView`). */
@@ -317,6 +326,7 @@ export function loopFinger(st: SceneState, fx: number, fy: number): boolean {
     }
     return true;
   }
+  calmNow(st, L);
   const o = travelOpts(st);
   let moved = false;
   // ⭐⭐⭐ T5 — a face crossed only where the view is continuous
@@ -397,6 +407,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const L = loopOf(st);
   if (L === null) return;
   L.dtMs = dtMs;
+  calmNow(st, L);
   const a = st.asm!;
   if (st.approachInertia.coasting) {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
@@ -526,7 +537,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // the look point: the assembly's centre far out, the shown place close in
   const w = lookShare(Math.max(0, d), farDistance(st.cfg), st.cfg.assemblyLockDistM, false);
   const lt: Vec3 = [a.centre[0] + (L.p[0] - a.centre[0]) * w, a.centre[1] + (L.p[1] - a.centre[1]) * w, a.centre[2] + (L.p[2] - a.centre[2]) * w];
-  st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
+  // ⭐⭐⭐ (§32.12) NOT EASED: the camera tied to the piece at every distance, as far out (⛔ eased 120 ms while the piece is not: at a middle distance the look
+  // trailed the place 85 – 100 mm — the piece sawed −3° … −5° on the screen at each event and slid back 4.4° over ~200 ms after the release)
+  st.asmLook = lt;
   sectionLinesFrame(st, L, g);
   outlineFrame(st, L, g);
 }
