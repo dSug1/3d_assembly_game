@@ -18,8 +18,10 @@ describe("⭐⭐ the piece's lag behind the orbit — its slider", () => {
   });
   it("⭐⭐ wired: the travel's shown place and direction eased by `orbitSpringMs`; the orbit's spring too; the slider in CAMERA ORBIT AROUND CENTER", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const tau = st.cfg.orbitSpringMs;");
-    expect(a).toContain("const sp = springPoint(L.p, L.pVel, L.travel.p, dtMs, tau);");
+    // ⭐⭐⭐ (§32.11) around the assembly NO spring: the shown place and view are the travel's at once (⛔ the piece trailed 40 – 50 mm, caught up ~200 ms after the stop)
+    expect(a).toContain("L.p = [L.travel.p[0], L.travel.p[1], L.travel.p[2]];");
+    expect(a).toContain("L.shown = vT;");
+    expect(a).not.toContain("springPoint(");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs)");
     const m = code("render/tuning_menu.ts");

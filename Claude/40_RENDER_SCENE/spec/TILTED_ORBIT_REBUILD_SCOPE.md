@@ -2001,3 +2001,38 @@ built, measured — the same 18 reversals — and REVERTED (measure or revert). 
 * ⏳ **Issue 2, the owner tests it first**: C4's turn of the piece's direction onto the facet's normal over the last 120 mm sweeps the piece 40 – 65 mm
   sideways per approach event at a face's edge (the view up to ~45° off the normal — 2 approaches in the walks; the same with and without the fix).
   Proposed, not built: spread the turn so the piece never moves sideways faster than it comes in (≤ 1 mm per mm — on a 45° edge from ~360 mm out).
+
+### 32.10 ✅ THE RING — cast at the crossing, fixed, the area inside it (2026-11-08)
+* **The owner** (on `dac0397`): *"The way the limited area is displayed is very strange: it is a 45degree-tilted square which grows by jumps over a couple
+  of frames … I was expecting a ring which directly shows up and encompasses the limited area when the piece crosses the offset"* → *"the ring shall be
+  always the same radius (slider to be added) … unless the limited area is smaller than what the ring usually covers"* → *"the ring is cast when the piece
+  crosses the offset and is then fixed (until the piece goes back away). The gizmo and red/green sections (and therefore inputs) are constrained within
+  that ring"*.
+* ⛔ What it was: the region flooded breadth first from the anchor (4-neighbours — a diamond), 600 casts a frame, its cell-edge outline redrawn every 12
+  frames while it grew.
+* **R1 — THE RING**: cast when close in is entered, centred on the gizmo then (the place + the shift, K5), radius `closeInRingMm` (**60 mm**, a slider in
+  CAMERA ORBIT), FIXED until close in is left. **The close-in area is the region INSIDE the ring**: the flood stays in it (a bridge never leaves it),
+  `chartAllows` refuses beyond it — the gizmo, the lines (K7) and the stop (K6) end at the ring; where the region is smaller, its own border.
+* **R2 — DRAWN** (`chartRing`): marching squares over `min(R − distance, ±half a cell)` — the circle interpolated exactly, the region's border on its
+  cells' edges, each point at the inside cell's depth, one Chaikin pass; one updatable mesh, drawn once its area is whole; brighter within 20 mm of its
+  border; hidden far out and under the slide (with the gizmo and the lines).
+* **R3 — THE ATLAS** (`facetGrid`, `fillGrid`): after the boot pass every facet's 2.5 mm grid cast in the background, 600 casts a frame, the facet the place
+  is on first; a chart anchored on it (its origin snapped to the grid) floods the cached landings with no cast — whole in the frame close in is entered.
+  `Scene_1`: all six facets cast within ~45 frames of the boot.
+* **Measured** (4 walks with approaches, 0 page errors): the ring shown in the frame the gizmo appears in 7 of 8 entries (2 frames later in the 8th, the
+  atlas not yet cast there); the gizmo never outside the ring (≤ 60 mm from its centre); the lines 0.00 mm, the gizmo on both, the landing 0.00 mm across.
+* **Vectors** (+2, 1629): the ring a circle of the radius in an open face, cut flat at the region's border, the region's own border when smaller; the atlas
+  flooded with 0 casts, the same region; the area constrained by the fixed ring (allows, the flood, the lines, the drawn ring the anchor's circle).
+  Mutants, each RED: the radius ignored, the atlas unread, no interpolation, `chartAllows` without the ring, the flood without the ring. ⛔ Deleted:
+  `chartOutline` (the cell edges).
+
+### 32.11 ✅ NO SPRING ON THE ORBIT (2026-11-08 — the owner: *"i don't like the way the piece movement springs during the orbit. I don't know if the camera has the same spring. Now that the gizmo is not used for orbit, i think a spring is unwarranted. There was no such spring in the finalized polar orbit movement and i want the same feeling"*)
+* **Measured** (`MODE=const`, dx / dy legs and reversals): the shown place and view on V6's critically damped spring (`orbitSpringMs` 30 ms) trailed the
+  travel **40 – 50 mm** while moving and caught up **~200 ms** after the finger stopped — a rubber band; no overshoot (0 frames moving away from the
+  travel). The camera has no lag of its own (`cameraFollowMs` 0, as in the polar orbit) but reads the same shown view: the same spring. The polar orbit's
+  piece followed a FIRST-order ease of its gizmo (45 ms) — no such lag at speed.
+* **V6 amended**: around the assembly the shown place and view ARE the travel's, at once — the piece and the camera with them. Measured: **0.0 mm** behind
+  while moving, still with the finger. Kept: the coast after the release (the orbit's inertia, ~12 mm — the polar orbit had it).
+* ⚠ The cost: on the slow tablet (pointer events 47 – 68 ms apart, every 3 – 4 frames) the piece steps per event; the iPhone dispatches every frame.
+* `springPoint` deleted (no caller); `orbitSpringMs` still drives the other orbits' spring (`springOrbit`). Vector: `orbit_lag` (no spring around the
+  assembly).

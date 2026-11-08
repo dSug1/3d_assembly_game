@@ -20,10 +20,10 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { buildFaceMap, shellExit, type FaceMap, type MapFace } from "../input/face_map";
-import { allowedShare, anchorChart, chartAllows, chartEdgeDistance, chartFilled, chartGizmo, chartLines, chartOutline, chartUV, closeInDir, closeInNext, facetAccept, fillChart, hullParts, type Chart, type FacetAccept, type HullPart } from "../input/close_in_chart";
+import { CASTS_PER_FILL, allowedShare, anchorChart, chartAllows, chartEdgeDistance, chartFilled, chartGizmo, chartLines, chartRing, chartUV, closeInDir, closeInNext, facetAccept, facetGrid, fillChart, fillGrid, gridDone, hullParts, type Chart, type FacetAccept, type FacetGrid, type HullPart } from "../input/close_in_chart";
 import type { RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
-import { orbitDegPerMm, springPoint } from "../input/follow_camera";
+import { orbitDegPerMm } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
 import { faceLift, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
@@ -44,7 +44,7 @@ const LINE_MAX = 48;
 const SECTION_LIFT_M = 0.002;
 /** ⭐ (§32 K8) the outline's lift (m), its redraw interval while the fill grows (frames), the edge's nearness that brightens it (m). */
 const OUTLINE_LIFT_M = 0.0015;
-const OUTLINE_EVERY = 12;
+const RING_MAX = 1024;
 const OUTLINE_NEAR_M = 0.02;
 /** ⭐ (§32) the gizmo's fade in (ms). */
 const GIZMO_FADE_MS = 150;
@@ -96,6 +96,8 @@ export interface LoopState {
   /** ⭐⭐⭐ §32 C1 — close in, and its chart (anchored on entering, frozen until left) */
   closeIn: boolean;
   chart: Chart | null;
+  /** ⭐⭐⭐ §32.10 THE ATLAS: each facet's grid of landings, cast in the background after the boot pass (: the facet has no accepted landing) */
+  readonly grids: readonly (FacetGrid | null)[];
   /** ⭐⭐⭐ §32.9 — under the slide, the gizmo's offset from the orbit's centre at the latch (the gizmo rides the slide); `null` off the slide */
   slideG: Vec3 | null;
 }
@@ -283,7 +285,8 @@ function loopOf(st: SceneState): LoopState | null {
   const pp = placedParts(st);
   const hulls = hullParts(pp.parts, pp.ids);
   const accept = map.facets.map((mf) => facetAccept(hulls, mf));
-  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, slideG: null };
+  const grids = map.facets.map((mf, i) => (Number.isFinite(accept[i]!.maxDepth) ? facetGrid(hulls, mf) : null));
+  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, grids, slideG: null };
   return st.loop;
 }
 
@@ -420,6 +423,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmLook = [t[0], t[1], t[2]];
     st.asmGizmoOn = false;
     hideLines(st);
+    // §32.10 the ring hidden with the gizmo and its lines while the slide holds the piece
+    if (st.asmOutline !== null) st.asmOutline.isVisible = false;
     return;
   }
   L.slideG = null;
@@ -454,16 +459,15 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.lastVerdict = "orbit: off the slide — the travel from where the slide left the piece";
   }
   if (st.router.size === 0 && !st.orbitInertia.coasting && (L.travel.hold.x !== 0 || L.travel.hold.y !== 0)) L.travel = { ...L.travel, hold: HOLD_FREE };
-  // V6 — the shown place and view follow the travel's on the orbit's critically damped spring (no speed jump at a pointer event)
-  const tau = st.cfg.orbitSpringMs;
+  // ⭐⭐⭐ V6 (2026-11-08, §32.11 — the owner: *"i don't like the way the piece movement springs during the orbit … Now that the gizmo is not used for
+  // orbit, i think a spring is unwarranted. There was no such spring in the finalized polar orbit movement"*) the shown place and view ARE the travel's,
+  // at once — the piece and the camera with them. ⛔ The critically damped spring (`orbitSpringMs`, 30 ms): the piece trailed the travel 40 – 50 mm while
+  // moving and caught up ~200 ms after the finger stopped — a rubber band.
   const vT = viewOf(L, L.travel);
-  const sp = springPoint(L.p, L.pVel, L.travel.p, dtMs, tau);
-  L.p = sp.at;
-  L.pVel = sp.vel;
-  const hT = L.shown.h + Math.atan2(Math.sin(vT.h - L.shown.h), Math.cos(vT.h - L.shown.h));
-  const sv = springPoint([L.shown.h, L.shown.e, 0], L.shownVel, [hT, vT.e, 0], dtMs, tau);
-  L.shown = { h: Math.atan2(Math.sin(sv.at[0]), Math.cos(sv.at[0])), e: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, sv.at[1])) };
-  L.shownVel = sv.vel;
+  L.p = [L.travel.p[0], L.travel.p[1], L.travel.p[2]];
+  L.pVel = [0, 0, 0];
+  L.shown = vT;
+  L.shownVel = [0, 0, 0];
   L.u = viewDir(L.shown);
   // the orbit's angles ARE the shown view (the HUD, the probes, the slide's way out read them)
   st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));
@@ -474,10 +478,21 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (!L.closeIn) L.chart = null;
   else if (L.chart === null) {
     const fi = L.travel.facet;
-    L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st));
+    L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st), L.grids[fi] ?? null, Math.max(0.001, st.cfg.closeInRingMm / 1000));
   }
   const C = L.chart;
   if (C !== null && !chartFilled(C)) fillChart(C, L.hulls);
+  // ⭐⭐⭐ §32.10 THE ATLAS in the background: the facet the place is on first, then the others — a budget of casts a frame, none once all are cast
+  else {
+    const order = [L.travel.facet, ...L.grids.map((_, i) => i).filter((i) => i !== L.travel.facet)];
+    let budget = CASTS_PER_FILL;
+    for (const i of order) {
+      const G = L.grids[i];
+      if (G === null || G === undefined || gridDone(G)) continue;
+      budget -= fillGrid(G, L.hulls, budget);
+      if (budget <= 0) break;
+    }
+  }
   // the gizmo: the shown place carried in (K1 – K3), else the travel's own place, else where it last was (the shown place trailing outside the region)
   let gz: GizmoShown | null = null;
   if (C !== null)
@@ -562,32 +577,37 @@ function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown | null): 
 }
 
 /**
- * ⭐⭐⭐ §32 K8 — THE CLOSE-IN AREA'S OUTLINE: the region's border (`chartOutline`), a light neutral line just off the surface, redrawn while the fill grows
- * (every `OUTLINE_EVERY` frames) and once it is done; brighter when the gizmo is within `OUTLINE_NEAR_M` of it (the stop is near). Far out: hidden.
+ * ⭐⭐⭐ §32.10 K8 — THE RING (the owner: *"the ring is cast when the piece crosses the offset and is then fixed (until the piece goes back away). The gizmo
+ * and red/green sections (and therefore inputs) are constrained within that ring"*): the disk of `closeInRingMm` round the gizmo where close in was
+ * entered, inside the region (`chartRing` — a circle, cut by the region's border where the region is smaller), a light neutral line just off the surface,
+ * shown at once with the gizmo (its area flooded from the atlas in that frame; until whole, not shown), FIXED until close in is left; brighter when the
+ * gizmo is within `OUTLINE_NEAR_M` of its border (the stop is near). Far out: hidden.
  */
 function outlineFrame(st: SceneState, L: LoopState, g: GizmoShown | null): void {
   const C = L.chart;
-  if (st.cfg.sectionLines !== 1 || g === null || C === null) {
+  if (st.cfg.sectionLines !== 1 || g === null || C === null || !chartFilled(C)) {
     if (st.asmOutline !== null) st.asmOutline.isVisible = false;
     return;
   }
-  const done = chartFilled(C);
-  const key = `${C.facet}|${C.u0}|${C.v0}|${C.version}`;
-  if (key !== st.asmOutlineKey && (done || st.frames % OUTLINE_EVERY === 0 || st.asmOutline === null || !st.asmOutline.isVisible)) {
+  // ⭐⭐⭐ the ring FIXED where close in was entered (its centre and radius the chart's): drawn once, when its area is whole
+  const key = `${C.facet}|${C.u0}|${C.v0}|${C.cu}|${C.cv}|${C.ringR}|${C.version}`;
+  if (key !== st.asmOutlineKey || st.asmOutline === null) {
     st.asmOutlineKey = key;
     const n = C.f.n;
     const lift = (p: Vec3): Vector3 => new Vector3(p[0] + n[0] * OUTLINE_LIFT_M, p[1] + n[1] * OUTLINE_LIFT_M, p[2] + n[2] * OUTLINE_LIFT_M);
-    const lines = chartOutline(C).map(([a, b]) => [lift(a), lift(b)]);
-    st.asmOutline?.dispose();
-    st.asmOutline = lines.length === 0 ? null : CreateLineSystem("asmOutline", { lines }, st.scene);
-    if (st.asmOutline !== null) {
+    const segs: Vector3[][] = [];
+    for (const loop of chartRing(C, C.cu, C.cv, C.ringR)) for (let k = 0; k < loop.length; k++) segs.push([lift(loop[k]!), lift(loop[(k + 1) % loop.length]!)]);
+    const pin = lift(g.point);
+    const lines = segs.slice(0, RING_MAX);
+    while (lines.length < RING_MAX) lines.push([pin, pin]);
+    if (st.asmOutline === null) {
+      st.asmOutline = CreateLineSystem("asmOutline", { lines, updatable: true }, st.scene);
       st.asmOutline.isPickable = false;
       st.asmOutline.alwaysSelectAsActiveMesh = true;
       st.asmOutline.alphaIndex = 999;
-    }
+    } else CreateLineSystem("asmOutline", { lines, instance: st.asmOutline });
   }
   const o = st.asmOutline;
-  if (o === null) return;
   o.isVisible = true;
   const near = chartEdgeDistance(C, g.uv[0], g.uv[1], OUTLINE_NEAR_M) < OUTLINE_NEAR_M;
   o.color = near ? new Color3(1, 1, 1) : new Color3(0.82, 0.84, 0.88);

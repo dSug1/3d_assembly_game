@@ -431,6 +431,9 @@ export interface GestureConfig {
   /** ⭐⭐⭐ (2026-11-08, scope §32 C1 — the owner: *"the value of the waist has to be deliberately fixed"*) CLOSE IN: the gizmo, the green / red lines and the
    * close-in area's outline are shown, and the place held inside that area, only while the piece is this near the shell (mm; left 30 mm further out) */
   closeInMm: number;
+  /** ⭐⭐⭐ (2026-11-08, scope §32.10 — the owner: *"the ring shall be always the same radius (slider to be added)"*) close in, the RING round the gizmo: its
+   * radius (mm) — cut by the close-in area's border where the area is smaller */
+  closeInRingMm: number;
   /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
   faceEdgeSlideDeg: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, STEP 5 — D5, the owner: *"step 5: ok"*) THE FACES CONTOUR: the placed parts' faces within this angle of
@@ -853,6 +856,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   assemblyLockDistM: 0.3, // ⭐ (2026-10-28) the look at the gizmo within 30 cm (the lock deleted 2026-11-04)
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
+  closeInRingMm: 60, // ⭐⭐⭐ (2026-11-08, scope §32.10) the ring round the gizmo: 60 mm (the lines' ±50 mm inside it)
   closeInMm: 120, // ⭐⭐⭐ (2026-11-08, scope §32 C1) close in within 120 mm of the shell (~2.7 piece widths)
   faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
   faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
@@ -1015,6 +1019,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   for (const k of ["orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
+  if (!(cfg.closeInRingMm >= 5 && cfg.closeInRingMm <= 300)) throw new Error(`closeInRingMm (${cfg.closeInRingMm}) must be in [5, 300] mm.`);
   if (!(cfg.closeInMm >= 10 && cfg.closeInMm <= 600)) throw new Error(`closeInMm (${cfg.closeInMm}) must be in [10, 600] mm.`);
   if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
   if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
