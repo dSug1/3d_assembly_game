@@ -20,7 +20,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { slideArmedAfter } from "../input/hover";
+import { slideArmedByOrbit } from "../input/hover";
 import { approachInput, approachRelease, assemblyOn, leavesCone } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -353,7 +353,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
-    if (!shiftApproach) st.slideArmed = slideArmedAfter(st.slideArmed, 0, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+    // ⭐⭐⭐ (2026-11-09, F3) never by the drag the slide let go of at the edge (`slideArmedByOrbit`) — it would latch again under the same finger
+    if (!shiftApproach) st.slideArmed = slideArmedByOrbit(st.slideArmed, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1), pointerId, st.slideLetGo);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;

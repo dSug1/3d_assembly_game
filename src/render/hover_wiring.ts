@@ -74,7 +74,7 @@ import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
 import { smoothTravel } from "../input/piece_orbit";
 import { ORBIT_SWAY_MIN_DEG, orbitSwayDegAt, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { hoverSwayDeg, slideAlong, slideBlockedVerdict, orbitBandSpent, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
+import { hoverSwayDeg, slideAlong, slideLetsGoAtBound, slideTurnTravel, slideBlockedVerdict, orbitBandSpent, slideCameraShift, slideOrbitDirOf, SLIDE_WAY_OUT_MIN_RAD, slideOrbitStart, slideOrbitStep, slideOrbitTurnOf } from "../input/hover";
 import { swingBlock } from "./sway_pass";
 import { worldPlacementOf } from "../core/object_model";
 import { goalLocked } from "../input/goal_lock";
@@ -130,6 +130,7 @@ export function hoverRelease(st: SceneState, pointerId: number): void {
   if (st.hoverPress?.pointerId === pointerId) st.hoverPress = null;
   if (st.hoverBand?.pointerId === pointerId) st.hoverBand = null;
   if (st.hoverSpent === pointerId) st.hoverSpent = null;
+  if (st.slideLetGo === pointerId) st.slideLetGo = null; // ⭐ (2026-11-09, F3) its next press may slide again
 }
 
 /** ⭐ The parts within `reachM` of the piece, each with its faces in the world (their ids kept, their triangles — `hoverFaceContact`'s overlap test). */
@@ -374,7 +375,9 @@ function hoverDragTake(st: SceneState, pointerId: number, s: Sample, prev: Sampl
   // ⭐⭐⭐ (2026-11-01, the owner: *"When I slide, i want to remove the translation sway of the assembly and the camera position freeze and replace that with a limited orbit of the camera"*) — in the slide
   // mode the step turns the camera's limited orbit, and the assembly sways as for the orbit (`slideOrbitMove`)
   if (hb !== null && onPlane) {
-    if (slideModeOn(st)) slideOrbitMove(st, hb.sway, s, asked, Math.hypot(dx, dy));
+    // ⭐⭐⭐ (2026-11-09, F4) the limited orbit turned once the step is SOLVED (`hoverSolve`, `slideTurnTravel`) — ⛔ by the finger's step here: the camera ran on
+    // while the boundary or a part held the piece still
+    if (slideModeOn(st)) st.slideTurnAsk = { s, px: (st.slideTurnAsk?.px ?? 0) + Math.hypot(dx, dy) };
     else hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));
   }
   // the camera eases toward the hover view with the finger's travel
@@ -661,8 +664,22 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
     const p = add(origin, add(scale(h.e1, u), scale(h.e2, v)));
     return rectsDistance(h.bound.rects, dotv(p, h.bound.a), dotv(p, h.bound.b));
   };
+  const asked: [number, number] = [h.pending[0], h.pending[1]];
   h.pending = boundStep([h.u, h.v], h.pending, dist);
+  // ⭐⭐⭐ (2026-11-09, F3) the slide lets go at the edge (`slideLetsGoAtBound`): the drag goes on as the orbit, from where the piece is
+  if (slideLetsGoAtBound(slideModeOn(st), [h.u, h.v], asked, h.pending)) {
+    st.slideTurnAsk = null;
+    st.slideLetGo = h.pointerId;
+    st.hover = null;
+    st.hoverPress = null;
+    st.hoverBand = null;
+    st.slideArmed = false;
+    st.lastVerdict = "slide: off at the edge of the hosting faces — the orbit takes the drag";
+    st.hudDirty = true;
+    return;
+  }
   if (Math.abs(h.pending[0] - h.u) + Math.abs(h.pending[1] - h.v) <= 1e-12) {
+    st.slideTurnAsk = null;
     st.lastVerdict = "hover: at the edge of the hosting faces — reverse to come back";
     st.hudDirty = true;
     return;
@@ -707,6 +724,14 @@ function hoverSolve(st: SceneState, h: NonNullable<SceneState["hover"]>, hf: Non
   if (Math.abs(nu - h.u) + Math.abs(nv - h.v) > 1e-12) {
     hf.du = nu - h.u;
     hf.dv = nv - h.v;
+  }
+  // ⭐⭐⭐ (2026-11-09, F4) the limited orbit by what the piece SLID (`slideTurnTravel`): its direction the solved step, its travel the finger's × the share slid
+  const ask = st.slideTurnAsk;
+  if (ask !== null && slideModeOn(st) && st.hoverBand !== null) {
+    const solved = add(scale(h.e1, nu - h.u), scale(h.e2, nv - h.v));
+    const travel = slideTurnTravel(ask.px, Math.hypot(asked[0] - h.u, asked[1] - h.v), Math.hypot(nu - h.u, nv - h.v));
+    slideOrbitMove(st, st.hoverBand.sway, ask.s, solved, travel);
+    st.slideTurnAsk = null;
   }
   h.u = nu;
   h.v = nv;

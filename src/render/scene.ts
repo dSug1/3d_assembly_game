@@ -600,6 +600,8 @@ export function createScene(
   st.hoverOutline = null;
   st.hoverOutlineKey = "";
   st.hoverSpent = null;
+  st.slideLetGo = null;
+  st.slideTurnAsk = null;
   st.hoverSlid = false;
   st.hoverReadyWorld = null;
   st.slideArmed = true;

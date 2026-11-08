@@ -1265,7 +1265,8 @@ describe('⭐⭐⭐ THE SLIDE\'S LIMITED ORBIT (2026-11-01, the owner: *"remove 
   it("⭐⭐⭐ wired: the slide mode's view begun as the limited orbit, the drag turns it and sways the assembly AS FOR THE ORBIT (⛔ the translation sway); its slider", async () => {
     const h = code("render/hover_wiring.ts");
     expect(h).toContain("const orbit = slideModeOn(st) ? slideOrbitStart(c.normal, plane.e1, plane.e2, toCam) : null;");
-    expect(h).toContain("if (slideModeOn(st)) slideOrbitMove(st, hb.sway, s, asked, Math.hypot(dx, dy)); else hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));");
+    // ⭐⭐⭐ (2026-11-09, F4) the turn made once SOLVED, by what the piece slid (`slide_edge_letgo.test.ts`) — the drag notes the finger's travel
+    expect(h).toContain("if (slideModeOn(st)) st.slideTurnAsk = { s, px: (st.slideTurnAsk?.px ?? 0) + Math.hypot(dx, dy) }; else hoverSway(st, hb.sway, s, asked, Math.hypot(dx, dy));");
     expect(h).toContain("hv.orbit = slideOrbitStep(hv.orbit, slideOrbitTurnOf(hv.orbit, moved, hv.e1, hv.e2, travelPx / mmToPx(1), st.cfg.slideOrbitDegPerMm));"); // ⭐ (2026-11-01) over a horizontal face by yaw and pitch
     expect(h).toContain("const deg = orbitSwayDegAt(st.cfg.orbitSwayDeg, Math.hypot(a[0] - c.x, a[1] - c.y, a[2] - c.z), range.minM, range.maxM, false);");
     expect(h).toContain("let dir = shownDir(hv);");
