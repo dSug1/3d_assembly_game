@@ -5,6 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { type EpisodeTally } from "../input/episode_ledger";
+import type { ReverseBand } from "../input/reverse_band";
 import { GoalCapture, GoalPulls } from "../input/goal_capture";
 import { GoalCommit } from "../input/goal_commit";
 import type { CameraOrbitState, OrbitSpring, OrbitZoom } from "../input/follow_camera";
@@ -499,7 +500,7 @@ export interface SceneState {
   /** ⭐⭐ (2026-10-25) a gizmo change asked for while the pause's roll was under way: held until the roll reaches `end` (`input/top_pause.ts`), then made */
   gizmoPending: { readonly to: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly end: 0 | 1 } | null;
   /** ⭐ Prototype: the orbit finger's own §1.1 tracker — it says per axis whether the input is moving (`D86`'s rest window). */
-  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker } | null;
+  orbitMotion: { readonly pointerId: number; readonly tracker: MotionTracker; readonly band: MotionTracker; /** ⭐⭐⭐ §32.13 the reverse band per component (`input/reverse_band.ts`) */ readonly rev: { readonly x: ReverseBand; readonly y: ReverseBand } } | null;
   /** ⭐ Prototype: the orbit finger's sway trigger — the other pieces sway when the green piece orbits (`greenPieceHeading`). */
   orbitSway: { readonly pointerId: number; readonly watcher: SwayWatcher } | null;
   /** ⭐ Prototype: how many orbit swings have been kicked — the HUD's check that the trigger fires. */

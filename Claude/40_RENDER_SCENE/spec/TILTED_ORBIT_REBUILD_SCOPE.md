@@ -2055,3 +2055,23 @@ built, measured — the same 18 reversals — and REVERTED (measure or revert). 
   1, 3.1 m → 0.63, 575 mm → 0.31, close in → 0.25. ⚠ An approach at a face's off-centre place now turns the view as the calm grows.
 * Vectors 1632 (`calm_distance.test.ts` 3 — the share's ends and line, share 1 linear, the wiring; RED on `3da8f2a`). Deleted with their last callers:
   `easePoint` (and `LOOK_TAU_MS`).
+
+### 32.13 ✅ THE REVERSE BAND — no back and forth from the finger's tremble (2026-11-08)
+* **The owner** (on `9394aae`, a top view far out, the place at the top's front-left corner, *held at the edge*): *"a dx creates a jitter of jumps back and
+  forth of the piece … whatever the distance"* → *"First, remove the dx jitter, then i will advise for the zenith/bottom block"*.
+* **Diagnosed** (the probe's `WOBBLEX` — a tremble along the drag's own axis, `SEQ` up onto the top, left, right; A/B on `16b38c4`, `3da8f2a`, `9394aae`):
+  §1.1's orbit band (`orbitDeadbandMm`) is paid once per axis ENTERING motion; from then on each event's step passed raw, its sign included. On a cap a
+  quarter turn of finger crosses the face (T2: `Scene_1`'s 53 cm top in ~16 mm, ~33 mm of travel per mm), so a 0.5 mm tremble moved the place ~15 mm back;
+  held at an edge (T5), each tremble left it and the next push went back. The place reversed 52× in every build; V6's spring hid it on the screen (34
+  reversals, 0.51°) until §32.11 deleted it (50, 1.12°).
+* **THE REVERSE BAND** (`input/reverse_band.ts`, wired in `render/pointer_wiring.ts`): a backlash per finger component, per drag — the way it last moved
+  kept; a step that way passes (first taking up any slack); a step BACK absorbed until the finger has gone back by more than the band (`orbitDeadbandMm`,
+  2.3 mm), the excess passed and the way flipped. Time-free, exact: a reversal costs the band once, then the finger is followed exactly; the coast records
+  what passed. Only the orbit around the assembly's drag (the approach, the slide untouched).
+* **Measured** (the same probe): the place's reversals 52 → **0**, the piece's on the screen 50 → **0**; the reversal leg still crosses the whole top back.
+  Two random walks with approaches and a tremble (`WOBBLEX=1.5`): 0 page errors, 0 reversals. ⚠ The largest step on the screen (~1.3°) is the cap's pace
+  itself (T2), not a back and forth.
+* ⏸ OPEN, the owner to advise: the hold at the zenith / bottom (T5's, identical on `16b38c4`: dy held at a top's far edge, dx at its ends — reached at
+  once at a cap's pace).
+* Vectors 1637 (`reverse_band.test.ts` 5 — a tremble moves nothing back, the slack, a reversal paid once, the wiring; RED on `d957613` and on three
+  mutants); the wiring vectors of `rebuild_wiring` and `proto_piece_orbit` follow.

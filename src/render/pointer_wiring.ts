@@ -28,6 +28,7 @@ import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { isTapRelease, SwayWatcher, MotionTracker, swayScale, impulseForPeak } from "../input";
 import { type Vec3 } from "../core/vec";
 import { mmToPx } from "../core/units";
+import { reverseBand, reverseBandStep } from "../input/reverse_band";
 import { faceFromPickedNormal } from "../core/face_pick";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_wiring";
@@ -307,7 +308,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐ The orbit finger's own tracker — the camera reads from it whether the input is MOVING, per axis.
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
       // ⭐ (the third audit) the drag's own deadband (`orbitDeadbandMm`), apart from the tracker the camera reads MOVING from
-      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg), band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true) };
+      st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg), band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true), rev: { x: reverseBand(), y: reverseBand() } };
       // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
       // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
       // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
@@ -341,8 +342,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // deadband); its coast replays the same millimetres (`loopFinger`). ⛔ The orbit's angles, the cone, the slide's arming by an orbit drag — not here.
     if (asmOn) {
       if (!shiftApproach) {
-        const fx = db.dx / mmToPx(1);
-        const fy = dxOnly ? 0 : -db.dy / mmToPx(1);
+        // ⭐⭐⭐ (2026-11-08, scope §32.13) THE REVERSE BAND: a step back along a component absorbed up to the orbit band (`orbitDeadbandMm`) — the
+        // finger's tremble on its own axis (⛔ on a cap ~33 mm of travel per mm: the piece jumped back and forth, at a held edge most of all)
+        const rv = st.orbitMotion.rev;
+        const fx = reverseBandStep(rv.x, db.dx / mmToPx(1), st.cfg.orbitDeadbandMm);
+        const fy = dxOnly ? 0 : reverseBandStep(rv.y, -db.dy / mmToPx(1), st.cfg.orbitDeadbandMm);
         loopFinger(st, fx, fy);
         st.orbitInertia.record(s.t, fx, fy);
       }
