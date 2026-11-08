@@ -33,11 +33,15 @@ export const MAP_COPLANAR_M = 0.0005;
 /** ⭐ Each face's rectangle grown by this (m) — the slide's `OUTLINE_GROW_M`: the 3 mm joints between the coloured cores close. */
 export const MAP_GROW_M = 0.0016;
 
-/** ⭐ A placed part's face, in the world, on the part's MODEL pose. */
+/**
+ * ⭐ A placed part's face, in the world, on the part's MODEL pose. ⭐⭐⭐ (2026-11-09, R1) `part`: the part it belongs to — a face glued to ANOTHER part's
+ * face (coplanar, opposite normals, overlapping) is not a surface there (`exposedRects`); a face without a part is never covered.
+ */
 export interface MapFace {
   readonly normal: Vec3;
   readonly centre: Vec3;
   readonly tris: readonly (readonly [Vec3, Vec3, Vec3])[];
+  readonly part?: string;
 }
 
 /**
@@ -380,17 +384,53 @@ export function stackOf(faces: readonly MapFace[], n: Vec3, t: Vec3, b: Vec3, co
     if (p === undefined) planes.push({ level, faces: [f] });
     else p.faces.push(f);
   }
+  const rectOf = (f: MapFace): Rect2 => {
+    const xs = f.tris.flatMap((tr) => tr.map((v) => dot(v, t)));
+    const ys = f.tris.flatMap((tr) => tr.map((v) => dot(v, b)));
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  };
+  // ⭐⭐⭐ (2026-11-09, R1) the faces that could GLUE onto this stack's: facing the other way (within the merge angle), with a part
+  const against = faces.filter((g) => g.part !== undefined && dot(g.normal, n) <= -cosMax && g.tris.length > 0);
   const groups: MapGroup[] = [];
   for (const p of planes) {
-    const rects: Rect2[] = p.faces.map((f) => {
-      const xs = f.tris.flatMap((tr) => tr.map((v) => dot(v, t)));
-      const ys = f.tris.flatMap((tr) => tr.map((v) => dot(v, b)));
-      return { x0: Math.min(...xs) - MAP_GROW_M, x1: Math.max(...xs) + MAP_GROW_M, y0: Math.min(...ys) - MAP_GROW_M, y1: Math.max(...ys) + MAP_GROW_M };
-    });
+    const covers = against.filter((g) => Math.abs(dot(g.centre, n) - p.level) <= MAP_COPLANAR_M);
+    const rects: Rect2[] = [];
+    for (const f of p.faces) {
+      const own = rectOf(f);
+      const parts = f.part === undefined ? [own] : exposedRects(own, covers.filter((g) => g.part !== f.part).map(rectOf));
+      for (const r of parts) rects.push({ x0: r.x0 - MAP_GROW_M, x1: r.x1 + MAP_GROW_M, y0: r.y0 - MAP_GROW_M, y1: r.y1 + MAP_GROW_M });
+    }
     for (const comp of components(rects)) groups.push({ depth: p.level, region: filledRegion(comp.map((k) => rects[k]!)) });
   }
   groups.sort((a, c) => c.depth - a.depth);
   return groups;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R1) **A FACE'S EXPOSED RECTANGLES**: its rectangle less every rectangle a face of another part glued onto it
+ * covers (rectangle difference — each cut leaves at most four pieces; a piece thinner than `MAP_GROW_M` dropped: the joints between touching faces).
+ * ⛔ Every face was fed whole: on the cube the largest coplanar region was a GLUED plane (Piece32's +x side, wholly covered, at 213.5 mm against the real
+ * face's 247.5; Piece30's −x side, 88 % covered, at −147.5 against −242.5) — the contour 361 mm wide for 490, every polygon short of the real edges.
+ */
+export function exposedRects(r: Rect2, covers: readonly Rect2[]): Rect2[] {
+  let out: Rect2[] = [r];
+  for (const c of covers) {
+    const next: Rect2[] = [];
+    for (const q of out) {
+      if (c.x0 >= q.x1 || c.x1 <= q.x0 || c.y0 >= q.y1 || c.y1 <= q.y0) {
+        next.push(q);
+        continue;
+      }
+      if (c.x0 > q.x0) next.push({ x0: q.x0, x1: c.x0, y0: q.y0, y1: q.y1 });
+      if (c.x1 < q.x1) next.push({ x0: c.x1, x1: q.x1, y0: q.y0, y1: q.y1 });
+      const x0 = Math.max(q.x0, c.x0);
+      const x1 = Math.min(q.x1, c.x1);
+      if (c.y0 > q.y0) next.push({ x0, x1, y0: q.y0, y1: c.y0 });
+      if (c.y1 < q.y1) next.push({ x0, x1, y0: c.y1, y1: q.y1 });
+    }
+    out = next;
+  }
+  return out.filter((q) => q.x1 - q.x0 > MAP_GROW_M && q.y1 - q.y0 > MAP_GROW_M);
 }
 
 /** ⭐ The MAIN group of a stack: the largest closed region (ties: the frontmost) — its depth is the facet's plane; its area the real face behind it. */
@@ -422,7 +462,7 @@ function boxPlanes(box: ShellBox): Plane[] {
 
 /**
  * ⭐⭐ A FACET'S POLYGON ON THE CONTOUR: a square of side `2·size` in its plane, clipped by every other half-space (Sutherland–Hodgman, 1974 — a convex
- * polygon by a plane; a point within 1e-9 of a plane kept).
+ * polygon by a plane; a point within `MAP_COPLANAR_M` of a plane kept — one rule for "the same plane", the stack's and the clip's).
  */
 export function facetPolygon(n: Vec3, e: number, planes: readonly Plane[], size: number): Vec3[] {
   const { t, b } = facetFrame(n);
@@ -441,9 +481,11 @@ export function facetPolygon(n: Vec3, e: number, planes: readonly Plane[], size:
       const q = poly[(i + 1) % poly.length]!;
       const dp = dot(pl.n, p) - pl.e;
       const dq = dot(pl.n, q) - pl.e;
-      const ip = dp <= 1e-9;
+      // ⭐⭐⭐ (2026-11-09, R2 = F9) a point within the face map's own COPLANAR tolerance of the plane kept — ⛔ 1e-9: the cube's back facet (its plane
+      // from the faces' float32 triangles) and the box's back (from the hulls' vertices in doubles) 5.1e-9 m apart: every corner out, the facet dropped
+      const ip = dp <= MAP_COPLANAR_M;
       if (ip) out.push(p);
-      if (ip !== dq <= 1e-9) {
+      if (ip !== dq <= MAP_COPLANAR_M) {
         const s = dp / (dp - dq);
         out.push([p[0] + (q[0] - p[0]) * s, p[1] + (q[1] - p[1]) * s, p[2] + (q[2] - p[2]) * s]);
       }

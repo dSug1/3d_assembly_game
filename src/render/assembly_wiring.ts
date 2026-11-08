@@ -355,7 +355,7 @@ function faceMapOf(st: SceneState): FaceMap | null {
       const w = faceWorld(st.world, id, f.id);
       const tris = faceTrianglesWorld(st, id, f.id);
       if (w === null || tris === null || tris.length === 0) continue;
-      faces.push({ normal: w.normal, centre: w.centre, tris });
+      faces.push({ normal: w.normal, centre: w.centre, tris, part: id }); // ⭐⭐⭐ (2026-11-09, R1) the part: a glued face is not a surface
     }
   }
   const map = buildFaceMap(faces, box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
