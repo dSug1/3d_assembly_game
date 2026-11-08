@@ -13,7 +13,12 @@
 * ⚠ **`Scene_1` IS A CUBE** since `1.0.109-` (`SCENE_1.md` §12): I1 – I10 were measured on the PAINTING (0.33 deep); I11 – I14 on the cube. ⭐ So the
   first job is to **re-measure I1 – I10 on the cube** (the probes below): some change (the faces contour, Piece44 / Piece45 moved, the grooves), some
   may vanish.
-* **The work order** (the owner may reorder; each fix its own commit):
+* ⭐⭐⭐ **2026-11-09 — THE WALKS AND THE ROOT CAUSES** (branch `1.0.110-Polar-orbit-issues`): 23 random-walk scenarios over the cube (~83 000
+  frames, every distance, dx / dy / mixed / reversals / approaches / a finger tremble) found two NEW issues (**I15** the seam trap, **I16** the
+  ring off its lines — mostly the probe) and a root-cause analysis put the sixteen on **seven roots R1 – R7** → **§4 – §5 below** (the record:
+  [`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md)). ⭐ **§5's build order
+  replaces the work order below** (R1 + R2 → R4 → R3 → R6 → R7 → F10 …), built on `1.0.111-Polar-orbit-fixes`.
+* **The work order** (⛔ superseded by §5, 2026-11-09; the owner may reorder; each fix its own commit):
   1. **F9 → I11** (no back facet) — the root is known and measured (§1, I11), the fix one constant; it changes the whole back of the map, so first.
   2. **I14** (the jitter over the top's edges) — reproduce, then find the cause (its row's TO DO). Fix only once the cause is named.
   3. Re-measure I13 after F9 (it sits in I11's region); then I1 – I10 on the cube.
@@ -145,3 +150,47 @@ the later commit when one was built for THIS code and is portable.
 
 ⚠ **Since 2026-11-08 `Scene_1` is a CUBE** (`SCENE_1.md` §12, `1.0.109-`): every measurement above was taken on the PAINTING (0.33 deep). Re-measure
 I1 – I10 on the cube (I11 – I13 were found on it) before building a fix against them (the faces contour, the steps, Piece44 / Piece45 all moved or changed).
+
+## 4. ⭐⭐⭐ The random walks (2026-11-09, on `469653b` — the cube)
+
+**The instrument**: `scripts/probes/walk_probe.mjs` (headless Chrome on the dev server; each scenario from a VIEW — `st.orbit.reset`; legs that
+change direction under one press; approaches A + drag mixed in; a seeded finger TREMBLE `wob`; every frame the gizmo, the piece, the camera, the
+angles, and the drawn lines — each break sub-sampled on `mapGizmo`: a FALSE break or a MAP jump), `scripts/probes/walk_analyse.mjs` (jitter,
+back-and-forth with the finger held one way, blockage / pole stall, jumps and leaps, the line-break map, against the finger, the piece behind its
+face, the camera's roll), `scripts/probes/walk_scenarios.json` (19 scenarios: far 6 m, mid 1.2 m, close 0.3 m, very close 0.1 m, contact; the
+edges, corners, grooves, the four protrusions, Piece42's slanted faces, the back, the poles; six seeded random zig-zag walks with approaches) + 4
+with a tremble. ~83 000 frames, 0 page errors. ⚠ Three of my own instrument's errors found and fixed on the way (the screen's right negated; reversals the
+scenario asked for counted as back-and-forth; a probe writing only at its end lost a run to its watchdog).
+
+| | found | where (mm, the cube's frame) |
+|---|---|---|
+| **I15 (NEW) — THE SEAM TRAP** | the solved angles lock at yaw = 90° exactly and never leave — dx (turns), dy (to both poles): the gizmo and the piece 0 mm for 350 – 2100 frames, at every distance; only an approach / a slide frees it | far (v 0.162), mid (ap 0.621), close (random_5: 955 + 1071 frames) |
+| I11 | confirmed: 490 mm across the back at pitch 0; 523 / 375 mm in the bottom cap's back quarter, 261 mm in the top's; the piece 0.4 – 3.3 m, the camera to 4.4 m far out | the back, both caps |
+| I1 | confirmed: the gizmo still at the cap centre while dx spins the yaw (stalls 30 – 732 frames); ⚠ the solved yaw DOES follow (§5) | (33, 540, 191), (33, −26, 191) |
+| I14 | **reproduced only with a tremble** (±2 – 3 px): 3 – 4 reversals in 5 – 17 frames, 10 – 23 mm, gizmo and piece; a straight finger: none | the right-top, front-top edges, Piece3's top, by Piece44 |
+| I3 / I4 | the slide blocked 39 – 189 frames a leg, *"at the edge of the hosting faces"*; the camera 7.6 m for a piece still | Piece3's, Piece44's, Piece4's tops |
+| I10 / I7 | the gizmo leaps 46 – 49 mm onto / off Piece44, 45, 43; 95 – 99 mm at the bottom-left groove (a 97 mm back-and-forth); 151 mm over Piece1's groove | |
+| I8 | false breaks at every 90° corner band (the green, the map continuous: sub-step ≤ 6 mm) and the ±45° bands (the red) | |
+| I16 (NEW) | the ring 9 – 93 mm from the sampled lines' joined segments — ⚠ mostly the probe (§5, R-note 3) | the back corners, the pole |
+
+## 5. ⭐⭐⭐ The root causes (2026-11-09) and the fixes — the build order
+
+A root-cause analysis (measured: the face map dumped from the page and rebuilt offline, the real solver run in the page; the record in
+[`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md) Part B):
+
+| root | mechanism (measured) | carries | the fix (one rule, one place) |
+|---|---|---|---|
+| **R1 — HIDDEN FACES MAKE THE FACETS** | `faceMapOf` feeds every face, the GLUED ones included; `mainOf` takes the largest coplanar region: the +x facet at **213.5** (Piece32's covered side; the real face 247.5 — a 2364 cm² tie broken by order), −x at **−147.5** (Piece30's side, 88 % mated; the real −242.5, 1669 cm² cut by two grooves). The contour 361 mm wide for 490: every polygon 34 / 95 mm short of the real edges | I8, I13, I14 (a built-in 17 / 32 mm back-and-forth at pitch 45°), the corner chords, half of I11 | **the stack reads the EXPOSED area** (`stackOf`): a face's rectangle is not real where a face of another part with the opposite normal lies on its plane (`MAP_COPLANAR_M`) — the mated area subtracted cell by cell, `mainOf` and `regionReal` on what is left. Offline: six facets at the real faces |
+| **R2 — the clip at 1e-9** (F9) | the back's plane from float32 triangles 5.1e-9 m off the box's | I11 | `facetPolygon` with `MAP_COPLANAR_M` (offline: six facets, four 90° columns) |
+| **R3 — the edge blend defeated by its own cast; no blend in the cap bands** | the blended place's cast takes the near facet's own face (the chord ALONG it): 86 – 89.5° x 247.5, 90° x 2.5, 90.5° x −242.5; the slice-end blend skipped in the cap bands (`same`): a 284 mm raw jump at pitch −61° | I11's step, I13's 77 mm, I14's spikes, I15's trigger | (a) the cast's hit taken only where the chord CUTS a surface (its offset along the chord small — a sagitta rule); (b) the slice-end blend in the cap bands too; (c) one EPS for the bound |
+| **R4 — THE SOLVER IS ABSORBED BY ANY RING DISCONTINUITY** | a lateral jump J of the anchor larger than `spare·0.9` (0.27 m far, ~16 mm close in) never fits a stride: the piece converges onto the jump, 24 queries a frame, `deferred` for ever, the orbit's target runs away; a dy carried with the yaw's backlog is dead too | **I15**, the close-in *"frozen, not touching"* blockages at grooves and Piece44 | `solveOrbitStep`: a stride that cannot fit while the gap is open takes the jump when its LANDING is admissible (one query); `orbitFrame`: a deferred solve with no progress keeps no backlog beyond this frame's input |
+| **R5 — one polar chart** | at v = 1 the anchor moves 0 mm/rad of yaw (the solved yaw follows, nothing seen moves); the red over a cap runs to the centre | I1, I12, I6 | F10 (the cap charted in the column it was entered from) after R1 – R4; F1 a stopgap |
+| **R6 — the slide owns every drag; its camera reads the finger** | `hoverDragTake` takes every one-finger drag in the slide mode; the limited orbit fed the finger's step before `hoverSolve` clamps it | I3, I4 | F3 (a refused bound step hands the drag to the orbit, the slide unlatched) + F4 (the limited orbit fed the SOLVED step, eased) |
+| **R7 — the piece placed from one surface point under the shell's offset** | within 60 mm the foot comes down onto the gizmo (the top at 498.5) while Piece44 stands to 540: the piece's body under Piece44's top, refused | I2 | a footprint placement (the piece's box clear of the parts' boxes inflated by the approach) — after R1 – R4, over F2 |
+
+**Also found**: the gizmo and the lines one frame behind the solved piece (`assemblyFrame` before the solve); `shownDir`'s branch cut opposite
+the calm's normal (the seam's jump far out 1406 mm against 490); I16 mostly the probe (`gizmoJoins` keeps the ring on a drawn segment) plus I8 / I10;
+I5 small (close in the finger ~1:1 on the glass; far out the PIECE sweeps 30 – 48 screen px a finger px).
+
+**The build order** (`1.0.111-Polar-orbit-fixes`): **R1 + R2** (each its commit; vectors on the dumped `Scene_1` faces) → **R4** → **R3** →
+**R6** (F3 + F4) → **R7** → F10 (subsuming F1) → F8, F7a / b, I7 → the walks re-run against §4.
