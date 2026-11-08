@@ -92,7 +92,7 @@ try {
         cz: window.__cause ?? null,
         lt: st.loop ? [st.loop.travel.facet, st.loop.travel.entry, st.loop.travel.planes.map((q) => q.n.map((x) => +x.toFixed(3))), st.loop.last, +st.loop.shown.h.toFixed(3), +st.loop.shown.e.toFixed(3)] : null,
         rs: (() => { const L = st.loop; if (!L || !L.ropes || !L.gz) return null; const pl = L.gz.travel.planes; const out = {};
-          for (const c of ["x", "y"]) { const r = L.ropes[c]; if (!r) { out[c] = null; continue; }
+          for (const c of ["x", "y"]) { const r = L.gz.ropes ? L.gz.ropes[c] : null; if (!r) { out[c] = null; continue; }
             const v = r.verts.filter((q, i, a) => q.s >= r.from - 1e-9 && q.s <= r.to + 1e-9);
             let steps = 0, voids = 0, deep = 0, len = 0, turns = 0, off = [0, 0];
             for (let i = 0; i < v.length; i++) { const q = v[i];
@@ -109,6 +109,15 @@ try {
               conn = Math.min(conn, Math.hypot(a[0] + ab[0] * t - gp[0], a[1] + ab[1] * t - gp[1], a[2] + ab[2] * t - gp[2])); if (v[i].void) chord = Math.max(chord, Math.sqrt(l2)); }
             out[c] = [v.length, steps, voids, +(deep * 1000).toFixed(0), +(len / Math.max(1e-6, r.to - r.from)).toFixed(2), turns, +(Math.min(off[0], off[1]) * 1000).toFixed(2), +((r.to - r.from) * 1000).toFixed(0), +(conn * 1000).toFixed(1), +(chord * 1000).toFixed(0)]; }
           return out; })(),
+        // ⭐⭐⭐ (§32) close in: [on, the chart's facet, its anchor u0, v0, its cells, filled, the gizmo shown, its uv]
+        ci: (() => { const L = st.loop; if (!L || L.closeIn === undefined) return null; const C = L.chart;
+          return [L.closeIn ? 1 : 0, C ? C.facet : -1, C ? +C.u0.toFixed(4) : null, C ? +C.v0.toFixed(4) : null, C ? C.cells.size : 0, C ? (C.head >= C.queue.length ? 1 : 0) : 0, st.asmGizmoOn ? 1 : 0, L.gz ? [+L.gz.uv[0].toFixed(4), +L.gz.uv[1].toFixed(4)] : null]; })(),
+        ap: st.approach ?? null,
+        lp: (() => { const m = st.asmSectionLines; if (!m || !m.isVisible) return null; const P = m.getVerticesData("position"); if (!P) return null; const half = P.length / 2;
+          const plan = (from, to) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9]; let n = 0;
+            for (let i = from; i + 5 < to; i += 6) { if (P[i] === P[i + 3] && P[i + 1] === P[i + 4] && P[i + 2] === P[i + 5]) continue; n++; for (let k = 0; k < 6; k++) { const a = k % 3; lo[a] = Math.min(lo[a], P[i + k]); hi[a] = Math.max(hi[a], P[i + k]); } }
+            return n === 0 ? null : [+(Math.min(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) * 1000).toFixed(1), n]; };
+          return [plan(0, half), plan(half, P.length)]; })(),
         sk: st.asmSectionKey ?? null, lc: st.lastCollision ? String(st.lastCollision).slice(0, 60) : null,
         ld: (() => { const m = st.asmSectionLines; const g = st.asmGizmoAt; if (!m || !m.isVisible || !g) return null; const P = m.getVerticesData("position"); if (!P) return null; const half = P.length / 2;
           const seg = (from, to) => { let best = 1e9; for (let i = from; i + 5 < to; i += 6) { const ax = P[i], ay = P[i + 1], az = P[i + 2], dx = P[i + 3] - ax, dy = P[i + 4] - ay, dz = P[i + 5] - az; const L = dx * dx + dy * dy + dz * dz; if (L < 1e-12) continue;
@@ -116,6 +125,20 @@ try {
           return [seg(0, half), seg(half, P.length)]; })() });
     } catch (e) { window.__recErr = String(e); } }); return true; })()`);
   if (!ok) throw new Error("no window.__st — is this the dev server (import.meta.env.DEV)?");
+  // LAND_EVERY=px (walk mode): every so many px, the approach SIMULATED in place (A + dy straight in until the parts stop it), where it stops against the
+  // gizmo, then the approach restored — one synchronous page task, no frame between
+  if (env.LAND_EVERY) await ev(`(async () => { window.__AW = await import("/src/render/assembly_wiring.ts"); window.__GB = await import("/src/render/green_box_wiring.ts"); window.__land = []; return 1; })()`);
+  const landTest = () => ev(`(() => { const st = window.__st, L = st.loop, AW = window.__AW, GB = window.__GB; if (!L || !L.gz || !st.asmGizmoAt || !st.pieceQ || st.hover !== null) return 0;
+    const fi = L.chart ? L.chart.facet : L.travel.facet; const G = st.asmGizmoAt.slice(), P = L.p.slice(), n = L.facets[fi].n, cap = !!L.facets[fi].cap, a0 = st.approach;
+    let zero = 0, it = 0; for (; it < 4000 && zero < 4; it++) { const m = AW.approachMove(st, -0.5 * GB.orbitDvPerMm(st)); zero = Math.abs(m) < 1e-9 ? zero + 1 : 0; }
+    const A = GB.ringAnchorAt(st, st.pieceQ); const v = [A[0] - G[0], A[1] - G[1], A[2] - G[2]]; const al = v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
+    const lat = Math.hypot(v[0] - al * n[0], v[1] - al * n[1], v[2] - al * n[2]);
+    const w = [G[0] - P[0], G[1] - P[1], G[2] - P[2]]; const wl = w[0] * n[0] + w[1] * n[1] + w[2] * n[2]; const gLat = Math.hypot(w[0] - wl * n[0], w[1] - wl * n[1], w[2] - wl * n[2]);
+    let blk = null; try { blk = GB.pieceSolverEnv(st).blocker?.(st.pieceQ) ?? null; } catch (e) { blk = "err"; }
+    const S = GB.ringAnchorAt(st, st.pieceQ);
+    st.approach = a0; st.approachInertia.stop();
+    window.__land.push({ leg: window.__leg, cap, n, ov: L.gz.normal === null, host: L.gz.host, G, P, A, miss: Math.hypot(...v) * 1000, along: al * 1000, lat: lat * 1000, gLat: gLat * 1000, gDepth: -wl * 1000, it, blk });
+    return 1; })()`);
   const vp = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));
   const [W, H] = vp;
   const top = Math.round(H * 0.42); // under the HUD
@@ -155,16 +178,37 @@ try {
     const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
     let k = 0;
     for (const [d, px] of JSON.parse(env.LEGS ?? '[["L",1400],["U",380],["R",1400],["D",380]]')) { k++; await leg(`c${k}${d}`, starts[d], dirs[d], Math.round(px / v)); }
+  } else if (mode === "seq") {
+    // MODE=seq SEQ='[["U",600],["A",300],["R",40],["A",60]]' — drags (L R U D, px) and approaches (A: A + drag up = in; AO: A + drag down = out), in order
+    const v = +(env.PXSTEP ?? 3);
+    const dirs = { L: [-v, 0], R: [v, 0], U: [0, -v], D: [0, v] };
+    const starts = { L: [W - 20, (top + H) / 2], R: [20, (top + H) / 2], U: [W / 2, H - 15], D: [W / 2, top + 10] };
+    let k = 0;
+    for (const [d, px] of JSON.parse(env.SEQ)) {
+      k++;
+      if (d === "A" || d === "AO") {
+        await ev(`window.__leg = ${JSON.stringify(`s${k}${d}`)}`);
+        await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 });
+        let m = d === "A" ? [60, H - 40] : [60, top + 10]; await move("mousePressed", m, 1); await frame();
+        for (let j = 0; j < Math.round(px / v); j++) { m = [m[0], m[1] + (d === "A" ? -v : v)]; if (!inside(m)) break; await move("mouseMoved", m, 1); await frame(); }
+        await move("mouseReleased", m, 0); await send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 }); await sleep(1500);
+      } else await leg(`s${k}${d}`, starts[d], dirs[d], Math.round(px / v));
+      if (env.SHOT_SEQ) { const shot = await send("Page.captureScreenshot", { format: "jpeg", quality: 70 }); if (shot?.data) writeFileSync(join(DIR, `${OUT}_s${k}.jpg`), Buffer.from(shot.data, "base64")); }
+    }
   } else if (mode === "walk") {
     // ⭐⭐⭐ (2026-11-06, the owner: *"changes of input direction during long walks … at or just after singularities"*) LONG WALKS: one press per walk,
     // its direction changed mid-drag — every segment a different KIND (dx / dy / a mix) at 3 px a frame (a quarter of them FAST, 8 px); a change at a
     // random length (60 … 600 px) or 0 … 11 steps after an EVENT (the travel's face changed; the verdict a hold, a crossing, a gap). The pointer kept in the
     // viewport by a lift and a re-press at the centre (the direction kept). Segments tagged `r<n>[dx,dy]` (the analysers' random legs); `cz` the cause.
-    const kinds = ["dx", "dy", "mix"];
+    // ⭐⭐⭐ (2026-11-08, scope §32 — the owner: *"the usual random walks (including approaches now)"*) APPROACHES=1: a segment is also an APPROACH (A + drag,
+    // in or out, 30 … APPRMAX px) — the drag lifted, A held, the press at the screen's left, then the walk re-pressed at the centre
+    const kinds = env.APPROACHES ? ["dx", "dy", "mix", "A"] : ["dx", "dy", "mix"];
     let kind = null;
     const pick = () => {
-      const k = kinds.filter((x) => x !== kind)[Math.floor(rnd() * 2)];
+      const others = kinds.filter((x) => x !== kind);
+      const k = others[Math.floor(rnd() * others.length)];
       kind = k;
+      if (k === "A") return [0, rnd() < 0.6 ? -1 : 1];
       const sg = rnd() < 0.5 ? -1 : 1;
       if (k === "dx") return [sg, 0];
       if (k === "dy") return [0, sg];
@@ -201,6 +245,23 @@ try {
           d = pick(); speed = rnd() < 0.25 ? 8 : 3; left = 60 + rnd() * 540; pending = -1;
           await tagIt();
         } else if (pending > 0) pending--;
+        if (kind === "A") {
+          // the approach: A held, drag up (in) or down (out) on the left of the screen, then the walk goes on from the centre
+          const n = Math.round((30 + rnd() * (+(env.APPRMAX ?? 400) - 30)) / 3);
+          await move("mouseReleased", m, 0); await frame();
+          await ev(`window.__leg = ${JSON.stringify(`a${w * 1000 + seg}[${d[1] < 0 ? "in" : "out"},${n * 3}]`)}`);
+          await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 });
+          let q = d[1] < 0 ? [60, H - 40] : [60, top + 10]; await move("mousePressed", q, 1); await frame();
+          for (let j = 0; j < n; j++) { const q2 = [q[0], q[1] + d[1] * 3]; if (!inside(q2)) break; q = q2; await move("mouseMoved", q, 1); await frame(); px += 3; }
+          await move("mouseReleased", q, 0); await send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
+          for (let j = 0; j < 30; j++) await frame();
+          if (env.LAND_EVERY) await landTest();
+          cause = "approach"; d = pick(); speed = rnd() < 0.25 ? 8 : 3; left = 60 + rnd() * 540; pending = -1;
+          if (kind === "A") { kind = "dx"; d = [rnd() < 0.5 ? -1 : 1, 0]; }
+          await tagIt();
+          m = center; await move("mousePressed", m, 1); await frame();
+          continue;
+        }
         const m2 = [m[0] + d[0] * speed, m[1] + d[1] * speed];
         if (!inside(m2)) {
           await move("mouseReleased", m, 0); await frame(); m = center; await move("mousePressed", m, 1); await frame();
@@ -208,6 +269,7 @@ try {
         }
         m = m2; await move("mouseMoved", m, 1); await frame();
         px += speed; left -= speed;
+        if (env.LAND_EVERY && Math.floor(px / +env.LAND_EVERY) !== Math.floor((px - speed) / +env.LAND_EVERY)) await landTest();
         // SHOT_EVERY=px: a screenshot every so many px of drag (the sections' shapes, looked at)
         if (env.SHOT_EVERY && Math.floor(px / +env.SHOT_EVERY) !== Math.floor((px - speed) / +env.SHOT_EVERY)) {
           const shot = await send("Page.captureScreenshot", { format: "jpeg", quality: 70 });
@@ -228,6 +290,7 @@ try {
     if (shot?.data) writeFileSync(join(DIR, `${OUT}_end.png`), Buffer.from(shot.data, "base64"));
   }
   if (env.AFTER) console.log("AFTER", await ev(env.AFTER));
+  if (env.LAND_EVERY) writeFileSync(join(DIR, `${OUT}_land.json`), await ev("JSON.stringify(window.__land)"));
   const rows = JSON.parse(await ev("JSON.stringify(window.__rec)"));
   const file = join(DIR, `${OUT}.json`);
   writeFileSync(file, JSON.stringify({ viewport: vp, recorderError: (await ev("window.__recErr ?? null")) ?? null, errors, rows }));

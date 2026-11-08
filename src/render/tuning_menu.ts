@@ -202,6 +202,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),
             tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
             tunable(st, "sections drawn (green / red): on (1) / off (0)", "sectionLines", 0, 1, 1),
+            // ⭐⭐⭐ (2026-11-08, scope §32 C1) close in: the gizmo, its lines and the area's outline within this of the shell
+            tunable(st, "close in: the gizmo and its area within (mm of the shell)", "closeInMm", 10, 600, 5),
             tunable(st, "turn governor, horizontal face (°/mm of dy)", "orbitTurnCapDegMm", 5, 300, 0.5),
             tunable(st, "turn governor, vertical face (°/mm of dy)", "orbitTurnCapVerticalDegMm", 5, 300, 0.5),
             // ⭐ (2026-10-12) to 6 m — the 1st and 4th rings doubled (Scene_1: 5.1 / ±3.15, 6 m)

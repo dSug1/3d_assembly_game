@@ -1,26 +1,26 @@
 /**
- * ⭐⭐⭐ (2026-11-06, THE SECOND REBUILD — `TILTED_ORBIT_REBUILD_SCOPE.md` §26, on §22) **THE ORBIT AROUND THE ASSEMBLY, WIRED** — on while `orbitMode` is 0.
- * No rule here: the travel is `input/loop_travel.ts` (T1 – T6), the view `input/loop_view.ts` (V1 – V6, T5's test), what a face is for a line
- * `input/rope.ts` (§29 the ropes), the cut `input/plane_cut.ts`, G1 `input/face_map.ts`. This file holds the state and the calls:
- * * G1 — the face map's facets of the placed parts (their planes at the parts' support); the travel's place on it (`st.loop`), moved ONLY by the finger
- *   and its coast (`loopFinger` — T6), a face crossed only where the view is continuous (T5); the shown place and view eased toward it every frame.
- * * P1 — the piece outside G1 along the shown view at the approach's distance (`shownOffset` / `placeOffset`: the same function) — no solver.
+ * ⭐⭐⭐ (2026-11-08, `TILTED_ORBIT_REBUILD_SCOPE.md` §32, rebuilt from `d926b88` — `1.0.105-`'s travel, view, piece and camera, §29's ropes deleted)
+ * **THE ORBIT AROUND THE ASSEMBLY, WIRED** — on while `orbitMode` is 0. No rule here: the travel is `input/loop_travel.ts` (T1 – T6), the view
+ * `input/loop_view.ts` (V1 – V6, T5's test), the close-in chart `input/close_in_chart.ts` (K1 – K8, C1 – C4), the cut `input/plane_cut.ts`, G1
+ * `input/face_map.ts`. This file holds the state and the calls:
+ * * G1 — the face map's facets of the placed parts (their planes at the parts' support — the shell); the travel's place on it (`st.loop`), moved ONLY by the
+ *   finger and its coast (`loopFinger` — T6), a face crossed only where the view is continuous (T5); the shown place and view eased toward it every frame.
+ * * P1 — the piece outside G1 along the shown view at the approach's distance (`shownOffset` / `placeOffset`: the same function) — no solver; close in
+ *   (C4) its direction turned onto the chart's normal as it nears the shell, so A + dy lands on the gizmo.
  * * V5 — the camera along the shown view (world yaw and pitch, never roll), the owner's offsets, never past the zenith.
- * * §29 THE ROPE (`input/rope.ts`) — G1 is the shell (each facet at the parts' outermost point); along each loop through the shown place every place
- *   casts straight in, its landing the first real surface; the rope joins the landings (a step drawn along the normal, a void spanned straight); the
- *   gizmo ON the rope of the line last travelled at the shown place — it never waits; the lines the two ropes, each only as far as the travel reaches.
- * * A1 – A2 — the approach: above G1 along the view, below it straight toward the gizmo, collision-checked; below G1 the slide owns the drag.
- * ⛔ `1.0.103-`'s calm direction, the camera's cone and carried up, the view's hold, the nearest-point gizmo, the lines as the gizmo's paths (§26.5).
+ * * §32 CLOSE IN (C1): within `closeInMm` of the shell ONE chart is anchored on the facet the place is on (K5) and frozen; the gizmo is the place carried
+ *   straight in along the facet's normal onto the parts (K1 – K4: the region continuous by construction); the place is held inside the region (K6 — the HUD
+ *   names it; A + dy out and back in anchors anew); the lines short (K7), the region's outline drawn (K8). Far out: no gizmo, no lines.
+ * * A1 – A2 — the approach: above G1 along the piece's direction, below it straight toward the gizmo, collision-checked; below G1 the slide owns the drag.
  */
-import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { Color4 } from "@babylonjs/core/Maths/math.color";
+import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { approachAt, approachDistance, approachStep, approachStepFree, easePoint, farDistance, lookShare, modelNormal, orbitDir, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { buildFaceMap, shellExit, type FaceMap, type MapFace } from "../input/face_map";
-import { buildRope, ropeAt, ropeDrawn, type Landing, type Rope, type RopePlace } from "../input/rope";
+import { allowedShare, anchorChart, chartAllows, chartEdgeDistance, chartFilled, chartGizmo, chartLines, chartOutline, chartUV, closeInDir, closeInNext, facetAccept, fillChart, hullParts, type Chart, type FacetAccept, type HullPart } from "../input/close_in_chart";
 import type { RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { orbitDegPerMm, springPoint } from "../input/follow_camera";
@@ -31,35 +31,47 @@ import { greenDragGains, pieceSolveOptions, pieceSolverEnv, ringAnchorAt, orbitD
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { cameraView, sameView, viewAt, viewDir, viewFacets, type View, type ViewFacet, type ViewOpts } from "../input/loop_view";
-import { HOLD_FREE, isCapNormal, travelAt, travelReach, travelStep, type CrossOk, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
-import { loopLength, loopPoint, onContour, planeThrough } from "../input/plane_cut";
-import { cross, dot, normalize, type Vec3 } from "../core/vec";
+import { HOLD_FREE, isCapNormal, travelAt, travelStep, type CrossOk, type Travel, type TravelFacet, type TravelOpts } from "../input/loop_travel";
+import { dot, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
-import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
+import { boxOf, type Box3 } from "../input/ray_box";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
-/** ⭐ A cast for the real surface starts this far outside the parts' box (m). */
-const CAST_OUT_M = 0.05;
-/** ⭐ The lines' samples along a loop (m) and their lift off the surface (m). */
-const LINE_STEP_M = 0.012;
-const LINE_MAX = 700;
+/** ⭐⭐ (§32 K7) the lines' reach each side of the gizmo (m — "limited to a small surface locally"), their segments' cap, their lift off the surface (m). */
+const LINE_HALF_M = 0.05;
+const LINE_MAX = 48;
 const SECTION_LIFT_M = 0.002;
+/** ⭐ (§32 K8) the outline's lift (m), its redraw interval while the fill grows (frames), the edge's nearness that brightens it (m). */
+const OUTLINE_LIFT_M = 0.0015;
+const OUTLINE_EVERY = 12;
+const OUTLINE_NEAR_M = 0.02;
+/** ⭐ (§32) the gizmo's fade in (ms). */
+const GIZMO_FADE_MS = 150;
+
+/** ⭐⭐⭐ (§32 C1) Is the gizmo shown (around the assembly: close in only), and its opacity (its fade in)? Elsewhere always, opaque. */
+export function gizmoShowing(st: SceneState, nowMs: number): number {
+  if (!assemblyOn(st)) return 1;
+  if (!st.asmGizmoOn) return 0;
+  return Math.max(0.05, Math.min(1, (nowMs - st.asmGizmoSince) / GIZMO_FADE_MS));
+}
 /** ⭐ The HUD's word for T5's stop. */
 const EDGE_HELD = "orbit: held at the edge — the face beyond is not reachable this way (its view would roll or turn over); the far faces by dx round the walls";
 const BELOW_G1 = "orbit: brought in — a drag takes the piece back out to orbit (the slide where the resting face looks at the face)";
+/** ⭐ (§32 K6) The HUD's word for the close-in area's stop. */
+const AREA_HELD = "orbit: the edge of the close-in area — bring the piece out (A + dy) and back in to move on";
 
 /** ⭐ Is the orbit the one around the assembly? */
 export function assemblyOn(st: SceneState): boolean {
   return st.cfg.orbitMode === 0;
 }
 
-/** ⭐ The gizmo shown (Gz1): its point on the real parts, the face's normal there, its part, and the travel at its own place (the lines' — Gz2). */
+/** ⭐ The gizmo shown (§32): its point on the real parts, the face's normal there (`null` over a bridge), its part, its chart coordinates. */
 interface GizmoShown {
   readonly point: Vec3;
   readonly normal: Vec3 | null;
   readonly host: string | null;
-  readonly travel: Travel;
+  readonly uv: readonly [number, number];
 }
 
 /** ⭐ The rebuild's state: G1 (its key, facets, the view's facets and knobs), the travel, the shown place and view (and their spring velocities), the gizmo. */
@@ -78,8 +90,12 @@ export interface LoopState {
   u: Vec3;
   dtMs: number;
   gz: GizmoShown | null;
-  /** ⭐ §29 the two ropes through the gizmo's own place (the green `x`, the red `y`), for that place's key */
-  ropes: { readonly key: string; readonly x: Rope | null; readonly y: Rope | null } | null;
+  /** ⭐⭐⭐ §32 K1 — the placed parts' convex hulls (the casts), K2 — each facet's accepted landings (the boot pass, per placed set) */
+  readonly hulls: readonly HullPart[];
+  readonly accept: readonly FacetAccept[];
+  /** ⭐⭐⭐ §32 C1 — close in, and its chart (anchored on entering, frozen until left) */
+  closeIn: boolean;
+  chart: Chart | null;
 }
 
 /** ⭐ The placed parts' world bounding box, `null` with none. */
@@ -110,12 +126,6 @@ export function ensureAssembly(st: SceneState): void {
   st.asmG = null;
 }
 
-interface GizmoHit {
-  readonly point: Vec3;
-  readonly normal: Vec3 | null;
-  readonly host: string | null;
-}
-
 /** ⭐ A pick on a placed part read on its MODEL pose (`unswayHit`) — never on the mesh as swayed by the orbit. */
 function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal: Vec3 | null, localN: Vec3 | null = null): { point: Vec3; normal: Vec3 | null } {
   const id = mesh === null ? undefined : st.idOf.get(mesh);
@@ -127,53 +137,6 @@ function modelHit(st: SceneState, mesh: AbstractMesh | null, point: Vec3, normal
   if (localN === null) return at;
   const s = mesh.absoluteScaling;
   return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };
-}
-
-/** ⭐ A ray cast in the MODEL's space against each placed part (its sway undone — `swayRay`), the nearest hit on its model pose. */
-function modelCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): GizmoHit | null {
-  let best: { d: number; mesh: AbstractMesh; info: import("@babylonjs/core/Collisions/pickingInfo").PickingInfo } | null = null;
-  for (const c of castParts(st)) {
-    if (c.box !== null && !rayMeetsBox(origin, dir, length, c.box, CAST_BOX_MARGIN_M)) continue;
-    let o = origin;
-    let d = dir;
-    if (c.pose !== null) {
-      const m = swayRay(origin, dir, c.drawnAt, c.drawnQ, c.pose.position, c.pose.orientation);
-      o = m.origin;
-      d = m.dir;
-    }
-    CAST_RAY.origin.copyFromFloats(o[0], o[1], o[2]);
-    CAST_RAY.direction.copyFromFloats(d[0], d[1], d[2]);
-    CAST_RAY.length = length;
-    const info = CAST_RAY.intersectsMesh(c.mesh, false);
-    if (!info.hit || info.pickedPoint === null) continue;
-    if (best === null || info.distance < best.d) best = { d: info.distance, mesh: c.mesh, info };
-  }
-  if (best === null) return null;
-  const pp = best.info.pickedPoint!;
-  const nn = best.info.getNormal(true);
-  const ln = best.info.getNormal(false, false);
-  const m = modelHit(st, best.mesh, [pp.x, pp.y, pp.z], nn ? [nn.x, nn.y, nn.z] : null, ln ? [ln.x, ln.y, ln.z] : null);
-  return { point: m.point, normal: m.normal, host: st.idOf.get(best.mesh) ?? null };
-}
-const CAST_RAY = new Ray(new Vector3(), new Vector3(0, 0, 1), 1);
-const CAST_BOX_MARGIN_M = 0.002;
-
-type CastPart = NonNullable<SceneState["asmCast"]>["parts"][number];
-
-/** ⭐ The parts a cast reads, once a frame: each placed mesh, its model pose, its drawn place and turn, its model-space box. */
-function castParts(st: SceneState): readonly CastPart[] {
-  const c = st.asmCast;
-  if (c !== null && c.frame === st.frames && c.world === st.world && c.count === st.goalCommit.count) return c.parts;
-  const boxes = placedParts(st).boxes;
-  const parts: CastPart[] = [];
-  for (const [mesh, id] of st.idOf) {
-    if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;
-    const p = mesh.absolutePosition;
-    const r = mesh.absoluteRotationQuaternion;
-    parts.push({ mesh, pose: worldPlacementOf(st.world, id), drawnAt: [p.x, p.y, p.z], drawnQ: [r.w, r.x, r.y, r.z], box: boxes.get(mesh) ?? null });
-  }
-  st.asmCast = { frame: st.frames, world: st.world, count: st.goalCommit.count, parts };
-  return parts;
 }
 
 /** ⭐ The parts' box (the face map's bound). */
@@ -201,6 +164,7 @@ function placedParts(st: SceneState): PlacedParts {
   const { key, meshes } = placedKey(st);
   if (st.asmParts !== null && st.asmParts.key === key) return st.asmParts;
   const parts: Vec3[][] = [];
+  const ids: (string | null)[] = [];
   const boxes = new Map<AbstractMesh, Box3>();
   for (const m of meshes) {
     const pos = m.getVerticesData(VertexBuffer.PositionKind);
@@ -218,10 +182,11 @@ function placedParts(st: SceneState): PlacedParts {
     }
     if (vs.length === 0) continue;
     parts.push(vs);
+    ids.push(st.idOf.get(m) ?? null);
     const b = boxOf(vs);
     if (b !== null) boxes.set(m, b);
   }
-  st.asmParts = { key, parts, boxes };
+  st.asmParts = { key, parts, ids, boxes };
   return st.asmParts;
 }
 
@@ -312,7 +277,11 @@ function loopOf(st: SceneState): LoopState | null {
   const p: Vec3 = [from[0] + f.n[0] * k, from[1] + f.n[1] * k, from[2] + f.n[2] * k];
   const travel = travelAt(facets, p, fi);
   const shown = L !== null ? L.shown : viewAt(view.facets, fi, p, travel.entry, view.opts);
-  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, ropes: null };
+  // ⭐⭐⭐ §32 K1 – K2 — the hulls the chart casts against, and THE BOOT PASS: each facet's accepted landings (per placed set — rerun when a piece is placed)
+  const pp = placedParts(st);
+  const hulls = hullParts(pp.parts, pp.ids);
+  const accept = map.facets.map((mf) => facetAccept(hulls, mf));
+  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null };
   return st.loop;
 }
 
@@ -347,9 +316,20 @@ export function loopFinger(st: SceneState, fx: number, fy: number): boolean {
   let moved = false;
   // ⭐⭐⭐ T5 — a face crossed only where the view is continuous
   const crossOk = crossOkOf(L);
+  const C = L.chart;
+  // ⭐⭐⭐ §32 K6 — close in, the place stays inside the chart's region (and on its facet): a step cut back to the region's edge, named on the HUD
+  const inArea = (t: Travel): boolean => C === null || (t.facet === C.facet && chartAllows(C, ...chartUV(C, t.p)));
   for (const [comp, mm] of [["x", fx], ["y", fy]] as const) {
     if (mm === 0) continue;
-    const r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);
+    let r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);
+    if (C !== null && !inArea(r.travel)) {
+      const k = allowedShare((m) => inArea(travelStep(L.facets, L.travel, comp, mm * m, o, crossOk).travel));
+      r = k > 0 ? travelStep(L.facets, L.travel, comp, mm * k, o, crossOk) : { travel: L.travel, held: null, crossed: 0 };
+      if (st.lastVerdict !== AREA_HELD) {
+        st.lastVerdict = AREA_HELD;
+        st.hudDirty = true;
+      }
+    }
     if (r.travel !== L.travel) moved = true;
     L.travel = r.travel;
     L.last = comp;
@@ -369,18 +349,26 @@ export function loopFinger(st: SceneState, fx: number, fy: number): boolean {
 function offsetAt(st: SceneState, approach: number): Vec3 {
   const L = st.loop;
   if (L === null) return [0, 0, 0];
-  const u = L.u;
   const d = approachDistance(st.cfg, approach);
+  // ⭐⭐⭐ §32 C4 — close in, the piece's direction turns from the view onto the chart's normal as it nears the shell, and its foot from the place onto the
+  // shifted place (K5) — so at the shell it stands straight above the gizmo and A + dy goes straight in onto it; continuous at the close-in distance
+  const C = L.chart;
+  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
+  const s = C === null ? 1 : Math.max(0, Math.min(1, d / inM));
+  const u = C === null ? L.u : closeInDir(L.u, C.f.n, s);
+  const w = 1 - s * s * (3 - 2 * s);
+  const base: Vec3 = C === null ? L.p : [L.p[0] + (C.f.t[0] * C.shift[0] + C.f.b[0] * C.shift[1]) * w, L.p[1] + (C.f.t[1] * C.shift[0] + C.f.b[1] * C.shift[1]) * w, L.p[2] + (C.f.t[2] * C.shift[0] + C.f.b[2] * C.shift[1]) * w];
+  const o: Vec3 = [base[0] - L.p[0], base[1] - L.p[1], base[2] - L.p[2]];
   const lift = Math.max(0, liftOf(st, u));
-  // ⭐⭐⭐ (§27.2 G1s) P1 — from the track's place along the view out to where the SHELL is left, then the approach's distance
-  const t0 = shellExit(L.map.facets, L.p, u);
-  if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];
-  // A1 — below the shell: from where the view leaves it straight toward the gizmo, as far in as `−d`
-  const g = st.asmGizmoAt ?? L.p;
-  const v: Vec3 = [g[0] - L.p[0] - u[0] * t0, g[1] - L.p[1] - u[1] * t0, g[2] - L.p[2] - u[2] * t0];
+  // ⭐⭐⭐ (§27.2 G1s) P1 — from the foot along the direction out to where the SHELL is left, then the approach's distance
+  const t0 = shellExit(L.map.facets, base, u);
+  if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];
+  // A1 — below the shell: from where the direction leaves it straight toward the gizmo, as far in as `−d`
+  const g = st.asmGizmoAt ?? base;
+  const v: Vec3 = [g[0] - base[0] - u[0] * t0, g[1] - base[1] - u[1] * t0, g[2] - base[2] - u[2] * t0];
   const lv = Math.hypot(v[0], v[1], v[2]);
   const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;
-  return [u[0] * (t0 + lift) + v[0] * k, u[1] * (t0 + lift) + v[1] * k, u[2] * (t0 + lift) + v[2] * k];
+  return [o[0] + u[0] * (t0 + lift) + v[0] * k, o[1] + u[1] * (t0 + lift) + v[1] * k, o[2] + u[2] * (t0 + lift) + v[2] * k];
 }
 
 /** ⭐ The piece's place from the orbit's centre (the shown place on G1) — the solver's and the approach's queries (the angles unused: P1). */
@@ -391,67 +379,6 @@ export function placeOffset(st: SceneState, _yaw: number, _v: number, approach: 
 /** ⭐ The DRAWN piece's place from the shown place. */
 export function shownOffset(st: SceneState, _yaw: number, _v: number): Vec3 {
   return offsetAt(st, st.approach);
-}
-
-/** ⭐⭐⭐ §29 R1 — A PLACE's LANDING: the first real surface straight in along its facet's normal (any surface, at any depth); none: `null` (a void). */
-function landingOf(st: SceneState, q: RopePlace): Landing | null {
-  const b = shellOf(st);
-  if (b === null) return null;
-  const h = realAlong(st, q.p, q.n, b);
-  return h === null ? null : { point: h.point, host: h.host };
-}
-
-/**
- * ⭐⭐⭐ §29 THE TWO ROPES through the gizmo's own place `gt` — each along its loop as far as the travel reaches (`travelReach`: T5's edges, R4's stops; the
- * whole loop when nothing stops it), the place at arc 0. Kept while the place and its planes do not move.
- */
-function ropesOf(st: SceneState, L: LoopState, gt: Travel): { readonly x: Rope | null; readonly y: Rope | null } {
-  const pl = gt.planes;
-  const key = `${gt.facet}|${gt.p.map((v) => v.toFixed(6)).join(",")}|${pl[0].n.map((v) => v.toFixed(5)).join(",")}|${pl[1].n.map((v) => v.toFixed(5)).join(",")}`;
-  if (L.ropes !== null && L.ropes.key === key) return L.ropes;
-  const o = travelOpts(st);
-  const crossOk = crossOkOf(L);
-  const one = (comp: "x" | "y"): Rope | null => {
-    const r = travelReach(L.facets, gt, comp, o, crossOk);
-    if (r === null) return null;
-    const total = loopLength(r.loop);
-    const closed = r.fwd + r.back >= total - 1e-6;
-    const from = closed ? -total / 2 : -r.back;
-    const to = closed ? total / 2 : r.fwd;
-    const at = (s: number): RopePlace => {
-      const q = loopPoint(r.loop, r.s0 + s);
-      return { p: q.p, facet: q.facet, n: L.facets[q.facet]!.n };
-    };
-    return buildRope(at, (q) => landingOf(st, q), from, to, LINE_STEP_M, total);
-  };
-  L.ropes = { key, x: one("x"), y: one("y") };
-  return L.ropes;
-}
-
-/** ⭐ The frontmost real surface along `−n` through `p` (a ray from outside the parts' box); none: `null`. */
-function realAlong(st: SceneState, p: Vec3, n: Vec3, b: ShellBox): GizmoHit | null {
-  const level = dot(p, n);
-  const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
-  const out = sup(1) + CAST_OUT_M;
-  const k = out - level;
-  return modelCast(st, [p[0] + n[0] * k, p[1] + n[1] * k, p[2] + n[2] * k], [-n[0], -n[1], -n[2]], out - sup(-1) + CAST_OUT_M);
-}
-
-/**
- * ⭐⭐⭐ Gz1 – Gz2 — THE GIZMO'S OWN PLACE: the shown place moved along the two cutting planes' common line onto G1 (`onContour`) — both planes pass through
- * it, so the gizmo is a vertex of both lines in every frame (⛔ the notch: the lines cut through the travel's target). Its travel: the target's, at that
- * place, the planes through it.
- */
-function gizmoTravel(L: LoopState): Travel {
-  const t = L.travel;
-  const n0 = t.planes[0].n;
-  const n1 = t.planes[1].n;
-  let d = normalize(cross(n0, n1)) ?? L.facets[t.facet]!.n;
-  const fn = L.facets[t.facet]!.n;
-  if (dot(d, fn) < 0) d = [-d[0], -d[1], -d[2]];
-  const c = onContour(L.map.facets, L.p, d);
-  if (c === null) return t;
-  return { ...t, p: c.p, facet: c.facet, planes: [planeThrough(c.p, n0), planeThrough(c.p, n1)] };
 }
 
 /**
@@ -481,6 +408,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmGizmo = [t[0], t[1], t[2]];
     st.asmGizmoAt = [t[0], t[1], t[2]];
     st.asmLook = [t[0], t[1], t[2]];
+    st.asmGizmoOn = false;
     hideLines(st);
     return;
   }
@@ -509,6 +437,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     L.p = p;
     st.approach = approachAt(st.cfg, depth);
     st.asmLock = null;
+    // §32 — a new chart from where the slide left the piece
+    L.chart = null;
+    L.closeIn = false;
     st.lastVerdict = "orbit: off the slide — the travel from where the slide left the piece";
   }
   if (st.router.size === 0 && !st.orbitInertia.coasting && (L.travel.hold.x !== 0 || L.travel.hold.y !== 0)) L.travel = { ...L.travel, hold: HOLD_FREE };
@@ -525,24 +456,44 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   L.u = viewDir(L.shown);
   // the orbit's angles ARE the shown view (the HUD, the probes, the slide's way out read them)
   st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));
-  // ⭐⭐⭐ §29 R5 — the gizmo ON THE ROPE of the line last travelled, at its own place (arc 0): a landing, over a void, round an edge — it never waits
-  const gt = gizmoTravel(L);
-  const R = ropesOf(st, L, gt);
-  const own = R[L.last] ?? R[L.last === "x" ? "y" : "x"];
-  const on = own === null ? null : ropeAt(own, 0);
-  L.gz = on === null ? { point: gt.p, normal: null, host: null, travel: gt } : { point: on.p, normal: on.overVoid ? null : on.n, host: on.host, travel: gt };
+  // ⭐⭐⭐ §32 C1 — CLOSE IN (the piece within `closeInMm` of the shell, left 30 mm further out): a chart anchored on the facet the place is on (K5), frozen
+  // until close in is left; filled a budget of casts a frame (K3 – K4). Far out: no chart, no gizmo, no lines.
+  const inM = Math.max(1e-3, st.cfg.closeInMm / 1000);
+  L.closeIn = closeInNext(L.closeIn, d, inM);
+  if (!L.closeIn) L.chart = null;
+  else if (L.chart === null) {
+    const fi = L.travel.facet;
+    L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st));
+  }
+  const C = L.chart;
+  if (C !== null && !chartFilled(C)) fillChart(C, L.hulls);
+  // the gizmo: the shown place carried in (K1 – K3), else the travel's own place, else where it last was (the shown place trailing outside the region)
+  let gz: GizmoShown | null = null;
+  if (C !== null)
+    for (const at of [L.p, L.travel.p]) {
+      const uv = chartUV(C, at);
+      const q = chartGizmo(C, uv[0], uv[1]);
+      if (q !== null) {
+        gz = { ...q, uv };
+        break;
+      }
+    }
+  if (gz === null && C !== null && L.gz !== null) gz = L.gz;
+  L.gz = C === null ? null : gz;
   const g = L.gz;
-  const fN = L.facets[g.travel.facet]!.n;
+  if (g !== null && !st.asmGizmoOn) st.asmGizmoSince = performance.now();
+  st.asmGizmoOn = g !== null;
+  const fN = L.facets[L.travel.facet]!.n;
   if (st.gizmoNormal === null || st.gizmoNormal === undefined || dot(st.gizmoNormal, fN) < Math.cos(Math.PI / 180)) {
     st.gizmoNormal = fN;
     st.orientDirty = true;
   }
-  if (g.host !== null && g.normal !== null && dot(g.normal, fN) > Math.cos(Math.PI / 180) && (st.gizmoHost ?? null) !== g.host) {
+  if (g !== null && g.host !== null && g.normal !== null && dot(g.normal, fN) > Math.cos(Math.PI / 180) && (st.gizmoHost ?? null) !== g.host) {
     st.gizmoHost = g.host;
     st.orientDirty = true;
   }
   st.asmG = [L.travel.p[0], L.travel.p[1], L.travel.p[2]];
-  st.asmGizmoAt = [g.point[0], g.point[1], g.point[2]];
+  st.asmGizmoAt = g === null ? null : [g.point[0], g.point[1], g.point[2]];
   st.asmGizmo = [L.p[0], L.p[1], L.p[2]];
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
@@ -551,6 +502,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const lt: Vec3 = [a.centre[0] + (L.p[0] - a.centre[0]) * w, a.centre[1] + (L.p[1] - a.centre[1]) * w, a.centre[2] + (L.p[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
   sectionLinesFrame(st, L, g);
+  outlineFrame(st, L, g);
 }
 
 function hideLines(st: SceneState): void {
@@ -558,50 +510,35 @@ function hideLines(st: SceneState): void {
 }
 
 /**
- * ⭐⭐⭐ §29 THE LINES — THE TWO ROPES (`input/rope.ts`): the green the dx loop's, the red the dy loop's, through the gizmo's own place, each drawn only as far
- * as the travel reaches; a step drawn along the normal, a void spanned straight (across it, or round the edge). The gizmo a vertex of both: on the rope
- * it travels by construction, the other rope taken through it at arc 0. Rebuilt only when the gizmo or its planes move. ONE mesh, updated in place.
+ * ⭐⭐⭐ §32 K7 — THE LINES, SHORT: the green along the chart's `t`, the red along its `b`, through the gizmo, each in its plane `(t, n)` / `(b, n)` through
+ * the gizmo exactly, as far as the region goes, at most `LINE_HALF_M` each side (`chartLines`); the gizmo a vertex of both. ONE mesh, updated in place.
+ * Far out (no gizmo): hidden.
  */
-function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown): void {
-  if (st.cfg.sectionLines !== 1) {
+function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown | null): void {
+  const C = L.chart;
+  if (st.cfg.sectionLines !== 1 || g === null || C === null) {
     hideLines(st);
     return;
   }
-  const gp = g.point;
-  const pl = g.travel.planes;
-  const key = `${pl[0].n.map((x) => x.toFixed(5)).join(",")}|${pl[0].d.toFixed(5)}|${pl[1].n.map((x) => x.toFixed(5)).join(",")}|${pl[1].d.toFixed(5)}|${gp.map((x) => x.toFixed(5)).join(",")}`;
+  const key = `${C.version}|${g.uv[0].toFixed(5)}|${g.uv[1].toFixed(5)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
-  const gv = new Vector3(gp[0], gp[1], gp[2]);
-  const R = ropesOf(st, L, g.travel);
-  const lift = (p: Vec3, n: Vec3): Vector3 => new Vector3(p[0] + n[0] * SECTION_LIFT_M, p[1] + n[1] * SECTION_LIFT_M, p[2] + n[2] * SECTION_LIFT_M);
-  const path = (comp: "x" | "y"): Vector3[][] => {
-    const r = R[comp];
-    if (r === null) return [];
-    const pts = ropeDrawn(r);
-    const vs: Vector3[] = [];
-    let passed = false;
-    for (const q of pts) {
-      // the gizmo a vertex of the line at arc 0
-      if (!passed && q.s >= 0) {
-        vs.push(gv);
-        passed = true;
-        if (Math.abs(q.s) < 1e-9) continue;
-      }
-      vs.push(lift(q.p, q.n));
-    }
-    if (!passed) vs.push(gv);
+  const n = C.f.n;
+  const gv = new Vector3(g.point[0] + n[0] * SECTION_LIFT_M, g.point[1] + n[1] * SECTION_LIFT_M, g.point[2] + n[2] * SECTION_LIFT_M);
+  const ls = chartLines(C, g.uv[0], g.uv[1], LINE_HALF_M);
+  const segs = (pts: readonly Vec3[]): Vector3[][] => {
+    const vs = pts.map((p) => new Vector3(p[0] + n[0] * SECTION_LIFT_M, p[1] + n[1] * SECTION_LIFT_M, p[2] + n[2] * SECTION_LIFT_M));
     const out: Vector3[][] = [];
     for (let k = 1; k < vs.length; k++) out.push([vs[k - 1]!, vs[k]!]);
     return out;
   };
-  const pad = (segs: Vector3[][]): Vector3[][] => {
-    const s = segs.slice(0, LINE_MAX);
-    while (s.length < LINE_MAX) s.push([gv, gv]);
-    return s;
+  const pad = (s: Vector3[][]): Vector3[][] => {
+    const o = s.slice(0, LINE_MAX);
+    while (o.length < LINE_MAX) o.push([gv, gv]);
+    return o;
   };
-  const lines = [...pad(path("x")), ...pad(path("y"))];
+  const lines = [...pad(segs(ls.green)), ...pad(segs(ls.red))];
   if (st.asmSectionLines === null) {
     const colours = lines.map((_, i) => (i < LINE_MAX ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);
@@ -612,6 +549,67 @@ function sectionLinesFrame(st: SceneState, L: LoopState, g: GizmoShown): void {
   } else CreateLineSystem("asmSections", { lines, instance: st.asmSectionLines });
   st.asmSectionLines.isVisible = true;
 }
+
+/**
+ * ⭐⭐⭐ §32 K8 — THE CLOSE-IN AREA'S OUTLINE: the region's border (`chartOutline`), a light neutral line just off the surface, redrawn while the fill grows
+ * (every `OUTLINE_EVERY` frames) and once it is done; brighter when the gizmo is within `OUTLINE_NEAR_M` of it (the stop is near). Far out: hidden.
+ */
+function outlineFrame(st: SceneState, L: LoopState, g: GizmoShown | null): void {
+  const C = L.chart;
+  if (st.cfg.sectionLines !== 1 || g === null || C === null) {
+    if (st.asmOutline !== null) st.asmOutline.isVisible = false;
+    return;
+  }
+  const done = chartFilled(C);
+  const key = `${C.facet}|${C.u0}|${C.v0}|${C.version}`;
+  if (key !== st.asmOutlineKey && (done || st.frames % OUTLINE_EVERY === 0 || st.asmOutline === null || !st.asmOutline.isVisible)) {
+    st.asmOutlineKey = key;
+    const n = C.f.n;
+    const lift = (p: Vec3): Vector3 => new Vector3(p[0] + n[0] * OUTLINE_LIFT_M, p[1] + n[1] * OUTLINE_LIFT_M, p[2] + n[2] * OUTLINE_LIFT_M);
+    const lines = chartOutline(C).map(([a, b]) => [lift(a), lift(b)]);
+    st.asmOutline?.dispose();
+    st.asmOutline = lines.length === 0 ? null : CreateLineSystem("asmOutline", { lines }, st.scene);
+    if (st.asmOutline !== null) {
+      st.asmOutline.isPickable = false;
+      st.asmOutline.alwaysSelectAsActiveMesh = true;
+      st.asmOutline.alphaIndex = 999;
+    }
+  }
+  const o = st.asmOutline;
+  if (o === null) return;
+  o.isVisible = true;
+  const near = chartEdgeDistance(C, g.uv[0], g.uv[1], OUTLINE_NEAR_M) < OUTLINE_NEAR_M;
+  o.color = near ? new Color3(1, 1, 1) : new Color3(0.82, 0.84, 0.88);
+  o.alpha = near ? 1 : 0.55;
+}
+
+/** ⭐ (§32 K4) the piece's resting face's narrowest width (m): recesses and gaps narrower than this are bridged; none: 45 mm. */
+function pieceWidth(st: SceneState): number {
+  const p = st.orbitPieces.find((o) => o.mesh === st.greenBox);
+  const pts = p?.restingEdges.flat() ?? [];
+  const n = p?.restingFace?.normal;
+  if (pts.length < 3 || n === undefined) return 0.045;
+  const a = Math.abs(n[0]) < 0.9 ? normalizeOr([0, n[2], -n[1]]) : normalizeOr([-n[2], 0, n[0]]);
+  const b: Vec3 = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
+  let w = Infinity;
+  for (let k = 0; k < 36; k++) {
+    const t = (k * Math.PI) / 36;
+    const dir: Vec3 = [a[0] * Math.cos(t) + b[0] * Math.sin(t), a[1] * Math.cos(t) + b[1] * Math.sin(t), a[2] * Math.cos(t) + b[2] * Math.sin(t)];
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const q of pts) {
+      const s = dot(q, dir);
+      lo = Math.min(lo, s);
+      hi = Math.max(hi, s);
+    }
+    w = Math.min(w, hi - lo);
+  }
+  return Number.isFinite(w) && w > 1e-4 ? w : 0.045;
+}
+const normalizeOr = (v: Vec3): Vec3 => {
+  const l = Math.hypot(v[0], v[1], v[2]);
+  return l > 1e-12 ? [v[0] / l, v[1] / l, v[2] / l] : [1, 0, 0];
+};
 
 /** ⭐⭐ THE APPROACH MOVED by `da` (the coordinate; down: in) — in and out only as far as the parts allow (`approachStepFree`). Returns the move taken. */
 export function approachMove(st: SceneState, da: number): number {

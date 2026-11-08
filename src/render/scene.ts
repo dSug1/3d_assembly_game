@@ -543,6 +543,10 @@ export function createScene(
   st.asmRedCache = null;
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
+  st.asmGizmoOn = false;
+  st.asmGizmoSince = 0;
+  st.asmOutline = null;
+  st.asmOutlineKey = "";
   st.asmMapQ = null;
   st.asmFaceMap = null;
   st.orbitFrame = UPRIGHT;
@@ -550,7 +554,6 @@ export function createScene(
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;
-  st.asmCast = null;
   st.loop = null;
   st.approach = 1;
   st.approachInertia = new OrbitInertia();

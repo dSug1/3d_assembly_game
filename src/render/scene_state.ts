@@ -477,19 +477,18 @@ export interface SceneState {
   asmGreenCache: { readonly key: string; readonly params: readonly number[]; readonly pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; readonly surf: readonly (Vec3 | null)[] } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
+  /** ⭐⭐⭐ (scope §32 C1) the gizmo shown (close in only) and since when (ms — its fade in) */
+  asmGizmoOn: boolean;
+  asmGizmoSince: number;
+  /** ⭐⭐⭐ (scope §32 K8) the close-in area's outline, and the chart version it was drawn for */
+  asmOutline: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  asmOutlineKey: string;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
-  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
+  asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly ids: readonly (string | null)[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */
   asmKey: { readonly frame: number; readonly world: import("../core/object_model").World; readonly count: number; readonly key: string; readonly meshes: readonly AbstractMeshT[] } | null;
-  /** ⭐ (2026-11-04, the audit) the parts a cast reads (pose, drawn place and turn, model box), once a frame */
   /** ⭐⭐⭐ (2026-11-06, the rebuild — scope §22) the travel on G1, the shown place / direction / up (`assembly_wiring.ts`); `null`: none yet */
   loop: import("./assembly_wiring").LoopState | null;
-  asmCast: {
-    readonly frame: number;
-    readonly world: import("../core/object_model").World;
-    readonly count: number;
-    readonly parts: readonly { readonly mesh: AbstractMeshT; readonly pose: import("../core/mate_connector").Placed | null; readonly drawnAt: Vec3; readonly drawnQ: import("../core/vec").Quat; readonly box: import("../input/ray_box").Box3 | null }[];
-  } | null;
   /** ⭐⭐⭐ (2026-11-04, Step 2) THE SHELL's box (`input/orbit_shell.ts`), per placed set */
   asmShell: { readonly key: string; readonly box: import("../input/orbit_shell").ShellBox | null } | null;
   approach: number;

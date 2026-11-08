@@ -48,14 +48,17 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     expect(shellExit(fm.facets, [0, 0.3, -0.09], [0, 0, -1])).toBeCloseTo(0, 12);
     expect(shellExit(fm.facets, [0, 0.3, -0.09], [0, Math.SQRT1_2, -Math.SQRT1_2])).toBeCloseTo(0, 9);
   });
-  it("⭐⭐⭐ P1 / §29 wired — the piece from the shell along the view; THE ROPES: every place's landing straight in, the gizmo on the rope of the line last travelled at its own place (never waiting), the lines the ropes (⛔ `gizmoCase`'s gap: the gizmo waited)", () => {
+  it("⭐⭐⭐ P1 / §32 wired — the piece from the shell along its direction (the view far out, turned onto the chart's normal close in — C4); THE CLOSE-IN CHART: anchored on entering close in, frozen, filled a budget a frame, the gizmo the place carried in (⛔ §29's ropes, their landings per place)", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const t0 = shellExit(L.map.facets, L.p, u);");
-    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
-    expect(a).toContain("return buildRope(at, (q) => landingOf(st, q), from, to, LINE_STEP_M, total);");
-    expect(a).toContain("const on = own === null ? null : ropeAt(own, 0);");
-    expect(a).toContain("const pts = ropeDrawn(r);");
-    for (const gone of ["gizmoCase", "edgeBetween", "surfaceAt", "else if (L.gz === null)"]) expect(a).not.toContain(gone);
+    expect(a).toContain("const t0 = shellExit(L.map.facets, base, u);");
+    expect(a).toContain("const u = C === null ? L.u : closeInDir(L.u, C.f.n, s);");
+    expect(a).toContain("if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];");
+    expect(a).toContain("L.closeIn = closeInNext(L.closeIn, d, inM);");
+    expect(a).toContain("if (!L.closeIn) L.chart = null;");
+    expect(a).toContain("L.chart = anchorChart(L.hulls, fi, L.map.facets[fi]!, L.accept[fi]!, L.travel.p, pieceWidth(st));");
+    expect(a).toContain("if (C !== null && !chartFilled(C)) fillChart(C, L.hulls);");
+    expect(a).toContain("const accept = map.facets.map((mf) => facetAccept(hulls, mf));"); // ⭐ K2 the boot pass, per placed set
+    for (const gone of ["gizmoCase", "edgeBetween", "surfaceAt", "buildRope", "ropeAt", "ropesOf", "landingOf", "modelCast"]) expect(a).not.toContain(gone);
   });
 
   it("⭐⭐⭐ T6 — ONLY THE FINGER MOVES THE TRAVEL: the drag and the coast call `loopFinger` (dx right, dy up, mm); the orbit's angles follow the shown direction; ⛔ the frame turns and the angle-grid gizmo gone", () => {
@@ -64,7 +67,10 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("if (!loopFinger(st, d.dYaw, d.dV) && (d.dYaw !== 0 || d.dV !== 0)) st.orbitInertia.stop();");
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("const r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);"); // ⭐⭐⭐ (§26.3) T5 a crossing test
+    expect(a).toContain("let r = travelStep(L.facets, L.travel, comp, mm, o, crossOk);"); // ⭐⭐⭐ (§26.3) T5 a crossing test
+    // ⭐⭐⭐ (§32 K6) close in, the step cut back to the chart's region (and its facet)
+    expect(a).toContain("const inArea = (t: Travel): boolean => C === null || (t.facet === C.facet && chartAllows(C, ...chartUV(C, t.p)));");
+    expect(a).toContain("const k = allowedShare((m) => inArea(travelStep(L.facets, L.travel, comp, mm * m, o, crossOk).travel));");
     expect(a).toContain("return (from, to) => sameView(viewOf(L, from), viewOf(L, to));");
     expect(a).toContain("st.orbit.reset(L.shown.h, vOfPitch(L.shown.e));"); // ⭐⭐⭐ (§26.2 V1) the orbit's angles ARE the shown view
     for (const gone of ["frameStep", "orbitFrameTurn", "mapGizmo", "syncAngle", "shellAnchor", "calmFrame", "cameraUp("]) expect(a).not.toContain(gone);
@@ -78,20 +84,22 @@ describe("⭐⭐⭐ the rebuild, wired (§22)", () => {
 
   it("⭐⭐⭐ A1 / A2 — the approach above G1 along the direction, below it straight toward the gizmo; the depth the slide's only arm; below G1 the orbit takes no drag", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("if (d >= 0) return [u[0] * (t0 + d + lift), u[1] * (t0 + d + lift), u[2] * (t0 + d + lift)];");
+    expect(a).toContain("if (d >= 0) return [o[0] + u[0] * (t0 + d + lift), o[1] + u[1] * (t0 + d + lift), o[2] + u[2] * (t0 + d + lift)];");
     expect(a).toContain("const k = lv > 1e-9 ? Math.min(1, -d / lv) : 0;");
     expect(a).toContain("st.slideArmed = d < 0;");
     expect(a).toContain("if (approachDistance(st.cfg, st.approach) < 0) { approachMove(st, Math.hypot(fx, fy) * orbitDvPerMm(st));");
   });
 
-  it("⭐⭐⭐ (§26) V5 and (§29) the ropes — the camera from the SHOWN view alone (world yaw and pitch, never past the zenith); the gizmo at its own place (the planes' common line onto G1), the ropes through it, followable only", () => {
+  it("⭐⭐⭐ (§26) V5 and (§32) the short lines — the camera from the SHOWN view alone (world yaw and pitch, never past the zenith); close in only, the lines through the gizmo within the chart's region, the area's outline", () => {
     const a = code("render/assembly_wiring.ts");
     // ⭐⭐⭐ (§26.2 V5) the camera from the shown view alone — no cone, no carried up, no pace
     expect(a).toContain("return cameraView(L === null ? { h: -Math.PI / 2, e: 0 } : L.shown, o.yawRad, o.pitchRad);");
     for (const gone of ["upTarget", "nextCarried", "viewAllowed", "paceUp", "capCameraClamp", "separationBetween", "nearestPoint", "calmDir"]) expect(a).not.toContain(gone);
-    // ⭐⭐⭐ the gizmo at its own place (the planes' common line onto G1); the ropes through it, followable only (the travel's reach)
-    expect(a).toContain("const c = onContour(L.map.facets, L.p, d);");
-    expect(a).toContain("const r = travelReach(L.facets, gt, comp, o, crossOk);");
-    expect(a).toContain("const R = ropesOf(st, L, g.travel);");
+    // ⭐⭐⭐ (§32 K7 – K8) close in only: the lines through the gizmo inside the region, at most LINE_HALF_M each side; the region's outline
+    expect(a).toContain("if (st.cfg.sectionLines !== 1 || g === null || C === null) { hideLines(st); return; }");
+    expect(a).toContain("const ls = chartLines(C, g.uv[0], g.uv[1], LINE_HALF_M);");
+    expect(a).toContain("const lines = chartOutline(C).map(([a, b]) => [lift(a), lift(b)]);");
+    // ⭐ far out the gizmo hidden (its ring reads `gizmoShowing`)
+    expect(code("render/green_box_wiring.ts")).toContain("const shown = gizmoShowing(st, performance.now()); if (shown <= 0) { ring.isVisible = false; return; }");
   });
 });

@@ -151,31 +151,6 @@ export function travelStep(facets: readonly TravelFacet[], tr: Travel, comp: "x"
   return travelRaw(facets, tr, comp, mm, o, crossOk).res;
 }
 
-/**
- * ⭐⭐⭐ (§26.4 Gz3) HOW FAR THE TRAVEL CAN CARRY THE PLACE along `comp`'s loop from `tr` (its hold freed), each way: the loop, the place's arc on it, and the
- * arc reachable forward (increasing arc) and backward — the loop's length when nothing stops it within a turn (T5's edges, R4's stops).
- */
-export function travelReach(facets: readonly TravelFacet[], tr: Travel, comp: "x" | "y", o: TravelOpts, crossOk?: CrossOk): { readonly loop: CutLoop; readonly s0: number; readonly fwd: number; readonly back: number } | null {
-  const free: Travel = { ...tr, hold: HOLD_FREE };
-  const big = 400 / Math.max(1e-6, o.degPerMm);
-  const a = travelRaw(facets, free, comp, big, o, crossOk);
-  const b = travelRaw(facets, free, comp, -big, o, crossOk);
-  if (a.loop === null || b.loop === null) return null;
-  const L = a.loop;
-  const total = loopLength(L);
-  const s0 = loopArc(L, free.p);
-  const arcTo = (r: typeof a): number => {
-    if (r.res.held === null) return total;
-    const s = loopArc(L, r.res.travel.p);
-    const d = r.dirSign > 0 ? s - s0 : s0 - s;
-    return ((d % total) + total) % total;
-  };
-  const ra = arcTo(a);
-  const rb = arcTo(b);
-  const fwd = a.dirSign > 0 ? ra : rb;
-  const back = a.dirSign > 0 ? rb : ra;
-  return { loop: L, s0, fwd, back };
-}
 
 function travelRaw(facets: readonly TravelFacet[], tr: Travel, comp: "x" | "y", mm: number, o: TravelOpts, crossOk?: CrossOk): { res: StepResult; loop: CutLoop | null; dirSign: number } {
   const held0 = comp === "x" ? tr.hold.x : tr.hold.y;
