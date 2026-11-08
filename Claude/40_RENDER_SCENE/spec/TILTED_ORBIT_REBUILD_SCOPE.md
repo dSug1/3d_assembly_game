@@ -1976,10 +1976,28 @@ the piece / camera steps against the place's, the landing across / along the nor
 | the A + dy landing (simulated after every approach in) | across the gizmo's normal: median **0.00 mm**, p95 0.07, max 8.8 (1 of 58); along: the piece's resting point 24 – 77 mm (the piece's own half-depth and its lift) |
 | the stop (K6) | 51 of 158 close-in drag segments wholly stopped — each checked at a REAL edge: the front's bottom row, its right edge (the facet's), a column of parts at x = −0.147 (reproduced offline), the bottom cap (its region 8.6 cm² — its parts' steps) |
 
-⛔⛔ **OPEN — INHERITED FROM `d926b88` (`1.0.105-`), NOT FROM THE CHART: THE SLIDE'S LATCH LOOP ON A TOP.** A + dy held in onto `Piece4`'s top: the slide
+✅ **FIXED in §32.9** — ⛔⛔ **INHERITED FROM `d926b88` (`1.0.105-`), NOT FROM THE CHART: THE SLIDE'S LATCH LOOP ON A TOP.** A + dy held in onto `Piece4`'s top: the slide
 latches (*"on — latched on Piece4's face (1.2 mm)"*), on the next frame the piece stands ~40 mm higher, the slide reads it as *"off — the approach took the
 piece away"*, the way out re-derives the approach from the piece's height (0.428 → 0.4615, above the shell) and the approach comes in again — every 10
 frames for as long as A + dy is held (18 reversals on seed 22; the same seed on `d926b88` in a worktree: **12**, the same verdicts). ⭐ Found only now
 because the walks include approaches. ⛔ A first reading (the drag's coast fighting the approach below the shell, `approachInput` stopping the coast) was
 built, measured — the same 18 reversals — and REVERTED (measure or revert). ⏳ To diagnose: what moves the piece 40 mm at the latch (`hoverStart`'s settle /
 `applyHoverModel` against `offsetAt`'s offset from `L.p` while the slide holds the centre) — `HOVER.md` §0's slide, not §32.
+
+### 32.9 ✅ The slide's latch loop FIXED (2026-11-08 — the owner: *"Fix 1. I will test the second issue first"*)
+* **Diagnosed** (the probe's per-frame `XPRE` hook, seed 22): at the latch the piece's resting point is 1.2 mm above `Piece4`'s top (y 498.5 mm), the
+  shell 40 mm higher (539.8). Under the slide `assemblyFrame` set `st.asmGizmoAt` to the orbit's centre — the SHELL's place — and below the shell the
+  piece's offset aims at the gizmo (`offsetAt`, A1): the next frame the piece stood ON THE SHELL (539.8), the slide read 41 mm off its face as *"taken
+  away"* and let go, the way out re-derived the approach from that height (+20.6 mm, above the shell), A + dy brought it in, it latched again — every 10
+  frames. It bites wherever the landed face lies deeper than the latch's reach (20 mm) below the shell (stepped tops, recesses); level with the shell the
+  gizmo and the centre coincide (why it was unseen; the earlier walks had no approaches).
+* **The rule**: under the slide the gizmo RIDES THE SLIDE at its offset from the centre at the latch (`L.slideG`, set on the slide's first frame, cleared
+  when it ends); the piece's below-shell offset keeps aiming at the real face. `render/assembly_wiring.ts`'s slide branch.
+* **Measured** (4 walks × 6 000 px with approaches): approach-in reversals on seed 22 **18 → 0**, latch / drop cycles **9 → 0** (one latch held; its one
+  release during an approach OUT, as it should); the other seeds 0 before and after; close in unchanged (the lines 0.00 mm, the gizmo on both, the landing
+  0.03 mm across, no gizmo far out, 0 page errors). A prototype measured first, reverted, then built.
+* **Vectors** 1627 (`rebuild_wiring`: the gizmo at the centre + the latch's offset, the centre itself refused, the offset cleared off the slide) — RED on
+  `1cd3fe3`.
+* ⏳ **Issue 2, the owner tests it first**: C4's turn of the piece's direction onto the facet's normal over the last 120 mm sweeps the piece 40 – 65 mm
+  sideways per approach event at a face's edge (the view up to ~45° off the normal — 2 approaches in the walks; the same with and without the fix).
+  Proposed, not built: spread the turn so the piece never moves sideways faster than it comes in (≤ 1 mm per mm — on a 45° edge from ~360 mm out).

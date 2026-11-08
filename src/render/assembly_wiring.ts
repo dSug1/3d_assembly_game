@@ -96,6 +96,8 @@ export interface LoopState {
   /** ⭐⭐⭐ §32 C1 — close in, and its chart (anchored on entering, frozen until left) */
   closeIn: boolean;
   chart: Chart | null;
+  /** ⭐⭐⭐ §32.9 — under the slide, the gizmo's offset from the orbit's centre at the latch (the gizmo rides the slide); `null` off the slide */
+  slideG: Vec3 | null;
 }
 
 /** ⭐ The placed parts' world bounding box, `null` with none. */
@@ -281,7 +283,7 @@ function loopOf(st: SceneState): LoopState | null {
   const pp = placedParts(st);
   const hulls = hullParts(pp.parts, pp.ids);
   const accept = map.facets.map((mf) => facetAccept(hulls, mf));
-  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null };
+  st.loop = { key, map, facets, view, travel, last: "x", p, pVel: [0, 0, 0], shown, shownVel: [0, 0, 0], u: viewDir(shown), dtMs: 16, gz: null, hulls, accept, closeIn: false, chart: null, slideG: null };
   return st.loop;
 }
 
@@ -406,12 +408,21 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const n = st.gizmoNormal ?? null;
     st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: null };
     st.asmGizmo = [t[0], t[1], t[2]];
-    st.asmGizmoAt = [t[0], t[1], t[2]];
+    // ⭐⭐⭐ (2026-11-08, scope §32.9) the gizmo RIDES THE SLIDE at its offset from the centre at the latch — below the shell the piece's offset aims at it
+    // (`offsetAt`). ⛔ Set to the centre (the shell's place): on a face 40 mm below the shell the piece jumped back up to the shell at the latch, the slide
+    // read it as taken away and let go, the way out re-derived the approach above the shell, A + dy brought it in again — a latch loop every 10 frames
+    // (`d926b88` too: 12 reversals on seed 22, 18 on `16b38c4`; 0 with the fix)
+    if (L.slideG === null) {
+      const g0 = st.asmGizmoAt ?? t;
+      L.slideG = [g0[0] - t[0], g0[1] - t[1], g0[2] - t[2]];
+    }
+    st.asmGizmoAt = [t[0] + L.slideG[0], t[1] + L.slideG[1], t[2] + L.slideG[2]];
     st.asmLook = [t[0], t[1], t[2]];
     st.asmGizmoOn = false;
     hideLines(st);
     return;
   }
+  L.slideG = null;
   if (st.asmLocked) {
     // ⭐ off the slide: the travel's place where the slide left the piece — on G1's facet facing it, the approach kept at the piece's depth below G1
     st.asmLocked = false;
