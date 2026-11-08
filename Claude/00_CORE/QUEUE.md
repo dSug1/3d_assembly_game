@@ -22,10 +22,10 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: CONTINUE FROM scope §32** (branch `1.0.107-Close-in-atlas`, rebuilt from `d926b88`): THE CLOSE-IN CHART — far out no gizmo; close in a frozen chart (the place carried in, its region continuous, the singularities outside, the place stopped at its edge, short lines); §31 its reason; §32.9 the slide's loop fixed; §32.10 the ring; §32.11 no spring. The second rebuild (`1.0.104-` from `8dfa635`): §26 – §30 (1632 vectors; §30 the sections exact `d26f71a`; §29 the ropes; §28 the deep debug; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
+✅ **Step 6** (§19), redesigned (§20, deployed) — ⛔ no device close. **Now: CONTINUE FROM scope §32** (branch `1.0.107-Close-in-atlas`, rebuilt from `d926b88`): THE CLOSE-IN CHART — far out no gizmo; close in a frozen chart (the place carried in, its region continuous, the singularities outside, the place stopped at its edge, short lines); §31 its reason; §32.9 the slide's loop fixed; §32.10 the ring; §32.11 – 12 no spring, the camera tied, the calm by distance. The second rebuild (`1.0.104-` from `8dfa635`): §26 – §30 (1632 vectors; §30 the sections exact `d26f71a`; §29 the ropes; §28 the deep debug; first rebuild `1.0.103-`, §22). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1629 golden vectors, all passing** — MEASURED 2026-11-08 (the count's home; the scope's §32).
+✅ `npm run verify`: **1632 golden vectors, all passing** — MEASURED 2026-11-08 (the count's home; the scope's §32).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 

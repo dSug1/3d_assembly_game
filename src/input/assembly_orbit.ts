@@ -178,13 +178,6 @@ export function approachStep(a: number, dyMm: number, perMm: number, cfg: Gestur
   return Math.min(r.max, Math.max(r.floor, a + dyMm * perMm));
 }
 
-/** ⭐ One frame of an ease of a point toward another (`1 − exp(−dt/τ)`), landing on it within 0.1 mm. */
-export function easePoint(cur: Vec3, target: Vec3, dtMs: number, tauMs: number): Vec3 {
-  const k = tauMs > 0 && dtMs > 0 ? 1 - Math.exp(-dtMs / tauMs) : 1;
-  const next: Vec3 = [cur[0] + (target[0] - cur[0]) * k, cur[1] + (target[1] - cur[1]) * k, cur[2] + (target[2] - cur[2]) * k];
-  return Math.hypot(target[0] - next[0], target[1] - next[1], target[2] - next[2]) < 1e-4 ? target : next;
-}
-
 /** ⭐ The two fingers' kind (from each finger's travel since the SECOND landed, mm): their COMMON motion — the approach; their RELATIVE — the pinch. */
 export function twoFingerKind(d1: readonly [number, number], d2: readonly [number, number], deadbandMm: number): "APPROACH" | "ZOOM" | null {
   const common = Math.hypot((d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2);
