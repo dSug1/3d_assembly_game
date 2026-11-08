@@ -680,6 +680,22 @@ function facetAt(f: Facet, L: number, s: number): Vec3 {
   return [f.n[0] * f.e + f.t[0] * L + f.b[0] * s, f.n[1] * f.e + f.t[1] * L + f.b[1] * s, f.n[2] * f.e + f.t[2] * L + f.b[2] * s];
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R3 (c)) **THE DEPTH IS READ JUST INSIDE THE FACET, NEVER ON ITS RIM**: the place `p` on facet `f`'s plane
+ * moved inside its polygon's extents by `MAP_COPLANAR_M` along `t` and `b` — the point the wiring casts the real depth (D3) from. The gizmo keeps its own
+ * place (only the ray's origin moves). ⛔ At an exact bound the place lay on the polygon's rim — the NEIGHBOUR's plane: the ray along `−n` grazed that face
+ * and hit an arbitrary point of it (the cube's front-left corner at yaw 225.0°: x −115 for −242.5 — a 127 mm spike; pitch 45.0° over the right-top edge: 107).
+ */
+export function castPoint(f: Facet, p: Vec3): Vec3 {
+  const e = MAP_COPLANAR_M;
+  const L = dot(p, f.t);
+  const S = dot(p, f.b);
+  const cl = (x: number, lo: number, hi: number): number => (hi - lo > 2 * e ? Math.min(hi - e, Math.max(lo + e, x)) : (lo + hi) / 2);
+  const dL = cl(L, f.tLo, f.tHi) - L;
+  const dS = cl(S, f.bLo, f.bHi) - S;
+  return [p[0] + f.t[0] * dL + f.b[0] * dS, p[1] + f.t[1] * dL + f.b[1] * dS, p[2] + f.t[2] * dL + f.b[2] * dS];
+}
+
 /** ⭐ Where the angles put the gizmo: the band, the column (`side`), the facet (`stack`), its normal, the place on its plane, and across it (the calm). */
 export interface MapTarget {
   readonly band: "SIDE" | "TOP" | "BOTTOM";
@@ -868,10 +884,10 @@ export function edgeBlend(
   if (bandY > 0 && Math.abs(a) > 1 - bandY) {
     const sg = a < 0 ? -1 : 1;
     const yawThere = col.mid + sg * (col.hw + EPS);
-    const nb = map.columns[columnAt(map, yawThere).k]!.bounds;
-    const same = Math.abs(nb[0]! - lo) < 1e-12 && Math.abs(nb[nb.length - 1]! - hi) < 1e-12;
-    if (!same || (p <= hi + Math.min(0.5 * spanT, E) + 1e-12 && p >= lo - Math.min(0.5 * spanB, E) - 1e-12))
-      h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
+    // ⭐⭐⭐ (2026-11-09, R3 (b)) at EVERY pitch, the caps' bands included — ⛔ two columns of equal bounds were blended only within E of their bands: over a
+    // cap the slice's end was a raw step (the cube without its back: 284 mm at −61°, the solver parked there 354 frames); on a box the two quarters' places
+    // meet on the diagonal, so the blend is of two equal points there — nothing moves
+    h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
   }
   let v: { w: number; pitchThere: number } | null = null;
   for (let j = 0; j < B.length && v === null; j++) {
@@ -913,28 +929,34 @@ export function blendThroughEdges(
   const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
   const nAt = (yw: number, pt: number): Vec3 => mapTarget(map, yw, pt, opts).normal;
   let chord = 0; // the longest chord blended across — the sagitta's bound: a part the chord cuts lies within half of it in front
-  const span = (a: Vec3, b: Vec3): void => {
+  let apart = false; // ⭐ (2026-11-09, R3 (a)) two facets blended FACING APART (their normals beyond `BLEND_APART_COS`) — no convex edge between them
+  const span = (a: Vec3, b: Vec3, na: Vec3, nb: Vec3): void => {
     chord = Math.max(chord, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
+    if (dot(na, nb) < BLEND_APART_COS) apart = true;
   };
   const upDown = (yw: number, q: Vec3, n: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): { p: Vec3; n: Vec3 } => {
     if (v === null) return { p: q, n };
     const o = at(yw, v.pitchThere);
     if (o === null) return { p: q, n };
-    span(q, o);
-    return { p: mix(q, o, v.w), n: mix(n, nAt(yw, v.pitchThere), v.w) };
+    const no = nAt(yw, v.pitchThere);
+    span(q, o, n, no);
+    return { p: mix(q, o, v.w), n: mix(n, no, v.w) };
   };
   let r = upDown(yaw, here, nAt(yaw, pitch), eb.v);
   if (eb.h !== null) {
     const o = at(eb.h.yawThere, pitch);
     if (o !== null) {
       const there = upDown(eb.h.yawThere, o, nAt(eb.h.yawThere, pitch), edgeBlend(map, eb.h.yawThere, pitch, opts).v);
-      span(r.p, there.p);
+      span(r.p, there.p, r.n, there.n);
       r = { p: mix(r.p, there.p, eb.h.w), n: mix(r.n, there.n, eb.h.w) };
     }
   }
   if (cast !== undefined) {
     const l = Math.hypot(r.n[0], r.n[1], r.n[2]);
-    if (l > 1e-9) {
+    // ⭐⭐⭐ (2026-11-09, R3 (a)) THE CAST ONLY ACROSS AN EDGE THE TWO FACETS MAKE — never between two facing APART (`apart`): ⛔ the cube without its back
+    // (+x and −x adjacent across the 490 mm back) left a chord lying ALONG a face; the cast took the near facet's own face — x 247.5 to 89.5°, 2.5 at 90°,
+    // −242.5 from 90.5° (a 490 mm jump). A convex edge (90° on a box) or a proud part's corner (Piece3, 45 mm off −x: §18's case) is cast as before
+    if (l > 1e-9 && !apart) {
       const nb: Vec3 = [r.n[0] / l, r.n[1] / l, r.n[2] / l];
       const h = chord > 0 ? cast(r.p, nb, chord / 2 + BLEND_REACH_M) : null;
       if (h !== null && dot([h[0] - r.p[0], h[1] - r.p[1], h[2] - r.p[2]], nb) > BLEND_FRONT_M) return h;
@@ -942,6 +964,8 @@ export function blendThroughEdges(
   }
   return r.p;
 }
+/** ⭐⭐ (2026-11-09, R3 (a)) two facets' normals below this cosine (beyond 120°) FACE APART — the blend between them is not across an edge they make. */
+export const BLEND_APART_COS = -0.5;
 /** ⭐ (2026-11-05) a cast's hit takes a blended place only this far (m) in front of it — the chord itself on a face is kept. */
 export const BLEND_FRONT_M = 0.0001;
 /** ⭐ …and the cast reaches this far (m) beyond half the chord — never a part standing far out along the blended normal (a jump onto it). */
