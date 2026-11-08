@@ -126,7 +126,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(g).toContain("const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);");
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
-    expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isEnabled()) continue;"); // ⭐ (§30 S1) the placed parts, each section cut from their model poses
+    expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isEnabled()) continue;"); // ⭐ (Step 4c) the placed parts — ⭐ (§32) their hulls the chart's casts
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
     expect(p).toContain("if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);");
@@ -254,8 +254,9 @@ describe('⭐⭐⭐ THE GIZMO READ ON THE MODEL, NOT THE SWAYING MESH (2026-11-0
     close(n, [0.5 / Math.hypot(0.5, 1), 1 / Math.hypot(0.5, 1), 0]);
     expect(A.modelNormal([0, 0, 0], [1, 1, 1], [1, 0, 0, 0])).toBeNull();
   });
-  it("⭐⭐ wired: the sections read on the model (`modelHit` on every part's vertex — §30 S1: no pick left)", () => {
+  it("⭐⭐ wired: both gizmo picks and the sections' hull read on the model (`modelHit`)", () => {
     const w = code("render/assembly_wiring.ts");
+    // ⭐⭐⭐ (§32) the gizmo's casts against hulls of the parts' vertices brought back onto the model (`tests/sway_cast.test.ts`)
     expect(w).toContain("const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;");
     expect(w).toContain("return { point: at.point, normal: modelNormal(localN, [s.x, s.y, s.z], pose.orientation) };");
   });

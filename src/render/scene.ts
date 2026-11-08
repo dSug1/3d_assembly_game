@@ -543,6 +543,10 @@ export function createScene(
   st.asmRedCache = null;
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
+  st.asmGizmoOn = false;
+  st.asmGizmoSince = 0;
+  st.asmOutline = null;
+  st.asmOutlineKey = "";
   st.asmMapQ = null;
   st.asmFaceMap = null;
   st.orbitFrame = UPRIGHT;

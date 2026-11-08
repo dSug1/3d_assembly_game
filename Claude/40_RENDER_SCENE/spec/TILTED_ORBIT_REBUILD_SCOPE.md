@@ -1,5 +1,7 @@
 # THE TILTED ORBIT — REBUILD SCOPE (from `ff2fca2`)
 
+> ⭐⭐⭐ **2026-11-08 — CONTINUE FROM §32** (branch `1.0.107-Close-in-atlas`, rebuilt from `d926b88`): THE CLOSE-IN CHART — far out no gizmo; close in one chart anchored and frozen, the gizmo the place carried in, its region continuous by construction (the singularities outside it, reached by another chart), the place stopped at its edge, the lines short. §31 (the jumps, the bijection) is its reason.
+
 > **Status** · approved by the owner 2026-11-04 (*"proceed"*) · branch `1.0.93from1.0.87-` (renamed `1.0.93from1.0.87-Polar-orbit-improved`; Step 4 on `1.0.94-`, renamed `1.0.94-Polar-orbit-Red-section-fixed`; Step 4b on `1.0.95-`, renamed `1.0.95-Step4c-of-polar-orbit-built`; Step 4c-bis on `1.0.96-Step4c-bis-of-polar-orbit`) · ✅ **Step 0 built** (2026-11-04, §8) · ✅ **Step 1 built**
 > (2026-11-04, §9) · ✅ **Step 2 built** (2026-11-04, §10) · ✅ **Step 3 built** (§11) · ✅ **Step 4 built** (§12) · ✅ **Step 4b built** — dx synchronized with the orbit, and the calm (58d86ff) ported (§13) · ✅ **Step 4c built** — the side decides, the parts read at rest (§14) · ✅ **Step 4c-bis built** — THE FACE MAP: the gizmo a
 > function of the orbit's angles, the carrier deleted (§15) · ✅ **Step 5 built** (2026-11-05, branch `1.0.99-Polar-orbit-finalized`, renamed from `1.0.99-`) — the face map on the FACES CONTOUR, D3's real depth,
@@ -1703,3 +1705,281 @@ superseded by it.
   `faceWidth`, `travelAcross`), `rope.test.ts` R6 × 2, R7 × 1; `sway_cast.test.ts` rewritten (the model pose, exact); the wiring strings moved
   (`rebuild_wiring`, `assembly_orbit`); the audit's finding-1 vectors deleted with `rayMeetsBox`. Mutants, each RED: R6 off (the chord), R7 off, S2 off
   (any depth), S3 off (no fill), the support without the fill, `travelAcross` projecting along the facet's normal.
+
+## 31. ⭐⭐⭐ (superseded by §32 — its reason) THE GIZMO JUMPS, THE BIJECTION, THE MAPPING TO BUILD (2026-11-07 / 08, branch `1.0.106-Gizmo-jumps`; ⛔ NOTHING BUILT AFTER §30)
+**Read this section first in a new conversation.** §30 is live (`e42f982`, the merge of `d26f71a`). The owner tested it: *"the overall behaviors are OK
+but there are huge and small jumps of the gizmo and the piece, but not the camera … there are still some red or green sections which are intricate and
+which break the rule that they shall be planes."* What followed was analysis and design only. Next: §31.9.
+
+### 31.1 The artifacts (claude.ai, private to the owner) — what each holds
+* **The recap and the rules to build — [Gizmo Mapping Rules](https://claude.ai/artifact/WM1tubD7R9Vm8Hkw2a2qcq)**: the layers (what drives what), the
+  glossary, the register F1 – F7 / D1 – D13 with each rule's status, a sketch per new rule, the islands decision (D13), the offline measurements, what is
+  open. ⭐ The design to build; §31.7 is its text.
+* **The decisions and the flaws — [Section Rules: Open Decisions](https://claude.ai/artifact/VzRiV6YqvksPr2BYcnJLZ2)**: (top) the owner's principle's
+  one rule to decide (a P with nothing of its face under it: hold / land / stretch, sketched on `Scene_1`'s top) and the added rule *the shell follows
+  the piece in*; then *why the gizmo and the piece jump* (J1 – J5, L1, sketched and measured on `e42f982`); then the four questions Q1 – Q4 of §30
+  (answered).
+* **The logic as built up to §29 — [Orbit Track, Shell and Cast](https://claude.ai/artifact/T6SSU3jKxpQYEb4szbBUMN)**: section 0 the rule set of §30 as
+  then proposed; sections 1 – 5 the track / shell / cast of §27 – §29 with their singularities.
+
+### 31.2 §30 measured (the series on `e42f982` — `scripts/probes/run_series.sh`)
+32 long walks with changes of direction (16 × 8000 px at four approach distances, 4 × 4000 px close in, then 12 more with the piece sprung). Against
+`d926b88` (§29): the gizmo against the finger / stuck / back-and-forth **0** (unchanged); the approach's back-and-forth on a top 77 – 203 mm a drag →
+**0 – 5 mm**; the other line > 30 mm off the gizmo 88 % → **3 – 11 %**; the green's plunges → **1 – 2 %**; the gizmo's depth jumps **−80 %**; the camera
+**unchanged** (upside-down 0, the view's step p99 6.9° both, its up's spins and its jumps the same — `analyse_camera.mjs`). ⛔ **But** 526 gizmo jumps in
+40 300 frames (median 100 mm, max 557 mm), and the piece jumping with them (695 far out against 503 before): §31.3. Every drawn line lies in its world
+plane within 0.6 mm in every frame (measured on the mesh drawn — the probe's `lp` field): "not a plane" is a SHAPE inside the plane (L1).
+
+### 31.3 The flaws (`analyse_jumps.mjs` on the probe's `gzs` field; the artifact *Section Rules*, top)
+The root, one sentence: **the gizmo is not a function of the place** — every frame it is rebuilt from casts sampled round the moving place, and the
+result depends on things that change while the place moves 1 mm.
+* **J1 — the order of the two lines** (95 jumps, ≤ 331 mm): the gizmo built "the travelled line at the place → the other across → the travelled
+  again"; over a strip one pass does not settle, and the other order settles elsewhere — switching dx ↔ dy with the finger still makes it leap.
+* **J2 — reaching out over a void** (32, ≤ 527 mm): nothing under the place → the rope's first landing searched up to half a loop away, the gizmo held
+  on it (15 % of frames hold it > 100 mm along the rope from the place, p90 244 mm; the windows spread only 50 mm), then a snap back.
+* **J3 — a face crossing re-derives everything** (105, ≤ 432 mm): the new face's frame, both planes and the ropes rebuilt from the new place; nothing
+  carries the gizmo across the edge.
+* **J4 — the rope rebuilt every frame** (232, median ~100 mm; most of the small jumps): its samples laid from the reach's start, which moves with the
+  place — the steps, the windows (R5) and the narrow bridges (R7) flip.
+* **J5 — the piece hangs from the gizmo** (§30 A1): J1 – J4 move the piece too. A spring on it (uncommitted, `L.gs`) turned jumps into glides of 20 – 70
+  mm a frame — it hides the cause, it does not remove it (close in 89 → 83).
+* **L1 — the lines are planes but read otherwise**: rounding chords across the air (R3) to a part standing behind; staircases in depth (> 5 steps in
+  34 – 44 % of the red's frames, 4 % before — R2 / R6); a kink where the gizmo is drawn into a line while it sits in the air on a chord (J2).
+
+### 31.4 ⭐⭐⭐ THE BIJECTION — why every gizmo construction since the second rebuild broke
+The owner: *"we need to biject the orbit + calm of the camera and piece to the travel of the gizmo in world axis on a surface which has singularities
+(overhang, recesses, protrusions). The offset shell is an interface layer in-between the two which softens the impossibility of the full bijection"* —
+agreed. *"This reminds me of the texture mapping in blender"* — the exact analogy.
+* The finger drives a smooth, sphere-like control (the orbit's yaw / pitch with the calm); the gizmo must travel a non-convex, stepped surface. A map
+  both continuous and one-to-one between them **cannot exist** as is: (1) **occlusion** — a straight projection (along the face's normal, the view, any
+  fixed direction) cannot reach a recess's floor behind its rim or an overhang's underside: plunges, misses, many-to-one jumps; (2) **topology** — a gap
+  or a through-hole makes the outer surface not sphere-like (D2's bridges and fills are that surgery); (3) **sharp edges** — the smooth control must
+  squeeze or stretch somewhere. The shell is the in-between layer that CHOOSES where the map bends: orbit → shell is easy and built (the travel, the
+  pace, the calm); **shell → surface is the whole problem**.
+* ⭐ **The polar orbit had it too** (`1.0.99-Polar-orbit-finalized`, §15 / §17 / §18) — the tilt did not create it. The polar orbit's gizmo was already a
+  function of the angles (the core box, a ray along the face's normal onto closed regions, blends at the edges), so it had no J1 / J4; but the same three
+  obstacles showed as the edge blends (the real outline ≠ the core box), chords through parts (`Piece3`: the close-in dx stalled 630 frames), the voids'
+  rules and the depth steps (D3), the lines broken at steps; 36 blockages, 1.2 % against the finger, 14 reversals (§18). The tilt removed the polar
+  orbit's own singularity (the poles: yaw meaningless straight above) and brought the travel's crossings, T5's holds and the caps.
+* **The literature** (texture mapping, camera navigation) and the patents found 2026-11-07 (⚠ not a legal opinion; the search was not exhaustive):
+  * box / cube projection (Blender's *Box* projection — our casts): plunges, misses, seams — textbook;
+  * shrinkwrap / closest point (Blender's *Shrinkwrap*; **HoverCam**, Khan, Komalo, Stam, Fitzmaurice, Kurtenbach, I3D 2005 — a camera orbiting any
+    object by its closest point): waits at convex corners, jumps at a recess's middle — ⛔ **Autodesk patents** US 7,042,449 and US 8,044,953 (the
+    latter listed expired by Google Patents; the former's status not checked) and the multiscale-navigation US 8,665,259 / 8,665,260 (not checked) —
+    avoid;
+  * **PolyCube-Maps** (Tarini, Hormann, Cignoni, Montani, SIGGRAPH 2004): the closest analogue (a shell of boxes, the surface mapped onto it) — no
+    patent found on the method; building the map is a hard optimisation;
+  * **harmonic maps / field lines** (Laplace, classical): continuous; in 2D between two closed curves the well-behaved case; 3D bijectivity not
+    guaranteed — ⚠ Pixar holds patents on harmonic COORDINATES for cage deformation (US 8,405,676, US 8,587,584), a different use;
+  * the **stretch by shares** (a piecewise-linear reparametrisation, textbook).
+* ⭐ **The planar rule reduces it to 2D**: in each section's plane the shell's loop (the place's path) surrounds the plane's cut — one closed curve to map
+  onto another.
+
+### 31.5 The design path in the conversation (each step's answer)
+1. The owner's principle (a sketch): *P on the shell follows dx / dy; G the projection of P; the green the contour G would draw if dx went on 360°, the
+   red the same for dy*. ✅ Adopted as the principle (G a function of P; the lines G's own paths) — it kills J1, J2, J4 by construction and makes F2 true
+   by construction. ⚠ Amended: project along the FACE's normal (it lies in both section planes — the lines stay exact planes, independent of the
+   camera), not along the piece → P view line (the green would climb 24 – 130 mm on `Scene_1`'s steps with the pitch, change with every camera turn and
+   jump at every silhouette).
+2. Faces not aligned with the world axes: the planes are built from each face's own frame (the green contains its level way, the red its slope, both its
+   normal), so the projection stays in both; on a neighbouring face the cast uses the normal projected into the line's plane (as `section.ts` does).
+   Recommended: the face's own frame (the red square to the face), not strict world x / z planes.
+3. *P with nothing of its face under it*, measured: a cast straight in from the BOX shell hits nothing at **23 %** of the front / back's area, **59 %**
+   of the sides', **61 %** of the top / bottom's (each box face's extent is set by other parts). Choices sketched (hold / land / stretch). The owner:
+   *"the shell are two planes: one for the red section and one for the green section, each computed at each pitch and yaw"* — ✅ with a planar shell per
+   line (the plane's cut offset in its plane) and the cast along that shell's normal, a hit always exists.
+4. The owner: *"the camera and piece shall still orbit, with the calm function you have designed. So you need to map this orbit + calm … to each planar
+   shell"* — ✅ correct: the built travel stays the input's only owner; a MAP from it onto each planar shell is needed — driven by the built orbit only,
+   continuous, never back / never waiting along a line, agreeing at a switch of line. Rejected: by the view direction (undefined across a face's middle,
+   where the calm holds the view square), by the nearest point (never enters a recess wider than the piece).
+5. ⭐ **The offline probe** of the two 2D candidates (§31.6) → **the stretch by shares**.
+6. The owner's display alternative (a sketch): *with dx the green in full and the red a short segment; with dy the reverse* — it does not change the
+   mapping (G still a function of the place along the travelled line; the switch still anchored) but removes the other line's far shape (the chords and
+   staircases) and most of its cost → D10.
+
+### 31.6 ⭐ The offline probe of the 2D candidates (`scripts/probes/map2d_probe.mjs scripts/probes/scene1_geom.json` — `Scene_1`'s 40 placed parts on their model pose, the shell's facets, the piece's width 45 mm, dumped by `dump_geometry.js`; ~2 min in node)
+121 section planes (57 green horizontal, 53 red x = const, 11 red z = const); the exact cut rasterised at 2 mm; recesses and gaps narrower than the piece
+closed (Q1c); the box's loop travelled at 1 mm steps; G by each candidate: **STRETCH** (each box side ↔ its run of the outline between the outline's
+supports in the corners' bisectors, by share of length) and **HARMONIC** (u = 1 on the loop, 0 on the parts, SOR; G the end of the field line).
+
+| family (planes) | candidate | planes with a jump > 10 mm | largest jump | longest wait (G within 1 mm) | outline covered |
+|---|---|---|---|---|---|
+| green (57) | **stretch** | **0** | 1 mm | median 3, max 26 mm | 100 % |
+|  | harmonic | 6 | 215 mm | median 22, max 263 mm | ≥ 97 % |
+| red front / back (53) | **stretch** | **0** | 1 mm | median 3, max 10 mm | 100 % |
+|  | harmonic | 2 | 20 mm | median 23, max 418 mm | ≥ 91 % |
+| red sides (11) | **stretch** | **0** | 1 mm | median 18, max 94 mm | 100 % |
+|  | harmonic | 4 | 484 mm | median 72, max 396 mm | 100 % |
+
+⛔ The harmonic map is ruled out (jumps at the saddle between islands; field lines crowd onto a thin painting's corners — waits; deep pockets missed).
+✅ The stretch is continuous on every plane in one piece. Left to it: **islands** (14 of 121 planes — the overhangs `Piece44` y 0.47 – 0.50 and
+`Piece45` y 0.14 – 0.24, two red planes through them, four side planes in the strip in front of the painting: D13), **slow zones** (≤ 94 mm of place
+for 1 mm of G at the painting's thin end: D12), the anchoring at a switch (D11). ⚠ Not yet in the model: the fill (D2b1), T5's reach limits, the cost.
+
+### 31.7 ⭐⭐⭐ THE REGISTER — the rules to build (the artifact *Gizmo Mapping Rules* holds the sketches)
+**The layers.** The finger moves the PLACE on the shell (the built travel, pace and crossings — T1 – T6, V1 – V5 unchanged); the camera and the piece
+read the place as built (the camera always the shell at its outermost); per section plane: the OUTLINE (the exact cut + the fill, gaps / recesses
+narrower than the piece closed) → the STRETCH of the place's share onto its run → **G**; the lines from G. The finger never moves G directly.
+* **F1** kept — the gizmo follows dx / dy, never back, never waits (its slowest pace D12). **F2 amended** — the travelled line drawn in full is where G
+  goes; the other a short segment of its plane's cut through G (D10); both world-level planes through G. **F3 – F7** kept (G where A + dy aims; the
+  camera never upside down, the built crossings / tilts / calm untouched; no penetration; smooth; no dead ends).
+* **D1 amended** — the place on the shell (built); G = the stretch of the place onto the travelled line's outline: a function of the place (+ the anchor
+  set at the last switch), whatever the order of the lines. ⛔ §29's ropes and §30's casts per place (J1 – J4).
+* **D2 kept** — D2a a gap with a path beyond bridged; D2b1 a void at the edge the other line bridges filled to the gap's lower lip; D2b2 otherwise the
+  outline's corner.
+* **D3 amended** — steps and protrusions are part of the outline, followed continuously: G slides along a step face (≤ 3 % of the travel measured)
+  instead of jumping it. ⏳ The owner may keep the jump.
+* **D4 amended** — far out the piece along the view from the PLACE (built); during A + dy it drifts gradually onto G's normal line from far out down to
+  the shell, then straight in along the normal (no sideways back-and-forth); close in **dx and dy orbit the piece at its own depth**, checked against
+  the parts (the owner — ⛔ A2: a drag first took the piece back out).
+* **D5 new** — the shell follows the piece in: during A + dy the shell face the piece approaches moves in with it down to the contact and re-expands as
+  it goes out — the GIZMO's P only; **the camera reads the outermost shell** (the owner: *"I agree"*).
+* **D6 amended** — G round the outline's own corner, continuously; the view the place's (⛔ a chord to the next face's first landing).
+* **D7 kept** — a recess narrower than the piece bridged (Q1c), as the closing of the cut by half the piece's width; wider followed at any depth.
+* **D8 amended** — a bridge is the closing's own shape (straight across at the rims, rounded ends), the same whichever side G is on (⛔ Q2b / R6's
+  level + far step).
+* **D9 amended** — an overhang's underside is on the outline when its pocket is at least the piece's width (G goes under), else bridged (⛔ Q4b).
+* **D10 new** — the display: the travelled line in full, the other a short segment (~ ±40 mm) of its plane's cut through G; they swap at a switch.
+* **D11 new** — the anchor: at a switch of line the new line's map is shifted so the current place gives the current G (no jump; a little path
+  dependence).
+* **D12 new, agreed** (the owner: *"Minimum pace: ok"*) — G never slower than a share of the place's pace (~0.35, a slider); the slack taken from the
+  neighbouring stretch of the run, the run's ends kept.
+* **D13 ⏳ to decide — islands** (a piece of a plane's cut standing apart by more than the piece's width): (a) skip it on this line; **(b) recommended**
+  the rope passes over it (straight bridges out to its outer face and back — the owner's D2a), G continuous, over a bridge G over the air and A + dy
+  aiming through; (c) G jumps to it and back.
+* Superseded: §29's R1 – R5 (casts per frame, reach-outs, windows), §30's S2 by cast, R6, R7. Kept as the outline's inputs: §30's S1 (the exact cut)
+  and S3 (the fill).
+* Other owner answers this session: the cast that hits nothing — *"cannot occur"* with the two planar shells (true for an offset of the plane's own cut,
+  cast along its normal); *Land* (G takes what the cast hits) — *"I see no issue"*, then superseded by the planar shells and the stretch.
+
+### 31.8 The working tree at hand-over (`1.0.106-Gizmo-jumps`, from `d26f71a`; live `e42f982`)
+* ⛔ UNCOMMITTED in `src/render/assembly_wiring.ts`: the piece hung from a SPRUNG gizmo (`L.gs`, `L.gsVel`, snapped after a slide) — measured not to
+  help (J5); keep or drop with the build. In `scripts/probes/orbit_probe.mjs`: the `gzs` (the gizmo's line, void, arc, facet, last) and `lp` (each drawn
+  line's planarity on the mesh) fields.
+* The tools in `scripts/probes/`: `run_series.sh` (the series; `OUTROOT=` a scratch folder), `analyse_walk.mjs` / `analyse_walk2.mjs` (against /
+  stuck / back-and-forth / jumps), `analyse_jumps.mjs` (the jumps by cause), `analyse_camera.mjs` (the camera's regression check), `analyse_lines.cjs`
+  (the lines' shapes), `map2d_probe.mjs` + `scene1_geom.json` + `dump_geometry.js` (the offline 2D model). The probe's modes: `MODE=walk`, `MODE=seq
+  SEQ=…` (drags and A + dy sequences), `LAND_EVERY=px` (the approach simulated in place), `SHOT_EVERY` / `SHOT_END` (screenshots), `AFTER=` (a page
+  expression).
+
+### 31.9 Next (in order — nothing to start before D13 is decided)
+1. The owner's D13 (islands) and D3 (slide or jump) answers.
+2. The offline model extended: the fill (D2b1), D12's minimum pace, D13, T5's reach limits; measured again (jumps, waits, coverage).
+3. The build: the outline per plane (cached), the stretch and its runs, the anchor, D10's display, D5's following shell, D4's drift — the rules in
+   `src/input/` (engine-free), the wiring holding the calls; the vectors RED against `d26f71a`.
+4. The series against `d926b88` and `e42f982` (`run_series.sh`, the five analysers) — the camera unchanged, J1 – J5 gone; then deploy and the device.
+
+## 32. ⭐⭐⭐ CONTINUE FROM HERE — THE CLOSE-IN CHART (2026-11-08, branch `1.0.107-Close-in-atlas`, REBUILT FROM `d926b88`; supersedes §29's ropes, §30, §31.7)
+**Read this section first in a new conversation.** The owner, after §31's roadblock (*"As we have hit a roadblock with the bijection, let's step back"*):
+*"A- the shell … B- the input dx and dy controls P on the shell, which controls the orbit of the piece and camera, including the calm function, the orbit
+tilts … C- we limit the red and green contours and the gizmo only: 1) when the piece is close in … 2) … limited to a small surface locally … aligned with
+world axis planes and the gizmo shall be always at the intersection of the green and red and correspond to where the piece would land at the end of the
+A + dy approach during close in … If a jump/back-and-forth/etc. would occur within the limited surface, the limited surface shall exclude this singularity
+(and the singularity shall be reached by going out of the close in and back in)"* → the answers below → *"i agree with all your recommendations. Prepare the
+specifications … rebuild … deploy … random walks (including approaches now)"*. ⭐ The global bijection (§31.4) is not attempted: an ATLAS of local charts,
+each one-to-one by construction, one anchored at a time.
+
+### 32.1 The base, and why (no patching of contradicting rules)
+* **`d926b88`** (the tip of `1.0.105-`, §29 + the §29.4 probe) — its travel (T1 – T6), view (V1 – V6), calm and tilts, its PIECE ON THE SHELL (P1: the
+  piece reads the place, never the gizmo) and its camera are B, which the owner judged *"very good"* (§29.4) and measured 0 against / 0 stuck / 0
+  back-and-forth (§29.3). ⛔ Not `e42f982` / `d26f71a` (§30): its A1 hung the piece from the gizmo (J5, §31.3) and its S2 / S3 / R6 / R7 are rules about
+  ropes, which C replaces. ⛔ Not `1.0.101-`: its facets sat at each face's main plane (no `supportOf`), not the shell A names (the owner agreed, A).
+* Deleted on the branch: §29's ropes (`input/rope.ts`, `tests/rope.test.ts`), the per-place mesh casts (`modelCast`, `castParts`, `realAlong`,
+  `landingOf`, `ropesOf`, `gizmoTravel`, `st.asmCast`), and the exports they alone used (`swayRay`, `rayMeetsBox`, `onContour`, `travelReach`).
+  Carried from `1.0.106-` (`63a4fee`): the docs (§31) and the probes. ⛔ Not carried: the sprung gizmo (`L.gs`, J5 — the piece no longer reads the gizmo).
+
+### 32.2 The decisions (the owner, 2026-11-08 — each answered in the conversation)
+* **A** — the shell is `1.0.105-`'s G1: each facet at the placed parts' outermost point, convex, every part inside it.
+* **B** — dx / dy move P on the shell; P drives the piece and the camera (the calm, the tilts) exactly as on `1.0.105-`.
+* **C1 — close in is a DISTANCE** (*"distance decides whether there is a gizmo: yes and no … shall be a gizmo at every distance (the waist) … the value of
+  the waist has to be deliberately fixed"*): within `closeInMm` (default **120 mm**, a slider in CAMERA ORBIT, left 30 mm further out) of the shell — the
+  gizmo, its lines and its area shown, at every distance down to the contact; far out NO gizmo, NO lines (*"Far out there is no gizmo nor red-green
+  contours"*). Its own number, not the camera's waist (the view unchanged). ⚠ Corrected in the conversation: on `Scene_1` the approach is monotone, its
+  waist **90 mm** from the shell, the far orbit 6 m (the scene's own rig — the 646 mm first quoted was the default rig's).
+* **C2 — over nothing to land on, the chart anchors on the facet's nearest accepted landing** (the gizmo appears there; appearing is not a jump) — never no
+  gizmo close in, never a refused approach.
+* **C3 — what may be landed on is decided by a BOOT PASS, per facet, no slider** (*"a coarse broad pass at boot … retract a margin to be on the safe side"*):
+  rerun when the placed set changes.
+* **C5 — the patch's edge STOPS the input** (*"the input shall be blocked (and the user shall bring the piece away to reload): … a delimitation of the
+  limited area"*); no radius — the patch is the whole continuous region on the facet; the lines short; the outline drawn.
+* **The feel** (*"the feel is perfect on the front face of the blue part in branch 1.0.106- … the movement feel i want to maintain"*): on a flat face the
+  gizmo is the place carried straight in — the same 1:1 motion as there, the same pace and ease (the travel untouched).
+
+### 32.3 The rules (owner: `input/close_in_chart.ts` K1 – K8, C1, C4 — engine-free; the wiring `render/assembly_wiring.ts` holds the state and the calls)
+* **K1 — THE CASTS**: each placed part's convex hull (its half-spaces from its MODEL-pose vertices — `hullPlanes`, `hullParts`), a ray clipped against each
+  (`castHulls`; its box first). No Babylon ray, no sway (the vertices are read on the model pose).
+* **K2 — THE BOOT PASS** (`facetAccept`): per facet a 10 mm grid cast straight in; the landings connected by steps ≤ 40 mm to the facet's OUTERMOST ones
+  are its own; the facet's depth limit = their deepest + 10 mm (the margin). `Scene_1`: ~8 400 casts, ~20 ms in node; the protrusion 48 cm below a top
+  (§29.4 M1) is refused.
+* **K3 — THE REGION**: a 2.5 mm grid on the facet, filled breadth first from the anchor (600 casts a frame); a neighbour joins when its landing is
+  accepted (K2), inside the facet's extent, and within 3 mm of the cell it is reached from — so the region is continuous BY CONSTRUCTION: a step, a void,
+  a refused landing, the facet's edge end it (the singularity stays outside). `Scene_1`'s back: 35 600 cells filled in ~100 frames.
+* **K4 — A RECESS / GAP NARROWER THAN THE PIECE** (its resting face's narrowest width) is bridged along the way it is met, level to level (the depth
+  interpolated between the rims — §30 D7 / Q1c kept); a wall standing up across the way is never bridged; a wider recess ends the region.
+* **K5 — THE ANCHOR** (C2): on entering close in, the travel's place on its facet; its own landing if accepted, else the nearest accepted coarse landing
+  with the chart SHIFTED so the place gives it (the gizmo moves with the place from there).
+* **K6 — THE STOP** (C5): close in, a finger step whose place would leave the region (or the facet) is cut back to the region's edge by halving
+  (`allowedShare`); the HUD: *"the edge of the close-in area — bring the piece out (A + dy) and back in to move on"*. A + dy is never stopped by it.
+* **K7 — THE LINES**: the green along the facet's `t`, the red along its `b`, through the gizmo, sampled per cell, as far as the region goes, at most
+  **±50 mm**; each in its plane `(t, n)` / `(b, n)` through the gizmo EXACTLY (on `Scene_1` world planes), the gizmo a vertex of both.
+* **K8 — THE OUTLINE**: the region's border cell by cell at each cell's depth, a light neutral line 1.5 mm off the surface (redrawn while the fill grows),
+  white and opaque when the gizmo is within 20 mm of it (the stop is near).
+* **The gizmo** = the shown place's chart coordinates, bilinear over the region's corner cells (continuous); faded in over 150 ms when close in is entered.
+* **C4 — THE APPROACH LANDS ON THE GIZMO**: close in, the piece's direction turns smoothly from the view (at `closeInMm`) onto the chart's normal (at the
+  shell), and its foot from the place onto the shifted place (K5) — at the shell it stands straight above the gizmo, and A + dy goes straight in onto it.
+* Unchanged from `d926b88`: T1 – T6, V1 – V6, the calm, P1 (on the shell), P3 (the resting face turned by the facet's normal), A1 – A2 (below the shell a
+  drag takes the piece back out; the slide), the camera.
+
+### 32.4 The singularities, and how each is reached (the coverage argument)
+A landing by a straight approach must be visible along the approach's direction, so the charts cover exactly the landable surface:
+
+| singularity | inside one chart | reached by |
+|---|---|---|
+| a step (the depth jumps) | the region stops at its lip | a chart anchored over the other level (out past `closeInMm` + 30 mm, the place moved, in again) |
+| a face parallel to the facet's normal (a riser) | never landed on | the neighbouring facet's chart |
+| an overhang's underside | hidden | the bottom facet's chart |
+| a void / a landing far below (a cap's strip) | the region stops at the rim; K2 refuses the far landing | a chart anchored over a landing (C2 shifts onto the nearest) |
+| a recess narrower than the piece | bridged (K4) | — the piece cannot enter it |
+
+### 32.5 Vectors (1627, all passing — MEASURED 2026-11-08)
+`tests/close_in_chart.test.ts` (13): the hull's planes and the first part met, a slanted face; K2 the far protrusion refused; K3 the step, the wide slot,
+the void and the far part outside the region; K4 the groove bridged level with its rims; the gizmo walked 1 mm at a time never jumping; K7 the lines in
+their planes exactly, the gizmo a vertex of both, ±50 mm; K8 the outline on the border only; the singularity reached by another chart (onto the proud
+part, into the slot); K5 the shift; C1 the hysteresis; C4 the direction; K6 the share. RED against `d926b88` (no module). ⭐ Mutants, each RED: the step
+test removed (4 red), the bridge removed (2), the shift dropped (1), the hysteresis removed (1), the depth limit removed (1), every landing accepted (2).
+Moved: `rebuild_wiring` (the chart's wiring), `sway_cast` (the hulls from model-pose vertices — ⛔ as drawn: 3 mm off, near the edge missed),
+`assembly_orbit`, `audit_2026_11_04` (no Babylon ray for the gizmo). Deleted with their code: `rope.test` (5), `rayMeetsBox`'s and `swayRay`'s.
+
+### 32.6 Tools
+`scripts/probes/chart_probe.ts` (offline on `scene1_geom.json`: a cast ~4.4 µs in node; regions per facet), `orbit_probe.mjs` (`APPROACHES=1`: an
+approach as a walk segment, in or out, the landing simulated after it with `LAND_EVERY`; the `ci` field: close in, the chart, its cells, the gizmo shown,
+its uv; `ap` the approach), `analyse_closein.mjs` (jumps within a chart, against, waits, the stop, the lines' planarity and the gizmo's distance to them,
+the piece / camera steps against the place's, the landing across / along the normal, a gizmo far out), `run_series_closein.sh` (the series).
+
+### 32.7 ⏳ Later — to do
+* **THE ATLAS UPDATED WHEN A NEW PART IS SEATED** (the owner, 2026-11-08: *"we need to include a pass update of the atlas when a new part is seated"*). As
+  built, a change of the placed set rebuilds everything at once: the shell (G1), every facet's boot pass (K2) and the hulls; an open chart is dropped and
+  re-anchored at the next close in. To do: (1) an UPDATE pass when a part is seated — only the facets the new part changes re-cast (the others' accepted
+  landings kept), spread over frames like the fill (no stall on the iPhone at the moment of the seat); (2) the open chart refreshed, not dropped, when its
+  facet survives (its region re-grown round the gizmo so the gizmo does not vanish under the piece just seated); (3) check that "seated" and the placed
+  set agree (`goalLocked`, `lockPlacedPieces`) so a seated part is always in the atlas; (4) vectors: a part seated onto a facet changes that facet's
+  landings and region, leaves the others untouched, and keeps the gizmo continuous.
+
+### 32.8 The series on `16b38c4` (2026-11-08 — `run_series_closein.sh`: 12 walks × 6 000 px at four start distances + 4 walks × 4 000 px started close in, approaches mixed into every walk; 78 711 frames, 0 page errors)
+| check (`analyse_closein.mjs`) | result |
+|---|---|
+| a gizmo far out | **0** frames (49 876 close-in frames, gizmo shown in all but 14 — the anchoring frame) |
+| the lines' planarity · the gizmo's distance to each line | **0.00 mm** in every frame (max 0.00) · **2.00 mm** (the lift) in every frame |
+| the gizmo against the place · waiting while the place moves | **0 · 0** |
+| the gizmo "jumping" within a chart (> 15 mm, > 3× the place's step) | 56 — ⚠ all the headless input's bursts: the travel's place moves 65 – 85 mm on one event every third frame and the shown place springs after it; the gizmo moves exactly with the piece (35 / 29 / 10 mm against 36 / 29 / 9) |
+| the piece / camera steps | the same bursts (the camera 2 – 3 frames behind the place's step); none with the place still outside an approach |
+| the A + dy landing (simulated after every approach in) | across the gizmo's normal: median **0.00 mm**, p95 0.07, max 8.8 (1 of 58); along: the piece's resting point 24 – 77 mm (the piece's own half-depth and its lift) |
+| the stop (K6) | 51 of 158 close-in drag segments wholly stopped — each checked at a REAL edge: the front's bottom row, its right edge (the facet's), a column of parts at x = −0.147 (reproduced offline), the bottom cap (its region 8.6 cm² — its parts' steps) |
+
+⛔⛔ **OPEN — INHERITED FROM `d926b88` (`1.0.105-`), NOT FROM THE CHART: THE SLIDE'S LATCH LOOP ON A TOP.** A + dy held in onto `Piece4`'s top: the slide
+latches (*"on — latched on Piece4's face (1.2 mm)"*), on the next frame the piece stands ~40 mm higher, the slide reads it as *"off — the approach took the
+piece away"*, the way out re-derives the approach from the piece's height (0.428 → 0.4615, above the shell) and the approach comes in again — every 10
+frames for as long as A + dy is held (18 reversals on seed 22; the same seed on `d926b88` in a worktree: **12**, the same verdicts). ⭐ Found only now
+because the walks include approaches. ⛔ A first reading (the drag's coast fighting the approach below the shell, `approachInput` stopping the coast) was
+built, measured — the same 18 reversals — and REVERTED (measure or revert). ⏳ To diagnose: what moves the piece 40 mm at the latch (`hoverStart`'s settle /
+`applyHoverModel` against `offsetAt`'s offset from `L.p` while the slide holds the centre) — `HOVER.md` §0's slide, not §32.

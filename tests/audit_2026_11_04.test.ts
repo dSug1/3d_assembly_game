@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { boxOf } from "../src/input/ray_box";
 import { finiteCamera } from "../src/input/finite";
 import { goalReportKey, sameGoalReportKey } from "../src/input/goal_capture";
 import { solveOrbitStep, type OrbitQ, type SolverEnv } from "../src/input/piece_orbit_solver";
@@ -31,7 +32,19 @@ const body = (id: string, at: Vec3, dims: [number, number, number] = [0.1, 0.1, 
 });
 const setup = (skinM = 0.001): CollisionSetup => ({ shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM });
 
-// ⛔ (2026-11-07, §30 S1) finding 1 — the face map's casts' slab pre-reject (`rayMeetsBox`) — DELETED with the mesh casts: the sections are exact cuts.
+describe("⭐⭐ (finding 1) the face map's casts — ⛔ superseded (§32): the close-in chart casts each part's convex hull, engine-free (`tests/close_in_chart.test.ts`)", () => {
+  it("⭐ the box round a set of points", () => {
+    expect(boxOf([[1, 2, 3], [-1, 5, 0]])).toEqual({ lo: [-1, 2, 0], hi: [1, 5, 3] });
+    expect(boxOf([])).toBeNull();
+  });
+  it("⭐ wired: the parts read once a frame; no Babylon ray is cast for the gizmo", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a).toContain("if (k !== null && k.frame === st.frames && k.world === st.world && k.count === st.goalCommit.count) return k;");
+    expect(a).not.toContain("new Ray(");
+    expect(a).not.toContain("intersectsMesh(");
+    expect(code("render/scene_state.ts")).not.toContain("asmRayCache");
+  });
+});
 
 describe("⭐⭐ (finding 2) the solver's cap is HARD past the first iteration", () => {
   const anchor = (q: OrbitQ): Vec3 => [Math.cos(q.yaw), q.v, Math.sin(q.yaw)];

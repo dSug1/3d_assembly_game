@@ -139,8 +139,6 @@ export function unswayHit(point: Vec3, normal: Vec3 | null, meshPos: Vec3, meshR
   const d = qmul(modelRot, qconj(meshRot)); // the mesh undone, then the model
   return { point: add(modelPos, qRotate(d, sub(point, meshPos))), normal: normal === null ? null : qRotate(d, normal) };
 }
-/** ⛔ (2026-11-07, §30 S1) `swayRay` — a ray moved onto each swaying mesh for the ropes' mesh casts — DELETED with them: the sections are cut from the
- * parts' model-pose vertices. */
 
 /**
  * ⭐⭐⭐ (2026-11-01) A face's normal on its body's MODEL pose from the mesh's own LOCAL facet normal (`localN`) and its scaling (`s`, per axis — the

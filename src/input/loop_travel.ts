@@ -151,31 +151,6 @@ export function travelStep(facets: readonly TravelFacet[], tr: Travel, comp: "x"
   return travelRaw(facets, tr, comp, mm, o, crossOk).res;
 }
 
-/**
- * ⭐⭐⭐ (§26.4 Gz3) HOW FAR THE TRAVEL CAN CARRY THE PLACE along `comp`'s loop from `tr` (its hold freed), each way: the loop, the place's arc on it, and the
- * arc reachable forward (increasing arc) and backward — the loop's length when nothing stops it within a turn (T5's edges, R4's stops).
- */
-export function travelReach(facets: readonly TravelFacet[], tr: Travel, comp: "x" | "y", o: TravelOpts, crossOk?: CrossOk): { readonly loop: CutLoop; readonly s0: number; readonly fwd: number; readonly back: number } | null {
-  const free: Travel = { ...tr, hold: HOLD_FREE };
-  const big = 400 / Math.max(1e-6, o.degPerMm);
-  const a = travelRaw(facets, free, comp, big, o, crossOk);
-  const b = travelRaw(facets, free, comp, -big, o, crossOk);
-  if (a.loop === null || b.loop === null) return null;
-  const L = a.loop;
-  const total = loopLength(L);
-  const s0 = loopArc(L, free.p);
-  const arcTo = (r: typeof a): number => {
-    if (r.res.held === null) return total;
-    const s = loopArc(L, r.res.travel.p);
-    const d = r.dirSign > 0 ? s - s0 : s0 - s;
-    return ((d % total) + total) % total;
-  };
-  const ra = arcTo(a);
-  const rb = arcTo(b);
-  const fwd = a.dirSign > 0 ? ra : rb;
-  const back = a.dirSign > 0 ? rb : ra;
-  return { loop: L, s0, fwd, back };
-}
 
 function travelRaw(facets: readonly TravelFacet[], tr: Travel, comp: "x" | "y", mm: number, o: TravelOpts, crossOk?: CrossOk): { res: StepResult; loop: CutLoop | null; dirSign: number } {
   const held0 = comp === "x" ? tr.hold.x : tr.hold.y;
@@ -327,25 +302,6 @@ function arcAt(L: CutLoop, i: number): number {
 
 
 export { loopLength };
-
-/**
- * ⭐⭐⭐ (2026-11-07, §30 G — F2: both lines through the gizmo) A LINE's TRAVEL MOVED ACROSS ONTO `a`: `comp`'s plane (its loop's) moved through `a`, its normal
- * kept; the place moved along that normal into it — its own way ALONG the line (its arc 0) kept, only the coordinate ACROSS the line taken from `a`.
- * ⛔ The place projected onto the shell along the facet's normal: the way along the line taken from `a` too — a window's shift applied twice.
- */
-export function travelAcross(facets: readonly TravelFacet[], tr: Travel, a: Vec3, comp: "x" | "y"): Travel {
-  const f = facets[tr.facet]!;
-  const fr = faceFrame(f.n, f.cap, tr.axis);
-  const want = comp === "x" ? fr.right : fr.up;
-  const pi = Math.abs(dot(tr.planes[0].n, want)) <= Math.abs(dot(tr.planes[1].n, want)) ? 0 : 1;
-  const n = tr.planes[pi]!.n;
-  const k = dot(n, a) - dot(n, tr.p);
-  if (Math.abs(k) < 1e-12) return tr;
-  const p: Vec3 = [tr.p[0] + n[0] * k, tr.p[1] + n[1] * k, tr.p[2] + n[2] * k];
-  const moved = planeThrough(a, n);
-  const planes: readonly [Plane, Plane] = pi === 0 ? [moved, tr.planes[1]] : [tr.planes[0], moved];
-  return { ...tr, p, planes };
-}
 
 /**
  * ⭐⭐⭐ (§26.2 V3 – V4) WHERE THE PLACE `p` STANDS ON A LOOP's SIDE of facet `fi` — the loop the plane cuts (the travel's own), the side's two ends, the
