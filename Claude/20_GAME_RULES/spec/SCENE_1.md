@@ -204,3 +204,22 @@ in `content/scene_1.ts`):
   the small one above and below, 41 mm out of the face.
 * Movable, white, part of the goal (`yawHalfTurns`): the level has **45** pieces. Not in the demo (`SCENE_1_OVERHANG_IDS`, with the frusta, out of
   `SCENE_1_TABLE`). `D136` / `D182`'s painting worlds leave them out (every body there an upright box). Vectors: `tests/scene_1_frusta.test.ts`, + 2.
+
+## 12. ⭐⭐⭐ The cube (2026-11-08, `1.0.109-`, ⛔ no device close)
+
+> The owner: *"increase the scale of all the seated parts in the z depth world axis so that the assembly is a cube instead of a thin painting. Move the
+> non seated parts which would interfere so they maintain their same distances from the cube's back face."*
+
+* **Every seated box is 4.8 units deep** (`SCENE_1_DEPTH`; the table's 0.3 × 16) — the painting's core HEIGHT (0.17 → 4.97), so the seated boxes' core
+  box is 4.87 × 4.8 × 4.8 (0.487 × 0.48 × 0.48 m). The owner's table is NOT edited: the level reads it through `CUBE_ROWS` (`content/scene_1.ts`).
+* **The FRONT face (−z, the boot's, the blue panel the boot's gizmo rests on) stays** at core −0.49; the depth grows toward +z — the BACK face moved 4.5
+  units back (`SCENE_1_BACK_SHIFT`).
+* **The five loose pieces** (`BOOT_MOVES`: Piece1, 2, 17, 23, 41) are NOT seated — not deepened (Piece17 also sizes the green piece); their goal slot is
+  the front 0.3 of their cell, flush with the front face. ⭐ Only **Piece1**, behind the painting, would stand in the cube: moved back by 4.5, the same
+  distance from the back face; the four others (in front, or Piece23 clear to the left) unchanged.
+* **The four frusta keep their shape** (×16 they would stand units out of the cube) and stay seated: Piece42, 43, 44 centred in depth on their host's
+  face (z 1.91), Piece45 on the front face where it was. ⚠ Piece44 no longer hangs over the top's front and back (the top is 483 mm deep): it overhangs
+  its own small face, 25.9 mm. The orbited pieces' goals centred on Piece4's top as before (z 1.91).
+* ⛔ **The demo keeps the painting** (`SCENE_1_TABLE`, 0.3 deep): its move plan is committed data generated from it.
+* Vectors: `tests/scene_1_cube.test.ts` (6, four RED on `22cfb16`); `d136` (Piece10 starts 5 cm CLEAR, its depth + 5 cm), `scene_1_frusta` (Piece44's
+  overhang), the demo's clearance helper and the green box's sizing read the painting. **1642** vectors.

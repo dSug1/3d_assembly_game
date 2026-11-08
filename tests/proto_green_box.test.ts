@@ -10,7 +10,7 @@ import { sizeM, smallestOfColour } from "@input/green_box";
 import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, easeOrbit, springOrbit, leashGain, pitchOf, vForPitch, wrapPi, type OrbitAt } from "@input/follow_camera";
 import { orbitOffset } from "@input/orbit";
 import { DEFAULT_CONFIG } from "@input/gestureConfig";
-import { SCENE_1, SCENE_1_PALETTE } from "../src/content/scene_1";
+import { SCENE_1, SCENE_1_PALETTE, SCENE_1_TABLE } from "../src/content/scene_1";
 import { RIG_3M } from "./helpers/rig_3m"; // ⭐ (2026-10-12) the rig these vectors were written on
 import { SCENE_0 } from "../src/content/scene_0";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
@@ -22,7 +22,8 @@ const code = (f: string) =>
 
 describe("⭐⭐ prototype — the green box", () => {
   it("⭐ its size is the smallest yellow piece's coloured core — Scene_1's Piece6, 65 × 37 × 30 mm", () => {
-    const y = smallestOfColour(SCENE_1.bodies, SCENE_1_PALETTE.MAT_C)!;
+    // ⭐ (2026-11-08) on the owner's TABLE (the painting): the level's seated boxes are 4.8 deep since the cube
+    const y = smallestOfColour(SCENE_1_TABLE.bodies, SCENE_1_PALETTE.MAT_C)!;
     expect(y.id).toBe("Piece6");
     const s = sizeM(y.dims, SCENE_1.unitM!);
     expect(s[0]).toBeCloseTo(0.065, 9);

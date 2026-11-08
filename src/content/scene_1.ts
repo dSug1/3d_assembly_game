@@ -102,6 +102,26 @@ export const SCENE_1_SLOTS: Readonly<Record<string, Slot>> = Object.fromEntries(
 export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
 
 /**
+ * ⭐⭐⭐ **THE CUBE** (the owner, 2026-11-08: *"increase the scale of all the seated parts in the z depth world axis so that the assembly is a cube instead
+ * of a thin painting. Move the non seated parts which would interfere so they maintain their same distances from the cube's back face"*) — every
+ * placed box's depth (the table's `sz`, 0.3) is `SCENE_1_DEPTH`, the painting's core HEIGHT (0.17 → 4.97: 4.8; its width is 4.87), so its core box is
+ * 4.87 × 4.8 × 4.8. ⭐ The FRONT face (−z, the one the boot looks at, the blue panel the boot's gizmo rests on) stays where it was (core −0.49); the depth
+ * grows toward +z, so the BACK face moves 4.5 units back. The table above is the owner's and is NOT edited: the level reads it through `cubeZ` / the
+ * depth here. ⭐ The frusta keep their shape (stretched by 16 they would stand units out of the cube) and stay seated: centred in depth on their host's
+ * face (Piece42, 43, 44), Piece45 on the front face where it was; the orbited pieces' goals centred on Piece4's top as before. ⛔ The DEMO keeps the
+ * painting (`SCENE_1_TABLE`): its move plan is committed data generated from it.
+ */
+export const SCENE_1_DEPTH = 4.8;
+const TABLE_DEPTH = 0.3;
+const TABLE_Z = -0.34;
+/** ⭐ The placed parts' front core face (−z) — fixed by the cube. */
+const FRONT_Z = TABLE_Z - TABLE_DEPTH / 2;
+/** ⭐ A placed box's centre in depth in the cube. */
+export const SCENE_1_CUBE_Z = FRONT_Z + SCENE_1_DEPTH / 2;
+/** ⭐ How far the back face moved (+z): a loose piece behind the painting that the cube would reach moves by it. */
+export const SCENE_1_BACK_SHIFT = SCENE_1_DEPTH - TABLE_DEPTH;
+
+/**
  * ⭐⭐⭐ **THE LEVEL-COMPLETED CONFIGURATION IS THE TABLE** (`D129`, the owner, 2026-09-28: *"current
  * configuration of parts is 'level completed configuration', therefore the target the user has to
  * achieve in minimum touchpoint episodes and time"*) — every piece where the table puts it, square.
@@ -129,8 +149,8 @@ export const SCENE_1_CONTOUR_MARGIN = 0.03 / 2;
  * `orbitGoalMm` under ~2.5 mm unreachable from a piece resting on it.
  */
 export const SCENE_1_ORBIT_GOALS: readonly FinalPose[] = [
-  { id: "green-box", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 0.4125 / 2, -0.34], orientation: "identity", symmetry: "yawHalfTurns" },
-  { id: "turquoise-piece", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 1.035 / 2, -0.34], orientation: "identity", symmetry: "hexPrism" },
+  { id: "green-box", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 0.4125 / 2, SCENE_1_CUBE_Z], orientation: "identity", symmetry: "yawHalfTurns" },
+  { id: "turquoise-piece", position: [1.04, 4.97 + SCENE_1_CONTOUR_MARGIN + 1.035 / 2, SCENE_1_CUBE_Z], orientation: "identity", symmetry: "hexPrism" },
 ];
 
 /**
@@ -152,9 +172,9 @@ const S = Math.SQRT1_2;
 export const SCENE_1_FRUSTUM_IDS: readonly string[] = ["Piece42", "Piece43"];
 const SEATED_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: readonly [number, number, number, number] }[] = [
   // Piece5: core x 2.305 ± 0.155, contour + 0.015 → its right face at 2.475; the frustum's body −y (the wide face) turned to −x: −90° about z
-  { id: "Piece42", slot: "MAT_A", position: [2.305 + 0.31 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, 4.56, -0.34], quat: [S, 0, 0, -S] },
+  { id: "Piece42", slot: "MAT_A", position: [2.305 + 0.31 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, 4.56, SCENE_1_CUBE_Z], quat: [S, 0, 0, -S] },
   // Piece19: core y 0.445 − 0.275 = 0.17, contour → 0.155 its bottom face; the wide face turned up: a half-turn about x
-  { id: "Piece43", slot: "MAT_A", position: [0.555, 0.445 - 0.55 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H, -0.34], quat: [0, 1, 0, 0] },
+  { id: "Piece43", slot: "MAT_A", position: [0.555, 0.445 - 0.55 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H, SCENE_1_CUBE_Z], quat: [0, 1, 0, 0] },
 ];
 
 /**
@@ -170,17 +190,37 @@ const SEATED_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: 
  */
 const OVERHANG_FRUSTA: readonly { id: string; slot: Slot; position: Triple; quat: readonly [number, number, number, number] }[] = [
   // Piece4's top at 4.56 + 0.82 / 2, contour + 0.015 → 4.985; a half-turn about (x + z)/√2: body x → z (the long axis along the depth), body +y (the small face) → −y
-  { id: "Piece44", slot: "MAT_A", position: [0.23, 4.56 + 0.82 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, -0.34], quat: [0, S, 0, S] },
+  { id: "Piece44", slot: "MAT_A", position: [0.23, 4.56 + 0.82 / 2 + SCENE_1_CONTOUR_MARGIN + FRUSTUM_HALF_H, SCENE_1_CUBE_Z], quat: [0, S, 0, S] },
   // Piece10's front face at −0.34 − 0.3 / 2, contour − 0.015 → −0.505; a third of a turn about (1, 1, 1)/√3: body x → y (the long axis vertical), body +y (the small face) → +z (onto the face)
-  { id: "Piece45", slot: "MAT_A", position: [0.23, 1.9, -0.34 - 0.3 / 2 - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H], quat: [0.5, 0.5, 0.5, 0.5] },
+  { id: "Piece45", slot: "MAT_A", position: [0.23, 1.9, FRONT_Z - SCENE_1_CONTOUR_MARGIN - FRUSTUM_HALF_H], quat: [0.5, 0.5, 0.5, 0.5] },
 ];
 /** ⭐ The overhangs' ids — kept out of the demo with the seated frusta. */
 export const SCENE_1_OVERHANG_IDS: readonly string[] = OVERHANG_FRUSTA.map((f) => f.id);
 
+/** ⭐ The pieces the boot moves out of the painting — not seated: not deepened (see `BOOT_MOVES`). */
+const BOOT_MOVES_IDS: Readonly<Record<string, true>> = { Piece1: true, Piece2: true, Piece17: true, Piece23: true, Piece41: true };
+
+/** ⭐ The cube's table: each row's depth and centre in depth (see `SCENE_1_DEPTH`). */
+// ⭐ the SEATED parts only — the five pieces the boot moves out of the painting (`BOOT_MOVES`) keep their size, and their goal is their slot's FRONT,
+// flush with the cube's front face as it was with the painting's (⚠ Piece17 also gives the green piece its size, `greenPyramidSizeM`)
+const CUBE_ROWS: typeof ROWS = ROWS.map((r) => {
+  const [id, slot, x, y, z, sx, sy, sz] = r;
+  return id in BOOT_MOVES_IDS ? r : ([id, slot, x, y, z === TABLE_Z ? SCENE_1_CUBE_Z : z, sx, sy, sz === TABLE_DEPTH ? SCENE_1_DEPTH : sz] as const);
+});
+
+/** ⭐ The painting's goal — the owner's table as it is: the DEMO's (`SCENE_1_TABLE`). */
+const PAINTING_FINAL_BODIES = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
+  id,
+  position: [x, y, z] as Triple,
+  orientation: "identity" as const,
+  symmetry: "halfTurns" as const,
+  kind: `${slot} ${sx}×${sy}×${sz}`,
+}));
+
 export const SCENE_1_FINAL: FinalConfiguration = {
   frame: "RELATIVE",
   bodies: [
-    ...ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
+    ...CUBE_ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => ({
       id,
       position: [x, y, z] as Triple,
       orientation: "identity" as const,
@@ -205,7 +245,8 @@ export const SCENE_1_FINAL: FinalConfiguration = {
  * be read and is 0. Reprojection rms per piece: 1.2, 1.6, 1.5, 1.8, 0.4 px.
  */
 const BOOT_MOVES: Readonly<Record<string, { position: Triple; yawDeg: number }>> = {
-  Piece1: { position: [-1.992, 4.825, 1.287], yawDeg: 32.4 },
+  // ⭐ (2026-11-08) behind the painting, where the cube now stands: moved back with its back face (`SCENE_1_BACK_SHIFT`), the same distance from it
+  Piece1: { position: [-1.992, 4.825, 1.287 + SCENE_1_BACK_SHIFT], yawDeg: 32.4 },
   Piece2: { position: [-2.116, 4.56, -1.591], yawDeg: -5 },
   Piece17: { position: [-2.17, 0.445, -1.313], yawDeg: 9.3 },
   Piece23: { position: [-2.864, 4.56, 0.587], yawDeg: 0 },
@@ -222,8 +263,11 @@ const frusta: BodySpec[] = [...SEATED_FRUSTA, ...OVERHANG_FRUSTA].map((f) => ({
   topScale: OBJECT_TOP_SCALE,
 }));
 
-const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => {
-  const moved = BOOT_MOVES[id];
+/** ⭐ The painting's boot pose of Piece1 (the demo's): before the cube moved it back. */
+const PAINTING_BOOT_MOVES: typeof BOOT_MOVES = { ...BOOT_MOVES, Piece1: { position: [-1.992, 4.825, 1.287], yawDeg: 32.4 } };
+
+const bodiesOf = (rows: typeof ROWS, moves: typeof BOOT_MOVES): BodySpec[] => rows.map(([id, slot, x, y, z, sx, sy, sz]) => {
+  const moved = moves[id];
   return {
     id,
     position: moved?.position ?? [x, y, z],
@@ -235,6 +279,7 @@ const pieces: BodySpec[] = ROWS.map(([id, slot, x, y, z, sx, sy, sz]) => {
     margin: SCENE_1_CONTOUR_MARGIN,
   };
 });
+const pieces: BodySpec[] = bodiesOf(CUBE_ROWS, BOOT_MOVES);
 
 /**
  * ⭐ The floor — Unity's built-in Plane (10 × 10 units) at `(0, −2.3, 0)`, scale `(4.79, 0.22, 4.79)`:
@@ -348,9 +393,9 @@ export const SCENE_1: SceneDescriptor = {
 };
 
 /** ⭐ (2026-10-18) `Scene_1` as the owner's TABLE alone — without the seated frusta (nor the overhangs, 2026-10-29): what the demo plays and its plan is generated from (`scene1_demo.ts`). */
-const notTable = (id: string): boolean => SCENE_1_FRUSTUM_IDS.includes(id) || SCENE_1_OVERHANG_IDS.includes(id);
+// ⭐ (2026-11-08) the PAINTING, not the cube: the demo's plan is committed data generated from it
 export const SCENE_1_TABLE: SceneDescriptor = {
   ...SCENE_1,
-  bodies: SCENE_1.bodies.filter((b) => !notTable(b.id)),
-  final: { ...SCENE_1_FINAL, bodies: SCENE_1_FINAL.bodies.filter((b) => !notTable(b.id)) },
+  bodies: [...bodiesOf(ROWS, PAINTING_BOOT_MOVES), FLOOR],
+  final: { ...SCENE_1_FINAL, bodies: PAINTING_FINAL_BODIES },
 };

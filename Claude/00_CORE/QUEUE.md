@@ -22,10 +22,10 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 ⭐⭐⭐ **CURRENT THREAD — THE TILTED ORBIT, REBUILT FROM `ff2fca2`** → [`TILTED_ORBIT_REBUILD_SCOPE.md`](../40_RENDER_SCENE/spec/TILTED_ORBIT_REBUILD_SCOPE.md)
 (six invariants, the steps, each step's probes and numbers). ✅ Steps 0–4c-bis and ✅ **Step 5** (2026-11-05: the face map on the FACES CONTOUR, D3's real
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
-⛔ no device close on any. ⭐⭐⭐ **Now: THE CLEAN-UP** (later findings on this build, I1 – I7; F1 – F5 not built) → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md). ⏸ The hover waits.
+⛔ no device close on any. ⭐⭐⭐ **Now: THE CLEAN-UP** (I1 – I10, F1 – F8, not built; ⚠ `Scene_1` a cube: `SCENE_1.md` §12) → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md). ⏸ The hover waits.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1636 golden vectors, all passing** — MEASURED 2026-11-05 (the count's home; the scope's §18).
+✅ `npm run verify`: **1642 golden vectors, all passing** — MEASURED 2026-11-08 (the count's home; the cube).
 
 ## (the record) YOU ARE HERE (2026-09-30)
 
