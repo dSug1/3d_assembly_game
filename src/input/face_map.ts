@@ -117,22 +117,28 @@ const wrapPi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
  * ⭐⭐ THE REGION, ITS HOLES CLOSED: the rectangles' edges cut the plane into cells; a cell is in a rectangle or not; the cells not in one and reachable
  * from outside (a flood fill from a border round them all) are the outside — every other cell is FILLED: in a rectangle, or a hole enclosed by them.
  */
-export function filledRegion(rects: readonly Rect2[]): FilledRegion {
+export function filledRegion(rects: readonly Rect2[], cores?: readonly Rect2[]): FilledRegion {
   if (rects.length === 0) return { xs: [], ys: [], filled: new Uint8Array(0), real: new Uint8Array(0) };
+  // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §7) `cores`: the faces' TRUE rectangles (`rects` grown by `MAP_GROW_M` to close the joints) — `real` is read
+  // from them, so a void's rim stays where the face ends. ⛔ The growth moved every rim 1.6 mm into its void: on that strip the map read a face, the cast
+  // found the void's floor — the gizmo dived 10 – 60 mm at both rims of every void with a floor (the cube's bottom groove, x 104 and 117)
+  const real = cores ?? rects;
   const x0 = Math.min(...rects.map((r) => r.x0)) - 1;
   const y0 = Math.min(...rects.map((r) => r.y0)) - 1;
   const x1 = Math.max(...rects.map((r) => r.x1)) + 1;
   const y1 = Math.max(...rects.map((r) => r.y1)) + 1;
-  const xs = [...new Set([x0, x1, ...rects.flatMap((r) => [r.x0, r.x1])])].sort((a, b) => a - b);
-  const ys = [...new Set([y0, y1, ...rects.flatMap((r) => [r.y0, r.y1])])].sort((a, b) => a - b);
+  const xs = [...new Set([x0, x1, ...[...rects, ...real].flatMap((r) => [r.x0, r.x1])])].sort((a, b) => a - b);
+  const ys = [...new Set([y0, y1, ...[...rects, ...real].flatMap((r) => [r.y0, r.y1])])].sort((a, b) => a - b);
   const nx = xs.length - 1;
   const ny = ys.length - 1;
   const inRect = new Uint8Array(nx * ny);
+  const inCore = new Uint8Array(nx * ny);
   for (let i = 0; i < nx; i++)
     for (let j = 0; j < ny; j++) {
       const cx = (xs[i]! + xs[i + 1]!) / 2;
       const cy = (ys[j]! + ys[j + 1]!) / 2;
       if (rects.some((r) => cx > r.x0 && cx < r.x1 && cy > r.y0 && cy < r.y1)) inRect[i * ny + j] = 1;
+      if (real.some((r) => cx > r.x0 && cx < r.x1 && cy > r.y0 && cy < r.y1)) inCore[i * ny + j] = 1;
     }
   // the outside: from the border cells (the padding round the rectangles), through cells in no rectangle
   const outside = new Uint8Array(nx * ny);
@@ -162,7 +168,7 @@ export function filledRegion(rects: readonly Rect2[]): FilledRegion {
   }
   const filled = new Uint8Array(nx * ny);
   for (let k = 0; k < nx * ny; k++) filled[k] = outside[k] === 1 ? 0 : 1;
-  return { xs, ys, filled, real: inRect };
+  return { xs, ys, filled, real: inCore };
 }
 
 /** ⭐ The cell index of `v` among the sorted cuts `cs` (the cell `[cs[i], cs[i+1]]` holding it; on a cut, the cell after it); −1 outside. */
@@ -421,12 +427,17 @@ export function stackOf(faces: readonly MapFace[], n: Vec3, t: Vec3, b: Vec3, co
   for (const p of planes) {
     const covers = against.filter((g) => Math.abs(dot(g.centre, n) - p.level) <= MAP_COPLANAR_M);
     const rects: Rect2[] = [];
+    const cores: Rect2[] = [];
     for (const f of p.faces) {
       const own = rectOf(f);
       const parts = f.part === undefined ? [own] : exposedRects(own, covers.filter((g) => g.part !== f.part).map(rectOf));
-      for (const r of parts) rects.push({ x0: r.x0 - MAP_GROW_M, x1: r.x1 + MAP_GROW_M, y0: r.y0 - MAP_GROW_M, y1: r.y1 + MAP_GROW_M });
+      for (const r of parts) {
+        rects.push({ x0: r.x0 - MAP_GROW_M, x1: r.x1 + MAP_GROW_M, y0: r.y0 - MAP_GROW_M, y1: r.y1 + MAP_GROW_M });
+        cores.push(r);
+      }
     }
-    for (const comp of components(rects)) groups.push({ depth: p.level, region: filledRegion(comp.map((k) => rects[k]!)) });
+    // ⭐⭐⭐ (2026-11-09, §7) grown to join and close; REAL where the faces truly are (`filledRegion`'s `cores`)
+    for (const comp of components(rects)) groups.push({ depth: p.level, region: filledRegion(comp.map((k) => rects[k]!), comp.map((k) => cores[k]!)) });
   }
   groups.sort((a, c) => c.depth - a.depth);
   return groups;
@@ -662,9 +673,10 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
  * on both travels keeps its depth until the frame turn (Steps 6–7: the orbit tilts at the real edge).
  */
 export function stackDepthAt(
-  s: { readonly groups: readonly MapGroup[]; readonly e?: number },
+  s: { readonly groups: readonly MapGroup[]; readonly e?: number; readonly tLo?: number; readonly tHi?: number; readonly bLo?: number; readonly bHi?: number },
   x: number,
   y: number,
+  foot?: readonly [number, number],
 ): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true } | null {
   let front = -1;
   for (let g = 0; g < s.groups.length; g++)
@@ -676,8 +688,14 @@ export function stackDepthAt(
   if (e !== undefined && (front < 0 || s.groups[front]!.depth <= e + MAP_COPLANAR_M)) {
     const mine = s.groups.map((gr, g) => ({ gr, g })).filter((q) => Math.abs(q.gr.depth - e) <= MAP_COPLANAR_M);
     if (mine.length > 0 && !mine.some((q) => regionReal(q.gr.region, x, y))) {
-      const c = closedAlong(mine.map((q) => q.gr.region), x, y);
+      const rs = mine.map((q) => q.gr.region);
+      const c = closedAlong(rs, x, y);
       if (c.x || c.y) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
+      // ⭐⭐⭐ (2026-11-09, §7) AN OPEN VOID THE HELD PIECE CANNOT ENTER IS SURFACE: a floor below (`front`, deeper than the plane), the void's opening on the
+      // plane (`voidOpening`) narrower than the piece's footprint (`foot`, its two smallest sizes, any way round) — the gizmo stays on the plane. ⛔ At its
+      // real depth the piece, centred on the gizmo, came down into a notch or a rebate it could not fit: along a 13 mm rebate every step blocked
+      if (foot !== undefined && front >= 0 && s.groups[front]!.depth < e - MAP_COPLANAR_M && !pieceEnters(foot, voidOpening(s, rs, x, y)))
+        return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
     }
   }
   if (front >= 0) return { depth: s.groups[front]!.depth, group: front, inside: true };
@@ -688,6 +706,60 @@ export function stackDepthAt(
   });
   const b = best as { depth: number; group: number; d: number } | null;
   return b === null ? null : { depth: b.depth, group: b.group, inside: false };
+}
+
+/** ⭐ (2026-11-09, §7) a piece enters a void this much (m) wider than the opening — the goal slots are cut to their piece (`D136`: contact is allowed). */
+export const VOID_FIT_TOL_M = 0.0005;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, §7) THE VOID'S OPENING through (`x`, `y`) on a facet's plane: its run along `x` and along `y` — from the point to the plane's first real
+ * face (`regionReal` on `rs`) each way, or to the facet's extents (`tLo` … `bHi`; the region's own bounds without them). Read at the PLANE: an undercut is
+ * measured by its mouth.
+ */
+export function voidOpening(
+  s: { readonly tLo?: number; readonly tHi?: number; readonly bLo?: number; readonly bHi?: number },
+  rs: readonly FilledRegion[],
+  x: number,
+  y: number,
+): readonly [number, number] {
+  const real = (u: number, v: number): boolean => rs.some((r) => regionReal(r, u, v));
+  const run = (along: "x" | "y"): number => {
+    const own = along === "x" ? rs.flatMap((r) => [r.xs[1] ?? 0, r.xs[r.xs.length - 2] ?? 0]) : rs.flatMap((r) => [r.ys[1] ?? 0, r.ys[r.ys.length - 2] ?? 0]);
+    const lo = (along === "x" ? s.tLo : s.bLo) ?? Math.min(...own);
+    const hi = (along === "x" ? s.tHi : s.bHi) ?? Math.max(...own);
+    const p = along === "x" ? x : y;
+    const cuts = [...new Set([lo, hi, ...rs.flatMap((r) => (along === "x" ? r.xs : r.ys)).filter((c) => c > lo && c < hi)])].sort((a, b) => a - b);
+    const at = (m: number): boolean => (along === "x" ? real(m, y) : real(x, m));
+    let up = hi;
+    for (let k = 0; k < cuts.length - 1; k++) {
+      const a = cuts[k]!;
+      const b = cuts[k + 1]!;
+      if (b <= p) continue;
+      if (at((Math.max(a, p) + b) / 2)) {
+        up = Math.max(a, p);
+        break;
+      }
+    }
+    let down = lo;
+    for (let k = cuts.length - 1; k > 0; k--) {
+      const a = cuts[k - 1]!;
+      const b = cuts[k]!;
+      if (a >= p) continue;
+      if (at((a + Math.min(b, p)) / 2)) {
+        down = Math.min(b, p);
+        break;
+      }
+    }
+    return Math.max(0, up - down);
+  };
+  return [run("x"), run("y")];
+}
+
+/** ⭐ (2026-11-09, §7) the piece's footprint (its two smallest sizes) through an opening, either way round. */
+export function pieceEnters(foot: readonly [number, number], open: readonly [number, number]): boolean {
+  const f = [Math.min(foot[0], foot[1]), Math.max(foot[0], foot[1])];
+  const o = [Math.min(open[0], open[1]), Math.max(open[0], open[1])];
+  return f[0]! <= o[0]! + VOID_FIT_TOL_M && f[1]! <= o[1]! + VOID_FIT_TOL_M;
 }
 
 /** ⭐ The map's knobs: the edge's slow stretch on each face (`edgeMm`) and the angle (deg) before a slice's end it is crossed in. */
