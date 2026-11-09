@@ -8,6 +8,9 @@
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
 * ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
+* ⭐⭐⭐ **2026-11-09 — CONTINUE FROM §8** (branch `1.0.114from1.0.112-`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
+  sections intricate — the owner went back to `1.0.112-`): F7b ported (the calm on slanted facets), the lines refined (I17's drawing), a closed void with a
+  floor keeps its depth (the owner's amendment); open: I17's reach by a finger far out, and the input-driven design on world-plane cuts (proposed, §8.5).
 * **Where things stand** (2026-11-08): branch **`1.0.110-`** (from `469653b`; the clean-up's line: `1.0.108from1.0.100-Polar-orbit-with-calm` →
   `1.0.109-Polar-orbit-with-cube-assembly` → here). Live: build **`0bf3134`** (`Scene_1` a cube). `npm run verify`: **1642** vectors passing. **Nothing
   of F1 – F10 is built.** ⛔ No device close on anything since §18.
@@ -280,7 +283,7 @@ approach down to the gizmo clears (enterable). ⚠ Boxes only, the piece centred
 | every void WITH A FLOOR (recess, groove, U-slot, L, undercut, notch) | two 10 – 60 mm SPIKES, one at each rim (1.6 mm wide each); the piece blocked there | ⛔ a BUG: the faces' rectangles are grown `MAP_GROW_M` (1.6 mm) to close the 3 mm joints between the cores, and the growth moved every rim INTO its void — the map read a face, the wiring cast the floor. ⭐ **The cube's bottom groove (x 103.5 – 116.5) was already bridged (closed across); its "wall" was these two strips, at x 104 and 117** |
 | an OPEN void narrower than the piece (a 13 mm notch or rebate) | the real depth: the piece, centred on the gizmo, down in it — **201 of 201 steps blocked** along a 13 mm rebate, every piece | D3's real depth for any void open on both travels, whatever the piece |
 | an open void the piece fits (a 50 mm notch / rebate, a 30 mm piece) | the real depth, enterable; blocked near the riser (13 of 151) | as designed — the riser contact is I2's kind (§6 (d), *normal*) |
-| a closed void, any size | bridged (D3 amended, 2026-11-05) | — |
+| a closed void, any size | bridged (D3 amended, 2026-11-05) — ⛔ **amended again 2026-11-09 (§8.3): bridged only with NO floor; a floor → its real depth where the piece fits** | — |
 | a through hole / slot (no floor) | the mouth's plane | — |
 | ⛔ the alternative weighed: real depth wherever the piece FITS, closed voids too | enterable, but crossing a 40 mm slot with a 30 mm piece blocked 28 of 201 steps (the piece sinks into the slot and meets its walls); and it reverses D3's amendment | rejected |
 
@@ -291,7 +294,7 @@ approach down to the gizmo clears (enterable). ⚠ Boxes only, the piece centred
    on both travels and a floor lies below, the void's OPENING (`voidOpening`: its run along `t` and `b` on the plane, to the first real face or the facet's
    extents — an undercut measured by its mouth) against the held piece's FOOTPRINT (`heldFoot`: its two smallest sizes, any way round, `pieceEnters`,
    `VOID_FIT_TOL_M` 0.5 mm): too narrow → `bridged`, the plane. No piece held → as before.
-3. **Unchanged**: a closed void is bridged whatever the piece (D3 amended); a void with no floor stays at its mouth; an open void the piece fits keeps its
+3. **Unchanged** (⛔ the first clause amended 2026-11-09, §8.3 — a closed void with a floor keeps its depth where the piece fits): a closed void is bridged whatever the piece (D3 amended); a void with no floor stays at its mouth; an open void the piece fits keeps its
    real depth. ⭐ **On the cube**: the bottom groove flat; the top-left notch (~50 mm) and the bottom-left (~90 mm) keep their depth — both held pieces fit
    (41.3 × 45, 44.8 × 51.8 mm): the notch the owner judged normal (§6 (a)) is untouched.
 
@@ -305,3 +308,102 @@ paths. The one parting the rule made is the one meant: `close_top_grooves`, the 
 None of the new stalls is over a void (the sides at x ±247.5, the top off its grooves, the bottom with the piece under the floor — where the old ones were).
 ⚠ Open: the face map outlines a face by its BOUNDING RECTANGLE, so a hole inside ONE face (a round hole cut in a plate) is invisible to it — only the cast
 finds it. Every part is a box today; a non-box part needs the region from the triangles.
+
+## 8. ⭐⭐⭐ `1.0.114from1.0.112-` (2026-11-09) — F7b, the lines refined, the closed void with a floor; open: I17's reach
+
+### 8.1 ✅ F7b — the calm on every side facet, slanted ones included (ported; live first as `32732ee`)
+
+Ported unchanged from `1.0.113-not-used` (its §8.3 holds the full record): `calmTarget`, `calmStep`, `calmShown` (`input/orbit_calm.ts`) — the calm in the
+FACET's own frame (its normal as it is, its level `t`, its `b` up the slope; dy's run its own extent along `b`); a vertical facet exactly as before (the
+cube untouched); the caps none; both shares whole where the frame changes. Simulated on a horizontal hexagonal prism (`tests/calm_slanted.test.ts`, 6):
+10° of orbit off a 30° face's normal shows 2.5° (the old rule 25°); no sweep swings more than the old rule. ⛔ NOT ported from `1.0.113-`: the step walk
+(F8), the line joins by bisection (F6) and `closedAlong` on real faces — the owner: *"too many back and forth of the red and green sections"* at the notches.
+
+### 8.2 Open, for later improvement
+
+### I17 — a narrow face cannot be held under the gizmo by a finger far out (the quads never show it)
+
+**The owner** (on the device, Piece42's slanted sides, proud of the cube's +x side): *"when I put the gizmo on the slanted face with the green line and
+take the piece far away, the orientation of the slanted face under the gizmo does not show in the quads."*
+
+**Checked in the page** (`scripts/probes/page_eval.mjs`, the orbit reset at yaw −2.5°, pitch 30°, far out): the code DOES carry the face — the gizmo at
+(269, 455, 174) mm on Piece42's slanted side, its normal (0.26, 0, −0.96) (15° off −z), `orientationFrames` / `quadFrames` add it as the fourth quad
+(drawn: a vertical quad turned 15°, outlined yellow); at yaw 0° the gizmo is back on Piece42's front and the fourth quad is gone. **A hand cannot get
+there**:
+
+1. **The slanted face is tiny in yaw.** Along the green it covers only yaw −3.25° … −1.5° — 1.75°. Far out the HUD reads `orbit 5.11°/mm dx`: **0.34 mm
+   of finger**. §1.1's band (`motionDeadbandMm`, 3.5 mm) ignores the first 3.5 mm of a drag before anything moves, so a finger cannot stop the gizmo
+   inside that window.
+2. **The quads switch even later.** They take the new face only once the gizmo lies 5 mm off the current face's plane (`faceSwitches`,
+   `gizmoEdgeMarginMm`, the *gizmo face edge margin* slider) — the window shrinks to ~1.35°, **0.26 mm of finger**.
+3. **The green line misleads.** It is drawn from 96 samples round the turn — one every **3.75°** (~25 mm on that side); only the sample at yaw 0° lands
+   on Piece42 (its front, x 288.8 mm), its neighbours on the side behind (x 247.5 at z 166 / 216), so the line is two chords THROUGH the part. Where the
+   eye sees the line cross the slanted face, the gizmo is really on Piece42's front or on the cube's side, and the quads show those. (The red, 64 samples
+   over 180° — one every 2.9°, ~19 mm of height — lands 2 – 6 samples on each of the part's slopes, so it follows them: the owner's *"why does the red
+   follow the slanted faces whereas the green crosses through"*.)
+
+**The root**: the gizmo moves by ANGLE (`mapGizmo` of the orbit's yaw / pitch), so a face seen nearly edge-on from the map's centre — a proud part's side,
+37 mm deep — is a fraction of a degree, whatever its size; the drawn lines sample by angle too. Every narrow face far out has it.
+
+**Candidate fixes**: ✅ (a) BUILT (2026-11-09, the owner: *"build the fix"*) — §8.4; (b), (c) not built. (a) the lines sampled ADAPTIVELY — subdivided where the depth changes between two neighbours until they follow the
+surface within ~1 mm (drawing only, cached per line) — fixes 3, not 1 – 2; (b) ⭐ the gizmo moved by DISTANCE on the surface rather than by angle (the
+input-driven gizmo on world-plane cuts, the Fable simulation of 2026-11-09: the slanted face is then 37 mm of travel at any distance, the lines the exact
+cuts) — fixes all three; (c) the edge margin read on the glass or relative to the face's size — eases 2 only.
+
+### 8.3 ✅ THE VOID RULE AMENDED AGAIN — a closed void is bridged only where it has NO FLOOR (2026-11-09, the owner)
+
+> The owner, on the top's black channel (130 mm wide, ~32 mm deep, running the whole depth front to back) — *"why does the red section completely avoid
+> the bottom of the black channel recess?"*; the rule restated (D3 amended, 2026-11-05: *a void closed on either line's travel is bridged*) → *"Modify this
+> rule: a void that is closed on either line's travel (faces of that plane on both sides of it along the green's travel or along the red's) and has no
+> bottom (there is no bottom of the void where the gizmo can project) is bridged. Therefore, for the black channel, a green section correctly bridges, the
+> red section would catch the bottom of the channel because the gizmo can project onto it"* → asked (the gizmo is one point on both lines: a green
+> bridged while the red is on the floor parts them by the channel's depth) — *"I was meaning the green section bridges it when the green section is on the
+> vertical face (not when the green section is on the horizontal face)"*; and the piece-fit rule (§7) for closed voids too: *"Yes"*.
+
+**Why it was bridged** (probed: `stackDepthAt` over every facet of the cube, a 10 mm grid): the channel is closed ACROSS (the top's faces on both sides
+along x — the green's travel over the top), so D3's amendment bridged it for BOTH lines (one gizmo), though it is open along the red's travel. The same
+rule bridged three strips on the front / back near the top (the channel's mouths), a 10 mm groove under the bottom, the rims round Piece42 (+x) and round
+a proud part on the bottom.
+
+**The rule as built** (`stackDepthAt`, `input/face_map.ts`; the wiring's cast unchanged):
+1. A void closed on a travel with **no floor under the point** — no deeper group of the facet's stack there (a slot through; the channel seen from the
+   FRONT: it runs through to the back) — **bridged** on the facet's plane, as before.
+2. A void closed on a travel **with a floor** — **its real depth**: `inside`, the wiring casts onto the floor (D3). From the top, the channel: the red runs
+   along its floor, the green steps down its wall, across its floor and back up.
+3. ⭐ **The piece-fit rule for closed voids too** (§7's, the owner's *"Yes"*): a void with a floor the held piece cannot enter (`voidOpening` against
+   `heldFoot`, 0.5 mm) — **bridged**, whether closed or open. The cube's 10 mm bottom groove and the rims round Piece42 stay on the plane; the channel
+   (130 mm; the pieces 41 × 45 / 45 × 52 mm) keeps its depth.
+4. ⭐ **The floor read as ANY deeper group under the point** — ⛔ `front` alone (the frontmost group holding the point): a hole enclosed by the plane's own
+   face is filled in that face's region (`filledRegion` closes holes), so the plane's group came first and the floor beneath it was never seen.
+
+**Measured** (the page, the cube): the red at yaw 98° over the top — on the channel's floor (y 466 mm) from pitch 58° to 82°, then onto the top (499);
+the green at pitch 70° over the top — 466 across the channel (x −132 … −20), 498 elsewhere; the front's green at the mouths' height (y 482) — the front's
+plane (z −51) straight across the channel's mouth.
+
+### 8.4 ✅ I17 (3) — THE LINES SAMPLED ADAPTIVELY (`refineStart`, `refineStep`, `refineNow` — `input/section_hull.ts`)
+
+* Every interval between two neighbouring samples is split at its middle while the middle's point lies more than **1 mm** off the chord
+  (`LINE_REFINE_M`), level by level over the whole line (breadth first — a budget of **160** evaluations a line, shared fairly, never spent on the first
+  jump), at most **7** halvings. A real jump halves until its chord lies within 1 mm of the riser — kept as a jump; the join rule breaks it.
+* ⭐ **A slice a frame**: a new line (its key changed — the line being dragged across) is drawn from its base samples (96 green / 63 red, as before); a
+  line that stays refines **32 evaluations a frame** (`LINE_REFINE_PER_FRAME`). ⛔ All at once: 18.6 ms for one green on the desktop (256 evaluations,
+  ~0.07 ms each) — a hitch on every dy frame on a phone. The mesh at a fixed size (the base + the budget; unused segments collapsed).
+* ⛔ First built reading the quarters too on the first level: 96 intervals × 3 evaluations spent the whole budget before any split — Piece42 still a chord.
+* **Measured** (the page, the green at pitch 30° by Piece42): its slopes drawn — x 250 → 252 → 264 → 287 → 291 mm up the near side, the front, and down
+  the far side (was: two chords through the part); 118 samples, settled in 5 frames, a step 0.9 ms, a new line's base 5.3 ms (as before).
+* ⚠ It fixes I17's third point (the line misleads) only: far out the slanted face is still 0.26 – 0.34 mm of finger (points 1 – 2, §8.2).
+
+### 8.5 Proposed, NOT built — the input-driven gizmo on world-plane cuts (a Fable simulation, 2026-11-09)
+
+The owner asked for a logic keeping both lines world planes while the gizmo reaches every face, steps allowed. Proposed: the finger moves the gizmo BY
+DISTANCE along the TRUE outline of the parts cut by two world planes (the facet's frame choosing them), the camera from the big facet plus ≤ 20° of tilt;
+simulated on the cube's 240 faces: 0 mm off the planes, 100 % of the exposed area reached (the map today ~80 %), no jump. ⚠ It is §28.4 of
+`TILTED_ORBIT_REBUILD_SCOPE.md` (branch `1.0.107-Close-in-atlas`) — proposed 2026-11-06, not adopted. It removes §31.4's bijection (no second surface to
+map onto) but reopens the cap exits (C1 a hold, B / A rolls — the owner's *"no roll"*), several-loop cuts and path dependence (0.7 mm median on the cube,
+75 – 100 mm on synthetic shapes). Recommended: not now — an offline test of the cap exits and the loops first.
+
+### 8.6 Vectors
+
+`tests/calm_slanted.test.ts` (6, F7b, RED on `f82bfbe`); `tests/line_refine.test.ts` (6, all RED on `b073178`); `tests/void_bridge.test.ts` and
+`tests/void_rims_fit.test.ts` rewritten to the amended rule (7 RED on `b073178`; the two *no floor → bridged* cases pass on both — the rule kept);
+`face_map.test.ts`'s wiring strings. **1696**.

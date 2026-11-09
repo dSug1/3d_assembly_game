@@ -11,7 +11,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
+import { gizmoJoins, insertIndex, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -375,7 +375,9 @@ function heldFoot(st: SceneState): readonly [number, number] | undefined {
  * over an empty slot (a hole the region closes) the gizmo at its BOTTOM — the region still chooses the face and keeps the gizmo continuous across the rim,
  * only the depth is the real one; a slot through the whole assembly (no hit): the region's plane. The piece and the camera ride the shell (Step 2).
  * ⭐⭐⭐ (2026-11-05, the owner) D3 AMENDED — a void CLOSED on the green's or the red's travel (`stackDepthAt`'s `bridged`): the gizmo straight through on
- * the facet's plane, the lines with it; a void open on both keeps its depth until the frame turn (Steps 6–7).
+ * the facet's plane, the lines with it; a void open on both keeps its depth until the frame turn (Steps 6–7). ⭐⭐⭐ (2026-11-09, the owner) AGAIN: only
+ * a closed void with NO floor under the point is bridged; one with a floor is `inside` here — the cast lands on its floor (the top's channel: the red along
+ * its floor, the green down and across it) — unless the held piece cannot enter it.
  */
 function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
   const map = faceMapOf(st);
@@ -611,6 +613,9 @@ function sampleJoins(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | nu
 /** ⭐ The section lines' samples (the green round the yaw, the red along the pitch — the gizmo's vertex added to each). */
 const GREEN_SAMPLES = 96;
 const RED_SAMPLES = 64;
+/** ⭐ (2026-11-09, I17) the mesh's fixed segment counts: the base samples + the refinement's budget (`refineSamples`) + the gizmo's vertex — unused collapsed */
+const GREEN_SEGS = GREEN_SAMPLES + LINE_REFINE_BUDGET + 1;
+const RED_SEGS = RED_SAMPLES + LINE_REFINE_BUDGET;
 /** ⭐ The lines lifted off the surface along its face's axis (m) — never in it. */
 const SECTION_LIFT_M = 0.002;
 
@@ -626,32 +631,40 @@ function sectionLinesFrame(st: SceneState): void {
   const o = mapOpts(st);
   const optKey = `${o.edgeMm}|${o.edgeDeg}`;
   const lift = (q: Vec3, n: Vec3): Vector3 => new Vector3(q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M);
-  const samples = (at: (x: number) => readonly [number, number], params: readonly number[]) => {
-    const pts: (Vector3 | null)[] = [];
-    const surf: (Vec3 | null)[] = [];
-    for (const x of params) {
-      const [yw, pt] = at(x);
-      const m = mapGizmo(st, yw, pt);
-      pts.push(m === null ? null : lift(m.hit.point, m.t.normal));
-      surf.push(m === null ? null : m.t.surface);
+  // ⭐⭐⭐ (2026-11-09, I17) the samples REFINED where the line leaves its chord by more than 1 mm (`refineStart`, `refineStep`): a narrow face (Piece42's
+  // slanted sides, 6.5° of yaw against a sample every 3.75°) is drawn on its surface, never as a chord through the part — drawing only. A new line (its
+  // key changed: the line being dragged across) is drawn from its base samples; a line that stays refines a slice a frame (`LINE_REFINE_PER_FRAME`)
+  type Val = { readonly p: Vec3; readonly s: Vec3 };
+  const evOf = (at: (x: number) => readonly [number, number]) => (x: number): Val | null => {
+    const [yw, pt] = at(x);
+    const m = mapGizmo(st, yw, pt);
+    if (m === null) return null;
+    const n = m.t.normal;
+    const q = m.hit.point;
+    return { p: [q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M], s: m.t.surface };
+  };
+  const drawn = (ref: RefineState<Val>) => {
+    const r = refineNow(ref);
+    return { params: r.params, pts: r.vals.map((v) => (v === null ? null : new Vector3(v.p[0], v.p[1], v.p[2]))), surf: r.vals.map((v) => (v === null ? null : v.s)) };
+  };
+  const line = (cache: SceneState["asmRedCache"], key: string, at: (x: number) => readonly [number, number], base: readonly number[], closed: boolean, period: number) => {
+    const ev = evOf(at);
+    if (cache === null || cache.key !== key) {
+      const ref = refineStart(base, closed, period, ev);
+      return { key, ref, ...drawn(ref) };
     }
-    return { pts, surf };
+    if (!cache.ref.done && refineStep(cache.ref, ev, (v) => v.p)) Object.assign(cache, drawn(cache.ref));
+    return cache;
   };
   // the red's samples (per the map's yaw): the pitch from −90° to +90°
   const rKey = `${parts}#R#${sh.yaw.toFixed(7)}#${optKey}`;
-  if (st.asmRedCache === null || st.asmRedCache.key !== rKey) {
-    const params = sectionFixed(Math.PI, RED_SAMPLES - 1, false);
-    st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };
-  }
+  st.asmRedCache = line(st.asmRedCache, rKey, (x) => [sh.yaw, x - Math.PI / 2], sectionFixed(Math.PI, RED_SAMPLES - 1, false), false, Math.PI);
   // the green's samples (per the map's pitch): the yaw round the circle
   const gKey = `${parts}#G#${sh.pitch.toFixed(7)}#${optKey}`;
-  if (st.asmGreenCache === null || st.asmGreenCache.key !== gKey) {
-    const params = sectionFixed(2 * Math.PI, GREEN_SAMPLES, true);
-    st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };
-  }
+  st.asmGreenCache = line(st.asmGreenCache, gKey, (x) => [x, sh.pitch], sectionFixed(2 * Math.PI, GREEN_SAMPLES, true), true, 2 * Math.PI);
   // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame
   const gv = lift(g, sh.t.normal);
-  const key = `${rKey}|${gKey}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
+  const key = `${rKey}|${gKey}|${st.asmRedCache.params.length}|${st.asmGreenCache.params.length}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
@@ -667,7 +680,11 @@ function sectionLinesFrame(st: SceneState): void {
   gSurf.splice(gi, 0, sh.t.surface);
   const n = green.length;
   const gJoin = around(green, gSurf, gi, (gi - 1 + n) % n, (gi + 1) % n);
-  for (let k = 0; k <= GREEN_SAMPLES; k++) {
+  for (let k = 0; k < GREEN_SEGS; k++) {
+    if (k >= n) {
+      lines.push([rest, rest]); // ⭐ (I17) beyond this line's samples: collapsed
+      continue;
+    }
     const p0 = green[k] ?? null;
     const p1 = green[(k + 1) % n] ?? null;
     const forced = (k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null;
@@ -681,14 +698,18 @@ function sectionLinesFrame(st: SceneState): void {
   red.splice(ri, 0, gv);
   rSurf.splice(ri, 0, sh.t.surface);
   const rJoin = around(red, rSurf, ri, ri - 1, ri + 1);
-  for (let k = 0; k < RED_SAMPLES - 1; k++) {
+  for (let k = 0; k < RED_SEGS; k++) {
+    if (k >= red.length - 1) {
+      lines.push([rest, rest]); // ⭐ (I17) beyond this line's samples: collapsed
+      continue;
+    }
     const p0 = red[k] ?? null;
     const p1 = red[k + 1] ?? null;
     const forced = k + 1 === ri ? rJoin[0] : k === ri ? rJoin[1] : null;
     lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(red, rSurf, k, k + 1)) ? [p0, p1] : [rest, rest]);
   }
   if (st.asmSectionLines === null) {
-    const colours = lines.map((_, i) => (i <= GREEN_SAMPLES ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
+    const colours = lines.map((_, i) => (i < GREEN_SEGS ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);
     st.asmSectionLines.isPickable = false;
     st.asmSectionLines.alwaysSelectAsActiveMesh = true;

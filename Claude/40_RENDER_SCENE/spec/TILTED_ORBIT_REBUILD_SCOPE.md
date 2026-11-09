@@ -787,7 +787,7 @@ dy and mixed dx-dy across the assembly … check jumps + back-and-forth + blocka
    result. A step met a part and slid the piece down; the gizmo was re-read lower; the way back to the height kept was tried round that lower gizmo — a
    place lower than the real one, free — and taken: down and up every two frames (probed, seed 7 `DIAG`: v 0.6865 ↔ 0.6808 at the pointer's cadence). Now
    an angle's place is a function of the angle alone. Probes: 27 back-and-forth → 0.
-2. ⭐⭐⭐ **THE VOID CLOSED ON A TRAVEL** (`stackDepthAt`'s `bridged`, `closedAlong`, `regionReal`; `tests/void_bridge.test.ts`) — **D3 AMENDED**: on the
+2. ⭐⭐⭐ **THE VOID CLOSED ON A TRAVEL** (⛔ AMENDED AGAIN 2026-11-09, the owner — bridged only where it has NO floor; a floor keeps its depth where the held piece fits: `POLAR_ORBIT_CLEANUP.md` §8.3) (`stackDepthAt`'s `bridged`, `closedAlong`, `regionReal`; `tests/void_bridge.test.ts`) — **D3 AMENDED**: on the
    facet's plane (its main group's), no face of that plane under the point but its faces on both sides along `t` (the green's travel on a side) or `b`
    (the red's): the gizmo and both lines go STRAIGHT THROUGH on the plane, never cast to the void's bottom; a cast still takes what stands IN FRONT of the
    plane (a part rising out of the void). A void open on both travels keeps its depth until the frame turn (Steps 6–7) — the owner's attachment 1.

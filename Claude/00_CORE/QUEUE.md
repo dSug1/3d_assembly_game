@@ -14,9 +14,10 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.112-`, from `1.0.111-Polar-orbit-fixes` — the best piece orbit so far)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.114from1.0.112-`, from `1.0.112-Polar-orbit-Final-with-slide` — `1.0.111-Polar-orbit-fixes` the best piece orbit so far)
 
 ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
+⭐⭐⭐ **2026-11-09 — `1.0.114from1.0.112-` (CONTINUE FROM `POLAR_ORBIT_CLEANUP.md` §8)**: `1.0.112-` renamed `1.0.112-Polar-orbit-Final-with-slide`; `1.0.113-` (the step walk F8, the line joins F6) renamed `1.0.113-not-used` — the owner: *"too many back and forth of the red and green sections"* at the notches; main rolled back to `1.0.112-` + F7b. Built here: **F7b** (the calm on every side facet, slanted ones included), **the lines refined** (I17's drawing: a narrow face drawn on its surface, a slice a frame), **a closed void bridged only where it has NO floor** (the owner's amendment of D3; the piece-fit rule for closed voids too — the top's channel: the red along its floor). Open: I17's reach by a finger far out; the input-driven design on world-plane cuts proposed, not adopted (§8.5).
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
 merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per
 change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
@@ -28,7 +29,7 @@ depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the ed
 ⭐⭐⭐ **2026-11-09 — THE FIXES BUILT** (`1.0.111-Polar-orbit-fixes`): R1 (the exposed faces), R2, R4 (the ring's jump crossed), R3, R6 (the slide lets go at its edge), the calm's branch cut, the map's catch-up hold; the walks re-run: the seam trap 36 → 1, the slide traps 17 → 3; then the void crossing (a narrow groove crossed whole, else BLOCKED — never deferred): the blocked stalls 51 → 21; ✅ the owner closed three open points with nothing built — the left notch (not reproduced on the device), the poles, the close-in block at a protruding part: all normal; ✅ the fourth — a groove too narrow for the piece — studied on synthetic voids and built on `1.0.112-`: the rims where the faces end, an open void the held piece cannot enter is surface (§7); **1682** vectors → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §6.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1682 golden vectors, all passing** — MEASURED 2026-11-09 (the count's home; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
+✅ `npm run verify`: **1696 golden vectors, all passing** — MEASURED 2026-11-09 (the count's home; 1688 with F7b, 1682 before it, §8; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
 
 ⭐ The 2026-09-30 record block (`D180`, the paused playability program, the inputs' simplification) moved → [`history/2026-11-09_queue_spent_blocks.md`](history/2026-11-09_queue_spent_blocks.md).
 
