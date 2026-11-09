@@ -224,15 +224,18 @@ export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): 
     const ny = r.ys.length - 1;
     const i = cellOf(r.xs, x);
     const j = cellOf(r.ys, y);
+    // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8) closed by REAL faces on both sides (`real`, the cores) — ⛔ by the FILLED cells, the faces grown by
+    // `MAP_GROW_M`: the 1.6 mm strip along an OPEN edge was closed by its own face's growth (the strip's row filled all along) and read bridged — the gizmo
+    // held on the plane there, then dropped to the void's floor (the top-left notch from the side: the step walk read no step at its foot)
     if (j >= 0)
       for (let a = 0; a < r.xs.length - 1; a++) {
-        if (r.filled[a * ny + j] !== 1) continue;
+        if (r.real[a * ny + j] !== 1) continue;
         if (r.xs[a]! < x) xLo = true;
         if (r.xs[a + 1]! > x) xHi = true;
       }
     if (i >= 0)
       for (let b = 0; b < ny; b++) {
-        if (r.filled[i * ny + b] !== 1) continue;
+        if (r.real[i * ny + b] !== 1) continue;
         if (r.ys[b]! < y) yLo = true;
         if (r.ys[b + 1]! > y) yHi = true;
       }
@@ -706,6 +709,150 @@ export function stackDepthAt(
   });
   const b = best as { depth: number; group: number; d: number } | null;
   return b === null ? null : { depth: b.depth, group: b.group, inside: false };
+}
+
+/** ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8) a depth difference below this (m) is no step — the coplanar tolerance's double. */
+export const STEP_MIN_M = 2 * MAP_COPLANAR_M;
+
+/** ⭐ A region's REAL rectangles (its cells in a face — never a closed hole), cached per region. */
+const REAL_RECTS = new WeakMap<FilledRegion, readonly Rect2[]>();
+function realRects(r: FilledRegion): readonly Rect2[] {
+  const known = REAL_RECTS.get(r);
+  if (known !== undefined) return known;
+  const ny = r.ys.length - 1;
+  const out: Rect2[] = [];
+  for (let i = 0; i < r.xs.length - 1; i++)
+    for (let j = 0; j < ny; j++) if (r.real[i * ny + j] === 1) out.push({ x0: r.xs[i]!, y0: r.ys[j]!, x1: r.xs[i + 1]!, y1: r.ys[j + 1]! });
+  REAL_RECTS.set(r, out);
+  return out;
+}
+
+/** ⭐ The nearest point of the rectangles to (`x`, `y`) and its distance (0 inside one). */
+function nearestOn(rs: readonly Rect2[], x: number, y: number): { readonly q: readonly [number, number]; readonly d: number } | null {
+  let best: { q: [number, number]; d: number } | null = null;
+  for (const r of rs) {
+    const qx = Math.min(r.x1, Math.max(r.x0, x));
+    const qy = Math.min(r.y1, Math.max(r.y0, y));
+    const d = Math.hypot(qx - x, qy - y);
+    if (best === null || d < best.d) best = { q: [qx, qy], d };
+  }
+  return best;
+}
+
+/** ⭐ How far the ray from (`x`, `y`) along (`dx`, `dy`) (a unit) runs before it enters one of the rectangles (beyond `from`); `Infinity`: none. */
+function rayEntry(rs: readonly Rect2[], x: number, y: number, dx: number, dy: number, from: number): number {
+  let best = Infinity;
+  for (const r of rs) {
+    let t0 = -Infinity;
+    let t1 = Infinity;
+    for (const [p, d, lo, hi] of [[x, dx, r.x0, r.x1], [y, dy, r.y0, r.y1]] as const) {
+      if (Math.abs(d) < 1e-15) {
+        if (p <= lo || p >= hi) t0 = Infinity;
+        continue;
+      }
+      const a = (lo - p) / d;
+      const b = (hi - p) / d;
+      t0 = Math.max(t0, Math.min(a, b));
+      t1 = Math.min(t1, Math.max(a, b));
+    }
+    if (t0 < t1 && t1 > from) best = Math.min(best, Math.max(t0, from));
+  }
+  return best;
+}
+
+/** ⭐ How far the ray runs inside the facet's extents (`tLo` … `bHi`) — to its exit. */
+function rayExit(s: { readonly tLo: number; readonly tHi: number; readonly bLo: number; readonly bHi: number }, x: number, y: number, dx: number, dy: number): number {
+  let t1 = Infinity;
+  for (const [p, d, lo, hi] of [[x, dx, s.tLo, s.tHi], [y, dy, s.bLo, s.bHi]] as const) if (Math.abs(d) > 1e-15) t1 = Math.min(t1, Math.max((lo - p) / d, (hi - p) / d));
+  return Math.max(0, t1);
+}
+
+/** ⭐⭐⭐ (§8) Where the walk puts the gizmo: a place on the facet (`x`, `y`) and its depth — `null`: the place's own (cast it); `step`: on a step's face. */
+export interface StepWalk {
+  readonly x: number;
+  readonly y: number;
+  readonly depth: number | null;
+  /** on a step's face: its outward direction on the facet (`t`, `b`) — the face's normal; `null` on the deeper surface */
+  readonly step: readonly [number, number] | null;
+  /** ⭐ (§8) on a step's face, how much of ITS normal the gizmo shows (the rest the facet's): 0 at the face's two ends — the edges onto the deeper and the
+   * front surfaces, both the facet's normal — 1 midway; the normal TURNS over each edge (⛔ the face's own at its top edge: at the pole, on Piece44's
+   * edge, the gizmo faced sideways with the piece straight above — 37 frames "behind" in the walks) */
+  readonly turn: number;
+}
+
+/** ⭐ (§8) the share of a step face's normal at `f` of the way up it (0 … 1): a half sine — none at either edge, whole midway. */
+function stepTurn(f: number): number {
+  return Math.sin(Math.PI * Math.min(1, Math.max(0, f)));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F8 → I10, the owner: *"F8-I10 … Build the fix if it is still here"*) **THE GIZMO WALKS A STEP.** The
+ * gizmo's depth is cast along the facet's normal, so a face PARALLEL to it — a step's face: a notch's tread seen from the side, a proud part's sides seen
+ * from the top — is never a place: the gizmo jumped across it (Piece25's top and Piece37's bottom from the −x side; Piece44's four sides from the top:
+ * 0 landings in a 1° × 0.5° sweep; the notch's fold back, I14's jitter). ⭐ The rule, one for every travel (it reads the distance to the step, never the
+ * drag's direction): a FRONT region (a group in front of the place's depth `d0` by `STEP_MIN_M`, its real faces) within the window of its edge — on the
+ * deeper side, `w` = `share` × the step's height `J` (the front group's depth less the deeper surface's at the edge's foot, `depthAt`), at most the room
+ * there (to the facet's extent, half the way to the next front region) — moves the gizmo `(w + J) / w` times faster: along the deeper surface to the
+ * edge's foot, up the step's face, onto the front surface. At the window's outer end it is the place itself; at the edge, the front face's: continuous.
+ * Outside every window: untouched (`null`). `depthAt(x, y)`: the place's depth as the wiring reads it (D3's cast) — `d0` the place's own.
+ * ⭐⭐⭐ **AN EDGE NOTCH IS WALKED ON ITS STEP FACE ONLY** — a RECESS (the foot below the facet's plane `e`) whose deeper side runs out to the facet's rim
+ * before meeting another front region: the corner of two facets, each seeing the notch (from the side, the tread its step and the riser its deeper
+ * surface; from the top, the reverse). ⛔ Each facet walked both — the red up the −x side climbed the tread and the riser, then the top's walk took it back
+ * down to the tread and up the riser again (a fold, probed). Now the window is the whole deeper side and the gizmo crosses only the step's face: from the
+ * front surface's edge to the notch's INNER CORNER at the rim — where the other facet's own walk starts. Each face walked once, by the facet it faces
+ * across; both meet at the corner.
+ */
+export function stepWalk(
+  s: { readonly groups: readonly MapGroup[]; readonly e: number; readonly tLo: number; readonly tHi: number; readonly bLo: number; readonly bHi: number },
+  x: number,
+  y: number,
+  d0: number,
+  depthAt: (x: number, y: number) => number | null,
+  share: number,
+): StepWalk | null {
+  if (!(share > 0)) return null;
+  const eps = MAP_COPLANAR_M;
+  let best: { r: number; q: readonly [number, number]; dir: [number, number]; delta: number; w: number; J: number; dQ: number; edge: boolean } | null = null;
+  const tall = Math.max(...s.groups.map((g) => g.depth)) - d0;
+  for (const g of s.groups) {
+    if (!(g.depth > d0 + STEP_MIN_M)) continue;
+    const near = nearestOn(realRects(g.region), x, y);
+    // beyond any window — but in a recess (an edge notch's window runs to the rim)
+    if (near === null || !(near.d > 1e-9) || (near.d >= share * tall + eps && !(d0 < s.e - STEP_MIN_M))) continue;
+    const dir: [number, number] = [(near.q[0] - x) / near.d, (near.q[1] - y) / near.d];
+    // the edge's FOOT, just outside the front region: the deeper surface's depth there
+    const fx = near.q[0] - dir[0] * eps;
+    const fy = near.q[1] - dir[1] * eps;
+    const dQ = depthAt(fx, fy);
+    if (dQ === null || !(g.depth - dQ > STEP_MIN_M)) continue;
+    const J = g.depth - dQ;
+    // the room on the deeper side: to the facet's extent, and half the way to the next region in front of the foot
+    const fronts = s.groups.filter((h) => h.depth > dQ + STEP_MIN_M).flatMap((h) => realRects(h.region));
+    const exit = rayExit(s, fx, fy, -dir[0], -dir[1]);
+    const entry = rayEntry(fronts, fx, fy, -dir[0], -dir[1], eps);
+    // an EDGE notch: a recess open to the rim — its whole deeper side the window, its step face alone walked
+    const edge = dQ < s.e - STEP_MIN_M && exit < entry;
+    // (the edge window: the edge to the rim exactly — the rim itself in it, at the inner corner)
+    const w = edge ? exit + eps : Math.min(share * J, Math.min(exit, entry / 2));
+    if (!(w > eps) || (edge ? near.d > w + 1e-9 : near.d >= w)) continue;
+    const r = near.d / w;
+    if (best === null || r < best.r) best = { r, q: near.q, dir, delta: near.d, w, J, dQ, edge };
+  }
+  if (best === null) return null;
+  const { q, dir, delta, w, J, dQ, edge } = best;
+  // the edge notch: on the step's face only — at the rim the notch's inner corner, at the edge the front surface's
+  if (edge) {
+    const f = Math.min(1, Math.max(0, 1 - delta / w));
+    return { x: q[0] - dir[0] * eps, y: q[1] - dir[1] * eps, depth: dQ + f * J, step: [-dir[0], -dir[1]], turn: stepTurn(f) };
+  }
+  const a = (1 - delta / w) * (w + J);
+  if (a <= w) {
+    // on the deeper surface, toward the edge's foot (never onto the edge itself: the foot is `eps` out)
+    const left = Math.max(eps, w - a);
+    return { x: q[0] - dir[0] * left, y: q[1] - dir[1] * left, depth: null, step: null, turn: 0 };
+  }
+  // on the step's face, at the foot: from the deeper surface's depth up to the front's
+  return { x: q[0] - dir[0] * eps, y: q[1] - dir[1] * eps, depth: dQ + (a - w), step: [-dir[0], -dir[1]], turn: stepTurn((a - w) / J) };
 }
 
 /** ⭐ (2026-11-09, §7) a piece enters a void this much (m) wider than the opening — the goal slots are cut to their piece (`D136`: contact is allowed). */
