@@ -14,7 +14,7 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.113-`, from `1.0.112-Polar-orbit-Final-with-slide`; `1.0.111-Polar-orbit-fixes` the best piece orbit so far)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.112-`, from `1.0.111-Polar-orbit-fixes` — the best piece orbit so far)
 
 ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
@@ -25,10 +25,10 @@ change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
 depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the edges on the surface, the piece by its support; traversal probes) built —
 ⛔ no device close on any. ⭐⭐⭐ **Now: THE CLEAN-UP** (I1 – I14, F1 – F10, not built; ⚠ `Scene_1` a cube: `SCENE_1.md` §12) → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §0. ⏸ The hover waits.
 ⭐⭐⭐ **2026-11-09 — THE WALKS AND THE ROOT CAUSES** (`1.0.110-Polar-orbit-issues`): 23 random-walk scenarios (`scripts/probes/walk_*.mjs`), two new issues (**I15** the seam trap — the solver absorbed at yaw 90° for ever; I16), **seven roots R1 – R7** (⭐ R1: the face map built from GLUED faces — the cube's ±x facets on internal planes) and the build order → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §4 – §5.
-⭐⭐⭐ **2026-11-09 — THE FIXES BUILT** (`1.0.111-Polar-orbit-fixes`): R1 (the exposed faces), R2, R4 (the ring's jump crossed), R3, R6 (the slide lets go at its edge), the calm's branch cut, the map's catch-up hold; the walks re-run: the seam trap 36 → 1, the slide traps 17 → 3; then the void crossing (a narrow groove crossed whole, else BLOCKED — never deferred): the blocked stalls 51 → 21; ✅ the owner closed three open points with nothing built — the left notch (not reproduced on the device), the poles, the close-in block at a protruding part: all normal; ✅ the fourth — a groove too narrow for the piece — studied on synthetic voids and built on `1.0.112-`: the rims where the faces end, an open void the held piece cannot enter is surface (§7); ⭐⭐⭐ **§8** (`1.0.113-`): ✅ F8 — the gizmo WALKS A STEP (I10; I14's root, the notches' fold), ✅ F6 — a line breaks only where the gizmo jumps, ✅ F7b — the calm on every side facet, slanted ones included (simulated on a hexagonal prism); I13 gone; I9 (a) and I5 checked, not built; **1699** vectors → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §8.
+⭐⭐⭐ **2026-11-09 — THE FIXES BUILT** (`1.0.111-Polar-orbit-fixes`): R1 (the exposed faces), R2, R4 (the ring's jump crossed), R3, R6 (the slide lets go at its edge), the calm's branch cut, the map's catch-up hold; the walks re-run: the seam trap 36 → 1, the slide traps 17 → 3; then the void crossing (a narrow groove crossed whole, else BLOCKED — never deferred): the blocked stalls 51 → 21; ✅ the owner closed three open points with nothing built — the left notch (not reproduced on the device), the poles, the close-in block at a protruding part: all normal; ✅ the fourth — a groove too narrow for the piece — studied on synthetic voids and built on `1.0.112-`: the rims where the faces end, an open void the held piece cannot enter is surface (§7); **1682** vectors → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §6.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1699 golden vectors, all passing** — MEASURED 2026-11-09 (the count's home; 1682 before §8; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
+✅ `npm run verify`: **1682 golden vectors, all passing** — MEASURED 2026-11-09 (the count's home; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
 
 ⭐ The 2026-09-30 record block (`D180`, the paused playability program, the inputs' simplification) moved → [`history/2026-11-09_queue_spent_blocks.md`](history/2026-11-09_queue_spent_blocks.md).
 

@@ -116,8 +116,7 @@ describe("⭐⭐⭐ (2026-11-09, §7) an open void the held piece cannot enter i
 
   it("⭐ WIRED: the gizmo reads the HELD piece's footprint", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const foot = heldFoot(st);");
-    expect(a).toContain("sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2], foot);");
+    expect(a).toContain("sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2], heldFoot(st));");
     expect(a).toContain("const m = st.greenBox;");
   });
 });

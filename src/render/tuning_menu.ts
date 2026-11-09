@@ -198,8 +198,6 @@ export function installTuningMenu(st: SceneState): void {
             // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map: the gizmo through an edge, slowly
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
             tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
-            // ⭐⭐⭐ (2026-11-09, §8) the gizmo walks a step: its window, a share of the step's height (0: off)
-            tunable(st, "gizmo walks a step: its window × the step's height (0 off)", "stepWalkShare", 0, 4, 0.25),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
             tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),
