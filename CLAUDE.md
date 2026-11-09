@@ -46,6 +46,7 @@ npm run build       # production bundle into dist/
 
 ## Where it stands (2026-10-14)
 
+⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
 ⭐⭐⭐ **2026-11-03 (branch `1.0.93from1.0.87-`, FROM COMMIT `ff2fca2`): THE TILTED ORBIT TO BE REBUILT FROM `ff2fca2`** (the owner: *"I will rebuild the tilted
 orbit from commit ff2fca2 … The behavior in commit ff2fca2 was the correct one: sections always plane and horizontal/vertical, no jumps, no change of direction,
 delta position drives gizmo which drives the orbit of the piece and camera, same direction of gizmo and delta position input"*) — the code is `ff2fca2`'s orbit

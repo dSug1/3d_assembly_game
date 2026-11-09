@@ -14,8 +14,9 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.111-Polar-orbit-fixes`, the clean-up's fixes)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-09, branch `1.0.112-`, from `1.0.111-Polar-orbit-fixes` — the best piece orbit so far)
 
+⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
 ⭐⭐⭐ **THE PROTOTYPE IS THE MAIN LINE** (since 2026-10-10, `1.0.62-`): the orbit moves the ORBITED PIECE round a yellow gizmo, the camera follows;
 merged into `main`, served at the site root; no `D`-numbers; the record is `40_RENDER_SCENE/spec/` (`DOUBLE_ORBIT_PROTOTYPE.md` — a dated line per
 change) and `30_OBJECTS_3D/spec/COLLISION.md` §11–§12.
