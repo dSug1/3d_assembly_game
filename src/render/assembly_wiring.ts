@@ -25,7 +25,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { alignedShare, calmHeading, poleWeight, easeNormal, easeToward, edgeShare, shownDir } from "../input/orbit_calm";
+import { calmHeading, calmShown, calmStep, calmTarget } from "../input/orbit_calm";
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -180,11 +180,8 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
  * whole within 3.6 m and none from 5.4 m: an A + dy approach through it turned the piece's direction, the approach curved); faded only toward ±90° of pitch.
  */
 function calmDir(st: SceneState, u: Vec3): Vec3 {
-  const k = st.asmCalm;
-  if (k === null) return u;
-  const w = poleWeight(u[1]);
-  if (!(w > 0)) return u;
-  return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);
+  // ⭐⭐⭐ (2026-11-09, §8 — F7b) the rule in `input/orbit_calm.ts` (`calmShown`): the eased facet's own frame, faded toward its poles
+  return calmShown(u, st.asmCalm);
 }
 
 /**
@@ -193,41 +190,35 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
  * of each (58d86ff's); over a top / under a bottom the orbit's whole angle (58d86ff: a face too thin for two zones). ⭐ The shares and the normal EASED
  * toward them (`easeToward`, `easeNormal`).
  */
+/** ⭐ (§8) The facets' normals just beyond the map's column at its two slice ends, at the map's pitch — the calm's frame there (`calmTarget`'s `across`). */
+function acrossNormals(st: SceneState, map: FaceMap | null, sh: { readonly t: MapTarget; readonly pitch: number } | null): { lo: Vec3 | null; hi: Vec3 | null } | undefined {
+  if (map === null || sh === null) return undefined;
+  const col = map.columns[sh.t.side];
+  if (col === undefined) return undefined;
+  const o = mapOpts(st);
+  const EPS = 1e-6;
+  return { lo: mapTarget(map, col.mid - col.hw - EPS, sh.pitch, o).normal, hi: mapTarget(map, col.mid + col.hw + EPS, sh.pitch, o).normal };
+}
+
 function calmFrame(st: SceneState, dtMs: number): void {
-  const t = st.asmShown?.t ?? null;
+  // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F7b) the rule in `input/orbit_calm.ts` (`calmTarget`, `calmStep`): every SIDE facet, slanted ones
+  // included, in its own frame; the caps none
+  const sh = st.asmShown;
+  const map = sh === null ? null : faceMapOf(st);
   const cfg = st.cfg;
-  let n: Vec3 | null = null;
-  let sH = 1;
-  let sV = 1;
-  if (t !== null && t.band === "SIDE") {
-    // ⭐⭐⭐ (Step 4c-bis) the SIDE's axis, never a hit's normal (a groove's wall, a slanted block) — ⭐⭐⭐ (Step 5) the FACET's normal, read level (the
-    // calm's frame turns about the world's up: a facet sloping up a column, its heading)
-    const h = Math.hypot(t.normal[0], t.normal[2]);
-    n = h > 1e-9 ? [t.normal[0] / h, 0, t.normal[2] / h] : t.normal;
-    const L = t.across;
-    sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);
-    // ⭐⭐⭐ dy's run: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face, so a pure dx never changes it (⛔ the
-    // wall under the gizmo: its top differed from the front to the side at the same height — the owner's bounce, probed)
-    const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;
-    const y = t.surface[1];
-    sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
-  }
-  const k = st.asmCalm;
-  if (k === null) {
-    // ⭐ from none: the shares come in from 1 (the orbit's whole angle) — never a jump at the start
-    if (n !== null) st.asmCalm = { n, sH: easeToward(1, sH, dtMs), sV: easeToward(1, sV, dtMs) };
-    return;
-  }
-  if (n !== null) {
-    // ⭐ the horizontal share whole: the normal changes nothing (the pitch is the world's up's, the heading the orbit's own) — taken at once (⛔ eased from
-    // a stale face 175° away while the shares fell: a 271 mm camera jump)
-    k.n = k.sH > 0.999 ? n : easeNormal(k.n, n, dtMs);
-    // ⭐ the HORIZONTAL calm only as far as the normal has caught up with the face's — the vertical one never waits on it (⛔ both released at every corner:
-    // the pitch swung up and the camera back under a pure dx — the owner's bounce, probed)
-    sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);
-  }
-  k.sH = easeToward(k.sH, sH, dtMs);
-  k.sV = easeToward(k.sV, sV, dtMs);
+  const tg =
+    sh === null || map === null
+      ? { n: null, sH: 1, sV: 1 }
+      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? shellOf(st) : null, {
+          shareH: cfg.faceSpanShareH,
+          zoneHPct: cfg.faceSpanZoneHPct,
+          zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
+          vOn: cfg.faceSpanShareVOn === 1,
+          shareV: cfg.faceSpanShareV,
+          zoneVPct: cfg.faceSpanZoneVPct,
+          zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
+        }, acrossNormals(st, map, sh));
+  st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
 }
 
 /**

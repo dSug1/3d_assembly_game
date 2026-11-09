@@ -2,7 +2,7 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, calmHeading, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
+import { alignedShare, calmHeading, calmShown, calmStep, calmTarget, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
 import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
@@ -67,10 +67,18 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const side = mapTarget(core, 0, 0, opts);
     expect(side.across.hi - side.across.lo).toBeCloseTo(0.033, 9);
     expect(side.normal).toEqual([1, 0, 0]);
-    // dy's run: the gizmo's height in the placed parts' box — one top and bottom on every face
-    const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("sV = box === null ? 1 : edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], cfg.faceSpanShareV, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
-    expect(a).not.toContain("chainRun(");
+    // dy's run: the gizmo's height in the placed parts' box — one top and bottom on every face (⭐ 2026-11-09, §8: the rule in `calmTarget`, pinned by
+    // behaviour — two vertical facets of different own extents at one height: the same vertical share; the box's, not theirs)
+    const K = { shareH: 0.25, zoneHPct: 25, zoneMinHM: 0.03, vOn: true, shareV: 0.25, zoneVPct: 25, zoneMinVM: 0.03 };
+    const box = { lo: [-0.243, 0, -0.051] as Vec3, hi: [0.248, 0.54, -0.018] as Vec3 };
+    const at = (y: number) => ({ band: "SIDE" as const, surface: [0, y, 0] as Vec3, across: { L: 0.1, lo: 0, hi: 0.2 } });
+    for (const y of [0.02, 0.1, 0.27, 0.52]) {
+      const a1 = calmTarget(at(y), { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.54 }, box, K);
+      const a2 = calmTarget(at(y), { n: [1, 0, 0], b: [0, 1, 0], bLo: 0.1, bHi: 0.3 }, box, K);
+      expect(a1.sV).toBe(a2.sV);
+      expect(a1.sV).toBe(edgeShare(Math.min(y, 0.54 - y), 0.54, 0.25, 25, 0.03));
+    }
+    expect(code("render/assembly_wiring.ts")).not.toContain("chainRun(");
   });
   it("⭐⭐⭐ the shares and the face's normal FOLLOW their targets (an exponential, 120 ms) — a target that changes at once (another height's face) never moves them at once", () => {
     expect(CALM_TAU_MS).toBe(120);
@@ -115,10 +123,14 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const mid = alignedShare(0.25, Math.cos((17.5 * Math.PI) / 180));
     expect(mid).toBeGreaterThan(0.25);
     expect(mid).toBeLessThan(1);
-    const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("k.n = k.sH > 0.999 ? n : easeNormal(k.n, n, dtMs);");
-    expect(a).toContain("sH = alignedShare(sH, k.n[0] * n[0] + k.n[2] * n[2]);");
-    expect(a).not.toContain("sV = alignedShare("); // ⛔ the vertical share released at every corner: the bounce
+    // ⭐ (2026-11-09, §8) the rule in `calmStep`, pinned by behaviour: a whole horizontal share takes a new (vertical) normal at once; a calming one eases it
+    // and holds the horizontal share toward 1 while it turns; ⛔ the vertical share never held between two vertical facets (released at every corner: the bounce)
+    const tg = { n: [1, 0, 0] as Vec3, sH: 0.25, sV: 0.25 };
+    expect(calmStep({ n: [0, 0, -1], sH: 1, sV: 0.25 }, tg, 16)!.n).toEqual([1, 0, 0]);
+    const held = calmStep({ n: [0, 0, -1], sH: 0.25, sV: 0.25 }, tg, 16)!;
+    expect(held.n[0]).toBeLessThan(0.2); // turned only a little toward +x
+    expect(held.sH).toBeGreaterThan(0.25); // the horizontal calm released while the normal turns (90° off: its target 1)
+    expect(held.sV).toBe(0.25); // the vertical calm kept: 0.25 eased toward 0.25
     // ⭐ with the horizontal share whole the face's normal cancels out — only the pitch is calmed, the heading is the orbit's own
     const deg = Math.PI / 180;
     const u: Vec3 = [Math.cos(50 * deg) * Math.cos(-30 * deg), Math.sin(50 * deg), Math.cos(50 * deg) * Math.sin(-30 * deg)];
@@ -131,14 +143,27 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
   it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; 58d86ff's seven sliders (its distance deleted, Q3) in the submenu", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return shownDir(u, k.n, [-k.n[2], 0, k.n[0]], [0, 1, 0], 1 - (1 - k.sH) * w, 1 - (1 - k.sV) * w);");
-    // ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight — ⛔ 58d86ff's gate curved the A + dy approach
-    expect(a).toContain("const w = poleWeight(u[1]);");
+    expect(a).toContain("return calmShown(u, st.asmCalm);");
+    // ⭐ (2026-11-09, §8) on a VERTICAL facet `calmShown` is exactly the old wiring's: the side's frame (its level `t`, the world's up) and the pole weight by
+    // the pitch alone — ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight (⛔ 58d86ff's gate curved the A + dy approach)
+    const D = Math.PI / 180;
+    for (const nn of [[0, 0, -1], [1, 0, 0], [0.6, 0, -0.8]] as Vec3[])
+      for (const [y, p] of [[-60, 20], [-100, 70], [10, -40]]) {
+        const u: Vec3 = [Math.cos(p! * D) * Math.cos(y! * D), Math.sin(p! * D), Math.cos(p! * D) * Math.sin(y! * D)];
+        const w = poleWeight(u[1]);
+        const old = shownDir(u, nn, [-nn[2], 0, nn[0]], [0, 1, 0], 1 - 0.75 * w, 1 - 0.6 * w);
+        const now = calmShown(u, { n: nn, sH: 0.25, sV: 0.4 });
+        for (const k of [0, 1, 2]) expect(now[k]).toBeCloseTo(old[k]!, 12);
+      }
     expect(a).not.toContain("calmWeight(");
-    expect(a).toContain("sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, cfg.faceSpanShareH, cfg.faceSpanZoneHPct, cfg.faceSpanZoneMinHCm / 100);");
-    expect(a).toContain("n = t.normal;"); // ⭐ (Step 4c-bis) the face map's side, never a hit's normal
+    // the targets: across, the facet's span (`edgeShare` of `t.across`); the facet the map's own (never a hit's normal)
+    const K = { shareH: 0.25, zoneHPct: 25, zoneMinHM: 0.03, vOn: true, shareV: 0.25, zoneVPct: 25, zoneMinVM: 0.03 };
+    const t0 = { band: "SIDE" as const, surface: [0, 0.2, 0] as Vec3, across: { L: 0.03, lo: 0, hi: 0.49 } };
+    expect(calmTarget(t0, { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.4 }, null, K).sH).toBe(edgeShare(0.03, 0.49, 0.25, 25, 0.03));
+    expect(calmTarget({ ...t0, band: "TOP" }, { n: [0, 1, 0], b: [0, 0, 1], bLo: 0, bHi: 0.4 }, null, K)).toEqual({ n: null, sH: 1, sV: 1 }); // a cap: none
+    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? shellOf(st) : null, {");
+    expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);");
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
-    expect(a).toContain("const box = cfg.faceSpanShareVOn === 1 ? shellOf(st) : null;");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
     const m = code("render/tuning_menu.ts");
