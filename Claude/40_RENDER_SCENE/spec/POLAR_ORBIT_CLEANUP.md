@@ -241,7 +241,7 @@ the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the 
   under the edge band. **Fix**: F8 (walk the step, never jump it) extended to the edge bands — the blend's cast walks from the place it left; and the
   owner's I7 rule for an OPEN notch (bridged as a void, or followed into). ✅ **THE OWNER (2026-11-09): NOT AN ISSUE, NOTHING BUILT** — *"I don't
   see the current implementation as an issue. I cannot reproduce your issue. The gizmo and piece movements are normal, even with small jumps."* The
-  walks' map reversals at the notch are a probe finding the device does not show; the notch stays as built (neither bridged nor followed).
+  walks' map reversals at the notch are a probe finding the device does not show; the notch stays as built (neither bridged nor followed). Confirmed when asked whether to bridge it: *"Stays as it is"*.
 * **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26**, **near the bottom 7 → 15**, top 6 → 4, elsewhere 5 → 6.
   * ⭐⭐⭐ **near the bottom — ROOT FOUND AND BUILT** (the solver replayed in the page, `walk_probe`'s `eval` leg): under the cube's bottom groove
     (x 104 – 117) D3 puts the gizmo at the groove's real depth, so the piece's anchor JUMPS 43.9 mm up into the groove's lips (gap 0): R4 refused the
