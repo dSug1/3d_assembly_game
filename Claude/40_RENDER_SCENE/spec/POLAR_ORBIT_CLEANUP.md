@@ -18,7 +18,7 @@
   ring off its lines — mostly the probe) and a root-cause analysis put the sixteen on **seven roots R1 – R7** → **§4 – §5 below** (the record:
   [`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md)). ⭐ **§5's build order
   replaces the work order below** (R1 + R2 → R4 → R3 → R6 → R7 → F10 …), built on `1.0.111-Polar-orbit-fixes`.
-* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut and the map's catch-up hold built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 2; ⛔ two regressions (the left notches' reversals, the blocked stalls) and what is left → **§6**.
+* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut, the map's catch-up hold and the void crossing built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 3, the blocked stalls back to 21 (23 before); ⛔ open: the left notch's map reversals (8 → 122, the owner's I7 rule), the poles (F10 / F1), R7 → **§6**.
 * **The work order** (⛔ superseded by §5, 2026-11-09; the owner may reorder; each fix its own commit):
   1. **F9 → I11** (no back facet) — the root is known and measured (§1, I11), the fix one constant; it changes the whole back of the map, so first.
   2. **I14** (the jitter over the top's edges) — reproduce, then find the cause (its row's TO DO). Fix only once the cause is named.
@@ -209,6 +209,7 @@ I5 small (close in the finger ~1:1 on the glass; far out the PIECE sweeps 30 –
 | **R6** = F3 + F4 | `a865d14` | `slideLetsGoAtBound`: a step the hosting faces refuse WHOLE hands the drag to the orbit (`slideArmedByOrbit`: that drag never re-arms it); `slideTurnTravel`: the limited orbit turned by what the piece SLID | `slide_edge_letgo` (5) |
 | the calm's cut | `a66cd4a` | `shownDir`'s horizontal share faded to 1 from 90° to 180° off the face's normal (no branch cut behind it) | `calm_branch_cut` (3) |
 | the map's catch-up (a regression R4 exposed) | `217de6d` | `mapAnglesStep`: where the catch-up ALONE would move the gizmo more than `MAP_SYNC_HOLD_M`, it is held that frame (a 32 mm limit cycle at Piece1's groove edge) | `map_sync_hold` (3) |
+| **the void crossing** ((b) below, the second pass) | `bf720a2` | `voidCrossing`: where R4's landing past a jump is REFUSED, the jump BACK out further along the step (anchors only, each candidate bisected); the whole void crossed when the piece's straight move past it fits the clearance's stride and that landing is admissible (one query); else the jump is a WALL — BLOCKED, never `deferred` | `solver_void_crossing` (4) |
 
 **Not built**: R7 (the owner's choice below), F10 / F1, F8, F7a / b, I7, the one-frame gizmo lag (`assemblyFrame` before the solve — reordering touches `gizmoAtAngles`).
 
@@ -228,6 +229,7 @@ the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the 
 | ⛔ **map reversals** (normalised) | 8 | **134** | a REGRESSION — (a) below |
 | ⛔ **long BLOCKED stalls** (not seam, slide, pole) | 23 | **51** | a REGRESSION — not yet traced, (b) below |
 | pole stalls | 70 | 83 | open — R5 (c) |
+| **after the void crossing** (`bf720a2`, the walks re-run): long BLOCKED stalls | 23 | 51 → **21** | ✅ the notch 26 → 4, near the bottom 15 → 4; seam 1, slide 3, pole 86; map reversals 134 → 122 (the notch's order, (a)) |
 | raw leaps / jumps (`walk_analyse`) | 210 / 163 | 416 / 457 | ⚠ mostly the input's bursts × a map 6.7 mm/° wide (R1; was 4.0) × motion where it used to freeze — the normalised rows are the ones to read |
 
 **What remains — the root causes and the fixes proposed:**
@@ -237,10 +239,15 @@ the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the 
   gizmo runs y 488 → 415 while the finger goes up), then steps 84 mm. ⭐ R1 exposed it — the −x facet moved −147.5 → −242.5, so the groove now lies
   under the edge band. **Fix**: F8 (walk the step, never jump it) extended to the edge bands — the blend's cast walks from the place it left; and the
   owner's I7 rule for an OPEN notch (bridged as a void, or followed into).
-* **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26** (the gizmo on its tread, y 414, x −221 … −233, the piece at
-  x −245 above it; 14 in `random_4` alone, dx AND dy refused) — (a)'s groove, the same root; **near the bottom 7 → 15** (y < 60: the front and
-  back's lower rims, the x 104 – 117 groove, Piece43); top 6 → 4; elsewhere 5 → 6. To trace each (the next pass); part may be R7's (the piece's
-  body against a proud part close in) — unverified.
+* **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26**, **near the bottom 7 → 15**, top 6 → 4, elsewhere 5 → 6.
+  * ⭐⭐⭐ **near the bottom — ROOT FOUND AND BUILT** (the solver replayed in the page, `walk_probe`'s `eval` leg): under the cube's bottom groove
+    (x 104 – 117) D3 puts the gizmo at the groove's real depth, so the piece's anchor JUMPS 43.9 mm up into the groove's lips (gap 0): R4 refused the
+    landing and the stride CONVERGED onto the jump (`tS` 0.014 → 0.0045 → … → 1e-6, the 24 queries spent, `deferred`; R4's no-backlog rule then dropped
+    the target — the piece still in FREE AIR, 16.8 mm of gap, for ever: I15's mechanism where the landing is not admissible). ✅ **The void crossing**
+    (above): the same yaw step now crosses in 3 queries; a dy there is BLOCKED (along `v` the void is longer than the straight move) — a visible stop
+    instead of a freeze. ⚠ Left: D3 makes a groove the piece cannot enter a WALL along it — the owner's (a slot's real depth vs a groove too narrow).
+  * ⭐⭐ **the top-left notch — (a)'s root** (replayed: the piece touching Piece3 at the gap kept, a dy UP moved its anchor HORIZONTALLY inward
+    (−245, 438) → (−218, 436), along the tread into the riser — gap 0, blocked): the map's wrong order IS the stall; (a)'s fix (I7's rule) removes both.
 * **(c) the poles** (R5): F10 (the cap charted in the column it was entered from) or F1 (a pitch cap, the stopgap) — **the owner's choice**.
 * **(d) R7 vs a slot**: a box-clearance placement would hold a piece at a slot's MOUTH (a goal slot's walls touch the piece). **The owner's choice**:
   F2, or R7 with a slot exemption.

@@ -142,8 +142,15 @@ export const RING_JUMP_M = 0.005;
  * (the cube's 90° seam: 350 – 2100 frames still, every distance).
  */
 export function ringJump(env: SolverEnv, q: OrbitQ, s: QStep, lo: number, maxM: number): number | null {
+  const j = jumpIn(env, q, s, lo, 1);
+  if (j === null) return null;
+  return arcLength(env, q, [s[0] * j.a, s[1] * j.a]) <= maxM ? j.b : null;
+}
+
+/** ⭐ The jump of the anchor in the shares (`lo`, `hi`] of the step, bisected to a hair (`ringJump`'s search): its two sides, or `null` (continuous there). */
+function jumpIn(env: SolverEnv, q: OrbitQ, s: QStep, lo: number, hi: number): { readonly a: number; readonly b: number } | null {
   let a = lo;
-  let b = 1;
+  let b = hi;
   if (!(b > a)) return null;
   let pa = env.anchor(plus(q, s, a));
   let pb = env.anchor(plus(q, s, b));
@@ -158,8 +165,34 @@ export function ringJump(env: SolverEnv, q: OrbitQ, s: QStep, lo: number, maxM: 
       pa = pm;
     }
   }
-  if (!(dist(pa, pb) >= RING_JUMP_M)) return null;
-  return arcLength(env, q, [s[0] * a, s[1] * a]) <= maxM ? b : null;
+  return dist(pa, pb) >= RING_JUMP_M ? { a, b } : null;
+}
+
+/** ⭐ (2026-11-09) the samples the rest of a step is scanned on for the jump BACK out of a void (anchors only, each candidate bisected — `jumpIn`). */
+export const VOID_SCAN_SAMPLES = 32;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §6 (b)) **A NARROW VOID IS TWO JUMPS**: past the jump INTO it (`tj`, its landing refused — the gizmo at a
+ * groove's real depth, D3, puts the piece in the groove's lips), the jump BACK out further along the step: its share when the piece's STRAIGHT move from
+ * `q` to the place past it fits `maxM` (the clearance's stride — a translation that short cannot reach a part; the piece only translates), else `null`.
+ * ⛔ The stride converged onto the refused jump: the cube's bottom groove (x 104 – 117) held the piece still in free air (16.8 mm of gap), `deferred` for
+ * ever — I15's mechanism where R4's landing is not admissible.
+ */
+export function voidCrossing(env: SolverEnv, q: OrbitQ, s: QStep, tj: number, maxM: number): number | null {
+  const here = env.anchor(q);
+  let t0 = tj;
+  let p0 = env.anchor(plus(q, s, t0));
+  for (let k = 1; k <= VOID_SCAN_SAMPLES; k++) {
+    const t1 = tj + ((1 - tj) * k) / VOID_SCAN_SAMPLES;
+    const p1 = env.anchor(plus(q, s, t1));
+    if (dist(p0, p1) >= RING_JUMP_M) {
+      const j = jumpIn(env, q, s, t0, t1);
+      if (j !== null) return dist(here, env.anchor(plus(q, s, j.b))) <= maxM ? j.b : null;
+    }
+    t0 = t1;
+    p0 = p1;
+  }
+  return null;
 }
 
 /** ⭐ The ring's Jacobian at `q`: how far the anchor moves per radian of yaw and per unit of `v` (metres) — finite differences. */
@@ -362,6 +395,21 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
           if (gj >= opt.gapM) {
             t = tj;
             gl = gj;
+          } else {
+            // ⭐⭐⭐ (2026-11-09, §6 (b)) the landing refused: a NARROW VOID is crossed whole (`voidCrossing`, one more query); else the jump is a WALL —
+            // the stride stops before it, BLOCKED (⛔ it converged onto the jump, `deferred` for ever: a frozen piece in free air)
+            const tb = voidCrossing(env, q, rest, tj, spare * 0.9);
+            const gb = tb === null ? -1 : gapAt(plus(q, rest, tb));
+            if (tb !== null && gb >= opt.gapM) {
+              t = tb;
+              gl = gb;
+            } else {
+              q = plus(q, rest, tS);
+              path.push(q);
+              rest = [rest[0] * (1 - tS), rest[1] * (1 - tS)];
+              blocked = true;
+              break;
+            }
           }
         }
       }
