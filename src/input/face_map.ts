@@ -671,6 +671,11 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
  * plane's faces on both sides of it along `t` or along `b` (`closedAlong` — a hole, a slot, a notch closed on the green's or the red's travel): the gizmo
  * goes STRAIGHT THROUGH on the facet's plane (`bridged`, never cast — ⛔ D3 put it at the void's bottom: the green dipped and climbed back). A void open
  * on both travels keeps its depth until the frame turn (Steps 6–7: the orbit tilts at the real edge).
+ * ⭐⭐⭐ (2026-11-09, the owner — D3 AMENDED AGAIN: *"a void that is closed on either line's travel … and has no bottom (there is no bottom of the void where
+ * the gizmo can project) is bridged"*) — a closed void is bridged only where it has NO FLOOR under the point (no deeper group of the stack: the top's black
+ * channel seen from the front, open front to back); a closed void WITH a floor keeps its real depth (`inside`, the wiring's cast — the channel from the
+ * top: the red along its floor, the green down its walls and across it) — ⭐ unless the held piece cannot enter it (`pieceEnters`, §7's rule, now for a
+ * closed void too: the cube's 10 mm bottom groove stays on the plane).
  */
 export function stackDepthAt(
   s: { readonly groups: readonly MapGroup[]; readonly e?: number; readonly tLo?: number; readonly tHi?: number; readonly bLo?: number; readonly bHi?: number },
@@ -690,11 +695,16 @@ export function stackDepthAt(
     if (mine.length > 0 && !mine.some((q) => regionReal(q.gr.region, x, y))) {
       const rs = mine.map((q) => q.gr.region);
       const c = closedAlong(rs, x, y);
-      if (c.x || c.y) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
+      // ⭐⭐⭐ (2026-11-09, the owner) closed AND no floor under the point: bridged; closed with a floor: the floor, unless the piece cannot enter (below)
+      // the floor: ANY deeper group under the point (⛔ `front` alone: a hole enclosed by the plane's own face is filled in its region — the plane's group
+      // came first and the floor beneath it was never seen)
+      const floor = s.groups.some((gr) => gr.depth < e - MAP_COPLANAR_M && regionContains(gr.region, x, y));
+      if ((c.x || c.y) && !floor) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
       // ⭐⭐⭐ (2026-11-09, §7) AN OPEN VOID THE HELD PIECE CANNOT ENTER IS SURFACE: a floor below (`front`, deeper than the plane), the void's opening on the
       // plane (`voidOpening`) narrower than the piece's footprint (`foot`, its two smallest sizes, any way round) — the gizmo stays on the plane. ⛔ At its
       // real depth the piece, centred on the gizmo, came down into a notch or a rebate it could not fit: along a 13 mm rebate every step blocked
-      if (foot !== undefined && front >= 0 && s.groups[front]!.depth < e - MAP_COPLANAR_M && !pieceEnters(foot, voidOpening(s, rs, x, y)))
+      // ⭐⭐⭐ (2026-11-09) the same for a CLOSED void with a floor (the owner: the piece-fit rule for closed voids too)
+      if (foot !== undefined && floor && !pieceEnters(foot, voidOpening(s, rs, x, y)))
         return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
     }
   }

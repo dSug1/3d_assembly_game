@@ -53,22 +53,30 @@ function topFacet(voids: Box[]) {
 }
 
 describe("⭐⭐⭐ (2026-11-09, §7) a void's rim stays where its face ends", () => {
-  it("⭐⭐⭐ a 13 mm groove 60 deep: 0.5 mm inside either rim the gizmo crosses on the plane — never the floor (RED: inside, the floor cast)", () => {
+  it("⭐⭐⭐ a 13 mm groove 60 deep: 1.5 mm out the face, 0.5 mm in the void — its floor with no piece held (2026-11-09: a closed void with a floor keeps its depth), the plane for a 30 mm piece (it cannot enter)", () => {
     const { f, at } = topFacet([voidBox(193.5, 206.5, 0, 400, 60)]);
     for (const x of [194, 206]) {
       const a = at(x, 200)!;
-      expect(a.bridged).toBe(true);
-      expect(a.depth).toBeCloseTo(f.e, 9);
+      expect(a.bridged).toBeUndefined();
+      expect(a.inside).toBe(true); // in the faces' 1.6 mm grown strip: the plane's region, and the wiring's cast lands on the floor (never bridged)
+      expect(at(200, 200)!.depth).toBeCloseTo(f.e - 0.06, 9); // its middle: the floor's own group
+      const p = at(x, 200, [0.03, 0.03])!;
+      expect(p.bridged).toBe(true);
+      expect(p.depth).toBeCloseTo(f.e, 9);
     }
     expect(at(192, 200)!.inside).toBe(true); // 1.5 mm out on the face: the face
+    expect(at(192, 200)!.depth).toBeCloseTo(f.e, 9);
   });
 
-  it("⭐⭐ a blind recess 40 × 40 and an L-shaped one: their rims crossed on the plane too", () => {
+  it("⭐⭐ a blind recess 40 × 40 and an L-shaped one: their rims at the true faces — the floor inside for a piece that fits, the plane for one that does not", () => {
     const r = topFacet([voidBox(180, 220, 180, 220, 60)]);
-    expect(r.at(180.5, 200)!.bridged).toBe(true);
+    expect(r.at(180.5, 200, [0.03, 0.03])!.bridged).toBeUndefined();
+    expect(r.at(180.5, 200, [0.045, 0.045])!.bridged).toBe(true);
     const l = topFacet([voidBox(150, 250, 150, 190, 40), voidBox(150, 190, 190, 250, 40)]);
-    expect(l.at(150.5, 170)!.bridged).toBe(true);
-    expect(l.at(189.5, 230)!.bridged).toBe(true);
+    expect(l.at(230, 170, [0.045, 0.045])!.bridged).toBe(true); // the arm 40 mm wide
+    expect(l.at(170, 170, [0.045, 0.045])!.bridged).toBeUndefined(); // the L's corner: 100 × 100 open — the piece fits
+    expect(l.at(189.5, 230, [0.045, 0.045])!.bridged).toBe(true);
+    expect(l.at(189.5, 230)!.bridged).toBeUndefined();
   });
 });
 
@@ -107,11 +115,23 @@ describe("⭐⭐⭐ (2026-11-09, §7) an open void the held piece cannot enter i
     expect(pieceEnters([0.014, 0.2], [0.4, 0.013])).toBe(false);
   });
 
-  it("⭐ a closed void stays bridged whatever the piece (the owner's D3 amendment, 2026-11-05) — a 40 mm groove, a 30 mm piece", () => {
+  it("⭐⭐⭐ (2026-11-09, the owner) a CLOSED void with a floor: its floor where the piece fits (a 40 mm groove, a 30 mm piece), the plane where it does not (a 45 mm piece) — ⛔ bridged whatever the piece (2026-11-05)", () => {
     const { f, at } = topFacet([voidBox(180, 220, 0, 400, 60)]);
     const a = at(200, 200, [0.03, 0.03])!;
-    expect(a.bridged).toBe(true);
-    expect(a.depth).toBeCloseTo(f.e, 9);
+    expect(a.bridged).toBeUndefined();
+    expect(a.depth).toBeCloseTo(f.e - 0.06, 9);
+    const b = at(200, 200, [0.045, 0.045])!;
+    expect(b.bridged).toBe(true);
+    expect(b.depth).toBeCloseTo(f.e, 9);
+  });
+
+  it("⭐⭐⭐ (2026-11-09, the owner: *\"… and has no bottom … is bridged\"*) a closed void with NO floor (a slot through the plate): bridged whatever the piece", () => {
+    const { f, at } = topFacet([voidBox(180, 220, 180, 220, 120)]);
+    for (const foot of [undefined, [0.03, 0.03] as [number, number]]) {
+      const a = at(200, 200, foot)!;
+      expect(a.bridged).toBe(true);
+      expect(a.depth).toBeCloseTo(f.e, 9);
+    }
   });
 
   it("⭐ WIRED: the gizmo reads the HELD piece's footprint", () => {
