@@ -18,6 +18,7 @@
   ring off its lines — mostly the probe) and a root-cause analysis put the sixteen on **seven roots R1 – R7** → **§4 – §5 below** (the record:
   [`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md)). ⭐ **§5's build order
   replaces the work order below** (R1 + R2 → R4 → R3 → R6 → R7 → F10 …), built on `1.0.111-Polar-orbit-fixes`.
+* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut and the map's catch-up hold built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 2; ⛔ two regressions (the left notches' reversals, the blocked stalls) and what is left → **§6**.
 * **The work order** (⛔ superseded by §5, 2026-11-09; the owner may reorder; each fix its own commit):
   1. **F9 → I11** (no back facet) — the root is known and measured (§1, I11), the fix one constant; it changes the whole back of the map, so first.
   2. **I14** (the jitter over the top's edges) — reproduce, then find the cause (its row's TO DO). Fix only once the cause is named.
@@ -193,4 +194,54 @@ the calm's normal (the seam's jump far out 1406 mm against 490); I16 mostly the 
 I5 small (close in the finger ~1:1 on the glass; far out the PIECE sweeps 30 – 48 screen px a finger px).
 
 **The build order** (`1.0.111-Polar-orbit-fixes`): **R1 + R2** (each its commit; vectors on the dumped `Scene_1` faces) → **R4** → **R3** →
-**R6** (F3 + F4) → **R7** → F10 (subsuming F1) → F8, F7a / b, I7 → the walks re-run against §4.
+**R6** (F3 + F4) → **R7** → F10 (subsuming F1) → F8, F7a / b, I7 → the walks re-run against §4. ✅ R1 – R4, R6 built and the walks re-run → §6 (R7, F10 … not built).
+
+## 6. ⭐⭐⭐ As built (2026-11-09, `1.0.111-Polar-orbit-fixes`) — and what the walks still find
+
+**Built** (each its commit, its vectors RED on the commit before; ⛔ no device close on any):
+
+| fix | commit | the rule | vectors |
+|---|---|---|---|
+| **R1** | `7d0d01d` | `stackOf` reads the EXPOSED area: a face's rectangles minus another part's coplanar opposite faces (`exposedRects`; `MapFace.part`) — the cube's six facets on its real faces (±x 247.5 / −242.5) | `face_map_exposed` (7, on `tests/fixtures/scene_1_cube_faces.json`, the page's 240 faces) |
+| **R2** | `7d0d01d` | `facetPolygon`'s clip at `MAP_COPLANAR_M` (was 1e-9): the back facet kept — four 90° columns | in `face_map_exposed` |
+| **R4** | `3c3ce8d` | `ringJump`: a free-air stride that fits under a quarter of its allowance looks for a JUMP of the anchor ahead (≥ `RING_JUMP_M`, bisected on the anchors) and crosses it when the landing is admissible (one query); `orbitFrame`: a deferred solve with no progress keeps no backlog | `solver_ring_jump` (5) |
+| **R3** | `5f0d049` | (a) no cast across two facets FACING APART (`BLEND_APART_COS`); (b) the slice-end blend at every pitch; (c) `castPoint`: D3's cast from just inside the facet, never its rim | `face_map_blend_cast` (5) |
+| **R6** = F3 + F4 | `a865d14` | `slideLetsGoAtBound`: a step the hosting faces refuse WHOLE hands the drag to the orbit (`slideArmedByOrbit`: that drag never re-arms it); `slideTurnTravel`: the limited orbit turned by what the piece SLID | `slide_edge_letgo` (5) |
+| the calm's cut | `a66cd4a` | `shownDir`'s horizontal share faded to 1 from 90° to 180° off the face's normal (no branch cut behind it) | `calm_branch_cut` (3) |
+| the map's catch-up (a regression R4 exposed) | `217de6d` | `mapAnglesStep`: where the catch-up ALONE would move the gizmo more than `MAP_SYNC_HOLD_M`, it is held that frame (a 32 mm limit cycle at Piece1's groove edge) | `map_sync_hold` (3) |
+
+**Not built**: R7 (the owner's choice below), F10 / F1, F8, F7a / b, I7, the one-frame gizmo lag (`assemblyFrame` before the solve — reordering touches `gizmoAtAngles`).
+
+**The walks re-run** (the 23 scenarios on `217de6d`, ~83 000 frames, 0 page errors; before = `469653b`). Two instruments added:
+`scripts/probes/walk_compare.mjs` (each check's events, and the long stalls classified SEAM / SLIDE / POLE / BLOCKED) and
+`scripts/probes/walk_norm.mjs` (⭐ the motion NORMALISED by the input — headless input is bursty, an event every 2 – 3 frames, so the raw jump counts
+measure the input as much as the orbit: MAP-STEP a gizmo step > 15 mm at > 25 mm per degree of the map's angles; MAP-REVERSAL the gizmo going back while
+the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the target goes one way).
+
+| measure | before | after | |
+|---|---|---|---|
+| **I15** seam stalls (≥ 30 frames still at a column's bound) | 36 | **1** | ✅ |
+| slide traps (stalls with the slide on) | 17 | **2** | ✅ (I3 / I4) |
+| the piece BEHIND the gizmo | 18 | **1** | ✅ |
+| solver reversals | 1 | 0 | ✅ |
+| map steps (normalised) | 121 | 114 | ≈ — what is left: the grooves' (32 – 95 mm) and Piece44 / 45's (41 mm) depths, D3 by design |
+| ⛔ **map reversals** (normalised) | 8 | **134** | a REGRESSION — (a) below |
+| ⛔ **long BLOCKED stalls** (not seam, slide, pole) | 23 | **51** | a REGRESSION — not yet traced, (b) below |
+| pole stalls | 70 | 83 | open — R5 (c) |
+| raw leaps / jumps (`walk_analyse`) | 210 / 163 | 416 / 457 | ⚠ mostly the input's bursts × a map 6.7 mm/° wide (R1; was 4.0) × motion where it used to freeze — the normalised rows are the ones to read |
+
+**What remains — the root causes and the fixes proposed:**
+
+* **(a) the notch reversals** (96 of the 116 reversals listed are at the cube's two LEFT grooves, x < −180, y > 400 or < 90). The side band's horizontal
+  cast meets the groove's RISER (x −193), the cap band's vertical cast its TREAD (y 414): the edge band blends riser → tread in the wrong order (the
+  gizmo runs y 488 → 415 while the finger goes up), then steps 84 mm. ⭐ R1 exposed it — the −x facet moved −147.5 → −242.5, so the groove now lies
+  under the edge band. **Fix**: F8 (walk the step, never jump it) extended to the edge bands — the blend's cast walks from the place it left; and the
+  owner's I7 rule for an OPEN notch (bridged as a void, or followed into).
+* **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26** (the gizmo on its tread, y 414, x −221 … −233, the piece at
+  x −245 above it; 14 in `random_4` alone, dx AND dy refused) — (a)'s groove, the same root; **near the bottom 7 → 15** (y < 60: the front and
+  back's lower rims, the x 104 – 117 groove, Piece43); top 6 → 4; elsewhere 5 → 6. To trace each (the next pass); part may be R7's (the piece's
+  body against a proud part close in) — unverified.
+* **(c) the poles** (R5): F10 (the cap charted in the column it was entered from) or F1 (a pitch cap, the stopgap) — **the owner's choice**.
+* **(d) R7 vs a slot**: a box-clearance placement would hold a piece at a slot's MOUTH (a goal slot's walls touch the piece). **The owner's choice**:
+  F2, or R7 with a slot exemption.
+* **(e) I5** (a ±3 px tremble over a 2 px step reverses the target): not built.
