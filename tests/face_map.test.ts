@@ -235,7 +235,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const m = mapGizmo(st, mq.yaw, mq.pitch);");
     expect(a).toContain("const t = mapTarget(map, yaw, pitch, mapOpts(st));");
-    expect(a).toContain("const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);");
+    expect(a).toContain("const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2], heldFoot(st));"); // (2026-11-09, §7) the held piece's footprint
     expect(a).toContain("const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));");
     expect(a).toContain("st.asmRedCache = { key: rKey, params, ...samples((x) => [sh.yaw, x - Math.PI / 2], params) };");
     expect(a).toContain("st.asmGreenCache = { key: gKey, params, ...samples((x) => [x, sh.pitch], params) };");

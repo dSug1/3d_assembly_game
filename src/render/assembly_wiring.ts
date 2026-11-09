@@ -364,6 +364,19 @@ function faceMapOf(st: SceneState): FaceMap | null {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §7) THE HELD PIECE'S FOOTPRINT — its two smallest sizes (m, its own box × its scale, any way round): an open
+ * void narrower than it is surface (`stackDepthAt`). `undefined` with no piece held.
+ */
+function heldFoot(st: SceneState): readonly [number, number] | undefined {
+  const m = st.greenBox;
+  if (m === null) return undefined;
+  const e = m.getBoundingInfo().boundingBox.extendSize;
+  const s = m.absoluteScaling;
+  const d = [2 * Math.abs(e.x * s.x), 2 * Math.abs(e.y * s.y), 2 * Math.abs(e.z * s.z)].sort((a, b) => a - b);
+  return [d[0]!, d[1]!];
+}
+
+/**
  * ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FOR THE ORBIT'S ANGLES — no carrier, no state: the angles' place (`mapTarget`), the FRONTMOST closed region
  * there (`stackDepthAt`; none: the nearest group's plane, beside the real face); inside a region, the ray along the normal from outside the box
  * (`modelCast` — the parts at rest) for the real surface. The point keeps the place's two other coordinates EXACTLY: the green's and the red's planes, by
@@ -380,7 +393,7 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
   const f = map.facets[t.stack]!;
   const n = t.normal;
   const sf = t.surface;
-  const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2]);
+  const at = stackDepthAt(f, sf[0] * f.t[0] + sf[1] * f.t[1] + sf[2] * f.t[2], sf[0] * f.b[0] + sf[1] * f.b[1] + sf[2] * f.b[2], heldFoot(st));
   if (at === null) return { hit: { point: sf, normal: n, host: null }, t };
   const level = (q: Vec3): number => q[0] * n[0] + q[1] * n[1] + q[2] * n[2];
   // along the normal onto the group's plane — the place's two other coordinates kept

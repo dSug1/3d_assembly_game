@@ -7,6 +7,7 @@
 
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
+* ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
 * **Where things stand** (2026-11-08): branch **`1.0.110-`** (from `469653b`; the clean-up's line: `1.0.108from1.0.100-Polar-orbit-with-calm` →
   `1.0.109-Polar-orbit-with-cube-assembly` → here). Live: build **`0bf3134`** (`Scene_1` a cube). `npm run verify`: **1642** vectors passing. **Nothing
   of F1 – F10 is built.** ⛔ No device close on anything since §18.
@@ -18,7 +19,7 @@
   ring off its lines — mostly the probe) and a root-cause analysis put the sixteen on **seven roots R1 – R7** → **§4 – §5 below** (the record:
   [`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md)). ⭐ **§5's build order
   replaces the work order below** (R1 + R2 → R4 → R3 → R6 → R7 → F10 …), built on `1.0.111-Polar-orbit-fixes`.
-* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut, the map's catch-up hold and the void crossing built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 3, the blocked stalls back to 21 (23 before); ⛔ open: the left notch's map reversals (8 → 122, the owner's I7 rule), the poles (F10 / F1), R7 → **§6**.
+* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut, the map's catch-up hold and the void crossing built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 3, the blocked stalls back to 21 (23 before); ✅ The owner (2026-11-09) closed three open points with NOTHING BUILT (§6): the left notch (not reproduced on the device — normal, even with small jumps), the poles (a dx moves nothing there) and the close-in block at a protruding part — all normal. ✅ The fourth — a groove too narrow for the piece — STUDIED AND BUILT on `1.0.112-` (the owner: *"make sure this is not an ad hoc patch"*): **§7**.
 * **The work order** (⛔ superseded by §5, 2026-11-09; the owner may reorder; each fix its own commit):
   1. **F9 → I11** (no back facet) — the root is known and measured (§1, I11), the fix one constant; it changes the whole back of the map, so first.
   2. **I14** (the jitter over the top's edges) — reproduce, then find the cause (its row's TO DO). Fix only once the cause is named.
@@ -211,7 +212,7 @@ I5 small (close in the finger ~1:1 on the glass; far out the PIECE sweeps 30 –
 | the map's catch-up (a regression R4 exposed) | `217de6d` | `mapAnglesStep`: where the catch-up ALONE would move the gizmo more than `MAP_SYNC_HOLD_M`, it is held that frame (a 32 mm limit cycle at Piece1's groove edge) | `map_sync_hold` (3) |
 | **the void crossing** ((b) below, the second pass) | `bf720a2` | `voidCrossing`: where R4's landing past a jump is REFUSED, the jump BACK out further along the step (anchors only, each candidate bisected); the whole void crossed when the piece's straight move past it fits the clearance's stride and that landing is admissible (one query); else the jump is a WALL — BLOCKED, never `deferred` | `solver_void_crossing` (4) |
 
-**Not built**: R7 (the owner's choice below), F10 / F1, F8, F7a / b, I7, the one-frame gizmo lag (`assemblyFrame` before the solve — reordering touches `gizmoAtAngles`).
+**Not built**: R7 and F10 / F1 (⛔ the owner, 2026-11-09: not issues — (c), (d) below), F8, F7a / b, I7, the one-frame gizmo lag (`assemblyFrame` before the solve — reordering touches `gizmoAtAngles`).
 
 **The walks re-run** (the 23 scenarios on `217de6d`, ~83 000 frames, 0 page errors; before = `469653b`). Two instruments added:
 `scripts/probes/walk_compare.mjs` (each check's events, and the long stalls classified SEAM / SLIDE / POLE / BLOCKED) and
@@ -238,17 +239,69 @@ the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the 
   cast meets the groove's RISER (x −193), the cap band's vertical cast its TREAD (y 414): the edge band blends riser → tread in the wrong order (the
   gizmo runs y 488 → 415 while the finger goes up), then steps 84 mm. ⭐ R1 exposed it — the −x facet moved −147.5 → −242.5, so the groove now lies
   under the edge band. **Fix**: F8 (walk the step, never jump it) extended to the edge bands — the blend's cast walks from the place it left; and the
-  owner's I7 rule for an OPEN notch (bridged as a void, or followed into).
+  owner's I7 rule for an OPEN notch (bridged as a void, or followed into). ✅ **THE OWNER (2026-11-09): NOT AN ISSUE, NOTHING BUILT** — *"I don't
+  see the current implementation as an issue. I cannot reproduce your issue. The gizmo and piece movements are normal, even with small jumps."* The
+  walks' map reversals at the notch are a probe finding the device does not show; the notch stays as built (neither bridged nor followed).
 * **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26**, **near the bottom 7 → 15**, top 6 → 4, elsewhere 5 → 6.
   * ⭐⭐⭐ **near the bottom — ROOT FOUND AND BUILT** (the solver replayed in the page, `walk_probe`'s `eval` leg): under the cube's bottom groove
     (x 104 – 117) D3 puts the gizmo at the groove's real depth, so the piece's anchor JUMPS 43.9 mm up into the groove's lips (gap 0): R4 refused the
     landing and the stride CONVERGED onto the jump (`tS` 0.014 → 0.0045 → … → 1e-6, the 24 queries spent, `deferred`; R4's no-backlog rule then dropped
     the target — the piece still in FREE AIR, 16.8 mm of gap, for ever: I15's mechanism where the landing is not admissible). ✅ **The void crossing**
     (above): the same yaw step now crosses in 3 queries; a dy there is BLOCKED (along `v` the void is longer than the straight move) — a visible stop
-    instead of a freeze. ⚠ Left: D3 makes a groove the piece cannot enter a WALL along it — the owner's (a slot's real depth vs a groove too narrow).
+    instead of a freeze. D3 makes a groove the piece cannot enter a WALL along it — ✅ **§7** (2026-11-09, `1.0.112-`): the study found the groove ALREADY bridged (closed across) — its wall was the map's rims, 1.6 mm inside the void, where the gizmo dived to the floor at x 104 and 117. Fixed, and an open void the held piece cannot enter made surface.
   * ⭐⭐ **the top-left notch — (a)'s root** (replayed: the piece touching Piece3 at the gap kept, a dy UP moved its anchor HORIZONTALLY inward
     (−245, 438) → (−218, 436), along the tread into the riser — gap 0, blocked): the map's wrong order IS the stall; (a)'s fix (I7's rule) removes both.
-* **(c) the poles** (R5): F10 (the cap charted in the column it was entered from) or F1 (a pitch cap, the stopgap) — **the owner's choice**.
-* **(d) R7 vs a slot**: a box-clearance placement would hold a piece at a slot's MOUTH (a goal slot's walls touch the piece). **The owner's choice**:
-  F2, or R7 with a slot exemption.
+* **(c) the poles** (R5): F10 (the cap charted in the column it was entered from) or F1 (a pitch cap, the stopgap) — ✅ **THE OWNER (2026-11-09):
+  NOT AN ISSUE, NOTHING BUILT** — *"it is normal that a sideways drag moves nothing at the pole"*. Neither F1 nor F10; the walks' POLE stalls (86) are
+  expected behaviour, not a defect to count.
+* **(d) R7 vs a slot**: a box-clearance placement would hold a piece at a slot's MOUTH (a goal slot's walls touch the piece). F2, or R7 with a slot
+  exemption — ✅ **THE OWNER (2026-11-09): NOT AN ISSUE, NOTHING BUILT** — *"it is normal the orbit gets blocked if the piece collides with the
+  protruding part at close in"*. Neither F2 nor R7; I2's close-in block at Piece44 / 45 / 42 is expected behaviour.
 * **(e) I5** (a ±3 px tremble over a 2 px step reverses the target): not built.
+
+## 7. ⭐⭐⭐ The void study and the rule built (2026-11-09, `1.0.112-`)
+
+> The owner: *"I am tempted to fix with your recommendation B but i want to make sure this is not an ad hoc patch for our particular assembly configuration.
+> Study the behavior for cases where there is a recess (with a bottom) or a hole (no bottom), with different geometries (shapes, position within face or at
+> the edges, ratio depth over widths, etc.)"* — *"In our scene, there are no holes, no recess inside of a face, etc. so you need to simulate gizmo and piece
+> behavior over such singularities before proposing"* — then *"Build, update the md files, deploy"*.
+
+**The instrument**: `scripts/probes/void_sim.ts` (`npx vite-node scripts/probes/void_sim.ts`) — the REAL face map (`buildFaceMap`, `stackDepthAt`) on a
+400 × 400 × 120 mm plate of box parts with voids cut into its top face, nine families: blind recesses (13 / 40 / 100 mm wide, 10 / 60 deep), through holes,
+grooves the whole face long (with a floor), through slots, a U-slot from an edge, corner notches and rebates along a whole edge (13 / 50), an L-shaped recess,
+an undercut (a 20 mm mouth over a 60 mm cavity); three pieces (a 30 mm cube, an 80 mm cube, a 20 × 20 × 100 bar); travels across and along at 1 mm. The
+piece CLOSE IN: its resting face 16 mm over the gizmo, centred on it — its largest depth step, the steps it overlaps a part (blocked), the steps a straight
+approach down to the gizmo clears (enterable). ⚠ Boxes only, the piece centred under the gizmo, one face (no edge band, no solver).
+
+**What it found** (the rules before the build):
+
+| family | before | why |
+|---|---|---|
+| every void WITH A FLOOR (recess, groove, U-slot, L, undercut, notch) | two 10 – 60 mm SPIKES, one at each rim (1.6 mm wide each); the piece blocked there | ⛔ a BUG: the faces' rectangles are grown `MAP_GROW_M` (1.6 mm) to close the 3 mm joints between the cores, and the growth moved every rim INTO its void — the map read a face, the wiring cast the floor. ⭐ **The cube's bottom groove (x 103.5 – 116.5) was already bridged (closed across); its "wall" was these two strips, at x 104 and 117** |
+| an OPEN void narrower than the piece (a 13 mm notch or rebate) | the real depth: the piece, centred on the gizmo, down in it — **201 of 201 steps blocked** along a 13 mm rebate, every piece | D3's real depth for any void open on both travels, whatever the piece |
+| an open void the piece fits (a 50 mm notch / rebate, a 30 mm piece) | the real depth, enterable; blocked near the riser (13 of 151) | as designed — the riser contact is I2's kind (§6 (d), *normal*) |
+| a closed void, any size | bridged (D3 amended, 2026-11-05) | — |
+| a through hole / slot (no floor) | the mouth's plane | — |
+| ⛔ the alternative weighed: real depth wherever the piece FITS, closed voids too | enterable, but crossing a 40 mm slot with a 30 mm piece blocked 28 of 201 steps (the piece sinks into the slot and meets its walls); and it reverses D3's amendment | rejected |
+
+**Built** (`src/input/face_map.ts`, `src/render/assembly_wiring.ts`):
+1. **The rims where the faces end** — `filledRegion(rects, cores)`: the grown rectangles still join and close (the joints, the holes), `real` is read from the
+   faces' TRUE rectangles (`stackOf` passes both). A void's rim strip is a void now: closed → bridged on the plane; open → the strip continues the plane.
+2. **An open void the held piece cannot enter is surface** — `stackDepthAt(s, x, y, foot)`: where no face of the plane is under the point, the void is open
+   on both travels and a floor lies below, the void's OPENING (`voidOpening`: its run along `t` and `b` on the plane, to the first real face or the facet's
+   extents — an undercut measured by its mouth) against the held piece's FOOTPRINT (`heldFoot`: its two smallest sizes, any way round, `pieceEnters`,
+   `VOID_FIT_TOL_M` 0.5 mm): too narrow → `bridged`, the plane. No piece held → as before.
+3. **Unchanged**: a closed void is bridged whatever the piece (D3 amended); a void with no floor stays at its mouth; an open void the piece fits keeps its
+   real depth. ⭐ **On the cube**: the bottom groove flat; the top-left notch (~50 mm) and the bottom-left (~90 mm) keep their depth — both held pieces fit
+   (41.3 × 45, 44.8 × 51.8 mm): the notch the owner judged normal (§6 (a)) is untouched.
+
+**Measured after**: the simulator's `built` column equals the chosen rule on 105 of 111 rows (the 6 others: one sample on the plate's outer border); no
+rim spike in any family. On the cube (a 0.5° sweep of the map, the page): no gizmo below the bottom's plane at the groove (was 6693 samples 58 mm down at
+x 104 – 117). Vectors: `tests/void_rims_fit.test.ts` (8; 7 RED on `7cbc8b4`, the 8th — a closed void stays bridged — the owner's rule kept). **1682**.
+**The walks** (20 of the 23 scenarios, `rims_*` against `void_*`): no page error; gizmo jumps 491 → 432, piece jumps 324 → 253, camera jumps 326 → 225,
+back-and-forth 31 + 34 → 21 + 24, map jumps 7765 → 5800, off-lines 238 → 139. ⚠ Long blocked stalls 17 → 30 (on the same 20) — but the walks are timed by
+the clock: 10 of the 13 pairs part within the first 10 frames by one frame's step (2.8 mm), before any void, so after that the two runs walk DIFFERENT
+paths. The one parting the rule made is the one meant: `close_top_grooves`, the gizmo kept on the top's plane where it dived 32 mm (466.5 → 498.5 mm).
+None of the new stalls is over a void (the sides at x ±247.5, the top off its grooves, the bottom with the piece under the floor — where the old ones were).
+⚠ Open: the face map outlines a face by its BOUNDING RECTANGLE, so a hole inside ONE face (a round hole cut in a plate) is invisible to it — only the cast
+finds it. Every part is a box today; a non-box part needs the region from the triangles.
