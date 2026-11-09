@@ -12,7 +12,7 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, sectionFixed } from "../input/section_hull";
-import { blendThroughEdges, buildFaceMap, facetOfNormal, mapAngles, mapTarget, stackDepthAt, syncAngle, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -355,7 +355,7 @@ function faceMapOf(st: SceneState): FaceMap | null {
       const w = faceWorld(st.world, id, f.id);
       const tris = faceTrianglesWorld(st, id, f.id);
       if (w === null || tris === null || tris.length === 0) continue;
-      faces.push({ normal: w.normal, centre: w.centre, tris });
+      faces.push({ normal: w.normal, centre: w.centre, tris, part: id }); // ⭐⭐⭐ (2026-11-09, R1) the part: a glued face is not a surface
     }
   }
   const map = buildFaceMap(faces, box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
@@ -395,7 +395,9 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
     const b = map.box;
     const sup = (sg: 1 | -1): number => sg * (Math.max(sg * b.lo[0] * n[0], sg * b.hi[0] * n[0]) + Math.max(sg * b.lo[1] * n[1], sg * b.hi[1] * n[1]) + Math.max(sg * b.lo[2] * n[2], sg * b.hi[2] * n[2]));
     const out = sup(1) + MAP_OUT_M;
-    const o: Vec3 = [p[0] + n[0] * (out - level(p)), p[1] + n[1] * (out - level(p)), p[2] + n[2] * (out - level(p))];
+    // ⭐⭐⭐ (2026-11-09, R3 (c)) the ray from just inside the facet (`castPoint`) — never on its rim, in the neighbour's plane (a grazing ray, a 127 mm spike)
+    const pc = castPoint(f, p);
+    const o: Vec3 = [pc[0] + n[0] * (out - level(pc)), pc[1] + n[1] * (out - level(pc)), pc[2] + n[2] * (out - level(pc))];
     const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
     if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
   }
@@ -515,10 +517,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (!st.asmLocked) {
     const pitch = pitchOfV(q.v);
     const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
-    const mq = {
-      yaw: syncAngle(m0.yaw, q.yaw, Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), MAP_CATCH_UP, true),
-      pitch: syncAngle(m0.pitch, pitch, pitch - pitchOfV(prev.v), MAP_CATCH_UP, false),
-    };
+    // ⭐⭐⭐ (2026-11-09) the catch-up held where it alone would move the gizmo across a jump (`mapAnglesStep`) — the ring stays a function of the angles
+    const mq = mapAnglesStep(m0, { yaw: q.yaw, pitch }, { yaw: Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitch: pitch - pitchOfV(prev.v) }, MAP_CATCH_UP, (y, p) => mapGizmo(st, y, p)?.hit.point ?? null);
     st.asmMapQ = mq;
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {

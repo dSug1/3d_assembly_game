@@ -38,7 +38,12 @@ export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: num
   if (sH >= 1 && sV >= 1) return u;
   const a = Math.atan2(dot(u, h), dot(u, n));
   const b = Math.asin(Math.max(-1, Math.min(1, dot(u, v))));
-  const a1 = a * Math.min(1, Math.max(0, sH));
+  // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 — the analysis's note 2) NO BRANCH CUT BEHIND THE FACE: the horizontal share faded to 1 from 90° off the
+  // normal to 180° (a smoothstep) — in front of the face (|α| ≤ 90°, the calm's whole use) unchanged. ⛔ `sH·α` with α from `atan2` jumped from +sH·π to
+  // −sH·π as the direction passed straight behind the normal: the shown direction flipped (far out, the seam's anchor jump 1406 mm against 490)
+  const x = Math.min(1, Math.max(0, (Math.abs(a) - Math.PI / 2) / (Math.PI / 2)));
+  const sHa = Math.min(1, Math.max(0, sH)) + (1 - Math.min(1, Math.max(0, sH))) * x * x * (3 - 2 * x);
+  const a1 = a * sHa;
   const b1 = b * Math.min(1, Math.max(0, sV));
   const cb = Math.cos(b1);
   return [

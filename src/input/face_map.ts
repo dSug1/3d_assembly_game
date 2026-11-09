@@ -33,11 +33,15 @@ export const MAP_COPLANAR_M = 0.0005;
 /** ⭐ Each face's rectangle grown by this (m) — the slide's `OUTLINE_GROW_M`: the 3 mm joints between the coloured cores close. */
 export const MAP_GROW_M = 0.0016;
 
-/** ⭐ A placed part's face, in the world, on the part's MODEL pose. */
+/**
+ * ⭐ A placed part's face, in the world, on the part's MODEL pose. ⭐⭐⭐ (2026-11-09, R1) `part`: the part it belongs to — a face glued to ANOTHER part's
+ * face (coplanar, opposite normals, overlapping) is not a surface there (`exposedRects`); a face without a part is never covered.
+ */
 export interface MapFace {
   readonly normal: Vec3;
   readonly centre: Vec3;
   readonly tris: readonly (readonly [Vec3, Vec3, Vec3])[];
+  readonly part?: string;
 }
 
 /**
@@ -332,6 +336,32 @@ export function syncAngle(m: number, target: number, d: number, catchUp: number,
   // the gap closed or crossed: on the orbit
   return Math.sign(gapOf(m2)) !== Math.sign(gap) ? target : m2;
 }
+/** ⭐⭐⭐ (2026-11-09) the most the map's catch-up may move the gizmo BY ITSELF in a frame (m) — the solver's own `RING_JUMP_M` (a jump, not travel). */
+export const MAP_SYNC_HOLD_M = 0.005;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §6 — a regression R4 exposed) **THE MAP'S ANGLES, ONE FRAME**: `syncAngle` on both (the orbit's step `d`,
+ * the catch-up after the slide) — UNLESS the catch-up alone moves the gizmo (`gizmoAt`) more than `MAP_SYNC_HOLD_M` from where the held offset puts it:
+ * then the offset is HELD this frame (the map's angles move by the orbit's step exactly). ⛔ The catch-up changed the ring between frames: the piece's place
+ * for the same solved angles moved — across a groove's edge, a place the solver had just landed on (admissible) was in the wall the next frame, the
+ * relocation put it back, the solver crossed again: 32 mm up and down every frame at Piece1's groove (the walks, `random_4`).
+ */
+export function mapAnglesStep(
+  m0: { readonly yaw: number; readonly pitch: number },
+  q: { readonly yaw: number; readonly pitch: number },
+  d: { readonly yaw: number; readonly pitch: number },
+  catchUp: number,
+  gizmoAt: (yaw: number, pitch: number) => Vec3 | null,
+): { readonly yaw: number; readonly pitch: number } {
+  const synced = { yaw: syncAngle(m0.yaw, q.yaw, d.yaw, catchUp, true), pitch: syncAngle(m0.pitch, q.pitch, d.pitch, catchUp, false) };
+  const held = { yaw: m0.yaw + d.yaw, pitch: m0.pitch + d.pitch };
+  if (Math.abs(wrapPi(synced.yaw - held.yaw)) + Math.abs(synced.pitch - held.pitch) < 1e-12) return synced;
+  const a = gizmoAt(synced.yaw, synced.pitch);
+  const b = gizmoAt(held.yaw, held.pitch);
+  if (a === null || b === null) return synced;
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > MAP_SYNC_HOLD_M ? held : synced;
+}
+
 /** ⭐ A normal within 1e-9 of a world axis: that axis EXACTLY (a box's face read on a turned pose carries 1e-16 of noise — the box's numbers kept exact). */
 export function snapAxis(n: Vec3): Vec3 {
   const l = Math.hypot(n[0], n[1], n[2]);
@@ -380,17 +410,53 @@ export function stackOf(faces: readonly MapFace[], n: Vec3, t: Vec3, b: Vec3, co
     if (p === undefined) planes.push({ level, faces: [f] });
     else p.faces.push(f);
   }
+  const rectOf = (f: MapFace): Rect2 => {
+    const xs = f.tris.flatMap((tr) => tr.map((v) => dot(v, t)));
+    const ys = f.tris.flatMap((tr) => tr.map((v) => dot(v, b)));
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  };
+  // ⭐⭐⭐ (2026-11-09, R1) the faces that could GLUE onto this stack's: facing the other way (within the merge angle), with a part
+  const against = faces.filter((g) => g.part !== undefined && dot(g.normal, n) <= -cosMax && g.tris.length > 0);
   const groups: MapGroup[] = [];
   for (const p of planes) {
-    const rects: Rect2[] = p.faces.map((f) => {
-      const xs = f.tris.flatMap((tr) => tr.map((v) => dot(v, t)));
-      const ys = f.tris.flatMap((tr) => tr.map((v) => dot(v, b)));
-      return { x0: Math.min(...xs) - MAP_GROW_M, x1: Math.max(...xs) + MAP_GROW_M, y0: Math.min(...ys) - MAP_GROW_M, y1: Math.max(...ys) + MAP_GROW_M };
-    });
+    const covers = against.filter((g) => Math.abs(dot(g.centre, n) - p.level) <= MAP_COPLANAR_M);
+    const rects: Rect2[] = [];
+    for (const f of p.faces) {
+      const own = rectOf(f);
+      const parts = f.part === undefined ? [own] : exposedRects(own, covers.filter((g) => g.part !== f.part).map(rectOf));
+      for (const r of parts) rects.push({ x0: r.x0 - MAP_GROW_M, x1: r.x1 + MAP_GROW_M, y0: r.y0 - MAP_GROW_M, y1: r.y1 + MAP_GROW_M });
+    }
     for (const comp of components(rects)) groups.push({ depth: p.level, region: filledRegion(comp.map((k) => rects[k]!)) });
   }
   groups.sort((a, c) => c.depth - a.depth);
   return groups;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R1) **A FACE'S EXPOSED RECTANGLES**: its rectangle less every rectangle a face of another part glued onto it
+ * covers (rectangle difference — each cut leaves at most four pieces; a piece thinner than `MAP_GROW_M` dropped: the joints between touching faces).
+ * ⛔ Every face was fed whole: on the cube the largest coplanar region was a GLUED plane (Piece32's +x side, wholly covered, at 213.5 mm against the real
+ * face's 247.5; Piece30's −x side, 88 % covered, at −147.5 against −242.5) — the contour 361 mm wide for 490, every polygon short of the real edges.
+ */
+export function exposedRects(r: Rect2, covers: readonly Rect2[]): Rect2[] {
+  let out: Rect2[] = [r];
+  for (const c of covers) {
+    const next: Rect2[] = [];
+    for (const q of out) {
+      if (c.x0 >= q.x1 || c.x1 <= q.x0 || c.y0 >= q.y1 || c.y1 <= q.y0) {
+        next.push(q);
+        continue;
+      }
+      if (c.x0 > q.x0) next.push({ x0: q.x0, x1: c.x0, y0: q.y0, y1: q.y1 });
+      if (c.x1 < q.x1) next.push({ x0: c.x1, x1: q.x1, y0: q.y0, y1: q.y1 });
+      const x0 = Math.max(q.x0, c.x0);
+      const x1 = Math.min(q.x1, c.x1);
+      if (c.y0 > q.y0) next.push({ x0, x1, y0: q.y0, y1: c.y0 });
+      if (c.y1 < q.y1) next.push({ x0, x1, y0: c.y1, y1: q.y1 });
+    }
+    out = next;
+  }
+  return out.filter((q) => q.x1 - q.x0 > MAP_GROW_M && q.y1 - q.y0 > MAP_GROW_M);
 }
 
 /** ⭐ The MAIN group of a stack: the largest closed region (ties: the frontmost) — its depth is the facet's plane; its area the real face behind it. */
@@ -422,7 +488,7 @@ function boxPlanes(box: ShellBox): Plane[] {
 
 /**
  * ⭐⭐ A FACET'S POLYGON ON THE CONTOUR: a square of side `2·size` in its plane, clipped by every other half-space (Sutherland–Hodgman, 1974 — a convex
- * polygon by a plane; a point within 1e-9 of a plane kept).
+ * polygon by a plane; a point within `MAP_COPLANAR_M` of a plane kept — one rule for "the same plane", the stack's and the clip's).
  */
 export function facetPolygon(n: Vec3, e: number, planes: readonly Plane[], size: number): Vec3[] {
   const { t, b } = facetFrame(n);
@@ -441,9 +507,11 @@ export function facetPolygon(n: Vec3, e: number, planes: readonly Plane[], size:
       const q = poly[(i + 1) % poly.length]!;
       const dp = dot(pl.n, p) - pl.e;
       const dq = dot(pl.n, q) - pl.e;
-      const ip = dp <= 1e-9;
+      // ⭐⭐⭐ (2026-11-09, R2 = F9) a point within the face map's own COPLANAR tolerance of the plane kept — ⛔ 1e-9: the cube's back facet (its plane
+      // from the faces' float32 triangles) and the box's back (from the hulls' vertices in doubles) 5.1e-9 m apart: every corner out, the facet dropped
+      const ip = dp <= MAP_COPLANAR_M;
       if (ip) out.push(p);
-      if (ip !== dq <= 1e-9) {
+      if (ip !== dq <= MAP_COPLANAR_M) {
         const s = dp / (dp - dq);
         out.push([p[0] + (q[0] - p[0]) * s, p[1] + (q[1] - p[1]) * s, p[2] + (q[2] - p[2]) * s]);
       }
@@ -638,6 +706,22 @@ function facetAt(f: Facet, L: number, s: number): Vec3 {
   return [f.n[0] * f.e + f.t[0] * L + f.b[0] * s, f.n[1] * f.e + f.t[1] * L + f.b[1] * s, f.n[2] * f.e + f.t[2] * L + f.b[2] * s];
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R3 (c)) **THE DEPTH IS READ JUST INSIDE THE FACET, NEVER ON ITS RIM**: the place `p` on facet `f`'s plane
+ * moved inside its polygon's extents by `MAP_COPLANAR_M` along `t` and `b` — the point the wiring casts the real depth (D3) from. The gizmo keeps its own
+ * place (only the ray's origin moves). ⛔ At an exact bound the place lay on the polygon's rim — the NEIGHBOUR's plane: the ray along `−n` grazed that face
+ * and hit an arbitrary point of it (the cube's front-left corner at yaw 225.0°: x −115 for −242.5 — a 127 mm spike; pitch 45.0° over the right-top edge: 107).
+ */
+export function castPoint(f: Facet, p: Vec3): Vec3 {
+  const e = MAP_COPLANAR_M;
+  const L = dot(p, f.t);
+  const S = dot(p, f.b);
+  const cl = (x: number, lo: number, hi: number): number => (hi - lo > 2 * e ? Math.min(hi - e, Math.max(lo + e, x)) : (lo + hi) / 2);
+  const dL = cl(L, f.tLo, f.tHi) - L;
+  const dS = cl(S, f.bLo, f.bHi) - S;
+  return [p[0] + f.t[0] * dL + f.b[0] * dS, p[1] + f.t[1] * dL + f.b[1] * dS, p[2] + f.t[2] * dL + f.b[2] * dS];
+}
+
 /** ⭐ Where the angles put the gizmo: the band, the column (`side`), the facet (`stack`), its normal, the place on its plane, and across it (the calm). */
 export interface MapTarget {
   readonly band: "SIDE" | "TOP" | "BOTTOM";
@@ -826,10 +910,10 @@ export function edgeBlend(
   if (bandY > 0 && Math.abs(a) > 1 - bandY) {
     const sg = a < 0 ? -1 : 1;
     const yawThere = col.mid + sg * (col.hw + EPS);
-    const nb = map.columns[columnAt(map, yawThere).k]!.bounds;
-    const same = Math.abs(nb[0]! - lo) < 1e-12 && Math.abs(nb[nb.length - 1]! - hi) < 1e-12;
-    if (!same || (p <= hi + Math.min(0.5 * spanT, E) + 1e-12 && p >= lo - Math.min(0.5 * spanB, E) - 1e-12))
-      h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
+    // ⭐⭐⭐ (2026-11-09, R3 (b)) at EVERY pitch, the caps' bands included — ⛔ two columns of equal bounds were blended only within E of their bands: over a
+    // cap the slice's end was a raw step (the cube without its back: 284 mm at −61°, the solver parked there 354 frames); on a box the two quarters' places
+    // meet on the diagonal, so the blend is of two equal points there — nothing moves
+    h = { w: ease((Math.abs(a) - (1 - bandY)) / bandY), yawThere };
   }
   let v: { w: number; pitchThere: number } | null = null;
   for (let j = 0; j < B.length && v === null; j++) {
@@ -871,28 +955,34 @@ export function blendThroughEdges(
   const mix = (a: Vec3, b: Vec3, w: number): Vec3 => [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w];
   const nAt = (yw: number, pt: number): Vec3 => mapTarget(map, yw, pt, opts).normal;
   let chord = 0; // the longest chord blended across — the sagitta's bound: a part the chord cuts lies within half of it in front
-  const span = (a: Vec3, b: Vec3): void => {
+  let apart = false; // ⭐ (2026-11-09, R3 (a)) two facets blended FACING APART (their normals beyond `BLEND_APART_COS`) — no convex edge between them
+  const span = (a: Vec3, b: Vec3, na: Vec3, nb: Vec3): void => {
     chord = Math.max(chord, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
+    if (dot(na, nb) < BLEND_APART_COS) apart = true;
   };
   const upDown = (yw: number, q: Vec3, n: Vec3, v: { readonly w: number; readonly pitchThere: number } | null): { p: Vec3; n: Vec3 } => {
     if (v === null) return { p: q, n };
     const o = at(yw, v.pitchThere);
     if (o === null) return { p: q, n };
-    span(q, o);
-    return { p: mix(q, o, v.w), n: mix(n, nAt(yw, v.pitchThere), v.w) };
+    const no = nAt(yw, v.pitchThere);
+    span(q, o, n, no);
+    return { p: mix(q, o, v.w), n: mix(n, no, v.w) };
   };
   let r = upDown(yaw, here, nAt(yaw, pitch), eb.v);
   if (eb.h !== null) {
     const o = at(eb.h.yawThere, pitch);
     if (o !== null) {
       const there = upDown(eb.h.yawThere, o, nAt(eb.h.yawThere, pitch), edgeBlend(map, eb.h.yawThere, pitch, opts).v);
-      span(r.p, there.p);
+      span(r.p, there.p, r.n, there.n);
       r = { p: mix(r.p, there.p, eb.h.w), n: mix(r.n, there.n, eb.h.w) };
     }
   }
   if (cast !== undefined) {
     const l = Math.hypot(r.n[0], r.n[1], r.n[2]);
-    if (l > 1e-9) {
+    // ⭐⭐⭐ (2026-11-09, R3 (a)) THE CAST ONLY ACROSS AN EDGE THE TWO FACETS MAKE — never between two facing APART (`apart`): ⛔ the cube without its back
+    // (+x and −x adjacent across the 490 mm back) left a chord lying ALONG a face; the cast took the near facet's own face — x 247.5 to 89.5°, 2.5 at 90°,
+    // −242.5 from 90.5° (a 490 mm jump). A convex edge (90° on a box) or a proud part's corner (Piece3, 45 mm off −x: §18's case) is cast as before
+    if (l > 1e-9 && !apart) {
       const nb: Vec3 = [r.n[0] / l, r.n[1] / l, r.n[2] / l];
       const h = chord > 0 ? cast(r.p, nb, chord / 2 + BLEND_REACH_M) : null;
       if (h !== null && dot([h[0] - r.p[0], h[1] - r.p[1], h[2] - r.p[2]], nb) > BLEND_FRONT_M) return h;
@@ -900,6 +990,8 @@ export function blendThroughEdges(
   }
   return r.p;
 }
+/** ⭐⭐ (2026-11-09, R3 (a)) two facets' normals below this cosine (beyond 120°) FACE APART — the blend between them is not across an edge they make. */
+export const BLEND_APART_COS = -0.5;
 /** ⭐ (2026-11-05) a cast's hit takes a blended place only this far (m) in front of it — the chord itself on a face is kept. */
 export const BLEND_FRONT_M = 0.0001;
 /** ⭐ …and the cast reaches this far (m) beyond half the chord — never a part standing far out along the blended normal (a jump onto it). */

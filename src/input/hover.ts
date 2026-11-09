@@ -389,6 +389,30 @@ export function slideRefusedAfter(result: boolean | "wait", waitedMs: number): b
 export function slideExits(planeGapM: number, reachM: number): boolean {
   return planeGapM > reachM;
 }
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R6 = F3) **AT THE EDGE OF THE HOSTING FACES THE ORBIT TAKES THE DRAG**: in the slide mode, a step the
+ * boundary refuses WHOLE (`bounded` is where the piece stood, `asked` was elsewhere) lets the slide go — the same drag goes on as the orbit, from where
+ * the piece is (no lift). ⛔ *"reverse to come back"*: latched on a small face (Piece44's top, 46 × 104 mm) every drag ended there, the orbit never took
+ * over, only A + drag left (the walks: legs blocked 39 – 189 frames, 2031 frames on one top).
+ */
+export function slideLetsGoAtBound(slideMode: boolean, from: readonly [number, number], asked: readonly [number, number], bounded: readonly [number, number]): boolean {
+  const moved = Math.abs(bounded[0] - from[0]) + Math.abs(bounded[1] - from[1]) > 1e-12;
+  const wanted = Math.abs(asked[0] - from[0]) + Math.abs(asked[1] - from[1]) > 1e-12;
+  return slideMode && wanted && !moved;
+}
+/** ⭐ (2026-11-09, F3) …and the drag the slide let go of does not arm it again (a NEW press does — every one-finger drag slides): `letGo` its pointer. */
+export function slideArmedByOrbit(armed: boolean, travelMm: number, pointerId: number, letGo: number | null): boolean {
+  return pointerId === letGo ? armed : slideArmedAfter(armed, 0, travelMm);
+}
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §5 R6 = F4) **THE SLIDE'S LIMITED ORBIT READS THE PIECE'S SLID TRAVEL**: the finger's travel (mm) since the
+ * last solve × the share of the asked step the piece actually slid (`solvedLen` of `askedLen`, at most 1) — 0 when the piece is stopped. ⛔ It read the
+ * finger, before the solve clamped the step: the camera ran on while the piece was still (the walks: 7.6 m of camera for a piece under 0.2 mm).
+ */
+export function slideTurnTravel(fingerMm: number, askedLen: number, solvedLen: number): number {
+  if (!(fingerMm > 0) || !(askedLen > 1e-12)) return 0;
+  return fingerMm * Math.min(1, Math.max(0, solvedLen / askedLen));
+}
 /** ⭐ (2026-11-01) Armed again (after the slide mode was left): an approach step inward (`approachTaken` < 0: down is in) or an orbit drag's travel. */
 export function slideArmedAfter(armed: boolean, approachTaken: number, orbitTravelMm: number): boolean {
   return armed || approachTaken < 0 || orbitTravelMm > 0;

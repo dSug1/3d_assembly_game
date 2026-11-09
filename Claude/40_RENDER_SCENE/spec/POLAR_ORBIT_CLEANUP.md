@@ -1,9 +1,52 @@
-# THE POLAR ORBIT'S CLEAN-UP — the issues found after `1.0.100-`, applied to its build (branch `1.0.108from1.0.100-`, now `1.0.109-`)
+# THE POLAR ORBIT'S CLEAN-UP — the issues found after `1.0.100-`, applied to its build (branch `1.0.108from1.0.100-`, now `1.0.110-`)
 
 > The owner (2026-11-08, on `1.0.107-`'s reverse band): *"I don't like this implementation. Revert to the built as it was in branch
 > 1.0.100-Polar-gizmo-over-void, and create a new branch 1.0.108from1.0.100- … capture the issues we have discovered in the later commits which are
 > applicable to 1.0.100- built (any jitter, approach issue, etc. which we did not detect when we debugged 1.0.100-). Propose the fixes for the issues so
 > we clean the polar orbit."*
+
+## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
+
+* **Where things stand** (2026-11-08): branch **`1.0.110-`** (from `469653b`; the clean-up's line: `1.0.108from1.0.100-Polar-orbit-with-calm` →
+  `1.0.109-Polar-orbit-with-cube-assembly` → here). Live: build **`0bf3134`** (`Scene_1` a cube). `npm run verify`: **1642** vectors passing. **Nothing
+  of F1 – F10 is built.** ⛔ No device close on anything since §18.
+* ⚠ **`Scene_1` IS A CUBE** since `1.0.109-` (`SCENE_1.md` §12): I1 – I10 were measured on the PAINTING (0.33 deep); I11 – I14 on the cube. ⭐ So the
+  first job is to **re-measure I1 – I10 on the cube** (the probes below): some change (the faces contour, Piece44 / Piece45 moved, the grooves), some
+  may vanish.
+* ⭐⭐⭐ **2026-11-09 — THE WALKS AND THE ROOT CAUSES** (branch `1.0.110-Polar-orbit-issues`): 23 random-walk scenarios over the cube (~83 000
+  frames, every distance, dx / dy / mixed / reversals / approaches / a finger tremble) found two NEW issues (**I15** the seam trap, **I16** the
+  ring off its lines — mostly the probe) and a root-cause analysis put the sixteen on **seven roots R1 – R7** → **§4 – §5 below** (the record:
+  [`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md)). ⭐ **§5's build order
+  replaces the work order below** (R1 + R2 → R4 → R3 → R6 → R7 → F10 …), built on `1.0.111-Polar-orbit-fixes`.
+* ⭐⭐⭐ **2026-11-09 — AS BUILT** (`1.0.111-Polar-orbit-fixes`): R1, R2, R4, R3, R6, the calm's branch cut and the map's catch-up hold built; the walks re-run — the seam trap (I15) 36 → 1, the slide traps 17 → 2; ⛔ two regressions (the left notches' reversals, the blocked stalls) and what is left → **§6**.
+* **The work order** (⛔ superseded by §5, 2026-11-09; the owner may reorder; each fix its own commit):
+  1. **F9 → I11** (no back facet) — the root is known and measured (§1, I11), the fix one constant; it changes the whole back of the map, so first.
+  2. **I14** (the jitter over the top's edges) — reproduce, then find the cause (its row's TO DO). Fix only once the cause is named.
+  3. Re-measure I13 after F9 (it sits in I11's region); then I1 – I10 on the cube.
+  4. Then §3's order: F2 → F1 → F3 + F4 → F6 → F8 → F7a → F7b → F10; then §18's matrix and the walks with approaches re-run.
+* **The project's rules for each fix** (`CLAUDE.md`'s five): the golden vectors land WITH the code and are shown **RED on the old code first**; `src/core`
+  and `src/input` import no engine; thresholds in mm on the glass; `npm run verify` green; a probe's numbers before / after; ⛔ only a look on the device
+  closes it. The solver budget stays 24 gap queries a frame; patent-free methods. **Commit, edit md, deploy only when the owner asks** (deploy: push the
+  branch, merge `--no-ff` into `main`, push, wait for `version.json`).
+* **Where the code is**: `src/input/face_map.ts` (`buildFaceMap` — D5's greedy, the caps, the columns; `facetPolygon` — the clip, I11; `mapTarget`, the
+  polar cap — I12; `blendThroughEdges`, `edgeMap`; `stackDepthAt` — D3, the voids); `src/render/assembly_wiring.ts` (`faceMapOf`, `rawGizmo`, `mapGizmo`
+  (exported), `calmFrame` / `calmDir` — I9 (b), `sectionLinesFrame` / `sampleJoins` — I8, `placeOffset`); `src/input/orbit_calm.ts` (`poleWeight`);
+  `src/input/orbit_shell.ts` (the shell, `placeAtAngles`, `faceLift`); `src/input/assembly_orbit.ts` (`ORBIT_PITCH_MAX_RAD` — F1); `src/content/scene_1.ts`
+  (the cube). Vectors: `tests/facets.test.ts` (the face map; ⚠ its fixtures are exact — I11's lesson), `tests/scene_1_cube.test.ts`.
+* **How to measure** (the dev server: `npm run dev:usb`, http://127.0.0.1:5173; headless Chrome over DevTools; `window.__st` exists in DEV):
+  * the map at ANY angles, no input: `const AW = await import("/src/render/assembly_wiring.ts"); AW.mapGizmo(st, yawRad, pitchRad)` → `{ hit: { point,
+    normal, host }, t: { stack, band, surface } }`; the facets: `st.asmFaceMap.map` (after one `mapGizmo` call). This found I8, I10, I11, I13: sweep yaw ×
+    pitch, compare neighbours (a gizmo step, a facet change, the drawn step against the place's step).
+  * a view to start from: `st.orbit.reset(yawRad, v)` (`v` the elevation, 0 … 1) — I14's place: yaw 180°, `v` 0.76 (the gizmo on Piece3's top,
+    (−167, 498, 101) mm).
+  * input over time: `scripts/probes/orbit_probe.mjs` (`MODE=const LEGS=…`, `MODE=random SEED=… DIAG=1`, `APPR=px` an approach first, `AFTER=expr`,
+    `OUT=name`) → `node scripts/probes/analyse_orbit.mjs <file>` (back-and-forth, blockage, jumps). ⚠ It has no option to start from a view: add one (a
+    `st.orbit.reset` after the boot) — the I14 try did it in a scratch copy; ⚠ setting `st.approach` by hand then A + drag moved nothing (unexplained).
+    ⚠ Headless input is bursty (an event every 2 – 3 frames): count reversals, not single jumps. ⭐ A probe's Chrome profile is removed in `finally`.
+* **The sketchbook** (plates: the shell's line, the hexagon, the corner, the step, the issue cards and the fixes table; on the painting):
+  https://claude.ai/artifact/UPGYPC5vfQpsK7DpKBxxnQ — ⚠ it stops at I10; this file is the record.
+* **The owner's open decisions**: F3's lift (to the orbit's distance, or orbit from where it is); I7's rule for a notch open on a travel; F10 (the frame
+  turn over a cap) against F1 (the pitch capped short of the pole); **the cube's grooves** — deepen the loose pieces too, or keep them 30 mm (§3).
 
 **The base**: `3c00d35` (the tip of `1.0.100-polar-orbit-gizmo-over-void`; its build live as `ef5fa8f` on 2026-11-05). The scope
 (`TILTED_ORBIT_REBUILD_SCOPE.md`) stops at §18 on this branch; §19 – §32.13 live on the later branches (`1.0.101-` … `1.0.107-Close-in-atlas`), which
@@ -29,6 +72,10 @@ the later commit when one was built for THIS code and is portable.
 | **I8** | **The green and the red lines break at a face's 90° corners** (the owner: *"why the green line is discontinuous"*, then *"also valid for the red contour"*): the drawn line is cut round an outer corner though the gizmo stays on the surface | found 2026-11-08 (new) | ✅ **applies**: every `sampleJoins` break of the green within 10° of a facet change — the place 3.7 – 3.8 mm a sample (the edge stretch), the drawn point 12 – 29 mm (`2.5 × place + 2 mm` fails), no depth change; at pitch 0, 4 segments lost at the front-left corner, 1 at the right. The red at eight yaws: breaks at pitch ±36° – ±53° (the ±45° edge), the place 1.5 – 2.8 mm, the drawn point 6 – 109 mm, the surface turning 82° – 122° in one sample |
 | **I9** | **Faces at other pitches than 0 / ±90°** (the owner: *"the face map shall include these possibilities"*): (a) on a RIDGE (no level face on top, e.g. a hexagonal prism lying on a face's edge) the top cap is one of the two upper slanted facets — dy over the top is not symmetric, +90° lands in one slanted face's middle; (b) **THE CALM is on vertical faces only** (`calmFrame`: targets on SIDE bands only, the normal flattened to level, faded between 60° and 85° by `poleWeight`) — on a slanted face, the top and the bottom the piece is squared to the horizontal, not to the face | found 2026-11-08 (new; a synthetic prism, `face_map.ts`) | ⚠ (a) **applies, no jump**: the ridge prism's bands front −45° / 30° / 75°, back −75° / −30° / 45°, worst step 7.5 mm; a FLAT top prism is symmetric and already vectored (`facets.test.ts`). (b) ✅ **applies** by construction (read in `calmFrame`, `calmDir`) |
 | **I10** | **A line jumps over a STEP: a face parallel to the cast is never a place** (the owner: *"these two horizontal black faces are never reachable by the red section"*) — on a side band the pitch drives the gizmo's height and the place is cast HORIZONTALLY along the wall's axis to the real depth (D3): a horizontal tread between two risers is skipped; the same for the green at a step seen from above (a part proud of a wall: its two sides), and for a vertical riser in a cap's band | found 2026-11-08 (new) | ✅ **applies**: the red at yaw 136° (facing −x): up the left column's side (x −196.9 mm), then from pitch 21° to 24° straight onto Piece3's side (−171.2 mm) — **Piece25's top** (y 414 mm) never a place; down, from −26° to −29° onto Piece30's side (−147.5 mm) — **Piece37's bottom** (y 73 mm) never. The green at Piece45's height (pitch −10°): onto Piece45's back face at yaw 264°, off at 274° — 288 landings on that face over every yaw × pitch, **0 on its two sides**; Piece44's sides the same. The sweep (1° × 0.5°) also finds 0 on Piece42's top / bottom, Piece45's top / bottom, Piece44's underside, Piece43's top — their causes not checked one by one. ⛔ First described as *"faces outside the contour"* (fixed by F2) — WRONG: the cast already reaches the column; F2 leaves it horizontal |
+| **I11** | **On the cube, NO BACK FACET** (the owner, on the glass: *"on the back face the green contour is discontinued and the gizmo and piece jumps directly from one edge to the other edge"*) — the face map holds five facets (±x, the front, the top, the bottom); the right and left columns each take half of the back's yaw | found 2026-11-08 on the cube (`1.0.109-`) | ✅ **applies**: the green at pitch 0.2 rad runs the right side to the back edge (z 432 mm), then at yaw 90° the gizmo jumps **245 mm** to the back's middle and **245 mm** on to the other edge, within 0.25°; nothing drawn between. ⭐⭐ **THE ROOT** (measured): a facet's polygon is clipped by the placed parts' BOX (`facetPolygon`, `boxPlanes`), a point kept within **1e-9 m** of a plane; the back's plane IS the box's face, computed twice — the box from the hulls' vertices in doubles, z = 0.43250000000000005; the facet from the faces' world triangles (the engine's float32 matrices), z = 0.43250000512599945 — **5.1e-9 m apart, 5× the tolerance**: every corner outside, the polygon empty, its share 0, D5 drops it (*"drop 0,0,1 … shares 0.797/0.797/0"*) though its real face is the front's, 2254 cm². The module's own coplanar tolerance is 0.5 mm (`MAP_COPLANAR_M`): two rules for *"the same plane"*. ⭐ **Why the painting had a back facet**: no facet ever lay ON the box's face — the back (−17.5 mm) 35 mm inside it (Piece44, its long axis along the depth, stuck out to +17.7 mm), the front inside Piece45, the right inside Piece42, the left inside the column, the top inside Piece44, the bottom inside Piece43; the cube centred Piece44 within a 483 mm-deep top, the back became the box's extreme. ⛔ **Why no vector caught it**: `facets.test.ts`'s synthetic shapes put facets on the box's face, but their faces and box come from the same exact numbers — the difference exactly 0, the one set where it cannot appear |
+| **I12** | **The red over a cap is RADIAL, so it bends at the edge** (the owner: *"strange contour of the red section"*, over the cube's top) — on a cap the map is polar (each side a quarter of the turn, the pitch the distance in to the cap's centre): at a fixed yaw the red runs from the rim straight to the cap's centre, so unless the yaw faces a side's MIDDLE it crosses the cap diagonally and bends where it comes over the edge | found 2026-11-08 on the cube | ✅ **applies** by construction (`mapTarget`'s cap); invisible on the painting (a 33 mm-deep top). The broken bits where it crosses the cube's grooves are I10 (steps) and I7 (voids) |
+| **I13** | **The red shifts sideways in a bottom edge band** (the owner: *"the red contour has a discontinuity in the alignment of the lines as it crosses the underneath of the red part"*, the back-right from below) | found 2026-11-08 on the cube | ⚠ **measured, cause not settled**: at yaw 85° the red runs down the RIGHT side's map at x 248 mm (I11 gives the back's yaw to the right side), then in the bottom edge band (pitch −39° … −51°) the gizmo goes 92 mm IN (x 156 → 136 → 125 mm) and back OUT to 194 mm on the bottom cap. Candidates: I11's region; the right facet's plane at Piece32's covered side (x 213.5 mm) 34 mm inside the real right face (247.5 mm), the edge blend's cast built on it. ⛔ Re-measure after F9 before calling it its own issue |
+| **I14** | **THE GIZMO JITTERS BACK AND FORTH OVER THE TOP FACE'S EDGES, and the piece with it** (the owner, on the glass, 2026-11-08: *"when I approach, the gizmo jitters a lot with back and forth. So does the piece"* — the gizmo on the top near the left edge, the camera `c=(-0.22,0.56,0.10)`, `elev=0.76`; then *"this is also valid for a lot of edges on the top face: the gizmo jitters with back and forth when I orbit over those edges, even without approach"*) | found 2026-11-08 on the cube (`0bf3134`) | ⛔ **NOT YET REPRODUCED, CAUSE NOT ANALYSED** — a first headless try only: the orbit reset to yaw 180°, elevation 0.76 (the gizmo on Piece3's top, (−167, 498, 101) mm — the screenshot's place), an approach (A + drag) from 0.99 to 0.45: the gizmo still to 0.0 mm, the piece coming in (its steps the headless input's bursts). A second run with the approach set to 0.45 by hand did not move (the drag had no effect — the probe's, to fix). ⭐ **TO DO**: (1) **random walks** over the top face (`orbit_probe.mjs MODE=random`, `DIAG=1`, several seeds) and over its edges — the yaw sweeping the top's rim, the pitch across the side / top edge (±45°), and the grooves' edges (the loose pieces' empty cells, I12's note); (2) **approaches** on the top (A + dy down to the contact) at a dozen places on and near those edges, with and without a dx / dy held after; (3) count the gizmo's and the piece's REVERSALS per frame (`analyse_orbit.mjs`'s back-and-forth, §18's I7 pattern) and name the place of each; (4) **analyse the cause** where it appears — candidates to check, none confirmed: the solver's slide along the ring at a blocked step (I2 / §18's back-and-forth), the edge blend's cast on the grooves' rims (I10 / I13), the slide latching and unlatching at the contact (the HUD read *"off the slide — the gizmo on the sections again"*), the void rule (I7) flipping over a groove |
 
 ## 2. Found later, and NOT applicable to this build (checked)
 
@@ -83,10 +130,118 @@ the later commit when one was built for THIS code and is portable.
   and up the riser continuously, the line drawn through. Red and green; a riser in a cap's band the same. Where: `mapTarget` / `blendThroughEdges`
   (`face_map.ts`). Vectors RED on `3c00d35`: a two-step stair, every tread landed on, no step of the place larger than the slowest band's. Cost: the
   angle spent on a step's tread and riser. ⭐ F6 alone keeps the break at a step (correct: the gizmo jumps there); after F8 nothing jumps, the line joins.
+* **F9 → I11 (no back facet): CLIP A FACET'S POLYGON WITH THE FACE MAP'S COPLANAR TOLERANCE** (`MAP_COPLANAR_M`, 0.5 mm) instead of 1e-9 m —
+  one constant, one place: *"the same plane"* means the same in the stack and in the clip; a facet on the box's face kept. Vectors RED on `0bf3134`: a
+  plain box whose faces' levels carry 5e-9 m of noise keeps its six facets; on the cube six facets, the back's share 1; the green at the back with no
+  gizmo step over 15 mm. ⭐ The lesson for the vectors: a fixture whose two sources of one plane are the SAME numbers cannot test their agreement.
+* **F10 → I12 (the red radial over a cap): THE FRAME TURN** — the red over a cap goes on SQUARE to the edge it came over, as it did up the side (the cap
+  mapped in the crossing edge's frame), not to the cap's centre: the scope's Step 6 (§16, the facet frames: *"at every crossing … the orbit's frame turns
+  about the edge"*). ⚠ A new rule set for the cap — weighed against F1 (the pitch capped short of the pole) before it is built.
+* **I13**: no fix proposed — re-measured after F9.
+* **I14**: no fix proposed — reproduce it first (the random walks and approaches on the top face), then find its cause.
+* ⚠ **The cube's grooves** (not an issue of the orbit; a decision for the owner): the five loose pieces were kept 30 mm deep (*"the seated parts"*), so
+  their empty cells are 480 mm-deep tunnels through the cube — Piece1's and Piece2 + Piece23's across the top, Piece17's and Piece41's across the bottom,
+  all five open at the back. Deepening them too would close them (their goal slots 480 mm deep; Piece17's own size kept for the green piece).
+* **Not an issue** (checked 2026-11-08): on the cube's FRONT the green is joined across the face — its gaps are I8 at the corners, and the line hidden
+  where the orbited piece stands between the camera and the face (the lines are depth-tested).
 
-**Order proposed**: F2 (a port, measured before; removes I2, half of I6) → F1 (I1, half of I6) → F3 + F4 (the slide) → F6 (I8) → F8 (I10) → F7a → F7b
-(after F1) → the §18 matrix (`§18-C6`) and the walks with approaches re-run, each against §18's *after* column. Each fix with its vectors, RED on
+**Order proposed**: F2 (a port, measured before; removes I2, half of I6) → F1 (I1, half of I6) → F3 + F4 (the slide) → F9 (I11, first on the cube) → F6 (I8) → F8 (I10) → F7a → F7b
+(after F1) → F10 (I12) → the §18 matrix (`§18-C6`) and the walks with approaches re-run, each against §18's *after* column. Each fix with its vectors, RED on
 `3c00d35`. ⭐ The sketchbook (plates, the hexagon, the corner, the step): https://claude.ai/artifact/UPGYPC5vfQpsK7DpKBxxnQ.
 
 ⚠ **Since 2026-11-08 `Scene_1` is a CUBE** (`SCENE_1.md` §12, `1.0.109-`): every measurement above was taken on the PAINTING (0.33 deep). Re-measure
-I1 – I10 on the cube before building a fix against them (the faces contour, the steps, Piece44 / Piece45 all moved or changed).
+I1 – I10 on the cube (I11 – I13 were found on it) before building a fix against them (the faces contour, the steps, Piece44 / Piece45 all moved or changed).
+
+## 4. ⭐⭐⭐ The random walks (2026-11-09, on `469653b` — the cube)
+
+**The instrument**: `scripts/probes/walk_probe.mjs` (headless Chrome on the dev server; each scenario from a VIEW — `st.orbit.reset`; legs that
+change direction under one press; approaches A + drag mixed in; a seeded finger TREMBLE `wob`; every frame the gizmo, the piece, the camera, the
+angles, and the drawn lines — each break sub-sampled on `mapGizmo`: a FALSE break or a MAP jump), `scripts/probes/walk_analyse.mjs` (jitter,
+back-and-forth with the finger held one way, blockage / pole stall, jumps and leaps, the line-break map, against the finger, the piece behind its
+face, the camera's roll), `scripts/probes/walk_scenarios.json` (19 scenarios: far 6 m, mid 1.2 m, close 0.3 m, very close 0.1 m, contact; the
+edges, corners, grooves, the four protrusions, Piece42's slanted faces, the back, the poles; six seeded random zig-zag walks with approaches) + 4
+with a tremble. ~83 000 frames, 0 page errors. ⚠ Three of my own instrument's errors found and fixed on the way (the screen's right negated; reversals the
+scenario asked for counted as back-and-forth; a probe writing only at its end lost a run to its watchdog).
+
+| | found | where (mm, the cube's frame) |
+|---|---|---|
+| **I15 (NEW) — THE SEAM TRAP** | the solved angles lock at yaw = 90° exactly and never leave — dx (turns), dy (to both poles): the gizmo and the piece 0 mm for 350 – 2100 frames, at every distance; only an approach / a slide frees it | far (v 0.162), mid (ap 0.621), close (random_5: 955 + 1071 frames) |
+| I11 | confirmed: 490 mm across the back at pitch 0; 523 / 375 mm in the bottom cap's back quarter, 261 mm in the top's; the piece 0.4 – 3.3 m, the camera to 4.4 m far out | the back, both caps |
+| I1 | confirmed: the gizmo still at the cap centre while dx spins the yaw (stalls 30 – 732 frames); ⚠ the solved yaw DOES follow (§5) | (33, 540, 191), (33, −26, 191) |
+| I14 | **reproduced only with a tremble** (±2 – 3 px): 3 – 4 reversals in 5 – 17 frames, 10 – 23 mm, gizmo and piece; a straight finger: none | the right-top, front-top edges, Piece3's top, by Piece44 |
+| I3 / I4 | the slide blocked 39 – 189 frames a leg, *"at the edge of the hosting faces"*; the camera 7.6 m for a piece still | Piece3's, Piece44's, Piece4's tops |
+| I10 / I7 | the gizmo leaps 46 – 49 mm onto / off Piece44, 45, 43; 95 – 99 mm at the bottom-left groove (a 97 mm back-and-forth); 151 mm over Piece1's groove | |
+| I8 | false breaks at every 90° corner band (the green, the map continuous: sub-step ≤ 6 mm) and the ±45° bands (the red) | |
+| I16 (NEW) | the ring 9 – 93 mm from the sampled lines' joined segments — ⚠ mostly the probe (§5, R-note 3) | the back corners, the pole |
+
+## 5. ⭐⭐⭐ The root causes (2026-11-09) and the fixes — the build order
+
+A root-cause analysis (measured: the face map dumped from the page and rebuilt offline, the real solver run in the page; the record in
+[`../history/2026-11-09_polar_orbit_walks_and_root_causes.md`](../history/2026-11-09_polar_orbit_walks_and_root_causes.md) Part B):
+
+| root | mechanism (measured) | carries | the fix (one rule, one place) |
+|---|---|---|---|
+| **R1 — HIDDEN FACES MAKE THE FACETS** | `faceMapOf` feeds every face, the GLUED ones included; `mainOf` takes the largest coplanar region: the +x facet at **213.5** (Piece32's covered side; the real face 247.5 — a 2364 cm² tie broken by order), −x at **−147.5** (Piece30's side, 88 % mated; the real −242.5, 1669 cm² cut by two grooves). The contour 361 mm wide for 490: every polygon 34 / 95 mm short of the real edges | I8, I13, I14 (a built-in 17 / 32 mm back-and-forth at pitch 45°), the corner chords, half of I11 | **the stack reads the EXPOSED area** (`stackOf`): a face's rectangle is not real where a face of another part with the opposite normal lies on its plane (`MAP_COPLANAR_M`) — the mated area subtracted cell by cell, `mainOf` and `regionReal` on what is left. Offline: six facets at the real faces |
+| **R2 — the clip at 1e-9** (F9) | the back's plane from float32 triangles 5.1e-9 m off the box's | I11 | `facetPolygon` with `MAP_COPLANAR_M` (offline: six facets, four 90° columns) |
+| **R3 — the edge blend defeated by its own cast; no blend in the cap bands** | the blended place's cast takes the near facet's own face (the chord ALONG it): 86 – 89.5° x 247.5, 90° x 2.5, 90.5° x −242.5; the slice-end blend skipped in the cap bands (`same`): a 284 mm raw jump at pitch −61° | I11's step, I13's 77 mm, I14's spikes, I15's trigger | (a) the cast's hit taken only where the chord CUTS a surface (its offset along the chord small — a sagitta rule); (b) the slice-end blend in the cap bands too; (c) one EPS for the bound |
+| **R4 — THE SOLVER IS ABSORBED BY ANY RING DISCONTINUITY** | a lateral jump J of the anchor larger than `spare·0.9` (0.27 m far, ~16 mm close in) never fits a stride: the piece converges onto the jump, 24 queries a frame, `deferred` for ever, the orbit's target runs away; a dy carried with the yaw's backlog is dead too | **I15**, the close-in *"frozen, not touching"* blockages at grooves and Piece44 | `solveOrbitStep`: a stride that cannot fit while the gap is open takes the jump when its LANDING is admissible (one query); `orbitFrame`: a deferred solve with no progress keeps no backlog beyond this frame's input |
+| **R5 — one polar chart** | at v = 1 the anchor moves 0 mm/rad of yaw (the solved yaw follows, nothing seen moves); the red over a cap runs to the centre | I1, I12, I6 | F10 (the cap charted in the column it was entered from) after R1 – R4; F1 a stopgap |
+| **R6 — the slide owns every drag; its camera reads the finger** | `hoverDragTake` takes every one-finger drag in the slide mode; the limited orbit fed the finger's step before `hoverSolve` clamps it | I3, I4 | F3 (a refused bound step hands the drag to the orbit, the slide unlatched) + F4 (the limited orbit fed the SOLVED step, eased) |
+| **R7 — the piece placed from one surface point under the shell's offset** | within 60 mm the foot comes down onto the gizmo (the top at 498.5) while Piece44 stands to 540: the piece's body under Piece44's top, refused | I2 | a footprint placement (the piece's box clear of the parts' boxes inflated by the approach) — after R1 – R4, over F2 |
+
+**Also found**: the gizmo and the lines one frame behind the solved piece (`assemblyFrame` before the solve); `shownDir`'s branch cut opposite
+the calm's normal (the seam's jump far out 1406 mm against 490); I16 mostly the probe (`gizmoJoins` keeps the ring on a drawn segment) plus I8 / I10;
+I5 small (close in the finger ~1:1 on the glass; far out the PIECE sweeps 30 – 48 screen px a finger px).
+
+**The build order** (`1.0.111-Polar-orbit-fixes`): **R1 + R2** (each its commit; vectors on the dumped `Scene_1` faces) → **R4** → **R3** →
+**R6** (F3 + F4) → **R7** → F10 (subsuming F1) → F8, F7a / b, I7 → the walks re-run against §4. ✅ R1 – R4, R6 built and the walks re-run → §6 (R7, F10 … not built).
+
+## 6. ⭐⭐⭐ As built (2026-11-09, `1.0.111-Polar-orbit-fixes`) — and what the walks still find
+
+**Built** (each its commit, its vectors RED on the commit before; ⛔ no device close on any):
+
+| fix | commit | the rule | vectors |
+|---|---|---|---|
+| **R1** | `7d0d01d` | `stackOf` reads the EXPOSED area: a face's rectangles minus another part's coplanar opposite faces (`exposedRects`; `MapFace.part`) — the cube's six facets on its real faces (±x 247.5 / −242.5) | `face_map_exposed` (7, on `tests/fixtures/scene_1_cube_faces.json`, the page's 240 faces) |
+| **R2** | `7d0d01d` | `facetPolygon`'s clip at `MAP_COPLANAR_M` (was 1e-9): the back facet kept — four 90° columns | in `face_map_exposed` |
+| **R4** | `3c3ce8d` | `ringJump`: a free-air stride that fits under a quarter of its allowance looks for a JUMP of the anchor ahead (≥ `RING_JUMP_M`, bisected on the anchors) and crosses it when the landing is admissible (one query); `orbitFrame`: a deferred solve with no progress keeps no backlog | `solver_ring_jump` (5) |
+| **R3** | `5f0d049` | (a) no cast across two facets FACING APART (`BLEND_APART_COS`); (b) the slice-end blend at every pitch; (c) `castPoint`: D3's cast from just inside the facet, never its rim | `face_map_blend_cast` (5) |
+| **R6** = F3 + F4 | `a865d14` | `slideLetsGoAtBound`: a step the hosting faces refuse WHOLE hands the drag to the orbit (`slideArmedByOrbit`: that drag never re-arms it); `slideTurnTravel`: the limited orbit turned by what the piece SLID | `slide_edge_letgo` (5) |
+| the calm's cut | `a66cd4a` | `shownDir`'s horizontal share faded to 1 from 90° to 180° off the face's normal (no branch cut behind it) | `calm_branch_cut` (3) |
+| the map's catch-up (a regression R4 exposed) | `217de6d` | `mapAnglesStep`: where the catch-up ALONE would move the gizmo more than `MAP_SYNC_HOLD_M`, it is held that frame (a 32 mm limit cycle at Piece1's groove edge) | `map_sync_hold` (3) |
+
+**Not built**: R7 (the owner's choice below), F10 / F1, F8, F7a / b, I7, the one-frame gizmo lag (`assemblyFrame` before the solve — reordering touches `gizmoAtAngles`).
+
+**The walks re-run** (the 23 scenarios on `217de6d`, ~83 000 frames, 0 page errors; before = `469653b`). Two instruments added:
+`scripts/probes/walk_compare.mjs` (each check's events, and the long stalls classified SEAM / SLIDE / POLE / BLOCKED) and
+`scripts/probes/walk_norm.mjs` (⭐ the motion NORMALISED by the input — headless input is bursty, an event every 2 – 3 frames, so the raw jump counts
+measure the input as much as the orbit: MAP-STEP a gizmo step > 15 mm at > 25 mm per degree of the map's angles; MAP-REVERSAL the gizmo going back while
+the map's angles go one way; SOLVE-REVERSAL the solved yaw going back while the target goes one way).
+
+| measure | before | after | |
+|---|---|---|---|
+| **I15** seam stalls (≥ 30 frames still at a column's bound) | 36 | **1** | ✅ |
+| slide traps (stalls with the slide on) | 17 | **2** | ✅ (I3 / I4) |
+| the piece BEHIND the gizmo | 18 | **1** | ✅ |
+| solver reversals | 1 | 0 | ✅ |
+| map steps (normalised) | 121 | 114 | ≈ — what is left: the grooves' (32 – 95 mm) and Piece44 / 45's (41 mm) depths, D3 by design |
+| ⛔ **map reversals** (normalised) | 8 | **134** | a REGRESSION — (a) below |
+| ⛔ **long BLOCKED stalls** (not seam, slide, pole) | 23 | **51** | a REGRESSION — not yet traced, (b) below |
+| pole stalls | 70 | 83 | open — R5 (c) |
+| raw leaps / jumps (`walk_analyse`) | 210 / 163 | 416 / 457 | ⚠ mostly the input's bursts × a map 6.7 mm/° wide (R1; was 4.0) × motion where it used to freeze — the normalised rows are the ones to read |
+
+**What remains — the root causes and the fixes proposed:**
+
+* **(a) the notch reversals** (96 of the 116 reversals listed are at the cube's two LEFT grooves, x < −180, y > 400 or < 90). The side band's horizontal
+  cast meets the groove's RISER (x −193), the cap band's vertical cast its TREAD (y 414): the edge band blends riser → tread in the wrong order (the
+  gizmo runs y 488 → 415 while the finger goes up), then steps 84 mm. ⭐ R1 exposed it — the −x facet moved −147.5 → −242.5, so the groove now lies
+  under the edge band. **Fix**: F8 (walk the step, never jump it) extended to the edge bands — the blend's cast walks from the place it left; and the
+  owner's I7 rule for an OPEN notch (bridged as a void, or followed into).
+* **(b) the BLOCKED stalls 23 → 51** — binned by place: the **top-left notch 5 → 26** (the gizmo on its tread, y 414, x −221 … −233, the piece at
+  x −245 above it; 14 in `random_4` alone, dx AND dy refused) — (a)'s groove, the same root; **near the bottom 7 → 15** (y < 60: the front and
+  back's lower rims, the x 104 – 117 groove, Piece43); top 6 → 4; elsewhere 5 → 6. To trace each (the next pass); part may be R7's (the piece's
+  body against a proud part close in) — unverified.
+* **(c) the poles** (R5): F10 (the cap charted in the column it was entered from) or F1 (a pitch cap, the stopgap) — **the owner's choice**.
+* **(d) R7 vs a slot**: a box-clearance placement would hold a piece at a slot's MOUTH (a goal slot's walls touch the piece). **The owner's choice**:
+  F2, or R7 with a slot exemption.
+* **(e) I5** (a ±3 px tremble over a 2 px step reverses the target): not built.

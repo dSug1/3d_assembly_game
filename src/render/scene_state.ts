@@ -20,6 +20,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, TapHistory, MotionTracker, type FollowState } from "../input";
+import type { Sample } from "../input/motion";
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
@@ -326,6 +327,10 @@ export interface SceneState {
   hoverOutlineKey: string;
   /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */
   hoverSpent: number | null;
+  /** ⭐⭐⭐ (2026-11-09, F3) the pointer whose drag the slide let go of at the edge of the hosting faces — it orbits, never re-arms the slide until it lifts */
+  slideLetGo: number | null;
+  /** ⭐⭐⭐ (2026-11-09, F4) the slide drag's finger travel (px) since the last solve, and its last sample — the limited orbit turned by what the piece SLID */
+  slideTurnAsk: { s: Sample; px: number } | null;
   /** ⭐ (2026-10-16) a slide just ended: no hover offered until the orbit moves the piece (`hoverOffered`). */
   hoverSlid: boolean;
   /** ⭐⭐⭐ (2026-11-01) the slide mode may latch (`slideLatches`): false once left, armed again by an approach step inward or an orbit drag (`slideArmedAfter`) */
