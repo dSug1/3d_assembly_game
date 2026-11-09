@@ -41,3 +41,39 @@ export function insertIndex(params: readonly number[], p: number): number {
   while (i < params.length && params[i]! <= p) i++;
   return i;
 }
+
+/** ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8) A line's step this short (m) is drawn whatever it crosses — the gizmo's own pace near an edge. */
+export const LINE_JOIN_M = 0.003;
+/** ⭐ …and its parameter halved this many times at most to tell a steep stretch from a jump — to 1/4096 of a sample's interval (the green's: 0.001°): a
+ * continuous stretch narrower than that reads as a jump (the map's narrowest — an edge's stretch, a walked window — are thousands of times wider). */
+export const LINE_JOIN_HALVINGS = 12;
+
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F6 → I8, the owner: *"F6-I8: check if the issue is still here"*) **A LINE BREAKS ONLY WHERE THE GIZMO
+ * JUMPS.** Two neighbouring samples `a` (at the parameter `s0`) and `b` (at `s1`) of a drawn line are joined when the gizmo's path between them is
+ * CONTINUOUS: the interval halved, the half with the larger step kept, until the step is under `LINE_JOIN_M` (joined) — a jump keeps its size however
+ * small the interval (broken). `at(s)`: the gizmo at a parameter (`null`: nothing there — broken). ⛔ The ratio of the drawn step to the place's step
+ * (`2.5 × place + 2 mm`) broke the line wherever the gizmo was merely FAST: through an edge's blend, over a notch's mouth, up a walked step — 10 – 30 mm
+ * drawn for 3 – 4 mm of place, every one continuous (probed: 8 of 12 breaks left on the cube after the step walk).
+ */
+export function pathJoins(a: readonly [number, number, number], b: readonly [number, number, number], s0: number, s1: number, at: (s: number) => readonly [number, number, number] | null): boolean {
+  const d = (p: readonly [number, number, number], q: readonly [number, number, number]): number => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  let lo = s0;
+  let hi = s1;
+  let A = a;
+  let B = b;
+  for (let k = 0; k < LINE_JOIN_HALVINGS; k++) {
+    if (d(A, B) <= LINE_JOIN_M) return true;
+    const m = (lo + hi) / 2;
+    const M = at(m);
+    if (M === null) return false;
+    if (d(A, M) >= d(M, B)) {
+      hi = m;
+      B = M;
+    } else {
+      lo = m;
+      A = M;
+    }
+  }
+  return d(A, B) <= LINE_JOIN_M;
+}
