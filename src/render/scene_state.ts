@@ -473,8 +473,8 @@ export interface SceneState {
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;
   /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
-  asmRedCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; surf: readonly (Vec3 | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement, a slice a frame (`refineStep`) */ readonly ref: import("../input/section_hull").RefineState<{ readonly p: Vec3; readonly s: Vec3 }> } | null;
-  asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; surf: readonly (Vec3 | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement, a slice a frame (`refineStep`) */ readonly ref: import("../input/section_hull").RefineState<{ readonly p: Vec3; readonly s: Vec3 }> } | null;
+  asmRedCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
+  asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
@@ -681,3 +681,6 @@ export const ORBIT_START_ELEVATION = 0.62;
 export const ORBIT_START_CENTRE_M: Vec3 = [0, 0, 0];
 
 type AbstractMeshT = import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh;
+
+/** ⭐ (2026-11-09, §8.7) a section line's sample: its drawn point (lifted along its surface's normal), its place on the facet, the real face under it (part, normal, the unlifted point). */
+export type LineSample = { readonly p: Vec3; readonly s: Vec3; readonly h: string | null; readonly n: Vec3; readonly q: Vec3 };

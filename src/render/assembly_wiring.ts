@@ -11,7 +11,7 @@
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
-import { gizmoJoins, insertIndex, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
+import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
@@ -22,7 +22,7 @@ import { goalLocked } from "../input/goal_lock";
 import { faceLift, pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
-import type { SceneState } from "./scene_state";
+import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import { calmHeading, calmShown, calmStep, calmTarget } from "../input/orbit_calm";
@@ -586,38 +586,25 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
  * dy the green only); a step between two neighbours far beyond the box's own step there (a depth step: a protrusion, a recess) breaks the line. ⭐ ONE
  * mesh of a fixed vertex count, updated in place (a segment not drawn: collapsed). Hidden under the slide, or off.
  */
-/** ⭐ (2026-11-02) the gizmo's vertex `i` joined to its neighbours `prev` / `next` (`gizmoJoins`: the nearer one at least). */
-function around(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, prev: number, next: number): [boolean, boolean] {
-  const g = pts[i];
-  if (g === null || g === undefined) return [false, false];
-  const a = prev >= 0 ? (pts[prev] ?? null) : null;
-  const b = next < pts.length ? (pts[next] ?? null) : null;
-  const d = (p: Vector3 | null): number => (p === null ? Infinity : Vector3.Distance(g, p));
-  const ja = a !== null && sampleJoins(pts, surf, prev, i);
-  const jb = b !== null && sampleJoins(pts, surf, i, next);
-  const j = gizmoJoins(ja, jb, d(a), d(b));
-  return [j[0] && a !== null, j[1] && b !== null];
-}
-
-/** ⭐ (Step 4c-bis) two neighbouring samples joined: their step no more than 2.5 × the box's own step between their places (+ 2 mm) — a depth step breaks it. */
-function sampleJoins(pts: readonly (Vector3 | null)[], surf: readonly (Vec3 | null)[], i: number, j: number): boolean {
-  const a = pts[i] ?? null;
-  const b = pts[j] ?? null;
-  const sa = surf[i] ?? null;
-  const sb = surf[j] ?? null;
-  if (a === null || b === null || sa === null || sb === null) return false;
-  const box = Math.hypot(sb[0] - sa[0], sb[1] - sa[1], sb[2] - sa[2]);
-  return Vector3.Distance(a, b) <= 2.5 * box + 0.002;
-}
-
 /** ⭐ The section lines' samples (the green round the yaw, the red along the pitch — the gizmo's vertex added to each). */
 const GREEN_SAMPLES = 96;
 const RED_SAMPLES = 64;
-/** ⭐ (2026-11-09, I17) the mesh's fixed segment counts: the base samples + the refinement's budget (`refineSamples`) + the gizmo's vertex — unused collapsed */
+/** ⭐ (2026-11-09, I17) the mesh's fixed segment counts: the base samples + the refinement's budget (`refineStep`) + the gizmo's vertex — unused collapsed */
 const GREEN_SEGS = GREEN_SAMPLES + LINE_REFINE_BUDGET + 1;
 const RED_SEGS = RED_SAMPLES + LINE_REFINE_BUDGET;
-/** ⭐ The lines lifted off the surface along its face's axis (m) — never in it. */
+/**
+ * ⭐ The lines lifted off the surface (m) — never in it. ⭐⭐⭐ (2026-11-09, §8.7) along the REAL surface's own normal (the gizmo's hit), ⛔ the big face's:
+ * on Piece42's slanted sides (15° from the +x face's plane) the lift along +x left the line 0.53 mm off the face.
+ */
 const SECTION_LIFT_M = 0.002;
+/** ⭐ (§8.7) a line's sample: its drawn point (lifted), its place on the facet, the real face under it (part, normal, the unlifted point) */
+type LineVal = LineSample;
+/** ⭐ (§8.7) two samples on the SAME real face — one part, one normal, one plane: their path continuous (no verification) */
+function sameFace(a: LineVal, b: LineVal): boolean {
+  if (a.h !== b.h) return false;
+  if (a.n[0] * b.n[0] + a.n[1] * b.n[1] + a.n[2] * b.n[2] < 0.9999) return false;
+  return Math.abs((a.q[0] - b.q[0]) * a.n[0] + (a.q[1] - b.q[1]) * a.n[1] + (a.q[2] - b.q[2]) * a.n[2]) < 0.001;
+}
 
 function sectionLinesFrame(st: SceneState): void {
   const sh = st.asmShown;
@@ -630,30 +617,34 @@ function sectionLinesFrame(st: SceneState): void {
   const parts = st.asmParts?.key ?? "";
   const o = mapOpts(st);
   const optKey = `${o.edgeMm}|${o.edgeDeg}`;
-  const lift = (q: Vec3, n: Vec3): Vector3 => new Vector3(q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M);
   // ⭐⭐⭐ (2026-11-09, I17) the samples REFINED where the line leaves its chord by more than 1 mm (`refineStart`, `refineStep`): a narrow face (Piece42's
-  // slanted sides, 6.5° of yaw against a sample every 3.75°) is drawn on its surface, never as a chord through the part — drawing only. A new line (its
-  // key changed: the line being dragged across) is drawn from its base samples; a line that stays refines a slice a frame (`LINE_REFINE_PER_FRAME`)
-  type Val = { readonly p: Vec3; readonly s: Vec3 };
-  const evOf = (at: (x: number) => readonly [number, number]) => (x: number): Val | null => {
-    const [yw, pt] = at(x);
+  // slanted sides, 6.5° of yaw against a sample every 3.75°) is drawn on its surface, never as a chord through the part — drawing only.
+  // ⭐⭐⭐ (§8.7) THE JOINS: an interval is drawn only where the gizmo's path is CONTINUOUS — the same real face at both ends at once, a face change once
+  // verified (`joinStep`, `pathJoins`); unverified, broken — never a chord across a jump. A new line (its key changed: the line being dragged across) is
+  // drawn from its base samples; each frame a line spends `LINE_REFINE_PER_FRAME` evaluations — its joins first, then its refinement
+  const valOf = (yw: number, pt: number): LineVal | null => {
     const m = mapGizmo(st, yw, pt);
     if (m === null) return null;
-    const n = m.t.normal;
+    const n = m.hit.normal ?? m.t.normal;
     const q = m.hit.point;
-    return { p: [q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M], s: m.t.surface };
+    return { p: [q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M], s: m.t.surface, h: m.hit.host, n, q };
   };
-  const drawn = (ref: RefineState<Val>) => {
+  const pos = (v: LineVal): Vec3 => v.p;
+  const drawn = (ref: RefineState<LineVal>) => {
     const r = refineNow(ref);
-    return { params: r.params, pts: r.vals.map((v) => (v === null ? null : new Vector3(v.p[0], v.p[1], v.p[2]))), surf: r.vals.map((v) => (v === null ? null : v.s)) };
+    return { params: r.params, vals: r.vals, joins: r.joins, pts: r.vals.map((v) => (v === null ? null : new Vector3(v.p[0], v.p[1], v.p[2]))) };
   };
   const line = (cache: SceneState["asmRedCache"], key: string, at: (x: number) => readonly [number, number], base: readonly number[], closed: boolean, period: number) => {
-    const ev = evOf(at);
+    const ev = (x: number): LineVal | null => valOf(...at(x));
     if (cache === null || cache.key !== key) {
-      const ref = refineStart(base, closed, period, ev);
+      const ref = refineStart(base, closed, period, ev, sameFace);
+      joinStep(ref, ev, pos);
       return { key, ref, ...drawn(ref) };
     }
-    if (!cache.ref.done && refineStep(cache.ref, ev, (v) => v.p)) Object.assign(cache, drawn(cache.ref));
+    const v0 = cache.ref.ver;
+    if (!joinsKnown(cache.ref)) joinStep(cache.ref, ev, pos);
+    else if (!cache.ref.done) refineStep(cache.ref, ev, pos);
+    if (cache.ref.ver !== v0) Object.assign(cache, drawn(cache.ref));
     return cache;
   };
   // the red's samples (per the map's yaw): the pitch from −90° to +90°
@@ -662,52 +653,53 @@ function sectionLinesFrame(st: SceneState): void {
   // the green's samples (per the map's pitch): the yaw round the circle
   const gKey = `${parts}#G#${sh.pitch.toFixed(7)}#${optKey}`;
   st.asmGreenCache = line(st.asmGreenCache, gKey, (x) => [x, sh.pitch], sectionFixed(2 * Math.PI, GREEN_SAMPLES, true), true, 2 * Math.PI);
-  // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame
-  const gv = lift(g, sh.t.normal);
-  const key = `${rKey}|${gKey}|${st.asmRedCache.params.length}|${st.asmGreenCache.params.length}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
+  // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame — lifted along its own surface's normal (§8.7)
+  const gval = valOf(sh.yaw, sh.pitch);
+  const gn = gval?.n ?? sh.t.normal;
+  const gv = new Vector3(g[0] + gn[0] * SECTION_LIFT_M, g[1] + gn[1] * SECTION_LIFT_M, g[2] + gn[2] * SECTION_LIFT_M);
+  const key = `${rKey}|${gKey}|${st.asmRedCache.ref.ver}|${st.asmGreenCache.ref.ver}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
   if (st.asmSectionLines !== null && key === st.asmSectionKey) return;
   st.asmSectionKey = key;
   const rest = gv;
   const lines: Vector3[][] = [];
+  /**
+   * ⭐ one line drawn with the gizmo's vertex inserted at `gi`: a segment between two samples by their interval's join; the gizmo's two by the interval
+   * it splits (continuous: both), else each by the same face — at least the nearer one (`gizmoJoins`: the ring always on a drawn line)
+   */
+  const draw = (c: NonNullable<SceneState["asmRedCache"]>, gi: number, closed: boolean, segs: number): void => {
+    const N = c.pts.length;
+    const pts = [...c.pts];
+    pts.splice(gi, 0, gv);
+    const n = pts.length;
+    const prevB = closed ? (gi - 1 + N) % N : gi - 1; // the sample before the gizmo (its interval holds the gizmo)
+    const nextB = closed ? gi % N : gi; // the sample after it
+    const split = prevB >= 0 ? (c.joins[prevB] ?? null) : null;
+    const pv = prevB >= 0 ? (c.vals[prevB] ?? null) : null;
+    const nv = nextB < N ? (c.vals[nextB] ?? null) : null;
+    const d = (p: Vector3 | null): number => (p === null ? Infinity : Vector3.Distance(gv, p));
+    const ja = pv !== null && (split === true || (gval !== null && sameFace(pv, gval)));
+    const jb = nv !== null && (split === true || (gval !== null && sameFace(gval, nv)));
+    const gj = gizmoJoins(ja, jb, d(prevB >= 0 ? (c.pts[prevB] ?? null) : null), d(nextB < N ? (c.pts[nextB] ?? null) : null));
+    const last = closed ? n : n - 1;
+    for (let k = 0; k < segs; k++) {
+      if (k >= last) {
+        lines.push([rest, rest]); // ⭐ (I17) beyond this line's samples: collapsed
+        continue;
+      }
+      const k1 = (k + 1) % n;
+      const p0 = pts[k] ?? null;
+      const p1 = pts[k1] ?? null;
+      const joined = k1 === gi ? gj[0] && pv !== null : k === gi ? gj[1] && nv !== null : c.joins[k < gi ? k : k - 1] === true;
+      lines.push(p0 !== null && p1 !== null && joined ? [p0, p1] : [rest, rest]);
+    }
+  };
   // green: a closed loop through the gizmo (its parameter the map's yaw)
   const gc = st.asmGreenCache;
-  const gParam = ((sh.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  const green = [...gc.pts];
-  const gSurf = [...gc.surf];
-  const gi = insertIndex(gc.params, gParam);
-  green.splice(gi, 0, gv);
-  gSurf.splice(gi, 0, sh.t.surface);
-  const n = green.length;
-  const gJoin = around(green, gSurf, gi, (gi - 1 + n) % n, (gi + 1) % n);
-  for (let k = 0; k < GREEN_SEGS; k++) {
-    if (k >= n) {
-      lines.push([rest, rest]); // ⭐ (I17) beyond this line's samples: collapsed
-      continue;
-    }
-    const p0 = green[k] ?? null;
-    const p1 = green[(k + 1) % n] ?? null;
-    const forced = (k + 1) % n === gi ? gJoin[0] : k === gi ? gJoin[1] : null;
-    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(green, gSurf, k, (k + 1) % n)) ? [p0, p1] : [rest, rest]);
-  }
+  draw(gc, insertIndex(gc.params, ((sh.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)), true, GREEN_SEGS);
   // red: bottom centre → top centre through the gizmo (its parameter the map's pitch + 90°)
   const rc = st.asmRedCache;
-  const red = [...rc.pts];
-  const rSurf = [...rc.surf];
-  const ri = insertIndex(rc.params, sh.pitch + Math.PI / 2);
-  red.splice(ri, 0, gv);
-  rSurf.splice(ri, 0, sh.t.surface);
-  const rJoin = around(red, rSurf, ri, ri - 1, ri + 1);
-  for (let k = 0; k < RED_SEGS; k++) {
-    if (k >= red.length - 1) {
-      lines.push([rest, rest]); // ⭐ (I17) beyond this line's samples: collapsed
-      continue;
-    }
-    const p0 = red[k] ?? null;
-    const p1 = red[k + 1] ?? null;
-    const forced = k + 1 === ri ? rJoin[0] : k === ri ? rJoin[1] : null;
-    lines.push(p0 !== null && p1 !== null && (forced ?? sampleJoins(red, rSurf, k, k + 1)) ? [p0, p1] : [rest, rest]);
-  }
+  draw(rc, insertIndex(rc.params, sh.pitch + Math.PI / 2), false, RED_SEGS);
   if (st.asmSectionLines === null) {
     const colours = lines.map((_, i) => (i < GREEN_SEGS ? [new Color4(0.35, 0.8, 0.35, 1), new Color4(0.35, 0.8, 0.35, 1)] : [new Color4(0.9, 0.25, 0.2, 1), new Color4(0.9, 0.25, 0.2, 1)]));
     st.asmSectionLines = CreateLineSystem("asmSections", { lines, colors: colours, updatable: true }, st.scene);

@@ -20,7 +20,7 @@ function piece42(x: number): number {
 const posOf = (v: Vec3): Vec3 => v;
 /** the whole refinement at once (the wiring spends it a slice a frame) */
 function refineSamples<T>(params: readonly number[], closed: boolean, period: number, ev: (x: number) => T | null, pos: (v: T) => Vec3, tolM = LINE_REFINE_M, levels = LINE_REFINE_LEVELS, budget = LINE_REFINE_BUDGET) {
-  const r = refineStart(params, closed, period, ev, budget);
+  const r = refineStart(params, closed, period, ev, undefined, budget);
   while (!r.done) refineStep(r, ev, pos, Infinity, tolM, levels);
   return refineNow(r);
 }
@@ -110,7 +110,7 @@ describe("⭐⭐⭐ (2026-11-09, I17) the lines sampled adaptively", () => {
 
   it("⭐ wired: both lines' samples refined a slice a frame, the mesh at a fixed size", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("if (!cache.ref.done && refineStep(cache.ref, ev, (v) => v.p)) Object.assign(cache, drawn(cache.ref));");
+    expect(a).toContain("else if (!cache.ref.done) refineStep(cache.ref, ev, pos);");
     expect(a).toContain("sectionFixed(Math.PI, RED_SAMPLES - 1, false), false, Math.PI)");
     expect(a).toContain("sectionFixed(2 * Math.PI, GREEN_SAMPLES, true), true, 2 * Math.PI)");
   });
