@@ -8,6 +8,7 @@
 //       { "random": n, "seed": s, "diag": 0|1, "zig": 0|1, "max": px }  n seeded random legs (zig: 2–4 segments a press)
 //       { "wob": px, "seed": s }        the finger's tremble from here on (±px a frame, both axes; 0 off)
 //       { "wait": ms }                  { "reset": [yaw, v] }  the orbit put at a view (the approach kept)
+//       { "eval": expr }               an expression evaluated in the page there (its value printed: a diagnosis at a state the walk reached)
 //   ONLY=name,name — run these scenarios only; OUT=name — the recording `<PROBE_DIR>/<name>.json`; URL (default http://127.0.0.1:5174/)
 //   EVAL=expr — no scenarios: boot, print the expression's value (JSON), exit
 // Then `node scripts/probes/walk_analyse.mjs <file>`. ⭐ Its own Chrome profile, removed in `finally`; every DevTools call times out; the tree killed.
@@ -168,6 +169,7 @@ try {
       };
       for (const L of sc.legs) {
         if (L.wait) { await sleep(L.wait); continue; }
+        if (L.eval) { console.log(`EVAL ${sc.name}:`, JSON.stringify(await ev(L.eval))); continue; }
         if (L.wob !== undefined) { wob = L.wob; if (L.seed !== undefined) seed = L.seed; continue; }
         if (L.reset) { k++; await tag(`reset${k}`); await ev(`window.__st.orbit.reset(${L.reset[0]}, ${L.reset[1]})`); await sleep(1200); continue; }
         if (L.A !== undefined) { k++; await approach(`a${k}[${L.A}]`, L.A); continue; }
