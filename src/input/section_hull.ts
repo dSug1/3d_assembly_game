@@ -59,27 +59,97 @@ export const LINE_REFINE_BUDGET = 160;
 /** ⭐ the evaluations a line's refinement may spend in one frame */
 export const LINE_REFINE_PER_FRAME = 32;
 
+/**
+ * ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8.7 — the owner: *"why such a difference between red and green contours?"* → *"build … budgeted continuity
+ * test"*) **A LINE BREAKS ONLY WHERE THE GIZMO JUMPS** — each interval carries its JOIN (`j`): `true` joined, `false` broken, `null` not yet known (drawn
+ * broken — never a chord). Both ends on the SAME real face (`same`: one part, one normal, one plane) — continuous by construction, joined at once, no
+ * evaluation; a face change — verified by `pathJoins` (`joinStep`), out of the same per-frame budget as the refinement. ⛔ The speed rule (`2.5 × place +
+ * 2 mm`) cut every surface steeper than 66° to the big face (Piece42's sides: 3.8 × — the green cut) and joined a jump wide enough between two samples
+ * (Piece44's overhang under the top: a 41 mm jump drawn as a chord while the red was dragged).
+ */
+export const LINE_JOIN_M = 0.003;
+/** ⭐ …its parameter halved this many times at most to tell a steep stretch from a jump. */
+export const LINE_JOIN_HALVINGS = 12;
+
+/**
+ * ⭐⭐⭐ Two neighbouring samples `a` (at the parameter `s0`) and `b` (at `s1`) are joined when the gizmo's path between them is CONTINUOUS: the interval
+ * halved, the half with the larger step kept, until the step is under `LINE_JOIN_M` (joined) — a jump keeps its size however small the interval (broken).
+ * `at(s)`: the drawn point at a parameter (`null`: nothing there — broken). `spend`: called once per evaluation.
+ */
+export function pathJoins(a: Vec3, b: Vec3, s0: number, s1: number, at: (s: number) => Vec3 | null, spend?: () => void): boolean {
+  const d = (p: Vec3, q: Vec3): number => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  let lo = s0;
+  let hi = s1;
+  let A = a;
+  let B = b;
+  for (let k = 0; k < LINE_JOIN_HALVINGS; k++) {
+    if (d(A, B) <= LINE_JOIN_M) return true;
+    const m = (lo + hi) / 2;
+    const M = at(m);
+    spend?.();
+    if (M === null) return false;
+    if (d(A, M) >= d(M, B)) {
+      hi = m;
+      B = M;
+    } else {
+      lo = m;
+      A = M;
+    }
+  }
+  return d(A, B) <= LINE_JOIN_M;
+}
+
+type RefNode<T> = { x: number; v: T | null; open: boolean; j: boolean | null };
+
 export interface RefineState<T> {
   readonly closed: boolean;
   readonly period: number;
-  nodes: { x: number; v: T | null; open: boolean }[];
+  /** ⭐ (§8.7) both values on the same real face — their path continuous */
+  readonly same: (a: T, b: T) => boolean;
+  nodes: RefNode<T>[];
   /** the level being scanned, the next node to scan in it, the level's output so far */
   lv: number;
   i: number;
-  next: { x: number; v: T | null; open: boolean }[];
+  next: RefNode<T>[];
   any: boolean;
   left: number;
   done: boolean;
+  /** ⭐ bumped on every change of the samples or the joins (the drawing's key) */
+  ver: number;
 }
 
-/** ⭐ The base samples evaluated; the refinement not started. */
-export function refineStart<T>(params: readonly number[], closed: boolean, period: number, ev: (x: number) => T | null, budget: number = LINE_REFINE_BUDGET): RefineState<T> {
-  const nodes = params.map((x) => ({ x, v: ev(x), open: true }));
-  if (!closed && nodes.length > 0) nodes[nodes.length - 1]!.open = false; // the last node starts no interval
-  return { closed, period, nodes, lv: 0, i: 0, next: [], any: false, left: budget, done: nodes.length < 2 };
+/** ⭐ An interval's join known at once: no value at an end — broken; the same face — joined; else unknown (to verify). */
+function joinOf<T>(same: (a: T, b: T) => boolean, a: T | null, b: T | null): boolean | null {
+  if (a === null || b === null) return false;
+  return same(a, b) ? true : null;
 }
 
-/** ⭐ Up to `maxEvals` more evaluations; `true` when it changed the line. */
+/** ⭐ The nodes in their order as they stand — mid-level, the scanned part's and the rest's merged (the same objects). */
+function nowNodes<T>(r: RefineState<T>): RefNode<T>[] {
+  return r.done ? r.nodes : [...r.next, ...r.nodes.slice(r.i)];
+}
+
+/** ⭐ The base samples evaluated, their joins known where the same face holds both ends; the refinement not started. */
+export function refineStart<T>(
+  params: readonly number[],
+  closed: boolean,
+  period: number,
+  ev: (x: number) => T | null,
+  same: (a: T, b: T) => boolean = () => false,
+  budget: number = LINE_REFINE_BUDGET,
+): RefineState<T> {
+  const nodes: RefNode<T>[] = params.map((x) => ({ x, v: ev(x), open: true, j: null }));
+  nodes.forEach((n, k) => {
+    const last = k + 1 >= nodes.length;
+    if (last && !closed) {
+      n.open = false; // the last node starts no interval
+      n.j = false;
+    } else n.j = joinOf(same, n.v, nodes[last ? 0 : k + 1]!.v);
+  });
+  return { closed, period, same, nodes, lv: 0, i: 0, next: [], any: false, left: budget, done: nodes.length < 2, ver: 0 };
+}
+
+/** ⭐ Up to `maxEvals` more evaluations of the refinement; `true` when it changed the line. */
 export function refineStep<T>(
   r: RefineState<T>,
   ev: (x: number) => T | null,
@@ -133,16 +203,59 @@ export function refineStep<T>(
     r.left--;
     spent++;
     if (misses(a.v, b.v, vm)) {
-      r.next.push({ x: xm, v: vm, open: true });
+      // ⭐ (§8.7) a continuous interval stays continuous in both halves; else each half judged again (the same face, or to verify)
+      const was = a.j;
+      a.j = was === true ? true : joinOf(r.same, a.v, vm);
+      r.next.push({ x: xm, v: vm, open: true, j: was === true ? true : joinOf(r.same, vm, b.v) });
       r.any = true;
       changed = true;
     } else a.open = false;
   }
+  if (changed) r.ver++;
   return changed;
 }
 
-/** ⭐ The line's samples as they stand (sorted; in [first, first + period) when closed) — mid-level, the scanned part's and the rest's merged. */
-export function refineNow<T>(r: RefineState<T>): { readonly params: number[]; readonly vals: (T | null)[] } {
-  const all = r.done ? r.nodes : [...r.next, ...r.nodes.slice(r.i)];
-  return { params: all.map((n) => n.x), vals: all.map((n) => n.v) };
+/**
+ * ⭐⭐⭐ (§8.7) Up to `maxEvals` evaluations verifying the joins not yet known (face changes), in the line's order (`pathJoins`); `true` when a join
+ * changed. A verification is started only with its whole cost left (`LINE_JOIN_HALVINGS`).
+ */
+export function joinStep<T>(r: RefineState<T>, ev: (x: number) => T | null, pos: (v: T) => Vec3, maxEvals: number = LINE_REFINE_PER_FRAME): boolean {
+  const all = nowNodes(r);
+  let spent = 0;
+  let changed = false;
+  for (let k = 0; k < all.length && maxEvals - spent >= LINE_JOIN_HALVINGS; k++) {
+    const a = all[k]!;
+    if (a.j !== null) continue;
+    const last = k + 1 >= all.length;
+    if (last && !r.closed) {
+      a.j = false;
+      continue;
+    }
+    const b = all[last ? 0 : k + 1]!;
+    if (a.v === null || b.v === null) {
+      a.j = false;
+      changed = true;
+      continue;
+    }
+    const s1 = last ? b.x + r.period : b.x;
+    a.j = pathJoins(pos(a.v), pos(b.v), a.x, s1, (s) => {
+      const v = ev(s);
+      return v === null ? null : pos(v);
+    }, () => spent++);
+    changed = true;
+  }
+  if (changed) r.ver++;
+  return changed;
 }
+
+/** ⭐ No join left to verify. */
+export function joinsKnown<T>(r: RefineState<T>): boolean {
+  return nowNodes(r).every((n) => n.j !== null);
+}
+
+/** ⭐ The line's samples as they stand (sorted; in [first, first + period) when closed) and each one's join to the next (`null`: not yet known). */
+export function refineNow<T>(r: RefineState<T>): { readonly params: number[]; readonly vals: (T | null)[]; readonly joins: (boolean | null)[] } {
+  const all = nowNodes(r);
+  return { params: all.map((n) => n.x), vals: all.map((n) => n.v), joins: all.map((n) => n.j) };
+}
+

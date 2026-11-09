@@ -8,9 +8,10 @@
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
 * ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
-* ⭐⭐⭐ **2026-11-09 — CONTINUE FROM §8** (branch `1.0.114from1.0.112-`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
+* ⭐⭐⭐ **NEXT TO BUILD — §9, THE TILTED POLE** (branch `1.0.116from1.0.114-`; the owner's four decisions open, §9.2).
+* ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
   sections intricate — the owner went back to `1.0.112-`): F7b ported (the calm on slanted facets), the lines refined (I17's drawing), a closed void with a
-  floor keeps its depth (the owner's amendment); open: I17's reach by a finger far out, and the input-driven design on world-plane cuts (proposed, §8.5).
+  floor keeps its depth (the owner's amendment), a line broken only where the gizmo jumps + the lift along the real surface (§8.7); open: I17's reach by a finger far out, and the input-driven design on world-plane cuts (proposed, §8.5).
 * **Where things stand** (2026-11-08): branch **`1.0.110-`** (from `469653b`; the clean-up's line: `1.0.108from1.0.100-Polar-orbit-with-calm` →
   `1.0.109-Polar-orbit-with-cube-assembly` → here). Live: build **`0bf3134`** (`Scene_1` a cube). `npm run verify`: **1642** vectors passing. **Nothing
   of F1 – F10 is built.** ⛔ No device close on anything since §18.
@@ -406,4 +407,94 @@ map onto) but reopens the cap exits (C1 a hold, B / A rolls — the owner's *"no
 
 `tests/calm_slanted.test.ts` (6, F7b, RED on `f82bfbe`); `tests/line_refine.test.ts` (6, all RED on `b073178`); `tests/void_bridge.test.ts` and
 `tests/void_rims_fit.test.ts` rewritten to the amended rule (7 RED on `b073178`; the two *no floor → bridged* cases pass on both — the rule kept);
-`face_map.test.ts`'s wiring strings. **1696**.
+`face_map.test.ts`'s wiring strings. **1696** (§8.7: **1700**).
+
+### 8.7 ✅ A LINE BREAKS ONLY WHERE THE GIZMO JUMPS — the joins verified within the frame's budget; the lift along the real surface (2026-11-09)
+
+> The owner: *"the slanted vertical faces still do not show the green contour while all the slanted faces show the red contour … why?"* → *"why such a
+> difference between red and green contours? (I do not want a patch, I want to understand why such difference before fixing it)"*; then *"check why the
+> red contour on this protruding grey part slanted face only shows when there is delta position change and then disappear when delta position stops"* →
+> *"Build lift fix and budgeted continuity test"*.
+
+**Why** (measured on the page, each line's settled samples): two neighbours were joined when the drawn step was at most **2.5 × the place's step + 2 mm**
+(`sampleJoins`) — a rule about SPEED, not continuity. On a slope the drawn step is 1 / cos(its angle to the big face) times the place's, so every surface
+steeper than ~66° to the big face read as a jump: the red crosses Piece42's top / bottom slopes at 58° (1.9 ×) — joined; the green crosses its slanted
+vertical sides at 75° (3.8 ×) — CUT (23.6 mm drawn for 17.5 allowed). The refinement (§8.4) exposed it: before, one chord 25 mm wide passed the rule.
+The reverse on Piece44 — an UPSIDE-DOWN frustum on the top, its four slopes facing down (an overhang the top's cast never meets): the gizmo truly jumps
+41 mm onto its top; at rest the refined line is cut there (right), but the line being DRAGGED, rebuilt every frame from its base samples ~20 mm apart,
+joined the jump by the same rule — a chord through the air lying almost on the slanted front face (the ephemeral red).
+⚠ A second, smaller inconsistency: the lines were lifted 2 mm along the BIG face's normal — on Piece42's sides 0.53 mm off the surface.
+
+**Built** (`input/section_hull.ts`; the wiring's `sectionLinesFrame`):
+1. **The joins** — each interval of a line carries its join: both ends on the SAME real face (one part, one normal, one plane: `sameFace`) — joined at
+   once, no evaluation; a face change — verified by `pathJoins` (the interval halved, the larger step kept, until under 3 mm: continuous; 12 halvings at
+   most: a jump), out of the SAME per-frame budget as the refinement (`LINE_REFINE_PER_FRAME`, 32 evaluations — the joins first, then the refinement);
+   ⭐ **unverified: drawn broken — never a chord**. A refined split keeps a continuous interval joined in both halves. The speed rule (`sampleJoins`)
+   deleted. The gizmo's vertex: both sides when the interval it splits is continuous, else each by the same face (the nearer one at least, as before).
+2. **The lift along the real surface's own normal** (the gizmo's hit), the gizmo's vertex too — 2 mm off every face.
+
+**The cost** (the owner's condition, measured on the desktop): 0.013 – 0.06 ms an evaluation; verifying every face change of a line at once would cost
+12 – 112 evaluations (0.2 – 4.8 ms) — on the line being dragged, rebuilt every frame, up to ~+10 ms a frame on an iPhone. Budgeted: a fresh line's
+joins 0.4 – 1.8 ms in its first frame (the red at eight yaws), then at most 32 evaluations a frame per line — no added frame cost. ⚠ The price: while
+dragging, a face change not yet verified shows as a short break, closed within a few frames.
+
+**Measured** (the page): the green over Piece42's sides joined at every height probed; the red over Piece44 on its FIRST frame — the jump's interval
+unverified (broken, no chord), settled — a jump (cut).
+
+**Vectors**: `tests/line_joins.test.ts` (4, all RED on `2879172`: `pathJoins` absent); `line_refine.test.ts`'s wiring string. **1700**.
+
+## 9. ⭐⭐⭐ NEXT TO BUILD — THE TILTED POLE: the pressed cap becomes a side (proposed 2026-11-09, branch `1.0.116from1.0.114-`; ⛔ NOT BUILT — the owner's decisions open)
+
+> The owner: *"create a new rule: when the left click or finger is pressed for orbiting, the orbit tilts so the face currently holding the gizmo becomes
+> the one with the red and green sections which are perpendicular (currently these are the vertical faces which have the red and green sections
+> perpendicular while the top and bottom faces have the polar red and green sections). If the gizmo crosses the edge of the face towards a face which
+> would result in the scene upside down or slanted, the camera tilts when the gizmo crosses the edge so that the verticality on the next face is restored
+> and the next face becomes the face with the red and green sections which are perpendicular (therefore the face which is exited takes the polar if it
+> shall contain the pole, unless it is slanted and does not take the pole and can continue to receive perpendicular red and green sections) : at the
+> moment the camera tilts the gizmo stays where it is but the red and green sections are recomputed to adopt the perpendicular configuration on the
+> coming face"* — *"my new rule allows to convert a polar red-green face to a perpendicular red-green face once, until the gizmo crossing edges requires
+> the polar orbit to realign its poles with the world vertical axis so the camera view remains faithful to the world vertical alignment"* — *"the calm
+> follows the tilt for the face which receives the perpendicular red and green sections"* → *"update the md file to capture this proposal as next to
+> build"*.
+
+### 9.1 The rule proposed
+
+1. **At a press on a cap** (the top / the bottom — a facet that holds a pole) the orbit's FRAME tilts about the camera's horizontal right axis, by the
+   angle that brings the pressed face's normal to the horizontal toward the camera (90° on the cube's top). ⭐ The camera does not move (measured: the
+   view at the press unchanged, 0°). In the tilted frame the pressed face is a SIDE: the red runs straight away from the viewer across it, the green
+   straight left–right; ⭐ the calm in the tilted frame on that face (the owner). ⭐ The gizmo stays where it is: the tilted map's angles put at the gizmo
+   (`mapAngles`, as after the slide), the 0 – 5° gap closed by the existing catch-up (`mapAnglesStep`) — ⛔ read at the camera's angles instead, the
+   gizmo jumped 46 – 49 mm at the press off a side's middle.
+2. **The tilt holds while the gizmo stays on that face** (its stack: proud parts and grooves included), across releases and presses.
+3. **At the first crossing off it, the orbit returns to the world frame**: the gizmo stays, the map's angles and the lines recomputed in the world frame,
+   the face exited polar again. At the crossing the camera already points within 10° of the world orbit's direction there — the re-tilt is essentially a
+   ROLL back to upright (measured, the camera facing the front):
+
+   | crossing | the view at the edge | the re-tilt |
+   |---|---|---|
+   | dx to the left or right side | slanted 63° (90° further on) | a 63° roll back to upright; the direction 10° off |
+   | dy toward the viewer, onto the front | upright, on the world orbit's direction | none — the switch is invisible |
+   | dy away, over the far edge onto the back | upside down (180°) | a 180° roll — decision 2 |
+4. **A face that does not hold a pole never tilts** (the vertical sides, slanted side facets). ⭐ While tilted, the tilted orbit's poles (the front's and
+   the back's centres) are never reached — any crossing re-tilts first.
+
+### 9.2 The owner's decisions (open)
+
+1. **The camera not square to a side at the press** (measured at 30° and 60° off the front): (a) the tilt about the camera's EXACT right — no motion,
+   but the pressed face's lines are vertical planes at the camera's heading, up to 45° off the world x / z axes (the world-axis rule bent on that face) —
+   recommended; (b) the tilt snapped to the nearest world axis — the view ROLLS 34° and the gizmo jumps 64 mm at the press; (c) snapped, with the camera's
+   heading swung at the press (up to 45° about the vertical, no roll).
+2. **dy away over the cap's far edge**: (a) the 180° roll — the same dy kept up then brings the gizmo back over the edge onto the cap, polar again;
+   (b) a stop at the far edge (as today's pole — round by dx); (c) other.
+3. **The pace of the roll back**: over the edge's slow stretch (the last 10 mm / 10°, tied to the place, reversible) or a fixed time.
+4. **Rolls**: the owner ruled them out on 2026-11-06 (*"no camera roll"*); this rule needs one at every exit of a tilted face but dy toward the viewer —
+   63 – 90° at a side exit, 180° at the far edge unless 2 (b).
+
+### 9.3 The probe and the cost
+
+Simulated offline on the cube's 240 real faces through the real face map (`buildFaceMap`, `mapTarget`, `mapAngles`, `stackDepthAt` — no cast, no
+solver, no calm): a press on the top from three camera headings (−90°, −60°, −30°), each tilt variant, then dx and dy both ways to every facet change,
+the view's verticality read there (the world's up on the screen against the screen's up). The scripts: the session's scratchpad `tilt_sim.ts`,
+`tilt_sim2.ts` (to be moved to `scripts/probes/` when built). ⭐ The bottom is symmetric (a press from below) — not simulated.
+**The build**: ONE rotation at the boundary between the orbit and the world — the orbit's direction and the camera's up turned by it, the face map built
+in the tilted frame (cached per tilt), the solver's ring through it, `mapAngles` at the press and at the re-tilt; the calm's targets on the tilted map.
