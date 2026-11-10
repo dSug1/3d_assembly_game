@@ -493,20 +493,30 @@ export interface SceneState {
     rollRad: number;
     axis: Vec3 | null;
     exit: boolean;
+    /** ⭐ (2026-11-10) the crossing off it is over a `b` end (a turn about the edge's line: the horizontal calm carried over), not across */
+    exitAcross: boolean;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;
   /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
   asmTiltAuto: boolean;
-  /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`poleEdgeWhole`, `tiltCalmWhole`) — 0: the calm as eased */
+  /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`tiltCalmWholeHV`'s `h`, a cap's release) — 0: the calm as eased */
   asmCalmWhole: number;
+  /** ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) the VERTICAL share alone whole by position — toward a top / bottom edge (`poleEdgeWhole`), a tilted facet's `b` ends: the horizontal calm carried over */
+  asmCalmWholeV: number;
+  /** ⭐ (2026-11-10) over a cap of the world's frame: the orbit's yaw as it came over (`capYawRelease`) — `null` on a side */
+  asmCapYaw0: number | null;
+  /** ⭐⭐⭐ (2026-11-10, the owner: *"build b"*) the gizmo HELD before a void's mouth while a dy carries it toward the open end (`mouthHold`) — its place, and toward which end (`hi`: up the facet); `null`: free */
+  asmMouth: { readonly point: Vec3; readonly hi: boolean } | null;
+  /** ⭐ (2026-11-10) last frame's gizmo before its glide (the map's, or the held one) — where a mouth's hold starts */
+  asmRawPrev: Vec3 | null;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-10, §9.4) the WORLD's face map, kept beside a tilted one (`asmFaceMap` is the frame's) */
   asmWorldMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
-  asmCalm: { n: Vec3; sH: number; sV: number } | null;
+  asmCalm: { n: Vec3; sH: number; sV: number; wA?: number } | null;
   /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
   asmRedCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
   asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;

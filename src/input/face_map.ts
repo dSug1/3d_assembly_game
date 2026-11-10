@@ -215,7 +215,7 @@ export function regionReal(r: FilledRegion, x: number, y: number): boolean {
  * ⭐⭐⭐ (2026-11-05) THE VOID CLOSED ON A TRAVEL: the regions `rs` (one plane's) hold (`x`, `y`) between them along `x` — a filled cell before it and one
  * after it on the line `y` — or along `y` (the line `x`). On a facet `x` is its `t` (the green's travel on a side) and `y` its `b` (the red's).
  */
-export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): { readonly x: boolean; readonly y: boolean } {
+export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): { readonly x: boolean; readonly y: boolean; readonly yLo: boolean; readonly yHi: boolean } {
   let xLo = false;
   let xHi = false;
   let yLo = false;
@@ -237,7 +237,7 @@ export function closedAlong(rs: readonly FilledRegion[], x: number, y: number): 
         if (r.ys[b + 1]! > y) yHi = true;
       }
   }
-  return { x: xLo && xHi, y: yLo && yHi };
+  return { x: xLo && xHi, y: yLo && yHi, yLo, yHi };
 }
 
 /** ⭐ The distance from (`x`, `y`) to the region (its holes closed): 0 inside, else to its nearest filled cell. */
@@ -682,7 +682,7 @@ export function stackDepthAt(
   x: number,
   y: number,
   foot?: readonly [number, number],
-): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true } | null {
+): { readonly depth: number; readonly group: number; readonly inside: boolean; readonly bridged?: true; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } } | null {
   let front = -1;
   for (let g = 0; g < s.groups.length; g++)
     if (regionContains(s.groups[g]!.region, x, y)) {
@@ -699,7 +699,12 @@ export function stackDepthAt(
       // the floor: ANY deeper group under the point (⛔ `front` alone: a hole enclosed by the plane's own face is filled in its region — the plane's group
       // came first and the floor beneath it was never seen)
       const floor = s.groups.some((gr) => gr.depth < e - MAP_COPLANAR_M && regionContains(gr.region, x, y));
-      if ((c.x || c.y) && !floor) return { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
+      // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"*) closed across only, open up
+      // the facet (`mouth`: toward its `b` end(s) — the top's channel seen from the front): the red's travel there is the next facet's, not this plane's
+      if ((c.x || c.y) && !floor)
+        return c.x && !c.y
+          ? { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true, mouth: { lo: !c.yLo, hi: !c.yHi } }
+          : { depth: mine[0]!.gr.depth, group: mine[0]!.g, inside: false, bridged: true };
       // ⭐⭐⭐ (2026-11-09, §7) AN OPEN VOID THE HELD PIECE CANNOT ENTER IS SURFACE: a floor below (`front`, deeper than the plane), the void's opening on the
       // plane (`voidOpening`) narrower than the piece's footprint (`foot`, its two smallest sizes, any way round) — the gizmo stays on the plane. ⛔ At its
       // real depth the piece, centred on the gizmo, came down into a notch or a rebate it could not fit: along a 13 mm rebate every step blocked

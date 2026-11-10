@@ -64,7 +64,28 @@ const SCENARIOS = [
   ["commit_back_after_cross", -90, 15, [0, -STEP], 420, 1.0, undefined, undefined, "back"],
   ["commit_fast_finger", -90, 15, [0, -4 * STEP], 160, 1.0, undefined, undefined, "fast"],
   ["auto_out_while_tilted", -70, 62, [0, 0], 160, 1.0, undefined, [1.0, 3.0]],
-].filter((s) => env.ONLY === undefined || s[0] === env.ONLY || (env.ONLY === "auto" && String(s[0]).startsWith("auto")));
+  // ⭐ (2026-11-10, the owner: *"when i cross the edge (horizontal edges) … a sort of shake of the scene"*) every horizontal edge by dy, far out and close in
+  ["shake_top_edge_far", -90, 25, [0, -STEP], 140, 2.5],
+  ["shake_bottom_edge_far", -90, -25, [0, STEP], 140, 2.5],
+  ["shake_top_edge_mid", -90, 25, [0, -STEP], 140, 1.7],
+  ["shake_bottom_edge_mid", -90, -25, [0, STEP], 140, 1.7],
+  ["shake_top_edge_close", -90, 25, [0, -STEP], 140, 1.0],
+  ["shake_bottom_edge_close", -90, -25, [0, STEP], 140, 1.0],
+  ["shake_top_edge_far_yaw0", 0, 25, [0, -STEP], 140, 2.5],
+  ["shake_top_edge_far_yaw45", 45, 25, [0, -STEP], 140, 2.5],
+  // ⭐ (2026-11-10, the owner's screenshots) an OBLIQUE heading close in: down onto the bottom and on, up onto the top and on; the channel's mouth from the front
+  ["obl_bottom_close_m70", -70, -10, [0, STEP], 300, 1.0],
+  ["obl_top_close_m70", -70, 10, [0, -STEP], 300, 1.0],
+  ["obl_bottom_close_m110", -110, -10, [0, STEP], 300, 1.0],
+  ["obl_top_close_m110", -110, 10, [0, -STEP], 300, 1.0],
+  ["mouth_front_up_m104", -104, 10, [0, -STEP], 120, 1.0],
+  ["mouth_front_up_m104_far", -104, 10, [0, -STEP], 120, 2.5],
+  // ⭐ (2026-11-10, the owner: *"when i dy upwards … the assembly tilts … only on the bottom face"*) onto a cap, on to its middle, then BACK toward the near edge
+  ["rev_bottom_close", -90, -10, [0, STEP], 120, 1.0, 30],
+  ["rev_top_close", -90, 10, [0, -STEP], 120, 1.0, 30],
+  ["rev_bottom_close_m75", -75, -10, [0, STEP], 120, 1.0, 30],
+  ["rev_top_close_m75", -75, 10, [0, -STEP], 120, 1.0, 30],
+].filter((s) => env.ONLY === undefined || s[0] === env.ONLY || (env.ONLY === "auto" && String(s[0]).startsWith("auto")) || (env.ONLY === "shake" && String(s[0]).startsWith("shake")) || (env.ONLY === "obl" && (String(s[0]).startsWith("obl") || String(s[0]).startsWith("mouth"))) || (env.ONLY === "rev" && String(s[0]).startsWith("rev")));
 
 try {
   let targets = null;

@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -197,8 +197,12 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   // ⭐⭐⭐ (2026-11-10, §9.4) off a tilted facet both shares whole by the exit's share (`k`): at the edge the shown direction is the orbit's own in both frames
   const c = st.asmCalm;
   // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) …and by the calm's whole share by POSITION (`asmCalmWhole`): never eased, so never behind a fast finger
-  const k = Math.max(st.asmTilt?.k ?? 0, st.asmCalmWhole);
-  if (c !== null && k > 0) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - k), sV: 1 - (1 - c.sV) * (1 - k) });
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) the vertical share alone toward a top / bottom edge (`asmCalmWholeV`);
+  // the roll back off a tilted facet over a `b` end keeps the horizontal calm too (`exitAcross` — a turn about the edge's own line)
+  const tl = st.asmTilt;
+  const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
+  const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
+  if (c !== null && (kH > 0 || kV > 0)) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 });
   return calmShown(u, c);
 }
 
@@ -219,6 +223,17 @@ function acrossNormals(st: SceneState, map: FaceMap | null, sh: { readonly t: Ma
 }
 
 function calmFrame(st: SceneState, dtMs: number): void {
+  // ⭐⭐⭐ (2026-11-10, the owner's shake at a crossing — the root: two time laws in one rig) the whole share's TARGET by position (`calmTargets`), the
+  // share itself on the rig's own lag (`wholeShareStep`, `gizmoEaseMs` — the gizmo's, which the piece and the camera's look follow)
+  const prev = st.asmCalmWhole;
+  const prevV = st.asmCalmWholeV;
+  calmTargets(st, dtMs);
+  st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);
+  st.asmCalmWholeV = wholeShareStep(prevV, st.asmCalmWholeV, dtMs, st.cfg.gizmoEaseMs);
+}
+
+/** ⭐ The calm's eased state (`st.asmCalm`) and its whole share's TARGET by position (left in `st.asmCalmWhole` for `calmFrame` to ease). */
+function calmTargets(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F7b) the rule in `input/orbit_calm.ts` (`calmTarget`, `calmStep`): every SIDE facet, slanted ones
   // included, in its own frame; the caps none
   const sh = st.asmShown;
@@ -236,26 +251,45 @@ function calmFrame(st: SceneState, dtMs: number): void {
           zoneVPct: cfg.faceSpanZoneVPct,
           zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
         }, acrossNormals(st, map, sh));
-  // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: both shares whole toward them over the calm's own edge zones (`tiltCalmWhole`)
+  // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: whole toward them over the calm's own edge zones (`tiltCalmWholeHV`) —
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) both shares toward an edge ACROSS, the vertical one alone toward a
+  // `b` end (a turn about the edge's own line: the horizontal calm carried over — `shownDirAcross`)
   const tl = st.asmTilt;
   st.asmCalmWhole = 0;
+  st.asmCalmWholeV = 0;
+  if (sh === null || sh.t.band === "SIDE" || tl !== null) st.asmCapYaw0 = null;
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
-    const p = tiltCalmWhole(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
-    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p), sV: 1 - (1 - tg.sV) * (1 - p) }, dtMs);
-    // ⭐⭐⭐ (2026-11-10) close in, the same share on the SHOWN direction too (by position — the eased state lags a fast finger)
-    if (st.asmTiltAuto) st.asmCalmWhole = p;
+    const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
+    const pV = Math.max(p.h, p.v);
+    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA }, dtMs);
+    // ⭐⭐⭐ (2026-11-10) the same share on the SHOWN direction too (by position — the eased state lags a fast finger); ⭐ at every distance (the owner's
+    // shake: far out the 120 ms calm alone fell behind, then caught up on the cap)
+    st.asmCalmWhole = p.h;
+    st.asmCalmWholeV = pV;
     return;
   }
   // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) close in (the automatic tilt on), the world's frame: a side facet whose top / bottom borders a face holding a
   // pole is whole toward it by POSITION (`poleEdgeWhole`) — the crossing, and the tilt there, with the shown direction the orbit's own
   // ⭐⭐⭐ …and ON a face holding a pole (no calm there by rule): whole at once — ⛔ the eased state's stale share applied there for the one frame before the
   // automatic tilt (the piece thrown back 6°, then forth at the tilt: the owner's back-and-forth)
-  if (tl === null && st.asmTiltAuto && sh !== null && sh.t.band !== "SIDE") st.asmCalmWhole = 1;
-  if (tl === null && st.asmTiltAuto && sh !== null && map !== null && sh.t.band === "SIDE") {
+  // ⭐ at every distance (2026-11-10, the shake: close in only before — far out the eased calm fell behind the finger and caught up on the cap)
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) ON A CAP: the vertical share whole, the side's horizontal calm KEPT
+  // (`shownDirAcross` carries it over the edge), released only as a dx turns the orbit away from where it came over (`capYawRelease`) and by the pitch
+  // (`poleWeight`) — ⛔ both whole at once: the yaw withheld through the dx released at the edge
+  if (tl === null && sh !== null && sh.t.band !== "SIDE") {
+    const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    if (st.asmCapYaw0 === null) st.asmCapYaw0 = q.yaw;
+    st.asmCalmWholeV = 1;
+    st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);
+    st.asmCalm = calmStep(st.asmCalm, st.asmCalm === null ? tg : { n: null, sH: st.asmCalm.sH, sV: 1, wA: 1 }, dtMs);
+    return;
+  }
+  if (tl === null && sh !== null && map !== null && sh.t.band === "SIDE") {
     const col = map.columns[sh.t.side];
     if (col !== undefined) {
       const i = col.facets.indexOf(sh.t.stack);
-      if (i >= 0) st.asmCalmWhole = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+      // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
+      if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
     }
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
@@ -445,7 +479,7 @@ function heldFoot(st: SceneState): readonly [number, number] | undefined {
  * a closed void with NO floor under the point is bridged; one with a floor is `inside` here — the cast lands on its floor (the top's channel: the red along
  * its floor, the green down and across it) — unless the held piece cannot enter it.
  */
-function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } } | null {
   const map = faceMapOf(st);
   if (map === null) return null;
   const t = mapTarget(map, yaw, pitch, mapOpts(st));
@@ -473,14 +507,15 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
     const h = frameCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
     if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
   }
-  return { hit: { point: p, normal: n, host: null }, t };
+  // ⭐⭐⭐ (2026-11-10, *"build b"*) a void's MOUTH (open up the facet): the plane's bridge, and which end it opens to (`mouthHold`)
+  return at.mouth !== undefined ? { hit: { point: p, normal: n, host: null }, t, mouth: at.mouth } : { hit: { point: p, normal: n, host: null }, t };
 }
 
 /**
  * ⭐⭐⭐ (Step 4c-bis) THE GIZMO, THROUGH AN EDGE WITHOUT A JUMP: in an edge band, the facet's gizmo (`rawGizmo`) blended toward the next facet's first one —
  * ⭐ (Step 5) the rule in `input/face_map.ts` (`blendThroughEdges`, `edgeBlend`), vectored on a non-box contour. Its normal, host and place: the facet's own.
  */
-export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget } | null {
+export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: GizmoHit; readonly t: MapTarget; readonly mouth?: { readonly lo: boolean; readonly hi: boolean } } | null {
   const here = rawGizmo(st, yaw, pitch);
   const map = faceMapOf(st);
   if (here === null || map === null) return null;
@@ -488,8 +523,9 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
   // ⭐⭐⭐ (2026-11-10, §9.4) the map works in its frame; its point and normal are given in the WORLD (`t` stays the map's: the calm, the lines' angles)
   const R = mapFrame(st);
   const n = here.hit.normal;
-  if (R === null) return p === here.hit.point ? here : { hit: { point: p, normal: n, host: here.hit.host }, t: here.t };
-  return { hit: { point: mulM(R, p), normal: n === null ? null : mulM(R, n), host: here.hit.host }, t: here.t };
+  const mo = here.mouth === undefined ? {} : { mouth: here.mouth };
+  if (R === null) return p === here.hit.point ? here : { hit: { point: p, normal: n, host: here.hit.host }, t: here.t, ...mo };
+  return { hit: { point: mulM(R, p), normal: n === null ? null : mulM(R, n), host: here.hit.host }, t: here.t, ...mo };
 }
 
 /**
@@ -603,7 +639,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmTilt.off = true;
     st.lastVerdict = "orbit: out past the automatic tilt's threshold — the tilt turns off";
   }
-  if (st.asmTiltAuto && st.asmTilt === null && st.asmGOff === null) tiltOn(st, "auto");
+  // ⭐⭐⭐ (2026-11-10, the owner: *"with fast dy the transition … happens not at the edge but somewhere inside the horizontal face"*) ON THE CROSSING'S FRAME,
+  // whatever the gizmo's eased offset — ⛔ `asmGOff === null` stood for "no frame change under way" until the glide of the depth (§9.8 – §9.9) set it at
+  // every depth step: an edge with a step held the tilt back 125 ms a step, the orbit going on in the world's frame (probed: 43 mm onto the top). Not
+  // needed: a tilt under way holds the gizmo (`tiltUnderWay`) and leaves only once whole (`tiltExits`); the gizmo SHOWN (`asmG`, its glide in it) is kept
+  if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = tiltDir(dirFrame(st), orbitDir(q.yaw, q.v));
   const d = approachDistance(st.cfg, st.approach);
@@ -619,15 +659,30 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     // ⭐⭐⭐ (2026-11-09) the catch-up held where it alone would move the gizmo across a jump (`mapAnglesStep`) — the ring stays a function of the angles
     const mq = mapAnglesStep(m0, { yaw: q.yaw, pitch }, { yaw: Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitch: pitch - pitchOfV(prev.v) }, MAP_CATCH_UP, (y, p) => mapGizmo(st, y, p)?.hit.point ?? null);
     st.asmMapQ = mq;
-    const m = mapGizmo(st, mq.yaw, mq.pitch);
-    if (m !== null) {
+    const m0g = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m0g !== null) {
+      // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth"* → *"build b"*) A VOID'S MOUTH:
+      // a dy toward its open end HOLDS the gizmo where it last was — the void's floor edge, the red's end there (`mouthHold`) — and hands over: the automatic
+      // tilt from there (close in), the next facet's first place once the angles reach it (far out); a dx lets it go onto the plane's bridge (§8.3)
+      const sh0 = st.asmShown;
+      const dP = sh0 === null ? 0 : mq.pitch - sh0.pitch;
+      const dY = sh0 === null ? 0 : Math.atan2(Math.sin(mq.yaw - sh0.yaw), Math.cos(mq.yaw - sh0.yaw));
+      const wasHeld = st.asmMouth !== null;
+      const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);
+      if (holdNow && st.asmMouth === null && st.asmRawPrev !== null) st.asmMouth = { point: st.asmRawPrev, hi: dP > 0 };
+      if (!holdNow) st.asmMouth = null;
+      const m = st.asmMouth === null ? m0g : { ...m0g, hit: { ...m0g.hit, point: st.asmMouth.point } };
+      st.asmRawPrev = m.hit.point;
       hit = m.hit;
       // ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"*, *"Apply the glide to those steps as well"*) THE GLIDE OF THE GIZMO'S DEPTH: the shown gizmo keeps the map's
       // own travel (the contour's place) and every step of the REAL depth beyond it is eased out by time (`gizmoGlide`, `asmGOff` — the piece's ring with
       // it) over 45°'s time at the tilt speed (125 ms at 360°/s): a notch along an edge (the switch kept AT the edge), a notch's wall inside a face, a void's
       // rim. ⛔ The stretch's blend (removed, §9.7) glided only edges, over 10°. A frame change has its own relocation (`asmShown` null then: none here)
       const R = mapFrame(st);
-      const glide = gizmoGlide(st.asmG, st.asmShown === null ? null : tiltDir(R, st.asmShown.t.surface), tiltDir(R, m.t.surface), m.hit.point);
+      // ⭐ (2026-11-10) held at a mouth: no travel of its own (the map's place moves on, the gizmo stays)
+      // ⭐ let go: from the held place straight (the map's place moved on meanwhile — its travel is not the gizmo's)
+      const s1 = tiltDir(R, m.t.surface);
+      const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
@@ -977,6 +1032,7 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   const onFacet = stack === tl.facet;
   if (!onFacet && !tl.finishing) {
     tl.finishing = true;
+    tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ (2026-11-10) over a `b` end: the reading toward the edge's line there
     st.lastVerdict = "orbit: over the edge — the tilt back to upright (the gizmo held until it completes)";
   }
   tl.kT = tl.finishing || tl.off ? 1 : 0;
@@ -1060,25 +1116,33 @@ export function tiltOnPress(st: SceneState): void {
 }
 
 /** ⭐⭐⭐ (§9.4; 2026-11-10 automatic too) the tilt made — at a press (`tiltOnPress`) or by itself close in (`assemblyFrame`, `tiltAutoLatch`). */
-function tiltOn(st: SceneState, why: "press" | "auto"): void {
+function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null = null): void {
   if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.asmLocked || st.hover !== null || st.greenBox === null) return;
   const sh = st.asmShown;
   const g = st.asmG;
   const wm = worldFaceMap(st);
   if (sh === null || g === null || wm === null) return;
-  const top = sh.t.stack === wm.top;
-  if (!top && sh.t.stack !== wm.bottom) return;
+  // ⭐⭐⭐ (2026-11-10, *"build b"*) held at a void's mouth (`asmMouth`): the face holding the pole it opens toward — the red has reached the floor's edge
+  const capStack = mouthHi === null ? sh.t.stack : mouthHi ? wm.top : wm.bottom;
+  const top = capStack === wm.top;
+  if (!top && capStack !== wm.bottom) return;
   // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
   // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
-  const cap = wm.facets[sh.t.stack]!;
+  const cap = wm.facets[capStack]!;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const hs = snapHeading(q.yaw);
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) THE CAMERA SWINGS FROM THE HEADING SHOWN: the calm carried over the
+  // edge (`shownDirAcross`) shows the piece at the calmed heading, not the orbit's — the camera's swing turns THAT to square (the directions' frame by
+  // `deltaShown`); the orbit's angles are turned by their own (`D0`, `delta`: the gizmo and the solver exact). ⛔ By the orbit's `delta`: 20° off square, the
+  // heading shown −83.7°, the swing started from the orbit's −70° (probed: −101.4°, then back to −90° over 20 frames)
+  const sw = dirAt(st, q.yaw, q.v);
+  const deltaShown = Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
-  const swingDurMs = rollDurationMs(delta, st.cfg.tiltRollDegS);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false };
+  const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;
@@ -1097,6 +1161,11 @@ function tiltOn(st: SceneState, why: "press" | "auto"): void {
     const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
     if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: Math.max(swingDurMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS)) };
   }
+  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) THE CALM CARRIED INTO F: the tilted facet's normal at once, the
+  // vertical share whole, the horizontal one KEPT — the tilt turns the frame about the edge's own line, which the reading toward it keeps (`shownDirAcross`)
+  // ⭐ (the facet the gizmo is on, once `tiltOn` has settled it — ⛔ the provisional `fi` first: a slanted facet's normal, eased across for 20 frames)
+  const tf = st.asmTilt.facet;
+  if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };
   st.asmShown = null;
   st.lastVerdict = `orbit: the tilted pole${why === "auto" ? " (automatic)" : ""} — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
@@ -1116,7 +1185,9 @@ function tiltOff(st: SceneState): void {
   const sh = st.asmShown;
   const nW = fm !== null && sh !== null ? mulM(tl.map, fm.facets[sh.t.stack]!.n) : null;
   turnAngles(st, (d) => mulM(D, d));
-  if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, sH: 1, sV: 1 };
+  // ⭐⭐⭐ (2026-11-10) THE CALM CARRIED OUT OF F: over a `b` end (a turn about the edge's line) the new side's normal at once, the horizontal share kept;
+  // across, both whole (⛔ both whole always: the calmed yaw released at every exit, then calmed again — a swing there and back)
+  if (st.asmCalm !== null) st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };
   st.asmTilt = null;
   st.asmShown = null;
   st.asmGOff = null;
