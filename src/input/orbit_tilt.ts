@@ -289,15 +289,17 @@ export function rollDurationMs(rad: number, degS: number): number {
  * ⛔ (the same day, replaced) the roll started in the edge's stretch by the finger's share, reversible, then committed, finished on a rest, carried, clamped.
  */
 /**
- * ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"* — the jumps at a notched edge, the stretch's blend removed) THE GLIDE AT AN EDGE: when the map hands the gizmo
- * from one facet to the next (`prevStack` → `stack`) and its point jumps — each facet's ray landing on another wall of a notch cut along the edge (110 mm
- * at the cube's bottom edge, 85 mm at its top) — the offset from the new point back to where it WAS shown (`prevShown`), to be eased out by time; `null`:
- * no facet change, or a step under `minM` (a plain convex edge: both rays meet at its corner).
+ * ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"*, then *"Apply the glide to those steps as well"*) THE GLIDE OF THE GIZMO'S DEPTH: the shown gizmo keeps the
+ * face map's own travel (`surf` − `prevSurf`: the contour's place, continuous — across an edge too) and every step of the REAL depth beyond it is eased
+ * out by time — the offset from the new point (`raw`) back to where the travel alone would have shown it (`prevShown` + the travel); `null` under `minM`.
+ * One rule for every jump of the real surface under the gizmo: a notch cut along an EDGE (each facet's ray on another wall — 110 mm at the cube's bottom
+ * edge, 85 mm at its top), a notch's own WALL inside a face (90 mm on the top, 62 mm on the bottom), a void's rim, a proud part's side. ⛔ (the same day)
+ * at a facet change only — the walls inside a face still jumped.
  */
-export const EDGE_GLIDE_MIN_M = 0.005;
-export function edgeGlide(prevStack: number | null, stack: number, prevShown: Vec3 | null, raw: Vec3, minM: number = EDGE_GLIDE_MIN_M): Vec3 | null {
-  if (prevStack === null || prevShown === null || prevStack === stack) return null;
-  const v: Vec3 = [prevShown[0] - raw[0], prevShown[1] - raw[1], prevShown[2] - raw[2]];
+export const GLIDE_MIN_M = 0.005;
+export function gizmoGlide(prevShown: Vec3 | null, prevSurf: Vec3 | null, surf: Vec3, raw: Vec3, minM: number = GLIDE_MIN_M): Vec3 | null {
+  if (prevShown === null || prevSurf === null) return null;
+  const v: Vec3 = [prevShown[0] + surf[0] - prevSurf[0] - raw[0], prevShown[1] + surf[1] - prevSurf[1] - raw[1], prevShown[2] + surf[2] - prevSurf[2] - raw[2]];
   return Math.hypot(v[0], v[1], v[2]) > minM ? v : null;
 }
 

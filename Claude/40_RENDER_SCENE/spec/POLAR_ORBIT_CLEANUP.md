@@ -691,10 +691,34 @@ pitch −45°) the −x side's ray meets Piece30 at x −147, the bottom's meets
 pitch 45°) the side's ray meets nothing (the void rule: the side's plane), the top's drops onto the notch's floor (Piece25, y 414) — **85 mm**. The
 stretch's blend (removed, §9.7) had glided A → B over the last 10° before the edge.
 
-**Built** (`edgeGlide`, `input/orbit_tilt.ts`; the wiring's per-frame gizmo): when the map hands the gizmo to the next facet and its point jumps more than
+**Built** (`edgeGlide` — ⛔ generalised the same day, §9.9; the wiring's per-frame gizmo): when the map hands the gizmo to the next facet and its point jumps more than
 `EDGE_GLIDE_MIN_M` (5 mm — a plain convex edge: both rays meet at its corner, nothing), the switch stays AT the edge and the jump is eased by time
 (`asmGOff`, the piece's ring with it) over 45°'s time at the tilt speed (125 ms at 360°/s). A frame change keeps its own relocation.
 **Probed** (`tilt_probe.mjs`, `glide_*`): the bottom edge 110 mm → 18 + 34 + 31 + 13 mm over four frames; the top edge 85 mm → 22 + 34 + 24 mm.
 ⚠ **Not an edge, not glided**: inside a face, the gizmo leaving a notch's floor for the face's surface (the notch's own wall — D3's real depth): 90 mm on
 the top (y 414 → 499), 62 mm on the bottom (y 74 → 15) — as before the rebuild (§6 (a): the owner, *"normal, even with small jumps"*).
 **Vectors**: `orbit_tilt.test.ts` +2 (the measured 110 mm case; none on one facet, under 5 mm, after a frame change). **1726**.
+
+### 9.9 ✅ THE GLIDE OF THE GIZMO'S DEPTH — every step of the real surface (2026-11-10, `1.0.119-`) — ⛔ no device close
+
+> The owner: *"Apply the glide to those steps as well, and check if this can be applied anywhere else."*
+
+**Built** (`gizmoGlide`, replacing §9.8's `edgeGlide`): the shown gizmo keeps the face map's OWN travel (the contour's place — continuous, across an edge
+too) and every step of the REAL depth beyond it (more than 5 mm) is eased out by time over 45°'s time at the tilt speed (125 ms at 360°/s), the piece's
+ring with it. One rule for: a notch cut along an edge (§9.8, the switch still AT the edge), a notch's own wall inside a face, a void's rim, a proud part's
+side. A frame change keeps its own relocation.
+
+**Probed**: the notch runs of §9.8 — the largest gizmo step through the bottom edge and onto the bottom's surface 62 → **22 mm**, through the top edge and
+out of the top's notch 90 → **34 mm** (the input's own step ~22 mm). The walks (`close_top_grooves`, `close_bottom_piece43`, `random_0`, 0 page errors): the
+notch's wall on the tilted top 85 mm in 63 + 19 + 2 mm, a proud part 74 mm in 65 + 9 — the headless page draws ~10 – 15 frames a second under the walks,
+so 125 ms is one or two frames there; ~7 – 8 on a phone at 60.
+
+**Checked elsewhere** (the walks' remaining jumps):
+* ⚠ an AUTOMATIC TILT's swing at one speed (decision 2): up to 45° of heading in 125 ms, eased already — read as camera steps of 0.2 – 0.6 m, the piece up
+  to 0.3 m; a minimum swing time would soften it (not a glide: the speed itself).
+* the relocation after leaving a tilted face (42 – 50 mm steps): already glided over 125 ms; a longer time would soften it.
+* an approach leg (A + drag): a camera step of 0.56 m — not the tilt's; not examined.
+* not seen in these walks: the solver's relocation of the piece out of a part, the slide's latch and release — candidates if the device shows them.
+
+**Vectors**: `orbit_tilt.test.ts` (the glide: the measured bottom edge, a notch's wall inside a face, none for the map's own travel, under 5 mm, after a
+frame change). **1727**.
