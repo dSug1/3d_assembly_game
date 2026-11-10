@@ -52,6 +52,8 @@ const SCENARIOS = [
   ["auto_dy_up_then_back_at_once", -90, 15, [0, -STEP], 420, 1.2, 4],
   ["auto_dy_up_corner_heading", -60, 15, [0, -STEP], 420, 1.2],
   ["auto_dx_round_the_sides", -90, 20, [STEP, 0], 300, 1.2],
+  ["auto_dy_down_front_to_bottom", -90, -10, [0, STEP], 260, 1.2],
+  ["auto_dy_down_front_to_bottom_far", -90, -10, [0, STEP], 260, 1.7],
   ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.2]],
   ["auto_out_while_tilted", -70, 62, [0, 0], 160, 1.2, undefined, [1.2, 3.0]],
 ].filter((s) => env.ONLY === undefined || s[0] === env.ONLY || (env.ONLY === "auto" && String(s[0]).startsWith("auto")));
@@ -99,7 +101,7 @@ try {
       const tl = st.asmTilt;
       window.__rec.push({ tag: window.__tag, p, t, up, roll, g: st.asmG ? [...st.asmG] : null, piece: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null,
         tl: tl ? { id: tl.id, k: tl.k, facet: tl.facet, exit: tl.exit, sw: tl.swingMs } : null, stack: st.asmShown ? st.asmShown.t.stack : null, band: st.asmShown ? st.asmShown.t.band : null,
-        goff: st.asmGOff ? st.asmGOff.left : null, gz: st.asmGizmo ? [...st.asmGizmo] : null, ov: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 80) }); } catch (e) { window.__recErr = String(e); }
+        goff: st.asmGOff ? st.asmGOff.left : null, gz: st.asmGizmo ? [...st.asmGizmo] : null, cm: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(3)), +st.asmCalm.sH.toFixed(3), +st.asmCalm.sV.toFixed(3)] : null, pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, cw: st.asmCalmWhole ?? null, au: st.asmTiltAuto ?? null, dfr: st.asmTilt ? st.asmTilt.dir : null, bo: st.boxOrbit ? [st.boxOrbit.yaw, st.boxOrbit.v] : null, ov: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 80) }); } catch (e) { window.__recErr = String(e); }
       requestAnimationFrame(tick); };
     requestAnimationFrame(tick); return true; })()`);
   const vp = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));

@@ -494,6 +494,8 @@ export interface SceneState {
   asmGOff: { readonly v: Vec3; left: number; readonly byTravel: boolean; /** ⭐ (2026-11-10) eased by time instead (the tilt turned off by distance): its clock */ timeMs?: number } | null;
   /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
   asmTiltAuto: boolean;
+  /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`poleEdgeWhole`, `tiltCalmWhole`) — 0: the calm as eased */
+  asmCalmWhole: number;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-10, §9.4) the WORLD's face map, kept beside a tilted one (`asmFaceMap` is the frame's) */

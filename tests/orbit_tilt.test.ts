@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, exitShare, frameMix, headingTurn, mulM, mulT, rollStep, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltExitTarget, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, exitShare, frameMix, headingTurn, mulM, mulT, poleEdgeWhole, rollStep, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltExitTarget, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -289,6 +289,24 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"fix the gap\"* — *\"poles held 
   });
 });
 
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"why is there a back-and-forth jump of the scene when the gizmo crosses an edge\"*) the calm whole toward a face holding a pole BY POSITION", () => {
+  const f = { b: [0, 1, 0] as Vec3, bLo: -0.25, bHi: 0.25 };
+  it("⭐⭐ 1 at the edge bordering a face holding a pole, 0 in the middle, smooth through the zone; an end bordering none: nothing", () => {
+    expect(poleEdgeWhole([0, -0.25, 0], f, true, true, 25, 0.03)).toBe(1);
+    expect(poleEdgeWhole([0, 0.25, 0], f, true, true, 25, 0.03)).toBe(1);
+    expect(poleEdgeWhole([0, 0, 0], f, true, true, 25, 0.03)).toBe(0);
+    expect(poleEdgeWhole([0, -0.25, 0], f, false, true, 25, 0.03)).toBe(0); // the bottom end borders no face holding a pole
+    expect(poleEdgeWhole([0, -0.25, 0], f, false, false, 25, 0.03)).toBe(0);
+    let last = 0;
+    for (let y = 0; y >= -0.25 - 1e-12; y -= 0.005) {
+      const p = poleEdgeWhole([0, y, 0], f, true, false, 25, 0.03);
+      expect(p).toBeGreaterThanOrEqual(last - 1e-12);
+      expect(p - last).toBeLessThan(0.15);
+      last = p;
+    }
+  });
+});
+
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
   it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
     expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
@@ -339,6 +357,10 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("st.orbitUserV = o.v;");
     // ⭐⭐ (the owner: *"fix the gap"*) any face holding a pole, tilted by its own angle — a virtual one (a pole on an edge) too
     expect(a).toContain("const R1 = capTilt(hs, cap.n);");
+    // ⭐⭐⭐ the calm made whole by position on the SHOWN direction (never eased): the back-and-forth at a crossing
+    expect(a).toContain("const k = Math.max(st.asmTilt?.k ?? 0, st.asmCalmWhole);");
+    expect(a).toContain('if (tl === null && st.asmTiltAuto && sh !== null && sh.t.band !== "SIDE") st.asmCalmWhole = 1;');
+    expect(a).toContain("if (i >= 0) st.asmCalmWhole = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its two sliders: on / off, and the press's swing (300 ms)", () => {
@@ -349,7 +371,7 @@ describe("⭐⭐ wired", () => {
     expect(m).toContain('"tiltSwingMs", 0, 1000, 25');
     expect(DEFAULT_CONFIG.tiltRollMinMs).toBe(250);
     expect(m).toContain('"tiltRollMinMs", 0, 2000, 25');
-    expect(DEFAULT_CONFIG.tiltAutoPct).toBe(30);
+    expect(DEFAULT_CONFIG.tiltAutoPct).toBe(20); // the owner's, 2026-11-10 (30 before)
     expect(m).toContain('"tiltAutoPct", 0, 100, 5');
   });
 });
