@@ -483,11 +483,17 @@ export interface SceneState {
     k: number;
     /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most 1 / `tiltRollMinMs` a ms (`rollStep`) */
     kT: number;
+    /** ⭐ (2026-11-10, the hysteresis) the gizmo once in the facet's middle: a roll back may be asked (`tiltExitTarget`) */
+    armed: boolean;
+    /** ⭐ (2026-11-10) out past the automatic tilt's threshold: the tilt turned off (the roll back by time, then the world's frame) */
+    off: boolean;
     axis: Vec3 | null;
     exit: boolean;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
-  asmGOff: { readonly v: Vec3; left: number; readonly byTravel: boolean } | null;
+  asmGOff: { readonly v: Vec3; left: number; readonly byTravel: boolean; /** ⭐ (2026-11-10) eased by time instead (the tilt turned off by distance): its clock */ timeMs?: number } | null;
+  /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
+  asmTiltAuto: boolean;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-10, §9.4) the WORLD's face map, kept beside a tilted one (`asmFaceMap` is the frame's) */

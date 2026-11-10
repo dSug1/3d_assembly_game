@@ -196,6 +196,37 @@ export function rollStep(shown: number, target: number, dtMs: number, minMs: num
   return shown + Math.max(-r, Math.min(r, target - shown));
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"at far distance it is disabled, at close distance (… at xx% of the max distance, make a slider) it toggles on
+ * automatically"*) THE AUTOMATIC TILT'S LATCH: on within `pct` % of the far distance, off only beyond `pct` + `TILT_AUTO_HYST_PCT` (an approach coasting
+ * round the threshold never flickers it); `pct` 0: never.
+ */
+export const TILT_AUTO_HYST_PCT = 5;
+export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
+  if (!(pct > 0) || !(farM > 0)) return false;
+  const r = (100 * distM) / farM;
+  return on ? r <= pct + TILT_AUTO_HYST_PCT : r <= pct;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"propose a small hysteresis, for example completion of the camera tilt before a tilt back can occur"*) THE FINGER'S SHARE
+ * OF THE WAY OFF, with the hysteresis: until the tilt is ARMED (the gizmo once in the facet's middle — its exit share 0) no roll back is asked while it stays
+ * on the facet (a tilt made at an edge — every automatic one — would otherwise roll straight back there); off the facet, whole. Returns the share and the
+ * arming.
+ */
+export function tiltExitTarget(armed: boolean, onFacet: boolean, share: number, off = false): { readonly kT: number; readonly armed: boolean } {
+  // ⭐⭐⭐ (2026-11-10, the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past the threshold
+  // (`off`): whole, wherever the gizmo is — the roll back paced by time (`rollStep`), no edge to pace it
+  if (!onFacet || off) return { kT: 1, armed };
+  const a = armed || share <= 0;
+  return { kT: a ? share : 0, armed: a };
+}
+
+/** ⭐⭐⭐ …and the frame back to the world's only once the tilt's swing is OVER and the roll shown is whole (the owner's hysteresis), off the facet — or out past the threshold (`off`). */
+export function tiltExits(onFacet: boolean, k: number, swingDone: boolean, off = false): boolean {
+  return (!onFacet || off) && k >= 1 && swingDone;
+}
+
 /** ⭐ A camera's frame: the direction (from what it looks at, toward it) and its up. */
 export interface CamFrame {
   readonly dir: Vec3;

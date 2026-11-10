@@ -199,9 +199,10 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "gizmo through an edge: the last / first of each face (mm)", "faceEdgeSlideMm", 0, 100, 1),
             tunable(st, "gizmo through an edge: in the last / first of each slice (°)", "faceEdgeSlideDeg", 0, 22.5, 0.5),
             // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole: a press on a cap makes it a side; its press's swing
-            tunable(st, "tilted pole: a press on a top / bottom makes it a side (1) / off (0)", "tiltedPole", 0, 1, 1),
+            tunable(st, "tilted pole: a press on a face holding a pole makes it a side (1) / off (0)", "tiltedPole", 0, 1, 1),
             tunable(st, "tilted pole: the press's swing and the gizmo's move (ms)", "tiltSwingMs", 0, 1000, 25),
             tunable(st, "tilted pole: the roll back, by the finger, at least (ms)", "tiltRollMinMs", 0, 2000, 25),
+            tunable(st, "tilted pole: automatic within this % of the far distance (0: the press only)", "tiltAutoPct", 0, 100, 5),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
             tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),
