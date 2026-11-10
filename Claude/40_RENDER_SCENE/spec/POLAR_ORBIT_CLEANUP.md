@@ -595,3 +595,88 @@ will solve by itself hopefully"* — nothing more built for it now.
 **Not done**: the slide ending OFF the tilted facet (it lets go at its edge, R6) would switch the frame with the roll eased by time only; the coast is
 stopped at a frame change (a flick across an edge stops there); the bottom's far edge probed, its grooves not. **Vectors**: `tests/orbit_tilt.test.ts` (16,
 RED on `46d24db` — the module absent); twelve wiring strings in six suites updated to the frame-aware code. **1716**.
+
+### 9.6 ✅ THE AUTOMATIC TILT, ANY FACE HOLDING A POLE, AND THE CROSSING (2026-11-10, branches `1.0.118-Tilted-polar-orbit-debugged` → `1.0.119-`; live `c16f5e1`) — ⛔ no device close
+
+⭐ **The owner's term**: *"the faces holding the poles"* (not "the top / bottom": a pole may be held by an edge or a slanted face — a hexagon extruded
+horizontally).
+
+**1. The automatic tilt** (the owner's logic, after a first build reverted — *"you did not understand my logic"*):
+> *"if the distance is greater than your slider threshold (… with hysteresis …), the automatic tilt toggles off (the tilt can be triggered manually as
+> current reverted build) — if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off (if the face is not already a red-green
+> perpendicular) — if the piece is beyond the hysteresis threshold (ie close to the face), the tilt automatically triggers each time the gizmo crosses the
+> edge towards a face's which is not red-green perpendicular (with a small hysteresis which I propose to be the time required for the camera to align)"*;
+> then *"Set the default tilted pole automatic within 20%"*.
+* `tiltAutoLatch`: on within `tiltAutoPct` % of the far distance (**20 %**: 1.2 m of 6.0 on `Scene_1`), off only beyond + 5 points; 0: the press only.
+  Close in, the gizmo entering a face holding a pole tilts by itself; going out past the threshold turns a tilt off (the roll back and the gizmo's
+  relocation by time — no edge to pace them).
+* The hysteresis: no tilt back before the camera has aligned (`tiltExits`: the swing over, the roll shown whole); a tilt made at an EDGE (every automatic one)
+  asks no roll back until the gizmo has once been in the face's middle (`tiltExitTarget`'s arming).
+* ⚠ A consequence recorded (decision 2 (a) composed with the automatic re-tilt): dy held up close in crosses the top again and again with a 180° roll each —
+  the gizmo always with the finger on the screen; to go down the back, the finger goes down.
+
+**2. Any face holding a pole** (*"fix the gap"*): `capTilt(hs, n)` turns by the face's OWN angle about the horizontal axis square to the snapped heading
+(no roll at any angle): 90° a level face, 60° a hexagon's slanted face toward the camera, 120° one slanting away (⛔ a quarter turn always: 30° short). A
+VIRTUAL face holding a pole (an edge holds it, no face beyond 45° — a diamond) tilts as a level one; the gizmo onto the nearest real face, eased.
+Vectored on synthetic prisms only (no such scene yet).
+
+**3. The back-and-forth at a crossing** (*"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*): the calm's shares are EASED;
+at a fast finger the wall's vertical share was 0.78 at the edge, the stale state applied on the face holding the pole for the frame before the automatic
+tilt (the piece thrown back 6°), then the tilted face's calm brought it forth. ✅ Close in the calm is made whole by POSITION on the shown direction, never
+eased (`poleEdgeWhole` toward a wall's end bordering a face holding a pole, whole ON that face, `tiltCalmWhole` on the tilted face): the piece's elevation
+−40.6° → −51.4° steadily through the crossing and the tilt (was −43° → −37° → −46°). Also: a frame change turns the camera's follow state and the
+spring's rates instead of resetting them.
+
+**4. The crossing** (⛔ REPLACED the same day by the rebuild, §9.7) — the owner's decisions: *"Finishing the tilt when finger stops: no halfway roll back: it shall finish the tilt. Make sure we end up in a
+situation compatible with the commitment at edge that you recommend. yes to all your other recommendations"*:
+* **COMMIT AT THE EDGE** (`tiltStepAllowed`, after every finger and coast step — `tiltClampStep`): past the edge with the roll not whole, never back onto the
+  face nor back down the stretch; during a swing, never back over the edge it came in by. Before the edge the roll stays the finger's (decision 3 (a)).
+* **A STOPPED FINGER FINISHES THE TILT** (`tiltFinishes`): armed, the roll begun, the finger at rest (§1.1's device-derived rest, or lifted with no coast)
+  — the gizmo carried over the edge (`edgeBlendDir`, `tiltCarry`) and the roll completed; never rolled back; then committed as any crossing.
+* **THE ROLL AT MOST `tiltRollDegS`** (**360°/s**; `rollDurationMs` of the turn's own angle): a half turn 0.5 s, a side's 63° 0.18 s — ⛔ `tiltRollMinMs`
+  (a whole roll in 250 ms whatever its size) deleted.
+* **THE FINGER'S DELTA CLAMPED IN THE STRETCH**: armed, the share never ahead of the roll shown by more than a frame's slack — the finger's excess
+  discarded; the gizmo and the view reach the edge together.
+* Probed (`tilt_probe.mjs`, the piece 1.0 m out): stopped at a roll of 0.20 → finished to 1.00, then the world's frame; a 4 × finger → the roll at its speed,
+  the gizmo held with it; the far edge's half turn ≤ 12.8° a frame (was 27°); with the clamp the gizmo reaches the edge only with the roll essentially whole,
+  so the commit is the safety net for a frame or two. ⚠ Not stopped: a finger rocked INSIDE the stretch rocks the view (by design, 3 (a)), now ≤ 360°/s.
+
+**The sliders** (☰ → CAMERA → CAMERA ORBIT AROUND CENTER): `tiltedPole` (1), `tiltSwingMs` (300 ms), `tiltRollDegS` (360°/s), `tiltAutoPct` (20 %).
+**Vectors**: `tests/orbit_tilt.test.ts` (30). **1730**.
+
+### 9.7 ✅ THE REBUILD: THE TILT AT THE EDGE, COMMITTED, TIMED, THE GIZMO HELD; THE FACE MAP'S STRETCH REMOVED (2026-11-10, `1.0.119-`) — ⛔ no device close
+
+> The owner: *"Modify: once the tilt starts, it cannot be rolled back (i did not understand what you meant by stretch but this shall not impact the tilt) and
+> shall complete"* — *"I do not understand the purpose of the stretch. I think this is superfluous since any tilt cannot be reversed before completed. I
+> would prefer to simply keep the edge, and not use any stretch"* — *"Revisit my requirements since my post with the crossing of the edge and the 4
+> attachments and propose a rebuild"* → the decisions: *"1-b; 2- one speed for every tilt; 3- remove it"*.
+
+**The requirements revisited** (since the post with the crossing and its attachments): R1 no going back before the tilt completes (no oscillation); R2 a
+tilt never left half done; R3 a bounded tilt speed; R4 finish, never undo; R5 a started tilt is irreversible and completes; R6 the edge the only trigger;
+the hysteresis the camera's alignment time. ⛔ §9.6's crossing (the roll in the edge's stretch by the finger, reversible, then the commit, the finish on a
+rest, the carry, the share clamp) is REPLACED — its rules answered a stretch R5 and R6 removed.
+
+**The rule as built** (`src/input/orbit_tilt.ts`, `render/assembly_wiring.ts`):
+1. **One trigger — the EDGE crossing**: onto a face holding a pole (close in, automatic; or a press) the orbit tilts so it is a side; OFF the tilted face the
+   roll back to upright starts the moment the gizmo crosses (off the tilted facet in F's map).
+2. **A tilt runs to the end on its own clock**, whatever the finger: **ONE SPEED FOR EVERY TILT**, `tiltRollDegS` (360°/s) of its own angle
+   (`rollDurationMs`): a roll back of 180° 0.5 s, of 63° 0.18 s; the swing of a tilt just made (≤ 45°) 0.13 s at most, none at once.
+   ⛔ `tiltSwingMs` (300 ms for any swing) deleted.
+3. **THE GIZMO HELD while a tilt is under way** (1-b; `tiltUnderWay`, `tiltClampStep` after every finger and coast step): its swing, or its roll back not
+   whole — every orbit step refused, the coast stopped; complete, the finger has the orbit again. The next tilt only after (the owner's hysteresis).
+4. Out past the automatic tilt's threshold: the same timed roll, the gizmo held.
+5. **Kept**: the calm made whole by position (§9.6 — the back-and-forth), the camera's state turned through a frame change, the gizmo at its exact point,
+   any face holding a pole by its own angle, the automatic latch (20 % / 25 %). A relocation of the gizmo where a frame change moves it: by time (with the
+   swing; after an exit 45°'s time at the speed — 125 ms).
+6. **THE FACE MAP'S SLOW STRETCH THROUGH AN EDGE REMOVED** (3 — *"remove it"*): `faceEdgeSlideMm` / `faceEdgeSlideDeg` (10 mm / 10° since 2026-11-04)
+   deleted with their sliders; the map's knobs zero (`MAP_OPTS`). ⚠ **Its cost, measured** (the page, the gizmo swept over the whole map every 0.25°): the
+   blend through an edge it carried went with it — the gizmo now STEPS where the real outline is not the map's at an edge: **110 mm** at the bottom edge
+   (pitch −45°, yaw 180° / 225°), **85 mm** at the top edge (yaw 135°), 50 – 58 mm at slice ends round yaw 131° – 135° (pitch −60°, 40°); 41 mm over the face
+   holding the top pole (Piece44 — stepped before too, §8.7); continuous mid-height round the sides (≤ 1.4 mm). The blend alone (no slowing) can be
+   restored if the device shows the steps.
+
+**Probed** (`tilt_probe.mjs`): the roll starts exactly at the crossing (0 until it, then 0.23, 0.43 … 1 for a side; 0.06 a frame for the far edge's half
+turn — ≤ 11.5° a frame); a finger reversed just after a crossing neither stops nor reverses the roll (the gizmo held, then free); the swing of 30° in 83 ms,
+the gizmo still; the automatic tilt at 1.0 m: onto the face holding the pole and back at the next crossing (the held-dy loop of §9.6 unchanged).
+**Vectors**: `tests/orbit_tilt.test.ts` (the share, the arming, the finish, the carry and the clamp deleted with their rules; the speed, the hold, the timed
+roll added); `face_map.test.ts`'s stretch vector now asserts its removal. **1724**.

@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, edgeBlendDir, exitShare, frameMix, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltFinishes, tiltStepAllowed, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltExitTarget, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -362,9 +362,14 @@ function placedKey(st: SceneState): { readonly key: string; readonly meshes: rea
   return st.asmKey;
 }
 
+/** ⭐ (2026-11-10) the face map's knobs: no slow stretch through an edge (the owner: *"remove it"*). */
+const MAP_OPTS: MapOpts = { edgeMm: 0, edgeDeg: 0 };
 /** ⭐⭐⭐ (Step 4c-bis) the face map's knobs: the slow stretch through an edge (mm on each face) and the yaw / pitch it is crossed in (deg). */
 function mapOpts(st: SceneState): MapOpts {
-  return { edgeMm: st.cfg.faceEdgeSlideMm, edgeDeg: st.cfg.faceEdgeSlideDeg };
+  // ⛔ (2026-11-10, the owner: *"remove it"*) the slow stretch through an edge (and the blend it carried) deleted: the gizmo goes through an edge as the map
+  // puts it (`faceEdgeSlideMm` / `faceEdgeSlideDeg`, 10 mm / 10° since 2026-11-04, gone)
+  void st;
+  return MAP_OPTS;
 }
 
 /**
@@ -619,9 +624,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       hit = m.hit;
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
-      tiltFrame(st, dtMs, m.t.stack, mq);
+      tiltFrame(st, dtMs, m.t.stack);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
-      gOffStep(st, q, prev, dtMs);
+      gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
       st.asmG = hit.point;
     }
@@ -934,113 +939,53 @@ function withGOff(st: SceneState, p: Vec3): Vec3 {
  * ⭐⭐⭐ THE RELOCATION'S SHARE LEFT, one frame: after a press over the swing's time (as the camera, 1 (c)); after an exit by the finger's travel over the
  * edge's slow stretch (`faceEdgeSlideDeg`, 3 (a)). Done: none.
  */
-function gOffStep(st: SceneState, q: { readonly yaw: number; readonly v: number }, prev: { readonly yaw: number; readonly v: number }, dtMs: number): void {
+function gOffStep(st: SceneState, dtMs: number): void {
   const o = st.asmGOff;
   if (o === null) return;
-  if (o.timeMs !== undefined) {
-    // ⭐ (2026-11-10) the tilt turned off by distance: no travel to pace it — over a quarter roll's time at `tiltRollDegS`
-    o.timeMs += dtMs;
-    o.left = 1 - swingEase(o.timeMs / Math.max(1, rollDurationMs(Math.PI / 2, st.cfg.tiltRollDegS)));
-  } else if (!o.byTravel) {
-    const tl = st.asmTilt;
-    o.left = tl === null || tl.swingMs === null ? 0 : 1 - swingEase(tl.swingMs / Math.max(1, st.cfg.tiltSwingMs));
-  } else {
-    const E = Math.max(1, st.cfg.faceEdgeSlideDeg) * (Math.PI / 180);
-    const travel = Math.abs(Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw))) + Math.abs(pitchOfV(q.v) - pitchOfV(prev.v));
-    o.left -= travel / E;
-  }
+  // ⭐ (2026-11-10, the rebuild) always by time — with a tilt's swing (its duration), after an exit a short ease (`RELOCATE_MS_ANGLE`'s time at the speed)
+  o.timeMs += dtMs;
+  o.left = o.durMs > 0 ? 1 - swingEase(o.timeMs / o.durMs) : 0;
   if (!(o.left > 1e-4)) st.asmGOff = null;
 }
+/** ⭐ (2026-11-10) a relocation after an exit (or a tilt with no swing): over this angle's time at `tiltRollDegS` — 45°: 125 ms at 360°/s */
+const RELOCATE_ANGLE = Math.PI / 4;
 
 /**
  * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
  * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
  */
-function tiltFrame(st: SceneState, dtMs: number, stack: number, mq: { readonly yaw: number; readonly pitch: number }): void {
+function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   const tl = st.asmTilt;
   if (tl === null) return;
   if (tl.swingMs !== null) {
     tl.swingMs += dtMs;
-    const e = swingEase(tl.swingMs / Math.max(1, st.cfg.tiltSwingMs));
+    const e = tl.swingDurMs > 0 ? swingEase(tl.swingMs / tl.swingDurMs) : 1;
     tl.dir = swingDir(tl.map, tl.delta, e);
     if (e >= 1) tl.swingMs = null;
   }
-  // ⭐⭐⭐ (2026-11-10, the owner: *"Make the roll back by finger && minimum of xx ms to smoothen it"*) the finger's share (`kT`) and the roll SHOWN (`k`):
-  // it follows the finger, never faster than `tiltRollDegS` (`rollStep`, `rollDurationMs`); the world's frame only once the roll shown is whole — until then
-  // the gizmo goes on in F past the edge (F's map is the real surface there too); back onto the facet first: the roll comes back, no exit
-  // ⭐⭐⭐ (2026-11-10, the owner's hysteresis) no roll back asked until the gizmo has once been in the facet's middle (`tiltExitTarget` — a tilt made at
-  // an edge, every automatic one, never rolls straight back there); the world's frame only once the tilt's swing is over (`tiltExits`)
-  const map = stack === tl.facet ? faceMapOf(st) : null;
-  const t = tiltExitTarget(tl.armed, stack === tl.facet, map === null ? 1 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st)), tl.off);
-  tl.armed = t.armed;
-  // ⭐⭐⭐ (2026-11-10, the owner: *"no halfway roll back: it shall finish the tilt"*) the finger at rest in the stretch, the roll begun: it FINISHES — the
-  // whole share asked, the gizmo carried over the edge (`tiltCarry`), then committed at the edge
-  if (!tl.finishing && tiltFinishes(tl.armed, stack === tl.facet, tl.k, fingerResting(st))) {
+  // ⭐⭐⭐ (2026-11-10, THE REBUILD — the owner: *"once the tilt starts, it cannot be rolled back … and shall complete"*, *"keep the edge, and not use any
+  // stretch"*, *"1-b"*, *"one speed for every tilt"*) THE ROLL BACK STARTS AS THE GIZMO CROSSES THE EDGE (off the tilted facet) — or out past the
+  // automatic tilt's threshold — and runs to the end on its own clock at `tiltRollDegS` (`rollDurationMs` of the turn's own angle); the gizmo HELD
+  // meanwhile (`tiltClampStep`, `tiltUnderWay`); whole: the world's frame (`tiltExits`, the swing over too)
+  const onFacet = stack === tl.facet;
+  if (!onFacet && !tl.finishing) {
     tl.finishing = true;
-    st.lastVerdict = "orbit: the finger stopped in the edge's stretch — the tilt finishes";
+    st.lastVerdict = "orbit: over the edge — the tilt back to upright (the gizmo held until it completes)";
   }
-  tl.kT = tl.finishing ? 1 : t.kT;
-  // ⭐⭐⭐ (2026-11-10, *"yes"*) at most `tiltRollDegS` °/s — the roll's own angle (`rollRad`, last frame's) over the speed: the same speed for every roll
-  const durMs = rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS);
-  tl.k = rollStep(tl.k, tl.kT, dtMs, durMs);
-  if (tl.finishing && stack === tl.facet && map !== null) tiltCarry(st, map, mq, dtMs, durMs);
-  tl.exit = tiltExits(stack === tl.facet, tl.k, tl.swingMs === null, tl.off);
-}
-
-/** ⭐ (2026-11-10) the finger at rest: §1.1's own rest (the device's window), or lifted with no coast. */
-function fingerResting(st: SceneState): boolean {
-  if (st.orbitMotion !== null) return st.orbitMotion.tracker.current === "STATIONARY";
-  return !st.orbitInertia.coasting;
+  tl.kT = tl.finishing || tl.off ? 1 : 0;
+  tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));
+  tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10) THE GIZMO CARRIED OVER THE EDGE while the tilt finishes: the orbit's target moved toward the edge the stretch leads to (`edgeBlendDir`)
- * by the stretch's angle over the roll's duration — the gizmo and the view reach the edge together; then the crossing is committed as any.
- */
-function tiltCarry(st: SceneState, map: FaceMap, mq: { readonly yaw: number; readonly pitch: number }, dtMs: number, durMs: number): void {
-  const d = edgeBlendDir(map, mq.yaw, mq.pitch, mapOpts(st));
-  if (d === null) return;
-  const E = Math.max(1, st.cfg.faceEdgeSlideDeg) * (Math.PI / 180);
-  const step = durMs > 0 ? (E * dtMs) / durMs : E;
-  const v = vOfPitch(pitchOfV(st.orbit.elevation) + d[1] * step);
-  st.orbit.reset(st.orbit.yaw + d[0] * step, v);
-}
-
-/**
- * ⭐⭐⭐ (2026-11-10, the owner's decisions) AN ORBIT STEP UNDER THE TILT — from (`yaw0`, `v0`) to the orbit's target now: allowed as it is, or cut to the
- * largest share of it allowed (`tiltStepAllowed`, bisection: COMMIT AT THE EDGE — never back over it before the roll is whole; the swing — never back
- * over the edge it came in by; the finger's delta CLAMPED in the stretch — the gizmo never ahead of the view's turn). Read on the map's angles the step
- * would give (the map's offset after the slide kept). Returns whether it cut the step.
+ * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"1-b"*) AN ORBIT STEP WHILE A TILT IS UNDER WAY (`tiltUnderWay`: its swing, or its roll back not whole) — REFUSED:
+ * the gizmo held where the crossing left it until the tilt completes; then the finger has the orbit again. Returns whether it refused the step.
  */
 export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {
   const tl = st.asmTilt;
-  const mq = st.asmMapQ;
-  const map = tl === null ? null : faceMapOf(st);
-  if (tl === null || mq === null || map === null) return false;
-  const y1 = st.orbit.yaw;
-  const v1 = st.orbit.elevation;
-  if (y1 === yaw0 && v1 === v0) return false;
-  const o = mapOpts(st);
-  const shareAt = (yaw: number, pitch: number): { r: number; on: boolean } => {
-    const on = mapTarget(map, yaw, pitch, o).stack === tl.facet;
-    return { r: on ? exitShare(map, yaw, pitch, tl.facet, o) : 1, on };
-  };
-  const s0 = shareAt(mq.yaw, mq.pitch);
-  const durMs = rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS);
-  const slack = durMs > 0 ? (2 * 16.7) / durMs : 1;
-  const ok = (f: number): boolean => {
-    const s1 = shareAt(mq.yaw + (y1 - yaw0) * f, mq.pitch + (pitchOfV(v0 + (v1 - v0) * f) - pitchOfV(v0)));
-    return tiltStepAllowed({ r0: s0.r, r1: s1.r, on0: s0.on, on1: s1.on, k: tl.k, armed: tl.armed, swinging: tl.swingMs !== null, finishing: tl.finishing, slack });
-  };
-  if (ok(1)) return false;
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 10; i++) {
-    const m = (lo + hi) / 2;
-    if (ok(m)) lo = m;
-    else hi = m;
-  }
-  st.orbit.reset(yaw0 + (y1 - yaw0) * lo, v0 + (v1 - v0) * lo);
+  if (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k)) return false;
+  if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
+  st.orbit.reset(yaw0, v0);
   return true;
 }
 
@@ -1124,7 +1069,9 @@ function tiltOn(st: SceneState, why: "press" | "auto"): void {
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, k: 0, kT: 0, armed: false, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false };
+  // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
+  const swingDurMs = rollDurationMs(delta, st.cfg.tiltRollDegS);
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;
@@ -1141,7 +1088,7 @@ function tiltOn(st: SceneState, why: "press" | "auto"): void {
   if (m !== null) {
     if (m.t.stack !== fi) st.asmTilt.facet = m.t.stack;
     const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
-    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, byTravel: false };
+    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: Math.max(swingDurMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS)) };
   }
   st.asmShown = null;
   st.lastVerdict = `orbit: the tilted pole${why === "auto" ? " (automatic)" : ""} — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
@@ -1173,7 +1120,7 @@ function tiltOff(st: SceneState): void {
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {
       const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
-      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = byTime ? { v, left: 1, byTravel: false, timeMs: 0 } : { v, left: 1, byTravel: true };
+      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
     }
   } else st.asmMapQ = null;
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";

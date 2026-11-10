@@ -243,9 +243,11 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(a).toContain("const m = mapGizmo(st, yw, pt);");
     expect(a).toContain("st.asmMapQ = map !== null && gM !== null ? mapAngles(map, gM, facetOfNormal(map, nM, gM), mapOpts(st)) : null;");
     for (const gone of ["carrierFrame(", "onGreen(", "facingChain(", "loopFor(", "faceTurnedAway", "castGizmo("]) expect(a).not.toContain(gone);
-    expect(DEFAULT_CONFIG.faceEdgeSlideMm).toBe(10);
-    expect(DEFAULT_CONFIG.faceEdgeSlideDeg).toBe(10);
-    expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, faceEdgeSlideDeg: 30 })).toThrow();
-    expect(code("render/tuning_menu.ts")).toContain('"faceEdgeSlideMm", 0, 100, 1');
+    // ⛔ (2026-11-10, the owner: *"remove it"*) the slow stretch through an edge deleted: no tunable, no slider, the map's knobs zero
+    expect("faceEdgeSlideMm" in DEFAULT_CONFIG).toBe(false);
+    expect("faceEdgeSlideDeg" in DEFAULT_CONFIG).toBe(false);
+    expect(code("render/tuning_menu.ts")).not.toContain('"faceEdgeSlideMm"');
+    expect(code("render/assembly_wiring.ts")).toContain("const MAP_OPTS: MapOpts = { edgeMm: 0, edgeDeg: 0 };");
+    void validateGestureConfig;
   });
 });

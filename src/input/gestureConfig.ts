@@ -428,16 +428,9 @@ export interface GestureConfig {
   /** ⭐⭐ …and the orbit's angles (yaw, pitch, zoom), on a critically damped spring of this time constant (ms; 0: at once) — the travel counts that share the
    * orbit's spring with it (the piece's entry, its aim, the centre's return) */
   orbitSpringMs: number;
-  /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 4c-bis — the owner: *"let the gizmo move slowly over the last and first few mm of the two faces during
-   * the arc"*) THE FACE MAP's slow stretch through an edge: the last / first this of each face (mm)… */
-  faceEdgeSlideMm: number;
-  /** ⭐⭐⭐ …crossed in this much of the yaw / pitch before and after the slice's end (deg, of each slice's 45°). */
-  faceEdgeSlideDeg: number;
   /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. */
   tiltedPole: number;
-  /** ⭐⭐⭐ …the press's swing (the camera's heading turned square to the face, 1 (c)) and the gizmo's relocation there, eased over this time (ms; 0 at once). */
-  tiltSwingMs: number;
-  /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"*) the roll back to upright off a tilted face: by the finger, never faster than this (°/s; 0: the finger alone) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
+  /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
   tiltRollDegS: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"at close distance (… xx% of the max distance, make a slider) it toggles on automatically"*) the tilt made by itself as the gizmo enters a top / bottom, within this % of the far distance (off beyond it + 5); 0: never (the press only). */
   tiltAutoPct: number;
@@ -866,10 +859,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitShellOffsetMm: 60, // ⭐⭐⭐ (2026-11-04, Step 2) the shell's offset
   gizmoEaseMs: 45, // ⭐⭐ (2026-11-04, the owner: *"update the lag the gizmo's position the piece follows to 45ms"*; 62, 55 before, the former GIZMO_TAU_MS 90)
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
-  faceEdgeSlideMm: 10, // ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo through an edge: the last / first 10 mm of each face…
-  faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
-  tiltSwingMs: 300, // ⭐⭐⭐ …its press's swing, 300 ms (a guess until a hand sets it)
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   tiltAutoPct: 20, // ⭐⭐⭐ (2026-11-10, the owner: *"Set the default tilted pole automatic within 20%"*) …automatic within 20 % of the far distance (1.2 m of 6.0 on `Scene_1`; off beyond 25 %) — 30 % before
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
@@ -1035,10 +1025,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.assemblyLockDistM >= 0.05 && cfg.assemblyLockDistM <= 2)) throw new Error(`assemblyLockDistM (${cfg.assemblyLockDistM}) must be in [0.05, 2] m.`);
   if (!(cfg.orbitShellOffsetMm >= 5 && cfg.orbitShellOffsetMm <= 300)) throw new Error(`orbitShellOffsetMm (${cfg.orbitShellOffsetMm}) must be in [5, 300] mm.`);
   for (const k of ["gizmoEaseMs", "orbitSpringMs"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 500)) throw new Error(`${k} (${cfg[k]}) must be in [0, 500] ms.`);
-  if (!(cfg.faceEdgeSlideMm >= 0 && cfg.faceEdgeSlideMm <= 100)) throw new Error(`faceEdgeSlideMm (${cfg.faceEdgeSlideMm}) must be in [0, 100] mm.`);
-  if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
   if (cfg.tiltedPole !== 0 && cfg.tiltedPole !== 1) throw new Error(`tiltedPole (${cfg.tiltedPole}) must be 0 or 1.`);
-  if (!(cfg.tiltSwingMs >= 0 && cfg.tiltSwingMs <= 1000)) throw new Error(`tiltSwingMs (${cfg.tiltSwingMs}) must be in [0, 1000] ms.`);
   if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoPct >= 0 && cfg.tiltAutoPct <= 100)) throw new Error(`tiltAutoPct (${cfg.tiltAutoPct}) must be in [0, 100] %.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);

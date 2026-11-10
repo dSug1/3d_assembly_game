@@ -9,13 +9,13 @@
  *   normal turned onto that heading in F — the cap is a SIDE there (the red straight away from the viewer, the green straight across). A tilt about an axis
  *   square to the heading never rolls the view (`offsetFrame` is the same in both frames — vectored). The heading's swing to the snapped one (≤ 45° about
  *   the vertical, no roll) is the directions' frame turning from `headingTurn(−Δ)·map` to `map` (`swingDir`) — the camera at the press exactly where it was.
- * * **Off the face** (`exitShare`): the share of the way through the tilted facet's edge band toward ANOTHER facet (0 … 1, 1 at the edge) — the camera's
- *   frame turned from F's upright to the world's by that share (`frameMix`): the roll back paced by the finger, reversible (3 (a)); at the edge the frame
- *   is the world's again (the face exited polar again).
+ * * **Off the face** (2026-11-10, the rebuild): the roll back starts as the gizmo CROSSES the edge and completes on its own clock at `tiltRollDegS`
+ *   (`rollStep`, `rollDurationMs`) — the gizmo held meanwhile (`tiltUnderWay`); the camera's frame turned from F's upright to the world's (`frameMix`);
+ *   whole, the world's frame again (the face exited polar again). The swing at the same speed: ONE speed for every tilt.
  * ⛔ ENGINE-FREE. Rotation matrices, Rodrigues' formula, a smoothstep — textbook; no licence, no patent.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
-import { edgeBlend, mapTarget, type FaceMap, type MapFace, type MapOpts } from "./face_map";
+import type { MapFace } from "./face_map";
 import type { ShellBox } from "./orbit_shell";
 import { vOfPitch } from "./assembly_orbit";
 import { edgeShare } from "./orbit_calm";
@@ -157,18 +157,6 @@ export function tiltBox(b: ShellBox, R: Mat3): ShellBox {
   return { lo, hi };
 }
 
-/**
- * ⭐⭐⭐ THE SHARE OF THE WAY OFF THE TILTED FACET (0 … 1): in its edge band (`edgeBlend` — the slow stretch, `faceEdgeSlideMm` / `faceEdgeSlideDeg`)
- * toward ANOTHER facet, twice the blend's weight (½ at the edge: 1 there); 0 in its middle, or in a band toward a facet of its own. The roll back to the
- * world's upright is this share of the way (3 (a): the finger's travel, reversible).
- */
-export function exitShare(map: FaceMap, yaw: number, pitch: number, facet: number, opts: MapOpts): number {
-  const eb = edgeBlend(map, yaw, pitch, opts);
-  let k = 0;
-  if (eb.h !== null && mapTarget(map, eb.h.yawThere, pitch, opts).stack !== facet) k = Math.max(k, 2 * eb.h.w);
-  if (eb.v !== null && mapTarget(map, yaw, eb.v.pitchThere, opts).stack !== facet) k = Math.max(k, 2 * eb.v.w);
-  return Math.min(1, Math.max(0, k));
-}
 
 /**
  * ⭐⭐⭐ THE CALM WHOLE TOWARD THE TILTED FACET'S EDGES (its every edge is a frame change: off it the world's frame): the share (0 … 1) that brings both
@@ -231,19 +219,6 @@ export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: num
   return on ? r <= pct + TILT_AUTO_HYST_PCT : r <= pct;
 }
 
-/**
- * ⭐⭐⭐ (2026-11-10, the owner: *"propose a small hysteresis, for example completion of the camera tilt before a tilt back can occur"*) THE FINGER'S SHARE
- * OF THE WAY OFF, with the hysteresis: until the tilt is ARMED (the gizmo once in the facet's middle — its exit share 0) no roll back is asked while it stays
- * on the facet (a tilt made at an edge — every automatic one — would otherwise roll straight back there); off the facet, whole. Returns the share and the
- * arming.
- */
-export function tiltExitTarget(armed: boolean, onFacet: boolean, share: number, off = false): { readonly kT: number; readonly armed: boolean } {
-  // ⭐⭐⭐ (2026-11-10, the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past the threshold
-  // (`off`): whole, wherever the gizmo is — the roll back paced by time (`rollStep`), no edge to pace it
-  if (!onFacet || off) return { kT: 1, armed };
-  const a = armed || share <= 0;
-  return { kT: a ? share : 0, armed: a };
-}
 
 /** ⭐⭐⭐ …and the frame back to the world's only once the tilt's swing is OVER and the roll shown is whole (the owner's hysteresis), off the facet — or out past the threshold (`off`). */
 export function tiltExits(onFacet: boolean, k: number, swingDone: boolean, off = false): boolean {
@@ -306,52 +281,18 @@ export function rollDurationMs(rad: number, degS: number): number {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, the owner's decisions: COMMIT AT THE EDGE; a finger stopped in the stretch FINISHES the tilt; the finger's delta CLAMPED in the stretch)
- * — IS AN ORBIT STEP ALLOWED, from the share of the way off the tilted facet `r0` (1 off it; `on0` on it) to `r1` (`on1`)?
- * * the press's / the automatic tilt's SWING under way: never off the facet (back over the edge it came in by);
- * * COMMITTED — past the edge (`!on0`) with the roll not whole, or FINISHING: never back onto the facet, never back down the stretch (`r1 < r0`);
- * * ARMED on the facet: the share never ahead of the roll shown by more than `slack` (`r1 ≤ max(r0, k + slack)`) — the gizmo cannot outrun the view's turn;
- *   the finger's excess discarded. A step back down the stretch: always (the roll by the finger, reversible, before the edge — decision 3 (a)).
+ * ⭐⭐⭐ (2026-11-10, the rebuild — the owner: *"once the tilt starts, it cannot be rolled back … and shall complete"*, *"keep the edge, and not use any
+ * stretch"*, *"1-b"*: the gizmo HELD until the tilt completes) — IS A TILT UNDER WAY: its swing (a tilt just made: the camera's heading turned square), its
+ * roll back to upright (started as the gizmo CROSSED the edge, or out past the automatic tilt's threshold), not yet whole. While it is, every orbit step is
+ * refused (the gizmo held where the crossing left it) — the tilt completes on its own clock, then the finger has the orbit again; the next tilt only after
+ * (the owner's hysteresis: *"the time required for the camera to align"*).
+ * ⛔ (the same day, replaced) the roll started in the edge's stretch by the finger's share, reversible, then committed, finished on a rest, carried, clamped.
  */
-export function tiltStepAllowed(s: {
-  readonly r0: number;
-  readonly r1: number;
-  readonly on0: boolean;
-  readonly on1: boolean;
-  readonly k: number;
-  readonly armed: boolean;
-  readonly swinging: boolean;
-  readonly finishing: boolean;
-  readonly slack: number;
-}): boolean {
-  if (s.swinging && !s.on1) return false;
-  const committed = (!s.on0 && s.k < 1) || s.finishing;
-  if (committed && ((!s.on0 && s.on1) || s.r1 < s.r0 - 1e-9)) return false;
-  if (s.armed && s.r1 > s.r0 + 1e-9 && s.r1 > s.k + s.slack) return false;
-  return true;
+export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
+  return swinging || (rolling && k < 1);
 }
 
-/**
- * ⭐⭐⭐ (2026-11-10) THE WAY TO THE EDGE the stretch at (`yaw`, `pitch`) leads to: the sign of the yaw's and the pitch's way (the band nearer its end —
- * `edgeBlend`'s larger weight); `null`: in no band.
- */
-export function edgeBlendDir(map: FaceMap, yaw: number, pitch: number, opts: MapOpts): readonly [number, number] | null {
-  const eb = edgeBlend(map, yaw, pitch, opts);
-  const wh = eb.h === null ? -1 : eb.h.w;
-  const wv = eb.v === null ? -1 : eb.v.w;
-  if (wh < 0 && wv < 0) return null;
-  if (wh >= wv && eb.h !== null) return [Math.sign(Math.atan2(Math.sin(eb.h.yawThere - yaw), Math.cos(eb.h.yawThere - yaw))), 0];
-  return eb.v === null ? null : [0, Math.sign(eb.v.pitchThere - pitch)];
-}
 
-/**
- * ⭐⭐⭐ (2026-11-10, the owner: *"no halfway roll back: it shall finish the tilt"*) DOES THE TILT FINISH BY ITSELF: armed, the roll begun (`k` > 0) on the
- * facet, and the finger at rest (§1.1's own rest — the device's window) or lifted with no coast: the gizmo carried over the edge, the roll completed —
- * then committed at the edge as any crossing.
- */
-export function tiltFinishes(armed: boolean, onFacet: boolean, k: number, fingerResting: boolean): boolean {
-  return armed && onFacet && k > 1e-3 && fingerResting;
-}
 
 function norm(v: Vec3): Vec3 {
   const l = Math.hypot(v[0], v[1], v[2]);
