@@ -253,6 +253,19 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
   return (mouth.hi && dPitch > 0) || (mouth.lo && dPitch < 0);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-10, branch `1.0.120a-`, the owner: *"build the calm with square the heading by position"*) THE HEADING SQUARED ON THE WAY TO A TOP / BOTTOM
+ * EDGE (the automatic tilt on): the share (0 … 1) by which the calm's horizontal share goes to 0 — the camera SQUARE to the face — as the gizmo nears an
+ * edge where the orbit will tilt (`towardB`: the calm's own zone toward the facet's `b` ends, `poleEdgeWhole` / `tiltCalmWholeHV`'s `v`), weighed by which
+ * edge is nearer (`wA`, `acrossWeight`: toward a vertical edge the calm stays whole there — a dx crosses it as before). ⭐ So the tilt finds the camera
+ * square and has nothing to swing (⛔ by time at the tilt: near a vertical edge the heading still up to 45° off square, swung in ~0.1 s — 14 – 17° of
+ * look and 18 – 20° of roll in a frame, probed). By position: reversible, at the finger's own pace. `on` false (far out): 0.
+ */
+export function headingSquare(on: boolean, towardB: number, wA: number): number {
+  if (!on) return 0;
+  return Math.min(1, Math.max(0, towardB)) * Math.min(1, Math.max(0, wA));
+}
+
 export const TILT_AUTO_HYST_PCT = 5;
 export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
   if (!(pct > 0) || !(farM > 0)) return false;
