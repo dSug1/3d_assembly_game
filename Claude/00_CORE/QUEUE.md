@@ -14,7 +14,7 @@ record. **A status changes in BOTH places or neither.**
 
 ---
 
-## ⭐⭐⭐ YOU ARE HERE (2026-11-10, branch `1.0.118-`, from `1.0.117-Tilted-polar-orbit` — the best piece orbit so far)
+## ⭐⭐⭐ YOU ARE HERE (2026-11-10, branch `1.0.119-`, from `1.0.118-Tilted-polar-orbit-debugged`; `1.0.117-Tilted-polar-orbit` the best piece orbit so far)
 
 ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.117-Tilted-polar-orbit` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (the tilted pole, live as `6c6da30`; before it `1.0.116from1.0.114-`, `f96ddeb`; `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.118-`. I17: nothing for now (§8.2, for later).
 ⭐⭐⭐ **BUILT (branch `1.0.117-Tilted-polar-orbit`, 2026-11-10; *"The build is good"*; the slide under it ⏸ for the slide's own work) — THE TILTED POLE** (`POLAR_ORBIT_CLEANUP.md` §9.4 the rule, §9.5 as built and probed): a press on a cap tilts the orbit so the cap is a side (the heading swung square, the gizmo kept); off it the world's frame, the roll back by the finger with a 250 ms minimum; three sliders (☰ → CAMERA → CAMERA ORBIT AROUND CENTER); `src/input/orbit_tilt.ts`. ⛔ No device close.
@@ -30,7 +30,8 @@ depth, D5's two sliders) and ✅ **§18** (`1.0.100-`: the voids bridged, the ed
 ⭐⭐⭐ **2026-11-09 — THE FIXES BUILT** (`1.0.111-Polar-orbit-fixes`): R1 (the exposed faces), R2, R4 (the ring's jump crossed), R3, R6 (the slide lets go at its edge), the calm's branch cut, the map's catch-up hold; the walks re-run: the seam trap 36 → 1, the slide traps 17 → 3; then the void crossing (a narrow groove crossed whole, else BLOCKED — never deferred): the blocked stalls 51 → 21; ✅ the owner closed three open points with nothing built — the left notch (not reproduced on the device), the poles, the close-in block at a protruding part: all normal; ✅ the fourth — a groove too narrow for the piece — studied on synthetic voids and built on `1.0.112-`: the rims where the faces end, an open void the held piece cannot enter is surface (§7); **1682** vectors → [`POLAR_ORBIT_CLEANUP.md`](../40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md) §6.
 ⭐ **The owner's rules**: the solver budget stays **24 gap queries** a frame (*"i am testing on iphone"*); patent-free methods only;
 md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` into `main`, push, wait for `version.json`.
-✅ `npm run verify`: **1716 golden vectors, all passing** — MEASURED 2026-11-10 (the count's home; 1700 before the tilted pole; 1696 before §8.7, the lines' joins; 1688 with F7b, 1682 before it, §8; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
+⭐⭐⭐ **2026-11-10 — THE AUTOMATIC TILT and THE CROSSING** (`1.0.118-` → `1.0.119-`, live `c16f5e1`; `POLAR_ORBIT_CLEANUP.md` §9.6): within 20 % of the far distance a face holding a pole tilts by itself; any face holding a pole by its own angle; the back-and-forth at a crossing fixed; committed at the edge, finished when the finger stops, ≤ 360°/s, the delta clamped. ⛔ No device close.
+✅ `npm run verify`: **1730 golden vectors, all passing** — MEASURED 2026-11-10 (the count's home; 1716 before §9.6; 1700 before the tilted pole; 1696 before §8.7, the lines' joins; 1688 with F7b, 1682 before it, §8; 1674 before the voids, §7; 1642 on 2026-11-08, the cube).
 
 ⭐ The 2026-09-30 record block (`D180`, the paused playability program, the inputs' simplification) moved → [`history/2026-11-09_queue_spent_blocks.md`](history/2026-11-09_queue_spent_blocks.md).
 
