@@ -799,5 +799,14 @@ tilt on (within 0.6 m of the gizmo, `tiltAutoM`), no calm — the camera square 
 gizmo held: a top / bottom edge the tilt (no swing), a vertical edge a 90° turn in 0.25 s. Far out the calm as before (`1.0.119-Fixes`, §9.10).
 The two others stay on their branches as the record: `1.0.120a-` (the heading squared by position, §9.11 on its branch) and `1.0.120c-` (no yaw
 realignment, the camera's up carried, §9.11c on its branch — live as `b7dccd0` when this was decided; `main` not redeployed from this branch yet).
-**Open, from the walks**: the first finger event after a crossing still moves the gizmo once before the hold (§9.11b); the far edge's roll back (180°,
+**Open, from the walks**: ~~the first finger event after a crossing still moves the gizmo once before the hold~~ (✅ fixed below); the far edge's roll back (180°,
 0.5 s) unchanged — the owner has not said whether it is part of the shake felt. **1734** vectors.
+
+**The hold through the crossing, fixed** (2026-11-10, the owner: *"Build that one alone"* — the step fix declined as a patch: the view follows the real
+surface on purpose, D3 — over a channel A + dy goes in to the contact; placed from the face's plane the piece would stop 32 mm above a floor and run into a
+proud part close in). ⭐ **The root**: the hold ended with the roll back's END, one frame before the EXIT — a finger event slipped in between, the orbit a
+step ahead of the piece's solved angles through the frame change; they caught up during the square camera's turn: the gizmo moved one step while the
+camera turned (walked: 22 mm on the turn's second frame at every heading). Now held until the exit itself (`tiltClampStep`: `finishing` / `off`), and the
+turn's target set at the exit (`nW`). **Walked** (up the side, over the top and back down, 0.5 m, three headings): 0 mm through the turn at 165° and 195°;
+at 180° 13 + 5 + 2 mm — `Piece42`'s 41 mm step glided (the real surface), as it should. ⚠ The first build set only the target — no change, walked; the
+trace found the gap. **1734**.

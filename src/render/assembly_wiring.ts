@@ -1077,7 +1077,10 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   const tl = st.asmTilt;
   // ⭐⭐⭐ (`1.0.120b-`) …and while the square camera turns through an edge (`squareTurning`): every edge a frame change
   const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
-  if (!turning && (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k))) return false;
+  // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) …and from the roll's end TO THE EXIT itself (`finishing` / `off`: the tilt still here) — ⛔ held only
+  // while the roll was short of whole: one finger event slipped in the frame between the roll's end and the exit, the orbit a step ahead of the piece's
+  // solved angles through the frame change; they caught up during the square camera's turn — the gizmo moved one step while the camera turned (walked)
+  if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;
   if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
   st.orbit.reset(yaw0, v0);
   return true;
@@ -1224,6 +1227,10 @@ function tiltOff(st: SceneState): void {
   const sqO = st.asmSquare;
   if (sqO.n !== null) sqO.n = mulM(D, sqO.n);
   if (sqO.target !== null) sqO.target = mulM(D, sqO.target);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) THE TURN'S TARGET AT THE CROSSING ITSELF: the face the gizmo crossed onto (`nW`) — so the hold
+  // (`squareTurning`) covers the turn from its first frame. ⛔ Left to the next frame's map (the place cleared here): the target stale for a frame, the
+  // turn not yet seen — the next finger events moved the gizmo while the camera turned (walked: 11 + 23 mm at the top → side crossing)
+  if (nW !== null) sqO.target = nW;
   // ⭐⭐⭐ (2026-11-10) THE CALM CARRIED OUT OF F: over a `b` end (a turn about the edge's line) the new side's normal at once, the horizontal share kept;
   // across, both whole (⛔ both whole always: the calmed yaw released at every exit, then calmed again — a swing there and back)
   if (st.asmCalm !== null) st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };

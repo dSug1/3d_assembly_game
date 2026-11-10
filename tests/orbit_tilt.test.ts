@@ -407,7 +407,8 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("if (!onFacet && !tl.finishing) {"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
-    expect(a).toContain("if (!turning && (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k))) return false;"); // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
+    expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
+    expect(a).toContain("if (nW !== null) sqO.target = nW;"); // ⭐ the turn's target at the crossing itself // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
     expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — ⭐ (2026-11-10) the camera's own swing: from the heading SHOWN

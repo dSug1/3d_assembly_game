@@ -75,7 +75,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
       ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, hv: st.hover != null, lk: !!st.asmLocked,
       show, gl: G ? [G.br.length, G.d] : null, rl: Rr ? [Rr.br.length, Rr.d] : null, gk: G ? G.key : null, rk: Rr ? Rr.key : null,
-      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, v: String(st.lastVerdict ?? "").slice(0, 90) });
+      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90) });
     // once per new line: its breaks sub-sampled on the map (16 between the two samples): the largest sub-step — a false break if small
     for (const [L, cache, closed, isG] of [[G, st.asmGreenCache, true, true], [Rr, st.asmRedCache, false, false]]) {
       if (!L || !show || window.__lineKeys.has(L.key) || !window.__AW) continue; window.__lineKeys.add(L.key);
