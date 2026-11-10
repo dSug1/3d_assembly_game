@@ -773,7 +773,7 @@ heading −83.6° … −83.8° all the way to the edge (was → −70.4°), the
 **Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
 (the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.
 
-### 9.11b THE SQUARE CAMERA CLOSE IN (2026-11-10, branch `1.0.120b-` — built, NOT deployed: to test after `1.0.120a-`) — ⛔ no device close
+### 9.11b THE SQUARE CAMERA CLOSE IN (2026-11-10, branch `1.0.120b-`, renamed `1.0.120b-Orthogonal-tilted-poles` — ⭐⭐⭐ THE WAY FORWARD, §9.12; deployed once as `58f63c5`) — ⛔ no device close
 
 > The owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already have a mechanism to cross the edges
 > and the calm is not required, is it?"* → *"build the square camera close in branch 1.0.120b-. we will deploy this branch later on"*. (`1.0.120a-`, the
@@ -789,3 +789,15 @@ the roll 0 ms, then a 180° flip in one frame (walked, the square camera looking
 the far edge's roll back over 0.5 s. ⚠ The first finger event after a crossing still moves the gizmo once (the hold starts with the turn's target, one
 frame later).
 **Vectors**: `orbit_tilt.test.ts` (`squareTurn`, `squareTurning`, the wiring). **1734**.
+
+### 9.12 ⭐⭐⭐ THE WAY FORWARD: `1.0.120b-Orthogonal-tilted-poles` (2026-11-10, the owner) — ⛔ no device close
+
+> The owner: *"rename branch 1.0.120b- to 1.0.120b-Orthogonal-tilted-poles in remote and local. we will use this branch as the way forward."*
+
+Of the three answers to the jolt at a tilt near a vertical edge (§9.11), the owner chose **the square camera close in** (§9.11b): with the automatic
+tilt on (within 0.6 m of the gizmo, `tiltAutoM`), no calm — the camera square to the gizmo's face, every edge a frame change made at one speed with the
+gizmo held: a top / bottom edge the tilt (no swing), a vertical edge a 90° turn in 0.25 s. Far out the calm as before (`1.0.119-Fixes`, §9.10).
+The two others stay on their branches as the record: `1.0.120a-` (the heading squared by position, §9.11 on its branch) and `1.0.120c-` (no yaw
+realignment, the camera's up carried, §9.11c on its branch — live as `b7dccd0` when this was decided; `main` not redeployed from this branch yet).
+**Open, from the walks**: the first finger event after a crossing still moves the gizmo once before the hold (§9.11b); the far edge's roll back (180°,
+0.5 s) unchanged — the owner has not said whether it is part of the shake felt. **1734** vectors.
