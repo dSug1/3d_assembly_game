@@ -81,7 +81,7 @@ describe("⭐⭐⭐ (2026-11-09, §8.7) a line breaks only where the gizmo jumps
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).not.toContain("function sampleJoins(");
     expect(a).toContain("if (!joinsKnown(cache.ref)) joinStep(cache.ref, ev, pos); else if (!cache.ref.done) refineStep(cache.ref, ev, pos);");
-    expect(a).toContain("const n = m.hit.normal ?? m.t.normal;");
+    expect(a).toContain("const n = m.hit.normal ?? tiltDir(mapFrame(st), m.t.normal);");
     expect(a).toContain("const ref = refineStart(base, closed, period, ev, sameFace); joinStep(ref, ev, pos);");
   });
 });

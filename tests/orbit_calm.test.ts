@@ -142,8 +142,8 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
   });
   it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; 58d86ff's seven sliders (its distance deleted, Q3) in the submenu", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);");
-    expect(a).toContain("return calmShown(u, st.asmCalm);");
+    expect(a).toContain("return n === null ? tiltDir(R, calmDir(st, u)) : coneClamp(tiltDir(R, u), n, st.asmLock!.cone ?? undefined);");
+    expect(a).toContain("return calmShown(u, c);");
     // ⭐ (2026-11-09, §8) on a VERTICAL facet `calmShown` is exactly the old wiring's: the side's frame (its level `t`, the world's up) and the pole weight by
     // the pitch alone — ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight (⛔ 58d86ff's gate curved the A + dy approach)
     const D = Math.PI / 180;
@@ -161,7 +161,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const t0 = { band: "SIDE" as const, surface: [0, 0.2, 0] as Vec3, across: { L: 0.03, lo: 0, hi: 0.49 } };
     expect(calmTarget(t0, { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.4 }, null, K).sH).toBe(edgeShare(0.03, 0.49, 0.25, 25, 0.03));
     expect(calmTarget({ ...t0, band: "TOP" }, { n: [0, 1, 0], b: [0, 0, 1], bLo: 0, bHi: 0.4 }, null, K)).toEqual({ n: null, sH: 1, sV: 1 }); // a cap: none
-    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? shellOf(st) : null, {");
+    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {");
     expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);");
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("calmFrame(st, dtMs);");

@@ -69,6 +69,7 @@ import {
 import { pieceRingRangeM, pieceShownAtRest, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import { syncCentre } from "./camera_rig";
 import { angleTo, orbitDir, orbitForCameraDir } from "../input/assembly_orbit";
+import { tiltDir, untiltDir } from "../input/orbit_tilt";
 import { MotionTracker, SwayWatcher, impulseForPeak, swayScale } from "../input";
 import { advanceFollow } from "../input/follow";
 import { exponentialSmooth, phantomTarget } from "../input/lead";
@@ -583,7 +584,9 @@ export function slideWayOutRebase(st: SceneState): void {
   if (!slideModeOn(st) || st.hover === null || hv === null || q === null) return;
   // ⭐⭐⭐ (2026-11-01, *"build A"*) the orbit whose CAMERA — its offsets included — stands where the slide's is (`orbitForCameraDir`): nothing for the camera
   // to take back after the blend (⛔ the piece's direction on the slide's: the camera then swung to its offset — a second, curved move on the screen)
-  const t = orbitForCameraDir(hv.iso, q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);
+  // ⭐⭐⭐ (2026-11-10, §9.4) the orbit's angles in its frame (the tilted pole's F): the slide's view turned into it
+  const tR = st.asmTilt === null ? null : st.asmTilt.dir;
+  const t = orbitForCameraDir(untiltDir(tR, hv.iso), q.yaw, (st.cfg.cameraYawOffsetDeg * Math.PI) / 180, (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180);
   if (t === null) return;
   const u0 = orbitDir(q.yaw, q.v);
   const u1 = orbitDir(t.yaw, t.v);
@@ -592,7 +595,7 @@ export function slideWayOutRebase(st: SceneState): void {
   // ⭐⭐ (2026-11-01) the lock's cone opened to the new direction (`lockCone` only tightens): ⛔ clamped into it, the piece and the camera were turned off the
   // slide's view after all — the camera's swing back (a slide on a top, the gizmo's face a side's)
   const lk = st.asmLock;
-  if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(orbitDir(nq.yaw, nq.v), lk.normal)) };
+  if (lk !== null && lk.normal !== null) st.asmLock = { ...lk, cone: Math.max(lk.cone ?? 0, angleTo(tiltDir(tR, orbitDir(nq.yaw, nq.v)), lk.normal)) };
   const before = ringAnchorAt(st, q);
   const after = ringAnchorAt(st, nq);
   const keep: Vec3 = [before[0] - after[0], before[1] - after[1], before[2] - after[2]];

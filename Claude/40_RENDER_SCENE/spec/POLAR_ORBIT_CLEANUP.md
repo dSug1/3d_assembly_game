@@ -8,7 +8,7 @@
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
 * ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.116from1.0.114-` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (tip `f96ddeb`; before it `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.117-`.
-* ⭐⭐⭐ **NEXT TO BUILD — §9, THE TILTED POLE** (branch `1.0.117-`; the owner's four decisions open, §9.2).
+* ⭐⭐⭐ **§9, THE TILTED POLE — BUILT 2026-11-10** (branch `1.0.117-`; the rule §9.4, as built and probed §9.5 — three sliders, the roll back by the finger with a 250 ms minimum; ⛔ no device close).
 * ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
   sections intricate — the owner went back to `1.0.112-`): F7b ported (the calm on slanted facets), the lines refined (I17's drawing), a closed void with a
   floor keeps its depth (the owner's amendment), a line broken only where the gizmo jumps + the lift along the real surface (§8.7); open: I17's reach by a finger far out, and the input-driven design on world-plane cuts (proposed, §8.5).
@@ -445,7 +445,7 @@ unverified (broken, no chord), settled — a jump (cut).
 
 **Vectors**: `tests/line_joins.test.ts` (4, all RED on `2879172`: `pathJoins` absent); `line_refine.test.ts`'s wiring string. **1700**.
 
-## 9. ⭐⭐⭐ NEXT TO BUILD — THE TILTED POLE: the pressed cap becomes a side (proposed 2026-11-09, now branch `1.0.117-`; ⛔ NOT BUILT — the owner's decisions open)
+## 9. ⭐⭐⭐ THE TILTED POLE: the pressed cap becomes a side (proposed 2026-11-09; decided 2026-11-10, §9.4; ✅ BUILT on `1.0.117-`, §9.5)
 
 > The owner: *"create a new rule: when the left click or finger is pressed for orbiting, the orbit tilts so the face currently holding the gizmo becomes
 > the one with the red and green sections which are perpendicular (currently these are the vertical faces which have the red and green sections
@@ -480,7 +480,7 @@ unverified (broken, no chord), settled — a jump (cut).
 4. **A face that does not hold a pole never tilts** (the vertical sides, slanted side facets). ⭐ While tilted, the tilted orbit's poles (the front's and
    the back's centres) are never reached — any crossing re-tilts first.
 
-### 9.2 The owner's decisions (open)
+### 9.2 The owner's decisions — ✅ DECIDED 2026-11-10: 1 (c), 2 (a), 3 (a), 4 the rule removed → §9.4
 
 1. **The camera not square to a side at the press** (measured at 30° and 60° off the front): (a) the tilt about the camera's EXACT right — no motion,
    but the pressed face's lines are vertical planes at the camera's heading, up to 45° off the world x / z axes (the world-axis rule bent on that face) —
@@ -500,3 +500,78 @@ the view's verticality read there (the world's up on the screen against the scre
 `tilt_sim2.ts` (to be moved to `scripts/probes/` when built). ⭐ The bottom is symmetric (a press from below) — not simulated.
 **The build**: ONE rotation at the boundary between the orbit and the world — the orbit's direction and the camera's up turned by it, the face map built
 in the tilted frame (cached per tilt), the solver's ring through it, `mapAngles` at the press and at the re-tilt; the calm's targets on the tilted map.
+
+### 9.4 ✅ THE RULE AS DECIDED (2026-11-10, the owner; ⛔ NOT BUILT)
+
+> The owner: *"Decision1: c. But make sure the gizmo stays at its exact position on the face and then the red and green sections recompute from there.
+> If gizmo is on a channel, the recompute the green/red sections shall apply the rule and maybe the gizmo needs to relocate with a step jump (i don't
+> know): in such case, make the jump smooth (same as the camera tilt)"* — *"Decision 2: a"* — *"Decision 3: a"* — *"Decision 4: remove the rule as it
+> conflicts with my decisions here"*.
+
+1. **The press on a cap (1 (c))**: the tilt's axis SNAPPED to the nearest world horizontal axis, and the camera's heading SWUNG about the vertical to face
+   the pressed face square (0 – 45°, no roll) — ⭐ a timed ease (a press has no finger travel to pace it), its duration a slider (a guess until a hand
+   sets it). The red and green on the tilted face run along the world x / z.
+2. **The gizmo stays at its EXACT point on the face** — the tilted map's angles taken AT that point (`mapAngles`), the lines recomputed from there.
+   ⭐ Where the tilted frame's rules place the gizmo elsewhere at those angles (a void's rule read on the new lines' travels — a channel bridged or
+   floored differently, a rim), the gizmo RELOCATES — ⛔ never a step: eased over the SAME ease as the camera's swing, starting and ending with it.
+3. **The far edge (2 (a))**: a dy away over the tilted cap's far edge — the view rolls 180°, the frame back to the world's, upright on the back face.
+   ⚠ As measured: the same dy kept up then brings the gizmo back up over that edge onto the cap, polar again (the input reversed after a half roll, as the
+   scope's §4.2); to go on down the back the finger reverses. A new press on the cap tilts it again.
+4. **Every roll back to upright paced by the FINGER (3 (a))** — over the edge's slow stretch (the last 10 mm / 10°, `faceEdgeSlideMm` / `faceEdgeSlideDeg`), reversible, held
+   when the finger stops: the 63 – 90° at a side exit, the 180° at the far edge; none toward the viewer (the switch unseen). A relocation of the gizmo at
+   the re-tilt (point 2 read in the world frame) eased over the same stretch.
+5. **The "no camera roll" rule (2026-11-06) is REMOVED (4)** — the owner: it conflicts with these decisions. ⚠ Its text lives on the later branches
+   (`TILTED_ORBIT_REBUILD_SCOPE.md` §19 onward, `1.0.101-` … `1.0.107-`), not on this one; this line is its retraction here.
+6. Unchanged from §9.1: the tilt held while the gizmo stays on that face's stack, across releases and presses; a face holding no pole never tilts; the
+   calm in the tilted frame on the tilted face; the bottom the same rule mirrored (⚠ not simulated — to be probed before it is built).
+
+### 9.5 ✅ BUILT (2026-11-10, branch `1.0.117-`) — ⛔ no device close
+
+> The owner: *"Build it, then probe for issues. Update the md files. Deploy"*; then, on the probe's first finding: *"Make the roll back by finger && minimum
+> of xx ms to smoothen it. Select a duration and put a slider."*
+
+**The rule in `src/input/orbit_tilt.ts`** (engine-free), wired in `render/assembly_wiring.ts`:
+* **ONE ROTATION BETWEEN THE ORBIT'S ANGLES AND THE WORLD** (`st.asmTilt`): `map` (F → world) — the face map BUILT IN F (`tiltFaces`, `tiltBox`; the
+  pressed cap a SIDE facet there), every cast turned into the world and back (`frameCast` → `modelCast`: still the parts at rest); `dir` — the orbit's
+  DIRECTIONS (the piece, the camera, the cone, the slide's way out), `map` once the press's swing is over. `mapGizmo` gives its point and normal in the
+  world; its `t` (the calm, the lines' angles) stays F's. The world's map is kept beside (`asmWorldMap`).
+* **The press** (`tiltOnPress`, `pointer_wiring.ts`: a FIRST press alone — a finger, the left button; not the second touch): the gizmo on the world's
+  top / bottom (a real facet), the world's frame, no slide. `capTilt` about the world horizontal axis square to the SNAPPED heading (`snapHeading` —
+  the piece's yaw to the nearest 90°; ⭐ an axis square to the heading never rolls the view, vectored with the camera's offsets); the heading SWUNG over
+  `tiltSwingMs` (`swingDir`: at the press exactly where it was); the map's angles put AT the gizmo in F (`mapAngles`); a relocation (`asmGOff`) eased with
+  the swing. ⭐ EVERY stored orbit angle turned into F (`turnAngles`): the orbit's, the solved piece's, the spring's, the camera's as shown, the solver's
+  memory (`orbitUserV`, `orbitRawPrev` — ⛔ missed in the first build: the solver read the whole frame change as a finger step, the pitch thrown to −90° at
+  the press), the calm's normal. The coast stopped.
+* **The roll back** (`exitShare`, `rollStep`, `frameMix`): the finger's share of the way off the tilted facet (`kT`: its edge band toward another facet —
+  ½ the blend's weight doubled, 1 at the edge; 1 beyond it) and the roll SHOWN (`k`) following it at most 1 / `tiltRollMinMs` a ms — ⭐ the owner's minimum
+  time (*"by finger && minimum of xx ms"*): reversible, a whole roll never under 250 ms. The camera's frame turned from F's upright toward the world's by
+  `k` about ONE axis (the half turn's kept from frame to frame). ⭐ The world's frame (`tiltOff`) only once the roll shown is whole and the gizmo is off the
+  facet — until then it goes on in F past the edge (F's map is the real surface there too); every angle turned back, the calm's shares whole, the map's
+  angles put at the gizmo in the world, a relocation there eased by the finger's travel (`faceEdgeSlideDeg`).
+* **The calm** in F on the tilted facet, whole toward EVERY edge (each a frame change) over its own edge zones (`tiltCalmWhole`; ⛔ forced by the exit's
+  share alone — the 10° band — the piece caught up its calmed angle in two or three input steps: 957 mm in a frame, probed).
+* **Three sliders** (☰ → CAMERA → CAMERA ORBIT AROUND CENTER, under the edge's two): `tiltedPole` (1 on / 0 the polar cap as before), `tiltSwingMs`
+  (300 ms), `tiltRollMinMs` (250 ms) — the two times guesses until a hand sets them.
+
+**The probe** (`scripts/probes/tilt_probe.mjs`, headless, the cube far out — the camera ~7.8 m — the mouse at 3 px a frame; seven scenarios: the top by
+dx both ways, dy away over the far edge, dy toward the front, a diagonal with a 40° swing; the bottom by dx and by dy over its far edge):
+* the press: the camera and the gizmo moved 0.0 mm at the press; the swing ends at the snapped heading (−60° → −90°, −50° → −90°, −120° → −90°), a
+  frame's look ≤ 3.5°, the gizmo 0.0 mm; the calm in F then lifts the piece toward the face's normal (62° → 70° of elevation; the diagonal 70° → 85°).
+* on the tilted face: the gizmo with the finger on the screen in EVERY frame (dx and dy, top and bottom); the red along the heading, the green square to it
+  (vectored on the cube's 240 faces).
+* every exit: the roll back to upright (a side 52 – 56° shown, the far edge 180°), then upright (|roll| ≤ 3° — the camera's own 2.5° yaw offset reads as
+  ~2 – 5° there); the gizmo continuous through the crossing; dy toward the viewer: no roll (the switch unseen).
+* ⚠ **Found, and fixed (the owner's slider)**: far out the edge's stretch is ~1.5 mm of finger (the orbit ~5°/mm), so by the finger alone the far edge's
+  half turn passed in one or two input events — **105° in a frame**. With `tiltRollMinMs` 250: ≤ 27° a frame, over ~8 frames; a side's ≤ 10°.
+* ⚠ After an exit 2 – 4 frames in 40 have the gizmo against the finger on the screen — while its relocation eases out (the world map's place differs from
+  F's at the crossing by up to ~50 mm, eased over 10° of travel).
+* ⚠ Past the far edge the same dy brings the gizmo back over it onto the top, polar (point 3) — to go down the back the finger reverses.
+* The press's cost: building F's map 4 – 13 ms once on the desktop (the world's 3 ms) — a phone's maybe 3 ×, one frame.
+
+⚠ **The walks** (`walk_probe.mjs`, tilt on against `?tiltedPole=0`): ⛔ the recorder had recorded NOTHING since §8.7 (it read `cache.surf`, deleted with
+the speed rule — it threw every frame); fixed to read the lines' own joins (unverified joins count as breaks: the line-break counts are not comparable with
+the walks before §8.7). The comparison was still running at the deploy — to be recorded here.
+
+**Not done**: the slide ending OFF the tilted facet (it lets go at its edge, R6) would switch the frame with the roll eased by time only; the coast is
+stopped at a frame change (a flick across an edge stops there); the bottom's far edge probed, its grooves not. **Vectors**: `tests/orbit_tilt.test.ts` (16,
+RED on `46d24db` — the module absent); eleven wiring strings in six suites updated to the frame-aware code. **1716**.

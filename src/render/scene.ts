@@ -543,7 +543,10 @@ export function createScene(
   st.asmGreenCache = null;
   st.asmGizmoAt = null;
   st.asmMapQ = null;
+  st.asmTilt = null;
+  st.asmGOff = null;
   st.asmFaceMap = null;
+  st.asmWorldMap = null;
   st.asmParts = null;
   st.asmShell = null;
   st.asmKey = null;

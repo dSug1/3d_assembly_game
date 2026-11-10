@@ -30,6 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
+import { anglesOfDir, capTilt, exitShare, frameMix, mulM, mulT, rollStep, snapHeading, swingDir, swingEase, tiltBox, tiltCalmWhole, tiltDir, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -167,11 +168,23 @@ function castParts(st: SceneState): readonly CastPart[] {
 
 /** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
+  // ⭐⭐⭐ (2026-11-10, §9.4) the orbit's angles in its FRAME (the tilted pole's F, `dirFrame`), turned into the world here — the calm in F
+  const R = dirFrame(st);
   const u = orbitDir(yaw, v);
   const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
   // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
   // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
-  return n === null ? calmDir(st, u) : coneClamp(u, n, st.asmLock!.cone ?? undefined);
+  return n === null ? tiltDir(R, calmDir(st, u)) : coneClamp(tiltDir(R, u), n, st.asmLock!.cone ?? undefined);
+}
+
+/** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; the press's swing included) — `null`: the world's. */
+export function dirFrame(st: SceneState): Mat3 | null {
+  return st.asmTilt === null ? null : st.asmTilt.dir;
+}
+
+/** ⭐⭐⭐ (§9.4) the face map's frame (F → world) — `null`: the world's. */
+function mapFrame(st: SceneState): Mat3 | null {
+  return st.asmTilt === null ? null : st.asmTilt.map;
 }
 
 /**
@@ -181,7 +194,11 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
  */
 function calmDir(st: SceneState, u: Vec3): Vec3 {
   // ⭐⭐⭐ (2026-11-09, §8 — F7b) the rule in `input/orbit_calm.ts` (`calmShown`): the eased facet's own frame, faded toward its poles
-  return calmShown(u, st.asmCalm);
+  // ⭐⭐⭐ (2026-11-10, §9.4) off a tilted facet both shares whole by the exit's share (`k`): at the edge the shown direction is the orbit's own in both frames
+  const c = st.asmCalm;
+  const k = st.asmTilt?.k ?? 0;
+  if (c !== null && k > 0) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - k), sV: 1 - (1 - c.sV) * (1 - k) });
+  return calmShown(u, c);
 }
 
 /**
@@ -209,7 +226,7 @@ function calmFrame(st: SceneState, dtMs: number): void {
   const tg =
     sh === null || map === null
       ? { n: null, sH: 1, sV: 1 }
-      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? shellOf(st) : null, {
+      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
           shareH: cfg.faceSpanShareH,
           zoneHPct: cfg.faceSpanZoneHPct,
           zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
@@ -218,6 +235,13 @@ function calmFrame(st: SceneState, dtMs: number): void {
           zoneVPct: cfg.faceSpanZoneVPct,
           zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
         }, acrossNormals(st, map, sh));
+  // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: both shares whole toward them over the calm's own edge zones (`tiltCalmWhole`)
+  const tl = st.asmTilt;
+  if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
+    const p = tiltCalmWhole(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
+    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p), sV: 1 - (1 - tg.sV) * (1 - p) }, dtMs);
+    return;
+  }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
 }
 
@@ -230,7 +254,7 @@ function gizmoFor(st: SceneState): Vec3 {
   if (st.asmG !== null) return st.asmG;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const m = mapGizmo(st, q.yaw, pitchOfV(q.v));
-  if (m !== null) return m.hit.point;
+  if (m !== null) return withGOff(st, m.hit.point);
   const g = st.asmGizmo ?? st.centreBlend.targetM;
   return [g[0], g[1], g[2]];
 }
@@ -332,11 +356,34 @@ function mapOpts(st: SceneState): MapOpts {
  * `faceTrianglesWorld`), per placed set; `null` with no box. ⭐⭐⭐ (Step 5) on the FACES CONTOUR — its two knobs (D5) sliders, in the cache's key.
  */
 function faceMapOf(st: SceneState): FaceMap | null {
+  const R = mapFrame(st);
+  if (R === null) return worldFaceMap(st);
+  const parts = placedParts(st);
+  const box = shellOf(st);
+  if (box === null) return null;
+  // ⭐⭐⭐ (2026-11-10, §9.4) under the tilted pole the map is BUILT IN F (`tiltFaces`, `tiltBox`): the pressed cap a side — cached per tilt
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#T${st.asmTilt!.id}`;
+  if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
+  const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  st.asmFaceMap = { key, map };
+  return map;
+}
+
+/** ⭐⭐⭐ (§9.4) THE WORLD'S FACE MAP, whatever the frame (the press reads the cap there; the exit puts the map's angles there). */
+function worldFaceMap(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
   if (box === null) return null;
   const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
-  if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
+  if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
+  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  st.asmWorldMap = { key, map };
+  if (mapFrame(st) === null) st.asmFaceMap = { key, map };
+  return map;
+}
+
+/** ⭐ The placed parts' faces on their model pose (the slide's own: `faceWorld`, `faceTrianglesWorld`), in the world. */
+function placedFaces(st: SceneState): MapFace[] {
   const faces: MapFace[] = [];
   for (const [id, obj] of st.world.objects) {
     if (obj.orbited === true || obj.frozen === true || !goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) continue;
@@ -349,9 +396,7 @@ function faceMapOf(st: SceneState): FaceMap | null {
       faces.push({ normal: w.normal, centre: w.centre, tris, part: id }); // ⭐⭐⭐ (2026-11-09, R1) the part: a glued face is not a surface
     }
   }
-  const map = buildFaceMap(faces, box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
-  st.asmFaceMap = { key, map };
-  return map;
+  return faces;
 }
 
 /**
@@ -404,7 +449,7 @@ function rawGizmo(st: SceneState, yaw: number, pitch: number): { readonly hit: G
     // ⭐⭐⭐ (2026-11-09, R3 (c)) the ray from just inside the facet (`castPoint`) — never on its rim, in the neighbour's plane (a grazing ray, a 127 mm spike)
     const pc = castPoint(f, p);
     const o: Vec3 = [pc[0] + n[0] * (out - level(pc)), pc[1] + n[1] * (out - level(pc)), pc[2] + n[2] * (out - level(pc))];
-    const h = modelCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
+    const h = frameCast(st, o, [-n[0], -n[1], -n[2]], out - sup(-1) + MAP_OUT_M);
     if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };
   }
   return { hit: { point: p, normal: n, host: null }, t };
@@ -419,7 +464,11 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
   const map = faceMapOf(st);
   if (here === null || map === null) return null;
   const p = blendThroughEdges(map, yaw, pitch, mapOpts(st), here.hit.point, (y, q) => rawGizmo(st, y, q)?.hit.point ?? null, (q, nb, reach) => blendCast(st, q, nb, reach));
-  return p === here.hit.point ? here : { hit: { point: p, normal: here.hit.normal, host: here.hit.host }, t: here.t };
+  // ⭐⭐⭐ (2026-11-10, §9.4) the map works in its frame; its point and normal are given in the WORLD (`t` stays the map's: the calm, the lines' angles)
+  const R = mapFrame(st);
+  const n = here.hit.normal;
+  if (R === null) return p === here.hit.point ? here : { hit: { point: p, normal: n, host: here.hit.host }, t: here.t };
+  return { hit: { point: mulM(R, p), normal: n === null ? null : mulM(R, n), host: here.hit.host }, t: here.t };
 }
 
 /**
@@ -427,8 +476,16 @@ export function mapGizmo(st: SceneState, yaw: number, pitch: number): { readonly
  * onto it (`modelCast` — the parts at rest); its hit, or none. Only a surface in front of `q` is met (the ray stops at it).
  */
 function blendCast(st: SceneState, q: Vec3, nb: Vec3, reach: number): Vec3 | null {
-  const h = modelCast(st, [q[0] + nb[0] * reach, q[1] + nb[1] * reach, q[2] + nb[2] * reach], [-nb[0], -nb[1], -nb[2]], reach);
+  const h = frameCast(st, [q[0] + nb[0] * reach, q[1] + nb[1] * reach, q[2] + nb[2] * reach], [-nb[0], -nb[1], -nb[2]], reach);
   return h === null ? null : h.point;
+}
+
+/** ⭐⭐⭐ (2026-11-10, §9.4) A CAST IN THE MAP'S FRAME: the ray turned into the world (`modelCast` — the parts at rest), its hit turned back. */
+function frameCast(st: SceneState, origin: Vec3, dir: Vec3, length: number): GizmoHit | null {
+  const R = mapFrame(st);
+  if (R === null) return modelCast(st, origin, dir, length);
+  const h = modelCast(st, mulM(R, origin), mulM(R, dir), length);
+  return h === null ? null : { point: mulT(R, h.point), normal: h.normal === null ? null : mulT(R, h.normal), host: h.host };
 }
 
 /**
@@ -465,7 +522,8 @@ function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
   const known = memo.at.get(key);
   if (known !== undefined) return known;
   const m = mapGizmo(st, yaw + Math.atan2(Math.sin(mq.yaw - q0.yaw), Math.cos(mq.yaw - q0.yaw)), pitchOfV(v) + (mq.pitch - pitchOfV(q0.v)));
-  const g = m === null ? gizmoFor(st) : m.hit.point;
+  // ⭐⭐⭐ (2026-11-10, §9.4) the relocation's offset at EVERY angle the solver asks (⛔ at the frame's own only: a step in the ring under the solver)
+  const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);
   if (memo.at.size < 512) memo.at.set(key, g);
   return g;
 }
@@ -511,8 +569,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmLook = [t[0], t[1], t[2]];
     return;
   }
+  // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
+  if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const u = orbitDir(q.yaw, q.v);
+  const u = tiltDir(dirFrame(st), orbitDir(q.yaw, q.v));
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
   // angles' steps (2026-10-29 … Step 4c): it could wait, be held, drift and jump. The map's angles ARE the orbit's — out of step only after the slide (put
@@ -529,8 +589,13 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {
       hit = m.hit;
-      st.asmG = hit.point;
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+      // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
+      tiltFrame(st, dtMs, m.t.stack, mq);
+      // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
+      gOffStep(st, q, prev);
+      hit = { ...hit, point: withGOff(st, hit.point) };
+      st.asmG = hit.point;
     }
   }
   calmFrame(st, dtMs);
@@ -546,7 +611,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
     // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)
     const map = faceMapOf(st);
-    st.asmMapQ = map !== null && st.asmG !== null ? mapAngles(map, st.asmG, facetOfNormal(map, st.gizmoNormal ?? null, st.asmG), mapOpts(st)) : null;
+    // ⭐⭐⭐ (2026-11-10, §9.4) in the map's frame (the tilted pole's F)
+    const gM = st.asmG === null ? null : untiltDir(mapFrame(st), st.asmG);
+    const nM = st.gizmoNormal === null || st.gizmoNormal === undefined ? null : untiltDir(mapFrame(st), st.gizmoNormal);
+    st.asmMapQ = map !== null && gM !== null ? mapAngles(map, gM, facetOfNormal(map, nM, gM), mapOpts(st)) : null;
     st.asmShown = null;
     st.asmLock = null;
     st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
@@ -614,7 +682,7 @@ function sectionLinesFrame(st: SceneState): void {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
   }
-  const parts = st.asmParts?.key ?? "";
+  const parts = `${st.asmParts?.key ?? ""}#T${st.asmTilt?.id ?? 0}`; // ⭐ (§9.4) a frame's lines are its own
   const o = mapOpts(st);
   const optKey = `${o.edgeMm}|${o.edgeDeg}`;
   // ⭐⭐⭐ (2026-11-09, I17) the samples REFINED where the line leaves its chord by more than 1 mm (`refineStart`, `refineStep`): a narrow face (Piece42's
@@ -625,7 +693,7 @@ function sectionLinesFrame(st: SceneState): void {
   const valOf = (yw: number, pt: number): LineVal | null => {
     const m = mapGizmo(st, yw, pt);
     if (m === null) return null;
-    const n = m.hit.normal ?? m.t.normal;
+    const n = m.hit.normal ?? tiltDir(mapFrame(st), m.t.normal);
     const q = m.hit.point;
     return { p: [q[0] + n[0] * SECTION_LIFT_M, q[1] + n[1] * SECTION_LIFT_M, q[2] + n[2] * SECTION_LIFT_M], s: m.t.surface, h: m.hit.host, n, q };
   };
@@ -655,7 +723,7 @@ function sectionLinesFrame(st: SceneState): void {
   st.asmGreenCache = line(st.asmGreenCache, gKey, (x) => [x, sh.pitch], sectionFixed(2 * Math.PI, GREEN_SAMPLES, true), true, 2 * Math.PI);
   // ⭐⭐⭐ the gizmo's EXACT point inserted in both: the ring is a vertex of each line, at every frame — lifted along its own surface's normal (§8.7)
   const gval = valOf(sh.yaw, sh.pitch);
-  const gn = gval?.n ?? sh.t.normal;
+  const gn = gval?.n ?? tiltDir(mapFrame(st), sh.t.normal);
   const gv = new Vector3(g[0] + gn[0] * SECTION_LIFT_M, g[1] + gn[1] * SECTION_LIFT_M, g[2] + gn[2] * SECTION_LIFT_M);
   const key = `${rKey}|${gKey}|${st.asmRedCache.ref.ver}|${st.asmGreenCache.ref.ver}|${gv.x.toFixed(6)},${gv.y.toFixed(6)},${gv.z.toFixed(6)}`;
   if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = true;
@@ -787,8 +855,25 @@ export function approachRelease(st: SceneState): void {
 
 /** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
 export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
-  const u = dirAt(st, cam.yaw, cam.v);
   const o = off ?? { yawRad: 0, pitchRad: 0 };
+  // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world; off the facet the frame turned toward
+  // the world's upright by the exit's share (`frameMix` — the roll back, paced by the finger, reversible; the far edge's half turn about one kept axis)
+  const tl = st.asmTilt;
+  if (tl !== null) {
+    const uF = orbitDir(cam.yaw, cam.v);
+    const lockN = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
+    const sF = lockN === null ? calmDir(st, uF) : untiltDir(tl.dir, coneClamp(tiltDir(tl.dir, uF), lockN, st.asmLock!.cone ?? undefined));
+    const fF = offsetFrame(sF, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
+    const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
+    if (!(tl.k > 0)) return f;
+    const uW = mulM(tl.dir, sF);
+    const flat = Math.hypot(uW[0], uW[2]);
+    const hW = flat > 1e-3 ? Math.atan2(uW[2], uW[0]) : Math.atan2(-f.up[2], -f.up[0]);
+    const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
+    tl.axis = mix.axis;
+    return mix.frame;
+  }
+  const u = dirAt(st, cam.yaw, cam.v);
   // ⭐⭐ (2026-10-28) the offsets in the camera's own frame, never faded — the same whichever face hosts the gizmo (`offsetFrame`)
   // ⭐ (2026-10-29) its heading the ORBIT's yaw, always (⛔ the direction's own — locked and turned into the cone at −90° it switched from the yaw to the
   // face's heading at once: the scene jump-rotated; and at ±90° it has none)
@@ -801,6 +886,161 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
 export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number): boolean {
   if (!st.asmLocked || st.asmLock === null || st.asmLock.normal === null) return false;
   const n = st.asmLock.normal;
-  const a1 = angleTo(orbitDir(yaw1, v1), n);
-  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(orbitDir(yaw0, v0), n);
+  const R = dirFrame(st);
+  const a1 = angleTo(tiltDir(R, orbitDir(yaw1, v1)), n);
+  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(tiltDir(R, orbitDir(yaw0, v0)), n);
+}
+
+/* ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE; the rules in `input/orbit_tilt.ts`) ------------------------------------------ */
+
+let TILT_SEQ = 0;
+
+/** ⭐ The gizmo with its relocation's offset (`asmGOff`) — none: as it is. */
+function withGOff(st: SceneState, p: Vec3): Vec3 {
+  const o = st.asmGOff;
+  return o === null || !(o.left > 0) ? p : [p[0] + o.v[0] * o.left, p[1] + o.v[1] * o.left, p[2] + o.v[2] * o.left];
+}
+
+/**
+ * ⭐⭐⭐ THE RELOCATION'S SHARE LEFT, one frame: after a press over the swing's time (as the camera, 1 (c)); after an exit by the finger's travel over the
+ * edge's slow stretch (`faceEdgeSlideDeg`, 3 (a)). Done: none.
+ */
+function gOffStep(st: SceneState, q: { readonly yaw: number; readonly v: number }, prev: { readonly yaw: number; readonly v: number }): void {
+  const o = st.asmGOff;
+  if (o === null) return;
+  if (!o.byTravel) {
+    const tl = st.asmTilt;
+    o.left = tl === null || tl.swingMs === null ? 0 : 1 - swingEase(tl.swingMs / Math.max(1, st.cfg.tiltSwingMs));
+  } else {
+    const E = Math.max(1, st.cfg.faceEdgeSlideDeg) * (Math.PI / 180);
+    const travel = Math.abs(Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw))) + Math.abs(pitchOfV(q.v) - pitchOfV(prev.v));
+    o.left -= travel / E;
+  }
+  if (!(o.left > 1e-4)) st.asmGOff = null;
+}
+
+/**
+ * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
+ * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
+ */
+function tiltFrame(st: SceneState, dtMs: number, stack: number, mq: { readonly yaw: number; readonly pitch: number }): void {
+  const tl = st.asmTilt;
+  if (tl === null) return;
+  if (tl.swingMs !== null) {
+    tl.swingMs += dtMs;
+    const e = swingEase(tl.swingMs / Math.max(1, st.cfg.tiltSwingMs));
+    tl.dir = swingDir(tl.map, tl.delta, e);
+    if (e >= 1) tl.swingMs = null;
+  }
+  // ⭐⭐⭐ (2026-11-10, the owner: *"Make the roll back by finger && minimum of xx ms to smoothen it"*) the finger's share (`kT`) and the roll SHOWN (`k`):
+  // it follows the finger, never faster than a whole roll in `tiltRollMinMs` (`rollStep`); the world's frame only once the roll shown is whole — until then
+  // the gizmo goes on in F past the edge (F's map is the real surface there too); back onto the facet first: the roll comes back, no exit
+  if (stack !== tl.facet) tl.kT = 1;
+  else {
+    const map = faceMapOf(st);
+    tl.kT = map === null ? 0 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st));
+  }
+  tl.k = rollStep(tl.k, tl.kT, dtMs, st.cfg.tiltRollMinMs);
+  tl.exit = stack !== tl.facet && tl.k >= 1;
+}
+
+/**
+ * ⭐⭐⭐ EVERY ORBIT ANGLE TURNED INTO ANOTHER FRAME (`turn`: a direction from the old frame to the new): the orbit's, the solved piece's, the spring's (at
+ * rest), the camera's as shown (its leash state rebuilt from the piece), the gizmo's last; the yaws kept together (one hint). The coast stopped.
+ */
+function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
+  const conv = (yaw: number, v: number, hint: number): { yaw: number; v: number } => anglesOfDir(turn(orbitDir(yaw, v)), hint);
+  const o = conv(st.orbit.yaw, st.orbit.elevation, 0);
+  st.orbit.reset(o.yaw, o.v);
+  // the solver's own memory of the target (the ring height kept, last frame's target) in the new frame — ⛔ left in the old one, the solver read a
+  // whole frame's difference as the finger's step (the first probe: the pitch thrown to −90° at the press)
+  st.orbitUserV = o.v;
+  st.orbitRawPrev = { yaw: o.yaw, v: o.v };
+  if (st.pieceQ !== null) st.pieceQ = { ...st.pieceQ, ...conv(st.pieceQ.yaw, st.pieceQ.v, o.yaw) };
+  if (st.boxSpring !== null) {
+    const a = conv(st.boxSpring.at.yaw, st.boxSpring.at.v, o.yaw);
+    st.boxSpring = { at: { ...st.boxSpring.at, yaw: a.yaw, v: a.v }, velYaw: 0, velV: 0, velLnZoom: st.boxSpring.velLnZoom };
+    st.boxOrbit = st.boxSpring.at;
+  } else if (st.boxOrbit !== null) st.boxOrbit = { ...st.boxOrbit, ...conv(st.boxOrbit.yaw, st.boxOrbit.v, o.yaw) };
+  if (st.cameraLagged !== null) st.cameraLagged = conv(st.cameraLagged.yaw, st.cameraLagged.v, o.yaw);
+  st.cameraOrbit = null;
+  if (st.asmPrevQ !== null) st.asmPrevQ = conv(st.asmPrevQ.yaw, st.asmPrevQ.v, o.yaw);
+  if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, n: turn(st.asmCalm.n) };
+  st.orbitInertia.stop();
+}
+
+/**
+ * ⭐⭐⭐ (§9.4, 1 (c)) A PRESS FOR ORBITING ON A CAP (the gizmo on the world's top / bottom, a real facet; the world's frame; no slide): the tilt about the
+ * world horizontal axis square to the SNAPPED heading (`capTilt`) — the cap a side in F; the camera's heading swung square to it over `tiltSwingMs`
+ * (`swingDir`: at the press exactly where it was); ⭐ the gizmo at its EXACT point — the map's angles taken there in F (`mapAngles`), the lines recomputed
+ * from there; where F's rules place it elsewhere (a void read on the new lines' travels), its relocation eased over the same swing (`asmGOff`).
+ */
+export function tiltOnPress(st: SceneState): void {
+  if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.asmLocked || st.hover !== null || st.greenBox === null) return;
+  const sh = st.asmShown;
+  const g = st.asmG;
+  const wm = worldFaceMap(st);
+  if (sh === null || g === null || wm === null) return;
+  const top = sh.t.stack === wm.top;
+  if (!top && sh.t.stack !== wm.bottom) return;
+  const cap = wm.facets[sh.t.stack]!;
+  if (!cap.real) return;
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const hs = snapHeading(q.yaw);
+  const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
+  const R1 = capTilt(hs, top);
+  const D0 = swingDir(R1, delta, 0);
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, k: 0, kT: 0, axis: null, exit: false };
+  const map = faceMapOf(st);
+  if (map === null) {
+    st.asmTilt = null;
+    return;
+  }
+  const gF = mulT(R1, g);
+  const fi = facetOfNormal(map, mulT(R1, cap.n), gF);
+  st.asmTilt.facet = fi;
+  turnAngles(st, (d) => mulT(D0, d));
+  const mq = mapAngles(map, gF, fi, mapOpts(st));
+  st.asmMapQ = mq;
+  const m = mapGizmo(st, mq.yaw, mq.pitch);
+  st.asmGOff = null;
+  if (m !== null) {
+    if (m.t.stack !== fi) st.asmTilt.facet = m.t.stack;
+    const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, byTravel: false };
+  }
+  st.asmShown = null;
+  st.lastVerdict = `orbit: the tilted pole — the ${top ? "top" : "bottom"} is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ (§9.4) OFF THE TILTED FACET: the world's frame again — every orbit angle turned into it (the camera already at the world's upright: the exit's
+ * share is whole at the edge); the gizmo kept — the world map's angles put at it (`mapAngles`), a relocation there eased by the finger's travel.
+ */
+function tiltOff(st: SceneState): void {
+  const tl = st.asmTilt;
+  if (tl === null) return;
+  const D = tl.dir;
+  const g = st.asmG;
+  const fm = faceMapOf(st);
+  const sh = st.asmShown;
+  const nW = fm !== null && sh !== null ? mulM(tl.map, fm.facets[sh.t.stack]!.n) : null;
+  turnAngles(st, (d) => mulM(D, d));
+  if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, sH: 1, sV: 1 };
+  st.asmTilt = null;
+  st.asmShown = null;
+  st.asmGOff = null;
+  const wm = faceMapOf(st);
+  if (wm !== null && g !== null) {
+    const mq = mapAngles(wm, g, facetOfNormal(wm, nW, g), mapOpts(st));
+    st.asmMapQ = mq;
+    const m = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m !== null) {
+      const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, byTravel: true };
+    }
+  } else st.asmMapQ = null;
+  st.lastVerdict = "orbit: off the tilted face — the world's frame again";
+  st.hudDirty = true;
 }
