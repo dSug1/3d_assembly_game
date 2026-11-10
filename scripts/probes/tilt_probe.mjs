@@ -46,7 +46,15 @@ const SCENARIOS = [
   ["top_diag_swing40", -50, 70, [STEP * 0.7, -STEP * 0.7], 420],
   ["bottom_dx_right", -90, -62, [STEP, 0], 420],
   ["bottom_dy_down_far_edge", -120, -62, [0, STEP], 420],
-].filter((s) => env.ONLY === undefined || s[0] === env.ONLY);
+  // ⭐ (2026-11-10) the AUTOMATIC tilt (the 6th: the piece's distance from the gizmo, m; the 7th: reverse the drag this many frames after the tilt; the 8th:
+  // no drag — the distance ramped [from, to] m over the drag's frames, the approach's way in / out)
+  ["auto_dy_up_front_over_top", -90, 15, [0, -STEP], 420, 1.2],
+  ["auto_dy_up_then_back_at_once", -90, 15, [0, -STEP], 420, 1.2, 4],
+  ["auto_dy_up_corner_heading", -60, 15, [0, -STEP], 420, 1.2],
+  ["auto_dx_round_the_sides", -90, 20, [STEP, 0], 300, 1.2],
+  ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.2]],
+  ["auto_out_while_tilted", -70, 62, [0, 0], 160, 1.2, undefined, [1.2, 3.0]],
+].filter((s) => env.ONLY === undefined || s[0] === env.ONLY || (env.ONLY === "auto" && String(s[0]).startsWith("auto")));
 
 try {
   let targets = null;
@@ -99,30 +107,43 @@ try {
   const move = (type, m, buttons) => send("Input.dispatchMouseEvent", { type, x: m[0], y: m[1], button: "left", buttons, clickCount: 1 });
   const frame = () => ev("new Promise((r) => requestAnimationFrame(() => r(1)))");
   const all = {};
-  for (const [name, yaw, pitch, step, n] of SCENARIOS) {
+  const setDist = (m) => `(async () => { const st = window.__st; const A = await import("/src/input/assembly_orbit.ts"); let lo = A.approachRange(st.cfg).min, hi = 1; for (let i = 0; i < 40; i++) { const x = (lo + hi) / 2; if (A.approachDistance(st.cfg, x) < ${m}) lo = x; else hi = x; } st.approach = (lo + hi) / 2; })()`;
+  for (const [name, yaw, pitch, step0, n, distM, revAfter, ramp] of SCENARIOS) {
+    let step = step0;
+    await ev(distM ? setDist(distM) : "window.__st.approach = 1");
     await ev(`window.__tag = "setup"; (() => { const st = window.__st; st.asmTilt = null; st.asmGOff = null; st.asmMapQ = null; st.orbitUserV = null; st.orbitRawPrev = null; st.orbit.reset(${yaw * D}, ${(pitch / 90 + 1) / 2}); st.orbitInertia.stop(); })()`);
     await sleep(2500);
     const start = [step[0] > 0 ? 160 : step[0] < 0 ? W - 160 : W * 0.25, step[1] > 0 ? 180 : step[1] < 0 ? H - 60 : H - 120];
     await ev(`window.__rec = []; window.__tag = "before"`);
     for (let k = 0; k < 5; k++) await frame();
     await ev(`window.__tag = "press"`);
-    await move("mousePressed", start, 1);
+    if (!ramp) await move("mousePressed", start, 1); // ⭐ a distance ramp presses nothing (the press would tilt by hand)
     for (let k = 0; k < 40; k++) await frame(); // the swing (300 ms) held still
     await ev(`window.__tag = "drag"`);
     let m = start;
     let after = -1;
+    let tiltSeen = -1;
     for (let j = 0; j < n; j++) {
+      if (ramp) {
+        await ev(setDist(ramp[0] + ((ramp[1] - ramp[0]) * (j + 1)) / n));
+        await frame();
+        continue;
+      }
+      if (revAfter !== undefined && tiltSeen < 0 && (await ev("window.__st.asmTilt !== null"))) tiltSeen = j;
+      if (revAfter !== undefined && tiltSeen >= 0 && j === tiltSeen + revAfter) step = [-step[0], -step[1]];
       const m2 = [m[0] + step[0], m[1] + step[1]];
       if (m2[0] < 4 || m2[0] > W - 4 || m2[1] < 4 || m2[1] > H - 4) break;
       m = m2;
       await move("mouseMoved", m, 1);
       await frame();
       const out = await ev("window.__st.asmTilt === null");
-      if (out && after < 0) after = j;
-      if (after >= 0 && j - after > 40) break;
+      if (!distM) {
+        if (out && after < 0) after = j;
+        if (after >= 0 && j - after > 40) break;
+      }
     }
     await ev(`window.__tag = "release"`);
-    await move("mouseReleased", m, 0);
+    if (!ramp) await move("mouseReleased", m, 0);
     for (let k = 0; k < 20; k++) await frame();
     all[name] = JSON.parse(await ev("JSON.stringify(window.__rec)"));
     const err = await ev("window.__recErr ?? null");
@@ -137,7 +158,25 @@ try {
   const head = (r) => (r.piece && r.gz ? (Math.atan2(r.piece[2] - r.gz[2], r.piece[0] - r.gz[0]) * 180) / Math.PI : NaN); // the piece's heading from the gizmo's foot
   const elev = (r) => (r.piece && r.gz ? (Math.asin((r.piece[1] - r.gz[1]) / dist(r.piece, r.gz)) * 180) / Math.PI : NaN);
   for (const [name, fr] of Object.entries(all)) {
-    const step = SCENARIOS.find((x) => x[0] === name)[3];
+    const sc = SCENARIOS.find((x) => x[0] === name);
+    const step = sc[3];
+    if (sc[5]) {
+      // the automatic scenarios: every tilt and its end, the frames between (the hysteresis), the largest steps, the roll after
+      const d = fr.filter((r) => r.tag === "drag" || r.tag === "press" || r.tag === "release");
+      const ev2 = [];
+      let prevId = null, startI = -1;
+      for (let i = 0; i < d.length; i++) {
+        const id = d[i].tl ? d[i].tl.id : null;
+        if (id !== prevId) { ev2.push(id === null ? `world @${i}${startI >= 0 ? ` (tilted ${i - startI} frames)` : ""} "${d[i].v.slice(7, 60)}"` : `TILT #${id} @${i} "${d[i].v.slice(7, 70)}"`); if (id !== null) startI = i; }
+        prevId = id;
+      }
+      let mLook = 0, mRollStep = 0, mG = 0;
+      for (let i = 1; i < d.length; i++) { const a = d[i - 1], b = d[i]; mLook = Math.max(mLook, ang(look(a), look(b))); if (a.roll !== null && b.roll !== null) mRollStep = Math.max(mRollStep, Math.abs(((b.roll - a.roll + 540) % 360) - 180)); if (a.g && b.g) mG = Math.max(mG, dist(a.g, b.g) * 1000); }
+      const bands = []; for (const r of d) { const b = r.band + (r.tl ? "*" : ""); if (bands.at(-1) !== b) bands.push(b); }
+      const last = d.at(-1);
+      console.log(`\n=== ${name}: ${d.length} frames; the piece ${sc[7] ? `${sc[7][0]} → ${sc[7][1]}` : sc[5]} m from the gizmo\n  ${ev2.join(" → ") || "no tilt"}\n  bands (* tilted): ${bands.join(" ")}\n  a frame's look ≤ ${mLook.toFixed(2)}°, roll step ≤ ${mRollStep.toFixed(2)}°, gizmo ≤ ${mG.toFixed(1)} mm; at the end roll ${last?.roll?.toFixed(1)}°`);
+      continue;
+    }
     const before = fr.filter((r) => r.tag === "before").at(-1);
     const press = fr.filter((r) => r.tag === "press");
     const drag = fr.filter((r) => r.tag === "drag");

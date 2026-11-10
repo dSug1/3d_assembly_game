@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, exitShare, frameMix, headingTurn, mulM, mulT, rollStep, snapHeading, swingDir, tiltBox, tiltCalmWhole, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, exitShare, frameMix, headingTurn, mulM, mulT, rollStep, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltExitTarget, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -213,6 +213,37 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"Make the roll back by finger && m
   });
 });
 
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
+  it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
+    expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
+    expect(tiltAutoLatch(false, 1.9, 6, 30)).toBe(false);
+    expect(tiltAutoLatch(true, 2.0, 6, 30)).toBe(true); // 33 %: still on
+    expect(tiltAutoLatch(true, 2.2, 6, 30)).toBe(false); // 37 %: off
+    expect(tiltAutoLatch(false, 0.01, 6, 0)).toBe(false);
+  });
+  it("⭐⭐⭐ a tilt made at an EDGE asks no roll back until the gizmo has once been in the facet's middle; then the finger's share; off the facet whole", () => {
+    let s = tiltExitTarget(false, true, 0.9); // entered at the edge
+    expect(s.kT).toBe(0);
+    expect(s.armed).toBe(false);
+    s = tiltExitTarget(s.armed, true, 0); // the middle reached
+    expect(s.armed).toBe(true);
+    expect(tiltExitTarget(s.armed, true, 0.6).kT).toBe(0.6);
+    expect(tiltExitTarget(false, false, 0).kT).toBe(1); // back over the entry edge at once: rolled back, all the same
+    expect(tiltExitTarget(true, true, 0, true).kT).toBe(1); // ⭐ out past the threshold (`off`): whole, mid-face too
+  });
+  it("⭐⭐⭐ THE OWNER'S HYSTERESIS: no tilt back before the tilt's swing is over and the roll shown whole — so a tilt and its tilt back take at least `tiltSwingMs` + `tiltRollMinMs`", () => {
+    expect(tiltExits(false, 1, false)).toBe(false);
+    expect(tiltExits(false, 0.8, true)).toBe(false);
+    expect(tiltExits(true, 1, true)).toBe(false);
+    expect(tiltExits(false, 1, true)).toBe(true);
+    // ⭐⭐⭐ (the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past it: off on the facet too — once
+    // the roll shown is whole and the swing over
+    expect(tiltExits(true, 1, true, true)).toBe(true);
+    expect(tiltExits(true, 0.5, true, true)).toBe(false);
+    expect(tiltExits(true, 1, false, true)).toBe(false);
+  });
+});
+
 describe("⭐⭐ wired", () => {
   it("⭐⭐⭐ the press tilts (`tiltOnPress`, a first press alone), the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`), the camera's roll by the exit's share", () => {
     const p = code("render/pointer_wiring.ts");
@@ -222,10 +253,13 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
     expect(a).toContain("turnAngles(st, (d) => mulM(D, d));");
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
-    expect(a).toContain("tl.kT = map === null ? 0 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st));");
+    expect(a).toContain("const t = tiltExitTarget(tl.armed, stack === tl.facet, map === null ? 1 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st)), tl.off);");
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, st.cfg.tiltRollMinMs);");
-    expect(a).toContain("tl.exit = stack !== tl.facet && tl.k >= 1;"); // ⭐ the world's frame only once the roll shown is whole
+    expect(a).toContain("tl.exit = tiltExits(stack === tl.facet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
+    expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);");
+    expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
+    expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null && st.asmGOff === null) tiltOn(st, "auto");');
     expect(a).toContain("st.orbitUserV = o.v;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its two sliders: on / off, and the press's swing (300 ms)", () => {
@@ -236,5 +270,7 @@ describe("⭐⭐ wired", () => {
     expect(m).toContain('"tiltSwingMs", 0, 1000, 25');
     expect(DEFAULT_CONFIG.tiltRollMinMs).toBe(250);
     expect(m).toContain('"tiltRollMinMs", 0, 2000, 25');
+    expect(DEFAULT_CONFIG.tiltAutoPct).toBe(30);
+    expect(m).toContain('"tiltAutoPct", 0, 100, 5');
   });
 });

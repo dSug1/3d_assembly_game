@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, exitShare, frameMix, mulM, mulT, rollStep, snapHeading, swingDir, swingEase, tiltBox, tiltCalmWhole, tiltDir, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, exitShare, frameMix, mulM, mulT, rollStep, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltExitTarget, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -571,6 +571,18 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
+  // within `tiltAutoPct` of the far distance (`tiltAutoLatch`, its hysteresis) the gizmo on a FACE HOLDING A POLE (the owner's term) tilts the orbit by itself
+  // (`tiltOn`, last frame's place); the other faces need none (their lines square already); far out: the press only. ⚠ The tilt is a quarter turn: exact
+  // for a LEVEL face holding a pole (the cube's); a slanted one (a horizontally extruded hexagon) is left short of square, a pole held by an edge never tilts
+  // ⭐⭐⭐ (the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past it: a tilt under way turns off
+  const autoWas = st.asmTiltAuto;
+  st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);
+  if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {
+    st.asmTilt.off = true;
+    st.lastVerdict = "orbit: out past the automatic tilt's threshold — the tilt turns off";
+  }
+  if (st.asmTiltAuto && st.asmTilt === null && st.asmGOff === null) tiltOn(st, "auto");
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const u = tiltDir(dirFrame(st), orbitDir(q.yaw, q.v));
   const d = approachDistance(st.cfg, st.approach);
@@ -593,7 +605,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
       tiltFrame(st, dtMs, m.t.stack, mq);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
-      gOffStep(st, q, prev);
+      gOffStep(st, q, prev, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
       st.asmG = hit.point;
     }
@@ -905,10 +917,14 @@ function withGOff(st: SceneState, p: Vec3): Vec3 {
  * ⭐⭐⭐ THE RELOCATION'S SHARE LEFT, one frame: after a press over the swing's time (as the camera, 1 (c)); after an exit by the finger's travel over the
  * edge's slow stretch (`faceEdgeSlideDeg`, 3 (a)). Done: none.
  */
-function gOffStep(st: SceneState, q: { readonly yaw: number; readonly v: number }, prev: { readonly yaw: number; readonly v: number }): void {
+function gOffStep(st: SceneState, q: { readonly yaw: number; readonly v: number }, prev: { readonly yaw: number; readonly v: number }, dtMs: number): void {
   const o = st.asmGOff;
   if (o === null) return;
-  if (!o.byTravel) {
+  if (o.timeMs !== undefined) {
+    // ⭐ (2026-11-10) the tilt turned off by distance: no travel to pace it — over `tiltRollMinMs`, as the roll
+    o.timeMs += dtMs;
+    o.left = 1 - swingEase(o.timeMs / Math.max(1, st.cfg.tiltRollMinMs));
+  } else if (!o.byTravel) {
     const tl = st.asmTilt;
     o.left = tl === null || tl.swingMs === null ? 0 : 1 - swingEase(tl.swingMs / Math.max(1, st.cfg.tiltSwingMs));
   } else {
@@ -935,13 +951,14 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number, mq: { readonly y
   // ⭐⭐⭐ (2026-11-10, the owner: *"Make the roll back by finger && minimum of xx ms to smoothen it"*) the finger's share (`kT`) and the roll SHOWN (`k`):
   // it follows the finger, never faster than a whole roll in `tiltRollMinMs` (`rollStep`); the world's frame only once the roll shown is whole — until then
   // the gizmo goes on in F past the edge (F's map is the real surface there too); back onto the facet first: the roll comes back, no exit
-  if (stack !== tl.facet) tl.kT = 1;
-  else {
-    const map = faceMapOf(st);
-    tl.kT = map === null ? 0 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st));
-  }
+  // ⭐⭐⭐ (2026-11-10, the owner's hysteresis) no roll back asked until the gizmo has once been in the facet's middle (`tiltExitTarget` — a tilt made at
+  // an edge, every automatic one, never rolls straight back there); the world's frame only once the tilt's swing is over (`tiltExits`)
+  const map = stack === tl.facet ? faceMapOf(st) : null;
+  const t = tiltExitTarget(tl.armed, stack === tl.facet, map === null ? 1 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st)), tl.off);
+  tl.kT = t.kT;
+  tl.armed = t.armed;
   tl.k = rollStep(tl.k, tl.kT, dtMs, st.cfg.tiltRollMinMs);
-  tl.exit = stack !== tl.facet && tl.k >= 1;
+  tl.exit = tiltExits(stack === tl.facet, tl.k, tl.swingMs === null, tl.off);
 }
 
 /**
@@ -976,6 +993,11 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
  * from there; where F's rules place it elsewhere (a void read on the new lines' travels), its relocation eased over the same swing (`asmGOff`).
  */
 export function tiltOnPress(st: SceneState): void {
+  tiltOn(st, "press");
+}
+
+/** ⭐⭐⭐ (§9.4; 2026-11-10 automatic too) the tilt made — at a press (`tiltOnPress`) or by itself close in (`assemblyFrame`, `tiltAutoLatch`). */
+function tiltOn(st: SceneState, why: "press" | "auto"): void {
   if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.asmLocked || st.hover !== null || st.greenBox === null) return;
   const sh = st.asmShown;
   const g = st.asmG;
@@ -990,7 +1012,7 @@ export function tiltOnPress(st: SceneState): void {
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, top);
   const D0 = swingDir(R1, delta, 0);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, k: 0, kT: 0, axis: null, exit: false };
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, k: 0, kT: 0, armed: false, off: false, axis: null, exit: false };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;
@@ -1010,7 +1032,7 @@ export function tiltOnPress(st: SceneState): void {
     if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, byTravel: false };
   }
   st.asmShown = null;
-  st.lastVerdict = `orbit: the tilted pole — the ${top ? "top" : "bottom"} is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
+  st.lastVerdict = `orbit: the tilted pole${why === "auto" ? " (automatic)" : ""} — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
 }
 
@@ -1022,6 +1044,7 @@ function tiltOff(st: SceneState): void {
   const tl = st.asmTilt;
   if (tl === null) return;
   const D = tl.dir;
+  const byTime = tl.off; // ⭐ (2026-11-10) turned off by distance: the relocation eased by time
   const g = st.asmG;
   const fm = faceMapOf(st);
   const sh = st.asmShown;
@@ -1038,9 +1061,9 @@ function tiltOff(st: SceneState): void {
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {
       const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
-      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, byTravel: true };
+      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = byTime ? { v, left: 1, byTravel: false, timeMs: 0 } : { v, left: 1, byTravel: true };
     }
   } else st.asmMapQ = null;
-  st.lastVerdict = "orbit: off the tilted face — the world's frame again";
+  st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
 }
