@@ -568,10 +568,26 @@ dx both ways, dy away over the far edge, dy toward the front, a diagonal with a 
 * ⚠ Past the far edge the same dy brings the gizmo back over it onto the top, polar (point 3) — to go down the back the finger reverses.
 * The press's cost: building F's map 4 – 13 ms once on the desktop (the world's 3 ms) — a phone's maybe 3 ×, one frame.
 
-⚠ **The walks** (`walk_probe.mjs`, tilt on against `?tiltedPole=0`): ⛔ the recorder had recorded NOTHING since §8.7 (it read `cache.surf`, deleted with
-the speed rule — it threw every frame); fixed to read the lines' own joins (unverified joins count as breaks: the line-break counts are not comparable with
-the walks before §8.7). The comparison was still running at the deploy — to be recorded here.
+⚠ **The walks** (`walk_probe.mjs`, six scenarios — far meridians, the top close in (I14), the top's grooves, the bottom by Piece43, random 0 / 1 — the
+tilt on against `?tiltedPole=0`, 0 page errors both). ⛔ The recorder had recorded NOTHING since §8.7 (it read `cache.surf`, deleted with the speed rule — it
+threw every frame); fixed to read the lines' own joins (unverified joins count as breaks: line-break counts are not comparable with the walks before §8.7).
+| total (six scenarios) | tilt off | tilt on |
+|---|---|---|
+| gizmo leaps / gizmo jumps | 196 / 60 | **153 / 41** |
+| pole stalls | 43 | **31** |
+| the ring off its lines (frames) | 2765 | **1644** |
+| fly-offs | 94 | 81 |
+| camera jumps / camera back-and-forth | 5 / 0 | 79 / 42 → **4 / 1** on the top close in after the fix below |
+| the gizmo against the finger | 165 | 357 |
+| rolls on a wall (the analyser's: the up > 5° off the vertical) | 1 | 29 — the roll back, by design |
+* ⛔ **FOUND AND FIXED**: under a SLIDE on the tilted top the lock's cone was measured from F's angles read as the world's (`assemblyFrame`'s hover branch)
+  — the piece clamped, the camera jumping 23 – 34 mm back and forth for 20+ frames (the top close in: 76 camera jumps, 41 back-and-forth); now the orbit's
+  direction turned into the world: 4 and 1 (tilt off: 2 and 0).
+* ⚠ The gizmo AGAINST the finger, 357 against 165: the extra events are in the WORLD's frame after an exit, on the vertical sides at the cube's corners
+  (dx legs low down) — the world orbit's own corner crossing; the tilt changes where the random walks go next, and they pass those corners more often.
+  Not established as the tilt's; the tilted face itself: every frame with the finger (the tilt probe).
+* ⚠ Only the top close in was re-walked after the fix (the other five as above, before it).
 
 **Not done**: the slide ending OFF the tilted facet (it lets go at its edge, R6) would switch the frame with the roll eased by time only; the coast is
 stopped at a frame change (a flick across an edge stops there); the bottom's far edge probed, its grooves not. **Vectors**: `tests/orbit_tilt.test.ts` (16,
-RED on `46d24db` — the module absent); eleven wiring strings in six suites updated to the frame-aware code. **1716**.
+RED on `46d24db` — the module absent); twelve wiring strings in six suites updated to the frame-aware code. **1716**.
