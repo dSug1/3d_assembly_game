@@ -498,7 +498,7 @@ export interface SceneState {
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;
-  /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
+  /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoM` of the gizmo, with its hysteresis) */
   asmTiltAuto: boolean;
   /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`tiltCalmWholeHV`'s `h`, a cap's release) — 0: the calm as eased */
   asmCalmWhole: number;
