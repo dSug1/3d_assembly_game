@@ -495,10 +495,13 @@ export interface SceneState {
     exit: boolean;
     /** ⭐ (2026-11-10) the crossing off it is over a `b` end (a turn about the edge's line: the horizontal calm carried over), not across */
     exitAcross: boolean;
+    /** ⭐⭐⭐ (2026-11-10, `1.0.120c-`) the automatic tilt: no swing to square, the camera's up CARRIED (`carryUp`) — its last up (world), `null` until the first frame */
+    carry: boolean;
+    up0: Vec3 | null;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;
-  /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
+  /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoM` of the gizmo, with its hysteresis) */
   asmTiltAuto: boolean;
   /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`tiltCalmWholeHV`'s `h`, a cap's release) — 0: the calm as eased */
   asmCalmWhole: number;
@@ -506,8 +509,6 @@ export interface SceneState {
   asmCalmWholeV: number;
   /** ⭐ (2026-11-10) over a cap of the world's frame: the orbit's yaw as it came over (`capYawRelease`) — `null` on a side */
   asmCapYaw0: number | null;
-  /** ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: its direction `n` (the directions' frame) turned at one speed to the gizmo's face's normal `target`; `q` its share over the calm (1 with the automatic tilt on, eased) */
-  asmSquare: { n: Vec3 | null; target: Vec3 | null; q: number };
   /** ⭐⭐⭐ (2026-11-10, the owner: *"build b"*) the gizmo HELD before a void's mouth while a dy carries it toward the open end (`mouthHold`) — its place, and toward which end (`hi`: up the facet); `null`: free */
   asmMouth: { readonly point: Vec3; readonly hi: boolean } | null;
   /** ⭐ (2026-11-10) last frame's gizmo before its glide (the map's, or the held one) — where a mouth's hold starts */

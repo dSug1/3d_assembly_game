@@ -549,7 +549,6 @@ export function createScene(
   st.asmCalmWhole = 0;
   st.asmCalmWholeV = 0;
   st.asmCapYaw0 = null;
-  st.asmSquare = { n: null, target: null, q: 0 };
   st.asmMouth = null;
   st.asmRawPrev = null;
   st.asmFaceMap = null;
