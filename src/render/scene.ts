@@ -546,6 +546,7 @@ export function createScene(
   st.asmTilt = null;
   st.asmGOff = null;
   st.asmTiltAuto = false;
+  st.asmCalmWhole = 0;
   st.asmFaceMap = null;
   st.asmWorldMap = null;
   st.asmParts = null;

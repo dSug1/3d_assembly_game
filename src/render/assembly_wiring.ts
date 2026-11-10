@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, exitShare, frameMix, mulM, mulT, rollStep, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltExitTarget, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, exitShare, frameMix, mulM, mulT, poleEdgeWhole, rollStep, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltExitTarget, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -196,7 +196,8 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   // ⭐⭐⭐ (2026-11-09, §8 — F7b) the rule in `input/orbit_calm.ts` (`calmShown`): the eased facet's own frame, faded toward its poles
   // ⭐⭐⭐ (2026-11-10, §9.4) off a tilted facet both shares whole by the exit's share (`k`): at the edge the shown direction is the orbit's own in both frames
   const c = st.asmCalm;
-  const k = st.asmTilt?.k ?? 0;
+  // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) …and by the calm's whole share by POSITION (`asmCalmWhole`): never eased, so never behind a fast finger
+  const k = Math.max(st.asmTilt?.k ?? 0, st.asmCalmWhole);
   if (c !== null && k > 0) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - k), sV: 1 - (1 - c.sV) * (1 - k) });
   return calmShown(u, c);
 }
@@ -237,10 +238,25 @@ function calmFrame(st: SceneState, dtMs: number): void {
         }, acrossNormals(st, map, sh));
   // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: both shares whole toward them over the calm's own edge zones (`tiltCalmWhole`)
   const tl = st.asmTilt;
+  st.asmCalmWhole = 0;
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWhole(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p), sV: 1 - (1 - tg.sV) * (1 - p) }, dtMs);
+    // ⭐⭐⭐ (2026-11-10) close in, the same share on the SHOWN direction too (by position — the eased state lags a fast finger)
+    if (st.asmTiltAuto) st.asmCalmWhole = p;
     return;
+  }
+  // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) close in (the automatic tilt on), the world's frame: a side facet whose top / bottom borders a face holding a
+  // pole is whole toward it by POSITION (`poleEdgeWhole`) — the crossing, and the tilt there, with the shown direction the orbit's own
+  // ⭐⭐⭐ …and ON a face holding a pole (no calm there by rule): whole at once — ⛔ the eased state's stale share applied there for the one frame before the
+  // automatic tilt (the piece thrown back 6°, then forth at the tilt: the owner's back-and-forth)
+  if (tl === null && st.asmTiltAuto && sh !== null && sh.t.band !== "SIDE") st.asmCalmWhole = 1;
+  if (tl === null && st.asmTiltAuto && sh !== null && map !== null && sh.t.band === "SIDE") {
+    const col = map.columns[sh.t.side];
+    if (col !== undefined) {
+      const i = col.facets.indexOf(sh.t.stack);
+      if (i >= 0) st.asmCalmWhole = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+    }
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
 }
@@ -967,6 +983,15 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number, mq: { readonly y
  */
 function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
   const conv = (yaw: number, v: number, hint: number): { yaw: number; v: number } => anglesOfDir(turn(orbitDir(yaw, v)), hint);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*) a RATE turned too — the place a
+  // little along it, turned, differenced (⛔ zeroed: mid-drag the piece's spring stalled at the tilt, then caught up — forth and back)
+  const convRate = (yaw: number, v: number, ry: number, rv: number, at: { yaw: number; v: number }): [number, number] => {
+    const m = Math.hypot(ry, rv);
+    if (!(m > 0)) return [0, 0];
+    const e = 1e-4 / m;
+    const b = conv(yaw + ry * e, v + rv * e, at.yaw);
+    return [(b.yaw - at.yaw) / e, (b.v - at.v) / e];
+  };
   const o = conv(st.orbit.yaw, st.orbit.elevation, 0);
   st.orbit.reset(o.yaw, o.v);
   // the solver's own memory of the target (the ring height kept, last frame's target) in the new frame — ⛔ left in the old one, the solver read a
@@ -975,12 +1000,31 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
   st.orbitRawPrev = { yaw: o.yaw, v: o.v };
   if (st.pieceQ !== null) st.pieceQ = { ...st.pieceQ, ...conv(st.pieceQ.yaw, st.pieceQ.v, o.yaw) };
   if (st.boxSpring !== null) {
-    const a = conv(st.boxSpring.at.yaw, st.boxSpring.at.v, o.yaw);
-    st.boxSpring = { at: { ...st.boxSpring.at, yaw: a.yaw, v: a.v }, velYaw: 0, velV: 0, velLnZoom: st.boxSpring.velLnZoom };
+    const sp = st.boxSpring;
+    const a = conv(sp.at.yaw, sp.at.v, o.yaw);
+    const [vy, vv] = convRate(sp.at.yaw, sp.at.v, sp.velYaw, sp.velV, a);
+    st.boxSpring = { at: { ...sp.at, yaw: a.yaw, v: a.v }, velYaw: vy, velV: vv, velLnZoom: sp.velLnZoom };
     st.boxOrbit = st.boxSpring.at;
   } else if (st.boxOrbit !== null) st.boxOrbit = { ...st.boxOrbit, ...conv(st.boxOrbit.yaw, st.boxOrbit.v, o.yaw) };
   if (st.cameraLagged !== null) st.cameraLagged = conv(st.cameraLagged.yaw, st.cameraLagged.v, o.yaw);
-  st.cameraOrbit = null;
+  // ⭐⭐⭐ (2026-11-10, the same report) THE CAMERA'S FOLLOW STATE TURNED, not rebuilt — its place, the leash's last driver and box, its rates (⛔ set to none:
+  // a camera lagging behind the piece mid-drag snapped onto it at the tilt — 240 mm in a frame against 100 — then trailed again)
+  const co = st.cameraOrbit;
+  if (co !== null) {
+    const cam = conv(co.cam.yaw, co.cam.v, o.yaw);
+    const drv = conv(co.yaw.lastDriver, co.pitch.lastDriver, o.yaw);
+    const box = conv(co.yaw.lastBox, co.pitch.lastBox, o.yaw);
+    const [ay, av] = convRate(co.cam.yaw, co.cam.v, co.yaw.vel, co.pitch.vel, cam);
+    const [cy, cv] = convRate(co.cam.yaw, co.cam.v, co.yawVel, co.pitchVel / Math.PI, cam);
+    st.cameraOrbit = {
+      ...co,
+      cam: { ...co.cam, yaw: cam.yaw, v: cam.v },
+      yaw: { ...co.yaw, lastDriver: drv.yaw, lastBox: box.yaw, vel: ay },
+      pitch: { ...co.pitch, lastDriver: drv.v, lastBox: box.v, vel: av },
+      yawVel: cy,
+      pitchVel: cv * Math.PI,
+    };
+  }
   if (st.asmPrevQ !== null) st.asmPrevQ = conv(st.asmPrevQ.yaw, st.asmPrevQ.v, o.yaw);
   if (st.asmCalm !== null) st.asmCalm = { ...st.asmCalm, n: turn(st.asmCalm.n) };
   st.orbitInertia.stop();

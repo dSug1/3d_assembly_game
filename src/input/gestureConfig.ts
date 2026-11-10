@@ -871,7 +871,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltSwingMs: 300, // ⭐⭐⭐ …its press's swing, 300 ms (a guess until a hand sets it)
   tiltRollMinMs: 250, // ⭐⭐⭐ (2026-11-10) …its roll back: a whole roll in 250 ms at the fastest (a guess until a hand sets it)
-  tiltAutoPct: 30, // ⭐⭐⭐ (2026-11-10) …automatic within 30 % of the far distance (1.8 m of 6.0 on `Scene_1`) — a guess until a hand sets it
+  tiltAutoPct: 20, // ⭐⭐⭐ (2026-11-10, the owner: *"Set the default tilted pole automatic within 20%"*) …automatic within 20 % of the far distance (1.2 m of 6.0 on `Scene_1`; off beyond 25 %) — 30 % before
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face

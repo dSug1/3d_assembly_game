@@ -199,6 +199,27 @@ export function rollStep(shown: number, target: number, dtMs: number, minMs: num
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*) THE CALM WHOLE TOWARD A FACE HOLDING A
+ * POLE, close in (the automatic tilt on): on a side facet, the share (0 … 1) bringing both of the calm's shares to 1 toward its `b` end(s) that border a
+ * face holding a pole (`lo`, `hi`) — the calm's own vertical edge zone (`edgeShare`, no interior). ⭐ Applied to the SHOWN direction, by position, never
+ * eased: ⛔ the calm's eased shares lagged a fast finger (0.78 at the edge), released in time on the face holding the pole (the piece surged, 116 mm a
+ * frame against 40), then the tilted face's calm took hold again (20 mm) — forth and back at every crossing.
+ */
+export function poleEdgeWhole(
+  surface: Vec3,
+  f: { readonly b: Vec3; readonly bLo: number; readonly bHi: number },
+  lo: boolean,
+  hi: boolean,
+  zoneVPct: number,
+  zoneMinVM: number,
+): number {
+  if (!lo && !hi) return 0;
+  const s = dot(surface, f.b);
+  const d = Math.min(lo ? s - f.bLo : Infinity, hi ? f.bHi - s : Infinity);
+  return edgeShare(Math.max(0, d), f.bHi - f.bLo, 0, zoneVPct, zoneMinVM);
+}
+
+/**
  * ⭐⭐⭐ (2026-11-10, the owner: *"at far distance it is disabled, at close distance (… at xx% of the max distance, make a slider) it toggles on
  * automatically"*) THE AUTOMATIC TILT'S LATCH: on within `pct` % of the far distance, off only beyond `pct` + `TILT_AUTO_HYST_PCT` (an approach coasting
  * round the threshold never flickers it); `pct` 0: never.
