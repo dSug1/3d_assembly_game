@@ -788,3 +788,8 @@ to upright at the exit as before (timed, the gizmo held). A press tilt (far out)
 kept through the crossing (−116° → −122°: the orbit's own, no square); mid-face unchanged; ⚠ the heading not squared — it wanders round the loop (−116°,
 100°, −101°, 95°, −95°).
 **Vectors**: `orbit_tilt.test.ts` (`carryUp`, `offsetFrameUp` = `offsetFrame`, the wiring). **1733**.
+
+**The automatic tilt's threshold in METRES** (2026-11-10, on `1.0.120a-`, `1.0.120b-`, `1.0.120c-`; the owner: *"instead Percent use m for the slider tilted
+pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*): `tiltAutoM` 0.6 m (☰ → CAMERA → CAMERA ORBIT
+AROUND CENTER, 0 – 3 m, step 0.05), off beyond 0.65 m (`TILT_AUTO_HYST_M`) — ⛔ `tiltAutoPct` (20 % of the far distance: 1.2 m on `Scene_1`, off beyond
+25 %) deleted. `1.0.120c-` deployed with it.
