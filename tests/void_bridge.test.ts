@@ -61,7 +61,7 @@ describe("⭐⭐⭐ the void closed on a travel — straight through on the face
   });
   it("⭐⭐ a slot open to the RIGHT and closed up / down (closed on the red's travel), with a floor: its floor too", () => {
     const s = facetOf(painting({ right: true }));
-    expect(closedAlong(s.groups.filter((g) => Math.abs(g.depth - 0.05) < 1e-6).map((g) => g.region), 0.2, 0.35)).toEqual({ x: false, y: true }); // open to the right, closed up / down
+    expect(closedAlong(s.groups.filter((g) => Math.abs(g.depth - 0.05) < 1e-6).map((g) => g.region), 0.2, 0.35)).toMatchObject({ x: false, y: true }); // open to the right, closed up / down
     const at = stackDepthAt(s, 0.05, 0.35)!; // over the floor (x 0 … 0.1): the plane's faces above and below
     expect(at.bridged).toBeUndefined();
     expect(at.depth).toBeCloseTo(0.02, 12);
@@ -89,8 +89,19 @@ describe("⭐⭐⭐ the void closed on a travel — straight through on the face
     ]);
     expect(regionReal(frame, 0.15, 0.15)).toBe(false); // the hole
     expect(regionReal(frame, 0.05, 0.15)).toBe(true);
-    expect(closedAlong([frame], 0.15, 0.15)).toEqual({ x: true, y: true });
-    expect(closedAlong([frame], 0.4, 0.15)).toEqual({ x: false, y: false });
+    expect(closedAlong([frame], 0.15, 0.15)).toEqual({ x: true, y: true, yLo: true, yHi: true });
+    expect(closedAlong([frame], 0.4, 0.15)).toEqual({ x: false, y: false, yLo: false, yHi: false });
+  });
+  it("⭐⭐⭐ (2026-11-10, the owner: *\"the tilt shall happen when the red section reaches the edge at the bottom of the mouth\"*) A MOUTH: closed across, open up to the facet's top, no floor — bridged, and the end it opens to (`mouth`, the red's hand-over); closed all round: none", () => {
+    const f: MapFace[] = [front(0.05, -0.3, 0, 0, 0.6), front(0.05, 0.1, 0.3, 0, 0.6), front(0.05, 0, 0.1, 0, 0.3)]; // a channel's mouth: no floor, no face over it
+    const s = facetOf(buildFaceMap(f, BOX));
+    const at = stackDepthAt(s, 0.05, 0.35)!;
+    expect(at.bridged).toBe(true);
+    expect(at.mouth).toEqual({ lo: false, hi: true });
+    const shut = facetOf(buildFaceMap([...f, front(0.05, 0, 0.1, 0.4, 0.6)], BOX)); // a face over it: a slot through, no floor — bridged, no mouth
+    const at2 = stackDepthAt(shut, 0.05, 0.35)!;
+    expect(at2.bridged).toBe(true);
+    expect(at2.mouth).toBeUndefined();
   });
   it("⭐⭐ through the map: a dx at the slot's height reads the slot's floor inside it, the facet's plane outside (2026-11-09)", () => {
     const fm = painting({ top: true });

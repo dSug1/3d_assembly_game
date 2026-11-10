@@ -722,3 +722,53 @@ so 125 ms is one or two frames there; ~7 – 8 on a phone at 60.
 
 **Vectors**: `orbit_tilt.test.ts` (the glide: the measured bottom edge, a notch's wall inside a face, none for the map's own travel, under 5 mm, after a
 frame change). **1727**.
+
+### 9.10 ✅ THE SHAKE AT A CROSSING — three roots, and the calm carried over a top / bottom edge (2026-11-10, `1.0.119-`) — ⛔ no device close
+
+> The owner: *"when i cross the edge (i tested on the horizontal edges), there seems to be a sort of shake of the scene. probe that and propose a fix"* —
+> *"when i cross at close in"* — *"Build 1 and 2 fixes"*, *"Also build fix 3"*, *"Make sure those three fixes address deep root causes and not just patch"* —
+> fix 2: *"i think the tilt shall happen when the red section reaches the edge at the bottom of the mouth, therefore the green section should not be an
+> issue"* → *"build b"* — the tilt of the assembly: *"The tilt of the assembly is related to the calm: the calm limits the tilt during the right or left
+> orbit, but when dy approaches the gizmo to the edge, the tilt seems to catch up what the calm prevented"* → *"build it"*.
+
+**1. Two time laws in one rig** (the jerk before an edge). The calm's whole share by POSITION (§9.6, `poleEdgeWhole`, `tiltCalmWhole`) turned the camera's
+DIRECTION at once on every finger event, while its LOOK (the gizmo, `gizmoEaseMs`) followed 45 ms behind; in the edge zone a mm of gizmo is ~4× the
+camera's angle — the image leapt forward, then slipped back (probed close in: 4.5 – 7.7° in the event's frame, then 0.1° back; far out, where the share
+was the calm's own 120 ms ease, the pitch rate doubled at the edge, 2.4 → 5.3° a frame). **Built**: the share by position kept, put on the rig's own lag
+(`wholeShareStep`, `gizmoEaseMs`), at every distance. **Probed**: 2.9 – 5.8° on an event, carried on over the next frames; the slip ≤ 0.04°; far out
+2.5° a frame through the edge.
+
+**2. The auto tilt held back by a glide** (the transition *"not at the edge but somewhere inside the horizontal face"*). Its guard `asmGOff === null`
+meant *no frame change under way* until the glide of the depth (§9.8 – §9.9) set that offset at every depth step: an edge with a step held the tilt
+125 ms a step, the orbit going on in the world's frame (probed at the channel's mouth: the tilt 7 frames and 43 mm onto the top). **Built**: the guard
+DELETED — a tilt under way already holds the gizmo (`tiltUnderWay`) and leaves only once whole (`tiltExits`); the gizmo SHOWN (its glide in it) kept.
+**Probed**: the tilt on the frame after the crossing, the gizmo where it crossed.
+
+**3. A void's MOUTH — the hand-over at its floor's edge** (option (b)). Seen from a side, the top's channel runs through (no floor): §8.3 bridged it on
+the side's plane, so a dy climbed the mouth to the box's corner (487 mm over a 466 mm floor), then the tilt dropped it onto the floor. **The conflict**:
+the gizmo is one point on both lines — the green bridges the mouth (§8.3), the red must end at the floor. **Built** (`stackDepthAt`'s `mouth`: closed
+across, open up the facet to its end; `mouthHold`): a dy toward the open end HOLDS the gizmo where it last was — the floor's edge — and hands over: the
+automatic tilt from there toward the face holding that pole (`tiltOn`'s cap from the mouth), or far out the cap's first place once the angles reach it
+(the release glided straight from the held place); a dx lets it go onto the bridge (the green straight across). ⚠ Path-dependent, the map's first
+exception since 2026-11-04 (the gizmo a function of the angles) — the owner's (b). **Probed**: close in the red climbs to 465 – 466 mm, held, tilted
+there, then along the floor at 466 (no 487, no drop); far out held at 465, then 465 → 466 onto the floor over three frames.
+
+**4. THE CALM CARRIED OVER A TOP / BOTTOM EDGE** (the tilt of the assembly). The calm's horizontal angle was a turn about the face's UP (`shownDir`);
+a top / bottom edge turns the frame about the edge's own LINE (dx's axis, both frames' `h`), which that angle does not survive — so the horizontal share
+was made whole toward the edge, and the yaw withheld through a dx was released in the last stretch (probed, 20° off square: the piece's heading
+−83.6° → −70.4°, then the tilt's swing back to −90°). **Built** (`input/orbit_calm.ts`): a second reading, the angle TOWARD the edge's line
+(`shownDirAcross` — a latitude toward `h`, a turn about `h` off `n`): a turn about `h` keeps it, so only the vertical share needs to be whole there.
+The two readings blended by the place (`acrossWeight`: toward the `b` ends the new one, toward the ends across the old — a pure dx never changes the
+vertical calm, the bounce; mid-face they differ by a fraction of a degree). Toward a top / bottom edge the vertical share alone whole (`asmCalmWholeV`);
+a normal turned about `h` with the vertical share whole taken at once, the horizontal share kept (`turnedAboutH`); the slanted facet's forced
+horizontal share at its `b` ends deleted. Over a cap of the world's frame (far out) the side's calm KEPT, released by a dx away from where it came over
+(`capYawRelease`, whole at 45°) and by the pitch (`poleWeight`, 60° → 85°). The tilt carries the calm INTO F (the tilted facet's normal, the horizontal
+share kept — set once `tiltOn` has settled the facet: ⛔ the provisional facet's normal first, eased across for 20 frames) and OUT of it over a `b` end
+(`exitAcross`: the new side's normal, the share kept; across, both whole). ⭐ The camera's swing at the tilt from the heading SHOWN (`deltaShown`) — the
+orbit's angles turned by their own (`D0`: the gizmo and the solver exact). **Probed** (20° off square, close in, top and bottom, −70° and −110°): the
+heading −83.6° … −83.8° all the way to the edge (was → −70.4°), then the swing to square in 1 – 3 frames, one way.
+
+**Not changed**: the camera's yaw offset turned about its own up (2026-10-28) leans the world's vertical by atan(sin 2.5° · tan(elevation)) — 2.5° at 45°,
+4.3° at 60°; found while probing, kept (the owner: the tilt of the assembly is the calm's); to be measured once the calm's fix is on the device.
+**Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
+(the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.

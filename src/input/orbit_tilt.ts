@@ -159,20 +159,33 @@ export function tiltBox(b: ShellBox, R: Mat3): ShellBox {
 
 
 /**
- * ⭐⭐⭐ THE CALM WHOLE TOWARD THE TILTED FACET'S EDGES (its every edge is a frame change: off it the world's frame): the share (0 … 1) that brings both
- * of the calm's shares to 1 — the calm's own edge zones (`edgeShare` with no interior: `zoneHPct` along `t`, `zoneVPct` along `b`), the nearer edge of
- * either. ⛔ Forced only by the exit's share (the 10° band): the piece caught up its calmed angle in two or three input steps (the probe: 957 mm in a frame).
+ * ⭐⭐⭐ THE CALM WHOLE TOWARD THE TILTED FACET'S EDGES (its every edge is a frame change: off it the world's frame): the shares (0 … 1) over the calm's own
+ * edge zones (`edgeShare` with no interior: `zoneHPct` along `t`, `zoneVPct` along `b`). ⛔ Forced only by the exit's share (the 10° band): the piece caught
+ * up its calmed angle in two or three input steps (the probe: 957 mm in a frame). ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm
+ * prevented"*) in TWO parts (⛔ their larger, for both shares: the horizontal calm released toward the `b` ends too): `h` toward the edges ACROSS (a turn
+ * about the facet's `b` — off it to a world's side: both shares whole), `v` toward its `b` ends (a turn about its `h`, the edge's own line — the vertical
+ * share alone whole: the horizontal calm carried over, `shownDirAcross`).
  */
-export function tiltCalmWhole(
+export function tiltCalmWholeHV(
   t: { readonly surface: Vec3; readonly across: { readonly L: number; readonly lo: number; readonly hi: number } },
   f: { readonly b: Vec3; readonly bLo: number; readonly bHi: number },
   z: { readonly zoneHPct: number; readonly zoneMinHM: number; readonly zoneVPct: number; readonly zoneMinVM: number },
-): number {
+): { readonly h: number; readonly v: number } {
   const L = t.across;
   const h = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, 0, z.zoneHPct, z.zoneMinHM);
   const sb = dot(t.surface, f.b);
   const v = edgeShare(Math.min(sb - f.bLo, f.bHi - sb), f.bHi - f.bLo, 0, z.zoneVPct, z.zoneMinVM);
-  return Math.max(h, v);
+  return { h, v };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10) OVER A CAP OF THE WORLD'S FRAME (no tilt — far out, or the one frame before the automatic one): the calm brought from the side KEPT, its
+ * horizontal share released only as a dx turns the orbit away from where it came over (`yawFromEntry`, a smoothstep to whole at 45°) — and by the pitch as
+ * before (`poleWeight`, 60° → 85°). ⛔ Whole at once on the cap: the withheld yaw released at the edge.
+ */
+export function capYawRelease(yawFromEntry: number): number {
+  const x = Math.min(1, Math.abs(Math.atan2(Math.sin(yawFromEntry), Math.cos(yawFromEntry))) / (Math.PI / 4));
+  return x * x * (3 - 2 * x);
 }
 
 /**
@@ -212,6 +225,34 @@ export function poleEdgeWhole(
  * automatically"*) THE AUTOMATIC TILT'S LATCH: on within `pct` % of the far distance, off only beyond `pct` + `TILT_AUTO_HYST_PCT` (an approach coasting
  * round the threshold never flickers it); `pct` 0: never.
  */
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"when i cross the edge … a sort of shake of the scene"* — *"make sure those fixes address deep root causes"*) THE CALM'S
+ * WHOLE SHARE ON THE RIG'S OWN TIME LAW: the share by position (`target`: `poleEdgeWhole`, `tiltCalmWholeHV`, a cap's 1) eased by the SAME lag as the gizmo
+ * the piece and the camera's look follow (`tauMs`, `gizmoEaseMs`). ⛔ Applied at once (§9.6) the camera's DIRECTION answered a finger event in its frame
+ * while its look target followed 45 ms behind — in the edge zone, where the share's slope turns a mm of gizmo into ~4× the camera's angle, the image
+ * leapt forward then slipped back on every event (probed: 4.5 – 7.7° in one frame, then 0.1° back); ⛔ eased by the calm's own 120 ms (far out, before),
+ * it fell behind the finger and caught up on the cap (the camera's pitch rate doubled at the edge). `tauMs` 0: the target.
+ */
+export function wholeShareStep(prev: number, target: number, dtMs: number, tauMs: number): number {
+  if (!(tauMs > 0)) return target;
+  return prev + (target - prev) * (1 - Math.exp(-Math.max(0, dtMs) / tauMs));
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"the tilt shall happen when the red section reaches the edge at the bottom of the mouth, therefore the green section should
+ * not be an issue"* → *"build b"*) THE MOUTH'S HAND-OVER: a void open up the facet to its edge (`mouth` — the top's channel seen from the front) is the NEXT
+ * facet's on the red's travel, the plane's on the green's. So the gizmo is HELD at its last place before the mouth while a dy carries it toward the open
+ * end (`dPitch` toward `hi` / `lo`, the larger of the two steps) — there the red has reached the void's floor edge: the hand-over (the automatic tilt);
+ * a dx (the yaw's step the larger) lets it go — on the bridge, the green straight across (§8.3). No step: as it was. ⛔ The plane's bridge on a dy too: the
+ * red climbed the mouth to the box's corner (487 mm over a 466 mm floor), then dropped onto the floor at the tilt.
+ */
+export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; readonly hi: boolean } | null | undefined, dPitch: number, dYaw: number): boolean {
+  if (mouth === null || mouth === undefined) return false;
+  if (dPitch === 0 && dYaw === 0) return wasHeld;
+  if (Math.abs(dYaw) > Math.abs(dPitch)) return false;
+  return (mouth.hi && dPitch > 0) || (mouth.lo && dPitch < 0);
+}
+
 export const TILT_AUTO_HYST_PCT = 5;
 export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
   if (!(pct > 0) || !(farM > 0)) return false;

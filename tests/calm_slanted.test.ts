@@ -95,7 +95,8 @@ describe("⭐⭐⭐ (2026-11-09, §8) THE CALM ON A SLANTED FACE — the horizon
     const a = Math.atan2(dot(s, [t[0] / l, 0, t[2] / l]), dot(s, upper.n)) / D;
     const u = dirOf(y, p);
     const a0 = Math.atan2(dot(u, [t[0] / l, 0, t[2] / l]), dot(u, upper.n)) / D;
-    expect(Math.abs(a)).toBeCloseTo(Math.abs(a0) * 0.25, 6);
+    // ⭐ (2026-11-10) read both ways, blended by the place (`acrossWeight`): mid-face the two readings part by 2e-5° here
+    expect(Math.abs(a)).toBeCloseTo(Math.abs(a0) * 0.25, 3);
   });
 
   it("⭐⭐⭐ the caps (the two faces holding the poles) no calm: over the top the orbit's whole direction", () => {

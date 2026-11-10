@@ -54,6 +54,44 @@ export function shownDir(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: num
   ];
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"the calm limits the tilt during the right or left orbit, but when dy approaches the gizmo to the edge, the tilt seems to
+ * catch up what the calm prevented"*) THE SHOWN DIRECTION BY THE ANGLE TOWARD THE EDGE'S LINE: `α` the latitude of `u` toward `h` (dx's axis), `β` its
+ * turn about `h` off `n` toward `v` — shown at `sH·α`, `sV·β`. ⭐ A crossing over a top / bottom edge (a pole's — and every `b` end of a facet: the next
+ * facet up the column, a cap) turns the frame about `h` itself, which both frames share: `α` is the same in both, so the horizontal calm CARRIES across;
+ * only `β` needs `sV` whole there. ⛔ `shownDir`'s `α` is a turn about `v`, which a turn about `h` does not keep: the horizontal share was made whole as dy
+ * neared the edge — the yaw the calm withheld through the dx released in the last stretch (probed: 20° off square, the piece's heading −83.6° → −70.4°,
+ * then the tilt's −90°). ⭐ No branch cut behind the face: `sV` faded to 1 from 90° off the normal to 180° (as `shownDir`'s `sH`).
+ */
+export function shownDirAcross(u: Vec3, n: Vec3, h: Vec3, v: Vec3, sH: number, sV: number): Vec3 {
+  if (sH >= 1 && sV >= 1) return u;
+  const a = Math.asin(Math.max(-1, Math.min(1, dot(u, h))));
+  const b = Math.atan2(dot(u, v), dot(u, n));
+  const x = Math.min(1, Math.max(0, (Math.abs(b) - Math.PI / 2) / (Math.PI / 2)));
+  const sVb = Math.min(1, Math.max(0, sV)) + (1 - Math.min(1, Math.max(0, sV))) * x * x * (3 - 2 * x);
+  const a1 = a * Math.min(1, Math.max(0, sH));
+  const b1 = b * sVb;
+  const ca = Math.cos(a1);
+  return [
+    ca * (n[0] * Math.cos(b1) + v[0] * Math.sin(b1)) + h[0] * Math.sin(a1),
+    ca * (n[1] * Math.cos(b1) + v[1] * Math.sin(b1)) + h[1] * Math.sin(a1),
+    ca * (n[2] * Math.cos(b1) + v[2] * Math.sin(b1)) + h[2] * Math.sin(a1),
+  ];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10) WHICH OF THE TWO WAYS TO READ THE CALM, by the place on the facet: 1 toward its `b` ends (a top / bottom edge — `shownDirAcross`, the turn
+ * about `h` kept), 0 toward its ends across (a vertical edge — `shownDir`, the turn about `v` kept: a pure dx never changes the vertical calm, the bounce);
+ * `dH`, `dV` the place's distance to the nearer end across / up, each a fraction of its run (a smoothstep of `dH / (dH + dV)`; at a corner, both shares whole
+ * there, either). Mid-face the two differ by a fraction of a degree (20° and 30° off, shares 0.25: 0.7°).
+ */
+export function acrossWeight(dH: number, dV: number): number {
+  const h = Math.max(0, dH);
+  const s = h + Math.max(0, dV);
+  const x = s > 1e-12 ? h / s : 0.5;
+  return x * x * (3 - 2 * x);
+}
+
 /* ⛔ (2026-11-04, the owner: *"modify the scope Q3: same calm at every distance"*) 58d86ff's `calmWeight` (the calm whole within 0.8 × its distance, none at
  * 1.2 ×), `CALM_RELEASE_FACTOR` and `calmEngageM` DELETED with its distance slider: a calm that changes with the distance turns the piece's direction while
  * A + dy approaches — the approach curved (*"why is there a 2D curve not straight when I approach the piece with A + dy"*). */
@@ -135,6 +173,8 @@ export interface CalmState {
   readonly n: Vec3;
   readonly sH: number;
   readonly sV: number;
+  /** ⭐ (2026-11-10) the reading's weight (`acrossWeight`): 0 `shownDir`, 1 `shownDirAcross`; absent: 0 */
+  readonly wA?: number;
 }
 
 const elevOf = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
@@ -151,9 +191,19 @@ export function calmTarget(
   box: { readonly lo: Vec3; readonly hi: Vec3 } | null,
   k: CalmKnobs,
   across?: { readonly lo: Vec3 | null; readonly hi: Vec3 | null },
-): { readonly n: Vec3 | null; readonly sH: number; readonly sV: number } {
-  if (t.band !== "SIDE") return { n: null, sH: 1, sV: 1 };
+): { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA: number } {
+  if (t.band !== "SIDE") return { n: null, sH: 1, sV: 1, wA: 1 };
   const L = t.across;
+  // ⭐⭐⭐ (2026-11-10) the reading's weight by the place (`acrossWeight`): toward the `b` ends the angle toward the edge's line
+  const fracUp = (): number => {
+    if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+      if (box === null || !(box.hi[1] - box.lo[1] > 0)) return 0.5;
+      return Math.min(t.surface[1] - box.lo[1], box.hi[1] - t.surface[1]) / (box.hi[1] - box.lo[1]);
+    }
+    const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
+    return f.bHi - f.bLo > 0 ? Math.min(s - f.bLo, f.bHi - s) / (f.bHi - f.bLo) : 0.5;
+  };
+  const wA = acrossWeight(L.hi - L.lo > 0 ? Math.min(L.L - L.lo, L.hi - L.L) / (L.hi - L.lo) : 0.5, fracUp());
   let sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
   let sV = 1;
   if (k.vOn) {
@@ -170,8 +220,9 @@ export function calmTarget(
   // ⭐⭐⭐ (§8) WHERE THE FRAME CHANGES, BOTH SHARES WHOLE AT THE EDGE — the shown direction the orbit's own on both sides, so the crossing is continuous in
   // space, not eased in time (⛔ a calmed share means another direction in another frame: crossing from a hexagon's end onto its slanted side the shown
   // direction swung 3.7° a frame, probed). Across a slice's end: the vertical share too, toward a neighbour of another frame (`across`: the normals
-  // beyond the facet's `t` ends); ⭐ between two VERTICAL facets never (the bounce: a pure dx never changes the vertical calm). Up a slanted facet's slope:
-  // the horizontal share too at its `b` ends (a stacked facet's frame, a cap's none).
+  // beyond the facet's `t` ends); ⭐ between two VERTICAL facets never (the bounce: a pure dx never changes the vertical calm). ⛔ (2026-11-10) up a slanted
+  // facet's slope the horizontal share was made whole at its `b` ends too: a `b` end is a turn about `h`, which the reading toward the edge's line keeps
+  // (`shownDirAcross`) — the vertical share alone whole there (its own `edgeShare`, 1 at the ends)
   const frameDiffers = (m: Vec3 | null): boolean => m !== null && !(Math.abs(f.n[1]) < VERTICAL_EPS && Math.abs(m[1]) < VERTICAL_EPS);
   const near = (d: number, run: number, pct: number, minM: number): number => 1 - edgeShare(d, run, 0, pct, minM);
   if (across !== undefined) {
@@ -179,12 +230,7 @@ export function calmTarget(
     const p = Math.max(frameDiffers(across.lo) ? 1 - near(L.L - L.lo, run, k.zoneHPct, k.zoneMinHM) : 0, frameDiffers(across.hi) ? 1 - near(L.hi - L.L, run, k.zoneHPct, k.zoneMinHM) : 0);
     sV = 1 - (1 - sV) * (1 - p);
   }
-  if (!(Math.abs(f.n[1]) < VERTICAL_EPS)) {
-    const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
-    const p = 1 - near(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.zoneVPct, k.zoneMinVM);
-    sH = 1 - (1 - sH) * (1 - p);
-  }
-  return { n: f.n, sH, sV };
+  return { n: f.n, sH, sV, wA };
 }
 
 /**
@@ -207,30 +253,51 @@ export function easeNormal3(n: Vec3, target: Vec3, dtMs: number): Vec3 {
  * (between two vertical facets always: the bounce's rule kept — the vertical calm never waits on a heading). The normal taken at once only where no share
  * it frames is calming (⛔ a slanted face's `b` is the normal's own: its vertical share reads it).
  */
-export function calmStep(prev: CalmState | null, tg: { readonly n: Vec3 | null; readonly sH: number; readonly sV: number }, dtMs: number): CalmState | null {
-  if (prev === null) return tg.n === null ? null : { n: tg.n, sH: easeToward(1, tg.sH, dtMs), sV: easeToward(1, tg.sV, dtMs) };
+export function calmStep(prev: CalmState | null, tg: { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA?: number }, dtMs: number): CalmState | null {
+  const wA = tg.wA ?? prev?.wA ?? 0; // ⭐ (2026-11-10) by position, never eased (continuous with the place)
+  if (prev === null) return tg.n === null ? null : { n: tg.n, sH: easeToward(1, tg.sH, dtMs), sV: easeToward(1, tg.sV, dtMs), wA };
   let n = prev.n;
   let sH = tg.sH;
   let sV = tg.sV;
   if (tg.n !== null) {
     const sameElev = Math.abs(elevOf(prev.n) - elevOf(tg.n)) < 1e-9;
+    // ⭐⭐⭐ (2026-11-10) a normal turned about the calm's own `h` (a top / bottom edge crossed: the next facet up the column, a tilt's frame) with the vertical
+    // share whole: TAKEN AT ONCE, the horizontal calm kept — `shownDirAcross` shows the same direction from either normal there (⛔ eased, it swung through
+    // `h` itself and `alignedShare` released the horizontal calm)
+    if (turnedAboutH(prev.n, tg.n) && prev.sV > 0.999) return { n: tg.n, sH: easeToward(prev.sH, sH, dtMs), sV: easeToward(prev.sV, sV, dtMs), wA };
     n = prev.sH > 0.999 && (sameElev || prev.sV > 0.999) ? tg.n : easeNormal3(prev.n, tg.n, dtMs);
     const lh = (v: Vec3): number => Math.hypot(v[0], v[2]);
     const cosH = lh(n) > 1e-9 && lh(tg.n) > 1e-9 ? (n[0] * tg.n[0] + n[2] * tg.n[2]) / (lh(n) * lh(tg.n)) : 1;
     sH = alignedShare(sH, cosH);
     sV = alignedShare(sV, Math.cos(elevOf(n) - elevOf(tg.n)));
   }
-  return { n, sH: easeToward(prev.sH, sH, dtMs), sV: easeToward(prev.sV, sV, dtMs) };
+  return { n, sH: easeToward(prev.sH, sH, dtMs), sV: easeToward(prev.sV, sV, dtMs), wA };
+}
+
+/** ⭐ (2026-11-10) `m` in the plane square to `n`'s own `h` (`facetFrame`) and not `n` itself: a turn about `h` (a top / bottom edge's crossing). */
+export function turnedAboutH(n: Vec3, m: Vec3): boolean {
+  const { t } = facetFrame(n);
+  return Math.abs(dot(m, t)) < 1e-6 && dot(m, n) < 1 - 1e-9;
 }
 
 /**
  * ⭐⭐⭐ (§8) THE SHOWN DIRECTION for the orbit's `u` under the calm `c` (`shownDir` in the eased facet's own frame), faded toward the frame's own POLES
- * (`poleWeight` of `u` along its `b`: on a vertical facet the world's up, as before). No calm: `u`.
+ * (`poleWeight` of `u` along its `b`: on a vertical facet the world's up, as before). No calm: `u`. ⭐⭐⭐ (2026-11-10) read both ways and blended by `c.wA`
+ * (`acrossWeight`): toward a top / bottom edge by the angle toward the edge's line (`shownDirAcross` — the horizontal calm carried over it).
  */
 export function calmShown(u: Vec3, c: CalmState | null): Vec3 {
   if (c === null) return u;
   const { t, b } = facetFrame(c.n);
   const w = poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2]);
   if (!(w > 0)) return u;
-  return shownDir(u, c.n, t, b, 1 - (1 - c.sH) * w, 1 - (1 - c.sV) * w);
+  const sH = 1 - (1 - c.sH) * w;
+  const sV = 1 - (1 - c.sV) * w;
+  const wA = Math.min(1, Math.max(0, c.wA ?? 0));
+  const d0 = wA >= 1 ? null : shownDir(u, c.n, t, b, sH, sV);
+  const d1 = wA <= 0 ? null : shownDirAcross(u, c.n, t, b, sH, sV);
+  if (d0 === null) return d1!;
+  if (d1 === null) return d0;
+  const m: Vec3 = [d0[0] * (1 - wA) + d1[0] * wA, d0[1] * (1 - wA) + d1[1] * wA, d0[2] * (1 - wA) + d1[2] * wA];
+  const l = Math.hypot(m[0], m[1], m[2]);
+  return l > 1e-12 ? [m[0] / l, m[1] / l, m[2] / l] : d0;
 }

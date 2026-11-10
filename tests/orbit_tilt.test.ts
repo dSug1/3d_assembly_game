@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -138,21 +138,45 @@ describe("⭐⭐⭐ the face map in F on the REAL cube — the top a side, the g
 
 });
 
-describe("⭐⭐ the calm on the tilted facet whole toward EVERY edge (each a frame change) over its own edge zones (`tiltCalmWhole`)", () => {
+describe("⭐⭐ the calm on the tilted facet whole toward EVERY edge (each a frame change) over its own edge zones (`tiltCalmWholeHV`)", () => {
   const f = { b: [0, 1, 0] as Vec3, bLo: 0, bHi: 0.4 };
   const z = { zoneHPct: 25, zoneMinHM: 0.03, zoneVPct: 25, zoneMinVM: 0.03 };
   const at = (L: number, y: number) => ({ surface: [0, y, 0] as Vec3, across: { L, lo: 0, hi: 0.4 } });
   it("⭐ 0 in the middle; 1 at any edge (across or up); rising smoothly through the zone (a quarter of the run), never a step", () => {
-    expect(tiltCalmWhole(at(0.2, 0.2), f, z)).toBe(0);
-    expect(tiltCalmWhole(at(0, 0.2), f, z)).toBe(1);
-    expect(tiltCalmWhole(at(0.2, 0.4), f, z)).toBe(1);
+    const w = (L: number, y: number) => Math.max(tiltCalmWholeHV(at(L, y), f, z).h, tiltCalmWholeHV(at(L, y), f, z).v);
+    expect(w(0.2, 0.2)).toBe(0);
+    expect(w(0, 0.2)).toBe(1);
+    expect(w(0.2, 0.4)).toBe(1);
     let last = 0;
     for (let y = 0.2; y <= 0.4 + 1e-12; y += 0.005) {
-      const p = tiltCalmWhole(at(0.2, y), f, z);
+      const p = w(0.2, y);
       expect(p).toBeGreaterThanOrEqual(last - 1e-12);
       expect(p - last).toBeLessThan(0.1);
       last = p;
     }
+  });
+  it("⭐⭐⭐ (2026-11-10, *\"the tilt seems to catch up what the calm prevented\"*) in two parts: toward a `b` end the VERTICAL share alone (`v` 1, `h` 0 — the horizontal calm carried over), across both", () => {
+    expect(tiltCalmWholeHV(at(0.2, 0.4), f, z)).toEqual({ h: 0, v: 1 });
+    expect(tiltCalmWholeHV(at(0, 0.2), f, z)).toEqual({ h: 1, v: 0 });
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"build b\"*) THE MOUTH'S HAND-OVER (`mouthHold`) and the cap's release (`capYawRelease`)", () => {
+  const up = { lo: false, hi: true };
+  it("⭐⭐⭐ a dy toward the open end holds (the red at the floor's edge); away, a dx, or no mouth lets go; no step keeps the state", () => {
+    expect(mouthHold(false, up, 0.02, 0.001)).toBe(true);
+    expect(mouthHold(true, up, -0.02, 0)).toBe(false);
+    expect(mouthHold(true, up, 0.01, 0.03)).toBe(false); // ⭐ a dx: onto the bridge (§8.3: the green straight across)
+    expect(mouthHold(true, null, 0.02, 0)).toBe(false);
+    expect(mouthHold(true, up, 0, 0)).toBe(true);
+    expect(mouthHold(false, up, 0, 0)).toBe(false);
+    expect(mouthHold(false, { lo: true, hi: false }, -0.02, 0)).toBe(true); // a bottom's mouth, dy down
+  });
+  it("⭐⭐ over a cap of the world's frame: the side's horizontal calm kept as it came over, whole after a 45° dx (a smoothstep); either way round", () => {
+    expect(capYawRelease(0)).toBe(0);
+    expect(capYawRelease(Math.PI / 4)).toBe(1);
+    expect(capYawRelease(-Math.PI / 8)).toBeCloseTo(0.5, 12);
+    expect(capYawRelease(2 * Math.PI + 0.01)).toBeLessThan(0.01);
   });
 });
 
@@ -320,6 +344,17 @@ describe("⭐⭐⭐ (2026-11-10, THE REBUILD — *\"once the tilt starts, it can
 });
 
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"Build 2\"*) THE GLIDE AT AN EDGE — the switch at the edge, the jump eased by time", () => {
+  it("⭐⭐⭐ (the owner's shake) the whole share on the rig's lag: an event's jump spread like the gizmo's (63 % in one τ), never past it; τ 0: at once", () => {
+    const tau = DEFAULT_CONFIG.gizmoEaseMs;
+    expect(wholeShareStep(0.48, 0.75, tau, tau)).toBeCloseTo(0.48 + 0.27 * (1 - Math.exp(-1)), 12);
+    expect(wholeShareStep(0.48, 0.75, 16.7, tau)).toBeLessThan(0.75 - 0.27 * 0.6); // ⛔ at once (§9.6): 0.75 in the event's frame
+    let x = 0.9;
+    for (let i = 0; i < 60; i++) x = wholeShareStep(x, 1, 16.7, tau);
+    expect(x).toBeGreaterThan(0.999);
+    expect(x).toBeLessThanOrEqual(1);
+    expect(wholeShareStep(0.2, 0.9, 16.7, 0)).toBe(0.9);
+    expect(wholeShareStep(0.2, 0.9, -5, tau)).toBe(0.2);
+  });
   it("⭐⭐⭐ the cube's bottom edge (measured: the side's ray on Piece30 at x −147, the bottom's on Piece37 at y 74 — 110 mm; the contour's place moved 1 mm): the offset back to where the travel alone puts it", () => {
     const g = gizmoGlide([-0.147, 0.016, 0.191], [-0.242, 0.016, 0.191], [-0.241, 0.016, 0.191], [-0.241, 0.074, 0.191]);
     expect(g).not.toBeNull();
@@ -374,22 +409,32 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("if (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k)) return false;"); // ⭐ 1-b: held
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
-    expect(a).toContain("const swingDurMs = rollDurationMs(delta, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt
+    expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — ⭐ (2026-11-10) the camera's own swing: from the heading SHOWN
+    expect(a).toContain("dir: swingDir(R1, deltaShown, 0)"); // ⭐ the directions' frame by the shown heading; the orbit's angles by their own (`D0`)
+    expect(a).toContain("if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };"); // ⭐ the calm carried into F
+    expect(a).toContain("st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };"); // ⭐ …and out of it
+    expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
+    expect(a).toContain('tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
+    expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
-    expect(a).toContain("const glide = gizmoGlide(st.asmG, st.asmShown === null ? null : tiltDir(R, st.asmShown.t.surface), tiltDir(R, m.t.surface), m.hit.point);"); // ⭐ the glide of the depth
+    expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
     expect(code("render/green_box_wiring.ts")).toContain("if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop();");
     expect(a).toContain("tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
     expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
-    expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null && st.asmGOff === null) tiltOn(st, "auto");');
+    expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);'); // ⭐ (2026-11-10) on the crossing's frame (or at a mouth's floor edge)
+    expect(a).not.toContain("st.asmGOff === null) tiltOn"); // ⛔ a glide of the depth held the tilt back — onto the face, not at the edge
     expect(a).toContain("st.orbitUserV = o.v;");
     // ⭐⭐ (the owner: *"fix the gap"*) any face holding a pole, tilted by its own angle — a virtual one (a pole on an edge) too
     expect(a).toContain("const R1 = capTilt(hs, cap.n);");
     // ⭐⭐⭐ the calm made whole by position on the SHOWN direction (never eased): the back-and-forth at a crossing
-    expect(a).toContain("const k = Math.max(st.asmTilt?.k ?? 0, st.asmCalmWhole);");
-    expect(a).toContain('if (tl === null && st.asmTiltAuto && sh !== null && sh.t.band !== "SIDE") st.asmCalmWhole = 1;');
-    expect(a).toContain("if (i >= 0) st.asmCalmWhole = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);"); // ⭐ (2026-11-10) the vertical share alone toward a top / bottom edge
+    expect(a).toContain("st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);"); // ⭐ (2026-11-10) over a cap: the side's horizontal calm kept, released by a dx
+    expect(a).not.toContain('sh.t.band !== "SIDE") st.asmCalmWhole = 1;'); // ⛔ whole at once on a cap: the withheld yaw released at the edge
+    expect(a).toContain("st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);"); // ⭐ the rig's one time law
+    expect(a).not.toContain("st.asmTiltAuto) st.asmCalmWhole"); // ⛔ close in only
+    expect(a).toContain("if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its two sliders: on / off, and the press's swing (300 ms)", () => {
