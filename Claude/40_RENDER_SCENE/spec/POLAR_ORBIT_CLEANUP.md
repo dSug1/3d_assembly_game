@@ -772,3 +772,20 @@ heading −83.6° … −83.8° all the way to the edge (was → −70.4°), the
 4.3° at 60°; found while probing, kept (the owner: the tilt of the assembly is the calm's); to be measured once the calm's fix is on the device.
 **Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
 (the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.
+
+### 9.11b THE SQUARE CAMERA CLOSE IN (2026-11-10, branch `1.0.120b-` — built, NOT deployed: to test after `1.0.120a-`) — ⛔ no device close
+
+> The owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already have a mechanism to cross the edges
+> and the calm is not required, is it?"* → *"build the square camera close in branch 1.0.120b-. we will deploy this branch later on"*. (`1.0.120a-`, the
+> heading squared by position, is §9.11 on its own branch.)
+
+**Built** (`squareTurn`, `squareTurning`, `squareFrame`, `asmSquare`): with the automatic tilt on, the camera's direction is the gizmo's face's NORMAL — no
+calm — over the calm by `q` (eased over 125 ms as the automatic latch turns on / off); every edge a frame change: the normal turned to the next face's at
+the tilts' one speed (360°/s: a vertical edge's 90° in 0.25 s), the gizmo held meanwhile (`tiltClampStep`); a top / bottom edge the tilt (the camera
+square already: no swing), the square camera carried into F and out of it as it is, then turned. ⭐ The roll back's target built exactly as the world's
+camera after the exit (`calmHeading` on the orbit's world yaw) — ⛔ a vertical view's heading read off the tilted camera's own up: the target equal to it,
+the roll 0 ms, then a 180° flip in one frame (walked, the square camera looking straight down at the tilted top).
+**Walked** (the loops at 1.0 m): within a face 0.00° of look a frame (the camera pans square); each crossing a 90° turn over 0.25 s with ~1° of roll;
+the far edge's roll back over 0.5 s. ⚠ The first finger event after a crossing still moves the gizmo once (the hold starts with the turn's target, one
+frame later).
+**Vectors**: `orbit_tilt.test.ts` (`squareTurn`, `squareTurning`, the wiring). **1734**.

@@ -253,6 +253,35 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
   return (mouth.hi && dPitch > 0) || (mouth.lo && dPitch < 0);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-10, branch `1.0.120b-`, the owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already
+ * have a mechanism to cross the edges"* → *"build the square camera close in"*) THE SQUARE CAMERA'S TURN, one frame: the camera's direction `n` turned
+ * toward the gizmo's face's normal `target` at ONE SPEED (`degS`, the tilts' — 90° in 0.25 s at 360°/s), about their common perpendicular (`fallback`
+ * when they are opposite). Every edge is then a frame change: a vertical edge a 90° turn, a top / bottom edge the tilt's (the camera square already: no
+ * swing). `null` target: as it is.
+ */
+export function squareTurn(n: Vec3, target: Vec3 | null, dtMs: number, degS: number, fallback: Vec3): Vec3 {
+  if (target === null) return n;
+  const c = Math.max(-1, Math.min(1, dot(n, target)));
+  const ang = Math.acos(c);
+  if (ang < 1e-9) return target;
+  const step = degS > 0 ? Math.min(ang, (degS * Math.PI) / 180 * (Math.max(0, dtMs) / 1000)) : ang;
+  if (step >= ang - 1e-12) return target;
+  let ax = cross(n, target);
+  let l = Math.hypot(ax[0], ax[1], ax[2]);
+  if (l < 1e-9) {
+    ax = fallback;
+    l = Math.hypot(ax[0], ax[1], ax[2]);
+  }
+  return rotateAbout(n, [ax[0] / l, ax[1] / l, ax[2] / l], step);
+}
+
+/** ⭐ (`1.0.120b-`) the square camera still turning: more than half a degree from its face's normal — the gizmo held meanwhile (as a tilt's). */
+export function squareTurning(n: Vec3 | null, target: Vec3 | null, q: number): boolean {
+  if (n === null || target === null || !(q > 0.5)) return false;
+  return dot(n, target) < Math.cos((0.5 * Math.PI) / 180);
+}
+
 export const TILT_AUTO_HYST_PCT = 5;
 export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
   if (!(pct > 0) || !(farM > 0)) return false;
