@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, edgeGlide, frameMix, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -622,11 +622,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {
       hit = m.hit;
-      // ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"*) THE GLIDE AT AN EDGE: the map hands the gizmo to the next facet and its point jumps (a notch cut along the
-      // edge — each facet's ray on another wall: 110 mm at the cube's bottom edge, 85 mm at its top): the switch kept AT the edge, the jump eased by time
-      // (`edgeGlide`, `asmGOff` — the piece's ring with it) over 45°'s time at the tilt speed (125 ms at 360°/s). ⛔ The stretch's blend (removed, §9.7)
-      // glided it over the last 10° before the edge. A frame change has its own relocation (`asmShown` null then: none here)
-      const glide = edgeGlide(st.asmShown?.t.stack ?? null, m.t.stack, st.asmG, m.hit.point);
+      // ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"*, *"Apply the glide to those steps as well"*) THE GLIDE OF THE GIZMO'S DEPTH: the shown gizmo keeps the map's
+      // own travel (the contour's place) and every step of the REAL depth beyond it is eased out by time (`gizmoGlide`, `asmGOff` — the piece's ring with
+      // it) over 45°'s time at the tilt speed (125 ms at 360°/s): a notch along an edge (the switch kept AT the edge), a notch's wall inside a face, a void's
+      // rim. ⛔ The stretch's blend (removed, §9.7) glided only edges, over 10°. A frame change has its own relocation (`asmShown` null then: none here)
+      const R = mapFrame(st);
+      const glide = gizmoGlide(st.asmG, st.asmShown === null ? null : tiltDir(R, st.asmShown.t.surface), tiltDir(R, m.t.surface), m.hit.point);
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
