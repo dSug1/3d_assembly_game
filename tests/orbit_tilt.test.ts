@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, headingSquare, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -416,6 +416,11 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
     expect(a).toContain('tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
     expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
+    // ⭐⭐⭐ (`1.0.120a-`) the heading squared on the way to a top / bottom edge, on the rig's lag
+    expect(a).toContain("sH: (1 - (1 - c.sH) * (1 - kH)) * (1 - sq)");
+    expect(a).toContain("st.asmCalmSquare = headingSquare(st.asmTiltAuto, st.asmCalmWholeV, tg.wA);");
+    expect(a).toContain("st.asmCalmSquare = headingSquare(st.asmTiltAuto, p.v, tg.wA);");
+    expect(a).toContain("st.asmCalmSquare = wholeShareStep(prevS, st.asmCalmSquare, dtMs, st.cfg.gizmoEaseMs);");
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
@@ -447,5 +452,16 @@ describe("⭐⭐ wired", () => {
     expect(m).not.toContain('"tiltRollMinMs"');
     expect(DEFAULT_CONFIG.tiltAutoPct).toBe(20); // the owner's, 2026-11-10 (30 before)
     expect(m).toContain('"tiltAutoPct", 0, 100, 5');
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-10, `1.0.120a-`, the owner: *\"build the calm with square the heading by position\"*) THE HEADING SQUARED ON THE WAY TO A TOP / BOTTOM EDGE (`headingSquare`)", () => {
+  it("⭐⭐⭐ square at a top / bottom edge mid-face; none toward a vertical edge (the calm whole there: a dx crosses as before); none far out; none in the face's middle", () => {
+    expect(headingSquare(true, 1, 1)).toBe(1);
+    expect(headingSquare(true, 1, 0)).toBe(0);
+    expect(headingSquare(false, 1, 1)).toBe(0);
+    expect(headingSquare(true, 0, 1)).toBe(0);
+    expect(headingSquare(true, 0.5, 0.8)).toBeCloseTo(0.4, 12);
+    expect(headingSquare(true, 2, -1)).toBe(0);
   });
 });

@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, headingSquare, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -202,7 +202,9 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   const tl = st.asmTilt;
   const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
   const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
-  if (c !== null && (kH > 0 || kV > 0)) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 });
+  // ⭐⭐⭐ (2026-11-10, `1.0.120a-`) the horizontal share × (1 − `asmCalmSquare`): square on the way to a top / bottom edge (the automatic tilt on)
+  const sq = st.asmCalmSquare;
+  if (c !== null && (kH > 0 || kV > 0 || sq > 0)) return calmShown(u, { n: c.n, sH: (1 - (1 - c.sH) * (1 - kH)) * (1 - sq), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 });
   return calmShown(u, c);
 }
 
@@ -227,7 +229,10 @@ function calmFrame(st: SceneState, dtMs: number): void {
   // share itself on the rig's own lag (`wholeShareStep`, `gizmoEaseMs` — the gizmo's, which the piece and the camera's look follow)
   const prev = st.asmCalmWhole;
   const prevV = st.asmCalmWholeV;
+  const prevS = st.asmCalmSquare;
+  st.asmCalmSquare = 0;
   calmTargets(st, dtMs);
+  st.asmCalmSquare = wholeShareStep(prevS, st.asmCalmSquare, dtMs, st.cfg.gizmoEaseMs);
   st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);
   st.asmCalmWholeV = wholeShareStep(prevV, st.asmCalmWholeV, dtMs, st.cfg.gizmoEaseMs);
 }
@@ -241,7 +246,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const cfg = st.cfg;
   const tg =
     sh === null || map === null
-      ? { n: null, sH: 1, sV: 1 }
+      ? { n: null, sH: 1, sV: 1, wA: 0 }
       : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
           shareH: cfg.faceSpanShareH,
           zoneHPct: cfg.faceSpanZoneHPct,
@@ -266,6 +271,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
     // shake: far out the 120 ms calm alone fell behind, then caught up on the cap)
     st.asmCalmWhole = p.h;
     st.asmCalmWholeV = pV;
+    // ⭐⭐⭐ (2026-11-10, `1.0.120a-`) square toward its `b` ends (the exits there: the roll back finds the camera square too)
+    st.asmCalmSquare = headingSquare(st.asmTiltAuto, p.v, tg.wA);
     return;
   }
   // ⭐⭐⭐ (2026-11-10, the owner's back-and-forth) close in (the automatic tilt on), the world's frame: a side facet whose top / bottom borders a face holding a
@@ -281,6 +288,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
     if (st.asmCapYaw0 === null) st.asmCapYaw0 = q.yaw;
     st.asmCalmWholeV = 1;
     st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);
+    st.asmCalmSquare = headingSquare(st.asmTiltAuto, 1, 1); // ⭐ (`1.0.120a-`) the frame before the automatic tilt: square
     st.asmCalm = calmStep(st.asmCalm, st.asmCalm === null ? tg : { n: null, sH: st.asmCalm.sH, sV: 1, wA: 1 }, dtMs);
     return;
   }
@@ -290,6 +298,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
       const i = col.facets.indexOf(sh.t.stack);
       // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+      // ⭐⭐⭐ (2026-11-10, `1.0.120a-`) THE HEADING SQUARED on the way to that edge — weighed against the vertical edges' whole (`headingSquare`)
+      st.asmCalmSquare = headingSquare(st.asmTiltAuto, st.asmCalmWholeV, tg.wA);
     }
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);

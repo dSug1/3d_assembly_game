@@ -772,3 +772,34 @@ heading −83.6° … −83.8° all the way to the edge (was → −70.4°), the
 4.3° at 60°; found while probing, kept (the owner: the tilt of the assembly is the calm's); to be measured once the calm's fix is on the device.
 **Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
 (the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.
+
+### 9.11 THE REMAINING JOLT AT A TILT NEAR A VERTICAL EDGE — two branches (2026-11-10) — ⛔ no device close
+
+> The owner (a sketch: the loop up the front, over the top, down the back, under the bottom): *"if you walk at close distance the path in red … there is
+> still a shake each time the gizmo crosses an edge"*, *"especially if the path is close to the edges"* — then *"do we need a calm when the automatic tilt
+> is toggled on? … on orthogonal red-green sections, we already have a mechanism to cross the edges and the calm is not required, is it?"* → *"rename this
+> branch to 1.0.119-Fixes … create two branches 1.0.120a- and 1.0.120b-. build the calm with square the heading by position on the branch 1.0.120a- and
+> deploy it. build the square camera close in branch 1.0.120b-"*.
+
+**The cause, walked** (the loop at 1.0 m — ⚠ the first walks at A 170 px put the piece in contact: the slide took over, no orbit): the tilt's heading
+swing (1 (c)). Mid-face the calm has the heading within a few degrees of square — the swing nothing (3.3° of look, 0.1° of roll); near a vertical edge
+the calm is whole (a dx crosses there), the heading up to 45° off square, swung at 360°/s in ~0.1 s: **14 – 17° of look and 18 – 20° of roll in a
+frame**, the camera 0.6 m (`07e7e1e`, before §9.10: 21° / 26° / 0.86 m). ⛔ No swing at all: the camera's up would have to roll ~35° at 26° off square
+(computed) — worse. ⛔ No calm close in: the swing is then the gizmo's whole yaw off square everywhere (~22° halfway to a vertical edge, against ~5°).
+
+**The walks before / after §9.10** (the same loops, `5d88eb2` against `88b7418`): the tilt late 9 and 4 frames → always the next frame; the red over the
+channel's mouth 2 frames → 0; the heading's sideways swing in a pure dy near the vertical edges 9.7 – 9.9° a walk → 1.8 – 1.9°; 0 page errors.
+
+**`1.0.120a-` (built, deployed): THE HEADING SQUARED BY POSITION on the way to a top / bottom edge** (`headingSquare`, `asmCalmSquare`): the automatic
+tilt on, the calm's horizontal share × (1 − the share toward the facet's `b` ends × `acrossWeight`) — square at a top / bottom edge, whole toward a
+vertical edge (a dx crosses as before), blended by the nearer; on the tilted facet the same toward its `b` ends (its exits); on a cap the frame before the
+tilt square; on the rig's lag (`wholeShareStep`, `gizmoEaseMs`). **Walked**: the first tilt near a vertical edge 3.8 – 4.4° of look, 3.2 – 3.8° of roll
+(the heading within 7° of square at the edge: `acrossWeight` ~0.7 that near the corner); mid-face unchanged; the heading now pans to square during the dy
+toward the edge (~11° a walk near the vertical edges — by position, at the finger's pace). ⚠ The automatic latch turning on / off (the approach) brings
+the squaring in / out over the rig's lag.
+
+**`1.0.120b-` (to build, deployed later): THE SQUARE CAMERA CLOSE IN** — the automatic tilt on: no calm, the camera always square to the gizmo's face;
+every edge a frame change — a top / bottom edge the tilt (no swing: already square), a vertical edge a timed 90° turn at one speed, the gizmo held until
+it completes.
+
+**Vectors** (`1.0.120a-`): `orbit_tilt.test.ts` (`headingSquare`, the wiring). **1733**.
