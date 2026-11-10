@@ -54,8 +54,13 @@ const SCENARIOS = [
   ["auto_dx_round_the_sides", -90, 20, [STEP, 0], 300, 1.2],
   ["auto_dy_down_front_to_bottom", -90, -10, [0, STEP], 260, 1.2],
   ["auto_dy_down_front_to_bottom_far", -90, -10, [0, STEP], 260, 1.7],
-  ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.2]],
-  ["auto_out_while_tilted", -70, 62, [0, 0], 160, 1.2, undefined, [1.2, 3.0]],
+  ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.0]],
+  // ⭐ (2026-11-10, the owner's decisions) the 9th: "stop" — the drag held still once the roll has begun (the tilt finishes by itself); "back" — reversed
+  // once over the edge (committed: refused until the roll is whole); "fast" — 4 × the step through the edge (the clamp: never ahead of the roll)
+  ["commit_stop_in_stretch", -90, 15, [0, -STEP], 420, 1.0, undefined, undefined, "stop"],
+  ["commit_back_after_cross", -90, 15, [0, -STEP], 420, 1.0, undefined, undefined, "back"],
+  ["commit_fast_finger", -90, 15, [0, -4 * STEP], 160, 1.0, undefined, undefined, "fast"],
+  ["auto_out_while_tilted", -70, 62, [0, 0], 160, 1.0, undefined, [1.0, 3.0]],
 ].filter((s) => env.ONLY === undefined || s[0] === env.ONLY || (env.ONLY === "auto" && String(s[0]).startsWith("auto")));
 
 try {
@@ -110,7 +115,7 @@ try {
   const frame = () => ev("new Promise((r) => requestAnimationFrame(() => r(1)))");
   const all = {};
   const setDist = (m) => `(async () => { const st = window.__st; const A = await import("/src/input/assembly_orbit.ts"); let lo = A.approachRange(st.cfg).min, hi = 1; for (let i = 0; i < 40; i++) { const x = (lo + hi) / 2; if (A.approachDistance(st.cfg, x) < ${m}) lo = x; else hi = x; } st.approach = (lo + hi) / 2; })()`;
-  for (const [name, yaw, pitch, step0, n, distM, revAfter, ramp] of SCENARIOS) {
+  for (const [name, yaw, pitch, step0, n, distM, revAfter, ramp, mode] of SCENARIOS) {
     let step = step0;
     await ev(distM ? setDist(distM) : "window.__st.approach = 1");
     await ev(`window.__tag = "setup"; (() => { const st = window.__st; st.asmTilt = null; st.asmGOff = null; st.asmMapQ = null; st.orbitUserV = null; st.orbitRawPrev = null; st.orbit.reset(${yaw * D}, ${(pitch / 90 + 1) / 2}); st.orbitInertia.stop(); })()`);
@@ -130,6 +135,14 @@ try {
         await ev(setDist(ramp[0] + ((ramp[1] - ramp[0]) * (j + 1)) / n));
         await frame();
         continue;
+      }
+      if (mode === "stop" && (await ev("window.__st.asmTilt !== null && window.__st.asmTilt.k > 0.15 && window.__st.asmShown !== null && window.__st.asmShown.t.stack === window.__st.asmTilt.facet"))) {
+        await ev(`window.__tag = "stopped"`);
+        for (let w = 0; w < 120; w++) await frame();
+        break;
+      }
+      if (mode === "back" && (await ev("window.__st.asmTilt !== null && window.__st.asmTilt.k > 0 && window.__st.asmShown !== null && window.__st.asmShown.t.stack !== window.__st.asmTilt.facet"))) {
+        if (step[0] === step0[0] && step[1] === step0[1]) { step = [-step0[0], -step0[1]]; await ev(`window.__tag = "back"`); }
       }
       if (revAfter !== undefined && tiltSeen < 0 && (await ev("window.__st.asmTilt !== null"))) tiltSeen = j;
       if (revAfter !== undefined && tiltSeen >= 0 && j === tiltSeen + revAfter) step = [-step[0], -step[1]];
@@ -164,7 +177,7 @@ try {
     const step = sc[3];
     if (sc[5]) {
       // the automatic scenarios: every tilt and its end, the frames between (the hysteresis), the largest steps, the roll after
-      const d = fr.filter((r) => r.tag === "drag" || r.tag === "press" || r.tag === "release");
+      const d = fr.filter((r) => r.tag === "drag" || r.tag === "press" || r.tag === "release" || r.tag === "stopped" || r.tag === "back");
       const ev2 = [];
       let prevId = null, startI = -1;
       for (let i = 0; i < d.length; i++) {
@@ -176,6 +189,9 @@ try {
       for (let i = 1; i < d.length; i++) { const a = d[i - 1], b = d[i]; mLook = Math.max(mLook, ang(look(a), look(b))); if (a.roll !== null && b.roll !== null) mRollStep = Math.max(mRollStep, Math.abs(((b.roll - a.roll + 540) % 360) - 180)); if (a.g && b.g) mG = Math.max(mG, dist(a.g, b.g) * 1000); }
       const bands = []; for (const r of d) { const b = r.band + (r.tl ? "*" : ""); if (bands.at(-1) !== b) bands.push(b); }
       const last = d.at(-1);
+      const mode = sc[8];
+      const kt = d.map((r) => (r.tl ? `${r.tag[0]}${r.tl.k.toFixed(2)}${r.tl.exit ? "x" : ""}` : `${r.tag[0]}W`)).filter((x, i, a) => i === 0 || x !== a[i - 1]).join(" ");
+      if (mode) console.log(`  [${mode}] the roll shown by frame (d drag, s stopped, b back; W the world's frame): ${kt.slice(0, 1200)}`);
       console.log(`\n=== ${name}: ${d.length} frames; the piece ${sc[7] ? `${sc[7][0]} → ${sc[7][1]}` : sc[5]} m from the gizmo\n  ${ev2.join(" → ") || "no tilt"}\n  bands (* tilted): ${bands.join(" ")}\n  a frame's look ≤ ${mLook.toFixed(2)}°, roll step ≤ ${mRollStep.toFixed(2)}°, gizmo ≤ ${mG.toFixed(1)} mm; at the end roll ${last?.roll?.toFixed(1)}°`);
       continue;
     }

@@ -481,12 +481,16 @@ export interface SceneState {
     readonly delta: number;
     swingMs: number | null;
     k: number;
-    /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most 1 / `tiltRollMinMs` a ms (`rollStep`) */
+    /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most `tiltRollDegS` (`rollStep`, `rollDurationMs`) */
     kT: number;
     /** ⭐ (2026-11-10, the hysteresis) the gizmo once in the facet's middle: a roll back may be asked (`tiltExitTarget`) */
     armed: boolean;
     /** ⭐ (2026-11-10) out past the automatic tilt's threshold: the tilt turned off (the roll back by time, then the world's frame) */
     off: boolean;
+    /** ⭐ (2026-11-10, the owner: *"it shall finish the tilt"*) the finger stopped in the stretch: the gizmo carried over the edge, the roll completed */
+    finishing: boolean;
+    /** ⭐ (2026-11-10) the roll's whole angle last frame (`frameMix`) — its duration at `tiltRollDegS` */
+    rollRad: number;
     axis: Vec3 | null;
     exit: boolean;
   } | null;

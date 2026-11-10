@@ -260,8 +260,7 @@ export interface CamFrame {
  * ⭐⭐⭐ THE CAMERA'S FRAME `k` OF THE WAY FROM `a` TO `b` — one turn about one axis (the turn taking `a`'s basis onto `b`'s), `k` of its angle. A half turn
  * (the far edge's 180° roll, 2 (a)) has two axes: the one nearer `hint` (the last frame's) — never flipping mid-way. Returns the frame and the axis used.
  */
-export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null): { readonly frame: CamFrame; readonly axis: Vec3 | null } {
-  if (!(k > 0)) return { frame: a, axis: hint };
+export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null): { readonly frame: CamFrame; readonly axis: Vec3 | null; readonly angle: number } {
   const basis = (f: CamFrame): Mat3 => {
     const d = norm(f.dir);
     const r = norm(cross(f.up, d));
@@ -274,7 +273,9 @@ export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null)
   const M: number[][] = [0, 1, 2].map((r) => [0, 1, 2].map((c) => A[0][c]! * B[0][r]! + A[1][c]! * B[1][r]! + A[2][c]! * B[2][r]!));
   const tr = M[0]![0]! + M[1]![1]! + M[2]![2]!;
   const th = Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2)));
-  if (th < 1e-9) return { frame: k >= 1 ? b : a, axis: hint };
+  // ⭐ (2026-11-10) the whole turn's angle returned at every share (the roll's speed in °/s reads it — `rollDurationMs`)
+  if (!(k > 0)) return { frame: a, axis: hint, angle: th };
+  if (th < 1e-9) return { frame: k >= 1 ? b : a, axis: hint, angle: th };
   let axis: Vec3;
   const s = Math.sin(th);
   if (s > 1e-4) {
@@ -291,7 +292,65 @@ export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null)
   }
   // the axis nearer the hint (a turn by θ about a = by 2π − θ about −a: only a half turn is ambiguous; keep its sign)
   const t = Math.min(1, k) * th;
-  return { frame: { dir: rotateAbout(a.dir, axis, t), up: rotateAbout(a.up, axis, t) }, axis };
+  return { frame: { dir: rotateAbout(a.dir, axis, t), up: rotateAbout(a.up, axis, t) }, axis, angle: th };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"* to a speed in °/s) THE ROLL'S DURATION (ms) at most `degS` °/s for
+ * a roll of `rad` (the whole turn, `frameMix`'s angle) — the same angular speed for every roll: 360°/s, a far edge's half turn 0.5 s, a side's 63° 0.18 s
+ * (⛔ a whole roll in 250 ms whatever its size: the half turn 2.9 × faster than the side's). `degS` 0: at once.
+ */
+export function rollDurationMs(rad: number, degS: number): number {
+  if (!(degS > 0)) return 0;
+  return (Math.abs(rad) / ((degS * Math.PI) / 180)) * 1000;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner's decisions: COMMIT AT THE EDGE; a finger stopped in the stretch FINISHES the tilt; the finger's delta CLAMPED in the stretch)
+ * — IS AN ORBIT STEP ALLOWED, from the share of the way off the tilted facet `r0` (1 off it; `on0` on it) to `r1` (`on1`)?
+ * * the press's / the automatic tilt's SWING under way: never off the facet (back over the edge it came in by);
+ * * COMMITTED — past the edge (`!on0`) with the roll not whole, or FINISHING: never back onto the facet, never back down the stretch (`r1 < r0`);
+ * * ARMED on the facet: the share never ahead of the roll shown by more than `slack` (`r1 ≤ max(r0, k + slack)`) — the gizmo cannot outrun the view's turn;
+ *   the finger's excess discarded. A step back down the stretch: always (the roll by the finger, reversible, before the edge — decision 3 (a)).
+ */
+export function tiltStepAllowed(s: {
+  readonly r0: number;
+  readonly r1: number;
+  readonly on0: boolean;
+  readonly on1: boolean;
+  readonly k: number;
+  readonly armed: boolean;
+  readonly swinging: boolean;
+  readonly finishing: boolean;
+  readonly slack: number;
+}): boolean {
+  if (s.swinging && !s.on1) return false;
+  const committed = (!s.on0 && s.k < 1) || s.finishing;
+  if (committed && ((!s.on0 && s.on1) || s.r1 < s.r0 - 1e-9)) return false;
+  if (s.armed && s.r1 > s.r0 + 1e-9 && s.r1 > s.k + s.slack) return false;
+  return true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10) THE WAY TO THE EDGE the stretch at (`yaw`, `pitch`) leads to: the sign of the yaw's and the pitch's way (the band nearer its end —
+ * `edgeBlend`'s larger weight); `null`: in no band.
+ */
+export function edgeBlendDir(map: FaceMap, yaw: number, pitch: number, opts: MapOpts): readonly [number, number] | null {
+  const eb = edgeBlend(map, yaw, pitch, opts);
+  const wh = eb.h === null ? -1 : eb.h.w;
+  const wv = eb.v === null ? -1 : eb.v.w;
+  if (wh < 0 && wv < 0) return null;
+  if (wh >= wv && eb.h !== null) return [Math.sign(Math.atan2(Math.sin(eb.h.yawThere - yaw), Math.cos(eb.h.yawThere - yaw))), 0];
+  return eb.v === null ? null : [0, Math.sign(eb.v.pitchThere - pitch)];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"no halfway roll back: it shall finish the tilt"*) DOES THE TILT FINISH BY ITSELF: armed, the roll begun (`k` > 0) on the
+ * facet, and the finger at rest (§1.1's own rest — the device's window) or lifted with no coast: the gizmo carried over the edge, the roll completed —
+ * then committed at the edge as any crossing.
+ */
+export function tiltFinishes(armed: boolean, onFacet: boolean, k: number, fingerResting: boolean): boolean {
+  return armed && onFacet && k > 1e-3 && fingerResting;
 }
 
 function norm(v: Vec3): Vec3 {
