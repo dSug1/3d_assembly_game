@@ -221,11 +221,6 @@ export function poleEdgeWhole(
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, the owner: *"at far distance it is disabled, at close distance (… at xx% of the max distance, make a slider) it toggles on
- * automatically"*) THE AUTOMATIC TILT'S LATCH: on within `pct` % of the far distance, off only beyond `pct` + `TILT_AUTO_HYST_PCT` (an approach coasting
- * round the threshold never flickers it); `pct` 0: never.
- */
-/**
  * ⭐⭐⭐ (2026-11-10, the owner: *"when i cross the edge … a sort of shake of the scene"* — *"make sure those fixes address deep root causes"*) THE CALM'S
  * WHOLE SHARE ON THE RIG'S OWN TIME LAW: the share by position (`target`: `poleEdgeWhole`, `tiltCalmWholeHV`, a cap's 1) eased by the SAME lag as the gizmo
  * the piece and the camera's look follow (`tauMs`, `gizmoEaseMs`). ⛔ Applied at once (§9.6) the camera's DIRECTION answered a finger event in its frame
@@ -266,12 +261,18 @@ export function headingSquare(on: boolean, towardB: number, wA: number): number 
   return Math.min(1, Math.max(0, towardB)) * Math.min(1, Math.max(0, wA));
 }
 
-export const TILT_AUTO_HYST_PCT = 5;
-export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
-  if (!(pct > 0) || !(farM > 0)) return false;
-  const r = (100 * distM) / farM;
-  return on ? r <= pct + TILT_AUTO_HYST_PCT : r <= pct;
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"at far distance it is disabled, at close distance (… make a slider) it toggles on automatically"* — then *"instead Percent
+ * use m for the slider … and set the default to 0.3 m"*) THE AUTOMATIC TILT'S LATCH: on within `thresholdM` of the gizmo (the piece's distance, m), off
+ * only beyond it + `TILT_AUTO_HYST_M` (an approach coasting round the threshold never flickers it); `thresholdM` 0: never. ⛔ A percentage of the far
+ * distance (20 % — 1.2 m on `Scene_1`, off beyond 25 %).
+ */
+export const TILT_AUTO_HYST_M = 0.05;
+export function tiltAutoLatch(on: boolean, distM: number, thresholdM: number): boolean {
+  if (!(thresholdM > 0)) return false;
+  return on ? distM <= thresholdM + TILT_AUTO_HYST_M : distM <= thresholdM;
 }
+
 
 
 /** ⭐⭐⭐ …and the frame back to the world's only once the tilt's swing is OVER and the roll shown is whole (the owner's hysteresis), off the facet — or out past the threshold (`off`). */

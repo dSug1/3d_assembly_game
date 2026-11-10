@@ -376,11 +376,12 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"Build 2\"*) THE GLIDE AT AN EDGE 
 
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
   it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
-    expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
-    expect(tiltAutoLatch(false, 1.9, 6, 30)).toBe(false);
-    expect(tiltAutoLatch(true, 2.0, 6, 30)).toBe(true); // 33 %: still on
-    expect(tiltAutoLatch(true, 2.2, 6, 30)).toBe(false); // 37 %: off
-    expect(tiltAutoLatch(false, 0.01, 6, 0)).toBe(false);
+    // ⭐ (2026-11-10, *"use m for the slider … 0.3 m"*) metres: on within 0.3 m, off only beyond 0.35 m
+    expect(tiltAutoLatch(false, 0.3, 0.3)).toBe(true);
+    expect(tiltAutoLatch(false, 0.31, 0.3)).toBe(false);
+    expect(tiltAutoLatch(true, 0.34, 0.3)).toBe(true); // within the hysteresis: still on
+    expect(tiltAutoLatch(true, 0.36, 0.3)).toBe(false); // off
+    expect(tiltAutoLatch(false, 0.01, 0)).toBe(false);
   });
   it("⭐⭐⭐ THE OWNER'S HYSTERESIS: no tilt back before the tilt's swing is over and the roll shown whole — so a tilt and its tilt back take at least `tiltSwingMs` + the roll's time at `tiltRollDegS`", () => {
     expect(tiltExits(false, 1, false)).toBe(false);
@@ -426,7 +427,7 @@ describe("⭐⭐ wired", () => {
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
     expect(code("render/green_box_wiring.ts")).toContain("if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop();");
     expect(a).toContain("tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
-    expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);");
+    expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
     expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);'); // ⭐ (2026-11-10) on the crossing's frame (or at a mouth's floor edge)
     expect(a).not.toContain("st.asmGOff === null) tiltOn"); // ⛔ a glide of the depth held the tilt back — onto the face, not at the edge
@@ -450,8 +451,9 @@ describe("⭐⭐ wired", () => {
     expect(DEFAULT_CONFIG.tiltRollDegS).toBe(360); // ⭐ (2026-11-10, *"yes"*) a speed, not a time (`tiltRollMinMs` deleted)
     expect(m).toContain('"tiltRollDegS", 0, 1440, 30');
     expect(m).not.toContain('"tiltRollMinMs"');
-    expect(DEFAULT_CONFIG.tiltAutoPct).toBe(20); // the owner's, 2026-11-10 (30 before)
-    expect(m).toContain('"tiltAutoPct", 0, 100, 5');
+    expect(DEFAULT_CONFIG.tiltAutoM).toBe(0.3); // the owner's, 2026-11-10 (20 % of the far distance before, 30 % before that)
+    expect("tiltAutoPct" in DEFAULT_CONFIG).toBe(false);
+    expect(m).toContain('"tiltAutoM", 0, 3, 0.05');
   });
 });
 
