@@ -437,8 +437,8 @@ export interface GestureConfig {
   tiltedPole: number;
   /** ⭐⭐⭐ …the press's swing (the camera's heading turned square to the face, 1 (c)) and the gizmo's relocation there, eased over this time (ms; 0 at once). */
   tiltSwingMs: number;
-  /** ⭐⭐⭐ (2026-11-10, the owner: *"minimum of xx ms to smoothen it"*) the roll back to upright off a tilted face: by the finger, a whole roll never in less than this (ms; 0: the finger alone). */
-  tiltRollMinMs: number;
+  /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"*) the roll back to upright off a tilted face: by the finger, never faster than this (°/s; 0: the finger alone) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
+  tiltRollDegS: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"at close distance (… xx% of the max distance, make a slider) it toggles on automatically"*) the tilt made by itself as the gizmo enters a top / bottom, within this % of the far distance (off beyond it + 5); 0: never (the press only). */
   tiltAutoPct: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, STEP 5 — D5, the owner: *"step 5: ok"*) THE FACES CONTOUR: the placed parts' faces within this angle of
@@ -870,7 +870,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   faceEdgeSlideDeg: 10, // …in the last / first 10° of each side's slice
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltSwingMs: 300, // ⭐⭐⭐ …its press's swing, 300 ms (a guess until a hand sets it)
-  tiltRollMinMs: 250, // ⭐⭐⭐ (2026-11-10) …its roll back: a whole roll in 250 ms at the fastest (a guess until a hand sets it)
+  tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   tiltAutoPct: 20, // ⭐⭐⭐ (2026-11-10, the owner: *"Set the default tilted pole automatic within 20%"*) …automatic within 20 % of the far distance (1.2 m of 6.0 on `Scene_1`; off beyond 25 %) — 30 % before
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
@@ -1039,7 +1039,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.faceEdgeSlideDeg >= 0 && cfg.faceEdgeSlideDeg <= 22.5)) throw new Error(`faceEdgeSlideDeg (${cfg.faceEdgeSlideDeg}) must be in [0, 22.5] °.`);
   if (cfg.tiltedPole !== 0 && cfg.tiltedPole !== 1) throw new Error(`tiltedPole (${cfg.tiltedPole}) must be 0 or 1.`);
   if (!(cfg.tiltSwingMs >= 0 && cfg.tiltSwingMs <= 1000)) throw new Error(`tiltSwingMs (${cfg.tiltSwingMs}) must be in [0, 1000] ms.`);
-  if (!(cfg.tiltRollMinMs >= 0 && cfg.tiltRollMinMs <= 2000)) throw new Error(`tiltRollMinMs (${cfg.tiltRollMinMs}) must be in [0, 2000] ms.`);
+  if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoPct >= 0 && cfg.tiltAutoPct <= 100)) throw new Error(`tiltAutoPct (${cfg.tiltAutoPct}) must be in [0, 100] %.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
   if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);

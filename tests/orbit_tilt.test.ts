@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, exitShare, frameMix, headingTurn, mulM, mulT, poleEdgeWhole, rollStep, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltExitTarget, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, edgeBlendDir, exitShare, frameMix, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltFinishes, tiltStepAllowed, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltExitTarget, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -307,6 +307,50 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"why is there a back-and-forth jum
   });
 });
 
+describe("⭐⭐⭐ (2026-11-10, the owner's decisions: COMMIT AT THE EDGE, a stopped finger FINISHES the tilt, the roll at most °/s, the delta CLAMPED in the stretch)", () => {
+  const base = { r0: 0.4, r1: 0.5, on0: true, on1: true, k: 0.45, armed: true, swinging: false, finishing: false, slack: 0.07 };
+  it("⭐⭐⭐ the roll's duration at 360°/s: a far edge's half turn 0.5 s, a side's 63° 0.175 s — the same angular speed (⛔ 250 ms for any roll); 0: at once", () => {
+    expect(rollDurationMs(Math.PI, 360)).toBeCloseTo(500, 9);
+    expect(rollDurationMs((63 * Math.PI) / 180, 360)).toBeCloseTo(175, 9);
+    expect(rollDurationMs(Math.PI, 0)).toBe(0);
+  });
+  it("⭐⭐⭐ COMMIT AT THE EDGE: past it with the roll not whole, never back onto the facet nor back down; whole: free (a new crossing)", () => {
+    expect(tiltStepAllowed({ ...base, on0: false, r0: 1, on1: true, r1: 0.95, k: 0.6 })).toBe(false);
+    expect(tiltStepAllowed({ ...base, on0: false, r0: 1, on1: false, r1: 1, k: 0.6 })).toBe(true); // onward, off the facet
+    expect(tiltStepAllowed({ ...base, on0: false, r0: 1, on1: true, r1: 0.95, k: 1 })).toBe(true);
+  });
+  it("⭐⭐⭐ BEFORE the edge the roll stays the finger's: back down the stretch always allowed (decision 3 (a)); a FINISHING tilt: never back", () => {
+    expect(tiltStepAllowed({ ...base, r1: 0.2 })).toBe(true);
+    expect(tiltStepAllowed({ ...base, r1: 0.2, finishing: true })).toBe(false);
+  });
+  it("⭐⭐⭐ THE DELTA CLAMPED: the share never ahead of the roll shown by more than the slack — the finger's excess discarded; unarmed (just entered): free", () => {
+    expect(tiltStepAllowed({ ...base, r1: 0.5, k: 0.45 })).toBe(true);
+    expect(tiltStepAllowed({ ...base, r1: 0.9, k: 0.45 })).toBe(false);
+    expect(tiltStepAllowed({ ...base, on1: false, r1: 1, k: 0.45 })).toBe(false); // over the edge ahead of the view: not yet
+    expect(tiltStepAllowed({ ...base, armed: false, r1: 0.9, k: 0 })).toBe(true);
+  });
+  it("⭐⭐ the SWING (a tilt just made): never back over the edge it came in by before it is over", () => {
+    expect(tiltStepAllowed({ ...base, armed: false, swinging: true, on1: false, r1: 1, k: 0 })).toBe(false);
+    expect(tiltStepAllowed({ ...base, armed: false, swinging: true, on1: true, r1: 0.95, k: 0 })).toBe(true);
+  });
+  it("⭐⭐⭐ A STOPPED FINGER FINISHES THE TILT (*\"no halfway roll back\"*): armed, the roll begun, on the facet, the finger at rest — never at rest in the middle (no roll begun)", () => {
+    expect(tiltFinishes(true, true, 0.3, true)).toBe(true);
+    expect(tiltFinishes(true, true, 0, true)).toBe(false);
+    expect(tiltFinishes(true, true, 0.3, false)).toBe(false);
+    expect(tiltFinishes(false, true, 0.3, true)).toBe(false);
+  });
+  it("⭐⭐ the way to the edge the stretch leads to (the carry): on the cube's tilted top, toward the column's end by the yaw; toward the cap by the pitch", () => {
+    const R = capTilt(-90 * D, [0, 1, 0]);
+    const map = buildFaceMap(tiltFaces(cube.faces, R), tiltBox(cube.box, R));
+    const fi = map.facets.findIndex((f) => dist(f.n, [0, 0, -1]) < 1e-6);
+    const col = map.columns.find((c) => c.facets.includes(fi))!;
+    expect(edgeBlendDir(map, col.mid + 0.97 * col.hw, 0, opts)).toEqual([1, 0]);
+    expect(edgeBlendDir(map, col.mid - 0.97 * col.hw, 0, opts)).toEqual([-1, 0]);
+    expect(edgeBlendDir(map, col.mid, col.bounds[col.bounds.length - 1]! - 2 * D, opts)).toEqual([0, 1]);
+    expect(edgeBlendDir(map, col.mid, 0, opts)).toBeNull();
+  });
+});
+
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
   it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
     expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
@@ -325,7 +369,7 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles 
     expect(tiltExitTarget(false, false, 0).kT).toBe(1); // back over the entry edge at once: rolled back, all the same
     expect(tiltExitTarget(true, true, 0, true).kT).toBe(1); // ⭐ out past the threshold (`off`): whole, mid-face too
   });
-  it("⭐⭐⭐ THE OWNER'S HYSTERESIS: no tilt back before the tilt's swing is over and the roll shown whole — so a tilt and its tilt back take at least `tiltSwingMs` + `tiltRollMinMs`", () => {
+  it("⭐⭐⭐ THE OWNER'S HYSTERESIS: no tilt back before the tilt's swing is over and the roll shown whole — so a tilt and its tilt back take at least `tiltSwingMs` + the roll's time at `tiltRollDegS`", () => {
     expect(tiltExits(false, 1, false)).toBe(false);
     expect(tiltExits(false, 0.8, true)).toBe(false);
     expect(tiltExits(true, 1, true)).toBe(false);
@@ -349,7 +393,10 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("const t = tiltExitTarget(tl.armed, stack === tl.facet, map === null ? 1 : exitShare(map, mq.yaw, mq.pitch, tl.facet, mapOpts(st)), tl.off);");
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
-    expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, st.cfg.tiltRollMinMs);");
+    expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, durMs);");
+    expect(a).toContain("if (!tl.finishing && tiltFinishes(tl.armed, stack === tl.facet, tl.k, fingerResting(st))) {");
+    expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
+    expect(code("render/green_box_wiring.ts")).toContain("if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop();");
     expect(a).toContain("tl.exit = tiltExits(stack === tl.facet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
     expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
@@ -369,8 +416,9 @@ describe("⭐⭐ wired", () => {
     const m = code("render/tuning_menu.ts");
     expect(m).toContain('"tiltedPole", 0, 1, 1');
     expect(m).toContain('"tiltSwingMs", 0, 1000, 25');
-    expect(DEFAULT_CONFIG.tiltRollMinMs).toBe(250);
-    expect(m).toContain('"tiltRollMinMs", 0, 2000, 25');
+    expect(DEFAULT_CONFIG.tiltRollDegS).toBe(360); // ⭐ (2026-11-10, *"yes"*) a speed, not a time (`tiltRollMinMs` deleted)
+    expect(m).toContain('"tiltRollDegS", 0, 1440, 30');
+    expect(m).not.toContain('"tiltRollMinMs"');
     expect(DEFAULT_CONFIG.tiltAutoPct).toBe(20); // the owner's, 2026-11-10 (30 before)
     expect(m).toContain('"tiltAutoPct", 0, 100, 5');
   });
