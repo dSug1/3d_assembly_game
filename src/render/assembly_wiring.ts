@@ -1005,12 +1005,13 @@ function tiltOn(st: SceneState, why: "press" | "auto"): void {
   if (sh === null || g === null || wm === null) return;
   const top = sh.t.stack === wm.top;
   if (!top && sh.t.stack !== wm.bottom) return;
+  // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
+  // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
   const cap = wm.facets[sh.t.stack]!;
-  if (!cap.real) return;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const hs = snapHeading(q.yaw);
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
-  const R1 = capTilt(hs, top);
+  const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
   st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: D0, facet: -1, delta, swingMs: 0, k: 0, kT: 0, armed: false, off: false, axis: null, exit: false };
   const map = faceMapOf(st);

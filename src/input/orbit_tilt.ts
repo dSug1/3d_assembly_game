@@ -88,15 +88,17 @@ export function headingTurn(d: number): Mat3 {
 }
 
 /**
- * ⭐⭐⭐ THE TILT AT A PRESS ON A CAP (1 (c)): F → world, 90° about the world's horizontal axis square to the heading `hs` (snapped), so the cap's normal
- * (`top`: up; else down) is `hs`'s direction in F — the cap a SIDE facing the camera. ⭐ The axis square to the heading: no roll (vectored).
+ * ⭐⭐⭐ THE TILT ON A FACE HOLDING A POLE (1 (c)): F → world, about the world's horizontal axis square to the heading `hs` (snapped) — ⭐ no roll, whatever
+ * the angle (vectored) — by the angle that lays the face's normal `n` HORIZONTAL in F, toward `hs`: the face a SIDE facing the camera. ⭐⭐ (2026-11-10, the
+ * owner: *"fix the gap"* — *"there will be cases where poles are held by edges or slanted faces"*) the face's OWN angle: 90° a level top (−90° a level
+ * bottom), 60° a horizontally extruded hexagon's slanted face toward the camera, 120° one slanting away (⛔ a quarter turn always: a slanted face holding a
+ * pole was left 30° short of square). `n` off the heading's vertical plane: its part in that plane laid horizontal — still a side in F.
  */
-export function capTilt(hs: number, top: boolean): Mat3 {
+export function capTilt(hs: number, n: Vec3): Mat3 {
   const hh: Vec3 = [Math.cos(hs), 0, Math.sin(hs)];
   const y: Vec3 = [0, 1, 0];
-  // R·hh = ±y with R a quarter turn about a ⟂ hh: a × hh = ±y ⇒ a = hh × y (top), y × hh (bottom)
-  const a = top ? cross(hh, y) : cross(y, hh);
-  return axisAngle(a, Math.PI / 2);
+  // R·hh = cos θ·hh + sin θ·y about a = hh × y (a × hh = y): θ the angle of `n` from `hh` in the plane of hh and y ⇒ Rᵀ·n horizontal, along hh
+  return axisAngle(cross(hh, y), Math.atan2(n[1], dot(n, hh)));
 }
 
 /** ⭐ The directions' frame during the press's swing: `headingTurn(−Δ·(1 − e))·map` — at the press (`e` 0) the camera where it was, at its end (`e` 1) `map`. */

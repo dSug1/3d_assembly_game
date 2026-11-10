@@ -30,8 +30,8 @@ describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
   it("⭐⭐ the cap's normal is the SNAPPED heading's direction in F — the cap a side facing the camera (top: up; bottom: down)", () => {
     for (const hs of [0, 90 * D, 180 * D, -90 * D]) {
       const hh: Vec3 = [Math.cos(hs), 0, Math.sin(hs)];
-      const top = capTilt(hs, true);
-      const bot = capTilt(hs, false);
+      const top = capTilt(hs, [0, 1, 0]);
+      const bot = capTilt(hs, [0, -1, 0]);
       expect(dist(mulT(top, [0, 1, 0]), hh)).toBeLessThan(1e-12);
       expect(dist(mulT(bot, [0, -1, 0]), hh)).toBeLessThan(1e-12);
       // the tilt's axis is square to the heading and horizontal: the heading's square stays put
@@ -53,7 +53,7 @@ describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
     for (const hs of [0, 90 * D, 180 * D, -90 * D])
       for (const pitch of [50 * D, 65 * D, 80 * D])
         for (const top of [true, false]) {
-          const R = capTilt(hs, top);
+          const R = capTilt(hs, top ? [0, 1, 0] : [0, -1, 0]);
           const uW = dirOf(hs, top ? pitch : -pitch);
           const w = offsetFrame(uW, hs, 7 * D, -12 * D);
           const f = frameViaF(R, uW, 7 * D, -12 * D);
@@ -66,7 +66,7 @@ describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
     const psi = 32 * D;
     const hs = snapHeading(psi);
     const delta = hs - psi;
-    const R = capTilt(hs, true);
+    const R = capTilt(hs, [0, 1, 0]);
     const u0 = dirOf(psi, 60 * D);
     const uF = mulT(swingDir(R, delta, 0), u0); // the press: the orbit's angles in F
     expect(dist(mulM(swingDir(R, delta, 0), uF), u0)).toBeLessThan(1e-12);
@@ -94,7 +94,7 @@ describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
 
 describe("⭐⭐⭐ the face map in F on the REAL cube — the top a side, the gizmo kept, the lines square", () => {
   const hs = -90 * D;
-  const R = capTilt(hs, true);
+  const R = capTilt(hs, [0, 1, 0]);
   const hh: Vec3 = [Math.cos(hs), 0, Math.sin(hs)];
   const map = buildFaceMap(tiltFaces(cube.faces, R), tiltBox(cube.box, R));
   const world = buildFaceMap(cube.faces, cube.box);
@@ -213,6 +213,82 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"Make the roll back by finger && m
   });
 });
 
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"fix the gap\"* — *\"poles held by edges or slanted faces\"*) A FACE HOLDING A POLE, WHATEVER ITS SLANT", () => {
+  // a prism along x: its section a regular polygon in (z, y), `off` the first vertex's angle — a hexagon with a VERTEX up (an edge holds the pole: two faces
+  // at 60°), a square turned 45° (a diamond: two faces at 45°, none beyond — the pole held by an edge, a VIRTUAL cap)
+  const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const crs = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  function prism(sides: number, off: number, R0: number, h: number) {
+    const ring = (x: number) => [...Array(sides)].map((_, k) => [x, R0 * Math.sin(off + (2 * Math.PI * k) / sides), R0 * Math.cos(off + (2 * Math.PI * k) / sides)] as Vec3);
+    const A = ring(-h / 2);
+    const B = ring(h / 2);
+    const quads: Vec3[][] = [];
+    for (let k = 0; k < sides; k++) quads.push([A[k]!, B[k]!, B[(k + 1) % sides]!, A[(k + 1) % sides]!]);
+    quads.push([...B].reverse(), A);
+    const faces: MapFace[] = quads.map((vs) => {
+      const c = crs(sub(vs[1]!, vs[0]!), sub(vs[2]!, vs[0]!));
+      const l = Math.hypot(...c);
+      const tris: [Vec3, Vec3, Vec3][] = [];
+      for (let i = 1; i + 1 < vs.length; i++) tris.push([vs[0]!, vs[i]!, vs[i + 1]!]);
+      const centre = [0, 1, 2].map((k) => vs.reduce((s, v) => s + v[k]!, 0) / vs.length) as unknown as Vec3;
+      const n: Vec3 = [c[0] / l, c[1] / l, c[2] / l];
+      return { normal: dot(n, centre) < 0 ? ([-n[0], -n[1], -n[2]] as Vec3) : n, centre, tris };
+    });
+    const ys = A.map((v) => v[1]);
+    const zs = A.map((v) => v[2]);
+    return { faces, box: { lo: [-h / 2, Math.min(...ys), Math.min(...zs)] as Vec3, hi: [h / 2, Math.max(...ys), Math.max(...zs)] as Vec3 } };
+  }
+  const hs = -90 * D; // the camera at −z
+  const hh: Vec3 = [Math.cos(hs), 0, Math.sin(hs)];
+
+  it("⭐⭐⭐ the tilt lays the face's normal HORIZONTAL toward the camera — level (90°), slanted toward (60°) or away (120°) — and never rolls the view", () => {
+    for (const e of [90, 60, 120, 75]) {
+      const n: Vec3 = [0, Math.sin(e * D), Math.cos(e * D) * hh[2]]; // in the heading's vertical plane: e from hh toward up
+      const R = capTilt(hs, n);
+      expect(dist(mulT(R, n), hh)).toBeLessThan(1e-12);
+      for (const pitch of [50 * D, 70 * D]) {
+        const uW = dirOf(hs, pitch);
+        const w = offsetFrame(uW, hs, 7 * D, -12 * D);
+        const f = frameViaF(R, uW, 7 * D, -12 * D);
+        expect(dist(f.up, w.up)).toBeLessThan(1e-9);
+      }
+    }
+    // off the heading's plane (a face holding the pole whose slant faces sideways): still a side in F (its normal horizontal)
+    const n2: Vec3 = [0.3, 0.9, -Math.sqrt(1 - 0.09 - 0.81)];
+    expect(Math.abs(mulT(capTilt(hs, n2), n2)[1])).toBeLessThan(1e-12);
+  });
+
+  it("⭐⭐⭐ A HEXAGON WITH A VERTEX UP (an edge holds the pole): the face holding it, slanted 60°, is a SIDE in F square to the camera; ⛔ a quarter turn left it 30° off", () => {
+    const { faces, box } = prism(6, 30 * D, 0.17, 0.5);
+    const world = buildFaceMap(faces, box);
+    const cap = world.facets[world.top]!;
+    expect(cap.real).toBe(true);
+    expect(Math.asin(cap.n[1]) / D).toBeCloseTo(60, 6);
+    const R = capTilt(hs, cap.n);
+    const map = buildFaceMap(tiltFaces(faces, R), tiltBox(box, R));
+    const fi = map.facets.findIndex((f) => Math.abs(f.n[1]) < 1e-9 && dot(f.n, hh) > 0.999);
+    expect(fi).toBeGreaterThanOrEqual(0);
+    expect(map.facets[fi]!.kind).toBe("SIDE");
+    // ⛔ the quarter turn: that face 30° off the horizontal in F
+    const old = mulT(capTilt(hs, [0, 1, 0]), cap.n);
+    expect(Math.abs(Math.asin(old[1]) / D)).toBeCloseTo(30, 6);
+  });
+
+  it("⭐⭐ A DIAMOND (a square turned 45°, the pole on an edge, no face beyond 45° — a VIRTUAL cap): tilted as a level one, both faces beside the edge are sides in F", () => {
+    const { faces, box } = prism(4, 0, 0.2, 0.5);
+    const world = buildFaceMap(faces, box);
+    expect(world.facets[world.top]!.real).toBe(false);
+    const R = capTilt(hs, world.facets[world.top]!.n);
+    const map = buildFaceMap(tiltFaces(faces, R), tiltBox(box, R));
+    const up = faces.filter((f) => f.normal[1] > 0.5).map((f) => mulT(R, f.normal));
+    expect(up.length).toBe(2);
+    for (const n of up) {
+      const f = map.facets.find((q) => dist(q.n, n) < 1e-6);
+      expect(f?.kind).toBe("SIDE");
+    }
+  });
+});
+
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
   it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
     expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
@@ -260,7 +336,10 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), farDistance(st.cfg), st.cfg.tiltAutoPct);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
     expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null && st.asmGOff === null) tiltOn(st, "auto");');
-    expect(a).toContain("st.orbitUserV = o.v;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
+    expect(a).toContain("st.orbitUserV = o.v;");
+    // ⭐⭐ (the owner: *"fix the gap"*) any face holding a pole, tilted by its own angle — a virtual one (a pole on an edge) too
+    expect(a).toContain("const R1 = capTilt(hs, cap.n);");
+    expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its two sliders: on / off, and the press's swing (300 ms)", () => {
     expect(DEFAULT_CONFIG.tiltedPole).toBe(1);
