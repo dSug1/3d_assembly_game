@@ -48,11 +48,11 @@ const SCENARIOS = [
   ["bottom_dy_down_far_edge", -120, -62, [0, STEP], 420],
   // ⭐ (2026-11-10) the AUTOMATIC tilt (the 6th: the piece's distance from the gizmo, m; the 7th: reverse the drag this many frames after the tilt; the 8th:
   // no drag — the distance ramped [from, to] m over the drag's frames, the approach's way in / out)
-  ["auto_dy_up_front_over_top", -90, 15, [0, -STEP], 420, 1.2],
+  ["auto_dy_up_front_over_top", -90, 15, [0, -STEP], 420, 1.0],
   ["auto_dy_up_then_back_at_once", -90, 15, [0, -STEP], 420, 1.2, 4],
   ["auto_dy_up_corner_heading", -60, 15, [0, -STEP], 420, 1.2],
   ["auto_dx_round_the_sides", -90, 20, [STEP, 0], 300, 1.2],
-  ["auto_dy_down_front_to_bottom", -90, -10, [0, STEP], 260, 1.2],
+  ["auto_dy_down_front_to_bottom", -90, -10, [0, STEP], 260, 1.0],
   ["auto_dy_down_front_to_bottom_far", -90, -10, [0, STEP], 260, 1.7],
   ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.0]],
   // ⭐ (2026-11-10, the owner's decisions) the 9th: "stop" — the drag held still once the roll has begun (the tilt finishes by itself); "back" — reversed

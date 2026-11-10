@@ -480,14 +480,14 @@ export interface SceneState {
     facet: number;
     readonly delta: number;
     swingMs: number | null;
+    /** ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS` */
+    readonly swingDurMs: number;
     k: number;
     /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most `tiltRollDegS` (`rollStep`, `rollDurationMs`) */
     kT: number;
-    /** ⭐ (2026-11-10, the hysteresis) the gizmo once in the facet's middle: a roll back may be asked (`tiltExitTarget`) */
-    armed: boolean;
     /** ⭐ (2026-11-10) out past the automatic tilt's threshold: the tilt turned off (the roll back by time, then the world's frame) */
     off: boolean;
-    /** ⭐ (2026-11-10, the owner: *"it shall finish the tilt"*) the finger stopped in the stretch: the gizmo carried over the edge, the roll completed */
+    /** ⭐ (2026-11-10, the rebuild) the gizmo CROSSED the edge: the roll back under way, irreversible, the gizmo held until it is whole */
     finishing: boolean;
     /** ⭐ (2026-11-10) the roll's whole angle last frame (`frameMix`) — its duration at `tiltRollDegS` */
     rollRad: number;
@@ -495,7 +495,7 @@ export interface SceneState {
     exit: boolean;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
-  asmGOff: { readonly v: Vec3; left: number; readonly byTravel: boolean; /** ⭐ (2026-11-10) eased by time instead (the tilt turned off by distance): its clock */ timeMs?: number } | null;
+  asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;
   /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoPct` of the far distance, with its hysteresis) */
   asmTiltAuto: boolean;
   /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`poleEdgeWhole`, `tiltCalmWhole`) — 0: the calm as eased */
