@@ -224,11 +224,23 @@ export function twoFingerKind(d1: readonly [number, number], d2: readonly [numbe
  * every pitch. ⛔ In the world's frame and faded from 60° of pitch (`frameAtHeading` — the top roll's rule): a top face, approached steeply, lost them.
  */
 export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
+  return offsetFrameUp(u, uprightUp(u, h), yawRad, pitchRad);
+}
+
+/** ⭐ (2026-11-10) `offsetFrame`'s up before the offsets: upright at the heading `h`, square to `u`. */
+export function uprightUp(u: Vec3, h: number): Vec3 {
   const e = Math.asin(Math.max(-1, Math.min(1, u[1])));
   const heading: Vec3 = [Math.cos(h), 0, Math.sin(h)];
   const raw: Vec3 = [-Math.sin(e) * heading[0], Math.cos(e), -Math.sin(e) * heading[2]];
   const k = dot(raw, u);
-  const up0 = normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
+  return normalize([raw[0] - k * u[0], raw[1] - k * u[1], raw[2] - k * u[2]]) ?? ([0, 1, 0] as Vec3);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, branch `1.0.120c-`) `offsetFrame` from a GIVEN up (`up0`, square to `u`) — the owner's offsets turned in the camera's own frame as ever.
+ * With `uprightUp`'s: `offsetFrame` itself; with a CARRIED up (`carryUp`): the camera never realigned.
+ */
+export function offsetFrameUp(u: Vec3, up0: Vec3, yawRad: number, pitchRad: number): { readonly dir: Vec3; readonly up: Vec3 } {
   const c = Math.cos(pitchRad);
   const sn = Math.sin(pitchRad);
   const d1: Vec3 = [c * u[0] + sn * up0[0], c * u[1] + sn * up0[1], c * u[2] + sn * up0[2]];

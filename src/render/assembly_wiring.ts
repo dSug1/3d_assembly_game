@@ -10,7 +10,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, offsetFrameUp, uprightUp, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, carryUp, frameMix, gizmoGlide, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -959,10 +959,17 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     const lockN = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
     const sF = lockN === null ? calmDir(st, uF) : untiltDir(tl.dir, coneClamp(tiltDir(tl.dir, uF), lockN, st.asmLock!.cone ?? undefined));
     const fF = offsetFrame(sF, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
-    const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
+    let f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
     const uW = mulM(tl.dir, sF);
     const flat = Math.hypot(uW[0], uW[2]);
     const hW = flat > 1e-3 ? Math.atan2(uW[2], uW[0]) : Math.atan2(-f.up[2], -f.up[0]);
+    // ⭐⭐⭐ (2026-11-10, `1.0.120c-`) THE CAMERA NEVER REALIGNED: from the crossing the world camera's own up (`uprightUp`, as the world's branch built it),
+    // then carried frame to frame (`carryUp`) — no roll of its own; the roll back to upright at the exit as before (`frameMix` below)
+    if (tl.carry) {
+      const up0 = tl.up0 === null ? uprightUp(uW, hW) : (carryUp(tl.up0, uW) ?? uprightUp(uW, hW));
+      tl.up0 = up0;
+      f = offsetFrameUp(uW, up0, o.yawRad, o.pitchRad);
+    }
     const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
@@ -1131,7 +1138,11 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const cap = wm.facets[capStack]!;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const hs = snapHeading(q.yaw);
-  const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
+  // ⭐⭐⭐ (2026-11-10, `1.0.120c-`, the owner: *"do not realign the camera view in yaw when a horizontal edge is crossed"*) the automatic tilt: NO SWING — the
+  // frame still built square to the edge (`hs`: the sections square to the face), the orbit and the camera turned into it as they are (`delta` 0), the
+  // camera's up carried (`carry`); a press as before
+  const carry = why === "auto";
+  const delta = carry ? 0 : Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) THE CAMERA SWINGS FROM THE HEADING SHOWN: the calm carried over the
@@ -1139,10 +1150,10 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   // `deltaShown`); the orbit's angles are turned by their own (`D0`, `delta`: the gizmo and the solver exact). ⛔ By the orbit's `delta`: 20° off square, the
   // heading shown −83.7°, the swing started from the orbit's −70° (probed: −101.4°, then back to −90° over 20 frames)
   const sw = dirAt(st, q.yaw, q.v);
-  const deltaShown = Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
+  const deltaShown = carry ? 0 : Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false };
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false, carry, up0: null };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;

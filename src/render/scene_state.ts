@@ -495,6 +495,9 @@ export interface SceneState {
     exit: boolean;
     /** ⭐ (2026-11-10) the crossing off it is over a `b` end (a turn about the edge's line: the horizontal calm carried over), not across */
     exitAcross: boolean;
+    /** ⭐⭐⭐ (2026-11-10, `1.0.120c-`) the automatic tilt: no swing to square, the camera's up CARRIED (`carryUp`) — its last up (world), `null` until the first frame */
+    carry: boolean;
+    up0: Vec3 | null;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;

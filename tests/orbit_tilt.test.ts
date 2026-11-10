@@ -3,8 +3,8 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
-import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, carryUp, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { offsetFrame, offsetFrameUp, orbitDir, pitchOfV, uprightUp, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -416,6 +416,10 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
     expect(a).toContain('tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
     expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
+    // ⭐⭐⭐ (`1.0.120c-`) the automatic tilt: no swing, the camera's up carried from the crossing
+    expect(a).toContain("const delta = carry ? 0 : Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));");
+    expect(a).toContain("const up0 = tl.up0 === null ? uprightUp(uW, hW) : (carryUp(tl.up0, uW) ?? uprightUp(uW, hW));");
+    expect(a).toContain("f = offsetFrameUp(uW, up0, o.yawRad, o.pitchRad);");
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
@@ -447,5 +451,23 @@ describe("⭐⭐ wired", () => {
     expect(m).not.toContain('"tiltRollMinMs"');
     expect(DEFAULT_CONFIG.tiltAutoPct).toBe(20); // the owner's, 2026-11-10 (30 before)
     expect(m).toContain('"tiltAutoPct", 0, 100, 5');
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-10, `1.0.120c-`, the owner: *\"do not realign the camera view in yaw when a horizontal edge is crossed\"*) THE CAMERA'S UP CARRIED (`carryUp`, `offsetFrameUp`)", () => {
+  it("⭐⭐⭐ `offsetFrame` IS `offsetFrameUp` from the upright up (the world's camera unchanged); the carried up square to the new direction, the least turn", () => {
+    const u = orbitDir(-1.2, vOfPitch(0.6));
+    const a = offsetFrame(u, -1.2, 0.04, 0.03);
+    const b = offsetFrameUp(u, uprightUp(u, -1.2), 0.04, 0.03);
+    for (let i = 0; i < 3; i++) {
+      expect(a.dir[i]).toBeCloseTo(b.dir[i]!, 12);
+      expect(a.up[i]).toBeCloseTo(b.up[i]!, 12);
+    }
+    const up = carryUp([0, 1, 0], [0.6, 0, 0.8])!;
+    expect(up).toEqual([0, 1, 0]); // already square: kept
+    const up2 = carryUp([0, 1, 0], [0, Math.SQRT1_2, Math.SQRT1_2])!;
+    expect(up2[1]).toBeCloseTo(Math.SQRT1_2, 12);
+    expect(up2[2]).toBeCloseTo(-Math.SQRT1_2, 12);
+    expect(carryUp([0, 1, 0], [0, 1, 0])).toBeNull();
   });
 });

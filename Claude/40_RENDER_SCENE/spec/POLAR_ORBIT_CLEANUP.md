@@ -772,3 +772,19 @@ heading −83.6° … −83.8° all the way to the edge (was → −70.4°), the
 4.3° at 60°; found while probing, kept (the owner: the tilt of the assembly is the calm's); to be measured once the calm's fix is on the device.
 **Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
 (the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.
+
+### 9.11c NO REALIGNMENT IN YAW AT A TOP / BOTTOM EDGE (2026-11-10, branch `1.0.120c-` from `1.0.119-Fixes` — built, NOT deployed) — ⛔ no device close
+
+> The owner: *"from branch 1.0.119-Fixes also create a branch 1.0.120c-. in this branch, maintain the calm for all the faces when automatic tilt is toggled
+> on, however, do not realign the camera view in yaw when a horizontal edge is crossed. i accept that the red and green sections are not aligned with the
+> camera view in such case."*
+
+**Built**: the automatic tilt with NO SWING (`delta` 0): the tilted frame still built square to the edge (the sections square to the face), the orbit and
+the camera turned into it as they are; the calm on every face as `1.0.119-Fixes`. ⭐ **The camera's up CARRIED** while tilted (`carryUp`,
+`offsetFrameUp`, `uprightUp`): from the crossing the world camera's own up, then made square to each frame's direction by the least turn — never realigned
+(⛔ rebuilt upright in the tilted frame: with the camera off square its up would roll at the crossing — ~35° at 26° off square, computed); the roll back
+to upright at the exit as before (timed, the gizmo held). A press tilt (far out) as before.
+**Walked** (the loops at 1.0 m): the first tilt near a vertical edge 3.5° of look, 3.2 – 3.9° of roll in a frame (was 14 – 17° / 18 – 20°); the heading
+kept through the crossing (−116° → −122°: the orbit's own, no square); mid-face unchanged; ⚠ the heading not squared — it wanders round the loop (−116°,
+100°, −101°, 95°, −95°).
+**Vectors**: `orbit_tilt.test.ts` (`carryUp`, `offsetFrameUp` = `offsetFrame`, the wiring). **1733**.

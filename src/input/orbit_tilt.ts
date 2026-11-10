@@ -253,6 +253,20 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
   return (mouth.hi && dPitch > 0) || (mouth.lo && dPitch < 0);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-10, branch `1.0.120c-`, the owner: *"maintain the calm for all the faces when automatic tilt is toggled on, however, do not realign the
+ * camera view in yaw when a horizontal edge is crossed. i accept that the red and green sections are not aligned with the camera view"*) THE CAMERA'S UP
+ * CARRIED: last frame's up made square to this frame's direction `u` (the least turn — no roll of its own). ⛔ Rebuilt upright in the tilted frame (built
+ * square to the edge): with the camera not swung to square, its up would roll at the crossing — ~35° at 26° off square (computed). `null` when `up` lies
+ * along `u` (none to carry).
+ */
+export function carryUp(up: Vec3, u: Vec3): Vec3 | null {
+  const k = dot(up, u);
+  const v: Vec3 = [up[0] - k * u[0], up[1] - k * u[1], up[2] - k * u[2]];
+  const l = Math.hypot(v[0], v[1], v[2]);
+  return l > 1e-6 ? [v[0] / l, v[1] / l, v[2] / l] : null;
+}
+
 export const TILT_AUTO_HYST_PCT = 5;
 export function tiltAutoLatch(on: boolean, distM: number, farM: number, pct: number): boolean {
   if (!(pct > 0) || !(farM > 0)) return false;
