@@ -669,7 +669,7 @@ rest, the carry, the share clamp) is REPLACED — its rules answered a stretch R
    any face holding a pole by its own angle, the automatic latch (20 % / 25 %). A relocation of the gizmo where a frame change moves it: by time (with the
    swing; after an exit 45°'s time at the speed — 125 ms).
 6. **THE FACE MAP'S SLOW STRETCH THROUGH AN EDGE REMOVED** (3 — *"remove it"*): `faceEdgeSlideMm` / `faceEdgeSlideDeg` (10 mm / 10° since 2026-11-04)
-   deleted with their sliders; the map's knobs zero (`MAP_OPTS`). ⚠ **Its cost, measured** (the page, the gizmo swept over the whole map every 0.25°): the
+   deleted with their sliders; the map's knobs zero (`MAP_OPTS`). ⚠ **Its cost, measured** (✅ answered by the glide at an edge, §9.8) (the page, the gizmo swept over the whole map every 0.25°): the
    blend through an edge it carried went with it — the gizmo now STEPS where the real outline is not the map's at an edge: **110 mm** at the bottom edge
    (pitch −45°, yaw 180° / 225°), **85 mm** at the top edge (yaw 135°), 50 – 58 mm at slice ends round yaw 131° – 135° (pitch −60°, 40°); 41 mm over the face
    holding the top pole (Piece44 — stepped before too, §8.7); continuous mid-height round the sides (≤ 1.4 mm). The blend alone (no slowing) can be
@@ -680,3 +680,21 @@ turn — ≤ 11.5° a frame); a finger reversed just after a crossing neither st
 the gizmo still; the automatic tilt at 1.0 m: onto the face holding the pole and back at the next crossing (the held-dy loop of §9.6 unchanged).
 **Vectors**: `tests/orbit_tilt.test.ts` (the share, the arming, the finish, the carry and the clamp deleted with their rules; the speed, the hold, the timed
 roll added); `face_map.test.ts`'s stretch vector now asserts its removal. **1724**.
+
+### 9.8 ✅ THE GLIDE AT AN EDGE (2026-11-10, `1.0.119-`) — ⛔ no device close
+
+> The owner: *"What causes the jumps? Explain with a sketch"* → the three options (the blend alone, a glide by time at the edge, leave them) → *"Build 2"*.
+
+**The cause** (measured in the page): the gizmo is the contour's point pushed in along the FACET's normal onto the parts (D3). Where a NOTCH is cut along an
+edge the contour's corner lies in empty space, and the two facets' rays land on the notch's two different walls: at the cube's bottom edge (yaw 180°,
+pitch −45°) the −x side's ray meets Piece30 at x −147, the bottom's meets Piece37 at y 74 — **110 mm** in one 0.25° step; at the top edge (yaw 135°,
+pitch 45°) the side's ray meets nothing (the void rule: the side's plane), the top's drops onto the notch's floor (Piece25, y 414) — **85 mm**. The
+stretch's blend (removed, §9.7) had glided A → B over the last 10° before the edge.
+
+**Built** (`edgeGlide`, `input/orbit_tilt.ts`; the wiring's per-frame gizmo): when the map hands the gizmo to the next facet and its point jumps more than
+`EDGE_GLIDE_MIN_M` (5 mm — a plain convex edge: both rays meet at its corner, nothing), the switch stays AT the edge and the jump is eased by time
+(`asmGOff`, the piece's ring with it) over 45°'s time at the tilt speed (125 ms at 360°/s). A frame change keeps its own relocation.
+**Probed** (`tilt_probe.mjs`, `glide_*`): the bottom edge 110 mm → 18 + 34 + 31 + 13 mm over four frames; the top edge 85 mm → 22 + 34 + 24 mm.
+⚠ **Not an edge, not glided**: inside a face, the gizmo leaving a notch's floor for the face's surface (the notch's own wall — D3's real depth): 90 mm on
+the top (y 414 → 499), 62 mm on the bottom (y 74 → 15) — as before the rebuild (§6 (a): the owner, *"normal, even with small jumps"*).
+**Vectors**: `orbit_tilt.test.ts` +2 (the measured 110 mm case; none on one facet, under 5 mm, after a frame change). **1726**.

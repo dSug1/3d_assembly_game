@@ -288,6 +288,19 @@ export function rollDurationMs(rad: number, degS: number): number {
  * (the owner's hysteresis: *"the time required for the camera to align"*).
  * ⛔ (the same day, replaced) the roll started in the edge's stretch by the finger's share, reversible, then committed, finished on a rest, carried, clamped.
  */
+/**
+ * ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"* — the jumps at a notched edge, the stretch's blend removed) THE GLIDE AT AN EDGE: when the map hands the gizmo
+ * from one facet to the next (`prevStack` → `stack`) and its point jumps — each facet's ray landing on another wall of a notch cut along the edge (110 mm
+ * at the cube's bottom edge, 85 mm at its top) — the offset from the new point back to where it WAS shown (`prevShown`), to be eased out by time; `null`:
+ * no facet change, or a step under `minM` (a plain convex edge: both rays meet at its corner).
+ */
+export const EDGE_GLIDE_MIN_M = 0.005;
+export function edgeGlide(prevStack: number | null, stack: number, prevShown: Vec3 | null, raw: Vec3, minM: number = EDGE_GLIDE_MIN_M): Vec3 | null {
+  if (prevStack === null || prevShown === null || prevStack === stack) return null;
+  const v: Vec3 = [prevShown[0] - raw[0], prevShown[1] - raw[1], prevShown[2] - raw[2]];
+  return Math.hypot(v[0], v[1], v[2]) > minM ? v : null;
+}
+
 export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
   return swinging || (rolling && k < 1);
 }

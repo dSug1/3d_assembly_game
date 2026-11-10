@@ -57,6 +57,9 @@ const SCENARIOS = [
   ["auto_in_over_the_top", -70, 62, [0, 0], 120, 3.0, undefined, [3.0, 1.0]],
   // ⭐ (2026-11-10, the owner's decisions) the 9th: "stop" — the drag held still once the roll has begun (the tilt finishes by itself); "back" — reversed
   // once over the edge (committed: refused until the roll is whole); "fast" — 4 × the step through the edge (the clamp: never ahead of the roll)
+  // ⭐ (2026-11-10, *"Build 2"*) the glide at a notched edge: through the cube's bottom edge at yaw 180° (110 mm) and its top edge at yaw 135° (85 mm), far out
+  ["glide_bottom_edge_yaw180", 180, -35, [0, STEP], 60, 2.5],
+  ["glide_top_edge_yaw135", 135, 35, [0, -STEP], 60, 2.5],
   ["commit_stop_in_stretch", -90, 15, [0, -STEP], 420, 1.0, undefined, undefined, "stop"],
   ["commit_back_after_cross", -90, 15, [0, -STEP], 420, 1.0, undefined, undefined, "back"],
   ["commit_fast_finger", -90, 15, [0, -4 * STEP], 160, 1.0, undefined, undefined, "fast"],
