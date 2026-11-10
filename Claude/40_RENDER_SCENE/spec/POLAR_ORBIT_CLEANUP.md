@@ -7,7 +7,7 @@
 
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
-* ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.116from1.0.114-` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (tip `f96ddeb`; before it `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.117-`.
+* ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.117-Tilted-polar-orbit` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (the tilted pole, live as `6c6da30`; before it `1.0.116from1.0.114-`, `f96ddeb`; `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.118-`.
 * ⭐⭐⭐ **§9, THE TILTED POLE — BUILT 2026-11-10** (branch `1.0.117-`; the rule §9.4, as built and probed §9.5 — three sliders, the roll back by the finger with a 250 ms minimum; ⛔ no device close).
 * ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
   sections intricate — the owner went back to `1.0.112-`): F7b ported (the calm on slanted facets), the lines refined (I17's drawing), a closed void with a
@@ -587,6 +587,10 @@ threw every frame); fixed to read the lines' own joins (unverified joins count a
   (dx legs low down) — the world orbit's own corner crossing; the tilt changes where the random walks go next, and they pass those corners more often.
   Not established as the tilt's; the tilted face itself: every frame with the finger (the tilt probe).
 * ⚠ Only the top close in was re-walked after the fix (the other five as above, before it).
+
+✅ **THE OWNER (2026-11-10): *"The build is good."*** — the branch renamed `1.0.117-Tilted-polar-orbit`, the best piece orbit so far. ⏸ **The slide under the
+tilted pole** (the cone fixed above; what remains — a slide ending off the tilted facet, below): *"just record it: we will later work on the slide and this
+will solve by itself hopefully"* — nothing more built for it now.
 
 **Not done**: the slide ending OFF the tilted facet (it lets go at its edge, R6) would switch the frame with the roll eased by time only; the coast is
 stopped at a frame change (a flick across an edge stops there); the bottom's far edge probed, its grooves not. **Vectors**: `tests/orbit_tilt.test.ts` (16,
