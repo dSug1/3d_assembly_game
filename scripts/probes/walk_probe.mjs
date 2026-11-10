@@ -57,12 +57,13 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
   const v3 = (x) => (x && x.length === 3 ? [x[0], x[1], x[2]] : x && typeof x.x === "number" ? [x.x, x.y, x.z] : null);
   const segD = (p, a, b) => { const ab = [b[0]-a[0], b[1]-a[1], b[2]-a[2]]; const l2 = ab[0]*ab[0]+ab[1]*ab[1]+ab[2]*ab[2]; let t = l2 > 0 ? ((p[0]-a[0])*ab[0]+(p[1]-a[1])*ab[1]+(p[2]-a[2])*ab[2]) / l2 : 0; t = Math.max(0, Math.min(1, t));
     return Math.hypot(p[0]-a[0]-ab[0]*t, p[1]-a[1]-ab[1]*t, p[2]-a[2]-ab[2]*t); };
-  // a line's state: its breaks (the product's own join rule, sampleJoins: step <= 2.5 × the place's step + 2 mm), the gizmo's distance to its joined segments
-  const lineOf = (cache, closed, g) => { if (!cache) return null; const P = cache.pts.map(v3), S = cache.surf; const n = P.length; const br = []; let dmin = Infinity;
+  // a line's state: its breaks (⭐ 2026-11-10: the product's own joins, cache.joins — §8.7; ⛔ the speed rule read cache.surf, deleted with it: the
+  // recorder threw on every frame and the walks recorded NOTHING since §8.7), the gizmo's distance to its joined segments
+  const lineOf = (cache, closed, g) => { if (!cache) return null; const P = cache.pts.map(v3), S = (cache.vals ?? []).map((v) => (v ? v.s : null)), J = cache.joins ?? []; const n = P.length; const br = []; let dmin = Infinity;
     for (let k = 0; k < (closed ? n : n - 1); k++) { const j = (k + 1) % n; const a = P[k], b = P[j], sa = S[k], sb = S[j];
       if (!a || !b || !sa || !sb) { br.push([k, -1]); continue; }
       const box = Math.hypot(sb[0]-sa[0], sb[1]-sa[1], sb[2]-sa[2]); const d = Math.hypot(b[0]-a[0], b[1]-a[1], b[2]-a[2]);
-      if (d > 2.5 * box + 0.002) br.push([k, +(d * 1000).toFixed(1), +(box * 1000).toFixed(1)]); else if (g) dmin = Math.min(dmin, segD(g, a, b)); }
+      if (J[k] !== true) br.push([k, +(d * 1000).toFixed(1), +(box * 1000).toFixed(1)]); else if (g) dmin = Math.min(dmin, segD(g, a, b)); }
     return { key: cache.key, br, d: Number.isFinite(dmin) ? +(dmin * 1000).toFixed(1) : null }; };
   window.__lineKeys = window.__lineKeys ?? new Set();
   st.scene.onAfterRenderObservable.add(() => { try { const c = st.camera; const t = c.getTarget ? c.getTarget() : c.target; const g = v3(st.asmGizmoAt ?? null);

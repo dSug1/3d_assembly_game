@@ -467,8 +467,31 @@ export interface SceneState {
   asmShown: { readonly t: import("../input/face_map").MapTarget; readonly yaw: number; readonly pitch: number } | null;
   /** ⭐⭐⭐ (Step 4c-bis) the face map's angles — the orbit's, but after the slide (put where it left the gizmo, closing on the orbit's: `syncAngle`); `null`: the orbit's */
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
+  /**
+   * ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4) THE TILTED POLE (`input/orbit_tilt.ts`): the orbit's frame F while a pressed cap is a side — `map` F →
+   * world (the face map built in F), `dir` the directions' (the press's swing, `swingDir`), the tilted `facet` (F's map), the swing's `delta` and clock,
+   * `k` the share of the way off the facet (the roll back), `axis` the roll's last axis, `exit` the crossing seen (the world's frame next frame); `null`:
+   * the world's frame.
+   */
+  asmTilt: {
+    readonly id: number;
+    readonly map: import("../input/orbit_tilt").Mat3;
+    dir: import("../input/orbit_tilt").Mat3;
+    facet: number;
+    readonly delta: number;
+    swingMs: number | null;
+    k: number;
+    /** ⭐ (2026-11-10) the finger's share of the way off (`exitShare`; 1 beyond the facet) — `k` the roll SHOWN, following it at most 1 / `tiltRollMinMs` a ms (`rollStep`) */
+    kT: number;
+    axis: Vec3 | null;
+    exit: boolean;
+  } | null;
+  /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
+  asmGOff: { readonly v: Vec3; left: number; readonly byTravel: boolean } | null;
   /** ⭐⭐⭐ (Step 4c-bis) THE FACE MAP (`input/face_map.ts`), per placed set */
   asmFaceMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
+  /** ⭐⭐⭐ (2026-11-10, §9.4) the WORLD's face map, kept beside a tilted one (`asmFaceMap` is the frame's) */
+  asmWorldMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
    * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
   asmCalm: { n: Vec3; sH: number; sV: number } | null;
