@@ -30,7 +30,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, frameMix, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, edgeGlide, frameMix, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -622,6 +622,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const m = mapGizmo(st, mq.yaw, mq.pitch);
     if (m !== null) {
       hit = m.hit;
+      // ⭐⭐⭐ (2026-11-10, the owner: *"Build 2"*) THE GLIDE AT AN EDGE: the map hands the gizmo to the next facet and its point jumps (a notch cut along the
+      // edge — each facet's ray on another wall: 110 mm at the cube's bottom edge, 85 mm at its top): the switch kept AT the edge, the jump eased by time
+      // (`edgeGlide`, `asmGOff` — the piece's ring with it) over 45°'s time at the tilt speed (125 ms at 360°/s). ⛔ The stretch's blend (removed, §9.7)
+      // glided it over the last 10° before the edge. A frame change has its own relocation (`asmShown` null then: none here)
+      const glide = edgeGlide(st.asmShown?.t.stack ?? null, m.t.stack, st.asmG, m.hit.point);
+      if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
       tiltFrame(st, dtMs, m.t.stack);

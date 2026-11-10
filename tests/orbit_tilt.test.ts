@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, edgeGlide, frameMix, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWhole, tiltExits, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -319,6 +319,20 @@ describe("⭐⭐⭐ (2026-11-10, THE REBUILD — *\"once the tilt starts, it can
   });
 });
 
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"Build 2\"*) THE GLIDE AT AN EDGE — the switch at the edge, the jump eased by time", () => {
+  it("⭐⭐⭐ the cube's bottom edge (measured: the side's ray on Piece30 at x −147, the bottom's on Piece37 at y 74 — 110 mm): the offset back to where the gizmo was", () => {
+    const g = edgeGlide(2, 5, [-0.147, 0.016, 0.191], [-0.241, 0.074, 0.191]);
+    expect(g).not.toBeNull();
+    expect(Math.hypot(...g!) * 1000).toBeCloseTo(110.4, 0);
+    expect(dist([-0.241 + g![0], 0.074 + g![1], 0.191 + g![2]], [-0.147, 0.016, 0.191])).toBeLessThan(1e-12); // shown: exactly where it was
+  });
+  it("⭐⭐ none on the same facet, none at a plain convex edge (under 5 mm), none after a frame change (no last facet)", () => {
+    expect(edgeGlide(2, 2, [0, 0, 0], [0.2, 0, 0])).toBeNull();
+    expect(edgeGlide(2, 5, [0, 0, 0], [0.003, 0, 0])).toBeNull();
+    expect(edgeGlide(null, 5, [0, 0, 0], [0.2, 0, 0])).toBeNull();
+  });
+});
+
 describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles on automatically\"*) THE AUTOMATIC TILT and its hysteresis", () => {
   it("⭐⭐ the latch: on within 30 % of the far distance, off only beyond 35 % — an approach round the threshold never flickers it; 0 %: never", () => {
     expect(tiltAutoLatch(false, 1.8, 6, 30)).toBe(true);
@@ -356,6 +370,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
     expect(a).toContain("const swingDurMs = rollDurationMs(delta, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
+    expect(a).toContain("const glide = edgeGlide(st.asmShown?.t.stack ?? null, m.t.stack, st.asmG, m.hit.point);"); // ⭐ the glide at an edge
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
     expect(code("render/green_box_wiring.ts")).toContain("if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop();");
     expect(a).toContain("tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
