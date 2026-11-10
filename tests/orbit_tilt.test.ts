@@ -451,7 +451,7 @@ describe("⭐⭐ wired", () => {
     expect(DEFAULT_CONFIG.tiltRollDegS).toBe(360); // ⭐ (2026-11-10, *"yes"*) a speed, not a time (`tiltRollMinMs` deleted)
     expect(m).toContain('"tiltRollDegS", 0, 1440, 30');
     expect(m).not.toContain('"tiltRollMinMs"');
-    expect(DEFAULT_CONFIG.tiltAutoM).toBe(0.3); // the owner's, 2026-11-10 (20 % of the far distance before, 30 % before that)
+    expect(DEFAULT_CONFIG.tiltAutoM).toBe(0.6); // the owner's, 2026-11-10 (0.3 m first, then *"correction: set the default at 0.6m"*) (20 % of the far distance before, 30 % before that)
     expect("tiltAutoPct" in DEFAULT_CONFIG).toBe(false);
     expect(m).toContain('"tiltAutoM", 0, 3, 0.05');
   });
