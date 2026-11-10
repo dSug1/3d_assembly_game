@@ -7,8 +7,8 @@
 
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
-* ⭐⭐⭐ **THE OWNER (2026-11-09): `1.0.111-Polar-orbit-fixes` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (live as `eef4be0`) — the reference to come back to; work goes on from it on `1.0.112-`.
-* ⭐⭐⭐ **NEXT TO BUILD — §9, THE TILTED POLE** (branch `1.0.116from1.0.114-`; the owner's four decisions open, §9.2).
+* ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.116from1.0.114-` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (tip `f96ddeb`; before it `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.117-`.
+* ⭐⭐⭐ **NEXT TO BUILD — §9, THE TILTED POLE** (branch `1.0.117-`; the owner's four decisions open, §9.2).
 * ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
   sections intricate — the owner went back to `1.0.112-`): F7b ported (the calm on slanted facets), the lines refined (I17's drawing), a closed void with a
   floor keeps its depth (the owner's amendment), a line broken only where the gizmo jumps + the lift along the real surface (§8.7); open: I17's reach by a finger far out, and the input-driven design on world-plane cuts (proposed, §8.5).
@@ -346,6 +346,8 @@ there**:
 **The root**: the gizmo moves by ANGLE (`mapGizmo` of the orbit's yaw / pitch), so a face seen nearly edge-on from the map's centre — a proud part's side,
 37 mm deep — is a fraction of a degree, whatever its size; the drawn lines sample by angle too. Every narrow face far out has it.
 
+⏸ **The owner (2026-11-10): *"do nothing for the moment"*** — recorded for a later possible improvement.
+
 **Candidate fixes**: ✅ (a) BUILT (2026-11-09, the owner: *"build the fix"*) — §8.4; (b), (c) not built. (a) the lines sampled ADAPTIVELY — subdivided where the depth changes between two neighbours until they follow the
 surface within ~1 mm (drawing only, cached per line) — fixes 3, not 1 – 2; (b) ⭐ the gizmo moved by DISTANCE on the surface rather than by angle (the
 input-driven gizmo on world-plane cuts, the Fable simulation of 2026-11-09: the slanted face is then 37 mm of travel at any distance, the lines the exact
@@ -443,7 +445,7 @@ unverified (broken, no chord), settled — a jump (cut).
 
 **Vectors**: `tests/line_joins.test.ts` (4, all RED on `2879172`: `pathJoins` absent); `line_refine.test.ts`'s wiring string. **1700**.
 
-## 9. ⭐⭐⭐ NEXT TO BUILD — THE TILTED POLE: the pressed cap becomes a side (proposed 2026-11-09, branch `1.0.116from1.0.114-`; ⛔ NOT BUILT — the owner's decisions open)
+## 9. ⭐⭐⭐ NEXT TO BUILD — THE TILTED POLE: the pressed cap becomes a side (proposed 2026-11-09, now branch `1.0.117-`; ⛔ NOT BUILT — the owner's decisions open)
 
 > The owner: *"create a new rule: when the left click or finger is pressed for orbiting, the orbit tilts so the face currently holding the gizmo becomes
 > the one with the red and green sections which are perpendicular (currently these are the vertical faces which have the red and green sections
