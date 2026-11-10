@@ -249,17 +249,32 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, branch `1.0.120c-`, the owner: *"maintain the calm for all the faces when automatic tilt is toggled on, however, do not realign the
- * camera view in yaw when a horizontal edge is crossed. i accept that the red and green sections are not aligned with the camera view"*) THE CAMERA'S UP
- * CARRIED: last frame's up made square to this frame's direction `u` (the least turn — no roll of its own). ⛔ Rebuilt upright in the tilted frame (built
- * square to the edge): with the camera not swung to square, its up would roll at the crossing — ~35° at 26° off square (computed). `null` when `up` lies
- * along `u` (none to carry).
+ * ⭐⭐⭐ (2026-11-10, branch `1.0.120b-`, the owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already
+ * have a mechanism to cross the edges"* → *"build the square camera close in"*) THE SQUARE CAMERA'S TURN, one frame: the camera's direction `n` turned
+ * toward the gizmo's face's normal `target` at ONE SPEED (`degS`, the tilts' — 90° in 0.25 s at 360°/s), about their common perpendicular (`fallback`
+ * when they are opposite). Every edge is then a frame change: a vertical edge a 90° turn, a top / bottom edge the tilt's (the camera square already: no
+ * swing). `null` target: as it is.
  */
-export function carryUp(up: Vec3, u: Vec3): Vec3 | null {
-  const k = dot(up, u);
-  const v: Vec3 = [up[0] - k * u[0], up[1] - k * u[1], up[2] - k * u[2]];
-  const l = Math.hypot(v[0], v[1], v[2]);
-  return l > 1e-6 ? [v[0] / l, v[1] / l, v[2] / l] : null;
+export function squareTurn(n: Vec3, target: Vec3 | null, dtMs: number, degS: number, fallback: Vec3): Vec3 {
+  if (target === null) return n;
+  const c = Math.max(-1, Math.min(1, dot(n, target)));
+  const ang = Math.acos(c);
+  if (ang < 1e-9) return target;
+  const step = degS > 0 ? Math.min(ang, (degS * Math.PI) / 180 * (Math.max(0, dtMs) / 1000)) : ang;
+  if (step >= ang - 1e-12) return target;
+  let ax = cross(n, target);
+  let l = Math.hypot(ax[0], ax[1], ax[2]);
+  if (l < 1e-9) {
+    ax = fallback;
+    l = Math.hypot(ax[0], ax[1], ax[2]);
+  }
+  return rotateAbout(n, [ax[0] / l, ax[1] / l, ax[2] / l], step);
+}
+
+/** ⭐ (`1.0.120b-`) the square camera still turning: more than half a degree from its face's normal — the gizmo held meanwhile (as a tilt's). */
+export function squareTurning(n: Vec3 | null, target: Vec3 | null, q: number): boolean {
+  if (n === null || target === null || !(q > 0.5)) return false;
+  return dot(n, target) < Math.cos((0.5 * Math.PI) / 180);
 }
 
 /**

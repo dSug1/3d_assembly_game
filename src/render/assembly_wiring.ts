@@ -10,7 +10,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, offsetFrameUp, uprightUp, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -26,11 +26,12 @@ import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import { calmHeading, calmShown, calmStep, calmTarget } from "../input/orbit_calm";
+import { facetFrame } from "../input/face_map";
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, carryUp, frameMix, gizmoGlide, mouthHold, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -202,8 +203,32 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   const tl = st.asmTilt;
   const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
   const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
-  if (c !== null && (kH > 0 || kV > 0)) return calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 });
-  return calmShown(u, c);
+  const base = c !== null && (kH > 0 || kV > 0) ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 }) : calmShown(u, c);
+  // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
+  const sq = st.asmSquare;
+  if (sq.n === null || !(sq.q > 0)) return base;
+  const m: Vec3 = [base[0] * (1 - sq.q) + sq.n[0] * sq.q, base[1] * (1 - sq.q) + sq.n[1] * sq.q, base[2] * (1 - sq.q) + sq.n[2] * sq.q];
+  const l = Math.hypot(m[0], m[1], m[2]);
+  return l > 1e-9 ? [m[0] / l, m[1] / l, m[2] / l] : base;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA'S FRAME: its target the normal of the gizmo's face in the map's frame (a side facet, or the tilted one —
+ * none over a cap of the world's frame: the automatic tilt comes next), its direction turned there at the tilts' one speed (`squareTurn`), its share in
+ * with the automatic tilt (`q`, eased over 125 ms).
+ */
+function squareFrame(st: SceneState, dtMs: number): void {
+  const sq = st.asmSquare;
+  const sh = st.asmShown;
+  const tl = st.asmTilt;
+  const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
+  sq.target = sh === null || onCap ? sq.target : sh.t.normal;
+  if (sq.n === null) sq.n = sq.target;
+  if (sq.n !== null) {
+    const { t } = facetFrame(sq.n);
+    sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);
+  }
+  sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
 }
 
 /**
@@ -228,6 +253,7 @@ function calmFrame(st: SceneState, dtMs: number): void {
   const prev = st.asmCalmWhole;
   const prevV = st.asmCalmWholeV;
   calmTargets(st, dtMs);
+  squareFrame(st, dtMs);
   st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);
   st.asmCalmWholeV = wholeShareStep(prevV, st.asmCalmWholeV, dtMs, st.cfg.gizmoEaseMs);
 }
@@ -959,17 +985,13 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     const lockN = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
     const sF = lockN === null ? calmDir(st, uF) : untiltDir(tl.dir, coneClamp(tiltDir(tl.dir, uF), lockN, st.asmLock!.cone ?? undefined));
     const fF = offsetFrame(sF, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
-    let f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
+    const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
     const uW = mulM(tl.dir, sF);
-    const flat = Math.hypot(uW[0], uW[2]);
-    const hW = flat > 1e-3 ? Math.atan2(uW[2], uW[0]) : Math.atan2(-f.up[2], -f.up[0]);
-    // ⭐⭐⭐ (2026-11-10, `1.0.120c-`) THE CAMERA NEVER REALIGNED: from the crossing the world camera's own up (`uprightUp`, as the world's branch built it),
-    // then carried frame to frame (`carryUp`) — no roll of its own; the roll back to upright at the exit as before (`frameMix` below)
-    if (tl.carry) {
-      const up0 = tl.up0 === null ? uprightUp(uW, hW) : (carryUp(tl.up0, uW) ?? uprightUp(uW, hW));
-      tl.up0 = up0;
-      f = offsetFrameUp(uW, up0, o.yawRad, o.pitchRad);
-    }
+    // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) the roll's target EXACTLY the world's camera after the exit — the orbit's world yaw through `calmHeading`, as the world's
+    // branch builds it (⛔ a vertical view's heading read off this camera's own up: the target equal to it, the roll 0 ms, then the 180° flip in one frame
+    // when the world's branch took over — the square camera looking straight down at the tilted top)
+    const uOW = mulM(tl.dir, uF);
+    const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, uW);
     const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
@@ -1053,7 +1075,9 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
  */
 export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {
   const tl = st.asmTilt;
-  if (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k)) return false;
+  // ⭐⭐⭐ (`1.0.120b-`) …and while the square camera turns through an edge (`squareTurning`): every edge a frame change
+  const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
+  if (!turning && (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k))) return false;
   if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
   st.orbit.reset(yaw0, v0);
   return true;
@@ -1138,11 +1162,7 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const cap = wm.facets[capStack]!;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const hs = snapHeading(q.yaw);
-  // ⭐⭐⭐ (2026-11-10, `1.0.120c-`, the owner: *"do not realign the camera view in yaw when a horizontal edge is crossed"*) the automatic tilt: NO SWING — the
-  // frame still built square to the edge (`hs`: the sections square to the face), the orbit and the camera turned into it as they are (`delta` 0), the
-  // camera's up carried (`carry`); a press as before
-  const carry = why === "auto";
-  const delta = carry ? 0 : Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
+  const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) THE CAMERA SWINGS FROM THE HEADING SHOWN: the calm carried over the
@@ -1150,10 +1170,10 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   // `deltaShown`); the orbit's angles are turned by their own (`D0`, `delta`: the gizmo and the solver exact). ⛔ By the orbit's `delta`: 20° off square, the
   // heading shown −83.7°, the swing started from the orbit's −70° (probed: −101.4°, then back to −90° over 20 frames)
   const sw = dirAt(st, q.yaw, q.v);
-  const deltaShown = carry ? 0 : Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
+  const deltaShown = Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false, carry, up0: null };
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;
@@ -1163,6 +1183,10 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const fi = facetOfNormal(map, mulT(R1, cap.n), gF);
   st.asmTilt.facet = fi;
   turnAngles(st, (d) => mulT(D0, d));
+  // ⭐⭐⭐ (`1.0.120b-`) the square camera into F (the directions' frame): turned there from where it is, never jumped
+  const sqB = st.asmSquare;
+  if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);
+  if (sqB.target !== null) sqB.target = mulT(st.asmTilt.dir, sqB.target);
   const mq = mapAngles(map, gF, fi, mapOpts(st));
   st.asmMapQ = mq;
   const m = mapGizmo(st, mq.yaw, mq.pitch);
@@ -1196,6 +1220,10 @@ function tiltOff(st: SceneState): void {
   const sh = st.asmShown;
   const nW = fm !== null && sh !== null ? mulM(tl.map, fm.facets[sh.t.stack]!.n) : null;
   turnAngles(st, (d) => mulM(D, d));
+  // ⭐⭐⭐ (`1.0.120b-`) the square camera out of F, as it is
+  const sqO = st.asmSquare;
+  if (sqO.n !== null) sqO.n = mulM(D, sqO.n);
+  if (sqO.target !== null) sqO.target = mulM(D, sqO.target);
   // ⭐⭐⭐ (2026-11-10) THE CALM CARRIED OUT OF F: over a `b` end (a turn about the edge's line) the new side's normal at once, the horizontal share kept;
   // across, both whole (⛔ both whole always: the calmed yaw released at every exit, then calmed again — a swing there and back)
   if (st.asmCalm !== null) st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };

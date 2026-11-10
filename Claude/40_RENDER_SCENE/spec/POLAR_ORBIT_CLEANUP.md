@@ -773,23 +773,31 @@ heading −83.6° … −83.8° all the way to the edge (was → −70.4°), the
 **Vectors**: `orbit_tilt.test.ts` (the share's lag, the two whole parts, the mouth's hand-over, the cap's release, the wiring), `void_bridge.test.ts`
 (the mouth; `closedAlong`'s ends), `orbit_calm.test.ts`, `calm_slanted.test.ts`. **1732**.
 
-### 9.11c NO REALIGNMENT IN YAW AT A TOP / BOTTOM EDGE (2026-11-10, branch `1.0.120c-` from `1.0.119-Fixes` — built, NOT deployed) — ⛔ no device close
+### 9.11b THE SQUARE CAMERA CLOSE IN (2026-11-10, branch `1.0.120b-`, renamed `1.0.120b-Orthogonal-tilted-poles` — ⭐⭐⭐ THE WAY FORWARD, §9.12; deployed once as `58f63c5`) — ⛔ no device close
 
-> The owner: *"from branch 1.0.119-Fixes also create a branch 1.0.120c-. in this branch, maintain the calm for all the faces when automatic tilt is toggled
-> on, however, do not realign the camera view in yaw when a horizontal edge is crossed. i accept that the red and green sections are not aligned with the
-> camera view in such case."*
+> The owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already have a mechanism to cross the edges
+> and the calm is not required, is it?"* → *"build the square camera close in branch 1.0.120b-. we will deploy this branch later on"*. (`1.0.120a-`, the
+> heading squared by position, is §9.11 on its own branch.)
 
-**Built**: the automatic tilt with NO SWING (`delta` 0): the tilted frame still built square to the edge (the sections square to the face), the orbit and
-the camera turned into it as they are; the calm on every face as `1.0.119-Fixes`. ⭐ **The camera's up CARRIED** while tilted (`carryUp`,
-`offsetFrameUp`, `uprightUp`): from the crossing the world camera's own up, then made square to each frame's direction by the least turn — never realigned
-(⛔ rebuilt upright in the tilted frame: with the camera off square its up would roll at the crossing — ~35° at 26° off square, computed); the roll back
-to upright at the exit as before (timed, the gizmo held). A press tilt (far out) as before.
-**Walked** (the loops at 1.0 m): the first tilt near a vertical edge 3.5° of look, 3.2 – 3.9° of roll in a frame (was 14 – 17° / 18 – 20°); the heading
-kept through the crossing (−116° → −122°: the orbit's own, no square); mid-face unchanged; ⚠ the heading not squared — it wanders round the loop (−116°,
-100°, −101°, 95°, −95°).
-**Vectors**: `orbit_tilt.test.ts` (`carryUp`, `offsetFrameUp` = `offsetFrame`, the wiring). **1733**.
+**Built** (`squareTurn`, `squareTurning`, `squareFrame`, `asmSquare`): with the automatic tilt on, the camera's direction is the gizmo's face's NORMAL — no
+calm — over the calm by `q` (eased over 125 ms as the automatic latch turns on / off); every edge a frame change: the normal turned to the next face's at
+the tilts' one speed (360°/s: a vertical edge's 90° in 0.25 s), the gizmo held meanwhile (`tiltClampStep`); a top / bottom edge the tilt (the camera
+square already: no swing), the square camera carried into F and out of it as it is, then turned. ⭐ The roll back's target built exactly as the world's
+camera after the exit (`calmHeading` on the orbit's world yaw) — ⛔ a vertical view's heading read off the tilted camera's own up: the target equal to it,
+the roll 0 ms, then a 180° flip in one frame (walked, the square camera looking straight down at the tilted top).
+**Walked** (the loops at 1.0 m): within a face 0.00° of look a frame (the camera pans square); each crossing a 90° turn over 0.25 s with ~1° of roll;
+the far edge's roll back over 0.5 s. ⚠ The first finger event after a crossing still moves the gizmo once (the hold starts with the turn's target, one
+frame later).
+**Vectors**: `orbit_tilt.test.ts` (`squareTurn`, `squareTurning`, the wiring). **1734**.
 
-**The automatic tilt's threshold in METRES** (2026-11-10, on `1.0.120a-`, `1.0.120b-`, `1.0.120c-`; the owner: *"instead Percent use m for the slider tilted
-pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*): `tiltAutoM` 0.6 m (☰ → CAMERA → CAMERA ORBIT
-AROUND CENTER, 0 – 3 m, step 0.05), off beyond 0.65 m (`TILT_AUTO_HYST_M`) — ⛔ `tiltAutoPct` (20 % of the far distance: 1.2 m on `Scene_1`, off beyond
-25 %) deleted. `1.0.120c-` deployed with it.
+### 9.12 ⭐⭐⭐ THE WAY FORWARD: `1.0.120b-Orthogonal-tilted-poles` (2026-11-10, the owner) — ⛔ no device close
+
+> The owner: *"rename branch 1.0.120b- to 1.0.120b-Orthogonal-tilted-poles in remote and local. we will use this branch as the way forward."*
+
+Of the three answers to the jolt at a tilt near a vertical edge (§9.11), the owner chose **the square camera close in** (§9.11b): with the automatic
+tilt on (within 0.6 m of the gizmo, `tiltAutoM`), no calm — the camera square to the gizmo's face, every edge a frame change made at one speed with the
+gizmo held: a top / bottom edge the tilt (no swing), a vertical edge a 90° turn in 0.25 s. Far out the calm as before (`1.0.119-Fixes`, §9.10).
+The two others stay on their branches as the record: `1.0.120a-` (the heading squared by position, §9.11 on its branch) and `1.0.120c-` (no yaw
+realignment, the camera's up carried, §9.11c on its branch — live as `b7dccd0` when this was decided; `main` not redeployed from this branch yet).
+**Open, from the walks**: the first finger event after a crossing still moves the gizmo once before the hold (§9.11b); the far edge's roll back (180°,
+0.5 s) unchanged — the owner has not said whether it is part of the shake felt. **1734** vectors.

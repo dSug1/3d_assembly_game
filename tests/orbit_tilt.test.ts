@@ -3,8 +3,8 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, carryUp, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
-import { offsetFrame, offsetFrameUp, orbitDir, pitchOfV, uprightUp, vOfPitch } from "../src/input/assembly_orbit";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -407,7 +407,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("if (!onFacet && !tl.finishing) {"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
-    expect(a).toContain("if (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k)) return false;"); // ⭐ 1-b: held
+    expect(a).toContain("if (!turning && (tl === null || !tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k))) return false;"); // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
     expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — ⭐ (2026-11-10) the camera's own swing: from the heading SHOWN
@@ -417,10 +417,13 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
     expect(a).toContain('tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
     expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
-    // ⭐⭐⭐ (`1.0.120c-`) the automatic tilt: no swing, the camera's up carried from the crossing
-    expect(a).toContain("const delta = carry ? 0 : Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));");
-    expect(a).toContain("const up0 = tl.up0 === null ? uprightUp(uW, hW) : (carryUp(tl.up0, uW) ?? uprightUp(uW, hW));");
-    expect(a).toContain("f = offsetFrameUp(uW, up0, o.yawRad, o.pitchRad);");
+    // ⭐⭐⭐ (`1.0.120b-`) the square camera close in: over the calm by `q`, turned at one speed, the gizmo held meanwhile, carried through the tilt's frames
+    expect(a).toContain("sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);");
+    expect(a).toContain("const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);");
+    expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);");
+    expect(a).toContain("if (sqO.n !== null) sqO.n = mulM(D, sqO.n);");
+    // ⭐⭐⭐ the roll back's target the world's camera exactly (⛔ a vertical view's heading off its own up: 0 ms, then a 180° flip)
+    expect(a).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, uW);");
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
@@ -456,20 +459,23 @@ describe("⭐⭐ wired", () => {
   });
 });
 
-describe("⭐⭐⭐ (2026-11-10, `1.0.120c-`, the owner: *\"do not realign the camera view in yaw when a horizontal edge is crossed\"*) THE CAMERA'S UP CARRIED (`carryUp`, `offsetFrameUp`)", () => {
-  it("⭐⭐⭐ `offsetFrame` IS `offsetFrameUp` from the upright up (the world's camera unchanged); the carried up square to the new direction, the least turn", () => {
-    const u = orbitDir(-1.2, vOfPitch(0.6));
-    const a = offsetFrame(u, -1.2, 0.04, 0.03);
-    const b = offsetFrameUp(u, uprightUp(u, -1.2), 0.04, 0.03);
-    for (let i = 0; i < 3; i++) {
-      expect(a.dir[i]).toBeCloseTo(b.dir[i]!, 12);
-      expect(a.up[i]).toBeCloseTo(b.up[i]!, 12);
-    }
-    const up = carryUp([0, 1, 0], [0.6, 0, 0.8])!;
-    expect(up).toEqual([0, 1, 0]); // already square: kept
-    const up2 = carryUp([0, 1, 0], [0, Math.SQRT1_2, Math.SQRT1_2])!;
-    expect(up2[1]).toBeCloseTo(Math.SQRT1_2, 12);
-    expect(up2[2]).toBeCloseTo(-Math.SQRT1_2, 12);
-    expect(carryUp([0, 1, 0], [0, 1, 0])).toBeNull();
+describe("⭐⭐⭐ (2026-11-10, `1.0.120b-`, the owner: *\"build the square camera close in\"*) THE SQUARE CAMERA'S TURN (`squareTurn`, `squareTurning`)", () => {
+  const Dg = Math.PI / 180;
+  it("⭐⭐⭐ a vertical edge: 90° at the tilts' speed (360°/s) — a quarter in 62.5 ms, whole in 250 ms, never past; opposite normals about the fallback", () => {
+    let n: Vec3 = [0, 0, -1];
+    const t: Vec3 = [1, 0, 0];
+    n = squareTurn(n, t, 62.5, 360, [0, 1, 0]);
+    expect(Math.acos(n[0] * t[0] + n[1] * t[1] + n[2] * t[2]) / Dg).toBeCloseTo(67.5, 6);
+    for (let i = 0; i < 10; i++) n = squareTurn(n, t, 62.5, 360, [0, 1, 0]);
+    expect(n).toEqual(t);
+    const o = squareTurn([0, 0, -1], [0, 0, 1], 125, 360, [0, 1, 0]); // 45° about the fallback
+    expect(Math.acos(-o[2]) / Dg).toBeCloseTo(45, 6);
+    expect(squareTurn([0, 0, -1], null, 100, 360, [0, 1, 0])).toEqual([0, 0, -1]);
+  });
+  it("⭐⭐ turning while more than half a degree off its face's normal and the square camera in (q > 0.5): the gizmo held", () => {
+    expect(squareTurning([0, 0, -1], [1, 0, 0], 1)).toBe(true);
+    expect(squareTurning([0, 0, -1], [0, 0, -1], 1)).toBe(false);
+    expect(squareTurning([0, 0, -1], [1, 0, 0], 0.2)).toBe(false);
+    expect(squareTurning(null, [1, 0, 0], 1)).toBe(false);
   });
 });
