@@ -58,8 +58,24 @@ export function orbitDir(yaw: number, v: number): Vec3 {
  * frame (`exact` — the accepted drop the two lines are drawn through; locked, the lock's point), else the eased one. The orbit's centre (the piece, the
  * camera) keeps its ease: a drop that changes surface does not jump the piece. ⛔ The ring at the eased point trailed the lines by 90 ms.
  */
-export function gizmoShownAt(exact: Vec3 | null, eased: Vec3): Vec3 {
-  return exact ?? eased;
+export function gizmoShownAt(exact: Vec3 | null, eased: Vec3, lag: Vec3 | null = null): Vec3 {
+  if (exact === null) return eased;
+  return lag === null ? exact : [exact[0] + lag[0], exact[1] + lag[1], exact[2] + lag[2]];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"I don't like the way the gizmo moves (it jitters slightly) but I like the smooth movement of the piece and scene"*, *"avoid
+ * adding another lerp or spring"*) THE BASE'S LAG ALONG THE SURFACE: how far the rig's eased base (`eased` — the piece and the camera hang from it) is
+ * behind its target (`target` — the foot at the gizmo's exact place), its part along the gizmo's face (`n` its normal; none: the whole). The gizmo and its
+ * sections are DRAWN by it (`gizmoShownAt`): one time law for the piece, the camera and the gizmo — the rig's own, no second ease. ⛔ The gizmo drawn at its
+ * exact place stepped on each finger event (22 mm, then nothing) against a piece now still on the screen: the jitter. Its part along the normal dropped:
+ * the drawn gizmo never leaves its surface (the base also moves along the normal when the shown direction turns — a turn of the camera, not the gizmo).
+ */
+export function gizmoLag(eased: Vec3, target: Vec3, n: Vec3 | null): Vec3 {
+  const l: Vec3 = [eased[0] - target[0], eased[1] - target[1], eased[2] - target[2]];
+  if (n === null) return l;
+  const k = l[0] * n[0] + l[1] * n[1] + l[2] * n[2];
+  return [l[0] - n[0] * k, l[1] - n[1] * k, l[2] - n[2] * k];
 }
 
 /**

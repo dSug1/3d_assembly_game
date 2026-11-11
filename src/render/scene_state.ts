@@ -457,6 +457,8 @@ export interface SceneState {
   asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-11) the look's share toward the gizmo and the assembly's centre this frame — the camera aims at the PIECE's own foot by it (`pieceLookPoint`) */
+  asmLookAim: { readonly w: number; readonly centre: Vec3 } | null;
   asmFacePoint: Vec3 | null;
   /** ⭐ (2026-10-28) the gizmo's raw point (Step 4c-bis: the face map's, `mapGizmo`; `null`: none yet) and the orbit place it was read at */
   asmG: Vec3 | null;
@@ -524,6 +526,8 @@ export interface SceneState {
   asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
   /** ⭐⭐⭐ (2026-11-02) the gizmo's EXACT point this frame — where the ring is drawn (`gizmoShownAt`) */
   asmGizmoAt: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-11) the rig's base behind its target along the gizmo's face — the ring and its sections drawn by it (`gizmoLag`); none: at the exact point */
+  asmGizmoLag: Vec3 | null;
   /** ⭐ the placed parts' model vertices and each mesh's model-space box (the casts' pre-reject), per placed set */
   asmParts: { readonly key: string; readonly parts: readonly (readonly Vec3[])[]; readonly boxes: ReadonlyMap<AbstractMeshT, import("../input/ray_box").Box3> } | null;
   /** ⭐ (2026-11-04, the audit) the placed set's key and meshes, once a frame */

@@ -292,6 +292,18 @@ export function tiltAutoLatch(on: boolean, distM: number, thresholdM: number): b
 
 
 /** ⭐⭐⭐ …and the frame back to the world's only once the tilt's swing is OVER and the roll shown is whole (the owner's hysteresis), off the facet — or out past the threshold (`off`). */
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"there is still a shake at crossing the edge at a different location (the shake is a roll of the piece back and forth while
+ * the piece is still on the horizontal face)"*) THE DIRECTION A CAMERA'S HEADING IS READ FROM (`calmHeading`): its own (`u`), or — a view straight down
+ * or up (no heading of its own) — the face it turns toward next (`toward`: the face the gizmo exits onto; the square camera's turn goes there). ⛔ A
+ * vertical view's heading fell back to the ORBIT's yaw — over the tilted top that followed the gizmo along it (18° after 8 finger steps): the roll back's
+ * target rolled the camera by it on the edge's frame, the world's camera (its view already turning toward the next face) rolled it back the next.
+ */
+export function headingFrom(u: Vec3, toward: Vec3 | null): Vec3 {
+  if (Math.hypot(u[0], u[2]) >= 1e-3 || toward === null || !(Math.hypot(toward[0], toward[2]) >= 1e-3)) return u;
+  return toward;
+}
+
 export function tiltExits(onFacet: boolean, k: number, swingDone: boolean, off = false): boolean {
   return (!onFacet || off) && k >= 1 && swingDone;
 }
