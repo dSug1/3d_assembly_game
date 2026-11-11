@@ -386,6 +386,30 @@ export function gizmoGlide(prevShown: Vec3 | null, prevSurf: Vec3 | null, surf: 
   return Math.hypot(v[0], v[1], v[2]) > minM ? v : null;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate
+ * alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as
+ * long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo
+ * moving from first millimeter and also the same for all the faces"*) THE AUTOMATIC TILT PENDING: from the frame the automatic tilt switches on (`autoWas` → `autoNow`, the approach crossing its
+ * distance) until the orbit's first millimetre of finger (`fingerMm`) — meanwhile NOTHING turns (no tilt made, the square camera's share held): the
+ * camera keeps its orientation while the approach goes on. Off (out past the threshold): not pending. ⛔ The tilt made and swung at once on a face holding a
+ * pole (the heading snapped square, the camera turned straight down — by time, the approach still running: a snap the approach did not explain).
+ */
+export function tiltPendingStep(pending: boolean, autoWas: boolean, autoNow: boolean, fingerMm: number): boolean {
+  return autoNow && (pending || !autoWas) && !(fingerMm > 0);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11) THE BLEND INTO THE CLOSE-IN ALIGNMENT BY THE FINGER'S TRAVEL: the share (0 … 1, a smoothstep) after `mm` of the orbit's finger since it
+ * started, over `spanMm` (`tiltBlendMm`; 0: at once) — the square camera's share on every face, the swing of the tilt made on a face holding a pole; no
+ * clock, the gizmo moving from the first millimetre.
+ */
+export function blendShare(mm: number, spanMm: number): number {
+  if (!(spanMm > 0)) return 1;
+  const x = Math.min(1, Math.max(0, mm / spanMm));
+  return x * x * (3 - 2 * x);
+}
+
 export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
   return swinging || (rolling && k < 1);
 }
