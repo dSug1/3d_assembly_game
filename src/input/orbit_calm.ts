@@ -185,6 +185,28 @@ const VERTICAL_EPS = 1e-6;
  * place in the facet's span (`t.across`); up, a vertical facet the place's height in `box` (the placed parts'; `null`: none), a slanted one its place along
  * `b` in the facet's own extent.
  */
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"the camera yaw exist when the yaw angle of the camera vs. vertical face is not the same at exit vs. entrance (the vertical face
+ * can be the same or another vertical face …)"*) A CAP OF THE WORLD'S FRAME READS THE CALM OF THE SIDE IT WOULD BE LEFT BY AT THE ORBIT'S YAW — the place
+ * where the red section leaves the cap (`isSide`: the map's band at that pitch, the yaw kept), found between the cap's pitch (`pitch`) and the level
+ * (0): that side's facet, its horizontal share and reading there, the vertical share whole (the cap). So the calm over a cap and on the side after the exit
+ * are ONE reading at the edge, whatever the entry — the shown heading continuous through every crossing. `null`: no side at the level (none to read).
+ * ⛔ The cap KEPT the entry side's calm (its normal and share), released only by a dx (`capYawRelease`, then carried over the edge, 432631d): equal to the
+ * exit side's only where the orbit's yaw against the face was the entry's — elsewhere the calm changed reading at the crossing, the camera's heading turned
+ * there by the rig's lag (the yaw at an exit: the tilted pole's roll at an exit, §9.13, in the world's frame).
+ */
+export function capEdgePitch(pitch: number, isSide: (p: number) => boolean): number | null {
+  if (!isSide(0)) return null;
+  let lo = 0;
+  let hi = pitch;
+  for (let i = 0; i < 24; i++) {
+    const m = (lo + hi) / 2;
+    if (isSide(m)) lo = m;
+    else hi = m;
+  }
+  return lo;
+}
+
 export function calmTarget(
   t: { readonly band: "SIDE" | "TOP" | "BOTTOM"; readonly surface: Vec3; readonly across: { readonly L: number; readonly lo: number; readonly hi: number } },
   f: { readonly n: Vec3; readonly b: Vec3; readonly bLo: number; readonly bHi: number },
