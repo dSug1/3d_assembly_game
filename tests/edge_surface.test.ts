@@ -80,6 +80,6 @@ describe("⭐⭐⭐ the piece round an edge, on the surface (2026-11-05)", () =>
     expect(a).toContain("(q, nb, reach) => blendCast(st, q, nb, reach));");
     expect(a).toContain("(g, u, dd) => footOf(st, g, u, dd), d, (u) => liftOf(st, u));");
     expect(a).toContain("const d = approachDistance(st.cfg, st.approach) + liftOf(st, u);");
-    expect(a).toContain("const foot = footOf(st, target, us, d + liftOf(st, us));"); // ⭐ (2026-11-11) along the shown direction
+    expect(a).toContain("const foot = footOf(st, target, u, d + liftOf(st, u));");
   });
 });

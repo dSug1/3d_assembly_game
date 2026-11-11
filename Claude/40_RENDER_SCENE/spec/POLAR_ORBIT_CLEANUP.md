@@ -810,25 +810,3 @@ camera turned (walked: 22 mm on the turn's second frame at every heading). Now h
 turn's target set at the exit (`nW`). **Walked** (up the side, over the top and back down, 0.5 m, three headings): 0 mm through the turn at 165° and 195°;
 at 180° 13 + 5 + 2 mm — `Piece42`'s 41 mm step glided (the real surface), as it should. ⚠ The first build set only the target — no change, walked; the
 trace found the gap. **1734**.
-
-### 9.13 ✅ THE GAP BETWEEN THE PIECE AND THE GIZMO — one base for the piece and the camera (2026-11-11, `1.0.120b-Orthogonal-tilted-poles`) — ⛔ no device close
-
-> The owner (the stretch, built and deployed as `a37259b`, reverted the same day: *"The implementation of commit a37259b is much worse"*): *"what you are
-> measuring is not what I am seeing. In commit 8f86339 I see no issue going from vertical to horizontal but I see issue going down from horizontal to
-> vertical at a different place of the same edge (probably because you accumulate a position gap on screen between the gizmo and the piece)"* → *"trace
-> the cause and fix it on 1.0.120b-Orthogonal-tilted-poles"*.
-
-**Measured** (walks in over the front edge at 0.5 m, along the tilted top by 0 / 4 / 8 finger steps, out over the same edge; the piece and the gizmo
-projected on the screen): the piece's place against the gizmo drifted on the tilted top — 2.5° from the edge to the middle, 1.1° more after 8 steps along
-it — and the crossing's turn paid the whole gap back at once: ±4° at every crossing, +4.8° and 0.8° across after the travel (the owner's reading, right).
-**Two causes, one shape — the piece and what frames it did not share a base:**
-1. **The camera aimed at the piece's base EASED A SECOND TIME** (`asmLook`, `LOOK_TAU_MS` 120 ms, over the gizmo's foot already eased 45 ms): it trailed the
-   piece by the finger's speed and direction. Now it aims at the base the piece hangs from (`pieceLookPoint`: the orbit's centre, blended toward the
-   assembly's centre by the look's share as before).
-2. **The base pushed off the gizmo along the ORBIT's direction** (`footOf(…, u, …)` in the frame, `u` the orbit's) while the piece hangs along the SHOWN one
-   (`shownOffset`, `placeAtAngles` — the square camera's, the calm's): where they part — 45° at an edge, 21° after a dx along the tilted top — the base slid
-   off the gizmo's line by the shell's gap × sin of that (29 mm, ~1°; the ±4° at each crossing). Now along the shown direction (`dirAt`).
-**Walked** (the same walks): the piece against the camera's aim 0.03 – 0.06° on the tilted top (was up to 1.6° / 2.6°); the piece against the gizmo
-spread (0.06 – 0.23°, 0.35 – 0.41°) (was 1.2° / 2.6°), the SAME gap before the exit whatever the travel (−1.11°, −0.86°); the gap's change across a
-crossing ±0.8 – 1.0° and nothing across (was ±4° and 0.8° after the travel). Far out (2.0 m): no jump, no back-and-forth, no fly-off (the walk's analyser).
-**Vectors**: the wiring (`orbit_tilt.test.ts`, `orbit_shell.test.ts`, `edge_surface.test.ts` — the base along the shown direction, the aim at it). **1734**.

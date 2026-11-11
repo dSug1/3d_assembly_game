@@ -178,22 +178,6 @@ function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   return n === null ? tiltDir(R, calmDir(st, u)) : coneClamp(tiltDir(R, u), n, st.asmLock!.cone ?? undefined);
 }
 
-/**
- * ⭐⭐⭐ (2026-11-11, the owner: *"there is a shake of the piece the moment you cross the edge at exit … probably because you accumulate a position gap on
- * screen between the gizmo and the piece"* → *"trace the cause and fix it"*) THE CAMERA'S AIM AT THE PIECE'S OWN BASE: the point the drawn piece hangs from
- * (`base` — the orbit's centre, the gizmo's foot on the rig's lag; the piece is `base + u·d`), blended toward the assembly's centre by the look's share as
- * before (far out the centre). So the piece sits at a fixed place against the camera's aim — the owner's two offsets only — on every face, at every speed.
- * ⛔ The aim was that base EASED A SECOND TIME (`LOOK_TAU_MS`, 120 ms): it trailed the piece by the finger's speed and direction (walked: the piece up to
- * ±1.9° off the aim, the gizmo ±2.4°, 1° more after a dx along the tilted top), and the gap was paid back at once in the crossing's turn, the finger held —
- * the shake at an exit. `null` (no assembly, the slide): the look point as before.
- */
-export function pieceLookPoint(st: SceneState, base: Vec3): Vec3 | null {
-  const la = st.asmLookAim;
-  if (!assemblyOn(st) || st.asmLocked || la === null) return null;
-  const c = la.centre;
-  return [c[0] + (base[0] - c[0]) * la.w, c[1] + (base[1] - c[1]) * la.w, c[2] + (base[2] - c[2]) * la.w];
-}
-
 /** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; the press's swing included) — `null`: the world's. */
 export function dirFrame(st: SceneState): Mat3 | null {
   return st.asmTilt === null ? null : st.asmTilt.dir;
@@ -687,6 +671,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // needed: a tilt under way holds the gizmo (`tiltUnderWay`) and leaves only once whole (`tiltExits`); the gizmo SHOWN (`asmG`, its glide in it) is kept
   if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const u = tiltDir(dirFrame(st), orbitDir(q.yaw, q.v));
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
   // angles' steps (2026-10-29 … Step 4c): it could wait, be held, drift and jump. The map's angles ARE the orbit's — out of step only after the slide (put
@@ -769,11 +754,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
   // camera); the ring at the gizmo itself, on the real surface
   const target = g0;
-  // ⭐⭐⭐ (2026-11-11, the owner's shake at an exit — the gap between the piece and the gizmo) the foot along the SHOWN direction (`dirAt`: the calm's, the
-  // square camera's), the one the piece hangs along (`shownOffset`) and the solver places it by (`placeAtAngles`) — ⛔ along the ORBIT's: where the two part
-  // (21° after a dx along the tilted top, the square camera) the base slid e·sin of that off the gizmo's line (29 mm, ~1° on the screen, kept until the exit)
-  const us = dirAt(st, q.yaw, q.v);
-  const foot = footOf(st, target, us, d + liftOf(st, us));
+  const foot = footOf(st, target, u, d + liftOf(st, u));
   st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
   st.centreBlend.snapTo(st.asmGizmo);
@@ -783,8 +764,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
-  // ⭐⭐⭐ (2026-11-11) the look's share and the centre kept for the camera (`pieceLookPoint`: the piece's own foot, read where the piece is placed)
-  st.asmLookAim = { w, centre: [a.centre[0], a.centre[1], a.centre[2]] };
   sectionLinesFrame(st);
 }
 
