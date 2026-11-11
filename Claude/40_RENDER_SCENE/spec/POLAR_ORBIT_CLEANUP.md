@@ -845,3 +845,45 @@ design).
 **Vectors**: `orbit_tilt.test.ts` — `headingFrom` (a vertical view's heading the same wherever along the top; the old reading 21° apart), `gizmoLag`,
 `gizmoShownAt` with the lag, the wiring (the roll's target, the lag, the trailing aim); `orbit_shell.test.ts`, `edge_surface.test.ts` (the base along the
 shown direction). The walk probe records the drawn gizmo (`gd`). **1738**.
+
+### 9.14 ✅ POLAR ORBIT: THE CAP'S RELEASE CARRIED OVER THE EDGE AT AN EXIT (2026-11-11, `1.0.121-`) — ⛔ no device close
+
+> The owner: *"in polar orbit at far distance, if you enter the face holding the pole with dy, then orbit the gizmo with dx and then exit the face holding the
+> pole (be it towards the same initial face or another face), the camera rolls the moment the gizmo crosses the edge at exit"*, *"this is a jump of the yaw
+> orbit of the camera"* → (built, reverted with the first automatic-tilt build to `3e7340a`, rebuilt) *"and also any slanted face if the issue arise on any
+> face not vertical"*.
+
+**Walked** (2.0 m, in over the front, a dx of 8 steps on the top, out): the camera's heading jumped **−4.1°, −2.1°, −0.9°** on the frames after the
+crossing, no finger event between; none with no dx. **Root**: on a cap of the world's frame a dx releases the side's horizontal calm (`capYawRelease`:
+about half after 21°) — the piece shown 8.5° off the face's normal; at the exit the side read no release: the whole share dropped to 0 at once, the 7°
+turn eased over three frames by the rig's lag (`wholeShareStep`, 45 ms). **Fix**: the release at the exit carried onto the side and faded by POSITION over
+the calm's own vertical edge zone (`capReleaseCarried` × `poleEdgeWhole`: whole at the edge, none past it, given back going up); spent past the zone; none
+under a tilt. ⭐ Any cap — level or slanted (every band but SIDE) — and the side facet bordering it, vertical or slanted (a column's end facet): by
+construction; `Scene_1`'s assembly has only level and vertical faces, so a slanted one was not walked. **Walked** (dx 8, 20 steps on the top, 8 on the
+bottom; the same face and another): the heading turns with the finger, 0.2 – 1.5° a frame (2° onto another face), nothing between events.
+**Vectors**: `orbit_tilt.test.ts` — `capReleaseCarried`, the wiring.
+
+### 9.15 ✅ THE AUTOMATIC TILT: THE SECTIONS AT ONCE, THE CAMERA PENDING THROUGH THE APPROACH, THEN BLENDED BY THE ORBIT'S FINGER (2026-11-11, `1.0.121-`) — ⛔ no device close
+
+> The owner: *"during the approach, if the gizmo is on a vertical face, the rotation of the camera to arrive square on … is very smooth and blends with the
+> approach. On the contrary, if the gizmo is on a face holding the pole … there is an immediate alignment of the camera so the red and green sections are
+> aligned with world axis: this does not blend with the approach"* → a first build (the tilt itself pending, a 30 mm blend), reverted → *"the red-green
+> sections automatically switches to orthogonal when the automatic tilted pole is toggled on but the camera view waits through the approach … I am ok if
+> the orthogonal red-green sections are temporarily not aligned with world axis until the camera alignment resolves … then the camera view resolves with
+> the mm when the close in orbit starts (set a faster alignment per mm …) or it completely resolves when the first edge is crossed (otherwise, it may carry
+> over a tilted view on another face)"*.
+
+**Before**: as the approach crossed `tiltAutoM` (0.6 m) on a face holding a pole the tilt was made and the camera swung to the snapped heading
+(`snapHeading`, 360°/s) and squared (125 ms) at once — by time, the approach still running.
+**Built**:
+1. **THE TILT AT ONCE**: made as the automatic tilt switches on — the map in F, the sections orthogonal, the gizmo on them (its relocation by time).
+2. **THE CAMERA PENDING** (`tiltPendingStep`): until the orbit's first millimetre of finger the camera keeps its orientation — the tilt's swing (`swingE`)
+   and the square camera's share held, on every face. A press within the distance leaves it to the automatic tilt.
+3. **THE BLEND BY THE FINGER** (`asmBlend`, `blendShare` — a smoothstep over `tiltBlendMm`, **10 mm**, ☰ → CAMERA → CAMERA ORBIT AROUND CENTER; the finger
+   counted at the orbit's input, the approach's excluded): the square share and the swing; the gizmo moving from the first millimetre (a swing pending
+   or paced by the finger never holds it).
+4. **WHOLE AT THE FIRST EDGE CROSSED** (`blendCrossed`: another tilt, the roll back under way, the square camera's target another face): the rest at the
+   tilts' one speed, the gizmo held as at every crossing — never a part-way view carried onto another face.
+**Walked** (the gizmo on the top square and 21° off square, on a side; the approach 1.0 → 0.5 m, a rest, then dx or dy): the camera's turn **0°** a frame
+through the approach and the rest (the tilt made, the sections orthogonal); then up to **2.5°** a frame over the first 10 mm.
+**Vectors**: `orbit_tilt.test.ts` — `tiltPendingStep`, `blendShare` (10 mm), `blendCrossed`, the wiring. The walk probe records `pd` / `bl` / `sw`. **1744**.
