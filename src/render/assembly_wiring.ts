@@ -26,11 +26,12 @@ import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
 import { calmHeading, calmShown, calmStep, calmTarget } from "../input/orbit_calm";
-import { dot, type Vec3 } from "../core/vec";
+import { facetFrame } from "../input/face_map";
+import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, stretchDir, stretchRoll, turnShare, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -212,59 +213,22 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA'S FRAME: its direction the stretch's (`stretchFrame` — square to the gizmo's face, turned toward the next
- * face by POSITION near an edge; kept over a cap of the world's frame, the automatic tilt coming next), its share in with the automatic tilt (`q`, eased
- * over 125 ms). ⛔ (2026-11-11) turned by time with the gizmo held (`squareTurn`, `squareEased`): the shake at every crossing.
+ * ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA'S FRAME: its target the normal of the gizmo's face in the map's frame (a side facet, or the tilted one —
+ * none over a cap of the world's frame: the automatic tilt comes next), its direction turned there at the tilts' one speed (`squareTurn`), its share in
+ * with the automatic tilt (`q`, eased over 125 ms).
  */
 function squareFrame(st: SceneState, dtMs: number): void {
   const sq = st.asmSquare;
-  // ⭐ on the rig's own lag (the gizmo's, `gizmoEaseMs`, which the camera's place follows — ⛔ at once: the direction turned on the finger event while the
-  // place followed 45 ms behind, the surface stepping back on each event inside the stretch, walked)
-  const d = st.asmStretch.dir;
-  if (d !== null) sq.n = sq.n === null ? d : turnShare(sq.n, d, 1 - Math.exp(-Math.max(0, dtMs) / Math.max(1, st.cfg.gizmoEaseMs)), d);
-  sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
-}
-
-/**
- * ⭐⭐⭐ (2026-11-11, the owner: *"proceed with the stretch"*) THE STRETCH AT THE GIZMO'S PLACE `t` (the map's frame): the square camera's direction — the
- * face's normal turned toward each neighbour nearer than the stretch (`stretchDir`: across its ends, the facets beyond; along its `b`, the next facet of
- * its column or the cap) — and the tilt's roll by position (`stretchRoll`): on the tilted facet by its nearest edge, beyond it by the place below its plane
- * (a cap of the tilted frame: the face it was entered from, or the far one). Over a cap of the world's frame: none (kept; the automatic tilt comes next).
- */
-function stretchFrame(st: SceneState, t: MapTarget, pitch: number): void {
-  const map = faceMapOf(st);
+  const sh = st.asmShown;
   const tl = st.asmTilt;
-  const z = st.cfg.tiltStretchMm / 1000;
-  st.asmStretch = { dir: null, k: null };
-  if (map === null) return;
-  const f = map.facets[t.stack];
-  if (f === undefined) return;
-  const tf = tl !== null && !tl.off ? map.facets[tl.facet] : undefined;
-  const below = (q: Vec3): number => (tf === undefined ? 0 : tf.e - dot(q, tf.n));
-  if (t.band === "SIDE") {
-    const L = t.across;
-    const ac = acrossNormals(st, map, { t, pitch });
-    const col = map.columns[t.side];
-    const i = col === undefined ? -1 : col.facets.indexOf(t.stack);
-    const nbOf = (k: number | undefined): Vec3 | null => (k === undefined || map.facets[k] === undefined ? null : map.facets[k]!.n);
-    const sb = dot(t.surface, f.b);
-    const near = [
-      { nb: ac?.lo ?? null, d: L.L - L.lo },
-      { nb: ac?.hi ?? null, d: L.hi - L.L },
-      { nb: col === undefined || i < 0 ? null : nbOf(i > 0 ? col.facets[i - 1] : map.bottom), d: sb - f.bLo },
-      { nb: col === undefined || i < 0 ? null : nbOf(i < col.facets.length - 1 ? col.facets[i + 1] : map.top), d: f.bHi - sb },
-    ];
-    const dir = stretchDir(t.normal, near, z, f.t);
-    let k: number | null = null;
-    if (tf !== undefined) k = t.stack === tl!.facet ? stretchRoll(true, Math.min(...near.map((e) => e.d)), 0, z) : stretchRoll(false, 0, below(t.surface), z);
-    st.asmStretch = { dir, k };
-    return;
+  const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
+  sq.target = sh === null || onCap ? sq.target : sh.t.normal;
+  if (sq.n === null) sq.n = sq.target;
+  if (sq.n !== null) {
+    const { t } = facetFrame(sq.n);
+    sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);
   }
-  // a cap of the tilted frame: the face the tilted one was entered from (or the far one) — toward the tilted facet by the place below its plane
-  if (tf !== undefined) {
-    const d = below(t.surface);
-    st.asmStretch = { dir: stretchDir(t.normal, [{ nb: tf.n, d }], z, f.t), k: stretchRoll(false, 0, d, z) };
-  }
+  sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
 }
 
 /**
@@ -748,7 +712,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
-      stretchFrame(st, m.t, mq.pitch);
       tiltFrame(st, dtMs, m.t.stack);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
@@ -1029,8 +992,7 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     // when the world's branch took over — the square camera looking straight down at the tilted top)
     const uOW = mulM(tl.dir, uF);
     const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, uW);
-    // ⭐⭐⭐ (2026-11-11) the roll back EASED too (`swingEase` of its share: at rest at both ends — ⛔ linear: it started and stopped at full speed)
-    const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), swingEase(tl.k), tl.axis);
+    const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
     tl.axis = mix.axis;
@@ -1102,13 +1064,6 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
     tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ (2026-11-10) over a `b` end: the reading toward the edge's line there
     st.lastVerdict = "orbit: over the edge — the tilt back to upright (the gizmo held until it completes)";
   }
-  // ⭐⭐⭐ (2026-11-11, the owner: *"proceed with the stretch"*) close in (the square camera) the roll BY POSITION (`stretchRoll`): no clock, no hold —
-  // the exit once the gizmo is a stretch beyond the tilted facet; far out (a press) and out past the automatic threshold, by time as before
-  if (!tl.off && st.asmSquare.q > 0.5 && st.asmStretch.k !== null) {
-    tl.k = st.asmStretch.k;
-    tl.exit = !onFacet && tl.k >= 1 - 1e-9 && tl.swingMs === null;
-    return;
-  }
   tl.kT = tl.finishing || tl.off ? 1 : 0;
   tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));
   tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);
@@ -1120,12 +1075,12 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
  */
 export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean {
   const tl = st.asmTilt;
-  if (tl === null) return false;
-  // ⭐⭐⭐ (2026-11-11, the owner: *"proceed with the stretch"*) close in (the square camera, the roll by position): NOTHING held but a swing — the stretch
-  // turns the camera with the finger (⛔ the square camera's timed turn with the gizmo held, and the hold through the exit that served it: deleted)
-  const byPosition = !tl.off && st.asmSquare.q > 0.5;
-  // ⭐⭐ (2026-11-10) far out (a press) and past the threshold: held from the roll's start TO THE EXIT itself (`finishing` / `off`)
-  if (!(byPosition ? tl.swingMs !== null : tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off)) return false;
+  // ⭐⭐⭐ (`1.0.120b-`) …and while the square camera turns through an edge (`squareTurning`): every edge a frame change
+  const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) …and from the roll's end TO THE EXIT itself (`finishing` / `off`: the tilt still here) — ⛔ held only
+  // while the roll was short of whole: one finger event slipped in the frame between the roll's end and the exit, the orbit a step ahead of the piece's
+  // solved angles through the frame change; they caught up during the square camera's turn — the gizmo moved one step while the camera turned (walked)
+  if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;
   if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
   st.orbit.reset(yaw0, v0);
   return true;
@@ -1231,9 +1186,10 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const fi = facetOfNormal(map, mulT(R1, cap.n), gF);
   st.asmTilt.facet = fi;
   turnAngles(st, (d) => mulT(D0, d));
-  // ⭐⭐⭐ (`1.0.120b-`) the square camera into F (the directions' frame), as it is — the stretch recomputes it from the place next frame, continuous
+  // ⭐⭐⭐ (`1.0.120b-`) the square camera into F (the directions' frame): turned there from where it is, never jumped
   const sqB = st.asmSquare;
   if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);
+  if (sqB.target !== null) sqB.target = mulT(st.asmTilt.dir, sqB.target);
   const mq = mapAngles(map, gF, fi, mapOpts(st));
   st.asmMapQ = mq;
   const m = mapGizmo(st, mq.yaw, mq.pitch);
@@ -1270,6 +1226,11 @@ function tiltOff(st: SceneState): void {
   // ⭐⭐⭐ (`1.0.120b-`) the square camera out of F, as it is
   const sqO = st.asmSquare;
   if (sqO.n !== null) sqO.n = mulM(D, sqO.n);
+  if (sqO.target !== null) sqO.target = mulM(D, sqO.target);
+  // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) THE TURN'S TARGET AT THE CROSSING ITSELF: the face the gizmo crossed onto (`nW`) — so the hold
+  // (`squareTurning`) covers the turn from its first frame. ⛔ Left to the next frame's map (the place cleared here): the target stale for a frame, the
+  // turn not yet seen — the next finger events moved the gizmo while the camera turned (walked: 11 + 23 mm at the top → side crossing)
+  if (nW !== null) sqO.target = nW;
   // ⭐⭐⭐ (2026-11-10) THE CALM CARRIED OUT OF F: over a `b` end (a turn about the edge's line) the new side's normal at once, the horizontal share kept;
   // across, both whole (⛔ both whole always: the calmed yaw released at every exit, then calmed again — a swing there and back)
   if (st.asmCalm !== null) st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };
