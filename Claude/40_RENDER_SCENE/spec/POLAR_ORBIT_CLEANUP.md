@@ -810,3 +810,35 @@ camera turned (walked: 22 mm on the turn's second frame at every heading). Now h
 turn's target set at the exit (`nW`). **Walked** (up the side, over the top and back down, 0.5 m, three headings): 0 mm through the turn at 165° and 195°;
 at 180° 13 + 5 + 2 mm — `Piece42`'s 41 mm step glided (the real surface), as it should. ⚠ The first build set only the target — no change, walked; the
 trace found the gap. **1734**.
+
+### 9.13 ⭐⭐⭐ THE STRETCH — the camera through an edge by position, the gizmo untouched (2026-11-11, `1.0.120b-Orthogonal-tilted-poles`) — ⛔ no device close
+
+> The owner: *"for any horizontal face at close in, if you enter with a dy at an edge then you travel inside the face and then you exit the face with dy at
+> another location on the same edge, there is a shake of the piece the moment you cross the edge at exit. Check what you fixed in previous commits …
+> If any previous patch is incompletely addressing the issue, remove it and fix the issue properly"* → (c) detailed: *"I am ok to accept the stretch but it
+> shall be used only to remove the tilt by controlling the camera, not the gizmo"* → *"proceed with the stretch"*, fixed or scaled: *"what stretch is
+> required at two different distances?"*.
+
+**The shake, measured** (walks in over an edge, across, out over the same edge — the front, back, left, top and bottom; the face's surface beside the gizmo
+projected on the screen): sliding with the finger (+0.3° a frame), then at the crossing the hold stopping the finger and the square camera's 90° turn
+moving it the OTHER way (−1 … −2.4° a frame), then with the finger again — at every exit (and its mirror at every entry), wherever on the edge. The piece
+itself ≤ 0.7° a frame: the assembly behind it shook. ⭐ **The root**: a camera square to the face with the gizmo centred before and after an edge can only
+turn ON the gizmo (a 90° turn mapping one square centred view to the other pivots there — computed); a turn about the edge moves the surface beside the
+gizmo against the pan that came before it. The polar orbit far out pivots behind the surface (the assembly's centre): no reversal.
+⛔ **Removed as not addressing it**: the timed square turn (`squareTurn`, then eased the same day — `squareEased`: the jerk gone, the reversal kept), its
+hold (`squareTurning`) and the hold through the exit with the turn's target at the exit (§9.12: a real one-frame gap, but only for the timed turn).
+
+**Built — THE STRETCH** (`stretchWeight`, `stretchDir`, `stretchRoll`, `stretchFrame`; `tiltStretchMm` 50 mm, ☰ → CAMERA → CAMERA ORBIT AROUND
+CENTER): close in, the square camera turns toward the next face BY THE GIZMO'S POSITION over the last 50 mm before an edge and the first 50 mm after it —
+½ at the edge (both faces at 45°), a smoothstep; every edge (across a facet's ends: the next facet; along its `b`: the next facet of its column or the cap);
+on the rig's lag (`gizmoEaseMs` — ⛔ at once: the direction turned on the finger event, the place 45 ms behind, the surface stepping back on each event).
+The TILT'S ROLL by position too (`stretchRoll`): ½ at the tilted facet's edges, ½ → 1 over the stretch beyond — the exit there; no clock, NOTHING HELD but a
+swing. ⭐ The gizmo untouched: the real surface, at the finger's speed, the frame switched exactly at the edge (the sections square to the face).
+⭐ **Fixed in mm on the assembly**: the pan and the turn both move the image as 1 / the camera's distance — whether the surface keeps with the finger
+depends only on the turn per mm, the same at every distance (only the finger travel across it changes with the orbit's gain). Far out (a press) and past
+the automatic threshold: the timed roll as before.
+**Walked** (the exits; finger steps a third of the walks' usual, nearer a phone's): the worst frame's backward step of the surface 2 – 5 cm from the gizmo
+2.7 – 4.4° with no stretch (an instant turn) → **0.4 – 0.8° at 50 mm**, 0.2 – 0.6° at 100 mm (the timed turn: −4° a frame for four frames); a slow
+backward drift remains over the crossing (2.6 – 5° in all, over ~45 frames) — geometry: the turn still pivots near the gizmo, now spread over the travel.
+⚠ It replaces, for the camera, §9.7's rule 1-b (a started tilt runs to the end on its own clock, the gizmo held) — the owner's acceptance of the stretch.
+**Vectors**: `orbit_tilt.test.ts` (the stretch's weight, direction through an edge, roll by position; the wiring; the timed turn's vectors deleted). **1735**.

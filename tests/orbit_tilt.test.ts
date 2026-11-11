@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, stretchDir, stretchRoll, stretchWeight, turnShare, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
@@ -404,11 +404,11 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R),");
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
     expect(a).toContain("turnAngles(st, (d) => mulM(D, d));");
-    expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
+    expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), swingEase(tl.k), tl.axis);");
     expect(a).toContain("if (!onFacet && !tl.finishing) {"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
-    expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
-    expect(a).toContain("if (nW !== null) sqO.target = nW;"); // ⭐ the turn's target at the crossing itself // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
+    expect(a).toContain("if (!(byPosition ? tl.swingMs !== null : tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off)) return false;"); // ⭐ (2026-11-11) close in nothing held but a swing; far out held to the exit
+    expect(a).not.toContain("sqO.target"); // ⛔ the timed turn's target and its hold deleted with it
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
     expect(a).toContain("const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);"); // ⭐ one speed for every tilt — ⭐ (2026-11-10) the camera's own swing: from the heading SHOWN
@@ -419,8 +419,12 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain('tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
     expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
     // ⭐⭐⭐ (`1.0.120b-`) the square camera close in: over the calm by `q`, turned at one speed, the gizmo held meanwhile, carried through the tilt's frames
-    expect(a).toContain("sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);");
-    expect(a).toContain("const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);");
+    expect(a).toContain("st.asmStretch = { dir, k };"); // ⭐⭐⭐ (2026-11-11) THE STRETCH: the camera by position, the gizmo untouched
+    expect(a).toContain("if (d !== null) sq.n = sq.n === null ? d : turnShare(sq.n, d, 1 - Math.exp(-Math.max(0, dtMs) / Math.max(1, st.cfg.gizmoEaseMs)), d);"); // …on the rig's lag
+    expect(a).toContain("if (!tl.off && st.asmSquare.q > 0.5 && st.asmStretch.k !== null) {"); // the roll by position close in
+    expect(a).not.toContain("squareEased("); // ⛔ the timed turn (eased or not): the shake at every crossing
+    expect(a).toContain("swingEase(tl.k), tl.axis);"); // ⭐ (2026-11-11) the roll back eased too
+    expect(a).not.toContain("squareTurn("); // ⛔ the turn at one constant speed (the shake at every crossing)
     expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);");
     expect(a).toContain("if (sqO.n !== null) sqO.n = mulM(D, sqO.n);");
     // ⭐⭐⭐ the roll back's target the world's camera exactly (⛔ a vertical view's heading off its own up: 0 ms, then a 180° flip)
@@ -460,23 +464,38 @@ describe("⭐⭐ wired", () => {
   });
 });
 
-describe("⭐⭐⭐ (2026-11-10, `1.0.120b-`, the owner: *\"build the square camera close in\"*) THE SQUARE CAMERA'S TURN (`squareTurn`, `squareTurning`)", () => {
+describe("⭐⭐⭐ (2026-11-11, the owner: *\"I am ok to accept the stretch but it shall be used only to remove the tilt by controlling the camera, not the gizmo\"*) THE STRETCH (`stretchWeight`, `stretchDir`, `stretchRoll`)", () => {
   const Dg = Math.PI / 180;
-  it("⭐⭐⭐ a vertical edge: 90° at the tilts' speed (360°/s) — a quarter in 62.5 ms, whole in 250 ms, never past; opposite normals about the fallback", () => {
-    let n: Vec3 = [0, 0, -1];
-    const t: Vec3 = [1, 0, 0];
-    n = squareTurn(n, t, 62.5, 360, [0, 1, 0]);
-    expect(Math.acos(n[0] * t[0] + n[1] * t[1] + n[2] * t[2]) / Dg).toBeCloseTo(67.5, 6);
-    for (let i = 0; i < 10; i++) n = squareTurn(n, t, 62.5, 360, [0, 1, 0]);
-    expect(n).toEqual(t);
-    const o = squareTurn([0, 0, -1], [0, 0, 1], 125, 360, [0, 1, 0]); // 45° about the fallback
-    expect(Math.acos(-o[2]) / Dg).toBeCloseTo(45, 6);
-    expect(squareTurn([0, 0, -1], null, 100, 360, [0, 1, 0])).toEqual([0, 0, -1]);
+  it("⭐⭐⭐ the camera's share toward the next face: 0 beyond the stretch, ½ AT the edge (both faces at 45°), a smoothstep between — by position, never by time", () => {
+    expect(stretchWeight(0.06, 0.05)).toBe(0);
+    expect(stretchWeight(0, 0.05)).toBe(0.5);
+    expect(stretchWeight(0.025, 0.05)).toBeCloseTo(0.25, 12);
+    expect(stretchWeight(0.01, 0)).toBe(0);
+    let last = 0;
+    for (let d = 0.05; d >= 0; d -= 0.001) {
+      const w = stretchWeight(d, 0.05);
+      expect(w).toBeGreaterThanOrEqual(last - 1e-12);
+      expect(w - last).toBeLessThan(0.02); // a mm of travel turns it by less than 2 % of the stretch's half: continuous with the finger
+      last = w;
+    }
   });
-  it("⭐⭐ turning while more than half a degree off its face's normal and the square camera in (q > 0.5): the gizmo held", () => {
-    expect(squareTurning([0, 0, -1], [1, 0, 0], 1)).toBe(true);
-    expect(squareTurning([0, 0, -1], [0, 0, -1], 1)).toBe(false);
-    expect(squareTurning([0, 0, -1], [1, 0, 0], 0.2)).toBe(false);
-    expect(squareTurning(null, [1, 0, 0], 1)).toBe(false);
+  it("⭐⭐⭐ continuous THROUGH the edge: the two faces' cameras meet at the bisector (A at its edge = B at its edge); beyond the stretch square", () => {
+    const a: Vec3 = [0, 0, -1];
+    const b: Vec3 = [0, 1, 0];
+    const onA = stretchDir(a, [{ nb: b, d: 0 }], 0.05, [1, 0, 0]);
+    const onB = stretchDir(b, [{ nb: a, d: 0 }], 0.05, [1, 0, 0]);
+    for (let k = 0; k < 3; k++) expect(onA[k]).toBeCloseTo(onB[k]!, 12);
+    expect(Math.acos(onA[1]) / Dg).toBeCloseTo(45, 9);
+    expect(stretchDir(a, [{ nb: b, d: 0.2 }], 0.05, [1, 0, 0])).toEqual(a);
+    expect(stretchDir(a, [{ nb: null, d: 0 }], 0.05, [1, 0, 0])).toEqual(a);
+    expect(turnShare(a, b, 1, [1, 0, 0])).toEqual(b);
+  });
+  it("⭐⭐⭐ the tilt's roll by position: on the tilted facet ½ at an edge, 0 inside; beyond it ½ → 1 over the stretch — 1 the exit (no clock, no hold)", () => {
+    expect(stretchRoll(true, 0.2, 0, 0.05)).toBe(0);
+    expect(stretchRoll(true, 0, 0, 0.05)).toBe(0.5);
+    expect(stretchRoll(false, 0, 0, 0.05)).toBe(0.5);
+    expect(stretchRoll(false, 0, 0.025, 0.05)).toBeCloseTo(0.75, 12);
+    expect(stretchRoll(false, 0, 0.05, 0.05)).toBe(1);
+    expect(stretchRoll(false, 0, 0, 0)).toBe(1);
   });
 });
