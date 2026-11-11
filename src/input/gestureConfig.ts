@@ -434,7 +434,6 @@ export interface GestureConfig {
   tiltRollDegS: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"at close distance (… xx% of the max distance, make a slider) it toggles on automatically"*) the tilt made by itself as the gizmo enters a top / bottom, within this % of the far distance (off beyond it + 5); 0: never (the press only). */
   tiltAutoM: number;
-  tiltStretchMm: number;
   /** ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, STEP 5 — D5, the owner: *"step 5: ok"*) THE FACES CONTOUR: the placed parts' faces within this angle of
    * a facet's normal are that facet's (deg — `Scene_1`'s slanted block, 15° off −z, is the front's)… */
   facetMergeDeg: number;
@@ -863,7 +862,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
-  tiltStretchMm: 50, // ⭐⭐⭐ (2026-11-11, the owner: *"proceed with the stretch"*) close in, the camera turns through an edge over 50 mm of the gizmo's travel each side (mm on the assembly — the same at every distance)
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
@@ -1030,7 +1028,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (cfg.tiltedPole !== 0 && cfg.tiltedPole !== 1) throw new Error(`tiltedPole (${cfg.tiltedPole}) must be 0 or 1.`);
   if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
-  if (!(cfg.tiltStretchMm >= 0 && cfg.tiltStretchMm <= 200)) throw new Error(`tiltStretchMm (${cfg.tiltStretchMm}) must be in [0, 200] mm.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
   if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);
   for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
