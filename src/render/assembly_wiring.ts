@@ -10,7 +10,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -31,7 +31,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, frameMix, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -665,6 +665,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(tiltDir(dirFrame(st), orbitDir(q0.yaw, q0.v)), n)) }; // ⭐ (§9.4) the orbit's direction in the world (⛔ F's angles read as the world's: under a slide on the tilted top the cone was wrong — the camera jumped 23 – 34 mm, back and forth, the walks)
     st.asmGizmo = [t[0], t[1], t[2]];
     st.asmGizmoAt = [t[0], t[1], t[2]];
+    st.asmGizmoLag = null;
     st.asmLook = [t[0], t[1], t[2]];
     return;
   }
@@ -776,6 +777,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const foot = footOf(st, target, us, d + liftOf(st, us));
   st.asmGizmo = st.asmGizmo === null ? [foot[0], foot[1], foot[2]] : easePoint(st.asmGizmo, foot, dtMs, st.cfg.gizmoEaseMs); // ⭐⭐ (2026-11-04) a slider (the former GIZMO_TAU_MS, 90 ms)
   st.asmGizmoAt = [target[0], target[1], target[2]]; // ⭐⭐⭐ (2026-11-02) where the ring is drawn: the vertex both lines go through (`gizmoShownAt`)
+  // ⭐⭐⭐ (2026-11-11, the owner's jitter of the gizmo) the ring and its sections drawn at the base's lag along the face (`gizmoLag`) — the rig's one ease
+  st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
   // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing; the slide: the gizmo)
@@ -786,6 +789,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-11) the look's share and the centre kept for the camera (`pieceLookPoint`: the piece's own foot, read where the piece is placed)
   st.asmLookAim = { w, centre: [a.centre[0], a.centre[1], a.centre[2]] };
   sectionLinesFrame(st);
+  // ⭐⭐⭐ (2026-11-11) the sections at the gizmo's lag too: the ring stays their intersection (*"the gizmo is always at the intersection"*)
+  const sl = st.asmSectionLines;
+  const lg = st.asmGizmoLag;
+  if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);
 }
 
 /**
@@ -1012,7 +1019,9 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     // branch builds it (⛔ a vertical view's heading read off this camera's own up: the target equal to it, the roll 0 ms, then the 180° flip in one frame
     // when the world's branch took over — the square camera looking straight down at the tilted top)
     const uOW = mulM(tl.dir, uF);
-    const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, uW);
+    // ⭐⭐⭐ (2026-11-11) a view straight down / up (the square camera on the tilted top) read toward the face the gizmo exits onto (`headingFrom`,
+    // `exitNormal`) — as the world's camera reads it the frame after, its view turning there (⛔ the orbit's yaw: a roll there and back at the exit)
+    const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));
     const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
@@ -1230,6 +1239,14 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   st.hudDirty = true;
 }
 
+/** ⭐⭐⭐ (2026-11-11) the normal of the face the gizmo is on, out of the tilted frame (off the tilted facet: the face it exits onto) — none: no tilt / no place. */
+function exitNormal(st: SceneState): Vec3 | null {
+  const tl = st.asmTilt;
+  const fm = faceMapOf(st);
+  const sh = st.asmShown;
+  return tl !== null && fm !== null && sh !== null ? mulM(tl.map, fm.facets[sh.t.stack]!.n) : null;
+}
+
 /**
  * ⭐⭐⭐ (§9.4) OFF THE TILTED FACET: the world's frame again — every orbit angle turned into it (the camera already at the world's upright: the exit's
  * share is whole at the edge); the gizmo kept — the world map's angles put at it (`mapAngles`), a relocation there eased by the finger's travel.
@@ -1240,9 +1257,7 @@ function tiltOff(st: SceneState): void {
   const D = tl.dir;
   const byTime = tl.off; // ⭐ (2026-11-10) turned off by distance: the relocation eased by time
   const g = st.asmG;
-  const fm = faceMapOf(st);
-  const sh = st.asmShown;
-  const nW = fm !== null && sh !== null ? mulM(tl.map, fm.facets[sh.t.stack]!.n) : null;
+  const nW = exitNormal(st);
   turnAngles(st, (d) => mulM(D, d));
   // ⭐⭐⭐ (`1.0.120b-`) the square camera out of F, as it is
   const sqO = st.asmSquare;

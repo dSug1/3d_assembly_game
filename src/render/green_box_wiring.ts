@@ -893,7 +893,7 @@ export function pinkRingFrame(st: SceneState): void {
     return;
   }
   // ⭐⭐⭐ (2026-11-02, *"the gizmo is always at the intersection"*) around the assembly at its EXACT point — the vertex both lines go through (`gizmoShownAt`)
-  const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM) : st.centreBlend.targetM;
+  const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag) : st.centreBlend.targetM;
   const cam = st.camera.position;
   const dir = new Vector3(t[0] - cam.x, t[1] - cam.y, t[2] - cam.z);
   const dist = dir.length();

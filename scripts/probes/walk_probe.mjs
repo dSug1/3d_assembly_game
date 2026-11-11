@@ -70,7 +70,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
     const sh = st.asmShown; const lift = sh && sh.t ? sh.t.normal : null; const gl = g && lift ? [g[0] + lift[0]*0.002, g[1] + lift[1]*0.002, g[2] + lift[2]*0.002] : g;
     const G = lineOf(st.asmGreenCache, true, gl), Rr = lineOf(st.asmRedCache, false, gl);
     const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && sh != null;
-    window.__rec.push({ leg: window.__leg, fd: window.__fd ?? null, ts: performance.now(), g, gn: v3(st.gizmoNormal ?? null), host: st.gizmoHost ?? null, foot: v3(st.asmGizmo ?? null),
+    window.__rec.push({ leg: window.__leg, fd: window.__fd ?? null, ts: performance.now(), g, gd: g && st.asmGizmoLag ? [g[0] + st.asmGizmoLag[0], g[1] + st.asmGizmoLag[1], g[2] + st.asmGizmoLag[2]] : g, gn: v3(st.gizmoNormal ?? null), host: st.gizmoHost ?? null, foot: v3(st.asmGizmo ?? null),
       p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
       ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, hv: st.hover != null, lk: !!st.asmLocked,

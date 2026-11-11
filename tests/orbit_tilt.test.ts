@@ -3,8 +3,9 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
-import { offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
+import { calmHeading } from "../src/input/orbit_calm";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -428,7 +429,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);");
     expect(a).toContain("if (sqO.n !== null) sqO.n = mulM(D, sqO.n);");
     // ⭐⭐⭐ the roll back's target the world's camera exactly (⛔ a vertical view's heading off its own up: 0 ms, then a 180° flip)
-    expect(a).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, uW);");
+    expect(a).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));"); // (2026-11-11) a vertical view read toward the exit's face
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
@@ -482,5 +483,39 @@ describe("⭐⭐⭐ (2026-11-10, `1.0.120b-`, the owner: *\"build the square cam
     expect(squareTurning([0, 0, -1], [0, 0, -1], 1)).toBe(false);
     expect(squareTurning([0, 0, -1], [1, 0, 0], 0.2)).toBe(false);
     expect(squareTurning(null, [1, 0, 0], 1)).toBe(false);
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and the gizmo drawn on the rig's lag", () => {
+  it("⭐⭐⭐ a view straight down reads its heading from the face it exits onto — the same wherever along the top the orbit's yaw has gone", () => {
+    const down: Vec3 = [0, -1, 0];
+    const front: Vec3 = [0, 0, -1];
+    const h0 = calmHeading(-90 * D, orbitDir(-90 * D, 0.3), headingFrom(down, front));
+    const h8 = calmHeading(-69 * D, orbitDir(-69 * D, 0.3), headingFrom(down, front)); // 8 steps along the top: the yaw 21° on
+    expect(Math.abs(h8 - h0)).toBeLessThan(1e-9); // ⛔ the orbit's yaw: 21° apart — the roll there and back
+    expect(Math.abs(calmHeading(-69 * D, orbitDir(-69 * D, 0.3), down) - calmHeading(-90 * D, orbitDir(-90 * D, 0.3), down))).toBeGreaterThan(20 * D); // the old reading
+  });
+  it("⭐ a view with a heading of its own keeps it; no face, or a vertical one: as it is", () => {
+    const u: Vec3 = [0.6, -0.8, 0];
+    expect(headingFrom(u, [0, 0, -1])).toEqual(u);
+    expect(headingFrom([0, -1, 0], null)).toEqual([0, -1, 0]);
+    expect(headingFrom([0, -1, 0], [0, 1, 0])).toEqual([0, -1, 0]);
+  });
+  it("⭐⭐⭐ the gizmo drawn at the base's lag along its face — never off its surface; none: at its exact point", () => {
+    const l = gizmoLag([0.01, 0.02, 0.5], [0, 0, 0.47], [0, 1, 0]);
+    expect(l[0]).toBeCloseTo(0.01, 12);
+    expect(l[1]).toBeCloseTo(0, 12); // the part along the normal dropped
+    expect(l[2]).toBeCloseTo(0.03, 12);
+    expect(gizmoLag([1, 2, 3], [0, 0, 0], null)).toEqual([1, 2, 3]);
+    expect(gizmoShownAt([1, 1, 1], [9, 9, 9], [0.01, 0, -0.02])).toEqual([1.01, 1, 0.98]);
+    expect(gizmoShownAt([1, 1, 1], [9, 9, 9])).toEqual([1, 1, 1]);
+    expect(gizmoShownAt(null, [9, 9, 9], [1, 1, 1])).toEqual([9, 9, 9]);
+  });
+  it("⭐⭐ wired: the roll's target through `headingFrom` toward the exit's face; the ring and the sections drawn on the lag", () => {
+    const aw = code("render/assembly_wiring.ts");
+    expect(aw).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));");
+    expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);");
+    expect(aw).toContain("if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);");
+    expect(code("render/green_box_wiring.ts")).toContain("gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag)");
   });
 });
