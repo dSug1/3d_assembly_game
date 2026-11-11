@@ -811,24 +811,37 @@ turn's target set at the exit (`nW`). **Walked** (up the side, over the top and 
 at 180° 13 + 5 + 2 mm — `Piece42`'s 41 mm step glided (the real surface), as it should. ⚠ The first build set only the target — no change, walked; the
 trace found the gap. **1734**.
 
-### 9.13 ✅ THE GAP BETWEEN THE PIECE AND THE GIZMO — one base for the piece and the camera (2026-11-11, `1.0.120b-Orthogonal-tilted-poles`) — ⛔ no device close
+### 9.13 ✅ THE EXIT ELSEWHERE ON THE EDGE — the roll's heading, the base along the shown direction, the gizmo drawn on the rig's lag (2026-11-11, `1.0.120b-Orthogonal-tilted-poles`) — ⛔ no device close
 
-> The owner (the stretch, built and deployed as `a37259b`, reverted the same day: *"The implementation of commit a37259b is much worse"*): *"what you are
-> measuring is not what I am seeing. In commit 8f86339 I see no issue going from vertical to horizontal but I see issue going down from horizontal to
-> vertical at a different place of the same edge (probably because you accumulate a position gap on screen between the gizmo and the piece)"* → *"trace
-> the cause and fix it on 1.0.120b-Orthogonal-tilted-poles"*.
+> The owner (after the stretch, `a37259b`, reverted: *"much worse"*): *"I see issue going down from horizontal to vertical at a different place of the same
+> edge (probably because you accumulate a position gap on screen between the gizmo and the piece)"* → `ea4f179` (one base for the piece and the camera),
+> then: *"it did not solve the issue: there is still a shake at crossing the edge at a different location (the shake is a roll of the piece back and forth
+> while the piece is still on the horizontal face)"*, *"I don't like the way the gizmo moves (it jitters slightly) but I like the smooth movement of the
+> piece and scene"*, *"avoid adding another lerp or spring"* → reverted to `8f86339` (`c6ef5f7`) and built there; then *"the piece movement makes it look
+> like static (it is frozen in front of the camera) … I liked the behavior there"* (8f86339).
 
-**Measured** (walks in over the front edge at 0.5 m, along the tilted top by 0 / 4 / 8 finger steps, out over the same edge; the piece and the gizmo
-projected on the screen): the piece's place against the gizmo drifted on the tilted top — 2.5° from the edge to the middle, 1.1° more after 8 steps along
-it — and the crossing's turn paid the whole gap back at once: ±4° at every crossing, +4.8° and 0.8° across after the travel (the owner's reading, right).
-**Two causes, one shape — the piece and what frames it did not share a base:**
-1. **The camera aimed at the piece's base EASED A SECOND TIME** (`asmLook`, `LOOK_TAU_MS` 120 ms, over the gizmo's foot already eased 45 ms): it trailed the
-   piece by the finger's speed and direction. Now it aims at the base the piece hangs from (`pieceLookPoint`: the orbit's centre, blended toward the
-   assembly's centre by the look's share as before).
-2. **The base pushed off the gizmo along the ORBIT's direction** (`footOf(…, u, …)` in the frame, `u` the orbit's) while the piece hangs along the SHOWN one
-   (`shownOffset`, `placeAtAngles` — the square camera's, the calm's): where they part — 45° at an edge, 21° after a dx along the tilted top — the base slid
-   off the gizmo's line by the shell's gap × sin of that (29 mm, ~1°; the ±4° at each crossing). Now along the shown direction (`dirAt`).
-**Walked** (the same walks): the piece against the camera's aim 0.03 – 0.06° on the tilted top (was up to 1.6° / 2.6°); the piece against the gizmo
-spread (0.06 – 0.23°, 0.35 – 0.41°) (was 1.2° / 2.6°), the SAME gap before the exit whatever the travel (−1.11°, −0.86°); the gap's change across a
-crossing ±0.8 – 1.0° and nothing across (was ±4° and 0.8° after the travel). Far out (2.0 m): no jump, no back-and-forth, no fly-off (the walk's analyser).
-**Vectors**: the wiring (`orbit_tilt.test.ts`, `orbit_shell.test.ts`, `edge_surface.test.ts` — the base along the shown direction, the aim at it). **1734**.
+**1. THE ROLL** (the shake). Walked (in over the front edge at 0.5 m, along the tilted top by 0 / 4 / 8 finger steps, out over the same edge): on the frame
+the tilt's roll back completes at the edge the camera rolled about the vertical by **0° / 4.1° / 18°**, and back the next frame — at `8f86339` and at
+`ea4f179` alike. **Root**: the square camera looks STRAIGHT DOWN at the tilted top — no heading of its own; the roll back's target (`hW`, §9.11b) read its
+heading through `calmHeading`, which for a vertical view falls back to the ORBIT's yaw — and over the tilted top that yaw follows the gizmo along it; the
+world's camera the frame after reads the face it turns toward (its view already turning there). Two readings of one heading, equal only at the entry's
+place. **Fix**: a view straight down / up reads its heading from the face the gizmo exits onto (`headingFrom`, `exitNormal` — the square turn's target, the
+same normal `tiltOff` uses). Walked: the worst roll step **0°** on every exit.
+
+**2. THE BASE ALONG THE SHOWN DIRECTION** (`ea4f179`, kept): the base the piece and the camera hang from (the gizmo's foot on the shell) was pushed off the
+gizmo along the ORBIT's direction while the piece hangs along the SHOWN one (the square camera's, the calm's) — 45° apart at an edge, 21° after a dx on the
+tilted top: the base slid off the gizmo's line (29 mm, ~1°). Now along the shown direction (`dirAt`).
+
+**3. THE GIZMO DRAWN ON THE RIG'S LAG** (the jitter, no new ease): the gizmo was drawn at its exact place — a step of 22 mm on each finger event, then nothing —
+against a piece and a scene on the rig's 45 ms ease. Now the ring AND its sections are drawn at the base's lag along the gizmo's face (`gizmoLag`: the
+eased base minus its target, its part along the face's normal dropped — never off its surface; the sections' mesh translated by it, so the ring stays their
+intersection). The exact place still drives everything (the orbit, the face map, the crossings, the holds). Walked: the drawn gizmo's jerk **0.20° → 0.01°**.
+
+**4. THE LOOK POINT TRAILING THE PIECE** (`8f86339`'s, back): `ea4f179` aimed the camera at the piece's own base (`pieceLookPoint`) — the piece frozen on the
+screen (0.014° a frame). The camera aims again at `st.asmLook` (the base eased again, `LOOK_TAU_MS` 120 ms): the piece leads the camera with the finger and
+settles when it stops. Walked: the piece 0.18 – 0.24° a frame (0.22 – 0.26° at `8f86339`), the gizmo with it (its spread against the piece 0.8 – 0.9°,
+1.9 – 2.9° at `8f86339`), the roll at every exit 0°. The left side (165°, 180°, 195°): unchanged (the square camera's timed turn at a vertical edge, by
+design).
+**Vectors**: `orbit_tilt.test.ts` — `headingFrom` (a vertical view's heading the same wherever along the top; the old reading 21° apart), `gizmoLag`,
+`gizmoShownAt` with the lag, the wiring (the roll's target, the lag, the trailing aim); `orbit_shell.test.ts`, `edge_surface.test.ts` (the base along the
+shown direction). The walk probe records the drawn gizmo (`gd`). **1738**.
