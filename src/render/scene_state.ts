@@ -457,6 +457,8 @@ export interface SceneState {
   asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
   asmLook: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-11) the look's share toward the gizmo and the assembly's centre this frame — the camera aims at the PIECE's own foot by it (`pieceLookPoint`) */
+  asmLookAim: { readonly w: number; readonly centre: Vec3 } | null;
   asmFacePoint: Vec3 | null;
   /** ⭐ (2026-10-28) the gizmo's raw point (Step 4c-bis: the face map's, `mapGizmo`; `null`: none yet) and the orbit place it was read at */
   asmG: Vec3 | null;
