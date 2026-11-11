@@ -846,22 +846,31 @@ design).
 `gizmoShownAt` with the lag, the wiring (the roll's target, the lag, the trailing aim); `orbit_shell.test.ts`, `edge_surface.test.ts` (the base along the
 shown direction). The walk probe records the drawn gizmo (`gd`). **1738**.
 
-### 9.14 ✅ POLAR ORBIT: THE CAP'S RELEASE CARRIED OVER THE EDGE AT AN EXIT (2026-11-11, `1.0.121-`) — ⛔ no device close
+### 9.14 ✅ POLAR ORBIT: A CAP READS THE CALM OF THE SIDE IT WOULD BE LEFT BY — the yaw at an exit (2026-11-11, `1.0.121-`) — ⛔ no device close
 
 > The owner: *"in polar orbit at far distance, if you enter the face holding the pole with dy, then orbit the gizmo with dx and then exit the face holding the
 > pole (be it towards the same initial face or another face), the camera rolls the moment the gizmo crosses the edge at exit"*, *"this is a jump of the yaw
-> orbit of the camera"* → (built, reverted with the first automatic-tilt build to `3e7340a`, rebuilt) *"and also any slanted face if the issue arise on any
-> face not vertical"*.
+> orbit of the camera"* → a first fix (`432631d`: the dx's release carried over the edge) → *"there is still a yaw at exit when I enter the face holding the
+> pole from one face and exit from the opposite face"*, *"the camera yaw exist when the yaw angle of the camera vs. vertical face is not the same at exit vs.
+> entrance (the vertical face can be the same or another vertical face, it does not matter …)"*, *"analyze the similarities with the camera roll issue we
+> fixed on tilted-pole-orbit … If the fix you have built in commit 432631d is a patch which is not addressing the issue, remove it and build a proper fix"*.
 
-**Walked** (2.0 m, in over the front, a dx of 8 steps on the top, out): the camera's heading jumped **−4.1°, −2.1°, −0.9°** on the frames after the
-crossing, no finger event between; none with no dx. **Root**: on a cap of the world's frame a dx releases the side's horizontal calm (`capYawRelease`:
-about half after 21°) — the piece shown 8.5° off the face's normal; at the exit the side read no release: the whole share dropped to 0 at once, the 7°
-turn eased over three frames by the rig's lag (`wholeShareStep`, 45 ms). **Fix**: the release at the exit carried onto the side and faded by POSITION over
-the calm's own vertical edge zone (`capReleaseCarried` × `poleEdgeWhole`: whole at the edge, none past it, given back going up); spent past the zone; none
-under a tilt. ⭐ Any cap — level or slanted (every band but SIDE) — and the side facet bordering it, vertical or slanted (a column's end facet): by
-construction; `Scene_1`'s assembly has only level and vertical faces, so a slanted one was not walked. **Walked** (dx 8, 20 steps on the top, 8 on the
-bottom; the same face and another): the heading turns with the finger, 0.2 – 1.5° a frame (2° onto another face), nothing between events.
-**Vectors**: `orbit_tilt.test.ts` — `capReleaseCarried`, the wiring.
+**Walked at `432631d`** (far out; in over a side, a turn of 21° / 100° / 180° / 200° at the pole, out; the top and the bottom; random dy / dx — 14 walks):
+at an exit the calm's offset (the shown heading against the orbit's yaw) jumped **0° → 9 – 14°**, the camera turning up to **2.74°** on frames with no
+finger event. `432631d` did not address it — it carried only the dx's release.
+**Root — the tilted pole's roll at an exit (§9.13) in the world's frame: one heading read two ways, equal only where the gizmo came in.** Over a cap the
+calm KEPT the entry side's (its normal and share — released by a dx, `capYawRelease`, carried over the edge, `capReleaseCarried`); after the exit it read
+the exit side at the gizmo's place. The same yaw against the same kind of face at entry and exit: equal; any other: the calm changed reading at the
+crossing, the rig's lag turned the camera there.
+**Fix**: over a cap the calm reads **the side the red leaves it by at the orbit's yaw** (`capEdgePitch`: the last side place below the cap at that yaw —
+its facet, its horizontal share and reading there; the vertical share whole). The cap's reading and the side's after the exit are ONE at the edge,
+whatever the entry; at a slice's end the side's calm is whole (no calm), so a dx over the cap crossing into another side's slice changes nothing either.
+⭐ Any cap (level or slanted — every band but SIDE) and any side facet it borders (a column's end facet, vertical or slanted) by construction; `Scene_1`'s
+assembly has only level and vertical faces, so a slanted one was not walked. `capYawRelease`, `capReleaseCarried` and their state deleted; the
+automatic tilt's camera wait (§9.15) untouched.
+**Walked after** (the same 14 walks): the calm's offset continuous through every exit (largest step **0.4°**); the camera's largest turn with no finger at
+an exit **0.44°** (2.74° before); the entries unchanged; turns over 1° with no finger over the walks 156 → 97.
+**Vectors**: `orbit_tilt.test.ts` — `capEdgePitch` (top and bottom, at five yaws), the side read at the edge the red's own, the wiring.
 
 ### 9.15 ✅ THE AUTOMATIC TILT: THE SECTIONS AT ONCE, THE CAMERA PENDING THROUGH THE APPROACH, THEN BLENDED BY THE ORBIT'S FINGER (2026-11-11, `1.0.121-`) — ⛔ no device close
 
