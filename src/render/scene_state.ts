@@ -480,6 +480,10 @@ export interface SceneState {
     facet: number;
     readonly delta: number;
     swingMs: number | null;
+    /** ⭐⭐⭐ (2026-11-11) the swing of the automatic tilt made as it switched on: held while the camera is pending, paced by the finger's travel (`asmBlend`) — the gizmo never held by it — then, the blend whole at a crossing, at the tilts' one speed */
+    readonly byMm: boolean;
+    /** ⭐⭐⭐ (2026-11-11) that swing's share shown */
+    swingE: number;
     /** ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS` */
     readonly swingDurMs: number;
     k: number;
@@ -500,6 +504,12 @@ export interface SceneState {
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;
   /** ⭐⭐⭐ (2026-11-10) the AUTOMATIC tilt's latch (`tiltAutoLatch`: within `tiltAutoM` of the gizmo, with its hysteresis) */
   asmTiltAuto: boolean;
+  /** ⭐⭐⭐ (2026-11-11) the automatic tilt switched on, the orbit not yet moved (`tiltPendingStep`): nothing turns */
+  asmTiltPending: boolean;
+  /** ⭐⭐⭐ (2026-11-11) the orbit's finger travel (mm) since last frame — the pending's end, the blend's pace */
+  asmOrbitMm: number;
+  /** ⭐⭐⭐ (2026-11-11) the blend into the close-in alignment under way: the finger's travel since the orbit started (`blendShare`); none: whole */
+  asmBlend: { mm: number; /** the tilt and the square camera's target at its start (`blendCrossed`) */ tiltId: number | null; target: Vec3 | null } | null;
   /** ⭐⭐⭐ (2026-11-10) the calm made whole by POSITION on the shown direction (`tiltCalmWholeHV`'s `h`, a cap's release) — 0: the calm as eased */
   asmCalmWhole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) the VERTICAL share alone whole by position — toward a top / bottom edge (`poleEdgeWhole`), a tilted facet's `b` ends: the horizontal calm carried over */

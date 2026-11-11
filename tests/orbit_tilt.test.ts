@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, capReleaseCarried, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, capReleaseCarried, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { calmHeading } from "../src/input/orbit_calm";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
@@ -408,7 +408,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("if (!onFacet && !tl.finishing) {"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
-    expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
+    expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
     expect(a).toContain("if (nW !== null) sqO.target = nW;"); // ⭐ the turn's target at the crossing itself // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
     expect(a).toContain("const g = m === null ? gizmoFor(st) : withGOff(st, m.hit.point);");
     expect(a).toContain("tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
@@ -536,5 +536,46 @@ describe("⭐⭐⭐ (2026-11-11) polar orbit: the cap's release carried over the
     expect(aw).toContain("st.asmCalmWhole = capReleaseCarried(st.asmCapRelease, i >= 0 ? st.asmCalmWholeV : 0);");
     expect(aw).toContain("if (!(st.asmCalmWhole > 0)) st.asmCapRelease = 0;");
     expect(aw).toContain("if (tl !== null) st.asmCapRelease = 0;");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-11) the automatic tilt: the sections at once, the CAMERA pending through the approach, then blended in by the orbit's finger — whole at the first edge", () => {
+  it("⭐⭐⭐ the camera pending from the frame it switches on until the orbit's first millimetre; nothing pending out past the threshold", () => {
+    expect(tiltPendingStep(false, false, true, 0)).toBe(true);
+    expect(tiltPendingStep(true, true, true, 0)).toBe(true);
+    expect(tiltPendingStep(true, true, true, 0.4)).toBe(false);
+    expect(tiltPendingStep(false, false, true, 2)).toBe(false);
+    expect(tiltPendingStep(true, true, false, 0)).toBe(false);
+    expect(tiltPendingStep(false, true, true, 0)).toBe(false);
+  });
+  it("⭐⭐ the blend's share by the finger's travel over 10 mm (a smoothstep), whole beyond, at once with no span", () => {
+    expect(DEFAULT_CONFIG.tiltBlendMm).toBe(10); // ⛔ 30 mm: too much finger before square (the owner)
+    expect(blendShare(0, 10)).toBe(0);
+    expect(blendShare(5, 10)).toBeCloseTo(0.5, 12);
+    expect(blendShare(10, 10)).toBe(1);
+    expect(blendShare(25, 10)).toBe(1);
+    expect(blendShare(5, 0)).toBe(1);
+  });
+  it("⭐⭐⭐ the blend whole at the first edge crossed: another tilt, the roll back under way, or the square camera's target another face", () => {
+    const n: Vec3 = [0, 0, -1];
+    expect(blendCrossed(3, 3, false, n, n)).toBe(false);
+    expect(blendCrossed(3, 3, false, n, [0, 0.0001, -1])).toBe(false);
+    expect(blendCrossed(3, 0, false, n, n)).toBe(true); // off the tilted cap
+    expect(blendCrossed(0, 4, false, n, n)).toBe(true); // onto a cap: a new tilt
+    expect(blendCrossed(3, 3, true, n, n)).toBe(true); // the roll back under way
+    expect(blendCrossed(0, 0, false, n, [1, 0, 0])).toBe(true); // a vertical edge
+    expect(blendCrossed(0, 0, false, null, [1, 0, 0])).toBe(false);
+  });
+  it("⭐⭐ wired: the tilt made at once, only the camera pending (the swing and the square share held), then by the finger; the gizmo held only by a swing at the tilts' speed", () => {
+    const aw = code("render/assembly_wiring.ts");
+    expect(aw).toContain("st.asmTiltPending = tiltPendingStep(pendWas, autoWas, st.asmTiltAuto, fingerMm);");
+    expect(aw).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);');
+    expect(aw).toContain("const byMm = why === \"auto\" && st.asmTiltPending;");
+    expect(aw).toContain("if (st.asmTiltPending) return;");
+    expect(aw).toContain("if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));");
+    expect(aw).toContain("else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);");
+    expect(aw).toContain("const swingTimed = tl !== null && tl.swingMs !== null && !(tl.byMm && (st.asmTiltPending || st.asmBlend !== null));");
+    expect(aw).toContain("blendCrossed(bl.tiltId, tid, st.asmTilt?.finishing ?? false, bl.target, st.asmSquare.target)");
+    expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);");
   });
 });

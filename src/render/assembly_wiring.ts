@@ -31,7 +31,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, capReleaseCarried, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, capYawRelease, capReleaseCarried, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -228,7 +228,10 @@ function squareFrame(st: SceneState, dtMs: number): void {
     const { t } = facetFrame(sq.n);
     sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);
   }
-  sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
+  // ⭐⭐⭐ (2026-11-11) pending: held (the camera keeps its orientation while the approach goes on); then by the finger's travel (`blendShare`), never by time
+  if (st.asmTiltPending) return;
+  if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
+  else sq.q = wholeShareStep(sq.q, st.asmTiltAuto ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));
 }
 
 /**
@@ -675,6 +678,18 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // whatever the gizmo's eased offset — ⛔ `asmGOff === null` stood for "no frame change under way" until the glide of the depth (§9.8 – §9.9) set it at
   // every depth step: an edge with a step held the tilt back 125 ms a step, the orbit going on in the world's frame (probed: 43 mm onto the top). Not
   // needed: a tilt under way holds the gizmo (`tiltUnderWay`) and leaves only once whole (`tiltExits`); the gizmo SHOWN (`asmG`, its glide in it) is kept
+  // ⭐⭐⭐ (2026-11-11, the owner: *"keep the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue, then the camera blends
+  // with the new alignment with the delta position mm when the orbit at close in starts"*) PENDING until the orbit's first millimetre (`tiltPendingStep`):
+  // no tilt, the square camera's share held; then the BLEND by the finger's travel (`asmBlend`, `blendShare`) — every face
+  const fingerMm = st.asmOrbitMm;
+  st.asmOrbitMm = 0;
+  const pendWas = st.asmTiltPending;
+  st.asmTiltPending = tiltPendingStep(pendWas, autoWas, st.asmTiltAuto, fingerMm);
+  if (!st.asmTiltAuto) st.asmBlend = null;
+  else if ((pendWas || !autoWas) && !st.asmTiltPending) st.asmBlend = { mm: 0, tiltId: null, target: null };
+  if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;
+  // ⭐⭐⭐ (2026-11-11, the owner: *"the red-green sections automatically switches to orthogonal when the automatic tilted pole is toggled on but the camera
+  // view waits"*) the tilt made at once — only the CAMERA pending (its swing, the square camera's share)
   if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
@@ -776,6 +791,18 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
   sectionLinesFrame(st);
+  // ⭐⭐⭐ (2026-11-11) the blend whole: by the finger's travel, or at the FIRST EDGE CROSSED (`blendCrossed` — the owner: *"otherwise, it may carry over a
+  // tilted view on another face"*; its rest then at the crossing's own speed)
+  const bl = st.asmBlend;
+  if (bl !== null) {
+    const tid = st.asmTilt?.id ?? 0;
+    if (bl.tiltId === null) {
+      bl.tiltId = tid;
+      bl.target = st.asmSquare.target;
+    } else if (blendCrossed(bl.tiltId, tid, st.asmTilt?.finishing ?? false, bl.target, st.asmSquare.target)) st.asmBlend = null;
+    else if (bl.target === null) bl.target = st.asmSquare.target;
+    if (st.asmBlend !== null && blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm) >= 1) st.asmBlend = null;
+  }
   // ⭐⭐⭐ (2026-11-11) the sections at the gizmo's lag too: the ring stays their intersection (*"the gizmo is always at the intersection"*)
   const sl = st.asmSectionLines;
   const lg = st.asmGizmoLag;
@@ -1067,7 +1094,15 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   if (tl === null) return;
   if (tl.swingMs !== null) {
     tl.swingMs += dtMs;
-    const e = tl.swingDurMs > 0 ? swingEase(tl.swingMs / tl.swingDurMs) : 1;
+    // ⭐⭐⭐ (2026-11-11) the automatic tilt's swing: held while the camera is pending, then by the finger's travel (`blendShare`); the blend whole at a
+    // crossing (or no blend): the rest at the tilts' one speed (`rollStep`), the gizmo held
+    if (tl.byMm) {
+      if (st.asmTiltPending) {
+        // held: the camera keeps its orientation while the approach goes on
+      } else if (st.asmBlend !== null) tl.swingE = Math.max(tl.swingE, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));
+      else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);
+    }
+    const e = tl.byMm ? tl.swingE : tl.swingDurMs > 0 ? swingEase(tl.swingMs / tl.swingDurMs) : 1;
     tl.dir = swingDir(tl.map, tl.delta, e);
     if (e >= 1) tl.swingMs = null;
   }
@@ -1097,7 +1132,9 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
   // ⭐⭐⭐ (2026-11-10, the owner: *"Build that one alone"*) …and from the roll's end TO THE EXIT itself (`finishing` / `off`: the tilt still here) — ⛔ held only
   // while the roll was short of whole: one finger event slipped in the frame between the roll's end and the exit, the orbit a step ahead of the piece's
   // solved angles through the frame change; they caught up during the square camera's turn — the gizmo moved one step while the camera turned (walked)
-  if (!turning && (tl === null || !(tiltUnderWay(tl.swingMs !== null, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;
+  // ⭐⭐⭐ (2026-11-11) a swing pending or paced by the finger (`byMm`, the automatic tilt's blend) never holds the gizmo: it moves from the first millimetre
+  const swingTimed = tl !== null && tl.swingMs !== null && !(tl.byMm && (st.asmTiltPending || st.asmBlend !== null));
+  if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;
   if (st.orbit.yaw === yaw0 && st.orbit.elevation === v0) return false;
   st.orbit.reset(yaw0, v0);
   return true;
@@ -1163,6 +1200,7 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
  * from there; where F's rules place it elsewhere (a void read on the new lines' travels), its relocation eased over the same swing (`asmGOff`).
  */
 export function tiltOnPress(st: SceneState): void {
+  if (st.asmTiltAuto) return; // ⭐⭐⭐ (2026-11-11) within the automatic distance the automatic tilt makes it — pending, then blended by the finger
   tiltOn(st, "press");
 }
 
@@ -1193,7 +1231,9 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const deltaShown = Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
-  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false };
+  // ⭐⭐⭐ (2026-11-11) made as the automatic tilt switched on (the camera pending): the swing held, then by the finger's travel (`swingE`)
+  const byMm = why === "auto" && st.asmTiltPending;
+  st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, byMm, swingE: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false };
   const map = faceMapOf(st);
   if (map === null) {
     st.asmTilt = null;

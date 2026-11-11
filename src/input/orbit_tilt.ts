@@ -398,6 +398,43 @@ export function gizmoGlide(prevShown: Vec3 | null, prevSurf: Vec3 | null, surf: 
   return Math.hypot(v[0], v[1], v[2]) > minM ? v : null;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate
+ * alignment of the camera … this does not blend with the approach"* → *"the red-green sections automatically switches to orthogonal when the automatic
+ * tilted pole is toggled on but the camera view waits through the approach … then the camera view resolves with the mm when the close in orbit starts …
+ * or it completely resolves when the first edge is crossed"*) THE CAMERA PENDING: from the frame the automatic tilt switches on (`autoWas` → `autoNow`, the
+ * approach crossing its distance) until the orbit's first millimetre of finger (`fingerMm`) the CAMERA keeps its orientation (the tilt's swing and the
+ * square camera's share held) — the tilt itself made at once (the sections orthogonal). Off (out past the threshold): not pending. ⛔ The camera swung and
+ * squared at once (by time, the approach still running): a snap the approach did not explain; ⛔ (the first build) the tilt itself held too — the sections
+ * polar until the orbit started.
+ */
+export function tiltPendingStep(pending: boolean, autoWas: boolean, autoNow: boolean, fingerMm: number): boolean {
+  return autoNow && (pending || !autoWas) && !(fingerMm > 0);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11) THE BLEND INTO THE CLOSE-IN ALIGNMENT BY THE FINGER'S TRAVEL: the share (0 … 1, a smoothstep) after `mm` of the orbit's finger since it
+ * started, over `spanMm` (`tiltBlendMm`, 10 mm; 0: at once) — the square camera's share on every face, the swing of the tilt made as it switched on; no
+ * clock, the gizmo moving from the first millimetre. ⭐ Whole at the first edge crossed (`blendCrossed`): never carried, part-way, onto another face.
+ */
+export function blendShare(mm: number, spanMm: number): number {
+  if (!(spanMm > 0)) return 1;
+  const x = Math.min(1, Math.max(0, mm / spanMm));
+  return x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"or it completely resolves when the first edge is crossed (otherwise, it may carry over a tilted view on another face)"*) HAS THE
+ * GIZMO CROSSED AN EDGE SINCE THE BLEND STARTED: another tilt (`tiltId`: one off, or a new one), the roll back under way (`finishing`), or the square camera's
+ * target another face (its normals more than 1° apart). ⭐ The blend is then whole — its rest resolved at the crossing's own speed, the gizmo held as at every
+ * crossing.
+ */
+export function blendCrossed(tiltId0: number, tiltId: number, finishing: boolean, target0: Vec3 | null, target: Vec3 | null): boolean {
+  if (tiltId !== tiltId0 || finishing) return true;
+  if (target0 === null || target === null) return false;
+  return dot(target0, target) < Math.cos(Math.PI / 180);
+}
+
 export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
   return swinging || (rolling && k < 1);
 }

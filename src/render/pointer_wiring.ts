@@ -358,6 +358,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     tiltClampStep(st, yawBefore, vBefore);
     // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
     hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
+    // ⭐⭐⭐ (2026-11-11) the orbit's finger travel (the approach's excluded): the automatic tilt's pending ends at its first millimetre, its blend paced by it
+    if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
     // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
     // ⭐⭐⭐ (2026-11-09, F3) never by the drag the slide let go of at the edge (`slideArmedByOrbit`) — it would latch again under the same finger
     if (!shiftApproach) st.slideArmed = slideArmedByOrbit(st.slideArmed, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1), pointerId, st.slideLetGo);
