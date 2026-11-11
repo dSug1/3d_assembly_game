@@ -422,7 +422,8 @@ describe("⭐⭐ wired", () => {
     // ⭐⭐⭐ (2026-11-11, the owner: *"you accumulate a position gap on screen between the gizmo and the piece"*) one base for the piece and the camera:
     expect(a).toContain("const foot = footOf(st, target, us, d + liftOf(st, us));"); // the base along the SHOWN direction (the piece's own)
     expect(a).not.toContain("const foot = footOf(st, target, u, d + liftOf(st, u));"); // ⛔ along the orbit's: the base off the gizmo's line (±4° at a crossing)
-    expect(code("render/green_box_wiring.ts")).toContain("const L: Vec3 = pieceLookPoint(st, [c.x, c.y, c.z]) ?? st.asmLook;"); // the aim at the piece's base, no second ease
+    expect(code("render/green_box_wiring.ts")).toContain("const L = st.asmLook;"); // (2026-11-11) the look point trailing the piece (8f86339's): the piece leads the camera
+    expect(code("render/green_box_wiring.ts")).not.toContain("pieceLookPoint"); // ⛔ the aim at the piece's own base: the piece frozen on the screen
     // ⭐⭐⭐ (`1.0.120b-`) the square camera close in: over the calm by `q`, turned at one speed, the gizmo held meanwhile, carried through the tilt's frames
     expect(a).toContain("sq.n = squareTurn(sq.n, sq.target, dtMs, st.cfg.tiltRollDegS, t);");
     expect(a).toContain("const turning = squareTurning(st.asmSquare.n, st.asmSquare.target, st.asmSquare.q);");

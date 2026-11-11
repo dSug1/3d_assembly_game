@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, leavesCone, pieceLookPoint, shownOffset, tiltClampStep } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, leavesCone, shownOffset, tiltClampStep } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -1199,9 +1199,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     lookAt = [c.x, c.y, c.z];
     // ⭐⭐⭐ (2026-10-28) around the assembly: the camera behind the piece about its LOOK POINT — the centre far out, the gizmo close in (`st.asmLook`)
     if (assemblyOn(st) && st.asmLook !== null) {
-      // ⭐⭐⭐ (2026-11-11) aimed at the PIECE's own foot at its own angles (`pieceLookPoint`), with the hover's offset it is drawn with — ⛔ the gizmo's
-      // foot eased twice: the piece drifted against the aim with the finger's speed, the gap paid back in the crossing's turn (the shake at an exit)
-      const L: Vec3 = pieceLookPoint(st, [c.x, c.y, c.z]) ?? st.asmLook;
+      // ⭐⭐⭐ (2026-11-11, the owner: *"the piece movement makes it look like static (it is frozen in front of the camera) … I liked the behavior there"*,
+      // 8f86339) the look point TRAILING the piece (`st.asmLook`, `LOOK_TAU_MS`): the piece leads the camera with the finger and settles when it stops
+      // (walked at 8f86339: up to 3.6° ahead, 0.26° a frame). ⛔ Aimed at the piece's own base (ea4f179): 0.014° a frame — frozen
+      const L = st.asmLook;
       const oo = cameraOffsetAt(camFrame.dir, [pp[0] - L[0], pp[1] - L[1], pp[2] - L[2]], gapFull);
       camAt = [L[0] + oo[0], L[1] + oo[1], L[2] + oo[2]];
       lookAt = [L[0], L[1], L[2]];
