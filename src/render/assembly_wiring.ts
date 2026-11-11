@@ -25,13 +25,13 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { calmHeading, calmShown, calmStep, calmTarget } from "../input/orbit_calm";
+import { calmHeading, calmShown, calmStep, calmTarget, capEdgePitch } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, capYawRelease, capReleaseCarried, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -286,8 +286,6 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const tl = st.asmTilt;
   st.asmCalmWhole = 0;
   st.asmCalmWholeV = 0;
-  if (sh === null || sh.t.band === "SIDE" || tl !== null) st.asmCapYaw0 = null;
-  if (tl !== null) st.asmCapRelease = 0;
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
@@ -303,16 +301,29 @@ function calmTargets(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ …and ON a face holding a pole (no calm there by rule): whole at once — ⛔ the eased state's stale share applied there for the one frame before the
   // automatic tilt (the piece thrown back 6°, then forth at the tilt: the owner's back-and-forth)
   // ⭐ at every distance (2026-11-10, the shake: close in only before — far out the eased calm fell behind the finger and caught up on the cap)
-  // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) ON A CAP: the vertical share whole, the side's horizontal calm KEPT
-  // (`shownDirAcross` carries it over the edge), released only as a dx turns the orbit away from where it came over (`capYawRelease`) and by the pitch
-  // (`poleWeight`) — ⛔ both whole at once: the yaw withheld through the dx released at the edge
+  // ⭐⭐⭐ (2026-11-11, the owner: *"the camera yaw exist when the yaw angle of the camera vs. vertical face is not the same at exit vs. entrance"*) ON A CAP:
+  // the calm of the side it would be left by at the orbit's yaw (`capEdgePitch` — the side's facet at the cap's edge, its share and reading there), the
+  // vertical share whole, and by the pitch as before (`poleWeight`) — one reading with the side's after the exit, whatever the entry. ⛔ The entry side's
+  // calm KEPT, released by a dx and carried over the edge (432631d): the camera turned at every exit at another yaw against the face
   if (tl === null && sh !== null && sh.t.band !== "SIDE") {
-    const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    if (st.asmCapYaw0 === null) st.asmCapYaw0 = q.yaw;
     st.asmCalmWholeV = 1;
-    st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);
-    st.asmCapRelease = st.asmCalmWhole; // ⭐⭐⭐ (2026-11-11) carried over the edge at the exit (`capReleaseCarried`)
-    st.asmCalm = calmStep(st.asmCalm, st.asmCalm === null ? tg : { n: null, sH: st.asmCalm.sH, sV: 1, wA: 1 }, dtMs);
+    const o = mapOpts(st);
+    const pE = map === null ? null : capEdgePitch(sh.pitch, (p) => mapTarget(map, sh.yaw, p, o).band === "SIDE");
+    if (map === null || pE === null) {
+      st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
+      return;
+    }
+    const tS = mapTarget(map, sh.yaw, pE, o);
+    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
+      shareH: cfg.faceSpanShareH,
+      zoneHPct: cfg.faceSpanZoneHPct,
+      zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
+      vOn: cfg.faceSpanShareVOn === 1,
+      shareV: cfg.faceSpanShareV,
+      zoneVPct: cfg.faceSpanZoneVPct,
+      zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
+    }, acrossNormals(st, map, { t: tS, pitch: pE }));
+    st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);
     return;
   }
   if (tl === null && sh !== null && map !== null && sh.t.band === "SIDE") {
@@ -321,10 +332,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
       const i = col.facets.indexOf(sh.t.stack);
       // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
-      // ⭐⭐⭐ (2026-11-11, the owner's roll at an exit after a dx on the cap) the cap's release carried over the edge, faded by position down the side
-      st.asmCalmWhole = capReleaseCarried(st.asmCapRelease, i >= 0 ? st.asmCalmWholeV : 0);
     }
-    if (!(st.asmCalmWhole > 0)) st.asmCapRelease = 0; // ⭐ past the edge zone (or none): spent
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
 }

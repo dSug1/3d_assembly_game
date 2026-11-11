@@ -3,9 +3,9 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, capReleaseCarried, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
-import { calmHeading } from "../src/input/orbit_calm";
+import { calmHeading, capEdgePitch } from "../src/input/orbit_calm";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
@@ -162,7 +162,7 @@ describe("⭐⭐ the calm on the tilted facet whole toward EVERY edge (each a fr
   });
 });
 
-describe("⭐⭐⭐ (2026-11-10, the owner: *\"build b\"*) THE MOUTH'S HAND-OVER (`mouthHold`) and the cap's release (`capYawRelease`)", () => {
+describe("⭐⭐⭐ (2026-11-10, the owner: *\"build b\"*) THE MOUTH'S HAND-OVER (`mouthHold`)", () => {
   const up = { lo: false, hi: true };
   it("⭐⭐⭐ a dy toward the open end holds (the red at the floor's edge); away, a dx, or no mouth lets go; no step keeps the state", () => {
     expect(mouthHold(false, up, 0.02, 0.001)).toBe(true);
@@ -172,12 +172,6 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"build b\"*) THE MOUTH'S HAND-OVER
     expect(mouthHold(true, up, 0, 0)).toBe(true);
     expect(mouthHold(false, up, 0, 0)).toBe(false);
     expect(mouthHold(false, { lo: true, hi: false }, -0.02, 0)).toBe(true); // a bottom's mouth, dy down
-  });
-  it("⭐⭐ over a cap of the world's frame: the side's horizontal calm kept as it came over, whole after a 45° dx (a smoothstep); either way round", () => {
-    expect(capYawRelease(0)).toBe(0);
-    expect(capYawRelease(Math.PI / 4)).toBe(1);
-    expect(capYawRelease(-Math.PI / 8)).toBeCloseTo(0.5, 12);
-    expect(capYawRelease(2 * Math.PI + 0.01)).toBeLessThan(0.01);
   });
 });
 
@@ -445,7 +439,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const R1 = capTilt(hs, cap.n);");
     // ⭐⭐⭐ the calm made whole by position on the SHOWN direction (never eased): the back-and-forth at a crossing
     expect(a).toContain("const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);"); // ⭐ (2026-11-10) the vertical share alone toward a top / bottom edge
-    expect(a).toContain("st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);"); // ⭐ (2026-11-10) over a cap: the side's horizontal calm kept, released by a dx
+    expect(a).not.toContain("capYawRelease"); // ⛔ (2026-11-11) the entry side's calm kept over a cap, released by a dx: the yaw at an exit elsewhere (§9.14)
     expect(a).not.toContain('sh.t.band !== "SIDE") st.asmCalmWhole = 1;'); // ⛔ whole at once on a cap: the withheld yaw released at the edge
     expect(a).toContain("st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);"); // ⭐ the rig's one time law
     expect(a).not.toContain("st.asmTiltAuto) st.asmCalmWhole"); // ⛔ close in only
@@ -521,21 +515,36 @@ describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and 
   });
 });
 
-describe("⭐⭐⭐ (2026-11-11) polar orbit: the cap's release carried over the edge at an exit, faded by position down the side", () => {
-  it("⭐⭐⭐ at the edge the whole release the cap had (the shown heading continuous); faded by the side's edge share; none with no release", () => {
-    const r = capYawRelease((21 * Math.PI) / 180); // a dx of 21° on the cap: about half released
-    expect(r).toBeGreaterThan(0.4);
-    expect(capReleaseCarried(r, 1)).toBeCloseTo(r, 12); // ⛔ dropped to 0 at the exit: the 7° jump of the shown heading
-    expect(capReleaseCarried(r, 0.5)).toBeCloseTo(r / 2, 12);
-    expect(capReleaseCarried(r, 0)).toBe(0); // past the edge zone: the side's calm whole
-    expect(capReleaseCarried(0, 1)).toBe(0); // no dx on the cap: nothing carried (the exit where it came over)
+describe("⭐⭐⭐ (2026-11-11) polar orbit: a cap reads the calm of the side it would be left by at the orbit's yaw — one reading with that side's after the exit", () => {
+  const world = buildFaceMap(cube.faces, cube.box);
+  const isSide = (yaw: number) => (p: number) => mapTarget(world, yaw, p, opts).band === "SIDE";
+  it("⭐⭐⭐ the edge's pitch: the last side place below the cap at the yaw (the top and the bottom), the cap just beyond", () => {
+    for (const yaw of [-90 * D, -69 * D, -20 * D, 80 * D, 179 * D]) {
+      const pT = capEdgePitch(80 * D, isSide(yaw))!;
+      expect(mapTarget(world, yaw, pT, opts).band).toBe("SIDE");
+      expect(mapTarget(world, yaw, pT + 1e-4, opts).band).toBe("TOP");
+      const pB = capEdgePitch(-80 * D, isSide(yaw))!;
+      expect(mapTarget(world, yaw, pB, opts).band).toBe("SIDE");
+      expect(mapTarget(world, yaw, pB - 1e-4, opts).band).toBe("BOTTOM");
+    }
+    expect(capEdgePitch(80 * D, () => false)).toBeNull();
   });
-  it("⭐⭐ wired: kept on the cap, carried on the side by its edge share, spent past it, none under a tilt", () => {
+  it("⭐⭐⭐ the side read at the cap's edge IS the side the red leaves it by at that yaw — the same facet as the gizmo's just past the edge, whatever the entry", () => {
+    // ⛔ the entry side's calm kept over the cap: at a yaw 21° off the entry's face, or on the opposite face, the side after the exit read another calm
+    for (const yaw of [-90 * D, -69 * D, 90 * D, 0, 135 * D]) {
+      const pT = capEdgePitch(85 * D, isSide(yaw))!;
+      const atEdge = mapTarget(world, yaw, pT, opts);
+      const below = mapTarget(world, yaw, pT - 2 * D, opts);
+      expect(atEdge.stack).toBe(below.stack);
+      expect(dot(atEdge.normal, below.normal)).toBeCloseTo(1, 9);
+    }
+  });
+  it("⭐⭐ wired: over a cap the side's calm at the edge (its share and reading, the vertical whole); the release and its carry deleted", () => {
     const aw = code("render/assembly_wiring.ts");
-    expect(aw).toContain("st.asmCapRelease = st.asmCalmWhole;");
-    expect(aw).toContain("st.asmCalmWhole = capReleaseCarried(st.asmCapRelease, i >= 0 ? st.asmCalmWholeV : 0);");
-    expect(aw).toContain("if (!(st.asmCalmWhole > 0)) st.asmCapRelease = 0;");
-    expect(aw).toContain("if (tl !== null) st.asmCapRelease = 0;");
+    expect(aw).toContain('const pE = map === null ? null : capEdgePitch(sh.pitch, (p) => mapTarget(map, sh.yaw, p, o).band === "SIDE");');
+    expect(aw).toContain("st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);");
+    expect(aw).not.toContain("capReleaseCarried");
+    expect(aw).not.toContain("asmCapYaw0");
   });
 });
 

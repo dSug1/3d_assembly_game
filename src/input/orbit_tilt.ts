@@ -179,28 +179,6 @@ export function tiltCalmWholeHV(
 }
 
 /**
- * ⭐⭐⭐ (2026-11-10) OVER A CAP OF THE WORLD'S FRAME (no tilt — far out, or the one frame before the automatic one): the calm brought from the side KEPT, its
- * horizontal share released only as a dx turns the orbit away from where it came over (`yawFromEntry`, a smoothstep to whole at 45°) — and by the pitch as
- * before (`poleWeight`, 60° → 85°). ⛔ Whole at once on the cap: the withheld yaw released at the edge.
- */
-/**
- * ⭐⭐⭐ (2026-11-11, the owner: *"in polar orbit at far distance, if you enter the face holding the pole with dy, then orbit the gizmo with dx and then exit the
- * face holding the pole (be it towards the same initial face or another face), the camera rolls the moment the gizmo crosses the edge at exit"*) THE CAP'S
- * RELEASE CARRIED OVER THE EDGE: on the side below (above) a cap, the calm's horizontal whole share the cap's release had at the exit (`carried`), faded
- * by POSITION over the calm's own edge zone (`edgeWhole`: `poleEdgeWhole`, 1 at the edge, 0 past the zone) — the shown direction continuous through the
- * crossing, the calm taking hold as the gizmo goes down the side (and given back going up). ⛔ Dropped at once: after a dx on the cap (21°: half
- * released) the shown heading jumped 7° toward the side's normal at the exit, eased over three frames (−4°, −2°, −0.7°) — the roll.
- */
-export function capReleaseCarried(carried: number, edgeWhole: number): number {
-  return Math.max(0, Math.min(1, carried)) * Math.max(0, Math.min(1, edgeWhole));
-}
-
-export function capYawRelease(yawFromEntry: number): number {
-  const x = Math.min(1, Math.abs(Math.atan2(Math.sin(yawFromEntry), Math.cos(yawFromEntry))) / (Math.PI / 4));
-  return x * x * (3 - 2 * x);
-}
-
-/**
  * ⭐⭐⭐ (2026-11-10, the owner: *"Make the roll back by finger && minimum of xx ms to smoothen it"*) THE ROLL SHOWN, one frame: toward the finger's share
  * `target` (`exitShare` — reversible) by at most `dtMs / minMs` — a whole roll never in less than `minMs` (⛔ by the finger alone: far out the edge's
  * stretch is ~1.5 mm of finger, the far edge's half turn passed in one or two input events — 105° in a frame, probed). `minMs` 0: the finger's share.
