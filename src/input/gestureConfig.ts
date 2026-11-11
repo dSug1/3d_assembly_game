@@ -863,7 +863,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
-  tiltBlendMm: 30, // ⭐⭐⭐ (2026-11-11) the automatic tilt's blend by the orbit's first 30 mm of finger — a guess until a hand sets it
+  tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least

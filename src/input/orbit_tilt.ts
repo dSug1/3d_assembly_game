@@ -183,6 +183,18 @@ export function tiltCalmWholeHV(
  * horizontal share released only as a dx turns the orbit away from where it came over (`yawFromEntry`, a smoothstep to whole at 45°) — and by the pitch as
  * before (`poleWeight`, 60° → 85°). ⛔ Whole at once on the cap: the withheld yaw released at the edge.
  */
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"in polar orbit at far distance, if you enter the face holding the pole with dy, then orbit the gizmo with dx and then exit the
+ * face holding the pole (be it towards the same initial face or another face), the camera rolls the moment the gizmo crosses the edge at exit"*) THE CAP'S
+ * RELEASE CARRIED OVER THE EDGE: on the side below (above) a cap, the calm's horizontal whole share the cap's release had at the exit (`carried`), faded
+ * by POSITION over the calm's own edge zone (`edgeWhole`: `poleEdgeWhole`, 1 at the edge, 0 past the zone) — the shown direction continuous through the
+ * crossing, the calm taking hold as the gizmo goes down the side (and given back going up). ⛔ Dropped at once: after a dx on the cap (21°: half
+ * released) the shown heading jumped 7° toward the side's normal at the exit, eased over three frames (−4°, −2°, −0.7°) — the roll.
+ */
+export function capReleaseCarried(carried: number, edgeWhole: number): number {
+  return Math.max(0, Math.min(1, carried)) * Math.max(0, Math.min(1, edgeWhole));
+}
+
 export function capYawRelease(yawFromEntry: number): number {
   const x = Math.min(1, Math.abs(Math.atan2(Math.sin(yawFromEntry), Math.cos(yawFromEntry))) / (Math.PI / 4));
   return x * x * (3 - 2 * x);
@@ -388,12 +400,13 @@ export function gizmoGlide(prevShown: Vec3 | null, prevSurf: Vec3 | null, surf: 
 
 /**
  * ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate
- * alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as
- * long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo
- * moving from first millimeter and also the same for all the faces"*) THE AUTOMATIC TILT PENDING: from the frame the automatic tilt switches on (`autoWas` → `autoNow`, the approach crossing its
- * distance) until the orbit's first millimetre of finger (`fingerMm`) — meanwhile NOTHING turns (no tilt made, the square camera's share held): the
- * camera keeps its orientation while the approach goes on. Off (out past the threshold): not pending. ⛔ The tilt made and swung at once on a face holding a
- * pole (the heading snapped square, the camera turned straight down — by time, the approach still running: a snap the approach did not explain).
+ * alignment of the camera … this does not blend with the approach"* → *"the red-green sections automatically switches to orthogonal when the automatic
+ * tilted pole is toggled on but the camera view waits through the approach … then the camera view resolves with the mm when the close in orbit starts …
+ * or it completely resolves when the first edge is crossed"*) THE CAMERA PENDING: from the frame the automatic tilt switches on (`autoWas` → `autoNow`, the
+ * approach crossing its distance) until the orbit's first millimetre of finger (`fingerMm`) the CAMERA keeps its orientation (the tilt's swing and the
+ * square camera's share held) — the tilt itself made at once (the sections orthogonal). Off (out past the threshold): not pending. ⛔ The camera swung and
+ * squared at once (by time, the approach still running): a snap the approach did not explain; ⛔ (the first build) the tilt itself held too — the sections
+ * polar until the orbit started.
  */
 export function tiltPendingStep(pending: boolean, autoWas: boolean, autoNow: boolean, fingerMm: number): boolean {
   return autoNow && (pending || !autoWas) && !(fingerMm > 0);
@@ -401,13 +414,25 @@ export function tiltPendingStep(pending: boolean, autoWas: boolean, autoNow: boo
 
 /**
  * ⭐⭐⭐ (2026-11-11) THE BLEND INTO THE CLOSE-IN ALIGNMENT BY THE FINGER'S TRAVEL: the share (0 … 1, a smoothstep) after `mm` of the orbit's finger since it
- * started, over `spanMm` (`tiltBlendMm`; 0: at once) — the square camera's share on every face, the swing of the tilt made on a face holding a pole; no
- * clock, the gizmo moving from the first millimetre.
+ * started, over `spanMm` (`tiltBlendMm`, 10 mm; 0: at once) — the square camera's share on every face, the swing of the tilt made as it switched on; no
+ * clock, the gizmo moving from the first millimetre. ⭐ Whole at the first edge crossed (`blendCrossed`): never carried, part-way, onto another face.
  */
 export function blendShare(mm: number, spanMm: number): number {
   if (!(spanMm > 0)) return 1;
   const x = Math.min(1, Math.max(0, mm / spanMm));
   return x * x * (3 - 2 * x);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11, the owner: *"or it completely resolves when the first edge is crossed (otherwise, it may carry over a tilted view on another face)"*) HAS THE
+ * GIZMO CROSSED AN EDGE SINCE THE BLEND STARTED: another tilt (`tiltId`: one off, or a new one), the roll back under way (`finishing`), or the square camera's
+ * target another face (its normals more than 1° apart). ⭐ The blend is then whole — its rest resolved at the crossing's own speed, the gizmo held as at every
+ * crossing.
+ */
+export function blendCrossed(tiltId0: number, tiltId: number, finishing: boolean, target0: Vec3 | null, target: Vec3 | null): boolean {
+  if (tiltId !== tiltId0 || finishing) return true;
+  if (target0 === null || target === null) return false;
+  return dot(target0, target) < Math.cos(Math.PI / 180);
 }
 
 export function tiltUnderWay(swinging: boolean, rolling: boolean, k: number): boolean {
