@@ -31,7 +31,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, capTilt, capYawRelease, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, capTilt, capYawRelease, capReleaseCarried, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -284,6 +284,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
   st.asmCalmWhole = 0;
   st.asmCalmWholeV = 0;
   if (sh === null || sh.t.band === "SIDE" || tl !== null) st.asmCapYaw0 = null;
+  if (tl !== null) st.asmCapRelease = 0;
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
@@ -307,6 +308,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
     if (st.asmCapYaw0 === null) st.asmCapYaw0 = q.yaw;
     st.asmCalmWholeV = 1;
     st.asmCalmWhole = capYawRelease(q.yaw - st.asmCapYaw0);
+    st.asmCapRelease = st.asmCalmWhole; // ⭐⭐⭐ (2026-11-11) carried over the edge at the exit (`capReleaseCarried`)
     st.asmCalm = calmStep(st.asmCalm, st.asmCalm === null ? tg : { n: null, sH: st.asmCalm.sH, sV: 1, wA: 1 }, dtMs);
     return;
   }
@@ -316,7 +318,10 @@ function calmTargets(st: SceneState, dtMs: number): void {
       const i = col.facets.indexOf(sh.t.stack);
       // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+      // ⭐⭐⭐ (2026-11-11, the owner's roll at an exit after a dx on the cap) the cap's release carried over the edge, faded by position down the side
+      st.asmCalmWhole = capReleaseCarried(st.asmCapRelease, i >= 0 ? st.asmCalmWholeV : 0);
     }
+    if (!(st.asmCalmWhole > 0)) st.asmCapRelease = 0; // ⭐ past the edge zone (or none): spent
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
 }

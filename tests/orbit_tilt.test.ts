@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, capYawRelease, capReleaseCarried, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { calmHeading } from "../src/input/orbit_calm";
 import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
@@ -518,5 +518,23 @@ describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and 
     expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);");
     expect(aw).toContain("if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);");
     expect(code("render/green_box_wiring.ts")).toContain("gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag)");
+  });
+});
+
+describe("⭐⭐⭐ (2026-11-11) polar orbit: the cap's release carried over the edge at an exit, faded by position down the side", () => {
+  it("⭐⭐⭐ at the edge the whole release the cap had (the shown heading continuous); faded by the side's edge share; none with no release", () => {
+    const r = capYawRelease((21 * Math.PI) / 180); // a dx of 21° on the cap: about half released
+    expect(r).toBeGreaterThan(0.4);
+    expect(capReleaseCarried(r, 1)).toBeCloseTo(r, 12); // ⛔ dropped to 0 at the exit: the 7° jump of the shown heading
+    expect(capReleaseCarried(r, 0.5)).toBeCloseTo(r / 2, 12);
+    expect(capReleaseCarried(r, 0)).toBe(0); // past the edge zone: the side's calm whole
+    expect(capReleaseCarried(0, 1)).toBe(0); // no dx on the cap: nothing carried (the exit where it came over)
+  });
+  it("⭐⭐ wired: kept on the cap, carried on the side by its edge share, spent past it, none under a tilt", () => {
+    const aw = code("render/assembly_wiring.ts");
+    expect(aw).toContain("st.asmCapRelease = st.asmCalmWhole;");
+    expect(aw).toContain("st.asmCalmWhole = capReleaseCarried(st.asmCapRelease, i >= 0 ? st.asmCalmWholeV : 0);");
+    expect(aw).toContain("if (!(st.asmCalmWhole > 0)) st.asmCapRelease = 0;");
+    expect(aw).toContain("if (tl !== null) st.asmCapRelease = 0;");
   });
 });

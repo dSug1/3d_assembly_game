@@ -506,6 +506,8 @@ export interface SceneState {
   asmCalmWholeV: number;
   /** ⭐ (2026-11-10) over a cap of the world's frame: the orbit's yaw as it came over (`capYawRelease`) — `null` on a side */
   asmCapYaw0: number | null;
+  /** ⭐⭐⭐ (2026-11-11) the cap's release of the calm at its last frame — carried over the edge onto the side, faded by position (`capReleaseCarried`) */
+  asmCapRelease: number;
   /** ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: its direction `n` (the directions' frame) turned at one speed to the gizmo's face's normal `target`; `q` its share over the calm (1 with the automatic tilt on, eased) */
   asmSquare: { n: Vec3 | null; target: Vec3 | null; q: number };
   /** ⭐⭐⭐ (2026-11-10, the owner: *"build b"*) the gizmo HELD before a void's mouth while a dy carries it toward the open end (`mouthHold`) — its place, and toward which end (`hi`: up the facet); `null`: free */
