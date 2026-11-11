@@ -248,33 +248,59 @@ export function mouthHold(wasHeld: boolean, mouth: { readonly lo: boolean; reado
   return (mouth.hi && dPitch > 0) || (mouth.lo && dPitch < 0);
 }
 
-/**
- * ⭐⭐⭐ (2026-11-10, branch `1.0.120b-`, the owner: *"do we need a calm when the automatic tilt is toggled on? … on orthogonal red-green sections, we already
- * have a mechanism to cross the edges"* → *"build the square camera close in"*) THE SQUARE CAMERA'S TURN, one frame: the camera's direction `n` turned
- * toward the gizmo's face's normal `target` at ONE SPEED (`degS`, the tilts' — 90° in 0.25 s at 360°/s), about their common perpendicular (`fallback`
- * when they are opposite). Every edge is then a frame change: a vertical edge a 90° turn, a top / bottom edge the tilt's (the camera square already: no
- * swing). `null` target: as it is.
- */
-export function squareTurn(n: Vec3, target: Vec3 | null, dtMs: number, degS: number, fallback: Vec3): Vec3 {
-  if (target === null) return n;
-  const c = Math.max(-1, Math.min(1, dot(n, target)));
+/** ⭐ (2026-11-11) A direction turned from `from` toward `target` by the share `e` of their angle, about their common perpendicular (`fallback` when opposite). */
+export function turnShare(from: Vec3, target: Vec3, e: number, fallback: Vec3): Vec3 {
+  const c = Math.max(-1, Math.min(1, dot(from, target)));
   const ang = Math.acos(c);
-  if (ang < 1e-9) return target;
-  const step = degS > 0 ? Math.min(ang, (degS * Math.PI) / 180 * (Math.max(0, dtMs) / 1000)) : ang;
-  if (step >= ang - 1e-12) return target;
-  let ax = cross(n, target);
+  const k = Math.min(1, Math.max(0, e));
+  if (ang < 1e-9 || k >= 1) return target;
+  let ax = cross(from, target);
   let l = Math.hypot(ax[0], ax[1], ax[2]);
   if (l < 1e-9) {
     ax = fallback;
     l = Math.hypot(ax[0], ax[1], ax[2]);
   }
-  return rotateAbout(n, [ax[0] / l, ax[1] / l, ax[2] / l], step);
+  return rotateAbout(from, [ax[0] / l, ax[1] / l, ax[2] / l], ang * k);
 }
 
-/** ⭐ (`1.0.120b-`) the square camera still turning: more than half a degree from its face's normal — the gizmo held meanwhile (as a tilt's). */
-export function squareTurning(n: Vec3 | null, target: Vec3 | null, q: number): boolean {
-  if (n === null || target === null || !(q > 0.5)) return false;
-  return dot(n, target) < Math.cos((0.5 * Math.PI) / 180);
+/**
+ * ⭐⭐⭐ (2026-11-11, branch `1.0.120b-Orthogonal-tilted-poles`, the owner: *"I am ok to accept the stretch but it shall be used only to remove the tilt by
+ * controlling the camera, not the gizmo"* → *"proceed with the stretch"*) THE STRETCH — the camera's turn through an edge BY POSITION: the share (0 … ½)
+ * by which the camera, square to the gizmo's face, has turned toward the next face's square at `d` from their edge (m, on the assembly) — a smoothstep over
+ * the stretch `zM`, ½ at the edge itself (both faces seen at 45°); beyond it the next face takes over from its own ½. ⛔ By time (the square camera's
+ * timed turn, the gizmo held — `squareTurn`, `squareEased`, `squareTurning`, deleted): a camera square to the face with the gizmo centred before and after
+ * an edge can only pivot ON the gizmo — the surface beside it, sliding with the finger, swung back the other way the moment the finger was held (walked:
+ * +0.3° a frame, then −1 … −2.4°, at every crossing). By position the turn rides the finger: the pan carries the surface on. ⭐ FIXED in mm on the assembly
+ * (the owner: *"what stretch is required at two different distances?"*): the pan and the turn both move the image as 1 / the camera's distance — whether
+ * the surface keeps with the finger depends only on the turn per mm, the same at every distance. `zM` 0: no stretch.
+ */
+export function stretchWeight(d: number, zM: number): number {
+  if (!(zM > 0)) return 0;
+  const x = Math.min(1, Math.max(0, 1 - Math.max(0, d) / zM));
+  return 0.5 * x * x * (3 - 2 * x);
+}
+
+/** ⭐ (2026-11-11) THE STRETCHED CAMERA'S DIRECTION: the face's normal `n` turned toward each neighbour across an edge nearer than the stretch (`stretchWeight`). */
+export function stretchDir(n: Vec3, near: readonly { readonly nb: Vec3 | null; readonly d: number }[], zM: number, fallback: Vec3): Vec3 {
+  let u = n;
+  for (const e of near) {
+    if (e.nb === null || dot(e.nb, n) > 1 - 1e-9) continue;
+    const w = stretchWeight(e.d, zM);
+    if (w > 0) u = turnShare(u, e.nb, w, fallback);
+  }
+  return u;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-11) THE TILT'S ROLL BY POSITION too (the owner's stretch *"controlling the camera"*): on the tilted facet ½ at its nearest edge, 0 inside
+ * the stretch (`stretchWeight` of `dEdge`); off it ½ → 1 over the stretch beyond the edge (`dBeyond`, the gizmo's place below the tilted facet's plane) —
+ * 1: the world's frame (the exit). ⛔ By time after the crossing, the gizmo held (§9.7's rule 1-b: 0.5 s for the far edge's half turn).
+ */
+export function stretchRoll(onFacet: boolean, dEdge: number, dBeyond: number, zM: number): number {
+  if (!(zM > 0)) return onFacet ? 0 : 1;
+  if (onFacet) return stretchWeight(dEdge, zM);
+  const x = Math.min(1, Math.max(0, Math.max(0, dBeyond) / zM));
+  return 0.5 + 0.5 * x * x * (3 - 2 * x);
 }
 
 /**
