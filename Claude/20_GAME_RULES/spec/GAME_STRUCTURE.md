@@ -156,7 +156,7 @@ shape how Blender levels are authored; the teardown contract only when the reloa
 | 0 | *Level 0 - Scene 0 - the workbench* | ⭐ **the HEPTAGON** (below) |
 | 1 | *Level 1 - Scene 1 - the painting* | `Scene_1`, unchanged |
 | 2 | *Demo - the painting* | `Scene1_demo`, unchanged |
-| 3 | *Level 2 - Scene 2 - the engine* | `Scene_2` (`content/scene_2.ts`): `Scene_1`'s floor, lights, rig, units, play volume — **empty** (no pieces, no goal) |
+| 3 | *Level 2 - Scene 2 - the engine* | `Scene_2` (`content/scene_2.ts`): `Scene_1`'s floor, lights, rig, units, play volume — **empty** (no pieces, no goal); ⭐ to hold the ENGINE (⛔ proposed, `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md`) |
 | 4 | *Level 0bis - Scene 0bis - the heptagon with tips* | ⭐ `Scene_0bis` (§7.1): `Scene_0` copied, its heptagon's two end faces TIPPED |
 
 * **The menu's order is the menu's only** (`WorldSpec.menuOrder`, `menuLevels` in `core/game_route.ts`): the demo on top, then Levels 0, 1, 2; each

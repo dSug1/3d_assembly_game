@@ -10,6 +10,8 @@
 
 ⛔ The build queue is [`../../00_CORE/QUEUE.md`](../../00_CORE/QUEUE.md); this is the dossier of
 row `3D4` (real 3D file import).
+⭐ (2026-11-12) It is stage W4 of the workflow for any new scene (⛔ proposed) → [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md);
+the part conventions it reads → [`PART_AUTHORING.md`](PART_AUTHORING.md); its first user, `Scene_2` → [`SCENE_2_ASSEMBLY.md`](SCENE_2_ASSEMBLY.md).
 
 ---
 
