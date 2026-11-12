@@ -99,6 +99,8 @@ const PENDING: Record<string, string> = {
   // stale entry the moment it was wired, which is the second direction it checks.
   // ⭐ `boxShape` LEFT this list 2026-09-29 (`D170`): the demo generator builds its world from box shapes.
   // ── Small surface kept for callers that do not exist yet. ────────────────────
+  PLATE_DIMS_M: "the workbench's plate — `Scene_0`'s content until 2026-11-12 (the heptagon); read by the fixture `tests/helpers/workbench.ts`",
+  PYRAMID_DIMS_M: "the workbench's pyramid — `Scene_0`'s content until 2026-11-12 (the heptagon); read by `frustum.test.ts` and the workbench fixture",
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
   // ⭐ (2026-11-04, Step 4c-bis) the carrier's by-distance fallback (`loopStep`, `greenPace`, `greenFaces`) DELETED with the carrier — the face map
   // (`input/face_map.ts`); it stands at `da020af` (TILTED_ORBIT_REBUILD_SCOPE.md §13, §15).
