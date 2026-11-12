@@ -247,6 +247,12 @@ export function orbitOffset(
 export class OrbitController {
   private yawRad: number;
   private v: number;
+  /**
+   * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC4, F4) THE ELEVATION ASKED PAST A RING'S LIMIT, since last read (`takeBeyond`) — a drag or a coast pushing
+   * into the pole: the face map's angles can still take it there (⛔ dropped: after a tilt the orbit sat at the pole with the gizmo mid-face, the map moved
+   * by the orbit's step alone — zero — the face never reached, 45 – 378 frames blocked on the heptagon).
+   */
+  private beyond = 0;
 
   constructor(
     private readonly cfg: GestureConfig,
@@ -272,7 +278,21 @@ export class OrbitController {
    */
   nudge(dYawRad: number, dV: number): void {
     this.yawRad += dYawRad;
-    this.v = Math.min(1, Math.max(0, this.v + dV));
+    this.stepV(dV);
+  }
+
+  /** ⭐ (F4) the elevation stepped, clamped to its rings — what the clamp cut off kept (`beyond`). */
+  private stepV(dV: number): void {
+    const nv = this.v + dV;
+    this.v = Math.min(1, Math.max(0, nv));
+    this.beyond += nv - this.v;
+  }
+
+  /** ⭐⭐⭐ (F4) the elevation asked past the rings' limit since the last call (+ above the top, − below the bottom), then cleared. */
+  takeBeyond(): number {
+    const b = this.beyond;
+    this.beyond = 0;
+    return b;
   }
 
   reset(yawRad: number, v: number): void {
@@ -319,7 +339,7 @@ export class OrbitController {
     // the camera — the same inversion, in the axis where screen coordinates already
     // point the other way.
     // ⭐ prototype (green box), 2026-10-02: × `elevationGainScale` — with four rings, a mm moves the outer segments as before.
-    this.v = Math.min(1, Math.max(0, this.v + dyMm * this.cfg.gainOrbitElevation * elevationGainScale(this.cfg)));
+    this.stepV(dyMm * this.cfg.gainOrbitElevation * elevationGainScale(this.cfg));
   }
 
   // ⛔ The approach swing's yaw / elevation OFFSETS and `absorb` are deleted with the swing (`D120`).

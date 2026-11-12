@@ -1,0 +1,8 @@
+# QUEUE.md's YOU-ARE-HERE lines moved (2026-11-12)
+
+Moved verbatim from `QUEUE.md` to make room for `1.0.125-Debug_scene_0` (`ORBIT_ANY_SHAPE.md`) within its 40 KB budget — the record of the
+`1.0.117-` and `1.0.114from1.0.112-` builds (their specs: `POLAR_ORBIT_CLEANUP.md` §8, §9.4 – §9.5).
+
+⭐⭐⭐ **BUILT (branch `1.0.117-Tilted-polar-orbit`, 2026-11-10; *"The build is good"*; the slide under it ⏸ for the slide's own work) — THE TILTED POLE** (`POLAR_ORBIT_CLEANUP.md` §9.4 the rule, §9.5 as built and probed): a press on a cap tilts the orbit so the cap is a side (the heading swung square, the gizmo kept); off it the world's frame, the roll back by the finger with a 250 ms minimum; three sliders (☰ → CAMERA → CAMERA ORBIT AROUND CENTER); `src/input/orbit_tilt.ts`. ⛔ No device close.
+
+⭐⭐⭐ **2026-11-09 — `1.0.114from1.0.112-` (now `…-Polar-orbit-cleaned-with-slide`, live `98ef251`; `POLAR_ORBIT_CLEANUP.md` §8)**: `1.0.112-` renamed `1.0.112-Polar-orbit-Final-with-slide`; `1.0.113-` (the step walk F8, the line joins F6) renamed `1.0.113-not-used` — the owner: *"too many back and forth of the red and green sections"* at the notches; main rolled back to `1.0.112-` + F7b. Built here: **F7b** (the calm on every side facet, slanted ones included), **the lines refined** (I17's drawing: a narrow face drawn on its surface, a slice a frame), **a line broken only where the gizmo jumps** (the joins verified within the frame's budget; the lift along the real surface — §8.7), **a closed void bridged only where it has NO floor** (the owner's amendment of D3; the piece-fit rule for closed voids too — the top's channel: the red along its floor). I17 and §8.5: closed 2026-11-12 (§9.16).

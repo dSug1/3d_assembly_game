@@ -133,7 +133,7 @@ describe("⭐⭐ the STUCK piece respawned by a double tap / click on it (2026-1
   });
   it("⭐⭐ (audit 6) stuck is the SOLVER's answer — its probes, then every direction's turn, one a frame, once the shown piece has caught up", () => {
     const g = flat("render/green_box_wiring.ts");
-    expect(g).toContain("blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);");
+    expect(g).toContain("blocked = stuckProbe(q, counted, { ...opt, maxQueries: Math.max(1, left) }, STUCK_PROBE_M);"); // ⭐ (2026-11-12, F5) within what the frame left
     // ⭐ (the second audit) scheduled — one check every 100 ms, a verdict per key — and INSIDE the margin counts, blocked input or not
     expect(g).toContain("const next = stuckNext(st.pieceStuck, key, t0, STUCK_EVERY_MS);");
     expect(g).toContain('if (stuckGate(st.pieceMoveBlocked, inside, armed, st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M) === "RESET") {'); // ⭐ (the sixth audit) decided in input/

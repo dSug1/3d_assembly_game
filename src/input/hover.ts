@@ -9,7 +9,7 @@
  * clearance rule, so the other faces stop and slide it. Pure: the scene reaches it through numbers.
  */
 import type { Vec3 } from "../core/vec";
-import type { OrbitQ } from "./piece_orbit_solver";
+import { FIRST_ITERATION_MAX_QUERIES, type OrbitQ } from "./piece_orbit_solver";
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -646,7 +646,9 @@ export function orbitFrameUnderHover(q: OrbitQ): { q: OrbitQ; target: OrbitQ; us
 export const HOVER_MIN_QUERIES = 4;
 export function hoverQueryBudget(capQueries: number, usedQueries: number): number {
   const left = capQueries - usedQueries;
-  return left >= HOVER_MIN_QUERIES ? left : 0;
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` F5) room for a solve's whole first iteration (`FIRST_ITERATION_MAX_QUERIES`) — it always completes (⛔ from
+  // `HOVER_MIN_QUERIES` up: the slide's solve went past the cap — 37 a frame on `Scene_1`, the walks)
+  return left >= Math.max(HOVER_MIN_QUERIES, FIRST_ITERATION_MAX_QUERIES) ? left : 0;
 }
 
 /**

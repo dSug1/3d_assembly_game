@@ -635,7 +635,6 @@ export function createScene(
   st.pieceMoveBlocked = false;
   st.pieceStuck = STUCK_FRESH;
   st.pieceGuardCarryMs = 0;
-  st.pieceQueriesCarry = 0;
   st.relocateCursor = { key: "", from: 0 };
   st.quadCheckRan = false;
   st.restAlignHeld = false;

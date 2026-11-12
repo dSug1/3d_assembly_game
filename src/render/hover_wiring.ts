@@ -254,7 +254,7 @@ function hoverStart(st: SceneState, pointerId: number | null): boolean | "wait" 
   if (c.gapM > maxGap) {
     const down = (x: OrbitQ): Vec3 => add(anchor, scale(c.normal, -x.yaw));
     const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt);
-    st.pieceQueriesCarry += s.queries;
+    st.pieceQueries += s.queries; // ⭐ (2026-11-12, F5) charged to this frame
     settleM = Math.max(0, s.q.yaw);
   }
   const settled: Vec3 = add(anchor, scale(c.normal, -settleM));

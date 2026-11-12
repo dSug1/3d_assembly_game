@@ -576,7 +576,11 @@ function restAlignFrame(st: SceneState, now: number): void {
   // the piece's place NOW, is held when it would take it under the margin (`turnStepHeld`): the slerp waits, and resumes once the way is open
   const b = st.greenBox;
   const anchor = st.pieceAnchor;
-  if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null) {
+  // ⭐⭐⭐ (2026-11-12, F5) its two queries within what the frame left — else the turn WAITS a frame (never past the cap)
+  if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null && queriesLeft(st) < 2) {
+    u = a.u ?? 0;
+    st.restAlign = { ...a, t0: now - u * REST_ALIGN_MS };
+  } else if (anchor !== null && u > (a.u ?? 0) && worldPlacementOf(st.world, b.name) !== null) {
     const t1 = performance.now();
     const r = b.rotationQuaternion ?? Quaternion.Identity();
     const shown: Quat = [r.w, r.x, r.y, r.z];
@@ -595,7 +599,7 @@ function restAlignFrame(st: SceneState, now: number): void {
       st.restAlignHeld = false;
     }
     st.pieceGuardCarryMs += performance.now() - t1;
-    st.pieceQueriesCarry += 2;
+    st.pieceQueries += 2;
   }
   const q = u < 1 ? qSlerp(a.from, a.base, u * u * (3 - 2 * u)) : a.base;
   b.rotationQuaternion = new Quaternion(q[1], q[2], q[3], q[0]);
@@ -967,13 +971,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.hudDirty = true;
   }
   st.zoom = clampGreenZoom(st.zoom, st.greenZoomMin);
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC5, F5) THE FRAME'S LEDGER: every gap query charged to the frame that makes it — from 0 here, the solve first
+  // (its whole cap, so its first iteration always fits), every check after it within what is LEFT (`queriesLeft`) — ⛔ the checks billed to the NEXT frame
+  // (~23): its solve had ~1 left and its first iteration went past the cap (25 – 38 a frame against the owner's 24, both scenes)
+  st.pieceQueries = 0;
   assemblyFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-28) the orbit around the assembly: the gizmo the ray finds, the lock, the approach's coast
   let rig: OrbitQ = { yaw: st.orbit.yaw, v: st.orbit.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM };
-  // ⭐ (2026-10-13, the second audit) the stuck and turn checks of the last frame counted too (they run after this frame's mean)
+  // ⭐ (2026-10-13, the second audit) the stuck and turn checks' TIME of the last frame counted too (they run after this frame's mean)
   st.pieceGuardFrameMs = st.pieceGuardCarryMs;
-  st.pieceQueries = st.pieceQueriesCarry;
   st.pieceGuardCarryMs = 0;
-  st.pieceQueriesCarry = 0;
   st.pieceDeferred = false;
   st.pieceSolveQueries = 0;
   // ⭐⭐⭐ (2026-10-13, the audit's rebuild → *"Build"*; `COLLISION.md` §12) — THE PIECE'S PLACE ON ITS RING IS SOLVED, ONCE A FRAME: from where
@@ -1428,6 +1434,13 @@ export function pieceSolverEnv(st: SceneState, anchorOf: (q: OrbitQ) => Vec3 = (
  * input was blocked (or the piece is inside the margin) and the shown piece has caught up: ONE check every `STUCK_EVERY_MS`, in turn
  * (`stuckNext`); a round's verdict holds for its key (§12ter, §12quater).
  */
+/** ⭐⭐⭐ (2026-11-12, F5) the gap queries this frame has LEFT (the owner's cap less what the frame spent). */
+export function queriesLeft(st: SceneState): number {
+  return st.cfg.pieceSolverQueries - st.pieceQueries;
+}
+/** ⭐ (F5) thrown by a check past what the frame left — caught by `pieceStuckFrame` alone (the check undecided, asked again later). */
+const OUT_OF_FRAME: unique symbol = Symbol("OUT_OF_FRAME");
+
 export function pieceStuckFrame(st: SceneState): void {
   // ⭐ (the sixth audit) read and cleared FIRST — an early return below left it stale for a later frame
   const quadRan = st.quadCheckRan;
@@ -1445,12 +1458,14 @@ export function pieceStuckFrame(st: SceneState): void {
   }
   // ⭐ (the fifth audit) staggered: not on a frame the red quad's check already ran
   if (quadRan) return;
+  // ⭐⭐⭐ (2026-11-12, F5) within what the frame left: nothing left — asked again on a later frame
+  if (queriesLeft(st) < 1) return;
   const t0 = performance.now();
   const env = pieceSolverEnv(st);
   const opt = pieceSolveOptions(st);
   // ⭐ (2026-10-13, the second audit) INSIDE the margin (no free place within reach) is checked too, blocked input or not — it was silent
   const inside = env.gap(q) < opt.gapM / 2;
-  st.pieceQueriesCarry += 1;
+  st.pieceQueries += 1;
   // ⭐⭐ (the sixth audit) the gate decided in `input/` (`stuckGate`): a free wiggle step no longer resets an armed verdict that has not moved
   const armed = st.pieceStuck.position && st.pieceStuck.turns;
   if (stuckGate(st.pieceMoveBlocked, inside, armed, st.pieceStuck.anchor, ringAnchorAt(st, q), STUCK_PROBE_M) === "RESET") {
@@ -1466,18 +1481,25 @@ export function pieceStuckFrame(st: SceneState): void {
   if (next.check !== null) {
     const k = next.check;
     let blocked: boolean;
+    // ⭐⭐⭐ (2026-11-12, F5) a HARD limit: what the frame left — past it the check is undecided (`OUT_OF_FRAME`), asked again on its next turn (⛔ the probe's
+    // four solves each completed a first iteration past their share, billed to the next frame)
+    const left = queriesLeft(st);
+    let n = 0;
+    const take = (): void => {
+      if (n >= left) throw OUT_OF_FRAME;
+      n++;
+    };
+    try {
     if (k === 0) {
-      let n = 0;
-      const counted: SolverEnv = { anchor: env.anchor, gap: (x) => (n++, env.gap(x)), normal: (x) => (n++, env.normal(x)) };
-      blocked = stuckProbe(q, counted, opt, STUCK_PROBE_M);
-      st.pieceQueriesCarry += n;
+      const counted: SolverEnv = { anchor: env.anchor, gap: (x) => (take(), env.gap(x)), normal: (x) => (take(), env.normal(x)) };
+      blocked = stuckProbe(q, counted, { ...opt, maxQueries: Math.max(1, left) }, STUCK_PROBE_M);
       // ⭐⭐ (2026-10-29) …and a SLIDE along the face, while one is available (the hover on, or ready): any free one is a way out (`slideProbeFree`)
       const face = st.hover !== null ? st.hover.n : (st.hoverReady?.normal ?? null);
       if (blocked && face !== null) {
         const e1 = normalize(cross(face, Math.abs(face[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])) ?? ([1, 0, 0] as Vec3);
         const e2 = normalize(cross(face, e1)) ?? ([0, 0, 1] as Vec3);
         const gapAt = (o: Vec3): number => {
-          st.pieceQueriesCarry += 1;
+          take();
           return pieceSolverEnv(st, (x) => add(ringAnchorAt(st, x), o)).gap(q);
         };
         if (slideProbeFree(gapAt, e1, e2, STUCK_PROBE_M, opt.gapM / 2)) blocked = false;
@@ -1488,8 +1510,18 @@ export function pieceStuckFrame(st: SceneState): void {
       const d = st.orientDirs[k - 1]!;
       const roll = aligned !== null && d.normal[0] * aligned[0] + d.normal[1] * aligned[1] + d.normal[2] * aligned[2] > 0.9998;
       const turn = restingPreview(st, d, roll);
-      blocked = turn === null || pieceTurnBlocker(st, turn) !== null;
+      // ⭐ (F5) the turn's sweep within what is left — cut: undecided (⛔ `pieceTurnBlocker`: unbounded, ~61 at the gap kept)
+      const v = turn === null ? "a part" : pieceTurnVerdict(st, turn, left - n);
+      if (v === "PENDING") throw OUT_OF_FRAME;
+      blocked = v !== null;
     }
+    } catch (e) {
+      st.pieceQueries += n;
+      if (e !== OUT_OF_FRAME) throw e;
+      st.pieceGuardCarryMs += performance.now() - t0;
+      return;
+    }
+    st.pieceQueries += n;
     st.pieceStuck = stuckRecord(st.pieceStuck, k, blocked, 1 + st.orientDirs.length);
     // ⭐ (the fifth audit) armed: remember where — a nudge smaller than a quarter of the probe keeps the verdict
     // ⭐ (the sixth audit) re-anchored at every check that keeps it armed — a drift of nudges does not add up to a reset
@@ -1538,7 +1570,7 @@ export function pieceTurnVerdict(st: SceneState, q: Quat, budget: number): strin
   // ⭐ (2026-10-13, the second audit) under the frame's cap (it took ~61 gap queries at the gap kept), timed and counted for the HUD
   const u = turnSweep(counted, 2 * Math.acos(d), pieceReachM(p.mesh, p.restingCentre), opt.gapM, opt.maxQueries, Math.min(opt.maxQueries, budget));
   st.pieceGuardCarryMs += performance.now() - t0;
-  st.pieceQueriesCarry += n;
+  st.pieceQueries += n;
   if (u === "PENDING") return "PENDING";
   return u === null ? null : (blocker ?? "a part");
 }

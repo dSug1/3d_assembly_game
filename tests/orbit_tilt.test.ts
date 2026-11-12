@@ -3,10 +3,10 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, TILT_SLANT_MIN, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { calmHeading, capEdgePitch } from "../src/input/orbit_calm";
-import { buildFaceMap, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
+import { buildFaceMap, holdsPole, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 import type { ShellBox } from "../src/input/orbit_shell";
 import type { Vec3 } from "../src/core/vec";
@@ -262,20 +262,39 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"fix the gap\"* — *\"poles held 
     expect(Math.abs(mulT(capTilt(hs, n2), n2)[1])).toBeLessThan(1e-12);
   });
 
-  it("⭐⭐⭐ A HEXAGON WITH A VERTEX UP (an edge holds the pole): the face holding it, slanted 60°, is a SIDE in F square to the camera; ⛔ a quarter turn left it 30° off", () => {
+  it("⭐⭐⭐ A HEXAGON WITH A VERTEX UP (an edge holds the pole) — ⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b / F2c) A RIDGE: its two 60° faces hold the pole TOGETHER (no cap — a virtual one), each tilted toward ITS OWN heading, a SIDE in F square to it; ⛔ a tie-break made one of them the cap, tilted toward the camera's heading", () => {
     const { faces, box } = prism(6, 30 * D, 0.17, 0.5);
     const world = buildFaceMap(faces, box);
-    const cap = world.facets[world.top]!;
-    expect(cap.real).toBe(true);
-    expect(Math.asin(cap.n[1]) / D).toBeCloseTo(60, 6);
-    const R = capTilt(hs, cap.n);
-    const map = buildFaceMap(tiltFaces(faces, R), tiltBox(box, R));
-    const fi = map.facets.findIndex((f) => Math.abs(f.n[1]) < 1e-9 && dot(f.n, hh) > 0.999);
-    expect(fi).toBeGreaterThanOrEqual(0);
-    expect(map.facets[fi]!.kind).toBe("SIDE");
-    // ⛔ the quarter turn: that face 30° off the horizontal in F
-    const old = mulT(capTilt(hs, [0, 1, 0]), cap.n);
-    expect(Math.abs(Math.asin(old[1]) / D)).toBeCloseTo(30, 6);
+    expect(world.facets[world.top]!.real).toBe(false); // ⭐ the ridge: neither face is the cap
+    const ridge = world.facets.map((f, i) => ({ f, i })).filter(({ f }) => f.kind === "SIDE" && Math.abs(Math.asin(f.n[1]) / D - 60) < 1e-6);
+    expect(ridge.length).toBe(2);
+    for (const { f, i } of ridge) {
+      expect(holdsPole(world, i)).toBe("TOP");
+      // its own heading, whatever the orbit's (the camera on the OTHER side included): never past the vertical
+      for (const yaw of [hs, hs + Math.PI, hs + Math.PI / 2]) {
+        const h = tiltHeading(f.n, yaw);
+        expect(Math.cos(h) * f.n[0] + Math.sin(h) * f.n[2]).toBeGreaterThan(0.49); // the face leans TOWARD the heading
+        const R = capTilt(h, f.n);
+        const map = buildFaceMap(tiltFaces(faces, R), tiltBox(box, R));
+        const hh2: Vec3 = [Math.cos(h), 0, Math.sin(h)];
+        const fi = map.facets.findIndex((g) => Math.abs(g.n[1]) < 1e-9 && dot(g.n, hh2) > 0.999);
+        expect(fi).toBeGreaterThanOrEqual(0);
+        expect(map.facets[fi]!.kind).toBe("SIDE");
+        // tilted by its own elevation, 60° — under the vertical (⛔ toward a heading it leans away from: 120°, past it)
+        expect(Math.abs(Math.acos(Math.max(-1, Math.min(1, R[1]![1]))) / D)).toBeCloseTo(60, 6);
+      }
+    }
+    // ⛔ the old tilt toward the camera's heading on the face leaning away: 120° — past the vertical, the view upside down
+    const away = ridge.find(({ f }) => Math.cos(hs) * f.n[0] + Math.sin(hs) * f.n[2] < 0)!.f;
+    expect(Math.acos(capTilt(hs, away.n)[1]![1]) / D).toBeCloseTo(120, 6);
+  });
+
+  it("⭐⭐ (2026-11-12, F2c) a LEVEL cap has no heading — the orbit's, snapped (a box's top and bottom, as before)", () => {
+    for (const yaw of [0.1, 1.2, -2.9, 4]) {
+      expect(tiltHeading([0, 1, 0], yaw)).toBe(snapHeading(yaw));
+      expect(tiltHeading([0, -1, 0], yaw)).toBe(snapHeading(yaw));
+    }
+    expect(TILT_SLANT_MIN).toBe(1e-3);
   });
 
   it("⭐⭐ A DIAMOND (a square turned 45°, the pole on an edge, no face beyond 45° — a VIRTUAL cap): tilted as a level one, both faces beside the edge are sides in F", () => {

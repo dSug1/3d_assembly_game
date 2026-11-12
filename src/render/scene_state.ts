@@ -370,7 +370,6 @@ export interface SceneState {
   pieceStuck: import("../input/piece_orbit_solver").StuckState;
   /** ⭐ (2026-10-13, the second audit) the stuck and turn checks' cost and gap queries this frame — added to the next frame's HUD figures. */
   pieceGuardCarryMs: number;
-  pieceQueriesCarry: number;
   /** ⭐ (the third audit) the relocation's search for the piece's place (`key`): the candidate to resume from, −1 when exhausted there. */
   relocateCursor: { key: string; from: number };
   /** ⭐ (the fifth audit) the red quad's check ran this frame — the stuck check waits a frame (staggered). */

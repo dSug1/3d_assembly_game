@@ -76,6 +76,17 @@ export function snapHeading(h: number): number {
   return Math.round(h / (Math.PI / 2)) * (Math.PI / 2);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC2, F2c) THE TILT'S HEADING for a face of normal `n` holding a pole, the orbit at `yaw`: a SLANTED face (its
+ * normal with a horizontal part) its OWN heading, snapped — tilted by its own angle toward it, never past the vertical; a LEVEL one (no heading) the
+ * orbit's, snapped (1 (c), as before). ⛔ Always the orbit's: from the heptagon's front its back top face, leaning away, needed 116° — the view upside down.
+ */
+export function tiltHeading(n: Vec3, yaw: number): number {
+  return Math.hypot(n[0], n[2]) > TILT_SLANT_MIN ? snapHeading(Math.atan2(n[2], n[0])) : snapHeading(yaw);
+}
+/** ⭐ (F2c) a normal's horizontal part beyond this (sin ≈ 0.06°) is a slanted face's heading — below it the face is level (a box's cap: exactly 0). */
+export const TILT_SLANT_MIN = 1e-3;
+
 /** ⭐ The turn about the world's vertical that adds `d` to every heading (the orbit's convention) — the press's swing. */
 export function headingTurn(d: number): Mat3 {
   const c = Math.cos(d);
