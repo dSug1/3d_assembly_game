@@ -23,13 +23,15 @@ export const GAME_CONTENT: GameContent = {
       id: "World_0",
       title: "World 0",
       levels: [
-        { id: "Level_0", title: "Level 0", scene: SCENE_0 },
-        { id: "Level_1", title: "Level 1 — the painting", scene: SCENE_1 },
+        { id: "Level_0", title: "Level 0 - Scene 0 - the workbench", scene: SCENE_0 },
+        { id: "Level_1", title: "Level 1 - Scene 1 - the painting", scene: SCENE_1 },
         // ⭐ `D170`: the painting assembling itself (`DEMO_SCENE.md`) — `?sceneIndex=2`.
-        { id: "Level1_demo", title: "Demo — the painting", scene: SCENE1_DEMO, demoPlan: loadScene1DemoPlan },
+        { id: "Level1_demo", title: "Demo - the painting", scene: SCENE1_DEMO, demoPlan: loadScene1DemoPlan },
         // ⭐ (2026-11-12, the owner: *"Empty scene"*) the floor and the lights alone — `?sceneIndex=3`.
-        { id: "Level_2", title: "Level 2 — empty", scene: SCENE_2 },
+        { id: "Level_2", title: "Level 2 - Scene 2 - the engine", scene: SCENE_2 },
       ],
+      // ⭐ (2026-11-12, the owner) the level menu: the demo on top — the menu only, the `?sceneIndex=` order above unchanged
+      menuOrder: ["Level1_demo", "Level_0", "Level_1", "Level_2"],
     },
   ],
 };

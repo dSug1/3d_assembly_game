@@ -23,7 +23,7 @@
  *
  * ⛔ ENGINE-FREE and DOM-free: hrefs in, hrefs out, so a test reaches every route.
  */
-import { GameFlow, levelOf, type GameContent, type LevelSpec, type SceneDescriptor, type Screen } from "./game_structure";
+import { GameFlow, levelOf, type GameContent, type LevelSpec, type SceneDescriptor, type Screen, type WorldSpec } from "./game_structure";
 
 /** ⭐ A level by its ids — what a scene index names. */
 export interface LevelRef {
@@ -39,6 +39,20 @@ export function levelRefs(content: GameContent): readonly LevelRef[] {
 /** ⭐ `D173`: every level of the catalogue, in the scene index's order. */
 export function levelsOf(content: GameContent): readonly LevelSpec[] {
   return content.worlds.flatMap((w) => w.levels);
+}
+
+/**
+ * ⭐ (2026-11-12, the owner) A world's levels in its MENU's order (`WorldSpec.menuOrder`): the listed ids first, in that order, then
+ * the others in catalogue order; an unknown or repeated id is ignored. ⛔ The menu only — never the `?sceneIndex=` order.
+ */
+export function menuLevels(world: WorldSpec): readonly LevelSpec[] {
+  const byId = new Map(world.levels.map((l) => [l.id, l]));
+  const first: LevelSpec[] = [];
+  for (const id of world.menuOrder ?? []) {
+    const l = byId.get(id);
+    if (l !== undefined && !first.includes(l)) first.push(l);
+  }
+  return [...first, ...world.levels.filter((l) => !first.includes(l))];
 }
 
 /** ⭐ Every scene of the catalogue, in the same order — the scene slider's list. */
