@@ -65,3 +65,27 @@ export function boxFit(pos: ArrayLike<number>, dims: readonly [number, number, n
     scale: [dims[0] / size[0]!, dims[1] / size[1]!, dims[2] / size[2]!],
   };
 }
+
+/**
+ * ⭐ (2026-11-12, the owner: *"modify the heptagon of scene 0bis so that the two lateral faces have a tip, as attachment"*) **THE TIPS** — the prism's
+ * two end faces (its caps) each raised into a PYRAMID whose apex stands on the polygon's centre, out along the extrusion.
+ *
+ * Babylon's cylinder builds each cap as a FAN round one vertex on its axis; moving those vertices out along the axis turns each flat cap into a
+ * pyramid, the engine's winding kept. These two functions are that move, engine-free.
+ */
+/** ⭐ The vertices ON the axis (x = y = 0) — the caps' centres; read before any stretch, while the axis is the origin's. */
+export function axisVertices(pos: ArrayLike<number>): number[] {
+  let r = 0;
+  for (let i = 0; i + 2 < pos.length; i += 3) r = Math.max(r, Math.hypot(pos[i]!, pos[i + 1]!));
+  const out: number[] = [];
+  if (!(r > 1e-9)) return out;
+  for (let i = 0; i + 2 < pos.length; i += 3) if (Math.hypot(pos[i]!, pos[i + 1]!) < r * 1e-9) out.push(i / 3);
+  return out;
+}
+
+/** ⭐ Each listed vertex pushed out along z by `tip`, away from the middle (z = 0) — in place; `false` (nothing moved) for a vertex AT the middle or a tip < 0. */
+export function raiseTips(pos: { [k: number]: number; readonly length: number }, vertices: readonly number[], tip: number): boolean {
+  if (!(tip >= 0) || vertices.some((v) => !(Math.abs(pos[v * 3 + 2]!) > 1e-12))) return false;
+  for (const v of vertices) pos[v * 3 + 2] = pos[v * 3 + 2]! + Math.sign(pos[v * 3 + 2]!) * tip;
+  return true;
+}
