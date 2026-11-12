@@ -9,9 +9,9 @@ snap/seat/unsnap (`D100`), the ledger (`src/input/episode_ledger.ts`) and the HU
 timer line (`D112`/`D115`). ⛔ Not built: the solver, the score.
 ⭐ [`spec/GAME_STRUCTURE.md`](spec/GAME_STRUCTURE.md) — the scaffold (`D105`), `?flow=1`; ⛔ empty
 until `GM6`–`GM8`. ⭐ `D144`: a ⏸ pause menu leaves a level by reload; one scene list; §5 = later.
-⭐ `D158`: a gesture that changes nothing costs zero episodes → `SCORE.md` §3.2.
 ⭐ [`spec/SCENE_1.md`](spec/SCENE_1.md) — `Scene_1` (`D117`).
-⭐ [`spec/DEMO_SCENE.md`](spec/DEMO_SCENE.md) — a level assembling itself (`D170`–`D179`), from heaps (`D191`–`D194`).
+⭐ [`spec/DEMO_SCENE.md`](spec/DEMO_SCENE.md) — a level assembling itself (`D170`–`D194`).
+⭐ [`spec/SCENE_WORKFLOW.md`](spec/SCENE_WORKFLOW.md) — a new scene: the assembly plan first (⛔ proposed).
 ⭐ [`spec/LEVEL_END.md`](spec/LEVEL_END.md) — the level end, results, UI theme (`D180`).
 
 ⭐ [`CONCEPT_ASSESSMENT_2026-09-26.md`](CONCEPT_ASSESSMENT_2026-09-26.md) — what is missing

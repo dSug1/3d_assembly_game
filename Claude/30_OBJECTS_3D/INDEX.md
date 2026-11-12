@@ -17,9 +17,7 @@ executable** — it re-points the chain onto the held object while every object'
 placement stays put, and *grabbing a child moves the whole assembly* is a vector by name.
 🔌 **WIRED AND CLOSED 2026-09-15** — *"locked/jumping fix is working"*. `scene.ts` builds a
 `World`, **every rule writes the model**, and the render loop is the SINGLE writer of a mesh
-transform. ⛔ The pass found **one defect, in the wiring**, and 409 vectors passed before and
-after the fix because the iteration set lives in `src/render`, on the far side of the boundary —
-which is why a device look is what closes a change.
+transform. ⛔ The pass found **one defect, in the wiring**, invisible to the suite.
 ⭐ The account: [`../00_CORE/queue_notes/3D1.md`](../00_CORE/queue_notes/3D1.md).
 ✅ **`3D6` BUILT** — `core/collision.ts`, `render/collision_wiring.ts` → [`spec/COLLISION.md`](spec/COLLISION.md). ✅ `3D7` (§10).
 
@@ -79,3 +77,4 @@ body is**, which the base plate proved →
 * **The assembly tree has never held more than two objects** (`3D5`).
 * ⭐ **Import (`3D4`)**: Blender → `.glb` → [`spec/MATERIALS_AND_IMPORT.md`](spec/MATERIALS_AND_IMPORT.md);
   `.blend` files → [`spec/BLENDER_ASSETS.md`](spec/BLENDER_ASSETS.md).
+* ⭐ Any scene's parts → [`spec/PART_AUTHORING.md`](spec/PART_AUTHORING.md); `Scene_2`: [`spec/SCENE_2_ASSEMBLY.md`](spec/SCENE_2_ASSEMBLY.md) (⛔ proposed).

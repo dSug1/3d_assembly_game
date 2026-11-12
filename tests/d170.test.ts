@@ -329,7 +329,7 @@ describe("⭐⭐ the playback — timing, speed, camera (`input/demo_playback.ts
 describe("⭐⭐ `Scene1_demo` — the spec applied to `Scene_1`, in World 0", () => {
   it("⭐ World 0's third level, so `?sceneIndex=2`", () => {
     const w0 = GAME_CONTENT.worlds.find((w) => w.id === "World_0")!;
-    expect(w0.levels.map((l) => l.id)).toEqual(["Level_0", "Level_1", "Level1_demo", "Level_2"]); // ⭐ (2026-11-12) Scene_2 after it, `?sceneIndex=3`
+    expect(w0.levels.map((l) => l.id)).toEqual(["Level_0", "Level_1", "Level1_demo", "Level_2", "Level_0bis"]); // ⭐ (2026-11-12) Scene_2 after it, `?sceneIndex=3`; Scene_0bis appended, 4
     expect(SCENES[2]!.id).toBe("Scene1_demo");
   });
 
