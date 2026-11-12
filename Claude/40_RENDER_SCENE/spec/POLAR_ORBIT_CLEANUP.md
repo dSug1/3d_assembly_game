@@ -7,6 +7,9 @@
 
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
+* ⭐⭐⭐ **THE OWNER (2026-11-12): `12dc4b6` (the tip of `1.0.121-two-types-of-orbits-finalized`, = `main`) IS THE BEST IMPLEMENTATION OF THE ORBIT SO
+  FAR** — the reference to come back to; work goes on from it on `1.0.122-`. The open points closed with nothing built (the far edge's roll back, the
+  camera's lean, the slide under the tilted pole: ok; I17 and §8.5: not applicable any longer) → **§9.16**.
 * ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.117-Tilted-polar-orbit` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (the tilted pole, live as `6c6da30`; before it `1.0.116from1.0.114-`, `f96ddeb`; `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.118-`.
 * ⭐⭐⭐ **§9, THE TILTED POLE — BUILT 2026-11-10** (branch `1.0.117-`; the rule §9.4, as built and probed §9.5 — three sliders, the roll back by the finger with a 250 ms minimum; ⛔ no device close).
 * ⭐⭐⭐ **2026-11-09 — §8** (branch `1.0.114from1.0.112-`, now `1.0.114from1.0.112-Polar-orbit-cleaned-with-slide`, live as `98ef251`; `1.0.113-` renamed `1.0.113-not-used`: its step walk F8 made the notches'
@@ -322,7 +325,7 @@ cube untouched); the caps none; both shares whole where the frame changes. Simul
 
 ### 8.2 Open, for later improvement
 
-### I17 — a narrow face cannot be held under the gizmo by a finger far out (the quads never show it)
+### I17 — a narrow face cannot be held under the gizmo by a finger far out (the quads never show it) — ✅ CLOSED 2026-11-12, not applicable any longer (§9.16)
 
 **The owner** (on the device, Piece42's slanted sides, proud of the cube's +x side): *"when I put the gizmo on the slanted face with the green line and
 take the piece far away, the orientation of the slanted face under the gizmo does not show in the quads."*
@@ -396,7 +399,7 @@ plane (z −51) straight across the channel's mouth.
   the far side (was: two chords through the part); 118 samples, settled in 5 frames, a step 0.9 ms, a new line's base 5.3 ms (as before).
 * ⚠ It fixes I17's third point (the line misleads) only: far out the slanted face is still 0.26 – 0.34 mm of finger (points 1 – 2, §8.2).
 
-### 8.5 Proposed, NOT built — the input-driven gizmo on world-plane cuts (a Fable simulation, 2026-11-09)
+### 8.5 Proposed, NOT built — the input-driven gizmo on world-plane cuts (a Fable simulation, 2026-11-09) — ✅ CLOSED 2026-11-12, not applicable any longer (§9.16)
 
 The owner asked for a logic keeping both lines world planes while the gizmo reaches every face, steps allowed. Proposed: the finger moves the gizmo BY
 DISTANCE along the TRUE outline of the parts cut by two world planes (the facet's frame choosing them), the camera from the big facet plus ≤ 20° of tilt;
@@ -896,3 +899,17 @@ an exit **0.44°** (2.74° before); the entries unchanged; turns over 1° with n
 **Walked** (the gizmo on the top square and 21° off square, on a side; the approach 1.0 → 0.5 m, a rest, then dx or dy): the camera's turn **0°** a frame
 through the approach and the rest (the tilt made, the sections orthogonal); then up to **2.5°** a frame over the first 10 mm.
 **Vectors**: `orbit_tilt.test.ts` — `tiltPendingStep`, `blendShare` (10 mm), `blendCrossed`, the wiring. The walk probe records `pd` / `bl` / `sw`. **1744**.
+
+### 9.16 ⭐⭐⭐ THE BEST IMPLEMENTATION OF THE ORBIT SO FAR: `12dc4b6` (2026-11-12, the owner) — and the open points closed with nothing built
+
+> The owner, on the open points read back to them: *"Far edge ok"*, *"Camera lean ok"*, *"Slide under tilted pole ok"*, *"Older item: not applicable any
+> longer. Close"*, *"Update the md to record the current commit is the best implementation of the orbit so far"*.
+
+* ⭐⭐⭐ **`12dc4b6` IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — the tip of `1.0.121-two-types-of-orbits-finalized` (= `main`; its code `eae0541`):
+  the square camera close in (§9.11b – §9.13, `1.0.120b-Orthogonal-tilted-poles`), the polar orbit far out with a cap reading the calm of the side it
+  would be left by (§9.14), the automatic tilt's camera pending then blended by the finger (§9.15). **1744** vectors. It supersedes `1.0.117-Tilted-polar-orbit`
+  (`6c6da30`) as the reference to come back to; work goes on from it on `1.0.122-`.
+* ✅ **Closed — ok as built, nothing to do**: the far edge's roll back (180° in 0.5 s, §9.12); the camera's lean (its yaw offset leaning the world's vertical
+  by 2.5 – 4.3°, §9.10 *Not changed*); the slide under the tilted pole (a slide ending off the tilted facet, §9.5 *Not done*).
+* ✅ **Closed — not applicable any longer**: I17 (a narrow face held by a finger far out, §8.2) and the input-driven gizmo on world-plane cuts (§8.5).
+* ⚠ Recorded as the owner gave them: they close these open points; a device close of §9.11b – §9.15 as a whole is not stated.
