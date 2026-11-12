@@ -288,7 +288,7 @@ floor**: a hidden flat face at the SAME place at the goal. So the gizmo, over th
 
 | part | the shape (what the look shows) | face proxy (`UFM_`) — routes, seats, ghosts | collision (`UCX_`) | connectors (`MC_`) |
 |---|---|---|---|---|
-| `E01` plinth | the rounded plate, ⭐ DEEPER: 3.35 × 3.5 (was 2.55), r 0.3, h 0.26, a 0.015 bevel | its flat top as is (the rounded sides are no route) | its hull (convex) | `MC_E01_case` at the lower case's seat |
+| `E01` plinth | the rounded plate, ⭐ DEEPER: 3.35 × 3.5 (was 2.55 — ✅ the owner, §6.4), r 0.3, h 0.26, a 0.015 bevel | its flat top as is (the rounded sides are no route) | its hull (convex) | `MC_E01_case` at the lower case's seat |
 | `E02` lower case | a HOLLOW glass tub: x ±1.225, y 0.26 – 0.81, z ±0.625, walls 0.05; four saddle walls across it (the two ends and two bulkheads at x ±0.35) each with a half-round saddle (r 0.065) on the crank axis | the top rim (the split face, flat); ⭐ a GHOST floor across the cavity at the crankshaft's resting proxy at its goal (y ≈ 0.65: the lowest pin's bottom) | ~11 convex pieces: the floor, two long walls, each saddle wall in two (either side of its saddle) | `MC_E02_plinth`, `MC_E02_crank`, `MC_E02_upper` |
 | `E03` crankshaft | as Appendix B: the bent bar (r 0.06), three throws (pins 0° / 120° / 240°, throw 0.2), knees, rear cap; the nose shoulder at the front | ⭐ its resting proxy: a flat face under the throws (y ≈ 0.65 at its goal), across the journals' length; the nose shoulder's flat (the pulley's seat) | ~12 pieces: the journals' bar segments, the three pins, the six arms (its hull would fill the throws and stop every rod) | `MC_E03_saddles`, `MC_E03_pin1`–`3`, `MC_E03_nose` |
 | `E04` upper case | a HOLLOW glass TRAPEZOID prism: x ±1.225, bottom z ±0.520 at y 0.81, top z ±0.317 at y 1.16, its slopes the two banks' feet planes (60° steep); half-holes for the journals at its ends; open below each bore | the two slopes (the banks' routes and seats), the top face (the top cap, exposed in the V), the front face (the pulley's route) — all flat | ~10 pieces: the top, the two slopes each cut round its three bore openings (square), the two ends either side of the half-holes | `MC_E04_lower`, `MC_E04_bankA`, `MC_E04_bankB` |
@@ -336,4 +336,6 @@ floor**: a hidden flat face at the SAME place at the goal. So the gizmo, over th
 ### 6.4 ⛔ Open for the owner
 
 1. **Approve this sheet** (W2's gate) — then W3, the Blender build script.
-2. The plinth DEEPER (3.5 for 2.55) to carry the 120° V's heads — or the plinth kept and the heads overhanging it.
+2. ✅ ~~The plinth DEEPER or the heads overhanging it~~ — **DEEPER, 3.5** (the owner, 2026-11-12: *"proceed with deeper plinth"*): at 120° the heads
+   reach 1.39 from the centre line, the valve caps ≈ 1.66, the exhaust collectors ≈ 1.69, against the reference plinth's 1.275 — 0.42 (≈ 6 cm) over
+   its edge each side; the 3.5 plinth (1.75) carries all of it. A look decision — the parts hold each other, nothing needs the plinth under it.
