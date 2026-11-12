@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { apexAtTop, apexTurn, boxFit, prismOutline } from "@core/prism";
 import { resolveBootOrientation } from "@core/game_structure";
 import { qRotate, type Quat, type Vec3 } from "@core/vec";
-import { SCENE_0, SCENE_0_HEPTAGON_DIMS, SCENE_0_HEPTAGON_POSITION, SCENE_0_ORBIT_GOALS, heptagonGoalFace } from "../src/content/scene_0";
+import { SCENE_0, SCENE_0_ANCHOR_DIMS, SCENE_0_ANCHOR_POSITION, SCENE_0_ANCHOR_SHIFT, SCENE_0_HEPTAGON_DIMS, SCENE_0_HEPTAGON_POSITION, SCENE_0_ORBIT_GOALS, heptagonGoalFace } from "../src/content/scene_0";
 import { SCENE_1 } from "../src/content/scene_1";
 import { greenPyramidSizeM } from "@input/green_box";
 
@@ -79,7 +79,8 @@ describe("⭐⭐ Scene_0 — the heptagon, the green piece, its goal, the orbit'
     expect([SCENE_0_HEPTAGON_DIMS[2], SCENE_0_HEPTAGON_DIMS[1], SCENE_0_HEPTAGON_DIMS[0]]).toEqual([4.9, 4.83, 4.83]);
     expect(SCENE_0_HEPTAGON_POSITION[1] - SCENE_0_HEPTAGON_DIMS[1] / 2).toBeCloseTo(0, 12); // its bottom face on the floor's top
     expect(hep.frozen).toBe(false);
-    expect(SCENE_0.final).toEqual({ frame: "ABSOLUTE", bodies: [{ id: "Heptagon", position: hep.position, orientation: hep.orientation }] });
+    expect(SCENE_0.final?.frame).toBe("ABSOLUTE");
+    expect(SCENE_0.final?.bodies[0]).toEqual({ id: "Heptagon", position: hep.position, orientation: hep.orientation });
   });
 
   it("⭐ the goal face: a TOP slanted face (adjacent to the zenith), on the user's side (−z, the boot camera's)", () => {
@@ -103,6 +104,27 @@ describe("⭐⭐ Scene_0 — the heptagon, the green piece, its goal, the orbit'
     close(qRotate(gq, [1, 0, 0]), [1, 0, 0]); // its long side along x
     const base: Vec3 = [g.position[0] - f.normal[0] * (h / 2), g.position[1] - f.normal[1] * (h / 2), g.position[2] - f.normal[2] * (h / 2)];
     close(base, f.centre); // the base's centre on the face's centre
+  });
+
+  it("⭐⭐ (2026-11-12, the owner: *\"add a protruding part on the left of the topmost slanted face of the heptagon to give a visual anchor to the player\"*) THE ANCHOR: proud of the goal face, its base flush on it, on the boot camera's LEFT (−x), clear of the green piece's goal, a PLACED part", () => {
+    const f = heptagonGoalFace();
+    const a = SCENE_0.bodies.find((b) => b.id === "Anchor")!;
+    expect(a).toBeDefined();
+    expect(a.frozen).toBe(false);
+    expect(a.position).toEqual(SCENE_0_ANCHOR_POSITION);
+    const aq = (a.orientation as { quat: Quat }).quat;
+    close(qRotate(aq, [0, 1, 0]), f.normal); // standing on the face (its own up the face's normal)
+    const h = SCENE_0_ANCHOR_DIMS[1];
+    const base: Vec3 = [a.position[0] - f.normal[0] * (h / 2), a.position[1] - f.normal[1] * (h / 2), a.position[2] - f.normal[2] * (h / 2)];
+    close(base, [f.centre[0] + SCENE_0_ANCHOR_SHIFT, f.centre[1], f.centre[2]]); // its base flush on the face, across its slope's middle
+    expect(SCENE_0_ANCHOR_SHIFT).toBeLessThan(0); // the left: −x (the boot camera at −z looking at +z; probed headless: its view x −0.16 against the heptagon's 0)
+    // clear of the green piece's goal along x, and within the heptagon's length
+    const [w] = greenPyramidSizeM(SCENE_1.bodies.find((b) => b.id === "Piece17")!.dims, 1);
+    const g = SCENE_0_ORBIT_GOALS.find((x) => x.id === "green-box")!;
+    expect(g.position[0] - w / 2 - (a.position[0] + SCENE_0_ANCHOR_DIMS[0] / 2)).toBeGreaterThan(0.5);
+    expect(a.position[0] - SCENE_0_ANCHOR_DIMS[0] / 2).toBeGreaterThan(hep.position[0] - SCENE_0_HEPTAGON_DIMS[2] / 2);
+    // a placed part: its goal where it boots
+    expect(SCENE_0.final?.bodies.find((b) => b.id === "Anchor")).toEqual({ id: "Anchor", position: a.position, orientation: a.orientation });
   });
 
   it("⭐ the orbit's boot centre is the heptagon's centre; the green piece sized from Scene_1's Piece17", () => {
