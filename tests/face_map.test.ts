@@ -241,7 +241,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 4c-bis) THE FACE MAP — the gizmo a funct
     expect(a).toContain("st.asmRedCache = line(st.asmRedCache, rKey, (x) => [sh.yaw, x - Math.PI / 2], sectionFixed(Math.PI, RED_SAMPLES - 1, false), false, Math.PI);");
     expect(a).toContain("st.asmGreenCache = line(st.asmGreenCache, gKey, (x) => [x, sh.pitch], sectionFixed(2 * Math.PI, GREEN_SAMPLES, true), true, 2 * Math.PI);");
     expect(a).toContain("const m = mapGizmo(st, yw, pt);");
-    expect(a).toContain("st.asmMapQ = map !== null && gM !== null ? mapAngles(map, gM, facetOfNormal(map, nM, gM), mapOpts(st)) : null;");
+    expect(a).not.toContain("orbit: off the slide"); // ⛔ (2026-11-12) the map's angles no longer put where a slide left the gizmo — the slide removed
     for (const gone of ["carrierFrame(", "onGreen(", "facingChain(", "loopFor(", "faceTurnedAway", "castGizmo("]) expect(a).not.toContain(gone);
     // ⛔ (2026-11-10, the owner: *"remove it"*) the slow stretch through an edge deleted: no tunable, no slider, the map's knobs zero
     expect("faceEdgeSlideMm" in DEFAULT_CONFIG).toBe(false);
