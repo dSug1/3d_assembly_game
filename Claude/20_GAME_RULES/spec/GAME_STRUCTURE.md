@@ -173,9 +173,13 @@ shape how Blender levels are authored; the teardown contract only when the reloa
     (`GREEN_BOOT_QUAT`);
   * **its goal**: the top slanted face on the user's side (−z), centred, the green piece's wide base (its largest face) flush on it, its long side
     along the heptagon's length (x); the turquoise standing on the same spot;
-  * **the orbit's boot centre**: the heptagon's (its box's middle, 0.0025 / 0.2415 / 0.191 m); otherwise `Scene_1`'s rig.
+  * **the orbit's boot centre**: the heptagon's (its box's middle, 0.0025 / 0.2415 / 0.191 m); otherwise `Scene_1`'s rig;
+  * ⭐ **THE ANCHOR** (2026-11-12, `1.0.124from1.0.121-`; the owner: *"add a protruding part on the left of the topmost slanted face of the heptagon
+    to give a visual anchor to the player"*): an orange box 0.6 × 0.45 × 0.6 units standing proud of the goal face (its base flush, across the face's
+    slope middle), 1.6 units LEFT of the face's centre as the boot camera sees it (−x; probed headless: its view x −0.16 against the heptagon's 0) —
+    0.78 units of face between it and the green piece's goal; a PLACED part like the heptagon (`final`), so the orbit takes it as the assembly.
 * **Probed headless** (`page_eval.mjs`, `contact_probe.mjs` on `?sceneIndex=0`): the mesh 9 faces, its box exactly the cube's; goal 1/2 at boot (the
   heptagon placed), the gizmo on the front top face; the orbit over the top at 1.0 m / 0.3 m / 20 mm / contact moved the gizmo 511 / 331 / 61 / 121 mm
   for 80 px, the solver never blocked; the tilted pole engaged; ⚠ one frame at contact read 26 gap queries (the budget 24). `Scene_2` boots, 34 fps.
 * **Vectors**: `tests/scene_2.test.ts` (8), `tests/scene_0_heptagon.test.ts` (10), the JSON seam's prism / reference-size refusals; the suites that
-  pinned the workbench moved to its fixture. **1677**.
+  pinned the workbench moved to its fixture. **1677**; the anchor (+1, on `1.0.124from1.0.121-`): **1762**.

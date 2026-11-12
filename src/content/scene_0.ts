@@ -96,6 +96,27 @@ const at = (lift: number): Triple => noNegZero([GOAL_FACE.centre[0] + GOAL_FACE.
 const GREEN = greenPyramidSizeM(PIECE17.dims, 1);
 const TURQUOISE = turquoiseSizeM(GREEN);
 
+/**
+ * ⭐⭐ (2026-11-12, the owner: *"add a protruding part on the left of the topmost slanted face of the heptagon to give a visual anchor to the player"*)
+ * **THE ANCHOR** — a small orange box standing proud of the goal face, on its LEFT as the boot camera sees it (−x: the camera at −z looking at +z, Babylon's
+ * left-handed frame), its base flush on the face, centred across the face's slope, clear of the green piece's goal (`ANCHOR_SHIFT` from the face's
+ * centre along x). A PLACED part like the heptagon (its goal where it boots), so the orbit takes it as part of the assembly.
+ */
+export const SCENE_0_ANCHOR_DIMS: Triple = [0.6, 0.45, 0.6];
+/** ⭐ Along x from the goal face's centre (units): −1.6 — the green piece's goal spans ±0.52, the anchor ±0.3: 0.78 units (78 mm) of face between them. */
+export const SCENE_0_ANCHOR_SHIFT = -1.6;
+const ANCHOR_AT = at(SCENE_0_ANCHOR_DIMS[1] / 2);
+export const SCENE_0_ANCHOR_POSITION: Triple = noNegZero([ANCHOR_AT[0] + SCENE_0_ANCHOR_SHIFT, ANCHOR_AT[1], ANCHOR_AT[2]] as Triple);
+const ANCHOR: BodySpec = {
+  id: "Anchor",
+  position: SCENE_0_ANCHOR_POSITION,
+  colour: [0.9, 0.5, 0.15],
+  dims: SCENE_0_ANCHOR_DIMS,
+  orientation: { quat: GOAL_TURN },
+  frozen: false,
+  topScale: 1,
+};
+
 export const SCENE_0_ORBIT_GOALS: readonly FinalPose[] = [
   { id: "green-box", position: at(GREEN[1] / 2), orientation: { quat: GOAL_TURN }, symmetry: "yawHalfTurns" },
   { id: "turquoise-piece", position: at(TURQUOISE.lengthM / 2), orientation: { quat: GOAL_TURN }, symmetry: "hexPrism" },
@@ -108,11 +129,17 @@ export const SCENE_0: SceneDescriptor = {
   // ⭐ (the owner: *"the camera orbit center shall be the center of the heptagon"*) `Scene_1`'s rig, its boot centre at the heptagon's (its body's
   // origin — the middle of its bounding box), in metres
   orbit: { ...SCENE_1.orbit!, centreM: [SCENE_0_HEPTAGON_POSITION[0] * UNIT_M, SCENE_0_HEPTAGON_POSITION[1] * UNIT_M, SCENE_0_HEPTAGON_POSITION[2] * UNIT_M] },
-  bodies: [HEPTAGON, FLOOR],
+  bodies: [HEPTAGON, ANCHOR, FLOOR],
   // ⭐ the heptagon's goal is where it boots: a PLACED part from the first frame — the assembly the orbit goes round
   // ⛔ ABSOLUTE, not Scene_1's RELATIVE: with fewer than three bodies a relative fit is only their mean offset — the green piece far out dragged it and
   // the heptagon read as out of place (goal 0/2, no assembly; measured headless)
-  final: { frame: "ABSOLUTE", bodies: [{ id: "Heptagon", position: SCENE_0_HEPTAGON_POSITION, orientation: HEPTAGON_TURN }] },
+  final: {
+    frame: "ABSOLUTE",
+    bodies: [
+      { id: "Heptagon", position: SCENE_0_HEPTAGON_POSITION, orientation: HEPTAGON_TURN },
+      { id: "Anchor", position: SCENE_0_ANCHOR_POSITION, orientation: { quat: GOAL_TURN } },
+    ],
+  },
   orbitGoals: SCENE_0_ORBIT_GOALS,
   orbitPieceRefDims: PIECE17.dims,
 };

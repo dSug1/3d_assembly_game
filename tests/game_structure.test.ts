@@ -82,10 +82,10 @@ describe("⭐⭐⭐ GameFlow — intro → menu → worlds → levels → play, 
 describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
   it("⭐ (2026-11-12, the owner) the HEPTAGON and the floor — the workbench's four bodies deleted (kept as a fixture: `helpers/workbench.ts`)", () => {
     expect(SCENE_0.id).toBe("Scene_0");
-    expect(SCENE_0.bodies.map((b) => b.id)).toEqual(["Heptagon", "Floor"]);
+    expect(SCENE_0.bodies.map((b) => b.id)).toEqual(["Heptagon", "Anchor", "Floor"]); // ⭐ the anchor (2026-11-12, the owner)
     expect(SCENE_0.bodies[0]).toMatchObject({ prismSides: 7, frozen: false, colour: [0.65, 0.67, 0.72], topScale: 1 });
-    expect(SCENE_0.bodies[1]).toMatchObject({ id: "Floor", frozen: true });
-    expect(SCENE_0.final?.bodies.map((b) => b.id)).toEqual(["Heptagon"]);
+    expect(SCENE_0.bodies[2]).toMatchObject({ id: "Floor", frozen: true });
+    expect(SCENE_0.final?.bodies.map((b) => b.id)).toEqual(["Heptagon", "Anchor"]);
   });
 
   it("⭐ the workbench fixture: the four bodies, with the boot's facts they had", () => {
