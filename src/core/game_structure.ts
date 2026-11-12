@@ -135,6 +135,12 @@ export interface BodySpec {
    * ⚠ Not with `topScale` ≠ 1 nor a `margin`. Absent: a box.
    */
   readonly prismSides?: number;
+  /**
+   * ⭐ (2026-11-12, the owner: *"the two lateral faces have a tip, as attachment"*) a prism's two end faces each raised into a PYRAMID, its apex on
+   * the polygon's centre, this far out along the extrusion (authored units). `dims` stays the WHOLE box, the tips included: the prism itself is
+   * `dims[2] − 2 × prismTip` long (`core/prism.ts`). ⚠ Only with `prismSides`, and shorter than half of `dims[2]`. Absent or `0`: flat ends.
+   */
+  readonly prismTip?: number;
 }
 
 /** ⭐ `D125`: the body's full extents — its coloured `dims` plus the contour on every side. */
@@ -378,6 +384,8 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       throw new Error(`${where}: prismSides must be an integer ≥ 3`);
     if (x.prismSides !== undefined && (x.topScale !== 1 || (x.margin ?? 0) !== 0))
       throw new Error(`${where}: a prism takes no topScale nor margin`);
+    if (x.prismTip !== undefined && !(x.prismSides !== undefined && typeof x.prismTip === "number" && x.prismTip >= 0 && 2 * x.prismTip < x.dims[2]))
+      throw new Error(`${where}: prismTip must be a number ≥ 0, below half the length, on a prism`);
     return {
       id: x.id,
       position: x.position,
@@ -388,6 +396,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       topScale: x.topScale,
       ...(x.margin === undefined ? {} : { margin: x.margin }),
       ...(x.prismSides === undefined ? {} : { prismSides: x.prismSides as number }),
+      ...(x.prismTip === undefined ? {} : { prismTip: x.prismTip as number }),
     };
   });
   if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))
