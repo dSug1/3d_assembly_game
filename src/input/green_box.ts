@@ -278,7 +278,8 @@ export function pieceFaces(
  * about (2, 3, 4). Any other scene: the identity.
  */
 // ⭐ (2026-11-12) `Scene_0` (the heptagon) boots its green piece as `Scene_1`'s (*"same as the green piece of scene 1"*)
-const GREEN_BOOT_QUAT: Readonly<Record<string, Quat>> = { Scene_1: [1, 2, 3, 4], Scene_0: [1, 2, 3, 4] };
+// ⭐ (2026-11-12) `Scene_0bis` (a copy of `Scene_0`, its heptagon tipped) the same
+const GREEN_BOOT_QUAT: Readonly<Record<string, Quat>> = { Scene_1: [1, 2, 3, 4], Scene_0: [1, 2, 3, 4], Scene_0bis: [1, 2, 3, 4] };
 export function greenBootOrientation(sceneId: string): Quat {
   const q = GREEN_BOOT_QUAT[sceneId];
   if (q === undefined) return [1, 0, 0, 0];

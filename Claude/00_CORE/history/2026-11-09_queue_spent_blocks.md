@@ -37,3 +37,7 @@ and the in-zone basis are deleted, `D82`/`D109`).
 ⭐ **A PIONEERFACECURSOR PER ALIGNMENT** (`D96`): an amber ring, dragged on its face (drag ships OFF). ⛔ Unjudged by a hand.
 ✅ **DEPLOYED**: https://dsug1.github.io/3d_assembly_game/, gated on `npm run verify`.
 
+
+## (the record) moved from QUEUE.md's YOU ARE HERE, 2026-11-12 (its byte budget, for the engine's line)
+
+⭐⭐⭐ **2026-11-09 — `1.0.114from1.0.112-` (now `…-Polar-orbit-cleaned-with-slide`, live `98ef251`; `POLAR_ORBIT_CLEANUP.md` §8)**: `1.0.112-` renamed `1.0.112-Polar-orbit-Final-with-slide`; `1.0.113-` (the step walk F8, the line joins F6) renamed `1.0.113-not-used` — the owner: *"too many back and forth of the red and green sections"* at the notches; main rolled back to `1.0.112-` + F7b. Built here: **F7b** (the calm on every side facet, slanted ones included), **the lines refined** (I17's drawing: a narrow face drawn on its surface, a slice a frame), **a line broken only where the gizmo jumps** (the joins verified within the frame's budget; the lift along the real surface — §8.7), **a closed void bridged only where it has NO floor** (the owner's amendment of D3; the piece-fit rule for closed voids too — the top's channel: the red along its floor). I17 and §8.5: closed 2026-11-12 (§9.16).
