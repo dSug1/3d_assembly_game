@@ -73,13 +73,14 @@ function sweep(path: (i: number) => [number, number], n: number, rule: "new" | "
 describe("⭐⭐⭐ (2026-11-09, §8) THE CALM ON A SLANTED FACE — the horizontal hexagonal prism", () => {
   it("⭐⭐⭐ in the middle of the upper +z face (30° up): the piece near square to THAT face — 10° of orbit off its normal shows 2.5°, on it 0° (⛔ the old rule: 25°, 22.5°, 7.6° off it — squared to the horizontal)", () => {
     const upper = fm.facets.find((f) => f.n[1] > 0.4 && f.n[1] < 0.6 && f.n[2] > 0.8)!;
-    for (const [p, off] of [[20, 10], [30, 0], [40, 10]] as const) {
+    // ⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` F3) the face's band by HEIGHT is 0 … 45° (⛔ 0 … 60°): its middle at 20 – 25° — 40° is its top edge's zone now
+    for (const [p, off] of [[20, 10], [25, 5], [30, 0]] as const) {
       const t = mapTarget(fm, 90 * D, p * D, opts);
       expect(fm.facets[t.stack]).toBe(upper);
       const u = dirOf(90 * D, p * D);
       expect(ang(u, upper.n)).toBeCloseTo(off, 6);
       expect(ang(calmShown(u, settled(90 * D, p * D)), upper.n)).toBeCloseTo(off * 0.25, 6);
-      expect(ang(calmShown(u, settled(90 * D, p * D, "old")), upper.n)).toBeGreaterThan(off * 0.25 + 5); // ⛔ as built before
+      if (off >= 10) expect(ang(calmShown(u, settled(90 * D, p * D, "old")), upper.n)).toBeGreaterThan(off * 0.25 + 5); // ⛔ as built before
     }
   });
 

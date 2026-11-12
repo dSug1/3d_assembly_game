@@ -61,9 +61,9 @@ describe("⭐ core/prism.ts — a right prism on a regular polygon, its bottom e
   });
 
   it("⭐ wired: a body's prismSides builds the prism (Babylon's cylinder, turned, stretched, flat shaded)", () => {
-    expect(code("render/scene.ts")).toContain("      b.prismSides,\n      (b.prismTip ?? 0) * unitM,\n    );"); // ⭐ (2026-11-12) and its tips (`Scene_0bis`)
+    expect(code("render/scene.ts")).toContain("      b.prismSides,\n    );");
     const b = code("render/bodies.ts");
-    expect(b).toContain("const mesh = prismSides !== undefined ? prismMesh(st, name, prismSides, dims, prismTip) : CreateBox(");
+    expect(b).toContain("const mesh = prismSides !== undefined ? prismMesh(st, name, prismSides, dims) : CreateBox(");
     expect(b).toContain("m.convertToFlatShadedMesh();");
   });
 });

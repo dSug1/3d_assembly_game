@@ -542,6 +542,15 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
   return { q, path, blocked, touched, deferred: false, rest: [0, 0], queries };
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC5, F5) THE MOST GAP QUERIES ONE ITERATION OF `solveOrbitStep` MAY MAKE — its first always completes (the solve
+ * must progress), so a frame RESERVES this much for it: the gap at the start (1) and, the worst branch — at the gap kept (2) —, the contact's normal (1),
+ * the clamp's landing (1), the long slide's two tries (2), the landing (1), a corner learned (1) or five halvings (5): 1 + 1 + 1 + 2 + 1 + 1 + 5 = 12
+ * (free air (1) and inside the margin (0): 7 at most). ⛔ Unreserved: the checks billed ahead of a solve left it ~1 query, its first iteration took 4 – 29
+ * — 25 – 38 a frame against the owner's 24 (the walks, both scenes).
+ */
+export const FIRST_ITERATION_MAX_QUERIES = 12;
+
 /** ⭐ (2026-11-04, the audit) thrown by a query past the cap — caught by `solveOrbitStep` alone. */
 const OVER_BUDGET: unique symbol = Symbol("OVER_BUDGET");
 
@@ -764,7 +773,10 @@ export function orbitFrame(
   let relocateExhausted = false;
   if ((relocate.from ?? 0) >= 0 && counted.gap(q) < opt.gapM / 2) {
     // ⭐ (the third audit) under the frame's cap, resumed next frame — never ~280 gap queries a frame
-    const found = nearestFree(q, counted, opt.gapM, relocate.stepM, relocate.maxM, Math.max(1, opt.maxQueries - extra), relocate.from ?? 0);
+    // ⭐⭐⭐ (2026-11-12, F5) the search leaves the solve its first iteration (`FIRST_ITERATION_MAX_QUERIES`) — none left: resumed next frame (⛔ `max(1, …)`:
+    // the search took the frame, the solve's first iteration went past the cap — 29 for the solve alone on `Scene_1`, the walks)
+    const room = opt.maxQueries - extra - FIRST_ITERATION_MAX_QUERIES;
+    const found = room >= 1 ? nearestFree(q, counted, opt.gapM, relocate.stepM, relocate.maxM, room, relocate.from ?? 0) : { to: null, next: relocate.from ?? 0 };
     relocateNext = found.next;
     relocateExhausted = found.to === null && found.next === null;
     const to = found.to;
@@ -791,7 +803,8 @@ export function orbitFrame(
     target = q;
     if (same(r.q, r.path[0]!)) stopCoast = true;
     if (Math.abs(dvIn) > 1e-12) userV = q.v; // the finger's own dy pushed in: the height asked is where it stopped
-  } else if (!r.touched && Math.abs(userV - q.v) > 1e-6 && opt.maxQueries - queries > 0) {
+  } else if (!r.touched && Math.abs(userV - q.v) > 1e-6 && opt.maxQueries - queries >= FIRST_ITERATION_MAX_QUERIES) {
+    // ⭐ (2026-11-12, F5) the way back only with a whole iteration left (⛔ `> 0`: its first iteration past the cap)
     // ⭐ (2026-11-04, the audit) the way back only within what the cap leaves (⛔ `max(4, …)`: four more past it, every frame it ran)
     const back = solveOrbitStep(q, [0, userV - q.v], env, { ...opt, maxQueries: opt.maxQueries - queries });
     queries += back.queries;

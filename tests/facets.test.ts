@@ -139,7 +139,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     expect(worstStep(fm)).toBeLessThan(0.006);
   });
 
-  it("⭐⭐⭐ a HORIZONTAL hexagonal prism (a face on top): six side facets in four columns — the ends (±x) and, at ±z, two facets STACKED at ±30° of elevation; the caps its top and bottom faces; the pitch bands from halfway to each neighbour's elevation; I1 on a SLANTED facet (the green the plane of t and n, the red of b and n)", () => {
+  it("⭐⭐⭐ a HORIZONTAL hexagonal prism (a face on top): six side facets in four columns — the ends (±x) and, at ±z, two facets STACKED at ±30° of elevation; the caps its top and bottom faces; ⭐ (2026-11-12, F3) the pitch bands by HEIGHT — one scale for every column (⛔ halfway to each neighbour's elevation: ±60° here, ±45° at the ends); I1 on a SLANTED facet (the green the plane of t and n, the red of b and n)", () => {
     const { faces, box } = hexPrism(0.15, 0.5, false);
     const fm = buildFaceMap(faces, box);
     expect(facetCount(fm)).toEqual({ sides: 6, columns: 4, real: 8 });
@@ -148,7 +148,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     const col = (deg: number) => fm.columns[columnAt(fm, deg * D).k]!;
     expect(col(0).bounds).toEqual([expect.closeTo(-45 * D, 12), expect.closeTo(45 * D, 12)]);
     expect(col(90).facets.length).toBe(2);
-    expect(col(90).bounds).toEqual([expect.closeTo(-60 * D, 12), expect.closeTo(0, 12), expect.closeTo(60 * D, 12)]);
+    // ⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` RC3, F3) the bound between the two stacked facets at their edge's HEIGHT (the middle: 0°), the band's ends a
+    // box's ±45° — the ends' column alike: a constant pitch is one height round the prism (⛔ −60 / 0 / 60° here against ±45° at the ends)
+    expect(col(90).bounds).toEqual([expect.closeTo(-45 * D, 12), expect.closeTo(0, 12), expect.closeTo(45 * D, 12)]);
     // at +15° of pitch in the +z slice: the UPPER slanted facet; at −15° the lower; at 70° the top
     expect(mapTarget(fm, 90 * D, 15 * D, opts).normal[1]).toBeCloseTo(Math.sin(30 * D), 12);
     expect(mapTarget(fm, 90 * D, -15 * D, opts).normal[1]).toBeCloseTo(-Math.sin(30 * D), 12);
@@ -163,7 +165,7 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
       expect(dot(sub(t.surface, t0.surface), f.b)).toBeCloseTo(0, 12);
       expect(dot(sub(t.surface, t0.surface), f.n)).toBeCloseTo(0, 12);
     }
-    for (let p = 2; p <= 58; p += 4) {
+    for (let p = 2; p <= 42; p += 4) { // ⭐ (F3) its band 0 … 45° (⛔ 0 … 60°)
       const t = mapTarget(fm, 90 * D, p * D, opts);
       expect(dot(sub(t.surface, t0.surface), f.t)).toBeCloseTo(0, 12);
       expect(dot(sub(t.surface, t0.surface), f.n)).toBeCloseTo(0, 12);
@@ -176,10 +178,11 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     const { faces, box } = hexPrism(0.15, 0.5, false);
     const fm = buildFaceMap(faces, box);
     expect(worstStep(fm)).toBeLessThan(0.006);
-    // the parting it cures: the raw places at a slice's end at 75° of pitch, from either side
+    // ⭐ (2026-11-12, F3) the parting it cured is gone at its root: one height scale, every column's caps start at 45° — the raw places at a slice's end at
+    // 75° of pitch meet from either side (⛔ before: the end column's quarter from 45°, the slanted one's from 60° — over 10 mm apart, the blend joining them)
     const a = mapTarget(fm, 45 * D - 1e-9, 75 * D, opts).surface;
     const b = mapTarget(fm, 45 * D + 1e-9, 75 * D, opts).surface;
-    expect(dist(a, b)).toBeGreaterThan(0.01);
+    expect(dist(a, b)).toBeLessThan(1e-6);
     expect(dist(place(fm, 45 * D - 1e-9, 75 * D), place(fm, 45 * D + 1e-9, 75 * D))).toBeLessThan(1e-6);
   });
 

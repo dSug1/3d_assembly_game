@@ -1,0 +1,6 @@
+[
+ {"name":"contact_top","yaw":-1.5707963267948966,"v":0.75,"legs":[{"A":215},{"random":8,"seed":51,"zig":1,"max":300}]},
+ {"name":"contact_front","yaw":-1.5707963267948966,"v":0.5,"legs":[{"A":215},{"random":8,"seed":52,"zig":1,"max":300}]},
+ {"name":"contact_bottom","yaw":-1.5707963267948966,"v":0.15,"legs":[{"A":215},{"random":8,"seed":53,"zig":1,"max":300}]},
+ {"name":"close_zenith2","yaw":1.5707963267948966,"v":0.75,"legs":[{"A":150},{"segs":[[0,-3,100]]},{"segs":[[0,3,100]]},{"segs":[[0,-3,100]]},{"random":6,"seed":54,"zig":1,"max":350}]}
+]

@@ -157,7 +157,6 @@ shape how Blender levels are authored; the teardown contract only when the reloa
 | 1 | *Level 1 - Scene 1 - the painting* | `Scene_1`, unchanged |
 | 2 | *Demo - the painting* | `Scene1_demo`, unchanged |
 | 3 | *Level 2 - Scene 2 - the engine* | `Scene_2` (`content/scene_2.ts`): `Scene_1`'s floor, lights, rig, units, play volume — **empty** (no pieces, no goal) |
-| 4 | *Level 0bis - Scene 0bis - the heptagon with tips* | ⭐ `Scene_0bis` (§7.1): `Scene_0` copied, its heptagon's two end faces TIPPED |
 
 * **The menu's order is the menu's only** (`WorldSpec.menuOrder`, `menuLevels` in `core/game_route.ts`): the demo on top, then Levels 0, 1, 2; each
   button its level's title alone (it was *title — scene title*). ⛔ The `?sceneIndex=` order is the catalogue's, unchanged — the default boot (1,
@@ -184,26 +183,3 @@ shape how Blender levels are authored; the teardown contract only when the reloa
   for 80 px, the solver never blocked; the tilted pole engaged; ⚠ one frame at contact read 26 gap queries (the budget 24). `Scene_2` boots, 34 fps.
 * **Vectors**: `tests/scene_2.test.ts` (8), `tests/scene_0_heptagon.test.ts` (10), the JSON seam's prism / reference-size refusals; the suites that
   pinned the workbench moved to its fixture. **1677**; the anchor (+1, on `1.0.124from1.0.121-`): **1762**.
-
-### 7.1 ⭐⭐ `Scene_0bis` — the heptagon with TIPS (2026-11-12, branch `1.0.124from1.0.121-Added_scene_2`, the worktree `3d_assembly_game-scene2`) — ⛔ no device close
-
-> *"create a Level 0 Scene 0bis and copy the scene 0 into it. Then modify the heptagon of scene 0bis so that the two lateral faces have a tip, as
-> attachment"* — the owner, with a sketch: the prism, each end face a pyramid to a point.
-
-* **The level**: `Level_0bis`, *Level 0bis - Scene 0bis - the heptagon with tips*; in the menu after Level 0 (`menuOrder`), in the catalogue APPENDED —
-  `?sceneIndex=4` (the earlier indices, and every probe's URL, unchanged). ⚠ So *Next level* after Level 2 is now Level 0bis (catalogue order).
-* **The scene** (`content/scene_0bis.ts`): a COPY of `scene_0.ts`, not a link (either can change without moving the other), its exports suffixed
-  `0BIS`, its id `Scene_0bis` (the green piece's boot turn listed for it, `GREEN_BOOT_QUAT`). ONE change: the heptagon's two END faces (the "lateral
-  faces", left and right as the boot camera sees them) each a seven-sided PYRAMID, its apex on the polygon's centre (y 0.229 m — the circumcentre, below
-  the box's middle, the heptagon being odd), **1.2 units** out along the extrusion (`SCENE_0BIS_TIP`; ⚠ a first value read off the sketch — about a
-  quarter of the prism — the owner's to set). The prism between them is `Scene_0`'s exactly: the goal face, the green piece's goals, the anchor, the
-  final, the orbit's centre are `Scene_0`'s; the body is 7.3 units long (0.73 m).
-* **The mechanism** (`BodySpec.prismTip`, authored units; only on a prism, ≥ 0, below half of `dims[2]`; the JSON seam carries and refuses it, named):
-  `dims` stays the WHOLE box, tips included. `render/bodies.ts`'s `prismMesh` fits the prism to the box LESS a tip at each end, then moves each cap's
-  HUB — Babylon's cylinder builds a cap as a fan round one vertex on the axis (`core/prism.ts`'s `axisVertices`, read before the stretch) — out by the
-  tip (`raiseTips`), BEFORE the flat shading; the engine's winding kept (`taperMesh`'s lesson). The collision hull, the faces and the face map read the
-  mesh, so they follow with nothing changed (the shape stays convex).
-* **Probed headless** (`page_eval.mjs` on `?sceneIndex=4`, its own dev server on 5181): the body's box 0.73 × 0.483 × 0.483 m; 28 triangles, none
-  facing in; 21 faces (7 sides + 7 per tip); both apexes at the centre.
-* **Vectors**: `tests/scene_0bis.test.ts` (11 — RED before: the module absent; the tip's sign mutant RED); the level lists in `d170`, `d173`, `d180`,
-  `scene_1`, `scene_2`; `scene_0_heptagon`'s wiring line. **1773**.

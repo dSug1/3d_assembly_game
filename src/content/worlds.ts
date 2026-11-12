@@ -9,7 +9,6 @@
  */
 import type { GameContent } from "../core/game_structure";
 import { SCENE_0 } from "./scene_0";
-import { SCENE_0BIS } from "./scene_0bis";
 import { SCENE_1 } from "./scene_1";
 import { SCENE_2 } from "./scene_2";
 import { loadScene1DemoPlan, SCENE1_DEMO } from "./scene1_demo";
@@ -30,12 +29,9 @@ export const GAME_CONTENT: GameContent = {
         { id: "Level1_demo", title: "Demo - the painting", scene: SCENE1_DEMO, demoPlan: loadScene1DemoPlan },
         // ⭐ (2026-11-12, the owner: *"Empty scene"*) the floor and the lights alone — `?sceneIndex=3`.
         { id: "Level_2", title: "Level 2 - Scene 2 - the engine", scene: SCENE_2 },
-        // ⭐ (2026-11-12, the owner: *"create a Level 0 Scene 0bis and copy the scene 0 into it"*) the heptagon with tips — `?sceneIndex=4` (appended:
-        // the earlier indices, and every probe's URL, unchanged); in the menu after Level 0.
-        { id: "Level_0bis", title: "Level 0bis - Scene 0bis - the heptagon with tips", scene: SCENE_0BIS },
       ],
       // ⭐ (2026-11-12, the owner) the level menu: the demo on top — the menu only, the `?sceneIndex=` order above unchanged
-      menuOrder: ["Level1_demo", "Level_0", "Level_0bis", "Level_1", "Level_2"],
+      menuOrder: ["Level1_demo", "Level_0", "Level_1", "Level_2"],
     },
   ],
 };

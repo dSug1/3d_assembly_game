@@ -293,7 +293,7 @@ describe("⭐⭐⭐ A&B — the contact made easy and visible (2026-10-14, the o
   });
   it("⭐⭐ A: the settle is SOLVED along the face's normal (the face's part stops it at the gap kept), the model at once, the mesh eased", () => {
     const h = code("render/hover_wiring.ts");
-    expect(h).toContain("const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt); st.pieceQueriesCarry += s.queries;");
+    expect(h).toContain("const s = solveOrbitStep({ yaw: 0, v: 0.5, zoom: 1 }, [settleDepth(c.gapM, opt.gapM), 0], pieceSolverEnv(st, down, setup), opt); st.pieceQueries += s.queries;"); // ⭐ (2026-11-12, F5) charged to its own frame (⛔ carried to the next)
     // ⭐ (the hover's second audit) the MODEL settled at once; the mesh drawn easing down
     expect(h).toContain("applyHoverModel(st, st.hoverFollow, scale(c.normal, -settleM), [0, 0, 0]);");
     expect(h).toContain("const settleLeft = hf.settleM * (1 - settleShare(now - hf.settleT0));");
@@ -420,10 +420,13 @@ describe("⭐⭐⭐ the hover's second audit (2026-10-14): the orbit held under 
     expect(h).toContain('if (!pieceShownAtRest(st, q)) { st.lastVerdict = "hover: waiting for the piece to come to rest"; st.hudDirty = true; return "wait"; }');
     expect(h).toContain("st.orbit.reset(q.yaw, q.v); st.orbitInertia.stop(); st.orbitUserV = q.v;");
   });
-  it("⭐⭐⭐ 2: what the frame's cap has left — none under HOVER_MIN_QUERIES", async () => {
+  it("⭐⭐⭐ 2: what the frame's cap has left — none under a solve's whole first iteration (⭐ 2026-11-12, F5: `FIRST_ITERATION_MAX_QUERIES` — ⛔ `HOVER_MIN_QUERIES`: the first iteration past the cap, 37 a frame)", async () => {
     const { hoverQueryBudget, HOVER_MIN_QUERIES } = await import("../src/input/hover");
+    const { FIRST_ITERATION_MAX_QUERIES } = await import("../src/input/piece_orbit_solver");
+    const room = Math.max(HOVER_MIN_QUERIES, FIRST_ITERATION_MAX_QUERIES);
     expect(hoverQueryBudget(24, 0)).toBe(24);
-    expect(hoverQueryBudget(24, 24 - HOVER_MIN_QUERIES)).toBe(HOVER_MIN_QUERIES);
+    expect(hoverQueryBudget(24, 24 - room)).toBe(room);
+    expect(hoverQueryBudget(24, 24 - room + 1)).toBe(0);
     expect(hoverQueryBudget(24, 21)).toBe(0);
     expect(hoverQueryBudget(24, 30)).toBe(0);
   });

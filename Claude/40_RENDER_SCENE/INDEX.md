@@ -56,9 +56,8 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 
 ## Where it stands
 
-✅ **Scenes are DATA**: `Scene_0` (the workbench) and `Scene_1` (`D117`) in `src/content/`, listed by
-`content/scenes.ts` and chosen from the level menu or `?sceneIndex=` (the slider deleted, `D186`). ⚠ `Scene_0`'s parts are deliberately
-**off-axis and off-plane** — collinear objects put every barycentre on one line.
+✅ **Scenes are DATA** (`src/content/`, `content/scenes.ts`; the level menu or `?sceneIndex=`). ⭐⭐ `Scene_0` is the HEPTAGON since
+2026-11-12 — the orbit on ANY shape: its rules, root causes, fixes → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md).
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.

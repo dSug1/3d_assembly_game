@@ -87,6 +87,45 @@ export interface Facet {
   readonly bHi: number;
   readonly share: number;
   readonly real: boolean;
+  /**
+   * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §2, F1) the polygon in the facet's own frame (`t`, `b`) and whether it IS its extents' rectangle — a facet
+   * that is not (the heptagon's ends) is placed on its CHORD at the height (`chordAt`), never in its bounding rectangle's void corners. Absent: a rectangle.
+   */
+  readonly tb?: readonly (readonly [number, number])[];
+  readonly rect?: boolean;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §2 — the owner's rule, F1) A FACET'S CHORD at `s` along `b`: its polygon's extent along `t` there (a convex polygon
+ * cut by the line `b = s`, `s` held within the polygon's `b` extent). A rectangle (or no polygon): its extents, EXACTLY — every box unchanged.
+ */
+export function chordAt(f: Facet, s: number): { readonly lo: number; readonly hi: number } {
+  const P = f.tb;
+  if (f.rect !== false || P === undefined || P.length < 3) return { lo: f.tLo, hi: f.tHi };
+  const y = Math.min(f.bHi, Math.max(f.bLo, s));
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i]!;
+    const q = P[(i + 1) % P.length]!;
+    // ⭐ a vertex within the rounding of the line is on it (⛔ `===`: a top edge's two corners 2e-17 apart in height — the chord one corner, an 87 mm jump)
+    if (Math.abs(p[1] - y) <= 1e-9) {
+      lo = Math.min(lo, p[0]);
+      hi = Math.max(hi, p[0]);
+    }
+    if (Math.abs(p[1] - y) > 1e-9 && Math.abs(q[1] - y) > 1e-9 && (p[1] - y) * (q[1] - y) < 0) {
+      const x = p[0] + ((y - p[1]) / (q[1] - p[1])) * (q[0] - p[0]);
+      lo = Math.min(lo, x);
+      hi = Math.max(hi, x);
+    }
+  }
+  if (!(hi >= lo)) {
+    // the line grazes a vertex within the rounding: the nearest vertex's place
+    let best = P[0]!;
+    for (const p of P) if (Math.abs(p[1] - y) < Math.abs(best[1] - y)) best = p;
+    return { lo: best[0], hi: best[0] };
+  }
+  return { lo, hi };
 }
 
 /** ⭐ A COLUMN of facets: its slice of the yaw (`mid` ± `hw`), its facets bottom → top and the pitch bands' bounds between them (one more than facets). */
@@ -105,6 +144,12 @@ export interface FaceMap {
   readonly columns: readonly Column[];
   readonly top: number;
   readonly bottom: number;
+  /**
+   * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` RC3, F3) THE HEIGHT SCALE's levels — every column's bound (a facet's edge somewhere round the contour) as a pitch
+   * and its height: a side place's HEIGHT read on it (the edge stretch at every level, all round — a level green ring slows at that height in every
+   * column), then the facet's own place at that height. Absent when no column has an inner bound (a box): each facet's own band, exactly as before.
+   */
+  readonly levels?: { readonly p: readonly number[]; readonly y: readonly number[] };
 }
 
 const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -342,6 +387,16 @@ export function syncAngle(m: number, target: number, d: number, catchUp: number,
   // the gap closed or crossed: on the orbit
   return Math.sign(gapOf(m2)) !== Math.sign(gap) ? target : m2;
 }
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC4, F4) THE PITCH THE FINGER ASKED PAST A POLE, for the map's angles: the orbit (its solved `v`) AT its limit
+ * and the elevation asked beyond it (`beyondV`, the orbit's `takeBeyond`) toward that limit — as pitch (`pitchMax` per half ring); else 0. ⛔ The map moved
+ * by the orbit's step alone: zero at the pole — after a tilt the orbit there and the gizmo mid-face, the face was never reached. ⭐ On a box the map is at
+ * the pole with the orbit (its catch-up ends there): nothing moves.
+ */
+export function poleBeyondPitch(v: number, beyondV: number, pitchMax: number): number {
+  return (v >= 1 && beyondV > 0) || (v <= 0 && beyondV < 0) ? 2 * beyondV * pitchMax : 0;
+}
+
 /** ⭐⭐⭐ (2026-11-09) the most the map's catch-up may move the gizmo BY ITSELF in a frame (m) — the solver's own `RING_JUMP_M` (a jump, not travel). */
 export const MAP_SYNC_HOLD_M = 0.005;
 
@@ -588,9 +643,20 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   }
   // the caps: the facet nearest straight up / down beyond 45° — else a virtual one at the box (its stack still read)
   const elev = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b — the owner: *"2 … OK"*) A RIDGE HOLDS THE POLE: two facets beyond 45° tied for it (within
+  // `RIDGE_TIE_DEG` of elevation — the heptagon's two top faces at the zenith) — neither is the cap: a virtual one, and the side columns run to ±90° (below).
+  // ⛔ A tie-break made the BACK face the cap: the front top face (the goal's) a side up to 76.9°, the place handed beyond the zenith there.
+  const ridge = { top: false, bottom: false };
   const capOf = (up: boolean): Candidate => {
     let best: Candidate | null = null;
-    for (const c of kept) if ((up ? elev(c.n) : -elev(c.n)) > Q + 1e-12 && (best === null || (up ? c.n[1] > best.n[1] : c.n[1] < best.n[1]))) best = c;
+    const beyond = kept.filter((c) => (up ? elev(c.n) : -elev(c.n)) > Q + 1e-12);
+    for (const c of beyond) if (best === null || (up ? c.n[1] > best.n[1] : c.n[1] < best.n[1])) best = c;
+    const tieRad = (RIDGE_TIE_DEG * Math.PI) / 180;
+    if (best !== null && beyond.some((c) => c !== best && Math.abs(elev(c.n) - elev(best!.n)) <= tieRad && Math.abs(wrapPi(Math.atan2(c.n[2], c.n[0]) - Math.atan2(best!.n[2], best!.n[0]))) > Q)) {
+      if (up) ridge.top = true;
+      else ridge.bottom = true;
+      best = null;
+    }
     if (best !== null) return best;
     // ⭐ virtual: AT THE BOX (⛔ at a dropped candidate's own plane — the plane D5 refused would cut the contour again)
     return { ...candOf([0, up ? 1 : -1, 0], false, 0), e: up ? box.hi[1] : -box.lo[1] };
@@ -611,6 +677,9 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
     const ts = poly.map((v) => dot(v, t));
     const bs = poly.map((v) => dot(v, b));
     const ext = (xs: number[], lo: boolean): number => (xs.length === 0 ? 0 : lo ? Math.min(...xs) : Math.max(...xs));
+    const [tLo, tHi, bLo, bHi] = [ext(ts, true), ext(ts, false), ext(bs, true), ext(bs, false)];
+    const tb = poly.map((_, k) => [ts[k]!, bs[k]!] as const);
+    const on = (x: number, a: number, z: number): boolean => Math.abs(x - a) < 1e-9 || Math.abs(x - z) < 1e-9;
     return {
       n: c.n,
       t,
@@ -619,12 +688,15 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
       kind: i < sides.length ? "SIDE" : c === capT ? "TOP" : "BOTTOM",
       groups: c.groups,
       poly,
-      tLo: ext(ts, true),
-      tHi: ext(ts, false),
-      bLo: ext(bs, true),
-      bHi: ext(bs, false),
+      tLo,
+      tHi,
+      bLo,
+      bHi,
       share: shareOf(c, poly),
       real: c.real,
+      tb,
+      // ⭐ (F1) a rectangle: every corner on its extents (a box's faces — placed exactly as before)
+      rect: tb.every(([x, y]) => on(x, tLo, tHi) && on(y, bLo, bHi)),
     };
   });
   // ⭐ the columns: the side facets by heading (the largest real face first, within `mergeDeg`); each a slice of the yaw from halfway to each neighbour's
@@ -642,16 +714,6 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
     else c.members.push(i);
   }
   cols.sort((x, y) => x.h - y.h);
-  const columns: Column[] = cols.map((c, k) => {
-    const prev = cols.length === 1 ? c.h - 2 * Math.PI : k === 0 ? cols[cols.length - 1]!.h - 2 * Math.PI : cols[k - 1]!.h;
-    const next = cols.length === 1 ? c.h + 2 * Math.PI : k === cols.length - 1 ? cols[0]!.h + 2 * Math.PI : cols[k + 1]!.h;
-    const lo = (prev + c.h) / 2;
-    const hi = (c.h + next) / 2;
-    const fs = [...c.members].sort((x, y) => elev(sides[x]!.n) - elev(sides[y]!.n));
-    const els = fs.map((i) => elev(sides[i]!.n));
-    const bounds = [(-H + els[0]!) / 2, ...els.slice(1).map((e, j) => (els[j]! + e) / 2), (els[els.length - 1]! + H) / 2];
-    return { mid: (lo + hi) / 2, hw: (hi - lo) / 2, facets: fs, bounds };
-  });
   const vs = facets.flatMap((f) => f.poly);
   const core: ShellBox =
     vs.length === 0
@@ -660,7 +722,81 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
           lo: [Math.min(...vs.map((v) => v[0])), Math.min(...vs.map((v) => v[1])), Math.min(...vs.map((v) => v[2]))],
           hi: [Math.max(...vs.map((v) => v[0])), Math.max(...vs.map((v) => v[1])), Math.max(...vs.map((v) => v[2]))],
         };
-  return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1 };
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC3, F3) ONE PITCH → HEIGHT SCALE for every side column: the side band from `PB` to `PT` (±45° under a cap —
+  // a box's; ±90° where a RIDGE holds the pole, §3) is the contour's height, linearly — a bound between two facets of a column at the HEIGHT of their
+  // edge: a constant pitch is one height in every column, the green a horizontal ring. ⛔ Each column's own bounds (halfway between its facets'
+  // elevations): the heptagon's front −64 / −13 / 38 / 77°, its back −64 / −13 / 51°, its ends ±45° — the green at different heights in adjacent columns.
+  // ⭐ A box's columns are single facets: [±45°] exactly, as before.
+  const PB = ridge.bottom ? -H : -Q;
+  const PT = ridge.top ? H : Q;
+  const yB = core.lo[1];
+  const yT = core.hi[1];
+  const pitchOfY = (y: number): number => (yT - yB > 1e-12 ? PB + ((y - yB) / (yT - yB)) * (PT - PB) : 0);
+  const yExt = (f: Facet): [number, number] => (f.poly.length === 0 ? [yB, yT] : [Math.min(...f.poly.map((v) => v[1])), Math.max(...f.poly.map((v) => v[1]))]);
+  const columns: Column[] = cols.map((c, k) => {
+    const prev = cols.length === 1 ? c.h - 2 * Math.PI : k === 0 ? cols[cols.length - 1]!.h - 2 * Math.PI : cols[k - 1]!.h;
+    const next = cols.length === 1 ? c.h + 2 * Math.PI : k === cols.length - 1 ? cols[0]!.h + 2 * Math.PI : cols[k + 1]!.h;
+    const lo = (prev + c.h) / 2;
+    const hi = (c.h + next) / 2;
+    const fs = [...c.members].sort((x, y) => elev(sides[x]!.n) - elev(sides[y]!.n));
+    const inner = fs.slice(1).map((i, j) => {
+      const below = yExt(facets[fs[j]!]!);
+      const above = yExt(facets[i]!);
+      return Math.min(PT, Math.max(PB, pitchOfY((below[1] + above[0]) / 2)));
+    });
+    const bounds = [PB, ...inner, PT];
+    return { mid: (lo + hi) / 2, hw: (hi - lo) / 2, facets: fs, bounds };
+  });
+  const ps = [...new Set(columns.flatMap((c) => c.bounds))].sort((x, y) => x - y).filter((v, i, a) => i === 0 || v - a[i - 1]! > 1e-9);
+  const yOfPitch = (q: number): number => (PT - PB > 1e-12 ? yB + ((q - PB) / (PT - PB)) * (yT - yB) : (yB + yT) / 2);
+  const levels = ps.length > 2 && yT - yB > 1e-12 ? { p: ps, y: ps.map(yOfPitch) } : undefined;
+  return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1, ...(levels ? { levels } : {}) };
+}
+
+/** ⭐⭐⭐ (F3) the side band's HEIGHT at `p` on the levels — linear between two, the edge stretch at each (`edgeMap`, its last `keM` slow). */
+export function levelHeight(lv: { readonly p: readonly number[]; readonly y: readonly number[] }, p: number, E: number, keM: number): number {
+  const P = lv.p;
+  let k = 0;
+  while (k < P.length - 2 && p > P[k + 1]!) k++;
+  const pm = (P[k]! + P[k + 1]!) / 2;
+  const ph = (P[k + 1]! - P[k]!) / 2;
+  const ym = (lv.y[k]! + lv.y[k + 1]!) / 2;
+  const yh = (lv.y[k + 1]! - lv.y[k]!) / 2;
+  return ym + edgeMap(ph > 1e-12 ? (p - pm) / ph : 0, bandFor(E, ph), yh, keM);
+}
+
+/** ⭐⭐⭐ (F3) …and back: the pitch whose height is `y`. */
+export function levelPitch(lv: { readonly p: readonly number[]; readonly y: readonly number[] }, y: number, E: number, keM: number): number {
+  const Y = lv.y;
+  let k = 0;
+  while (k < Y.length - 2 && y > Y[k + 1]!) k++;
+  const pm = (lv.p[k]! + lv.p[k + 1]!) / 2;
+  const ph = (lv.p[k + 1]! - lv.p[k]!) / 2;
+  const ym = (Y[k]! + Y[k + 1]!) / 2;
+  const yh = (Y[k + 1]! - Y[k]!) / 2;
+  return pm + edgeUnmap(y - ym, bandFor(E, ph), yh, keM) * ph;
+}
+
+/** ⭐⭐⭐ (F3) a side facet's place along `b` at the world height `y` (its plane: `y = n_y·e + b_y·s`, `t` level) — within its extent. */
+function sAtHeight(f: Facet, y: number): number {
+  const s = Math.abs(f.b[1]) > 1e-12 ? (y - f.n[1] * f.e) / f.b[1] : (f.bLo + f.bHi) / 2;
+  return Math.min(f.bHi, Math.max(f.bLo, s));
+}
+
+/** ⭐⭐⭐ (2026-11-12, F2b) Two facets beyond 45° within this many degrees of elevation of each other (and facing apart) hold a pole TOGETHER — a ridge. */
+export const RIDGE_TIE_DEG = 1;
+
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) DOES FACET `fi` HOLD A POLE — the cap, or a side facet beyond 45° of elevation (a ridge's faces, each
+ * holding it from its own side): which one; `null` none. ⭐ A box's sides are vertical: its two caps alone, as before.
+ */
+export function holdsPole(map: FaceMap, fi: number): "TOP" | "BOTTOM" | null {
+  if (fi === map.top) return "TOP";
+  if (fi === map.bottom) return "BOTTOM";
+  const f = map.facets[fi];
+  if (f === undefined || f.kind !== "SIDE") return null;
+  const s = Math.SQRT1_2;
+  return f.n[1] > s + 1e-12 ? "TOP" : f.n[1] < -s - 1e-12 ? "BOTTOM" : null;
 }
 
 /**
@@ -804,8 +940,10 @@ export function castPoint(f: Facet, p: Vec3): Vec3 {
   const L = dot(p, f.t);
   const S = dot(p, f.b);
   const cl = (x: number, lo: number, hi: number): number => (hi - lo > 2 * e ? Math.min(hi - e, Math.max(lo + e, x)) : (lo + hi) / 2);
-  const dL = cl(L, f.tLo, f.tHi) - L;
   const dS = cl(S, f.bLo, f.bHi) - S;
+  // ⭐⭐⭐ (2026-11-12, F1) inside the CHORD at that height (a rectangle's extents, as before)
+  const c = chordAt(f, S + dS);
+  const dL = cl(L, c.lo, c.hi) - L;
   return [p[0] + f.t[0] * dL + f.b[0] * dS, p[1] + f.t[1] * dL + f.b[1] * dS, p[2] + f.t[2] * dL + f.b[2] * dS];
 }
 
@@ -842,26 +980,47 @@ export function columnAt(map: FaceMap, yaw: number): { readonly k: number; reado
  * whole cap's extent: on a vertical hexagon twice the facet's edge, the quarters' corners parted — probed, 176 mm). `toCap` / `fromCap` map a place
  * across the facet onto it and back — on a box the same extent: unchanged.
  */
-function capSpan(map: FaceMap, f: Facet, cap: Facet): { readonly toCap: (L: number) => number; readonly fromCap: (L: number) => number } {
+function capSpan(map: FaceMap, f: Facet, cap: Facet, ext?: { readonly lo: number; readonly hi: number }): { readonly toCap: (L: number) => number; readonly fromCap: (L: number) => number } {
   const nh = Math.hypot(f.n[0], f.n[2]);
   const out = (v: Vec3): number => (nh > 1e-9 ? (v[0] * f.n[0] + v[2] * f.n[2]) / nh : 0);
   const m = cap.poly.length === 0 ? 0 : Math.max(...cap.poly.map(out));
   const ts = cap.poly.filter((v) => out(v) >= m - 1e-6).map((v) => dot(v, f.t));
-  const lo = ts.length === 0 ? f.tLo : Math.min(...ts);
-  const hi = ts.length === 0 ? f.tHi : Math.max(...ts);
-  const same = Math.abs(lo - f.tLo) < 1e-9 && Math.abs(hi - f.tHi) < 1e-9;
-  const w = f.tHi - f.tLo;
+  // ⭐⭐⭐ (2026-11-12, F1) from the facet's CHORD at its rim (`ext`) — a facet not a rectangle is already placed on it (⛔ from its rectangle: the place
+  // squeezed twice, 43 mm short of the side's last one at the band's end); a rectangle's chord is its extents, as before
+  const fLo = ext?.lo ?? f.tLo;
+  const fHi = ext?.hi ?? f.tHi;
+  const lo = ts.length === 0 ? fLo : Math.min(...ts);
+  const hi = ts.length === 0 ? fHi : Math.max(...ts);
+  const same = Math.abs(lo - fLo) < 1e-9 && Math.abs(hi - fHi) < 1e-9;
+  const w = fHi - fLo;
   if (same || !(w > 1e-12) || !(hi - lo > 1e-12)) return { toCap: (L) => L, fromCap: (L) => L };
   void map;
-  return { toCap: (L) => lo + ((L - f.tLo) / w) * (hi - lo), fromCap: (L) => f.tLo + ((L - lo) / (hi - lo)) * w };
+  return { toCap: (L) => lo + ((L - fLo) / w) * (hi - lo), fromCap: (L) => fLo + ((L - lo) / (hi - lo)) * w };
 }
 
 /** ⭐ The cap's centre the quarters converge to: the contour's middle in x / z, on the cap's plane. */
-function capCentre(map: FaceMap, cap: Facet): Vec3 {
+export function capCentre(map: FaceMap, cap: Facet): Vec3 {
   const cx = (map.core.lo[0] + map.core.hi[0]) / 2;
   const cz = (map.core.lo[2] + map.core.hi[2]) / 2;
   const cy = Math.abs(cap.n[1]) > 1e-9 ? (cap.e - cap.n[0] * cx - cap.n[2] * cz) / cap.n[1] : (map.core.lo[1] + map.core.hi[1]) / 2;
-  return [cx, cy, cz];
+  const C: Vec3 = [cx, cy, cz];
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §5 RC2, F2a) THE CAP POLYGON'S OWN CENTROID — ⛔ the core's middle on the cap's plane: off a cap not centred on the
+  // core (a slanted one, a tilted frame's), the quarters converged to a point beyond its edge. ⭐ On a box's top the same point (kept exactly).
+  const P = cap.poly;
+  if (P.length === 0) return C;
+  let a = 0;
+  let s: Vec3 = [0, 0, 0];
+  const o = P[0]!;
+  for (let i = 1; i + 1 < P.length; i++) {
+    const p = P[i]!;
+    const q = P[i + 1]!;
+    const w = Math.abs(dot(cross([p[0] - o[0], p[1] - o[1], p[2] - o[2]], [q[0] - o[0], q[1] - o[1], q[2] - o[2]]), cap.n)) / 2;
+    a += w;
+    s = [s[0] + (w * (o[0] + p[0] + q[0])) / 3, s[1] + (w * (o[1] + p[1] + q[1])) / 3, s[2] + (w * (o[2] + p[2] + q[2])) / 3];
+  }
+  // a degenerate cap (a ridge's: a line) — its points' middle
+  const G: Vec3 = a > 1e-12 ? [s[0] / a, s[1] / a, s[2] / a] : [P.reduce((t, v) => t + v[0], 0) / P.length, P.reduce((t, v) => t + v[1], 0) / P.length, P.reduce((t, v) => t + v[2], 0) / P.length];
+  return Math.hypot(G[0] - C[0], G[1] - C[1], G[2] - C[2]) < 1e-9 ? C : G;
 }
 
 /**
@@ -880,24 +1039,30 @@ export function mapTarget(map: FaceMap, yaw: number, pitch: number, opts: MapOpt
   const lo = B[0]!;
   const hi = B[B.length - 1]!;
   const p = Math.max(-H, Math.min(H, pitch));
-  const across = (f: Facet): number => (f.tLo + f.tHi) / 2 + edgeMap(a, bandY, (f.tHi - f.tLo) / 2, ke);
+  // ⭐⭐⭐ (2026-11-12, F1) across the facet's CHORD at the place's height `s` (`chordAt` — a rectangle's extents, as before)
+  const across = (f: Facet, s: number): { L: number; lo: number; hi: number } => {
+    const c = chordAt(f, s);
+    return { L: (c.lo + c.hi) / 2 + edgeMap(a, bandY, (c.hi - c.lo) / 2, ke), lo: c.lo, hi: c.hi };
+  };
   if (p <= hi + 1e-12 && p >= lo - 1e-12) {
     let i = 0;
     while (i < col.facets.length - 1 && p > B[i + 1]!) i++;
     const fi = col.facets[i]!;
     const f = map.facets[fi]!;
-    const L = across(f);
     const pm = (B[i]! + B[i + 1]!) / 2;
     const ph = (B[i + 1]! - B[i]!) / 2;
-    const s = (f.bLo + f.bHi) / 2 + edgeMap(ph > 1e-12 ? (p - pm) / ph : 0, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke);
-    return { band: "SIDE", side: k, stack: fi, normal: f.n, surface: facetAt(f, L, s), across: { L, lo: f.tLo, hi: f.tHi } };
+    // ⭐⭐⭐ (F3) on the height scale's levels when there are any (`levelHeight`, then the facet's place at that height) — a box: its own band, as before
+    const s = map.levels !== undefined ? sAtHeight(f, levelHeight(map.levels, p, E, ke)) : (f.bLo + f.bHi) / 2 + edgeMap(ph > 1e-12 ? (p - pm) / ph : 0, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke);
+    const x = across(f, s);
+    return { band: "SIDE", side: k, stack: fi, normal: f.n, surface: facetAt(f, x.L, s), across: x };
   }
   const up = p > hi;
   const f = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
-  const L = across(f);
+  const x = across(f, up ? f.bHi : f.bLo);
+  const L = x.L;
   const capI = up ? map.top : map.bottom;
   const cap = map.facets[capI]!;
-  const rim = facetAt(f, capSpan(map, f, cap).toCap(L), up ? f.bHi : f.bLo);
+  const rim = facetAt(f, capSpan(map, f, cap, x).toCap(L), up ? f.bHi : f.bLo);
   const C = capCentre(map, cap);
   const span = up ? H - hi : lo + H;
   const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
@@ -908,7 +1073,7 @@ export function mapTarget(map: FaceMap, yaw: number, pitch: number, opts: MapOpt
     stack: capI,
     normal: cap.n,
     surface: [C[0] + (rim[0] - C[0]) * (1 - g), C[1] + (rim[1] - C[1]) * (1 - g), C[2] + (rim[2] - C[2]) * (1 - g)],
-    across: { L, lo: f.tLo, hi: f.tHi },
+    across: { L, lo: x.lo, hi: x.hi },
   };
 }
 
@@ -920,7 +1085,11 @@ export function mapTarget(map: FaceMap, yaw: number, pitch: number, opts: MapOpt
 export function mapAngles(map: FaceMap, p: Vec3, fi: number, opts: MapOpts): { readonly yaw: number; readonly pitch: number } {
   const E = (Math.max(0, opts.edgeDeg) * Math.PI) / 180;
   const ke = Math.max(0, opts.edgeMm) / 1000;
-  const yawOf = (col: Column, f: Facet, L: number): number => col.mid + edgeUnmap(L - (f.tLo + f.tHi) / 2, bandFor(E, col.hw), (f.tHi - f.tLo) / 2, ke) * col.hw;
+  // ⭐⭐⭐ (2026-11-12, F1) across the CHORD at the place's height `sAt` — `mapTarget`'s own (a rectangle's extents, as before)
+  const yawOf = (col: Column, f: Facet, L: number, sAt: number): number => {
+    const c = chordAt(f, sAt);
+    return col.mid + edgeUnmap(L - (c.lo + c.hi) / 2, bandFor(E, col.hw), (c.hi - c.lo) / 2, ke) * col.hw;
+  };
   if (fi === map.top || fi === map.bottom) {
     const up = fi === map.top;
     const cap = map.facets[fi]!;
@@ -941,13 +1110,13 @@ export function mapAngles(map: FaceMap, p: Vec3, fi: number, opts: MapOpts): { r
     const s = map.facets[up ? col.facets[col.facets.length - 1]! : col.facets[0]!]!;
     const r = Math.min(1, Math.max(0, best.r));
     const ct = s.t[0] * C[0] + s.t[2] * C[2];
-    const L = capSpan(map, s, cap).fromCap(r > 1e-9 ? ct + (qx * s.t[0] + qz * s.t[2]) / r : ct);
+    const L = capSpan(map, s, cap, chordAt(s, up ? s.bHi : s.bLo)).fromCap(r > 1e-9 ? ct + (qx * s.t[0] + qz * s.t[2]) / r : ct);
     const B = col.bounds;
     const edge = up ? B[B.length - 1]! : B[0]!;
     const span = up ? H - edge : edge + H;
     const dMin = Math.min(map.core.hi[0] - map.core.lo[0], map.core.hi[2] - map.core.lo[2]) / 2;
     const g = topOut(1 - r, bandFor(E, span), ke, dMin);
-    return { yaw: yawOf(col, s, L), pitch: up ? edge + g * span : edge - g * span };
+    return { yaw: yawOf(col, s, L, up ? s.bHi : s.bLo), pitch: up ? edge + g * span : edge - g * span };
   }
   const f = map.facets[fi]!;
   for (const col of map.columns) {
@@ -956,7 +1125,9 @@ export function mapAngles(map: FaceMap, p: Vec3, fi: number, opts: MapOpts): { r
     const pm = (col.bounds[i]! + col.bounds[i + 1]!) / 2;
     const ph = (col.bounds[i + 1]! - col.bounds[i]!) / 2;
     const s = dot(f.b, p);
-    return { yaw: yawOf(col, f, dot(f.t, p)), pitch: pm + edgeUnmap(s - (f.bLo + f.bHi) / 2, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke) * ph };
+    // ⭐⭐⭐ (F3) on the height scale's levels (`levelPitch` of the place's height) — a box: its own band, as before
+    if (map.levels !== undefined) return { yaw: yawOf(col, f, dot(f.t, p), s), pitch: levelPitch(map.levels, f.n[1] * f.e + f.b[1] * Math.min(f.bHi, Math.max(f.bLo, s)), E, ke) };
+    return { yaw: yawOf(col, f, dot(f.t, p), s), pitch: pm + edgeUnmap(s - (f.bLo + f.bHi) / 2, bandFor(E, ph), (f.bHi - f.bLo) / 2, ke) * ph };
   }
   return { yaw: 0, pitch: 0 };
 }

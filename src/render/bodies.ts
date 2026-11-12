@@ -20,7 +20,7 @@ import { type Quat } from "../core/vec";
 import { setWorldPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { type Placed } from "../core/mate_connector";
 import { taperTop } from "../core/frustum";
-import { apexAtTop, apexTurn, axisVertices, boxFit, raiseTips } from "../core/prism";
+import { apexAtTop, apexTurn, boxFit } from "../core/prism";
 import { OBJECT_DIMS_M } from "../core/scene_dims";
 import { shapeFromVertices, type ConvexShape } from "../core/collision_shape";
 import { meshTopology, type MeshTopology } from "../core/mesh_topology";
@@ -66,29 +66,22 @@ export function taperMesh(m: Mesh, topScale: number) : boolean {
  * (`prismFit` — whichever way the builder starts its ring), then stretched onto the box (`prismFit`'s scale and shift). ⭐ FLAT shaded after the bake (a
  * smooth-shaded prism reads as a cylinder — defect 68; normals recomputed from the stretched positions). ⚠ A box when the fit is degenerate.
  */
-function prismMesh(st: SceneState, name: string, sides: number, whole: readonly [number, number, number], tip = 0): Mesh {
-  // ⭐ (2026-11-12) the tips: the prism fills `whole` less a tip at each end, then each cap's centre (the fan's hub, on the axis) goes out by `tip`
-  const dims: readonly [number, number, number] = [whole[0], whole[1], whole[2] - 2 * tip];
+function prismMesh(st: SceneState, name: string, sides: number, dims: readonly [number, number, number]): Mesh {
   const m = CreateCylinder(name, { height: 2, diameter: 2, tessellation: sides }, st.scene);
   m.bakeTransformIntoVertices(Matrix.RotationX(Math.PI / 2));
   const at = () => m.getVerticesData(VertexBuffer.PositionKind) ?? [];
-  const hubs = tip > 0 ? axisVertices(at()) : [];
   const turn = apexTurn(at(), sides);
   if (turn !== null) {
     m.bakeTransformIntoVertices(Matrix.RotationZ(turn));
     // ⚠ the engine's sense of a turn is not assumed: turned the other way, the apex is undone and turned the right way
     if (!apexAtTop(at())) m.bakeTransformIntoVertices(Matrix.RotationZ(-2 * turn));
   }
-  const fit = turn === null || !apexAtTop(at()) || !(dims[2] > 0) || (tip > 0 && hubs.length !== 2) ? null : boxFit(at(), dims);
+  const fit = turn === null || !apexAtTop(at()) ? null : boxFit(at(), dims);
   if (fit === null) {
     m.dispose();
-    return CreateBox(name, { width: whole[0], height: whole[1], depth: whole[2] }, st.scene);
+    return CreateBox(name, { width: dims[0], height: dims[1], depth: dims[2] }, st.scene);
   }
   m.bakeTransformIntoVertices(Matrix.Translation(-fit.centre[0], -fit.centre[1], -fit.centre[2]).multiply(Matrix.Scaling(fit.scale[0], fit.scale[1], fit.scale[2])));
-  if (hubs.length > 0) {
-    const pos = Array.from(at());
-    if (raiseTips(pos, hubs, tip)) m.setVerticesData(VertexBuffer.PositionKind, pos);
-  }
   m.convertToFlatShadedMesh();
   m.refreshBoundingInfo();
   return m;
@@ -118,11 +111,9 @@ export function make(st: SceneState, name: string,
    */
   coreDims?: readonly [number, number, number],
   /** ⭐ (2026-11-12) a right PRISM on a regular polygon of this many sides (`core/prism.ts`) instead of a box; `dims` its bounding box. */
-  prismSides?: number,
-  /** ⭐ (2026-11-12) the prism's end faces raised into tips this long (metres), within `dims` (`BodySpec.prismTip`). */
-  prismTip = 0,) {
+  prismSides?: number,) {
   // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
-  const mesh = prismSides !== undefined ? prismMesh(st, name, prismSides, dims, prismTip) : CreateBox(
+  const mesh = prismSides !== undefined ? prismMesh(st, name, prismSides, dims) : CreateBox(
     name,
     { width: dims[0], height: dims[1], depth: dims[2] },
     st.scene,

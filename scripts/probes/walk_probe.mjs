@@ -75,7 +75,15 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
       ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, hv: st.hover != null, lk: !!st.asmLocked,
       show, gl: G ? [G.br.length, G.d] : null, rl: Rr ? [Rr.br.length, Rr.d] : null, gk: G ? G.key : null, rk: Rr ? Rr.key : null,
-      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90) });
+      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90),
+      cax: (() => { const m = c.getViewMatrix().m; return [[m[0], m[4], m[8]], [m[1], m[5], m[9]], [m[2], m[6], m[10]]]; })(),
+      pr: st.greenBox && st.greenBox.rotationQuaternion ? st.greenBox.rotationQuaternion.asArray() : null,
+      nq: [st.pieceQueries ?? null, st.pieceSolveQueries ?? null, st.pieceQueriesCarry ?? null], hov: st.hover != null, hr: st.hoverReady != null });
+    window.__secs = window.__secs ?? [];
+    for (const [L, cache, nm] of [[G, st.asmGreenCache, "green"], [Rr, st.asmRedCache, "red"]]) {
+      if (!L || !cache || !show) continue; const key = nm + "|" + L.key; window.__secKeys = window.__secKeys ?? new Set(); if (window.__secKeys.has(key)) continue; window.__secKeys.add(key);
+      const P = cache.pts.map(v3).filter(Boolean); const step = Math.max(1, Math.ceil(P.length / 240));
+      window.__secs.push({ frame: window.__rec.length - 1, line: nm, pts: P.filter((_, i) => i % step === 0).map((p) => p.map((x) => +x.toFixed(5))), joins: (cache.joins ?? []).filter((_, i) => i % step === 0) }); }
     // once per new line: its breaks sub-sampled on the map (16 between the two samples): the largest sub-step — a false break if small
     for (const [L, cache, closed, isG] of [[G, st.asmGreenCache, true, true], [Rr, st.asmRedCache, false, false]]) {
       if (!L || !show || window.__lineKeys.has(L.key) || !window.__AW) continue; window.__lineKeys.add(L.key);
@@ -89,7 +97,10 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
     }
   } catch (e) { window.__recErr = String(e); } }); return true; })()`;
 
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, "about:blank"], { stdio: "ignore" });
+const profTmp = join(prof, "tmp");
+mkdirSync(profTmp, { recursive: true });
+const QUIET_FLAGS = ["--disable-component-update", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--disable-default-apps", "--disable-extensions", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter"];
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
 try {
   let targets = null;
   for (let i = 0; i < 60 && !targets; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch {} }
@@ -137,7 +148,7 @@ try {
       if (only && !only.has(sc.name)) continue;
       if (!first) await boot();
       first = false;
-      await ev(`window.__rec = []; window.__lineBreaks = []; window.__lineKeys = new Set(); window.__leg = "boot"`);
+      await ev(`window.__rec = []; window.__lineBreaks = []; window.__lineKeys = new Set(); window.__secs = []; window.__secKeys = new Set(); window.__leg = "boot"`);
       if (!(await ev(RECORDER))) throw new Error("no window.__st — is this the dev server?");
       const [W, H] = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));
       const top = Math.round(H * 0.42);
@@ -196,7 +207,15 @@ try {
       const rows = JSON.parse(await ev("JSON.stringify(window.__rec)"));
       const breaks = JSON.parse(await ev("JSON.stringify(window.__lineBreaks ?? [])"));
       const facets = await ev(`(() => { const m = window.__st.asmFaceMap?.map; return m ? { box: m.box, facets: m.facets.map((f) => ({ n: f.n, e: f.e, kind: f.kind, share: f.share, real: f.real, t: [f.tLo, f.tHi], b: [f.bLo, f.bHi] })), columns: m.columns } : null; })()`);
-      results.push({ name: sc.name, viewport: [W, H], recorderError: (await ev("window.__recErr ?? null")) ?? null, rows, breaks, facets });
+      const secs = JSON.parse(await ev("JSON.stringify(window.__secs ?? [])"));
+      // the placed parts' planes (each mesh's triangles, world): a section point's signed distance to the solid is the max over a part's planes
+      const solids = await ev(`(() => { const out = []; for (const m of window.__st.scene.meshes.filter((x) => /^(Piece\\d+|Heptagon|Anchor)$/.test(x.name) && x.isEnabled())) { const name = m.name; const w = m.computeWorldMatrix(true).m; const pos = m.getVerticesData("position"); const idx = m.getIndices();
+        const W = (i) => { const x = pos[3*i], y = pos[3*i+1], z = pos[3*i+2]; return [x*w[0]+y*w[4]+z*w[8]+w[12], x*w[1]+y*w[5]+z*w[9]+w[13], x*w[2]+y*w[6]+z*w[10]+w[14]]; };
+        const nv = pos.length / 3; let cc = [0, 0, 0]; for (let i = 0; i < nv; i++) { const q = W(i); cc = [cc[0] + q[0] / nv, cc[1] + q[1] / nv, cc[2] + q[2] / nv]; }
+        const planes = []; for (let t = 0; t + 2 < idx.length; t += 3) { const a = W(idx[t]), b = W(idx[t+1]), c = W(idx[t+2]); const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+          let n = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]]; const l = Math.hypot(...n); if (l < 1e-12) continue; n = n.map((x) => x / l); if (n[0]*(cc[0]-a[0])+n[1]*(cc[1]-a[1])+n[2]*(cc[2]-a[2]) > 0) n = n.map((x) => -x); planes.push([...n, n[0]*a[0]+n[1]*a[1]+n[2]*a[2]]); }
+        out.push({ name, planes }); } return out; })()`);
+      results.push({ name: sc.name, viewport: [W, H], recorderError: (await ev("window.__recErr ?? null")) ?? null, rows, breaks, facets, secs, solids });
       console.log(`${sc.name}: ${rows.length} frames, ${breaks.length} line samplings`);
       writeFileSync(join(DIR, `${OUT}.json`), JSON.stringify({ errors, results })); // ⭐ saved after every scenario: a watchdog keeps what was walked
     }

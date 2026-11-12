@@ -153,7 +153,7 @@ function quadTurnFrame(st: SceneState): void {
   // ⭐⭐ (2026-10-13, the sixth audit; the owner: *"once the piece has cleared a collision, the red square still show too long before fading to
   // yellow"*) — due every `QUAD_CHECK_MS` while its key changes, MOVING OR NOT (⛔ the §11septies pause skipped it at > 3 mm a frame: pulling away
   // from a part never re-asked it), under what the frame's solve left of the cap; a sweep the budget cut keeps the colour and asks again
-  const budget = quadCheckBudget(key !== qc.key, now - qc.at, QUAD_CHECK_MS, st.cfg.pieceSolverQueries, st.pieceSolveQueries);
+  const budget = quadCheckBudget(key !== qc.key, now - qc.at, QUAD_CHECK_MS, st.cfg.pieceSolverQueries, st.pieceQueries); // ⭐ (2026-11-12, F5) all the frame spent, not the solve's alone
   if (budget === null) return;
   st.quadCheckRan = true; // ⭐ (the fifth audit) the stuck check skips this frame — the two paced checks never share one
   const q = restingPreview(st, dir, roll);

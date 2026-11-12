@@ -10,9 +10,9 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
+import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, ORBIT_PITCH_MAX_RAD, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
-import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, castPoint, holdsPole, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -31,7 +31,7 @@ import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -648,6 +648,8 @@ function edgeMarginM(st: SceneState): number {
  * reads set to it, the look point eased; the approach's coast. Under a HOVER the hover owns the gizmo: it is taken as the locked one.
  */
 export function assemblyFrame(st: SceneState, dtMs: number): void {
+  // ⭐⭐⭐ (2026-11-12, F4) the elevation asked past a pole, read EVERY frame (never piled up while the assembly's orbit is off — a jump later)
+  const beyondV = st.orbit.takeBeyond();
   if (!assemblyOn(st) || st.greenBox === null) return;
   ensureAssembly(st);
   const a = st.asm!;
@@ -711,7 +713,10 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const pitch = pitchOfV(q.v);
     const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
     // ⭐⭐⭐ (2026-11-09) the catch-up held where it alone would move the gizmo across a jump (`mapAnglesStep`) — the ring stays a function of the angles
-    const mq = mapAnglesStep(m0, { yaw: q.yaw, pitch }, { yaw: Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitch: pitch - pitchOfV(prev.v) }, MAP_CATCH_UP, (y, p) => mapGizmo(st, y, p)?.hit.point ?? null);
+    // ⭐⭐⭐ (2026-11-12, F4) the pitch the finger asked past a pole joins the map's step (`poleBeyondPitch`) — the face reached even with the orbit there
+    const beyond = poleBeyondPitch(q.v, beyondV, ORBIT_PITCH_MAX_RAD);
+    const mqs = mapAnglesStep(m0, { yaw: q.yaw, pitch }, { yaw: Math.atan2(Math.sin(q.yaw - prev.yaw), Math.cos(q.yaw - prev.yaw)), pitch: pitch - pitchOfV(prev.v) + beyond }, MAP_CATCH_UP, (y, p) => mapGizmo(st, y, p)?.hit.point ?? null);
+    const mq = { yaw: mqs.yaw, pitch: Math.max(-ORBIT_PITCH_MAX_RAD, Math.min(ORBIT_PITCH_MAX_RAD, mqs.pitch)) };
     st.asmMapQ = mq;
     const m0g = mapGizmo(st, mq.yaw, mq.pitch);
     if (m0g !== null) {
@@ -1221,13 +1226,18 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   if (sh === null || g === null || wm === null) return;
   // ⭐⭐⭐ (2026-11-10, *"build b"*) held at a void's mouth (`asmMouth`): the face holding the pole it opens toward — the red has reached the floor's edge
   const capStack = mouthHi === null ? sh.t.stack : mouthHi ? wm.top : wm.bottom;
-  const top = capStack === wm.top;
-  if (!top && capStack !== wm.bottom) return;
+  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) a face HOLDS A POLE when it is the cap — or a side beyond 45° (`holdsPole`: a ridge's two faces, each
+  // from its own side); a box's sides are vertical: its caps alone, as before
+  const pole = holdsPole(wm, capStack);
+  if (pole === null) return;
+  const top = pole === "TOP";
   // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
   // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
   const cap = wm.facets[capStack]!;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const hs = snapHeading(q.yaw);
+  // ⭐⭐⭐ (2026-11-12, F2c) a SLANTED face tilted toward ITS OWN heading (never past the vertical: ⛔ the camera's, a face leaning away needed 116° — the
+  // view upside down, 17 of 22 such tilts on the heptagon); a level one has none: the camera's, as before
+  const hs = tiltHeading(cap.n, q.yaw);
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
