@@ -351,6 +351,10 @@ export interface SceneState {
    * (1 far … the contact) and its coast; Shift with the mouse on the last pointer event */
   asm: { readonly centre: Vec3; readonly radius: number } | null;
   asmGizmo: Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) the piece's FOOTPRINT SUPPORT this frame — a placed part (its index in the placed set `key`); `null`: the gizmo's own surface */
+  asmSupport: { readonly key: string; readonly index: number } | null;
+  /** ⭐⭐ (2026-11-12) the support's LEVEL as shown along `n` (the direction it was read on) — a drop eased, a rise at once (`supportLevelStep`); `null`: none */
+  asmSupportLevel: { readonly n: Vec3; readonly h: number } | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
   /** ⭐ (2026-10-28) the gizmo's raw point (Step 4c-bis: the face map's, `mapGizmo`; `null`: none yet) and the orbit place it was read at */

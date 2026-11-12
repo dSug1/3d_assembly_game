@@ -529,6 +529,8 @@ export function createScene(
   st.topPauseShown = 0;
   st.asm = null;
   st.asmGizmo = null;
+  st.asmSupport = null;
+  st.asmSupportLevel = null;
   st.asmLook = null;
   st.asmFacePoint = null;
   st.asmG = null;

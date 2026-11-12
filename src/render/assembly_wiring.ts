@@ -20,13 +20,15 @@ import { rigPlace, type RigCameraFrame } from "../input/orbit_rig";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { goalLocked } from "../input/goal_lock";
 import { faceLift, pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellBox } from "../input/orbit_shell";
+import { footprintSupport, levelRaise, supportLevelStep, supportTop } from "../input/footprint";
+import { placeByFaceCentre } from "../core/resting_face";
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmShown, calmStep, calmTarget, capEdgePitch } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
-import type { Vec3 } from "../core/vec";
+import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
@@ -363,7 +365,70 @@ function shellOf(st: SceneState): ShellBox | null {
  * the foot.
  */
 function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
-  return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
+  // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) THE FOOTPRINT SUPPORT: the gizmo raised to the top of the part under the piece's whole footprint
+  // (`levelRaise`) — off a proud part's edge the piece keeps its height until it has cleared it (⛔ it dropped with the gizmo, into the part: a wall)
+  // ⭐⭐ its LEVEL as shown (`st.asmSupportLevel`: a drop eased, a rise at once) along the SURFACE's normal it was read on (the gizmo's face) — ⛔ along the
+  // piece's direction (the calm's, 14° off a face): a support read on a slant, the approach run in against it, the raise lost as the direction turned — inside
+  const lv = st.asmSupportLevel;
+  const r = levelRaise(lv, g);
+  const gs: Vec3 = r > 0 ? [g[0] + lv!.n[0] * r, g[1] + lv!.n[1] * r, g[2] + lv!.n[2] * r] : g;
+  return shellAnchor(gs, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
+}
+
+
+/**
+ * ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) EACH FRAME, BEFORE THE SOLVE: the piece's support chosen from where it IS (`footprintSupport`: the highest placed
+ * part under its whole footprint along the gizmo's face normal, not above its bottom) — every query of the frame reads it fixed.
+ */
+function supportFrame(st: SceneState, dtMs: number): void {
+  const id = st.greenBox?.name;
+  const local = id === undefined ? undefined : st.world.objects.get(id)?.shape?.points;
+  const place = id === undefined ? null : worldPlacementOf(st.world, id);
+  const rc = st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingCentre;
+  if (local === undefined || place === null || rc === undefined || st.pieceQ === null || st.orbitPiecePlaced) {
+    st.asmSupport = null;
+    st.asmSupportLevel = null;
+    return;
+  }
+  // ⭐⭐ at its SOLVED place (`pieceQ`, the level as last read) — ⛔ its drawn pose: on the spring's lag a high part read as under its bottom, the piece
+  // raised by the whole lag (197 mm in a frame, the walks)
+  const at = placeByFaceCentre(ringAnchorAt(st, st.pieceQ), place.orientation, rc);
+  const piece = local.map((p) => {
+    const w = qRotate(place.orientation, p);
+    return [at[0] + w[0], at[1] + w[1], at[2] + w[2]] as Vec3;
+  });
+  const parts = placedParts(st);
+  // ⭐⭐ along the gizmo's FACE normal — the surface the piece rests over (none yet: no support)
+  const u = st.gizmoNormal ?? null;
+  if (u === null) {
+    st.asmSupport = null;
+    st.asmSupportLevel = null;
+    return;
+  }
+  // ⭐⭐ only a part within the shell's offset under the piece (`orbitShellOffsetMm`: where the piece hangs from the gizmo itself) — far out, none
+  const i = footprintSupport(piece, parts.parts, u, undefined, st.cfg.orbitShellOffsetMm / 1000);
+  st.asmSupport = i === null ? null : { key: parts.key, index: i };
+  // ⭐⭐ the level: the support's top; none — a level left by a support eases down to the gizmo's own (last frame's) and then clears; never one made from
+  // the gizmo alone (⛔ it was: far out, with no support, the piece held at last frame's gizmo height whenever the gizmo went down — the walks)
+  const g = st.asmG;
+  const lv = st.asmSupportLevel;
+  const gl = g !== null && lv !== null ? g[0] * u[0] + g[1] * u[1] + g[2] * u[2] : null;
+  const target = i !== null ? supportTop(parts.parts[i]!, u) : gl !== null && lv!.h > gl + 1e-4 ? gl : null;
+  const same = lv !== null && u[0] * lv.n[0] + u[1] * lv.n[1] + u[2] * lv.n[2] > 0.999;
+  const next = target === null ? null : { n: u, h: same ? supportLevelStep(lv!.h, target, dtMs) : target };
+  // ⭐⭐ (2026-11-12, the walk `vclose_top_front`: the piece came down INTO `Piece22`, the top's channel, and stayed — its footprint cleared the parts' visible
+  // cores, not their contours, 1.5 mm out) A DROP ONLY WHERE THE PIECE FITS: a lowered level, or a level read on another face's normal (an edge crossed), is
+  // asked of the solver's own gap at the piece's place (one query, in the frame's budget); not free at the gap kept — the support holds the piece where it is
+  // (an open void it cannot enter is surface, §7)
+  if (lv !== null && (next === null || !same || next.h < lv.h) && st.pieceQ !== null) {
+    st.asmSupportLevel = next;
+    st.pieceQueriesCarry += 1;
+    if (pieceSolverEnv(st).gap(st.pieceQ) < pieceSolveOptions(st).gapM) {
+      st.asmSupportLevel = lv;
+      return;
+    }
+  }
+  st.asmSupportLevel = next;
 }
 
 /** ⭐⭐⭐ (2026-11-05) The piece's lift along `u` (`faceLift`): its hull past its resting face's centre toward the gizmo, at its pose; none: 0. */
@@ -651,6 +716,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
     approachMove(st, s.dV);
   }
+  // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) the footprint support, from where the piece is — before anything reads the foot
+  supportFrame(st, dtMs);
   // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —

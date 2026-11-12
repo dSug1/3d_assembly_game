@@ -119,3 +119,53 @@ the source pins of eleven suites updated; the new ones RED on `0815892` (6 faile
 **Probed** (`contact_probe.mjs`, 1 px × 30): **aligned at contact, the slide gone — the orbit moves**: on the top the gizmo 43 mm (dx) / 52 mm (dy) where it
 moved **0** (§2), the readout lit every frame; ⚠ still ~0.2 × the free run's, the solver BLOCKED on 32 – 50 of 61 frames — the edge too (0.20 – 0.23 ×,
 unchanged): **step 2's support** is what answers it.
+
+## 5. Step 2 — the diagnosis before the build (2026-11-12): the slowdown is a STEP of the real surface, not the host face
+
+Probed (`contact_probe.mjs`, the distance SET — no approach drag; its blocked flag is sticky and had carried the approach's push into step 0's counts):
+over the cube's top the orbit turns **28.8°** for 30 px at 1.0 m and 0.3 m, **7.9°** at 20 mm and at contact — at 20 mm, far from any contact, the yaw
+steps 1.35° a frame, then 0.58, 0.13, 0.01, 0: the solver BLOCKED with nothing TOUCHED. The gizmo stood on `Piece44` (proud of the top by 41 mm, x 0.0005 …
+0.0455) and stopped at **x 0.0455 — its edge**. ⭐ **The root**: close in the piece hangs from the gizmo itself (the shell's foot is the gizmo within 60 mm),
+and the gizmo follows the REAL depth (D3); off a proud part's edge the gizmo drops 41 mm, so the piece's anchor JUMPS down (`ringJump`); the landing would
+put the piece into the part it is still over — refused — and a refused jump that is no narrow void is a WALL (`solveOrbitStep`, R4 / §6 (b)): blocked. At
+0.3 m the shell's smooth foot carries the piece over the step. Directly over a flat face nothing blocks (measured: every step taken whole, one query).
+⇒ The support as decided (§3, 2 (a): the gizmo's face not an obstacle for a move along it) does NOT reach this case: a move along a flat face was never
+slowed. The proposal: **the FOOTPRINT support** (below, the owner's decision).
+
+## 6. ✅ Step 2 BUILT (2026-11-12, `1.0.122-`) — THE FOOTPRINT SUPPORT (the owner: *"Proceed"*; *"make sure there is no regression for the polar orbit and the tilted-pole orbit"*) — ⛔ no device close
+
+**The rule** (`src/input/footprint.ts`, Oh & Stuerzlinger's whole overlap area): of the placed parts whose outline, seen along the gizmo's FACE normal,
+overlaps the piece's own at its SOLVED place, the support is the highest whose top is not above the piece's bottom (`SUPPORT_SLACK_M` 0.5 mm) and not further
+below it than the shell's offset (`orbitShellOffsetMm`, 60 mm — where the piece hangs from the gizmo itself); a part above the piece's bottom is a WALL (Q1 (b)),
+never a step up. **The wiring** (`supportFrame`, at the head of `assemblyFrame`, once a frame): the support's LEVEL along that normal — a rise at once, a drop
+eased (`supportLevelStep`, τ 40 ms) and taken only where the piece FITS (one gap query, in the frame's budget; not free: held); `footOf` raises the gizmo to it
+(`levelRaise`) before the shell's foot. No level is ever made from the gizmo alone: a support's level eases down to the gizmo, then clears.
+**Measured** (`contact_probe.mjs`, the distance set, 30 px over the cube's top): the orbit **28.8°** at 1.0 m, 0.3 m, **20 mm and the contact** (7.9° at 20 mm
+and at the contact before); the gizmo 186 – 191 mm; nothing blocked.
+
+**The regression checks** (the owner's request; `walk_probe.mjs` 8 scenarios — far, mid, close, very close, random — and `tilt_probe.mjs` 38 scenarios, the
+same on `a3047f9` and on this code, compared with `walk_compare.mjs`): four flaws of the first wiring FOUND by them and fixed —
+1. a drop of the level was not collision-checked: over the top's channel the piece came down INTO `Piece22` (the footprint read the parts' visible cores, not
+   their contours) and stayed → a drop only where the piece fits;
+2. the level read along the PIECE'S direction (the calm's, 14° off the front): the approach ran in against a slanted support, the raise lost as the direction
+   turned — inside `Piece4` → along the gizmo's face normal;
+3. the footprint read at the DRAWN pose (the spring's lag): a high part read as under the piece's bottom — 197 mm in a frame → at the solved place;
+4. the support unbounded and a fallback level made from the gizmo alone: far out (6 m) a proud part's front "supported" the piece, its foot pushed 41 mm →
+   the window (the shell's offset), no level from the gizmo alone.
+**The result** (the last run): **the polar orbit — no regression**: in `far_rings`, `far_meridians`, `mid_rings_zig`, `close_top_grooves`, `close_corners` the
+support never engages (0 frames with a level, recorded per frame — `walk_probe.mjs` records `sup` / `lvl` now): the old code's path exactly; their small
+differences are the walks' own run-to-run noise (`mid_rings_zig` 0 → 2 piece jumps with no support at all). **The tilted pole — no regression**: no scenario
+of the 38 worse (the largest look / roll / gizmo step per scenario, > 25 % flagged: none). Where the support engages (`close_top_I14`, `vclose_top_front`,
+`random_0`): `close_top_I14` level with the old code; the others' extra piece jumps within that noise; `vclose_top_front`'s stall time on a different path
+after ~frame 867 (the old code stalled earlier). Totals: blocked stalls 25 → 26, piece back-and-forth 6 → 1, against the finger 115 → 107. ⚠ The walks are
+history-dependent: close in, where the old code was stuck the new one goes on and meets places the old never reached.
+**Vectors**: `tests/footprint.test.ts` (9: the measured `Piece44` case, cleared, a wall, beside, any face, the window, the level's ease, the raise, the wiring;
+RED on `a3047f9` — the module absent); `orbit_shell.test.ts`'s `footOf` pin. **1655**. The probes' disk hygiene: Chrome's TEMP / TMP inside the per-run profile,
+its updater off (`scripts/probes/*.mjs`); `tilt_probe.mjs`'s watchdog 30 min (897 s of 15 on a loaded machine).
+
+## 7. Step 4 DROPPED (2026-11-12, the owner)
+
+> *"Aren't step 3 and step 4 doing the same thing?"* → *"Drop step 4 for now and if needed, revise step 3 to cover the requirements that needed a step 4"*.
+
+Q5's slow-finger friction in the contact band is dropped: step 3 (the gain scaled by the approach's distance, 1 (b)) answers the fine placement on distance;
+if the device shows it is not enough, step 3 is revised to cover it — no second gain on speed.
