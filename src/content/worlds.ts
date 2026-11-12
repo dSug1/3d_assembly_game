@@ -10,6 +10,7 @@
 import type { GameContent } from "../core/game_structure";
 import { SCENE_0 } from "./scene_0";
 import { SCENE_1 } from "./scene_1";
+import { SCENE_2 } from "./scene_2";
 import { loadScene1DemoPlan, SCENE1_DEMO } from "./scene1_demo";
 
 export const GAME_CONTENT: GameContent = {
@@ -26,6 +27,8 @@ export const GAME_CONTENT: GameContent = {
         { id: "Level_1", title: "Level 1 — the painting", scene: SCENE_1 },
         // ⭐ `D170`: the painting assembling itself (`DEMO_SCENE.md`) — `?sceneIndex=2`.
         { id: "Level1_demo", title: "Demo — the painting", scene: SCENE1_DEMO, demoPlan: loadScene1DemoPlan },
+        // ⭐ (2026-11-12, the owner: *"Empty scene"*) the floor and the lights alone — `?sceneIndex=3`.
+        { id: "Level_2", title: "Level 2 — empty", scene: SCENE_2 },
       ],
     },
   ],
