@@ -129,6 +129,12 @@ export interface BodySpec {
    * gap of `2 × margin`. ⚠ Authored units, like `dims`. Absent or `0`: no contour, the body is `dims`.
    */
   readonly margin?: number;
+  /**
+   * ⭐ (2026-11-12, the owner: *"an heptagon extruded horizontally"*) a RIGHT PRISM on a regular polygon of this many sides (≥ 3) instead of a box:
+   * the polygon in the body's own x–y plane, ONE EDGE FLAT at the bottom, extruded along its own z; `dims` its bounding box (`core/prism.ts`).
+   * ⚠ Not with `topScale` ≠ 1 nor a `margin`. Absent: a box.
+   */
+  readonly prismSides?: number;
 }
 
 /** ⭐ `D125`: the body's full extents — its coloured `dims` plus the contour on every side. */
@@ -171,6 +177,11 @@ export interface SceneDescriptor {
    * the hidden one never counts. Kept apart from `final`, which the demo and the table's own checks read as the parts alone.
    */
   readonly orbitGoals?: readonly FinalPose[];
+  /**
+   * ⭐ (2026-11-12) the size the ORBITED pieces are made from (authored units: `greenPyramidSizeM`'s reference — `Scene_1`'s Piece17, 0.92 × 0.55 × 0.3)
+   * when the scene has no `Piece17` of its own; absent and no `Piece17`: no orbited piece.
+   */
+  readonly orbitPieceRefDims?: Triple;
 }
 
 export interface LevelSpec {
@@ -188,6 +199,11 @@ export interface WorldSpec {
   readonly id: string;
   readonly title: string;
   readonly levels: readonly LevelSpec[];
+  /**
+   * ⭐ (2026-11-12, the owner) the ORDER of the level menu's buttons, by level id — the menu only: `levels` keeps the catalogue's
+   * order, which is each level's `?sceneIndex=`. Ids not listed follow in catalogue order; unknown ids are ignored (`menuLevels`).
+   */
+  readonly menuOrder?: readonly string[];
 }
 
 export interface GameContent {
@@ -324,6 +340,11 @@ const isOrientation = (v: unknown): v is BootOrientation =>
  * ⭐⭐ Parse a scene from JSON, refusing anything malformed with the FIELD named. ⛔ Never a
  * plausible default: a body with a missing dimension is a report, not a unit cube.
  */
+function refDims(id: string, d: unknown): Triple {
+  if (!isTriple(d) || !d.every((x) => x > 0)) throw new Error(`scene ${id}: orbitPieceRefDims must be three positive numbers`);
+  return d;
+}
+
 export function parseSceneDescriptor(json: string): SceneDescriptor {
   let raw: unknown;
   try {
@@ -353,6 +374,10 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       throw new Error(`${where}: topScale must be in (0, 1]`);
     if (x.margin !== undefined && !(typeof x.margin === "number" && Number.isFinite(x.margin) && x.margin >= 0))
       throw new Error(`${where}: margin must be a number ≥ 0`);
+    if (x.prismSides !== undefined && !(Number.isInteger(x.prismSides) && (x.prismSides as number) >= 3))
+      throw new Error(`${where}: prismSides must be an integer ≥ 3`);
+    if (x.prismSides !== undefined && (x.topScale !== 1 || (x.margin ?? 0) !== 0))
+      throw new Error(`${where}: a prism takes no topScale nor margin`);
     return {
       id: x.id,
       position: x.position,
@@ -362,6 +387,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
       frozen: x.frozen,
       topScale: x.topScale,
       ...(x.margin === undefined ? {} : { margin: x.margin }),
+      ...(x.prismSides === undefined ? {} : { prismSides: x.prismSides as number }),
     };
   });
   if (o.unitM !== undefined && !(typeof o.unitM === "number" && o.unitM > 0 && Number.isFinite(o.unitM)))
@@ -411,6 +437,7 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     ...(o.demo !== undefined ? { demo: o.demo as DemoPlan } : {}),
     final: parseFinal(o.id, o.final, bodies),
     ...(o.orbitGoals !== undefined ? { orbitGoals: parseOrbitGoals(o.id, o.orbitGoals) } : {}),
+    ...(o.orbitPieceRefDims !== undefined ? { orbitPieceRefDims: refDims(o.id, o.orbitPieceRefDims) } : {}),
   };
 }
 

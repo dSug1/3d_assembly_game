@@ -16,7 +16,7 @@
  * ⭐⭐ `D180`: every element is styled by the UI THEME's classes (`render/ui_theme.ts`) — no colour, font or size here.
  */
 import { type GameContent, type Screen } from "../core/game_structure";
-import { flowAt, pauseTarget, playHref, playIndexOf, type PauseAction } from "../core/game_route";
+import { flowAt, menuLevels, pauseTarget, playHref, playIndexOf, type PauseAction } from "../core/game_route";
 import { ui } from "./ui_theme";
 
 export interface GameShellHandle {
@@ -94,8 +94,8 @@ export function installGameShell(
     }
     const world = content.worlds.find((w) => w.id === s.worldId);
     panel.append(ui("h2", "ui-title", world?.title ?? "Levels"));
-    for (const l of world?.levels ?? [])
-      panel.append(button(`${l.title} — ${l.scene.title}`, () => flow.openLevel(l.id)));
+    // ⭐ (2026-11-12, the owner) the menu's order, each button its level's title alone
+    for (const l of world ? menuLevels(world) : []) panel.append(button(l.title, () => flow.openLevel(l.id)));
     panel.append(button("Back", () => flow.back()));
   };
   render();

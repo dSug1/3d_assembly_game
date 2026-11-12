@@ -140,3 +140,42 @@ ONE Babylon `Scene` remains.
 
 ⭐ **Recommended order**: nothing on garbage collection now; #1 and #2 before `Scene_2`, because they
 shape how Blender levels are authored; the teardown contract only when the reload is dropped.
+
+## 7. ⭐⭐ World 0's levels (2026-11-12, branch `1.0.123-Scene-2-empty`, a worktree from `main`) — ⛔ no device close
+
+> *"create a scene 2 of World 0 in the level menu"* → *"Empty scene"* · the level menu's buttons (below) · *"copy the content of the scene 2 into the
+> scene 0. Therefore, delete the entire content of scene 0 and copy the content of scene 2"* · *"in scene 0 add: an heptagon extruded horizontally. One
+> face on the floor, the opposite edge at the zenith. Dimensions: overall the same as the cube of the assembly of scene 1. Grey color. — a green piece
+> (same as the green piece of scene 1). The objective is to test all the functionalities of the scene 1 (polar orbit, tilted-pole orbit, snap, etc.)
+> with an assembly which is not the scene 1's cube but another shape"* · *"the goal of the green piece shall be the center of the topmost slanted face
+> towards the user at boot, the green piece resting face being oriented longitudinally and being the largest face of the green piece"* · *"the camera
+> orbit center shall be the center of the heptagon"* — the owner
+
+| `?sceneIndex=` | level (its menu button) | scene |
+|---|---|---|
+| 0 | *Level 0 - Scene 0 - the workbench* | ⭐ **the HEPTAGON** (below) |
+| 1 | *Level 1 - Scene 1 - the painting* | `Scene_1`, unchanged |
+| 2 | *Demo - the painting* | `Scene1_demo`, unchanged |
+| 3 | *Level 2 - Scene 2 - the engine* | `Scene_2` (`content/scene_2.ts`): `Scene_1`'s floor, lights, rig, units, play volume — **empty** (no pieces, no goal) |
+
+* **The menu's order is the menu's only** (`WorldSpec.menuOrder`, `menuLevels` in `core/game_route.ts`): the demo on top, then Levels 0, 1, 2; each
+  button its level's title alone (it was *title — scene title*). ⛔ The `?sceneIndex=` order is the catalogue's, unchanged — the default boot (1,
+  `Scene_1`) and every probe's URL kept. *Next level* after Level 1 now skips the demo to Level 2.
+* ⭐ **`Scene_0` — THE HEPTAGON** (`content/scene_0.ts`): the workbench's four bodies and rig DELETED (a test fixture now, `tests/helpers/workbench.ts`;
+  `core/scene_dims.ts` keeps their dimensions); `Scene_2`'s content copied (read from `SCENE_1`, not linked to `scene_2.ts`), then:
+  * a grey RIGHT PRISM on a regular heptagon (`BodySpec.prismSides`, `core/prism.ts`; built from Babylon's cylinder, turned until a vertex is at the
+    top, stretched onto its box, flat shaded — `render/bodies.ts`), one face on the floor, a vertex at the zenith, **extruded along x** so its two top
+    faces slope toward and away from the boot camera; its box `Scene_1`'s cube's (the 41 table pieces at their goals, the frusta left out: 4.9 × 4.83 ×
+    4.83 units, centred at x 0.025, z 1.91), standing on the floor (the cube floats 0.155 above it). ⚠ The regular heptagon is 1.026 × wider than high:
+    stretched onto the box, it is 2.6 % narrower than regular (its angles ~1° off). A PLACED part — its goal is where it boots (`final`, ⛔ `ABSOLUTE`:
+    with fewer than three bodies a `RELATIVE` fit is their mean offset, the far green piece dragged it — goal 0/2, no assembly, measured headless);
+  * the green (and turquoise) piece as `Scene_1`'s: sized from `Scene_1`'s Piece17 (`SceneDescriptor.orbitPieceRefDims`), the same boot turn
+    (`GREEN_BOOT_QUAT`);
+  * **its goal**: the top slanted face on the user's side (−z), centred, the green piece's wide base (its largest face) flush on it, its long side
+    along the heptagon's length (x); the turquoise standing on the same spot;
+  * **the orbit's boot centre**: the heptagon's (its box's middle, 0.0025 / 0.2415 / 0.191 m); otherwise `Scene_1`'s rig.
+* **Probed headless** (`page_eval.mjs`, `contact_probe.mjs` on `?sceneIndex=0`): the mesh 9 faces, its box exactly the cube's; goal 1/2 at boot (the
+  heptagon placed), the gizmo on the front top face; the orbit over the top at 1.0 m / 0.3 m / 20 mm / contact moved the gizmo 511 / 331 / 61 / 121 mm
+  for 80 px, the solver never blocked; the tilted pole engaged; ⚠ one frame at contact read 26 gap queries (the budget 24). `Scene_2` boots, 34 fps.
+* **Vectors**: `tests/scene_2.test.ts` (8), `tests/scene_0_heptagon.test.ts` (10), the JSON seam's prism / reference-size refusals; the suites that
+  pinned the workbench moved to its fixture. **1677**.

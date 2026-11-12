@@ -14,6 +14,7 @@ import { contourDims, parseSceneDescriptor, serializeSceneDescriptor } from "@co
 import { IDENTITY, qAngle, qconj, qFromAxisAngle, qmul, qRotate, type Quat, type Vec3 } from "@core/vec";
 import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE_0 } from "../src/content/scene_0";
+import { WORKBENCH } from "./helpers/workbench";
 import { SCENE1_DEMO } from "../src/content/scene1_demo";
 import { SCENE1_DEMO_PLAN } from "../src/content/scene1_demo_plan";
 
@@ -100,8 +101,9 @@ describe("⭐⭐ `3D7` — each level's volume, as data", () => {
     }
   });
 
-  it("⭐ `Scene_0` (the workbench) declares none — unbounded; the demo carries `Scene_1`'s", () => {
-    expect(playVolumeOf(SCENE_0)).toBeNull();
+  it("⭐ the workbench fixture declares none — unbounded; `Scene_0` (the heptagon, 2026-11-12) and the demo carry `Scene_1`'s", () => {
+    expect(playVolumeOf(WORKBENCH)).toBeNull();
+    expect(playVolumeOf(SCENE_0)).toEqual(playVolumeOf(SCENE_1));
     expect(playVolumeOf(SCENE1_DEMO)).toEqual(playVolumeOf(SCENE_1));
   });
 

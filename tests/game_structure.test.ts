@@ -12,6 +12,7 @@ import {
   type GameContent,
 } from "@core/game_structure";
 import { SCENE_0 } from "../src/content/scene_0";
+import { WORKBENCH } from "./helpers/workbench";
 import { GAME_CONTENT } from "../src/content/worlds";
 import { bootTilt, OBJECT_SIZE_M, OBJECT_TOP_SCALE, PLATE_DIMS_M } from "@core/scene_dims";
 import { IDENTITY, qFromAxisAngle, qRotate } from "@core/vec";
@@ -79,11 +80,17 @@ describe("⭐⭐⭐ GameFlow — intro → menu → worlds → levels → play, 
 });
 
 describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
-  it("⭐ the four bodies, in the boot's order, with the boot's facts", () => {
-    // ⛔ RED against any drift from the `make(...)` calls this replaced.
+  it("⭐ (2026-11-12, the owner) the HEPTAGON and the floor — the workbench's four bodies deleted (kept as a fixture: `helpers/workbench.ts`)", () => {
     expect(SCENE_0.id).toBe("Scene_0");
-    expect(SCENE_0.bodies.map((b) => b.id)).toEqual(["objectA", "objectB", "objectC", "objectD"]);
-    const [a, b, c, d] = SCENE_0.bodies;
+    expect(SCENE_0.bodies.map((b) => b.id)).toEqual(["Heptagon", "Floor"]);
+    expect(SCENE_0.bodies[0]).toMatchObject({ prismSides: 7, frozen: false, colour: [0.65, 0.67, 0.72], topScale: 1 });
+    expect(SCENE_0.bodies[1]).toMatchObject({ id: "Floor", frozen: true });
+    expect(SCENE_0.final?.bodies.map((b) => b.id)).toEqual(["Heptagon"]);
+  });
+
+  it("⭐ the workbench fixture: the four bodies, with the boot's facts they had", () => {
+    expect(WORKBENCH.bodies.map((b) => b.id)).toEqual(["objectA", "objectB", "objectC", "objectD"]);
+    const [a, b, c, d] = WORKBENCH.bodies;
     expect(a?.orientation).toBe("tilt+");
     expect(b?.orientation).toBe("tilt-");
     expect(b?.topScale).toBe(OBJECT_TOP_SCALE);
@@ -92,8 +99,8 @@ describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
     expect(c?.position).toEqual([0, -OBJECT_SIZE_M * 3, 0]);
     expect(d?.orientation).toEqual({ seeded: 2 });
     expect(d?.position).toEqual([0, 0.307246, 0.16]);
-    expect(SCENE_0.bodies.filter((x) => x.frozen)).toHaveLength(1);
-    expect(SCENE_0.final).toBeNull();
+    expect(WORKBENCH.bodies.filter((x) => x.frozen)).toHaveLength(1);
+    expect(WORKBENCH.final).toBeNull();
   });
 
   it("⭐ the content is one world, two levels: Scene_0 and Scene_1 (2026-09-27)", () => {
@@ -128,12 +135,13 @@ describe("⭐⭐⭐ Scene_0 — the boot, as data", () => {
 });
 
 describe("⭐⭐ the JSON seam — a scene survives a round trip, and a bad one is named", () => {
-  it("⭐ serialize → parse is the identity on Scene_0", () => {
+  it("⭐ serialize → parse is the identity on Scene_0 (the heptagon: a prism, its goals, its reference size) and on the workbench", () => {
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_0))).toEqual(SCENE_0);
+    expect(parseSceneDescriptor(serializeSceneDescriptor(WORKBENCH))).toEqual(WORKBENCH);
   });
 
   it("⛔ each malformed field is refused with its NAME, never defaulted", () => {
-    const ok = JSON.parse(serializeSceneDescriptor(SCENE_0));
+    const ok = JSON.parse(serializeSceneDescriptor(WORKBENCH));
     const bad = (mutate: (o: any) => void): string => {
       const o = JSON.parse(JSON.stringify(ok));
       mutate(o);
@@ -150,5 +158,16 @@ describe("⭐⭐ the JSON seam — a scene survives a round trip, and a bad one 
     expect(() => parseSceneDescriptor(bad((o) => (o.bodies[0].position = [0, NaN, 0])))).toThrow(/objectA: position/);
     // ⛔ a final configuration without its pose list is refused, named (`D129`)
     expect(() => parseSceneDescriptor(bad((o) => (o.final = {})))).toThrow(/final: bodies/);
+    // ⭐ (2026-11-12) a prism's sides, and a prism refuses a taper or a contour; the orbited pieces' reference size
+    const hep = JSON.parse(serializeSceneDescriptor(SCENE_0));
+    const badH = (mutate: (o: any) => void): string => {
+      const o = JSON.parse(JSON.stringify(hep));
+      mutate(o);
+      return JSON.stringify(o);
+    };
+    expect(() => parseSceneDescriptor(badH((o) => (o.bodies[0].prismSides = 2)))).toThrow(/Heptagon: prismSides/);
+    expect(() => parseSceneDescriptor(badH((o) => (o.bodies[0].prismSides = 7.5)))).toThrow(/Heptagon: prismSides/);
+    expect(() => parseSceneDescriptor(badH((o) => (o.bodies[0].topScale = 0.5)))).toThrow(/Heptagon: a prism takes no topScale nor margin/);
+    expect(() => parseSceneDescriptor(badH((o) => (o.orbitPieceRefDims = [1, 0, 1])))).toThrow(/orbitPieceRefDims/);
   });
 });

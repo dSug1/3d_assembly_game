@@ -295,9 +295,14 @@ describe("⭐⭐ the switch and the view", () => {
     expect(orbitOffset(DEFAULT_CONFIG, 0, v, 1).offsetM[1]).toBeCloseTo(0, 9);
   });
 
-  it("⭐ Scene_0 is untouched: no unitM, no lighting, the rig's own view", () => {
-    expect(SCENE_0.unitM).toBeUndefined();
-    expect(SCENE_0.lighting).toBeUndefined();
-    expect(SCENE_0.bootView).toBeUndefined();
+  it("⭐ (2026-11-12) Scene_0 (the heptagon) carries Scene_1's units, lighting, boot view and rig — its boot centre the heptagon's", () => {
+    expect(SCENE_0.unitM).toBe(SCENE_1.unitM);
+    expect(SCENE_0.lighting).toBe(SCENE_1.lighting);
+    expect(SCENE_0.bootView).toBe(SCENE_1.bootView);
+    const { centreM: c0, ...rig0 } = SCENE_0.orbit!;
+    const { centreM: _c1, ...rig1 } = SCENE_1.orbit!;
+    expect(rig0).toEqual(rig1);
+    const h = SCENE_0.bodies.find((b) => b.id === "Heptagon")!;
+    c0!.forEach((v, i) => expect(v).toBeCloseTo(h.position[i]! * SCENE_1.unitM!, 12));
   });
 });
