@@ -715,7 +715,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitDeadbandMm: 2.3,
   orbitBandRestMs: 400,
   // ⚠ guesses with sliders: the quads turn exactly, so the angle is only room for rounding
-  orbitGoalMm: 5,
+  // ⭐ 10 mm (the owner on the device, 2026-11-12: "Set the snap to 10 mm, not 5 mm")
+  orbitGoalMm: 10,
   // ⚠ a guess with a slider (the slide's reach until 2026-11-12)
   contactBandMm: 20,
   orbitGoalDeg: 3,
@@ -827,7 +828,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
-  orbitContactMmPerMm: 1, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the slide's 1 : 1
+  orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
   tiltBlendMm: 10, // ⭐⭐⭐ (2026-11-11, the owner: *"set a faster alignment per mm as the one you previously chose required a lot of delta position mm"*) the automatic tilt's blend by the orbit's first 10 mm of finger (30 before) — a guess until a hand sets it
   tiltAutoM: 0.6, // ⭐⭐⭐ (2026-11-10, the owner: *"instead Percent use m for the slider tilted pole automatic within this and set the default to 0.3 m"* → *"correction: set the default at 0.6m"*) the automatic tilt within 0.6 m of the gizmo (off beyond 0.65 m) — 20 % of the far distance before (1.2 m on `Scene_1`), 30 % before that
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…

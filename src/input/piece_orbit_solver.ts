@@ -220,7 +220,12 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   const m12 = dot3(J[0], J[1]);
   const m22 = dot3(J[1], J[1]);
   const A = normals.map((n) => [dot3(n, J[0]), dot3(n, J[1])] as const);
-  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -1e-12 * (Math.abs(a[0]) + Math.abs(a[1])));
+  const speed = (s: QStep) => Math.sqrt(Math.max(0, m11 * s[0] * s[0] + 2 * m12 * s[0] * s[1] + m22 * s[1] * s[1]));
+  // ⭐⭐⭐ (2026-11-12, the owner: *"when I am in contact … the pan is not smooth: it looks like there is friction"*) INTO a contact = the anchor's motion
+  // ANGLE into it beyond `TANGENT_TOL` (`intoContact`) — ⛔ the product against `1e-12 × |a|`, blind to the step's length: a ring level to 1e-8 (the
+  // Jacobian's finite differences) read as pushing into the floor under it, and the projection took the WHOLE yaw away — one way blocked at the kept gap
+  // in free air, the other free, by the noise's sign (probed: the channel's floor, 7 mm short of the wall; `projectExact` returned [0, 0])
+  const feasible = (s: QStep) => A.every((a) => !intoContact(a, s, speed(s)));
   // ⭐⭐⭐ (2026-10-17, the owner: *"after the sliding is toggled off, the orbit is blocked and I need to go a lot of back and forth to unlock the green
   // piece"*) — a step that pushes into NO contact is the step, whatever the metric: asked FIRST. ⛔ The singular metric was refused before — the way back
   // after a slide has one coordinate (its share), so a way back starting in contact (every slide ends at the kept gap) was blocked on its first step,
@@ -240,7 +245,7 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   let bestCost = cost(best);
   for (const a of A) {
     const into = a[0] * dq[0] + a[1] * dq[1];
-    if (!(into < 0)) continue;
+    if (!intoContact(a, dq, speed(dq))) continue;
     const w0 = i11 * a[0] + i12 * a[1];
     const w1 = i12 * a[0] + i22 * a[1];
     const den = a[0] * w0 + a[1] * w1;
@@ -265,12 +270,21 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
 export function keepSense(s: QStep, dq: QStep, J: readonly [Vec3, Vec3], normals: readonly Vec3[]): QStep {
   const k: QStep = [s[0] * dq[0] < 0 ? 0 : s[0], s[1] * dq[1] < 0 ? 0 : s[1]];
   if (k[0] === s[0] && k[1] === s[1]) return s;
-  for (const n of normals) {
-    const a0 = dot3(n, J[0]);
-    const a1 = dot3(n, J[1]);
-    if (a0 * k[0] + a1 * k[1] < -1e-12 * (Math.abs(a0) + Math.abs(a1))) return [0, 0];
-  }
+  const tv: Vec3 = [J[0][0] * k[0] + J[1][0] * k[1], J[0][1] * k[0] + J[1][1] * k[1], J[0][2] * k[0] + J[1][2] * k[1]];
+  const sp = Math.hypot(tv[0], tv[1], tv[2]);
+  for (const n of normals) if (intoContact([dot3(n, J[0]), dot3(n, J[1])], k, sp)) return [0, 0];
   return k;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-12) The anchor's motion along a contact counts as tangent below this angle into it (rad, its sine): ~0.06°. The landing's gap is checked
+ * anyway (≥ half the gap kept), so a slope this small sinks the piece 0.004 mm over a 4 mm sub-step.
+ */
+export const TANGENT_TOL = 1e-3;
+
+/** ⭐⭐⭐ (2026-11-12) Does the step `s` push INTO the contact whose row is `a` (= n·J, n unit) — its anchor's speed `speed` (= |J s|): an angle beyond `TANGENT_TOL`. */
+export function intoContact(a: readonly [number, number], s: QStep, speed: number): boolean {
+  return a[0] * s[0] + a[1] * s[1] < -TANGENT_TOL * speed;
 }
 
 /**

@@ -49,9 +49,9 @@ describe("⭐⭐⭐ wired: around the assembly the finger's yaw AND pitch scaled
     expect(p).toContain("-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag * kd), dyPx * share * kd);");
     expect(p.indexOf("const kd = asmOn")).toBeLessThan(p.indexOf("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du);"));
   });
-  it("⭐ the tunables: 0.6 m and 1 mm/mm by default, validated, their sliders", () => {
+  it("⭐ the tunables: 0.6 m and 4 mm/mm by default (the owner on the device, 2026-11-12), validated, their sliders", () => {
     expect(DEFAULT_CONFIG.orbitGainFullM).toBe(0.6);
-    expect(DEFAULT_CONFIG.orbitContactMmPerMm).toBe(1);
+    expect(DEFAULT_CONFIG.orbitContactMmPerMm).toBe(4);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitGainFullM: 0 })).toThrow(/orbitGainFullM/);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, orbitContactMmPerMm: 0 })).toThrow(/orbitContactMmPerMm/);
     const m = code("render/tuning_menu.ts");

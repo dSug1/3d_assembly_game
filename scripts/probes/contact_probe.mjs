@@ -9,7 +9,7 @@
 //   MISALIGN=1 — the piece turned so its resting face's normal is (1, 1, 1)/√3 (a CORNER down): more than 2° off every face of the cube (the contours
 //   never light, the slide never latches) — the solver's contact alone; MISALIGN=edge — turned 45° about the world's x (an EDGE onto the top and the front)
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -67,7 +67,9 @@ const SCENARIOS = [
   ["top_set0.3_dx", -90, 62, 0.3, [STEP, 0]],
   ["top_set0.02_dx", -90, 62, 0.02, [STEP, 0]],
   ["top_setmin_dx", -90, 62, "min", [STEP, 0]],
-].filter((s) => env.ONLY === undefined || String(s[0]).includes(env.ONLY));
+  // ⭐ (2026-11-12) SCEN='[["name", yaw, pitch, "contact", [dx, dy]], …]' — scenarios of one's own (the owner's channel: in by A + dy, then dx)
+  ...(env.SCEN ? JSON.parse(env.SCEN) : []),
+].filter((s) => (env.SCEN === undefined || env.SCEN.includes(`"${s[0]}"`)) && (env.ONLY === undefined || String(s[0]).includes(env.ONLY)));
 
 try {
   let targets = null;
@@ -106,7 +108,7 @@ try {
       window.__rec.push({ tag: window.__tag, g: st.asmG ? [...st.asmG] : null, piece: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null,
         q: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, ov: [st.orbit.yaw, st.orbit.elevation], ap: st.approach,
         sq: st.pieceSolveQueries, qs: st.pieceQueries, touch: !!st.pieceTouching, def: !!st.pieceDeferred, blk: !!st.pieceMoveBlocked,
-        ready: st.contactReady != null, on: st.hover != null, rot: st.greenBox?.rotationQuaternion ? st.greenBox.rotationQuaternion.asArray().map((x) => +x.toFixed(3)) : null, tilt: st.asmTilt ? st.asmTilt.id : null, v: String(st.lastVerdict ?? "").slice(0, 110) });
+        ready: st.contactReady != null, an: st.pieceAnchor ? [...st.pieceAnchor] : null, col: String(st.lastCollision ?? "").slice(0, 80), colAt: st.lastCollisionAt ?? 0, on: st.hover != null, rot: st.greenBox?.rotationQuaternion ? st.greenBox.rotationQuaternion.asArray().map((x) => +x.toFixed(3)) : null, tilt: st.asmTilt ? st.asmTilt.id : null, v: String(st.lastVerdict ?? "").slice(0, 110) });
     } catch (e) { window.__recErr = String(e); } requestAnimationFrame(tick); };
     requestAnimationFrame(tick); return true; })()`);
   const [W, H] = JSON.parse(await ev("JSON.stringify([innerWidth, innerHeight])"));
@@ -133,6 +135,17 @@ try {
     else await ev(setDist(dist === "contact" ? 0.03 : dist));
     await sleep(1500);
     await ev(`window.__rec = []`);
+    if (opts?.pre) {
+      // ⭐ (2026-11-12) a drag BEFORE the approach: [dx, dy, frames] — the gizmo brought over the spot (the channel's middle)
+      const [px0, py0, nf] = opts.pre;
+      let m0 = [px0 >= 0 ? 200 : W - 200, py0 >= 0 ? 120 : H - 120];
+      await move("mousePressed", m0, 1);
+      for (let k = 0; k < 6; k++) await frame();
+      for (let j = 0; j < nf; j++) { m0 = [m0[0] + px0, m0[1] + py0]; await move("mouseMoved", m0, 1); await frame(); }
+      await move("mouseReleased", m0, 0);
+      for (let k = 0; k < 40; k++) await frame();
+      notes[name + "_pre"] = await ev(`({ g: window.__st.asmG, piece: window.__st.greenBox.getAbsolutePosition().asArray() })`);
+    }
     if (dist === "contact") {
       // ⭐ A held + a drag: the approach in until it stops (the sign found by its first steps)
       await ev(`window.__tag = "approach"; window.__st.orbitApproachKey = true`);
@@ -167,6 +180,8 @@ try {
       for (let k = 0; k < 20; k++) await frame();
       notes[name] = await ev(`({ ready: window.__st.contactReady != null, on: window.__st.hover != null, v: String(window.__st.lastVerdict ?? "").slice(0, 140) })`);
     }
+    // ⭐ (2026-11-12) EVAL=file.js — an async function body run in the page before the drag (`st` = window.__st); its result in the notes
+    if (env.EVAL) notes[name + "_eval"] = await ev(`(async () => { const st = window.__st; ${readFileSync(env.EVAL, "utf8")} })()`);
     // the drag: from a spot on empty space where the step has room
     const start = [step[0] > 0 ? 200 : step[0] < 0 ? W - 200 : 200, step[1] > 0 ? 120 : step[1] < 0 ? H - 60 : H - 120];
     await ev(`window.__tag = "press"`);
@@ -186,6 +201,8 @@ try {
     await ev(`window.__tag = "release"`);
     await move("mouseReleased", m, 0);
     for (let k = 0; k < 20; k++) await frame();
+    // ⭐ (2026-11-12) EVAL_AFTER=file.js — the same, after the drag (where it stopped)
+    if (env.EVAL_AFTER) notes[name + "_after"] = await ev(`(async () => { const st = window.__st; ${readFileSync(env.EVAL_AFTER, "utf8")} })()`);
     all[name] = { px, frames: JSON.parse(await ev("JSON.stringify(window.__rec)")) };
     const err = await ev("window.__recErr ?? null");
     if (err) console.log("REC ERROR", err);

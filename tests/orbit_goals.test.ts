@@ -81,6 +81,7 @@ describe("⭐⭐ the orbited piece's goal margins IN THE WORLD (2026-10-14, the 
     const final = liveFinalOf(SCENE_1.final!, SCENE_1.orbitGoals, "green-box");
     const at = new Map(final.bodies.map((b) => [b.id, { position: [b.position[0] * u, b.position[1] * u, b.position[2] * u] as Vec3, orientation: IDENTITY }]));
     const loose = { positionM: 0.18, angleRad: (15 * Math.PI) / 180 }; // a grabbed part's, as measured headless
+    expect(DEFAULT_CONFIG.orbitGoalMm).toBe(10); // ⭐ the owner, 2026-11-12: "Set the snap to 10 mm, not 5 mm"
     const orbit = orbitGoalTolerance(DEFAULT_CONFIG.orbitGoalMm, DEFAULT_CONFIG.orbitGoalDeg);
     const placed = (dx: number, yawDeg: number) => {
       const g = at.get("green-box")!;
