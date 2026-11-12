@@ -299,18 +299,7 @@ export function installTuningMenu(st: SceneState): void {
         // ⛔ The three rule selectors that stood here (pinned Pioneer, WorldAxisB, plane/channels)
         // are DELETED with their alternatives (`D109`, 2026-09-27).
       ],
-      // ⭐⭐ (2026-10-16, the owner: *"place the sliders in object translation under subfolder piece sliding"*) — the slide's inertia, the part translation's follower
-      subsections: [
-        {
-          title: "PIECE SLIDING",
-          sliders: [
-            tunable(st, "slide inertia (ms)", "hoverInertiaMs", 1, 100, 0.2),
-            tunable(st, "slide damping ratio (<1 = overshoot)", "hoverDampingRatio", 0.1, 1, 0.05),
-            tunable(st, "slide phantom lead (ms)", "hoverLeadMs", 0, 100, 0.25),
-            tunable(st, "slide friction (mm/s, 0 = off)", "hoverFrictionMmS", 0, 100, 0.5),
-          ],
-        },
-      ],
+      // ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) PIECE SLIDING (the slide's inertia, damping, lead, friction) DELETED with the slide
     },
     {
       // ⭐⭐ **THE FACE SUBMENU** — the owner, 2026-09-25: *"create a Face submenu and place the
@@ -346,13 +335,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "piece solver — gap checks per frame (more: smoother, slower)", "pieceSolverQueries", 8, 96, 4),
             tunable(st, "orbit drag deadband (mm on glass, ≥ 3× the pointer noise)", "orbitDeadbandMm", 2.3, 8, 0.1),
             tunable(st, "orbit drag deadband — the pause that re-arms it (ms)", "orbitBandRestMs", 0, 1500, 50),
-            // ⭐⭐ (2026-10-14) the HOVER: a drag starting on the orbited piece slides it on the face it rests against (`HOVER.md`)
-            tunable(st, "hover moves the gizmo (1) or the piece alone (0)", "hoverGizmoMove", 0, 1, 1),
-            tunable(st, "hover amplitude (mm, 500 = unlimited)", "hoverAmplitudeMm", 10, 500, 5),
-            // ⭐⭐⭐ (2026-11-01) the slide's limited orbit: the camera's turn per mm of finger, up to the isometric corner
-            tunable(st, "slide camera orbit (°/mm of finger, up to the isometric corner)", "slideOrbitDegPerMm", 0, 10, 0.1),
-            tunable(st, "hover reach — a facing part's face this close, the piece settles onto it (mm)", "hoverApproachMm", 2, 60, 1),
-            tunable(st, "hover gain (1 = under the finger)", "hoverGain", 0.1, 2, 0.05),
+            // ⭐⭐⭐ (2026-11-12, `CLOSE_IN_CONTACT.md`) the slide's sliders DELETED with it; its reach is the contact readout's band
+            tunable(st, "contact band — the resting face looking at a placed part's face this close lights the contact (mm)", "contactBandMm", 2, 60, 1),
             // ⭐ (2026-10-14) the orbited piece's goal margins, in the world
             tunable(st, "orbited piece goal margin (mm)", "orbitGoalMm", 1.5, 30, 0.5),
             tunable(st, "orbited piece goal margin (°)", "orbitGoalDeg", 0.5, 15, 0.5),

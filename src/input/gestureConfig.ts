@@ -237,39 +237,14 @@ export interface GestureConfig {
    */
   orbitBandRestMs: number;
   /**
-   * ⭐⭐ (prototype, 2026-10-14, the hover; `HOVER.md`) the owner: *"make a slider in object translation to toggle on or off the move of the
-   * gizmo"* — 1: a hover drag slides the yellow GIZMO and the piece rides with it (every later orbit turns about the corrected centre); 0: the
-   * piece alone, its offset dropped by the next orbit drag (*"Cleared on orbit"*).
-   */
-  hoverGizmoMove: number;
-  /** ⭐ (2026-10-14) the hover's reach from where it began (mm, in the world) — *"from 10mm to 500 mm (in this last case … unlimited)"*. */
-  hoverAmplitudeMm: number;
-  /**
-   * ⭐⭐⭐ (2026-11-01, the owner: *"the camera orbits gradually with the delta position until it reaches the clamped position"*) — the slide's LIMITED ORBIT:
-   * the camera's turn per mm of finger (°/mm), the way the piece slides, up to the isometric corner (45° each way, `SLIDE_ORBIT_CLAMP_RAD`).
-   */
-  slideOrbitDegPerMm: number;
-  /**
-   * ⭐⭐ (2026-10-16, the owner: *"Add some inertia when sliding the green – turquoise piece. Propose to reapply what we did for translation of a part in world
-   * translation."* → *"build the inertia. place the sliders in object translation under subfolder piece sliding"*) — the slide's drawn piece on the part
-   * translation's follower: its inertia (ms), its damping ratio (< 1 overshoots a little) and its phantom lead (ms) — 60 ms / 0.5 / 0.2 by default (measured: the part's 7.6 ms smoothed nothing).
-   */
-  hoverInertiaMs: number;
-  hoverDampingRatio: number;
-  hoverLeadMs: number;
-  /** ⭐⭐ (2026-10-16, the owner: *"can you also add some friction ? (different from inertia)"* → *"Kinetic (drag)"*) — the slide's kinetic friction, mm/s on
-   * the glass: a finger step is scaled by speed / (speed + this); 0 = off. */
-  hoverFrictionMmS: number;
-  /** ⭐ (2026-10-14) the hover's gain — 1: the piece under the finger. */
-  hoverGain: number;
-  /**
    * ⭐⭐ (2026-10-14, the owner: *"In the attached configuration the green piece is declared having achieved its goal: this is wrong: not centered, not aligned in quad rotation."*) THE ORBITED PIECE'S GOAL MARGINS, IN THE WORLD — mm and degrees. ⛔ It was judged by a grabbed part's:
    * the snap's 10 mm ON THE GLASS at the camera's distance (182 mm at 4.25 m, measured) and 15° — loose on purpose for a part the capture then
    * pulls exactly, far too loose for a fine placement: 35 mm off and 12° off read as placed.
    */
   orbitGoalMm: number;
-  /** ⭐⭐ (2026-10-14, *"I think the contact check is too strict. It is difficult for the user to judge the contact depending on the camera view. Also, it may be difficult to achieve the contact based only on orbit movement. Propose something to ease the contact and its perception by the user"* → *"Build A&B"*) the hover's REACH: a resting face looking at a part's face this close (mm, in the world) may hover — the piece settles onto it first. */
-  hoverApproachMm: number;
+  /** ⭐⭐⭐ (2026-11-12, `CLOSE_IN_CONTACT.md`; was `hoverApproachMm`, the slide's reach) THE CONTACT BAND (mm, in the world): the resting face looking at a placed
+   * part's face within it — the contact readout lit (the shadow, the face, the outline; display only). */
+  contactBandMm: number;
   orbitGoalDeg: number;
   /** ms of motion buffer the release reads (`trimBuffer`) — the lift speed and the recognizer's speed. */
   flickWindow: number;
@@ -734,27 +709,10 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ 3 × pointerNoiseMm (0.761), rounded up — the floor `motionDeadbandMm` is held to
   orbitDeadbandMm: 2.3,
   orbitBandRestMs: 400,
-  // ⭐ (2026-10-14, the owner: *"Set default gizmo moves with hover off and hover distance is unlimited"*) the piece alone, unlimited
-  hoverGizmoMove: 0,
-  // ⚠ guesses with sliders
-  hoverAmplitudeMm: 500,
-  // ⚠ a guess with a slider: 45° in ~22 mm of finger (the orbit's own yaw is ~5.1°/mm — "gradually")
-  slideOrbitDegPerMm: 2,
-  // ⭐ (2026-10-16) MEASURED on a touch slide (headless): the part translation's 7.6 ms / 0.2 smoothed nothing — the per-frame solved steps showed through,
-  // 42 mm in one frame; 60 ms / 0.5: the largest step 11.8 mm, an overshoot of 2.6 mm (under the 3 mm cap). The lead is the part's.
-  // ⭐ (2026-10-16, the owner: *"set default slide inertia = 40 ms, slide damping ratio = 0.93, slide phantom lead raise the slider"*) — 40 ms / 0.93
-  hoverInertiaMs: 40,
-  hoverDampingRatio: 0.93,
-  // ⭐ (2026-10-16, the owner: *"set the slide phantom lead to 9.75 ms and slide friction to 12.5 mm/s"*)
-  hoverLeadMs: 9.75,
-  // ⚠ (2026-10-16) a guess with a slider: at 10 mm/s a slow finger moves the piece half as far
-  // ⭐ (2026-10-16, the owner: *"set the slide friction to 8 mm/s"*)
-  hoverFrictionMmS: 8,
-  hoverGain: 1,
-  // ⚠ guesses with sliders: within the hover's reach; the quads turn exactly, so the angle is only room for rounding
+  // ⚠ guesses with sliders: the quads turn exactly, so the angle is only room for rounding
   orbitGoalMm: 5,
-  // ⚠ a guess with a slider
-  hoverApproachMm: 20,
+  // ⚠ a guess with a slider (the slide's reach until 2026-11-12)
+  contactBandMm: 20,
   orbitGoalDeg: 3,
   flickWindow: 120,
   // ⚠ Placeholder, like every number here. Long enough to span several pointer
@@ -1021,7 +979,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
       `orbitDeadbandMm (${cfg.orbitDeadbandMm}) must be in [${(SETTLE_NOISE_MULTIPLE * cfg.pointerNoiseMm).toFixed(2)}, 8] mm: under 3× the measured pointer noise a resting finger's wobble leaks through.`,
     );
   }
-  if (!(cfg.hoverGizmoMove === 0 || cfg.hoverGizmoMove === 1)) throw new Error(`hoverGizmoMove (${cfg.hoverGizmoMove}) must be 0 or 1.`);
   if (!(cfg.topRollBandDeg >= 2 && cfg.topRollBandDeg <= 60)) throw new Error(`topRollBandDeg (${cfg.topRollBandDeg}) must be in [2, 60]°.`);
   if (!(cfg.quadSliceMaxDeg >= 10 && cfg.quadSliceMaxDeg <= 180)) throw new Error(`quadSliceMaxDeg (${cfg.quadSliceMaxDeg}) must be in [10, 180]°.`);
   if (cfg.orbitMode !== 0 && cfg.orbitMode !== 1) throw new Error(`orbitMode (${cfg.orbitMode}) must be 0 or 1.`);
@@ -1042,15 +999,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.gizmoEdgeMarginMm >= 0 && cfg.gizmoEdgeMarginMm <= 20)) throw new Error(`gizmoEdgeMarginMm (${cfg.gizmoEdgeMarginMm}) must be in [0, 20] mm.`);
   if (!(cfg.orbitTurnCapDegMm >= 5 && cfg.orbitTurnCapDegMm <= 300)) throw new Error(`orbitTurnCapDegMm (${cfg.orbitTurnCapDegMm}) must be in [5, 300]°/mm.`);
   if (!(cfg.orbitTurnCapVerticalDegMm >= 5 && cfg.orbitTurnCapVerticalDegMm <= 300)) throw new Error(`orbitTurnCapVerticalDegMm (${cfg.orbitTurnCapVerticalDegMm}) must be in [5, 300]°/mm.`);
-  if (!(cfg.hoverInertiaMs > 0 && cfg.hoverInertiaMs <= 200)) throw new Error(`hoverInertiaMs (${cfg.hoverInertiaMs}) must be in (0, 200] ms.`);
-  if (!(cfg.hoverDampingRatio > 0 && cfg.hoverDampingRatio <= 2)) throw new Error(`hoverDampingRatio (${cfg.hoverDampingRatio}) must be in (0, 2].`);
-  if (!(cfg.hoverFrictionMmS >= 0 && cfg.hoverFrictionMmS <= 500)) throw new Error(`hoverFrictionMmS (${cfg.hoverFrictionMmS}) must be in [0, 500] mm/s.`);
-  if (!(cfg.hoverLeadMs >= 0 && cfg.hoverLeadMs <= 200)) throw new Error(`hoverLeadMs (${cfg.hoverLeadMs}) must be in [0, 200] ms.`);
-  if (!(cfg.hoverAmplitudeMm >= 10 && cfg.hoverAmplitudeMm <= 500)) throw new Error(`hoverAmplitudeMm (${cfg.hoverAmplitudeMm}) must be in [10, 500] mm (500: unlimited).`);
-  if (!(cfg.slideOrbitDegPerMm >= 0 && cfg.slideOrbitDegPerMm <= 10)) throw new Error(`slideOrbitDegPerMm (${cfg.slideOrbitDegPerMm}) must be in [0, 10] °/mm.`);
-  if (!(cfg.hoverGain > 0 && cfg.hoverGain <= 3)) throw new Error(`hoverGain (${cfg.hoverGain}) must be in (0, 3].`);
   if (!(cfg.orbitGoalMm > 0 && cfg.orbitGoalMm <= 50)) throw new Error(`orbitGoalMm (${cfg.orbitGoalMm}) must be in (0, 50] mm.`);
-  if (!(cfg.hoverApproachMm >= 1.5 && cfg.hoverApproachMm <= 100)) throw new Error(`hoverApproachMm (${cfg.hoverApproachMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact may hover.`);
+  if (!(cfg.contactBandMm >= 1.5 && cfg.contactBandMm <= 100)) throw new Error(`contactBandMm (${cfg.contactBandMm}) must be in [1.5, 100] mm: under 1.5 mm nothing short of contact would light.`);
   if (!(cfg.quadUnlitAlpha >= 0 && cfg.quadUnlitAlpha <= 1)) throw new Error(`quadUnlitAlpha (${cfg.quadUnlitAlpha}) must be in [0, 1].`);
   if (!(cfg.orbitGoalDeg > 0 && cfg.orbitGoalDeg <= 30)) throw new Error(`orbitGoalDeg (${cfg.orbitGoalDeg}) must be in (0, 30]°.`);
   if (!(cfg.orbitBandRestMs >= 0 && cfg.orbitBandRestMs <= 3000)) {

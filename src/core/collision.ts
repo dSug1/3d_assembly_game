@@ -512,22 +512,7 @@ export function bodiesWithin(world: World, id: ObjectId, setup: CollisionSetup, 
   return [...per].map(([o, g]) => ({ id: o, gapM: g }));
 }
 
-/**
- * ⭐⭐ (2026-10-14, the hover; the owner: *"make sure that if collision faces are coplanar, the hover can continue over several parts' collision faces, provided within the max hover distance … the piece should be able to slide over the two white and one black parts"*) — every body lying ENTIRELY behind the plane `n · x = level` (within `tolM`): a piece in front of
- * it, moved PARALLEL to it, can never reach one — its distance to such a body never falls under its distance to the plane. The hover leaves
- * them out, so a piece slides across COPLANAR faces of several parts as across one.
- */
-export function bodiesBehindPlane(world: World, setup: CollisionSetup, n: Vec3, level: number, tolM: number): Set<ObjectId> {
-  const out = new Set<ObjectId>();
-  for (const id of world.objects.keys()) {
-    const parts = worldParts(world, id, setup.shapes);
-    if (!parts) continue;
-    let max = -Infinity;
-    for (const part of parts) for (const p of part) max = Math.max(max, n[0] * p[0] + n[1] * p[1] + n[2] * p[2]);
-    if (max <= level + tolM) out.add(id);
-  }
-  return out;
-}
+/** ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) `bodiesBehindPlane` (the hover's coplanar exemption) DELETED with the slide. */
 
 /** What `resolveMove` decided. */
 export interface MoveVerdict {

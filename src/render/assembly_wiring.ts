@@ -10,7 +10,7 @@
  */
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { angleTo, lockCone, approachDistance, approachStep, coneClamp, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
+import { approachDistance, approachStep, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
 import { blendThroughEdges, buildFaceMap, castPoint, mapAnglesStep, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -23,15 +23,14 @@ import { faceLift, pieceReach, placeAtAngles, shellAnchor, shellBox, type ShellB
 import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
-import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
-import { slideArmedAfter } from "../input/hover";
+import { faceTrianglesWorld } from "./contact_wiring";
 import { calmHeading, calmShown, calmStep, calmTarget, capEdgePitch } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, untiltDir, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -167,15 +166,14 @@ function castParts(st: SceneState): readonly CastPart[] {
   return parts;
 }
 
-/** ⭐ The piece's direction at the orbit place — locked, kept in the face's cone (`coneClamp`). */
+/** ⭐ The piece's direction at the orbit place (the calm's). */
 function dirAt(st: SceneState, yaw: number, v: number): Vec3 {
   // ⭐⭐⭐ (2026-11-10, §9.4) the orbit's angles in its FRAME (the tilted pole's F, `dirFrame`), turned into the world here — the calm in F
   const R = dirFrame(st);
   const u = orbitDir(yaw, v);
-  const n = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
   // ⭐⭐⭐ (2026-11-04, `1.0.95-`, the owner: *"i am referring to this calm behavior of commit 58d86ff… It shall stay"*) the piece and the camera on the SHOWN
   // direction — the orbit's angle calm in the middle of a face, whole at its edges (`calmDir`); the gizmo is still moved by the orbit's own `u`
-  return n === null ? tiltDir(R, calmDir(st, u)) : coneClamp(tiltDir(R, u), n, st.asmLock!.cone ?? undefined);
+  return tiltDir(R, calmDir(st, u));
 }
 
 /** ⭐⭐⭐ (2026-11-10, §9.4) the orbit's DIRECTIONS' frame (F → world; the press's swing included) — `null`: the world's. */
@@ -338,11 +336,10 @@ function calmTargets(st: SceneState, dtMs: number): void {
 }
 
 /**
- * ⭐ The gizmo a query of the piece's place reads: locked, the locked point; else this frame's (`st.asmG`, the face map's); none yet, the map's at the
+ * ⭐ The gizmo a query of the piece's place reads: this frame's (`st.asmG`, the face map's); none yet, the map's at the
  * orbit's angles.
  */
 function gizmoFor(st: SceneState): Vec3 {
-  if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
   if (st.asmG !== null) return st.asmG;
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const m = mapGizmo(st, q.yaw, pitchOfV(q.v));
@@ -363,10 +360,9 @@ function shellOf(st: SceneState): ShellBox | null {
 /**
  * ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 2) THE GIZMO'S FOOT (`shellAnchor`) — the orbit's centre the piece and the camera read: on the
  * smooth shell round the placed parts' box beyond `orbitShellOffsetMm`, onto the gizmo within it. A protrusion, a recess, a notch moves the gizmo, never
- * the foot. Under the slide: the slide's gizmo itself (the slide unchanged).
+ * the foot.
  */
 function footOf(st: SceneState, g: Vec3, u: Vec3, d: number): Vec3 {
-  if (st.asmLocked) return g;
   return shellAnchor(g, u, d, st.cfg.orbitShellOffsetMm / 1000, shellOf(st), reachOf(st, u));
 }
 
@@ -603,11 +599,10 @@ export function placeOffset(st: SceneState, yaw: number, v: number, approach: nu
 
 /**
  * ⭐⭐⭐ (2026-11-05) THE GIZMO AT THE ORBIT'S ANGLES `yaw`, `v` (`mapGizmo`) — out of step after the slide by the frame's own lag (`st.asmMapQ` against
- * `st.asmPrevQ`, `syncAngle`); at the frame's own angles exactly the frame's gizmo (`st.asmG`). Under the slide: its held gizmo. Memoised for the frame
+ * `st.asmPrevQ`, `syncAngle`); at the frame's own angles exactly the frame's gizmo (`st.asmG`). Memoised for the frame
  * (the solver asks the same angles several times).
  */
 function gizmoAtAngles(st: SceneState, yaw: number, v: number): Vec3 {
-  if (st.asmLocked && st.asmLock !== null) return st.asmLock.point;
   const q0 = st.asmPrevQ;
   const mq = st.asmMapQ;
   if (q0 === null || mq === null) return gizmoFor(st);
@@ -645,7 +640,7 @@ function edgeMarginM(st: SceneState): number {
 
 /**
  * ⭐⭐ EVERY FRAME (before the piece is placed): the lock, the gizmo (its point eased, its face by the edge rule — the quads follow), the centre the orbit
- * reads set to it, the look point eased; the approach's coast. Under a HOVER the hover owns the gizmo: it is taken as the locked one.
+ * reads set to it, the look point eased; the approach's coast.
  */
 export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (!assemblyOn(st) || st.greenBox === null) return;
@@ -655,19 +650,6 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.approachInertia.coasting) {
     const s = st.approachInertia.step(dtMs, st.cfg.boxSmoothMs * 4);
     approachMove(st, s.dV);
-  }
-  if (st.hover !== null) {
-    const t = st.centreBlend.targetM;
-    st.asmLocked = true;
-    st.asmShown = null; // ⭐ (Step 4c-bis) back out: the map's angles put where the slide leaves the gizmo
-    const n = st.gizmoNormal ?? null;
-    const q0 = st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    st.asmLock = { point: [t[0], t[1], t[2]], normal: n, host: st.gizmoHost ?? null, cone: n === null ? null : lockCone(st.asmLock?.cone ?? null, angleTo(tiltDir(dirFrame(st), orbitDir(q0.yaw, q0.v)), n)) }; // ⭐ (§9.4) the orbit's direction in the world (⛔ F's angles read as the world's: under a slide on the tilted top the cone was wrong — the camera jumped 23 – 34 mm, back and forth, the walks)
-    st.asmGizmo = [t[0], t[1], t[2]];
-    st.asmGizmoAt = [t[0], t[1], t[2]];
-    st.asmGizmoLag = null;
-    st.asmLook = [t[0], t[1], t[2]];
-    return;
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) the tilted facet left last frame: the WORLD's frame from this one (`tiltOff` — the angles turned, the gizmo kept)
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
@@ -707,7 +689,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const prev = st.asmPrevQ ?? q;
   st.asmPrevQ = { yaw: q.yaw, v: q.v };
   let hit: GizmoHit | null = null;
-  if (!st.asmLocked) {
+  {
     const pitch = pitchOfV(q.v);
     const m0 = st.asmMapQ ?? { yaw: q.yaw, pitch };
     // ⭐⭐⭐ (2026-11-09) the catch-up held where it alone would move the gizmo across a jump (`mapAnglesStep`) — the ring stays a function of the angles
@@ -748,28 +730,9 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     }
   }
   calmFrame(st, dtMs);
-  const g0 = st.asmLocked && st.asmLock !== null ? st.asmLock.point : (st.asmG ?? st.asmGizmo ?? a.centre);
-  // ⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 1 (a); the owner: *"deleting the lock at step 1 is cleaner"*) — THE CLOSE-IN LOCK DELETED: the
-  // carrier runs at EVERY distance (⛔ the old lock: within 30 cm of the gizmo, or inside the assembly's sphere, the gizmo and its face were held — one
-  // behaviour far out, another close in). `st.asmLocked` is now the SLIDE's hold only (set under a hover, above).
-  const was = st.asmLocked;
-  st.asmLocked = false;
-  if (was) {
-    // ⭐ off the slide: the map's angles put at the slide's gizmo (`mapAngles`) — before Step 4c-bis the carrier found again, projected into the yaw plane (⛔ 2026-10-28 carried on from the held point — off the
-    // yaw plane by the slide: the gizmo off the red section from then on)
-    st.asmG = st.asmLock !== null ? st.asmLock.point : st.asmG;
-    // ⭐⭐⭐ (Step 4c-bis) the map's angles put where the slide leaves the gizmo (`mapAngles`, its face's stack), then closing on the orbit's (`syncAngle`)
-    const map = faceMapOf(st);
-    // ⭐⭐⭐ (2026-11-10, §9.4) in the map's frame (the tilted pole's F)
-    const gM = st.asmG === null ? null : untiltDir(mapFrame(st), st.asmG);
-    const nM = st.gizmoNormal === null || st.gizmoNormal === undefined ? null : untiltDir(mapFrame(st), st.gizmoNormal);
-    st.asmMapQ = map !== null && gM !== null ? mapAngles(map, gM, facetOfNormal(map, nM, gM), mapOpts(st)) : null;
-    st.asmShown = null;
-    st.asmLock = null;
-    st.lastVerdict = "orbit: off the slide — the gizmo on the sections again";
-  }
-  // ⭐ unlocked: the face by the edge rule (the quads read it)
-  if (!st.asmLocked && hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
+  const g0 = st.asmG ?? st.asmGizmo ?? a.centre;
+  // ⭐ the face by the edge rule (the quads read it)
+  if (hit !== null && hit.normal !== null && faceSwitches(st.gizmoNormal ?? null, st.asmFacePoint, hit.normal, hit.point, edgeMarginM(st))) {
     if ((st.gizmoHost ?? null) !== hit.host) {
       st.gizmoHost = hit.host;
       st.orientDirty = true;
@@ -778,7 +741,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
     if (n0 === null || n0[0] * hit.normal[0] + n0[1] * hit.normal[1] + n0[2] * hit.normal[2] < Math.cos(Math.PI / 180)) st.orientDirty = true;
     st.gizmoNormal = hit.normal;
     st.asmFacePoint = hit.point;
-  } else if (!st.asmLocked && hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
+  } else if (hit !== null && st.asmFacePoint === null) st.asmFacePoint = hit.point;
   // ⭐ the orbit's centre eased to the gizmo's FOOT (⭐⭐⭐ 2026-11-04, Step 2 — the shell: a step of the gizmo in depth moves neither the piece nor the
   // camera); the ring at the gizmo itself, on the real surface
   const target = g0;
@@ -793,8 +756,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);
   st.centreBlend.snapTo(st.asmGizmo);
   syncCentre(st);
-  // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing; the slide: the gizmo)
-  const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM, st.asmLocked);
+  // ⭐ the look point: the centre far out, the gizmo close in (a share of the distance — it frames the view, it switches nothing)
+  const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM);
   const g = st.asmGizmo;
   const lt: Vec3 = [a.centre[0] + (g[0] - a.centre[0]) * w, a.centre[1] + (g[1] - a.centre[1]) * w, a.centre[2] + (g[2] - a.centre[2]) * w];
   st.asmLook = st.asmLook === null ? lt : easePoint(st.asmLook, lt, dtMs, LOOK_TAU_MS);
@@ -848,7 +811,7 @@ function sameFace(a: LineVal, b: LineVal): boolean {
 function sectionLinesFrame(st: SceneState): void {
   const sh = st.asmShown;
   const g = st.asmG;
-  const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && g !== null && sh !== null;
+  const show = st.cfg.sectionLines === 1 && g !== null && sh !== null;
   if (!show) {
     if (st.asmSectionLines !== null) st.asmSectionLines.isVisible = false;
     return;
@@ -956,20 +919,11 @@ function sectionLinesFrame(st: SceneState): void {
  * (`pieceGapMm`), the largest free share found by halving. Returns the move taken.
  */
 export function approachMove(st: SceneState, da: number): number {
-  const taken = approachMoveTaken(st, da);
-  // ⭐⭐⭐ (2026-11-01) a step IN arms the slide mode again (`slideArmedAfter`) — a step out never: its coast cannot latch it at the reach
-  st.slideArmed = slideArmedAfter(st.slideArmed, taken, 0);
-  return taken;
-}
-
-function approachMoveTaken(st: SceneState, da: number): number {
   if (da === 0) return 0;
   const a0 = st.approach;
   const want = approachStep(a0, da, 1, st.cfg);
   if (want === a0) return 0;
   const out = want > a0;
-  // ⭐⭐⭐ (2026-11-01, *"build A"*) a step OUT of a slide: the orbit goes on from the slide's view (`slideWayOutRebase`)
-  if (out) slideWayOutRebase(st);
   if (st.pieceQ === null || st.greenBox === null) {
     st.approach = want;
     return want - a0;
@@ -986,7 +940,7 @@ function approachMoveTaken(st: SceneState, da: number): number {
     });
   const gapAt = (cand: number): number => envAt(cand).gap(q);
   // ⭐⭐⭐ (2026-11-01, *"the collision detection shall apply also when moving the piece away from a face"*) — out checked too (`approachStepFree`); blocked, the
-  // player finds the way out (a slide, the orbit)
+  // player finds the way out (the orbit; ⭐ 2026-11-12 the way out's check KEPT with the slide removed — the owner: *"we still need a collision check at way out"*)
   const gapNow = out ? gapAt(a0) : gapM;
   const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);
   if (free(want)) {
@@ -1014,8 +968,6 @@ function approachMoveTaken(st: SceneState, da: number): number {
 export function approachInput(st: SceneState, dyMm: number): void {
   const taken = approachMove(st, dyMm * orbitDvPerMm(st));
   st.approachInertia.record(performance.now(), 0, taken);
-  // ⭐ (2026-11-01) the slide mode left: the piece's own offset (the slide's settle) ways in by the approach's travel
-  if (st.hover === null) hoverWayInStep(st, Math.abs(dyMm));
   st.hudDirty = true;
 }
 
@@ -1032,9 +984,8 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   const tl = st.asmTilt;
   if (tl !== null) {
     const uF = orbitDir(cam.yaw, cam.v);
-    const lockN = st.asmLocked && st.asmLock !== null ? st.asmLock.normal : null;
-    const sF = lockN === null ? calmDir(st, uF) : untiltDir(tl.dir, coneClamp(tiltDir(tl.dir, uF), lockN, st.asmLock!.cone ?? undefined));
-    const fF = offsetFrame(sF, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
+    const sF = calmDir(st, uF);
+    const fF = offsetFrame(sF, calmHeading(cam.yaw, uF, sF), o.yawRad, o.pitchRad);
     const f = { dir: mulM(tl.dir, fF.dir), up: mulM(tl.dir, fF.up) };
     const uW = mulM(tl.dir, sF);
     // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) the roll's target EXACTLY the world's camera after the exit — the orbit's world yaw through `calmHeading`, as the world's
@@ -1056,16 +1007,7 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   // face's heading at once: the scene jump-rotated; and at ±90° it has none)
   // ⭐⭐⭐ (2026-11-04, `1.0.95-`) under the CALM the heading turned as the direction was (`calmHeading`) — ⛔ the orbit's yaw with the calm's direction:
   // the up built from another heading than the direction's own, the camera ROLLED on a wall (probed: 222 frames over 5° on one close-in dx leg)
-  return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
-}
-
-/** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */
-export function leavesCone(st: SceneState, yaw0: number, v0: number, yaw1: number, v1: number): boolean {
-  if (!st.asmLocked || st.asmLock === null || st.asmLock.normal === null) return false;
-  const n = st.asmLock.normal;
-  const R = dirFrame(st);
-  const a1 = angleTo(tiltDir(R, orbitDir(yaw1, v1)), n);
-  return a1 > (st.asmLock.cone ?? (80 * Math.PI) / 180) + 1e-9 && a1 > angleTo(tiltDir(R, orbitDir(yaw0, v0)), n);
+  return offsetFrame(u, calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
 }
 
 /* ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE; the rules in `input/orbit_tilt.ts`) ------------------------------------------ */
@@ -1214,7 +1156,7 @@ export function tiltOnPress(st: SceneState): void {
 
 /** ⭐⭐⭐ (§9.4; 2026-11-10 automatic too) the tilt made — at a press (`tiltOnPress`) or by itself close in (`assemblyFrame`, `tiltAutoLatch`). */
 function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null = null): void {
-  if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.asmLocked || st.hover !== null || st.greenBox === null) return;
+  if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.greenBox === null) return;
   const sh = st.asmShown;
   const g = st.asmG;
   const wm = worldFaceMap(st);

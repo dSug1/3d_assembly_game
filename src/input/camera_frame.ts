@@ -89,3 +89,21 @@ const onPlane = (u: Vec3, d: Vec3): Vec3 | null => {
 function targetFrame(cfg: GestureConfig, from: RigParams, to: RigParams, s: number, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   return rigFrameBetween(cfg, from, to, s, cam, off);
 }
+
+/**
+ * ⭐ THE CAMERA'S UP SQUARED TO ITS VIEW: `up` with its part along `view` removed, unit; `up` along the view, the world's up squared instead; no view (or
+ * neither squares), `up` as it was. ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) it was `uprightBlend` (the slide view's roll to upright, by its weight) — the slide
+ * removed, its weight was 0 for good.
+ */
+export function upSquareToView(up: Vec3, view: Vec3): Vec3 {
+  const vl = Math.hypot(view[0], view[1], view[2]);
+  if (!(vl > 1e-12)) return up;
+  const d: Vec3 = [view[0] / vl, view[1] / vl, view[2] / vl];
+  const sq = (u: Vec3): Vec3 | null => {
+    const k = u[0] * d[0] + u[1] * d[1] + u[2] * d[2];
+    const p: Vec3 = [u[0] - k * d[0], u[1] - k * d[1], u[2] - k * d[2]];
+    const l = Math.hypot(p[0], p[1], p[2]);
+    return l > 1e-12 ? [p[0] / l, p[1] / l, p[2] / l] : null;
+  };
+  return sq(up) ?? sq([0, 1, 0]) ?? up;
+}
