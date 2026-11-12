@@ -20,7 +20,7 @@ every later stage uses those names.
 
 | | stage | produces | decided by | gate |
 |---|---|---|---|---|
-| **W0** | **The brief** | the object; its reference (a sheet, a preview, photos); what the level is FOR; the phone's limits (§4) | the owner | the owner's go |
+| **W0** | **The brief** | the object; its reference (a sheet, a preview, photos); what the level is FOR; ⭐ its SCALE — the assembled object about `Scene_1`'s cube (§4); the phone's limits (§4) | the owner | the owner's go |
 | **W1** | ⭐⭐ **THE ASSEMBLY PLAN** (§2) | the parts catalogue and the steps, on paper, in the scene's spec (§5); a sketch per step where needed | Claude drafts, the owner decides | ⛔ **the owner's approval** — nothing after it starts before |
 | **W2** | **The geometry spec** | per part, DERIVED from the plan: what the render mesh shows, its collision pieces, its flat faces (the face proxy), its connectors, its goal; the naming | Claude, from the plan | the owner's approval (the conventions once for all scenes; a scene's sheet each time) |
 | **W3** | **The Blender build** | a RE-RUNNABLE script (`Assets/Blender/scripts/build_<scene>.py`) making the `.blend` from the reference and the plan, and a CHECK script reading it back (§3) | Claude builds; the owner edits the `.blend` | the check script clean; the owner's look in Blender |
@@ -55,9 +55,9 @@ the catalogue does. A broken convention then costs four parts, not the scene. �
 
 ### 2.2 The steps
 
-| step | part | host(s) | seat: part face ↔ host face | approach | turn at the goal | gizmo route | after | notes |
-|---|---|---|---|---|---|---|---|---|
-| e.g. 3 | `P04` shaft | `P03` frame | its two journals ↔ the frame's two saddles | straight down, 30 mm | fixed by its flats (1 way) | the frame's top face, then into the saddles | 2 | |
+| step | part | host(s) | seat: part face ↔ host face | approach | turn at the goal | gizmo route | orbit centre | after | notes |
+|---|---|---|---|---|---|---|---|---|---|
+| e.g. 3 | `P04` shaft | `P03` frame | its two journals ↔ the frame's two saddles | straight down, 30 mm | fixed by its flats (1 way) | the frame's top face, then into the saddles | the frame's top centre | 2 | |
 
 * **host** — the placed part(s) it rests on or goes into.
 * **seat** — the pair of FLAT faces that touch at the goal (or the connector pair): their normals anti-parallel (`30_OBJECTS_3D/INDEX.md` rule 1).
@@ -65,15 +65,28 @@ the catalogue does. A broken convention then costs four parts, not the scene. �
 * **approach** — the last straight move into the goal: its axis and length (an insertion: the depth; a resting part: none). ⭐ An insertion often
   has ONE axis only (where the opening, the part's own shape and what it seats on line up): the plan NAMES it, and W2 designs for it the FACE the
   part slides on to reach the opening and the flat seat at the end (`Scene_2`'s pistons — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §2.6).
+  ⭐ An insertion is driven by the APPROACH (A + dy: the held part straight along the gizmo's face normal toward the gizmo) — so it needs a GHOST face
+  at the opening's goal depth for the gizmo to stand on (`30_OBJECTS_3D/spec/PART_AUTHORING.md` §3), and, when the play is a few millimetres, a way to
+  hold the gizmo on the opening's axis at its mouth (`SCENE_2_ASSEMBLY.md` §2.9). ⛔ And the WHOLE part must fit the opening along that axis — every
+  end of it, measured on the reference's numbers (rule 2).
 * **turn at the goal** — how many orientations fit (the twist; a symmetry).
 * **gizmo route** — the faces of the assembly-so-far the orbit runs over to reach the goal: they must be EXPOSED faces at that step.
+* ⭐ **orbit centre** — where the orbit's CENTRE is for that step (the owner, 2026-11-12: *"each time we seat a part, we will need to redefine the
+  center of the orbit or give the possibility to the player to modify the center of the orbit because the seating of the next part may require to
+  orbit around another position for the center"*): one centre for a whole assembly (`Scene_1`'s boot centre, `Scene_0`'s heptagon's) cannot serve a
+  part whose goal is at one end, inside a bore or under an overhang. The plan names, per step, the centre the orbit should go round — the host's, the
+  seat's, the opening's — so it can be REDEFINED automatically when the previous part seats; ⭐ and the game gives the PLAYER a way to move it (a
+  gesture, the queue's `IN10` — orbit about a chosen point — and the camera's centre blend, so the change is eased, never a jump). ⚠ Both are
+  requirements for the queue (§2.4), not built.
 * **after** — the steps that must be done before (a partial order: several orders may be valid).
 
 ### 2.3 ⛔ The rules a plan must pass (on paper at W1; as vectors on the data at W5; as probes at W6)
 
 1. **An order exists** — the `after` graph has no cycle; every host is pre-placed or placed at an earlier step.
 2. **Access** — at its step, a part's way in (the approach, and the orbit's route before it) is not closed by a part placed before: nothing is placed
-   INSIDE what is already closed.
+   INSIDE what is already closed. ⛔ Checked ON THE REFERENCE's NUMBERS at W1, not on the picture — the WHOLE part's sweep along its approach, every
+   end of it (`Scene_2`, 2026-11-12: an approved plan slid each piston in sideways at its bank's split; the numbers showed the rods' other ends inside
+   the crankcase, below its split — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §2.7).
 3. **A seat for every step** — a flat face on the part and one on the host, anti-parallel at the goal.
 4. **The gizmo can reach it** — every face of the route is an exposed face of the assembly at that step (the face map is built from the EXPOSED faces —
    `POLAR_ORBIT_CLEANUP.md`, R1).
@@ -106,6 +119,19 @@ the goal, every collision piece is convex, every proxy face is flat — and refu
 
 ## 4. ⛔ The limits every plan is written against
 
+* ⭐⭐ **THE SIZE OF `Scene_1`'s CUBE** — the complete assembly's overall dimensions are similar to `Scene_1`'s cube assembly (4.9 × 4.83 × 4.83
+  units: 0.49 × 0.483 × 0.483 m; `Scene_0`'s heptagon fills the same box), the owner, 2026-11-12: *"the overall dimensions of the engine complete
+  assembly shall be similar to the cube assembly of scene 1, because all the inputs and behaviors and sliders have been taylored on these
+  dimensions"* — the orbit's rings, the zoom, the gizmo's ease, the close-in tilt's 0.6 m, the face map's thresholds, the camera's distances were all
+  tuned on that size; a scene far larger or smaller would need them all re-tuned. ⭐ Set at W0 (the scene's scale), checked at W2 (the assembled
+  bounding box against the cube's) and at W6 (measured on the built scene).
+* ⭐⭐ **THE FACE MAP's TWO THRESHOLDS — no face the orbit runs on or seats on at them** (the owner, 2026-11-12: *"if 45 degree deck is a problem,
+  capture in the md files to avoid such inclination and increase or decrease the inclination"*): ① a face becomes a TOP / BOTTOM cap only beyond
+  **45° of elevation** (`input/face_map.ts`, `buildFaceMap`'s `capOf`: `> π/4 + 1e-12`) — a face AT 45° is classified by rounding; ② faces facing the
+  same way within **20°** (`MAP_AXIS_DEG`, the merge) become ONE facet — two faces the player must reach separately cannot be that close. ⭐ So a face of
+  a gizmo route or a seat keeps **≥ 15° from 45° of elevation**, and faces that must stay apart are **≥ 30° apart**; where the reference puts one at a
+  threshold, the scene's geometry is TILTED off it at W1 / W2 (`Scene_2`: its 90° V → 120°, its decks 45° → 30° — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md`
+  §2.10). ⚠ Reasoned on the code; measured on the built scene at W6.
 * **24 gap queries a frame** — the solver's budget (the owner tests on an iPhone): few bodies near the held part, few collision pieces each.
 * **Few parts** — every part is a step; the level's length and the phone's cost both grow with them.
 * **Patent-free methods only.**

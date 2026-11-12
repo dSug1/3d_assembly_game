@@ -40,6 +40,18 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    prism, a round seat as one flat disc face) — what the face map builds its facets from, so the gizmo RUNS on it and a part RESTS on it. ⚠ Its name
    (e.g. `UFM_<part>`) and its rules (convex or not, which faces count, how it meets the render mesh, what replaces it at the face map) are written
    here before it is built.
+   ⭐⭐ **GHOST faces** (the owner, 2026-11-12: *"a ghost surface to support the gizmo for A + dy"*): a proxy face where there is NO real surface —
+   across an opening a part goes into (a bore, a socket, a slot), at the depth where that part stops at its goal. The approach (A + dy) moves the
+   held part straight along the gizmo's face normal TOWARD the gizmo and stops at it (`render/assembly_wiring.ts`, `placeOffset`; D3: *"center of the
+   orbit = gizmo"*); over an opening the part fits, the gizmo reads the real depth (`POLAR_ORBIT_CLEANUP.md` §7, §8.3) — so the ghost face IS that
+   depth: the gizmo drops onto it, A + dy brings the part down to it, the goal capture seats it. Never drawn, never collided, never picked; one per
+   opening, each at its own part's depth.
+   ⭐ **THE PAIR**: an inserted part carries a **resting proxy** — one flat face SQUARE to its approach axis, CENTRED on it, at its hull's extreme along
+   the approach (what the orbit's lift measures) — and its host carries the **ghost floor** at the SAME place at the goal; the gizmo then stands on the
+   opening's axis and A + dy lands the part exactly on its goal. A ghost floor may lie outside its host's body (in a cavity below an opening). An open
+   CAVITY (a tub the part goes into) needs one as much as a bore: its real depth is the cavity's bottom, not the seat (`Scene_2`'s crankshaft).
+   ⭐ A proxy face keeps the face map's thresholds (`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §4: ≥ 15° from 45° of elevation; ≥ 30° between faces
+   to be told apart), and an opening in a proxy face is a RECTANGLE (the face map reads rectangles), round only in the look.
 4. **The seating points** — an empty per seat of the plan, at a position with an OUTWARD normal and a twist reference: a MATE CONNECTOR
    (`core/mate_connector.ts`), named after the plan's step.
 5. **The goal is the authored pose** — a scene is authored ASSEMBLED, so each part's goal is where it sits; where it BOOTS is level data (as
@@ -57,3 +69,7 @@ nothing unplanned carries a proxy. ⛔ A skipped check is announced (`00_CORE/ME
 A scene may come with an animation of the assembled object (a machine running, a mechanism turning). ⭐ The parts are still while they are assembled; the animation
 is a REWARD at the level's end (`20_GAME_RULES/spec/LEVEL_END.md`), built last — its moving parts are then the plan's parts, so the plan's
 granularity must allow it (a part that moves in the animation is one part, or a known group).
+⭐ **A part may hold a HINGE** (the owner, 2026-11-12, `Scene_2`'s piston + rod): two meshes, one a child pivoting on the other at an axis marked
+by an empty (`HINGE_<part>_<name>`) — LOCKED at the goal's angle while the player places it (the part rigid, its collision fixed), FREE in the
+animation. ⭐ The animation is COMPUTED by the game (a formula in `src/core`, vectored; the poses applied by the render) — not a clip baked in
+Blender; Blender previews it. Each moving piece's PIVOT is authored where the formula turns it (`SCENE_2_ASSEMBLY.md` §6.5).
