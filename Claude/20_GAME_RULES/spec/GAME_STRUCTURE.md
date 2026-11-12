@@ -185,7 +185,7 @@ shape how Blender levels are authored; the teardown contract only when the reloa
 * **Vectors**: `tests/scene_2.test.ts` (8), `tests/scene_0_heptagon.test.ts` (10), the JSON seam's prism / reference-size refusals; the suites that
   pinned the workbench moved to its fixture. **1677**; the anchor (+1, on `1.0.124from1.0.121-`): **1762**.
 
-### 7.1 ⭐⭐ `Scene_0bis` — the heptagon with TIPS (2026-11-12, branch `1.0.124from1.0.121-Added_scene_2`, the worktree `3d_assembly_game-scene2`) — ⛔ no device close
+### 7.1 ⭐⭐ `Scene_0bis` — the heptagon with TIPS (2026-11-12, branch `1.0.124from1.0.121-Added_scene_2`, the worktree `3d_assembly_game-scene2`) — ✅✅ closed by a device look (the owner, 2026-11-12, on `b09bd37`: *"scene 0bis is OK"* — the 1.2-unit tip kept)
 
 > *"create a Level 0 Scene 0bis and copy the scene 0 into it. Then modify the heptagon of scene 0bis so that the two lateral faces have a tip, as
 > attachment"* — the owner, with a sketch: the prism, each end face a pyramid to a point.
