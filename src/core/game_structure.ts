@@ -188,6 +188,11 @@ export interface WorldSpec {
   readonly id: string;
   readonly title: string;
   readonly levels: readonly LevelSpec[];
+  /**
+   * ⭐ (2026-11-12, the owner) the ORDER of the level menu's buttons, by level id — the menu only: `levels` keeps the catalogue's
+   * order, which is each level's `?sceneIndex=`. Ids not listed follow in catalogue order; unknown ids are ignored (`menuLevels`).
+   */
+  readonly menuOrder?: readonly string[];
 }
 
 export interface GameContent {

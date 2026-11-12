@@ -17,7 +17,7 @@ const { bodies: _bodies, final: _final, orbitGoals: _orbitGoals, ...shared } = S
 export const SCENE_2: SceneDescriptor = {
   ...shared,
   id: "Scene_2",
-  title: "Scene 2 — empty",
+  title: "Scene 2 — the engine", // ⭐ (2026-11-12, the owner: "Level 2 - Scene 2 - the engine"); still empty
   bodies: [FLOOR],
   final: null,
 };
