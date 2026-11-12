@@ -38,6 +38,7 @@ import { applyCamera, pinchPair, recomputeOrbitCentre, retargetGizmo, syncCentre
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit"; // ⏸ (2026-10-12) orbitRollSteps — with the commented-out way in
+import { edgeHoldDy } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
@@ -341,7 +342,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const shiftApproach = asmOn && st.orbitShift && !dxOnly;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
-    const fdy = orbitDy(db.dy, asmOn);
+    const fdy0 = orbitDy(db.dy, asmOn);
+    // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
+    if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
+    const fdy = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
     const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch * g.pitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
     const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;

@@ -87,6 +87,44 @@ export function tiltHeading(n: Vec3, yaw: number): number {
 /** ⭐ (F2c) a normal's horizontal part beyond this (sin ≈ 0.06°) is a slanted face's heading — below it the face is level (a box's cap: exactly 0). */
 export const TILT_SLANT_MIN = 1e-3;
 
+/**
+ * ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8 — the owner: *"just give an hysteresis of the dy: the dy upwards is blocked until a certain band is reached in
+ * the face beyond but dx and dy downwards are allowed (the reverse for dy if the pole-holding edge was at the nadir). This will also be OK in case of the
+ * cube of scene 1"*) **THE HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE**: leaving a tilted face over the edge AWAY from its heading (`heading`, the tilt's
+ * snapped one — the face beyond faces away from the camera: the roll back turns the camera round), the dy SIGN that crossed (`sign`, the finger's) is held
+ * until the gizmo is `band` deep in the face beyond, square to the edge (`edgeHoldDepth`) — dx and the other dy free. ⛔ Without it a finger still pushing
+ * the same way went straight back over the edge in the turned frame: the heptagon's ridge bounced the gizmo between its two top faces (60 back-and-forths
+ * in the walks). `null`: no hold (a near edge, a side edge, a level face beyond, no dy).
+ */
+export interface EdgeHold {
+  /** where the gizmo crossed */
+  readonly g0: Vec3;
+  /** into the face beyond, square to the edge (unit) */
+  readonly d: Vec3;
+  /** the dy sign held (the finger's that crossed) */
+  readonly sign: 1 | -1;
+}
+export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, g0: Vec3, sign: number): EdgeHold | null {
+  const h = Math.hypot(nExit[0], nExit[2]);
+  if (!(h > 1e-6) || sign === 0) return null;
+  if ((nExit[0] * Math.cos(heading) + nExit[2] * Math.sin(heading)) / h > -0.5) return null;
+  const e = cross(nTilted, nExit);
+  const le = Math.hypot(e[0], e[1], e[2]);
+  if (!(le > 1e-9)) return null;
+  let d = cross([e[0] / le, e[1] / le, e[2] / le], nExit);
+  if (dot(d, nTilted) > 0) d = [-d[0], -d[1], -d[2]];
+  const ld = Math.hypot(d[0], d[1], d[2]);
+  return { g0, d: [d[0] / ld, d[1] / ld, d[2] / ld], sign: sign > 0 ? 1 : -1 };
+}
+/** ⭐⭐⭐ (§8) how deep the gizmo `g` is in the face beyond, square to the crossed edge (m). */
+export function edgeHoldDepth(h: EdgeHold, g: Vec3): number {
+  return dot([g[0] - h.g0[0], g[1] - h.g0[1], g[2] - h.g0[2]], h.d);
+}
+/** ⭐⭐⭐ (§8) the finger's dy under the hold: its held sign none, the other whole. */
+export function edgeHoldDy(h: EdgeHold | null, dy: number): number {
+  return h !== null && Math.sign(dy) === h.sign ? 0 : dy;
+}
+
 /** ⭐ The turn about the world's vertical that adds `d` to every heading (the orbit's convention) — the press's swing. */
 export function headingTurn(d: number): Mat3 {
   const c = Math.cos(d);

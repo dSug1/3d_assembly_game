@@ -472,6 +472,10 @@ export interface SceneState {
    * `k` the share of the way off the facet (the roll back), `axis` the roll's last axis, `exit` the crossing seen (the world's frame next frame); `null`:
    * the world's frame.
    */
+  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
+  asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
+  /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */
+  asmDySign: number;
   asmTilt: {
     readonly id: number;
     readonly map: import("../input/orbit_tilt").Mat3;
@@ -498,6 +502,8 @@ export interface SceneState {
     exit: boolean;
     /** ⭐ (2026-11-10) the crossing off it is over a `b` end (a turn about the edge's line: the horizontal calm carried over), not across */
     exitAcross: boolean;
+    /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the tilt's snapped heading (`tiltHeading`) — leaving over the edge away from it sets the dy hold */
+    readonly heading: number;
   } | null;
   /** ⭐⭐⭐ (§9.4) the gizmo's relocation where a frame change moves it: its offset from the map's point, the share left (eased over the swing's time, or by the finger's travel after an exit) */
   asmGOff: { readonly v: Vec3; left: number; /** ⭐ (2026-11-10, the rebuild) always by time: its clock and duration */ timeMs: number; readonly durMs: number } | null;

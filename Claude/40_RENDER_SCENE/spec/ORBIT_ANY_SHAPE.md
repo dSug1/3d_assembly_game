@@ -121,3 +121,23 @@ no-jump bound); updated with their reasons: `facets.test.ts` (the horizontal hex
 The probes: every Chrome-launching probe without disk litter (the trial branch's fix brought here); `walk_probe.mjs` records the camera's axes, the
 piece's turn, the sections' points, the parts' planes, the frame's queries; `walk_rules.mjs` (R1 – R8), `walk_rope.mjs` (the tight rope),
 `walk_scenarios_any_shape.json`, `walk_scenarios_contact.json`.
+
+## 8. ✅ THE DY HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE (2026-11-12) — ⛔ no device close
+
+> *"just give an hysteresis of the dy: the dy upwards is blocked until a certain band is reached in the face beyond but dx and dy downwards are allowed
+> (the reverse for dy if the pole-holding edge was at the nadir). This will also be OK in case of the cube of scene 1 (there is the same issue when a dy
+> crosses the pole-holding face's far edge)."* — the owner
+
+**Why**: the heptagon's walks on the fixed code (`hepF1`, against `hep1`): the rope 11 536 → 0 runs off the surface, the green not a plane 12.7 → 2.9, the
+gizmo's leaps 159 → 12, the lines' map jumps 4 803 → 444, blocked 28 → 17, the top faces' tilts upside down 17 of 22 → 0 of 388 — but the piece's
+back-and-forths 11 → 60: on the front top face (tilted toward the front) dy up crossed the ridge; the back top face, tilted toward ITS heading (F2c),
+turned the camera round, and the finger still pushing up went straight back over the ridge.
+**The rule** (`edgeHoldAt`, `edgeHoldDepth`, `edgeHoldDy` in `input/orbit_tilt.ts`): leaving a tilted face over the edge AWAY from the tilt's heading
+(`asmTilt.heading` — the face beyond faces away from the camera, the roll back turns it round: the cube's far edges, the heptagon's ridge, the nadir's far
+edge; never a near or a side edge), the dy sign that crossed (the finger's last, `asmDySign`) is HELD until the gizmo is `edgeHoldMm` (30 mm, a slider in
+☰ → CAMERA → CAMERA ORBIT AROUND CENTER — a guess) deep in the face beyond, SQUARE to the edge (a dx along the edge does not release it); dx and the
+other dy free; the coast stopped at the crossing; released too when the assembly's orbit is off. ⭐ `Scene_1` too, by the owner's choice.
+⚠ What is left upside down: a few frames on the roll back after the BOTTOM face's far edge (that tilt's heading the camera's — a level face) — the
+far-edge roll back accepted on the cube (`POLAR_ORBIT_CLEANUP.md` §9.16), more often met on the heptagon's lower faces.
+**Vectors**: `orbit_any_shape.test.ts` (+3: set only over a far edge, the sign held and the depth square to the edge, the wiring); two source pins.
+**1792** with `Scene_0bis` merged.
