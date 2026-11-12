@@ -816,12 +816,13 @@ export function createGreenBox(st: SceneState): void {
   // in scene 0). Dimensions = 150 % dimensions of the piece 17"*, then *"divide the height of the green piece by 2"* — Piece17's
   // core × 1.5, the height halved, the length cut by 25 % (103.5 × 41.25 × 45 mm in `Scene_1`, `greenPyramidSizeM`), its
   // top tapered to half (`OBJECT_TOP_SCALE`, `Scene_0`'s pyramid) by `taperMesh`. ⛔ It was the smallest yellow piece's box.
-  const piece17 = bodyNamed(st.sceneSpec.bodies, "Piece17");
-  if (piece17 === null) {
+  // ⭐ (2026-11-12) or the scene's own reference size (`orbitPieceRefDims` — `Scene_0`: Piece17's, read from `Scene_1`)
+  const ref = bodyNamed(st.sceneSpec.bodies, "Piece17")?.dims ?? st.sceneSpec.orbitPieceRefDims ?? null;
+  if (ref === null) {
     st.greenBox = null;
     return;
   }
-  const [w, h, d] = greenPyramidSizeM(piece17.dims, st.sceneSpec.unitM ?? 1);
+  const [w, h, d] = greenPyramidSizeM(ref, st.sceneSpec.unitM ?? 1);
   const box = CreateBox("green-box", { width: w, height: h, depth: d }, st.scene);
   if (!taperMesh(box, OBJECT_TOP_SCALE)) st.untaperedBodies.push("green-box");
   const mat = new StandardMaterial("green-box-mat", st.scene);

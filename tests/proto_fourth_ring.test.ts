@@ -10,7 +10,7 @@ import { sceneConfig } from "../src/input/scene_rig";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "../src/core/game_structure";
 import { SCENE_1 } from "../src/content/scene_1";
 import { RIG_3M } from "./helpers/rig_3m"; // ⭐ (2026-10-12) the rig these vectors were written on
-import { SCENE_0 } from "../src/content/scene_0";
+import { WORKBENCH } from "./helpers/workbench";
 
 const ring = (cfg: typeof DEFAULT_CONFIG, v: number) => {
   const o = orbitOffset(cfg, 0, v, 1).offsetM;
@@ -51,11 +51,11 @@ describe("⭐⭐ prototype — a fourth orbit ring", () => {
     expect(() => validateGestureConfig(cfg)).not.toThrow();
   });
 
-  it("⭐ OPTIONAL: a scene without it keeps its three rings exactly (Scene_0 = the defaults); the JSON seam keeps and checks it", () => {
+  it("⭐ OPTIONAL: a scene without it keeps its three rings exactly (the workbench fixture = the defaults); the JSON seam keeps and checks it", () => {
     expect(DEFAULT_CONFIG.orbitLowerRingOn).toBe(0);
-    expect(sceneConfig(DEFAULT_CONFIG, SCENE_0.orbit).orbitLowerRingOn).toBe(0);
+    expect(sceneConfig(DEFAULT_CONFIG, WORKBENCH.orbit).orbitLowerRingOn).toBe(0);
     // with the flag off, the lower ring's values change nothing
-    const off = sceneConfig(DEFAULT_CONFIG, SCENE_0.orbit);
+    const off = sceneConfig(DEFAULT_CONFIG, WORKBENCH.orbit);
     const moved = { ...off, orbitLowerRadiusM: 2.9, orbitLowerHeightM: -0.9 };
     for (const v of [0, 0.2, 0.5, 0.8, 1]) expect(orbitOffset(moved, 0.7, v, 1.3).offsetM).toEqual(orbitOffset(off, 0.7, v, 1.3).offsetM);
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_1)).orbit).toEqual(SCENE_1.orbit);

@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { bodyNamed, greenPyramidSizeM } from "../src/input/green_box";
 import { SCENE_1 } from "../src/content/scene_1";
 import { SCENE_0 } from "../src/content/scene_0";
+import { SCENE_2 } from "../src/content/scene_2";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
 
@@ -177,8 +178,12 @@ describe("⭐⭐ prototype — the green piece is a PYRAMID, Piece17 × 150 %, i
     [0.1035, 0.04125, 0.045].forEach((v, i) => expect(s[i]!).toBeCloseTo(v, 12));
     expect(bodyNamed(SCENE_0.bodies, "Piece17")).toBeNull();
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/bodyNamed\(st\.sceneSpec\.bodies, "Piece17"\)/);
-    expect(w).toMatch(/greenPyramidSizeM\(piece17\.dims, st\.sceneSpec\.unitM \?\? 1\)/);
+    // ⭐ (2026-11-12) or the scene's own reference size (`Scene_0`, the heptagon: Piece17's, read from Scene_1); neither (`Scene_2`): none
+    expect(w).toContain('const ref = bodyNamed(st.sceneSpec.bodies, "Piece17")?.dims ?? st.sceneSpec.orbitPieceRefDims ?? null;');
+    expect(w).toContain("greenPyramidSizeM(ref, st.sceneSpec.unitM ?? 1)");
+    expect(SCENE_0.orbitPieceRefDims).toEqual(p17.dims);
+    expect(bodyNamed(SCENE_2.bodies, "Piece17")).toBeNull();
+    expect(SCENE_2.orbitPieceRefDims).toBeUndefined();
     expect(w).toMatch(/taperMesh\(box, OBJECT_TOP_SCALE\)/);
   });
 });

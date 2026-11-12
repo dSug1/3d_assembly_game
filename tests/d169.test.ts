@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { SCENE_1_TABLE as SCENE_1, SCENE_1_SHIFT_Y } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
 import { SCENE_0 } from "../src/content/scene_0";
+import { WORKBENCH } from "./helpers/workbench";
 import { parseSceneDescriptor, serializeSceneDescriptor } from "@core/game_structure";
 import { bootOrbitCentre } from "@input/scene_rig";
 
@@ -37,8 +38,9 @@ describe("⭐⭐ `D169` — Scene_1's floor top centre is the origin", () => {
     expect(bootOrbitCentre(SCENE_1.orbit, [0, 0, 0])).toEqual([0, SCENE_1_SHIFT_Y * SCENE_1.unitM!, 0]);
   });
 
-  it("⛔ a scene without a centre keeps the fallback — Scene_0 boots about the origin as before", () => {
-    expect(bootOrbitCentre(SCENE_0.orbit, [0, 0, 0])).toEqual([0, 0, 0]);
+  it("⛔ a rig without a centre keeps the fallback (the workbench fixture's: the origin, as Scene_0 booted until 2026-11-12)", () => {
+    expect(bootOrbitCentre(WORKBENCH.orbit, [0, 0, 0])).toEqual([0, 0, 0]);
+    expect(SCENE_0.orbit?.centreM).toBeDefined(); // ⭐ (2026-11-12) the heptagon's centre
     expect(bootOrbitCentre(undefined, [1, 2, 3])).toEqual([1, 2, 3]);
   });
 

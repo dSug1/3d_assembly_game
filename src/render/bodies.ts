@@ -9,6 +9,8 @@ import { type MoveVerdict } from "../core/collision";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
+import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -18,6 +20,7 @@ import { type Quat } from "../core/vec";
 import { setWorldPlacement, worldPlacementOf, type ObjectId } from "../core/object_model";
 import { type Placed } from "../core/mate_connector";
 import { taperTop } from "../core/frustum";
+import { apexAtTop, apexTurn, boxFit } from "../core/prism";
 import { OBJECT_DIMS_M } from "../core/scene_dims";
 import { shapeFromVertices, type ConvexShape } from "../core/collision_shape";
 import { meshTopology, type MeshTopology } from "../core/mesh_topology";
@@ -56,6 +59,34 @@ export function taperMesh(m: Mesh, topScale: number) : boolean {
   return true;
 }
 
+/**
+ * ⭐ (2026-11-12, the owner: *"an heptagon extruded horizontally"*) A RIGHT PRISM: `core/prism.ts`'s outline (in the body's x–y plane, its bottom edge
+ * flat, its bounding box `dims[0]` × `dims[1]`) extruded along the body's z by `dims[2]`, centred. ⭐ Built by Babylon's own CYLINDER builder (its winding
+ * kept — `taperMesh`'s lesson; the turquoise piece's way): `n` sides, its axis turned from y onto z, then turned about z until a VERTEX is at the top
+ * (`prismFit` — whichever way the builder starts its ring), then stretched onto the box (`prismFit`'s scale and shift). ⭐ FLAT shaded after the bake (a
+ * smooth-shaded prism reads as a cylinder — defect 68; normals recomputed from the stretched positions). ⚠ A box when the fit is degenerate.
+ */
+function prismMesh(st: SceneState, name: string, sides: number, dims: readonly [number, number, number]): Mesh {
+  const m = CreateCylinder(name, { height: 2, diameter: 2, tessellation: sides }, st.scene);
+  m.bakeTransformIntoVertices(Matrix.RotationX(Math.PI / 2));
+  const at = () => m.getVerticesData(VertexBuffer.PositionKind) ?? [];
+  const turn = apexTurn(at(), sides);
+  if (turn !== null) {
+    m.bakeTransformIntoVertices(Matrix.RotationZ(turn));
+    // ⚠ the engine's sense of a turn is not assumed: turned the other way, the apex is undone and turned the right way
+    if (!apexAtTop(at())) m.bakeTransformIntoVertices(Matrix.RotationZ(-2 * turn));
+  }
+  const fit = turn === null || !apexAtTop(at()) ? null : boxFit(at(), dims);
+  if (fit === null) {
+    m.dispose();
+    return CreateBox(name, { width: dims[0], height: dims[1], depth: dims[2] }, st.scene);
+  }
+  m.bakeTransformIntoVertices(Matrix.Translation(-fit.centre[0], -fit.centre[1], -fit.centre[2]).multiply(Matrix.Scaling(fit.scale[0], fit.scale[1], fit.scale[2])));
+  m.convertToFlatShadedMesh();
+  m.refreshBoundingInfo();
+  return m;
+}
+
 export function make(st: SceneState, name: string,
   at: Vector3,
   rgb: [number, number, number],
@@ -78,9 +109,11 @@ export function make(st: SceneState, name: string,
    * ⭐⭐ `D125`: the COLOURED CORE's extents, when the body has a transparent contour. The body (mesh,
    * collision shape, faces) is `dims`; the core is a child drawn inside it, and never picked.
    */
-  coreDims?: readonly [number, number, number],) {
+  coreDims?: readonly [number, number, number],
+  /** ⭐ (2026-11-12) a right PRISM on a regular polygon of this many sides (`core/prism.ts`) instead of a box; `dims` its bounding box. */
+  prismSides?: number,) {
   // ⚠ `width/height/depth`, not `size` — the objects are no longer cubes.
-  const mesh = CreateBox(
+  const mesh = prismSides !== undefined ? prismMesh(st, name, prismSides, dims) : CreateBox(
     name,
     { width: dims[0], height: dims[1], depth: dims[2] },
     st.scene,

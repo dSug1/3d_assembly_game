@@ -12,7 +12,7 @@ import { acceptedOrientations, bestRigidFit, goalReport, type Pose } from "@core
 import { parseSceneDescriptor, serializeSceneDescriptor, resolveBootOrientation } from "@core/game_structure";
 import { add, IDENTITY, qAngle, qconj, qFromAxisAngle, qmul, qRotate, scale, type Quat, type Vec3 } from "@core/vec";
 import { SCENE_1_TABLE as SCENE_1 } from "../src/content/scene_1"; // ⭐ (2026-10-18) the owner's table of boxes — the seated frusta have their own vectors (`scene_1_frusta.test.ts`)
-import { SCENE_0 } from "../src/content/scene_0";
+import { WORKBENCH } from "./helpers/workbench";
 import { sceneConfig } from "@input/scene_rig";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
@@ -151,8 +151,8 @@ describe("⭐⭐⭐ `D131` — each scene carries its own orbit rig", () => {
     expect(() => validateGestureConfig(c)).not.toThrow();
   });
 
-  it("⭐ Scene_0's rig IS the config default — its scene says so itself (bottom ring −1.2 m since 2026-09-28)", () => {
-    const c = sceneConfig(DEFAULT_CONFIG, SCENE_0.orbit);
+  it("⭐ the workbench's rig (Scene_0's until 2026-11-12, a fixture now) IS the config default (bottom ring −1.2 m since 2026-09-28)", () => {
+    const c = sceneConfig(DEFAULT_CONFIG, WORKBENCH.orbit);
     expect([c.orbitTopRadiusM, c.orbitMiddleRadiusM, c.orbitBottomRadiusM]).toEqual([1.0, 0.36, 0.5]);
     expect(c).toEqual(DEFAULT_CONFIG);
   });
