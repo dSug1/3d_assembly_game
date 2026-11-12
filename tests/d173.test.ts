@@ -39,7 +39,7 @@ describe("⭐⭐⭐ `D173` — the demo plan is loaded only by the demo level", 
   });
 
   it("⭐ the demo level carries the loader; the other levels none", () => {
-    expect(levelsOf(GAME_CONTENT).map((l) => l.demoPlan !== undefined)).toEqual([false, false, true, false]);
+    expect(levelsOf(GAME_CONTENT).map((l) => l.demoPlan !== undefined)).toEqual([false, false, true, false, false]);
   });
 
   it("⭐⭐ `sceneReady(2)` fetches the plan and boots the pieces at its start poses", async () => {

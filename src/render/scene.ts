@@ -262,6 +262,7 @@ export function createScene(
       b.topScale,
       (b.margin ?? 0) > 0 ? [b.dims[0] * unitM, b.dims[1] * unitM, b.dims[2] * unitM] : undefined,
       b.prismSides,
+      (b.prismTip ?? 0) * unitM,
     );
   }
 
