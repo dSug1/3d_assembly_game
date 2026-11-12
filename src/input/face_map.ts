@@ -24,7 +24,7 @@
  */
 import type { Vec3 } from "../core/vec";
 import type { ShellBox } from "./orbit_shell";
-import type { Rect2 } from "./contact";
+import type { Rect2 } from "./hover";
 
 /** ⭐ The default merge angle (deg) — `facetMergeDeg`'s default: `Scene_1`'s slanted block (15° off −z) is the front's. */
 export const MAP_AXIS_DEG = 20;

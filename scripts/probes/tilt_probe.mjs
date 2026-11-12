@@ -5,7 +5,7 @@
 // at the exit and after, the exit's frame. Chrome hygiene as `page_eval.mjs` (its own profile, removed in `finally`; a watchdog; the tree killed on Windows).
 //   URL=…  BOOT_MS=15000  ONLY=name (one scenario)  STEP=3 (px a frame)  OUT=file.json (the frames)
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -14,13 +14,7 @@ const env = process.env;
 const port = 9300 + Math.floor(Math.random() * 600);
 const prof = join(tmpdir(), `tilt_probe_profile_${process.pid}`);
 const chromePath = env.CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
-// ⭐⭐ (2026-11-12) NO DISK LITTER: Chrome's own temp files (the component updater's `Cr24` packages, `scoped_dir*`, the url fetcher's folder) went to %TEMP%
-// itself — outside the profile removed in `finally`, and a `taskkill /F` skips Chrome's own cleanup (20 files, ~4 MB, one session). Now its TEMP / TMP are
-// INSIDE the profile, and the updater and the background network are off.
-const profTmp = join(prof, "tmp");
-mkdirSync(profTmp, { recursive: true });
-const QUIET_FLAGS = ["--disable-component-update", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--disable-default-apps", "--disable-extensions", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter"];
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, "about:blank"], { stdio: "ignore" });
 const killChrome = () => (process.platform === "win32" && chrome.pid !== undefined ? spawnSync("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" }) : chrome.kill());
 function removeProfile() {
   for (let i = 0; i < 6; i++) {
@@ -34,11 +28,11 @@ function removeProfile() {
   }
 }
 const watchdog = setTimeout(() => {
-  console.error(`WATCHDOG: past ${+(env.WATCHDOG_MIN ?? 30)} min`);
+  console.error("WATCHDOG: past 15 min");
   killChrome();
   removeProfile();
   process.exit(2);
-}, +(env.WATCHDOG_MIN ?? 30) * 60_000); // ⭐ (2026-11-12) 30 min by default — the 38 scenarios took 897 s of the old 15 min on a loaded machine
+}, 15 * 60_000);
 watchdog.unref();
 
 const D = Math.PI / 180;

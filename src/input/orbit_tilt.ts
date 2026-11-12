@@ -126,6 +126,11 @@ export function tiltDir(R: Mat3 | null, v: Vec3): Vec3 {
   return R === null ? v : mulM(R, v);
 }
 
+/** ⭐ …and a world direction in the frame. */
+export function untiltDir(R: Mat3 | null, v: Vec3): Vec3 {
+  return R === null ? v : mulT(R, v);
+}
+
 /** ⭐ A face in F: its normal, centre and triangles turned by `Rᵀ` (`R`: F → world). */
 export function tiltFaces(faces: readonly MapFace[], R: Mat3): MapFace[] {
   return faces.map((f) => ({

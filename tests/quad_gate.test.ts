@@ -52,9 +52,9 @@ describe("⭐⭐⭐ the resting face's contour (2026-10-15, the owner: *\"Hide t
     expect(g).toContain('import { RESTING_FACE_COLOUR } from "./colours";');
     expect(g).toContain("contour.color = RESTING_FACE_COLOUR.clone();");
     expect(g).toContain("xray.color = RESTING_FACE_COLOUR.clone();");
-    expect(g).toContain("const shown = restingContourShown(st.restingQuads?.shown === true, st.contactReady !== null); for (const c of fill.getChildMeshes(true)) c.isVisible = shown;"); // ⭐ (2026-11-12) the contact readout (the slide removed)
+    expect(g).toContain("const shown = restingContourShown(st.restingQuads?.shown === true, st.hoverReady !== null || st.hover !== null); for (const c of fill.getChildMeshes(true)) c.isVisible = shown;");
     expect(g).not.toContain("for (const c of fill.getChildMeshes(true)) c.isVisible = true;");
-    const h = code("render/contact_wiring.ts"); // ⭐ (2026-11-12) the readout, the slide removed
+    const h = code("render/hover_wiring.ts");
     expect(h).toContain("const READY_COLOUR = RESTING_FACE_COLOUR;"); // ⭐ one colour, one place
     expect(h).toContain('import { RESTING_FACE_COLOUR } from "./colours";');
     expect(h).not.toMatch(/import \{[^}]*RESTING_FACE_COLOUR[^}]*\} from "\.\/green_box_wiring"/);

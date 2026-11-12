@@ -3,7 +3,7 @@
 > **STATUS** · live · **OWNS** · `Assets/Blender/`: every `.blend`, the scripts that build it, and the
 > conventions between a Blender file and a game scene
 > **READ IF** · you are opening, editing or regenerating a `.blend`, or importing one into a scene
-> **LAST VERIFIED** · 2026-09-28
+> **LAST VERIFIED** · 2026-11-12 (the file's path)
 
 ⭐ The import itself — the glTF loader, `BodySpec.source`, the material policy — is row `3D4` and its
 dossier [`MATERIALS_AND_IMPORT.md`](MATERIALS_AND_IMPORT.md); ⛔ **not built**. Collision shapes authored
@@ -14,7 +14,7 @@ is the ASSETS: what exists and how it was made.
 
 | file | what |
 |---|---|
-| `Assets/Blender/scene_2.blend` | ⭐ `Scene_1`'s painting rebuilt in Blender — the goal table, the frozen floor, the three lights (§2) |
+| `Assets/Blender/World0_Scene1_painting/world0_scene_1.blend` | ⭐ `Scene_1`'s painting rebuilt in Blender — the goal table, the frozen floor, the three lights (§2); `scene_2.blend` until 2026-11-12 (§7) |
 | `Assets/Blender/scripts/build_painting.py` | builds the painting and the floor from `src/content/scene_1.ts` (idempotent) |
 | `Assets/Blender/scripts/scene_1_lights.ts` | prints `Scene_1`'s lights as JSON, computed by the game's own `core/lighting.ts` |
 | `Assets/Blender/scripts/add_lights.py` | adds the lights, the world fill and background, from that JSON (idempotent) |
@@ -23,7 +23,7 @@ is the ASSETS: what exists and how it was made.
 ⚠ `.blend` is the SOURCE the owner edits; the game will load a `.glb` exported from it (`3D4`). A browser
 cannot read a `.blend`.
 
-## 2. ⭐⭐ `scene_2.blend` — `Scene_1` rebuilt, to be imported as `Scene_2`
+## 2. ⭐⭐ `World0_Scene1_painting/world0_scene_1.blend` (was `scene_2.blend`) — `Scene_1` rebuilt, to be imported as `Scene_2`
 
 > *"instead of the two cubes, reproduce in the blender file the scene_1 painting. Remember that we
 > created rectangular pieces, and inside those pieces there was a smaller part which rendered the part"*
@@ -104,9 +104,9 @@ world fill is not Babylon's sky/ground hemisphere (up- and down-facing faces dif
 
 ```bash
 B="/c/Program Files/Blender Foundation/Blender 3.4/blender.exe"   # the owner's install
-"$B" -b Assets/Blender/scene_2.blend --python Assets/Blender/scripts/build_painting.py
+"$B" -b Assets/Blender/World0_Scene1_painting/world0_scene_1.blend --python Assets/Blender/scripts/build_painting.py
 npx vite-node Assets/Blender/scripts/scene_1_lights.ts > "$TEMP/lights.json"
-LIGHTS_JSON="$(cygpath -w "$TEMP/lights.json")" "$B" -b Assets/Blender/scene_2.blend --python Assets/Blender/scripts/add_lights.py
+LIGHTS_JSON="$(cygpath -w "$TEMP/lights.json")" "$B" -b Assets/Blender/World0_Scene1_painting/world0_scene_1.blend --python Assets/Blender/scripts/add_lights.py
 ```
 
 * Headless (`-b`), and every script sets `save_version = 0` so no `.blend1` is left beside the file.
@@ -125,6 +125,8 @@ LIGHTS_JSON="$(cygpath -w "$TEMP/lights.json")" "$B" -b Assets/Blender/scene_2.b
    are set on every material now.
 3. Replaced by `Scene_1`'s painting (§2), then the frozen plate's flag and the lights (§4).
 4. Renamed `scene_2.blend` (`git mv`) — the owner's `Scene_2` will import it and be compared with `Scene_1`.
+5. ⭐ (2026-11-12, the owner) Moved into its own folder `Assets/Blender/Scene1_painting/` and renamed `scene_1.blend`.
+6. ⭐ (2026-11-12, the owner) Renamed again: the folder `World0_Scene1_painting/`, the file `world0_scene_1.blend` (the world in the name).
 
 ## 8. ⭐ `D169` — the floor's top centre is the origin (2026-09-29)
 

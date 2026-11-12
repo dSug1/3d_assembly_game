@@ -8,10 +8,6 @@ whole — the owner has driven it on the device through several rounds and repor
 
 ## 0. THE HOVER AS IT STANDS (2026-10-14, `2a54a92`) — read this first
 
-⛔⛔⛔ **2026-11-12 — THE SLIDE IS REMOVED WHOLE (step 1 built)** (the owner: *"the slide is not required at all any longer because the feature of pan of the piece is
-already available through the tilted-pole orbit"*): the decisions, what is kept (the goal capture, the approach, the contact readout as display only, the
-way out's collision check), the probe and the open gain → [`CLOSE_IN_CONTACT.md`](CLOSE_IN_CONTACT.md). Everything below is the record.
-
 **What it is**: the fine placement of the orbited piece (green / turquoise) on a part's face, after the orbit's approach and the quads' turn;
 the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 

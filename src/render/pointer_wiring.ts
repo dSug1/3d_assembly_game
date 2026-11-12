@@ -12,14 +12,16 @@ import { orientTapShown, restingQuadPointer, shownDirection } from "./orient_cub
 import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
 import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_wiring";
 import { worldPlacementOf } from "../core/object_model";
+import { hoverDragStep, hoverOrbitStep, hoverPressNote, hoverRelease } from "./hover_wiring";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/pinch";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
-import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
+import { isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
+import { slideArmedByOrbit } from "../input/hover";
+import { approachInput, approachRelease, assemblyOn, leavesCone, tiltClampStep, tiltOnPress } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -95,13 +97,14 @@ export function installPointerHandler(st: SceneState): void {
       st.eventGaps.set(e.pointerId, { last: s.t, gaps: seen?.gaps ?? [] });
     }
     if (info.type === PointerEventTypes.POINTERUP) {
+      hoverRelease(st, e.pointerId); // ⭐ (2026-10-14) the finger lifted: the hover ends — back to the orbit
       // ⭐⭐ (2026-10-13, §11nonies) the press on a placed part released: a TAP moves the gizmo there (`orbitTargetOnRelease`), a drag does not
       const pc = st.pendingPartCentre;
       if (pc !== null && pc.pointerId === e.pointerId) {
         st.pendingPartCentre = null;
         const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
-        // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
-        if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
+        // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw — ⭐ (2026-11-01) not in the slide mode: the gizmo rides the slide
+        if (to !== null && st.hover === null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
       }
       st.eventGaps.delete(e.pointerId);
       st.pointerTypeOf.delete(e.pointerId);
@@ -137,6 +140,8 @@ export function installPointerHandler(st: SceneState): void {
         const n = pick?.getNormal(true);
         const face = n && st.greenBox !== null ? faceFromPickedNormal(st.world, st.greenBox.name, [n.x, n.y, n.z] as Vec3) : null;
         st.pieceFaceTap = restingFaceTap(onOrbited, true, false) && face !== null ? { pointerId: e.pointerId, faceId: face.faceId } : null;
+        // ⭐⭐ (2026-10-14, the HOVER) the first touch on the piece: its drag may slide (`hoverDragStep`, decided past the tap's slop)
+        if (holdRole === null) hoverPressNote(st, e.pointerId, s);
       }
       st.pointerTypeOf.set(e.pointerId, e.pointerType);
       // ⛔⛔ (2026-11-02, *"remove the translation and the rotation of the parts … I will only keep orbit and sliding"*) — NO PRESS HOLDS A PART:
@@ -204,8 +209,8 @@ export function installPointerHandler(st: SceneState): void {
         return;
       }
       if (st.router.outside().length === 2) updatePinch(st);
-      // §2 rule 1: ONE touchpoint — orbit (⛔ 2026-11-12 the slide removed: a drag from the piece orbits too)
-      else if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);
+      // §2 rule 1: ONE touchpoint — orbit. ⭐⭐ (2026-10-14) …unless it pressed ON the orbited piece and slides
+      else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);
     } else if (info.type === PointerEventTypes.POINTERUP) {
       st.router.release(e.pointerId);
       // ⛔ A pinch needs BOTH touchpoints: lifting one ends it.
@@ -263,13 +268,14 @@ export function installPointerHandler(st: SceneState): void {
 }
 
 /**
- * ⛔⛔ (2026-11-04, the audit) **THE WINDOW LOST: EVERY POINTER RELEASED** — as its POINTERUP would have (the hold, the approach's coast, the
+ * ⛔⛔ (2026-11-04, the audit) **THE WINDOW LOST: EVERY POINTER RELEASED** — as its POINTERUP would have (the hold, the hover, the approach's coast, the
  * gesture's end), then the router cleared, the pinch ended, the orbit drag's tracker dropped. ⚠ No tap is read: a lost release is never a tap.
  */
 export function forgetPointers(st: SceneState): void {
   st.orbitApproachKey = false;
   for (const p of st.router.all()) {
     holdRelease(st, p.id, false);
+    hoverRelease(st, p.id);
     st.episodeKey.delete(p.id);
     st.eventGaps.delete(p.id);
     st.pointerTypeOf.delete(p.id);
@@ -343,16 +349,20 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
-    // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): around the assembly the orbit's yaw and pitch per mm of finger scaled
-    // down with the piece's distance to the gizmo — full from `orbitGainFullM` out, at the contact the gizmo `orbitContactMmPerMm` on the surface per mm
-    const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm, st.asm?.radius ?? 0) : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    // ⭐ (2026-10-28) locked close in: a step further out of the face's cone is refused (the piece never goes behind the face)
+    if (leavesCone(st, yawBefore, vBefore, st.orbit.yaw, st.orbit.elevation)) st.orbit.reset(yawBefore, vBefore);
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);
+    // ⭐ (2026-10-14) the orbit is back: the piece-only hover offset dropped, the camera out of the hover view with this travel
+    hoverOrbitStep(st, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1));
     // ⭐⭐⭐ (2026-11-11) the orbit's finger travel (the approach's excluded): the automatic tilt's pending ends at its first millimetre, its blend paced by it
     if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
+    // ⭐⭐⭐ (2026-11-01) an orbit step arms the slide mode again (`slideArmedAfter`; A + drag's is the approach's)
+    // ⭐⭐⭐ (2026-11-09, F3) never by the drag the slide let go of at the edge (`slideArmedByOrbit`) — it would latch again under the same finger
+    if (!shiftApproach) st.slideArmed = slideArmedByOrbit(st.slideArmed, Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1), pointerId, st.slideLetGo);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;
@@ -430,8 +440,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   } else st.orbit.drag(dx, dy);
   // ⭐ The centre migrates by the SAME finger travel that drives the orbit, so the camera arrives as the gesture progresses
   // rather than on a timer.
-  // ⭐⭐ (2026-10-17) …but while the piece's place is solved, by the travel the solver HONOURS — the frame applies it (`gizmoBlendTravel`)
-  if (pieceSolveRuns(st)) {
+  // ⭐⭐ (2026-10-17) …but while the piece's place is solved (no hover), by the travel the solver HONOURS — the frame applies it (`gizmoBlendTravel`)
+  if (pieceSolveRuns(st) && st.hover === null) {
     const p = st.gizmoTravelPending ?? { mm: 0, mmX: 0, mmY: 0 };
     st.gizmoTravelPending = { mm: p.mm + Math.hypot(dx, dy) / mmToPx(1), mmX: p.mmX + Math.abs(dx) / mmToPx(1), mmY: p.mmY + Math.abs(dy) / mmToPx(1) };
   } else st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));

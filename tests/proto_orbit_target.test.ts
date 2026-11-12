@@ -51,7 +51,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // ⭐ (2026-10-13, §11nonies) NOTED at the press, moved at a TAP's release
     expect(p).toContain("st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: hitId ?? null, x: s.x, y: s.y, t: s.t } : null;"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
     expect(p.replace(/\s+/g, " ")).toContain("const to = orbitTargetOnRelease(pc.target, isTapRelease(pc.t, pc.x, pc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop))); "); // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
-    expect(p).toContain("if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⛔ (2026-11-12) the slide removed
+    expect(p).toContain("if (to !== null && st.hover === null) retargetGizmo(st, to, pc.normal, pc.host ?? null);"); // ⭐ (2026-11-01) not in the slide mode
     expect(p).not.toContain("st.centreBlend.retarget(newTarget);");
   });
 
@@ -63,7 +63,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     const p = code("render/pointer_wiring.ts");
     // ⛔ (2026-11-02, `d8134eb`) one step, two callers: a single finger anywhere — a part is empty space — and the held second touch's first
     expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(2);
-    expect(p).toContain("else if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);"); // ⛔ (2026-11-12) no hover step first
+    expect(p).toContain("else if (st.router.outside().length === 1 && !hoverDragStep(st, e.pointerId, s, prev)) orbitDragStep(st, e.pointerId, s, prev);");
     expect(p).not.toContain("lockedInGoal");
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
     // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only

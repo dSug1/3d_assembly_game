@@ -20,6 +20,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, TapHistory, MotionTracker, type FollowState } from "../input";
+import type { Sample } from "../input/motion";
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
@@ -226,22 +227,123 @@ export interface SceneState {
   pieceSolveQueries: number;
   /** ⭐ (2026-10-14) the last orbit solve met a part — slid along it or was stopped (the orbit sway's least angle). */
   pieceTouching: boolean;
+  /** ⭐⭐ (2026-10-14, the HOVER) the hover in progress: its finger, the contact face's normal and its plane's axes, where it began (the piece's
+   * anchor, the gizmo, the piece-only offset), the solved offset on the plane (m) and the part touched. */
+  hover: {
+    /** ⭐⭐⭐ (2026-11-01) the finger sliding — `null` in the SLIDE MODE with no finger on it (the mode stays on; the next drag takes it) */
+    pointerId: number | null;
+    /** ⭐ (2026-11-01) the hosting face's plane (`n · p`), the slide mode's exit reads the resting face's distance to it (`slideExits`) */
+    level: number;
+    /** ⭐ (2026-11-01) the approach when the slide began: the solve's origin carried by the approach since (`hoverSolve`) */
+    approach0: number;
+    n: import("../core/vec").Vec3;
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    origin: import("../core/vec").Vec3;
+    u: number;
+    v: number;
+    /** ⭐ (2026-10-14, the hover's second audit) the finger's target on the plane, solved once a frame (`hoverSolve`) — what the work cap left of it kept */
+    pending: [number, number];
+    /** ⭐⭐ (2026-10-14) the finger's deadbanded place on the glass — each step read as two rays from the camera of the moment (`hoverFingerStep`) */
+    finger: [number, number];
+    /** ⭐ (2026-10-16) the finger's smoothed glass speed (mm/s) — the kinetic friction's (`hoverFrictionMmS`) */
+    speedMmS: number;
+    /** ⭐⭐ (2026-10-14) the coloured triangles of every face in the hosting face's plane — the resting face over none of them ends the hover */
+    /** ⭐⭐⭐ (2026-10-15) the drawn boundary the resting face's centre stays in (`coplanarBoundary`); `null`: none found — unbounded */
+    bound: { a: import("../core/vec").Vec3; b: import("../core/vec").Vec3; onFace: number; rects: import("../input/hover").Rect2[] } | null;
+    /** ⭐ (2026-10-14) the parts wholly behind the contact face's plane — out of the hover's checks (coplanar faces slid across) */
+    behind: Set<string>;
+  } | null;
+  /** ⭐ (2026-10-14) a first touch pressed on the orbited piece — its drag may hover (decided past the tap's slop). */
+  hoverPress: { pointerId: number; x: number; y: number } | null;
+  /** ⭐ (2026-10-14) the hover finger's own deadband (the orbit band's) and its sway trigger. */
+  hoverBand: { pointerId: number; band: import("../input").MotionTracker; sway: import("../input").SwayWatcher } | null;
+  /** ⭐ (2026-10-14) the hover's drawn offset following the solved one (`u`, `v`) on the part translation's follower; the plane, the gizmo or piece. */
+  hoverFollow: {
+    /** ⭐ (2026-11-01) the slide view's target when the slide began — the gizmo's slide carries it (`applyHoverModel`) */
+    view0: import("../core/vec").Vec3 | null;
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    n: import("../core/vec").Vec3;
+    settleM: number;
+    settleT0: number;
+    centre0: import("../core/vec").Vec3;
+    offset0: import("../core/vec").Vec3;
+    gizmo: boolean;
+    u: number;
+    v: number;
+    fu: import("../input/follow").FollowState;
+    fv: import("../input/follow").FollowState;
+    /** ⭐ (2026-10-16) the solved place's smoothed velocity and its last value — the phantom lead's (`hoverLeadMs`) */
+    vu: number;
+    vv: number;
+    lu: number;
+    lv: number;
+    /** ⭐ (2026-10-14, the hover's audit) the last solved step on the plane — the drawn lag is kept behind it (`hoverDrawLag`) */
+    du: number;
+    dv: number;
+  } | null;
+  /** ⭐⭐ (2026-10-14, the hover's audit) the hover's DRAWN lag (world, m): added to the piece's MESH only (`anchorFrame`) and taken off again when the model reads the mesh (`syncOrbitPieceModel`) — the model is the solved place. */
+  hoverDraw: import("../core/vec").Vec3 | null;
+  /** ⭐ (2026-10-14) the way in's DRAWN offset easing after the solved one (`wayInDrawFrame`), and its rate. */
+  wayInDrawn: { x: import("../core/vec").Vec3; v: import("../core/vec").Vec3 } | null;
+  /** ⭐ (2026-10-14) the piece-only hover offset (`hoverGizmoMove` 0), and whether the orbit dropped it (eased out). */
+  hoverOffset: import("../core/vec").Vec3 | null;
+  /** ⭐⭐ (2026-10-14, the owner: *"After a hover which has moved the piece, the orbit shall way in smoothly"*) the orbit's WAY IN taking the piece-only offset back (`HoverWayIn`); `null`: none on. */
+  hoverWayIn: import("../input/hover").HoverWayIn | null;
+  /** ⭐ (2026-10-14) the HOVER VIEW the camera eases toward (its progress 0 … 1, its target and the face's frame); `null`: the orbit's camera. */
+  hoverView: {
+    progress: number;
+    /** ⭐ (2026-10-14) the share SHOWN — easing after `progress` on the orbit's spring — its rate, and when it was last eased */
+    shown: number;
+    shownVel: number;
+    at: number;
+    target: import("../core/vec").Vec3;
+    n: import("../core/vec").Vec3;
+    e1: import("../core/vec").Vec3;
+    e2: import("../core/vec").Vec3;
+    /** ⭐⭐ (2026-10-14) the view direction from the target: the nearest ISOMETRIC CORNER (`hoverCornerDirection`), and its side signs */
+    iso: import("../core/vec").Vec3;
+    signs: [number, number];
+    /** ⭐ (2026-10-14, the hover's audit) the view it RETARGETED from (a hover on another face), eased out over `HOVER_VIEW_RETARGET_MS` */
+    from: { target: import("../core/vec").Vec3; iso: import("../core/vec").Vec3; t0: number } | null;
+    /** ⭐⭐⭐ (2026-11-01) the slide mode's LIMITED ORBIT (`SlideOrbit`: its angles toward `e1` / `e2`, clamped) — `iso` is its direction; `null` off the slide mode */
+    orbit: import("../input/hover").SlideOrbit | null;
+    /** ⭐ (2026-11-01) its angles SHOWN, eased after the slide's on the orbit's τ (the camera never steps with a pointer event) */
+    orbitShown: [number, number];
+  } | null;
   /** ⭐⭐ (2026-10-14) the orbited piece was captured onto its goal and STAYS there — the orbit no longer places it (*"Piece stays placed"*). */
   orbitPiecePlaced: boolean;
-  /** ⭐⭐ (2026-11-12, `CLOSE_IN_CONTACT.md` — the slide removed, the readout kept) THE CONTACT: the placed part's face the resting face looks at within
-   * `contactBandMm` (`contactFrame`), when it was last looked for, and the world and the band that look saw (looked again only when either changes). */
-  contactReady: { id: string; faceId: string; normal: import("../core/vec").Vec3; centre: import("../core/vec").Vec3 } | null;
-  contactReadyAt: number;
-  contactReadyWorld: object | null;
-  contactReadyReachMm: number;
+  /** ⭐⭐ (2026-10-14) a hover is AVAILABLE: the part's face the resting face looks at within reach (`hoverVisualFrame`), and when it was last looked for. */
+  hoverReady: { id: string; faceId: string; normal: import("../core/vec").Vec3; centre: import("../core/vec").Vec3 } | null;
+  hoverReadyAt: number;
   /** ⭐ (2026-10-14) the contact shadow (the resting face's outline on the hosting face), its line count, and the hosting face's fill (its key). */
-  contactShadow: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
-  contactShadowCount: number;
-  contactFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
-  contactFillKey: string;
+  hoverShadow: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  hoverShadowCount: number;
+  hoverFaceFill: import("@babylonjs/core/Meshes/mesh").Mesh | null;
+  hoverFaceKey: string;
   /** ⭐⭐ (2026-10-14) the green OUTLINE of the coplanar hosting faces joined to the hosting one, and its key. */
-  contactOutline: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
-  contactOutlineKey: string;
+  hoverOutline: import("@babylonjs/core/Meshes/linesMesh").LinesMesh | null;
+  hoverOutlineKey: string;
+  /** ⭐ (2026-10-14, the hover's second audit) a hover finger whose hover ended in a CAPTURE — it moves nothing more until it lifts. */
+  hoverSpent: number | null;
+  /** ⭐⭐⭐ (2026-11-09, F3) the pointer whose drag the slide let go of at the edge of the hosting faces — it orbits, never re-arms the slide until it lifts */
+  slideLetGo: number | null;
+  /** ⭐⭐⭐ (2026-11-09, F4) the slide drag's finger travel (px) since the last solve, and its last sample — the limited orbit turned by what the piece SLID */
+  slideTurnAsk: { s: Sample; px: number } | null;
+  /** ⭐ (2026-10-16) a slide just ended: no hover offered until the orbit moves the piece (`hoverOffered`). */
+  hoverSlid: boolean;
+  /** ⭐⭐⭐ (2026-11-01) the slide mode may latch (`slideLatches`): false once left, armed again by an approach step inward or an orbit drag (`slideArmedAfter`) */
+  slideArmed: boolean;
+  /** ⭐ (2026-11-01) when the latch was last tried (ms) — at most every 100 ms while it is refused */
+  slideTryAt: number;
+  /** ⭐ (2026-11-01) the last latch try was refused (`slideRefusedAfter`) — the lit contours no longer hold the orbit (`slideHoldsOrbit`) */
+  slideRefused: boolean;
+  /** ⭐ (2026-11-01) since when the latch has waited for the piece to come to rest (ms; 0: not waiting) */
+  slideWaitSince: number;
+  /** ⭐ (2026-10-14, the hover's second audit) the world and the reach the ready look last saw — looked again only when either changes. */
+  hoverReadyWorld: object | null;
+  hoverReadyReachMm: number;
   /** ⭐⭐ (2026-10-13, §12) THE ONE AUTHORITY: the orbited piece's solved place on its ring (`null`: not solved — the way in / out, a new orbit). */
   pieceQ: import("../input/piece_orbit_solver").OrbitQ | null;
   /** ⭐ (2026-10-13, §11octies) the orbit's target as the input last left it — a frame with no new input is a RETURN toward the height kept. */
@@ -347,14 +449,13 @@ export interface SceneState {
   topPause: number;
   topPauseShown: number;
   /** ⭐⭐⭐ (2026-10-28) THE ORBIT AROUND THE ASSEMBLY (`assembly_wiring.ts`): the assembly's fixed centre and radius (`null`: not read yet); the lock and
-   * (⛔ 2026-11-12 the slide's lock removed with it); the shown gizmo (eased), the camera's look point, the face's point (the edge rule), the frame's ray cache; the approach coordinate
+   * the locked gizmo; the shown gizmo (eased), the camera's look point, the face's point (the edge rule), the frame's ray cache; the approach coordinate
    * (1 far … the contact) and its coast; Shift with the mouse on the last pointer event */
   asm: { readonly centre: Vec3; readonly radius: number } | null;
+  asmLocked: boolean;
+  /** ⭐ (2026-10-29) …and its cone (`lockCone`: from where the piece was at the lock, tightened inward; `null`: the default 80°) */
+  asmLock: { readonly point: Vec3; readonly normal: Vec3 | null; readonly host: string | null; readonly cone?: number | null } | null;
   asmGizmo: Vec3 | null;
-  /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md §6) the piece's FOOTPRINT SUPPORT this frame — a placed part (its index in the placed set `key`); `null`: the gizmo's own surface */
-  asmSupport: { readonly key: string; readonly index: number } | null;
-  /** ⭐⭐ (2026-11-12) the support's LEVEL as shown along `n` (the direction it was read on) — a drop eased, a rise at once (`supportLevelStep`); `null`: none */
-  asmSupportLevel: { readonly n: Vec3; readonly h: number } | null;
   asmLook: Vec3 | null;
   asmFacePoint: Vec3 | null;
   /** ⭐ (2026-10-28) the gizmo's raw point (Step 4c-bis: the face map's, `mapGizmo`; `null`: none yet) and the orbit place it was read at */

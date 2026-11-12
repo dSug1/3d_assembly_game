@@ -922,7 +922,21 @@ export function relocationKey(q: OrbitQ, rotation: readonly number[] | null, giz
   return [q.yaw.toFixed(5), q.v.toFixed(5), rotation === null ? "" : rotation.map((x) => x.toFixed(4)).join(","), gizmo.map((x) => x.toFixed(4)).join(","), signature].join("|");
 }
 
-/** ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) `slideProbeFree` (a slide along the face as a way out) DELETED with the slide. */
+/**
+ * ⭐⭐ (2026-10-29, the owner: *"the message says the piece is blocked, however I can still slide the piece in the opposite direction than the blocking
+ * part. Why is there such message if there is a way out"* → *"agreed"*) — **A SLIDE IS A WAY OUT**: while a slide on a face is available, a step of
+ * `probeM` each way along the face's two directions (`e1`, `e2`), the piece kept at its gap — free when any one keeps the gap at the margin or more
+ * (`gapAt(offset)`, the piece moved by `offset`). ⛔ The check tried the orbit's steps and the turns only: in a pocket the red pop-up showed while a slide
+ * led out.
+ */
+export function slideProbeFree(gapAt: (offset: Vec3) => number, e1: Vec3, e2: Vec3, probeM: number, hardM: number): boolean {
+  for (const e of [e1, e2]) {
+    for (const k of [1, -1]) {
+      if (gapAt([e[0] * probeM * k, e[1] * probeM * k, e[2] * probeM * k]) >= hardM) return true;
+    }
+  }
+  return false;
+}
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */
 export function pieceRespawnArmed(positionStuck: boolean, everyTurnBlocked: boolean): boolean {

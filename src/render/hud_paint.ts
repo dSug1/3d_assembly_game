@@ -9,6 +9,7 @@ import { placedReport } from "./goal_capture_wiring";
 import { scoreView } from "../input/score_view";
 import { formatElapsed } from "../input/episode_ledger";
 import { type Sample } from "../input";
+import { hoverViewWeight } from "../input/hover";
 import { restingFaceWorld } from "../core/object_model";
 import { type GoalReport } from "../core/goal";
 import { formatFrameStats } from "../core/frame_meter";
@@ -90,7 +91,7 @@ export function paint(st: SceneState) {
       `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
       `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
       // ⭐ prototype (2026-10-06): around the piece the camera looks along an axis, not at a target — r is its distance to the PIECE
-      `r=${(st.pieceOrbit !== null && st.greenBox !== null ? st.camera.position.subtract(st.greenBox.position).length() : st.camera.radius).toFixed(3)}m${st.pieceOrbit !== null ? " to the piece" : ""} zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""} ` +
+      `r=${(st.pieceOrbit !== null && st.greenBox !== null ? st.camera.position.subtract(st.greenBox.position).length() : st.camera.radius).toFixed(3)}m${st.pieceOrbit !== null ? " to the piece" : ""} zoom=${st.zoom.toFixed(2)}${st.greenBox !== null ? `(≥${st.greenZoomMin.toFixed(2)})` : ""}${st.hoverView !== null ? ` [hover view ${(hoverViewWeight(st.hoverView.progress) * 100).toFixed(0)} %]` : ""} ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}${st.topPause > 0 && st.topPause < 1 ? ` pause=${(st.topPause * 100).toFixed(0)}%` : ""}` +
       `${st.pinch.isZooming ? "  ZOOMING" : ""}` +
       // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.

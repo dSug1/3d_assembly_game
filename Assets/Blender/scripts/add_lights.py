@@ -2,7 +2,7 @@
 which the game's own core/lighting.ts computed (direction, Kelvin x filter colour, URP illuminance at
 the scene's centre). Unity/Babylon (x, y up, z depth) -> Blender (x, z, y), as for the pieces.
 Run: npx vite-node Assets/Blender/scripts/scene_1_lights.ts > <tmp>/lights.json
-     LIGHTS_JSON=<tmp>/lights.json blender -b Assets/Blender/scene_2.blend --python Assets/Blender/scripts/add_lights.py
+     LIGHTS_JSON=<tmp>/lights.json blender -b Assets/Blender/World0_Scene1_painting/world0_scene_1.blend --python Assets/Blender/scripts/add_lights.py
 K and F were MEASURED in Blender 3.4 Eevee by calibrate_lights.py; re-measure on another Blender version.
 See Claude/30_OBJECTS_3D/spec/BLENDER_ASSETS.md."""
 import bpy, json, math, os

@@ -73,7 +73,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
     window.__rec.push({ leg: window.__leg, fd: window.__fd ?? null, ts: performance.now(), g, gd: g && st.asmGizmoLag ? [g[0] + st.asmGizmoLag[0], g[1] + st.asmGizmoLag[1], g[2] + st.asmGizmoLag[2]] : g, gn: v3(st.gizmoNormal ?? null), host: st.gizmoHost ?? null, foot: v3(st.asmGizmo ?? null),
       p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
-      ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, sup: st.asmSupport ? st.asmSupport.index : null, lvl: st.asmSupportLevel ? [st.asmSupportLevel.n, st.asmSupportLevel.h] : null,
+      ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, hv: st.hover != null, lk: !!st.asmLocked,
       show, gl: G ? [G.br.length, G.d] : null, rl: Rr ? [Rr.br.length, Rr.d] : null, gk: G ? G.key : null, rk: Rr ? Rr.key : null,
       tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90) });
     // once per new line: its breaks sub-sampled on the map (16 between the two samples): the largest sub-step — a false break if small
@@ -89,13 +89,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
     }
   } catch (e) { window.__recErr = String(e); } }); return true; })()`;
 
-// ⭐⭐ (2026-11-12) NO DISK LITTER: Chrome's own temp files (the component updater's `Cr24` packages, `scoped_dir*`, the url fetcher's folder) went to %TEMP%
-// itself — outside the profile removed in `finally`, and a `taskkill /F` skips Chrome's own cleanup (20 files, ~4 MB, one session). Now its TEMP / TMP are
-// INSIDE the profile, and the updater and the background network are off.
-const profTmp = join(prof, "tmp");
-mkdirSync(profTmp, { recursive: true });
-const QUIET_FLAGS = ["--disable-component-update", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--disable-default-apps", "--disable-extensions", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter"];
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, "about:blank"], { stdio: "ignore" });
 try {
   let targets = null;
   for (let i = 0; i < 60 && !targets; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch {} }

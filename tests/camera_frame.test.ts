@@ -177,7 +177,7 @@ describe("⭐⭐⭐ the orbit — the second Fable audit (2026-10-17)", () => {
     expect(gizmoBlendTravel(3, 1, 2.8, asked, { yaw: 0.02, v: 0 }, true, false)).toBeCloseTo((3 * 1) / Math.hypot(1, 2.8), 9);
     // wired: the drag keeps the travel for the frame; the frame advances the change after the solve
     const w = readFileSync("src/render/pointer_wiring.ts", "utf8");
-    expect(w).toContain("if (pieceSolveRuns(st)) {"); // ⛔ (2026-11-12) no hover: the slide removed
+    expect(w).toContain("if (pieceSolveRuns(st) && st.hover === null) {");
     const g = readFileSync("src/render/green_box_wiring.ts", "utf8");
     expect(g).toContain("st.centreBlend.advance(gizmoBlendTravel(pend.mm, pend.mmX, pend.mmY, input, { yaw: fr.q.yaw - q0.yaw, v: fr.q.v - q0.v }, fr.blocked, fr.relocated));");
     expect(g.indexOf("st.centreBlend.advance(gizmoBlendTravel(")).toBeLessThan(g.indexOf("st.rigShare = easeShare("));

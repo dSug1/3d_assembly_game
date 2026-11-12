@@ -8,7 +8,7 @@
 ## 0. ⭐⭐⭐ START HERE — a new conversation fixing I1 – I14
 
 * ⭐⭐⭐ **THE OWNER (2026-11-12): `12dc4b6` (the tip of `1.0.121-two-types-of-orbits-finalized`, = `main`) IS THE BEST IMPLEMENTATION OF THE ORBIT SO
-  FAR** — the reference to come back to; work goes on from it on `1.0.122-`. The open points closed with nothing built (the far edge's roll back, the
+  FAR** — the reference to come back to; work goes on from it on `1.0.124from1.0.121-` (`1.0.122-`, the slide's removal, not used). The open points closed with nothing built (the far edge's roll back, the
   camera's lean, the slide under the tilted pole: ok; I17 and §8.5: not applicable any longer) → **§9.16**.
 * ⭐⭐⭐ **THE OWNER (2026-11-10): `1.0.117-Tilted-polar-orbit` IS THE BEST PIECE ORBIT BUILT SO FAR IN THE PIPELINE** (the tilted pole, live as `6c6da30`; before it `1.0.116from1.0.114-`, `f96ddeb`; `1.0.111-Polar-orbit-fixes`, `eef4be0`) — the reference to come back to; work goes on from it on `1.0.118-`.
 * ⭐⭐⭐ **§9, THE TILTED POLE — BUILT 2026-11-10** (branch `1.0.117-`; the rule §9.4, as built and probed §9.5 — three sliders, the roll back by the finger with a 250 ms minimum; ⛔ no device close).
@@ -908,7 +908,7 @@ through the approach and the rest (the tilt made, the sections orthogonal); then
 * ⭐⭐⭐ **`12dc4b6` IS THE BEST IMPLEMENTATION OF THE ORBIT SO FAR** — the tip of `1.0.121-two-types-of-orbits-finalized` (= `main`; its code `eae0541`):
   the square camera close in (§9.11b – §9.13, `1.0.120b-Orthogonal-tilted-poles`), the polar orbit far out with a cap reading the calm of the side it
   would be left by (§9.14), the automatic tilt's camera pending then blended by the finger (§9.15). **1744** vectors. It supersedes `1.0.117-Tilted-polar-orbit`
-  (`6c6da30`) as the reference to come back to; work goes on from it on `1.0.122-`.
+  (`6c6da30`) as the reference to come back to; work goes on from it on `1.0.124from1.0.121-` (`1.0.122-`, the slide's removal, not used).
 * ✅ **Closed — ok as built, nothing to do**: the far edge's roll back (180° in 0.5 s, §9.12); the camera's lean (its yaw offset leaning the world's vertical
   by 2.5 – 4.3°, §9.10 *Not changed*); the slide under the tilted pole (a slide ending off the tilted facet, §9.5 *Not done*).
 * ✅ **Closed — not applicable any longer**: I17 (a narrow face held by a finger far out, §8.2) and the input-driven gizmo on world-plane cuts (§8.5).

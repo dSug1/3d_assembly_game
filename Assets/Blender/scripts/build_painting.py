@@ -1,6 +1,6 @@
 """Rebuild Scene_1's painting (the goal table) in the open .blend, from src/content/scene_1.ts.
 Idempotent: the Painting collection and the Floor are rebuilt from scratch each run.
-Run: blender -b Assets/Blender/scene_2.blend --python Assets/Blender/scripts/build_painting.py
+Run: blender -b Assets/Blender/World0_Scene1_painting/world0_scene_1.blend --python Assets/Blender/scripts/build_painting.py
 See Claude/30_OBJECTS_3D/spec/BLENDER_ASSETS.md."""
 import bpy, bmesh, re, math, os
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
