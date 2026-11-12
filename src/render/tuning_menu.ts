@@ -201,6 +201,9 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "tilted pole: every tilt's speed — its roll, its swing (°/s; 0: at once)", "tiltRollDegS", 0, 1440, 30),
             tunable(st, "tilted pole: automatic within this distance (m; 0: the press only)", "tiltAutoM", 0, 3, 0.05),
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
+            // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) the close-in gain: full from this distance out, down to the contact's
+            tunable(st, "close-in gain: the orbit's full speed from this distance of the piece out (m)", "orbitGainFullM", 0.05, 3, 0.05),
+            tunable(st, "close-in gain: at the contact, the gizmo's travel per mm of finger (mm)", "orbitContactMmPerMm", 0.1, 10, 0.1),
             // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
             tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
             tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),

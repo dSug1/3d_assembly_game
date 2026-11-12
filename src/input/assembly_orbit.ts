@@ -230,3 +230,19 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
 
 // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — and its successor, the carrier on the
 // sections' hull, with it (Step 4c-bis): the gizmo is a function of the orbit's angles (`input/face_map.ts`).
+
+/**
+ * ⭐⭐⭐ (2026-11-12, `CLOSE_IN_CONTACT.md` step 3; the owner: *"1b"* — the orbit's degrees per mm scaled down continuously as the approach's distance
+ * shrinks) — **THE CLOSE-IN GAIN**: the orbit's gain at the piece's distance `dM` from the gizmo, a share of its full gain — 1 from `fullM` out, falling
+ * LINEARLY toward the contact (speed proportional to the distance to the surface: Ware & Fleet's context-sensitive flying, 1997), where it is the share that
+ * moves the gizmo `contactMmPerMm` mm on the surface per mm of finger (the slide's 1 : 1), read from the full gain (`degPerMm`, °/mm) at the assembly's
+ * radius (`radiusM`). ⛔ Unscaled, close in a mm of finger moved the gizmo ~24 mm (probed: 30 px → 186 mm on the cube's top) — a pixel beyond the goal's 5 mm.
+ * Never above 1; a degenerate input (no radius, no gain, no distance range): 1 (the orbit as it was).
+ */
+export function closeInGain(dM: number, fullM: number, contactMmPerMm: number, degPerMm: number, radiusM: number): number {
+  const fullMmPerMm = ((degPerMm * Math.PI) / 180) * radiusM * 1000;
+  if (!(fullM > 0) || !(fullMmPerMm > 0) || !(contactMmPerMm > 0)) return 1;
+  const kMin = Math.min(1, contactMmPerMm / fullMmPerMm);
+  const t = Math.min(1, Math.max(0, dM / fullM));
+  return kMin + (1 - kMin) * t;
+}

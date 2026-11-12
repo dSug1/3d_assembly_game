@@ -169,3 +169,16 @@ its updater off (`scripts/probes/*.mjs`); `tilt_probe.mjs`'s watchdog 30 min (89
 
 Q5's slow-finger friction in the contact band is dropped: step 3 (the gain scaled by the approach's distance, 1 (b)) answers the fine placement on distance;
 if the device shows it is not enough, step 3 is revised to cover it — no second gain on speed.
+
+## 8. ✅ Step 3 BUILT (2026-11-12, `1.0.122-`) — THE CLOSE-IN GAIN (the owner's 1 (b); *"Proceed"*) — ⛔ no device close
+
+**The rule** (`closeInGain`, `input/assembly_orbit.ts`; speed proportional to the distance to the surface — Ware & Fleet's context-sensitive flying, 1997):
+around the assembly the orbit's yaw AND pitch per mm of finger are its full gain from `orbitGainFullM` (0.6 m, the automatic tilt's distance) out, falling
+LINEARLY with the piece's distance to the gizmo to the contact, where the gizmo travels `orbitContactMmPerMm` (1 mm — the slide's 1 : 1) on the surface per mm
+of finger (the full gain read at the assembly's radius). Two sliders (☰ → CAMERA → CAMERA ORBIT AROUND CENTER), both guesses until a hand sets them. Wired in
+the drag (`orbitDragStep`: dx and dy × `kd`); the coast records the scaled steps. Beyond 0.6 m the gain is exactly 1: the far orbit is the same code path.
+**Measured** (`contact_probe.mjs`, the cube's top, 30 px ≈ 7.9 mm of finger): 1.0 m **28.8°** / 184 mm (unchanged); 0.3 m **15.1°** / 117 mm; 20 mm **2.25°** /
+12 mm; the contact **1.34° / 7.3 mm** (~0.9 mm per mm; ~190 mm before).
+**Vectors**: `tests/close_in_gain.test.ts` (5: the contact's 1 : 1 from the probed gain, full from `fullM` out, linear and monotonic, degenerate inputs, the
+wiring, the tunables; RED on `e6be90c` — the function absent); four suites' source pins of the drag line updated (`* kd`). **1660**.
+**The tilted pole — no regression**: `tilt_probe.mjs`'s 38 scenarios (1.0 m and out: the gain 1 there) none worse than on `a3047f9`.

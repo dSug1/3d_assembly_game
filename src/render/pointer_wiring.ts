@@ -18,7 +18,7 @@ import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOn
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
-import { isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
+import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
 import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
@@ -343,8 +343,11 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
+    // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): around the assembly the orbit's yaw and pitch per mm of finger scaled
+    // down with the piece's distance to the gizmo — full from `orbitGainFullM` out, at the contact the gizmo `orbitContactMmPerMm` on the surface per mm
+    const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm, st.asm?.radius ?? 0) : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag), dyPx * share);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);
