@@ -104,8 +104,9 @@ describe("⭐⭐ `D180` — the results screen's routes: Next level · Retry · 
     expect(resultTarget("NEXT", HREF, TWO, 3)).toBeNull(); // ⭐ no button then
   });
 
-  it("⭐ the real catalogue: Level 1 has no next playable level (the demo is not one); Level 0's next is Level 1", () => {
-    expect(nextPlayableIndex(GAME_CONTENT, 1)).toBeNull();
+  it("⭐ the real catalogue: Level 1's next skips the demo to Level 2 (2026-11-12, Scene_2); Level 2 has none; Level 0's next is Level 1", () => {
+    expect(nextPlayableIndex(GAME_CONTENT, 1)).toBe(3);
+    expect(nextPlayableIndex(GAME_CONTENT, 3)).toBeNull();
     expect(nextPlayableIndex(GAME_CONTENT, 0)).toBe(1);
   });
 });
