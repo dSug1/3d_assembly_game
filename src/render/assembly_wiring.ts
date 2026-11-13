@@ -1153,7 +1153,15 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   const zm = st.asmZoneMix;
   let shown: RigCameraFrame = f;
   if (zm !== null) {
-    const mx = frameMix(zm.from, f, zm.k, zm.axis);
+    // ⭐⭐⭐ (2026-11-13, the owner: *"when the camera rolls, the piece flies outside the screen to then come back"*) the turn ABOUT THE VIEW ONLY: the frame
+    // shown at the switch laid on this frame's direction (its up square to it), so the camera keeps looking along the piece's direction and only its up
+    // turns — ⛔ the whole frame mixed: mid-turn the camera looked along the old direction, the piece placed along the new one, off the glass
+    const d = f.dir;
+    const k0 = zm.from.up[0] * d[0] + zm.from.up[1] * d[1] + zm.from.up[2] * d[2];
+    const pu: Vec3 = [zm.from.up[0] - k0 * d[0], zm.from.up[1] - k0 * d[1], zm.from.up[2] - k0 * d[2]];
+    const lu = Math.hypot(pu[0], pu[1], pu[2]);
+    const from = lu > 1e-6 ? { dir: d, up: [pu[0] / lu, pu[1] / lu, pu[2] / lu] as Vec3 } : f;
+    const mx = frameMix(from, f, zm.k, zm.axis);
     zm.rad = mx.angle;
     zm.axis = mx.axis;
     shown = mx.frame;
