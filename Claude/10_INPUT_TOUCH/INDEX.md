@@ -5,7 +5,7 @@
 > **READ IF** · you are building or debugging any gesture
 > **LAST VERIFIED** · 2026-09-27
 
-⭐⭐⭐ **WHAT A FINGER DOES TODAY, BOTH DEVICES → [`spec/INPUTS_TABLE.md`](spec/INPUTS_TABLE.md).**
+⭐⭐⭐ **WHAT A FINGER DOES TODAY, BOTH DEVICES → [`spec/INPUTS_TABLE.md`](spec/INPUTS_TABLE.md).** ⭐ 2026-11-13: no zoom; the pinch is the approach → [`spec/ZOOM_REMOVED_PINCH_APPROACH.md`](spec/ZOOM_REMOVED_PINCH_APPROACH.md).
 ⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION AND ALIGNMENT ARE DELETED** — snap, unsnap, undo, edge band, mode
 toggle, HitFace and PioneerFaceCursor with them; only the orbited piece moves (orbit, approach, slide), and every press is the orbit's.
 ⭐ The code before: commit **`d8134eb`**. ⏳ Later: the parts get the orbited pieces' properties; `Scene_0` gets the orbit and the slide.
@@ -264,12 +264,12 @@ geometry → [`../../THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 | `sway.ts` | the sympathetic sway's reversal detector and `receivesSway` — ⛔ **three** exclusions: the kicker, (`D53`) any body with a finger on it, the mover's **Pioneer** at any distance (`D182`), and any body **seated on a frozen one** |
 | `camera_reset.ts` | the double-tap-on-empty-space flight home (`D111`), and the clock `align_snap` borrows a fraction of |
 | `noise_meter.ts` | the instrument behind the only measured number on this project |
-| `pinch.ts` | rule 4. A **ratio** of separations, never a rate |
+| `camera_radius.ts` | the camera's radius held to its range (the near-plane guard) — ⛔ what was left of `pinch.ts` (rule 4, the pinch zoom) when the zoom was deleted, 2026-11-13 → [`spec/ZOOM_REMOVED_PINCH_APPROACH.md`](spec/ZOOM_REMOVED_PINCH_APPROACH.md) |
 | `orbit.ts` | rule 1's three-ring surface, monotone and bounded by the rings |
 | `barycentre.ts` | rule 1's orbit **centre** — what the camera orbits around |
 | `recognizer.ts` | §1.3 itself: the state machine, rollback, and the release-time priority ladder |
 | `mouse_second_touch.ts` · ⚠ `render/mouse_adapter.ts` | ⭐⭐ `D94` — **a mouse as two touches**: left = the browser's own pointer; **Shift + left drag** = an anchor-only second touch; **right-press and hold** = the HitFace (never driven), then a **left click** presses the Pioneer. ⛔ Never touches a DOM event, models only #2, reads `buttons` every event. `hitFaceAllowed`: only the right button sets a HitFace; `secondTouchAlwaysAvailable`: `D60` translates an aligned body under the left button in any mode |
-| `pioneer_cursor_grab.ts` · `mouse_wheel_zoom.ts` | `D96`: which PioneerFaceCursor a press grabs (mouse inside the ring, touch within 1–10 radii; OFF by default) · the wheel's notches onto pinch's `zoom` |
+| `pioneer_cursor_grab.ts` | `D96`: which PioneerFaceCursor a press grabs (mouse inside the ring, touch within 1–10 radii; OFF by default) — ⛔ `mouse_wheel_zoom.ts` deleted with the zoom (2026-11-13) |
 | `snap.ts` · `unsnap.ts` · `seat_snap.ts` · `assembly.ts` | `D100`: the snap conditions and re-arm; the unsnap gesture; the seat's magnet lerp; the assembly's root → §11.13 |
 | `second_touch_drive.ts` | the second touch's drive (`D108`/`D123`): gravity lift + spin, for an aligned body and a free one in `TRANSLATE` |
 | `aligned_axes.ts` · `grip_mode.ts` | `D97`'s segments from the FollowerFace to the cursor · which grip modes translate |

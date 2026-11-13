@@ -379,6 +379,8 @@ to `goal ✅  demo ✅`; the main script went 1,336 → 1,305 KB (334.7 → 329.
   start, in portrait, the outer ends of the rows are cut (landscape 1304 × 882: **2.11 m**, all in view). §9. It then **draws back linearly to the rig's maximum**
   (`cameraRadiusMaxM`, 3 m), reached at the end. ⛔ A cube that cannot fit within the maximum is shown from the
   maximum. ⚠ The demo drives the zoom while it plays; the pinch and the wheel are the player's again at the end.
+  ⛔ (2026-11-13) the player's zoom is DELETED (no pinch, no wheel — `10_INPUT_TOUCH/spec/ZOOM_REMOVED_PINCH_APPROACH.md`): the demo's
+  distance is its own scale now, `st.demoCameraScale` (1 elsewhere), unchanged on screen (checked headless against the old code).
 * ✅ Measured headless (`D171`; Chrome, 882 × 1304, `demoDurationS=20`): the scattered pieces all on screen at the start
   (`r = 2.248 m`); at 88.6 % `demo 145/150 SNAP`, yaw 242°; at 94.5 % `camera settling`, 263°; 98.5 %, 269.4°; the end
   at exactly 270° (= −90° + 360°), `r = 3.00 m`, `elev = 1.00`, `goal ✅  demo ✅`.

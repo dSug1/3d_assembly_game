@@ -36,7 +36,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `markers.ts` | face fills and contours, the HitFace's fuchsia contour, PioneerFaceCursors, outlines, their per-frame lift (`liftHighlights`) |
 | `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
 | `gizmo.ts` | the axis gizmo (⛔ `highlight_pass.ts` deleted with the white highlights and the swing, `D120`) |
-| `camera_rig.ts` | orbit, zoom, centre blend, reset, gesture frames |
+| `camera_rig.ts` | orbit, centre blend, reset, gesture frames |
 | `hud_paint.ts` · `tuning_menu.ts` | every readout line; every slider |
 | `sway_pass.ts` · `drive.ts` | the nudge and the spin; where a translation or depth step lands |
 | `seat_wiring.ts` | the snap, the seats, the unsnap feed, the cursor drag |
@@ -61,10 +61,8 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
-* **Rule 4 — pinch zoom** (`IN9`, ✅ closed on a device look).
+* ⛔ **Rule 4 — pinch zoom** — deleted 2026-11-13 with the zoom (`10_INPUT_TOUCH/spec/ZOOM_REMOVED_PINCH_APPROACH.md`).
 * **Rule 1 — orbit** on a three-ring surface (`IN9`, ✅ closed on a device look).
-⭐ They compose through **one shared `zoom` scalar** that scales the whole orbit
-surface, rather than both writing `camera.radius` and fighting over it.
 
 ✅✅ **THE OBJECT RULES ARE REAL NOW, and the MODEL is authoritative** (`3D1`, closed
 2026-09-15). A gesture writes `src/core/object_model.ts`; the render loop reads the model

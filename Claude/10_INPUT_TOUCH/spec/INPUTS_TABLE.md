@@ -2,7 +2,7 @@
 
 > **STATUS** · live · **OWNS** · the one list of inputs, tablet and desktop
 > **READ IF** · you are about to add, change or remove a gesture — or to judge one on a device
-> **LAST VERIFIED** · 2026-11-04 (`1.0.96-`: Step 4c-bis — the gizmo from the FACE MAP at the orbit's angles, slowly through an edge, CAMERA ORBIT AROUND CENTER › gizmo through an edge (mm, °); `1.0.95-`: Step 4c — the gizmo on the side's axis, never held on a side, the parts read at rest (the lag's gizmo ease 45 ms); the piece's lag behind the ring on two sliders, CAMERA ORBIT AROUND CENTER › lag: the gizmo's position / the orbit's angles; dx moves the gizmo round a side in step with the orbit — its place from the yaw (Step 4b); the calm of 58d86ff back — the view near square in a face's middle, CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE; `1.0.94-`: the dy up / down a side in a world plane (Step 4); `1.0.93from1.0.87-`: the dy reaches the top / bottom centre at ±90° (Step 3); the orbit's piece and camera on the shell (Step 2); the slide on placed parts only, the close-in lock deleted; around the assembly the dy WITH the finger — finger down, the gizmo down; `1.0.89-`: the parts' translation, rotation and alignment deleted)
+> **LAST VERIFIED** · 2026-11-13 (`1.0.128-Removed-the-zoom`: the zoom removed, the pinch is the approach — [`ZOOM_REMOVED_PINCH_APPROACH.md`](ZOOM_REMOVED_PINCH_APPROACH.md)); before: 2026-11-04 (`1.0.96-`: Step 4c-bis — the gizmo from the FACE MAP at the orbit's angles, slowly through an edge, CAMERA ORBIT AROUND CENTER › gizmo through an edge (mm, °); `1.0.95-`: Step 4c — the gizmo on the side's axis, never held on a side, the parts read at rest (the lag's gizmo ease 45 ms); the piece's lag behind the ring on two sliders, CAMERA ORBIT AROUND CENTER › lag: the gizmo's position / the orbit's angles; dx moves the gizmo round a side in step with the orbit — its place from the yaw (Step 4b); the calm of 58d86ff back — the view near square in a face's middle, CAMERA ORBIT AROUND CENTER › FACE-SPAN ORBIT SHARE; `1.0.94-`: the dy up / down a side in a world plane (Step 4); `1.0.93from1.0.87-`: the dy reaches the top / bottom centre at ±90° (Step 3); the orbit's piece and camera on the shell (Step 2); the slide on placed parts only, the close-in lock deleted; around the assembly the dy WITH the finger — finger down, the gizmo down; `1.0.89-`: the parts' translation, rotation and alignment deleted)
 
 ⭐ The rules and their reasons live in [`ALIGNMENT_RULES.md`](ALIGNMENT_RULES.md) (§12 for this
 pass) and [`SPEC_INPUT_SYSTEM_R5.md`](SPEC_INPUT_SYSTEM_R5.md); this page is the inventory.
@@ -14,6 +14,9 @@ input, and the undo, the edge band, the mode toggle, the HitFace and the Pioneer
 REMOVED from this table; the table as it stood is at commit **`d8134eb`** (`git show d8134eb:Claude/10_INPUT_TOUCH/spec/INPUTS_TABLE.md`),
 and so is the code (`git show d8134eb:src/...`). ⏳ Later: the parts will be given the orbited pieces' properties (they orbit and slide too).
 
+⛔⛔⛔ **2026-11-13 (`1.0.128-Removed-the-zoom`, the owner: *"remove the zoom function entirely"* → *"build A"*)** — NO ZOOM on either device (the
+pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROACH** (spread: in; pinch: out) → [`ZOOM_REMOVED_PINCH_APPROACH.md`](ZOOM_REMOVED_PINCH_APPROACH.md).
+
 ## 1. Tablet (touch)
 
 | holding | input | does |
@@ -21,13 +24,13 @@ and so is the code (`git show d8134eb:src/...`). ⏳ Later: the parts will be gi
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | 1 finger drag | **the orbit around the assembly**: dx the yaw, dy the pitch (±90°, 2026-10-29; ⭐ 2026-11-04 WITH the finger: down, the gizmo down — `orbitDy`) — ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo from the FACE MAP: the angles' place on the assembly's core box (dx round the sides at the gizmo's height, each side a slice of the turn; dy up a side in the world's vertical plane square to it, over the top / under the bottom to the centre at ±90°), the ray along the face's axis onto the slide's coplanar regions (holes closed), slowly through an edge (the last / first 10 mm in 10°) — where the green and red sections meet, both drawn (⛔ the carrier on the section's hull, 2026-10-29 … Step 4c, deleted) |
-| ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **2 fingers moving together** (`twoFingerKind`; ⭐ the second may land ON the piece) | **the APPROACH** — up: in, toward the gizmo the ray finds, to the contact; down: out; dx nothing. A tap on a part no longer moves the gizmo |
-| nothing | 2 fingers pinch on empty space | zoom — ⭐ (2026-10-11) once the SECOND finger has moved past its deadband in x, the first still or moving (`pinchDxOpen`; both fingers' since 2026-10-10 before); the first finger moving alone is the way in |
+| ⭐ the orbited piece (prototype, ⭐⭐⭐ 2026-11-13; `orbitMode` 0) | **2 fingers spread apart / pinched together** (`pinchLatched`: their separation past the deadband from where they landed; ⭐ the second may land ON the piece) | **the APPROACH** — spread: in, toward the gizmo the ray finds, to the contact; pinched: out; × `approachPinchGain` (CAMERA ORBIT AROUND CENTER). ⛔ Two fingers moving together (`twoFingerKind`, 2026-10-28) no longer approach |
+| nothing | 2 fingers pinch on empty space | ⛔ nothing — the zoom deleted 2026-11-13 |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a SECOND finger held (off the orbited piece) + the first finger's **dx** | the **way in**, the orbit round the piece and the **roll** (dy ignored); the first finger may lift and press again (the same input); the second **lifted**: the **way out** (`RESTING_FACE_ALIGNMENT.md` §20) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a TAP on the orbited piece — the first finger's OR the second's | the face hit becomes the **resting face**, aligned (§13, §20) — ⭐ (2026-10-14) to the direction SHOWN: the yellow quad, or, the quads hidden, the gizmo's supporting face (yellow) (`RESTING_FACE_ALIGNMENT.md` §28) |
 | ⭐ the orbited piece (prototype, 2026-10-13) | first finger held (empty space or a part) + a second finger TAP on empty space or a frozen body | ⭐⭐ the same as a first-touch tap on empty space: the YELLOW quad tapped — aligned to its direction, or the roll when already aligned there (`holdTapTapsYellow` → `orientTapShown`); one episode. (It only rolled until 2026-10-13.) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | first finger held ON A PART, second finger held, first drags | as from empty space — ⭐ (2026-11-02) a press on a part IS empty space |
-| ⏸ the orbited piece (prototype, 2026-10-12) | (the way in + roll, the zoom ↔ roll switch) | ⏸ COMMENTED OUT 2026-10-12 — two fingers are the STANDARD PINCH: either finger's travel past the deadband starts the zoom |
+| ⏸ the orbited piece (prototype, 2026-10-12) | (the way in + roll, the zoom ↔ roll switch) | ⏸ COMMENTED OUT 2026-10-12 (then two fingers were the standard pinch zoom — ⛔ deleted 2026-11-13; around the assembly the pinch is the approach) |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a first-touch TAP on a RESTING-FACE QUAD (⛔ the orientation window is deleted) | the resting face SITS AGAINST the side tapped (the other side: 180°); the same quad again — the roll; it becomes the yellow quad until the next drag; one episode each. ⛔ Over the piece, the piece's resting-face pick wins |
 | ⭐ the orbited piece (prototype, 2026-10-12) | a first-touch TAP on EMPTY space (left click on desktop) | a tap on the YELLOW quad's direction (the candidate, or the quad last tapped until the next drag): aligned to it, or the roll |
 | ⭐ the orbited piece (prototype, 2026-10-12) | first finger held + a second finger TAP on a PLACED part | moves the **orbit centre** (the pink gizmo) there, as a first touch's press does — never a roll; ⛔ no pink face from a part, no alignment (the cube's only). ⭐ (2026-10-13) a tap whose wobble already started the pinch is still a tap (`holdTapMode`; the zoom undone) |
@@ -49,7 +52,7 @@ contour shown instead (`D196`).
 | holding | input | does |
 |---|---|---|
 | nothing | left drag on empty space | orbit the camera |
-| — | wheel | zoom |
+| — | wheel | ⛔ nothing (swallowed: the page neither scrolls nor zooms) — the zoom deleted 2026-11-13 |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **A held + left drag** (a mouse or a touchpad; ⭐ 2026-10-29, ⛔ Shift — Windows' Sticky Keys) | **the APPROACH** (dy: up in, down out); dx nothing; no orbit |
 | ⭐ the orbited piece (prototype, 2026-10-12) | ALT or CTRL held + a left drag | orbits the CENTRE (⏸ the way in, round the piece and its roll are commented out) |
 | ⛔ the orbited piece (prototype, 2026-10-12) | ALT / CTRL pressed with the cursor over a placed part | nothing — ⛔ the key's raycast is deleted (it took the pink face, aligned to it); the key is the held second touch only |
@@ -82,6 +85,8 @@ contour shown instead (`D196`).
 | the fuchsia offer | `D109` | its cone is the **snap cone angle** (CAPTURE) |
 | `CameraOffsetZoneEnter` (empty) | `D109` | — |
 | a Shift + left drag on empty space zooming (a pinch of two mouse-made touches) | `D118` | the wheel |
+| ⛔ the ZOOM — the pinch on empty space, the two-finger pinch around the assembly, the wheel, the boot zoom and its keep-in-view floor | 2026-11-13 (`1.0.128-Removed-the-zoom`) | none — the camera the radius offset behind the piece; the approach brings the piece in |
+| two fingers moving together as the approach (`twoFingerKind`) | 2026-11-13 | the PINCH is the approach (spread: in) |
 | aligning on the second touch's PRESS | `D119` | aligning on its released TAP |
 | `D89`: a second touch on the frozen plate selects it | `D119` | a tap on it aligns; a press steers |
 | the white capture contour and shell; the camera swing at capture (`D63`) | `D120` | — (the snap never used them) |
