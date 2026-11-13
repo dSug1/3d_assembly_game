@@ -654,6 +654,16 @@ export function createScene(
   registerOrbitPieces(st);
   // ⭐⭐ (2026-10-15) the orbited pieces cast, on every device (`attachOrbitedShadows`, `applyShadowLevel`)
   attachOrbitedShadows(st);
+  // ⭐⭐ (2026-11-13, W4) a Blender scene's `.glb`, at its goal (`render/model_import.ts`) — after the shadows' caster lists exist, which it extends.
+  // ⭐ Its module (and the glTF reader with it) fetched only by a level that has a model: the other levels' bundle does not carry it.
+  st.modelStatus = "";
+  if (spec.model !== undefined) {
+    st.modelStatus = "model: loading…";
+    void import("./model_import").then((m) => m.importSceneModel(st)).catch((e: unknown) => {
+      console.error("⛔ the model's module did not load:", e);
+      st.modelStatus = "⛔MODEL module not loaded";
+    });
+  }
 
   // ───────────────────────────────────────────────────────────────────
   // `IN1` — one recognizer per touchpoint, and a readout so the state machine can

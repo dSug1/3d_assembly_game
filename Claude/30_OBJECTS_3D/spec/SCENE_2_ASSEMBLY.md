@@ -266,6 +266,10 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
 * ✅ **The radii's departure from Appendix B** (§2.9 item 2): bore 0.30, piston 0.28, big end 0.085 — APPROVED (the owner, 2026-11-12: *"new radii approved"*).
 * ✅ The V at 120° (§2.10), decided on the owner's instruction (*"increase or decrease the inclination to avoid 45 degrees"*).
 * ✅ **W2's sheet** (§6) — APPROVED (the owner, 2026-11-13: *"W2 sheet approved"*).
+* ⭐⭐ **W4 → W7, the order** (the owner, 2026-11-13; `SCENE_WORKFLOW.md` §6.4): ✅ the SLICE — the plinth (the anchor), the lower case, the crankshaft,
+  the pulley (*"1 ok"*); the loader `@babylonjs/loaders` (*"2 ok"*); then ① **the FINAL STAGE** — the whole engine assembled in the game, settling the
+  scale, the lights, the background (*"that's the goal the player has to achieve"*); ② **the BOOT STAGE** — the parts laid out in their heaps (*"so we
+  can lay the parts properly"*); ③ the PLAYABLE slice (*"then the slice of playable game"*). Each ⛔ gated by the owner's look.
 
 ## 5. What the GAME must gain for this plan (requirements for the queue, once approved)
 

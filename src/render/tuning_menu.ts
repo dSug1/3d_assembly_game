@@ -287,6 +287,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ `D138`: 2 = AUTO (off on a device too slow for them). Watch the HUD's `frame` line.
         tunable(st, "shadows (0 = off, 1 = on, 2 = auto)", "shadowsOn", 0, 2, 1),
         tunable(st, "auto shadows: frame budget (ms, median)", "autoShadowBudgetMs", 10, 100, 1),
+        // ⭐ (2026-11-13) a Blender scene's layers over its look — to check the import (`render/model_import.ts`).
+        tunable(st, "model layers (0 = look, 1 = + collision, 2 = + face proxies, 3 = all)", "modelLayers", 0, 3, 1),
       ],
     },
     {
