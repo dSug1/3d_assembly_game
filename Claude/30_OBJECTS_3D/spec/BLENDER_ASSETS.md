@@ -20,6 +20,7 @@ is the ASSETS: what exists and how it was made.
 | `Assets/Blender/scripts/add_lights.py` | adds the lights, the world fill and background, from that JSON (idempotent) |
 | `Assets/Blender/scripts/calibrate_lights.py` | measures the two constants `add_lights.py` uses (§4) |
 | `Assets/Blender/World0_Scene2_engine/blender-build-glass-v6-engine.md` | ⭐ (2026-11-12, the owner's) the build sheet of `Scene_2`'s ENGINE — a glass 90° V6 on a wooden plinth; its Appendix B the source of truth. ⛔ No `.blend` yet; its plan → [`SCENE_2_ASSEMBLY.md`](SCENE_2_ASSEMBLY.md) |
+| `Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.blend` / `.glb` | ⭐ (2026-11-13) `Scene_2` built by `scripts/build_engine.py -- --step 10`: the `.blend` (the source) and its `.glb` export, read back (`PART_AUTHORING.md` §4.4) |
 | `Assets/Blender/World0_Scene2_engine/glass-v6-engine-preview.html` | ⭐ (2026-11-12, the owner's) its three.js reference animation (the 720° loop) |
 
 ⚠ `.blend` is the SOURCE the owner edits; the game will load a `.glb` exported from it (`3D4`). A browser
