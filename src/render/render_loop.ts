@@ -10,7 +10,8 @@ import { hiddenFromBelow, seesFace, topFaceOutline } from "../core/underside";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import { backgroundMix } from "../core/lighting";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
 import { applyShadowLevel } from "./lighting";
@@ -305,6 +306,12 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
+    // ⭐ (2026-11-13) LEVEL's background slider: the scene's own background with the night blue mixed in. ⚠ Written on change only.
+    if (st.cfg.backgroundBluePct !== st.backgroundBlueSeen) {
+      st.backgroundBlueSeen = st.cfg.backgroundBluePct;
+      const c = backgroundMix(st.sceneSpec.lighting?.background ?? [0.078, 0.086, 0.102], st.cfg.backgroundBluePct);
+      st.scene.clearColor = new Color4(c[0], c[1], c[2], 1);
+    }
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame. ⛔ On the wall clock, not the
     // score's: counted from the first press, it never ticked before a touch — and the `frame` line
     // (and `D138`'s shadow verdict) sat at `—` on an untouched page.

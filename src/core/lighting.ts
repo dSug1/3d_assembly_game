@@ -68,6 +68,18 @@ export interface LightingSpec extends LightingStudio {
   readonly ambient: number;
 }
 
+/** ⭐ (2026-11-13) `Scene_1`'s NIGHT BLUE background — the blue the LEVEL slider `backgroundBluePct` mixes into any scene's background. */
+export const NIGHT_BLUE: Triple = [0.0087, 0.1465, 0.2138];
+
+/**
+ * ⭐ (2026-11-13, the owner: *"make a slider in the LEVEL so the player can chose its mix of blue"*) the background shown: the scene's own `base`
+ * with `bluePct` % of the night blue mixed in, channel by channel (the clear colour's own values, not tone-mapped). 0 = the scene's own.
+ */
+export function backgroundMix(base: Triple, bluePct: number): Triple {
+  const w = Math.min(1, Math.max(0, bluePct / 100));
+  return [base[0] + (NIGHT_BLUE[0] - base[0]) * w, base[1] + (NIGHT_BLUE[1] - base[1]) * w, base[2] + (NIGHT_BLUE[2] - base[2]) * w];
+}
+
 /** ⭐ The direction a Unity light shines, from its Euler angles. */
 export function unityForward(eulerDeg: Triple): Vec3 {
   const x = (eulerDeg[0] * Math.PI) / 180;
