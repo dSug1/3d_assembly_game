@@ -125,6 +125,69 @@ export function calmHeading(yaw: number, u0: Vec3, u: Vec3): number {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-13, the owner: *"when the gizmo reach the zenith edge, there is a camera roll when the gizmo is stopped at the zenith … the more the camera
+ * yaw when the gizmo hit the zenith edge the more the camera roll at the hit"*) THE CALM'S HEADING READ LEVEL: the heading the calm gives the orbit's yaw
+ * on a LEVEL direction — the horizontal share (`sH`, made whole by `kH` as `calmDir` does) times the yaw's angle off the face's own heading (`n`'s level
+ * part; faded to whole behind the face, as `shownDir`), whatever the pitch. On a vertical face exactly `calmHeading`'s at every pitch below the pole fade.
+ * A face with no heading of its own (a cap's normal): the yaw. ⛔ The camera's heading read off the SHOWN direction (`calmHeading`) went back to the bare
+ * yaw toward the pole — the calm faded there (`poleWeight`, 60° … 85°), and straight up the direction has no heading at all (the guard: the yaw) — so a dy
+ * alone turned a camera looking down: a roll toward the yaw's side, its size the yaw's angle off the face × the withheld share (probed: 21° off the
+ * front, 14° on the cube over the last 25° of pitch, 18.6° in ONE frame on the heptagon's ridge).
+ */
+export function calmLevelHeading(yaw: number, c: CalmState | null, kH = 0): number {
+  if (c === null) return yaw;
+  const hn = Math.hypot(c.n[0], c.n[2]);
+  if (!(hn > 1e-3)) return yaw;
+  const a = Math.atan2(Math.sin(yaw - Math.atan2(c.n[2], c.n[0])), Math.cos(yaw - Math.atan2(c.n[2], c.n[0])));
+  const s0 = 1 - (1 - Math.min(1, Math.max(0, c.sH))) * (1 - Math.min(1, Math.max(0, kH)));
+  const x = Math.min(1, Math.max(0, (Math.abs(a) - Math.PI / 2) / (Math.PI / 2)));
+  const s = s0 + (1 - s0) * x * x * (3 - 2 * x);
+  return yaw + (s - 1) * a;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-13) THE CALM'S HEADING OFFSET HELD WHILE THE VIEW LOOKS DOWN — one step a frame: `prev` the offset shown (rad, off the yaw; `null`: none
+ * yet), `target` the level reading's (`calmLevelHeading` − yaw), `w` / `wPrev` this and last frame's `poleWeight` of the orbit's pitch (1 up to 60°, 0
+ * from 85°). Whole (`w` 1): the target. A dy alone climbing: HELD (no roll at the zenith's hit). Coming down: the gap closed by the share of the way down
+ * to 60° just made (`(w − wPrev) / (1 − wPrev)`) — by the pitch, never by time. A dx (`dYaw`, the orbit's yaw this frame): toward NONE (0, the bare yaw —
+ * the zenith's heading before) by at most `HELD_OFFSET_PER_YAW` of it — the view spinning between 0.5 and 1.5 × the yaw's pace; so leaving after a dx
+ * costs what it did before (the side's calm coming in on the way down), and only the hit's roll is gone. ⛔ The level reading at the pole as is (the
+ * side the gizmo would exit by, at the yaw): a dx there spun the view at 0.25 × the yaw's pace mid-face and caught up at the corners, 8.3° in a frame;
+ * ⛔ held whole through the dx: the whole difference rolled on the way down, 22° against the old 6°; ⛔ moved toward the side's reading: a corner's
+ * reading changing late in the dx, 20° left for the way down (all probed on Scene_1's cube).
+ */
+export function heldOffsetStep(prev: number | null, target: number, w: number, wPrev: number, dYaw = 0): number {
+  if (prev === null || w >= 1) return target;
+  const lim = HELD_OFFSET_PER_YAW * Math.abs(dYaw);
+  const o = prev + Math.max(-lim, Math.min(lim, -prev));
+  const f = w > wPrev && wPrev < 1 ? Math.min(1, (w - wPrev) / (1 - wPrev)) : 0;
+  return o + f * Math.atan2(Math.sin(target - o), Math.cos(target - o));
+}
+
+/** ⭐ (2026-11-13, §9) the held offset's most travel toward its target per radian of the orbit's yaw (a dx while the view looks down). */
+export const HELD_OFFSET_PER_YAW = 0.5;
+
+/** ⭐ (2026-11-13) The camera's heading taken whole from the level reading (`calmLevelHeading`) from this pitch of the orbit's direction up / down … */
+export const LEVEL_HEADING_FROM_RAD = (60 * Math.PI) / 180;
+/** ⭐ …blended in from this one (the shown direction's own heading below it, as before). */
+export const LEVEL_HEADING_BLEND_RAD = (50 * Math.PI) / 180;
+
+/**
+ * ⭐⭐⭐ (2026-11-13) THE CAMERA'S HEADING in the world's frame: the shown direction's own (`calmHeading`, as before) below `LEVEL_HEADING_BLEND_RAD` of
+ * the orbit's pitch (`u0`, the orbit's direction), the level reading (`level`, `calmLevelHeading`) from `LEVEL_HEADING_FROM_RAD` to the pole, a smoothstep
+ * between — so a dy alone never turns the heading of a camera looking down (no roll at the zenith), and at the vertical there is a heading to read.
+ */
+export function cameraHeading(yaw: number, u0: Vec3, u: Vec3, level: number): number {
+  const p = Math.asin(Math.min(1, Math.abs(u0[1])));
+  const x = Math.min(1, Math.max(0, (LEVEL_HEADING_FROM_RAD - p) / (LEVEL_HEADING_FROM_RAD - LEVEL_HEADING_BLEND_RAD)));
+  const s = x * x * (3 - 2 * x);
+  if (!(s > 0)) return level;
+  const h0 = calmHeading(yaw, u0, u);
+  if (s >= 1) return h0;
+  return level + s * Math.atan2(Math.sin(h0 - level), Math.cos(h0 - level));
+}
+
+/**
  * ⭐⭐⭐ (2026-11-04, `1.0.95-`) A share's target held toward 1 while the eased normal has not caught up with its own (`cosAngle`, between them): whole calm
  * within 5°, none beyond 30° (a smoothstep). ⛔ A share calming while the normal still swung across from a stale face (175° away, off a top onto the funnel's
  * slanted side): the camera jumped 271 mm in a frame (probed).

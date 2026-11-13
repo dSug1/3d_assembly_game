@@ -98,7 +98,7 @@ left and its first iteration always completes: 25 – 31 on the heptagon, 38 on 
 | F3 | ONE pitch → height scale for all the side columns (the green horizontal everywhere) | the cube's columns are single ±45° facets |
 | F5 | the checks within what the frame leaves, the solve's first iteration reserved, a check that does not fit resumed next frame | ⚠ changes `Scene_1` (fixes its overruns): only the stuck verdict's / the red quads' timing, by a frame or two |
 
-## 7. ✅ AS BUILT (2026-11-12, `1.0.125-Debug_scene_0`) — ⛔ no device close
+## 7. ✅ AS BUILT (2026-11-12, `1.0.125-Debug_scene_0`) — ✅✅ closed by the owner's look with §8 (2026-11-13, `de789f6`)
 
 ⭐⭐⭐ **`Scene_1` unchanged, proven**: its face map from the cube's real faces (`tests/fixtures/scene_1_cube_faces.json`) is `12dc4b6`'s **bit for bit** —
 place, blended place, band, facet, chord, the angles read back, the columns — over 5 568 points every 3.75° (worst difference 0), kept as a vector on
@@ -122,7 +122,7 @@ The probes: every Chrome-launching probe without disk litter (the trial branch's
 piece's turn, the sections' points, the parts' planes, the frame's queries; `walk_rules.mjs` (R1 – R8), `walk_rope.mjs` (the tight rope),
 `walk_scenarios_any_shape.json`, `walk_scenarios_contact.json`.
 
-## 8. ✅ THE DY HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE (2026-11-12) — ⛔ no device close
+## 8. ✅ THE DY HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE (2026-11-12) — ✅✅ closed by the owner's look (2026-11-13, `de789f6`)
 
 > *"just give an hysteresis of the dy: the dy upwards is blocked until a certain band is reached in the face beyond but dx and dy downwards are allowed
 > (the reverse for dy if the pole-holding edge was at the nadir). This will also be OK in case of the cube of scene 1 (there is the same issue when a dy
@@ -141,3 +141,12 @@ other dy free; the coast stopped at the crossing; released too when the assembly
 far-edge roll back accepted on the cube (`POLAR_ORBIT_CLEANUP.md` §9.16), more often met on the heptagon's lower faces.
 **Vectors**: `orbit_any_shape.test.ts` (+3: set only over a far edge, the sign held and the depth square to the edge, the wiring); two source pins.
 **1792** with `Scene_0bis` merged.
+**The after-walks** (2026-11-13, `hepH1` / `hepH2` / `s1H1` / `s1H2`, against `hepF1` / `hepF2` and `s1ref` / `s1ref2`): the heptagon's close-in
+back-and-forths — piece 86 → 3, gizmo 88 → 1, camera 67 → 1; the rope 0 runs off the surface still; the green not a plane 1.1 – 1.5 per 1 000 frames;
+the top faces' tilts 0 upside down of 31; `Scene_1` at contact: blocked 41 → 46 frames (the same). The long BLOCKED runs (to 486 frames) are the walk's
+finger pushing the held sign — by design; the other sign took the gizmo down the face beyond and released the hold.
+⚠ Not readable from these runs, ⛔ open: they ran beside another session's walks, the frames 2 – 5 × longer (`ts`), so every per-frame-step count (the
+jumps, ×2 on both scenes) is not comparable; and the RED section's not-a-plane count on the heptagon far out, 7.1 → 29.4 per 1 000 frames (≈ 35 at
+contact before the hold already) — to re-walk on an idle machine before it is read as a defect. The far walks stopped at 4 of 9 scenarios (the
+watchdog), the tilt probe gave nothing.
+✅✅ **The owner (2026-11-13, on the device, `de789f6` — F1 – F5 and this hold): *"the behavior is tested and is ok for me"*.**

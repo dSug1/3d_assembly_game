@@ -25,7 +25,7 @@ import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from ".
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld, hoverWayInStep, slideWayOutRebase } from "./hover_wiring";
 import { slideArmedAfter } from "../input/hover";
-import { calmHeading, calmShown, calmStep, calmTarget, capEdgePitch } from "../input/orbit_calm";
+import { calmHeading, calmLevelHeading, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import type { Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -259,6 +259,26 @@ function calmFrame(st: SceneState, dtMs: number): void {
   squareFrame(st, dtMs);
   st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);
   st.asmCalmWholeV = wholeShareStep(prevV, st.asmCalmWholeV, dtMs, st.cfg.gizmoEaseMs);
+  // ⭐⭐⭐ (2026-11-13, `ORBIT_ANY_SHAPE.md` §9) the world camera's calm heading offset: the level reading's, HELD while the view looks down (`heldOffsetStep`)
+  // — no roll at the zenith's hit, an even spin there by a dx; none under the tilted pole (its own frame) or the slide's lock
+  if (st.asmTilt !== null || st.asmLocked) {
+    st.asmHeadO = null;
+    st.asmHeadW = 1;
+    st.asmHeadYaw = null;
+    return;
+  }
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const tgt = calmLevelHeading(q.yaw, st.asmCalm, st.asmCalmWhole) - q.yaw;
+  const w = poleWeight(Math.sin(Math.abs(pitchOfV(q.v))));
+  const dYaw = st.asmHeadYaw === null ? 0 : Math.atan2(Math.sin(q.yaw - st.asmHeadYaw), Math.cos(q.yaw - st.asmHeadYaw));
+  st.asmHeadO = heldOffsetStep(st.asmHeadO, tgt, w, st.asmHeadW, dYaw);
+  st.asmHeadW = w;
+  st.asmHeadYaw = q.yaw;
+}
+
+/** ⭐⭐⭐ (2026-11-13, §9) the world camera's level heading at `yaw`: the held offset (`asmHeadO`), else the level reading now. */
+function levelHeadingOf(st: SceneState, yaw: number): number {
+  return st.asmHeadO !== null ? yaw + st.asmHeadO : calmLevelHeading(yaw, st.asmCalm, st.asmCalmWhole);
 }
 
 /** ⭐ The calm's eased state (`st.asmCalm`) and its whole share's TARGET by position (left in `st.asmCalmWhole` for `calmFrame` to ease). */
@@ -652,7 +672,12 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const beyondV = st.orbit.takeBeyond();
   // ⭐⭐⭐ (2026-11-12, §8) the dy hold released once the gizmo is deep enough in the face beyond — or the assembly's orbit off
   if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null || edgeHoldDepth(st.asmEdgeHold, st.asmG) >= st.cfg.edgeHoldMm / 1000)) st.asmEdgeHold = null;
-  if (!assemblyOn(st) || st.greenBox === null) return;
+  if (!assemblyOn(st) || st.greenBox === null) {
+    st.asmHeadO = null; // ⭐ (2026-11-13, §9) read afresh when the assembly's orbit is back
+    st.asmHeadW = 1;
+    st.asmHeadYaw = null;
+    return;
+  }
   ensureAssembly(st);
   const a = st.asm!;
   // ⭐ the approach's coast — ⭐⭐ (2026-11-01) under the slide mode too: a flick out leaves it
@@ -1050,7 +1075,12 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     const uOW = mulM(tl.dir, uF);
     // ⭐⭐⭐ (2026-11-11) a view straight down / up (the square camera on the tilted top) read toward the face the gizmo exits onto (`headingFrom`,
     // `exitNormal`) — as the world's camera reads it the frame after, its view turning there (⛔ the orbit's yaw: a roll there and back at the exit)
-    const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));
+    // ⭐⭐⭐ (2026-11-13) …through the world's own heading rule (`cameraHeading`): toward a pole the calm read level — the calm the world's branch has right
+    // after the exit (`tiltOff`: over a `b` end the exit face's normal with the horizontal share kept, else none)
+    const nX = exitNormal(st);
+    const yW = anglesOfDir(uOW, cam.yaw).yaw;
+    const cW = st.asmCalm !== null && tl.exitAcross && nX !== null ? { n: nX, sH: st.asmCalm.sH, sV: 1, wA: 1 } : null;
+    const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), calmLevelHeading(yW, cW));
     const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
@@ -1063,7 +1093,9 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
   // face's heading at once: the scene jump-rotated; and at ±90° it has none)
   // ⭐⭐⭐ (2026-11-04, `1.0.95-`) under the CALM the heading turned as the direction was (`calmHeading`) — ⛔ the orbit's yaw with the calm's direction:
   // the up built from another heading than the direction's own, the camera ROLLED on a wall (probed: 222 frames over 5° on one close-in dx leg)
-  return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);
+  // ⭐⭐⭐ (2026-11-13, the owner's roll at the zenith) toward the poles the heading of the calm read LEVEL (`cameraHeading`, `calmLevelHeading`) — a dy
+  // alone never turns a camera looking down (⛔ `calmHeading` alone: back to the bare yaw as the calm faded, and at the vertical — a roll by the yaw's side)
+  return offsetFrame(u, st.asmLocked ? cam.yaw : cameraHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u, levelHeadingOf(st, cam.yaw)), o.yawRad, o.pitchRad);
 }
 
 /** ⭐ Locked: does an orbit step from (`yaw0`, `v0`) to (`yaw1`, `v1`) leave the face's cone further? (it is then refused) */

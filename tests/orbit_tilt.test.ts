@@ -443,7 +443,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("if (sqB.n !== null) sqB.n = mulT(st.asmTilt.dir, sqB.n);");
     expect(a).toContain("if (sqO.n !== null) sqO.n = mulM(D, sqO.n);");
     // ⭐⭐⭐ the roll back's target the world's camera exactly (⛔ a vertical view's heading off its own up: 0 ms, then a 180° flip)
-    expect(a).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));"); // (2026-11-11) a vertical view read toward the exit's face
+    expect(a).toContain("const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), calmLevelHeading(yW, cW));"); // (2026-11-11) a vertical view read toward the exit's face // ⭐ (2026-11-13, ORBIT_ANY_SHAPE.md §9) toward the poles the calm read level (`cameraHeading`): the roll at the zenith
     expect(a).not.toContain("tiltCarry("); // ⛔ the carry over the edge deleted
     expect(a).toContain("const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);"); // ⭐ the glide of the depth (held at a mouth: none; let go: straight from the held place)
     expect(code("render/pointer_wiring.ts")).toContain("tiltClampStep(st, yawBefore, vBefore);");
@@ -527,7 +527,7 @@ describe("⭐⭐⭐ (2026-11-11) the roll at an exit elsewhere on the edge, and 
   });
   it("⭐⭐ wired: the roll's target through `headingFrom` toward the exit's face; the ring and the sections drawn on the lag", () => {
     const aw = code("render/assembly_wiring.ts");
-    expect(aw).toContain("const hW = calmHeading(anglesOfDir(uOW, cam.yaw).yaw, uOW, headingFrom(uW, exitNormal(st)));");
+    expect(aw).toContain("const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), calmLevelHeading(yW, cW));"); // ⭐ (2026-11-13, ORBIT_ANY_SHAPE.md §9) toward the poles the calm read level (`cameraHeading`): the roll at the zenith
     expect(aw).toContain("st.asmGizmoLag = gizmoLag(st.asmGizmo, foot, st.gizmoNormal ?? null);");
     expect(aw).toContain("if (sl !== null) sl.position.set(lg?.[0] ?? 0, lg?.[1] ?? 0, lg?.[2] ?? 0);");
     expect(code("render/green_box_wiring.ts")).toContain("gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag)");
