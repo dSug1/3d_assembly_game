@@ -105,7 +105,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(rollOf(offsetFrame(u, calmHeading(yaw, u0, u), 0, 0))).toBeLessThan(1e-6); // upright
     expect(rollOf(offsetFrame(u, yaw, 0, 0))).toBeGreaterThan(5); // ⛔ the orbit's yaw: rolled
     expect(calmHeading(yaw, [0, 1, 0], u)).toBe(yaw);
-    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, st.asmLocked ? cam.yaw : calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);");
+    expect(code("render/assembly_wiring.ts")).toContain("return offsetFrame(u, calmHeading(cam.yaw, orbitDir(cam.yaw, cam.v), u), o.yawRad, o.pitchRad);");
   });
   it("⭐⭐⭐ the calm fades out toward straight above / below: whole under 60° of pitch, none from 85° (⛔ at the bottom pole a stale side normal, a share of 0.53: the piece bent off its gizmo's face, 657 frames behind it, probed)", () => {
     const s = (deg: number) => Math.sin((deg * Math.PI) / 180);
@@ -142,7 +142,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
   });
   it("⭐⭐⭐ wired: the piece and the camera on the shown direction (the gizmo on the orbit's own); the targets from the carrier each frame; 58d86ff's seven sliders (its distance deleted, Q3) in the submenu", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("return n === null ? tiltDir(R, calmDir(st, u)) : coneClamp(tiltDir(R, u), n, st.asmLock!.cone ?? undefined);");
+    expect(a).toContain("return tiltDir(R, calmDir(st, u));"); // ⛔ (2026-11-12) no lock: always the calm's
     expect(a).toContain(": calmShown(u, c);"); // ⭐ (`1.0.120b-`) the calm's, then the square camera over it
     // ⭐ (2026-11-09, §8) on a VERTICAL facet `calmShown` is exactly the old wiring's: the side's frame (its level `t`, the world's up) and the pole weight by
     // the pitch alone — ⭐⭐⭐ (the owner, Q3: *"same calm at every distance"*) no distance in the weight (⛔ 58d86ff's gate curved the A + dy approach)

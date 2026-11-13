@@ -580,7 +580,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/camAt = returnCamera\(cr, pp, homeRel, cfg\.pieceOrbitReturnMm\);\s*const ax = returnLook\(cr, camAt, pp, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitReturnMm\);/);
-    expect(w).toMatch(/: \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\] \+ hov\[0\], c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\] \+ hov\[1\], c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\] \+ hov\[2\]\]/);
+    expect(w).toMatch(/: \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\] \+ \(st\.pieceHold\?\.\[0\] \?\? 0\), c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\] \+ \(st\.pieceHold\?\.\[1\] \?\? 0\), c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\] \+ \(st\.pieceHold\?\.\[2\] \?\? 0\)\]/); // ⛔ (2026-11-12) no hover offset; ⭐ (the slide's rebuild) the ring's hold (`slide_rebuild.test.ts`)
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
     expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
@@ -601,7 +601,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(key).not.toMatch(/st\.zoom\b|cameraLagged|boxOrbit/); // never the live camera
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
-    expect(p).toMatch(/const dyPx = \(dxOnly \|\| shiftApproach \? 0 : fdy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(shiftApproach \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag\), dyPx \* share\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // ⭐ (2026-10-19) the dy through the turn governor
+    expect(p).toMatch(/const dyPx = \(dxOnly \|\| shiftApproach \? 0 : fdy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(shiftApproach \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag \* kd\), dyPx \* share \* kd\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // ⭐ (2026-10-19) the dy through the turn governor
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\), band: new MotionTracker\(\{ \.\.\.st\.cfg, motionDeadbandMm: st\.cfg\.orbitDeadbandMm \}, st\.cfg\.orbitBandRestMs, true\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)*if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
