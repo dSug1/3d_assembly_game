@@ -497,14 +497,18 @@ SR = 0.06                                                     # the bar's radius
 HW = ROD_X + BIG_W / 2 + THROW_GAP + SR                       # 0.215 (0.2 before): a throw's half width, to its arms' centres
 PX = [(i - (N_CYL - 1) / 2) * PITCH for i in range(N_CYL)]    # the throws at x −0.8, 0, +0.8
 OFF = [i * 2 * math.pi / N_CYL for i in range(N_CYL)]         # the pins at 0°, 120°, 240°
-NOSE_X = -CASE_X                                             # the bar's front end FLUSH with the case's front face (the owner's file,
-                                                              # 2026-11-13: *"i moved the end of the crankshaft flush with the vertical faces"*; −1.431 before) — the pulley's shoulder
-FLYWHEEL = (0.277, 0.12, CASE_X + 0.094)                      # r, thickness, its inner face's x — the owner's, sturdier three times (0.277 × 0.094, 0.234 × 0.082,
-                                                              # a 0.12 × 0.06 cap before)
+# ⭐ the FLYWHEEL at the FRONT and the PULLEY at the REAR (the owner, 2026-11-13: *"extend the crankshaft and move the flywheel to the other side
+# of the crankshaft (I thought it was the pulley)"*): the bar runs FLY_GAP past each end face of the case
+FLY_GAP = 0.094
+FLY_FRONT_GAP = 0.057                                         # the flywheel's inner face this far in front of the case (the owner's file)
+FLYWHEEL = (0.179, 0.084, -(CASE_X + FLY_FRONT_GAP))          # r, thickness, its inner face's x — in FRONT; the owner's file, 2026-11-13: *"I
+                                                              # modified the wheel at the end of the cranskshaft"*: smaller, closer (0.277 × 0.12
+                                                              # at 0.094 before; sturdier three times before that)
+NOSE_X = CASE_X + FLY_GAP                                     # the bar's REAR end: the pulley's shoulder (the front end was the nose before)
 # ⭐ the crank's RESTING proxy (and the lower case's ghost floor) at the crank's LOWEST point at the goal — its hull's extreme along its way in,
 # what the orbit's lift measures: since the flywheel, the flywheel's bottom (the lowest pin's before)
 CRANK_REST_Y = min(YC - FLYWHEEL[0], min(YC + RC * math.cos(o) - SR for o in [i * 2 * math.pi / N_CYL for i in range(N_CYL)]))
-BAR_END_X = FLYWHEEL[2] + 0.01                                # the bar ends inside the flywheel
+BAR_START_X = FLYWHEEL[2] - 0.01                              # the bar starts inside the flywheel
 
 
 def bank_frame(side):
@@ -566,7 +570,7 @@ def build_crankshaft():
     part, coll = new_part("E03", "crankshaft", 3, (0, YC, 0))
     ucx = []
     c = lambda x, y=0.0, z=0.0: Vector((x, YC + y, z))
-    corners, x0 = [c(NOSE_X)], NOSE_X
+    corners, x0 = [c(BAR_START_X)], BAR_START_X
     for i, x in enumerate(PX):
         py, pz = RC * math.cos(OFF[i]), RC * math.sin(OFF[i])
         a, b = x - HW, x + HW
@@ -576,8 +580,8 @@ def build_crankshaft():
         for xx in (a, b):
             ucx.append(hull(ball_points(c(xx), SR) + ball_points(c(xx, py, pz), SR)))
         x0 = b
-    corners.append(c(BAR_END_X))
-    ucx.append(cyl_between(c(x0), c(BAR_END_X), SR, 8, circumscribed=True))
+    corners.append(c(NOSE_X))
+    ucx.append(cyl_between(c(x0), c(NOSE_X), SR, 8, circumscribed=True))
     # ⭐ the bar ONE continuous tube along its bent centre line, its knees rounded bends (the owner, 2026-11-13: *"make the crankshaft curves'
     # geometry simpler: too many vertices here"* — 12 UV spheres and a cylinder a piece before, 3,040 vertices)
     centre, tangents = filleted(corners, KNEE_R, KNEE_STEPS)
@@ -593,7 +597,7 @@ def build_crankshaft():
             for k in poly.edge_keys:
                 edge_of[tuple(sorted(k))].use_edge_sharp = True
     r, ln, x0f = FLYWHEEL
-    xc = x0f + ln / 2
+    xc = x0f - ln / 2                                                          # in front: from its inner face toward −x
     mesh_object("E03_flywheel", cyl_between(c(xc - ln / 2), c(xc + ln / 2), r, 32), MAT["chrome"], part, coll)   # its own object
     ucx.append(cyl_between(c(xc - ln / 2), c(xc + ln / 2), r, 8, circumscribed=True))
     for k, piece in enumerate(ucx):
@@ -603,10 +607,10 @@ def build_crankshaft():
     gx, gz = GHOST_CRANK
     mesh_object("UFM_E03_rest", quad(bmesh.new(), [(-gx, CRANK_REST_Y, -gz), (-gx, CRANK_REST_Y, gz), (gx, CRANK_REST_Y, gz),
                                                    (gx, CRANK_REST_Y, -gz)]), MAT["ufm"], part, coll, "ufm")
-    mesh_object("UFM_E03_nose", disc(c(NOSE_X), (-1, 0, 0), SR), MAT["ufm"], part, coll, "ufm")
+    mesh_object("UFM_E03_nose", disc(c(NOSE_X), (1, 0, 0), SR), MAT["ufm"], part, coll, "ufm")
 
     seat_marker("MC_E03_saddles", part, coll, (0, CRANK_REST_Y, 0), (0, -1, 0), (1, 0, 0))
-    seat_marker("MC_E03_nose", part, coll, c(NOSE_X), (-1, 0, 0), (0, 1, 0))
+    seat_marker("MC_E03_nose", part, coll, c(NOSE_X), (1, 0, 0), (0, 1, 0))
     for side, i, x, name in CYLS:                                              # each rod's seat on its pin: the bank's axis outward
         up = bank_frame(side).to_3x3() @ Vector((0, 1, 0))
         seat_marker(f"MC_E03_pin_{name}", part, coll, pin_centre(i) + Vector((x, 0, 0)), up, (1, 0, 0))
@@ -632,7 +636,21 @@ def rod_frame(side, i, x, theta=0.0):
     return bank_frame(side) @ Matrix.Translation((x, ly, lz)) @ Matrix.Rotation(r, 4, "X")
 
 
-def rod_outline_points(side, i, x, seg=16, theta=0.0):
+def half_ring(F, half):
+    """A big end's half ring in the rod's frame F (its origin the pin): half +1 the rod's own (toward the small end), −1 its CAP (toward the
+    crank); r BIG_IN – BIG_R, BIG_W wide along x."""
+    bm, seg = bmesh.new(), 20
+    pts = [(BIG_R * math.cos(math.pi * k / seg), half * BIG_R * math.sin(math.pi * k / seg)) for k in range(seg + 1)] + \
+          [(BIG_IN * math.cos(math.pi * (seg - k) / seg), half * BIG_IN * math.sin(math.pi * (seg - k) / seg)) for k in range(seg + 1)]
+    a = [bm.verts.new(F @ Vector((-BIG_W / 2, py, pz))) for pz, py in pts]
+    b = [bm.verts.new(F @ Vector((BIG_W / 2, py, pz))) for pz, py in pts]
+    n = len(pts)
+    fs = [bm.faces.new(a[::-1]), bm.faces.new(b)] + [bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k])) for k in range(n)]
+    bmesh.ops.recalc_face_normals(bm, faces=fs)
+    return bm
+
+
+def rod_outline_points(side, i, x, seg=16, theta=0.0, cap=False):
     """The rod's solid in points (reference coordinates): the big end's half ring (open toward the crank), the small end — their hull holds
     the shank."""
     F, pts = rod_frame(side, i, x, theta), []
@@ -640,6 +658,8 @@ def rod_outline_points(side, i, x, seg=16, theta=0.0):
         t = math.pi * k / seg
         for dx in (-BIG_W / 2, BIG_W / 2):
             pts.append(F @ Vector((dx, BIG_R * math.sin(t), BIG_R * math.cos(t))))
+            if cap:                                       # its cap, once seated (the crank turned): the lower half too
+                pts.append(F @ Vector((dx, -BIG_R * math.sin(t), BIG_R * math.cos(t))))
     for k in range(2 * seg):
         t = 2 * math.pi * k / (2 * seg)
         for dx in (-SMALL_W / 2, SMALL_W / 2):
@@ -1032,17 +1052,15 @@ def build_piston(side, i, x, name):
     # segment)
     shank = bevel_outer(box(-SHANK[0] / 2, SHANK[0] / 2, 0.06, ROD_L, -SHANK[1] / 2, SHANK[1] / 2), width=SHANK_CHAMFER, segments=1)
     merge_into(rod, transformed(shank, F))
-    big = bmesh.new()                                      # the big end: a half ring OPEN toward the crank (−y in the rod's frame)
-    seg = 20
-    ring_pts = [(BIG_R * math.cos(math.pi * k / seg), BIG_R * math.sin(math.pi * k / seg)) for k in range(seg + 1)] + \
-               [(BIG_IN * math.cos(math.pi * (seg - k) / seg), BIG_IN * math.sin(math.pi * (seg - k) / seg)) for k in range(seg + 1)]
-    a = [big.verts.new(F @ Vector((-BIG_W / 2, py, pz))) for pz, py in ring_pts]
-    b = [big.verts.new(F @ Vector((BIG_W / 2, py, pz))) for pz, py in ring_pts]
-    n = len(ring_pts)
-    fs = [big.faces.new(a[::-1]), big.faces.new(b)] + [big.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k])) for k in range(n)]
-    bmesh.ops.recalc_face_normals(big, faces=fs)
-    merge_into(rod, big)
+    merge_into(rod, half_ring(F, +1))                     # the big end: a half ring OPEN toward the crank (−y in the rod's frame)
     rod_obj = mesh_object(f"{pid}_rod_mesh", rod, MAT["chrome"], part, coll, origin=hinge)
+    # ⭐ its COUNTER CLOSURE, the rod CAP (the owner's file, 2026-11-13: *"create the counter closure of the rod connections … make the counter
+    # closure appear in the game when the piston-rod is seated in its position"*): the other half ring, closing the big end round the pin from the
+    # crank's side — a child of the rod (it turns with it on the hinge), NO collision piece (the way in needs the big end open), and marked to
+    # APPEAR only once the part is seated (PART_AUTHORING.md §3: `appears_when_seated`)
+    cap = mesh_object(f"{pid}_rod_cap", half_ring(F, -1), MAT["chrome"], part, coll, origin=hinge)
+    cap.parent, cap.matrix_basis = rod_obj, Matrix()
+    cap["appears_when_seated"] = True
     h = empty(f"HINGE_{pid}_wrist", coll, parent=part, matrix=part.matrix_basis.inverted() @ hinge, display="SINGLE_ARROW", size=0.2)
     h["role"], h["axis"], h["locked_at_deg"] = "hinge", "local X (the crank's direction)", math.degrees(r)
     rod_obj["hinge"] = h.name
@@ -1327,6 +1345,36 @@ def build_exhausts():
     build_exhaust(1)
 
 
+# ================================================================ STEP 9 — E17 the pulley (any turn about its axis), on the crank's REAR end
+PULLEY = (0.34, 0.10, 0.006)        # Appendix B's hammered pulley: r, thickness; its rims' chamfer
+PULLEY_DISC = (0.24, 0.01)          # its dark inner disc: r, how far it stands proud of the pulley's outer face
+PULLEY_HUB = (0.08, 0.015)          # its hub: r, how far proud
+PULLEY_PIN = (0.04, 0.15, 0.03)     # its pin: r, its distance off the axis (the turn shows), how far proud
+
+
+def build_pulley():
+    part, coll = new_part("E17", "pulley", 9, (NOSE_X, YC, 0), symmetry="spinFree")
+    c = lambda x, y=0.0, z=0.0: Vector((x, YC + y, z))
+    r, t, b = PULLEY
+    x0, x1 = NOSE_X, NOSE_X + t                                                # its inner face on the crank's end, its outer face behind
+    along_x = Matrix.Translation(c(0))                                          # revolve_x turns about x: the crank's axis
+    prof = [(x0, 0.0, 0), (x0, r - b, 0), (x0 + b, r, 0), (x1 - b, r, 0), (x1, r - b, 0), (x1, 0.0, 0)]
+    mesh_object("E17_pulley_mesh", revolve_x(prof, along_x, seg=48), MAT["chromeH"], part, coll)
+    dr, dp = PULLEY_DISC
+    mesh_object("E17_pulley_disc", cyl_between(c(x1 - 0.02), c(x1 + dp), dr, 40), MAT["dark"], part, coll)
+    hr, hp = PULLEY_HUB
+    mesh_object("E17_pulley_hub", cyl_between(c(x1 - 0.02), c(x1 + dp + hp), hr, 20), MAT["chrome"], part, coll)
+    pr, po, pp = PULLEY_PIN
+    mesh_object("E17_pulley_pin", cyl_between(c(x1 - 0.02, po), c(x1 + dp + pp, po), pr, 14), MAT["chrome"], part, coll)
+    # collision: one piece, the whole pulley (its hull: a cylinder to its hub's face)
+    mesh_object("UCX_E17_00", cyl_between(c(x0), c(x1 + dp + hp), r, 12, circumscribed=True), MAT["ucx"], part, coll, "ucx")
+    # face proxy: its inner face (its seat on the crank's end) and its outer face (round: a disc each)
+    faces = disc(c(x0), (-1, 0, 0), r, 24)
+    merge_into(faces, disc(c(x1 + dp), (1, 0, 0), dr, 24))
+    mesh_object("UFM_E17_faces", faces, MAT["ufm"], part, coll, "ufm")
+    seat_marker("MC_E17_nose", part, coll, c(x0), (-1, 0, 0), (0, 1, 0))
+
+
 # each seat: (the step, the host's marker, the part's marker) — anti-parallel and coincident at the goal (the check below)
 SEAT_PAIRS = [(2, "MC_E01_case", "MC_E02_plinth"), (3, "MC_E02_crank", "MC_E03_saddles"),
               (4, "MC_E02_upper", "MC_E04_lower"), (5, "MC_E04_bankA", "MC_E05_upper"), (5, "MC_E04_bankB", "MC_E06_upper")]
@@ -1345,8 +1393,10 @@ for _side, _pid, _bank, _tag in ((-1, "E13", "E05", "A"), (1, "E14", "E06", "B")
 for _side, _pid, _head, _tag in ((-1, "E15", "E13", "A"), (1, "E16", "E14", "B")):     # each exhaust straight down onto its valve set's discs
     SEAT_PAIRS.append((8, f"MC_{_head}_exhaust", f"MC_{_pid}_head"))
     INSERTIONS.append((8, f"{_pid}_exhaust_{_tag}", tuple(bank_frame(_side).to_3x3() @ Vector((0, 1, 0))), 0.8))
+SEAT_PAIRS.append((9, "MC_E03_nose", "MC_E17_nose"))          # the pulley along the crank's axis, from behind, onto its end
+INSERTIONS.append((9, "E17_pulley", (1, 0, 0), 0.8))
 
-STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, build_upper_case), (5, build_banks), (6, build_pistons), (7, build_heads), (8, build_exhausts)]
+STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, build_upper_case), (5, build_banks), (6, build_pistons), (7, build_heads), (8, build_exhausts), (9, build_pulley)]
 for n, fn in STEPS:
     if n <= STEP:
         fn()
@@ -1596,7 +1646,7 @@ if STEP >= 6:
             lo = min(lo, s_ - SKIRT - FOOT)                                  # the body's bottom above the cylinder's end (≥ 0)
             hi = min(hi, DECK - VALVE_DIP - (s_ + PISTON_Y + PISTON_H / 2))   # the crown below the valves' heads (≥ 0)
             if first is None:
-                for pts in (rod_outline_points(side, i, x, theta=th), piston_body_points(side, i, x, theta=th)):
+                for pts in (rod_outline_points(side, i, x, theta=th, cap=True), piston_body_points(side, i, x, theta=th)):
                     bm = hull(pts)
                     vs = [v.co.copy() for v in bm.verts]
                     fs = [[v.index for v in f.verts] for f in bm.faces]

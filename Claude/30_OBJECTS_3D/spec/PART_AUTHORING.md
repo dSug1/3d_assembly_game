@@ -66,6 +66,13 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    CAVITY (a tub the part goes into) needs one as much as a bore: its real depth is the cavity's bottom, not the seat (`Scene_2`'s crankshaft).
    ⭐ A proxy face keeps the face map's thresholds (`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §4: ≥ 15° from 45° of elevation; ≥ 30° between faces
    to be told apart), and an opening in a proxy face is a RECTANGLE (the face map reads rectangles), round only in the look.
+3bis. ⭐⭐ **A piece that APPEARS WHEN THE PART IS SEATED** (the owner, 2026-11-13, `Scene_2`'s rod caps: *"create the counter closure of the rod
+   connections … make the counter closure appear in the game when the piston-rod is seated in its position"*): a part whose way in needs an
+   opening (a big end that must pass over its pin) carries the piece that closes it as its OWN object, a child of what it moves with (the rod: it
+   turns with it), the custom property **`appears_when_seated: true`** and NO collision piece of its own. ⭐ The game (requirement): hidden while
+   the part is held and approached; SHOWN the frame the part seats (the goal capture, `D183`), with a short pop-in; from then on it moves with
+   its parent (the level-end animation) — and its collision, if one is ever authored for it (`UCX_<piece>`), enabled only then. The check script:
+   the way in is swept WITHOUT it, the motion (§4.2) WITH it.
 4. **The seating points** — an empty per seat of the plan, `MC_<part>_<seat>`, at a position on the seat face with its OUTWARD normal (the
    empty's single arrow, its local Z) and a twist reference (its local X), named after the plan's step. ⭐ **REDEFINED** (the owner, 2026-11-13:
    *"the mate connector was designed for translation of parts which no longer exists (it was replaced by our orbit and approach)"*): it is a SEAT
