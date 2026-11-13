@@ -1896,8 +1896,11 @@ scene.view_settings.look = "Medium High Contrast"
 import json
 
 
-def engine_pose(theta_deg):
-    """{object name: its matrix_basis} at the crank angle θ — every moving piece; the rest stays at its goal."""
+def engine_pose(theta_deg, valves_closed=False):
+    """{object name: its matrix_basis} at the crank angle θ — every moving piece; the rest stays at its goal.
+    ⭐ valves_closed: THE GOAL (the export, the checks after the run): at θ 0 the crank and pistons are at their goal but two valves are part
+    open (each valve opens over 180° of the 720°: at every θ some are) — the valve set is SEATED closed, its collision built closed (the owner,
+    2026-11-13: *"collision layer has two valves cap misaligned"* — B1's second and B2's first, 0.06 down their axes off their cylinders)."""
     th, poses, fire = math.radians(theta_deg), {}, valve_fire()
     poses["E03_crankshaft"] = Matrix.Translation((0, YC, 0)) @ Matrix.Rotation(th, 4, "X")
     if STEP >= 9:
@@ -1912,7 +1915,7 @@ def engine_pose(theta_deg):
             hid = "E13" if side < 0 else "E14"
             part = bpy.data.objects[f"{hid}_head_{'A' if side < 0 else 'B'}"]
             for vs, which in ((-1, "1"), (1, "2")):
-                lift = valve_lift(theta_deg, name, which)
+                lift = 0.0 if valves_closed else valve_lift(theta_deg, name, which)
                 m = part.matrix_basis.inverted() @ valve_frame(side, x, vs) @ Matrix.Translation((0, -lift, 0))
                 poses[f"{hid}_valve_{name}_{which}"] = m
                 poses[f"{hid}_valve_{name}_{which}_cap"] = m
@@ -1953,6 +1956,11 @@ def contact_ok(a, b, pairs, ta, tb):
     return False
 
 
+# ⭐ THE BUILT POSE, every part's every object (reference units, relative to YUP_ROOT) — before anything moves them: the export must put each
+# where it was built, the look, its collision and its proxies together (⑫ in check_glb; PART_AUTHORING.md §4.4)
+bpy.context.view_layer.update()
+BUILT = {o.name: YUP_ROOT.matrix_world.inverted() @ o.matrix_world for p, c in PARTS for o in c.objects}
+
 if STEP >= 6:
     movers = [o for o in bpy.data.objects if o.type == "MESH" and o.get("role") == "render" and
               (owner_part(o).name in {"E03_crankshaft", "E17_pulley"} or owner_part(o).name.startswith(tuple(PISTON_IDS.values())) or "_valve_" in o.name)]
@@ -1981,7 +1989,7 @@ if STEP >= 6:
                         continue
                     key = tuple(sorted((a.name, b.name)))
                     hits.setdefault(key, []).append(theta)
-    apply_pose(engine_pose(0))                              # back to the goal
+    apply_pose(engine_pose(0, valves_closed=True))          # back to the goal (the valves closed)
     if hits:
         print(f"the engine RUNNING (720°, every 6°, the meshes): ⛔ {len(hits)} interferences — " +
               "; ".join(f"{a} × {b} at {v[0]}°–{v[-1]}° ({len(v)} poses)" for (a, b), v in sorted(hits.items())))
@@ -2467,8 +2475,13 @@ print("preview →", scene.render.filepath)
 GLB = BLEND.replace(".blend", ".glb")
 
 
-def export_glb(path, yup=True):
-    apply_pose(engine_pose(0))                                   # the goal, whatever frame the preview's keyframes left
+def export_glb(path, yup=True, valves_closed=True):
+    # ⛔ the preview's KEYFRAMES drive the movers: each update re-evaluates them at the current frame (frame 1 = θ 0, two valves open) and
+    # overwrites any pose set by hand — the first run of ⑫ found the valves still open after apply_pose. Detached for the export, then back.
+    actions = {o.name: o.animation_data.action for o in bpy.data.objects if o.animation_data and o.animation_data.action}
+    for n in actions:
+        bpy.data.objects[n].animation_data.action = None
+    apply_pose(engine_pose(0, valves_closed))                    # the goal (the valves closed)
     to_root = YUP_ROOT.matrix_world.inverted()
     bpy.context.view_layer.update()
     preview = {o.name for o in PREVIEW.all_objects}
@@ -2500,6 +2513,8 @@ def export_glb(path, yup=True):
     for o in keep:
         o.select_set(False)
         o.hide_set(hidden[o.name])
+    for n, act in actions.items():
+        bpy.data.objects[n].animation_data.action = act
     return keep
 
 
@@ -2560,6 +2575,21 @@ def check_glb(path, keep, label="the export"):
                       ((W[o.name].to_3x3() @ Vector((0, 1, 0))) - (m.to_3x3() @ Vector((0, 0, 1)))).length)
     if off > 1e-4:
         bad.append(f"the markers' places / normals off the reference by {off:.4f} (the axes)")
+    # ⭐ ⑫ THE BUILT POSE: every exported node where it was BUILT — its place and its axes (glTF local x, y, z = Blender's x, z, −y). A piece
+    # exported in another pose leaves its collision pieces and proxies behind (the valves exported part open: their caps off their cylinders)
+    moved = []
+    for nm, m in BUILT.items():
+        if nm not in W:
+            continue
+        g = W[nm]
+        d = max((g @ Vector(a) - m @ Vector(b)).length for a, b in (((0, 0, 0), (0, 0, 0)), ((1, 0, 0), (1, 0, 0)), ((0, 1, 0), (0, 0, 1)),
+                                                                   ((0, 0, 1), (0, -1, 0))))
+        if d > 1e-4:
+            moved.append((d, nm))
+    if moved:
+        moved.sort(reverse=True)
+        bad.append(f"{len(moved)} nodes NOT where they were built (the look off its collision and proxies): " +
+                   ", ".join(f"{nm} {d:.3f}" for d, nm in moved[:6]))
     for k in ("animations", "cameras"):
         if gl.get(k):
             bad.append(f"{len(gl[k])} {k} exported")
@@ -2587,4 +2617,10 @@ if STEP >= 10:
         print("the export's CONTROL (z up): " + ("⛔ NOT caught — the axes check is blind" if check_glb(ctl, kept, "  control")
                                                  else "caught ✅"))
         os.remove(ctl)
+        ctl = os.path.join(os.environ.get("TEMP", OUT_DIR), "scene2_control_open_valves.glb")   # ⑫'s control: exported at θ 0 as it was
+        export_glb(ctl, valves_closed=False)
+        print("the built pose's CONTROL (the valves as at θ 0): " + ("⛔ NOT caught — the pose check is blind" if check_glb(ctl, kept, "  control")
+                                                                     else "caught ✅"))
+        os.remove(ctl)
+        export_glb(GLB)                                          # the file's own pose back (the controls' exports moved the valves)
 

@@ -276,6 +276,19 @@ workflow once the scene is built in blender"*)
    carried, each marker's place and normal = the reference's (within 1e-4), nothing double-sided, no animation or camera, images embedded; its size
    and vertex counts printed. **Its control** (`CHECK_CONTROLS`): the same export WITHOUT the +Y-up conversion must FAIL the axes check (caught:
    3.18 off). `Scene_2`: 1.47 MB, 280 nodes, 30,416 vertices as exported (glTF splits a vertex at every hard edge).
+5. ⭐⭐ **THE GOAL POSE, every piece WHERE IT WAS BUILT** (the owner, 2026-11-13: *"collision layer has two valves cap misaligned"*): the export
+   posed the engine at θ 0 — the crank and pistons at their goal, but TWO VALVES part open (each valve opens over 180° of the 720°: at every θ some
+   are), their look 0.061 down their axes off the collision cylinders built closed. ⛔ Why no check saw it: the read-back compared the MARKERS with
+   the reference, never a drawn piece with the pose its collision and proxies were built in. Now:
+   - **the goal pose** = the crank's θ 0 with **every valve CLOSED** (`engine_pose(0, valves_closed=True)` — the valve set is SEATED closed);
+   - ⛔ **the preview's KEYFRAMES detached during the export**: Blender re-evaluates an object's action at the current frame on every update and
+     overwrites a pose set by hand — the first fix posed the valves closed and the file still had them open (found by the check below). Each
+     mover's action is set aside, the goal posed, the file written, the actions put back (the `.blend` keeps its scrubbable preview);
+   - ⭐ **⑫ THE BUILT POSE** (read back): every part's every object's matrix is recorded right after the build (`BUILT`, before the running check
+     moves anything); every exported node — render, `UCX_`, `UFM_`, marker — must sit there (its place and its three axes, 1e-4) — else
+     *"N nodes NOT where they were built"*, named. **Its control** (`CHECK_CONTROLS`): the export at θ 0 with the valves as they are then — must
+     FAIL (caught: the 4 valve objects, 0.061).
+   ⭐ For ANY scene with moving pieces: the export's pose is the pose the collision and proxies were built in — never a frame of the animation.
 
 ## 5. A scene's own reference animation
 

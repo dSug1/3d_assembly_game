@@ -59,3 +59,17 @@ describe("⭐ World 0's level menu (the owner, 2026-11-12): the demo on top, eac
     expect(s).toContain("for (const l of world ? menuLevels(world) : []) panel.append(button(l.title, () => flow.openLevel(l.id)));");
   });
 });
+
+describe("⭐ `Scene_2`'s model (2026-11-13, W4 — the final stage)", () => {
+  it("⭐ the engine's .glb, every part (no slice yet), carried through the JSON seam", () => {
+    expect(SCENE_2.model?.url).toMatch(/world0_scene_2_engine.*\.glb/);
+    expect(SCENE_2.model?.parts).toBeUndefined();
+    const sliced = { ...SCENE_2, model: { url: "x.glb", parts: ["E01", "E02"] } };
+    expect(parseSceneDescriptor(serializeSceneDescriptor(sliced))).toEqual(sliced);
+  });
+  it("⛔ a model without a url, or with parts not ids, refused by name", () => {
+    const j = (model: unknown) => JSON.stringify({ ...JSON.parse(serializeSceneDescriptor(SCENE_2)), model });
+    expect(() => parseSceneDescriptor(j({ parts: ["E01"] }))).toThrow(/model.url/);
+    expect(() => parseSceneDescriptor(j({ url: "x.glb", parts: [1] }))).toThrow(/model.parts/);
+  });
+});

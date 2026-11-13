@@ -72,7 +72,9 @@ export function paint(st: SceneState) {
       // ⭐ (2026-10-13, `COLLISION.md` §11bis) what the orbited piece's guard costs a frame (ms, smoothed)
       (st.greenBox !== null ? `  solver ${st.pieceGuardMs.toFixed(2)}ms (peak ${st.pieceGuardPeak.toFixed(0)}) q${st.pieceQueries}${st.pieceDeferred ? " d" : ""}${st.pieceMoveBlocked ? " b" : ""}` : "") +
       goalReadout(st, goal) +
-      demoReadout(st),
+      demoReadout(st) +
+      // ⭐ (2026-11-13) a Blender scene's model: its parts, or ⛔ why it was refused
+      (st.modelStatus === "" ? "" : `  ${st.modelStatus}`),
     // ⚠ EVERY finger down, ignored ones included — the readout must not lie about
     // what is on the glass. The rules read `activeCount`, which excludes them.
     pointers: st.router.size,

@@ -147,3 +147,75 @@ part); ⭐ a CONTROL that must read BLOCKED (the part pushed past its goal) — 
 * The level as played (its menu entry, its boot): `20_GAME_RULES/spec/GAME_STRUCTURE.md` §7.
 * The Blender files and scripts: `Assets/Blender/World<N>_Scene<M>_<name>/`, registered in `30_OBJECTS_3D/spec/BLENDER_ASSETS.md` §1.
 * What the game must gain: a row in `00_CORE/QUEUE.md`, once approved — never a second list.
+
+## 6. ⭐⭐⭐ THE PLAYBOOK — the steps as followed for `Scene_2` (2026-11-12 – 13), to reuse for the next scene
+
+> *"update the md files with the steps we follow, so that next time I create a new scene I can use that to speed up things"* — the owner, 2026-11-13
+
+⭐ A RUN-SHEET, in order: what to do, what to ask, what closes each stage. The rules live above (§1 – §4) and in `PART_AUTHORING.md`; this section only
+says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before it.
+
+### 6.1 Setting up
+
+1. **A branch for the scene** — a worktree is optional (`Scene_2` was built in `../3d_assembly_game-scene2` beside the main folder's work, then merged
+   `--no-ff` into it and the worktree removed: `node_modules` checked for links first — `git worktree remove` follows a junction).
+2. **The menu entry first** — an EMPTY scene in the level menu (`src/content/scene_<n>.ts`, `worlds.ts`, `GAME_STRUCTURE.md` §7): the floor, lights,
+   rig and play volume read from `SCENE_1` (never retyped), so the level boots from day one.
+3. **The scene's spec file** — `30_OBJECTS_3D/spec/SCENE_<N>_ASSEMBLY.md` (§5), with the owner's words quoted as they come.
+
+### 6.2 W0 – W2: on paper
+
+1. **W0 — the brief**: the object and its reference (`Scene_2`: the owner's glass V6 sheet and HTML preview); ⭐ the SCALE at once — the assembled
+   object about `Scene_1`'s cube (§4); the reference's units → `unitM` (`Scene_2`: 0.14 m a unit).
+2. **W1 — the plan** (§2's template): the catalogue, the steps, the nine rules checked ON THE REFERENCE'S NUMBERS. ⭐ Ask the owner the decisions the
+   plan turns on, numbered (`Scene_2`'s D1 – D4: how the block splits, the anchor, look-alike parts, the boot). ⭐ Check the face thresholds (§4) on the
+   reference — tilt off 45° here, not later (`Scene_2`'s 90° V → 120°). ⛔ **GATE: "plan approved".**
+3. **W2 — the geometry sheet**: per part its look, collision pieces, face proxy and ghosts, seat markers, goal (`SCENE_2_ASSEMBLY.md` §6 is the model).
+   ⛔ **GATE: "sheet approved".**
+
+### 6.3 W3: the Blender build, one step at a time
+
+1. **The script** — `Assets/Blender/scripts/build_<scene>.py -- --step N` (`build_engine.py` is the model to copy): rebuilds the `.blend` up to step N,
+   the finish pass, a preview render, ⭐ every check of `PART_AUTHORING.md` §4.2 printed. ⚠ Blender runs are HEAVY: started on the owner's go only.
+2. **One step a round** — build step N, the checks clean, ⛔ **GATE: the owner's look in Blender**; his changes come back either as words or as edits
+   in his own copy of the `.blend` (`<scene>_owner.blend`): READ them (the file's numbers), carry the RULE into the script, never the hand-dragged number
+   (§4.1 of `PART_AUTHORING.md`); a request that breaks a rule (a scale that bends the V) is asked, not taken.
+3. **Every finding the owner makes that a check missed → a new check AND a planted control** (`CHECK_CONTROLS=1`: each must be CAUGHT), and the
+   mistake written into `PART_AUTHORING.md` §3's list (ⓐ … ⓜ) — so it is caught by the script next time, not by the owner.
+4. **Before the export** — the three checks of `PART_AUTHORING.md` §4.3: the geometry review, the motion run (`animation_golden.json` if the object
+   moves at the end), ⛔ **GATE: the owner's review of the face proxies and ghosts** (`review_proxies.py`, the review `.blend`).
+5. **The export** — the last step: one `.glb`, read back by the script (§4.4). Commit the `.blend`, the script, the `.glb`, the previews.
+
+### 6.4 W4 – W7: into the game — ⭐ a VERTICAL SLICE first (§1)
+
+1. **Choose the slice with the owner** — the anchor, one part resting on it, one INSERTED, one more if cheap (`Scene_2`: the plinth (pre-placed), the
+   lower case, the crankshaft (plunged into the tub), the pulley (pushed onto the crank's end)). ⛔ **GATE: "slice ok".**
+2. **W4 — the loader** (decided 2026-11-13: Babylon's own glTF reader `@babylonjs/loaders`, Apache-2.0, the same version as `@babylonjs/core`): the
+   `.glb` read in `src/core` from its JSON (the conventions checked, every refusal NAMED, vectors on the real file and on broken copies), meshes made in
+   `src/render`, with a debug view of the collision pieces, the face proxies and the markers.
+3. ⭐⭐ **THE FINAL STAGE — the WHOLE scene assembled, in the game** (the owner, 2026-11-13: *"probably good to have a look at the scene in its final
+   stage because that's the goal the player has to achieve. That will settle dimensions and scales, lighting, background, etc."*): every part at its
+   goal, on the floor, under the scene's lights and background, the camera's rig round it — what the player builds toward. ⭐ Settled here, once: the
+   SCALE (`unitM`; against `Scene_1`'s cube, §4), where it stands on the floor, the LIGHTS and SHADOWS, the BACKGROUND, the materials as Babylon draws
+   them (glass, chrome, wood; the axes and nothing inside out). ⛔ **GATE: the owner's look** (the browser, then the device).
+   ⭐ Found at `Scene_2`'s look (2026-11-13), for every scene: **(a) metal is BLACK without an environment** — a metallic material shows only what
+   it reflects; Blender's viewport lights it with a studio image, the game had none. The fix: an environment made for the game, no third-party image,
+   no network — `scripts/gen_sky_hdr.mjs` writes `Assets/Environment/sky_sand.hdr` (512 × 256 Radiance RGBE, run-length coded, ≈ 63 KB: a light grey sky tinted blue — the owner: *"the sky is too blue"* —,
+   a small bright sun 40° up, warm sand below), loaded by `render/model_import.ts` as a prefiltered `HDRCubeTexture` (`scene.environmentTexture`;
+   it lights the glTF's PBR materials only, not drawn as a background); its strength the RENDERING slider **environment** (`envIntensity`, 0 – 3).
+   **(b) look with the debug layers** (the `model layers` slider): the look against its collision pieces and proxies — `Scene_2`'s showed two valves
+   off their collision: exported in an animation frame, not the goal (`PART_AUTHORING.md` §4.4 item 5).
+4. ⭐⭐ **THE BOOT STAGE — the parts laid out where the player finds them** (the owner: *"also good to have a look at the scene in its boot stage so we
+   can lay the parts properly"*): the anchor at its goal, every other part in its boot place (`Scene_2`: the HEAPS, one per type of part, a part never on
+   its seating face — `SCENE_2_ASSEMBLY.md` D4), reachable by the orbit, inside the play volume, in view from the boot camera. ⛔ **GATE: the owner's
+   look** — the layout is level data, so it is tuned here before any part is played.
+5. **W5 — the PLAYABLE SLICE: the level data and what the game must gain**: the slice's parts as bodies (the anchor frozen, the others placeable), the
+   boot layout from item 4, the steps as data; the plan's requirements for the game (`SCENE_<N>_ASSEMBLY.md` §5 — `Scene_2`: every part orbited in turn,
+   the plunge snap, a ghost read only for its part, a seated face skipped, the orbit's centre per step) built as needed by the slice, each with its vectors.
+6. **W6 — the headless proof**: probes walking the slice from boot to goal (`scripts/probes/`), the budget per frame. ⚠ HEAVY: on the owner's go.
+7. **W7** — deploy on the owner's word; ⛔ **GATE: the owner's look on the device** closes the slice. Then widen a step at a time, a look each.
+
+### 6.5 Each round, whatever the stage
+
+* `npm run verify:quick` before every commit (the full `verify` in CI); md, commits, deploys only when the owner asks; stage files by path.
+* Record the owner's words in the scene's spec, the status in ONE line of `CLAUDE.md` / `QUEUE.md` (their byte budgets: move old lines to `history/`).

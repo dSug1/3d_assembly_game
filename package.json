@@ -24,7 +24,8 @@
     "verify:quick": "npm run typecheck && npm run test:quick"
   },
   "dependencies": {
-    "@babylonjs/core": "^7.54.0"
+    "@babylonjs/core": "^7.54.0",
+    "@babylonjs/loaders": "^7.54.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

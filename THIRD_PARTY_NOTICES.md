@@ -11,6 +11,7 @@ game will be commercialised.
 | component | version | licence | notes |
 |---|---|---|---|
 | Babylon.js (`@babylonjs/core`) | see `package-lock.json` | Apache-2.0 | requires this NOTICE to ship with the binary |
+| Babylon.js glTF loaders (`@babylonjs/loaders`, with its type package `babylonjs-gltf2interface`) | see `package-lock.json` (the same version as `@babylonjs/core`) | Apache-2.0 | ships — reads a scene's `.glb` (2026-11-13, `render/model_import.ts`); requires this NOTICE to ship with the binary |
 | Vite | see `package-lock.json` | MIT | build-time only, not shipped |
 | Vitest | see `package-lock.json` | MIT | test-time only, not shipped |
 | TypeScript | see `package-lock.json` | Apache-2.0 | build-time only, not shipped |

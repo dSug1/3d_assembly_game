@@ -595,6 +595,8 @@ export interface SceneState {
   shadowFull: import("@babylonjs/core/Meshes/abstractMesh").AbstractMesh[][];
   shadowKey: number;
   shadowLevelSeen: "FULL" | "PIECE" | null;
+  /** ⭐ (2026-11-13) the scene's `.glb` (`render/model_import.ts`): loading, its parts, or ⛔ why it was refused — on the HUD's first line. `""` no model. */
+  modelStatus: string;
   cfg: GestureConfig;
   canvas: HTMLCanvasElement;
 }
