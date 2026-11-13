@@ -91,6 +91,9 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | ⭐⭐ **the CONTROL** | the same part pushed 0.05 units PAST its goal, into its host | ⛔ it must read BLOCKED — else the check is BLIND (a check never seen failing is not trusted: `CLAUDE.md` rule 2's spirit) |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
+⭐ **A host is CUT only where a part REALLY passes** (the owner, 2026-11-13, `Scene_2`'s upper case: *"(b)"*): the cut is the part's own swept
+hull along its way in (the hull of its two end positions — exact for a convex piece), computed from the part's geometry in the script — never the whole
+opening's cylinder, which can eat a host whole; a part's geometry the cut needs is a shared function, built before the part's own step.
 ⚠ Not yet in the report, to add as the steps need them: every collision piece convex and closed; every proxy face flat; every part the plan names
 present and nothing unplanned carrying a proxy; each moving part's pivot (§5). ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
 ⚠ What the way-in sweep does NOT see: a piece wholly INSIDE another without a crossing triangle (the 0.01 step makes it cross on the way); contact at

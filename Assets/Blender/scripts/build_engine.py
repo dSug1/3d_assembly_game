@@ -187,7 +187,11 @@ def hull(points):
     res = bmesh.ops.convex_hull(bm, input=vs)
     loose = list({v for v in res["geom_interior"] + res["geom_unused"] if isinstance(v, bmesh.types.BMVert)})
     bmesh.ops.delete(bm, geom=loose, context="VERTS")
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    centre = sum((v.co for v in bm.verts), Vector()) / len(bm.verts)
+    bm.normal_update()
+    bmesh.ops.reverse_faces(bm, faces=[f for f in bm.faces if (f.calc_center_median() - centre).dot(f.normal) < 0])
+    open_edges = sum(1 for e in bm.edges if len(e.link_faces) != 2)
+    assert open_edges == 0, f"a hull is not a closed solid: {open_edges} edges without two faces"
     return bm
 
 
@@ -209,6 +213,44 @@ def disc(center, normal, r, seg=16):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     if bm.faces[0].normal.dot(n) < 0:
         bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    return bm
+
+
+def boolean_cut(base, cutters):
+    """base − cutters (bmeshes, reference coordinates) by Blender's EXACT boolean; returns a new bmesh. The inputs are freed."""
+    def obj(bm, name):
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me)
+        bm.free()
+        o = bpy.data.objects.new(name, me)
+        scene.collection.objects.link(o)
+        return o
+    b = obj(base, "_bool_base")
+    tmp = [obj(c, f"_bool_cut_{i}") for i, c in enumerate(cutters)]
+    for i, t in enumerate(tmp):
+        m = b.modifiers.new(f"cut{i}", "BOOLEAN")
+        m.operation, m.solver, m.object = "DIFFERENCE", "EXACT", t
+    if os.environ.get("BOOL_DEBUG"):
+        for k in range(len(tmp)):
+            for j, m in enumerate(b.modifiers):
+                m.show_viewport = j <= k
+            ev = b.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            print(f"  boolean after cutter {k} ({len(tmp[k].data.vertices)} verts): {len(ev.data.vertices)} verts")
+        for m in b.modifiers:
+            m.show_viewport = True
+    me = bpy.data.meshes.new_from_object(b.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    out = bmesh.new()
+    out.from_mesh(me)
+    for o in [b] + tmp:
+        m = o.data
+        bpy.data.objects.remove(o, do_unlink=True)
+        bpy.data.meshes.remove(m)
+    bpy.data.meshes.remove(me)
+    return out
+
+
+def transformed(bm, matrix):
+    bmesh.ops.transform(bm, matrix=matrix, verts=bm.verts)
     return bm
 
 
@@ -385,12 +427,182 @@ def build_crankshaft():
         seat_marker(f"MC_E03_pin_{name}", part, coll, pin_centre(i) + Vector((x, 0, 0)), up, (1, 0, 0))
 
 
-# each seat: (the step, the host's marker, the part's marker) — anti-parallel and coincident at the goal (the check below)
-SEAT_PAIRS = [(2, "MC_E01_case", "MC_E02_plinth"), (3, "MC_E02_crank", "MC_E03_saddles")]
-# each insertion: (the step, the part, its way in — the reference direction it comes FROM, how far) — swept against the parts before it
-INSERTIONS = [(2, "E02_lower_case", (0, 1, 0), 0.8), (3, "E03_crankshaft", (0, 1, 0), 0.8)]
+# ================================================================ THE PISTONS' KINEMATICS (shared: step 4 cuts along their way, step 6 builds them)
+PISTON_R, PISTON_H, PISTON_Y = 0.28, 0.32, 0.07      # body r, height, centre above the wrist pin (Appendix B, §2.9's radius)
+BIG_R, BIG_IN, BIG_W = 0.085, 0.06, 0.08             # the big end: outer r, inner r (the pin), width along x
+SMALL_R, SMALL_W = 0.06, 0.08                        # the small end (the wrist)
+SHANK = (0.06, 0.10)                                 # the rod's shank: x, z
 
-STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft)]
+
+def kinematics(side, i, theta=0.0):
+    """Appendix B's update() for one cylinder at the crank angle θ: the pin in the bank (ly, lz), the piston's travel s, the rod's angle."""
+    a = theta + OFF[i]
+    cy, cz = RC * math.cos(a), RC * math.sin(a)
+    phi = side * ALPHA
+    ly = cy * math.cos(phi) + cz * math.sin(phi)
+    lz = -cy * math.sin(phi) + cz * math.cos(phi)
+    s = ly + math.sqrt(ROD_L ** 2 - lz ** 2)
+    return ly, lz, s, math.atan2(-lz, s - ly)
+
+
+def rod_frame(side, i, x):
+    """The rod's frame (reference coordinates): its origin the big end's centre (the pin), its local y toward the small end."""
+    ly, lz, s, r = kinematics(side, i)
+    return bank_frame(side) @ Matrix.Translation((x, ly, lz)) @ Matrix.Rotation(r, 4, "X")
+
+
+def rod_outline_points(side, i, x, seg=16):
+    """The rod's solid in points (reference coordinates): the big end's half ring (open toward the crank), the small end — their hull holds
+    the shank."""
+    F, pts = rod_frame(side, i, x), []
+    for k in range(seg + 1):
+        t = math.pi * k / seg
+        for dx in (-BIG_W / 2, BIG_W / 2):
+            pts.append(F @ Vector((dx, BIG_R * math.sin(t), BIG_R * math.cos(t))))
+    for k in range(2 * seg):
+        t = 2 * math.pi * k / (2 * seg)
+        for dx in (-SMALL_W / 2, SMALL_W / 2):
+            pts.append(F @ Vector((dx, ROD_L + SMALL_R * math.sin(t), SMALL_R * math.cos(t))))
+    return pts
+
+
+WAY_IN_LEN = 0.9    # how far back along the bore a piston's way in is swept (it starts above the deck)
+
+
+def rod_sweep_points(side, i, x, steps=90):
+    """The rod's way in: its points moved back along the bank's axis from its goal to WAY_IN_LEN."""
+    up = bank_frame(side).to_3x3() @ Vector((0, 1, 0))
+    base = rod_outline_points(side, i, x)
+    return [p + up * (WAY_IN_LEN * k / steps) for k in range(steps + 1) for p in base]
+
+
+# ================================================================ STEP 4 — E04 the upper case (a hollow glass trapezoid, cut where the rods pass)
+FOOT = 0.45                     # a bank's foot plane, y′ = 0.45 in its frame: the upper case's slope
+BORE_R = 0.30
+BORE_HOLE = (0.36, 0.60)        # a bore's hole through the slope, y′ (the slope's glass is y′ 0.40 – 0.45)
+
+
+def slope_z(y, offset):
+    """|z| of the plane y′ = offset of bank B (the mirror for A) at the height y — the upper case's slopes."""
+    return (offset - math.cos(ALPHA) * (y - YC)) / math.sin(ALPHA)
+
+
+UC_TOP = 1.16
+
+
+def bore_cutter(side, x, r=BORE_R, seg=48, squared=False):
+    """A bore's hole through the slope, in reference coordinates: round (the look) or squared 2r (the collision)."""
+    y0, y1 = BORE_HOLE
+    bm = box(x - r, x + r, y0, y1, -r, r) if squared else cyl_between((x, y0, 0), (x, y1, 0), r, seg)
+    return transformed(bm, bank_frame(side))
+
+
+def bore_points(side, x):
+    M, y0, y1 = bank_frame(side), *BORE_HOLE
+    return [M @ Vector((x + dx, y, dz)) for dx in (-BORE_R, BORE_R) for dz in (-BORE_R, BORE_R)
+            for y in [y0 + (y1 - y0) * k / 24 for k in range(25)]]
+
+
+def footprint(points, y_lo, y_hi, margin=0.01):
+    """The (x, z) box of the points between the heights y_lo and y_hi — None when none are there."""
+    inside = [p for p in points if y_lo - margin <= p.y <= y_hi + margin]
+    if not inside:
+        return None
+    return (min(p.x for p in inside) - margin, max(p.x for p in inside) + margin,
+            min(p.z for p in inside) - margin, max(p.z for p in inside) + margin)
+
+
+def bore_xs(side):
+    return [x for s, i, x, n in CYLS if s == side]
+
+
+def build_upper_case():
+    part, coll = new_part("E04", "upper_case", 4, (0, SPLIT, 0), symmetry="yawHalfTurn")
+    X, xi = CASE_X, CASE_X - WALL
+    zb, zt = slope_z(SPLIT, FOOT), slope_z(UC_TOP, FOOT)                         # 0.520, 0.318
+    yb, yt = SPLIT - 0.01, UC_TOP - WALL
+    zbi, zti = slope_z(yb, FOOT - WALL), slope_z(yt, FOOT - WALL)
+    outer = prism_x([(-zb, SPLIT), (zb, SPLIT), (zt, UC_TOP), (-zt, UC_TOP)], -X, X)
+    inner = prism_x([(-zbi, yb), (zbi, yb), (zti, yt), (-zti, yt)], -xi, xi)
+    cutters = [inner, cyl_between((-X - 0.1, SPLIT, 0), (X + 0.1, SPLIT, 0), SADDLE_R, 24)]
+    cutters += [bore_cutter(side, x) for side, i, x, n in CYLS]
+    cutters += [hull(rod_sweep_points(side, i, x, steps=1)) for side, i, x, n in CYLS]   # (b): only where the rods really pass
+    mesh_object("E04_upper_case_mesh", boolean_cut(outer, cutters), MAT["glass"], part, coll)
+
+    # collision — the end walls in three (either side of the half-hole, a block over it), each slope's strips between the bores (squared),
+    # the top plate's boxes where no bore's line of descent (squared) passes
+    ucx = []
+    for s in (-1, 1):
+        xa, xb = sorted((s * xi, s * X))
+        for zs in (-1, 1):
+            ucx.append(prism_x([(zs * SADDLE_R, SPLIT), (zs * zb, SPLIT), (zs * zt, UC_TOP), (zs * SADDLE_R, UC_TOP)], xa, xb))
+        ucx.append(box(xa, xb, SPLIT + SADDLE_R, UC_TOP, -SADDLE_R, SADDLE_R))
+        edges = sorted([-xi, xi] + [x - BORE_R for x in bore_xs(s)] + [x + BORE_R for x in bore_xs(s)])
+        for a, b in zip(edges[0::2], edges[1::2]):
+            if b - a > 1e-6:
+                ucx.append(prism_x([(s * zb, SPLIT), (s * zt, UC_TOP), (s * slope_z(UC_TOP, FOOT - WALL), UC_TOP),
+                                    (s * slope_z(SPLIT, FOOT - WALL), SPLIT)], a, b))
+    cuts = []
+    for side, i, x, n in CYLS:
+        for pts in (bore_points(side, x), rod_sweep_points(side, i, x)):
+            f = footprint(pts, yt, UC_TOP)
+            if f:
+                cuts.append((f[0], f[1], (f[2], f[3])))
+    xs = sorted({-xi, xi} | {c for a, b, f in cuts for c in (a, b) if -xi < c < xi})
+    top_boxes = []
+    for a, b in zip(xs, xs[1:]):
+        busy = sorted(f for ca, cb, f in cuts if f and ca < (a + b) / 2 < cb)
+        free, z = [], -zti
+        for lo, hi in busy:
+            if lo > z:
+                free.append((z, min(lo, zti)))
+            z = max(z, hi)
+        if z < zti:
+            free.append((z, zti))
+        for za, zb2 in free:
+            if zb2 - za > 0.01:
+                last = top_boxes[-1] if top_boxes else None
+                if last and abs(last[1] - a) < 1e-9 and abs(last[2] - za) < 1e-6 and abs(last[3] - zb2) < 1e-6:
+                    top_boxes[-1] = (last[0], b, za, zb2)          # the same free band as its neighbour: one box
+                else:
+                    top_boxes.append((a, b, za, zb2))
+    for a, b, za, zb2 in top_boxes:
+        ucx.append(box(a, b, yt, UC_TOP, za, zb2))
+    for k, piece in enumerate(ucx):
+        mesh_object(f"UCX_E04_{k:02d}", piece, MAT["ucx"], part, coll, "ucx")
+
+    # face proxy: each slope's strips between the bores' squares (the banks' route and seat), the top's free boxes, the front and rear faces,
+    # the end walls' bottoms (the seat on the lower case)
+    bm = bmesh.new()
+    for s in (-1, 1):
+        edges = sorted([-X, X] + [x - BORE_R for x in bore_xs(s)] + [x + BORE_R for x in bore_xs(s)])
+        for a, b in zip(edges[0::2], edges[1::2]):
+            quad(bm, [(a, SPLIT, s * zb), (b, SPLIT, s * zb), (b, UC_TOP, s * zt), (a, UC_TOP, s * zt)])
+        bm.faces.new([bm.verts.new((s * X, y, z)) for z, y in
+                      [(-zb, SPLIT), (-SADDLE_R, SPLIT)] + [(SADDLE_R * math.cos(math.pi - math.pi * i / 12), SPLIT + SADDLE_R * math.sin(math.pi - math.pi * i / 12)) for i in range(13)]
+                      + [(zb, SPLIT), (zt, UC_TOP), (-zt, UC_TOP)]])
+        for zs in (-1, 1):
+            za, zb2 = sorted((zs * SADDLE_R, zs * zb))
+            xa, xb = sorted((s * xi, s * X))
+            quad(bm, [(xa, SPLIT, za), (xb, SPLIT, za), (xb, SPLIT, zb2), (xa, SPLIT, zb2)])
+    for a, b, za, zb2 in top_boxes:
+        quad(bm, [(a, UC_TOP, za), (a, UC_TOP, zb2), (b, UC_TOP, zb2), (b, UC_TOP, za)])
+    mesh_object("UFM_E04_outer", bm, MAT["ufm"], part, coll, "ufm")
+
+    seat_marker("MC_E04_lower", part, coll, (0, SPLIT, 0), (0, -1, 0), (1, 0, 0))
+    for side, tag in ((-1, "bankA"), (1, "bankB")):
+        M = bank_frame(side)
+        seat_marker(f"MC_E04_{tag}", part, coll, M @ Vector((0, FOOT, 0)), M.to_3x3() @ Vector((0, 1, 0)), (1, 0, 0))
+
+
+# each seat: (the step, the host's marker, the part's marker) — anti-parallel and coincident at the goal (the check below)
+SEAT_PAIRS = [(2, "MC_E01_case", "MC_E02_plinth"), (3, "MC_E02_crank", "MC_E03_saddles"),
+              (4, "MC_E02_upper", "MC_E04_lower")]
+# each insertion: (the step, the part, its way in — the reference direction it comes FROM, how far) — swept against the parts before it
+INSERTIONS = [(2, "E02_lower_case", (0, 1, 0), 0.8), (3, "E03_crankshaft", (0, 1, 0), 0.8),
+              (4, "E04_upper_case", (0, 1, 0), 0.8)]
+
+STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, build_upper_case)]
 for n, fn in STEPS:
     if n <= STEP:
         fn()
@@ -446,6 +658,23 @@ os.makedirs(PREVIEW_DIR, exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 scene.render.filepath = os.path.join(PREVIEW_DIR, f"step_{STEP:02d}.png")
 bpy.ops.render.render(write_still=True)
+
+# the CLOSE-UP (render only, after the save): this step's parts alone, the glass less clear, framed on their box
+focus = [(p, c) for p, c in PARTS if p["step"] == STEP]
+if focus:
+    for p, c in PARTS:
+        for o in c.objects:
+            o.hide_render = o.hide_render or (p["step"] != STEP)
+    MAT["glass"].node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = 0.6
+    pts = [YUP_ROOT.matrix_world.inverted() @ o.matrix_world @ Vector(k) for p, c in focus for o in c.objects
+           if o.type == "MESH" and o.get("role") == "render" for k in o.bound_box]
+    centre = sum(pts, Vector()) / len(pts)
+    extent = max((q - centre).length for q in pts)
+    cam.location = ref_to_blender(centre + direction * 16)
+    cam.rotation_euler = (ref_to_blender(centre) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    cam_data.ortho_scale = 2.2 * extent
+    scene.render.filepath = os.path.join(PREVIEW_DIR, f"step_{STEP:02d}_part.png")
+    bpy.ops.render.render(write_still=True)
 
 print("\n================ BUILT up to step", STEP, "→", BLEND)
 for part, coll in PARTS:
