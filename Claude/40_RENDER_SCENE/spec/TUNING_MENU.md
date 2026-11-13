@@ -1,6 +1,6 @@
 # THE TUNING MENU — by subject, cleaned (2026-11-13)
 
-> **STATUS** · ✅ built (`1.0.130from1.0.128-Cleaned-sliders`) · ⛔ no device close
+> **STATUS** · ✅ built (`1.0.130from1.0.128-Cleaned-sliders`) · ✅✅ closed by the owner's look (2026-11-13, `ddd2572`)
 > **OWNS** · where every slider lives (☰), why a slider was removed, the rules for adding one
 > **READ IF** · you add, move or remove a slider, or look for one
 > **LAST VERIFIED** · 2026-11-13 (88 sliders; 1706 vectors)
@@ -70,4 +70,6 @@ TITLE: the new titles start folded once.
 
 `tests/menu_layout.test.ts` (3 — the tree, 88 sliders each once and live, the removed ones) and `tests/zero_sliders_removed.test.ts` (4) — red against
 `854ba10` but the kept-slider check; deleted: the leash / lag vectors of `proto_green_box.test.ts` (21), `proto_menu_worldspace.test.ts`, the CAMERA
-subsections' describe; the pins moved to the new sections. **1706**. ⛔ No device close.
+subsections' describe; the pins moved to the new sections. **1706**.
+
+✅✅ **The owner (2026-11-13, on the device, `ddd2572`): *"changes are ok"*.**
