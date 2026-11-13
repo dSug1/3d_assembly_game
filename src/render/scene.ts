@@ -622,9 +622,7 @@ export function createScene(
   st.orbitRawPrev = null;
   st.orbitUserV = null;
   st.pendingPartCentre = null;
-  st.pendingBrowseCentre = null;
   st.modelBrowse = new Set();
-  st.browseArmed = null;
   st.browseGlide = null;
   st.browseFingerMm = 0;
   st.pieceFrameStepM = 0;

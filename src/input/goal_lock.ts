@@ -57,8 +57,9 @@ export function orbitTargetOnRelease(
  * ⭐⭐ (2026-11-13, the owner: *"at boot (ie before a part is picked up), the player shall be able to peep at the pieces therefore the player shall be
  * able to move the center of the current orbit towards the piece of his choice. I would propose a click or first touch moves the orbit center to the
  * point where the raycast hit the surface of a piece or the floor"*) — BROWSING a scene's model before a part is in hand: a first touch (or the
- * left button) whose ray hits a part or the floor NOTES the point; its TAP moves the orbit's centre there at the release (`orbitTargetOnRelease`) —
- * ⚠ at the release, not the press: a drag that starts on a part ORBITS, and a centre thrown at every touch would jump before every orbit drag.
+ * left button) whose ray hits a part or the floor gives the point the centre GLIDES to (`browseGlideAt`) — AT THE PRESS, that press driving the
+ * orbit (the owner: *"at boot, a press modifies the position of the center of the orbit (not any longer the tap + press). I am ok that each press
+ * changes the orbit center at boot"*). ⛔ Before: a tap armed the point and the press after it started the glide.
  */
 export function browseTargetOnPress(
   firstTouch: boolean,
@@ -70,15 +71,6 @@ export function browseTargetOnPress(
   return [hitPoint[0], hitPoint[1], hitPoint[2]];
 }
 
-/**
- * ⭐⭐ (2026-11-13, the owner: *"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit)"*) — the
- * browsing TAP only ARMS its point; the centre starts moving at the PRESS that follows within `windowMs` of the tap's release (that press then
- * drives the orbit). A tap with no press after it moves nothing.
- */
-export function browseOnPress(armed: { readonly target: readonly [number, number, number]; readonly t: number } | null, pressT: number, windowMs: number): [number, number, number] | null {
-  if (armed === null || pressT - armed.t > windowMs || pressT < armed.t) return null;
-  return [armed.target[0], armed.target[1], armed.target[2]];
-}
 
 /**
  * ⭐⭐⭐ (2026-11-13) THE BROWSED CENTRE'S GLIDE — the owner: *"the center of the orbit shall reach its goal within a travel of xx mm of finger. Its

@@ -259,12 +259,8 @@ export interface SceneState {
   /** ⭐ (2026-10-20) the boot gizmo's face normal (a respawn puts it back) */
   bootGizmoNormal?: Vec3 | null;
   pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; host?: string | null; x: number; y: number; t: number } | null;
-  /** ⭐ (2026-11-13) a press BROWSING the model (`browseTargetOnPress`): where its tap would move the orbit's centre. */
-  pendingBrowseCentre: { pointerId: number; target: [number, number, number]; x: number; y: number; t: number } | null;
   /** ⭐ (2026-11-13) the meshes a browsing tap may hit: the model's parts (drawn) and its floor (`model_import.ts`). */
   modelBrowse: Set<AbstractMesh>;
-  /** ⭐ (2026-11-13) a browsing tap's point, ARMED until a press follows within the double-tap window (`browseOnPress`). */
-  browseArmed: { target: [number, number, number]; t: number } | null;
   /** ⭐ (2026-11-13) the centre's GLIDE to a browsed point (`browseGlideAt`): from, to, the finger's travel so far (mm); `null` when none / arrived. */
   browseGlide: { from: readonly [number, number, number]; to: [number, number, number]; travelledMm: number } | null;
   /** ⭐ (2026-11-13) this frame's finger travel fed to the centre (mm) — the minimum speed tops it up (`browseMinimumExtraMm`). */

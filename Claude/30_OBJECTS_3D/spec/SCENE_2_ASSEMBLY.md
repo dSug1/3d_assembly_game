@@ -333,9 +333,10 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
    piece of his choice. I would propose a click or first touch moves the orbit center to the point where the raycast hit the surface of a piece or the
    floor"*), then (*"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit). The translation of the
    orbit center shall be done as per the mm of delta input or at a certain minimal speed, whichever is fastest"*): with no part in hand,
-   ① a first touch (or the left button) whose ray hits a drawn part or the floor NOTES the point; its release, if a TAP, ARMS it (a drag orbits and
-   arms nothing); ② the PRESS that follows within the double-tap window (300 ms) STARTS the centre's migration there — that press drives the orbit;
-   a tap alone moves nothing; ③ ⭐⭐⭐ the centre GLIDES along the straight line to the point, its travel **PROPORTIONAL to the finger's**, arriving
+   ① ⭐⭐ **EVERY PRESS** — a first touch (or the left button) whose ray hits a drawn part or the floor — **starts the centre's glide there AT
+   ONCE, and that same press drives the orbit** (the owner: *"at boot, a press modifies the position of the center of the orbit (not any longer the
+   tap + press). I am ok that each press changes the orbit center at boot"*; ⛔ before: a TAP armed the point and the press that followed within the
+   double-tap window started the glide — *"one rapid tap followed by press"*); ③ ⭐⭐⭐ the centre GLIDES along the straight line to the point, its travel **PROPORTIONAL to the finger's**, arriving
    after **`browseArriveMm` of finger — 12 mm** (*"do 12 mm of travel instead of 30 mm"*; 30 first) whatever the distance — LINEAR, no ease (the owner: *"the center of the orbit shall reach its goal
    within a travel of xx mm of finger. Its travel shall be proportional to the finger travel"*); a still finger leaves it where it is (a CAMERA
    slider: *browsed centre: finger travel to arrive*). ⛔ (0) A glide at 1 screen mm per finger mm came first — replaced by this rule.
