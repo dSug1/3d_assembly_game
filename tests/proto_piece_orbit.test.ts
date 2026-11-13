@@ -583,7 +583,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/: \[c\.x \+ bo\.offsetM\[0\] \* k \+ back\[0\] \+ \(st\.pieceHold\?\.\[0\] \?\? 0\), c\.y \+ bo\.offsetM\[1\] \* k \+ back\[1\] \+ \(st\.pieceHold\?\.\[1\] \?\? 0\), c\.z \+ bo\.offsetM\[2\] \* k \+ back\[2\] \+ \(st\.pieceHold\?\.\[2\] \?\? 0\)\]/); // ⛔ (2026-11-12) no hover offset; ⭐ (the slide's rebuild) the ring's hold (`slide_rebuild.test.ts`)
     expect(code("render/pointer_wiring.ts")).toMatch(/if \(st\.centreReturn !== null\) st\.centreReturn = advanceCentreReturn\(st\.centreReturn, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
     expect(DEFAULT_CONFIG.pieceOrbitReturnMm).toBe(30); // ONE value for the way back's move and view — *"Set way out in 30mm"*
-    expect(code("render/tuning_menu.ts")).toContain('"pieceOrbitReturnMm", 0, 300, 5)');
+    expect(code("render/tuning_menu.ts")).not.toContain('"pieceOrbitReturnMm"'); // ⛔ (2026-11-13) its slider removed: the way back has no live caller
     expect(w).toMatch(/st\.restAligned = false;\s*st\.restRoll = null;\s*st\.anchorShift = null;\s*st\.pieceOrbit = null;\s*st\.pieceEntry = null;\s*st\.pieceAim = null;\s*st\.orbitRollAcc = 0;\s*st\.centreReturn = null;/); // the respawn
     expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece =\s*scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
@@ -601,14 +601,15 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(key).not.toMatch(/st\.zoom\b|cameraLagged|boxOrbit/); // never the live camera
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);
-    expect(p).toMatch(/const dyPx = \(dxOnly \|\| shiftApproach \? 0 : fdy\) \* st\.cfg\.boxGainPitch \* g\.pitch;[\s\S]*st\.orbit\.drag\(shiftApproach \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* g\.yaw \* st\.pieceYawGainDrag \* kd\), dyPx \* share \* kd\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // ⭐ (2026-10-19) the dy through the turn governor
+    expect(p).toMatch(/const dyPx = \(dxOnly \|\| shiftApproach \? 0 : fdy\) \* st\.cfg\.boxGainPitch;[\s\S]*st\.orbit\.drag\(shiftApproach \? 0 : pauseYawStep\(topPauseOn\(st\), st\.topPause, -db\.dx \* st\.cfg\.boxGainYaw \* st\.pieceYawGainDrag \* kd\), dyPx \* share \* kd\)/); // ⭐ (2026-10-25) dx held mid-roll (`pauseYawStep`) // ⭐ (2026-10-19) the dy through the turn governor
     // ⭐ a steady speed through a drag: the gain applies to a drag that STARTS around the piece — latched where the drag's tracker is made
     expect(p).toMatch(/st\.orbitMotion = \{ pointerId, tracker: new MotionTracker\(st\.cfg\), band: new MotionTracker\(\{ \.\.\.st\.cfg, motionDeadbandMm: st\.cfg\.orbitDeadbandMm \}, st\.cfg\.orbitBandRestMs, true\) \};(?:\s*\/\/[^\n]*\n)+\s*st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)*if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/);
     expect((p.match(/st\.pieceYawGainDrag = /g) ?? []).length).toBe(1);
     expect([DEFAULT_CONFIG.pieceOrbitGapMinPct, DEFAULT_CONFIG.pieceOrbitEnterMm]).toEqual([50, 12]); // the way in at 12 mm (2026-10-08)
     const menu = code("render/tuning_menu.ts");
-    expect(menu).toContain('"pieceOrbitGapMinPct", 10, 100, 5)');
-    expect(menu).toContain('"pieceOrbitEnterMm", 0, 60, 1)');
+    // ⛔ (2026-11-13) their sliders removed: the way in has no live caller (`menu_layout.test.ts`) — the values kept for the parked code
+    expect(menu).not.toContain('"pieceOrbitGapMinPct"');
+    expect(menu).not.toContain('"pieceOrbitEnterMm"');
     expect(menu).not.toMatch(/pieceOrbitSlerpMm|pieceOrbitFadeMm/); // merged into the way in's one value
     // ⭐ the pink ring stays at the old centre: it still reads the centre blend's target, which nothing here retargets
     expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);

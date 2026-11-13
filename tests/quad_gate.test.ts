@@ -78,13 +78,12 @@ describe("⭐⭐ the quads (2026-10-15, the owner: *\"Make the quads' non-yellow
     expect(q).toContain("x.edges.alpha = quadEdgeAlpha(lit, st.cfg.quadUnlitAlpha);");
     expect(q).toContain("(x.fill.material as StandardMaterial).alpha = quadFillAlpha(lit, st.cfg.quadUnlitAlpha);");
     expect(q).not.toMatch(/QUAD_EDGE_ALPHA|QUAD_ALPHA\b/); // one place: `quad_gate.ts` and the tunable
-    // the slider just below the (renamed) yellow gizmo's
+    // ⭐ (2026-11-13) the opacity in RENDERING, the yellow gizmo's switch in GIZMO & SECTIONS (just below it before)
     const m = code("render/tuning_menu.ts");
     const g = m.indexOf('"pinkGizmoVisible", 0, 1, 1)');
     const u = m.indexOf('"quadUnlitAlpha", 0, 1, 0.01)');
-    expect(g).toBeGreaterThan(0);
-    expect(u).toBeGreaterThan(g);
-    expect(m.slice(g, u).split("tunable(st,").length - 1).toBe(1); // only its own call between them: just below
+    expect(g).toBeGreaterThan(m.indexOf('title: "GIZMO & SECTIONS"'));
+    expect(u).toBeGreaterThan(m.indexOf('title: "RENDERING"'));
     expect(m).toContain('tunable(st, "yellow gizmo (the orbit centre\'s ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1)');
     expect(m).not.toContain('"pink gizmo (the orbit centre');
   });

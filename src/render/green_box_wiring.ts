@@ -28,7 +28,7 @@ import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
-import { boxDragGains, cameraLag, cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
+import { cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
 import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf, settledPause, travelOf } from "../input/top_pause";
 import { orbitOffset } from "../input/orbit";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -1134,21 +1134,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
           now,
           dtSec * 1000,
           st.cfg,
-          {
-            leashRad: (st.cfg.cameraLeashDeg * Math.PI) / 180,
-            settleDelayMs: st.cfg.cameraSettleDelayMs,
-            restTauMs: st.cfg.cameraCatchUpMs,
-          },
+          { restTauMs: st.cfg.cameraCatchUpMs }, // ⛔ (2026-11-13) no leash, no settle delay (both 0, deleted)
           { yaw: rig.yaw, v: rig.v },
           finger,
           rel.release,
         );
-  // ⭐⭐ prototype (green box), the owner 2026-10-02: the TIME LAG on top of the leash — the camera eases toward where the leash
-  // puts it (`cameraLag`, `cameraFollowMs`; 0 = none).
-  st.cameraLagged =
-    st.cameraLagged === null
-      ? st.cameraOrbit.cam
-      : cameraLag(st.cameraLagged, st.cameraOrbit.cam, dtSec * 1000, st.cfg.cameraFollowMs);
+  // ⛔⛔ (2026-11-13) the TIME LAG on top of the leash (`cameraLag`, `cameraFollowMs` 0 — the camera where the leash put it) deleted: the camera
+  // where its orbit step puts it
+  st.cameraLagged = st.cameraOrbit.cam;
   // ⭐ At the box's distance (the box as placed, clamp included) + the radius offset, at the camera's angles plus the
   // owner's offsets.
   const off = pieceOrbitAngleOffset(st);
@@ -1634,10 +1627,7 @@ export function bootTargetOnBlueFace(st: SceneState): [number, number, number] |
 }
 
 
-/**
- * ⭐ prototype (green box): the gains the green piece's orbit drag runs at NOW — the inside-the-leash factors (`boxDragGains`). ⭐ ONE
- * home: the drag and the HUD read it. (The yaw share while held went with the rotation, 2026-10-04.)
- */
+/* ⛔⛔ (2026-11-13) `greenDragGains` — the inside-the-leash factors (`boxDragGains`) — deleted with the leash (0): 1 always. */
 /**
  * ⭐⭐⭐ (2026-10-19) THE TURN GOVERNOR's call (`governedRingStep`, `input/turn_governor.ts`): the step `du` the finger (or the coast) asks for, cut where the
  * camera — the frame the orbit asks for on the turn now — would turn faster than the cap per mm of dy: `orbitTurnCapDegMm` on a curve that passes over
@@ -1704,18 +1694,11 @@ export function topPauseFrame(st: SceneState, dtMs: number): void {
   }
 }
 
-/** ⭐ (2026-10-19) the ring a millimetre of dy buys at the orbit drag's gains (`boxGainPitch` × the leash's × the elevation gain × the four-ring scale). */
+/** ⭐ (2026-10-19) the ring a millimetre of dy buys at the orbit drag's gains (`boxGainPitch` × the elevation gain × the four-ring scale). */
 export function orbitDvPerMm(st: SceneState): number {
-  return st.cfg.boxGainPitch * greenDragGains(st).pitch * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
+  return st.cfg.boxGainPitch * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg); // ⛔ (2026-11-13) × the inside-the-leash gain (1 always) deleted
 }
 
-export function greenDragGains(st: SceneState): { yaw: number; pitch: number } {
-  const g =
-    st.boxOrbit === null || st.cameraOrbit === null
-      ? { yaw: 1, pitch: 1 }
-      : boxDragGains(st.cfg, st.boxOrbit, st.cameraOrbit.cam, (st.cfg.cameraLeashDeg * Math.PI) / 180, st.cfg.boxGainInsideLeash);
-  return g;
-}
 
 const toBabylon = (q: Quat): Quaternion => new Quaternion(q[1], q[2], q[3], q[0]);
 

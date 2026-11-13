@@ -269,12 +269,12 @@ describe("⭐⭐⭐ THE TOP ROLL (2026-10-18, the owner: *\"the vertical edges i
     for (const yaw of [0.4, 2.0]) for (const r of sweep(yaw, off, cfg, tilted(yaw, 70))) if (r.e >= 75) { steep++; expect(r.offPlane).toBeLessThan(0.1); }
     expect(steep).toBeGreaterThan(10);
   });
-  it("⭐ the band a slider: CAMERA › CAMERA ORBIT AROUND CENTER, 20° by default, 2–60 validated", () => {
+  it("⭐ the band a slider: LEGACY (2026-11-13 — only `orbitMode` 1's; CAMERA › CAMERA ORBIT AROUND CENTER before), 20° by default, 2–60 validated", () => {
     expect(DEFAULT_CONFIG.topRollBandDeg).toBe(20);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topRollBandDeg: 1 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, topRollBandDeg: 61 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
-    const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
+    const sub = m.indexOf('title: "LEGACY"');
     const at = m.indexOf('"topRollBandDeg"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);

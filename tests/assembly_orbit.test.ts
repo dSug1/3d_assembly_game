@@ -114,8 +114,8 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, assemblyLockDistM: 0.01 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, gizmoEdgeMarginMm: 21 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
-    const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
-    for (const k of ['"orbitMode"', '"assemblyLockDistM"', '"gizmoEdgeMarginMm"']) {
+    for (const [k, title] of [['"orbitMode"', "LEGACY"], ['"assemblyLockDistM"', "APPROACH & CONTACT"], ['"gizmoEdgeMarginMm"', "GIZMO & SECTIONS"]] as const) { // ⭐ (2026-11-13) the menu by subject (`menu_layout.test.ts`)
+      const sub = m.indexOf(`title: "${title}"`);
       const at = m.indexOf(k);
       expect(at).toBeGreaterThan(sub);
       expect(m.lastIndexOf("title:", at)).toBe(sub);
@@ -180,11 +180,11 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
   });
   // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) and its resync are deleted — its carrier rides
   // the section's hull now: `tests/section_hull.test.ts`
-  it("⭐⭐ the sections drawn: the slider, in CAMERA ORBIT AROUND CENTER", () => {
+  it("⭐⭐ the sections drawn: the slider, in GIZMO & SECTIONS (2026-11-13; CAMERA ORBIT AROUND CENTER before)", () => {
     expect(DEFAULT_CONFIG.sectionLines).toBe(1);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, sectionLines: 2 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
-    const sub = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
+    const sub = m.indexOf('title: "GIZMO & SECTIONS"');
     const at = m.indexOf('"sectionLines"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
@@ -303,7 +303,7 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0) THE dy WITH
     // ⛔ (measured at ff2fca2) the gizmo went against the finger in 29 of 30 moving frames: the dy entered the orbit with its own sign
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const fdy0 = orbitDy(db.dy, asmOn);"); expect(p).toContain("const fdy = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;"); // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) through the dy hold
-    expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch * g.pitch;");
+    expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;"); // ⛔ (2026-11-13) × the leash's gain deleted (1)
     expect(p).toContain("const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1))");
     // the approach (A + drag) keeps the finger's own dy: finger up brings the piece in
     expect(p).toContain("if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");

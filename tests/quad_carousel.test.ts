@@ -42,12 +42,12 @@ describe("⭐⭐⭐ the yellow quad by yaw", () => {
     expect(carouselQuad(c, edge + QUAD_SLICE_HYSTERESIS_RAD / 2, before)).toBe(before);
     expect(carouselQuad(c, edge + QUAD_SLICE_HYSTERESIS_RAD * 2, before)).toBe(after);
   });
-  it("⭐ the slider in FACE ALIGNMENT, 30° by default, 10–180 validated; wired over the quads' planes, the yellow's sense on the camera's side", () => {
+  it("⭐ the slider in GIZMO & SECTIONS (2026-11-13; FACE ALIGNMENT before), 30° by default, 10–180 validated; wired over the quads' planes, the yellow's sense on the camera's side", () => {
     expect(DEFAULT_CONFIG.quadSliceMaxDeg).toBe(30);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadSliceMaxDeg: 9 })).toThrow();
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, quadSliceMaxDeg: 181 })).toThrow();
     const m = readFileSync("src/render/tuning_menu.ts", "utf8");
-    const sub = m.indexOf('title: "FACE ALIGNMENT"');
+    const sub = m.indexOf('title: "GIZMO & SECTIONS"');
     const at = m.indexOf('"quadSliceMaxDeg"');
     expect(at).toBeGreaterThan(sub);
     expect(m.lastIndexOf("title:", at)).toBe(sub);
