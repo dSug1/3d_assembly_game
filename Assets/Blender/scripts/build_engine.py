@@ -36,10 +36,12 @@ CASE_H = 0.55 * 1.2 * 1.15      # 0.759: the lower case's height (the owner, 202
 YC = PLINTH_H + CASE_H          # 1.133 (1.034, 0.862, 0.81 before): the crank axis's height — ⭐ every height above follows it
 RC = 0.15                       # the crank's throw (0.2 before — the owner, 2026-11-13: *"the piston shall remain in the cylinder"*)
 PISTON_R, PISTON_H, PISTON_Y = 0.28, 0.32, 0.07      # body r, height, centre above the wrist pin (Appendix B, §2.9's radius)
+PISTON_RIM, PISTON_CEIL = 0.026, 0.10                # its skirt's wall (the owner's inset: 0.28 → 0.254), its inner ceiling above the wrist pin
 # the rod, STURDIER twice from the owner's file (2026-11-13: *"I made the rod sturdier and the rod connection sturdier again"*):
 BIG_R, BIG_IN, BIG_W = 0.14, 0.06, 0.09              # the big end: outer r (0.12, 0.085 before), inner r (the pin), width along x (0.08 before)
 SMALL_R, SMALL_W = 0.06, 0.09                        # the small end (the wrist), width (0.08 before)
 SHANK = (0.0675, 0.10)                               # the rod's shank: x (0.06 before), z
+SHANK_CHAMFER = 0.0033                               # its twelve edges chamfered (the owner's)
 ROD_X = 0.1                                          # each rod's offset along x from its throw's centre (bank A −, bank B +: two rods a pin)
 THROW_GAP = 0.01                                     # between a big end and its throw's arm
 ALPHA = math.pi / 3             # each bank 60° from the vertical (the V at 120°)
@@ -273,6 +275,21 @@ def tidy(bm):
     return bm
 
 
+def split_holes(bm, xs):
+    """No BRIDGES (the owner, 2026-11-13: *"upper case: what are these edges for ? clean the geometry"*): a face cannot hold a hole, so a flat face
+    cut by holes kept arbitrary edges linking each hole to its outline; the part split by planes x = const through every hole's centre leaves each
+    hole two half-holes — notches in two faces' outlines — then every edge left splitting a flat face, off those planes, is dissolved."""
+    for x in xs:
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(x, 0, 0), plane_no=(1, 0, 0))
+    bm.normal_update()
+    on_plane = lambda e: any(all(abs(v.co.x - x) < 1e-6 for v in e.verts) for x in xs)
+    flat = [e for e in bm.edges if len(e.link_faces) == 2 and e.link_faces[0].normal.dot(e.link_faces[1].normal) > 0.99999 and not on_plane(e)]
+    if flat:
+        bmesh.ops.dissolve_edges(bm, edges=flat, use_verts=True)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-7, edges=bm.edges)
+    return bm
+
+
 def boolean_cut(base, cutters):
     """base − cutters (bmeshes, reference coordinates) by Blender's EXACT boolean; returns a new bmesh. The inputs are freed."""
     def obj(bm, name):
@@ -319,7 +336,7 @@ def flat_face(outline, y):
     return bm
 
 
-def mesh_object(name, bm, mat, part, coll, role="render", origin=None):
+def mesh_object(name, bm, mat, part, coll, role="render", origin=None, smooth=None, extra_mats=()):
     """A mesh child of `part`; `bm` is in REFERENCE coordinates and is brought into the part's frame — or, with `origin` (a reference
     matrix), into that frame, the object then standing there (a hinged piece's pivot)."""
     to_local = (origin or part.matrix_basis).inverted()
@@ -336,11 +353,32 @@ def mesh_object(name, bm, mat, part, coll, role="render", origin=None):
     if origin is not None:
         o.matrix_basis = part.matrix_basis.inverted() @ origin
     o["role"] = role
+    if extra_mats:
+        for m in extra_mats:
+            me.materials.append(m)
+    if smooth is None:                           # ⭐ EVERY visible part auto smooth (the owner, 2026-11-13: *"shade auto smooth all the parts in the scene"*)
+        smooth = role == "render"
+    if smooth:                                   # shade smooth, AUTO SMOOTH 30° (Blender's own): a round piece needs > 12 sides to read round under it;
+        for poly in me.polygons:                 # a real 90° edge (a lip, a flange's rim, a bar's end) stays crisp
+            poly.use_smooth = True
+        me.use_auto_smooth, me.auto_smooth_angle = True, (math.pi if smooth == "all" else math.radians(30))
     if role != "render":
         o.display_type = "WIRE" if role == "ucx" else "SOLID"
         o.hide_render = True
         o.show_wire = True
     return o
+
+
+GLASS_BEVEL = 0.01      # the glass edges' bevel (the build sheet's 0.01)
+
+
+def bevel_outer(bm, width=GLASS_BEVEL, segments=4, keep=None):
+    """The OUTER edges bevelled, before any cut (the owner, 2026-11-13: *"revert your 3 segment modifier on the cases and banks. Just bevel the
+    outer edges of the cases and banks (not the inside geometry). apply shade auto smooth"*): every edge of the outer solid, applied in the mesh;
+    4 segments — their faces 22.5° apart, round under auto smooth 30° (3 would be exactly 30°)."""
+    edges = [e for e in bm.edges if not (keep and keep(e))]     # `keep`: the edges left SHARP (a seat face's, flush on its host)
+    bmesh.ops.bevel(bm, geom=edges, offset=width, segments=segments, affect="EDGES", profile=0.5)
+    return bm
 
 
 def box_uv(o):
@@ -412,7 +450,11 @@ def build_lower_case():
     rooms = [(-xi, -BULKHEAD_X - hw), (-BULKHEAD_X + hw, BULKHEAD_X - hw), (BULKHEAD_X + hw, xi)]
     cutters = [box(a, b, yf, SPLIT + 0.1, -zi, zi) for a, b in rooms]
     cutters.append(cyl_between((-CASE_X - 0.1, SPLIT, 0), (CASE_X + 0.1, SPLIT, 0), SADDLE_R, 24))
-    mesh_object("E02_lower_case_mesh", boolean_cut(box(-CASE_X, CASE_X, CASE_Y0, SPLIT, -CASE_Z, CASE_Z), cutters), MAT["glass"], part, coll)
+    # its SEAT faces' edges sharp (the owner: *"same for the edges of the upper case which snap with the edges of the lower case and vice versa"*):
+    # its top (the split: the upper case and the banks on it) and its bottom (on the plinth)
+    on_seat = lambda e: all(abs(v.co.y - SPLIT) < 1e-6 for v in e.verts) or all(abs(v.co.y - CASE_Y0) < 1e-6 for v in e.verts)
+    lower = boolean_cut(bevel_outer(box(-CASE_X, CASE_X, CASE_Y0, SPLIT, -CASE_Z, CASE_Z), keep=on_seat), cutters)
+    mesh_object("E02_lower_case_mesh", split_holes(lower, [(a + b) / 2 for a, b in rooms]), MAT["glass"], part, coll)
 
     # collision: 15 convex pieces — each saddle wall in three (either side of the saddle, and a block squared under it)
     pieces = [(-xi, xi, CASE_Y0, yf, -zi, zi)]
@@ -455,7 +497,8 @@ SR = 0.06                                                     # the bar's radius
 HW = ROD_X + BIG_W / 2 + THROW_GAP + SR                       # 0.215 (0.2 before): a throw's half width, to its arms' centres
 PX = [(i - (N_CYL - 1) / 2) * PITCH for i in range(N_CYL)]    # the throws at x −0.8, 0, +0.8
 OFF = [i * 2 * math.pi / N_CYL for i in range(N_CYL)]         # the pins at 0°, 120°, 240°
-NOSE_X = -CASE_X - 0.15                                      # −1.431: the bar's front end (the pulley's shoulder)
+NOSE_X = -CASE_X                                             # the bar's front end FLUSH with the case's front face (the owner's file,
+                                                              # 2026-11-13: *"i moved the end of the crankshaft flush with the vertical faces"*; −1.431 before) — the pulley's shoulder
 FLYWHEEL = (0.277, 0.12, CASE_X + 0.094)                      # r, thickness, its inner face's x — the owner's, sturdier three times (0.277 × 0.094, 0.234 × 0.082,
                                                               # a 0.12 × 0.06 cap before)
 # ⭐ the crank's RESTING proxy (and the lower case's ghost floor) at the crank's LOWEST point at the goal — its hull's extreme along its way in,
@@ -476,31 +519,83 @@ def pin_centre(i):
     return Vector((0, YC + RC * math.cos(OFF[i]), RC * math.sin(OFF[i])))
 
 
+KNEE_R, KNEE_STEPS, BAR_SEG = 0.075, 4, 16   # the bar's bends: centre-line radius (> the bar's 0.06), 4 steps of 22.5°; 16 sides — round under
+                                            # auto smooth 30°
+
+
+SUPPORT = 0.004     # a SUPPORT ring on a straight this close to its bend (the owner's file, 2026-11-13: *"add bevels just next to the last
+                    # sections before a curve so that the turn is crisper"* — his two at 0.0033 and 0.0042)
+
+
+def filleted(corners, radius, steps):
+    """A polyline's corners rounded by arcs of `radius` (each in `steps` steps) — the centre line of a bent bar, as (points, TANGENTS): each
+    point's exact direction (a straight's own, an arc's own at that angle) — the rings then stand square to the curve."""
+    out, tan = [corners[0]], [(corners[1] - corners[0]).normalized()]
+    for A, P, B in zip(corners, corners[1:], corners[2:]):
+        d1, d2 = (P - A).normalized(), (B - P).normalized()
+        theta = math.acos(max(-1.0, min(1.0, d1.dot(d2))))
+        if theta < 1e-6:
+            out.append(P)
+            tan.append(d1)
+            continue
+        t = radius * math.tan(theta / 2)
+        S = P - d1 * t
+        n = (d2 - d1 * d1.dot(d2)).normalized()
+        C = S + n * radius
+        if (S - out[-1]).length > 2 * SUPPORT + 1e-6:        # a straight comes in: its support ring just before the bend
+            out.append(S - d1 * SUPPORT)
+            tan.append(d1)
+        for k in range(steps + 1):
+            phi = theta * k / steps
+            q = C + radius * (-n * math.cos(phi) + d1 * math.sin(phi))
+            if (q - out[-1]).length > 1e-6:      # ⛔ two bends meeting (an arm exactly two bends long) gave the SAME point twice: a doubled ring
+                out.append(q)
+                tan.append((d1 * math.cos(phi) + n * math.sin(phi)).normalized())
+        E = out[-1]                                          # a straight goes out: its support ring just after the bend (if it is a straight —
+        nxt_t = radius if B is not corners[-1] else 0.0      # the arm between two bends has none)
+        if (B - E).length - nxt_t > 2 * SUPPORT + 1e-6:
+            out.append(E + d2 * SUPPORT)
+            tan.append(d2)
+    if (corners[-1] - out[-1]).length > 1e-6:
+        out.append(corners[-1])
+        tan.append((corners[-1] - corners[-2]).normalized())
+    return out, tan
+
+
 def build_crankshaft():
     part, coll = new_part("E03", "crankshaft", 3, (0, YC, 0))
-    bm, ucx = bmesh.new(), []
+    ucx = []
     c = lambda x, y=0.0, z=0.0: Vector((x, YC + y, z))
-    x0 = NOSE_X
+    corners, x0 = [c(NOSE_X)], NOSE_X
     for i, x in enumerate(PX):
         py, pz = RC * math.cos(OFF[i]), RC * math.sin(OFF[i])
         a, b = x - HW, x + HW
-        cyl_between(c(x0), c(a), SR, 24, bm)                                   # the journal before the throw
-        ucx.append(cyl_between(c(x0), c(a), SR, 8, circumscribed=True))
-        cyl_between(c(a, py, pz), c(b, py, pz), SR, 24, bm)                    # the pin
+        corners += [c(a), c(a, py, pz), c(b, py, pz), c(b)]                    # down the journal, up the arm, along the pin, down the arm
+        ucx.append(cyl_between(c(x0), c(a), SR, 8, circumscribed=True))        # collision: the journal, the pin, each arm with its knees
         ucx.append(cyl_between(c(a, py, pz), c(b, py, pz), SR, 8, circumscribed=True))
-        for xx in (a, b):                                                      # the two arms and their knees
-            cyl_between(c(xx), c(xx, py, pz), SR, 20, bm)
-            sphere(c(xx), SR, bm)
-            sphere(c(xx, py, pz), SR, bm)
+        for xx in (a, b):
             ucx.append(hull(ball_points(c(xx), SR) + ball_points(c(xx, py, pz), SR)))
         x0 = b
-    cyl_between(c(x0), c(BAR_END_X), SR, 24, bm)                               # the last journal
+    corners.append(c(BAR_END_X))
     ucx.append(cyl_between(c(x0), c(BAR_END_X), SR, 8, circumscribed=True))
+    # ⭐ the bar ONE continuous tube along its bent centre line, its knees rounded bends (the owner, 2026-11-13: *"make the crankshaft curves'
+    # geometry simpler: too many vertices here"* — 12 UV spheres and a cylinder a piece before, 3,040 vertices)
+    centre, tangents = filleted(corners, KNEE_R, KNEE_STEPS)
+    bar = tube(centre, SR, seg=BAR_SEG, tangents=tangents)
+    o = mesh_object("E03_crankshaft_mesh", bar, MAT["chrome"], part, coll)
+    # its shading: smooth EVERYWHERE but the two flat end caps (marked sharp) — a bend's inner side turns about 0.01 only, its faces slivers whose
+    # normals passed auto smooth's 30° and split into creases; so auto smooth at 180° (no split by angle) with the caps' rims sharp by hand
+    me = o.data
+    me.auto_smooth_angle = math.pi
+    edge_of = {tuple(sorted(e.vertices)): e for e in me.edges}
+    for poly in me.polygons:
+        if poly.loop_total == BAR_SEG:
+            for k in poly.edge_keys:
+                edge_of[tuple(sorted(k))].use_edge_sharp = True
     r, ln, x0f = FLYWHEEL
     xc = x0f + ln / 2
-    cyl_between(c(xc - ln / 2), c(xc + ln / 2), r, 32, bm)                     # the rear cap
+    mesh_object("E03_flywheel", cyl_between(c(xc - ln / 2), c(xc + ln / 2), r, 32), MAT["chrome"], part, coll)   # its own object
     ucx.append(cyl_between(c(xc - ln / 2), c(xc + ln / 2), r, 8, circumscribed=True))
-    mesh_object("E03_crankshaft_mesh", bm, MAT["chrome"], part, coll)
     for k, piece in enumerate(ucx):
         mesh_object(f"UCX_E03_{k:02d}", piece, MAT["ucx"], part, coll, "ucx")
 
@@ -648,7 +743,11 @@ def build_upper_case():
     cutters += [bore_cutter(side, x) for side, i, x, n in CYLS]
     cutters += [hull(rod_sweep_points(side, i, x, steps=1)) for side, i, x, n in CYLS]   # (b): only where the rods really pass
     cutters += [hull(body_sweep_points(side, i, x, steps=1)) for side, i, x, n in CYLS]  # … and the pistons' bodies, below the feet now
-    mesh_object("E04_upper_case_mesh", boolean_cut(outer, cutters), MAT["glass"], part, coll)
+    # its SEAT faces' edges sharp: its bottom (on the lower case) and its two slopes (the banks' feet on them, flush to the top's edge)
+    on_slope = lambda p: any(abs((bank_frame(sd).inverted() @ p).y - FOOT) < 1e-6 for sd in (-1, 1))
+    on_seat = lambda e: all(abs(v.co.y - SPLIT) < 1e-6 for v in e.verts) or all(on_slope(v.co) for v in e.verts)
+    upper = boolean_cut(bevel_outer(outer, keep=on_seat), cutters)
+    mesh_object("E04_upper_case_mesh", split_holes(upper, sorted({x for side, i, x, n in CYLS})), MAT["glass"], part, coll)
 
     # collision — the end walls in three (either side of the half-hole, a block over it), each slope's strips between the bores (squared),
     # the top plate's boxes where no bore's line of descent (squared) passes
@@ -723,6 +822,10 @@ def build_upper_case():
 HEAD_TOP = 0.068                # the bank's top above the deck (the owner's file; the head's glass ran to 0.16)
 BANK_TOP = DECK + HEAD_TOP      # 1.418
 RING = (0.012,)                 # the chrome ring's tube radius at each bore's top
+# ⭐ each ring RESTS ON the bank's top face at the bore's (sharp) edge (the owner, 2026-11-13: *"make the rings level with the bank face (gap
+# in red shall be zero)"*)
+RING_R = BORE_R + RING[0]                         # 0.312: its centre circle — its inside on the bore's edge
+RING_TOP = 2 * RING[0]                            # its top above the bank's top face
 GHOST_HALF = 0.20               # a bore's ghost floor (and its piston's resting proxy): a 0.40 square on the bore's axis
 
 
@@ -758,13 +861,14 @@ def piston_rest_y(side, i, x):
     return min((inv @ p).y for p in rod_outline_points(side, i, x))
 
 
-def torus(centre_frame, R, r, seg=40, rseg=8):
+def torus(centre_frame, R, r, seg=32, rseg=8):      # LIGHT, shaded smooth ALL OVER (smooth="all"): a torus has no real edge, so few sides
+                                                    # read round (the owner, 2026-11-13: *"bad blender geometries in the hidden faces … less vertices"*)
     bm = bmesh.new()
     rings = []
     for i in range(seg):
         a = 2 * math.pi * i / seg
         rings.append([bm.verts.new(centre_frame @ Vector(((R + r * math.cos(b)) * math.cos(a), r * math.sin(b), (R + r * math.cos(b)) * math.sin(a))))
-                      for b in [2 * math.pi * j / rseg for j in range(rseg)]])
+                      for b in [-math.pi / 2 + 2 * math.pi * j / rseg for j in range(rseg)]])
     for i in range(seg):
         for j in range(rseg):
             a, b = rings[i], rings[(i + 1) % seg]
@@ -782,14 +886,19 @@ def build_bank(side):
     xs = bore_xs(side)
 
     body = transformed(box(-X, X, FOOT, BANK_TOP, zlo, zhi), M)
-    below = box(-X - 1, X + 1, -2, SPLIT, -3, 3)
     bores = [transformed(cyl_between((x, FOOT - 0.2, 0), (x, BANK_TOP + 0.2, 0), BORE_R, 48), M) for x in xs]
-    mesh_object(f"{pid}_bank_{tag}_mesh", boolean_cut(body, [below] + bores), MAT["glass"], part, coll)
+    # its FOOT's edges not bevelled (the owner, 2026-11-13: *"no need for bevel at the edges of the banks which snap with the surface of the
+    # upper case"*): the foot sits flush on the slope — a rounded edge there left a groove along the joint
+    inv_m = M.inverted()
+    on_foot = lambda e: all(abs((inv_m @ v.co).y - FOOT) < 1e-6 for v in e.verts)
+    bank = boolean_cut(bevel_outer(body, keep=on_foot), bores)
+    mesh_object(f"{pid}_bank_{tag}_mesh", split_holes(bank, xs), MAT["glass"], part, coll)   # (no cut at the split: the
+    # foot's outer edge lies ON the lower case's top edge since the cases' widening)
     rings = bmesh.new()
     for x in xs:
-        tb = torus(M @ Matrix.Translation((x, BANK_TOP, 0)), BORE_R, RING[0])
+        tb = torus(M @ Matrix.Translation((x, BANK_TOP + RING[0], 0)), RING_R, RING[0])
         me = bpy.data.meshes.new("_t"); tb.to_mesh(me); tb.free(); rings.from_mesh(me); bpy.data.meshes.remove(me)
-    mesh_object(f"{pid}_bank_{tag}_rings", rings, MAT["chrome"], part, coll)
+    mesh_object(f"{pid}_bank_{tag}_rings", rings, MAT["chrome"], part, coll, smooth="all")
 
     # collision: the two long walls beside the bores, the ends and the partitions between them (every bore SQUARED), each cut at the split
     ucx = [clipped_box_hull(side, -X, X, FOOT, BANK_TOP, BORE_R, zhi), clipped_box_hull(side, -X, X, FOOT, BANK_TOP, zlo, -BORE_R)]
@@ -844,7 +953,7 @@ def build_bank(side):
 
     up = M.to_3x3() @ Vector((0, 1, 0))
     seat_marker(f"MC_{pid}_upper", part, coll, M @ Vector((0, FOOT, 0)), -up, (1, 0, 0))
-    seat_marker(f"MC_{pid}_head", part, coll, M @ Vector((0, BANK_TOP + RING[0], 0)), up, (1, 0, 0))   # the valve set's discs on the rings' tops
+    seat_marker(f"MC_{pid}_head", part, coll, M @ Vector((0, BANK_TOP, 0)), up, (1, 0, 0))   # the valve set's discs on the bank's top face, inside the rings
 
 
 def build_banks():
@@ -861,6 +970,7 @@ def crown_number(text, frame):
     """The cylinder's name in relief on the crown (D2: told apart), as a mesh in reference coordinates; `frame`: its centre, +y its normal."""
     cu = bpy.data.curves.new("_num", "FONT")
     cu.body, cu.size, cu.extrude, cu.align_x, cu.align_y = text, 0.2, 0.004, "CENTER", "CENTER"
+    cu.resolution_u = 3                            # light letters (Blender's 12 gave up to 1,000 vertices a crown)
     tmp = bpy.data.objects.new("_num", cu)
     scene.collection.objects.link(tmp)
     me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
@@ -869,6 +979,7 @@ def crown_number(text, frame):
     bpy.data.objects.remove(tmp, do_unlink=True)
     bpy.data.curves.remove(cu)
     bpy.data.meshes.remove(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)   # the text's conversion leaves its letters' outlines doubled
     # read UPRIGHT (the owner: *"rotate the annotations A1 to A3 so they are not upside down"*): the text's up is the world's up seen on the crown
     n = Vector((0, 1, 0))
     u = frame.to_3x3().inverted() @ Vector((0, 1, 0))
@@ -900,15 +1011,27 @@ def build_piston(side, i, x, name):
 
     # the PISTON: its body, its dark ring, its number on the crown
     y0, y1 = s + PISTON_Y - PISTON_H / 2, s + PISTON_Y + PISTON_H / 2
-    mesh_object(f"{pid}_piston_mesh", cyl_between(M @ Vector((x, y0, 0)), M @ Vector((x, y1, 0)), PISTON_R, 48), MAT["chrome"], part, coll)
-    mesh_object(f"{pid}_piston_ring", torus(M @ Matrix.Translation((x, s + 0.18, 0)), PISTON_R + 0.001, 0.007), MAT["dark"], part, coll)
+    # ⭐ HOLLOW from below (the owner's file, 2026-11-13: *"I modified the lower face of one of the pistons to inset it so we can see the end of the
+    # rod inside the piston. Make something similar, but limiting the number of vertices inside the piston interior"*): ONE revolved profile —
+    # the outer wall, the crown, the bottom rim, ONE inner band up to a ceiling clear of the small end (the interior: one ring and a pole)
+    yi = s + PISTON_CEIL
+    prof = [(s + PISTON_Y + PISTON_H / 2, 0.0, 0), (y1, PISTON_R, 0), (y0, PISTON_R, 0), (y0, PISTON_R - PISTON_RIM, 0), (yi, PISTON_R - PISTON_RIM, 0),
+            (yi, 0.0, 0)]
+    along_y = M @ Matrix.Translation((x, 0, 0)) @ Matrix.Rotation(math.pi / 2, 4, "Z")   # revolve_x's axis turned onto the bore's (y′)
+    mesh_object(f"{pid}_piston_mesh", revolve_x([(-yy, r, m) for yy, r, m in prof], along_y @ Matrix.Rotation(math.pi, 4, "Z"), seg=48),
+                MAT["chrome"], part, coll)
+    mesh_object(f"{pid}_piston_ring", torus(M @ Matrix.Translation((x, s + 0.18, 0)), PISTON_R + 0.001, 0.007, rseg=6), MAT["dark"], part, coll,
+                smooth="all")
     mesh_object(f"{pid}_piston_number", crown_number(name, M @ Matrix.Translation((x, y1, 0))), MAT["dark"], part, coll)
 
     # the ROD: its own object, its origin ON THE HINGE (the small end = the wrist pin), turning about x — LOCKED at the goal's angle in play
     F = rod_frame(side, i, x)
     hinge = F @ Matrix.Translation((0, ROD_L, 0))
     rod = cyl_between(F @ Vector((-SMALL_W / 2, ROD_L, 0)), F @ Vector((SMALL_W / 2, ROD_L, 0)), SMALL_R, 24)
-    merge_into(rod, transformed(box(-SHANK[0] / 2, SHANK[0] / 2, 0.06, ROD_L, -SHANK[1] / 2, SHANK[1] / 2), F))
+    # the shank's edges CHAMFERED (the owner's file, 2026-11-13: *"I bevelled part of the rod. reapply for all rods"*: all twelve, 0.0033, one
+    # segment)
+    shank = bevel_outer(box(-SHANK[0] / 2, SHANK[0] / 2, 0.06, ROD_L, -SHANK[1] / 2, SHANK[1] / 2), width=SHANK_CHAMFER, segments=1)
+    merge_into(rod, transformed(shank, F))
     big = bmesh.new()                                      # the big end: a half ring OPEN toward the crank (−y in the rod's frame)
     seg = 20
     ring_pts = [(BIG_R * math.cos(math.pi * k / seg), BIG_R * math.sin(math.pi * k / seg)) for k in range(seg + 1)] + \
@@ -958,13 +1081,18 @@ GROMMET = (0.035, 0.01)                         # where the stem leaves the bank
 VALVES_GHOST_HALF = 0.1                         # the valve set's ghost floor: a 0.2 square inside the middle bore's mouth
 # ⭐ a GLASS DISC per bore (the owner, 2026-11-13: *"A glass disc per bore"* — the bores open at the bank's top for the pistons, the valves need a
 # seat): in the bore's mouth, its rim ON the chrome ring, the valves through it, the grommets on it — part of the valve set
-DISC_R, DISC_T = BORE_R + 0.012, 0.02           # out to the ring's outer edge, 0.02 thick
-DISC_TOP = HEAD_TOP + 0.012 + DISC_T            # the disc's top above the deck (on the ring's top, RING's tube 0.012)
+DISC_R, DISC_T = BORE_R, RING_TOP               # INSIDE its ring, LEVEL with it (the owner, 2026-11-13: *"these yellow volumes shall be level
+                                                # with the rings"*): r 0.30, on the bank's top face, 0.024 thick (it sat on the ring's top before)
+DISC_SINK = 0.0055                              # the disc LOWERED into its ring (the owner's file, 2026-11-13: *"I grabbed the closure of the
+                                                # cylinder to lower it inside the ring"*): its top under the ring's top, the ring a rim round it
+DISC_TOP = HEAD_TOP + DISC_T - DISC_SINK        # the disc's top above the deck
 
 
 def grommet_along():
-    """How far along its valve's axis a grommet's centre is so that the grommet rests ON its disc (its lowest point on it)."""
-    return (DISC_TOP + GROMMET[0] * math.sin(VALVE_TILT) + GROMMET[1] * math.cos(VALVE_TILT)) / math.cos(VALVE_TILT)
+    """How far along its valve's axis the grommet sits: where the stem crosses the plane of the grommet's centre — the grommet lying FLAT on its
+    disc (the owner's file: *"I also modified the rotation and position of three of the rings for the valves. do the same for the other rings so
+    they match the closures of the cylinders"*), its tube's radius above the disc's top."""
+    return (DISC_TOP + GROMMET[1]) / math.cos(VALVE_TILT)
 
 
 def valves_rest_y(side):
@@ -995,24 +1123,29 @@ def build_head(side):
             continue
         for vs, which in ((-1, "1"), (1, "2")):
             V = valve_frame(side, x, vs)
-            merge_into(grommets, torus(V @ Matrix.Translation((0, ga, 0)), GROMMET[0], GROMMET[1], seg=20, rseg=8))
-            v = cyl_between(V @ Vector((0, hc - hh / 2, 0)), V @ Vector((0, hc + hh / 2, 0)), rb, 28, r_end=rt)
-            merge_into(v, cyl_between(V @ Vector((0, s0, 0)), V @ Vector((0, cc, 0)), sr, 10))
+            gc = V @ Vector((0, ga, 0))                               # flat on the disc: the torus square to the BANK's axis, not the valve's
+            merge_into(grommets, torus(Matrix.Translation(gc) @ M.to_3x3().to_4x4(), GROMMET[0], GROMMET[1], seg=12, rseg=6))
+            # ONE revolved profile (a head and a stem pushed into it before): the stem's top inside its cap, down to the head, the head's
+            # top, its rim, its seat face — 16 sides (the head 28 and the stem 14 before)
+            prof = [(cc, 0.0, 0), (cc, sr, 0), (hc + hh / 2, sr, 0), (hc + hh / 2, rt, 0), (hc - hh / 2, rb, 0), (hc - hh / 2, 0.0, 0)]
+            on_axis = V @ Matrix.Rotation(math.pi / 2, 4, "Z")          # revolve_x's axis turned onto the valve's (its local y)
+            v = revolve_x([(-yy, r, m) for yy, r, m in prof], on_axis @ Matrix.Rotation(math.pi, 4, "Z"), seg=16)
             vo = mesh_object(f"{pid}_valve_{name}_{which}", v, MAT["chrome"], part, coll, origin=V)
-            mesh_object(f"{pid}_valve_{name}_{which}_cap", cyl_between(V @ Vector((0, cc - ch / 2, 0)), V @ Vector((0, cc + ch / 2, 0)), cr, 32),
+            mesh_object(f"{pid}_valve_{name}_{which}_cap", cyl_between(V @ Vector((0, cc - ch / 2, 0)), V @ Vector((0, cc + ch / 2, 0)), cr, 16),
                         MAT["chromeH"], part, coll, origin=V)
             vo["axis"], vo["lift"] = "local −Y (it opens down its own axis)", 0.07
             # collision: one piece per valve above the bank (its stem from the grommet, its cap) — the gaps between the caps open for the exhaust
             pts = [V @ Vector((cr * math.cos(t), y, cr * math.sin(t))) for y in (cc - ch / 2, cc + ch / 2) for t in [2 * math.pi * k / 12 for k in range(12)]]
             pts += [V @ Vector((sr * math.cos(t), ga, sr * math.sin(t))) for t in [2 * math.pi * k / 8 for k in range(8)]]
             ucx.append(hull(pts))
-    mesh_object(f"{pid}_head_{tag}_grommets", grommets, MAT["chrome"], part, coll)
+    mesh_object(f"{pid}_head_{tag}_grommets", grommets, MAT["chrome"], part, coll, smooth="all")
     discs = bmesh.new()
     for s_, i, x, name in CYLS:
         if s_ == side:
-            a, b = M @ Vector((x, DECK + DISC_TOP - DISC_T, 0)), M @ Vector((x, DECK + DISC_TOP, 0))
-            merge_into(discs, cyl_between(a, b, DISC_R, 48))
-            ucx.append(cyl_between(a, b, DISC_R, 12, circumscribed=True))    # its rim over the bank's glass: what the valve set rests on
+            a, b = M @ Vector((x, DECK + DISC_TOP - DISC_T, 0)), M @ Vector((x, DECK + DISC_TOP, 0))   # the look: sunk DISC_SINK into the bore
+            merge_into(discs, cyl_between(a, b, DISC_R, 32))
+            ucx.append(cyl_between(M @ Vector((x, BANK_TOP, 0)), b, DISC_R, 12, circumscribed=True))   # its collision ON the bank's top face
+            # (its rim over the glass: what the valve set rests on — the look sinks, the seat does not)
     mesh_object(f"{pid}_head_{tag}_discs", discs, MAT["glass"], part, coll)
     tops = bmesh.new()
     for s_, i, x, name in CYLS:
@@ -1028,7 +1161,7 @@ def build_head(side):
                                                      M @ Vector((-q, yv, q))]), MAT["ufm"], part, coll, "ufm")
     up = M.to_3x3() @ Vector((0, 1, 0))
     seat_marker(f"MC_{pid}_rest", part, coll, M @ Vector((0, yv, 0)), -up, (1, 0, 0))
-    seat_marker(f"MC_{pid}_deck", part, coll, M @ Vector((0, BANK_TOP + RING[0], 0)), -up, (1, 0, 0))   # its discs on the rings' tops
+    seat_marker(f"MC_{pid}_deck", part, coll, M @ Vector((0, BANK_TOP, 0)), -up, (1, 0, 0))   # its discs on the bank's top face
     seat_marker(f"MC_{pid}_exhaust", part, coll, M @ Vector((0, DECK + DISC_TOP, side * 0.15)), up, (1, 0, 0))   # the exhaust's seat (step 8)
 
 
@@ -1040,11 +1173,16 @@ def build_heads():
 # ================================================================ STEP 8 — E15, E16 the exhausts (each its own), on the valve sets' discs
 # the 120° preview's revision, the owner's sketches (§6.2): per cylinder a FLANGE on the disc next to the outer (lower) valve, on its FRONT side, a
 # STUB slightly bent halfway rising off it and running out and a little down into the COLLECTOR; the collector's dead end short, its rear end open
-EXH_DX, EXH_ZS = -0.17, 0.15                    # a flange's centre from its bore's axis: along x (the front side), across (z′, outward)
+EXH_DX, EXH_ZS = 0.17, 0.15                     # a flange's centre from its bore's axis: along x (−side × it: bank A's BEHIND its valves, bank B's in
+                                                # front — the owner's file, 2026-11-13: the two exhausts mirror images, as the banks), across (z′)
 FLANGE = (0.065, 0.02)                          # r, thickness
+FLANGE_CHAMFER = 0.004                          # its rims' chamfer
 STUB_R, COLL_R, COLL_LIP = 0.05, 0.085, 0.014   # the stub's r, the collector's r, its wall at the open end
 COLL_UP, COLL_Z = 0.10, 0.65                    # the collector's axis above the disc tops (y′), and out (z′)
-DEAD_END = 0.14                                 # the collector's closed front past the first stub
+DEAD_END = 0.14                                 # the collector's closed REAR past the last stub
+OPEN_PAST = 0.165                               # its OPEN FRONT past the case's front face (the owner's file: *"reverse the opening and closing"*)
+EXH_SEG, EXH_PATH = 14, 5                       # LIGHT (*"less vertex-intensive"*) yet ROUND under Blender's auto smooth 30° (*"increase the vertex
+                                                # number slightly … so that the shade auto smooth can toggle"*): 14 sides (26° apart; 8 were 45°), 5 steps
 
 
 def catmull_rom(points, per_seg=12, alpha=0.5):
@@ -1069,14 +1207,21 @@ def catmull_rom(points, per_seg=12, alpha=0.5):
     return out
 
 
-def tube(path, r, seg=16):
-    """A closed tube of radius r along a path (parallel-transported rings, both ends capped)."""
+def tube(path, r, seg=16, start=None, tangents=None):
+    """A closed tube of radius r along a path (parallel-transported rings, both ends capped); `start`: the first ring's exact normal (a pipe
+    leaving a flange square to it); `tangents`: every ring's exact normal (a bent bar's — `filleted`)."""
     bm = bmesh.new()
     tangent = (path[1] - path[0]).normalized()
     u = tangent.orthogonal().normalized()
     rings = []
     for k, p in enumerate(path):
-        t = (path[min(k + 1, len(path) - 1)] - path[max(k - 1, 0)]).normalized()
+        nxt = (path[min(k + 1, len(path) - 1)] - p) if k < len(path) - 1 else (p - path[k - 1])
+        prv = (p - path[k - 1]) if k > 0 else nxt
+        # the ring square to the BISECTOR of its two segments (the chord between its neighbours tilted it where the spacing is uneven — the
+        # crank's short arm between two bends: the rings crossed on the inside, a crease)
+        t = (nxt.normalized() + prv.normalized()).normalized() if (k or start is None) else Vector(start).normalized()
+        if tangents is not None:                 # ⭐ exact: the bisector tilted the ring where two bends meet in an S (11°: a stubby pinch)
+            t = Vector(tangents[k]).normalized()
         u = (u - t * u.dot(t)).normalized()
         v = t.cross(u)
         rings.append([bm.verts.new(p + r * (math.cos(2 * math.pi * i / seg) * u + math.sin(2 * math.pi * i / seg) * v)) for i in range(seg)])
@@ -1095,13 +1240,39 @@ def exhaust_layout(side):
     for s_, i, x0, name in CYLS:
         if s_ != side:
             continue
-        x = x0 + EXH_DX
-        pts = [(x, top + FLANGE[1], side * zs), (x, top + 0.08, side * (zs + 0.03)),          # from the flange's TOP: the tube's first ring
+        x = x0 - side * EXH_DX
+        pts = [(x, top + FLANGE[1], side * zs), (x, top + FLANGE[1] + 0.03, side * zs), (x, top + 0.08, side * (zs + 0.03)),          # from the flange's TOP: the tube's first ring
                # is square to its leaning start and dipped 0.018 below the flange's bottom, into the disc, from its bottom
                (x, top + 0.14, side * (zs + 0.2)), (x, yc2 + 0.01, side * (COLL_Z - 0.12)),
                (x, yc2, zc)]
-        out.append((name, [M @ q for q in catmull_rom(pts)], Vector((x, top, side * zs))))
+        out.append((name, [M @ q for q in catmull_rom(pts, per_seg=EXH_PATH)], Vector((x, top, side * zs))))
     return out
+
+
+def revolve_x(profile, frame, seg=12):
+    """A surface of revolution about the frame's x axis from a profile [(x, r, material index)] — one clean mesh, every ring shared, a single
+    pole where r = 0 (a dome's tip, a disc's centre). Each face takes the material index of the profile segment it comes from."""
+    bm = bmesh.new()
+    rings = []
+    for x, r, m in profile:
+        if r < 1e-9:
+            rings.append([bm.verts.new(frame @ Vector((x, 0, 0)))])
+        else:
+            rings.append([bm.verts.new(frame @ Vector((x, r * math.cos(2 * math.pi * i / seg), r * math.sin(2 * math.pi * i / seg))))
+                          for i in range(seg)])
+    for k in range(len(rings) - 1):
+        a, b, m = rings[k], rings[k + 1], profile[k][2]
+        for i in range(seg):
+            j = (i + 1) % seg
+            if len(a) == 1:
+                f = bm.faces.new((a[0], b[j], b[i]))
+            elif len(b) == 1:
+                f = bm.faces.new((a[i], a[j], b[0]))
+            else:
+                f = bm.faces.new((a[i], a[j], b[j], b[i]))
+            f.material_index = m
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
 
 
 def build_exhaust(side):
@@ -1112,31 +1283,38 @@ def build_exhaust(side):
     layout = exhaust_layout(side)
     fx = sum(f.x for n, p, f in layout) / len(layout)
     part, coll = new_part(pid, f"exhaust_{tag}", 8, (0, 0, 0), frame=M @ Matrix.Translation((fx, top, side * EXH_ZS)))
-    chrome, ucx, rest = bmesh.new(), [], bmesh.new()
+    flanges, ucx, rest = bmesh.new(), [], bmesh.new()
     fr, ft = FLANGE
     for name, path, f in layout:
-        merge_into(chrome, cyl_between(M @ f, M @ (f + Vector((0, ft, 0))), fr, 24))
-        merge_into(chrome, tube(path, STUB_R))
-        merge_into(rest, disc(M @ f, -(M.to_3x3() @ Vector((0, 1, 0))), fr, 16))
+        # ONE revolved profile, 24 sides, its two rims CHAMFERED (the owner: *"Shade auto smooth not latching on E15_exhaust_A_flanges. do
+        # better"* — a 14-sided coin 0.02 thick: one band of faces between two hard edges, nothing for the smoothing to work with)
+        b = FLANGE_CHAMFER
+        prof = [(0.0, 0.0, 0), (0.0, fr - b, 0), (b, fr, 0), (ft - b, fr, 0), (ft, fr - b, 0), (ft, 0.0, 0)]
+        merge_into(flanges, revolve_x(prof, M @ Matrix.Translation(f) @ Matrix.Rotation(math.pi / 2, 4, "Z"), seg=24))
+        # ⭐ each stub its OWN object, smooth (the owner, 2026-11-13: *"make the exhaust curved parts separate objects so they can be smooth
+        # shaded"*): it runs into the collector and onto its flange without being welded to either
+        up_b = M.to_3x3() @ Vector((0, 1, 0))
+        mesh_object(f"{pid}_exhaust_{tag}_stub_{name}", tube(path, STUB_R, seg=EXH_SEG, start=up_b), MAT["chrome"], part, coll, smooth=True)
+        merge_into(rest, disc(M @ f, -(M.to_3x3() @ Vector((0, 1, 0))), fr, 12))
         # collision: the stub with its flange, one convex piece (the stub runs in a plane x = const: its hull stays clear of the valve caps)
         pts = [M @ (f + Vector((fr * math.cos(t), 0, fr * math.sin(t)))) for t in [2 * math.pi * k / 12 for k in range(12)]]
-        tb = tube(path, STUB_R, seg=10)
+        tb = tube(path, STUB_R, seg=EXH_SEG, start=M.to_3x3() @ Vector((0, 1, 0)))
         pts += [v.co.copy() for v in tb.verts]
         tb.free()
         ucx.append(hull(pts))
-    # the collector: its closed front (a flattened ball) just past the first stub, its open rear (a dark inside, a chrome lip)
-    x0 = min(f.x for n, p, f in layout) - DEAD_END
-    x1 = CASE_X - 0.05
+    mesh_object(f"{pid}_exhaust_{tag}_flanges", flanges, MAT["chrome"], part, coll, smooth=True)
+    # ⭐ the collector, ONE revolved profile (*"make it a regola d'arte"*): a dark bore inside the open front, the lip, the outer wall, and a
+    # flattened DOME closing the rear on the wall's own last ring — no sphere pushed into a cylinder
+    x0 = -CASE_X - OPEN_PAST
+    x1 = max(f.x for n, p, f in layout) + DEAD_END
     a, b = M @ Vector((x0, yc2, zc)), M @ Vector((x1, yc2, zc))
-    merge_into(chrome, cyl_between(a, b, COLL_R, 32))
-    cap = sphere((0, 0, 0), COLL_R)
-    bmesh.ops.scale(cap, vec=(0.6, 1, 1), verts=cap.verts)
-    bmesh.ops.translate(cap, vec=a, verts=cap.verts)
-    merge_into(chrome, cap)
-    mesh_object(f"{pid}_exhaust_{tag}_mesh", chrome, MAT["chrome"], part, coll)
-    mesh_object(f"{pid}_exhaust_{tag}_open_end", cyl_between(b - Vector((0.002, 0, 0)), b + Vector((0.001, 0, 0)), COLL_R - COLL_LIP, 32),
-                MAT["dark"], part, coll)
-    ucx.append(cyl_between(a - Vector((COLL_R * 0.6, 0, 0)), b, COLL_R, 8, circumscribed=True))
+    ri, depth = COLL_R - COLL_LIP, 0.25
+    prof = [(x0 + depth, 0.0, 1), (x0 + depth, ri, 1), (x0, ri, 0), (x0, COLL_R, 0)]          # the dark inside (material 1), the lip
+    prof += [(x0 + (x1 - x0) * k / 4, COLL_R, 0) for k in range(1, 5)]                       # the wall, a few rings (smooth along it)
+    prof += [(x1 + 0.6 * COLL_R * math.sin(t), COLL_R * math.cos(t), 0) for t in [math.pi / 2 * k / 4 for k in range(1, 5)]]   # the dome
+    frame = M @ Matrix.Translation((0, yc2, zc))
+    mesh_object(f"{pid}_exhaust_{tag}_collector", revolve_x(prof, frame, seg=EXH_SEG), MAT["chrome"], part, coll, smooth=True, extra_mats=(MAT["dark"],))
+    ucx.append(cyl_between(a, b + Vector((COLL_R * 0.6, 0, 0)), COLL_R, 8, circumscribed=True))
     for k, piece in enumerate(ucx):
         mesh_object(f"UCX_{pid}_{k:02d}", piece, MAT["ucx"], part, coll, "ucx")
     mesh_object(f"UFM_{pid}_rest", rest, MAT["ufm"], part, coll, "ufm")      # its resting face: the flanges' bottoms, on the discs (real faces)
@@ -1172,6 +1350,82 @@ STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, bu
 for n, fn in STEPS:
     if n <= STEP:
         fn()
+
+
+# ================================================================ THE FINISH PASS — every visible object, once built (PART_AUTHORING.md §4.1)
+# (the owner, 2026-11-13: *"once the object is built, clean the geometry (remove duplicate vertices, reduce the number of vertices where possible
+# in particular hidden faces and hidden objects or hidden object parts, etc.), apply shade auto smooth. do that for all the objects"*)
+from mathutils.bvhtree import BVHTree as _BVH
+
+
+def _inside(tree, p, direction=Vector((0.5773, 0.5774, 0.5774)), eps=1e-5):
+    """p inside the closed mesh of `tree`: the crossings of a ray from p, counted (odd = inside); a point ON the surface is not inside."""
+    near = tree.find_nearest(p)
+    if near[0] is not None and near[3] < 1e-4:
+        return False
+    hits, o = 0, p.copy()
+    for _ in range(64):
+        loc, nrm, idx, dist = tree.ray_cast(o, direction)
+        if loc is None:
+            break
+        hits += 1
+        o = loc + direction * eps
+    return hits % 2 == 1
+
+
+def finish_pass():
+    to_root = YUP_ROOT.matrix_world.inverted()
+    report, total0, total1 = [], 0, 0
+    for part, coll in PARTS:
+        meshes = [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render"]
+        opaque = [o for o in meshes if o.active_material is not MAT["glass"]]
+        trees = {}
+        for o in opaque:                                    # each opaque piece as a closed volume, in the reference's coordinates
+            m = to_root @ o.matrix_world
+            trees[o.name] = _BVH.FromPolygons([m @ v.co for v in o.data.vertices], [list(pl.vertices) for pl in o.data.polygons])
+        for o in meshes:
+            me = o.data
+            v0 = len(me.vertices)
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            # 1. HIDDEN faces: an opaque piece's faces wholly inside ANOTHER opaque piece of the same part (glass hides nothing)
+            hidden = []
+            if o in opaque:
+                m = to_root @ o.matrix_world
+                others = [trees[q.name] for q in opaque if q is not o]
+                for f in bm.faces:
+                    pts = [m @ v.co for v in f.verts] + [m @ f.calc_center_median()]
+                    if others and any(all(_inside(t, q) for q in pts) for t in others):
+                        hidden.append(f)
+            if hidden:
+                bmesh.ops.delete(bm, geom=hidden, context="FACES")
+            # 2. duplicates welded, loose geometry gone, and the NEEDLESS vertex — a flat fan's pole (a cap's centre) — dissolved into one face;
+            #    ⛔ never a general "limited dissolve": it took out the crank's SUPPORT rings (their two sides are coplanar on a straight)
+            bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+            bm.normal_update()
+            poles = [v for v in bm.verts if len(v.link_faces) >= 5 and all(len(f.verts) == 3 for f in v.link_faces)
+                     and all(f.normal.dot(v.link_faces[0].normal) > 0.99999 for f in v.link_faces)
+                     and len({f.material_index for f in v.link_faces}) == 1]
+            if poles:
+                bmesh.ops.dissolve_verts(bm, verts=poles)
+            loose = [v for v in bm.verts if not v.link_faces]
+            if loose:
+                bmesh.ops.delete(bm, geom=loose, context="VERTS")
+            smooth_angle = me.auto_smooth_angle if me.use_auto_smooth else math.radians(30)
+            bm.to_mesh(me)
+            bm.free()
+            # 3. AUTO SMOOTH: every face smooth, the object's own angle (30° unless it set its own: a torus, the crank)
+            for pl in me.polygons:
+                pl.use_smooth = True
+            me.use_auto_smooth, me.auto_smooth_angle = True, smooth_angle
+            v1 = len(me.vertices)
+            total0, total1 = total0 + v0, total1 + v1
+            if v1 != v0 or hidden:
+                report.append(f"{o.name} {v0}→{v1}" + (f" ({len(hidden)} hidden faces)" if hidden else ""))
+    print(f"finish pass: {total0} → {total1} vertices; " + ("; ".join(report) if report else "nothing to clean"))
+
+
+finish_pass()
 
 # proxies and collision hidden in the viewport (Alt+H or the outliner's eye shows them)
 bpy.context.view_layer.update()
@@ -1267,14 +1521,14 @@ def redundancy(o):
 bad = []
 for part, coll in PARTS:
     for o in coll.objects:
-        if o.type == "MESH" and (o.get("role") == "ufm" or (o.get("role") == "render" and o.active_material == MAT["glass"])):
+        if o.type == "MESH" and o.get("role") in ("ufm", "render"):      # EVERY visible mesh (the crank's doubled rings passed a glass-only check)
             d, z, l = redundancy(o)
             if d or z or l:
                 bad.append(f"{o.name} ({d} duplicate vertices, {z} zero-area faces, {l} loose edges)")
 ghosts = [(o.name, o.get("for_part")) for o in bpy.data.objects if o.get("ghost")]
 print("ghost floors, each for ONE part:", ", ".join(f"{n}→{f}" for n, f in ghosts),
       "✅" if all(f and bpy.data.objects.get(next((p.name for p, _ in PARTS if p["part_id"] == f), "")) for n, f in ghosts) else "⛔ a ghost names no built part")
-print("redundant geometry (glass and proxies):", "✅ none" if not bad else "⛔ " + "; ".join(bad))
+print("redundant geometry (every visible mesh and proxy):", "✅ none" if not bad else "⛔ " + "; ".join(bad))
 
 
 def ref_pose(o):

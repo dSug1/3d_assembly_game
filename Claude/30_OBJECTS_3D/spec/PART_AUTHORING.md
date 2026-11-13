@@ -33,7 +33,19 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 
 ## 3. ⭐⭐ What each PART carries (the proposed conventions)
 
-1. **The render mesh** — the look; what a finger taps (`D50`).
+1. **The render mesh** — the look; what a finger taps (`D50`). ⭐ **Kept LIGHT** (the owner, 2026-11-13: *"make the exhaust less vertex-intensive. They
+   will slow down the rendering"*): a small round piece about 14 sides (above 12: auto smooth below), a bent pipe a few steps a segment — the phone draws every part at once.
+   ⭐ **Drawn properly** (the owner: *"regola d'arte"*): a round piece with an end (a capped pipe, a dome) is ONE revolved profile sharing its rings —
+   never a primitive pushed into another; pieces that meet at an angle (a stub into a collector) are SEPARATE objects, a pipe leaving a face square to it; EVERY visible part AUTO
+   SMOOTH at Blender's 30° — so a round piece has MORE than 12 sides (14: still light), else it stays faceted (the owner's toggle must work).
+   ⭐ A piece with NO real edge (a torus: a ring, a grommet) is smooth ALL over — then 6 – 8 round its tube read round; a hidden piece (a valve's
+   head in its bore) is as light as the rest — one profile, never two primitives pushed together.
+   ⭐ A bent bar: its rings square to the curve's EXACT tangent (never the average of two segments — it tilts them in an S), and a SUPPORT ring
+   just before and after each bend on the straights (the owner's: 0.004) — the turn crisp.
+   ⭐ A glass part's OUTER edges bevelled, before its cuts (the inside sharp) — but NOT a seat face's edges (the owner: *"no need for bevel at the
+   edges of the banks which snap with the surface of the upper case"*): a part flush on its host shows no groove along the joint.
+   ⭐ A flat face with HOLES (a bore through a deck): a face cannot hold a hole, so the part is split by straight planes through every hole's
+   centre and every other edge inside a flat face dissolved — no arbitrary BRIDGE edges (the owner: *"what are these edges for ? clean the geometry"*).
 2. **`UCX_<part>_NN` — the collision pieces**: a few convex pieces, only where the plan inserts or rests (a bore as a ring of pieces, or squared),
    as `BLENDER_COLLISION_AUTHORING.md` specifies. Absent: the hull at spawn.
 3. ⭐ **The face proxy — NEW, not yet specified**: a hidden flat-faced stand-in where the plan's SEATS and GIZMO ROUTES are (a bore as a 6- or 8-sided
@@ -85,7 +97,14 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    overwritten); Claude reads both headless, diffs them object by object (transforms, vertex bounds in the reference's units, objects added or
    deleted), states the intent it reads for the owner's confirmation, writes it into the script as a RULE where it is one (*"flush with"*), rebuilds
    and re-runs the checks. ⭐ When the owner wants to model by hand, that part leaves the script — decided per part, written in the scene's spec.
-5. **Authored in the reference's units, y up**: an empty `YUP_ROOT` (rotation x 90°) so every number reads as the reference's; `unitM` on it.
+5. ⭐⭐ **THE FINISH PASS, every visible object once built** (the owner, 2026-11-13: *"once the object is built, clean the geometry (remove
+   duplicate vertices, reduce the number of vertices where possible in particular hidden faces and hidden objects or hidden object parts, etc.),
+   apply shade auto smooth. do that for all the objects"*) — in the build script, after the steps, before the checks: ① the HIDDEN faces deleted:
+   an opaque piece's faces wholly inside another opaque piece of the same part (a ring's inner half in its piston, a stem's top in its cap, a pipe's
+   end in its collector — glass hides nothing); ② duplicates welded, loose geometry deleted, a flat fan's pole (a cap's centre) dissolved into one
+   face — ⛔ never a general limited dissolve (it takes out a bent bar's support rings: their two sides are coplanar); ③ AUTO SMOOTH on every face
+   (30°, or the object's own: a torus smooth all over). It prints what it removed, object by object.
+6. **Authored in the reference's units, y up**: an empty `YUP_ROOT` (rotation x 90°) so every number reads as the reference's; `unitM` on it.
 
 ### 4.2 ⭐⭐ The checks every run prints (each for the steps built so far)
 
@@ -95,7 +114,7 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | **each SEAT** | per pair of the plan (host's marker, part's marker — `MC_`): the distance between them and their normals' dot at the goal | distance 0, dot −1 (anti-parallel — `../INDEX.md` rule 1) |
 | ⭐ **each WAY IN** | the part's collision pieces moved BACK along its approach, from 2 mm off its goal to its full length, against EVERY earlier part's collision pieces (triangle overlap, `BVHTree`) | clear at every position; ⛔ else the first blocked distance and the pieces named |
 | ⭐⭐ **the CONTROL** | the same part pushed 0.05 units PAST its goal, into its host | ⛔ it must read BLOCKED — else the check is BLIND (a check never seen failing is not trusted: `CLAUDE.md` rule 2's spirit) |
-| ⭐ **no redundant geometry** (the owner, 2026-11-13: *"be careful that in your blender file, you have redundant edges … not sure if it can create issues (rendering, gizmo, etc.)"*) | per GLASS mesh and per face proxy: duplicate vertices, zero-area faces, loose edges | none — a transparent part is ONE solid (a boolean of one outer body, never touching boxes: their faces show through the glass), every boolean's result welded and its flat faces' extra edges dissolved, a proxy's strips welded into whole faces (`tidy`). An opaque part made of touching primitives (a chrome bar and its knees) may keep them |
+| ⭐ **no redundant geometry** (the owner, 2026-11-13: *"be careful that in your blender file, you have redundant edges … not sure if it can create issues (rendering, gizmo, etc.)"*) | per VISIBLE mesh and per face proxy (⛔ first glass only: it missed the crank's doubled rings and the text's doubled outlines): duplicate vertices, zero-area faces, loose edges | none — a transparent part is ONE solid (a boolean of one outer body, never touching boxes: their faces show through the glass), every boolean's result welded and its flat faces' extra edges dissolved, a proxy's strips welded into whole faces (`tidy`). An opaque part made of touching primitives (a chrome bar and its knees) may keep them |
 | ⭐ **the MOTION** (the owner, 2026-11-13: *"when the crank rotates, the piston shall remain in the cylinder"*) — for a scene with a level-end animation (§5) | the mechanism driven through its whole cycle by the game's own formula (every 6°): each moving part against the limits it must keep (a piston inside its cylinder, under its valves) and against the still parts' collision pieces | every margin ≥ 0, no collision — ⭐ with its control (a known-bad dimension must read OUT) |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
