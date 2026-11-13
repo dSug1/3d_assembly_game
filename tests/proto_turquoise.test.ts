@@ -63,7 +63,8 @@ describe("⭐⭐ prototype — the turquoise piece", () => {
     // the spawn: only that piece shown, it is the orbited one, at the boot quaternion; on a switch the rig back at its boot pose
     expect(w).toMatch(/for \(const o of st\.orbitPieces\) o\.mesh\.setEnabled\(o === p\);\s*st\.greenBox = p\.mesh;/);
     expect(w).toMatch(/p\.mesh\.rotationQuaternion = toBabylon\(greenBootOrientation\(st\.sceneSpec\.id\)\);/);
-    expect(w).toMatch(/if \(!atBoot\) \{\s*st\.orbit = new OrbitController\(st\.cfg, ORBIT_START_YAW_RAD, st\.bootElevation\);\s*st\.orbitInertia\.stop\(\);/); // ⛔ (2026-11-13) no zoom reset: the zoom deleted
+    // ⭐ (2026-11-13) the reset returns to the SCENE's boot yaw (a model's front — `bootYawForFront`), the rig's global yaw otherwise
+    expect(w).toMatch(/if \(!atBoot\) \{\s*st\.orbit = new OrbitController\(st\.cfg, st\.bootYawRad, st\.bootElevation\);[^\n]*\n\s*st\.orbitInertia\.stop\(\);/); // ⛔ (2026-11-13) no zoom reset: the zoom deleted
     expect(w).toMatch(/st\.boxSpring = null;\s*st\.cameraOrbit = null;\s*st\.cameraLagged = null;/);
     expect(code("render/hud_paint.ts")).toMatch(/st\.orbitPieceKind === 1 \? "turquoise" : "green"\}, \$\{st\.orbitPieceFaces\} faces/);
   });

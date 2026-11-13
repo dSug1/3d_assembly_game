@@ -27,7 +27,7 @@ import { trackingMetresPerPx } from "../input";
 import { OBJECT_TOP_SCALE } from "../core/scene_dims";
 import { taperMesh } from "./bodies";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { GIZMO_RING_PX, ORBIT_START_YAW_RAD, RING_POINTS } from "./scene_state";
+import { GIZMO_RING_PX, RING_POINTS } from "./scene_state";
 import { cameraOffset, cameraOrbitAt, cameraOrbitStep, springOrbit, type OrbitAt } from "../input/follow_camera";
 import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf, settledPause, travelOf } from "../input/top_pause";
 import { orbitOffset } from "../input/orbit";
@@ -651,7 +651,7 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
   st.greenPieceVolumeM3 = p.volumeM3;
   p.mesh.rotationQuaternion = toBabylon(greenBootOrientation(st.sceneSpec.id));
   if (!atBoot) {
-    st.orbit = new OrbitController(st.cfg, ORBIT_START_YAW_RAD, st.bootElevation);
+    st.orbit = new OrbitController(st.cfg, st.bootYawRad, st.bootElevation); // ⭐ (2026-11-13) the scene's boot yaw (a model's front)
     st.orbitInertia.stop();
     st.orbitMotion = null;
     st.boxSpring = null;

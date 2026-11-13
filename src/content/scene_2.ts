@@ -20,6 +20,7 @@ import { SCENE_1 } from "./scene_1";
 import ENGINE_GLB from "../../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.glb?url";
 import STUDIO_HDR from "../../Assets/Environment/studio_cream.hdr?url";
 import CONTACT_JSON from "../../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine_contact.json?url";
+import { SCENE2_BOOT_RULE } from "./scene2_boot";
 
 const FLOOR = SCENE_1.bodies.find((b) => b.id === "Floor" && b.frozen);
 if (FLOOR === undefined) throw new Error("Scene_2: Scene_1 has no frozen Floor to copy");
@@ -71,5 +72,8 @@ export const SCENE_2: SceneDescriptor = {
   },
   // ⭐ The final stage: every part (no slice yet).
   // ⭐ (2026-11-13) the contact shadows BAKED per part and per pair, switched on when seated (`SCENE_SETUP.md` §6.3) — the SSAO off below
-  model: { url: ENGINE_GLB, contact: CONTACT_JSON },
+  // ⭐ (2026-11-13) THE BOOT STAGE: the parts in their heaps, DRAWN AT EVERY BOOT from the rule (`scene2_boot.ts` — `SCENE_2_ASSEMBLY.md` §2.5);
+  // the LEVEL slider `modelStage` shows the final stage
+  // ⭐⭐ the FRONT: the file's +x (Blender's +X — the flywheel's end, as built, lit and set up; the owner's look): the camera boots facing it
+  model: { url: ENGINE_GLB, contact: CONTACT_JSON, boot: SCENE2_BOOT_RULE, frontDeg: 0 },
 };

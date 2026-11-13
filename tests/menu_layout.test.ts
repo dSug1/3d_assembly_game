@@ -46,7 +46,7 @@ function menuTree(): Node[] {
 const n = (title: string, sliders: string[], subsections: Node[] = []): Node => ({ title, sliders, subsections });
 
 const LAYOUT: Node[] = [
-  n("LEVEL", ["orbitPieceKind", "lockPlacedPieces", "demoDurationS", "backgroundBluePct"], [
+  n("LEVEL", ["orbitPieceKind", "lockPlacedPieces", "demoDurationS", "backgroundBluePct", "modelStage"], [
     n("GOAL", ["ungrabbedGoalMm", "ungrabbedGoalDeg", "orbitGoalMm", "orbitGoalDeg", "captureOffsetMm", "snapConeDeg", "snapMs"]),
   ]),
   n("INPUT", ["tapMaxDuration", "motionDeadbandMm", "restConfirmMs", "restGapFactor", "orbitDeadbandMm", "orbitBandRestMs"]),
@@ -75,9 +75,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("92 sliders, each once, each a live config value; no folder over 9", () => {
+  it("93 sliders, each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(92);
+    expect(all.length).toBe(93);
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);

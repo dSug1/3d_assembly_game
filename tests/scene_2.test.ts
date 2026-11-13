@@ -49,6 +49,23 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(SCENE_1.lighting!.environment).toBeUndefined();
   });
 
+  it("⭐ (2026-11-13) the boot RULE carried (the layout is drawn at every boot); a heap not in its order, a bad limit, refused", () => {
+    expect(SCENE_2.model!.boot!.anchors).toEqual(["E01"]);
+    const base = JSON.parse(serializeSceneDescriptor(SCENE_2));
+    const o1 = structuredClone(base);
+    o1.model.boot.heapOf.E03 = "nowhere";
+    expect(() => parseSceneDescriptor(JSON.stringify(o1))).toThrow(/not a heap of heapOrder/);
+    const o2 = structuredClone(base);
+    o2.model.boot.maxStack = 0;
+    expect(() => parseSceneDescriptor(JSON.stringify(o2))).toThrow(/maxStack/);
+  });
+
+  it("⭐ (2026-11-13) a model's front must be a finite angle", () => {
+    const o = JSON.parse(serializeSceneDescriptor(SCENE_2));
+    o.model.frontDeg = "front";
+    expect(() => parseSceneDescriptor(JSON.stringify(o))).toThrow(/frontDeg/);
+  });
+
   it("the studio's fields refused when malformed", () => {
     const base = JSON.parse(serializeSceneDescriptor(SCENE_2));
     const bad = (f: (o: { lighting: Record<string, unknown> & { lights: Record<string, unknown>[] } }) => void) => {

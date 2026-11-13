@@ -606,6 +606,10 @@ export interface SceneState {
   shadowLevelSeen: "FULL" | "PIECE" | null;
   /** ⭐ (2026-11-13) the scene's `.glb` (`render/model_import.ts`): loading, its parts, or ⛔ why it was refused — on the HUD's first line. `""` no model. */
   modelStatus: string;
+  /** ⭐ (2026-11-13) the boot layout's seed and time (or why it failed), appended to `modelStatus`. */
+  modelBootNote: string;
+  /** ⭐ (2026-11-13) the yaw the camera boots and resets at: facing the scene model's front (`bootYawForFront`), else the rig's global. */
+  bootYawRad: number;
   /** ⭐ (2026-11-13) the `backgroundBluePct` last applied to the clear colour (`-1`: none yet — the first frame applies it). */
   backgroundBlueSeen: number;
   /**

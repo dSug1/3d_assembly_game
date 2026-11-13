@@ -20,6 +20,7 @@
 import { bootTilt } from "./scene_dims";
 import { qFromAxisAngle, type Quat } from "./vec";
 import type { LightingSpec } from "./lighting";
+import type { BootRule } from "./boot_heaps";
 import type { DemoPlan } from "./demo_plan";
 
 export type Triple = readonly [number, number, number];
@@ -198,6 +199,19 @@ export interface SceneDescriptor {
     readonly parts?: readonly string[];
     /** ⭐ (2026-11-13) the baked contact shadows per pair (`<scene>_contact.json`, `core/model_contact.ts`, `SCENE_SETUP.md` §6.3). */
     readonly contact?: string;
+    /**
+     * ⭐ (2026-11-13) THE BOOT STAGE's RULE: the parts' heaps by type, their areas, the limits — the layout DRAWN AT EVERY BOOT from it
+     * (`core/boot_heaps.ts` `bootFromModel`). Absent: every part at its goal (the final stage). The anchors stand at their goals.
+     */
+    readonly boot?: BootRule;
+    /**
+     * ⭐⭐ (2026-11-13, the owner: *"for me, this is the camera viewing the front of the assembly. this is how the final assembly will be placed,
+     * this is how we built in blender. this is how I setup the lights and the environment. Therefore, if anything is not in line, everything has
+     * to be yaw rotated so it matches this"*) THE FRONT: the assembly's front as built — an angle in the model's frame x–z plane (degrees,
+     * `atan2(z, x)`; `Scene_2`: 0 = the file's +x, Blender's +X). The camera BOOTS facing it (`bootYawForFront`), the heaps stand in the half
+     * toward it, the goal is as built. Absent: the rig's global boot yaw.
+     */
+    readonly frontDeg?: number;
   };
 }
 
@@ -461,8 +475,21 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     if (typeof m !== "object" || m === null || typeof m.url !== "string" || m.url === "") throw new Error(`scene ${o.id}: model.url must be a non-empty string`);
     if (m.parts !== undefined && !(Array.isArray(m.parts) && m.parts.every((x) => typeof x === "string" && x !== "")))
       throw new Error(`scene ${o.id}: model.parts must be an array of part ids`);
+    const fd = (m as { frontDeg?: unknown }).frontDeg;
+    if (fd !== undefined && !(typeof fd === "number" && Number.isFinite(fd))) throw new Error(`scene ${o.id}: model.frontDeg must be a finite number`);
     if (m.contact !== undefined && !(typeof m.contact === "string" && m.contact !== ""))
       throw new Error(`scene ${o.id}: model.contact must be a non-empty URL`);
+    const boot = (m as { boot?: unknown }).boot as Record<string, unknown> | undefined;
+    if (boot !== undefined) {
+      const okObj = (v: unknown) => typeof v === "object" && v !== null;
+      if (!okObj(boot) || !okObj(boot.heapOf) || !Array.isArray(boot.anchors) || !Array.isArray(boot.heapOrder) || !okObj(boot.arc))
+        throw new Error(`scene ${o.id}: model.boot needs heapOf, anchors, heapOrder and an arc`);
+      const heaps = new Set(boot.heapOrder as string[]);
+      for (const [id, h] of Object.entries(boot.heapOf as Record<string, unknown>))
+        if (typeof h !== "string" || !heaps.has(h)) throw new Error(`scene ${o.id}: model.boot.heapOf.${id}: ${String(h)} is not a heap of heapOrder`);
+      for (const k of ["footprintShare", "floorHalf", "maxStack", "jitterShare", "tries", "anchorMargin", "floorMargin"])
+        if (!(typeof boot[k] === "number" && (boot[k] as number) > 0)) throw new Error(`scene ${o.id}: model.boot.${k} must be a number > 0`);
+    }
   }
   return {
     id: o.id,
@@ -477,14 +504,16 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     final: parseFinal(o.id, o.final, bodies),
     ...(o.orbitGoals !== undefined ? { orbitGoals: parseOrbitGoals(o.id, o.orbitGoals) } : {}),
     ...(o.orbitPieceRefDims !== undefined ? { orbitPieceRefDims: refDims(o.id, o.orbitPieceRefDims) } : {}),
-    ...(o.model !== undefined ? { model: modelOf(o.model as { url: string; parts?: string[]; contact?: string }) } : {}),
+    ...(o.model !== undefined ? { model: modelOf(o.model as { url: string; parts?: string[]; contact?: string; boot?: BootRule; frontDeg?: number }) } : {}),
   };
 }
 
-const modelOf = (m: { url: string; parts?: string[]; contact?: string }): NonNullable<SceneDescriptor["model"]> => ({
+const modelOf = (m: { url: string; parts?: string[]; contact?: string; boot?: BootRule; frontDeg?: number }): NonNullable<SceneDescriptor["model"]> => ({
   url: m.url,
+  ...(m.frontDeg !== undefined ? { frontDeg: m.frontDeg } : {}),
   ...(m.parts !== undefined ? { parts: m.parts } : {}),
   ...(m.contact !== undefined ? { contact: m.contact } : {}),
+  ...(m.boot !== undefined ? { boot: m.boot } : {}),
 });
 
 /**

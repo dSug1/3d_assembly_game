@@ -177,6 +177,12 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 
 1. **The script** — `Assets/Blender/scripts/build_<scene>.py -- --step N` (`build_engine.py` is the model to copy): rebuilds the `.blend` up to step N,
    the finish pass, a preview render, ⭐ every check of `PART_AUTHORING.md` §4.2 printed. ⚠ Blender runs are HEAVY: started on the owner's go only.
+   ⭐⭐⭐ **THE FRONT, from step 1** (the owner, 2026-11-13: *"this is the camera viewing the front of the assembly. this is how the final assembly
+   will be placed, this is how we built in blender. this is how I setup the lights and the environment. Therefore, if anything is not in line,
+   everything has to be yaw rotated so it matches this"*): the scene's front is chosen in Blender (`Scene_2`: +X, the flywheel's end) and declared
+   in the scene (`model.frontDeg`, the model's frame); the game's camera BOOTS and RESETS facing it (`core/scene_dims.ts` `bootYawForFront` — the
+   glTF reader mirrors x), the key light is set relative to that camera, the boot heaps stand in the half toward it, the goal is as built. ⛔ Never a
+   global yaw: `Scene_2`'s camera booted a quarter turn off its front, the heaps followed the camera into the front's right half.
    ⭐⭐ **FROM STEP 1, THE GAME'S STAGE IN THE `.blend`, AT THE GAME'S SCALE** (the owner, 2026-11-13: *"I can see the floor is much larger in blender
    compared to the assembly than what it is in the scene of the pipeline"* — `Scene_2`'s preview floor was 24 units, 3.4 m at 0.14 m a unit, for the
    game's 2 m: every look until the export judged the engine against a floor 1.7× too big):
@@ -244,7 +250,12 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 4. ⭐⭐ **THE BOOT STAGE — the parts laid out where the player finds them** (the owner: *"also good to have a look at the scene in its boot stage so we
    can lay the parts properly"*): the anchor at its goal, every other part in its boot place (`Scene_2`: the HEAPS, one per type of part, a part never on
    its seating face — `SCENE_2_ASSEMBLY.md` D4), reachable by the orbit, inside the play volume, in view from the boot camera. ⛔ **GATE: the owner's
-   look** — the layout is level data, so it is tuned here before any part is played.
+   look** — the RULE is level data, so it is tuned here before any part is played. ⭐⭐ The layout is DRAWN AT EVERY BOOT from the rule (a new
+   seed each game — the owner: *"otherwise the parts will always be the same order game after game"*): `core/boot_heaps.ts` `bootFromModel` from
+   the `.glb`'s collision pieces (the hull's stable faces, a drop until contact, the demo's rules, ≈ 0.5 s); a scene gives its heaps by type, its
+   anchors, its areas' arc — ⭐⭐ centred on the scene's FRONT (below), the front half —, ⭐ a PERIMETER round the anchors no part crosses (`anchorMargin`; `Scene_2` 1 unit) and a margin before the floor's
+   edge (`floorMargin`; `Scene_2` 0.2 unit) (`src/content/scene2_boot.ts` is the model); `?bootSeed=N` replays; the LEVEL slider **model stage** shows boot / final;
+   the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5).
 5. **W5 — the PLAYABLE SLICE: the level data and what the game must gain**: the slice's parts as bodies (the anchor frozen, the others placeable), the
    boot layout from item 4, the steps as data; the plan's requirements for the game (`SCENE_<N>_ASSEMBLY.md` §5 — `Scene_2`: every part orbited in turn,
    the plunge snap, a ghost read only for its part, a seated face skipped, the orbit's centre per step) built as needed by the slice, each with its vectors.

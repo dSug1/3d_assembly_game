@@ -194,6 +194,8 @@ export interface GestureConfig {
   envIntensity: number;
   /** ⭐ (2026-11-13) the scene's contact shadows (ambient occlusion) on (`1`) or off (`0`) — where the scene asks for them; a cost per frame. */
   aoOn: number;
+  /** ⭐ (2026-11-13) a scene model's STAGE shown: `0` the boot (the parts in their heaps — where a level starts), `1` the final (every part at its goal). */
+  modelStage: number;
   // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
   // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
@@ -691,6 +693,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ The owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"* — the sky it reflects, as generated.
   envIntensity: 1,
   aoOn: 1,
+  modelStage: 0,
   // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
   // 1 degree"* — so zooming out cannot place a piece nobody moved.
   ungrabbedGoalMm: 1,
@@ -1084,6 +1087,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(`modelLayers (${cfg.modelLayers}) must be 0 (the look), 1 (+ collision), 2 (+ face proxies) or 3 (all).`);
   }
   if (cfg.aoOn !== 0 && cfg.aoOn !== 1) throw new Error(`aoOn (${cfg.aoOn}) must be 0 (off) or 1 (on).`);
+  if (cfg.modelStage !== 0 && cfg.modelStage !== 1) throw new Error(`modelStage (${cfg.modelStage}) must be 0 (boot) or 1 (final).`);
   if (!(cfg.envIntensity >= 0 && cfg.envIntensity <= 3)) {
     throw new Error(`envIntensity (${cfg.envIntensity}) must be in [0, 3]: 0 none, 1 as generated.`);
   }

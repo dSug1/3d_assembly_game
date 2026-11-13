@@ -20,6 +20,10 @@ A `.glb` carries shapes and materials, and nothing of the room. Each thing is ma
 
 ⛔ The game's look is the judge. Blender's Eevee approximates Babylon: soft shadows and reflections differ.
 
+⭐⭐ (2026-11-13) Every light is set RELATIVE TO THE SCENE'S FRONT: the camera boots facing the model's front (`model.frontDeg`,
+`SCENE_WORKFLOW.md` §6.3 item 1). `Scene_2`'s key, set behind-left of the camera by the owner's eye, was already in line with the front built in
+Blender; only the camera was turned (a quarter turn — it had booted at the rig's global yaw).
+
 ## 2. ⭐ The scene's `lighting` (`core/lighting.ts`)
 
 - `background`: the clear colour, as shown. It is not tone-mapped.

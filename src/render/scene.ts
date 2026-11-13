@@ -73,6 +73,7 @@ import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBo
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type Follow, type SceneState } from "./scene_state";
+import { bootYawForFront } from "../core/scene_dims";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
@@ -660,6 +661,7 @@ export function createScene(
   // ⭐⭐ (2026-11-13, W4) a Blender scene's `.glb`, at its goal (`render/model_import.ts`) — after the shadows' caster lists exist, which it extends.
   // ⭐ Its module (and the glTF reader with it) fetched only by a level that has a model: the other levels' bundle does not carry it.
   st.modelStatus = "";
+  st.modelBootNote = "";
   st.backgroundBlueSeen = -1;
   st.modelFloor = null;
   if (spec.model !== undefined) {
@@ -774,9 +776,12 @@ export function createScene(
           ? elevationAtDistance(st.cfg, bootDistanceM)
           : 1
         : ORBIT_START_ELEVATION;
+  // ⭐⭐ (2026-11-13) the boot yaw: facing the model's FRONT when the scene has one (`bootYawForFront`), the rig's global yaw otherwise
+  const front = st.sceneSpec.model?.frontDeg;
+  st.bootYawRad = front === undefined ? ORBIT_START_YAW_RAD : bootYawForFront(front);
   st.orbit = new OrbitController(
     st.cfg,
-    ORBIT_START_YAW_RAD,
+    st.bootYawRad,
     st.bootElevation,
   );
   // ⛔⛔ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely. With the approach of the piece, there is no need for

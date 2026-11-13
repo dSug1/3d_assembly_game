@@ -135,3 +135,14 @@ export function bootTilt(sign: 1 | -1): Quat {
  * the render rig boots at it, the camera reset returns to it, and the demo generator aims pieces from it.
  */
 export const ORBIT_START_YAW_RAD = -Math.PI / 2;
+
+/**
+ * ⭐⭐ (2026-11-13) THE BOOT YAW FACING A MODEL'S FRONT: the rig's offset is `(cos yaw, ·, sin yaw)` in the game's world, and Babylon's glTF reader
+ * shows the model's x MIRRORED (its root: 180° about y, z × −1) — so a front at `frontDeg` in the model's frame is the world direction
+ * `(−cos f, sin f)`: the yaw `atan2(sin f, −cos f)`. `Scene_2`'s front 0 (the file's +x) → π: the camera on the world's −x. ⛔ The global −90°
+ * put it 90° off the front the model, its lights and its environment were made for (the owner's look at the boot stage).
+ */
+export function bootYawForFront(frontDeg: number): number {
+  const f = (frontDeg * Math.PI) / 180;
+  return Math.atan2(Math.sin(f), -Math.cos(f));
+}

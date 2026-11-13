@@ -130,6 +130,52 @@ step the player cannot see — rule 5).
   orders; the heaps are built for the steps' order above (step 1 on top).
 * ⚠ Generated offline as DATA (the demo's `core/demo_plan.ts` way), its size checked against the strip (the crankshaft 2.9 reference units long —
   0.44 m — is the demo's *long bar* case).
+* ⭐⭐⭐ **DRAWN AT EVERY BOOT** (2026-11-13; the owner: *"there has to be a script which randomly distribute the parts within assigned areas and
+  with the rules I indicated for demo scene, otherwise the parts will always be the same order game after game and it is very static and boring"*)
+  — a committed layout was built first, then replaced: the scene carries the RULE (`src/content/scene2_boot.ts`: the heaps by type, the anchors,
+  the areas' arc, the limits) and `render/model_import.ts` draws the layout at load (`core/boot_heaps.ts` `bootFromModel`) with a NEW SEED each
+  game — `?bootSeed=N` replays one; the seed and its time on the HUD's first line; a failure shows the parts at their goals and says why.
+  - ⭐⭐⭐ **THE FRONT — the yaw origin** (the owner: *"there is a problem of yaw origin … the pieces are currently in the right half of the
+    scene"*, then, with Blender's view from +X: *"for me, this is the camera viewing the front of the assembly. this is how the final assembly will be
+    placed, this is how we built in blender. this is how I setup the lights and the environment. Therefore, if anything is not in line, everything
+    has to be yaw rotated so it matches this"*). The front is **the file's +x — Blender's +X, the flywheel's end** (`model.frontDeg: 0`). The lights
+    and the environment were already in line with it (the key from Blender's +X, −Y: behind-left of a camera looking from +X); ONLY THE CAMERA was
+    not: it booted at the rig's global yaw −90°, the world's −z — the model seen from 270°, a quarter turn off (the HUD read `yaw origin −90°`, and
+    the heaps, centred on that camera, stood in the front's right half). ⭐ Now the camera BOOTS — and RESETS — facing the front (`bootYawForFront`:
+    Babylon's glTF reader mirrors x, so a front `f` is the world direction `(−cos f, sin f)`; `Scene_2` → yaw π), and the heaps' arc is centred on
+    the FRONT (the HUD shows `front 0° camera N°`: the two agree). Tested: for any front the camera boots on that side; the global −90° reads 270°.
+    The heaps: 180° round it — the front half; a heap's radius = room for its parts LYING SIDE BY SIDE (√ of their footprints squared — the demo's
+    "√ of the flat area"); a part's spot drawn round its heap's centre, the spread widening with the tries, never past 1.2 × the radius. Tested at
+    four yaw origins (0, 90, 180, 270°): every part's centre in the front half; its counter-example (the opposite origin) fires.
+  - **Retried, never assembled**: 150 tries a part (80 failed 4 seeds of 30 — the block's long cases between the plinth's perimeter and the floor's
+    margin); a layout that still fails is redrawn with the next seed (up to 6) — 50 seeds at random yaw origins: 2 retried, all placed, ≈ 1 s.
+  - ⭐ **THE FIRST PART's orientation** (the owner: *"we also need to have the yaw origin as reference to orient the first part (because it can be
+    oriented by any yaw value on the plinth)"* → *"this is how the final assembly will be placed"*): the goal is AS BUILT, its front at the front —
+    the lower case, which could sit on the plinth at any yaw, is placed only at its goal's yaw (its symmetry, `yawHalfTurn`, accepting the half
+    turn). ⚠ To build in W5 (the playable slice).
+  - **The demo's rules**: on a stable face of its hull at any yaw (never chosen for its seating face); dropped until it touches; **a rest HOLDS**
+    (the centre of mass over the contacts, 1 % of its radius); **one heap per type** (on the floor or its own heap's parts; never the plinth);
+    **three high at most, BOTH WAYS THE EYE COUNTS** (up the support chain AND from above: no floor point under more than three of its heap's
+    outlines — the demo's `D194`); **the reverse of the steps** (the next part on top).
+  - **Fast enough for a boot (≈ 0.3 – 0.7 s)**: a part collides as its HULL (conservative: nothing rests in another's hollow) and only against what
+    stands under it, dropped straight to the floor when nothing does — the first version (every collision piece against every piece, a slow descent)
+    took 12 – 30 s. ⛔ **The hull was broken** for the heads and exhausts (many coplanar points in float32: 20,000 triangles for 271 points; the
+    resting faces 7 s on one part) → the points JOGGLED (qhull's `QJ`), flatness judged before; the hull test checks triangles = 2 × vertices − 4.
+  - ⛔ **Blocked = a gap under 1e-4 units**: `gapBetween` reads touching AND overlapping as 0 (the first version tested `null`: no part blocked
+    another — the test's counter-example caught it).
+  - ⭐ **THE PERIMETER round the plinth** (the owner: *"leave more space around the plinth so that the parts do not interfere later on … make a
+    perimeter around the plinth that the parts can't cross"*): the plinth's footprint + **1 unit (14 cm) on every side** (`anchorMargin`); no point
+    of a part inside it (its hull's outline against the box, both ways). Tested on every seed, with its counter-example; 30 more seeds: no failure,
+    the slowest 1.1 s, 14 parts stacked in all.
+  - ⭐ **THE FLOOR'S MARGIN** (the owner: *"add a smaller margin before the edges of the floor"*, then *"0.5 unit is too big"*): no part within
+    **0.2 unit (≈ 3 cm)** of the floor's true edge (`floorHalf` 1 / 0.14 = 7.143, `floorMargin` 0.2; an accidental 7.0 — 2 cm — before). Tested
+    on every seed.
+  - Checked (`tests/boot_heaps.test.ts`, the real collision pieces, FOUR seeds): nothing overlaps (its counter-example fires), on and inside the
+    floor less its margin, outside the plinth's perimeter, one heap per type, three high, never on a part needed before it; the same seed = the same layout, four
+    seeds = four layouts; each < 3 s.
+  - ⚠ Stacks are RARE (0 – 2 parts above the floor per layout): a rest on another engine part (curved, irregular) seldom holds. ⛔ The owner's look.
+  - The game: the LEVEL slider **model stage** (0 = boot, the default; 1 = final); the contact shadows follow the seated set (at boot the plinth
+    only); the rods' caps (`appears_when_seated`) hidden until seated. The generator travels in the lazy model module (the main bundle unchanged).
 
 ### 2.6 ⭐ The rod's big end — OPEN, and the ONE axis of a piston's way in
 
