@@ -290,6 +290,7 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ (2026-11-13) a Blender scene's layers over its look — to check the import (`render/model_import.ts`).
         tunable(st, "model layers (0 = look, 1 = + collision, 2 = + face proxies, 3 = all)", "modelLayers", 0, 3, 1),
         tunable(st, "environment (the sky the model's metal reflects; 0 = none)", "envIntensity", 0, 3, 0.1),
+        tunable(st, "contact shadows (ambient occlusion; 0 = off)", "aoOn", 0, 1, 1),
       ],
     },
     {

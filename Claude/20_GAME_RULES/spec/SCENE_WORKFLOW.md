@@ -198,13 +198,16 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
      | shapes, collision, proxies, markers, the FLOOR | the `.blend` (the build script) | the game reads the `.glb` |
      | materials (colour, metallic, roughness, alpha, textures) | the `.blend` — Principled's glTF inputs only (sheen, specular tint … are dropped) | the `.glb` |
      | the ENVIRONMENT (the sky the metal reflects) | ONE image, `Assets/Environment/sky_sand.hdr` (`scripts/gen_sky_hdr.mjs`) | both load the same file |
-     | the LIGHTS (spots, directional, ambient fill), the background, the environment's strength | the GAME's data (`Scene_1`'s `lighting`, `envIntensity`) — shadows, the auto-shadow switch and the frame budget depend on them | the build MIRRORS them as Blender lights and world (`build_engine.py`: "the GAME's lighting mirrored") |
+     | the LIGHTS (spots, directional, ambient fill), the background, tone mapping, contact shadows, the environment's strength | the GAME's data (the scene's `lighting`, `envIntensity`) — shadows, the auto-shadow switch and the frame budget depend on them | the build MIRRORS them as Blender lights and world (`build_engine.py`: "the GAME's lighting mirrored") |
      | shadows, tone mapping, the contour seen from below | the game | Blender: Standard colour; the rest not shown |
 
-     ⭐ The conversions (Babylon's PBR on the `.glb`): a directional of intensity I → a Blender sun of strength π·I; a spot → its URP intensity at the
-     bodies' mean, Babylon's physical falloff I/d² in metres → a Blender spot of power 4π²·I / `unitM`²; the ambient fill and the sky → the world's
+     ⭐ The conversions (Babylon's PBR on the `.glb`): a directional of intensity I → a Blender sun of strength I (both apply Lambert's 1/π); a spot → its URP intensity at the
+     bodies' mean, Babylon's physical falloff I/d² in metres → a Blender spot of power 4π·I / `unitM`²; the ambient fill and the sky → the world's
      light, the camera seeing the background colour; positions (−X, Y, Z) / `unitM` (Babylon's glTF reader mirrors x); the sky's panorama mirrored
      (Mapping y × −1). ⚠ Eevee approximates Babylon (reflections, soft shadows): the look in Blender is close — ⛔ the game's look is the judge.
+     ⭐⭐ **THE SCENE SETUP, in full — `40_RENDER_SCENE/spec/SCENE_SETUP.md`** (the lighting's fields, the mirror, `Scene_2`'s cream studio). ⭐ To set a
+     scene's atmosphere: proposals rendered in Blender from the reference (`atmosphere_proposal.py`, renders only), ⛔ GATE: the owner picks one;
+     then its numbers go into the scene's `lighting` (the game) and the build mirrors them — compared against the chosen render from its camera.
 2. **One step a round** — build step N, the checks clean, ⛔ **GATE: the owner's look in Blender**; his changes come back either as words or as edits
    in his own copy of the `.blend` (`<scene>_owner.blend`): READ them (the file's numbers), carry the RULE into the script, never the hand-dragged number
    (§4.1 of `PART_AUTHORING.md`); a request that breaks a rule (a scale that bends the V) is asked, not taken.

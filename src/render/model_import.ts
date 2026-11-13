@@ -23,6 +23,10 @@ import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { topFaceOutline } from "../core/underside";
+import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
+import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
+import "@babylonjs/core/Rendering/geometryBufferRendererSceneComponent";
+import "@babylonjs/core/Rendering/prePassRendererSceneComponent";
 import { type Vec3 } from "../core/vec";
 import {
   catalogSlice,
@@ -43,6 +47,7 @@ export async function importSceneModel(st: SceneState): Promise<void> {
   const spec = st.sceneSpec.model;
   if (spec === undefined) return;
   st.modelStatus = "model: loading…";
+  applyStudio(st);
   try {
     const res = await fetch(spec.url);
     if (!res.ok) throw new Error(`${spec.url}: HTTP ${res.status}`);
@@ -70,12 +75,6 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   const result = await SceneLoader.ImportMeshAsync("", "", bytes, scene, undefined, ".glb");
   const gltfRoot = result.meshes.find((m) => m.name === "__root__");
   if (gltfRoot === undefined) throw new Error("the glTF reader made no __root__");
-
-  // ⭐⭐ THE ENVIRONMENT the metal reflects (the owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"*):
-  // a metallic material shows only what it reflects — with no environment texture, black. Blender's viewport lit it with its studio image.
-  // Ours is generated (`scripts/gen_sky_hdr.mjs`: sky, sun, sand — no third-party image, no network), prefiltered on load for the roughness.
-  // ⚠ It lights the glTF's PBR materials only (the floor and Scene_1's pieces are StandardMaterials); not drawn as a background.
-  scene.environmentTexture = new HDRCubeTexture(SKY_HDR, scene, 256, false, true, false, true);
 
   // ⭐ Reference units → metres, standing on the floor's top (the world origin).
   const holder = new TransformNode("sceneModel", scene);
@@ -123,6 +122,15 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
     st.shadowFull[i]?.push(...render);
   });
   for (const m of render) m.receiveShadows = true;
+  // ⭐ (2026-11-13, the owner's look: the glass a WHITE sheet, render C's clear) a TRANSPARENT PBR material's reflections fade with its opacity, as
+  // Blender's alpha blend does — Babylon keeps them whole by default ("specular / radiance over alpha"): metallic glass in a bright room = opaque white
+  for (const m of render) {
+    const mat = m.material as { alpha?: number; useSpecularOverAlpha?: boolean; useRadianceOverAlpha?: boolean } | null;
+    if (mat !== null && mat.alpha !== undefined && mat.alpha < 1 && mat.useRadianceOverAlpha !== undefined) {
+      mat.useSpecularOverAlpha = false;
+      mat.useRadianceOverAlpha = false;
+    }
+  }
   st.shadowLevelSeen = null;
 
   // ⭐ The debug layers follow the slider, applied on change only.
@@ -167,4 +175,44 @@ function placeFloor(st: SceneState, mesh: AbstractMesh): void {
   outline.isVisible = false;
   const frozen = st.sceneSpec.bodies.filter((b) => b.frozen).sort((a, b) => b.dims[0] * b.dims[2] - a.dims[0] * a.dims[2]);
   st.modelFloor = { mesh, outline, bottom: { centre: [0, top, 0], normal: [0, -1, 0] }, replaces: frozen[0]?.id ?? null };
+}
+
+/**
+ * ⭐⭐ THE SCENE SETUP a model needs (`SCENE_SETUP.md`; the scene's `lighting`, `core/lighting.ts` `LightingStudio`) — applied before the file
+ * loads (its own module, loaded for a level with a model only: the other levels' bundle unchanged):
+ * - ⭐ THE ENVIRONMENT the metal reflects (the owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"*): a
+ *   metallic material shows only what it reflects — with none, black. The scene's panorama (`lighting.environment`; else the generated sky),
+ *   prefiltered on load for the roughness; its strength the `envIntensity` slider. ⚠ It lights PBR materials (the `.glb`'s) only; not drawn.
+ * - TONE MAPPING (ACES, `lighting.toneMapping`): the high-key, low-contrast look of the studio.
+ * - CONTACT SHADOWS (`lighting.ambientOcclusion`: SSAO2, half resolution) — ⚠ a cost per frame: the `aoOn` slider switches it, for the device's
+ *   measurement.
+ */
+function applyStudio(st: SceneState): void {
+  const scene = st.scene;
+  const L = st.sceneSpec.lighting;
+  scene.environmentTexture = new HDRCubeTexture(L?.environment ?? SKY_HDR, scene, 256, false, true, false, true);
+  if (L?.toneMapping !== undefined) {
+    const ip = scene.imageProcessingConfiguration;
+    ip.toneMappingEnabled = true;
+    ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
+    ip.exposure = L.toneMapping.exposure;
+    ip.contrast = L.toneMapping.contrast;
+  }
+  if (L?.ambientOcclusion === true) {
+    const ao = new SSAO2RenderingPipeline("contactShadows", scene, 0.5, [st.camera], true);
+    ao.radius = 0.06; // metres: a part's contact, not the room's
+    ao.totalStrength = 1.0;
+    // ⚠ (2026-11-13, the owner: "on my gpu computer, the frame rate has gone down to 59 fps") the cheap settings: 8 samples, the plain blur
+    ao.samples = 8;
+    ao.maxZ = 20;
+    ao.expensiveBlur = false;
+    let seen = -1;
+    scene.onBeforeRenderObservable.add(() => {
+      const v = st.cfg.aoOn;
+      if (v === seen) return;
+      seen = v;
+      if (v === 1) scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("contactShadows", st.camera);
+      else scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline("contactShadows", st.camera);
+    });
+  }
 }

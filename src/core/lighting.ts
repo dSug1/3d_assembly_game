@@ -35,9 +35,27 @@ export interface LightSpec {
   readonly spotInnerDeg?: number;
   readonly kelvin: number;
   readonly filter: Triple;
+  /**
+   * ⭐ (2026-11-13, `Scene_2`'s studio) the light's apparent SIZE, degrees: its shadows SOFT (Babylon: contact-hardening, PCSS; Blender's mirror: a
+   * sun's angle). Absent: Unity's soft PCF as before.
+   */
+  readonly softnessDeg?: number;
 }
 
-export interface LightingSpec {
+/**
+ * ⭐⭐ (2026-11-13) `Scene_2`'s STUDIO (the owner: *"can you recreate this atmosphere"* → *"atmosphere_C_between_floor.png is the setup I want. build
+ * that"*): what a scene with a `.glb` model also needs. All optional — `Scene_1` and `Scene_0` carry none and look as before.
+ */
+export interface LightingStudio {
+  /** The panorama the model's PBR materials take their fill and reflections from (a URL; `Assets/Environment/*.hdr`). */
+  readonly environment?: string;
+  /** Tone mapping (ACES) on — the high-key, low-contrast look; Blender's mirror: Filmic. */
+  readonly toneMapping?: { readonly exposure: number; readonly contrast: number };
+  /** Contact shadows (screen-space ambient occlusion) — the soft dark where a part meets another or the floor. */
+  readonly ambientOcclusion?: boolean;
+}
+
+export interface LightingSpec extends LightingStudio {
   /** The clear colour behind the scene, linear RGB. */
   readonly background: Triple;
   readonly lights: readonly LightSpec[];

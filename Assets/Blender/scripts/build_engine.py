@@ -1871,7 +1871,8 @@ with open(os.path.join(HERE, "..", "..", "..", "src", "content", "scene_1.ts"), 
 _game_m = float(_re.search(r'id: "Floor",[\s\S]*?dims: \[([\d.]+),', _s1).group(1)) * float(_re.search(r"unitM: ([\d.]+)", _s1).group(1))
 print(f"the FLOOR at the game's scale: {2 * FLOOR_HALF * UNIT_M:.3f} m here, {_game_m:.3f} m in the game (Scene_1's floor) — "
       + ("✅" if abs(2 * FLOOR_HALF * UNIT_M - _game_m) < 1e-6 else "⛔ NOT THE GAME'S SIZE"))
-MAT["floor"] = material("Floor", (0.84, 0.74, 0.52), roughness=1.0)
+MAT["floor"] = material("Floor", (0.864, 0.785, 0.629), roughness=1.0)   # ⭐ IVORY (sRGB EFE5D0 — the owner: render C "is the setup I want": halfway,
+                                                                          # in linear light, between Scene_1's sand yellow and the reference's cream)
 MAT["floor"].use_backface_culling = True
 _floor_bm = flat_face(rounded_rect(2 * FLOOR_HALF, 2 * FLOOR_HALF, FLOOR_R), 0.0)
 _floor_bm.normal_update()
@@ -1890,39 +1891,48 @@ assert (YUP_ROOT.matrix_basis.to_3x3() @ FLOOR.data.polygons[0].normal).z > 0.99
 
 # ⭐⭐ THE GAME'S LIGHTING, MIRRORED — never authored here (the owner, 2026-11-13: *"do we need to work the environment, the lighting, etc. directly in
 # blender …, or does it need to be made in the babylon/ts pipeline ?"* → *"do it"*; `SCENE_WORKFLOW.md` §6.3 item 1). The SOURCE is the game's data:
-# Scene_1's `lighting` (src/content/scene_1.ts — two spots, a directional, the ambient fill, the background) and the environment's strength
-# (`envIntensity`, src/input/gestureConfig.ts), READ here (never retyped) and converted to what Babylon does with them on the .glb's PBR materials:
+# the SCENE's `lighting` (src/content/scene_2.ts since 2026-11-13 — the cream studio: its key, ambient, background, panorama, tone mapping, contact
+# shadows; Scene_1's before) and the environment's strength (`envIntensity`, src/input/gestureConfig.ts), READ here (never retyped) and converted
+# to what Babylon does with them on the .glb's PBR materials (`SCENE_SETUP.md`):
 #   - positions: the game's metres = authored × Scene_1's unitM, in Babylon's LEFT-handed world; Babylon's glTF reader shows the file's (x, y, z) at
 #     (−x, y, z) (its root: 180° about y, z × −1) → reference = (−X, Y, Z) / UNIT_M;
-#   - a DIRECTIONAL of intensity I lights a white PBR face square to it to I (no 1/π in Babylon) → a Blender SUN of strength π·I;
+#   - a DIRECTIONAL of intensity I is an illuminance on a PBR material, Lambert's 1/π applied — as Blender's sun → a Blender SUN of strength I
+#     (⛔ π·I before: the game's key then read π times darker than Blender showed — the owner's first look at the studio);
 #   - a SPOT: Babylon gives it the intensity URP's falloff delivers at the bodies' mean (`illuminanceAt`) and, on a PBR material, its own physical
-#     falloff I/d² (d in metres) → a Blender SPOT of power 4π²·I / UNIT_M² (Blender: P / (4π²·d²), d in this file's units);
+#     falloff I/d² (d in metres, a luminous intensity) → a Blender SPOT of power 4π·I / UNIT_M² (Blender: P / (4π·d²), d in this file's units);
 #   - the ambient fill (a hemispheric light: white above, (0.25, 0.25, 0.28) below) and the sky (×envIntensity) → the WORLD's light; the CAMERA sees
 #     the game's background colour (its clear colour), not the sky — as the game shows it;
 #   - the sky's panorama MIRRORED (Mapping y × −1): Babylon reads an equirectangular image as u = atan2(z, x) in its world, Blender as its mirror.
 # ⚠ An APPROXIMATION of Babylon's renderer by Eevee (soft shadows, reflections differ): the look here is close, the game's is the judge.
 import re as _re2
 with open(os.path.join(HERE, "..", "..", "..", "src", "content", "scene_1.ts"), encoding="utf-8") as _fh:
-    _s1 = _fh.read()
+    _s1 = _fh.read()                                      # the units (Scene_2 carries Scene_1's unitM)
+with open(os.path.join(HERE, "..", "..", "..", "src", "content", "scene_2.ts"), encoding="utf-8") as _fh:
+    _s2 = _fh.read()                                      # ⭐ the lighting: the scene's own
 with open(os.path.join(HERE, "..", "..", "..", "src", "input", "gestureConfig.ts"), encoding="utf-8") as _fh:
     _gc = _fh.read()
-_lit = _s1[_s1.index("lighting: {"):]
+_lit = _s2[_s2.index("lighting: {"):]
 _lit = _lit[:_lit.index("\n  },")]
 _num = lambda key, txt: float(_re2.search(key + r":\s*(-?[\d.]+)", txt).group(1))
 _tri = lambda key, txt: [float(v) for v in _re2.search(key + r":\s*\[([^\]]+)\]", txt).group(1).split(",")]
 G_UNIT = _num(r"\n  unitM", _s1)
 G_BG, G_AMBIENT = _tri("background", _lit), _num("ambient", _lit)
 G_ENV = _num(r"\n  envIntensity", _gc)
+_envvar = _re2.search(r"environment: (\w+)", _lit)
+G_PANORAMA = (os.path.basename(_re2.search(r"import " + _envvar.group(1) + r' from "([^"]+)\?url"', _s2).group(1)) if _envvar else "sky_sand.hdr")
+_tm = _re2.search(r"toneMapping: \{ exposure: ([\d.]+), contrast: ([\d.]+) \}", _lit)
+G_TONE = (float(_tm.group(1)), float(_tm.group(2))) if _tm else None
+G_AO = bool(_re2.search(r"ambientOcclusion: true", _lit))
 G_LIGHTS = []
 for _blk in _re2.split(r"\n      \{", _lit)[1:]:
     _l = {"name": _re2.search(r'name: "([^"]+)"', _blk).group(1), "type": _re2.search(r'type: "([^"]+)"', _blk).group(1),
           "position": _tri("position", _blk), "eulerDeg": _tri("eulerDeg", _blk), "intensity": _num("intensity", _blk),
           "kelvin": _num("kelvin", _blk), "filter": _tri("filter", _blk)}
-    for _k in ("range", "spotOuterDeg", "spotInnerDeg"):
+    for _k in ("range", "spotOuterDeg", "spotInnerDeg", "softnessDeg"):
         if _re2.search(_k + r":", _blk):
             _l[_k] = _num(_k, _blk)
     G_LIGHTS.append(_l)
-assert len(G_LIGHTS) == 3, f"Scene_1's lights not read: {len(G_LIGHTS)}"
+assert G_LIGHTS, "the scene's lights not read"
 
 
 def unity_forward(e):                                     # core/lighting.ts unityForward
@@ -1972,9 +1982,9 @@ for _l in G_LIGHTS:
     _ld = bpy.data.lights.new(_l["name"], "SUN" if _l["type"] == "DIRECTIONAL" else "SPOT")
     _ld.color = _col
     if _l["type"] == "DIRECTIONAL":
-        _ld.energy, _ld.angle = math.pi * _e, math.radians(2)
+        _ld.energy, _ld.angle = _e, math.radians(_l.get("softnessDeg", 2))     # its SIZE: the shadows' softness
     else:
-        _ld.energy = 4 * math.pi ** 2 * _e / UNIT_M ** 2
+        _ld.energy = 4 * math.pi * _e / UNIT_M ** 2
         _ld.spot_size = math.radians(_l["spotOuterDeg"])
         _ld.spot_blend = 1 - _l.get("spotInnerDeg", _l["spotOuterDeg"]) / _l["spotOuterDeg"]
         _ld.shadow_soft_size = 0.05
@@ -1993,7 +2003,7 @@ _tc = _nt.nodes.new("ShaderNodeTexCoord")
 _map = _nt.nodes.new("ShaderNodeMapping")
 _map.inputs["Scale"].default_value = (1, -1, 1)
 _env = _nt.nodes.new("ShaderNodeTexEnvironment")
-_env.image = bpy.data.images.load(os.path.abspath(os.path.join(HERE, "..", "..", "Environment", "sky_sand.hdr")))
+_env.image = bpy.data.images.load(os.path.abspath(os.path.join(HERE, "..", "..", "Environment", G_PANORAMA)))
 _nt.links.new(_tc.outputs["Generated"], _map.inputs["Vector"])
 _nt.links.new(_map.outputs["Vector"], _env.inputs["Vector"])
 _bg_env = _nt.nodes["Background"]
@@ -2023,8 +2033,8 @@ _nt.links.new(_add.outputs["Shader"], _ms.inputs[1])
 _nt.links.new(_bg_cam.outputs["Background"], _ms.inputs[2])
 _nt.links.new(_ms.outputs["Shader"], _out.inputs["Surface"])
 scene.world = world
-print("the GAME's lighting mirrored (src/content/scene_1.ts, gestureConfig.ts): " + ", ".join(_mirrored) +
-      f"; the ambient fill {G_AMBIENT}, the sky ×{G_ENV}, the background {G_BG}")
+print("the GAME's lighting mirrored (src/content/scene_2.ts, gestureConfig.ts): " + ", ".join(_mirrored) +
+      f"; the ambient fill {G_AMBIENT}, the panorama {G_PANORAMA} ×{G_ENV}, the background {G_BG}, tone mapping {G_TONE}, contact shadows {G_AO}")
 for _scr in bpy.data.screens:                      # the viewport's Material Preview WITH the scene's world and lights (its own studio image hid them)
     for _area in _scr.areas:
         for _sp in _area.spaces:
@@ -2048,8 +2058,15 @@ scene.eevee.taa_render_samples = 32
 scene.eevee.use_ssr = True
 scene.eevee.use_soft_shadows = True
 scene.render.resolution_x = scene.render.resolution_y = 900
-scene.view_settings.view_transform = "Standard"       # as the game draws (Babylon: no tone mapping) — Filmic washed the floor's yellow to cream
-scene.view_settings.look = "None"
+# ⭐ the game's TONE MAPPING mirrored: ACES there → Filmic here (Blender 3.4 has no ACES; Filmic "Medium Contrast" its nearest — render C's look);
+# none there → Standard (Filmic would wash the colours the game shows raw)
+if G_TONE is not None:
+    scene.view_settings.view_transform, scene.view_settings.look = "Filmic", "Medium Contrast"
+    scene.view_settings.exposure = math.log2(G_TONE[0])
+else:
+    scene.view_settings.view_transform, scene.view_settings.look = "Standard", "None"
+scene.eevee.use_gtao = G_AO                          # the game's contact shadows (SSAO2) ↔ Eevee's ambient occlusion
+scene.eevee.gtao_distance, scene.eevee.gtao_factor = 0.6, 1.2
 
 # ================================================================ THE ENGINE RUNNING — Appendix B's update(θ), the ONE formula the game ports
 # (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ? for example I want to see there is no

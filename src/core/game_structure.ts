@@ -412,6 +412,17 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     const l = o.lighting as Record<string, unknown> | null;
     if (typeof l !== "object" || l === null || !isTriple(l.background) || !Array.isArray(l.lights))
       throw new Error(`scene ${o.id}: lighting needs a background and a lights array`);
+    if (l.environment !== undefined && !(typeof l.environment === "string" && l.environment !== ""))
+      throw new Error(`scene ${o.id}: lighting.environment must be a non-empty URL`);
+    const tm = l.toneMapping as Record<string, unknown> | undefined;
+    if (tm !== undefined && !(typeof tm === "object" && tm !== null && typeof tm.exposure === "number" && tm.exposure > 0
+      && typeof tm.contrast === "number" && tm.contrast > 0))
+      throw new Error(`scene ${o.id}: lighting.toneMapping needs an exposure and a contrast > 0`);
+    if (l.ambientOcclusion !== undefined && typeof l.ambientOcclusion !== "boolean")
+      throw new Error(`scene ${o.id}: lighting.ambientOcclusion must be true or false`);
+    for (const li of l.lights as Record<string, unknown>[])
+      if (li?.softnessDeg !== undefined && !(typeof li.softnessDeg === "number" && li.softnessDeg > 0 && li.softnessDeg < 90))
+        throw new Error(`scene ${o.id}: light ${String(li.name)}: softnessDeg must be in (0, 90)`);
   }
   if (o.orbit !== undefined) {
     const r = o.orbit as Record<string, unknown> | null;
