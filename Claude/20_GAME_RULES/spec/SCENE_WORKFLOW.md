@@ -198,6 +198,13 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    goal, on the floor, under the scene's lights and background, the camera's rig round it — what the player builds toward. ⭐ Settled here, once: the
    SCALE (`unitM`; against `Scene_1`'s cube, §4), where it stands on the floor, the LIGHTS and SHADOWS, the BACKGROUND, the materials as Babylon draws
    them (glass, chrome, wood; the axes and nothing inside out). ⛔ **GATE: the owner's look** (the browser, then the device).
+   ⭐ Found at `Scene_2`'s look (2026-11-13), for every scene: **(a) metal is BLACK without an environment** — a metallic material shows only what
+   it reflects; Blender's viewport lights it with a studio image, the game had none. The fix: an environment made for the game, no third-party image,
+   no network — `scripts/gen_sky_hdr.mjs` writes `Assets/Environment/sky_sand.hdr` (512 × 256 Radiance RGBE, run-length coded, ≈ 63 KB: a light grey sky tinted blue — the owner: *"the sky is too blue"* —,
+   a small bright sun 40° up, warm sand below), loaded by `render/model_import.ts` as a prefiltered `HDRCubeTexture` (`scene.environmentTexture`;
+   it lights the glTF's PBR materials only, not drawn as a background); its strength the RENDERING slider **environment** (`envIntensity`, 0 – 3).
+   **(b) look with the debug layers** (the `model layers` slider): the look against its collision pieces and proxies — `Scene_2`'s showed two valves
+   off their collision: exported in an animation frame, not the goal (`PART_AUTHORING.md` §4.4 item 5).
 4. ⭐⭐ **THE BOOT STAGE — the parts laid out where the player finds them** (the owner: *"also good to have a look at the scene in its boot stage so we
    can lay the parts properly"*): the anchor at its goal, every other part in its boot place (`Scene_2`: the HEAPS, one per type of part, a part never on
    its seating face — `SCENE_2_ASSEMBLY.md` D4), reachable by the orbit, inside the play volume, in view from the boot camera. ⛔ **GATE: the owner's

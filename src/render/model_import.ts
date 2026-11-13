@@ -17,6 +17,8 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
+import SKY_HDR from "../../Assets/Environment/sky_sand.hdr?url";
 import {
   catalogSlice,
   glbJson,
@@ -63,6 +65,12 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   const result = await SceneLoader.ImportMeshAsync("", "", bytes, scene, undefined, ".glb");
   const gltfRoot = result.meshes.find((m) => m.name === "__root__");
   if (gltfRoot === undefined) throw new Error("the glTF reader made no __root__");
+
+  // ⭐⭐ THE ENVIRONMENT the metal reflects (the owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"*):
+  // a metallic material shows only what it reflects — with no environment texture, black. Blender's viewport lit it with its studio image.
+  // Ours is generated (`scripts/gen_sky_hdr.mjs`: sky, sun, sand — no third-party image, no network), prefiltered on load for the roughness.
+  // ⚠ It lights the glTF's PBR materials only (the floor and Scene_1's pieces are StandardMaterials); not drawn as a background.
+  scene.environmentTexture = new HDRCubeTexture(SKY_HDR, scene, 256, false, true, false, true);
 
   // ⭐ Reference units → metres, standing on the floor's top (the world origin).
   const holder = new TransformNode("sceneModel", scene);
@@ -111,6 +119,7 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   // ⭐ The debug layers follow the slider, applied on change only.
   let seen = -1;
   const apply = (): void => {
+    scene.environmentIntensity = st.cfg.envIntensity;
     const v = st.cfg.modelLayers;
     if (v === seen) return;
     seen = v;

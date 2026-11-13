@@ -187,6 +187,11 @@ export interface GestureConfig {
    * only, `1` + the collision pieces (`UCX_`, red), `2` + the face proxies (`UFM_`, cyan) and their ghosts (yellow), `3` all.
    */
   modelLayers: number;
+  /**
+   * ⭐ How strongly a scene model's materials take their light and reflections from the environment (`scene.environmentIntensity`;
+   * `Assets/Environment/sky_sand.hdr`). `0` = none (the chrome reflects black, as before it), `1` = as generated.
+   */
+  envIntensity: number;
   // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
   // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
@@ -679,6 +684,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   autoShadowBudgetMs: 33,
   // ⭐ The look only: the layers are for checking the import, not for play.
   modelLayers: 0,
+  // ⭐ The owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"* — the sky it reflects, as generated.
+  envIntensity: 1,
   // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
   // 1 degree"* — so zooming out cannot place a piece nobody moved.
   ungrabbedGoalMm: 1,
@@ -1065,6 +1072,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (![0, 1, 2, 3].includes(cfg.modelLayers)) {
     throw new Error(`modelLayers (${cfg.modelLayers}) must be 0 (the look), 1 (+ collision), 2 (+ face proxies) or 3 (all).`);
+  }
+  if (!(cfg.envIntensity >= 0 && cfg.envIntensity <= 3)) {
+    throw new Error(`envIntensity (${cfg.envIntensity}) must be in [0, 3]: 0 none, 1 as generated.`);
   }
   if (!(cfg.pieceContourAlpha >= 0 && cfg.pieceContourAlpha <= 1)) {
     throw new Error(`pieceContourAlpha (${cfg.pieceContourAlpha}) must be in [0, 1]: it is an opacity.`);
