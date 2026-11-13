@@ -8,6 +8,10 @@ whole — the owner has driven it on the device through several rounds and repor
 
 ## 0. THE HOVER AS IT STANDS (2026-10-14, `2a54a92`) — read this first
 
+⛔⛔⛔ **2026-11-13 — THE SLIDE IS REMOVED WHOLE** (`1.0.126-Slide_removal`; the trial `1.0.122-` rebuilt): the decisions, what is kept (the goal capture, the
+approach, the contact readout as display only, the way out's collision check), the rebuild's fixes and walks → [`CLOSE_IN_CONTACT.md`](CLOSE_IN_CONTACT.md) §10.
+Everything below is the record.
+
 **What it is**: the fine placement of the orbited piece (green / turquoise) on a part's face, after the orbit's approach and the quads' turn;
 the goal capture then pulls it exactly (`LEVEL_END.md` §5quater).
 

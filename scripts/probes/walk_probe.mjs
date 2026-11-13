@@ -69,16 +69,21 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
   st.scene.onAfterRenderObservable.add(() => { try { const c = st.camera; const t = c.getTarget ? c.getTarget() : c.target; const g = v3(st.asmGizmoAt ?? null);
     const sh = st.asmShown; const lift = sh && sh.t ? sh.t.normal : null; const gl = g && lift ? [g[0] + lift[0]*0.002, g[1] + lift[1]*0.002, g[2] + lift[2]*0.002] : g;
     const G = lineOf(st.asmGreenCache, true, gl), Rr = lineOf(st.asmRedCache, false, gl);
-    const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover === null && sh != null;
+    const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover == null && sh != null;
     window.__rec.push({ leg: window.__leg, fd: window.__fd ?? null, ts: performance.now(), g, gd: g && st.asmGizmoLag ? [g[0] + st.asmGizmoLag[0], g[1] + st.asmGizmoLag[1], g[2] + st.asmGizmoLag[2]] : g, gn: v3(st.gizmoNormal ?? null), host: st.gizmoHost ?? null, foot: v3(st.asmGizmo ?? null),
       p: st.greenBox ? v3(st.greenBox.getAbsolutePosition()) : null, c: v3(c.position), t: v3(t), up: v3(c.upVector),
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
-      ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, hv: st.hover != null, lk: !!st.asmLocked,
+      ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, sup: st.asmSupport ? st.asmSupport.index : null, lvl: st.asmSupportLevel ? [st.asmSupportLevel.n, st.asmSupportLevel.h] : null,
       show, gl: G ? [G.br.length, G.d] : null, rl: Rr ? [Rr.br.length, Rr.d] : null, gk: G ? G.key : null, rk: Rr ? Rr.key : null,
       tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90),
       cax: (() => { const m = c.getViewMatrix().m; return [[m[0], m[4], m[8]], [m[1], m[5], m[9]], [m[2], m[6], m[10]]]; })(),
       pr: st.greenBox && st.greenBox.rotationQuaternion ? st.greenBox.rotationQuaternion.asArray() : null,
-      nq: [st.pieceQueries ?? null, st.pieceSolveQueries ?? null, st.pieceQueriesCarry ?? null], hov: st.hover != null, hr: st.hoverReady != null, cm: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(4)), +st.asmCalm.sH.toFixed(4), +st.asmCalm.sV.toFixed(4), +(st.asmCalm.wA ?? 0).toFixed(3)] : null, cw: [+(st.asmCalmWhole ?? 0).toFixed(3), +(st.asmCalmWholeV ?? 0).toFixed(3)] });
+      nq: [st.pieceQueries ?? null, st.pieceSolveQueries ?? null, st.pieceQueriesCarry ?? null], hov: st.hover != null, hr: st.hoverReady != null, cmn: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(4)), +st.asmCalm.sH.toFixed(4), +st.asmCalm.sV.toFixed(4), +(st.asmCalm.wA ?? 0).toFixed(3)] : null, cw: [+(st.asmCalmWhole ?? 0).toFixed(3), +(st.asmCalmWholeV ?? 0).toFixed(3)],
+      rd: (() => { try { const GB = window.__GB; if (!GB || !st.pieceQ || !st.greenBox || st.cfg.orbitMode !== 0) { window.__prevQ = null; return null; } const pq = st.pieceQ, pv = window.__prevQ; const a = GB.ringAnchorAt(st, pq); const env = GB.pieceSolverEnv(st); const out = { a, g: env.gap(pq) };
+        if (pv) { const b = GB.ringAnchorAt(st, pv); out.b = b; out.gb = env.gap(pv); }
+        window.__prevQ = { ...pq }; return out; } catch (e) { return String(e); } })(),
+      dbs: st.dbgStart ?? null, dlog: st.dbgLog ?? null, dbe: st.dbgEnd ?? null, ph: st.pieceHold ? st.pieceHold.map((x) => +(x * 1000).toFixed(2)) : null, hc: st.pieceHoldCount ?? null, go: st.asmGOff ? [+st.asmGOff.left.toFixed(3), +(Math.hypot(...st.asmGOff.v) * 1000).toFixed(1)] : null, cm: st.asmCalm ? [+st.asmCalm.sH.toFixed(3), +st.asmCalm.sV.toFixed(3), +st.asmCalm.wA.toFixed(3)] : null, lc: st.lastCollision ?? null, lv: st.lastVerdict ?? null,
+      pm: (() => { const w = window.__OM && st.greenBox ? window.__OM.worldPlacementOf(st.world, st.greenBox.name) : null; return w ? [...w.position, ...w.orientation] : null; })(), tilt: st.asmTilt != null, dist: st.asmG && st.greenBox ? (() => { const w = window.__OM.worldPlacementOf(st.world, st.greenBox.name); return w ? Math.hypot(w.position[0] - st.asmG[0], w.position[1] - st.asmG[1], w.position[2] - st.asmG[2]) : null; })() : null });
     window.__secs = window.__secs ?? [];
     for (const [L, cache, nm] of [[G, st.asmGreenCache, "green"], [Rr, st.asmRedCache, "red"]]) {
       if (!L || !cache || !show) continue; const key = nm + "|" + L.key; window.__secKeys = window.__secKeys ?? new Set(); if (window.__secKeys.has(key)) continue; window.__secKeys.add(key);
@@ -134,6 +139,7 @@ try {
     await send("Page.navigate", { url: URL });
     for (let i = 0; i < 120; i++) { await sleep(500); if (await ev("!!(window.__st && window.__st.frames > 30 && window.__st.greenBox)")) break; }
     await ev(`import("/src/render/assembly_wiring.ts").then((m) => { window.__AW = m; return 1; })`);
+    await ev(`Promise.all([import("/src/core/object_model.ts"), import("/src/render/collision_wiring.ts"), import("/src/core/vec.ts"), import("/src/render/green_box_wiring.ts")]).then(([a, b, c, d]) => { window.__OM = a; window.__CW = b; window.__V = c; window.__GB = d; return 1; })`);
     await sleep(1000);
   };
   await boot();
@@ -215,7 +221,11 @@ try {
         const planes = []; for (let t = 0; t + 2 < idx.length; t += 3) { const a = W(idx[t]), b = W(idx[t+1]), c = W(idx[t+2]); const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
           let n = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]]; const l = Math.hypot(...n); if (l < 1e-12) continue; n = n.map((x) => x / l); if (n[0]*(cc[0]-a[0])+n[1]*(cc[1]-a[1])+n[2]*(cc[2]-a[2]) > 0) n = n.map((x) => -x); planes.push([...n, n[0]*a[0]+n[1]*a[1]+n[2]*a[2]]); }
         out.push({ name, planes }); } return out; })()`);
-      results.push({ name: sc.name, viewport: [W, H], recorderError: (await ev("window.__recErr ?? null")) ?? null, rows, breaks, facets, secs, solids });
+      // ⭐ (2026-11-12, the slide's rebuild) the collision hulls the solver reads: every part's convex parts in the world, the piece's own (local)
+      const hulls = JSON.parse(await ev(`(() => { const st = window.__st; const OM = window.__OM; const setup = window.__CW.pieceCollisionSetup(st); const me = st.greenBox.name; const W = (id, pts) => { const at = OM.worldPlacementOf(st.world, id); return at ? pts.map((p) => { const r = window.__V.qRotate(at.orientation, p); return [at.position[0] + r[0], at.position[1] + r[1], at.position[2] + r[2]]; }) : null; };
+        const parts = []; for (const id of st.world.objects.keys()) { if (id === me || setup.exempt(me, id)) continue; const ps = setup.shapes.partsOf(st.world, id); if (!ps) continue; for (const pp of ps) { const w = W(id, pp); if (w) parts.push({ id, pts: w }); } }
+        return JSON.stringify({ parts, piece: setup.shapes.partsOf(st.world, me) }); })()`));
+      results.push({ name: sc.name, viewport: [W, H], recorderError: (await ev("window.__recErr ?? null")) ?? null, rows, breaks, facets, secs, solids, hulls });
       console.log(`${sc.name}: ${rows.length} frames, ${breaks.length} line samplings`);
       writeFileSync(join(DIR, `${OUT}.json`), JSON.stringify({ errors, results })); // ⭐ saved after every scenario: a watchdog keeps what was walked
     }

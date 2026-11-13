@@ -332,7 +332,13 @@ function nearestOnTetrahedron(w: readonly Vec3[]): Nearest {
   // one answer a flat simplex can never justify. ⚠ It is reachable in earnest: four support
   // points of two boxes meeting face to face are routinely coplanar. ⭐ So degeneracy is
   // decided FIRST, by volume, and falls through to the faces.
-  const degenerate = Math.abs(vol6) <= 1e-18;
+  // ⭐⭐⭐ (2026-11-13, the slide's rebuild) FLAT RELATIVE TO ITS OWN SIZE — ⛔ `|vol6| ≤ 1e-18` was an ABSOLUTE threshold, in m³: two bodies a few centimetres
+  // across meeting face to face give support points coplanar to rounding, a volume ~1e-12, read as NOT flat — and the plane tests on their near-zero
+  // products then read the origin as inside: CONTAINMENT, a gap of 0, for a piece 2.8 mm clear of the heptagon's slanted face (walked: the solver took
+  // the free air for a wall and blocked, or landed on it). Measured over 3 000 face-parallel pairs at 0.5 – 5 mm, turned and moved at random: wrong on
+  // 181 before, on none now (`tests/gjk_flat.test.ts`)
+  const e = Math.max(length(sub(b, a)), length(sub(c, a)), length(sub(d, a)), length(sub(c, b)), length(sub(d, b)), length(sub(d, c)));
+  const degenerate = Math.abs(vol6) <= 1e-9 * e * e * e;
 
   let best: Nearest | null = null;
   let bestLen = Infinity;

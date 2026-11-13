@@ -171,7 +171,7 @@ pitch, on the heptagon in ONE frame (18.6°) where the ridge's vertical share we
 * **its offset HELD while the view looks down** (`heldOffsetStep`, stepped once a frame in `calmFrame` — `asmHeadO`, `asmHeadW`, `asmHeadYaw`): whole at
   ≤ 60° (`poleWeight` 1); a dy alone climbing keeps it (no roll at the hit); a dx looking down relaxes it toward NONE — the old zenith heading — by at most
   `HELD_OFFSET_PER_YAW` (0.5) of the yaw turned (the view spinning at 0.5 – 1.5 × its pace meanwhile); coming down closes the gap by the share of the way
-  to 60° just made — by the pitch, never by time; cleared under the tilted pole, the slide's lock, the assembly's orbit off;
+  to 60° just made — by the pitch, never by time; cleared under the tilted pole and with the assembly's orbit off (the slide's lock too, before `1.0.126-Slide_removal` was merged — no lock since);
 * the tilted pole's exit target (`hW`) through the same `cameraHeading`, with the calm the world's branch has right after the exit.
 **Rejected on the way** (each probed on `Scene_1`'s cube against the old code, three short scenarios — a dx at the zenith, the same at the nadir, a close-in
 exit over the top's far edge): the level reading at the pole as is — a dx spun the view at 0.25 × mid-face and caught up at the corners, 8.3° in a frame
