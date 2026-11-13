@@ -23,7 +23,7 @@ every later stage uses those names.
 | **W0** | **The brief** | the object; its reference (a sheet, a preview, photos); what the level is FOR; ⭐ its SCALE — the assembled object about `Scene_1`'s cube (§4); the phone's limits (§4) | the owner | the owner's go |
 | **W1** | ⭐⭐ **THE ASSEMBLY PLAN** (§2) | the parts catalogue and the steps, on paper, in the scene's spec (§5); a sketch per step where needed | Claude drafts, the owner decides | ⛔ **the owner's approval** — nothing after it starts before |
 | **W2** | **The geometry spec** | per part, DERIVED from the plan: what the render mesh shows, its collision pieces, its flat faces (the face proxy), its connectors, its goal; the naming | Claude, from the plan | the owner's approval (the conventions once for all scenes; a scene's sheet each time) |
-| **W3** | **The Blender build** | a RE-RUNNABLE script (`Assets/Blender/scripts/build_<scene>.py`) making the `.blend` from the reference and the plan, and a CHECK script reading it back (§3) | Claude builds; the owner edits the `.blend` | the check script clean; the owner's look in Blender |
+| **W3** | **The Blender build** | ⭐ STEP BY STEP: a RE-RUNNABLE script (`Assets/Blender/scripts/build_<scene>.py -- --step N`) rebuilding the `.blend` up to the plan's step N, a preview render and the CHECKS each run (§3; `PART_AUTHORING.md` §4) | Claude builds a step; the owner looks; changes go into the script | ⛔ each step's checks clean AND the owner's look in Blender before the next step |
 | **W4** | **The export and the import** | the `.glb`; the loader reads it and REFUSES, named, what breaks a convention (`3D4`) | Claude | vectors on the loader; the import of the slice |
 | **W5** | **The level data** | the scene file (`src/content/<scene>.ts`): the boot layout, the plan's steps as DATA, the rig, the lights | Claude | vectors: the plan's rules (§2.3) checked on the data |
 | **W6** | **The headless proof** | probes walking EVERY step: the orbit from the boot to the goal, the seat, the capture, the solver's budget per frame, screenshots | Claude | every step reached, budget kept |
@@ -114,8 +114,9 @@ Derived from the plan, per part — the conventions for every scene are [`../../
 * **the connectors** — an empty per seat (position, outward normal, twist reference), named after the plan's step;
 * **the goal** — the authored pose (the `.blend` is authored assembled); the boot is level data.
 
-⭐ The CHECK script (W3) reads the `.blend` back against the plan: every planned seat has its two faces and connectors, the normals are anti-parallel at
-the goal, every collision piece is convex, every proxy face is flat — and refuses, named, what is not (a skipped check is announced — `METHOD.md`).
+⭐ The CHECKS (W3), printed by every run of the build for the steps built so far — the procedure and the table: `PART_AUTHORING.md` §4: the size;
+each seat (its two markers coincident, anti-parallel); each WAY IN (the part's collision pieces swept back along its approach against every earlier
+part); ⭐ a CONTROL that must read BLOCKED (the part pushed past its goal) — else the check is blind. A skipped check is announced (`METHOD.md`).
 
 ## 4. ⛔ The limits every plan is written against
 

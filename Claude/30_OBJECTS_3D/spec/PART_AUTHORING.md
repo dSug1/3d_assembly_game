@@ -52,17 +52,49 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    CAVITY (a tub the part goes into) needs one as much as a bore: its real depth is the cavity's bottom, not the seat (`Scene_2`'s crankshaft).
    ⭐ A proxy face keeps the face map's thresholds (`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §4: ≥ 15° from 45° of elevation; ≥ 30° between faces
    to be told apart), and an opening in a proxy face is a RECTANGLE (the face map reads rectangles), round only in the look.
-4. **The seating points** — an empty per seat of the plan, at a position with an OUTWARD normal and a twist reference: a MATE CONNECTOR
-   (`core/mate_connector.ts`), named after the plan's step.
+4. **The seating points** — an empty per seat of the plan, `MC_<part>_<seat>`, at a position on the seat face with its OUTWARD normal (the
+   empty's single arrow, its local Z) and a twist reference (its local X), named after the plan's step. ⭐ **REDEFINED** (the owner, 2026-11-13:
+   *"the mate connector was designed for translation of parts which no longer exists (it was replaced by our orbit and approach)"*): it is a SEAT
+   MARKER, not `core/mate_connector.ts`'s capture — the game seats a part by the orbit, A + dy and the goal capture (`D183`, the goal = the authored
+   pose). Read by the check script (each pair ANTI-PARALLEL and coincident at the goal) and later by the level data (the step's approach axis = the
+   host's marker normal, its orbit centre). ⚠ `core/mate_connector.ts` is left as it is until the game reads the markers (W5).
 5. **The goal is the authored pose** — a scene is authored ASSEMBLED, so each part's goal is where it sits; where it BOOTS is level data (as
    `Scene_1`'s `BOOT_MOVES`).
 6. **Units and axes** — the scene's `unitM`; +Y up at the export (`BLENDER_ASSETS.md` §3).
 
-## 4. ⭐ The check script (W3)
+## 4. ⭐⭐ The Blender build, STEP BY STEP, and its checks (W3 — the procedure for every scene)
 
-Reads the `.blend` back against the plan, and refuses, NAMED, what breaks a convention: every planned seat has its two flat faces and its two
-connectors, anti-parallel at the goal; every collision piece is convex and closed; every proxy face is flat; every part the plan names exists and
-nothing unplanned carries a proxy. ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
+> *"make sure you script in blender step by step so I can have a look and review what is built in blender step by step (not the full scene and then
+> I test at the end and nothing works and we don't know where to start the debugging from)"* · *"capture your checks in the tiered md files so it
+> becomes part of the procedure to create an assembly in blender"* — the owner, 2026-11-13 (first applied: `Scene_2`, `build_engine.py`)
+
+### 4.1 The loop — one step at a time, the owner's look between steps
+
+1. **One script, one argument**: `blender -b --python Assets/Blender/scripts/build_<scene>.py -- --step N` rebuilds the `.blend` FROM SCRATCH
+   (factory-empty file, `save_version = 0`) up to the plan's step N — the steps in the PLAN's order, one part (or one kind's parts) a step; the last
+   step the `.glb` export.
+2. **Every run**: saves the `.blend`, renders `previews/step_NN.png` (a `PREVIEW` collection — floor, light, camera — never exported) and prints the
+   REPORT (§4.2).
+3. ⛔ **Claude stops after each step**: reads the report and the render, then hands the owner what to look at in Blender for THAT step. The next step
+   starts on the owner's word. A failing check is fixed at its step, never carried forward.
+4. ⛔ **The `.blend` is the script's output**: the owner looks, closes WITHOUT saving; a change goes into the script (an edit by hand is lost at the
+   next run). ⭐ When the owner wants to model by hand, that part leaves the script — decided per part, written in the scene's spec.
+5. **Authored in the reference's units, y up**: an empty `YUP_ROOT` (rotation x 90°) so every number reads as the reference's; `unitM` on it.
+
+### 4.2 ⭐⭐ The checks every run prints (each for the steps built so far)
+
+| check | what it measures | passes when |
+|---|---|---|
+| **the size** | per part, its render meshes' box in units and in metres (`unitM`); its counts: render, `UCX_`, `UFM_`, seats | the assembly about `Scene_1`'s cube (`SCENE_WORKFLOW.md` §4); the counts as the scene's sheet |
+| **each SEAT** | per pair of the plan (host's marker, part's marker — `MC_`): the distance between them and their normals' dot at the goal | distance 0, dot −1 (anti-parallel — `../INDEX.md` rule 1) |
+| ⭐ **each WAY IN** | the part's collision pieces moved BACK along its approach, from 2 mm off its goal to its full length, against EVERY earlier part's collision pieces (triangle overlap, `BVHTree`) | clear at every position; ⛔ else the first blocked distance and the pieces named |
+| ⭐⭐ **the CONTROL** | the same part pushed 0.05 units PAST its goal, into its host | ⛔ it must read BLOCKED — else the check is BLIND (a check never seen failing is not trusted: `CLAUDE.md` rule 2's spirit) |
+| the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
+
+⚠ Not yet in the report, to add as the steps need them: every collision piece convex and closed; every proxy face flat; every part the plan names
+present and nothing unplanned carrying a proxy; each moving part's pivot (§5). ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
+⚠ What the way-in sweep does NOT see: a piece wholly INSIDE another without a crossing triangle (the 0.01 step makes it cross on the way); contact at
+the goal (allowed — `COLLISION.md` §9: only penetration is refused), which is why the sweep starts 2 mm off.
 
 ## 5. A scene's own reference animation
 

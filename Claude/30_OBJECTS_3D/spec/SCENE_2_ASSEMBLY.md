@@ -1,7 +1,7 @@
 # `Scene_2` — THE ENGINE: its brief (W0) and its ASSEMBLY PLAN (W1)
 
 > **STATUS** · ✅ **W1 APPROVED 2026-11-12** (the owner: *"plan approved"*), ⭐ **AMENDED the same day** by W2's first finding (§2.7: the pistons
-> DOWN THEIR BORES, the banks WHOLE — *"1- agreed … 2- make the banks whole again"*), the V at 120° (§2.10) · ⭐ W2 DRAFTED (§6), awaiting approval · ⛔ NOTHING BUILT · **OWNS** · `Scene_2`'s
+> DOWN THEIR BORES, the banks WHOLE — *"1- agreed … 2- make the banks whole again"*), the V at 120° (§2.10) · ✅ W2 APPROVED 2026-11-13 (§6; the owner: *"W2 sheet approved"*) · ⛔ NOTHING BUILT · **OWNS** · `Scene_2`'s
 > brief, its parts catalogue, its assembly steps, the rules' check, its decisions and what the game must gain for it
 > **READ IF** · you are working on `Scene_2` (World 0's *Level 2 - Scene 2 - the engine*)
 > **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`)
@@ -247,7 +247,7 @@ fits, `stackDepthAt`, `pieceEnters`). **So the mechanism is A + dy — and it ne
 
 ## 3. What is NOT decided here
 
-The Blender build (W3), the level data (W5) — after W2 (§6) is approved.
+The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"script in blender step by step so I can have a look and review what is built in blender step by step"*): `Assets/Blender/scripts/build_engine.py -- --step N` rebuilds the .blend up to step N (1 plinth · 2 lower case · 3 crankshaft · 4 upper case · 5 banks · 6 pistons · 7 heads · 8 exhausts · 9 pulley · 10 the .glb), renders `previews/step_NN.png`; the owner reviews each step before the next. ✅ Step 1 (the plinth) reviewed OK by the owner; step 2 (the lower case) reviewed OK; step 3 (the crankshaft) built — the script now checks each seat pair (anti-parallel, coincident) and each way in (the collision pieces swept back along it against every earlier part, with a control 0.05 past the goal that must read BLOCKED).
 
 ## 4. ⛔ Open
 
@@ -255,7 +255,7 @@ The Blender build (W3), the level data (W5) — after W2 (§6) is approved.
   2- make the banks whole again"*).
 * ✅ **The radii's departure from Appendix B** (§2.9 item 2): bore 0.30, piston 0.28, big end 0.085 — APPROVED (the owner, 2026-11-12: *"new radii approved"*).
 * ✅ The V at 120° (§2.10), decided on the owner's instruction (*"increase or decrease the inclination to avoid 45 degrees"*).
-* ⛔ **W2's sheet** (§6) — the owner's approval (§6.4).
+* ✅ **W2's sheet** (§6) — APPROVED (the owner, 2026-11-13: *"W2 sheet approved"*).
 
 ## 5. What the GAME must gain for this plan (requirements for the queue, once approved)
 
@@ -271,7 +271,7 @@ The Blender build (W3), the level data (W5) — after W2 (§6) is approved.
    it (`IN10`, queued: orbit about a chosen point).
 8. ⭐ **A mouth capture** (§2.9 item 3): over an opening the held part goes into, the gizmo held on the opening's axis.
 
-## 6. ⭐⭐ W2 — THE GEOMETRY SHEET (DRAFT 2026-11-12, ⛔ awaiting the owner's approval)
+## 6. ⭐⭐ W2 — THE GEOMETRY SHEET (DRAFT 2026-11-12, ✅ APPROVED 2026-11-13)
 
 ⭐ Derived from the plan (§2) at the 120° V (§2.10), per `PART_AUTHORING.md` §3. Reference units (× 0.14 m), y up, the crank axis along x at y 0.81;
 `y′ z′` a bank's own axes (its axis, its depth; bank A leans to −z, its inner side +z′). ⚠ Every number below is computed from Appendix B and §2.9 /
@@ -335,7 +335,7 @@ floor**: a hidden flat face at the SAME place at the goal. So the gizmo, over th
 
 ### 6.4 ⛔ Open for the owner
 
-1. **Approve this sheet** (W2's gate) — then W3, the Blender build script.
+1. ✅ ~~Approve this sheet~~ — **APPROVED** (the owner, 2026-11-13: *"W2 sheet approved"*); W3 next, the Blender build script — ⛔ started only on the owner's go (the PC shared with other sessions' walks).
 2. ✅ ~~The plinth DEEPER or the heads overhanging it~~ — **DEEPER, 3.5** (the owner, 2026-11-12: *"proceed with deeper plinth"*): at 120° the heads
    reach 1.39 from the centre line, the valve caps ≈ 1.66, the exhaust collectors ≈ 1.69, against the reference plinth's 1.275 — 0.42 (≈ 6 cm) over
    its edge each side; the 3.5 plinth (1.75) carries all of it. A look decision — the parts hold each other, nothing needs the plinth under it.
