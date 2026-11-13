@@ -22,9 +22,15 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(SCENE_2.orbitGoals).toBeUndefined();
   });
 
-  it("⭐ Scene_1's floor, rig, units and volume — read, never retyped", () => {
+  it("⭐ Scene_1's floor, units and volume — read, never retyped; its own rig", () => {
     expect(SCENE_2.bodies[0]).toBe(SCENE_1.bodies.find((b) => b.id === "Floor"));
-    expect(SCENE_2.orbit).toBe(SCENE_1.orbit);
+    // ⭐ (2026-11-13) its OWN rig — the owner's ring values; the centre and the boot distance Scene_1's
+    expect(SCENE_2.orbit).toMatchObject({
+      topRadiusM: 5.1, topHeightM: 3.54, middleRadiusM: 0.9, middleHeightM: 0.6,
+      lowerRadiusM: 0.9, lowerHeightM: -0.6, bottomRadiusM: 1.46, bottomHeightM: -0.83,
+      centreM: SCENE_1.orbit!.centreM, bootDistanceM: SCENE_1.orbit!.bootDistanceM,
+    });
+    expect(SCENE_1.orbit!.topHeightM).toBe(3.15); // Scene_1 (the painting) untouched
     expect(SCENE_2.unitM).toBe(SCENE_1.unitM);
     expect(SCENE_2.playVolume).toBe(SCENE_1.playVolume);
   });

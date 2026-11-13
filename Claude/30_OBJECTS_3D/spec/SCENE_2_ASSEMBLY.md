@@ -347,6 +347,9 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
    min speed entirely as the logic is wrong"*). The old principle kept: the press that drives the orbit carries the centre (`input/goal_lock.ts`
    `browseTargetOnPress`, `browseOnPress`, `browseGlideAt`; `render/pointer_wiring.ts`, `render/render_loop.ts`; the model's meshes in
    `st.modelBrowse`). Tested (`tests/browse_centre.test.ts`: proportional, the exact arrival at the set travel whatever the distance, a still finger).
+   ⭐ **THE RIG, `Scene_2`'s own** (2026-11-13, the owner's values from the menu — Scene_1's were the painting's): ring 1 (top) r **5.10** m at
+   **+3.54**; ring 2 r **0.90** at **+0.60**; ring 3 (on) r **0.90** at **−0.60**; ring 4 (bottom) r **1.46** at **−0.83** — heights from the orbit
+   centre; the centre (0, 0.23, 0) and the boot distance 3 m Scene_1's (`src/content/scene_2.ts`).
    ⚠ **The orbit around the assembly with a part in hand** (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md` — the pipeline's) needs an ORBITED PIECE: in
    `Scene_2` none exists yet (the parts are drawn, not bodies), so only the bare rig runs — `Scene_1`'s rings, tuned for the painting (the owner:
    *"it looks like the orbit is an old 3-ring orbit, and not the one we have built in this pipeline"*). W5's order: ① a `.glb` part as the orbited

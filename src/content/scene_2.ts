@@ -25,7 +25,7 @@ import { SCENE2_BOOT_RULE } from "./scene2_boot";
 const FLOOR = SCENE_1.bodies.find((b) => b.id === "Floor" && b.frozen);
 if (FLOOR === undefined) throw new Error("Scene_2: Scene_1 has no frozen Floor to copy");
 
-// ⭐ Scene_1 without its pieces and its goals (the play volume, units, boot view and rig carried; the lighting its own, below)
+// ⭐ Scene_1 without its pieces and its goals (the play volume, units and boot view carried; the lighting and the rig its own, below)
 const { bodies: _bodies, final: _final, orbitGoals: _orbitGoals, ...shared } = SCENE_1;
 
 export const SCENE_2: SceneDescriptor = {
@@ -34,6 +34,19 @@ export const SCENE_2: SceneDescriptor = {
   title: "Scene 2 — the engine", // ⭐ (2026-11-12, the owner: "Level 2 - Scene 2 - the engine")
   bodies: [FLOOR],
   final: null,
+  // ⭐⭐ (2026-11-13) ITS OWN RIG — the owner's values, tuned on the menu at the boot stage (Scene_1's were the painting's: top 5.1 / +3.15, a waist
+  // 0.09 / ±0.127, bottom 5.1 / −3.15); the centre and the boot distance Scene_1's
+  orbit: {
+    ...SCENE_1.orbit!,
+    topRadiusM: 5.1,
+    topHeightM: 3.54,
+    middleRadiusM: 0.9,
+    middleHeightM: 0.6,
+    lowerRadiusM: 0.9,
+    lowerHeightM: -0.6,
+    bottomRadiusM: 1.46,
+    bottomHeightM: -0.83,
+  },
   lighting: {
     // ⭐ the backdrop as render C shows it (sRGB CAC7C2), then 10 % lower (B6B3AF — the owner: "lower the lights a little so the player can stay
     // in the game longer"), then 5 % up (BFBCB7 — "increase the whole scene light 5%") — the clear colour is not tone-mapped. ⛔ A creamed night
