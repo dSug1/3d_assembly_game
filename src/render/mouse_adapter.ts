@@ -31,7 +31,6 @@
 import type { Scene } from "@babylonjs/core/scene";
 import { PointerEventTypes, PointerInfo } from "@babylonjs/core/Events/pointerEvents";
 import { MouseSecondTouch, MOUSE_SECOND_ID, type MouseAction, type MouseInput } from "../input/mouse_second_touch";
-import { wheelNotches } from "../input/mouse_wheel_zoom";
 
 export interface MouseSecondTouchHandle {
   /** ⚠ Diagnostics: real mouse events seen, synthetic actions delivered, the last one. */
@@ -41,11 +40,6 @@ export interface MouseSecondTouchHandle {
 export function attachMouseSecondTouch(
   canvas: HTMLCanvasElement,
   scene: Scene,
-  /**
-   * ⭐ The scene's zoom, handed signed wheel notches (positive = in). ⛔ The scene owns `zoom` and
-   * `applyCamera()`; this file only translates the wheel into notches — `input/mouse_wheel_zoom.ts`.
-   */
-  onWheelNotches?: (notches: number) => void,
   /** ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) does the scene orbit a piece — ALT / CTRL then the HELD SECOND TOUCH? */
   orbitSecond?: () => boolean,
 ): MouseSecondTouchHandle {
@@ -114,13 +108,9 @@ export function attachMouseSecondTouch(
     }
   };
   const onMenu = (e: Event) => e.preventDefault();
-  // ⭐⭐ THE WHEEL ZOOMS (the owner, 2026-09-25). ⛔ `passive: false` and `preventDefault`, or the page scrolls instead.
-  const onWheel = (e: WheelEvent) => {
-    if (onWheelNotches === undefined) return;
-    e.preventDefault();
-    const n = wheelNotches(e.deltaY, e.deltaMode);
-    if (n !== 0) onWheelNotches(n);
-  };
+  // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) THE WHEEL ZOOM deleted (`D118`'s wheel, 2026-09-25); the wheel is still
+  // swallowed so the page neither scrolls nor zooms (Ctrl + wheel is the browser's zoom, and Ctrl is the orbit's held second touch)
+  const onWheel = (e: WheelEvent) => e.preventDefault();
   canvas.addEventListener("wheel", onWheel, { passive: false });
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);

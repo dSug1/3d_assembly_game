@@ -58,7 +58,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { startDemo } from "./demo_wiring";
 import { bootOrbitCentre, sceneConfig } from "../input/scene_rig";
-import { DEFAULT_CONFIG, parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, TapHistory } from "../input";
+import { DEFAULT_CONFIG, parseConfigOverrides, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, TapHistory } from "../input";
 import { type Vec3 } from "../core/vec";
 import { FrameMeter } from "../core/frame_meter";
 import { makeWorld, type ObjectId } from "../core/object_model";
@@ -70,10 +70,8 @@ import { type MeshTopology } from "../core/mesh_topology";
 import { JumpWatch } from "../input/jump_watch";
 import { createHud } from "./hud";
 import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBox, registerOrbitPieces } from "./green_box_wiring";
-import { GREEN_ZOOM_MAX, GREEN_ZOOM_MIN } from "../input/green_box";
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
-import { wheelZoom } from "../input/mouse_wheel_zoom";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type Follow, type SceneState } from "./scene_state";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, syncCentre } from "./camera_rig";
@@ -583,8 +581,6 @@ export function createScene(
   st.orbitInertia = new OrbitInertia();
   st.greenPieceVolumeM3 = 0;
   st.cameraReleasePending = false;
-  st.greenZoomMin = 0.1;
-  st.greenZoomMinKey = "";
   st.boxOrbit = null;
   st.boxSpring = null;
   st.pinkRing = null;
@@ -670,20 +666,8 @@ export function createScene(
   // ⭐⭐⭐ **THE MOUSE'S SECOND TOUCH** (ALT / CTRL, the orbit's held one) and the wheel. ⛔ One call, at
   // Babylon's own pre-pointer seam: no DOM event is stopped or created, only `pointerType ===
   // "mouse"` is looked at, and the scene's gesture code below is untouched.
-  st.mouseLayer = attachMouseSecondTouch(st.canvas, st.scene, (notches) => {
-    // ⭐⭐ THE WHEEL WRITES THE SAME `zoom` THE PINCH WRITES, through the same `applyCamera()` —
-    // one zoom, not two. ⛔ Clamped on the multiplier, so scrolling past a limit cannot store zoom
-    // the camera will never show (`input/mouse_wheel_zoom.ts`).
-    const base = st.orbit.pose(1).radiusM;
-    if (!(base > 1e-9)) return;
-    // ⭐ prototype (green box), 2026-10-02: with a green piece the zoom is the CAMERA's distance behind it — its own range, 0.1–2.
-    st.zoom =
-      st.greenBox !== null
-        ? wheelZoom(st.zoom, notches, Math.max(GREEN_ZOOM_MIN, st.greenZoomMin), GREEN_ZOOM_MAX)
-        : wheelZoom(st.zoom, notches, st.cfg.cameraRadiusMinM / base, st.cfg.cameraRadiusMaxM / base);
-    st.zoomAtPinchStart = st.zoom;
-    applyCamera(st);
-  },
+  // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) the WHEEL ZOOM deleted — the wheel does nothing (the page does not scroll)
+  st.mouseLayer = attachMouseSecondTouch(st.canvas, st.scene,
   // ⭐⭐ (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20) ALT / CTRL is the orbit's HELD SECOND TOUCH whenever a piece is orbited
   () => st.greenBox !== null);
   // ⭐⭐ TUNABLES MAY BE OVERRIDDEN FROM THE URL, so a number can be A/B'd ON THE
@@ -746,13 +730,7 @@ export function createScene(
   st.hudDirty = false;
 
   // ─────────────────────────────────────────────────────────────────
-  // §2 RULE 4 — PINCH ZOOM, for touchpoints that hit NOTHING.
-  //
-  // ⭐ §4: *"Anchor role is latched at press time."* Whether a touchpoint is ON an
-  // object or OUTSIDE one is decided once, when it goes down, and never revisited.
-  // Without that a user steadying their grip near a part would silently switch
-  // between two different mappings mid-gesture. ⭐ `IN2` now owns that latch.
-  st.pinch = new PinchTracker(st.cfg);
+  // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) §2 RULE 4, THE PINCH ZOOM, deleted — the rig at 1 always.
 
   /**
    * An orbit centre chosen but NOT YET COMMITTED — see `orbitCentreGraceMs`.
@@ -786,35 +764,9 @@ export function createScene(
     ORBIT_START_YAW_RAD,
     st.bootElevation,
   );
-  // ⭐ ONE zoom scalar, shared. Pinch scales the whole orbit SURFACE rather than
-  // setting a radius directly, so rule 1 and rule 4 compose instead of fighting over
-  // the same number. `1` is the rings as configured.
-  /**
-   * ⭐⭐⭐ **THE BOOT ZOOM — HALF THE MAXIMUM ZOOM-OUT** (the owner, 2026-09-17: *"zoom out the
-   * camera at scene boot to place it at half its maximum zoom out so I can see the
-   * rectangles"*).
-   *
-   * ⛔⛔ **DERIVED, NOT A MAGIC NUMBER.** *"Maximum zoom out"* is not a zoom value at all — it
-   * is `cameraRadiusMaxM`, the clamp in `pinch.ts` that stops the camera leaving the scene. So
-   * half of it is **`cameraRadiusMaxM / 2` metres of camera radius**, and the zoom that produces
-   * it depends on the rig surface at the boot elevation. ⭐ `orbitOffset`'s radius and height both
-   * scale linearly with zoom, so `radiusM(z) = z × radiusM(1)` and the zoom follows by division.
-   * ⚠ A hard-coded 2.5 or whatever would silently stop meaning *half* the moment anyone touched
-   * `cameraRadiusMaxM`, the rig rings, or `ORBIT_START_ELEVATION`.
-   *
-   * ⚠ Clamped to at least 1: the boot view may be pushed OUT but never pulled in closer than
-   * the rig's own surface, which is what the orbit was designed around.
-   */
-  st.orbitStartZoom = (() => {
-    // ⭐ prototype (green box): the owner's literal boot zoom (`bootZoom`, 1.5) — your rings × 1.5 — unless 0.
-    if (st.cfg.bootZoom > 0) return st.cfg.bootZoom;
-    const base = st.orbit.pose(1).radiusM;
-    if (!(base > 1e-9)) return 1;
-    return Math.max(1, st.cfg.cameraRadiusMaxM / 2 / base);
-  })();
-
-  st.zoom = st.orbitStartZoom;
-  st.zoomAtPinchStart = st.orbitStartZoom;
+  // ⛔⛔ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely. With the approach of the piece, there is no need for
+  // zoom"*) the boot zoom deleted with the zoom (`bootZoom` — 1 since 2026-10-02): the rig as configured; only the demo scales its camera
+  st.demoCameraScale = 1;
   // ⛔⛔ THE CENTRE MIGRATES, IT DOES NOT TELEPORT. Rule 1 re-chooses a barycentre on
   // every press, so aiming at a different pair of objects used to JUMP the camera.
   // See input/orbit.ts — progress is finger travel in mm, not wall-clock.

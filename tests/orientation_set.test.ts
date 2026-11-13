@@ -256,8 +256,8 @@ describe("⭐⭐ the camera's pitch offset MIRRORED below the level (2026-10-13,
     expect(mirroredPitchOffset(MIRROR_BLEND_RAD / 2, off)).toBeCloseTo(off / 2, 12); // half through the blend
     expect(MIRROR_BLEND_RAD).toBeCloseTo((5 * Math.PI) / 180, 12);
   });
-  it("⭐ wired: the camera (`cameraOffset`) and the zoom limit that keeps the piece on screen (`minGreenZoom`) both", () => {
+  it("⭐ wired: the camera (`cameraOffset`) — ⛔ (2026-11-13) the zoom limit that kept the piece on screen (`minGreenZoom`) deleted with the zoom", () => {
     expect(code("input/follow_camera.ts")).toContain("const pitch = Math.max(-lim, Math.min(lim, ringPitch + mirroredPitchOffset(ringPitch, off.pitchRad)));");
-    expect(code("input/green_box.ts")).toContain("s.pitchRad + mirroredPitchOffset(s.pitchRad, p.pitchOffsetRad)");
+    expect(code("input/green_box.ts")).not.toContain("minGreenZoom(");
   });
 });

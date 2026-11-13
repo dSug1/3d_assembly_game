@@ -1,7 +1,7 @@
 /**
  * ⭐⭐⭐ prototype — **THE HELD SECOND TOUCH, WIRED** (`RESTING_FACE_ALIGNMENT.md` §20; the owner, 2026-10-11). The decisions are
  * `input/hold_gesture.ts`'s; this holds the input in flight (`st.hold`) and calls the actions — the way in (`enterPieceOrbit`), the orbit
- * round the piece and the roll (`orbitDragStep`, dx only), the zoom (`updatePinch`), the way out (`returnToCentreOrbit`), the tap roll
+ * round the piece and the roll (`orbitDragStep`, dx only), the approach (⛔ 2026-11-13 the zoom deleted), the way out (`returnToCentreOrbit`), the tap roll
  * (⭐ 2026-10-13: the yellow quad tapped, `orientTapShown`), the orbit centre moved by a tap on a placed part. ⛔ No rule here.
  * ⛔⛔ (2026-10-12, the owner: *"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting face.
  * Alignment of resting face shall be with the cube only"*) — the second touch takes no pink face and aligns nothing; its highlights clock
@@ -15,16 +15,23 @@
  *   the first held, the roll to the next axis.
  */
 import { pxToMm } from "../core/units";
-import { holdTapMode, holdTapTapsYellow, pinchStarts, type HoldMode } from "../input/hold_gesture";
+import { holdTapMode, holdTapTapsYellow, type HoldMode } from "../input/hold_gesture";
 // ⏸ (2026-10-12) with the way in, commented out: import { holdDecision, holdSwitch, trailAnchor } from "../input/hold_gesture";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
-import { pinchPair, retargetGizmo, updatePinch } from "./camera_rig";
-import { twoFingerKind } from "../input/assembly_orbit";
+import { retargetGizmo } from "./camera_rig";
+import { pinchApproachDyMm, pinchLatched, separationMm } from "../input/assembly_orbit";
 import { approachInput, approachRelease, assemblyOn } from "./assembly_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
+
+/** ⭐⭐⭐ (2026-11-13) the two fingers' separation now (mm); `null` — one of them lifted */
+const sepOf = (st: SceneState, a: number | null, b: number | null): number | null => {
+  const p = a === null ? undefined : st.router.get(a);
+  const q = b === null ? undefined : st.router.get(b);
+  return p === undefined || q === undefined ? null : separationMm([pxToMm(p.last.x), pxToMm(p.last.y)], [pxToMm(q.last.x), pxToMm(q.last.y)]);
+};
 
 const xOf = (st: SceneState, id: number | null): number | null => {
   if (id === null) return null;
@@ -105,13 +112,14 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
 // ⏸       return h.mode; // ⭐ the roll from the next step: this one only decided
 // ⏸     }
 // ⏸   }
-  if (h.mode === "ZOOM") {
-    updatePinch(st);
-    return h.mode;
-  }
-  // ⭐⭐ (2026-10-28) the APPROACH: each finger's dy half of the step — the two fingers' mean (dx nothing)
+  // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) the APPROACH BY THE PINCH: the fingers' separation's change since the last read — spread IN, pinched
+  // OUT (`pinchApproachDyMm`, × `approachPinchGain`). ⛔ (2026-10-28) each finger's dy half of the step (the two fingers' mean), latched by `twoFingerKind`
   if (h.mode === "APPROACH") {
-    if (pointerId === h.first || pointerId === h.second) approachInput(st, pxToMm(_s.y - _prev.y) / 2);
+    const sep = sepOf(st, h.first, h.second);
+    if ((pointerId === h.first || pointerId === h.second) && sep !== null && h.base) {
+      if (h.base.sep !== null) approachInput(st, pinchApproachDyMm(h.base.sep, sep, st.cfg.approachPinchGain));
+      h.base.sep = sep;
+    }
     return h.mode;
   }
   if (pointerId !== h.first && pointerId !== h.second) return h.mode;
@@ -123,42 +131,21 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
       if (pointerId === h.first) orbitStep(false);
       return h.mode;
     }
-    // ⭐ a finger: the STANDARD PINCH — either finger's travel past the deadband starts it (`pinchStarts`); before, nothing moves
-    const travel = (id: number | null): number => {
-      const q = id === null ? undefined : st.router.get(id);
-      return q === undefined ? 0 : pxToMm(Math.hypot(q.last.x - q.pressed.x, q.last.y - q.pressed.y));
-    };
-    // ⭐⭐⭐ (2026-10-28) AROUND THE ASSEMBLY: the two fingers' COMMON motion is the APPROACH, their relative motion the pinch — judged on the travel since
-    // the two-finger input started, once the larger is clear (`twoFingerKind`)
+    // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) AROUND THE ASSEMBLY THE PINCH IS THE APPROACH: two fingers whose separation has moved past the
+    // deadband from where they landed (`pinchLatched`) — whatever else they do; the approach then runs from that separation (no jump). ⛔ (2026-10-28 …
+    // 2026-11-13) the first move judged once (`twoFingerKind`): common motion the approach, relative the pinch — a real swipe wobbled into the pinch
     if (assemblyOn(st)) {
-      const posOf = (id: number | null): [number, number] | null => {
-        const q = id === null ? undefined : st.router.get(id);
-        return q === undefined ? null : [q.last.x, q.last.y];
-      };
-      const moved = (id: number | null, from: readonly [number, number] | null): [number, number] => {
-        const q = id === null ? undefined : st.router.get(id);
-        return q === undefined || from === null ? [0, 0] : [pxToMm(q.last.x - from[0]), pxToMm(q.last.y - from[1])];
-      };
-      if (h.base === undefined || h.base === null) h.base = { first: posOf(h.first), second: posOf(h.second), approach: st.approach };
-      const kind = twoFingerKind(moved(h.first, h.base.first), moved(h.second, h.base.second), st.cfg.motionDeadbandMm);
-      if (kind === null) return h.mode;
-      if (kind === "APPROACH") {
-        h.mode = "APPROACH";
-        st.lastVerdict = "orbit: two fingers together — the approach (up: in, down: out)";
-        st.hudDirty = true;
-        return h.mode;
-      }
-      h.mode = "ZOOM";
-      startZoom(st);
-      st.lastVerdict = "orbit: two fingers — the pinch zoom";
+      const sep = sepOf(st, h.first, h.second);
+      if (sep === null) return h.mode;
+      if (h.base === undefined || h.base === null) h.base = { approach: st.approach, sep0: sep, sep: null };
+      if (!pinchLatched(h.base.sep0, sep, st.cfg.motionDeadbandMm)) return h.mode;
+      h.base.sep = sep;
+      h.mode = "APPROACH";
+      st.lastVerdict = "orbit: two fingers — the approach by the pinch (spread: in, pinch: out)";
       st.hudDirty = true;
       return h.mode;
     }
-    if (!pinchStarts(travel(h.first), travel(h.second), st.cfg.motionDeadbandMm)) return h.mode;
-    h.mode = "ZOOM";
-    startZoom(st);
-    st.lastVerdict = "orbit: two fingers — the pinch zoom";
-    st.hudDirty = true;
+    // ⛔⛔ (2026-11-13) elsewhere two fingers did the pinch zoom (`pinchStarts`): no zoom — nothing moves
     return h.mode;
   }
 // ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
@@ -240,9 +227,8 @@ export function holdRelease(
 // ⏸       st.lastVerdict = "orbit: the second touch lifted — the way out";
 // ⏸     }
 // ⏸   }
-  // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the pinch is a tap: the zoom it started undone (`holdTapMode`)
+  // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the approach is a tap (`holdTapMode`; ⛔ 2026-11-13 no zoom)
   const mode = holdTapMode(h.mode, tapped);
-  if (mode !== h.mode && h.mode === "ZOOM") st.zoom = st.zoomAtPinchStart;
   // ⭐ (2026-10-28) a tapped approach undone; an approach's end starts its coast
   if (mode !== h.mode && h.mode === "APPROACH" && h.base) st.approach = h.base.approach;
   else if (h.mode === "APPROACH") approachRelease(st);
@@ -265,14 +251,7 @@ export function holdRelease(
   return "SECOND";
 }
 
-/** ⭐ The zoom from here — the fingers' distance now is its start: no jump (the decision, and `holdSwitch`'s WAY → ZOOM). */
-function startZoom(st: SceneState): void {
-  const p = pinchPair(st);
-  if (p !== null) {
-    st.pinch.begin(p[0], p[1]);
-    st.zoomAtPinchStart = st.zoom;
-  }
-}
+// ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) `startZoom` deleted.
 
 // ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
 // Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:

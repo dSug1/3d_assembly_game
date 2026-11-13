@@ -179,7 +179,7 @@ describe("⛔⛔⛔ (2026-11-12, CLOSE_IN_CONTACT.md) THE SLIDE REMOVED WHOLE �
     }
     expect(code("render/green_box_wiring.ts")).toContain("if (st.cfg.pinkGizmoVisible !== 1) {");
     expect(code("render/assembly_wiring.ts")).toContain("const show = st.cfg.sectionLines === 1 && g !== null && sh !== null;");
-    expect(code("render/pointer_wiring.ts")).toContain("else if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);");
+    expect(code("render/pointer_wiring.ts")).toContain("if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);"); // ⛔ (2026-11-13) the zoom deleted (no pinch branch before it)
   });
   it("⭐ the readout: the same look, display only — its band `contactBandMm` (the slide's reach, 20 mm), validated, its slider", () => {
     expect(DEFAULT_CONFIG.contactBandMm).toBe(20);

@@ -306,7 +306,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // the wiring: the spin reads the piece as placed; the way in takes the leftover over and adds it as it fades
     const w = code("render/green_box_wiring.ts");
     expect(w).toMatch(/function orbitHeading\(st: SceneState\): number \{\s*const p = st\.pieceAnchor;\s*const c = st\.orbitCentreM;\s*return p === null \? 0 : headingAbout\(\[c\.x, c\.y, c\.z\], p\);/);
-    expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, clampGreenZoom\(st\.zoom\)\);\s*(?:\/\/[^\n]*\n\s*)*st\.pieceAim = startPieceAim\(st\.pieceEntry\);\s*st\.centreReturn = null;/);
+    expect(w).toMatch(/const left: Vec3 = st\.centreReturn === null \? \[0, 0, 0\] : returnPieceOffset\(st\.centreReturn, st\.cfg\.pieceOrbitReturnMm\);\s*st\.pieceEntry = startPieceEntry\([^\n]*, left, 1\); \/\/ ⭐ \(2026-11-13\) no zoom: 1\s*(?:\/\/[^\n]*\n\s*)*st\.pieceAim = startPieceAim\(st\.pieceEntry\);\s*st\.centreReturn = null;/);
     // ⭐⭐ (*"I want the piece to behave the same as when resting face is aligned"*) no spin with the orbit — ⛔ (2026-10-11) the sphere deleted:
     // every piece is aligned from its spawn
     expect(w).toMatch(/st\.orbitHeadingPrev = h;\s*(?:\/\/[^\n]*\n\s*)+if \(prev === null \|\| st\.restAligned\) return;/);
@@ -339,7 +339,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/const aim = st\.pieceAim;\s*if \(aim !== null\) \{\s*const aimT = aimProgress\(aim, cfg\.pieceOrbitEnterMm\);\s*if \(aimT >= 1\) st\.pieceAim = null;\s*else \{\s*(?:\/\/[^\n]*\n\s*)*camAt = pieceCamera\(pp, aimRing\(aim\.look, ring, aimT\), gapPiece\);\s*const ax = entryLook\(aim\.look, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
     expect(w).toMatch(/st\.pieceOrbit = null;\s*st\.pieceAim = null;/); // the way out
     // …and the camera's start shift round the piece fades by the same dx-only progress — in the way in, then in the orbit around the piece
-    expect(w).toMatch(/camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\), aimT\);/);
+    expect(w).toMatch(/camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, 1, aimT\);/);
     expect(w).toMatch(/camAt = pieceCamera\(pp, aimRing\(aim\.look, ring, aimT\), gapPiece\);/);
     const e1 = advE(e0, FADE);
     const r1 = ringAngles(0.4, 0.3);
@@ -392,7 +392,7 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     // every place the piece is placed or judged reads the piece's range — the frame, the way out, the keep-in-view zoom floor, the yaw gain
     const w = code("render/green_box_wiring.ts");
     expect(w).not.toMatch(/clampCameraRadiusM/);
-    expect(w.split("clampPieceRadiusM(").length - 1).toBe(8); // ⛔ (2026-10-25) the top face camera lift's piece as drawn deleted // ⭐ (2026-10-14) + the orbit sway's distance range (`pieceRingRangeM`, its closest and farthest) // ⭐ (2026-10-13) + the collision guard's ring anchor (`ringAnchorAt`) // (2026-10-09) + the rings' closest point for the way out (`piecesClosestM`)
+    expect(w.split("clampPieceRadiusM(").length - 1).toBe(7); // ⛔ (2026-11-13) − the zoom limit's ring (`minGreenZoom`), deleted with the zoom // ⛔ (2026-10-25) the top face camera lift's piece as drawn deleted // ⭐ (2026-10-14) + the orbit sway's distance range (`pieceRingRangeM`, its closest and farthest) // ⭐ (2026-10-13) + the collision guard's ring anchor (`ringAnchorAt`) // (2026-10-09) + the rings' closest point for the way out (`piecesClosestM`)
     expect(code("render/tuning_menu.ts")).not.toMatch(/PIECE_MIN_DISTANCE|pieceMinDistance/); // no slider
   });
 
@@ -571,12 +571,12 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     const enter = w.slice(w.indexOf("export function enterPieceOrbit"), w.indexOf("function counterYawFrame"));
     expect(enter).not.toMatch(/restAlign|restingFace/); // nor the orbit the alignment
     // ⭐⭐⭐ (2026-10-08) the tap starts the WAY IN; the orbit around the piece starts at its END
-    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, clampGreenZoom\(st\.zoom\)\);/);
+    expect(w).toMatch(/st\.pieceEntry = startPieceEntry\(\[c\.x, c\.y, c\.z\], \[pos\.x, pos\.y, pos\.z\], \[cam\.x, cam\.y, cam\.z\], \[tg\.x - cam\.x, tg\.y - cam\.y, tg\.z - cam\.z\], st\.centreBlend\.targetM, ring, st\.boxOrbit\?\.yaw \?\? st\.orbit\.yaw, left, 1\); \/\/ ⭐ \(2026-11-13\) no zoom: 1/);
     // ⭐⭐ (2026-10-08) the pivot handed over gradually: the heading carried each frame, the piece placed at it on the way in
     expect(w).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = carryHeading\(st\.pieceEntry, st\.boxOrbit\.yaw, cfg\.pieceOrbitEnterMm\);/);
     expect(w).toContain("const be = st.pieceEntry === null ? null : ringPlaceNow(st, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom);"); // ⭐ (2026-10-16) the turned curve on level rings (`orbit_rig.ts`)
-    expect(w).toMatch(/const aimT = st\.pieceAim === null \? entryProgress\(pe, cfg\.pieceOrbitEnterMm\) : aimProgress\(st\.pieceAim, cfg\.pieceOrbitEnterMm\);\s*(?:\/\/[^\n]*\n\s*)*camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, clampGreenZoom\(st\.zoom\), aimT\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
-    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\), clampGreenZoom\(st\.zoom\)\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
+    expect(w).toMatch(/const aimT = st\.pieceAim === null \? entryProgress\(pe, cfg\.pieceOrbitEnterMm\) : aimProgress\(st\.pieceAim, cfg\.pieceOrbitEnterMm\);\s*(?:\/\/[^\n]*\n\s*)*camAt = entryCamera\(pe, pp, ring, cfg\.pieceOrbitEnterMm, 1, aimT\);\s*const ax = entryLook\(pe, camAt, \[c\.x, c\.y, c\.z\], pp, cfg\.pieceOrbitEnterMm, aimT\);/);
+    expect(w).toMatch(/if \(entryProgress\(pe, cfg\.pieceOrbitEnterMm\) >= 1\) \{[\s\S]{0,500}?st\.pieceOrbit = startPieceOrbit\(\[c\.x, c\.y, c\.z\], pp, \[out\[0\] \/ h, 0, out\[2\] \/ h\], camAt, Math\.hypot\(pp\[0\] - t\[0\], pp\[1\] - t\[1\], pp\[2\] - t\[2\]\), 1\);\s*st\.pieceEntry = null;/); // the end distance from the piece orbit's start
     // ⛔ (2026-10-08) a way in is NEVER cancelled by the distance
     // ⭐⭐ (2026-10-07) it ENDS itself: checked at the frame's start against the pink gizmo, then the way back
     expect(w).toMatch(/camAt = returnCamera\(cr, pp, homeRel, cfg\.pieceOrbitReturnMm\);\s*const ax = returnLook\(cr, camAt, pp, \[c\.x, c\.y, c\.z\], cfg\.pieceOrbitReturnMm\);/);
@@ -588,16 +588,16 @@ describe("⭐⭐⭐ prototype — the orbit around the piece", () => {
     expect(w).toMatch(/\? pushedPiece\(\[c\.x, c\.y, c\.z\], po\.dir, bo\.radiusM \* k\)/);
     expect(w).toMatch(/const gapPiece =\s*scaledGap\(po\.gap0M, bo\.radiusM \* k, po\.ring0M, ringDistanceRange\(/);
     // (2026-10-09) …× the zoom now over the zoom at its start — the zoom acts outside the sphere too
-    expect(w).toMatch(/cfg\.pieceOrbitGapMinPct\) \*\s*zoomScale\(po\.zoom0, clampGreenZoom\(st\.zoom\)\);/);
+    expect(w).toMatch(/cfg\.pieceOrbitGapMinPct\) \*\s*zoomScale\(po\.zoom0, 1\);/);
     expect(w).toMatch(/camAt = pieceCamera\(pp, ring, gapPiece\);\s*lookAt = pp;/); // around the piece: at the rings' angles, looking at it
     expect(w).toMatch(/st\.camera\.setPosition\(new Vector3\(camAt\[0\], camAt\[1\], camAt\[2\]\)\);\s*st\.camera\.setTarget\(new Vector3\(lookAt\[0\], lookAt\[1\], lookAt\[2\]\)\);/);
     // ⭐⭐ the owner: *"the gain shall be unique during the whole game, and computed based on the camera position dictated by the sliders
     // values"* — recomputed ONLY when its sliders change (the key), from the sliders' camera (the boot zoom, not the live one)
     expect(w).toMatch(/if \(gainKey !== st\.pieceYawGainKey\) \{\s*st\.pieceYawGainKey = gainKey;/);
-    expect(w).toMatch(/gapM: cameraGapM\(cfg\.cameraRadiusOffsetMm \/ 1000, st\.orbitStartZoom\),/);
+    expect(w).toMatch(/gapM: cameraGapM\(cfg\.cameraRadiusOffsetMm \/ 1000, 1\),/);
     expect((w.match(/st\.pieceYawGain = /g) ?? []).length).toBe(1);
     const key = w.slice(w.indexOf("const gainKey = ["), w.indexOf("].join", w.indexOf("const gainKey = [")));
-    for (const k of ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "st.orbitStartZoom", "pieceOrbitGapMinPct", "orbitTopHeightM", "orbitBottomHeightM"]) expect(key).toContain(k);
+    for (const k of ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "pieceOrbitGapMinPct", "orbitTopHeightM", "orbitBottomHeightM"]) expect(key).toContain(k);
     expect(key).not.toMatch(/st\.zoom\b|cameraLagged|boxOrbit/); // never the live camera
     const p = code("render/pointer_wiring.ts");
     expect(p).toMatch(/if \(st\.pieceEntry !== null\) st\.pieceEntry = advancePieceEntry\(st\.pieceEntry, Math\.hypot\(dx, dy\) \/ mmToPx\(1\)\);/);

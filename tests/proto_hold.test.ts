@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { holdDecision, holdSwitch, holdTapMode, holdTapTapsYellow, pinchStarts, trailAnchor } from "../src/input/hold_gesture";
+import { holdDecision, holdSwitch, holdTapMode, holdTapTapsYellow, trailAnchor } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -78,8 +78,8 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // dy ignored on the way in / round the piece
     expect(p).toMatch(/const dy = dxOnly \? 0 : s\.y - prev\.y;/);
     const h = code("render/hold_wiring.ts");
-    // ⭐ (2026-10-12) the zoom's start in `startZoom`
-    expect(h).toMatch(/function startZoom\(st: SceneState\): void \{\s*const p = pinchPair\(st\);\s*if \(p !== null\) \{\s*st\.pinch\.begin\(p\[0\], p\[1\]\);\s*st\.zoomAtPinchStart = st\.zoom;/);
+    // ⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) no zoom's start any more (`startZoom` deleted)
+    expect(h).not.toMatch(/function startZoom|updatePinch|st\.pinch|st\.zoom/);
     expect(h).toContain("void orbitStep;"); // ⏸ (2026-10-12) the way in's dx-only orbit is commented out
   });
 
@@ -126,7 +126,7 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // a lost focus lifts it (the way out, as a release)
     expect(a).toContain('if (!modDown) return; modDown = false; apply({ type: "MOD_UP", button: -1, buttons: 0, x: 0, y: 0 });');
     // the wheel never zooms the page nor walks the history: blocked on the canvas, whatever key
-    expect(a).toContain("const onWheel = (e: WheelEvent) => { if (onWheelNotches === undefined) return; e.preventDefault();");
+    expect(a).toContain("const onWheel = (e: WheelEvent) => e.preventDefault();"); // ⛔ (2026-11-13) and zooms nothing: the zoom deleted
     const p = code("render/pointer_wiring.ts");
     // ⭐⭐ (2026-10-11, *"the action is triggered directly by CTRL being pressed or tapped : this sends a raycast which first hit is the item on
     // which the action is triggered"*) — the KEY's press acts: a part's face the pink face (as a second finger's press), the orbited piece the
@@ -174,7 +174,7 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
     expect(holdTapTapsYellow(true, "HELD", true, false)).toBe(true);
     expect(holdTapTapsYellow(false, "HELD", true, false)).toBe(false); // a hold, not a tap
     expect(holdTapTapsYellow(true, "WAY", true, false)).toBe(false); // the way in
-    expect(holdTapTapsYellow(true, "ZOOM", true, false)).toBe(false); // a zoom (a tap that wobbled into it is judged HELD: `holdTapMode`)
+    expect(holdTapTapsYellow(true, "APPROACH", true, false)).toBe(false); // the approach (a tap that wobbled into it is judged HELD: `holdTapMode`; ⛔ 2026-11-13 no zoom)
     expect(holdTapTapsYellow(true, "HELD", false, false)).toBe(false); // the first touch not held
     expect(holdTapTapsYellow(true, "HELD", true, true)).toBe(false); // its press acted (a placed part: the centre moved)
   });
@@ -209,13 +209,11 @@ describe("⭐⭐ prototype — zoom ↔ way in + roll WITHOUT LIFTING (2026-10-1
 
 
 describe("⛔⛔ the way in, the orbit round the piece and its dx roll COMMENTED OUT; the STANDARD pinch (2026-10-12, *\"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held … Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on). Simplify the zoom so that this reverts back to the standard zoom input design for mobile\"*)", () => {
-  it("⭐ a finger: the standard pinch — either finger's travel past the deadband starts it; the desktop's key: the first touch orbits the centre", () => {
-    expect(pinchStarts(3.6, 0, DB)).toBe(true);
-    expect(pinchStarts(0, 3.6, DB)).toBe(true);
-    expect(pinchStarts(3.4, 3.4, DB)).toBe(false);
+  it("⭐ a finger: ⛔ (2026-11-13, the owner: *\"remove the zoom function entirely\"*) the standard pinch zoom deleted — two fingers away from the assembly move nothing; the desktop's key: the first touch orbits the centre", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
     expect(h).toContain("if (h.second === MOUSE_SECOND_ID) { // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out) if (pointerId === h.first) orbitStep(false); return h.mode; }");
-    expect(h).toContain("if (!pinchStarts(travel(h.first), travel(h.second), st.cfg.motionDeadbandMm)) return h.mode; h.mode = \"ZOOM\"; startZoom(st);");
+    expect(h).toContain("// ⛔⛔ (2026-11-13) elsewhere two fingers did the pinch zoom (`pinchStarts`): no zoom — nothing moves return h.mode;");
+    expect(h).not.toContain("if (!pinchStarts("); // ⏸ the parked way in's commented-out lines still name its ZOOM
     const r = code("render/camera_rig.ts");
     expect(r).not.toMatch(/pinchDxOpen|pinchZooms|pinchMotion/);
   });
@@ -231,17 +229,17 @@ describe("⭐⭐ a first touch / left TAP on EMPTY space = a tap on the cube's p
 });
 
 describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (2026-10-13, *\"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate.\"*)", () => {
-  it("⭐ a tapped ZOOM is judged HELD (the gizmo moved, or the roll); a held pinch stays a zoom; the other modes unchanged", () => {
-    expect(holdTapMode("ZOOM", true)).toBe("HELD");
-    expect(holdTapMode("ZOOM", false)).toBe("ZOOM");
+  it("⭐ a tapped APPROACH is judged HELD (the gizmo moved, or the roll); a held one stays the approach; the other modes unchanged (⛔ 2026-11-13 the zoom deleted)", () => {
+    expect(holdTapMode("APPROACH", true)).toBe("HELD");
+    expect(holdTapMode("APPROACH", false)).toBe("APPROACH");
     expect(holdTapMode("HELD", true)).toBe("HELD");
     expect(holdTapMode("WAY", true)).toBe("WAY");
     // ⚠ why: the tap's slop (8 mm) is wider than the pinch's deadband (3.5 mm)
     expect(DEFAULT_CONFIG.doubleTapSlop).toBeGreaterThan(DEFAULT_CONFIG.motionDeadbandMm);
   });
-  it("⭐ wired at the second touch's release: the zoom undone, the tap judged in that mode", () => {
+  it("⭐ wired at the second touch's release: a tapped approach undone, the tap judged in that mode (⛔ 2026-11-13 no zoom to undo)", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("const mode = holdTapMode(h.mode, tapped); if (mode !== h.mode && h.mode === \"ZOOM\") st.zoom = st.zoomAtPinchStart;"); // ⭐ (2026-10-28) a tapped approach undone too
+    expect(h).toContain("const mode = holdTapMode(h.mode, tapped); // ⭐ (2026-10-28) a tapped approach undone; an approach's end starts its coast if (mode !== h.mode && h.mode === \"APPROACH\" && h.base) st.approach = h.base.approach;");
     expect(h).toContain("if (holdTapTapsYellow(tapped, mode, h.first !== null,");
   });
 });

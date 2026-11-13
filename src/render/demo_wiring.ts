@@ -47,10 +47,9 @@ export function advanceDemoFrame(st: SceneState, dtSec: number): void {
   }
   const cam = demoCamera(st.bootElevation, d.progress);
   st.orbit.reset(cam.yawRad, cam.elevation);
-  // ⭐ `D171`: the zoom that puts the camera at the demo's distance — the fit at the start, the rig's maximum at the end.
+  // ⭐ `D171`: the scale that puts the camera at the demo's distance — the fit at the start, the rig's maximum at the end (⭐ 2026-11-13 the demo's own: no zoom)
   const rigM = orbitOffset(st.cfg, cam.yawRad, cam.elevation, 1).radiusM;
-  st.zoom = demoDistanceM(d.fitM, st.cfg.cameraRadiusMaxM, d.progress) / Math.max(1e-9, rigM);
-  st.zoomAtPinchStart = st.zoom;
+  st.demoCameraScale = demoDistanceM(d.fitM, st.cfg.cameraRadiusMaxM, d.progress) / Math.max(1e-9, rigM);
   applyCamera(st);
   st.hudDirty = true;
   // ⭐ Once the last move has landed the demo HOLDS: poses and camera are left to the player.

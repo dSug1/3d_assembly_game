@@ -13,7 +13,7 @@ import { pieceRespawnArmed, pieceTapAction } from "../input/piece_orbit_solver";
 import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_wiring";
 import { worldPlacementOf } from "../core/object_model";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre } from "../input/green_box";
-import { clampCameraRadiusM } from "../input/pinch";
+import { clampCameraRadiusM } from "../input/camera_radius";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
@@ -32,7 +32,7 @@ import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_w
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar } from "./gesture_wiring";
 import { type SceneState } from "./scene_state";
-import { applyCamera, pinchPair, recomputeOrbitCentre, retargetGizmo, syncCentre, updatePinch } from "./camera_rig";
+import { applyCamera, recomputeOrbitCentre, retargetGizmo, syncCentre } from "./camera_rig";
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit"; // ⏸ (2026-10-12) orbitRollSteps — with the commented-out way in
@@ -167,15 +167,10 @@ export function installPointerHandler(st: SceneState): void {
         st.pendingCentre = EMPTY_PRESS_MOVES_TARGET && st.cfg.orbitCentreGraceMs > 0 ? { x: e.clientX, y: e.clientY, at: s.t } : null;
         if (EMPTY_PRESS_MOVES_TARGET && !st.pendingCentre) recomputeOrbitCentre(st, e);
       } else {
-        // ⛔ A SECOND ONE ARRIVED: this is a pinch — the camera keeps orbiting whatever it was already orbiting.
+        // ⛔ A SECOND ONE ARRIVED: two fingers — the camera keeps orbiting whatever it was already orbiting.
         st.pendingCentre = null;
       }
-      const p = pinchPair(st);
-      if (p) {
-        st.pinch.begin(p[0], p[1]);
-        // ⚠ Captured HERE, once: the zoom is a ratio against the gesture's start, never an accumulation (`input/pinch.ts`).
-        st.zoomAtPinchStart = st.zoom;
-      }
+      // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) no pinch zoom begins here any more
       // ⭐⭐⭐ (2026-10-11) the held second touch's input starts — or the first touch pressed again while it is held. ⭐ A FINGER's press on a PLACED
       // part notes where: its TAP moves the orbit centre there (`holdRelease`), as a first touch's press does
       if (holdRole === "SECOND") {
@@ -198,19 +193,16 @@ export function installPointerHandler(st: SceneState): void {
       const prev = routed.last;
       st.router.move(e.pointerId, s, null);
       // ⭐⭐⭐ (2026-10-11) the held second touch's input owns its two touches' moves: undecided (nothing moves), the way in / round the piece (the
-      // first touch's dx only), the approach, or the zoom
+      // first touch's dx only), the approach (⛔ 2026-11-13 no zoom)
       if (st.hold !== null && (e.pointerId === st.hold.first || e.pointerId === st.hold.second)) {
         holdMove(st, e.pointerId, s, prev, (dxOnly) => orbitDragStep(st, e.pointerId, s, prev, dxOnly));
         st.hudDirty = true;
         return;
       }
-      if (st.router.outside().length === 2) updatePinch(st);
-      // §2 rule 1: ONE touchpoint — orbit (⛔ 2026-11-12 the slide removed: a drag from the piece orbits too)
-      else if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);
+      // §2 rule 1: ONE touchpoint — orbit (⛔ 2026-11-12 the slide removed: a drag from the piece orbits too; ⛔ 2026-11-13 two: no pinch zoom)
+      if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);
     } else if (info.type === PointerEventTypes.POINTERUP) {
       st.router.release(e.pointerId);
-      // ⛔ A pinch needs BOTH touchpoints: lifting one ends it.
-      st.pinch.end();
       const tapped = isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));
       // ⭐⭐⭐ (2026-10-11) the held second touch lifted: its input ends — consumed, not a tap; ⭐ (2026-10-28) a second finger's TAP on the orbited
       // piece (around the assembly it is the second touch): its resting-face tap still goes on below
@@ -278,7 +270,6 @@ export function forgetPointers(st: SceneState): void {
   }
   if (assemblyOn(st)) approachRelease(st);
   st.router.clear();
-  st.pinch.end();
   st.hold = null;
   st.orbitMotion = null;
   st.pendingPartCentre = null;

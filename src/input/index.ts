@@ -2,7 +2,7 @@ export * from "./gestureConfig";
 export * from "./config_override";
 export * from "./motion";
 export * from "./flick";
-export * from "./pinch";
+export * from "./camera_radius";
 export * from "./barycentre";
 export * from "./orbit";
 export * from "./noise_meter";
