@@ -37,6 +37,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { rotateAbout } from "../input/orbit_tilt";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -1160,11 +1161,18 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
     const k0 = zm.from.up[0] * d[0] + zm.from.up[1] * d[1] + zm.from.up[2] * d[2];
     const pu: Vec3 = [zm.from.up[0] - k0 * d[0], zm.from.up[1] - k0 * d[1], zm.from.up[2] - k0 * d[2]];
     const lu = Math.hypot(pu[0], pu[1], pu[2]);
-    const from = lu > 1e-6 ? { dir: d, up: [pu[0] / lu, pu[1] / lu, pu[2] / lu] as Vec3 } : f;
-    const mx = frameMix(from, f, zm.k, zm.axis);
-    zm.rad = mx.angle;
-    zm.axis = mx.axis;
-    shown = mx.frame;
+    // ⭐⭐⭐ (2026-11-14, the walks: a 173° flip in ONE frame at the bottom face's half turn) the turn's way KEPT from its first frame (`zm.sgn`): a half
+    // turn has two ways round, and `frameMix` chose by the last rounding — 90° one way, then the other way, the picture flipped
+    if (lu > 1e-6) {
+      const u0: Vec3 = [pu[0] / lu, pu[1] / lu, pu[2] / lu];
+      const c = u0[0] * f.up[0] + u0[1] * f.up[1] + u0[2] * f.up[2];
+      const x: Vec3 = [u0[1] * f.up[2] - u0[2] * f.up[1], u0[2] * f.up[0] - u0[0] * f.up[2], u0[0] * f.up[1] - u0[1] * f.up[0]];
+      let phi = Math.atan2(x[0] * d[0] + x[1] * d[1] + x[2] * d[2], c);
+      if (zm.sgn === 0) zm.sgn = phi < 0 ? -1 : 1;
+      else if (Math.sign(phi) !== zm.sgn && Math.abs(phi) > Math.PI / 2) phi += 2 * Math.PI * zm.sgn;
+      zm.rad = Math.abs(phi);
+      shown = { dir: d, up: rotateAbout(u0, d, Math.min(1, zm.k) * phi) };
+    }
   }
   st.asmCamLast = { dir: shown.dir, up: shown.up };
   return shown;
@@ -1599,7 +1607,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
     }
   } else st.asmMapQ = null;
   // the camera's turn from the frame it shows now (none before the first frame: at once)
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: st.asmCamLast, k: 0, rad: Math.PI / 2, axis: null };
+  st.asmZoneMix = st.asmCamLast === null ? null : { from: st.asmCamLast, k: 0, rad: Math.PI / 2, sgn: 0 };
   st.lastVerdict =
     next === null
       ? "orbit: out of the polar zone — the world's frame again"
@@ -1662,7 +1670,7 @@ function spitStep(st: SceneState): void {
   st.asmSpitSide = side;
   // ⭐ a crossing only seen from high up (the zenith edge, the bottom face's): low (round a tip) the heading is the direction's own — the side changes silently
   if (prev === 0 || side === prev || Math.asin(Math.min(1, Math.abs(u[1]))) < SPIT_CROSSING_PITCH_RAD) return;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: st.asmCamLast, k: 0, rad: Math.PI / 2, axis: null };
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: st.asmCamLast, k: 0, rad: Math.PI / 2, sgn: 0 };
   st.orbitInertia.stop();
   const g = st.asmG;
   const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);

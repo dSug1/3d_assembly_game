@@ -21,7 +21,6 @@
 import type { Vec3 } from "../core/vec";
 import type { FaceMap, Facet } from "./face_map";
 import type { Mat3 } from "./orbit_tilt";
-import { LEVEL_HEADING_BLEND_RAD } from "./orbit_calm";
 
 /** ⭐ The zones' knobs — each a `GestureConfig` field with a slider (`zoneOptsOf` in the wiring). */
 export interface ZoneOpts {
@@ -479,13 +478,22 @@ export const SPIT_SIDE_BIAS = 0.3;
  */
 export function spitCameraHeading(u: Vec3, a: Vec3, side: number): number {
   const r = spitSideRef(a);
-  const hx = u[0] + side * SPIT_SIDE_BIAS * r[0];
-  const hz = u[2] + side * SPIT_SIDE_BIAS * r[2];
+  // ⭐ (2026-11-14, the walks: 105 – 112 ROLL events, the camera standing 5 – 17° off upright for hundreds of frames at mid height) the bias faded in
+  // from `SPIT_BIAS_FROM_RAD` (60°) to `SPIT_BIAS_FULL_RAD` (75°) of the view's pitch: below, the camera plainly upright (its own direction's heading)
+  const p = Math.asin(Math.min(1, Math.abs(u[1]) / Math.max(1e-12, len(u))));
+  const x = Math.min(1, Math.max(0, (p - SPIT_BIAS_FROM_RAD) / (SPIT_BIAS_FULL_RAD - SPIT_BIAS_FROM_RAD)));
+  const b = SPIT_SIDE_BIAS * x * x * (3 - 2 * x);
+  const hx = u[0] + side * b * r[0];
+  const hz = u[2] + side * b * r[2];
   return Math.hypot(hx, hz) > 1e-9 ? Math.atan2(hz, hx) : spitHeading(a, side);
 }
 
+/** ⭐ The side's bias faded in from this pitch of the view … */
+export const SPIT_BIAS_FROM_RAD = (60 * Math.PI) / 180;
+/** ⭐ … whole from this one. */
+export const SPIT_BIAS_FULL_RAD = (75 * Math.PI) / 180;
 /** ⭐ A side change is a CROSSING (the turn, the hold) only seen from this pitch up / down: below it the heading is the direction's own (`spitCameraHeading`). */
-export const SPIT_CROSSING_PITCH_RAD = LEVEL_HEADING_BLEND_RAD;
+export const SPIT_CROSSING_PITCH_RAD = SPIT_BIAS_FROM_RAD;
 
 /**
  * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed: at the gizmo `g0` on its face (normal `n`), into the face beyond square to the
