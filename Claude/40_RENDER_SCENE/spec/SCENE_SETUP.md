@@ -88,6 +88,7 @@ At the FINAL STAGE (every part shown), with the HUD's `frame` line, ☰ RENDERIN
 |---|---|---|---|---|
 | desktop GPU (fps) | 95 | 100 | 120 | 125 |
 | iPhone (fps) | 40 | 48 | 56 | 59 (the screen's 60 Hz ceiling) |
+| ⭐ iPhone AFTER (build `806579a`: the contact shadows baked, the shadow map on events) | **59 — at the 60 Hz ceiling, shadows on** | | | |
 
 Read as frame times. SSAO cost 2.2 ms on the GPU and **≈ 7 ms on the phone**. Shadows cost 0.4 ms on the GPU and 1 – 4 ms on the phone. Without both, the phone sits at its 60 Hz ceiling: the scene itself (glass, PBR, ~81 draw calls) fits. ⛔ A scene is not done until this table is filled for it.
 
