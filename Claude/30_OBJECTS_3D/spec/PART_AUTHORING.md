@@ -46,6 +46,8 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    orbit = gizmo"*); over an opening the part fits, the gizmo reads the real depth (`POLAR_ORBIT_CLEANUP.md` §7, §8.3) — so the ghost face IS that
    depth: the gizmo drops onto it, A + dy brings the part down to it, the goal capture seats it. Never drawn, never collided, never picked; one per
    opening, each at its own part's depth.
+   ⭐ **A ghost face serves ONE part** (`for_part` on it): two parts may go into the same opening at different depths (`Scene_2`: a bore's piston,
+   then its valve set) — the game reads a ghost only while ITS part is held, else the gizmo stops at the wrong one. The check script names each.
    ⭐ **THE PAIR**: an inserted part carries a **resting proxy** — one flat face SQUARE to its approach axis, CENTRED on it, at its hull's extreme along
    the approach (what the orbit's lift measures) — and its host carries the **ghost floor** at the SAME place at the goal; the gizmo then stands on the
    opening's axis and A + dy lands the part exactly on its goal. A ghost floor may lie outside its host's body (in a cavity below an opening). An open
@@ -78,7 +80,11 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 3. ⛔ **Claude stops after each step**: reads the report and the render, then hands the owner what to look at in Blender for THAT step. The next step
    starts on the owner's word. A failing check is fixed at its step, never carried forward.
 4. ⛔ **The `.blend` is the script's output**: the owner looks, closes WITHOUT saving; a change goes into the script (an edit by hand is lost at the
-   next run). ⭐ When the owner wants to model by hand, that part leaves the script — decided per part, written in the scene's spec.
+   next run). ⭐ **The owner's edits as a REQUEST** (the owner, 2026-11-13: *"can I modify the blender file and save it so I can show you what I
+   want ? … you can compare my blender file with your script and update your script"*): the owner edits and SAVES AS `<scene>_owner.blend` (never
+   overwritten); Claude reads both headless, diffs them object by object (transforms, vertex bounds in the reference's units, objects added or
+   deleted), states the intent it reads for the owner's confirmation, writes it into the script as a RULE where it is one (*"flush with"*), rebuilds
+   and re-runs the checks. ⭐ When the owner wants to model by hand, that part leaves the script — decided per part, written in the scene's spec.
 5. **Authored in the reference's units, y up**: an empty `YUP_ROOT` (rotation x 90°) so every number reads as the reference's; `unitM` on it.
 
 ### 4.2 ⭐⭐ The checks every run prints (each for the steps built so far)
@@ -89,6 +95,8 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | **each SEAT** | per pair of the plan (host's marker, part's marker — `MC_`): the distance between them and their normals' dot at the goal | distance 0, dot −1 (anti-parallel — `../INDEX.md` rule 1) |
 | ⭐ **each WAY IN** | the part's collision pieces moved BACK along its approach, from 2 mm off its goal to its full length, against EVERY earlier part's collision pieces (triangle overlap, `BVHTree`) | clear at every position; ⛔ else the first blocked distance and the pieces named |
 | ⭐⭐ **the CONTROL** | the same part pushed 0.05 units PAST its goal, into its host | ⛔ it must read BLOCKED — else the check is BLIND (a check never seen failing is not trusted: `CLAUDE.md` rule 2's spirit) |
+| ⭐ **no redundant geometry** (the owner, 2026-11-13: *"be careful that in your blender file, you have redundant edges … not sure if it can create issues (rendering, gizmo, etc.)"*) | per GLASS mesh and per face proxy: duplicate vertices, zero-area faces, loose edges | none — a transparent part is ONE solid (a boolean of one outer body, never touching boxes: their faces show through the glass), every boolean's result welded and its flat faces' extra edges dissolved, a proxy's strips welded into whole faces (`tidy`). An opaque part made of touching primitives (a chrome bar and its knees) may keep them |
+| ⭐ **the MOTION** (the owner, 2026-11-13: *"when the crank rotates, the piston shall remain in the cylinder"*) — for a scene with a level-end animation (§5) | the mechanism driven through its whole cycle by the game's own formula (every 6°): each moving part against the limits it must keep (a piston inside its cylinder, under its valves) and against the still parts' collision pieces | every margin ≥ 0, no collision — ⭐ with its control (a known-bad dimension must read OUT) |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
 ⭐ **A host is CUT only where a part REALLY passes** (the owner, 2026-11-13, `Scene_2`'s upper case: *"(b)"*): the cut is the part's own swept
