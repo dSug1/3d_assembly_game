@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass V6 — 120° revision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --page:#F7F6F4; --ink:#222019; --muted:#6B675E; --rule:#E2DED7; --chip:#FFFFFF; --chipink:#222019;
+  --focus:#3A63D8; --floor:#ECEAE6; --card:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme: dark;
+    --page:#17161A; --ink:#ECEAE5; --muted:#A8A49B; --rule:#2D2B30; --chip:#FFFFFF; --chipink:#222019;
+    --focus:#93B0FF; --floor:#ECEAE6; --card:#1F1E23; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:17px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:56px 24px 88px}
+header{max-width:780px;margin-bottom:36px}
+h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:clamp(48px,9vw,100px);line-height:.9;letter-spacing:-.02em;margin:0 0 18px}
+header p{margin:0;color:var(--muted);font-size:19px;max-width:62ch}
+.locked{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none}
+.locked li{border:1px solid var(--rule);border-radius:999px;padding:4px 12px;font-size:14px}
+.machine{border-top:1px solid var(--rule);padding:44px 0}
+.machine-head{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px;align-items:start}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:8px}
+.stage{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--floor)}
+.stage canvas{display:block;width:100%!important;height:100%!important}
+.toggle{position:absolute;left:12px;bottom:12px;border:0;border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;
+  background:var(--chip);color:var(--chipink);cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.toggle:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.hud{position:absolute;right:12px;top:12px;font-size:13px;color:#4A463E;background:rgba(255,255,255,.82);padding:4px 10px;border-radius:999px}
+.mounts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.mounts button{font:inherit;font-size:15px;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.mounts button[aria-pressed="true"]{background:var(--ink);color:var(--page);border-color:var(--ink)}
+.mounts button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.caption{margin:10px 0 0;font-size:15px;color:var(--muted)}
+.caption b{color:var(--ink);font-weight:600}
+h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:56px;line-height:1;margin:0 0 12px}
+.pitch{font-size:19px;margin:0 0 16px;max-width:54ch}
+h3{font-size:14px;font-weight:600;margin:24px 0 8px;color:var(--muted)}
+ol,ul{margin:0;padding-left:1.25em;max-width:62ch}
+li{margin-bottom:4px}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:36px}
+.cols h3{margin-top:0;color:var(--ink);font-size:16px}
+.cols p{margin:0 0 8px}
+table.bom{border-collapse:collapse;width:100%;font-size:15px}
+table.bom td{padding:5px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+table.bom td:first-child{width:2.4em;font-weight:600;font-variant-numeric:tabular-nums}
+code{font-size:.9em;background:rgba(127,127,127,.12);padding:1px 5px;border-radius:4px}
+.next{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:20px 22px;margin-top:40px;max-width:780px}
+.next h3{margin-top:0;color:var(--ink);font-size:16px}
+.next p{margin:0}
+@media (max-width:860px){
+  .machine-head,.pair{grid-template-columns:1fr;gap:24px}
+  .cols{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Glass V6 · 120°</h1>
+  <p>Revision of the reference animation (2026-11-12): the V opened from 90° to 120° (each bank 60° from the vertical), bore 0.30, piston 0.28, an open big end (r 0.085), a deeper plinth, the exhausts' bent stubs rising from the heads' tops beside the lower valves. Everything else as the reference. One loop is shown; pause to inspect any moment.</p>
+</header>
+<!-- ENGINE -->
+<section class="machine">
+  <div class="machine-head">
+    <div class="stage" data-scene="engine"><span class="hud" id="hud-engine">Crank 0°</span><button class="toggle" type="button">Pause</button><button class="toggle view" type="button" style="left:auto;right:12px">Rear view</button></div>
+      
+    <div>
+      <h2>Glass V6 · 120°</h2>
+      <p class="pitch">A glass 120° V6 on a wooden plinth. The two banks of three cylinders lean out from a glass crankcase. A single bent chrome crankshaft with three throws carries one rod from each bank on every throw. Each cylinder has its two valves set across the bank, ending in hammered caps. Chrome exhausts run along each side: one stub per cylinder rises from the top of its cylinder head inside the bore's ring, right next to the lower valve whose gas it takes — stubs and valves alternating along the bank — and, gently bent halfway, runs out into a collector; the collector's closed front end is short, its rear end open. A hammered pulley faces front. Nothing sits in the V, so you look straight down between the banks.</p>
+      <h3>How it moves</h3>
+      <ol>
+        <li>Each crank throw drives one piston in each bank, 120° apart because of the bank angle.</li>
+        <li>For every piston, the first valve opens at the top and closes at the bottom. During the next full up-and-down stroke neither valve moves. The second valve then opens at the bottom and closes at the top.</li>
+        <li>The six cylinders start their cycles at evenly spread points over two crank turns, so the caps ripple across both banks. The loop is 720°.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="cols">
+    <div>
+      <h3>Parts</h3>
+      <table class="bom">
+        <tr><td>1</td><td>Glass block: crankcase plus two banks at 90°</td></tr>
+        <tr><td>1</td><td>Crankshaft: one bent bar with 3 throws, front pulley</td></tr>
+        <tr><td>6</td><td>Pistons and connecting rods</td></tr>
+        <tr><td>12</td><td>Valves (head, stem, hammered cap)</td></tr>
+        <tr><td>2</td><td>Chrome exhausts: 3 gently bent stubs rising from the head's top beside the lower valves, into 1 collector per side (short closed front, open rear)</td></tr>
+        <tr><td>1</td><td>Wooden plinth</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Rig</h3>
+      <p>One Empty, <code>crank</code>, with X rotation keyed 0→720° and linear interpolation.</p>
+      <p>Pistons: parent each bank to an Empty rotated ±45° about X. In bank space the piston travel is <code>y + sqrt(l*l - z*z)</code>, where (y, z) is the crank pin seen from that bank.</p>
+      <p>Crankshaft: draw it as one curve (straight runs with right-angle jogs out to the throws), add a round bevel and fillet the corners. It is a single object.</p><p>Rods: Child Of the crank pin, plus a Damped Track to the wrist pin.</p>
+      <p>Valves: with p = (θ − TDC) mod 720 for each cylinder, the first valve lifts by <code>sin(π·p/180)</code> for p from 0 to 180, and the second by <code>sin(π·(p−540)/180)</code> for p from 540 to 720. Otherwise both stay shut, with exhaust from 160 to 380 and intake from 340 to 560. Firing angles are 0, 540, 180, 360 for cylinders 1 to 4.</p>
+    </div>
+    <div>
+      <h3>Look</h3>
+      <p>Wood: a medium-light beech or cherry with long vertical grain, satin finish, roughness 0.45.</p>
+      <p>Chrome: metallic 1, roughness 0.15, with a coarse Voronoi into Bump for the hammered caps and smooth everywhere else.</p>
+      <p>Glass: a Glass BSDF with IOR 1.45 and roughness 0. Bevel every edge so the tubes catch rim light. Render in Cycles; a white seamless backdrop with blind-stripe light completes the reference look.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const PI=Math.PI, TAU=2*PI;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const backOut=x=>{const c=2.2;x=clamp(x)-1;return 1+(c+1)*x*x*x+c*x*x};
+const wrapPI=a=>{a=(a+PI)%TAU;if(a<0)a+=TAU;return a-PI};
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+function canvasTex(draw,size=256){
+  const c=document.createElement('canvas');c.width=c.height=size;
+  const g=c.getContext('2d');draw(g,size);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;return t;
+}
+function seeded(seed){let s=seed;return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+function makeEnv(renderer){
+  const pm=new THREE.PMREMGenerator(renderer),es=new THREE.Scene();
+  const g=new THREE.SphereGeometry(10,32,16),cols=[];const p=g.attributes.position;
+  for(let i=0;i<p.count;i++){const y=p.getY(i)/10;const k=clamp(y*.5+.5);const v=k<.5?lerp(.12,.32,k*2):lerp(.32,.75,(k-.5)*2);const c=new THREE.Color().setRGB(v,v*.98,v*.95);cols.push(c.r,c.g,c.b)}
+  g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  es.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({side:THREE.BackSide,vertexColors:true})));
+  const pm1=new THREE.MeshBasicMaterial({color:new THREE.Color().setRGB(7,7,6.8),side:THREE.DoubleSide});
+  [[-6,6,4,4,1.2],[6,4,-2,1.5,6],[0,7,-6,7,1.2],[-7,2,-3,.8,5]].forEach(([x,y,z,w,h])=>{const q=new THREE.Mesh(new THREE.PlaneGeometry(w,h),pm1);q.position.set(x,y,z);q.lookAt(0,0,0);es.add(q)});
+  const tex=pm.fromScene(es,.02).texture;pm.dispose();return tex;
+}
+function makeMats(renderer){
+  const r=seeded(11);
+  const wood=canvasTex((g,n)=>{g.fillStyle='#D59A5C';g.fillRect(0,0,n,n);
+    for(let i=0;i<70;i++){const y=r()*n,a=.08+r()*.22,w=.6+r()*2.4,f=1+r()*3,p=r()*TAU;
+      g.strokeStyle=`rgba(140,80,35,${a})`;g.lineWidth=w;g.beginPath();
+      for(let x=0;x<=n;x+=4){const yy=y+Math.sin(x/n*TAU*f+p)*3;x?g.lineTo(x,yy):g.moveTo(x,yy)}g.stroke();}});
+  const woodV=canvasTex((g,n)=>{g.fillStyle='#C98A4E';g.fillRect(0,0,n,n);
+    for(let i=0;i<90;i++){const x=r()*n,a=.06+r()*.2,w=.6+r()*3,f=.5+r()*2,p=r()*TAU;
+      g.strokeStyle=`rgba(125,70,30,${a})`;g.lineWidth=w;g.beginPath();
+      for(let y=0;y<=n;y+=4){const xx=x+Math.sin(y/n*TAU*f+p)*4;y?g.lineTo(xx,y):g.moveTo(xx,y)}g.stroke();}});
+  const stone=canvasTex((g,n)=>{g.fillStyle='#D6D1C8';g.fillRect(0,0,n,n);
+    for(let i=0;i<2200;i++){const d=r()<.5;g.fillStyle=d?`rgba(110,105,98,${.05+r()*.12})`:`rgba(255,255,255,${.1+r()*.2})`;
+      g.beginPath();g.arc(r()*n,r()*n,.5+r()*3.5,0,TAU);g.fill();}});
+  const brass=canvasTex((g,n)=>{g.fillStyle='#C99F45';g.fillRect(0,0,n,n);
+    for(let i=0;i<900;i++){const d=r()<.55;g.fillStyle=d?`rgba(110,75,20,${.05+r()*.12})`:`rgba(255,230,150,${.06+r()*.12})`;
+      g.beginPath();g.arc(r()*n,r()*n,1+r()*5,0,TAU);g.fill();}});
+  const hammer=canvasTex((g,n)=>{g.fillStyle='#808080';g.fillRect(0,0,n,n);
+    for(let i=0;i<260;i++){const x=r()*n,y=r()*n,rad=4+r()*10;const gr=g.createRadialGradient(x,y,0,x,y,rad);
+      gr.addColorStop(0,'rgba(40,40,40,.5)');gr.addColorStop(1,'rgba(40,40,40,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,2*rad,2*rad);}});
+  hammer.encoding=THREE.LinearEncoding;
+  const env=makeEnv(renderer);
+  const S=o=>new THREE.MeshStandardMaterial(o);
+  return {env,
+    wood:S({map:wood,roughness:.6}), woodV:S({map:woodV,roughness:.5,envMap:env,envMapIntensity:.25}),
+    stone:S({map:stone,roughness:.85}),
+    brass:S({map:brass,roughness:.36,metalness:.35}),
+    chrome:S({color:0xC9CDD2,metalness:1,roughness:.14,envMap:env,envMapIntensity:1.1}),
+    chromeH:S({color:0xC9CDD2,metalness:1,roughness:.2,envMap:env,envMapIntensity:1.1,bumpMap:hammer,bumpScale:.035}),
+    steel:S({color:0xA9AEB4,roughness:.3,metalness:.55}),
+    dark:S({color:0x55595F,roughness:.45,metalness:.5}),
+    iron:S({color:0x3A3B3E,roughness:.65,metalness:.3}),
+    glass:new THREE.MeshPhysicalMaterial({color:0xffffff,metalness:0,roughness:.03,transparent:true,opacity:.26,envMap:env,envMapIntensity:1.6,clearcoat:1,clearcoatRoughness:.02,depthWrite:false,side:THREE.DoubleSide}),
+    leaf:S({color:0x5F8A3E,roughness:.7,flatShading:true}),
+    bark:S({color:0x6E5038,roughness:.85}),
+    soil:S({color:0x5B4433,roughness:1}),
+    acorn:S({color:0x9A6A35,roughness:.5}),
+  };
+}
+function floorMat(){
+  const t=canvasTex((g,n)=>{g.fillStyle='#ECEAE6';g.fillRect(0,0,n,n);
+    g.save();g.translate(n/2,n/2);g.rotate(-0.6);
+    for(let i=-14;i<14;i++){const y=i*62;const gr=g.createLinearGradient(0,y,0,y+40);
+      gr.addColorStop(0,'rgba(110,100,90,0)');gr.addColorStop(.5,'rgba(110,100,90,.09)');gr.addColorStop(1,'rgba(110,100,90,0)');
+      g.fillStyle=gr;g.fillRect(-n,y,2*n,40);}
+    g.restore();},1024);
+  t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;
+  return new THREE.MeshStandardMaterial({map:t,roughness:1});
+}
+function sh(m){m.castShadow=true;m.receiveShadow=true;return m}
+function rrect(w,d,r){const s=new THREE.Shape(),x=w/2,y=d/2;
+  s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.absarc(x-r,-y+r,r,-PI/2,0);s.lineTo(x,y-r);s.absarc(x-r,y-r,r,0,PI/2);
+  s.lineTo(-x+r,y);s.absarc(-x+r,y-r,r,PI/2,PI);s.lineTo(-x,-y+r);s.absarc(-x+r,-y+r,r,PI,1.5*PI);return s}
+function extrude(shape,h,mat,b=0.03){
+  const g=new THREE.ExtrudeGeometry(shape,{depth:Math.max(.001,h-2*b),bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:3,curveSegments:24});
+  g.rotateX(-PI/2);g.translate(0,b,0);return sh(new THREE.Mesh(g,mat));
+}
+function box(w,h,d,mat){return sh(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat))}
+function cyl(rt,rb,h,mat,seg=48){return sh(new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat))}
+function cylX(r,len,mat,seg=32){const m=cyl(r,r,len,mat,seg);m.rotation.z=PI/2;return m}
+function rectPath(x0,y0,x1,y1){const p=new THREE.Path();p.moveTo(x0,y0);p.lineTo(x0,y1);p.lineTo(x1,y1);p.lineTo(x1,y0);p.lineTo(x0,y0);return p}
+
+/* ================= ENGINE v6: glass 120° V6 on a wooden plinth (revision), chrome exhausts ================= */
+function engine(scene,m){
+  const T=4, rc=.2, l=.75, yc=.81, ALPHA=PI/3, deck=l+rc+.27, SR=.06;
+  const hl=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7,depthWrite:false});
+  const edgeM=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.8});
+  const tube=(pts,r,mat)=>sh(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),64,r,12,false),mat));
+  const glassBox=(w,h,d,parent,pos)=>{const g=new THREE.BoxGeometry(w,h,d);const mesh=new THREE.Mesh(g,m.glass);mesh.renderOrder=3;mesh.position.copy(pos);parent.add(mesh);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeM);e.position.copy(pos);parent.add(e);return mesh};
+  function build(perBank){
+    const root=new THREE.Group();scene.add(root);
+    const pitch=.7, nP=perBank, PX=[...Array(nP)].map((_,i)=>(i-(nP-1)/2)*pitch);
+    const OFF=[...Array(nP)].map((_,i)=>i*TAU/nP);
+    const LEN=nP*pitch+.35;
+    // crankcase + two inclined banks, all glass
+    glassBox(LEN,.9,1.25,root,new THREE.Vector3(0,yc-.1,0));
+    const banks=[-1,1].map(side=>{const g=new THREE.Group();g.position.set(0,yc,0);g.rotation.x=side*ALPHA;root.add(g);
+      const bh=deck+.16-.45;glassBox(LEN,bh,.78,g,new THREE.Vector3(0,.45+bh/2,0));
+      const st=new THREE.Mesh(new THREE.BoxGeometry(LEN-.04,.01,.01),hl);st.position.set(0,deck+.16,.39);g.add(st);
+      return {g,side};});
+    // crankshaft: one bent bar, each throw carries a rod from each bank
+    const crank=new THREE.Group();crank.position.y=yc;root.add(crank);
+    const barX=(x0,x1,y)=>{const c=cylX(SR,x1-x0,m.chrome,24);c.position.set((x0+x1)/2,y,0);crank.add(c)};
+    const knee=(x,y)=>{const s=sh(new THREE.Mesh(new THREE.SphereGeometry(SR,18,12),m.chrome));s.position.set(x,y,0);crank.add(s)};
+    let x0=-LEN/2-.15;const HW=.2;
+    const knee3=(x,y,z)=>{const s=sh(new THREE.Mesh(new THREE.SphereGeometry(SR,18,12),m.chrome));s.position.set(x,y,z);crank.add(s)};
+    PX.forEach((x,i)=>{const o=OFF[i],py=rc*Math.cos(o),pz=rc*Math.sin(o),a=x-HW,b=x+HW;barX(x0,a,0);
+      const pinB=cylX(SR,b-a,m.chrome,24);pinB.position.set(x,py,pz);crank.add(pinB);
+      [a,b].forEach(xx=>{const g=new THREE.Group();g.position.x=xx;g.rotation.x=o;const arm=cyl(SR,SR,rc,m.chrome,20);arm.position.y=rc/2;g.add(arm);crank.add(g);knee3(xx,0,0);knee3(xx,py,pz)});x0=b;});
+    barX(x0,LEN/2+.1,0);
+    // front pulley (at -x, facing the viewer like the reference) and rear cap
+    const pul=cylX(.34,.1,m.chromeH,64);pul.position.x=-LEN/2-.2;crank.add(pul);
+    const pg=cylX(.24,.11,m.dark,48);pg.position.x=-LEN/2-.2;crank.add(pg);
+    const ph=cylX(.08,.13,m.chrome,24);ph.position.x=-LEN/2-.2;crank.add(ph);
+    const pd=cylX(.04,.13,m.chrome,12);pd.position.set(-LEN/2-.21,.15,0);crank.add(pd);
+    const rcap=cylX(.12,.06,m.chrome);rcap.position.x=LEN/2+.12;crank.add(rcap);
+    [-1,1].forEach(sx=>{const b=cylX(.13,.05,m.chrome,40);b.position.set(sx*(LEN/2+.025),yc,0);root.add(b)});
+    // cylinders: bank A (side -1) offset -x, bank B (+1) offset +x on the same pin
+    const cyls=[];
+    banks.forEach(({g,side})=>{PX.forEach((px,i)=>{
+      const x=px+side*.1;
+      const rod=new THREE.Group();g.add(rod);
+      const shank=box(.06,l,.1,m.chrome);shank.position.y=l/2;rod.add(shank);
+      {const be=new THREE.Shape();be.moveTo(.085,0);be.absarc(0,0,.085,0,PI,false);be.lineTo(-.06,0);be.absarc(0,0,.06,PI,0,true);be.lineTo(.085,0);const bg=new THREE.ExtrudeGeometry(be,{depth:.08,bevelEnabled:false,curveSegments:20});bg.rotateY(PI/2);bg.translate(-.04,0,0);rod.add(sh(new THREE.Mesh(bg,m.chrome)));}const se=cylX(.06,.08,m.chrome);se.position.y=l;rod.add(se);
+      const piston=new THREE.Group();g.add(piston);
+      const pb=cyl(.28,.28,.32,m.chrome,40);pb.position.y=.07;piston.add(pb);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.281,.007,6,40),m.dark);ring.rotation.x=PI/2;ring.position.y=.18;piston.add(ring);
+      const bore=new THREE.Mesh(new THREE.CylinderGeometry(.30,.30,deck-.55,40,1,true),m.glass);bore.position.set(x,.55+(deck-.55)/2,0);bore.renderOrder=2;g.add(bore);
+      const dr=new THREE.Mesh(new THREE.TorusGeometry(.30,.012,6,40),m.chrome);dr.rotation.x=PI/2;dr.position.set(x,deck,0);g.add(dr);
+      const valves=[-1,1].map(vs=>{const vg=new THREE.Group();vg.position.set(x,deck,vs*.1);vg.rotation.x=vs*.3;g.add(vg);
+        const v=new THREE.Group();vg.add(v);
+        const vh=cyl(.08,.065,.03,m.chrome,28);vh.position.y=-.018;v.add(vh);
+        const stem=cyl(.018,.018,.5,m.chrome,10);stem.position.y=.24;v.add(stem);
+        const cap=cyl(.085,.085,.045,m.chromeH,32);cap.position.y=.49;v.add(cap);
+        const grom=new THREE.Mesh(new THREE.TorusGeometry(.035,.01,8,20),m.chrome);grom.rotation.x=PI/2;grom.position.y=.165/Math.cos(.3);vg.add(grom);
+        return v;});
+      // exhaust header: from the outer side of the head, down to a collector along the block
+      const hp=[new THREE.Vector3(x,deck-.12,side*.39),new THREE.Vector3(x,deck-.2,side*.62),new THREE.Vector3(x+side*.05,deck-.55,side*.72)];
+      cyls.push({x,side,pin:i,g,rod,piston,valves,hp});
+    });});
+    // exhausts in chrome, built in each bank's own frame (revision, the owner's sketch): per cylinder a stub rises from the HEAD's TOP face INSIDE the
+    // bore's ring, next to the LOWER (outer) valve but offset along the crank, on its FRONT side (−0.17), so stubs and valves alternate along the bank — the valves sit
+    // between the stubs; each stub is one pipe, slightly bent halfway, running out and a little down into the collector. The collector's closed front
+    // (the dead end) stops just past the first stub; the rear end open. Measured: a stub 0.035 (4.9 mm) clear of its valve's cap along x at every
+    // height — so the exhaust can come straight DOWN onto the top face
+    banks.forEach(({g,side})=>{
+      const top=deck+.16, dx=-.17, zs=.15, r=.05, yc2=1.48, zc=.65, R=.085;
+      const mine=cyls.filter(c=>c.side===side);
+      mine.forEach(c=>{
+        const x=c.x+dx;
+        const fl=cyl(.065,.065,.02,m.chrome,24);fl.position.set(x,top+.01,side*zs);g.add(fl);
+        const pts=[new THREE.Vector3(x,top,side*zs),new THREE.Vector3(x,top+.08,side*(zs+.03)),new THREE.Vector3(x,top+.14,side*(zs+.2)),new THREE.Vector3(x,yc2+.01,side*(zc-.12)),new THREE.Vector3(x,yc2,side*zc)];
+        g.add(sh(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),40,r,16,false),m.chrome)));
+      });
+      const x0=Math.min(...mine.map(c=>c.x))+dx-.14, x1=(LEN-.1)/2, cl=x1-x0, cz=side*zc;
+      const outer=sh(new THREE.Mesh(new THREE.CylinderGeometry(R,R,cl,32,1,true),new THREE.MeshStandardMaterial({color:m.chrome.color,metalness:1,roughness:.14,envMap:m.chrome.envMap,envMapIntensity:1.1,side:THREE.DoubleSide})));
+      outer.rotation.z=PI/2;outer.position.set((x0+x1)/2,yc2,cz);g.add(outer);
+      const inner=new THREE.Mesh(new THREE.CylinderGeometry(R-.014,R-.014,cl,32,1,true),new THREE.MeshStandardMaterial({color:0x2A2C30,roughness:.5,metalness:.4,side:THREE.BackSide}));
+      inner.rotation.z=PI/2;inner.position.set((x0+x1)/2,yc2,cz);g.add(inner);
+      const lip=new THREE.Mesh(new THREE.RingGeometry(R-.014,R,32),m.chrome);lip.rotation.y=PI/2;lip.position.set(x1,yc2,cz);g.add(lip);
+      const cap=sh(new THREE.Mesh(new THREE.SphereGeometry(R,24,12),m.chrome));cap.scale.x=.6;cap.position.set(x0,yc2,cz);g.add(cap);
+    });
+    // wooden plinth, same language as the earlier mount
+    const pl=extrude(rrect(LEN+.9,3.5,.3),yc-.55,m.woodV,.015);root.add(pl);
+    // firing order: spread TDC events evenly over 720°
+    const tdc=c=>{const pinA=OFF[c.pin],bank=c.side*ALPHA;return((bank-pinA)*180/PI%360+360)%360;};
+    const sorted=[...cyls].sort((a,b)=>tdc(a)-tdc(b));
+    sorted.forEach((c,k)=>{c.fire=(tdc(c)+(k%2)*360)%720;}); // each cycle starts at that cylinder's top dead centre
+    return{root,update(thDeg){
+      const th=thDeg*PI/180;crank.rotation.x=th;
+      cyls.forEach(c=>{
+        const a=th+OFF[c.pin];const cy=rc*Math.cos(a),cz=rc*Math.sin(a);
+        const phi=c.side*ALPHA;const ly=cy*Math.cos(phi)+cz*Math.sin(phi),lz=-cy*Math.sin(phi)+cz*Math.cos(phi);
+        const s=ly+Math.sqrt(l*l-lz*lz);
+        c.piston.position.set(c.x,s,0);c.rod.position.set(c.x,ly,lz);c.rod.rotation.x=Math.atan2(-lz,s-ly);
+        const ps=((thDeg-c.fire)%720+720)%720;
+        c.valves[0].position.y=-.07*(ps<180?Math.sin(PI*ps/180):0);
+        c.valves[1].position.y=-.07*(ps>540?Math.sin(PI*(ps-540)/180):0);
+      });
+    }};
+  }
+  const v6=build(3);
+  const hud=document.getElementById('hud-engine');
+  return{T,target:[.05,.95,0],size:2.7,dir:[-.95,.62,1],update(t){
+    const thDeg=720*t/T;v6.update(thDeg);
+    if(hud)hud.textContent=`Crank ${Math.round(thDeg)%720}°`;
+  }};
+}
+
+/* ================= MILL v10: oil-rig pumpjack turned 90°, beam swinging in the crank's plane ================= */
+function mill(scene,m){
+  const T=10, REVS=4;
+  const ys=.9, XW=-1.5, Rw=.85, XC=-.2, rc=.22, ZC=.32;
+  const XT=XC+.08, L=.6, a=.75, RH=.8;                    // pitman length, tail arm, horsehead radius
+  const ZP=a, YP=ys+L, ZH=ZP+RH, XH=XT;                   // pivot above the crank line, pump under the horsehead
+  const stripes=(dir)=>canvasTex((g,n)=>{g.fillStyle='#7FB7E0';g.fillRect(0,0,n,n);g.fillStyle='rgba(255,255,255,.35)';
+      for(let i=0;i<6;i++){dir==='x'?g.fillRect(i*n/6,0,n/18,n):g.fillRect(0,i*n/6,n,n/18)}},128);
+  const wM=(t,o)=>new THREE.MeshStandardMaterial({map:t,transparent:true,opacity:o,roughness:.1,depthWrite:false});
+  // water
+  const st=stripes('z');st.repeat.set(1,8);
+  const stream=new THREE.Mesh(new THREE.BoxGeometry(.62,.08,4.4),wM(st,.55));stream.position.set(XW,.04,0);stream.renderOrder=2;scene.add(stream);
+  const bx=stripes('x');const bLen=XH-.1-(XW+.31);bx.repeat.set(bLen*2,1);
+  const branch=new THREE.Mesh(new THREE.BoxGeometry(bLen,.06,.22),wM(bx,.7));branch.position.set(XW+.31+bLen/2,.03,ZH);branch.renderOrder=2;scene.add(branch);
+  // wheel: hub, six full-length radial paddles, two rims
+  const wheel=new THREE.Group();wheel.position.set(XW,ys,0);scene.add(wheel);
+  [-.17,.17].forEach(x=>{const rim=sh(new THREE.Mesh(new THREE.TorusGeometry(Rw-.03,.035,8,64),m.wood));rim.rotation.y=PI/2;rim.position.x=x;wheel.add(rim);});
+  const r0=.12,r1=Rw+.02,pl=r1-r0;
+  for(let k=0;k<6;k++){const an=k*TAU/6;const p=box(.36,pl,.05,m.wood);p.position.set(0,(r0+pl/2)*Math.cos(an),(r0+pl/2)*Math.sin(an));p.rotation.x=an;wheel.add(p);}
+  wheel.add(cylX(.15,.42,m.wood));
+  // shaft and small wheel
+  const shaft=new THREE.Group();shaft.position.set(0,ys,0);scene.add(shaft);
+  const x0=XW-.62,x1=XC-.02;const sb=cylX(.065,x1-x0,m.wood);sb.position.x=(x0+x1)/2;shaft.add(sb);
+  const disc=cylX(.32,.08,m.wood,48);disc.position.x=XC;shaft.add(disc);
+  const cw=box(.08,.2,.42,m.iron);cw.position.set(XC,0,-.16);shaft.add(cw);
+  const pin=cylX(.04,.16,m.iron);pin.position.set(XC+.08,0,rc);shaft.add(pin);
+  const PT=.06;
+  [XW-.55,XW+.55].forEach(x=>{const pw=box(.54,PT,.54,m.wood);pw.position.set(x,PT/2,0);scene.add(pw);
+    const h=ys+.18-PT;const bk=box(.4,h,.4,m.stone);bk.position.set(x,PT+h/2,0);scene.add(bk)});
+  // samson post beside the beam
+  // samson post: a plain square pyramid (no bracing) on a wooden plate, pivot hub on top
+  const ppl=box(.9,PT,.9,m.wood);ppl.position.set(XT,PT/2,ZP);scene.add(ppl);
+  const pyH=YP-.1-PT;const pyr=sh(new THREE.Mesh(new THREE.CylinderGeometry(.11,.5,pyH,4,1),m.stone));pyr.rotation.y=PI/4;pyr.position.set(XT,PT+pyH/2,ZP);scene.add(pyr);
+  const hub=cylX(.13,.22,m.steel,40);hub.position.set(XT,YP,ZP);scene.add(hub);
+  // beam along z, swinging in the same plane as the small wheel
+  const beam=new THREE.Group();beam.position.set(XT,YP,ZP);scene.add(beam);
+  const bb=box(.13,.14,a+RH-.25,m.wood);bb.position.z=(RH-.25-a)/2;beam.add(bb);
+  // horsehead after the reference, slimmer and in a lighter grey
+  const headMat=new THREE.MeshStandardMaterial({color:0x9A9EA4,roughness:.45,metalness:.35});
+  const hs=new THREE.Shape();const B0=RH-.26,TOP=.2,LO=-.5;
+  hs.moveTo(B0,.14);
+  hs.quadraticCurveTo(B0+.01,TOP,B0+.07,TOP);
+  hs.lineTo(RH-.08,TOP+.01);
+  hs.quadraticCurveTo(RH-.015,TOP+.01,RH*Math.cos(.2),RH*Math.sin(.2));
+  for(let i=1;i<=20;i++){const t=.2-(.2-LO)*i/20;hs.lineTo(RH*Math.cos(t),RH*Math.sin(t));}
+  hs.quadraticCurveTo(RH*Math.cos(LO)-.04,RH*Math.sin(LO)-.05,RH*Math.cos(LO)-.1,RH*Math.sin(LO)-.01);
+  hs.lineTo(B0+.02,.03);
+  hs.quadraticCurveTo(B0-.01,.08,B0,.14);
+  const hg=new THREE.ExtrudeGeometry(hs,{depth:.11,bevelEnabled:true,bevelThickness:.015,bevelSize:.015,bevelSegments:3,curveSegments:16});
+  hg.rotateY(-PI/2);hg.translate(.055,0,0);
+  beam.add(sh(new THREE.Mesh(hg,headMat)));
+  const tailJ=cylX(.05,.16,m.iron);tailJ.position.z=-a;beam.add(tailJ);
+  // short grey pitman with ball joints
+  const pit=new THREE.Group();scene.add(pit);
+  const pr=box(.06,L,.06,m.iron);pr.position.y=L/2;pit.add(pr);
+  pit.add(cylX(.05,.12,m.iron));
+  // cable off the horsehead, bridle, pump rod, pump
+  const cable=cyl(.008,.008,1,m.dark,6);scene.add(cable);
+  const bridle=sh(new THREE.Mesh(new THREE.SphereGeometry(.055,20,12),m.iron));scene.add(bridle);
+  const rodLen=.7, YB0=YP-.5;
+  const PH=YB0-RH*.34-.1;
+  const pbody=cyl(.12,.13,PH,m.brass,32);pbody.position.set(XH,PH/2,ZH);scene.add(pbody);
+  const pcol=cyl(.14,.14,.04,m.brass,32);pcol.position.set(XH,PH,ZH);scene.add(pcol);
+  const prod=cyl(.022,.022,rodLen,m.steel,12);scene.add(prod);
+  // pipe, planter, tree
+  const tx=XH+.8, soilY=.5, ZT=ZH;
+  const pipe=cylX(.025,tx-.3-XH-.12,m.brass,12);pipe.position.set((XH+.12+tx-.3)/2,.22,ZT);scene.add(pipe);
+  const planter=box(.6,soilY,.5,m.wood);planter.position.set(tx,soilY/2,ZT);scene.add(planter);
+  const soil=box(.54,.03,.44,m.soil);soil.position.set(tx,soilY,ZT);scene.add(soil);
+  const tree=new THREE.Group();tree.position.set(tx,soilY+.01,ZT);scene.add(tree);
+  const trunkG=new THREE.CylinderGeometry(.75,1,1,10);trunkG.translate(0,.5,0);
+  const trunk=sh(new THREE.Mesh(trunkG,m.bark));tree.add(trunk);
+  const canopy=new THREE.Group();tree.add(canopy);
+  [[0,0,0,1],[.55,-.25,.2,.75],[-.5,-.2,-.15,.8],[.1,.35,-.1,.7]].forEach(([x,y,z,s])=>{const b=sh(new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),m.leaf));b.position.set(x,y,z);canopy.add(b)});
+  const sprout=new THREE.Group();tree.add(sprout);
+  [-1,1].forEach(d=>{const lf=sh(new THREE.Mesh(new THREE.SphereGeometry(.05,12,8),m.leaf));lf.scale.set(1.3,.35,.7);lf.position.set(d*.045,.16,0);lf.rotation.z=d*.4;sprout.add(lf)});
+  const P=[[0,0,0,0],[.17,.012,0,1],[.5,.026,.18,0],[.85,.05,.31,0]];
+  const setTree=(h,r,c,sp)=>{trunk.scale.set(Math.max(.001,r),Math.max(.001,h),Math.max(.001,r));canopy.position.y=h+c*.5;canopy.scale.setScalar(Math.max(.001,c));canopy.visible=c>.005;sprout.scale.setScalar(Math.max(.001,sp));sprout.visible=sp>.01;trunk.visible=h>.005};
+  const mt=new THREE.MeshBasicMaterial({color:0x5F8A3E}),rs=seeded(9),bits=[];
+  for(let i=0;i<12;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,.03),mt);scene.add(b);const an=rs()*TAU;bits.push({m:b,vx:Math.cos(an)*(.6+rs()*.8),vz:Math.sin(an)*(.6+rs()*.8),vy:.8+rs()*1.2})}
+  // beam angle b (positive = horsehead down) from the fixed pitman length, all in the y-z plane
+  const solve=th=>{const Py=ys-rc*Math.sin(th),Pz=rc*Math.cos(th);let b=0,Ez=0,Ey=YP;
+    for(let i=0;i<8;i++){Ez=ZP-a*Math.cos(b);Ey=Py+Math.sqrt(Math.max(0,L*L-(Ez-Pz)**2));b=Math.asin(clamp((Ey-YP)/a,-1,1));}
+    return{b,Py,Pz,Ey,Ez}};
+  // pump bottom = horsehead lowest = b largest
+  let thLow=0,gl=-9;for(let i=0;i<360;i++){const t=i/360*TAU,b=solve(t).b;if(b>gl){gl=b;thLow=t}}
+  const b0=thLow<PI?thLow+TAU:thLow;const bottoms=[b0-TAU,b0,b0+TAU].map(x=>x<PI?x+TAU:x).sort((p,q)=>p-q);
+  const POP=bottoms[2]+PI*.6;
+  const hud=document.getElementById('hud-mill');
+  return{T,target:[-.4,.9,.5],size:2.4,dir:[-.85,.6,1],update(tt){
+    const th=REVS*TAU*tt/T;
+    wheel.rotation.x=th;shaft.rotation.x=th;
+    st.offset.y=-(tt/T)*16;bx.offset.x=-(tt/T)*12;
+    const s=solve(th);beam.rotation.x=s.b;
+    pit.position.set(XT,s.Py,s.Pz);pit.rotation.x=Math.atan2(s.Ez-s.Pz,s.Ey-s.Py);
+    // cable leaves the curved face vertically; the arc unwinds it as the head goes down
+    const yb=YB0-RH*s.b, yt=YP;
+    cable.position.set(XH,(yt+yb)/2,ZH);cable.scale.y=Math.max(.01,yt-yb);
+    bridle.position.set(XH,yb,ZH);prod.position.set(XH,yb-rodLen/2,ZH);
+    let stage=0;bottoms.forEach(x=>{if(th>=x)stage++});
+    tree.visible=true;tree.scale.setScalar(1);
+    if(th>=POP){const u=seg(th,POP,POP+.25);setTree(...P[3]);tree.scale.setScalar(1+.2*u);tree.visible=u<1;}
+    else{let k=-1;bottoms.forEach((x,i)=>{if(th>=x&&th<x+.45)k=i});
+      if(k>=0){const u=seg(th,bottoms[k],bottoms[k]+.45),e=backOut(u),q=P[k],n=P[k+1];
+        setTree(lerp(q[0],n[0],e),lerp(q[1],n[1],e),lerp(q[2],n[2],e),lerp(q[3],n[3],Math.min(1,u*1.5)));}
+      else setTree(...P[stage]);}
+    const tau=(th-POP)/(REVS*TAU)*T;
+    if(tau>=0&&tau<.5)bits.forEach(b=>{b.m.visible=true;b.m.position.set(tx+b.vx*tau,soilY+1.0+b.vy*tau-4.9*tau*tau,ZT+b.vz*tau*.6)});
+    else bits.forEach(b=>b.m.visible=false);
+    let label='Breath';bottoms.forEach((x,i)=>{if(th>=x&&th<POP)label=`Stroke ${i+1} of 3`});
+    if(hud)hud.textContent=label;
+  }};
+}
+function cylZ(r,len,mat,seg=32){const c=cyl(r,r,len,mat,seg);c.rotation.x=PI/2;return c}
+
+const SCENES={engine,mill};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stages=[];
+document.querySelectorAll('.stage').forEach(el=>{
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  el.prepend(renderer.domElement);
+  const scene=new THREE.Scene();scene.background=new THREE.Color(0xECEAE6);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(24,24),floorMat());floor.rotation.x=-PI/2;floor.receiveShadow=true;scene.add(floor);
+  scene.add(new THREE.HemisphereLight(0xffffff,0xd9cfc2,.62));
+  const sun=new THREE.DirectionalLight(0xfff4e8,.75);sun.position.set(-3,8,4.5);sun.castShadow=true;
+  Object.assign(sun.shadow.camera,{left:-6,right:6,top:6,bottom:-6,near:.5,far:24});
+  sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0004;sun.shadow.normalBias=.02;scene.add(sun);
+  const def=SCENES[el.dataset.scene](scene,makeMats(renderer),el.dataset.variant);
+  const cam=new THREE.OrthographicCamera(-def.size,def.size,def.size,-def.size,.1,80);
+  const tg=new THREE.Vector3(...def.target);
+  // (revision) a REAR view — the camera mirrored front-to-back and side-to-side, to see the exhausts join behind the engine; #rear opens in it
+  let rear=location.hash==='#rear';
+  const aim=()=>{const d=new THREE.Vector3(...def.dir);if(rear){d.x=-d.x;d.z=-d.z}cam.position.copy(tg).add(d.normalize().multiplyScalar(16));cam.lookAt(tg)};aim();
+  const vb=el.querySelector('.view');if(vb){const vl=()=>{vb.textContent=rear?'Front view':'Rear view'};vl();vb.addEventListener('click',()=>{rear=!rear;aim();vl();s.dirty=true})}
+  const s={el,renderer,scene,cam,def,t:reduce?def.T*.3:0,paused:reduce,visible:false,dirty:true};
+  const size=()=>{const w=el.clientWidth;renderer.setSize(w,w,false);s.dirty=true};
+  new ResizeObserver(size).observe(el);size();
+  new IntersectionObserver(e=>{s.visible=e[0].isIntersecting;s.dirty=true},{rootMargin:'100px'}).observe(el);
+  const btn=el.querySelector('.toggle');
+  const label=()=>{btn.textContent=s.paused?'Play':'Pause';btn.setAttribute('aria-pressed',String(s.paused))};
+  btn.addEventListener('click',()=>{s.paused=!s.paused;label()});label();
+  if(def.setMount){document.querySelectorAll('[data-mount]').forEach(b=>b.addEventListener('click',()=>{def.setMount(b.dataset.mount);s.dirty=true;
+    document.querySelectorAll('[data-mount]').forEach(o=>o.setAttribute('aria-pressed',String(o===b)))}))}
+  stages.push(s);
+});
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;
+  for(const s of stages){
+    if(!s.visible)continue;
+    if(!s.paused)s.t=(s.t+dt)%s.def.T;
+    if(!s.paused||s.dirty){s.def.update(s.t);s.renderer.render(s.scene,s.cam);s.dirty=false}
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

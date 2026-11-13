@@ -201,7 +201,7 @@ quietly would cost the next device session.
 ⭐⭐ **The frame meter and AUTO shadows** (`D138`; the tablet: 10 fps, 20 without shadows): the HUD's `frame`
 line is the median and p95 of 120 frames (`core/frame_meter.ts`); CAMERA's *shadows*: `0` off, `1` on, `2`
 **auto** (default) — measured 3 s, then OFF for the session if the median misses `autoShadowBudgetMs` (33 ms),
-latched (`core/auto_shadow.ts`). ⭐ 10-15: OFF keeps the orbited piece's shadow (one light, one map; `applyShadowLevel`).
+latched (`core/auto_shadow.ts`). ⭐ 10-15: OFF keeps the orbited piece's shadow (`applyShadowLevel`). fps across devices → `spec/FRAME_RATE.md`.
 
 ## Queued
 
