@@ -13,8 +13,14 @@ name: Deploy to GitHub Pages
 # not be a separate webpage .../proto/ any longer but be what the main merge from and serve on .../3d_assembly_game/.
 # There is no need to have repository variables any longer from this 1.0.62- branch onwards"*). The branch that
 # triggered the run (main, on a push) is built into the site's root -- since 1.0.62- that IS the orbiting prototype.
-# ⛔ The second build at /proto/ (2026-10-01), its `proto_branch` input and the PROTO_BRANCH variable are retired.
 # See Claude/50_BUILD_DEPLOY/DEPLOY_GITHUB_PAGES.md.
+#
+# ⭐⭐ A PROTOTYPE AT /proto/ AGAIN (2026-11-13, the owner: *"for the deploy in github webpage, create this as a prototype
+# (as we did in a couple of previous branches) so I can test it independently of main"*). ⛔ No repository variable (the
+# 2026-10-10 rule): the branch is named in the FILE `.github/proto_branch` on main (its first line; empty, absent or
+# `none`: no /proto/). The root is main's, untouched; the prototype is built from its own branch, gated by its own
+# `npm run verify`, into /proto/ (`base: "./"` lets a build live in a subfolder). Every deploy replaces the whole site,
+# so as long as the file names a branch, every deploy of main rebuilds /proto/ beside it.
 
 on:
   push:
@@ -32,6 +38,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── the ROOT: the branch that triggered the run (main, on a push) ──
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -55,13 +62,84 @@ jobs:
       # ⭐ (2026-11-04, the audit) `vite build` alone: `npm run verify` above already typechecked.
       - run: npx vite build
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+
+  # ── /proto/: the branch named in `.github/proto_branch`, when one is ──
+  proto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      branch: ${{ steps.name.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: name
+        name: The prototype's branch (.github/proto_branch)
+        run: |
+          b=""
+          if [ -f .github/proto_branch ]; then b="$(head -n 1 .github/proto_branch | tr -d '\r' | xargs)"; fi
+          if [ "$b" = "none" ]; then b=""; fi
+          echo "branch=$b" >> "$GITHUB_OUTPUT"
+          echo "prototype branch: '${b}'"
+
+      - if: steps.name.outputs.branch != ''
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.name.outputs.branch }}
+
+      - if: steps.name.outputs.branch != ''
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: steps.name.outputs.branch != ''
+        run: npm ci
+
+      - if: steps.name.outputs.branch != ''
+        name: Typecheck and golden vectors (prototype)
+        run: npm run verify
+
+      # ⛔ The build id is read from GITHUB_SHA (vite.config.ts), which is the TRIGGERING commit -- main's -- so /proto/
+      # was labelled with main's sha (seen live, 2026-10-01). Its own checkout's commit, so the HUD's `build` line names
+      # the code on screen.
+      - if: steps.name.outputs.branch != ''
+        name: Build (labelled with its own commit)
+        run: GITHUB_SHA="$(git rev-parse HEAD)" npx vite build
+
+      - if: steps.name.outputs.branch != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: proto
+          path: dist
+
+  # ── the site assembled: the root, and /proto/ inside it ──
+  package:
+    needs: [build, proto]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - if: needs.proto.outputs.branch != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: proto
+          path: dist/proto
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
