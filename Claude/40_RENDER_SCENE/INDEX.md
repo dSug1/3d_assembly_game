@@ -37,7 +37,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `alignment_wiring.ts` | `alignFollowerToPioneer`, release, seat/unseat |
 | `gizmo.ts` | the axis gizmo (⛔ `highlight_pass.ts` deleted with the white highlights and the swing, `D120`) |
 | `camera_rig.ts` | orbit, centre blend, reset, gesture frames |
-| `hud_paint.ts` · `tuning_menu.ts` | every readout line; every slider |
+| `hud_paint.ts` · `tuning_menu.ts` | every readout line; every slider (by subject → `spec/TUNING_MENU.md`) |
 | `sway_pass.ts` · `drive.ts` | the nudge and the spin; where a translation or depth step lands |
 | `seat_wiring.ts` | the snap, the seats, the unsnap feed, the cursor drag |
 | `pointer_wiring.ts` · `render_loop.ts` | every press/move/release; the per-frame order |
