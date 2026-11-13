@@ -167,8 +167,8 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
     const m = code("render/tuning_menu.ts");
-    const i = m.indexOf('title: "FACE-SPAN ORBIT SHARE"');
-    expect(i).toBeGreaterThan(m.indexOf('title: "CAMERA ORBIT AROUND CENTER"'));
+    const i = m.indexOf('title: "CALM ON A FACE"'); // ⭐ (2026-11-13) the menu by subject (`menu_layout.test.ts`)
+    expect(i).toBeGreaterThan(m.indexOf('title: "ORBIT"'));
     const sub = m.slice(i, m.indexOf("],", i));
     for (const k of ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]) expect(sub).toContain(`"${k}"`);
     const d = DEFAULT_CONFIG;

@@ -45,8 +45,8 @@ describe("⭐⭐⭐ the close-in gain — full far out, the contact's 1 : 1 at t
 describe("⭐⭐⭐ wired: around the assembly the finger's yaw AND pitch scaled by it; two sliders, validated", () => {
   it("⭐⭐⭐ the drag's dx and dy × `kd`, read at the approach's distance; the coast records the scaled steps", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm, st.asm?.radius ?? 0) : 1;");
-    expect(p).toContain("-db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag * kd), dyPx * share * kd);");
+    expect(p).toContain("const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm, st.asm?.radius ?? 0) : 1;"); // ⛔ (2026-11-13) × the leash's gain deleted (1)
+    expect(p).toContain("-db.dx * st.cfg.boxGainYaw * st.pieceYawGainDrag * kd), dyPx * share * kd);");
     expect(p.indexOf("const kd = asmOn")).toBeLessThan(p.indexOf("st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du);"));
   });
   it("⭐ the tunables: 0.6 m and 4 mm/mm by default (the owner on the device, 2026-11-12), validated, their sliders", () => {

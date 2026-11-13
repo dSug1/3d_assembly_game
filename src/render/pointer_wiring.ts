@@ -16,7 +16,7 @@ import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayK
 import { clampCameraRadiusM } from "../input/camera_radius";
 import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
-import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
+import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
 import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
@@ -282,7 +282,7 @@ export function forgetPointers(st: SceneState): void {
  * ⭐ §2 rule 1's ORBIT DRAG, one step — from empty space, and (prototype (green box)) from a finger on a piece locked in its goal.
  * ⭐ Prototype (the owner: *"invert the inputs direction for the box"* — *"and invert input directions for the camera orbit as
  * well"*): with a green box, the orbit drag turns the other way — the camera follows the box, so both orbits invert together;
- * its own gains, yaw and pitch (*"the green box orbits too fast"*), slower inside the leash (`boxDragGains`). ⚠ The zoom (pinch,
+ * its own gains, yaw and pitch (*"the green box orbits too fast"*) (⛔ 2026-11-13 slower inside the leash: deleted with the leash). ⚠ The zoom (pinch,
  * wheel) is unchanged.
  */
 export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample, dxOnly = false): void {
@@ -309,8 +309,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     }
     st.orbitMotion.tracker.push(s);
     st.orbitMotion.band.push(s);
-    // ⭐ the inside-the-leash gains (`greenDragGains`).
-    const g = greenDragGains(st);
+    // ⛔ (2026-11-13) the inside-the-leash gains (`greenDragGains`, 1 with the leash at 0) deleted with the leash
     const yaw0 = st.orbit.yaw;
     const v0 = st.orbit.elevation;
     // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
@@ -331,18 +330,18 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
     if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
     const fdy = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
-    const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch * g.pitch;
+    const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
-    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
+    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
     const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
     const vBefore = st.orbit.elevation;
     // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): around the assembly the orbit's yaw and pitch per mm of finger scaled
     // down with the piece's distance to the gizmo — full from `orbitGainFullM` out, at the contact the gizmo `orbitContactMmPerMm` on the surface per mm
-    const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation, g).yawDegPerMm, st.asm?.radius ?? 0) : 1;
+    const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm, st.asm?.radius ?? 0) : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * g.yaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);

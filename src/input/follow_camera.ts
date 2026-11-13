@@ -8,8 +8,8 @@
  *
  * ⭐ Two orbits about one centre. The BOX eases after the rig (`easeOrbit`). The CAMERA has its own (yaw, `v`), placed at
  * TWICE the rig's offset — twice the radius, twice the height. Per axis:
- * * **input MOVING — the LEASH**: while the box is within `leashRad` of the camera the camera stays; past it, it is dragged
- *   along, `leashRad` behind. Its speed is what that did.
+ * * **input MOVING — ON THE BOX** (⛔ 2026-11-13 the LEASH deleted — `cameraLeashDeg` 0 since 2026-10-02: within it the camera stayed,
+ *   past it it was dragged along that far behind). Its speed is what that did.
  * * **input STOPPED — the GLIDE**: a camera at rest stays where it is. A MOVING camera keeps its speed `v₀` and brakes
  *   EXPONENTIALLY (the owner: *"build with the simplified exponential"*): time constant `τ = D / v₀`, `D` its distance to
  *   where the box ends — which covers exactly `D`, the speed continuous at the stop. ⛔ No fixed time: it follows from the
@@ -67,9 +67,10 @@ export interface CameraOrbitState {
   readonly pitchVel: number;
 }
 
+/** ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero … Delete the functions which use them"*) the LEASH (`cameraLeashDeg`, 0 since 2026-10-02) and the
+ * SETTLE DELAY (`cameraSettleDelayMs`, 0) deleted: the camera on the box while the input moves, no window after it stops (`camera_follow_leash0.json`:
+ * 1.0.130's steps at 0, reproduced bit for bit). */
 export interface CameraOrbitParams {
-  readonly leashRad: number;
-  readonly settleDelayMs: number;
   /** ⭐ A release's catch-up from REST: the spring's time constant, ms. */
   readonly restTauMs: number;
 }
@@ -128,26 +129,7 @@ export function cameraOrbitAt(box: OrbitAt, nowMs: number, cfg: GestureConfig): 
   return { cam: box, yaw: axisAt(box.yaw, nowMs), pitch: axisAt(box.v, nowMs), yawVel: 0, pitchVel: 0 };
 }
 
-/**
- * ⭐ The pitch LEASH (an angle) as a distance in ring position `v`, for a camera at `camV` behind a box at `boxV`: how far from the
- * box, toward the camera, the pitch first differs from the box's by `leashRad` — found on that stretch (bisection), so it is exact
- * whatever the rings' shape. ⭐ If the whole stretch stays within the leash, the camera is inside it: the stretch itself (plus a
- * hair). `0` for no leash.
- */
-export function leashInV(cfg: GestureConfig, boxV: number, camV: number, leashRad: number): number {
-  if (!(leashRad > 0)) return 0;
-  const pb = pitchOf(cfg, boxV);
-  const off = (v: number) => Math.abs(pitchOf(cfg, v) - pb);
-  if (off(camV) <= leashRad) return Math.abs(boxV - camV) + 1e-9;
-  let near = boxV; // within the leash
-  let far = camV; // beyond it
-  for (let i = 0; i < 50; i++) {
-    const mid = (near + far) / 2;
-    if (off(mid) < leashRad) near = mid;
-    else far = mid;
-  }
-  return Math.abs(boxV - (near + far) / 2);
-}
+/* ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero … Delete the functions which use them"*) `leashInV` (the pitch leash in ring position) deleted with the leash. */
 
 /** ⭐ One step of a glide, integrated EXACTLY: `s = D − (D − s)·e^(−dt/τ)`; within a millidegree it lands. */
 function glideStep(g: Glide, dtMs: number): { glide: Glide | null; move: number; vel: number } {
@@ -209,7 +191,7 @@ function axisStep(
 ): { next: AxisState; move: number } {
   const changed = Math.abs(driverDelta) > 1e-9 || fingerMoving === true;
   const movedAt = changed ? nowMs : a.movedAt;
-  const window = fingerMoving === null ? p.settleDelayMs : Math.max(p.settleDelayMs, holdMs);
+  const window = fingerMoving === null ? 0 : Math.max(0, holdMs); // ⛔ (2026-11-13) no settle delay (`cameraSettleDelayMs` 0, deleted)
   const moving = movedAt === nowMs || nowMs - movedAt < window;
   const aligning = released || a.aligning;
   const base = { movedAt, lastDriver: driverAngle, lastBox: boxAngle, aligning };
@@ -217,8 +199,9 @@ function axisStep(
 
   if (moving && !released) {
     // ⭐ The LEASH. (A new input ends a realignment the release asked for.) ⛔ A camera pinned EXACTLY at the leash reads `leash + rounding`: under a nanoradian past it is no move.
-    if (Math.abs(gapToBox) > p.leashRad + 1e-9) {
-      const move = gapToBox - Math.sign(gapToBox) * p.leashRad;
+    // ⛔ (2026-11-13) no leash (`cameraLeashDeg` 0, deleted): the camera ON the box
+    if (Math.abs(gapToBox) > 1e-9) {
+      const move = gapToBox;
       return { next: { ...base, aligning: false, vel: move / dtMs, glide: null }, move };
     }
     // ⭐⭐ Inside it, a camera still carrying SPEED — a glide the input interrupted, or the leash's own pull a moment ago —
@@ -287,7 +270,7 @@ export function cameraOrbitStep(
   // any pitch above the top ring's 31.7°, clamped there, lagged the green piece by up to 2.4° even at leash 0, then snapped
   // back — the stair. `v` always moves one way. ⭐ The leash stays an ANGLE, converted to `v` EXACTLY on the stretch between the
   // camera and the box (`leashInV`).
-  const leashV = leashInV(cfg, box.v, s.cam.v, p.leashRad);
+  void cfg; // ⛔ (2026-11-13) the pitch leash's conversion (`leashInV`) deleted with the leash
   const q = axisStep(
     s.pitch,
     box.v - s.cam.v,
@@ -297,7 +280,7 @@ export function cameraOrbitStep(
     driver.v,
     nowMs,
     dtMs,
-    { ...p, leashRad: leashV },
+    p,
     finger === null ? null : finger.pitch,
     finger === null ? 0 : finger.holdMs,
     released,
@@ -364,26 +347,8 @@ export function easeOrbit(cur: OrbitZoom, target: OrbitZoom, dtMs: number, tauMs
   };
 }
 
-/**
- * ⭐⭐ prototype (green box) — **THE BOX IS SLOWER INSIDE THE LEASH** (the owner, 2026-10-01: *"reduce the gains while the green
- * box is within the leash zone because the green box is orbiting too fast, but maintain the orbit speed when it is beyond the
- * leash zone"*). Per axis, from how far the box is from the camera on that axis: `inside` with the box right in front of the
- * camera, ramped SMOOTHLY (smoothstep) to 1 at the leash edge and beyond. ⛔ Not a step at the edge — a gain that switched there
- * would lurch the box the moment the camera starts following. A leash of 0 has no inside: 1.
- */
-export function leashGain(gapRad: number, leashRad: number, inside: number): number {
-  if (!(leashRad > 0)) return 1;
-  const t = Math.min(1, Math.abs(gapRad) / leashRad);
-  return inside + (1 - inside) * t * t * (3 - 2 * t);
-}
-
-/** ⭐ Both axes' gains for the box's drag, from the box and the camera as they stand (yaw the short way, pitch in angle). */
-export function boxDragGains(cfg: GestureConfig, box: OrbitAt, cam: OrbitAt, leashRad: number, inside: number): { yaw: number; pitch: number } {
-  return {
-    yaw: leashGain(wrapPi(box.yaw - cam.yaw), leashRad, inside),
-    pitch: leashGain(pitchOf(cfg, box.v) - pitchOf(cfg, cam.v), leashRad, inside),
-  };
-}
+/* ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero … Delete the functions which use them"*) `leashGain` and `boxDragGains` — the box's drag slower inside the leash (`boxGainInsideLeash`) — deleted: with a leash of
+ * 0 there is no inside, the gains were 1 always (`boxGainInsideLeash`, 0.35, never applied). */
 
 /** ⭐ The green box's spring state: where it is, and how fast each channel moves (yaw rad/ms, `v` /ms, ln zoom /ms). */
 export interface OrbitSpring {
@@ -424,41 +389,28 @@ export function springOrbit(s: OrbitSpring, target: OrbitZoom, dtMs: number, tau
   };
 }
 
-/**
- * ⭐⭐ prototype (green box) — **THE CAMERA'S TIME LAG, ON TOP OF THE LEASH** (the owner, 2026-10-02: *"lag the camera orbit
- * behind the green piece orbit in whichever orbit direction … create time lag with slider on top of leash"*). The leash says
- * where the camera SHOULD be (`cameraOrbitStep`'s `cam`); the camera then EASES toward that, exponentially with time constant
- * `tauMs` (`cameraFollowMs`) — yaw the short way, in whichever direction it is moving. So a fast orbit opens a wider gap than
- * a slow one, and the gap closes by itself once the orbit stops. `tauMs = 0`: no lag, the camera is where the leash says.
- */
-export function cameraLag(shown: OrbitAt, wanted: OrbitAt, dtMs: number, tauMs: number): OrbitAt {
-  const k = ease(dtMs, tauMs);
-  return { yaw: shown.yaw + wrapPi(wanted.yaw - shown.yaw) * k, v: shown.v + (wanted.v - shown.v) * k };
-}
+/* ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero … Delete the functions which use them"*) `cameraLag` — the camera's time lag on top of the leash (`cameraFollowMs`, 0: the camera where the leash put it) —
+ * deleted. */
 
 /**
  * ⭐ prototype (green box) — **HOW MANY DEGREES OF ORBIT ONE MILLIMETRE OF FINGER GIVES** (the owner, 2026-10-02: *"compute somewhere
  * the delta yaw and pitch orbit degrees that a delta x or delta y position input provides"*). The orbit drag (`orbitDragStep`)
  * turns `dx` mm into `dx × gainOrbitYaw × boxGainYaw` rad of YAW — the same anywhere on the rings — and `dy` mm into
  * `dy × gainOrbitElevation × boxGainPitch` of the RING PARAMETER `v`, whose PITCH (`pitchOf`) is not linear in `v`: so the pitch
- * rate is the slope there (a central difference; one-sided at a ring's end — the slope going back inward, the only way `v` can move). `gains` are the
- * inside-the-leash factors (`boxDragGains`; 1 with no leash). Degrees per mm of `|dx|` and per mm of `v` increase (a finger moving
+ * rate is the slope there (a central difference; one-sided at a ring's end — the slope going back inward, the only way `v` can move). (⛔ 2026-11-13 its
+ * `gains` — the inside-the-leash factors, 1 with no leash — deleted with the leash.) Degrees per mm of `|dx|` and per mm of `v` increase (a finger moving
  * DOWN on the glass since the owner's dy inversion, 2026-10-04 — UP before): yaw positive; pitch SIGNED — ⚠ the pitch is not monotone along `Scene_1`'s waist
  * rings (it peaks at ±33.5° near v = 0.25 / 0.75 and comes back to ±31.7° at the outer rings), so near a ring's end the sign flips.
  */
-export function orbitDegPerMm(
-  cfg: GestureConfig,
-  v: number,
-  gains: { readonly yaw: number; readonly pitch: number } = { yaw: 1, pitch: 1 },
-): { readonly yawDegPerMm: number; readonly pitchDegPerMm: number } {
+export function orbitDegPerMm(cfg: GestureConfig, v: number): { readonly yawDegPerMm: number; readonly pitchDegPerMm: number } {
   const DEG = 180 / Math.PI;
-  const dvPerMm = cfg.gainOrbitElevation * elevationGainScale(cfg) * cfg.boxGainPitch * gains.pitch;
+  const dvPerMm = cfg.gainOrbitElevation * elevationGainScale(cfg) * cfg.boxGainPitch;
   const h = 1e-4;
   const lo = Math.max(0, v - h);
   const hi = Math.min(1, v + h);
   const slope = hi > lo ? (pitchOf(cfg, hi) - pitchOf(cfg, lo)) / (hi - lo) : 0;
   return {
-    yawDegPerMm: cfg.gainOrbitYaw * cfg.boxGainYaw * gains.yaw * DEG,
+    yawDegPerMm: cfg.gainOrbitYaw * cfg.boxGainYaw * DEG,
     pitchDegPerMm: slope * dvPerMm * DEG,
   };
 }

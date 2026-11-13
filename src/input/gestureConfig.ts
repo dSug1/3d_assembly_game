@@ -364,8 +364,8 @@ export interface GestureConfig {
    * where a press and a retarget are the same event.
    */
   orbitCentreGraceMs: number;
-  /** ⭐ Prototype (`input/follow_camera.ts`): degrees the green box may orbit away from the camera, per axis, before it drags the camera. */
-  cameraLeashDeg: number;
+  // ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero"*) `cameraLeashDeg` (0), `cameraSettleDelayMs` (0),
+  // `cameraFollowMs` (0) deleted with what read them, and `boxGainInsideLeash` (0.35, inert with no leash).
   /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
   cameraYawOffsetDeg: number;
   pieceOrbitGapMinPct: number;
@@ -451,21 +451,12 @@ export interface GestureConfig {
   boxGainYaw: number;
   /** ⭐ Prototype: the green box orbit's PITCH gain, a multiplier on `gainOrbitElevation`. */
   boxGainPitch: number;
-  /**
-   * ⭐ Prototype: the box's gain while it is INSIDE the camera leash, a multiplier ramped up to 1 at the leash edge (the owner,
-   * 2026-10-01: *"reduce the gains while the green box is within the leash zone … but maintain the orbit speed beyond"*).
-   */
-  boxGainInsideLeash: number;
   /** ⭐ Prototype: `1` — a piece in its goal cannot be moved or turned (`goal_lock.ts`); `0` re-enables it. */
   lockPlacedPieces: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
   boxSmoothMs: number;
-  /** ⭐ Prototype: how long an axis must stay still before the camera settles on it, ms. */
-  cameraSettleDelayMs: number;
   /** ⭐ Prototype: when the orbit finger is LIFTED, a camera at rest realigns on a spring of this time constant, ms. */
   cameraCatchUpMs: number;
-  /** ⭐ Prototype: the camera's TIME LAG on top of the leash — its follow time constant, ms (`cameraLag`); 0 = none. */
-  cameraFollowMs: number;
   /**
    * ⭐ Prototype: how far the scene SWINGS about the yellow target when the green piece orbits, degrees — at the reference finger
    * speed; scaled by it like every sway (`swayScale`), on the sway's spring (`translateSwayTauMs`). 0 = none.
@@ -794,7 +785,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // each other; 120 covers that with margin without being long enough to notice.
   orbitCentreGraceMs: 120,
   // ⚠ Prototype guesses, with sliders in CAMERA.
-  cameraLeashDeg: 0, // ⭐ the owner, 2026-10-02: 1.5, then 0.5, 0, 0.05, then back to 0 (was 3) — the camera right behind the box
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 2.5, // ⭐ the owner, 2026-10-05 (was 3)
@@ -857,16 +847,13 @@ export const DEFAULT_CONFIG: GestureConfig = {
   boxGainYaw: 1.65,
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
-  boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
   lockPlacedPieces: 1,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
   // ⭐ The owner: *"set camera settle delay after an input to zero"* (⚠ a frame with no pointer event then reads as stopped).
-  cameraSettleDelayMs: 0,
   // ⚠ A guess with a slider: ~0.5 s to arrive (a critically damped spring covers 95 % in ~4.7 τ).
   cameraCatchUpMs: 120,
   // ⭐ The owner, 2026-10-02: *"set the default camera lag to 0"* (was 150 ms, a guess) — no lag; the slider still adds one.
-  cameraFollowMs: 0,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"build 1-3"*) — the rotation sway's 0.3° is lost against an orbit.
   orbitSwayDeg: 4.5, // ⭐ the owner, 2026-10-03 (was 8; 2 before)
   // ⭐ The owner, 2026-10-02: *"I want the sway to resolve quickly"* — a third of the held piece's 180 ms (a guess, with a slider).
@@ -1033,12 +1020,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.lockPlacedPieces === 0 || cfg.lockPlacedPieces === 1)) {
     throw new Error(`lockPlacedPieces (${cfg.lockPlacedPieces}) must be 0 or 1.`);
   }
-  if (!(cfg.boxGainInsideLeash >= 0.05 && cfg.boxGainInsideLeash <= 1)) {
-    throw new Error(`boxGainInsideLeash (${cfg.boxGainInsideLeash}) must be in [0.05, 1].`);
-  }
-  if (!(cfg.cameraLeashDeg >= 0 && cfg.cameraLeashDeg <= 90)) {
-    throw new Error(`cameraLeashDeg (${cfg.cameraLeashDeg}) must be in [0, 90]°.`);
-  }
   if (cfg.orbitPieceKind !== 0 && cfg.orbitPieceKind !== 1) {
     throw new Error(`orbitPieceKind (${cfg.orbitPieceKind}) must be 0 (green) or 1 (turquoise).`);
   }
@@ -1057,14 +1038,8 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.orbitSwayDeg >= 0 && cfg.orbitSwayDeg <= 20)) {
     throw new Error(`orbitSwayDeg (${cfg.orbitSwayDeg}) must be in [0, 20]°.`);
   }
-  if (!(cfg.cameraFollowMs >= 0 && cfg.cameraFollowMs <= 2000)) {
-    throw new Error(`cameraFollowMs (${cfg.cameraFollowMs}) must be in [0, 2000] ms.`);
-  }
   if (!(cfg.cameraCatchUpMs >= 10 && cfg.cameraCatchUpMs <= 2000)) {
     throw new Error(`cameraCatchUpMs (${cfg.cameraCatchUpMs}) must be in [10, 2000] ms.`);
-  }
-  if (!(cfg.cameraSettleDelayMs >= 0 && cfg.cameraSettleDelayMs <= 2000)) {
-    throw new Error(`cameraSettleDelayMs (${cfg.cameraSettleDelayMs}) must be in [0, 2000] ms.`);
   }
   if (!(cfg.ungrabbedGoalMm > 0 && cfg.ungrabbedGoalMm <= cfg.captureOffsetMm)) {
     throw new Error(`ungrabbedGoalMm (${cfg.ungrabbedGoalMm}) must be in (0, captureOffsetMm]: stricter than a grabbed piece, never 0.`);

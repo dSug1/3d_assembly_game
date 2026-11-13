@@ -43,15 +43,12 @@ describe("⭐ prototype — orbit degrees per millimetre of finger", () => {
     expect(orbitDegPerMm(cfg, 0.3).pitchDegPerMm).toBeLessThan(0);
     expect(orbitDegPerMm(cfg, 0.7).pitchDegPerMm).toBeLessThan(0);
     expect(orbitDegPerMm(cfg, 0.9).pitchDegPerMm).toBeLessThan(0);
-    // inside the leash, the box's gains scale both
-    const slow = orbitDegPerMm(cfg, 0.5, { yaw: 0.5, pitch: 0.25 });
-    expect(slow.yawDegPerMm).toBeCloseTo(orbitDegPerMm(cfg, 0.5).yawDegPerMm * 0.5, 9);
-    expect(slow.pitchDegPerMm).toBeCloseTo(orbitDegPerMm(cfg, 0.5).pitchDegPerMm * 0.25, 9);
+    // ⛔ (2026-11-13) the inside-the-leash gains (an argument) deleted with the leash
   });
 
-  it("⭐ wired: the HUD's `green` line reads it at the rig's ring position, with the leash gains", () => {
+  it("⭐ wired: the HUD's `green` line reads it at the rig's ring position (⛔ 2026-11-13 no leash gains)", () => {
     const h = code("render/hud_paint.ts");
-    expect(h).toMatch(/const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation, g\);/);
+    expect(h).toMatch(/const r = orbitDegPerMm\(st\.cfg, st\.orbit\.elevation\);/);
     expect(h).toMatch(/orbit \$\{r\.yawDegPerMm\.toFixed\(2\)\}°\/mm dx, \$\{r\.pitchDegPerMm\.toFixed\(2\)\}°\/mm dy/);
   });
 

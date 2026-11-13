@@ -14,7 +14,6 @@ import { type GoalReport } from "../core/goal";
 import { formatFrameStats } from "../core/frame_meter";
 import { type SceneState } from "./scene_state";
 import { orbitDegPerMm } from "../input/follow_camera";
-import { greenDragGains } from "./green_box_wiring";
 import type { RestingCandidate, RestingResult } from "../core/resting_face";
 
 // ⛔⛔ (2026-11-02) the release verdict and the pinched part's depth readout are deleted with the parts' translation (commit `d8134eb`).
@@ -175,8 +174,7 @@ return ({
 export function greenReadout(st: SceneState): string {
   if (st.greenBox === null || st.greenBoxDistM === null) return "—";
   // ⭐ …and what one millimetre of finger orbits HERE (the owner, 2026-10-02): yaw per mm of dx, pitch per mm of dy (`orbitDegPerMm`).
-  const g = greenDragGains(st);
-  const r = orbitDegPerMm(st.cfg, st.orbit.elevation, g);
+  const r = orbitDegPerMm(st.cfg, st.orbit.elevation); // ⛔ (2026-11-13) the leash's gains deleted: 1
   // ⭐ the orbited piece (green or turquoise, the SCENE menu's switch) and its logical faces, read when it was created
   const piece = `${st.orbitPieceKind === 1 ? "turquoise" : "green"}, ${st.orbitPieceFaces} faces${restingHud(st.orbitPieces.find((o) => o.mesh === st.greenBox)?.resting ?? null, st.orbitPieces.find((o) => o.mesh === st.greenBox)?.restingFace ?? null)}`;
   // ⭐ …and the scene's parts: how many have a resting face, and the one asked last (at boot, or the moment it was unseated)
