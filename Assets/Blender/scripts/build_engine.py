@@ -1014,6 +1014,11 @@ def build_head(side):
             merge_into(discs, cyl_between(a, b, DISC_R, 48))
             ucx.append(cyl_between(a, b, DISC_R, 12, circumscribed=True))    # its rim over the bank's glass: what the valve set rests on
     mesh_object(f"{pid}_head_{tag}_discs", discs, MAT["glass"], part, coll)
+    tops = bmesh.new()
+    for s_, i, x, name in CYLS:
+        if s_ == side:
+            merge_into(tops, disc(M @ Vector((x, DECK + DISC_TOP, 0)), M.to_3x3() @ Vector((0, 1, 0)), DISC_R, 24))
+    mesh_object(f"UFM_{pid}_discs", tops, MAT["ufm"], part, coll, "ufm")      # the exhaust's route and seat
     for k, piece in enumerate(ucx):
         mesh_object(f"UCX_{pid}_{k:02d}", piece, MAT["ucx"], part, coll, "ucx")
 
@@ -1032,6 +1037,118 @@ def build_heads():
     build_head(1)
 
 
+# ================================================================ STEP 8 — E15, E16 the exhausts (each its own), on the valve sets' discs
+# the 120° preview's revision, the owner's sketches (§6.2): per cylinder a FLANGE on the disc next to the outer (lower) valve, on its FRONT side, a
+# STUB slightly bent halfway rising off it and running out and a little down into the COLLECTOR; the collector's dead end short, its rear end open
+EXH_DX, EXH_ZS = -0.17, 0.15                    # a flange's centre from its bore's axis: along x (the front side), across (z′, outward)
+FLANGE = (0.065, 0.02)                          # r, thickness
+STUB_R, COLL_R, COLL_LIP = 0.05, 0.085, 0.014   # the stub's r, the collector's r, its wall at the open end
+COLL_UP, COLL_Z = 0.10, 0.65                    # the collector's axis above the disc tops (y′), and out (z′)
+DEAD_END = 0.14                                 # the collector's closed front past the first stub
+
+
+def catmull_rom(points, per_seg=12, alpha=0.5):
+    """three.js's CatmullRomCurve3 (open, 'centripetal'): the end tangents from mirrored points."""
+    P = [Vector(p) for p in points]
+    P = [2 * P[0] - P[1]] + P + [2 * P[-1] - P[-2]]
+    out = []
+    for k in range(1, len(P) - 2):
+        p0, p1, p2, p3 = P[k - 1], P[k], P[k + 1], P[k + 2]
+        t0 = 0.0
+        t1 = t0 + max((p1 - p0).length ** alpha, 1e-6)
+        t2 = t1 + max((p2 - p1).length ** alpha, 1e-6)
+        t3 = t2 + max((p3 - p2).length ** alpha, 1e-6)
+        for j in range(per_seg + (1 if k == len(P) - 3 else 0)):
+            t = t1 + (t2 - t1) * j / per_seg
+            a1 = (t1 - t) / (t1 - t0) * p0 + (t - t0) / (t1 - t0) * p1
+            a2 = (t2 - t) / (t2 - t1) * p1 + (t - t1) / (t2 - t1) * p2
+            a3 = (t3 - t) / (t3 - t2) * p2 + (t - t2) / (t3 - t2) * p3
+            b1 = (t2 - t) / (t2 - t0) * a1 + (t - t0) / (t2 - t0) * a2
+            b2 = (t3 - t) / (t3 - t1) * a2 + (t - t1) / (t3 - t1) * a3
+            out.append((t2 - t) / (t2 - t1) * b1 + (t - t1) / (t2 - t1) * b2)
+    return out
+
+
+def tube(path, r, seg=16):
+    """A closed tube of radius r along a path (parallel-transported rings, both ends capped)."""
+    bm = bmesh.new()
+    tangent = (path[1] - path[0]).normalized()
+    u = tangent.orthogonal().normalized()
+    rings = []
+    for k, p in enumerate(path):
+        t = (path[min(k + 1, len(path) - 1)] - path[max(k - 1, 0)]).normalized()
+        u = (u - t * u.dot(t)).normalized()
+        v = t.cross(u)
+        rings.append([bm.verts.new(p + r * (math.cos(2 * math.pi * i / seg) * u + math.sin(2 * math.pi * i / seg) * v)) for i in range(seg)])
+    faces = [bm.faces.new(rings[0][::-1]), bm.faces.new(rings[-1])]
+    for a, b in zip(rings, rings[1:]):
+        faces += [bm.faces.new((a[i], a[(i + 1) % seg], b[(i + 1) % seg], b[i])) for i in range(seg)]
+    bmesh.ops.recalc_face_normals(bm, faces=faces)
+    return bm
+
+
+def exhaust_layout(side):
+    """Per cylinder of the bank: its stub's path (reference coordinates) and its flange's centre (bank frame)."""
+    M, top = bank_frame(side), DECK + DISC_TOP
+    yc2, zc, zs = top + COLL_UP, side * COLL_Z, EXH_ZS
+    out = []
+    for s_, i, x0, name in CYLS:
+        if s_ != side:
+            continue
+        x = x0 + EXH_DX
+        pts = [(x, top + FLANGE[1], side * zs), (x, top + 0.08, side * (zs + 0.03)),          # from the flange's TOP: the tube's first ring
+               # is square to its leaning start and dipped 0.018 below the flange's bottom, into the disc, from its bottom
+               (x, top + 0.14, side * (zs + 0.2)), (x, yc2 + 0.01, side * (COLL_Z - 0.12)),
+               (x, yc2, zc)]
+        out.append((name, [M @ q for q in catmull_rom(pts)], Vector((x, top, side * zs))))
+    return out
+
+
+def build_exhaust(side):
+    pid, tag = ("E15", "A") if side < 0 else ("E16", "B")
+    M = bank_frame(side)
+    top = DECK + DISC_TOP
+    yc2, zc = top + COLL_UP, side * COLL_Z
+    layout = exhaust_layout(side)
+    fx = sum(f.x for n, p, f in layout) / len(layout)
+    part, coll = new_part(pid, f"exhaust_{tag}", 8, (0, 0, 0), frame=M @ Matrix.Translation((fx, top, side * EXH_ZS)))
+    chrome, ucx, rest = bmesh.new(), [], bmesh.new()
+    fr, ft = FLANGE
+    for name, path, f in layout:
+        merge_into(chrome, cyl_between(M @ f, M @ (f + Vector((0, ft, 0))), fr, 24))
+        merge_into(chrome, tube(path, STUB_R))
+        merge_into(rest, disc(M @ f, -(M.to_3x3() @ Vector((0, 1, 0))), fr, 16))
+        # collision: the stub with its flange, one convex piece (the stub runs in a plane x = const: its hull stays clear of the valve caps)
+        pts = [M @ (f + Vector((fr * math.cos(t), 0, fr * math.sin(t)))) for t in [2 * math.pi * k / 12 for k in range(12)]]
+        tb = tube(path, STUB_R, seg=10)
+        pts += [v.co.copy() for v in tb.verts]
+        tb.free()
+        ucx.append(hull(pts))
+    # the collector: its closed front (a flattened ball) just past the first stub, its open rear (a dark inside, a chrome lip)
+    x0 = min(f.x for n, p, f in layout) - DEAD_END
+    x1 = CASE_X - 0.05
+    a, b = M @ Vector((x0, yc2, zc)), M @ Vector((x1, yc2, zc))
+    merge_into(chrome, cyl_between(a, b, COLL_R, 32))
+    cap = sphere((0, 0, 0), COLL_R)
+    bmesh.ops.scale(cap, vec=(0.6, 1, 1), verts=cap.verts)
+    bmesh.ops.translate(cap, vec=a, verts=cap.verts)
+    merge_into(chrome, cap)
+    mesh_object(f"{pid}_exhaust_{tag}_mesh", chrome, MAT["chrome"], part, coll)
+    mesh_object(f"{pid}_exhaust_{tag}_open_end", cyl_between(b - Vector((0.002, 0, 0)), b + Vector((0.001, 0, 0)), COLL_R - COLL_LIP, 32),
+                MAT["dark"], part, coll)
+    ucx.append(cyl_between(a - Vector((COLL_R * 0.6, 0, 0)), b, COLL_R, 8, circumscribed=True))
+    for k, piece in enumerate(ucx):
+        mesh_object(f"UCX_{pid}_{k:02d}", piece, MAT["ucx"], part, coll, "ucx")
+    mesh_object(f"UFM_{pid}_rest", rest, MAT["ufm"], part, coll, "ufm")      # its resting face: the flanges' bottoms, on the discs (real faces)
+    up = M.to_3x3() @ Vector((0, 1, 0))
+    seat_marker(f"MC_{pid}_head", part, coll, M @ Vector((0, top, side * EXH_ZS)), -up, (1, 0, 0))
+
+
+def build_exhausts():
+    build_exhaust(-1)
+    build_exhaust(1)
+
+
 # each seat: (the step, the host's marker, the part's marker) — anti-parallel and coincident at the goal (the check below)
 SEAT_PAIRS = [(2, "MC_E01_case", "MC_E02_plinth"), (3, "MC_E02_crank", "MC_E03_saddles"),
               (4, "MC_E02_upper", "MC_E04_lower"), (5, "MC_E04_bankA", "MC_E05_upper"), (5, "MC_E04_bankB", "MC_E06_upper")]
@@ -1047,8 +1164,11 @@ for _side, _i, _x, _name in CYLS:     # each piston DOWN ITS BORE: on its bore's
 for _side, _pid, _bank, _tag in ((-1, "E13", "E05", "A"), (1, "E14", "E06", "B")):     # each head along its bank's axis onto the deck
     SEAT_PAIRS += [(7, f"MC_{_bank}_head", f"MC_{_pid}_deck"), (7, f"MC_{_bank}_valves", f"MC_{_pid}_rest")]
     INSERTIONS.append((7, f"{_pid}_head_{_tag}", tuple(bank_frame(_side).to_3x3() @ Vector((0, 1, 0))), 0.8))
+for _side, _pid, _head, _tag in ((-1, "E15", "E13", "A"), (1, "E16", "E14", "B")):     # each exhaust straight down onto its valve set's discs
+    SEAT_PAIRS.append((8, f"MC_{_head}_exhaust", f"MC_{_pid}_head"))
+    INSERTIONS.append((8, f"{_pid}_exhaust_{_tag}", tuple(bank_frame(_side).to_3x3() @ Vector((0, 1, 0))), 0.8))
 
-STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, build_upper_case), (5, build_banks), (6, build_pistons), (7, build_heads)]
+STEPS = [(1, build_plinth), (2, build_lower_case), (3, build_crankshaft), (4, build_upper_case), (5, build_banks), (6, build_pistons), (7, build_heads), (8, build_exhausts)]
 for n, fn in STEPS:
     if n <= STEP:
         fn()
