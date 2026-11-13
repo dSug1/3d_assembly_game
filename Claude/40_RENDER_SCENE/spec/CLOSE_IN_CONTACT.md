@@ -194,7 +194,7 @@ wiring, the tunables; RED on `e6be90c` — the function absent); four suites' so
   `Piece22`: a slow dx blocked 7 mm short of the wall in free air; the front face, a dy at contact blocked on 108 of 121 frames → 18). Now a step is INTO a
   contact only past a tolerance on its own length. Vectors: `tests/solver_tangent.test.ts` (4; two red before).
 
-## 10. ✅ THE REBUILD (2026-11-12 – 13, `1.0.126-Slide_removal`, a worktree `slide_removal` from `785ea5a`) — ⛔ no device close
+## 10. ✅ THE REBUILD (2026-11-12 – 13, `1.0.126-Slide_removal`, a worktree `slide_removal` from `785ea5a`) — ✅✅ closed by the owner's look (2026-11-13, `825e62c`, merged)
 
 > The owner: *"Re-build the removal of the slide (refer to branch 1.0.122-) with the same target features (gizmo speed proportional to the distance, sliders,
 > default value of the sliders, sliding around obstacles, snap, etc.). Make sure the issues we faced on 1.0.122- are not repeated (friction of piece's edge or
@@ -255,3 +255,6 @@ part neither pose meets; a `reset` leg skipped), **LEAP** (> 15 mm in a frame on
 `tests/fixtures/gjk_heptagon_face_parallel.json`; a 600-pair face-parallel sweep against an exact separating-axis reference), `tests/slide_rebuild.test.ts`
 (the hold, the release, the re-base, the rest, `straightFree`, the wiring's pins); `footprint`, `orbit_shell`, `proto_piece_orbit`'s pins updated with their
 reasons. **1716** (`785ea5a`'s 1775 − the slide's vectors + the trial's + these).
+
+✅✅ **The owner (2026-11-13, on the device, `825e62c` — `1.0.126-Slide_removal` merged into `1.0.127from1.0.125-Slide_removal` with `1.0.125-`'s line:
+the orbit on any shape, the dy hold, `Scene_0bis`, the zenith roll; 1737 vectors): *"all looks good on screen"*.** Work goes on on `1.0.128-`.
