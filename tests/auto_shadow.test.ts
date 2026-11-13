@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AUTO_SHADOW_MIN_FRAMES, AUTO_SHADOW_WARMUP_MS, autoShadowVerdict } from "@core/auto_shadow";
+import { AUTO_SHADOW_MIN_FRAMES, AUTO_SHADOW_WARMUP_MS, autoLadderStep, autoShadowVerdict, casterSignature } from "@core/auto_shadow";
 import { DEFAULT_CONFIG, validateGestureConfig } from "@input/gestureConfig";
 
 const stats = (medianMs: number, p95Ms = medianMs, n = 60) => ({ medianMs, p95Ms, n });
@@ -59,5 +59,41 @@ describe("⭐⭐⭐ the orbited piece's shadow, on every device (2026-10-15, the
     const loop = read("render/render_loop.ts");
     expect(loop).toContain("applyShadowLevel(st, shadowLevel(mode, st.autoShadow));");
     expect(loop).not.toContain("if (st.scene.shadowsEnabled !== on) st.scene.shadowsEnabled = on;");
+  });
+});
+
+describe("⭐⭐ (2026-11-13) the quality LADDER — contact shadows first (SCENE_SETUP.md §6.2 item 7)", () => {
+  it("no verdict: wait; within budget: shadows on (contact shadows kept)", () => {
+    expect(autoLadderStep(null, true)).toBe("WAIT");
+    expect(autoLadderStep("ON", true)).toBe("SHADOWS_ON");
+  });
+  it("too slow WITH contact shadows: drop them first — never the shadows on the first miss", () => {
+    expect(autoLadderStep("OFF", true)).toBe("DROP_AO");
+    expect(autoLadderStep("OFF", true)).not.toBe("SHADOWS_OFF");
+  });
+  it("too slow again (contact shadows already gone, or none): the shadows off", () => {
+    expect(autoLadderStep("OFF", false)).toBe("SHADOWS_OFF");
+    expect(autoLadderStep("ON", false)).toBe("SHADOWS_ON");
+  });
+});
+
+describe("⭐⭐ (2026-11-13) the shadow map redrawn ON EVENTS only — the casters' signature (SCENE_SETUP.md §6.2 item 1)", () => {
+  const still = [{ flag: 5, visible: true, enabled: true }, { flag: 9, visible: true, enabled: true }];
+  it("an unchanged scene: the same signature (no redraw)", () => {
+    expect(casterSignature(still, true)).toBe(casterSignature(structuredClone(still), true));
+  });
+  it("a caster moved, hidden, disabled, added or removed; the light switched: a NEW signature (a redraw)", () => {
+    const base = casterSignature(still, true);
+    expect(casterSignature([still[0]!, { ...still[1]!, flag: 10 }], true)).not.toBe(base);
+    expect(casterSignature([still[0]!, { ...still[1]!, visible: false }], true)).not.toBe(base);
+    expect(casterSignature([still[0]!, { ...still[1]!, enabled: false }], true)).not.toBe(base);
+    expect(casterSignature([still[0]!], true)).not.toBe(base);
+    expect(casterSignature([...still, { flag: 1, visible: true, enabled: true }], true)).not.toBe(base);
+    expect(casterSignature(still, false)).not.toBe(base);
+  });
+  it("the render loop asks before every frame, after everything that moved a caster", () => {
+    const loop = readFileSync(new URL("../src/render/render_loop.ts", import.meta.url), "utf8");
+    expect(loop.indexOf("shadowsOnDemand(st);")).toBeGreaterThan(loop.indexOf("orientCubeFrame(st);"));
+    expect(loop.indexOf("shadowsOnDemand(st);")).toBeLessThan(loop.indexOf("st.scene.render();"));
   });
 });

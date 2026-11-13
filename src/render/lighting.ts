@@ -9,9 +9,10 @@ import { SpotLight } from "@babylonjs/core/Lights/spotLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
+import { RenderTargetTexture } from "@babylonjs/core/Materials/Textures/renderTargetTexture";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { illuminanceAt, lightColour, unityForward, type Triple } from "../core/lighting";
-import { keyLightIndex } from "../core/auto_shadow";
+import { casterSignature, keyLightIndex } from "../core/auto_shadow";
 import type { SceneState } from "./scene_state";
 
 /** The default: `Scene_0`'s light and background, exactly as they were. */
@@ -137,4 +138,28 @@ export function applyShadowLevel(st: SceneState, level: "FULL" | "PIECE"): void 
     if (map === null) return;
     map.renderList = level === "FULL" ? (st.shadowFull[i] ?? []).slice() : key ? st.orbitPieces.map((o) => o.mesh as AbstractMesh) : [];
   });
+}
+
+/**
+ * ⭐⭐ (2026-11-13, `SCENE_SETUP.md` §6.2 item 1) THE SHADOW MAPS DRAWN ON EVENTS ONLY: each map renders once, then again only when its casters
+ * change — one moved (its world matrix recomputed: `updateFlag`), appeared or vanished (visible / enabled), or the list itself changed (the shadow
+ * level, a model loaded). A still scene costs no shadow pass; a part in the hand redraws it every frame it moves (iPhone: shadows 1 – 4 ms).
+ * ⚠ Called just before `scene.render()`; `computeWorldMatrix()` is cached for an unchanged mesh, so a move made this frame is seen this frame.
+ */
+const shadowSignature = new WeakMap<RenderTargetTexture, number>();
+export function shadowsOnDemand(st: SceneState): void {
+  for (const g of st.shadowGens) {
+    const map = g.getShadowMap();
+    if (map === null) continue;
+    if (map.refreshRate !== RenderTargetTexture.REFRESHRATE_RENDER_ONCE) map.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+    const list = map.renderList ?? [];
+    const h = casterSignature(
+      list.map((m) => ({ flag: m.computeWorldMatrix().updateFlag, visible: m.isVisible, enabled: m.isEnabled() })),
+      g.getLight().shadowEnabled,
+    );
+    if (shadowSignature.get(map) !== h) {
+      shadowSignature.set(map, h);
+      map.resetRefreshCounter();
+    }
+  }
 }

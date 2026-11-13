@@ -23,6 +23,7 @@ import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { topFaceOutline } from "../core/underside";
+import { contactFactors, positionKey, readContactFile, type ContactFile } from "../core/model_contact";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import "@babylonjs/core/Rendering/geometryBufferRendererSceneComponent";
@@ -64,6 +65,20 @@ export async function importSceneModel(st: SceneState): Promise<void> {
     }
     await place(st, bytes, read.catalog, new Set(slice.parts.map((p) => p.node)));
     st.modelStatus = `model ${slice.parts.length} parts`;
+    // ⭐⭐ the CONTACT SHADOWS per pair (`SCENE_SETUP.md` §6.3): the final stage seats every part of the slice at load
+    if (spec.contact !== undefined) {
+      const cr = await fetch(spec.contact);
+      if (!cr.ok) throw new Error(`${spec.contact}: HTTP ${cr.status}`);
+      const cf = readContactFile(await cr.json(), new Set(read.catalog.parts.map((p) => p.id)));
+      if (cf.file === null) {
+        console.error("⛔ the contact shadows are REFUSED:\n" + cf.refusals.join("\n"));
+        st.modelStatus += `  ⛔CONTACT REFUSED ×${cf.refusals.length}`;
+      } else {
+        st.modelContact = prepareContact(st, cf.file);
+        const n = applyContactShadows(st, new Set(slice.parts.map((p) => p.id)));
+        st.modelStatus += ` · contact ${n}`;
+      }
+    }
   } catch (e) {
     console.error("⛔ the scene's model did not load:", e);
     st.modelStatus = `⛔MODEL ${(e as Error).message}`;
@@ -132,6 +147,11 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
     }
   }
   st.shadowLevelSeen = null;
+
+  // ⭐⭐ (2026-11-13, `SCENE_SETUP.md` §6.2 item 4) THE FINAL STAGE DOES NOT MOVE: every mesh's world matrix frozen (no recomputation per frame;
+  // the shadow map, drawn on events, then never redrawn for it). ⚠ W5 unfreezes a part when the player picks it up.
+  holder.freezeWorldMatrix();
+  for (const m of holder.getChildMeshes(false)) m.freezeWorldMatrix();
 
   // ⭐ The debug layers follow the slider, applied on change only.
   let seen = -1;
@@ -206,13 +226,62 @@ function applyStudio(st: SceneState): void {
     ao.samples = 8;
     ao.maxZ = 20;
     ao.expensiveBlur = false;
+    st.aoAvailable = true;
     let seen = -1;
     scene.onBeforeRenderObservable.add(() => {
-      const v = st.cfg.aoOn;
+      // ⭐ the slider AND the quality ladder (`autoAo` false: dropped on a slow device — `SCENE_SETUP.md` §6.2 item 7)
+      const v = st.cfg.aoOn === 1 && st.autoAo !== false ? 1 : 0;
       if (v === seen) return;
       seen = v;
       if (v === 1) scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline("contactShadows", st.camera);
       else scene.postProcessRenderPipelineManager.detachCamerasFromRenderPipeline("contactShadows", st.camera);
     });
   }
+}
+
+/**
+ * ⭐⭐ THE CONTACT SHADOWS' RECEIVERS, prepared once: each baked mesh's own colours (its part's own occlusion, `COLOR_0`) and its vertices' position
+ * keys. A glTF mesh with several materials is several Babylon meshes (`<name>_primitive<i>`): each found by its node's name.
+ */
+function prepareContact(st: SceneState, file: ContactFile): NonNullable<SceneState["modelContact"]> {
+  const names = new Set(file.terms.map((t) => t.mesh));
+  const meshes: { term: string; mesh: AbstractMesh; base: Float32Array; keys: string[] }[] = [];
+  for (const m of st.scene.meshes) {
+    const term = names.has(m.name) ? m.name : [...names].find((n) => m.name.startsWith(`${n}_primitive`));
+    if (term === undefined) continue;
+    const col = m.getVerticesData(VertexBuffer.ColorKind);
+    const pos = m.getVerticesData(VertexBuffer.PositionKind);
+    if (col === null || pos === null) continue;
+    const keys: string[] = [];
+    for (let i = 0; i + 2 < pos.length; i += 3) keys.push(positionKey(pos[i]!, pos[i + 1]!, pos[i + 2]!));
+    meshes.push({ term, mesh: m, base: Float32Array.from(col), keys });
+  }
+  return { file, meshes };
+}
+
+/**
+ * ⭐⭐ THE CONTACT SHADOWS FOR A SET OF SEATED PARTS (`core/model_contact.ts`): every receiver's colours recomputed from its baked own occlusion
+ * × the product of the terms whose two parts are seated — on a seating, an unseating, an undo, a reset (W5 calls it with the new set); any order
+ * gives the same picture. Nothing per frame. Returns the vertices darkened.
+ */
+export function applyContactShadows(st: SceneState, seated: ReadonlySet<string>): number {
+  const c = st.modelContact;
+  if (c === null) return 0;
+  const factors = contactFactors(c.file, seated);
+  let n = 0;
+  for (const r of c.meshes) {
+    const f = factors.get(r.term);
+    const out = Float32Array.from(r.base);
+    if (f !== undefined) {
+      const stride = out.length / r.keys.length;
+      r.keys.forEach((k, i) => {
+        const v = f.get(k);
+        if (v === undefined) return;
+        n++;
+        for (let ch = 0; ch < Math.min(3, stride); ch++) out[i * stride + ch]! *= v;
+      });
+    }
+    r.mesh.setVerticesData(VertexBuffer.ColorKind, out, true, out.length / r.keys.length);
+  }
+  return n;
 }

@@ -40,7 +40,7 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(L.ambient).toBe(0); // the studio panorama is the fill — never two fills
     expect(L.environment).toMatch(/studio_cream.*\.hdr/);
     expect(L.toneMapping).toEqual({ exposure: 0.89, contrast: 1.1 });
-    expect(L.ambientOcclusion).toBe(true);
+    expect(L.ambientOcclusion).toBe(false); // baked instead (SCENE_SETUP.md §6.3)
     // ⭐ the key comes FROM where the panorama's soft box is (scripts/gen_sky_hdr.mjs KEY_FROM): its travel the opposite
     const f = unityForward(L.lights[0]!.eulerDeg);
     const from = [-0.666, 0.643, 0.378];

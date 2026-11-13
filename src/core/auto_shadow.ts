@@ -42,6 +42,34 @@ export function shadowLevel(mode: number, auto: "ON" | "OFF" | null): "FULL" | "
   return mode === 1 || (mode === 2 && auto !== "OFF") ? "FULL" : "PIECE";
 }
 
+/**
+ * ⭐⭐ (2026-11-13, `SCENE_SETUP.md` §6.2 item 7 — the QUALITY LADDER) what the automatic switch does with a verdict: a device that misses its
+ * budget drops the CONTACT SHADOWS (SSAO, ≈ 7 ms on the iPhone) FIRST and is measured again; only a second miss turns the shadows off. `aoInPlay`:
+ * the scene's contact shadows are on and not already dropped. `WAIT`: no verdict yet.
+ */
+export type LadderAction = "WAIT" | "DROP_AO" | "SHADOWS_ON" | "SHADOWS_OFF";
+export function autoLadderStep(verdict: "ON" | "OFF" | null, aoInPlay: boolean): LadderAction {
+  if (verdict === null) return "WAIT";
+  if (verdict === "OFF" && aoInPlay) return "DROP_AO";
+  return verdict === "ON" ? "SHADOWS_ON" : "SHADOWS_OFF";
+}
+
+/**
+ * ⭐⭐ (2026-11-13, `SCENE_SETUP.md` §6.2 item 1) a shadow map's CASTERS as one number: it changes when a caster moved (its world matrix's
+ * `updateFlag`), appeared or vanished (visible, enabled), the list changed (length, order), or the light's shadows were switched — and only then is
+ * the map redrawn. Engine-free: the renderer passes what it reads.
+ */
+export interface CasterState {
+  readonly flag: number;
+  readonly visible: boolean;
+  readonly enabled: boolean;
+}
+export function casterSignature(casters: readonly CasterState[], lightOn: boolean): number {
+  let h = casters.length | 0;
+  for (const c of casters) h = (Math.imul(h, 31) + c.flag + (c.visible ? 7 : 0) + (c.enabled ? 13 : 0)) | 0;
+  return lightOn ? (h + 101) | 0 : h;
+}
+
 /** ⭐ The light that draws the piece's shadow alone: the strongest (−1 with none). */
 export function keyLightIndex(intensities: readonly number[]): number {
   let best = -1;

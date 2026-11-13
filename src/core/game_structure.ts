@@ -193,7 +193,12 @@ export interface SceneDescriptor {
    * read and checked by `core/model_catalog.ts`; `parts` the slice it plays (part ids, the anchor among them) — absent: every part. ⚠ Shown, not yet
    * bodies (the final stage); the playable slice makes them bodies (W5).
    */
-  readonly model?: { readonly url: string; readonly parts?: readonly string[] };
+  readonly model?: {
+    readonly url: string;
+    readonly parts?: readonly string[];
+    /** ⭐ (2026-11-13) the baked contact shadows per pair (`<scene>_contact.json`, `core/model_contact.ts`, `SCENE_SETUP.md` §6.3). */
+    readonly contact?: string;
+  };
 }
 
 export interface LevelSpec {
@@ -452,10 +457,12 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     }
   }
   if (o.model !== undefined) {
-    const m = o.model as { url?: unknown; parts?: unknown } | null;
+    const m = o.model as { url?: unknown; parts?: unknown; contact?: unknown } | null;
     if (typeof m !== "object" || m === null || typeof m.url !== "string" || m.url === "") throw new Error(`scene ${o.id}: model.url must be a non-empty string`);
     if (m.parts !== undefined && !(Array.isArray(m.parts) && m.parts.every((x) => typeof x === "string" && x !== "")))
       throw new Error(`scene ${o.id}: model.parts must be an array of part ids`);
+    if (m.contact !== undefined && !(typeof m.contact === "string" && m.contact !== ""))
+      throw new Error(`scene ${o.id}: model.contact must be a non-empty URL`);
   }
   return {
     id: o.id,
@@ -470,12 +477,15 @@ export function parseSceneDescriptor(json: string): SceneDescriptor {
     final: parseFinal(o.id, o.final, bodies),
     ...(o.orbitGoals !== undefined ? { orbitGoals: parseOrbitGoals(o.id, o.orbitGoals) } : {}),
     ...(o.orbitPieceRefDims !== undefined ? { orbitPieceRefDims: refDims(o.id, o.orbitPieceRefDims) } : {}),
-    ...(o.model !== undefined ? { model: modelOf(o.model as { url: string; parts?: string[] }) } : {}),
+    ...(o.model !== undefined ? { model: modelOf(o.model as { url: string; parts?: string[]; contact?: string }) } : {}),
   };
 }
 
-const modelOf = (m: { url: string; parts?: string[] }): NonNullable<SceneDescriptor["model"]> =>
-  m.parts === undefined ? { url: m.url } : { url: m.url, parts: m.parts };
+const modelOf = (m: { url: string; parts?: string[]; contact?: string }): NonNullable<SceneDescriptor["model"]> => ({
+  url: m.url,
+  ...(m.parts !== undefined ? { parts: m.parts } : {}),
+  ...(m.contact !== undefined ? { contact: m.contact } : {}),
+});
 
 /**
  * ⭐ `D129`: a final configuration names bodies the scene HAS, each once, never a frozen one (it

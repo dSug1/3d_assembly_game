@@ -116,6 +116,9 @@ export function createScene(
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
   st.frameMeter = new FrameMeter();
   st.autoShadow = null;
+  st.autoAo = null;
+  st.aoAvailable = false;
+  st.modelContact = null;
   st.autoShadowArmedAt = performance.now();
   st.shadowModeSeen = st.cfg.shadowsOn;
 

@@ -13,8 +13,8 @@ import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { backgroundMix } from "../core/lighting";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
-import { applyShadowLevel } from "./lighting";
+import { autoLadderStep, autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
+import { applyShadowLevel, shadowsOnDemand } from "./lighting";
 import { FrameMeter } from "../core/frame_meter";
 import { advanceFollow, displayPose, exponentialSmooth, phantomTarget } from "../input";
 import { worldPlacementOf } from "../core/object_model";
@@ -288,6 +288,7 @@ export function startRenderLoop(st: SceneState): void {
         st.shadowModeSeen = mode;
         if (mode === 2) {
           st.autoShadow = null;
+          st.autoAo = null;
           st.autoShadowArmedAt = now;
           st.frameMeter = new FrameMeter();
         }
@@ -295,8 +296,16 @@ export function startRenderLoop(st: SceneState): void {
       }
       if (mode === 2 && st.autoShadow === null) {
         const v = autoShadowVerdict(st.frameMeter.stats(), now - st.autoShadowArmedAt, st.cfg.autoShadowBudgetMs);
-        if (v !== null) {
-          st.autoShadow = v;
+        // ⭐⭐ (2026-11-13) the LADDER: the contact shadows go first, the device measured again; then the shadows
+        const step = autoLadderStep(v, st.aoAvailable && st.cfg.aoOn === 1 && st.autoAo !== false);
+        if (step === "DROP_AO") {
+          st.autoAo = false;
+          st.autoShadowArmedAt = now;
+          st.frameMeter = new FrameMeter();
+          st.hudDirty = true;
+        } else if (step !== "WAIT") {
+          if (st.autoAo === null) st.autoAo = true;
+          st.autoShadow = step === "SHADOWS_ON" ? "ON" : "OFF";
           st.hudDirty = true;
         }
       }
@@ -333,6 +342,7 @@ export function startRenderLoop(st: SceneState): void {
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
     orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
+    shadowsOnDemand(st); // ⭐ (2026-11-13) the shadow maps redrawn only when a caster changed — after everything that moved one
     st.scene.render();
     st.frames++;
   }));

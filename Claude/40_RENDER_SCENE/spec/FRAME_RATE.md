@@ -39,6 +39,9 @@ by millimetres of finger.
 2. **The shadows**: AUTO already turns them off when the median frame misses 33 ms (`D138`, `40_RENDER_SCENE/INDEX.md`).
 3. **Low Power Mode off** — the player's (`BROWSER_GUARDS.md` §3).
 
+⭐ (2026-11-13) A scene with a `.glb` model: its frame-rate stage, the measured table, the strategies built (the shadow map on events, the contact
+shadows baked per part and per pair, the model frozen, the quality ladder) → `SCENE_SETUP.md` §6.
+
 ## 5. How to judge it
 
 The HUD's `frame` line: the median and p95 of the last 120 frames (`core/frame_meter.ts`). On the iPhone, a p95 under ~25 ms while orbiting and
