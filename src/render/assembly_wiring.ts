@@ -32,12 +32,11 @@ import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
-import { mmToPx } from "../core/units";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { distanceToFacets, fingerInFrame, polarZones, viewBeyond, viewHoldStep, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -814,6 +813,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zone the gizmo is in (last frame's place, the exit's hysteresis): a change turns every angle into its frame
   zoneStep(st, dtMs);
+  spitStep(st);
   zoneHighlightFrame(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
   // within `tiltAutoM` of the gizmo (`tiltAutoLatch`, its hysteresis) the gizmo on a FACE HOLDING A POLE (the owner's term) tilts the orbit by itself
@@ -1165,7 +1165,8 @@ export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAn
 function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const o = off ?? { yawRad: 0, pitchRad: 0 };
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) IN A POLAR ZONE'S FRAME (no tilt there): S1 the camera upright IN F (its up the axis on the glass, as the tilted
-  // pole's); S2 THE SPIT — upright in the WORLD (the axis across the glass): a dy turns the assembly about it, R4 kept by the view's hold (`zoneViewCheck`)
+  // pole's); S2 THE SPIT — upright in the WORLD (the axis across the glass): a dy turns the assembly about it; its heading the SIDE of the axis it is on
+  // (`spitHeading`, ⛔ its own direction's: it spun at the vertical), the side changed at the crossing by one timed turn (`spitStep`, as `Scene_0`'s)
   const B = st.asmTilt === null ? baseFrame(st) : null;
   if (B !== null) {
     const uF = orbitDir(cam.yaw, cam.v);
@@ -1175,7 +1176,8 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
       return { dir: mulM(B, fF.dir), up: mulM(B, fF.up) };
     }
     const uW = mulM(B, sF);
-    return offsetFrame(uW, Math.hypot(uW[0], uW[2]) > 1e-6 ? Math.atan2(uW[2], uW[0]) : cam.yaw, o.yawRad, o.pitchRad);
+    const side = st.asmSpitSide !== 0 ? st.asmSpitSide : spitSide(uW, st.asmZone!.zone.axis, 0);
+    return offsetFrame(uW, spitCameraHeading(uW, st.asmZone!.zone.axis, side), o.yawRad, o.pitchRad);
   }
   // ⭐⭐⭐ (2026-11-10, §9.4) THE TILTED POLE: the camera upright IN F (the pressed cap a side), turned into the world; off the facet the frame turned toward
   // the world's upright by the exit's share (`frameMix` — the roll back, paced by the finger, reversible; the far edge's half turn about one kept axis)
@@ -1573,7 +1575,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   const sq = st.asmSquare;
   if (sq.n !== null) sq.n = turn(sq.n);
   if (sq.target !== null) sq.target = turn(sq.target);
-  st.asmViewHold = null;
+  st.asmSpitSide = 0;
   st.asmShown = null;
   st.asmGOff = null;
   const map = faceMapOf(st);
@@ -1604,16 +1606,13 @@ function spitZone(st: SceneState): PolarZone | null {
 }
 
 /**
- * ⭐⭐⭐ (§3.5, D-Z3) THE FINGER IN A SPIT (the pointer's `dx`, `fdy` in px — `fdy` up positive): the dy toward the turn-over held (`viewHoldStep`), then the
- * move read in F's upright screen (`fingerInFrame`: a dx pole to pole, a dy round the axis — the way it goes on the glass). Elsewhere as it is.
+ * ⭐⭐⭐ (§3.5) THE FINGER IN A SPIT (the pointer's `dx`, `fdy` in px — `fdy` up positive; the §8 hold after a crossing already applied): the move read in
+ * F's upright screen (`fingerInFrame`: a dx pole to pole, a dy round the axis — the way it goes on the glass). Elsewhere as it is.
  */
 export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly dx: number; readonly fdy: number } {
   const z = spitZone(st);
   if (z === null) return { dx, fdy };
-  const px = mmToPx(1);
-  const h = viewHoldStep(st.asmViewHold, fdy / px, st.cfg.zoneHoldMm);
-  st.asmViewHold = h.hold;
-  const dy = h.dyMm * px;
+  const dy = fdy;
   const cf = st.asmCamLast;
   if (cf === null) return { dx, fdy: dy };
   // ⭐ F's up on the glass from the orbit's own angles (`cos θ·a − sin θ·d`: the way toward the pole — at the pole itself the way OFF it at the yaw, so a
@@ -1625,27 +1624,43 @@ export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly 
   // ⭐ the camera's view: toward the centre (`dir` is the centre → camera direction) — the glass's right `up × view` (Babylon's left-handed axes)
   const r = fingerInFrame(dx, dy, [-cf.dir[0], -cf.dir[1], -cf.dir[2]], cf.up, fUp, st.asmZoneAlpha);
   st.asmZoneAlpha = r.alpha;
+  // ⭐⭐⭐ looking down (from `SPIT_CROSSING_PITCH_RAD`): the swap itself, one finger axis to one of F's (`fingerSwapped`) — a dx never back over the edge
+  const uC = cf.dir;
+  if (Math.asin(Math.min(1, Math.abs(uC[1]) / Math.max(1e-12, Math.hypot(uC[0], uC[1], uC[2])))) >= SPIT_CROSSING_PITCH_RAD) {
+    const sw = fingerSwapped(dx, dy, r.alpha);
+    return { dx: sw.dx, fdy: sw.dy };
+  }
   return { dx: r.dx, fdy: r.dy };
 }
 
 /**
- * ⭐⭐⭐ (D-Z3 — the owner: *"R4 shall be maintained … dy hold until reverted with an hysteresis while the other dy direction is authorized as well as the
- * dx"*) AFTER AN ORBIT STEP IN A SPIT: a step that takes the view past `zoneViewMaxDeg` from the horizon (on toward the vertical) is refused — the orbit
- * back where it was, the screen's dy that pushed HELD (`asmViewHold`), the coast stopped. Returns whether it refused.
+ * ⭐⭐⭐ (2026-11-13, the owner: *"the dy hold happens after the crossing, not before the crossing … replicate the behavior of scene 0 when crossing the
+ * zenith edge"*) ONE FRAME OF THE SPIT'S SIDE, before the gizmo: the side of the axis the SHOWN direction is on (`spitSide`); changed — the camera has
+ * passed over the axis (the zenith edge, the bottom face's, any): ONE timed turn from the frame shown to the new side's upright one at the tilts' one
+ * speed (`asmZoneMix`, `frameMix` — one axis: over a ridge, the ridge's own line), the gizmo held meanwhile (`tiltClampStep`), the coast stopped; and
+ * `Scene_0`'s §8 HOLD AFTER THE CROSSING: the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond (`crossingHold`), dx and the
+ * other dy free. ⛔ The hold before it (`zoneViewCheck`, the view held at 80°, 2026-11-13 earlier): the gizmo stopped on the ridge, never across.
  */
-export function zoneViewCheck(st: SceneState, yaw0: number, v0: number, fdyScreen: number): boolean {
-  const B = spitZone(st) === null ? null : baseFrame(st);
-  if (B === null) return false;
-  // ⭐ the SHOWN direction (`dirAt`: the calm's — the camera's own; ⛔ the orbit's bare direction: on the sloped faces the calm took the view ~5° past it)
-  const u0 = dirAt(st, yaw0, v0);
-  const u1 = dirAt(st, st.orbit.yaw, st.orbit.elevation);
-  if (!viewBeyond(u1, st.cfg.zoneViewMaxDeg) || Math.abs(u1[1]) <= Math.abs(u0[1])) return false;
-  st.orbit.reset(yaw0, v0);
+function spitStep(st: SceneState): void {
+  const z = spitZone(st);
+  if (z === null) {
+    st.asmSpitSide = 0;
+    return;
+  }
+  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+  const u = dirAt(st, q.yaw, q.v);
+  const prev = st.asmSpitSide;
+  const side = spitSide(u, z.axis, prev);
+  st.asmSpitSide = side;
+  // ⭐ a crossing only seen from high up (the zenith edge, the bottom face's): low (round a tip) the heading is the direction's own — the side changes silently
+  if (prev === 0 || side === prev || Math.asin(Math.min(1, Math.abs(u[1]))) < SPIT_CROSSING_PITCH_RAD) return;
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: st.asmCamLast, k: 0, rad: Math.PI / 2, axis: null };
   st.orbitInertia.stop();
-  if (fdyScreen !== 0) st.asmViewHold = { sign: Math.sign(fdyScreen), backMm: 0 };
-  st.lastVerdict = "orbit: the spit holds the view short of upside down (R4) — the dy back or a dx goes on";
+  const g = st.asmG;
+  const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
+  if (hold !== null) st.asmEdgeHold = hold;
+  st.lastVerdict = "orbit: the spit over the edge — the camera turned to the other side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
-  return true;
 }
 
 /** ⭐⭐⭐ (2026-11-13, the owner: *"highlight the zone in fuchsia during the runtime so I can always check what it is"*) the zones' colour and its share seen */

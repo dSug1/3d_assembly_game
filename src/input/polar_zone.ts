@@ -15,12 +15,13 @@
  *    `wholeShare` of the contour's area.
  *
  * The runtime helpers: which zone the gizmo is in with the exit's hysteresis (`zoneAt`, D-Z7), the finger read in F's upright screen (`fingerInFrame`), and
- * R4 kept in the spit (`viewHoldStep`, D-Z3 — the owner: *"keep the same rule as what we have done for scene 0: dy hold until reverted with an hysteresis
- * while the other dy direction is authorized as well as the dx"*).
+ * the zenith edge crossed as on `Scene_0` (`spitSide`, `spitHeading`, `crossingHold` — the owner: *"the dy hold happens after the crossing, not before
+ * the crossing"*, *"I want to replicate the behavior of scene 0 when crossing the zenith edge"*).
  */
 import type { Vec3 } from "../core/vec";
 import type { FaceMap, Facet } from "./face_map";
 import type { Mat3 } from "./orbit_tilt";
+import { LEVEL_HEADING_BLEND_RAD } from "./orbit_calm";
 
 /** ⭐ The zones' knobs — each a `GestureConfig` field with a slider (`zoneOptsOf` in the wiring). */
 export interface ZoneOpts {
@@ -420,25 +421,82 @@ export function fingerInFrame(dx: number, dy: number, view: Vec3, up: Vec3, a: V
   return { dx: dot(W, Rt1), dy: dot(W, U1), alpha };
 }
 
-/** ⭐⭐⭐ (D-Z3) R4 in the spit: the dy toward the turn-over HELD (`sign`), released once the finger has come back `backMm` the other way. */
-export interface ViewHold {
-  readonly sign: number;
-  readonly backMm: number;
+/**
+ * ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) THE SPIT'S FINGER LOOKING DOWN: the swap itself, each
+ * finger axis on ONE of F's — a dx along the axis only (F's pitch), a dy round it only (F's yaw), the signs the glass's (`alpha`, `fingerInFrame`'s). As on
+ * `Scene_0`, where after the crossing a dx runs along the ridge and never back over it. ⛔ The glass's mix there (the view near the vertical, F's up a few
+ * degrees off the glass's right): a dx leaked into the turn round the axis, the camera crossed back, turned round, the leak reversed — 9 crossings in one
+ * diagonal (probed).
+ */
+export function fingerSwapped(dx: number, dy: number, alpha: number): { readonly dx: number; readonly dy: number } {
+  const s = Math.sin(alpha) >= 0 ? 1 : -1;
+  return { dx: -dy * s, dy: dx * s };
 }
 
 /**
- * ⭐⭐⭐ (D-Z3) ONE FINGER STEP THROUGH THE HOLD: `dyMm` (the screen's dy, signed) — the held sign passes nothing; the other passes whole and counts toward
- * the release (`releaseMm`). Returns the dy that passes and the hold after it.
+ * ⭐⭐⭐ (2026-11-13, the owner: *"check what happens in scene 0 at the zenith edge: the dy hold happens after the crossing, not before the crossing … I
+ * want to replicate the behavior of scene 0 when crossing the zenith edge"*) THE SPIT'S SIDE. On `Scene_0` (probed close in, `zen0c`) the gizmo crosses the
+ * ridge, the camera makes ONE turn over it — about the edge's own line, 140° in ≈ 160 ms, its roll about the view < 1° — the gizmo held, THEN the dy that
+ * crossed is held (§8). In the spit the camera is upright in the world: its heading is the SIDE of the axis it is on (in front of the body or behind it —
+ * `spitSideRef` × the side), never its own direction's (that spun at the vertical: 100° in 12 frames, the "very rapid roll" with a dx). The side changes
+ * only when the camera has passed over the axis (`spitSide`, a 2° hysteresis) — that change IS the crossing: one timed turn, the gizmo held, then the hold.
  */
-export function viewHoldStep(h: ViewHold | null, dyMm: number, releaseMm: number): { readonly dyMm: number; readonly hold: ViewHold | null } {
-  if (h === null || dyMm === 0) return { dyMm, hold: h };
-  if (Math.sign(dyMm) === h.sign) return { dyMm: 0, hold: h };
-  const back = h.backMm + Math.abs(dyMm);
-  return { dyMm, hold: back >= releaseMm ? null : { sign: h.sign, backMm: back } };
+export const SPIT_SIDE_HYST_DEG = 2;
+
+/** ⭐ The horizontal direction square to the axis (the side "in front" when positive): `a × up`, laid level; a vertical axis: x. */
+export function spitSideRef(a: Vec3): Vec3 {
+  return unit([-a[2], 0, a[0]]) ?? [1, 0, 0];
 }
 
-/** ⭐ (D-Z3) The view past R4's bound: the direction `u` (centre → camera) more than `maxDeg` above / below the horizon. */
-export function viewBeyond(u: Vec3, maxDeg: number): boolean {
-  const l = len(u);
-  return l > 0 && Math.abs(u[1] / l) > Math.sin(maxDeg * D);
+/**
+ * ⭐⭐⭐ THE SIDE the camera direction `u` (centre → camera) is on: the sign of its part square to the axis along `spitSideRef`, changed from `prev` only past
+ * `hystDeg` (a camera straight over the axis keeps its side); looking along the axis (at a tip): `prev`. `prev` 0: none yet — read as it is.
+ */
+export function spitSide(u: Vec3, a: Vec3, prev: number, hystDeg: number = SPIT_SIDE_HYST_DEG): number {
+  const k = dot(u, a);
+  const r: Vec3 = [u[0] - k * a[0], u[1] - k * a[1], u[2] - k * a[2]];
+  const lr = len(r);
+  if (!(lr > 0.05)) return prev === 0 ? 1 : prev;
+  const s = dot(r, spitSideRef(a)) / lr;
+  if (prev === 0) return s < 0 ? -1 : 1;
+  return Math.sign(s) !== prev && Math.abs(s) > Math.sin(hystDeg * D) ? -prev : prev;
+}
+
+/** ⭐ The spit camera's level heading (the orbit's convention: x = cos, z = sin) on `side`. */
+export function spitHeading(a: Vec3, side: number): number {
+  const r = spitSideRef(a);
+  return Math.atan2(side * r[2], side * r[0]);
+}
+
+/** ⭐ The side's bias in the spit camera's heading (`spitCameraHeading`): the level part of a unit direction it outweighs — a view above ≈ 72° */
+export const SPIT_SIDE_BIAS = 0.3;
+
+/**
+ * ⭐⭐⭐ THE SPIT CAMERA'S HEADING for its direction `u` (centre → camera): the heading of `u`'s level part plus the side's level direction × `SPIT_SIDE_BIAS`
+ * — ONE continuous rule. Looking down (a small level part) the side wins: a dx along the axis at the top never spins the view (⛔ `u`'s own: 100° in 12
+ * frames); level (round a tip) `u`'s own wins, and there the heading hardly turns the picture (`offsetFrame` weighs it by the view's sine). ⛔ Two readings
+ * blended by the pitch (`Scene_0`'s 50° / 60°): near a tip they part by up to 80° — the picture rolled 70° in one finger event.
+ */
+export function spitCameraHeading(u: Vec3, a: Vec3, side: number): number {
+  const r = spitSideRef(a);
+  const hx = u[0] + side * SPIT_SIDE_BIAS * r[0];
+  const hz = u[2] + side * SPIT_SIDE_BIAS * r[2];
+  return Math.hypot(hx, hz) > 1e-9 ? Math.atan2(hz, hx) : spitHeading(a, side);
+}
+
+/** ⭐ A side change is a CROSSING (the turn, the hold) only seen from this pitch up / down: below it the heading is the direction's own (`spitCameraHeading`). */
+export const SPIT_CROSSING_PITCH_RAD = LEVEL_HEADING_BLEND_RAD;
+
+/**
+ * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed: at the gizmo `g0` on its face (normal `n`), into the face beyond square to the
+ * edge (toward the new `side`, along the face) — the dy sign that crossed (`sign`, the finger's last) held until the gizmo is `edgeHoldMm` deep. `null`: no
+ * dy to hold, or no way along the face.
+ */
+export function crossingHold(g0: Vec3, n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly g0: Vec3; readonly d: Vec3; readonly sign: 1 | -1 } | null {
+  if (sign === 0 || n === null) return null;
+  const s = spitSideRef(a);
+  const w: Vec3 = [s[0] * side, s[1] * side, s[2] * side];
+  const k = dot(w, n);
+  const d = unit([w[0] - k * n[0], w[1] - k * n[1], w[2] - k * n[2]]);
+  return d === null ? null : { g0, d, sign: sign > 0 ? 1 : -1 };
 }

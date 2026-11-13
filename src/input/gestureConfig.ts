@@ -429,10 +429,6 @@ export interface GestureConfig {
   zoneWholeShare: number;
   /** ⭐⭐⭐ (D-Z7) the gizmo leaves a zone this far past its rim (mm) */
   zoneExitMm: number;
-  /** ⭐⭐⭐ (D-Z3, R4) in the spit, the view held this far from the vertical (deg) */
-  zoneViewMaxDeg: number;
-  /** ⭐⭐⭐ (D-Z3) the dy held there released after this much finger back (mm) */
-  zoneHoldMm: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -857,8 +853,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   zoneSpitMinDeg: 60, // ⭐⭐⭐ (D-Z6)
   zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
   zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
-  zoneViewMaxDeg: 80, // ⭐⭐⭐ (D-Z3, R4 kept in the spit) a guess with a slider
-  zoneHoldMm: 10, // ⭐⭐⭐ (D-Z3, the owner: "dy hold until reverted with an hysteresis") a guess with a slider
   edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -1037,8 +1031,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
   if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
   if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
-  if (!(cfg.zoneViewMaxDeg >= 30 && cfg.zoneViewMaxDeg <= 89)) throw new Error(`zoneViewMaxDeg (${cfg.zoneViewMaxDeg}) must be in [30, 89] deg.`);
-  if (!(cfg.zoneHoldMm >= 0 && cfg.zoneHoldMm <= 100)) throw new Error(`zoneHoldMm (${cfg.zoneHoldMm}) must be in [0, 100] mm.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);
   if (!(cfg.orbitContactMmPerMm > 0 && cfg.orbitContactMmPerMm <= 50)) throw new Error(`orbitContactMmPerMm (${cfg.orbitContactMmPerMm}) must be in (0, 50] mm/mm.`);

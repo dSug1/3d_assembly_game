@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, greenDragGains, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress, zoneFinger, zoneViewCheck } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress, zoneFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -340,8 +340,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
     if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
     const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
-    // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5, D-Z3) in a polar zone's spit: the dy toward the turn-over held (R4), the finger read in F's upright screen
-    // (a dx pole to pole, a dy round the axis — the way it goes on the glass)
+    // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) in a polar zone's spit: the finger read in F's upright screen (a dx pole to pole, a dy round the axis — the way
+    // it goes on the glass); a crossing's hold is §8's, above (`spitStep` sets it)
     const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, dxOnly ? 0 : fdy1) : { dx: db.dx, fdy: fdy1 };
     const fdy = zf.fdy;
     const fdx = zf.dx;
@@ -360,8 +360,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);
-    // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md D-Z3) R4 kept in the spit: a step on past the view's bound refused, its dy held
-    if (asmOn && !shiftApproach) zoneViewCheck(st, yawBefore, vBefore, dxOnly ? 0 : fdy1);
     // ⭐⭐⭐ (2026-11-11) the orbit's finger travel (the approach's excluded): the automatic tilt's pending ends at its first millimetre, its blend paced by it
     if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).

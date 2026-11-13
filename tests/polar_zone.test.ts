@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { buildFaceMap, type MapFace } from "../src/input/face_map";
 import { prismOutline } from "../src/core/prism";
-import { DEFAULT_ZONE_OPTS, fingerInFrame, polarZones, snapToWorldAxis, viewBeyond, viewHoldStep, zoneAt, zoneFrame, zoneOrientation, distanceToFacets } from "../src/input/polar_zone";
+import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, zoneAt, zoneFrame, zoneOrientation, distanceToFacets } from "../src/input/polar_zone";
 import { mulM, mulT } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
@@ -157,6 +157,17 @@ describe("⭐⭐⭐ the finger read in F's upright screen (§3.5, the swap)", ()
     expect(s.dy).toBeCloseTo(0, 12);
     expect(Math.abs(r.alpha)).toBeCloseTo(Math.PI / 2, 12);
   });
+  it("looking down in the spit: the swap itself, a dx on F's pitch only, a dy on F's yaw only — the same signs as the glass's mix at ±90°", () => {
+    for (const al of [Math.PI / 2 - 0.2, -Math.PI / 2 + 0.15]) {
+      const g = fingerInFrame(1, 0, [0, 0, -1], [0, 1, 0], [Math.sin(al), Math.cos(al), 0], 0);
+      const s1 = fingerSwapped(1, 0, g.alpha);
+      expect(Math.abs(s1.dx)).toBe(0);
+      expect(Math.sign(s1.dy)).toBe(Math.sign(g.dy));
+      const s2 = fingerSwapped(0, 1, g.alpha);
+      expect(Math.abs(s2.dy)).toBe(0);
+      expect(Math.sign(s2.dx)).toBe(Math.sign(fingerInFrame(0, 1, [0, 0, -1], [0, 1, 0], [Math.sin(al), Math.cos(al), 0], 0).dx));
+    }
+  });
   it("looking along the axis: the last angle kept (no jump)", () => {
     const r = fingerInFrame(1, 0, [1, 0, 0], [0, 1, 0], [1, 0, 0], 0.7);
     expect(r.alpha).toBe(0.7);
@@ -167,26 +178,55 @@ describe("⭐⭐⭐ the finger read in F's upright screen (§3.5, the swap)", ()
   });
 });
 
-describe("⭐⭐⭐ R4 kept in the spit: the dy hold (D-Z3, the owner: as Scene_0's)", () => {
-  it("the held sign passes nothing; the other passes and counts; released once back past the hysteresis", () => {
-    let h = { sign: 1, backMm: 0 } as { sign: number; backMm: number } | null;
-    let r = viewHoldStep(h, 3, 10);
-    expect(r.dyMm).toBe(0);
-    h = r.hold;
-    r = viewHoldStep(h, -4, 10);
-    expect(r.dyMm).toBe(-4);
-    expect(r.hold).not.toBeNull();
-    r = viewHoldStep(r.hold, 2, 10);
-    expect(r.dyMm).toBe(0); // still held: not back far enough
-    r = viewHoldStep(r.hold, -7, 10);
-    expect(r.dyMm).toBe(-7);
-    expect(r.hold).toBeNull();
-    expect(viewHoldStep(null, 5, 10)).toEqual({ dyMm: 5, hold: null });
+describe("⭐⭐⭐ the zenith edge crossed as on Scene_0 (the owner): the side, its heading, the hold AFTER the crossing", () => {
+  const a: Vec3 = [1, 0, 0];
+  it("the side: in front (−z, the boot camera) and behind; kept straight over the axis and at a tip; changed past 2°", () => {
+    const front = spitSide([0, 0.3, -1], a, 0);
+    const back = spitSide([0, 0.3, 1], a, 0);
+    expect(front).toBe(-back);
+    expect(spitSide([0, 1, 0.01], a, front)).toBe(front); // straight over the axis: kept
+    expect(spitSide([0, 1, 0.01 * Math.sign(back)], a, front)).toBe(front); // 0.6° past: kept (the hysteresis)
+    expect(spitSide([0, 1, 0.1 * (back > 0 ? 1 : -1)], a, front)).toBe(back); // 5.7° past: changed
+    expect(spitSide([1, 0.01, 0.01], a, front)).toBe(front); // looking along the axis: kept
   });
-  it("the view past the bound: more than 80° above or below the horizon", () => {
-    expect(viewBeyond([0, 1, 0.1], 80)).toBe(true);
-    expect(viewBeyond([0, -1, 0.1], 80)).toBe(true);
-    expect(viewBeyond([1, 1, 0], 80)).toBe(false);
+  it("its heading: the side's level direction square to the axis — the boot camera's own in front, the opposite behind; no spin along the axis", () => {
+    const front = spitSide([0, 0, -1], a, 0);
+    const h = spitHeading(a, front);
+    expect(Math.cos(h)).toBeCloseTo(0, 12);
+    expect(Math.sin(h)).toBeCloseTo(-1, 12);
+    expect(Math.sin(spitHeading(a, -front))).toBeCloseTo(1, 12);
+  });
+  it("the camera's heading: the side's looking down (no spin along the axis at the top), its own direction's when level; continuous between", () => {
+    const front = spitSide([0, 0, -1], a, 0);
+    const side = spitHeading(a, front);
+    // looking down, the camera moved along the axis: the heading stays within 10° of the side's
+    for (const x of [-0.12, -0.05, 0, 0.05, 0.12]) {
+      const u: Vec3 = [x, 0.99, -0.03];
+      expect(Math.abs(Math.atan2(Math.sin(spitCameraHeading(u, a, front) - side), Math.cos(spitCameraHeading(u, a, front) - side)))).toBeLessThan((25 * Math.PI) / 180);
+    }
+    // level, toward a tip: close to its own
+    const lvl: Vec3 = [-0.95, 0.1, -0.3];
+    const own = Math.atan2(lvl[2], lvl[0]);
+    expect(Math.abs(Math.atan2(Math.sin(spitCameraHeading(lvl, a, front) - own), Math.cos(spitCameraHeading(lvl, a, front) - own)))).toBeLessThan((25 * Math.PI) / 180);
+    // continuous: a step of 1° of the direction turns the heading by less than 6°
+    let prev = spitCameraHeading([0, 0.98, -0.2], a, front);
+    for (let t = 1; t <= 90; t++) {
+      const th = (t * Math.PI) / 180;
+      const u: Vec3 = [-Math.sin(th) * 0.98, Math.cos(th) * 0.98, -0.2];
+      const h = spitCameraHeading(u, a, front);
+      expect(Math.abs(Math.atan2(Math.sin(h - prev), Math.cos(h - prev)))).toBeLessThan((6 * Math.PI) / 180);
+      prev = h;
+    }
+  });
+  it("the hold after the crossing: into the face beyond, square to the ridge, down its slope; the dy that crossed; none without a dy", () => {
+    const nBack: Vec3 = [0, 0.9 / Math.hypot(0.9, 0.44), 0.44 / Math.hypot(0.9, 0.44)];
+    const back = spitSide([0, 0.3, 1], a, 0);
+    const h = crossingHold([0, 0.48, 0.19], nBack, a, back, 1)!;
+    expect(h.sign).toBe(1);
+    expect(Math.abs(h.d[0])).toBeLessThan(1e-12); // square to the ridge (along x)
+    expect(h.d[1]).toBeLessThan(0); // down the face beyond
+    expect(Math.abs(h.d[0] * nBack[0] + h.d[1] * nBack[1] + h.d[2] * nBack[2])).toBeLessThan(1e-12); // along it
+    expect(crossingHold([0, 0, 0], nBack, a, back, 0)).toBeNull();
   });
 });
 

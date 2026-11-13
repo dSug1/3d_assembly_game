@@ -390,8 +390,8 @@ export interface SceneState {
   asmZoneMix: { readonly from: import("../input/orbit_tilt").CamFrame; k: number; rad: number; axis: Vec3 | null } | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
-  /** ⭐⭐⭐ (D-Z3) R4 in the spit: the dy toward the turn-over held */
-  asmViewHold: import("../input/polar_zone").ViewHold | null;
+  /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
+  asmSpitSide: number;
   /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
   asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
   /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */
