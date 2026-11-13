@@ -43,7 +43,7 @@ The build READS `src/content/scene_<n>.ts`'s `lighting`, `scene_1.ts`'s `unitM` 
 - **A spot** has Babylon's physical falloff I/d² (d in metres; a luminous intensity) on a PBR material. It becomes a Blender **spot** of power 4π·I / `unitM`² (no spot in `Scene_2` yet: unchecked).
 - **The world**: the panorama × `envIntensity`, plus the hemispheric fill × `ambient`. The panorama is MIRRORED (Mapping y × −1): Babylon reads an equirectangular image as θ = atan2(z, x) in its world (`PanoramaToCubeMapTools`), Blender as its mirror. The CAMERA sees `background`.
 - **Tone**: Filmic "Medium Contrast" (exposure log2) when `toneMapping` is set, else Standard (Babylon shows the colours raw; Filmic washed the yellow floor to cream).
-- **Contact shadows**: Eevee AO when `ambientOcclusion` is set.
+- **Contact shadows**: Eevee AO when `ambientOcclusion` is set (the game's SSAO). A scene with BAKED contact shadows (§6.3) shows its bake in the game and Eevee's AO in Blender only if set.
 - ⚠ **Checked once, by eye**: after the correction, the game's floor and the Blender render read alike (the owner's second look decides). Spots unchecked.
 
 ## 4. ⭐⭐ `Scene_2`'s cream studio (2026-11-13)
@@ -54,8 +54,8 @@ The reference was a pasta machine on a cream sculpted plinth: a high-key studio.
 
 - **Key**: `Key_softbox`, one directional, intensity **10.6** (11.8, then −5 % twice: *"reduce the 40° front light intensity by 5%"*), 4800 K, `softnessDeg` **25**, coming FROM (−0.666, 0.643, 0.378) (game world): **40°** up, **60.4° left of the BOOT view's straight ahead**, toward behind the engine (the camera at −z, yaw −90°; the owner turned it from 80.4°: *"yaw this light 15 degrees"* … *"in the other direction"*, then *"5 degrees toward the left"*). `eulerDeg` [40, 119.6, 0]. ⭐ Raised from 28.8° at 15.7 (the owner: *"I find the horizontal light a bit too strong"*): the floor as lit, a vertical face a third less. Its shadows fall long and soft toward the front-right of the boot view. No gobo (the reference's curtain shadow left out). ⛔ First placed behind-left of render C's camera, which looks from the OTHER side (+x, +z): in the game the shadow fell away from the camera (the owner's first look). Turned −136.5° about the vertical.
 - **Environment**: `studio_cream.hdr` (17 KB). Cream walls at **0.45** × sRGB F2EBDF (render C's fill), the floor's ivory below, and a SOFT BOX (r 14°, ×4, warm) toward the key, laid out in Babylon's mapping so the chrome's highlight sits where the key comes from. The test checks it: the key's travel is opposite `KEY_FROM`.
-- **Background**: sRGB **BFBCB7** (render C's backdrop CAC7C2, sampled; then −10 %, then +5 %). ⛔ A creamed night blue (40 % `Scene_1`'s night blue + 60 % cream, 929C9C) tried and reverted; then the series night blue 50/50 … 95/5 shown (`previews/backgrounds/`, composited on one transparent render) — the owner: *"we will keep it as cream as it is"*; 95/5 tried in the game, reverted.
-- **Tone mapping**: ACES, exposure **0.89**, contrast 1.1. ⭐ Exposure 1 → 0.85 and the background −10 % (the owner: *"lower the lights a little so the player can stay in the game longer"*): every light lower together, the balance kept; then *"increase the whole scene light 5%"*: 0.89, the background +5 %. **Contact shadows** on.
+- **Background**: sRGB **BFBCB7** (render C's backdrop CAC7C2, sampled; then −10 %, then +5 %). ⛔ A creamed night blue (40 % `Scene_1`'s night blue + 60 % cream, 929C9C) tried and reverted; then the series night blue 50/50 … 95/5 shown (composited on one transparent render; the pictures deleted, not needed) — the owner: *"we will keep it as cream as it is"*; 95/5 tried in the game, reverted.
+- **Tone mapping**: ACES, exposure **0.89**, contrast 1.1. ⭐ Exposure 1 → 0.85 and the background −10 % (the owner: *"lower the lights a little so the player can stay in the game longer"*): every light lower together, the balance kept; then *"increase the whole scene light 5%"*: 0.89, the background +5 %. **Contact shadows**: BAKED per part and per pair (§6.3), the SSAO off (`ambientOcclusion: false`; it cost ≈ 7 ms on the iPhone).
 - **Floor**: **ivory, sRGB EFE5D0** (linear 0.864, 0.785, 0.629): halfway in linear light between `Scene_1`'s sand yellow ECDFBF and the reference's cream F2EBDF. It is designed in the Blender file (`SCENE_WORKFLOW.md` §6.3 item 1).
 - **Materials** (the build): the glass is the owner's (metallic 1, roughness **0.75**, alpha 0.43); chrome C9CDD2 (metallic 1, roughness 0.14); the plinth's wood unchanged.
 - Tuned once against render C: the first studio (walls 0.8, box ×6, key 3) washed the shadows out. The fill was twice render C's.
@@ -74,3 +74,91 @@ The reference was a pasta machine on a cream sculpted plinth: a high-key studio.
 - On the `.glb`'s PBR materials, the chrome was BLACK, because there was no environment. The generated `sky_sand.hdr` fixed that, and was later made "less blue".
 - Then the scene was TOO BRIGHT: the fill and the sky stood for the same ambient light twice.
 - The Blender preview's own sun, floor (24 units, 1.7× the game's) and Filmic had never been the game's. Since 2026-11-13 the `.blend` shows the game's stage (§1).
+
+## 6. ⭐⭐⭐ THE FRAME RATE — a stage of the pipeline (2026-11-13)
+
+> *"find a way to increase the fps by simplifying the rendering"* → *"update the md files to capture the fps optimization in the workflow and your
+> recommendations … so this becomes part of the pipeline. Then proceed with building all."* — the owner
+
+### 6.1 Measure first — the four toggles, on the desktop GPU AND the phone
+
+At the FINAL STAGE (every part shown), with the HUD's `frame` line, ☰ RENDERING *contact shadows* × CAMERA *shadows*:
+
+| `Scene_2`, contact shadows / shadows | on / on | on / off | off / on | off / off |
+|---|---|---|---|---|
+| desktop GPU (fps) | 95 | 100 | 120 | 125 |
+| iPhone (fps) | 40 | 48 | 56 | 59 (the screen's 60 Hz ceiling) |
+
+Read as frame times. SSAO cost 2.2 ms on the GPU and **≈ 7 ms on the phone**. Shadows cost 0.4 ms on the GPU and 1 – 4 ms on the phone. Without both, the phone sits at its 60 Hz ceiling: the scene itself (glass, PBR, ~81 draw calls) fits. ⛔ A scene is not done until this table is filled for it.
+
+### 6.2 The strategies — what applies
+
+| # | Strategy | Status |
+|---|---|---|
+| 1 | **The shadow map drawn ON EVENTS only** (a caster moved, appeared or vanished; the shadow level changed), not every frame | ✅ BUILT (`lighting.ts` `shadowsOnDemand`) — every scene |
+| 2 | **Contact shadows BAKED in Blender** (§6.3) instead of SSAO | ✅ BUILT (`build_engine.py` the bake; `core/model_contact.ts`; `model_import.ts`) — `Scene_2`'s SSAO off |
+| 3 | PCSS → plain PCF | only if a phone still misses after 1 and 2 (the key's `softnessDeg` removed = PCF) |
+| 4 | **Freeze what does not move** (the model's world matrices) | ✅ BUILT for the final stage; W5 unfreezes a part when it is picked up |
+| 5 | Merge each part's meshes by material (fewer draw calls) | not now — the phone is at its ceiling without the effects; revisit when parts become bodies (W5) |
+| 6 | Less glass overdraw | not now (same reason) |
+| 7 | **The quality LADDER**: the automatic switch drops the contact shadows FIRST, re-measures, then the shadows | ✅ BUILT (`core/auto_shadow.ts` `autoLadderStep`; `render_loop.ts`) |
+| 8 | Render resolution (`FRAME_RATE.md` §4 item 1) | last resort — the owner judged it not needed |
+
+### 6.3 ⭐⭐ Contact shadows while the player BUILDS — baked per part, per PAIR, switched on when seated
+
+> *"we will need a strategy to manage shadows as the assembly gets built by the player as baking from final assembly will not work during the steps
+> of assembly by the player. check literature."* · *"we may need to bake at each step of assembly to trigger when a part is seated"* — the owner
+
+A bake of the finished assembly is wrong while it is half built, and a bake per STEP does not fit either: the plan is a partial order (several
+orders valid — `SCENE_WORKFLOW.md` §2.2), so there would be one bake per possible SET of seated parts. The literature's answer for rigid parts is
+occlusion computed per occluder and COMBINED at run time:
+- Kontkanen & Laine, *Ambient Occlusion Fields* (I3D 2005): the occlusion a rigid object casts, precomputed around it, combined heuristically.
+- Malmer, Malmer, Assarsson & Holzschuch, *Fast Precomputed Ambient Occlusion for Proximity Shadows* (JGT 2007): the same idea in a 3D grid.
+- Iwanicki, *Lighting Technology of The Last of Us* (SIGGRAPH 2013): occluders' contributions accumulated; the double occlusion "not visible in practice".
+
+Here the parts' goal places are KNOWN, so no field is needed. The occlusion is baked at the goal:
+- **Each part's OWN occlusion** (its corners, its holes; the floor always present) → its vertex colours, exported as `COLOR_0`; always on.
+- **Each PAIR term** (what part B casts on part A at their goals): `bake(A + B) / bake(A alone)` per vertex of A, kept where < 0.995, for every pair whose opaque meshes come within the bake's reach. Written to the scene's `<scene>_contact.json`: per term the receiver mesh, its part, the occluder part, and per vertex its glTF-local position and factor.
+- **At run time** (`core/model_contact.ts`): a term applies when BOTH its parts are seated, and the factors MULTIPLY into the vertex colours, so any order gives the same result. One colour-buffer write per seating; nothing per frame. The final stage seats every part at load.
+- **What is baked**: the OPAQUE meshes only. The glass neither receives nor occludes (Cycles' AO would count it solid: the cases would blacken everything inside).
+- **Checked by the build**:
+  - Every term darkens only: an occluder added may brighten a vertex by no more than the bake's noise (0.06), measured in ABSOLUTE terms. ⛔ As a ratio it read 1.458: dividing by a dark vertex inflates the noise.
+  - The product self × Π terms at the full assembly = a TRUE full-assembly bake: for EACH term, the mean error over its own vertices ≤ 0.08. ⛔ First as a 95th percentile over ALL the vertices: blind. Its control (`CHECK_CONTROLS`: the darkest term dropped) moved it 0.034 → 0.037. Local per term, the control reads 0.627: caught ✅.
+  - The `.glb` read back: every baked mesh carries `COLOR_0`.
+  - The game's tests: every term's points ARE vertices of its mesh in the `.glb` (≥ 99.5 %; the unturned axes, the counter-example, find almost none), any order gives the same factors, and broken files are refused.
+- **Kept**: a vertex's factor where it darkens by ≥ 3 %, as a ratio AND in absolute terms. ⛔ Ratio only: 251 terms, 346 kB, mostly noise.
+- **`Scene_2`**: 69 opaque meshes, **151 pair terms**, the sidecar 243 kB (**42 kB gzipped**). The `.glb` 1.47 → 1.83 MB: `COLOR_0` as floats (a lighter encoding is possible later). The bake ≈ 3.5 min in the build (Cycles, 128 samples, reach 0.3 units = 4.2 cm).
+- **A part in the hand** has no contact term until seated; its key-light shadow (§6.2 item 1, redrawn while it moves) shows where it is. If that looks bare, a later step can add analytic stand-ins (an ellipsoid per part, Iwanicki's way).
+- **In Blender** the look shows Eevee's own AO (the mirror, §3); the game shows the bake. The bake is the build's, never hand-painted.
+
+### 6.4 ⭐⭐ The shadows DURING PLAY — as the player builds, every shadow follows
+
+> *"in the md files, capture the management of the shadows during the game play while the assembly gets assembled by the player and shadow may
+> change"* — the owner, 2026-11-13
+
+A scene has two kinds of shadow. Each follows the assembly by EVENTS, never by a per-frame recomputation.
+
+| Shadow | What it is | Made | Follows the play by |
+|---|---|---|---|
+| **Key light's** | the long, soft shadow of the key (`softnessDeg`), on the floor and on the parts | a shadow map (`lighting.ts`) | **redrawn when a caster changes** — moved, shown, hidden, added (`shadowsOnDemand`, `casterSignature`) |
+| **Contact** | the soft dark where parts meet (ambient occlusion) | baked in Blender: each part's own (`COLOR_0`) + per-pair terms (`<scene>_contact.json`) | **recomputed when the SET of seated parts changes** (`applyContactShadows(st, seated)`) |
+
+What each moment of play does:
+
+| Moment | Key light's shadow | Contact shadows |
+|---|---|---|
+| The level boots (the boot stage: the anchor seated, the rest in heaps) | drawn once | `seated` = the pre-placed parts (the anchor): their pairs only |
+| A part is **picked up** (it leaves its heap or its seat) | its world matrix unfrozen (W5) → redrawn every frame it moves | if it was seated: removed from `seated` → its pairs lifted, on it and on its neighbours (both ways) |
+| A part **moves** in the hand | redrawn each frame (it is a caster that moves) | none for it (no term until seated); a part in the hand shows its own occlusion only |
+| A part is **released, not seated** (back on a heap, on the floor) | redrawn once, then still | unchanged |
+| A part is **seated** (the snap, the plunge) | redrawn once, then still; frozen again | added to `seated` → every pair with an already-seated neighbour applied, both ways (what it casts, what it receives) |
+| **Undo** / a part unlocked / the level reset | redrawn once | `seated` recomputed from the model → `applyContactShadows` with the new set |
+| The **final stage** (every part at its goal) | drawn once | every pair applied: = a full-assembly bake within the build's tolerance (each term's mean error ≤ 0.08) |
+| The **engine runs** at the level end (the crank turns, pistons and valves move) | redrawn every frame of the animation | the terms stay those of the GOAL pose. ⚠ The moving pieces' contacts are approximate while they move (the crank's turn changes them) — acceptable for a short animation; a per-angle bake is not planned |
+
+⭐ Rules:
+- `applyContactShadows` always recomputes FROM THE BAKED COLOURS × the product of the applicable terms. Never incrementally, so no rounding drifts and no order matters.
+- A part is "seated" exactly when the game's model says so (W5's goal capture / the snap), the same set the score reads. ⛔ Never inferred from a mesh's position.
+- The shadow map's redraw is automatic (`casterSignature`): W5 has nothing to call. It only must unfreeze a part's world matrix when the part is picked up (`unfreezeWorldMatrix`), and may freeze it again when seated.
+- The quality ladder (§6.2 item 7) and the `shadowsOn` setting decide whether the key light's shadow exists at all. The contact shadows cost nothing per frame and stay on.
+- ⚠ Not built yet (W5): the calls at pick-up / seat / undo / reset. Today the final stage calls `applyContactShadows` once with every part of the slice.

@@ -2770,6 +2770,10 @@ def check_glb(path, keep, label="the export"):
         moved.sort(reverse=True)
         bad.append(f"{len(moved)} nodes NOT where they were built (the look off its collision and proxies): " +
                    ", ".join(f"{nm} {d:.3f}" for d, nm in moved[:6]))
+    _baked = [o.name for o in keep if o.type == "MESH" and o.data.color_attributes.get("AO") is not None]
+    _no_color = [n for n in _baked if not any("COLOR_0" in pr["attributes"] for pr in gl["meshes"][by_name[n]["mesh"]]["primitives"])]
+    if _no_color:
+        bad.append(f"{len(_no_color)} baked meshes exported WITHOUT their contact shadows (COLOR_0): {_no_color[:4]}")
     if by_name.get("FLOOR", {}).get("extras", {}).get("role") != "floor":
         bad.append("the FLOOR not exported with its role floor")
     for k in ("animations", "cameras"):
@@ -2790,7 +2794,148 @@ def check_glb(path, keep, label="the export"):
     return not bad
 
 
+# ================================================================ ⭐⭐ THE CONTACT SHADOWS, BAKED — per part and per PAIR (`SCENE_SETUP.md` §6.3)
+# (the owner, 2026-11-13: *"we will need a strategy to manage shadows as the assembly gets built by the player as baking from final assembly will not
+# work during the steps of assembly"* · *"we may need to bake at each step of assembly to trigger when a part is seated"*). The plan is a PARTIAL order
+# (several orders valid), so no bake per step: each part's OWN occlusion → its vertex colours (`AO`, exported as COLOR_0, always on), and per PAIR
+# (A, B) the term bake(A + B) / bake(A alone) on A's vertices → `<scene>_contact.json`; the game multiplies the terms of the pairs whose two parts
+# are SEATED (any order: a product). Ambient occlusion fields (Kontkanen & Laine 2005), proximity shadows (Malmer et al. 2007), occluders accumulated
+# (Iwanicki 2013) — here at the KNOWN goal places, so no field.
+# ⚠ OPAQUE meshes only: the glass neither receives nor occludes (Cycles' AO counts it solid — the cases would blacken all inside them). The floor:
+# one face (its outline is the D196 contour) — no vertices to carry a contact shadow; the key light's shadow does it.
+AO_DIST = 0.3                                    # the reach of a contact shadow, reference units (4.2 cm)
+AO_SAMPLES = 128
+CONTACT_JSON = BLEND.replace(".blend", "_contact.json")
+TERM_KEEP = 0.97                                 # a factor kept below it: a darkening under 3 % is not seen (0.995 first: 283 terms, 476 kB)
+AO_NOISE = 0.06                                  # a bake's own noise (128 samples): an occluder added may not BRIGHTEN a vertex by more
+CONTACT_TOL = 0.08                               # self × Π terms vs a true full bake: the mean error over EACH term's vertices (⛔ a p95 over all the
+                                                 # vertices first: blind — its control, one term dropped, moved it 0.034 → 0.037)
+
+
+def opaque_render(coll):
+    return [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render" and not o.get("metadata")
+            and o.material_slots and all(s.material is not None and s.material.diffuse_color[3] >= 1 for s in o.material_slots)]
+
+
+def bake_ao(receivers, occluders):
+    """Cycles' AO baked into each receiver's `AO` colour attribute (per vertex), with only `occluders` (and the receivers) seen. Returns {name: [v]}."""
+    seen = set(occluders) | set(receivers)
+    saved = {o.name: o.hide_render for o in bpy.data.objects if o.type == "MESH"}
+    for o in bpy.data.objects:
+        if o.type == "MESH":
+            o.hide_render = o not in seen
+    for o in bpy.data.objects:
+        o.select_set(False)
+    for o in receivers:
+        me = o.data
+        attr = me.color_attributes.get("AO") or me.color_attributes.new("AO", "FLOAT_COLOR", "POINT")
+        me.color_attributes.active_color = attr
+        me.color_attributes.render_color_index = list(me.color_attributes).index(attr)
+        o.hide_set(False)
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = receivers[0]
+    bpy.ops.object.bake(type="AO", target="VERTEX_COLORS", use_clear=True)
+    out = {o.name: [c.color[0] for c in o.data.color_attributes["AO"].data] for o in receivers}
+    for o in bpy.data.objects:
+        if o.type == "MESH":
+            o.hide_render = saved[o.name]
+    return out
+
+
+def world_box(objs):
+    to_root = YUP_ROOT.matrix_world.inverted()
+    pts = [to_root @ o.matrix_world @ Vector(c) for o in objs for c in o.bound_box]
+    return Vector([min(p[i] for p in pts) for i in range(3)]), Vector([max(p[i] for p in pts) for i in range(3)])
+
+
+def box_gap(a, b):
+    return max(0.0, max(max(a[0][i] - b[1][i], b[0][i] - a[1][i]) for i in range(3)))
+
+
+def bake_contact(drop_one=False):
+    """The bake, its terms, the sidecar, the checks. `drop_one`: the control — the largest term left out must FAIL the product check."""
+    actions = {o.name: o.animation_data.action for o in bpy.data.objects if o.animation_data and o.animation_data.action}
+    for n in actions:                                       # ⛔ the preview's keyframes would re-pose the valves (PART_AUTHORING.md §4.4 item 5)
+        bpy.data.objects[n].animation_data.action = None
+    apply_pose(engine_pose(0, valves_closed=True))
+    engine_was = scene.render.engine
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples = AO_SAMPLES
+    scene.world.light_settings.distance = AO_DIST
+    parts = [(p, opaque_render(c)) for p, c in PARTS]
+    parts = [(p, ms) for p, ms in parts if ms]
+    floor = [bpy.data.objects["FLOOR"]]
+    self_ao = {}
+    for p, ms in parts:
+        self_ao.update(bake_ao(ms, ms + floor))
+    boxes = {p.name: world_box(ms) for p, ms in parts}
+    terms, raw_max = [], 0.0
+    for pa, ma in parts:
+        for pb, mb in parts:
+            if pa is pb or box_gap(boxes[pa.name], boxes[pb.name]) > AO_DIST:
+                continue
+            both = bake_ao(ma, ma + mb + floor)
+            for o in ma:
+                fs = []
+                for i, (vs, vb) in enumerate(zip(self_ao[o.name], both[o.name])):
+                    raw_max = max(raw_max, vb - vs)              # ⚠ in ABSOLUTE terms: the ratio inflates the noise where vs is small (1.458 seen)
+                    f = min(1.0, vb / max(vs, 1e-3))
+                    if f < TERM_KEEP and vs - vb >= 1 - TERM_KEEP:   # ⚠ AND darker in absolute terms: on a dark vertex the noise alone makes ratios
+                                                                     # below 0.97 (251 terms, 346 kB of mostly noise)
+                        fs.append((i, f))
+                if fs:
+                    terms.append({"mesh": o.name, "part": pa["part_id"], "by": pb["part_id"], "idx": fs})
+    # ⭐ the CHECK: self × Π terms at the full assembly = a TRUE full bake
+    allm = [o for p, ms in parts for o in ms]
+    full = bake_ao(allm, allm + floor)
+    used = terms
+    if drop_one and terms:
+        worst = max(terms, key=lambda t: sum(1 - f for i, f in t["idx"]) / len(t["idx"]))      # the darkest term on average
+        used = [t for t in terms if t is not worst]
+    pred = {n: list(v) for n, v in self_ao.items()}
+    for t in used:
+        for i, f in t["idx"]:
+            pred[t["mesh"]][i] *= f
+    # ⭐ LOCAL: per term, the mean error over its own vertices — a missing pair shows as its whole darkening
+    per_term = [(sum(abs(pred[t["mesh"]][i] - full[t["mesh"]][i]) for i, f in t["idx"]) / len(t["idx"]), t) for t in terms]
+    p95, worst_t = max(per_term, key=lambda e: e[0]) if per_term else (0.0, None)
+    errs = per_term
+    # the self AO left in the attribute: what the .glb exports as COLOR_0
+    for o in allm:
+        for c, v in zip(o.data.color_attributes["AO"].data, self_ao[o.name]):
+            c.color = (v, v, v, 1.0)
+    scene.render.engine = engine_was
+    for n, act in actions.items():
+        bpy.data.objects[n].animation_data.action = act
+    return terms, raw_max, p95, len(errs), allm
+
+
+def write_contact(terms, allm):
+    """The sidecar: each term's receiver mesh, its part, its occluder part, and per vertex its glTF-local position (Blender's (x, y, z) → (x, z, −y))
+    and factor. The game finds the vertices by position (the exporter splits and reorders vertices)."""
+    by_name = {o.name: o for o in allm}
+    out = []
+    for t in terms:
+        vs = by_name[t["mesh"]].data.vertices
+        out.append({"mesh": t["mesh"], "part": t["part"], "by": t["by"],
+                    "points": [[round(vs[i].co.x, 4), round(vs[i].co.z, 4), round(-vs[i].co.y, 4), round(f, 3)] for i, f in t["idx"]]})
+    with open(CONTACT_JSON, "w", encoding="utf-8") as fh:
+        json.dump({"about": "Scene_2's contact shadows per PAIR (SCENE_SETUP.md §6.3): a term applies when both its parts are seated; factors multiply",
+                   "version": 1, "aoDistance": AO_DIST, "terms": out}, fh, separators=(",", ":"))
+    return os.path.getsize(CONTACT_JSON)
+
+
 if STEP >= 10:
+    _terms, _raw, _p95, _n, _allm = bake_contact()
+    _size = write_contact(_terms, _allm)
+    print(f"CONTACT SHADOWS baked (opaque meshes: {len(_allm)}; reach {AO_DIST}): {len(_terms)} pair terms, {_size / 1000:.1f} kB; every term darkens "
+          f"only: {'✅' if _raw <= AO_NOISE else '⛔'} (the most an occluder brightened a vertex: {_raw:+.3f}, noise {AO_NOISE}); self × Π terms vs a full "
+          f"bake, the worst term's mean error {_p95:.3f} over {_n} terms: " + ("✅" if _p95 <= CONTACT_TOL else f"⛔ over {CONTACT_TOL}"))
+    if os.environ.get("CHECK_CONTROLS"):                         # ⑬ the control: the largest term dropped must FAIL the product check
+        _t2, _r2, _p2, _n2, _a2 = bake_contact(drop_one=True)
+        print("the contact shadows' CONTROL (the darkest term dropped): " + (f"caught ✅ ({_p2:.3f})" if _p2 > CONTACT_TOL else f"⛔ NOT caught ({_p2:.3f})"))
+        _terms, _raw, _p95, _n, _allm = bake_contact()             # the file's own bake back
+        write_contact(_terms, _allm)
     kept = export_glb(GLB)
     check_glb(GLB, kept)
     if os.environ.get("CHECK_CONTROLS"):                         # ⑪ the control: the same export WITHOUT the +Y-up conversion must FAIL

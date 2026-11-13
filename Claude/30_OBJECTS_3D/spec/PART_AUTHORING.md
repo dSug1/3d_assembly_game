@@ -294,6 +294,10 @@ workflow once the scene is built in blender"*)
    one-sided material, at the game's size: `SCENE_WORKFLOW.md` §6.3 item 1). ⚠ Built as an object of the ROOT's frame — not with `mesh_object`, which
    brings reference coordinates into a PART's frame (the root's own rotation then stood the floor on its edge: the build asserts it faces up). Read
    back: exported, its role carried; the game's reader takes at most one, a mesh with no children (`core/model_catalog.ts`).
+7. ⭐⭐ **THE CONTACT SHADOWS, BAKED** (2026-11-13, `40_RENDER_SCENE/spec/SCENE_SETUP.md` §6.3): before the export, the build bakes each part's own
+   occlusion into its OPAQUE meshes' vertex colours (`AO` → `COLOR_0`) and, per pair of parts within reach at their goals, what one casts on the other →
+   `<scene>_contact.json`; the glass neither receives nor occludes. Checks: darkens only (absolute, within the noise), the product = a full bake PER TERM
+   (⛔ a global percentile was blind — its control proved it), every baked mesh exported with `COLOR_0`; control ⑬ the darkest term dropped.
 
 ## 5. A scene's own reference animation
 

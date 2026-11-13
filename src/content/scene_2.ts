@@ -19,6 +19,7 @@ import { SCENE_1 } from "./scene_1";
 // ⭐ The file Vite serves (hashed in the build); fetched only when this level is played.
 import ENGINE_GLB from "../../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine.glb?url";
 import STUDIO_HDR from "../../Assets/Environment/studio_cream.hdr?url";
+import CONTACT_JSON from "../../Assets/Blender/World0_Scene2_engine/world0_scene_2_engine_contact.json?url";
 
 const FLOOR = SCENE_1.bodies.find((b) => b.id === "Floor" && b.frozen);
 if (FLOOR === undefined) throw new Error("Scene_2: Scene_1 has no frozen Floor to copy");
@@ -65,8 +66,10 @@ export const SCENE_2: SceneDescriptor = {
     // ⭐ exposure 0.85 (1 before): every light and reflection together a little lower — the owner: "so the player can stay in the game longer";
     // then 0.89 ("increase the whole scene light 5%")
     toneMapping: { exposure: 0.89, contrast: 1.1 },
-    ambientOcclusion: true,
+    // ⭐ (2026-11-13) OFF: the contact shadows are BAKED (SSAO cost ≈ 7 ms on the iPhone — `SCENE_SETUP.md` §6.1); the slider can still try it
+    ambientOcclusion: false,
   },
   // ⭐ The final stage: every part (no slice yet).
-  model: { url: ENGINE_GLB },
+  // ⭐ (2026-11-13) the contact shadows BAKED per part and per pair, switched on when seated (`SCENE_SETUP.md` §6.3) — the SSAO off below
+  model: { url: ENGINE_GLB, contact: CONTACT_JSON },
 };

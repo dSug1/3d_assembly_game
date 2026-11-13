@@ -41,10 +41,12 @@ function shadowsLabel(st: SceneState): string {
   // ⭐ (2026-10-15) "off" keeps the orbited piece's own shadow (`shadowLevel`)
   if (m === 0) return "off (the piece's shadow kept)";
   if (m === 1) return "on";
-  if (st.autoShadow === null) return "auto (measuring…)";
-  return st.autoShadow === "OFF"
+  // ⭐ (2026-11-13) the ladder: the contact shadows dropped first is said too
+  const ao = st.autoAo === false ? " · contact shadows dropped" : "";
+  if (st.autoShadow === null) return `auto (measuring…)${ao}`;
+  return (st.autoShadow === "OFF"
     ? `auto → OFF (too slow: median over ${st.cfg.autoShadowBudgetMs}ms) — the piece's shadow kept`
-    : `auto → on`;
+    : `auto → on`) + ao;
 }
 
 export function paint(st: SceneState) {

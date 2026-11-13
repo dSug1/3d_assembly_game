@@ -236,6 +236,11 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    it lights the glTF's PBR materials only, not drawn as a background); its strength the RENDERING slider **environment** (`envIntensity`, 0 – 3).
    **(b) look with the debug layers** (the `model layers` slider): the look against its collision pieces and proxies — `Scene_2`'s showed two valves
    off their collision: exported in an animation frame, not the goal (`PART_AUTHORING.md` §4.4 item 5).
+   ⭐⭐ **(c) THE FRAME RATE, measured here** (the owner, 2026-11-13: *"so this becomes part of the pipeline"*): the four toggles (contact shadows ×
+   shadows) on the desktop GPU AND the phone, the table filled; the scene's contact shadows BAKED per part and per pair (switched on when seated, any
+   order), the shadow map drawn on events, the model frozen, the quality ladder — `40_RENDER_SCENE/spec/SCENE_SETUP.md` §6. ⛔ **GATE: the table filled,
+   the phone at its ceiling or the gap named.** ⭐ During play (W5) the shadows follow the assembly by events — the shadow map on a caster's change, the
+   contact shadows on a change of the SEATED set (pick-up, seat, undo, reset): `SCENE_SETUP.md` §6.4, to wire in the playable slice.
 4. ⭐⭐ **THE BOOT STAGE — the parts laid out where the player finds them** (the owner: *"also good to have a look at the scene in its boot stage so we
    can lay the parts properly"*): the anchor at its goal, every other part in its boot place (`Scene_2`: the HEAPS, one per type of part, a part never on
    its seating face — `SCENE_2_ASSEMBLY.md` D4), reachable by the orbit, inside the play volume, in view from the boot camera. ⛔ **GATE: the owner's

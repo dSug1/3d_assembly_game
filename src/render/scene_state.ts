@@ -587,6 +587,15 @@ export interface SceneState {
   goalPopupTimer?: ReturnType<typeof setTimeout>;
   /** ⭐ `D138`: AUTO shadows' verdict — `null` while measuring — and when that measurement began. */
   autoShadow: "ON" | "OFF" | null;
+  /** ⭐ (2026-11-13) the ladder's contact-shadow verdict: `null` measuring (or none to drop), `false` DROPPED for the session, `true` kept. */
+  autoAo: boolean | null;
+  /** ⭐ (2026-11-13) the scene has contact shadows (SSAO) at all — set by `model_import.ts`. */
+  aoAvailable: boolean;
+  /** ⭐ (2026-11-13) the model's baked contact shadows per pair and their receivers (`model_import.ts`); `null`: none. */
+  modelContact: {
+    readonly file: import("../core/model_contact").ContactFile;
+    readonly meshes: readonly { readonly term: string; readonly mesh: AbstractMesh; readonly base: Float32Array; readonly keys: readonly string[] }[];
+  } | null;
   autoShadowArmedAt: number;
   /** The `shadowsOn` value last applied, so a change back to AUTO re-arms the measurement. */
   shadowModeSeen: number;
