@@ -150,3 +150,36 @@ jumps, ×2 on both scenes) is not comparable; and the RED section's not-a-plane 
 contact before the hold already) — to re-walk on an idle machine before it is read as a defect. The far walks stopped at 4 of 9 scenarios (the
 watchdog), the tilt probe gave nothing.
 ✅✅ **The owner (2026-11-13, on the device, `de789f6` — F1 – F5 and this hold): *"the behavior is tested and is ok for me"*.**
+
+## 9. ✅ THE CAMERA'S ROLL AT THE ZENITH (2026-11-13, `1.0.125-Debug_scene_0`, live `a0ec9bc`) — ✅✅ the owner: *"this is good"*
+
+> *"polar orbit far out: the sections are ok. however there is only one defect: when the gizmo reach the zenith edge, there is a camera roll when the
+> gizmo is stopped at the zenith. This happens at all the distances in polar orbit mode"* → *"if I hit the zenith edge at zero camera yaw there is almost
+> no roll … with camera yaw towards the left, there is a roll towards the left … the more the camera yaw when the gizmo hit the zenith edge the more the
+> camera roll at the hit"* — the owner (⚠ my first reading, a dx spinning the view at the pole, was wrong: the roll is a dy's, at the hit).
+
+**Root cause**: the calm holds the camera nearer square to the face than the orbit's yaw; the world camera's heading was `calmHeading` of the SHOWN
+direction, and toward the pole that direction gave the withheld yaw back — the calm faded (`poleWeight`, 60° … 85° of pitch) and, straight up, no heading
+at all (the guard: the bare yaw; `ORBIT_PITCH_MAX_RAD` is exactly 90°). A dy alone rolled a camera looking down by (1 − sH) × the yaw's angle off the face,
+toward the yaw's side. Probed (`zen_left` / `zen_mid` / `zen_right`, 21° off the front): 14 – 19° on both scenes; on `Scene_1`'s cube over the last 25° of
+pitch, on the heptagon in ONE frame (18.6°) where the ridge's vertical share went whole. In `12dc4b6` too — not a regression of the any-shape fixes.
+**The rule** (`input/orbit_calm.ts`):
+* **the heading read LEVEL** (`calmLevelHeading`): the calm's horizontal share (made whole by `asmCalmWhole` as `calmDir` does) times the yaw's angle off the
+  face's OWN heading (its normal's level part; whole behind the face) — independent of the pitch; on a vertical face exactly `calmHeading`'s below the fade;
+* **the camera's heading** (`cameraHeading`): the shown direction's own below 50° of the orbit's pitch (unchanged), the level reading from 60°, a smoothstep
+  between;
+* **its offset HELD while the view looks down** (`heldOffsetStep`, stepped once a frame in `calmFrame` — `asmHeadO`, `asmHeadW`, `asmHeadYaw`): whole at
+  ≤ 60° (`poleWeight` 1); a dy alone climbing keeps it (no roll at the hit); a dx looking down relaxes it toward NONE — the old zenith heading — by at most
+  `HELD_OFFSET_PER_YAW` (0.5) of the yaw turned (the view spinning at 0.5 – 1.5 × its pace meanwhile); coming down closes the gap by the share of the way
+  to 60° just made — by the pitch, never by time; cleared under the tilted pole, the slide's lock, the assembly's orbit off;
+* the tilted pole's exit target (`hW`) through the same `cameraHeading`, with the calm the world's branch has right after the exit.
+**Rejected on the way** (each probed on `Scene_1`'s cube against the old code, three short scenarios — a dx at the zenith, the same at the nadir, a close-in
+exit over the top's far edge): the level reading at the pole as is — a dx spun the view at 0.25 × mid-face and caught up at the corners, 8.3° in a frame
+(the old even spin 3.0°); the offset held whole through a dx — the whole difference rolled on the way down, 22° against the old 6°; relaxed toward the side's
+reading — a corner's reading changing late, 20° left for the way down.
+**Measured as built**: the hit's roll 14 – 19° → ≈ 2° on both scenes (≈ 2° is there square to the face, old and new — not the calm); the heptagon's largest
+frame 18.6° → 0.6°; the cube: leaving the zenith after a dx as the old code at that yaw, the nadir −5.4° against −6.3°, the tilted pole's exit 378° of roll in
+sum both; a dx at the zenith after an off-square arrival, the largest frame 3.7° against 3.0° (the relaxation).
+**Vectors**: `tests/zenith_roll.test.ts` (7 — the old composition kept beside the new: its 0.75 × yaw roll, left and right); five source pins
+(`assembly_orbit`, `orbit_calm`, `orbit_tilt` ×2, `orbit_any_shape`'s F4 early return). The walk probe records the calm (`cm`, `cw`). **1799**. ✅✅ the
+owner's look (*"this is good"*).
