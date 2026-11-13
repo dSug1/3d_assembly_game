@@ -36,7 +36,8 @@ their clicks (a touch cancelled on them would kill the click).
 ## 3. Only the player can switch off — the launch messages
 
 ⛔ No web page can disable these: they belong to the system or to accessibility, on purpose. ⭐ To show at the first launch (once, with *"Don't show
-again"*), the device's own section only (from the user agent). ⛔ **Not built yet** — the texts below are the specification.
+again"*), the device's own section only (from the user agent). ⛔ **NOT BUILT — owed in `QUEUE.md` › WHAT IS STILL OWED (5)**. ⭐ The texts below
+are in the code already, word for word: `LAUNCH_TITLE`, `LAUNCH_MESSAGES` and the platform from the user agent, `launchPlatform` (`render/browser_guards.ts`).
 
 ### iPhone / iPad
 
@@ -74,7 +75,7 @@ again"*), the device's own section only (from the user agent). ⛔ **Not built y
 
 ## 4. Next, if wanted (not built)
 
-* **The launch messages** (§3) as a sheet in the game shell, once per device.
+* **The launch messages** (§3) as a sheet in the game shell, once per device — ⛔ OWED (`QUEUE.md`); its texts and platform are in the code.
 * **Full screen by code on Android** (`requestFullscreen` on the first tap — Android Chrome allows it; ⛔ iPhone Safari does not, but the home-screen icon
   does it): the address bar gone, fewer edge conflicts; with it, the **orientation lock** (`screen.orientation.lock`, Android in full screen only).
 * A **web app manifest** (`display: "fullscreen"`, an icon) so *Add to Home Screen* opens the game without the browser.

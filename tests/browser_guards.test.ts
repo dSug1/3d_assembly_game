@@ -3,7 +3,7 @@
 // GAME (`render/browser_guards.ts`, `BROWSER_GUARDS.md`). RED against `240990f`: no module, no guard in `main.ts`, no touch callout in `index.html`.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { CANVAS_CANCELLED, DOCUMENT_CANCELLED, installBrowserGuards } from "../src/render/browser_guards";
+import { CANVAS_CANCELLED, DOCUMENT_CANCELLED, installBrowserGuards, LAUNCH_MESSAGES, LAUNCH_TITLE, launchPlatform } from "../src/render/browser_guards";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -99,6 +99,24 @@ describe("⭐⭐⭐ the browser's gestures kept off the game (2026-11-13)", () =
     expect(() => installBrowserGuards(canvas, doc, undefined)).not.toThrow();
     installBrowserGuards(canvas, doc, { request: () => Promise.reject(new Error("NotAllowedError")) });
     await tick();
+  });
+
+  it("⭐⭐ the launch messages: the device's section by its user agent (an iPad asking as a Mac by its touch points); the texts are BROWSER_GUARDS.md §3's, word for word", () => {
+    expect(launchPlatform("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15")).toBe("ios");
+    expect(launchPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15", 5)).toBe("ios"); // an iPad
+    expect(launchPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15", 0)).toBe("macos");
+    expect(launchPlatform("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36")).toBe("android");
+    expect(launchPlatform("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36")).toBe("windows");
+    expect(launchPlatform("Mozilla/5.0 (X11; Linux x86_64) Firefox/130.0")).toBeNull();
+    const md = readFileSync(new URL("../Claude/10_INPUT_TOUCH/spec/BROWSER_GUARDS.md", import.meta.url), "utf8");
+    const s3 = md.slice(md.indexOf("## 3."), md.indexOf("## 4.")).replace(/\n>\s+/g, " ").replace(/\*/g, "");
+    expect(s3).toContain(LAUNCH_TITLE);
+    for (const p of ["ios", "android", "windows", "macos"] as const) {
+      expect(LAUNCH_MESSAGES[p].length, p).toBeGreaterThan(0);
+      for (const m of LAUNCH_MESSAGES[p]) expect(s3, m).toContain(m);
+    }
+    // ⛔ the sheet that shows them is owed, in the build queue
+    expect(readFileSync(new URL("../Claude/00_CORE/QUEUE.md", import.meta.url), "utf8")).toContain("THE LAUNCH MESSAGES SHEET");
   });
 
   it("wired: installed in `main.ts` as soon as the canvas exists (the shell and every level); `index.html` with no touch callout on the page and the canvas", () => {

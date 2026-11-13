@@ -17,6 +17,55 @@
  * What no page can switch off (the system's own gestures, the accessibility zooms) is told to the player: `BROWSER_GUARDS.md` §3.
  */
 
+/**
+ * ⭐⭐ (2026-11-13, the owner: *"on-screen message at launch: capture in the md file somewhere that this needs to be built and include the message in
+ * browser_guards"*) THE LAUNCH MESSAGES — what no page can switch off, for the PLAYER to (`BROWSER_GUARDS.md` §3, the same texts). ⛔ The sheet that
+ * shows them is NOT BUILT (owed: `QUEUE.md` › WHAT IS STILL OWED): at the first launch, once, *"Don't show again"*, the device's section only
+ * (`launchPlatform`).
+ */
+export type LaunchPlatform = "ios" | "android" | "windows" | "macos";
+
+export const LAUNCH_TITLE = "For the best control, before you play:";
+
+export const LAUNCH_MESSAGES: Readonly<Record<LaunchPlatform, readonly string[]>> = {
+  ios: [
+    "Zoom (three fingers double-tap) — turn it off in Settings › Accessibility › Zoom, or it magnifies the screen mid-game.",
+    "Reachability (a swipe down on the bottom edge) — Settings › Accessibility › Touch › Reachability: off.",
+    "Back Tap and AssistiveTouch — Settings › Accessibility › Touch: off if you use them.",
+    "Play full screen: Share › Add to Home Screen, then start the game from its icon — Safari's bars and its swipe-back from the left edge are gone.",
+    "Optional — Guided Access (Settings › Accessibility › Guided Access, then triple-click the side button in the game): the phone stays in the game, no swipe from the edges or the corners leaves it.",
+    "Low Power Mode halves the frame rate: off for the smoothest play.",
+  ],
+  android: [
+    "Gesture navigation: a swipe from the left or right edge goes BACK and leaves the game — start your gestures away from the edges, or choose 3-button navigation in Settings › System › Gestures › System navigation.",
+    "Magnification (triple tap, or its shortcut) — Settings › Accessibility › Magnification: off.",
+    "TalkBack changes every touch — off while playing.",
+    "Optional — Screen pinning (Settings › Security › App pinning): the phone stays in the game.",
+    "Battery saver can lower the frame rate: off for the smoothest play.",
+  ],
+  windows: [
+    "Full screen: press F11 — the browser's bars are gone.",
+    "Three- and four-finger touch gestures — Settings › Bluetooth & devices › Touch: off (they switch apps mid-game).",
+    "Edge swipes (from the right: notifications; from the left: task view) — start your gestures away from the screen's edges.",
+    "Touchpad gestures (three / four fingers) — Settings › Bluetooth & devices › Touchpad: off if they get in the way.",
+  ],
+  macos: [
+    "A two-finger swipe left / right may go back a page in Safari: start the drag on the game, not past it; System Settings › Trackpad › More Gestures › Swipe between pages: off if it gets in the way.",
+  ],
+};
+
+/**
+ * ⭐ The device's section, from the user agent (and the touch points: an iPad asks as a Mac — `maxTouchPoints` > 1 tells it apart); `null`: none
+ * (Linux, ChromeOS, an unknown agent — no message).
+ */
+export function launchPlatform(userAgent: string, maxTouchPoints = 0): LaunchPlatform | null {
+  if (/iPhone|iPad|iPod/.test(userAgent)) return "ios";
+  if (/Macintosh/.test(userAgent)) return maxTouchPoints > 1 ? "ios" : "macos";
+  if (/Android/.test(userAgent)) return "android";
+  if (/Windows/.test(userAgent)) return "windows";
+  return null;
+}
+
 /** ⭐ The canvas's events cancelled — the touch sequence, the double click, the selection, the context menu. */
 export const CANVAS_CANCELLED = ["touchstart", "touchmove", "touchend", "dblclick", "selectstart", "contextmenu"] as const;
 /** ⭐ iOS Safari's pinch gesture events, cancelled on the document. */
