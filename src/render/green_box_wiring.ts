@@ -33,26 +33,24 @@ import { laggedPlace, pauseMid, pauseSpan, pauseTowardEnd, pauseYawStep, placeOf
 import { orbitOffset } from "../input/orbit";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
-import { add, cross, dot, length, normalize, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, leavesCone, shownOffset, tiltClampStep } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
 import { GRAVITY_FRAMES, quadFrames } from "../core/orientation_set";
-import { cameraFrameHeld } from "../input/camera_frame";
+import { cameraFrameHeld, upSquareToView } from "../input/camera_frame";
 import { elevationGainScale } from "../input/orbit";
 import { UNTURNED, rigYawToward } from "../input/orbit_rig";
-import { hoverCameraBlend, hoverFrame, hoverOffsetFrame, hoverVisualFrame, wayInDrawFrame } from "./hover_wiring";
-/** ⭐ (2026-10-14) the gap queries a frame keeps for the way in after a hover (out of `pieceSolverQueries`). */
-const HOVER_FADE_QUERIES = 8;
-import { gizmoHiddenBySlide, modelLag, orbitFrameUnderHover, uprightBlend } from "../input/hover";
+import { contactFrame } from "./contact_wiring";
 import { dirLabel } from "./orient_cube";
 import { pieceCollisionSetup } from "./collision_wiring";
-import { orbitFrame, relocationKey, slideProbeFree, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
+import { orbitFrame, relocationKey, stuckGate, stuckKeep, turnSweep, worldSignature, stuckNext, stuckProbe, stuckRecord, turnStepHeld, type OrbitQ, type SolveOptions, type SolverEnv } from "../input/piece_orbit_solver";
 import { contactNormal, nearestObstacle, type CollisionSetup } from "../core/collision";
 import { setWorldPlacement, type World } from "../core/object_model";
-import { STUCK_FRESH } from "../input/piece_orbit_solver";
+import { FIRST_ITERATION_MAX_QUERIES, STUCK_FRESH } from "../input/piece_orbit_solver";
+import { ringHoldStep } from "../input/ring_hold";
 import type { OrientDirection } from "../core/orientation_set";
 import { ORBIT_ROLL_SPAN_RAD, aimProgress, aimRing, startPieceAim, ringProgress, zoomScale, anglesOf, carryHeading, entryCamera, entryLook, entryPieceOffset, entryProgress, headingAbout, pieceCamera, pushedPiece, referenceYawGain, returnCamera, returnLook, returnPieceOffset, returnProgress, ringDistanceRange, scaledGap, smoothTravel, startCentreReturn, startPieceEntry, startPieceOrbit } from "../input/piece_orbit";
 
@@ -623,7 +621,7 @@ function restingFillFrame(st: SceneState, now: number): void {
   // ⭐⭐ (2026-10-14, the owner: *"scale the yellow highlight on the hosting part and the resting face on the piece in the same way they scale for the quads as the piece moves towards the gizmo (instead as towards the max distance). So that this is the mirror effect passing the point where quads disappear. At full scale the yellow highlight follows the contour of the hosting face. At min scale (1 pixel) it is centered on the center of the hosting face."*) — and in the MIRROR: past where the quads disappear it grows again toward the gizmo (`growth`)
   // ⭐⭐ (2026-10-14, the owner: *"keep the yellow highlight of the resting face at full scale, do not diminish it."*) — ALWAYS SHOWN, AT FULL SCALE (no growth with the quads, no mirror)
   // ⭐⭐⭐ (2026-10-15, the owner: *"Hide the yellow highlight of the resting face when the quads are not shown"* · *"Continue to green highlight the resting face … when sliding is allowed"*) — shown with the quads, or while a slide is available or on (`restingContourShown`)
-  const shown = restingContourShown(st.restingQuads?.shown === true, st.hoverReady !== null || st.hover !== null);
+  const shown = restingContourShown(st.restingQuads?.shown === true, st.contactReady !== null);
   for (const c of fill.getChildMeshes(true)) c.isVisible = shown;
   const camD = Vector3.Distance(st.camera.position, p.mesh.position);
   const lift = highlightLiftM(st.cfg.highlightLiftMm, camD, st.camera.fov, st.canvas.clientHeight);
@@ -676,18 +674,6 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.cameraPrev = null; // ⭐ (2026-10-17) a new orbit: no last frame to carry the up from (a switch, a respawn)
     st.gizmoTravelPending = null;
     st.orbitPiecePlaced = false; // ⭐ (2026-10-14) a switch or a respawn brings a piece back to the orbit
-    st.hover = null; // ⭐ (2026-10-14) a new orbit: no hover, no piece-only offset, the orbit's camera
-    st.hoverPress = null;
-    st.hoverBand = null;
-    st.hoverFollow = null;
-    st.hoverDraw = null;
-    st.wayInDrawn = null;
-    st.hoverSpent = null;
-    st.hoverSlid = false;
-    st.slideArmed = true;
-    st.hoverOffset = null;
-    st.hoverWayIn = null;
-    st.hoverView = null;
     st.orbitRawPrev = null;
     st.orbitUserV = null;
   }
@@ -801,9 +787,7 @@ export function syncOrbitPieceModel(st: SceneState): void {
     return;
   }
   const r = m.rotationQuaternion ?? Quaternion.Identity();
-  // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag is the mesh's, not the model's
-  const d = modelLag(st.hoverDraw, st.orbitPiecePlaced);
-  const pos: Vec3 = [m.position.x - d[0], m.position.y - d[1], m.position.z - d[2]];
+  const pos: Vec3 = [m.position.x, m.position.y, m.position.z];
   const q: Quat = [r.w, r.x, r.y, r.z];
   const was = o.local;
   const same =
@@ -891,9 +875,8 @@ export function pinkRingFrame(st: SceneState): void {
   const ring = st.pinkRing;
   if (ring === null) return;
   // ⭐ (2026-10-11, the owner: *"add a slider to hide the pink gizmo"*) hidden by its slider
-  // ⭐⭐ (2026-11-01, the owner: *"hide the gizmo when contours are highlighted and during sliding: the gizmo shall reappear when the piece is taken away from
-  // the hosting face"*) — and while the contours are lit or the slide is on (`gizmoHiddenBySlide`)
-  if (st.cfg.pinkGizmoVisible !== 1 || gizmoHiddenBySlide(st.hoverReady !== null, st.hover !== null)) {
+  // ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) no longer hidden while the contours are lit: the slide is removed, the gizmo drives the orbit close in
+  if (st.cfg.pinkGizmoVisible !== 1) {
     ring.isVisible = false;
     return;
   }
@@ -916,7 +899,7 @@ export function pinkRingFrame(st: SceneState): void {
  * ⭐ Every frame (prototype): the box where the orbit rig put it; the camera on ITS orbit (`input/follow_camera.ts`: twice
  * the rig's radius and height, leashed and settled per axis), looking at the yellow target — the orbit centre.
  */
-/** ⭐ (2026-10-17) the piece's place on its ring is SOLVED this frame (`orbitFrame` — or held, under a hover): the one condition, read by the frame and the drag. */
+/** ⭐ (2026-10-17) the piece's place on its ring is SOLVED this frame (`orbitFrame`): the one condition, read by the frame and the drag. */
 export function pieceSolveRuns(st: SceneState): boolean {
   const b0 = st.greenBox;
   return !st.orbitPiecePlaced && st.pieceOrbit === null && st.pieceEntry === null && st.centreReturn === null && b0 !== null && worldPlacementOf(st.world, b0.name) !== null;
@@ -941,7 +924,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
     if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop(); // ⭐⭐⭐ (2026-11-10) the tilt's crossing: committed at the edge, the coast never ahead of the roll
-    if (leavesCone(st, y0, v0, st.orbit.yaw, st.orbit.elevation)) { st.orbit.reset(y0, v0); st.orbitInertia.stop(); } // ⭐ (2026-10-28) locked: never behind the face // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
+    // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn
   // ⭐ prototype (green box), 2026-10-02: the zoom moves the CAMERA, not the green piece — it rides the rings as they are, and the
@@ -991,29 +974,36 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   if (pieceSolveRuns(st)) {
     const t0 = performance.now();
     const env = pieceSolverEnv(st);
-    // ⭐ (2026-10-14) the way in after a hover keeps its share of the frame's cap (`HOVER_FADE_QUERIES`): near the hosting face the orbit's slide
-    // took it all and the way in advanced in bursts
     // ⭐ (2026-11-04, the audit) the frame's cap less what the last frame's checks carried in (⛔ the carry was counted, never taken off: the frame's total
     // could reach the cap plus the carry)
-    const opt0 = { ...pieceSolveOptions(st), maxQueries: st.cfg.pieceSolverQueries - st.pieceQueries };
-    const opt = st.hoverWayIn !== null && st.hoverOffset !== null ? { ...opt0, maxQueries: Math.max(4, opt0.maxQueries - HOVER_FADE_QUERIES) } : opt0;
+    const opt = { ...pieceSolveOptions(st), maxQueries: st.cfg.pieceSolverQueries - st.pieceQueries };
     if (st.pieceQ === null) {
       st.pieceQ = st.boxSpring?.at ?? rig;
+      // ⭐ (the rebuild) a new solve starts from the piece as it is: nothing to compare its ring with
+      st.pieceHoldPrev = null;
     }
     // ⭐⭐ (2026-10-13, the second audit) ONE FRAME DECIDED in `orbitFrame` (input/piece_orbit_solver.ts): the relocation, the solve, the target's
     // reset, the work cap's rest, the ring height kept — the render only applies it
     // ⭐ (the third audit) the relocation's search resumes where the cap cut it, and is not re-run for a place already found exhausted
-    if (st.hover !== null) {
-      // ⭐⭐⭐ (2026-10-14, the hover's second audit) THE ORBIT HOLDS STILL UNDER A HOVER (`orbitFrameUnderHover`): no backlog, no way back to the height, no relocation
-      const held = orbitFrameUnderHover(st.pieceQ);
-      if (!sameQ(held.target, rig)) st.orbit.reset(held.target.yaw, held.target.v);
-      st.orbitInertia.stop();
-      st.orbitUserV = held.userV;
-      st.pieceQ = held.q;
-      st.pieceSolveQueries = held.queries;
-      rig = { ...held.q };
-      st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    } else {
+    // ⭐⭐⭐ (2026-11-12, the slide's rebuild) THE RING NEVER MOVES THE PIECE INTO A PART (`ringHoldStep`): this frame's ring at last frame's solved angles,
+    // against where the piece was solved — a move that closes on a part is HELD (the piece stays), the hold released by checked steps. Not across an approach
+    // (its own move, checked by `approachMove`) nor a new orbit
+    {
+      const prevH = st.pieceHoldPrev;
+      const sameApproach = prevH !== null && prevH.approach === st.approach;
+      const hr = ringHoldStep({
+        prev: sameApproach ? prevH!.anchor : null,
+        now: ringAnchorAt(st, st.pieceQ),
+        hold: st.pieceHold,
+        gapM: opt.gapM,
+        gapAt: (p) => pieceSolverEnv(st, () => p).gap(st.pieceQ!),
+        budget: opt.maxQueries - FIRST_ITERATION_MAX_QUERIES,
+      });
+      st.pieceHold = hr.hold;
+      st.pieceQueries += hr.queries;
+      opt.maxQueries -= hr.queries;
+      if (hr.held) st.pieceHoldCount++;
+    }
     const rr = b0!.rotationQuaternion; // `pieceSolveRuns`: the green box exists
     const relocKey = relocationKey(st.pieceQ, rr ? [rr.w, rr.x, rr.y, rr.z] : null, st.centreBlend.targetM, sceneSignature(st));
     if (st.relocateCursor.key !== relocKey) st.relocateCursor = { key: relocKey, from: 0 };
@@ -1050,12 +1040,14 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     st.orbitUserV = fr.userV;
     st.pieceQ = fr.q;
     rig = { ...fr.q };
+    st.pieceHoldPrev = { anchor: ringAnchorAt(st, fr.q), approach: st.approach }; // ⭐⭐⭐ (the rebuild) where the piece was solved, the hold included
     st.orbitRawPrev = { yaw: st.orbit.yaw, v: st.orbit.elevation };
-    }
     st.pieceGuardFrameMs += performance.now() - t0;
   } else {
     // ⭐ the way in / out round a piece, or no piece in the world: the rings as they are
     st.pieceQ = null;
+    st.pieceHold = null;
+    st.pieceHoldPrev = null;
     st.pieceTouching = false;
     st.orbitRawPrev = null;
     st.orbitUserV = null;
@@ -1106,19 +1098,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ (2026-10-13) the solver's cost on the HUD: a mean over ~30 frames and the PEAK of the last 2 s (a freeze shows there)
   st.pieceGuardMs += (st.pieceGuardFrameMs - st.pieceGuardMs) / 30;
   st.pieceGuardPeak = now - st.pieceGuardPeakAt > 2000 || st.pieceGuardFrameMs >= st.pieceGuardPeak ? (st.pieceGuardPeakAt = now, st.pieceGuardFrameMs) : st.pieceGuardPeak;
-  // ⭐ (2026-10-14, the hover) the drawn hover offset following the solved one; the piece-only offset eased out once the orbit drops it
-  hoverFrame(st, now, dtSec);
-  hoverOffsetFrame(st, dtSec * 1000);
-  wayInDrawFrame(st, dtSec * 1000); // ⭐ (2026-10-14) the way in drawn on the orbit's spring
-  // ⭐ (2026-10-14, the hover's second audit) the centre as the hover left it THIS frame (`syncCentre` replaces it) — ⛔ read at the frame's top, the piece and the camera trailed a frame
   c = st.orbitCentreM;
-  const hov = st.hoverOffset ?? [0, 0, 0];
-  const pp: Vec3 =
+  let pp: Vec3 =
     po !== null
       ? pushedPiece([c.x, c.y, c.z], po.dir, bo.radiusM * k)
       : be !== null
         ? [c.x + be[0] * k + eo[0], c.y + be[1] * k + eo[1], c.z + be[2] * k + eo[2]]
-        : [c.x + bo.offsetM[0] * k + back[0] + hov[0], c.y + bo.offsetM[1] * k + back[1] + hov[1], c.z + bo.offsetM[2] * k + back[2] + hov[2]];
+        : [c.x + bo.offsetM[0] * k + back[0] + (st.pieceHold?.[0] ?? 0), c.y + bo.offsetM[1] * k + back[1] + (st.pieceHold?.[1] ?? 0), c.z + bo.offsetM[2] * k + back[2] + (st.pieceHold?.[2] ?? 0)]; // ⭐⭐⭐ (the rebuild) the ring's hold drawn too
+  // ⭐⭐⭐ (2026-11-13, the slide's rebuild) around the assembly the drawn piece rests on its support as the solved one does (`restDrawn`)
+  if (po === null && be === null && assemblyOn(st)) pp = restDrawn(st, pp);
   // ⭐⭐ (2026-10-09) `pp` is the ANCHOR — where the resting face's centre goes; the mesh is placed from it at the frame's end
   // (`anchorFrame`); until then everything orbit-side reads the anchor
   // ⭐ (2026-10-13) how far the piece moved this frame (the yellow quad's check waits while it sweeps)
@@ -1292,14 +1280,10 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     });
     st.hudDirty = true;
   }
-  // ⭐⭐ (2026-10-14) toward the HOVER VIEW by its progress (the hover drag's travel in, the orbit's out)
-  const hb = hoverCameraBlend(st, camAt, lookAt);
-  camAt = hb.camAt;
-  lookAt = hb.lookAt;
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
-  // ⭐⭐⭐ (2026-10-16, *"at the camera end position for sliding mode, gravity direction is aligned with vertical axis of the screen"*) — rolled to upright by the slide view's weight
-  const up = uprightBlend(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]], hb.w);
+  // ⭐ squared to the view (`upSquareToView` — ⛔ 2026-11-12 the slide view's roll to upright removed with the slide)
+  const up = upSquareToView(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]]);
   // ⛔ (2026-11-04, the audit) a non-finite camera is THROWN, never written: a NaN blanked the glass with nothing to say why — thrown, `guardDraw` names it
   if (!finiteCamera(camAt, lookAt, up)) throw new Error("camera not finite");
   if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);
@@ -1315,7 +1299,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     restAlignFrame(st, now);
     anchorFrame(st, now);
   }
-  hoverVisualFrame(st, now); // ⭐ (2026-10-14) the contact shadow, the hosting face, the ready colour — ⭐ (2026-10-15, the Fable audit) BEFORE the contour reads its readiness
+  contactFrame(st, now); // ⭐ (2026-11-12) the contact readout: the shadow, the hosting face, the outline — ⭐ (2026-10-15, the Fable audit) BEFORE the contour reads its readiness
   restingFillFrame(st, now);
 }
 
@@ -1333,9 +1317,7 @@ function anchorFrame(st: SceneState, now: number): void {
   const r = b.rotationQuaternion ?? Quaternion.Identity();
   const at = placeByFaceCentre(a, [r.w, r.x, r.y, r.z], p.restingCentre);
   const s = anchorShiftNow(st, now);
-  // ⭐⭐ (2026-10-14, the hover's audit) the hover's drawn lag: the mesh only — the model is the solved place (`syncOrbitPieceModel` takes it off)
-  const d = st.hoverDraw ?? [0, 0, 0];
-  b.position.set(at[0] + s[0] + d[0], at[1] + s[1] + d[1], at[2] + s[2] + d[2]);
+  b.position.set(at[0] + s[0], at[1] + s[1], at[2] + s[2]);
 }
 
 /** ⭐ A new resting face's jump still left (`anchorShift`), eased out over the alignment's turn (`REST_ALIGN_MS`); cleared once gone. */
@@ -1357,9 +1339,10 @@ export function ringAnchorAt(st: SceneState, o: OrbitQ): Vec3 {
   const offP = ringPlaceNow(st, o.yaw, o.v, o.zoom); // ⭐⭐⭐ (2026-10-16) the turned curve on level rings (`ringPlaceNow`)
   const off = { offsetM: offP, radiusM: Math.hypot(offP[0], offP[1], offP[2]) };
   const k = off.radiusM > 1e-9 ? clampPieceRadiusM(off.radiusM, st.cfg) / off.radiusM : 1;
-  // ⭐ (2026-10-14, the hover) the piece-only offset (`hoverGizmoMove` 0) rides with it until the orbit drops it
-  const h = st.hoverOffset ?? [0, 0, 0];
-  return [c.x + off.offsetM[0] * k + h[0], c.y + off.offsetM[1] * k + h[1], c.z + off.offsetM[2] * k + h[2]];
+  // ⭐⭐⭐ (2026-11-12, the slide's rebuild) the RING'S HOLD (`input/ring_hold.ts`): where the ring's own move would have closed the piece on a part, the piece
+  // stayed — every angle's place carries that offset until it is released
+  const h = st.pieceHold;
+  return h === null ? [c.x + off.offsetM[0] * k, c.y + off.offsetM[1] * k, c.z + off.offsetM[2] * k] : [c.x + off.offsetM[0] * k + h[0], c.y + off.offsetM[1] * k + h[1], c.z + off.offsetM[2] * k + h[2]];
 }
 
 /** ⭐ (2026-10-13) the orbited piece's mesh pose with its resting face's centre at `anchor`, turned `q` (else as it is). */
@@ -1375,7 +1358,9 @@ function pieceMeshAt(st: SceneState, anchor: Vec3, q?: Quat): { position: Vec3; 
 const LOOK_M = 0.3;
 /** ⭐ (§12) the relocation's search: its stride along the ring and its reach (anchor metres). */
 const RELOCATE_STEP_M = 0.01;
-const RELOCATE_MAX_M = 0.4;
+// ⭐⭐⭐ (2026-11-12, the slide's rebuild — the owner's teleport) 3 cm: a LAST RESORT next to the piece, never a teleport — ⛔ 0.4 m: once the ring's own move
+// had put the piece inside its margin, the search moved it 35 mm across the channel in one frame (the ring's moves are held now: `input/ring_hold.ts`)
+const RELOCATE_MAX_M = 0.03;
 /** ⭐ (§12) the stuck probe: the anchor moved this far each way (m); one check of the round every this many ms (the second audit). */
 const STUCK_PROBE_M = 0.003;
 const STUCK_EVERY_MS = 100;
@@ -1423,6 +1408,12 @@ export function pieceSolverEnv(st: SceneState, anchorOf: (q: OrbitQ) => Vec3 = (
     normal: (q) => {
       const m = at(q);
       return m.blocker === null ? null : contactNormal(m.world, b.name, m.blocker, setup);
+    },
+    // ⭐⭐⭐ (2026-11-12, the slide's rebuild) the piece translated to an anchor off the ring — a ring jump's straight sweep (`straightFree`)
+    gapAtAnchor: (p) => {
+      const pose = pieceMeshAt(st, p);
+      const world = pose === null ? st.world : setWorldPlacement(st.world, b.name, pose);
+      return nearestObstacle(world, b.name, setup, LOOK_M).gapM;
     },
   };
 }
@@ -1493,17 +1484,6 @@ export function pieceStuckFrame(st: SceneState): void {
     if (k === 0) {
       const counted: SolverEnv = { anchor: env.anchor, gap: (x) => (take(), env.gap(x)), normal: (x) => (take(), env.normal(x)) };
       blocked = stuckProbe(q, counted, { ...opt, maxQueries: Math.max(1, left) }, STUCK_PROBE_M);
-      // ⭐⭐ (2026-10-29) …and a SLIDE along the face, while one is available (the hover on, or ready): any free one is a way out (`slideProbeFree`)
-      const face = st.hover !== null ? st.hover.n : (st.hoverReady?.normal ?? null);
-      if (blocked && face !== null) {
-        const e1 = normalize(cross(face, Math.abs(face[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])) ?? ([1, 0, 0] as Vec3);
-        const e2 = normalize(cross(face, e1)) ?? ([0, 0, 1] as Vec3);
-        const gapAt = (o: Vec3): number => {
-          take();
-          return pieceSolverEnv(st, (x) => add(ringAnchorAt(st, x), o)).gap(q);
-        };
-        if (slideProbeFree(gapAt, e1, e2, STUCK_PROBE_M, opt.gapM / 2)) blocked = false;
-      }
     }
     else {
       const aligned = st.restAligned && st.restRoll !== null ? st.pinkTargetNormal : null;

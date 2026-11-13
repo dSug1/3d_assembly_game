@@ -189,7 +189,8 @@ describe("⭐⭐ (findings 5, 6) the window lost releases every pointer; the HUD
     expect(p).toContain('window.addEventListener("blur", () => forgetPointers(st));');
     expect(p).toContain('if (document.visibilityState === "hidden") forgetPointers(st);');
     const f = p.slice(p.indexOf("export function forgetPointers"));
-    for (const k of ["st.router.clear();", "st.pinch.end();", "st.hold = null;", "st.orbitMotion = null;", "holdRelease(st, p.id, false);", "hoverRelease(st, p.id);"]) expect(f).toContain(k);
+    for (const k of ["st.router.clear();", "st.pinch.end();", "st.hold = null;", "st.orbitMotion = null;", "holdRelease(st, p.id, false);"]) expect(f).toContain(k);
+    expect(f).not.toContain("hoverRelease"); // ⛔ (2026-11-12) the slide removed
   });
   it("⭐ the HUD's paint in its own guard; its fault written straight into the box", () => {
     expect(code("render/render_loop.ts")).toContain('guardDraw(st, "hud", () => paint(st));');

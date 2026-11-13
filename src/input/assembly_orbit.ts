@@ -19,7 +19,7 @@ import type { GestureConfig } from "./gestureConfig";
 import { orbitOffset } from "./orbit";
 import { waistV } from "./orbit_rig";
 import { smoothstep01 as smooth } from "./waist_view";
-import { add, cross, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
+import { add, dot, normalize, qconj, qFromAxisAngle, qmul, qRotate, sub, type Quat, type Vec3 } from "../core/vec";
 
 /**
  * ⭐ The pitch's reach either side of the horizon — ±90° (the owner, 2026-10-29: *"can you increase the pitch to -90 +90 degrees ?"* → *"build it with the
@@ -118,32 +118,7 @@ export function farDistance(cfg: GestureConfig): number {
   return approachDistance(cfg, 1);
 }
 
-/** ⭐ Under the slide, the piece's direction from the gizmo kept within this of the face's normal (it never goes behind the face, into the assembly). */
-export const LOCK_CONE_RAD = (80 * Math.PI) / 180;
-
-/**
- * ⭐⭐ (2026-10-29, the owner: *"when I approach A+dy in configuration attachment 1, at one point the scene jump rotates to configuration attachment 2"*)
- * — THE LOCK'S CONE, from where the piece is: at the lock (`cone` `null`) the piece's own angle off the face's normal when it is outside `LOCK_CONE_RAD`
- * (⛔ the cone at once: at −90° over a vertical face the piece was snapped 10° in one frame — 5.8 cm at the lock's 0.28 m, the camera turned with it);
- * after that, tightened as the piece comes inward, never below `LOCK_CONE_RAD`.
- */
-export function lockCone(cone: number | null, angle: number): number {
-  return Math.max(LOCK_CONE_RAD, cone === null ? angle : Math.min(cone, angle));
-}
-
-/** ⭐ `u` turned toward `n` (both unit) until within `maxRad` of it; within already, `u` itself. */
-export function coneClamp(u: Vec3, n: Vec3, maxRad: number = LOCK_CONE_RAD): Vec3 {
-  const c = Math.max(-1, Math.min(1, dot(u, n)));
-  const a = Math.acos(c);
-  if (a <= maxRad) return u;
-  const axis = normalize(cross(n, u)) ?? normalize(cross(n, [0, 1, 0])) ?? [1, 0, 0];
-  return qRotate(qFromAxisAngle(axis, maxRad), n);
-}
-
-/** ⭐ The angle between `u` and `n` (unit). */
-export function angleTo(u: Vec3, n: Vec3): number {
-  return Math.acos(Math.max(-1, Math.min(1, dot(u, n))));
-}
+/** ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) the slide's lock cone (`LOCK_CONE_RAD`, `lockCone`, `coneClamp`) DELETED with the slide. */
 
 /**
  * ⭐⭐⭐ (2026-11-01, the owner: *"The 3° face: check what can interrupt the turn … Check other possibilities."*) — A HIT ON A SWAYING MESH, BROUGHT ONTO
@@ -193,11 +168,9 @@ export function faceSwitches(curNormal: Vec3 | null, curPoint: Vec3 | null, hitN
  * regions bridge the joints (`input/face_map.ts`). */
 
 /**
- * ⭐ How far the camera looks at the gizmo rather than the centre (0 … 1): 0 far out (at ring 1's distance), 1 at the lock's distance (smoothstep between);
- * locked, 1.
+ * ⭐ How far the camera looks at the gizmo rather than the centre (0 … 1): 0 far out (at ring 1's distance), 1 at the lock's distance (smoothstep between).
  */
-export function lookShare(distM: number, farM: number, lockDistM: number, locked: boolean): number {
-  if (locked) return 1;
+export function lookShare(distM: number, farM: number, lockDistM: number): number {
   if (!(farM > lockDistM)) return 1;
   return smooth((farM - distM) / (farM - lockDistM));
 }
@@ -253,35 +226,23 @@ export function offsetFrame(u: Vec3, h: number, yawRad: number, pitchRad: number
   return { dir: qRotate(t, d1), up: qRotate(t, u1) };
 }
 
-/**
- * ⭐⭐⭐ (2026-11-01, the owner: *"when I move away the piece after slide, the piece goes towards the camera first, then there is a later movement of the
- * piece on the screen due to the camera taking back its offset position"* → *"build A"*) — **THE ORBIT WHOSE CAMERA LOOKS ALONG `want`**: the yaw and pitch
- * whose camera direction — the piece's direction turned by the camera's offsets (`offsetFrame`) — is `want` (unit, from what it looks at to the camera);
- * the yaw kept nearest `yaw0`. Solved by fixed-point on the two angles (the offsets are a near-rigid turn: a few steps); the best found when it cannot
- * meet it (straight above). `null` for no direction.
- */
-export function orbitForCameraDir(want: Vec3, yaw0: number, offYawRad: number, offPitchRad: number): { yaw: number; v: number } | null {
-  const w = normalize(want);
-  if (w === null) return null;
-  const LIM = Math.PI / 2 - 1e-4;
-  const angles = (d: Vec3): { yaw: number; p: number } => ({ yaw: Math.atan2(d[2], d[0]), p: Math.asin(Math.max(-1, Math.min(1, d[1]))) });
-  const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
-  const aw = angles(w);
-  const flat = Math.hypot(w[0], w[2]) > 1e-9;
-  let yaw = yaw0 + (flat ? wrap(aw.yaw - yaw0) : 0);
-  let p = aw.p;
-  let best = { yaw, p, err: Infinity };
-  for (let i = 0; i < 40; i++) {
-    const d = offsetFrame(orbitDir(yaw, vOfPitch(p)), yaw, offYawRad, offPitchRad).dir;
-    const err = Math.acos(Math.max(-1, Math.min(1, dot(d, w))));
-    if (err < best.err) best = { yaw, p, err };
-    if (err < 1e-9) break;
-    const ad = angles(d);
-    if (flat) yaw += wrap(aw.yaw - ad.yaw);
-    p = Math.max(-LIM, Math.min(LIM, p + (aw.p - ad.p)));
-  }
-  return { yaw: best.yaw, v: vOfPitch(best.p) };
-}
+/** ⛔ (2026-11-12) `orbitForCameraDir` (the slide's way out from its view) DELETED with the slide. */
 
 // ⛔ (2026-10-29) the gizmo CARRIED along the sections (`yawAbout`, `pitchSlide`, `sectionRay`, `radialRay`) is deleted — and its successor, the carrier on the
 // sections' hull, with it (Step 4c-bis): the gizmo is a function of the orbit's angles (`input/face_map.ts`).
+
+/**
+ * ⭐⭐⭐ (2026-11-12, `CLOSE_IN_CONTACT.md` step 3; the owner: *"1b"* — the orbit's degrees per mm scaled down continuously as the approach's distance
+ * shrinks) — **THE CLOSE-IN GAIN**: the orbit's gain at the piece's distance `dM` from the gizmo, a share of its full gain — 1 from `fullM` out, falling
+ * LINEARLY toward the contact (speed proportional to the distance to the surface: Ware & Fleet's context-sensitive flying, 1997), where it is the share that
+ * moves the gizmo `contactMmPerMm` mm on the surface per mm of finger (the slide's 1 : 1), read from the full gain (`degPerMm`, °/mm) at the assembly's
+ * radius (`radiusM`). ⛔ Unscaled, close in a mm of finger moved the gizmo ~24 mm (probed: 30 px → 186 mm on the cube's top) — a pixel beyond the goal's 5 mm.
+ * Never above 1; a degenerate input (no radius, no gain, no distance range): 1 (the orbit as it was).
+ */
+export function closeInGain(dM: number, fullM: number, contactMmPerMm: number, degPerMm: number, radiusM: number): number {
+  const fullMmPerMm = ((degPerMm * Math.PI) / 180) * radiusM * 1000;
+  if (!(fullM > 0) || !(fullMmPerMm > 0) || !(contactMmPerMm > 0)) return 1;
+  const kMin = Math.min(1, contactMmPerMm / fullMmPerMm);
+  const t = Math.min(1, Math.max(0, dM / fullM));
+  return kMin + (1 - kMin) * t;
+}

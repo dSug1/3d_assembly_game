@@ -42,6 +42,9 @@ export interface SolverEnv {
   secondGap?(q: OrbitQ): number;
   /** ⭐ (2026-11-01) the nearest obstacle's id at `q` (`null`: none near) — what a blocked slide names on the HUD; absent: unnamed */
   blocker?(q: OrbitQ): string | null;
+  /** ⭐⭐⭐ (2026-11-12, the slide's rebuild) the piece's gap with its anchor at the point `p` (the piece translated there, off the ring) — a straight move's
+   * sweep (`straightFree`); absent: a ring jump is crossed on its landing alone, as before */
+  gapAtAnchor?(p: Vec3): number;
 }
 
 export interface SolveOptions {
@@ -168,6 +171,34 @@ function jumpIn(env: SolverEnv, q: OrbitQ, s: QStep, lo: number, hi: number): { 
   return dist(pa, pb) >= RING_JUMP_M ? { a, b } : null;
 }
 
+/** ⭐⭐⭐ (2026-11-12, the slide's rebuild) the most gap queries one straight sweep may make (`straightFree`) — past it the move is not free. */
+export const SWEEP_MAX_QUERIES = 4;
+
+/**
+ * ⭐⭐⭐ (2026-11-12, the slide's rebuild) **A STRAIGHT MOVE OF THE PIECE IS FREE** — the anchor translated from `a` to `b`, the piece never nearer a part than
+ * `hard`: conservative advancement (Mirtich 1996) — from `a` (its gap `g0`) a stride as long as the clearance less `hard` allows (no point of the piece moves
+ * further: nothing can be reached), the gap read at the stride's end (`gapAtAnchor`, `spend` charging it), again — free when the stride reaches `b`; not
+ * free when a gap falls under `hard` or the sweep needs more than `SWEEP_MAX_QUERIES` (a move along a part at the gap kept: a wall, never a crawl past it).
+ * Within the clearance itself: free, no query. ⚠ `gapAtAnchor` absent (an environment without it): free — the landing alone decides, as before.
+ */
+export function straightFree(env: SolverEnv, a: Vec3, b: Vec3, g0: number, hard: number, spend: () => void = () => {}): boolean {
+  const L = dist(a, b);
+  if (!(L > 1e-12) || (g0 - hard) * 0.9 >= L) return true;
+  if (env.gapAtAnchor === undefined) return true;
+  let t = 0;
+  let g = g0;
+  for (let k = 0; k < SWEEP_MAX_QUERIES; k++) {
+    const adv = (g - hard) * 0.9;
+    if (!(adv > 0)) return false;
+    t += adv / L;
+    if (t >= 1) return true;
+    spend();
+    g = env.gapAtAnchor([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
+    if (g < hard) return false;
+  }
+  return t + ((g - hard) * 0.9) / L >= 1;
+}
+
 /** ⭐ (2026-11-09) the samples the rest of a step is scanned on for the jump BACK out of a void (anchors only, each candidate bisected — `jumpIn`). */
 export const VOID_SCAN_SAMPLES = 32;
 
@@ -220,7 +251,12 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   const m12 = dot3(J[0], J[1]);
   const m22 = dot3(J[1], J[1]);
   const A = normals.map((n) => [dot3(n, J[0]), dot3(n, J[1])] as const);
-  const feasible = (s: QStep) => A.every((a) => a[0] * s[0] + a[1] * s[1] >= -1e-12 * (Math.abs(a[0]) + Math.abs(a[1])));
+  const speed = (s: QStep) => Math.sqrt(Math.max(0, m11 * s[0] * s[0] + 2 * m12 * s[0] * s[1] + m22 * s[1] * s[1]));
+  // ⭐⭐⭐ (2026-11-12, the owner: *"when I am in contact … the pan is not smooth: it looks like there is friction"*) INTO a contact = the anchor's motion
+  // ANGLE into it beyond `TANGENT_TOL` (`intoContact`) — ⛔ the product against `1e-12 × |a|`, blind to the step's length: a ring level to 1e-8 (the
+  // Jacobian's finite differences) read as pushing into the floor under it, and the projection took the WHOLE yaw away — one way blocked at the kept gap
+  // in free air, the other free, by the noise's sign (probed: the channel's floor, 7 mm short of the wall; `projectExact` returned [0, 0])
+  const feasible = (s: QStep) => A.every((a) => !intoContact(a, s, speed(s)));
   // ⭐⭐⭐ (2026-10-17, the owner: *"after the sliding is toggled off, the orbit is blocked and I need to go a lot of back and forth to unlock the green
   // piece"*) — a step that pushes into NO contact is the step, whatever the metric: asked FIRST. ⛔ The singular metric was refused before — the way back
   // after a slide has one coordinate (its share), so a way back starting in contact (every slide ends at the kept gap) was blocked on its first step,
@@ -240,7 +276,7 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
   let bestCost = cost(best);
   for (const a of A) {
     const into = a[0] * dq[0] + a[1] * dq[1];
-    if (!(into < 0)) continue;
+    if (!intoContact(a, dq, speed(dq))) continue;
     const w0 = i11 * a[0] + i12 * a[1];
     const w1 = i12 * a[0] + i22 * a[1];
     const den = a[0] * w0 + a[1] * w1;
@@ -265,12 +301,21 @@ export function projectExact(dq: QStep, J: readonly [Vec3, Vec3], normals: reado
 export function keepSense(s: QStep, dq: QStep, J: readonly [Vec3, Vec3], normals: readonly Vec3[]): QStep {
   const k: QStep = [s[0] * dq[0] < 0 ? 0 : s[0], s[1] * dq[1] < 0 ? 0 : s[1]];
   if (k[0] === s[0] && k[1] === s[1]) return s;
-  for (const n of normals) {
-    const a0 = dot3(n, J[0]);
-    const a1 = dot3(n, J[1]);
-    if (a0 * k[0] + a1 * k[1] < -1e-12 * (Math.abs(a0) + Math.abs(a1))) return [0, 0];
-  }
+  const tv: Vec3 = [J[0][0] * k[0] + J[1][0] * k[1], J[0][1] * k[0] + J[1][1] * k[1], J[0][2] * k[0] + J[1][2] * k[1]];
+  const sp = Math.hypot(tv[0], tv[1], tv[2]);
+  for (const n of normals) if (intoContact([dot3(n, J[0]), dot3(n, J[1])], k, sp)) return [0, 0];
   return k;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-12) The anchor's motion along a contact counts as tangent below this angle into it (rad, its sine): ~0.06°. The landing's gap is checked
+ * anyway (≥ half the gap kept), so a slope this small sinks the piece 0.004 mm over a 4 mm sub-step.
+ */
+export const TANGENT_TOL = 1e-3;
+
+/** ⭐⭐⭐ (2026-11-12) Does the step `s` push INTO the contact whose row is `a` (= n·J, n unit) — its anchor's speed `speed` (= |J s|): an angle beyond `TANGENT_TOL`. */
+export function intoContact(a: readonly [number, number], s: QStep, speed: number): boolean {
+  return a[0] * s[0] + a[1] * s[1] < -TANGENT_TOL * speed;
 }
 
 /**
@@ -392,7 +437,10 @@ export function solveOrbitStep(q0: OrbitQ, dq: QStep, env: SolverEnv, opt: Solve
         const tj = ringJump(env, q, rest, tS, spare * 0.9);
         if (tj !== null) {
           const gj = gapAt(plus(q, rest, tj));
-          if (gj >= opt.gapM) {
+          // ⭐⭐⭐ (2026-11-12, the slide's rebuild — the owner's teleport) …and the piece's STRAIGHT move there is free (`straightFree`: conservative
+          // advancement on the anchors, a few queries) — ⛔ the landing alone: a jump is a move the shown piece makes all the same, straight; across a wall
+          // (a gizmo stepping onto a part's top, a channel to the next) it went through it. Not free: the jump is a wall
+          if (gj >= opt.gapM && straightFree(env, env.anchor(q), env.anchor(plus(q, rest, tj)), g, hard, spend)) {
             t = tj;
             gl = gj;
           } else {
@@ -935,21 +983,7 @@ export function relocationKey(q: OrbitQ, rotation: readonly number[] | null, giz
   return [q.yaw.toFixed(5), q.v.toFixed(5), rotation === null ? "" : rotation.map((x) => x.toFixed(4)).join(","), gizmo.map((x) => x.toFixed(4)).join(","), signature].join("|");
 }
 
-/**
- * ⭐⭐ (2026-10-29, the owner: *"the message says the piece is blocked, however I can still slide the piece in the opposite direction than the blocking
- * part. Why is there such message if there is a way out"* → *"agreed"*) — **A SLIDE IS A WAY OUT**: while a slide on a face is available, a step of
- * `probeM` each way along the face's two directions (`e1`, `e2`), the piece kept at its gap — free when any one keeps the gap at the margin or more
- * (`gapAt(offset)`, the piece moved by `offset`). ⛔ The check tried the orbit's steps and the turns only: in a pocket the red pop-up showed while a slide
- * led out.
- */
-export function slideProbeFree(gapAt: (offset: Vec3) => number, e1: Vec3, e2: Vec3, probeM: number, hardM: number): boolean {
-  for (const e of [e1, e2]) {
-    for (const k of [1, -1]) {
-      if (gapAt([e[0] * probeM * k, e[1] * probeM * k, e[2] * probeM * k]) >= hardM) return true;
-    }
-  }
-  return false;
-}
+/** ⛔ (2026-11-12, `CLOSE_IN_CONTACT.md`) `slideProbeFree` (a slide along the face as a way out) DELETED with the slide. */
 
 /** ⭐ The red pop-up and the respawn: armed when EVERYTHING is blocked — the position (the solver's probes) AND every turn. */
 export function pieceRespawnArmed(positionStuck: boolean, everyTurnBlocked: boolean): boolean {
