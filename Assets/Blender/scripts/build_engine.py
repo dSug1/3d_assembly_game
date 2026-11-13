@@ -140,7 +140,10 @@ def textured(m, image):
 
 
 MAT = {
-    "glass": material("Glass", (1, 1, 1), roughness=0.03, alpha=0.26),
+    "glass": material("Glass", (1, 1, 1), metallic=1.0, roughness=0.75, alpha=0.43),   # ⭐ the owner's file, 2026-11-13 (*"I have changed
+        # the material of the glass. see my world0_scene_2_engine_owner.blend file. apply the same"*, after *"too transparent"*): metallic 1,
+        # roughness 0.3025, alpha 0.43 (0, 0.03, 0.26 before) — then *"INCREASE the roughness of the glass material to 0.75"*: a frosted,
+        # reflecting glass; its sheen tint and specular 0.507 are not glTF's
     "chrome": material("Chrome", srgb("C9CDD2"), metallic=1, roughness=0.14),
     "chromeH": material("ChromeHammered", srgb("C9CDD2"), metallic=1, roughness=0.2),
     "dark": material("Dark", srgb("55595F"), metallic=0.5, roughness=0.45),
@@ -1853,22 +1856,182 @@ def ref_to_blender(p):
     return Vector((p[0], -p[2], p[1]))
 
 
-floor_me = bpy.data.meshes.new("PreviewFloor")
-s = 12
-floor_me.from_pydata([(-s, -s, 0), (s, -s, 0), (s, s, 0), (-s, s, 0)], [], [(0, 1, 2, 3)])
-floor_me.materials.append(material("PreviewFloor", srgb("ECEAE6"), roughness=1))
-PREVIEW.objects.link(bpy.data.objects.new("PreviewFloor", floor_me))
+# ⭐⭐ THE SCENE'S FLOOR, DESIGNED HERE and EXPORTED (the owner, 2026-11-13: *"make it the attributes of the scene (yellow material, invisible from
+# below, with just a highlight of its contour when the camera sees it from below …) bevel the corners of the floor with a radius half of the radius
+# of the bevel of the plinth corners"*): `FLOOR`, a child of the root (no part: never placed), role `floor` — the game's floor (2 m × 2 m: Scene_1's
+# size; its "sand yellow" MAT_F, linear), its top at y 0 (the plinth stands on it), the corners r = PLINTH_R / 2.
+# ⭐ ONE FACE, facing up, its material ONE-SIDED: invisible from below by itself — in Blender (backface culling) and in the game. ⛔ The contour seen
+# from below cannot be a material: the game draws it (`D196`, `render/model_import.ts` — the top face's outline from this mesh's own vertices).
+FLOOR_HALF, FLOOR_R = 1.0 / UNIT_M, PLINTH_R / 2         # 7.143 (1 m), 0.165
+# ⛔ THE SCALE CHECKED against the GAME's own floor (read from src/content/scene_1.ts, not retyped — the preview's 24-unit floor had been 1.7× the
+# game's, unseen until the owner compared the two): its dims × its unitM = this floor's 2 × FLOOR_HALF × UNIT_M
+import re as _re
+with open(os.path.join(HERE, "..", "..", "..", "src", "content", "scene_1.ts"), encoding="utf-8") as _fh:
+    _s1 = _fh.read()
+_game_m = float(_re.search(r'id: "Floor",[\s\S]*?dims: \[([\d.]+),', _s1).group(1)) * float(_re.search(r"unitM: ([\d.]+)", _s1).group(1))
+print(f"the FLOOR at the game's scale: {2 * FLOOR_HALF * UNIT_M:.3f} m here, {_game_m:.3f} m in the game (Scene_1's floor) — "
+      + ("✅" if abs(2 * FLOOR_HALF * UNIT_M - _game_m) < 1e-6 else "⛔ NOT THE GAME'S SIZE"))
+MAT["floor"] = material("Floor", (0.84, 0.74, 0.52), roughness=1.0)
+MAT["floor"].use_backface_culling = True
+_floor_bm = flat_face(rounded_rect(2 * FLOOR_HALF, 2 * FLOOR_HALF, FLOOR_R), 0.0)
+_floor_bm.normal_update()
+_floor_bm.faces.ensure_lookup_table()
+if _floor_bm.faces[0].normal.y < 0:
+    bmesh.ops.reverse_faces(_floor_bm, faces=list(_floor_bm.faces))
+_floor_me = bpy.data.meshes.new("FLOOR")                  # ⛔ not mesh_object: it brings reference coordinates into a PART's frame (a child of the
+_floor_bm.to_mesh(_floor_me)                              # root) — the root's own frame IS the reference: the floor stood on its edge
+_floor_bm.free()
+_floor_me.materials.append(MAT["floor"])
+FLOOR = bpy.data.objects.new("FLOOR", _floor_me)
+collection("FLOOR (the scene's, exported)", ENGINE).objects.link(FLOOR)
+FLOOR.parent = YUP_ROOT
+FLOOR["role"] = "floor"
+assert (YUP_ROOT.matrix_basis.to_3x3() @ FLOOR.data.polygons[0].normal).z > 0.999, "the floor's face does not face up"
 
-sun_data = bpy.data.lights.new("PreviewSun", "SUN")
-sun_data.energy, sun_data.angle, sun_data.color = 3.0, math.radians(3), srgb("FFF4E8")
-sun = bpy.data.objects.new("PreviewSun", sun_data)
-sun.rotation_euler = (-ref_to_blender((-3, 8, 4.5))).to_track_quat("-Z", "Y").to_euler()
-PREVIEW.objects.link(sun)
-world = bpy.data.worlds.new("PreviewWorld")
+# ⭐⭐ THE GAME'S LIGHTING, MIRRORED — never authored here (the owner, 2026-11-13: *"do we need to work the environment, the lighting, etc. directly in
+# blender …, or does it need to be made in the babylon/ts pipeline ?"* → *"do it"*; `SCENE_WORKFLOW.md` §6.3 item 1). The SOURCE is the game's data:
+# Scene_1's `lighting` (src/content/scene_1.ts — two spots, a directional, the ambient fill, the background) and the environment's strength
+# (`envIntensity`, src/input/gestureConfig.ts), READ here (never retyped) and converted to what Babylon does with them on the .glb's PBR materials:
+#   - positions: the game's metres = authored × Scene_1's unitM, in Babylon's LEFT-handed world; Babylon's glTF reader shows the file's (x, y, z) at
+#     (−x, y, z) (its root: 180° about y, z × −1) → reference = (−X, Y, Z) / UNIT_M;
+#   - a DIRECTIONAL of intensity I lights a white PBR face square to it to I (no 1/π in Babylon) → a Blender SUN of strength π·I;
+#   - a SPOT: Babylon gives it the intensity URP's falloff delivers at the bodies' mean (`illuminanceAt`) and, on a PBR material, its own physical
+#     falloff I/d² (d in metres) → a Blender SPOT of power 4π²·I / UNIT_M² (Blender: P / (4π²·d²), d in this file's units);
+#   - the ambient fill (a hemispheric light: white above, (0.25, 0.25, 0.28) below) and the sky (×envIntensity) → the WORLD's light; the CAMERA sees
+#     the game's background colour (its clear colour), not the sky — as the game shows it;
+#   - the sky's panorama MIRRORED (Mapping y × −1): Babylon reads an equirectangular image as u = atan2(z, x) in its world, Blender as its mirror.
+# ⚠ An APPROXIMATION of Babylon's renderer by Eevee (soft shadows, reflections differ): the look here is close, the game's is the judge.
+import re as _re2
+with open(os.path.join(HERE, "..", "..", "..", "src", "content", "scene_1.ts"), encoding="utf-8") as _fh:
+    _s1 = _fh.read()
+with open(os.path.join(HERE, "..", "..", "..", "src", "input", "gestureConfig.ts"), encoding="utf-8") as _fh:
+    _gc = _fh.read()
+_lit = _s1[_s1.index("lighting: {"):]
+_lit = _lit[:_lit.index("\n  },")]
+_num = lambda key, txt: float(_re2.search(key + r":\s*(-?[\d.]+)", txt).group(1))
+_tri = lambda key, txt: [float(v) for v in _re2.search(key + r":\s*\[([^\]]+)\]", txt).group(1).split(",")]
+G_UNIT = _num(r"\n  unitM", _s1)
+G_BG, G_AMBIENT = _tri("background", _lit), _num("ambient", _lit)
+G_ENV = _num(r"\n  envIntensity", _gc)
+G_LIGHTS = []
+for _blk in _re2.split(r"\n      \{", _lit)[1:]:
+    _l = {"name": _re2.search(r'name: "([^"]+)"', _blk).group(1), "type": _re2.search(r'type: "([^"]+)"', _blk).group(1),
+          "position": _tri("position", _blk), "eulerDeg": _tri("eulerDeg", _blk), "intensity": _num("intensity", _blk),
+          "kelvin": _num("kelvin", _blk), "filter": _tri("filter", _blk)}
+    for _k in ("range", "spotOuterDeg", "spotInnerDeg"):
+        if _re2.search(_k + r":", _blk):
+            _l[_k] = _num(_k, _blk)
+    G_LIGHTS.append(_l)
+assert len(G_LIGHTS) == 3, f"Scene_1's lights not read: {len(G_LIGHTS)}"
+
+
+def unity_forward(e):                                     # core/lighting.ts unityForward
+    x, y = math.radians(e[0]), math.radians(e[1])
+    return Vector((math.sin(y) * math.cos(x), -math.sin(x), math.cos(y) * math.cos(x)))
+
+
+def kelvin_rgb(k):                                        # core/lighting.ts kelvinToRgb
+    t = min(40000, max(1000, k)) / 100
+    cl = lambda v: min(255, max(0, v)) / 255
+    r = 255 if t <= 66 else 329.698727446 * (t - 60) ** -0.1332047592
+    g = 99.4708025861 * math.log(t) - 161.1195681661 if t <= 66 else 288.1221695283 * (t - 60) ** -0.0755148492
+    b = 255 if t >= 66 else (0 if t <= 19 else 138.5177312231 * math.log(t - 10) - 305.0447927307)
+    rgb = [cl(r), cl(g), cl(b)]
+    m = max(rgb)
+    return [c / m for c in rgb]
+
+
+def illuminance_at(l, p):                                 # core/lighting.ts illuminanceAt (URP's falloff, authored units)
+    if l["type"] == "DIRECTIONAL":
+        return max(0.0, l["intensity"])
+    d = Vector(p) - Vector(l["position"])
+    d2, rng = d.length_squared, l.get("range", math.inf)
+    if not d2 > 0 or d2 >= rng * rng:
+        return 0.0
+    win = (1 - (d2 / (rng * rng)) ** 2) ** 2 if math.isfinite(rng) else 1
+    cone = 1
+    if "spotOuterDeg" in l:
+        ca = d.normalized().dot(unity_forward(l["eulerDeg"]).normalized())
+        co, ci = math.cos(math.radians(l["spotOuterDeg"] / 2)), math.cos(math.radians(l.get("spotInnerDeg", l["spotOuterDeg"]) / 2))
+        if ca <= co:
+            return 0.0
+        cone = min(1, (ca - co) / (ci - co)) ** 2 if ci > co else 1
+    return max(0.0, l["intensity"]) / d2 * win * cone
+
+
+def game_to_ref(v, point=True):                           # Babylon's world (metres, left-handed) → this file's reference units (y up)
+    return Vector((-v[0], v[1], v[2])) / (UNIT_M if point else 1)
+
+
+_target = (0.0, 0.0, 0.0)                                 # the bodies' mean (scene.ts: the non-frozen bodies; Scene_2 has none → the origin)
+_mirrored = []
+for _l in G_LIGHTS:
+    _col = [k * f for k, f in zip(kelvin_rgb(_l["kelvin"]), _l["filter"])]
+    _e = illuminance_at(_l, _target)
+    _dir = game_to_ref(unity_forward(_l["eulerDeg"]), point=False).normalized()
+    _ld = bpy.data.lights.new(_l["name"], "SUN" if _l["type"] == "DIRECTIONAL" else "SPOT")
+    _ld.color = _col
+    if _l["type"] == "DIRECTIONAL":
+        _ld.energy, _ld.angle = math.pi * _e, math.radians(2)
+    else:
+        _ld.energy = 4 * math.pi ** 2 * _e / UNIT_M ** 2
+        _ld.spot_size = math.radians(_l["spotOuterDeg"])
+        _ld.spot_blend = 1 - _l.get("spotInnerDeg", _l["spotOuterDeg"]) / _l["spotOuterDeg"]
+        _ld.shadow_soft_size = 0.05
+    _lo = bpy.data.objects.new(_l["name"], _ld)
+    _lo.location = ref_to_blender(game_to_ref([c * G_UNIT for c in _l["position"]]))
+    _lo.rotation_euler = ref_to_blender(_dir).to_track_quat("-Z", "Y").to_euler()
+    _lo["about"] = "the GAME's light, mirrored from src/content/scene_1.ts (never edited here)"
+    PREVIEW.objects.link(_lo)
+    _mirrored.append(f"{_l['name']} ({_l['type'].lower()}, game {_e:.3f} → Blender {_ld.energy:.2f})")
+
+world = bpy.data.worlds.new("GameWorld")
 world.use_nodes = True
-world.node_tree.nodes["Background"].inputs["Color"].default_value = (1, 1, 1, 1)
-world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.6
+_nt = world.node_tree
+_out = _nt.nodes["World Output"]
+_tc = _nt.nodes.new("ShaderNodeTexCoord")
+_map = _nt.nodes.new("ShaderNodeMapping")
+_map.inputs["Scale"].default_value = (1, -1, 1)
+_env = _nt.nodes.new("ShaderNodeTexEnvironment")
+_env.image = bpy.data.images.load(os.path.abspath(os.path.join(HERE, "..", "..", "Environment", "sky_sand.hdr")))
+_nt.links.new(_tc.outputs["Generated"], _map.inputs["Vector"])
+_nt.links.new(_map.outputs["Vector"], _env.inputs["Vector"])
+_bg_env = _nt.nodes["Background"]
+_nt.links.new(_env.outputs["Color"], _bg_env.inputs["Color"])
+_bg_env.inputs["Strength"].default_value = G_ENV
+_sep = _nt.nodes.new("ShaderNodeSeparateXYZ")
+_nt.links.new(_tc.outputs["Generated"], _sep.inputs["Vector"])
+_mr = _nt.nodes.new("ShaderNodeMapRange")
+_mr.inputs["From Min"].default_value, _mr.inputs["From Max"].default_value = -1.0, 1.0
+_nt.links.new(_sep.outputs["Z"], _mr.inputs["Value"])
+_mix = _nt.nodes.new("ShaderNodeMixRGB")
+_mix.inputs["Color1"].default_value = (0.25, 0.25, 0.28, 1)
+_mix.inputs["Color2"].default_value = (1, 1, 1, 1)
+_nt.links.new(_mr.outputs["Result"], _mix.inputs["Fac"])
+_bg_hemi = _nt.nodes.new("ShaderNodeBackground")
+_nt.links.new(_mix.outputs["Color"], _bg_hemi.inputs["Color"])
+_bg_hemi.inputs["Strength"].default_value = G_AMBIENT
+_add = _nt.nodes.new("ShaderNodeAddShader")
+_nt.links.new(_bg_env.outputs["Background"], _add.inputs[0])
+_nt.links.new(_bg_hemi.outputs["Background"], _add.inputs[1])
+_bg_cam = _nt.nodes.new("ShaderNodeBackground")
+_bg_cam.inputs["Color"].default_value = (*G_BG, 1)
+_lp = _nt.nodes.new("ShaderNodeLightPath")
+_ms = _nt.nodes.new("ShaderNodeMixShader")
+_nt.links.new(_lp.outputs["Is Camera Ray"], _ms.inputs["Fac"])
+_nt.links.new(_add.outputs["Shader"], _ms.inputs[1])
+_nt.links.new(_bg_cam.outputs["Background"], _ms.inputs[2])
+_nt.links.new(_ms.outputs["Shader"], _out.inputs["Surface"])
 scene.world = world
+print("the GAME's lighting mirrored (src/content/scene_1.ts, gestureConfig.ts): " + ", ".join(_mirrored) +
+      f"; the ambient fill {G_AMBIENT}, the sky ×{G_ENV}, the background {G_BG}")
+for _scr in bpy.data.screens:                      # the viewport's Material Preview WITH the scene's world and lights (its own studio image hid them)
+    for _area in _scr.areas:
+        for _sp in _area.spaces:
+            if _sp.type == "VIEW_3D":
+                _sp.shading.type = "MATERIAL"
+                _sp.shading.use_scene_world = True
+                _sp.shading.use_scene_lights = True
 
 target = Vector((0.05, YC + 0.14, 0))
 direction = Vector((-0.95, 0.62, 1)).normalized()
@@ -1885,8 +2048,8 @@ scene.eevee.taa_render_samples = 32
 scene.eevee.use_ssr = True
 scene.eevee.use_soft_shadows = True
 scene.render.resolution_x = scene.render.resolution_y = 900
-scene.view_settings.view_transform = "Filmic"
-scene.view_settings.look = "Medium High Contrast"
+scene.view_settings.view_transform = "Standard"       # as the game draws (Babylon: no tone mapping) — Filmic washed the floor's yellow to cream
+scene.view_settings.look = "None"
 
 # ================================================================ THE ENGINE RUNNING — Appendix B's update(θ), the ONE formula the game ports
 # (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ? for example I want to see there is no
@@ -2556,7 +2719,7 @@ def check_glb(path, keep, label="the export"):
     bad = []
     # ⛔ the expected set INDEPENDENT of the export's list (its first run exported the root alone, and a check against that list passed it):
     # every object of every part's collection, and the root
-    expected = {"YUP_ROOT"} | {o.name for p, c in PARTS for o in c.objects}
+    expected = {"YUP_ROOT", "FLOOR"} | {o.name for p, c in PARTS for o in c.objects}
     missing = sorted(expected - set(by_name))
     extra = sorted(set(by_name) - expected)
     if missing or extra:
@@ -2590,6 +2753,8 @@ def check_glb(path, keep, label="the export"):
         moved.sort(reverse=True)
         bad.append(f"{len(moved)} nodes NOT where they were built (the look off its collision and proxies): " +
                    ", ".join(f"{nm} {d:.3f}" for d, nm in moved[:6]))
+    if by_name.get("FLOOR", {}).get("extras", {}).get("role") != "floor":
+        bad.append("the FLOOR not exported with its role floor")
     for k in ("animations", "cameras"):
         if gl.get(k):
             bad.append(f"{len(gl[k])} {k} exported")

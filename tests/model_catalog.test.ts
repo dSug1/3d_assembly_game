@@ -32,6 +32,11 @@ describe("Scene_2's engine — the real file", () => {
     );
   });
 
+  it("⭐ the scene's FLOOR, designed in the Blender file: a child of the root, not a part", () => {
+    expect(catalog!.floor).toBe("FLOOR");
+    expect(catalog!.parts.some((p) => p.node === "FLOOR")).toBe(false);
+  });
+
   it("the plinth is the one anchor; symmetries and kinds as the plan's catalogue", () => {
     expect(catalog!.parts.filter((p) => p.frozen).map((p) => p.id)).toEqual(["E01"]);
     const by = (id: string) => catalog!.parts.find((p) => p.id === id)!;
@@ -155,6 +160,18 @@ describe("broken copies — each convention refused, by name", () => {
     const r = refused(j);
     expect(r).toContain("E17_pulley: part_id E03 used twice");
     expect(r).toContain("E02_lower_case: no step (a whole number ≥ 1)");
+  });
+
+  it("two floors; a floor without a mesh", () => {
+    const j = copy() as typeof JSON0 & { scenes: { nodes: number[] }[] };
+    const fi = j.nodes.findIndex((n) => n.name === "FLOOR");
+    const rootNode = node(j, "YUP_ROOT") as { children?: number[] };
+    j.nodes.push({ ...structuredClone(j.nodes[fi]!), name: "FLOOR2" });
+    rootNode.children!.push(j.nodes.length - 1);
+    delete (j.nodes[fi] as { mesh?: number }).mesh;
+    const r = refused(j);
+    expect(r).toContain("2 floors (FLOOR, FLOOR2): at most one");
+    expect(r).toContain("FLOOR: role floor without a mesh");
   });
 
   it("not a .glb at all", () => {

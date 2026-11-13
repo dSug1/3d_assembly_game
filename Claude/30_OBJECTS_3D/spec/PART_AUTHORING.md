@@ -289,6 +289,11 @@ workflow once the scene is built in blender"*)
      *"N nodes NOT where they were built"*, named. **Its control** (`CHECK_CONTROLS`): the export at θ 0 with the valves as they are then — must
      FAIL (caught: the 4 valve objects, 0.061).
    ⭐ For ANY scene with moving pieces: the export's pose is the pose the collision and proxies were built in — never a frame of the animation.
+6. ⭐⭐ **THE SCENE'S FLOOR is in the file** (the owner, 2026-11-13: *"make it the attributes of the scene (yellow material, invisible from below, with
+   just a highlight of its contour when the camera sees it from below …)"*): `FLOOR` under the root (role `floor`, no `part_id`, one face up, a
+   one-sided material, at the game's size: `SCENE_WORKFLOW.md` §6.3 item 1). ⚠ Built as an object of the ROOT's frame — not with `mesh_object`, which
+   brings reference coordinates into a PART's frame (the root's own rotation then stood the floor on its edge: the build asserts it faces up). Read
+   back: exported, its role carried; the game's reader takes at most one, a mesh with no children (`core/model_catalog.ts`).
 
 ## 5. A scene's own reference animation
 

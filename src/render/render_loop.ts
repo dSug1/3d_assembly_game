@@ -6,7 +6,7 @@
  */
 import { orientCubeFrame } from "./orient_cube";
 import { advanceDemoFrame } from "./demo_wiring";
-import { hiddenFromBelow, topFaceOutline } from "../core/underside";
+import { hiddenFromBelow, seesFace, topFaceOutline } from "../core/underside";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -248,10 +248,18 @@ export function startRenderLoop(st: SceneState): void {
       // ⚠ `isVisible` is what Babylon's default pick reads too, so a press goes through it to
       // what is behind. ⛔ Not inherited: the coloured core (`D125`) is hidden with it.
       const cam: [number, number, number] = [st.camera.position.x, st.camera.position.y, st.camera.position.z];
+      const mf = st.modelFloor;
       for (const [fid, o] of st.world.objects) {
         if (o.frozen !== true) continue;
         const mesh = st.meshOf.get(fid);
         if (!mesh) continue;
+        // ⭐ (2026-11-13) the body whose floor the scene's .glb draws: never drawn itself (its collision and rules stand)
+        if (mf !== null && mf.replaces === fid) {
+          if (mesh.isVisible) mesh.isVisible = false;
+          const c = mesh.metadata?.core as { isVisible: boolean } | undefined;
+          if (c && c.isVisible) c.isVisible = false;
+          continue;
+        }
         const want = !hiddenFromBelow(st.world, fid, cam);
         if (mesh.isVisible !== want) mesh.isVisible = want;
         const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
@@ -260,6 +268,12 @@ export function startRenderLoop(st: SceneState): void {
         // never pickable, never an orbit candidate: it can touch nothing.
         const outline = topOutlineFor(st, fid, mesh);
         if (outline !== null && outline.isVisible === want) outline.isVisible = !want;
+      }
+      // ⭐⭐ the SAME rules on the scene's own floor (its .glb: one face, one-sided): hidden from below, its top face's contour shown instead
+      if (mf !== null) {
+        const want = !seesFace(cam, mf.bottom);
+        if (mf.mesh.isVisible !== want) mf.mesh.isVisible = want;
+        if (mf.outline.isVisible === want) mf.outline.isVisible = !want;
       }
     }
     // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame

@@ -81,6 +81,12 @@ export interface ModelCatalog {
   readonly unitM: number;
   /** In the plan's order (`step`, then id). */
   readonly parts: readonly ModelPart[];
+  /**
+   * ⭐ The scene's FLOOR, designed in its Blender file (the owner, 2026-11-13: *"update the md files to capture that the floor is designed in the
+   * blender file of the scene"*): a child of the root with role `floor` and a mesh, never a part (never placed). `null`: the file has none (the
+   * level's own floor body is drawn). At most one.
+   */
+  readonly floor: string | null;
 }
 
 export interface CatalogResult {
@@ -193,10 +199,18 @@ export function readModelCatalog(json: unknown): CatalogResult {
 
   const parts: ModelPart[] = [];
   const ids = new Set<string>();
+  const floors: string[] = [];
   for (const pi of root?.children ?? []) {
     const pn = nodes[pi]!;
     const pname = nameOf(pi);
     const ex = pn.extras ?? {};
+    // ⭐ the scene's floor: a child of the root, not a part — a mesh, nothing under it
+    if (ex["role"] === "floor") {
+      if (pn.mesh === undefined) refusals.push(`${pname}: role floor without a mesh`);
+      if ((pn.children ?? []).length > 0) refusals.push(`${pname}: the floor has children (it is one face, never a part)`);
+      floors.push(pname);
+      continue;
+    }
     // ② the part
     const id = ex["part_id"];
     if (typeof id !== "string" || id === "") {
@@ -319,11 +333,12 @@ export function readModelCatalog(json: unknown): CatalogResult {
     }
   }
   if (root !== undefined && parts.length === 0) refusals.push(`root ${nameOf(rootIdx)}: no parts`);
+  if (floors.length > 1) refusals.push(`${floors.length} floors (${floors.join(", ")}): at most one`);
 
   parts.sort((a, b) => a.step - b.step || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return refusals.length > 0 || root === undefined
     ? { catalog: null, refusals }
-    : { catalog: { root: nameOf(rootIdx), unitM: unitM as number, parts }, refusals };
+    : { catalog: { root: nameOf(rootIdx), unitM: unitM as number, parts, floor: floors[0] ?? null }, refusals };
 }
 
 const fmt = (v: Vec3): string => `[${v.map((x) => x.toFixed(4)).join(", ")}]`;

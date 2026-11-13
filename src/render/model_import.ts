@@ -19,6 +19,11 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
 import SKY_HDR from "../../Assets/Environment/sky_sand.hdr?url";
+import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import { topFaceOutline } from "../core/underside";
+import { type Vec3 } from "../core/vec";
 import {
   catalogSlice,
   glbJson,
@@ -98,9 +103,13 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
     ghost: debugMat("model.ghost", new Color3(0.95, 0.85, 0.2), 0.5),
   };
 
+  // ⭐⭐ THE SCENE'S FLOOR (designed in its Blender file — `SCENE_WORKFLOW.md` §6.3): drawn instead of the level's floor body, the body's rules on it
+  const floorMesh = catalog.floor === null ? undefined : holder.getChildMeshes(false).find((m) => m.name === catalog.floor);
+  if (floorMesh !== undefined) placeFloor(st, floorMesh);
+
   const byLayer = new Map<Layer, AbstractMesh[]>([["render", []], ["ucx", []], ["face", []], ["ghost", []]]);
   for (const m of holder.getChildMeshes(false)) {
-    if (m.getTotalVertices() === 0) continue;
+    if (m.getTotalVertices() === 0 || m === floorMesh) continue;
     m.isPickable = false;
     const layer = layerOf(m.name, ghosts);
     if (layer !== "render") m.material = mats[layer];
@@ -128,4 +137,34 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   };
   apply();
   scene.onBeforeRenderObservable.add(apply);
+}
+
+/**
+ * ⭐⭐ The scene's floor from its `.glb`: it RECEIVES shadows (the floor only receives), is never picked, and takes the level's floor rules — the
+ * frozen body it replaces (the largest frozen one: the play volume's floor) is no longer drawn, its collision kept; `D128` hides this mesh when the
+ * camera sees its underside, `D196` then shows its top face's contour in its own colour (the render loop, `st.modelFloor`). ⚠ The contour is read
+ * from the mesh's OWN vertices (the top ring — its rounded corners), built once: the floor never moves.
+ */
+function placeFloor(st: SceneState, mesh: AbstractMesh): void {
+  mesh.isPickable = false;
+  mesh.receiveShadows = true;
+  mesh.computeWorldMatrix(true);
+  const wm = mesh.getWorldMatrix();
+  const pos = mesh.getVerticesData(VertexBuffer.PositionKind) ?? [];
+  const pts: Vec3[] = [];
+  for (let i = 0; i + 2 < pos.length; i += 3) {
+    const v = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), wm);
+    pts.push([v.x, v.y, v.z]);
+  }
+  const ring = topFaceOutline(pts, { position: [0, 0, 0], orientation: [1, 0, 0, 0] }, 1e-5);
+  if (ring === null) throw new Error(`the floor ${mesh.name} has no top face`);
+  const top = ring[0]![1];
+  const outline = CreateLines(`top-outline-${mesh.name}`, { points: ring.map((p) => new Vector3(p[0], p[1], p[2])) }, st.scene);
+  const albedo = (mesh.material as { albedoColor?: Color3 } | null)?.albedoColor;
+  outline.color = albedo?.clone() ?? new Color3(0.84, 0.74, 0.52);
+  outline.isPickable = false;
+  outline.metadata = { orbitCandidate: false };
+  outline.isVisible = false;
+  const frozen = st.sceneSpec.bodies.filter((b) => b.frozen).sort((a, b) => b.dims[0] * b.dims[2] - a.dims[0] * a.dims[2]);
+  st.modelFloor = { mesh, outline, bottom: { centre: [0, top, 0], normal: [0, -1, 0] }, replaces: frozen[0]?.id ?? null };
 }

@@ -8,8 +8,9 @@
  * What: an equirectangular Radiance .hdr (linear RGB, values above 1 allowed), 512 × 256:
  *   - the SKY: a light grey with a tint of blue, paler at the horizon (most of what an upward chrome face shows);
  *   - the SUN: a small, very bright disc with a glow (the crisp highlight on rounded chrome), 40° up;
- *   - the GROUND: warm sand, darker toward the nadir (what downward faces show — near the floor's own yellow, so the chrome sits in its room).
- * Rows are constant except round the sun, so the file's run-length coding keeps it small (≈ 20 KB).
+ *   - the GROUND: the game floor's sand yellow, darker toward the nadir (what downward faces show — the chrome sits in its room).
+ * Rows are constant except round the sun, so the file's run-length coding keeps it small (≈ 63 KB).
+ * ⭐ Blender's preview world uses the SAME file (`build_engine.py`), so the .blend shows the game's reflections.
  *
  * Run: `node scripts/gen_sky_hdr.mjs` → `Assets/Environment/sky_sand.hdr` (committed; the game loads it as a prefiltered HDRCubeTexture).
  */
@@ -22,8 +23,11 @@ const OUT = fileURLToPath(new URL("../Assets/Environment/sky_sand.hdr", import.m
 
 const ZENITH = [0.62, 0.68, 0.78];                    // light grey, a tint of blue (the owner, 2026-11-13: "the sky is too blue. make it more light greyish with a tint of blue"; 0.18, 0.38, 0.85 before)
 const HORIZON = [0.88, 0.9, 0.93];
-const SAND_NEAR = [0.62, 0.5, 0.33];
-const SAND_FAR = [0.3, 0.24, 0.16];
+// the GROUND = the game's floor (Scene_1's "sand yellow" MAT_F, linear 0.84, 0.74, 0.52 — the owner: *"including the effect of the yellow floor of
+// the scene"*), as lit: a little darker toward the nadir (the model's own shadow under it)
+const FLOOR = [0.84, 0.74, 0.52];
+const SAND_NEAR = FLOOR.map((v) => v * 0.85);
+const SAND_FAR = FLOOR.map((v) => v * 0.6);
 const SUN = { elev: (40 * Math.PI) / 180, azim: (-35 * Math.PI) / 180, radius: (1.6 * Math.PI) / 180, value: 40, color: [1, 0.95, 0.85] };
 
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
