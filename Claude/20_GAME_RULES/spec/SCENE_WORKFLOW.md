@@ -255,7 +255,9 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    the `.glb`'s collision pieces (the hull's stable faces, a drop until contact, the demo's rules, ≈ 0.5 s); a scene gives its heaps by type, its
    anchors, its areas' arc — ⭐⭐ centred on the scene's FRONT (below), the front half —, ⭐ a PERIMETER round the anchors no part crosses (`anchorMargin`; `Scene_2` 1 unit) and a margin before the floor's
    edge (`floorMargin`; `Scene_2` 0.2 unit) (`src/content/scene2_boot.ts` is the model); `?bootSeed=N` replays; the LEVEL slider **model stage** shows boot / final;
-   the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5).
+   the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5). ⭐ **Browsing at boot**: before a part is in hand, a rapid TAP on a part
+   or the floor followed by a PRESS (which drives the orbit) moves the orbit's centre there — proportionally to the finger's travel, arriving
+   after a set travel (12 mm) — so the player can peep at the heaps (`SCENE_2_ASSEMBLY.md` §5 item 7).
 5. **W5 — the PLAYABLE SLICE: the level data and what the game must gain**: the slice's parts as bodies (the anchor frozen, the others placeable), the
    boot layout from item 4, the steps as data; the plan's requirements for the game (`SCENE_<N>_ASSEMBLY.md` §5 — `Scene_2`: every part orbited in turn,
    the plunge snap, a ghost read only for its part, a seated face skipped, the orbit's centre per step) built as needed by the slice, each with its vectors.

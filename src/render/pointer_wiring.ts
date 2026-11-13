@@ -14,7 +14,7 @@ import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_
 import { worldPlacementOf } from "../core/object_model";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/camera_radius";
-import { EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
+import { browseOnPress, browseTargetOnPress, EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
@@ -104,6 +104,14 @@ export function installPointerHandler(st: SceneState): void {
         // ⭐⭐⭐ (2026-10-16) and the rig turned onto the face the tap hit, at the camera's yaw
         if (to !== null) retargetGizmo(st, to, pc.normal, pc.host ?? null);
       }
+      // ⭐⭐ (2026-11-13) BROWSING a model before a part is in hand: a TAP on a part or the floor ARMS its point — the PRESS that follows within
+      // the double-tap window starts the centre's migration there (`browseOnPress`); a tap alone moves nothing
+      const bc = st.pendingBrowseCentre;
+      if (bc !== null && bc.pointerId === e.pointerId) {
+        st.pendingBrowseCentre = null;
+        const to = orbitTargetOnRelease(bc.target, isTapRelease(bc.t, bc.x, bc.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop)));
+        st.browseArmed = to !== null ? { target: to, t: s.t } : null;
+      }
       st.eventGaps.delete(e.pointerId);
       st.pointerTypeOf.delete(e.pointerId);
     }
@@ -160,6 +168,21 @@ export function installPointerHandler(st: SceneState): void {
       const newTarget = orbitTargetOnPress(hitId !== undefined && st.router.all().length === 1 && holdRole === null, e.pointerType !== "mouse" || e.isTrusted, goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1), hitAt);
       const hitN = newTarget !== null ? pick?.getNormal(true) : null;
       st.pendingPartCentre = newTarget !== null ? { pointerId: e.pointerId, target: newTarget, normal: hitN ? [hitN.x, hitN.y, hitN.z] : null, host: hitId ?? null, x: s.x, y: s.y, t: s.t } : null;
+      // ⭐⭐ (2026-11-13) a PRESS within the window after a browsing TAP: the centre starts migrating to the armed point — this press drives the orbit
+      {
+        const to = st.router.all().length === 1 ? browseOnPress(st.browseArmed, s.t, st.cfg.doubleTapWindow) : null;
+        st.browseArmed = null;
+        // ⭐ the GLIDE starts (`browseGlideAt`, the render loop): from where the centre is, proportional to the finger's travel
+        if (to !== null) st.browseGlide = { from: st.centreBlend.centreM, to, travelledMm: 0 };
+      }
+      // ⭐⭐ (2026-11-13) BROWSING a scene's model before a part is in hand (`browseTargetOnPress`): the ray on a PART or the FLOOR notes the point
+      st.pendingBrowseCentre = null;
+      if (st.modelBrowse.size > 0) {
+        const bp = st.scene.pick(e.clientX, e.clientY, (m) => st.modelBrowse.has(m) && m.isEnabled() && m.isVisible, false, st.camera);
+        const at = bp?.hit === true && bp.pickedPoint ? ([bp.pickedPoint.x, bp.pickedPoint.y, bp.pickedPoint.z] as [number, number, number]) : null;
+        const bt = browseTargetOnPress(st.router.all().length === 1 && holdRole === null, e.pointerType !== "mouse" || e.button === 0, st.greenBox !== null, at);
+        st.pendingBrowseCentre = bt !== null ? { pointerId: e.pointerId, target: bt, x: s.x, y: s.y, t: s.t } : null;
+      }
 
       if (st.router.outside().length === 1) {
         // ⭐⭐ DEFERRED, NOT IMMEDIATE: a second touchpoint turns this into a PINCH, and the two never land in the same instant. ⭐ prototype
@@ -273,6 +296,7 @@ export function forgetPointers(st: SceneState): void {
   st.hold = null;
   st.orbitMotion = null;
   st.pendingPartCentre = null;
+  st.pendingBrowseCentre = null;
   st.pieceFaceTap = null;
   st.noisePointer = null;
   st.hudDirty = true;
@@ -428,7 +452,10 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
   if (pieceSolveRuns(st)) {
     const p = st.gizmoTravelPending ?? { mm: 0, mmX: 0, mmY: 0 };
     st.gizmoTravelPending = { mm: p.mm + Math.hypot(dx, dy) / mmToPx(1), mmX: p.mmX + Math.abs(dx) / mmToPx(1), mmY: p.mmY + Math.abs(dy) / mmToPx(1) };
-  } else st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+  } else {
+    st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
+    st.browseFingerMm += Math.hypot(dx, dy) / mmToPx(1); // ⭐ (2026-11-13) the frame's finger travel — the minimum speed tops it up
+  }
   // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
   if (st.pieceEntry !== null) st.pieceEntry = advancePieceEntry(st.pieceEntry, Math.hypot(dx, dy) / mmToPx(1));
   // ⭐ (2026-10-10) …and the view's re-aim to the piece: dx ALONE (a pure dy leaves the piece where it is on the screen)

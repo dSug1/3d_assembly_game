@@ -328,7 +328,30 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
 5. **The heaps' generator** for a scene's parts (`core/demo_plan.ts`, today `Scene_1`'s).
 6. **The running engine at the level's end.**
 7. **The orbit's centre per step** (§2.8): redefined when a part seats (or when the player picks the next part), eased; and a player gesture to move
-   it (`IN10`, queued: orbit about a chosen point).
+   it (`IN10`, queued: orbit about a chosen point). ⭐⭐ **BUILT (2026-11-13) for the boot — BROWSING** (the owner: *"at boot (ie before a part is
+   picked up), the player shall be able to peep at the pieces therefore the player shall be able to move the center of the current orbit towards the
+   piece of his choice. I would propose a click or first touch moves the orbit center to the point where the raycast hit the surface of a piece or the
+   floor"*), then (*"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit). The translation of the
+   orbit center shall be done as per the mm of delta input or at a certain minimal speed, whichever is fastest"*): with no part in hand,
+   ① a first touch (or the left button) whose ray hits a drawn part or the floor NOTES the point; its release, if a TAP, ARMS it (a drag orbits and
+   arms nothing); ② the PRESS that follows within the double-tap window (300 ms) STARTS the centre's migration there — that press drives the orbit;
+   a tap alone moves nothing; ③ ⭐⭐⭐ the centre GLIDES along the straight line to the point, its travel **PROPORTIONAL to the finger's**, arriving
+   after **`browseArriveMm` of finger — 12 mm** (*"do 12 mm of travel instead of 30 mm"*; 30 first) whatever the distance — LINEAR, no ease (the owner: *"the center of the orbit shall reach its goal
+   within a travel of xx mm of finger. Its travel shall be proportional to the finger travel"*); a still finger leaves it where it is (a CAMERA
+   slider: *browsed centre: finger travel to arrive*). ⛔ (0) A glide at 1 screen mm per finger mm came first — replaced by this rule.
+   ⛔ (1) First built on the centre BLEND of 2026-09-14 (commits `2590d16`, `08a6a65` — the barycentre's, approved *"Working"*: progress = finger
+   travel over a fixed 30 mm, EASED): right for its ~10 cm re-centrings, wrong across the floor — a heap 0.7 m away moved ~25 mm per finger mm (the
+   jumps) and the ease's slow start and end were the stalls (the owner: *"there are big jumps and stalls of the camera before the orbit center reaches
+   its goal"*). ⛔ (2) A MINIMUM SPEED (time-driven, the larger of it and the finger: 40 → 80 → 240 → 120 mm/s) — REMOVED (the owner: *"remove this
+   min speed entirely as the logic is wrong"*). The old principle kept: the press that drives the orbit carries the centre (`input/goal_lock.ts`
+   `browseTargetOnPress`, `browseOnPress`, `browseGlideAt`; `render/pointer_wiring.ts`, `render/render_loop.ts`; the model's meshes in
+   `st.modelBrowse`). Tested (`tests/browse_centre.test.ts`: proportional, the exact arrival at the set travel whatever the distance, a still finger).
+   ⚠ **The orbit around the assembly with a part in hand** (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md` — the pipeline's) needs an ORBITED PIECE: in
+   `Scene_2` none exists yet (the parts are drawn, not bodies), so only the bare rig runs — `Scene_1`'s rings, tuned for the painting (the owner:
+   *"it looks like the orbit is an old 3-ring orbit, and not the one we have built in this pipeline"*). W5's order: ① a `.glb` part as the orbited
+   piece (its collision pieces, its face proxies as the faces the gizmo and the resting face read), picked from its heap by a tap; ② seating — the
+   lower case only at its goal's yaw, the crank's plunge, the pulley; ③ the centre per step, the contact shadows and caps on seating, the rig tuned
+   for the engine — the owner's look after each.
 8. ⭐⭐ **The PLUNGE snap** (the owner, 2026-11-13; `00_CORE/QUEUE.md`): a part resting on a hole's ghost at its mouth (flush with the host's
    face) carried along the hole's axis onto its seat — the ghost's `plunge_axis`, `plunge`, `plunge_to`; with the mouth capture (§2.9 item 3: the
    gizmo held on the hole's axis) as its first half. 9 in this scene: the crank into the tub, six pistons, two valve sets.

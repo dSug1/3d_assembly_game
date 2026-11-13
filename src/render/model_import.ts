@@ -137,6 +137,10 @@ async function place(
     byLayer.get(layer)!.push(m);
   }
 
+  // ⭐⭐ (2026-11-13) BROWSING: a tap on a drawn part or the floor moves the orbit's centre there (`browseTargetOnPress`, `pointer_wiring.ts`)
+  for (const m of byLayer.get("render")!) st.modelBrowse.add(m);
+  if (floorMesh !== undefined) st.modelBrowse.add(floorMesh);
+
   // ⭐ Shadows: every render mesh casts and receives; the per-light caster lists the shadow level re-applies (`applyShadowLevel`) grow with them.
   const render = byLayer.get("render")!;
   st.shadowGens.forEach((g, i) => {

@@ -273,6 +273,7 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
         // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
         tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
+        tunable(st, "browsed centre: finger travel to arrive (mm)", "browseArriveMm", 5, 150, 5),
       ],
     },
     {

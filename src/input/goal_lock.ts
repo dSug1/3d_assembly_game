@@ -53,6 +53,51 @@ export function orbitTargetOnRelease(
   return noted !== null && tapped ? [noted[0], noted[1], noted[2]] : null;
 }
 
+/**
+ * ⭐⭐ (2026-11-13, the owner: *"at boot (ie before a part is picked up), the player shall be able to peep at the pieces therefore the player shall be
+ * able to move the center of the current orbit towards the piece of his choice. I would propose a click or first touch moves the orbit center to the
+ * point where the raycast hit the surface of a piece or the floor"*) — BROWSING a scene's model before a part is in hand: a first touch (or the
+ * left button) whose ray hits a part or the floor NOTES the point; its TAP moves the orbit's centre there at the release (`orbitTargetOnRelease`) —
+ * ⚠ at the release, not the press: a drag that starts on a part ORBITS, and a centre thrown at every touch would jump before every orbit drag.
+ */
+export function browseTargetOnPress(
+  firstTouch: boolean,
+  touchOrLeftButton: boolean,
+  partInHand: boolean,
+  hitPoint: readonly [number, number, number] | null,
+): [number, number, number] | null {
+  if (!firstTouch || !touchOrLeftButton || partInHand || hitPoint === null) return null;
+  return [hitPoint[0], hitPoint[1], hitPoint[2]];
+}
+
+/**
+ * ⭐⭐ (2026-11-13, the owner: *"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit)"*) — the
+ * browsing TAP only ARMS its point; the centre starts moving at the PRESS that follows within `windowMs` of the tap's release (that press then
+ * drives the orbit). A tap with no press after it moves nothing.
+ */
+export function browseOnPress(armed: { readonly target: readonly [number, number, number]; readonly t: number } | null, pressT: number, windowMs: number): [number, number, number] | null {
+  if (armed === null || pressT - armed.t > windowMs || pressT < armed.t) return null;
+  return [armed.target[0], armed.target[1], armed.target[2]];
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-13) THE BROWSED CENTRE'S GLIDE — the owner: *"the center of the orbit shall reach its goal within a travel of xx mm of finger. Its
+ * travel shall be proportional to the finger travel"*. The centre's position = start + (goal − start) × min(1, finger travel / `arriveMm`) — LINEAR
+ * (proportional), arriving after exactly `arriveMm` of finger whatever the distance; a still finger leaves it where it is.
+ * ⛔ (1) The centre blend of 2026-09-14 (commits `2590d16`, `08a6a65`: the same budget, 30 mm) was EASED (smoothstep): its slow start and end were
+ * the stalls (the owner: *"there are big jumps and stalls"*). ⛔ (2) A time-driven MINIMUM SPEED (40 → 80 → 240 → 120 mm/s) — removed (*"remove this
+ * min speed entirely as the logic is wrong"*). ⛔ (3) A glide at 1 screen mm per finger mm — replaced by this rule.
+ */
+export function browseGlideAt(
+  from: readonly [number, number, number],
+  to: readonly [number, number, number],
+  travelledMm: number,
+  arriveMm: number,
+): { at: [number, number, number]; arrived: boolean } {
+  const t = arriveMm <= 0 ? 1 : Math.min(1, Math.max(0, travelledMm) / arriveMm);
+  return { at: [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t], arrived: t >= 1 };
+}
+
 // ⛔ (2026-10-11) `pinkFaceTapCandidate` is DELETED — the pink face is the held second touch's now (`hold_gesture.ts`'s `pinkCandidate`).
 
 /**

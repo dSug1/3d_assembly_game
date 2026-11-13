@@ -196,6 +196,8 @@ export interface GestureConfig {
   aoOn: number;
   /** ⭐ (2026-11-13) a scene model's STAGE shown: `0` the boot (the parts in their heaps — where a level starts), `1` the final (every part at its goal). */
   modelStage: number;
+  /** ⭐ (2026-11-13) the finger travel (mm) over which a browsed orbit centre reaches its goal — proportionally (`browseGlideAt`). */
+  browseArriveMm: number;
   // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
   // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
@@ -694,6 +696,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   envIntensity: 1,
   aoOn: 1,
   modelStage: 0,
+  // ⭐ the owner, 2026-11-13: "the center of the orbit shall reach its goal within a travel of xx mm of finger. Its travel shall be proportional to the
+  // finger travel" — then "do 12 mm of travel instead of 30 mm" (30 first: the 2026-09-14 centre blend's value), LINEAR
+  browseArriveMm: 12,
   // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
   // 1 degree"* — so zooming out cannot place a piece nobody moved.
   ungrabbedGoalMm: 1,
@@ -1087,6 +1092,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(`modelLayers (${cfg.modelLayers}) must be 0 (the look), 1 (+ collision), 2 (+ face proxies) or 3 (all).`);
   }
   if (cfg.aoOn !== 0 && cfg.aoOn !== 1) throw new Error(`aoOn (${cfg.aoOn}) must be 0 (off) or 1 (on).`);
+  if (!(cfg.browseArriveMm > 0 && cfg.browseArriveMm <= 300)) throw new Error(`browseArriveMm (${cfg.browseArriveMm}) must be in (0, 300] mm.`);
   if (cfg.modelStage !== 0 && cfg.modelStage !== 1) throw new Error(`modelStage (${cfg.modelStage}) must be 0 (boot) or 1 (final).`);
   if (!(cfg.envIntensity >= 0 && cfg.envIntensity <= 3)) {
     throw new Error(`envIntensity (${cfg.envIntensity}) must be in [0, 3]: 0 none, 1 as generated.`);

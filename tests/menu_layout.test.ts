@@ -60,7 +60,7 @@ const LAYOUT: Node[] = [
     n("THE APPROACH'S DISTANCE (THE RINGS)", ["orbitTopRadiusM", "orbitTopHeightM", "orbitMiddleRadiusM", "orbitMiddleHeightM", "orbitLowerRingOn", "orbitLowerRadiusM", "orbitLowerHeightM", "orbitBottomRadiusM", "orbitBottomHeightM"]),
   ]),
   n("GIZMO & SECTIONS", ["sectionLines", "facetMergeDeg", "facetMinShare", "gizmoEdgeMarginMm", "pinkGizmoVisible", "quadSliceMaxDeg", "quadGrowthLogK"]),
-  n("CAMERA", ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "orbitBlendDistanceMm"]),
+  n("CAMERA", ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "orbitBlendDistanceMm", "browseArriveMm"]),
   n("RENDERING", ["pieceContourAlpha", "faceHighlightAlpha", "quadUnlitAlpha", "highlightLiftMm", "shadowsOn", "autoShadowBudgetMs", "modelLayers", "envIntensity", "aoOn"]),
   n("SCENE SWAY", ["orbitSwayKind", "orbitSwayDeg", "orbitSlideMm", "orbitSwayTauMs", "swayTurnDeg", "swayReferenceSpeedMmPerS"], [
     n("PARTS' FOLLOW", ["translateInertiaMs", "translateDampingRatio", "translateLeadMs", "translateSwayTauMs", "rotateSwayTauMs"]),
@@ -75,9 +75,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("93 sliders, each once, each a live config value; no folder over 9", () => {
+  it("94 sliders, each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(93);
+    expect(all.length).toBe(94);
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);

@@ -12,6 +12,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { backgroundMix } from "../core/lighting";
+import { browseGlideAt } from "../input/goal_lock";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoLadderStep, autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
 import { applyShadowLevel, shadowsOnDemand } from "./lighting";
@@ -20,7 +21,7 @@ import { advanceFollow, displayPose, exponentialSmooth, phantomTarget } from "..
 import { worldPlacementOf } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelPose, shapeOfBody, writePose } from "./bodies";
-import { recomputeOrbitCentre } from "./camera_rig";
+import { recomputeOrbitCentre, syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
@@ -315,6 +316,18 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
+    // ⭐⭐⭐ (2026-11-13) a BROWSED centre's GLIDE (`browseGlideAt`): proportional to the finger's travel, arriving after `browseArriveMm` of it — the
+    // marker shows the destination
+    if (st.browseGlide !== null) {
+      const gl = st.browseGlide;
+      gl.travelledMm += st.browseFingerMm;
+      const g = browseGlideAt(gl.from, gl.to, gl.travelledMm, st.cfg.browseArriveMm);
+      st.centreBlend.snapTo(g.at);
+      syncCentre(st);
+      st.centreMarker.position.set(gl.to[0], gl.to[1], gl.to[2]);
+      if (g.arrived) st.browseGlide = null;
+    }
+    st.browseFingerMm = 0;
     // ⭐ (2026-11-13) LEVEL's background slider: the scene's own background with the night blue mixed in. ⚠ Written on change only.
     if (st.cfg.backgroundBluePct !== st.backgroundBlueSeen) {
       st.backgroundBlueSeen = st.cfg.backgroundBluePct;
