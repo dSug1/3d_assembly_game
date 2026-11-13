@@ -342,7 +342,7 @@ def mesh_object(name, bm, mat, part, coll, role="render", origin=None, smooth=No
     to_local = (origin or part.matrix_basis).inverted()
     bmesh.ops.transform(bm, matrix=to_local, verts=bm.verts)
     if role == "ufm":
-        tidy(bm)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)       # welded only: built minimal (a general dissolve makes bridges)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
@@ -441,6 +441,23 @@ BULKHEAD_X, SADDLE_R = PITCH / 2, 0.065            # the two inner bulkheads mid
 GHOST_CRANK = (1.10, 0.20)                       # the crank's resting proxy / ghost floor: x ±1.10, z ±0.20
 
 
+def mark_plunge(g, into, depth, seat):
+    """⭐ A part going INTO a hole / recess (the owner, 2026-11-13: *"the ghost face shall be aligned with the outer face … Then, we will create a
+    special snap to plunge the pistons inside the cylinder hole"*): its ghost floor lies IN THE PLANE WHERE THE HOLE EXITS (flush with the host's
+    outer face, filling the opening); the part rests there, then the PLUNGE snap (to build — QUEUE.md) carries it `depth` along `into` onto its
+    seat `seat`. Read by the game from the ghost's custom properties."""
+    g["plunge_axis"] = [round(c, 6) for c in Vector(into).normalized()]
+    g["plunge"] = round(depth, 6)
+    g["plunge_to"] = seat
+    return g
+
+
+def bore_disc(M, x, y, r=None, seg=24):
+    """A bore's mouth as a polygon (bank frame M, the bore at x, the plane y′): the SAME 24 corners as the deck proxy's round hole (holed_strips)."""
+    r = BORE_R if r is None else r
+    return [M @ Vector((x + r * math.cos(2 * math.pi * k / seg), y, r * math.sin(2 * math.pi * k / seg))) for k in range(seg)]
+
+
 def build_lower_case():
     part, coll = new_part("E02", "lower_case", 2, (0, CASE_Y0, 0), symmetry="yawHalfTurn")
     xi, zi, yf = CASE_X - WALL, CASE_Z - WALL, CASE_Y0 + WALL
@@ -478,10 +495,20 @@ def build_lower_case():
         for zs in (-1, 1):                                                                     # rim: end walls' tops
             za, zb = sorted((zs * SADDLE_R, zs * Z))
             quad(bm, [(s * xi, y1, za), (s * X, y1, za), (s * X, y1, zb), (s * xi, y1, zb)])
+    for bx in (-BULKHEAD_X, BULKHEAD_X):                                       # the bulkheads' tops (the coverage check: real, no proxy)
+        for zs in (-1, 1):
+            za, zb2 = sorted((zs * SADDLE_R, zs * zi))
+            quad(bm, [(bx - WALL / 2, y1, za), (bx + WALL / 2, y1, za), (bx + WALL / 2, y1, zb2), (bx - WALL / 2, y1, zb2)])
     mesh_object("UFM_E02_outer", bm, MAT["ufm"], part, coll, "ufm")
-    gx, gz = GHOST_CRANK
-    mesh_object("UFM_E02_GHOST_crank", quad(bmesh.new(), [(-gx, CRANK_REST_Y, -gz), (gx, CRANK_REST_Y, -gz), (gx, CRANK_REST_Y, gz),
-                                                          (-gx, CRANK_REST_Y, gz)]), MAT["ghost"], part, coll, "ufm")
+    # ⭐ the GHOST at the tub's MOUTH — the split's plane, where the recess exits (the owner, 2026-11-13: *"the ghost face shall always be a face
+    # aligned with the assembly face where the hole exits"*; it lay 0.18 down at the crank's resting depth before): the three rooms and the
+    # saddles' notches in the bulkheads and end walls — the openings the rim's proxy leaves, filled; the crank PLUNGES from it onto its saddles
+    gb = bmesh.new()
+    for a, b in rooms:
+        quad(gb, [(a, y1, -zi), (b, y1, -zi), (b, y1, zi), (a, y1, zi)])
+    for a, b in [(bx - hw, bx + hw) for bx in (-BULKHEAD_X, BULKHEAD_X)] + [(-X, -xi), (xi, X)]:
+        quad(gb, [(a, y1, -SADDLE_R), (b, y1, -SADDLE_R), (b, y1, SADDLE_R), (a, y1, SADDLE_R)])
+    mark_plunge(mesh_object("UFM_E02_GHOST_crank", gb, MAT["ghost"], part, coll, "ufm"), (0, -1, 0), SPLIT - CRANK_REST_Y, "MC_E02_crank")
     coll.objects["UFM_E02_GHOST_crank"]["ghost"] = True
     coll.objects["UFM_E02_GHOST_crank"]["for_part"] = "E03"      # ⭐ a ghost floor serves ONE part: the game reads it only while that part is held
 
@@ -815,9 +842,10 @@ def build_upper_case():
     # the end walls' bottoms (the seat on the lower case)
     bm = bmesh.new()
     for s in (-1, 1):
-        edges = sorted([-X, X] + [x - BORE_R for x in bore_xs(s)] + [x + BORE_R for x in bore_xs(s)])
-        for a, b in zip(edges[0::2], edges[1::2]):
-            quad(bm, [(a, SPLIT, s * zb), (b, SPLIT, s * zb), (b, UC_TOP, s * zt), (a, UC_TOP, s * zt)])
+        Ms = bank_frame(s)                                                     # each SLOPE in its bank's frame, its bores ROUND
+        zl, zh = sorted(((Ms.inverted() @ Vector((0, SPLIT, s * zb))).z, (Ms.inverted() @ Vector((0, UC_TOP, s * zt))).z))
+        for poly in holed_strips(X, zl, zh, bore_xs(s), BORE_R):
+            bm.faces.new([bm.verts.new(Ms @ Vector((px, FOOT, pz))) for px, pz in poly])
         bm.faces.new([bm.verts.new((s * X, y, z)) for z, y in
                       [(-zb, SPLIT), (-SADDLE_R, SPLIT)] + [(SADDLE_R * math.cos(math.pi - math.pi * i / 12), SPLIT + SADDLE_R * math.sin(math.pi - math.pi * i / 12)) for i in range(13)]
                       + [(zb, SPLIT), (zt, UC_TOP), (-zt, UC_TOP)]])
@@ -825,9 +853,29 @@ def build_upper_case():
             za, zb2 = sorted((zs * SADDLE_R, zs * zb))
             xa, xb = sorted((s * xi, s * X))
             quad(bm, [(xa, SPLIT, za), (xb, SPLIT, za), (xb, SPLIT, zb2), (xa, SPLIT, zb2)])
-    for a, b, za, zb2 in top_boxes:
+    # the TOP to its OUTER edges (the owner, 2026-11-13: *"in step 5, why there is a gap"* — the collision's boxes stop at the plate's INNER
+    # width, and the proxy had reused them: a strip open along each top edge, between the top and its slope); the rods' slots stay open
+    widen = lambda z: (-zt if abs(z + zti) < 1e-6 else zt if abs(z - zti) < 1e-6 else z)
+    widen_x = lambda x: (-X if abs(x + xi) < 1e-6 else X if abs(x - xi) < 1e-6 else x)   # and along the crank (*"there is still a gap on
+    for a, b, za, zb2 in top_boxes:                                                       # the top surface"*: 0.05 open at each end)
+        za, zb2, a, b = widen(za), widen(zb2), widen_x(a), widen_x(b)
         quad(bm, [(a, UC_TOP, za), (a, UC_TOP, zb2), (b, UC_TOP, zb2), (b, UC_TOP, za)])
+    zbi_ = slope_z(SPLIT, FOOT - WALL)                                         # the slopes' bottoms, on the split (the coverage check)
+    for sd in (-1, 1):
+        za, zb2 = sorted((sd * zbi_, sd * zb))
+        quad(bm, [(-xi, SPLIT, za), (xi, SPLIT, za), (xi, SPLIT, zb2), (-xi, SPLIT, zb2)])
     mesh_object("UFM_E04_outer", bm, MAT["ufm"], part, coll, "ufm")
+    # ⭐ each SLOPE whole, a GHOST for its bank (the review, step 5: four strips 0.1 wide between the bore openings — the gizmo would stutter):
+    # the slope's plane edge to edge, bridging the openings; read only while that bank is held
+    for sd, bank_id in ((-1, "E05"), (1, "E06")):
+        # only the OPENINGS (the owner: *"ghost and real surface overlap: will it be a problem in the babylon/ts pipeline ?"* — a ghost fills
+        # the opening it bridges, edge to edge with the real rim, never over a real face: the face map would count the overlap twice)
+        Ms = bank_frame(sd)
+        holes = bmesh.new()
+        for xb in bore_xs(sd):
+            merge_into(holes, disc(Ms @ Vector((xb, FOOT, 0)), Ms.to_3x3() @ Vector((0, 1, 0)), BORE_R, 24))
+        g = mesh_object(f"UFM_E04_GHOST_slope_{bank_id}", holes, MAT["ghost"], part, coll, "ufm")
+        g["ghost"], g["for_part"] = True, bank_id
 
     seat_marker("MC_E04_lower", part, coll, (0, SPLIT, 0), (0, -1, 0), (1, 0, 0))
     for side, tag in ((-1, "bankA"), (1, "bankB")):
@@ -893,8 +941,25 @@ def torus(centre_frame, R, r, seg=32, rseg=8):      # LIGHT, shaded smooth ALL O
         for j in range(rseg):
             a, b = rings[i], rings[(i + 1) % seg]
             bm.faces.new((a[j], b[j], b[(j + 1) % rseg], a[(j + 1) % rseg]))
-    bm.normal_update()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)   # ⛔ its faces were wound INWARD: every ring was inside out (invisible in a game engine)
     return bm
+
+
+def holed_strips(X, zlo, zhi, centres, r, seg=12):
+    """A plane's rectangle [−X, X] × [zlo, zhi] (in a part's frame: x along the crank, z across) with ROUND holes of radius r at x = centres,
+    as polygons cut straight through each hole's centre — each hole two half-circle notches, no bridge (PART_AUTHORING.md §3: a proxy as close
+    to the real surface as it can be: the real bores are round)."""
+    cuts = sorted([-X, X] + list(centres))
+    arc = lambda c, t0, t1: [(c + r * math.cos(math.radians(t0 + (t1 - t0) * k / seg)), r * math.sin(math.radians(t0 + (t1 - t0) * k / seg)))
+                             for k in range(seg + 1)]
+    polys = []
+    for a, b in zip(cuts, cuts[1:]):
+        poly = [(a, zlo), (b, zlo)]
+        poly += arc(b, -90, -270) if b in centres else []       # the hole at the right: its left half
+        poly += [(b, zhi), (a, zhi)]
+        poly += arc(a, 90, -90) if a in centres else []         # the hole at the left: its right half
+        polys.append(poly)
+    return polys
 
 
 def build_bank(side):
@@ -934,41 +999,47 @@ def build_bank(side):
         poly = keep_above_split([M @ Vector(p) for p in pts_local])
         if len(poly) >= 3:
             bm.faces.new([bm.verts.new(p) for p in poly])
-    for a, b in zip(edges[0::2], edges[1::2]):
-        face([(a, BANK_TOP, zlo), (a, BANK_TOP, zhi), (b, BANK_TOP, zhi), (b, BANK_TOP, zlo)])
-    for x in xs:
-        for z0, z1 in ((BORE_R, zhi), (zlo, -BORE_R)):
-            face([(x - BORE_R, BANK_TOP, z0), (x - BORE_R, BANK_TOP, z1), (x + BORE_R, BANK_TOP, z1), (x + BORE_R, BANK_TOP, z0)])
+    for poly in holed_strips(X, zlo, zhi, xs, BORE_R):                         # the DECK, its bores ROUND (squares 0.6 before: glass left out)
+        face([(px, BANK_TOP, pz) for px, pz in poly])
     for z in (zhi, zlo):
         face([(-X, FOOT, z), (X, FOOT, z), (X, BANK_TOP, z), (-X, BANK_TOP, z)])
     for x in (-X, X):
         face([(x, FOOT, zlo), (x, FOOT, zhi), (x, BANK_TOP, zhi), (x, BANK_TOP, zlo)])
-    for a, b in zip(edges[0::2], edges[1::2]):
-        face([(a, FOOT, zlo), (b, FOOT, zlo), (b, FOOT, zhi), (a, FOOT, zhi)])
-    for x in xs:
-        for z0, z1 in ((BORE_R, zhi), (zlo, -BORE_R)):
-            face([(x - BORE_R, FOOT, z0), (x + BORE_R, FOOT, z0), (x + BORE_R, FOOT, z1), (x - BORE_R, FOOT, z1)])
+    for poly in holed_strips(X, zlo, zhi, xs, BORE_R):                         # the FOOT, the same
+        face([(px, FOOT, pz) for px, pz in poly])
     bm.normal_update()
     mesh_object(f"UFM_{pid}_outer", bm, MAT["ufm"], part, coll, "ufm")
 
-    # the GHOST floors: one per bore, at its piston's resting proxy at the goal
+    # the GHOST floors: one per bore, ⭐ its MOUTH on the deck — flush with the bank's top, filling the deck proxy's round hole (the owner,
+    # 2026-11-13: *"the ghost face shall be aligned with the outer face"*; it lay 0.6 – 0.8 down the bore at the piston's resting depth before,
+    # floating); the piston rests there, then PLUNGES down its bore onto its seat
+    into = M.to_3x3() @ Vector((0, -1, 0))
     for side_, i, x, name in CYLS:
         if side_ != side:
             continue
         yr = piston_rest_y(side, i, x)
         g = M @ Vector((x, yr, 0))
-        o = mesh_object(f"UFM_{pid}_GHOST_{name}", quad(bmesh.new(), [M @ Vector((x - GHOST_HALF, yr, -GHOST_HALF)), M @ Vector((x - GHOST_HALF, yr, GHOST_HALF)),
-                                                                       M @ Vector((x + GHOST_HALF, yr, GHOST_HALF)), M @ Vector((x + GHOST_HALF, yr, -GHOST_HALF))]),
-                        MAT["ghost"], part, coll, "ufm")
+        gb = bmesh.new()
+        gb.faces.new([gb.verts.new(q) for q in bore_disc(M, x, BANK_TOP)])
+        o = mesh_object(f"UFM_{pid}_GHOST_{name}", gb, MAT["ghost"], part, coll, "ufm")
         o["ghost"], o["for_part"] = True, PISTON_IDS[name]
+        mark_plunge(o, into, BANK_TOP - yr, f"MC_{pid}_bore_{name}")
         seat_marker(f"MC_{pid}_bore_{name}", part, coll, g, M.to_3x3() @ Vector((0, 1, 0)), (1, 0, 0))
 
     # the VALVE SET's ghost floor (step 7): at its valve heads' lowest point, under its centre (x 0 — inside the middle bore's mouth)
     yv, hid = valves_rest_y(side), ("E13" if side < 0 else "E14")
-    q = VALVES_GHOST_HALF
-    o = mesh_object(f"UFM_{pid}_GHOST_valves", quad(bmesh.new(), [M @ Vector((-q, yv, -q)), M @ Vector((-q, yv, q)), M @ Vector((q, yv, q)),
-                                                                M @ Vector((q, yv, -q))]), MAT["ghost"], part, coll, "ufm")
+    # ⭐ FULL-DECK (the owner, 2026-11-13: *"ghost floors shall be connected to real surfaces (not single small surfaces floating in the air).
+    # Then correct to full-deck ghost"*): the whole bank's outline at the valve heads' depth, its edges ON the bank's outer faces — the gizmo
+    # lands on it anywhere along the bank (a 0.2 square in the middle bore's mouth before: it needed the mouth capture)
+    # ⭐⭐ then AT THE MOUTHS (the owner, 2026-11-13: *"the ghost face shall always be a face aligned with the assembly face where the hole
+    # exits"*): its valves go INTO the bores — the three bores' mouths on the deck, the set PLUNGING from them onto its seat
+    gb = bmesh.new()
+    for s_, i_, x_, n_ in CYLS:
+        if s_ == side:
+            gb.faces.new([gb.verts.new(q) for q in bore_disc(M, x_, BANK_TOP)])
+    o = mesh_object(f"UFM_{pid}_GHOST_valves", gb, MAT["ghost"], part, coll, "ufm")
     o["ghost"], o["for_part"] = True, hid
+    mark_plunge(o, M.to_3x3() @ Vector((0, -1, 0)), BANK_TOP - yv, f"MC_{pid}_valves")
     seat_marker(f"MC_{pid}_valves", part, coll, M @ Vector((0, yv, 0)), M.to_3x3() @ Vector((0, 1, 0)), (1, 0, 0))
 
     up = M.to_3x3() @ Vector((0, 1, 0))
@@ -986,10 +1057,14 @@ PISTON_IDS = {name: f"E{7 + k:02d}" for k, (side, i, x, name) in enumerate(CYLS)
 ROD_FIT = 0.07      # the rod's collision piece starts this far up from the big end's centre: clear of the pin's (0.065)
 
 
-def crown_number(text, frame):
+POCKET_MARGIN = 0.006      # a valve pocket's margin round the head's sweep
+NUMBER_X, NUMBER_SIZE = 0.175, 0.11   # the crown's name beside the pockets (it was centred, 0.2)
+
+
+def crown_number(text, frame, size=0.2):
     """The cylinder's name in relief on the crown (D2: told apart), as a mesh in reference coordinates; `frame`: its centre, +y its normal."""
     cu = bpy.data.curves.new("_num", "FONT")
-    cu.body, cu.size, cu.extrude, cu.align_x, cu.align_y = text, 0.2, 0.004, "CENTER", "CENTER"
+    cu.body, cu.size, cu.extrude, cu.align_x, cu.align_y = text, size, 0.004, "CENTER", "CENTER"
     cu.resolution_u = 3                            # light letters (Blender's 12 gave up to 1,000 vertices a crown)
     tmp = bpy.data.objects.new("_num", cu)
     scene.collection.objects.link(tmp)
@@ -1038,11 +1113,51 @@ def build_piston(side, i, x, name):
     prof = [(s + PISTON_Y + PISTON_H / 2, 0.0, 0), (y1, PISTON_R, 0), (y0, PISTON_R, 0), (y0, PISTON_R - PISTON_RIM, 0), (yi, PISTON_R - PISTON_RIM, 0),
             (yi, 0.0, 0)]
     along_y = M @ Matrix.Translation((x, 0, 0)) @ Matrix.Rotation(math.pi / 2, 4, "Z")   # revolve_x's axis turned onto the bore's (y′)
-    mesh_object(f"{pid}_piston_mesh", revolve_x([(-yy, r, m) for yy, r, m in prof], along_y @ Matrix.Rotation(math.pi, 4, "Z"), seg=48),
+    body = revolve_x([(-yy, r, m) for yy, r, m in prof], along_y @ Matrix.Rotation(math.pi, 4, "Z"), seg=48)
+    # ⭐ VALVE POCKETS (the owner, 2026-11-13: *"Valve pockets in crowns"* — the reference's valves open 0.07 at the piston's top dead centre,
+    # 0.007 above its crown: the engine's run found every valve in its piston): per valve, the space its head sweeps RELATIVE TO THE PISTON over
+    # the 720° cycle, POCKET_MARGIN bigger, cut from the crown
+    P0inv = (M @ Matrix.Translation((x, s, 0))).inverted()
+    rt, rb, hh, hc = VALVE_HEAD
+    pockets = []
+    for vs, which in ((-1, "1"), (1, "2")):
+        pts = []
+        for k in range(0, 720, 6):
+            lift = valve_lift(k, name, which)
+            if lift <= 0:
+                continue
+            Pk = M @ Matrix.Translation((x, kinematics(side, i, math.radians(k))[2], 0))
+            V = valve_frame(side, x, vs) @ Matrix.Translation((0, -lift, 0))
+            for yy, rr in ((hc - hh / 2 - POCKET_MARGIN, rb + POCKET_MARGIN), (hc + hh / 2, rt + POCKET_MARGIN)):
+                for t in [2 * math.pi * j / 16 for j in range(16)]:
+                    q = V @ Vector((rr * math.cos(t), yy, rr * math.sin(t)))
+                    pts.append((M @ Matrix.Translation((x, s, 0)) @ (Pk.inverted() @ q), kinematics(side, i, math.radians(k))[2]))
+                    # (into the piston's frame, back at its goal; with the piston's travel then)
+        if pts:
+            # ⭐ a CLEAN CYLINDER along the valve's axis, containing the whole sweep (the owner, 2026-11-13: *"bad geometry in blender for the
+            # recesses: the surface is not flat any longer"* — the sweep's convex hull had facets at every angle, bending the crown's shading)
+            Minv = M.inverted()
+            near = [(q, sk) for q, sk in pts if (Minv @ q).y < y1 + POCKET_MARGIN]   # only where the head REACHES the crown
+            if not near:
+                continue
+            # the valve's axis AS THE PISTON SEES IT then: carried by the piston's travel along the bore (its goal is not where it meets the
+            # valve — at the deck the axis was 0.16 aside for a piston whose goal is at the bottom of its stroke: r 0.178)
+            s_ref = sum(sk for q, sk in near) / len(near)
+            V0 = M @ Matrix.Translation((0, s - s_ref, 0)) @ Minv @ valve_frame(side, x, vs)
+            loc = [V0.inverted() @ q for q, sk in near]
+            rad = max(math.hypot(q.x, q.z) for q in loc) + 0.004
+            y_lo, y_hi = min(q.y for q in loc) - 0.004, max(q.y for q in loc) + 0.05
+            pockets.append(cyl_between(V0 @ Vector((0, y_lo, 0)), V0 @ Vector((0, y_hi, 0)), rad, 24))
+            if name == "A1" and which == "1":
+                print(f"valve pockets (each alike): r {rad:.3f}, the floor {-y_lo:.3f} below the valve's seat")
+    if pockets:
+        body = split_holes(boolean_cut(body, pockets), [x])
+    mesh_object(f"{pid}_piston_mesh", body,
                 MAT["chrome"], part, coll)
     mesh_object(f"{pid}_piston_ring", torus(M @ Matrix.Translation((x, s + 0.18, 0)), PISTON_R + 0.001, 0.007, rseg=6), MAT["dark"], part, coll,
                 smooth="all")
-    mesh_object(f"{pid}_piston_number", crown_number(name, M @ Matrix.Translation((x, y1, 0))), MAT["dark"], part, coll)
+    # its name BESIDE the pockets (they take the crown's middle, across the bank): toward the crank's rear, smaller
+    mesh_object(f"{pid}_piston_number", crown_number(name, M @ Matrix.Translation((x + NUMBER_X, y1, 0)), size=NUMBER_SIZE), MAT["dark"], part, coll)
 
     # the ROD: its own object, its origin ON THE HINGE (the small end = the wrist pin), turning about x — LOCKED at the goal's angle in play
     F = rod_frame(side, i, x)
@@ -1096,6 +1211,7 @@ VALVE_HEAD = (0.08, 0.065, 0.03, -0.018)        # the valve's head: top r, botto
 VALVE_STEM = (0.018, -0.01)                     # stem: r, its bottom along the axis — it runs INTO its cap's centre
 VALVE_CAP = (0.085, 0.045, 0.32)                # the hammered cap: r, height, centre along the axis (0.49 before — the owner's file: the stems shorter)
 GROMMET = (0.035, 0.01)                         # where the stem leaves the bank's top: R, r — it RESTS on the top (below)
+VALVE_LIFT = 0.07                               # a valve's lift (Appendix B)
 VALVES_GHOST_HALF = 0.1                         # the valve set's ghost floor: a 0.2 square inside the middle bore's mouth
 # ⭐ a GLASS DISC per bore (the owner, 2026-11-13: *"A glass disc per bore"* — the bores open at the bank's top for the pistons, the valves need a
 # seat): in the bore's mouth, its rim ON the chrome ring, the valves through it, the grommets on it — part of the valve set
@@ -1119,6 +1235,23 @@ def valves_rest_y(side):
     pts = [inv @ (valve_frame(side, x, vs) @ Vector((rb * math.cos(t), hc - hh / 2, rb * math.sin(t))))
            for s_, i, x, n in CYLS if s_ == side for vs in (-1, 1) for t in [2 * math.pi * k / 24 for k in range(24)]]
     return min(p.y for p in pts)
+
+
+def valve_fire():
+    """Appendix B's firing order: each cylinder's cycle starts at its top dead centre, the TDCs spread over 720°."""
+    tdc = {name: ((side * math.degrees(ALPHA) - math.degrees(OFF[i])) % 360 + 360) % 360 for side, i, x, name in CYLS}
+    order = sorted(CYLS, key=lambda c: tdc[c[3]])
+    return {c[3]: (tdc[c[3]] + (k % 2) * 360) % 720 for k, c in enumerate(order)}
+
+
+def valve_lift(theta_deg, name, which):
+    """Appendix B: a cylinder's first valve opens over its first 180° (its piston going down), its second over its last 180°; 0.07 at most."""
+    ps = ((theta_deg - valve_fire()[name]) % 720 + 720) % 720
+    if which == "1" and ps < 180:
+        return VALVE_LIFT * math.sin(math.pi * ps / 180)
+    if which == "2" and ps > 540:
+        return VALVE_LIFT * math.sin(math.pi * (ps - 540) / 180)
+    return 0.0
 
 
 def valve_frame(side, x, vs):
@@ -1406,6 +1539,30 @@ for n, fn in STEPS:
 # (the owner, 2026-11-13: *"once the object is built, clean the geometry (remove duplicate vertices, reduce the number of vertices where possible
 # in particular hidden faces and hidden objects or hidden object parts, etc.), apply shade auto smooth. do that for all the objects"*)
 from mathutils.bvhtree import BVHTree as _BVH
+from mathutils.geometry import tessellate_polygon as _tess
+_TRI_SRC = {}
+
+
+def tri_bvh(verts, polys):
+    """⛔ BVHTree.FromPolygons FANS an n-gon from its first corner: a CONCAVE face (a notched end, a holed strip) gets triangles OUTSIDE its
+    outline — phantom surface over the notch (2026-11-13: 34 'duplicate' faces found that were not there; the owner's superposed faces missed).
+    Here each polygon triangulated by its outline; tri_src(tree, i) gives the polygon of the tree's triangle i."""
+    tris, src = [], []
+    for k, pl in enumerate(polys):
+        if len(pl) == 3:
+            tris.append(list(pl))
+            src.append(k)
+            continue
+        for t in _tess([[verts[i] for i in pl]]):
+            tris.append([pl[i] for i in t])
+            src.append(k)
+    tree = _BVH.FromPolygons(verts, tris)
+    _TRI_SRC[id(tree)] = (tree, src)
+    return tree
+
+
+def tri_src(tree, i):
+    return _TRI_SRC[id(tree)][1][i]
 
 
 def _inside(tree, p, direction=Vector((0.5773, 0.5774, 0.5774)), eps=1e-5):
@@ -1424,15 +1581,17 @@ def _inside(tree, p, direction=Vector((0.5773, 0.5774, 0.5774)), eps=1e-5):
 
 
 def finish_pass():
+    bpy.context.view_layer.update()            # ⛔ the world matrices are stale until refreshed (a child read its parent's old place)
     to_root = YUP_ROOT.matrix_world.inverted()
     report, total0, total1 = [], 0, 0
     for part, coll in PARTS:
         meshes = [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render"]
-        opaque = [o for o in meshes if o.active_material is not MAT["glass"]]
+        # ⛔ `is` never matched (Blender hands a new wrapper each access): the glass had counted as opaque
+        opaque = [o for o in meshes if o.active_material != MAT["glass"]]
         trees = {}
         for o in opaque:                                    # each opaque piece as a closed volume, in the reference's coordinates
             m = to_root @ o.matrix_world
-            trees[o.name] = _BVH.FromPolygons([m @ v.co for v in o.data.vertices], [list(pl.vertices) for pl in o.data.polygons])
+            trees[o.name] = tri_bvh([m @ v.co for v in o.data.vertices], [list(pl.vertices) for pl in o.data.polygons])
         for o in meshes:
             me = o.data
             v0 = len(me.vertices)
@@ -1464,9 +1623,18 @@ def finish_pass():
             smooth_angle = me.auto_smooth_angle if me.use_auto_smooth else math.radians(30)
             bm.to_mesh(me)
             bm.free()
-            # 3. AUTO SMOOTH: every face smooth, the object's own angle (30° unless it set its own: a torus, the crank)
+            # 3. AUTO SMOOTH: every face smooth, the object's own angle (30° unless it set its own: a torus, the crank); an edge meant CRISP (a
+            #    chamfer, 40° and more) marked sharp, so the smoothing never softens it and the review never counts it as faceted
             for pl in me.polygons:
                 pl.use_smooth = True
+            bmc = bmesh.new()
+            bmc.from_mesh(me)
+            bmc.normal_update()
+            for e in bmc.edges:
+                if len(e.link_faces) == 2 and e.calc_face_angle(0) >= math.radians(35):   # a chamfer's (45°) and its corners' (35.3°)
+                    e.smooth = False
+            bmc.to_mesh(me)
+            bmc.free()
             me.use_auto_smooth, me.auto_smooth_angle = True, smooth_angle
             v1 = len(me.vertices)
             total0, total1 = total0 + v0, total1 + v1
@@ -1476,6 +1644,179 @@ def finish_pass():
 
 
 finish_pass()
+
+
+def geometry_review():
+    """Every visible object, once finished (the owner, 2026-11-13: *"once a visible object is drawn, do a check of the geometry to clean it …
+    especially on objects or object's portions which are mostly hidden during game, shade auto smooth latches"*): ① does auto smooth LATCH — on
+    a smooth object, the edges whose faces meet at 30° – 60° stay hard under 30° and look faceted (real crisp edges, ≥ 60° or marked sharp, are
+    not counted); ② how much of it can be SEEN in the assembled engine — rays from each face in 26 directions, the opaque parts blocking (glass
+    does not): an object mostly unseen is a candidate for lighter geometry (never deleted: the parts appear one by one, earlier steps see more)."""
+    bpy.context.view_layer.update()            # ⛔ stale world matrices had put the caps where they were not: "95 % unseen"
+    to_root = YUP_ROOT.matrix_world.inverted()
+    vis = [o for o in bpy.data.objects if o.type == "MESH" and o.get("role") == "render"]
+    occl_v, occl_p = [], []
+    for o in vis:
+        if o.active_material == MAT["glass"]:
+            continue
+        m, base = to_root @ o.matrix_world, len(occl_v)
+        occl_v += [m @ v.co for v in o.data.vertices]
+        occl_p += [[base + i for i in pl.vertices] for pl in o.data.polygons]
+    tree = tri_bvh(occl_v, occl_p)
+    dirs = [Vector((x, y, z)).normalized() for x in (-1, 0, 1) for y in (-1, 0, 1) for z in (-1, 0, 1) if (x, y, z) != (0, 0, 0)]
+    faceted, hidden, inside_out = [], [], []
+    for o in vis:
+        me = o.data
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.normal_update()
+        # ⓪ INSIDE OUT: a closed mesh's signed volume must be positive (a game engine draws a face's front only — an inverted mesh is invisible)
+        if all(len(e.link_faces) == 2 for e in bm.edges) and bm.calc_volume(signed=True) < 0:
+            inside_out.append(o.name)
+        if me.use_auto_smooth:
+            lim = me.auto_smooth_angle
+            soft = [e for e in bm.edges if len(e.link_faces) == 2 and e.smooth]
+            bad = [e for e in soft if lim < e.calc_face_angle(0) < math.radians(35)]
+            if soft and len(bad) > 0.1 * len(soft):
+                faceted.append(f"{o.name} ({len(bad)} of {len(soft)} edges 30–35°)")
+        m = to_root @ o.matrix_world
+        n3 = m.to_3x3()
+        seen = 0
+        for f in bm.faces:
+            c, nrm = m @ f.calc_center_median(), (n3 @ f.normal).normalized()
+            if any(d.dot(nrm) > 0.05 and tree.ray_cast(c + nrm * 1e-4 + d * 1e-4, d)[0] is None for d in dirs):
+                seen += 1
+        bm.free()
+        if me.polygons and seen < 0.3 * len(me.polygons):
+            hidden.append(f"{o.name} ({100 - 100 * seen // len(me.polygons)} % unseen, {len(me.vertices)} vertices)")
+    print("inside out (a game engine would not draw them):", "✅ none" if not inside_out else "⛔ " + ", ".join(inside_out))
+    print("auto smooth LATCHES:", "✅ every smooth object" if not faceted else "⚠ faceted — " + "; ".join(faceted))
+    print("mostly UNSEEN in the assembled engine (candidates for lighter geometry):", "none" if not hidden else "; ".join(hidden))
+
+
+geometry_review()
+
+
+# ================================================================ THE CHECKS' CONTROLS — CHECK_CONTROLS=1 plants one defect per mistake met (PART_AUTHORING.md
+# §4.2): each must be CAUGHT, else the check is blind. Never in a normal run (the file is then a broken one: rebuild without it)
+if os.environ.get("CHECK_CONTROLS") and STEP >= 7:
+    print("CHECK_CONTROLS: planting the defects (this file is NOT a build to keep)")
+    to_root_c = YUP_ROOT.matrix_world.inverted()
+    def _edit(name, fn):
+        o = bpy.data.objects[name]
+        bm = bmesh.new(); bm.from_mesh(o.data); fn(o, bm); bm.to_mesh(o.data); bm.free()
+    def _shrink_top(o, bm):                                   # ⓐ the upper case's top 2 % short along x (its ends open)
+        top = max(v.co.y for v in bm.verts)
+        for v in bm.verts:
+            if abs(v.co.y - top) < 1e-6:
+                v.co.x *= 0.98
+    _edit("UFM_E04_outer", _shrink_top)
+    def _drop_bulkheads(o, bm):                               # ⓒ a seat face forgotten: the bulkheads' tops
+        m = to_root_c @ o.matrix_world
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(abs(abs((m @ v.co).x) - BULKHEAD_X) < WALL for v in f.verts)], context="FACES")
+    _edit("UFM_E02_outer", _drop_bulkheads)
+    def _flip_one(o, bm):                                     # ⓓ a face turned the wrong way
+        bm.faces.ensure_lookup_table(); bmesh.ops.reverse_faces(bm, faces=[bm.faces[0]])
+    CONTROL_FLIP = _flip_one                                   # planted AFTER the orientation pass (it would turn it back)
+    def _open_crack(o, bm):                                   # ③ a crack: a deck strip's edge on an inner cut pulled back 0.02 (in its plane)
+        bm.normal_update()
+        c = sorted(bore_xs(1))[1]                               # the middle bore's cut (bank frame x = reference x)
+        m = to_root_c @ o.matrix_world
+        deck_n = bank_frame(1).to_3x3() @ Vector((0, 1, 0))
+        f = next(f for f in bm.faces if abs((bank_frame(1).inverted() @ (m @ f.calc_center_median())).y - BANK_TOP) < 1e-4 and f.calc_center_median().x < c
+                 and any(abs((m @ v.co).x - c) < 1e-5 for v in f.verts))
+        bmesh.ops.split_edges(bm, edges=list(f.edges))
+        for v in f.verts:
+            if abs((m @ v.co).x - c) < 1e-5:
+                v.co.x -= 0.02
+    _edit("UFM_E06_outer", _open_crack)
+    part = bpy.data.objects["E04_upper_case"]; coll = part.users_collection[0]
+    mesh_object("UFM_E04_CONTROL_floating", quad(bmesh.new(), [(0.2, UC_TOP + 0.1, -0.05), (0.3, UC_TOP + 0.1, -0.05), (0.3, UC_TOP + 0.1, 0.05),
+                                                              (0.2, UC_TOP + 0.1, 0.05)]), MAT["ufm"], part, coll, "ufm")   # ⓔ a patch in the air
+    part = bpy.data.objects["E01_plinth"]; coll = part.users_collection[0]
+    g = mesh_object("UFM_E01_CONTROL_GHOST_over", quad(bmesh.new(), [(1.4, PLINTH_H, 1.4), (1.6, PLINTH_H, 1.4), (1.6, PLINTH_H, 1.6), (1.4, PLINTH_H, 1.6)]),
+                    MAT["ghost"], part, coll, "ufm")                                                       # ⓑ a ghost over a real face
+    g["ghost"], g["for_part"] = True, "E02"
+    src = bpy.data.objects["UFM_E05_GHOST_A1"]                                                              # ⑩ a ghost RECESSED 0.1 down its bore
+    rc = src.copy(); rc.data = src.data.copy(); rc.name = "UFM_E05_CONTROL_GHOST_recessed"; src.users_collection[0].objects.link(rc)
+    rc.data.transform(Matrix.Translation(src.matrix_world.inverted().to_3x3() @ (YUP_ROOT.matrix_world.to_3x3() @ (bank_frame(-1).to_3x3() @ Vector((0, -0.1, 0))))))
+    part = bpy.data.objects["E01_plinth"]; coll = part.users_collection[0]
+    src = bpy.data.objects["UFM_E01_top"]                                                                   # ⑨ a face doubled (same way)
+    dup = src.copy(); dup.data = src.data.copy(); dup.name = "UFM_E01_CONTROL_duplicate"; coll.objects.link(dup)
+
+
+# ================================================================ THE PROXIES' ORIENTATION (⛔ BEFORE the save: it ran after it, its turns lost) — every face the right way (the face map reads normals)
+# (2026-11-13: the lower case's rim strips faced DOWN or UP by the order their corners were listed — the review counted them as separate planes;
+# the game's face map would have read an upside-down top): a real proxy face OUT of its part (a point just in front of it outside the part's
+# solid), a ghost floor TOWARD where its part arrives from
+
+
+def inner_point(f):
+    """A point INSIDE a bmesh face (one of its triangles' centroid): a notched strip is concave — its centre can fall in the hole."""
+    c = f.calc_center_median()                     # a CONVEX face: its centre, well inside (a fan's first triangle sits at a disc's RIM — the
+    if bmesh.geometry.intersect_face_point(f, c):  # pulley's inner face tested in its chamfer, 2026-11-13: left facing in)
+        return c
+    pts = [v.co for v in f.verts]
+    tris = sorted(_tess([pts]), key=lambda t: -((pts[t[1]] - pts[t[0]]).cross(pts[t[2]] - pts[t[0]])).length)
+    return sum((pts[i] for i in tris[0]), Vector()) / 3 if tris else c
+
+
+def _inside_tree(tree, p, dirs=(Vector((0.3127, 0.9214, 0.2309)), Vector((-0.7071, 0.1, 0.7)).normalized(), Vector((0.55, -0.6, -0.58)).normalized())):
+    """Inside by the crossings' parity — THREE rays, the majority (one ray grazing a seam counts it twice: the pulley's inner face, 2026-11-13)."""
+    votes = 0
+    for d in dirs:
+        hits, o = 0, p.copy()
+        for _ in range(64):
+            loc = tree.ray_cast(o, d)[0]
+            if loc is None:
+                break
+            hits, o = hits + 1, loc + d * 1e-5
+        votes += hits % 2
+    return votes >= 2
+
+
+def orient_proxies():
+    bpy.context.view_layer.update()
+    to_root = YUP_ROOT.matrix_world.inverted()
+    arrives = {name.split("_")[0]: Vector(way) for st, name, way, dist in INSERTIONS}
+    report = []
+    for part, coll in PARTS:
+        meshes = [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render"]
+        tv, tp = [], []
+        for o in meshes:
+            m, base = to_root @ o.matrix_world, len(tv)
+            tv += [m @ v.co for v in o.data.vertices]
+            tp += [[base + i for i in pl.vertices] for pl in o.data.polygons]
+        solid = tri_bvh(tv, tp) if tp else None
+        for o in [q for q in coll.objects if q.get("role") == "ufm"]:
+            m = to_root @ o.matrix_world
+            bm = bmesh.new()
+            bm.from_mesh(o.data)
+            bm.normal_update()
+            flip = []
+            for f in bm.faces:
+                c, n = m @ inner_point(f), (m.to_3x3() @ f.normal).normalized()
+                if o.get("ghost"):
+                    way = arrives.get(o.get("for_part"))
+                    if way is not None and n.dot(way) < 0:
+                        flip.append(f)
+                elif "_rest" in o.name:
+                    continue                                  # a resting proxy faces down its own way in: built so
+                elif solid is not None and _inside_tree(solid, c + n * 0.002) and not _inside_tree(solid, c - n * 0.002):
+                    flip.append(f)
+            if flip:
+                bmesh.ops.reverse_faces(bm, faces=flip)
+                bm.to_mesh(o.data)
+                report.append(f"{o.name} ({len(flip)})")
+            bm.free()
+    print("proxies' ORIENTATION (faces turned to face out / toward their part's arrival):", "; ".join(report) if report else "all were right")
+
+
+orient_proxies()
+if os.environ.get("CHECK_CONTROLS") and STEP >= 7:
+    o_ = bpy.data.objects["UFM_E05_outer"]
+    bm_ = bmesh.new(); bm_.from_mesh(o_.data); bm_.faces.ensure_lookup_table()
+    bmesh.ops.reverse_faces(bm_, faces=[bm_.faces[0]]); bm_.to_mesh(o_.data); bm_.free()       # ⓓ the wrong-way face, after the pass
 
 # proxies and collision hidden in the viewport (Alt+H or the outliner's eye shows them)
 bpy.context.view_layer.update()
@@ -1522,6 +1863,125 @@ scene.eevee.use_soft_shadows = True
 scene.render.resolution_x = scene.render.resolution_y = 900
 scene.view_settings.view_transform = "Filmic"
 scene.view_settings.look = "Medium High Contrast"
+
+# ================================================================ THE ENGINE RUNNING — Appendix B's update(θ), the ONE formula the game ports
+# (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ? for example I want to see there is no
+# interference of the pieces when the crankshaft is rotated over 360 degrees"*): ① every 6° over the 720° cycle, every moving piece posed and its
+# MESH tested against every other part's; ② the same poses baked as keyframes (a preview to scrub — the game computes its own); ③ the poses at
+# every 30° written to animation_golden.json — the TypeScript port (src/core) must reproduce them: then what is checked here holds in Babylon
+import json
+
+
+def engine_pose(theta_deg):
+    """{object name: its matrix_basis} at the crank angle θ — every moving piece; the rest stays at its goal."""
+    th, poses, fire = math.radians(theta_deg), {}, valve_fire()
+    poses["E03_crankshaft"] = Matrix.Translation((0, YC, 0)) @ Matrix.Rotation(th, 4, "X")
+    if STEP >= 9:
+        poses["E17_pulley"] = Matrix.Translation((NOSE_X, YC, 0)) @ Matrix.Rotation(th, 4, "X")
+    for side, i, x, name in CYLS:
+        pid = PISTON_IDS[name]
+        if STEP >= 6:
+            ly, lz, s_, r_ = kinematics(side, i, th)
+            poses[f"{pid}_piston_{name}"] = bank_frame(side) @ Matrix.Translation((x, s_, 0))
+            poses[f"{pid}_rod_mesh"] = Matrix.Rotation(r_, 4, "X")          # about its hinge (the wrist), in its piston's frame
+        if STEP >= 7:
+            hid = "E13" if side < 0 else "E14"
+            part = bpy.data.objects[f"{hid}_head_{'A' if side < 0 else 'B'}"]
+            for vs, which in ((-1, "1"), (1, "2")):
+                lift = valve_lift(theta_deg, name, which)
+                m = part.matrix_basis.inverted() @ valve_frame(side, x, vs) @ Matrix.Translation((0, -lift, 0))
+                poses[f"{hid}_valve_{name}_{which}"] = m
+                poses[f"{hid}_valve_{name}_{which}_cap"] = m
+    return poses
+
+
+def apply_pose(poses):
+    for n, m in poses.items():
+        o = bpy.data.objects.get(n)
+        if o:
+            o.matrix_basis = m
+    bpy.context.view_layer.update()
+
+
+def owner_part(o):
+    while o.parent is not None and o.parent is not YUP_ROOT:
+        o = o.parent
+    return o
+
+
+def mesh_tree(o):
+    m = YUP_ROOT.matrix_world.inverted() @ o.matrix_world
+    vs = [m @ v.co for v in o.data.vertices]
+    return tri_bvh(vs, [list(pl.vertices) for pl in o.data.polygons]), vs, o
+
+
+def contact_ok(a, b, pairs, ta, tb):
+    """A KNOWN contact, named: a big end or its cap ON its crank pin (the triangles at the pin's radius), the pulley ON the crank's end."""
+    names = {a.name, b.name}
+    if any(n.endswith(("_rod_mesh", "_rod_cap")) for n in names) and any(n.startswith("E03_crankshaft") for n in names):
+        rod = a if a.name.endswith(("_rod_mesh", "_rod_cap")) else b
+        F = YUP_ROOT.matrix_world.inverted() @ (rod.matrix_world if rod.name.endswith("_rod_mesh") else rod.parent.matrix_world)
+        pin_axis_pt = F @ Vector((0, -ROD_L, 0))          # the big end's centre (the hinge is the small end)
+        return all(abs(math.hypot(((ta if rod is a else tb)[k][1] - pin_axis_pt).y, ((ta if rod is a else tb)[k][1] - pin_axis_pt).z)) < BIG_R + 0.01
+                   for k in [p[0] if rod is a else p[1] for p in pairs])
+    if names & {"E17_pulley_mesh", "E17_pulley_disc", "E17_pulley_hub", "E17_pulley_pin"} and "E03_crankshaft_mesh" in names:
+        return True
+    return False
+
+
+if STEP >= 6:
+    movers = [o for o in bpy.data.objects if o.type == "MESH" and o.get("role") == "render" and
+              (owner_part(o).name in {"E03_crankshaft", "E17_pulley"} or owner_part(o).name.startswith(tuple(PISTON_IDS.values())) or "_valve_" in o.name)]
+    statics = [o for o in bpy.data.objects if o.type == "MESH" and o.get("role") == "render" and o not in movers]
+    static_trees = [mesh_tree(o) for o in statics]
+    hits, golden = {}, {}
+    for k in range(120):                                    # every 6° over the 720° cycle
+        theta = 6 * k
+        apply_pose(engine_pose(theta))
+        trees = [mesh_tree(o) for o in movers]
+        if theta % 30 == 0:
+            golden[str(theta)] = {o.name: [list(r) for r in (YUP_ROOT.matrix_world.inverted() @ o.matrix_world)] for o in movers}
+        for i, (ta, va, a) in enumerate(trees):
+            for tb, vb, b in trees[i + 1:] + static_trees:
+                if owner_part(a) is owner_part(b):
+                    continue
+                pairs = ta.overlap(tb)
+                if pairs:
+                    pa_ = lambda p: a.data.polygons[tri_src(ta, p)].vertices
+                    pb_ = lambda q: b.data.polygons[tri_src(tb, q)].vertices
+                    tri_a = [(None, sum((va[v] for v in pa_(p)), Vector()) / len(pa_(p))) for p, q in pairs]
+                    tri_b = [(None, sum((vb[v] for v in pb_(q)), Vector()) / len(pb_(q))) for p, q in pairs]
+                    cen_a = {p: tri_a[j] for j, (p, q) in enumerate(pairs)}
+                    cen_b = {q: tri_b[j] for j, (p, q) in enumerate(pairs)}
+                    if contact_ok(a, b, pairs, cen_a, cen_b):
+                        continue
+                    key = tuple(sorted((a.name, b.name)))
+                    hits.setdefault(key, []).append(theta)
+    apply_pose(engine_pose(0))                              # back to the goal
+    if hits:
+        print(f"the engine RUNNING (720°, every 6°, the meshes): ⛔ {len(hits)} interferences — " +
+              "; ".join(f"{a} × {b} at {v[0]}°–{v[-1]}° ({len(v)} poses)" for (a, b), v in sorted(hits.items())))
+    else:
+        print("the engine RUNNING (720°, every 6°, the meshes): ✅ no interference (known contacts: big ends and caps on their pins, the pulley on the crank)")
+    with open(os.path.join(OUT_DIR, "animation_golden.json"), "w", encoding="utf-8") as fh:
+        json.dump({"about": "Scene_2's poses (reference units, y up, relative to YUP_ROOT) at every 30° of the 720° cycle — Appendix B's update(θ); "
+                            "the TypeScript port must reproduce them", "unitM": UNIT_M, "poses": golden}, fh, indent=0)
+    # the PREVIEW: the same poses baked as keyframes, 96 frames = 720° (scrub the timeline; the game computes its own)
+    scene.frame_start, scene.frame_end, scene.render.fps = 1, 96, 24
+    for f in range(1, 97):
+        for n, m in engine_pose(720 * (f - 1) / 96).items():
+            o = bpy.data.objects.get(n)
+            if o:
+                o.matrix_basis = m
+                o.keyframe_insert("location", frame=f)
+                o.keyframe_insert("rotation_euler", frame=f)
+    for o in bpy.data.objects:
+        if o.animation_data and o.animation_data.action:
+            for fc in o.animation_data.action.fcurves:
+                for kp in fc.keyframe_points:
+                    kp.interpolation = "LINEAR"
+    scene.frame_set(1)
+
 
 # ---------------------------------------------------------------- save, render, report
 os.makedirs(PREVIEW_DIR, exist_ok=True)
@@ -1578,6 +2038,290 @@ for part, coll in PARTS:
 ghosts = [(o.name, o.get("for_part")) for o in bpy.data.objects if o.get("ghost")]
 print("ghost floors, each for ONE part:", ", ".join(f"{n}→{f}" for n, f in ghosts),
       "✅" if all(f and bpy.data.objects.get(next((p.name for p, _ in PARTS if p["part_id"] == f), "")) for n, f in ghosts) else "⛔ a ghost names no built part")
+
+
+# ================================================================ THE PROXY SANITY (PART_AUTHORING.md §3 item 3) — the gizmo's surfaces checked
+# against the real ones: ① fidelity ② coverage ③ continuity ④ floating islands ⑤ reachability ⑥ simplicity — every failure named
+SANE_TOL, SANE_CRACK, SANE_NARROW, SANE_TINY = 0.005, 0.05, 0.025, 0.0025
+
+
+def _closest_on_seg(q, a, b):
+    ab = b - a
+    t = max(0.0, min(1.0, (q - a).dot(ab) / ab.length_squared)) if ab.length_squared > 0 else 0.0
+    return a + ab * t
+
+
+def superposed(objs, out, key, same_only=False, tol=1e-4):
+    """Faces lying ON another face (inside each triangle sampled, a face of ANOTHER polygon within tol, parallel): same-facing → out[key]
+    (a duplicate); opposite-facing → returned {(covered object, other object): faces} (a seat). Concave-safe (tri_bvh)."""
+    to_root = YUP_ROOT.matrix_world.inverted()
+    tv, tp, key_of = [], [], []
+    for o in objs:
+        m, base = to_root @ o.matrix_world, len(tv)
+        tv += [m @ v.co for v in o.data.vertices]
+        for pl in o.data.polygons:
+            tp.append([base + i for i in pl.vertices])
+            key_of.append((o, pl.index, (m.to_3x3() @ pl.normal).normalized()))
+    if not tp:
+        out.setdefault(key, [])
+        return {}
+    tree = tri_bvh(tv, tp)
+    dup, seats = {}, {}
+    for k, pl in enumerate(tp):
+        o, pi, n = key_of[k]
+        cover = None
+        ring = [tv[i] for i in pl]
+        for t in _tess([ring]):
+            a, b, c = (tv[pl[i]] for i in t)
+            for q in ((a + b + c) / 3, a.lerp((b + c) / 2, 0.2), b.lerp((a + c) / 2, 0.2), c.lerp((a + b) / 2, 0.2)):
+                if min((q - _closest_on_seg(q, ring[i], ring[i - 1])).length for i in range(len(ring))) < 5 * tol:
+                    continue                                  # by its own outline: a coplanar NEIGHBOUR is there by right
+                for h in tree.find_nearest_range(q, tol):
+                    j = tri_src(tree, h[2])
+                    if j == k:
+                        continue
+                    d = key_of[j][2].dot(n)
+                    if abs(d) > 0.999:
+                        cover = (key_of[j][0], d > 0)
+                        break
+                if cover:
+                    break
+            if cover:
+                break
+        if cover is None:
+            continue
+        other, same = cover
+        if same:
+            dup[tuple(sorted((o.name, other.name)))] = dup.get(tuple(sorted((o.name, other.name))), 0) + 1
+        elif not same_only:
+            seats[(o.name, other.name)] = seats.get((o.name, other.name), 0) + 1
+    out.setdefault(key, []).extend(f"{a} × {b} ({n} faces)" for (a, b), n in sorted(dup.items()))
+    return seats
+
+
+def proxy_sanity():
+    bpy.context.view_layer.update()
+    to_root = YUP_ROOT.matrix_world.inverted()
+
+    def tree_of(objs):
+        tv, tp = [], []
+        for o in objs:
+            m, base = to_root @ o.matrix_world, len(tv)
+            tv += [m @ v.co for v in o.data.vertices]
+            tp += [[base + i for i in pl.vertices] for pl in o.data.polygons]
+        return tri_bvh(tv, tp) if tp else None
+
+    def faces_of(o):
+        m = to_root @ o.matrix_world
+        return [([m @ o.data.vertices[i].co for i in pl.vertices], (m.to_3x3() @ pl.normal).normalized()) for pl in o.data.polygons]
+
+    def samples(pts):
+        c = sum(pts, Vector()) / len(pts)
+        return [c] + [p.lerp(c, 0.02) for p in pts] + [(pts[i] + pts[(i + 1) % len(pts)]) / 2 for i in range(len(pts))]
+
+    real_proxies = [o for o in bpy.data.objects if o.get("role") == "ufm" and not o.get("ghost") and "_rest" not in o.name]
+    part_trees = {p.name: tree_of([o for o in c.objects if o.type == "MESH" and o.get("role") == "render"]) for p, c in PARTS}
+    all_real_tree = tree_of(real_proxies)
+    out = {k: [] for k in ("fidelity", "coverage", "continuity", "floating", "reachability", "simplicity", "steps", "alone")}
+    for part, coll in PARTS:
+        meshes = [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render"]
+        mine = [o for o in real_proxies if o.parent is part]
+        if not mine or not meshes:
+            continue
+        real = tree_of(meshes)
+        proxy = tree_of(mine)
+        # ① FIDELITY: every point of the proxy ON the real surface
+        off = 0.0
+        for o in mine:                                                  # sampled INSIDE each face's triangles (a notched strip is concave:
+            m = to_root @ o.matrix_world                                # its centroid can fall in the bore)
+            o.data.calc_loop_triangles()
+            for tri in o.data.loop_triangles:
+                a, b, c = (m @ o.data.vertices[i].co for i in tri.vertices)
+                for q in ((a + b + c) / 3, a.lerp((b + c) / 2, 0.1), b.lerp((a + c) / 2, 0.1), c.lerp((a + b) / 2, 0.1)):
+                    off = max(off, real.find_nearest(q)[3])
+        if off > SANE_TOL:
+            out["fidelity"].append(f"{part.name} ({off:.3f} off)")
+        # ② COVERAGE (a part with an OUTER proxy): every real outer face — facing out of the part itself — near a proxy face
+        if any(o.name.endswith("_outer") for o in mine):
+            gaps, where = 0, []
+            body = [o for o in meshes if o.name.endswith("_mesh")]       # the part's body (its rings, grommets: decoration, no route)
+            hp = hull([to_root @ o.matrix_world @ v.co for o in body for v in o.data.vertices])
+            hv = [v.co.copy() for v in hp.verts]
+            hf = [[v.index for v in f.verts] for f in hp.faces]
+            hp.free()
+            shell = _BVH.FromPolygons(hv, hf)
+            for o in body:
+                m = to_root @ o.matrix_world
+                o.data.calc_loop_triangles()
+                for tri in o.data.loop_triangles:                          # INSIDE each triangle (a big face's corners touch other proxies:
+                    a, b, c3 = (m @ o.data.vertices[i].co for i in tri.vertices)   # its centroid and corners missed a strip at its end)
+                    tn = (m.to_3x3() @ tri.normal).normalized()
+                    for q in ((a + b + c3) / 3, a.lerp((b + c3) / 2, 0.15), b.lerp((a + c3) / 2, 0.15), c3.lerp((a + b) / 2, 0.15)):
+                        hit = shell.find_nearest(q)
+                        # on its OUTER shell AND facing as the shell does there (an inner wall just under the rim is near the shell, not on it)
+                        if hit[3] > 0.006 or hit[1].normalized().dot(tn) < 0.9:
+                            continue
+                        if proxy.find_nearest(q)[3] > SANE_TOL:
+                            gaps += 1
+                            where.append(q)
+                            break
+            if gaps:
+                xs_ = sorted({round(q.x, 2) for q in where}); ys_ = sorted({round(q.y, 2) for q in where}); zs_ = sorted({round(q.z, 2) for q in where})
+                out["coverage"].append(f"{part.name} ({gaps} real outer faces off every proxy, at x {xs_[:6]}… y {ys_[:6]}… z {zs_[:6]}…)")
+        for o in mine:
+            bm = bmesh.new()
+            bm.from_mesh(o.data)
+            m = to_root @ o.matrix_world
+            other_objs = [q for q in real_proxies if q is not o]
+            others = tree_of(other_objs)
+            all_tree = tree_of(real_proxies)                  # EVERY proxy face, this object's too (a crack between two strips of one proxy)
+            face_key = [(q.name, pl.index) for q in real_proxies for pl in q.data.polygons]
+            face_owner = [q.parent.name for q in real_proxies for _ in q.data.polygons]
+            # ③ CONTINUITY: a boundary edge with another proxy face NEARLY touching it — a crack
+            cracks, steps = [], []
+            for e in bm.edges:
+                if len(e.link_faces) == 1 and all_tree is not None:
+                    mid = m @ ((e.verts[0].co + e.verts[1].co) / 2)
+                    own = (o.name, e.link_faces[0].index)
+                    rng = [h for h in all_tree.find_nearest_range(mid, SANE_CRACK) if face_key[tri_src(all_tree, h[2])] != own]
+                    if any(h[3] < SANE_TOL for h in rng):             # TOUCHING another face (a T-junction, a fold): connected — no crack
+                        continue
+                    near = rng
+                    if not near:
+                        continue
+                    loc, nrm, idx, d = min(near, key=lambda h: h[3])
+                    # a CRACK only over real material OF THE TWO PARTS: the gap's middle on one of them (over an opening — a half-hole, a cavity —
+                    # or another part passing through it, the proxy is right to stop)
+                    probe = (mid + loc) / 2
+                    if not (0.01 < d < SANE_CRACK):                   # under 0.01 (≈ 1.4 mm): two polygons' tessellation at a round rim, no gap
+                        continue
+                    fn = (m.to_3x3() @ e.link_faces[0].normal).normalized()
+                    if nrm.normalized().dot(fn) < 0.99:               # not facing the SAME way (a side at a corner; a SEAT's other face, facing
+                                                                      # back in the same plane — two parts pressed together): no crack
+                        continue
+                    ed = (m @ e.verts[1].co - m @ e.verts[0].co).normalized()
+                    gap = loc - mid
+                    if (gap - ed * gap.dot(ed)).length < 0.01:        # ALONG the edge (the next strip after a cut, the line carrying on): no crack
+                        continue
+                    if abs((loc - mid).dot(fn)) > SANE_TOL:          # off the plane: a STEP (a disc on its ring), not a gap to fall into
+                        steps.append(abs((loc - mid).dot(fn)))
+                        continue
+                    def on_plane(t):                                  # real material IN THE PROXY'S PLANE (a hole's own wall is not)
+                        if t is None:
+                            return False
+                        hit = t.find_nearest(probe)
+                        return hit[3] < 0.001 and abs(hit[1].normalized().dot(fn)) > 0.95   # IN the plane (a hole's rim is 0.003 off)
+                    if on_plane(part_trees[part.name]) or on_plane(part_trees[face_owner[tri_src(all_tree, idx)]]):
+                        cracks.append((d, mid))
+            if steps:
+                out["steps"].append(f"{o.name} (up to {max(steps):.4f})")
+            if cracks:
+                d, mid = max(cracks, key=lambda c: c[0])
+                out["continuity"].append(f"{o.name} ({len(cracks)} edges a crack off another proxy, the widest {d:.3f} at "
+                                         f"({mid.x:+.3f}, {mid.y:.3f}, {mid.z:+.3f}))")
+            # ④ FLOATING islands and ⑤ REACHABILITY (narrow, tiny)
+            seen, islands = set(), []
+            for f in bm.faces:
+                if f.index in seen:
+                    continue
+                stack, isl = [f], []
+                while stack:
+                    g = stack.pop()
+                    if g.index in seen:
+                        continue
+                    seen.add(g.index)
+                    isl.append(g)
+                    stack += [h for e in g.edges for h in e.link_faces if h.index not in seen]
+                islands.append(isl)
+            for isl in islands:
+                area = sum(f.calc_area() for f in isl)
+                alone = others is None or min(others.find_nearest(m @ v.co)[3] for f in isl for v in f.verts) > SANE_TOL
+                if alone and area < 0.05:                     # a SMALL proxy touching no other: named for a person to confirm (a crank's nose
+                    out["alone"].append(f"{o.name} ({area:.4f})")          # is meant; a stray patch is not — fidelity cannot tell them apart)
+            for f in bm.faces:
+                a, per = f.calc_area(), f.calc_perimeter()
+                if a < SANE_TINY or (per > 0 and 2 * a / per < SANE_NARROW):
+                    out["reachability"].append(f"{o.name} (a face {a:.4f} / {2 * a / per if per else 0:.3f} wide)")
+                    break
+            # ⑥ SIMPLICITY: coplanar faces sharing an edge, off a deliberate cut (x = const through a hole) — needless splits
+            needless = sum(1 for e in bm.edges if len(e.link_faces) == 2 and e.link_faces[0].normal.dot(e.link_faces[1].normal) > 0.99999
+                           and abs(e.verts[0].co.x - e.verts[1].co.x) > 1e-6)
+            if needless:
+                out["simplicity"].append(f"{o.name} ({needless} needless splits)")
+            bm.free()
+    for part, coll in PARTS:                                                # ⑧ ORIENTATION VERIFIED: every real proxy faces OUT of its part
+        meshes = [o for o in coll.objects if o.type == "MESH" and o.get("role") == "render"]
+        solid = tree_of(meshes) if meshes else None
+        for o in [q for q in coll.objects if q.get("role") == "ufm" and not q.get("ghost") and "_rest" not in q.name]:
+            m = to_root @ o.matrix_world
+            bmo = bmesh.new()
+            bmo.from_mesh(o.data)
+            bmo.normal_update()
+            wrong = sum(1 for f in bmo.faces
+                        if solid is not None and _inside_tree(solid, m @ inner_point(f) + (m.to_3x3() @ f.normal).normalized() * 0.002)
+                        and not _inside_tree(solid, m @ inner_point(f) - (m.to_3x3() @ f.normal).normalized() * 0.002))
+            bmo.free()
+            if wrong:
+                out.setdefault("orientation", []).append(f"{o.name} ({wrong} facing in)")
+    out.setdefault("orientation", [])
+    for g in [o for o in bpy.data.objects if o.get("ghost")]:              # ⑦ no ghost OVER a real face (it fills openings only)
+        t = tree_of(real_proxies)
+        m = to_root @ g.matrix_world
+        g.data.calc_loop_triangles()
+        over = sum(1 for tri in g.data.loop_triangles
+                   if t.find_nearest(m @ ((g.data.vertices[tri.vertices[0]].co + g.data.vertices[tri.vertices[1]].co + g.data.vertices[tri.vertices[2]].co) / 3))[3] < 1e-4)
+        if over:
+            out.setdefault("ghost overlap", []).append(f"{g.name} ({over} triangles over a real face)")
+    out.setdefault("ghost overlap", [])
+    dives, plunges = [], []
+    route = tree_of(real_proxies)
+    for g in [o for o in bpy.data.objects if o.get("ghost")]:
+        m = to_root @ g.matrix_world
+        edge_pts = [m @ v.co for v in g.data.vertices]
+        d = min(route.find_nearest(q)[3] for q in edge_pts)
+        dives.append(f"{g.name} {d:.3f}")
+        if d > SANE_TOL:          # ⑩ FLUSH: a ghost IN THE PLANE WHERE ITS HOLE EXITS (the owner, 2026-11-13: *"the ghost face shall always be a
+            out.setdefault("ghost flush", []).append(f"{g.name} ({d:.3f} recessed)")   # face aligned with the assembly face where the hole exits"*)
+        if g.get("plunge") is not None:
+            plunges.append(f"{g.name} → {g['plunge_to']} {g['plunge']:.3f}")
+    out.setdefault("ghost flush", [])
+    out["dives"] = []
+    # ⑨ SUPERPOSED faces (the owner, 2026-11-13: *"you have a lot of superposed faces. check for example step 3. this is not caught by your
+    # checks"*): a face lying ON another (same plane, its inside covered). SAME-facing = a duplicate (⛔ z-fighting, two faces for one route);
+    # OPPOSITE-facing = a SEAT (two parts pressed together: the covered face unreachable once seated — listed, the game must skip it)
+    seats = superposed(real_proxies, out, "superposed (proxies)")
+    superposed([o for o in bpy.data.objects if o.type == "MESH" and o.get("role") == "render"], out, "superposed (meshes)", same_only=True)
+    steps, alone = out.pop("steps"), out.pop("alone")
+    out.pop("dives", None)
+    print("PROXY SANITY: " + " · ".join(f"{k} {'✅' if not v else '⚠ ' + '; '.join(v)}" for k, v in out.items()))
+    print("   real STEPS between proxies (climbed, not fallen into — information):", "; ".join(steps) if steps else "none")
+    print("   small proxies ALONE (touching no other — confirm each is meant):", "; ".join(alone) if alone else "none")
+    print("   SEATS (a proxy face pressed on another part's, facing back — unreachable once seated, the game skips it):",
+          "; ".join(f"{a} on {b} ({n} faces)" for (a, b), n in sorted(seats.items())) if seats else "none")
+    print("   PLUNGES (a ghost at a hole's mouth: the part rests there, the plunge snap carries it onto its seat — to build, QUEUE.md):",
+          "; ".join(plunges) if plunges else "none")
+
+
+proxy_sanity()
+
+
+# ⭐ every ghost floor CONNECTED to its host's real surface (the owner, 2026-11-13: *"ghost floors shall be connected to real surfaces (not single
+# small surfaces floating in the air)"*): each of its corners within 0.005 of the host part's own meshes
+floating = []
+for g in [o for o in bpy.data.objects if o.get("ghost")]:
+    host = g.parent
+    tv, tp = [], []
+    for o in host.children:
+        if o.type == "MESH" and o.get("role") == "render":
+            m, base = YUP_ROOT.matrix_world.inverted() @ o.matrix_world, len(tv)
+            tv += [m @ v.co for v in o.data.vertices]
+            tp += [[base + i for i in pl.vertices] for pl in o.data.polygons]
+    t = tri_bvh(tv, tp)
+    gm = YUP_ROOT.matrix_world.inverted() @ g.matrix_world
+    gap = max(t.find_nearest(gm @ v.co)[3] for v in g.data.vertices)
+    if gap > 0.005:
+        floating.append(f"{g.name} ({gap:.3f} off)")
+print("ghost floors CONNECTED to real surfaces:", "✅ every one" if not floating else "⚠ floating — " + "; ".join(floating))
 print("redundant geometry (every visible mesh and proxy):", "✅ none" if not bad else "⛔ " + "; ".join(bad))
 
 

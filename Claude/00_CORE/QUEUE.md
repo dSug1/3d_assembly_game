@@ -43,6 +43,7 @@ md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` 
 1. ⛔⛔ **The playability program above** — `GM1` ✅ (`D180`), `3D7` ✅ (`D181`, the play volume); `3D2` (the approach) next.
 2. ✅ **~~A device look on everything since `D106`~~** — *"Checked and all closed"*, the owner, 2026-09-30; ✅ and `D180`'s own (*"Tested, ok"*).
 3. ⚠ `D47`'s pull-apart break (`3D3`) and the approach (`3D2`) — specified, not built.
+⭐ **THE PLUNGE SNAP** (`Scene_2`, 2026-11-13) — a part from its ghost at a hole's mouth down onto its seat. To build: `PART_AUTHORING.md` §3.3–4.
 4. ⚠ **Prototype `1.0.58b-`** → `DOUBLE_ORBIT_PROTOTYPE.md`; its demo path drives the box, `DEMO_SCENE.md` §7. ⭐ (2026-10-14) it IS the main line — see the block above.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 

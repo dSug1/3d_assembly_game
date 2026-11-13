@@ -58,14 +58,84 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    orbit = gizmo"*); over an opening the part fits, the gizmo reads the real depth (`POLAR_ORBIT_CLEANUP.md` §7, §8.3) — so the ghost face IS that
    depth: the gizmo drops onto it, A + dy brings the part down to it, the goal capture seats it. Never drawn, never collided, never picked; one per
    opening, each at its own part's depth.
+   ⭐⭐⭐ **THE PRINCIPLE** (the owner, 2026-11-13: *"surfaces which support gizmo shall be as close to the real surfaces as possible while
+   simplifying their geometries. Sanity check shall be done so there are no false gaps, discontinuities between faces, faces floating in the air,
+   small unreachable faces"*): a face proxy is the part's REAL OUTER SURFACE, SIMPLIFIED — flat where the real surface is nearly flat, covering
+   every real face the gizmo may run on, nothing where the real surface has nothing (a ghost floor aside: it bridges an opening on purpose, its
+   edges on real surfaces). ✅ ADOPTED (the owner, 2026-11-13: *"update the md files accordingly, then proceed"*) — the PROXY SANITY CHECK, every run, each failure named (§4.2), a VIRTUAL face (a resting proxy, a ghost) exempt from ① and ② (it is off the real surface by design):
+   ① **fidelity** — points sampled over every proxy face within 0.005 (≈ 0.7 mm at 0.14 m a unit) of its part's real mesh (a proxy floating,
+   inside the glass, standing off); ② **coverage** — points sampled over the part's real OUTER faces (outward, seen) within 0.005 of a proxy face
+   (a false GAP: `Scene_2`'s strip along the upper case's top); ③ **continuity** — every proxy edge meets another proxy face (shared or touching)
+   or lies on a real boundary (a fold, an opening's rim); another proxy face NEARLY touching it (0.005 – 0.05) is a CRACK the gizmo falls into;
+   ④ **no floating islands** — touching proxy faces grouped: an island touching no other and not a whole face of its part is a stray patch;
+   ⑤ **reachability** — faces too small or narrow to stand on (≈ 7 mm), faces the gizmo cannot reach (facing a part at the goal); ⑥ **simplicity**
+   — coplanar touching proxy faces merged unless a deliberate cut crosses them (the cuts through holes), each part's face count against a budget.
+   ⭐ **As built** (`Scene_2`, 2026-11-13): ① sampled INSIDE each face's triangles (a notched strip is concave — its centroid can fall in a bore);
+   ② over the part's OUTER SHELL only (faces within 0.006 of its convex hull — a bore's wall, an open cavity, a ring are no route); ③ a crack is
+   two proxies 0.01 – 0.05 apart IN ONE PLANE over real material of THEIR two parts lying IN that plane (under 0.01: two polygons' tessellation
+   at a round rim; off the plane: a real STEP — a disc on its ring — reported as information, climbed not fallen into; over an opening, or another
+   part passing through it, the proxy is right to stop). ⭐ Its first runs found, on `Scene_2`: the upper case's top stopping short of its edges
+   (a strip open), and the decks', feet's and slopes' bore openings SQUARE round ROUND bores (glass left out, cracks round the discs) — now ROUND
+   (strips cut through each bore's centre, an arc on each side).
+   ⛔⛔ **THE MISTAKES MET — not to repeat** (the owner, 2026-11-13: *"Capture both in the workflow md so we do not repeat those mistakes later on"*,
+   *"Update the md files accordingly … so we do not repeat the same later on"*, *"capture in the md file if correction is required in the check"*):
+   ⓐ **a proxy from the COLLISION's extents** — inside the walls: the upper case's top stopped short of its edges, first across (z), then, fixed
+   on one axis only, along (x): ⛔ a proxy's extents are the part's OUTER ones, on EVERY axis; ⓑ **a ghost OVER a real face** (a slope's ghost
+   covering its strips): the face map counts the overlap twice — ⛔ a ghost fills ONLY the opening it bridges, edge to edge with the real rim
+   (the check ⑦ *ghost overlap*); ⓒ **a SEAT face forgotten** (the bulkhead tops, the slopes' bottoms on the split): ⛔ every real outer face,
+   seats included, has its proxy — coverage reads the OUTER SHELL (within 0.006 of the part's convex hull AND facing as the hull does there: an
+   inner wall just under the rim is near the hull, not on it), sampled INSIDE each triangle (a big face's corners touch other proxies); ⓓ **a
+   proxy facing the WRONG WAY** (the rim's strips up or down by the order of their corners): the face map reads normals — ⛔ the ORIENTATION
+   pass turns every real proxy face OUT of its part and every ghost TOWARD its part's arrival, and ⛔ every pass that CHANGES the file runs
+   BEFORE its save (the orientation ran after it once: its turns lost, the review showed the old faces); ⓔ **a review that hides the parts**: a
+   small real proxy (the crank's nose) looked floating — ⛔ the review shows each placed part's mesh, faint, behind its faces; the check names
+   every small proxy standing ALONE for a person to confirm; ⓕ **a ghost's drop taken for a gap**: a ghost floor meets its rim through a real
+   WALL (the tub's inside) — ⛔ SUPERSEDED: a ghost now lies flush at the mouth (item 3's PLUNGE), a dive is an error (⑩ ghost flush);
+   ⓖ **islands joined only by shared corners**: strips meeting in a T (a bulkhead's top on a rim) counted apart — ⛔ faces TOUCHING (a corner
+   on another's edge) are one island.
+   ⭐⭐ **THE CHECKS PROVEN — their CONTROLS** (the owner, 2026-11-13: *"update the md files to make the checks work better. Then do a full rebuild …
+   so we can check if our workflow and check are working properly"*): `CHECK_CONTROLS=1` builds the scene with ONE DEFECT PLANTED PER MISTAKE MET —
+   the top 2 % short along x (→ coverage), a ghost over a real face (→ ghost overlap), the bulkheads' tops deleted (→ coverage), a face turned
+   AFTER the orientation pass (→ the orientation VERIFIED), a patch in the air (→ fidelity, alone), a deck strip's edge pulled back 0.02 in its
+   plane (→ continuity) — ⛔ each must be CAUGHT, and the normal build clean; then the build is run again WITHOUT it (that file is broken by
+   design). ⭐ The controls found the checks' own blind spots, now corrected: ⓗ a test at a face's CENTRE is blind on a notched (concave) face —
+   its centre can fall in the hole: every inside / outside test at a point INSIDE one of its triangles (the orientation pass had the same blind
+   spot); ⓘ continuity compared an edge with OTHER proxy objects only — a crack between two strips of ONE proxy was invisible: every proxy face
+   but the edge's own; ⓙ a crack is a gap ACROSS an edge between faces facing the SAME way, the edge touching nothing at its middle — not a
+   neighbour ALONG the edge (the line carrying on after a cut), not a face at a corner, not a SEAT's other face (the same plane, facing back),
+   not past a T-junction (an edge lying on another face's edge is connected). ⛔ A check never seen failing is not trusted (`CLAUDE.md` rule 2's
+   spirit); a planted defect it misses is a defect in the CHECK.
+   ⭐⭐ **SUPERPOSED FACES** (the owner, 2026-11-13: *"you have a lot of superposed faces. check for example step 3. this is not caught by your
+   checks"*): ⑨ a face lying ON another (the same plane, its inside covered) — SAME-facing = a DUPLICATE (⛔ an error: z-fighting, two faces for
+   one route), OPPOSITE-facing = a SEAT (two parts pressed together: the covered face unreachable once seated — listed; the game skips it; the
+   review draws it GREY, set back 3 mm, never flickering). Checked on the proxies and on the meshes (duplicates only); its control a proxy face
+   doubled. ⓚ ⛔ **`BVHTree.FromPolygons` FANS an n-gon from its first corner**: a CONCAVE face (a notched end, a holed strip) gets triangles
+   OUTSIDE its outline — phantom surface over the notch (34 false "duplicates", the real ones hidden among them): every tree of faces built from
+   the faces' OWN triangulation (`tri_bvh`: `tessellate_polygon`, its index mapped back to the polygon). ⓛ a test point is taken WELL INSIDE a
+   face (its centre when inside, else its largest triangle's centroid): a fan's first triangle sits at a disc's RIM — the pulley's inner face was
+   tested in its chamfer and left facing INTO the pulley; an inside test votes over THREE rays (one grazing a seam counts it twice). ⓜ a sample
+   by a face's own outline finds its coplanar NEIGHBOUR (thin support-ring strips, a number's glyphs): such samples are skipped.
+   The owner's visual review (§4.3 item 3) stays the human pass; W6's headless walk the measure.
+   ⭐⭐ **A ghost floor is CONNECTED to real surfaces** (the owner, 2026-11-13: *"ghost floors shall be connected to real surfaces (not single
+   small surfaces floating in the air)"*): it spans the opening or cavity it serves out to its host's real faces — `Scene_2`'s valve sets' ghost
+   is its three bores' mouths, never a small patch the gizmo must find; the build checks it (each corner within 0.005 of its host's meshes) and
+   names every floating one.
    ⭐ **A ghost face serves ONE part** (`for_part` on it): two parts may go into the same opening at different depths (`Scene_2`: a bore's piston,
    then its valve set) — the game reads a ghost only while ITS part is held, else the gizmo stops at the wrong one. The check script names each.
-   ⭐ **THE PAIR**: an inserted part carries a **resting proxy** — one flat face SQUARE to its approach axis, CENTRED on it, at its hull's extreme along
-   the approach (what the orbit's lift measures) — and its host carries the **ghost floor** at the SAME place at the goal; the gizmo then stands on the
-   opening's axis and A + dy lands the part exactly on its goal. A ghost floor may lie outside its host's body (in a cavity below an opening). An open
-   CAVITY (a tub the part goes into) needs one as much as a bore: its real depth is the cavity's bottom, not the seat (`Scene_2`'s crankshaft).
+   ⭐⭐ **A PART GOING INTO A HOLE OR A RECESS — the ghost AT THE MOUTH, then the PLUNGE** (the owner, 2026-11-13: *"the ghost face shall be aligned with the outer face … Then, we will create a special snap to plunge the pistons inside the cylinder hold … In such case, the ghost face shall always be a face aligned with the assembly face where the hole exits"*):
+   the part carries a **resting proxy** — one flat face SQUARE to its approach axis, CENTRED on it, at its hull's extreme along the approach; its host
+   carries the **ghost floor** IN THE PLANE WHERE THE HOLE EXITS — flush with the host's outer face, filling the opening exactly (the same outline
+   as the hole the outer proxy leaves: a bore's 24-gon, a tub's rooms and notches). The part rests on it at the mouth; a **PLUNGE snap** (⛔ to
+   build — `00_CORE/QUEUE.md`) carries it down the hole onto its seat. The ghost says how: `plunge_axis` (into the hole), `plunge` (the depth from
+   the mouth to the seat), `plunge_to` (the host's seat marker, item 4). ⛔ SUPERSEDED: a ghost at the goal's DEPTH (in the bore, in the tub) —
+   the pistons' floated 0.6 – 0.8 off their bank, the valve sets' and the crank's lay recessed. A bore and an open CAVITY alike (`Scene_2`: the
+   crank into the tub, the pistons and the valve sets into the bores). The build checks it: ⑩ **ghost flush** (each ghost's edge ON the route
+   round it — a recessed ghost is an error) and prints every plunge.
+   ⛔ A face proxy is the part's OUTER surface — never reuse its collision pieces' extents (inside the walls: `Scene_2`'s upper case top stopped
+   short of its edges, a strip open between the top and its slopes).
    ⭐ A proxy face keeps the face map's thresholds (`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §4: ≥ 15° from 45° of elevation; ≥ 30° between faces
-   to be told apart), and an opening in a proxy face is a RECTANGLE (the face map reads rectangles), round only in the look.
+   to be told apart), and an opening in a proxy face follows the REAL opening (a round bore round — 2026-11-13: the squares left real glass out;
+   ⚠ the face map's reading of a round rim to be measured at W6).
 3bis. ⭐⭐ **A piece that APPEARS WHEN THE PART IS SEATED** (the owner, 2026-11-13, `Scene_2`'s rod caps: *"create the counter closure of the rod
    connections … make the counter closure appear in the game when the piston-rod is seated in its position"*): a part whose way in needs an
    opening (a big end that must pass over its pin) carries the piece that closes it as its OWN object, a child of what it moves with (the rod: it
@@ -79,6 +149,9 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    MARKER, not `core/mate_connector.ts`'s capture — the game seats a part by the orbit, A + dy and the goal capture (`D183`, the goal = the authored
    pose). Read by the check script (each pair ANTI-PARALLEL and coincident at the goal) and later by the level data (the step's approach axis = the
    host's marker normal, its orbit centre). ⚠ `core/mate_connector.ts` is left as it is until the game reads the markers (W5).
+   ⭐ **An INSERTION into a hole / recess** (the owner, 2026-11-13): the part's seat marker lies DOWN the hole; the host's ghost at the mouth names
+   it (`plunge_to`), with the plunge's axis and depth (item 3) — ⛔ the game's PLUNGE snap is to build (`00_CORE/QUEUE.md`): from the mouth, the
+   part carried along the hole's axis onto that marker — the successor of the mate connector's translation, for holes only.
 5. **The goal is the authored pose** — a scene is authored ASSEMBLED, so each part's goal is where it sits; where it BOOTS is level data (as
    `Scene_1`'s `BOOT_MOVES`).
 6. **Units and axes** — the scene's `unitM`; +Y up at the export (`BLENDER_ASSETS.md` §3).
@@ -123,6 +196,8 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | ⭐⭐ **the CONTROL** | the same part pushed 0.05 units PAST its goal, into its host | ⛔ it must read BLOCKED — else the check is BLIND (a check never seen failing is not trusted: `CLAUDE.md` rule 2's spirit) |
 | ⭐ **no redundant geometry** (the owner, 2026-11-13: *"be careful that in your blender file, you have redundant edges … not sure if it can create issues (rendering, gizmo, etc.)"*) | per VISIBLE mesh and per face proxy (⛔ first glass only: it missed the crank's doubled rings and the text's doubled outlines): duplicate vertices, zero-area faces, loose edges | none — a transparent part is ONE solid (a boolean of one outer body, never touching boxes: their faces show through the glass), every boolean's result welded and its flat faces' extra edges dissolved, a proxy's strips welded into whole faces (`tidy`). An opaque part made of touching primitives (a chrome bar and its knees) may keep them |
 | ⭐ **the MOTION** (the owner, 2026-11-13: *"when the crank rotates, the piston shall remain in the cylinder"*) — for a scene with a level-end animation (§5) | the mechanism driven through its whole cycle by the game's own formula (every 6°): each moving part against the limits it must keep (a piston inside its cylinder, under its valves) and against the still parts' collision pieces | every margin ≥ 0, no collision — ⭐ with its control (a known-bad dimension must read OUT) |
+| ⭐⭐ **the RUN on the meshes** (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ?"*) — a scene with an animation | the game's own formula posing every moving piece through its whole cycle (every 6°), each piece's MESH against every other part's; the same poses baked as keyframes (a preview to scrub); the poses at fixed angles written to `animation_golden.json` — the golden vectors the TypeScript port must reproduce | no interference beyond the contacts NAMED in the script (a big end on its pin) — `Scene_2`'s first run found every valve in its piston: the reference's own preview had hidden it |
+| ⭐ **the PROXY SANITY** (✅ adopted, §3 item 3's principle) | fidelity, coverage, continuity, floating islands, reachability, simplicity, ORIENTATION, ghost overlap, GHOST FLUSH (at its hole's mouth; the plunges printed), SUPERPOSED (duplicates ⛔; seats listed) of the face proxies; the ghosts' dives and the real steps (information); lone small proxies (to confirm) | every failure named; ⭐ each check proven by its CONTROL (`CHECK_CONTROLS=1`: one planted defect each, all caught) |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
 ⭐ **A host is CUT only where a part REALLY passes** (the owner, 2026-11-13, `Scene_2`'s upper case: *"(b)"*): the cut is the part's own swept
@@ -130,8 +205,40 @@ hull along its way in (the hull of its two end positions — exact for a convex 
 opening's cylinder, which can eat a host whole; a part's geometry the cut needs is a shared function, built before the part's own step.
 ⚠ Not yet in the report, to add as the steps need them: every collision piece convex and closed; every proxy face flat; every part the plan names
 present and nothing unplanned carrying a proxy; each moving part's pivot (§5). ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
+⭐⭐ **WRITING A CHECK — its pitfalls, met** (2026-11-13, the owner: *"this is not caught by your checks"*; §3 ⓗ–ⓜ): ⛔ never
+`BVHTree.FromPolygons` on faces that may be CONCAVE (it fans each n-gon from its first corner: phantom triangles over a notch) — build the tree
+from the faces' own triangulation (`tri_bvh`) and map its index back to the face; ⛔ never a face's CENTRE or its first fan triangle as its test
+point — a point WELL INSIDE it (the centre when inside, else the largest triangle's centroid); an inside / outside test by ray parity VOTES over
+three rays (a seam grazed counts twice); a sample by a face's own outline is skipped (its coplanar neighbour is there by right); refresh the view
+layer before reading world matrices; compare materials with `==`. ⭐ Every new check gets its CONTROL in `CHECK_CONTROLS` the day it is written.
 ⚠ What the way-in sweep does NOT see: a piece wholly INSIDE another without a crossing triangle (the 0.01 step makes it cross on the way); contact at
 the goal (allowed — `COLLISION.md` §9: only penetration is refused), which is why the sweep starts 2 mm off.
+
+### 4.3 ⭐⭐ ONCE THE SCENE IS BUILT, BEFORE ITS EXPORT — three checks (the owner, 2026-11-13: *"update the md files to capture … as part of the
+workflow once the scene is built in blender"*)
+
+1. ⭐ **The GEOMETRY of every visible object** (*"once a visible object is drawn, do a check of the geometry to clean it (duplicate vertices,
+   optimization of number of vertices especially on objects or object's portions which are mostly hidden during game, shade auto smooth latches"*)
+   — the FINISH PASS cleans (§4.1 item 5), the GEOMETRY REVIEW reports, every run: ⓪ **inside out** — a closed mesh's signed volume negative
+   (a game engine draws a face's front only: an inverted mesh is INVISIBLE — `Scene_2`'s every ring was, unseen in Blender, which shades both
+   sides); ① **auto smooth latches** — on a smooth object, edges at 30° – 35° (they stay hard under 30°: faceted; 35° and more are crisp by
+   design and marked sharp — a chamfer); ② **mostly unseen** — rays from each face of the ASSEMBLED scene in 26 directions, the opaque parts
+   blocking (glass does not): an object mostly unseen is a candidate for lighter geometry, never deleted (the parts appear one by one — an earlier
+   step sees more). ⛔ Its pitfalls, met: compare Blender materials with `==` (never `is`: a new wrapper each access — the glass had counted as a
+   wall); refresh the view layer before reading world matrices (stale ones put the caps where they were not).
+2. ⭐ **The MOTION, before it exists in the game** (*"how can we check that the animation will be ok in babylon/ts pipeline ?"*) — for a scene
+   with an animation (§5): the RUN on the meshes (§4.2's row): every moving piece posed by the game's own formula through its whole cycle, every
+   6°, each MESH against every other part's — no interference beyond the contacts named in the script; the poses BAKED as keyframes (the owner
+   scrubs the timeline — a preview only, the game computes its own); the poses at fixed angles written to `animation_golden.json` — the golden
+   vectors the TypeScript port (`src/core`) must reproduce, so what the run proved holds in Babylon; W6's headless run closes it.
+3. ⭐⭐ **The FACE PROXIES and the GHOST floors, for PLAYABILITY — the OWNER's review** (*"the owner shall check the ghost and hidden faces to
+   check if the game will be playable … the orbit and gizmo will not be smooth on such faces"*): a REVIEW script colours every proxy face by
+   its risk for the gizmo and the orbit, step by step (the faces exposed at that step, the ghosts of the part being placed): 🔴 within 15° of 45°
+   of elevation (the face map's side/cap boundary, `SCENE_WORKFLOW.md` §4); 🟠 NARROW or tiny (the gizmo jumps across it; under ≈ 7 mm on the glass);
+   🟡 a plane CHOPPED into many separate strips (a deck between bores); 🟢 fine; 🟣 a ghost floor, named with the part it serves; ⚪ a SEAT face (pressed on another part's face, facing back: unreachable once seated) grey and
+   set back 3 mm (two faces in one plane flicker); ⛔ every other face LIFTED 2 mm off its real surface (a proxy lies ON it by design: shown over the context meshes, the whole step flickered — the owner, step 3: *"why step 3 still shows superposed faces everywhere?"*) — renders per
+   step and a review `.blend` (never the build's) — ⭐ holding ONLY the faces to review (the owner: *"display only the faces I need to review in the review blend file (not all the scene, as I cannot see the faces I need to see)"*): every other object deleted, one collection a step, the first step with a finding shown, the colours in Solid mode too. ⛔ The owner looks and decides (merge, enlarge, a ghost bridging a strip, or accept); W6 then
+   walks the real orbit on each step headless; W7 (the device) closes.
 
 ## 5. A scene's own reference animation
 
