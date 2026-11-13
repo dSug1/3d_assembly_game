@@ -382,6 +382,18 @@ export interface SceneState {
    */
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
+  asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
+  /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
+  asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
+  /** ⭐⭐⭐ (D-Z7) the camera's turn into a zone's frame (or out): the frame shown at the switch, the share, the turn's axis */
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamFrame; k: number; rad: number; axis: Vec3 | null } | null;
+  /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
+  asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (D-Z3) R4 in the spit: the dy toward the turn-over held */
+  asmViewHold: import("../input/polar_zone").ViewHold | null;
+  /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */
+  asmZoneAlpha: number;
   /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */
   asmDySign: number;
   /** ⭐⭐⭐ (2026-11-13, `ORBIT_ANY_SHAPE.md` §9) the world camera's calm heading offset off the yaw, held while the view looks down (`heldOffsetStep`); `null`: none (tilted, off) */

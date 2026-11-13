@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep, zoneViewCheck } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -924,6 +924,7 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
     const y0 = st.orbit.yaw, v0 = st.orbit.elevation;
     st.orbit.nudge(pauseYawStep(topPauseOn(st), st.topPause, d.dYaw), dv);
     if (tiltClampStep(st, y0, v0)) st.orbitInertia.stop(); // ⭐⭐⭐ (2026-11-10) the tilt's crossing: committed at the edge, the coast never ahead of the roll
+    else zoneViewCheck(st, y0, v0, 0); // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md D-Z3) …and the coast never past the spit's view bound (R4)
     // ⭐⭐ (2026-10-25) no yaw while the pause's roll is under way // ⭐ (2026-10-19) the coast governed as the finger is — ⭐ (2026-10-21) on the travel, through the pause
   }
   topPauseFrame(st, dtSec * 1000); // ⭐⭐⭐ (2026-10-21) the top face pause's share settled to the piece's side, and drawn

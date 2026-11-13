@@ -413,6 +413,26 @@ export interface GestureConfig {
   tiltBlendMm: number;
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after a pole-holding face's far edge, the dy that crossed held until the gizmo is this deep in the face beyond (mm) */
   edgeHoldMm: number;
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the polar zones on (1) / off (0) */
+  zoneOn: number;
+  /** ⭐⭐⭐ (D-Z1, T1) a corner where this many real facets meet is a pole */
+  zoneValenceMin: number;
+  /** ⭐⭐⭐ (D-Z1, T3 — the owner: the assembly as it stands) a facet is small under this share of the placed set's box's smallest side */
+  zoneFacetMinRatio: number;
+  /** ⭐⭐⭐ (D-Z2) the zone's axis snapped onto a world axis within this (deg) */
+  zoneSnapDeg: number;
+  /** ⭐⭐⭐ (D-Z6) upright (S1) up to this angle of the axis from the vertical (deg) */
+  zoneUprightMaxDeg: number;
+  /** ⭐⭐⭐ (D-Z6) the spit (S2) from this angle of the axis from the vertical (deg) */
+  zoneSpitMinDeg: number;
+  /** ⭐⭐⭐ (D-Z5) the zone's frame for the whole assembly over this share of the contour's area */
+  zoneWholeShare: number;
+  /** ⭐⭐⭐ (D-Z7) the gizmo leaves a zone this far past its rim (mm) */
+  zoneExitMm: number;
+  /** ⭐⭐⭐ (D-Z3, R4) in the spit, the view held this far from the vertical (deg) */
+  zoneViewMaxDeg: number;
+  /** ⭐⭐⭐ (D-Z3) the dy held there released after this much finger back (mm) */
+  zoneHoldMm: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -829,6 +849,16 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
+  zoneOn: 1, // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zones
+  zoneValenceMin: 5, // ⭐⭐⭐ (D-Z1) Blender's pole
+  zoneFacetMinRatio: 0.22, // ⭐⭐⭐ (D-Z1, the owner: relative to the placed set) Scene_0bis's tips 0.15, Scene_0 0.31, Scene_1 0.50
+  zoneSnapDeg: 10, // ⭐⭐⭐ (D-Z2)
+  zoneUprightMaxDeg: 30, // ⭐⭐⭐ (D-Z6)
+  zoneSpitMinDeg: 60, // ⭐⭐⭐ (D-Z6)
+  zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
+  zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
+  zoneViewMaxDeg: 80, // ⭐⭐⭐ (D-Z3, R4 kept in the spit) a guess with a slider
+  zoneHoldMm: 10, // ⭐⭐⭐ (D-Z3, the owner: "dy hold until reverted with an hysteresis") a guess with a slider
   edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -1000,6 +1030,15 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
+  if (cfg.zoneOn !== 0 && cfg.zoneOn !== 1) throw new Error(`zoneOn (${cfg.zoneOn}) must be 0 or 1.`);
+  if (!(Number.isInteger(cfg.zoneValenceMin) && cfg.zoneValenceMin >= 3 && cfg.zoneValenceMin <= 20)) throw new Error(`zoneValenceMin (${cfg.zoneValenceMin}) must be an integer in [3, 20].`);
+  if (!(cfg.zoneFacetMinRatio >= 0 && cfg.zoneFacetMinRatio <= 1)) throw new Error(`zoneFacetMinRatio (${cfg.zoneFacetMinRatio}) must be in [0, 1].`);
+  if (!(cfg.zoneSnapDeg >= 0 && cfg.zoneSnapDeg <= 45)) throw new Error(`zoneSnapDeg (${cfg.zoneSnapDeg}) must be in [0, 45] deg.`);
+  if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
+  if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
+  if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
+  if (!(cfg.zoneViewMaxDeg >= 30 && cfg.zoneViewMaxDeg <= 89)) throw new Error(`zoneViewMaxDeg (${cfg.zoneViewMaxDeg}) must be in [30, 89] deg.`);
+  if (!(cfg.zoneHoldMm >= 0 && cfg.zoneHoldMm <= 100)) throw new Error(`zoneHoldMm (${cfg.zoneHoldMm}) must be in [0, 100] mm.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);
   if (!(cfg.orbitContactMmPerMm > 0 && cfg.orbitContactMmPerMm <= 50)) throw new Error(`orbitContactMmPerMm (${cfg.orbitContactMmPerMm}) must be in (0, 50] mm/mm.`);

@@ -203,6 +203,17 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
             // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the owner's hysteresis
             tunable(st, "tilted pole: past a pole face's far edge, the dy back held until this deep (mm)", "edgeHoldMm", 0, 100, 5),
+            // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md — the owner's decisions D-Z1 – D-Z7) the polar zones
+            tunable(st, "polar zones: on (1) / off (0)", "zoneOn", 0, 1, 1),
+            tunable(st, "polar zones: a pole where this many faces meet", "zoneValenceMin", 3, 12, 1),
+            tunable(st, "polar zones: a face is small under this share of the assembly's smallest side", "zoneFacetMinRatio", 0, 0.6, 0.01),
+            tunable(st, "polar zones: the axis snapped onto a world axis within (deg)", "zoneSnapDeg", 0, 30, 1),
+            tunable(st, "polar zones: upright (globe) up to this angle from the vertical (deg)", "zoneUprightMaxDeg", 0, 90, 5),
+            tunable(st, "polar zones: spit from this angle from the vertical (deg)", "zoneSpitMinDeg", 0, 90, 5),
+            tunable(st, "polar zones: the zone's frame for the whole assembly over this share of its area", "zoneWholeShare", 0, 1.01, 0.05),
+            tunable(st, "polar zones: leave a zone this far past its rim (mm)", "zoneExitMm", 0, 100, 1),
+            tunable(st, "polar zones (spit): the view held this far from the vertical (deg)", "zoneViewMaxDeg", 30, 89, 1),
+            tunable(st, "polar zones (spit): the dy held there released after this much finger back (mm)", "zoneHoldMm", 0, 50, 1),
             // ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) the close-in gain: full from this distance out, down to the contact's
             tunable(st, "close-in gain: the orbit's full speed from this distance of the piece out (m)", "orbitGainFullM", 0.05, 3, 0.05),
             tunable(st, "close-in gain: at the contact, the gizmo's travel per mm of finger (mm)", "orbitContactMmPerMm", 0.1, 10, 0.1),

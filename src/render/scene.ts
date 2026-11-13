@@ -552,6 +552,12 @@ export function createScene(
   st.asmMapQ = null;
   st.asmTilt = null;
   st.asmEdgeHold = null;
+  st.asmZones = null;
+  st.asmZone = null;
+  st.asmZoneMix = null;
+  st.asmCamLast = null;
+  st.asmViewHold = null;
+  st.asmZoneAlpha = 0;
   st.asmDySign = 0;
   st.asmHeadO = null;
   st.asmHeadW = 1;
