@@ -8,7 +8,9 @@ face proxies (UFM_…), plus the ghost floors of the part being placed — by th
   green   fine
   magenta a ghost floor (named with the part it serves)
   grey    a SEAT face (lying on another part's face, facing back: unreachable once seated), set back 0.003 so the pair never flickers
-It renders two views a step into <out>/review/ and saves <scene>_review.blend beside the build (never the build itself), and prints a report.
+It saves <scene>_review.blend beside the build (never the build itself) and prints a report. ⛔ No renders by default (the owner, 2026-11-13:
+*"no need to have review renders"* — the review .blend is what is looked at); REVIEW_RENDERS=1 renders two views a step into <out>/review/
+(git-ignored, for a quick look only).
 
 Run:  blender -b <scene>.blend --python Assets/Blender/scripts/review_proxies.py
 """
@@ -20,7 +22,9 @@ CAP_BAND, CHOPPED = 14.5, 4          # degrees off 45° (the rule: ≥ 15° — 
 
 blend = bpy.data.filepath
 out_dir = os.path.join(os.path.dirname(blend), "review")
-os.makedirs(out_dir, exist_ok=True)
+RENDERS = bool(os.environ.get("REVIEW_RENDERS"))
+if RENDERS:
+    os.makedirs(out_dir, exist_ok=True)
 scene = bpy.context.scene
 root = bpy.data.objects["YUP_ROOT"]
 to_root = root.matrix_world.inverted()
@@ -198,13 +202,13 @@ for k in steps[1:]:
     ghosts = sorted({f"{faces[j][4]}→{faces[j][6]}" for j, c in enumerate(cls) if c == GHOST})
     report.append(f"step {k} (placing {', '.join(placing)}): {len(faces)} faces — green {count[0]}, yellow {count[1]}, orange {count[2]}, "
                   f"red {count[3]}, ghost {count[4]}, seat {count[5]}" + (f"; flagged: {worst}" if worst else "") + (f"; ghosts: {ghosts}" if ghosts else ""))
-    # two views
-    for o in bpy.data.objects:
+    # two views — only on request (REVIEW_RENDERS=1)
+    for o in (bpy.data.objects if RENDERS else []):
         if o.name.startswith("REVIEW_step_"):
             o.hide_render = not o.name.startswith(ob.name)
     cam = scene.camera
     target = Vector((0.05, 1.3, 0))
-    for tag, d in (("front", Vector((-0.95, 0.62, 1))), ("rear", Vector((0.95, 0.62, -1)))):
+    for tag, d in ((("front", Vector((-0.95, 0.62, 1))), ("rear", Vector((0.95, 0.62, -1)))) if RENDERS else ()):
         to_b = lambda p: root.matrix_world @ p
         cam.location = to_b(target + d.normalized() * 16)
         cam.rotation_euler = (to_b(target) - cam.location).to_track_quat("-Z", "Y").to_euler()
@@ -238,7 +242,7 @@ for o in list(bpy.data.objects):
         bpy.context.view_layer.layer_collection.children[col.name].exclude = (k != flagged[0])
 review_path = blend.replace(".blend", "_review.blend")
 bpy.ops.wm.save_as_mainfile(filepath=review_path, copy=True)
-print("\n================ THE FACE PROXIES' REVIEW →", out_dir)
+print("\n================ THE FACE PROXIES' REVIEW" + (f" → renders in {out_dir}" if RENDERS else ""))
 for line in report:
     print(line)
 print("review file →", review_path)

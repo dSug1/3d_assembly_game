@@ -10,6 +10,8 @@ build/
 .vite/
 *.tsbuildinfo
 
+# the face proxies' review renders (review_proxies.py, REVIEW_RENDERS=1 — a quick look, never kept)
+Assets/Blender/*/review/
 # Blender autosave copies
 *.blend1
 *.blend2
