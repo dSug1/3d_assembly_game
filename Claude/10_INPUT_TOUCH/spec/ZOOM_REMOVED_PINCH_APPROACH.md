@@ -1,6 +1,6 @@
 # THE ZOOM REMOVED — THE PINCH IS THE APPROACH (2026-11-13)
 
-> **STATUS** · ✅ built (`1.0.128-Removed-the-zoom`, `ce3e6c7`; live `c9738e4`) · ⛔ no device close
+> **STATUS** · ✅ built (`1.0.128-Removed-the-zoom`, `ce3e6c7`; live `c9738e4`) · ✅✅ closed by the owner's look (2026-11-13)
 > **OWNS** · why there is no zoom; the phone's approach by the pinch — its latch, its mapping, its slider
 > **READ IF** · you touch two-finger input, the camera's distance, the wheel or the approach
 > **LAST VERIFIED** · 2026-11-13 (1716 vectors)
@@ -59,5 +59,5 @@ the green piece's zoom range and floor (`proto_green_box.test.ts`); about ten so
 
 ## 5. Open
 
-* ⛔ the device look (rule 5 — touch cannot be judged with a mouse): the latch's feel, the gain;
+* ✅✅ the device look — the owner, 2026-11-13: *"pinch approach tested ok on device"* (the gain kept at ×1);
 * the desktop has no zoom either (the wheel did it): A + drag is its approach.

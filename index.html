@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <!-- ⛔ `user-scalable=no` and `maximum-scale=1` are load-bearing: without them
-         the browser's own pinch-zoom competes with rule 4's camera zoom, and a
-         two-finger gesture becomes unpredictable. -->
+         the browser's own pinch-zoom competes with the two-finger approach (the pinch),
+         and a two-finger gesture becomes unpredictable. ⚠ iOS Safari ignores them:
+         its pinch events are cancelled in `src/render/browser_guards.ts`. -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
@@ -24,6 +25,8 @@
         overscroll-behavior: none;
         -webkit-user-select: none;
         user-select: none;
+        /* ⭐ (2026-11-13) no long-press callout (iOS) — the loupe itself needs the canvas's touch events cancelled: `render/browser_guards.ts` */
+        -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent;
       }
       #app {
@@ -31,6 +34,9 @@
         height: 100%;
         display: block;
         touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
       }
     </style>
   </head>
