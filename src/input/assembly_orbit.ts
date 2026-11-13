@@ -198,12 +198,30 @@ export function easePoint(cur: Vec3, target: Vec3, dtMs: number, tauMs: number):
   return Math.hypot(target[0] - next[0], target[1] - next[1], target[2] - next[2]) < 1e-4 ? target : next;
 }
 
-/** ⭐ The two fingers' kind (from each finger's travel since the SECOND landed, mm): their COMMON motion — the approach; their RELATIVE — the pinch. */
-export function twoFingerKind(d1: readonly [number, number], d2: readonly [number, number], deadbandMm: number): "APPROACH" | "ZOOM" | null {
-  const common = Math.hypot((d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2);
-  const rel = Math.hypot(d2[0] - d1[0], d2[1] - d1[1]);
-  if (!(Math.max(common, rel) > deadbandMm)) return null;
-  return common >= rel ? "APPROACH" : "ZOOM";
+/**
+ * ⭐⭐⭐ (2026-11-13, the owner: *"simplify the two finger approach on mobile phone: it is currently difficult to latch the two finger approach: propose
+ * something simpler (for example, use the pinch input for the approach on mobile phone)"* → *"build A"*) **THE PINCH IS THE APPROACH**: two fingers
+ * spread apart bring the piece IN, pinched together take it OUT — any two fingers, nothing to classify (⛔ `twoFingerKind`: the first move judged once,
+ * common motion the approach, relative the pinch — a real two-finger swipe wobbled into the pinch, which then held for the gesture). The fingers'
+ * SEPARATION (mm) is the signal: tens of millimetres, far above a finger's jitter.
+ * `pinchLatched`: the separation moved past the deadband from where the two fingers landed (`sep0Mm`) — then the approach runs from THERE (re-anchored,
+ * so no jump by the deadband at its start).
+ */
+export function pinchLatched(sep0Mm: number, sepMm: number, deadbandMm: number): boolean {
+  return Math.abs(sepMm - sep0Mm) > deadbandMm;
+}
+
+/** ⭐ The two fingers' separation (mm) from their places (mm). */
+export function separationMm(a: readonly [number, number], b: readonly [number, number]): number {
+  return Math.hypot(b[0] - a[0], b[1] - a[1]);
+}
+
+/**
+ * ⭐ The approach's input for a change of the fingers' separation, as the approach's `dyMm` (finger UP = negative = IN): spread (`sepMm` > `prevMm`)
+ * IN, pinched OUT, × `gain` (`approachPinchGain`).
+ */
+export function pinchApproachDyMm(prevMm: number, sepMm: number, gain: number): number {
+  return -(sepMm - prevMm) * gain;
 }
 
 /**

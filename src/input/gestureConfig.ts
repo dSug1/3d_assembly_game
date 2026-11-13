@@ -302,19 +302,7 @@ export interface GestureConfig {
   evictOnOverflow: boolean;
   matePriorityOverAnchor: boolean;
 
-  // ── §2 rule 4 — pinch zoom ───────────────────────────────────────
-  /**
-   * mm the finger separation must change before zoom engages.
-   * ⚠ Crossing it RE-ANCHORS the gesture, so the zoom does not jump by the deadband
-   * at the moment it starts. See pinch.ts.
-   */
-  pinchDeadband: number;
-  /**
-   * Zoom gain, applied as an EXPONENT on the separation ratio — the quantity is a
-   * ratio, so a multiplier would be dimensionally wrong. `1` is the plain physical
-   * mapping: fingers twice as far apart halve the camera radius.
-   */
-  gainZoom: number;
+  // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) §2 rule 4, the pinch zoom, deleted: `pinchDeadband`, `gainZoom`.
 
   /**
    * Metres. ⛔⛔ THE NEAR-PLANE FLOOR, AND IT IS LOAD-BEARING. `render/scene.ts` sets
@@ -413,6 +401,8 @@ export interface GestureConfig {
   tiltBlendMm: number;
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after a pole-holding face's far edge, the dy that crossed held until the gizmo is this deep in the face beyond (mm) */
   edgeHoldMm: number;
+  /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
+  approachPinchGain: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -466,8 +456,6 @@ export interface GestureConfig {
    * 2026-10-01: *"reduce the gains while the green box is within the leash zone … but maintain the orbit speed beyond"*).
    */
   boxGainInsideLeash: number;
-  /** ⭐ Prototype: the zoom the scene BOOTS at (the owner, 2026-10-01: *"set the default zoom at 1.5"*). `0` = the derived rule (half the maximum radius). */
-  bootZoom: number;
   /** ⭐ Prototype: `1` — a piece in its goal cannot be moved or turned (`goal_lock.ts`); `0` re-enables it. */
   lockPlacedPieces: number;
   /** ⭐ Prototype: the green box's ease after the rig, ms (an exponential time constant; 0 = none — it steps with the input events). */
@@ -491,8 +479,6 @@ export interface GestureConfig {
   orbitSlideMm: number;
   /** ⭐ Prototype: the green piece's ORBIT INERTIA — its coast's time constant per cm³ of its volume, ms (`inertiaTauMs`); 0 = none. */
   orbitInertiaGain: number;
-  /** ⭐ Prototype: the share of the half-view the green piece is kept inside (`minGreenZoom`) — 0.9 = the central 90 % (the owner, 2026-10-02; was 0.8). */
-  greenKeepInViewMargin: number;
   /** ⭐ Prototype: WHICH piece the orbit carries — 0 the green frustum, 1 the turquoise hexagonal prism (the SCENE menu); a change respawns it as at boot. */
   orbitPieceKind: number;
   /** Radians of yaw per MILLIMETRE of finger travel. ⛔ Never per pixel. */
@@ -829,6 +815,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSpringMs: 30, // ⭐⭐ (2026-11-04) the former boxSmoothMs / 2 for the orbit's spring
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
+  approachPinchGain: 1, // ⭐⭐⭐ (2026-11-13, the owner: *"build A"* — the pinch is the approach) a guess with a slider: a mm of spread = a mm of the old two-finger dy
   edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -871,7 +858,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   boxGainPitch: 0.5,
   // ⚠ A guess with a slider (0.05–1, step 0.05 — the owner's range).
   boxGainInsideLeash: 0.35, // ⭐ the owner, 2026-10-01 (was 0.5)
-  bootZoom: 1, // ⭐ the owner, 2026-10-02: 1.00, with Scene_1's rings ×1.5 so the scene is unchanged (was 1.5)
   lockPlacedPieces: 1,
   // ⚠ About one pointer interval on the tablet (`D86`: 47–68 ms), so a step is covered by the next event.
   boxSmoothMs: 60,
@@ -890,7 +876,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitSlideMm: 5,
   // ⚠ A guess with a slider (the owner, 2026-10-02: *"add a slider for orbit inertia gain"*): ×182 cm³ → τ ≈ 180 ms, a ~1 s coast.
   orbitPieceKind: 0, // ⭐ prototype, the owner 2026-10-04: *"a slider in scene menu to choose between the green piece or the turquoise piece"*
-  greenKeepInViewMargin: 0.9, // ⭐ prototype (green box), the owner 2026-10-02 (was 0.8, a guess)
   orbitInertiaGain: 0.15, // ⭐ the owner, 2026-10-02: 1, then 0.45, then 0.15 — τ ≈ 28 ms for the green piece
   // ⭐⭐ 0.054 rad/mm — CHOSEN ON THE DEVICE, 2026-09-14, with the menu slider. That is
   // ~3.1° of yaw per mm, so a full turn of the camera takes ~116 mm of drag.
@@ -906,10 +891,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // by ×3.4, ×2.3 and now ×2. ⛔ Stop guessing gains; ship the slider with the rule.
   gainOrbitElevation: 0.02,
 
-  // ⚠ Placeholders like everything else. `IN5` measures them — and can now do it by
-  // finger, since tunables override from the URL (`?pinchDeadband=1`).
-  pinchDeadband: 2,
-  gainZoom: 1,
   // ⛔ 0.15 m is 15x the camera's 0.01 m near plane. See the field comment.
   cameraRadiusMinM: 0.15,
   cameraRadiusMaxM: 3,
@@ -1001,6 +982,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
+  if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);
   if (!(cfg.orbitContactMmPerMm > 0 && cfg.orbitContactMmPerMm <= 50)) throw new Error(`orbitContactMmPerMm (${cfg.orbitContactMmPerMm}) must be in (0, 50] mm/mm.`);
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
@@ -1051,9 +1033,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.lockPlacedPieces === 0 || cfg.lockPlacedPieces === 1)) {
     throw new Error(`lockPlacedPieces (${cfg.lockPlacedPieces}) must be 0 or 1.`);
   }
-  if (!(cfg.bootZoom === 0 || (cfg.bootZoom >= 0.1 && cfg.bootZoom <= 20))) {
-    throw new Error(`bootZoom (${cfg.bootZoom}) must be 0 (derived) or in [0.1, 20].`);
-  }
   if (!(cfg.boxGainInsideLeash >= 0.05 && cfg.boxGainInsideLeash <= 1)) {
     throw new Error(`boxGainInsideLeash (${cfg.boxGainInsideLeash}) must be in [0.05, 1].`);
   }
@@ -1062,9 +1041,6 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   }
   if (cfg.orbitPieceKind !== 0 && cfg.orbitPieceKind !== 1) {
     throw new Error(`orbitPieceKind (${cfg.orbitPieceKind}) must be 0 (green) or 1 (turquoise).`);
-  }
-  if (!(cfg.greenKeepInViewMargin > 0 && cfg.greenKeepInViewMargin <= 1)) {
-    throw new Error(`greenKeepInViewMargin (${cfg.greenKeepInViewMargin}) must be in (0, 1].`);
   }
   if (!(cfg.orbitInertiaGain >= 0 && cfg.orbitInertiaGain <= 50)) {
     throw new Error(`orbitInertiaGain (${cfg.orbitInertiaGain}) must be in [0, 50] ms/cm³.`);

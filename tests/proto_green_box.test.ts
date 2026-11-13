@@ -439,27 +439,13 @@ describe("⭐⭐ prototype — the green box", () => {
     expect(code("tuning_menu.ts")).toMatch(/"boxGainInsideLeash", 0\.05, 1, 0\.05\)/);
   });
 
-  it("⭐ prototype: the scene BOOTS at zoom 1.5 (the owner: *\"set the default zoom at 1.5\"*) — the derived half-radius rule only at 0", () => {
-    // the owner: 1.5, then *"I want to set the zoom at 1.00 but the scene shall be exactly the same"* (the rings ×1.5)
-    expect(DEFAULT_CONFIG.bootZoom).toBe(1);
+  it("⭐ prototype: the camera's defaults behind the green piece (⛔ 2026-11-13 the boot zoom deleted with the zoom — `zoom_removed.test.ts`)", () => {
     // the owner, 2026-10-02: *"set camera leash behind the green box to 1.5 degrees"*, corrected to 0.5, then to *"0 degrees"*
     // … then *"set the camera leash to 0.05"* (the slider reaches it, step 0.05), then *"revert the camera leash to 0"*
     expect(DEFAULT_CONFIG.cameraLeashDeg).toBe(0);
     expect(code("tuning_menu.ts")).toContain('"cameraLeashDeg", 0, 60, 0.05)');
     expect(DEFAULT_CONFIG.cameraRadiusOffsetMm).toBe(1250);
     expect(DEFAULT_CONFIG.boxGainInsideLeash).toBe(0.35); // the owner: *"set green box gain inside the leash to 0.35"* // the owner: *"set the camera radius offset at 1250 mm"*
-    const scene = code("scene.ts");
-    expect(scene).toMatch(/if \(st\.cfg\.bootZoom > 0\) return st\.cfg\.bootZoom;/);
-    expect(scene.indexOf("if (st.cfg.bootZoom > 0)")).toBeLessThan(scene.indexOf("st.cfg.cameraRadiusMaxM / 2 / base"));
-  });
-
-  it("⭐ prototype: the boot zoom has a SLIDER in CAMERA, applied at once and kept for the camera reset (the owner: *\"add the slider boot zoom\"*)", () => {
-    const m = code("tuning_menu.ts");
-    // ⭐ 2026-10-02: the zoom is the camera's distance behind the green piece — its range 0.1–2
-    expect(m).toContain(`tunable(st, "boot zoom (× the camera's distance behind the green piece)", "bootZoom", 0.1, 2, 0.05)`);
-    expect(m.indexOf("bootZoomSlider(st),")).toBeGreaterThan(m.indexOf('title: "CAMERA"'));
-    const body = m.slice(m.indexOf("export function bootZoomSlider"), m.indexOf("export function installTuningMenu"));
-    for (const w of ["st.orbitStartZoom = value", "st.zoom = value", "st.zoomAtPinchStart = value", "applyCamera(st)"]) expect(body).toContain(w);
   });
 
   it("⭐ prototype: Scene_1 boots on the TOP ring (the owner: *\"boot scene 1 on the top ring\"*)", () => {
@@ -491,7 +477,7 @@ describe("⭐ prototype — the CAMERA menu has subsections (the owner, 2026-10-
       for (const k of keys) expect(body).toContain(k);
     };
     under("GREEN PIECE ORBIT", ['"boxGainYaw"', '"boxGainPitch"', '"boxGainInsideLeash"', '"boxSmoothMs"', '"orbitInertiaGain"']);
-    under("CAMERA OFFSET", ["bootZoomSlider(st)", '"cameraYawOffsetDeg"', '"cameraPitchOffsetDeg"', '"cameraRadiusOffsetMm"']);
+    under("CAMERA OFFSET", ['"cameraYawOffsetDeg"', '"cameraPitchOffsetDeg"', '"cameraRadiusOffsetMm"']);
     under("CAMERA FOLLOW", ['"cameraLeashDeg"', '"cameraFollowMs"', '"cameraSettleDelayMs"', '"cameraCatchUpMs"']);
     under("ORBIT SWAY", ['"orbitSwayKind"', '"orbitSwayDeg"', '"orbitSlideMm"', '"orbitSwayTauMs"']);
     under("RENDERING", ['"pieceContourAlpha"', '"shadowsOn"', '"autoShadowBudgetMs"']);
@@ -526,10 +512,10 @@ describe("⛔⛔ prototype — NO STAIR between the rings: the camera's pitch ax
 });
 
 describe("⭐⭐ prototype — Scene_1's rings are a smooth WAIST (the owner, 2026-10-02: *\"the shape shall be a waist … propose the three missing parameters so that the 2D curve … can be smooth\"*)", () => {
-  it("⭐ the outer rings stay under the 3 m clamp at the boot zoom; ⛔ the middle ring NO LONGER clears the painting (the owner's 0.09 m, 2026-10-02)", async () => {
+  it("⭐ the outer rings stay under the 3 m clamp (the rig at 1 — ⛔ 2026-11-13 no zoom); ⛔ the middle ring NO LONGER clears the painting (the owner's 0.09 m, 2026-10-02)", async () => {
     const { sceneConfig } = await import("../src/input/scene_rig");
     const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
-    const zoom = DEFAULT_CONFIG.bootZoom;
+    const zoom = 1;
     const u = SCENE_1.unitM!;
     const c = SCENE_1.orbit!.centreM as readonly number[];
     // the painting's farthest horizontal reach from the orbit's axis
@@ -587,11 +573,10 @@ describe("⭐⭐ prototype — zoom 1.00, the SAME scene (the owner, 2026-10-02:
     const { sceneConfig } = await import("../src/input/scene_rig");
     const now = sceneConfig(DEFAULT_CONFIG, RIG_3M);
     const before = { ...now, orbitTopRadiusM: 1.7, orbitTopHeightM: 1.05, orbitMiddleRadiusM: 0.25, orbitMiddleHeightM: 0, orbitBottomRadiusM: 1.7, orbitBottomHeightM: -1.05 };
-    expect(DEFAULT_CONFIG.bootZoom).toBe(1);
     // ⚠ The whole surface matched until the owner set the middle ring to 0.09 m at 0.15 m (2026-10-02); the outer rings still do.
     for (const yaw of [0, 1.3, -2.7]) {
       for (const v of [0, 1]) {
-        const a = orbitOffset(now, yaw, v, DEFAULT_CONFIG.bootZoom).offsetM;
+        const a = orbitOffset(now, yaw, v, 1).offsetM; // ⭐ (2026-11-13) the rig at 1, the zoom deleted
         const b = orbitOffset(before, yaw, v, 1.5).offsetM;
         a.forEach((x, k) => expect(x).toBeCloseTo(b[k]!, 12));
       }
@@ -627,122 +612,5 @@ describe("⭐⭐ prototype — the boot orbit centre is the blue piece's face to
   });
 });
 
-describe("⭐⭐ prototype — the ZOOM moves the CAMERA, not the green piece (the owner, 2026-10-02: *\"the zoom shall bring the camera closer to or further away from the green piece. zoom from 0.1 to 2, with 1.00 corresponding to the current distance\"*)", () => {
-  it("⭐ the camera's gap behind the green piece = the radius offset × the zoom, held to 0.1–2; 1.00 is today's 1.25 m", async () => {
-    const { cameraGapM, clampGreenZoom, GREEN_ZOOM_MIN, GREEN_ZOOM_MAX, GREEN_PIECE_ORBIT_ZOOM } = await import("../src/input/green_box");
-    expect([GREEN_ZOOM_MIN, GREEN_ZOOM_MAX, GREEN_PIECE_ORBIT_ZOOM]).toEqual([0.1, 2, 1]);
-    const off = DEFAULT_CONFIG.cameraRadiusOffsetMm / 1000;
-    expect(cameraGapM(off, 1)).toBeCloseTo(1.25, 12); // today's distance
-    expect(cameraGapM(off, 2)).toBeCloseTo(2.5, 12);
-    expect(cameraGapM(off, 0.1)).toBeCloseTo(0.125, 12);
-    expect(cameraGapM(off, 5)).toBeCloseTo(2.5, 12); // held to 2
-    expect(cameraGapM(off, 0.01)).toBeCloseTo(0.125, 12); // held to 0.1
-    expect(clampGreenZoom(Number.NaN)).toBe(1);
-  });
-
-  it("⭐⭐ the green piece rides the rings as they are, whatever the zoom; the camera's gap and the wheel follow the zoom", async () => {
-    // the camera at zoom 0.5 and 2: the green piece's distance from the centre is the same, only the camera moves
-    const { sceneConfig } = await import("../src/input/scene_rig");
-    const { GREEN_PIECE_ORBIT_ZOOM, cameraGapM } = await import("../src/input/green_box");
-    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
-    const box = orbitOffset(cfg, 0.3, 0.8, GREEN_PIECE_ORBIT_ZOOM).offsetM;
-    const near = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 0.5));
-    const far = cameraOffset(cfg, { yaw: 0.3, v: 0.8 }, box, NO_OFFSET_CAM, cameraGapM(1.25, 2));
-    const len = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
-    expect(len(far) - len(near)).toBeCloseTo(2.5 - 0.625, 9);
-    const w = code("green_box_wiring.ts");
-    // ⭐ (2026-11-12, F5) the frame's query ledger reset between them (`st.pieceQueries = 0`)
-    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);[\s\S]*?st\.pieceQueries = 0;\s*assemblyFrame\(st, dtSec \* 1000\);[^\n]*\n\s*let rig: OrbitQ = \{ yaw: st\.orbit\.yaw, v: st\.orbit\.elevation, zoom: GREEN_PIECE_ORBIT_ZOOM \};/);
-    expect(w).toMatch(/const gapFull = cameraGapM\(st\.cfg\.cameraRadiusOffsetMm \/ 1000, st\.zoom\);/); // (2026-10-06: scaled around the piece, `scaledGap`)
-    expect(code("scene.ts")).toMatch(/st\.greenBox !== null\s*\? wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
-  });
-});
-const NO_OFFSET_CAM = { yawRad: 0, pitchRad: 0 };
-
-describe("⭐⭐ prototype — the zoom never brings the camera so close the green piece leaves the screen (the owner, 2026-10-02)", () => {
-  const D = Math.PI / 180;
-  const base = { yawOffsetRad: 3 * D, pitchOffsetRad: 2 * D, ring: [{ distanceM: 3, pitchRad: 0 }], radiusOffsetM: 1.25, fovVerticalRad: 0.8, margin: 0.8 };
-
-  it("⭐ the yaw offset is checked against the HORIZONTAL half-view — so portrait needs a farther camera than landscape", async () => {
-    const { minGreenZoom } = await import("../src/input/green_box");
-    const portrait = minGreenZoom({ ...base, aspect: 0.676 });
-    const landscape = minGreenZoom({ ...base, aspect: 1.48 });
-    expect(portrait).toBeCloseTo(0.55, 2);
-    expect(landscape).toBeCloseTo(0.26, 2);
-    expect(minGreenZoom({ ...base, yawOffsetRad: 0, pitchOffsetRad: 0, aspect: 0.676 })).toBe(0.1); // no offset: no limit
-    expect(minGreenZoom({ ...base, margin: 0.5, aspect: 0.676 })).toBeGreaterThan(portrait); // a tighter margin, farther
-    // ⭐ the same angle as yaw needs more than as pitch in portrait (the horizontal half-view is the narrower)
-    const asYaw = minGreenZoom({ ...base, yawOffsetRad: 3 * D, pitchOffsetRad: 0, aspect: 0.676 });
-    const asPitch = minGreenZoom({ ...base, yawOffsetRad: 0, pitchOffsetRad: 3 * D, aspect: 0.676 });
-    expect(asYaw).toBeGreaterThan(asPitch);
-  });
-
-  it("⭐⭐ at the limit, the green piece sits EXACTLY on the margin's edge of the view — the geometry, not the formula, checked", async () => {
-    const { minGreenZoom } = await import("../src/input/green_box");
-    for (const [yaw, aspect] of [[3, 0.676], [8, 1.48], [12, 0.676]] as const) {
-      const z = minGreenZoom({ ...base, yawOffsetRad: yaw * D, pitchOffsetRad: 0, aspect });
-      if (z <= 0.1) continue;
-      // the camera at distance d + g from the target, δ off the green piece's direction, looking at the target
-      const d = base.ring[0]!.distanceM;
-      const R = d + z * base.radiusOffsetM;
-      const cam = [R * Math.cos(yaw * D), R * Math.sin(yaw * D)];
-      const toTarget = [-cam[0]!, -cam[1]!];
-      const toBox = [d - cam[0]!, -cam[1]!];
-      const ang = Math.acos((toTarget[0]! * toBox[0]! + toTarget[1]! * toBox[1]!) / (Math.hypot(...toTarget) * Math.hypot(...toBox)));
-      const halfH = Math.atan(Math.tan(base.fovVerticalRad / 2) * aspect);
-      // ⭐ reachable: exactly on the margin's edge. ⚠ An offset so large it needs more than zoom 2 (12° in portrait needs 2.33) is
-      // CAPPED at 2 — the piece then sits OUTSIDE the margin: stated, not hidden (it stays on screen only while the angle fits the view).
-      if (z < 2) expect(ang).toBeCloseTo(halfH * base.margin, 9);
-      else expect(ang).toBeGreaterThan(halfH * base.margin);
-    }
-  });
-
-  it("⭐⭐ EXACT on an elevated ring — the owner: *\"the min zoom can go further low than today's limit 0.72 … same for landscape\"*", async () => {
-    const { minGreenZoom } = await import("../src/input/green_box");
-    const { orbitOffset } = await import("../src/input/orbit");
-    const { cameraOffset } = await import("../src/input/follow_camera");
-    const { sceneConfig } = await import("../src/input/scene_rig");
-    const cfg = sceneConfig(DEFAULT_CONFIG, RIG_3M);
-    const vs = Array.from({ length: 33 }, (_, i) => i / 32);
-    const ring = vs.map((v) => {
-      const o = orbitOffset(cfg, 0, v, 1);
-      return { distanceM: Math.min(o.radiusM, cfg.cameraRadiusMaxM), pitchRad: Math.atan2(o.offsetM[1], Math.hypot(o.offsetM[0], o.offsetM[2])) };
-    });
-    // the piece's centre seen from the camera, placed by the PRODUCT's own `orbitOffset` + `cameraOffset` (an independent path)
-    const seen = (v: number, zoom: number, aspect: number): number => {
-      const b = orbitOffset(cfg, 0, v, 1).offsetM;
-      const c = cameraOffset(cfg, { yaw: 0, v }, b, { yawRad: base.yawOffsetRad, pitchRad: base.pitchOffsetRad }, base.radiusOffsetM * zoom);
-      const n = Math.hypot(...c);
-      const f = [-c[0] / n, -c[1] / n, -c[2] / n];
-      const rl = Math.hypot(f[0]!, f[2]!);
-      const r = [-f[2]! / rl, 0, f[0]! / rl];
-      const u = [r[1]! * f[2]! - r[2]! * f[1]!, r[2]! * f[0]! - r[0]! * f[2]!, r[0]! * f[1]! - r[1]! * f[0]!];
-      const q = [b[0] - c[0], b[1] - c[1], b[2] - c[2]];
-      const z = q[0]! * f[0]! + q[1]! * f[1]! + q[2]! * f[2]!;
-      const halfV = base.fovVerticalRad / 2;
-      const halfH = Math.atan(Math.tan(halfV) * aspect);
-      const ax = Math.atan(Math.abs((q[0]! * r[0]! + q[1]! * r[1]! + q[2]! * r[2]!) / z)) / halfH;
-      const ay = Math.atan(Math.abs((q[0]! * u[0]! + q[1]! * u[1]! + q[2]! * u[2]!) / z)) / halfV;
-      return Math.max(ax, ay); // the share of the half-view the centre uses, the tighter axis
-    };
-    // ⛔ portrait: the level-camera closed form gave ~0.70 (the owner's 0.72 on the tablet) — the yaw offset is foreshortened by the
-    // top ring's elevation. Landscape is bound by the PITCH offset, vertical on every ring: ~0.25, as before (the size term's 0.40 gone).
-    for (const [aspect, lo, hi] of [[0.53, 0.55, 0.65], [1.6, 0.24, 0.27]] as const) {
-      const z = minGreenZoom({ ...base, ring, aspect });
-      expect(z).toBeGreaterThan(lo);
-      expect(z).toBeLessThan(hi);
-      // at the limit, the WORST ring position puts the centre exactly on the margin; every other one inside it
-      const shares = vs.map((v) => seen(v, z, aspect));
-      expect(Math.max(...shares)).toBeCloseTo(base.margin, 6);
-    }
-  });
-
-  it("⭐ wired: recomputed only when what it depends on changes; the zoom and the wheel are held to it", () => {
-    const w = code("green_box_wiring.ts");
-    expect(w).toMatch(/if \(key !== st\.greenZoomMinKey\) \{/);
-    expect(w).toMatch(/st\.zoom = clampGreenZoom\(st\.zoom, st\.greenZoomMin\);/);
-    expect(code("scene.ts")).toMatch(/wheelZoom\(st\.zoom, notches, Math\.max\(GREEN_ZOOM_MIN, st\.greenZoomMin\), GREEN_ZOOM_MAX\)/);
-    expect(code("tuning_menu.ts")).toContain('"greenKeepInViewMargin", 0.3, 1, 0.05)');
-    expect(DEFAULT_CONFIG.greenKeepInViewMargin).toBe(0.9); // the owner, 2026-10-02 (was 0.8)
-  });
-});
+/* ⛔⛔ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely"*) the ZOOM's vectors deleted with it — the camera's gap
+ * behind the green piece (×0.1 – 2), the wheel's and the pinch's range, the keep-on-screen floor (`minGreenZoom`): `zoom_removed.test.ts` pins its absence. */

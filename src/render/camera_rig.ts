@@ -1,13 +1,11 @@
 /**
- * THE CAMERA RIG — the orbit, the zoom, the centre blend, the reset, the gesture frames. ⛔ The rules are `input/orbit.ts`'s, `input/pinch.ts`'s and `input/camera_reset.ts`'s.
+ * THE CAMERA RIG — the orbit, the centre blend, the reset, the gesture frames (⛔ 2026-11-13 the zoom deleted). ⛔ The rules are `input/orbit.ts`'s and `input/camera_reset.ts`'s.
  *
  * ⭐ Split out of `scene.ts` on 2026-09-26 (the owner: *"make everything as much modular as
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
-import { pinchAllowed } from "../input/pinch";
-import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, nearestPairCentre, type Sample } from "../input";
+import { clampCameraRadiusM, nearestPairCentre } from "../input";
 import { type Vec3 } from "../core/vec";
 import { blendRig, horizontalShare, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { pauseEndNearer, pauseUnderWay } from "../input/top_pause";
@@ -138,12 +136,12 @@ export function syncCentre(st: SceneState) {
 
 /**
  * ⭐ Write the orbit rig's pose onto the camera — the one writer every camera event calls (reset,
- * startup, pinch, a slider, the orbit drag, the wheel).
+ * startup, a slider, the orbit drag; ⛔ 2026-11-13 no pinch, no wheel: the zoom deleted).
  */
 export function applyCamera(st: SceneState) {
   // ⛔⛔ THE APPROACH SWING IS DELETED (`D120`, 2026-09-27): the rig pose is the camera, with no
   // offset added on top.
-  const pose = st.orbit.pose(st.zoom);
+  const pose = st.orbit.pose(st.demoCameraScale); // ⭐ (2026-11-13) the rig at 1 — the demo alone scales it
   // ⛔ The rig gives a DIRECTION and a distance; the clamp may only shorten it.
   // Clamping the components independently would change the viewing ANGLE, which is
   // not what a near-plane guard is for.
@@ -170,27 +168,5 @@ export function applyCamera(st: SceneState) {
 }
 
 
-/**
- * The two outside touchpoints, OLDEST FIRST, or `null` unless there are exactly two
- * and nothing is being held. ⭐ Press order is the router's `seq`, not a `Map`'s
- * insertion order — the two agree until an id is reused.
- */
-export function pinchPair(st: SceneState) : [Sample, Sample] | null {
-  const out = st.router.outside();
-  if (out.length !== 2 || st.router.objects().length !== 0) return null;
-  // ⛔ `D118`: never from a mouse — the wheel is the desktop's zoom.
-  if (!pinchAllowed(out.map((q) => st.pointerTypeOf.get(q.id) === "mouse" || q.id === MOUSE_SECOND_ID))) return null;
-  return [out[0]!.last, out[1]!.last];
-}
-
-export function updatePinch(st: SceneState) {
-  const p = pinchPair(st);
-  if (!p) return;
-  // ⭐⭐ (2026-10-12, the owner: *"Simplify the zoom so that this reverts back to the standard zoom input design for mobile"*) — the STANDARD pinch:
-  // the zoom follows the fingers' distance from the pinch's start; ⛔ the dx gate (2026-10-10) and the moving-fingers gate (2026-10-06) deleted
-  const factor = st.pinch.scale(p[0], p[1]);
-  if (factor === null) return; // still inside the deadband: leave the camera alone
-  st.zoom = st.zoomAtPinchStart * factor;
-  applyCamera(st);
-}
+// ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) `pinchPair` and `updatePinch` (the pinch zoom) deleted.
 

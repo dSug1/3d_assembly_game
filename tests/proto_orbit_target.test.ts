@@ -63,7 +63,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     const p = code("render/pointer_wiring.ts");
     // ⛔ (2026-11-02, `d8134eb`) one step, two callers: a single finger anywhere — a part is empty space — and the held second touch's first
     expect(p.split("orbitDragStep(st, e.pointerId, s, ").length - 1).toBe(2);
-    expect(p).toContain("else if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);"); // ⛔ (2026-11-12) no hover step first
+    expect(p).toContain("if (st.router.outside().length === 1) orbitDragStep(st, e.pointerId, s, prev);"); // ⛔ (2026-11-13) the zoom deleted (no pinch branch before it) // ⛔ (2026-11-12) no hover step first
     expect(p).not.toContain("lockedInGoal");
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
     // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only

@@ -18,7 +18,10 @@
  * ⛔ No engine, no scene: millimetres and milliseconds.
  */
 
-export type HoldMode = "HELD" | "WAY" | "ZOOM" | "APPROACH"; // ⭐ (2026-10-28) APPROACH: two fingers' common dy brings the piece in (around the assembly)
+export type HoldMode = "HELD" | "WAY" | "APPROACH"; // ⭐ (2026-10-28) APPROACH: two fingers' common dy brings the piece in (around the assembly) — ⛔ (2026-11-13) "ZOOM" deleted with the zoom
+/** ⏸ The PARKED way in's modes (`holdDecision`, `holdSwitch` — their callers commented out since 2026-10-12): its "ZOOM" is the pinch zoom deleted
+ * 2026-11-13 (the owner: *"remove the zoom function entirely"*); kept as the owner parked it (*"don't remove it, as it may be useful later on"*). */
+export type ParkedHoldMode = "HELD" | "WAY" | "ZOOM";
 
 /**
  * ⭐ The first touch's dx past the deadband decides what the two touches are doing: the second's x travel past HALF the deadband — it is on
@@ -79,33 +82,26 @@ export function trailAnchor(anchorMm: number, xMm: number, deadbandMm: number): 
  * rolls instead. A pinch with both fingers moving stays a zoom. ⛔ HELD (undecided) is `holdDecision`'s, never this.
  */
 export function holdSwitch(
-  mode: HoldMode,
+  mode: ParkedHoldMode,
   secondMoved: boolean,
   secondRestMs: number,
   firstDxMm: number,
   deadbandMm: number,
   restMs: number,
-): HoldMode {
+): ParkedHoldMode {
   if (mode === "WAY") return secondMoved ? "ZOOM" : "WAY";
   if (mode === "ZOOM") return !secondMoved && secondRestMs >= restMs && Math.abs(firstDxMm) > deadbandMm ? "WAY" : "ZOOM";
   return mode;
 }
 
-/**
- * ⭐⭐ (2026-10-12, the owner: *"Simplify the zoom so that this reverts back to the standard zoom input design for mobile"*) — the STANDARD PINCH:
- * two fingers down, it starts as soon as EITHER has travelled past the deadband (mm, from its press); then the zoom follows the fingers'
- * distance. ⛔ The way in (`holdDecision`'s WAY) and the switch without lifting (`holdSwitch`) are commented out with the piece orbit.
- */
-export function pinchStarts(firstTravelMm: number, secondTravelMm: number, deadbandMm: number): boolean {
-  return firstTravelMm > deadbandMm || secondTravelMm > deadbandMm;
-}
+/* ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) `pinchStarts` — the STANDARD PINCH zoom's start (2026-10-12) — deleted. */
 
 /**
  * ⛔⛔ (2026-10-13, the owner: *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — the second touch's release that is a TAP (`isTapRelease`: within `tapMaxDuration` and the 8 mm
  * `doubleTapSlop`) is a tap even when the fingers' wobble already started the STANDARD PINCH (either finger past the 3.5 mm deadband,
  * `pinchStarts` — since 2026-10-12): a real finger's tap wanders a few mm, so the tap on a placed part (the gizmo moved there) and the tap roll
- * were lost to a zoom. The mode the release is judged in: `HELD` for a tapped `ZOOM` (the caller undoes the zoom it started).
+ * were lost to a zoom. The mode the release is judged in: `HELD` for a tapped `APPROACH` (the caller undoes it; ⛔ 2026-11-13 the zoom deleted).
  */
 export function holdTapMode(mode: HoldMode, tapped: boolean): HoldMode {
-  return tapped && (mode === "ZOOM" || mode === "APPROACH") ? "HELD" : mode; // ⭐ (2026-10-28) a tapped approach too (the caller undoes it)
+  return tapped && mode === "APPROACH" ? "HELD" : mode; // ⭐ (2026-10-28) a tapped approach (the caller undoes it); ⛔ (2026-11-13) a tapped zoom: no zoom
 }

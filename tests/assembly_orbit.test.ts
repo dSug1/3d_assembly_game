@@ -24,7 +24,8 @@ import {
   orbitDir,
   ORBIT_PITCH_MAX_RAD,
   pitchOfV,
-  twoFingerKind,
+  pinchApproachDyMm,
+  pinchLatched,
   vOfPitch,
   orbitDy,
 } from "../src/input/assembly_orbit";
@@ -96,12 +97,11 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
       prev = w;
     }
   });
-  it("⭐⭐ TWO FINGERS: their common motion — the approach; apart or together — the pinch; a leading finger undecided", () => {
-    expect(twoFingerKind([0.2, -5], [-0.3, -4.4], 3.5)).toBe("APPROACH");
-    expect(twoFingerKind([-4, 0], [4, 0], 3.5)).toBe("ZOOM");
-    expect(twoFingerKind([0, 4], [0, -4], 3.5)).toBe("ZOOM");
-    expect(twoFingerKind([0, 3.6], [0, 0.5], 3.5)).toBe(null);
-    expect(twoFingerKind([0, 8], [0, 0], 3.5)).toBe("ZOOM");
+  it("⭐⭐ TWO FINGERS (⭐⭐⭐ 2026-11-13, the pinch is the approach — `pinch_approach.test.ts`): latched by the separation's change past the deadband; spread in", () => {
+    expect(pinchLatched(40, 43.6, 3.5)).toBe(true);
+    expect(pinchLatched(40, 36.4, 3.5)).toBe(true);
+    expect(pinchLatched(40, 43.4, 3.5)).toBe(false); // a common swipe changes no separation
+    expect(pinchApproachDyMm(40, 50, 1)).toBe(-10); // spread: finger-up's sign, IN
     const e = easePoint([0, 0, 0], [1, 0, 0], 16, 90);
     expect(e[0]).toBeCloseTo(1 - Math.exp(-16 / 90), 12);
     expect(easePoint([0.99995, 0, 0], [1, 0, 0], 16, 90)).toEqual([1, 0, 0]);
@@ -138,8 +138,8 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
     expect(p).not.toContain("leavesCone"); // ⛔ (2026-11-12) the slide's lock and its cone removed
     const h = code("render/hold_wiring.ts");
-    expect(h).toContain('if (kind === "APPROACH") { h.mode = "APPROACH";');
-    expect(h).toContain("if (pointerId === h.first || pointerId === h.second) approachInput(st, pxToMm(_s.y - _prev.y) / 2);");
+    expect(h).toContain("if (h.base.sep !== null) approachInput(st, pinchApproachDyMm(h.base.sep, sep, st.cfg.approachPinchGain));"); // ⭐⭐⭐ (2026-11-13) the pinch is the approach
+    expect(h).not.toContain("approachInput(st, pxToMm(_s.y - _prev.y) / 2)"); // ⛔ the two fingers' mean dy
   });
   it("⭐⭐⭐ (2026-10-28, *\"I want the offset to be the same whichever the hosting face\"*) the camera's offsets in its OWN frame: the same angle off the piece's direction, the same split up / sideways, at every pitch — never faded (⛔ gone above 60°: a top face's steep approach lost them)", () => {
     const yawOff = (2.5 * Math.PI) / 180, pitchOff = (2 * Math.PI) / 180;

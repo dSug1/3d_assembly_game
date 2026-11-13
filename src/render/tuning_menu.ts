@@ -58,27 +58,6 @@ return ({
 });
 }
 
-/**
- * ⭐ prototype (green box) — **THE BOOT ZOOM SLIDER** (the owner, 2026-10-01: *"add the slider boot zoom and set it at 1.5"*).
- * ⭐ Applied AT ONCE, not at the next boot: the zoom jumps to it, and it is where the camera reset (double tap on empty space)
- * returns — the boot view, as if the scene had booted with it.
- */
-export function bootZoomSlider(st: SceneState): MenuSlider {
-  // ⭐ 2026-10-02: the zoom is the CAMERA's distance behind the green piece (× the radius offset), 0.1–2.
-  const base = tunable(st, "boot zoom (× the camera's distance behind the green piece)", "bootZoom", 0.1, 2, 0.05);
-  return {
-    ...base,
-    set: (value) => {
-      const err = base.set(value);
-      if (err !== null) return err;
-      st.orbitStartZoom = value;
-      st.zoom = value;
-      st.zoomAtPinchStart = value;
-      applyCamera(st);
-      return null;
-    },
-  };
-}
 
 export function installTuningMenu(st: SceneState): void {
 
@@ -128,15 +107,12 @@ export function installTuningMenu(st: SceneState): void {
           ],
         },
         {
-          // ⭐ Where the camera sits relative to the green piece, and the zoom it boots at.
+          // ⭐ Where the camera sits relative to the green piece (⛔ 2026-11-13 the boot zoom deleted with the zoom).
           title: "CAMERA OFFSET",
           sliders: [
-            bootZoomSlider(st),
             tunable(st, "camera yaw offset (deg)", "cameraYawOffsetDeg", -45, 45, 0.5),
             tunable(st, "camera pitch offset (deg)", "cameraPitchOffsetDeg", -30, 30, 1),
             tunable(st, "camera radius offset beyond the green box (mm)", "cameraRadiusOffsetMm", 100, 2000, 50),
-            // ⭐ 2026-10-02: the zoom never comes closer than keeps the green piece inside this share of the view.
-            tunable(st, "green piece keep-in-view margin (share of the half-view)", "greenKeepInViewMargin", 0.3, 1, 0.05),
           ],
         },
         {
@@ -192,6 +168,8 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "orbit: around the assembly (0) / the gizmo's 2D curve (1)", "orbitMode", 0, 1, 1),
             tunable(st, "look at the gizmo within (m)", "assemblyLockDistM", 0.05, 2, 0.05),
             tunable(st, "the shell's offset: onto the gizmo within it, the smooth shell beyond (mm)", "orbitShellOffsetMm", 5, 300, 5),
+            // ⭐⭐⭐ (2026-11-13) the pinch is the approach on the phone
+            tunable(st, "approach by pinch: per mm of the fingers' spread (×; spread in, pinch out)", "approachPinchGain", 0.1, 5, 0.1),
             // ⭐⭐ (2026-11-04, the owner: *"add a slider for gizmo position and one for orbit angles"*) the piece's lag behind the ring, its two parts
             tunable(st, "lag: the gizmo's position the piece follows (ease, ms; 0 at once)", "gizmoEaseMs", 0, 500, 5),
             tunable(st, "lag: the orbit's angles (spring, ms; 0 at once)", "orbitSpringMs", 0, 500, 5),

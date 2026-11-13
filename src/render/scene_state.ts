@@ -19,7 +19,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { parseConfigOverrides, PinchTracker, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, TapHistory, MotionTracker, type FollowState } from "../input";
+import { parseConfigOverrides, OrbitController, OrbitCentreBlend, PointerNoiseMeter, PointerRouter, SwayWatcher, TapHistory, MotionTracker, type FollowState } from "../input";
 import { type Quat, type Vec3 } from "../core/vec";
 
 import { type FrameMeter } from "../core/frame_meter";
@@ -185,8 +185,9 @@ export interface SceneState {
     swStillSince: number;
     swFirstX0: number | null;
     wayIn: boolean;
-    /** ⭐ (2026-10-28) both fingers' places (px) when the two-finger input started — the APPROACH / ZOOM decision reads the travel from there; and the approach then (a tapped one undone) */
-    base?: { readonly first: readonly [number, number] | null; readonly second: readonly [number, number] | null; readonly approach: number } | null;
+    /** ⭐ (2026-10-28) the approach when the two-finger input started (a tapped one undone); ⭐⭐⭐ (2026-11-13, the pinch is the approach) the fingers' separation
+     * then (mm, `sep0`) and the one the approach last read (`sep`; `null` — not latched yet: `pinchLatched`) */
+    base?: { readonly approach: number; readonly sep0: number; sep: number | null } | null;
   } | null;
   /** ⭐⭐ Prototype (2026-10-12, §21): THE ORIENTATION CUBE — the level's distinct face directions (`core/orientation_set.ts`), whether they
    * must be read again (a goal commit), its meshes and facet maps, its window on the glass (CSS px; `null` — hidden), a press it owns. */
@@ -484,15 +485,11 @@ export interface SceneState {
   greenPieceVolumeM3: number;
   /** ⭐ Prototype: the finger lifted while the orbit coasted — the camera gets the release when the coast ends (`cameraRelease`). */
   cameraReleasePending: boolean;
-  /** ⭐ Prototype: the closest zoom that keeps the green piece on screen (`minGreenZoom`), and what it was computed from. */
-  greenZoomMin: number;
-  greenZoomMinKey: string;
   /** ⭐ Prototype: the green box's eased orbit (it chases the rig every frame). */
   boxOrbit: OrbitZoom | null;
   /** ⭐ Prototype: the box's spring (`springOrbit`) — `boxOrbit` is its `at`. */
   boxSpring: OrbitSpring | null;
   mouseLayer: MouseSecondTouchHandle;
-  orbitStartZoom: number;
   engine: Engine;
   scene: Scene;
   camera: ArcRotateCamera;
@@ -555,11 +552,11 @@ export interface SceneState {
   gestureChanged: boolean;
   lastVerdict: string;
   hudDirty: boolean;
-  pinch: PinchTracker;
   pendingCentre: { x: number; y: number; at: number } | null;
   orbit: OrbitController;
-  zoom: number;
-  zoomAtPinchStart: number;
+  /** ⭐⭐ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely. With the approach of the piece, there is no need for zoom"*)
+   * no zoom: the rig at 1 — only the DEMO scales the camera's distance (`D171`, the fit at its start to the rig's maximum at its end); 1 otherwise */
+  demoCameraScale: number;
   centreBlend: OrbitCentreBlend;
   /** ⭐⭐⭐ (2026-10-16) the rig turned onto the gizmo's face (`input/orbit_rig.ts`): the turn it had (`rigFrom`) and the new one (`rigTo`), blended at the gizmo's share */
   rigFrom: import("../input/orbit_rig").RigParams;
