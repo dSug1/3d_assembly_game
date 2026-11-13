@@ -102,6 +102,10 @@ const PENDING: Record<string, string> = {
   PLATE_DIMS_M: "the workbench's plate — `Scene_0`'s content until 2026-11-12 (the heptagon); read by the fixture `tests/helpers/workbench.ts`",
   PYRAMID_DIMS_M: "the workbench's pyramid — `Scene_0`'s content until 2026-11-12 (the heptagon); read by `frustum.test.ts` and the workbench fixture",
   NO_SWAY: "a named zero for `SwayOffsets`; only tests construct one today",
+  // ⭐ (2026-11-13, the owner) the launch messages' texts and platform, ready for the sheet that shows them — OWED (`QUEUE.md`, `BROWSER_GUARDS.md` §3)
+  LAUNCH_MESSAGES: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
+  LAUNCH_TITLE: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
+  launchPlatform: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   // ⭐ (2026-11-04, Step 4c-bis) the carrier's by-distance fallback (`loopStep`, `greenPace`, `greenFaces`) DELETED with the carrier — the face map
   // (`input/face_map.ts`); it stands at `da020af` (TILTED_ORBIT_REBUILD_SCOPE.md §13, §15).
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).

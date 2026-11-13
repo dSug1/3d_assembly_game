@@ -25,6 +25,7 @@ import { chooseTheme, themeProblems } from "@core/ui_theme";
 import { UI_THEMES } from "./content/ui_themes";
 import { applyUiTheme } from "@render/ui_theme";
 import { showLevelResults } from "@render/level_end_ui";
+import { installBrowserGuards } from "./render/browser_guards";
 
 /**
  * ⭐⭐⭐ ASK THE ORIGIN WHETHER THIS BUNDLE IS CURRENT, AND REPLACE THE PAGE ONCE IF NOT.
@@ -86,6 +87,8 @@ try {
 
   const canvas = document.getElementById("app") as HTMLCanvasElement | null;
   if (!canvas) throw new Error("no #app canvas in the document");
+  // ⭐⭐⭐ (2026-11-13) the browser's own gestures kept off the game — the iOS loupe, Safari's pinch-zoom, the double click; the screen kept awake
+  installBrowserGuards(canvas);
 
   // ⭐ `?flow=1` boots the game shell (intro → menu → worlds → levels, `&screen=` to open one); the
   // default goes straight to a scene — `Scene_1` since `D144` — so the device loop pays no taps.

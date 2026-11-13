@@ -5,7 +5,7 @@
 > **READ IF** · you are building or debugging any gesture
 > **LAST VERIFIED** · 2026-09-27
 
-⭐⭐⭐ **WHAT A FINGER DOES TODAY, BOTH DEVICES → [`spec/INPUTS_TABLE.md`](spec/INPUTS_TABLE.md).** ⭐ 2026-11-13: no zoom; the pinch is the approach → [`spec/ZOOM_REMOVED_PINCH_APPROACH.md`](spec/ZOOM_REMOVED_PINCH_APPROACH.md).
+⭐⭐⭐ **WHAT A FINGER DOES TODAY, BOTH DEVICES → [`spec/INPUTS_TABLE.md`](spec/INPUTS_TABLE.md).** ⭐ 2026-11-13: no zoom; the pinch is the approach → [`spec/ZOOM_REMOVED_PINCH_APPROACH.md`](spec/ZOOM_REMOVED_PINCH_APPROACH.md); the browser's and the system's gestures kept off the game (the iOS loupe …) and the player's launch messages → [`spec/BROWSER_GUARDS.md`](spec/BROWSER_GUARDS.md).
 ⛔⛔⛔ **2026-11-02 (`1.0.89-`): THE PARTS' TRANSLATION, ROTATION AND ALIGNMENT ARE DELETED** — snap, unsnap, undo, edge band, mode
 toggle, HitFace and PioneerFaceCursor with them; only the orbited piece moves (orbit, approach, slide), and every press is the orbit's.
 ⭐ The code before: commit **`d8134eb`**. ⏳ Later: the parts get the orbited pieces' properties; `Scene_0` gets the orbit and the slide.
