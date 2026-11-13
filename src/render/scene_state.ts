@@ -392,6 +392,8 @@ export interface SceneState {
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (D-Z3) R4 in the spit: the dy toward the turn-over held */
   asmViewHold: import("../input/polar_zone").ViewHold | null;
+  /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
+  asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
   /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */
   asmZoneAlpha: number;
   /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */

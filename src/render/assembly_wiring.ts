@@ -33,6 +33,10 @@ import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 import { mmToPx } from "../core/units";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { distanceToFacets, fingerInFrame, polarZones, viewBeyond, viewHoldStep, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
@@ -791,6 +795,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-12, §8) the dy hold released once the gizmo is deep enough in the face beyond — or the assembly's orbit off
   if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null || edgeHoldDepth(st.asmEdgeHold, st.asmG) >= st.cfg.edgeHoldMm / 1000)) st.asmEdgeHold = null;
   if (!assemblyOn(st) || st.greenBox === null) {
+    if (st.asmZoneMesh !== null) st.asmZoneMesh.mesh.isVisible = false; // ⭐ (POLAR_ZONES.md) the zones' fuchsia with the assembly's orbit only
     st.asmHeadO = null; // ⭐ (2026-11-13, §9) read afresh when the assembly's orbit is back
     st.asmHeadW = 1;
     st.asmHeadYaw = null;
@@ -809,6 +814,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zone the gizmo is in (last frame's place, the exit's hysteresis): a change turns every angle into its frame
   zoneStep(st, dtMs);
+  zoneHighlightFrame(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
   // within `tiltAutoM` of the gizmo (`tiltAutoLatch`, its hysteresis) the gizmo on a FACE HOLDING A POLE (the owner's term) tilts the orbit by itself
   // (`tiltOn`, last frame's place); the other faces need none (their lines square already); far out: the press only. ⚠ The tilt is a quarter turn: exact
@@ -1640,4 +1646,55 @@ export function zoneViewCheck(st: SceneState, yaw0: number, v0: number, fdyScree
   st.lastVerdict = "orbit: the spit holds the view short of upside down (R4) — the dy back or a dx goes on";
   st.hudDirty = true;
   return true;
+}
+
+/** ⭐⭐⭐ (2026-11-13, the owner: *"highlight the zone in fuchsia during the runtime so I can always check what it is"*) the zones' colour and its share seen */
+const ZONE_FUCHSIA = new Color3(1, 0, 1);
+const ZONE_ALPHA = 0.45;
+/** ⭐ the fuchsia lifted off the faces (m) — never in them, under the sections' 2 mm */
+const ZONE_LIFT_M = 0.0012;
+
+/**
+ * ⭐⭐⭐ (the owner: *"highlight the zone in fuchsia during the runtime"*) THE ZONES DRAWN: every zone's facets (the world map's contour polygons, lifted
+ * along their normals) in one fuchsia, see-through mesh — rebuilt when the zones change (a seat, a slider), hidden with none or the assembly's orbit off.
+ */
+function zoneHighlightFrame(st: SceneState): void {
+  const zones = zonesOf(st);
+  const wm = worldFaceMap(st);
+  const key = st.asmZones?.key ?? "";
+  if (zones.length === 0 || wm === null) {
+    if (st.asmZoneMesh !== null) st.asmZoneMesh.mesh.isVisible = false;
+    return;
+  }
+  if (st.asmZoneMesh !== null && st.asmZoneMesh.key === key) {
+    st.asmZoneMesh.mesh.isVisible = true;
+    return;
+  }
+  if (st.asmZoneMesh !== null) {
+    st.asmZoneMesh.mesh.material?.dispose();
+    st.asmZoneMesh.mesh.dispose();
+  }
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (const z of zones)
+    for (const fi of z.facets) {
+      const f = wm.facets[fi];
+      if (f === undefined || f.poly.length < 3) continue;
+      const base = positions.length / 3;
+      for (const p of f.poly) positions.push(p[0] + f.n[0] * ZONE_LIFT_M, p[1] + f.n[1] * ZONE_LIFT_M, p[2] + f.n[2] * ZONE_LIFT_M);
+      for (let k = 1; k + 1 < f.poly.length; k++) indices.push(base, base + k, base + k + 1);
+    }
+  const mesh = new Mesh("polar-zones", st.scene);
+  const data = new VertexData();
+  data.positions = positions;
+  data.indices = indices;
+  data.applyToMesh(mesh);
+  const mat = new StandardMaterial("polar-zones-mat", st.scene);
+  mat.diffuseColor = ZONE_FUCHSIA.clone();
+  mat.emissiveColor = ZONE_FUCHSIA.scale(0.6);
+  mat.alpha = ZONE_ALPHA;
+  mat.backFaceCulling = false;
+  mesh.material = mat;
+  mesh.isPickable = false;
+  st.asmZoneMesh = { key, mesh };
 }
