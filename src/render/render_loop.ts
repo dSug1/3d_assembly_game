@@ -6,11 +6,12 @@
  */
 import { orientCubeFrame } from "./orient_cube";
 import { advanceDemoFrame } from "./demo_wiring";
-import { hiddenFromBelow, topFaceOutline } from "../core/underside";
+import { hiddenFromBelow, seesFace, topFaceOutline } from "../core/underside";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import { backgroundMix } from "../core/lighting";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
 import { applyShadowLevel } from "./lighting";
@@ -248,10 +249,18 @@ export function startRenderLoop(st: SceneState): void {
       // ⚠ `isVisible` is what Babylon's default pick reads too, so a press goes through it to
       // what is behind. ⛔ Not inherited: the coloured core (`D125`) is hidden with it.
       const cam: [number, number, number] = [st.camera.position.x, st.camera.position.y, st.camera.position.z];
+      const mf = st.modelFloor;
       for (const [fid, o] of st.world.objects) {
         if (o.frozen !== true) continue;
         const mesh = st.meshOf.get(fid);
         if (!mesh) continue;
+        // ⭐ (2026-11-13) the body whose floor the scene's .glb draws: never drawn itself (its collision and rules stand)
+        if (mf !== null && mf.replaces === fid) {
+          if (mesh.isVisible) mesh.isVisible = false;
+          const c = mesh.metadata?.core as { isVisible: boolean } | undefined;
+          if (c && c.isVisible) c.isVisible = false;
+          continue;
+        }
         const want = !hiddenFromBelow(st.world, fid, cam);
         if (mesh.isVisible !== want) mesh.isVisible = want;
         const core = mesh.metadata?.core as { isVisible: boolean } | undefined;
@@ -260,6 +269,12 @@ export function startRenderLoop(st: SceneState): void {
         // never pickable, never an orbit candidate: it can touch nothing.
         const outline = topOutlineFor(st, fid, mesh);
         if (outline !== null && outline.isVisible === want) outline.isVisible = !want;
+      }
+      // ⭐⭐ the SAME rules on the scene's own floor (its .glb: one face, one-sided): hidden from below, its top face's contour shown instead
+      if (mf !== null) {
+        const want = !seesFace(cam, mf.bottom);
+        if (mf.mesh.isVisible !== want) mf.mesh.isVisible = want;
+        if (mf.outline.isVisible === want) mf.outline.isVisible = !want;
       }
     }
     // ⭐ The shadow switch (shadowsOn, CAMERA): three soft shadow maps redraw every piece each frame
@@ -291,6 +306,12 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
+    // ⭐ (2026-11-13) LEVEL's background slider: the scene's own background with the night blue mixed in. ⚠ Written on change only.
+    if (st.cfg.backgroundBluePct !== st.backgroundBlueSeen) {
+      st.backgroundBlueSeen = st.cfg.backgroundBluePct;
+      const c = backgroundMix(st.sceneSpec.lighting?.background ?? [0.078, 0.086, 0.102], st.cfg.backgroundBluePct);
+      st.scene.clearColor = new Color4(c[0], c[1], c[2], 1);
+    }
     // ⭐ `D112`: the timer repaints the HUD once a SECOND, not per frame. ⛔ On the wall clock, not the
     // score's: counted from the first press, it never ticked before a touch — and the `frame` line
     // (and `D138`'s shadow verdict) sat at `—` on an untouched page.

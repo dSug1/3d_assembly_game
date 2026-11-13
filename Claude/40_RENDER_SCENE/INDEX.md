@@ -43,7 +43,7 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `pointer_wiring.ts` · `render_loop.ts` | every press/move/release; the per-frame order |
 | `collision_wiring.ts` | `3D6`: the shape and bounds SOURCES for `core/collision.ts` — the seam Blender shapes replace |
 | `undo_wiring.ts` | `D111`: snapshot at a gesture's start, restore on a double tap on a body |
-| `lighting.ts` · `empty_space_probe.ts` | a scene's lights from `core/lighting.ts` · `D114`'s probe for empty glass |
+| `lighting.ts` · `model_import.ts` · `empty_space_probe.ts` | a scene's lights, environment, tone, AO → `spec/SCENE_SETUP.md` · its `.glb` · `D114`'s probe |
 | `screens.ts` | the game shell (`D105`), a DOM overlay, `?flow=1`; ⭐ the ⏸ pause menu (`D144`) |
 | `ui_theme.ts` · `level_end_ui.ts` · `level_end_wiring.ts` | `D180`: the UI theme's tokens and classes (every screen's style) · the results screen · the level end's per-frame facts |
 | `hud.ts` · `menu.ts` · `mouse_adapter.ts` | the readout · the slider panel · `D94`'s desktop seam (below) |
@@ -201,7 +201,7 @@ quietly would cost the next device session.
 ⭐⭐ **The frame meter and AUTO shadows** (`D138`; the tablet: 10 fps, 20 without shadows): the HUD's `frame`
 line is the median and p95 of 120 frames (`core/frame_meter.ts`); CAMERA's *shadows*: `0` off, `1` on, `2`
 **auto** (default) — measured 3 s, then OFF for the session if the median misses `autoShadowBudgetMs` (33 ms),
-latched (`core/auto_shadow.ts`). ⭐ 10-15: OFF keeps the orbited piece's shadow (`applyShadowLevel`). fps across devices → `spec/FRAME_RATE.md`.
+latched (`core/auto_shadow.ts`). ⭐ OFF keeps the orbited piece's shadow (`applyShadowLevel`). fps per device → `spec/FRAME_RATE.md`.
 
 ## Queued
 

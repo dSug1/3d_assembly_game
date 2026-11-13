@@ -177,6 +177,37 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 
 1. **The script** — `Assets/Blender/scripts/build_<scene>.py -- --step N` (`build_engine.py` is the model to copy): rebuilds the `.blend` up to step N,
    the finish pass, a preview render, ⭐ every check of `PART_AUTHORING.md` §4.2 printed. ⚠ Blender runs are HEAVY: started on the owner's go only.
+   ⭐⭐ **FROM STEP 1, THE GAME'S STAGE IN THE `.blend`, AT THE GAME'S SCALE** (the owner, 2026-11-13: *"I can see the floor is much larger in blender
+   compared to the assembly than what it is in the scene of the pipeline"* — `Scene_2`'s preview floor was 24 units, 3.4 m at 0.14 m a unit, for the
+   game's 2 m: every look until the export judged the engine against a floor 1.7× too big):
+   - **the FLOOR is DESIGNED in the scene's Blender file and EXPORTED** (`FLOOR`, a child of the root, role `floor`, never a part): the game's size in
+     reference units = **its metres / `unitM`** (`Scene_2`: 2 m / 0.14 = 14.29), its colour (`Scene_1`'s sand yellow), ONE FACE facing up with a
+     ONE-SIDED material — invisible from below by itself (Blender's backface culling, the game's). The game draws it INSTEAD of the level's floor body
+     (whose collision and rules stand) and applies the floor's rules to it: hidden from below (`D128`), its top face's contour shown then (`D196` — a
+     contour cannot be a material: the game draws it from the mesh's own vertices, `render/model_import.ts`). Its corners: the scene's choice
+     (`Scene_2`: r = half the plinth's corner radius, 0.165);
+   - **the game's ENVIRONMENT as the world** (`Assets/Environment/sky_sand.hdr`, §6.4 item 3) and **the colour transform Standard** (Babylon has no
+     tone mapping; Filmic washed the floor's yellow to cream), the viewport in Material Preview with the scene's world and lights;
+   - ⛔ **checked**: the floor's size × `unitM` = the game's floor (2.000 m) — before the first look, not at the export.
+   - ⭐⭐ **WHERE EACH THING IS MADE — ONE SOURCE EACH** (the owner, 2026-11-13: *"do we need to work the environment, the lighting, etc. directly in
+     blender …, or does it need to be made in the babylon/ts pipeline ?"* → *"do it"*). What a `.glb` carries is made in Blender; what it cannot carry
+     is made in the game and MIRRORED into the `.blend` by the build, read from the game's files (never retyped):
+
+     | What | Made in | The other side |
+     |---|---|---|
+     | shapes, collision, proxies, markers, the FLOOR | the `.blend` (the build script) | the game reads the `.glb` |
+     | materials (colour, metallic, roughness, alpha, textures) | the `.blend` — Principled's glTF inputs only (sheen, specular tint … are dropped) | the `.glb` |
+     | the ENVIRONMENT (the sky the metal reflects) | ONE image, `Assets/Environment/sky_sand.hdr` (`scripts/gen_sky_hdr.mjs`) | both load the same file |
+     | the LIGHTS (spots, directional, ambient fill), the background, tone mapping, contact shadows, the environment's strength | the GAME's data (the scene's `lighting`, `envIntensity`) — shadows, the auto-shadow switch and the frame budget depend on them | the build MIRRORS them as Blender lights and world (`build_engine.py`: "the GAME's lighting mirrored") |
+     | shadows, tone mapping, the contour seen from below | the game | Blender: Standard colour; the rest not shown |
+
+     ⭐ The conversions (Babylon's PBR on the `.glb`): a directional of intensity I → a Blender sun of strength I (both apply Lambert's 1/π); a spot → its URP intensity at the
+     bodies' mean, Babylon's physical falloff I/d² in metres → a Blender spot of power 4π·I / `unitM`²; the ambient fill and the sky → the world's
+     light, the camera seeing the background colour; positions (−X, Y, Z) / `unitM` (Babylon's glTF reader mirrors x); the sky's panorama mirrored
+     (Mapping y × −1). ⚠ Eevee approximates Babylon (reflections, soft shadows): the look in Blender is close — ⛔ the game's look is the judge.
+     ⭐⭐ **THE SCENE SETUP, in full — `40_RENDER_SCENE/spec/SCENE_SETUP.md`** (the lighting's fields, the mirror, `Scene_2`'s cream studio). ⭐ To set a
+     scene's atmosphere: proposals rendered in Blender from the reference (`atmosphere_proposal.py`, renders only), ⛔ GATE: the owner picks one;
+     then its numbers go into the scene's `lighting` (the game) and the build mirrors them — compared against the chosen render from its camera.
 2. **One step a round** — build step N, the checks clean, ⛔ **GATE: the owner's look in Blender**; his changes come back either as words or as edits
    in his own copy of the `.blend` (`<scene>_owner.blend`): READ them (the file's numbers), carry the RULE into the script, never the hand-dragged number
    (§4.1 of `PART_AUTHORING.md`); a request that breaks a rule (a scale that bends the V) is asked, not taken.

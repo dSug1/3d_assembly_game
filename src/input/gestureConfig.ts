@@ -192,6 +192,8 @@ export interface GestureConfig {
    * `Assets/Environment/sky_sand.hdr`). `0` = none (the chrome reflects black, as before it), `1` = as generated.
    */
   envIntensity: number;
+  /** ⭐ (2026-11-13) the scene's contact shadows (ambient occlusion) on (`1`) or off (`0`) — where the scene asks for them; a cost per frame. */
+  aoOn: number;
   // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
   // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
@@ -203,6 +205,8 @@ export interface GestureConfig {
    * counted). The owner: *"the complete demo can be adjusted to run between 10 s to 1 min"*.
    */
   demoDurationS: number;
+  /** ⭐ (2026-11-13) the background's share of night blue, % (0 = the scene's own; 95 at most) — `core/lighting.ts` `backgroundMix`. */
+  backgroundBluePct: number;
   /**
    * ⭐ How far every highlight floats off the face or edge it marks, in mm ON THE GLASS — the face
    * fills and contours, the aligned outline, the PioneerFaceCursor (×3). One CSS pixel by default.
@@ -686,12 +690,15 @@ export const DEFAULT_CONFIG: GestureConfig = {
   modelLayers: 0,
   // ⭐ The owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"* — the sky it reflects, as generated.
   envIntensity: 1,
+  aoOn: 1,
   // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
   // 1 degree"* — so zooming out cannot place a piece nobody moved.
   ungrabbedGoalMm: 1,
   ungrabbedGoalDeg: 1,
   // ⭐ The owner, 2026-09-29: *"set default demo duration to 23 s"* (30 at `D170`, then 20); a slider in SCENE, 10–60 s.
   demoDurationS: 23,
+  // ⭐ The owner, 2026-11-13: "make a slider in the LEVEL so the player can chose its mix of blue" — the scene's own background by default
+  backgroundBluePct: 0,
   // ⭐ The owner, 2026-09-28: 0.1 mm (was one CSS pixel, 25.4 / 96 mm). ⭐ Measured safe: it stays ~67/d times
   // above a 24-bit depth buffer's resolution at d metres (the camera's 0.01–100 m planes) — 13× at 5 m, vectored.
   // ⚠ Raise it if a far zoom flickers (a device with a coarser depth buffer).
@@ -1061,6 +1068,9 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.ungrabbedGoalDeg > 0 && cfg.ungrabbedGoalDeg <= 45)) {
     throw new Error(`ungrabbedGoalDeg (${cfg.ungrabbedGoalDeg}) must be in (0, 45]°: 0 places nothing.`);
   }
+  if (!(cfg.backgroundBluePct >= 0 && cfg.backgroundBluePct <= 95)) {
+    throw new Error(`backgroundBluePct (${cfg.backgroundBluePct}) must be in [0, 95] %.`);
+  }
   if (!(cfg.demoDurationS >= 10 && cfg.demoDurationS <= 60)) {
     throw new Error(`demoDurationS (${cfg.demoDurationS}) must be in [10, 60] s — the owner's range.`);
   }
@@ -1073,6 +1083,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (![0, 1, 2, 3].includes(cfg.modelLayers)) {
     throw new Error(`modelLayers (${cfg.modelLayers}) must be 0 (the look), 1 (+ collision), 2 (+ face proxies) or 3 (all).`);
   }
+  if (cfg.aoOn !== 0 && cfg.aoOn !== 1) throw new Error(`aoOn (${cfg.aoOn}) must be 0 (off) or 1 (on).`);
   if (!(cfg.envIntensity >= 0 && cfg.envIntensity <= 3)) {
     throw new Error(`envIntensity (${cfg.envIntensity}) must be in [0, 3]: 0 none, 1 as generated.`);
   }

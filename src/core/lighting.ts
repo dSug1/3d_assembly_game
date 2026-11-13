@@ -35,9 +35,27 @@ export interface LightSpec {
   readonly spotInnerDeg?: number;
   readonly kelvin: number;
   readonly filter: Triple;
+  /**
+   * ⭐ (2026-11-13, `Scene_2`'s studio) the light's apparent SIZE, degrees: its shadows SOFT (Babylon: contact-hardening, PCSS; Blender's mirror: a
+   * sun's angle). Absent: Unity's soft PCF as before.
+   */
+  readonly softnessDeg?: number;
 }
 
-export interface LightingSpec {
+/**
+ * ⭐⭐ (2026-11-13) `Scene_2`'s STUDIO (the owner: *"can you recreate this atmosphere"* → *"atmosphere_C_between_floor.png is the setup I want. build
+ * that"*): what a scene with a `.glb` model also needs. All optional — `Scene_1` and `Scene_0` carry none and look as before.
+ */
+export interface LightingStudio {
+  /** The panorama the model's PBR materials take their fill and reflections from (a URL; `Assets/Environment/*.hdr`). */
+  readonly environment?: string;
+  /** Tone mapping (ACES) on — the high-key, low-contrast look; Blender's mirror: Filmic. */
+  readonly toneMapping?: { readonly exposure: number; readonly contrast: number };
+  /** Contact shadows (screen-space ambient occlusion) — the soft dark where a part meets another or the floor. */
+  readonly ambientOcclusion?: boolean;
+}
+
+export interface LightingSpec extends LightingStudio {
   /** The clear colour behind the scene, linear RGB. */
   readonly background: Triple;
   readonly lights: readonly LightSpec[];
@@ -48,6 +66,18 @@ export interface LightingSpec {
    * scene has but does not list. `0` = none — then every face turned from the three lights is black.
    */
   readonly ambient: number;
+}
+
+/** ⭐ (2026-11-13) `Scene_1`'s NIGHT BLUE background — the blue the LEVEL slider `backgroundBluePct` mixes into any scene's background. */
+export const NIGHT_BLUE: Triple = [0.0087, 0.1465, 0.2138];
+
+/**
+ * ⭐ (2026-11-13, the owner: *"make a slider in the LEVEL so the player can chose its mix of blue"*) the background shown: the scene's own `base`
+ * with `bluePct` % of the night blue mixed in, channel by channel (the clear colour's own values, not tone-mapped). 0 = the scene's own.
+ */
+export function backgroundMix(base: Triple, bluePct: number): Triple {
+  const w = Math.min(1, Math.max(0, bluePct / 100));
+  return [base[0] + (NIGHT_BLUE[0] - base[0]) * w, base[1] + (NIGHT_BLUE[1] - base[1]) * w, base[2] + (NIGHT_BLUE[2] - base[2]) * w];
 }
 
 /** ⭐ The direction a Unity light shines, from its Euler angles. */

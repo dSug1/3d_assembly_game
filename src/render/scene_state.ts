@@ -597,6 +597,19 @@ export interface SceneState {
   shadowLevelSeen: "FULL" | "PIECE" | null;
   /** ⭐ (2026-11-13) the scene's `.glb` (`render/model_import.ts`): loading, its parts, or ⛔ why it was refused — on the HUD's first line. `""` no model. */
   modelStatus: string;
+  /** ⭐ (2026-11-13) the `backgroundBluePct` last applied to the clear colour (`-1`: none yet — the first frame applies it). */
+  backgroundBlueSeen: number;
+  /**
+   * ⭐ (2026-11-13) the scene's FLOOR from its `.glb` (designed in the Blender file): drawn INSTEAD of the level's floor body (`replaces`: that body's
+   * id, its mesh kept hidden — its collision and rules stand), and `D128` / `D196` applied to it in the render loop — hidden when the camera sees
+   * its underside (`bottom`), its top face's contour (`outline`) shown then. `null`: no model floor.
+   */
+  modelFloor: {
+    readonly mesh: AbstractMesh;
+    readonly outline: LinesMesh;
+    readonly bottom: { readonly centre: Vec3; readonly normal: Vec3 };
+    readonly replaces: string | null;
+  } | null;
   cfg: GestureConfig;
   canvas: HTMLCanvasElement;
 }

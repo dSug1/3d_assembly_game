@@ -1,3 +1,4 @@
+import { unityForward } from "../src/core/lighting";
 import { describe, expect, it } from "vitest";
 import { SCENE_1 } from "../src/content/scene_1";
 import { SCENE_2 } from "../src/content/scene_2";
@@ -21,9 +22,8 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(SCENE_2.orbitGoals).toBeUndefined();
   });
 
-  it("⭐ Scene_1's floor, lights, rig, units and volume — read, never retyped", () => {
+  it("⭐ Scene_1's floor, rig, units and volume — read, never retyped", () => {
     expect(SCENE_2.bodies[0]).toBe(SCENE_1.bodies.find((b) => b.id === "Floor"));
-    expect(SCENE_2.lighting).toBe(SCENE_1.lighting);
     expect(SCENE_2.orbit).toBe(SCENE_1.orbit);
     expect(SCENE_2.unitM).toBe(SCENE_1.unitM);
     expect(SCENE_2.playVolume).toBe(SCENE_1.playVolume);
@@ -31,6 +31,35 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
 
   it("⭐ round-trips through the scene's JSON seam", () => {
     expect(parseSceneDescriptor(serializeSceneDescriptor(SCENE_2))).toEqual(SCENE_2);
+  });
+
+  it("⭐⭐ (2026-11-13) its OWN lighting, the cream studio (the owner: \"atmosphere_C_between_floor.png is the setup I want\")", () => {
+    const L = SCENE_2.lighting!;
+    expect(L).not.toBe(SCENE_1.lighting);
+    expect(L.lights.map((l) => [l.name, l.type, l.softnessDeg])).toEqual([["Key_softbox", "DIRECTIONAL", 25]]);
+    expect(L.ambient).toBe(0); // the studio panorama is the fill — never two fills
+    expect(L.environment).toMatch(/studio_cream.*\.hdr/);
+    expect(L.toneMapping).toEqual({ exposure: 0.89, contrast: 1.1 });
+    expect(L.ambientOcclusion).toBe(true);
+    // ⭐ the key comes FROM where the panorama's soft box is (scripts/gen_sky_hdr.mjs KEY_FROM): its travel the opposite
+    const f = unityForward(L.lights[0]!.eulerDeg);
+    const from = [-0.666, 0.643, 0.378];
+    expect(f[0]! * from[0]! + f[1]! * from[1]! + f[2]! * from[2]!).toBeLessThan(-0.999);
+    // Scene_1 untouched
+    expect(SCENE_1.lighting!.environment).toBeUndefined();
+  });
+
+  it("the studio's fields refused when malformed", () => {
+    const base = JSON.parse(serializeSceneDescriptor(SCENE_2));
+    const bad = (f: (o: { lighting: Record<string, unknown> & { lights: Record<string, unknown>[] } }) => void) => {
+      const o = structuredClone(base);
+      f(o);
+      return () => parseSceneDescriptor(JSON.stringify(o));
+    };
+    expect(bad((o) => (o.lighting.environment = ""))).toThrow(/environment/);
+    expect(bad((o) => (o.lighting.toneMapping = { exposure: 0, contrast: 1 }))).toThrow(/toneMapping/);
+    expect(bad((o) => (o.lighting.ambientOcclusion = "yes"))).toThrow(/ambientOcclusion/);
+    expect(bad((o) => (o.lighting.lights[0]!.softnessDeg = 90))).toThrow(/softnessDeg/);
   });
 });
 

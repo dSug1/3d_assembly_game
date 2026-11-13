@@ -62,7 +62,14 @@ export function buildLighting(st: SceneState, target: Triple): ShadowGenerator[]
       d.intensity = e;
       d.diffuse = colour;
       d.specular = colour;
-      gens.push(shadowFor(d, spec.shadowStrength));
+      const g = shadowFor(d, spec.shadowStrength);
+      // ⭐ (2026-11-13, `Scene_2`'s studio) a light with a SIZE casts SOFT shadows — contact-hardening (PCSS): sharp where an object touches, wider
+      // away from it, as under the reference's soft box. ⚠ The light's size as a share of its shadow map: tan(softness / 2), clamped.
+      if (l.softnessDeg !== undefined) {
+        g.useContactHardeningShadow = true;
+        g.contactHardeningLightSizeUVRatio = Math.min(0.5, Math.max(0.01, Math.tan((l.softnessDeg * Math.PI) / 360)));
+      }
+      gens.push(g);
     }
   }
   return gens;

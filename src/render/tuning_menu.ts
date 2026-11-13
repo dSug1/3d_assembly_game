@@ -78,6 +78,7 @@ export function installTuningMenu(st: SceneState): void {
         tunable(st, "lock pieces in their goal (1 = locked, 0 = free)", "lockPlacedPieces", 0, 1, 1),
         // ⭐ `D170`: how long a demo scene takes, first move to last — changing it mid-demo changes the speed.
         tunable(st, "demo duration (s)", "demoDurationS", 10, 60, 5),
+        tunable(st, "background: night blue share (%; 0 = the scene's own)", "backgroundBluePct", 0, 95, 5),
       ],
       subsections: [
         {
@@ -290,6 +291,7 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐ (2026-11-13) a Blender scene's layers over its look — to check the import (`render/model_import.ts`).
         tunable(st, "model layers (0 = look, 1 = + collision, 2 = + face proxies, 3 = all)", "modelLayers", 0, 3, 1),
         tunable(st, "environment (the sky the model's metal reflects; 0 = none)", "envIntensity", 0, 3, 0.1),
+        tunable(st, "contact shadows (ambient occlusion; 0 = off)", "aoOn", 0, 1, 1),
       ],
     },
     {
