@@ -424,8 +424,11 @@ def build_plinth():
     top_edges = [e for e in bm.edges if all(abs(v.co.y - PLINTH_H) < 1e-6 for v in e.verts)]   # ⛔ 1e-9 caught NO edge (float32): no bevel, silently
     assert top_edges, "the plinth's top edges were not found: no bevel"
     bmesh.ops.bevel(bm, geom=top_edges, offset=PLINTH_BEVEL, segments=3, affect="EDGES", profile=0.5)
-    box_uv(mesh_object("E01_plinth_mesh", bm, MAT["woodV"], part, coll))
-    mesh_object("UCX_E01_00", prism_y(outline, 0.0, PLINTH_H), MAT["ucx"], part, coll, "ucx")
+    pm = mesh_object("E01_plinth_mesh", bm, MAT["woodV"], part, coll)
+    pm.data.auto_smooth_angle = math.radians(35)   # its bevel's 3 steps are 30° each — ON Blender's 30°, faceted by float noise: its own 35°
+    box_uv(pm)
+    # collision: the outline with 2 steps a corner (24 vertices — the drawn 8 a corner gave 36-gon caps, 140 triangles: COLLISION SIMPLICITY)
+    mesh_object("UCX_E01_00", prism_y(rounded_rect(PLINTH_W, PLINTH_D, PLINTH_R, seg=2), 0.0, PLINTH_H), MAT["ucx"], part, coll, "ucx")
     inset = rounded_rect(PLINTH_W - 2 * PLINTH_BEVEL, PLINTH_D - 2 * PLINTH_BEVEL, PLINTH_R - PLINTH_BEVEL)
     mesh_object("UFM_E01_top", flat_face(inset, PLINTH_H), MAT["ufm"], part, coll, "ufm")
     seat_marker("MC_E01_case", part, coll, (0, PLINTH_H, 0), (0, 1, 0), (1, 0, 0))
@@ -604,8 +607,10 @@ def build_crankshaft():
         corners += [c(a), c(a, py, pz), c(b, py, pz), c(b)]                    # down the journal, up the arm, along the pin, down the arm
         ucx.append(cyl_between(c(x0), c(a), SR, 8, circumscribed=True))        # collision: the journal, the pin, each arm with its knees
         ucx.append(cyl_between(c(a, py, pz), c(b, py, pz), SR, 8, circumscribed=True))
-        for xx in (a, b):
-            ucx.append(hull(ball_points(c(xx), SR) + ball_points(c(xx, py, pz), SR)))
+        for xx in (a, b):        # each arm ONE 8-sided cylinder knee to knee, SR / 2 past each (a hull of two balls before: 48 – 72 triangles)
+            k0, k1 = c(xx), c(xx, py, pz)
+            d = (k1 - k0).normalized()
+            ucx.append(cyl_between(k0 - d * SR / 2, k1 + d * SR / 2, SR, 8, circumscribed=True))
         x0 = b
     corners.append(c(NOSE_X))
     ucx.append(cyl_between(c(x0), c(NOSE_X), SR, 8, circumscribed=True))
@@ -1157,7 +1162,9 @@ def build_piston(side, i, x, name):
     mesh_object(f"{pid}_piston_ring", torus(M @ Matrix.Translation((x, s + 0.18, 0)), PISTON_R + 0.001, 0.007, rseg=6), MAT["dark"], part, coll,
                 smooth="all")
     # its name BESIDE the pockets (they take the crown's middle, across the bank): toward the crank's rear, smaller
-    mesh_object(f"{pid}_piston_number", crown_number(name, M @ Matrix.Translation((x + NUMBER_X, y1, 0)), size=NUMBER_SIZE), MAT["dark"], part, coll)
+    num = mesh_object(f"{pid}_piston_number", crown_number(name, M @ Matrix.Translation((x + NUMBER_X, y1, 0)), size=NUMBER_SIZE), MAT["dark"], part, coll)
+    num["metadata"] = True       # ⭐ METADATA, its own object (the owner, 2026-11-13: *"make it separate objects so we can hide them in the game later
+                                 # on"*): the game may hide it; never merged into a part's mesh, no collision, no proxy (PART_AUTHORING.md §3 item 1bis)
 
     # the ROD: its own object, its origin ON THE HINGE (the small end = the wrist pin), turning about x — LOCKED at the goal's angle in play
     F = rod_frame(side, i, x)
@@ -1285,10 +1292,11 @@ def build_head(side):
             mesh_object(f"{pid}_valve_{name}_{which}_cap", cyl_between(V @ Vector((0, cc - ch / 2, 0)), V @ Vector((0, cc + ch / 2, 0)), cr, 16),
                         MAT["chromeH"], part, coll, origin=V)
             vo["axis"], vo["lift"] = "local −Y (it opens down its own axis)", 0.07
-            # collision: one piece per valve above the bank (its stem from the grommet, its cap) — the gaps between the caps open for the exhaust
-            pts = [V @ Vector((cr * math.cos(t), y, cr * math.sin(t))) for y in (cc - ch / 2, cc + ch / 2) for t in [2 * math.pi * k / 12 for k in range(12)]]
-            pts += [V @ Vector((sr * math.cos(t), ga, sr * math.sin(t))) for t in [2 * math.pi * k / 8 for k in range(8)]]
-            ucx.append(hull(pts))
+            # collision per valve above the bank: ⭐ TWO CYLINDERS — its cap, and its stem from the grommet up into the cap (the owner, 2026-11-13:
+            # *"same for E13_valve_A1_1_cap"* — one hull of the cap's rims and the stem's ring before: a cone of 60 slivers round the stem);
+            # the gaps between the caps open for the exhaust
+            ucx.append(cyl_between(V @ Vector((0, cc - ch / 2, 0)), V @ Vector((0, cc + ch / 2, 0)), cr, 12, circumscribed=True))
+            ucx.append(cyl_between(V @ Vector((0, ga, 0)), V @ Vector((0, cc - ch / 2, 0)), sr, 8, circumscribed=True))
     mesh_object(f"{pid}_head_{tag}_grommets", grommets, MAT["chrome"], part, coll, smooth="all")
     discs = bmesh.new()
     for s_, i, x, name in CYLS:
@@ -1328,6 +1336,7 @@ EXH_DX, EXH_ZS = 0.17, 0.15                     # a flange's centre from its bor
                                                 # front — the owner's file, 2026-11-13: the two exhausts mirror images, as the banks), across (z′)
 FLANGE = (0.065, 0.02)                          # r, thickness
 FLANGE_CHAMFER = 0.004                          # its rims' chamfer
+STUB_PIECES = 4                                 # a stub's collision: a chain of cylinders along its path
 STUB_R, COLL_R, COLL_LIP = 0.05, 0.085, 0.014   # the stub's r, the collector's r, its wall at the open end
 COLL_UP, COLL_Z = 0.10, 0.65                    # the collector's axis above the disc tops (y′), and out (z′)
 DEAD_END = 0.14                                 # the collector's closed REAR past the last stub
@@ -1447,12 +1456,16 @@ def build_exhaust(side):
         up_b = M.to_3x3() @ Vector((0, 1, 0))
         mesh_object(f"{pid}_exhaust_{tag}_stub_{name}", tube(path, STUB_R, seg=EXH_SEG, start=up_b), MAT["chrome"], part, coll, smooth=True)
         merge_into(rest, disc(M @ f, -(M.to_3x3() @ Vector((0, 1, 0))), fr, 12))
-        # collision: the stub with its flange, one convex piece (the stub runs in a plane x = const: its hull stays clear of the valve caps)
-        pts = [M @ (f + Vector((fr * math.cos(t), 0, fr * math.sin(t)))) for t in [2 * math.pi * k / 12 for k in range(12)]]
-        tb = tube(path, STUB_R, seg=EXH_SEG, start=M.to_3x3() @ Vector((0, 1, 0)))
-        pts += [v.co.copy() for v in tb.verts]
-        tb.free()
-        ucx.append(hull(pts))
+        # collision: ⭐ the flange a short cylinder, the stub a CHAIN of STUB_PIECES cylinders along its path (the owner, 2026-11-13: *"the
+        # UCX_E16_00 of the exhaust connectors is very bad geometry … make a series of cylinders appended together"* — one hull of the flange
+        # and every vertex of the bent tube before: hundreds of slivers); each joint overlapped by STUB_R / 2 so no gap opens at a bend, the
+        # first starting ON the flange's top (never into the disc below: another part)
+        ucx.append(cyl_between(M @ f, M @ (f + Vector((0, ft, 0))), fr, 12, circumscribed=True))
+        ks = [round(j * (len(path) - 1) / STUB_PIECES) for j in range(STUB_PIECES + 1)]
+        for j, (ka, kb) in enumerate(zip(ks, ks[1:])):
+            pa, pb = path[ka].copy(), path[kb].copy()
+            d = (pb - pa).normalized()
+            ucx.append(cyl_between(pa - (d * STUB_R / 2 if j else Vector()), pb + d * STUB_R / 2, STUB_R, 8, circumscribed=True))
     mesh_object(f"{pid}_exhaust_{tag}_flanges", flanges, MAT["chrome"], part, coll, smooth=True)
     # ⭐ the collector, ONE revolved profile (*"make it a regola d'arte"*): a dark bore inside the open front, the lip, the outer wall, and a
     # flattened DOME closing the rear on the wall's own last ring — no sphere pushed into a cylinder
@@ -1633,6 +1646,11 @@ def finish_pass():
             for e in bmc.edges:
                 if len(e.link_faces) == 2 and e.calc_face_angle(0) >= math.radians(35):   # a chamfer's (45°) and its corners' (35.3°)
                     e.smooth = False
+                # ⭐ a FLAT CAP (a face of more than 4 sides: a crown, a deck, a disc) keeps EVERY edge sharp where its neighbour is not
+                # coplanar — it shades FLAT (the owner, 2026-11-13: *"some of the pistons' top face are still not flat"*: the crown met each
+                # valve pocket's floor at 17°, under the 30° smoothing, and its normals leaned 8.6° toward it — a gradient on a flat face)
+                elif len(e.link_faces) == 2 and any(len(f.verts) > 4 for f in e.link_faces) and e.calc_face_angle(0) > math.radians(1):
+                    e.smooth = False
             bmc.to_mesh(me)
             bmc.free()
             me.use_auto_smooth, me.auto_smooth_angle = True, smooth_angle
@@ -1737,6 +1755,12 @@ if os.environ.get("CHECK_CONTROLS") and STEP >= 7:
     g = mesh_object("UFM_E01_CONTROL_GHOST_over", quad(bmesh.new(), [(1.4, PLINTH_H, 1.4), (1.6, PLINTH_H, 1.4), (1.6, PLINTH_H, 1.6), (1.4, PLINTH_H, 1.6)]),
                     MAT["ghost"], part, coll, "ufm")                                                       # ⓑ a ghost over a real face
     g["ghost"], g["for_part"] = True, "E02"
+    sph = [Vector((0.1 * math.cos(a) * math.cos(b), -1 + 0.1 * math.sin(b), 0.1 * math.sin(a) * math.cos(b)))
+           for a in [2 * math.pi * k / 16 for k in range(16)] for b in [math.pi * (j / 8 - 0.5) for j in range(1, 8)]]
+    mesh_object("UCX_E01_CONTROL_hull", hull(sph), MAT["ucx"], part, coll, "ucx")       # ⑫ a collision piece a dense hull
+    me_c = bpy.data.objects["E07_piston_mesh"].data                                          # ⑬ a crown's sharp edges cleared
+    for e in me_c.edges:
+        e.use_edge_sharp = False
     src = bpy.data.objects["UFM_E05_GHOST_A1"]                                                              # ⑩ a ghost RECESSED 0.1 down its bore
     rc = src.copy(); rc.data = src.data.copy(); rc.name = "UFM_E05_CONTROL_GHOST_recessed"; src.users_collection[0].objects.link(rc)
     rc.data.transform(Matrix.Translation(src.matrix_world.inverted().to_3x3() @ (YUP_ROOT.matrix_world.to_3x3() @ (bank_frame(-1).to_3x3() @ Vector((0, -0.1, 0))))))
@@ -2323,6 +2347,32 @@ for g in [o for o in bpy.data.objects if o.get("ghost")]:
         floating.append(f"{g.name} ({gap:.3f} off)")
 print("ghost floors CONNECTED to real surfaces:", "✅ every one" if not floating else "⚠ floating — " + "; ".join(floating))
 print("redundant geometry (every visible mesh and proxy):", "✅ none" if not bad else "⛔ " + "; ".join(bad))
+# ⭐ FLAT CAPS SHADED FLAT (the owner, 2026-11-13: the pistons' crowns): every face of more than 4 sides on a smooth object — its shading
+# normals (auto smooth's split normals) within 1° of the face's own
+leaning = []
+for o in bpy.data.objects:
+    if o.type == "MESH" and o.get("role") == "render" and o.data.use_auto_smooth:
+        me = o.data
+        me.calc_normals_split()
+        worst = max((math.degrees(me.loops[li].normal.angle(pl.normal, 0)) for pl in me.polygons if len(pl.vertices) > 4 for li in pl.loop_indices),
+                    default=0)
+        if worst > 1:
+            leaning.append(f"{o.name} ({worst:.1f}°)")
+print("FLAT CAPS shaded flat (every face of more than 4 sides, its normals within 1°):",
+      "✅ every one" if not leaning else f"⛔ {len(leaning)} — " + "; ".join(sorted(leaning)))
+# ⭐ COLLISION SIMPLICITY (the owner, 2026-11-13: *"check the md files why these exhaust connectors and valve caps faces have failed the checks for
+# simplification"* — no check read a collision piece's SHAPE: the exhausts' hulls were 216 triangles, slivers 0.9° wide): every UCX_ piece a simple
+# shape — at most UCX_MAX_VERTS vertices and UCX_MAX_TRIS triangles (a 12-sided cylinder: 24, 44; a box: 8, 12)
+UCX_MAX_VERTS, UCX_MAX_TRIS = 24, 48
+heavy = []
+for o in bpy.data.objects:
+    if o.get("role") == "ucx":
+        o.data.calc_loop_triangles()
+        nv, nt = len(o.data.vertices), len(o.data.loop_triangles)
+        if nv > UCX_MAX_VERTS or nt > UCX_MAX_TRIS:
+            heavy.append(f"{o.name} ({nv} vertices, {nt} triangles)")
+print(f"COLLISION SIMPLICITY (every UCX_ piece ≤ {UCX_MAX_VERTS} vertices, ≤ {UCX_MAX_TRIS} triangles):",
+      "✅ every piece" if not heavy else f"⛔ {len(heavy)} — " + "; ".join(sorted(heavy)))
 
 
 def ref_pose(o):

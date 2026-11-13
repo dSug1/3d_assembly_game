@@ -46,8 +46,17 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    edges of the banks which snap with the surface of the upper case"*): a part flush on its host shows no groove along the joint.
    ⭐ A flat face with HOLES (a bore through a deck): a face cannot hold a hole, so the part is split by straight planes through every hole's
    centre and every other edge inside a flat face dissolved — no arbitrary BRIDGE edges (the owner: *"what are these edges for ? clean the geometry"*).
+1bis. ⭐⭐ **METADATA is its OWN object** (the owner, 2026-11-13: *"make it separate objects so we can hide them in the game later on"* · *"metadata
+   in the scene shall be separate objects so they can be hidden during the game"*): anything that MARKS rather than builds — a label, a number,
+   a sign (`Scene_2`'s crown names A1 … B3) — is a separate mesh, child of its part, custom property `metadata = true` (a glTF `extra`); never merged
+   into a part's mesh; no collision piece, no face proxy. The game may hide it (a setting, a level's choice) without touching the part.
 2. **`UCX_<part>_NN` — the collision pieces**: a few convex pieces, only where the plan inserts or rests (a bore as a ring of pieces, or squared),
    as `BLENDER_COLLISION_AUTHORING.md` specifies. Absent: the hull at spawn.
+   ⭐ **SIMPLE SHAPES, never a hull of a detailed mesh** (the owner, 2026-11-13: *"the UCX_E16_00 of the exhaust connectors is very bad geometry …
+   make a series of cylinders appended together"* · *"same for E13_valve_A1_1_cap"*): a bent pipe is a CHAIN of short cylinders along its path
+   (each joint overlapped by half the radius, so no gap opens at a bend; the first starting ON its seat, never into the host below); a valve is
+   two cylinders, its cap and its stem — 8 – 12 sides, circumscribed. ⛔ The convex hull of a flange and every vertex of a bent tube, or of a cap's
+   rims and a stem's ring, made cones of slivers (60 – hundreds of triangles a piece) the solver pays for every frame.
 3. ⭐ **The face proxy — NEW, not yet specified**: a hidden flat-faced stand-in where the plan's SEATS and GIZMO ROUTES are (a bore as a 6- or 8-sided
    prism, a round seat as one flat disc face) — what the face map builds its facets from, so the gizmo RUNS on it and a part RESTS on it. ⚠ Its name
    (e.g. `UFM_<part>`) and its rules (convex or not, which faces count, how it meets the render mesh, what replaces it at the face map) are written
@@ -97,7 +106,8 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    so we can check if our workflow and check are working properly"*): `CHECK_CONTROLS=1` builds the scene with ONE DEFECT PLANTED PER MISTAKE MET —
    the top 2 % short along x (→ coverage), a ghost over a real face (→ ghost overlap), the bulkheads' tops deleted (→ coverage), a face turned
    AFTER the orientation pass (→ the orientation VERIFIED), a patch in the air (→ fidelity, alone), a deck strip's edge pulled back 0.02 in its
-   plane (→ continuity) — ⛔ each must be CAUGHT, and the normal build clean; then the build is run again WITHOUT it (that file is broken by
+   plane (→ continuity); then a proxy face doubled (→ superposed), a ghost recessed down a bore (→ ghost flush), the export without +Y up (→ the
+   axes), a dense hull as a collision piece (→ collision simplicity), a crown's sharp edges cleared (→ flat caps) — 11 in all — ⛔ each must be CAUGHT, and the normal build clean; then the build is run again WITHOUT it (that file is broken by
    design). ⭐ The controls found the checks' own blind spots, now corrected: ⓗ a test at a face's CENTRE is blind on a notched (concave) face —
    its centre can fall in the hole: every inside / outside test at a point INSIDE one of its triangles (the orientation pass had the same blind
    spot); ⓘ continuity compared an edge with OTHER proxy objects only — a crack between two strips of ONE proxy was invisible: every proxy face
@@ -183,7 +193,10 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    an opaque piece's faces wholly inside another opaque piece of the same part (a ring's inner half in its piston, a stem's top in its cap, a pipe's
    end in its collector — glass hides nothing); ② duplicates welded, loose geometry deleted, a flat fan's pole (a cap's centre) dissolved into one
    face — ⛔ never a general limited dissolve (it takes out a bent bar's support rings: their two sides are coplanar); ③ AUTO SMOOTH on every face
-   (30°, or the object's own: a torus smooth all over). It prints what it removed, object by object.
+   (30°, or the object's own: a torus smooth all over; a bevel whose steps fall ON 30° — the plinth's 3 × 30° — its own 35°); ⭐ a FLAT CAP (a face
+   of more than 4 sides: a crown, a deck, a disc) keeps every edge sharp where its neighbour is not coplanar, so it shades FLAT (the owner:
+   *"some of the pistons' top face are still not flat"* — each crown met its valve pockets' floors at 17°, under the 30° smoothing: its normals
+   leaned 8.6°, a gradient on a flat face; on all six, seen more or less by where each pocket faces). It prints what it removed, object by object.
 6. **Authored in the reference's units, y up**: an empty `YUP_ROOT` (rotation x 90°) so every number reads as the reference's; `unitM` on it.
 
 ### 4.2 ⭐⭐ The checks every run prints (each for the steps built so far)
@@ -198,11 +211,18 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | ⭐ **the MOTION** (the owner, 2026-11-13: *"when the crank rotates, the piston shall remain in the cylinder"*) — for a scene with a level-end animation (§5) | the mechanism driven through its whole cycle by the game's own formula (every 6°): each moving part against the limits it must keep (a piston inside its cylinder, under its valves) and against the still parts' collision pieces | every margin ≥ 0, no collision — ⭐ with its control (a known-bad dimension must read OUT) |
 | ⭐⭐ **the RUN on the meshes** (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ?"*) — a scene with an animation | the game's own formula posing every moving piece through its whole cycle (every 6°), each piece's MESH against every other part's; the same poses baked as keyframes (a preview to scrub); the poses at fixed angles written to `animation_golden.json` — the golden vectors the TypeScript port must reproduce | no interference beyond the contacts NAMED in the script (a big end on its pin) — `Scene_2`'s first run found every valve in its piston: the reference's own preview had hidden it |
 | ⭐ **the PROXY SANITY** (✅ adopted, §3 item 3's principle) | fidelity, coverage, continuity, floating islands, reachability, simplicity, ORIENTATION, ghost overlap, GHOST FLUSH (at its hole's mouth; the plunges printed), SUPERPOSED (duplicates ⛔; seats listed) of the face proxies; the ghosts' dives and the real steps (information); lone small proxies (to confirm) | every failure named; ⭐ each check proven by its CONTROL (`CHECK_CONTROLS=1`: one planted defect each, all caught) |
+| ⭐ **FLAT CAPS shaded flat** (the owner, 2026-11-13: the pistons' crowns) | every face of more than 4 sides on a smooth object: its shading normals (the split normals) against the face's own | within 1° — ⭐ its control: a crown's sharp edges cleared (caught: 8.6°) |
+| ⭐ **COLLISION SIMPLICITY** (the owner, 2026-11-13: *"why these exhaust connectors and valve caps faces have failed the checks for simplification"*) | every `UCX_` piece's vertices and triangles | ≤ 24 vertices, ≤ 48 triangles (a 12-sided cylinder: 24, 44) — ⭐ its control: a hull of a dense sphere (caught: 220 triangles). It found, besides the exhausts' (216) and the valves' (60): the crank's arms (hulls of two balls, 72) and the plinth (36-gon caps, 140) — all simplified |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
 ⭐ **A host is CUT only where a part REALLY passes** (the owner, 2026-11-13, `Scene_2`'s upper case: *"(b)"*): the cut is the part's own swept
 hull along its way in (the hull of its two end positions — exact for a convex piece), computed from the part's geometry in the script — never the whole
 opening's cylinder, which can eat a host whole; a part's geometry the cut needs is a shared function, built before the part's own step.
+⭐⭐ **WHY THE CHECKS MISSED THEM — EVERY ROLE NEEDS A SHAPE CHECK** (2026-11-13): each check reads only some objects. The collision pieces were
+checked for what they BLOCK (the ways in, their controls, the crank turned) but never for their SHAPE — the finish pass, the geometry review and
+the redundancy check read the visible meshes and the proxies only; simplicity was a rule for the render mesh (§3 item 1) and the proxy (item 3),
+never for `UCX_`. So a 216-triangle hull passed every run. ⛔ For every ROLE in the file (render, `UCX_`, `UFM_`, markers, metadata), at least one
+check of its SHAPE, as well as of its function — and a new rule (§3) comes with its check and its control the same day.
 ⚠ Not yet in the report, to add as the steps need them: every collision piece convex and closed; every proxy face flat; every part the plan names
 present and nothing unplanned carrying a proxy; each moving part's pivot (§5). ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
 ⭐⭐ **WRITING A CHECK — its pitfalls, met** (2026-11-13, the owner: *"this is not caught by your checks"*; §3 ⓗ–ⓜ): ⛔ never
