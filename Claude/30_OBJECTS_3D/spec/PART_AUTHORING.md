@@ -240,6 +240,23 @@ workflow once the scene is built in blender"*)
    `.blend` (never the build's; ⛔ no renders, none committed — the owner: *"no need to have review renders"*; `REVIEW_RENDERS=1` for a quick look) — ⭐ holding ONLY the faces to review (the owner: *"display only the faces I need to review in the review blend file (not all the scene, as I cannot see the faces I need to see)"*): every other object deleted, one collection a step, the first step with a finding shown, the colours in Solid mode too. ⛔ The owner looks and decides (merge, enlarge, a ghost bridging a strip, or accept); W6 then
    walks the real orbit on each step headless; W7 (the device) closes.
 
+### 4.4 ⭐⭐ THE EXPORT — the plan's last step (W4's first half; `Scene_2` 2026-11-13)
+
+1. **`--step <last>`**: the whole build and its checks, then ONE `.glb` beside the `.blend` — a scene authored ASSEMBLED is one file, each part a
+   named subtree under the root (`MATERIALS_AND_IMPORT.md` §4's *"one file per part"* was written for a single authored part).
+2. **What it holds**: every part's subtree — render meshes, `UCX_`, `UFM_` with its ghosts, `MC_` markers, `HINGE_` pivots — their custom
+   properties as glTF `extras` (a boolean as 0 / 1); **+Y up**, reference units (`unitM` on the root); textures EMBEDDED; the GOAL pose.
+   ⛔ Not: the `PREVIEW` collection, the keyframes (the game computes the motion, §5), cameras, lights.
+3. **For the game**: each marker and hinge carries its frame IN REFERENCE UNITS — `position`, `normal` (a seat) or `axis_dir` (a hinge), `twist`
+   — so the game never undoes Blender's axis conversion (in the node itself a marker's normal is its local +Y: Blender's +Z, converted). Every
+   material ONE-SIDED (`doubleSided` false: the game draws front faces only — the inside-out check's premise). The collision pieces exported
+   SMOOTH (never drawn: their faces share vertices — flat, they were 10,346 vertices for 4,136 triangles).
+4. ⭐ **READ BACK, every run**: the file's JSON parsed — every object of every part's collection present (⛔ the expected set INDEPENDENT of the
+   export's own list: the first run exported the root alone, and a check against that list passed it), the part count, every custom property
+   carried, each marker's place and normal = the reference's (within 1e-4), nothing double-sided, no animation or camera, images embedded; its size
+   and vertex counts printed. **Its control** (`CHECK_CONTROLS`): the same export WITHOUT the +Y-up conversion must FAIL the axes check (caught:
+   3.18 off). `Scene_2`: 1.47 MB, 280 nodes, 30,416 vertices as exported (glTF splits a vertex at every hard edge).
+
 ## 5. A scene's own reference animation
 
 A scene may come with an animation of the assembled object (a machine running, a mechanism turning). ⭐ The parts are still while they are assembled; the animation

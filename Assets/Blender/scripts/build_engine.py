@@ -2409,3 +2409,132 @@ if STEP >= 3:
     gap = (HW - SR) - (ROD_X + BIG_W / 2)
     print(f"the rods' big ends within their throws: {gap:+.3f} clear of each arm  {'✅' if gap > 0 else '⛔'}")
 print("preview →", scene.render.filepath)
+
+# ================================================================ STEP 10 — THE EXPORT: one .glb beside the .blend (W4; PART_AUTHORING.md §4.4)
+# Every part's subtree under YUP_ROOT — render meshes, UCX_ collision pieces, UFM_ face proxies and ghosts, MC_ seat markers, HINGE_ pivots —
+# with their custom properties as glTF `extras`; +Y up; textures embedded; at the GOAL pose (θ = 0); ⛔ no PREVIEW, no keyframes (the game
+# computes the motion, §5), no camera, no light. Then the file READ BACK and checked: names, extras, the markers' places and axes.
+GLB = BLEND.replace(".blend", ".glb")
+
+
+def export_glb(path, yup=True):
+    apply_pose(engine_pose(0))                                   # the goal, whatever frame the preview's keyframes left
+    to_root = YUP_ROOT.matrix_world.inverted()
+    bpy.context.view_layer.update()
+    preview = {o.name for o in PREVIEW.all_objects}
+    keep = [YUP_ROOT] + [o for o in YUP_ROOT.children_recursive if o.name not in preview]
+    for o in keep:                                               # each marker and hinge says its frame IN REFERENCE UNITS (y up):
+        if o.get("role") == "seat" or o.name.startswith("HINGE_"):  # the game never undoes Blender's axis conversion
+            m = to_root @ o.matrix_world
+            o["position"] = [round(c, 6) for c in m.translation]
+            o["normal" if o.get("role") == "seat" else "axis_dir"] = [round(c, 6) for c in (m.to_3x3() @ Vector((0, 0, 1) if o.get("role") == "seat" else (1, 0, 0))).normalized()]
+            o["twist"] = [round(c, 6) for c in (m.to_3x3() @ Vector((1, 0, 0))).normalized()]
+    for m in MAT.values():                                       # each material as defined (a step's close-up preview raises the glass to 0.6)
+        if m.use_nodes:
+            m.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = m.diffuse_color[3]
+        m.use_backface_culling = True                            # ⭐ ONE-SIDED (glTF doubleSided false): the game draws front faces only — the
+                                                                 # inside-out check's premise; the glass's back faces hidden as in Blender's preview
+    for o in keep:                                               # the collision pieces SMOOTH: never drawn, so their faces share vertices
+        if o.get("role") == "ucx":                               # (flat, every face its own: 10,346 vertices for 4,136 triangles)
+            for pl in o.data.polygons:
+                pl.use_smooth = True
+            o.data.use_auto_smooth = False
+    hidden = {o.name: o.hide_get() for o in keep}
+    for o in bpy.data.objects:
+        o.select_set(False)
+    for o in keep:
+        o.hide_set(False)
+        o.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_extras=True, export_yup=yup,
+                              export_apply=False, export_animations=False, export_cameras=False, export_lights=False)
+    for o in keep:
+        o.select_set(False)
+        o.hide_set(hidden[o.name])
+    return keep
+
+
+def read_glb(path):
+    import struct
+    with open(path, "rb") as fh:
+        data = fh.read()
+    n = struct.unpack_from("<I", data, 12)[0]
+    return json.loads(data[20:20 + n].decode("utf-8")), len(data)
+
+
+def glb_world(gl):
+    """Each node's world matrix (glTF's own: TRS down the tree)."""
+    from mathutils import Quaternion
+    nodes, parent = gl["nodes"], {}
+    for i, nd in enumerate(nodes):
+        for c in nd.get("children", []):
+            parent[c] = i
+    def local(nd):
+        if "matrix" in nd:
+            return Matrix([nd["matrix"][r::4] for r in range(4)])
+        t = Matrix.Translation(nd.get("translation", (0, 0, 0)))
+        x, y, z, w = nd.get("rotation", (0, 0, 0, 1))
+        sc = nd.get("scale", (1, 1, 1))
+        return t @ Quaternion((w, x, y, z)).to_matrix().to_4x4() @ Matrix.Diagonal((*sc, 1))
+    out = {}
+    def world(i):
+        if i not in out:
+            out[i] = (world(parent[i]) if i in parent else Matrix()) @ local(nodes[i])
+        return out[i]
+    return {nodes[i]["name"]: world(i) for i in range(len(nodes))}
+
+
+def check_glb(path, keep, label="the export"):
+    gl, size = read_glb(path)
+    by_name = {nd["name"]: nd for nd in gl["nodes"]}
+    W = glb_world(gl)
+    to_root = YUP_ROOT.matrix_world.inverted()
+    bad = []
+    # ⛔ the expected set INDEPENDENT of the export's list (its first run exported the root alone, and a check against that list passed it):
+    # every object of every part's collection, and the root
+    expected = {"YUP_ROOT"} | {o.name for p, c in PARTS for o in c.objects}
+    missing = sorted(expected - set(by_name))
+    extra = sorted(set(by_name) - expected)
+    if missing or extra:
+        bad.append(f"nodes missing {missing[:5]} / unexpected {extra[:5]}")
+    if sum(1 for nm in by_name if bpy.data.objects.get(nm) and bpy.data.objects[nm].get("part_id")) != len(PARTS):
+        bad.append(f"parts exported ≠ the {len(PARTS)} built")
+    lost = [f"{o.name}.{k}" for o in keep for k in o.keys() if k not in by_name.get(o.name, {}).get("extras", {})]
+    if lost:
+        bad.append(f"{len(lost)} custom properties not carried: {lost[:5]}")
+    # ⭐ the AXES: each marker's glTF world place and its normal (glTF local +Y = Blender's local +Z) = the reference's — y up, the same units
+    off = 0.0
+    for o in keep:
+        if o.get("role") == "seat" and o.name in W:
+            m = to_root @ o.matrix_world
+            off = max(off, (W[o.name].translation - m.translation).length,
+                      ((W[o.name].to_3x3() @ Vector((0, 1, 0))) - (m.to_3x3() @ Vector((0, 0, 1)))).length)
+    if off > 1e-4:
+        bad.append(f"the markers' places / normals off the reference by {off:.4f} (the axes)")
+    for k in ("animations", "cameras"):
+        if gl.get(k):
+            bad.append(f"{len(gl[k])} {k} exported")
+    if any(m.get("doubleSided") for m in gl.get("materials", [])):
+        bad.append("a material double-sided")
+    if any("uri" in im for im in gl.get("images", [])):
+        bad.append("an image NOT embedded")
+    verts = sum(gl["accessors"][pr["attributes"]["POSITION"]]["count"] for me in gl.get("meshes", []) for pr in me["primitives"])
+    kinds = {r: sum(1 for o in keep if (o.get("role") == r)) for r in ("render", "ucx", "ufm", "seat")}
+    print(f"{label} → {os.path.basename(path)}: {size / 1e6:.2f} MB, {len(gl['nodes'])} nodes ({sum(1 for o in keep if o.get('part_id'))} parts, "
+          f"{kinds['render']} render meshes, {kinds['ucx']} UCX, {kinds['ufm']} UFM incl. {sum(1 for o in keep if o.get('ghost'))} ghosts, "
+          f"{kinds['seat']} seat markers, {sum(1 for o in keep if o.name.startswith('HINGE_'))} hinges), {verts} vertices as exported, "
+          f"{len(gl.get('materials', []))} materials, {len(gl.get('images', []))} images embedded — "
+          + ("✅ read back: every node, every custom property, the markers' places and normals in reference units (y up)" if not bad
+             else "⛔ " + "; ".join(bad)))
+    return not bad
+
+
+if STEP >= 10:
+    kept = export_glb(GLB)
+    check_glb(GLB, kept)
+    if os.environ.get("CHECK_CONTROLS"):                         # ⑪ the control: the same export WITHOUT the +Y-up conversion must FAIL
+        ctl = os.path.join(os.environ.get("TEMP", OUT_DIR), "scene2_control_zup.glb")
+        export_glb(ctl, yup=False)
+        print("the export's CONTROL (z up): " + ("⛔ NOT caught — the axes check is blind" if check_glb(ctl, kept, "  control")
+                                                 else "caught ✅"))
+        os.remove(ctl)
+

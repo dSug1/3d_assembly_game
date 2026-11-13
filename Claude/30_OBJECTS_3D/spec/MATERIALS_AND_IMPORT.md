@@ -55,7 +55,7 @@ Almost nothing, and that is fine for four boxes:
 
 | constraint | rule |
 |---|---|
-| **the format** | **`.glb`** — binary glTF, one file per part, textures EMBEDDED |
+| **the format** | **`.glb`** — binary glTF, one file per part (⭐ a scene authored assembled: one file, each part a subtree — `PART_AUTHORING.md` §4.4), textures EMBEDDED |
 | **egress** | self-hosted in the build, never fetched from a CDN — `CONSTRAINTS` §5, the youth audience (`60_SECURITY_COMPLIANCE`) |
 | **texture budget** | modest sizes: it runs on a tablet and in a Capacitor webview |
 | **the licence** | `@babylonjs/loaders` is Apache-2.0 like Babylon core, so `N13` is satisfied — ⛔ but it goes into `THIRD_PARTY_NOTICES.md` **with the dependency**, and the notice ships with the binary |
