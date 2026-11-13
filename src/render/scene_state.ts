@@ -476,6 +476,12 @@ export interface SceneState {
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
   /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */
   asmDySign: number;
+  /** ⭐⭐⭐ (2026-11-13, `ORBIT_ANY_SHAPE.md` §9) the world camera's calm heading offset off the yaw, held while the view looks down (`heldOffsetStep`); `null`: none (tilted, off) */
+  asmHeadO: number | null;
+  /** ⭐ (§9) last frame's `poleWeight` of the orbit's pitch */
+  asmHeadW: number;
+  /** ⭐ (§9) last frame's orbit yaw (the dx's share of the held offset's travel) */
+  asmHeadYaw: number | null;
   asmTilt: {
     readonly id: number;
     readonly map: import("../input/orbit_tilt").Mat3;

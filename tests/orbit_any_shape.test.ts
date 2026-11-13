@@ -181,7 +181,7 @@ describe("⭐⭐⭐ F4 — the pitch asked PAST A POLE reaches the map (⛔ the 
   });
   it("⭐⭐⭐ wired: read every frame (before the assembly's early return), added to the map's pitch step, the map's pitch held within ±90°", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a.indexOf("const beyondV = st.orbit.takeBeyond();")).toBeLessThan(a.indexOf("if (!assemblyOn(st) || st.greenBox === null) return;"));
+    expect(a.indexOf("const beyondV = st.orbit.takeBeyond();")).toBeLessThan(a.indexOf("if (!assemblyOn(st) || st.greenBox === null) {")); // ⭐ (2026-11-13, §9) the early return now also clears the held heading offset
     expect(a).toContain("const beyond = poleBeyondPitch(q.v, beyondV, ORBIT_PITCH_MAX_RAD);");
     expect(a).toContain("pitch: pitch - pitchOfV(prev.v) + beyond }, MAP_CATCH_UP,");
     expect(a).toContain("const mq = { yaw: mqs.yaw, pitch: Math.max(-ORBIT_PITCH_MAX_RAD, Math.min(ORBIT_PITCH_MAX_RAD, mqs.pitch)) };");
