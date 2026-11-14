@@ -57,7 +57,9 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    (each joint overlapped by half the radius, so no gap opens at a bend; the first starting ON its seat, never into the host below); a valve is
    two cylinders, its cap and its stem — 8 – 12 sides, circumscribed. ⛔ The convex hull of a flange and every vertex of a bent tube, or of a cap's
    rims and a stem's ring, made cones of slivers (60 – hundreds of triangles a piece) the solver pays for every frame.
-3. ⭐ **The face proxy — NEW, not yet specified**: a hidden flat-faced stand-in where the plan's SEATS and GIZMO ROUTES are (a bore as a 6- or 8-sided
+3. ⭐ **The face proxy — NEW, not yet specified**: ⭐ (2026-11-14) it also gives a picked part its RESTING-FACE QUADS (`20_GAME_RULES/spec/PICK_AND_PLACE.md`
+   §5 — the quad nearest the part's orientation as it lay is its start); ⚠ TO TROUBLESHOOT PROPERLY: a part with MANY proxy faces would get too many
+   candidates (which faces count as a quad, merged how). A hidden flat-faced stand-in where the plan's SEATS and GIZMO ROUTES are (a bore as a 6- or 8-sided
    prism, a round seat as one flat disc face) — what the face map builds its facets from, so the gizmo RUNS on it and a part RESTS on it. ⚠ Its name
    (e.g. `UFM_<part>`) and its rules (convex or not, which faces count, how it meets the render mesh, what replaces it at the face map) are written
    here before it is built.

@@ -273,6 +273,10 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 5. **W5 — the PLAYABLE SLICE: the level data and what the game must gain**: the slice's parts as bodies (the anchor frozen, the others placeable), the
    boot layout from item 4, the steps as data; the plan's requirements for the game (`SCENE_<N>_ASSEMBLY.md` §5 — `Scene_2`: every part orbited in turn,
    the plunge snap, a ghost read only for its part, a seated face skipped, the orbit's centre per step) built as needed by the slice, each with its vectors.
+   ⭐ (2026-11-14) the play loop for every scene — the pick, the put-down, the two orbits, the step after a snap: [`PICK_AND_PLACE.md`](PICK_AND_PLACE.md);
+   the placed parts rebuild the face map at each snap. ⏳ **MAKING A PART AN ORBITED PIECE** (its collision pieces, face proxy and quads, goal, symmetry,
+   lift) is to be written HERE as a procedure while walking it on `Scene_2` (the owner: *"we will create a proper workflow for that at the same time as
+   we prototype our scene 2 so we can define the workflow by walking it ourselves"*).
 6. **W6 — the headless proof**: probes walking the slice from boot to goal (`scripts/probes/`), the budget per frame. ⚠ HEAVY: on the owner's go.
 7. **W7** — deploy on the owner's word; ⛔ **GATE: the owner's look on the device** closes the slice. Then widen a step at a time, a look each.
 
