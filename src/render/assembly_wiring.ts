@@ -37,7 +37,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
-import { poseAboutPiece, type CamPose } from "../input/orbit_tilt";
+import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -1177,8 +1177,17 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
   zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
   zm.rad = r.angle;
-  st.asmCamLast = { dir: norm3([r.pose.eye[0] - r.pose.look[0], r.pose.eye[1] - r.pose.look[1], r.pose.eye[2] - r.pose.look[2]]), up: r.pose.up };
-  return r.pose;
+  // ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
+  // (especially at far distance)?"*) THE TWO FRAMED — the piece and the camera's aim (the assembly far out), each carried straight on the glass
+  // (`poseFramingTwo`, toric space): neither leaves it; degenerate (the two on one ray, close in where the aim is the gizmo by the piece): about the
+  // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
+  // ⭐ the rule chosen at the turn's first frame and kept (`zm.sgn` 2: about the piece) — never switched mid-turn (a jump between the two poses)
+  const t = zm.sgn === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.sgn);
+  if (t === null && zm.sgn === 0) zm.sgn = 2;
+  const pose = t !== null ? t.pose : r.pose;
+  if (t !== null) zm.sgn = t.sgn;
+  st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
+  return pose;
 }
 
 /** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
@@ -1671,7 +1680,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
     }
   } else st.asmMapQ = null;
   // the camera's turn from the frame it shows now (none before the first frame: at once)
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };
+  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };
   st.lastVerdict =
     next === null
       ? "orbit: out of the polar zone — the world's frame again"
@@ -1734,7 +1743,7 @@ function spitStep(st: SceneState): void {
   st.asmSpitSide = side;
   // ⭐ a crossing only seen from high up (the zenith edge, the bottom face's): low (round a tip) the heading is the direction's own — the side changes silently
   if (prev === 0 || side === prev || Math.asin(Math.min(1, Math.abs(u[1]))) < SPIT_CROSSING_PITCH_RAD) return;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };
   st.orbitInertia.stop();
   const g = st.asmG;
   const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);

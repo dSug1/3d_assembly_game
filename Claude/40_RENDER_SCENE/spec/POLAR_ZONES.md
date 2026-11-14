@@ -162,7 +162,8 @@ function zoneScreenUp(z: PolarZone, view: Vec3): Vec3;                          
    past the hysteresis (`edgeHoldMm`); dy the other way and dx stay free throughout. The body's back is reached by dx, along the green, round a pole.
 5. **The transitions** — entering / leaving a zone: today's timed frame change (the gizmo held; close in pending through the approach, blended by the
    first 10 mm of finger, §9.15) (D-Z7). An S1 ↔ S2 change can be a quarter turn of the glass — its speed may need its own slider (the device decides).
-   One frame at a time: the zone the gizmo is in decides.
+   One frame at a time: the zone the gizmo is in decides. ⭐ The camera's turn itself (here, at the spit's zenith edge and its bottom face's middle):
+   §4.6.
 6. **The extent of F (D-Z5)** — the zone only, UNLESS the zone's facets plus the facets whose sections are the same in F and in the world cover more
    than `zoneWholeShare` (0.5) of the contour's area: then F for the WHOLE assembly (`Scene_0bis`: one spit, no transition from a tip to the body; its
    far view turns about the long axis instead of today's world polar orbit). An author's tag forces either.
@@ -192,6 +193,32 @@ function zoneScreenUp(z: PolarZone, view: Vec3): Vec3;                          
 The same 17 walks on `Scene_0bis` and `Scene_0` (`walk_probe.mjs`, `walk_rules`, `walk_analyse`, `walk_rope`, `walk_teleport`) against §1.1's table —
 B1 – B4's counts toward `Scene_0`'s; no regression on `Scene_1` / `Scene_0`. ⛔ A look on the device closes it (rule 5).
 
+### 4.6 The camera's realignment — the piece and the assembly kept on the glass (2026-11-14, branch `1.0.129b-`)
+Every turn of the camera a zone makes — entering / leaving it, the spit's side changing at its zenith edge and at its bottom face's middle — goes from
+the POSE on the glass when it starts (`poseShown`: the eye, the aim, the up, and where the piece was drawn) to this frame's pose, at the tilts' one speed
+(`tiltRollDegS`, 360°/s; its time from its own angle, read before it is stepped), the gizmo held (`tiltClampStep`). What the owner saw, and what each
+step changed (probed far out, the camera 7.7 m from the assembly, the piece 1.3 m in front of it; the probe's landscape glass):
+* ⛔ **About the view** (`5e7e78f`): only the up turned — the piece, off the glass's centre far out, went round it; and in the first frame it leapt to the
+  opposite corner, (−0.27, −0.06) → (0.27, 0.76) of the half-glass: the view's offsets (`cameraPitchOffsetDeg`, `cameraYawOffsetDeg`) are laid in the
+  heading's frame, the heading's half turn mirrored them (*"the piece snaps 180 degrees diagonally"*).
+* ⛔ **About the piece** (`81b4bc0`, `poseAboutPiece`): one turn of the camera's axes, the piece's place on the glass carried straight to its new one —
+  the piece's largest step in a frame 0.98 → 0.11 of the half-glass; but far out the ASSEMBLY swung round the piece (its centre out to 0.30 of the
+  half-glass, 0.49 on a 0.67-wide glass: *"the assembly and scene sometimes fly off the screen view"*).
+* ⭐ **The two framed** (`poseFramingTwo`, on `1.0.129b-`) — after Lino & Christie's **toric space** and Gleicher & Witkin's **through-the-lens** control:
+  the camera solved each frame from where TWO targets are on the glass — the piece (A) and the camera's aim (B, its look point: the assembly far out,
+  the gizmo close in). Their places (tangent coordinates) carried STRAIGHT from the start's to the end's — a straight line between two points of the glass
+  stays on it (a rectangle is convex): NEITHER CAN LEAVE IT, whatever the glass. The angle they make at the camera follows; with the piece's distance
+  carried, the camera lies on the toric surface of A and B, its place round the line A → B carried the way it began (kept past the half turn): the half
+  turn is a turn about the line through both. Degenerate (the two on one ray from the camera, close in where the aim is the gizmo by the piece): about
+  the piece alone — chosen at the turn's first frame and kept. Probed: the assembly's centre within 0.09 of the glass's middle through the zenith edge
+  (0.14 on the 0.67-wide glass), 0.10 through the bottom face; the piece as before (straight, 0.51 of the half-glass from its old place to its new one).
+* ⚠ **TO CUSTOMISE FOR A PHONE HELD UPRIGHT (portrait)**: Babylon's vertical FOV is fixed (0.8 rad), so on a 390 × 844 glass the half-width is ~11°
+  against ~41° on the probe's landscape glass. The turn keeps both targets on whatever glass holds them at its ends — but the FRAMING ITSELF far out
+  (the view's offsets put the piece ~13.7° off the axis) leaves the piece ~1.2 half-widths out even at rest. The offsets / the FOV (or a horizontal FOV
+  fixed in portrait) need their own values in portrait; not done. (The probe's `WINDOW=w,h`: headless Chrome stays ≥ ~500 px wide — project the recorded
+  poses on a narrower glass instead.)
+* Not covered: the rest of the scene (the floor, the plinth) turns about the A → B line — it is what moves on the glass during the half turn.
+
 ## 5. Open, not decided by this spec
 * The bend on a LARGE face inside a zone: the cap's I12 (a radial red bends at the cap's rim) for P− on a flat face.
 * Several zones with crossing axes in one assembly (one frame at a time; a transition at each rim).
@@ -212,6 +239,10 @@ B1 – B4's counts toward `Scene_0`'s; no regression on `Scene_1` / `Scene_0`. �
 The illustrated page the owner decided from: claude.ai/artifact/ThMWwMGgrtvucdm7vtVZCq.
 
 ## Sources
+Lino & Christie, *Efficient Composition for Virtual Camera Control*, SCA 2012 (irisa.fr/mimetic/GENS/mchristi/Publications/2012/LC12.html) and
+*Intuitive and Efficient Camera Control with the Toric Space*, SIGGRAPH 2015 (doi 10.1145/2766965) · Gleicher & Witkin, *Through-the-Lens Camera
+Control*, SIGGRAPH 1992 (graphics.cs.wisc.edu/Papers/1992/GW92/camera.pdf) · Christie, Olivier & Normand, *Camera Control in Computer Graphics*, CGF 2008
+· Oskam et al., *Visibility Transition Planning for Dynamic Camera Control*, SCA 2009 (§4.6) ·
 Hanson & Wernert, *Constrained 3D Navigation with 2D Controllers*, IEEE Vis 1997 (homes.luddy.indiana.edu/hansona/papers/vis97.pdf) · Crane, Desbrun,
 Schröder, *Trivial Connections on Discrete Surfaces*, CGF 2010 (geometry.caltech.edu/pubs/CDS10.pdf) · Ray, Vallet, Li, Lévy, *N-Symmetry Direction Field
 Design*, TOG 2008 (hal inria-00331900) · Bommes et al., *Quad-Mesh Generation and Processing: A Survey*, CGF 2013 · the Blender manual, *Mesh Structure*

@@ -113,9 +113,85 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
   it("wired: the zone's switch and the spit's crossing start from the pose on the glass; the camera's stage turns it about the piece", () => {
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
     const gb = readFileSync("src/render/green_box_wiring.ts", "utf8");
-    expect(aw).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };");
-    expect(aw).toContain("if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };");
+    expect(aw).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };");
+    expect(aw).toContain("if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };");
+    expect(aw).toContain("const t = zm.sgn === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.sgn);");
     expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);");
     expect(gb).toContain("const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-14, the owner: "Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen
+// view?") the turn FRAMING TWO TARGETS (toric space, Lino & Christie 2012 / 2015): the piece and the camera's aim carried straight on the glass
+import { poseFramingTwo } from "../src/input/orbit_tilt";
+const tangentOf = (p: CamPose, q: Vec3): [number, number] => {
+  const f = unit(sub(p.look, p.eye));
+  const r = unit(cross(p.up, [-f[0], -f[1], -f[2]]));
+  const u = cross([-f[0], -f[1], -f[2]], r);
+  const v = sub(q, p.eye);
+  return [dot(v, r) / dot(v, f), dot(v, u) / dot(v, f)];
+};
+describe("the turn framing two targets — the piece and the camera's aim (toric space)", () => {
+  // far out, as on Scene_0bis: the camera 7.7 m from its aim (the assembly), the piece 1.3 m in front, off the glass's centre
+  const aim: Vec3 = [0, 0, 0.5];
+  const a: CamPose = { eye: [0, 7.5, 0], look: aim, up: [0, 0.07, 1], piece };
+  // the realignment's target: the half turn about the view through the aim (the old turn's, which sent the piece round the glass)
+  const b0 = turned(A, aim, unit(sub(A.look, A.eye)), Math.PI * 0.95);
+  const b: CamPose = { eye: b0.eye, look: b0.look, up: b0.up };
+
+  it("starts on the pose shown and ends on the new one", () => {
+    const r0 = poseFramingTwo(a, b, piece, 0, 0)!;
+    close(r0.pose.eye, a.eye, 1e-7);
+    close(unit(sub(r0.pose.look, r0.pose.eye)), unit(sub(a.look, a.eye)), 1e-7);
+    const r1 = poseFramingTwo(a, b, piece, 1, r0.sgn)!;
+    close(r1.pose.eye, b.eye, 1e-7);
+    close(unit(sub(r1.pose.look, r1.pose.eye)), unit(sub(b.look, b.eye)), 1e-7);
+    const fB = unit(sub(b.look, b.eye));
+    const kB = dot(b.up, fB);
+    close(unit(r1.pose.up), unit([b.up[0] - kB * fB[0], b.up[1] - kB * fB[1], b.up[2] - kB * fB[2]]), 1e-7);
+  });
+
+  it("all the way: the piece AND the aim each exactly on its straight line on the glass (⛔ about the piece alone: the aim swung round it)", () => {
+    const pa0 = tangentOf(a, piece), pa1 = tangentOf(b, piece), qa0 = tangentOf(a, aim), qa1 = tangentOf(b, aim);
+    let sg = 0;
+    for (let i = 0; i <= 20; i++) {
+      const k = i / 20;
+      const r = poseFramingTwo(a, b, piece, k, sg)!;
+      sg = r.sgn;
+      const p = tangentOf(r.pose, piece), q = tangentOf(r.pose, aim);
+      expect(p[0]).toBeCloseTo(pa0[0] + (pa1[0] - pa0[0]) * k, 7);
+      expect(p[1]).toBeCloseTo(pa0[1] + (pa1[1] - pa0[1]) * k, 7);
+      expect(q[0]).toBeCloseTo(qa0[0] + (qa1[0] - qa0[0]) * k, 7);
+      expect(q[1]).toBeCloseTo(qa0[1] + (qa1[1] - qa0[1]) * k, 7);
+    }
+  });
+
+  it("random turns: both on the glass at the start and the end ⇒ on it all the way (any glass: a straight line inside a rectangle)", () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    let tested = 0;
+    for (let n = 0; n < 200 && tested < 60; n++) {
+      const ax = unit([rnd() - 0.5, rnd() - 0.5, rnd() - 0.5]);
+      const bb = turned(a, [aim[0] + rnd() - 0.5, aim[1] + rnd() - 0.5, aim[2] + rnd() - 0.5], ax, (rnd() * 2 - 1) * Math.PI);
+      const bp: CamPose = { eye: bb.eye, look: bb.look, up: bb.up };
+      const on = (t: [number, number]): boolean => Math.abs(t[0]) <= 0.9 && Math.abs(t[1]) <= 0.4; // a narrow glass (a phone held upright: tan 11°, tan 22°)
+      // the aim: the look point of each pose (it moves with the turn's target — in the game the look point now)
+      if (!on(tangentOf(a, piece)) || !on(tangentOf(a, a.look)) || !on(tangentOf(bp, piece)) || !on(tangentOf(bp, bp.look))) continue;
+      let sg = 0;
+      for (let i = 0; i <= 10; i++) {
+        const r = poseFramingTwo(a, bp, piece, i / 10, sg);
+        if (r === null) break;
+        sg = r.sgn;
+        expect(on(tangentOf(r.pose, piece))).toBe(true);
+        expect(on(tangentOf(r.pose, bp.look))).toBe(true);
+      }
+      tested++;
+    }
+    expect(tested).toBeGreaterThan(5);
+  });
+
+  it("degenerate — the piece on the line from the camera to its aim: none (the caller turns about the piece alone)", () => {
+    const onRay: CamPose = { eye: [0, 7.5, 0], look: [0, 0, 0], up: [0, 0, 1], piece: [0, 6, 0] };
+    expect(poseFramingTwo(onRay, onRay, [0, 6, 0], 0.5, 0)).toBeNull();
   });
 });
