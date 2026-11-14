@@ -211,7 +211,8 @@ step changed (probed far out, the camera 7.7 m from the assembly, the piece 1.3 
   stays on it (a rectangle is convex): NEITHER CAN LEAVE IT, whatever the glass. The angle they make at the camera follows; with the piece's distance
   carried, the camera lies on the toric surface of A and B, its place round the line A → B carried the way it began (kept past the half turn): the half
   turn is a turn about the line through both. Degenerate (the two on one ray from the camera, close in where the aim is the gizmo by the piece): about
-  the piece alone — chosen at the turn's first frame and kept. Probed: the assembly's centre within 0.09 of the glass's middle through the zenith edge
+  the piece alone — chosen at the turn's first frame and kept. ⭐ (2026-11-14, §4.8 items 3 – 4: SUPERSEDED in part) the aim now the piece's place plus
+  their separation carried round (the paths never meet — the guard `FRAMING_TWO_MIN` deleted), the reference carried with the line, the angles frame to frame. Probed: the assembly's centre within 0.09 of the glass's middle through the zenith edge
   (0.14 on the 0.67-wide glass), 0.10 through the bottom face; the piece as before (straight, 0.51 of the half-glass from its old place to its new one).
 * ⚠ **TO CUSTOMISE FOR A PHONE HELD UPRIGHT (portrait)**: Babylon's vertical FOV is fixed (0.8 rad), so on a 390 × 844 glass the half-width is ~11°
   against ~41° on the probe's landscape glass. The turn keeps both targets on whatever glass holds them at its ends — but the FRAMING ITSELF far out
@@ -246,7 +247,53 @@ next crossing held again (no bounce at the middle). ⚠ Far out a dx after the c
 silently there and the hold ends (`Scene_0`'s ridge ends at the end cap instead).
 **Vectors**: `polar_zone.test.ts` (`overAxisPitch`: under the axis, the walk's 41° case, round a tip, level beside it; the wiring), the pins.
 
+### 4.8 The owner's play, recorded and replayed — five root causes (2026-11-14, `1.0.142-Debug-spit-orbit`)
+> *"record 1: two jumps towards the end; records 2 to 10: one jump or big sway rotation of the camera or piece flying toward the end of each
+> recording — check"* … *"find the deep root causes … eliminate previous patches … test them with the same walks as I used"* — the owner.
+
+**The tools.** `src/render/play_recorder.ts` (dev only, `?sceneIndex=4#rec`; ● REC / ■ STOP, one `_rNN.jsonl` per record through the dev server's
+`/__rec`, `vite.config.ts` — the folder: `REC_DIR`, else the first line of `.recordings-dir`, else `.recordings/`): every frame the finger, the gizmo, the
+piece (place and rotation), the camera, the orbit's and the map's angles, the zone's side / turn / hold, the calm. `walk_probe.mjs`'s **`replay` leg**
+sends a recording's raw pointer events again at their recorded times from the page's boot (unawaited — ⛔ awaited, the play ran 4× slow), and
+`CHROME_FLAGS="--force-device-scale-factor=0.4 --disable-gpu-vsync --disable-frame-rate-limit"` brings the headless page to ~110 fps (the owner's 135;
+⛔ the default 26 fps made every frame's step 5× the owner's).
+
+**Found on the owner's session `ilmj` (records 1 – 10, 106 s, very fast mouse), and fixed:**
+1. **The side read a frame late** — the spit's side was read in the assembly's step, BEFORE the camera's orbit step: the camera passed over the axis in
+   the frame, was drawn ONCE with the old side's heading (137 – 171° in one frame, records 1, 4, 6), then the turn began from that pose → **the side read
+   at THIS frame's camera place, in the camera stage just before its frame is built** (`spitStep(st, camPlace)`, `green_box_wiring.ts`).
+2. **The crossing read at the frame's end** — a fast finger took the camera from straight under the body (pitch 85°) to 70° past it in one frame: read
+   there 19°, "round a tip", the side flipped with no turn (100 – 170° in one frame) → **`crossingPitch`**: `overAxisPitch` where the camera's PATH this
+   frame cut the side's plane (`asmSpitU`, last frame's direction).
+3. **The two framed handed to the piece alone** — the guard against the two's straight glass paths meeting (`FRAMING_TWO_MIN` 0.12, §4.6) fired on most
+   turns (the piece sits 0.1 – 0.3 of the glass from the aim): about the piece alone, far out the assembly swung off the glass (80 frames off it) →
+   **the piece's place straight, the aim's as the piece's plus their SEPARATION carried round** (its angle turned, its length blended): the two never
+   meet, the guard DELETED (`poseFramingTwo`). The aim stays within the larger end separation of the piece (no longer the convexity proof of §4.6).
+4. **The reference round the piece → aim line one fixed world axis** (`wRef`, laid square to the line each frame): the piece's spring swung the line
+   50 – 90° round the assembly in a turn's first frames, it came by that axis, its square flipped — 140 – 174° rolls in one frame → **the start's
+   reference carried with the line** (the least turn from the start's line to the line now — parallel transport).
+   …and **the way round kept as a sign** (a full turn added when the shortest way pointed the other way past 90°): the angle wandered there, the turn
+   leapt by k × 360° (112 – 161° in one frame) → **both angles carried frame to frame, the branch nearest the last** (`FramingKeep`; `zm.rule`, `zm.keep`).
+5. **The calm read past its face** — the eased calm normal ~120 ms behind a fast finger: the orbit went 166 – 174° round from it, the angle off it wrapped
+   through ±180° and the shown direction leapt to the other side (the piece 3 – 5 m in one frame, the gizmo held; 1256 of the recorded turns' frames)
+   → **`facingWeight`** (`orbit_calm.ts`): the calm whole to 90° off the eased normal, none from 135° (every scene — `POLAR_ORBIT_CLEANUP.md` §8.1).
+**Also** the turn stepped by its ANGLE at one speed (`zm.done` at `tiltRollDegS` — ⛔ a share stepped by the angle of the moment: 17°, then 167°: 80° in
+one frame), and the side read at the CAMERA's place (`cameraLagged`, not the finger's orbit — ⛔ 99 – 102° in one frame mid-turn).
+
+**Replayed (the same events, ~110 fps) — the recording (before) → after:** one-frame turns over 90° **20 → 0**; silent flips **→ 0**; the assembly
+leaping at a turn's start **6 → 0**; frames with the assembly off the glass **80 → 0**; rolls over 1000°/s **171 → 94**; the turns' p99 rate 1857 –
+2119 → 2075 °/s, their worst frame 18 688 → 6016 °/s. ⚠ **Left**: the remaining fast rolls (88 of 94) come with the PIECE moving > 0.5 m in a frame —
+its spring catching up a fast finger (`pieceQ` the target, the drawn piece ~50 ms behind); the camera, framing it, follows. Largest 46°. Not a jump
+of the rules: the piece's own pace (§5).
+**No regression** (`facingWeight` reaches every scene — A/B, the same walks with it off, ~100 fps): `Scene_0` (`walk_scenarios_any_shape.json`:
+far_random, mid_random, close_zenith, close_random) — one-frame jumps 0 → 0, fast rolls 7 → 2; `Scene_1` (`walk_scenarios.json`: random_0, random_1,
+close_top_I14) — one-frame jumps 2 → 0. No page errors.
+**Vectors**: `pose_about_piece.test.ts` (the separation carried round, the half turn about the view through the aim, the angles carried through every
+wrap, the wiring), `polar_zone.test.ts` (`crossingPitch`), `orbit_calm.test.ts` (`facingWeight`, the shown direction continuous all the way round).
+
 ## 5. Open, not decided by this spec
+* (2026-11-14, §4.8) The piece's spring under a very fast finger (a 0.5 – 5 m step in a frame at the turn's start) — the camera framing it turns as fast.
+  A cap on the piece's pace, or the turn starting once the spring has caught up, are the candidates; not decided.
 * The bend on a LARGE face inside a zone: the cap's I12 (a radial red bends at the cap's rim) for P− on a flat face.
 * Several zones with crossing axes in one assembly (one frame at a time; a transition at each rim).
 * The concave cases (a fan inside a recess) — §1.6's obstacles still bind; out of scope.

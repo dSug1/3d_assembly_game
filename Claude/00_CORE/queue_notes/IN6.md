@@ -1,7 +1,7 @@
 # IN6 — Undo
 
-> **STATUS** · built, unjudged · **OWNS** · the scene's undo history
-> **LAST VERIFIED** · 2026-09-28
+> **STATUS** · ⛔ DELETED 2026-11-02 (see the end) · **OWNS** · the record of the scene's undo history
+> **LAST VERIFIED** · 2026-11-14
 
 ## `D111` — one scene history (2026-09-27)
 
@@ -24,3 +24,12 @@ moved, and the entry stays (`peek`). ✅ 6 vectors (`tests/d141.test.ts`). ⛔ U
 ⭐⭐ **`D157` (2026-09-29) — a double tap (or double click) that does not land costs ZERO episodes** (the owner: *"a double tap which does not land (for example, a double tap on an object which has never moved) does nothing and should count as zero episode"* · *"same for double click which does not land"*). ⭐ A double tap is two gestures, and the first had already landed its episode when the second was read as a double tap. Now each gesture tells the tally whether it changed the model (`endGesture` returns it); a double tap whose undo does NOT land (refused by `D141`, or nothing to undo) excludes its second tap and takes back the first's episode — only if that gesture changed nothing (`EpisodeTally.retractInertPrevious`). A landed undo still costs ONE. ✅ 3 vectors, 1291 → 1294; headless with real double clicks: never-moved body 0, a drag 1, a refused double click still 1, a landed undo 2.
 
 ⭐ **`D158` absorbs `D157`** the same day: any gesture that changes nothing costs zero; the take-back is deleted → `SCORE.md` §3.2.
+
+## ⛔⛔ 2026-11-02 — THE UNDO DELETED (recorded 2026-11-14)
+
+Deleted on `1.0.89-` with the parts' translation, rotation, alignment and snap (the owner, 2026-11-02, decision 3: *"the undo is deleted"*):
+`core/undo_history.ts`, `render/undo_wiring.ts` and their vectors are gone; the code before the removal is commit `d8134eb` →
+[`../../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md`](../../10_INPUT_TOUCH/history/2026-11-02_parts_translation_rotation_deleted.md).
+⭐ Checked in the code 2026-11-14 (`1.0.142-`): nothing undoes; a double tap acts only as the STUCK orbited piece's respawn (`pieceTapAction`,
+`render/pointer_wiring.ts`), and only where an orbited piece exists (not `Scene_2`). ⏳ An undo after a SNAP is to be specified anew with the
+pick-up flow (the old one undid finger-moved parts and cannot be reused).

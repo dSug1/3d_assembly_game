@@ -9,7 +9,10 @@
 //       { "wob": px, "seed": s }        the finger's tremble from here on (±px a frame, both axes; 0 off)
 //       { "wait": ms }                  { "reset": [yaw, v] }  the orbit put at a view (the approach kept)
 //       { "eval": expr }               an expression evaluated in the page there (its value printed: a diagnosis at a state the walk reached)
+//       { "replay": file.jsonl, "t0": ms, "t1": ms }  ⭐ (2026-11-14) the owner's play (`src/render/play_recorder.ts`): its pointer events at their times
 //   ONLY=name,name — run these scenarios only; OUT=name — the recording `<PROBE_DIR>/<name>.json`; URL (default http://127.0.0.1:5174/)
+//   WINDOW=w,h — the window (the page ~18 × 96 px smaller); CHROME_FLAGS="…" — extra flags (⭐ a replay near the owner's ~135 fps:
+//   "--force-device-scale-factor=0.4 --disable-gpu-vsync --disable-frame-rate-limit" ≈ 110 fps; the default ≈ 26)
 //   EVAL=expr — no scenarios: boot, print the expression's value (JSON), exit
 // Then `node scripts/probes/walk_analyse.mjs <file>`. ⭐ Its own Chrome profile, removed in `finally`; every DevTools call times out; the tree killed.
 import { spawn, spawnSync } from "node:child_process";
@@ -75,7 +78,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
       ov: [st.orbit.yaw, st.orbit.elevation], pq: st.pieceQ ? [st.pieceQ.yaw, st.pieceQ.v] : null, mq: st.asmMapQ ? [st.asmMapQ.yaw, st.asmMapQ.pitch] : null,
       ms: sh && sh.t ? [sh.t.stack, sh.t.band, sh.t.side ?? null] : null, ap: st.approach, tc: st.pieceTouching ?? null, sup: st.asmSupport ? st.asmSupport.index : null, lvl: st.asmSupportLevel ? [st.asmSupportLevel.n, st.asmSupportLevel.h] : null,
       show, gl: G ? [G.br.length, G.d] : null, rl: Rr ? [Rr.br.length, Rr.d] : null, gk: G ? G.key : null, rk: Rr ? Rr.key : null,
-      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90), zs: st.asmSpitSide ?? null, zm: st.asmZoneMix ? [+st.asmZoneMix.k.toFixed(3), st.asmZoneMix.sgn, +st.asmZoneMix.rad.toFixed(2)] : null, eh: st.asmEdgeHold ? st.asmEdgeHold.sign : null, cw: [+(st.asmCalmWhole ?? 0).toFixed(3), +(st.asmCalmWholeV ?? 0).toFixed(3)], cs: st.asmCalm ? { n: st.asmCalm.n.map((x) => +x.toFixed(3)), sH: +st.asmCalm.sH.toFixed(3), sV: +st.asmCalm.sV.toFixed(3) } : null, /* ⭐ (2026-11-14) the calm */ /* ⭐ (2026-11-14) the zone's state: the spit's side, its turn (share, way, angle), the hold */
+      tl: st.asmTilt ? [st.asmTilt.id, +st.asmTilt.k.toFixed(3)] : null, au: st.asmTiltAuto ?? null, pd: st.asmTiltPending ?? null, bl: st.asmBlend ? +st.asmBlend.mm.toFixed(2) : null, sw: st.asmTilt && st.asmTilt.byMm ? +st.asmTilt.swingE.toFixed(3) : null, sq: st.asmSquare && st.asmSquare.n && st.asmSquare.target ? [+(Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI).toFixed(1), +st.asmSquare.q.toFixed(2)] : null, ov2: [st.orbit.yaw, st.orbit.elevation], v: String(st.lastVerdict ?? "").slice(0, 90), zs: st.asmSpitSide ?? null, zm: st.asmZoneMix ? [+st.asmZoneMix.k.toFixed(3), st.asmZoneMix.rule, +st.asmZoneMix.rad.toFixed(2)] : null, eh: st.asmEdgeHold ? st.asmEdgeHold.sign : null, cw: [+(st.asmCalmWhole ?? 0).toFixed(3), +(st.asmCalmWholeV ?? 0).toFixed(3)], cs: st.asmCalm ? { n: st.asmCalm.n.map((x) => +x.toFixed(3)), sH: +st.asmCalm.sH.toFixed(3), sV: +st.asmCalm.sV.toFixed(3) } : null, /* ⭐ (2026-11-14) the calm */ /* ⭐ (2026-11-14) the zone's state: the spit's side, its turn (share, way, angle), the hold */
       cax: (() => { const m = c.getViewMatrix().m; return [[m[0], m[4], m[8]], [m[1], m[5], m[9]], [m[2], m[6], m[10]]]; })(),
       pr: st.greenBox && st.greenBox.rotationQuaternion ? st.greenBox.rotationQuaternion.asArray() : null,
       nq: [st.pieceQueries ?? null, st.pieceSolveQueries ?? null, st.pieceQueriesCarry ?? null], hov: st.hover != null, hr: st.hoverReady != null, cmn: st.asmCalm ? [st.asmCalm.n.map((x) => +x.toFixed(4)), +st.asmCalm.sH.toFixed(4), +st.asmCalm.sV.toFixed(4), +(st.asmCalm.wA ?? 0).toFixed(3)] : null, cw: [+(st.asmCalmWhole ?? 0).toFixed(3), +(st.asmCalmWholeV ?? 0).toFixed(3)],
@@ -105,7 +108,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
 const profTmp = join(prof, "tmp");
 mkdirSync(profTmp, { recursive: true });
 const QUIET_FLAGS = ["--disable-component-update", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--disable-default-apps", "--disable-extensions", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter"];
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, `--window-size=${env.WINDOW ?? "1500,830"}` /* ⭐ (2026-11-14) WINDOW=w,h: a phone held upright, 390,844 — the vertical FOV fixed, the glass narrow */, `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, `--window-size=${env.WINDOW ?? "1500,830"}` /* ⭐ (2026-11-14) WINDOW=w,h: a phone held upright, 390,844 — the vertical FOV fixed, the glass narrow */, `--user-data-dir=${prof}`, ...QUIET_FLAGS, ...(env.CHROME_FLAGS ? env.CHROME_FLAGS.split(" ") : []) /* ⭐ (2026-11-14) e.g. --force-device-scale-factor=0.4: fewer pixels, a replay nearer the owner's frame rate */, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
 try {
   let targets = null;
   for (let i = 0; i < 60 && !targets; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch {} }
@@ -185,7 +188,28 @@ try {
         await ev("window.__fd = null"); await move("mouseReleased", m, 0); await send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65 });
         await tag(name + "_rel"); await sleep(1200);
       };
+      // ⭐⭐⭐ (2026-11-14) THE OWNER'S PLAY REPLAYED: a play recorder's session (`src/render/play_recorder.ts`, its JSONL) — its raw pointer events sent at
+      // their recorded times (from the page's boot, as recorded), `t0`–`t1` (ms of the page's clock) — each frame's leg tagged as the recording's
+      const replay = async (L) => {
+        const evs = readFileSync(L.replay, "utf8").trim().split("\n").map((l) => JSON.parse(l)).flatMap((b) => b.events ?? []).filter((e) => e.t >= (L.t0 ?? 0) && e.t <= (L.t1 ?? Infinity)).sort((a, b) => a.t - b.t);
+        if (evs.length === 0) return;
+        const start = Date.now() - evs[0].t;
+        let down = 0, press = 0, last = null;
+        for (const e of evs) {
+          const wait = start + e.t - Date.now();
+          if (wait > 1) await sleep(wait);
+          const m = [e.x, e.y];
+          // ⭐ sent WITHOUT waiting for each answer (in order on the one socket) — ⛔ awaited: every event a round trip, the play 4× slower than recorded
+          const q = (pr) => void pr.catch(() => undefined);
+          if (e.type === "pointerdown") { press++; down = 1; q(tag(`press${press}`)); q(move("mousePressed", m, 1)); }
+          else if (e.type === "pointermove") { if (down && last) q(ev(`window.__fd = [${(e.x - last[0]).toFixed(1)}, ${(e.y - last[1]).toFixed(1)}]`)); q(move("mouseMoved", m, down)); }
+          else { down = 0; q(ev("window.__fd = null")); q(tag(`free${press}`)); q(move("mouseReleased", m, 0)); }
+          last = m;
+        }
+        await sleep(1500);
+      };
       for (const L of sc.legs) {
+        if (L.replay) { await replay(L); continue; }
         if (L.wait) { await sleep(L.wait); continue; }
         if (L.eval) { console.log(`EVAL ${sc.name}:`, JSON.stringify(await ev(L.eval))); continue; }
         if (L.wob !== undefined) { wob = L.wob; if (L.seed !== undefined) seed = L.seed; continue; }

@@ -36,7 +36,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, overAxisPitch, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
@@ -869,7 +869,11 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zone the gizmo is in (last frame's place, the exit's hysteresis): a change turns every angle into its frame
   zoneStep(st, dtMs);
-  spitStep(st);
+  //  ⭐ (2026-11-14) the spit's side itself at the camera's place, in the camera stage (`spitStep`)
+  if (spitZone(st) === null) {
+    st.asmSpitSide = 0;
+    st.asmSpitU = null;
+  }
   zoneHighlightFrame(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
   // within `tiltAutoM` of the gizmo (`tiltAutoLatch`, its hysteresis) the gizmo on a FACE HOLDING A POLE (the owner's term) tilts the orbit by itself
@@ -1236,11 +1240,15 @@ export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, 
   // (especially at far distance)?"*) THE TWO FRAMED — the piece and the camera's aim (the assembly far out), each carried straight on the glass
   // (`poseFramingTwo`, toric space): neither leaves it; degenerate (the two on one ray, close in where the aim is the gizmo by the piece): about the
   // piece alone, as above. ⛔ About the piece alone everywhere: far out the assembly swung round the piece (4.5° at 7.7 m — off a narrow glass)
-  // ⭐ the rule chosen at the turn's first frame and kept (`zm.sgn` 2: about the piece) — never switched mid-turn (a jump between the two poses)
-  const t = zm.sgn === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.sgn);
-  if (t === null && zm.sgn === 0) zm.sgn = 2;
+  // ⭐ the rule chosen at the turn's first frame and kept (`zm.rule` 2: about the piece) — never switched mid-turn (a jump between the two poses); the
+  // two's angles carried frame to frame (`zm.keep`, `FramingKeep`)
+  const t = zm.rule === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.keep);
+  if (t === null && zm.rule === 0) zm.rule = 2;
   const pose = t !== null ? t.pose : r.pose;
-  if (t !== null) zm.sgn = t.sgn;
+  if (t !== null) {
+    zm.rule = 1;
+    zm.keep = t.keep;
+  }
   st.asmCamLast = { dir: norm3([pose.eye[0] - pose.look[0], pose.eye[1] - pose.look[1], pose.eye[2] - pose.look[2]]), up: pose.up };
   return pose;
 }
@@ -1672,8 +1680,13 @@ function sameZone(a: PolarZone, b: PolarZone): boolean {
 function zoneStep(st: SceneState, dtMs: number): void {
   const zm = st.asmZoneMix;
   // ⭐ (2026-11-14) from the frame its angle is known (`zoneMixPose` read it: its axis) — ⛔ by the placeholder's 90° first: 20° in the first frame, then 8.5°
+  // ⭐⭐⭐ (2026-11-14, the owner's play recording: one-frame rolls of 60 – 100° inside the turns, very fast input) THE TURN BY ANGLE at the tilts' one speed:
+  // the angle turned so far (`done`) over the turn's whole angle as it is NOW — ⛔ a share stepped by the angle of the moment: the first frame read 17°, the
+  // share leapt to 0.49, the next frame the turn was 167° — 80° in one frame. If the whole grows, the camera keeps its speed toward the new whole
   if (zm !== null && zm.axis !== null) {
-    zm.k = rollStep(zm.k, 1, dtMs, rollDurationMs(zm.rad, st.cfg.tiltRollDegS));
+    const degS = st.cfg.tiltRollDegS;
+    zm.done = degS > 0 ? Math.min(zm.rad, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : zm.rad;
+    zm.k = zm.rad > 1e-9 ? Math.min(1, zm.done / zm.rad) : 1;
     if (zm.k >= 1) st.asmZoneMix = null;
   }
   const zones = zonesOf(st);
@@ -1720,6 +1733,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   if (sq.n !== null) sq.n = turn(sq.n);
   if (sq.target !== null) sq.target = turn(sq.target);
   st.asmSpitSide = 0;
+  st.asmSpitU = null;
   st.asmShown = null;
   st.asmGOff = null;
   const map = faceMapOf(st);
@@ -1735,7 +1749,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
     }
   } else st.asmMapQ = null;
   // the camera's turn from the frame it shows now (none before the first frame: at once)
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };
+  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
   st.lastVerdict =
     next === null
       ? "orbit: out of the polar zone — the world's frame again"
@@ -1785,10 +1799,11 @@ export function zoneFinger(st: SceneState, dx: number, fdy: number): { readonly 
  * `Scene_0`'s §8 HOLD AFTER THE CROSSING: the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond (`crossingHold`), dx and the
  * other dy free. ⛔ The hold before it (`zoneViewCheck`, the view held at 80°, 2026-11-13 earlier): the gizmo stopped on the ridge, never across.
  */
-function spitStep(st: SceneState): void {
+export function spitStep(st: SceneState, cp: OrbitAt): void {
   const z = spitZone(st);
   if (z === null) {
     st.asmSpitSide = 0;
+    st.asmSpitU = null;
     return;
   }
   // ⭐⭐⭐ (2026-11-14, the owner: *"dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements"*) the
@@ -1796,19 +1811,29 @@ function spitStep(st: SceneState): void {
   // mapping are read off it) at the ORBIT's own angles, the finger's: ⛔ at the piece's (`pieceQ`, its spring): a frame late, the gizmo 14 – 30 mm past the
   // ridge far out; ⛔ the orbit's bare direction (the same day): close in the square camera turned the view over the ridge while the orbit stood 0.17°
   // past it — no side change, no turn, no hold, the next dy mapped back on the turned view: the gizmo bounced between the ridge's two faces every frame
-  const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);
+  // ⭐⭐⭐ (2026-11-14, the owner's play recording) …at the CAMERA's own place (`cameraLagged`: the one its heading is built from — `assemblyCameraFrameRaw`):
+  // ⛔ at the orbit's (the finger's), a fast finger flipped the side while the camera still looked from the old one — the heading summed the new side's bias
+  // with the old side's direction, passed through nothing and flipped: 99 – 102° in one frame mid-turn
+  // ⭐⭐⭐ (2026-11-14, the owner's records 1 – 10: "a jump … toward the end of each recording") …at THIS frame's camera place (`cp`: the camera stage calls
+  // this just before it builds the frame, `green_box_wiring.ts`) — ⛔ called from the assembly's step, before the camera's orbit step: last frame's place;
+  // the camera passed over the axis in the frame, was drawn with the old side's heading (137 – 171° in ONE frame), and the turn began a frame later
+  const u = mulM(baseFrame(st)!, calmDir(st, orbitDir(cp.yaw, cp.v)));
   const prev = st.asmSpitSide;
   const side = spitSide(u, z.axis, prev);
+  const u0 = st.asmSpitU;
   st.asmSpitSide = side;
+  st.asmSpitU = u;
   if (prev === 0 || side === prev) return;
   // ⭐⭐⭐ (2026-11-14) a CROSSING only where the orbit passes OVER or UNDER the axis (`overAxisPitch`, the part of its direction square to the axis steep:
   // the zenith edge, the bottom face's middle); round a tip the side changes silently — and a crossing's hold ends there (it held the way back over an edge
   // the gizmo has now left round the body: the finger's mapping turned with the side)
-  if (overAxisPitch(u, z.axis) < SPIT_CROSSING_PITCH_RAD) {
+  // ⭐⭐⭐ (2026-11-14, the owner's records) read on the camera's PATH this frame (`crossingPitch`) — ⛔ at its end alone: a fast finger passed straight under
+  // the body and was read 70° beyond, "round a tip" — the side flipped with no turn: 100 – 170° in one frame
+  if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD) {
     st.asmEdgeHold = null;
     return;
   }
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
   st.orbitInertia.stop();
   const g = st.asmG;
   const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
