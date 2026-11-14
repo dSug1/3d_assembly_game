@@ -261,8 +261,20 @@ export function installPointerHandler(st: SceneState): void {
     // ⭐ `D187`: a tap's action is triggered BY this release — it lands now.
     st.episodes.sync(gestureChangedSoFar(st));
     st.hudDirty = true;
-    if (st.gestureSpan.release(e.pointerId)) st.episodes.gestureEnded(endGesture(st));
+    if (st.gestureSpan.release(e.pointerId)) gestureOver(st);
   });
+}
+
+/**
+ * ⭐ THE GESTURE'S END (the last finger up, or the window lost): its episode closed — ⭐⭐⭐ (2026-11-14, the owner: *"when I dy in one direction in the
+ * rectangle faces, there are times I cannot reverse … the input is blocked: I can only go in one dy direction"*) — and §8's HOLD ENDED WITH IT
+ * (`asmEdgeHold`): the hold belongs to the gesture that crossed (its finger still pushing the way it crossed — no ping-pong over the edge); within it, it
+ * ends by `edgeHoldMm` of the finger the other way. ⛔ Kept across presses: a new press the way the last one crossed was held whole — 4 – 8 s of dy moving
+ * nothing (13 of 116 dy segments of the reversal walks far out), until 30 mm the other way.
+ */
+function gestureOver(st: SceneState): void {
+  st.asmEdgeHold = null;
+  st.episodes.gestureEnded(endGesture(st));
 }
 
 /**
@@ -276,7 +288,7 @@ export function forgetPointers(st: SceneState): void {
     st.episodeKey.delete(p.id);
     st.eventGaps.delete(p.id);
     st.pointerTypeOf.delete(p.id);
-    if (st.gestureSpan.release(p.id)) st.episodes.gestureEnded(endGesture(st));
+    if (st.gestureSpan.release(p.id)) gestureOver(st);
   }
   if (assemblyOn(st)) approachRelease(st);
   st.router.clear();

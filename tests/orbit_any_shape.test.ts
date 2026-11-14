@@ -292,3 +292,16 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
   });
 });
+
+// ⭐⭐⭐ (2026-11-14, the owner: "there are times I cannot reverse … I can only go in one dy direction") §8's hold ends WITH THE GESTURE that crossed —
+// ⛔ kept across presses: a new press the way the last one crossed moved nothing for 4 – 8 s (the reversal walks far out)
+describe("§8's hold: the gesture's own", () => {
+  it("wired: ended at the gesture's end (the last finger up, the window lost) — and nowhere else by time", async () => {
+    const { readFileSync } = await import("node:fs");
+    const pw = readFileSync("src/render/pointer_wiring.ts", "utf8");
+    expect(pw).toContain("function gestureOver(st: SceneState): void {\n  st.asmEdgeHold = null;\n  st.episodes.gestureEnded(endGesture(st));\n}");
+    expect(pw).toContain("if (st.gestureSpan.release(e.pointerId)) gestureOver(st);");
+    expect(pw).toContain("if (st.gestureSpan.release(p.id)) gestureOver(st);");
+    expect(pw).not.toContain("st.episodes.gestureEnded(endGesture(st));\n  });");
+  });
+});

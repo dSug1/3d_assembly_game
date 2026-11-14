@@ -170,6 +170,18 @@ this far the other way (mm)"*.
 ridge, released by the reverse. `Scene_1` close in (zenith, caps, bottom) against the morning's run: gizmo jumps 25 → 14, the rest within a run's spread.
 **Vectors**: `orbit_any_shape.test.ts` (the finger gathered the other way only, released at the band, a nadir's), the wiring pins.
 
+### 8.2 The hold is the GESTURE's — ended with it (2026-11-14, `1.0.142-Debug-spit-orbit`)
+> *"when I dy in one direction in the rectangle faces, there are times I cannot reverse in the other dy direction: the input is blocked: I can only go
+> in one dy direction"* — the owner, on `Scene_0bis`.
+
+**Measured** (`Scene_0bis`, 116 dy segments of long reversal walks — far, mid, close; over the zenith edge and the bottom face): 13 segments moved the
+orbit by NOTHING for 4 – 8 s — each the first of a NEW press going the way the LAST press had crossed: the hold set then was still on (it ended only by
+30 mm of finger the other way, whatever the gestures between). **The rule**: the hold ends with the gesture that crossed (`gestureOver` in
+`pointer_wiring.ts`: the last finger up, or the window lost); within the gesture, §8.1 unchanged. Applies to every hold (`Scene_0`'s tilted pole too).
+**Probed after** (the same walks, ~100 – 140 fps): blocked segments **13 → 0**; crossings 63 → 75 (the dy moving now), none within 0.6 s of the
+last (no ping-pong over the edge); no one-frame turn over 90°.
+**Vectors**: `orbit_any_shape.test.ts` (the wiring: ended at the gesture's end).
+
 ## 9. ✅ THE CAMERA'S ROLL AT THE ZENITH (2026-11-13, `1.0.125-Debug_scene_0`, live `a0ec9bc`) — ✅✅ the owner: *"this is good"*
 
 > *"polar orbit far out: the sections are ok. however there is only one defect: when the gizmo reach the zenith edge, there is a camera roll when the
