@@ -58,7 +58,6 @@ function startWorld(): World {
       parent: null,
       faces: [],
       connectors: [],
-      constraints: [],
       frozen: b.frozen,
       shape: boxShape(contourDims(b)),
     })),

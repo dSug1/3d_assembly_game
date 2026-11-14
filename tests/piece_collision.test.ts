@@ -24,7 +24,6 @@ const body = (id: string, at: Vec3, dims: [number, number, number], extra: Parti
   parent: null,
   faces: [],
   connectors: [],
-  constraints: [],
   shape: boxShape(dims),
   ...extra,
 });

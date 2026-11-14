@@ -13,8 +13,7 @@ import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Viewport } from "@babylonjs/core/Maths/math.viewport";
 import { describe, expect, it } from "vitest";
-import { coupleStops, faceFlushAxes, nextCoupleRoll, placeByFaceCentre } from "../src/core/resting_face";
-import { ORBIT_ROLL_SPAN_RAD, orbitRollSteps } from "../src/input/piece_orbit";
+import { faceFlushAxes, nextCoupleRoll, placeByFaceCentre } from "../src/core/resting_face";
 import { dot, qRotate, qSlerp, type Quat, type Vec3 } from "../src/core/vec";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
@@ -137,51 +136,6 @@ describe("⭐⭐ prototype — the roll to the next couple of symmetry axes", ()
       const c = qRotate(q, fc);
       for (const k of [0, 1, 2]) expect(origin[k]! + c[k]!).toBeCloseTo(anchor[k]!, 12);
     }
-  });
-
-  it("⭐⭐ OUTSIDE THE SPHERE THE ORBIT'S dx ROLLS TOO (*\"In 45 degree orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right\"*)", () => {
-    // the stops of a half turn: green on the rectangle 2, the hexagon on it 6 (on a single axis 3)
-    expect(coupleStops([1, 0, 0, 0], DOWN, rectAxes, PINK)).toBe(2);
-    expect(coupleStops([1, 0, 0, 0], DOWN, hexAxes, PINK)).toBe(6);
-    expect(coupleStops([1, 0, 0, 0], DOWN, hexAxes, [X])).toBe(3);
-    expect(coupleStops([1, 0, 0, 0], DOWN, [], PINK)).toBe(0);
-    // 45° of orbit to the right, in small dx steps: EVERY stop of the half turn passed once — green 2 rolls (22.5° each), turquoise 6 (7.5°)
-    for (const [axes, n] of [[rectAxes, 2], [hexAxes, 6]] as const) {
-      const step = ORBIT_ROLL_SPAN_RAD / coupleStops([1, 0, 0, 0], DOWN, axes, PINK);
-      let acc = 0;
-      let rolls = 0;
-      let q: Quat = [1, 0, 0, 0];
-      for (let i = 0; i < 450; i++) {
-        const r = orbitRollSteps(acc, (0.1 * D), step); // 0.1° of orbit per event, 45° in all
-        acc = r.acc;
-        for (let k = 0; k < r.steps; k++) {
-          q = nextCoupleRoll(q, DOWN, axes, PINK, LOOK_DOWN, 1)!.q;
-          rolls++;
-        }
-      }
-      expect(rolls).toBe(n);
-      // a half turn: every axis line back on itself (the stops visited once each)
-      for (const a of axes) expect(axes.some((b) => angleOf(qRotate(q, a), b) < 1e-6)).toBe(true);
-    }
-    // ⭐ the step accumulator: whole steps, the rest kept; a turn back goes through zero first (no flicker); no step size, nothing
-    expect(orbitRollSteps(0, 0.5, 0.2)).toEqual({ acc: expect.closeTo(0.1, 12), steps: 2 });
-    const one = orbitRollSteps(0, 0.21, 0.2);
-    expect(one.steps).toBe(1);
-    expect(orbitRollSteps(one.acc, -0.05, 0.2).steps).toBe(0); // back a little: no roll back
-    expect(orbitRollSteps(0, -0.45, 0.2).steps).toBe(-2);
-    expect(orbitRollSteps(0.1, 5, 0)).toEqual({ acc: 0, steps: 0 });
-    // ⭐ dx LEFT: counter-clockwise on the screen — the same stop distance, the other way in the world
-    const cw = nextCoupleRoll([1, 0, 0, 0], DOWN, rectAxes, PINK, LOOK_DOWN, 1)!;
-    const ccw = nextCoupleRoll([1, 0, 0, 0], DOWN, rectAxes, PINK, LOOK_DOWN, -1)!;
-    expect(ccw.angleRad).toBeCloseTo(cw.angleRad, 12);
-    expect(qRotate(ccw.q, X)[2]).toBeCloseTo(-qRotate(cw.q, X)[2], 9);
-    const p = code("render/pointer_wiring.ts");
-    // ⭐ (2026-10-10) a NEW orbit drag starts fresh — every roll, the first included, one step of the orbit from where the drag began
-    expect(p).toMatch(/st\.pieceYawGainDrag = st\.pieceOrbit !== null \|\| st\.pieceEntry !== null \|\| st\.hold\?\.mode === "WAY" \? st\.pieceYawGain : 1;\s*(?:\/\/[^\n]*\n\s*)+if \(st\.hold === null\) st\.orbitRollAcc = 0;\s*\}/); // ⭐ (2026-10-11) kept across a re-press while the second touch is held
-    const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const roll = nextCoupleRoll\(from, p\.restingFace\.normal, p\.restingFlush, pinkAxes, view, sense\);/);
-    expect(w).toMatch(/return n > 0 \? ORBIT_ROLL_SPAN_RAD \/ n : 0;/);
-    expect(ORBIT_ROLL_SPAN_RAD).toBeCloseTo(45 * D, 12);
   });
 
   it("⭐⭐ BOOT: the orbited piece's resting face aligned to the FROZEN body, the roll active at once (*\"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is immediately active at boot\"*)", () => {

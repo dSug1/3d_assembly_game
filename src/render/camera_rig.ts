@@ -5,7 +5,7 @@
  * possible"*). Every function takes the scene's `st: SceneState` first.
  */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { clampCameraRadiusM, nearestPairCentre } from "../input";
+import { clampCameraRadiusM } from "../input";
 import { type Vec3 } from "../core/vec";
 import { blendRig, horizontalShare, rigPlace, rigTurnFor, snapToGravity, type RigCameraFrame, type RigParams } from "../input/orbit_rig";
 import { pauseEndNearer, pauseUnderWay } from "../input/top_pause";
@@ -13,54 +13,6 @@ import { assemblyCameraFrame, assemblyOn, placeOffset } from "./assembly_wiring"
 import { cameraFrameHeld } from "../input/camera_frame";
 import type { CameraAngleOffset, OrbitAt } from "../input/follow_camera";
 import { type SceneState } from "./scene_state";
-import { modelPose } from "./bodies";
-
-/**
- * §2 rule 1's orbit centre: the barycentre nearest the touchpoint's ray.
- * ⚠ Only the objects actually ON SCREEN are offered — the spec asks for candidates
- * to be viewport-culled before ranking, and culling needs the projection, which is
- * why it happens here and not in `input/`.
- */
-export function recomputeOrbitCentre(st: SceneState, e: { clientX: number; clientY: number }) {
-  const ray = st.scene.createPickingRay(e.clientX, e.clientY, null, st.camera);
-  const visible = st.scene.meshes
-    .filter(
-      (m) =>
-        m.isEnabled() && m.isVisible && m.metadata?.orbitCandidate === true,
-    )
-    // ⭐ prototype (green box): frozen bodies (the floor) are not candidates — `nearestPairCentre`.
-    .filter((m) => {
-      const id = st.idOf.get(m);
-      return id === undefined || st.world.objects.get(id)?.frozen !== true;
-    })
-    // ⛔⛔ THE HOME POSITION, WITH THE SWAY TAKEN BACK OFF. The sympathetic sway is a
-    // decoration: it must not move what the scene MEANS. Reading `mesh.position`
-    // directly would let the barycentre — and so where the camera orbits — depend on
-    // whether the objects happened to be mid-wobble when the finger landed.
-    // ⚠ `METHOD`: an instrument must not be moved by the thing it is measuring.
-    // ⭐⭐ NOW IT READS THE MODEL, so there is no sway to subtract: the decoration
-    // never enters the object's real placement in the first place. The subtraction this
-    // replaces was correct but defensive — it undid a contamination that can no longer
-    // happen. `display_pose.meaningfulPose` is the statement of that rule.
-    .map((m) => {
-      const mp = modelPose(st, m);
-      return mp
-        ? mp.position
-        : ([m.position.x, m.position.y, m.position.z] as Vec3);
-    });
-  // ⭐⭐ prototype (green box): the MIDPOINT of the two piece centres nearest the ray (the owner, 2026-10-01) — it replaces
-  // `orbitCentre`'s subset barycentres here. ⭐ No piece: the target stays where it is.
-  const c =
-    nearestPairCentre(visible, {
-      origin: [ray.origin.x, ray.origin.y, ray.origin.z],
-      direction: [ray.direction.x, ray.direction.y, ray.direction.z],
-    }) ?? st.centreBlend.targetM;
-  // ⚠ RETARGET, never assign. The blend starts from wherever the centre actually is,
-  // so interrupting a half-finished migration does not put the jump back.
-  st.centreBlend.retarget(c);
-  syncCentre(st);
-}
-
 
 /** ⭐⭐⭐ (2026-10-16) the rig's turn NOW — the old and the new BLENDED at the gizmo's share (`blendRig`): the piece and the camera read this one. */
 export function rigNow(st: SceneState): RigParams {

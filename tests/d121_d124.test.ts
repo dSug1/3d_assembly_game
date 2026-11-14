@@ -20,7 +20,6 @@ const PLATE: SceneObject = {
     { id: "side", centre: [1, 0, 0], normal: [1, 0, 0] },
   ],
   connectors: [],
-  constraints: [],
   frozen: true,
 };
 

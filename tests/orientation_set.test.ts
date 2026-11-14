@@ -230,7 +230,7 @@ describe("⭐ the quads seen through the piece (2026-10-12, *\"show the quads ev
 
 describe("⭐⭐ the quad tapped stays yellow until the next drag (2026-10-12, *\"if one quad is clicked, it becomes the yellow quad since the left click/first touch on empty will keep on rolling the resting piece on this quad until the next delta position\"*)", () => {
   it("⭐ an orbit drag step that moves drops it; nothing else does", () => {
-    expect(flat("render/pointer_wiring.ts")).toContain("const dy = dxOnly ? 0 : s.y - prev.y; // ⭐⭐ (2026-10-12, *\"… keep on rolling the resting piece on this quad until the next delta position\"*) — a drag drops the quad tapped: // the yellow quad is the candidate again if (dx !== 0 || dy !== 0) st.orientShown.clicked = null;");
+    expect(flat("render/pointer_wiring.ts")).toContain("const dy = s.y - prev.y; // ⭐⭐ (2026-10-12, *\"… keep on rolling the resting piece on this quad until the next delta position\"*) — a drag drops the quad tapped: // the yellow quad is the candidate again if (dx !== 0 || dy !== 0) st.orientShown.clicked = null;");
     const c = code("render/orient_cube.ts");
     expect(c.match(/clicked = null/g)).toBeNull();
   });

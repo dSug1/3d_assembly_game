@@ -37,7 +37,6 @@ import { type GestureSpan } from "../core/gesture";
 import { type DemoPlan } from "../core/demo_plan";
 import { type LevelEnd, type LevelResult } from "../core/level_end";
 import { type Aabb } from "../core/collision";
-import { type CentreReturn, type PieceAim, type PieceEntry, type PieceOrbit } from "../input/piece_orbit";
 
 // ⛔ `MARKER_LIFT_M` (1.5 mm in the world) is deleted: a highlight's lift is one pixel ON THE GLASS,
 // recomputed every frame (`input/highlight_lift.ts`, `highlightLiftMm`).
@@ -160,17 +159,13 @@ export interface SceneState {
   pieceFaceTap: { readonly pointerId: number; readonly faceId: string } | null;
   /**
    * ⭐⭐ Prototype (2026-10-11, `RESTING_FACE_ALIGNMENT.md` §20): the HELD SECOND TOUCH's input — its pointer (the right button's on a
-   * desktop), the first touch's (`null` while lifted: a re-press continues), what the two are doing (`HoldMode`), the x each started from
-   * (px — the way in's decision), and the pink face its press would take (`null`: none — taken at the way in, or at the release).
+   * desktop), the first touch's (`null` while lifted: a re-press continues), what the two are doing (`HoldMode`). ⛔ (2026-11-14, CL1) the
+   * parked way in's fields (its x's, press time, switch anchors) deleted with it.
    */
   hold: {
     readonly second: number;
     first: number | null;
     mode: import("../input/hold_gesture").HoldMode;
-    readonly secondX0: number;
-    firstX0: number | null;
-    /** ⭐ (2026-10-11) when the second touch was pressed (ms) — a tap (within the tap time) never starts the way in. */
-    readonly t0: number;
     /** ⭐ (2026-10-11) its press changed the pink face (a new one, aligned to) or named a resting face — then its tap taps nothing (`holdTapTapsYellow`). */
     pressActed: boolean;
     /** ⭐ (2026-10-12) where the second touch's press hit a PLACED part (`null`: elsewhere) — its TAP moves the orbit centre there. */
@@ -179,12 +174,6 @@ export interface SceneState {
     readonly centreNormal: readonly [number, number, number] | null;
     /** ⭐ (2026-10-19) the part pressed (the gizmo's host on a tap — its faces the quads) */
     readonly centreHost?: string | null;
-    /** ⭐ (2026-10-12) the switch without lifting (`holdSwitch`): the second finger's trailing anchor (mm), since when it rests (ms), the first
-     * finger's x when it came to rest (px; `null` — lifted), and whether the way in was made (the way out at the second finger's lift). */
-    swAnchorMm: number;
-    swStillSince: number;
-    swFirstX0: number | null;
-    wayIn: boolean;
     /** ⭐ (2026-10-28) the approach when the two-finger input started (a tapped one undone); ⭐⭐⭐ (2026-11-13, the pinch is the approach) the fingers' separation
      * then (mm, `sep0`) and the one the approach last read (`sep`; `null` — not latched yet: `pinchLatched`) */
     base?: { readonly approach: number; readonly sep0: number; sep: number | null } | null;
@@ -319,26 +308,10 @@ export interface SceneState {
     /** ⭐ the couple last aligned — resting axis, pink axis — `null` before the first roll. */
     readonly couple: readonly [number, number] | null;
   } | null;
-  /** ⭐ Prototype (2026-10-06): the ORBIT AROUND THE PIECE (`input/piece_orbit.ts`) — set at the first resting-face alignment, cleared only by a
-   * respawn. `null`: the orbit around the centre as before. */
-  pieceOrbit: PieceOrbit | null;
-  /** ⭐ Prototype (2026-10-07): the way BACK to the orbit around the centre in progress (`returnToCentreOrbit`); `null` once home. */
-  centreReturn: CentreReturn | null;
-  /** ⭐ Prototype (2026-10-08): the WAY IN to the orbit around the piece in progress (`enterPieceOrbit` → the frame); `null` once in. */
-  pieceEntry: PieceEntry | null;
-  /** ⭐ Prototype (2026-10-10): the view's re-aim from the gizmo to the piece, advanced by dx only (`PieceAim`) — from the way in's start until
-   * it is done (into the orbit around the piece); `null` otherwise. */
-  pieceAim: PieceAim | null;
-  /** ⭐ Prototype (2026-10-10): the orbit's turn, signed by dx, not yet a whole roll step (`orbitRollSteps`) — outside the sphere, aligned. */
-  orbitRollAcc: number;
+  // ⛔ (2026-11-14, CL1) the old orbit AROUND THE PIECE's state (`pieceOrbit`, its way in `pieceEntry` / `pieceAim`, its way back `centreReturn`, the
+  // roll's `orbitRollAcc`, the yaw gain round it) deleted: no live caller since 2026-10-12 (`PIECE_ORBIT.md`; the code at `7c38150`)
   /** ⭐ Prototype (2026-10-10): the orbited piece is to be aligned to the FROZEN body at the next frame (its boot or respawn — `bootRestAlign`). */
   bootRestAlign: boolean;
-  /** ⭐ …and the yaw gain while orbiting around the piece — ONE for the game (`referenceYawGain`), recomputed only when its sliders change
-   * (`pieceYawGainKey`). */
-  pieceYawGain: number;
-  pieceYawGainKey: string;
-  /** ⭐ …what the drag in progress uses: the gain if it STARTED around the piece, else 1 — a steady speed through a drag. */
-  pieceYawGainDrag: number;
   /** ⭐ Prototype: which of them is spawned (`orbitPieceKind` when it was), and its face count. */
   orbitPieceKind: number;
   orbitPieceFaces: number;
@@ -577,7 +550,6 @@ export interface SceneState {
   gestureChanged: boolean;
   lastVerdict: string;
   hudDirty: boolean;
-  pendingCentre: { x: number; y: number; at: number } | null;
   orbit: OrbitController;
   /** ⭐⭐ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely. With the approach of the piece, there is no need for zoom"*)
    * no zoom: the rig at 1 — only the DEMO scales the camera's distance (`D171`, the fit at its start to the rig's maximum at its end); 1 otherwise */

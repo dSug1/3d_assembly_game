@@ -92,11 +92,5 @@ export function browseGlideAt(
 
 // ⛔ (2026-10-11) `pinkFaceTapCandidate` is DELETED — the pink face is the held second touch's now (`hold_gesture.ts`'s `pinkCandidate`).
 
-/**
- * ⭐⭐ prototype (green box) — **ONLY A PRESS ON A PLACED PIECE MOVES THE YELLOW TARGET** (the owner, 2026-10-02: *"a press on
- * empty space or frozen object or green piece does not change the yellow orbit center position. Only a press on placed object
- * changes the yellow orbit center position."*). ⛔ So the empty-space press — the frozen floor and the green piece are empty
- * space to the router — no longer retargets (§2 rule 1's barycentre, `nearestPairCentre`); its drag still orbits. ⭐ Switched
- * OFF, not deleted: `true` restores it.
- */
-export const EMPTY_PRESS_MOVES_TARGET = false;
+// ⛔ (2026-11-14, CL1) `EMPTY_PRESS_MOVES_TARGET` (off since 2026-10-02: only a press on a placed piece moves the yellow target) deleted with
+// the empty-press barycentre it switched (`recomputeOrbitCentre`, `nearestPairCentre`).

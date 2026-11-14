@@ -17,22 +17,22 @@ import { MotionTracker } from "../src/input/motion";
 
 describe("URL tunable overrides", () => {
   it("applies a numeric override and reports it", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=45");
-    expect(r.config.pieceOrbitReturnMm).toBe(45);
-    expect(r.applied).toEqual(["pieceOrbitReturnMm=45"]);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?browseArriveMm=45");
+    expect(r.config.browseArriveMm).toBe(45);
+    expect(r.applied).toEqual(["browseArriveMm=45"]);
     expect(r.rejected).toEqual([]);
   });
 
   it("applies several, and leaves everything else alone", () => {
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "pieceOrbitReturnMm=45&pieceOrbitEnterMm=0");
-    expect(r.config.pieceOrbitReturnMm).toBe(45);
-    expect(r.config.pieceOrbitEnterMm).toBe(0);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "browseArriveMm=45&idleOrbitOn=0");
+    expect(r.config.browseArriveMm).toBe(45);
+    expect(r.config.idleOrbitOn).toBe(0);
     expect(r.config.orbitDeadbandMm).toBe(DEFAULT_CONFIG.orbitDeadbandMm);
   });
 
   it("⭐ ZERO is a legitimate value, not an absent one", () => {
-    // ⛔ `pieceOrbitEnterMm=0` is a real setting (the way in at once). A parser that treated 0 as missing would make it unreachable.
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitEnterMm=0").config.pieceOrbitEnterMm).toBe(0);
+    // ⛔ `idleOrbitOn=0` is a real setting (the idle orbit off). A parser that treated 0 as missing would make it unreachable.
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?idleOrbitOn=0").config.idleOrbitOn).toBe(0);
   });
 
   it("⛔ REFUSES an unknown key, loudly", () => {
@@ -43,13 +43,13 @@ describe("URL tunable overrides", () => {
 
   it("⛔ REFUSES an empty value — it is a typo, not a request for zero", () => {
     // `Number("")` is 0, which would silently set a tunable to zero.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=");
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?browseArriveMm=");
     expect(r.applied).toEqual([]);
-    expect(r.config.pieceOrbitReturnMm).toBe(DEFAULT_CONFIG.pieceOrbitReturnMm);
+    expect(r.config.browseArriveMm).toBe(DEFAULT_CONFIG.browseArriveMm);
   });
 
   it("⛔ REFUSES a non-number", () => {
-    expect(parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=fast").applied).toEqual([]);
+    expect(parseConfigOverrides(DEFAULT_CONFIG, "?browseArriveMm=fast").applied).toEqual([]);
   });
 
   it("ignores the cache-busting parameters this URL routinely carries", () => {
@@ -127,10 +127,10 @@ describe("URL tunable overrides", () => {
   it("⛔⛔ ONE bad key does not cost the GOOD ones in the same URL", () => {
     // ⚠ The device loop is A/B by URL: losing a whole query because one value was refused
     // would mean a session testing a set of numbers that was never in force.
-    const r = parseConfigOverrides(DEFAULT_CONFIG, "?pieceOrbitReturnMm=45&motionDeadbandMm=0.5");
-    expect(r.config.pieceOrbitReturnMm).toBe(45);
+    const r = parseConfigOverrides(DEFAULT_CONFIG, "?browseArriveMm=45&motionDeadbandMm=0.5");
+    expect(r.config.browseArriveMm).toBe(45);
     expect(r.config.motionDeadbandMm).toBe(DEFAULT_CONFIG.motionDeadbandMm);
-    expect(r.applied).toEqual(["pieceOrbitReturnMm=45"]);
+    expect(r.applied).toEqual(["browseArriveMm=45"]);
     expect(r.rejected.length).toBe(1);
   });
 });

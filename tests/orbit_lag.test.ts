@@ -23,7 +23,7 @@ describe("⭐⭐ the piece's lag behind the ring — two sliders", () => {
     expect(a).not.toContain("const GIZMO_TAU_MS"); expect(a).not.toContain("dtMs, GIZMO_TAU_MS)");
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("springOrbit(st.boxSpring, rig, dtSec * 1000, st.cfg.orbitSpringMs)");
-    for (const k of ["pieceEntry", "pieceAim", "centreReturn"]) expect(g).toContain(`smoothTravel(st.${k}, dtSec * 1000, st.cfg.orbitSpringMs)`);
+    expect(g).not.toContain("smoothTravel("); // ⛔ (2026-11-14, CL1) the way in / out round the piece and their eased travel deleted
     const m = code("render/tuning_menu.ts");
     const c = m.indexOf('title: "CAMERA ORBIT AROUND CENTER"');
     expect(m.indexOf('"gizmoEaseMs", 0, 500, 5')).toBeGreaterThan(c);

@@ -288,7 +288,7 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;");
-    expect(p).toContain("if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);");
-    expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
+    expect(p).toContain("if (asmOn && fdy0 !== 0 && !shiftApproach) st.asmDySign = Math.sign(fdy0);");
+    expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
   });
 });

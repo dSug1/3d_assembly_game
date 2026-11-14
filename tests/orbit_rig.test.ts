@@ -14,7 +14,7 @@ import { cameraOffset } from "../src/input/follow_camera";
 import { IDENTITY, qFromAxisAngle, qmul, qRotate, type Vec3 } from "../src/core/vec";
 import { rigFrameBetween, rigTurnFor } from "../src/input/orbit_rig";
 import { topRollWidth } from "../src/input/orbit_rig";
-import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, rigYawToward, waistV, type RigParams } from "../src/input/orbit_rig";
+import { UNTURNED, blendRig, cameraOffsetAt, rigBetaFor, rigCameraFrame, rigPlace, rigRotationFor, rigSwing, rigSwingShare, waistV, type RigParams } from "../src/input/orbit_rig";
 import { fourRingLayout } from "../src/input/orbit";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8").replace(/\s+/g, " ");
@@ -200,14 +200,6 @@ describe("⭐⭐⭐ the rig turned onto the gizmo's face (2026-10-16)", () => {
     expect(Math.cos(rigBetaFor(qt, 0, [Math.cos(7 * Math.PI / 180), 0, Math.sin(7 * Math.PI / 180)]))).toBeCloseTo(1, 9); // 7° off: still ON the line
     expect(Math.cos(rigBetaFor(qt, 0, [-1, 0, 0.1]) - Math.PI)).toBeCloseTo(1, 9); // the camera on the other side: the other way along it
   });
-  it("⭐ the rebase: the yaw whose ring points at the piece — the inverse of the place", () => {
-    for (const p of [UNTURNED, turnFor(0.4, [0, 1, 0]), turnFor(-0.6, [0.2, 0.5, 0.8])]) {
-      for (const yaw of [0.3, 2.2, -1.4]) {
-        const rel = rigPlace(cfg, p, yaw, 0.7, 1);
-        expect(Math.cos(rigYawToward(cfg, p, 0.7, 1, rel) - yaw)).toBeCloseTo(1, 9);
-      }
-    }
-  });
   it("⭐⭐ the blend's share EASED toward the gizmo's stepped progress (⛔ stepped: a 6 % screen jerk per pointer event) — an exponential approach that lands", async () => {
     const { easeShare } = await import("../src/input/orbit_rig");
     let s = 0;
@@ -286,13 +278,13 @@ describe("⭐⭐⭐ the rig's turn wired (2026-10-16)", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const offP = ringPlaceNow(st, o.yaw, o.v, o.zoom);"); // ringAnchorAt
     expect(g).toContain("const boP = assemblyOn(st) ? shownOffset(st, st.boxOrbit.yaw, st.boxOrbit.v) : ringPlaceNow(st, st.boxOrbit.yaw, st.boxOrbit.v, st.boxOrbit.zoom);"); // ⭐ (2026-10-28) the 2D curve's orbit when `orbitMode` is 1
-    expect(g).toContain("const be = st.pieceEntry === null ? null : ringPlaceNow(st, st.pieceEntry.headingRad, st.boxOrbit.v, st.boxOrbit.zoom);");
+    expect(g).not.toContain("st.pieceEntry"); // ⛔ (2026-11-14, CL1) the way in's heading deleted with it
   });
   it("⭐⭐⭐ the camera DERIVED FROM THE PIECE (`cameraFrameNow` on the same blended turn — `rigNow`), its up set from it", () => {
     const g = code("render/green_box_wiring.ts");
     expect(g).toContain("const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);");
     expect(g).toContain("const o = cameraOffsetAt(camFrame.dir,");
-    expect(g.split("const ring = anglesOf(camFrame.dir);").length - 1).toBe(2);
+    expect(g).not.toContain("anglesOf(camFrame.dir)"); // ⛔ (2026-11-14, CL1) the camera round the piece (its way in, its orbit) deleted
     expect(g).toContain("st.camera.upVector = new Vector3(up[0], up[1], up[2]);");
     const c = code("render/camera_rig.ts");
     expect(c).toContain("return blendRig(st.rigFrom, st.rigTo, st.rigShare);"); // ⭐ the share as drawn (eased)

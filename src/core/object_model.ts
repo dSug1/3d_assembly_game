@@ -33,8 +33,6 @@
  * data and plain functions; every operation returns a NEW world and mutates nothing.
  */
 import type { ConvexShape } from "./collision_shape";
-import type { Constraint, EvictResult } from "./constraint_stack";
-import { cleared, evict, push } from "./constraint_stack";
 import type { MateConnector, Placed } from "./mate_connector";
 import { worldPose } from "./mate_connector";
 import { IDENTITY, add, canon, qRotate, qconj, qmul, scale, type Quat, type Vec3 } from "./vec";
@@ -69,8 +67,7 @@ export interface SceneObject {
   readonly parent: ObjectId | null;
   readonly faces: readonly Face[];
   readonly connectors: readonly MateConnector[];
-  /** Spec §1.4, oldest first. §0: every object starts with an EMPTY stack. */
-  readonly constraints: readonly Constraint[];
+  // ⛔ (2026-11-14, CL1) `constraints` (§1.4's stack) deleted with `core/constraint_stack.ts`: always empty since the alignment was deleted (2026-11-02)
   /**
    * ⭐⭐⭐ **FROZEN — THE TRANSFORM CANNOT BE MODIFIED AND THE BODY CANNOT BE A FOLLOWER**
    * (the owner, 2026-09-17, for the base plate).
@@ -474,53 +471,6 @@ export function connectorWorldPose(
   const here = worldPlacementOf(world, id);
   if (!here) return null;
   return worldPose(connector, here);
-}
-
-// ── the constraint stack, attached ─────────────────────────────────────────────
-
-/**
- * Spec §1.4. ⭐ Delegates the ordering decision to `constraint_stack.push`, which owns
- * `matePriorityOverAnchor` — one constant, one place.
- */
-export function pushObjectConstraint(
-  world: World,
-  id: ObjectId,
-  c: Constraint,
-  matePriorityOverAnchor: boolean,
-): World {
-  const o = world.objects.get(id);
-  if (!o) return world;
-  // ⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER. ⚠ Refused here rather than at the tap, because a
-  // constraint is what would MOVE it: an alignment's solve, a seat retarget and a mate all
-  // read the stack and write a pose. ⭐ Nothing can be constrained, so nothing can be moved
-  // through the constraint door either.
-  if (o.frozen === true) return world;
-  return withObject(world, { ...o, constraints: push(o.constraints, c, matePriorityOverAnchor) });
-}
-
-/** Clear one object's stack — the alignment setter's first half (`alignFollowerTo`). ⛔ No drag ever clears it. (Born as §2septies' double-tap, deleted `D111`.) */
-export function clearObjectConstraints(world: World, id: ObjectId): World {
-  const o = world.objects.get(id);
-  if (!o) return world;
-  return withObject(world, { ...o, constraints: cleared() });
-}
-
-/**
- * ⭐⭐⭐ `A4`/`D13` — EVICTION, ON ONE OBJECT. The alignments go, the mates stay.
- *
- * ⛔ It returns the VERDICT as well as the world, because *nothing to evict* is a thing the
- * caller has to say out loud — see `EvictResult.refused`. ⚠ An unknown id refuses rather
- * than throwing: the caller is a pointer handler, and a mesh that is not an object is an
- * ordinary outcome there.
- */
-export function evictObjectConstraints(
-  world: World,
-  id: ObjectId,
-): { readonly world: World; readonly result: EvictResult } {
-  const o = world.objects.get(id);
-  if (!o) return { world, result: { stack: [], removed: 0, refused: true } };
-  const result = evict(o.constraints);
-  return { world: withObject(world, { ...o, constraints: result.stack }), result };
 }
 
 /** Unused re-export guard: `Quat` is part of this module's surface via `Placed`. */

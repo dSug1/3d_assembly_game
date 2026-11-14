@@ -14,7 +14,8 @@ const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url)
 describe("⭐⭐⭐ prototype — the yellow gizmo: ALWAYS SEEN while its slider is on (2026-10-15, the owner: *\"Let's make it simple and light for game lightness: make the gizmo always seen if the gizmo slider is toggled on. No need for raycast, timer, etc.\"*)", () => {
   it("⭐⭐⭐ wired: at the yellow target, the amber ring's size on the glass, billboarded, drawn on top — no ray, no verdict, no timer", () => {
     const w = code("render/green_box_wiring.ts");
-    expect(w).toMatch(/const t = st\.centreBlend\.targetM;/);
+    // ⛔ (2026-11-14, CL1) this matched a line of the dead way in (`const t = st.centreBlend.targetM;`) — now the ring's own
+    expect(w).toContain("const t = assemblyOn(st) ? gizmoShownAt(st.asmGizmoAt, st.centreBlend.targetM, st.asmGizmoLag) : st.centreBlend.targetM;");
     expect(w).toMatch(/trackingMetresPerPx\(dist, st\.camera\.fov, st\.canvas\.clientHeight\) \* GIZMO_RING_PX/);
     expect(w).toMatch(/ring\.billboardMode = Mesh\.BILLBOARDMODE_ALL;\s*ring\.renderingGroupId = 2;/);
     expect(w).toMatch(/ring\.isVisible = true;\s*const m = trackingMetresPerPx[^\n]*\n\s*ring\.scaling\.set\(m, m, m\);\s*ring\.position\.set\(t\[0\], t\[1\], t\[2\]\);/);

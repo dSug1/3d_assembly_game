@@ -14,7 +14,7 @@ import { pieceRingRangeM, pieceSolveRuns, respawnStuckPiece } from "./green_box_
 import { worldPlacementOf } from "../core/object_model";
 import { GREEN_PIECE_ORBIT_ZOOM, orbitSlideDirection, orbitSwayDegAt, orbitSwayKinds, orbitSwingAxis, placedBarycentre } from "../input/green_box";
 import { clampCameraRadiusM } from "../input/camera_radius";
-import { browseTargetOnPress, EMPTY_PRESS_MOVES_TARGET, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
+import { browseTargetOnPress, goalLocked, orbitTargetOnPress, orbitTargetOnRelease } from "../input/goal_lock";
 import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
@@ -32,10 +32,9 @@ import { holdFirstPress, holdMove, holdRelease, holdSecondPress } from "./hold_w
 import { episodeCounts } from "../input/episode_ledger";
 import { beginGesture, endGesture, gestureChangedSoFar } from "./gesture_wiring";
 import { type SceneState } from "./scene_state";
-import { applyCamera, recomputeOrbitCentre, retargetGizmo, syncCentre } from "./camera_rig";
+import { applyCamera, retargetGizmo, syncCentre } from "./camera_rig";
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
-import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit"; // ⏸ (2026-10-12) orbitRollSteps — with the commented-out way in
 import { edgeHoldDy, edgeHoldFinger } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
@@ -171,15 +170,7 @@ export function installPointerHandler(st: SceneState): void {
         if (to !== null) st.browseGlide = { from: st.centreBlend.centreM, to, travelledMm: 0 };
       }
 
-      if (st.router.outside().length === 1) {
-        // ⭐⭐ DEFERRED, NOT IMMEDIATE: a second touchpoint turns this into a PINCH, and the two never land in the same instant. ⭐ prototype
-        // (green box), 2026-10-02: an empty-space press does NOT move the yellow target (`EMPTY_PRESS_MOVES_TARGET`, switched off).
-        st.pendingCentre = EMPTY_PRESS_MOVES_TARGET && st.cfg.orbitCentreGraceMs > 0 ? { x: e.clientX, y: e.clientY, at: s.t } : null;
-        if (EMPTY_PRESS_MOVES_TARGET && !st.pendingCentre) recomputeOrbitCentre(st, e);
-      } else {
-        // ⛔ A SECOND ONE ARRIVED: two fingers — the camera keeps orbiting whatever it was already orbiting.
-        st.pendingCentre = null;
-      }
+      // ⛔ (2026-11-14, CL1) the empty-space press's centre (`EMPTY_PRESS_MOVES_TARGET`, off since 2026-10-02) and its deferred commit deleted
       // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) no pinch zoom begins here any more
       // ⭐⭐⭐ (2026-10-11) the held second touch's input starts — or the first touch pressed again while it is held. ⭐ A FINGER's press on a PLACED
       // part notes where: its TAP moves the orbit centre there (`holdRelease`), as a first touch's press does
@@ -188,10 +179,10 @@ export function installPointerHandler(st: SceneState): void {
         const centreAt: [number, number, number] | null = onPlaced && hitAt !== null ? [hitAt[0], hitAt[1], hitAt[2]] : null;
         const firstNow = st.router.outside().find((q) => q.id !== e.pointerId)?.id ?? null;
         const centreN = centreAt !== null ? pick?.getNormal(true) : null;
-        holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null ? (hitId ?? null) : null);
+        holdSecondPress(st, e.pointerId, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null ? (hitId ?? null) : null);
         // ⭐ (2026-10-28) on the orbited piece its tap is the resting face's, never the yellow quad's
         if (onOrbited && st.hold !== null) st.hold.pressActed = true;
-      } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId, s.x);
+      } else if (holdRole === "FIRST") holdFirstPress(st, e.pointerId);
       st.hudDirty = true;
       return;
     }
@@ -205,7 +196,7 @@ export function installPointerHandler(st: SceneState): void {
       // ⭐⭐⭐ (2026-10-11) the held second touch's input owns its two touches' moves: undecided (nothing moves), the way in / round the piece (the
       // first touch's dx only), the approach (⛔ 2026-11-13 no zoom)
       if (st.hold !== null && (e.pointerId === st.hold.first || e.pointerId === st.hold.second)) {
-        holdMove(st, e.pointerId, s, prev, (dxOnly) => orbitDragStep(st, e.pointerId, s, prev, dxOnly));
+        holdMove(st, e.pointerId, s, prev, () => orbitDragStep(st, e.pointerId, s, prev));
         st.hudDirty = true;
         return;
       }
@@ -295,10 +286,9 @@ export function forgetPointers(st: SceneState): void {
  * its own gains, yaw and pitch (*"the green box orbits too fast"*) (⛔ 2026-11-13 slower inside the leash: deleted with the leash). ⚠ The zoom (pinch,
  * wheel) is unchanged.
  */
-export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample, dxOnly = false): void {
+export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev: Sample): void {
   const dx = s.x - prev.x;
-  // ⭐ (2026-10-11, *"first touch's dy while the second is held: ignored"*) — the way in and the orbit round the piece take dx only
-  const dy = dxOnly ? 0 : s.y - prev.y;
+  const dy = s.y - prev.y;
   // ⭐⭐ (2026-10-12, *"… keep on rolling the resting piece on this quad until the next delta position"*) — a drag drops the quad tapped:
   // the yellow quad is the candidate again
   if (dx !== 0 || dy !== 0) st.orientShown.clicked = null;
@@ -307,15 +297,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     if (st.orbitMotion === null || st.orbitMotion.pointerId !== pointerId) {
       // ⭐ (the third audit) the drag's own deadband (`orbitDeadbandMm`), apart from the tracker the camera reads MOVING from
       st.orbitMotion = { pointerId, tracker: new MotionTracker(st.cfg), band: new MotionTracker({ ...st.cfg, motionDeadbandMm: st.cfg.orbitDeadbandMm }, st.cfg.orbitBandRestMs, true) };
-      // ⭐ prototype (2026-10-06): the yaw gain around the piece (`referenceYawGain`, one for the game) applies to a drag that STARTS
-      // orbiting around the piece — a drag already running at the alignment tap keeps its speed to its end. ⭐⭐ (2026-10-08, the owner:
-      // *"the camera yaw speed is identical on way in and on piece orbit so there is no visual discontinuity"*) …or on the WAY IN: one speed
-      // through the way in and the orbit that follows, whichever a drag starts in
-      st.pieceYawGainDrag = st.pieceOrbit !== null || st.pieceEntry !== null || st.hold?.mode === "WAY" ? st.pieceYawGain : 1;
-      // ⭐ (2026-10-10, the owner: *"there seem to be the need for a bigger dx to trigger the first roll than afterwards"* → *"build the two
-      // changes"*) a NEW drag starts its roll count fresh — no leftover from the last drag, so its first roll takes one step like every other.
-      // ⭐ (2026-10-11) …except a first touch pressed again while the second is held: the same input goes on (*"continuation"*)
-      if (st.hold === null) st.orbitRollAcc = 0;
     }
     st.orbitMotion.tracker.push(s);
     st.orbitMotion.band.push(s);
@@ -324,7 +305,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const v0 = st.orbit.elevation;
     // ⭐ the owner, 2026-10-04: *"For the orbit, invert the sense of the delta position y input"* — dy enters with its own sign now
     // (it was negated: finger UP raised the green piece on the rings; now finger DOWN does). dx unchanged.
-    // ⭐ prototype (2026-10-06): orbiting around the piece, the yaw gain is LOWERED so the scene slides as far as before (`referenceYawGain`)
     // ⭐⭐ (2026-10-13, the second audit) through §1.1's per-axis DEADBAND (the tracker's step): a finger's wobble on the axis it is not moving
     // emits nothing — raw, it rocked the piece's slide along a sloped part every other event; one band paid once per axis entering motion
     const db = st.orbitMotion.band.step;
@@ -334,19 +314,19 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // (the owner's default: *"the same °/mm as the dx yaw"*) — 170° of pitch over the ring parameter
     const asmOn = assemblyOn(st);
     // ⛔ the approach (A + dy) only in the PIECE ORBIT — not foreseen in the scene orbit (the owner, 2026-11-14)
-    const shiftApproach = pieceOrbitOn(st) && st.orbitShift && !dxOnly;
+    const shiftApproach = pieceOrbitOn(st) && st.orbitShift;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
     const fdy0 = orbitDy(db.dy, asmOn);
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
-    if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
+    if (asmOn && fdy0 !== 0 && !shiftApproach) st.asmDySign = Math.sign(fdy0);
     const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
     // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance)
-    if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);
+    if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);
     // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) in a polar zone's spit: the finger read in F's upright screen (a dx pole to pole, a dy round the axis — the way
     // it goes on the glass); a crossing's hold is §8's, above (`spitStep` sets it)
     // ⭐ (2026-11-14) a dx only: the finger's OWN dy none, before any mapping — the mapped pitch kept (in a spit seen from above it is the finger's dx)
-    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, dxOnly ? 0 : fdy1) : { dx: db.dx, fdy: dxOnly ? 0 : fdy1 };
+    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, fdy1) : { dx: db.dx, fdy: fdy1 };
     const fdy = zf.fdy;
     const fdx = zf.dx;
     const dyPx = (shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;
@@ -360,32 +340,15 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // down with the piece's distance to the gizmo — full from `orbitGainFullM` out, at the contact the gizmo `orbitContactMmPerMm` on the surface per mm
     const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm, st.asm?.radius ?? 0) : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -fdx * st.cfg.boxGainYaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -fdx * st.cfg.boxGainYaw * kd), dyPx * share * kd);
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);
     // ⭐⭐⭐ (2026-11-11) the orbit's finger travel (the approach's excluded): the automatic tilt's pending ends at its first millimetre, its blend paced by it
-    if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);
+    if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;
-    // ⭐⭐ (2026-10-10, the owner: *"when the piece is outside the white sphere, I want the dx to also drive the roll to the next axis. In 45 degree
-    // orbit around the piece I want all the axis to have rolled at least once. direction of the roll : clockwise if dx is to the right"*) —
-    // outside the sphere and aligned to the face it would align to now, the orbit's turn (signed by dx) rolls the piece a stop every
-    // `orbitRollStepRad` (green 22.5°, turquoise 7.5°): right clockwise on the screen, left counter-clockwise, whatever the ring
-    // ⭐ (2026-10-10) …the pink face changed since or not: the roll goes on against the axes it was aligned to
-    // ⭐⭐ (2026-10-11) …on the held second touch's way in and round the piece (the sphere is deleted)
-// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
-// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
-// ⏸     if (st.hold !== null && st.hold.mode === "WAY" && st.restAligned && st.restRoll !== null && dx !== 0) {
-// ⏸       const turned = Math.abs(Math.atan2(Math.sin(st.orbit.yaw - yaw0), Math.cos(st.orbit.yaw - yaw0)));
-// ⏸       const r = orbitRollSteps(st.orbitRollAcc, Math.sign(dx) * turned, orbitRollStepRad(st));
-// ⏸       st.orbitRollAcc = r.acc;
-// ⏸       // ⛔⛔ (2026-10-10, the owner: *"when the dx is too fast, the piece makes strange movements. consider clamping"*) ONE turn in flight: a roll
-// ⏸       // only once the last turn landed, one at most — a fast dx crossing several stops drops the rest (queued, they made a turn past 180°,
-// ⏸       // eased the SHORT way round, about another axis)
-// ⏸       if (r.steps !== 0 && st.restAlign === null) rollRestingFace(st, performance.now(), r.steps > 0 ? 1 : -1, true);
-// ⏸     }
     // ⭐⭐ prototype (green box), the owner 2026-10-02: *"apply the sway to other objects when the green piece orbits"* → *"build
     // 1-3"*: the held body's own TRIGGER (`SwayWatcher` on the orbit finger) — but a SWING of the scene, as a block, about the
     // yellow target, in the sense the green piece orbits (`orbitSwingAxis`), `orbitSwayDeg` × the finger's speed factor, on the
@@ -451,12 +414,6 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     st.centreBlend.advance(Math.hypot(dx, dy) / mmToPx(1));
     st.browseFingerMm += Math.hypot(dx, dy) / mmToPx(1); // ⭐ (2026-11-13) the frame's finger travel — the minimum speed tops it up
   }
-  // ⭐ prototype (2026-10-06): …and the camera's glide to the piece, once orbiting around it (`piece_orbit.ts`) — the same travel
-  if (st.pieceEntry !== null) st.pieceEntry = advancePieceEntry(st.pieceEntry, Math.hypot(dx, dy) / mmToPx(1));
-  // ⭐ (2026-10-10) …and the view's re-aim to the piece: dx ALONE (a pure dy leaves the piece where it is on the screen)
-  if (st.pieceAim !== null) st.pieceAim = advancePieceAim(st.pieceAim, dx / mmToPx(1));
-  // …and the way back to the centre orbit (2026-10-07), the same travel
-  if (st.centreReturn !== null) st.centreReturn = advanceCentreReturn(st.centreReturn, Math.hypot(dx, dy) / mmToPx(1));
   syncCentre(st);
   applyCamera(st);
 }

@@ -17,7 +17,6 @@ const BOX = (id: string): SceneObject => ({
     { id: "-y", centre: [0, -0.5, 0], normal: [0, -1, 0] },
   ],
   connectors: [],
-  constraints: [],
 });
 const ORIGIN: Vec3 = [0, 0, 0];
 

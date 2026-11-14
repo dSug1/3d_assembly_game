@@ -343,7 +343,6 @@ export function createScene(
           frozen: m.metadata?.frozen === true,
           connectors: [],
           // §0's Start condition: every object begins with an EMPTY stack.
-          constraints: [],
         };
       }),
   );
@@ -654,14 +653,6 @@ export function createScene(
   st.restRoll = null;
   st.pieceAnchor = null;
   st.anchorShift = null;
-  st.pieceOrbit = null;
-  st.centreReturn = null;
-  st.pieceEntry = null;
-  st.pieceAim = null;
-  st.orbitRollAcc = 0;
-  st.pieceYawGain = 1;
-  st.pieceYawGainKey = "";
-  st.pieceYawGainDrag = 1;
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
@@ -763,13 +754,6 @@ export function createScene(
   // ─────────────────────────────────────────────────────────────────
   // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) §2 RULE 4, THE PINCH ZOOM, deleted — the rig at 1 always.
 
-  /**
-   * An orbit centre chosen but NOT YET COMMITTED — see `orbitCentreGraceMs`.
-   * ⛔ Resolved in the RENDER LOOP rather than by a timer: the loop is already running,
-   * a frame is the granularity anything visible happens at, and there is no callback to
-   * cancel, leak, or fire after the scene is gone.
-   */
-  st.pendingCentre = null;
 
   /**
    * The double-tap reset in flight, or `null`.

@@ -157,7 +157,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
   it("⭐⭐⭐ WHEN it runs (the owner: *\"at boot for every part … not seated … at the moment it is unseated\"*; a part in its goal IS seated)", async () => {
     const { restingFaceFrame } = await import("../src/render/resting_face_wiring");
     const cube = topoOf(CreateBox("c2", { size: 2 }, scene));
-    const obj = (id: string, frozen = false) => ({ id, local: { position: [0, 0, 0] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], constraints: [], frozen });
+    const obj = (id: string, frozen = false) => ({ id, local: { position: [0, 0, 0] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], frozen });
     const ids = ["A", "B", "C", "floor"];
     // ⛔ (2026-11-02) a part seated on a Pioneer is gone with the parts' snap (`d8134eb`): seated = placed in its goal
     const placed = new Set(["B", "C"]); // B and C placed in their goals
@@ -255,7 +255,7 @@ describe("⭐⭐⭐ prototype — the resting-face selector", () => {
     expect(rec.centre[0]).toBeCloseTo((2 * 1 + 1 * 2.5) / 3, 12); // 1.5 by area — the faces' mean would say 1.75
     expect(rec.centre[2]).toBeCloseTo(0.5, 12);
     expect(restingFaceRecord(P, faces, { faces: [7], normal: [0, -1, 0] } as never)).toBeNull();
-    const floor = { id: "floor", local: { position: [1, 2, 3] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], constraints: [], frozen: true };
+    const floor = { id: "floor", local: { position: [1, 2, 3] as Vec3, orientation: [1, 0, 0, 0] as Quat }, parent: null, faces: [], connectors: [], frozen: true };
     const w = setRestingFace(makeWorld([floor]), "floor", { ...rec, why: "BOOT" });
     expect(w.objects.get("floor")!.restingFace!.faceIds).toEqual(["f0", "f1"]);
     expect(w.objects.get("floor")!.local).toEqual(floor.local);

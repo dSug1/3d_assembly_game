@@ -341,7 +341,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | GM7 | Populate worlds and levels; a theme | GAME | content | `World_0` exists | GM1 |
 | GM8 | Save/load a scene as local JSON (Free Flow) | GAME | feature | queued | GM1 |
 | GM9 | The player layer: player HUD, cues, hints, sound, haptics, save-in-progress (build #5) | GAME | feature | queued | GM1 |
-| CL1 | ⭐ The clean-up before the pick-up flow: the dead and parked code (~1 900 lines), bit for bit on `Scene_1` | CORE | cleanup | queued — FIRST (the owner, 2026-11-14); `orbitMode` 1 and `Scene_1`'s pieces kept → [`queue_notes/CL1.md`](queue_notes/CL1.md) | — |
+| CL1 | ⭐ The clean-up before the pick-up flow: the dead and parked code (~1 900 lines), bit for bit on `Scene_1` | CORE | cleanup | ✅ **BUILT 2026-11-14** — ≈ 2 700 lines; Scene_1, Scene_0, Scene_0bis replayed IDENTICAL bit for bit (`replay_probe.mjs`); 1 787 vectors → [`queue_notes/CL1.md`](queue_notes/CL1.md) | — |
 | GM10 | ⭐ Pick a part (a tap; its step available, outlined; cycle) and put it down (a double tap; a free spot near, the least turn) | GAME | feature | ⛔ specified 2026-11-14, not built → [`queue_notes/GM10.md`](queue_notes/GM10.md) | CL1 |
 | GM11 | ⭐ The scene orbit ↔ the piece orbit: by the clock at a pick, inputs held until ready; the idle blend while held | GAME | feature | ⛔ specified 2026-11-14, not built → [`queue_notes/GM11.md`](queue_notes/GM11.md) | GM10 |
 | GM12 | ⭐ After a snap: the face map rebuilt, the centre to the next part's support, the outlines back; the level end to the scene orbit | GAME | feature | ⛔ specified 2026-11-14, not built → [`queue_notes/GM12.md`](queue_notes/GM12.md) | GM11 |

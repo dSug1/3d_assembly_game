@@ -19,7 +19,6 @@ const body = (id: string, at: Vec3, orbited = false): SceneObject => ({
   parent: null,
   faces: [{ id: "f0", centre: [0, -0.05, 0], normal: [0, -1, 0] }],
   connectors: [],
-  constraints: [],
   shape: boxShape([0.1, 0.1, 0.1]),
   ...(orbited ? { orbited: true, restingFace: { faceIds: ["f0"], centre: [0, -0.05, 0] as Vec3, normal: [0, -1, 0] as Vec3, why: "SPAWN" as const } } : {}),
 });

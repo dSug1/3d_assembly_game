@@ -71,6 +71,6 @@ describe("⛔⛔ the zoom deleted (2026-11-13)", () => {
     const h = flat("render/hold_wiring.ts");
     expect(h).toContain('h.mode = "APPROACH"; st.lastVerdict = "orbit: two fingers — the approach by the pinch (spread: in, pinch: out)";');
     expect(h).not.toMatch(/\bupdatePinch\b|\bpinchPair\b/);
-    expect(code("input/hold_gesture.ts")).toContain('export type HoldMode = "HELD" | "WAY" | "APPROACH";');
+    expect(code("input/hold_gesture.ts")).toContain('export type HoldMode = "HELD" | "APPROACH";');
   });
 });

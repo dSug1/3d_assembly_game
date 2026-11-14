@@ -48,7 +48,6 @@ const body = (
   parent: null,
   faces: [],
   connectors: [],
-  constraints: [],
   shape: boxShape(dims),
   ...(frozen ? { frozen: true } : {}),
 });

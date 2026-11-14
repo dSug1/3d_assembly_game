@@ -3,26 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { nearestPairCentre } from "../src/input/barycentre";
 import { orbitTargetOnPress } from "../src/input/goal_lock";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
-const ray = { origin: [0, 0, -5] as [number, number, number], direction: [0, 0, 1] as [number, number, number] };
 
 describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
-  it("⭐⭐ empty space: the MIDPOINT of the two piece centres nearest the ray — not a subset barycentre", () => {
-    // A and B nearest the ray (0.1 and 0.2 off it), C far (1 m off), D on the ray but BEHIND the camera (5 m from its origin)
-    const A: [number, number, number] = [0.1, 0, 0];
-    const B: [number, number, number] = [0, 0.2, 1];
-    const C: [number, number, number] = [1, 0, 0];
-    const D: [number, number, number] = [0, 0, -10];
-    expect(nearestPairCentre([C, A, D, B], ray)).toEqual([0.05, 0.1, 0.5]);
-    // ⭐ the order does not matter, and a third piece never pulls it (a subset barycentre of A, B, C would)
-    expect(nearestPairCentre([B, C, A], ray)).toEqual([0.05, 0.1, 0.5]);
-    expect(nearestPairCentre([C], ray)).toEqual([1, 0, 0]); // one piece: its centre
-    expect(nearestPairCentre([], ray)).toBeNull(); // none: the target stays
-  });
-
   it("⭐⭐ a piece in its goal: the hit point — first touch or left button only, and only when locked", () => {
     const hit: [number, number, number] = [0.3, 0.2, 0.1];
     expect(orbitTargetOnPress(true, true, true, hit)).toEqual(hit);
@@ -32,19 +17,14 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     expect(orbitTargetOnPress(true, true, true, null)).toBeNull();
   });
 
-  it("⭐⭐ ONLY a press on a placed piece moves the target — empty space, the floor, the green piece do not (the owner, 2026-10-02)", async () => {
-    const { EMPTY_PRESS_MOVES_TARGET } = await import("../src/input/goal_lock");
-    expect(EMPTY_PRESS_MOVES_TARGET).toBe(false); // switched off, not deleted
+  it("⭐⭐ ONLY a press on a placed piece moves the target — empty space, the floor, the green piece do not (the owner, 2026-10-02); ⛔ (2026-11-14, CL1) the switched-off empty-press retarget deleted", () => {
+    expect(code("input/goal_lock.ts")).not.toMatch(/export const EMPTY_PRESS_MOVES_TARGET/);
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/EMPTY_PRESS_MOVES_TARGET && st\.cfg\.orbitCentreGraceMs > 0/);
-    expect(p).toMatch(/if \(EMPTY_PRESS_MOVES_TARGET && !st\.pendingCentre\) recomputeOrbitCentre\(st, e\);/);
+    expect(p).not.toMatch(/EMPTY_PRESS_MOVES_TARGET &&|st\.pendingCentre|recomputeOrbitCentre\(/);
+    expect(code("render/camera_rig.ts")).not.toMatch(/recomputeOrbitCentre|nearestPairCentre/);
   });
 
-  it("⭐ wired: empty space reads nearestPairCentre over the non-frozen pieces; a press on a piece retargets at the hit", () => {
-    const c = code("render/camera_rig.ts");
-    expect(c).toMatch(/nearestPairCentre\(visible,/);
-    expect(c).toMatch(/st\.world\.objects\.get\(id\)\?\.frozen !== true/);
-    expect(c).not.toMatch(/const c = orbitCentre\(/);
+  it("⭐ wired: a press on a piece retargets at the hit", () => {
     const p = code("render/pointer_wiring.ts");
     // ⛔ (2026-11-02, `d8134eb`) no press holds a part: a press on a part is OUTSIDE, its hit read off the pick
     expect(p).toContain("const newTarget = orbitTargetOnPress(hitId !== undefined && st.router.all().length === 1 && holdRole === null, e.pointerType !== \"mouse\" || e.isTrusted,");
@@ -68,7 +48,7 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
     // ⛔ without this the green box would read every frame of that drag as a RELEASE
     // ⭐ (2026-10-11) the held second touch's input first: its first touch orbits on the way in / round the piece only
     expect(code("render/green_box_wiring.ts")).toMatch(
-      /const orbiting = h !== null\s*\? \(h\.mode === "WAY" \|\| h\.mode === "HELD" \? h\.first : null\)[^\n]*\n\s*: out\.length === 1\s*\? out\[0\]!\.id\s*: null;/,
+      /const orbiting = h !== null\s*\? \(h\.mode === "HELD" \? h\.first : null\)[^\n]*\n\s*: out\.length === 1\s*\? out\[0\]!\.id\s*: null;/,
     );
   });
 });
