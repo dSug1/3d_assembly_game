@@ -4,6 +4,8 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath, URL } from "node:url";
 import { execSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * ⭐⭐ THE BUILD ID, STAMPED INTO THE BUNDLE AND SERVED BESIDE IT.
@@ -74,6 +76,35 @@ export default defineConfig({
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
           res.end(VERSION_JSON);
+        });
+      },
+    },
+    {
+      // ⭐ (2026-11-14) THE PLAY RECORDER's sink, dev only: `src/render/play_recorder.ts` (the page with `#rec`) posts a batch a second; each appended as
+      // one line to `.recordings/<session>.jsonl` (git-ignored). No build ever serves it.
+      name: "play-recorder-sink",
+      apply: "serve",
+      configureServer(server) {
+        // the destination: REC_DIR, else the first line of `.recordings-dir` (a local, git-ignored file — the owner's own folder), else `.recordings/`
+        const local = existsSync(".recordings-dir") ? readFileSync(".recordings-dir", "utf8").split(/\r?\n/)[0]?.trim() : "";
+        const dir = process.env["REC_DIR"] ?? (local !== undefined && local !== "" ? local : join(process.cwd(), ".recordings"));
+        server.middlewares.use((req, res, next) => {
+          if (req.method !== "POST" || req.url?.split("?")[0] !== "/__rec") return next();
+          let body = "";
+          req.setEncoding("utf8");
+          req.on("data", (c: string) => (body += c));
+          req.on("end", () => {
+            try {
+              const session = String((JSON.parse(body) as { session?: unknown }).session ?? "unknown").replace(/[^\w.-]/g, "_");
+              mkdirSync(dir, { recursive: true });
+              appendFileSync(join(dir, `${session}.jsonl`), body + "\n");
+              res.statusCode = 204;
+              res.end();
+            } catch (e) {
+              res.statusCode = 400;
+              res.end(String(e));
+            }
+          });
         });
       },
     },

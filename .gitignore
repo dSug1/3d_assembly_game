@@ -46,3 +46,7 @@ Thumbs.db
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# the play recorder's sessions (src/render/play_recorder.ts, dev only)
+.recordings/
+.recordings-dir
