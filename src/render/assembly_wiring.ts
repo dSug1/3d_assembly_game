@@ -1304,13 +1304,17 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   // automatic tilt's threshold — and runs to the end on its own clock at `tiltRollDegS` (`rollDurationMs` of the turn's own angle); the gizmo HELD
   // meanwhile (`tiltClampStep`, `tiltUnderWay`); whole: the world's frame (`tiltExits`, the swing over too)
   const onFacet = stack === tl.facet;
-  if (!onFacet && !tl.finishing) {
+  // ⭐⭐⭐ (2026-11-14, the owner: *"a sort of a flash of the scene with a very short jump of the camera"*) THE ROLL STEPPED FROM THE FRAME ITS ANGLE IS READ:
+  // the crossing's frame sets its target (the face crossed onto), the camera's stage reads the turn's angle (`tl.rollRad`) — ⛔ stepped at once by the
+  // angle read last frame, on the facet (its target the tilt's own heading there: ~0°, 0 ms): the half turn whole in ONE frame (probed: 180° at the ridge)
+  const crossing = !onFacet && !tl.finishing;
+  if (crossing) {
     tl.finishing = true;
     tl.exitAcross = (st.asmCalm?.wA ?? 0) > 0.5; // ⭐ (2026-11-10) over a `b` end: the reading toward the edge's line there
     st.lastVerdict = "orbit: over the edge — the tilt back to upright (the gizmo held until it completes)";
   }
   tl.kT = tl.finishing || tl.off ? 1 : 0;
-  tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));
+  if (!crossing) tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));
   tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);
 }
 
@@ -1560,6 +1564,10 @@ function tiltOff(st: SceneState): void {
     if (m !== null) {
       const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
       if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+      // ⭐⭐⭐ (2026-11-14, the same flash) the map's place in the world AT ONCE (the gizmo's own, just put there): a tilt that follows the exit (a ridge's
+      // far face, close in) is made THIS frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts, its
+      // heading not the roll's target (probed after a dx: −18° then +19.5° back)
+      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
     }
   } else st.asmMapQ = null;
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";

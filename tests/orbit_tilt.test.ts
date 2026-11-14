@@ -419,7 +419,11 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
     expect(a).toContain("turnAngles(st, (d) => mulM(D, d));");
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
-    expect(a).toContain("if (!onFacet && !tl.finishing) {"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
+    expect(a).toContain("const crossing = !onFacet && !tl.finishing;"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
+    // ⭐⭐⭐ (2026-11-14) stepped from the frame its angle is read (⛔ at once by last frame's: the ridge's half turn whole in one frame), and the exit leaves
+    // the world map's place set (a tilt that follows made the same frame: ⛔ one frame of the world's camera between the two)
+    expect(a).toContain("if (!crossing) tl.k = rollStep(tl.k, tl.kT, dtMs, rollDurationMs(tl.rollRad, st.cfg.tiltRollDegS));");
+    expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).not.toContain("exitShare("); // ⛔ the stretch's share deleted
     expect(a).toContain("if (!turning && (tl === null || !(tiltUnderWay(swingTimed, tl.finishing || tl.off, tl.k) || tl.finishing || tl.off))) return false;"); // ⭐ (2026-11-10) held to the exit itself
     expect(a).toContain("if (nW !== null) sqO.target = nW;"); // ⭐ the turn's target at the crossing itself // ⭐ 1-b: held (⭐ `1.0.120b-`: and while the square camera turns)
