@@ -469,6 +469,9 @@ export function poseAboutPiece(a: CamPose, b: CamPose, piece: Vec3, k: number, h
  * THROUGH BOTH (both stay put); the camera's axes the one turn putting A and B where they go. `null`: degenerate (the two on one ray from the camera, or
  * at one place, or behind it) — the caller turns about the piece alone (`poseAboutPiece`). k 0: `a`; k 1: `b`.
  */
+/** ⭐ (2026-11-14) the closest the two places may come on the glass (tangent units, ≈ 7°) for the turn to be the two's — else the piece's alone */
+export const FRAMING_TWO_MIN = 0.12;
+
 export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, sgn: number): { readonly pose: CamPose; readonly sgn: number } | null {
   const A0 = a.piece ?? A;
   const B0 = a.look;
@@ -494,6 +497,16 @@ export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, sgn: 
   const ta1 = tangent(b, Bb, A);
   const tb1 = tangent(b, Bb, B);
   if (ta0 === null || tb0 === null || ta1 === null || tb1 === null) return null;
+  // ⭐⭐⭐ (2026-11-14) at the turn's FIRST frame (`sgn` 0): the two places' straight paths passing within `FRAMING_TWO_MIN` of each other on the glass —
+  // the two on one ray from the camera somewhere on the way, the turn's axis unreadable there — the turn is the piece's alone for its whole length (⛔ a
+  // switch mid-turn, the pose about the piece for a frame: a jump)
+  if (sgn === 0) {
+    const d0: [number, number] = [ta0[0] - tb0[0], ta0[1] - tb0[1]];
+    const dd: [number, number] = [ta1[0] - tb1[0] - d0[0], ta1[1] - tb1[1] - d0[1]];
+    const q = dd[0] * dd[0] + dd[1] * dd[1];
+    const kc = q > 1e-12 ? Math.min(1, Math.max(0, -(d0[0] * dd[0] + d0[1] * dd[1]) / q)) : 0;
+    if (Math.hypot(d0[0] + kc * dd[0], d0[1] + kc * dd[1]) < FRAMING_TWO_MIN) return null;
+  }
   const s = Math.min(1, Math.max(0, k));
   const lerp = (x: number, y: number): number => x + (y - x) * s;
   const ta: [number, number] = [lerp(ta0[0], ta1[0]), lerp(ta0[1], ta1[1])];
@@ -519,10 +532,15 @@ export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, sgn: 
   const rB = roots.reduce((p, q) => (Math.abs(q - rB0) < Math.abs(p - rB0) ? q : p));
   const cb = Math.max(-1, Math.min(1, (rA * rA + L * L - rB * rB) / (2 * rA * L)));
   const sb = Math.sqrt(1 - cb * cb);
-  // the place round the line A → B: an angle from a reference square to it (the world's up, else x)
+  const L0 = len(sub(B0, A0));
+  if (!(L0 > 1e-6)) return null;
+  const u0: Vec3 = norm(sub(B0, A0));
+  // the place round the line A → B: an angle from ONE reference for the whole turn — the start camera's axis most square to the line (`a`'s, fixed),
+  // laid square to the line as it is now. ⛔ (2026-11-14) the world's up, else x past 0.95: far out the line (the camera over the piece over the assembly)
+  // stands near the vertical and the piece's spring tilts it through 0.95 mid-turn — the reference switched, φ jumped: a 61° roll in ONE frame mid-turn
+  const wRef: Vec3 = [Ba.r, Ba.u, Ba.f].reduce((p, q) => (Math.abs(dot(q, u0)) < Math.abs(dot(p, u0)) ? q : p));
   const ref = (u: Vec3): { e1: Vec3; e2: Vec3 } => {
-    const w: Vec3 = Math.abs(u[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0];
-    const e1 = norm(sub(w, [u[0] * dot(w, u), u[1] * dot(w, u), u[2] * dot(w, u)]));
+    const e1 = norm(sub(wRef, [u[0] * dot(wRef, u), u[1] * dot(wRef, u), u[2] * dot(wRef, u)]));
     return { e1, e2: cross(u, e1) };
   };
   const phiOf = (E: Vec3, P: Vec3, u: Vec3): number => {
@@ -530,9 +548,6 @@ export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, sgn: 
     const v = sub(E, P);
     return Math.atan2(dot(v, e2), dot(v, e1));
   };
-  const L0 = len(sub(B0, A0));
-  if (!(L0 > 1e-6)) return null;
-  const u0: Vec3 = norm(sub(B0, A0));
   const phi0 = phiOf(a.eye, A0, u0);
   const phi1 = phiOf(b.eye, A, uAB);
   let dphi = Math.atan2(Math.sin(phi1 - phi0), Math.cos(phi1 - phi0));
