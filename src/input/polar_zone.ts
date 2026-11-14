@@ -513,6 +513,26 @@ export function overAxisPitch(u: Vec3, a: Vec3): number {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-14, the owner's records: a fast finger) HOW STEEPLY THE CAMERA'S PATH PASSED THE AXIS between last frame's direction `u0` and this one's
+ * `u1`: `overAxisPitch` where the path cuts the side's plane (`spitSideRef`: the place the side really changed) — not at either end alone. ⛔ Read at the
+ * frame's end only: the camera went from straight under the body (pitch 85°) to 70° past it in one frame — read there 19°, "round a tip", the side
+ * flipped with no turn: the heading by 170° in ONE frame. Both ends on one side of the plane (the hysteresis): the end nearer it. `u0` none: `u1`'s.
+ */
+export function crossingPitch(u0: Vec3 | null, u1: Vec3, a: Vec3): number {
+  if (u0 === null) return overAxisPitch(u1, a);
+  const r = spitSideRef(a);
+  const d0 = dot(u0, r);
+  const d1 = dot(u1, r);
+  if (d0 * d1 < 0) {
+    const t = d0 / (d0 - d1);
+    const m: Vec3 = [u0[0] + (u1[0] - u0[0]) * t, u0[1] + (u1[1] - u0[1]) * t, u0[2] + (u1[2] - u0[2]) * t];
+    const l = len(m);
+    return l > 1e-9 ? overAxisPitch([m[0] / l, m[1] / l, m[2] / l], a) : Math.PI / 2; // ⭐ through the centre: straight over the axis
+  }
+  return overAxisPitch(Math.abs(d0) < Math.abs(d1) ? u0 : u1, a);
+}
+
+/**
  * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed: at the gizmo `g0` on its face (normal `n`), into the face beyond square to the
  * edge (toward the new `side`, along the face) — the dy sign that crossed (`sign`, the finger's last) held until the gizmo is `edgeHoldMm` deep. `null`: no
  * dy to hold, or no way along the face.

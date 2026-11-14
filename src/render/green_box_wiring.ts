@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep, zoneMixPose } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, restDrawn, shownOffset, spitStep, tiltClampStep, zoneMixPose } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -1154,6 +1154,9 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   let lookAt: Vec3;
   // ⭐⭐⭐ (2026-10-16) THE CAMERA DERIVED FROM THE PIECE (`cameraFrameNow`): its direction the piece's own, its up upright but over a crossing
   const camPlace = cameraPlaceNow(st); // ⭐⭐⭐ (2026-10-25) over a horizontal face on the TRAVEL (`laggedPlace`): the roll as soon as the camera reaches the zenith
+  // ⭐⭐⭐ (2026-11-14, the owner's records) the spit's side read at THIS place, just before the frame is built from it — the crossing's turn starts in the
+  // frame the camera passes over the axis, from the pose shown (⛔ read a frame earlier: drawn once with the old side's heading — a half turn in one frame)
+  if (assemblyOn(st)) spitStep(st, camPlace);
   const camFrame = cameraFrameNow(st, camPlace, off, dtSec * 1000);
   st.cameraPrev = { dir: camFrame.dir, up: camFrame.up, cam: camPlace }; // ⭐ (2026-10-17) the next frame's up carried from this one (`cameraFrameHeld`) — ⭐ (2026-10-25) with the pause share: the roll in the pause is travel
   if (po === null) {

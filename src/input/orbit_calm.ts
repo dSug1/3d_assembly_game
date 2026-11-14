@@ -365,6 +365,29 @@ export function turnedAboutH(n: Vec3, m: Vec3): boolean {
   return Math.abs(dot(m, t)) < 1e-6 && dot(m, n) < 1 - 1e-9;
 }
 
+/** ⭐ (2026-11-14) the calm whole up to this angle between the orbit's direction and the eased face's normal (in the face's own frame, round its `b`) … */
+export const CALM_FACING_FROM_RAD = Math.PI / 2;
+/** ⭐ … and none from this one */
+export const CALM_FACING_NONE_RAD = (3 * Math.PI) / 4;
+
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner's play records: *"one jump or big sway rotation of the camera or piece flying toward the end of each recording"*) HOW MUCH
+ * THE CALM'S FACE FACES THE ORBIT: 1 while `u` is within `CALM_FACING_FROM_RAD` (90°) of the eased normal `n` round its `b` (the angle in the face's own
+ * `n`, `t` plane), smoothly 0 at `CALM_FACING_NONE_RAD` (135°) and beyond. The calm frames a face the camera looks at; its reading — `u`'s angle off `n`,
+ * a share of it shown — means nothing for a face turned away, and at 180° it wraps. ⛔ Unbounded: a fast finger took the orbit 166 – 174° round from the
+ * eased normal (the calm ~120 ms behind), the angle wrapped through ±180° and the shown direction leapt to the other side — the piece thrown 3 – 5 m in
+ * ONE frame, the camera (framing it) swung 20 – 116° — 1256 of the recorded turns' frames, every gizmo held.
+ */
+export function facingWeight(u: Vec3, n: Vec3, t: Vec3): number {
+  const a = u[0] * n[0] + u[1] * n[1] + u[2] * n[2];
+  const c = u[0] * t[0] + u[1] * t[1] + u[2] * t[2];
+  const l = Math.hypot(a, c);
+  if (!(l > 1e-9)) return 1;
+  const g = Math.acos(Math.max(-1, Math.min(1, a / l)));
+  const x = Math.min(1, Math.max(0, (CALM_FACING_NONE_RAD - g) / (CALM_FACING_NONE_RAD - CALM_FACING_FROM_RAD)));
+  return x * x * (3 - 2 * x);
+}
+
 /**
  * ⭐⭐⭐ (§8) THE SHOWN DIRECTION for the orbit's `u` under the calm `c` (`shownDir` in the eased facet's own frame), faded toward the frame's own POLES
  * (`poleWeight` of `u` along its `b`: on a vertical facet the world's up, as before). No calm: `u`. ⭐⭐⭐ (2026-11-10) read both ways and blended by `c.wA`
@@ -373,7 +396,8 @@ export function turnedAboutH(n: Vec3, m: Vec3): boolean {
 export function calmShown(u: Vec3, c: CalmState | null): Vec3 {
   if (c === null) return u;
   const { t, b } = facetFrame(c.n);
-  const w = poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2]);
+  // ⭐⭐⭐ (2026-11-14, the owner's records: "the piece flying") …and faded as `u` turns AWAY from the eased face (`facingWeight`)
+  const w = poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2]) * facingWeight(u, c.n, t);
   if (!(w > 0)) return u;
   const sH = 1 - (1 - c.sH) * w;
   const sV = 1 - (1 - c.sV) * w;

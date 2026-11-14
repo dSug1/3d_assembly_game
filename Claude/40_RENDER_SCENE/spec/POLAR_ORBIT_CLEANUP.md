@@ -322,6 +322,10 @@ FACET's own frame (its normal as it is, its level `t`, its `b` up the slope; dy'
 cube untouched); the caps none; both shares whole where the frame changes. Simulated on a horizontal hexagonal prism (`tests/calm_slanted.test.ts`, 6):
 10° of orbit off a 30° face's normal shows 2.5° (the old rule 25°); no sweep swings more than the old rule. ⛔ NOT ported from `1.0.113-`: the step walk
 (F8), the line joins by bisection (F6) and `closedAlong` on real faces — the owner: *"too many back and forth of the red and green sections"* at the notches.
+⭐⭐⭐ (2026-11-14, `1.0.142-Debug-spit-orbit`, the owner's play records — `POLAR_ZONES.md` §4.8) **`calmShown` faded as the orbit turns AWAY from the
+eased face** (`facingWeight`: whole to 90° off its normal, round its `b`; none from 135°). ⛔ Unbounded: a fast finger took the orbit 166 – 174° round the
+eased normal, the angle off it wrapped through ±180°, the shown direction leapt to the other side (the piece 3 – 5 m in one frame). Below 90° nothing
+changes (`orbit_calm.test.ts` pins the old wiring there).
 
 ### 8.2 Open, for later improvement
 

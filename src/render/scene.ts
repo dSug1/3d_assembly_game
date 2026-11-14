@@ -562,6 +562,7 @@ export function createScene(
   st.asmPieceDrawn = null;
   st.asmZoneFacetsF = null;
   st.asmSpitSide = 0;
+  st.asmSpitU = null;
   st.asmZoneAlpha = 0;
   st.asmZoneMesh = null;
   st.asmDySign = 0;
@@ -729,6 +730,8 @@ export function createScene(
   // ⭐ DEV ONLY — the scene state on `window` for a CDP harness to read. ⛔ `import.meta.env.DEV` is
   // false in `npm run build`, so the production bundle carries no hook.
   if (import.meta.env.DEV) (window as unknown as { __st?: unknown }).__st = st;
+  // ⭐ (2026-11-14) the play recorder, dev only, with `#rec` in the URL (`render/play_recorder.ts` → `.recordings/`, `vite.config.ts`'s `/__rec`)
+  if (import.meta.env.DEV && window.location.hash.includes("rec")) void import("./play_recorder").then((m) => m.installPlayRecorder(st));
   st.gestureSpan = new GestureSpan();
   st.gestureBefore = null;
   st.episodes = new EpisodeTally();

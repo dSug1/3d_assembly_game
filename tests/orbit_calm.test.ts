@@ -2,7 +2,7 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, calmHeading, calmShown, calmStep, calmTarget, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
+import { alignedShare, calmHeading, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
 import { buildFaceMap, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
@@ -150,7 +150,8 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     for (const nn of [[0, 0, -1], [1, 0, 0], [0.6, 0, -0.8]] as Vec3[])
       for (const [y, p] of [[-60, 20], [-100, 70], [10, -40]]) {
         const u: Vec3 = [Math.cos(p! * D) * Math.cos(y! * D), Math.sin(p! * D), Math.cos(p! * D) * Math.sin(y! * D)];
-        const w = poleWeight(u[1]);
+        // ⭐⭐⭐ (2026-11-14) × how much the face faces the orbit (`facingWeight`: whole to 90° off its normal, none from 135°)
+        const w = poleWeight(u[1]) * facingWeight(u, nn, [-nn[2], 0, nn[0]]);
         const old = shownDir(u, nn, [-nn[2], 0, nn[0]], [0, 1, 0], 1 - 0.75 * w, 1 - 0.6 * w);
         const now = calmShown(u, { n: nn, sH: 0.25, sV: 0.4 });
         for (const k of [0, 1, 2]) expect(now[k]).toBeCloseTo(old[k]!, 12);
@@ -176,5 +177,35 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect("faceSpanEngageM" in d).toBe(false); // the distance gate deleted (Q3)
     expect(() => validateGestureConfig({ ...d, faceSpanShareVOn: 0.5 })).toThrow();
     expect(() => validateGestureConfig({ ...d, faceSpanShareH: 1.5 })).toThrow();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-14, the owner's records: "piece flying toward the end of each recording") the calm faded as the orbit turns AWAY from the eased face —
+// whole to 90° off its normal, none from 135°: ⛔ unbounded, a fast finger took the orbit 166 – 174° round the eased normal, the angle off it wrapped
+// through ±180° and the shown direction leapt to the other side (the piece 3 – 5 m in one frame, the gizmo held)
+describe("the calm faded as the face turns away (facingWeight)", () => {
+  const n: Vec3 = [0, 0, -1];
+  const t: Vec3 = [1, 0, 0];
+  const at = (deg: number): Vec3 => [Math.sin((deg * Math.PI) / 180), 0, -Math.cos((deg * Math.PI) / 180)];
+  it("whole up to 90°, none from 135°, smooth between", () => {
+    for (const d of [0, 30, 60, 89.9]) expect(facingWeight(at(d), n, t)).toBe(1);
+    for (const d of [135, 150, 180, -170]) expect(facingWeight(at(d), n, t)).toBe(0);
+    let prev = 1;
+    for (let d = 90; d <= 135; d += 1) {
+      const w = facingWeight(at(d), n, t);
+      expect(w).toBeLessThanOrEqual(prev + 1e-12);
+      expect(prev - w).toBeLessThan(0.06);
+      prev = w;
+    }
+  });
+  it("the shown direction continuous all the way round the eased normal — no leap through ±180°", () => {
+    const c = { n, sH: 0.25, sV: 0.4 };
+    let prev = calmShown(at(-180), c);
+    for (let d = -179; d <= 180; d += 1) {
+      const s = calmShown(at(d), c);
+      // ⭐ through the fade (90° – 135°) the calm released: up to ≈ 3° shown per degree of orbit — continuous, never a leap
+      expect((Math.acos(Math.min(1, prev[0] * s[0] + prev[1] * s[1] + prev[2] * s[2])) * 180) / Math.PI).toBeLessThan(4);
+      prev = s;
+    }
   });
 });

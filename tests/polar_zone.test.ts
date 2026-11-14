@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { buildFaceMap, type MapFace } from "../src/input/face_map";
 import { prismOutline } from "../src/core/prism";
-import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, zoneAt, zoneFrame, zoneOrientation, distanceToFacets } from "../src/input/polar_zone";
+import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, zoneAt, zoneFrame, zoneOrientation, distanceToFacets, crossingPitch, overAxisPitch } from "../src/input/polar_zone";
 import { mulM, mulT } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
@@ -279,6 +279,24 @@ describe("the spit's crossing: over or under the axis (overAxisPitch)", async ()
   it("wired: a crossing only when the orbit passes over / under the axis; a silent change ends the crossing's hold", async () => {
     const { readFileSync } = await import("node:fs");
     const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
-    expect(aw).toContain("if (overAxisPitch(u, z.axis) < SPIT_CROSSING_PITCH_RAD) {\n    st.asmEdgeHold = null;\n    return;\n  }");
+    expect(aw).toContain("if (crossingPitch(u0, u, z.axis) < SPIT_CROSSING_PITCH_RAD) {\n    st.asmEdgeHold = null;\n    return;\n  }");
+  });
+});
+
+// ⭐⭐⭐ (2026-11-14, the owner's records) the crossing read on the camera's PATH: from straight under the body to 70° past it in one frame — under the axis
+describe("the spit's crossing on the camera's path (crossingPitch)", () => {
+  const a: [number, number, number] = [1, 0, 0];
+  it("straight under, then 70° past: the crossing's place read (steep), not the frame's end (19°)", () => {
+    const u0: [number, number, number] = [-0.12, -0.99, 0.05];
+    const u1: [number, number, number] = [0.11, -0.33, -0.94];
+    expect((overAxisPitch(u1, a) * 180) / Math.PI).toBeLessThan(25);
+    expect((crossingPitch(u0, u1, a) * 180) / Math.PI).toBeGreaterThan(80);
+  });
+  it("round a tip: the place there (the part square to the axis small): no crossing", () => {
+    expect(crossingPitch([0.95, 0.1, 0.29], [0.95, 0.1, -0.29], a)).toBe(0);
+  });
+  it("no last direction: the frame's own", () => {
+    const u: [number, number, number] = [0, 0.8, 0.6];
+    expect(crossingPitch(null, u, a)).toBe(overAxisPitch(u, a));
   });
 });
