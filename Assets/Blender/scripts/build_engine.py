@@ -24,10 +24,16 @@ from mathutils import Matrix, Vector
 # ---------------------------------------------------------------- arguments, paths
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 STEP = int(argv[argv.index("--step") + 1]) if "--step" in argv else 1
+# ⭐ `--rev N`: a REVISION beside the file, never over it (the owner, 2026-11-14: *"creating a revision2 file (do not overwrite the file) … I shall
+# authorize an export then only if I am satisfied"*) — `world0_scene_2_engine_revisionN.blend`, its previews in `previews/revisionN/`, the
+# animation's golden file untouched, and NO export (step 10 refused)
+REV = argv[argv.index("--rev") + 1] if "--rev" in argv else ""
+if REV and STEP >= 10:
+    sys.exit("--rev builds a revision for the owner's look: the export (step 10) waits for the owner's go — run --step 9")
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.abspath(os.path.join(HERE, "..", "World0_Scene2_engine"))
-BLEND = os.path.join(OUT_DIR, "world0_scene_2_engine.blend")
-PREVIEW_DIR = os.path.join(OUT_DIR, "previews")
+BLEND = os.path.join(OUT_DIR, f"world0_scene_2_engine{'_revision' + REV if REV else ''}.blend")
+PREVIEW_DIR = os.path.join(OUT_DIR, "previews", *(["revision" + REV] if REV else []))
 
 # ---------------------------------------------------------------- the reference's numbers (Appendix B at 120°, §2.9 / §2.10 / §6)
 UNIT_M = 0.14
@@ -1105,6 +1111,120 @@ def merge_into(target, bm):
     bpy.data.meshes.remove(me)
 
 
+PISTON_SEG = 48     # the piston's round: its revolve and its crown's edge (a multiple of 4: the crown's patches meet on its axes and at one step)
+CROWN_ROWS = 4      # the crown's rows of quads between a pocket's rim and the piston's edge
+FLOOR_GROUPS = (3, 1, 3, 3, 1)   # a pocket floor's rim steps (run-out → tip) taken onto ONE step of its inner rectangle each: 3 = a 3-to-1 reduction
+FLOOR_SIDE = 3      # of those groups, how many face the rectangle's flank (along u); the rest its end (along v)
+FLOOR_INNER = 0.8   # the inner rectangle's corner K at this share of the floor's radius, toward the rim's 45°
+FLOOR_WEIGHT = 0.0  # the rectangle's steps ∝ (the rim steps they face) ** this — 1: as the rim, 0: equal
+FLOOR_REDUCE_T = 0.65   # a 3-to-1 reduction's two inner vertices this far from the rim toward the rectangle
+# (the FLOOR_ values swept over every layout of five groups — the quads' corners and their longest / shortest edge: 41° – 145°, 3.0;
+#  (3, 1, 3, 1, 3) at 0.7, halfway: 29° – 163°; steps sized like the rim: thin strips, 4.2)
+
+
+def crown_quads(P, pockets, yc, name):
+    """⭐ REVISION 2 — THE CROWN IN QUADS (the owner, 2026-11-14: *"the top of the piston is not properly drawn in blender and does not follow the
+    state of the art quad drawing, as a result, the rendering is poor and shows fake facets"*). Revision 1 cut the pockets with a boolean out of a
+    flat cap: the crown became two 46-sided faces, each floor an 11-sided one, every wall's steps uneven (0.0012 beside 0.025) — long slivers
+    once triangulated. Here every surface is drawn from its own equation in the piston's frame `P` (x the crank's, y the bore's, z across the
+    bank), the half x ≥ 0, then mirrored onto x ≤ 0 (the valves' axes lie in the mid plane x = 0):
+    * each POCKET — its cylinder (the valve's axis `d`, radius `rad`) between the crown (y = yc) and its floor (square to d, at y_lo along it):
+      its WALL one quad per even step of the cylinder's angle φ, from the deep TIP (φ 0, on x = 0) to the RUN-OUT (φ0, where the floor rises
+      through the crown: the wall's height 0 there — that last step a TRIANGLE, the one point where three surfaces meet); its FLOOR a band of
+      quads along its rim round an inner rectangle (a circle's square-in-a-circle layout — a ladder parallel to the chord was tried first: its
+      rows thinned to slivers toward the tip, where the rim runs parallel to them);
+    * the CROWN, each side: the BAND between the two pockets (one row from the chord to the edge's first step) and, round each pocket, a RULED
+      patch from its rim to the edge (90° → one step: PISTON_SEG / 4 − 1 steps, as many as the rim's) in CROWN_ROWS rows.
+    Returns a bmesh in reference coordinates with a face layer "surface": 1 the crown, 2 a pocket's wall, 3 a pocket's floor."""
+    m, k, R = PISTON_SEG // 4 - 1, CROWN_ROWS, PISTON_R
+    step = 2 * math.pi / PISTON_SEG
+    Pinv = P.inverted()
+    faces, band_tops = [], {}
+    for V0, rad, y_lo in pockets:
+        L = Pinv @ V0
+        a0, d = L.translation.copy(), (L.to_3x3() @ Vector((0, 1, 0))).normalized()
+        assert abs(d.x) < 1e-6 and abs(a0.x) < 1e-6, f"piston {name}: a valve's axis off the piston's mid plane — the crown cannot be mirrored"
+        d.x = a0.x = 0.0
+        e2 = Vector((1, 0, 0))
+        e1 = e2.cross(d)                                   # square to d, in the mid plane …
+        if e1.y > 0:
+            e1 = -e1                                       # … toward the DEEP side (the wall tallest there): the tip at φ = 0
+        c = a0 + y_lo * d                                  # the floor's centre
+        cos0 = (yc - c.y) / (rad * e1.y)
+        assert -1 < cos0 < 1, f"piston {name}: a pocket's floor does not cross the crown"
+        phi0 = math.acos(cos0)
+        phis = [phi0 * (1 - j / m) for j in range(m + 1)]               # j = 0 the run-out … j = m the tip
+        fl = lambda u, v: c + u * e1 + v * e2                           # the floor's plane: u toward the tip, v along x
+        B = [fl(rad * math.cos(f), rad * math.sin(f)) for f in phis]    # the floor's rim
+        T = [b + ((yc - b.y) / d.y) * d for b in B]                     # the crown's rim: up the cylinder's line from the floor's
+        T[0] = B[0]                                                     # the run-out: one vertex, the wall's height 0
+        for p in T:
+            p.y = yc
+        faces.append((2, [B[0], T[1], B[1]]))                           # the WALL: the run-out's triangle …
+        faces += [(2, [B[j], T[j], T[j + 1], B[j + 1]]) for j in range(1, m)]      # … then quads to the tip
+        # the FLOOR as a circle is drawn in quads: a BAND along its rim round an inner RECTANGLE on the chord and the mid line, its corner K
+        # toward the rim's 45° (the square-in-a-circle layout: no corner on a smooth curve). ⭐ LIGHTER (the owner, 2026-11-14: *"can you
+        # optimize the count of vertices in the flat recesses (for example by merging quads)"*): the band REDUCES — each group of FLOOR_GROUPS
+        # takes its rim steps onto ONE step of the rectangle, a group of 3 by the 3-to-1 quad reduction (4 quads, 2 inner vertices) — so the
+        # rectangle is len(FLOOR_GROUPS) steps round, not m (a 6 × 5 grid at first, 54 vertices a half floor; now 3 × 2, 30)
+        assert sum(FLOOR_GROUPS) == m and set(FLOOR_GROUPS) <= {1, 3}, "FLOOR_GROUPS: steps of 1 or 3, as many in all as the rim's"
+        u0 = rad * cos0                                                 # the chord (where the floor rises through the crown)
+        na, nb = FLOOR_SIDE, len(FLOOR_GROUPS) - FLOOR_SIDE             # the rectangle: na steps along u (the rim's flank), nb along v
+        jK = sum(FLOOR_GROUPS[:na])                                     # the rim step facing K
+        uK, vR = FLOOR_INNER * rad * math.cos(phis[jK]), FLOOR_INNER * rad * math.sin(phis[jK])
+        assert uK > u0 + 0.01 * rad, f"piston {name}: a pocket's floor too shallow for its inner rectangle"
+        # the rectangle's steps sized like the rim groups they face (equal steps sheared the 3-to-1 quads: corners 29° – 163°)
+        cum = lambda ws: [sum(ws[:i]) / sum(ws) for i in range(len(ws) + 1)]
+        fu = cum([n ** FLOOR_WEIGHT for n in FLOOR_GROUPS[:na]])
+        fv = cum([n ** FLOOR_WEIGHT for n in FLOOR_GROUPS[na:]][::-1])      # along v from the mid line: the end's groups reversed
+        G = [[fl(u0 + (uK - u0) * fu[p_], vR * fv[q_]) for q_ in range(nb + 1)] for p_ in range(na + 1)]   # [along u][along v]
+        for row in G:
+            row[0].x = 0.0                                              # the mid line, exact
+        I = [G[g][nb] for g in range(na + 1)] + [G[na][nb - g] for g in range(1, nb + 1)]   # the rectangle's outline facing the rim
+        j0 = 0
+        for g, n in enumerate(FLOOR_GROUPS):
+            if n == 1:
+                faces.append((3, [B[j0], B[j0 + 1], I[g + 1], I[g]]))
+            else:                                                       # 3 to 1: two inner vertices between the rim and the step
+                p1 = B[j0 + 1].lerp(I[g].lerp(I[g + 1], 1 / 3), FLOOR_REDUCE_T)
+                p2 = B[j0 + 2].lerp(I[g].lerp(I[g + 1], 2 / 3), FLOOR_REDUCE_T)
+                faces += [(3, [B[j0], B[j0 + 1], p1, I[g]]), (3, [B[j0 + 1], B[j0 + 2], p2, p1]),
+                          (3, [B[j0 + 2], B[j0 + 3], I[g + 1], p2]), (3, [p1, p2, I[g + 1], I[g]])]
+            j0 += n
+        chord = [G[0][q_] for q_ in range(nb + 1)] + [B[0]]            # mid line → run-out
+        for p in chord:
+            p.y = yc
+        faces += [(3, [G[p_][q_], G[p_ + 1][q_], G[p_ + 1][q_ + 1], G[p_][q_ + 1]]) for p_ in range(na) for q_ in range(nb)]
+        for p in (T[m], B[m]):
+            p.x = 0.0
+        sg = 1 if T[m].z > 0 else -1                                    # this pocket's side of the crown
+        rim = T[::-1]                                                   # the crown round the pocket: tip → run-out …
+        edge = [Vector((R * math.cos(math.pi / 2 - step * i), yc, sg * R * math.sin(math.pi / 2 - step * i))) for i in range(m + 1)]
+        edge[0].x = 0.0                                                 # … to the edge, 90° → one step
+        grid = [[rim[i].lerp(edge[i], r / k) for i in range(m + 1)] for r in range(k + 1)]
+        faces += [(1, [grid[r][i], grid[r][i + 1], grid[r + 1][i + 1], grid[r + 1][i]]) for r in range(k) for i in range(m)]
+        band_tops[sg] = chord + [grid[r][m] for r in range(1, k + 1)]  # the chord (mid line → run-out), then out to the edge at one step
+    assert set(band_tops) == {1, -1}, f"piston {name}: the crown expects one pocket each side of its mid line"
+    assert len(band_tops[1]) == len(band_tops[-1]), f"piston {name}: the two pockets' chords drawn in different steps"
+    mid = [Vector(((a.x + b.x) / 2, yc, 0.0)) for a, b in zip(band_tops[1], band_tops[-1])]   # the band's middle line, z = 0
+    mid[0].x, mid[-1].x = 0.0, R
+    for sg in (1, -1):
+        top = band_tops[sg]
+        faces += [(1, [mid[i], mid[i + 1], top[i + 1], top[i]]) for i in range(len(top) - 1)]
+    faces += [(s_, [Vector((-p.x, p.y, p.z)) for p in reversed(pts)]) for s_, pts in faces]   # the half x ≤ 0
+    bm = bmesh.new()
+    lay = bm.faces.layers.int.new("surface")
+    verts = {}
+    def vert(p):
+        key = tuple(round(c_, 8) for c_ in p)
+        if key not in verts:
+            verts[key] = bm.verts.new(P @ p)
+        return verts[key]
+    for s_, pts in faces:
+        bm.faces.new([vert(p) for p in pts])[lay] = s_
+    return bm
+
+
 def build_piston(side, i, x, name):
     pid = PISTON_IDS[name]
     ly, lz, s, r = kinematics(side, i)
@@ -1118,10 +1238,11 @@ def build_piston(side, i, x, name):
     # rod inside the piston. Make something similar, but limiting the number of vertices inside the piston interior"*): ONE revolved profile —
     # the outer wall, the crown, the bottom rim, ONE inner band up to a ceiling clear of the small end (the interior: one ring and a pole)
     yi = s + PISTON_CEIL
-    prof = [(s + PISTON_Y + PISTON_H / 2, 0.0, 0), (y1, PISTON_R, 0), (y0, PISTON_R, 0), (y0, PISTON_R - PISTON_RIM, 0), (yi, PISTON_R - PISTON_RIM, 0),
-            (yi, 0.0, 0)]
+    # ⭐ REVISION 2 (the owner, 2026-11-14): the CROWN is no longer part of the revolve — it is drawn in QUADS with its pockets (`crown_quads`,
+    # below) and welded onto the revolve's top ring
+    prof = [(y1, PISTON_R, 0), (y0, PISTON_R, 0), (y0, PISTON_R - PISTON_RIM, 0), (yi, PISTON_R - PISTON_RIM, 0), (yi, 0.0, 0)]
     along_y = M @ Matrix.Translation((x, 0, 0)) @ Matrix.Rotation(math.pi / 2, 4, "Z")   # revolve_x's axis turned onto the bore's (y′)
-    body = revolve_x([(-yy, r, m) for yy, r, m in prof], along_y @ Matrix.Rotation(math.pi, 4, "Z"), seg=48)
+    body = revolve_x([(-yy, r, m) for yy, r, m in prof], along_y @ Matrix.Rotation(math.pi, 4, "Z"), seg=PISTON_SEG)
     # ⭐ VALVE POCKETS (the owner, 2026-11-13: *"Valve pockets in crowns"* — the reference's valves open 0.07 at the piston's top dead centre,
     # 0.007 above its crown: the engine's run found every valve in its piston): per valve, the space its head sweeps RELATIVE TO THE PISTON over
     # the 720° cycle, POCKET_MARGIN bigger, cut from the crown
@@ -1154,14 +1275,22 @@ def build_piston(side, i, x, name):
             V0 = M @ Matrix.Translation((0, s - s_ref, 0)) @ Minv @ valve_frame(side, x, vs)
             loc = [V0.inverted() @ q for q, sk in near]
             rad = max(math.hypot(q.x, q.z) for q in loc) + 0.004
-            y_lo, y_hi = min(q.y for q in loc) - 0.004, max(q.y for q in loc) + 0.05
-            pockets.append(cyl_between(V0 @ Vector((0, y_lo, 0)), V0 @ Vector((0, y_hi, 0)), rad, 24))
+            y_lo = min(q.y for q in loc) - 0.004
+            pockets.append((V0, rad, y_lo))      # the pocket's cylinder: the valve's axis as the piston sees it, its radius, its floor (along it)
             if name == "A1" and which == "1":
                 print(f"valve pockets (each alike): r {rad:.3f}, the floor {-y_lo:.3f} below the valve's seat")
-    if pockets:
-        body = split_holes(boolean_cut(body, pockets), [x])
-    mesh_object(f"{pid}_piston_mesh", body,
-                MAT["chrome"], part, coll)
+    P = M @ Matrix.Translation((x, s, 0))                    # the piston's own frame: x the crank's, y the bore's, its wrist pin at 0
+    body.faces.layers.int.new("surface")                     # the revolve's faces: surface 0
+    merge_into(body, crown_quads(P, pockets, PISTON_Y + PISTON_H / 2, name))
+    bmesh.ops.remove_doubles(body, verts=body.verts, dist=1e-6)   # the crown's rim ON the revolve's top ring: welded
+    assert all(len(e.link_faces) == 2 for e in body.edges), f"piston {name}: the body is not closed after the crown's weld"
+    bmesh.ops.recalc_face_normals(body, faces=body.faces)
+    lay = body.faces.layers.int.get("surface")
+    for e in body.edges:                                     # every edge between two SURFACES (the revolve, the crown, a pocket's wall, its floor)
+        if len(e.link_faces) == 2 and e.link_faces[0][lay] != e.link_faces[1][lay]:   # CRISP — the crown meets each floor at 17°, under
+            e.smooth = False                                                            # the 30° smoothing: unmarked it would lean
+    body.faces.layers.int.remove(lay)
+    mesh_object(f"{pid}_piston_mesh", body, MAT["chrome"], part, coll)
     mesh_object(f"{pid}_piston_ring", torus(M @ Matrix.Translation((x, s + 0.18, 0)), PISTON_R + 0.001, 0.007, rseg=6), MAT["dark"], part, coll,
                 smooth="all")
     # its name BESIDE the pockets (they take the crown's middle, across the bank): toward the crank's rear, smaller
@@ -1761,7 +1890,7 @@ if os.environ.get("CHECK_CONTROLS") and STEP >= 7:
     sph = [Vector((0.1 * math.cos(a) * math.cos(b), -1 + 0.1 * math.sin(b), 0.1 * math.sin(a) * math.cos(b)))
            for a in [2 * math.pi * k / 16 for k in range(16)] for b in [math.pi * (j / 8 - 0.5) for j in range(1, 8)]]
     mesh_object("UCX_E01_CONTROL_hull", hull(sph), MAT["ucx"], part, coll, "ucx")       # ⑫ a collision piece a dense hull
-    me_c = bpy.data.objects["E07_piston_mesh"].data                                          # ⑬ a crown's sharp edges cleared
+    me_c = bpy.data.objects["E07_piston_mesh"].data                                          # ⑬ a crown's sharp edges cleared (→ CROWNS IN QUADS)
     for e in me_c.edges:
         e.use_edge_sharp = False
     src = bpy.data.objects["UFM_E05_GHOST_A1"]                                                              # ⑩ a ghost RECESSED 0.1 down its bore
@@ -2175,7 +2304,7 @@ if STEP >= 6:
               "; ".join(f"{a} × {b} at {v[0]}°–{v[-1]}° ({len(v)} poses)" for (a, b), v in sorted(hits.items())))
     else:
         print("the engine RUNNING (720°, every 6°, the meshes): ✅ no interference (known contacts: big ends and caps on their pins, the pulley on the crank)")
-    with open(os.path.join(OUT_DIR, "animation_golden.json"), "w", encoding="utf-8") as fh:
+    with open(os.path.join(OUT_DIR, "animation_golden.json") if not REV else os.devnull, "w", encoding="utf-8") as fh:   # a revision: untouched
         json.dump({"about": "Scene_2's poses (reference units, y up, relative to YUP_ROOT) at every 30° of the 720° cycle — Appendix B's update(θ); "
                             "the TypeScript port must reproduce them", "unitM": UNIT_M, "poses": golden}, fh, indent=0)
     # the PREVIEW: the same poses baked as keyframes, 96 frames = 720° (scrub the timeline; the game computes its own)
@@ -2548,6 +2677,37 @@ for o in bpy.data.objects:
             leaning.append(f"{o.name} ({worst:.1f}°)")
 print("FLAT CAPS shaded flat (every face of more than 4 sides, its normals within 1°):",
       "✅ every one" if not leaning else f"⛔ {len(leaning)} — " + "; ".join(sorted(leaning)))
+# ⭐ THE CROWNS IN QUADS (revision 2, the owner, 2026-11-14: *"does not follow the state of the art quad drawing … shows fake facets"*): FLAT CAPS
+# reads only faces of more than 4 sides — blind to a crown drawn in quads. Each piston's top (the faces within PISTON_H / 4 of its crown): no
+# face of more than 4 sides; triangles only at the pockets' run-outs (2 a pocket); every FLAT face there (the crown, the floors: normal within 20°
+# of the bore's) shaded flat (its split normals within 1°); every quad's corners between 30° and 150°, planar (1e-6)
+crown_bad, crown_stats = [], []
+if STEP >= 6:
+    for side_, i_, x_, name_ in CYLS:
+        o = bpy.data.objects[f"{PISTON_IDS[name_]}_piston_mesh"]
+        me = o.data
+        me.calc_normals_split()
+        yc = PISTON_Y + PISTON_H / 2
+        top = [pl for pl in me.polygons if all(me.vertices[v].co.y > yc - PISTON_H / 4 for v in pl.vertices)]
+        ngons = sum(1 for pl in top if len(pl.vertices) > 4)
+        tris = sum(1 for pl in top if len(pl.vertices) == 3)
+        flat = [pl for pl in top if pl.normal.y > math.cos(math.radians(20))]
+        folded = sum(1 for pl in top if pl.normal.y < -0.5)             # a quad folded over its neighbours faces DOWN once the normals agree
+        lean = max((math.degrees(me.loops[li].normal.angle(pl.normal, 0)) for pl in flat for li in pl.loop_indices), default=0)
+        angles, skew = [], 0.0
+        for pl in top:
+            if len(pl.vertices) != 4:
+                continue
+            q = [me.vertices[v].co for v in pl.vertices]
+            angles += [math.degrees((q[(a + 1) % 4] - q[a]).angle(q[(a - 1) % 4] - q[a], 0)) for a in range(4)]
+            skew = max(skew, abs((q[3] - q[0]).dot((q[1] - q[0]).cross(q[2] - q[0]).normalized())))
+        lo_a, hi_a = min(angles), max(angles)
+        crown_stats.append(f"{name_} {len(top)} faces ({tris} triangles), corners {lo_a:.0f}°–{hi_a:.0f}°, lean {lean:.2f}°")
+        if ngons or folded or tris != 4 or lean > 1 or lo_a < 30 or hi_a > 150 or skew > 1e-6:
+            crown_bad.append(f"{name_} ({ngons} n-gons, {folded} folded, {tris} triangles, lean {lean:.1f}°, corners {lo_a:.0f}°–{hi_a:.0f}°, off plane {skew:.1e})")
+    print("CROWNS IN QUADS (no n-gon, a triangle only at each pocket's run-out, flat faces shaded flat, corners 30°–150°, planar):",
+          "✅ every piston" if not crown_bad else f"⛔ {len(crown_bad)} — " + "; ".join(crown_bad))
+    print("  " + " · ".join(crown_stats))
 # ⭐ COLLISION SIMPLICITY (the owner, 2026-11-13: *"check the md files why these exhaust connectors and valve caps faces have failed the checks for
 # simplification"* — no check read a collision piece's SHAPE: the exhausts' hulls were 216 triangles, slivers 0.9° wide): every UCX_ piece a simple
 # shape — at most UCX_MAX_VERTS vertices and UCX_MAX_TRIS triangles (a 12-sided cylinder: 24, 44; a box: 8, 12)
