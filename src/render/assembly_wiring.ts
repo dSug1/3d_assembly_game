@@ -843,7 +843,13 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   if (st.asmBlend !== null) st.asmBlend.mm += fingerMm;
   // ⭐⭐⭐ (2026-11-11, the owner: *"the red-green sections automatically switches to orthogonal when the automatic tilted pole is toggled on but the camera
   // view waits"*) the tilt made at once — only the CAMERA pending (its swing, the square camera's share)
-  if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth === null ? null : st.asmMouth.hi);
+  // ⭐⭐⭐ (2026-11-14, the owner: *"a block … especially if there has been some dx during the travel and the gizmo arrives at the zenith edge at another
+  // point"*) AT THE MAP'S POLE (its pitch at ±90°: a column run to a VIRTUAL pole — the heptagon's end cap at the ridge's end) the face holding that
+  // pole is the CAP (`tiltOn`'s virtual pole, as at a void's mouth): the tilt made there. ⛔ The column's own face (the end cap, a side): no tilt, the
+  // polar orbit at its limit — a dy up did nothing, for ever (the walks: 6 presses, the gizmo at the corner)
+  const mqP = st.asmMapQ;
+  const atPole = mqP === null || !(Math.abs(mqP.pitch) >= ORBIT_PITCH_MAX_RAD - 1e-9) ? null : mqP.pitch > 0;
+  if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth !== null ? st.asmMouth.hi : atPole);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
@@ -1215,7 +1221,12 @@ function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleO
     const nX = exitNormal(st);
     const yW = anglesOfDir(uOW, cam.yaw).yaw;
     const cW = st.asmCalm !== null && tl.exitAcross && nX !== null ? { n: nX, sH: st.asmCalm.sH, sV: 1, wA: 1 } : null;
-    const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), calmLevelHeading(yW, cW));
+    // ⭐⭐⭐ (2026-11-14, the owner's roll back and forth at the zenith edge, the jump after a dx — the walks: EVERY ridge crossing closed by a 104° – 180°
+    // turn in ONE frame) over a RIDGE — the face crossed onto holds the same pole, the next tilt made at once (close in) — the roll back aims at THAT
+    // tilt's heading (`nextTiltHeading`, `tiltOn`'s own test): one timed roll, the next tilt's swing then nothing. ⛔ The calm's reading (the exit face's heading straight up, the
+    // orbit's yaw after a dx): 175° one way then 180° back in a frame, or a little then 172° – 180° in a frame
+    const hR = nextTiltHeading(st, nX, yW);
+    const hW = cameraHeading(yW, uOW, headingFrom(uW, nX), hR ?? calmLevelHeading(yW, cW));
     const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);
     tl.rollRad = mix.angle; // ⭐ (2026-11-10) the roll's whole angle — its duration at `tiltRollDegS`
     if (!(tl.k > 0)) return f;
@@ -1414,7 +1425,10 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   // `deltaShown`); the orbit's angles are turned by their own (`D0`, `delta`: the gizmo and the solver exact). ⛔ By the orbit's `delta`: 20° off square, the
   // heading shown −83.7°, the swing started from the orbit's −70° (probed: −101.4°, then back to −90° over 20 frames)
   const sw = dirAt(st, q.yaw, q.v);
-  const deltaShown = Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
+  // ⭐⭐⭐ (2026-11-14) …the heading ON THE GLASS (`shownHeading`, the camera drawn last frame) — ⛔ the direction's own horizontal part: steep (a ridge, 66° –
+  // 86°) it leans back toward the face just left, 180° from the camera shown after the roll back — the new tilt flipped the picture in one frame
+  const hSh = shownHeading(st, sw);
+  const deltaShown = hSh !== null ? Math.atan2(Math.sin(hs - hSh), Math.cos(hs - hSh)) : Math.hypot(sw[0], sw[2]) > 1e-3 ? Math.atan2(Math.sin(hs - Math.atan2(sw[2], sw[0])), Math.cos(hs - Math.atan2(sw[2], sw[0]))) : delta;
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
   // ⭐⭐⭐ (2026-11-11) made as the automatic tilt switched on (the camera pending): the swing held, then by the finger's travel (`swingE`)
@@ -1450,6 +1464,38 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   st.asmShown = null;
   st.lastVerdict = `orbit: the tilted pole${why === "auto" ? " (automatic)" : ""} — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14) THE HEADING ON THE GLASS: the world camera's heading read off the frame drawn last (`st.cameraPrev`) — its upright up (the pitch
+ * offset taken off: `offsetFrame`'s up0 = cos p·up + sin p·dir) with the direction `u`: H = cos e·u_h − sin e·up0_h (exact for an upright frame, steep or
+ * level). `null`: no frame drawn yet.
+ */
+function shownHeading(st: SceneState, u: Vec3): number | null {
+  const cp = st.cameraPrev;
+  if (cp === null || cp === undefined) return null;
+  const p = (st.cfg.cameraPitchOffsetDeg * Math.PI) / 180;
+  const c = Math.cos(p);
+  const s = Math.sin(p);
+  const u0: Vec3 = [c * cp.up[0] + s * cp.dir[0], c * cp.up[1] + s * cp.dir[1], c * cp.up[2] + s * cp.dir[2]];
+  const e = Math.asin(Math.max(-1, Math.min(1, u[1])));
+  const hx = Math.cos(e) * u[0] - Math.sin(e) * u0[0];
+  const hz = Math.cos(e) * u[2] - Math.sin(e) * u0[2];
+  return Math.hypot(hx, hz) > 1e-6 ? Math.atan2(hz, hx) : null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14) WHAT FOLLOWS THE EXIT onto the face of normal `nX` (world): the tilt `tiltOn` makes there at once — the automatic tilt on, no zone,
+ * the face HOLDING A POLE (`holdsPole`, `tiltOn`'s own test) — its heading (`tiltHeading`, `tiltOn`'s own); `null`: none (the world's camera follows).
+ * The roll back turns to the frame that will be shown next: one turn from the glass to what follows, whatever the face (a ridge, a slanted cap).
+ */
+function nextTiltHeading(st: SceneState, nX: Vec3 | null, yaw: number): number | null {
+  if (st.cfg.tiltedPole !== 1 || !st.asmTiltAuto || st.asmZone !== null || nX === null || st.asmG === null) return null;
+  const wm = worldFaceMap(st);
+  if (wm === null) return null;
+  const i = facetOfNormal(wm, nX, st.asmG);
+  const f = wm.facets[i];
+  return f === undefined || holdsPole(wm, i) === null ? null : tiltHeading(f.n, yaw);
 }
 
 /** ⭐⭐⭐ (2026-11-11) the normal of the face the gizmo is on, out of the tilted frame (off the tilted facet: the face it exits onto) — none: no tilt / no place. */
