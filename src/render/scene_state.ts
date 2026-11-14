@@ -622,6 +622,14 @@ export interface SceneState {
     readonly bottom: { readonly centre: Vec3; readonly normal: Vec3 };
     readonly replaces: string | null;
   } | null;
+  /**
+   * ⭐⭐⭐ (2026-11-14, `PICK_AND_PLACE.md`) THE PICK-UP FLOW of a scene's `.glb` parts as bodies (`render/model_bodies_wiring.ts`, the lazy model module):
+   * its frame hooks — before the orbited piece's frame (the pick, the put-down, the snap's step) and after it (the camera's blends, the parts drawn).
+   * `null`: no such scene (the module never loaded).
+   */
+  modelHooks: { readonly before: (dtMs: number) => void; readonly after: (dtMs: number) => void } | null;
+  /** ⭐ (2026-11-14) a release whose tap the pick-up flow took (the held part's, a cycle's): the game's tap on empty space skips it. */
+  modelTapTaken: number | null;
   cfg: GestureConfig;
   canvas: HTMLCanvasElement;
 }

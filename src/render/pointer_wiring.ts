@@ -232,6 +232,8 @@ export function installPointerHandler(st: SceneState): void {
           st.hudDirty = true;
           return;
         }
+      } else if (st.modelTapTaken === e.pointerId) {
+        st.modelTapTaken = null; // ⭐ (2026-11-14) the pick-up flow took this tap (the held part's, a cycle's — `model_bodies_wiring.ts`)
       } else if (st.hold === null && e.pointerId !== MOUSE_SECOND_ID && tapped) {
         // ⭐⭐ (2026-10-12, *"a left click / first touch tap on empty is equivalent to a left click / first touch tap on the polyhedron pink face"*) —
         // a TAP elsewhere taps the cube's face SHOWN
@@ -423,7 +425,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
  * key pressed over it (2026-10-11). ⭐ (2026-10-09) the pink face unchanged since the last alignment: its rolls carry over to the new resting
  * face, at once. One episode; the highlights shown, then held and faded. `false` if nothing was aligned.
  */
-function selectRestingFace(st: SceneState, faceId: string): boolean {
+export function selectRestingFace(st: SceneState, faceId: string): boolean {
   if (st.orbitPiecePlaced) return false; // ⭐ (2026-10-14) a piece placed in its goal keeps its faces
   // ⭐⭐⭐ (2026-10-15, the owner: *"allow the resting face selection by tap on piece only if quads are shown"*)
   if (!quadTapsAllowed(st.restingQuads?.shown === true)) return false;

@@ -85,6 +85,8 @@ const RESTING_ALPHA = 0.6;
 function restingOf(
   st: SceneState,
   m: Mesh,
+  /** ⭐ (2026-11-14) the piece's own depth pass (`restingDepth`) — ⛔ not for an invisible proxy (a `.glb` part's: its drawn meshes are its own) */
+  depth = true,
 ): {
   resting: RestingResult;
   restingFace: RestingCandidate | null;
@@ -101,7 +103,7 @@ function restingOf(
   const restingFace = resting.winner === null ? null : chooseInGroup(resting.winner, greenBootOrientation(st.sceneSpec.id));
   if (topo === null || restingFace === null) return { resting, restingFace, restingFill: null, restingAxes: [], restingAxesFallback: true, restingEdges: [], restingLong: { axes: [], ends: [] }, restingCentre: [0, 0, 0], restingFlush: [] };
   const parts = restingParts(st, m, topo, restingFace);
-  restingDepth(st, m);
+  if (depth) restingDepth(st, m);
   return { resting, restingFace, ...parts };
 }
 
@@ -549,6 +551,20 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
   p.mesh.rotationQuaternion = toBabylon(greenBootOrientation(st.sceneSpec.id));
   if (!atBoot) {
     st.orbit = new OrbitController(st.cfg, st.bootYawRad, st.bootElevation); // ⭐ (2026-11-13) the scene's boot yaw (a model's front)
+    resetPieceOrbit(st);
+  }
+  // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
+  // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
+  st.bootRestAlign = true;
+  st.hudDirty = true;
+}
+
+/**
+ * ⭐ A NEW ORBIT for the orbited piece: the coast, the springs, the camera's follow, the alignment, the hold, the solve — all started again (a switch,
+ * a respawn, ⭐ 2026-11-14 a PICK, `model_bodies_wiring.ts`). ⛔ The orbit's angles are the caller's.
+ */
+export function resetPieceOrbit(st: SceneState): void {
+  {
     st.orbitInertia.stop();
     st.orbitMotion = null;
     st.boxSpring = null;
@@ -568,10 +584,11 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
     st.orbitRawPrev = null;
     st.orbitUserV = null;
   }
-  // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
-  // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
-  st.bootRestAlign = true;
-  st.hudDirty = true;
+}
+
+/** ⭐ (2026-11-14, `PICK_AND_PLACE.md`) an orbited piece's entry for any mesh — its faces, its volume (the coast's), its resting face and fill. */
+export function orbitPieceEntry(st: SceneState, mesh: Mesh, volumeM3: number): SceneState["orbitPieces"][number] {
+  return { mesh, faces: piecesFacesOf(mesh), volumeM3, ...restingOf(st, mesh, false) };
 }
 
 /**

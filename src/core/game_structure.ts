@@ -45,7 +45,7 @@ export type BootOrientation =
  * OPPOSITE was (the owner: *"face aligned or opposite face aligned as there is no way to
  * distinguish two opposite faces for these geometries"*), and a rectangle face shows no 180° spin.
  */
-export type GoalSymmetry = "halfTurns" | "yawHalfTurns" | "hexPrism";
+export type GoalSymmetry = "halfTurns" | "yawHalfTurns" | "hexPrism" | "spinX";
 
 /** ⭐ One body's pose in a level's FINAL configuration — authored units, like `BodySpec`. */
 export interface FinalPose {
@@ -542,7 +542,7 @@ function parseFinal(sceneId: string, raw: unknown, bodies: readonly BodySpec[]):
       // ⛔ A seeded rotation changes with `?sceneSeed=` — a goal must be one fixed pose.
       if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation))
         throw new Error(`${at}: unknown orientation`);
-      if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism") throw new Error(`${at}: unknown symmetry`);
+      if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism" && x.symmetry !== "spinX") throw new Error(`${at}: unknown symmetry`);
       if (x.kind !== undefined && (typeof x.kind !== "string" || x.kind === "")) throw new Error(`${at}: kind must be a non-empty string`);
       return {
         id: x.id,
@@ -568,7 +568,7 @@ function parseOrbitGoals(sceneId: string, raw: unknown): readonly FinalPose[] {
     seen.add(x.id);
     if (!isTriple(x.position)) throw new Error(`${at}: position is not three finite numbers`);
     if (!isOrientation(x.orientation) || (typeof x.orientation === "object" && "seeded" in x.orientation)) throw new Error(`${at}: unknown orientation`);
-    if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism") throw new Error(`${at}: unknown symmetry`);
+    if (x.symmetry !== undefined && x.symmetry !== "halfTurns" && x.symmetry !== "yawHalfTurns" && x.symmetry !== "hexPrism" && x.symmetry !== "spinX") throw new Error(`${at}: unknown symmetry`);
     return {
       id: x.id,
       position: x.position,

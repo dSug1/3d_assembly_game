@@ -669,6 +669,8 @@ export function createScene(
   st.modelAnimNote = "";
   st.backgroundBlueSeen = -1;
   st.modelFloor = null;
+  st.modelHooks = null;
+  st.modelTapTaken = null;
   if (spec.model !== undefined) {
     st.modelStatus = "model: loading…";
     void import("./model_import").then((m) => m.importSceneModel(st)).catch((e: unknown) => {

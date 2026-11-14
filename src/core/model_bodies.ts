@@ -12,7 +12,7 @@
 import { compose, type Placement, type TriMesh } from "./glb_geometry";
 import { bootShape, type BootPart } from "./boot_heaps";
 import { hull2 } from "./resting_face";
-import { add, dot, length, normalize, qconj, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "./vec";
+import { add, dot, normalize, qconj, qmul, qRotate, shortestArc, sub, type Quat, type Vec3 } from "./vec";
 
 /** A scene-frame point in the world (metres). */
 export const toWorld = (p: Vec3, unitM: number): Vec3 => [-p[0] * unitM, p[1] * unitM, p[2] * unitM];
@@ -200,6 +200,3 @@ export function perimeterOf(pts: readonly Vec3[], margin: number): PutDownRule["
     z1: Math.max(...pts.map((p) => p[2])) + margin,
   };
 }
-
-/** ⭐ The distance between two poses' origins (metres) — a test's helper too. */
-export const poseGap = (a: Vec3, b: Vec3): number => length(sub(a, b));

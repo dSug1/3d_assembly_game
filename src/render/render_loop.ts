@@ -340,8 +340,10 @@ export function startRenderLoop(st: SceneState): void {
     }
 
     // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
+    st.modelHooks?.before(dtSec * 1000); // ⭐ (2026-11-14) the pick-up flow (`model_bodies_wiring.ts`): the pick, the put-down, the snap's step
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
+    st.modelHooks?.after(dtSec * 1000); // ⭐ (2026-11-14) its camera's blends, its parts drawn where their bodies are
     orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
     st.scene.render();
     st.frames++;

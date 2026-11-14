@@ -26,6 +26,9 @@ import { topFaceOutline } from "../core/underside";
 import { contactFactors, positionKey, readContactFile, type ContactFile } from "../core/model_contact";
 import { bootWithRetries, type BootLayout, type BootPose } from "../core/boot_heaps";
 import { bootAnimator, type BootAnimator } from "./boot_anim_wiring"; // ANIMATION MODULE: boot
+import { makeModelBodies } from "./model_bodies_wiring";
+import { bodyFrame, type BodyFrame } from "../core/model_bodies";
+import { glbBin, partFaces, partGeometry, type Placement } from "../core/glb_geometry";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import "@babylonjs/core/Rendering/geometryBufferRendererSceneComponent";
@@ -264,7 +267,10 @@ async function place(
             applyStage();
           },
         });
+  // ⭐⭐⭐ (2026-11-14, `PICK_AND_PLACE.md`) once the parts are BODIES the stage is the play's: the stage slider no longer moves them
+  let played = false;
   const applyStage = (force = false): void => {
+    if (played) return;
     const v = poses === null ? 1 : st.cfg.modelStage;
     if (v === stageSeen && !force) return;
     // ANIMATION MODULE: boot — running at the boot stage, its end applies the stage (a forced call — the contact file arriving — waits for it)
@@ -302,9 +308,48 @@ async function place(
     applyContactShadows(st, seated);
   };
   applyStage(true);
+  // ⭐⭐⭐ (2026-11-14, `PICK_AND_PLACE.md`, `GM10`) THE PARTS BECOME BODIES once the boot has SETTLED (its stage, its animation over): their frames from the
+  // file (the collision pieces, the face proxy, the goal), where each stands now (its boot place; an anchor its goal), drawn by `toNode`
+  const play = (): void => {
+    if (played || poses === null || layout === null || spec.boot === undefined || stageSeen !== 0 || boot?.running() === true) return;
+    played = true;
+    try {
+      const parsed = glbJson(bytes);
+      if (!("json" in parsed)) throw new Error(parsed.refusal);
+      const bin = glbBin(bytes);
+      const geo = partGeometry(parsed.json, bin, catalog).filter((g) => keep.has(g.node));
+      const faces = new Map(partFaces(parsed.json, bin, catalog).map((f) => [f.id, f.mesh]));
+      const frames = new Map<string, BodyFrame>(geo.map((g) => [g.id, bodyFrame(g.id, g.goal, g.pieces, faces.get(g.id) ?? { positions: [], indices: [] }, catalog.unitM)]));
+      const starts = new Map<string, Placement>(Object.entries(poses).map(([id, b]) => [id, { position: b.position, rotation: b.rotation }]));
+      const meshes = new Map(sliceIds.map((id) => [id, (goals.get(id)?.node.getChildMeshes(false) ?? []).filter((m) => st.modelBrowse.has(m))] as const));
+      const ok = makeModelBodies(st, {
+        catalog,
+        frames,
+        partPieces: new Map(geo.map((g) => [g.id, g.pieces])),
+        starts,
+        anchors: spec.boot.anchors,
+        rule: spec.boot,
+        yawOriginDeg: yawOrigin,
+        unitM: catalog.unitM,
+        place: (id, P) => toNode(id, P),
+        meshesOf: (id) => meshes.get(id) ?? [],
+        freeze: (id, frozen) => {
+          const g = goals.get(id);
+          if (g === undefined || g === null) return;
+          for (const m of g.node.getChildMeshes(false)) (frozen ? m.freezeWorldMatrix() : m.unfreezeWorldMatrix());
+        },
+        contact: (seated) => applyContactShadows(st, seated),
+      });
+      st.modelStatus += ok ? " · play: the parts are bodies" : " · ⛔play: no part readable as a body";
+    } catch (e) {
+      console.error("⛔ the parts did not become bodies:", e);
+      st.modelStatus += ` · ⛔PLAY ${(e as Error).message}`;
+    }
+  };
   scene.onBeforeRenderObservable.add(() => {
     applyStage();
     boot?.step(); // ANIMATION MODULE: boot
+    play();
   });
 
   // ⭐ The debug layers follow the slider, applied on change only.

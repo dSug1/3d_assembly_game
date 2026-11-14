@@ -115,6 +115,11 @@ export interface SceneObject {
    */
   readonly shape?: ConvexShape;
   /**
+   * ⭐⭐ (2026-11-14, `PICK_AND_PLACE.md`) THE COLLISION PIECES — several convex sets, local frame (a `.glb` part's `UCX_`: a case with bores is not its
+   * hull). Present: the collision reads them (`hullAtSpawn`); `shape` stays the body's whole hull (the capture's distance).
+   */
+  readonly pieces?: readonly ConvexShape[];
+  /**
    * ⭐⭐ **ITS RESTING FACE** (the owner, 2026-10-09: *"add the resting face to the object model so that each object in the scene has a
    * resting face identified and tracked"*) — the face the part is instinctively laid on (`core/resting_face.ts`, `RESTING_FACE.md`),
    * in the LOCAL frame like `faces`, so the body's placement carries it: `restingFaceWorld` reads it in the world at any moment.
