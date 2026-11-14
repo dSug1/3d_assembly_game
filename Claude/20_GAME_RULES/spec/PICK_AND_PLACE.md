@@ -1,6 +1,6 @@
 # PICK AND PLACE — picking a part, putting it down, the two orbits, the snap (any scene)
 
-> **STATUS** · ⛔ SPECIFIED, NOT BUILT (2026-11-14, `1.0.143from1.0.142-Pick-up-of-parts`) · **OWNS** · the play loop from a loose part to a seated
+> **STATUS** · 🔧 BUILT 2026-11-14 (`1.0.143from1.0.142-Pick-up-of-parts`), headless only — ⛔ no device look (§12) · **OWNS** · the play loop from a loose part to a seated
 > one: the pick, the put-down, the switch between the SCENE ORBIT and the PIECE ORBIT, the step after a snap
 > **READ IF** · you build or change how a part is chosen, held, dropped or seated, or how the camera goes from browsing to the part in hand
 > **LAST VERIFIED** · 2026-11-14
@@ -140,3 +140,55 @@ The owner: *"for the moment, record that in the md files. No animation. Just spa
 3. ⚠ The scene rings' reach (§6): measured per scene, `Scene_2` first.
 4. ⏳ Making a `.glb` part an orbited piece (its collision pieces, face proxy, quads, goal, symmetry, lift) — the workflow written while walking it
    on `Scene_2` (`SCENE_WORKFLOW.md` W5).
+
+## 12. ⭐⭐ AS BUILT (2026-11-14) — and the decisions taken while building (⚠ for the owner's review)
+
+**Where it lives**: `core/model_bodies.ts` (engine-free: the scene / world frames — `world = unitM · (−x, y, z)`, a rotation across as `(w, x, −y, −z)` —
+a part's body framed by the world at its goal, its pose both ways, the pickable rule, the put-down's spot), `core/glb_geometry.ts` (`partFaces`: the face
+proxy from the `.glb`), `render/model_bodies_wiring.ts` (the flow), hooked from `render/model_import.ts` once the boot has settled and from the render loop
+(`st.modelHooks`); `SceneObject.pieces` (a body's own convex pieces — the `UCX_` — read by the collision, `core/collision.ts`); the goal symmetry `spinX`.
+**Checked**: `tests/model_bodies.test.ts` (12, each with its counter-example; the face proxies' winding through the mirror on the real engine);
+`scripts/probes/pick_probe.mjs` (25 checks, headless, virtual clock: boot, pick, put-down, pick, seat, the next step outlined and picked, the orbit after
+the switch, the single tap held for its window, a drag during a switch moving nothing, the crank's thin bar within the 9 mm reach, the idle blend);
+`scripts/probes/seat_probe.mjs` — ⭐ **the lower case SEATED through the game's own steps** (picked; its bottom the resting face; the top quad; the roll;
+A + drag in): captured, committed, out of the hand, the crankshaft outlined next. `Scene_1` and `Scene_0bis` replayed bit for bit (`replay_probe.mjs`).
+
+**Root causes found and fixed while building** (each from a probe, ⛔ no patch kept that did not fix its cause):
+1. the resting-face QUADS never showed for a `.glb` part — their rule asked the piece's mesh to be drawn, and the proxy never is (`orient_cube.ts`);
+2. …and they hide nearer than half the rings' farthest (`quadsShownFromM`; `Scene_2` 3.1 m): a part picked at its own distance (≈ 0.9 m) could never be
+   turned — on its side at contact, 90° off, never placed. ⭐ The pick's distance is now at least where the quads show;
+3. the put-down's spiral started where the part was HELD — beyond the floor once the piece orbit is 3 m out: "no free spot", stuck in hand. ⭐ It starts
+   at the floor's nearest point (a vector fails on the old rule);
+4. the scene orbit's way back took the ring PLACE nearest the camera — a ring surface cannot hold the piece orbit's places (it has a distance): the camera
+   dropped to the bottom ring. ⭐ Now the ring that looks from the camera's DIRECTION;
+5. the held part's double tap missed a thin part (the crank's bar) — ⭐ the same 9 mm reach as the pick.
+6. Found in the tests (`CL1`): two regexes with literal backspaces for `` (could never fail), one check passing on a line of dead code.
+
+**DECISIONS TAKEN (to review)**:
+- **D-1 · the step order**: a part is pickable when EVERY part of a lower `step` is placed — the file carries the plan's partial order only as step groups
+  (both banks 5, the six pistons 6, the pulley 9): stricter than §2.3 of `SCENE_2_ASSEMBLY.md` (the pulley "any time after step 3"; a bank's pistons
+  before the other bank). ⏳ A per-part `after` in the `.glb` would carry the true order.
+- **D-2 · the anchor**: the plinth (`frozen` in the file) is a PLACED body, not a frozen one — the face map reads only unfrozen placed parts (its top is
+  the lower case's gizmo route); nothing moves a placed part.
+- **D-3 · the pick's distance**: the larger of the part's own distance from the assembly and 1.05 × where the quads show (`Scene_2`: ≈ 3.3 m) — so the
+  part can be turned before it comes in. ⚠ At the highest pitch (the pole, the owner's choice) the yellow CANDIDATE quad was a side's (the probe:
+  (1, 0, 0)); a tap on the quad wanted turns the part right.
+- **D-4 · the way back to the scene orbit**: from the camera's yaw and pitch, the ring at the nearest distance among equals. ⛔ The rings were NOT
+  extended: a ring surface cannot hold every piece-orbit place, and `Scene_2`'s rings (−37° … +41° of pitch) set the boot view the owner approved —
+  a piece-orbit view from higher swings down on the way back. ⏳ The owner's call: a higher, narrower top ring.
+- **D-5 · after a snap**: the centre to the centre of the part JUST PLACED (the file names no host per step — the support of the next part is most
+  often the last one placed: the case for the crank); the level complete: the assembly's centre.
+- **D-6 · a tap on a placed part while holding** moves NO gizmo — around the assembly the ray places it (`retargetGizmo`, 2026-10-28): "as today" is that.
+- **D-7 · a single tap on the held part** picks a resting face only where it meets a face of the part's FACE PROXY (a piston's: one face) — elsewhere
+  nothing.
+- **D-8 · the pulley's `spinFree`** → `spinX`: any turn about its own x, every 5° (the 3° margin covers it).
+- **D-9 · the stage slider** (`modelStage`) is inert once the parts are bodies.
+- **D-10 · the idle blend**: the camera along its own direction to the scene orbit's boot distance (3 m), looking at the assembly's centre; the idle orbit
+  plays on top; back by the clock on an input.
+- **D-11 · the score**: a pick 1, a put-down 1, a cycle's swap 0 (its pick counted), a snap 0.
+- **D-12 · loose parts are obstacles** to the held part (as every body) — ⏳ to judge on the device whether the heaps should be passed through.
+
+**NOT DONE — measured**: from the CRANKSHAFT on, the seats lie inside a host (the tub's saddles, the bores): the gizmo needs the GHOST faces read for the
+held part (`SCENE_2_ASSEMBLY.md` §5 item 9) and the PLUNGE snap (§5 item 8) — both owed. The seat probe: the crank turned right (0°) stops on the
+plinth's top beside the case, 192 mm from its goal. The CYCLE is built but not walked headless (no two pickable parts within reach in the seeds tried).
+⛔ **Owed: the owner's look on the device** — nothing here is closed by it.

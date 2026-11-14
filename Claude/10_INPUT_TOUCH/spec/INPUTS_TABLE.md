@@ -17,10 +17,18 @@ and so is the code (`git show d8134eb:src/...`). ⏳ Later: the parts will be gi
 ⛔⛔⛔ **2026-11-13 (`1.0.128-Removed-the-zoom`, the owner: *"remove the zoom function entirely"* → *"build A"*)** — NO ZOOM on either device (the
 pinch, the wheel, the boot zoom); around the assembly **the PINCH is the APPROACH** (spread: in; pinch: out) → [`ZOOM_REMOVED_PINCH_APPROACH.md`](ZOOM_REMOVED_PINCH_APPROACH.md).
 
+⭐⭐⭐ **2026-11-14 (`1.0.143from1.0.142-Pick-up-of-parts`) — THE PICK-UP FLOW, a scene's `.glb` parts (`Scene_2`)** →
+[`../../20_GAME_RULES/spec/PICK_AND_PLACE.md`](../../20_GAME_RULES/spec/PICK_AND_PLACE.md): the rows marked *(`.glb` parts)* below; ⛔ no device look yet.
+
 ## 1. Tablet (touch)
 
 | holding | input | does |
 |---|---|---|
+| nothing *(`.glb` parts)* | a TAP on a part whose step is available (outlined) — within 9 mm, the nearest | **PICK**: the part in hand, the piece orbit by the clock (600 ms, the inputs held) |
+| a part *(`.glb` parts)* | right after a pick, a TAP on another candidate within reach | **CYCLE**: the first back where it lay, the other picked |
+| a part *(`.glb` parts)* | a DOUBLE TAP on it (within 9 mm) | **PUT DOWN**: the free spot nearest, the least turn; the scene orbit by the clock |
+| a part *(`.glb` parts)* | a single TAP on it | after the double-tap window: the face of its face proxy tapped becomes its resting face |
+| a part *(`.glb` parts)* | no input for the idle orbit's time | the camera blends to the scene orbit's distance (the idle orbit there); back on an input |
 | nothing | 1 finger drag on empty space | orbit the camera (three rings) |
 | ⭐ the orbited piece (prototype, 2026-10-11) | a first touch / left press on a placed part | moves the **orbit centre** (the pink gizmo) |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | 1 finger drag | **the orbit around the assembly**: dx the yaw, dy the pitch (±90°, 2026-10-29; ⭐ 2026-11-04 WITH the finger: down, the gizmo down — `orbitDy`) — ⭐⭐⭐ (2026-11-04, Step 4c-bis) the gizmo from the FACE MAP: the angles' place on the assembly's core box (dx round the sides at the gizmo's height, each side a slice of the turn; dy up a side in the world's vertical plane square to it, over the top / under the bottom to the centre at ±90°), the ray along the face's axis onto the slide's coplanar regions (holes closed), slowly through an edge (the last / first 10 mm in 10°) — where the green and red sections meet, both drawn (⛔ the carrier on the section's hull, 2026-10-29 … Step 4c, deleted) |
@@ -51,6 +59,7 @@ contour shown instead (`D196`).
 
 | holding | input | does |
 |---|---|---|
+| *(`.glb` parts)* | a left click / a left double click | as the tap / the double tap above (pick, cycle, put down, the resting face) |
 | nothing | left drag on empty space | orbit the camera |
 | — | wheel | ⛔ nothing (swallowed: the page neither scrolls nor zooms) — the zoom deleted 2026-11-13 |
 | ⭐ the orbited piece (prototype, 2026-10-28; `orbitMode` 0) | **A held + left drag** (a mouse or a touchpad; ⭐ 2026-10-29, ⛔ Shift — Windows' Sticky Keys) | **the APPROACH** (dy: up in, down out); dx nothing; no orbit |
