@@ -64,7 +64,7 @@ describe("⭐⭐ prototype — a tap on the orbited piece sets its resting face"
     expect(fn).toMatch(/st\.orbitPieces\[i\] = \{ \.\.\.p, restingFace: cand, \.\.\.parts \};/);
     expect(fn).toMatch(/st\.world = setRestingFace\(st\.world, p\.mesh\.name, \{ \.\.\.rec, why: "TAPPED" \}\);/);
     // the piece's depth clone and transparent pass are set once, at creation — never again for a new face
-    expect(w).toMatch(/const parts = restingParts\(st, m, topo, restingFace\);\s*restingDepth\(st, m\);/);
+    expect(w).toMatch(/const parts = restingParts\(st, m, topo, restingFace\);\s*if \(depth\) restingDepth\(st, m\);/);
     expect(fn).not.toMatch(/restingDepth/);
   });
 });

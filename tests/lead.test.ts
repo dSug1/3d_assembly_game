@@ -6,7 +6,10 @@
  * τ or ζ, it would be a third name for a thing we already have twice.
  */
 import { describe, expect, it } from "vitest";
-import { exponentialSmooth, phantomTarget, neutralLeadSec } from "../src/input/lead";
+import { exponentialSmooth, phantomTarget } from "../src/input/lead";
+
+/** The lead at which a steady drag leaves no gap (2·ζ·τ) — ⛔ (2026-11-14, CL1) the product's `neutralLeadSec` deleted: nothing read it. */
+const neutralLeadSec = (tauSec: number, zeta: number): number => 2 * zeta * tauSec;
 import { advanceFollow, type FollowState } from "../src/input/follow";
 
 const DT = 1 / 120;

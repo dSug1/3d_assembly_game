@@ -19,7 +19,6 @@ const body = (id: string, at: Vec3, orbited = false): SceneObject => ({
   parent: null,
   faces: [{ id: "f0", centre: [0, -0.05, 0], normal: [0, -1, 0] }],
   connectors: [],
-  constraints: [],
   shape: boxShape([0.1, 0.1, 0.1]),
   ...(orbited ? { orbited: true, restingFace: { faceIds: ["f0"], centre: [0, -0.05, 0] as Vec3, normal: [0, -1, 0] as Vec3, why: "SPAWN" as const } } : {}),
 });
@@ -73,7 +72,7 @@ describe("⭐⭐ prototype — the orbited pieces in the object model", () => {
     const loop = code("render/render_loop.ts");
     // ⭐ (2026-10-12) the orientation cube placed between them — after the camera moved, before the render
     // ⭐ (2026-11-14) `shadowsOnDemand` moved inside the render (`onBeforeRenderTargetsRenderObservable`): the cube straight before the render again
-    expect(loop).toMatch(/greenBoxFrame\(st, dtSec\);\s*syncOrbitPieceModel\(st\);\s*orientCubeFrame\(st\);[^\n]*\n\s*st\.scene\.render\(\);/);
+    expect(loop).toMatch(/greenBoxFrame\(st, dtSec\);\s*syncOrbitPieceModel\(st\);\s*st\.modelHooks\?\.after\(dtSec \* 1000\);[^\n]*\n\s*orientCubeFrame\(st\);[^\n]*\n\s*st\.scene\.render\(\);/);
     // the follower loop and the jump watch leave it alone
     expect(loop).toMatch(/for \(const \[jid, jmesh\] of st\.meshOf\) \{\s*if \(st\.world\.objects\.get\(jid\)\?\.orbited === true\) continue;/);
     expect(loop).toMatch(/for \(const \[fid, mesh\] of st\.meshOf\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(st\.world\.objects\.get\(fid\)\?\.orbited === true\) continue;/);

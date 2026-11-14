@@ -419,13 +419,7 @@ export function cameraOffsetAt(dir: Vec3, boxOffset: Vec3, radiusOffsetM: number
   return [d * dir[0], d * dir[1], d * dir[2]];
 }
 
-/** ⭐ The yaw whose ring place points the piece at `rel` (from the gizmo) at `v` — the rebase at the end of the orbit around the piece. */
-export function rigYawToward(cfg: GestureConfig, p: RigParams, v: number, zoom: number, rel: Vec3): number {
-  const c = qRotate(p.q, orbitOffset(cfg, p.yaw0, v, zoom).offsetM);
-  if (Math.hypot(c[0], c[2]) < 1e-9 || Math.hypot(rel[0], rel[2]) < 1e-9) return p.yaw0;
-  // ⭐ yawTurn(δ) adds δ to the orbit's yaw: the piece's azimuth less the curve point's at yaw0
-  return p.yaw0 + Math.atan2(rel[2], rel[0]) - Math.atan2(c[2], c[0]);
-}
+// ⛔ (2026-11-14, CL1) `rigYawToward` (the rebase at the end of the old orbit around the piece) deleted with `returnToCentreOrbit`.
 
 /**
  * ⭐⭐ (2026-10-16, the owner: *"there is still a Z-shape back and forth of the piece when the camera turns. Can you synchronize all movements so that this disappear ? Also, when I change the gizmo, the piece does some strange travels and most of the times the camera never catches the offset … with the piece traveling outside the screen during the orbit"*) — **THE TURN ITSELF BLENDED** at the gizmo's share `s`: the rotation slerped, the fixed yaw and the

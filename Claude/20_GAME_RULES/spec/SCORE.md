@@ -157,6 +157,9 @@ lesson: two implementations of one fact disagree exactly when one is fixed).
 
 ⭐ When a gesture's last touch lifts, its cost lands only if it CHANGED THE MODEL — the undo layer's own comparison of the bodies, the alignments, the seats and the cursors before and after (`endGesture`). So an align, an unalign, an unsnap, a move and an undo land; a press and release on a body, Space with nothing after it, a Space click cancelled by Esc, a drag that crossed no rotation increment and a double tap or click that does not land (`D157`, absorbed) cost ZERO. ⭐ The undo pair still costs ONE (`D111`): its first tap changed nothing, its second tap's gesture undid. ⛔ `D157`'s take-back and `undoSecondTap` are deleted with it, and so is `D155`'s continuation mark: a press held still + Space + an alignment costs 1 (the alignment), a drag that MOVED + Space + an alignment costs 2 (two things landed). ⛔ **Reversed by `D159` the same day**: a Space freeze carries the gesture, so drag + Space + the action that follows lands ONCE — 1 if anything changed (alignment, or the move then Esc), 0 if not. ✅ `EpisodeTally.gestureEnded(changed)`, 4 vectors; headless, each case measured.
 
+⭐ (2026-11-14, ⛔ not built) **the pick-up flow**: a pick-up costs ONE episode, a put-down ONE, the snap NONE — it is the automatic goal capture
+(the owner: *"Pick and put-down only"*) → `PICK_AND_PLACE.md` §8.
+
 ### 3.4 ⭐⭐⭐ `D187` — AN EPISODE LANDS WHEN ITS ACTION IS TRIGGERED (2026-09-30)
 
 > *"the episode count shall be incremented at the first touch or click or delta position which triggers an action which

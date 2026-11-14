@@ -89,15 +89,14 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(Math.max(...sizes(menuTree()))).toBeLessThanOrEqual(9);
   });
 
-  it("⛔ removed: the sliders that never act — the way in to the orbit around the piece, the centre grace (their values kept for the parked code)", () => {
+  it("⛔ removed: the sliders that never act — the way in to the orbit around the piece, the centre grace — and (2026-11-14, CL1) their values with the code", () => {
     const all = flatten(menuTree());
     for (const k of ["pieceOrbitGapMinPct", "pieceOrbitEnterMm", "pieceOrbitReturnMm", "orbitCentreGraceMs"]) {
       expect(all).not.toContain(k);
-      expect(k in DEFAULT_CONFIG).toBe(true);
+      expect(k in DEFAULT_CONFIG).toBe(false);
     }
-    // why: the way in has no live caller; the grace only after an empty-space press moves the centre, which is off
     const code = (p: string) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
-    expect(code("render/green_box_wiring.ts").split(/enterPieceOrbit\(st\)|returnToCentreOrbit\(st,/).length - 1).toBe(0);
-    expect(code("input/goal_lock.ts")).toContain("export const EMPTY_PRESS_MOVES_TARGET = false;");
+    expect(code("render/green_box_wiring.ts")).not.toMatch(/enterPieceOrbit|returnToCentreOrbit/);
+    expect(code("input/goal_lock.ts")).not.toMatch(/export const EMPTY_PRESS_MOVES_TARGET/);
   });
 });

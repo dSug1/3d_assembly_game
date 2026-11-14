@@ -13,8 +13,8 @@ import { bodyOf, followerFor } from "./bodies";
 export function nudgeOthersWorld(st: SceneState, heldMesh: AbstractMesh,
   dir: Vec3,
   speedMmPerS: number,
-  /** ⭐ prototype (green box), 2026-10-02: the peak, mm on the glass — a dragged piece's `translateSwayMm` unless given. */
-  amplitudeMm: number = st.cfg.translateSwayMm,
+  /** ⭐ prototype (green box), 2026-10-02: the peak, mm on the glass (the orbit's `orbitSlideMm`). */
+  amplitudeMm: number,
   /** ⭐ …and the softness it is sized with AND springs back on (`Follow.swayTransTauMs`) — `translateSwayTauMs` unless given. */
   tauMs: number = st.cfg.translateSwayTauMs,) : void {
   const perPx = trackingMetresPerPx(

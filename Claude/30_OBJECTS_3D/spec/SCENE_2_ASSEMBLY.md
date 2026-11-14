@@ -253,6 +253,9 @@ step the player cannot see — rule 5).
 
 ⭐ Redefined AUTOMATICALLY when a part seats (the centre of the next step the player is likely to take — ⚠ with a partial order, the next part is the
 player's choice: the centre may follow the part the player PICKS rather than the step), eased by the centre blend; and MOVABLE by the player.
+⭐ (2026-11-14, the owner: *"for the moment, orbit center blends to the center of the piece which will support the next piece to be assembled. At the end
+of the level complete, the orbit center becomes the center of the assembly and the orbit toggles back to scene orbit"*) — the table read that way, the
+rule for every scene in `20_GAME_RULES/spec/PICK_AND_PLACE.md` §7.
 
 ### 2.9 ⭐⭐ Down the bore with the orbit we built — A + dy, and the GHOST FLOOR (checked on the code, 2026-11-12)
 

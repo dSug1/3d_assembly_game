@@ -28,7 +28,7 @@ const setup = (volume: Aabb | null = VOLUME): CollisionSetup => ({
 });
 /** One unit cube (half-size 0.5) at `p`. */
 const world = (p: Vec3, q: Quat = IDENTITY): World =>
-  makeWorld([{ id: "A", local: { position: p, orientation: q }, parent: null, faces: [], connectors: [], constraints: [], frozen: false, shape: boxShape([1, 1, 1]) }]);
+  makeWorld([{ id: "A", local: { position: p, orientation: q }, parent: null, faces: [], connectors: [], frozen: false, shape: boxShape([1, 1, 1]) }]);
 const move = (w: World, to: Vec3, q?: Quat) => resolveMove(w, "A", { position: to, orientation: q ?? worldPlacementOf(w, "A")!.orientation }, setup());
 
 describe("⭐⭐⭐ `3D7` — a piece cannot leave the play volume: it STOPS at a wall and SLIDES along it", () => {

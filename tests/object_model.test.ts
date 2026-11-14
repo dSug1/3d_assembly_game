@@ -47,8 +47,6 @@ import {
   invertPlacement,
   makeWorld,
   connectorWorldPose,
-  pushObjectConstraint,
-  clearObjectConstraints,
   reroot,
   setWorldPlacement,
   worldPlacementOf,
@@ -91,7 +89,6 @@ function obj(
     parent,
     faces: [],
     connectors: [],
-    constraints: [],
     ...extra,
   };
 }
@@ -463,46 +460,6 @@ describe("setWorldPlacement", () => {
   });
 });
 
-describe("the constraint stack, attached to an object", () => {
-  const anchor = {
-    kind: "GRAVITY_ALIGN" as const,
-    localNormal: [0, 1, 0] as Vec3,
-    targetWorld: [0, -1, 0] as Vec3,
-  };
-
-  it("starts empty — spec §0's Start condition", () => {
-    const { world } = chainOfThree();
-    expect(world.objects.get("leaf")!.constraints).toEqual([]);
-  });
-
-  it("appends NEWEST LAST, so an existing anchor stays older and therefore HARD", () => {
-    const { world } = chainOfThree();
-    const axis = { kind: "WORLD_AXIS_ALIGN" as const, localNormal: [1, 0, 0] as Vec3, targetWorld: [1, 0, 0] as Vec3 };
-    const after = pushObjectConstraint(pushObjectConstraint(world, "leaf", anchor, false), "leaf", axis, false);
-    expect(after.objects.get("leaf")!.constraints.map((c) => c.kind)).toEqual(["GRAVITY_ALIGN", "WORLD_AXIS_ALIGN"]);
-  });
-
-  it("a constraint pushed on one object does not appear on another", () => {
-    const { world } = chainOfThree();
-    const after = pushObjectConstraint(world, "leaf", anchor, false);
-    expect(after.objects.get("mid")!.constraints).toEqual([]);
-  });
-
-  it("clearing empties that object's stack only — the alignment setter's clear (born as §2septies)", () => {
-    const { world } = chainOfThree();
-    const both = pushObjectConstraint(pushObjectConstraint(world, "leaf", anchor, false), "mid", anchor, false);
-    const after = clearObjectConstraints(both, "leaf");
-    expect(after.objects.get("leaf")!.constraints).toEqual([]);
-    expect(after.objects.get("mid")!.constraints).toHaveLength(1);
-  });
-
-  it("⛔ re-rooting does NOT disturb the stacks — they are per-object state, not tree state", () => {
-    const { world } = chainOfThree();
-    const withStack = pushObjectConstraint(world, "root", anchor, false);
-    expect(reroot(withStack, "leaf").objects.get("root")!.constraints).toHaveLength(1);
-  });
-});
-
 describe("immutability — every operation returns a new world", () => {
   it("setWorldPlacement does not mutate the input", () => {
     const { world } = chainOfThree();
@@ -533,7 +490,6 @@ describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call 
     parent: null,
     faces: [{ id: "+y", centre: [0, 0.012, 0], normal: [0, 1, 0] }],
     connectors: [],
-    constraints: [],
     frozen,
   });
 
@@ -555,31 +511,6 @@ describe("⛔⛔ frozen — an invariant at the writers, not a rule at the call 
     const w = makeWorld([plate(false)]);
     const after = setWorldPlacement(w, "plate", { position: [1, 1, 1], orientation: IDENTITY });
     expect(worldPlacementOf(after, "plate")!.position).toEqual([1, 1, 1]);
-  });
-
-  it("⛔⛔ A FROZEN BODY CANNOT BE A FOLLOWER — the constraint push is refused", () => {
-    // ⭐⭐ NOT a second feature: a constraint is what would MOVE it. An alignment's solve, a
-    // seat retarget and a mate all read the stack and write a pose, so refusing the stack
-    // closes the same guarantee through the other door.
-    const w = makeWorld([plate(true)]);
-    const after = pushObjectConstraint(
-      w,
-      "plate",
-      { kind: "FACE_ALIGN", localNormal: [0, 1, 0], targetWorld: [1, 0, 0] },
-      false,
-    );
-    expect(after.objects.get("plate")!.constraints).toEqual([]);
-  });
-
-  it("⭐ an unfrozen body accepts the same constraint", () => {
-    const w = makeWorld([plate(false)]);
-    const after = pushObjectConstraint(
-      w,
-      "plate",
-      { kind: "FACE_ALIGN", localNormal: [0, 1, 0], targetWorld: [1, 0, 0] },
-      false,
-    );
-    expect(after.objects.get("plate")!.constraints.length).toBe(1);
   });
 
   it("⚠ `frozen` is OPTIONAL and absent means free — every existing body is unaffected", () => {
@@ -619,7 +550,6 @@ describe("⛔⛔ frozen and the tree — a frozen body is a PARENT, never a CHIL
     parent: null,
     faces: [{ id: "+y", centre: [0, 0.012, 0], normal: [0, 1, 0] }],
     connectors: [],
-    constraints: [],
     frozen: true,
   });
   const part = (id: string, at: Vec3): SceneObject => ({
@@ -628,7 +558,6 @@ describe("⛔⛔ frozen and the tree — a frozen body is a PARENT, never a CHIL
     parent: null,
     faces: [{ id: "+y", centre: [0, 0.04, 0], normal: [0, 1, 0] }],
     connectors: [],
-    constraints: [],
   });
 
   it("⛔⛔⛔ ATTACHING A FROZEN BODY AS A CHILD IS REFUSED", () => {

@@ -154,7 +154,7 @@ describe("⭐⭐ the wiring", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const k = restRaise(lv, pp, lv.n, 0, liftOf(st, lv.n), pieceSolveOptions(st).gapM + REST_SPARE_M);");
     const g = code("render/green_box_wiring.ts");
-    expect(g).toContain("if (po === null && be === null && assemblyOn(st)) pp = restDrawn(st, pp);");
+    expect(g).toContain("if (assemblyOn(st)) pp = restDrawn(st, pp);");
     expect(g.indexOf("pp = restDrawn(st, pp);")).toBeLessThan(g.indexOf("st.pieceAnchor = pp;"));
   });
   it("⭐⭐ the foot carries the rest; the approach's own check reads the piece without it", () => {

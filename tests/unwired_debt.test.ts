@@ -38,14 +38,7 @@ import { join } from "node:path";
  * up, which is `config_debt.test.ts`'s own warning about itself.
  */
 const PENDING: Record<string, string> = {
-  // ── prototype 2026-10-12: the way in / the orbit round the piece / its dx roll / the zoom ↔ roll switch, commented out, KEPT. ──
-  enterPieceOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  returnToCentreOrbit: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  holdDecision: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  holdSwitch: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  trailAnchor: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  orbitRollSteps: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
-  orbitRollStepRad: "⏸ the way in and the piece orbit, COMMENTED OUT 2026-10-12 (the owner: *don't remove it, as it may be useful later on*) — wired back with them",
+  // ⛔ (2026-11-14, CL1) the parked way in / out round the piece, the constraint stack, the recognizer and the barycentre centre DELETED with their entries.
   // ── prototype `1.0.59q-` (2026-10-05): priority 1 of the resting-face alignment, SUPERSEDED twice in a day — kept until the
   // owner settles the rule (`RESTING_FACE_ALIGNMENT.md` §2), then deleted with their vectors. ──────────────────────────────
   restAlignTarget:
@@ -72,16 +65,8 @@ const PENDING: Record<string, string> = {
   // seat and constraints stay — the parts will be given the orbited pieces' properties later, and the mate is `3D2`'s. ──────────────
   attach: "3D2 — the seat in the assembly tree; its gesture (the snap) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
   detach: "3D2 — the unseat; its gesture (the unsnap) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  pushObjectConstraint: "3D2 — a constraint onto an object's stack; its writer (the alignment) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  clearObjectConstraints: "3D2 — clears an object's stack; its writer (the unalign) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  evictObjectConstraints: "3D2 — the stack's eviction; its writer went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  solve: "3D2 — the constraint stack's solve; its reader (the aligned drag) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  rotationChannel: "3D2 — the constrained rotation's channel; its reader went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  singleAlignment: "3D2 — the one-alignment cap; its reader went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
   // ── 2026-11-02, kept for the vectors that measure through them. ──
   WORLD_DOWN: "the gravity the orbit's vectors compose the gravity frame with; its product reader (the parts' gesture frame) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
-  Recognizer: "IN1 — §1.3's per-touchpoint recognizer; its carrier (a held part) went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`); `TapHistory`'s vectors run through it",
-  neutralLeadSec: "IN4 — the phantom lead's landmark (2·ζ·τ) the follower's vectors are written against; its HUD readout went with the parts' translation, rotation and alignment DELETED 2026-11-02 (commit `d8134eb`)",
   offsetPositions: "the shell's offset geometry — the drawn shell deleted (`D120`); the topology vectors measure OUTWARD through it",
   // ── `3D2`: the seat. The assembly tree exists; nothing is assembled yet. ──────
   reroot: "3D2 — `parent ≠ root`, needed the first time an assembly is re-hung",
@@ -111,11 +96,10 @@ const PENDING: Record<string, string> = {
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
   smallestOfColour: "the green proxy's first size (the smallest yellow piece) — replaced on the prototype by Piece17 × 150 %",
   // ⭐ prototype (green box), 2026-10-02: the box follows the rig on a spring now (`springOrbit`) — no speed jump per event.
+  cameraOffset: "the camera's place on the rings the unturned rig must equal EXACTLY (`orbit_rig.test.ts`); its product reader (the yaw gain round the piece) deleted 2026-11-14 (CL1) — kept as that reference",
   easeOrbit: "the green box's first ease (one exponential) — replaced by `springOrbit`; kept as the vectors' reference for the jitter it caused",
   // ⭐ prototype (green box), 2026-10-02: the camera's pitch axis runs on the ring position `v` now — the angle is not monotone.
   vForPitch: "pitch → ring position by a search that assumes the pitch rises monotonically — false on a waist (the stair); kept for its vectors",
-  // ⭐ prototype (green box), 2026-10-01: the empty-space press reads `nearestPairCentre` on this branch only.
-  orbitCentre: "§2 rule 1's subset barycentre — replaced on the prototype branch by `nearestPairCentre`; the main line still calls it",
   // ⭐ `D170`: run at BUILD time, not in the product — `scripts/gen_demo_plan.ts` writes the committed plan the
   // product plays, and `d170_regenerate.test.ts` regenerates it to prove the data is still the generator's.
   generateDemoPlan: "build-time only — `scripts/gen_demo_plan.ts` writes `content/scene1_demo_plan.ts` (D170)",

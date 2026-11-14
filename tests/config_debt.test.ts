@@ -41,11 +41,8 @@ import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
  * waste a device session measuring.
  */
 const PENDING: Readonly<Record<string, string>> = {
-  // ⛔⛔ UNREADABLE UNTIL MATES EXIST, and NOT fake-wired to keep this list short. §1.4's
-  // ordering only matters with TWO entries on a stack, and the alignment is capped at one —
-  // so passing this flag today would be a read that changes nothing, which is the
-  // slider-that-does-nothing shape this project has already paid for once.
-  matePriorityOverAnchor: "3D2 / §4 6quater — the first rule that pushes a MATE",
+  // ⛔ (2026-11-14, CL1) `matePriorityOverAnchor`, `evictOnOverflow` (the constraint stack's) and `holdSwitchRestMs` (the parked way in's) DELETED with
+  // their readers, not left pending.
   // ⛔ (2026-11-02) `referenceCameraDistance`, `gainTranslateAxis`, `gainTranslateMutual` and `axisMappingMode` (rules 6bis/6ter/6quater)
   // are DELETED with the parts' translation (commit `d8134eb`), not left pending.
   // ⭐ `matePriorityOverAnchor` LEFT THIS LIST on 2026-09-16: `IN3`'s 2ter/2quater now pass
@@ -57,9 +54,6 @@ const PENDING: Readonly<Record<string, string>> = {
   mateFacingCos: "3D2 — snap/seat; the anti-parallel test",
   mateBreakLinear: "3D3 — break on residual",
   mateBreakAngular: "3D3 — break on residual",
-  // ⏸ (2026-11-04, the audit) read only by the way in and the piece orbit the owner switched off and KEPT (2026-10-12: *"don't remove it, as it may be
-  // useful later on"*, `render/hold_wiring.ts`); a comment no longer makes it look read
-  holdSwitchRestMs: "IN3 — the ⏸ way in / piece orbit (hold_wiring.ts), if it is switched back on",
 };
 
 function walk(dir: string): string[] {

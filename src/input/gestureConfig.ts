@@ -116,19 +116,6 @@ export interface GestureConfig {
    */
   translateLeadMs: number;
   /**
-   * mm ON THE SCREEN — how far every OTHER object drifts **the same way as** the held one
-   * when it starts, resumes or turns, before springing back to exactly where it was.
-   * ⚠ Alongside, not against. It was built opposite for one round on a request that was
-   * then corrected; the sign lives in `swayWorldDirection` and nowhere else.
-   * ⭐⭐ THE SCENE REACTS INSTEAD OF STANDING FROZEN around the one thing that moves.
-   * ⛔ Screen millimetres, not world metres, and converted through the SAME tracking
-   * factor rule 6 uses (`input/translate.ts`) — so the sway is the same size to the eye
-   * whatever the zoom. A world-metre amplitude would vanish zoomed out and swamp the
-   * scene zoomed in. ⚠ Rule 3 of the project: thresholds are millimetres on the glass.
-   * ⛔ `0` disables it exactly.
-   */
-  translateSwayMm: number;
-  /**
    * ms — the softness of that spring: its time constant, and also exactly when the drift
    * reaches its peak (see `impulseForPeak`). Bigger is slower and lazier.
    * ⚠ IT HAS ITS OWN SLIDER EVEN THOUGH ONLY ONE WAS ASKED FOR, and the reason is this
@@ -341,10 +328,6 @@ export interface GestureConfig {
   /** mm between the two taps' press points. */
   doubleTapSlop: number;
 
-  // ── §1.4 constraints ────────────────────────────────────────────────────
-  evictOnOverflow: boolean;
-  matePriorityOverAnchor: boolean;
-
   // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) §2 rule 4, the pinch zoom, deleted: `pinchDeadband`, `gainZoom`.
 
   /**
@@ -394,26 +377,11 @@ export interface GestureConfig {
    * position"*. ⚠ `0` is legal and reproduces the old jump, for an A/B.
    */
   orbitBlendDistanceMm: number;
-  /**
-   * ms — how long §2 rule 1 WAITS before committing to a new orbit centre, in case a
-   * second touchpoint is on its way down outside any object.
-   * ⭐⭐ TWO FINGERS OUTSIDE IS A PINCH (rule 4), NOT AN ORBIT. They never land at the
-   * same instant, so the first one arriving alone is indistinguishable from the start of
-   * an orbit — and rule 1 would pick a barycentre, move the marker and retarget the
-   * camera for a gesture the user meant as a zoom. ⚠ Waiting a beat costs nothing: the
-   * centre blend takes 30 mm of finger travel anyway, so a retarget deferred by a tenth
-   * of a second is invisible.
-   * ⛔ `0` commits immediately — the behaviour before this existed, and the only setting
-   * where a press and a retarget are the same event.
-   */
-  orbitCentreGraceMs: number;
   // ⛔⛔ (2026-11-13, the owner: *"remove all the float sliders which are currently set to zero"*) `cameraLeashDeg` (0), `cameraSettleDelayMs` (0),
   // `cameraFollowMs` (0) deleted with what read them, and `boxGainInsideLeash` (0.35, inert with no leash).
   /** ⭐ Prototype: the camera's yaw offset from its orbit position, degrees — so the green box does not hide the yellow target. */
   cameraYawOffsetDeg: number;
-  pieceOrbitGapMinPct: number;
   orbitPieceYawFactor: number;
-  pieceOrbitEnterMm: number;
   /** ⭐⭐ (2026-10-18, the owner) THE TOP ROLL's band: over a crossing (a horizontal face) the half-round turns only while the view is within this
    * many degrees of straight above (below) — elsewhere the camera stays upright in the curve's vertical plane (°, 2–60). */
   topRollBandDeg: number;
@@ -499,9 +467,6 @@ export interface GestureConfig {
   quadGrowthLogK: number;
   /** ⭐ Prototype (2026-10-12): the ORBITED PIECE's farthest distance from the orbit centre (m) — the rings beyond it are cut (`clampPieceRadiusM`). */
   pieceRadiusMaxM: number;
-  /** ⭐ Prototype (2026-10-12): zoom → roll without lifting — how long the second finger must REST before the first finger's dx rolls (ms). */
-  holdSwitchRestMs: number;
-  pieceOrbitReturnMm: number;
   /** ⭐ Prototype: the camera's pitch offset from its orbit position, degrees (+ = above). */
   cameraPitchOffsetDeg: number;
   /** ⭐ Prototype: the camera's orbit radius = the green box's + this, millimetres (100–2000, the owner's range). */
@@ -535,10 +500,6 @@ export interface GestureConfig {
   gainOrbitYaw: number;
   /** Elevation parameter (0 = bottom ring, 1 = top) per MILLIMETRE of finger travel. */
   gainOrbitElevation: number;
-
-  // ── §2 / §4 rules ───────────────────────────────────────────────────────
-  /** §1: the barycentre candidate set grows as 2^N − N − 1. Cap it. */
-  maxBarycenterCandidates: number;
 
   // ── mate geometry ───────────────────────────────────────────────────────
   /** ⛔ NEGATIVE. A mate is anti-parallel; see core/mate_connector.ts. */
@@ -709,7 +670,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // much as the digitiser's own jitter. ⚠ That is not a coincidence worth reading too
   // much into, but it does say the effect is meant to be felt rather than seen: the
   // ×0.3…×4.5 speed scaling is what makes it visible on a fast drag.
-  translateSwayMm: 0.8,
   // ⚠ Still a guess, with a slider.
   translateSwayTauMs: 180,
   // ⚠ Guesses, both with sliders. 50° is "a deliberate change of heading, not a wobble";
@@ -840,8 +800,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⛔ Fork A — today's behaviour, the only set a hand has closed. 1 = `IN3`,
   // 2 = the owner's third set (inert until specified). See `input/anchor_fork.ts`.
 
-  evictOnOverflow: false,
-  matePriorityOverAnchor: false,
 
   // ⭐⭐ CHOSEN BY THE OWNER ON THE DEVICE, 2026-09-14, with the tuning menu — the
   // first numbers in this file that are a JUDGEMENT rather than a guess.
@@ -876,14 +834,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   orbitBlendDistanceMm: 30,
   // ⚠ A GUESS, with a slider. Two fingers of one hand land within roughly 30–80 ms of
   // each other; 120 covers that with margin without being long enough to notice.
-  orbitCentreGraceMs: 120,
   // ⚠ Prototype guesses, with sliders in CAMERA.
   // ⚠ Prototype guesses, with sliders: enough to see the target past the box (~10° on screen), and half the orbit speed.
   // ⭐ The owner, 2026-10-01: *"Set camera yaw offset at 3 degrees, camera pitch offset at 2 degrees"*.
   cameraYawOffsetDeg: 2.5, // ⭐ the owner, 2026-10-05 (was 3)
   // ⭐ prototype, the owner 2026-10-06: around the piece, the gap at the rings' closest, % of the camera's distance from the piece at the
   // resting-face alignment (`scaledGap`)
-  pieceOrbitGapMinPct: 50,
   // ⭐ prototype, the owner 2026-10-06: *"when in orbit around center, yaw rotate the piece in the other direction"*, *"rotate twice
   // faster"* — before the alignment the piece turns on itself this many times the orbit's turn, in its sense (−1 was the old "against")
   orbitPieceYawFactor: 3, // the owner, 2026-10-06: 3 (was 2)
@@ -925,7 +881,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   sectionLines: 1, // ⭐ (2026-10-28) the sections drawn
   orbitTurnCapDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"set the turn governor horizontal face to 12.5"*; first 40) the horizontal face's turn over the top (96°/mm at the shipped gains, view and roll) capped
   orbitTurnCapVerticalDegMm: 12.5, // ⭐ (2026-10-19, the owner: *"same for vertical faces"* — 12.5; first 10) the vertical face's view between rings 2 and 3 (20°/mm at the shipped gains) slowed
-  pieceOrbitEnterMm: 12, // the owner, 2026-10-08: *"Set the way in to the orbit at 12 mm"* (was 60)
   // ⛔ (2026-10-12) the pink highlights' hold / fade (`highlightHoldMs`, `highlightFadeMs`) deleted with the pink face from a part
   // ⭐ prototype, the owner 2026-10-11: *"add a slider to hide the pink gizmo"* — shown by default (*"make the default pink gizmo hidden"*, then *"set the default : pink gizmo shown"*, the same day)
   pinkGizmoVisible: 1,
@@ -938,10 +893,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // the camera's maximum (`cameraRadiusMaxM`, 3 m) → 5 m, then *"revert to the 6m max distance geometry as it was in previous commit: this geometry allows each quad to become yellow during orbit at maximum distance"*
   pieceRadiusMaxM: 6,
   // ⭐ prototype, the owner 2026-10-12: *"Build with the 150ms rest"*
-  holdSwitchRestMs: 150,
   // ⭐ prototype, the owner 2026-10-07: the way back to the centre orbit, ONE value for the move and the view (*"with 10mm and 60mm merged
   // into one single value"* — *"60 mm"*): finger travel, eased (`returnProgress`); 30 since 2026-10-08 (*"Set way out in 30mm"*)
-  pieceOrbitReturnMm: 30,
   cameraPitchOffsetDeg: 2,
   // ⚠ 1500 mm: the boot view's distance under the rule it replaces (box 1.5 m out, camera 3.0 m) — so nothing jumps.
   cameraRadiusOffsetMm: 1250, // ⭐ the owner, 2026-10-01 (was 1500)
@@ -983,7 +936,6 @@ export const DEFAULT_CONFIG: GestureConfig = {
   cameraRadiusMinM: 0.15,
   cameraRadiusMaxM: 3,
 
-  maxBarycenterCandidates: 8,
 
   mateFacingCos: -0.85,
   mateBreakLinear: 0.02,

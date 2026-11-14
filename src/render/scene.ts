@@ -50,10 +50,10 @@ import { GestureSpan } from "../core/gesture";
 import "@babylonjs/core/Culling/ray";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+// ⏸ (2026-11-14) with the commented-out marker: import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+// ⏸ (2026-11-14) with the commented-out marker: import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+// ⏸ (2026-11-14) with the commented-out marker: import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Scene } from "@babylonjs/core/scene";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { startDemo } from "./demo_wiring";
@@ -343,7 +343,6 @@ export function createScene(
           frozen: m.metadata?.frozen === true,
           connectors: [],
           // §0's Start condition: every object begins with an EMPTY stack.
-          constraints: [],
         };
       }),
   );
@@ -504,28 +503,31 @@ export function createScene(
    * have made the marker's meaning depend on the alignment state.
    */
 
-  // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
-  // Without it the barycentre selection is invisible, and "it seems to orbit the right
-  // thing" is not an observation. `IN3` deletes this along with the three placeholder
-  // boxes. ⚠ It does NOT delete the rotation — see below.
-  st.centreMarker = CreateSphere(
-    "orbit-centre-marker",
-    { diameter: 0.012 },
-    st.scene,
-  );
-  const markerMat = new StandardMaterial("orbit-centre-marker-mat", st.scene);
-  markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
-  markerMat.disableLighting = true;
-  st.centreMarker.material = markerMat;
-  // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
-  // exists to display.
-  st.centreMarker.isPickable = false;
-  // ⭐ prototype (green box), the owner 2026-10-01: *"make the yellow orbit center always visible (not occluded by any object)"* —
-  // drawn in rendering group 2, after the bodies with the depth cleared (as the cursor rings are), so nothing hides it.
-  st.centreMarker.renderingGroupId = 2;
-  // ⭐ prototype (green box), the owner 2026-10-02: *"hide the yellow orbit center"* — the pink ring marks the target now. ⛔ Only
-  // HIDDEN: the marker still moves to every new target (`syncCentre`), and the target itself (`centreBlend.targetM`) is unchanged.
-  st.centreMarker.isVisible = false;
+  // ⏸⏸ (2026-11-14, the owner: *"no need for a marker. This can be deleted (or, better, commented out)"* — `PICK_AND_PLACE.md` §2 item 2) THE YELLOW
+  // CENTRE MARKER commented out (hidden since 2026-10-02): `st.centreMarker` is `null`, its two writers skip it.
+  st.centreMarker = null;
+// ⏸   // ⚠ DIAGNOSTIC ONLY: a small marker at whatever §2 rule 1 chose to orbit around.
+// ⏸   // Without it the barycentre selection is invisible, and "it seems to orbit the right
+// ⏸   // thing" is not an observation. `IN3` deletes this along with the three placeholder
+// ⏸   // boxes. ⚠ It does NOT delete the rotation — see below.
+// ⏸   st.centreMarker = CreateSphere(
+// ⏸     "orbit-centre-marker",
+// ⏸     { diameter: 0.012 },
+// ⏸     st.scene,
+// ⏸   );
+// ⏸   const markerMat = new StandardMaterial("orbit-centre-marker-mat", st.scene);
+// ⏸   markerMat.emissiveColor = new Color3(1, 0.85, 0.4);
+// ⏸   markerMat.disableLighting = true;
+// ⏸   st.centreMarker.material = markerMat;
+// ⏸   // ⛔ Not pickable, and not a barycentre candidate: it must not alter the gesture it
+// ⏸   // exists to display.
+// ⏸   st.centreMarker.isPickable = false;
+// ⏸   // ⭐ prototype (green box), the owner 2026-10-01: *"make the yellow orbit center always visible (not occluded by any object)"* —
+// ⏸   // drawn in rendering group 2, after the bodies with the depth cleared (as the cursor rings are), so nothing hides it.
+// ⏸   st.centreMarker.renderingGroupId = 2;
+// ⏸   // ⭐ prototype (green box), the owner 2026-10-02: *"hide the yellow orbit center"* — the pink ring marks the target now. ⛔ Only
+// ⏸   // HIDDEN: the marker still moves to every new target (`syncCentre`), and the target itself (`centreBlend.targetM`) is unchanged.
+// ⏸   st.centreMarker.isVisible = false;
   // ⭐ prototype (green box): the green box — the orbit rig drives it now, and the camera follows it (prototype).
   st.greenBoxRigM = null;
   st.cameraOrbit = null;
@@ -655,14 +657,6 @@ export function createScene(
   st.restRoll = null;
   st.pieceAnchor = null;
   st.anchorShift = null;
-  st.pieceOrbit = null;
-  st.centreReturn = null;
-  st.pieceEntry = null;
-  st.pieceAim = null;
-  st.orbitRollAcc = 0;
-  st.pieceYawGain = 1;
-  st.pieceYawGainKey = "";
-  st.pieceYawGainDrag = 1;
   st.orbitPieceKind = 0;
   st.orbitPieceFaces = 0;
   st.greenBoxDistM = null;
@@ -679,6 +673,8 @@ export function createScene(
   st.modelAnimNote = "";
   st.backgroundBlueSeen = -1;
   st.modelFloor = null;
+  st.modelHooks = null;
+  st.modelTapTaken = null;
   if (spec.model !== undefined) {
     st.modelStatus = "model: loading…";
     void import("./model_import").then((m) => m.importSceneModel(st)).catch((e: unknown) => {
@@ -766,13 +762,6 @@ export function createScene(
   // ─────────────────────────────────────────────────────────────────
   // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) §2 RULE 4, THE PINCH ZOOM, deleted — the rig at 1 always.
 
-  /**
-   * An orbit centre chosen but NOT YET COMMITTED — see `orbitCentreGraceMs`.
-   * ⛔ Resolved in the RENDER LOOP rather than by a timer: the loop is already running,
-   * a frame is the granularity anything visible happens at, and there is no callback to
-   * cancel, leak, or fire after the scene is gone.
-   */
-  st.pendingCentre = null;
 
   /**
    * The double-tap reset in flight, or `null`.

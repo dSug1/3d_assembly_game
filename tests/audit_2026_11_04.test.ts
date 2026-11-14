@@ -27,7 +27,6 @@ const body = (id: string, at: Vec3, dims: [number, number, number] = [0.1, 0.1, 
   parent: null,
   faces: [],
   connectors: [],
-  constraints: [],
   shape: boxShape(dims),
 });
 const setup = (skinM = 0.001): CollisionSetup => ({ shapes: hullAtSpawn, bounds: boundsFromShapes(hullAtSpawn), skinM });

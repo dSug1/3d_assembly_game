@@ -57,6 +57,54 @@ export function accessorPoints(g: Gltf, bin: Uint8Array, accessor: number): Vec3
   return out;
 }
 
+/** An index accessor's values (unsigned byte, short or int). */
+export function accessorIndices(g: Gltf, bin: Uint8Array, accessor: number): number[] {
+  const acc = g.accessors[accessor]!;
+  const bv = g.bufferViews[acc.bufferView]!;
+  const dv = new DataView(bin.buffer, bin.byteOffset + (bv.byteOffset ?? 0) + (acc.byteOffset ?? 0));
+  const size = acc.componentType === 5121 ? 1 : acc.componentType === 5123 ? 2 : acc.componentType === 5125 ? 4 : 0;
+  if (size === 0 || acc.type !== "SCALAR") throw new Error(`accessor ${accessor}: not an index accessor`);
+  const out: number[] = [];
+  for (let i = 0; i < acc.count; i++) out.push(size === 1 ? dv.getUint8(i) : size === 2 ? dv.getUint16(i * 2, true) : dv.getUint32(i * 4, true));
+  return out;
+}
+
+/** ⭐ A triangle mesh (positions and their triangles, three indices each). */
+export interface TriMesh {
+  readonly positions: readonly Vec3[];
+  readonly indices: readonly number[];
+}
+
+/**
+ * ⭐⭐ (2026-11-14, `PICK_AND_PLACE.md`) Each part's FACE PROXY (`UFM_` — the real faces; the ghosts apart) as ONE triangle mesh in the PART's
+ * frame (reference units): what the face map, the gizmo and the resting-face quads read once the part is a body.
+ */
+export function partFaces(json: unknown, bin: Uint8Array, catalog: ModelCatalog): { readonly id: string; readonly mesh: TriMesh }[] {
+  const g = json as Gltf & { readonly meshes: readonly { readonly primitives: readonly { readonly attributes: Readonly<Record<string, number>>; readonly indices?: number }[] }[] };
+  const byName = new Map(g.nodes.map((n, i) => [n.name ?? `#${i}`, i]));
+  return catalog.parts.map((part) => {
+    const real = new Set(part.faces);
+    const positions: Vec3[] = [];
+    const indices: number[] = [];
+    const walk = (i: number, toPart: Placement): void => {
+      const n = g.nodes[i]!;
+      const here = compose(toPart, local(n));
+      if (n.mesh !== undefined && real.has(n.name ?? "")) {
+        for (const pr of g.meshes[n.mesh]!.primitives) {
+          const base = positions.length;
+          for (const p of accessorPoints(g, bin, pr.attributes["POSITION"]!)) positions.push(apply(here, p));
+          const idx = pr.indices === undefined ? positions.slice(base).map((_, k) => k) : accessorIndices(g, bin, pr.indices);
+          for (const k of idx) indices.push(base + k);
+        }
+      }
+      for (const c of n.children ?? []) walk(c, here);
+    };
+    const pi = byName.get(part.node);
+    if (pi !== undefined) for (const c of g.nodes[pi]!.children ?? []) walk(c, { position: [0, 0, 0], rotation: [1, 0, 0, 0] });
+    return { id: part.id, mesh: { positions, indices } };
+  });
+}
+
 export interface PartGeometry {
   readonly id: string;
   readonly node: string;

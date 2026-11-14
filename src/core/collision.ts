@@ -58,7 +58,10 @@ export interface BoundsSource {
 /** ⭐ TODAY's shape: the one convex hull computed at spawn from the mesh (`SceneObject.shape`). */
 export const hullAtSpawn: CollisionShapeSource = {
   partsOf(world, id) {
-    const pts = world.objects.get(id)?.shape?.points;
+    const o = world.objects.get(id);
+    // ⭐⭐ (2026-11-14) a body's own convex PIECES first (a `.glb` part's `UCX_` — `PICK_AND_PLACE.md`), else its one hull
+    if (o?.pieces !== undefined && o.pieces.length > 0) return o.pieces.map((p) => p.points);
+    const pts = o?.shape?.points;
     return pts && pts.length > 0 ? [pts] : null;
   },
 };

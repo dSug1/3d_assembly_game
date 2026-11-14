@@ -354,7 +354,6 @@ function assembledWorld(scene: SceneDescriptor, final: Map<string, Placed>): Wor
     parent: null,
     faces: [],
     connectors: [],
-    constraints: [],
     frozen: b.frozen,
     shape: boxShape(contourDims(b)),
   }));
