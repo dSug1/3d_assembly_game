@@ -20,6 +20,6 @@ describe("the approach only in the piece orbit", () => {
   });
   it("⛔ A + dy: only in the piece orbit", () => {
     const p = read("pointer_wiring.ts");
-    expect(p).toMatch(/const shiftApproach = pieceOrbitOn\(st\) && st\.orbitShift && !dxOnly;/);
+    expect(p).toMatch(/const shiftApproach = pieceOrbitOn\(st\) && st\.orbitShift;/);
   });
 });

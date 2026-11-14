@@ -37,7 +37,6 @@ const BOX: SceneObject = {
     { id: "-z", centre: [0, 0, -0.5], normal: [0, 0, -1] },
   ],
   connectors: [],
-  constraints: [],
 };
 
 const worldWith = (o: SceneObject) => makeWorld([o]);

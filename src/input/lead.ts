@@ -69,11 +69,3 @@ export function phantomTarget(target: number, velocity: number, leadSec: number)
   return target + velocity * leadSec;
 }
 
-/**
- * The lead at which a steady drag leaves NO gap between object and finger.
- * ⭐ Exposed so the readout and the docs can state it rather than restate the algebra,
- * and so the slider has a landmark instead of a range of equally arbitrary numbers.
- */
-export function neutralLeadSec(tauSec: number, zeta: number): number {
-  return 2 * zeta * tauSec;
-}

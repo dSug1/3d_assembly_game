@@ -1,25 +1,22 @@
 /**
  * ⭐⭐⭐ prototype — **THE HELD SECOND TOUCH, WIRED** (`RESTING_FACE_ALIGNMENT.md` §20; the owner, 2026-10-11). The decisions are
- * `input/hold_gesture.ts`'s; this holds the input in flight (`st.hold`) and calls the actions — the way in (`enterPieceOrbit`), the orbit
- * round the piece and the roll (`orbitDragStep`, dx only), the approach (⛔ 2026-11-13 the zoom deleted), the way out (`returnToCentreOrbit`), the tap roll
- * (⭐ 2026-10-13: the yellow quad tapped, `orientTapShown`), the orbit centre moved by a tap on a placed part. ⛔ No rule here.
+ * `input/hold_gesture.ts`'s; this holds the input in flight (`st.hold`) and calls the actions — the first touch's orbit (`orbitDragStep`), the
+ * approach by the pinch (⛔ 2026-11-13 the zoom deleted), the tap roll (⭐ 2026-10-13: the yellow quad tapped, `orientTapShown`), the orbit centre
+ * moved by a tap on a placed part. ⛔ No rule here. ⛔ (2026-11-14, CL1) the way in / out round the piece, parked since 2026-10-12, deleted (the
+ * code at `7c38150`).
  * ⛔⛔ (2026-10-12, the owner: *"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting face.
  * Alignment of resting face shall be with the cube only"*) — the second touch takes no pink face and aligns nothing; its highlights clock
  * is deleted with it.
  * - **Press** of the second touch (a finger while another is down, or ALT / CTRL) OFF the orbited pieces: the input starts (HELD); a finger's
  *   press on a PLACED part notes where (`centreAt`).
- * - **The first touch moving**: undecided until its dx passes the deadband (`holdDecision`) — WAY (the way in, then the orbit round the piece
- *   and the roll, dx only) or ZOOM (the pinch); decided, the finger that moves decides again (`holdSwitch`).
+ * - **The first touch moving**: the desktop's key — it orbits the centre; two fingers — their separation past the deadband: the APPROACH.
  * - **The first touch lifting and pressing again**: the same input goes on (no centre change, no coast, the roll's count kept).
- * - **The second touch lifting**: the way out if the way in had started; else, a TAP — on a placed part, the orbit centre moved there; else,
- *   the first held, the roll to the next axis.
+ * - **The second touch lifting**: a TAP — on a placed part, the orbit centre moved there; else, the first held, the yellow quad tapped.
  */
 import { pxToMm } from "../core/units";
 import { holdTapMode, holdTapTapsYellow, type HoldMode } from "../input/hold_gesture";
-// ⏸ (2026-10-12) with the way in, commented out: import { holdDecision, holdSwitch, trailAnchor } from "../input/hold_gesture";
 import { MOUSE_SECOND_ID } from "../input/mouse_second_touch";
 import { orientTapShown } from "./orient_cube";
-// ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { retargetGizmo } from "./camera_rig";
 import { pinchApproachDyMm, pinchLatched, separationMm } from "../input/assembly_orbit";
 import { approachInput, approachRelease, pieceOrbitOn } from "./assembly_wiring";
@@ -33,85 +30,33 @@ const sepOf = (st: SceneState, a: number | null, b: number | null): number | nul
   return p === undefined || q === undefined ? null : separationMm([pxToMm(p.last.x), pxToMm(p.last.y)], [pxToMm(q.last.x), pxToMm(q.last.y)]);
 };
 
-const xOf = (st: SceneState, id: number | null): number | null => {
-  if (id === null) return null;
-  const p = st.router.all().find((q) => q.id === id);
-  return p === undefined ? null : p.last.x;
-};
-
 /** ⭐ The second touch pressed (`second`), the first touch down or not (`first`), where it hit a PLACED part (`centreAt`; `null`: elsewhere). */
 export function holdSecondPress(
   st: SceneState,
   second: number,
-  x: number,
   first: number | null,
   centreAt: readonly [number, number, number] | null = null,
   centreNormal: readonly [number, number, number] | null = null,
   centreHost: string | null = null,
 ): void {
-  st.hold = { second, first, mode: "HELD", secondX0: x, firstX0: xOf(st, first), t0: performance.now(), pressActed: centreAt !== null, centreAt, centreNormal, centreHost, swAnchorMm: pxToMm(x), swStillSince: performance.now(), swFirstX0: xOf(st, first), wayIn: false };
-  st.lastVerdict = "orbit: second touch held — dx of the first touch: the way in";
+  st.hold = { second, first, mode: "HELD", pressActed: centreAt !== null, centreAt, centreNormal, centreHost };
+  st.lastVerdict = "orbit: second touch held";
   st.hudDirty = true;
 }
 
 /** ⭐ The first touch pressed again while the second is held: the same input goes on. */
-export function holdFirstPress(st: SceneState, first: number, x: number): void {
+export function holdFirstPress(st: SceneState, first: number): void {
   const h = st.hold;
   if (h === null) return;
   h.first = first;
   h.base = null; // ⭐ (2026-10-28) the two-finger decision's travel from here
-  // ⭐ undecided still: its dx counts from here
-  if (h.mode === "HELD") h.firstX0 = x;
-  h.swFirstX0 = x; // ⭐ (2026-10-12) the switch's too
   st.hudDirty = true;
 }
 
-/**
- * ⭐ A move of one of the input's two touches. `orbitStep` — the caller's orbit drag (dx only on the way in / round the piece). Returns the
- * mode now.
- */
-export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: Sample, orbitStep: (dxOnly: boolean) => void): HoldMode | null {
+/** ⭐ A move of one of the input's two touches. `orbitStep` — the caller's orbit drag. Returns the mode now. */
+export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: Sample, orbitStep: () => void): HoldMode | null {
   const h = st.hold;
   if (h === null) return null;
-// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
-// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
-// ⏸   // ⭐⭐ (2026-10-12, *"swap from one to another without releasing any of the two touches"* → *"Build with the 150ms rest. No change for
-// ⏸   // desktop."*) — decided, the finger that moves decides again (`holdSwitch`); ⛔ a finger second touch only (the desktop's key has no x)
-// ⏸   if (h.mode !== "HELD" && h.second !== MOUSE_SECOND_ID && (pointerId === h.first || pointerId === h.second)) {
-// ⏸     const now = performance.now();
-// ⏸     const fx = xOf(st, h.first);
-// ⏸     const sx = xOf(st, h.second);
-// ⏸     let secondMoved = false;
-// ⏸     if (sx !== null) {
-// ⏸       const t = trailAnchor(h.swAnchorMm, pxToMm(sx), st.cfg.motionDeadbandMm);
-// ⏸       h.swAnchorMm = t.anchor;
-// ⏸       if (t.moved) {
-// ⏸         secondMoved = true;
-// ⏸         h.swStillSince = now; // ⭐ its rest starts again, and the first finger's dx counts from here
-// ⏸         h.swFirstX0 = fx;
-// ⏸       }
-// ⏸     }
-// ⏸     if (h.swFirstX0 === null) h.swFirstX0 = fx;
-// ⏸     const next = holdSwitch(
-// ⏸       h.mode,
-// ⏸       secondMoved,
-// ⏸       now - h.swStillSince,
-// ⏸       fx === null || h.swFirstX0 === null ? 0 : pxToMm(fx - h.swFirstX0),
-// ⏸       st.cfg.motionDeadbandMm,
-// ⏸       st.cfg.holdSwitchRestMs,
-// ⏸     );
-// ⏸     if (next === "ZOOM" && h.mode === "WAY") {
-// ⏸       h.mode = "ZOOM";
-// ⏸       startZoom(st);
-// ⏸       st.lastVerdict = "orbit: the second finger moves — zoom (no lift)";
-// ⏸     } else if (next === "WAY" && h.mode === "ZOOM") {
-// ⏸       h.mode = "WAY";
-// ⏸       st.lastVerdict = "orbit: the second finger rests, the first moves — way in + roll (no lift)";
-// ⏸       startWay(st, h);
-// ⏸       st.hudDirty = true;
-// ⏸       return h.mode; // ⭐ the roll from the next step: this one only decided
-// ⏸     }
-// ⏸   }
   // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) the APPROACH BY THE PINCH: the fingers' separation's change since the last read — spread IN, pinched
   // OUT (`pinchApproachDyMm`, × `approachPinchGain`). ⛔ (2026-10-28) each finger's dy half of the step (the two fingers' mean), latched by `twoFingerKind`
   if (h.mode === "APPROACH") {
@@ -128,8 +73,8 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     // ⛔⛔ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held (=
     // left click held while CTRL/ALT is held) … Simplify the zoom so that this reverts back to the standard zoom input design for mobile"*)
     if (h.second === MOUSE_SECOND_ID) {
-      // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out)
-      if (pointerId === h.first) orbitStep(false);
+      // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE
+      if (pointerId === h.first) orbitStep();
       return h.mode;
     }
     // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) AROUND THE ASSEMBLY THE PINCH IS THE APPROACH: two fingers whose separation has moved past the
@@ -150,48 +95,11 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     // ⛔⛔ (2026-11-13) elsewhere two fingers did the pinch zoom (`pinchStarts`): no zoom — nothing moves
     return h.mode;
   }
-// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
-// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
-// ⏸   if (h.mode === "HELD") {
-// ⏸     // ⭐ (2026-10-11) judged at EITHER touch's move: the second's dx past its deadband — a zoom (the first still or not); the first's — the
-// ⏸     // way in, or a zoom if the second is on its way (`holdDecision`)
-// ⏸     const fx = xOf(st, h.first);
-// ⏸     const sx = xOf(st, h.second);
-// ⏸     const d = holdDecision(
-// ⏸       fx === null || h.firstX0 === null ? 0 : pxToMm(fx - h.firstX0),
-// ⏸       sx === null ? 0 : pxToMm(sx - h.secondX0),
-// ⏸       st.cfg.motionDeadbandMm,
-// ⏸       performance.now() - h.t0,
-// ⏸       st.cfg.tapMaxDuration,
-// ⏸     );
-// ⏸     if (d === null) {
-// ⏸       // ⭐⭐ (2026-10-11, the owner: *"there are times when CTRL while orbiting … while held it completely freezes the orbit"*) — UNDECIDED, the
-// ⏸       // first touch goes on orbiting the CENTRE (dx and dy): it used to move nothing, and a drag mostly in dy never decided — frozen for as
-// ⏸       // long as the key was held
-// ⏸       if (pointerId === h.first) orbitStep(false);
-// ⏸       return h.mode;
-// ⏸     }
-// ⏸     h.mode = d;
-// ⏸     // ⭐ (2026-10-12) the switch's anchors from the decision
-// ⏸     if (sx !== null) h.swAnchorMm = pxToMm(sx);
-// ⏸     h.swStillSince = performance.now();
-// ⏸     h.swFirstX0 = fx;
-// ⏸     if (d === "ZOOM") {
-// ⏸       // ⭐ the zoom from here — what moved while undecided is no jump
-// ⏸       startZoom(st);
-// ⏸       st.lastVerdict = "orbit: both touches move across — zoom";
-// ⏸       st.hudDirty = true;
-// ⏸       return h.mode;
-// ⏸     }
-// ⏸     // ⭐ WAY: the way in — the roll counted from here
-// ⏸     startWay(st, h);
-// ⏸   }
-  void orbitStep; // ⏸ (2026-10-12) the way in / round the piece (the first touch's dx only) is commented out
   return h.mode;
 }
 
 /**
- * ⭐ A release. `"SECOND"` — the input ended (the way out, a centre moved, a roll); `"FIRST"` — the first touch lifted, the input goes on (⛔ not the approach: ended);
+ * ⭐ A release. `"SECOND"` — the input ended (a centre moved, a quad tapped); `"FIRST"` — the first touch lifted, the input goes on (⛔ not the approach: ended);
  * `null` — not the input's.
  */
 export function holdRelease(
@@ -218,17 +126,6 @@ export function holdRelease(
     return "FIRST";
   }
   if (pointerId !== h.second) return null;
-// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
-// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
-// ⏸   if (h.mode === "WAY" || h.wayIn) {
-// ⏸     // ⭐ (2026-10-12) …or a zoom switched to after the way in (`wayIn`)
-// ⏸     // ⭐ the way out — from the camera as it is (a way in cut short too)
-// ⏸     if (st.pieceOrbit !== null || st.pieceEntry !== null) {
-// ⏸       st.pieceEntry = null;
-// ⏸       returnToCentreOrbit(st, true);
-// ⏸       st.lastVerdict = "orbit: the second touch lifted — the way out";
-// ⏸     }
-// ⏸   }
   // ⛔⛔ (2026-10-13, *"The possibility to move the gizmo by second touch tap on mobile has disappeared. Reinstate."*) — a TAP that wobbled into the approach is a tap (`holdTapMode`; ⛔ 2026-11-13 no zoom)
   const mode = holdTapMode(h.mode, tapped);
   // ⭐ (2026-10-28) a tapped approach undone; an approach's end starts its coast
@@ -254,16 +151,3 @@ export function holdRelease(
 }
 
 // ⛔⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) `startZoom` deleted.
-
-// ⏸⏸ (2026-10-12, the owner: *"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held …
-// Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on)"*) — kept, commented out:
-// ⏸ /** ⭐ The way in (once — `wayIn`; already round the piece: it goes on), the roll counted from here (the decision, and `holdSwitch`'s ZOOM → WAY). */
-// ⏸ function startWay(st: SceneState, h: NonNullable<SceneState["hold"]>): void {
-// ⏸   if (!h.wayIn || (st.pieceOrbit === null && st.pieceEntry === null)) {
-// ⏸     if (enterPieceOrbit(st)) st.lastVerdict += " — the way in";
-// ⏸   }
-// ⏸   h.wayIn = true;
-// ⏸   st.orbitRollAcc = 0;
-// ⏸   st.pieceYawGainDrag = st.pieceYawGain;
-// ⏸   st.hudDirty = true;
-// ⏸ }

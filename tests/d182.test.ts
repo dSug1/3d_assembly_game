@@ -26,7 +26,6 @@ const PAINTING: World = makeWorld(
     parent: null,
     faces: [],
     connectors: [],
-    constraints: [],
     frozen: b.frozen,
     shape: boxShape(contourDims(b).map((v) => v * U) as unknown as Vec3),
   })),

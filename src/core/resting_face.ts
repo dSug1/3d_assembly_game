@@ -623,28 +623,7 @@ export function faceEdges(points: readonly Vec3[], normal: Vec3): Edge[] {
   return back.map((a, i) => [a, back[(i + 1) % back.length]!] as Edge);
 }
 
-/**
- * ⭐ How many DISTINCT stops a half turn of the resting face holds — the couples' alignment angles (mod 180°, an axis being a line) that differ:
- * the green base on a rectangle 2, the turquoise hexagon on it 6. 0 with no couple. (2026-10-10: the orbit's dx rolls through them all in
- * `ORBIT_ROLL_SPAN`.)
- */
-export function coupleStops(q: Quat, restNormal: Vec3, restAxes: readonly Vec3[], pinkAxes: readonly Vec3[]): number {
-  const n = normalize(qRotate(q, restNormal));
-  if (n === null) return 0;
-  const flat = (v: Vec3): Vec3 | null => normalize(sub(v, scale(n, dot(v, n))));
-  const angles: number[] = [];
-  for (const r0 of restAxes) {
-    const s = flat(qRotate(q, r0));
-    if (s === null) continue;
-    for (const p0 of pinkAxes) {
-      const r = flat(p0);
-      if (r === null) continue;
-      const phi = (((Math.atan2(dot(n, cross(s, r)), dot(s, r)) % Math.PI) + Math.PI) % Math.PI);
-      if (!angles.some((x) => Math.abs(x - phi) < 1e-6 || Math.abs(Math.abs(x - phi) - Math.PI) < 1e-6)) angles.push(phi);
-    }
-  }
-  return angles.length;
-}
+// ⛔ (2026-11-14, CL1) `coupleStops` deleted: it only paced the orbit's dx roll round the piece (`orbitRollStepRad`), parked since 2026-10-12.
 
 /**
  * ⭐⭐ prototype — **THE RESTING FACE'S CENTRE RIDES THE RINGS** (2026-10-09; the owner: *"as a conclusion of the way in, I want the center of

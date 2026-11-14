@@ -40,7 +40,7 @@ const near = (a: readonly number[], b: readonly number[], eps: number): boolean 
   a.length === b.length && a.every((v, i) => Math.abs(v - b[i]!) <= eps);
 
 /**
- * ⭐⭐ **DID THE WORLD CHANGE?** — placement, parent (the seat) and constraints (the alignment),
+ * ⭐⭐ **DID THE WORLD CHANGE?** — placement and parent (the seat),
  * per object. ⛔ A tolerance, not identity: the model is rewritten by rules that land exactly
  * where they started (a retarget, a re-derived seat), and an unchanged body must not look moved.
  * ⭐ A body's orientation is compared up to SIGN — `q` and `−q` are the same turn.
@@ -64,6 +64,5 @@ function objectsDiffer(a: SceneObject, b: SceneObject, eps: number): boolean {
   if (!near(a.local.position, b.local.position, eps)) return true;
   const qa = a.local.orientation;
   const qb = b.local.orientation;
-  if (!near(qa, qb, eps) && !near(qa, qb.map((v) => -v), eps)) return true;
-  return JSON.stringify(a.constraints) !== JSON.stringify(b.constraints);
+  return !near(qa, qb, eps) && !near(qa, qb.map((v) => -v), eps);
 }

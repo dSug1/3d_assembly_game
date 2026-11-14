@@ -36,7 +36,6 @@ function painting(id: string, at: (slot: Vec3) => Vec3): { world: World; slot: V
       parent: null,
       faces: [],
       connectors: [],
-      constraints: [],
       shape: boxShape([d[0] * U, d[1] * U, d[2] * U]),
       ...(b.frozen ? { frozen: true } : {}),
     };
@@ -92,7 +91,7 @@ describe("⭐⭐⭐ `D136` — a piece goes back into its ZERO-clearance slot", 
     // sideways, a 0 → 0 case the old rule allowed too — and passed both ways. This one is the refused case.
     const cube = (id: string, x: number): SceneObject => ({
       id, local: { position: [x, 0, 0], orientation: IDENTITY }, parent: null,
-      faces: [], connectors: [], constraints: [], shape: boxShape([0.1, 0.1, 0.1]),
+      faces: [], connectors: [], shape: boxShape([0.1, 0.1, 0.1]),
     });
     const w = makeWorld([cube("F", 0.195), cube("Third", 0.3)]);
     const v = resolveMove(w, "F", { position: [0.2, 0, 0], orientation: IDENTITY }, setup(0.0003));

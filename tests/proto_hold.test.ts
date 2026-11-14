@@ -1,44 +1,21 @@
 /**
- * ⭐⭐⭐ prototype — THE HELD SECOND TOUCH (`RESTING_FACE_ALIGNMENT.md` §20; the owner, 2026-10-11): the white sphere deleted; the second
- * touch (the right button) held off the orbited pieces + the first touch's dx — the way in, the orbit round the piece, the roll; its
- * release — the way out; the first touch lifted and pressed again — the same input. ⛔ (2026-10-12) no pink face from a part, no highlights' clock:
+ * ⭐⭐⭐ prototype — THE HELD SECOND TOUCH (`RESTING_FACE_ALIGNMENT.md` §20; the owner, 2026-10-11): the first touch lifted and pressed again — the
+ * same input. ⛔ (2026-11-14, CL1) the parked way in / out round the piece and their decisions (`holdDecision`, `holdSwitch`, `trailAnchor`) deleted. ⛔ (2026-10-12) no pink face from a part, no highlights' clock:
  * a second touch's TAP on a placed part moves the orbit centre; alignment is the orientation cube's only.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { holdDecision, holdSwitch, holdTapMode, holdTapTapsYellow, trailAnchor } from "../src/input/hold_gesture";
+import { holdTapMode, holdTapTapsYellow } from "../src/input/hold_gesture";
 import { DEFAULT_CONFIG } from "../src/input/gestureConfig";
 
 const code = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), "utf8");
-const DB = 3.5;
 
 describe("⭐⭐⭐ prototype — the held second touch: the rules (`input/hold_gesture.ts`)", () => {
-  it("⭐⭐ the first touch's dx past the deadband decides: the second within half its deadband — the WAY IN; past it — a PINCH (the owner's point 4)", () => {
-    expect(holdDecision(3, 0, DB)).toBeNull(); // not yet
-    expect(holdDecision(-3.6, 0.7, DB)).toBe("WAY"); // the second held (its measured noise, 0.76 mm, well within)
-    expect(holdDecision(3.6, 1.7, DB)).toBe("WAY");
-    expect(holdDecision(3.6, -1.8, DB)).toBe("ZOOM"); // on its way: a pinch whose first finger's event happened to land first
-    expect(holdDecision(3.6, 3.6, DB)).toBe("ZOOM");
-  });
-
-  it("⭐⭐ (2026-10-11, *\"zoom: make it possible also if first touch is immobile and second touch dx exit deadband\"*) the SECOND touch's dx past its deadband: a ZOOM, the first still", () => {
-    expect(holdDecision(0, 3.6, DB)).toBe("ZOOM");
-    expect(holdDecision(0.5, -3.6, DB)).toBe("ZOOM");
-    expect(holdDecision(0, 3.4, DB)).toBeNull(); // within it: nothing yet
-  });
-
-  it("⭐⭐ (2026-10-11, *\"why when I tap CTRL during a dx orbit around the center, the piece jumps and come back?\"*) a TAP never starts the way in; undecided, the drag orbits the centre (no freeze)", () => {
-    expect(holdDecision(3.6, 0, DB, 120, 200)).toBeNull(); // held 120 ms of a 200 ms tap: maybe a tap — no way in yet
-    expect(holdDecision(3.6, 0, DB, 201, 200)).toBe("WAY"); // held longer: the way in
-    expect(holdDecision(0, 3.6, DB, 50, 200)).toBe("ZOOM"); // the second finger's own dx: a zoom at once (a finger that moved is no tap)
+  it("⭐⭐ undecided (HELD), the desktop key's first touch orbits the centre (no freeze); the frame's camera follows it", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("if (pointerId === h.first) orbitStep(false); return h.mode; }");
-    // the frame's camera follows it while undecided
-    expect(code("render/green_box_wiring.ts")).toContain('? (h.mode === "WAY" || h.mode === "HELD" ? h.first : null)');
-    // the pinch's own gate: the second finger's dx opens it, the first still or moving; the first alone never
-    // wired: judged at EITHER touch's move; the orbit steps only on the first's
+    expect(h).toContain("if (pointerId === h.first) orbitStep(); return h.mode; }");
+    expect(code("render/green_box_wiring.ts")).toContain('? (h.mode === "HELD" ? h.first : null)');
     expect(h).toContain("if (pointerId !== h.first && pointerId !== h.second) return h.mode;");
-    expect(h).toContain("void orbitStep; // ⏸ (2026-10-12) the way in / round the piece (the first touch's dx only) is commented out");
   });
 
   it("⛔⛔ (2026-10-12, *\"Remove the selection of pink face on the seated / placed parts and the resulting alignment of resting face\"*) — no pink face from a part, no highlights' clock", () => {
@@ -65,27 +42,28 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     // a finger's press on a PLACED part notes where (its tap moves the orbit centre); the key looks at nothing
     expect(p).not.toContain("pinkCandidate");
     expect(p).toContain("const onPlaced = e.pointerId !== MOUSE_SECOND_ID && hitId !== undefined && goalLocked(hitId, st.goalCommit, st.cfg.lockPlacedPieces === 1);");
-    expect(p).toContain("holdSecondPress(st, e.pointerId, s.x, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null ? (hitId ?? null) : null);"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
-    expect(p).toMatch(/holdSecondPress\(st, e\.pointerId, s\.x, firstNow,/);
-    expect(p).toMatch(/\} else if \(holdRole === "FIRST"\) holdFirstPress\(st, e\.pointerId, s\.x\);/);
+    expect(p).toContain("holdSecondPress(st, e.pointerId, firstNow, centreAt, centreN ? [centreN.x, centreN.y, centreN.z] : null, centreAt !== null ? (hitId ?? null) : null);"); // ⭐ (2026-10-19) and the host part // ⭐ (2026-10-16) the rig turned onto the gizmo's face (`orbit_rig.ts`)
+    expect(p).toMatch(/\} else if \(holdRole === "FIRST"\) holdFirstPress\(st, e\.pointerId\);/);
     // ⛔ the old second-touch taps and the yaw / pitch are gone
     expect(p).not.toMatch(/orbitTap|pinkTap|tumble/);
   });
 
-  it("⭐⭐ the moves: the input owns both touches' — undecided (nothing moves), the way in (dx only), or the zoom; ⛔ never the centre orbit while held", () => {
+  it("⭐⭐ the moves: the input owns both touches' — the desktop's key orbits the centre, two fingers the approach; ⛔ never the centre orbit while held", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toMatch(/if \(st\.hold !== null && \(e\.pointerId === st\.hold\.first \|\| e\.pointerId === st\.hold\.second\)\) \{\s*holdMove\(st, e\.pointerId, s, prev, \(dxOnly\) => orbitDragStep\(st, e\.pointerId, s, prev, dxOnly\)\);\s*st\.hudDirty = true;\s*return;\s*\}/);
-    // dy ignored on the way in / round the piece
-    expect(p).toMatch(/const dy = dxOnly \? 0 : s\.y - prev\.y;/);
+    expect(p).toMatch(/if \(st\.hold !== null && \(e\.pointerId === st\.hold\.first \|\| e\.pointerId === st\.hold\.second\)\) \{\s*holdMove\(st, e\.pointerId, s, prev, \(\) => orbitDragStep\(st, e\.pointerId, s, prev\)\);\s*st\.hudDirty = true;\s*return;\s*\}/);
+    // ⛔ (2026-11-14, CL1) the way in's dx-only step deleted: dy always read
+    expect(p).toMatch(/const dy = s\.y - prev\.y;/);
+    expect(p).not.toContain("dxOnly");
     const h = code("render/hold_wiring.ts");
-    // ⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) no zoom's start any more (`startZoom` deleted)
-    expect(h).not.toMatch(/function startZoom|updatePinch|st\.pinch|st\.zoom/);
-    expect(h).toContain("void orbitStep;"); // ⏸ (2026-10-12) the way in's dx-only orbit is commented out
+    // ⛔ (2026-11-13, the owner: *"remove the zoom function entirely"*) no zoom's start any more (`startZoom` deleted) — ⛔ (2026-11-14) the `\b`s
+    // here were literal backspaces (the regex could never match): fixed
+    expect(h).not.toMatch(/function startZoom|updatePinch|st\.pinch\b|st\.zoom\b/);
+    expect(h).not.toMatch(/void orbitStep|⏸/); // ⛔ (2026-11-14, CL1) the commented-out way in deleted
   });
 
   it("⭐⭐ the release: the second — the way out (if the way in had started), else a TAP: on a placed part the orbit centre moved there, else the roll; the first — the input goes on", () => {
     const h = code("render/hold_wiring.ts");
-    expect(h).toMatch(/st\.hold = \{ second, first, mode: "HELD", secondX0: x, firstX0: xOf\(st, first\), t0: performance\.now\(\), pressActed: centreAt !== null, centreAt, centreNormal, centreHost, swAnchorMm: pxToMm\(x\), swStillSince: performance\.now\(\), swFirstX0: xOf\(st, first\), wayIn: false \};/);
+    expect(h).toContain('st.hold = { second, first, mode: "HELD", pressActed: centreAt !== null, centreAt, centreNormal, centreHost };');
     expect(h.replace(/\s+/g, " ")).toContain('return "FIRST"; } h.first = null; st.hudDirty = true; return "FIRST";'); // ⛔ (2026-11-01) the approach ended first (`hover.test.ts`)
     // ⛔ (2026-10-12, the owner: *"Second touch tap on seated / placed part now sets the pink gizmo (same as first touch tap on seated / placed
     // part)"*) — the ONE place the second touch moves the orbit centre: its TAP on a placed part, at its release
@@ -95,19 +73,6 @@ describe("⭐⭐⭐ prototype — the held second touch, wired", () => {
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const tapped = isTapRelease(routed.pressed.t, routed.pressed.x, routed.pressed.y, s.t, s.x, s.y, st.cfg.tapMaxDuration, mmToPx(st.cfg.doubleTapSlop));");
     expect(p.replace(/\s+/g, " ")).toContain('if (holdRelease(st, e.pointerId, tapped) === "SECOND" && !faceTapHere) { st.hudDirty = true; return; }'); // ⭐ (2026-10-28) a second finger's tap on the piece still picks its resting face
-  });
-
-  it("⛔⛔ (2026-10-11, *\"the object systematically translates towards the world's negative depth axis when second touch is lifted\"*) the way out and the way in read the ANCHOR, never the mesh's origin", () => {
-    const w = code("render/green_box_wiring.ts");
-    const out = w.slice(w.indexOf("export function returnToCentreOrbit("), w.indexOf("function counterYawFrame("));
-    const into = w.slice(w.indexOf("export function enterPieceOrbit("), w.indexOf("export function returnToCentreOrbit("));
-    // ⭐ the anchor — the resting face's centre, what rides the rings — for the rebase's yaw and for the offset the way out fades
-    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*st\.orbit = new OrbitController\(/);
-    expect(out).toMatch(/const a = st\.pieceAnchor;\s*const p = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};\s*const pieceOff: Vec3 = rebase/);
-    expect(into).toMatch(/const a = st\.pieceAnchor;\s*const pos = a === null \? box\.position : \{ x: a\[0\], y: a\[1\], z: a\[2\] \};/);
-    // ⛔ read at the mesh, the offset carried the piece by its middle-to-face distance (20.6 mm toward −z, headless)
-    expect(out).not.toMatch(/^\s*const p = box\.position;/m);
-    expect(into).not.toMatch(/^\s*const pos = box\.position;/m);
   });
 
   it("⭐ the frame: the first touch orbits only on the way in / round the piece; no coast while the second touch is held (*\"the orbit simply waits for the re-press\"*)", () => {
@@ -173,7 +138,6 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
   it("⭐ a tap, undecided, the first held, its press nothing else (⭐ 2026-10-12: a press on a placed part moves the centre) — and only then; ⭐⭐ (2026-10-13) aligned or not", () => {
     expect(holdTapTapsYellow(true, "HELD", true, false)).toBe(true);
     expect(holdTapTapsYellow(false, "HELD", true, false)).toBe(false); // a hold, not a tap
-    expect(holdTapTapsYellow(true, "WAY", true, false)).toBe(false); // the way in
     expect(holdTapTapsYellow(true, "APPROACH", true, false)).toBe(false); // the approach (a tap that wobbled into it is judged HELD: `holdTapMode`; ⛔ 2026-11-13 no zoom)
     expect(holdTapTapsYellow(true, "HELD", false, false)).toBe(false); // the first touch not held
     expect(holdTapTapsYellow(true, "HELD", true, true)).toBe(false); // its press acted (a placed part: the centre moved)
@@ -187,33 +151,13 @@ describe("⭐⭐ prototype — the second touch's TAP, the first held, ROLLS to 
   });
 });
 
-describe("⭐⭐ prototype — zoom ↔ way in + roll WITHOUT LIFTING (2026-10-12, *\"swap from one to another without releasing any of the two touches\"* → *\"Build with the 150ms rest. No change for desktop.\"*)", () => {
-  it("⭐ the trailing anchor: nothing inside the deadband; past it, dragged to one deadband behind, `moved`", () => {
-    expect(trailAnchor(10, 12.9, 3)).toEqual({ anchor: 10, moved: false });
-    expect(trailAnchor(10, 14, 3)).toEqual({ anchor: 11, moved: true });
-    expect(trailAnchor(10, 5, 3)).toEqual({ anchor: 8, moved: true });
-  });
-  it("⭐⭐ WAY → ZOOM when the second finger moves; ZOOM → WAY only after its REST (150 ms) and the first finger's dx past the deadband", () => {
-    expect(holdSwitch("WAY", true, 0, 0, 3, 150)).toBe("ZOOM");
-    expect(holdSwitch("WAY", false, 999, 50, 3, 150)).toBe("WAY");
-    expect(holdSwitch("ZOOM", false, 150, 3.1, 3, 150)).toBe("WAY");
-    expect(holdSwitch("ZOOM", false, 149, 50, 3, 150)).toBe("ZOOM"); // ⭐ the rest not over: the pinch goes on
-    expect(holdSwitch("ZOOM", false, 999, 2.9, 3, 150)).toBe("ZOOM"); // the first inside its deadband
-    expect(holdSwitch("ZOOM", true, 999, 50, 3, 150)).toBe("ZOOM"); // both moving: a pinch
-    expect(holdSwitch("HELD", true, 999, 50, 3, 150)).toBe("HELD"); // undecided is `holdDecision`'s
-    expect(DEFAULT_CONFIG.holdSwitchRestMs).toBe(150);
-    // ⛔ (2026-11-04, the audit) its slider removed — only the ⏸ way in reads the tunable (`config_debt`'s PENDING)
-    expect(code("render/tuning_menu.ts")).not.toContain('"holdSwitchRestMs", 0, 600, 10)');
-  });
-});
-
 
 describe("⛔⛔ the way in, the orbit round the piece and its dx roll COMMENTED OUT; the STANDARD pinch (2026-10-12, *\"remove the roll to the next axis triggered by first touch pressed and delta position while second touch held … Comment out the way in and the piece orbit accordingly (don't remove it, as it may be useful later on). Simplify the zoom so that this reverts back to the standard zoom input design for mobile\"*)", () => {
   it("⭐ a finger: ⛔ (2026-11-13, the owner: *\"remove the zoom function entirely\"*) the standard pinch zoom deleted — two fingers away from the assembly move nothing; the desktop's key: the first touch orbits the centre", () => {
     const h = code("render/hold_wiring.ts").replace(/\s+/g, " ");
-    expect(h).toContain("if (h.second === MOUSE_SECOND_ID) { // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE (the way in is commented out) if (pointerId === h.first) orbitStep(false); return h.mode; }");
+    expect(h).toContain("if (h.second === MOUSE_SECOND_ID) { // ⭐ the desktop's key: no position, no pinch — the first touch orbits the CENTRE if (pointerId === h.first) orbitStep(); return h.mode; }");
     expect(h).toContain("// ⛔⛔ (2026-11-13) elsewhere two fingers did the pinch zoom (`pinchStarts`): no zoom — nothing moves return h.mode;");
-    expect(h).not.toContain("if (!pinchStarts("); // ⏸ the parked way in's commented-out lines still name its ZOOM
+    expect(h).not.toContain("if (!pinchStarts(");
     const r = code("render/camera_rig.ts");
     expect(r).not.toMatch(/pinchDxOpen|pinchZooms|pinchMotion/);
   });
@@ -233,7 +177,6 @@ describe("⛔⛔ a second-touch TAP that wobbled into the pinch is still a tap (
     expect(holdTapMode("APPROACH", true)).toBe("HELD");
     expect(holdTapMode("APPROACH", false)).toBe("APPROACH");
     expect(holdTapMode("HELD", true)).toBe("HELD");
-    expect(holdTapMode("WAY", true)).toBe("WAY");
     // ⚠ why: the tap's slop (8 mm) is wider than the pinch's deadband (3.5 mm)
     expect(DEFAULT_CONFIG.doubleTapSlop).toBeGreaterThan(DEFAULT_CONFIG.motionDeadbandMm);
   });

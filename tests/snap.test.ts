@@ -25,7 +25,6 @@ describe("⭐ object_model.setLocalPlacement — the seat's writer", () => {
     shape: { points: [] },
     frozen,
     connectors: [],
-    constraints: [],
   });
 
   it("⭐ writes the LOCAL placement, so the world one composes through the parent", () => {

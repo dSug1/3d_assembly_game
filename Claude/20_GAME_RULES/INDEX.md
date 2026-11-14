@@ -4,14 +4,14 @@
 > **LAST VERIFIED** · 2026-09-27
 
 ⭐ [`spec/SCORE.md`](spec/SCORE.md) — the score (`D99`–`D101`): **episodes** against a **solved
-optimum**, plus **time**; **Free Flow** escapes it. §6 is the build list (`GM1`–`GM5`). ✅ Built:
-snap/seat/unsnap (`D100`), the ledger (`src/input/episode_ledger.ts`) and the HUD's episodes +
-timer line (`D112`/`D115`). ⛔ Not built: the solver, the score.
+optimum**, plus **time**; **Free Flow** escapes it. ✅ Built: the ledger, the HUD's episodes + timer
+(`D112`/`D115`). ⛔ Not built: the solver, the score.
 ⭐ [`spec/GAME_STRUCTURE.md`](spec/GAME_STRUCTURE.md) — the scaffold (`D105`), `?flow=1`; ⛔ empty
 until `GM6`–`GM8`. ⭐ `D144`: a ⏸ pause menu leaves a level by reload; one scene list; §5 = later.
 ⭐ [`spec/SCENE_1.md`](spec/SCENE_1.md) — `Scene_1` (`D117`).
 ⭐ [`spec/DEMO_SCENE.md`](spec/DEMO_SCENE.md) — a level assembling itself (`D170`–`D194`).
 ⭐ [`spec/SCENE_WORKFLOW.md`](spec/SCENE_WORKFLOW.md) — a new scene; §6 the playbook.
+⭐ [`spec/PICK_AND_PLACE.md`](spec/PICK_AND_PLACE.md) — pick, put down, the orbits; built §12.
 ⭐ [`spec/LEVEL_END.md`](spec/LEVEL_END.md) — the level end, results, UI theme (`D180`).
 
 ⭐ [`CONCEPT_ASSESSMENT_2026-09-26.md`](CONCEPT_ASSESSMENT_2026-09-26.md) — what is missing

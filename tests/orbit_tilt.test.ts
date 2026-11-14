@@ -614,6 +614,6 @@ describe("⭐⭐⭐ (2026-11-11) the automatic tilt: the sections at once, the C
     expect(aw).toContain("else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);");
     expect(aw).toContain("const swingTimed = tl !== null && tl.swingMs !== null && !(tl.byMm && (st.asmTiltPending || st.asmBlend !== null));");
     expect(aw).toContain("blendCrossed(bl.tiltId, tid, st.asmTilt?.finishing ?? false, bl.target, st.asmSquare.target)");
-    expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, dxOnly ? 0 : db.dy) / mmToPx(1);");
+    expect(code("render/pointer_wiring.ts")).toContain("if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);");
   });
 });

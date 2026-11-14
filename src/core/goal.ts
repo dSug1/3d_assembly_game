@@ -69,8 +69,13 @@ const HEX_PRISM: readonly Quat[] = [0, 1, 2, 3, 4, 5].flatMap((k) => {
   return [yaw, qmul(yaw, qFromAxisAngle([1, 0, 0], Math.PI))];
 });
 
+/** ⭐⭐ (2026-11-14, `Scene_2`'s pulley — the file's `spinFree`) ANY turn about the body's own x: every 5° (the orbited piece's 3° margin covers the
+ * 2.5° between two). */
+const SPIN_X: readonly Quat[] = Array.from({ length: 72 }, (_, k) => qFromAxisAngle([1, 0, 0], (k * Math.PI) / 36));
+
 export function acceptedOrientations(goal: Quat, symmetry: GoalSymmetry | undefined): readonly Quat[] {
-  const set = symmetry === "halfTurns" ? HALF_TURNS : symmetry === "yawHalfTurns" ? YAW_HALF_TURNS : symmetry === "hexPrism" ? HEX_PRISM : [IDENTITY];
+  const set =
+    symmetry === "halfTurns" ? HALF_TURNS : symmetry === "yawHalfTurns" ? YAW_HALF_TURNS : symmetry === "hexPrism" ? HEX_PRISM : symmetry === "spinX" ? SPIN_X : [IDENTITY];
   return set.map((s) => qmul(goal, s));
 }
 

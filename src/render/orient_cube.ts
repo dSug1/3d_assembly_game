@@ -265,7 +265,8 @@ function restingQuadsFrame(st: SceneState, shown: number): void {
   const d = Math.hypot(pp.x - gizmo[0], pp.y - gizmo[1], pp.z - gizmo[2]);
   const range = pieceDistanceRange(st.cfg);
   const from = quadsShownFromM(range.maxM);
-  const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;
+  // ⭐ (2026-11-14) a `.glb` part's proxy is never drawn (its own meshes are): it counts as shown (`model_bodies_wiring.ts`)
+  const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && d >= from;
   for (const x of q.quads) {
     x.fill.isVisible = show;
     x.edges.isVisible = show;

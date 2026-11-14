@@ -114,7 +114,7 @@ describe("⭐⭐⭐ `D190` — only the pieces an action MOVED are re-judged", (
 
   it("⭐ `piecesMoved`: the pieces whose world pose differs between two models", () => {
     const w0 = makeWorld(
-      ["A", "B"].map((id) => ({ id, local: { position: [0, 0, 0] as Vec3, orientation: IDENTITY }, parent: null, faces: [], connectors: [], constraints: [], frozen: false })),
+      ["A", "B"].map((id) => ({ id, local: { position: [0, 0, 0] as Vec3, orientation: IDENTITY }, parent: null, faces: [], connectors: [], frozen: false })),
     );
     const w1 = setWorldPlacement(w0, "B", { position: [0.01, 0, 0], orientation: IDENTITY });
     expect([...piecesMoved(w0, w1, ["A", "B"])]).toEqual(["B"]);

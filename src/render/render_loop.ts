@@ -21,7 +21,7 @@ import { advanceFollow, displayPose, exponentialSmooth, phantomTarget } from "..
 import { worldPlacementOf } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelPose, shapeOfBody, writePose } from "./bodies";
-import { recomputeOrbitCentre, syncCentre } from "./camera_rig";
+import { syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
@@ -49,23 +49,6 @@ export function startRenderLoop(st: SceneState): void {
     // ⭐ The frame meter: every render-loop interval, so the HUD reports what THIS device takes.
     if (st.lastFrameMs !== null) st.frameMeter.push(now - st.lastFrameMs);
     st.lastFrameMs = now;
-
-    // ⭐ The deferred orbit centre, committed once its grace has passed with no second
-    // touchpoint outside. ⚠ `router.outside().length` is re-checked here and not only at
-    // press: a finger could have arrived and left again within the window.
-    if (
-      st.pendingCentre !== null &&
-      now - st.pendingCentre.at >= st.cfg.orbitCentreGraceMs
-    ) {
-      const p = st.pendingCentre;
-      st.pendingCentre = null;
-      // ⚠ BOTH conditions re-checked at commit time, not only at press: within the grace
-      // a second finger could have arrived and left, or a finger could have landed on an
-      // object and turned the whole gesture into a translation.
-      if (st.router.outside().length === 1 && st.router.objects().length === 0) {
-        recomputeOrbitCentre(st, { clientX: p.x, clientY: p.y });
-      }
-    }
 
     // ⛔⛔⛔ **THE MODEL WRITERS RUN BEFORE THE VIEW READS THE MODEL — reordered by audit,
     // 2026-09-17.** The alignment slerp and the Pioneer cascade both WRITE orientations, and
@@ -329,7 +312,7 @@ export function startRenderLoop(st: SceneState): void {
       const g = browseGlideAt(gl.from, gl.to, gl.travelledMm, st.cfg.browseArriveMm);
       st.centreBlend.snapTo(g.at);
       syncCentre(st);
-      st.centreMarker.position.set(gl.to[0], gl.to[1], gl.to[2]);
+      st.centreMarker?.position.set(gl.to[0], gl.to[1], gl.to[2]); // ⏸ (2026-11-14) the marker commented out
       if (g.arrived) st.browseGlide = null;
     }
     st.browseFingerMm = 0;
@@ -357,8 +340,10 @@ export function startRenderLoop(st: SceneState): void {
     }
 
     // ⭐ prototype (green box): the green box, midway between the yellow target and the camera — after everything that moved either.
+    st.modelHooks?.before(dtSec * 1000); // ⭐ (2026-11-14) the pick-up flow (`model_bodies_wiring.ts`): the pick, the put-down, the snap's step
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
+    st.modelHooks?.after(dtSec * 1000); // ⭐ (2026-11-14) its camera's blends, its parts drawn where their bodies are
     orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
     st.scene.render();
     st.frames++;

@@ -93,7 +93,7 @@ export function paint(st: SceneState) {
       `c=(${st.orbitCentreM.x.toFixed(2)},${st.orbitCentreM.y.toFixed(2)},${st.orbitCentreM.z.toFixed(2)}) ` +
       `${st.centreBlend.isBlending ? `→${(st.centreBlend.progress * 100).toFixed(0)}% ` : ""}` +
       // ⭐ prototype (2026-10-06): around the piece the camera looks along an axis, not at a target — r is its distance to the PIECE
-      `r=${(st.pieceOrbit !== null && st.greenBox !== null ? st.camera.position.subtract(st.greenBox.position).length() : st.camera.radius).toFixed(3)}m${st.pieceOrbit !== null ? " to the piece" : ""} ` +
+      `r=${st.camera.radius.toFixed(3)}m ` +
       `elev=${st.orbit.elevation.toFixed(2)}${st.orbit.atLimit ? "⛔LIMIT" : ""}${st.topPause > 0 && st.topPause < 1 ? ` pause=${(st.topPause * 100).toFixed(0)}%` : ""}` +
       // ⭐ prototype (green box): the orbit swings kicked so far — it climbs at each start, resume or turn of an orbit drag.
       `${st.greenBox !== null ? `  orbitSway×${st.orbitSwayKicks}` : ""}`,
@@ -185,7 +185,7 @@ export function greenReadout(st: SceneState): string {
   const last = st.restingLast === null ? undefined : st.restingFaces.get(st.restingLast);
   // ⭐ `RESTING_FACE_ALIGNMENT.md`: the orbit taps counted, and the alignment (turning / following the orbit)
   // ⭐ (2026-10-11) the held second touch's input: undecided, the way in / round the piece, or the approach (⛔ 2026-11-13 no zoom)
-  const taps = `${st.hold === null ? "" : ` · second touch held (${st.hold.mode === "HELD" ? "undecided" : st.hold.mode === "WAY" ? "way in / round the piece" : "approach"}${st.hold.first === null ? ", first touch lifted" : ""})`}${st.restAlign !== null ? " · aligning" : st.restAligned ? ` · aligned (no counter-yaw)${st.restRoll !== null && st.restRoll.couple !== null ? ` · a${st.restRoll.couple[0]}∥b${st.restRoll.couple[1]} (${st.restRoll.rolls} roll${st.restRoll.rolls === 1 ? "" : "s"})` : ""}` : ""}${st.pieceOrbit !== null ? ` · around the piece, yaw gain ×${st.pieceYawGain.toFixed(2)}` : ""}${st.pieceEntry !== null ? " · entering the orbit around the piece" : ""}${st.centreReturn !== null ? " · back to the centre orbit" : ""}`;
+  const taps = `${st.hold === null ? "" : ` · second touch held (${st.hold.mode === "HELD" ? "undecided" : "approach"}${st.hold.first === null ? ", first touch lifted" : ""})`}${st.restAlign !== null ? " · aligning" : st.restAligned ? ` · aligned (no counter-yaw)${st.restRoll !== null && st.restRoll.couple !== null ? ` · a${st.restRoll.couple[0]}∥b${st.restRoll.couple[1]} (${st.restRoll.rolls} roll${st.restRoll.rolls === 1 ? "" : "s"})` : ""}` : ""}`;
   const parts = `${taps} | resting faces ${st.restingFaces.size}${last === undefined ? "" : ` (last ${st.restingLast} ${last.why === "BOOT" ? "at boot" : "UNSEATED"}${restingHud(last.result, last.chosen)})`}`;
   // ⭐ (2026-10-09) its resting face as the OBJECT MODEL tracks it — the world normal now (`restingFaceWorld`)
   const rw = restingFaceWorld(st.world, st.greenBox.name);

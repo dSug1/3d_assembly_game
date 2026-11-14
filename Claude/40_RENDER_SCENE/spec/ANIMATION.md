@@ -110,7 +110,19 @@ The parts are MACHINED, RIGID metal and glass: the principles are applied with a
      boot animation's clock and the idle orbit's timer start — each animation module waits on that event instead of its own (`host.ready`
      becomes the registry's promise; the boot module's compile step becomes a registered task).
   4. A guard: a task that never ends is named on the HUD after N s and the scene shown anyway (a level never stuck behind the cover).
-* *(to come)* a part's seat snap, an undo, the reset, the level end (`20_GAME_RULES/spec/LEVEL_END.md`), the screens.
+* ⏳ **QUEUED — THE PICK-UP FLOW'S MOTIONS** (2026-11-14, `20_GAME_RULES/spec/PICK_AND_PLACE.md` §9; the owner: *"for the moment, record that in
+  the md files. No animation. Just spawn the piece in lifted position / quaternion or put down position / quaternion"*) — the poses are SPAWNED
+  until these are built, each its own module (§6); the proposed defaults (the literature, `20_GAME_RULES/history/2026-11-14_pick_and_place_decisions.md`):
+  | motion | proposed |
+  |---|---|
+  | the pick-up: an anticipation dip, then the lift (vertical, from where it lay, turning onto its nearest quad) | 60 – 80 ms dip, then 120 – 200 ms, a small overshoot; the contact shadow fades and spreads, the real shadow follows |
+  | the camera to the piece orbit | the clock, 500 – 700 ms, in and out; the inputs held until the piece and the camera are in place |
+  | the put-down (to the free spot near) | 300 – 400 ms on an arc, landing with the boot's two hops |
+  | the snap onto the goal | ≈ 150 ms in, a 3 % overshoot, ≈ 100 ms settle; the seat flashes |
+  | the plunge (down a hole's axis) | 150 – 250 ms along the axis, after the mouth's capture |
+  | a rod cap appearing | the boot's pop, 170 ms |
+  ⛔ No carry over the assembly (the owner: *"the camera orbits to reach its position"*). ⏳ **Sound**: none in the game yet — later, with these (`GM9`).
+* *(to come)* the reset, the level end (`20_GAME_RULES/spec/LEVEL_END.md`), the screens. ⛔ No undo (deleted 2026-11-02; none after a snap).
 
 ## 5. ⭐ How an animation is built (the pipeline's rules)
 
