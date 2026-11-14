@@ -179,11 +179,15 @@ export function putDownPlacement(
     if (!inside(contacts, [c[0], c[2]])) return null;
     return { position: base, rotation: q };
   };
+  // ⭐ the spiral from the nearest point ON THE FLOOR (inside its margin): a part held beyond the floor's edge (the piece orbit 3 m out) starts at
+  // the edge nearest it (⛔ from where it was: no spot within reach — "no free spot", the part stuck in hand: the pick probe)
+  const sx = Math.max(-edge, Math.min(edge, centreNow[0]));
+  const sz = Math.max(-edge, Math.min(edge, centreNow[2]));
   for (let r = 0; r <= rule.maxU + 1e-9; r += rule.stepU) {
     const n = r === 0 ? 1 : Math.max(8, Math.ceil((2 * Math.PI * r) / rule.stepU));
     for (let i = 0; i < n; i++) {
       const t = (2 * Math.PI * i) / n;
-      const at = tryAt(centreNow[0] + r * Math.cos(t), centreNow[2] + r * Math.sin(t));
+      const at = tryAt(sx + r * Math.cos(t), sz + r * Math.sin(t));
       if (at !== null) return at;
     }
   }

@@ -131,6 +131,10 @@ describe("⭐⭐ the put-down: the least turn, the nearest free spot by the boot
     expect(free.position[2]).toBeCloseTo(0, 9);
     const edge = putDownPlacement(box, { position: [6.9, 3, 0], rotation: [1, 0, 0, 0] }, [], rule)!;
     expect(edge.position[0] + 0.5).toBeLessThanOrEqual(6.8 + 1e-9);
+    // ⭐ held far BEYOND the floor (the piece orbit 3 m out): the nearest spot inside its edge, not "none" (⛔ the spiral from where it was could not reach)
+    const far = putDownPlacement(box, { position: [21, 3, 0], rotation: [1, 0, 0, 0] }, [], { ...rule, maxU: 2 })!;
+    expect(far).not.toBeNull();
+    expect(far.position[0] + 0.5).toBeCloseTo(6.8, 1);
   });
 });
 

@@ -35,6 +35,8 @@ import { mmToPx } from "../core/units";
 import { add, dot, qRotate, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { OrbitController } from "../input";
 import { approachDistance, approachRange } from "../input/assembly_orbit";
+import { pieceDistanceRange } from "../input/orbit";
+import { quadsShownFromM } from "../core/orientation_set";
 import { TapHistory, isTapRelease } from "../input/recognizer";
 import { topologyOfBody } from "./bodies";
 import { orbitPieceEntry, resetPieceOrbit, restOnTappedFace } from "./green_box_wiring";
@@ -404,8 +406,11 @@ class ModelPlay {
     const cam = from.pos;
     const yaw = a === null ? st.orbit.yaw : Math.atan2(cam[2] - a.centre[2], cam[0] - a.centre[0]);
     st.orbit.reset(yaw, 1);
-    // ⭐ …"AT THIS DISTANCE": the approach set to the part's own distance from the assembly's centre as it lay (⛔ the approach's far end: 6 m up)
-    if (a !== null) st.approach = approachFor(st, Math.hypot(pose.position[0] - a.centre[0], pose.position[1] - a.centre[1], pose.position[2] - a.centre[2]));
+    // ⭐ …"AT THIS DISTANCE": the approach set to the part's own distance from the assembly's centre as it lay (⛔ the approach's far end: 6 m up) —
+    // ⭐⭐ but never nearer than where the resting-face QUADS show (`quadsShownFromM`: half the rings' farthest — `Scene_2` 3.1 m): nearer, they are
+    // hidden and the part cannot be turned before it comes in (the seat probe: on its side at contact, 90° off, never placed)
+    const own = a === null ? 0 : Math.hypot(pose.position[0] - a.centre[0], pose.position[1] - a.centre[1], pose.position[2] - a.centre[2]);
+    st.approach = approachFor(st, Math.max(own, 1.05 * quadsShownFromM(pieceDistanceRange(st.cfg).maxM)));
     // ⭐ its resting face: the face most DOWN as it lay — the turn onto the nearest quad the least (`bootRestAlign` turns it onto the floor's top)
     const q = pose.orientation;
     let down: { id: string; d: number } | null = null;
@@ -483,7 +488,7 @@ class ModelPlay {
       perimeter: perimeterOf(placedPts, r.anchorMargin),
       yawOriginDeg: this.host.yawOriginDeg,
       stepU: 0.1,
-      maxU: 2 * r.floorHalf,
+      maxU: 2 * Math.SQRT2 * r.floorHalf, // ⭐ the whole floor, corner to corner
     });
     if (spot === null) {
       st.lastVerdict = `put down: no free spot for ${id} — it stays in hand`;

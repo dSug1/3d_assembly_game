@@ -312,7 +312,7 @@ export function startRenderLoop(st: SceneState): void {
       const g = browseGlideAt(gl.from, gl.to, gl.travelledMm, st.cfg.browseArriveMm);
       st.centreBlend.snapTo(g.at);
       syncCentre(st);
-      st.centreMarker.position.set(gl.to[0], gl.to[1], gl.to[2]);
+      st.centreMarker?.position.set(gl.to[0], gl.to[1], gl.to[2]); // ⏸ (2026-11-14) the marker commented out
       if (g.arrived) st.browseGlide = null;
     }
     st.browseFingerMm = 0;

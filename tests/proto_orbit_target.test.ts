@@ -36,7 +36,8 @@ describe("⭐⭐⭐ prototype — the yellow orbit target on a press", () => {
   });
 
   it("⭐ the yellow target is ALWAYS VISIBLE — drawn in rendering group 2, after the bodies, the depth cleared (the owner: *\"not occluded by any object\"*)", () => {
-    expect(code("render/scene.ts")).toContain("st.centreMarker.renderingGroupId = 2;");
+    expect(code("render/scene.ts")).toContain("// ⏸   st.centreMarker.renderingGroupId = 2;"); // ⏸ (2026-11-14) the marker commented out (the owner)
+    expect(code("render/scene.ts")).toContain("st.centreMarker = null;");
   });
 
   it("⭐⭐ a drag from a piece LOCKED in its goal ORBITS — the same step as empty space, and the green box's camera hears that finger", () => {

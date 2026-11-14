@@ -111,7 +111,7 @@ describe("⭐⭐ the quads: their size with the gizmo's distance, capped; a clic
     expect(c).toContain("const onePx = trackingMetresPerPx(Math.hypot(at[0] - cam.x, at[1] - cam.y, at[2] - cam.z), st.camera.fov, st.canvas.clientHeight);");
     // ⭐⭐ *\"the scale 0.1 should be reached at half the maximal distance. below this, the quads shall be hidden. fit the power curve accordingly\"*
     expect(quadsShownFromM(6)).toBeCloseTo(3.9, 12); // ⭐ (2026-10-15) 65 % of the farthest (it was half)
-    expect(c).toContain("const from = quadsShownFromM(range.maxM); const show = st.greenBox !== null && p.mesh.isEnabled() && p.mesh.isVisible && d >= from;");
+    expect(c).toContain("const from = quadsShownFromM(range.maxM); // ⭐ (2026-11-14) a `.glb` part's proxy is never drawn (its own meshes are): it counts as shown (`model_bodies_wiring.ts`) const show = st.greenBox !== null && p.mesh.isEnabled() && (p.mesh.isVisible || p.mesh.metadata?.modelBody === true) && d >= from;");
     expect(c).toContain("const side = quadSize(d, from, range.maxM, st.cfg.quadGrowthLogK, onePx, full); q.growth = side / full; q.root.scaling.setAll(side);");
     expect(c).toContain("if (!q.quads.some((k) => k.fill.isVisible)) return false;");
     expect(c).not.toContain("dRef");

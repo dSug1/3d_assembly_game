@@ -162,7 +162,7 @@ describe("⭐⭐ prototype — option 2, the SLIDE (the owner, 2026-10-02: *\"bu
 
 describe("⭐ prototype — the yellow orbit centre is HIDDEN (the owner, 2026-10-02: *\"hide the yellow orbit center\"*)", () => {
   it("⭐ hidden at boot, and nothing turns it back on — the pink ring marks the target", () => {
-    expect(code("render/scene.ts")).toContain("st.centreMarker.isVisible = false;");
+    expect(code("render/scene.ts")).toContain("// ⏸   st.centreMarker.isVisible = false;"); // ⏸ (2026-11-14) commented out with the marker (the owner)
     for (const f of ["render/camera_rig.ts", "render/render_loop.ts", "render/green_box_wiring.ts", "render/pointer_wiring.ts"]) {
       expect(code(f)).not.toMatch(/centreMarker\.isVisible = true/);
     }

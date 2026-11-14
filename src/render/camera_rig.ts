@@ -80,7 +80,7 @@ export function syncCentre(st: SceneState) {
   // than easier. ⚠ The migration is still visible — as the gap between the camera
   // and a marker that is already where it is going.
   const t = st.centreBlend.targetM;
-  st.centreMarker.position.set(t[0], t[1], t[2]);
+  st.centreMarker?.position.set(t[0], t[1], t[2]); // ⏸ (2026-11-14) the marker commented out
 }
 
 

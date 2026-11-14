@@ -120,7 +120,8 @@ export interface SceneState {
   /** ⭐ The scene being played — `Scene_0` unless a level says otherwise. */
   sceneSpec: SceneDescriptor;
   tuning: ReturnType<typeof parseConfigOverrides>;
-  centreMarker: Mesh;
+  /** ⏸ (2026-11-14) the yellow centre marker — commented out (the owner): always `null`. */
+  centreMarker: Mesh | null;
   /** ⭐ prototype (green box): the green box, midway between the yellow target and the camera — `null` in a scene with no yellow body. */
   greenBox: Mesh | null;
   /** ⭐ Prototype: the pink ring at the yellow target (`pinkRingFrame`). */
