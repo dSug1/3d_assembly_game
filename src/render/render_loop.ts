@@ -12,6 +12,7 @@ import { type LinesMesh } from "@babylonjs/core/Meshes/linesMesh";
 import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { backgroundMix } from "../core/lighting";
+import { browseGlideAt } from "../input/goal_lock";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { autoLadderStep, autoShadowVerdict, shadowLevel } from "../core/auto_shadow";
 import { applyShadowLevel, shadowsOnDemand } from "./lighting";
@@ -20,7 +21,7 @@ import { advanceFollow, displayPose, exponentialSmooth, phantomTarget } from "..
 import { worldPlacementOf } from "../core/object_model";
 import { type SceneState } from "./scene_state";
 import { followerFor, guardDraw, modelPose, shapeOfBody, writePose } from "./bodies";
-import { recomputeOrbitCentre } from "./camera_rig";
+import { recomputeOrbitCentre, syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { goalCommitFrame } from "./goal_commit_wiring";
 import { goalCaptureFrame } from "./goal_capture_wiring";
@@ -30,6 +31,11 @@ import { greenBoxFrame, syncOrbitPieceModel } from "./green_box_wiring";
 import { restingFaceFrame } from "./resting_face_wiring";
 
 export function startRenderLoop(st: SceneState): void {
+  // ⭐⭐ (2026-11-13) THE SHADOW MAPS REDRAWN ONLY WHEN A CASTER CHANGED (`shadowsOnDemand`) — ⭐ (2026-11-14) asked RIGHT BEFORE THEY RENDER, inside the
+  // frame's render: after every `onBeforeRender` mover (the boot animation, the model's stage) and after the active meshes' world matrices are
+  // recomputed. ⛔ Asked before `scene.render()` (2026-11-13 – 14) it ran before those movers and its `computeWorldMatrix()` cached the casters'
+  // PREVIOUS pose — the shadows drawn a frame behind the parts (the owner: "some shadows lag during the rebounds").
+  st.scene.onBeforeRenderTargetsRenderObservable.add(() => shadowsOnDemand(st));
 
   // ⛔⛔ AUDIT 2026-09-27: THE WHOLE FRAME IS GUARDED. Babylon queues the next frame only AFTER this
   // function returns (`AbstractEngine._renderLoop`), so one throw anywhere below used to stop the loop
@@ -315,6 +321,18 @@ export function startRenderLoop(st: SceneState): void {
     }
     // ⭐ `D125`: the contour slider. ⚠ Written on change only.
     for (const m of st.contourMats) if (m.alpha !== st.cfg.pieceContourAlpha) m.alpha = st.cfg.pieceContourAlpha;
+    // ⭐⭐⭐ (2026-11-13) a BROWSED centre's GLIDE (`browseGlideAt`): proportional to the finger's travel, arriving after `browseArriveMm` of it — the
+    // marker shows the destination
+    if (st.browseGlide !== null) {
+      const gl = st.browseGlide;
+      gl.travelledMm += st.browseFingerMm;
+      const g = browseGlideAt(gl.from, gl.to, gl.travelledMm, st.cfg.browseArriveMm);
+      st.centreBlend.snapTo(g.at);
+      syncCentre(st);
+      st.centreMarker.position.set(gl.to[0], gl.to[1], gl.to[2]);
+      if (g.arrived) st.browseGlide = null;
+    }
+    st.browseFingerMm = 0;
     // ⭐ (2026-11-13) LEVEL's background slider: the scene's own background with the night blue mixed in. ⚠ Written on change only.
     if (st.cfg.backgroundBluePct !== st.backgroundBlueSeen) {
       st.backgroundBlueSeen = st.cfg.backgroundBluePct;
@@ -342,7 +360,6 @@ export function startRenderLoop(st: SceneState): void {
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
     orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
-    shadowsOnDemand(st); // ⭐ (2026-11-13) the shadow maps redrawn only when a caster changed — after everything that moved one
     st.scene.render();
     st.frames++;
   }));

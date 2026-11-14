@@ -120,8 +120,9 @@ step the player cannot see — rule 5).
   classification by color of the demo scene"* — it replaces Claude's one heap per material): the **block** (`E02`, `E04` – `E06`: the two cases and
   the two banks), the **crankshaft** (`E03`), the **pistons** (`E07` – `E12`), the **heads** (`E13`, `E14`), the **exhausts** (`E15`, `E16`), the
   **pulley** (`E17`) — six heaps, a single part its own (⚠ the crankshaft stands with the block in the steps but is its own type: chrome, a bar).
-* **Dropped, not placed**: each part falls and settles by the game's own collision rule — flat on the floor, on a part, or leaning; a rest must hold
-  (a part balanced on an edge is refused); **three parts stacked at most**, counted both ways the eye counts.
+* **Dropped, not placed**: each part falls and settles by the game's own collision rule — flat on the floor; a rest must hold (a part balanced on an
+  edge is refused); ⛔⛔ **NO STACKING AT ALL** (the owner, 2026-11-14: *"modify the rule: do not allow the pieces to stack at all at boot time"* — three high first): every part on the
+  floor, no part's outline over another's seen from above (`maxStack: 1`, counted both ways the eye counts).
   ⛔ **NOT laid on its seating face** (the owner: *"I would not lie the parts on their seating face at start: I want to keep the same feel as the demo
   scene"* — it reverses Claude's first proposal for D4): a part lands at any yaw and on whichever face it settles on, as the demo's do; turning it
   onto its seat is the player's work.
@@ -130,6 +131,65 @@ step the player cannot see — rule 5).
   orders; the heaps are built for the steps' order above (step 1 on top).
 * ⚠ Generated offline as DATA (the demo's `core/demo_plan.ts` way), its size checked against the strip (the crankshaft 2.9 reference units long —
   0.44 m — is the demo's *long bar* case).
+* ⭐⭐⭐ **DRAWN AT EVERY BOOT** (2026-11-13; the owner: *"there has to be a script which randomly distribute the parts within assigned areas and
+  with the rules I indicated for demo scene, otherwise the parts will always be the same order game after game and it is very static and boring"*)
+  — a committed layout was built first, then replaced: the scene carries the RULE (`src/content/scene2_boot.ts`: the heaps by type, the anchors,
+  the areas' arc, the limits) and `render/model_import.ts` draws the layout at load (`core/boot_heaps.ts` `bootFromModel`) with a NEW SEED each
+  game — `?bootSeed=N` replays one; the seed and its time on the HUD's first line; a failure shows the parts at their goals and says why.
+  - ⭐⭐⭐ **THE FRONT — the yaw origin** (the owner: *"there is a problem of yaw origin … the pieces are currently in the right half of the
+    scene"*, then, with Blender's view from +X: *"for me, this is the camera viewing the front of the assembly. this is how the final assembly will be
+    placed, this is how we built in blender. this is how I setup the lights and the environment. Therefore, if anything is not in line, everything
+    has to be yaw rotated so it matches this"*). The front is **the file's +x — Blender's +X, the flywheel's end** (`model.frontDeg: 0`). The lights
+    and the environment were already in line with it (the key from Blender's +X, −Y: behind-left of a camera looking from +X); ONLY THE CAMERA was
+    not: it booted at the rig's global yaw −90°, the world's −z — the model seen from 270°, a quarter turn off (the HUD read `yaw origin −90°`, and
+    the heaps, centred on that camera, stood in the front's right half). ⭐ Now the camera BOOTS — and RESETS — facing the front (`bootYawForFront`:
+    Babylon's glTF reader mirrors x, so a front `f` is the world direction `(−cos f, sin f)`; `Scene_2` → yaw π), and the heaps' arc is centred on
+    the FRONT (the HUD shows `front 0° camera N°`: the two agree). Tested: for any front the camera boots on that side; the global −90° reads 270°.
+    The heaps: 180° round it — the front half; a heap's radius = room for its parts LYING SIDE BY SIDE (√ of their footprints squared — the demo's
+    "√ of the flat area"); a part's spot drawn round its heap's centre, the spread widening with the tries, never past 1.2 × the radius. Tested at
+    four yaw origins (0, 90, 180, 270°): every part's centre in the front half; its counter-example (the opposite origin) fires.
+  - **Retried, never assembled**: 150 tries a part (80 failed 4 seeds of 30 — the block's long cases between the plinth's perimeter and the floor's
+    margin); a layout that still fails is redrawn with the next seed (up to 6) — 50 seeds at random yaw origins: 2 retried, all placed, ≈ 1 s.
+  - ⭐ **THE FIRST PART's orientation** (the owner: *"we also need to have the yaw origin as reference to orient the first part (because it can be
+    oriented by any yaw value on the plinth)"* → *"this is how the final assembly will be placed"*): the goal is AS BUILT, its front at the front —
+    the lower case, which could sit on the plinth at any yaw, is placed only at its goal's yaw (its symmetry, `yawHalfTurn`, accepting the half
+    turn). ⚠ To build in W5 (the playable slice).
+  - **The demo's rules**: on a stable face of its hull at any yaw (never chosen for its seating face); dropped until it touches; **a rest HOLDS**
+    (the centre of mass over the contacts, 1 % of its radius); **one heap per type** (on the floor or its own heap's parts; never the plinth);
+    ⛔ **ONE HIGH — NO STACKING, BOTH WAYS THE EYE COUNTS** (up the support chain AND from above: no floor point under two outlines; the owner, 2026-11-14: *"modify the rule: do not allow the pieces to stack at all at boot time"*
+    — three high first, the demo's `D194`); **in the FRONT HALF**, the generator's own check since the heaps spread wider (seed 42's part fell just
+    behind the line); **the heaps' order the reverse of the steps**.
+  - **Fast enough for a boot (≈ 0.3 – 0.7 s)**: a part collides as its HULL (conservative: nothing rests in another's hollow) and only against what
+    stands under it, dropped straight to the floor when nothing does — the first version (every collision piece against every piece, a slow descent)
+    took 12 – 30 s. ⛔ **The hull was broken** for the heads and exhausts (many coplanar points in float32: 20,000 triangles for 271 points; the
+    resting faces 7 s on one part) → the points JOGGLED (qhull's `QJ`), flatness judged before; the hull test checks triangles = 2 × vertices − 4.
+  - ⛔ **Blocked = a gap under 1e-4 units**: `gapBetween` reads touching AND overlapping as 0 (the first version tested `null`: no part blocked
+    another — the test's counter-example caught it).
+  - ⭐ **THE PERIMETER round the plinth** (the owner: *"leave more space around the plinth so that the parts do not interfere later on … make a
+    perimeter around the plinth that the parts can't cross"*): the plinth's footprint + **1 unit (14 cm) on every side** (`anchorMargin`); no point
+    of a part inside it (its hull's outline against the box, both ways). Tested on every seed, with its counter-example; 30 more seeds: no failure,
+    the slowest 1.1 s, 14 parts stacked in all.
+  - ⭐ **THE FLOOR'S MARGIN** (the owner: *"add a smaller margin before the edges of the floor"*, then *"0.5 unit is too big"*): no part within
+    **0.2 unit (≈ 3 cm)** of the floor's true edge (`floorHalf` 1 / 0.14 = 7.143, `floorMargin` 0.2; an accidental 7.0 — 2 cm — before). Tested
+    on every seed.
+  - Checked (`tests/boot_heaps.test.ts`, the real collision pieces, FOUR seeds): nothing overlaps (its counter-example fires), on and inside the
+    floor less its margin, outside the plinth's perimeter, one heap per type, ⛔ every part on the floor only (no stacking); the same seed = the same layout, four
+    seeds = four layouts; each < 3 s.
+  - The game: the LEVEL slider **model stage** (0 = boot, the default; 1 = final); the contact shadows follow the seated set (at boot the plinth
+    only); the rods' caps (`appears_when_seated`) hidden until seated. The generator travels in the lazy model module (the main bundle unchanged).
+  - ⭐⭐ **THE BOOT'S ANIMATION — POP AND TUMBLE, BUILT** (the owner, 2026-11-14: *"all the pieces except the floor shall appear with a pop up in
+    the air, then rotate 360 on world pitch while they reach their position on the floor"*, then his three videos and *"a very small rebound when the
+    piece lands, the floor shall never be animated"*; the rules: `40_RENDER_SCENE/spec/ANIMATION.md` §4): the layout drawn first, the animation
+    travels TO it (its end the drawn pose, exact); ⭐ ALL AT ONCE (*"all pieces shall appear and drop at the same time: not one after the
+    others"*): every part pops at the same instant — ⭐ the plinth IN PLACE, nothing more (*"the plinth pops up directly in its position: no fall
+    nor rotation"*) — the others above their spots, hold — EACH PIECE ITS OWN 50 – 100 ms (*"different lag for each piece"*) — fall under one g
+    turning 360° about the world's pitch axis,
+    rebounds — two hops, 16 % of its radius then a quarter of it (*"100 % higher"*, then *"a bit more (the rebound is a bit dull)"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2° (zero speed there), then back to it in 1 s; ⛔ no input-driven orbit or approach until the yaw
+    is back at 0° (*"deny input driven orbit or approach until the zero degree has been reached"*) (*"a backwards approach of the camera from
+    the boot moment until the pieces are set"*); ≈ 1.6 s in all, lift 3.6 units; ⚠ neighbours side by side may BRUSH in the air while they
+    turn together (measured: 3 – 10 pairs a layout, the pistons and the block's cases) — the price of all at once; ⭐ it starts only when the boot
+    is READY (the contact file loaded, the shaders compiled; the parts hidden until then; a hitch slows it, never skips it — *"the pop up and
+    rotation is cut"* before); LEVEL › BOOT ANIMATION; `?anim=0` skips it.
 
 ### 2.6 ⭐ The rod's big end — OPEN, and the ONE axis of a piston's way in
 
@@ -281,8 +341,49 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
 4. **Kinds for placed parts** (`FinalPose.kind`, `D183`) carried to the orbited parts; **a free spin** symmetry (the pulley).
 5. **The heaps' generator** for a scene's parts (`core/demo_plan.ts`, today `Scene_1`'s).
 6. **The running engine at the level's end.**
-7. **The orbit's centre per step** (§2.8): redefined when a part seats (or when the player picks the next part), eased; and a player gesture to move
-   it (`IN10`, queued: orbit about a chosen point).
+7. ⭐⭐ **TWO ORBITS, NAMED** (the owner, 2026-11-14: *"let's call the orbit we have in the boot scene the 'scene orbit' (which includes the 4
+   rings, the repositioning of the orbit center with the press). It is distinct from the 'piece orbit' (which includes the polar orbit and the
+   tilted-poles orbit) which will be wired to the piece. Why this distinction: for example because the repositioning of the orbit center is not
+   foreseen for the moment in the piece orbit"*, and *"the approach with A + dy or finger zoom is not foreseen in the scene orbit"*):
+
+   | | **the SCENE ORBIT** | **the PIECE ORBIT** |
+   |---|---|---|
+   | when | no part in hand (the boot, browsing the heaps) | a part in hand, round it and the assembly |
+   | what it is | the camera on the rig's FOUR RINGS round the orbit's centre | the POLAR orbit and the TILTED-POLES orbit (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md`, `POLAR_ORBIT_CLEANUP.md`) |
+   | the centre moved by a press | ⭐ YES — browsing (below) | ⛔ NO (not foreseen for now) |
+   | the approach (A + dy, the pinch / finger zoom) | ⛔ NO — gated in the code (`pieceOrbitOn`: around the assembly AND a part in hand; before, with no piece, `approachMove` moved the camera itself — a finger zoom; *"make sure the zoom with finger is disabled in the scene orbit"*), `tests/scene_orbit_no_zoom.test.ts` | YES (§2.9) |
+   | its own rig | `Scene_2`'s rings (below) | the piece's |
+
+   ⚠ A rule written for one is not assumed for the other: a change to the scene orbit says so, a change to the piece orbit says so.
+   **The orbit's centre per step** (§2.8): redefined when a part seats (or when the player picks the next part), eased; and a player gesture to move
+   it (`IN10`, queued: orbit about a chosen point). ⭐⭐ **BUILT (2026-11-13) for the boot — BROWSING** — the SCENE ORBIT's (the owner: *"at boot (ie before a part is
+   picked up), the player shall be able to peep at the pieces therefore the player shall be able to move the center of the current orbit towards the
+   piece of his choice. I would propose a click or first touch moves the orbit center to the point where the raycast hit the surface of a piece or the
+   floor"*), then (*"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit). The translation of the
+   orbit center shall be done as per the mm of delta input or at a certain minimal speed, whichever is fastest"*): with no part in hand,
+   ① ⭐⭐ **EVERY PRESS** — a first touch (or the left button) whose ray hits a drawn part or the floor — **starts the centre's glide there AT
+   ONCE, and that same press drives the orbit** (the owner: *"at boot, a press modifies the position of the center of the orbit (not any longer the
+   tap + press). I am ok that each press changes the orbit center at boot"*; ⛔ before: a TAP armed the point and the press that followed within the
+   double-tap window started the glide — *"one rapid tap followed by press"*); ③ ⭐⭐⭐ the centre GLIDES along the straight line to the point, its travel **PROPORTIONAL to the finger's**, arriving
+   after **`browseArriveMm` of finger — 12 mm** (*"do 12 mm of travel instead of 30 mm"*; 30 first) whatever the distance — LINEAR, no ease (the owner: *"the center of the orbit shall reach its goal
+   within a travel of xx mm of finger. Its travel shall be proportional to the finger travel"*); a still finger leaves it where it is (a CAMERA
+   slider: *browsed centre: finger travel to arrive*). ⛔ (0) A glide at 1 screen mm per finger mm came first — replaced by this rule.
+   ⛔ (1) First built on the centre BLEND of 2026-09-14 (commits `2590d16`, `08a6a65` — the barycentre's, approved *"Working"*: progress = finger
+   travel over a fixed 30 mm, EASED): right for its ~10 cm re-centrings, wrong across the floor — a heap 0.7 m away moved ~25 mm per finger mm (the
+   jumps) and the ease's slow start and end were the stalls (the owner: *"there are big jumps and stalls of the camera before the orbit center reaches
+   its goal"*). ⛔ (2) A MINIMUM SPEED (time-driven, the larger of it and the finger: 40 → 80 → 240 → 120 mm/s) — REMOVED (the owner: *"remove this
+   min speed entirely as the logic is wrong"*). The old principle kept: the press that drives the orbit carries the centre (`input/goal_lock.ts`
+   `browseTargetOnPress`, `browseOnPress`, `browseGlideAt`; `render/pointer_wiring.ts`, `render/render_loop.ts`; the model's meshes in
+   `st.modelBrowse`). Tested (`tests/browse_centre.test.ts`: proportional, the exact arrival at the set travel whatever the distance, a still finger).
+   ⭐ **THE RIG, `Scene_2`'s own** (2026-11-13, the owner's values from the menu — Scene_1's were the painting's): ring 1 (top) r **5.10** m at
+   **+3.54**; ring 2 r **0.90** at **+0.60**; ring 3 (on) r **0.90** at **−0.60**; ring 4 (bottom) r **1.46** at **−0.83** — heights from the orbit
+   centre; the centre (0, 0.23, 0) and the boot distance 3 m Scene_1's (`src/content/scene_2.ts`).
+   ⚠ **The PIECE ORBIT — around the assembly with a part in hand** (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md` — the pipeline's) needs an ORBITED PIECE: in
+   `Scene_2` none exists yet (the parts are drawn, not bodies), so only the bare rig runs — `Scene_1`'s rings, tuned for the painting (the owner:
+   *"it looks like the orbit is an old 3-ring orbit, and not the one we have built in this pipeline"*). W5's order: ① a `.glb` part as the orbited
+   piece (its collision pieces, its face proxies as the faces the gizmo and the resting face read), picked from its heap by a tap; ② seating — the
+   lower case only at its goal's yaw, the crank's plunge, the pulley; ③ the centre per step, the contact shadows and caps on seating, the rig tuned
+   for the engine — the owner's look after each.
 8. ⭐⭐ **The PLUNGE snap** (the owner, 2026-11-13; `00_CORE/QUEUE.md`): a part resting on a hole's ghost at its mouth (flush with the host's
    face) carried along the hole's axis onto its seat — the ghost's `plunge_axis`, `plunge`, `plunge_to`; with the mouth capture (§2.9 item 3: the
    gizmo held on the hole's axis) as its first half. 9 in this scene: the crank into the tub, six pistons, two valve sets.

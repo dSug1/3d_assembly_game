@@ -259,6 +259,12 @@ export interface SceneState {
   /** ⭐ (2026-10-20) the boot gizmo's face normal (a respawn puts it back) */
   bootGizmoNormal?: Vec3 | null;
   pendingPartCentre: { pointerId: number; target: [number, number, number]; normal: [number, number, number] | null; host?: string | null; x: number; y: number; t: number } | null;
+  /** ⭐ (2026-11-13) the meshes a browsing tap may hit: the model's parts (drawn) and its floor (`model_import.ts`). */
+  modelBrowse: Set<AbstractMesh>;
+  /** ⭐ (2026-11-13) the centre's GLIDE to a browsed point (`browseGlideAt`): from, to, the finger's travel so far (mm); `null` when none / arrived. */
+  browseGlide: { from: readonly [number, number, number]; to: [number, number, number]; travelledMm: number } | null;
+  /** ⭐ (2026-11-13) this frame's finger travel fed to the centre (mm) — the minimum speed tops it up (`browseMinimumExtraMm`). */
+  browseFingerMm: number;
   /** ⭐ (2026-10-13) how far the piece moved this frame (m) — the quad's check pauses mid-sweep. */
   pieceFrameStepM: number;
   pieceGuardPeak: number;
@@ -383,6 +389,23 @@ export interface SceneState {
    */
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
+  asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
+  /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
+  asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
+  /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
+   *  angle, its axis kept frame to frame (`null`: not yet) */
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the way round the piece → aim line, kept from its first frame (0: not yet) */ sgn: number } | null;
+  /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
+  asmPieceDrawn: import("../core/vec").Vec3 | null;
+  /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
+  asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
+  asmSpitSide: number;
+  /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
+  asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
+  /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */
+  asmZoneAlpha: number;
   /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */
   asmDySign: number;
   /** ⭐⭐⭐ (2026-11-13, `ORBIT_ANY_SHAPE.md` §9) the world camera's calm heading offset off the yaw, held while the view looks down (`heldOffsetStep`); `null`: none (tilted, off) */
@@ -606,6 +629,12 @@ export interface SceneState {
   shadowLevelSeen: "FULL" | "PIECE" | null;
   /** ⭐ (2026-11-13) the scene's `.glb` (`render/model_import.ts`): loading, its parts, or ⛔ why it was refused — on the HUD's first line. `""` no model. */
   modelStatus: string;
+  /** ⭐ (2026-11-13) the boot layout's seed and time (or why it failed), appended to `modelStatus`. */
+  modelBootNote: string;
+  /** ⭐ (2026-11-14) the boot's animation's length, for the HUD (`model_import.ts`). */
+  modelAnimNote: string;
+  /** ⭐ (2026-11-13) the yaw the camera boots and resets at: facing the scene model's front (`bootYawForFront`), else the rig's global. */
+  bootYawRad: number;
   /** ⭐ (2026-11-13) the `backgroundBluePct` last applied to the clear colour (`-1`: none yet — the first frame applies it). */
   backgroundBlueSeen: number;
   /**

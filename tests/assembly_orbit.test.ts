@@ -135,7 +135,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
     expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;"); // ⭐ (Step 4c) the placed parts, cast one by one in the model's space (`modelCast`)
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
+    expect(p).toContain("const shiftApproach = pieceOrbitOn(st) && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));"); // ⛔ (2026-11-14) the piece orbit only
     expect(p).not.toContain("leavesCone"); // ⛔ (2026-11-12) the slide's lock and its cone removed
     const h = code("render/hold_wiring.ts");
     expect(h).toContain("if (h.base.sep !== null) approachInput(st, pinchApproachDyMm(h.base.sep, sep, st.cfg.approachPinchGain));"); // ⭐⭐⭐ (2026-11-13) the pinch is the approach
@@ -302,7 +302,7 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0) THE dy WITH
     expect(orbitDy(5, false)).toBe(5);
     // ⛔ (measured at ff2fca2) the gizmo went against the finger in 29 of 30 moving frames: the dy entered the orbit with its own sign
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const fdy0 = orbitDy(db.dy, asmOn);"); expect(p).toContain("const fdy = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;"); // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) through the dy hold
+    expect(p).toContain("const fdy0 = orbitDy(db.dy, asmOn);"); expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;"); // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) through the dy hold
     expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;"); // ⛔ (2026-11-13) × the leash's gain deleted (1)
     expect(p).toContain("const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1))");
     // the approach (A + drag) keeps the finger's own dy: finger up brings the piece in

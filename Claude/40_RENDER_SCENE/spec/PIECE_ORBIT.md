@@ -1,5 +1,8 @@
 # The orbit around the piece — specification (prototype)
 
+> ⭐ (2026-11-14) **The PIECE ORBIT** — the owner's name for the polar and the tilted-poles orbits wired to the piece, distinct from the **SCENE ORBIT**
+> (the four rings and the centre moved by a press, no approach): ⛔ no centre moved by a press here for now. `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §5 item 7.
+
 > **Status:** ✅ BUILT 2026-10-06 on `1.0.59u-from1.0.59s-Orbit-around-piece` — commits `d3e0c07` (*orbit center on piece*), `68b4584` (*orbit around the
 > piece*), `f98b584` (*frozen gain*), `864c6f2` (the slerp's own slider); then on **`1.0.59v-`** (2026-10-07): `86afd21` (§1bis, an action of
 > its own), `f8beaf5` (§6, the end by itself and the way back), the transitions' smoothing (§6bis), and the way back around the piece (§6);

@@ -91,9 +91,10 @@ describe("⭐⭐ (2026-11-13) the shadow map redrawn ON EVENTS only — the cast
     expect(casterSignature([...still, { flag: 1, visible: true, enabled: true }], true)).not.toBe(base);
     expect(casterSignature(still, false)).not.toBe(base);
   });
-  it("the render loop asks before every frame, after everything that moved a caster", () => {
+  it("asked RIGHT BEFORE the shadow maps render (after every mover in the frame — the owner: \"some shadows lag during the rebounds\")", () => {
     const loop = readFileSync(new URL("../src/render/render_loop.ts", import.meta.url), "utf8");
-    expect(loop.indexOf("shadowsOnDemand(st);")).toBeGreaterThan(loop.indexOf("orientCubeFrame(st);"));
-    expect(loop.indexOf("shadowsOnDemand(st);")).toBeLessThan(loop.indexOf("st.scene.render();"));
+    expect(loop).toContain("st.scene.onBeforeRenderTargetsRenderObservable.add(() => shadowsOnDemand(st));");
+    // ⛔ the old place: before `scene.render()`, ahead of the `onBeforeRender` movers — a frame behind
+    expect(loop).not.toMatch(/^\s*shadowsOnDemand\(st\);/m);
   });
 });

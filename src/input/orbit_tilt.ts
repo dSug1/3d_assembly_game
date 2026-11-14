@@ -387,6 +387,167 @@ export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null)
   return { frame: { dir: rotateAbout(a.dir, axis, t), up: rotateAbout(a.up, axis, t) }, axis, angle: th };
 }
 
+/** ⭐ A camera's pose: where it is, what it looks at, its up — and where the piece was drawn with it (`piece`; none: the piece given with the turn). */
+export interface CamPose {
+  readonly eye: Vec3;
+  readonly look: Vec3;
+  readonly up: Vec3;
+  readonly piece?: Vec3 | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner: *"the piece still snaps 180 degrees diagonally before the camera realignment brings the piece back to its position"*) THE
+ * CAMERA TURNED ABOUT THE PIECE, `k` of the way from the pose `a` (the one on the glass when the turn began) to `b` (this frame's): its axes by ONE turn
+ * (`frameMix`'s, the half turn's way kept by `hint` — and past it, never back the short way round), the piece's place in the camera's frame carried
+ * straight from `a`'s (with the piece where `a` drew it, `a.piece`) to `b`'s, the eye put where that place holds for the piece NOW (it may still move: its
+ * spring catching up, far out 1.7 m through a half turn — the camera follows it as ever) — so the piece stays on the glass where it was (or glides straight to where `b` puts
+ * it) and the assembly turns behind it; the look's distance blended. ⛔ The camera turned about the glass's centre (its up about its view): the piece, off
+ * the centre far out, went round the glass — and, the view's offsets turned with the heading, first jumped to the opposite corner.
+ */
+export function poseAboutPiece(a: CamPose, b: CamPose, piece: Vec3, k: number, hint: Vec3 | null): { readonly pose: CamPose; readonly axis: Vec3 | null; readonly angle: number } {
+  const frameOf = (p: CamPose): CamFrame => ({ dir: norm([p.eye[0] - p.look[0], p.eye[1] - p.look[1], p.eye[2] - p.look[2]]), up: p.up });
+  const fa = frameOf(a);
+  const fb = frameOf(b);
+  const m = frameMix(fa, fb, 1, hint);
+  let axis = m.axis;
+  let angle = m.angle;
+  // ⭐ past the half turn the shortest way flips: kept the way it began (the angle grows beyond 180°, never a jump back)
+  if (axis !== null && hint !== null && dot(axis, hint) < 0 && angle > Math.PI / 2) {
+    axis = [-axis[0], -axis[1], -axis[2]];
+    angle = 2 * Math.PI - angle;
+  }
+  const s = Math.min(1, Math.max(0, k));
+  const basis = (f: CamFrame): { r: Vec3; u: Vec3; f: Vec3 } => {
+    const d = norm(f.dir);
+    const r = norm(cross(f.up, d));
+    const u = cross(d, r);
+    return { r, u, f: [-d[0], -d[1], -d[2]] };
+  };
+  const coords = (p: CamPose, B: { r: Vec3; u: Vec3; f: Vec3 }, q: Vec3): Vec3 => {
+    const v: Vec3 = [q[0] - p.eye[0], q[1] - p.eye[1], q[2] - p.eye[2]];
+    return [dot(v, B.r), dot(v, B.u), dot(v, B.f)];
+  };
+  const ca = coords(a, basis(fa), a.piece ?? piece);
+  const cb = coords(b, basis(fb), piece);
+  const t = s * angle;
+  const ft: CamFrame = axis === null || !(angle > 1e-9) ? (s >= 1 ? fb : fa) : { dir: rotateAbout(fa.dir, axis, t), up: rotateAbout(fa.up, axis, t) };
+  const Bt = basis(ft);
+  const c: Vec3 = [ca[0] + (cb[0] - ca[0]) * s, ca[1] + (cb[1] - ca[1]) * s, ca[2] + (cb[2] - ca[2]) * s];
+  const eye: Vec3 = [
+    piece[0] - (Bt.r[0] * c[0] + Bt.u[0] * c[1] + Bt.f[0] * c[2]),
+    piece[1] - (Bt.r[1] * c[0] + Bt.u[1] * c[1] + Bt.f[1] * c[2]),
+    piece[2] - (Bt.r[2] * c[0] + Bt.u[2] * c[1] + Bt.f[2] * c[2]),
+  ];
+  const la = Math.hypot(a.look[0] - a.eye[0], a.look[1] - a.eye[1], a.look[2] - a.eye[2]);
+  const lb = Math.hypot(b.look[0] - b.eye[0], b.look[1] - b.eye[1], b.look[2] - b.eye[2]);
+  const l = la + (lb - la) * s;
+  const look: Vec3 = [eye[0] + Bt.f[0] * l, eye[1] + Bt.f[1] * l, eye[2] + Bt.f[2] * l];
+  return { pose: { eye, look, up: Bt.u }, axis, angle };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner: *"Is there a way for the camera to realign without the piece nor the assembly/scene to sometimes fly off the screen view
+ * (especially at far distance)?"*) THE TURN FRAMING TWO TARGETS — the piece `A` and the camera's aim `B` (its look point: the assembly far out) — after
+ * Lino & Christie's TORIC SPACE (*Efficient composition for virtual camera control*, SCA 2012; *Intuitive and efficient camera control with the toric
+ * space*, SIGGRAPH 2015) and Gleicher & Witkin's *through-the-lens* control (1992): the camera solved, each frame, from WHERE THE TWO ARE ON THE GLASS.
+ * Their places on the glass (tangent coordinates) carried STRAIGHT from the pose `a` (on the glass at the turn's start, `a.piece` the piece then, `a.look`
+ * its aim) to `b`'s — a straight line between two points of the glass stays on it (a rectangle is convex): neither can leave it, whatever the glass's
+ * shape. The angle the two make at the camera follows (α), with the piece's distance carried (rA) the camera lies on the toric surface of A and B; its
+ * place round the line A → B (φ) carried from `a`'s to `b`'s the way it began (`sgn`, kept past the half turn) — the half turn is a turn ABOUT THE LINE
+ * THROUGH BOTH (both stay put); the camera's axes the one turn putting A and B where they go. `null`: degenerate (the two on one ray from the camera, or
+ * at one place, or behind it) — the caller turns about the piece alone (`poseAboutPiece`). k 0: `a`; k 1: `b`.
+ */
+export function poseFramingTwo(a: CamPose, b: CamPose, A: Vec3, k: number, sgn: number): { readonly pose: CamPose; readonly sgn: number } | null {
+  const A0 = a.piece ?? A;
+  const B0 = a.look;
+  const B = b.look;
+  const sub = (p: Vec3, q: Vec3): Vec3 => [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
+  const len = (v: Vec3): number => Math.hypot(v[0], v[1], v[2]);
+  const basis = (p: CamPose): { r: Vec3; u: Vec3; f: Vec3 } => {
+    const d = norm(sub(p.eye, p.look));
+    const r = norm(cross(p.up, d));
+    const u = cross(d, r);
+    return { r, u, f: [-d[0], -d[1], -d[2]] };
+  };
+  // a point's tangent coordinates on the glass (right / forward, up / forward) — `null` behind the camera
+  const tangent = (p: CamPose, Bs: { r: Vec3; u: Vec3; f: Vec3 }, q: Vec3): [number, number] | null => {
+    const v = sub(q, p.eye);
+    const z = dot(v, Bs.f);
+    return z > 1e-9 ? [dot(v, Bs.r) / z, dot(v, Bs.u) / z] : null;
+  };
+  const Ba = basis(a);
+  const Bb = basis(b);
+  const ta0 = tangent(a, Ba, A0);
+  const tb0 = tangent(a, Ba, B0);
+  const ta1 = tangent(b, Bb, A);
+  const tb1 = tangent(b, Bb, B);
+  if (ta0 === null || tb0 === null || ta1 === null || tb1 === null) return null;
+  const s = Math.min(1, Math.max(0, k));
+  const lerp = (x: number, y: number): number => x + (y - x) * s;
+  const ta: [number, number] = [lerp(ta0[0], ta1[0]), lerp(ta0[1], ta1[1])];
+  const tb: [number, number] = [lerp(tb0[0], tb1[0]), lerp(tb0[1], tb1[1])];
+  // the two directions in the camera's coordinates (right, up, forward)
+  const dA = norm([ta[0], ta[1], 1]);
+  const dB = norm([tb[0], tb[1], 1]);
+  const ca = Math.max(-1, Math.min(1, dot(dA, dB)));
+  const alpha = Math.acos(ca);
+  if (!(alpha > (0.5 * Math.PI) / 180)) return null;
+  const AB = sub(B, A);
+  const L = len(AB);
+  const rA = lerp(len(sub(A0, a.eye)), len(sub(A, b.eye)));
+  if (!(L > 1e-6) || !(rA > 1e-6)) return null;
+  const uAB: Vec3 = [AB[0] / L, AB[1] / L, AB[2] / L];
+  // the triangle A, B, camera: the angle α at the camera, the side to A rA — the side to B (the root nearer the one carried), then the angle at A
+  const sa = Math.sin(alpha);
+  const disc = L * L - rA * rA * sa * sa;
+  if (!(disc >= 0)) return null;
+  const rB0 = lerp(len(sub(B0, a.eye)), len(sub(B, b.eye)));
+  const roots = [rA * ca + Math.sqrt(disc), rA * ca - Math.sqrt(disc)].filter((x) => x > 1e-9);
+  if (roots.length === 0) return null;
+  const rB = roots.reduce((p, q) => (Math.abs(q - rB0) < Math.abs(p - rB0) ? q : p));
+  const cb = Math.max(-1, Math.min(1, (rA * rA + L * L - rB * rB) / (2 * rA * L)));
+  const sb = Math.sqrt(1 - cb * cb);
+  // the place round the line A → B: an angle from a reference square to it (the world's up, else x)
+  const ref = (u: Vec3): { e1: Vec3; e2: Vec3 } => {
+    const w: Vec3 = Math.abs(u[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0];
+    const e1 = norm(sub(w, [u[0] * dot(w, u), u[1] * dot(w, u), u[2] * dot(w, u)]));
+    return { e1, e2: cross(u, e1) };
+  };
+  const phiOf = (E: Vec3, P: Vec3, u: Vec3): number => {
+    const { e1, e2 } = ref(u);
+    const v = sub(E, P);
+    return Math.atan2(dot(v, e2), dot(v, e1));
+  };
+  const L0 = len(sub(B0, A0));
+  if (!(L0 > 1e-6)) return null;
+  const u0: Vec3 = norm(sub(B0, A0));
+  const phi0 = phiOf(a.eye, A0, u0);
+  const phi1 = phiOf(b.eye, A, uAB);
+  let dphi = Math.atan2(Math.sin(phi1 - phi0), Math.cos(phi1 - phi0));
+  let sg = sgn;
+  if (sg === 0) sg = dphi < 0 ? -1 : 1;
+  else if (Math.sign(dphi) !== sg && Math.abs(dphi) > Math.PI / 2) dphi += 2 * Math.PI * sg;
+  const phi = phi0 + s * dphi;
+  const { e1, e2 } = ref(uAB);
+  const w: Vec3 = [Math.cos(phi) * e1[0] + Math.sin(phi) * e2[0], Math.cos(phi) * e1[1] + Math.sin(phi) * e2[1], Math.cos(phi) * e1[2] + Math.sin(phi) * e2[2]];
+  const eye: Vec3 = [A[0] + rA * (cb * uAB[0] + sb * w[0]), A[1] + rA * (cb * uAB[1] + sb * w[1]), A[2] + rA * (cb * uAB[2] + sb * w[2])];
+  // the camera's axes: the one turn taking the two directions (camera's coordinates) onto the two seen from `eye` (world) — the coordinates are
+  // left-handed (right = up × back, Babylon's), so the third axis of the world's triad is reversed
+  const wA = norm(sub(A, eye));
+  const wB = norm(sub(B, eye));
+  const x2 = norm(sub(dB, [dA[0] * ca, dA[1] * ca, dA[2] * ca]));
+  const x3 = cross(dA, x2);
+  const kw = dot(wB, wA);
+  const y2 = norm(sub(wB, [wA[0] * kw, wA[1] * kw, wA[2] * kw]));
+  const y3n = cross(wA, y2);
+  const y3: Vec3 = [-y3n[0], -y3n[1], -y3n[2]];
+  const axis = (j: 0 | 1 | 2): Vec3 => [dA[j]! * wA[0] + x2[j]! * y2[0] + x3[j]! * y3[0], dA[j]! * wA[1] + x2[j]! * y2[1] + x3[j]! * y3[1], dA[j]! * wA[2] + x2[j]! * y2[2] + x3[j]! * y3[2]];
+  const up = axis(1);
+  const fwd = axis(2);
+  const l = lerp(len(sub(a.look, a.eye)), len(sub(b.look, b.eye)));
+  return { pose: { eye, look: [eye[0] + fwd[0] * l, eye[1] + fwd[1] * l, eye[2] + fwd[2] * l], up }, sgn: sg };
+}
+
 /**
  * ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"* to a speed in °/s) THE ROLL'S DURATION (ms) at most `degS` °/s for
  * a roll of `rad` (the whole turn, `frameMix`'s angle) — the same angular speed for every roll: 360°/s, a far edge's half turn 0.5 s, a side's 63° 0.18 s

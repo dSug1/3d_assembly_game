@@ -194,6 +194,35 @@ export interface GestureConfig {
   envIntensity: number;
   /** ⭐ (2026-11-13) the scene's contact shadows (ambient occlusion) on (`1`) or off (`0`) — where the scene asks for them; a cost per frame. */
   aoOn: number;
+  /** ⭐ (2026-11-13) a scene model's STAGE shown: `0` the boot (the parts in their heaps — where a level starts), `1` the final (every part at its goal). */
+  modelStage: number;
+  /** ⭐ (2026-11-13) the finger travel (mm) over which a browsed orbit centre reaches its goal — proportionally (`browseGlideAt`). */
+  browseArriveMm: number;
+  /** ⭐ (2026-11-14) the boot's POP AND TUMBLE (`core/boot_anim.ts`): played (`1`) or the heaps shown at once (`0`). */
+  bootAnimOn: number;
+  /** ⭐ (2026-11-14) the boot's animation (every part at once): the pop (ms), the hold in the air (ms), the fall from 3 units (ms — sets gravity). */
+  bootPopMs: number;
+  /** ⭐ each piece's hold between the pop and the fall is drawn between these (ms) — the owner: "random, clamped between 50 ms and 100 ms". */
+  bootHoldMinMs: number;
+  bootHoldMaxMs: number;
+  bootFallMs: number;
+  /** ⭐ (2026-11-14) the landing's rebound, % of the part's radius (the owner: "a very small rebound"). */
+  bootReboundPct: number;
+  /** ⭐ (2026-11-14) the turns about the world's pitch axis while falling (the owner: "rotate 360"): + the top toward the camera, − away. */
+  bootTurns: number;
+  /** ⭐ (2026-11-14) the camera's distance at the boot animation's start (m), pulled back to the game's by its end; `0`: no pull back. */
+  bootCamFromM: number;
+  /** ⭐ (2026-11-14) the camera's yaw off the front at the boot animation's start (degrees), swept to 0 by its end; `0`: no sweep. */
+  bootCamYawFromDeg: number;
+  /** ⭐ (2026-11-14) the IDLE ORBIT (`core/idle_orbit.ts`): on (`1`) / off (`0`); after how long without a scene input (s); its yaw and pitch swing
+   *  each side (degrees); one loop (s); the catch back: by the finger's travel (mm), or in time for an input without a delta (ms). */
+  idleOrbitOn: number;
+  idleOrbitAfterS: number;
+  idleOrbitYawDeg: number;
+  idleOrbitPitchDeg: number;
+  idleOrbitPeriodS: number;
+  idleCatchMm: number;
+  idleCatchMs: number;
   // ⛔ `D183`: `goalPositionTolM` / `goalAngleTolDeg` are deleted — a GRABBED piece is placed within the snap's own
   // margins (`captureOffsetMm` on the glass, `snapConeDeg`); one never grabbed within the two below.
   /** ⭐ `D183`: mm ON THE GLASS a piece never grabbed may sit from its goal and count as placed (the owner: 1 mm). */
@@ -417,6 +446,22 @@ export interface GestureConfig {
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
   approachPinchGain: number;
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the polar zones on (1) / off (0) */
+  zoneOn: number;
+  /** ⭐⭐⭐ (D-Z1, T1) a corner where this many real facets meet is a pole */
+  zoneValenceMin: number;
+  /** ⭐⭐⭐ (D-Z1, T3 — the owner: the assembly as it stands) a facet is small under this share of the placed set's box's smallest side */
+  zoneFacetMinRatio: number;
+  /** ⭐⭐⭐ (D-Z2) the zone's axis snapped onto a world axis within this (deg) */
+  zoneSnapDeg: number;
+  /** ⭐⭐⭐ (D-Z6) upright (S1) up to this angle of the axis from the vertical (deg) */
+  zoneUprightMaxDeg: number;
+  /** ⭐⭐⭐ (D-Z6) the spit (S2) from this angle of the axis from the vertical (deg) */
+  zoneSpitMinDeg: number;
+  /** ⭐⭐⭐ (D-Z5) the zone's frame for the whole assembly over this share of the contour's area */
+  zoneWholeShare: number;
+  /** ⭐⭐⭐ (D-Z7) the gizmo leaves a zone this far past its rim (mm) */
+  zoneExitMm: number;
   /** ⭐⭐⭐ (2026-11-12, CLOSE_IN_CONTACT.md step 3) THE CLOSE-IN GAIN (`closeInGain`): the orbit's full gain from this distance of the piece to the gizmo out (m),
    * falling linearly to the contact's */
   orbitGainFullM: number;
@@ -691,6 +736,33 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ The owner, 2026-11-13: *"the chrome is good in blender, but is a black color in the scene render"* — the sky it reflects, as generated.
   envIntensity: 1,
   aoOn: 1,
+  modelStage: 0,
+  // ⭐ the owner, 2026-11-13: "the center of the orbit shall reach its goal within a travel of xx mm of finger. Its travel shall be proportional to the
+  // finger travel" — then "do 12 mm of travel instead of 30 mm" (30 first: the 2026-09-14 centre blend's value), LINEAR
+  browseArriveMm: 12,
+  // ⭐ the owner, 2026-11-14: "all the pieces except the floor shall appear with a pop up in the air, then rotate 360 on world pitch while they reach
+  // their position on the floor" — the values read off his example videos (the ball: popped in ≈ 170 ms, held ≈ 0.3 s), `BOOT_ANIM_DEFAULT`
+  bootAnimOn: 1,
+  bootPopMs: 170,
+  // ⭐ the owner: "shorten the pause between the pop up end and the start of rotation/fall" — 300 first (the ball's beat)
+  bootHoldMinMs: 50,
+  bootHoldMaxMs: 100,
+  bootFallMs: 500,
+  bootReboundPct: 16, // the owner: "make the rebound 100 % higher" (6 first), then "a bit more (the rebound is a bit dull)" (12; and two hops now)
+  bootTurns: 1,
+  // ⭐ the owner, 2026-11-14: "add a backwards approach of the camera from the boot moment until the pieces are set, from r=1.5m to r=3m"
+  bootCamFromM: 2.5, // "from 2.5m to 3m" (1.5 first; 2.25 tried, reverted)
+  // ⭐ "yaw from -5 to 0 degree (current front)" — the boot's sweep onto the front, with the pull back
+  bootCamYawFromDeg: -15, // then "camera yaw from -15 to zero degree at boot" (−5 first)
+  // ⭐ the owner, 2026-11-14: "whenever the player is inactive for xx seconds, such small camera orbit triggers on … the camera will catch back its
+  // game position with mm of input or ms (if the input is not delta position)" — the loop and swing measured on his video (…081353), `IDLE_ORBIT_DEFAULT`
+  idleOrbitOn: 1,
+  idleOrbitAfterS: 4, // the owner: "from 10s to 5s", then "from 5 s to 4 s"
+  idleOrbitYawDeg: 1.2,
+  idleOrbitPitchDeg: 0.5,
+  idleOrbitPeriodS: 6.8,
+  idleCatchMm: 12,
+  idleCatchMs: 300,
   // ⭐ `D183`, the owner, 2026-09-30: *"if a piece was never grabbed, the criteria shall restrict to 1mm on the glass and
   // 1 degree"* — so zooming out cannot place a piece nobody moved.
   ungrabbedGoalMm: 1,
@@ -827,6 +899,14 @@ export const DEFAULT_CONFIG: GestureConfig = {
   tiltedPole: 1, // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole on
   tiltRollDegS: 360, // ⭐⭐⭐ (2026-11-10, *"yes"*) …its roll back at most 360°/s (a half turn 0.5 s, a side's 63° 0.18 s) — a guess until a hand sets it
   approachPinchGain: 1, // ⭐⭐⭐ (2026-11-13, the owner: *"build A"* — the pinch is the approach) a guess with a slider: a mm of spread = a mm of the old two-finger dy
+  zoneOn: 1, // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) the polar zones
+  zoneValenceMin: 5, // ⭐⭐⭐ (D-Z1) Blender's pole
+  zoneFacetMinRatio: 0.22, // ⭐⭐⭐ (D-Z1, the owner: relative to the placed set) Scene_0bis's tips 0.15, Scene_0 0.31, Scene_1 0.50
+  zoneSnapDeg: 10, // ⭐⭐⭐ (D-Z2)
+  zoneUprightMaxDeg: 30, // ⭐⭐⭐ (D-Z6)
+  zoneSpitMinDeg: 60, // ⭐⭐⭐ (D-Z6)
+  zoneWholeShare: 0.5, // ⭐⭐⭐ (D-Z5)
+  zoneExitMm: 10, // ⭐⭐⭐ (D-Z7) a guess with a slider
   edgeHoldMm: 30, // ⭐⭐⭐ (2026-11-12, §8, the owner's hysteresis: *"until a certain band is reached in the face beyond"*) a guess with a slider
   orbitGainFullM: 0.6, // ⭐⭐⭐ (2026-11-12, step 3) a guess with a slider: the automatic tilt's distance (`tiltAutoM`)
   orbitContactMmPerMm: 4, // ⭐⭐⭐ (2026-11-12, step 3; the owner on the device: "set ... to 4 mm" — 1 was the slide's 1 : 1)
@@ -989,6 +1069,13 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.tiltRollDegS >= 0 && cfg.tiltRollDegS <= 1440)) throw new Error(`tiltRollDegS (${cfg.tiltRollDegS}) must be in [0, 1440] °/s.`);
   if (!(cfg.tiltAutoM >= 0 && cfg.tiltAutoM <= 6)) throw new Error(`tiltAutoM (${cfg.tiltAutoM}) must be in [0, 6] m.`);
   if (!(cfg.tiltBlendMm >= 0 && cfg.tiltBlendMm <= 200)) throw new Error(`tiltBlendMm (${cfg.tiltBlendMm}) must be in [0, 200] mm.`);
+  if (cfg.zoneOn !== 0 && cfg.zoneOn !== 1) throw new Error(`zoneOn (${cfg.zoneOn}) must be 0 or 1.`);
+  if (!(Number.isInteger(cfg.zoneValenceMin) && cfg.zoneValenceMin >= 3 && cfg.zoneValenceMin <= 20)) throw new Error(`zoneValenceMin (${cfg.zoneValenceMin}) must be an integer in [3, 20].`);
+  if (!(cfg.zoneFacetMinRatio >= 0 && cfg.zoneFacetMinRatio <= 1)) throw new Error(`zoneFacetMinRatio (${cfg.zoneFacetMinRatio}) must be in [0, 1].`);
+  if (!(cfg.zoneSnapDeg >= 0 && cfg.zoneSnapDeg <= 45)) throw new Error(`zoneSnapDeg (${cfg.zoneSnapDeg}) must be in [0, 45] deg.`);
+  if (!(cfg.zoneUprightMaxDeg >= 0 && cfg.zoneUprightMaxDeg <= cfg.zoneSpitMinDeg && cfg.zoneSpitMinDeg <= 90)) throw new Error(`zoneUprightMaxDeg (${cfg.zoneUprightMaxDeg}) ≤ zoneSpitMinDeg (${cfg.zoneSpitMinDeg}) ≤ 90 deg.`);
+  if (!(cfg.zoneWholeShare >= 0 && cfg.zoneWholeShare <= 1.01)) throw new Error(`zoneWholeShare (${cfg.zoneWholeShare}) must be in [0, 1.01].`);
+  if (!(cfg.zoneExitMm >= 0 && cfg.zoneExitMm <= 200)) throw new Error(`zoneExitMm (${cfg.zoneExitMm}) must be in [0, 200] mm.`);
   if (!(cfg.edgeHoldMm >= 0 && cfg.edgeHoldMm <= 200)) throw new Error(`edgeHoldMm (${cfg.edgeHoldMm}) must be in [0, 200] mm.`);
   if (!(cfg.approachPinchGain > 0 && cfg.approachPinchGain <= 10)) throw new Error(`approachPinchGain (${cfg.approachPinchGain}) must be in (0, 10].`);
   if (!(cfg.orbitGainFullM > 0 && cfg.orbitGainFullM <= 6)) throw new Error(`orbitGainFullM (${cfg.orbitGainFullM}) must be in (0, 6] m.`);
@@ -1084,6 +1171,23 @@ export function validateGestureConfig(cfg: GestureConfig): void {
     throw new Error(`modelLayers (${cfg.modelLayers}) must be 0 (the look), 1 (+ collision), 2 (+ face proxies) or 3 (all).`);
   }
   if (cfg.aoOn !== 0 && cfg.aoOn !== 1) throw new Error(`aoOn (${cfg.aoOn}) must be 0 (off) or 1 (on).`);
+  if (!(cfg.browseArriveMm > 0 && cfg.browseArriveMm <= 300)) throw new Error(`browseArriveMm (${cfg.browseArriveMm}) must be in (0, 300] mm.`);
+  if (!(Math.abs(cfg.bootCamYawFromDeg) <= 90)) throw new Error(`bootCamYawFromDeg (${cfg.bootCamYawFromDeg}) must be in [−90, 90]°.`);
+  if (!(cfg.bootCamFromM >= 0 && cfg.bootCamFromM <= 10)) throw new Error(`bootCamFromM (${cfg.bootCamFromM}) must be in [0, 10] m.`);
+  if (cfg.idleOrbitOn !== 0 && cfg.idleOrbitOn !== 1) throw new Error(`idleOrbitOn (${cfg.idleOrbitOn}) must be 0 or 1.`);
+  if (!(cfg.idleOrbitAfterS >= 1 && cfg.idleOrbitAfterS <= 600)) throw new Error(`idleOrbitAfterS (${cfg.idleOrbitAfterS}) must be in [1, 600] s.`);
+  if (!(cfg.idleOrbitYawDeg >= 0 && cfg.idleOrbitYawDeg <= 15)) throw new Error(`idleOrbitYawDeg (${cfg.idleOrbitYawDeg}) must be in [0, 15]°.`);
+  if (!(cfg.idleOrbitPitchDeg >= 0 && cfg.idleOrbitPitchDeg <= 10)) throw new Error(`idleOrbitPitchDeg (${cfg.idleOrbitPitchDeg}) must be in [0, 10]°.`);
+  if (!(cfg.idleOrbitPeriodS >= 1 && cfg.idleOrbitPeriodS <= 60)) throw new Error(`idleOrbitPeriodS (${cfg.idleOrbitPeriodS}) must be in [1, 60] s.`);
+  if (!(cfg.idleCatchMm > 0 && cfg.idleCatchMm <= 200)) throw new Error(`idleCatchMm (${cfg.idleCatchMm}) must be in (0, 200] mm.`);
+  if (!(cfg.idleCatchMs > 0 && cfg.idleCatchMs <= 3000)) throw new Error(`idleCatchMs (${cfg.idleCatchMs}) must be in (0, 3000] ms.`);
+  if (cfg.bootAnimOn !== 0 && cfg.bootAnimOn !== 1) throw new Error(`bootAnimOn (${cfg.bootAnimOn}) must be 0 or 1.`);
+  for (const k of ["bootPopMs", "bootHoldMinMs", "bootHoldMaxMs", "bootFallMs"] as const)
+    if (!(cfg[k] >= 0 && cfg[k] <= 3000)) throw new Error(`${k} (${cfg[k]}) must be in [0, 3000] ms.`);
+  if (!(cfg.bootFallMs >= 50)) throw new Error(`bootFallMs (${cfg.bootFallMs}) must be at least 50 ms (it sets gravity).`);
+  if (!(cfg.bootReboundPct >= 0 && cfg.bootReboundPct <= 30)) throw new Error(`bootReboundPct (${cfg.bootReboundPct}) must be in [0, 30] %.`);
+  if (!(Number.isInteger(cfg.bootTurns) && Math.abs(cfg.bootTurns) <= 3)) throw new Error(`bootTurns (${cfg.bootTurns}) must be a whole number in [−3, 3].`);
+  if (cfg.modelStage !== 0 && cfg.modelStage !== 1) throw new Error(`modelStage (${cfg.modelStage}) must be 0 (boot) or 1 (final).`);
   if (!(cfg.envIntensity >= 0 && cfg.envIntensity <= 3)) {
     throw new Error(`envIntensity (${cfg.envIntensity}) must be in [0, 3]: 0 none, 1 as generated.`);
   }

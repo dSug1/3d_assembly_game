@@ -67,7 +67,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
     return { key: cache.key, br, d: Number.isFinite(dmin) ? +(dmin * 1000).toFixed(1) : null }; };
   window.__lineKeys = window.__lineKeys ?? new Set();
   st.scene.onAfterRenderObservable.add(() => { try { const c = st.camera; const t = c.getTarget ? c.getTarget() : c.target; const g = v3(st.asmGizmoAt ?? null);
-    const sh = st.asmShown; const lift = sh && sh.t ? sh.t.normal : null; const gl = g && lift ? [g[0] + lift[0]*0.002, g[1] + lift[1]*0.002, g[2] + lift[2]*0.002] : g;
+    const sh = st.asmShown; const n0 = sh && sh.t ? sh.t.normal : null; const RF = window.__AW && window.__AW.dirFrame ? window.__AW.dirFrame(st) : null; /* ⭐ (2026-11-14) the map's normal turned into the world (a polar zone's or a tilt's frame) */ const lift = n0 && RF ? [RF[0][0]*n0[0]+RF[0][1]*n0[1]+RF[0][2]*n0[2], RF[1][0]*n0[0]+RF[1][1]*n0[1]+RF[1][2]*n0[2], RF[2][0]*n0[0]+RF[2][1]*n0[1]+RF[2][2]*n0[2]] : n0; const gl = g && lift ? [g[0] + lift[0]*0.002, g[1] + lift[1]*0.002, g[2] + lift[2]*0.002] : g;
     const G = lineOf(st.asmGreenCache, true, gl), Rr = lineOf(st.asmRedCache, false, gl);
     const show = st.cfg.sectionLines === 1 && !st.asmLocked && st.hover == null && sh != null;
     window.__rec.push({ leg: window.__leg, fd: window.__fd ?? null, ts: performance.now(), g, gd: g && st.asmGizmoLag ? [g[0] + st.asmGizmoLag[0], g[1] + st.asmGizmoLag[1], g[2] + st.asmGizmoLag[2]] : g, gn: v3(st.gizmoNormal ?? null), host: st.gizmoHost ?? null, foot: v3(st.asmGizmo ?? null),
@@ -105,7 +105,7 @@ const RECORDER = `(() => { const st = window.__st; if (!st) return false; window
 const profTmp = join(prof, "tmp");
 mkdirSync(profTmp, { recursive: true });
 const QUIET_FLAGS = ["--disable-component-update", "--disable-background-networking", "--no-first-run", "--no-default-browser-check", "--disable-default-apps", "--disable-extensions", "--disable-sync", "--disable-breakpad", "--disable-crash-reporter"];
-const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, "--window-size=1500,830", `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
+const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", `--remote-debugging-port=${port}`, `--window-size=${env.WINDOW ?? "1500,830"}` /* ⭐ (2026-11-14) WINDOW=w,h: a phone held upright, 390,844 — the vertical FOV fixed, the glass narrow */, `--user-data-dir=${prof}`, ...QUIET_FLAGS, "about:blank"], { stdio: "ignore", env: { ...process.env, TEMP: profTmp, TMP: profTmp } });
 try {
   let targets = null;
   for (let i = 0; i < 60 && !targets; i++) { await sleep(250); try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch {} }

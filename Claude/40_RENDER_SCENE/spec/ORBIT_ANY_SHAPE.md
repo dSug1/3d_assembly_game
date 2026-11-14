@@ -1,5 +1,8 @@
 # THE ORBIT ON ANY SHAPE — `Scene_0`'s heptagon (2026-11-12, branch `1.0.125-Debug_scene_0`)
 
+> ⭐ (2026-11-14) **The PIECE ORBIT** — the owner's name for the polar and the tilted-poles orbits wired to the piece, distinct from the **SCENE ORBIT**
+> (the four rings and the centre moved by a press, no approach): ⛔ no centre moved by a press here for now. `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §5 item 7.
+
 > *"in the polar orbit of the heptagon: the red and green sections are broken … the green contour larger than the slanted faces … the concept of tight
 > rope is not implemented (the gizmo can travel in the void beyond the edges of the heptagon). In the tilted pole orbit of the heptagon: … the dy can push
 > the gizmo and piece beyond the zenith edge on the other side, but the camera does not tilt so the view is upside down and at one point … any further dy

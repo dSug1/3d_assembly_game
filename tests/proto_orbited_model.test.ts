@@ -72,8 +72,8 @@ describe("⭐⭐ prototype — the orbited pieces in the object model", () => {
   it("⭐⭐ wired: the model synced FROM the mesh after the orbit placed it, only when it moved — never a scene change; never written back", () => {
     const loop = code("render/render_loop.ts");
     // ⭐ (2026-10-12) the orientation cube placed between them — after the camera moved, before the render
-    // ⭐ (2026-11-13) `shadowsOnDemand` may stand before the render: it only READS the casters (whether to redraw the shadow map), never the model
-    expect(loop).toMatch(/greenBoxFrame\(st, dtSec\);\s*syncOrbitPieceModel\(st\);\s*orientCubeFrame\(st\);[^\n]*\n\s*shadowsOnDemand\(st\);[^\n]*\n\s*st\.scene\.render\(\);/);
+    // ⭐ (2026-11-14) `shadowsOnDemand` moved inside the render (`onBeforeRenderTargetsRenderObservable`): the cube straight before the render again
+    expect(loop).toMatch(/greenBoxFrame\(st, dtSec\);\s*syncOrbitPieceModel\(st\);\s*orientCubeFrame\(st\);[^\n]*\n\s*st\.scene\.render\(\);/);
     // the follower loop and the jump watch leave it alone
     expect(loop).toMatch(/for \(const \[jid, jmesh\] of st\.meshOf\) \{\s*if \(st\.world\.objects\.get\(jid\)\?\.orbited === true\) continue;/);
     expect(loop).toMatch(/for \(const \[fid, mesh\] of st\.meshOf\) \{\s*(?:\/\/[^\n]*\n\s*)+if \(st\.world\.objects\.get\(fid\)\?\.orbited === true\) continue;/);

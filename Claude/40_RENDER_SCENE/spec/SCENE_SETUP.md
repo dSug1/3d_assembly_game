@@ -20,6 +20,10 @@ A `.glb` carries shapes and materials, and nothing of the room. Each thing is ma
 
 ⛔ The game's look is the judge. Blender's Eevee approximates Babylon: soft shadows and reflections differ.
 
+⭐⭐ (2026-11-13) Every light is set RELATIVE TO THE SCENE'S FRONT: the camera boots facing the model's front (`model.frontDeg`,
+`SCENE_WORKFLOW.md` §6.3 item 1). `Scene_2`'s key, set behind-left of the camera by the owner's eye, was already in line with the front built in
+Blender; only the camera was turned (a quarter turn — it had booted at the rig's global yaw).
+
 ## 2. ⭐ The scene's `lighting` (`core/lighting.ts`)
 
 - `background`: the clear colour, as shown. It is not tone-mapped.
@@ -88,6 +92,7 @@ At the FINAL STAGE (every part shown), with the HUD's `frame` line, ☰ RENDERIN
 |---|---|---|---|---|
 | desktop GPU (fps) | 95 | 100 | 120 | 125 |
 | iPhone (fps) | 40 | 48 | 56 | 59 (the screen's 60 Hz ceiling) |
+| ⭐ iPhone AFTER (build `806579a`: the contact shadows baked, the shadow map on events) | **59 — at the 60 Hz ceiling, shadows on** | | | |
 
 Read as frame times. SSAO cost 2.2 ms on the GPU and **≈ 7 ms on the phone**. Shadows cost 0.4 ms on the GPU and 1 – 4 ms on the phone. Without both, the phone sits at its 60 Hz ceiling: the scene itself (glass, PBR, ~81 draw calls) fits. ⛔ A scene is not done until this table is filled for it.
 

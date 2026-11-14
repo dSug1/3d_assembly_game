@@ -32,4 +32,5 @@
 | **provisional motion** | a continuous rule applied live during a drag. ⛔ Its rollback on a flick is retired (`D36`, `D110`): a committed gesture ends kept |
 | **golden vectors** | hand-checkable tests in `tests/`, written with the code, that must be shown to fail against the old behaviour |
 | **the engine boundary** | `src/core` and `src/input` import no engine. Enforced by `tests/boundary.test.ts` |
+| **scene orbit / piece orbit** | (the owner, 2026-11-14) the **scene orbit**: the camera round the scene — the four rings, the centre moved by a press (browsing); ⛔ no approach (A + dy, pinch). The **piece orbit**: wired to the piece — the polar and the tilted-poles orbits; ⛔ no centre moved by a press (for now). `SCENE_2_ASSEMBLY.md` §5 item 7 |
 | **a live look** | someone running the build **on a real device** and saying whether it is right. The only thing that closes a change |

@@ -22,7 +22,7 @@ import { orientTapShown } from "./orient_cube";
 // ⏸ (2026-10-12) with the way in, commented out: import { enterPieceOrbit, returnToCentreOrbit } from "./green_box_wiring";
 import { retargetGizmo } from "./camera_rig";
 import { pinchApproachDyMm, pinchLatched, separationMm } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn } from "./assembly_wiring";
+import { approachInput, approachRelease, pieceOrbitOn } from "./assembly_wiring";
 import type { Sample } from "../input";
 import type { SceneState } from "./scene_state";
 
@@ -115,6 +115,7 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
   // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) the APPROACH BY THE PINCH: the fingers' separation's change since the last read — spread IN, pinched
   // OUT (`pinchApproachDyMm`, × `approachPinchGain`). ⛔ (2026-10-28) each finger's dy half of the step (the two fingers' mean), latched by `twoFingerKind`
   if (h.mode === "APPROACH") {
+    if (!pieceOrbitOn(st)) return h.mode; // ⛔ the scene orbit: no finger zoom (the part put down mid-pinch included)
     const sep = sepOf(st, h.first, h.second);
     if ((pointerId === h.first || pointerId === h.second) && sep !== null && h.base) {
       if (h.base.sep !== null) approachInput(st, pinchApproachDyMm(h.base.sep, sep, st.cfg.approachPinchGain));
@@ -134,7 +135,8 @@ export function holdMove(st: SceneState, pointerId: number, _s: Sample, _prev: S
     // ⭐⭐⭐ (2026-11-13, the owner: *"build A"*) AROUND THE ASSEMBLY THE PINCH IS THE APPROACH: two fingers whose separation has moved past the
     // deadband from where they landed (`pinchLatched`) — whatever else they do; the approach then runs from that separation (no jump). ⛔ (2026-10-28 …
     // 2026-11-13) the first move judged once (`twoFingerKind`): common motion the approach, relative the pinch — a real swipe wobbled into the pinch
-    if (assemblyOn(st)) {
+    // ⛔ only in the PIECE ORBIT: in the scene orbit two fingers move nothing (the owner: "make sure the zoom with finger is disabled in the scene orbit")
+    if (pieceOrbitOn(st)) {
       const sep = sepOf(st, h.first, h.second);
       if (sep === null) return h.mode;
       if (h.base === undefined || h.base === null) h.base = { approach: st.approach, sep0: sep, sep: null };

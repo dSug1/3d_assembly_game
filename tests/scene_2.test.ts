@@ -22,9 +22,15 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(SCENE_2.orbitGoals).toBeUndefined();
   });
 
-  it("⭐ Scene_1's floor, rig, units and volume — read, never retyped", () => {
+  it("⭐ Scene_1's floor, units and volume — read, never retyped; its own rig", () => {
     expect(SCENE_2.bodies[0]).toBe(SCENE_1.bodies.find((b) => b.id === "Floor"));
-    expect(SCENE_2.orbit).toBe(SCENE_1.orbit);
+    // ⭐ (2026-11-13) its OWN rig — the owner's ring values; the centre and the boot distance Scene_1's
+    expect(SCENE_2.orbit).toMatchObject({
+      topRadiusM: 5.1, topHeightM: 3.54, middleRadiusM: 0.9, middleHeightM: 0.6,
+      lowerRadiusM: 0.9, lowerHeightM: -0.6, bottomRadiusM: 1.46, bottomHeightM: -0.83,
+      centreM: SCENE_1.orbit!.centreM, bootDistanceM: SCENE_1.orbit!.bootDistanceM,
+    });
+    expect(SCENE_1.orbit!.topHeightM).toBe(3.15); // Scene_1 (the painting) untouched
     expect(SCENE_2.unitM).toBe(SCENE_1.unitM);
     expect(SCENE_2.playVolume).toBe(SCENE_1.playVolume);
   });
@@ -47,6 +53,23 @@ describe("⭐ `Scene_2` — an empty scene, World 0's fourth level (the owner, 2
     expect(f[0]! * from[0]! + f[1]! * from[1]! + f[2]! * from[2]!).toBeLessThan(-0.999);
     // Scene_1 untouched
     expect(SCENE_1.lighting!.environment).toBeUndefined();
+  });
+
+  it("⭐ (2026-11-13) the boot RULE carried (the layout is drawn at every boot); a heap not in its order, a bad limit, refused", () => {
+    expect(SCENE_2.model!.boot!.anchors).toEqual(["E01"]);
+    const base = JSON.parse(serializeSceneDescriptor(SCENE_2));
+    const o1 = structuredClone(base);
+    o1.model.boot.heapOf.E03 = "nowhere";
+    expect(() => parseSceneDescriptor(JSON.stringify(o1))).toThrow(/not a heap of heapOrder/);
+    const o2 = structuredClone(base);
+    o2.model.boot.maxStack = 0;
+    expect(() => parseSceneDescriptor(JSON.stringify(o2))).toThrow(/maxStack/);
+  });
+
+  it("⭐ (2026-11-13) a model's front must be a finite angle", () => {
+    const o = JSON.parse(serializeSceneDescriptor(SCENE_2));
+    o.model.frontDeg = "front";
+    expect(() => parseSceneDescriptor(JSON.stringify(o))).toThrow(/frontDeg/);
   });
 
   it("the studio's fields refused when malformed", () => {

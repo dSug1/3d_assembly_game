@@ -46,7 +46,8 @@ function menuTree(): Node[] {
 const n = (title: string, sliders: string[], subsections: Node[] = []): Node => ({ title, sliders, subsections });
 
 const LAYOUT: Node[] = [
-  n("LEVEL", ["orbitPieceKind", "lockPlacedPieces", "demoDurationS", "backgroundBluePct"], [
+  n("LEVEL", ["orbitPieceKind", "lockPlacedPieces", "demoDurationS", "backgroundBluePct", "modelStage"], [
+    n("BOOT ANIMATION", ["bootAnimOn", "bootPopMs", "bootHoldMinMs", "bootHoldMaxMs", "bootFallMs", "bootReboundPct", "bootTurns", "bootCamFromM", "bootCamYawFromDeg"]),
     n("GOAL", ["ungrabbedGoalMm", "ungrabbedGoalDeg", "orbitGoalMm", "orbitGoalDeg", "captureOffsetMm", "snapConeDeg", "snapMs"]),
   ]),
   n("INPUT", ["tapMaxDuration", "motionDeadbandMm", "restConfirmMs", "restGapFactor", "orbitDeadbandMm", "orbitBandRestMs"]),
@@ -55,12 +56,16 @@ const LAYOUT: Node[] = [
     n("SMOOTHING", ["boxSmoothMs", "gizmoEaseMs", "orbitSpringMs", "cameraCatchUpMs"]),
     n("CALM ON A FACE", ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]),
     n("TILTED POLE", ["tiltedPole", "tiltRollDegS", "tiltAutoM", "tiltBlendMm", "edgeHoldMm"]),
+    // ⭐⭐⭐ (2026-11-14, merged from 1.0.129b-: POLAR_ZONES.md D-Z1 – D-Z7) where the tilted pole stops
+    n("POLAR ZONES", ["zoneOn", "zoneValenceMin", "zoneFacetMinRatio", "zoneSnapDeg", "zoneUprightMaxDeg", "zoneSpitMinDeg", "zoneWholeShare", "zoneExitMm"]),
   ]),
   n("APPROACH & CONTACT", ["approachPinchGain", "orbitShellOffsetMm", "assemblyLockDistM", "pieceGapMm", "collisionSkinMm", "pieceSolverQueries", "contactBandMm"], [
     n("THE APPROACH'S DISTANCE (THE RINGS)", ["orbitTopRadiusM", "orbitTopHeightM", "orbitMiddleRadiusM", "orbitMiddleHeightM", "orbitLowerRingOn", "orbitLowerRadiusM", "orbitLowerHeightM", "orbitBottomRadiusM", "orbitBottomHeightM"]),
   ]),
   n("GIZMO & SECTIONS", ["sectionLines", "facetMergeDeg", "facetMinShare", "gizmoEdgeMarginMm", "pinkGizmoVisible", "quadSliceMaxDeg", "quadGrowthLogK"]),
-  n("CAMERA", ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "orbitBlendDistanceMm"]),
+  n("CAMERA", ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "orbitBlendDistanceMm", "browseArriveMm"], [
+    n("IDLE ORBIT", ["idleOrbitOn", "idleOrbitAfterS", "idleOrbitYawDeg", "idleOrbitPitchDeg", "idleOrbitPeriodS", "idleCatchMm", "idleCatchMs"]),
+  ]),
   n("RENDERING", ["pieceContourAlpha", "faceHighlightAlpha", "quadUnlitAlpha", "highlightLiftMm", "shadowsOn", "autoShadowBudgetMs", "modelLayers", "envIntensity", "aoOn"]),
   n("SCENE SWAY", ["orbitSwayKind", "orbitSwayDeg", "orbitSlideMm", "orbitSwayTauMs", "swayTurnDeg", "swayReferenceSpeedMmPerS"], [
     n("PARTS' FOLLOW", ["translateInertiaMs", "translateDampingRatio", "translateLeadMs", "translateSwayTauMs", "rotateSwayTauMs"]),
@@ -75,9 +80,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("92 sliders, each once, each a live config value; no folder over 9", () => {
+  it("118 sliders (110 + the polar zones' 8), each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(92);
+    expect(all.length).toBe(118);
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);

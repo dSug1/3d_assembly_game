@@ -20,15 +20,17 @@ import { type AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
 import SKY_HDR from "../../Assets/Environment/sky_sand.hdr?url";
 import { CreateLines } from "@babylonjs/core/Meshes/Builders/linesBuilder";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { topFaceOutline } from "../core/underside";
 import { contactFactors, positionKey, readContactFile, type ContactFile } from "../core/model_contact";
+import { bootWithRetries, type BootLayout, type BootPose } from "../core/boot_heaps";
+import { bootAnimator, type BootAnimator } from "./boot_anim_wiring"; // ANIMATION MODULE: boot
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import "@babylonjs/core/Rendering/geometryBufferRendererSceneComponent";
 import "@babylonjs/core/Rendering/prePassRendererSceneComponent";
-import { type Vec3 } from "../core/vec";
+import { type Quat, type Vec3 } from "../core/vec";
 import {
   catalogSlice,
   glbJson,
@@ -63,21 +65,28 @@ export async function importSceneModel(st: SceneState): Promise<void> {
       st.modelStatus = `⛔MODEL REFUSED ×${refusals.length}: ${refusals[0] ?? "?"}`;
       return;
     }
-    await place(st, bytes, read.catalog, new Set(slice.parts.map((p) => p.node)));
-    st.modelStatus = `model ${slice.parts.length} parts`;
-    // ⭐⭐ the CONTACT SHADOWS per pair (`SCENE_SETUP.md` §6.3): the final stage seats every part of the slice at load
-    if (spec.contact !== undefined) {
-      const cr = await fetch(spec.contact);
-      if (!cr.ok) throw new Error(`${spec.contact}: HTTP ${cr.status}`);
-      const cf = readContactFile(await cr.json(), new Set(read.catalog.parts.map((p) => p.id)));
-      if (cf.file === null) {
-        console.error("⛔ the contact shadows are REFUSED:\n" + cf.refusals.join("\n"));
-        st.modelStatus += `  ⛔CONTACT REFUSED ×${cf.refusals.length}`;
-      } else {
-        st.modelContact = prepareContact(st, cf.file);
-        const n = applyContactShadows(st, new Set(slice.parts.map((p) => p.id)));
-        st.modelStatus += ` · contact ${n}`;
+    // ⭐ the boot is READY when its other work is done (the contact file below): the boot animation's clock waits for it (ANIMATION MODULE: boot)
+    let markReady = (): void => undefined;
+    const bootReady = new Promise<void>((r) => (markReady = r));
+    const stage = await place(st, bytes, read.catalog, new Set(slice.parts.map((p) => p.node)), slice.parts.map((p) => p.id), bootReady);
+    try {
+      st.modelStatus = `model ${slice.parts.length} parts${st.modelBootNote}${st.modelAnimNote}`;
+      // ⭐⭐ the CONTACT SHADOWS per pair (`SCENE_SETUP.md` §6.3): the final stage seats every part of the slice at load
+      if (spec.contact !== undefined) {
+        const cr = await fetch(spec.contact);
+        if (!cr.ok) throw new Error(`${spec.contact}: HTTP ${cr.status}`);
+        const cf = readContactFile(await cr.json(), new Set(read.catalog.parts.map((p) => p.id)));
+        if (cf.file === null) {
+          console.error("⛔ the contact shadows are REFUSED:\n" + cf.refusals.join("\n"));
+          st.modelStatus += `  ⛔CONTACT REFUSED ×${cf.refusals.length}`;
+        } else {
+          st.modelContact = prepareContact(st, cf.file);
+          stage(true); // ⭐ the stage's seated set: at boot the anchors only, at the final every part
+          st.modelStatus += ` · contact ${cf.file.terms.length} terms`;
+        }
       }
+    } finally {
+      markReady();
     }
   } catch (e) {
     console.error("⛔ the scene's model did not load:", e);
@@ -85,7 +94,14 @@ export async function importSceneModel(st: SceneState): Promise<void> {
   }
 }
 
-async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, keep: ReadonlySet<string>): Promise<void> {
+async function place(
+  st: SceneState,
+  bytes: Uint8Array,
+  catalog: ModelCatalog,
+  keep: ReadonlySet<string>,
+  sliceIds: readonly string[],
+  bootReady: Promise<void>,
+): Promise<(force?: boolean) => void> {
   const scene = st.scene;
   const result = await SceneLoader.ImportMeshAsync("", "", bytes, scene, undefined, ".glb");
   const gltfRoot = result.meshes.find((m) => m.name === "__root__");
@@ -130,6 +146,10 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
     byLayer.get(layer)!.push(m);
   }
 
+  // ⭐⭐ (2026-11-13) BROWSING: a tap on a drawn part or the floor moves the orbit's centre there (`browseTargetOnPress`, `pointer_wiring.ts`)
+  for (const m of byLayer.get("render")!) st.modelBrowse.add(m);
+  if (floorMesh !== undefined) st.modelBrowse.add(floorMesh);
+
   // ⭐ Shadows: every render mesh casts and receives; the per-light caster lists the shadow level re-applies (`applyShadowLevel`) grow with them.
   const render = byLayer.get("render")!;
   st.shadowGens.forEach((g, i) => {
@@ -153,6 +173,140 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   holder.freezeWorldMatrix();
   for (const m of holder.getChildMeshes(false)) m.freezeWorldMatrix();
 
+  // ⭐⭐ (2026-11-13) THE STAGE: the BOOT (the parts in their heaps — where a level starts) or the FINAL (every part at its goal); the LEVEL slider
+  // `modelStage`. ⭐⭐ The boot layout is DRAWN NOW, a new seed every game (the owner: *"randomly distribute the parts within assigned areas …
+  // otherwise the parts will always be the same order game after game"*) — `?bootSeed=N` replays one; the seed on the HUD. A boot placement is
+  // in the scene frame (the file's root maps into it): the part's node takes root⁻¹ ∘ boot.
+  const spec = st.sceneSpec.model!;
+  let poses: Readonly<Record<string, BootPose>> | null = null;
+  let layout: BootLayout | null = null;
+  let yawOrigin = 0;
+  let bootSeed = 1;
+  if (spec.boot !== undefined) {
+    const asked = Number(new URLSearchParams(globalThis.location?.search ?? "").get("bootSeed"));
+    const seed = Number.isInteger(asked) && asked > 0 ? asked : 1 + Math.floor(Math.random() * 2147483646);
+    // ⭐⭐ THE YAW ORIGIN = the model's FRONT as built (the owner: "this is the camera viewing the front of the assembly … if anything is not in
+    // line, everything has to be yaw rotated so it matches this") — the camera boots facing it; the heaps in the half toward it. The camera's own
+    // direction (the model's frame: Babylon's glTF reader mirrors x) is shown beside it, a check that the two agree.
+    const d = st.camera.position.subtract(st.orbitCentreM);
+    const cameraDeg = Math.hypot(d.x, d.z) > 1e-6 ? (Math.atan2(d.z, -d.x) * 180) / Math.PI : NaN;
+    const yawOriginDeg = spec.frontDeg ?? (Number.isFinite(cameraDeg) ? cameraDeg : 270);
+    try {
+      const t0 = performance.now();
+      const parsed = glbJson(bytes);
+      let used = seed;
+      if ("json" in parsed) {
+        const r = bootWithRetries(bytes, parsed.json, catalog, spec.boot, seed, yawOriginDeg);
+        poses = r.layout.poses;
+        layout = r.layout;
+        yawOrigin = yawOriginDeg;
+        bootSeed = r.seed;
+        used = r.seed;
+      }
+      st.modelBootNote = ` · boot seed ${used}, front ${Math.round(yawOriginDeg)}° camera ${Math.round(cameraDeg)}° (${Math.round(performance.now() - t0)} ms)`;
+    } catch (e) {
+      console.error(`⛔ the boot layout (seed ${seed}) failed — the parts shown at their goals:`, e);
+      st.modelBootNote = ` · ⛔BOOT seed ${seed}: ${(e as Error).message}`;
+    }
+  }
+  const root = scene.getTransformNodeByName(catalog.root);
+  const rootQ = root?.rotationQuaternion ?? Quaternion.Identity();
+  const rootP = root?.position ?? Vector3.Zero();
+  const rootInv = Quaternion.Inverse(rootQ);
+  const goals = new Map(
+    catalog.parts
+      .filter((p) => keep.has(p.node))
+      .map((p) => {
+        const n = scene.getTransformNodeByName(p.node);
+        return [
+          p.id,
+          n === null ? null : { node: n, pos: n.position.clone(), rot: (n.rotationQuaternion ?? Quaternion.Identity()).clone(), scl: n.scaling.clone() },
+        ] as const;
+      }),
+  );
+  /** A placement in the scene frame onto a part's node (the file's root mapped out: root⁻¹ ∘ placement), its scaling × `s`. */
+  const toNode = (id: string, P: { readonly position: Vec3; readonly rotation: Quat }, s = 1): void => {
+    const g = goals.get(id);
+    if (g === undefined || g === null) return;
+    const q = new Quaternion(P.rotation[1], P.rotation[2], P.rotation[3], P.rotation[0]);
+    g.node.rotationQuaternion = rootInv.multiply(q);
+    const rel = new Vector3(P.position[0] - rootP.x, P.position[1] - rootP.y, P.position[2] - rootP.z);
+    g.node.position.copyFrom(rel.applyRotationQuaternion(rootInv));
+    g.node.scaling.copyFrom(g.scl).scaleInPlace(s);
+  };
+
+  // ANIMATION MODULE: boot — the POP AND TUMBLE (`boot_anim_wiring.ts`): removable with the lines marked so
+  let stageSeen = -1;
+  const boot: BootAnimator | null =
+    layout === null
+      ? null
+      : bootAnimator({
+          st,
+          holder,
+          layout,
+          yawOriginDeg: yawOrigin,
+          seed: bootSeed,
+          ready: bootReady,
+          node: (id) => goals.get(id)?.node ?? null,
+          place: toNode,
+          restoreAnchor: (id) => {
+            const g = goals.get(id);
+            if (g === undefined || g === null) return;
+            g.node.position.copyFrom(g.pos);
+            g.node.rotationQuaternion = g.rot.clone();
+            g.node.scaling.copyFrom(g.scl);
+          },
+          clearContact: () => applyContactShadows(st, new Set()),
+          finish: () => applyStage(true),
+          replay: () => {
+            if (stageSeen !== 0) return;
+            stageSeen = -1;
+            applyStage();
+          },
+        });
+  const applyStage = (force = false): void => {
+    const v = poses === null ? 1 : st.cfg.modelStage;
+    if (v === stageSeen && !force) return;
+    // ANIMATION MODULE: boot — running at the boot stage, its end applies the stage (a forced call — the contact file arriving — waits for it)
+    if (boot?.running() === true && v === 0) return;
+    boot?.stop();
+    const entering = v !== stageSeen;
+    stageSeen = v;
+    // ⭐ the SEATED set: the final every part of the slice; the boot the parts without a boot place (the anchors)
+    const seated = new Set(v === 1 ? sliceIds : sliceIds.filter((id) => poses?.[id] === undefined));
+    // ⭐ a piece that APPEARS WHEN SEATED (the rods' caps — `PART_AUTHORING.md` §3bis) is enabled only while its part is seated — ⚠ set BEFORE the
+    // boot animation starts (2026-11-14: it returned first, the six caps shown on the falling pistons and hidden only at its end — the owner: "the
+    // shadows of the end connectors of the piston rods lag")
+    for (const p of catalog.parts)
+      for (const r of p.renders)
+        if (r.appearsWhenSeated) scene.getMeshByName(r.node)?.setEnabled(seated.has(p.id));
+    if (v === 0 && entering && boot?.start() === true) return; // ANIMATION MODULE: boot
+    holder.unfreezeWorldMatrix();
+    for (const m of holder.getChildMeshes(false)) m.unfreezeWorldMatrix();
+    for (const [id, g] of goals) {
+      if (g === null) continue;
+      const b = v === 0 ? poses?.[id] : undefined;
+      if (b === undefined) {
+        g.node.position.copyFrom(g.pos);
+        g.node.rotationQuaternion = g.rot.clone();
+        continue;
+      }
+      const q = new Quaternion(b.rotation[1], b.rotation[2], b.rotation[3], b.rotation[0]);
+      g.node.rotationQuaternion = rootInv.multiply(q);
+      const rel = new Vector3(b.position[0] - rootP.x, b.position[1] - rootP.y, b.position[2] - rootP.z);
+      g.node.position.copyFrom(rel.applyRotationQuaternion(rootInv));
+    }
+    holder.freezeWorldMatrix();
+    for (const m of holder.getChildMeshes(false)) m.freezeWorldMatrix();
+    // ⭐ the contact shadows follow the SEATED set
+    applyContactShadows(st, seated);
+  };
+  applyStage(true);
+  scene.onBeforeRenderObservable.add(() => {
+    applyStage();
+    boot?.step(); // ANIMATION MODULE: boot
+  });
+
   // ⭐ The debug layers follow the slider, applied on change only.
   let seen = -1;
   const apply = (): void => {
@@ -165,6 +319,7 @@ async function place(st: SceneState, bytes: Uint8Array, catalog: ModelCatalog, k
   };
   apply();
   scene.onBeforeRenderObservable.add(apply);
+  return applyStage;
 }
 
 /**

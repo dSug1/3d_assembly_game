@@ -73,12 +73,14 @@ import { bootGizmoHostOf, bootGizmoNormalOf, bootTargetOnBlueFace, createGreenBo
 import { createScoreOverlay } from "./score_overlay";
 import { attachMouseSecondTouch } from "./mouse_adapter";
 import { CAMERA_RADIUS_M, ORBIT_START_CENTRE_M, ORBIT_START_ELEVATION, ORBIT_START_YAW_RAD, type Follow, type SceneState } from "./scene_state";
+import { bootYawForFront } from "../core/scene_dims";
 import { coreOf, make, quatOf, shapeOfBody, topologyOfBody } from "./bodies";
 import { applyCamera, syncCentre } from "./camera_rig";
 import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
+import { wireIdleOrbit } from "./idle_orbit_wiring"; // ANIMATION MODULE: idle
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
 import { OrbitInertia } from "../input/orbit_inertia";
@@ -553,6 +555,14 @@ export function createScene(
   st.asmMapQ = null;
   st.asmTilt = null;
   st.asmEdgeHold = null;
+  st.asmZones = null;
+  st.asmZone = null;
+  st.asmZoneMix = null;
+  st.asmCamLast = null;
+  st.asmPieceDrawn = null;
+  st.asmSpitSide = 0;
+  st.asmZoneAlpha = 0;
+  st.asmZoneMesh = null;
   st.asmDySign = 0;
   st.asmHeadO = null;
   st.asmHeadW = 1;
@@ -621,6 +631,9 @@ export function createScene(
   st.orbitRawPrev = null;
   st.orbitUserV = null;
   st.pendingPartCentre = null;
+  st.modelBrowse = new Set();
+  st.browseGlide = null;
+  st.browseFingerMm = 0;
   st.pieceFrameStepM = 0;
   st.pieceGuardPeak = 0;
   st.pieceGuardPeakAt = 0;
@@ -660,6 +673,8 @@ export function createScene(
   // ⭐⭐ (2026-11-13, W4) a Blender scene's `.glb`, at its goal (`render/model_import.ts`) — after the shadows' caster lists exist, which it extends.
   // ⭐ Its module (and the glTF reader with it) fetched only by a level that has a model: the other levels' bundle does not carry it.
   st.modelStatus = "";
+  st.modelBootNote = "";
+  st.modelAnimNote = "";
   st.backgroundBlueSeen = -1;
   st.modelFloor = null;
   if (spec.model !== undefined) {
@@ -774,9 +789,12 @@ export function createScene(
           ? elevationAtDistance(st.cfg, bootDistanceM)
           : 1
         : ORBIT_START_ELEVATION;
+  // ⭐⭐ (2026-11-13) the boot yaw: facing the model's FRONT when the scene has one (`bootYawForFront`), the rig's global yaw otherwise
+  const front = st.sceneSpec.model?.frontDeg;
+  st.bootYawRad = front === undefined ? ORBIT_START_YAW_RAD : bootYawForFront(front);
   st.orbit = new OrbitController(
     st.cfg,
-    ORBIT_START_YAW_RAD,
+    st.bootYawRad,
     st.bootElevation,
   );
   // ⛔⛔ (2026-11-13, the owner: *"Set the zoom at 1 and then remove the zoom function entirely. With the approach of the piece, there is no need for
@@ -1011,6 +1029,7 @@ export function createScene(
    * several correct-looking analyses, stop modelling the code and ask which READOUT moves.*
    */
   startRenderLoop(st);
+  wireIdleOrbit(st); // ANIMATION MODULE: idle — the idle orbit (`idle_orbit_wiring.ts`): removable with this line and its import
   window.addEventListener("resize", () => st.engine.resize());
 
   return {
