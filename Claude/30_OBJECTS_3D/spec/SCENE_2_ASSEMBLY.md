@@ -184,7 +184,7 @@ step the player cannot see — rule 5).
     others"*): every part pops at the same instant — ⭐ the plinth IN PLACE, nothing more (*"the plinth pops up directly in its position: no fall
     nor rotation"*) — the others above their spots, hold — EACH PIECE ITS OWN 50 – 100 ms (*"different lag for each piece"*) — fall under one g
     turning 360° about the world's pitch axis,
-    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2° (zero speed there), then back to it in 1 s; ⛔ no input-driven orbit or approach until the yaw
+    rebounds — two hops, 16 % of its radius then a quarter of it (*"100 % higher"*, then *"a bit more (the rebound is a bit dull)"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2° (zero speed there), then back to it in 1 s; ⛔ no input-driven orbit or approach until the yaw
     is back at 0° (*"deny input driven orbit or approach until the zero degree has been reached"*) (*"a backwards approach of the camera from
     the boot moment until the pieces are set"*); ≈ 1.6 s in all, lift 3.6 units; ⚠ neighbours side by side may BRUSH in the air while they
     turn together (measured: 3 – 10 pairs a layout, the pistons and the block's cases) — the price of all at once; ⭐ it starts only when the boot
@@ -351,7 +351,7 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
    | when | no part in hand (the boot, browsing the heaps) | a part in hand, round it and the assembly |
    | what it is | the camera on the rig's FOUR RINGS round the orbit's centre | the POLAR orbit and the TILTED-POLES orbit (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md`, `POLAR_ORBIT_CLEANUP.md`) |
    | the centre moved by a press | ⭐ YES — browsing (below) | ⛔ NO (not foreseen for now) |
-   | the approach (A + dy, the pinch / finger zoom) | ⛔ NO | YES (§2.9) |
+   | the approach (A + dy, the pinch / finger zoom) | ⛔ NO — gated in the code (`pieceOrbitOn`: around the assembly AND a part in hand; before, with no piece, `approachMove` moved the camera itself — a finger zoom; *"make sure the zoom with finger is disabled in the scene orbit"*), `tests/scene_orbit_no_zoom.test.ts` | YES (§2.9) |
    | its own rig | `Scene_2`'s rings (below) | the piece's |
 
    ⚠ A rule written for one is not assumed for the other: a change to the scene orbit says so, a change to the piece orbit says so.

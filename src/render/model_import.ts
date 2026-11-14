@@ -272,6 +272,14 @@ async function place(
     boot?.stop();
     const entering = v !== stageSeen;
     stageSeen = v;
+    // ⭐ the SEATED set: the final every part of the slice; the boot the parts without a boot place (the anchors)
+    const seated = new Set(v === 1 ? sliceIds : sliceIds.filter((id) => poses?.[id] === undefined));
+    // ⭐ a piece that APPEARS WHEN SEATED (the rods' caps — `PART_AUTHORING.md` §3bis) is enabled only while its part is seated — ⚠ set BEFORE the
+    // boot animation starts (2026-11-14: it returned first, the six caps shown on the falling pistons and hidden only at its end — the owner: "the
+    // shadows of the end connectors of the piston rods lag")
+    for (const p of catalog.parts)
+      for (const r of p.renders)
+        if (r.appearsWhenSeated) scene.getMeshByName(r.node)?.setEnabled(seated.has(p.id));
     if (v === 0 && entering && boot?.start() === true) return; // ANIMATION MODULE: boot
     holder.unfreezeWorldMatrix();
     for (const m of holder.getChildMeshes(false)) m.unfreezeWorldMatrix();
@@ -290,13 +298,8 @@ async function place(
     }
     holder.freezeWorldMatrix();
     for (const m of holder.getChildMeshes(false)) m.freezeWorldMatrix();
-    // ⭐ the contact shadows follow the SEATED set: the final every part of the slice; the boot the parts without a boot place (the anchors)
-    const seated = new Set(v === 1 ? sliceIds : sliceIds.filter((id) => poses?.[id] === undefined));
+    // ⭐ the contact shadows follow the SEATED set
     applyContactShadows(st, seated);
-    // ⭐ a piece that APPEARS WHEN SEATED (the rods' caps — `PART_AUTHORING.md` §3bis) is enabled only while its part is seated
-    for (const p of catalog.parts)
-      for (const r of p.renders)
-        if (r.appearsWhenSeated) scene.getMeshByName(r.node)?.setEnabled(seated.has(p.id));
   };
   applyStage(true);
   scene.onBeforeRenderObservable.add(() => {

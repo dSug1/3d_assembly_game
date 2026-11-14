@@ -49,6 +49,15 @@ export function assemblyOn(st: SceneState): boolean {
   return st.cfg.orbitMode === 0;
 }
 
+/**
+ * ⭐⭐ (2026-11-14) THE PIECE ORBIT is on — a part in hand, around the assembly. ⛔ Not the SCENE ORBIT (no part in hand: the four rings, the centre
+ * moved by a press): the owner, *"the approach with A + dy or finger zoom is not foreseen in the scene orbit"*, *"make sure the zoom with finger is
+ * disabled in the scene orbit"* — the approach (A + dy, the pinch) runs only here (`SCENE_2_ASSEMBLY.md` §5 item 7).
+ */
+export function pieceOrbitOn(st: SceneState): boolean {
+  return assemblyOn(st) && st.greenBox !== null;
+}
+
 /** ⭐ The placed parts' world bounding box, `null` with none. */
 function placedBox(st: SceneState): { lo: Vec3; hi: Vec3 } | null {
   let lo: Vec3 | null = null;

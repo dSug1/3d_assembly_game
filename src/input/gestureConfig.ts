@@ -732,7 +732,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   bootHoldMinMs: 50,
   bootHoldMaxMs: 100,
   bootFallMs: 500,
-  bootReboundPct: 12, // the owner: "make the rebound 100 % higher" (6 first)
+  bootReboundPct: 16, // the owner: "make the rebound 100 % higher" (6 first), then "a bit more (the rebound is a bit dull)" (12; and two hops now)
   bootTurns: 1,
   // ⭐ the owner, 2026-11-14: "add a backwards approach of the camera from the boot moment until the pieces are set, from r=1.5m to r=3m"
   bootCamFromM: 2.5, // "from 2.5m to 3m" (1.5 first; 2.25 tried, reverted)

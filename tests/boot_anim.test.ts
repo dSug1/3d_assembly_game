@@ -161,15 +161,19 @@ describe("the curves", () => {
     expect(p.entries[1]!.turnTo).toBeCloseTo(0.7 * 1.08 - 0.3, 9); // the falling part's window, the plinth's radius not in it
     for (let t = 0; t < p.endMs; t += 5) expect(bootAnimState(p.entries[0]!, t, cfg).theta).toBe(0);
   });
-  it("the REBOUND: very small (the owner: \"a very small rebound\"), straight up, back to rest; no turn", () => {
-    let top = 0;
+  it("the REBOUND: TWO hops straight up (the owner: \"the rebound is a bit dull\"), the second a quarter of the first, back to rest; no turn", () => {
+    const d1 = 180 / 1.5; // the test entry's 180 ms of rebound, split 2 : 1
+    let top1 = 0, top2 = 0;
     for (let t = 770; t < 950; t++) {
       const s = bootAnimState(e, t, cfg);
-      top = Math.max(top, s.h);
+      if (t - 770 < d1) top1 = Math.max(top1, s.h);
+      else top2 = Math.max(top2, s.h);
       expect(s.theta).toBe(0);
     }
-    expect(top).toBeCloseTo(cfg.rebound * e.radius, 3);
-    expect(top).toBeLessThanOrEqual(0.15); // 12 % of the radius (the owner: "100 % higher" than 6 %)
+    expect(top1).toBeCloseTo(cfg.rebound * e.radius, 3);
+    expect(top2).toBeCloseTo((cfg.rebound * e.radius) / 4, 3);
+    expect(Math.abs(bootAnimState(e, 770 + d1, cfg).h)).toBeLessThan(1e-9); // it touches down between the hops
+    expect(top1).toBeLessThanOrEqual(0.2); // 16 % of the radius ("a bit more" than 12 %)
     expect(bootAnimState(e, 950, cfg)).toEqual({ visible: true, scale: 1, h: 0, theta: 0, done: true });
   });
 });

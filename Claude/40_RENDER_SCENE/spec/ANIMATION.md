@@ -40,7 +40,7 @@ The parts are MACHINED, RIGID metal and glass: the principles are applied with a
 | appear (scale pop) | 170 ms (the ball: 5 frames at 30 fps), every piece at once | ease-out-back, 8 % overshoot |
 | hold in the air | each piece its own, 50 – 100 ms (drawn from the boot's seed; 300 first) | still |
 | fall from 3 units | 500 ms — sets g; the lift 3.6 units ≈ 550 ms | h = lift − ½ g t² |
-| landing rebound | 180 ms, 12 % of the radius (6 % first) | a parabola, straight up and down |
+| landing rebound | TWO hops, 180 + 90 ms: 16 % of the radius, then a quarter of it (6 %, then one hop of 12 % first — *"the rebound is a bit dull"*) | parabolas, straight up and down (restitution ½) |
 | boot camera pull back and sweep | the whole boot (≈ 1.6 s), 2.5 m → 3 m (1.5 first; 2.25 tried), yaw −15° → +2° (zero speed) → 0° in 1 s after (−5° → 0 first) | smoothstep (in and out) |
 | idle orbit | starts after 4 s (10, then 5 first); a 6.8 s loop; ± 1.2° yaw, ± 0.5° pitch | an ellipse, faded in over 2 s |
 | idle catch back | 12 mm of finger, or 300 ms without a delta | linear |

@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -333,7 +333,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-10-28) AROUND THE ASSEMBLY: A + drag's dy (⛔ Shift, 2026-10-29) is the APPROACH (and nothing else moves); one finger's dy the PITCH, at the dx yaw's pace
     // (the owner's default: *"the same °/mm as the dx yaw"*) — 170° of pitch over the ring parameter
     const asmOn = assemblyOn(st);
-    const shiftApproach = asmOn && st.orbitShift && !dxOnly;
+    // ⛔ the approach (A + dy) only in the PIECE ORBIT — not foreseen in the scene orbit (the owner, 2026-11-14)
+    const shiftApproach = pieceOrbitOn(st) && st.orbitShift && !dxOnly;
     if (shiftApproach) approachInput(st, db.dy / mmToPx(1));
     // ⭐⭐⭐ (2026-11-04) around the assembly the dy with the finger (`orbitDy`: finger down, the gizmo down)
     const fdy0 = orbitDy(db.dy, asmOn);

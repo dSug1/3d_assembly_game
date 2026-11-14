@@ -31,6 +31,11 @@ import { greenBoxFrame, syncOrbitPieceModel } from "./green_box_wiring";
 import { restingFaceFrame } from "./resting_face_wiring";
 
 export function startRenderLoop(st: SceneState): void {
+  // ⭐⭐ (2026-11-13) THE SHADOW MAPS REDRAWN ONLY WHEN A CASTER CHANGED (`shadowsOnDemand`) — ⭐ (2026-11-14) asked RIGHT BEFORE THEY RENDER, inside the
+  // frame's render: after every `onBeforeRender` mover (the boot animation, the model's stage) and after the active meshes' world matrices are
+  // recomputed. ⛔ Asked before `scene.render()` (2026-11-13 – 14) it ran before those movers and its `computeWorldMatrix()` cached the casters'
+  // PREVIOUS pose — the shadows drawn a frame behind the parts (the owner: "some shadows lag during the rebounds").
+  st.scene.onBeforeRenderTargetsRenderObservable.add(() => shadowsOnDemand(st));
 
   // ⛔⛔ AUDIT 2026-09-27: THE WHOLE FRAME IS GUARDED. Babylon queues the next frame only AFTER this
   // function returns (`AbstractEngine._renderLoop`), so one throw anywhere below used to stop the loop
@@ -355,7 +360,6 @@ export function startRenderLoop(st: SceneState): void {
     greenBoxFrame(st, dtSec);
     syncOrbitPieceModel(st);
     orientCubeFrame(st); // ⭐ (2026-10-12, §21) after the camera moved
-    shadowsOnDemand(st); // ⭐ (2026-11-13) the shadow maps redrawn only when a caster changed — after everything that moved one
     st.scene.render();
     st.frames++;
   }));

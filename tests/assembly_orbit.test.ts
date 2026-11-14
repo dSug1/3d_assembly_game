@@ -135,7 +135,7 @@ describe("⭐⭐⭐ the orbit around the assembly (2026-10-28)", () => {
     expect(a).toContain("const free = (cand: number): boolean => approachStepFree(gapAt(cand), gapNow, gapM, out);"); // ⭐ (2026-11-01) in by the gap kept, as before — out checked too
     expect(a).toContain("if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1) || !mesh.isPickable || !mesh.isEnabled()) continue;"); // ⭐ (Step 4c) the placed parts, cast one by one in the model's space (`modelCast`)
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("const shiftApproach = asmOn && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
+    expect(p).toContain("const shiftApproach = pieceOrbitOn(st) && st.orbitShift && !dxOnly; if (shiftApproach) approachInput(st, db.dy / mmToPx(1));"); // ⛔ (2026-11-14) the piece orbit only
     expect(p).not.toContain("leavesCone"); // ⛔ (2026-11-12) the slide's lock and its cone removed
     const h = code("render/hold_wiring.ts");
     expect(h).toContain("if (h.base.sep !== null) approachInput(st, pinchApproachDyMm(h.base.sep, sep, st.cfg.approachPinchGain));"); // ⭐⭐⭐ (2026-11-13) the pinch is the approach

@@ -54,13 +54,16 @@ export const BOOT_ANIM_DEFAULT: BootAnimConfig = {
   holdMaxMs: 100,
   fallMs: 500,
   liftRef: 3,
-  settleMs: 180,
+  settleMs: 270, // two hops (180 + 90 ms); 180 first (one hop)
   turns: 1, // the owner: "rotate 360"
   overshoot: 0.08,
-  rebound: 0.12, // the owner: "make the rebound 100 % higher" (0.06 first)
+  rebound: 0.16, // the owner: "make the rebound 100 % higher" (0.06 first), then "a bit more (the rebound is a bit dull)" (0.12)
   liftMin: 2,
   turnRoom: 2,
 };
+
+/** The rebound's restitution: each hop the height × e², the time × e. */
+const REBOUND_RESTITUTION = 0.5;
 
 /**
  * A part (or an anchor) to animate: its extent at rest; its motion — `"tumble"` (the default: pop in the air, hold, fall turning, rebound) or
@@ -166,9 +169,15 @@ export function bootAnimState(e: AnimEntry, t: number, cfg: BootAnimConfig): Ani
     // ⚠ −full → 0: the part STARTS a turn off (the same orientation) and ends exactly at its rest orientation
     return { visible: true, scale: 1, h, theta: e.turns ? -full * (1 - p) : 0, done: false };
   }
-  // ⭐ the REBOUND: one hop straight up, a parabola of `rebound` × its radius, back exactly at rest — no turn; ⛔ nothing else moves
-  const u = (t - e.landAt) / Math.max(1, cfg.settleMs);
-  return { visible: true, scale: 1, h: 4 * cfg.rebound * e.radius * u * (1 - u), theta: 0, done: false };
+  // ⭐ the REBOUND — TWO hops straight up, as a real bounce losing energy (the owner: "the rebound is a bit dull" — one hop first): the first
+  // `rebound` × its radius high, the second a quarter of it in half the time (restitution ½: height × ¼, time × ½); back exactly at rest — no turn
+  const D = Math.max(1, e.endAt - e.landAt);
+  const d1 = D / (1 + REBOUND_RESTITUTION);
+  const tt = t - e.landAt;
+  const hop = (u: number, a: number): number => 4 * a * u * (1 - u);
+  const A1 = cfg.rebound * e.radius;
+  const h = tt < d1 ? hop(tt / d1, A1) : hop((tt - d1) / (D - d1), A1 * REBOUND_RESTITUTION * REBOUND_RESTITUTION);
+  return { visible: true, scale: 1, h, theta: 0, done: false };
 }
 
 /**
