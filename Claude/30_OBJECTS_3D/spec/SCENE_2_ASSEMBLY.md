@@ -120,8 +120,9 @@ step the player cannot see — rule 5).
   classification by color of the demo scene"* — it replaces Claude's one heap per material): the **block** (`E02`, `E04` – `E06`: the two cases and
   the two banks), the **crankshaft** (`E03`), the **pistons** (`E07` – `E12`), the **heads** (`E13`, `E14`), the **exhausts** (`E15`, `E16`), the
   **pulley** (`E17`) — six heaps, a single part its own (⚠ the crankshaft stands with the block in the steps but is its own type: chrome, a bar).
-* **Dropped, not placed**: each part falls and settles by the game's own collision rule — flat on the floor, on a part, or leaning; a rest must hold
-  (a part balanced on an edge is refused); **three parts stacked at most**, counted both ways the eye counts.
+* **Dropped, not placed**: each part falls and settles by the game's own collision rule — flat on the floor; a rest must hold (a part balanced on an
+  edge is refused); ⛔⛔ **NO STACKING AT ALL** (the owner, 2026-11-14: *"modify the rule: do not allow the pieces to stack at all at boot time"* — three high first): every part on the
+  floor, no part's outline over another's seen from above (`maxStack: 1`, counted both ways the eye counts).
   ⛔ **NOT laid on its seating face** (the owner: *"I would not lie the parts on their seating face at start: I want to keep the same feel as the demo
   scene"* — it reverses Claude's first proposal for D4): a part lands at any yaw and on whichever face it settles on, as the demo's do; turning it
   onto its seat is the player's work.
@@ -155,8 +156,9 @@ step the player cannot see — rule 5).
     turn). ⚠ To build in W5 (the playable slice).
   - **The demo's rules**: on a stable face of its hull at any yaw (never chosen for its seating face); dropped until it touches; **a rest HOLDS**
     (the centre of mass over the contacts, 1 % of its radius); **one heap per type** (on the floor or its own heap's parts; never the plinth);
-    **three high at most, BOTH WAYS THE EYE COUNTS** (up the support chain AND from above: no floor point under more than three of its heap's
-    outlines — the demo's `D194`); **the reverse of the steps** (the next part on top).
+    ⛔ **ONE HIGH — NO STACKING, BOTH WAYS THE EYE COUNTS** (up the support chain AND from above: no floor point under two outlines; the owner, 2026-11-14: *"modify the rule: do not allow the pieces to stack at all at boot time"*
+    — three high first, the demo's `D194`); **in the FRONT HALF**, the generator's own check since the heaps spread wider (seed 42's part fell just
+    behind the line); **the heaps' order the reverse of the steps**.
   - **Fast enough for a boot (≈ 0.3 – 0.7 s)**: a part collides as its HULL (conservative: nothing rests in another's hollow) and only against what
     stands under it, dropped straight to the floor when nothing does — the first version (every collision piece against every piece, a slow descent)
     took 12 – 30 s. ⛔ **The hull was broken** for the heads and exhausts (many coplanar points in float32: 20,000 triangles for 271 points; the
@@ -171,11 +173,22 @@ step the player cannot see — rule 5).
     **0.2 unit (≈ 3 cm)** of the floor's true edge (`floorHalf` 1 / 0.14 = 7.143, `floorMargin` 0.2; an accidental 7.0 — 2 cm — before). Tested
     on every seed.
   - Checked (`tests/boot_heaps.test.ts`, the real collision pieces, FOUR seeds): nothing overlaps (its counter-example fires), on and inside the
-    floor less its margin, outside the plinth's perimeter, one heap per type, three high, never on a part needed before it; the same seed = the same layout, four
+    floor less its margin, outside the plinth's perimeter, one heap per type, ⛔ every part on the floor only (no stacking); the same seed = the same layout, four
     seeds = four layouts; each < 3 s.
-  - ⚠ Stacks are RARE (0 – 2 parts above the floor per layout): a rest on another engine part (curved, irregular) seldom holds. ⛔ The owner's look.
   - The game: the LEVEL slider **model stage** (0 = boot, the default; 1 = final); the contact shadows follow the seated set (at boot the plinth
     only); the rods' caps (`appears_when_seated`) hidden until seated. The generator travels in the lazy model module (the main bundle unchanged).
+  - ⭐⭐ **THE BOOT'S ANIMATION — POP AND TUMBLE, BUILT** (the owner, 2026-11-14: *"all the pieces except the floor shall appear with a pop up in
+    the air, then rotate 360 on world pitch while they reach their position on the floor"*, then his three videos and *"a very small rebound when the
+    piece lands, the floor shall never be animated"*; the rules: `40_RENDER_SCENE/spec/ANIMATION.md` §4): the layout drawn first, the animation
+    travels TO it (its end the drawn pose, exact); ⭐ ALL AT ONCE (*"all pieces shall appear and drop at the same time: not one after the
+    others"*): every part pops at the same instant — ⭐ the plinth IN PLACE, nothing more (*"the plinth pops up directly in its position: no fall
+    nor rotation"*) — the others above their spots, hold — EACH PIECE ITS OWN 50 – 100 ms (*"different lag for each piece"*) — fall under one g
+    turning 360° about the world's pitch axis,
+    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −5° of yaw onto the front (*"a backwards approach of the camera from
+    the boot moment until the pieces are set"*); ≈ 1.6 s in all, lift 3.6 units; ⚠ neighbours side by side may BRUSH in the air while they
+    turn together (measured: 3 – 10 pairs a layout, the pistons and the block's cases) — the price of all at once; ⭐ it starts only when the boot
+    is READY (the contact file loaded, the shaders compiled; the parts hidden until then; a hitch slows it, never skips it — *"the pop up and
+    rotation is cut"* before); LEVEL › BOOT ANIMATION; `?anim=0` skips it.
 
 ### 2.6 ⭐ The rod's big end — OPEN, and the ONE axis of a piston's way in
 

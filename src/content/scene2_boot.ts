@@ -22,7 +22,8 @@ export const SCENE2_HEAP_ORDER = ["block", "crankshaft", "pistons", "heads", "ex
  * - the heaps' AREAS on an arc of 180° — the FRONT HALF round the YAW ORIGIN, the direction toward the boot camera, read from the camera at load
  *   (the owner, 2026-11-13: *"the parts are in the … half right of the scene, instead of the front half"* — the camera had been assumed at −z);
  *   inside the floor and clear of the plinth; a heap's area: room for its parts lying side by side;
- * - three high at most, counted both ways (the demo's `D194`); a rest holds; the reverse of the steps (the next part on top).
+ * - ⛔ NO STACKING (the owner, 2026-11-14: *"do not allow the pieces to stack at all at boot time"* — three high first, the demo's `D194`): every
+ *   part on the floor, no outline over another's seen from above; a rest holds; the heaps' order the reverse of the steps.
  */
 export const SCENE2_BOOT_RULE: BootRule = {
   heapOf: SCENE2_HEAPS,
@@ -36,7 +37,9 @@ export const SCENE2_BOOT_RULE: BootRule = {
   // edges of the floor", then "0.5 unit is too big" (7.0 before — an accidental 2 cm)
   floorHalf: 1 / 0.14,
   floorMargin: 0.2,
-  maxStack: 3,
+  // ⛔ one high: no part on another, counted both ways (up the chain AND from above) — the owner: "do not allow the pieces to stack at all at boot
+  // time" (3 before)
+  maxStack: 1,
   // ⭐ the perimeter round the plinth: its footprint + 1 unit (14 cm) every side — the owner: "leave more space around the plinth"
   anchorMargin: 1.0,
   jitterShare: 0.25,

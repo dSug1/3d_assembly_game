@@ -253,11 +253,22 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    look** — the RULE is level data, so it is tuned here before any part is played. ⭐⭐ The layout is DRAWN AT EVERY BOOT from the rule (a new
    seed each game — the owner: *"otherwise the parts will always be the same order game after game"*): `core/boot_heaps.ts` `bootFromModel` from
    the `.glb`'s collision pieces (the hull's stable faces, a drop until contact, the demo's rules, ≈ 0.5 s); a scene gives its heaps by type, its
-   anchors, its areas' arc — ⭐⭐ centred on the scene's FRONT (below), the front half —, ⭐ a PERIMETER round the anchors no part crosses (`anchorMargin`; `Scene_2` 1 unit) and a margin before the floor's
+   anchors, its areas' arc — ⭐⭐ centred on the scene's FRONT (below), the front half —, ⛔ NO STACKING (`maxStack: 1`; the owner, 2026-11-14:
+   *"do not allow the pieces to stack at all at boot time"*), ⭐ a PERIMETER round the anchors no part crosses (`anchorMargin`; `Scene_2` 1 unit) and a margin before the floor's
    edge (`floorMargin`; `Scene_2` 0.2 unit) (`src/content/scene2_boot.ts` is the model); `?bootSeed=N` replays; the LEVEL slider **model stage** shows boot / final;
    the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5). ⭐ **Browsing at boot**: before a part is in hand, EVERY PRESS on a part
    or the floor (the press that drives the orbit) moves the orbit's centre there — proportionally to the finger's travel, arriving
    after a set travel (12 mm) — so the player can peep at the heaps (`SCENE_2_ASSEMBLY.md` §5 item 7).
+   ⭐⭐ **THE ANIMATIONS** (the owner, 2026-11-14: *"animations when something move or appear or disappear so the game is dynamic … as per the 12
+   principles of animation by Frank Thomas and Ollie Johnston"*): what the GAME moves on its own — an appearance, a landing, a seat's snap, a reset,
+   the level end — is animated by `40_RENDER_SCENE/spec/ANIMATION.md` (the principles as applied, the timing table, the curves engine-free and
+   tested, the end pose exact); ⛔ never what the finger drives (the orbit, the held part, the browsed glide: by position). A scene lists its own
+   (`Scene_2`: the boot's POP AND TUMBLE, `SCENE_2_ASSEMBLY.md` §2.5; every scene: the IDLE ORBIT); ⛔ the floor never animated; each a removable
+   MODULE (`ANIMATION.md` §6). ⛔ **GATE: the owner's look on the device** — an animation is tuned by eye; his example videos read frame by frame.
+   ⏳ **TO DO — A LOADING INDICATOR** (the owner, 2026-11-14: *"if the scene requires a certain time to load, we will later make a button with a
+   slider to show the scene is loading"*): when a scene's model takes a noticeable time to load (the `.glb` fetch, the boot layout ≈ 0.3 – 1 s, the
+   contact file), a button with a progress slider shows it, then gives way to the boot animation — ⭐ proposed: a boot-task registry every module
+   registers its work in, ONE "boot ready" event that reveals the scene and starts the animations (`ANIMATION.md` §4).
 5. **W5 — the PLAYABLE SLICE: the level data and what the game must gain**: the slice's parts as bodies (the anchor frozen, the others placeable), the
    boot layout from item 4, the steps as data; the plan's requirements for the game (`SCENE_<N>_ASSEMBLY.md` §5 — `Scene_2`: every part orbited in turn,
    the plunge snap, a ghost read only for its part, a seated face skipped, the orbit's centre per step) built as needed by the slice, each with its vectors.

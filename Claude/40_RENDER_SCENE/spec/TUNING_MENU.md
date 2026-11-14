@@ -40,7 +40,8 @@ frames (drags, lifts, four releases, their glides); the step without them reprod
 
 | section | folder | sliders |
 |---|---|---|
-| **LEVEL** | | orbited piece · lock pieces in goal · demo duration |
+| **LEVEL** | | orbited piece · lock pieces in goal · demo duration · background blue · model stage |
+| | BOOT ANIMATION | on · pop · hold shortest / longest (each piece its own) · fall from 3 units (gravity) · rebound · turns · camera pulls back from · camera sweeps from (`ANIMATION.md`) |
 | | GOAL | never-grabbed mm / ° · orbited piece's goal margin mm / ° · capture offset · snap cone · snap time |
 | **INPUT** | | tap max duration · motion deadband · rest floor · rest = N × event gap · orbit drag deadband · its re-arm pause |
 | **ORBIT** | SPEED | yaw gain · elevation gain · box gain yaw / pitch · inertia · piece yaw per orbit yaw · close-in full distance · contact mm/mm |
@@ -50,7 +51,8 @@ frames (drags, lifts, four releases, their glides); the step without them reprod
 | **APPROACH & CONTACT** | | approach by pinch · shell offset · look at the gizmo within · piece gap · collision allowance · solver checks · contact band |
 | | THE APPROACH'S DISTANCE (THE RINGS) | the four rings' radius / height, the 3rd ring's switch |
 | **GIZMO & SECTIONS** | | sections drawn · faces merged within · facet's share · gizmo edge margin · yellow gizmo shown · yellow quad slice · quads' growth |
-| **CAMERA** | | yaw / pitch / radius offset · centre blend |
+| **CAMERA** | | yaw / pitch / radius offset · centre blend · browsed centre's travel |
+| | IDLE ORBIT | on · after · yaw / pitch swing · loop · catch back mm / ms (`ANIMATION.md`) |
 | **RENDERING** | | piece contour opacity · face highlight opacity · quads' opacity · highlight offset · shadows · auto-shadow budget |
 | **SCENE SWAY** | | sway kind / angle / slide / softness · re-trigger turn · reference speed |
 | | PARTS' FOLLOW | inertia · damping · lead · translate / rotate sway softness |

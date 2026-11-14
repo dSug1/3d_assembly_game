@@ -80,6 +80,7 @@ import { paint } from "./hud_paint";
 import { installTuningMenu } from "./tuning_menu";
 import { installPointerHandler } from "./pointer_wiring";
 import { startRenderLoop } from "./render_loop";
+import { wireIdleOrbit } from "./idle_orbit_wiring"; // ANIMATION MODULE: idle
 import { LevelEnd, type LevelResult } from "../core/level_end";
 import { playVolumeOf } from "../core/play_volume";
 import { OrbitInertia } from "../input/orbit_inertia";
@@ -665,6 +666,7 @@ export function createScene(
   // ⭐ Its module (and the glTF reader with it) fetched only by a level that has a model: the other levels' bundle does not carry it.
   st.modelStatus = "";
   st.modelBootNote = "";
+  st.modelAnimNote = "";
   st.backgroundBlueSeen = -1;
   st.modelFloor = null;
   if (spec.model !== undefined) {
@@ -1019,6 +1021,7 @@ export function createScene(
    * several correct-looking analyses, stop modelling the code and ask which READOUT moves.*
    */
   startRenderLoop(st);
+  wireIdleOrbit(st); // ANIMATION MODULE: idle — the idle orbit (`idle_orbit_wiring.ts`): removable with this line and its import
   window.addEventListener("resize", () => st.engine.resize());
 
   return {

@@ -83,6 +83,22 @@ export function installTuningMenu(st: SceneState): void {
       ],
       subsections: [
         {
+          // ⭐ (2026-11-14) the boot's POP AND TUMBLE (`core/boot_anim.ts`, `40_RENDER_SCENE/spec/ANIMATION.md`): a change REPLAYS it (the model stage
+          // to 1 and back to 0 replays it too)
+          title: "BOOT ANIMATION",
+          sliders: [
+            tunable(st, "boot animation (1 = on, 0 = the heaps at once)", "bootAnimOn", 0, 1, 1),
+            tunable(st, "pop (ms)", "bootPopMs", 0, 600, 10),
+            tunable(st, "hold in the air, shortest (ms; each piece its own)", "bootHoldMinMs", 0, 1000, 10),
+            tunable(st, "hold in the air, longest (ms)", "bootHoldMaxMs", 0, 1000, 10),
+            tunable(st, "fall from 3 units (ms; sets gravity)", "bootFallMs", 100, 1500, 25),
+            tunable(st, "rebound (% of the part's radius)", "bootReboundPct", 0, 30, 1),
+            tunable(st, "turns while falling (+ top toward the camera, − away)", "bootTurns", -3, 3, 1),
+            tunable(st, "camera pulls back from (m; 0 = none)", "bootCamFromM", 0, 3, 0.05),
+            tunable(st, "camera sweeps onto the front from (deg yaw; 0 = none)", "bootCamYawFromDeg", -30, 30, 1),
+          ],
+        },
+        {
           // ⭐ When a piece is in its goal: the never-grabbed and the orbited piece's margins; the capture's fit (offset, cone) and the pull's time.
           title: "GOAL",
           sliders: [
@@ -274,6 +290,21 @@ export function installTuningMenu(st: SceneState): void {
         // ⚠ 0 reproduces the old teleporting centre, for an A/B by finger.
         tunable(st, "centre blend (mm)", "orbitBlendDistanceMm", 0, 200, 5),
         tunable(st, "browsed centre: finger travel to arrive (mm)", "browseArriveMm", 5, 150, 5),
+      ],
+      subsections: [
+        {
+          // ⭐ (2026-11-14) the IDLE ORBIT (`core/idle_orbit.ts`, `40_RENDER_SCENE/spec/ANIMATION.md`): a small orbit after a while without a scene input
+          title: "IDLE ORBIT",
+          sliders: [
+            tunable(st, "idle orbit (1 = on, 0 = off)", "idleOrbitOn", 0, 1, 1),
+            tunable(st, "starts after (s without a scene input)", "idleOrbitAfterS", 2, 60, 1),
+            tunable(st, "yaw swing, each side (deg)", "idleOrbitYawDeg", 0, 5, 0.1),
+            tunable(st, "pitch swing, each side (deg)", "idleOrbitPitchDeg", 0, 3, 0.1),
+            tunable(st, "one loop (s)", "idleOrbitPeriodS", 2, 20, 0.2),
+            tunable(st, "catch back: finger travel (mm)", "idleCatchMm", 2, 60, 1),
+            tunable(st, "catch back: an input without a delta (ms)", "idleCatchMs", 50, 1500, 50),
+          ],
+        },
       ],
     },
     {

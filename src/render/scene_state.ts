@@ -614,6 +614,8 @@ export interface SceneState {
   modelStatus: string;
   /** ⭐ (2026-11-13) the boot layout's seed and time (or why it failed), appended to `modelStatus`. */
   modelBootNote: string;
+  /** ⭐ (2026-11-14) the boot's animation's length, for the HUD (`model_import.ts`). */
+  modelAnimNote: string;
   /** ⭐ (2026-11-13) the yaw the camera boots and resets at: facing the scene model's front (`bootYawForFront`), else the rig's global. */
   bootYawRad: number;
   /** ⭐ (2026-11-13) the `backgroundBluePct` last applied to the clear colour (`-1`: none yet — the first frame applies it). */

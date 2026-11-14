@@ -48,10 +48,11 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `ui_theme.ts` · `level_end_ui.ts` · `level_end_wiring.ts` | `D180`: the UI theme's tokens and classes (every screen's style) · the results screen · the level end's per-frame facts |
 | `hud.ts` · `menu.ts` · `mouse_adapter.ts` | the readout · the slider panel · `D94`'s desktop seam (below) |
 | `scene.ts` | the composition root |
+| ⭐ animations | the 12 principles, §1 the finger's exempt → `spec/ANIMATION.md` |
 | ⭐ `green_box_wiring` · `orient_cube` · `hover_wiring` | orbited piece, `HOVER.md` §0 |
 
-⚠ No vector reaches them; the split was checked by the typecheck, the suite, the build and a
-**headless Chrome boot** — a hand is owed. ⭐ Three essays moved to
+⚠ No vector reaches them; checked by the typecheck, suite, build and a **headless Chrome
+boot** — a hand is owed. ⭐ Three essays moved to
 [`history/2026-09-26_index_essays_moved.md`](history/2026-09-26_index_essays_moved.md).
 
 ## Where it stands
@@ -208,8 +209,7 @@ latched (`core/auto_shadow.ts`). ⭐ OFF keeps the orbited piece's shadow (`appl
 `RND1` constraint glyphs (hard vs soft) · `RND2` mate preview ghost + drop line ·
 `RND3` anchor ring during two-touchpoint gestures. All three are spec §6's
 *constraint visibility* requirement: **the stack must never be invisible state.**
-✅ **All three are UNBLOCKED** — `3D1` is built and closed, so the constraint stack they
-must draw exists. · `RND4` Halo/Wedge for an off-screen partner, queued behind 6ter.
+✅ **All three UNBLOCKED** — `3D1` built: the constraint stack they draw exists. · `RND4` Halo/Wedge for an off-screen partner, queued behind 6ter.
 
 
 ---
@@ -217,6 +217,6 @@ must draw exists. · `RND4` Halo/Wedge for an off-screen partner, queued behind 
 ## ⭐ The sway and the camera guards — the full text
 
 ⚠ Both describe **built scene behaviour**: the sympathetic sway (the scene reacting to the
-held object) and the guards on the camera. ⛔ They came here from `QUEUE.md` when it hit its
-cap, and moved on to `history/` when THIS file hit its own — unrewritten both times.
+held object) and the guards on the camera. ⛔ From `QUEUE.md` at its cap, on to `history/` at
+this file's — unrewritten both times.
 ⭐ [`history/2026-09-16_sway_and_camera_guards.md`](history/2026-09-16_sway_and_camera_guards.md).

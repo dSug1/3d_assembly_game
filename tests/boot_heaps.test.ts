@@ -57,7 +57,7 @@ const frontness = (P: Poses, id: string, originDeg: number): number => {
 
 describe("Scene_2's boot stage — drawn at every boot, the demo's rules on every seed", () => {
   for (const seed of SEEDS) {
-    it(`seed ${seed}: every part placed, nothing overlapping, on and inside the floor, one heap per type, three high, the next part on top`, { timeout: 60_000 }, () => {
+    it(`seed ${seed}: every part placed, nothing overlapping, on and inside the floor, one heap per type, ⛔ NO STACKING (on the floor only), the next part on top`, { timeout: 60_000 }, () => {
       const P = layout(seed).L.poses as unknown as Poses;
       expect(Object.keys(P).sort()).toEqual(cat.parts.map((p) => p.id).filter((id) => id !== "E01").sort());
       expect(overlaps(P)).toEqual([]);
@@ -73,7 +73,9 @@ describe("Scene_2's boot stage — drawn at every boot, the demo's rules on ever
         const k = layout(seed).L.perimeter!;
         expect(pts.some((q) => q[0] > k.x0 && q[0] < k.x1 && q[2] > k.z0 && q[2] < k.z1)).toBe(false);
         expect(p.heap).toBe(SCENE2_HEAPS[id]);
-        expect(p.level).toBeLessThanOrEqual(3);
+        // ⛔ the owner, 2026-11-14: "do not allow the pieces to stack at all at boot time" — one high, on the floor only
+        expect(p.level).toBe(1);
+        expect(p.on).toEqual(["floor"]);
         for (const s of p.on)
           if (s !== "floor") {
             expect(P[s]?.heap).toBe(p.heap); // never another heap's part, never the anchor

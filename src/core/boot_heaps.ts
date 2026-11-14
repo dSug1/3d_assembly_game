@@ -6,7 +6,7 @@
  * - **one heap per TYPE of part** (the owner: *"keep the same types of parts close together … so it reproduces the classification by color of the
  *   demo scene"*), the heaps in a STRIP between the floor's edge and the engine, in front as the boot camera sees it;
  * - **dropped, not placed**: each part on a STABLE face of its hull (`restingFaces`: its centre of mass over the support, the tipping gate), at a
- *   random yaw, lowered until it touches the floor or the heap — a rest must HOLD (its centre of mass over its contacts), **three high at most**;
+ *   random yaw, lowered until it touches the floor or the heap — a rest must HOLD (its centre of mass over its contacts), **`maxStack` high at most** (`Scene_2`: ONE — no stacking, the owner 2026-11-14);
  *   ⛔ never chosen for its seating face (*"I would not lie the parts on their seating face at start"*): any stable face, as the demo's;
  * - **the order**: the parts reach their heaps in the REVERSE of the steps, so the part the player needs next is on TOP (*"the last one down is
  *   the first one lifted"*).
@@ -71,6 +71,17 @@ export interface BootPose extends Placement {
   readonly level: number;
   /** What it rests on: the floor and / or parts. */
   readonly on: readonly string[];
+  /** ⭐ (2026-11-14, the boot's animation — `40_RENDER_SCENE/spec/ANIMATION.md` §4) its extent at rest, scene frame: the centre (its hull's centre of
+   *  mass), the radius round it, its lowest and highest y. */
+  readonly extent: BootExtent;
+}
+
+/** A part's extent at rest (scene frame): the bounding sphere round its centre and its height span. */
+export interface BootExtent {
+  readonly centre: Vec3;
+  readonly radius: number;
+  readonly bottom: number;
+  readonly top: number;
 }
 
 export interface BootLayout {
@@ -79,6 +90,18 @@ export interface BootLayout {
   readonly perimeter: { readonly x0: number; readonly x1: number; readonly z0: number; readonly z1: number } | null;
   /** Each heap's centre (x, z) and radius. */
   readonly heaps: Readonly<Record<string, { readonly centre: readonly [number, number]; readonly radius: number }>>;
+  /** ⭐ (2026-11-14) the anchors at their goals: the placement (scene frame, when known) and the extent — the boot's animation pops them too. */
+  readonly anchors: Readonly<Record<string, { readonly goal: Placement | null; readonly extent: BootExtent }>>;
+}
+
+/** The extent of points (scene frame) round a given centre. */
+function extentOf(pts: readonly Vec3[], centre: Vec3): BootExtent {
+  return {
+    centre,
+    radius: Math.max(...pts.map((p) => length(sub(p, centre)))),
+    bottom: Math.min(...pts.map((p) => p[1])),
+    top: Math.max(...pts.map((p) => p[1])),
+  };
 }
 
 const DOWN: Vec3 = [0, -1, 0];
@@ -128,7 +151,11 @@ export function bootShape(part: BootPart): Shape {
 /**
  * ⭐⭐ The layout. `anchors`: parts standing at their goals (pieces already in the scene frame) — obstacles, never touched.
  */
-export function bootLayout(parts: readonly BootPart[], anchors: readonly { readonly id: string; readonly pieces: readonly (readonly Vec3[])[] }[], opt: BootOptions): BootLayout {
+export function bootLayout(
+  parts: readonly BootPart[],
+  anchors: readonly { readonly id: string; readonly pieces: readonly (readonly Vec3[])[]; readonly goal?: Placement }[],
+  opt: BootOptions,
+): BootLayout {
   const rnd = rng(opt.seed);
   const gauss = () => Math.sqrt(-2 * Math.log(Math.max(1e-12, rnd()))) * Math.cos(2 * Math.PI * rnd());
   const shapes = new Map(parts.map((p) => [p.id, bootShape(p)]));
@@ -261,6 +288,22 @@ export function bootLayout(parts: readonly BootPart[], anchors: readonly { reado
           continue;
         }
       }
+      // ⛔ IN THE FRONT HALF — the mean of its pieces' points toward the yaw origin (with no stacking a heap spreads wider: a part at the arc's
+      // end fell just behind the line, seed 42 — the test's rule, now the generator's too)
+      {
+        const pts = part.pieces.flat();
+        const yo = (opt.yawOriginDeg * Math.PI) / 180;
+        let sx = 0, sz = 0;
+        for (const p of pts) {
+          const w = apply(pose, p);
+          sx += w[0];
+          sz += w[2];
+        }
+        if ((sx / pts.length) * Math.cos(yo) + (sz / pts.length) * Math.sin(yo) <= 0) {
+          no("behind the front half");
+          continue;
+        }
+      }
       // ⭐ what it rests on, and the contact points
       const on: string[] = [];
       const contacts: Vec3[] = [];
@@ -285,7 +328,7 @@ export function bootLayout(parts: readonly BootPart[], anchors: readonly { reado
         no("on another heap or the anchor");
         continue;
       }
-      // ⛔ THREE HIGH AT MOST, BOTH WAYS THE EYE COUNTS (the demo's `D194`): up the support chain …
+      // ⛔ `maxStack` HIGH AT MOST (`Scene_2`: one — no stacking), BOTH WAYS THE EYE COUNTS (the demo's `D194`): up the support chain …
       const lv = 1 + Math.max(0, ...on.filter((x) => x !== "floor").map((x) => level.get(x) ?? 0));
       if (lv > opt.maxStack) {
         no("over three, up the chain");
@@ -306,14 +349,21 @@ export function bootLayout(parts: readonly BootPart[], anchors: readonly { reado
         no("over three, from above");
         continue;
       }
-      placed = { ...pose, heap: part.heap, level: lv, on };
+      placed = { ...pose, heap: part.heap, level: lv, on, extent: extentOf(hullW, c) };
       level.set(part.id, lv);
       down.push({ id: part.id, heap: part.heap, hull: hullW, ...ob, outline });
     }
     if (placed === null) throw new Error(`${part.id}: no rest found in heap ${part.heap} after ${opt.tries} tries — ${[...why].map(([k, v]) => `${k} ×${v}`).join("; ")}`);
     poses[part.id] = placed;
   }
-  return { poses, heaps, perimeter: keep };
+  const anchorOut: Record<string, { goal: Placement | null; extent: BootExtent }> = {};
+  for (const a of anchors) {
+    const pts = a.pieces.flat();
+    if (pts.length === 0) continue;
+    const b = box(pts);
+    anchorOut[a.id] = { goal: a.goal ?? null, extent: extentOf(pts, [(b.lo[0] + b.hi[0]) / 2, (b.lo[1] + b.hi[1]) / 2, (b.lo[2] + b.hi[2]) / 2]) };
+  }
+  return { poses, heaps, perimeter: keep, anchors: anchorOut };
 }
 
 /** The point inside the counter-clockwise polygon by at least `margin` from every edge. */
@@ -352,7 +402,7 @@ export function bootFromModel(bytes: Uint8Array, json: unknown, catalog: ModelCa
   if (missing.length > 0) throw new Error(`the boot rule has no heap for ${missing.join(", ")}`);
   return bootLayout(
     geo.filter((g) => !anchors.has(g.id)).map((g) => ({ id: g.id, step: catalog.parts.find((p) => p.id === g.id)!.step, heap: rule.heapOf[g.id]!, pieces: g.pieces })),
-    geo.filter((g) => anchors.has(g.id)).map((g) => ({ id: g.id, pieces: g.pieces.map((pc) => pc.map((p) => apply(g.goal, p))) })),
+    geo.filter((g) => anchors.has(g.id)).map((g) => ({ id: g.id, pieces: g.pieces.map((pc) => pc.map((p) => apply(g.goal, p))), goal: g.goal })),
     { ...rule, seed, yawOriginDeg },
   );
 }
