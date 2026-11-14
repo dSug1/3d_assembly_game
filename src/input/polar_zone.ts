@@ -495,16 +495,33 @@ export const SPIT_BIAS_FULL_RAD = (75 * Math.PI) / 180;
 /** ⭐ A side change is a CROSSING (the turn, the hold) only seen from this pitch up / down: below it the heading is the direction's own (`spitCameraHeading`). */
 export const SPIT_CROSSING_PITCH_RAD = SPIT_BIAS_FROM_RAD;
 
+/** ⭐ (2026-11-14) the part of a unit direction square to the axis under this, the direction is round a TIP (within 30° of the axis): no crossing there */
+export const SPIT_OVER_AXIS_MIN = 0.5;
+
+/**
+ * ⭐⭐⭐ (2026-11-14) HOW STEEPLY THE DIRECTION `u` PASSES THE AXIS `a`: the pitch (rad) of its part SQUARE to the axis — a side change with it steep
+ * (≥ `SPIT_CROSSING_PITCH_RAD`) is the camera passing OVER or UNDER the axis (the zenith edge, the bottom face's middle: a crossing — the turn, the hold);
+ * 0 round a tip (that part under `SPIT_OVER_AXIS_MIN`: its way means nothing there — a silent change). ⛔ (the same day) the pitch of `u` itself: on the
+ * bottom face off its middle `u` leans along the axis (41° toward a tip, 2026-11-14's walk) though it passes under the axis — read as "round a tip", the
+ * side flipped with no turn and no hold, the finger's mapping with it: the gizmo bounced across the middle every few frames.
+ */
+export function overAxisPitch(u: Vec3, a: Vec3): number {
+  const k = dot(u, a);
+  const r: Vec3 = [u[0] - k * a[0], u[1] - k * a[1], u[2] - k * a[2]];
+  const lr = len(r);
+  return lr >= SPIT_OVER_AXIS_MIN ? Math.asin(Math.min(1, Math.abs(r[1]) / lr)) : 0;
+}
+
 /**
  * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed: at the gizmo `g0` on its face (normal `n`), into the face beyond square to the
  * edge (toward the new `side`, along the face) — the dy sign that crossed (`sign`, the finger's last) held until the gizmo is `edgeHoldMm` deep. `null`: no
  * dy to hold, or no way along the face.
  */
-export function crossingHold(g0: Vec3, n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly g0: Vec3; readonly d: Vec3; readonly sign: 1 | -1 } | null {
+export function crossingHold(g0: Vec3, n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly g0: Vec3; readonly d: Vec3; readonly sign: 1 | -1; readonly back: number } | null {
   if (sign === 0 || n === null) return null;
   const s = spitSideRef(a);
   const w: Vec3 = [s[0] * side, s[1] * side, s[2] * side];
   const k = dot(w, n);
   const d = unit([w[0] - k * n[0], w[1] - k * n[1], w[2] - k * n[2]]);
-  return d === null ? null : { g0, d, sign: sign > 0 ? 1 : -1 };
+  return d === null ? null : { g0, d, sign: sign > 0 ? 1 : -1, back: 0 };
 }

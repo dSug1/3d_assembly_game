@@ -442,7 +442,7 @@ export interface GestureConfig {
   tiltAutoM: number;
   /** ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo moving from first millimeter and also the same for all the faces"*) the automatic tilt's blend: the finger's travel (mm) over which the camera turns into the close-in alignment once the orbit starts (0: at once). */
   tiltBlendMm: number;
-  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after a pole-holding face's far edge, the dy that crossed held until the gizmo is this deep in the face beyond (mm) */
+  /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) after an edge that turns the camera round, the dy that crossed held until the FINGER has gone this far the other way (mm; ⛔ 2026-11-14 the gizmo's depth in the face beyond) */
   edgeHoldMm: number;
   /** ⭐⭐⭐ (2026-11-13, the pinch is the approach) the approach per mm of the two fingers' spread (× the two-finger dy it replaces — 1 the same pace) */
   approachPinchGain: number;

@@ -220,7 +220,7 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "tilted pole: automatic within this distance (m; 0: the press only)", "tiltAutoM", 0, 3, 0.05),
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
             // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the owner's hysteresis
-            tunable(st, "tilted pole: past a pole face's far edge, the dy back held until this deep (mm)", "edgeHoldMm", 0, 100, 5),
+            tunable(st, "past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm", 0, 100, 5),
           ],
         },
         {

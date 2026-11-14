@@ -303,8 +303,8 @@ describe("⭐⭐⭐ (2026-11-04, the tilted orbit's rebuild, Step 0) THE dy WITH
     // ⛔ (measured at ff2fca2) the gizmo went against the finger in 29 of 30 moving frames: the dy entered the orbit with its own sign
     const p = code("render/pointer_wiring.ts");
     expect(p).toContain("const fdy0 = orbitDy(db.dy, asmOn);"); expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;"); // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) through the dy hold
-    expect(p).toContain("const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;"); // ⛔ (2026-11-13) × the leash's gain deleted (1)
-    expect(p).toContain("const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1))");
+    expect(p).toContain("const dyPx = (shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;"); // ⭐ (2026-11-14) a dx only zeroes the finger's own dy before the mapping (`zoneFinger`), never the mapped pitch // ⛔ (2026-11-13) × the leash's gain deleted (1)
+    expect(p).toContain("const dvWant = asmOn ? (((shiftApproach ? 0 : fdy) / mmToPx(1))");
     // the approach (A + drag) keeps the finger's own dy: finger up brings the piece in
     expect(p).toContain("if (shiftApproach) approachInput(st, db.dy / mmToPx(1));");
   });

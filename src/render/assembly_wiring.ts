@@ -36,9 +36,9 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, overAxisPitch, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -802,7 +802,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-12, F4) the elevation asked past a pole, read EVERY frame (never piled up while the assembly's orbit is off — a jump later)
   const beyondV = st.orbit.takeBeyond();
   // ⭐⭐⭐ (2026-11-12, §8) the dy hold released once the gizmo is deep enough in the face beyond — or the assembly's orbit off
-  if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null || edgeHoldDepth(st.asmEdgeHold, st.asmG) >= st.cfg.edgeHoldMm / 1000)) st.asmEdgeHold = null;
+  // ⭐⭐⭐ (2026-11-14) its release is the FINGER's (`edgeHoldFinger`, in the pointer's step) — here only with the assembly's orbit gone
+  if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;
   if (!assemblyOn(st) || st.greenBox === null) {
     if (st.asmZoneMesh !== null) st.asmZoneMesh.mesh.isVisible = false; // ⭐ (POLAR_ZONES.md) the zones' fuchsia with the assembly's orbit only
     st.asmHeadO = null; // ⭐ (2026-11-13, §9) read afresh when the assembly's orbit is back
@@ -1745,13 +1746,23 @@ function spitStep(st: SceneState): void {
     st.asmSpitSide = 0;
     return;
   }
-  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  const u = dirAt(st, q.yaw, q.v);
+  // ⭐⭐⭐ (2026-11-14, the owner: *"dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements"*) the
+  // side of the axis the camera's direction is on — the SHOWN rule (`dirAt`: the calm's, the square camera's — the camera's heading and the finger's
+  // mapping are read off it) at the ORBIT's own angles, the finger's: ⛔ at the piece's (`pieceQ`, its spring): a frame late, the gizmo 14 – 30 mm past the
+  // ridge far out; ⛔ the orbit's bare direction (the same day): close in the square camera turned the view over the ridge while the orbit stood 0.17°
+  // past it — no side change, no turn, no hold, the next dy mapped back on the turned view: the gizmo bounced between the ridge's two faces every frame
+  const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);
   const prev = st.asmSpitSide;
   const side = spitSide(u, z.axis, prev);
   st.asmSpitSide = side;
-  // ⭐ a crossing only seen from high up (the zenith edge, the bottom face's): low (round a tip) the heading is the direction's own — the side changes silently
-  if (prev === 0 || side === prev || Math.asin(Math.min(1, Math.abs(u[1]))) < SPIT_CROSSING_PITCH_RAD) return;
+  if (prev === 0 || side === prev) return;
+  // ⭐⭐⭐ (2026-11-14) a CROSSING only where the orbit passes OVER or UNDER the axis (`overAxisPitch`, the part of its direction square to the axis steep:
+  // the zenith edge, the bottom face's middle); round a tip the side changes silently — and a crossing's hold ends there (it held the way back over an edge
+  // the gizmo has now left round the body: the finger's mapping turned with the side)
+  if (overAxisPitch(u, z.axis) < SPIT_CROSSING_PITCH_RAD) {
+    st.asmEdgeHold = null;
+    return;
+  }
   if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, sgn: 0 };
   st.orbitInertia.stop();
   const g = st.asmG;

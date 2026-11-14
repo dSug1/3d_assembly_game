@@ -160,6 +160,7 @@ function zoneScreenUp(z: PolarZone, view: Vec3): Vec3;                          
 4. **The camera** — up per §3.5; the calm computed in F; R4 / R5 restated IN F. ⛔ **R4 KEPT in S2 too (D-Z3, the owner)**: the camera is never
    upside down — the same rule as `Scene_0`'s §8 dy hold: where dy would turn the view over, dy in THAT direction is held until the finger reverses
    past the hysteresis (`edgeHoldMm`); dy the other way and dx stay free throughout. The body's back is reached by dx, along the green, round a pole.
+   ⭐ As built (the crossing, the hold after it, the finger): §4.7.
 5. **The transitions** — entering / leaving a zone: today's timed frame change (the gizmo held; close in pending through the approach, blended by the
    first 10 mm of finger, §9.15) (D-Z7). An S1 ↔ S2 change can be a quarter turn of the glass — its speed may need its own slider (the device decides).
    One frame at a time: the zone the gizmo is in decides. ⭐ The camera's turn itself (here, at the spit's zenith edge and its bottom face's middle):
@@ -218,6 +219,32 @@ step changed (probed far out, the camera 7.7 m from the assembly, the piece 1.3 
   fixed in portrait) need their own values in portrait; not done. (The probe's `WINDOW=w,h`: headless Chrome stays ≥ ~500 px wide — project the recorded
   poses on a narrower glass instead.)
 * Not covered: the rest of the scene (the floor, the plinth) turns about the A → B line — it is what moves on the glass during the half turn.
+
+### 4.7 The spit's crossing and its hold — rebuilt on `Scene_0`'s model (2026-11-14, `1.0.142-Pick-up-of-Parts`)
+> *"when I keep dy upwards or downwards and I hit the zenith edge or the middle of the bottom face, there is still a difference vs. scene 0 at
+> tilted-pole orbit … dy or dx … create hard-to-control movements … analyze the root causes … rebuild properly"* — the owner.
+
+**Measured first** (the same six gestures on both scenes: across and on, the same dy, a 12 px reverse then forward, a dx and back, the reverse past the
+hysteresis, on): `Scene_0` held, 0 mm, 2 mm, dx along the ridge, released. `Scene_0bis` far out: the small reverse took the gizmo BACK over the ridge
+(59 – 82 mm), the camera turned back, a new hold the other way; close in at the bottom, the crossing never made. Four causes:
+1. **The hysteresis on the surface** (§8's depth, true only close in) — far out a finger mm is ~9 mm of surface: released by a 12 px reverse →
+   `ORBIT_ANY_SHAPE.md` §8.1: **the release is the finger's** (`edgeHoldFinger`, `edgeHoldMm` of finger the other way), one rule for every hold.
+2. **The side read late** — the shown direction at the PIECE's angles (its spring): the crossing a frame after the gizmo, 14 – 30 mm past the ridge →
+   **the shown rule at the ORBIT's own angles** (`dirAt(st, st.orbit.yaw, st.orbit.elevation)`). ⛔ Tried the same day: the orbit's bare direction —
+   close in the square camera turned the view over the ridge while the orbit stood 0.17° past it: no side change, no turn, no hold, the next dy mapped
+   back on the turned view (the gizmo bounced between the ridge's two faces every frame). The side must be the one the camera shows.
+3. **The crossing's gate on the direction's own pitch** — off the bottom face's middle the direction leans along the axis (41° toward a tip) though it
+   passes UNDER it: read "round a tip", the side flipped silently (no turn, no hold), the finger's mapping with it — the gizmo bounced across the middle →
+   **`overAxisPitch`**: the part of the direction SQUARE to the axis steep (≥ 60°) is a crossing (over / under the axis); under `SPIT_OVER_AXIS_MIN`
+   (0.5: within 30° of the axis — round a tip) the side changes silently, and **a crossing's hold ends there** (the edge it held is left round the body).
+4. **A dx only** (the held second touch's) zeroed the MAPPED pitch — in a spit seen from above that is the finger's dx → the finger's own dy zeroed
+   before the mapping, the mapped one kept.
+**Probed after** (the same gestures): `Scene_0bis` close in at the top = `Scene_0` (held, 0, 2 mm, dx along the ridge at its height, released); close in
+at the bottom the crossing at the bottom face's FAR edge (z 0.2992 — `Scene_0`'s 0.2995; the square camera faces the bottom face: no crossing at its
+middle close in, as on `Scene_0`); far out, top and bottom: held, 0 mm, 18 – 19 mm on the small reverse (no crossing back), released by the reverse, the
+next crossing held again (no bounce at the middle). ⚠ Far out a dx after the crossing runs along the axis to a tip (the zone's pole) — the side changes
+silently there and the hold ends (`Scene_0`'s ridge ends at the end cap instead).
+**Vectors**: `polar_zone.test.ts` (`overAxisPitch`: under the axis, the walk's 41° case, round a tip, level beside it; the wiring), the pins.
 
 ## 5. Open, not decided by this spec
 * The bend on a LARGE face inside a zone: the cap's I12 (a radial red bends at the cap's rim) for P− on a flat face.
