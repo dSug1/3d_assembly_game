@@ -255,25 +255,40 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], g0, 0)).toBeNull();
     expect(edgeHoldAt(front, [0, -1, 0], [0, -0.614, 0.789], g0, -1)!.sign).toBe(-1);
   });
-  it("⭐⭐⭐ the held sign none, the other whole; released `edgeHoldMm` deep in the face beyond, SQUARE to the edge (a dx along it does not)", async () => {
-    const { edgeHoldAt, edgeHoldDepth, edgeHoldDy } = await import("../src/input/orbit_tilt");
+  it("⭐⭐⭐ the held sign none, the other whole; released after `edgeHoldMm` of FINGER the other way (2026-11-14 — the owner's hysteresis, a finger's: the same far out as close in)", async () => {
+    const { edgeHoldAt, edgeHoldFinger, edgeHoldDy } = await import("../src/input/orbit_tilt");
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
     const h = edgeHoldAt(-Math.PI / 2, [0, 1, 0], [0, 0, 1], [0, 0.5, 0.25], 1)!;
+    expect(h.back).toBe(0);
     expect(edgeHoldDy(h, 3)).toBe(0);
     expect(edgeHoldDy(h, -3)).toBe(-3);
     expect(edgeHoldDy(null, 3)).toBe(3);
-    // into the back side: down it (−y) — deep; along the edge (x): not deeper
-    expect(edgeHoldDepth(h, [0, 0.45, 0.25])).toBeCloseTo(0.05, 12);
-    expect(edgeHoldDepth(h, [0.2, 0.5, 0.25])).toBeCloseTo(0, 12);
+    // the held way pushes on: nothing gathered, still held
+    expect(edgeHoldFinger(h, 10, 30)).toBe(h);
+    // the other way: gathered, the forward pushes in between change nothing; released at the band, not before
+    const a = edgeHoldFinger(h, -12, 30)!;
+    expect(a.back).toBeCloseTo(12, 12);
+    expect(edgeHoldFinger(a, 50, 30)).toBe(a);
+    const b = edgeHoldFinger(a, -17.9, 30)!;
+    expect(b).not.toBeNull();
+    expect(b.back).toBeCloseTo(29.9, 12);
+    expect(edgeHoldFinger(b, -0.2, 30)).toBeNull();
+    // a held nadir (−1): the up way gathers
+    const n = edgeHoldAt(-Math.PI / 2, [0, -1, 0], [0, -0.614, 0.789], [0, 0, 0.3], -1)!;
+    expect(edgeHoldFinger(n, -5, 30)).toBe(n);
+    expect(edgeHoldFinger(n, 31, 30)).toBeNull();
+    expect(edgeHoldFinger(h, 0, 30)).toBe(h);
     expect(DEFAULT_CONFIG.edgeHoldMm).toBe(30);
   });
-  it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` sets the hold from the dy that crossed (the coast stopped); released by depth each frame; the drag's dy through it", () => {
+  it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` sets the hold from the dy that crossed (the coast stopped); released by the FINGER (2026-11-14); the drag's dy through it", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("exit: false, exitAcross: false, heading: hs };");
     expect(a).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);");
-    expect(a).toContain("edgeHoldDepth(st.asmEdgeHold, st.asmG) >= st.cfg.edgeHoldMm / 1000)) st.asmEdgeHold = null;");
+    expect(a).toContain("if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;");
+    expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(p).toContain("const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;");
     expect(p).toContain("if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);");
+    expect(p).toContain("if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);");
   });
 });

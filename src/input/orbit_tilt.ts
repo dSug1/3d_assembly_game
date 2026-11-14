@@ -92,7 +92,7 @@ export const TILT_SLANT_MIN = 1e-3;
  * the face beyond but dx and dy downwards are allowed (the reverse for dy if the pole-holding edge was at the nadir). This will also be OK in case of the
  * cube of scene 1"*) **THE HOLD AFTER A POLE-HOLDING FACE'S FAR EDGE**: leaving a tilted face over the edge AWAY from its heading (`heading`, the tilt's
  * snapped one — the face beyond faces away from the camera: the roll back turns the camera round), the dy SIGN that crossed (`sign`, the finger's) is held
- * until the gizmo is `band` deep in the face beyond, square to the edge (`edgeHoldDepth`) — dx and the other dy free. ⛔ Without it a finger still pushing
+ * until the finger has gone `band` mm the other way (`edgeHoldFinger`; ⛔ 2026-11-14 the gizmo's depth in the face beyond) — dx and the other dy free. ⛔ Without it a finger still pushing
  * the same way went straight back over the edge in the turned frame: the heptagon's ridge bounced the gizmo between its two top faces (60 back-and-forths
  * in the walks). `null`: no hold (a near edge, a side edge, a level face beyond, no dy).
  */
@@ -103,6 +103,8 @@ export interface EdgeHold {
   readonly d: Vec3;
   /** the dy sign held (the finger's that crossed) */
   readonly sign: 1 | -1;
+  /** ⭐⭐⭐ (2026-11-14) the finger's travel THE OTHER WAY since the crossing (mm) — the hold ends at `edgeHoldMm` of it (`edgeHoldFinger`) */
+  readonly back: number;
 }
 export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, g0: Vec3, sign: number): EdgeHold | null {
   const h = Math.hypot(nExit[0], nExit[2]);
@@ -114,11 +116,21 @@ export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, g0: Vec3
   let d = cross([e[0] / le, e[1] / le, e[2] / le], nExit);
   if (dot(d, nTilted) > 0) d = [-d[0], -d[1], -d[2]];
   const ld = Math.hypot(d[0], d[1], d[2]);
-  return { g0, d: [d[0] / ld, d[1] / ld, d[2] / ld], sign: sign > 0 ? 1 : -1 };
+  return { g0, d: [d[0] / ld, d[1] / ld, d[2] / ld], sign: sign > 0 ? 1 : -1, back: 0 };
 }
-/** ⭐⭐⭐ (§8) how deep the gizmo `g` is in the face beyond, square to the crossed edge (m). */
-export function edgeHoldDepth(h: EdgeHold, g: Vec3): number {
-  return dot([g[0] - h.g0[0], g[1] - h.g0[1], g[2] - h.g0[2]], h.d);
+/** ⛔ (2026-11-14) `edgeHoldDepth` (the release by the gizmo's depth on the SURFACE) deleted — the release is the finger's (`edgeHoldFinger`). */
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner: *"the dy in the same direction is hold until the dy in the opposite direction hits the hysteresis threshold"*) THE HOLD'S
+ * HYSTERESIS ON THE FINGER: a finger dy of `dyMm` (mm, signed as the hold's `sign`) — the held way adds nothing, the other way adds its length to `back`;
+ * at `bandMm` the hold ends (`null`). ⛔ The gizmo's depth in the face beyond (`edgeHoldDepth` ≥ `edgeHoldMm` on the SURFACE): the same as the finger only
+ * close in, where the contact's gain makes a finger mm a surface mm — far out a finger mm is ~9 mm of surface (Scene_0bis's spit, which holds at every
+ * distance: the crossing's own overshoot 17 mm, a 12 px reverse 17 more — released, the next forward dy back over the ridge, the camera turned back:
+ * the ping-pong probed 2026-11-14).
+ */
+export function edgeHoldFinger(h: EdgeHold, dyMm: number, bandMm: number): EdgeHold | null {
+  if (!(dyMm !== 0) || Math.sign(dyMm) === h.sign) return h;
+  const back = h.back + Math.abs(dyMm);
+  return back >= bandMm ? null : { ...h, back };
 }
 /** ⭐⭐⭐ (§8) the finger's dy under the hold: its held sign none, the other whole. */
 export function edgeHoldDy(h: EdgeHold | null, dy: number): number {

@@ -154,6 +154,22 @@ contact before the hold already) — to re-walk on an idle machine before it is 
 watchdog), the tilt probe gave nothing.
 ✅✅ **The owner (2026-11-13, on the device, `de789f6` — F1 – F5 and this hold): *"the behavior is tested and is ok for me"*.**
 
+### 8.1 The release is the FINGER's (2026-11-14, `1.0.142-Pick-up-of-Parts`)
+> *"the dy in the same direction is hold until the dy in the opposite direction hits the hysteresis threshold and the dx performs properly"* — the owner,
+> comparing `Scene_0bis` with this hold.
+
+**Why**: the release by the gizmo's DEPTH in the face beyond (`edgeHoldDepth` ≥ `edgeHoldMm` on the surface) equals the owner's hysteresis only close
+in, where the contact's gain makes a finger mm about a surface mm — the only place `Scene_0`'s tilted pole holds. `Scene_0bis`'s spit holds at every
+distance (`POLAR_ZONES.md` §4.7): far out a finger mm is ~9 mm of surface — the crossing's own overshoot 17 mm, a 12 px reverse 17 more: released, the
+next forward dy straight back over the ridge, the camera turned back, a new hold the other way (the ping-pong, probed).
+**The rule** (`edgeHoldFinger` in `input/orbit_tilt.ts`, called in the pointer's step): the hold gathers the finger's travel the OTHER way (`back`, mm;
+the held way adds nothing, forward pushes in between change nothing) and ends at `edgeHoldMm` (30 mm ≈ 113 px) — the same rule for every hold, every
+distance. `edgeHoldDepth` deleted; the release in `assemblyFrame` only when the assembly's orbit is gone. The slider reads *"… held until the finger goes
+this far the other way (mm)"*.
+**Probed** (`Scene_0` close in, the same six gestures before / after): the same sequence — held across, 0 mm on, 2 mm on a small reverse, dx along the
+ridge, released by the reverse. `Scene_1` close in (zenith, caps, bottom) against the morning's run: gizmo jumps 25 → 14, the rest within a run's spread.
+**Vectors**: `orbit_any_shape.test.ts` (the finger gathered the other way only, released at the band, a nadir's), the wiring pins.
+
 ## 9. ✅ THE CAMERA'S ROLL AT THE ZENITH (2026-11-13, `1.0.125-Debug_scene_0`, live `a0ec9bc`) — ✅✅ the owner: *"this is good"*
 
 > *"polar orbit far out: the sections are ok. however there is only one defect: when the gizmo reach the zenith edge, there is a camera roll when the

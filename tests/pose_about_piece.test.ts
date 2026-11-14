@@ -118,6 +118,8 @@ describe("the camera turned about the piece (a polar zone's turn)", () => {
     expect(aw).toContain("const t = zm.sgn === 2 ? null : poseFramingTwo(zm.from, to, piece, zm.k, zm.sgn);");
     expect(aw).toContain("const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);");
     expect(gb).toContain("const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);");
+    // ⭐⭐⭐ (2026-11-14) the spit's side: the SHOWN rule at the ORBIT's own angles (⛔ the piece's spring: late; ⛔ the bare orbit: the square camera's turn over the ridge unseen)
+    expect(aw).toContain("const u = dirAt(st, st.orbit.yaw, st.orbit.elevation);");
   });
 });
 

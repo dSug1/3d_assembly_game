@@ -251,3 +251,34 @@ describe("⭐⭐ the zone the gizmo is in, with the exit's hysteresis (D-Z7)", (
     expect(distanceToFacets(map, z.facets, [0, W / 2, 0])).toBeGreaterThan(0.2);
   });
 });
+
+// ⭐⭐⭐ (2026-11-14, the owner: "dy or dx when the gizmo hit the zenith edge or the middle of the bottom face create hard-to-control movements") the
+// spit's CROSSING is the orbit passing over or under the axis — the part of its direction square to the axis steep — never the direction's own pitch
+describe("the spit's crossing: over or under the axis (overAxisPitch)", async () => {
+  const { overAxisPitch, SPIT_CROSSING_PITCH_RAD } = await import("../src/input/polar_zone");
+  const ax: [number, number, number] = [1, 0, 0];
+  const dirAt = (alongDeg: number, roundDeg: number): [number, number, number] => {
+    // `alongDeg` toward the axis' tip, `roundDeg` round it from straight down (0) — a unit direction
+    const a = (alongDeg * Math.PI) / 180, r = (roundDeg * Math.PI) / 180;
+    return [Math.sin(a), -Math.cos(a) * Math.cos(r), Math.cos(a) * Math.sin(r)];
+  };
+  it("straight under the axis (the bottom face's middle): steep — a crossing", () => {
+    expect(overAxisPitch(dirAt(0, 1), ax)).toBeGreaterThan(SPIT_CROSSING_PITCH_RAD);
+  });
+  it("⛔ the walk's case — off the middle along the axis, leaning 41° toward a tip, yet passing UNDER it: still a crossing (its own pitch read 49°)", () => {
+    const u = dirAt(41, 1);
+    expect(Math.asin(Math.abs(u[1])) * 180 / Math.PI).toBeLessThan(60); // the old gate: "round a tip", silent
+    expect(overAxisPitch(u, ax)).toBeGreaterThan(SPIT_CROSSING_PITCH_RAD);
+  });
+  it("round a tip (within 30° of the axis): none — the side changes silently", () => {
+    expect(overAxisPitch(dirAt(75, 1), ax)).toBe(0);
+  });
+  it("level, beside the axis (round its middle at the height of the axis): not a crossing", () => {
+    expect(overAxisPitch(dirAt(0, 90), ax)).toBeLessThan(SPIT_CROSSING_PITCH_RAD);
+  });
+  it("wired: a crossing only when the orbit passes over / under the axis; a silent change ends the crossing's hold", async () => {
+    const { readFileSync } = await import("node:fs");
+    const aw = readFileSync("src/render/assembly_wiring.ts", "utf8");
+    expect(aw).toContain("if (overAxisPitch(u, z.axis) < SPIT_CROSSING_PITCH_RAD) {\n    st.asmEdgeHold = null;\n    return;\n  }");
+  });
+});

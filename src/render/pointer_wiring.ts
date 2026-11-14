@@ -36,7 +36,7 @@ import { applyCamera, recomputeOrbitCentre, retargetGizmo, syncCentre } from "./
 import { sampleOf } from "./hud_paint";
 import { nudgeOthersWorld, swingBlock } from "./sway_pass";
 import { advanceCentreReturn, advancePieceAim, advancePieceEntry } from "../input/piece_orbit"; // ⏸ (2026-10-12) orbitRollSteps — with the commented-out way in
-import { edgeHoldDy } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
+import { edgeHoldDy, edgeHoldFinger } from "../input/orbit_tilt"; // ⭐ (2026-11-12, ORBIT_ANY_SHAPE.md §8) the dy hold
 
 export function installPointerHandler(st: SceneState): void {
   // ⭐⭐ (2026-10-29, *"A should replace shift"*) THE APPROACH KEY held (`isApproachKey`): its release ends the approach (its coast); a lost window forgets it
@@ -341,14 +341,17 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
     if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
     const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
+    // ⭐⭐⭐ (2026-11-14) …and released by the finger the other way past `edgeHoldMm` (`edgeHoldFinger` — the owner's hysteresis, a finger's, at any distance)
+    if (asmOn && st.asmEdgeHold !== null && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmEdgeHold = edgeHoldFinger(st.asmEdgeHold, fdy0 / mmToPx(1), st.cfg.edgeHoldMm);
     // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) in a polar zone's spit: the finger read in F's upright screen (a dx pole to pole, a dy round the axis — the way
     // it goes on the glass); a crossing's hold is §8's, above (`spitStep` sets it)
-    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, dxOnly ? 0 : fdy1) : { dx: db.dx, fdy: fdy1 };
+    // ⭐ (2026-11-14) a dx only: the finger's OWN dy none, before any mapping — the mapped pitch kept (in a spit seen from above it is the finger's dx)
+    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, dxOnly ? 0 : fdy1) : { dx: db.dx, fdy: dxOnly ? 0 : fdy1 };
     const fdy = zf.fdy;
     const fdx = zf.dx;
-    const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;
+    const dyPx = (shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
-    const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
+    const dvWant = asmOn ? (((shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
     const travel = dvRaw !== 0 ? (asmOn ? { dv: dvWant, du: dvWant } : orbitTravelStep(st, dvRaw, orbitDvPerMm(st))) : { dv: 0, du: 0 };
     const share = dvRaw !== 0 ? travel.dv / dvRaw : 1;
     const yawBefore = st.orbit.yaw;
