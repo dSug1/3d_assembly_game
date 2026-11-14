@@ -2,7 +2,7 @@
  * ⭐⭐ **THE BOOT'S POP AND TUMBLE — ITS WIRING** (2026-11-14; `40_RENDER_SCENE/spec/ANIMATION.md` §4 and §6 — a MODULE: removable).
  * Every part but the floor — ALL AT ONCE — pops in the air above its spot, falls turning about the world's pitch axis, rebounds a hair, rests EXACTLY at its
  * layout pose (`core/boot_anim.ts`, the curves and the schedule). Played when the stage becomes the boot (at load; the stage slider 1 → 0 replays
- * it; a BOOT ANIMATION slider's change replays it), the camera pulling back and sweeping meanwhile (2.5 m → the game's 3 m, yaw −5° → the front). ⛔ The floor never moves. `?anim=0` or the OS's *reduce motion*: the heaps at once.
+ * it; a BOOT ANIMATION slider's change replays it), the camera pulling back and sweeping meanwhile (2.5 m → the game's 3 m, yaw −15° → the front). ⛔ The floor never moves. `?anim=0` or the OS's *reduce motion*: the heaps at once.
  *
  * ⚠ TO REMOVE IT: delete this file and `core/boot_anim.ts` (+ `tests/boot_anim.test.ts`), the lines marked `ANIMATION MODULE: boot` in
  * `model_import.ts`, the `boot…` keys in `input/gestureConfig.ts` and the BOOT ANIMATION sliders (`tuning_menu.ts`, `tests/menu_layout.test.ts`).

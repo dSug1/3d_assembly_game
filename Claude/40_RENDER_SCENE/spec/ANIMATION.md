@@ -41,7 +41,7 @@ The parts are MACHINED, RIGID metal and glass: the principles are applied with a
 | hold in the air | each piece its own, 50 – 100 ms (drawn from the boot's seed; 300 first) | still |
 | fall from 3 units | 500 ms — sets g; the lift 3.6 units ≈ 550 ms | h = lift − ½ g t² |
 | landing rebound | 180 ms, 12 % of the radius (6 % first) | a parabola, straight up and down |
-| boot camera pull back and sweep | the whole boot (≈ 1.6 s), 2.5 m → 3 m (1.5 first; 2.25 tried), yaw −5° → the front | smoothstep (in and out) |
+| boot camera pull back and sweep | the whole boot (≈ 1.6 s), 2.5 m → 3 m (1.5 first; 2.25 tried), yaw −15° → the front (−5° first) | smoothstep (in and out) |
 | idle orbit | starts after 4 s (10, then 5 first); a 6.8 s loop; ± 1.2° yaw, ± 0.5° pitch | an ellipse, faded in over 2 s |
 | idle catch back | 12 mm of finger, or 300 ms without a delta | linear |
 | *(queued)* a seat's snap · a disappearance · a screen | 120 – 250 ms | out / in |
@@ -68,7 +68,7 @@ The parts are MACHINED, RIGID metal and glass: the principles are applied with a
      schedule that proved no contact (the plinth first, staggered pops, parts popping higher to fall one above the other: 5 – 7.6 s) is replaced;
   4. ⭐ **THE CAMERA PULLS BACK** meanwhile (the owner: *"add a backwards approach of the camera from the boot moment until the pieces are set,
      from r=1.5m to r=3m"*, then *"from 2.25m to 3m, yaw from -5 to 0 degree (current front)"*): from 2.5 m to the game's own distance (3 m — *"revert to 2.5 m -> 3m"* after 2.25) and
-     SWEEPING from −5° of yaw onto the front, together, slow in and out, arriving exactly as the last piece is set
+     SWEEPING from −15° of yaw onto the front, together (*"camera yaw from -15 to zero degree at boot"*; −5° first), slow in and out, arriving exactly as the last piece is set
      (`pullBackRadius`); a LAYER (the radius set for the draw, given back after it) — the player may orbit meanwhile; `bootCamFromM` 0: none;
   5. not browsed in flight; the contact shadows off while it plays, back at its end; the model unfrozen while it plays, frozen at its end;
   6. replayed by the stage slider (1 → 0) and by any BOOT ANIMATION slider; `?anim=0` or the OS's *reduce motion*: the heaps at once;

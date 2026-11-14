@@ -737,7 +737,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   // ⭐ the owner, 2026-11-14: "add a backwards approach of the camera from the boot moment until the pieces are set, from r=1.5m to r=3m"
   bootCamFromM: 2.5, // "from 2.5m to 3m" (1.5 first; 2.25 tried, reverted)
   // ⭐ "yaw from -5 to 0 degree (current front)" — the boot's sweep onto the front, with the pull back
-  bootCamYawFromDeg: -5,
+  bootCamYawFromDeg: -15, // then "camera yaw from -15 to zero degree at boot" (−5 first)
   // ⭐ the owner, 2026-11-14: "whenever the player is inactive for xx seconds, such small camera orbit triggers on … the camera will catch back its
   // game position with mm of input or ms (if the input is not delta position)" — the loop and swing measured on his video (…081353), `IDLE_ORBIT_DEFAULT`
   idleOrbitOn: 1,

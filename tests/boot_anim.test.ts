@@ -188,9 +188,9 @@ describe("the CAMERA'S PULL BACK (the owner: \"from r=1.5m to r=3m\" until the p
       last = r;
     }
   });
-  it("the defaults: 2.5 m and −5° of yaw; a LAYER — the radius given back after the draw", () => {
+  it("the defaults: 2.5 m and −15° of yaw; a LAYER — the radius given back after the draw", () => {
     expect(DEFAULT_CONFIG.bootCamFromM).toBe(2.5); // the owner: "revert to 2.5 m -> 3m" (1.5 first; 2.25 tried)
-    expect(DEFAULT_CONFIG.bootCamYawFromDeg).toBe(-5); // "yaw from -5 to 0 degree (current front)"
+    expect(DEFAULT_CONFIG.bootCamYawFromDeg).toBe(-15); // then "from -15 to zero degree" (−5 first) // "yaw from -5 to 0 degree (current front)"
     const w = readFileSync(new URL("../src/render/boot_anim_wiring.ts", import.meta.url), "utf8");
     expect(w).toMatch(/onAfterRenderObservable\.add[\s\S]*st\.camera\.radius -= applied\.dRadius;\s*st\.camera\.alpha -= applied\.dAlpha;[\s\S]*getViewMatrix\(true\)/);
   });
