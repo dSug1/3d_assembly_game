@@ -560,6 +560,7 @@ export function createScene(
   st.asmZoneMix = null;
   st.asmCamLast = null;
   st.asmPieceDrawn = null;
+  st.asmZoneFacetsF = null;
   st.asmSpitSide = 0;
   st.asmZoneAlpha = 0;
   st.asmZoneMesh = null;

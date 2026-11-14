@@ -137,8 +137,9 @@ describe("the turn framing two targets — the piece and the camera's aim (toric
   // far out, as on Scene_0bis: the camera 7.7 m from its aim (the assembly), the piece 1.3 m in front, off the glass's centre
   const aim: Vec3 = [0, 0, 0.5];
   const a: CamPose = { eye: [0, 7.5, 0], look: aim, up: [0, 0.07, 1], piece };
-  // the realignment's target: the half turn about the view through the aim (the old turn's, which sent the piece round the glass)
-  const b0 = turned(A, aim, unit(sub(A.look, A.eye)), Math.PI * 0.95);
+  // the realignment's target: a half turn about the line piece → aim with a tilt (both places moving on the glass, never meeting — ⭐ 2026-11-14: the half
+  // turn about the VIEW through the aim carried the piece's place straight across the aim's: degenerate, the piece's turn — the next block's vector)
+  const b0 = turned(turned(A, aim, unit(sub(aim, piece)), Math.PI * 0.95), aim, unit(cross(sub(aim, piece), [1, 0, 0])), 0.15);
   const b: CamPose = { eye: b0.eye, look: b0.look, up: b0.up };
 
   it("starts on the pose shown and ends on the new one", () => {
@@ -195,5 +196,47 @@ describe("the turn framing two targets — the piece and the camera's aim (toric
   it("degenerate — the piece on the line from the camera to its aim: none (the caller turns about the piece alone)", () => {
     const onRay: CamPose = { eye: [0, 7.5, 0], look: [0, 0, 0], up: [0, 0, 1], piece: [0, 6, 0] };
     expect(poseFramingTwo(onRay, onRay, [0, 6, 0], 0.5, 0)).toBeNull();
+  });
+});
+
+// ⭐⭐⭐ (2026-11-14, the owner: "in the middle of the camera roll there seems to be a jump and then camera roll continue") — the walk: far out the line
+// piece → aim stood near the vertical, the piece's spring tilted it through the old reference's switch (0.95) mid-turn: a 61° roll in ONE frame
+describe("the two-target turn's reference: one for the whole turn", () => {
+  it("the piece → aim line tilting through 18° from the vertical mid-turn: every step of the turn as smooth as its neighbours", () => {
+    const aim: Vec3 = [0, 0, 0.5];
+    const piece0: Vec3 = [0, 6.48, 0.65];
+    const a: CamPose = { eye: [0.3, 7.7, -0.4], look: aim, up: [0, 0.2, 1], piece: piece0 };
+    // the realignment: a half turn ABOUT THE LINE piece → aim (both keep their places), as the spit's crossing far out
+    const half = turned({ eye: a.eye, look: a.look, up: a.up }, aim, unit(sub(aim, piece0)), Math.PI * 0.99);
+    let sg = 0;
+    let prevUp: Vec3 | null = null;
+    const steps: number[] = [];
+    for (let i = 0; i <= 40; i++) {
+      const k = i / 40;
+      // the piece carried 2.2 m along z by its spring through the turn (as in the walk): the line's tilt from the vertical 1° → 19°
+      const piece: Vec3 = [0, 6.48 - 0.4 * k, 0.65 + 2.2 * k];
+      const shift = sub(piece, piece0);
+      const b: CamPose = { eye: [half.eye[0] + shift[0], half.eye[1] + shift[1], half.eye[2] + shift[2]], look: aim, up: half.up };
+      const r = poseFramingTwo(a, b, piece, k, sg)!;
+      expect(r).not.toBeNull();
+      sg = r.sgn;
+      const f = unit(sub(r.pose.look, r.pose.eye));
+      const kk = dot(r.pose.up, f);
+      const up = unit([r.pose.up[0] - kk * f[0], r.pose.up[1] - kk * f[1], r.pose.up[2] - kk * f[2]]);
+      if (prevUp !== null) steps.push((Math.acos(Math.max(-1, Math.min(1, dot(prevUp, up)))) * 180) / Math.PI);
+      prevUp = up;
+    }
+    const med = [...steps].sort((x, y) => x - y)[steps.length >> 1]!;
+    expect(Math.max(...steps)).toBeLessThan(3 * med + 1); // ⛔ the old reference: one step of tens of degrees
+  });
+});
+
+describe("the two-target turn: the two meeting on the glass on the way — the piece's turn, chosen at the start", () => {
+  it("the piece's path crossing the aim's place (a half turn about the view through the aim): none at the first frame; the turn the piece's alone", () => {
+    const aim: Vec3 = [0, 0, 0.5];
+    const piece0: Vec3 = [0, 6.48, 0.65];
+    const a: CamPose = { eye: [0.3, 7.7, -0.4], look: aim, up: [0, 0.2, 1], piece: piece0 };
+    const half = turned({ eye: a.eye, look: a.look, up: a.up }, aim, unit(sub(a.look, a.eye)), Math.PI * 0.99);
+    expect(poseFramingTwo(a, { eye: half.eye, look: aim, up: half.up }, piece0, 0, 0)).toBeNull();
   });
 });

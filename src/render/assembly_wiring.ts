@@ -307,6 +307,32 @@ function levelHeadingOf(st: SceneState, yaw: number): number {
   return st.asmHeadO !== null ? yaw + st.asmHeadO : calmLevelHeading(yaw, st.asmCalm, st.asmCalmWhole);
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-14) IS FACET `j` OF THE MAP IN USE (`map`, built in the map's frame) ONE OF THE POLAR ZONE'S OWN FACETS (`st.asmZone`, world facet indices)? —
+ * its normal and its polygon's centre turned into the world, the world map's facet there (`facetOfNormal`); cached per map and zone. None: false.
+ */
+function zoneFacetOf(st: SceneState, map: FaceMap, j: number): boolean {
+  const zn = st.asmZone;
+  if (zn === null) return false;
+  const key = `${st.asmFaceMap?.key ?? "w"}#${st.asmWorldMap?.key ?? ""}#${zn.id}`;
+  if (st.asmZoneFacetsF === null || st.asmZoneFacetsF.key !== key) st.asmZoneFacetsF = { key, of: new Map() };
+  const memo = st.asmZoneFacetsF.of;
+  const hit = memo.get(j);
+  if (hit !== undefined) return hit;
+  const wm = worldFaceMap(st);
+  const f = map.facets[j];
+  let r = false;
+  if (wm !== null && f !== undefined && f.poly.length > 0) {
+    const R = mapFrame(st);
+    const k = 1 / f.poly.length;
+    const c: Vec3 = [f.poly.reduce((a, v) => a + v[0] * k, 0), f.poly.reduce((a, v) => a + v[1] * k, 0), f.poly.reduce((a, v) => a + v[2] * k, 0)];
+    const cW = R === null ? c : mulM(R, c);
+    r = zn.zone.facets.includes(facetOfNormal(wm, R === null ? f.n : mulM(R, f.n), cW));
+  }
+  memo.set(j, r);
+  return r;
+}
+
 /** ⭐ The calm's eased state (`st.asmCalm`) and its whole share's TARGET by position (left in `st.asmCalmWhole` for `calmFrame` to ease). */
 function calmTargets(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-09, POLAR_ORBIT_CLEANUP.md §8 — F7b) the rule in `input/orbit_calm.ts` (`calmTarget`, `calmStep`): every SIDE facet, slanted ones
@@ -332,6 +358,18 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const tl = st.asmTilt;
   st.asmCalmWhole = 0;
   st.asmCalmWholeV = 0;
+  // ⭐⭐⭐ (2026-11-14, the owner: *"when I orbit fast in scene 0bis, the movements of the gizmo, camera and piece are not coherent: some jumps, tilts/rolls"*)
+  // ON A POLAR ZONE'S OWN FACETS (a tip's fan, small facets round a pole) NO CALM: whole, as over a cap — there is no face to stay square to there, the
+  // zone's polar orbit is the frame. ⛔ The calm facet by facet: each fan facet's normal up to 90° from the body's, the calm's target swung at every
+  // facet change — a 22 – 50° roll and a 17 – 20° turn of the view in ONE frame (18 of the fast walk's 24 jumps, far out)
+  // ⭐ the facet the MAP's place is on THIS frame, the one the calm reads (`zoneFacetOf`) — ⛔ `st.gizmoNormal`: updated after the calm, the frame onto a fan
+  // facet still read the body's — the calm stepped onto the fan facet for that frame (a 14.7° view jump, probed)
+  if (sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
+    st.asmCalmWhole = 1;
+    st.asmCalmWholeV = 1;
+    st.asmCalm = calmStep(st.asmCalm, { n: null, sH: 1, sV: 1 }, dtMs);
+    return;
+  }
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
@@ -378,6 +416,13 @@ function calmTargets(st: SceneState, dtMs: number): void {
       const i = col.facets.indexOf(sh.t.stack);
       // ⭐⭐⭐ (2026-11-10) the VERTICAL share alone (the horizontal calm carried over the edge)
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
+      // ⭐⭐⭐ (2026-11-14) …and BOTH shares whole by position toward an end bordering a polar zone's own facet (no calm there, `zoneFacetOf`) — the calm gone
+      // before the border, as toward a pole. ⛔ Released at the border by the whole share's ease: 45% of a strong calm in one frame, a 24° view jump
+      if (i >= 0) {
+        const zLo = i > 0 && zoneFacetOf(st, map, col.facets[i - 1]!);
+        const zHi = i < col.facets.length - 1 && zoneFacetOf(st, map, col.facets[i + 1]!);
+        if (zLo || zHi) st.asmCalmWhole = Math.max(st.asmCalmWhole, poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, zLo, zHi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100));
+      }
     }
   }
   st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
