@@ -193,8 +193,7 @@ class ModelPlay {
     for (const id of ids) host.freeze(id, true);
     // ⭐ FIRST in line: a switch holds every scene input; the taps the flow takes are noted
     st.scene.onPointerObservable.add((info, es) => this.pointerFirst(info.type, info.event as PointerEvent, es), undefined, true);
-    // ⭐ AFTER the game's own: a press on a PLACED part while a part is held notes the gizmo's point (its tap moves the gizmo — as the green piece's)
-    st.scene.onPointerObservable.add((info) => this.pointerLate(info.type, info.event as PointerEvent));
+    // ⚠ a tap on a PLACED part while a part is held moves NO gizmo: around the assembly the ray places it (`retargetGizmo`, 2026-10-28) — as today
   }
 
   // ─── the pointer ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -262,15 +261,6 @@ class ModelPlay {
     this.pending = { kind: "pick", id: near[0]!, others: near.slice(1) };
   }
 
-  private pointerLate(type: number, e: PointerEvent): void {
-    if (type !== PointerEventTypes.POINTERDOWN || this.held === null || this.st.router.all().length !== 1) return;
-    // ⭐ a press on a PLACED part's drawn mesh (the proxies are invisible to the game's pick): its tap moves the gizmo there (`pendingPartCentre`)
-    const placed = new Set(this.ids.filter((id) => id !== this.held && this.st.goalCommit.has(id)));
-    const hit = this.pickParts(e.clientX, e.clientY, placed);
-    if (hit === null) return;
-    this.st.pendingPartCentre = { pointerId: e.pointerId, target: [hit.at[0], hit.at[1], hit.at[2]], normal: hit.n === null ? null : [hit.n[0], hit.n[1], hit.n[2]], host: hit.id, x: e.clientX, y: e.clientY, t: performance.now() };
-  }
-
   /** The parts of `eligible` within the hit area round (x, y), the nearest first. */
   private partsNear(x: number, y: number, eligible: ReadonlySet<string>): string[] {
     const r = mmToPx(HIT_MM / 2);
@@ -319,12 +309,14 @@ class ModelPlay {
     return best === null || best.d < 0.9 ? null : best.id;
   }
 
-  /** The finger on the held part's DRAWN meshes (its face proxy may be a single face). */
+  /** The finger on the held part's DRAWN meshes (its face proxy may be a single face) — within the same 9 mm hit area as a pick (a crank's thin bar). */
   private onHeld(x: number, y: number): boolean {
     if (this.held === null) return false;
     const mine = new Set(this.host.meshesOf(this.held));
-    const p = this.st.scene.pick(x, y, (m) => mine.has(m) && m.isEnabled(), false, this.st.camera);
-    return p?.hit === true;
+    const r = mmToPx(HIT_MM / 2);
+    const at: [number, number][] = [[x, y]];
+    for (const k of [0.5, 1]) for (let i = 0; i < 8; i++) at.push([x + r * k * Math.cos((i * Math.PI) / 4), y + r * k * Math.sin((i * Math.PI) / 4)]);
+    return at.some(([sx, sy]) => this.st.scene.pick(sx, sy, (m) => mine.has(m) && m.isEnabled(), false, this.st.camera)?.hit === true);
   }
 
   // ─── the frame ────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -76,15 +76,18 @@ try {
     return { held: st.greenBox ? st.greenBox.name : null, placed: st.goalCommit.count, total: st.goalCommit.total, verdict: st.lastVerdict, outlined: [...new Set(outl.map((n) => n.split("_")[0]))],
       cam: [st.camera.position.x, st.camera.position.y, st.camera.position.z].map((x) => +x.toFixed(3)), placedFlag: st.orbitPiecePlaced, E02: pose("E02"), E03: pose("E03"), orbit: [+st.orbit.yaw.toFixed(3), +st.orbit.elevation.toFixed(3)] }; })()`);
   // the screen point of a part: its drawn meshes' bounding centre, projected
+  // a screen point ON a part: its drawn meshes' vertices projected, the first whose pick meets the part (⛔ its box's centre misses a thin bar)
   const screenOf = (pid) => ev(`(() => { const st = window.__st; const ms = st.scene.meshes.filter((m) => st.modelBrowse.has(m) && m.name.startsWith("${pid}") && m.isEnabled());
-    if (ms.length === 0) return null; let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (const m of ms) { m.computeWorldMatrix(true); const b = m.getBoundingInfo().boundingBox; for (const [k, v] of [["x", 0], ["y", 1], ["z", 2]]) { lo[v] = Math.min(lo[v], b.minimumWorld[k]); hi[v] = Math.max(hi[v], b.maximumWorld[k]); } }
-    const c = { x: (lo[0] + hi[0]) / 2, y: (lo[1] + hi[1]) / 2, z: (lo[2] + hi[2]) / 2 };
-    const e = st.scene.getEngine(); const vp = st.camera.viewport.toGlobal(e.getRenderWidth(), e.getRenderHeight());
-    const V = c.constructor; const p = window.BABYLON_project ? null : null;
-    const m = st.scene.getTransformMatrix(); const w = [c.x, c.y, c.z, 1]; const M = m.m;
-    const x = w[0] * M[0] + w[1] * M[4] + w[2] * M[8] + M[12], y = w[0] * M[1] + w[1] * M[5] + w[2] * M[9] + M[13], ww = w[0] * M[3] + w[1] * M[7] + w[2] * M[11] + M[15];
-    const s = e.getHardwareScalingLevel(); return [((x / ww + 1) / 2) * vp.width * s, ((1 - y / ww) / 2) * vp.height * s]; })()`);
+    if (ms.length === 0) return null; const e = st.scene.getEngine(); const vp = st.camera.viewport.toGlobal(e.getRenderWidth(), e.getRenderHeight()); const s = e.getHardwareScalingLevel();
+    const M = st.scene.getTransformMatrix().m; const mine = new Set(ms); const pts = [];
+    for (const m of ms) { m.computeWorldMatrix(true); const W = m.getWorldMatrix().m; const pos = m.getVerticesData("position") ?? []; const step = Math.max(3, 3 * Math.floor(pos.length / 3 / 40));
+      for (let i = 0; i + 2 < pos.length; i += step) { const x0 = pos[i], y0 = pos[i + 1], z0 = pos[i + 2];
+        const wx = x0 * W[0] + y0 * W[4] + z0 * W[8] + W[12], wy = x0 * W[1] + y0 * W[5] + z0 * W[9] + W[13], wz = x0 * W[2] + y0 * W[6] + z0 * W[10] + W[14];
+        const x = wx * M[0] + wy * M[4] + wz * M[8] + M[12], y = wx * M[1] + wy * M[5] + wz * M[9] + M[13], w = wx * M[3] + wy * M[7] + wz * M[11] + M[15];
+        if (w <= 0) continue; const sx = ((x / w + 1) / 2) * vp.width * s, sy = ((1 - y / w) / 2) * vp.height * s; if (sx > 8 && sy > 260 && sx < ${W} - 8 && sy < ${H} - 8) pts.push([sx, sy]); } }
+    pts.sort((a, b) => a[1] - b[1]); const mid = pts.length ? pts[Math.floor(pts.length / 2)] : null; const order = mid ? [...pts].sort((a, b) => Math.hypot(a[0] - mid[0], a[1] - mid[1]) - Math.hypot(b[0] - mid[0], b[1] - mid[1])) : [];
+    for (const [px, py] of order) { for (const [ox, oy] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) { const p = st.scene.pick(px + ox, py + oy, (m) => m.isEnabled() && (st.modelBrowse.has(m)), false, st.camera); if (p.hit && mine.has(p.pickedMesh)) return [px + ox, py + oy]; } }
+    return null; })()`);
   const mouse = (type, x, y, buttons) => send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
   const tap = async (x, y) => { await mouse("mouseMoved", x, y, 0); await mouse("mousePressed", x, y, 1); await step(3); await mouse("mouseReleased", x, y, 0); };
 
@@ -149,6 +152,72 @@ try {
   s = await state();
   await shot("5_crank");
   check(s.held === "E03", `the next pick: E03 in hand (${s.verdict})`);
+
+  // ⭐ the piece orbit answers the finger once the switch is over
+  const orbitNow = () => ev("[window.__st.orbit.yaw, window.__st.orbit.elevation]");
+  const drag = async (x, y, dx, dy, n) => { await mouse("mouseMoved", x, y, 0); await mouse("mousePressed", x, y, 1); await step(2); for (let k = 1; k <= n; k++) { await mouse("mouseMoved", x + (dx * k) / n, y + (dy * k) / n, 1); await step(1); } await mouse("mouseReleased", x + dx, y + dy, 0); };
+  let o0 = await orbitNow();
+  await drag(300, 600, 120, 0, 12);
+  await step(20);
+  let o1 = await orbitNow();
+  check(Math.abs(o1[0] - o0[0]) > 0.05, `the piece orbit turns with a drag (yaw ${o0[0].toFixed(3)} → ${o1[0].toFixed(3)})`);
+
+  // ⭐ a SINGLE tap on the held part: nothing before the double-tap window is over, its resting face after it
+  const p6 = await screenOf("E03");
+  const v0 = await ev("window.__st.lastVerdict");
+  await tap(p6[0], p6[1]);
+  await step(3);
+  const vMid = await ev("window.__st.lastVerdict");
+  check(vMid === v0, "single tap on the held part: nothing yet (the window)");
+  await step(40);
+  const vAfter = await ev("window.__st.lastVerdict");
+  console.log("single tap:", vAfter);
+  check(vAfter !== v0 || (await ev("window.__st.greenBox && window.__st.greenBox.name")) === "E03", "single tap on the held part: still held, its tap judged after the window");
+
+  // ⭐ a tap on the PLACED lower case while a part is held moves NO gizmo — around the assembly the ray places it (2026-10-28): as today
+  const g0 = await ev("[...window.__st.centreBlend.targetM]");
+  const pc = await screenOf("E02");
+  if (pc !== null) { await tap(pc[0], pc[1]); await step(20); }
+  const g1 = await ev("[...window.__st.centreBlend.targetM]");
+  check(JSON.stringify(g0) === JSON.stringify(g1) && (await ev("window.__st.greenBox && window.__st.greenBox.name")) === "E03", "a tap on the placed case: no gizmo move, the crank still held");
+
+  // ⭐ THE INPUTS HELD THROUGH A SWITCH: a double tap puts the crank down; a drag during the switch moves nothing
+  const p7 = await screenOf("E03");
+  await tap(p7[0], p7[1]);
+  await step(4);
+  await tap(p7[0], p7[1]);
+  await step(1); // ⭐ the put-down runs at the next frame: the switch starts
+  check((await ev("window.__st.greenBox === null")) === true, "double tap on the crank (its thin bar, the 9 mm reach): put down at once");
+  o0 = await orbitNow();
+  await drag(300, 600, 150, 40, 10);
+  o1 = await orbitNow();
+  check(Math.abs(o1[0] - o0[0]) < 1e-9 && Math.abs(o1[1] - o0[1]) < 1e-9, `a drag during the switch moves nothing (${o0} → ${o1})`);
+  await step(60);
+  s = await state();
+  check(s.held === null, `the crank put down (${s.verdict})`);
+
+  // ⭐⭐ IDLE WHILE HELD: the camera out to the scene orbit's distance, back on an input
+  await ev("(() => { const st = window.__st; st.cfg.idleOrbitOn = 1; st.cfg.idleOrbitAfterS = 1; return 1; })()");
+  // the scene orbit back at the boot's view (the put-down left the camera at the waist, the crank off the glass)
+  await ev(`import("/src/render/camera_rig.ts").then((r) => { const st = window.__st; st.orbit.reset(st.bootYawRad, st.bootElevation); r.applyCamera(st); return 1; })`);
+  await step(5);
+  const p8 = await screenOf("E03");
+  console.log("idle pick at:", p8);
+  if (p8 === null) throw new Error("the crank is not on the glass");
+  await tap(p8[0], p8[1]);
+  await step(60);
+  s = await state();
+  check(s.held === "E03", `the crank picked again (${s.verdict})`);
+  const distNow = () => ev("(() => { const st = window.__st; const c = st.asm ? st.asm.centre : [0, 0, 0]; const p = st.camera.position; return Math.hypot(p.x - c[0], p.y - c[1], p.z - c[2]); })()");
+  const dHeld = await distNow();
+  await step(150);
+  const dIdle = await distNow();
+  check(dIdle > dHeld + 0.3, `idle while held: the camera out (${dHeld.toFixed(2)} → ${dIdle.toFixed(2)} m)`);
+  await drag(300, 600, 30, 0, 6);
+  await step(60);
+  const dBack = await distNow();
+  check(Math.abs(dBack - dHeld) < 0.6, `an input: the camera back to the piece orbit (${dBack.toFixed(2)} m)`);
+  await shot("6_idle_back");
   const err = await ev("window.__stepErr ?? null");
   check(errors === 0 && err === null, `no exception (${errors}; ${err})`);
   ws.close();
