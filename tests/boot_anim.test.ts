@@ -213,6 +213,17 @@ describe("the CAMERA'S YAW: −15° → +2° (null speed there) → 0° in 1 s, 
   });
 });
 
+describe("⛔ no input-driven orbit or approach until the yaw is back at 0° (the owner: \"deny input driven orbit or approach until the zero degree has been reached\")", () => {
+  const w = readFileSync(new URL("../src/render/boot_anim_wiring.ts", import.meta.url), "utf8");
+  it("the module's pointer filter is FIRST in line, stops the scene's pointer events while the animation or the yaw's tail runs", () => {
+    expect(w).toMatch(/st\.scene\.onPointerObservable\.add\(\s*\(info, es\) => \{[\s\S]*const busy = anim !== null \|\| tail !== null;[\s\S]*es\.skipNextObservers = true;[\s\S]*\},\s*undefined,\s*true,\s*\);/);
+  });
+  it("a press made meanwhile stays stopped until its release (no half gesture)", () => {
+    expect(w).toMatch(/if \(busy && info\.type === PointerEventTypes\.POINTERDOWN\) held\.add\(id\);/);
+    expect(w).toMatch(/if \(busy \|\| held\.has\(id\)\)/);
+  });
+});
+
 describe("the PITCH axis: the boot camera's right — a positive angle tips the top TOWARD the camera", () => {
   for (const f of [0, 90, 180, 270, 33]) {
     it(`front ${f}°`, () => {

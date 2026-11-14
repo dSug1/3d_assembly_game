@@ -256,7 +256,8 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
    anchors, its areas' arc — ⭐⭐ centred on the scene's FRONT (below), the front half —, ⛔ NO STACKING (`maxStack: 1`; the owner, 2026-11-14:
    *"do not allow the pieces to stack at all at boot time"*), ⭐ a PERIMETER round the anchors no part crosses (`anchorMargin`; `Scene_2` 1 unit) and a margin before the floor's
    edge (`floorMargin`; `Scene_2` 0.2 unit) (`src/content/scene2_boot.ts` is the model); `?bootSeed=N` replays; the LEVEL slider **model stage** shows boot / final;
-   the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5). ⭐ **Browsing at boot**: before a part is in hand, EVERY PRESS on a part
+   the tests check the rules on several seeds (`SCENE_2_ASSEMBLY.md` §2.5). ⭐ **Browsing at boot** — the SCENE ORBIT (the four rings, the centre moved by a press; ⛔ no approach — distinct from the PIECE ORBIT, the polar
+   and tilted-poles orbits wired to the part in hand, with no centre moved by a press: `SCENE_2_ASSEMBLY.md` §5 item 7): before a part is in hand, EVERY PRESS on a part
    or the floor (the press that drives the orbit) moves the orbit's centre there — proportionally to the finger's travel, arriving
    after a set travel (12 mm) — so the player can peep at the heaps (`SCENE_2_ASSEMBLY.md` §5 item 7).
    ⭐⭐ **THE ANIMATIONS** (the owner, 2026-11-14: *"animations when something move or appear or disappear so the game is dynamic … as per the 12

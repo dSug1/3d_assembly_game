@@ -184,7 +184,8 @@ step the player cannot see — rule 5).
     others"*): every part pops at the same instant — ⭐ the plinth IN PLACE, nothing more (*"the plinth pops up directly in its position: no fall
     nor rotation"*) — the others above their spots, hold — EACH PIECE ITS OWN 50 – 100 ms (*"different lag for each piece"*) — fall under one g
     turning 360° about the world's pitch axis,
-    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2°, then back to it in 1 s (*"a backwards approach of the camera from
+    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2° (zero speed there), then back to it in 1 s; ⛔ no input-driven orbit or approach until the yaw
+    is back at 0° (*"deny input driven orbit or approach until the zero degree has been reached"*) (*"a backwards approach of the camera from
     the boot moment until the pieces are set"*); ≈ 1.6 s in all, lift 3.6 units; ⚠ neighbours side by side may BRUSH in the air while they
     turn together (measured: 3 – 10 pairs a layout, the pistons and the block's cases) — the price of all at once; ⭐ it starts only when the boot
     is READY (the contact file loaded, the shaders compiled; the parts hidden until then; a hitch slows it, never skips it — *"the pop up and
@@ -340,8 +341,22 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
 4. **Kinds for placed parts** (`FinalPose.kind`, `D183`) carried to the orbited parts; **a free spin** symmetry (the pulley).
 5. **The heaps' generator** for a scene's parts (`core/demo_plan.ts`, today `Scene_1`'s).
 6. **The running engine at the level's end.**
-7. **The orbit's centre per step** (§2.8): redefined when a part seats (or when the player picks the next part), eased; and a player gesture to move
-   it (`IN10`, queued: orbit about a chosen point). ⭐⭐ **BUILT (2026-11-13) for the boot — BROWSING** (the owner: *"at boot (ie before a part is
+7. ⭐⭐ **TWO ORBITS, NAMED** (the owner, 2026-11-14: *"let's call the orbit we have in the boot scene the 'scene orbit' (which includes the 4
+   rings, the repositioning of the orbit center with the press). It is distinct from the 'piece orbit' (which includes the polar orbit and the
+   tilted-poles orbit) which will be wired to the piece. Why this distinction: for example because the repositioning of the orbit center is not
+   foreseen for the moment in the piece orbit"*, and *"the approach with A + dy or finger zoom is not foreseen in the scene orbit"*):
+
+   | | **the SCENE ORBIT** | **the PIECE ORBIT** |
+   |---|---|---|
+   | when | no part in hand (the boot, browsing the heaps) | a part in hand, round it and the assembly |
+   | what it is | the camera on the rig's FOUR RINGS round the orbit's centre | the POLAR orbit and the TILTED-POLES orbit (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md`, `POLAR_ORBIT_CLEANUP.md`) |
+   | the centre moved by a press | ⭐ YES — browsing (below) | ⛔ NO (not foreseen for now) |
+   | the approach (A + dy, the pinch / finger zoom) | ⛔ NO | YES (§2.9) |
+   | its own rig | `Scene_2`'s rings (below) | the piece's |
+
+   ⚠ A rule written for one is not assumed for the other: a change to the scene orbit says so, a change to the piece orbit says so.
+   **The orbit's centre per step** (§2.8): redefined when a part seats (or when the player picks the next part), eased; and a player gesture to move
+   it (`IN10`, queued: orbit about a chosen point). ⭐⭐ **BUILT (2026-11-13) for the boot — BROWSING** — the SCENE ORBIT's (the owner: *"at boot (ie before a part is
    picked up), the player shall be able to peep at the pieces therefore the player shall be able to move the center of the current orbit towards the
    piece of his choice. I would propose a click or first touch moves the orbit center to the point where the raycast hit the surface of a piece or the
    floor"*), then (*"the change of orbit center shall be done with one rapid tap followed by press (which drives the orbit). The translation of the
@@ -363,7 +378,7 @@ The level data (W5). ⭐ **W3 STARTED 2026-11-13, STEP BY STEP** (the owner: *"s
    ⭐ **THE RIG, `Scene_2`'s own** (2026-11-13, the owner's values from the menu — Scene_1's were the painting's): ring 1 (top) r **5.10** m at
    **+3.54**; ring 2 r **0.90** at **+0.60**; ring 3 (on) r **0.90** at **−0.60**; ring 4 (bottom) r **1.46** at **−0.83** — heights from the orbit
    centre; the centre (0, 0.23, 0) and the boot distance 3 m Scene_1's (`src/content/scene_2.ts`).
-   ⚠ **The orbit around the assembly with a part in hand** (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md` — the pipeline's) needs an ORBITED PIECE: in
+   ⚠ **The PIECE ORBIT — around the assembly with a part in hand** (`PIECE_ORBIT.md`, `ORBIT_ANY_SHAPE.md` — the pipeline's) needs an ORBITED PIECE: in
    `Scene_2` none exists yet (the parts are drawn, not bodies), so only the bare rig runs — `Scene_1`'s rings, tuned for the painting (the owner:
    *"it looks like the orbit is an old 3-ring orbit, and not the one we have built in this pipeline"*). W5's order: ① a `.glb` part as the orbited
    piece (its collision pieces, its face proxies as the faces the gizmo and the resting face read), picked from its heap by a tap; ② seating — the

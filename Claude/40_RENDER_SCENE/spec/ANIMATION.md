@@ -73,6 +73,9 @@ The parts are MACHINED, RIGID metal and glass: the principles are applied with a
      arrive to 0 degree at almost zero speed in 1s"*; smootherstep both legs, `bootCamYawDeg`; −5° → 0 then −15° → 0 first), slow in and out, arriving exactly as the last piece is set
      (`pullBackRadius`); a LAYER (the radius set for the draw, given back after it) — the player may orbit meanwhile; `bootCamFromM` 0: none;
   5. not browsed in flight; the contact shadows off while it plays, back at its end; the model unfrozen while it plays, frozen at its end;
+  ⛔ **NO INPUT-DRIVEN (SCENE) ORBIT OR APPROACH until the yaw is back at 0°** (the owner: *"deny input driven orbit or approach until the zero degree has
+     been reached"*): the module's own pointer filter, first in line, stops every scene pointer event while the animation and the yaw's last
+     second run; a press made meanwhile stays stopped until released; the menu and the UI untouched;
   6. replayed by the stage slider (1 → 0) and by any BOOT ANIMATION slider; `?anim=0` or the OS's *reduce motion*: the heaps at once;
   7. ⭐⭐ **IT STARTS WHEN THE BOOT IS READY** (the owner: *"show the scene when everything at boot has been computed. at the moment, the scene is
      shown and the timer starts so the pop up and rotation is cut and I start to see the pieces sometimes when they have fallen already"*): the

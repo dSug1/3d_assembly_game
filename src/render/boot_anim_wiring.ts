@@ -8,6 +8,7 @@
  * `model_import.ts`, the `boot…` keys in `input/gestureConfig.ts` and the BOOT ANIMATION sliders (`tuning_menu.ts`, `tests/menu_layout.test.ts`).
  */
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import {
   animatedPlacement, BOOT_ANIM_DEFAULT, bootAnimPlan, bootAnimState, bootCamYawDeg, CAM_YAW_BACK_MS, CAM_YAW_OVER_DEG, pitchAxis, pullBackRadius,
@@ -120,9 +121,31 @@ export function bootAnimator(host: BootAnimHost): BootAnimator {
     st.camera.getViewMatrix(true);
   });
 
+  // ⭐⭐ NO INPUT-DRIVEN ORBIT OR APPROACH until the camera is back at the front (the owner: "deny input driven orbit or approach until the zero
+  // degree has been reached"): while the animation plays and the yaw's last second runs, every pointer event on the scene is stopped HERE, before
+  // the game's own observers (inserted first); a press made meanwhile stays stopped until its release (no half gesture reaches the game).
+  // ⛔ The menu and the UI are not the scene: untouched.
+  const held = new Set<number>();
+  st.scene.onPointerObservable.add(
+    (info, es) => {
+      const e = info.event as PointerEvent;
+      const busy = anim !== null || tail !== null;
+      const id = e.pointerId;
+      if (busy && info.type === PointerEventTypes.POINTERDOWN) held.add(id);
+      if (busy || held.has(id)) {
+        es.skipNextObservers = true;
+        if (info.type === PointerEventTypes.POINTERUP) held.delete(id);
+      }
+    },
+    undefined,
+    true,
+  );
+
   const stop = (): void => {
-    tail = null;
+    // ⚠ only an animation still RUNNING takes the yaw's tail with it: once finished, the stage applied at its end calls `stop()` too — clearing the
+    // tail there made the +2° → 0° a jump (the owner: "the return from +2 to zero is still a jump")
     if (anim === null) return;
+    tail = null;
     for (const it of anim.items) {
       if (!it.shown) host.node(it.e.id)?.setEnabled(true);
       for (const m of it.meshes) st.modelBrowse.add(m);
