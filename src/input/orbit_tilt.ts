@@ -387,6 +387,64 @@ export function frameMix(a: CamFrame, b: CamFrame, k: number, hint: Vec3 | null)
   return { frame: { dir: rotateAbout(a.dir, axis, t), up: rotateAbout(a.up, axis, t) }, axis, angle: th };
 }
 
+/** ⭐ A camera's pose: where it is, what it looks at, its up — and where the piece was drawn with it (`piece`; none: the piece given with the turn). */
+export interface CamPose {
+  readonly eye: Vec3;
+  readonly look: Vec3;
+  readonly up: Vec3;
+  readonly piece?: Vec3 | null;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner: *"the piece still snaps 180 degrees diagonally before the camera realignment brings the piece back to its position"*) THE
+ * CAMERA TURNED ABOUT THE PIECE, `k` of the way from the pose `a` (the one on the glass when the turn began) to `b` (this frame's): its axes by ONE turn
+ * (`frameMix`'s, the half turn's way kept by `hint` — and past it, never back the short way round), the piece's place in the camera's frame carried
+ * straight from `a`'s (with the piece where `a` drew it, `a.piece`) to `b`'s, the eye put where that place holds for the piece NOW (it may still move: its
+ * spring catching up, far out 1.7 m through a half turn — the camera follows it as ever) — so the piece stays on the glass where it was (or glides straight to where `b` puts
+ * it) and the assembly turns behind it; the look's distance blended. ⛔ The camera turned about the glass's centre (its up about its view): the piece, off
+ * the centre far out, went round the glass — and, the view's offsets turned with the heading, first jumped to the opposite corner.
+ */
+export function poseAboutPiece(a: CamPose, b: CamPose, piece: Vec3, k: number, hint: Vec3 | null): { readonly pose: CamPose; readonly axis: Vec3 | null; readonly angle: number } {
+  const frameOf = (p: CamPose): CamFrame => ({ dir: norm([p.eye[0] - p.look[0], p.eye[1] - p.look[1], p.eye[2] - p.look[2]]), up: p.up });
+  const fa = frameOf(a);
+  const fb = frameOf(b);
+  const m = frameMix(fa, fb, 1, hint);
+  let axis = m.axis;
+  let angle = m.angle;
+  // ⭐ past the half turn the shortest way flips: kept the way it began (the angle grows beyond 180°, never a jump back)
+  if (axis !== null && hint !== null && dot(axis, hint) < 0 && angle > Math.PI / 2) {
+    axis = [-axis[0], -axis[1], -axis[2]];
+    angle = 2 * Math.PI - angle;
+  }
+  const s = Math.min(1, Math.max(0, k));
+  const basis = (f: CamFrame): { r: Vec3; u: Vec3; f: Vec3 } => {
+    const d = norm(f.dir);
+    const r = norm(cross(f.up, d));
+    const u = cross(d, r);
+    return { r, u, f: [-d[0], -d[1], -d[2]] };
+  };
+  const coords = (p: CamPose, B: { r: Vec3; u: Vec3; f: Vec3 }, q: Vec3): Vec3 => {
+    const v: Vec3 = [q[0] - p.eye[0], q[1] - p.eye[1], q[2] - p.eye[2]];
+    return [dot(v, B.r), dot(v, B.u), dot(v, B.f)];
+  };
+  const ca = coords(a, basis(fa), a.piece ?? piece);
+  const cb = coords(b, basis(fb), piece);
+  const t = s * angle;
+  const ft: CamFrame = axis === null || !(angle > 1e-9) ? (s >= 1 ? fb : fa) : { dir: rotateAbout(fa.dir, axis, t), up: rotateAbout(fa.up, axis, t) };
+  const Bt = basis(ft);
+  const c: Vec3 = [ca[0] + (cb[0] - ca[0]) * s, ca[1] + (cb[1] - ca[1]) * s, ca[2] + (cb[2] - ca[2]) * s];
+  const eye: Vec3 = [
+    piece[0] - (Bt.r[0] * c[0] + Bt.u[0] * c[1] + Bt.f[0] * c[2]),
+    piece[1] - (Bt.r[1] * c[0] + Bt.u[1] * c[1] + Bt.f[1] * c[2]),
+    piece[2] - (Bt.r[2] * c[0] + Bt.u[2] * c[1] + Bt.f[2] * c[2]),
+  ];
+  const la = Math.hypot(a.look[0] - a.eye[0], a.look[1] - a.eye[1], a.look[2] - a.eye[2]);
+  const lb = Math.hypot(b.look[0] - b.eye[0], b.look[1] - b.eye[1], b.look[2] - b.eye[2]);
+  const l = la + (lb - la) * s;
+  const look: Vec3 = [eye[0] + Bt.f[0] * l, eye[1] + Bt.f[1] * l, eye[2] + Bt.f[2] * l];
+  return { pose: { eye, look, up: Bt.u }, axis, angle };
+}
+
 /**
  * ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"yes"* to a speed in °/s) THE ROLL'S DURATION (ms) at most `degS` °/s for
  * a roll of `rad` (the whole turn, `frameMix`'s angle) — the same angular speed for every roll: 360°/s, a far edge's half turn 0.5 s, a side's 63° 0.18 s

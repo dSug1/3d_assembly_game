@@ -37,7 +37,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
-import { rotateAbout } from "../input/orbit_tilt";
+import { poseAboutPiece, type CamPose } from "../input/orbit_tilt";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, edgeHoldDepth, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -1156,32 +1156,41 @@ export function approachRelease(st: SceneState): void {
 /** ⭐ THE CAMERA'S FRAME: behind the piece along its direction (locked, the cone's), the owner's world offsets as ever, its up upright. */
 export function assemblyCameraFrame(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
   const f = assemblyCameraFrameRaw(st, cam, off);
-  // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md D-Z7) a zone's switch: the camera turned from the frame shown then to this one, at the tilts' one speed (`zoneStep`)
+  // ⭐⭐⭐ (2026-11-14) a zone's switch / the spit's crossing turns the camera ABOUT THE PIECE, on its pose (`zoneMixPose`, the camera's stage) — the frame
+  // here is the one turned to. ⛔ (2026-11-13) its up turned about the view here: the piece went round the glass's centre, after a jump to the opposite corner
+  st.asmCamLast = { dir: f.dir, up: f.up };
+  return f;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-14, the owner: *"the piece still snaps 180 degrees diagonally before the camera realignment brings the piece back to its position … I don't
+ * like this snap jump"*) THE CAMERA'S POSE DURING A ZONE'S TURN (`asmZoneMix`): from the pose on the glass at the switch to this frame's (`eye`, `look`,
+ * `up` — the camera's stage builds them from the frame turned to), turned ABOUT THE PIECE (`poseAboutPiece`): the piece holds its place on the glass, the
+ * assembly turns behind it; the turn's angle sets its time (`zoneStep`), its axis kept frame to frame. No turn: the pose as given. Measured (Scene_0bis,
+ * the zenith edge, far out): the piece leapt from (−0.27, −0.06) of the half-glass to (0.27, 0.76) — the offsets turned with the heading — then went round.
+ */
+export function zoneMixPose(st: SceneState, piece: Vec3, eye: Vec3, look: Vec3, up: Vec3): CamPose {
   const zm = st.asmZoneMix;
-  let shown: RigCameraFrame = f;
-  if (zm !== null) {
-    // ⭐⭐⭐ (2026-11-13, the owner: *"when the camera rolls, the piece flies outside the screen to then come back"*) the turn ABOUT THE VIEW ONLY: the frame
-    // shown at the switch laid on this frame's direction (its up square to it), so the camera keeps looking along the piece's direction and only its up
-    // turns — ⛔ the whole frame mixed: mid-turn the camera looked along the old direction, the piece placed along the new one, off the glass
-    const d = f.dir;
-    const k0 = zm.from.up[0] * d[0] + zm.from.up[1] * d[1] + zm.from.up[2] * d[2];
-    const pu: Vec3 = [zm.from.up[0] - k0 * d[0], zm.from.up[1] - k0 * d[1], zm.from.up[2] - k0 * d[2]];
-    const lu = Math.hypot(pu[0], pu[1], pu[2]);
-    // ⭐⭐⭐ (2026-11-14, the walks: a 173° flip in ONE frame at the bottom face's half turn) the turn's way KEPT from its first frame (`zm.sgn`): a half
-    // turn has two ways round, and `frameMix` chose by the last rounding — 90° one way, then the other way, the picture flipped
-    if (lu > 1e-6) {
-      const u0: Vec3 = [pu[0] / lu, pu[1] / lu, pu[2] / lu];
-      const c = u0[0] * f.up[0] + u0[1] * f.up[1] + u0[2] * f.up[2];
-      const x: Vec3 = [u0[1] * f.up[2] - u0[2] * f.up[1], u0[2] * f.up[0] - u0[0] * f.up[2], u0[0] * f.up[1] - u0[1] * f.up[0]];
-      let phi = Math.atan2(x[0] * d[0] + x[1] * d[1] + x[2] * d[2], c);
-      if (zm.sgn === 0) zm.sgn = phi < 0 ? -1 : 1;
-      else if (Math.sign(phi) !== zm.sgn && Math.abs(phi) > Math.PI / 2) phi += 2 * Math.PI * zm.sgn;
-      zm.rad = Math.abs(phi);
-      shown = { dir: d, up: rotateAbout(u0, d, Math.min(1, zm.k) * phi) };
-    }
-  }
-  st.asmCamLast = { dir: shown.dir, up: shown.up };
-  return shown;
+  const to: CamPose = { eye, look, up };
+  st.asmPieceDrawn = [piece[0], piece[1], piece[2]]; // ⭐ where the piece is drawn this frame: a turn starting next frame starts from it
+  if (zm === null) return to;
+  const r = poseAboutPiece(zm.from, to, piece, zm.k, zm.axis);
+  zm.axis = r.axis ?? zm.axis ?? [0, 1, 0]; // ⭐ the angle read (a turn of nothing has no axis of its own: done at once — never held for ever)
+  zm.rad = r.angle;
+  st.asmCamLast = { dir: norm3([r.pose.eye[0] - r.pose.look[0], r.pose.eye[1] - r.pose.look[1], r.pose.eye[2] - r.pose.look[2]]), up: r.pose.up };
+  return r.pose;
+}
+
+/** ⭐ The pose on the glass now (the camera drawn last frame) — a zone's turn starts from it. */
+function poseShown(st: SceneState): CamPose {
+  const c = st.camera;
+  const t = c.getTarget();
+  return { eye: [c.position.x, c.position.y, c.position.z], look: [t.x, t.y, t.z], up: [c.upVector.x, c.upVector.y, c.upVector.z], piece: st.asmPieceDrawn };
+}
+
+function norm3(v: Vec3): Vec3 {
+  const l = Math.hypot(v[0], v[1], v[2]);
+  return l > 1e-12 ? [v[0] / l, v[1] / l, v[2] / l] : [0, 0, 1];
 }
 
 function assemblyCameraFrameRaw(st: SceneState, cam: OrbitAt, off?: CameraAngleOffset): RigCameraFrame {
@@ -1590,7 +1599,8 @@ function sameZone(a: PolarZone, b: PolarZone): boolean {
  */
 function zoneStep(st: SceneState, dtMs: number): void {
   const zm = st.asmZoneMix;
-  if (zm !== null) {
+  // ⭐ (2026-11-14) from the frame its angle is known (`zoneMixPose` read it: its axis) — ⛔ by the placeholder's 90° first: 20° in the first frame, then 8.5°
+  if (zm !== null && zm.axis !== null) {
     zm.k = rollStep(zm.k, 1, dtMs, rollDurationMs(zm.rad, st.cfg.tiltRollDegS));
     if (zm.k >= 1) st.asmZoneMix = null;
   }
@@ -1653,7 +1663,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
     }
   } else st.asmMapQ = null;
   // the camera's turn from the frame it shows now (none before the first frame: at once)
-  st.asmZoneMix = st.asmCamLast === null ? null : { from: st.asmCamLast, k: 0, rad: Math.PI / 2, sgn: 0 };
+  st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };
   st.lastVerdict =
     next === null
       ? "orbit: out of the polar zone — the world's frame again"
@@ -1716,7 +1726,7 @@ function spitStep(st: SceneState): void {
   st.asmSpitSide = side;
   // ⭐ a crossing only seen from high up (the zenith edge, the bottom face's): low (round a tip) the heading is the direction's own — the side changes silently
   if (prev === 0 || side === prev || Math.asin(Math.min(1, Math.abs(u[1]))) < SPIT_CROSSING_PITCH_RAD) return;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: st.asmCamLast, k: 0, rad: Math.PI / 2, sgn: 0 };
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null };
   st.orbitInertia.stop();
   const g = st.asmG;
   const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);

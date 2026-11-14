@@ -386,8 +386,11 @@ export interface SceneState {
   asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
   /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
-  /** ⭐⭐⭐ (D-Z7) the camera's turn into a zone's frame (or out): the frame shown at the switch, the share, the turn's axis */
-  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamFrame; k: number; rad: number; /** the turn's way about the view, kept from its first frame (0: not yet) */ sgn: number } | null;
+  /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
+   *  angle, its axis kept frame to frame (`null`: not yet) */
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null } | null;
+  /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
+  asmPieceDrawn: import("../core/vec").Vec3 | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */

@@ -214,6 +214,6 @@ describe("⭐ the camera's up SQUARED to its view (was `uprightBlend` at the sli
     const w = upSquareToView([0, 0, 1], [0, 0, 2]); // the up along the view: the world's up instead
     expect(w).toEqual([0, 1, 0]);
     expect(upSquareToView([0, 1, 0], [0, 0, 0])).toEqual([0, 1, 0]); // no view: the up as it was
-    expect(code("render/green_box_wiring.ts")).toContain("const up = upSquareToView(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]]);");
+    expect(code("render/green_box_wiring.ts")).toContain("const up = upSquareToView(upIn, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]]);");
   });
 });
