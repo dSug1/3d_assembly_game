@@ -58,7 +58,7 @@ boot** — a hand is owed. ⭐ Three essays moved to
 ## Where it stands
 
 ✅ **Scenes are DATA** (`src/content/`, `content/scenes.ts`; the level menu or `?sceneIndex=`). ⭐⭐ `Scene_0` is the HEPTAGON since
-2026-11-12 — the orbit on ANY shape: rules, root causes, fixes; §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
+2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.

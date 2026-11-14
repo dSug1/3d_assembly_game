@@ -555,6 +555,14 @@ export function createScene(
   st.asmMapQ = null;
   st.asmTilt = null;
   st.asmEdgeHold = null;
+  st.asmZones = null;
+  st.asmZone = null;
+  st.asmZoneMix = null;
+  st.asmCamLast = null;
+  st.asmPieceDrawn = null;
+  st.asmSpitSide = 0;
+  st.asmZoneAlpha = 0;
+  st.asmZoneMesh = null;
   st.asmDySign = 0;
   st.asmHeadO = null;
   st.asmHeadW = 1;

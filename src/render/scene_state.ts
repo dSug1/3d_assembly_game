@@ -389,6 +389,23 @@ export interface SceneState {
    */
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
+  /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
+  asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
+  /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
+  asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
+  /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
+   *  angle, its axis kept frame to frame (`null`: not yet) */
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the way round the piece → aim line, kept from its first frame (0: not yet) */ sgn: number } | null;
+  /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
+  asmPieceDrawn: import("../core/vec").Vec3 | null;
+  /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
+  asmCamLast: import("../input/orbit_tilt").CamFrame | null;
+  /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
+  asmSpitSide: number;
+  /** ⭐⭐⭐ (2026-11-13, the owner) the zones drawn in fuchsia (`zoneHighlightFrame`) and the zones' key they were built for */
+  asmZoneMesh: { readonly key: string; readonly mesh: import("@babylonjs/core/Meshes/mesh").Mesh } | null;
+  /** ⭐ (§3.5) the angle of F's up on the glass (`fingerInFrame`) — kept looking along the axis */
+  asmZoneAlpha: number;
   /** ⭐ (§8) the sign of the finger's last orbit dy (the one that crossed) — 0: none yet */
   asmDySign: number;
   /** ⭐⭐⭐ (2026-11-13, `ORBIT_ANY_SHAPE.md` §9) the world camera's calm heading offset off the yaw, held while the view looks down (`heldOffsetStep`); `null`: none (tilted, off) */

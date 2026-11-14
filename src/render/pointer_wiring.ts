@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, tiltOnPress } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, tiltOnPress, zoneFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -340,7 +340,12 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     const fdy0 = orbitDy(db.dy, asmOn);
     // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the finger's dy sign remembered; after a pole-holding face's far edge, the sign that crossed HELD (`edgeHoldDy`)
     if (asmOn && fdy0 !== 0 && !dxOnly && !shiftApproach) st.asmDySign = Math.sign(fdy0);
-    const fdy = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
+    const fdy1 = asmOn ? edgeHoldDy(st.asmEdgeHold, fdy0) : fdy0;
+    // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §3.5) in a polar zone's spit: the finger read in F's upright screen (a dx pole to pole, a dy round the axis — the way
+    // it goes on the glass); a crossing's hold is §8's, above (`spitStep` sets it)
+    const zf = asmOn && !shiftApproach ? zoneFinger(st, db.dx, dxOnly ? 0 : fdy1) : { dx: db.dx, fdy: fdy1 };
+    const fdy = zf.fdy;
+    const fdx = zf.dx;
     const dyPx = (dxOnly || shiftApproach ? 0 : fdy) * st.cfg.boxGainPitch;
     const dvRaw = (dyPx / mmToPx(1)) * st.cfg.gainOrbitElevation * elevationGainScale(st.cfg);
     const dvWant = asmOn ? (((dxOnly || shiftApproach ? 0 : fdy) / mmToPx(1)) * orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm) / ((2 * ORBIT_PITCH_MAX_RAD * 180) / Math.PI) : dvRaw;
@@ -352,7 +357,7 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     // down with the piece's distance to the gizmo — full from `orbitGainFullM` out, at the contact the gizmo `orbitContactMmPerMm` on the surface per mm
     const kd = asmOn ? closeInGain(approachDistance(st.cfg, st.approach), st.cfg.orbitGainFullM, st.cfg.orbitContactMmPerMm, orbitDegPerMm(st.cfg, st.orbit.elevation).yawDegPerMm, st.asm?.radius ?? 0) : 1;
     // ⭐⭐ (2026-10-25) no yaw while the top face pause's roll is under way (straight above, a dx would turn the picture like a roll)
-    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -db.dx * st.cfg.boxGainYaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
+    st.orbit.drag(shiftApproach ? 0 : pauseYawStep(topPauseOn(st), st.topPause, -fdx * st.cfg.boxGainYaw * st.pieceYawGainDrag * kd), dyPx * share * kd);
     // ⭐⭐⭐ (2026-11-10, the owner's decisions) under the tilt: COMMITTED AT THE EDGE (never back over it before the roll is whole), the finger's delta
     // CLAMPED in the stretch (the gizmo never ahead of the view's turn) — `tiltClampStep`
     tiltClampStep(st, yawBefore, vBefore);

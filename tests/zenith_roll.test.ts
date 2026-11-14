@@ -99,6 +99,6 @@ describe("the camera's heading through the zenith (§9)", () => {
     expect(src).toMatch(/offsetFrame\(u, cameraHeading\(cam\.yaw, orbitDir\(cam\.yaw, cam\.v\), u, levelHeadingOf\(st, cam\.yaw\)\)/);
     expect(src).toMatch(/st\.asmHeadO = heldOffsetStep\(st\.asmHeadO, tgt, w, st\.asmHeadW, dYaw\)/);
     expect(src).toMatch(/return st\.asmHeadO !== null \? yaw \+ st\.asmHeadO : calmLevelHeading\(yaw, st\.asmCalm, st\.asmCalmWhole\)/);
-    expect(src).toMatch(/const hW = cameraHeading\(yW, uOW, headingFrom\(uW, nX\), calmLevelHeading\(yW, cW\)\)/);
+    expect(src).toMatch(/const hW = cameraHeading\(yW, uOW, headingFrom\(uW, nX\), hR \?\? calmLevelHeading\(yW, cW\)\)/);
   });
 });

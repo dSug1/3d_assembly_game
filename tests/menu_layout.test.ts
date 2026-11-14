@@ -56,6 +56,8 @@ const LAYOUT: Node[] = [
     n("SMOOTHING", ["boxSmoothMs", "gizmoEaseMs", "orbitSpringMs", "cameraCatchUpMs"]),
     n("CALM ON A FACE", ["faceSpanShareH", "faceSpanZoneHPct", "faceSpanZoneMinHCm", "faceSpanShareVOn", "faceSpanShareV", "faceSpanZoneVPct", "faceSpanZoneMinVCm"]),
     n("TILTED POLE", ["tiltedPole", "tiltRollDegS", "tiltAutoM", "tiltBlendMm", "edgeHoldMm"]),
+    // ⭐⭐⭐ (2026-11-14, merged from 1.0.129b-: POLAR_ZONES.md D-Z1 – D-Z7) where the tilted pole stops
+    n("POLAR ZONES", ["zoneOn", "zoneValenceMin", "zoneFacetMinRatio", "zoneSnapDeg", "zoneUprightMaxDeg", "zoneSpitMinDeg", "zoneWholeShare", "zoneExitMm"]),
   ]),
   n("APPROACH & CONTACT", ["approachPinchGain", "orbitShellOffsetMm", "assemblyLockDistM", "pieceGapMm", "collisionSkinMm", "pieceSolverQueries", "contactBandMm"], [
     n("THE APPROACH'S DISTANCE (THE RINGS)", ["orbitTopRadiusM", "orbitTopHeightM", "orbitMiddleRadiusM", "orbitMiddleHeightM", "orbitLowerRingOn", "orbitLowerRadiusM", "orbitLowerHeightM", "orbitBottomRadiusM", "orbitBottomHeightM"]),
@@ -78,9 +80,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("110 sliders, each once, each a live config value; no folder over 9", () => {
+  it("118 sliders (110 + the polar zones' 8), each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(110);
+    expect(all.length).toBe(118);
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);

@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, restDrawn, shownOffset, tiltClampStep, zoneMixPose } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -1251,7 +1251,15 @@ export function greenBoxFrame(st: SceneState, dtSec: number): void {
   // ⭐ The owner: *"the camera looks at the yellow target (orbit center)"*.
   // ⭐⭐⭐ (2026-10-16) the camera's up: upright, turned with the swing between rings 2 and 3 over a crossing
   // ⭐ squared to the view (`upSquareToView` — ⛔ 2026-11-12 the slide view's roll to upright removed with the slide)
-  const up = upSquareToView(camFrame.up, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]]);
+  let upIn: Vec3 = camFrame.up;
+  // ⭐⭐⭐ (2026-11-14) a polar zone's turn (its switch, the spit's crossing): the camera turned ABOUT THE PIECE from the pose on the glass (`zoneMixPose`)
+  if (po === null && assemblyOn(st)) {
+    const zp = zoneMixPose(st, pp, camAt, lookAt, camFrame.up);
+    camAt = [zp.eye[0], zp.eye[1], zp.eye[2]];
+    lookAt = [zp.look[0], zp.look[1], zp.look[2]];
+    upIn = zp.up;
+  }
+  const up = upSquareToView(upIn, [lookAt[0] - camAt[0], lookAt[1] - camAt[1], lookAt[2] - camAt[2]]);
   // ⛔ (2026-11-04, the audit) a non-finite camera is THROWN, never written: a NaN blanked the glass with nothing to say why — thrown, `guardDraw` names it
   if (!finiteCamera(camAt, lookAt, up)) throw new Error("camera not finite");
   if (st.camera.upVector.x !== up[0] || st.camera.upVector.y !== up[1] || st.camera.upVector.z !== up[2]) st.camera.upVector = new Vector3(up[0], up[1], up[2]);

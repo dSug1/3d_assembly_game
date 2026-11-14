@@ -223,6 +223,20 @@ export function installTuningMenu(st: SceneState): void {
             tunable(st, "tilted pole: past a pole face's far edge, the dy back held until this deep (mm)", "edgeHoldMm", 0, 100, 5),
           ],
         },
+        {
+          // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md — the owner's decisions D-Z1 – D-Z7) where the tilted pole stops: the polar orbit about a zone's own axis
+          title: "POLAR ZONES",
+          sliders: [
+            tunable(st, "polar zones: on (1) / off (0)", "zoneOn", 0, 1, 1),
+            tunable(st, "polar zones: a pole where this many faces meet", "zoneValenceMin", 3, 12, 1),
+            tunable(st, "polar zones: a face is small under this share of the assembly's smallest side", "zoneFacetMinRatio", 0, 0.6, 0.01),
+            tunable(st, "polar zones: the axis snapped onto a world axis within (deg)", "zoneSnapDeg", 0, 30, 1),
+            tunable(st, "polar zones: upright (globe) up to this angle from the vertical (deg)", "zoneUprightMaxDeg", 0, 90, 5),
+            tunable(st, "polar zones: spit from this angle from the vertical (deg)", "zoneSpitMinDeg", 0, 90, 5),
+            tunable(st, "polar zones: the zone's frame for the whole assembly over this share of its area", "zoneWholeShare", 0, 1.01, 0.05),
+            tunable(st, "polar zones: leave a zone this far past its rim (mm)", "zoneExitMm", 0, 100, 1),
+          ],
+        },
       ],
     },
     {
