@@ -11,7 +11,7 @@ import { bootFromModel, type BootLayout } from "../src/core/boot_heaps";
 import { apply, glbBin, partGeometry, type Placement } from "../src/core/glb_geometry";
 import { gapBetween } from "../src/core/collision_shape";
 import {
-  animatedPlacement, BOOT_ANIM_DEFAULT, bootAnimPlan, bootAnimState, pitchAxis, popScale, pullBackRadius, type AnimEntry, type AnimPart, type AnimPlan,
+  animatedPlacement, BOOT_ANIM_DEFAULT, bootAnimPlan, bootAnimState, bootCamYawDeg, pitchAxis, popScale, pullBackRadius, type AnimEntry, type AnimPart, type AnimPlan,
 } from "../src/core/boot_anim";
 import { SCENE2_BOOT_RULE } from "../src/content/scene2_boot";
 import { qFromAxisAngle, qRotate, type Vec3 } from "../src/core/vec";
@@ -193,6 +193,23 @@ describe("the CAMERA'S PULL BACK (the owner: \"from r=1.5m to r=3m\" until the p
     expect(DEFAULT_CONFIG.bootCamYawFromDeg).toBe(-15); // then "from -15 to zero degree" (−5 first) // "yaw from -5 to 0 degree (current front)"
     const w = readFileSync(new URL("../src/render/boot_anim_wiring.ts", import.meta.url), "utf8");
     expect(w).toMatch(/onAfterRenderObservable\.add[\s\S]*st\.camera\.radius -= applied\.dRadius;\s*st\.camera\.alpha -= applied\.dAlpha;[\s\S]*getViewMatrix\(true\)/);
+  });
+});
+
+describe("the CAMERA'S YAW: −15° → +2° (null speed there) → 0° in 1 s, arriving at almost zero speed", () => {
+  const y = (t: number) => bootCamYawDeg(-15, 2, t, 1600, 1000);
+  const v = (t: number) => (y(t + 1) - y(t)) * 1000; // °/s
+  it("the poses: −15° at the boot, +2° when the pieces are set, 0° exactly 1 s later", () => {
+    expect(y(0)).toBe(-15);
+    expect(y(1600)).toBe(2);
+    expect(y(2600)).toBe(0);
+    expect(y(9999)).toBe(0);
+  });
+  it("almost zero speed at +2° and at 0°; it does move between", () => {
+    expect(Math.abs(v(1599))).toBeLessThan(0.05);
+    expect(Math.abs(v(1600))).toBeLessThan(0.05);
+    expect(Math.abs(v(2598))).toBeLessThan(0.05);
+    expect(Math.abs(v(2100))).toBeGreaterThan(3); // the peak, mid-way (2° × 15/8 per s)
   });
 });
 

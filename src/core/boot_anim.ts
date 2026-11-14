@@ -181,6 +181,24 @@ export function pullBackRadius(fromM: number, toM: number, t: number, endMs: num
   return fromM + (toM - fromM) * smooth(Math.max(0, t) / endMs);
 }
 
+/** ⭐ The boot camera's yaw sweep: past the front to +2°, then back to 0 in 1 s (the owner, 2026-11-14). */
+export const CAM_YAW_OVER_DEG = 2;
+export const CAM_YAW_BACK_MS = 1000;
+
+/** Smootherstep: 0 → 1 with zero speed (and zero acceleration) at both ends. */
+const smoother = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (6 * x - 15) + 10));
+
+/**
+ * ⭐ THE CAMERA'S YAW at the boot, degrees off the front (the owner: *"make the yaw from -15 degree to +2 degree with a null yaw speed at +2 degree
+ * and then acceleration and deceleration to arrive to 0 degree at almost zero speed in 1s"*): `fromDeg` → `overDeg` while the pieces arrive
+ * (`endMs`), arriving at ZERO speed; then `overDeg` → 0 in `backMs`, accelerating then decelerating to almost zero speed (smootherstep, both legs).
+ */
+export function bootCamYawDeg(fromDeg: number, overDeg: number, t: number, endMs: number, backMs: number): number {
+  if (t < endMs) return fromDeg + (overDeg - fromDeg) * smoother(Math.max(0, t) / Math.max(1e-6, endMs));
+  if (t >= endMs + backMs) return 0;
+  return overDeg * (1 - smoother((t - endMs) / backMs));
+}
+
 /**
  * ⭐ The world's PITCH axis for a boot camera facing the yaw origin (`yawOriginDeg`, the scene frame: the camera toward (cos f, 0, sin f) — the
  * heaps' convention, `boot_heaps.ts`): horizontal, the camera's right — oriented so a POSITIVE angle tips a part's top TOWARD the camera.

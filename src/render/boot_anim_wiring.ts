@@ -2,14 +2,17 @@
  * ⭐⭐ **THE BOOT'S POP AND TUMBLE — ITS WIRING** (2026-11-14; `40_RENDER_SCENE/spec/ANIMATION.md` §4 and §6 — a MODULE: removable).
  * Every part but the floor — ALL AT ONCE — pops in the air above its spot, falls turning about the world's pitch axis, rebounds a hair, rests EXACTLY at its
  * layout pose (`core/boot_anim.ts`, the curves and the schedule). Played when the stage becomes the boot (at load; the stage slider 1 → 0 replays
- * it; a BOOT ANIMATION slider's change replays it), the camera pulling back and sweeping meanwhile (2.5 m → the game's 3 m, yaw −15° → the front). ⛔ The floor never moves. `?anim=0` or the OS's *reduce motion*: the heaps at once.
+ * it; a BOOT ANIMATION slider's change replays it), the camera pulling back and sweeping meanwhile (2.5 m → the game's 3 m, yaw −15° → +2° → the front in 1 s). ⛔ The floor never moves. `?anim=0` or the OS's *reduce motion*: the heaps at once.
  *
  * ⚠ TO REMOVE IT: delete this file and `core/boot_anim.ts` (+ `tests/boot_anim.test.ts`), the lines marked `ANIMATION MODULE: boot` in
  * `model_import.ts`, the `boot…` keys in `input/gestureConfig.ts` and the BOOT ANIMATION sliders (`tuning_menu.ts`, `tests/menu_layout.test.ts`).
  */
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { animatedPlacement, BOOT_ANIM_DEFAULT, bootAnimPlan, bootAnimState, pitchAxis, pullBackRadius, type AnimEntry, type BootAnimConfig } from "../core/boot_anim";
+import {
+  animatedPlacement, BOOT_ANIM_DEFAULT, bootAnimPlan, bootAnimState, bootCamYawDeg, CAM_YAW_BACK_MS, CAM_YAW_OVER_DEG, pitchAxis, pullBackRadius,
+  type AnimEntry, type BootAnimConfig,
+} from "../core/boot_anim";
 import type { BootLayout } from "../core/boot_heaps";
 import type { Placement } from "../core/glb_geometry";
 import type { Quat, Vec3 } from "../core/vec";
@@ -82,12 +85,28 @@ export function bootAnimator(host: BootAnimHost): BootAnimator {
   // for the draw and TAKEN OFF after it (by its own delta — the two layers stack in any order), so the game's camera, its rig and its picks never
   // see it; the player may orbit meanwhile. `bootCamFromM` 0 and `bootCamYawFromDeg` 0: none.
   let applied: { dRadius: number; dAlpha: number } | null = null;
+  // ⭐ the yaw's last second, +2° back to the front, runs PAST the animation's end (its own clock, the same cap)
+  let tail: { t: number; last: number; endMs: number } | null = null;
   st.scene.onBeforeRenderObservable.add(() => {
-    if (anim === null) return;
-    const t = anim.clock;
+    let t: number, endMs: number;
+    if (anim !== null) {
+      t = anim.clock;
+      endMs = anim.endMs;
+    } else if (tail !== null) {
+      const now = performance.now();
+      tail.t += Math.min(FRAME_CAP_MS, now - tail.last);
+      tail.last = now;
+      if (tail.t >= tail.endMs + CAM_YAW_BACK_MS) {
+        tail = null;
+        return;
+      }
+      t = tail.t;
+      endMs = tail.endMs;
+    } else return;
     const r0 = st.camera.radius;
-    const r = st.cfg.bootCamFromM > 0 ? pullBackRadius(st.cfg.bootCamFromM, r0, t, anim.endMs) : r0;
-    const dAlpha = (pullBackRadius(st.cfg.bootCamYawFromDeg, 0, t, anim.endMs) * Math.PI) / 180;
+    const r = st.cfg.bootCamFromM > 0 ? pullBackRadius(st.cfg.bootCamFromM, r0, t, endMs) : r0;
+    const yawDeg = st.cfg.bootCamYawFromDeg === 0 ? 0 : bootCamYawDeg(st.cfg.bootCamYawFromDeg, CAM_YAW_OVER_DEG, t, endMs, CAM_YAW_BACK_MS);
+    const dAlpha = (yawDeg * Math.PI) / 180;
     if (r === r0 && dAlpha === 0) return;
     st.camera.radius = r;
     st.camera.alpha += dAlpha;
@@ -102,6 +121,7 @@ export function bootAnimator(host: BootAnimHost): BootAnimator {
   });
 
   const stop = (): void => {
+    tail = null;
     if (anim === null) return;
     for (const it of anim.items) {
       if (!it.shown) host.node(it.e.id)?.setEnabled(true);
@@ -215,7 +235,9 @@ export function bootAnimator(host: BootAnimHost): BootAnimator {
       host.place(it.e.id, P, Math.max(1e-3, P.scale));
     }
     if (t >= anim.endMs) {
+      const end = anim.endMs;
       stop();
+      tail = { t, last: now, endMs: end }; // the yaw's way back carries on
       host.finish();
     }
   };

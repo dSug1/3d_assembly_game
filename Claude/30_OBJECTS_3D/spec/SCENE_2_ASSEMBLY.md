@@ -184,7 +184,7 @@ step the player cannot see — rule 5).
     others"*): every part pops at the same instant — ⭐ the plinth IN PLACE, nothing more (*"the plinth pops up directly in its position: no fall
     nor rotation"*) — the others above their spots, hold — EACH PIECE ITS OWN 50 – 100 ms (*"different lag for each piece"*) — fall under one g
     turning 360° about the world's pitch axis,
-    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw onto the front (*"a backwards approach of the camera from
+    rebounds (12 % of its radius, *"100 % higher"*); the CAMERA PULLS BACK meanwhile from 2.5 m to 3 m and SWEEPS from −15° of yaw past the front to +2°, then back to it in 1 s (*"a backwards approach of the camera from
     the boot moment until the pieces are set"*); ≈ 1.6 s in all, lift 3.6 units; ⚠ neighbours side by side may BRUSH in the air while they
     turn together (measured: 3 – 10 pairs a layout, the pistons and the block's cases) — the price of all at once; ⭐ it starts only when the boot
     is READY (the contact file loaded, the shaders compiled; the parts hidden until then; a hitch slows it, never skips it — *"the pop up and
