@@ -34,6 +34,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.abspath(os.path.join(HERE, "..", "World0_Scene2_engine"))
 BLEND = os.path.join(OUT_DIR, f"world0_scene_2_engine{'_revision' + REV if REV else ''}.blend")
 PREVIEW_DIR = os.path.join(OUT_DIR, "previews", *(["revision" + REV] if REV else []))
+# ⭐ (2026-11-14) the outputs beside the .blend named from ITS stem (`os.path.splitext`) — ⛔ `BLEND.replace(".blend", …)` rewrote every
+# ".blend" in the whole absolute path (a parent folder named with ".blend" would have moved the .glb and the contact file)
+BLEND_STEM = os.path.splitext(BLEND)[0]
 
 # ---------------------------------------------------------------- the reference's numbers (Appendix B at 120°, §2.9 / §2.10 / §6)
 UNIT_M = 0.14
@@ -130,7 +133,8 @@ def wood_v_image(n=1024):
     rgba = np.concatenate([img[::-1], np.ones((n, n, 1))], axis=2)   # the canvas's rows top-down, Blender's bottom-up
     im.pixels = rgba.ravel().tolist()
     os.makedirs(os.path.join(OUT_DIR, "textures"), exist_ok=True)
-    im.filepath_raw = os.path.join(OUT_DIR, "textures", "wood_v.png")
+    # ⭐ (2026-11-14) a revision writes its own copy (`wood_v_revisionN.png`), never over the shared file the build packs (seeded: the same image)
+    im.filepath_raw = os.path.join(OUT_DIR, "textures", f"wood_v{'_revision' + REV if REV else ''}.png")
     im.file_format = "PNG"
     im.save()
     im.pack()
@@ -2812,7 +2816,7 @@ print("preview →", scene.render.filepath)
 # Every part's subtree under YUP_ROOT — render meshes, UCX_ collision pieces, UFM_ face proxies and ghosts, MC_ seat markers, HINGE_ pivots —
 # with their custom properties as glTF `extras`; +Y up; textures embedded; at the GOAL pose (θ = 0); ⛔ no PREVIEW, no keyframes (the game
 # computes the motion, §5), no camera, no light. Then the file READ BACK and checked: names, extras, the markers' places and axes.
-GLB = BLEND.replace(".blend", ".glb")
+GLB = BLEND_STEM + ".glb"
 
 
 def export_glb(path, yup=True, valves_closed=True):
@@ -2965,7 +2969,7 @@ def check_glb(path, keep, label="the export"):
 # one face (its outline is the D196 contour) — no vertices to carry a contact shadow; the key light's shadow does it.
 AO_DIST = 0.3                                    # the reach of a contact shadow, reference units (4.2 cm)
 AO_SAMPLES = 128
-CONTACT_JSON = BLEND.replace(".blend", "_contact.json")
+CONTACT_JSON = BLEND_STEM + "_contact.json"
 TERM_KEEP = 0.97                                 # a factor kept below it: a darkening under 3 % is not seen (0.995 first: 283 terms, 476 kB)
 AO_NOISE = 0.06                                  # a bake's own noise (128 samples): an occluder added may not BRIGHTEN a vertex by more
 CONTACT_TOL = 0.08                               # self × Π terms vs a true full bake: the mean error over EACH term's vertices (⛔ a p95 over all the
