@@ -107,7 +107,7 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    the top 2 % short along x (→ coverage), a ghost over a real face (→ ghost overlap), the bulkheads' tops deleted (→ coverage), a face turned
    AFTER the orientation pass (→ the orientation VERIFIED), a patch in the air (→ fidelity, alone), a deck strip's edge pulled back 0.02 in its
    plane (→ continuity); then a proxy face doubled (→ superposed), a ghost recessed down a bore (→ ghost flush), the export without +Y up (→ the
-   axes), a dense hull as a collision piece (→ collision simplicity), a crown's sharp edges cleared (→ flat caps) — 11 in all — ⛔ each must be CAUGHT, and the normal build clean; then the build is run again WITHOUT it (that file is broken by
+   axes), a dense hull as a collision piece (→ collision simplicity), a crown's sharp edges cleared (→ flat caps; since the crowns in quads, 2026-11-14, → CROWNS IN QUADS: caught at 11.9°, flat caps blind to it) — 11 in all — ⛔ each must be CAUGHT, and the normal build clean; then the build is run again WITHOUT it (that file is broken by
    design). ⭐ The controls found the checks' own blind spots, now corrected: ⓗ a test at a face's CENTRE is blind on a notched (concave) face —
    its centre can fall in the hole: every inside / outside test at a point INSIDE one of its triangles (the orientation pass had the same blind
    spot); ⓘ continuity compared an edge with OTHER proxy objects only — a crack between two strips of ONE proxy was invisible: every proxy face
@@ -178,7 +178,10 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    (factory-empty file, `save_version = 0`) up to the plan's step N — the steps in the PLAN's order, one part (or one kind's parts) a step; the last
    step the `.glb` export.
 2. **Every run**: saves the `.blend`, renders `previews/step_NN.png` (a `PREVIEW` collection — floor, light, camera — never exported) and prints the
-   REPORT (§4.2).
+   REPORT (§4.2). ⭐ **A REVISION for the owner's look** (2026-11-14 — the owner: *"creating a revision2 file (do not overwrite the file) … I shall
+   authorize an export then only if I am satisfied"*): `-- --step N --rev 2` writes `<scene>_revision2.blend` and `previews/revision2/` instead,
+   leaves `animation_golden.json` untouched and REFUSES step 10 (the export waits for the owner's go); once approved, the normal run (`--step
+   <last>`) rebuilds the file and exports, and the revision is deleted.
 3. ⛔ **Claude stops after each step**: reads the report and the render, then hands the owner what to look at in Blender for THAT step. The next step
    starts on the owner's word. A failing check is fixed at its step, never carried forward.
 4. ⛔ **The `.blend` is the script's output**: the owner looks, closes WITHOUT saving; a change goes into the script (an edit by hand is lost at the
@@ -211,10 +214,19 @@ ported from the scene's reference when it has one; the `.blend` is the source th
 | ⭐ **the MOTION** (the owner, 2026-11-13: *"when the crank rotates, the piston shall remain in the cylinder"*) — for a scene with a level-end animation (§5) | the mechanism driven through its whole cycle by the game's own formula (every 6°): each moving part against the limits it must keep (a piston inside its cylinder, under its valves) and against the still parts' collision pieces | every margin ≥ 0, no collision — ⭐ with its control (a known-bad dimension must read OUT) |
 | ⭐⭐ **the RUN on the meshes** (the owner, 2026-11-13: *"how can we check that the animation will be ok in babylon/ts pipeline ?"*) — a scene with an animation | the game's own formula posing every moving piece through its whole cycle (every 6°), each piece's MESH against every other part's; the same poses baked as keyframes (a preview to scrub); the poses at fixed angles written to `animation_golden.json` — the golden vectors the TypeScript port must reproduce | no interference beyond the contacts NAMED in the script (a big end on its pin) — `Scene_2`'s first run found every valve in its piston: the reference's own preview had hidden it |
 | ⭐ **the PROXY SANITY** (✅ adopted, §3 item 3's principle) | fidelity, coverage, continuity, floating islands, reachability, simplicity, ORIENTATION, ghost overlap, GHOST FLUSH (at its hole's mouth; the plunges printed), SUPERPOSED (duplicates ⛔; seats listed) of the face proxies; the ghosts' dives and the real steps (information); lone small proxies (to confirm) | every failure named; ⭐ each check proven by its CONTROL (`CHECK_CONTROLS=1`: one planted defect each, all caught) |
-| ⭐ **FLAT CAPS shaded flat** (the owner, 2026-11-13: the pistons' crowns) | every face of more than 4 sides on a smooth object: its shading normals (the split normals) against the face's own | within 1° — ⭐ its control: a crown's sharp edges cleared (caught: 8.6°) |
+| ⭐ **FLAT CAPS shaded flat** (the owner, 2026-11-13: the pistons' crowns) | every face of more than 4 sides on a smooth object: its shading normals (the split normals) against the face's own | within 1° — ⭐ its control: a crown's sharp edges cleared (caught: 8.6°; ⚠ blind to it since the crowns are quads — the next row catches it) |
+| ⭐ **CROWNS IN QUADS** (the owner, 2026-11-14: *"the top of the piston … does not follow the state of the art quad drawing, as a result, the rendering is poor and shows fake facets"*) | each piston's top (its faces within a quarter of its height of the crown): sides per face, folded faces, the flat faces' split normals, every quad's corners and planarity | no n-gon, nothing folded, a triangle only at each pocket's run-out (4 a piston), flat faces within 1°, corners 30° – 150°, planar to 1e-6 — ⭐ its control: a crown's sharp edges cleared (caught: 11.9°) |
 | ⭐ **COLLISION SIMPLICITY** (the owner, 2026-11-13: *"why these exhaust connectors and valve caps faces have failed the checks for simplification"*) | every `UCX_` piece's vertices and triangles | ≤ 24 vertices, ≤ 48 triangles (a 12-sided cylinder: 24, 44) — ⭐ its control: a hull of a dense sphere (caught: 220 triangles). It found, besides the exhausts' (216) and the valves' (60): the crank's arms (hulls of two balls, 72) and the plinth (36-gon caps, 140) — all simplified |
 | the look | the render of the step | the owner's eye in Blender (§4.1 item 3) |
 
+⭐⭐ **A FLAT FACE WITH HOLES OR NOTCHES IS DRAWN IN QUADS, never left as a boolean's n-gon** (2026-11-14, `Scene_2`'s piston crowns): each part's
+own occlusion is baked PER VERTEX into its colours (the `.glb`'s `COLOR_0`, always on — `SCENE_SETUP.md` §6.3), so a flat n-gon fanned into long
+slivers carries a dark rim vertex's value across the whole face: FAKE FACETS on a flat crown (revision 1: 57 of its 89 triangles slivers). ⭐ The way
+it is drawn (`build_engine.py` `crown_quads`): every surface from its own equation, no boolean; a curved wall in even steps; the flat face in
+patches whose rows run from a hole's rim to the outline; a round floor as a BAND round an inner RECTANGLE (the square-in-a-circle layout — never a
+ladder parallel to a chord: its rows thin to slivers where the rim runs along them), the band REDUCING 3 to 1 (4 quads) so the inside stays light;
+every edge between two surfaces marked sharp (a 17° crease under the 30° smoothing leans the flat face's normals). A triangle only where three
+surfaces meet in a point (a pocket's run-out). The layout's numbers SWEPT for the quads' corners and their longest / shortest edge, not guessed.
 ⭐ **A host is CUT only where a part REALLY passes** (the owner, 2026-11-13, `Scene_2`'s upper case: *"(b)"*): the cut is the part's own swept
 hull along its way in (the hull of its two end positions — exact for a convex piece), computed from the part's geometry in the script — never the whole
 opening's cylinder, which can eat a host whole; a part's geometry the cut needs is a shared function, built before the part's own step.

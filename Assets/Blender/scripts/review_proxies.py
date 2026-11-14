@@ -240,7 +240,7 @@ for o in list(bpy.data.objects):
         col.objects.link(o)
         o.hide_render = False
         bpy.context.view_layer.layer_collection.children[col.name].exclude = (k != flagged[0])
-review_path = blend.replace(".blend", "_review.blend")
+review_path = os.path.splitext(blend)[0] + "_review.blend"   # ⭐ (2026-11-14) from the file's own stem — ⛔ .replace(".blend", …) over the whole path
 bpy.ops.wm.save_as_mainfile(filepath=review_path, copy=True)
 print("\n================ THE FACE PROXIES' REVIEW" + (f" → renders in {out_dir}" if RENDERS else ""))
 for line in report:
