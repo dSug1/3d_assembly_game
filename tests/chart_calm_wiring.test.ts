@@ -59,7 +59,7 @@ describe("⭐⭐⭐ the calm on every side face (`chartCalm`, step 2.3)", () => 
     expect(body).toContain("if (i >= 0 && !rules.everyFacet) { const zLo = i > 0 && zoneFacetOf(st, map, col.facets[i - 1]!);");
     expect(body.match(/zoneFacetOf\(/g)?.length).toBe(3); // the three reads, each under the rule's guard
     // ⭐ left as they are: the pole's edge (the vertical share) and the tilted facet's whole shares
-    expect(body).toContain("if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(body).toContain("if (i >= 0) { const ends = wholeEnds(rules.ownRun, i, col.facets.length); st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, ends.lo, ends.hi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100); }");
     expect(body).toContain("const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!,");
   });
 

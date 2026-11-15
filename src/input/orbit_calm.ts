@@ -298,6 +298,19 @@ export function calmRules(chartLayout: number, chartCalm: number): CalmRules {
 }
 
 const elevOf = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 step 2.4e, the auditor's completion — measured in the app, `Scene_0bis`, both switches on, a steady finger from
+ * the rectangle onto the triangle) THE ENDS OF A SIDE FACET'S OWN RUN THE VERTICAL SHARE IS WHOLE TOWARD **BY POSITION** (`poleEdgeWhole`, on the SHOWN
+ * direction, never eased): facet `i` of its column's `n`. As built (`ownRun` false): the column's two OUTER ends alone — toward a face holding a pole.
+ * With `ownRun` (the calm on one reference): BOTH of its own ends, every side facet alike — the eased share's target is whole there (`calmTarget`), and
+ * the eased state lags a moving finger: with the target alone the view still turned 6.3° in a frame at the rectangle's edge (8.1° before; the share
+ * 0.62 there, its target 1), the edge zone crossed in 3 frames against the ease's 120 ms. ⛔ A list of which faces border which (the first, shelved
+ * fix: a vertical facet under a slanted one): one more per-face rule.
+ */
+export function wholeEnds(ownRun: boolean, i: number, n: number): { readonly lo: boolean; readonly hi: boolean } {
+  return ownRun ? { lo: true, hi: true } : { lo: i === 0, hi: i === n - 1 };
+}
 const VERTICAL_EPS = 1e-6;
 
 /**

@@ -531,7 +531,8 @@ describe("⭐⭐ wired", () => {
     expect(a).not.toContain('sh.t.band !== "SIDE") st.asmCalmWhole = 1;'); // ⛔ whole at once on a cap: the withheld yaw released at the edge
     expect(a).toContain("st.asmCalmWhole = wholeShareStep(prev, st.asmCalmWhole, dtMs, st.cfg.gizmoEaseMs);"); // ⭐ the rig's one time law
     expect(a).not.toContain("st.asmTiltAuto) st.asmCalmWhole"); // ⛔ close in only
-    expect(a).toContain("if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
+    expect(a).toContain("const ends = wholeEnds(rules.ownRun, i, col.facets.length);"); // ⭐ (2026-11-15, step 2.4e) the ends by the rule; off: the column's outer ends, as before
+    expect(a).toContain("st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, ends.lo, ends.hi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
   it("⭐ its sliders: on / off, every tilt's speed, the automatic distance (⛔ 2026-11-15 no press tilts)", () => {

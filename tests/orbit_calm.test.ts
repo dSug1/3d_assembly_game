@@ -2,7 +2,7 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { acrossWeight, alignedShare, calmHeading, calmRules, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, edgeShareSmooth, shownDir, shownDirAcross } from "../src/input/orbit_calm";
+import { acrossWeight, alignedShare, wholeEnds, calmHeading, calmRules, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, edgeShareSmooth, shownDir, shownDirAcross } from "../src/input/orbit_calm";
 import type { CalmKnobs, CalmState } from "../src/input/orbit_calm";
 import { buildFaceMap, facetFrame, mapTarget } from "../src/input/face_map";
 
@@ -713,5 +713,24 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 2.4e) the calm on one reference (CalmKnob
     expect(calmRules(1, 1).ownRun).toBe(true);
     for (const [l, c] of [[0, 0], [0, 1], [1, 0], [2, 1], [1, 2]] as const) expect(calmRules(l, c).ownRun).toBe(false);
     expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm).ownRun).toBe(false);
+  });
+});
+
+// ⭐⭐⭐ (2026-11-15, step 2.4e, the auditor's completion — the app, `Scene_0bis`, both switches on, a steady finger from the rectangle onto the triangle: with
+// the eased share's target alone the view still turned 6.3° in a frame at the rectangle's edge, 8.1° before the step) THE ENDS THE VERTICAL SHARE IS WHOLE
+// TOWARD BY POSITION (`wholeEnds`, handed to `poleEdgeWhole`): as built the column's two OUTER ends; with the rule every side facet's BOTH own ends.
+// RED on: the rule ignored; the rule giving the outer ends; one end alone.
+describe("⭐⭐⭐ step 2.4e: the vertical share whole BY POSITION toward a side facet's own ends (`wholeEnds`)", () => {
+  it("as built (the rule off): the column's outer ends alone — the lowest facet's bottom, the highest's top", () => {
+    expect(wholeEnds(false, 0, 1)).toEqual({ lo: true, hi: true }); // `Scene_1`'s side: alone in its column
+    expect(wholeEnds(false, 0, 3)).toEqual({ lo: true, hi: false });
+    expect(wholeEnds(false, 1, 3)).toEqual({ lo: false, hi: false }); // `Scene_0bis`'s rectangle between two tip facets: neither — the fault
+    expect(wholeEnds(false, 2, 3)).toEqual({ lo: false, hi: true });
+  });
+  it("with the rule: both own ends of every side facet, whatever its place in the column", () => {
+    for (const n of [1, 2, 3, 5]) for (let i = 0; i < n; i++) expect(wholeEnds(true, i, n)).toEqual({ lo: true, hi: true });
+  });
+  it("a single-facet column is the same either way (`Scene_1`'s sides)", () => {
+    expect(wholeEnds(true, 0, 1)).toEqual(wholeEnds(false, 0, 1));
   });
 });
