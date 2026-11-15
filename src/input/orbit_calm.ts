@@ -265,6 +265,28 @@ export interface CalmState {
   readonly sV: number;
   /** ⭐ (2026-11-10) the reading's weight (`acrossWeight`): 0 `shownDir`, 1 `shownDirAcross`; absent: 0 */
   readonly wA?: number;
+  /**
+   * ⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) the fade by the pitch (`poleWeight` of the orbit along the facet's `b`) in `calmShown`: absent or
+   * true, today's; false, none — a side facet's reading under `calmRules(…).noPitchFade` (a pole is a place in the chart, not a pitch). `facingWeight` stays.
+   */
+  readonly poleFade?: boolean;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) THE CALM'S RULES behind the switch `chartCalm`, on only with the charts' layout too (`chartLayout`;
+ * ⛔ under the old layout a tip's fan is squeezed into 30° of orbit and the calm there jumped the view — removed 2026-11-14): `smooth`, the shares read by
+ * `edgeShareSmooth` (`CalmKnobs.smooth`); `everyFacet`, a polar zone's own facets (a fan's) calmed as any side facet — no list of faces without the calm,
+ * none made whole toward them; `noPitchFade`, a side facet's reading not faded by the pitch (`CalmState.poleFade` false). All three false: today's.
+ */
+export interface CalmRules {
+  readonly smooth: boolean;
+  readonly everyFacet: boolean;
+  readonly noPitchFade: boolean;
+}
+
+export function calmRules(chartLayout: number, chartCalm: number): CalmRules {
+  const on = chartLayout === 1 && chartCalm === 1;
+  return { smooth: on, everyFacet: on, noPitchFade: on };
 }
 
 const elevOf = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
@@ -366,8 +388,18 @@ export function easeNormal3(n: Vec3, target: Vec3, dtMs: number): Vec3 {
  * (between two vertical facets always: the bounce's rule kept — the vertical calm never waits on a heading). The normal taken at once only where no share
  * it frames is calming (⛔ a slanted face's `b` is the normal's own: its vertical share reads it).
  */
-export function calmStep(prev: CalmState | null, tg: { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA?: number }, dtMs: number): CalmState | null {
+export function calmStep(
+  prev: CalmState | null,
+  tg: { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA?: number; readonly poleFade?: boolean },
+  dtMs: number,
+): CalmState | null {
   const wA = tg.wA ?? prev?.wA ?? 0; // ⭐ (2026-11-10) by position, never eased (continuous with the place)
+  const s = calmStepEased(prev, tg, wA, dtMs);
+  // ⭐ (2026-11-15, step 2.3) the fade by the pitch the TARGET's, at once (by position, as `wA`); none on the target: no key (today's objects)
+  return s === null || tg.poleFade === undefined ? s : { ...s, poleFade: tg.poleFade };
+}
+
+function calmStepEased(prev: CalmState | null, tg: { readonly n: Vec3 | null; readonly sH: number; readonly sV: number }, wA: number, dtMs: number): CalmState | null {
   if (prev === null) return tg.n === null ? null : { n: tg.n, sH: easeToward(1, tg.sH, dtMs), sV: easeToward(1, tg.sV, dtMs), wA };
   let n = prev.n;
   let sH = tg.sH;
@@ -425,7 +457,8 @@ export function calmShown(u: Vec3, c: CalmState | null): Vec3 {
   if (c === null) return u;
   const { t, b } = facetFrame(c.n);
   // ⭐⭐⭐ (2026-11-14, the owner's records: "the piece flying") …and faded as `u` turns AWAY from the eased face (`facingWeight`)
-  const w = poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2]) * facingWeight(u, c.n, t);
+  // ⭐⭐⭐ (2026-11-15, step 2.3) …the fade by the pitch only where `poleFade` is not false (`calmRules(…).noPitchFade`: a side facet's reading)
+  const w = (c.poleFade === false ? 1 : poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2])) * facingWeight(u, c.n, t);
   if (!(w > 0)) return u;
   const sH = 1 - (1 - c.sH) * w;
   const sV = 1 - (1 - c.sV) * w;

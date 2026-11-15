@@ -2,8 +2,8 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { acrossWeight, alignedShare, calmHeading, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, edgeShareSmooth, shownDir } from "../src/input/orbit_calm";
-import type { CalmKnobs } from "../src/input/orbit_calm";
+import { acrossWeight, alignedShare, calmHeading, calmRules, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, edgeShareSmooth, shownDir, shownDirAcross } from "../src/input/orbit_calm";
+import type { CalmKnobs, CalmState } from "../src/input/orbit_calm";
 import { buildFaceMap, facetFrame, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
@@ -163,8 +163,9 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     const t0 = { band: "SIDE" as const, surface: [0, 0.2, 0] as Vec3, across: { L: 0.03, lo: 0, hi: 0.49 } };
     expect(calmTarget(t0, { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.4 }, null, K).sH).toBe(edgeShare(0.03, 0.49, 0.25, 25, 0.03));
     expect(calmTarget({ ...t0, band: "TOP" }, { n: [0, 1, 0], b: [0, 0, 1], bLo: 0, bHi: 0.4 }, null, K)).toEqual({ n: null, sH: 1, sV: 1, wA: 1 }); // a cap: none (⭐ 2026-11-10: read toward its edge's line, `wA` 1)
-    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {");
-    expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);");
+    // ⭐ (2026-11-15, step 2.3) the knobs from one helper (`calmKnobs`, its `smooth` from `calmRules`) — `chart_calm_wiring.test.ts`
+    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));");
+    expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);"); // ⭐ (step 2.3) a cap with no side to read; the generic call: `chart_calm_wiring.test.ts`
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("calmFrame(st, dtMs);");
     expect(code("render/assembly_wiring.ts")).toContain("asmCalm: null,");
@@ -401,5 +402,152 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 1.4) the calm's share continuous on a nar
     expect(p).toBeGreaterThan(0);
     expect(p).toBeLessThan(1);
     expect(calmTarget(ta, f, box(0.54), { ...K, smooth: true }, { lo: slantN, hi: null }).sV).toBe(1 - (1 - sV0) * (1 - p));
+  });
+});
+
+// ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) THE CALM ON EVERY SIDE FACE, behind `chartCalm` (on only with `chartLayout`): the rules (`calmRules`),
+// no fade by the pitch on a side facet's reading (`CalmState.poleFade` false — `facingWeight` kept), the field taken from the target at once by `calmStep`
+// and never a key when the target has none (objects built with the rule off identical to today's). The wiring's pins: `chart_calm_wiring.test.ts`.
+describe("⭐⭐⭐ (ORBIT_CHARTS step 2.3) the calm on every side face (calmRules, CalmState.poleFade)", () => {
+  // ⛔ `calmShown`'s body as committed before step 2.3 (`50595df`), verbatim but for its name — the "today" an absent or true `poleFade` is measured against
+  const oldCalmShown = (u: Vec3, c: CalmState | null): Vec3 => {
+    if (c === null) return u;
+    const { t, b } = facetFrame(c.n);
+    const w = poleWeight(u[0] * b[0] + u[1] * b[1] + u[2] * b[2]) * facingWeight(u, c.n, t);
+    if (!(w > 0)) return u;
+    const sH = 1 - (1 - c.sH) * w;
+    const sV = 1 - (1 - c.sV) * w;
+    const wA = Math.min(1, Math.max(0, c.wA ?? 0));
+    const d0 = wA >= 1 ? null : shownDir(u, c.n, t, b, sH, sV);
+    const d1 = wA <= 0 ? null : shownDirAcross(u, c.n, t, b, sH, sV);
+    if (d0 === null) return d1!;
+    if (d1 === null) return d0;
+    const m: Vec3 = [d0[0] * (1 - wA) + d1[0] * wA, d0[1] * (1 - wA) + d1[1] * wA, d0[2] * (1 - wA) + d1[2] * wA];
+    const l = Math.hypot(m[0], m[1], m[2]);
+    return l > 1e-12 ? [m[0] / l, m[1] / l, m[2] / l] : d0;
+  };
+  // the reference without the pitch's fade: the same blend with the weight `facingWeight` alone
+  const noFadeRef = (u: Vec3, c: CalmState): Vec3 => {
+    const { t, b } = facetFrame(c.n);
+    const w = facingWeight(u, c.n, t);
+    if (!(w > 0)) return u;
+    const sH = 1 - (1 - c.sH) * w;
+    const sV = 1 - (1 - c.sV) * w;
+    const wA = Math.min(1, Math.max(0, c.wA ?? 0));
+    const d0 = wA >= 1 ? null : shownDir(u, c.n, t, b, sH, sV);
+    const d1 = wA <= 0 ? null : shownDirAcross(u, c.n, t, b, sH, sV);
+    if (d0 === null) return d1!;
+    if (d1 === null) return d0;
+    const m: Vec3 = [d0[0] * (1 - wA) + d1[0] * wA, d0[1] * (1 - wA) + d1[1] * wA, d0[2] * (1 - wA) + d1[2] * wA];
+    const l = Math.hypot(m[0], m[1], m[2]);
+    return l > 1e-12 ? [m[0] / l, m[1] / l, m[2] / l] : d0;
+  };
+  const D = Math.PI / 180;
+  const slant: Vec3 = [0, 0.5, -Math.sqrt(0.75)];
+  const NORMALS: readonly Vec3[] = [[0, 0, -1], [1, 0, 0], [0.6, 0, -0.8], slant, [Math.sqrt(0.5), -Math.sqrt(0.5), 0]];
+  /** `u` at angle `a` round the facet's `b` off `n` (in its `n`, `t` plane) and at `p` toward its `b` */
+  const inFrame = (n: Vec3, aDeg: number, pDeg: number): Vec3 => {
+    const { t, b } = facetFrame(n);
+    const ca = Math.cos(aDeg * D);
+    const sa = Math.sin(aDeg * D);
+    const cp = Math.cos(pDeg * D);
+    const sp = Math.sin(pDeg * D);
+    return [cp * (ca * n[0] + sa * t[0]) + sp * b[0], cp * (ca * n[1] + sa * t[1]) + sp * b[1], cp * (ca * n[2] + sa * t[2]) + sp * b[2]];
+  };
+  const STATES = (n: Vec3): CalmState[] => [
+    { n, sH: 0.25, sV: 0.4 },
+    { n, sH: 0.25, sV: 0.25, wA: 0.4 },
+    { n, sH: 0.6, sV: 0.3, wA: 1 },
+    { n, sH: 1, sV: 0.25, wA: 0 },
+  ];
+
+  it("⭐⭐ the rules on only when BOTH switches are 1 (the charts' layout and the calm's); else all three off", () => {
+    expect(calmRules(1, 1)).toEqual({ smooth: true, everyFacet: true, noPitchFade: true });
+    for (const [l, c] of [[0, 0], [0, 1], [1, 0]] as const) expect(calmRules(l, c)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false });
+    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false }); // the defaults: today's
+  });
+
+  it("⭐⭐⭐ `poleFade` absent or true: calmShown EXACTLY as before step 2.3 on a grid of directions, normals and shares", () => {
+    let n = 0;
+    for (const nn of NORMALS)
+      for (const c of STATES(nn))
+        for (let a = -170; a <= 180; a += 25)
+          for (const p of [-89, -80, -70, -50, -20, 0, 15, 45, 62, 75, 84, 88]) {
+            const u = inFrame(nn, a, p);
+            const old = oldCalmShown(u, c);
+            expect(calmShown(u, c)).toEqual(old);
+            expect(calmShown(u, { ...c, poleFade: true })).toEqual(old);
+            n++;
+          }
+    expect(n).toBe(5 * 4 * 15 * 12);
+  });
+
+  it("⭐⭐⭐ `poleFade: false`: no fade where `u` is 60° – 85° (and beyond) toward the facet's `b` — the calm whole there, as in the middle; `facingWeight` still applied", () => {
+    let differs = 0;
+    for (const nn of NORMALS)
+      for (const c0 of STATES(nn)) {
+        const c: CalmState = { ...c0, poleFade: false };
+        for (let a = -170; a <= 180; a += 25)
+          for (const p of [-84, -75, -65, -40, 0, 30, 62, 70, 78, 84, 88]) {
+            const u = inFrame(nn, a, p);
+            const now = calmShown(u, c);
+            const ref = noFadeRef(u, c);
+            for (const k of [0, 1, 2]) expect(now[k]).toBeCloseTo(ref[k]!, 12);
+            if (Math.abs(p) >= 60 && Math.abs(a) <= 45) {
+              const old = oldCalmShown(u, c0);
+              if (Math.hypot(now[0] - old[0], now[1] - old[1], now[2] - old[2]) > 1e-6) differs++;
+            }
+          }
+      }
+    expect(differs).toBeGreaterThan(50); // the fade is gone exactly where it acted: the comparison can fail
+    // at 80° toward `b`, 20° round off the normal, on a vertical facet: today the calm is all but gone (poleWeight < 0.2); without the fade, whole
+    const nn: Vec3 = [0, 0, -1];
+    const { t: tt, b: bb } = facetFrame(nn);
+    const u = inFrame(nn, 20, 80);
+    const c: CalmState = { n: nn, sH: 0.25, sV: 0.25 };
+    expect(poleWeight(u[1])).toBeLessThan(0.2);
+    const whole = shownDir(u, nn, tt, bb, 0.25, 0.25);
+    const nf = calmShown(u, { ...c, poleFade: false });
+    for (const k of [0, 1, 2]) expect(nf[k]).toBeCloseTo(whole[k]!, 12);
+    expect(Math.hypot(nf[0] - u[0], nf[1] - u[1], nf[2] - u[2])).toBeGreaterThan(0.05);
+    // `facingWeight` kept: a face turned away (150° round its `b`) shows the orbit's own direction; 112° a part of the calm
+    for (const p of [0, 70, 80]) {
+      const away = inFrame(nn, 150, p);
+      expect(calmShown(away, { ...c, poleFade: false })).toEqual(away);
+      const half = inFrame(nn, 112, p);
+      const fw = facingWeight(half, nn, tt);
+      expect(fw).toBeGreaterThan(0.2);
+      expect(fw).toBeLessThan(0.8);
+      const r = shownDir(half, nn, tt, bb, 1 - 0.75 * fw, 1 - 0.75 * fw);
+      const got = calmShown(half, { ...c, poleFade: false });
+      for (const k of [0, 1, 2]) expect(got[k]).toBeCloseTo(r[k]!, 12);
+    }
+  });
+
+  it("⭐⭐⭐ calmStep: `poleFade` the TARGET's at once (by position, never eased, never the previous state's); none on the target → no such key on the result", () => {
+    const tg = { n: [1, 0, 0] as Vec3, sH: 0.25, sV: 0.25 };
+    const prevs: (CalmState | null)[] = [null, { n: [0, 0, -1], sH: 1, sV: 0.25 }, { n: [0, 0, -1], sH: 0.25, sV: 0.25, wA: 0.3 }, { n: [1, 0, 0], sH: 0.4, sV: 0.3 }];
+    for (const prev of prevs) {
+      const plain = calmStep(prev, tg, 16)!;
+      expect("poleFade" in plain).toBe(false);
+      expect(Object.keys(plain).sort()).toEqual(["n", "sH", "sV", "wA"]);
+      for (const pf of [false, true]) {
+        expect(calmStep(prev, { ...tg, poleFade: pf }, 16)).toStrictEqual({ ...plain, poleFade: pf }); // everything else as without the field
+        // the previous state's own field never carried, never eased
+        expect(calmStep(prev === null ? null : { ...prev, poleFade: !pf }, { ...tg, poleFade: pf }, 16)!.poleFade).toBe(pf);
+        const dropped = calmStep(prev === null ? null : { ...prev, poleFade: pf }, tg, 16)!;
+        expect(dropped).toStrictEqual(plain);
+        expect(Object.keys(dropped)).not.toContain("poleFade");
+      }
+    }
+    // a target with no normal: none from none; from a state, the target's field (here none: no key)
+    expect(calmStep(null, { n: null, sH: 1, sV: 1, poleFade: false }, 16)).toBeNull();
+    const toCap = calmStep({ n: [0, 0, -1], sH: 0.25, sV: 0.25, poleFade: false }, { n: null, sH: 1, sV: 1 }, 16)!;
+    expect(Object.keys(toCap)).not.toContain("poleFade");
+    // the turn about `h` taken at once (its own return): the field too
+    const up: Vec3 = [0, Math.sin(30 * D), -Math.cos(30 * D)];
+    const r = calmStep({ n: [0, 0, -1], sH: 0.25, sV: 1 }, { n: up, sH: 0.25, sV: 0.25, poleFade: false }, 16)!;
+    expect(r.n).toEqual(up);
+    expect(r.poleFade).toBe(false);
   });
 });

@@ -26,7 +26,7 @@ import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
-import { calmHeading, calmLevelHeading, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight } from "../input/orbit_calm";
+import { calmHeading, calmLevelHeading, calmRules, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -297,7 +297,11 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   const tl = st.asmTilt;
   const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
   const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
-  const base = c !== null && (kH > 0 || kV > 0) ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 }) : calmShown(u, c);
+  // ⭐ (2026-11-15, step 2.3) the fade by the pitch carried (`poleFade`; absent: no key, today's)
+  const base =
+    c !== null && (kH > 0 || kV > 0)
+      ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) })
+      : calmShown(u, c);
   // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
   const sq = st.asmSquare;
   if (sq.n === null || !(sq.q > 0)) return base;
@@ -408,18 +412,12 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const sh = st.asmShown;
   const map = sh === null ? null : faceMapOf(st);
   const cfg = st.cfg;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) the calm on every side face (`calmRules`: `chartCalm` with the charts' layout) — all off: today's
+  const rules = calmRules(cfg.chartLayout, cfg.chartCalm);
   const tg =
     sh === null || map === null
       ? { n: null, sH: 1, sV: 1 }
-      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
-          shareH: cfg.faceSpanShareH,
-          zoneHPct: cfg.faceSpanZoneHPct,
-          zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
-          vOn: cfg.faceSpanShareVOn === 1,
-          shareV: cfg.faceSpanShareV,
-          zoneVPct: cfg.faceSpanZoneVPct,
-          zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
-        }, acrossNormals(st, map, sh));
+      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));
   // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: whole toward them over the calm's own edge zones (`tiltCalmWholeHV`) —
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) both shares toward an edge ACROSS, the vertical one alone toward a
   // `b` end (a turn about the edge's own line: the horizontal calm carried over — `shownDirAcross`)
@@ -432,7 +430,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
   // facet change — a 22 – 50° roll and a 17 – 20° turn of the view in ONE frame (18 of the fast walk's 24 jumps, far out)
   // ⭐ the facet the MAP's place is on THIS frame, the one the calm reads (`zoneFacetOf`) — ⛔ `st.gizmoNormal`: updated after the calm, the frame onto a fan
   // facet still read the body's — the calm stepped onto the fan facet for that frame (a 14.7° view jump, probed)
-  if (sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
+  // ⭐⭐⭐ (2026-11-15, step 2.3) …with `calmRules(…).everyFacet`: a fan facet a side facet like any other (its own shares, whole at its edges)
+  if (!rules.everyFacet && sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
     st.asmCalmWhole = 1;
     st.asmCalmWholeV = 1;
     st.asmCalm = calmStep(st.asmCalm, { n: null, sH: 1, sV: 1 }, dtMs);
@@ -441,7 +440,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
-    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA }, dtMs);
+    // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading: no fade by the pitch with `calmRules(…).noPitchFade`
+    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA, ...(rules.noPitchFade ? { poleFade: false } : {}) }, dtMs);
     // ⭐⭐⭐ (2026-11-10) the same share on the SHOWN direction too (by position — the eased state lags a fast finger); ⭐ at every distance (the owner's
     // shake: far out the 120 ms calm alone fell behind, then caught up on the cap)
     st.asmCalmWhole = p.h;
@@ -466,15 +466,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
       return;
     }
     const tS = mapTarget(map, sh.yaw, pE, o);
-    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
-      shareH: cfg.faceSpanShareH,
-      zoneHPct: cfg.faceSpanZoneHPct,
-      zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
-      vOn: cfg.faceSpanShareVOn === 1,
-      shareV: cfg.faceSpanShareV,
-      zoneVPct: cfg.faceSpanZoneVPct,
-      zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
-    }, acrossNormals(st, map, { t: tS, pitch: pE }));
+    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, { t: tS, pitch: pE }));
     st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);
     return;
   }
@@ -486,14 +478,31 @@ function calmTargets(st: SceneState, dtMs: number): void {
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
       // ⭐⭐⭐ (2026-11-14) …and BOTH shares whole by position toward an end bordering a polar zone's own facet (no calm there, `zoneFacetOf`) — the calm gone
       // before the border, as toward a pole. ⛔ Released at the border by the whole share's ease: 45% of a strong calm in one frame, a 24° view jump
-      if (i >= 0) {
+      // ⭐⭐⭐ (2026-11-15, step 2.3) none with `calmRules(…).everyFacet`: a fan facet is calmed, nothing to be whole toward
+      if (i >= 0 && !rules.everyFacet) {
         const zLo = i > 0 && zoneFacetOf(st, map, col.facets[i - 1]!);
         const zHi = i < col.facets.length - 1 && zoneFacetOf(st, map, col.facets[i + 1]!);
         if (zLo || zHi) st.asmCalmWhole = Math.max(st.asmCalmWhole, poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, zLo, zHi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100));
       }
     }
   }
-  st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
+  // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading (a normal): no fade by the pitch with `calmRules(…).noPitchFade`; a cap's none (`n` null)
+  st.asmCalm = calmStep(st.asmCalm, rules.noPitchFade && tg.n !== null ? { ...tg, poleFade: false } : tg, dtMs);
+}
+
+/** ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls; `smooth` from `calmRules` (false: `edgeShare`, today's) */
+function calmKnobs(st: SceneState, smooth: boolean): CalmKnobs {
+  const cfg = st.cfg;
+  return {
+    shareH: cfg.faceSpanShareH,
+    zoneHPct: cfg.faceSpanZoneHPct,
+    zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
+    vOn: cfg.faceSpanShareVOn === 1,
+    shareV: cfg.faceSpanShareV,
+    zoneVPct: cfg.faceSpanZoneVPct,
+    zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
+    smooth,
+  };
 }
 
 /**

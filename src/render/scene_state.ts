@@ -446,8 +446,9 @@ export interface SceneState {
   /** ⭐⭐⭐ (2026-11-10, §9.4) the WORLD's face map, kept beside a tilted one (`asmFaceMap` is the frame's) */
   asmWorldMap: { readonly key: string; readonly map: import("../input/face_map").FaceMap } | null;
   /** ⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM (58d86ff, `input/orbit_calm.ts`): the gizmo's face's normal (horizontal) and the shares of the orbit's angle shown
-   * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet */
-  asmCalm: { n: Vec3; sH: number; sV: number; wA?: number } | null;
+   * along its level axis (`sH`) and its vertical (`sV`) — each EASED toward its target (the carrier's runs); `null`: none yet; ⭐ (2026-11-15, step 2.3)
+   * `poleFade` the fade by the pitch (`CalmState.poleFade`; absent: today's) */
+  asmCalm: { n: Vec3; sH: number; sV: number; wA?: number; poleFade?: boolean } | null;
   /** ⭐⭐⭐ (2026-11-02; Step 4c-bis: from the face map) each line's samples, once per line — their points and their places on the box (`surf`) */
   asmRedCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
   asmGreenCache: { readonly key: string; params: readonly number[]; pts: readonly (import("@babylonjs/core/Maths/math.vector").Vector3 | null)[]; vals: readonly (LineSample | null)[]; /** ⭐ (§8.7) each sample's join to the next (`null`: not yet verified — drawn broken) */ joins: readonly (boolean | null)[]; /** ⭐ (2026-11-09, I17) the line's adaptive refinement and its joins, a slice a frame (`refineStep`, `joinStep`) */ readonly ref: import("../input/section_hull").RefineState<LineSample> } | null;
