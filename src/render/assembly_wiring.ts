@@ -668,19 +668,10 @@ function worldFaceMap(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
   if (box === null) return null;
-  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the switch on (`chartLayout` 1): the chart's map, cached under its own key (`#C1`);
-  // off, the lines below as built
-  if (st.cfg.chartLayout === 1) {
-    const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;
-    if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
-    const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
-    st.asmWorldMap = { key, map };
-    if (mapFrame(st) === null) st.asmFaceMap = { key, map };
-    return map;
-  }
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' switch (`chartOpts`) in the call and the key
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;
   if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
-  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
   st.asmWorldMap = { key, map };
   if (mapFrame(st) === null) st.asmFaceMap = { key, map };
   return map;

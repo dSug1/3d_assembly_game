@@ -20,13 +20,12 @@ describe("⭐⭐⭐ the charts' switch (`chartLayout`, step 2.2)", () => {
     expect(a).toContain('return st.cfg.chartLayout === 1 ? { layout: "chart", scale: "normals" } : {};');
   });
 
-  it("both `buildFaceMap` calls carry the options (the frame's, the world's under the switch)", () => {
+  it("both `buildFaceMap` calls carry the options (the frame's, the world's — one path each)", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
-    expect(a).toContain("if (st.cfg.chartLayout === 1) { const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;");
     expect(a).toContain("const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
-    // every call in the wiring is one of the three above (two in the world's: the switch on, and off as built)
-    expect(a.match(/buildFaceMap\(/g)?.length).toBe(3);
+    // every call in the wiring is one of the two above
+    expect(a.match(/buildFaceMap\(/g)?.length).toBe(2);
   });
 
   it("both cache keys carry the switch", () => {
