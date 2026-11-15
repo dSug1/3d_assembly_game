@@ -79,3 +79,9 @@
   makes the automatic tilt and leaves it at once: 45° and 90° rolls in one frame.
 * **Deployed a second time** (the owner: *"deploy"*): `6d5f2b7` as main `157974f`, live; `?chartLayout=1&chartCalm=1` or the two sliders (GIZMO &
   SECTIONS) turn the charts' layout and the new calm on; **1869 vectors**.
+* **The owner's look on the second deploy** (2026-11-15): *"overall is good"*; four reports (the calm "unleashes" from the rectangle onto the triangle
+  on `Scene_0bis`; on `Scene_0` with the charts on: the camera realigns at a click on the top slanted faces and the bottom, half turns on the top
+  faces, the gizmo once on the face opposite the camera) and ⛔ *"analyze the deep root cause, don't patch with fix which may conflict with other
+  rules"*. The analysis: the spec's §11 — one root cause (the orbit's place stored twice, as a direction and as a chart coordinate; the old
+  detectors still deciding where a frame changes; the calm's per-face references), the basis of step 2.4. The fix built for the first report is
+  shelved (`git stash`), not committed.

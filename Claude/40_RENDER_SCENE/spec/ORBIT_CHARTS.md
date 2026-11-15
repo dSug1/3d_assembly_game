@@ -576,3 +576,59 @@ between two normals far apart, and the camera travels from one to the other at `
 **Where it lands**: step 2.4 — every change of frame becomes the one transition (§4), so its trigger gets ONE band; the square camera's and the
 calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres on the glass (`CLAUDE.md` rule 3), a slider with
 the rule. ⚠ Its cost, to weigh at each: a band is a delay at every real crossing — the view stays the last face's for the band's depth.
+
+## 11. THE ROOT CAUSE FOUND AT THE OWNER'S LOOK ON THE SECOND DEPLOY (2026-11-15) — the basis of step 2.4
+
+The owner, on `157974f`: *"overall is good"*, then four reports and one instruction:
+
+1. `Scene_0bis`, both switches on: *"when I cross the edge to go from the rectangle face to the triangle face … it seems the calm unleashes and there
+   is a very brief acceleration of the camera orbit to reach the triangle face. This does not occur when I cross from the triangle face to the
+   rectangle face. Also, this does not occur in scene 0 nor scene 1. Why ?"*
+2. `Scene_0`, the charts' switch on: *"when I arrive from another face to one of the top slanted face or to the bottom face and I release and click
+   again: the moment I click again, the camera realigns and the red and green sections become orthogonal. I don't know what triggers this … this
+   creates disturbing camera movements."*
+3. *"there are 180 camera tilts on the top slanted surface but I cannot catch when nor what triggers them."*
+4. *"I arrived in a configuration where the gizmo and sections were in the face opposite to the camera."*
+
+⛔ **The instruction: *"analyze the deep root cause, don't patch with fix which may conflict with other rules"*.**
+
+**Measured** (the replays, the same script on each): a tilt is made AT A PRESS 11 – 13 times a replay in today's game (both switches off, `Scene_0`
+and `Scene_1`) and as often with the charts' layout on; the view makes a half turn (150° or more within 30 frames) 18 times on `Scene_0` off, 16
+on, 11 on `Scene_1` — 12 of the 16 at a tilt's EXIT; report 1 reproduced in the app, far out, a steady finger: the view 0.2° a frame on the
+rectangle, 6 – 8° for a moment at the edge, 2 – 3° on the triangle (the way back peaks at 4°). Report 4 is not in any replay: it is explained by
+reading, below — not reproduced.
+
+**ONE ROOT CAUSE: where the orbit is, is stored twice, and what a face is, is decided twice.**
+
+1. **Two states for one place.** The ORBIT's angles are a DIRECTION (they place the camera; every change of frame turns them by a rigid rotation —
+   `turnAngles`). The MAP's angles (`asmMapQ`) are a CHART COORDINATE (they place the gizmo; after a change of frame they are re-read at the gizmo —
+   `mapAngles`). The two are equal only where the map is the identity between a direction and a place. At a pole a direction has no yaw. Under the
+   charts' layout the pitch is a chart coordinate everywhere, in every frame. After a change of frame the two are brought together only by the
+   catch-up's small steps (`mapAnglesStep`), never across a jump — so the camera can come down one side of a ridge and the gizmo the other
+   (report 4). ⚠ `72cdc54` (deployed) is a patch on this: leaving a tilt at a pole it picks the yaw that keeps the PICTURE (before it: yaw 0) —
+   neither looks at the side the gizmo is on.
+2. **The old detectors still decide where a frame changes.** `holdsPole` — a cap, or a side steeper than 45° — makes the tilt at ANY press far out
+   and by itself close in: `Scene_0`'s bottom and its two top faces, `Scene_1`'s top and bottom, in today's game too. Its entry swings the camera
+   square to the face and holds its up on the frame's axis (report 2: the sections horizontal and vertical on the glass); its exit over the ridge
+   or a far edge is a half turn (report 3). Under the charts' layout the pole is the RIDGE and the two top faces are plain cells: the tilt there is a
+   second answer to a question the layout has already answered (D-C4). Three mechanisms meet at that ridge — the tilt's entry, its exit, the world's
+   own crossing — each with its trigger: which one turned the camera cannot be told from the glass.
+3. **The calm reads per-face rules with different references.** A vertical facet's vertical share reads the BOX's height (the bounce, 2026-11-04),
+   a slanted one its own extent (2026-11-09), and a polar zone's border was made whole by a third rule (2026-11-14) that step 2.3 removed. In the
+   zone's frame the body's faces are vertical under a tip's facets: at the rectangle's own edge the share is 0.41 (the box's top is the apex,
+   120 mm further), on the triangle 1 — a 20° step of the view, eased in 120 ms (report 1; the way back gives it back on a face where the view
+   barely moves). The same shape as 1 and 2: the view computed from WHICH FACE the place is on and that face's own convention, not from the place.
+
+**What follows — no patch; step 2.4 is built on it:**
+
+* **One state**: the gizmo's place and its chart's angles. At every change of chart the orbit's angles are DERIVED from them (§4.1: "the gizmo stays
+  at its exact place; the next chart's angles are read there"), and the camera's turn is the seam's own, known beforehand — ⛔ never two conversions
+  that must then agree.
+* **The frames change where the atlas says** (§3), not where `holdsPole` fires: on `Scene_0` no tilt on the two top faces (D-C4); a level cap keeps
+  its square layouts (§3 6.) — ⛔ the owner's to decide: whether a press far out still tilts a cap, or close in only.
+* **One trigger, one band** (§10.2).
+* **The calm's shares on one reference** — the chart's own runs, every face alike — or step B (§5.3: the view read from the place).
+
+**The day's patches, as they stand**: `72cdc54` (the heading kept at a pole; the tilted facet's border a tie) is deployed and stays until step 2.4
+replaces the two conversions — it removes a 90° roll of today's game and is flagged above. The fix built for report 1 (a vertical facet's vertical
+share whole toward its own end under a slanted one: 8.1° → 4.5° a frame) is SHELVED, not committed (`git stash`): one more per-face rule.
