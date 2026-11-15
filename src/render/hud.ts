@@ -63,6 +63,11 @@ export interface HudFields {
    * are on. ⚠ A property of the device and the scene, so it is only evidence on the glass it ran on.
    */
   readonly frame: string;
+  /**
+   * ⭐⭐ (2026-11-15, the owner's phone: a black scene, `frame —`) whether anything is being DRAWN: the frames drawn, the last frame's interval as it
+   * was, the canvas's size and its buffer's, the WebGL context (`formatDrawState`). ⚠ Its numbers come FIRST on the line: a phone cuts a line's end.
+   */
+  readonly draw: string;
 }
 
 export interface Hud {
@@ -197,6 +202,7 @@ DRAWFAULT ${text}`;
         // stale Pages bundle cost a morning on 2026-09-16 — the fix had been live for two
         // hours. ⚠ `+dirty` is what separates the USB dev loop from the same sha deployed.
         `frame     ${f.frame}`,
+        `draw      ${f.draw}`,
         `build     ${BUILD_STAMP}`,
       ].join("\n");
     },

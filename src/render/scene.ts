@@ -118,6 +118,10 @@ export function createScene(
   // ⛔ BEFORE anything paints: the HUD's `frame` line reads the meter on the first `paint()`,
   // which runs during boot — created later, it crashed the page (`Cannot read … 'stats'`).
   st.frameMeter = new FrameMeter();
+  st.lastIntervalMs = null; // ⭐ (2026-11-15) the HUD's `draw` line — read by the first `paint()` too
+  st.longFrames = 0;
+  st.glLost = 0;
+  st.glRestored = 0;
   st.autoShadow = null;
   st.autoAo = null;
   st.aoAvailable = false;

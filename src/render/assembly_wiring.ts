@@ -26,7 +26,7 @@ import { syncCentre } from "./camera_rig";
 import { orbitDvPerMm, pieceSolveOptions, pieceSolverEnv, ringAnchorAt } from "./green_box_wiring";
 import type { LineSample, SceneState } from "./scene_state";
 import { faceTrianglesWorld } from "./contact_wiring";
-import { calmHeading, calmLevelHeading, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight } from "../input/orbit_calm";
+import { calmHeading, calmLevelHeading, calmRules, calmShown, calmStep, calmTarget, cameraHeading, capEdgePitch, heldOffsetStep, poleWeight, type CalmKnobs } from "../input/orbit_calm";
 import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
@@ -38,7 +38,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -297,7 +297,11 @@ function calmDir(st: SceneState, u: Vec3): Vec3 {
   const tl = st.asmTilt;
   const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);
   const kV = Math.max(tl?.k ?? 0, st.asmCalmWhole, st.asmCalmWholeV);
-  const base = c !== null && (kH > 0 || kV > 0) ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0 }) : calmShown(u, c);
+  // ⭐ (2026-11-15, step 2.3) the fade by the pitch carried (`poleFade`; absent: no key, today's)
+  const base =
+    c !== null && (kH > 0 || kV > 0)
+      ? calmShown(u, { n: c.n, sH: 1 - (1 - c.sH) * (1 - kH), sV: 1 - (1 - c.sV) * (1 - kV), wA: c.wA ?? 0, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) })
+      : calmShown(u, c);
   // ⭐⭐⭐ (2026-11-10, `1.0.120b-`) THE SQUARE CAMERA close in: the gizmo's face's normal (turned at one speed through every edge), over the calm by `q`
   const sq = st.asmSquare;
   if (sq.n === null || !(sq.q > 0)) return base;
@@ -408,18 +412,12 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const sh = st.asmShown;
   const map = sh === null ? null : faceMapOf(st);
   const cfg = st.cfg;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) the calm on every side face (`calmRules`: `chartCalm` with the charts' layout) — all off: today's
+  const rules = calmRules(cfg.chartLayout, cfg.chartCalm);
   const tg =
     sh === null || map === null
       ? { n: null, sH: 1, sV: 1 }
-      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
-          shareH: cfg.faceSpanShareH,
-          zoneHPct: cfg.faceSpanZoneHPct,
-          zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
-          vOn: cfg.faceSpanShareVOn === 1,
-          shareV: cfg.faceSpanShareV,
-          zoneVPct: cfg.faceSpanZoneVPct,
-          zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
-        }, acrossNormals(st, map, sh));
+      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));
   // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: whole toward them over the calm's own edge zones (`tiltCalmWholeHV`) —
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) both shares toward an edge ACROSS, the vertical one alone toward a
   // `b` end (a turn about the edge's own line: the horizontal calm carried over — `shownDirAcross`)
@@ -432,7 +430,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
   // facet change — a 22 – 50° roll and a 17 – 20° turn of the view in ONE frame (18 of the fast walk's 24 jumps, far out)
   // ⭐ the facet the MAP's place is on THIS frame, the one the calm reads (`zoneFacetOf`) — ⛔ `st.gizmoNormal`: updated after the calm, the frame onto a fan
   // facet still read the body's — the calm stepped onto the fan facet for that frame (a 14.7° view jump, probed)
-  if (sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
+  // ⭐⭐⭐ (2026-11-15, step 2.3) …with `calmRules(…).everyFacet`: a fan facet a side facet like any other (its own shares, whole at its edges)
+  if (!rules.everyFacet && sh !== null && map !== null && zoneFacetOf(st, map, sh.t.stack)) {
     st.asmCalmWhole = 1;
     st.asmCalmWholeV = 1;
     st.asmCalm = calmStep(st.asmCalm, { n: null, sH: 1, sV: 1 }, dtMs);
@@ -441,7 +440,8 @@ function calmTargets(st: SceneState, dtMs: number): void {
   if (tl !== null && sh !== null && map !== null && tg.n !== null && sh.t.stack === tl.facet) {
     const p = tiltCalmWholeHV(sh.t, map.facets[sh.t.stack]!, { zoneHPct: cfg.faceSpanZoneHPct, zoneMinHM: cfg.faceSpanZoneMinHCm / 100, zoneVPct: cfg.faceSpanZoneVPct, zoneMinVM: cfg.faceSpanZoneMinVCm / 100 });
     const pV = Math.max(p.h, p.v);
-    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA }, dtMs);
+    // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading: no fade by the pitch with `calmRules(…).noPitchFade`
+    st.asmCalm = calmStep(st.asmCalm, { n: tg.n, sH: 1 - (1 - tg.sH) * (1 - p.h), sV: 1 - (1 - tg.sV) * (1 - pV), wA: tg.wA, ...(rules.noPitchFade ? { poleFade: false } : {}) }, dtMs);
     // ⭐⭐⭐ (2026-11-10) the same share on the SHOWN direction too (by position — the eased state lags a fast finger); ⭐ at every distance (the owner's
     // shake: far out the 120 ms calm alone fell behind, then caught up on the cap)
     st.asmCalmWhole = p.h;
@@ -466,15 +466,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
       return;
     }
     const tS = mapTarget(map, sh.yaw, pE, o);
-    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, {
-      shareH: cfg.faceSpanShareH,
-      zoneHPct: cfg.faceSpanZoneHPct,
-      zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
-      vOn: cfg.faceSpanShareVOn === 1,
-      shareV: cfg.faceSpanShareV,
-      zoneVPct: cfg.faceSpanZoneVPct,
-      zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
-    }, acrossNormals(st, map, { t: tS, pitch: pE }));
+    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, { t: tS, pitch: pE }));
     st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);
     return;
   }
@@ -486,14 +478,31 @@ function calmTargets(st: SceneState, dtMs: number): void {
       if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);
       // ⭐⭐⭐ (2026-11-14) …and BOTH shares whole by position toward an end bordering a polar zone's own facet (no calm there, `zoneFacetOf`) — the calm gone
       // before the border, as toward a pole. ⛔ Released at the border by the whole share's ease: 45% of a strong calm in one frame, a 24° view jump
-      if (i >= 0) {
+      // ⭐⭐⭐ (2026-11-15, step 2.3) none with `calmRules(…).everyFacet`: a fan facet is calmed, nothing to be whole toward
+      if (i >= 0 && !rules.everyFacet) {
         const zLo = i > 0 && zoneFacetOf(st, map, col.facets[i - 1]!);
         const zHi = i < col.facets.length - 1 && zoneFacetOf(st, map, col.facets[i + 1]!);
         if (zLo || zHi) st.asmCalmWhole = Math.max(st.asmCalmWhole, poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, zLo, zHi, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100));
       }
     }
   }
-  st.asmCalm = calmStep(st.asmCalm, tg, dtMs);
+  // ⭐⭐⭐ (2026-11-15, step 2.3) a side facet's reading (a normal): no fade by the pitch with `calmRules(…).noPitchFade`; a cap's none (`n` null)
+  st.asmCalm = calmStep(st.asmCalm, rules.noPitchFade && tg.n !== null ? { ...tg, poleFade: false } : tg, dtMs);
+}
+
+/** ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls; `smooth` from `calmRules` (false: `edgeShare`, today's) */
+function calmKnobs(st: SceneState, smooth: boolean): CalmKnobs {
+  const cfg = st.cfg;
+  return {
+    shareH: cfg.faceSpanShareH,
+    zoneHPct: cfg.faceSpanZoneHPct,
+    zoneMinHM: cfg.faceSpanZoneMinHCm / 100,
+    vOn: cfg.faceSpanShareVOn === 1,
+    shareV: cfg.faceSpanShareV,
+    zoneVPct: cfg.faceSpanZoneVPct,
+    zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
+    smooth,
+  };
 }
 
 /**
@@ -1030,7 +1039,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
-      tiltFrame(st, dtMs, m.t.stack);
+      tiltFrame(st, dtMs, m.t.stack, m.t.surface);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
@@ -1431,7 +1440,7 @@ const RELOCATE_ANGLE = Math.PI / 4;
  * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
  * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
  */
-function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
+function tiltFrame(st: SceneState, dtMs: number, stack: number, surface: Vec3): void {
   const tl = st.asmTilt;
   if (tl === null) return;
   if (tl.swingMs !== null) {
@@ -1452,7 +1461,11 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   // stretch"*, *"1-b"*, *"one speed for every tilt"*) THE ROLL BACK STARTS AS THE GIZMO CROSSES THE EDGE (off the tilted facet) — or out past the
   // automatic tilt's threshold — and runs to the end on its own clock at `tiltRollDegS` (`rollDurationMs` of the turn's own angle); the gizmo HELD
   // meanwhile (`tiltClampStep`, `tiltUnderWay`); whole: the world's frame (`tiltExits`, the swing over too)
-  const onFacet = stack === tl.facet;
+  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT (`onTiltedFacet`: the place `surface`, in F, within a micrometre of the tilted facet — a tie,
+  // not a band) — ⛔ the stack alone: under the charts' layout a press with the gizmo on `Scene_0`'s ridge left the tilt at once (the place read on the
+  // neighbour), and the exit at the world's pole then rolled the view 157° in one frame (`tiltOff`)
+  const fmB = stack === tl.facet ? null : faceMapOf(st);
+  const onFacet = onTiltedFacet(stack, tl.facet, stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface));
   // ⭐⭐⭐ (2026-11-14, the owner: *"a sort of a flash of the scene with a very short jump of the camera"*) THE ROLL STEPPED FROM THE FRAME ITS ANGLE IS READ:
   // the crossing's frame sets its target (the face crossed onto), the camera's stage reads the turn's angle (`tl.rollRad`) — ⛔ stepped at once by the
   // angle read last frame, on the facet (its target the tilt's own heading there: ~0°, 0 ms): the half turn whole in ONE frame (probed: 180° at the ridge)
@@ -1496,7 +1509,7 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
  * ⭐⭐⭐ EVERY ORBIT ANGLE TURNED INTO ANOTHER FRAME (`turn`: a direction from the old frame to the new): the orbit's, the solved piece's, the spring's (at
  * rest), the camera's as shown (its leash state rebuilt from the piece), the gizmo's last; the yaws kept together (one hint). The coast stopped.
  */
-function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
+function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3, poleYaw = 0): void {
   const conv = (yaw: number, v: number, hint: number): { yaw: number; v: number } => anglesOfDir(turn(orbitDir(yaw, v)), hint);
   // ⭐⭐⭐ (2026-11-10, the owner: *"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*) a RATE turned too — the place a
   // little along it, turned, differenced (⛔ zeroed: mid-drag the piece's spring stalled at the tilt, then caught up — forth and back)
@@ -1507,7 +1520,9 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
     const b = conv(yaw + ry * e, v + rv * e, at.yaw);
     return [(b.yaw - at.yaw) / e, (b.v - at.v) / e];
   };
-  const o = conv(st.orbit.yaw, st.orbit.elevation, 0);
+  // ⭐⭐⭐ (2026-11-15) at a pole of the NEW frame the orbit's direction has no heading: the caller's (`poleYaw` — the heading shown; none handed: 0, as
+  // before); the others take the orbit's (their hint)
+  const o = anglesOfDir(turn(orbitDir(st.orbit.yaw, st.orbit.elevation)), 0, poleYaw);
   st.orbit.reset(o.yaw, o.v);
   // the solver's own memory of the target (the ring height kept, last frame's target) in the new frame — ⛔ left in the old one, the solver read a
   // whole frame's difference as the finger's step (the first probe: the pitch thrown to −90° at the press)
@@ -1690,7 +1705,11 @@ function tiltOff(st: SceneState): void {
       st.orbitInertia.stop(); // a coast would push on against it
     }
   }
-  turnAngles(st, (d) => mulM(D, d));
+  // ⭐⭐⭐ (2026-11-15) LEFT WITH THE ORBIT AT THE WORLD'S POLE (straight above or below: no heading in its direction) its yaw is the heading the camera
+  // SHOWS (`shownHeading`; none drawn yet: the tilt's own) — ⛔ none handed: yaw 0, the view rolled there in ONE frame (probed: 90° on `Scene_1`'s top —
+  // the automatic tilt on, then off, by the approach; 157° on `Scene_0`'s ridge)
+  const hP = shownHeading(st, mulM(D, orbitDir(st.orbit.yaw, st.orbit.elevation))) ?? tl.heading;
+  turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));
   // ⭐⭐⭐ (`1.0.120b-`) the square camera out of F, as it is
   const sqO = st.asmSquare;
   if (sqO.n !== null) sqO.n = mulM(D, sqO.n);

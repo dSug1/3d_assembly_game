@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built, the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look given (*"everything ok with charts switched on"*); 🔧 step 2.3 built behind a second switch (`chartCalm`), not deployed, the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -45,10 +45,35 @@
   fixed (it fails when the script moves nothing), the baseline re-recorded (the gizmo 23 – 25 m a run). ⚠ CL1's check used the same probe.
 * **Step 2.2** (`9e38e78`, `7463174`): `chartLayout`, off by default; switch off = today's game on the three scenes; switch on = `Scene_1` the
   same play (≤ 10⁻⁹ m), `Scene_0` and `Scene_0bis` another play, no error; **1845 vectors**; the owner's look owed. The record: the spec's §7.3.
-* **The owner, the same day**: fix the centre read off the drawn meshes; a held part must not inherit the last one's orbit state — both owed, as
-  their own step.
+* **The owner, the same day**: fix the centre read off the drawn meshes; a held part must not inherit the last one's orbit state. ✅ The
+  state's one home built (`f1b7573`: reset at each pick-up; ⛔ not at the test scenes' piece switch — the owner's to decide). ⛔ The centre built
+  (`a3826a1`) then REVERTED (`8008ce0`): today's centre is the ORIGIN by accident (the meshes' boxes read before they are placed), the model's is
+  31 cm into the assembly — another framing, the owner's decision. The record: the spec's §7.3.
+* **CL1's bit-for-bit check redone with the fixed probe** (the owner: *"Do it."*): the clean-up changed nothing (the spec's §7.3).
+* **Deployed** (the owner: *"Deploy afterwards so i can test scene 0 and scene 0bis"*): `8008ce0` as main `7db32b6`; `?chartLayout=1` or the
+  slider (GIZMO & SECTIONS) turns the charts' layout on; **1851 vectors**.
 * **The owner, the same day (the sway)**: the orbit reads the MODEL's coordinates, never the swayed assembly's → the spec's §4.5; one input reads
   the drawn meshes today (`placedBox` → the assembly's centre and radius at a pick-up): the owner's to decide.
 * **The owner, the same day**: test scenes of the builder's choice may live in ANOTHER worktree, reviewed then deleted by the owner (the spec's §7.2).
 * **The owner, the same day**: how the specificities (holes, voids, channels, mouths, protrusions) are handled → the spec's §4.4: untouched below the
   charts; the mouth's hand-over is coupled to the tilt and is carried over at step 2.4; `Scene_2`'s contour is not measured yet.
+* **The owner's look with the switch on** (2026-11-15): *"everything ok with charts switched on"* (⚠ the device not stated); a desktop recording
+  of `Scene_0bis` sent the same day was withdrawn (*"The charts were switched off."*). The record: the spec's §7.3.
+* **The owner's decisions**: *"Center: keep the origin for the moment"*; *"State reset: do what is best for"* (the message ended there) — read as
+  the builder's call: the reset wherever a piece starts being orbited; ✅ built (`spawnOrbitPiece`, not at the boot; the spring's last place
+  cleared with it), probed in the app under a tilt and in a zone; **1857 vectors**. Found, not changed: a switch or a respawn keeps the approach.
+* **The black scene on the phone: solved** (the owner: *"it is now working on the phone. solved."*); its cause was never found.
+* **A black scene on the owner's iPhone after the deploy**: not reproduced, its cause unknown, not reported again since; `2cae564` (local, not
+  deployed) adds the HUD's `draw` line (the WebGL context, the frames, the last interval, the canvas's size); **1856 vectors**.
+* **For later, at the owner's request** → the spec's §10: (1) the tilted pole close in is KEPT (rule §3 6.) and checked on the build with the
+  switch off and on, but general on every kind of face only by a step of its own, **step C**, after 2.5; (2) a band against input noise at every
+  trigger of a camera movement (the example: the square camera's target at an edge close in, no band today), considered at step 2.4.
+* **Step 2.3** (the owner: *"continue to next step"*; `fcfa8bd`, an Opus agent, audited): the calm on every side face behind `chartCalm` (off; acts
+  only with `chartLayout` 1) — the share continuous on a narrow run, a fan's facets calmed, no fade by the pitch on a side facet; **1867 vectors**;
+  both switches off = the commit before, bit for bit; with the calm `Scene_1` identical, `Scene_0bis` another play (no single-frame jump; a few more
+  fast rolls round a tip). ⛔ The owner's look on `Scene_0bis` owed. The record: the spec's §7.3.
+* ⛔ **Found measuring its baseline, fixed** (`72cdc54`): a tilt left with the orbit exactly at a pole reset the yaw to 0 — a 90° roll in one frame
+  in today's game (`Scene_1`'s top, the piece in then out), 157° on `Scene_0`'s ridge under the charts' layout, where a press on the ridge also left
+  its tilt at once (the gizmo on the tilted facet's border). **1869 vectors**; the switches off still bit for bit. The record: the spec's §7.3.
+* **Found, not fixed** (today's game, for step 2.4 — the spec's §10.2): close in, a fast dy onto `Scene_1`'s bottom face and off it within the frame
+  makes the automatic tilt and leaves it at once: 45° and 90° rolls in one frame.

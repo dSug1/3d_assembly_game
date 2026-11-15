@@ -445,6 +445,10 @@ export interface GestureConfig {
    * face maps (the world's and a frame's) are built with the pole as the shape's top / bottom set and the pitch scale read from the faces' normals;
    * 0 — as built (0 or 1) */
   chartLayout: number;
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3 — behind a switch, off by default) THE CALM ON EVERY SIDE FACE: 1 — a polar zone's own facets
+   * (a fan's) calmed as any side facet, the share continuous on a narrow run (`edgeShareSmooth`), a side facet's reading not faded by the pitch; only
+   * with `chartLayout` 1 too (`calmRules`); 0 — as built (0 or 1) */
+  chartCalm: number;
   /** ⭐⭐⭐ THE CALM (58d86ff's face-span orbit share, ported 2026-11-04 `1.0.95-` — the owner: *"It shall stay"*): the share of the orbit's angle shown along
    * dx's axis in the middle of a face (0 … 1), its edge zone (% of the gizmo's run along it) and the zone's minimum (cm) */
   faceSpanShareH: number;
@@ -875,6 +879,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   facetMergeDeg: 20, // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the faces within 20° of a facet's normal are its (MAP_AXIS_DEG's)…
   facetMinShare: 0.25, // …and a facet kept with a quarter of its polygon real face at least
   chartLayout: 0, // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) off: the face maps as built until the owner's look
+  chartCalm: 0, // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) off: the calm as built until the owner's look (on only with `chartLayout` 1)
   faceSpanShareH: 0.25, // ⭐⭐⭐ (58d86ff, *"1- ok as recommended"*) a quarter of the orbit's angle shown in the middle of a face
   faceSpanZoneHPct: 25, // ⭐⭐⭐ (58d86ff, *"2- ok as recommended"*) the edge zone a quarter of the run
   faceSpanZoneMinHCm: 3, // …at least 3 cm
@@ -1040,6 +1045,7 @@ export function validateGestureConfig(cfg: GestureConfig): void {
   if (!(cfg.facetMergeDeg >= 1 && cfg.facetMergeDeg <= 44)) throw new Error(`facetMergeDeg (${cfg.facetMergeDeg}) must be in [1, 44] °.`);
   if (!(cfg.facetMinShare >= 0 && cfg.facetMinShare <= 1)) throw new Error(`facetMinShare (${cfg.facetMinShare}) must be in [0, 1].`);
   if (cfg.chartLayout !== 0 && cfg.chartLayout !== 1) throw new Error(`chartLayout (${cfg.chartLayout}) must be 0 or 1.`);
+  if (cfg.chartCalm !== 0 && cfg.chartCalm !== 1) throw new Error(`chartCalm (${cfg.chartCalm}) must be 0 or 1.`);
   for (const k of ["faceSpanShareH", "faceSpanShareV"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 1)) throw new Error(`${k} (${cfg[k]}) must be in [0, 1].`);
   for (const k of ["faceSpanZoneHPct", "faceSpanZoneVPct"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 50)) throw new Error(`${k} (${cfg[k]}) must be in [0, 50] %.`);
   for (const k of ["faceSpanZoneMinHCm", "faceSpanZoneMinVCm"] as const) if (!(cfg[k] >= 0 && cfg[k] <= 30)) throw new Error(`${k} (${cfg[k]}) must be in [0, 30] cm.`);

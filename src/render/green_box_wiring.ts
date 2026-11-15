@@ -35,7 +35,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { SceneState } from "./scene_state";
 import { add, dot, length, qRotate, qSlerp, scale, sub, type Quat, type Vec3 } from "../core/vec";
 import { cameraFrameNow, retargetGizmo, rigNow, ringPlaceNow, syncCentre } from "./camera_rig";
-import { assemblyFrame, assemblyOn, restDrawn, shownOffset, spitStep, tiltClampStep, zoneMixPose } from "./assembly_wiring";
+import { assemblyFrame, assemblyOn, resetOrbitState, restDrawn, shownOffset, spitStep, tiltClampStep, zoneMixPose } from "./assembly_wiring";
 import { gizmoShownAt } from "../input/assembly_orbit";
 import { cameraOffsetAt, easeShare, gizmoBlendTravel, horizontalShare, rigSwingNeed } from "../input/orbit_rig";
 import { governedRingStep } from "../input/turn_governor";
@@ -552,6 +552,11 @@ export function spawnOrbitPiece(st: SceneState, kind: number, atBoot: boolean): 
   if (!atBoot) {
     st.orbit = new OrbitController(st.cfg, st.bootYawRad, st.bootElevation); // ⭐ (2026-11-13) the scene's boot yaw (a model's front)
     resetPieceOrbit(st);
+    // ⭐⭐⭐ (2026-11-15, the owner: *"State reset: do what is best for"* — the builder's call) the orbit's state back to its start too (`orbitStateStart`, its
+    // ONE home — the creation's and the pick-up's): the angles above have just jumped to the boot's — ⛔ the tilt, the zone's turn, the calm, the dy hold
+    // and the map's angles of where the piece WAS stayed against them (a switch or a stuck respawn under a tilt: the boot's angles read in the tilt's frame)
+    resetOrbitState(st);
+    st.boxOrbit = null; // ⭐ …and the spring's last place: the assembly's frame reads it before the spring starts again (⛔ left: the gizmo one frame at the old angles)
   }
   // ⭐⭐ (2026-10-10, the owner: *"at boot, all the pieces (not placed) have their resting face aligned with frozen object … so the roll is
   // immediately active at boot"*) — aligned to the frozen body on the first frame, once the orbit has placed it (`bootRestAlign`)
