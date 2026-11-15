@@ -67,8 +67,8 @@ const unit = (a: Vec3): Vec3 | null => {
   return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : null;
 };
 const D = Math.PI / 180;
-/** ⭐ two corners within this are one (m) */
-const CORNER_TOL_M = 0.0005;
+/** ⭐ two corners within this are one (m) — the charts' too (`orbit_charts.ts`) */
+export const CORNER_TOL_M = 0.0005;
 /** ⭐ T2: an edge is level within this (deg) — `RIDGE_TIE_DEG`'s */
 const LEVEL_DEG = 1;
 /** ⭐ D-Z5: a facet's section is the same in F and in the world when its normal is square to the axis within this (deg) */

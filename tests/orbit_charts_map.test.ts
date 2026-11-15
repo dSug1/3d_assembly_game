@@ -11,62 +11,16 @@
  * RED on the commit before (`510bbd8`) and on the mutants recorded in the step's report.
  */
 import { describe, expect, it } from "vitest";
-import { buildFaceMap, DEFAULT_FACET_OPTS, mapTarget, type FaceMap, type FacetOpts, type MapFace } from "../src/input/face_map";
-import { prismOutline } from "../src/core/prism";
+import { buildFaceMap, DEFAULT_FACET_OPTS, mapTarget, type FaceMap, type FacetOpts } from "../src/input/face_map";
+import { boxPolys, heptagonPolys, solid } from "./helpers/chart_shapes";
 import type { Vec3 } from "../src/core/vec";
-import type { ShellBox } from "../src/input/orbit_shell";
 
 const D = Math.PI / 180;
 const O0 = { edgeMm: 0, edgeDeg: 0 };
-const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const CHART: FacetOpts = { ...DEFAULT_FACET_OPTS, layout: "chart" };
 const NORMALS: FacetOpts = { ...DEFAULT_FACET_OPTS, layout: "chart", scale: "normals" };
 
-/** a convex solid from its polygons: each a face, oriented outward from the box's middle, its triangles a fan; the box its bounds */
-function solid(polys: readonly (readonly Vec3[])[]): { faces: MapFace[]; box: ShellBox } {
-  const vs = polys.flat();
-  const lo: Vec3 = [Math.min(...vs.map((v) => v[0])), Math.min(...vs.map((v) => v[1])), Math.min(...vs.map((v) => v[2]))];
-  const hi: Vec3 = [Math.max(...vs.map((v) => v[0])), Math.max(...vs.map((v) => v[1])), Math.max(...vs.map((v) => v[2]))];
-  const mid: Vec3 = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
-  const faces = polys.map((p): MapFace => {
-    const c = cross(sub(p[1]!, p[0]!), sub(p[2]!, p[0]!));
-    const l = Math.hypot(...c);
-    const tris: [Vec3, Vec3, Vec3][] = [];
-    for (let i = 1; i + 1 < p.length; i++) tris.push([p[0]!, p[i]!, p[i + 1]!]);
-    const centre: Vec3 = [p.reduce((s, v) => s + v[0], 0) / p.length, p.reduce((s, v) => s + v[1], 0) / p.length, p.reduce((s, v) => s + v[2], 0) / p.length];
-    let n: Vec3 = [c[0] / l, c[1] / l, c[2] / l];
-    if (dot(n, sub(centre, mid)) < 0) n = [-n[0], -n[1], -n[2]];
-    return { normal: n, centre, tris, part: "p" };
-  });
-  return { faces, box: { lo, hi } };
-}
-/** a box x × y × z, its bottom at y 0, centred in x / z, as six quads (corners counter-clockwise or not: `solid` orients them) */
-function boxPolys(x: number, y: number, z: number): Vec3[][] {
-  const [a, b] = [x / 2, z / 2];
-  return [
-    [[-a, 0, -b], [a, 0, -b], [a, 0, b], [-a, 0, b]],
-    [[-a, y, -b], [a, y, -b], [a, y, b], [-a, y, b]],
-    [[-a, 0, -b], [a, 0, -b], [a, y, -b], [-a, y, -b]],
-    [[-a, 0, b], [a, 0, b], [a, y, b], [-a, y, b]],
-    [[-a, 0, -b], [-a, 0, b], [-a, y, b], [-a, y, -b]],
-    [[a, 0, -b], [a, 0, b], [a, y, b], [a, y, -b]],
-  ];
-}
-/** `Scene_0`'s heptagon LYING along x (the prototype's `tippedPolys(7, 0)`): `prismOutline(7, 0.483, 0.483)` on its bottom edge, x ±0.245, flat ends */
-function heptagonPolys(): Vec3[][] {
-  const W = 0.483;
-  const prof = prismOutline(7, W, W)!.map(([z, y]) => [z, y + W / 2] as const);
-  const at = (x: number, k: number): Vec3 => [x, prof[k]![1], prof[k]![0]];
-  const n = prof.length;
-  const out: Vec3[][] = [];
-  for (let k = 0; k < n; k++) out.push([at(-0.245, k), at(-0.245, (k + 1) % n), at(0.245, (k + 1) % n), at(0.245, k)]);
-  out.push([...Array(n)].map((_, k) => at(0.245, k)));
-  out.push([...Array(n)].map((_, k) => at(-0.245, k)));
-  return out;
-}
 /** a SHED: a 0.48 m square box 0.2 m high under one roof rising 60° from its front (−z) to its back (+z) */
 function shedPolys(): Vec3[][] {
   const a = 0.24;

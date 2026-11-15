@@ -91,6 +91,9 @@ const PENDING: Record<string, string> = {
   LAUNCH_MESSAGES: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   LAUNCH_TITLE: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
   launchPlatform: "the launch messages sheet is owed (`BROWSER_GUARDS.md` §3); read by `browser_guards.test.ts`",
+  // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §7.2 step 1.2) the assignment of the contour's faces to charts, built and vectored ahead of its wiring (step 2.1).
+  chartContour: "ORBIT_CHARTS step 2.1 — the contour the charts' assignment reads, from the world face map at each seat; read by `orbit_charts.test.ts`",
+  assignCharts: "ORBIT_CHARTS step 2.1 — the assignment of the contour's faces to charts (§3), run at each seat; read by `orbit_charts.test.ts`",
   // ⭐ (2026-11-04, Step 4c-bis) the carrier's by-distance fallback (`loopStep`, `greenPace`, `greenFaces`) DELETED with the carrier — the face map
   // (`input/face_map.ts`); it stands at `da020af` (TILTED_ORBIT_REBUILD_SCOPE.md §13, §15).
   // ⭐ prototype (green box), 2026-10-02: the green piece is Piece17's pyramid now (`bodyNamed`, `greenPyramidSizeM`).
