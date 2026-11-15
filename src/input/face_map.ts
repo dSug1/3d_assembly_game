@@ -61,10 +61,18 @@ export interface MapGroup {
   readonly region: FilledRegion;
 }
 
-/** ⭐ The faces contour's knobs (D5): the merge angle (deg) and the real face share a facet needs (0 … 1). */
+/**
+ * ⭐ The faces contour's knobs (D5): the merge angle (deg) and the real face share a facet needs (0 … 1).
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2, step 1.1 — the COLUMNS chart, not wired yet) `layout`: "built" (absent) — the caps, columns and pitch scale as
+ * built; "chart" — the pole the shape's TOP / BOTTOM SET (a facet level within `CHART_CAP_DEG`: a cap; else no cap, the side band to ±90°), the columns by
+ * heading within `CHART_HEADING_DEG`, the levels every side facet's level edge (`CHART_LEVEL_M`) and the ends. `scale` (read with "chart" only): "built"
+ * (absent) — each level's pitch linear in its height between ∓45° (a cap) or ∓90° (a pole); "normals" — from the faces' normals (`chartLevels`).
+ */
 export interface FacetOpts {
   readonly mergeDeg: number;
   readonly minShare: number;
+  readonly layout?: "built" | "chart";
+  readonly scale?: "built" | "normals";
 }
 export const DEFAULT_FACET_OPTS: FacetOpts = { mergeDeg: MAP_AXIS_DEG, minShare: 0.25 };
 
@@ -647,8 +655,20 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   // `RIDGE_TIE_DEG` of elevation — the heptagon's two top faces at the zenith) — neither is the cap: a virtual one, and the side columns run to ±90° (below).
   // ⛔ A tie-break made the BACK face the cap: the front top face (the goal's) a side up to 76.9°, the place handed beyond the zenith there.
   const ridge = { top: false, bottom: false };
+  const chart = fo.layout === "chart";
   const capOf = (up: boolean): Candidate => {
     let best: Candidate | null = null;
+    if (chart) {
+      // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2) THE POLE IS THE TOP / BOTTOM SET: a facet level within `CHART_CAP_DEG` is the cap; none — the pole is an
+      // edge or a point, no cap (a virtual one at the box), the side band to ±90° (`ridge`). ⛔ Not the facet nearest the vertical beyond 45° with the
+      // ridge's tie: under a shed's 60° roof the side band ended at 45° and the place was pinned beyond it, a steep apex pinned for half the pitch range
+      const cosCap = Math.cos((CHART_CAP_DEG * Math.PI) / 180);
+      for (const c of kept) if ((up ? c.n[1] : -c.n[1]) > cosCap && (best === null || (up ? c.n[1] > best.n[1] : c.n[1] < best.n[1]))) best = c;
+      if (best !== null) return best;
+      if (up) ridge.top = true;
+      else ridge.bottom = true;
+      return { ...candOf([0, up ? 1 : -1, 0], false, 0), e: up ? box.hi[1] : -box.lo[1] };
+    }
     const beyond = kept.filter((c) => (up ? elev(c.n) : -elev(c.n)) > Q + 1e-12);
     for (const c of beyond) if (best === null || (up ? c.n[1] > best.n[1] : c.n[1] < best.n[1])) best = c;
     const tieRad = (RIDGE_TIE_DEG * Math.PI) / 180;
@@ -704,14 +724,27 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
     const h = Math.atan2(n[2], n[0]);
     return h < 0 ? h + 2 * Math.PI : h;
   };
-  const order = sides.map((_, i) => i).sort((x, y) => sides[y]!.area - sides[x]!.area);
   const cols: { h: number; members: number[] }[] = [];
-  const mergeRad = (Math.max(0, fo.mergeDeg) * Math.PI) / 180;
-  for (const i of order) {
-    const h = heading(sides[i]!.n);
-    const c = cols.find((k) => Math.abs(wrapPi(h - k.h)) <= mergeRad + 1e-12);
-    if (c === undefined) cols.push({ h, members: [i] });
-    else c.members.push(i);
+  if (chart) {
+    // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2) the side facets by heading within `CHART_HEADING_DEG` (stacked facets share a level edge: one heading),
+    // chained in heading order, the last group joined to the first across 0° — ⛔ not `mergeDeg`: a column is one heading, not a family of normals
+    const tol = (CHART_HEADING_DEG * Math.PI) / 180;
+    for (const i of sides.map((_, k) => k).sort((x, y) => heading(sides[x]!.n) - heading(sides[y]!.n))) {
+      const h = heading(sides[i]!.n);
+      const g = cols[cols.length - 1];
+      if (g !== undefined && Math.abs(wrapPi(h - g.h)) < tol) g.members.push(i);
+      else cols.push({ h, members: [i] });
+    }
+    if (cols.length > 1 && Math.abs(wrapPi(cols[0]!.h - cols[cols.length - 1]!.h)) < tol) cols[0]!.members.push(...cols.pop()!.members);
+  } else {
+    const order = sides.map((_, i) => i).sort((x, y) => sides[y]!.area - sides[x]!.area);
+    const mergeRad = (Math.max(0, fo.mergeDeg) * Math.PI) / 180;
+    for (const i of order) {
+      const h = heading(sides[i]!.n);
+      const c = cols.find((k) => Math.abs(wrapPi(h - k.h)) <= mergeRad + 1e-12);
+      if (c === undefined) cols.push({ h, members: [i] });
+      else c.members.push(i);
+    }
   }
   cols.sort((x, y) => x.h - y.h);
   const vs = facets.flatMap((f) => f.poly);
@@ -733,6 +766,26 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   const yT = core.hi[1];
   const pitchOfY = (y: number): number => (yT - yB > 1e-12 ? PB + ((y - yB) / (yT - yB)) * (PT - PB) : 0);
   const yExt = (f: Facet): [number, number] => (f.poly.length === 0 ? [yB, yT] : [Math.min(...f.poly.map((v) => v[1])), Math.max(...f.poly.map((v) => v[1]))]);
+  if (chart) {
+    // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2) THE CHART'S LEVELS (`chartLevels`) — a column's facets bottom → top by their middle height, a bound between
+    // two stacked facets the pitch of the level at the lower one's top; the side band from the lowest level's pitch to the highest's
+    const lv = chartLevels(facets.slice(0, sides.length), cols.map((c) => [...c.members].sort((x, y) => yExt(facets[x]!)[0] + yExt(facets[x]!)[1] - (yExt(facets[y]!)[0] + yExt(facets[y]!)[1]))), yB, yT, !ridge.bottom, !ridge.top, fo.scale === "normals");
+    const P0 = lv.p[0]!;
+    const PN = lv.p[lv.p.length - 1]!;
+    const columns: Column[] = cols.map((c, k) => {
+      const prev = cols.length === 1 ? c.h - 2 * Math.PI : k === 0 ? cols[cols.length - 1]!.h - 2 * Math.PI : cols[k - 1]!.h;
+      const next = cols.length === 1 ? c.h + 2 * Math.PI : k === cols.length - 1 ? cols[0]!.h + 2 * Math.PI : cols[k + 1]!.h;
+      const lo = (prev + c.h) / 2;
+      const hi = (c.h + next) / 2;
+      const fs = lv.cols[k]!;
+      const inner = fs.slice(0, -1).map((i) => Math.min(PN, Math.max(P0, pitchOfLevels(lv, yExt(facets[i]!)[1]))));
+      return { mid: (lo + hi) / 2, hw: (hi - lo) / 2, facets: fs, bounds: [P0, ...inner, PN] };
+    });
+    // the levels read whenever a column's facets are not each the whole height on its own band (⭐ a box: none — its map exactly the built one)
+    const whole = lv.p.length === 2 && columns.every((c) => c.facets.length === 1 && Math.abs(yExt(facets[c.facets[0]!]!)[0] - yB) < 1e-9 && Math.abs(yExt(facets[c.facets[0]!]!)[1] - yT) < 1e-9);
+    const levels = !whole && yT - yB > 1e-12 ? { p: lv.p, y: lv.y } : undefined;
+    return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1, ...(levels ? { levels } : {}) };
+  }
   const columns: Column[] = cols.map((c, k) => {
     const prev = cols.length === 1 ? c.h - 2 * Math.PI : k === 0 ? cols[cols.length - 1]!.h - 2 * Math.PI : cols[k - 1]!.h;
     const next = cols.length === 1 ? c.h + 2 * Math.PI : k === cols.length - 1 ? cols[0]!.h + 2 * Math.PI : cols[k + 1]!.h;
@@ -751,6 +804,104 @@ export function buildFaceMap(faces: readonly MapFace[], box: ShellBox, fo: Facet
   const yOfPitch = (q: number): number => (PT - PB > 1e-12 ? yB + ((q - PB) / (PT - PB)) * (yT - yB) : (yB + yT) / 2);
   const levels = ps.length > 2 && yT - yB > 1e-12 ? { p: ps, y: ps.map(yOfPitch) } : undefined;
   return { box, core, facets, columns, top: sides.length, bottom: sides.length + 1, ...(levels ? { levels } : {}) };
+}
+
+/** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2) layout "chart": a facet within this of straight up / down (deg) is a CAP — the top / bottom set a level face. */
+export const CHART_CAP_DEG = 1;
+/** ⭐⭐⭐ (2026-11-15, §2.2) layout "chart": side facets within this of each other's heading (deg) are one COLUMN — stacked along a level edge. */
+export const CHART_HEADING_DEG = 0.5;
+/** ⭐⭐⭐ (2026-11-15, §2.2) layout "chart": two heights within this (m) are one LEVEL — an edge whose two ends are this close in height is level. */
+export const CHART_LEVEL_M = 2e-4;
+
+/** ⭐⭐⭐ (2026-11-15, §2.2) the pitch at the height `y` on a chart's levels — linear between two, held beyond the ends. */
+function pitchOfLevels(lv: { readonly p: readonly number[]; readonly y: readonly number[] }, y: number): number {
+  const n = lv.y.length;
+  if (y <= lv.y[0]!) return lv.p[0]!;
+  if (y >= lv.y[n - 1]!) return lv.p[n - 1]!;
+  let k = 0;
+  while (k < n - 2 && y > lv.y[k + 1]!) k++;
+  return lv.p[k]! + ((y - lv.y[k]!) / (lv.y[k + 1]! - lv.y[k]!)) * (lv.p[k + 1]! - lv.p[k]!);
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2, §5.2) THE CHART'S LEVELS: the heights of the side facets' LEVEL EDGES (two ends within `CHART_LEVEL_M` in
+ * height) and the contour's lowest `yB` and highest `yT`, each with its pitch. `cols`: each column's side facets bottom → top (indices into `sides`);
+ * `capB` / `capT`: a real cap there (else a pole). `normals` false — the pitch linear in the height between ∓45° (a cap) or ∓90° (a pole), as built;
+ * true — at a level edge HALFWAY between the elevations of the two stacked facets meeting there (a cap counts ±90°), weighted by the edges' lengths when
+ * several columns have an edge at that level; a pole ±90°. The repair: a level no pair gives is laid by its height between its neighbours (an end with
+ * none at ∓45°), and every interval keeps at least a quarter of its share by the height — two levels never at one pitch.
+ */
+function chartLevels(
+  sides: readonly Facet[],
+  cols: readonly (readonly number[])[],
+  yB: number,
+  yT: number,
+  capB: boolean,
+  capT: boolean,
+  normals: boolean,
+): { readonly y: readonly number[]; readonly p: readonly number[]; readonly cols: readonly (readonly number[])[] } {
+  const TOL = CHART_LEVEL_M;
+  const raw: number[] = [yB, yT];
+  for (const s of sides)
+    for (let k = 0; k < s.poly.length; k++) {
+      const p = s.poly[k]!;
+      const q = s.poly[(k + 1) % s.poly.length]!;
+      if (Math.abs(p[1] - q[1]) < TOL && Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) > 1e-6) raw.push((p[1] + q[1]) / 2);
+    }
+  raw.sort((a, b) => a - b);
+  const ys: number[] = [];
+  for (const y of raw) if (ys.length === 0 || y - ys[ys.length - 1]! > TOL) ys.push(y);
+  ys[0] = yB;
+  ys[ys.length - 1] = yT;
+  const PB = capB ? -Q : -H;
+  const PT = capT ? Q : H;
+  if (!normals) return { y: ys, p: ys.map((y) => (yT - yB > 1e-12 ? PB + ((y - yB) / (yT - yB)) * (PT - PB) : 0)), cols };
+  // a side facet's level edge at the height `y`: its length (0: none)
+  const levelEdge = (s: Facet, y: number): number => {
+    let l = 0;
+    for (let k = 0; k < s.poly.length; k++) {
+      const p = s.poly[k]!;
+      const q = s.poly[(k + 1) % s.poly.length]!;
+      if (Math.abs(p[1] - y) < TOL && Math.abs(q[1] - y) < TOL) l = Math.max(l, Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]));
+    }
+    return l;
+  };
+  const el = (s: Facet): number => Math.asin(Math.max(-1, Math.min(1, s.n[1])));
+  const q = ys.map((y, k) => {
+    const first = k === 0;
+    const last = k === ys.length - 1;
+    if (first && !capB) return -H;
+    if (last && !capT) return H;
+    // the facets meeting along a level edge there — each pair at the pitch halfway between their elevations (a cap: ±90°), by the edges' lengths
+    let w = 0;
+    let e = 0;
+    for (const col of cols)
+      for (let j = 0; j <= col.length; j++) {
+        const lo = j > 0 ? sides[col[j - 1]!]! : null;
+        const hi = j < col.length ? sides[col[j]!]! : null;
+        if (lo === null && !first) continue;
+        if (hi === null && !last) continue;
+        const l = Math.min(lo === null ? Infinity : levelEdge(lo, y), hi === null ? Infinity : levelEdge(hi, y));
+        if (!(l > 1e-6) || !Number.isFinite(l)) continue;
+        w += l;
+        e += (l * ((lo === null ? -H : el(lo)) + (hi === null ? H : el(hi)))) / 2;
+      }
+    return w > 0 ? e / w : NaN;
+  });
+  // the repair
+  const ps = [...q];
+  if (Number.isNaN(ps[0]!)) ps[0] = -Q;
+  if (Number.isNaN(ps[ps.length - 1]!)) ps[ps.length - 1] = Q;
+  for (let k = 1; k < ps.length - 1; k++)
+    if (Number.isNaN(ps[k]!)) {
+      let b0 = k + 1;
+      while (Number.isNaN(ps[b0]!)) b0++;
+      ps[k] = ps[k - 1]! + ((ys[k]! - ys[k - 1]!) / (ys[b0]! - ys[k - 1]!)) * (ps[b0]! - ps[k - 1]!);
+    }
+  const gap = (k: number): number => (0.25 * (ys[k]! - ys[k - 1]!) * (ps[ps.length - 1]! - ps[0]!)) / (yT - yB);
+  for (let k = 1; k < ps.length - 1; k++) ps[k] = Math.max(ps[k]!, ps[k - 1]! + gap(k));
+  for (let k = ps.length - 2; k >= 1; k--) ps[k] = Math.min(ps[k]!, ps[k + 1]! - gap(k + 1));
+  return { y: ys, p: ps, cols };
 }
 
 /** ⭐⭐⭐ (F3) the side band's HEIGHT at `p` on the levels — linear between two, the edge stretch at each (`edgeMap`, its last `keM` slow). */

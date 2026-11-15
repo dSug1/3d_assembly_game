@@ -81,10 +81,15 @@ export function boxOf(polys: V[][]): { lo: V; hi: V } {
   const vs = polys.flat();
   return { lo: [Math.min(...vs.map((v) => v[0])), Math.min(...vs.map((v) => v[1])), Math.min(...vs.map((v) => v[2]))], hi: [Math.max(...vs.map((v) => v[0])), Math.max(...vs.map((v) => v[1])), Math.max(...vs.map((v) => v[2]))] };
 }
-export function mapOf(polys: V[][]): FaceMap {
+/** the polygons as `MapFace`s (outward from the box's middle) and their box — what `mapOf` builds the face map from */
+export function facesOf(polys: V[][]): { faces: MapFace[]; box: { lo: V; hi: V } } {
   const b = boxOf(polys);
   const mid: V = [(b.lo[0] + b.hi[0]) / 2, (b.lo[1] + b.hi[1]) / 2, (b.lo[2] + b.hi[2]) / 2];
-  return buildFaceMap(polys.map((p) => face(p, mid)), { lo: b.lo as any, hi: b.hi as any });
+  return { faces: polys.map((p) => face(p, mid)), box: b };
+}
+export function mapOf(polys: V[][]): FaceMap {
+  const { faces, box } = facesOf(polys);
+  return buildFaceMap(faces, { lo: box.lo as any, hi: box.hi as any });
 }
 export function hullPolys(points: V[]): V[][] {
   const h = convexHull3(points)!;
