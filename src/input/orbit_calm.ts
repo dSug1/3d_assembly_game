@@ -30,6 +30,31 @@ export function edgeShare(dEdgeM: number, runM: number, interior: number, zonePc
   return k + (1 - k) * x * x * (3 - 2 * x);
 }
 
+const smooth01 = (x: number): number => {
+  const c = Math.min(1, Math.max(0, x));
+  return c * c * (3 - 2 * c);
+};
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 1.4) THE SHARE MADE CONTINUOUS ON A NARROW RUN — `edgeShare` turns whole as soon as the run is not longer
+ * than two zones (with 25 %, 3 cm, 0.25: from 0.25 to 1 as a face's width passes 6 cm — a jump of the shown direction, hidden by the ease). Here the interior
+ * share is `interior` for a run of four minimum zones or more and rises to 1 by a smoothstep as the run shortens from four minimum zones to two; the zone
+ * `zonePct` % of the run, at least `zoneMinM`, at most half the run. ⭐ EXACTLY `edgeShare` wherever the run is at least four minimum zones and the zone
+ * share under 50 %; 1 where it is 1: a run not longer than two minimum zones, a zone share of 50 % or more (the two zones cover the run). A zero minimum zone:
+ * no narrow ramp — exactly `edgeShare` for every run (`interior` in the middle of any run however short, the zone the share alone). Position only: reversible.
+ * `calmTarget` reads it when `CalmKnobs.smooth`.
+ */
+export function edgeShareSmooth(dEdgeM: number, runM: number, interior: number, zonePct: number, zoneMinM: number): number {
+  const minM = Math.max(0, zoneMinM);
+  const zone0 = Math.max((Math.max(0, zonePct) / 100) * runM, minM);
+  if (!(runM > 2 * zone0)) return 1; // a run not longer than two minimum zones, or the two zones covering it: whole, as `edgeShare`
+  const zone = Math.min(zone0, runM / 2);
+  const x = Math.min(1, Math.max(0, 1 - Math.max(0, dEdgeM) / zone));
+  const k = Math.min(1, Math.max(0, interior));
+  const kEff = runM >= 4 * minM ? k : k + (1 - k) * smooth01((4 * minM - runM) / (2 * minM));
+  return kEff + (1 - kEff) * x * x * (3 - 2 * x);
+}
+
 /**
  * ⭐⭐⭐ (58d86ff) THE PIECE'S SHOWN DIRECTION: the orbit's direction `u` read as two angles off the face's normal `n` — `α` toward `h` (dx's axis), `β`
  * toward `v` (dy's) — and shown at `sH·α`, `sV·β`. Both shares 1: `u` itself. The piece, the camera, the approach and the solve read it; the gizmo is still
@@ -229,6 +254,8 @@ export interface CalmKnobs {
   readonly shareV: number;
   readonly zoneVPct: number;
   readonly zoneMinVM: number;
+  /** ⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1) the shares read by `edgeShareSmooth` (continuous on a narrow run); absent or false: `edgeShare`, today's */
+  readonly smooth?: boolean;
 }
 
 /** ⭐ The calm as it stands: the eased facet normal and the two shares (1: the orbit's whole angle). */
@@ -288,18 +315,19 @@ export function calmTarget(
     const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
     return f.bHi - f.bLo > 0 ? Math.min(s - f.bLo, f.bHi - s) / (f.bHi - f.bLo) : 0.5;
   };
+  const share = k.smooth === true ? edgeShareSmooth : edgeShare; // ⭐ (2026-11-15, step 1.4) absent or false: today's
   const wA = acrossWeight(L.hi - L.lo > 0 ? Math.min(L.L - L.lo, L.hi - L.L) / (L.hi - L.lo) : 0.5, fracUp());
-  let sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
+  let sH = share(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
   let sV = 1;
   if (k.vOn) {
     if (Math.abs(f.n[1]) < VERTICAL_EPS) {
       // ⭐⭐⭐ a vertical facet: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face (⛔ the wall's own top: the bounce)
       const y = t.surface[1];
-      if (box !== null) sV = edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], k.shareV, k.zoneVPct, k.zoneMinVM);
+      if (box !== null) sV = share(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], k.shareV, k.zoneVPct, k.zoneMinVM);
     } else {
       // ⭐⭐⭐ (§8) a slanted facet: its place up its own slope, in its own extent
       const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
-      sV = edgeShare(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.shareV, k.zoneVPct, k.zoneMinVM);
+      sV = share(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.shareV, k.zoneVPct, k.zoneMinVM);
     }
   }
   // ⭐⭐⭐ (§8) WHERE THE FRAME CHANGES, BOTH SHARES WHOLE AT THE EDGE — the shown direction the orbit's own on both sides, so the crossing is continuous in
@@ -309,7 +337,7 @@ export function calmTarget(
   // facet's slope the horizontal share was made whole at its `b` ends too: a `b` end is a turn about `h`, which the reading toward the edge's line keeps
   // (`shownDirAcross`) — the vertical share alone whole there (its own `edgeShare`, 1 at the ends)
   const frameDiffers = (m: Vec3 | null): boolean => m !== null && !(Math.abs(f.n[1]) < VERTICAL_EPS && Math.abs(m[1]) < VERTICAL_EPS);
-  const near = (d: number, run: number, pct: number, minM: number): number => 1 - edgeShare(d, run, 0, pct, minM);
+  const near = (d: number, run: number, pct: number, minM: number): number => 1 - share(d, run, 0, pct, minM);
   if (across !== undefined) {
     const run = L.hi - L.lo;
     const p = Math.max(frameDiffers(across.lo) ? 1 - near(L.L - L.lo, run, k.zoneHPct, k.zoneMinHM) : 0, frameDiffers(across.hi) ? 1 - near(L.hi - L.L, run, k.zoneHPct, k.zoneMinHM) : 0);
