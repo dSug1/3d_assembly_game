@@ -492,7 +492,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
   const tg =
     sh === null || map === null
       ? { n: null, sH: 1, sV: 1 }
-      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));
+      : calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, sh));
   // ⭐⭐⭐ (2026-11-10, §9.4) on the TILTED facet every edge is a frame change: whole toward them over the calm's own edge zones (`tiltCalmWholeHV`) —
   // ⭐⭐⭐ (2026-11-10, the owner: *"the tilt seems to catch up what the calm prevented"*) both shares toward an edge ACROSS, the vertical one alone toward a
   // `b` end (a turn about the edge's own line: the horizontal calm carried over — `shownDirAcross`)
@@ -541,7 +541,7 @@ function calmTargets(st: SceneState, dtMs: number): void {
       return;
     }
     const tS = mapTarget(map, sh.yaw, pE, o);
-    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, { t: tS, pitch: pE }));
+    const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, { t: tS, pitch: pE }));
     st.asmCalm = calmStep(st.asmCalm, { n: gS.n, sH: gS.sH, sV: 1, wA: gS.wA }, dtMs);
     return;
   }
@@ -565,8 +565,11 @@ function calmTargets(st: SceneState, dtMs: number): void {
   st.asmCalm = calmStep(st.asmCalm, rules.noPitchFade && tg.n !== null ? { ...tg, poleFade: false } : tg, dtMs);
 }
 
-/** ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls; `smooth` from `calmRules` (false: `edgeShare`, today's) */
-function calmKnobs(st: SceneState, smooth: boolean): CalmKnobs {
+/**
+ * ⭐ (2026-11-15, step 2.3) the calm's knobs from the sliders — both `calmTarget` calls; `smooth` from `calmRules` (false: `edgeShare`, today's); ⭐ (step
+ * 2.4e) `ownRun` from `calmRules` too (false: a vertical facet's vertical share on the box's height, the bounce's rule, today's)
+ */
+function calmKnobs(st: SceneState, smooth: boolean, ownRun: boolean): CalmKnobs {
   const cfg = st.cfg;
   return {
     shareH: cfg.faceSpanShareH,
@@ -577,6 +580,7 @@ function calmKnobs(st: SceneState, smooth: boolean): CalmKnobs {
     zoneVPct: cfg.faceSpanZoneVPct,
     zoneMinVM: cfg.faceSpanZoneMinVCm / 100,
     smooth,
+    ownRun,
   };
 }
 

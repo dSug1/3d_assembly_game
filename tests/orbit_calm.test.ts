@@ -164,7 +164,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(calmTarget(t0, { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.4 }, null, K).sH).toBe(edgeShare(0.03, 0.49, 0.25, 25, 0.03));
     expect(calmTarget({ ...t0, band: "TOP" }, { n: [0, 1, 0], b: [0, 0, 1], bLo: 0, bHi: 0.4 }, null, K)).toEqual({ n: null, sH: 1, sV: 1, wA: 1 }); // a cap: none (⭐ 2026-11-10: read toward its edge's line, `wA` 1)
     // ⭐ (2026-11-15, step 2.3) the knobs from one helper (`calmKnobs`, its `smooth` from `calmRules`) — `chart_calm_wiring.test.ts`
-    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));");
+    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, sh));");
     expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);"); // ⭐ (step 2.3) a cap with no side to read; the generic call: `chart_calm_wiring.test.ts`
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("calmFrame(st, dtMs);");
@@ -462,9 +462,9 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 2.3) the calm on every side face (calmRul
   ];
 
   it("⭐⭐ the rules on only when BOTH switches are 1 (the charts' layout and the calm's); else all three off", () => {
-    expect(calmRules(1, 1)).toEqual({ smooth: true, everyFacet: true, noPitchFade: true });
-    for (const [l, c] of [[0, 0], [0, 1], [1, 0]] as const) expect(calmRules(l, c)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false });
-    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false }); // the defaults: today's
+    expect(calmRules(1, 1)).toEqual({ smooth: true, everyFacet: true, noPitchFade: true, ownRun: true });
+    for (const [l, c] of [[0, 0], [0, 1], [1, 0]] as const) expect(calmRules(l, c)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false, ownRun: false });
+    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm)).toEqual({ smooth: false, everyFacet: false, noPitchFade: false, ownRun: false }); // the defaults: today's
   });
 
   it("⭐⭐⭐ `poleFade` absent or true: calmShown EXACTLY as before step 2.3 on a grid of directions, normals and shares", () => {
@@ -549,5 +549,169 @@ describe("⭐⭐⭐ (ORBIT_CHARTS step 2.3) the calm on every side face (calmRul
     const r = calmStep({ n: [0, 0, -1], sH: 0.25, sV: 1 }, { n: up, sH: 0.25, sV: 0.25, poleFade: false }, 16)!;
     expect(r.n).toEqual(up);
     expect(r.poleFade).toBe(false);
+  });
+});
+
+// ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §11 3., §12 step 2.4e) THE CALM ON ONE REFERENCE (`CalmKnobs.ownRun`, `calmRules(…).ownRun`): a vertical facet's vertical
+// share and the reading's weight by the place on its OWN run along `b` (`bLo` … `bHi`), as a slanted facet's — ⛔ the box's height (the bounce's rule)
+describe("⭐⭐⭐ (ORBIT_CHARTS step 2.4e) the calm on one reference (CalmKnobs.ownRun)", () => {
+  // ⛔ `calmTarget`'s body as committed before step 2.4e (`45e3318`), verbatim but for its name — the "today" the knob's absence is measured against
+  const before24e = (
+    t: { readonly band: "SIDE" | "TOP" | "BOTTOM"; readonly surface: Vec3; readonly across: { readonly L: number; readonly lo: number; readonly hi: number } },
+    f: { readonly n: Vec3; readonly b: Vec3; readonly bLo: number; readonly bHi: number },
+    box: { readonly lo: Vec3; readonly hi: Vec3 } | null,
+    k: CalmKnobs,
+    across?: { readonly lo: Vec3 | null; readonly hi: Vec3 | null },
+  ): { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA: number } => {
+    const VERTICAL_EPS = 1e-6;
+    if (t.band !== "SIDE") return { n: null, sH: 1, sV: 1, wA: 1 };
+    const L = t.across;
+    const fracUp = (): number => {
+      if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+        if (box === null || !(box.hi[1] - box.lo[1] > 0)) return 0.5;
+        return Math.min(t.surface[1] - box.lo[1], box.hi[1] - t.surface[1]) / (box.hi[1] - box.lo[1]);
+      }
+      const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
+      return f.bHi - f.bLo > 0 ? Math.min(s - f.bLo, f.bHi - s) / (f.bHi - f.bLo) : 0.5;
+    };
+    const share = k.smooth === true ? edgeShareSmooth : edgeShare;
+    const wA = acrossWeight(L.hi - L.lo > 0 ? Math.min(L.L - L.lo, L.hi - L.L) / (L.hi - L.lo) : 0.5, fracUp());
+    let sH = share(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
+    let sV = 1;
+    if (k.vOn) {
+      if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+        const y = t.surface[1];
+        if (box !== null) sV = share(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], k.shareV, k.zoneVPct, k.zoneMinVM);
+      } else {
+        const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
+        sV = share(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.shareV, k.zoneVPct, k.zoneMinVM);
+      }
+    }
+    const frameDiffers = (m: Vec3 | null): boolean => m !== null && !(Math.abs(f.n[1]) < VERTICAL_EPS && Math.abs(m[1]) < VERTICAL_EPS);
+    const near = (d: number, run: number, pct: number, minM: number): number => 1 - share(d, run, 0, pct, minM);
+    if (across !== undefined) {
+      const run = L.hi - L.lo;
+      const p = Math.max(frameDiffers(across.lo) ? 1 - near(L.L - L.lo, run, k.zoneHPct, k.zoneMinHM) : 0, frameDiffers(across.hi) ? 1 - near(L.hi - L.L, run, k.zoneHPct, k.zoneMinHM) : 0);
+      sV = 1 - (1 - sV) * (1 - p);
+    }
+    return { n: f.n, sH, sV, wA };
+  };
+
+  type TT = Parameters<typeof calmTarget>[0];
+  type FF = Parameters<typeof calmTarget>[1];
+  type BB = Parameters<typeof calmTarget>[2];
+  type AA = Parameters<typeof calmTarget>[4];
+  const K: CalmKnobs = { shareH: 0.25, zoneHPct: 25, zoneMinHM: 0.03, vOn: true, shareV: 0.25, zoneVPct: 25, zoneMinVM: 0.03 };
+  const KS: CalmKnobs = { ...K, smooth: true }; // the rule on: `smooth` with it
+  const KO: CalmKnobs = { ...KS, ownRun: true };
+  const BOX: BB = { lo: [-0.3, 0, -0.3], hi: [0.3, 0.49, 0.3] }; // the fault's numbers: a box 0.49 m high, its top a tip's apex …
+  const RECT: FF = { n: [0, 0, -1], b: [0, 1, 0], bLo: 0.12, bHi: 0.37 }; // … a body's rectangle 0.25 m high under it, its top 120 mm below the apex
+  const slantN: Vec3 = [0, 0.5, -Math.sqrt(0.75)];
+  const slantB = facetFrame(slantN).b;
+  const tAt = (surface: Vec3, fr = 0.3): TT => ({ band: "SIDE", surface, across: { L: -0.1 + fr * 0.4, lo: -0.1, hi: 0.3 } });
+  const ACROSS: readonly AA[] = [undefined, { lo: slantN, hi: [1, 0, 0] }, { lo: null, hi: [0, 0.6, -0.8] }, { lo: [1, 0, 0], hi: [-1, 0, 0] }];
+
+  it("⭐⭐⭐ a vertical facet SHORTER than the box (the fault): at its own top edge the vertical share WHOLE and the reading toward the edge's line (today: 0.2509, the view held back); in its middle the interior share, as on a slanted face of that extent", () => {
+    const top = tAt([0.02, 0.37, -0.3]);
+    const today = calmTarget(top, RECT, BOX, KS);
+    expect(today.sV).toBeCloseTo(0.25092, 5); // the box's top 120 mm further: held back at the face's own edge
+    expect(today.sV).toBe(edgeShareSmooth(0.12, 0.49, 0.25, 25, 0.03));
+    expect(today.wA).toBeCloseTo(acrossWeight(0.3, 0.12 / 0.49), 12); // the reading by the place: 0.245 of the box's run up (0.576) …
+    expect(today.wA).toBeLessThan(0.6); // … not the reading toward the edge's line at the face's own edge
+    const own = calmTarget(top, RECT, BOX, KO);
+    expect(own.sV).toBe(1); // ⭐ whole at its own top edge
+    expect(own.wA).toBe(1); // ⭐ the reading toward the edge's line (`shownDirAcross`) at the edge itself
+    expect(own.sH).toBe(today.sH); // the horizontal share untouched
+    expect(own.n).toEqual(today.n);
+    expect(calmTarget(tAt([0.02, 0.12, -0.3]), RECT, BOX, KO).sV).toBe(1); // and at its own bottom edge
+    expect(calmTarget(tAt([0.02, 0.245, -0.3]), RECT, BOX, KO).sV).toBeCloseTo(0.25, 12); // the interior share in its middle
+    // as on a slanted facet of the same extent, at the same place along its own run, on a grid of heights (the shares and the reading's weight)
+    const SL: FF = { n: slantN, b: slantB, bLo: 0.12, bHi: 0.37 };
+    let n = 0;
+    for (let i = 0; i <= 50; i++) {
+      const y = 0.12 + (0.25 * i) / 50;
+      for (const fr of [0, 0.1, 0.5, 0.9])
+        for (const a of [undefined, { lo: null, hi: null }] as AA[]) {
+          const v = calmTarget(tAt([0.02, y, -0.3], fr), RECT, BOX, KO, a);
+          const s = calmTarget(tAt([y * slantB[0], y * slantB[1], y * slantB[2]], fr), SL, BOX, KO, a);
+          expect(v.sV).toBeCloseTo(s.sV, 12);
+          expect(v.wA).toBeCloseTo(s.wA, 12);
+          expect(v.sH).toBe(s.sH);
+          n++;
+        }
+    }
+    expect(n).toBe(51 * 4 * 2);
+  });
+
+  it("⭐⭐⭐ a vertical facet whose own extent EQUALS the box's height (`Scene_1`'s case): the knob changes nothing — `sV` and `wA` at every height (a grid), any heading", () => {
+    let n = 0;
+    for (const nn of [[0, 0, -1], [1, 0, 0], [0.6, 0, -0.8]] as Vec3[])
+      for (const [lo, hi] of [[0, 0.49], [0.1, 0.64]] as const) {
+        const b = facetFrame(nn).b;
+        const f: FF = { n: nn, b, bLo: lo, bHi: hi };
+        const bx: BB = { lo: [-0.3, lo, -0.3], hi: [0.3, hi, 0.3] };
+        for (let i = 0; i <= 40; i++) {
+          const y = lo + ((hi - lo) * i) / 40;
+          for (const k of [K, KS, { ...K, zoneVPct: 10, zoneMinVM: 0.05, shareV: 0.4 }]) {
+            const t = tAt([0.3 * nn[0] + 0.05 * b[0], y, 0.3 * nn[2]], i / 40);
+            const off = calmTarget(t, f, bx, k);
+            const on = calmTarget(t, f, bx, { ...k, ownRun: true });
+            expect(on.sV).toBeCloseTo(off.sV, 12);
+            expect(on.wA).toBeCloseTo(off.wA, 12);
+            expect(on.sH).toBe(off.sH);
+            n++;
+          }
+        }
+      }
+    expect(n).toBe(3 * 2 * 41 * 3);
+  });
+
+  it("⭐⭐ a SLANTED facet: the knob changes nothing (a grid of places, knob sets, `across`)", () => {
+    let n = 0;
+    for (const f of [{ n: slantN, b: slantB, bLo: -0.1, bHi: 0.3 }, { n: slantN, b: slantB, bLo: 0, bHi: 0.09 }] as FF[])
+      for (const bx of [BOX, null])
+        for (const s of [-0.1, -0.05, 0, 0.02, 0.045, 0.09, 0.2, 0.3])
+          for (const fr of [0, 0.1, 0.5, 1])
+            for (const a of ACROSS)
+              for (const k of [K, KS, { ...K, vOn: false }]) {
+                const t = tAt([s * slantB[0], s * slantB[1], s * slantB[2]], fr);
+                expect(calmTarget(t, f, bx, { ...k, ownRun: true }, a)).toEqual(calmTarget(t, f, bx, k, a));
+                n++;
+              }
+    expect(n).toBe(2 * 2 * 8 * 4 * 4 * 3);
+  });
+
+  it("⭐⭐⭐ the knob absent or false: calmTarget EXACTLY as before step 2.4e on a grid of places × the knob sets the vectors use (the bounce's rule kept)", () => {
+    const FACETS: readonly { readonly f: FF; readonly box: BB }[] = [
+      { f: RECT, box: BOX }, // the fault's rectangle: where the knob would differ
+      { f: { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.54 }, box: { lo: [-0.3, 0, -0.3], hi: [0.3, 0.54, 0.3] } },
+      { f: { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.09 }, box: { lo: [-0.3, 0, -0.3], hi: [0.3, 0.09, 0.3] } },
+      { f: { n: [0, 0, -1], b: [0, 1, 0], bLo: 0.12, bHi: 0.37 }, box: null },
+      { f: { n: slantN, b: slantB, bLo: -0.1, bHi: 0.3 }, box: BOX },
+    ];
+    let n = 0;
+    let differs = 0;
+    for (const k of [K, KS, { ...K, vOn: false }, { ...K, zoneHPct: 10, zoneMinHM: 0.02, shareV: 0.4, zoneMinVM: 0.05 }])
+      for (const { f, box } of FACETS)
+        for (const y of [0.005, 0.045, 0.12, 0.2, 0.245, 0.33, 0.37, 0.45])
+          for (const fr of [0, 0.05, 0.5, 1])
+            for (const a of ACROSS) {
+              const t = tAt([0.02, y, -0.1 + 0.4 * y], fr);
+              const old = before24e(t, f, box, k, a);
+              expect(calmTarget(t, f, box, k, a)).toEqual(old);
+              expect(calmTarget(t, f, box, { ...k, ownRun: false }, a)).toEqual(old);
+              const on = calmTarget(t, f, box, { ...k, ownRun: true }, a);
+              if (on.sV !== old.sV || on.wA !== old.wA) differs++;
+              n++;
+            }
+    expect(n).toBe(4 * 5 * 8 * 4 * 4);
+    expect(differs).toBeGreaterThan(0); // the grid reaches places where the knob differs: the comparison can fail
+    expect(calmTarget({ band: "TOP", surface: [0, 0, 0], across: { L: 0, lo: 0, hi: 0.09 } }, RECT, BOX, KO)).toEqual({ n: null, sH: 1, sV: 1, wA: 1 });
+  });
+
+  it("⭐⭐ `calmRules`: `ownRun` on only with BOTH switches 1", () => {
+    expect(calmRules(1, 1).ownRun).toBe(true);
+    for (const [l, c] of [[0, 0], [0, 1], [1, 0], [2, 1], [1, 2]] as const) expect(calmRules(l, c).ownRun).toBe(false);
+    expect(calmRules(DEFAULT_CONFIG.chartLayout, DEFAULT_CONFIG.chartCalm).ownRun).toBe(false);
   });
 });

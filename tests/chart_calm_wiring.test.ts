@@ -36,12 +36,20 @@ describe("⭐⭐⭐ the calm on every side face (`chartCalm`, step 2.3)", () => 
 
   it("change 1 — the knobs' `smooth` from the rule at BOTH `calmTarget` calls, through one helper", () => {
     const a = code("render/assembly_wiring.ts");
-    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, sh));");
-    expect(a).toContain("const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth), acrossNormals(st, map, { t: tS, pitch: pE }));");
+    expect(a).toContain("calmTarget(sh.t, map.facets[sh.t.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, sh));");
+    expect(a).toContain("const gS = calmTarget(tS, map.facets[tS.stack]!, cfg.faceSpanShareVOn === 1 ? map.box : null, calmKnobs(st, rules.smooth, rules.ownRun), acrossNormals(st, map, { t: tS, pitch: pE }));");
     expect(a.match(/calmTarget\(/g)?.length).toBe(2); // every call is one of the two above
-    const k = between(a, "function calmKnobs(st: SceneState, smooth: boolean): CalmKnobs {", "} /**");
-    expect(k).toContain("zoneMinVM: cfg.faceSpanZoneMinVCm / 100, smooth, };");
+    const k = between(a, "function calmKnobs(st: SceneState, smooth: boolean, ownRun: boolean): CalmKnobs {", "} /**");
+    expect(k).toContain("zoneMinVM: cfg.faceSpanZoneMinVCm / 100, smooth, ownRun, };");
     expect(a.match(/shareH: cfg\.faceSpanShareH/g)?.length).toBe(1); // the knobs built in one place
+  });
+
+  it("⭐⭐⭐ (step 2.4e) the knobs' `ownRun` from the rule (`calmRules(…).ownRun`) at BOTH `calmTarget` calls, handed through `calmKnobs`", () => {
+    const a = code("render/assembly_wiring.ts");
+    expect(a.match(/calmKnobs\(st, rules\.smooth, rules\.ownRun\)/g)?.length).toBe(2);
+    expect(a.match(/calmKnobs\(/g)?.length).toBe(3); // the two calls and the helper itself
+    const k = between(a, "function calmKnobs(st: SceneState, smooth: boolean, ownRun: boolean): CalmKnobs {", "} /**");
+    expect(k).toContain("smooth, ownRun, };");
   });
 
   it("change 2 — the zone's own facets (no calm) and the whole share toward them skipped by the rule; `zoneFacetOf` kept for the rule off", () => {
