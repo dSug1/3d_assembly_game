@@ -285,6 +285,8 @@ export function installTuningMenu(st: SceneState): void {
         // ⭐⭐⭐ (2026-11-04, Step 5, D5) the faces contour: the facets' merge angle and the real face share a facet needs
         tunable(st, "faces contour: faces merged into a facet within (°)", "facetMergeDeg", 1, 44, 1),
         tunable(st, "faces contour: a facet kept with this share of real face", "facetMinShare", 0, 1, 0.05),
+        // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' layout behind a switch, off by default
+        tunable(st, "faces contour: charts' layout — the pole the top / bottom, the pitch from the normals (0 off, 1 on)", "chartLayout", 0, 1, 1),
         tunable(st, "gizmo face edge margin (mm)", "gizmoEdgeMarginMm", 0, 20, 0.5),
         // ⭐ prototype (2026-10-11, *"add a slider to hide the pink gizmo"*)
         tunable(st, "yellow gizmo (the orbit centre's ring): shown (0 = hidden; 1 = shown)", "pinkGizmoVisible", 0, 1, 1),
