@@ -292,7 +292,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 |---|---|---|
 | **1.1** ✅ | built `7cd63a4`, audited (§7.3) — `face_map.ts`: the pole as the top / bottom set and the scale from the normals, behind options whose defaults are today's (`buildFaceMap` unchanged by default; every existing vector untouched) | `npm run verify`; new vectors shown RED on a mutant; a comparison probe: the port against the prototype on the 35 shapes, ≤ 10⁻⁹ m |
 | **1.2** ✅ | built `445a194` + `9718ead`, audited (§7.3) — `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
-| **1.3** | `ring_chart.ts` (new): the RINGS place and its way back | the same |
+| **1.3** ✅ | built `e82262e`, audited (§7.3) — `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** | `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
 | **2.1** | the wiring reads the atlas, set to reproduce today (the built scale, today's frames); the `asm…` inventory (§4.2) and the specificities' paths (§4.4) | the same replay on `Scene_1`, `Scene_0`, `Scene_0bis`, number by number (`replay_probe.mjs`) |
 | **2.2** | step A on (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
@@ -322,6 +322,16 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   frame is built up front — 10 ms on `Scene_0bis` (160 candidates), 120 ms on the 38-face hull (1 127); nearly free if built only when gravity
   breaks a face or a cap asks for its layouts — to measure on the real scenes. `star.length >= 3` never decides on a convex shape (the prototype's own
   redundancy, kept).
+
+* **1.3** (2026-11-15, `e82262e`, an Opus agent; audited by Fable): `src/input/ring_chart.ts` — `buildRingChart(map, contour)` (the ends, the spine,
+  the levels and their pitches, the side faces per height band), `ringTarget` (in `mapTarget`'s shape: `stack` the facet, `across` its chord there;
+  `side` −1 always — the rings have no column) and `ringAngles`. The gates, rerun by the auditor: against the prototype's rings chart on the 35
+  shapes, a 1° grid (`scripts/probes/ring_chart_check.ts`) — the same face, the point and the levels EXACT (gap 0), the round trip ≤ 4 × 10⁻¹⁵ m;
+  12 vectors (`tests/ring_chart.test.ts`), each red on a mutant, three more mutants of the auditor's caught; **1834 vectors**; a place costs
+  0.3 – 0.8 µs. ⚠ One departure from the prototype, kept: on a cap the way back solves the yaw by steps (≤ 8) — the prototype reads the azimuth about
+  the cap's centre while its place reads the rim about the SPINE 1 µm inside the cap: 0.2 µm apart where the spine slants (the shed). ⚠ A cap's place
+  can sit 0.5 µm outside the cap's polygon (the rim read 1 µm below it — the prototype's). The repair of the levels decides nothing on the 35 shapes:
+  a bevelled box (the vectors' "barrel") pins it.
 
 Step 1 changes nothing on the screen: no module is imported by the game. Through 2.2 – 2.4 a switch between the old and the new stays in the build
 (a slider), so both are compared in the same minute on the device; it goes with 2.5.

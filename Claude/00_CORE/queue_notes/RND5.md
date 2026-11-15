@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1, 1.2 built and audited (not wired); 🔧 step 1.3 next · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1, 1.2, 1.3 built and audited (not wired); 🔧 step 1.4 next · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -30,5 +30,7 @@
   rounding only (§7.3); the shed's statement corrected (§9).
 * **Step 1.2** (`445a194`, `9718ead`): `src/input/orbit_charts.ts`, the assignment — EXACTLY the prototype's on the 35 shapes; the audit found the
   border peel unpinned, now vector 10; **1822 vectors**; the record: the spec's §7.3. Noted for 2.1: the candidates' cost at a seat.
+* **Step 1.3** (`e82262e`): `src/input/ring_chart.ts`, the rings fallback — EXACTLY the prototype's places on the 35 shapes; **1834 vectors**;
+  0.3 – 0.8 µs a place; the record: the spec's §7.3.
 * **The owner, the same day**: how the specificities (holes, voids, channels, mouths, protrusions) are handled → the spec's §4.4: untouched below the
   charts; the mouth's hand-over is coupled to the tilt and is carried over at step 2.4; `Scene_2`'s contour is not measured yet.
