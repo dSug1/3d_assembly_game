@@ -173,12 +173,17 @@ export function swingEase(s: number): number {
   return x * x * (3 - 2 * x);
 }
 
-/** ⭐ A direction's orbit angles (yaw, ring parameter `v`) — the yaw kept `yawHint` straight above / below (no heading to read). */
-export function anglesOfDir(d: Vec3, yawHint: number): { readonly yaw: number; readonly v: number } {
+/**
+ * ⭐ A direction's orbit angles (yaw, ring parameter `v`) — straight above / below (no heading to read) the yaw is `poleYaw` (absent: `yawHint`).
+ * ⭐⭐⭐ (2026-11-15) `poleYaw`, the heading the camera SHOWS — ⛔ the hint: a tilt left with the orbit exactly at the world's pole took the orbit's own
+ * hint, 0, and the view rolled to yaw 0 in ONE frame (probed in the app: 90° on `Scene_1`'s top, the automatic tilt switched off by the approach; 157°
+ * on `Scene_0`'s ridge under the charts' layout).
+ */
+export function anglesOfDir(d: Vec3, yawHint: number, poleYaw: number = yawHint): { readonly yaw: number; readonly v: number } {
   const l = Math.hypot(d[0], d[1], d[2]);
   const u: Vec3 = l > 1e-12 ? [d[0] / l, d[1] / l, d[2] / l] : [1, 0, 0];
   const flat = Math.hypot(u[0], u[2]);
-  const yaw = flat > 1e-9 ? yawHint + wrapPi(Math.atan2(u[2], u[0]) - yawHint) : yawHint;
+  const yaw = flat > 1e-9 ? yawHint + wrapPi(Math.atan2(u[2], u[0]) - yawHint) : poleYaw;
   return { yaw, v: vOfPitch(Math.asin(Math.max(-1, Math.min(1, u[1])))) };
 }
 
@@ -352,6 +357,20 @@ export function headingFrom(u: Vec3, toward: Vec3 | null): Vec3 {
 
 export function tiltExits(onFacet: boolean, k: number, swingDone: boolean, off = false): boolean {
   return (!onFacet || off) && k >= 1 && swingDone;
+}
+
+/** ⭐ (2026-11-15) the tilted facet's border is the facet's: a place this near it (m) is on it — a TIE, not a band (the band against input noise:
+ * `ORBIT_CHARTS.md` §10.2) */
+export const TILT_TIE_M = 1e-6;
+
+/**
+ * ⭐⭐⭐ (2026-11-15) IS THE GIZMO ON THE TILTED FACET — the map's place on its stack (`stack` = `facet`), or on the neighbour's but within `TILT_TIE_M` of
+ * the tilted facet itself (`borderM`: the place's distance to it): its border. ⛔ The stack alone: under the charts' layout the levels are the faces'
+ * bisectors — a press with the gizmo on `Scene_0`'s ridge made the tilt with the gizmo EXACTLY on the tilted facet's border, the place there was read on
+ * the neighbour, and the tilt left at once ("over the edge", the roll back, the exit — four frames after the press).
+ */
+export function onTiltedFacet(stack: number, facet: number, borderM: number): boolean {
+  return stack === facet || borderM <= TILT_TIE_M;
 }
 
 /** ⭐ A camera's frame: the direction (from what it looks at, toward it) and its up. */

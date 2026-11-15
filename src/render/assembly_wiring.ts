@@ -38,7 +38,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, type Mat3 } from "../input/orbit_tilt";
+import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
 const LOOK_TAU_MS = 120;
@@ -1039,7 +1039,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
-      tiltFrame(st, dtMs, m.t.stack);
+      tiltFrame(st, dtMs, m.t.stack, m.t.surface);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
       gOffStep(st, dtMs);
       hit = { ...hit, point: withGOff(st, hit.point) };
@@ -1440,7 +1440,7 @@ const RELOCATE_ANGLE = Math.PI / 4;
  * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
  * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
  */
-function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
+function tiltFrame(st: SceneState, dtMs: number, stack: number, surface: Vec3): void {
   const tl = st.asmTilt;
   if (tl === null) return;
   if (tl.swingMs !== null) {
@@ -1461,7 +1461,11 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number): void {
   // stretch"*, *"1-b"*, *"one speed for every tilt"*) THE ROLL BACK STARTS AS THE GIZMO CROSSES THE EDGE (off the tilted facet) — or out past the
   // automatic tilt's threshold — and runs to the end on its own clock at `tiltRollDegS` (`rollDurationMs` of the turn's own angle); the gizmo HELD
   // meanwhile (`tiltClampStep`, `tiltUnderWay`); whole: the world's frame (`tiltExits`, the swing over too)
-  const onFacet = stack === tl.facet;
+  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT (`onTiltedFacet`: the place `surface`, in F, within a micrometre of the tilted facet — a tie,
+  // not a band) — ⛔ the stack alone: under the charts' layout a press with the gizmo on `Scene_0`'s ridge left the tilt at once (the place read on the
+  // neighbour), and the exit at the world's pole then rolled the view 157° in one frame (`tiltOff`)
+  const fmB = stack === tl.facet ? null : faceMapOf(st);
+  const onFacet = onTiltedFacet(stack, tl.facet, stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface));
   // ⭐⭐⭐ (2026-11-14, the owner: *"a sort of a flash of the scene with a very short jump of the camera"*) THE ROLL STEPPED FROM THE FRAME ITS ANGLE IS READ:
   // the crossing's frame sets its target (the face crossed onto), the camera's stage reads the turn's angle (`tl.rollRad`) — ⛔ stepped at once by the
   // angle read last frame, on the facet (its target the tilt's own heading there: ~0°, 0 ms): the half turn whole in ONE frame (probed: 180° at the ridge)
@@ -1505,7 +1509,7 @@ export function tiltClampStep(st: SceneState, yaw0: number, v0: number): boolean
  * ⭐⭐⭐ EVERY ORBIT ANGLE TURNED INTO ANOTHER FRAME (`turn`: a direction from the old frame to the new): the orbit's, the solved piece's, the spring's (at
  * rest), the camera's as shown (its leash state rebuilt from the piece), the gizmo's last; the yaws kept together (one hint). The coast stopped.
  */
-function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
+function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3, poleYaw = 0): void {
   const conv = (yaw: number, v: number, hint: number): { yaw: number; v: number } => anglesOfDir(turn(orbitDir(yaw, v)), hint);
   // ⭐⭐⭐ (2026-11-10, the owner: *"why is there a back-and-forth jump of the scene when the gizmo crosses an edge"*) a RATE turned too — the place a
   // little along it, turned, differenced (⛔ zeroed: mid-drag the piece's spring stalled at the tilt, then caught up — forth and back)
@@ -1516,7 +1520,9 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3): void {
     const b = conv(yaw + ry * e, v + rv * e, at.yaw);
     return [(b.yaw - at.yaw) / e, (b.v - at.v) / e];
   };
-  const o = conv(st.orbit.yaw, st.orbit.elevation, 0);
+  // ⭐⭐⭐ (2026-11-15) at a pole of the NEW frame the orbit's direction has no heading: the caller's (`poleYaw` — the heading shown; none handed: 0, as
+  // before); the others take the orbit's (their hint)
+  const o = anglesOfDir(turn(orbitDir(st.orbit.yaw, st.orbit.elevation)), 0, poleYaw);
   st.orbit.reset(o.yaw, o.v);
   // the solver's own memory of the target (the ring height kept, last frame's target) in the new frame — ⛔ left in the old one, the solver read a
   // whole frame's difference as the finger's step (the first probe: the pitch thrown to −90° at the press)
@@ -1699,7 +1705,11 @@ function tiltOff(st: SceneState): void {
       st.orbitInertia.stop(); // a coast would push on against it
     }
   }
-  turnAngles(st, (d) => mulM(D, d));
+  // ⭐⭐⭐ (2026-11-15) LEFT WITH THE ORBIT AT THE WORLD'S POLE (straight above or below: no heading in its direction) its yaw is the heading the camera
+  // SHOWS (`shownHeading`; none drawn yet: the tilt's own) — ⛔ none handed: yaw 0, the view rolled there in ONE frame (probed: 90° on `Scene_1`'s top —
+  // the automatic tilt on, then off, by the approach; 157° on `Scene_0`'s ridge)
+  const hP = shownHeading(st, mulM(D, orbitDir(st.orbit.yaw, st.orbit.elevation))) ?? tl.heading;
+  turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));
   // ⭐⭐⭐ (`1.0.120b-`) the square camera out of F, as it is
   const sqO = st.asmSquare;
   if (sqO.n !== null) sqO.n = mulM(D, sqO.n);

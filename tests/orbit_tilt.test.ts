@@ -3,7 +3,7 @@
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, TILT_SLANT_MIN, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
+import { anglesOfDir, onTiltedFacet, TILT_TIE_M, blendCrossed, blendShare, tiltPendingStep, tiltHeading, TILT_SLANT_MIN, capTilt, frameMix, gizmoGlide, headingFrom, wholeShareStep, headingTurn, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, snapHeading, swingDir, tiltAutoLatch, tiltBox, tiltCalmWholeHV, tiltExits, mouthHold, squareTurn, squareTurning, tiltFaces, type Mat3 } from "../src/input/orbit_tilt";
 import { gizmoLag, gizmoShownAt, offsetFrame, orbitDir, pitchOfV, vOfPitch } from "../src/input/assembly_orbit";
 import { calmHeading, capEdgePitch } from "../src/input/orbit_calm";
 import { buildFaceMap, holdsPole, mapAngles, mapTarget, type MapFace } from "../src/input/face_map";
@@ -90,6 +90,39 @@ describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
       expect(a.yaw).toBeCloseTo(y, 12);
       expect(pitchOfV(a.v)).toBeCloseTo(p, 12);
     }
+  });
+
+  // ⭐⭐⭐ (2026-11-15) A DIRECTION STRAIGHT UP / DOWN HAS NO HEADING: its yaw is the caller's `poleYaw` (the heading the camera shows) — ⛔ the hint: a
+  // tilt left with the orbit exactly at the world's pole took the orbit's own hint, 0, and the view rolled to yaw 0 in ONE frame (probed in the app: 90°
+  // on `Scene_1`'s top, the automatic tilt switched off by the approach; 157° on `Scene_0`'s ridge under the charts' layout). RED on: `poleYaw` ignored.
+  it("⭐⭐⭐ straight up / down the yaw is `poleYaw`; with a heading it is never read; absent, the hint (as before)", () => {
+    for (const d of [[0, 1, 0], [0, -1, 0], [1e-12, 1, -1e-12], [0, -3, 0]] as const) {
+      expect(anglesOfDir(d as unknown as [number, number, number], 0, -Math.PI / 2).yaw).toBe(-Math.PI / 2);
+      expect(anglesOfDir(d as unknown as [number, number, number], 0.7, 2.1).yaw).toBe(2.1);
+      expect(anglesOfDir(d as unknown as [number, number, number], 0.7).yaw).toBe(0.7); // absent: the hint
+    }
+    expect(pitchOfV(anglesOfDir([0, 1, 0], 0, 1.2).v)).toBeCloseTo(Math.PI / 2, 12);
+    expect(pitchOfV(anglesOfDir([0, -1, 0], 0, 1.2).v)).toBeCloseTo(-Math.PI / 2, 12);
+    // a direction with a heading: `poleYaw` changes nothing — the same number, bit for bit
+    for (const [y, p] of [[0.3, 0.2], [-2.5, -0.9], [3.1, 1.2], [1.0, 1.5707]] as const) {
+      expect(anglesOfDir(dirOf(y, p), 0, 2.1).yaw).toBe(anglesOfDir(dirOf(y, p), 0).yaw);
+      expect(anglesOfDir(dirOf(y, p), 0, 2.1).v).toBe(anglesOfDir(dirOf(y, p), 0).v);
+    }
+  });
+
+  // ⭐⭐⭐ (2026-11-15) ON THE TILTED FACET'S BORDER IS ON IT — a tie, not a band: under the charts' layout a press with the gizmo on `Scene_0`'s ridge made
+  // the tilt with the gizmo exactly on the tilted facet's border; the map's place there was read on the NEIGHBOUR — "over the edge", the roll back, the
+  // exit, all within four frames of the press. RED on: the stack alone decides; the tie as wide as a millimetre.
+  it("⭐⭐⭐ the gizmo is on the tilted facet on its stack, or within the tie of its border (`TILT_TIE_M`, a micrometre)", () => {
+    expect(TILT_TIE_M).toBe(1e-6);
+    expect(onTiltedFacet(7, 7, 0)).toBe(true);
+    expect(onTiltedFacet(7, 7, 0.3)).toBe(true); // its own stack: whatever the distance handed
+    expect(onTiltedFacet(6, 7, 0)).toBe(true); // the neighbour's stack, exactly on the border
+    expect(onTiltedFacet(6, 7, 1e-9)).toBe(true);
+    expect(onTiltedFacet(6, 7, 1e-6)).toBe(true);
+    expect(onTiltedFacet(6, 7, 2e-6)).toBe(false);
+    expect(onTiltedFacet(6, 7, 1e-3)).toBe(false); // a millimetre past the edge: off it
+    expect(onTiltedFacet(6, 7, Infinity)).toBe(false);
   });
 });
 
@@ -417,7 +450,15 @@ describe("⭐⭐ wired", () => {
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R),");
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
-    expect(a).toContain("turnAngles(st, (d) => mulM(D, d));");
+    // ⭐⭐⭐ (2026-11-15) the exit hands the heading SHOWN for a pole of the world (`shownHeading`; none drawn: the tilt's own) — ⛔ none: yaw 0 there
+    expect(a).toContain("const hP = shownHeading(st, mulM(D, orbitDir(st.orbit.yaw, st.orbit.elevation))) ?? tl.heading;");
+    expect(a).toContain("turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));");
+    expect(a).toContain("function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3, poleYaw = 0): void {");
+    expect(a).toContain("const o = anglesOfDir(turn(orbitDir(st.orbit.yaw, st.orbit.elevation)), 0, poleYaw);");
+    // ⭐⭐⭐ (2026-11-15) …and the gizmo on the tilted facet's border is on it (`onTiltedFacet`, the place's distance to the facet in F's map)
+    expect(a).toContain("tiltFrame(st, dtMs, m.t.stack, m.t.surface);");
+    expect(a).toContain("const onFacet = onTiltedFacet(stack, tl.facet, stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface));");
+    expect(a).not.toContain("const onFacet = stack === tl.facet;");
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("const crossing = !onFacet && !tl.finishing;"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch
     // ⭐⭐⭐ (2026-11-14) stepped from the frame its angle is read (⛔ at once by last frame's: the ridge's half turn whole in one frame), and the exit leaves
