@@ -404,6 +404,25 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   | `Scene_0bis` | at most 3 × 10⁻⁹ m apart (today's game against itself: the same) | ANOTHER play from frame 5, no error; the gizmo's largest step 94 mm (100 today) |
 
   ⛔ Owed: the owner's look on `Scene_0` and `Scene_0bis` with the switch on; the walks' rules on them; the test scenes.
+* **The two fixes the owner asked for** (2026-11-15: *"- fix that centre reading in this build. - state carry over : this is not intended. Fix
+  it."*; an Opus agent, audited by Fable):
+  * ✅ **The orbit's starting state has ONE home** (`f1b7573`, kept): `orbitStateStart()` (37 fields) applied by `resetOrbitState(st)` at the
+    scene's creation and at each pick-up (`model_bodies_wiring.ts`), the frame's gizmo memo cleared with it — a newly held part no longer inherits
+    the last one's tilt, zone, calm, mouth, dy hold or pending tilt; `tests/orbit_state_reset.test.ts`. ⛔ Not applied at the test scenes' piece
+    switch (`spawnOrbitPiece`, `respawnStuckPiece`): the owner's to decide. Found, not fixed: the section lines' caches (`asmRedCache`,
+    `asmGreenCache`) ignore the held part.
+  * ⛔ **The centre read from the model** (`a3826a1`) — **REVERTED** (`8008ce0`), the owner's to decide. The replay differed from frame 0 on the
+    three scenes, and the cause is not the sway: today `st.asm.centre` is the **ORIGIN** [0, 0, 0] on the three scenes — `placedBox` reads the
+    meshes' world boxes at the first frame, before they are placed (radius 0.245 / 0.365 / 0.2415 m) — and from the model it is
+    [0.0025, 0.2444, 0.191] (`Scene_0`, `Scene_0bis`) and [0.0231, 0.257, 0.1704], radius 0.2828 m (`Scene_1`): the centre 31 cm away, the look
+    point 0.24 m at frame 0 — another framing of the camera, not a last digit. ⚠ Every look the owner closed was with the centre at the origin
+    (the floor's middle). The fix is `git revert 8008ce0` away.
+* **What was deployed** (2026-11-15, the owner: *"Deploy afterwards so i can test scene 0 and scene 0bis"*): `8008ce0` = steps 1.1 – 2.2, the
+  state's one home, the probe's fix; **1851 vectors**; the replay with the switch OFF against today's game: `Scene_1` and `Scene_0` identical bit
+  for bit, `Scene_0bis` at most 2.9 × 10⁻⁹ m apart (its own noise). Merged into `main` as `7db32b6` (main's tree = the branch's).
+* **CL1's bit-for-bit check REDONE with the fixed probe** (the owner: *"Do it."*): the code before the clean-up (`eeec345`) against after
+  (`1b34f62`), the gizmo travelling 22 – 25 m a run: `Scene_0` and `Scene_0bis` identical bit for bit; `Scene_1` identical bit for bit in one of
+  two runs, within 7 × 10⁻¹⁰ m in the other — the replay's own noise. **CL1 changed nothing**; its first check was hollow, its conclusion holds.
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
