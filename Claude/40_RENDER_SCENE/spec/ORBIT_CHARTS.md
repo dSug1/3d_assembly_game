@@ -659,9 +659,44 @@ tilts so the face currently holding the gizmo becomes the one with the red and g
 never seamless, and less so under the charts' layout: the world frame's view of a place and the tilted frame's view of the SAME place are two
 conventions (§11, 1. and 3.) — the bottom looked at from 51° below, then 53° (off); from 67°, then 76° (on).
 
-**Also seen, not looked into**: a tilt made at a press and then left keeps the swung heading (the orbit's yaw −60° → −90°: the second cell not
-measured — the way down made and left a tilt); the switch off, `Scene_0`, the orbit's yaw −60°, elevation 0.751: a dy up the glass moved nothing for
-360 frames (the first cell not measured) — possibly the anchor proud of that face, possibly the script.
+**Also seen**: a tilt made at a press and then left kept the swung heading (the orbit's yaw −60° → −90°: the second cell not measured — the way
+down made and left a tilt). ⚠ The first cell not measured was the SCRIPT's fault, not the game's: its drag began on the HUD's lines at the bottom of
+the glass (a press there is not the orbit's); begun higher, the dy reaches the face.
 
-⛔ **The owner's to decide (step 2.4)**: no action at a press at all — the tilt close in only, made by the finger's travel as the gizmo enters the
-face (the automatic tilt, 2026-11-10) — or the press kept on a level face.
+✅ **Decided and built** (the owner, 2026-11-15: *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit."*) → §12, step P.
+
+## 12. STEP 2.4 — THE DESIGN AND THE BUILD (2026-11-15)
+
+The owner: *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit. Then build step 2.4 as you have recommended in your
+previous message."* — the recommendation: ONE STATE (the gizmo's place and its chart's angles, the camera derived from it at every change of frame);
+frames change only where the charts say, with one trigger and one band against input noise; the calm's shares on one reference for every face (§11).
+
+⭐ **Everything of step 2.4 is under `chartLayout` 1** (the calm's part under `chartCalm` too): with it 0 the game replays bit for bit — every
+sub-step's first gate. ⛔ The layout alone with the old detectors (what `157974f` showed with the switch on) is no longer reachable.
+
+| sub-step | what |
+|---|---|
+| **P** | THE PRESS'S ACTION REMOVED, unconditional: a press does nothing to the orbit; the tilted pole close in only (the automatic tilt) |
+| **2.4a** | THE ATLAS DECIDES WHERE A FRAME CHANGES (`assignCharts` on the world face map, per placed set): a face tilts only if it is a CAP with a square layout (§3 6.), its heading one of the layouts' — ⛔ `holdsPole` (a side beyond 45°: `Scene_0`'s two top faces, D-C4) and the virtual cap of a pole held by an edge; the zones are the frames the atlas takes (§3 3. – 4.) — ⛔ `polarZones`' detectors |
+| **2.4b** | A POLE HELD BY AN EDGE OR A POINT IS CROSSED BY THE ONE TRANSITION, close in (far out it stays the polar orbit's limit, D-C6): `Scene_0`'s ridge — the half turn and the hold of §1, with no tilt |
+| **2.4c** | ONE STATE AT EVERY CHANGE OF FRAME: the tilt's entry and exit and a zone's switch are the one transition — ⛔ `turnAngles` (each angle state turned as a direction) and the map's catch-up after it |
+| **2.4d** | ONE TRIGGER, ONE BAND: the face under the gizmo read ONCE by the edge rule (`faceSwitches`, `gizmoEdgeMarginMm` — world millimetres: an edge is a place on the assembly) for every trigger of a camera movement — a change of frame, the square camera's target (§10.2) |
+| **2.4e** | THE CALM ON ONE REFERENCE (under `chartCalm`): a side face's vertical share reads its OWN run between its level edges, a vertical face as a slanted one — ⛔ the box's height for a vertical face (the bounce's rule, 2026-11-04: kept with `chartCalm` 0) |
+
+**THE ONE TRANSITION** (§4.1), as built from 2.4b on: 1. the frame set at once; 2. the gizmo KEPT — the new chart's angles read at its exact place
+(`mapAngles`); 3. EVERY angle state set to those angles (the orbit's, the solver's memory, the solved piece's, the spring's at rest, the camera's
+follow state, the map's) — ⛔ never each turned by a rigid rotation with the map's angles left to catch up; 4. the picture carried from the pose
+SHOWN by ONE camera turn (`asmZoneMix`: timed at `tiltRollDegS`, the gizmo held — or by the finger's travel where the automatic tilt blends, the
+gizmo free), the piece's shown direction eased on the same clock; 5. a half turn sets the dy hold.
+
+**Not in this build**: the RINGS chart's wiring (no scene leaves a face to it — a face whose home is RINGS stays on gravity's columns map, as
+today); far out a pole stays the polar orbit's limit (D-C6: with the press gone a top face, a ridge, a cap's centre are crossed close in only —
+⛔ the owner's to change); step C.
+
+### 12.1 As built
+
+* **P** (2026-11-15, `5894ab2`, an Opus agent; audited by Fable): `tiltOnPress` and its call deleted, `tiltOn`'s `why` with it (one caller left: the
+  automatic tilt, its verdict byte for byte); no slider removed (each is still read), two labels corrected; 1 vector, red on the code before;
+  **1870 vectors**. The auditor's gates: a press held still on `Scene_0`'s top slanted face and bottom and on `Scene_1`'s top, square and 30° off,
+  both layouts — no tilt, the view 0.0°; the close-in run (approach in, the automatic tilt made by a dy, orbit in it, approach out) on `Scene_1` and
+  `Scene_0` (both layouts): IDENTICAL line for line to the code before. ⚠ Far out the replays are another play from the first press that tilted.
