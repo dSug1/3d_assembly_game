@@ -291,7 +291,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | step | what | closed by |
 |---|---|---|
 | **1.1** ✅ | built `7cd63a4`, audited (§7.3) — `face_map.ts`: the pole as the top / bottom set and the scale from the normals, behind options whose defaults are today's (`buildFaceMap` unchanged by default; every existing vector untouched) | `npm run verify`; new vectors shown RED on a mutant; a comparison probe: the port against the prototype on the 35 shapes, ≤ 10⁻⁹ m |
-| **1.2** | `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
+| **1.2** ✅ | built `445a194` + `9718ead`, audited (§7.3) — `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
 | **1.3** | `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** | `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
 | **2.1** | the wiring reads the atlas, set to reproduce today (the built scale, today's frames); the `asm…` inventory (§4.2) and the specificities' paths (§4.4) | the same replay on `Scene_1`, `Scene_0`, `Scene_0bis`, number by number (`replay_probe.mjs`) |
@@ -311,6 +311,17 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   ⚠ Found: the frames' box (§3); layout "chart" with the built scale is today's map to the rounding, NOT bit for bit (the heptagon's level pitches
   differ in the last digit) — step 2.1's replay compares within a tolerance, or keeps layout "built" until 2.2. ⛔ Not verified: the edge stretch
   (`edgeMm`, `edgeDeg` > 0) and the edge blend on a chart map other than a box.
+
+* **1.2** (2026-11-15, `445a194` and `9718ead`, an Opus agent; audited by Fable): `src/input/orbit_charts.ts` — `chartContour`, `columnsChart` (a
+  face's kind, the chart's ends), `candidateAxes`, `modesOf`, `costOn`, `seamTurn`, `assignCharts` (its result: per face its home and kind, the
+  frames taken, each cap's layouts), `DEFAULT_CHART_OPTS` (the bounds as parameters: 45°, 30°, 15°; the zones' three read from `DEFAULT_ZONE_OPTS`).
+  The gates, rerun by the auditor: the assignment against the prototype's on the 35 shapes (`scripts/probes/chart_assign_check.ts`) — the contour,
+  the candidates, every face's kind in every candidate frame, the homes, the frames taken, the caps' layouts: EXACT, the largest gap 0; 10 vectors
+  (`tests/orbit_charts.test.ts`), each red on a mutant; **1822 vectors**. ⭐ The audit's find: the border PEEL had no vector (disabled, the first
+  nine stayed green; only the comparison caught it, on the cube standing on a corner) — vector 10 pins it. ⚠ Noted for step 2.1: every candidate
+  frame is built up front — 10 ms on `Scene_0bis` (160 candidates), 120 ms on the 38-face hull (1 127); nearly free if built only when gravity
+  breaks a face or a cap asks for its layouts — to measure on the real scenes. `star.length >= 3` never decides on a convex shape (the prototype's own
+  redundancy, kept).
 
 Step 1 changes nothing on the screen: no module is imported by the game. Through 2.2 – 2.4 a switch between the old and the new stays in the build
 (a slider), so both are compared in the same minute on the device; it goes with 2.5.
