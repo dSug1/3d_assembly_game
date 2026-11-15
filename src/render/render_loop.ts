@@ -36,6 +36,16 @@ export function startRenderLoop(st: SceneState): void {
   // recomputed. ⛔ Asked before `scene.render()` (2026-11-13 – 14) it ran before those movers and its `computeWorldMatrix()` cached the casters'
   // PREVIOUS pose — the shadows drawn a frame behind the parts (the owner: "some shadows lag during the rebounds").
   st.scene.onBeforeRenderTargetsRenderObservable.add(() => shadowsOnDemand(st));
+  // ⭐⭐ (2026-11-15, the owner's phone: *"The scene is black. I can't see anything"*) A LOST WEBGL CONTEXT IS SAID ON THE HUD (its `draw` line) — painted
+  // HERE, at once: Babylon stops calling the frame below while the context is lost, so the loop's own paint would never show it
+  st.engine.onContextLostObservable.add(() => {
+    st.glLost++;
+    guardDraw(st, "hud", () => paint(st));
+  });
+  st.engine.onContextRestoredObservable.add(() => {
+    st.glRestored++;
+    st.hudDirty = true;
+  });
 
   // ⛔⛔ AUDIT 2026-09-27: THE WHOLE FRAME IS GUARDED. Babylon queues the next frame only AFTER this
   // function returns (`AbstractEngine._renderLoop`), so one throw anywhere below used to stop the loop
@@ -48,6 +58,11 @@ export function startRenderLoop(st: SceneState): void {
     const dtSec = st.lastFrameMs === null ? 0 : (now - st.lastFrameMs) / 1000;
     // ⭐ The frame meter: every render-loop interval, so the HUD reports what THIS device takes.
     if (st.lastFrameMs !== null) st.frameMeter.push(now - st.lastFrameMs);
+    // ⭐ (2026-11-15) …and the interval AS IT WAS for the `draw` line: the meter drops one over a second, the very ones a stalled loop makes
+    if (st.lastFrameMs !== null) {
+      st.lastIntervalMs = now - st.lastFrameMs;
+      if (st.lastIntervalMs > 1000) st.longFrames++;
+    }
     st.lastFrameMs = now;
 
     // ⛔⛔⛔ **THE MODEL WRITERS RUN BEFORE THE VIEW READS THE MODEL — reordered by audit,

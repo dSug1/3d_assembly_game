@@ -577,6 +577,13 @@ export interface SceneState {
   lastJumpAt: number;
   frames: number;
   lastFrameMs: number | null;
+  /** ⭐ (2026-11-15) the HUD's `draw` line: the last interval between two render-loop calls as it was (`null`: fewer than two yet) … */
+  lastIntervalMs: number | null;
+  /** ⭐ … how many were longer than a second (the frame meter drops them as pauses) … */
+  longFrames: number;
+  /** ⭐ … and how often the WebGL context was lost / restored */
+  glLost: number;
+  glRestored: number;
   /** ⭐ The frame meter — the HUD's `frame` line (median and p95 of recent frames). */
   frameMeter: FrameMeter;
   /** ⭐ `D142`: the goal pop-up's element (made on first use) and its fade timer. */

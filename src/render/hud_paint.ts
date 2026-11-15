@@ -11,7 +11,7 @@ import { formatElapsed } from "../input/episode_ledger";
 import { type Sample } from "../input";
 import { restingFaceWorld } from "../core/object_model";
 import { type GoalReport } from "../core/goal";
-import { formatFrameStats } from "../core/frame_meter";
+import { formatDrawState, formatFrameStats, type DrawState } from "../core/frame_meter";
 import { type SceneState } from "./scene_state";
 import { orbitDegPerMm } from "../input/follow_camera";
 import type { RestingCandidate, RestingResult } from "../core/resting_face";
@@ -47,6 +47,28 @@ function shadowsLabel(st: SceneState): string {
   return (st.autoShadow === "OFF"
     ? `auto → OFF (too slow: median over ${st.cfg.autoShadowBudgetMs}ms) — the piece's shadow kept`
     : `auto → on`) + ao;
+}
+
+/**
+ * ⭐⭐ (2026-11-15) what the `draw` line reports (`formatDrawState`): the canvas as the page lays it out, the engine's drawing buffer, the WebGL context
+ * asked directly (lost? an error pending?) — once a paint, so once a second.
+ */
+function drawState(st: SceneState): DrawState {
+  const gl = (st.engine as unknown as { _gl?: WebGLRenderingContext | null })._gl ?? null;
+  const lost = gl === null ? null : gl.isContextLost();
+  return {
+    frames: st.frames,
+    lastIntervalMs: st.lastIntervalMs,
+    longFrames: st.longFrames,
+    cssW: st.canvas.clientWidth,
+    cssH: st.canvas.clientHeight,
+    bufW: st.engine.getRenderWidth(),
+    bufH: st.engine.getRenderHeight(),
+    contextLost: lost,
+    lost: st.glLost,
+    restored: st.glRestored,
+    glError: gl === null || lost === true ? 0 : gl.getError(),
+  };
 }
 
 export function paint(st: SceneState) {
@@ -138,6 +160,7 @@ export function paint(st: SceneState) {
 DRAWFAULT x${st.drawFaultCount} ${st.drawFault}`),
     noise: noiseLine(st),
     frame: `${formatFrameStats(st.frameMeter.stats())}  shadows=${shadowsLabel(st)}`,
+    draw: formatDrawState(drawState(st)),
   });
 }
 

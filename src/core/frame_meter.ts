@@ -47,3 +47,43 @@ export function formatFrameStats(s: FrameStats | null): string {
   if (!s) return "—";
   return `${s.medianMs.toFixed(0)}ms (${(1000 / s.medianMs).toFixed(0)} fps) · p95 ${s.p95Ms.toFixed(0)}ms · n=${s.n}`;
 }
+
+/**
+ * ⭐⭐ (2026-11-15, the owner's phone: *"The scene is black. I can't see anything"* — the HUD read `frame —` after eight minutes, and nothing on it
+ * told a stalled loop from a lost WebGL context or a canvas of no size) **THE DRAW STATE**, what the `draw` line reports: the frames drawn; the last
+ * interval between two frames AS IT WAS (⛔ the meter drops one over a second as a pause — exactly the ones a stalled loop makes, so a crawling
+ * device read `—` for ever); how many such long ones; the canvas's size on the page and its drawing buffer's; the WebGL context's state.
+ */
+export interface DrawState {
+  readonly frames: number;
+  /** the last interval between two render-loop calls, unfiltered; `null`: fewer than two calls yet */
+  readonly lastIntervalMs: number | null;
+  /** how many intervals were longer than a second (the meter's pauses) */
+  readonly longFrames: number;
+  readonly cssW: number;
+  readonly cssH: number;
+  readonly bufW: number;
+  readonly bufH: number;
+  /** `null`: no WebGL context to ask (a headless engine) */
+  readonly contextLost: boolean | null;
+  readonly lost: number;
+  readonly restored: number;
+  /** `gl.getError()`; 0: none */
+  readonly glError: number;
+}
+
+/**
+ * ⭐ The HUD's words for it: `gl ok · frames 1234 · last 17ms (long 0) · 414×800 → 828×1600`. Whatever is wrong is marked ⛔. ⚠ The context FIRST and
+ * the sizes last: a phone shows about 55 characters of a line (the first build put the context last — cut off on the very screen it was made for).
+ */
+export function formatDrawState(d: DrawState): string {
+  const last = d.lastIntervalMs === null ? "—" : `${d.lastIntervalMs > 1000 ? "⛔" : ""}${d.lastIntervalMs.toFixed(0)}ms`;
+  const noSize = !(d.cssW > 0 && d.cssH > 0 && d.bufW > 0 && d.bufH > 0);
+  const gl =
+    d.contextLost === null
+      ? "—"
+      : (d.contextLost ? "⛔LOST" : "ok") +
+        (d.lost > 0 || d.restored > 0 ? ` (lost ${d.lost}, back ${d.restored})` : "") +
+        (d.glError !== 0 ? ` ⛔err 0x${d.glError.toString(16)}` : "");
+  return `gl ${gl} · frames ${d.frames} · last ${last} (long ${d.longFrames}) · ${noSize ? "⛔" : ""}${d.cssW}×${d.cssH} → ${d.bufW}×${d.bufH}`;
+}
