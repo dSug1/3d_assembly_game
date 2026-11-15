@@ -57,3 +57,12 @@
 * **The owner, the same day**: test scenes of the builder's choice may live in ANOTHER worktree, reviewed then deleted by the owner (the spec's §7.2).
 * **The owner, the same day**: how the specificities (holes, voids, channels, mouths, protrusions) are handled → the spec's §4.4: untouched below the
   charts; the mouth's hand-over is coupled to the tilt and is carried over at step 2.4; `Scene_2`'s contour is not measured yet.
+* **The owner's look with the switch on** (2026-11-15): *"everything ok with charts switched on"* (⚠ the device not stated); a desktop recording
+  of `Scene_0bis` sent the same day was withdrawn (*"The charts were switched off."*). The record: the spec's §7.3.
+* **The owner's decisions**: *"Center: keep the origin for the moment"*; *"State reset: do what is best for"* (the message ended there) — read as
+  the builder's call: the reset wherever a piece starts being orbited; ⛔ not built yet.
+* **A black scene on the owner's iPhone after the deploy**: not reproduced, its cause unknown, not reported again since; `2cae564` (local, not
+  deployed) adds the HUD's `draw` line (the WebGL context, the frames, the last interval, the canvas's size); **1856 vectors**.
+* **For later, at the owner's request** → the spec's §10: (1) the tilted pole close in is KEPT (rule §3 6.) and checked on the build with the
+  switch off and on, but general on every kind of face only by a step of its own, **step C**, after 2.5; (2) a band against input noise at every
+  trigger of a camera movement (the example: the square camera's target at an edge close in, no band today), considered at step 2.4.

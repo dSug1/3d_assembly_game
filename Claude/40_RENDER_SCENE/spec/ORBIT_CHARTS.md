@@ -325,11 +325,12 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **1.3** ✅ | built `e82262e`, audited (§7.3) — `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** ✅ | built `c2f3d3a`, audited (§7.3) — `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
-| **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); ⛔ the owner's look owed — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
+| **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
-| **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
+| **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4); ⭐ each trigger's band against input noise considered here (§10.2) | replays, walks, the owner's look after each |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
+| **C** (later) | the tilted pole close in on every kind of face (§10.1): an offline round first, the owner's decisions (D-C2, D-C4), then the build — after 2.5 | the owner's look |
 
 ### 7.3 As built
 
@@ -403,7 +404,10 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   | `Scene_0` | identical, bit for bit | ANOTHER play from frame 0 (the gizmo 87 mm away at the boot's angles), no error; the gizmo's largest step 91 mm (98 today) |
   | `Scene_0bis` | at most 3 × 10⁻⁹ m apart (today's game against itself: the same) | ANOTHER play from frame 5, no error; the gizmo's largest step 94 mm (100 today) |
 
-  ⛔ Owed: the owner's look on `Scene_0` and `Scene_0bis` with the switch on; the walks' rules on them; the test scenes.
+  ✅ **The owner's look with the switch on** (2026-11-15): *"everything ok with charts switched on"* — ⚠ on which device: not stated. (A desktop
+  recording of `Scene_0bis` sent the same day — quick turns, a camera roll passing nearly upside down — was withdrawn: *"disregard my two previous
+  conversations. The charts were switched off."*; with the switch off the build replays as the game before it.)
+  ⛔ Owed: the walks' rules on `Scene_0` and `Scene_0bis`; the test scenes.
 * **The two fixes the owner asked for** (2026-11-15: *"- fix that centre reading in this build. - state carry over : this is not intended. Fix
   it."*; an Opus agent, audited by Fable):
   * ✅ **The orbit's starting state has ONE home** (`f1b7573`, kept): `orbitStateStart()` (37 fields) applied by `resetOrbitState(st)` at the
@@ -423,6 +427,14 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 * **CL1's bit-for-bit check REDONE with the fixed probe** (the owner: *"Do it."*): the code before the clean-up (`eeec345`) against after
   (`1b34f62`), the gizmo travelling 22 – 25 m a run: `Scene_0` and `Scene_0bis` identical bit for bit; `Scene_1` identical bit for bit in one of
   two runs, within 7 × 10⁻¹⁰ m in the other — the replay's own noise. **CL1 changed nothing**; its first check was hollow, its conclusion holds.
+* **The owner's decisions on the two fixes** (2026-11-15): *"Center: keep the origin for the moment"* — `8008ce0`'s revert stands; *"State reset:
+  do what is best for"* (the message ended there) — read as the builder's call: `resetOrbitState` wherever a piece starts being orbited (the
+  test scenes' piece switch and the stuck respawn too). ⛔ Not built yet.
+* **A black scene on the owner's iPhone after the deploy** (`7db32b6`, the switch off; the HUD: `frame —` after eight minutes, the canvas the
+  page's own background) — not reproduced (desktop Chrome, a phone-sized emulation), its cause unknown, not reported again since. `2cae564`
+  (local, ⛔ not deployed): the HUD's `draw` line — the WebGL context (lost, restored, an error), the frames drawn, the last frame's interval as
+  it was, the canvas's size and its buffer's; **1856 vectors**.
+* **The tilted pole close in, and a band against input noise** (the owner's two notes for later, 2026-11-15) → §10.
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
@@ -462,3 +474,61 @@ given as −13° and 32°), the bottom level −58° (−45°), and an end face 
 The shed (found at step 1.1): this file and the artifact said today's rule takes its 60° roof for a cap. It does not — that roof's normal is 30° up,
 under the 45° bound: today the side band stops at 45° and the place is pinned on the high edge's middle beyond it (8.4 % of steps move nothing).
 §2.2 now says so; a roof sloping LESS than 45° is the one today's rule makes a cap.
+
+## 10. FOR LATER — recorded at the owner's request (2026-11-15)
+
+### 10.1 The tilted pole close in: KEPT — general on every geometry by a step of its own (step C)
+
+The owner: *"I want to know if this is a feature that you intend to keep and make sure it works for all the geometries and topologies you are
+rebuilding the code for, or is it something that will need its own rebuild ? If so, capture in the md file for later on."*
+
+**Kept.** It is rule §3 6., a cap's square layouts — computed for every cap since step 1.2 (`assignCharts().layouts`, equal to the prototype's on
+the 35 shapes). Step 2.4 re-homes its trigger and its exit in the one transition (§4); on the three scenes it behaves as today. ⭐ Checked on the
+build (`2cae564`, a headless run, the switch off and on): within `tiltAutoM` the automatic tilt fires on `Scene_1`'s top and bottom and on
+`Scene_0`'s two top faces and its bottom, and rolls back at the edge — `Scene_1` the same line for line with the switch on.
+
+⛔ **Not made general by steps 1.1 – 2.5** — two reasons:
+
+1. **The close-in machinery is today's wiring, about the WORLD's vertical**: the latch by distance, the camera pending then blended by the
+   finger's travel, the square camera, the swing and the roll back, the mouth's hand-over (`tiltOn`, `capTilt`, `holdsPole` on the world's map) —
+   and it never fires inside a polar zone (`POLAR_ZONES.md` §4.2 1.). The prototype never ran close in (§6: not covered).
+2. **Most kinds of face have a default close in, or nothing:**
+
+| the face | close in |
+|---|---|
+| a level rectangle (`Scene_1`'s top and bottom, `Scene_0`'s bottom) | four square layouts, one per entry edge — as built ✅ |
+| a slanted face holding the pole across a ridge (`Scene_0`'s two top faces) | tilts by its own angle today; a plain cell under the charts, the tilt dropped (D-C4) — the owner's look at step 2.4 |
+| a level face that is not a rectangle (a triangle, a pentagon) | no square layout exists; the default is polar at every distance (D-C2), two other ways listed — no scene has one |
+| a fan round a point (the tips; any polar zone) | the zone's polar orbit, no tilt — as built; `Scene_0bis` whole |
+| the cap of a frame that is not gravity's (a tilted body's top, an upright zone's cap) | its layouts are computed; the wiring cannot use them |
+| a BENT cell (`Scene_0`'s two ends), a face left to RINGS | no change of frame; the square camera alone |
+
+**Step C** (after 2.5 — the tilt's trigger must be the one transition first): an offline round on the 35 shapes and the test scenes — per kind
+of face, whether close in changes the frame, which layout, each exit's turn and the camera's path through it; the owner's decisions (D-C2, D-C4,
+the rows above); then the build, closed by the owner's look. Until then close in is today's, on the three scenes.
+
+### 10.2 A band against input noise at every trigger of a camera movement
+
+The owner: *"for later on: consider adding hysteresis where needed (for example crossing of edges which trigger camera movement) so that input
+noise does not transfer to camera movement (see attachment in example)"*.
+
+**The example** (two screenshots, `Scene_0bis`, build `7db32b6`, close in — the piece 0.12 – 0.15 m from the yellow target, one pointer down,
+STATIONARY): the gizmo at the corner where two of the body's front faces meet a tip's faces; the view square to the body's face in one, turned
+toward the tip in the other. **Its cause, read in the code**: close in the square camera's target is the normal of the face the gizmo is on
+(`squareFrame`: `asmSquare.target = asmShown.t.normal`), read every frame with no band — the place's noise across the edge flips the target
+between two normals far apart, and the camera travels from one to the other at `tiltRollDegS`.
+
+**What has a band today** (read 2026-11-15; to re-read when this is taken up):
+
+| the trigger | its band |
+|---|---|
+| the automatic tilt's latch by distance | on within `tiltAutoM` (0.6 m), off 0.05 m beyond (`TILT_AUTO_HYST_M`) |
+| out of a polar zone | `zoneExitMm` (10 mm) past its rim |
+| the spit's side (the camera over the axis) | `SPIT_SIDE_HYST_DEG` (2°) |
+| a half-turn crossing | the dy that crossed held `edgeHoldMm` (30 mm) into the face beyond — that dy only |
+| ⛔ the square camera's target close in | none — the example |
+| ⛔ to check: the calm's normal (eased, not banded), the tilt's entry at an edge close in, its exit by a dx | — |
+
+**Where it lands**: step 2.4 — every change of frame becomes the one transition (§4), so its trigger gets ONE band; the square camera's and the
+calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres on the glass (`CLAUDE.md` rule 3), a slider with
+the rule. ⚠ Its cost, to weigh at each: a band is a delay at every real crossing — the view stays the last face's for the band's depth.
