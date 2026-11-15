@@ -93,3 +93,4 @@
   under `chartLayout` 1 but P). ✅ P built (`5894ab2`): a press does nothing to the orbit, the tilt close in only.
 * ✅ **2.4a built and audited** (`44ba40e`): under `chartLayout` 1 the atlas decides where a frame changes (the spec's §12.1).
 * ✅ **2.4b built and audited** (`a57796e`): close in, `Scene_0`'s ridge crossed by the one transition (the spec's §12.1).
+* ✅ **2.4c built and audited** (`c25a1cc` + the auditor's fix `1327ade`): one state at every change of frame (the spec's §12.1, its table).

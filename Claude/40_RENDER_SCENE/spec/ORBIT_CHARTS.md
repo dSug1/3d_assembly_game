@@ -720,3 +720,27 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
   view ≤ 6.4° a frame (360°/s), the piece on the glass ≤ 0.05° a frame through it, the dy held for the rest of the gesture (54 of 54 readings);
   the dy reversed: down the far face; one drag back up: one crossing back. ⚠ A NEW gesture pushing the same way crosses again — the owner's rule
   of 2026-11-14 (the hold ends with the gesture). ⚠ Not measured: the spring's leftover lag at the crossing (30 ms, zero with the square camera whole).
+* **2.4c** (2026-11-15, `c25a1cc`, an Opus agent; audited by Fable, one fix `1327ade`): under the switch `tiltOn`, `tiltOff` and `zoneSwitch` (with
+  a place shown) are the one transition — the frame at once (no swing, no roll back inside F), the new chart's angles at the gizmo, `seamRebase`, ONE
+  camera turn from the pose shown (`seamTurnStart`: paced as the swing was when the tilt is made with the camera pending — held, then by the finger's
+  travel, then by time; else by time, the gizmo held), the piece's shown direction eased on that turn (`asmDirEase`, applied in `dirAt` alone);
+  `src/input/seam_turn.ts` (`dirGap`, `easedDir`, `seamTurnPace` / `Holds` / `Step`, `poleYawKept`, `tiltLeavesNow`, `seamWholeRad`). No place yet
+  (`Scene_0bis`'s whole zone, the first frame): `turnAngles`, as before. 25 vectors, red on 28 mutants; **1933 vectors**.
+  ⭐ **The auditor's find** (the app, `Scene_1`'s top, a fast dy onto it): the eased direction ran on the camera turn's share, whose angle (1.2°) has
+  nothing to do with the direction's gap (7.7° — the spring's lag behind the finger): the turn whole in one frame, the gap's rest in the next — 9.1°
+  of view in a frame. Now ONE clock over the SUM of the two (`seamWholeRad`, `turnWhole`).
+  **The gates** — replays against 2.4b's: off, `Scene_1` and `Scene_0bis` identical bit for bit, `Scene_0` within 6 × 10⁻¹⁰ m (the replay's own
+  noise, from frame 3); on, `Scene_0bis` the same play (≤ 3 × 10⁻⁹ m), `Scene_1` and `Scene_0` another play from the first close-in tilt (frame
+  1133), no error, the view's largest turn in a frame 14.2° / 15.4° (14.9° / 15.4° before), none over 20°. **In the app, close in, before → after**:
+
+  | | `Scene_1` | `Scene_0` |
+  |---|---|---|
+  | the orbit's angles against the map's, at rest | up to 23° apart → 0.00° | up to 26° → 0.00° |
+  | the gizmo's step while a camera turn runs | 28 mm → 0.0 mm | 28 mm → 0.0 mm |
+  | the largest roll in ONE frame | 6.3° → 6.2° | **180°** (leaving the tilted bottom) → 6.3° |
+  | the largest view turn in ONE frame | 6.3° → 6.7°; ⚠ the tilt's entry under a fast dy 5.7° → **8.5°** | 11.2° → 6.4° |
+
+  ⚠ **For the session on the tilted pole close in**: that entry — the piece's spring, 30 ms behind a fast finger, is set onto the new angles and its
+  lag eased at 360°/s (two frames) with the camera following the piece; before, the lag was kept and caught up by the spring itself. ⚠ **A new
+  camera turn, by design**: the tilt left by distance (or a zone's switch) with the gizmo on the FAR half of a cap turns the camera round to the
+  place's own side — before, the camera stayed and the gizmo's angles disagreed (report 4 of §11). The ridge's crossing (2.4b) re-run: unchanged.
