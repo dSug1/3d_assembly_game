@@ -91,3 +91,4 @@
 * **The owner's decision** (2026-11-15): *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit. Then build step
   2.4 as you have recommended in your previous message."* — the design and the build's record: the spec's §12 (sub-steps P, 2.4a – 2.4e, each
   under `chartLayout` 1 but P). ✅ P built (`5894ab2`): a press does nothing to the orbit, the tilt close in only.
+* ✅ **2.4a built and audited** (`44ba40e`): under `chartLayout` 1 the atlas decides where a frame changes (the spec's §12.1).

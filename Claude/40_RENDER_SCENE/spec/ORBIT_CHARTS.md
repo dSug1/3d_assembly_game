@@ -700,3 +700,13 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
   **1870 vectors**. The auditor's gates: a press held still on `Scene_0`'s top slanted face and bottom and on `Scene_1`'s top, square and 30° off,
   both layouts — no tilt, the view 0.0°; the close-in run (approach in, the automatic tilt made by a dy, orbit in it, approach out) on `Scene_1` and
   `Scene_0` (both layouts): IDENTICAL line for line to the code before. ⚠ Far out the replays are another play from the first press that tilted.
+* **2.4a** (2026-11-15, `44ba40e`, an Opus agent; audited by Fable): `capTiltHeading` (a CAP with a square layout tilts, toward the layout's
+  heading nearest today's — today's own value on a world-aligned cap; a side however steep, a cap that is not a rectangle, a virtual cap: none) and
+  `chartZones` (the frames the atlas took as `PolarZone`s: their OWN faces — `used[].own`, new — the axis signed as `polarZones` signs it) in
+  `orbit_charts.ts`; the wiring's `atlasOf` (cached per placed set and the three zone knobs), `tiltOn`, `nextTiltHeading`, `zonesOf` under the
+  switch. 16 vectors (`tests/orbit_charts_atlas.test.ts`), red on 21 mutants; the assignment still EXACT against the prototype on the 35 shapes;
+  **1886 vectors**. The auditor's gates — replays against P's: the switch off, the three scenes IDENTICAL bit for bit; on, the three identical
+  too (`Scene_0bis`: the atlas's zone IS `polarZones`'; the script never tilts on `Scene_0`'s top faces); the close-in run on `Scene_0`: on, no
+  tilt on a top face, the orbit stopping at the ridge (2.4b's), the bottom tilting as before; off, as before. ⚠ Found by the agent, no scene has
+  it: a tipped heptagon whose axis is 10 – 20° off the VERTICAL — `polarZones` finds one whole upright zone, the atlas a WORLD frame square to
+  the axis serving 6 faces: the assignment's rule on a shape outside the 35 — for the test scenes and step 3.
