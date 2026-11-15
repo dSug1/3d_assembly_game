@@ -239,9 +239,9 @@ describe("⭐⭐⭐ the wiring: the atlas decides only under the switch (`render
     expect(f).toContain("assignCharts(contour, { ...DEFAULT_CHART_OPTS, uprightMaxDeg: c.zoneUprightMaxDeg, spitMinDeg: c.zoneSpitMinDeg, wholeShare: c.zoneWholeShare });");
     expect(raw.match(/assignCharts\(/g)?.length).toBe(1);
     expect(raw.match(/chartContour\(/g)?.length).toBe(1);
-    // its three readers, each inside its function's `chartLayout === 1` branch
-    expect(raw.match(/atlasOf\(st\)/g)?.length).toBe(3);
-    for (const sig of ["function tiltOn(", "function nextTiltHeading(", "function zonesOf("]) {
+    // its four readers, each inside its function's `chartLayout === 1` branch (⭐ step 2.4b: the pole's crossing in `assemblyFrame`)
+    expect(raw.match(/atlasOf\(st\)/g)?.length).toBe(4);
+    for (const sig of ["function tiltOn(", "function nextTiltHeading(", "function zonesOf(", "export function assemblyFrame("]) {
       const g = fn(sig);
       expect(g.indexOf("st.cfg.chartLayout === 1")).toBeLessThan(g.indexOf("atlasOf(st)"));
     }

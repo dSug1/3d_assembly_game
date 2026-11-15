@@ -39,6 +39,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
+import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -932,7 +933,8 @@ function edgeMarginM(st: SceneState): number {
  */
 export function assemblyFrame(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-12, F4) the elevation asked past a pole, read EVERY frame (never piled up while the assembly's orbit is off — a jump later)
-  const beyondV = st.orbit.takeBeyond();
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b) consumed by a pole's crossing (`poleCross`): the map's step must not also push past the pole
+  let beyondV = st.orbit.takeBeyond();
   // ⭐⭐⭐ (2026-11-12, §8) the dy hold released once the gizmo is deep enough in the face beyond — or the assembly's orbit off
   // ⭐⭐⭐ (2026-11-14) its release is the FINGER's (`edgeHoldFinger`, in the pointer's step) — here only with the assembly's orbit gone
   if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;
@@ -997,6 +999,27 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   const mqP = st.asmMapQ;
   const atPole = mqP === null || !(Math.abs(mqP.pitch) >= ORBIT_PITCH_MAX_RAD - 1e-9) ? null : mqP.pitch > 0;
   if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b) A POLE HELD BY AN EDGE OR A POINT (gravity's chart's end: `Scene_0`'s ridge, an apex) CROSSED BY THE ONE
+  // TRANSITION, close in, in the world's frame (`poleCrossingDue`: the map's angles at the pole, the finger asking beyond it) — the gizmo kept, the far
+  // face's angles read there, every angle state set to them, one camera turn, the dy hold (`poleCross`); the beyond consumed. ⛔ Far out: the polar orbit's
+  // limit (D-C6); a cap: the tilt's (above). Only after the tilt's making: a frame that tilted never crosses
+  if (st.cfg.chartLayout === 1) {
+    const atl = atlasOf(st);
+    const due = poleCrossingDue({
+      chartLayout: st.cfg.chartLayout,
+      tilted: st.asmTilt !== null,
+      zoned: st.asmZone !== null,
+      closeIn: st.asmTiltAuto,
+      turning: st.asmZoneMix !== null,
+      mouth: st.asmMouth !== null,
+      atPole,
+      shown: st.asmShown !== null && st.asmG !== null,
+      beyondV,
+      topKind: atl?.assign.gravity.top.kind ?? null,
+      bottomKind: atl?.assign.gravity.bottom.kind ?? null,
+    });
+    if (due !== null && poleCross(st)) beyondV = 0;
+  }
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
@@ -1765,6 +1788,91 @@ function tiltOff(st: SceneState): void {
   } else st.asmMapQ = null;
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §11 1., §12 "THE ONE TRANSITION" 3.) ONE STATE: EVERY ANGLE STATE SET TO THE CHART'S ANGLES `mq` (a yaw and a pitch in
+ * the frame the orbit is in, whatever the chart — the caller has read them at the gizmo's exact place, `mapAngles`): the orbit's, the solver's memory (the
+ * ring height, last frame's target), the solved piece's, the spring's at rest, the camera's follow state (its place, its last driver and box, its rates
+ * and glides none — a glide is a move still to come, in the old angles), the previous angles — exactly the states `turnAngles` turns — and the map's (`asmMapQ`); the coast stopped. ⛔ Never each state turned as a
+ * direction by a rigid rotation with the map's angles left to catch up (`turnAngles`, the root cause: the orbit's place stored twice). The views (the
+ * calm, the square camera, the heading held) are the caller's.
+ */
+function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: number }): void {
+  const yaw = mq.yaw;
+  const v = vOfPitch(mq.pitch);
+  st.orbit.reset(yaw, v);
+  st.orbitUserV = v;
+  st.orbitRawPrev = { yaw, v };
+  if (st.pieceQ !== null) st.pieceQ = { ...st.pieceQ, yaw, v };
+  if (st.boxSpring !== null) {
+    const sp = st.boxSpring;
+    st.boxSpring = { at: { ...sp.at, yaw, v }, velYaw: 0, velV: 0, velLnZoom: sp.velLnZoom };
+    st.boxOrbit = st.boxSpring.at;
+  } else if (st.boxOrbit !== null) st.boxOrbit = { ...st.boxOrbit, yaw, v };
+  if (st.cameraLagged !== null) st.cameraLagged = { yaw, v };
+  const co = st.cameraOrbit;
+  if (co !== null) {
+    st.cameraOrbit = {
+      ...co,
+      cam: { ...co.cam, yaw, v },
+      yaw: { ...co.yaw, lastDriver: yaw, lastBox: yaw, vel: 0, glide: null },
+      pitch: { ...co.pitch, lastDriver: v, lastBox: v, vel: 0, glide: null },
+      yawVel: 0,
+      pitchVel: 0,
+    };
+  }
+  st.asmPrevQ = { yaw, v };
+  st.asmMapQ = { yaw: mq.yaw, pitch: mq.pitch };
+  st.orbitInertia.stop();
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b, §4.1, §1 "the top and the bottom") OVER A POLE HELD BY AN EDGE OR A POINT — THE ONE TRANSITION, in the
+ * world's frame (the trigger `poleCrossingDue`, in `assemblyFrame`): 1. the gizmo KEPT (`asmG`); 2. the far facet at the map's place on the pole
+ * (`farFacetAt` — none: no crossing, the orbit stops there as before); 3. the far chart coordinates read there (`poleSeam`, `mapAngles`); 4. every angle state set to
+ * them (`seamRebase`); 5. the place shown at them, a relocation eased if the map's place there is not the gizmo; 6. the views — the world camera's held
+ * zenith heading read afresh, the calm carried over the edge (`tiltOff`'s: the far face's normal, the vertical share whole, the horizontal one kept), the
+ * square camera's target the far face; 7. ONE camera turn from the pose shown (`asmZoneMix`, as `spitStep` starts it — the gizmo held meanwhile by
+ * `tiltClampStep`); 8. the dy that crossed held (`edgeHoldAt`, a half turn). ⭐ Everything in the MODEL's space (the world face map, `asmG`, `asmShown`);
+ * the camera's pose shown read only to start the turn from the picture on the glass. Returns whether it crossed.
+ */
+function poleCross(st: SceneState): boolean {
+  const wm = worldFaceMap(st);
+  const sh = st.asmShown;
+  const P = st.asmG;
+  if (wm === null || sh === null || P === null) return false;
+  const cur = sh.t.stack;
+  const n0 = wm.facets[cur]?.n;
+  // ⭐ the map's own place on the pole (the contour's, `asmShown.t.surface`: the world's — no tilt, no zone) — ⛔ the gizmo with its real depth or its
+  // glide: off the contour's polygons, the far facet not found
+  const S = sh.t.surface;
+  const seam = poleSeam(wm, cur, S, mapOpts(st));
+  if (n0 === undefined || seam === null) return false;
+  const nFar = wm.facets[seam.far]!.n;
+  const heading = st.orbit.yaw;
+  const mq1 = { yaw: seam.yaw, pitch: seam.pitch };
+  seamRebase(st, mq1);
+  st.asmShown = null;
+  st.asmGOff = null;
+  const m = mapGizmo(st, mq1.yaw, mq1.pitch);
+  if (m !== null) {
+    const v: Vec3 = [P[0] - m.hit.point[0], P[1] - m.hit.point[1], P[2] - m.hit.point[2]];
+    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+    st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch };
+  }
+  st.asmHeadO = null;
+  st.asmHeadW = 1;
+  st.asmHeadYaw = null;
+  const c = st.asmCalm;
+  if (c !== null) st.asmCalm = { n: nFar, sH: c.sH, sV: 1, wA: 1, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) };
+  st.asmSquare.target = nFar;
+  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
+  const hold = edgeHoldAt(heading, n0, nFar, P, st.asmDySign);
+  if (hold !== null) st.asmEdgeHold = hold;
+  st.lastVerdict = "orbit: over the pole's edge — the camera turned to the far side (the gizmo held until it completes), then the dy that crossed held";
+  st.hudDirty = true;
+  return true;
 }
 
 /* ⭐⭐⭐ (2026-11-13, `Claude/40_RENDER_SCENE/spec/POLAR_ZONES.md` — the owner's decisions D-Z1 – D-Z7; the rules in `input/polar_zone.ts`) ------------ */
