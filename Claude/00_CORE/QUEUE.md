@@ -43,7 +43,7 @@ md, commits, deploys only when asked; deploy = push the branch, merge `--no-ff` 
 5. ⛔ **THE LAUNCH MESSAGES SHEET** — not built; its texts in `render/browser_guards.ts` → [`BROWSER_GUARDS.md`](../10_INPUT_TOUCH/spec/BROWSER_GUARDS.md) §3.
 ⭐ The 2026-09-17 version of this list (white contours, shakes, two undos, `FOLLOW`) is spent → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
-### ⛔⛔⛔ THE 2026-09-17 AUDIT### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
+### ⛔⛔⛔ THE 2026-09-17 AUDIT — the first defects found by READING, and a device look is owed
 
 ⭐⭐ The whole record, with what is **not** fixed and why: [`queue_notes/AUDIT_2026-09-17.md`](queue_notes/AUDIT_2026-09-17.md); the hygiene audit that followed: [`queue_notes/AUDIT_2026-09-27.md`](queue_notes/AUDIT_2026-09-27.md).
 ⛔⛔ **THE ONE TO KNOW: the game booted in `TRANSLATE` while every document said `ROTATE`** — and `git log -S` finds no commit that ever returned `ROTATE`. Nothing regressed; the owner's decision never reached the code, and the vector asserted the value the function RETURNED rather than the decision made. ⭐ `METHOD`: *a vector written from the code it tests cannot contradict that code.* ✅ Owner re-confirmed and fixed.
@@ -72,7 +72,7 @@ gesture. ⭐ That is what `1.0.4` is: **translation with one finger.**
 
 ⛔ `A15` (closed by the same look) was **deleted by `D54`** → [`history/2026-09-27_queue_spent_blocks.md`](history/2026-09-27_queue_spent_blocks.md).
 
-### ⭐⭐⭐ THE INPUT MODEL, AND IT IS NOW SINGULAR### ⭐⭐⭐ THE INPUT MODEL, AND IT IS NOW SINGULAR (`D28`, 2026-09-16)
+### ⭐⭐⭐ THE INPUT MODEL, AND IT IS NOW SINGULAR (`D28`, 2026-09-16)
 
 ✅✅ **`IN13` IS ANSWERED AND CLOSED.** One build carried **three** readings of §2/§4 from
 `1.0.5` to `1.0.7` — fork A (one touchpoint translates), fork B (the spec's inversion) and
@@ -301,6 +301,7 @@ Design of record: [`../10_INPUT_TOUCH/spec/SPEC_INPUT_SYSTEM_R5.md`](../10_INPUT
 | RND2 | Mate preview: ghost + drop line | RND | render | queued | 3D2 |
 | RND3 | Anchor ring during two-touchpoint gestures (§4) | RND | render | queued | IN2 |
 | RND4 | Off-screen target indication — Halo / Wedge | RND | render | queued. ⭐ Not general polish: **6ter needs BOTH objects selected**, and at close zoom the partner is routinely off-frame, so the gesture becomes unreachable with nothing to say why. Curvature (Halo) or a tapered wedge encodes direction AND distance without a camera snap. ⚠ Audience includes youth — cap the indicator count. Prior art: Baudisch & Rosenholtz CHI 2003; Gustafson et al. CHI 2008 | 3D1, IN4 |
+| RND5 | ⭐ Orbit on charts | RND | feature | spec ✅ → `queue_notes/RND5.md` | — |
 
 ## Phase DEP — build and deployment
 

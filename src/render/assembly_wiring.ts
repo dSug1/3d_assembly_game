@@ -12,7 +12,7 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { approachDistance, approachStep, easePoint, faceSwitches, farDistance, approachStepFree, lookShare, offsetFrame, modelNormal, orbitDir, ORBIT_PITCH_MAX_RAD, pitchOfV, swayRay, unswayHit, vOfPitch, gizmoLag } from "../input/assembly_orbit";
 import { gizmoJoins, insertIndex, joinsKnown, joinStep, LINE_REFINE_BUDGET, refineNow, refineStart, refineStep, sectionFixed, type RefineState } from "../input/section_hull";
-import { blendThroughEdges, buildFaceMap, castPoint, holdsPole, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
+import { blendThroughEdges, buildFaceMap, castPoint, holdsPole, mapAnglesStep, poleBeyondPitch, facetOfNormal, mapAngles, mapTarget, stackDepthAt, type FaceMap, type FacetOpts, type MapFace, type MapOpts, type MapTarget } from "../input/face_map";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -97,6 +97,74 @@ export function ensureAssembly(st: SceneState): void {
   st.asmGizmo = null;
   st.asmLook = null;
   st.asmG = null;
+}
+
+/** ⭐ The orbit's state a held part starts from (`orbitStateStart`). */
+type OrbitStateStart = Pick<
+  SceneState,
+  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmMapQ"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
+>;
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_STATE_INVENTORY.md` F.2; the owner: *"this is not intended. Fix it."*) THE ORBIT'S STARTING STATE, ONE HOME — every HISTORY,
+ * TRANSITION and VIEW field of the inventory's table A (their inner state with them: each composite starts `null` or as a fresh object), and the two
+ * per-part results that start empty (`asmSupport`, `asmOrbitMm`). Read by the scene's creation and by the pick-up (`resetOrbitState`): a newly held part
+ * starts as the first one did. ⛔ Not here: the GEOMETRY caches (each carries its key; `asm` is the pick's own, re-read by `ensureAssembly`), the RENDER
+ * objects, `asmRestOff` (the approach's re-entrancy flag, false outside it), `pieceHoldCount` (the HUD's and the probes' running count).
+ */
+export function orbitStateStart(): OrbitStateStart {
+  return {
+    asmGizmo: null,
+    asmSupport: null,
+    asmSupportLevel: null,
+    pieceHold: null,
+    pieceHoldPrev: null,
+    asmLook: null,
+    asmFacePoint: null,
+    asmG: null,
+    asmPrevQ: null,
+    asmShown: null,
+    asmMapQ: null,
+    asmEdgeHold: null,
+    asmZone: null,
+    asmZoneMix: null,
+    asmPieceDrawn: null,
+    asmCamLast: null,
+    asmSpitSide: 0,
+    asmSpitU: null,
+    asmZoneAlpha: 0,
+    asmDySign: 0,
+    asmHeadO: null,
+    asmHeadW: 1,
+    asmHeadYaw: null,
+    asmTilt: null,
+    asmGOff: null,
+    asmTiltAuto: false,
+    asmTiltPending: false,
+    asmOrbitMm: 0,
+    asmBlend: null,
+    asmCalmWhole: 0,
+    asmCalmWholeV: 0,
+    asmSquare: { n: null, target: null, q: 0 },
+    asmCalm: null,
+    asmMouth: null,
+    asmRawPrev: null,
+    asmGizmoAt: null,
+    asmGizmoLag: null,
+  };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15) THE ORBIT'S STATE BACK TO ITS START (`orbitStateStart`) — at the scene's creation and at each pick-up; and the gizmo's per-frame memo
+ * cleared (`GIZMO_MEMO`: keyed by the frame and the angles only — a pick inside a frame would be served the last part's gizmo). ⛔ The tilt's and the
+ * zone's id counters are never reset: an id reused would match a face map's cache key.
+ */
+export function resetOrbitState(st: SceneState): void {
+  Object.assign(st, orbitStateStart());
+  GIZMO_MEMO.delete(st);
 }
 
 interface GizmoHit {
@@ -656,9 +724,9 @@ function faceMapOf(st: SceneState): FaceMap | null {
   if (box === null) return null;
   // ⭐⭐⭐ (2026-11-10, §9.4) under the tilted pole the map is BUILT IN F (`tiltFaces`, `tiltBox`): the pressed cap a side — cached per tilt
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md) …or in the polar zone's frame (`baseFrame`) — cached per zone switch
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}`;
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}${st.asmTilt !== null ? `#T${st.asmTilt.id}` : `#Z${st.asmZone?.id ?? 0}`}`;
   if (st.asmFaceMap !== null && st.asmFaceMap.key === key) return st.asmFaceMap.map;
-  const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  const map = buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R), { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
   st.asmFaceMap = { key, map };
   return map;
 }
@@ -668,12 +736,21 @@ function worldFaceMap(st: SceneState): FaceMap | null {
   const parts = placedParts(st);
   const box = shellOf(st);
   if (box === null) return null;
-  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) the charts' switch (`chartOpts`) in the call and the key
+  const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;
   if (st.asmWorldMap !== null && st.asmWorldMap.key === key) return st.asmWorldMap.map;
-  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });
+  const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });
   st.asmWorldMap = { key, map };
   if (mapFrame(st) === null) st.asmFaceMap = { key, map };
   return map;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §2.2 / §5.2, step 2.2) THE CHARTS' SWITCH (`chartLayout`): 1 — both face maps built as the COLUMNS chart, the pole
+ * the shape's top / bottom set and the pitch scale read from the faces' normals; 0 — nothing new, the maps as built.
+ */
+function chartOpts(st: SceneState): Pick<FacetOpts, "layout" | "scale"> {
+  return st.cfg.chartLayout === 1 ? { layout: "chart", scale: "normals" } : {};
 }
 
 /** ⭐ The placed parts' faces on their model pose (the slide's own: `faceWorld`, `faceTrianglesWorld`), in the world. */

@@ -204,8 +204,9 @@ describe("⭐⭐⭐ (2026-11-04, Step 5) THE FACES CONTOUR — the face map on f
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("if (h !== null && (at.bridged !== true || level(h.point) > at.depth + MAP_BRIDGE_FRONT_M)) return { hit: { point: onto(level(h.point)), normal: h.normal ?? n, host: h.host }, t };"); // ⭐ (2026-11-05) D3 amended: a bridged void is not cast to its bottom
     expect(a).not.toContain("MAP_REFINE_M");
-    expect(a).toContain("const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare });");
-    expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}`;");
+    // ⭐⭐⭐ (2026-11-15, ORBIT_CHARTS step 2.2) the charts' switch joined the call (`...chartOpts(st)`) and the key (`#C${st.cfg.chartLayout}`)
+    expect(a).toContain("const map = buildFaceMap(placedFaces(st), box, { mergeDeg: st.cfg.facetMergeDeg, minShare: st.cfg.facetMinShare, ...chartOpts(st) });");
+    expect(a).toContain("const key = `${parts.key}#${st.cfg.facetMergeDeg}#${st.cfg.facetMinShare}#C${st.cfg.chartLayout}`;");
     expect(DEFAULT_CONFIG.facetMergeDeg).toBe(20);
     expect(DEFAULT_CONFIG.facetMinShare).toBe(0.25);
     expect(() => validateGestureConfig({ ...DEFAULT_CONFIG, facetMergeDeg: 50 })).toThrow();

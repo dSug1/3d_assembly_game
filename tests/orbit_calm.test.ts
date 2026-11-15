@@ -2,8 +2,9 @@
 // this calm behavior of commit 58d86ff… It shall stay"*). The first five cases are 58d86ff's own, unchanged.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { alignedShare, calmHeading, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, shownDir } from "../src/input/orbit_calm";
-import { buildFaceMap, mapTarget } from "../src/input/face_map";
+import { acrossWeight, alignedShare, calmHeading, calmShown, calmStep, calmTarget, facingWeight, poleWeight, CALM_TAU_MS, easeNormal, easeToward, edgeShare, edgeShareSmooth, shownDir } from "../src/input/orbit_calm";
+import type { CalmKnobs } from "../src/input/orbit_calm";
+import { buildFaceMap, facetFrame, mapTarget } from "../src/input/face_map";
 
 import { DEFAULT_CONFIG, validateGestureConfig } from "../src/input/gestureConfig";
 import type { Vec3 } from "../src/core/vec";
@@ -166,7 +167,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);");
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("calmFrame(st, dtMs);");
-    expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
+    expect(code("render/assembly_wiring.ts")).toContain("asmCalm: null,");
     const m = code("render/tuning_menu.ts");
     const i = m.indexOf('title: "CALM ON A FACE"'); // ⭐ (2026-11-13) the menu by subject (`menu_layout.test.ts`)
     expect(i).toBeGreaterThan(m.indexOf('title: "ORBIT"'));
@@ -207,5 +208,198 @@ describe("the calm faded as the face turns away (facingWeight)", () => {
       expect((Math.acos(Math.min(1, prev[0] * s[0] + prev[1] * s[1] + prev[2] * s[2])) * 180) / Math.PI).toBeLessThan(4);
       prev = s;
     }
+  });
+});
+
+// ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 1.4) THE SHARE CONTINUOUS ON A NARROW RUN — `edgeShare` turns whole as a face's width passes two zones
+// (0.25 → 1 at 6 cm with today's knobs); `edgeShareSmooth` ramps the interior share to 1 from four minimum zones to two. Not wired: `calmTarget` reads it
+// only with `smooth: true`, which no caller sets.
+describe("⭐⭐⭐ (ORBIT_CHARTS step 1.4) the calm's share continuous on a narrow run (edgeShareSmooth, CalmKnobs.smooth)", () => {
+  type Set = readonly [number, number, number]; // interior, zone %, minimum zone (m)
+  const TODAY: Set = [0.25, 25, 0.03];
+  const SETS: readonly Set[] = [TODAY, [0.4, 10, 0.02], [0, 40, 0.05], [0.25, 25, 0]];
+  it("⭐⭐ EXACTLY edgeShare wherever the run is at least four minimum zones and the zone share under 50 %", () => {
+    let n = 0;
+    for (const [k, pct, m] of SETS)
+      for (let i = 0; i <= 60; i++) {
+        const run = Math.max(4 * m, 0.001) + i * 0.0097;
+        for (let j = -2; j <= 52; j++) {
+          const d = (j / 100) * run;
+          expect(edgeShareSmooth(d, run, k, pct, m)).toBe(edgeShare(d, run, k, pct, m));
+          n++;
+        }
+      }
+    expect(n).toBe(4 * 61 * 55);
+  });
+  it("⭐⭐ 1 for a run of two minimum zones or less, and for a zone share of 50 % and of 80 %, as edgeShare", () => {
+    for (const run of [0, 0.001, 0.03, 0.0599, 0.06])
+      for (const d of [0, run / 4, run / 2]) {
+        expect(edgeShareSmooth(d, run, 0.25, 25, 0.03)).toBe(1);
+        expect(edgeShare(d, run, 0.25, 25, 0.03)).toBe(1);
+      }
+    for (const pct of [50, 80])
+      for (const run of [0.07, 0.2, 0.49, 1.3])
+        for (const d of [0, 0.01, run / 3, run / 2]) {
+          expect(edgeShareSmooth(d, run, 0.25, pct, 0.03)).toBe(1);
+          expect(edgeShare(d, run, 0.25, pct, 0.03)).toBe(1);
+        }
+  });
+  it("⭐⭐⭐ NO JUMP: the run swept 1 – 30 cm (0.1 mm steps) at its middle and the distance across a run, never a step over 0.01 — ⛔ edgeShare jumps 0.75 at 6 cm (the defect)", () => {
+    const [k, pct, m] = TODAY;
+    let maxS = 0;
+    let maxE = 0;
+    let atE = 0;
+    let prevS = edgeShareSmooth(0.005, 0.01, k, pct, m);
+    let prevE = edgeShare(0.005, 0.01, k, pct, m);
+    for (let i = 101; i <= 3000; i++) {
+      const run = i * 1e-4;
+      const s = edgeShareSmooth(run / 2, run, k, pct, m);
+      const e = edgeShare(run / 2, run, k, pct, m);
+      maxS = Math.max(maxS, Math.abs(s - prevS));
+      if (Math.abs(e - prevE) > maxE) { maxE = Math.abs(e - prevE); atE = run; }
+      prevS = s;
+      prevE = e;
+    }
+    expect(maxS).toBeLessThan(0.01);
+    expect(maxE).toBeCloseTo(0.75, 9); // ⛔ the defect, pinned
+    expect(atE).toBeCloseTo(0.06, 9); // 600 × 0.1 mm, a hair over 6 cm in floating point: the first run past two zones
+    for (const [k2, pct2, m2] of SETS)
+      for (const run of [0.065, 0.07, 0.09, 0.11, 0.12, 0.2, 0.49]) {
+        let prev = edgeShareSmooth(0, run, k2, pct2, m2);
+        for (let i = 1; i * 1e-4 <= run; i++) {
+          const s = edgeShareSmooth(i * 1e-4, run, k2, pct2, m2);
+          expect(Math.abs(s - prev)).toBeLessThan(0.01);
+          prev = s;
+        }
+      }
+  });
+  it("⭐⭐ it never decreases as the run shortens (at its middle), and stays within interior … 1", () => {
+    for (const [k, pct, m] of SETS) {
+      let prev = -1;
+      for (let i = 3000; i >= 1; i--) {
+        const run = i * 1e-4;
+        const s = edgeShareSmooth(run / 2, run, k, pct, m);
+        expect(s).toBeGreaterThanOrEqual(prev - 1e-12);
+        prev = s;
+        for (const f of [0, 0.1, 0.3, 0.5]) {
+          const v = edgeShareSmooth(f * run, run, k, pct, m);
+          expect(v).toBeGreaterThanOrEqual(k);
+          expect(v).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  // ⛔ `calmTarget`'s body as committed before step 1.4 (`1dc43c8`), verbatim but for its name — the "today" the knob's absence is measured against
+  const oldCalmTarget = (
+    t: { readonly band: "SIDE" | "TOP" | "BOTTOM"; readonly surface: Vec3; readonly across: { readonly L: number; readonly lo: number; readonly hi: number } },
+    f: { readonly n: Vec3; readonly b: Vec3; readonly bLo: number; readonly bHi: number },
+    box: { readonly lo: Vec3; readonly hi: Vec3 } | null,
+    k: CalmKnobs,
+    across?: { readonly lo: Vec3 | null; readonly hi: Vec3 | null },
+  ): { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA: number } => {
+    const VERTICAL_EPS = 1e-6;
+    if (t.band !== "SIDE") return { n: null, sH: 1, sV: 1, wA: 1 };
+    const L = t.across;
+    const fracUp = (): number => {
+      if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+        if (box === null || !(box.hi[1] - box.lo[1] > 0)) return 0.5;
+        return Math.min(t.surface[1] - box.lo[1], box.hi[1] - t.surface[1]) / (box.hi[1] - box.lo[1]);
+      }
+      const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
+      return f.bHi - f.bLo > 0 ? Math.min(s - f.bLo, f.bHi - s) / (f.bHi - f.bLo) : 0.5;
+    };
+    const wA = acrossWeight(L.hi - L.lo > 0 ? Math.min(L.L - L.lo, L.hi - L.L) / (L.hi - L.lo) : 0.5, fracUp());
+    let sH = edgeShare(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
+    let sV = 1;
+    if (k.vOn) {
+      if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+        const y = t.surface[1];
+        if (box !== null) sV = edgeShare(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], k.shareV, k.zoneVPct, k.zoneMinVM);
+      } else {
+        const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
+        sV = edgeShare(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.shareV, k.zoneVPct, k.zoneMinVM);
+      }
+    }
+    const frameDiffers = (m: Vec3 | null): boolean => m !== null && !(Math.abs(f.n[1]) < VERTICAL_EPS && Math.abs(m[1]) < VERTICAL_EPS);
+    const near = (d: number, run: number, pct: number, minM: number): number => 1 - edgeShare(d, run, 0, pct, minM);
+    if (across !== undefined) {
+      const run = L.hi - L.lo;
+      const p = Math.max(frameDiffers(across.lo) ? 1 - near(L.L - L.lo, run, k.zoneHPct, k.zoneMinHM) : 0, frameDiffers(across.hi) ? 1 - near(L.hi - L.L, run, k.zoneHPct, k.zoneMinHM) : 0);
+      sV = 1 - (1 - sV) * (1 - p);
+    }
+    return { n: f.n, sH, sV, wA };
+  };
+
+  type TT = Parameters<typeof calmTarget>[0];
+  type FF = Parameters<typeof calmTarget>[1];
+  type BB = Parameters<typeof calmTarget>[2];
+  type AA = Parameters<typeof calmTarget>[4];
+  const K: CalmKnobs = { shareH: 0.25, zoneHPct: 25, zoneMinHM: 0.03, vOn: true, shareV: 0.25, zoneVPct: 25, zoneMinVM: 0.03 };
+  const slantN: Vec3 = [0, 0.5, -Math.sqrt(0.75)];
+  const slantB = facetFrame(slantN).b;
+  const box = (h: number) => ({ lo: [-0.3, 0, -0.3] as Vec3, hi: [0.3, h, 0.3] as Vec3 });
+  const sOf = (y: number): Vec3 => [0.02, y, -0.1 + 0.4 * y];
+  const FACETS: readonly { readonly f: FF; readonly box: BB }[] = [
+    { f: { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.54 }, box: box(0.54) }, // a wide vertical facet
+    { f: { n: [0, 0, -1], b: [0, 1, 0], bLo: 0, bHi: 0.09 }, box: box(0.09) }, // a vertical one in a narrow box
+    { f: { n: slantN, b: slantB, bLo: -0.1, bHi: 0.3 }, box: box(0.54) }, // a slanted one
+    { f: { n: slantN, b: slantB, bLo: 0, bHi: 0.09 }, box: null }, // a narrow slanted one
+  ];
+  const ACROSS: readonly AA[] = [undefined, { lo: slantN, hi: [1, 0, 0] }, { lo: null, hi: [0, 0.6, -0.8] }, { lo: [1, 0, 0], hi: [-1, 0, 0] }];
+  const grid = (each: (t: TT, f: FF, b: BB, a: AA) => void): number => {
+    let n = 0;
+    for (const { f, box: b } of FACETS)
+      for (const chord of [0.05, 0.08, 0.09, 0.4, 0.49])
+        for (const fr of [0, 0.02, 0.1, 0.3, 0.5, 0.8, 1])
+          for (const y of [0.005, 0.03, 0.045, 0.1, 0.27])
+            for (const a of ACROSS) {
+              each({ band: "SIDE", surface: sOf(y), across: { L: -0.1 + fr * chord, lo: -0.1, hi: -0.1 + chord } }, f, b, a);
+              n++;
+            }
+    return n;
+  };
+  it("⭐⭐⭐ `smooth` absent or false: calmTarget EXACTLY as before step 1.4 on a grid of places (wide, slanted, narrow; with and without `across`)", () => {
+    for (const k of [K, { ...K, vOn: false }, { ...K, zoneHPct: 10, zoneMinHM: 0.02, shareV: 0.4, zoneMinVM: 0.05 }]) {
+      let differs = 0;
+      const n = grid((t, f, b, a) => {
+        const old = oldCalmTarget(t, f, b, k, a);
+        expect(calmTarget(t, f, b, k, a)).toEqual(old);
+        expect(calmTarget(t, f, b, { ...k, smooth: false }, a)).toEqual(old);
+        const sm = calmTarget(t, f, b, { ...k, smooth: true }, a);
+        if (sm.sH !== old.sH || sm.sV !== old.sV) differs++;
+      });
+      expect(n).toBe(4 * 5 * 7 * 5 * 4);
+      expect(differs).toBeGreaterThan(0); // the grid reaches places where the smooth share differs: the comparison can fail
+    }
+    expect(calmTarget({ band: "TOP", surface: [0, 0, 0], across: { L: 0, lo: 0, hi: 0.09 } }, FACETS[0]!.f, null, { ...K, smooth: true })).toEqual({ n: null, sH: 1, sV: 1, wA: 1 });
+  });
+  it("⭐⭐⭐ `smooth: true`: a 9 cm chord's middle reads a horizontal share strictly between today's interior share and 1; a 40 cm chord as today; every share read through edgeShareSmooth", () => {
+    const f = FACETS[0]!.f;
+    const mid = (chord: number): TT => ({ band: "SIDE", surface: [0, 0.27, 0], across: { L: chord / 2, lo: 0, hi: chord } });
+    expect(calmTarget(mid(0.09), f, box(0.54), K).sH).toBe(0.25); // today: the interior share at 9 cm …
+    expect(calmTarget(mid(0.059), f, box(0.54), K).sH).toBe(1); // … and whole below 6 cm
+    const narrow = calmTarget(mid(0.09), f, box(0.54), { ...K, smooth: true });
+    expect(narrow.sH).toBeGreaterThan(0.25);
+    expect(narrow.sH).toBeLessThan(1);
+    expect(narrow.sH).toBeCloseTo(0.625, 12); // kEff = 0.25 + 0.75·S(0.5)
+    for (const a of ACROSS) expect(calmTarget(mid(0.4), f, box(0.54), { ...K, smooth: true }, a)).toEqual(calmTarget(mid(0.4), f, box(0.54), K, a));
+    // the vertical share on a vertical facet (a 9 cm box), on a slanted one (a 9 cm extent), and the weight toward a neighbour of another frame
+    const nb = FACETS[1]!;
+    const tv: TT = { band: "SIDE", surface: [0, 0.045, 0], across: { L: 0.2, lo: 0, hi: 0.4 } };
+    expect(calmTarget(tv, nb.f, nb.box, { ...K, smooth: true }).sV).toBe(edgeShareSmooth(0.045, 0.09, 0.25, 25, 0.03));
+    const ns = FACETS[3]!;
+    const s0 = 0.045;
+    const ts: TT = { band: "SIDE", surface: [s0 * slantB[0], s0 * slantB[1], s0 * slantB[2]], across: { L: 0.2, lo: 0, hi: 0.4 } };
+    const sl = calmTarget(ts, ns.f, null, { ...K, smooth: true });
+    expect(sl.sV).toBeCloseTo(edgeShareSmooth(0.045, 0.09, 0.25, 25, 0.03), 12);
+    expect(sl.sV).toBeGreaterThan(0.25);
+    expect(sl.sV).toBeLessThan(1);
+    const ta: TT = { band: "SIDE", surface: [0, 0.27, 0], across: { L: 0.03, lo: 0, hi: 0.09 } };
+    const p = edgeShareSmooth(0.03, 0.09, 0, 25, 0.03);
+    const sV0 = edgeShareSmooth(0.27, 0.54, 0.25, 25, 0.03);
+    expect(p).toBeGreaterThan(0);
+    expect(p).toBeLessThan(1);
+    expect(calmTarget(ta, f, box(0.54), { ...K, smooth: true }, { lo: slantN, hi: null }).sV).toBe(1 - (1 - sV0) * (1 - p));
   });
 });

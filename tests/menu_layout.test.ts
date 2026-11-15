@@ -62,7 +62,7 @@ const LAYOUT: Node[] = [
   n("APPROACH & CONTACT", ["approachPinchGain", "orbitShellOffsetMm", "assemblyLockDistM", "pieceGapMm", "collisionSkinMm", "pieceSolverQueries", "contactBandMm"], [
     n("THE APPROACH'S DISTANCE (THE RINGS)", ["orbitTopRadiusM", "orbitTopHeightM", "orbitMiddleRadiusM", "orbitMiddleHeightM", "orbitLowerRingOn", "orbitLowerRadiusM", "orbitLowerHeightM", "orbitBottomRadiusM", "orbitBottomHeightM"]),
   ]),
-  n("GIZMO & SECTIONS", ["sectionLines", "facetMergeDeg", "facetMinShare", "gizmoEdgeMarginMm", "pinkGizmoVisible", "quadSliceMaxDeg", "quadGrowthLogK"]),
+  n("GIZMO & SECTIONS", ["sectionLines", "facetMergeDeg", "facetMinShare", "chartLayout", "gizmoEdgeMarginMm", "pinkGizmoVisible", "quadSliceMaxDeg", "quadGrowthLogK"]),
   n("CAMERA", ["cameraYawOffsetDeg", "cameraPitchOffsetDeg", "cameraRadiusOffsetMm", "orbitBlendDistanceMm", "browseArriveMm"], [
     n("IDLE ORBIT", ["idleOrbitOn", "idleOrbitAfterS", "idleOrbitYawDeg", "idleOrbitPitchDeg", "idleOrbitPeriodS", "idleCatchMm", "idleCatchMs"]),
   ]),
@@ -80,9 +80,9 @@ describe("⭐⭐⭐ the menu by subject (2026-11-13)", () => {
     expect(menuTree()).toEqual(LAYOUT);
   });
 
-  it("118 sliders (110 + the polar zones' 8), each once, each a live config value; no folder over 9", () => {
+  it("119 sliders (110 + the polar zones' 8 + the charts' switch, ORBIT_CHARTS.md step 2.2), each once, each a live config value; no folder over 9", () => {
     const all = flatten(menuTree());
-    expect(all.length).toBe(118);
+    expect(all.length).toBe(119);
     expect(new Set(all).size).toBe(all.length);
     for (const k of all) expect(k in DEFAULT_CONFIG, k).toBe(true);
     const sizes = (ns: Node[]): number[] => ns.flatMap((x) => [x.sliders.length, ...sizes(x.subsections)]);
