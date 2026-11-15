@@ -19,7 +19,7 @@ import { buildFaceMap, DEFAULT_FACET_OPTS, facetOfNormal, mapAngles, mapTarget, 
 import { assignCharts, capTiltHeading, chartContour } from "../src/input/orbit_charts";
 import { blendShare, capTilt, mulT, rollDurationMs, rollStep, tiltBox, tiltFaces } from "../src/input/orbit_tilt";
 import { ORBIT_PITCH_MAX_RAD } from "../src/input/assembly_orbit";
-import { dirGap, DIR_GAP_MIN_RAD, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, tiltLeavesNow } from "../src/input/seam_turn";
+import { dirGap, DIR_GAP_MIN_RAD, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../src/input/seam_turn";
 import type { ShellBox } from "../src/input/orbit_shell";
 import type { Vec3 } from "../src/core/vec";
 import { boxPolys, solid } from "./helpers/chart_shapes";
@@ -328,5 +328,43 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(sp).toContain("const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);");
     // ⛔ the sway: nothing of a drawn mesh, a pick or the camera read by the ease (the pose shown only starts a turn, in `seamTurnStart`)
     for (const sig of ["function seamEase(", "function drawnDir(", "function easeCarry(", "function seamTurnFrame("]) expect(fnSource(W, sig)).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast/);
+  });
+});
+
+// ⭐⭐⭐ (2026-11-15, the auditor's find — measured in the app, `Scene_1`'s top, close in, a fast dy onto it: the automatic tilt's camera turn read 1.2°
+// whole, the piece's shown direction's gap 7.69° (the spring's lag behind the finger); the turn was whole after ONE frame and the ease, tied to its share,
+// handed the gap's rest over in the next — the view turned 9.14° in ONE frame against the tilts' 6°; on the LONGER of the two, the first fix, the two
+// parts added: 8.89°) THE TRANSITION'S ONE CLOCK RUNS OVER THE SUM OF ITS TWO PARTS (`seamWholeRad`): the camera's turn and the direction's gap — the
+// two together never over the tilts' one speed. RED on: the camera's angle alone; the longer of the two; the gap alone.
+describe("⭐⭐⭐ the transition's whole angle: the camera's turn PLUS the piece's direction's gap (`seamWholeRad`)", () => {
+  const D = Math.PI / 180;
+  it("the sum of the two; no gap (the switch off, always): the camera's own, bit for bit", () => {
+    expect(seamWholeRad(1.2 * D, 7.69 * D)).toBe(1.2 * D + 7.69 * D); // the measured case
+    expect(seamWholeRad(170 * D, 7.69 * D)).toBe(170 * D + 7.69 * D);
+    expect(seamWholeRad(40 * D, 40 * D)).toBe(80 * D);
+    for (const r of [0, 1e-12, 0.021, Math.PI / 2, 3.1]) expect(seamWholeRad(r, 0)).toBe(r);
+  });
+  it("never negative, never NaN: a part that is not a positive number counts for nothing", () => {
+    expect(seamWholeRad(NaN, 0.3)).toBe(0.3);
+    expect(seamWholeRad(0.3, NaN)).toBe(0.3);
+    expect(seamWholeRad(-1, -2)).toBe(0);
+    expect(seamWholeRad(0, 0)).toBe(0);
+  });
+  it("on that clock the measured case takes two frames at 360°/s, the two parts TOGETHER never over 6° a frame (⛔ one frame, then the rest at once)", () => {
+    const whole = seamWholeRad(1.2 * D, 7.69 * D);
+    const a = seamTurnStep({ k: 0, done: 0, rad: whole, axisKnown: true }, "TIME", 0, 1000 / 60, 360);
+    expect(a.k).toBeCloseTo(6 / 8.89, 6);
+    expect(a.k * 7.69 + a.k * 1.2).toBeLessThanOrEqual(6 + 1e-9); // the direction's step plus the camera's, deg — ⛔ on the longer alone: 6.94
+    const b = seamTurnStep({ k: a.k, done: a.done, rad: whole, axisKnown: true }, "TIME", 0, 1000 / 60, 360);
+    expect(b.k).toBe(1);
+    // ⛔ on the camera's angle alone: whole after one frame — the gap's 7.69° in the frame after
+    expect(seamTurnStep({ k: 0, done: 0, rad: 1.2 * D, axisKnown: true }, "TIME", 0, 1000 / 60, 360).k).toBe(1);
+  });
+  it("wired: `zoneStep`'s clock and a paced turn's both run over `turnWhole` — this turn's eased direction, else the camera's own", () => {
+    const aw = readFileSync("src/render/assembly_wiring.ts", "utf8").replace(/\s+/g, " ");
+    expect(aw).toContain("function turnWhole(st: SceneState, zm: NonNullable<SceneState[\"asmZoneMix\"]>): number { const e = st.asmDirEase; return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0); }");
+    expect(aw).toContain("const whole = turnWhole(st, zm); zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole; zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;");
+    expect(aw).toContain("seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace,");
+    expect(aw).not.toContain("Math.min(zm.rad, zm.done +");
   });
 });

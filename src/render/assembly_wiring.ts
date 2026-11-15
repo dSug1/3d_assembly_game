@@ -40,7 +40,7 @@ import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwa
 import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
-import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, tiltLeavesNow } from "../input/seam_turn";
+import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../input/seam_turn";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -311,6 +311,16 @@ function seamTurnStart(st: SceneState, paced: boolean): void {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) THE WHOLE ANGLE A TURN'S CLOCK RUNS OVER: the camera's own (`rad`) or the piece's shown direction's
+ * gap eased on it (`asmDirEase`, this turn's) added (`seamWholeRad`) — never the camera's alone (the gap's rest handed over in one frame). No ease
+ * (always, with `chartLayout` 0): the camera's, as ever.
+ */
+function turnWhole(st: SceneState, zm: NonNullable<SceneState["asmZoneMix"]>): number {
+  const e = st.asmDirEase;
+  return seamWholeRad(zm.rad, e !== null && e.mix === zm ? e.angle : 0);
+}
+
+/**
  * ⭐⭐⭐ (2026-11-15, §12 2.4c) ONE FRAME OF A PACED TURN (the automatic tilt's entry made pending — `byMm`), after the finger's travel is counted
  * (`asmBlend.mm`): held while the camera is pending, by the finger's travel while the blend runs, then by time (`seamTurnPace`, `seamTurnStep`); whole:
  * none. ⭐ Every other turn: `zoneStep`'s clock, as ever.
@@ -320,7 +330,7 @@ function seamTurnFrame(st: SceneState, dtMs: number): void {
   if (zm === null || zm.byMm !== true) return;
   const bl = st.asmBlend;
   const pace = seamTurnPace(true, st.asmTiltPending, bl !== null);
-  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: zm.rad, axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS);
+  const r = seamTurnStep({ k: zm.k, done: zm.done, rad: turnWhole(st, zm), axisKnown: zm.axis !== null }, pace, bl === null ? 1 : blendShare(bl.mm, st.cfg.tiltBlendMm), dtMs, st.cfg.tiltRollDegS);
   zm.k = r.k;
   zm.done = r.done;
   if (zm.k >= 1) st.asmZoneMix = null;
@@ -2065,8 +2075,11 @@ function zoneStep(st: SceneState, dtMs: number): void {
   // ⭐⭐⭐ (2026-11-15, §12 2.4c) a PACED turn (the automatic tilt's entry made pending, `chartLayout` 1 only) advances in `seamTurnFrame`, by its own pace
   if (zm !== null && zm.axis !== null && zm.byMm !== true) {
     const degS = st.cfg.tiltRollDegS;
-    zm.done = degS > 0 ? Math.min(zm.rad, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : zm.rad;
-    zm.k = zm.rad > 1e-9 ? Math.min(1, zm.done / zm.rad) : 1;
+    // ⭐⭐⭐ (2026-11-15, §12 2.4c, the auditor's find) over the transition's WHOLE angle (`turnWhole`: the camera's plus the piece's direction's gap
+    // eased on this turn; no ease: the camera's own, as ever)
+    const whole = turnWhole(st, zm);
+    zm.done = degS > 0 ? Math.min(whole, zm.done + (degS * Math.PI / 180) * (dtMs / 1000)) : whole;
+    zm.k = whole > 1e-9 ? Math.min(1, zm.done / whole) : 1;
     if (zm.k >= 1) st.asmZoneMix = null;
   }
   const zones = zonesOf(st);

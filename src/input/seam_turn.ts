@@ -80,6 +80,20 @@ export function easeRest(ease: DirEase | null, share: number): DirEase | null {
 }
 
 /** ⭐ How a camera turn advances this frame: held at its start, by the finger's travel, or by time. */
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — the auditor's find, measured in the app on `Scene_1`'s top, close in) THE TRANSITION'S WHOLE ANGLE: the
+ * SUM of its two parts — the camera's turn (`turnRad`, the pose's own angle as it is now) and the piece's shown direction's gap (`easeRad`, `dirGap`'s;
+ * none: 0) — the ONE clock both run on, so the two TOGETHER never turn the view faster than the tilts' one speed (the owner, 2026-11-10: *"one speed
+ * for every tilt"*). ⛔ The camera's turn alone: the two angles are unrelated (the camera's pose 1.2° from the one shown, the piece's direction 7.7° —
+ * the spring's lag behind a fast finger); the turn was whole in one frame and the rest of the gap was handed over in the next: the view turned 9.1° in
+ * ONE frame at the tilts' 6° a frame. ⛔ The LONGER of the two (the first fix): each part within the speed, the two adding — 8.9° in a frame, measured.
+ */
+export function seamWholeRad(turnRad: number, easeRad: number): number {
+  const t = Number.isFinite(turnRad) && turnRad > 0 ? turnRad : 0;
+  const e = Number.isFinite(easeRad) && easeRad > 0 ? easeRad : 0;
+  return t + e;
+}
+
 export type TurnPace = "HELD" | "FINGER" | "TIME";
 
 /**
