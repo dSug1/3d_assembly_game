@@ -5,6 +5,10 @@
 //   URL (default http://127.0.0.1:5191/?sceneIndex=1&idleOrbitOn=0) · OUT — the recording `<PROBE_DIR>/<OUT>.json` · SEED (1) · LEGS (40)
 //   CMP=a.json,b.json — no browser: compare two recordings frame by frame (exit 1 on the first difference)
 // ⭐ Its own Chrome profile with Chrome's TEMP inside it, removed in `finally`; the updater and background network off (memory: no disk litter).
+// ⛔⛔ (2026-11-15, the orbit on charts) THE REPLAY MOVED NOTHING, and so compared nothing: the game's own watchdog (`main.ts`: no frame drawn one
+// second after the start → a full-screen error box) fires under the virtual clock — no frame is stepped while the page loads — and its box then took
+// EVERY press of the script: 2 794 frames of the boot pose, "identical bit for bit" whatever the code. The box is removed after the boot, any other
+// error box stops the run, and the run ends with what the script MOVED (the camera's, the piece's and the gizmo's travel) — nothing moved: exit 3.
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -104,6 +108,9 @@ try {
   for (let i = 0; i < 750 && !ready; i++) { await sleep(40); ready = await ev("!!(window.__step && window.__st && window.__st.greenBox)"); }
   if (!ready) throw new Error("the scene did not build");
   await sleep(1500);
+  // the watchdog's box (see the header), removed; any other error box stops the run
+  const boxes = await ev(`(() => { const e = [...document.querySelectorAll('pre[data-role="error"]')]; const t = e.map((x) => x.textContent.split(String.fromCharCode(10))[0]); e.forEach((x) => x.remove()); return t; })()`);
+  if (boxes.some((t) => t !== "The render loop produced no frames")) throw new Error(`the page shows an error: ${boxes.join(" | ")}`);
   await ev("window.__step(240)");
   if (!(await ev("window.__st.frames > 30"))) throw new Error("the scene does not draw");
   await ev(RECORD);
@@ -135,6 +142,13 @@ try {
   }
   await ev(`window.__leg = "settle"`); await step(120);
   const frames = await ev("window.__frames");
+  const late = await ev(`[...document.querySelectorAll('pre[data-role="error"]')].map((x) => x.textContent.slice(0, 200))`);
+  if (late.length > 0) { console.log(`⛔ AN ERROR BOX DURING THE RUN: ${late.join(" | ")}`); process.exitCode = 4; }
+  // what the script moved: a replay that moves nothing compares nothing
+  const travel = (k) => { let t = 0; for (let i = 1; i < frames.length; i++) { const a = frames[i - 1][k], b = frames[i][k]; if (a && b) t += Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); } return t; };
+  const moved = { camera: travel("c"), piece: travel("p"), gizmo: travel("g") };
+  console.log(`moved: the camera ${moved.camera.toFixed(2)} m, the piece ${moved.piece.toFixed(2)} m, the gizmo ${moved.gizmo.toFixed(2)} m`);
+  if (!(moved.camera > 0.01 && moved.gizmo > 0.01)) { console.log("⛔ THE SCRIPT MOVED NOTHING — the replay compares nothing"); process.exitCode = 3; }
   const recErr = await ev("window.__recErr ?? window.__stepErr ?? null");
   writeFileSync(join(DIR, `${OUT}.json`), JSON.stringify({ url: URL, seed: +(env.SEED ?? 1), errors, recErr, frames }));
   console.log(`${OUT}: ${frames.length} frames, ${errors} errors, recErr ${recErr} → ${join(DIR, OUT + ".json")}`);

@@ -325,7 +325,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **1.3** ✅ | built `e82262e`, audited (§7.3) — `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** ✅ | built `c2f3d3a`, audited (§7.3) — `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
-| **2.2** | step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
+| **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); ⛔ the owner's look owed — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
 | **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
@@ -370,12 +370,18 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   the knob equal to its old body on 560 places × 3 knob sets; **1840 vectors**. ⚠ "The rule for every face" (a fan's too) and "no fade by the pitch"
   are the wiring's (`poleWeight`, the zone's facets): step 2.3.
 * ⭐ **Steps 1.1 – 1.4 are closed** (2026-11-15): four modules built ahead of their wiring, 1805 → 1840 vectors, the game unchanged.
-* **2.1, the replay's BASELINE** (2026-11-15, Fable; the owner's go: the runs on the owner's PC, cleaned after): `scripts/probes/replay_probe.mjs`
-  (the virtual clock, seed 1, 40 legs, 2 794 frames) on today's game (`510bbd8`, the main folder) for `Scene_1`, `Scene_0` (`?sceneIndex=0`) and
-  `Scene_0bis` (`?sceneIndex=4`); `Scene_1` recorded twice: IDENTICAL bit for bit (the replay repeats). ⭐ **The rebuild branch after steps 1.1 – 1.4
-  (`51aa428`) against it: IDENTICAL, bit for bit, on the three scenes** — "the game unchanged" shown, not argued. The batch: 7 runs, about a minute
-  each; nothing left in the temp folder, no Chrome left running; the three baseline recordings (16 MB) kept in the session's scratchpad for the next
-  steps, re-recordable from the main folder at any time.
+* ⛔⛔ **2.1, THE REPLAY COMPARED NOTHING — found at step 2.2, the same day, and fixed.** The first baseline (and the first "IDENTICAL, bit for
+  bit" of the rebuild against it) was HOLLOW: in every recording the camera, the piece and the gizmo travelled 0.00 m. The game's own watchdog
+  (`main.ts`: no frame drawn one second after the start → a full-screen error box) fires under the probe's virtual clock — no frame is stepped while
+  the page loads — and its box took every press of the script. ⚠ The probe is unchanged since CL1 (2026-11-14) and the watchdog is older: CL1's own
+  bit-for-bit check was most likely hollow too (not rerun). ⭐ `METHOD`: *a gate that cannot go red is not a gate* — the probe now removes the
+  watchdog's box, stops on any other error box, prints what the script MOVED and fails when it moved nothing (`replay_probe.mjs`); two tools beside
+  it: `replay_cmp.mjs` (the largest numeric difference per recorded field) and `replay_health.mjs` (steps, stalls, the camera's up).
+* **2.1, the replay's BASELINE, re-recorded** (2026-11-15, Fable; the owner's go: the runs on the owner's PC, cleaned after): seed 1, 40 legs,
+  2 794 frames on today's game (`510bbd8`, the main folder) for `Scene_1`, `Scene_0` (`?sceneIndex=0`), `Scene_0bis` (`?sceneIndex=4`) — the gizmo
+  travels 23 – 25 m a run, the camera 440 – 480 m. How well it repeats on today's game: `Scene_1` and `Scene_0` identical bit for bit; `Scene_0bis`
+  31 frames (3 – 33) apart by up to 3 × 10⁻⁹ m, then identical — so the gate on `Scene_0bis` is numeric (≤ 10⁻⁶ m), and a `Scene_0` run can show
+  the same last-digit noise. Nothing left in the temp folder; the three baseline recordings (16 MB) kept in the session's scratchpad.
 * **2.1, the INVENTORY** (2026-11-15, `312d299`, an Opus agent; samples checked against the code by Fable — the dead edge blend, `placedBox`, the
   zone's wait, the tilt's map index, the sway's writer: all as written): [`ORBIT_STATE_INVENTORY.md`](ORBIT_STATE_INVENTORY.md), sections A (the 53
   fields, each with its writers, readers, kind and coordinate space), B (the three changes of frame and their order), C (the specificities' paths
@@ -384,6 +390,20 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   open questions — among them: a pick-up resets four fields only, a put-down none, so the tilt, the zone and the calm carry from one held part to
   the next; `asmSupport` and two fields of the dy hold are never read; `GIZMO_MEMO` is keyed by the frame count and the angles only). ⭐ **Step 2.1
   is closed.**
+
+* **2.2** (2026-11-15, `9e38e78` and `7463174`, an Opus agent; audited by Fable): the tunable `chartLayout` (0, the default: as built; 1: both
+  face maps built with `layout: "chart"`, `scale: "normals"`), its slider beside the faces-contour ones (GIZMO & SECTIONS), `?chartLayout=1` on the
+  URL; the wiring's whole change: `...chartOpts(st)` in the two `buildFaceMap` calls and `#C…` in their cache keys. 5 vectors
+  (`tests/orbit_charts_switch.test.ts`), the source pin of `tests/facets.test.ts` and the menu's pinned tree following the source; **1845 vectors**.
+  ⭐ **The replays (the fixed probe), against today's game:**
+
+  | scene | switch OFF | switch ON |
+  |---|---|---|
+  | `Scene_1` | identical, bit for bit | the same play: at most 7 × 10⁻¹⁰ m apart, never over 10⁻⁹ |
+  | `Scene_0` | identical, bit for bit | ANOTHER play from frame 0 (the gizmo 87 mm away at the boot's angles), no error; the gizmo's largest step 91 mm (98 today) |
+  | `Scene_0bis` | at most 3 × 10⁻⁹ m apart (today's game against itself: the same) | ANOTHER play from frame 5, no error; the gizmo's largest step 94 mm (100 today) |
+
+  ⛔ Owed: the owner's look on `Scene_0` and `Scene_0bis` with the switch on; the walks' rules on them; the test scenes.
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
