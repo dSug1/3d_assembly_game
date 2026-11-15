@@ -150,9 +150,20 @@ At an edge between two faces served by different charts — or held differently,
 ### 4.2 What it replaces
 
 A change of frame is made today in three places of `assembly_wiring.ts`, each with its own trigger, turn and hold, their order hand-set (a tilt under
-way delays a zone switch by a frame; a silent side change clears a hold): the tilt, the zone, the spit's side. The scene state holds 50 `asm…` fields,
-about half of them history (latches, clocks, last-frame values). ⭐ The build's first act on the wiring (step 2.1) is the INVENTORY of those fields:
-which are cached geometry (kept, read from the atlas), which are the transition's (one set), which go.
+way delays a zone switch until its whole roll back is over; a silent side change clears a hold): the tilt, the zone, the spit's side. ⭐ THE INVENTORY
+(step 2.1, 2026-11-15): [`ORBIT_STATE_INVENTORY.md`](ORBIT_STATE_INVENTORY.md) — 53 state fields: 20 HISTORY (latches, clocks, last-frame values),
+9 cached GEOMETRY, 9 VIEW (eases), 6 TRANSITION, 5 RENDER, 4 other; none is ever reset but at the scene's creation (a pick-up clears four). What the
+one transition must keep, from it:
+
+1. **The order is hand-set across two stages of the frame**: the tilt's exit, then the zone's step, then the automatic tilt, then the map's place —
+   and the spit's side and the zone's turn later, in the camera's stage; the tilt's roll uses the angle the camera's stage read the frame BEFORE.
+2. **Every change of frame repeats one re-base** (`turnAngles`: the orbit, the solved place, the spring, the camera's follow state, the previous
+   angles, the calm; then the square camera, `asmShown` cleared, the map's angles re-read at the gizmo by `mapAngles`, a relocation started).
+3. **The holds come from four sources**: `tiltClampStep` (the gizmo, through a swing, a roll, a zone's turn), the dy hold (set by the tilt's exit
+   and by the spit's crossing), the pending automatic tilt (the camera's swing waits), the mouth's hold.
+4. **The mouth and the virtual pole are inside the tilt's trigger** (§4.4), both through `holdsPole` (a side beyond 45°).
+5. **Two camera turns, two codes**: the tilt's (`frameMix`, its own share and roll) and the zone's / the spit's (`poseAboutPiece`, ONE shared
+   `asmZoneMix` — each can restart the other); a frame's map is keyed by the tilt's or the zone's id (rebuilt at every tilt).
 
 ### 4.3 "Never blocked" — its exceptions, stated once
 
@@ -172,7 +183,8 @@ each level, the frame serving each face. The contour is convex by construction b
 | holes | closed when a facet's stack is built (`filledRegion`) | nothing: a rectangle with a hole is a rectangle on the contour |
 | protrusions | a group in front of the facet's main plane, in its stack | nothing: the gizmo on the frontmost group (`stackDepthAt`) |
 | voids, channels | the gizmo's depth on the stack: bridged where closed on the travel with no floor, the real depth over a floor, surface where the held piece cannot enter (`pieceEnters`, the rims) | nothing: it runs after the place on the facet |
-| the edge blend, the glides of a depth step | the wiring, after the map (`blendThroughEdges`, `gizmoGlide`) | nothing: they read the same columns and bounds |
+| the glides of a depth step | the wiring, after the map (`gizmoGlide`) | nothing |
+| the edge's slow stretch and its blend | ⛔ OFF since 2026-11-10 (the owner: *"remove it"*; `MAP_OPTS` 0 / 0): `edgeBlend`, `blendThroughEdges` return at once | nothing — dead paths (the inventory's F.1), to delete at step 2.5 |
 | **a void's mouth** (open up the facet to its edge) | the gizmo held (`mouthHold`), then handed over BY THE AUTOMATIC TILT | ⛔ **coupled**: the hand-over is a change of frame |
 
 * ⛔ **Step 2.4 must carry the mouth over**: the tilt's trigger becomes the one transition (§4.1), so the mouth's hand-over — and every rule keyed on
@@ -184,6 +196,23 @@ each level, the frame serving each face. The contour is convex by construction b
   1."*): no pass, no replay, no walk on it in this build; the charts' kinds on its contour at each seat are the owner's to look at then. A slanted
   part large enough to pass D5 becomes a facet and changes the contour (today too); the charts then treat it as any shape.
 * What the "surface" of an assembly is stays PARKED (the owner).
+
+### 4.5 The sway — the orbit reads the MODEL's coordinates (the owner, 2026-11-15)
+
+> *"a point that hurt us in the past: there is a sway of the assembly when orbiting (this will be later replaced by more lively animations): make
+> sure that your Opus agent take that into account (in the past we made sure to use the model coordinates, not the swayed assembly coordinates)."*
+
+⛔ **Everything the charts compute is in the MODEL's space** — the parts' model poses (`st.world`), never the meshes as drawn. As built (the
+inventory's G): the sway is applied in ONE place, the mesh writer (`render_loop.ts`: sway ∘ follower spring ∘ model pose), before the orbit's frame;
+the face maps are built from the model poses (`placedFaces` → `faceWorld`); the orbit's only ray cast is `modelCast` (`swayRay` moves the ray onto
+each part as drawn, the hit comes back to its model pose); every gizmo, foot, mouth and relocation point and every map is in model space. So the
+contour, the assignment and the rings — functions of the world face map — are in model space BY CONSTRUCTION.
+* **The rule for every wiring step**: a point, a normal or a frame taken from a mesh, a pick or the camera goes through `modelCast` / `swayRay`
+  before it reaches a chart; stated in every brief, checked in every diff.
+* ⚠ **The one orbit input read off the drawn meshes today**: `placedBox` (the meshes' world bounding boxes) → the assembly's centre and radius, read
+  at each pick-up — if the assembly sways at that instant the centre is off by the sway. Not the charts'; the owner's to decide (the inventory's F.10).
+* The section lines and the zones' tint are drawn at model positions over swayed parts — the rule's own consequence: they part from the faces while
+  a sway lasts (F.12).
 
 ## 5. THE CALM
 
@@ -295,7 +324,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **1.2** ✅ | built `445a194` + `9718ead`, audited (§7.3) — `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
 | **1.3** ✅ | built `e82262e`, audited (§7.3) — `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** ✅ | built `c2f3d3a`, audited (§7.3) — `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
-| **2.1** | the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
+| **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** | step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
 | **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
@@ -347,6 +376,14 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   (`51aa428`) against it: IDENTICAL, bit for bit, on the three scenes** — "the game unchanged" shown, not argued. The batch: 7 runs, about a minute
   each; nothing left in the temp folder, no Chrome left running; the three baseline recordings (16 MB) kept in the session's scratchpad for the next
   steps, re-recordable from the main folder at any time.
+* **2.1, the INVENTORY** (2026-11-15, `312d299`, an Opus agent; samples checked against the code by Fable — the dead edge blend, `placedBox`, the
+  zone's wait, the tilt's map index, the sway's writer: all as written): [`ORBIT_STATE_INVENTORY.md`](ORBIT_STATE_INVENTORY.md), sections A (the 53
+  fields, each with its writers, readers, kind and coordinate space), B (the three changes of frame and their order), C (the specificities' paths
+  and the map fields they read), D (the two `buildFaceMap` calls), E (the angle assumptions outside the map: `holdsPole`'s 45°, `poleWeight`'s
+  60 – 85°, the spit's 60° / 75°, `snapHeading`'s 90° — each a risk under the normals' scale or a frame off the world's axes), G (the sway), F (14
+  open questions — among them: a pick-up resets four fields only, a put-down none, so the tilt, the zone and the calm carry from one held part to
+  the next; `asmSupport` and two fields of the dy hold are never read; `GIZMO_MEMO` is keyed by the frame count and the angles only). ⭐ **Step 2.1
+  is closed.**
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the

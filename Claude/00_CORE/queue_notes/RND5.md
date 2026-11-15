@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); 🔧 step 2.1 next · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 next · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -38,7 +38,10 @@
   need to review the proxy faces and the ghost faces … I will do it myself when I troubleshoot the scene. Focus on the other scene 0, 0bis and 1."*
 * **Step 2.1, the replay's baseline** (Fable): today's game recorded on `Scene_1`, `Scene_0`, `Scene_0bis`; the rebuild branch after steps
   1.1 – 1.4 replays IDENTICAL, bit for bit, on the three; nothing left on the disk but the three baseline recordings (16 MB, the scratchpad).
-  Owed in 2.1: the inventory of the wiring's orbit state and of the specificities' paths.
+* **Step 2.1, the inventory** (`312d299`): `40_RENDER_SCENE/spec/ORBIT_STATE_INVENTORY.md` — 53 state fields, the three changes of frame, the
+  specificities' paths, the angle assumptions, the sway; samples checked against the code. Its main constraints: the spec's §4.2.
+* **The owner, the same day (the sway)**: the orbit reads the MODEL's coordinates, never the swayed assembly's → the spec's §4.5; one input reads
+  the drawn meshes today (`placedBox` → the assembly's centre and radius at a pick-up): the owner's to decide.
 * **The owner, the same day**: test scenes of the builder's choice may live in ANOTHER worktree, reviewed then deleted by the owner (the spec's §7.2).
 * **The owner, the same day**: how the specificities (holes, voids, channels, mouths, protrusions) are handled → the spec's §4.4: untouched below the
   charts; the mouth's hand-over is coupled to the tilt and is carried over at step 2.4; `Scene_2`'s contour is not measured yet.
