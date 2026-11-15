@@ -1,6 +1,7 @@
 // ⭐⭐⭐ (2026-11-15, `ORBIT_STATE_INVENTORY.md` F.2; the owner: *"this is not intended. Fix it."*) — THE ORBIT'S STARTING STATE HAS ONE HOME
 // (`orbitStateStart`, `render/assembly_wiring.ts`): the scene's creation and the pick-up (`model_bodies_wiring.ts`) both apply it (`resetOrbitState`), so a
-// newly held part starts as the first one did — no tilt, zone, calm, mouth, dy hold or pending tilt carried from the last part. ⛔ Before: set at the
+// newly held part starts as the first one did — no tilt, zone, calm, mouth, dy hold or pending tilt carried from the last part; and a piece spawned
+// again (the test scenes' piece switch, the stuck respawn — `spawnOrbitPiece`, not at the boot) applies it too. ⛔ Before: set at the
 // creation only; a pick-up cleared four fields, a put-down none. RED on mutants: a field left out of `orbitStateStart`; a starting value changed; the
 // square camera's object shared between calls; the pick-up's call removed; the creation's call removed; the memo's clearing removed.
 import { describe, expect, it } from "vitest";
@@ -113,5 +114,18 @@ describe("⭐⭐⭐ one home: the creation and the pick-up both apply it", () =>
     expect(p.indexOf("resetOrbitState(st);")).toBeLessThan(p.indexOf("ensureAssembly(st);"));
     const m = code("render/model_bodies_wiring.ts");
     for (const k of Object.keys(RESET)) expect(m, k).not.toMatch(new RegExp(`\\bst\\.${k} = `));
+  });
+
+  // ⭐⭐⭐ (2026-11-15, the owner: *"State reset: do what is best for"* — the builder's call) the test scenes' piece switch and the stuck piece's respawn
+  // put the orbit back at its boot angles (`spawnOrbitPiece`, not at the boot): the orbit's state with it — ⛔ before, the tilt, the zone's turn, the calm,
+  // the dy hold and the map's angles of where the piece WAS stayed, against angles that had just jumped to the boot's. RED on the code before (no call).
+  it("a piece spawned again (the switch, the stuck respawn) applies it, after the piece orbit's own reset — the boot's spawn does not (the creation did)", () => {
+    const s = fnSource("render/green_box_wiring.ts", "export function spawnOrbitPiece(");
+    // ⭐ …and the spring's last place cleared with it (`boxOrbit`): the assembly's frame reads it before the spring starts again — ⛔ left, the gizmo was
+    // put for ONE frame at the last place's angles read in the world's frame (probed: low on `Scene_1`'s front, then the boot's place). RED without it.
+    expect(s).toMatch(/if \(!atBoot\) \{ st\.orbit = new OrbitController\([^;]*\); (\/\/[^;]*?)?resetPieceOrbit\(st\); (\/\/[^;]*?)?resetOrbitState\(st\); st\.boxOrbit = null; (\/\/[^;]*?)?\}/);
+    expect(s.match(/resetOrbitState\(st\);/g)?.length).toBe(1);
+    // the respawn goes through it (its own fields after)
+    expect(fnSource("render/green_box_wiring.ts", "export function respawnStuckPiece(")).toMatch(/\{ spawnOrbitPiece\(st, st\.orbitPieceKind, false\);/);
   });
 });

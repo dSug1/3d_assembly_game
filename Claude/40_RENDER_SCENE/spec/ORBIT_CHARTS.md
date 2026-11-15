@@ -429,7 +429,13 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   two runs, within 7 × 10⁻¹⁰ m in the other — the replay's own noise. **CL1 changed nothing**; its first check was hollow, its conclusion holds.
 * **The owner's decisions on the two fixes** (2026-11-15): *"Center: keep the origin for the moment"* — `8008ce0`'s revert stands; *"State reset:
   do what is best for"* (the message ended there) — read as the builder's call: `resetOrbitState` wherever a piece starts being orbited (the
-  test scenes' piece switch and the stuck respawn too). ⛔ Not built yet.
+  test scenes' piece switch and the stuck respawn too). ✅ **Built** (Fable): `spawnOrbitPiece`, not at the boot, applies it after the piece
+  orbit's own reset, and clears the spring's last place (`boxOrbit` — the assembly's frame read it once more, the gizmo one frame at the old
+  angles). Probed in the app, a switch under a tilt on `Scene_1`: ⛔ before, the boot's angles were read in the tilt's frame — the piece ended at
+  the BACK of the cube with a dy hold; now the gizmo is at the boot's place on the switch's own frame (`Scene_0`, `Scene_0bis` in its zone: the
+  same). **1857 vectors.** Found, not changed: a switch or a respawn keeps the APPROACH (a piece stuck close in respawns close in — the boot's is
+  far); a pick-up (`Scene_2`'s flow) still reads the last spring place for one frame.
+* **The black scene on the phone: solved** (the owner, 2026-11-15: *"it is now working on the phone. solved."*) — its cause was never found.
 * **A black scene on the owner's iPhone after the deploy** (`7db32b6`, the switch off; the HUD: `frame —` after eight minutes, the canvas the
   page's own background) — not reproduced (desktop Chrome, a phone-sized emulation), its cause unknown, not reported again since. `2cae564`
   (local, ⛔ not deployed): the HUD's `draw` line — the WebGL context (lost, restored, an error), the frames drawn, the last frame's interval as

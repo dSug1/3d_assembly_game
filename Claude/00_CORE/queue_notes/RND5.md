@@ -60,7 +60,9 @@
 * **The owner's look with the switch on** (2026-11-15): *"everything ok with charts switched on"* (⚠ the device not stated); a desktop recording
   of `Scene_0bis` sent the same day was withdrawn (*"The charts were switched off."*). The record: the spec's §7.3.
 * **The owner's decisions**: *"Center: keep the origin for the moment"*; *"State reset: do what is best for"* (the message ended there) — read as
-  the builder's call: the reset wherever a piece starts being orbited; ⛔ not built yet.
+  the builder's call: the reset wherever a piece starts being orbited; ✅ built (`spawnOrbitPiece`, not at the boot; the spring's last place
+  cleared with it), probed in the app under a tilt and in a zone; **1857 vectors**. Found, not changed: a switch or a respawn keeps the approach.
+* **The black scene on the phone: solved** (the owner: *"it is now working on the phone. solved."*); its cause was never found.
 * **A black scene on the owner's iPhone after the deploy**: not reproduced, its cause unknown, not reported again since; `2cae564` (local, not
   deployed) adds the HUD's `draw` line (the WebGL context, the frames, the last interval, the canvas's size); **1856 vectors**.
 * **For later, at the owner's request** → the spec's §10: (1) the tilted pole close in is KEPT (rule §3 6.) and checked on the build with the
