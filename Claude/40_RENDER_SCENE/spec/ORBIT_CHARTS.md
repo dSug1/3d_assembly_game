@@ -710,3 +710,13 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
   tilt on a top face, the orbit stopping at the ridge (2.4b's), the bottom tilting as before; off, as before. ⚠ Found by the agent, no scene has
   it: a tipped heptagon whose axis is 10 – 20° off the VERTICAL — `polarZones` finds one whole upright zone, the atlas a WORLD frame square to
   the axis serving 6 faces: the assignment's rule on a shape outside the 35 — for the test scenes and step 3.
+* **2.4b** (2026-11-15, `a57796e`, an Opus agent; audited by Fable): `src/input/pole_crossing.ts` — `poleCrossingDue` (the trigger: the charts on,
+  the world's frame, close in, no turn under way, the map at a pole whose end is an EDGE or a POINT, the finger asking beyond), `farFacetAt` (the
+  face across the pole at the place), `poleSeam` (its angles there, the pitch on the pole); the wiring's `seamRebase` (EVERY angle state SET to a
+  chart's angles — `turnAngles`'s list, nothing turned; written for any chart: 2.4c's) and `poleCross` (the one transition: the place kept, the far
+  angles, the rebase, the views carried, one camera turn from the pose shown, the dy hold). 22 vectors, red on 29 mutants; **1908 vectors**. The
+  auditor's gates — replays against 2.4a's: off, the three scenes IDENTICAL bit for bit; on, identical too (the script never pushes past the ridge
+  close in); in the app, `Scene_0`, close in, ONE drag up the front top face: exactly ONE crossing, the gizmo 0.0 mm while the camera turns, the
+  view ≤ 6.4° a frame (360°/s), the piece on the glass ≤ 0.05° a frame through it, the dy held for the rest of the gesture (54 of 54 readings);
+  the dy reversed: down the far face; one drag back up: one crossing back. ⚠ A NEW gesture pushing the same way crosses again — the owner's rule
+  of 2026-11-14 (the hold ends with the gesture). ⚠ Not measured: the spring's leftover lag at the crossing (30 ms, zero with the square camera whole).

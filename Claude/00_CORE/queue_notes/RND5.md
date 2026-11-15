@@ -92,3 +92,4 @@
   2.4 as you have recommended in your previous message."* — the design and the build's record: the spec's §12 (sub-steps P, 2.4a – 2.4e, each
   under `chartLayout` 1 but P). ✅ P built (`5894ab2`): a press does nothing to the orbit, the tilt close in only.
 * ✅ **2.4a built and audited** (`44ba40e`): under `chartLayout` 1 the atlas decides where a frame changes (the spec's §12.1).
+* ✅ **2.4b built and audited** (`a57796e`): close in, `Scene_0`'s ridge crossed by the one transition (the spec's §12.1).
