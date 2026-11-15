@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look given (*"everything ok with charts switched on"*); 🔧 step 2.3 built behind a second switch (`chartCalm`), not deployed, the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look given (*"everything ok with charts switched on"*); 🔧 step 2.3 built behind a second switch (`chartCalm`), DEPLOYED (main `157974f`), the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -77,3 +77,5 @@
   its tilt at once (the gizmo on the tilted facet's border). **1869 vectors**; the switches off still bit for bit. The record: the spec's §7.3.
 * **Found, not fixed** (today's game, for step 2.4 — the spec's §10.2): close in, a fast dy onto `Scene_1`'s bottom face and off it within the frame
   makes the automatic tilt and leaves it at once: 45° and 90° rolls in one frame.
+* **Deployed a second time** (the owner: *"deploy"*): `6d5f2b7` as main `157974f`, live; `?chartLayout=1&chartCalm=1` or the two sliders (GIZMO &
+  SECTIONS) turn the charts' layout and the new calm on; **1869 vectors**.

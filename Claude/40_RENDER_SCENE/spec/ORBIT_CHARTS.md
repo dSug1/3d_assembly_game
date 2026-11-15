@@ -474,6 +474,10 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
      calm heading, as at any exit by distance).
   2 vectors and the wiring's pins, red on the code before; **1869 vectors**. Replays: both switches off identical bit for bit on the three scenes;
   `chartLayout` 1: `Scene_1` and `Scene_0bis` identical, `Scene_0` from the press on the ridge on — its largest roll in a frame 14° (157°).
+* **Deployed a second time** (2026-11-15, the owner: *"deploy"*): `6d5f2b7` — step 2.3 behind `chartCalm`, the two fixes above, the orbit state's
+  reset at a piece's spawn, the HUD's `draw` line — merged into `main` as `157974f` (main's tree = the branch's), live; **1869 vectors**; both
+  switches off the three scenes replay bit for bit as the build before. ⛔ Owed: the owner's look on `Scene_0bis` with both switches on, and on
+  `Scene_0`'s ridge with `chartLayout` on.
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
