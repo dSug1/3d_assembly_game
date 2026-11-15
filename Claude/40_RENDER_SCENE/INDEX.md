@@ -42,7 +42,6 @@ takes `st: SceneState` first and imports only what it uses. ⛔ The 2026-09-19 l
 | `seat_wiring.ts` | the snap, the seats, the unsnap feed, the cursor drag |
 | `pointer_wiring.ts` · `render_loop.ts` | every press/move/release; the per-frame order |
 | `collision_wiring.ts` | `3D6`: the shape and bounds SOURCES for `core/collision.ts` — the seam Blender shapes replace |
-| `undo_wiring.ts` | `D111`: snapshot at a gesture's start, restore on a double tap on a body |
 | `lighting.ts` · `model_import.ts` · `empty_space_probe.ts` | a scene's lights, environment, tone, AO → `spec/SCENE_SETUP.md` · its `.glb` · `D114`'s probe |
 | `screens.ts` | the game shell (`D105`), a DOM overlay, `?flow=1`; ⭐ the ⏸ pause menu (`D144`) |
 | `ui_theme.ts` · `level_end_ui.ts` · `level_end_wiring.ts` | `D180`: the UI theme's tokens and classes (every screen's style) · the results screen · the level end's per-frame facts |
@@ -58,7 +57,7 @@ boot** — a hand is owed. ⭐ Three essays moved to
 ## Where it stands
 
 ✅ **Scenes are DATA** (`src/content/`, `content/scenes.ts`; the level menu or `?sceneIndex=`). ⭐⭐ `Scene_0` is the HEPTAGON since
-2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
+2026-11-12 — the orbit on ANY shape, §9 the zenith roll → [`spec/ORBIT_ANY_SHAPE.md`](spec/ORBIT_ANY_SHAPE.md); zones `spec/POLAR_ZONES.md`; ⭐ the rebuild on charts, approved → `spec/ORBIT_CHARTS.md`; the slide removed → `spec/CLOSE_IN_CONTACT.md` §10.
 
 ✅ **Camera rules are REAL, not diagnostic.** `src/input/` owns the geometry; this
 folder only applies it.
