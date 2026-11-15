@@ -26,6 +26,11 @@ export function boxOf(points: readonly Vec3[]): Box3 | null {
   return { lo, hi };
 }
 
+/** ⭐ (2026-11-15) The box round a set of boxes (`null`s skipped); `null` for none — the assembly's box from its parts' model boxes. */
+export function boxUnion(boxes: readonly (Box3 | null)[]): Box3 | null {
+  return boxOf(boxes.flatMap((b) => (b === null ? [] : [b.lo, b.hi])));
+}
+
 /** ⭐ `true` when the segment `origin + t·dir`, `t ∈ [0, length]` (`dir` a unit vector), meets `box` grown by `margin`. */
 export function rayMeetsBox(origin: Vec3, dir: Vec3, length: number, box: Box3, margin: number): boolean {
   let t0 = 0;
