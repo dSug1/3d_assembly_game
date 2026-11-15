@@ -167,7 +167,7 @@ describe("⭐⭐⭐ (2026-11-04, `1.0.95-`) THE CALM PORTED — the runs from th
     expect(a).toContain("st.asmCalm = calmStep(st.asmCalm, tg, dtMs);");
     expect(a).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };");
     expect(a).toContain("calmFrame(st, dtMs);");
-    expect(code("render/scene.ts")).toContain("st.asmCalm = null;");
+    expect(code("render/assembly_wiring.ts")).toContain("asmCalm: null,");
     const m = code("render/tuning_menu.ts");
     const i = m.indexOf('title: "CALM ON A FACE"'); // ⭐ (2026-11-13) the menu by subject (`menu_layout.test.ts`)
     expect(i).toBeGreaterThan(m.indexOf('title: "ORBIT"'));

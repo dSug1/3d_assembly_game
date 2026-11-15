@@ -99,6 +99,74 @@ export function ensureAssembly(st: SceneState): void {
   st.asmG = null;
 }
 
+/** ⭐ The orbit's state a held part starts from (`orbitStateStart`). */
+type OrbitStateStart = Pick<
+  SceneState,
+  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmMapQ"
+  | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
+  | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
+  | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
+>;
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_STATE_INVENTORY.md` F.2; the owner: *"this is not intended. Fix it."*) THE ORBIT'S STARTING STATE, ONE HOME — every HISTORY,
+ * TRANSITION and VIEW field of the inventory's table A (their inner state with them: each composite starts `null` or as a fresh object), and the two
+ * per-part results that start empty (`asmSupport`, `asmOrbitMm`). Read by the scene's creation and by the pick-up (`resetOrbitState`): a newly held part
+ * starts as the first one did. ⛔ Not here: the GEOMETRY caches (each carries its key; `asm` is the pick's own, re-read by `ensureAssembly`), the RENDER
+ * objects, `asmRestOff` (the approach's re-entrancy flag, false outside it), `pieceHoldCount` (the HUD's and the probes' running count).
+ */
+export function orbitStateStart(): OrbitStateStart {
+  return {
+    asmGizmo: null,
+    asmSupport: null,
+    asmSupportLevel: null,
+    pieceHold: null,
+    pieceHoldPrev: null,
+    asmLook: null,
+    asmFacePoint: null,
+    asmG: null,
+    asmPrevQ: null,
+    asmShown: null,
+    asmMapQ: null,
+    asmEdgeHold: null,
+    asmZone: null,
+    asmZoneMix: null,
+    asmPieceDrawn: null,
+    asmCamLast: null,
+    asmSpitSide: 0,
+    asmSpitU: null,
+    asmZoneAlpha: 0,
+    asmDySign: 0,
+    asmHeadO: null,
+    asmHeadW: 1,
+    asmHeadYaw: null,
+    asmTilt: null,
+    asmGOff: null,
+    asmTiltAuto: false,
+    asmTiltPending: false,
+    asmOrbitMm: 0,
+    asmBlend: null,
+    asmCalmWhole: 0,
+    asmCalmWholeV: 0,
+    asmSquare: { n: null, target: null, q: 0 },
+    asmCalm: null,
+    asmMouth: null,
+    asmRawPrev: null,
+    asmGizmoAt: null,
+    asmGizmoLag: null,
+  };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15) THE ORBIT'S STATE BACK TO ITS START (`orbitStateStart`) — at the scene's creation and at each pick-up; and the gizmo's per-frame memo
+ * cleared (`GIZMO_MEMO`: keyed by the frame and the angles only — a pick inside a frame would be served the last part's gizmo). ⛔ The tilt's and the
+ * zone's id counters are never reset: an id reused would match a face map's cache key.
+ */
+export function resetOrbitState(st: SceneState): void {
+  Object.assign(st, orbitStateStart());
+  GIZMO_MEMO.delete(st);
+}
+
 interface GizmoHit {
   readonly point: Vec3;
   readonly normal: Vec3 | null;

@@ -40,7 +40,7 @@ import { quadsShownFromM } from "../core/orientation_set";
 import { TapHistory, isTapRelease } from "../input/recognizer";
 import { topologyOfBody } from "./bodies";
 import { orbitPieceEntry, resetPieceOrbit, restOnTappedFace } from "./green_box_wiring";
-import { ensureAssembly } from "./assembly_wiring";
+import { ensureAssembly, resetOrbitState } from "./assembly_wiring";
 import { applyCamera, syncCentre } from "./camera_rig";
 import { selectRestingFace } from "./pointer_wiring";
 import type { SceneState } from "./scene_state";
@@ -395,10 +395,10 @@ class ModelPlay {
     st.orbitPieceFaces = entry.faces;
     st.greenPieceVolumeM3 = entry.volumeM3;
     resetPieceOrbit(st);
+    // ⭐⭐⭐ (2026-11-15, the owner: *"this is not intended. Fix it."*) the orbit's state as the first part's (`orbitStateStart`): no tilt, zone, calm, mouth,
+    // dy hold or pending tilt carried from the last part held (⛔ four fields only were cleared here)
+    resetOrbitState(st);
     st.asm = null;
-    st.asmGizmo = null;
-    st.asmLook = null;
-    st.asmG = null;
     applyCamera(st); // ⭐ the rig's handle for the orbited piece (`greenBoxRigM`)
     ensureAssembly(st);
     // ⭐ the orbit at the camera's yaw round the assembly, the HIGHEST pitch (the owner: "up to the highest position in the piece orbit at this distance")
