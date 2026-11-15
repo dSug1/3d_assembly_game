@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; 🔧 step 1.1 next; nothing built in `src` yet · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ step 1.1 built and audited (not wired); 🔧 step 1.2 next · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -21,3 +21,12 @@
   spec's §8 defaults stand until the owner changes one.
 * The build: the worktree `../orbit_charts`, branch `1.0.146-Orbit-charts` (from `1.0.145-`), one commit per step, never pushed by an agent.
 * **Out of scope** (the owner): what the "surface" of an assembly is — protrusions, channels, holes.
+
+## 2026-11-15 — step 1.1 BUILT (`7cd63a4`, an Opus agent) and AUDITED (Fable)
+
+* `buildFaceMap`'s optional `layout: "chart"` and `scale: "normals"` (absent: today's map, untouched); the record and the gates' figures: the spec's
+  §7.3. **1812 vectors.** Nothing is wired: the game does not change.
+* Found, each written into the spec: a frame's box must be the contour's, not `tiltBox` (§3); "chart" with the built scale is today's map to the
+  rounding only (§7.3); the shed's statement corrected (§9).
+* **The owner, the same day**: how the specificities (holes, voids, channels, mouths, protrusions) are handled → the spec's §4.4: untouched below the
+  charts; the mouth's hand-over is coupled to the tilt and is carried over at step 2.4; `Scene_2`'s contour is not measured yet.

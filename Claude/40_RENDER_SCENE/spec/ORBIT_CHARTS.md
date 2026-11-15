@@ -58,8 +58,9 @@ detector, trigger, turn and hold (§4.2). This spec gives ONE builder, ONE test 
 In the frame of axis `a` (`zoneFrame`'s convention; gravity: the world's own):
 
 * **The pole is the shape's TOP SET and BOTTOM SET along the axis** — a level face (within 1°): a CAP, polar; an edge or a point: the pole itself, no
-  cap, the side faces run to ±90°. ⛔ Today (`capOf`): the face nearest the vertical beyond 45°, a ridge only when two tie within 1° — a shed's roof
-  becomes a cap, a steep apex is pinned for half the pitch range (the audit, 2026-11-14).
+  cap, the side faces run to ±90°. ⛔ Today (`capOf`): the face nearest the vertical beyond 45°, a ridge only when two tie within 1° — a roof
+  sloping less than 45° becomes a cap; under a steeper one (the shed's, 60°) the side band stops at 45° and the place is pinned beyond it; a steep
+  apex is pinned for half the pitch range (the audit, 2026-11-14).
 * **The columns**: the side faces by heading (faces stacked along a level edge share one heading); each a slice of the yaw from halfway to each
   neighbour's heading — as built.
 * **The levels**: the heights of the level edges between stacked faces, and the two ends — as built (F3: one pitch → height scale, the green a ring).
@@ -113,6 +114,9 @@ only the faces every COLUMNS chart breaks (none on `Scene_0`, `Scene_0bis`, `Sce
    * **the tilted rectangles** — the faces that are CELLS in it at a cost ≤ 45° (`ROLL_OK`), refused where the camera's turn at the frame's border
      exceeds 30° (`SEAM_OK`).
    The frame serving the most area first, then the next, until none serves anything.
+   ⚠ **A frame's map is built in the box of the CONTOUR turned into the frame** — ⛔ `tiltBox` (the world box's turned corners, what the wiring hands
+   a tilted or zone frame today): looser than the shape in a frame off the parts' axes, the 25 % share test (D5) then drops the first face and every
+   one after it — the map all virtual (found at step 1.1 on the heptagon at 45° and the crossed heptagons; no bite on the three scenes' frames).
 4. **The whole rule** (D-Z5, kept): a frame whose own faces, with the faces that are CELLS in it at no cost (the same sections as under gravity, or
    a level face), cover more than half the contour serves those too — no change of chart at their borders (`Scene_0bis`: all 21 faces, as built).
 5. **What is left: RINGS about gravity** — and a level face the columns cannot hold as a cap takes the rings' cap.
@@ -154,6 +158,31 @@ which are cached geometry (kept, read from the atlas), which are the transition'
 
 (1) The pole of gravity's polar orbit far out — as today; (2) the gizmo held while the camera turns at a seam; (3) the dy hold after a half turn.
 ⛔ No other stall: a chart reads zero steps moving nothing on its own faces (§6).
+
+### 4.4 The specificities — holes, voids, channels, mouths, protrusions (the owner, 2026-11-15)
+
+> *"I told you we will look at the contour faces later on. For the moment, we have defined the charts on simple objects. Tell me how you are handling
+> the specificities (holes, voids, channels, mouths, protrusions) we have patched in our pipeline for the moment."*
+
+⭐ **The charts read the CONTOUR only** — the facets' polygons — and decide four things on it: the face holding the pole, the columns, the pitch at
+each level, the frame serving each face. The contour is convex by construction because the specificities are folded in BELOW it, and they stay there:
+
+| specificity | handled by (unchanged) | the charts |
+|---|---|---|
+| holes | closed when a facet's stack is built (`filledRegion`) | nothing: a rectangle with a hole is a rectangle on the contour |
+| protrusions | a group in front of the facet's main plane, in its stack | nothing: the gizmo on the frontmost group (`stackDepthAt`) |
+| voids, channels | the gizmo's depth on the stack: bridged where closed on the travel with no floor, the real depth over a floor, surface where the held piece cannot enter (`pieceEnters`, the rims) | nothing: it runs after the place on the facet |
+| the edge blend, the glides of a depth step | the wiring, after the map (`blendThroughEdges`, `gizmoGlide`) | nothing: they read the same columns and bounds |
+| **a void's mouth** (open up the facet to its edge) | the gizmo held (`mouthHold`), then handed over BY THE AUTOMATIC TILT | ⛔ **coupled**: the hand-over is a change of frame |
+
+* ⛔ **Step 2.4 must carry the mouth over**: the tilt's trigger becomes the one transition (§4.1), so the mouth's hand-over — and every rule keyed on
+  "a face holding a pole" (`holdsPole`: a side facet beyond 45°; the tilt's virtual pole) — becomes a trigger of that transition. Step 2.1's inventory
+  lists these paths beside the `asm…` fields, each with the map fields it reads.
+* **The gate that they still behave**: `Scene_1` carries grooves, a channel and a mouth — its replay, from step 2.1 on.
+* ⛔ **Not measured**: the charts' kinds on a real scene's contour other than a box and the heptagons — `Scene_2`'s, at each seat. Before step 2.4:
+  one headless pass listing its contour and its faces' kinds at every seat (a heavy job: the owner's go). A slanted part large enough to pass D5
+  becomes a facet and changes the contour (today too); the charts then treat it as any shape.
+* What the "surface" of an assembly is stays PARKED (the owner).
 
 ## 5. THE CALM
 
@@ -261,16 +290,27 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 
 | step | what | closed by |
 |---|---|---|
-| **1.1** | `face_map.ts`: the pole as the top / bottom set and the scale from the normals, behind options whose defaults are today's (`buildFaceMap` unchanged by default; every existing vector untouched) | `npm run verify`; new vectors shown RED on a mutant; a comparison probe: the port against the prototype on the 35 shapes, ≤ 10⁻⁹ m |
+| **1.1** ✅ | built `7cd63a4`, audited (§7.3) — `face_map.ts`: the pole as the top / bottom set and the scale from the normals, behind options whose defaults are today's (`buildFaceMap` unchanged by default; every existing vector untouched) | `npm run verify`; new vectors shown RED on a mutant; a comparison probe: the port against the prototype on the 35 shapes, ≤ 10⁻⁹ m |
 | **1.2** | `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
 | **1.3** | `ring_chart.ts` (new): the RINGS place and its way back | the same |
 | **1.4** | `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
-| **2.1** | the wiring reads the atlas, set to reproduce today (the built scale, today's frames); the `asm…` inventory (§4.2) | the same replay on `Scene_1`, `Scene_0`, `Scene_0bis`, number by number (`replay_probe.mjs`) |
+| **2.1** | the wiring reads the atlas, set to reproduce today (the built scale, today's frames); the `asm…` inventory (§4.2) and the specificities' paths (§4.4) | the same replay on `Scene_1`, `Scene_0`, `Scene_0bis`, number by number (`replay_probe.mjs`) |
 | **2.2** | step A on (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
 | **2.4** | the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
+
+### 7.3 As built
+
+* **1.1** (2026-11-15, `7cd63a4`, an Opus agent; audited by Fable): `FacetOpts.layout` ("chart") and `.scale` ("normals"), absent by default;
+  `chartLevels`, `CHART_CAP_DEG` 1°, `CHART_HEADING_DEG` 0.5°, `CHART_LEVEL_M` 0.2 mm. The gates, rerun by the auditor: the port against the prototype
+  (`scripts/probes/chart_port_check.ts`) on the 35 shapes, every frame the assignment uses, both scales — ≤ 2.8 × 10⁻¹⁵ m, the round trip
+  ≤ 1.2 × 10⁻¹⁵ m (two shapes have no place to compare: the columns serve none of their faces); 7 vectors (`tests/orbit_charts_map.test.ts`), each red
+  on a mutant, and a mutant of the auditor's (a column's bound read at the lower facet's bottom) red on 1 vector and on 25 shapes; **1812 vectors**.
+  ⚠ Found: the frames' box (§3); layout "chart" with the built scale is today's map to the rounding, NOT bit for bit (the heptagon's level pitches
+  differ in the last digit) — step 2.1's replay compares within a tolerance, or keeps layout "built" until 2.2. ⛔ Not verified: the edge stretch
+  (`edgeMm`, `edgeDeg` > 0) and the edge blend on a chart map other than a box.
 
 Step 1 changes nothing on the screen: no module is imported by the game. Through 2.2 – 2.4 a switch between the old and the new stays in the build
 (a slider), so both are compared in the same minute on the device; it goes with 2.5.
@@ -297,3 +337,7 @@ Step 1 changes nothing on the screen: no module is imported by the game. Through
 The calm study first read each level's pitch as the mid-range of every face touching that height. On other shapes that rule puts two levels at one
 pitch — a 328 mm leap on a cube standing on a corner. The rule of §2.2 replaces it. On `Scene_0` the two middle levels are −13° and **38°** (first
 given as −13° and 32°), the bottom level −58° (−45°), and an end face reads 16 % / 4 % (first given as 10 % / 3 %); the other rows are unchanged.
+
+The shed (found at step 1.1): this file and the artifact said today's rule takes its 60° roof for a cap. It does not — that roof's normal is 30° up,
+under the 45° bound: today the side band stops at 45° and the place is pinned on the high edge's middle beyond it (8.4 % of steps move nothing).
+§2.2 now says so; a roof sloping LESS than 45° is the one today's rule makes a cap.
