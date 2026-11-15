@@ -116,3 +116,20 @@ for (const s1 of [1, -1]) for (const s2 of [1, -1]) ICO.push([0, s1, s2 * PHI], 
 export const DOD: Vec3[] = [...CUBE];
 for (const a of [1, -1]) for (const b of [1, -1]) DOD.push([0, a / PHI, b * PHI], [a / PHI, b * PHI, 0], [a * PHI, 0, b / PHI]);
 export const DOD_FACE: Vec3 = [0, PHI, 1];
+
+/**
+ * a BARREL: an upright square box (0.4 × 1 × 0.4) bevelled 22° in over its bottom and top 50 mm — the rings' mean elevations give its two inner levels
+ * pitches only 22° apart over 90 % of its height, and the repair spreads them (`ring_chart.test.ts`)
+ */
+export function barrelPolys(): Vec3[][] {
+  const inset = 0.05 * Math.tan((22 * Math.PI) / 180);
+  const P: Vec3[] = [];
+  for (const [y, h] of [[0, 0.2 - inset], [0.05, 0.2], [0.95, 0.2], [1, 0.2 - inset]] as const) for (const a of [-1, 1]) for (const b of [-1, 1]) P.push([a * h, y, b * h]);
+  return hullPolys(P);
+}
+
+/** the prototype's SHED: a 0.48 m box 0.2 m tall under one roof slanted 60° (its top an edge at the back) — the spine from its bottom's centre slants */
+export function shedPolys(): Vec3[][] {
+  const r = 0.2 + 0.48 * Math.tan(Math.PI / 3);
+  return hullPolys([[-0.24, 0, -0.24], [0.24, 0, -0.24], [-0.24, 0, 0.24], [0.24, 0, 0.24], [-0.24, 0.2, -0.24], [0.24, 0.2, -0.24], [-0.24, r, 0.24], [0.24, r, 0.24]]);
+}
