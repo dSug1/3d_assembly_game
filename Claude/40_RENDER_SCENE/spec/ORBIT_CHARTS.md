@@ -179,9 +179,10 @@ each level, the frame serving each face. The contour is convex by construction b
   "a face holding a pole" (`holdsPole`: a side facet beyond 45°; the tilt's virtual pole) — becomes a trigger of that transition. Step 2.1's inventory
   lists these paths beside the `asm…` fields, each with the map fields it reads.
 * **The gate that they still behave**: `Scene_1` carries grooves, a channel and a mouth — its replay, from step 2.1 on.
-* ⛔ **Not measured**: the charts' kinds on a real scene's contour other than a box and the heptagons — `Scene_2`'s, at each seat. Before step 2.4:
-  one headless pass listing its contour and its faces' kinds at every seat (a heavy job: the owner's go). A slanted part large enough to pass D5
-  becomes a facet and changes the contour (today too); the charts then treat it as any shape.
+* ⛔ **Not measured, and OUT for now — `Scene_2`** (the owner, 2026-11-15: *"Scene 2: I would avoid for the moment: I still need to review the proxy
+  faces and the ghost faces so it is not ready for a pass: I will do it myself when I troubleshoot the scene. Focus on the other scene 0, 0bis and
+  1."*): no pass, no replay, no walk on it in this build; the charts' kinds on its contour at each seat are the owner's to look at then. A slanted
+  part large enough to pass D5 becomes a facet and changes the contour (today too); the charts then treat it as any shape.
 * What the "surface" of an assembly is stays PARKED (the owner).
 
 ## 5. THE CALM
@@ -293,11 +294,11 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **1.1** ✅ | built `7cd63a4`, audited (§7.3) — `face_map.ts`: the pole as the top / bottom set and the scale from the normals, behind options whose defaults are today's (`buildFaceMap` unchanged by default; every existing vector untouched) | `npm run verify`; new vectors shown RED on a mutant; a comparison probe: the port against the prototype on the 35 shapes, ≤ 10⁻⁹ m |
 | **1.2** ✅ | built `445a194` + `9718ead`, audited (§7.3) — `orbit_charts.ts` (new, engine-free): a face's kind, the candidate frames, the assignment (§3), the whole rule, a cap's layouts, the seam's turn | the same; the assignment equal to the prototype's on the 35 shapes |
 | **1.3** ✅ | built `e82262e`, audited (§7.3) — `ring_chart.ts` (new): the RINGS place and its way back | the same |
-| **1.4** | `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
-| **2.1** | the wiring reads the atlas, set to reproduce today (the built scale, today's frames); the `asm…` inventory (§4.2) and the specificities' paths (§4.4) | the same replay on `Scene_1`, `Scene_0`, `Scene_0bis`, number by number (`replay_probe.mjs`) |
-| **2.2** | step A on (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
+| **1.4** ✅ | built `c2f3d3a`, audited (§7.3) — `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
+| **2.1** | the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
+| **2.2** | step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
-| **2.4** | the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
+| **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4) | replays, walks, the owner's look after each |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
 
@@ -332,6 +333,18 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   the cap's centre while its place reads the rim about the SPINE 1 µm inside the cap: 0.2 µm apart where the spine slants (the shed). ⚠ A cap's place
   can sit 0.5 µm outside the cap's polygon (the rim read 1 µm below it — the prototype's). The repair of the levels decides nothing on the 35 shapes:
   a bevelled box (the vectors' "barrel") pins it.
+
+* **1.4** (2026-11-15, `c2f3d3a`, an Opus agent; audited by Fable): `edgeShareSmooth` beside `edgeShare` — EXACTLY `edgeShare` wherever the run is
+  at least four minimum zones and the zone share under 50 %, 1 where `edgeShare` is 1, and between two and four minimum zones the interior share rises
+  to 1 by a smoothstep (⛔ `edgeShare`: 0.25 → 1 in one step as a face's width passes 6 cm — pinned by a vector); `CalmKnobs.smooth` (absent: today's)
+  makes `calmTarget` read it. 6 vectors (`tests/orbit_calm.test.ts`), red on 12 mutants of the agent's and one of the auditor's; `calmTarget` without
+  the knob equal to its old body on 560 places × 3 knob sets; **1840 vectors**. ⚠ "The rule for every face" (a fan's too) and "no fade by the pitch"
+  are the wiring's (`poleWeight`, the zone's facets): step 2.3.
+* ⭐ **Steps 1.1 – 1.4 are closed** (2026-11-15): four modules built ahead of their wiring, 1805 → 1840 vectors, the game unchanged.
+
+⭐ **The replays, the walks and the looks are on `Scene_0`, `Scene_0bis` and `Scene_1` only** (the owner — `Scene_2` is out, §4.4). A headless run
+  cleans after itself (the owner: *"make sure not to fill my disc with temporary data: clean afterwards"*): its own Chrome profile in the temp
+  folder, Chrome's temp files inside it, the profile removed when the run ends, the temp folder checked after the batch.
 
 Step 1 changes nothing on the screen: no module is imported by the game. Through 2.2 – 2.4 a switch between the old and the new stays in the build
 (a slider), so both are compared in the same minute on the device; it goes with 2.5.
