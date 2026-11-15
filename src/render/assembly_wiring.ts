@@ -31,7 +31,7 @@ import { facetFrame } from "../input/face_map";
 import { qRotate, type Vec3 } from "../core/vec";
 import { faceWorld, worldPlacementOf } from "../core/object_model";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { boxOf, boxUnion, rayMeetsBox, type Box3 } from "../input/ray_box";
+import { boxOf, rayMeetsBox, type Box3 } from "../input/ray_box";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -64,19 +64,19 @@ export function pieceOrbitOn(st: SceneState): boolean {
   return assemblyOn(st) && st.greenBox !== null;
 }
 
-/**
- * ⭐ The placed parts' box, `null` with none — ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §4.5, the inventory's F.10; the owner: *"fix that centre reading in this
- * build"*) on their MODEL poses: each goal-locked part's model-space box (`placedParts`' own; a part it leaves out — disabled — read the same way,
- * `modelVertsOf`). ⛔ The meshes' world bounding boxes: the parts AS DRAWN — a pick made while the assembly swayed took a centre off by the sway.
- */
-function placedBox(st: SceneState): Box3 | null {
-  const boxes = placedParts(st).boxes;
-  const each: (Box3 | null)[] = [];
+/** ⭐ The placed parts' world bounding box, `null` with none. */
+function placedBox(st: SceneState): { lo: Vec3; hi: Vec3 } | null {
+  let lo: Vec3 | null = null;
+  let hi: Vec3 | null = null;
   for (const [mesh, id] of st.idOf) {
     if (!goalLocked(id, st.goalCommit, st.cfg.lockPlacedPieces === 1)) continue;
-    each.push(boxes.get(mesh) ?? boxOf(modelVertsOf(st, mesh)));
+    const b = mesh.getBoundingInfo().boundingBox;
+    const a = b.minimumWorld;
+    const c = b.maximumWorld;
+    lo = lo === null ? [a.x, a.y, a.z] : [Math.min(lo[0], a.x), Math.min(lo[1], a.y), Math.min(lo[2], a.z)];
+    hi = hi === null ? [c.x, c.y, c.z] : [Math.max(hi[0], c.x), Math.max(hi[1], c.y), Math.max(hi[2], c.z)];
   }
-  return boxUnion(each);
+  return lo === null || hi === null ? null : { lo, hi };
 }
 
 /**
@@ -662,7 +662,20 @@ function placedParts(st: SceneState): PlacedParts {
   const parts: Vec3[][] = [];
   const boxes = new Map<AbstractMesh, Box3>();
   for (const m of meshes) {
-    const vs = modelVertsOf(st, m);
+    const pos = m.getVerticesData(VertexBuffer.PositionKind);
+    if (pos === null) continue;
+    const w = m.computeWorldMatrix(true);
+    const seen = new Set<string>();
+    const vs: Vec3[] = [];
+    for (let i = 0; i + 2 < pos.length; i += 3) {
+      const w0 = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), w);
+      // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose (`modelHit`) — ⛔ cached from the swaying mesh, a hull read mid-sway stayed turned
+      const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;
+      const k = `${v[0].toFixed(6)},${v[1].toFixed(6)},${v[2].toFixed(6)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      vs.push(v);
+    }
     if (vs.length === 0) continue;
     parts.push(vs);
     const b = boxOf(vs);
@@ -670,25 +683,6 @@ function placedParts(st: SceneState): PlacedParts {
   }
   st.asmParts = { key, parts, boxes };
   return st.asmParts;
-}
-
-/** ⭐ One part's world vertices on its MODEL pose (duplicates welded); none without vertex data. */
-function modelVertsOf(st: SceneState, m: AbstractMesh): Vec3[] {
-  const pos = m.getVerticesData(VertexBuffer.PositionKind);
-  if (pos === null) return [];
-  const w = m.computeWorldMatrix(true);
-  const seen = new Set<string>();
-  const vs: Vec3[] = [];
-  for (let i = 0; i + 2 < pos.length; i += 3) {
-    const w0 = Vector3.TransformCoordinates(new Vector3(pos[i]!, pos[i + 1]!, pos[i + 2]!), w);
-    // ⭐⭐⭐ (2026-11-01) on the part's MODEL pose (`modelHit`) — ⛔ cached from the swaying mesh, a hull read mid-sway stayed turned
-    const v = modelHit(st, m, [w0.x, w0.y, w0.z], null).point;
-    const k = `${v[0].toFixed(6)},${v[1].toFixed(6)},${v[2].toFixed(6)}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    vs.push(v);
-  }
-  return vs;
 }
 
 type PlacedParts = NonNullable<SceneState["asmParts"]>;
