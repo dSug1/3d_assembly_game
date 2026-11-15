@@ -215,9 +215,10 @@ export function installTuningMenu(st: SceneState): void {
           sliders: [
             // ⛔ (2026-11-10, the owner: *"remove it"*) the face map's slow stretch through an edge deleted (`faceEdgeSlideMm` / `faceEdgeSlideDeg`)
             // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole: a press on a cap makes it a side; its press's swing
-            tunable(st, "tilted pole: a press on a face holding a pole makes it a side (1) / off (0)", "tiltedPole", 0, 1, 1),
+            // ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: close in only — the labels say so
+            tunable(st, "tilted pole: close in, a face holding a pole made a side (1) / off (0)", "tiltedPole", 0, 1, 1),
             tunable(st, "tilted pole: every tilt's speed — its roll, its swing (°/s; 0: at once)", "tiltRollDegS", 0, 1440, 30),
-            tunable(st, "tilted pole: automatic within this distance (m; 0: the press only)", "tiltAutoM", 0, 3, 0.05),
+            tunable(st, "tilted pole: automatic within this distance (m; 0: never)", "tiltAutoM", 0, 3, 0.05),
             tunable(st, "tilted pole: automatic — the camera blended in over the orbit's first (mm of finger; 0: at once)", "tiltBlendMm", 0, 100, 5),
             // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) the owner's hysteresis
             tunable(st, "past an edge that turns the camera round, the dy that crossed held until the finger goes this far the other way (mm)", "edgeHoldMm", 0, 100, 5),

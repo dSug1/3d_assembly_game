@@ -1,5 +1,6 @@
 // ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4) THE TILTED POLE — a press on a cap tilts the orbit so the cap is a side (the owner's decisions 1 (c),
 // 2 (a), 3 (a), 4 the "no camera roll" rule removed). RED against `46d24db`: `src/input/orbit_tilt.ts` and the wiring (`tiltOnPress`, `tiltOff`) absent.
+// ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: the tilt close in only (the automatic tilt).
 // ⭐ The cube's fixture is the REAL specimen (the 240 faces the page fed to `buildFaceMap`, 2026-11-09).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -27,7 +28,7 @@ function frameViaF(R: Mat3, uW: Vec3, oy: number, op: number) {
   return { dir: mulM(R, f.dir), up: mulM(R, f.up) };
 }
 
-describe("⭐⭐⭐ the tilt at a press on a cap (1 (c))", () => {
+describe("⭐⭐⭐ the tilt on a cap (1 (c); ⛔ 2026-11-15 no longer at a press — the automatic tilt's, close in)", () => {
   it("⭐⭐ the cap's normal is the SNAPPED heading's direction in F — the cap a side facing the camera (top: up; bottom: down)", () => {
     for (const hs of [0, 90 * D, 180 * D, -90 * D]) {
       const hh: Vec3 = [Math.cos(hs), 0, Math.sin(hs)];
@@ -443,10 +444,27 @@ describe("⭐⭐⭐ (2026-11-10, the owner: *\"at close distance … it toggles 
   });
 });
 
-describe("⭐⭐ wired", () => {
-  it("⭐⭐⭐ the press tilts (`tiltOnPress`, a first press alone), the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`), the camera's roll by the exit's share", () => {
+describe("⛔⛔⛔ (2026-11-15, the owner: *\"cancel my rule and remove the press action on the orbit\"*, `ORBIT_CHARTS.md` §11.1) NO ACTION AT A PRESS — the tilted pole close in only", () => {
+  it("⛔ the pointer handler calls no tilt, no press entry point is left, `tiltOn` has ONE caller (the automatic tilt), its verdict unchanged", () => {
     const p = code("render/pointer_wiring.ts");
-    expect(p).toContain("if (assemblyOn(st) && holdRole === null && e.pointerId !== MOUSE_SECOND_ID && st.router.all().length === 1) tiltOnPress(st);");
+    expect(p).not.toMatch(/\btiltOn\w*\(/);
+    expect(p).not.toMatch(/import[^;]*tiltOn/); // nothing of the tilt's making imported by the pointer handler
+    const a = code("render/assembly_wiring.ts");
+    expect(a).not.toMatch(/function tiltOnPress/); // ⛔ the press's entry point deleted (its name stays in the dated comments)
+    expect(a).not.toMatch(/tiltOnPress\(/);
+    expect(a).not.toContain('"press"');
+    expect(a.match(/\btiltOn\(st,/g)?.length).toBe(1); // the automatic tilt's call alone (`assemblyFrame`)
+    expect(a).toContain("if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);");
+    // ⭐ the verdict byte-identical to the automatic tilt's of before (recorded replays and probes match on it)
+    expect(a).toContain("st.lastVerdict = `orbit: the tilted pole (automatic) — the face holding the ${top ? \"top\" : \"bottom\"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;");
+    // ⭐ the automatic tilt keeps its pending camera, blended by the finger's travel
+    expect(a).toContain("const byMm = st.asmTiltPending;");
+  });
+});
+
+describe("⭐⭐ wired", () => {
+  it("⭐⭐⭐ (⛔ 2026-11-15 no press tilts: the block above) the frame's every direction through `dirFrame`, the map built in F, the exit back to the world (`tiltOff`), the camera's roll by the exit's share", () => {
+    // ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) the press's call (`tiltOnPress`) removed — pinned absent above
     const a = code("render/assembly_wiring.ts");
     expect(a).toContain("buildFaceMap(tiltFaces(placedFaces(st), R), tiltBox(box, R),");
     expect(a).toContain("turnAngles(st, (d) => mulT(D0, d));");
@@ -481,7 +499,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };"); // ⭐ the calm carried into F
     expect(a).toContain("st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };"); // ⭐ …and out of it
     expect(a).toContain("const holdNow = mouthHold(wasHeld, m0g.mouth, dP, dY);"); // ⭐ build b
-    expect(a).toContain('tiltOn(st, "auto", st.asmMouth !== null ? st.asmMouth.hi : atPole);');
+    expect(a).toContain('tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
     expect(a).toContain("const kH = Math.max(tl !== null && !tl.exitAcross ? tl.k : 0, st.asmCalmWhole);");
     // ⭐⭐⭐ (2026-11-11, the owner: *"you accumulate a position gap on screen between the gizmo and the piece"*) one base for the piece and the camera:
     expect(a).toContain("const foot = footOf(st, target, us, d + liftOf(st, us));"); // the base along the SHOWN direction (the piece's own)
@@ -502,7 +520,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("tl.exit = tiltExits(onFacet, tl.k, tl.swingMs === null, tl.off);"); // ⭐ the world's frame only once the swing is over and the roll whole
     expect(a).toContain("st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");
     expect(a).toContain("if (autoWas && !st.asmTiltAuto && st.asmTilt !== null && !st.asmTilt.off) {"); // ⭐ out past the threshold: the tilt off
-    expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth !== null ? st.asmMouth.hi : atPole);'); // ⭐ (2026-11-10) on the crossing's frame (or at a mouth's floor edge)
+    expect(a).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);'); // ⭐ (2026-11-10) on the crossing's frame (or at a mouth's floor edge)
     expect(a).not.toContain("st.asmGOff === null) tiltOn"); // ⛔ a glide of the depth held the tilt back — onto the face, not at the edge
     expect(a).toContain("st.orbitUserV = o.v;");
     // ⭐⭐ (the owner: *"fix the gap"*) any face holding a pole, tilted by its own angle — a virtual one (a pole on an edge) too
@@ -516,7 +534,7 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("if (i >= 0) st.asmCalmWholeV = poleEdgeWhole(sh.t.surface, map.facets[sh.t.stack]!, i === 0, i === col.facets.length - 1, cfg.faceSpanZoneVPct, cfg.faceSpanZoneMinVCm / 100);");
     expect(a).not.toContain("if (!cap.real) return;"); // ⭐ the solver's memory turned too (the first probe: the pitch thrown to −90° at the press)
   });
-  it("⭐ its two sliders: on / off, and the press's swing (300 ms)", () => {
+  it("⭐ its sliders: on / off, every tilt's speed, the automatic distance (⛔ 2026-11-15 no press tilts)", () => {
     expect(DEFAULT_CONFIG.tiltedPole).toBe(1);
     expect("tiltSwingMs" in DEFAULT_CONFIG).toBe(false); // ⛔ one speed for every tilt
     const m = code("render/tuning_menu.ts");
@@ -648,8 +666,8 @@ describe("⭐⭐⭐ (2026-11-11) the automatic tilt: the sections at once, the C
   it("⭐⭐ wired: the tilt made at once, only the camera pending (the swing and the square share held), then by the finger; the gizmo held only by a swing at the tilts' speed", () => {
     const aw = code("render/assembly_wiring.ts");
     expect(aw).toContain("st.asmTiltPending = tiltPendingStep(pendWas, autoWas, st.asmTiltAuto, fingerMm);");
-    expect(aw).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth !== null ? st.asmMouth.hi : atPole);');
-    expect(aw).toContain("const byMm = why === \"auto\" && st.asmTiltPending;");
+    expect(aw).toContain('if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);');
+    expect(aw).toContain("const byMm = st.asmTiltPending;"); // ⛔ (2026-11-15) `why === "auto" &&` gone with the press: every tilt is the automatic one
     expect(aw).toContain("if (st.asmTiltPending) return;");
     expect(aw).toContain("if (st.asmTiltAuto && st.asmBlend !== null) sq.q = Math.max(sq.q, blendShare(st.asmBlend.mm, st.cfg.tiltBlendMm));");
     expect(aw).toContain("else tl.swingE = rollStep(tl.swingE, 1, dtMs, tl.swingDurMs);");

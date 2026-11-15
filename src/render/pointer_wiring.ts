@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, tiltOnPress, zoneFinger } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, zoneFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -142,9 +142,8 @@ export function installPointerHandler(st: SceneState): void {
       // ⛔⛔ (2026-11-02, *"remove the translation and the rotation of the parts … I will only keep orbit and sliding"*) — NO PRESS HOLDS A PART:
       // every press is the orbit's, on a part as on empty space (the router's OBJECT role is never asked for)
       const routed = st.router.press(e.pointerId, s, null);
-      // ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a FIRST press for orbiting (a finger alone, the left button) with the gizmo on
-      // a cap: the orbit tilts so the cap is a side (`tiltOnPress`)
-      if (assemblyOn(st) && holdRole === null && e.pointerId !== MOUSE_SECOND_ID && st.router.all().length === 1) tiltOnPress(st);
+      // ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*, `ORBIT_CHARTS.md` §11.1) A PRESS DOES NOTHING TO THE
+      // ORBIT — the tilted pole at a first press (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4, its call here) removed: the tilt close in only (`assemblyFrame`)
       // ⭐ `D187`: classified NOW with what the press knows — the episode lands the moment its action is triggered, not at the release
       {
         const key = ++st.episodeSeq;

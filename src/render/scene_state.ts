@@ -359,7 +359,7 @@ export interface SceneState {
    * ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4) THE TILTED POLE (`input/orbit_tilt.ts`): the orbit's frame F while a pressed cap is a side — `map` F →
    * world (the face map built in F), `dir` the directions' (the press's swing, `swingDir`), the tilted `facet` (F's map), the swing's `delta` and clock,
    * `k` the share of the way off the facet (the roll back), `axis` the roll's last axis, `exit` the crossing seen (the world's frame next frame); `null`:
-   * the world's frame.
+   * the world's frame. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press makes it: the automatic tilt alone.
    */
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;

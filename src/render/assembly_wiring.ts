@@ -963,7 +963,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   zoneHighlightFrame(st);
   // ⭐⭐⭐ (2026-11-10, the owner: *"at close distance … it toggles on automatically therefore the tilt occurs each time the gizmo crosses a face's edge"*) —
   // within `tiltAutoM` of the gizmo (`tiltAutoLatch`, its hysteresis) the gizmo on a FACE HOLDING A POLE (the owner's term) tilts the orbit by itself
-  // (`tiltOn`, last frame's place); the other faces need none (their lines square already); far out: the press only. ⚠ The tilt is a quarter turn: exact
+  // (`tiltOn`, last frame's place); the other faces need none (their lines square already); far out: the press only (⛔ 2026-11-15, the owner: *"cancel my
+  // rule and remove the press action on the orbit"* — far out: none, the tilt close in only). ⚠ The tilt is a quarter turn: exact
   // for a LEVEL face holding a pole (the cube's); a slanted one (a horizontally extruded hexagon) is left short of square, a pole held by an edge never tilts
   // ⭐⭐⭐ (the owner: *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"*) out past it: a tilt under way turns off
   const autoWas = st.asmTiltAuto;
@@ -994,7 +995,7 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
   // polar orbit at its limit — a dy up did nothing, for ever (the walks: 6 presses, the gizmo at the corner)
   const mqP = st.asmMapQ;
   const atPole = mqP === null || !(Math.abs(mqP.pitch) >= ORBIT_PITCH_MAX_RAD - 1e-9) ? null : mqP.pitch > 0;
-  if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, "auto", st.asmMouth !== null ? st.asmMouth.hi : atPole);
+  if (st.asmTiltAuto && st.asmTilt === null) tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole);
   const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
   const d = approachDistance(st.cfg, st.approach);
   // ⭐⭐⭐ (2026-11-04, STEP 4c-bis) THE GIZMO FROM THE FACE MAP at the orbit's angles (`mapGizmo`) — ⛔ the carrier on the sections' hulls, moved by the
@@ -1423,7 +1424,8 @@ function withGOff(st: SceneState, p: Vec3): Vec3 {
 
 /**
  * ⭐⭐⭐ THE RELOCATION'S SHARE LEFT, one frame: after a press over the swing's time (as the camera, 1 (c)); after an exit by the finger's travel over the
- * edge's slow stretch (`faceEdgeSlideDeg`, 3 (a)). Done: none.
+ * edge's slow stretch (`faceEdgeSlideDeg`, 3 (a)). Done: none. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*)
+ * no press tilts now: the swing's time is an automatic tilt's.
  */
 function gOffStep(st: SceneState, dtMs: number): void {
   const o = st.asmGOff;
@@ -1439,6 +1441,7 @@ const RELOCATE_ANGLE = Math.PI / 4;
 /**
  * ⭐⭐⭐ ONE FRAME OF THE TILTED POLE, after the map's place (`stack` at the map's angles `mq`): the press's swing advanced (`swingDir`); the share of the way
  * off the tilted facet (`exitShare` — the camera's roll back and the calm's shares whole by it); off the facet: whole, and the world's frame next frame.
+ * ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) the swing an automatic tilt's alone: no press tilts.
  */
 function tiltFrame(st: SceneState, dtMs: number, stack: number, surface: Vec3): void {
   const tl = st.asmTilt;
@@ -1565,14 +1568,11 @@ function turnAngles(st: SceneState, turn: (d: Vec3) => Vec3, poleYaw = 0): void 
  * world horizontal axis square to the SNAPPED heading (`capTilt`) — the cap a side in F; the camera's heading swung square to it over `tiltSwingMs`
  * (`swingDir`: at the press exactly where it was); ⭐ the gizmo at its EXACT point — the map's angles taken there in F (`mapAngles`), the lines recomputed
  * from there; where F's rules place it elsewhere (a void read on the new lines' travels), its relocation eased over the same swing (`asmGOff`).
+ * ⭐⭐⭐ (§9.4; 2026-11-10 automatic too) the tilt made — at a press (`tiltOnPress`) or by itself close in (`assemblyFrame`, `tiltAutoLatch`).
+ * ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*, `ORBIT_CHARTS.md` §11.1) the press no longer tilts —
+ * `tiltOnPress` and its `why` deleted: close in only, by itself (`assemblyFrame`, `tiltAutoLatch`); the verdict the automatic tilt's, as before.
  */
-export function tiltOnPress(st: SceneState): void {
-  if (st.asmTiltAuto) return; // ⭐⭐⭐ (2026-11-11) within the automatic distance the automatic tilt makes it — pending, then blended by the finger
-  tiltOn(st, "press");
-}
-
-/** ⭐⭐⭐ (§9.4; 2026-11-10 automatic too) the tilt made — at a press (`tiltOnPress`) or by itself close in (`assemblyFrame`, `tiltAutoLatch`). */
-function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null = null): void {
+function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   if (!assemblyOn(st) || st.cfg.tiltedPole !== 1 || st.asmTilt !== null || st.greenBox === null) return;
   // ⭐⭐⭐ (2026-11-13, POLAR_ZONES.md §4.2 1.) A RESTRICTION: in a polar zone the tilted-pole orbit never fires — the polar orbit about the zone's axis
   if (st.asmZone !== null) return;
@@ -1609,7 +1609,7 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   // ⭐ (2026-11-10, *"one speed for every tilt"*) the swing's duration: its angle at `tiltRollDegS`
   const swingDurMs = rollDurationMs(deltaShown, st.cfg.tiltRollDegS);
   // ⭐⭐⭐ (2026-11-11) made as the automatic tilt switched on (the camera pending): the swing held, then by the finger's travel (`swingE`)
-  const byMm = why === "auto" && st.asmTiltPending;
+  const byMm = st.asmTiltPending;
   st.asmTilt = { id: ++TILT_SEQ, map: R1, dir: swingDir(R1, deltaShown, 0), facet: -1, delta: deltaShown, swingMs: 0, byMm, swingE: 0, swingDurMs, k: 0, kT: 0, off: false, finishing: false, rollRad: Math.PI, axis: null, exit: false, exitAcross: false, heading: hs };
   const map = faceMapOf(st);
   if (map === null) {
@@ -1639,7 +1639,7 @@ function tiltOn(st: SceneState, why: "press" | "auto", mouthHi: boolean | null =
   const tf = st.asmTilt.facet;
   if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };
   st.asmShown = null;
-  st.lastVerdict = `orbit: the tilted pole${why === "auto" ? " (automatic)" : ""} — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
+  st.lastVerdict = `orbit: the tilted pole (automatic) — the face holding the ${top ? "top" : "bottom"} pole is a side (heading ${Math.round((hs * 180) / Math.PI)}°, swing ${Math.round((delta * 180) / Math.PI)}°)`;
   st.hudDirty = true;
 }
 
