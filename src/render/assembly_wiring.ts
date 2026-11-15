@@ -37,6 +37,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { crossingHold, crossingPitch, distanceToFacets, fingerInFrame, fingerSwapped, polarZones, SPIT_CROSSING_PITCH_RAD, spitCameraHeading, spitSide, zoneAt, type PolarZone, type ZoneOpts } from "../input/polar_zone";
+import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_OPTS, type ChartAssignment, type ChartFace } from "../input/orbit_charts";
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
@@ -1582,18 +1583,37 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   if (sh === null || g === null || wm === null) return;
   // ⭐⭐⭐ (2026-11-10, *"build b"*) held at a void's mouth (`asmMouth`): the face holding the pole it opens toward — the red has reached the floor's edge
   const capStack = mouthHi === null ? sh.t.stack : mouthHi ? wm.top : wm.bottom;
-  // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) a face HOLDS A POLE when it is the cap — or a side beyond 45° (`holdsPole`: a ridge's two faces, each
-  // from its own side); a box's sides are vertical: its caps alone, as before
-  const pole = holdsPole(wm, capStack);
-  if (pole === null) return;
-  const top = pole === "TOP";
-  // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
-  // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
-  const cap = wm.facets[capStack]!;
-  const q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
-  // ⭐⭐⭐ (2026-11-12, F2c) a SLANTED face tilted toward ITS OWN heading (never past the vertical: ⛔ the camera's, a face leaning away needed 116° — the
-  // view upside down, 17 of 22 such tilts on the heptagon); a level one has none: the camera's, as before
-  const hs = tiltHeading(cap.n, q.yaw);
+  let top: boolean;
+  let cap: (typeof wm.facets)[number];
+  let q: { readonly yaw: number; readonly v: number };
+  let hs: number;
+  if (st.cfg.chartLayout === 1) {
+    // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) THE ATLAS DECIDES: a face tilts only if it is a CAP with a square layout (`capTiltHeading`), its heading
+    // one of the layouts' — ⛔ `holdsPole` (a side beyond 45°: `Scene_0`'s two top faces, D-C4) and the virtual cap of a pole held by an edge (not on the
+    // contour: no tilt — 2.4b gives that pole its own crossing)
+    const at = atlasOf(st);
+    const f = wm.facets[capStack];
+    if (at === null || f === undefined) return;
+    q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    const h = capTiltHeading(at.assign, at.contour, capStack, f.n, q.yaw);
+    if (h === null) return;
+    cap = f;
+    top = f.n[1] > 0;
+    hs = h;
+  } else {
+    // ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §3, F2b) a face HOLDS A POLE when it is the cap — or a side beyond 45° (`holdsPole`: a ridge's two faces, each
+    // from its own side); a box's sides are vertical: its caps alone, as before
+    const pole = holdsPole(wm, capStack);
+    if (pole === null) return;
+    top = pole === "TOP";
+    // ⭐⭐ (2026-11-10, the owner: *"fix the gap"*) ANY face holding a pole — level, slanted (tilted by its own angle, `capTilt`), or VIRTUAL (the pole held by
+    // an edge, no face beyond 45°: tilted as a level one, the gizmo then onto the real face nearest in F, eased) — ⛔ a real one only before
+    cap = wm.facets[capStack]!;
+    q = st.pieceQ ?? st.boxOrbit ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };
+    // ⭐⭐⭐ (2026-11-12, F2c) a SLANTED face tilted toward ITS OWN heading (never past the vertical: ⛔ the camera's, a face leaning away needed 116° — the
+    // view upside down, 17 of 22 such tilts on the heptagon); a level one has none: the camera's, as before
+    hs = tiltHeading(cap.n, q.yaw);
+  }
   const delta = Math.atan2(Math.sin(hs - q.yaw), Math.cos(hs - q.yaw));
   const R1 = capTilt(hs, cap.n);
   const D0 = swingDir(R1, delta, 0);
@@ -1672,6 +1692,11 @@ function nextTiltHeading(st: SceneState, nX: Vec3 | null, yaw: number): number |
   if (wm === null) return null;
   const i = facetOfNormal(wm, nX, st.asmG);
   const f = wm.facets[i];
+  // ⭐⭐⭐ (2026-11-15, §12 2.4a) under the charts' layout the atlas's test and heading (`capTiltHeading`, `tiltOn`'s own) — ⛔ `holdsPole`
+  if (st.cfg.chartLayout === 1) {
+    const at = atlasOf(st);
+    return f === undefined || at === null ? null : capTiltHeading(at.assign, at.contour, i, f.n, yaw);
+  }
   return f === undefined || holdsPole(wm, i) === null ? null : tiltHeading(f.n, yaw);
 }
 
@@ -1756,12 +1781,41 @@ function zoneOptsOf(st: SceneState): ZoneOpts {
 function zonesOf(st: SceneState): readonly PolarZone[] {
   const wm = worldFaceMap(st);
   if (wm === null || st.cfg.zoneOn !== 1) return [];
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) under the charts' layout the zones are the frames the ATLAS takes (`chartZones`, §3 3. – 4.) — ⛔
+  // `polarZones`' detectors; the key its own (the atlas's), never the detectors'
+  if (st.cfg.chartLayout === 1) {
+    const at = atlasOf(st);
+    if (at === null) return [];
+    const keyA = `atlas#${at.key}`;
+    if (st.asmZones !== null && st.asmZones.key === keyA) return st.asmZones.zones;
+    const zonesA = chartZones(at.assign, at.contour);
+    st.asmZones = { key: keyA, zones: zonesA };
+    return zonesA;
+  }
   const o = zoneOptsOf(st);
   const key = `${st.asmWorldMap?.key ?? ""}#${o.valenceMin}#${o.facetMinRatio}#${o.snapDeg}#${o.uprightMaxDeg}#${o.spitMinDeg}#${o.wholeShare}`;
   if (st.asmZones !== null && st.asmZones.key === key) return st.asmZones.zones;
   const zones = polarZones(wm, o);
   st.asmZones = { key, zones };
   return zones;
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §3, §12 2.4a — read under `chartLayout` 1 only) THE PLACED SET'S ATLAS: the WORLD face map's contour
+ * (`chartContour` — the map is built from the parts' MODEL poses, `placedFaces`: never the swayed meshes) and its assignment (`assignCharts`, the
+ * defaults with the three zone knobs from the sliders, as `zoneOptsOf`), cached per the world map's key and those knobs — ⭐ computed once per placed set
+ * or knob change, never per frame (≈ 10 ms on `Scene_0bis`). `null`: no map.
+ */
+function atlasOf(st: SceneState): { readonly key: string; readonly contour: readonly ChartFace[]; readonly assign: ChartAssignment } | null {
+  const wm = worldFaceMap(st);
+  if (wm === null) return null;
+  const c = st.cfg;
+  const key = `${st.asmWorldMap?.key ?? ""}#${c.zoneUprightMaxDeg}#${c.zoneSpitMinDeg}#${c.zoneWholeShare}`;
+  if (st.asmAtlas !== null && st.asmAtlas.key === key) return st.asmAtlas;
+  const contour = chartContour(wm);
+  const assign = assignCharts(contour, { ...DEFAULT_CHART_OPTS, uprightMaxDeg: c.zoneUprightMaxDeg, spitMinDeg: c.zoneSpitMinDeg, wholeShare: c.zoneWholeShare });
+  st.asmAtlas = { key, contour, assign };
+  return st.asmAtlas;
 }
 
 /** ⭐ Two zones the same (a recomputed set keeps the zone the orbit is in when its facets and axis are unchanged). */

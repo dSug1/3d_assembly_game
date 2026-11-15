@@ -365,6 +365,9 @@ export interface SceneState {
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
   /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
   asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a — `chartLayout` 1 only) the placed set's ATLAS: the world face map's contour (`chartContour`) and its
+   *  assignment (`assignCharts`), per its key (the world map's and the three zone knobs it reads) — where a frame changes (the tilt, the zones) */
+  asmAtlas: { readonly key: string; readonly contour: readonly import("../input/orbit_charts").ChartFace[]; readonly assign: import("../input/orbit_charts").ChartAssignment } | null;
   /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's

@@ -191,8 +191,9 @@ describe("⭐⭐⭐ F4 — the pitch asked PAST A POLE reaches the map (⛔ the 
 describe("⭐⭐⭐ F2b / F2c wired — the tilt on ANY face holding a pole (`holdsPole`), toward its own heading (`tiltHeading`)", () => {
   it("⭐⭐⭐ `tiltOn`: a pole by `holdsPole` (the cap, or a side beyond 45°), its heading by `tiltHeading` (⛔ the cap alone; the orbit's heading)", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
-    expect(a).toContain("const pole = holdsPole(wm, capStack); if (pole === null) return; const top = pole === \"TOP\";");
-    expect(a).toContain("const hs = tiltHeading(cap.n, q.yaw);");
+    // ⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a) the switch's `chartLayout` 0 path — the atlas decides under 1 (`orbit_charts_atlas.test.ts`)
+    expect(a).toContain("const pole = holdsPole(wm, capStack); if (pole === null) return; top = pole === \"TOP\";");
+    expect(a).toContain("hs = tiltHeading(cap.n, q.yaw);");
     expect(a).not.toContain("const hs = snapHeading(q.yaw);");
   });
 });
