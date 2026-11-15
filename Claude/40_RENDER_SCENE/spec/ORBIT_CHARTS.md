@@ -326,7 +326,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **1.4** ✅ | built `c2f3d3a`, audited (§7.3) — `orbit_calm.ts`: the continuous share, the rule for every face — pure, not wired | the same; identical to today on `Scene_1`'s runs |
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
-| **2.3** | the calm on every face (§5.1) | `Scene_1` unchanged; the owner's look on `Scene_0bis` |
+| **2.3** 🔧 | built `fcfa8bd`, audited, replayed (§7.3); ⛔ the owner's look owed — the calm on every face (§5.1) behind a second switch, `chartCalm` (off by default; acts only with `chartLayout` 1) | `Scene_1` unchanged ✅; the owner's look on `Scene_0bis` |
 | **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4); ⭐ each trigger's band against input noise considered here (§10.2) | replays, walks, the owner's look after each |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
@@ -441,6 +441,39 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   (local, ⛔ not deployed): the HUD's `draw` line — the WebGL context (lost, restored, an error), the frames drawn, the last frame's interval as
   it was, the canvas's size and its buffer's; **1856 vectors**.
 * **The tilted pole close in, and a band against input noise** (the owner's two notes for later, 2026-11-15) → §10.
+* **2.3** (2026-11-15, the owner: *"continue to next step"*; `fcfa8bd`, an Opus agent; audited by Fable): **the calm on every side face of the map
+  in use**, behind `chartCalm` (0 by default; the slider after `chartLayout`'s, GIZMO & SECTIONS) — on only with `chartLayout` 1 too (`calmRules`,
+  `orbit_calm.ts`: under the old layout a tip's fan is squeezed into 30° of orbit, where the calm jumped the view — removed 2026-11-14). Three
+  rules, all off otherwise: the shares CONTINUOUS on a narrow run (`CalmKnobs.smooth`); a polar zone's own facets — a fan's — calmed as any side
+  facet (the two blocks of `calmTargets` that excepted them skipped); NO FADE BY THE PITCH on a side facet's reading (`CalmState.poleFade` false,
+  taken from the target at once; the cap's reading keeps `poleWeight`, `facingWeight` stays everywhere). ⛔ Untouched: the world camera's heading
+  (`calmFrame`: `calmLevelHeading`, `heldOffsetStep`) — step 2.4's. 10 vectors (`tests/orbit_calm.test.ts`, `tests/chart_calm_wiring.test.ts`),
+  red on 21 mutants; **1867 vectors**. The gates, rerun by the auditor: both switches off — the three scenes identical BIT FOR BIT to the commit
+  before; `chartLayout` 1 with `chartCalm` 1 against `chartLayout` 1 alone:
+
+  | scene | the replay | the view, one frame (with the calm · without) |
+  |---|---|---|
+  | `Scene_1` | identical bit for bit ✅ | — |
+  | `Scene_0` | the same play, the piece within 10⁻⁴ m at the first difference | the same |
+  | `Scene_0bis` | another play, no error | largest turn 13.0° · 12.9°; rolls over 20°: 8 frames · 3, the largest 28.3° · 23.8° |
+
+  ⚠ `Scene_0bis`'s rolls over 20° are fast turns round a tip spread over 3 – 4 frames under a fast finger (8 – 10° of view a frame), not the
+  single-frame jumps of 2026-11-14 (22 – 50°); two plays are compared, not one path. And §5.1's own measure stands: the present fan is never seen
+  more than 27° off square with or without the calm — on the three scenes the gain is small; a steep tip or a fan of three needs it. ⛔ Owed: the
+  owner's look on `Scene_0bis` with both switches on.
+* ⛔⛔ **THE TILT'S EXIT AT A POLE, AND THE TILTED FACET'S BORDER — found measuring 2.3's baseline, fixed** (Fable, `72cdc54`). With `chartLayout`
+  1 the replay of `Scene_0` held two rolls of 157° and 140° in ONE frame (none with it off; the owner's look had not hit them). Two causes:
+  1. **The tilted facet's border** (the charts' layout only): the levels are the faces' bisectors, so a press with the gizmo on the ridge made
+     the tilt with the gizmo EXACTLY on the tilted facet's border; the map's place there was read on the neighbour — "over the edge", the roll
+     back and the exit within four frames of the press. Now a place within a micrometre of the tilted facet is on it (`onTiltedFacet`,
+     `TILT_TIE_M` — a tie, not a band: §10.2's is still owed).
+  2. **The exit at a pole — a fault of today's game too.** A direction straight up or down has no heading: `anglesOfDir` fell back to the
+     orbit's hint, 0, so a tilt left with the orbit exactly at the world's pole set the yaw to 0 and the view rolled there in one frame. Probed in
+     the app with both switches off: on `Scene_1`'s top, the piece brought in (the automatic tilt on) and back out (off) rolled the view 90° in one
+     frame. Now the exit hands the heading the camera shows (`anglesOfDir`'s `poleYaw`, `turnAngles`, `tiltOff`): 9° there (the world camera's own
+     calm heading, as at any exit by distance).
+  2 vectors and the wiring's pins, red on the code before; **1869 vectors**. Replays: both switches off identical bit for bit on the three scenes;
+  `chartLayout` 1: `Scene_1` and `Scene_0bis` identical, `Scene_0` from the press on the ridge on — its largest roll in a frame 14° (157°).
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
@@ -533,7 +566,8 @@ between two normals far apart, and the camera travels from one to the other at `
 | the spit's side (the camera over the axis) | `SPIT_SIDE_HYST_DEG` (2°) |
 | a half-turn crossing | the dy that crossed held `edgeHoldMm` (30 mm) into the face beyond — that dy only |
 | ⛔ the square camera's target close in | none — the example |
-| ⛔ to check: the calm's normal (eased, not banded), the tilt's entry at an edge close in, its exit by a dx | — |
+| ⛔ the automatic tilt made at an edge close in | none — **measured in today's game** (the replay, `Scene_1`, both switches off, the approach 0.61): a fast dy onto the bottom face and off it within the frame makes the tilt and leaves it at once — the view rolled 45° and 90° in ONE frame (frames 1120, 1137) |
+| ⛔ to check: the calm's normal (eased, not banded), the tilt's exit by a dx | — |
 
 **Where it lands**: step 2.4 — every change of frame becomes the one transition (§4), so its trigger gets ONE band; the square camera's and the
 calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres on the glass (`CLAUDE.md` rule 3), a slider with

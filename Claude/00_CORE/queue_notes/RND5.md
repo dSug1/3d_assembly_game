@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look given (*"everything ok with charts switched on"*); 🔧 step 2.3 built behind a second switch (`chartCalm`), not deployed, the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -68,3 +68,12 @@
 * **For later, at the owner's request** → the spec's §10: (1) the tilted pole close in is KEPT (rule §3 6.) and checked on the build with the
   switch off and on, but general on every kind of face only by a step of its own, **step C**, after 2.5; (2) a band against input noise at every
   trigger of a camera movement (the example: the square camera's target at an edge close in, no band today), considered at step 2.4.
+* **Step 2.3** (the owner: *"continue to next step"*; `fcfa8bd`, an Opus agent, audited): the calm on every side face behind `chartCalm` (off; acts
+  only with `chartLayout` 1) — the share continuous on a narrow run, a fan's facets calmed, no fade by the pitch on a side facet; **1867 vectors**;
+  both switches off = the commit before, bit for bit; with the calm `Scene_1` identical, `Scene_0bis` another play (no single-frame jump; a few more
+  fast rolls round a tip). ⛔ The owner's look on `Scene_0bis` owed. The record: the spec's §7.3.
+* ⛔ **Found measuring its baseline, fixed** (`72cdc54`): a tilt left with the orbit exactly at a pole reset the yaw to 0 — a 90° roll in one frame
+  in today's game (`Scene_1`'s top, the piece in then out), 157° on `Scene_0`'s ridge under the charts' layout, where a press on the ridge also left
+  its tilt at once (the gizmo on the tilted facet's border). **1869 vectors**; the switches off still bit for bit. The record: the spec's §7.3.
+* **Found, not fixed** (today's game, for step 2.4 — the spec's §10.2): close in, a fast dy onto `Scene_1`'s bottom face and off it within the frame
+  makes the automatic tilt and leaves it at once: 45° and 90° rolls in one frame.
