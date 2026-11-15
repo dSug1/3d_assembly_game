@@ -7,7 +7,7 @@
  *   it; the apex 12.6 mm off centre — the SAME frame (⛔ today: the zone's axis from the rim's centroid, snapped).
  * * A lying triangle prism with tips: a fan of THREE is a fan (⛔ today: `valenceMin` 5).
  * * An icosahedron, a vertex up: no fan is taken round a corner whose star gravity partly serves — its broken faces on the rings.
- * * A dodecahedron: every face on the rings. A cube on a corner: two frames.
+ * * A dodecahedron: every face on the rings. A cube on a corner: two frames, both held WORLD — the border peel's choice (4 + 2 faces).
  * The whole comparison with the prototype (`scripts/probes/chart_lib.ts`) on 35 shapes: `scripts/probes/chart_assign_check.ts`. RED on the mutants
  * recorded in the step's report.
  */
@@ -152,5 +152,21 @@ describe("⭐⭐⭐ the rings, the tilted rectangles (§3 3., 5.)", () => {
     expect(A.used.flatMap((u) => u.faces).sort()).toEqual([0, 1, 2, 3, 4, 5]);
     expect(A.home.some((h) => h.rings)).toBe(false);
     for (let i = 0; i < 6; i++) expect(A.kind[i]).toBe("CELL");
+  });
+  it("⭐ the cube on a corner, what the border PEEL decides: both frames held WORLD (⛔ the first AXIS- would turn the camera > 30° at its border); the first takes the four faces round its axis, the second the opposite pair left", () => {
+    const { C, A } = assigned(hullPolys(onSphere(CUBE, 0.4, [1, 1, 1])));
+    const sq = (n: Vec3, a: Vec3): number => Math.abs(n[0] * a[0] + n[1] * a[1] + n[2] * a[2]);
+    // the reference's (`scripts/probes/chart_lib.ts`, `assignCharts`): [-0.7887, -0.5774, 0.2113] WORLD four faces, [-0.2113, 0.5774, 0.7887] WORLD two
+    const ref: [Vec3, number][] = [[[-0.7887, -0.5774, 0.2113], 4], [[-0.2113, 0.5774, 0.7887], 2]];
+    expect(A.used.length).toBe(2);
+    A.used.forEach((u, k) => {
+      const [axis, count] = ref[k]!;
+      expect(u.home.mode).toBe("WORLD");
+      for (let j = 0; j < 3; j++) expect(u.home.axis[j]!).toBeCloseTo(axis[j]!, 4);
+      expect(u.faces.length).toBe(count);
+      for (const i of u.faces) expect(sq(C[i]!.n, u.home.axis)).toBeLessThan(1e-9);
+    });
+    const pair = A.used[1]!.faces;
+    expect(sq(C[pair[0]!]!.n, C[pair[1]!]!.n)).toBeCloseTo(1, 9);
   });
 });
