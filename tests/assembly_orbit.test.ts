@@ -221,7 +221,7 @@ describe("⛔⛔ (2026-11-12, CLOSE_IN_CONTACT.md) the slide's LOCK removed with
   it("⛔ no lock, no cone: the gizmo, the piece's direction and the camera's frame are the orbit's at every distance — nothing held, nothing clamped", () => {
     const a = code("render/assembly_wiring.ts");
     for (const gone of ["asmLocked", "asmLock", "lockCone", "coneClamp", "leavesCone", "st.hover"]) expect(a).not.toContain(gone);
-    expect(a).toContain(" return tiltDir(R, calmDir(st, u));"); // the piece's direction: the calm's, always
+    expect(a).toContain(" const s = tiltDir(R, calmDir(st, u));"); expect(a).toContain(" if (e === null) return s;"); // ⭐ (2026-11-15, step 2.4c) the eased direction only under `chartLayout` 1 (an ease set): else exactly this // the piece's direction: the calm's, always
     expect(a).toContain(" const g0 = st.asmG ?? st.asmGizmo ?? a.centre;"); // the gizmo: the face map's, always
     expect(a).toContain(" const w = lookShare(d, farDistance(st.cfg), st.cfg.assemblyLockDistM);");
     for (const f of ["render/pointer_wiring.ts", "render/green_box_wiring.ts"]) expect(code(f)).not.toContain("leavesCone");

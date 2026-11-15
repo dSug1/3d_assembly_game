@@ -372,11 +372,15 @@ export interface SceneState {
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
    *  angle, its axis kept frame to frame (`null`: not yet) */
-  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number } | null;
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean } | null;
   /** ⭐ (2026-11-14) which facets of the map in use are the polar zone's own (`zoneFacetOf`), per map and zone */
   asmZoneFacetsF: { readonly key: string; readonly of: Map<number, boolean> } | null;
   /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
   asmPieceDrawn: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) THE PIECE'S SHOWN DIRECTION EASED on the camera turn's clock: the one rotation from
+   *  the new chart's direction back to the one drawn before the change of frame (`dirGap`), its rest `1 − k` of the turn `mix` (`asmZoneMix`, the same
+   *  object — another turn, or none: whole), applied in `dirAt` (`easedDir`); `null`: none */
+  asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object } | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */
