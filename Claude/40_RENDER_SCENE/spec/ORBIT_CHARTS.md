@@ -327,7 +327,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** 🔧 | built `fcfa8bd`, audited, replayed (§7.3); ⛔ the owner's look owed — the calm on every face (§5.1) behind a second switch, `chartCalm` (off by default; acts only with `chartLayout` 1) | `Scene_1` unchanged ✅; the owner's look on `Scene_0bis` |
-| **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4); ⭐ each trigger's band against input noise considered here (§10.2) | replays, walks, the owner's look after each |
+| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited; ⛔ 2.4d (the trigger's band) NOT built — the owner's hysteresis session (§12.2); ⛔ the rings not wired; ⛔ the owner's look owed, nothing deployed — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
 | **C** (later) | the tilted pole close in on every kind of face (§10.1): an offline round first, the owner's decisions (D-C2, D-C4), then the build — after 2.5 | the owner's look |
@@ -744,3 +744,23 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
   lag eased at 360°/s (two frames) with the camera following the piece; before, the lag was kept and caught up by the spring itself. ⚠ **A new
   camera turn, by design**: the tilt left by distance (or a zone's switch) with the gizmo on the FAR half of a cap turns the camera round to the
   place's own side — before, the camera stayed and the gizmo's angles disagreed (report 4 of §11). The ridge's crossing (2.4b) re-run: unchanged.
+* **2.4e** (2026-11-15, `e14a2f0`, an Opus agent; audited by Fable, one completion `2fdbd34`), under `chartLayout` 1 AND `chartCalm` 1:
+  `CalmKnobs.ownRun` (`calmRules(…).ownRun`) — a vertical facet's vertical share and its reading's weight on its OWN run along `b`, as a slanted
+  one's; and (the auditor's) the vertical share whole BY POSITION toward both own ends of every side facet (`wholeEnds` → `poleEdgeWhole` — as
+  built: the column's outer ends alone). 12 vectors, red on 12 mutants; **1942 vectors**. **The gates**: off, `Scene_1` and `Scene_0` identical
+  bit for bit, `Scene_0bis` within its noise; `chartLayout` 1 alone: the three identical bit for bit; in the app, `Scene_0bis`, both switches on,
+  far out, a steady finger from the rectangle onto the triangle — the view's largest turn in a frame **8.1° → 6.3°** (the eased target alone: it
+  lags the finger, the edge zone crossed in 3 frames against 120 ms) **→ 4.9°** (by position), the way back 4.0° → 3.6°, the roll 4.8° → 2.8°.
+  ⚠ **`Scene_1` and `Scene_0` change too with `chartCalm` 1** (the gizmo's path identical to 10⁻⁸ m, the VIEW up to 0.5 m of camera, ~4°):
+  the old reference was the placed parts' BOX — on `Scene_1` 0.566 m high (parts proud of the top and under the bottom, 41 mm each) against the
+  side faces' own 0.483 m — so the old share was never whole at a side face's own edge there either. ⚠ The bounce's rule (2026-11-04) is replaced
+  under `chartCalm` 1 only; its cost on walls of unequal extents is in `calmTarget`'s comment — the owner's to review (§12.2).
+
+### 12.2 The decisions taken while the owner slept (2026-11-15 → 16), and where the next session starts
+
+The owner: *"I will go to sleep. Finish everything tonight without asking me anything. Just record your decisions so I can review tomorrow morning.
+Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis."* → the list, each with its reason and what undoes it:
+[`queue_notes/RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
+§10.1 — it now runs on the one transition; the entry's 8.5° frame of §12.1's table is the first thing to look at) and the hysteresis (2.4d: ONE
+banded reading of the face under the gizmo, `faceSwitches` / `gizmoEdgeMarginMm`, for the tilt's entry and exit, the pole's crossing and the
+square camera's target — §10.2's table lists what has a band today). Nothing is pushed or deployed: live is still `157974f`.
