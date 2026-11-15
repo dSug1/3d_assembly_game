@@ -85,3 +85,6 @@
   rules"*. The analysis: the spec's §11 — one root cause (the orbit's place stored twice, as a direction and as a chart coordinate; the old
   detectors still deciding where a frame changes; the calm's per-face references), the basis of step 2.4. The fix built for the first report is
   shelved (`git stash`), not committed.
+* **The press's action** (the owner, 2026-11-15: *"Why does a press have an action at all on the orbit? … Why did it appear now?"*): the owner's
+  rule of 2026-11-09, built 2026-11-10, in every build since; measured with a press held still (the spec's §11.1): unseen on `Scene_1` square, 2° –
+  9.5° on `Scene_0` before the charts, 3° – 9° at rest under the charts' layout. ⛔ The owner's to decide: no action at a press (the tilt close in only).

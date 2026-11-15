@@ -632,3 +632,36 @@ reading, below — not reproduced.
 **The day's patches, as they stand**: `72cdc54` (the heading kept at a pole; the tilted facet's border a tie) is deployed and stays until step 2.4
 replaces the two conversions — it removes a 90° roll of today's game and is flagged above. The fix built for report 1 (a vertical facet's vertical
 share whole toward its own end under a slanted one: 8.1° → 4.5° a frame) is SHELVED, not committed (`git stash`): one more per-face rule.
+
+### 11.1 The press's action: where it comes from, what it turns (measured 2026-11-15)
+
+The owner: *"Why does a press have an action at all on the orbit? There was not press input on the orbit in my previous build. Why did it appear now?"*
+
+**Where it comes from** — the owner's rule of 2026-11-09 (`POLAR_ORBIT_CLEANUP.md` §9: *"when the left click or finger is pressed for orbiting, the orbit
+tilts so the face currently holding the gizmo becomes the one with the red and green sections which are perpendicular"*), decision 1 (c) of
+2026-11-10 (the heading swung square at the press, 0 – 45°), built `b7548b5` (`1.0.117-`). In every build since: `12dc4b6`, `de789f6`, `825e62c`,
+`d2f7738`, the build before the charts (the switches off replay bit for bit). Far out only (close in the tilt makes itself, 2026-11-10); since
+2026-11-12 (`785ea5a`, F2b) on a side beyond 45° too — `Scene_0`'s two top faces. ⛔ The only action a press has on the orbit.
+
+**Measured** (the scratchpad's `tilt_check.mjs`, `MODE=press`: far out, the gizmo brought onto the face, 90 frames of rest, then a press held STILL
+150 frames — no finger travel; the gizmo moved 0.0 mm in every case; the view's turn):
+
+| the face, the camera | the switch off (= the build before the charts) | the charts' layout on |
+|---|---|---|
+| `Scene_1` top, square | 0.0° | the same (`Scene_1` replays bit for bit) |
+| `Scene_1` top, 30° off square | 13.3° in 5 frames (7.1° in one) — decision 1 (c)'s swing | the same |
+| `Scene_0` top slanted face, square | 9.5° in ONE frame, back on the same view within 40 | 6.9° in one frame, at rest 3.4° away |
+| `Scene_0` top slanted face, 30° off | not measured (below) | 15.2° (8.9° in one frame) |
+| `Scene_0` bottom, square | 2.2°, eased over 40 frames | 9.2°, eased over 40 frames |
+| `Scene_0` bottom, 30° off | 13.3° (7.2° in one frame) | not measured (below) |
+
+**Read**: on the cube, square, the press is unseen (the 2026-11-10 probe's 0.0 mm); off square it is the swing decided then. On `Scene_0` the entry was
+never seamless, and less so under the charts' layout: the world frame's view of a place and the tilted frame's view of the SAME place are two
+conventions (§11, 1. and 3.) — the bottom looked at from 51° below, then 53° (off); from 67°, then 76° (on).
+
+**Also seen, not looked into**: a tilt made at a press and then left keeps the swung heading (the orbit's yaw −60° → −90°: the second cell not
+measured — the way down made and left a tilt); the switch off, `Scene_0`, the orbit's yaw −60°, elevation 0.751: a dy up the glass moved nothing for
+360 frames (the first cell not measured) — possibly the anchor proud of that face, possibly the script.
+
+⛔ **The owner's to decide (step 2.4)**: no action at a press at all — the tilt close in only, made by the finger's travel as the gizmo enters the
+face (the automatic tilt, 2026-11-10) — or the press kept on a level face.
