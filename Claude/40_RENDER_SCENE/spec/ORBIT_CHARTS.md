@@ -341,6 +341,17 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
   the knob equal to its old body on 560 places × 3 knob sets; **1840 vectors**. ⚠ "The rule for every face" (a fan's too) and "no fade by the pitch"
   are the wiring's (`poleWeight`, the zone's facets): step 2.3.
 * ⭐ **Steps 1.1 – 1.4 are closed** (2026-11-15): four modules built ahead of their wiring, 1805 → 1840 vectors, the game unchanged.
+* **2.1, the replay's BASELINE** (2026-11-15, Fable; the owner's go: the runs on the owner's PC, cleaned after): `scripts/probes/replay_probe.mjs`
+  (the virtual clock, seed 1, 40 legs, 2 794 frames) on today's game (`510bbd8`, the main folder) for `Scene_1`, `Scene_0` (`?sceneIndex=0`) and
+  `Scene_0bis` (`?sceneIndex=4`); `Scene_1` recorded twice: IDENTICAL bit for bit (the replay repeats). ⭐ **The rebuild branch after steps 1.1 – 1.4
+  (`51aa428`) against it: IDENTICAL, bit for bit, on the three scenes** — "the game unchanged" shown, not argued. The batch: 7 runs, about a minute
+  each; nothing left in the temp folder, no Chrome left running; the three baseline recordings (16 MB) kept in the session's scratchpad for the next
+  steps, re-recordable from the main folder at any time.
+
+⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
+geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
+rebuild branch plus levels made for the test (a shed, a gable house, a pyramid roof, fans of three, a tilted body: the shapes of §6 the game's data can
+express) — where the game's real pipeline is replayed and walked on them. ⛔ Never merged: the owner reviews it, then deletes it.
 
 ⭐ **The replays, the walks and the looks are on `Scene_0`, `Scene_0bis` and `Scene_1` only** (the owner — `Scene_2` is out, §4.4). A headless run
   cleans after itself (the owner: *"make sure not to fill my disc with temporary data: clean afterwards"*): its own Chrome profile in the temp
