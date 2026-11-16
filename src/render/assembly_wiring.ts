@@ -41,6 +41,7 @@ import { assignCharts, capTiltHeading, chartContour, chartZones, DEFAULT_CHART_O
 import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_tilt";
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamTurnHolds, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow } from "../input/seam_turn";
+import { bandedFacet } from "../input/face_band";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -105,7 +106,7 @@ export function ensureAssembly(st: SceneState): void {
 /** ⭐ The orbit's state a held part starts from (`orbitStateStart`). */
 type OrbitStateStart = Pick<
   SceneState,
-  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmMapQ"
+  | "asmGizmo" | "asmSupport" | "asmSupportLevel" | "pieceHold" | "pieceHoldPrev" | "asmLook" | "asmFacePoint" | "asmG" | "asmPrevQ" | "asmShown" | "asmFaceBand" | "asmMapQ"
   | "asmEdgeHold" | "asmZone" | "asmZoneMix" | "asmPieceDrawn" | "asmDirEase" | "asmCamLast" | "asmSpitSide" | "asmSpitU" | "asmZoneAlpha" | "asmDySign" | "asmHeadO"
   | "asmHeadW" | "asmHeadYaw" | "asmTilt" | "asmGOff" | "asmTiltAuto" | "asmTiltPending" | "asmOrbitMm" | "asmBlend" | "asmCalmWhole" | "asmCalmWholeV"
   | "asmSquare" | "asmCalm" | "asmMouth" | "asmRawPrev" | "asmGizmoAt" | "asmGizmoLag"
@@ -130,6 +131,7 @@ export function orbitStateStart(): OrbitStateStart {
     asmG: null,
     asmPrevQ: null,
     asmShown: null,
+    asmFaceBand: null,
     asmMapQ: null,
     asmEdgeHold: null,
     asmZone: null,
@@ -394,8 +396,19 @@ function squareFrame(st: SceneState, dtMs: number): void {
   const sq = st.asmSquare;
   const sh = st.asmShown;
   const tl = st.asmTilt;
-  const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
-  sq.target = sh === null || onCap ? sq.target : sh.t.normal;
+  if (st.cfg.chartLayout === 1) {
+    // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d) UNDER THE CHARTS' LAYOUT THE BANDED FACET (`asmFaceBand`, read once a frame in `assemblyFrame`):
+    // the target its normal in the map's frame, its band (SIDE / cap) its `kind` — what `sh.t` gives on that facet (a place's band IS its facet's kind) —
+    // ⛔ the place's own facet (`sh.t.normal`) unbanded: its noise across an edge flipped the target (measured, `Scene_1` close in: 20 flips, 600° of view).
+    // Set with every place shown (`assemblyFrame`; afresh where a change of frame re-reads the place: `tiltOff`, `poleCross`); none: the target kept
+    const fb = sh === null ? null : st.asmFaceBand;
+    const bf = fb === null ? undefined : fb.map.facets[fb.facet];
+    const onCapB = fb !== null && bf !== undefined && bf.kind !== "SIDE" && (tl === null || fb.facet !== tl.facet);
+    sq.target = bf === undefined || onCapB ? sq.target : bf.n;
+  } else {
+    const onCap = sh !== null && sh.t.band !== "SIDE" && (tl === null || sh.t.stack !== tl.facet);
+    sq.target = sh === null || onCap ? sq.target : sh.t.normal;
+  }
   if (sq.n === null) sq.n = sq.target;
   if (sq.n !== null) {
     const { t } = facetFrame(sq.n);
@@ -1010,6 +1023,24 @@ function edgeMarginM(st: SceneState): number {
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §10.2, §12 2.4d — `chartLayout` 1 only) THE BANDED FACET under the gizmo, read once a frame at the map's place `t`
+ * (`assemblyFrame`, where `asmShown` is set): the facet kept while the place is on it or within `edgeMarginM` of it (`bandedFacet`, `distanceToFacets` —
+ * the map's own frame, the MODEL's coordinates: never a drawn mesh, a world matrix or the camera), else the place's. A reading of another map (a change
+ * of frame, a seat) is none: taken afresh at the place's facet. The tilt's exit reads the same distance to the same facet with the same band (`tiltFrame`).
+ */
+function faceBandRead(st: SceneState, t: MapTarget): void {
+  const map = faceMapOf(st);
+  if (map === null) {
+    st.asmFaceBand = null;
+    return;
+  }
+  const b = st.asmFaceBand;
+  const cur = b !== null && b.map === map ? b.facet : null;
+  const d = cur === null || cur === t.stack ? 0 : distanceToFacets(map, [cur], t.surface);
+  st.asmFaceBand = { map, facet: bandedFacet(cur, t.stack, d, edgeMarginM(st)) };
+}
+
+/**
  * ⭐⭐ EVERY FRAME (before the piece is placed): the lock, the gizmo (its point eased, its face by the edge rule — the quads follow), the centre the orbit
  * reads set to it, the look point eased; the approach's coast.
  */
@@ -1148,6 +1179,8 @@ export function assemblyFrame(st: SceneState, dtMs: number): void {
       const glide = st.asmMouth !== null ? null : gizmoGlide(st.asmG, st.asmShown === null ? null : wasHeld ? s1 : tiltDir(R, st.asmShown.t.surface), s1, m.hit.point);
       if (glide !== null) st.asmGOff = { v: glide, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+      // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) the BANDED FACET read once a frame, at the place just set (in the map's own frame) — charts only
+      if (st.cfg.chartLayout === 1) faceBandRead(st, m.t);
       // ⭐⭐⭐ (2026-11-10, §9.4) the tilted pole's frame this frame: the press's swing, the share of the way off the facet (the roll back), the exit
       tiltFrame(st, dtMs, m.t.stack, m.t.surface);
       // ⭐⭐⭐ (§9.4) a frame change that moves the gizmo: its relocation, eased (`asmGOff`)
@@ -1579,7 +1612,11 @@ function tiltFrame(st: SceneState, dtMs: number, stack: number, surface: Vec3): 
   // not a band) — ⛔ the stack alone: under the charts' layout a press with the gizmo on `Scene_0`'s ridge left the tilt at once (the place read on the
   // neighbour), and the exit at the world's pole then rolled the view 157° in one frame (`tiltOff`)
   const fmB = stack === tl.facet ? null : faceMapOf(st);
-  const onFacet = onTiltedFacet(stack, tl.facet, stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface));
+  const borderM = stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface);
+  // ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) UNDER THE CHARTS' LAYOUT IN AT THE EDGE, OUT ONE BAND PAST IT: on the tilted facet within `edgeMarginM` of
+  // its border (the banded facet's own band and distance: the exit and its change on the same frame) — ⛔ the tie alone: a place wobbling ±3 mm across the
+  // entry edge made and left the tilt 21 times in 240 frames (measured, `Scene_1` close in: 1188° of view). Off: the tie, as before
+  const onFacet = st.cfg.chartLayout === 1 ? onTiltedFacet(stack, tl.facet, borderM, edgeMarginM(st)) : onTiltedFacet(stack, tl.facet, borderM);
   // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c) UNDER THE CHARTS' LAYOUT THE EXIT ASKED AT ONCE (`tiltLeavesNow`: off the tilted facet, or the tilt turned
   // off) and made at the next frame's start (`tiltOff`: the one transition — its camera turn from the pose shown); the gizmo held until then
   // (`tiltClampStep`). ⛔ The roll back inside F first (`finishing`, `k`, `frameMix`, `tiltExits`' wait): a second camera turn, by another code
@@ -1799,6 +1836,7 @@ function tiltOn(st: SceneState, mouthHi: boolean | null = null): void {
   const tf = st.asmTilt.facet;
   if (st.asmCalm !== null && tf >= 0 && map.facets[tf] !== undefined) st.asmCalm = { n: map.facets[tf]!.n, sH: st.asmCalm.sH, sV: 1, wA: 1 };
   st.asmShown = null;
+  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   // ⭐⭐⭐ (§12 2.4c) 4. the picture carried from the pose SHOWN by ONE camera turn, paced as the swing was (made pending: `byMm` — held, then by the finger,
   // then by time; else by time, the gizmo held), and the piece's shown direction eased on the same clock
   if (uWas !== null) {
@@ -1899,6 +1937,7 @@ function tiltOff(st: SceneState): void {
   if (st.asmCalm !== null) st.asmCalm = tl.exitAcross && nW !== null ? { n: nW, sH: st.asmCalm.sH, sV: 1, wA: 1 } : { ...st.asmCalm, sH: 1, sV: 1 };
   st.asmTilt = null;
   st.asmShown = null;
+  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmGOff = null;
   const wm = faceMapOf(st);
   if (wm !== null && g !== null) {
@@ -1916,6 +1955,7 @@ function tiltOff(st: SceneState): void {
       // far face, close in) is made THIS frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts, its
       // heading not the roll's target (probed after a dx: −18° then +19.5° back)
       st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+      if (st.cfg.chartLayout === 1) faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh in the world's map (cleared above)
     }
   } else st.asmMapQ = null;
   // ⭐⭐⭐ (§12 2.4c) the picture carried from the pose SHOWN by ONE camera turn (timed, the gizmo held — as a zone's), the piece's shown direction eased on it
@@ -1993,12 +2033,14 @@ function poleCross(st: SceneState): boolean {
   const uWas = drawnDir(st); // ⭐ (2.4c) the direction drawn before the crossing: the piece's ease starts from it
   seamRebase(st, mq1);
   st.asmShown = null;
+  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmGOff = null;
   const m = mapGizmo(st, mq1.yaw, mq1.pitch);
   if (m !== null) {
     const v: Vec3 = [P[0] - m.hit.point[0], P[1] - m.hit.point[1], P[2] - m.hit.point[2]];
     if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
     st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch };
+    faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh at the far face (cleared above; a crossing is under the charts' layout only)
   }
   st.asmHeadO = null;
   st.asmHeadW = 1;
@@ -2145,6 +2187,7 @@ function zoneSwitch(st: SceneState, next: PolarZone | null): void {
   st.asmSpitSide = 0;
   st.asmSpitU = null;
   st.asmShown = null;
+  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmGOff = null;
   const map = faceMapOf(st);
   if (map !== null && g !== null) {

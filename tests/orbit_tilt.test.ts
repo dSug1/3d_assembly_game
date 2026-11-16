@@ -475,7 +475,9 @@ describe("⭐⭐ wired", () => {
     expect(a).toContain("const o = anglesOfDir(turn(orbitDir(st.orbit.yaw, st.orbit.elevation)), 0, poleYaw);");
     // ⭐⭐⭐ (2026-11-15) …and the gizmo on the tilted facet's border is on it (`onTiltedFacet`, the place's distance to the facet in F's map)
     expect(a).toContain("tiltFrame(st, dtMs, m.t.stack, m.t.surface);");
-    expect(a).toContain("const onFacet = onTiltedFacet(stack, tl.facet, stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface));");
+    // ⭐⭐⭐ (2026-11-16, §12 2.4d) the distance read once; the switch off: the tie (the default), as before — on: the band (`orbit_charts_face_band.test.ts`)
+    expect(a).toContain("const borderM = stack === tl.facet ? 0 : fmB === null ? Infinity : distanceToFacets(fmB, [tl.facet], surface);");
+    expect(a).toContain(": onTiltedFacet(stack, tl.facet, borderM);");
     expect(a).not.toContain("const onFacet = stack === tl.facet;");
     expect(a).toContain("const mix = frameMix(f, offsetFrame(uW, hW, o.yawRad, o.pitchRad), tl.k, tl.axis);");
     expect(a).toContain("const crossing = !onFacet && !tl.finishing;"); // ⭐ the roll starts as the gizmo crosses the edge — no stretch

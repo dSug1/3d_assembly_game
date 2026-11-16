@@ -370,9 +370,12 @@ export const TILT_TIE_M = 1e-6;
  * the tilted facet itself (`borderM`: the place's distance to it): its border. ⛔ The stack alone: under the charts' layout the levels are the faces'
  * bisectors — a press with the gizmo on `Scene_0`'s ridge made the tilt with the gizmo EXACTLY on the tilted facet's border, the place there was read on
  * the neighbour, and the tilt left at once ("over the edge", the roll back, the exit — four frames after the press).
+ * ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d) `tolM`: how near the border is still on it — the tie by default (`TILT_TIE_M`: with `chartLayout` 0
+ * nothing changes); under the charts' layout the wiring hands the one band (`gizmoEdgeMarginMm`): IN AT THE EDGE (the tilt's entry, unchanged), OUT ONE
+ * BAND PAST IT — a place wobbling a few millimetres across the entry edge makes the tilt once and never leaves it (as `zoneAt`'s exit, `zoneExitMm`).
  */
-export function onTiltedFacet(stack: number, facet: number, borderM: number): boolean {
-  return stack === facet || borderM <= TILT_TIE_M;
+export function onTiltedFacet(stack: number, facet: number, borderM: number, tolM: number = TILT_TIE_M): boolean {
+  return stack === facet || borderM <= tolM;
 }
 
 /** ⭐ A camera's frame: the direction (from what it looks at, toward it) and its up. */

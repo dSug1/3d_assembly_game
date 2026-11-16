@@ -353,6 +353,10 @@ export interface SceneState {
   asmSectionKey: string;
   /** ⭐⭐⭐ (2026-11-04, Step 4c-bis) the face map's place for the gizmo of this frame and the map's angles it was found at — the lines and the calm read it */
   asmShown: { readonly t: import("../input/face_map").MapTarget; readonly yaw: number; readonly pitch: number } | null;
+  /** ⭐⭐⭐ (2026-11-16, `ORBIT_CHARTS.md` §12 2.4d — `chartLayout` 1 only; `null` with it 0) THE BANDED FACET under the gizmo (`bandedFacet`): the facet
+   *  index and the face map it indexes (the world's, a tilted frame's, a zone's — another map's reading is none), read once a frame where `asmShown` is set;
+   *  `null`: none — taken afresh at the place's facet (cleared with `asmShown` at every change of frame) */
+  asmFaceBand: { readonly map: import("../input/face_map").FaceMap; readonly facet: number } | null;
   /** ⭐⭐⭐ (Step 4c-bis) the face map's angles — the orbit's, but after the slide (put where it left the gizmo, closing on the orbit's: `syncAngle`); `null`: the orbit's */
   asmMapQ: { readonly yaw: number; readonly pitch: number } | null;
   /**
