@@ -327,10 +327,10 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** 🔧 | built `fcfa8bd`, audited, replayed (§7.3); ⛔ the owner's look owed — the calm on every face (§5.1) behind a second switch, `chartCalm` (off by default; acts only with `chartLayout` 1) | `Scene_1` unchanged ✅; the owner's look on `Scene_0bis` |
-| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited; ⛔ 2.4d (the trigger's band) NOT built — the owner's hysteresis session (§12.2); ⛔ the rings not wired; ⛔ the owner's look owed (deployed 2026-11-16, main `902ae88`) — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
+| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited, deployed (main `902ae88`), the owner's look 2026-11-16: *"looks on pc and mobile look good"* (§12.3); 2.4d (the band) built 2026-11-16, local (§12.1); ⛔ the rings not wired — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
-| **C** (later) | the tilted pole close in on every kind of face (§10.1): an offline round first, the owner's decisions (D-C2, D-C4), then the build — after 2.5 | the owner's look |
+| **C** (later) | the tilted pole close in on every kind of face (§10.1) — ⭐ its study, PROPOSED 2026-11-16: [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) (the rules, the obstacles, one design, the audit; the owner's decisions D-T1 – D-T7); then an offline round and the build | the owner's look |
 
 ### 7.3 As built
 
@@ -574,7 +574,7 @@ between two normals far apart, and the camera travels from one to the other at `
 | ⛔ to check: the calm's normal (eased, not banded), the tilt's exit by a dx | — |
 
 **Where it lands**: step 2.4 — every change of frame becomes the one transition (§4), so its trigger gets ONE band; the square camera's and the
-calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres on the glass (`CLAUDE.md` rule 3), a slider with
+calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres ON THE MODEL (⛔ corrected 2026-11-16 — on the glass at the far camera `gizmoEdgeMarginMm` was 26 cm; an edge is a place on the assembly), a slider with
 the rule. ⚠ Its cost, to weigh at each: a band is a delay at every real crossing — the view stays the last face's for the band's depth.
 
 ## 11. THE ROOT CAUSE FOUND AT THE OWNER'S LOOK ON THE SECOND DEPLOY (2026-11-15) — the basis of step 2.4
@@ -764,3 +764,26 @@ Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis."
 §10.1 — it now runs on the one transition; the entry's 8.5° frame of §12.1's table is the first thing to look at) and the hysteresis (2.4d: ONE
 banded reading of the face under the gizmo, `faceSwitches` / `gizmoEdgeMarginMm`, for the tilt's entry and exit, the pole's crossing and the
 square camera's target — §10.2's table lists what has a band today). ✅ Deployed 2026-11-16 (the owner: *"deploy"*): main `902ae88`.
+* **2.4d** (2026-11-16, `42a408a`, an Opus agent; audited by Fable), under `chartLayout` 1: ONE band, `gizmoEdgeMarginMm` (5 mm ON THE MODEL), in
+  two forms. `bandedFacet` (`src/input/face_band.ts`, `st.asmFaceBand`): the facet kept while the place is within the band of its polygon, read once
+  a frame where `asmShown` is set, afresh at every change of frame — it feeds the square camera's target. The tilt: IN AT THE EDGE (its entry
+  unchanged — the owner's rule of 2026-11-10), OUT ONE BAND PAST IT (`onTiltedFacet`'s tolerance), as `zoneAt` and the latch by distance already are.
+  ⛔ Not banded, on purpose: the pole's crossing (its trigger is the finger's own push, the hold follows), the calm (eased, whole at an edge), the
+  spit's side (§12.3). 18 vectors, red on 22 mutants; **1960 vectors**. **The gates** (`Scene_1`, close in, the place wobbling across an edge for 240
+  frames — the session's `edge_noise.mjs`): the top edge, ±2.5 mm — the tilt made / left **21 → 0**, the view turned **1 188° → 0°**; a vertical
+  edge, to 2.9 mm past it — the square camera's target **20 → 0**, the view **600° → 0°**; a crossing deeper than the band still makes and leaves the
+  tilt. Off: `Scene_1` and `Scene_0bis` identical bit for bit, `Scene_0` within its noise; on: `Scene_1` identical, `Scene_0` and `Scene_0bis`
+  another play from drag 17 (no frame over 20° of view; the roll's largest 14.6° → 17.9° on `Scene_0`, 26.9° → 21.0° on `Scene_0bis`). ⚠ Its cost:
+  a tilt's real exit, and the square camera's turn at an edge, come 5 mm past the edge. ⚠ Not measured: `blendCrossed` and `squareTurning` start one
+  band later too.
+
+### 12.3 The owner's look on step 2.4 and the two comments (2026-11-16)
+
+*"looks on pc and mobile look good. OK with two comments"* (main `902ae88`: P, 2.4a – 2.4c, 2.4e). **1.** The hysteresis must not forget *"faces
+where the camera tilts when the gizmo crosses the middle (for example in scene 0bis, when coming from a triangle to the bottom face around the middle
+of the bottom face, noise can send the gizmo on one half or the other half of the bottom face and the camera keeps tilting)"* — ⭐ reproduced with a
+straight finger and NO noise, in the game before the charts too: the spit's finger mapping and its heading change in the middle of that face. It is
+structural, not a missing band (the side's own band is ≈ 8 mm there): NOT patched at 2.4d →
+[`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §4.1. **2.** The tilted-pole orbit close in: *"do the same as what we have done so far"* — its
+rules, the obstacles and their fallbacks, one design from what others solved, the audit → that study (PROPOSED: seven decisions are the owner's,
+nothing built). ⛔ 2.4d is local (`42a408a`), not deployed.
