@@ -295,8 +295,8 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run — ⛔ §8 is a PROPOSAL: the owner's word before it is built |
-| **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ⛔ the owner's look owed | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
+| **C3** 🔧 | ✅ the owner's go, 2026-11-16 (*"Continue next step"*) — THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run |
+| **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ✅✅ **the owner's look, 2026-11-16: *"This is good."*** | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
 | **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
 
@@ -417,3 +417,14 @@ geometry. It matters only if the finger is still pushing that way — which is t
 the turn is over 90° exactly when one dy sign moves the gizmo out through that edge (up on a top face, down on a bottom one); the hold is set on
 the finger's dy sign only if it IS that sign. On every face that carries a layout today (rectangles) nothing changes; the difference appears only
 on faces D-T5 keeps polar for now. Gravity's tilt keeps its own test (`edgeHoldAt`, 120°) until the half turns become one event (step C5).
+
+## 11. THE TWO SWITCHES ON BY DEFAULT (the owner, 2026-11-16)
+
+After his look on C4 (main `6685f8f`): *"This is good. Commit. For the next deploys always toggle on the two switches by default in all the scenes. Continue next step"*
+
+* **What changes**: `chartLayout` and `chartCalm` are 1 in the defaults — every scene, every device, from the next deploy on. The sliders stay
+  (GIZMO & SECTIONS); `?chartLayout=0&chartCalm=0` is the game as it was before the charts (the old detectors live until step 2.5 deletes them).
+* **The gates**: with both forced to 0 the three scenes replay bit for bit as the switch-off baseline; with no parameter they replay as the
+  switch-on one.
+* ⚠ **`Scene_2`** has never been run with the switches on (the owner keeps it out of these passes: *"I will do it myself when I troubleshoot the
+  scene"*): with this default it runs the charts' layout too.

@@ -171,3 +171,5 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   middle, the half turn one band past the far edge, then the hold. **2038 vectors**; off: the three scenes bit for bit; on: `Scene_1`, `Scene_0` bit
   for bit, `Scene_0bis` another play, no worse. A new slider `freeFaceSquare` (POLAR ZONES: 0 the calm kept / 1 the camera square to a spit's level
   face) — the owner's to judge. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `301ada6` merged as main `6685f8f`, live; the owner's look owed. ⛔ Next, on the owner's word only: §8 (the way out blended), to measure first.
+* ✅✅ **The owner's look on C4** (main `6685f8f`, 2026-11-16): *"This is good. Commit. For the next deploys always toggle on the two switches by default in all the scenes. Continue next step"* → C4 closed; **both switches ON by default
+  from the next deploy, in every scene** (the study's §11); the next step: §8, the way out of close in blended (C3) — measured first.
