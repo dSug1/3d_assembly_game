@@ -13,6 +13,7 @@ import { SCENE_0BIS } from "./scene_0bis";
 import { SCENE_1 } from "./scene_1";
 import { SCENE_2 } from "./scene_2";
 import { loadScene1DemoPlan, SCENE1_DEMO } from "./scene1_demo";
+import { TEST_A, TEST_B, TEST_C, TEST_D, TEST_E, TEST_F } from "./test_scenes";
 
 export const GAME_CONTENT: GameContent = {
   title: "3D Assembly",
@@ -33,6 +34,13 @@ export const GAME_CONTENT: GameContent = {
         // ⭐ (2026-11-12, the owner: *"create a Level 0 Scene 0bis and copy the scene 0 into it"*) the heptagon with tips — `?sceneIndex=4` (appended:
         // the earlier indices, and every probe's URL, unchanged); in the menu after Level 0.
         { id: "Level_0bis", title: "Level 0bis - Scene 0bis - the heptagon with tips", scene: SCENE_0BIS },
+        // ⛔ THROWAWAY (package T1, branch 1.0.146t-): the test shapes, `?sceneIndex=5` … `10` (`content/test_scenes.ts`)
+        { id: "Test_a", title: "Test a", scene: TEST_A },
+        { id: "Test_b", title: "Test b", scene: TEST_B },
+        { id: "Test_c", title: "Test c", scene: TEST_C },
+        { id: "Test_d", title: "Test d", scene: TEST_D },
+        { id: "Test_e", title: "Test e", scene: TEST_E },
+        { id: "Test_f", title: "Test f", scene: TEST_F },
       ],
       // ⭐ (2026-11-12, the owner) the level menu: the demo on top — the menu only, the `?sceneIndex=` order above unchanged
       menuOrder: ["Level1_demo", "Level_0", "Level_0bis", "Level_1", "Level_2"],
