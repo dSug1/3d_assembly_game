@@ -39,9 +39,9 @@ Collected from the owner's words as the documents record them (`POLAR_ORBIT_CLEA
 | **T5** | **One turn, and it completes.** One speed, irreversible, the gizmo held while it runs | *"once the tilt starts, it cannot be rolled back … and shall complete"* · *"one speed for every tilt"* (11-10) |
 | **T6** | **Upright where upright means something.** On every face that is not level the world's vertical is up on the glass; never upside down | *"the camera roll shall keep the scene upside up if the face is not purely horizontal"* (11-04) · R4 KEPT (11-13) |
 | **T7** | **No surprise at an entry.** Entering a face needs no turn when a layout continuing the view exists; the turn is paid at the exit that needs one | *"If the gizmo crosses the edge … towards a face which would result in the scene upside down or slanted, the camera tilts when the gizmo crosses the edge so that the verticality on the next face is restored"* (11-09) |
-| **T8** | **Once per face.** A layout taken on a face is kept until the gizmo leaves that face | *"my new rule allows to convert a polar red-green face to a perpendicular red-green face once, until the gizmo crossing edges requires the polar orbit to realign its poles"* (11-09) |
+| **T8** | **Once per face, close in.** A layout taken on a face is kept until the gizmo leaves that face — or the piece backs out past the close-in distance (D-T1) | *"my new rule allows to convert a polar red-green face to a perpendicular red-green face once, until the gizmo crossing edges requires the polar orbit to realign its poles"* (11-09) · *"the tilted pole orbit is reserved for close in … The close in square is for fine placement of the piece, not for scene view"* (11-16) |
 | **T9** | **The half turn's price.** After a half turn the dy that crossed is held until the finger reverses; the hold ends with the gesture | *"the dy upwards is blocked until a certain band is reached in the face beyond but dx and dy downwards are allowed"* (11-12) · *"there are times I cannot reverse"* (11-14) |
-| **T10** | **The approach is not disturbed.** Made during the approach, the layout changes the sections at once and the camera waits, then blends by the finger's first millimetres | *"the red-green sections automatically switches to orthogonal … but the camera view waits through the approach"* (11-11) |
+| **T10** | **The approach is not disturbed — on the way in nor on the way out.** Made during the approach, the layout changes the sections at once and the camera waits, then blends by the finger's first millimetres; backing out, the camera's way back to the orbit is blended too (§8) | *"the red-green sections automatically switches to orthogonal … but the camera view waits through the approach"* (11-11) · *"Find a way to blend properly the camera movement on the way out"* (11-16) |
 | **T11** | **No noise into the camera.** Every trigger of a camera turn has a band | *"hysteresis where needed … so that input noise does not transfer to camera movement"* (11-15) · the middle of `Scene_0bis`'s bottom face (11-16) |
 | **T12** | **Any geometry, one way.** The same rules on every shape; where a rule cannot hold, a stated fallback — never a case-by-case patch | *"analyze the deep root cause, don't patch with fix which may conflict with other rules"* (11-15) |
 
@@ -51,8 +51,8 @@ then Sections; a camera turn at a crossing and a short hold are the price of str
 ⚠ **Three places where the owner's own rules pull against each other** — to settle in §5, not to patch:
 
 1. **T8 against the distance switch.** *"if the piece crosses the hysteresis threshold, the tilt automatically triggers on or off"* (11-10) drops the
-   layout in the MIDDLE of a face when the piece backs out past 0.65 m — a camera turn with no edge (T4). As built it can turn the camera right round
-   (the gizmo on the far half of a top face — `RND5.md`, decision 10).
+   layout in the MIDDLE of a face when the piece backs out past 0.65 m — a camera turn with no edge (T4), up to a half turn. ✅ **Settled by the
+   owner (D-T1, 2026-11-16): the distance switch STAYS** — the tilted pole is for close in only; what must change is HOW the camera goes back (§8).
 2. **T9 across gestures.** The hold ends with the gesture, so a new gesture pushing the same way crosses the far edge again — the loop the hold was
    made to stop, once per gesture (`RND5.md`, decision 4).
 3. **Far out.** With the press gone the tilt is close in only: far out a face holding a pole is polar and its middle is the orbit's limit (D-C6) — except
@@ -97,7 +97,7 @@ the camera looks at along the vertical. Hence the two kinds of face this study r
 | **O9** | **A free face too small** for a layout to mean anything — narrower than the band, or than the hold's depth | no | below a size (the contour's own rule: a face under a quarter of its polygon is not a face, D5) it is part of its neighbours — no change of layout on it |
 | **O10** | **The vertical view in another frame** — a zone whose axis is not gravity's. Held by the WORLD's vertical (a spit), the body's level faces are free faces exactly as a cube's top is; and there the orbit does NOT stop at them, it runs on under the body | yes — it is the same obstacle | the same rule (§3.4). ⛔ Today: a different mechanism, which puts the turn on a line across the face (§4.1) |
 | **O11** | **A concave edge** — a level floor meeting a wall that rises from it (a channel, a step) | yes, and it is cheap: the wall faces the camera, its upright view needs NO turn | falls out of §3.3's computation (the far edge of a floor against a rising wall: 0°; against a falling one: 180°) — ⛔ today the special case of the "mouth", path-dependent |
-| **O12** | **Close in against far out** — the square camera exists within 0.6 m only | a choice, not an obstacle | the layout must not depend on the distance (T8); only the camera's share of "square" does (§5 D-T1) |
+| **O12** | **Close in against far out** — the square camera and the layouts exist within 0.6 m only (the owner, D-T1: for fine placement, not for the scene's view) | a choice, made | backing out past 0.65 m the polar orbit is back; the camera's way there is blended, never a timed turn under a moving approach (§8) |
 | **O13** | **Occlusion, collision** — square over a floor between walls the camera or the piece may not fit | no | as today: the piece stops where it touches (*"it is normal the orbit gets blocked if the piece collides"*, 2026-11-09) |
 
 ## 3. THE DESIGN — the carried heading
@@ -204,7 +204,7 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 | **W1** | **Three families for one obstacle**: the tilt (gravity's caps, close in), the spit's side / bias / swap / crossing (a zone held by the world), the polar limit with its three pitch blends (`poleWeight` 60 – 85°, `cameraHeading` 50 – 60°, the held zenith heading). Each has its own trigger, turn and hold; the half turn is written three times (`tiltOff` + `edgeHoldAt`, `poleCross`, `spitStep` + `crossingHold`) | `assembly_wiring.ts`, `polar_zone.ts`, `orbit_calm.ts` | T12 |
 | **W2** | **The tilt refuses every zone** (`tiltOn`: `if (st.asmZone !== null) return`) and reads the WORLD map's cap: a zone's free faces have no layouts in the wiring (an upright zone's cap — *its layouts are computed; the wiring cannot use them*) | `tiltOn` | O10 |
 | **W3** | **The spit's turn sits on a line across a free face**, with a 2° band, a 60° → 75° blend of the heading and a hard swap of the finger's axes at 60° whose sign is undefined when the axis lies up the glass | `spitSide`, `spitCameraHeading`, `zoneFinger`, `fingerSwapped` | T1, T4 — §4.1 |
-| **W4** | **The layout is dropped by distance in the middle of a face** (`tl.off`, the owner's rule of 2026-11-10): a camera turn with no edge, up to a half turn | `assemblyFrame`, `tiltOff` | T4, T8 — §1 tension 1 |
+| **W4** | **The way out by distance is a TIMED turn** (`tl.off` → `tiltOff`: one turn at 360°/s, the gizmo held) in the middle of a face, up to a half turn, while the approach is still going — the way IN waits and blends (T10), the way out does not | `assemblyFrame`, `tiltOff` | T10 — §8 |
 | **W5** | **The layout is "the one nearest the heading shown"** (`capTiltHeading(…, yaw)`), not "the entry edge's". Equal on a box (each side face owns ±45° of yaw); nothing checks that they stay equal on another polygon, nor at a corner | `tiltOn` | O1, O5 |
 | **W6** | **The hold is set from 120°** (`edgeHoldAt`: the exit face's level normal under −0.5 along the heading): an exit that turns the view between 90° and 120° (a heptagon's end face: 103°) leaves the dy free to bring the gizmo back over the edge it just crossed | `orbit_tilt.ts` | O2, T9 |
 | **W7** | **A tilted frame's map is built in the WORLD box's turned corners** (`tiltBox`): for a layout off the world's axes the box is looser than the shape and the map's share test drops its faces (found at step 1.1: the map all virtual at 45°). Today's tilt cannot serve a layout that is not along x or z | `faceMapOf` | O6 |
@@ -228,12 +228,12 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 
 | # | the question | recommended | its cost |
 |---|---|---|---|
-| **D-T1** | Is a free face's layout kept until an EDGE — also when the piece backs out past the close-in distance (your rule of 2026-11-10 turns it off there)? | **Yes**: only the camera's "square" share follows the distance | far out a top face can then be in its square layout until the gizmo leaves it — as it was after a press |
+| **D-T1** ⛔ | Is a free face's layout kept until an EDGE — also when the piece backs out past the close-in distance (your rule of 2026-11-10 turns it off there)? | ~~Yes~~ — ⛔ **NO**, the owner, 2026-11-16: *"no, I would prefer to return to the orbit when the distance is crossed back (0.65m currently), so the tilted pole orbit is reserved for close in. I don't like to see the top of the scene square at far distance. The close in square is for fine placement of the piece, not for scene view. Find a way to blend properly the camera movement on the way out."* | the turn on the way out cannot be removed (the polar layout's pole is in the middle of the face): it is PACED — §8 |
 | **D-T2** ✅ | Do a spit's level faces follow the same rule — no turn in the middle of `Scene_0bis`'s bottom face, the half turn at its far edge, the picture unchanged when coming in from a tip? | **Yes** — ✅ the owner, 2026-11-16: *"D-T2: agreed"* | the spit's side, bias and swap are replaced, not tuned; N1 or N2 far out (§3.4) is yours to judge on the device |
-| **D-T3** | Far out on gravity's top and bottom faces: polar and a limit (D-C6, today), or the same rule far out too (a top face crossable by dy again)? | **keep D-C6** now; reopen after D-T2 is seen | far out stays as you accepted it (*"polar orbit far out: the sections are ok"*) |
-| **D-T4** | The dy hold from any turn over 90° (not 120°)? | **Yes** | none on a rectangle (its exits are 0, 90, 180°) |
-| **D-T5** | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it | W8's loophole is closed either way |
-| **D-T6** | A new gesture pushing the same way crosses a far edge again (your rule of 2026-11-14). Keep? | **keep** — the alternative is a hold that outlives the gesture, which you removed | one crossing per gesture |
+| **D-T3** ✅ | Far out on gravity's top and bottom faces: polar and a limit (D-C6, today), or the same rule far out too (a top face crossable by dy again)? | **keep D-C6** — ✅ the owner, 2026-11-16 (*"D-T2 to D-T7: agree with your recommendations"*) | far out stays as you accepted it (*"polar orbit far out: the sections are ok"*) |
+| **D-T4** ✅ | The dy hold from any turn over 90° (not 120°)? | **Yes** — ✅ the owner, 2026-11-16 | none on a rectangle (its exits are 0, 90, 180°) |
+| **D-T5** ✅ | A level face that is not a rectangle: the layout square to its entry edge (a tilt), or polar at every distance (D-C2, today)? | **keep D-C2** until a scene has such a face; the design covers it — ✅ the owner, 2026-11-16 | W8's loophole is closed either way |
+| **D-T6** ✅ | A new gesture pushing the same way crosses a far edge again (your rule of 2026-11-14). Keep? | **keep** — ✅ the owner, 2026-11-16 | one crossing per gesture |
 | **D-T7** ✅ | The patents of §3.5 | ✅ the owner, 2026-11-16: the local-up / global-up rule on its own is not what US 7,782,319 claims (§3.5) — **the carried heading stands** | ⛔ never a clickable / draggable 3D orientation widget in the game; ⚠ US 8,044,953 not covered by that reading |
 
 ## 6. THE BUILD, IF APPROVED — steps and gates (each one agent run, audited; a look on the device closes it)
@@ -243,9 +243,9 @@ not what is missing**: the heading rule itself changes in the middle of a face (
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** | The layout kept until an edge (D-T1, W4); the square camera's target on every face (W8) | the close-in runs; the edge-noise run |
-| **C4** | The spit on the same rule (D-T2, W2, W3): `spitSide`, the bias and the swap deleted | `mid_check.mjs`: the arrival from a tip turns nothing; the owner's records of 2026-11-14 replayed |
-| **C5** | One half-turn event (W1); the mouth as a concave edge (W9) | the ridge and far-edge runs |
+| **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run |
+| **C4** 🔧 | in build 2026-11-16 (an Opus agent) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare` | `mid_check.mjs`: the arrival from a tip turns nothing; one drag across the face; the owner's records of 2026-11-14 replayed |
+| **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
 
 ## 7. C0 — THE OFFLINE ROUND (run 2026-11-16: `npx vite-node scripts/probes/free_face_study.ts`, a few seconds; `VERBOSE=1` for every table)
@@ -275,3 +275,30 @@ rule's shape; no ease, no spring), its level bottom face by today's rules and by
 So D-T2's rule removes both turns that have no edge, and the finger's mapping is right at every sample; N2's cost is as estimated (the world's
 vertical pointing down by 0.44 of its length in the last part of the face), N1's is the orbit over that face becoming a pan. ⭐ To judge on the
 device: both behind one slider at C4.
+
+## 8. THE WAY OUT OF CLOSE IN (D-T1) — to measure, then step C3
+
+The owner (2026-11-16): *"no, I would prefer to return to the orbit when the distance is crossed back (0.65m currently), so the tilted pole orbit is reserved for close in. I don't like to see the top of the scene square at far distance. The close in square is for fine placement of the piece, not for scene view. Find a way to blend properly the camera movement on the way out."*
+
+**What the way out has to turn.** On a top face the polar orbit's camera stands on the side of the gizmo's own place, its up on the glass pointing
+over the pole from there; the close-in layout's up is the heading carried in. Between the two: nothing when the gizmo is on the half of the face
+nearest the edge it came over, a quarter at the sides, **half a turn on the far half** — and the camera travels round to that side. The polar
+layout's pole is in the middle of the face, so this cannot be removed. It can only be PACED.
+
+**Today** (step 2.4c): at 0.65 m the frame changes and ONE camera turn runs by TIME at `tiltRollDegS` (360°/s), the gizmo held — up to half a
+turn in half a second, under an approach that is still going. ⛔ To measure first (a probe: the gizmo on the far half of `Scene_1`'s top, the
+piece backed out): the turn's degrees a frame and its length against the approach's travel.
+
+**Proposed — the way out mirrors the way in** (T10, the owner's rule of 2026-11-11):
+
+| | the way IN (as built) | the way OUT (proposed) |
+|---|---|---|
+| at the threshold | the layout taken, the sections square at once | the polar orbit back, the sections polar at once; the gizmo kept |
+| the camera | waits while the approach goes on | **follows the approach's own travel outward**: its turn from the picture shown to the polar camera whole after a set distance more (a new slider, in metres) — a slow approach turns it slowly, a stopped one stops it |
+| if the finger orbits before it is whole | blends by the finger's first millimetres (`tiltBlendMm`) | the same |
+| by time | never | **never** — ⛔ today's timed turn |
+| the gizmo | free | **free** — ⛔ today held while the turn runs |
+| turning back | — | approaching back in inside the band takes the way in again, from the picture shown |
+
+The square camera's share (square to the face → the orbit's own direction, eased by the calm) goes on the same pace, so the direction and the up
+arrive together. ⚠ Its cost: on the far half of a top face the picture still turns half round — over the band's metres instead of half a second.

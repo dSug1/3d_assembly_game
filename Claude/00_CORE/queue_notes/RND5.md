@@ -157,3 +157,8 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   about a 3D representation of the coordinate system (a cube) manipulated to select a viewpoint; the local-up / global-up rule on its own is not
   claimed → **the carried heading stands**; ⛔ the game never shows a clickable / draggable 3D orientation widget. ⚠ US 8,044,953 (HoverCam) is
   not covered by that reading. C4 (the spit on the carried heading) is unblocked.
+* ✅ **The owner's decisions on the study** (2026-11-16): **D-T1 NO** — *"no, I would prefer to return to the orbit when the distance is crossed back (0.65m currently), so the tilted pole orbit is reserved for close in. I don't like to see the top of the scene square at far distance. The close in square is for fine placement of the piece, not for scene view. Find a way to blend properly the camera movement on the way out."* → the distance switch stays;
+  the way out gets a proper blend (the study's §8: the way out mirrors the way in — the camera follows the approach's travel outward, never a timed
+  turn, the gizmo free; to MEASURE first, then step C3); **D-T2 to D-T7** — *"agree with your recommendations"*: D-T3 keep D-C6 (far out polar,
+  a limit), D-T4 the dy hold from any turn over 90°, D-T5 keep D-C2 (a level face that is not a rectangle stays polar), D-T6 keep (one crossing
+  per gesture), D-T7 as answered. C4 in build.
