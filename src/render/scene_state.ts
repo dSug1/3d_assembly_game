@@ -359,21 +359,28 @@ export interface SceneState {
    * ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4) THE TILTED POLE (`input/orbit_tilt.ts`): the orbit's frame F while a pressed cap is a side — `map` F →
    * world (the face map built in F), `dir` the directions' (the press's swing, `swingDir`), the tilted `facet` (F's map), the swing's `delta` and clock,
    * `k` the share of the way off the facet (the roll back), `axis` the roll's last axis, `exit` the crossing seen (the world's frame next frame); `null`:
-   * the world's frame.
+   * the world's frame. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press makes it: the automatic tilt alone.
    */
   /** ⭐⭐⭐ (2026-11-12, `ORBIT_ANY_SHAPE.md` §8) THE DY HOLD after a pole-holding face's far edge (`edgeHoldAt`); `null`: none */
   asmEdgeHold: import("../input/orbit_tilt").EdgeHold | null;
   /** ⭐⭐⭐ (2026-11-13, `POLAR_ZONES.md`) the placed set's polar zones (`polarZones` on the world's face map), per its key */
   asmZones: { readonly key: string; readonly zones: readonly import("../input/polar_zone").PolarZone[] } | null;
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4a — `chartLayout` 1 only) the placed set's ATLAS: the world face map's contour (`chartContour`) and its
+   *  assignment (`assignCharts`), per its key (the world map's and the three zone knobs it reads) — where a frame changes (the tilt, the zones) */
+  asmAtlas: { readonly key: string; readonly contour: readonly import("../input/orbit_charts").ChartFace[]; readonly assign: import("../input/orbit_charts").ChartAssignment } | null;
   /** ⭐⭐⭐ (POLAR_ZONES.md) the zone the orbit is in (`zoneAt`) — its frame F the orbit's base frame unless it is the world's; `id` per switch (the maps' keys) */
   asmZone: { readonly id: number; readonly zone: import("../input/polar_zone").PolarZone } | null;
   /** ⭐⭐⭐ (D-Z7; 2026-11-14 about the piece) the camera's turn into a zone's frame (or out): the POSE on the glass at the switch, the share, the turn's
    *  angle, its axis kept frame to frame (`null`: not yet) */
-  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number } | null;
+  asmZoneMix: { readonly from: import("../input/orbit_tilt").CamPose; k: number; rad: number; axis: import("../core/vec").Vec3 | null; /** (2026-11-14) the turn's rule, chosen at its first frame and kept: 0 not yet, 1 the two framed (`poseFramingTwo`), 2 about the piece alone */ rule: 0 | 1 | 2; /** (2026-11-14) the two's angles carried frame to frame (`FramingKeep`; null: not yet) */ keep: import("../input/orbit_tilt").FramingKeep | null; /** (2026-11-14) the angle turned so far (rad) — the turn's progress at one speed */ done: number; /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) the automatic tilt's entry made with the camera PENDING: paced as its swing was (`seamTurnPace`: held while pending, then by the finger's travel, then by time); absent: by time */ byMm?: boolean } | null;
   /** ⭐ (2026-11-14) which facets of the map in use are the polar zone's own (`zoneFacetOf`), per map and zone */
   asmZoneFacetsF: { readonly key: string; readonly of: Map<number, boolean> } | null;
   /** ⭐ (2026-11-14) where the piece was drawn last frame around the assembly (a zone's turn starts from the piece's place on the glass then) */
   asmPieceDrawn: import("../core/vec").Vec3 | null;
+  /** ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4c — `chartLayout` 1 only) THE PIECE'S SHOWN DIRECTION EASED on the camera turn's clock: the one rotation from
+   *  the new chart's direction back to the one drawn before the change of frame (`dirGap`), its rest `1 − k` of the turn `mix` (`asmZoneMix`, the same
+   *  object — another turn, or none: whole), applied in `dirAt` (`easedDir`); `null`: none */
+  asmDirEase: { readonly axis: import("../core/vec").Vec3; readonly angle: number; readonly mix: object } | null;
   /** ⭐ (D-Z7) the last camera frame built around the assembly (the switch's start, the finger's screen) */
   asmCamLast: import("../input/orbit_tilt").CamFrame | null;
   /** ⭐⭐⭐ (2026-11-13, the owner: *"replicate the behavior of scene 0 when crossing the zenith edge"*) the spit's side of the axis (`spitSide`; 0: none) */

@@ -256,6 +256,12 @@ export interface CalmKnobs {
   readonly zoneMinVM: number;
   /** ⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1) the shares read by `edgeShareSmooth` (continuous on a narrow run); absent or false: `edgeShare`, today's */
   readonly smooth?: boolean;
+  /**
+   * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §11 3., §12 step 2.4e) THE CALM ON ONE REFERENCE: a VERTICAL facet's vertical share (and the reading's weight by
+   * the place, `acrossWeight`) read on its OWN run along `b` (`bLo` … `bHi`), exactly as a slanted facet's — ⛔ the placed parts' box height (the bounce's
+   * rule). Absent or false: today's, byte for byte. `calmRules(…).ownRun`.
+   */
+  readonly ownRun?: boolean;
 }
 
 /** ⭐ The calm as it stands: the eased facet normal and the two shares (1: the orbit's whole angle). */
@@ -276,20 +282,35 @@ export interface CalmState {
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §5.1, step 2.3) THE CALM'S RULES behind the switch `chartCalm`, on only with the charts' layout too (`chartLayout`;
  * ⛔ under the old layout a tip's fan is squeezed into 30° of orbit and the calm there jumped the view — removed 2026-11-14): `smooth`, the shares read by
  * `edgeShareSmooth` (`CalmKnobs.smooth`); `everyFacet`, a polar zone's own facets (a fan's) calmed as any side facet — no list of faces without the calm,
- * none made whole toward them; `noPitchFade`, a side facet's reading not faded by the pitch (`CalmState.poleFade` false). All three false: today's.
+ * none made whole toward them; `noPitchFade`, a side facet's reading not faded by the pitch (`CalmState.poleFade` false); ⭐ (step 2.4e) `ownRun`, a
+ * vertical facet's vertical share on its own run (`CalmKnobs.ownRun`). All four false: today's.
  */
 export interface CalmRules {
   readonly smooth: boolean;
   readonly everyFacet: boolean;
   readonly noPitchFade: boolean;
+  readonly ownRun: boolean;
 }
 
 export function calmRules(chartLayout: number, chartCalm: number): CalmRules {
   const on = chartLayout === 1 && chartCalm === 1;
-  return { smooth: on, everyFacet: on, noPitchFade: on };
+  return { smooth: on, everyFacet: on, noPitchFade: on, ownRun: on };
 }
 
 const elevOf = (n: Vec3): number => Math.asin(Math.max(-1, Math.min(1, n[1])));
+
+/**
+ * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 step 2.4e, the auditor's completion — measured in the app, `Scene_0bis`, both switches on, a steady finger from
+ * the rectangle onto the triangle) THE ENDS OF A SIDE FACET'S OWN RUN THE VERTICAL SHARE IS WHOLE TOWARD **BY POSITION** (`poleEdgeWhole`, on the SHOWN
+ * direction, never eased): facet `i` of its column's `n`. As built (`ownRun` false): the column's two OUTER ends alone — toward a face holding a pole.
+ * With `ownRun` (the calm on one reference): BOTH of its own ends, every side facet alike — the eased share's target is whole there (`calmTarget`), and
+ * the eased state lags a moving finger: with the target alone the view still turned 6.3° in a frame at the rectangle's edge (8.1° before; the share
+ * 0.62 there, its target 1), the edge zone crossed in 3 frames against the ease's 120 ms. ⛔ A list of which faces border which (the first, shelved
+ * fix: a vertical facet under a slanted one): one more per-face rule.
+ */
+export function wholeEnds(ownRun: boolean, i: number, n: number): { readonly lo: boolean; readonly hi: boolean } {
+  return ownRun ? { lo: true, hi: true } : { lo: i === 0, hi: i === n - 1 };
+}
 const VERTICAL_EPS = 1e-6;
 
 /**
@@ -328,9 +349,20 @@ export function calmTarget(
 ): { readonly n: Vec3 | null; readonly sH: number; readonly sV: number; readonly wA: number } {
   if (t.band !== "SIDE") return { n: null, sH: 1, sV: 1, wA: 1 };
   const L = t.across;
+  // ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §11 3., §12 step 2.4e, `k.ownRun`) THE CALM ON ONE REFERENCE: every side facet, a vertical one exactly as a slanted
+  // one, reads its vertical share — and the reading's weight by the place (`fracUp`, the same reference) — on its OWN run between its level edges (`bLo` …
+  // `bHi` along `b`; on a vertical facet `b` is the world's up and `bLo` … `bHi` its own polygon's bottom and top, `buildFaceMap`): whole at its own top and
+  // bottom edge, where the elevation changes and the orbit's own angle is shown (§5.2). ⛔ The box's height for a vertical facet (the bounce's rule, kept
+  // with the knob off): under `Scene_0bis`'s tip, in its zone's frame, a body rectangle's share was 0.41 at its own edge (the box's top the apex, 120 mm
+  // further) against the triangle's 1 — a 20° step of the view eased in 120 ms (the owner's report 1).
+  // ⚠ THE COST, the owner's to review: the bounce's rule made every wall read the same top and bottom, so a pure dx along walls never changed the vertical
+  // calm. With each face's own run, two neighbouring walls whose own extents differ (an L-shaped tower: a low wall beside a tall one) give another vertical
+  // share at the same height — a dx across them eases the view's pitch. No scene has such walls (`Scene_1`: every side the cube's full height; `Scene_0`:
+  // its end faces the heptagon's full height; `Scene_0bis` in its zone's frame: the seven rectangles one extent). `chartCalm` 0 keeps the old rule.
+  const vertical = k.ownRun !== true && Math.abs(f.n[1]) < VERTICAL_EPS;
   // ⭐⭐⭐ (2026-11-10) the reading's weight by the place (`acrossWeight`): toward the `b` ends the angle toward the edge's line
   const fracUp = (): number => {
-    if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+    if (vertical) {
       if (box === null || !(box.hi[1] - box.lo[1] > 0)) return 0.5;
       return Math.min(t.surface[1] - box.lo[1], box.hi[1] - t.surface[1]) / (box.hi[1] - box.lo[1]);
     }
@@ -342,12 +374,13 @@ export function calmTarget(
   let sH = share(Math.min(L.L - L.lo, L.hi - L.L), L.hi - L.lo, k.shareH, k.zoneHPct, k.zoneMinHM);
   let sV = 1;
   if (k.vOn) {
-    if (Math.abs(f.n[1]) < VERTICAL_EPS) {
+    if (vertical) {
       // ⭐⭐⭐ a vertical facet: the gizmo's HEIGHT within the placed parts' box — the same top and bottom on every face (⛔ the wall's own top: the bounce)
+      // ⭐ (step 2.4e) not with `k.ownRun`: the facet's own run, below
       const y = t.surface[1];
       if (box !== null) sV = share(Math.min(y - box.lo[1], box.hi[1] - y), box.hi[1] - box.lo[1], k.shareV, k.zoneVPct, k.zoneMinVM);
     } else {
-      // ⭐⭐⭐ (§8) a slanted facet: its place up its own slope, in its own extent
+      // ⭐⭐⭐ (§8) a slanted facet: its place up its own slope, in its own extent — ⭐ (step 2.4e, `k.ownRun`) a vertical one too
       const s = t.surface[0] * f.b[0] + t.surface[1] * f.b[1] + t.surface[2] * f.b[2];
       sV = share(Math.min(s - f.bLo, f.bHi - s), f.bHi - f.bLo, k.shareV, k.zoneVPct, k.zoneMinVM);
     }

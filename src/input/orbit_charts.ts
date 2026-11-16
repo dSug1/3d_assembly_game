@@ -12,13 +12,15 @@
  *    camera's turn at a seam between two charts (`seamTurn`).
  * 5. **The assignment** (`assignCharts`, §3): gravity's chart, the frames taken greedily (the fans, the tilted rectangles), the rings, the whole rule, each
  *    cap's square layouts.
+ * 6. **Where a frame changes** (step 2.4a, §12, under `chartLayout` 1): a cap's tilt heading from its square layouts (`capTiltHeading`), the zones from
+ *    the frames taken (`chartZones`) — ⛔ `holdsPole`, `polarZones`' detectors.
  * ⭐ The reference this module is checked against, exactly, on 35 shapes: `scripts/probes/chart_lib.ts` (`scripts/probes/chart_assign_check.ts`).
  * ⛔ ENGINE-FREE. Plane geometry, a greedy cover — textbook; no licence, no patent.
  */
 import type { Vec3 } from "../core/vec";
 import { CHART_CAP_DEG, CHART_HEADING_DEG, CHART_LEVEL_M, facetFrame, type FaceMap } from "./face_map";
-import { CORNER_TOL_M, DEFAULT_ZONE_OPTS, zoneFrame } from "./polar_zone";
-import type { Mat3 } from "./orbit_tilt";
+import { CORNER_TOL_M, DEFAULT_ZONE_OPTS, zoneFrame, type PolarZone } from "./polar_zone";
+import { capTilt, tiltHeading, type Mat3 } from "./orbit_tilt";
 
 const D = Math.PI / 180;
 const TAU = 2 * Math.PI;
@@ -377,8 +379,9 @@ export interface ChartAssignment {
   readonly home: readonly ChartHome[];
   /** per contour face, its kind in its home */
   readonly kind: readonly HomeKind[];
-  /** the frames taken, in the order taken (one entry per frame and mode), with the faces each serves (the whole rule's appended) */
-  readonly used: readonly { readonly home: ChartHome; readonly faces: readonly number[] }[];
+  /** the frames taken, in the order taken (one entry per frame and mode), with the faces each serves (the whole rule's appended) — ⭐ (step 2.4a) `own`
+   *  the frame's OWN faces, those it took before the whole rule (`faces`' first ones: the zone's facets, `chartZones`) */
+  readonly used: readonly { readonly home: ChartHome; readonly faces: readonly number[]; readonly own: readonly number[] }[];
   /** per cap face (a face whose home kind is CAP), its square layouts: the frames square to it in which it is a CELL, each AXIS+ then AXIS- */
   readonly layouts: ReadonlyMap<number, readonly ChartHome[]>;
   /** how many faces gravity's COLUMNS chart breaks */
@@ -421,7 +424,7 @@ export function assignCharts(faces: readonly ChartFace[], o: ChartOpts = DEFAULT
   }
   const brokenByGravity = W.kinds.filter((k) => k === "BROKEN").length;
   const frames = candidateAxes(faces).map((a) => columnsChart(faces, a));
-  const used: { home: ChartHome; faces: number[] }[] = [];
+  const used: { home: ChartHome; faces: number[]; own: number[] }[] = [];
   while (todo.size > 0) {
     let pick: { h: ChartHome; S: number[]; gain: number; roll: number } | null = null;
     for (let k = 0; k < frames.length; k++) {
@@ -463,8 +466,10 @@ export function assignCharts(faces: readonly ChartFace[], o: ChartOpts = DEFAULT
       todo.delete(i);
     }
     const prev = used.find((u) => u.home.frame === p.h.frame && u.home.mode === p.h.mode);
-    if (prev !== undefined) prev.faces.push(...p.S);
-    else used.push({ home: p.h, faces: [...p.S] });
+    if (prev !== undefined) {
+      prev.faces.push(...p.S);
+      prev.own.push(...p.S);
+    } else used.push({ home: p.h, faces: [...p.S], own: [...p.S] });
   }
   // what is left: the rings about gravity
   for (const i of todo) home[i] = homeR;
@@ -497,4 +502,107 @@ export function assignCharts(faces: readonly ChartFace[], o: ChartOpts = DEFAULT
     layouts.set(i, list);
   }
   return { gravity: W, frames, home: homes, kind, used, layouts, brokenByGravity };
+}
+
+// ── 6. the atlas decides where a frame changes (step 2.4a, §12) ───────────────────────────────────────────────────────────────────────────────────
+
+/** ⭐ (2.4a) `capTilt`'s F-vertical lies along a layout's up within this (deg) — the layouts are square to the cap within `CHART_SQUARE_COS` (≈ 1.15°). */
+const CHART_TILT_LAYOUT_DEG = 3;
+/** ⭐ (2.4a) today's heading (`tiltHeading`) IS one of the layouts' when within this (rad): returned unchanged — a world-aligned cap bit for bit. */
+const CHART_TILT_SAME_RAD = 1e-6;
+/** ⭐ (2.4a) a zone's axis within this (per component) of a world axis is that axis exactly — float noise of the contour's frame, not a snap. */
+const CHART_AXIS_CLEAN = 1e-9;
+
+/**
+ * ⭐⭐⭐ (§3 6., §12 2.4a; D-C2, D-C4) THE TILT'S HEADING ON A CAP FROM ITS SQUARE LAYOUTS — the atlas's answer to "does this face tilt, toward where":
+ * the contour face of the WORLD face-map facet `facet` (`ChartFace.index`) a CAP in its home with at least one square layout (`assign.layouts`); the
+ * candidate headings the `hs` for which `capTilt(hs, n)` builds a layout — its F-vertical (F's `[0, 1, 0]` in the world) along the layout's up (`axis`
+ * for AXIS+, its opposite for AXIS-), on a rectangle four headings 90° apart along its own edges; the one nearest today's (`tiltHeading(n, yaw)`) —
+ * ⭐ today's value ITSELF when it is a candidate within `CHART_TILT_SAME_RAD`, else that candidate unwrapped next to it. `null`: no tilt — a side face
+ * however steep (⛔ `holdsPole`'s 45°), a cap that is not a rectangle (D-C2), a facet not on the contour (a virtual cap: a pole held by an edge, D-C6).
+ */
+export function capTiltHeading(assign: ChartAssignment, faces: readonly ChartFace[], facet: number, n: Vec3, yaw: number): number | null {
+  const ci = faces.findIndex((f) => f.index === facet);
+  if (ci < 0 || assign.kind[ci] !== "CAP") return null;
+  const lay = assign.layouts.get(ci);
+  if (lay === undefined || lay.length === 0) return null;
+  const cosOk = Math.cos(CHART_TILT_LAYOUT_DEG * D);
+  const cands: number[] = [];
+  for (const h of lay) {
+    const up = h.mode === "AXIS-" ? mul(h.axis, -1) : h.axis;
+    if (!(Math.hypot(up[0], up[2]) > 1e-9)) continue;
+    const h0 = Math.atan2(up[2], up[0]);
+    for (const hs of [h0, h0 + Math.PI]) {
+      const R = capTilt(hs, n);
+      if (dot([R[0][1], R[1][1], R[2][1]], unit(up)) >= cosOk) cands.push(hs);
+    }
+  }
+  if (cands.length === 0) return null;
+  const t = tiltHeading(n, yaw);
+  let best = cands[0]!;
+  for (const c of cands) if (Math.abs(wrapPi(c - t)) < Math.abs(wrapPi(best - t))) best = c;
+  const d = wrapPi(best - t);
+  return Math.abs(d) < CHART_TILT_SAME_RAD ? t : t + d;
+}
+
+/** the axis with each component within `CHART_AXIS_CLEAN` of ±1 laid exactly on that world axis */
+function cleanAxis(a: Vec3): Vec3 {
+  for (let k = 0; k < 3; k++)
+    if (Math.abs(1 - Math.abs(a[k]!)) < CHART_AXIS_CLEAN) {
+      // ⭐ the world axis negated as `snapToWorldAxis` negates it (its zeros −0): the zone's numbers `polarZones`' own
+      const e: Vec3 = [k === 0 ? 1 : 0, k === 1 ? 1 : 0, k === 2 ? 1 : 0];
+      return a[k]! > 0 ? e : [-e[0], -e[1], -e[2]];
+    }
+  return a;
+}
+
+/**
+ * ⭐⭐⭐ (§3 3. – 4., §12 2.4a) THE ZONES FROM THE ATLAS — the frames it TOOK (`assign.used`, a home off gravity's), in the shape the wiring consumes
+ * (`PolarZone`, ⛔ `polarZones`' detectors): `orientation` SPIT for a WORLD hold, UPRIGHT for AXIS±; `poles` the frame's ends that are points — each the
+ * contour's own corner, in the contour's order (facets by index, corners along each polygon: `contourCorners`' order); `axis` as `polarZones` orients it —
+ * UPRIGHT its up (the AXIS- frame's opposite), SPIT from the first pole to the second (one pole: toward it; none: the frame's own), laid exactly on a
+ * world axis within `CHART_AXIS_CLEAN`; `frame` `zoneFrame(axis)`; `facets` the frame's OWN faces' world indices (`own`, sorted — ⛔ the whole rule's
+ * adopted faces: they make it `whole`, as `polarZones`' alike faces do); `whole` it serves every contour face; `reason` empty.
+ */
+export function chartZones(assign: ChartAssignment, faces: readonly ChartFace[]): PolarZone[] {
+  const out: PolarZone[] = [];
+  for (const u of assign.used) {
+    if (u.home.frame < 0) continue;
+    const c = assign.frames[u.home.frame]!;
+    const orientation = u.home.mode === "WORLD" ? "SPIT" : "UPRIGHT";
+    // the poles, each at the first corner of the contour (in its order) on the end
+    const ends: { p: Vec3; at: number; top: boolean }[] = [];
+    for (const [end, top] of [[c.top, true], [c.bottom, false]] as const) {
+      if (end.kind !== "POINT") continue;
+      let at = 0;
+      let p: Vec3 | null = null;
+      for (const f of faces) {
+        for (const q of f.pts) {
+          if (dist(q, end.centre) < CORNER_TOL_M) {
+            p = q;
+            break;
+          }
+          at++;
+        }
+        if (p !== null) break;
+      }
+      if (p !== null) ends.push({ p, at, top });
+    }
+    ends.sort((x, y) => x.at - y.at);
+    let a: Vec3 = c.axis;
+    if (orientation === "UPRIGHT") a = u.home.mode === "AXIS-" ? mul(c.axis, -1) : c.axis;
+    else if (ends.length >= 2) a = dot(c.axis, sub(ends[ends.length - 1]!.p, ends[0]!.p)) >= 0 ? c.axis : mul(c.axis, -1);
+    else if (ends.length === 1) a = ends[0]!.top ? c.axis : mul(c.axis, -1);
+    a = cleanAxis(a);
+    out.push({
+      facets: [...new Set(u.own.map((i) => faces[i]!.index))].sort((x, y) => x - y),
+      poles: ends.map((e) => e.p),
+      axis: a,
+      frame: zoneFrame(a),
+      orientation,
+      whole: new Set(u.faces).size === faces.length,
+      reason: { pole: [], t2: [], t3: [] },
+    });
+  }
+  return out;
 }

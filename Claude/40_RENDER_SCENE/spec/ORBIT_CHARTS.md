@@ -327,7 +327,7 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
 | **2.1** ✅ | done (§7.3) — the `asm…` inventory (§4.2) and the specificities' paths (§4.4), written down; the replay's BASELINE recorded on today's code for `Scene_1`, `Scene_0`, `Scene_0bis` | the inventory read against the code by the auditor; the baseline replayed twice, identical |
 | **2.2** 🔧 | built `9e38e78` + `7463174`, audited, replayed (§7.3); the owner's look: *"everything ok with charts switched on"* (2026-11-15; ⚠ the device not stated) — step A behind a switch, off by default (the map's `layout` "chart" and `scale` "normals", the world's and the frames') (§5.2) | `Scene_1` unchanged; walks; the owner's look on `Scene_0` |
 | **2.3** 🔧 | built `fcfa8bd`, audited, replayed (§7.3); ⛔ the owner's look owed — the calm on every face (§5.1) behind a second switch, `chartCalm` (off by default; acts only with `chartLayout` 1) | `Scene_1` unchanged ✅; the owner's look on `Scene_0bis` |
-| **2.4** | the atlas computed with the face map (`chartContour`, `assignCharts`, the rings) and the charts take over the changes of frame, one mechanism at a time: the zone's detector, then the tilt's, then the one transition (§4); ⭐ each trigger's band against input noise considered here (§10.2) | replays, walks, the owner's look after each |
+| **2.4** 🔧 | built 2026-11-15 as P, 2.4a, 2.4b, 2.4c, 2.4e (§12, §12.1), each audited; ⛔ 2.4d (the trigger's band) NOT built — the owner's hysteresis session (§12.2); ⛔ the rings not wired; ⛔ the owner's look owed, nothing deployed — the atlas computed with the face map and the charts taking over the changes of frame (§4) | replays ✅ (§12.1); walks, the owner's look |
 | **2.5** | the old detectors and their state deleted | a replay proving nothing changed |
 | **3** | Fable's audit of the whole diff; the docs; then step B's offline round (§5.3) | the owner's look |
 | **C** (later) | the tilted pole close in on every kind of face (§10.1): an offline round first, the owner's decisions (D-C2, D-C4), then the build — after 2.5 | the owner's look |
@@ -474,6 +474,10 @@ owner's go. A step that changes the screen is closed by the owner's look on a de
      calm heading, as at any exit by distance).
   2 vectors and the wiring's pins, red on the code before; **1869 vectors**. Replays: both switches off identical bit for bit on the three scenes;
   `chartLayout` 1: `Scene_1` and `Scene_0bis` identical, `Scene_0` from the press on the ridge on — its largest roll in a frame 14° (157°).
+* **Deployed a second time** (2026-11-15, the owner: *"deploy"*): `6d5f2b7` — step 2.3 behind `chartCalm`, the two fixes above, the orbit state's
+  reset at a piece's spawn, the HUD's `draw` line — merged into `main` as `157974f` (main's tree = the branch's), live; **1869 vectors**; both
+  switches off the three scenes replay bit for bit as the build before. ⛔ Owed: the owner's look on `Scene_0bis` with both switches on, and on
+  `Scene_0`'s ridge with `chartLayout` on.
 
 ⭐ **TEST SCENES OF THE BUILDER'S CHOICE** (the owner, 2026-11-15: *"You can also create virtual scenes in another worktree to test our pipeline on
 geometries of your choice. I can then review later and delete the worktree once done."*): from step 2.2, a throwaway worktree beside this one — the
@@ -572,3 +576,191 @@ between two normals far apart, and the camera travels from one to the other at `
 **Where it lands**: step 2.4 — every change of frame becomes the one transition (§4), so its trigger gets ONE band; the square camera's and the
 calm's targets are views, not frames: theirs with step 2.3 / step C. Each band in millimetres on the glass (`CLAUDE.md` rule 3), a slider with
 the rule. ⚠ Its cost, to weigh at each: a band is a delay at every real crossing — the view stays the last face's for the band's depth.
+
+## 11. THE ROOT CAUSE FOUND AT THE OWNER'S LOOK ON THE SECOND DEPLOY (2026-11-15) — the basis of step 2.4
+
+The owner, on `157974f`: *"overall is good"*, then four reports and one instruction:
+
+1. `Scene_0bis`, both switches on: *"when I cross the edge to go from the rectangle face to the triangle face … it seems the calm unleashes and there
+   is a very brief acceleration of the camera orbit to reach the triangle face. This does not occur when I cross from the triangle face to the
+   rectangle face. Also, this does not occur in scene 0 nor scene 1. Why ?"*
+2. `Scene_0`, the charts' switch on: *"when I arrive from another face to one of the top slanted face or to the bottom face and I release and click
+   again: the moment I click again, the camera realigns and the red and green sections become orthogonal. I don't know what triggers this … this
+   creates disturbing camera movements."*
+3. *"there are 180 camera tilts on the top slanted surface but I cannot catch when nor what triggers them."*
+4. *"I arrived in a configuration where the gizmo and sections were in the face opposite to the camera."*
+
+⛔ **The instruction: *"analyze the deep root cause, don't patch with fix which may conflict with other rules"*.**
+
+**Measured** (the replays, the same script on each): a tilt is made AT A PRESS 11 – 13 times a replay in today's game (both switches off, `Scene_0`
+and `Scene_1`) and as often with the charts' layout on; the view makes a half turn (150° or more within 30 frames) 18 times on `Scene_0` off, 16
+on, 11 on `Scene_1` — 12 of the 16 at a tilt's EXIT; report 1 reproduced in the app, far out, a steady finger: the view 0.2° a frame on the
+rectangle, 6 – 8° for a moment at the edge, 2 – 3° on the triangle (the way back peaks at 4°). Report 4 is not in any replay: it is explained by
+reading, below — not reproduced.
+
+**ONE ROOT CAUSE: where the orbit is, is stored twice, and what a face is, is decided twice.**
+
+1. **Two states for one place.** The ORBIT's angles are a DIRECTION (they place the camera; every change of frame turns them by a rigid rotation —
+   `turnAngles`). The MAP's angles (`asmMapQ`) are a CHART COORDINATE (they place the gizmo; after a change of frame they are re-read at the gizmo —
+   `mapAngles`). The two are equal only where the map is the identity between a direction and a place. At a pole a direction has no yaw. Under the
+   charts' layout the pitch is a chart coordinate everywhere, in every frame. After a change of frame the two are brought together only by the
+   catch-up's small steps (`mapAnglesStep`), never across a jump — so the camera can come down one side of a ridge and the gizmo the other
+   (report 4). ⚠ `72cdc54` (deployed) is a patch on this: leaving a tilt at a pole it picks the yaw that keeps the PICTURE (before it: yaw 0) —
+   neither looks at the side the gizmo is on.
+2. **The old detectors still decide where a frame changes.** `holdsPole` — a cap, or a side steeper than 45° — makes the tilt at ANY press far out
+   and by itself close in: `Scene_0`'s bottom and its two top faces, `Scene_1`'s top and bottom, in today's game too. Its entry swings the camera
+   square to the face and holds its up on the frame's axis (report 2: the sections horizontal and vertical on the glass); its exit over the ridge
+   or a far edge is a half turn (report 3). Under the charts' layout the pole is the RIDGE and the two top faces are plain cells: the tilt there is a
+   second answer to a question the layout has already answered (D-C4). Three mechanisms meet at that ridge — the tilt's entry, its exit, the world's
+   own crossing — each with its trigger: which one turned the camera cannot be told from the glass.
+3. **The calm reads per-face rules with different references.** A vertical facet's vertical share reads the BOX's height (the bounce, 2026-11-04),
+   a slanted one its own extent (2026-11-09), and a polar zone's border was made whole by a third rule (2026-11-14) that step 2.3 removed. In the
+   zone's frame the body's faces are vertical under a tip's facets: at the rectangle's own edge the share is 0.41 (the box's top is the apex,
+   120 mm further), on the triangle 1 — a 20° step of the view, eased in 120 ms (report 1; the way back gives it back on a face where the view
+   barely moves). The same shape as 1 and 2: the view computed from WHICH FACE the place is on and that face's own convention, not from the place.
+
+**What follows — no patch; step 2.4 is built on it:**
+
+* **One state**: the gizmo's place and its chart's angles. At every change of chart the orbit's angles are DERIVED from them (§4.1: "the gizmo stays
+  at its exact place; the next chart's angles are read there"), and the camera's turn is the seam's own, known beforehand — ⛔ never two conversions
+  that must then agree.
+* **The frames change where the atlas says** (§3), not where `holdsPole` fires: on `Scene_0` no tilt on the two top faces (D-C4); a level cap keeps
+  its square layouts (§3 6.) — ⛔ the owner's to decide: whether a press far out still tilts a cap, or close in only.
+* **One trigger, one band** (§10.2).
+* **The calm's shares on one reference** — the chart's own runs, every face alike — or step B (§5.3: the view read from the place).
+
+**The day's patches, as they stand**: `72cdc54` (the heading kept at a pole; the tilted facet's border a tie) is deployed and stays until step 2.4
+replaces the two conversions — it removes a 90° roll of today's game and is flagged above. The fix built for report 1 (a vertical facet's vertical
+share whole toward its own end under a slanted one: 8.1° → 4.5° a frame) is SHELVED, not committed (`git stash`): one more per-face rule.
+
+### 11.1 The press's action: where it comes from, what it turns (measured 2026-11-15)
+
+The owner: *"Why does a press have an action at all on the orbit? There was not press input on the orbit in my previous build. Why did it appear now?"*
+
+**Where it comes from** — the owner's rule of 2026-11-09 (`POLAR_ORBIT_CLEANUP.md` §9: *"when the left click or finger is pressed for orbiting, the orbit
+tilts so the face currently holding the gizmo becomes the one with the red and green sections which are perpendicular"*), decision 1 (c) of
+2026-11-10 (the heading swung square at the press, 0 – 45°), built `b7548b5` (`1.0.117-`). In every build since: `12dc4b6`, `de789f6`, `825e62c`,
+`d2f7738`, the build before the charts (the switches off replay bit for bit). Far out only (close in the tilt makes itself, 2026-11-10); since
+2026-11-12 (`785ea5a`, F2b) on a side beyond 45° too — `Scene_0`'s two top faces. ⛔ The only action a press has on the orbit.
+
+**Measured** (the scratchpad's `tilt_check.mjs`, `MODE=press`: far out, the gizmo brought onto the face, 90 frames of rest, then a press held STILL
+150 frames — no finger travel; the gizmo moved 0.0 mm in every case; the view's turn):
+
+| the face, the camera | the switch off (= the build before the charts) | the charts' layout on |
+|---|---|---|
+| `Scene_1` top, square | 0.0° | the same (`Scene_1` replays bit for bit) |
+| `Scene_1` top, 30° off square | 13.3° in 5 frames (7.1° in one) — decision 1 (c)'s swing | the same |
+| `Scene_0` top slanted face, square | 9.5° in ONE frame, back on the same view within 40 | 6.9° in one frame, at rest 3.4° away |
+| `Scene_0` top slanted face, 30° off | not measured (below) | 15.2° (8.9° in one frame) |
+| `Scene_0` bottom, square | 2.2°, eased over 40 frames | 9.2°, eased over 40 frames |
+| `Scene_0` bottom, 30° off | 13.3° (7.2° in one frame) | not measured (below) |
+
+**Read**: on the cube, square, the press is unseen (the 2026-11-10 probe's 0.0 mm); off square it is the swing decided then. On `Scene_0` the entry was
+never seamless, and less so under the charts' layout: the world frame's view of a place and the tilted frame's view of the SAME place are two
+conventions (§11, 1. and 3.) — the bottom looked at from 51° below, then 53° (off); from 67°, then 76° (on).
+
+**Also seen**: a tilt made at a press and then left kept the swung heading (the orbit's yaw −60° → −90°: the second cell not measured — the way
+down made and left a tilt). ⚠ The first cell not measured was the SCRIPT's fault, not the game's: its drag began on the HUD's lines at the bottom of
+the glass (a press there is not the orbit's); begun higher, the dy reaches the face.
+
+✅ **Decided and built** (the owner, 2026-11-15: *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit."*) → §12, step P.
+
+## 12. STEP 2.4 — THE DESIGN AND THE BUILD (2026-11-15)
+
+The owner: *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit. Then build step 2.4 as you have recommended in your
+previous message."* — the recommendation: ONE STATE (the gizmo's place and its chart's angles, the camera derived from it at every change of frame);
+frames change only where the charts say, with one trigger and one band against input noise; the calm's shares on one reference for every face (§11).
+
+⭐ **Everything of step 2.4 is under `chartLayout` 1** (the calm's part under `chartCalm` too): with it 0 the game replays bit for bit — every
+sub-step's first gate. ⛔ The layout alone with the old detectors (what `157974f` showed with the switch on) is no longer reachable.
+
+| sub-step | what |
+|---|---|
+| **P** | THE PRESS'S ACTION REMOVED, unconditional: a press does nothing to the orbit; the tilted pole close in only (the automatic tilt) |
+| **2.4a** | THE ATLAS DECIDES WHERE A FRAME CHANGES (`assignCharts` on the world face map, per placed set): a face tilts only if it is a CAP with a square layout (§3 6.), its heading one of the layouts' — ⛔ `holdsPole` (a side beyond 45°: `Scene_0`'s two top faces, D-C4) and the virtual cap of a pole held by an edge; the zones are the frames the atlas takes (§3 3. – 4.) — ⛔ `polarZones`' detectors |
+| **2.4b** | A POLE HELD BY AN EDGE OR A POINT IS CROSSED BY THE ONE TRANSITION, close in (far out it stays the polar orbit's limit, D-C6): `Scene_0`'s ridge — the half turn and the hold of §1, with no tilt |
+| **2.4c** | ONE STATE AT EVERY CHANGE OF FRAME: the tilt's entry and exit and a zone's switch are the one transition — ⛔ `turnAngles` (each angle state turned as a direction) and the map's catch-up after it |
+| **2.4d** | ONE TRIGGER, ONE BAND: the face under the gizmo read ONCE by the edge rule (`faceSwitches`, `gizmoEdgeMarginMm` — world millimetres: an edge is a place on the assembly) for every trigger of a camera movement — a change of frame, the square camera's target (§10.2) |
+| **2.4e** | THE CALM ON ONE REFERENCE (under `chartCalm`): a side face's vertical share reads its OWN run between its level edges, a vertical face as a slanted one — ⛔ the box's height for a vertical face (the bounce's rule, 2026-11-04: kept with `chartCalm` 0) |
+
+**THE ONE TRANSITION** (§4.1), as built from 2.4b on: 1. the frame set at once; 2. the gizmo KEPT — the new chart's angles read at its exact place
+(`mapAngles`); 3. EVERY angle state set to those angles (the orbit's, the solver's memory, the solved piece's, the spring's at rest, the camera's
+follow state, the map's) — ⛔ never each turned by a rigid rotation with the map's angles left to catch up; 4. the picture carried from the pose
+SHOWN by ONE camera turn (`asmZoneMix`: timed at `tiltRollDegS`, the gizmo held — or by the finger's travel where the automatic tilt blends, the
+gizmo free), the piece's shown direction eased on the same clock; 5. a half turn sets the dy hold.
+
+**Not in this build**: the RINGS chart's wiring (no scene leaves a face to it — a face whose home is RINGS stays on gravity's columns map, as
+today); far out a pole stays the polar orbit's limit (D-C6: with the press gone a top face, a ridge, a cap's centre are crossed close in only —
+⛔ the owner's to change); step C.
+
+### 12.1 As built
+
+* **P** (2026-11-15, `5894ab2`, an Opus agent; audited by Fable): `tiltOnPress` and its call deleted, `tiltOn`'s `why` with it (one caller left: the
+  automatic tilt, its verdict byte for byte); no slider removed (each is still read), two labels corrected; 1 vector, red on the code before;
+  **1870 vectors**. The auditor's gates: a press held still on `Scene_0`'s top slanted face and bottom and on `Scene_1`'s top, square and 30° off,
+  both layouts — no tilt, the view 0.0°; the close-in run (approach in, the automatic tilt made by a dy, orbit in it, approach out) on `Scene_1` and
+  `Scene_0` (both layouts): IDENTICAL line for line to the code before. ⚠ Far out the replays are another play from the first press that tilted.
+* **2.4a** (2026-11-15, `44ba40e`, an Opus agent; audited by Fable): `capTiltHeading` (a CAP with a square layout tilts, toward the layout's
+  heading nearest today's — today's own value on a world-aligned cap; a side however steep, a cap that is not a rectangle, a virtual cap: none) and
+  `chartZones` (the frames the atlas took as `PolarZone`s: their OWN faces — `used[].own`, new — the axis signed as `polarZones` signs it) in
+  `orbit_charts.ts`; the wiring's `atlasOf` (cached per placed set and the three zone knobs), `tiltOn`, `nextTiltHeading`, `zonesOf` under the
+  switch. 16 vectors (`tests/orbit_charts_atlas.test.ts`), red on 21 mutants; the assignment still EXACT against the prototype on the 35 shapes;
+  **1886 vectors**. The auditor's gates — replays against P's: the switch off, the three scenes IDENTICAL bit for bit; on, the three identical
+  too (`Scene_0bis`: the atlas's zone IS `polarZones`'; the script never tilts on `Scene_0`'s top faces); the close-in run on `Scene_0`: on, no
+  tilt on a top face, the orbit stopping at the ridge (2.4b's), the bottom tilting as before; off, as before. ⚠ Found by the agent, no scene has
+  it: a tipped heptagon whose axis is 10 – 20° off the VERTICAL — `polarZones` finds one whole upright zone, the atlas a WORLD frame square to
+  the axis serving 6 faces: the assignment's rule on a shape outside the 35 — for the test scenes and step 3.
+* **2.4b** (2026-11-15, `a57796e`, an Opus agent; audited by Fable): `src/input/pole_crossing.ts` — `poleCrossingDue` (the trigger: the charts on,
+  the world's frame, close in, no turn under way, the map at a pole whose end is an EDGE or a POINT, the finger asking beyond), `farFacetAt` (the
+  face across the pole at the place), `poleSeam` (its angles there, the pitch on the pole); the wiring's `seamRebase` (EVERY angle state SET to a
+  chart's angles — `turnAngles`'s list, nothing turned; written for any chart: 2.4c's) and `poleCross` (the one transition: the place kept, the far
+  angles, the rebase, the views carried, one camera turn from the pose shown, the dy hold). 22 vectors, red on 29 mutants; **1908 vectors**. The
+  auditor's gates — replays against 2.4a's: off, the three scenes IDENTICAL bit for bit; on, identical too (the script never pushes past the ridge
+  close in); in the app, `Scene_0`, close in, ONE drag up the front top face: exactly ONE crossing, the gizmo 0.0 mm while the camera turns, the
+  view ≤ 6.4° a frame (360°/s), the piece on the glass ≤ 0.05° a frame through it, the dy held for the rest of the gesture (54 of 54 readings);
+  the dy reversed: down the far face; one drag back up: one crossing back. ⚠ A NEW gesture pushing the same way crosses again — the owner's rule
+  of 2026-11-14 (the hold ends with the gesture). ⚠ Not measured: the spring's leftover lag at the crossing (30 ms, zero with the square camera whole).
+* **2.4c** (2026-11-15, `c25a1cc`, an Opus agent; audited by Fable, one fix `1327ade`): under the switch `tiltOn`, `tiltOff` and `zoneSwitch` (with
+  a place shown) are the one transition — the frame at once (no swing, no roll back inside F), the new chart's angles at the gizmo, `seamRebase`, ONE
+  camera turn from the pose shown (`seamTurnStart`: paced as the swing was when the tilt is made with the camera pending — held, then by the finger's
+  travel, then by time; else by time, the gizmo held), the piece's shown direction eased on that turn (`asmDirEase`, applied in `dirAt` alone);
+  `src/input/seam_turn.ts` (`dirGap`, `easedDir`, `seamTurnPace` / `Holds` / `Step`, `poleYawKept`, `tiltLeavesNow`, `seamWholeRad`). No place yet
+  (`Scene_0bis`'s whole zone, the first frame): `turnAngles`, as before. 25 vectors, red on 28 mutants; **1933 vectors**.
+  ⭐ **The auditor's find** (the app, `Scene_1`'s top, a fast dy onto it): the eased direction ran on the camera turn's share, whose angle (1.2°) has
+  nothing to do with the direction's gap (7.7° — the spring's lag behind the finger): the turn whole in one frame, the gap's rest in the next — 9.1°
+  of view in a frame. Now ONE clock over the SUM of the two (`seamWholeRad`, `turnWhole`).
+  **The gates** — replays against 2.4b's: off, `Scene_1` and `Scene_0bis` identical bit for bit, `Scene_0` within 6 × 10⁻¹⁰ m (the replay's own
+  noise, from frame 3); on, `Scene_0bis` the same play (≤ 3 × 10⁻⁹ m), `Scene_1` and `Scene_0` another play from the first close-in tilt (frame
+  1133), no error, the view's largest turn in a frame 14.2° / 15.4° (14.9° / 15.4° before), none over 20°. **In the app, close in, before → after**:
+
+  | | `Scene_1` | `Scene_0` |
+  |---|---|---|
+  | the orbit's angles against the map's, at rest | up to 23° apart → 0.00° | up to 26° → 0.00° |
+  | the gizmo's step while a camera turn runs | 28 mm → 0.0 mm | 28 mm → 0.0 mm |
+  | the largest roll in ONE frame | 6.3° → 6.2° | **180°** (leaving the tilted bottom) → 6.3° |
+  | the largest view turn in ONE frame | 6.3° → 6.7°; ⚠ the tilt's entry under a fast dy 5.7° → **8.5°** | 11.2° → 6.4° |
+
+  ⚠ **For the session on the tilted pole close in**: that entry — the piece's spring, 30 ms behind a fast finger, is set onto the new angles and its
+  lag eased at 360°/s (two frames) with the camera following the piece; before, the lag was kept and caught up by the spring itself. ⚠ **A new
+  camera turn, by design**: the tilt left by distance (or a zone's switch) with the gizmo on the FAR half of a cap turns the camera round to the
+  place's own side — before, the camera stayed and the gizmo's angles disagreed (report 4 of §11). The ridge's crossing (2.4b) re-run: unchanged.
+* **2.4e** (2026-11-15, `e14a2f0`, an Opus agent; audited by Fable, one completion `2fdbd34`), under `chartLayout` 1 AND `chartCalm` 1:
+  `CalmKnobs.ownRun` (`calmRules(…).ownRun`) — a vertical facet's vertical share and its reading's weight on its OWN run along `b`, as a slanted
+  one's; and (the auditor's) the vertical share whole BY POSITION toward both own ends of every side facet (`wholeEnds` → `poleEdgeWhole` — as
+  built: the column's outer ends alone). 12 vectors, red on 12 mutants; **1942 vectors**. **The gates**: off, `Scene_1` and `Scene_0` identical
+  bit for bit, `Scene_0bis` within its noise; `chartLayout` 1 alone: the three identical bit for bit; in the app, `Scene_0bis`, both switches on,
+  far out, a steady finger from the rectangle onto the triangle — the view's largest turn in a frame **8.1° → 6.3°** (the eased target alone: it
+  lags the finger, the edge zone crossed in 3 frames against 120 ms) **→ 4.9°** (by position), the way back 4.0° → 3.6°, the roll 4.8° → 2.8°.
+  ⚠ **`Scene_1` and `Scene_0` change too with `chartCalm` 1** (the gizmo's path identical to 10⁻⁸ m, the VIEW up to 0.5 m of camera, ~4°):
+  the old reference was the placed parts' BOX — on `Scene_1` 0.566 m high (parts proud of the top and under the bottom, 41 mm each) against the
+  side faces' own 0.483 m — so the old share was never whole at a side face's own edge there either. ⚠ The bounce's rule (2026-11-04) is replaced
+  under `chartCalm` 1 only; its cost on walls of unequal extents is in `calmTarget`'s comment — the owner's to review (§12.2).
+
+### 12.2 The decisions taken while the owner slept (2026-11-15 → 16), and where the next session starts
+
+The owner: *"I will go to sleep. Finish everything tonight without asking me anything. Just record your decisions so I can review tomorrow morning.
+Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis."* → the list, each with its reason and what undoes it:
+[`queue_notes/RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
+§10.1 — it now runs on the one transition; the entry's 8.5° frame of §12.1's table is the first thing to look at) and the hysteresis (2.4d: ONE
+banded reading of the face under the gizmo, `faceSwitches` / `gizmoEdgeMarginMm`, for the tilt's entry and exit, the pole's crossing and the
+square camera's target — §10.2's table lists what has a band today). Nothing is pushed or deployed: live is still `157974f`.

@@ -1,6 +1,6 @@
 # RND5 — The orbit on charts
 
-> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 1.4 built and audited (not wired, the game unchanged); ✅ step 2.1 (the baseline, the inventory); 🔧 step 2.2 built and DEPLOYED (main `7db32b6`, the switch off by default), the owner's look given (*"everything ok with charts switched on"*); 🔧 step 2.3 built behind a second switch (`chartCalm`), not deployed, the owner's look owed · **OWNS** · one layout rule for the orbit on any simple shape
+> **STATUS** · ✅ spec APPROVED 2026-11-15; ✅ steps 1.1 – 2.1; 🔧 2.2 and 2.3 built and DEPLOYED (main `157974f`); 🔧 **step 2.4 built 2026-11-15 night, LOCAL ONLY** (`1.0.146-Orbit-charts`, not pushed, not deployed): P (the press's action removed), 2.4a (the atlas decides where a frame changes), 2.4b (a ridge crossed by the one transition, close in), 2.4c (one state at every change of frame), 2.4e (the calm on one reference) — each audited, **1942 vectors**; ⛔ 2.4d (the trigger's band) NOT built: the owner's hysteresis session; ⛔ the owner's look owed on all of it; ⛔ 2.5 (the old detectors deleted) after that look → the spec's §12, and "DECISIONS TO REVIEW" below
 > **LAST VERIFIED** · 2026-11-15
 
 ## 2026-11-15 — queued (the owner: *"I want to implement your systematic approach"*)
@@ -77,3 +77,50 @@
   its tilt at once (the gizmo on the tilted facet's border). **1869 vectors**; the switches off still bit for bit. The record: the spec's §7.3.
 * **Found, not fixed** (today's game, for step 2.4 — the spec's §10.2): close in, a fast dy onto `Scene_1`'s bottom face and off it within the frame
   makes the automatic tilt and leaves it at once: 45° and 90° rolls in one frame.
+* **Deployed a second time** (the owner: *"deploy"*): `6d5f2b7` as main `157974f`, live; `?chartLayout=1&chartCalm=1` or the two sliders (GIZMO &
+  SECTIONS) turn the charts' layout and the new calm on; **1869 vectors**.
+* **The owner's look on the second deploy** (2026-11-15): *"overall is good"*; four reports (the calm "unleashes" from the rectangle onto the triangle
+  on `Scene_0bis`; on `Scene_0` with the charts on: the camera realigns at a click on the top slanted faces and the bottom, half turns on the top
+  faces, the gizmo once on the face opposite the camera) and ⛔ *"analyze the deep root cause, don't patch with fix which may conflict with other
+  rules"*. The analysis: the spec's §11 — one root cause (the orbit's place stored twice, as a direction and as a chart coordinate; the old
+  detectors still deciding where a frame changes; the calm's per-face references), the basis of step 2.4. The fix built for the first report is
+  shelved (`git stash`), not committed.
+* **The press's action** (the owner, 2026-11-15: *"Why does a press have an action at all on the orbit? … Why did it appear now?"*): the owner's
+  rule of 2026-11-09, built 2026-11-10, in every build since; measured with a press held still (the spec's §11.1): unseen on `Scene_1` square, 2° –
+  9.5° on `Scene_0` before the charts, 3° – 9° at rest under the charts' layout. ⛔ The owner's to decide: no action at a press (the tilt close in only).
+* **The owner's decision** (2026-11-15): *"Instruct the Opus agent to cancel my rule and remove the press action on the orbit. Then build step
+  2.4 as you have recommended in your previous message."* — the design and the build's record: the spec's §12 (sub-steps P, 2.4a – 2.4e, each
+  under `chartLayout` 1 but P). ✅ P built (`5894ab2`): a press does nothing to the orbit, the tilt close in only.
+* ✅ **2.4a built and audited** (`44ba40e`): under `chartLayout` 1 the atlas decides where a frame changes (the spec's §12.1).
+* ✅ **2.4b built and audited** (`a57796e`): close in, `Scene_0`'s ridge crossed by the one transition (the spec's §12.1).
+* ✅ **2.4c built and audited** (`c25a1cc` + the auditor's fix `1327ade`): one state at every change of frame (the spec's §12.1, its table).
+* ✅ **2.4e built and audited** (`e14a2f0` + the auditor's completion `2fdbd34`): the calm on one reference (the spec's §12.1). **Step 2.4 is
+  built but for 2.4d.**
+
+## DECISIONS TO REVIEW — taken 2026-11-15 night while the owner slept (*"Finish everything tonight without asking me anything. Just record your decisions so I can review tomorrow morning."*)
+
+| # | the decision | why | what undoes it |
+|---|---|---|---|
+| 1 | **2.4d (the trigger's band, the hysteresis) NOT built** | the owner: *"Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis"*; put to the owner before sleep: *"I agree. Proceed"* | one agent run; its design is the spec's §12 row 2.4d |
+| 2 | **All of step 2.4 sits under `chartLayout` 1** (2.4e under `chartCalm` too) — no third switch; "the layout with the old detectors" (what `157974f` shows with the switch on) is no longer reachable | fewer states to compare on a device: off = the game as it was (minus the press), on = the charts | a second switch around the 2.4a – 2.4c branches |
+| 3 | **Far out a pole stays the orbit's limit** (the spec's D-C6, unchanged): with the press gone, a top face, `Scene_0`'s ridge and a cap's centre are crossed CLOSE IN only (within `tiltAutoM`, 0.6 m); far out the dy stops there and the way round is a dx | D-C6 was approved with the charts; the owner removed the press knowing the tilt becomes close in only | `poleCrossingDue`'s `closeIn` condition (2.4b) for a ridge; a cap far out needs the tilt far out — the press's rule or another trigger |
+| 4 | **A new gesture pushing the same way over a ridge crosses it again** | the owner's rule of 2026-11-14 (the dy hold ends with the gesture that crossed), kept as it is | a hold that outlives the gesture — the hysteresis session's |
+| 5 | **The zones come from the atlas with their OWN faces as facets** (`used[].own`), not every face the whole rule adds | the wiring reads a zone's facets for the calm and the tint: with all 21 the calm would vanish on `Scene_0bis`'s body; and so the atlas's zone equals `polarZones`' there (the replay identical bit for bit) | `chartZones` |
+| 6 | **The RINGS chart is not wired** | no scene leaves a face to it; a face whose home is RINGS stays on gravity's columns map, as today | its own step, with a test scene |
+| 7 | **2.4c: no roll back inside the tilted frame** — leaving a tilt is ONE camera turn from the pose shown (the zones' mechanism), the frame changed at once | "two camera turns, two codes" was half of the root cause (§11); measured: `Scene_0`'s 180° one-frame roll gone | `chartLayout` 0 |
+| 8 | **2.4c: at a change of frame the piece's spring and the camera's follow state are SET to the new chart's angles, their lag eased** (not kept and left to catch up) | "every angle state set" is the rule that makes the orbit's and the map's angles equal (23° – 26° apart before, 0.00° after); ⚠ its cost: under a fast dy the tilt's entry turns the view 8.5° in one frame (5.7° before) | keep each follower's lag through `seamRebase` — to judge on the device in the tilted-pole session |
+| 9 | **2.4c, my fix: a transition's clock runs over the SUM of the camera's turn and the piece's direction's gap** | the two angles are unrelated; on the camera's alone the gap's rest landed in one frame (9.1°), on the longer of the two they added (8.9°) | `seamWholeRad` |
+| 10 | **2.4c, by design: leaving a tilt by distance with the gizmo on the FAR half of a cap turns the camera round to that side** | the camera is derived from the place; before, it stayed and the gizmo's angles disagreed — the owner's report 4 (the gizmo on the face opposite the camera) | none without the two states again |
+| 11 | **2.4e: a side face's vertical calm reads its OWN run, and is whole by position at both its own edges** — the bounce's rule (2026-11-04: the box's height for a vertical face) replaced under `chartCalm` 1 | one reference for every face (§11 3.); the owner's report 1 measured 8.1° → 4.9° a frame; ⚠ cost 1: walls of unequal extents side by side (an L-shaped tower) ease the view's pitch on a dx — no scene has them; ⚠ cost 2: `Scene_1`'s and `Scene_0`'s view changes by up to ~4° with `chartCalm` 1 (the old reference was the parts' box, 83 mm taller than the cube's side faces) | `chartCalm` 0; or `CalmKnobs.ownRun` / `wholeEnds` alone |
+| 12 | **Nothing pushed, nothing deployed** — live is still `157974f` (step 2.3); the branch's 15 commits since `6d5f2b7` are local | a push and a deploy are the owner's word each time | *"deploy"* — live about 4 minutes later; the default (both switches off) then differs from live by ONE thing: a press no longer tilts |
+| 13 | **Step 2.5 (the old detectors and the switch deleted) not started** | it follows the owner's look on the switch-on behaviour | — |
+| 14 | **The shelved fix in `git stash` left in place** | superseded by 2.4e (it was the per-face form of the same idea), but dropping a stash is not mine to do unasked | `git stash drop` in the worktree, on the owner's word |
+| 15 | **`CLAUDE.md`'s status lines and `QUEUE.md`'s row not touched** | only when asked; `QUEUE.md` is 5 bytes under its budget | — |
+
+**Found on the way, not acted on** — (a) the atlas on a tipped heptagon whose axis is 10 – 20° off the vertical takes a frame square to the axis
+serving 6 faces where the old detector finds one whole upright zone (no scene; the test scenes and step 3); (b) under the charts a box whose top
+leans 10° has its top built as a side under a virtual pole: 2.4b would cross from that roof onto the wall under its high edge (no scene);
+(c) the replay script never pushes past `Scene_0`'s ridge close in and never tilts on its top faces: those paths are gated by the targeted
+runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press`, `MODE=rim`, the default close-in run) — to move into
+`scripts/probes/` when the walks' rules are written; (d) the replay's last-digit noise starts at frame 3 on any scene (≤ 3 × 10⁻⁹ m) — the
+"unexplained difference at frame 3" noted on the shelved fix was that noise.

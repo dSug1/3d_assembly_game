@@ -402,11 +402,11 @@ export interface GestureConfig {
   /** ⭐⭐ …and the orbit's angles (yaw, pitch, zoom), on a critically damped spring of this time constant (ms; 0: at once) — the travel counts that share the
    * orbit's spring with it (the piece's entry, its aim, the centre's return) */
   orbitSpringMs: number;
-  /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. */
+  /** ⭐⭐⭐ (2026-11-10, POLAR_ORBIT_CLEANUP.md §9.4 — the owner's TILTED POLE) a press on a cap tilts the orbit so the cap is a side (1); off (0): the polar cap as before. ⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*) no press tilts: 1 the automatic tilt close in (`tiltAutoM`), 0 none. */
   tiltedPole: number;
   /** ⭐⭐⭐ (2026-11-10, the owner: *"limit the speed of the scene tilt at crossing"* → *"one speed for every tilt"*) EVERY tilt — the roll back to upright, the swing of a tilt just made — at this speed (°/s; 0: at once) — ⛔ `tiltRollMinMs` (a whole roll in 250 ms whatever its size) replaced. */
   tiltRollDegS: number;
-  /** ⭐⭐⭐ (2026-11-10, the owner: *"at close distance (… xx% of the max distance, make a slider) it toggles on automatically"*) the tilt made by itself as the gizmo enters a top / bottom, within this % of the far distance (off beyond it + 5); 0: never (the press only). */
+  /** ⭐⭐⭐ (2026-11-10, the owner: *"at close distance (… xx% of the max distance, make a slider) it toggles on automatically"*) the tilt made by itself as the gizmo enters a top / bottom, within this % of the far distance (off beyond it + 5); 0: never (the press only). ⛔ (2026-11-15) no press tilts: 0 no tilt at all. */
   tiltAutoM: number;
   /** ⭐⭐⭐ (2026-11-11, the owner: *"during the approach … if the gizmo is on a face holding the pole … when the tilted-pole-orbit toggles on there is an immediate alignment of the camera … this does not blend with the approach. I would like to keep the camera orientation when the tilted-pole-orbit toggles on as long as the approach continue, then the camera blends with the new alignment with the delta position mm when the orbit at close in starts"*, *"gizmo moving from first millimeter and also the same for all the faces"*) the automatic tilt's blend: the finger's travel (mm) over which the camera turns into the close-in alignment once the orbit starts (0: at once). */
   tiltBlendMm: number;

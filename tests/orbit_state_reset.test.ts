@@ -37,6 +37,7 @@ const RESET: Record<string, unknown> = {
   asmZone: null,
   asmZoneMix: null,
   asmPieceDrawn: null,
+  asmDirEase: null,
   asmCamLast: null,
   asmSpitSide: 0,
   asmSpitU: null,
@@ -62,15 +63,15 @@ const RESET: Record<string, unknown> = {
 };
 /** ⭐ The fields KEPT: the GEOMETRY caches (`asm` the pick's own), the RENDER objects, the re-entrancy flag, the running count. */
 const KEPT = [
-  "asm", "asmZones", "asmZoneFacetsF", "asmFaceMap", "asmWorldMap", "asmParts", "asmKey", "asmCast", "asmShell",
+  "asm", "asmZones", "asmAtlas", "asmZoneFacetsF", "asmFaceMap", "asmWorldMap", "asmParts", "asmKey", "asmCast", "asmShell",
   "asmSectionLines", "asmSectionKey", "asmZoneMesh", "asmRedCache", "asmGreenCache",
   "asmRestOff", "pieceHoldCount",
 ];
 
 describe("⭐⭐⭐ the orbit's starting state (`orbitStateStart`, `resetOrbitState`)", () => {
-  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (53)", () => {
+  it("every `asm…` / `pieceHold…` field of the scene's state is decided: reset or kept (55)", () => {
     const decl = [...raw("render/scene_state.ts").matchAll(/^ {2}((?:asm|pieceHold)\w*)\??:/gm)].map((m) => m[1]!);
-    expect(decl.length).toBe(53);
+    expect(decl.length).toBe(55);
     expect([...Object.keys(RESET), ...KEPT].sort()).toEqual([...decl].sort());
   });
 

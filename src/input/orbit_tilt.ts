@@ -12,6 +12,8 @@
  * * **Off the face** (2026-11-10, the rebuild): the roll back starts as the gizmo CROSSES the edge and completes on its own clock at `tiltRollDegS`
  *   (`rollStep`, `rollDurationMs`) — the gizmo held meanwhile (`tiltUnderWay`); the camera's frame turned from F's upright to the world's (`frameMix`);
  *   whole, the world's frame again (the face exited polar again). The swing at the same speed: ONE speed for every tilt.
+ * ⛔⛔⛔ (2026-11-15, the owner: *"cancel my rule and remove the press action on the orbit"*, `ORBIT_CHARTS.md` §11.1) a press no longer tilts: the tilt
+ *   is made close in only, by itself (the automatic tilt, `tiltAutoLatch`) — every function here still serves it (the swing, `capTilt`, `snapHeading`).
  * ⛔ ENGINE-FREE. Rotation matrices, Rodrigues' formula, a smoothstep — textbook; no licence, no patent.
  */
 import { cross, dot, type Vec3 } from "../core/vec";
