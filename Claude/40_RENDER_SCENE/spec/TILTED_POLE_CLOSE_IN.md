@@ -522,13 +522,9 @@ itself (the camera's turn is 0.04° at its first frame).
 
 ### 12.2 Tried, measured, reverted — nothing of it committed
 
-| trial | `Scene_1` | `Scene_0` | `Scene_0bis` |
-|---|---|---|---|
-| today | the largest 8.7°, in all 673°; the entry 6.2 / 8.0 | 8.8° | 8.9° |
-| T1 — the ease read once the frame's view is set (after `calmFrame`) | the entry **0.4 / 1.4**; but the bottom's entry **10.4** (was 6.7): the gap now holds the square's first step, which the camera's turn counts too, while the square keeps turning | — | — |
-| T2 — T1, and the square camera at its target while a transition's turn runs (its pitch INSIDE the one turn) | **6.0** at most, in all 504°; the same tilts made / left | 8.0 (a finger drag, no turn running) | ⛔ **54.6**: the spit's turn starts in the camera's stage, after the read — the piece's direction jumps; every start of a turn would need the read |
-
-So (1.) cannot be fixed alone: it is part of (2.). T2 shows the shape of a fix, and that it is not local.
+T1 (the ease read after `calmFrame`) and T2 (T1, and the square camera at its target inside a running turn), their table and figures — moved
+word for word → [2026-11-17_package_a_trials_and_gates.md](../history/2026-11-17_package_a_trials_and_gates.md). In short: T1 alone moved the jolt to
+the bottom's entry; T2 kept every turn ≤ 6° on `Scene_1` but broke the spit (54.6°): the shape of a fix, not local.
 
 ### 12.3 Why it is not built
 
@@ -771,28 +767,29 @@ The frame change itself unchanged (at once, the gizmo kept, every angle set). **
    speed's step over the turn's whole angle); the square camera's own share when no turn runs (its step capped by the angle it turns the direction).
 **Expected**: every change of frame close in turns the picture once, ≤ 6° a frame (today 6.2 – 8.9); the ridge's and the spit's half turns slower.
 
-### 18.1 As built (2026-11-17 night: `fe06c2c`, an Opus agent; base `e79d820`) — one `git revert fe06c2c` undoes A
+### 18.1 As built (2026-11-17 night: `fe06c2c`, then `c53f54a`, Opus agents; base `e79d820`) — `git revert c53f54a fe06c2c` undoes A
 `seam_turn.ts`: FINGER capped and waiting for the angle (`seamTurnStep`), `squareShareStep` / `nlerpAngle`, `squareRestarts`, `seamStepRad`; the wiring:
 `squareFrame` (at its target inside a turn, else its share capped), `seamEaseRead` after `calmFrame` (the gap from `dirFrom`; the turn's axis and
 framing rule read afresh), every clock waiting for it, `turnRestart`. Two causes found while building, both fixed in the rule: (a) where the camera
 follows the eased direction (the world's frame) its angle GROWS with the ease in the frame — the clock's step solves for it (`seamStepRad`; ⛔ 6.19° in
 the first frame of `Scene_1`'s exit by an edge); (b) the spit's turn (begun in the camera's stage) kept the axis read before the square camera was at its
 target — 285° of view the far way round for a 93° pose (`Scene_0bis`'s top ridge from a tip): now re-read. 17 vectors (`one_turn.test.ts`), red on 13
-mutants; 10 pins updated; **2075 vectors**. **The gates** (base → A; "in a turn" = a transition's turn running, `tilt_check`'s new `WORSTF`, `TURNONLY`):
-
-| run | largest a frame, all / in a turn / no turn running | in all | notes |
-|---|---|---|---|
-| default `Scene_1` | 8.7 → **6.0** / 5.9 / 6.0 | 673 → 507° | tilts 2 / 2 as before |
-| default `Scene_0` | 8.8 → 8.0 / **5.8** / 8.0 | 2149 → 1851° | the 8.0 – 7.3: a dx drag onto the end cap while the square camera turns on its own (no transition); holds 7 → 6 |
-| default `Scene_0bis` | 8.9 → 7.6 / 6.4 / 7.6 | 3627 → 3476° | the 6.4: the frame the spit's turn starts (its share 0) — the square camera's own step and the drag before it; 7.6 drags |
-| `out` 4 px / 1 px | 6.0 → **5.2** (the way out) | 277 → 266° | 95 % within 0.67 s (0.58) / 0.70 s (0.68) |
-| `ridge` 0 / 1 / 4 | 8.5 / 8.5 / 8.1 → **6.0 / 5.8 / 6.0**; in a turn 4.8 / 5.8 / 5.8 | | crossings and holds as before (`Scene_1`'s second hold 36 → 28 readings, all on) |
-| `pole` 1 / 0 | 6.6 / 6.9, unchanged (no turn over 0.8°) | | |
-| ridge_check tip (§13.4, decision 3) | walk-in 124° at ≤ 10.0° → **125° at ≤ 6.6°** (in its turn ≤ 4.8°), the same way round; walk-back 357° ≤ 8.6° → 337° ≤ 6.0° | | the arrival kept as the owner saw it, slower |
-| across / edge_noise | 6.6 → 6.7 (walk); the edges: 0 made / left, 0° in the runs — equal | | |
+mutants; 10 pins updated; **2075 vectors**. The gates of `fe06c2c` (base → `fe06c2c`) moved word for word → [2026-11-17_package_a_trials_and_gates.md](../history/2026-11-17_package_a_trials_and_gates.md).
 
 ⚠ Not equal, not judged: `mid_check` could not park the gizmo 2 mm off the middle on A (its climb lands elsewhere: the gizmo held longer), so its walk
 measured another path. The replays are another play from the first transition (`Scene_1`, `Scene_0` drag 19, `Scene_0bis` drag 5): every earlier drag
 ends on the same gizmo (0.000 mm); in that drag the gizmo is held 1 – 4 frames longer (the turns' pace) and the refused finger moves it 23 – 266 mm
 less; `replay_health` clean, no frame over 20°. ⚠ Still over 6° with NO transition: a drag while the square camera turns on its own at a vertical edge
 (7.6 – 8.0°: its 6° plus the spring's lag) — not in A's list; the owner's to decide whether that edge is a transition too. ⛔ No device look yet.
+
+**The second commit, `c53f54a`** (the first audit's blocker, fixed at its root): on `Scene_0bis`'s spit, the free face's exit, the turn's END pose
+went on moving under the rig's own lags (the camera's leash catching up after a drag, the calm's ease) while the turn ran; the clock reads only the
+angle from the start pose to the end, so the picture turned 6.66, 6.36, 6.17, 6.06° in four frames (`across_check`). Now the share DRAWN is capped in
+the camera's stage (`zoneMixPose`): `shownShareCap` bisects the largest share whose picture turns at most the one speed's step from the pose drawn last
+frame, the picture's turn MEASURED by `poseTurnRad` (the one rotation between two poses' axes, look and roll together — the gates' own measure); the
+clocks carry on from the share drawn (`turnShareDrawn`; the way out's progress by `seamOutShareInv`, the smoothstep's inverse); a turn ENDS where it is
+drawn whole (no longer in its clocks). 6 vectors (`one_turn.test.ts`), pins updated (`pose_about_piece`, `way_out_blend`); **2081 vectors** (165 files). What it changed (its second
+audit's measures): `across_check`'s walk 6.6 → 6.7 → **6.0°** in a frame (base → `fe06c2c` → `c53f54a`); `Scene_0bis` (`tilt_check`) the frames in a
+turn 541 → 613, the whole turn 3476 → 3544°; the spit's free-face entry and exit turns ~10 frames longer; `ridge_check`'s walk back 58 frames in a turn
+(40 before). ⚠ One frame of 6.36° left at share 0 — a spit turn's first frame: the end pose's own motion under a drag, not the turn's share. Open,
+the owner's → [`RND5.md`](../../00_CORE/queue_notes/RND5.md) (package A, its list).

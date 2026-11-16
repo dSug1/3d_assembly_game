@@ -370,9 +370,25 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   the direction's ease read after the frame's view is set, at every turn start; the shown share capped at `tiltRollDegS` in every path (the
   finger-paced entry, the square camera's own share). The design →
   [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18. No new tunable.
-* **As built** (`fe06c2c`, one commit: `git revert fe06c2c` undoes A): every transition close in at ≤ 6° a frame on the three scenes (`Scene_1`'s
+* **As built** (`fe06c2c`, then `c53f54a` below — two commits: `git revert c53f54a fe06c2c` undoes A): every transition close in at ≤ 6° a frame on the three scenes (`Scene_1`'s
   default 8.7 → 6.0, the ridge 8.5 → 6.0, the way out 6.0 → 5.2; `Scene_0bis`'s spit 8.9 → ≤ 6.4 at a turn's first frame); the top ridge from a tip
   kept as the owner saw it (125°, the same way round, ≤ 6.6°). Two causes fixed in the rule while building (the camera's angle growing with the ease;
   the spit's turn axis read before the view was set). 17 vectors, 13 mutants; **2075 vectors**. ⚠ `mid_check` not reproduced on A (its climb lands
   elsewhere); a drag across a vertical edge while the square camera turns on its own still reaches 7.6 – 8.0° (no transition there — the owner's to
   decide). ⛔ No device look. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18.1.
+* **The second commit, `c53f54a`** (2026-11-17, the first audit's blocker fixed at its root; the second audit: the code sound, `npm run verify` 165
+  files, **2081 vectors**): on `Scene_0bis`'s spit, the free face's exit, the turn's END pose still moved under the rig's own lags (the leash after a
+  drag, the calm's ease) while the turn ran, so the picture turned 6.66, 6.36, 6.17, 6.06° in four frames. Now the share DRAWN is capped in the camera's
+  stage (`shownShareCap`, the picture's actual turn measured by `poseTurnRad`; the clocks carried on from it, the way out's by `seamOutShareInv`); a
+  turn ends where it is drawn whole. Its figures (the second auditor's): `across_check`'s walk 6.6 → 6.7 → 6.0° in a frame; `Scene_0bis` in
+  `tilt_check` 541 → 613 frames in a turn, 3476 → 3544° in all turns; the spit's free-face entry and exit turns ~10 frames longer; `ridge_check`'s walk
+  back 58 frames in a turn (40); one frame of 6.36° left at share 0 — a spit turn's first frame, the end pose's own motion under a drag, not the
+  turn's share. 6 vectors. ⛔ No device look. → [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §18.1.
+* **FOR THE OWNER — not decided, nothing built** (from A's builders):
+  1. **The square camera's own turn at a vertical edge during a drag** — 7.6 to 8.0° a frame with no transition running: leave it (it is a drag), or
+     pace it as a transition.
+  2. **The summed clock** — the turns are longer than §12.4 estimated (a 90° exit about 30 frames; the way out 0.67 s against 0.58 s): keep it, or a
+     refined clock.
+  3. **The cap under a fast finger** — a turn paced by the finger adds nothing in the frames where the finger itself moves the picture over 6°, and
+     finishes once it slows or lifts: to judge on the device.
+  4. **A turn started with no world map still reads no ease** — unchanged from before A.
