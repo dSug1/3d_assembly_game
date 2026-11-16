@@ -284,16 +284,22 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): one band under the
     before(A, "faceBandRead(st, m.t);", "calmFrame(st, dtMs);");
   });
   it("⭐ taken afresh at every change of frame: `tiltOn`, `tiltOff`, `poleCross`, `zoneSwitch` clear it with the place; `tiltOff` and `poleCross` read it again at the place they re-read", () => {
-    for (const sig of ["function tiltOn(", "function tiltOff(", "function poleCross(", "function zoneSwitch("]) {
+    for (const sig of ["function tiltOn(", "function tiltOff(", "function zoneSwitch("]) {
       const f = fnCode(W, sig);
       expect(f, sig).toContain("st.asmShown = null; st.asmFaceBand = null;");
     }
+    // ⭐⭐⭐ (2026-11-16, step C5) the tilt's exit and the ridge's crossing re-read the place through the one event (`crossTurn`): cleared, then read there
+    const ct = codeOnly(raw(W)).replace(/\s+/g, " ");
+    const i0 = ct.indexOf("function crossTurn(");
+    const c = ct.slice(i0, ct.indexOf("function ", i0 + 10));
+    expect(c).toContain("st.asmShown = null; st.asmFaceBand = null;");
+    expect(c).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);");
+    before(c, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
     const off = fnCode(W, "function tiltOff(");
-    expect(off).toContain("st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; if (st.cfg.chartLayout === 1) faceBandRead(st, m.t);");
+    expect(off).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
+    expect(off).toContain("st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch }; if (chart) faceBandRead(st, m.t);"); // no place to keep under the switch, or the switch off
     before(off, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
-    const pc = fnCode(W, "function poleCross(");
-    expect(pc).toContain("st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch }; faceBandRead(st, m.t);");
-    before(pc, "st.asmFaceBand = null;", "faceBandRead(st, m.t);");
+    expect(fnCode(W, "function poleCross(")).toContain("crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");
     // nowhere else is it written but the reading and the clears (and the starting state)
     expect(codeOnly(raw(W)).match(/st\.asmFaceBand = /g)?.length).toBe(6); // the reading's two, the four clears
     expect(raw(W).match(/faceBandRead\(st, /g)?.length).toBe(3);

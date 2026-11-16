@@ -533,15 +533,15 @@ export function crossingPitch(u0: Vec3 | null, u1: Vec3, a: Vec3): number {
 }
 
 /**
- * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed: at the gizmo `g0` on its face (normal `n`), into the face beyond square to the
- * edge (toward the new `side`, along the face) — the dy sign that crossed (`sign`, the finger's last) held until the gizmo is `edgeHoldMm` deep. `null`: no
- * dy to hold, or no way along the face.
+ * ⭐⭐⭐ (§8's hold, after the crossing) THE DY HOLD once the side changed, the gizmo on its face (normal `n`): the dy sign that crossed (`sign`, the
+ * finger's last) held until the finger has gone `edgeHoldMm` the other way. `null`: no dy to hold, or no way along the face toward the new `side` (its
+ * normal along that way). ⛔ (2026-11-16, step C5) where the gizmo crossed (`g0`) and the way into the face beyond (`d`) no longer returned: read by
+ * nothing. ⭐ (step C5) kept under `chartLayout` 1 too, handed to the one event (`crossTurn`; `TILTED_POLE_CLOSE_IN.md` §13.3).
  */
-export function crossingHold(g0: Vec3, n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly g0: Vec3; readonly d: Vec3; readonly sign: 1 | -1; readonly back: number } | null {
+export function crossingHold(n: Vec3 | null, a: Vec3, side: number, sign: number): { readonly sign: 1 | -1; readonly back: number } | null {
   if (sign === 0 || n === null) return null;
   const s = spitSideRef(a);
   const w: Vec3 = [s[0] * side, s[1] * side, s[2] * side];
   const k = dot(w, n);
-  const d = unit([w[0] - k * n[0], w[1] - k * n[1], w[2] - k * n[2]]);
-  return d === null ? null : { g0, d, sign: sign > 0 ? 1 : -1, back: 0 };
+  return unit([w[0] - k * n[0], w[1] - k * n[1], w[2] - k * n[2]]) === null ? null : { sign: sign > 0 ? 1 : -1, back: 0 };
 }

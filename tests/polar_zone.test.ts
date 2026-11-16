@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { buildFaceMap, type MapFace } from "../src/input/face_map";
 import { prismOutline } from "../src/core/prism";
-import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, zoneAt, zoneFrame, zoneOrientation, distanceToFacets, crossingPitch, overAxisPitch } from "../src/input/polar_zone";
+import { DEFAULT_ZONE_OPTS, fingerInFrame, fingerSwapped, polarZones, snapToWorldAxis, spitSide, spitHeading, spitCameraHeading, crossingHold, spitSideRef, zoneAt, zoneFrame, zoneOrientation, distanceToFacets, crossingPitch, overAxisPitch } from "../src/input/polar_zone";
 import { mulM, mulT } from "../src/input/orbit_tilt";
 import type { Vec3 } from "../src/core/vec";
 
@@ -218,15 +218,16 @@ describe("⭐⭐⭐ the zenith edge crossed as on Scene_0 (the owner): the side,
       prev = h;
     }
   });
-  it("the hold after the crossing: into the face beyond, square to the ridge, down its slope; the dy that crossed; none without a dy", () => {
+  it("the hold after the crossing: the dy that crossed (its last sign), nothing gathered yet; none without a dy, no face, or a face whose normal is the way to the new side (⛔ 2026-11-16, step C5: `g0` and `d` no longer returned — read by nothing)", () => {
     const nBack: Vec3 = [0, 0.9 / Math.hypot(0.9, 0.44), 0.44 / Math.hypot(0.9, 0.44)];
     const back = spitSide([0, 0.3, 1], a, 0);
-    const h = crossingHold([0, 0.48, 0.19], nBack, a, back, 1)!;
-    expect(h.sign).toBe(1);
-    expect(Math.abs(h.d[0])).toBeLessThan(1e-12); // square to the ridge (along x)
-    expect(h.d[1]).toBeLessThan(0); // down the face beyond
-    expect(Math.abs(h.d[0] * nBack[0] + h.d[1] * nBack[1] + h.d[2] * nBack[2])).toBeLessThan(1e-12); // along it
-    expect(crossingHold([0, 0, 0], nBack, a, back, 0)).toBeNull();
+    const h = crossingHold(nBack, a, back, 1)!;
+    expect(h).toEqual({ sign: 1, back: 0 });
+    expect(crossingHold(nBack, a, back, -2)).toEqual({ sign: -1, back: 0 });
+    expect(crossingHold(nBack, a, back, 0)).toBeNull();
+    expect(crossingHold(null, a, back, 1)).toBeNull();
+    const w = spitSideRef(a);
+    expect(crossingHold([w[0] * back, w[1] * back, w[2] * back], a, back, 1)).toBeNull(); // no way along the face toward the new side
   });
 });
 

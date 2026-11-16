@@ -198,8 +198,12 @@ describe("⭐⭐⭐ the wiring (source pins, comments stripped)", () => {
   const W = "render/assembly_wiring.ts";
   it("⭐ `tiltOff`: under `chartLayout === 1` the paced turn only when `seamOutPaced` (left by distance, `tiltOutBlendMm` > 0) — else the old `seamTurnStart(st, false)`", () => {
     const f = fnCode(W, "function tiltOff(");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st); else seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }");
-    expect(f.match(/seamOutStart\(/g)?.length).toBe(1);
+    // ⭐⭐⭐ (2026-11-16, step C5) through the one event (`crossTurn`): the paced flag the site's, the turn started there
+    expect(f).toContain("const paced = chart && seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);");
+    expect(f).toContain("crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });");
+    expect(f).toContain("if (chart) crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });");
+    const c = fnCode(W, "function crossTurn(");
+    expect(c).toContain("if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas);");
     // the latch read is LAST frame's: `tiltOff` runs before the latch is stepped
     const a = fnCode(W, "export function assemblyFrame(");
     before(a, "if (st.asmTilt !== null && st.asmTilt.exit) tiltOff(st);", "st.asmTiltAuto = tiltAutoLatch(st.asmTiltAuto, approachDistance(st.cfg, st.approach), st.cfg.tiltAutoM);");

@@ -129,6 +129,14 @@ Both climb the gizmo by 6-frame direction probes (undone) — slow but sure — 
 ~76° in all, ≤ 6.2° in a frame; across — nothing at the middle, the half turn at the far edge (one band past it), then the dy hold (the finger must
 reverse: "reached the rectangle beyond false" is expected), ≤ 6.6° a frame.
 
+* **ridge_check** (`SCRIPT=ridge_check.mjs`, step C5 — `TILTED_POLE_CLOSE_IN.md` §13): `Scene_0bis`'s TOP. `MODE=tip` (`TIP` +1 / −1, `S0` mm off
+  the middle): the gizmo onto the triangle above the tip's end, ONE drag along the axis toward the body's middle, then ONE drag back (`BACK=0`: none);
+  `MODE=across` (`FROM_SIDE` ±1): from a ridge face ONE drag round the axis over the ridge, then ONE back. `WALKDIR=dx,dy` forces the finger's way
+  (else the 6-frame probes pick it). Per drag: the side's changes, the timed turns, the dy hold (set / ended, where), the view's turn, the gizmo still,
+  and the gizmo's way on the glass against the finger's (sideways 60 – 120°, against > 120°: a finger axis swapped under the finger); the path every
+  `EVERY` frames with the axis's angle on the glass and how far the view looks down. ~60 s a run.
+  `SCRIPT=ridge_check.mjs MODE=tip TIP=1 bash scripts/probes/mid_batch.sh "chartLayout=1&chartCalm=1|2|0|IN"` (the 4th field: close in).
+
 ## 5. Gate (e) — `edge_noise.mjs`: a place wobbling across an edge, close in (2.4d)
 
 `bash scripts/probes/edge_batch.sh "<scene>|<query>|<EDGE>|<AMM>|<OFFMM> …"` — `EDGE=top` (a side face's top edge, the face beyond holding the

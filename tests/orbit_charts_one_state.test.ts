@@ -271,9 +271,14 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(f).toContain("const seam = st.cfg.chartLayout === 1 && g !== null && worldFaceMap(st) !== null; const uWas = seam ? drawnDir(st) : null;");
     before(f, "const uWas = seam ? drawnDir(st) : null;", "st.asmTilt = null;");
     expect(f).toContain("if (!seam) turnAngles(st, (d) => mulM(D, d), Math.atan2(Math.sin(hP), Math.cos(hP)));");
-    expect(f).toContain("const mq = seam ? poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP) : mq0; if (seam) seamRebase(st, mq); else st.asmMapQ = mq;");
-    expect(f).toContain("if (st.cfg.chartLayout === 1) { if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st); else seamTurnStart(st, false); if (uWas !== null) seamEase(st, uWas); }"); // ⭐ (2026-11-16, step C3) left by distance with `tiltOutBlendMm` > 0: paced; else timed as before
-    expect(f).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);"); // the dy hold: unchanged
+    // ⭐⭐⭐ (2026-11-16, step C5) the rebase, the turn (paced by distance: step C3) and the ease through the one event (`crossTurn`); the switch off as before
+    expect(f).toContain("if (seam && mq0 !== null && g !== null) {");
+    before(f, "if (seam && mq0 !== null && g !== null) {", "crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held }); } else { if (mq0 !== null && g !== null) { st.asmMapQ = mq0;");
+    expect(f).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, st.asmDySign);"); // the dy hold with the switch off: unchanged
+    expect(f).toContain("if (st.cfg.chartLayout === 1) held = crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold;"); // on: the one rule
+    const c = fnSource(W, "function crossTurn(");
+    expect(c).toContain("seamRebase(st, mq);");
+    before(c, "seamRebase(st, mq);", "if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas);");
     expect(f).toContain("if (nW !== null) sqO.target = nW;");
     expect(f.match(/turnAngles\(/g)?.length).toBe(1);
   });
@@ -322,10 +327,11 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE STATE under th
     expect(e).toContain("if (gap !== null) st.asmDirEase = { axis: gap.axis, angle: gap.angle, mix };");
     expect(fnSource(W, "function drawnDir(")).toContain("const q = st.boxOrbit ?? st.pieceQ ?? { yaw: st.orbit.yaw, v: st.orbit.elevation };");
     const x = fnSource(W, "function poleCross(");
-    before(x, "const uWas = drawnDir(st);", "seamRebase(st, mq1);");
-    before(x, "if (st.asmCamLast !== null) st.asmZoneMix = {", "seamEase(st, uWas);");
+    // ⭐⭐⭐ (2026-11-16, step C5) the crossing's rebase, turn and ease through the one event (`crossTurn`), the direction drawn read before it
+    before(x, "const uWas = drawnDir(st);", "crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });");
     const sp = fnSource(W, "export function spitStep(");
-    expect(sp).toContain("const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);");
+    expect(sp).toContain("crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });"); // the switch on: the one event, the ease carried
+    expect(sp).toContain("const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);"); // off: as before
     // ⛔ the sway: nothing of a drawn mesh, a pick or the camera read by the ease (the pose shown only starts a turn, in `seamTurnStart`)
     for (const sig of ["function seamEase(", "function drawnDir(", "function easeCarry(", "function seamTurnFrame("]) expect(fnSource(W, sig)).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast/);
   });

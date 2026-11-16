@@ -16,7 +16,7 @@
  *   a half at the far side, any angle on another polygon (§2.2 O2, O6) — computed from the edge, never tabulated. ⭐ A concave edge falls out of the
  *   same computation (O11): a wall RISING from a level floor unfolds the other way, so the far wall costs 0.
  * * **The dy hold** (`turnHolds`): a turn over a threshold the CALLER chooses (§3.3, the third row — the owner has not decided between today's 120° and
- *   90°, §4 W6).
+ *   90°, §4 W6). ⭐⭐⭐ (step C5, §13) the crossings that turn the camera at an EDGE read ONE rule (`crossingHoldSign`, `crossingEvent`).
  * ⭐ Everything in the MODEL's coordinates — the contour's polygons (`orbit_charts.ts`'s `ChartFace`); nothing here reads a mesh or the camera.
  * ⭐ The reference this module is checked against, on the 35 shapes: `scripts/probes/free_face_study.ts` (`isFree`, `unfoldedUp`, `edgesOf`, Part A).
  * ⛔ ENGINE-FREE. Plane geometry — textbook; no licence, no patent.
@@ -193,8 +193,73 @@ export function exitHoldSign(heading: Vec3, edges: readonly FreeEdge[], to: numb
   const d = unit(sub(e.b, e.a));
   const m = sub(mul(add(e.a, e.b), 0.5), centre);
   const out = sub(m, mul(d, dot(m, d)));
+  // ⭐⭐⭐ (step C5, §13) the one rule (`crossingHoldSign`): over a free face's level side the face beyond's up unfolded is ∓ `out`, so "it brings the
+  // gizmo back" IS the turn over a quarter (checked above) — the pushed dy alone decides here, as before
+  return crossingHoldSign(heading, e.heading, unit(out), dySign);
+}
+
+/* ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13 — step C5: ONE HALF-TURN EVENT, the rule every crossing that turns the camera reads) ------------- */
+
+/** ⭐ `crossingHoldSign`: a dy's part along the edge's outward direction must exceed this (of a unit up) to count — a dy sliding along the edge pushes nothing. */
+export const CROSSING_PUSH_MIN = 1e-9;
+
+/**
+ * ⭐⭐⭐ (§13.2, D-T4 made exact) THE DY HOLD AT A CROSSING THAT TURNS THE CAMERA — the sign held, or 0. On the glass the finger's dy of sign `s` moves the
+ * gizmo along the up SHOWN (`upShown`, `T`) before the turn and along the next face's up (`upNext`, `U`, unfolded into the face left's plane) after it;
+ * `out` the direction from the face left toward the edge, in its plane. The dy is held when it PUSHED the gizmo out over the edge (`s·T·out > 0`) AND
+ * the same dy would bring it straight back after the turn (`s·U·out < 0`) — the finger must reverse. ⭐ Over a free face's level side `U` is `−out` into a
+ * top face, `+out` out of a bottom one: the pair is §10's rule (the turn over a quarter and the dy that pushed). ⛔ The turn over 120° and the finger's
+ * LAST dy sign (`edgeHoldAt`, before C5): an exit turning 90° – 120° left the dy that pushed free to bring the gizmo straight back; a dy that crossed
+ * nothing (an old or opposite sign, the edge crossed by a dx) was held. No dy, no next up: 0.
+ */
+export function crossingHoldSign(upShown: Vec3, upNext: Vec3 | null, out: Vec3, dySign: number): 1 | -1 | 0 {
+  if (upNext === null || !(dySign > 0 || dySign < 0)) return 0;
   const s = dySign > 0 ? 1 : -1;
-  return s * dot(heading, out) > 0 ? s : 0;
+  return s * dot(upShown, out) > CROSSING_PUSH_MIN && s * dot(upNext, out) < -CROSSING_PUSH_MIN ? s : 0;
+}
+
+/** ⭐⭐ (§13.2) a face's own "up": the holding `up` laid in its plane (normal `n`) — upright on the glass on a BOUND face; null on a level (free) face. */
+export function faceOwnUp(n: Vec3, up: Vec3): Vec3 | null {
+  const w = sub(up, mul(n, dot(n, up)));
+  return len(w) < FREE_NO_UPHILL ? null : unit(w);
+}
+
+/**
+ * ⭐⭐ (§13.2) a direction `v` of the face beyond (normal `nTo`) UNFOLDED across the edge onto the face left's plane (normal `nFrom`): turned about the
+ * edge's own line (`nFrom × nTo`) by the angle that brings `nTo` onto `nFrom` — `freeEdges`' unfolding, the edge read from the two normals. The two
+ * faces coplanar (no edge): `v` as it is.
+ */
+export function unfoldAcross(v: Vec3, nFrom: Vec3, nTo: Vec3): Vec3 {
+  const e = cross(nFrom, nTo);
+  if (len(e) < 1e-12) return v;
+  const d = unit(e);
+  return rot(v, d, Math.atan2(dot(d, cross(nTo, nFrom)), dot(nTo, nFrom)));
+}
+
+/**
+ * ⭐⭐ (§13.2) THE OUTWARD DIRECTION of a convex edge in the face left's plane (normal `nFrom`): the face beyond's normal laid in that plane (a convex
+ * edge leans the face beyond's normal outward). ⛔ A concave edge (a mouth, W9) is the study before step B's. Coplanar: none.
+ */
+export function edgeOut(nFrom: Vec3, nTo: Vec3): Vec3 | null {
+  const w = sub(nTo, mul(nFrom, dot(nFrom, nTo)));
+  return len(w) < 1e-12 ? null : unit(w);
+}
+
+/**
+ * ⭐⭐⭐ (§13.2) THE ONE HALF-TURN EVENT's numbers at a crossing from the face of normal `nFrom` onto the face of normal `nTo` (world, the MODEL's), the up
+ * shown on the face left `upShown` (the site's own: a tilt's frame, a bound face's own up, a free face's carried heading), the holding `up`: the TURN —
+ * the angle between the up shown and the next face's own up unfolded across the edge (0 … π; null: the face beyond is level — it takes the entry's
+ * layout, no turn known here) — and the dy HELD (`crossingHoldSign`, its `out` the edge's own, `edgeOut`).
+ */
+export function crossingEvent(upShown: Vec3, nFrom: Vec3, nTo: Vec3, up: Vec3, dySign: number): { readonly turnRad: number | null; readonly hold: 1 | -1 | 0 } {
+  const own = faceOwnUp(nTo, up);
+  const out = edgeOut(nFrom, nTo);
+  if (own === null || out === null) return { turnRad: own === null ? null : 0, hold: 0 };
+  const U = unfoldAcross(own, nFrom, nTo);
+  const t = sub(upShown, mul(nFrom, dot(nFrom, upShown)));
+  if (len(t) < FREE_NO_UPHILL) return { turnRad: null, hold: 0 }; // the up shown along the face's normal: nothing shown in its plane
+  const T = unit(t);
+  return { turnRad: Math.atan2(len(cross(T, U)), dot(T, U)), hold: crossingHoldSign(T, U, out, dySign) };
 }
 
 /**

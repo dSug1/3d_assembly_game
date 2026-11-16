@@ -99,26 +99,19 @@ export const TILT_SLANT_MIN = 1e-3;
  * in the walks). `null`: no hold (a near edge, a side edge, a level face beyond, no dy).
  */
 export interface EdgeHold {
-  /** where the gizmo crossed */
-  readonly g0: Vec3;
-  /** into the face beyond, square to the edge (unit) */
-  readonly d: Vec3;
-  /** the dy sign held (the finger's that crossed) */
+  /** the dy sign held (the finger's that crossed) — ⛔ (2026-11-16, step C5) `g0` (where it crossed) and `d` (into the face beyond) deleted: read by nothing */
   readonly sign: 1 | -1;
   /** ⭐⭐⭐ (2026-11-14) the finger's travel THE OTHER WAY since the crossing (mm) — the hold ends at `edgeHoldMm` of it (`edgeHoldFinger`) */
   readonly back: number;
 }
-export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, g0: Vec3, sign: number): EdgeHold | null {
+export function edgeHoldAt(heading: number, nTilted: Vec3, nExit: Vec3, sign: number): EdgeHold | null {
   const h = Math.hypot(nExit[0], nExit[2]);
   if (!(h > 1e-6) || sign === 0) return null;
   if ((nExit[0] * Math.cos(heading) + nExit[2] * Math.sin(heading)) / h > -0.5) return null;
+  // ⭐ the two faces must meet at an edge (their normals not parallel); ⛔ (step C5) the direction into the face beyond (`d`) built from it: read by nothing
   const e = cross(nTilted, nExit);
-  const le = Math.hypot(e[0], e[1], e[2]);
-  if (!(le > 1e-9)) return null;
-  let d = cross([e[0] / le, e[1] / le, e[2] / le], nExit);
-  if (dot(d, nTilted) > 0) d = [-d[0], -d[1], -d[2]];
-  const ld = Math.hypot(d[0], d[1], d[2]);
-  return { g0, d: [d[0] / ld, d[1] / ld, d[2] / ld], sign: sign > 0 ? 1 : -1, back: 0 };
+  if (!(Math.hypot(e[0], e[1], e[2]) > 1e-9)) return null;
+  return { sign: sign > 0 ? 1 : -1, back: 0 };
 }
 /** ⛔ (2026-11-14) `edgeHoldDepth` (the release by the gizmo's depth on the SURFACE) deleted — the release is the finger's (`edgeHoldFinger`). */
 /**

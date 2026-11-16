@@ -207,3 +207,16 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ⛔ **Not built**: structural, in code every change of frame shares, and every fix changes what the owner has looked at (the ridge, the spit, the
   tilt's turns). The options A (the one turn truly one — recommended), B (a limiter on the picture), C (one shared budget), D (keep) →
   [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §12.
+
+## 2026-11-16 — C5, one half-turn event (an Opus agent)
+
+* **The brief**: the four places that each make *"a crossing that turns the camera and may hold a dy"* (the tilt's exit, the ridge close in, the
+  spit's change of side, a free face's exit) made ONE event — a pure rule in `src/input`, one wiring function the four call, the dead fields removed,
+  under `chartLayout` 1 (0: bit for bit); the hold by D-T4 (§10); then the spit's top ridge arrived at from a tip measured (`Scene_0bis`).
+* **The design** (written before the build): the hold is the dy that pushed the gizmo out over the edge AND would bring it straight back after the
+  turn — on a free face's level edge exactly §10's rule; the four sites' facts and dead fields tabled →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §13.
+* **Built** (§13.3): `crossingHoldSign`, `crossingEvent` (pure) and `crossTurn` (the one wiring function) — the tilt's exit, the ridge, the spit's
+  side and a free face's exit call it; the hold by the rule at the tilt's exit and the ridge; the spit keeps the finger's last sign (the mirror rule
+  built, measured — a second half turn arriving from a tip — and withdrawn); `EdgeHold.g0` / `.d` deleted. Every gate equal to the baseline, the
+  default replays bit for bit. ⛔ Not built: the spit's turn at the gizmo's edge (R1, the owner's) — far out it lands 55 – 60 mm past the ridge (§13.4).

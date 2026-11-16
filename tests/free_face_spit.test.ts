@@ -382,11 +382,12 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const x = fnCode(W, "function freeFaceExit(");
     expect(x).toContain("const turn = exitTurnRad(fr.heading, edges, to);");
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null;");
-    expect(x).toContain(turn + " st.orbitInertia.stop();");
-    expect(x).toContain("const held = exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);");
-    expect(x).toContain("if (held !== 0 && nTo !== null && g !== null) {");
-    expect(x).toContain("crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held)");
-    expect(x).toContain("const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held); if (hold !== null) st.asmEdgeHold = hold; }");
+    // ⭐⭐⭐ (2026-11-16, step C5) the turn, the ease carried, the coast stopped and the hold through the one event (`crossTurn`)
+    expect(x).toContain("const held = st.asmG === null ? 0 : exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);");
+    expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
+    expect(x).not.toContain("crossingHold(");
+    const c = fnCode(W, "function crossTurn(");
+    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");

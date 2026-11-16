@@ -298,16 +298,14 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       "const S = sh.t.surface;",
       "const seam = poleSeam(wm, cur, S, mapOpts(st));",
       "if (n0 === undefined || seam === null) return false;",
-      "const heading = st.orbit.yaw;",
-      "seamRebase(st, mq1);",
-      "const m = mapGizmo(st, mq1.yaw, mq1.pitch);",
-      "st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch };",
+      // ⭐⭐⭐ (2026-11-16, step C5) the hold by the one rule: the face left's own up, the dy that pushed over the ridge and would come back
+      "const upL = faceOwnUp(n0, WORLD_UP);",
+      "const hold = upL === null ? 0 : crossingEvent(upL, n0, nFar, WORLD_UP, st.asmDySign).hold;",
       "st.asmHeadO = null; st.asmHeadW = 1; st.asmHeadYaw = null;",
       "st.asmCalm = { n: nFar, sH: c.sH, sV: 1, wA: 1,",
       "st.asmSquare.target = nFar;",
-      "if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };",
-      "const hold = edgeHoldAt(heading, n0, nFar, P, st.asmDySign);",
-      "if (hold !== null) st.asmEdgeHold = hold;",
+      // the rebase at the far face's angles, the gizmo kept, one camera turn from the pose shown, the ease, the hold — THE ONE EVENT
+      "crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });",
       "st.hudDirty = true; return true;",
     ];
     let at = -1;
@@ -316,9 +314,27 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`)", () => {
       expect(i, s).toBeGreaterThan(at);
       at = i;
     }
-    // the relocation as `tiltOff`'s: the gizmo kept where it is, the map's place there more than a micrometre off — eased
-    expect(x).toContain("if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };");
-    // the turn started exactly as the spit's crossing starts it
+    expect(x).not.toContain("edgeHoldAt(");
+    // the one event: the angle states set, the place shown at them, its relocation as `tiltOff`'s (the gizmo kept, the map's place more than a micrometre
+    // off — eased), the band afresh; the turn from the pose shown; the hold set only when the rule names a dy
+    const c = fnSource(W, "function crossTurn(");
+    const order2 = [
+      "seamRebase(st, mq);",
+      "const m = mapGizmo(st, mq.yaw, mq.pitch);",
+      "if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };",
+      "st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch }; faceBandRead(st, m.t);",
+      "else if (st.asmCamLast !== null) seamTurnStart(st, false);",
+      "st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };",
+    ];
+    let at2 = -1;
+    for (const s of order2) {
+      const i = c.indexOf(s);
+      expect(i, s).toBeGreaterThan(at2);
+      at2 = i;
+    }
+    expect(c).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
+    // the turn started exactly as the spit's crossing starts it (with the switch off, its own lines; on, the same event)
+    expect(fnSource(W, "function seamTurnStart(")).toContain("st.asmZoneMix = st.asmCamLast === null ? null : { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0, ...(paced ? { byMm: true } : {}) };");
     expect(fnSource(W, "export function spitStep(")).toContain("if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };");
     // ⛔ the sway: nothing read off a drawn mesh, a pick or the camera for a place, a normal or a frame (the pose shown only starts the turn)
     expect(x).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);

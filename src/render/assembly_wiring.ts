@@ -42,7 +42,7 @@ import { poseAboutPiece, poseFramingTwo, type CamPose } from "../input/orbit_til
 import { poleCrossingDue, poleSeam } from "../input/pole_crossing";
 import { dirGap, easedDir, easeRest, poleYawKept, seamOutPaced, seamOutShare, seamOutStep, seamOutTarget, seamTurnPace, seamTurnStep, seamWholeRad, tiltLeavesNow, turnHoldsGizmo } from "../input/seam_turn";
 import { bandedFacet } from "../input/face_band";
-import { contourFaceAt, exitHoldSign, exitTurnRad, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
+import { contourFaceAt, crossingEvent, exitHoldSign, exitTurnRad, faceOwnUp, freeEdges, freeEntryHeading, freeHeadingAngle, isFreeFace } from "../input/free_face";
 import { anglesOfDir, blendCrossed, blendShare, tiltPendingStep, tiltHeading, edgeHoldAt, capTilt, frameMix, headingFrom, gizmoGlide, mouthHold, squareTurn, squareTurning, tiltCalmWholeHV, wholeShareStep, mulM, mulT, poleEdgeWhole, rollDurationMs, rollStep, tiltUnderWay, swingDir, swingEase, tiltAutoLatch, tiltBox, tiltDir, tiltExits, tiltFaces, onTiltedFacet, type Mat3 } from "../input/orbit_tilt";
 
 /** ⭐ The look point's ease (ms). */
@@ -1968,11 +1968,17 @@ function tiltOff(st: SceneState): void {
   // turns round): the dy that crossed held until the gizmo is `edgeHoldMm` deep in the face beyond (`edgeHoldAt`) — the cube's far edges, the heptagon's ridge
   const fmT = faceMapOf(st);
   const nT = fmT !== null && fmT.facets[tl.facet] !== undefined ? mulM(tl.map, fmT.facets[tl.facet]!.n) : null;
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13, step C5) UNDER THE CHARTS' LAYOUT THE ONE EVENT's hold (`crossingEvent`): the up shown the tilt's own
+  // (upright in the tilted frame: `map · y`), the dy that pushed the gizmo out over the edge AND would bring it back — set with the turn (`crossTurn`)
+  let held: 1 | -1 | 0 = 0;
   if (!byTime && nW !== null && nT !== null && g !== null) {
-    const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);
-    if (hold !== null) {
-      st.asmEdgeHold = hold;
-      st.orbitInertia.stop(); // a coast would push on against it
+    if (st.cfg.chartLayout === 1) held = crossingEvent(mulM(tl.map, [0, 1, 0]), nT, nW, WORLD_UP, st.asmDySign).hold;
+    else {
+      const hold = edgeHoldAt(tl.heading, nT, nW, st.asmDySign);
+      if (hold !== null) {
+        st.asmEdgeHold = hold;
+        st.orbitInertia.stop(); // a coast would push on against it
+      }
     }
   }
   // ⭐⭐⭐ (2026-11-15) LEFT WITH THE ORBIT AT THE WORLD'S POLE (straight above or below: no heading in its direction) its yaw is the heading the camera
@@ -1997,32 +2003,31 @@ function tiltOff(st: SceneState): void {
   st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
   st.asmGOff = null;
   const wm = faceMapOf(st);
-  if (wm !== null && g !== null) {
-    const mq0 = mapAngles(wm, g, facetOfNormal(wm, nW, g), mapOpts(st));
-    // ⭐⭐⭐ (§12 2.4c) the gizmo KEPT, the world's angles read at its exact place — at a pole of the world's map (a cap's centre: any yaw) the yaw keeping the
-    // heading SHOWN (`poleYawKept`, `hP`) — and EVERY angle state SET to them (`seamRebase`; ⛔ `turnAngles`, each state turned as a direction)
-    const mq = seam ? poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP) : mq0;
-    if (seam) seamRebase(st, mq);
-    else st.asmMapQ = mq;
-    const m = mapGizmo(st, mq.yaw, mq.pitch);
-    if (m !== null) {
-      const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
-      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
-      // ⭐⭐⭐ (2026-11-14, the same flash) the map's place in the world AT ONCE (the gizmo's own, just put there): a tilt that follows the exit (a ridge's
-      // far face, close in) is made THIS frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts, its
-      // heading not the roll's target (probed after a dx: −18° then +19.5° back)
-      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
-      if (st.cfg.chartLayout === 1) faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh in the world's map (cleared above)
-    }
-  } else st.asmMapQ = null;
-  // ⭐⭐⭐ (§12 2.4c) the picture carried from the pose SHOWN by ONE camera turn (timed, the gizmo held — as a zone's), the piece's shown direction eased on it
-  // (⭐ no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
-  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3 — D-T1) LEFT BY DISTANCE (`off`, the automatic tilt's latch off — `seamOutPaced`) with
-  // `tiltOutBlendMm` over 0: the same turn paced by the approach finger's travel outward, the gizmo free (`seamOutStart`); an edge's exit, a zone's, or 0: timed
-  if (st.cfg.chartLayout === 1) {
-    if (seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm)) seamOutStart(st);
-    else seamTurnStart(st, false);
-    if (uWas !== null) seamEase(st, uWas);
+  const chart = st.cfg.chartLayout === 1;
+  // ⭐⭐⭐ (§12 2.4c) the gizmo KEPT, the world's angles read at its exact place — at a pole of the world's map (a cap's centre: any yaw) the yaw keeping the
+  // heading SHOWN (`poleYawKept`, `hP`) — and EVERY angle state SET to them, the place shown there AT ONCE (`crossTurn`; ⛔ `turnAngles`, each state turned
+  // as a direction). ⭐⭐⭐ (2026-11-14, the same flash) the map's place at once: a tilt that follows the exit (a ridge's far face, close in) is made THIS
+  // frame (`tiltOn` reads the place) — ⛔ left none: one frame of the world's camera between the two tilts (probed after a dx: −18° then +19.5° back)
+  const mq0 = wm !== null && g !== null ? mapAngles(wm, g, facetOfNormal(wm, nW, g), mapOpts(st)) : null;
+  const paced = chart && seamOutPaced(st.cfg.chartLayout, tl.off, st.asmTiltAuto, st.cfg.tiltOutBlendMm);
+  if (seam && mq0 !== null && g !== null) {
+    // ⭐⭐⭐ (2026-11-16, §13, step C5) THE ONE EVENT (`crossTurn`): the rebase, ONE camera turn from the pose shown — ⭐⭐⭐ (§8, step C3, D-T1) LEFT BY
+    // DISTANCE (`off`, `seamOutPaced`) with `tiltOutBlendMm` over 0 paced by the approach finger's travel outward, the gizmo free; an edge's exit, a
+    // zone's, or 0: timed, the gizmo held — the piece's shown direction eased from the one drawn, the coast stopped, the hold
+    crossTurn(st, { at: { mq: poleYawKept(mq0, ORBIT_PITCH_MAX_RAD, hP), g }, uWas, carry: false, paced, hold: held });
+  } else {
+    if (mq0 !== null && g !== null) {
+      st.asmMapQ = mq0;
+      const m = mapGizmo(st, mq0.yaw, mq0.pitch);
+      if (m !== null) {
+        const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+        if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+        st.asmShown = { t: m.t, yaw: mq0.yaw, pitch: mq0.pitch };
+        if (chart) faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh in the world's map (cleared above)
+      }
+    } else st.asmMapQ = null;
+    // ⭐ (charts, no place to keep — unreachable while a tilt holds one: the turn alone, the angles turned as today)
+    if (chart) crossTurn(st, { at: null, uWas, carry: false, paced, hold: held });
   }
   st.lastVerdict = byTime ? "orbit: the tilt off (out past the threshold) — the world's frame again" : "orbit: off the tilted face — the world's frame again";
   st.hudDirty = true;
@@ -2066,6 +2071,43 @@ function seamRebase(st: SceneState, mq: { readonly yaw: number; readonly pitch: 
 }
 
 /**
+ * ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13 — step C5, `chartLayout` 1) **THE ONE HALF-TURN EVENT** — the wiring every crossing that turns the
+ * camera calls (the tilt's exit, the ridge crossed close in, the spit's change of side, a free face's exit); the site keeps its trigger, its frame and its
+ * views (the calm, the square camera, the held heading, the spit's side, the free face's state), and hands:
+ * * `at` — the chart's angles read at the gizmo `g` kept (a change of frame; none: the frame unchanged): EVERY angle state set to them (`seamRebase`), the
+ *   place shown there at once with its relocation eased if the map's place is not the gizmo, the band read afresh (`faceBandRead`);
+ * * ONE camera turn from the pose SHOWN (`asmZoneMix`; none before the first camera frame) — `paced`: the way out of close in paced by the finger
+ *   (`seamOutStart`, step C3), else timed at the tilts' one speed, the gizmo held meanwhile (`tiltClampStep`);
+ * * the piece's shown direction eased on that turn from the one drawn before the change (`uWas`, `seamEase`) — or, the frame unchanged, the ease running
+ *   carried onto it by its rest (`carry`, `easeCarry`);
+ * * the coast stopped; `hold` — the dy held (`crossingEvent`, `exitHoldSign`: the one rule; the spit's side: `crossingHold`, §13.3), 0: none (a hold already on is left as it is).
+ * ⭐ Everything in the MODEL's space (the map, `g`); the camera's pose read only to start the turn from the picture on the glass.
+ */
+function crossTurn(st: SceneState, c: { readonly at: { readonly mq: { readonly yaw: number; readonly pitch: number }; readonly g: Vec3 } | null; readonly uWas: Vec3 | null; readonly carry: boolean; readonly paced: boolean; readonly hold: 1 | -1 | 0 }): void {
+  if (c.at !== null) {
+    const { mq, g } = c.at;
+    seamRebase(st, mq);
+    st.asmShown = null;
+    st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
+    st.asmGOff = null;
+    const m = mapGizmo(st, mq.yaw, mq.pitch);
+    if (m !== null) {
+      const v: Vec3 = [g[0] - m.hit.point[0], g[1] - m.hit.point[1], g[2] - m.hit.point[2]];
+      if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
+      st.asmShown = { t: m.t, yaw: mq.yaw, pitch: mq.pitch };
+      faceBandRead(st, m.t);
+    }
+  }
+  const mixWas = st.asmZoneMix;
+  if (c.paced) seamOutStart(st);
+  else if (st.asmCamLast !== null) seamTurnStart(st, false);
+  if (c.uWas !== null) seamEase(st, c.uWas);
+  else if (c.carry) easeCarry(st, mixWas);
+  st.orbitInertia.stop();
+  if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };
+}
+
+/**
  * ⭐⭐⭐ (2026-11-15, `ORBIT_CHARTS.md` §12 2.4b, §4.1, §1 "the top and the bottom") OVER A POLE HELD BY AN EDGE OR A POINT — THE ONE TRANSITION, in the
  * world's frame (the trigger `poleCrossingDue`, in `assemblyFrame`): 1. the gizmo KEPT (`asmG`); 2. the far facet at the map's place on the pole
  * (`farFacetAt` — none: no crossing, the orbit stops there as before); 3. the far chart coordinates read there (`poleSeam`, `mapAngles`); 4. every angle state set to
@@ -2088,30 +2130,21 @@ function poleCross(st: SceneState): boolean {
   const seam = poleSeam(wm, cur, S, mapOpts(st));
   if (n0 === undefined || seam === null) return false;
   const nFar = wm.facets[seam.far]!.n;
-  const heading = st.orbit.yaw;
-  const mq1 = { yaw: seam.yaw, pitch: seam.pitch };
   const uWas = drawnDir(st); // ⭐ (2.4c) the direction drawn before the crossing: the piece's ease starts from it
-  seamRebase(st, mq1);
-  st.asmShown = null;
-  st.asmFaceBand = null; // ⭐⭐⭐ (2026-11-16, §12 2.4d) a change of frame: the banded facet read afresh at the place's facet in the new map (never held by the band)
-  st.asmGOff = null;
-  const m = mapGizmo(st, mq1.yaw, mq1.pitch);
-  if (m !== null) {
-    const v: Vec3 = [P[0] - m.hit.point[0], P[1] - m.hit.point[1], P[2] - m.hit.point[2]];
-    if (Math.hypot(v[0], v[1], v[2]) > 1e-6) st.asmGOff = { v, left: 1, timeMs: 0, durMs: rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS) };
-    st.asmShown = { t: m.t, yaw: mq1.yaw, pitch: mq1.pitch };
-    faceBandRead(st, m.t); // ⭐⭐⭐ (2026-11-16, §12 2.4d) the banded facet afresh at the far face (cleared above; a crossing is under the charts' layout only)
-  }
+  // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13, step C5) the hold by the one rule (`crossingEvent`): the up shown the face left's own (a bound face is
+  // upright on the glass) — ⛔ `edgeHoldAt` (the far face's level normal over 120° from the yaw, the finger's last dy sign whatever it was)
+  const upL = faceOwnUp(n0, WORLD_UP);
+  const hold = upL === null ? 0 : crossingEvent(upL, n0, nFar, WORLD_UP, st.asmDySign).hold;
+  // the views, the far face's: the world camera's held zenith heading read afresh, the calm carried over the edge, the square camera's target
   st.asmHeadO = null;
   st.asmHeadW = 1;
   st.asmHeadYaw = null;
   const c = st.asmCalm;
   if (c !== null) st.asmCalm = { n: nFar, sH: c.sH, sV: 1, wA: 1, ...(c.poleFade !== undefined ? { poleFade: c.poleFade } : {}) };
   st.asmSquare.target = nFar;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  seamEase(st, uWas); // ⭐⭐⭐ (2026-11-15, §12 2.4c) the piece's shown direction eased on the turn (here the gap ~0)
-  const hold = edgeHoldAt(heading, n0, nFar, P, st.asmDySign);
-  if (hold !== null) st.asmEdgeHold = hold;
+  // THE ONE EVENT: every angle state set to the far face's (the gizmo kept), one camera turn from the pose shown, the piece's direction eased on it (here
+  // the gap ~0), the hold
+  crossTurn(st, { at: { mq: { yaw: seam.yaw, pitch: seam.pitch }, g: P }, uWas, carry: false, paced: false, hold });
   st.lastVerdict = "orbit: over the pole's edge — the camera turned to the far side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
   return true;
@@ -2336,7 +2369,7 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
   if (fr !== null) {
     const d = t.stack === fr.facet ? 0 : distanceToFacets(map, [fr.facet], t.surface);
     if (onTiltedFacet(t.stack, fr.facet, d, edgeMarginM(st))) return;
-    freeFaceExit(st, z, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
+    freeFaceExit(st, fr, at.contour, contourOfFacet(map, B, at.contour, t.stack));
     return;
   }
   const f = map.facets[t.stack];
@@ -2363,24 +2396,17 @@ function freeFaceFrame(st: SceneState, t: MapTarget, prev: { readonly map: FaceM
  * never a "crossing" on the next frame); the dy held when the turn is over a quarter AND the finger's dy is the one that pushed the gizmo out over that
  * side (`exitHoldSign`, §10 — D-T4; `crossingHold`, its side the face beyond's); none carried.
  */
-function freeFaceExit(st: SceneState, z: PolarZone, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
+function freeFaceExit(st: SceneState, fr: NonNullable<SceneState["asmFree"]>, contour: readonly ChartFace[], to: number): void {
   const edges = freeEdges(contour, fr.ci, WORLD_UP);
   const turn = exitTurnRad(fr.heading, edges, to);
   // ⭐⭐⭐ (`TILTED_POLE_CLOSE_IN.md` §10, D-T4) the dy held: the finger's, only if it is the one that pushed the gizmo out over this side (`exitHoldSign`)
-  const held = exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
+  // ⭐⭐⭐ (step C5, §13) through the one rule (`crossingHoldSign`) — over a free face's level side exactly §10's; the gizmo placed (none: no hold, as before)
+  const held = st.asmG === null ? 0 : exitHoldSign(fr.heading, edges, to, contour[fr.ci]?.c ?? [0, 0, 0], st.asmDySign);
   st.asmFree = null;
   st.asmSpitSide = 0;
   st.asmSpitU = null;
-  const mixWas = st.asmZoneMix;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas);
-  st.orbitInertia.stop();
-  const nTo = contour[to]?.n ?? null;
-  const g = st.asmG;
-  if (held !== 0 && nTo !== null && g !== null) {
-    const hold = crossingHold(g, nTo, z.axis, spitSide(nTo, z.axis, 0), held);
-    if (hold !== null) st.asmEdgeHold = hold;
-  }
+  // THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the hold
+  crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });
   st.lastVerdict = `orbit: off the spit's level face — the camera turned ${turn === null ? "(no layout known)" : `${Math.round((turn * 180) / Math.PI)}°`} (the gizmo held until it completes)`;
   st.hudDirty = true;
 }
@@ -2461,13 +2487,22 @@ export function spitStep(st: SceneState, cp: OrbitAt): void {
     st.asmEdgeHold = null;
     return;
   }
-  const mixWas = st.asmZoneMix;
-  if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
-  easeCarry(st, mixWas); // ⭐⭐⭐ (2026-11-15, §12 2.4c — an ease runs under `chartLayout` 1 only) the piece's shown direction's ease carried by its rest
-  st.orbitInertia.stop();
   const g = st.asmG;
-  const hold = g === null ? null : crossingHold(g, st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
-  if (hold !== null) st.asmEdgeHold = hold;
+  // §8's hold: the dy that crossed — the finger's last sign (`crossingHold`). ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §13.3, step C5) KEPT under the
+  // charts' layout too: the one rule needs the next up the picture turns to, and the side's turn is read off the CAMERA's place, not an edge — the mirror
+  // view as that up (built, measured, withdrawn): arrived along the top ridge from a tip the picture turns ~110°, not a mirror; the dy that crossed was
+  // judged not to push, was not held, and brought the gizmo straight back over the ridge — a second half turn (the view 124° → 343° in the drag)
+  const hold = g === null ? null : crossingHold(st.gizmoNormal ?? null, z.axis, side, st.asmDySign);
+  if (st.cfg.chartLayout === 1) {
+    // ⭐⭐⭐ (step C5) THE ONE EVENT (`crossTurn`): the frame unchanged, one camera turn from the pose shown, the ease running carried, the coast stopped, the hold
+    crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: hold === null ? 0 : hold.sign });
+  } else {
+    const mixWas = st.asmZoneMix;
+    if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 };
+    easeCarry(st, mixWas); // ⭐⭐⭐ (2026-11-15, §12 2.4c — an ease runs under `chartLayout` 1 only) the piece's shown direction's ease carried by its rest
+    st.orbitInertia.stop();
+    if (hold !== null) st.asmEdgeHold = hold;
+  }
   st.lastVerdict = "orbit: the spit over the edge — the camera turned to the other side (the gizmo held until it completes), then the dy that crossed held";
   st.hudDirty = true;
 }

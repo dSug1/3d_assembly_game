@@ -244,22 +244,21 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
   it("⭐⭐⭐ set only over the edge AWAY from the tilt's heading (the camera turns round): the heptagon's ridge, the cube's far edge, the nadir's far edge — never the near edge, a side edge", async () => {
     const { edgeHoldAt } = await import("../src/input/orbit_tilt");
     const front = -Math.PI / 2; // the heading toward −z (the user's side)
-    const g0: Vec3 = [0, 0.48, 0.19];
     const n = (deg: number): Vec3 => [0, Math.cos(deg * D), -Math.sin(deg * D)]; // a face's normal tilted `deg` from up toward −z
     // the heptagon: the front top face tilted (heading front), left over the ridge onto the back top face
-    expect(edgeHoldAt(front, n(25.7), n(-25.7), g0, 1)).not.toBeNull();
+    expect(edgeHoldAt(front, n(25.7), n(-25.7), 1)).not.toBeNull();
     // the cube: its top tilted (heading front), left over the far edge onto the back side (+z) — and over the near edge onto the front side: none
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], g0, 1)).not.toBeNull();
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, -1], g0, 1)).toBeNull();
+    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], 1)).not.toBeNull();
+    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, -1], 1)).toBeNull();
     // across, onto a side (±x): none; no dy: none; the nadir's far edge (the bottom tilted, heading front, onto a back lower face): set, its sign kept
-    expect(edgeHoldAt(front, [0, 1, 0], [1, 0, 0], g0, 1)).toBeNull();
-    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], g0, 0)).toBeNull();
-    expect(edgeHoldAt(front, [0, -1, 0], [0, -0.614, 0.789], g0, -1)!.sign).toBe(-1);
+    expect(edgeHoldAt(front, [0, 1, 0], [1, 0, 0], 1)).toBeNull();
+    expect(edgeHoldAt(front, [0, 1, 0], [0, 0, 1], 0)).toBeNull();
+    expect(edgeHoldAt(front, [0, -1, 0], [0, -0.614, 0.789], -1)!.sign).toBe(-1);
   });
   it("⭐⭐⭐ the held sign none, the other whole; released after `edgeHoldMm` of FINGER the other way (2026-11-14 — the owner's hysteresis, a finger's: the same far out as close in)", async () => {
     const { edgeHoldAt, edgeHoldFinger, edgeHoldDy } = await import("../src/input/orbit_tilt");
     const { DEFAULT_CONFIG } = await import("../src/input/gestureConfig");
-    const h = edgeHoldAt(-Math.PI / 2, [0, 1, 0], [0, 0, 1], [0, 0.5, 0.25], 1)!;
+    const h = edgeHoldAt(-Math.PI / 2, [0, 1, 0], [0, 0, 1], 1)!;
     expect(h.back).toBe(0);
     expect(edgeHoldDy(h, 3)).toBe(0);
     expect(edgeHoldDy(h, -3)).toBe(-3);
@@ -275,7 +274,7 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
     expect(b.back).toBeCloseTo(29.9, 12);
     expect(edgeHoldFinger(b, -0.2, 30)).toBeNull();
     // a held nadir (−1): the up way gathers
-    const n = edgeHoldAt(-Math.PI / 2, [0, -1, 0], [0, -0.614, 0.789], [0, 0, 0.3], -1)!;
+    const n = edgeHoldAt(-Math.PI / 2, [0, -1, 0], [0, -0.614, 0.789], -1)!;
     expect(edgeHoldFinger(n, -5, 30)).toBe(n);
     expect(edgeHoldFinger(n, 31, 30)).toBeNull();
     expect(edgeHoldFinger(h, 0, 30)).toBe(h);
@@ -284,7 +283,7 @@ describe("⭐⭐⭐ §8 — THE DY HOLD after a pole-holding face's FAR edge (th
   it("⭐⭐⭐ wired: the tilt keeps its heading; `tiltOff` sets the hold from the dy that crossed (the coast stopped); released by the FINGER (2026-11-14); the drag's dy through it", () => {
     const a = readFileSync(new URL("../src/render/assembly_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
     expect(a).toContain("exit: false, exitAcross: false, heading: hs };");
-    expect(a).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, g, st.asmDySign);");
+    expect(a).toContain("const hold = edgeHoldAt(tl.heading, nT, nW, st.asmDySign);");
     expect(a).toContain("if (st.asmEdgeHold !== null && (!assemblyOn(st) || st.asmG === null)) st.asmEdgeHold = null;");
     expect(a).not.toContain("edgeHoldDepth");
     const p = readFileSync(new URL("../src/render/pointer_wiring.ts", import.meta.url), "utf8").replace(/\s+/g, " ");
