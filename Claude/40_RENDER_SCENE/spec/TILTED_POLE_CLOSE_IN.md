@@ -337,23 +337,34 @@ over the pole from there; the close-in layout's up is the heading carried in. Be
 nearest the edge it came over, a quarter at the sides, **half a turn on the far half** — and the camera travels round to that side. The polar
 layout's pole is in the middle of the face, so this cannot be removed. It can only be PACED.
 
-**Today** (step 2.4c): at 0.65 m the frame changes and ONE camera turn runs by TIME at `tiltRollDegS` (360°/s), the gizmo held — up to half a
-turn in half a second, under an approach that is still going. ⛔ To measure first (a probe: the gizmo on the far half of `Scene_1`'s top, the
-piece backed out): the turn's degrees a frame and its length against the approach's travel.
+**Today, measured** (2026-11-16, `Scene_1`, close in on the top, ONE approach drag out; the session's `tilt_check.mjs`, `MODE=out`):
 
-**Proposed — the way out mirrors the way in** (T10, the owner's rule of 2026-11-11):
+| the gizmo | the finger | the view's turn after the threshold | meanwhile the piece backs out |
+|---|---|---|---|
+| on the FAR half of the top | slow (1 px a frame) | **180° in 0.52 s**, a constant 6° a frame from its first frame to its last, the gizmo held | 1.4 m |
+| on the far half | faster (4 px a frame) | the same 180° in 0.52 s | 5.3 m — the zoom is over long before the turn: the turn TRAILS it |
+| on the near half | slow | 20° in 0.38 s, 3.6° a frame | 1.0 m |
 
-| | the way IN (as built) | the way OUT (proposed) |
+So the turn is a fixed half second whatever the finger does, it starts and stops abruptly, it holds the gizmo, and at any normal speed it runs on
+after the zoom has finished. ⚠ The approach's DISTANCE cannot pace it: it grows by 1.4 m in half a second under the slowest finger — only the
+finger's own travel can.
+
+**The way out — as briefed (step C3; the owner's go: *"Continue next step"*, 2026-11-16)**, under `chartLayout` 1:
+
+| | the way IN (as built) | the way OUT (C3) |
 |---|---|---|
-| at the threshold | the layout taken, the sections square at once | the polar orbit back, the sections polar at once; the gizmo kept |
-| the camera | waits while the approach goes on | **follows the approach's own travel outward**: its turn from the picture shown to the polar camera whole after a set distance more (a new slider, in metres) — a slow approach turns it slowly, a stopped one stops it |
+| at the threshold | the layout taken, the sections square at once | the polar orbit back, the sections polar at once; the gizmo kept — as today |
+| the camera | waits while the approach goes on | **follows the approach finger's own travel**: its turn from the picture shown to the polar camera is whole after `tiltOutBlendMm` of it (a new slider, millimetres ON THE GLASS; 0: today's timed turn), with a smooth start and end |
+| its speed | — | never faster than the tilts' one speed (`tiltRollDegS`, T5): a fast finger does not flip the picture in a frame — the turn then runs at that speed |
 | if the finger orbits before it is whole | blends by the finger's first millimetres (`tiltBlendMm`) | the same |
-| by time | never | **never** — ⛔ today's timed turn |
+| by time | never | only once the finger has LIFTED with the turn unfinished: it completes at the one speed — never left half done |
 | the gizmo | free | **free** — ⛔ today held while the turn runs |
-| turning back | — | approaching back in inside the band takes the way in again, from the picture shown |
+| turning back | — | the share never rewinds (no approach jitter into the camera, T11); back within the close-in distance the way in takes over, from the picture shown |
 
-The square camera's share (square to the face → the orbit's own direction, eased by the calm) goes on the same pace, so the direction and the up
-arrive together. ⚠ Its cost: on the far half of a top face the picture still turns half round — over the band's metres instead of half a second.
+The square camera's share (square to the face → the orbit's own direction) goes on the same share, so the direction and the up arrive together.
+⚠ **What to expect**: on the far half of a top face the picture still turns half round — that cannot be removed (D-T1). Under a slow, deliberate
+finger it now follows the finger; at a normal speed it still takes about half a second (the one-speed rule), with a smooth start and end and the
+gizmo free. The slider stretches it.
 
 ## 9. STEP C4 — A SPIT'S LEVEL FACES, as briefed (2026-11-16; D-T2; under `chartLayout` 1, in a spit zone only)
 
