@@ -3,7 +3,7 @@
 > **STATUS** · ⛔ **PROPOSED 2026-11-12, NOT APPROVED, NOTHING BUILT** · **OWNS** · the conventions every assembly part follows — where it is authored,
 > and what it carries besides its look — stage W2 / W3 of the scene workflow
 > **READ IF** · you are deriving a scene's geometry from its assembly plan, or modelling, importing or checking a part
-> **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`)
+> **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §6 (the playability checks) APPROVED 2026-11-16, to be tested
 
 ⭐ The process this serves: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) — the ASSEMBLY PLAN (W1) comes first,
 and everything here is DERIVED from its steps: a seat, a gizmo route, an insertion of the plan is what makes a part carry a face, a connector or a
@@ -13,7 +13,7 @@ collision piece. ⛔ Nothing here is authored for a step the plan does not have.
 
 | the game's rule today | what a realistic mesh alone does to it |
 |---|---|
-| **the gizmo runs on the placed parts' FACETS** — faces clustered within 20°, a facet kept only while its real face covers a quarter of its polygon, built from the EXPOSED faces (`input/face_map.ts`; `40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md`) | any ROUND part (a cylinder, a bore, a disc's rim, a torus) is dozens of thin side faces: no facet survives, or the gizmo jumps from sliver to sliver |
+| **the gizmo runs on the placed parts' FACETS** — faces clustered within 20°, a facet kept only while its real face covers a quarter of its polygon, built from the EXPOSED faces (`input/face_map.ts`; `40_RENDER_SCENE/spec/POLAR_ORBIT_CLEANUP.md`) — ⭐ (2026-11-16, §6) "exposed" = reachable from outside (S22) | any ROUND part (a cylinder, a bore, a disc's rim, a torus) is dozens of thin side faces: no facet survives, or the gizmo jumps from sliver to sliver |
 | **every body collides as ONE convex hull** made at spawn (`COLLISION.md` §2, §8) | the hull fills every hole, slot and notch: nothing is ever INSERTED. ⭐ The answer is specified, not built: `UCX_` pieces (`BLENDER_COLLISION_AUTHORING.md`, `3D8`) |
 | **the solver's budget: 24 gap queries a frame** (the owner tests on an iPhone) | many small parts of many collision pieces overrun it: the parts must be FEW and their pieces SIMPLE |
 | **a mate is ANTI-PARALLEL** (`../INDEX.md` rule 1) — the seat's two normals face each other | a seat on a curved surface has no single normal: it needs a FLAT stand-in |
@@ -63,7 +63,7 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    prism, a round seat as one flat disc face) — what the face map builds its facets from, so the gizmo RUNS on it and a part RESTS on it. ⚠ Its name
    (e.g. `UFM_<part>`) and its rules (convex or not, which faces count, how it meets the render mesh, what replaces it at the face map) are written
    here before it is built.
-   ⭐⭐ **GHOST faces** (the owner, 2026-11-12: *"a ghost surface to support the gizmo for A + dy"*): a proxy face where there is NO real surface —
+   ⛔ (superseded 2026-11-13 by the ghost AT THE MOUTH, below — kept as the record) ⭐⭐ **GHOST faces** (the owner, 2026-11-12: *"a ghost surface to support the gizmo for A + dy"*): a proxy face where there is NO real surface —
    across an opening a part goes into (a bore, a socket, a slot), at the depth where that part stops at its goal. The approach (A + dy) moves the
    held part straight along the gizmo's face normal TOWARD the gizmo and stops at it (`render/assembly_wiring.ts`, `placeOffset`; D3: *"center of the
    orbit = gizmo"*); over an opening the part fits, the gizmo reads the real depth (`POLAR_ORBIT_CLEANUP.md` §7, §8.3) — so the ghost face IS that
@@ -143,6 +143,8 @@ ported from the scene's reference when it has one; the `.blend` is the source th
    the pistons' floated 0.6 – 0.8 off their bank, the valve sets' and the crank's lay recessed. A bore and an open CAVITY alike (`Scene_2`: the
    crank into the tub, the pistons and the valve sets into the bores). The build checks it: ⑩ **ghost flush** (each ghost's edge ON the route
    round it — a recessed ghost is an error) and prints every plunge.
+   ⭐ (2026-11-16, §6.2) A ghost is needed only where the goal's ENTRY SET is narrow (a hole): its pose COMPUTED per axis and sense by withdrawal,
+   the drawn ghost CHECKED against it (B4) — one source of truth, the goal pose.
    ⛔ A face proxy is the part's OUTER surface — never reuse its collision pieces' extents (inside the walls: `Scene_2`'s upper case top stopped
    short of its edges, a strip open between the top and its slopes).
    ⭐ A proxy face keeps the face map's thresholds (`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md` §4: ≥ 15° from 45° of elevation; ≥ 30° between faces
@@ -237,7 +239,7 @@ checked for what they BLOCK (the ways in, their controls, the crank turned) but 
 the redundancy check read the visible meshes and the proxies only; simplicity was a rule for the render mesh (§3 item 1) and the proxy (item 3),
 never for `UCX_`. So a 216-triangle hull passed every run. ⛔ For every ROLE in the file (render, `UCX_`, `UFM_`, markers, metadata), at least one
 check of its SHAPE, as well as of its function — and a new rule (§3) comes with its check and its control the same day.
-⚠ Not yet in the report, to add as the steps need them: every collision piece convex and closed; every proxy face flat; every part the plan names
+⚠ Not yet in the report, to add as the steps need them (⭐ 2026-11-16: B1, §6): every collision piece convex and closed; every proxy face flat; every part the plan names
 present and nothing unplanned carrying a proxy; each moving part's pivot (§5). ⛔ A skipped check is announced (`00_CORE/METHOD.md`).
 ⭐⭐ **WRITING A CHECK — its pitfalls, met** (2026-11-13, the owner: *"this is not caught by your checks"*; §3 ⓗ–ⓜ): ⛔ never
 `BVHTree.FromPolygons` on faces that may be CONCAVE (it fans each n-gon from its first corner: phantom triangles over a notch) — build the tree
@@ -271,7 +273,7 @@ workflow once the scene is built in blender"*)
    of elevation (the face map's side/cap boundary, `SCENE_WORKFLOW.md` §4); 🟠 NARROW or tiny (the gizmo jumps across it; under ≈ 7 mm on the glass);
    🟡 a plane CHOPPED into many separate strips (a deck between bores); 🟢 fine; 🟣 a ghost floor, named with the part it serves; ⚪ a SEAT face (pressed on another part's face, facing back: unreachable once seated) grey and
    set back 3 mm (two faces in one plane flicker); ⛔ every other face LIFTED 2 mm off its real surface (a proxy lies ON it by design: shown over the context meshes, the whole step flickered — the owner, step 3: *"why step 3 still shows superposed faces everywhere?"*) — a review
-   `.blend` (never the build's; ⛔ no renders, none committed — the owner: *"no need to have review renders"*; `REVIEW_RENDERS=1` for a quick look) — ⭐ holding ONLY the faces to review (the owner: *"display only the faces I need to review in the review blend file (not all the scene, as I cannot see the faces I need to see)"*): every other object deleted, one collection a step, the first step with a finding shown, the colours in Solid mode too. ⛔ The owner looks and decides (merge, enlarge, a ghost bridging a strip, or accept); W6 then
+   `.blend` (never the build's; ⛔ no renders, none committed — the owner: *"no need to have review renders"*; `REVIEW_RENDERS=1` for a quick look) — ⭐ holding ONLY the faces to review (the owner: *"display only the faces I need to review in the review blend file (not all the scene, as I cannot see the faces I need to see)"*): every other object deleted, one collection a step, the first step with a finding shown, the colours in Solid mode too. ⭐ (2026-11-16, §6) the review gets B3 – B6's colours and pass rules (B3, B5 once the landing map exists). ⛔ The owner looks and decides (merge, enlarge, a ghost bridging a strip, or accept); W6 then
    walks the real orbit on each step headless; W7 (the device) closes.
 
 ### 4.4 ⭐⭐ THE EXPORT — the plan's last step (W4's first half; `Scene_2` 2026-11-13)
@@ -322,3 +324,52 @@ granularity must allow it (a part that moves in the animation is one part, or a 
 by an empty (`HINGE_<part>_<name>`) — LOCKED at the goal's angle while the player places it (the part rigid, its collision fixed), FREE in the
 animation. ⭐ The animation is COMPUTED by the game (a formula in `src/core`, vectored; the poses applied by the render) — not a clip baked in
 Blender; Blender previews it. Each moving piece's PIVOT is authored where the formula turns it (`SCENE_2_ASSEMBLY.md` §6.5).
+
+## 6. ⭐⭐ THE PLAYABILITY CHECKS AND CHECKLIST (2026-11-16) — ⭐ **Approved by the owner 2026-11-16 — TO BE TESTED, may be reversed**
+
+> The owner's aim (2026-11-16): *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* — and his approval of the recommendation (2026-11-16, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §8 Q7): *"I agree with the recommendations, although they shall be later tested and could be reversed if the testing shows they need to be reversed."*
+> ⛔ **SPECIFIED, NOT BUILT**: no Blender script and no game-side check below exists yet. **First**: B1, B2, B4; **once the landing map exists** (the
+> game's L2, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §5.1): B3, B5; B6 beside them. The brief they read: [`../../20_GAME_RULES/spec/SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §7.1.
+> The rule numbers (S…, P…) are [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md)'s.
+
+### 6.1 The checks B1 – B6
+
+Each runs in Blender at W3 (per build step, every run), PAINTS its result as a colour attribute on the faces (green a place, amber at a threshold,
+red no place / not reachable) in the review `.blend`, prints a **verdict line** and **fails the run** (exit ≠ 0) when its pass rule fails, with a
+planted **control** in `CHECK_CONTROLS` (*"a check never seen failing is not trusted"*, §4.2). Each is re-verified cheaply at import.
+
+| check | what it tests | how in Blender's Python | painted | pass rule | re-verified in the game | hooks |
+|---|---|---|---|---|---|---|
+| **B1 solids** (S25 restated) | each `UCX_` convex, closed, volume > 0, in ONE budget; the part's `UFM_` proxy lies ON the union of its `UCX_` within a fit tolerance, facing OUT of it; each ghost's rim on a real proxy face | `bmesh`: `edge.is_manifold`, `is_boundary`, the hull's vertices; `mathutils.bvhtree.BVHTree`: `find_nearest` (proxy samples → `UCX_`), `overlap` (self-crossings); a point-in-convex test for "outward" | red: a proxy face off its solid or facing in; amber: within 2× the tolerance | all green, or an exemption written per piece (`fit_tol`: the squared bores) | a pure `src/core` function on the parsed `.glb` (the geometry from `glb_geometry.ts`): convex / closed / budget, proxy planar and outward; a vector on each scene's file | W3 every run; W4 import |
+| **B2 exposed per stage** (S22) | per stage, which proxy faces are on the boundary of the placed parts' union that the outside reaches | the union (Boolean, Exact solver — overlapping input) or a voxel grid of the `UCX_` pieces; a flood of the outside (numpy, 6-neighbour); each proxy face sampled against the flooded cells | grey: glued / buried / sealed | none — it is a map; it replaces "exposed = not glued" in the plan's rule 4 | the same on the game's data in a vector (a coarse grid), not at load | W3 per stage; W1 rule 4 made a script |
+| **B3 landing map** (P2) | per stage, per held piece, per facet direction: where the piece first touches | ⛔ NOT re-implemented in Python: a node script runs the GAME's own L2 function on the provisional `.glb` and writes `<scene>_landing.json`; `review_proxies.py` paints it | green landable; red closed for that piece; magenta "nothing to land on" | ⏳ pending until L2 exists: every face a later step needs as a place (7bis.2) is landable for the piece that needs it | it IS the game's function (one implementation) | W3 before the export; W5 |
+| **B4 goal reachable** (S21, S28) | per part at its stage: its ENTRY SET — the sphere of directions sampled at a named step plus the parts' face normals, the part withdrawn from its goal along each until it CLEARS the placed set (not a fixed 0.8); the set's share of the sphere and its narrowest opening; at least one direction starting at a landing of B3; where the set is narrow, the pre-insertion pose per axis and sense and the drawn ghost at it | `BVHTree.overlap` of the part's `UCX_` against the placed set's, stepped then bisected (the way-in sweep extended to many directions); the ghost compared within the fit tolerance | red: EMPTY, or no direction starts at a place (the blocking parts named); amber: a SMALL set (a warning for his look), the ghost off the computed pose | not empty and reached; a small set warns, never fails | the same sweep with the game's GJK over the `UCX_` pairs, in a vector at W4 / W5; seat pairs re-checked from `mates_with` | W1 (on the reference's numbers, as rule 2), W3, W5 |
+| **B5 coverage** (S24) | per stage, every exposed face (B2) that is no place, with its reason: parallel to the cast, under an overhang, closed for the piece (B3), inside a cavity, below the share | from B2 and B3 (⏳ the reason "closed for the piece" pending until L2 exists) | each face by its reason; a text list | none — the owner accepts each class or changes the part | the list in the level's data; a vector that it does not grow unseen | W3 before the export: the owner's proxy review (§4.3 item 3) gets these colours |
+| **B6 conformance** | features near a threshold: a facet's elevation within 15° of 45°, two route faces within 30°, a feature whose closing radius is near the piece's size (ORBIT_SURFACE.md §2.6), a facet near the share | the thresholds READ from the game's files (never retyped — as the lights are); numpy on the proxy's faces | amber: at a threshold, with its margin | no route or seat face at a threshold without a written acceptance | the same thresholds in the game: the vector reads one constant | W2 (sheet), W3 |
+
+### 6.2 The goal's ENTRY SET (B4) and the ghost
+
+**A goal's ENTRY SET** (the owner, 2026-11-16: *"a goal can have multiple entry directions: for example a goal when a piece rests on a plane can be accessed from all the directions paralel to the plane, unless you call the plane the "direction". A hole can be entered from both sides."* — and: *"there are infinite directions for the set down: any clear path towards the goal (=no collision in-between the piece and the piece as seated in the goal) can be travelled by the piece from any orbit angle: this is not one set-down."*): one definition — **the directions along which the part,
+withdrawn from its seated pose, touches no placed part**; forward, in his words, any clear path from any orbit angle with no collision between the
+piece and the piece as seated. A region of the sphere of directions, usually a continuum (a piece resting on an open plane: about half the
+sphere); a hole open both ends: its axis in both senses; a blind hole: its axis from the open side; a tight slot: a single direction. ⭐ By
+default the author states NOTHING: it is computed (B4). The brief may NARROW it (`entry_narrow`: how the level means the part to be placed) and
+MARKS a goal whose set is small (`entry_small`: a bore, a keyed slot) — those are the goals a level can make unreachable. A ghost (the
+pre-insertion pose) only where the set is narrow, computed per axis and sense.
+B4 reports per goal and stage the set's share of the sphere and its narrowest opening; it FAILS only when the set is empty, or when no direction
+of it starts at a place the gizmo reaches; a small set is a WARNING painted for the owner's look. The sampling: the sphere at a named step plus the
+placed parts' and the part's face normals (a tight slot's single direction is missed by a sampling alone).
+
+### 6.3 The design-for-playability checklist (for whoever draws a part; each line traced to its rule)
+
+1. A wide entry set where the play allows; a narrow one (a bore, a keyed slot) only where the level means it, marked in the brief; along the host
+   face's normal and from above where it can be (S21, S28, B4; design for assembly).
+2. A lead-in: a chamfer or a ghost at the mouth, so the plunge starts from a capture region (S13, ORBIT_SURFACE.md §2.5).
+3. Every face a later part rests on is wider than that part's footprint, or a ghost bridges it (P2, B3).
+4. No route or seat face within 15° of 45° of elevation; faces to be told apart ≥ 30° apart (B6).
+5. No gap, groove or step at a threshold: clearly narrower than the noise tolerance, or clearly wider than the piece (ORBIT_SURFACE.md §2.6).
+6. Collision pieces convex, closed, few; the proxy on them, facing out (S25, B1).
+7. Round parts as flat proxies; no doubly curved place (C15, C38).
+8. Symmetric, or obviously not: a look-alike turn declared in the catalogue (`SCENE_WORKFLOW.md` §2.3 rule 7).
+9. Nothing placed inside what is already closed; no step that needs a turn mid-path (B4).
+10. Each exposed face is a place, or listed with its reason (S24, B5).

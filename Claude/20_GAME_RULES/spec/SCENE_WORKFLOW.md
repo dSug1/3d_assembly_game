@@ -3,7 +3,7 @@
 > **STATUS** · ⛔ **PROPOSED 2026-11-12, NOT APPROVED** · **OWNS** · the stages every new assembly scene goes through, what each stage produces, who
 > decides at each gate, and the template of the ASSEMBLY PLAN
 > **READ IF** · you are starting a new scene, or about to model, import or script the parts of one
-> **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`)
+> **LAST VERIFIED** · 2026-11-12 (branch `1.0.124from1.0.121-Added_scene_2`) · ⭐ §7 (the playability amendments) APPROVED 2026-11-16, to be tested
 
 > *"I think we first need to draft an assembly plan how the player would build the assembly. That will determine how to geometrize the parts, how to
 > draw them and their supporting surfaces in blender, etc. Propose a workflow which could be adopted for any new scene and which will be captured in
@@ -31,6 +31,9 @@ every later stage uses those names.
 
 ⭐⭐ **A VERTICAL SLICE FIRST**: three or four parts (the base, one host, one part that inserts, one that rests) go through W1 – W7 before the rest of
 the catalogue does. A broken convention then costs four parts, not the scene. ⭐ Then the scene widens step by step, a device look on each widening.
+
+⭐ (2026-11-16) **The playability amendments** (§7, approved, to be tested; NOT built): W1 writes each part's PLAYABILITY BRIEF; W3's gate adds
+the checks B1 – B6 (failing the run); W4 / W5 re-verify them at import.
 
 ⭐ **Going back is normal**: a step that fails at W6 or W7 goes back to W1 (the plan changes) or W2 (the geometry changes), never patched at W5 —
 *no heuristic pile-up* (`METHOD.md`).
@@ -86,10 +89,11 @@ the catalogue does. A broken convention then costs four parts, not the scene. �
 2. **Access** — at its step, a part's way in (the approach, and the orbit's route before it) is not closed by a part placed before: nothing is placed
    INSIDE what is already closed. ⛔ Checked ON THE REFERENCE's NUMBERS at W1, not on the picture — the WHOLE part's sweep along its approach, every
    end of it (`Scene_2`, 2026-11-12: an approved plan slid each piston in sideways at its bank's split; the numbers showed the rods' other ends inside
-   the crankcase, below its split — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §2.7).
+   the crankcase, below its split — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md` §2.7). ⭐ (2026-11-16, §7) Run as a script: B4, the goal's ENTRY SET at
+   its stage — empty fails, small warns.
 3. **A seat for every step** — a flat face on the part and one on the host, anti-parallel at the goal.
 4. **The gizmo can reach it** — every face of the route is an exposed face of the assembly at that step (the face map is built from the EXPOSED faces —
-   `POLAR_ORBIT_CLEANUP.md`, R1).
+   `POLAR_ORBIT_CLEANUP.md`, R1). ⭐ (2026-11-16, §7) "Exposed" = reachable from outside, on the parts taken together (S22) — B2 run as a script.
 5. **A step is one action** — a part too small to orbit on its own (a cap, a screw) belongs to a subassembly; a step the player cannot see is
    redesigned (the camera, the order) or removed.
 6. **The phone's budget** (§4) — counted for the worst step: the bodies and collision pieces near the held part at its goal.
@@ -134,7 +138,8 @@ part); ⭐ a CONTROL that must read BLOCKED (the part pushed past its goal) — 
   same way within **20°** (`MAP_AXIS_DEG`, the merge) become ONE facet — two faces the player must reach separately cannot be that close. ⭐ So a face of
   a gizmo route or a seat keeps **≥ 15° from 45° of elevation**, and faces that must stay apart are **≥ 30° apart**; where the reference puts one at a
   threshold, the scene's geometry is TILTED off it at W1 / W2 (`Scene_2`: its 90° V → 120°, its decks 45° → 30° — `30_OBJECTS_3D/spec/SCENE_2_ASSEMBLY.md`
-  §2.10). ⚠ Reasoned on the code; measured on the built scene at W6.
+  §2.10). ⚠ Reasoned on the code; measured on the built scene at W6. ⭐ (2026-11-16, §7) They bind the ROUTE and SEAT faces (the contour's
+  facets), not every real face — B6 paints what stands at a threshold.
 * **24 gap queries a frame** — the solver's budget (the owner tests on an iPhone): few bodies near the held part, few collision pieces each.
 * **Few parts** — every part is a step; the level's length and the phone's cost both grow with them.
 * **Patent-free methods only.**
@@ -284,3 +289,51 @@ says WHEN. ⛔ Each ⛔ GATE is the owner's — nothing after it starts before i
 
 * `npm run verify:quick` before every commit (the full `verify` in CI); md, commits, deploys only when the owner asks; stage files by path.
 * Record the owner's words in the scene's spec, the status in ONE line of `CLAUDE.md` / `QUEUE.md` (their byte budgets: move old lines to `history/`).
+
+## 7. ⭐⭐ THE PLAYABILITY AMENDMENTS (2026-11-16) — ⭐ **Approved by the owner 2026-11-16 — TO BE TESTED, may be reversed**
+
+> The owner's aim (2026-11-16): *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* — and his approval of the recommendation (2026-11-16, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §8 Q7): *"I agree with the recommendations, although they shall be later tested and could be reversed if the testing shows they need to be reversed."*
+> ⛔ **SPECIFIED, NOT BUILT**: neither the Blender scripts nor the game-side checks below exist yet. The rules they serve and their reasons:
+> [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §2.5 (the entry set), §2.7, §7bis; the checks in full: [`../../30_OBJECTS_3D/spec/PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6.
+
+### 7.1 W1 — the PLAYABILITY BRIEF each part carries from the plan
+
+Written at W1, beside §2.2's step, ONE home, exported as glTF `extras` so that Blender and the game read the same facts:
+
+| field | what | by default |
+|---|---|---|
+| `after` | its stage: the parts placed before it (the partial order; each placement its own stage) | §2.2's *after* |
+| the entry set | computed (below); `entry_narrow` — the directions the level means; `entry_small` — a goal whose set is small (a bore, a keyed slot) | nothing stated |
+| `mates_with` | its seat pairs, on each `MC_` marker | §2.2's *seat* |
+| its resting faces | the faces it rests on while held (its resting proxy) | the seat face (§2.2) |
+| the faces later parts need | the routes of later steps over it — the faces B3 and B5 must find landable | §2.2's *gizmo route* |
+
+**A goal's ENTRY SET** (the owner, 2026-11-16: *"a goal can have multiple entry directions: for example a goal when a piece rests on a plane can be accessed from all the directions paralel to the plane, unless you call the plane the "direction". A hole can be entered from both sides."* — and: *"there are infinite directions for the set down: any clear path towards the goal (=no collision in-between the piece and the piece as seated in the goal) can be travelled by the piece from any orbit angle: this is not one set-down."*): one definition — **the directions along which the part,
+withdrawn from its seated pose, touches no placed part**; forward, in his words, any clear path from any orbit angle with no collision between the
+piece and the piece as seated. A region of the sphere of directions, usually a continuum (a piece resting on an open plane: about half the
+sphere); a hole open both ends: its axis in both senses; a blind hole: its axis from the open side; a tight slot: a single direction. ⭐ By
+default the author states NOTHING: it is computed (B4). The brief may NARROW it (`entry_narrow`: how the level means the part to be placed) and
+MARKS a goal whose set is small (`entry_small`: a bore, a keyed slot) — those are the goals a level can make unreachable. A ghost (the
+pre-insertion pose) only where the set is narrow, computed per axis and sense.
+
+⚠ §2.2's *approach* column names ONE axis; under this amendment it is the narrowing the plan means (`entry_narrow`), and an insertion's axis is a
+small entry set (`entry_small`): B4 reports both.
+
+### 7.2 W3 — the checks B1 – B6 at the gate
+
+Each runs at every build (per step), PAINTS its result on the faces in the review `.blend`, prints a verdict and FAILS the run when its pass rule
+fails, with its planted control in `CHECK_CONTROLS` (`PART_AUTHORING.md` §6). **First**: B1 (closed convex collision pieces, the proxy on them,
+facing out), B2 (exposed per stage = reachable from outside), B4 (the entry set per goal and stage: empty fails, small warns — never fails).
+**Once the landing map exists** (the game's L2, [ORBIT_SURFACE.md](../../40_RENDER_SCENE/spec/ORBIT_SURFACE.md) §5.1): B3 (where each held piece first touches, per stage) and B5 (the coverage: every
+exposed face that is no place, with its reason). B6 (features at a threshold) beside them. The owner's proxy review (`PART_AUTHORING.md` §4.3
+item 3) gets their colours.
+
+### 7.3 W4 / W5 — the re-verification at import
+
+At load, a `src/core` checker beside `readModelCatalog`: B1's subset (convex, closed, the budget, the proxy planar and outward). In vectors on each
+scene's `.glb` (W5): B2 on a coarse grid; B4's sweep with the game's GJK over the `UCX_` pairs, the seat pairs from `mates_with`; B3 the game's own
+function. Each new vector shown failing first (`CLAUDE.md` rule 2).
+
+### 7.4 The design-for-playability checklist (whoever draws a part)
+
+→ `PART_AUTHORING.md` §6.3 (ten lines, each traced to its rule).

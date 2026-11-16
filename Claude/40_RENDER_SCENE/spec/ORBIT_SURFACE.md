@@ -1,8 +1,10 @@
-# THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16, third step)
+# THE ORBIT'S SURFACE — what it aims at, its rules and principles, its singularities, its obstacles, what the rebuild must specify (2026-11-16)
 
-> ⛔⛔ **PROPOSED, FOR THE OWNER'S REVIEW. NOTHING BUILT, NO CODE CHANGED.** Written 2026-11-16 on branch `1.0.146s-Orbit-surface-spec` (from
-> `1.0.146-Orbit-charts`, `1190db2`). Every rule marked **[OWNER]** quotes the owner, with its file, section and date; every rule or principle
-> marked **[PROPOSED]** is a reading of this study and is NOT his decision until he says so.
+> ⛔⛔ **THE OWNER'S DECISIONS OF 2026-11-16 ARE RECORDED (§8) — PROVISIONAL: TO BE TESTED, AND MAY BE REVERSED BY THE TESTING. NOTHING BUILT, NO GAME
+> CODE CHANGED.** Branch `1.0.146s-Orbit-surface-spec` (from `1.0.146-Orbit-charts`, `1190db2`). **[OWNER]** quotes the owner, with its file, section
+> and date; **[DECIDED 2026-11-16]** marks what he decided, or accepted by agreeing with a written recommendation (*"I agree with the recommendations,
+> although they shall be later tested and could be reversed if the testing shows they need to be reversed"*); **[PROPOSED]** is this study's reading,
+> NOT his decision until he says so.
 >
 > **The owner's request (2026-11-16, verbatim):** *"In the meantime, write the specifications for my review regarding the surface definition. What
 > does the surface aim at. What are the rules. What geometries, topologies, singularities shall be considered. What obstacles to overcome. What to
@@ -10,30 +12,12 @@
 > surface definition and the singularities (voids, channels, mouths, protrusions, small faces): just capture that in your to do list for the
 > moment."*
 >
-> **First review (2026-11-16)**, at his request (*"do a review yourself … and amend as necessary"*): §3.0, C25 – C47, S21 – S25, OS13 – OS16,
-> marked *(review)*.
->
-> ⭐⭐ **SECOND REVISION (2026-11-16), opened by the owner's feedback:** *"My feedback of the review: …"* — his nine points are quoted whole in §0bis,
-> each with what was done. His thread through them: no ad hoc rule per geometry; check the literature for patent-free proposals; put what can be
-> checked into the Blender workflow. So: §2 is rebuilt on six PRINCIPLES (P1 – P6) with a table of the ad hoc rules they replace; §2.5 and §2.6 give
-> the advice asked on S13 and S16; §3 – §6 say which principle answers each class; §7bis (new) proposes the Blender workflow's amendments; §8 asks
-> nine questions. The audit table (WS1 – WS25), the errata of the first version and the prior art moved to [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md).
-> New code references are on the tip of `1.0.146-Orbit-charts` (`30f7bb3`, read 2026-11-16, nothing run); the first version's are on `1190db2`.
->
-> ⭐⭐⭐ **THIRD STEP (2026-11-16): THE SHAPES AND THE CONSOLIDATION**, at his request: *"I suggest you complement this set of rules by doing like you
-> did for the orbit charts: you elaborate some basic geometries or topologies with surface singularities and you consolidate the rules you have
-> drafted, or amend them, or add rules which are missing to cover cases we did not consider."* (and *"Make sure you manage the load on my
-> computer"*). 63 shapes and a 1596-cell sweep, read by today's functions and by the principles (`scripts/probes/surface_study/`, `903e50d`, about a
-> minute of one core). Consolidated: P1 and P2 ③ amended, P3's condition reopened, the mouth's hold given a domain, S26 – S29 added, S5's order
-> asked, Q3 merged into Q2 — each marked *(study, F…)*. Shapes, results, findings, the consolidation table and the catalogue's moved §3.1b – §3.2:
-> [ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md). ⭐ **Corrected after a critic's review (2026-11-16):** P1 is NOT built off a face's middle — the
-> far foot bumps along ONE assembly when the orbit's direction is oblique (F17, measured): P1 keeps his words (the mechanism then proposed is
-> withdrawn at the alignment below); the "L19 lid on the tray's floor" evidence withdrawn (a fault of the study's goal check, fixed and rerun).
->
-> ⭐⭐⭐ **ALIGNMENT WITH THE OWNER'S TWO COMMENTS (2026-11-16)** — on P1 and on the scope, quoted whole in §0ter, and his request: *"Confirm that
-> the specification is in line with both points."* It was not fully. Now: the scope is stated (§0, §1.3: WHERE THE GIZMO TRAVELS); P1 is a boundary
-> condition with his boundary; the "two boundaries" reading and the proposed far-foot mechanism are withdrawn; F17, F7 and the mouth are findings
-> handed to the orbit's queue; P3 and P6 are withdrawn (their text: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §5); Q1 and Q4 re-worded.
+> **Four exchanges with him, 2026-11-16** (the full record of the revisions: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §6): (1) a first review at
+> his request — marked *(review)*; (2) his feedback on nine rules → six principles, §2.5 – §2.6, §7bis (§0bis); (3) the shapes study and its
+> consolidation ([ORBIT_SURFACE_SHAPES.md](ORBIT_SURFACE_SHAPES.md), `903e50d`) — marked *(study, F…)* —, then his two comments on P1 and on the scope
+> (§0ter) — marked *(alignment)*; (4) his answer to §8's nine questions, a new word for the collision regime and a clarification on the entries
+> (§0quater) — marked *(decisions)*. Code references: the tip of `1.0.146-Orbit-charts` (`30f7bb3`; the contact's drop read on `9f101a4`), the first
+> version's on `1190db2`.
 
 ---
 
@@ -46,38 +30,36 @@ question many times a frame: *for this place of the orbit, where is the gizmo �
 (the orbit's angles, the shell, the charts, the tilted orbit, the calm) is settled in the orbit's own documents and is not reopened here; the one
 place where the gizmo's travel acts on the piece and the camera is the collision (P5).
 
+**Two words (§1.4, the owner 2026-11-16).** **Contact range** — where the piece can collide (during the approach, during the orbit); out of it: far
+and medium. **Close in** — only the orbit ↔ tilted orbit transition (0.6 m in, 0.65 m out).
+
 **What it is today.** Four things grown patch by patch: a **convex contour** of big facets (the layout); under each facet a **stack of depths**
 where holes, voids, mouths and protrusions get one rule each; a **ray cast**; separate **convex hulls** for the collision and the support. The
 gizmo's void test and the piece's footprint support answer nearly the same question twice, and disagree near every wall (§2.2 P2).
 
-**What is proposed (not decided).** Principles instead of one rule per shape, tested on 63 shapes and 1596 cells *(study)*:
-* **P1 — a boundary condition, in his words.** Far and medium, no singularity under the gizmo changes the path of the piece and the camera;
-  close in, the real surface and the collision govern. Close in = WHERE THE PIECE CAN COLLIDE (inside the shell's offset in today's code) — not
-  the 0.6 – 0.65 m of the tilted orbit's transition. Today's code departs from it in two measured places (F17: an oblique direction shifts the far
-  piece by a depth step × tan θ; the mouth: a real lip decides where the tilted orbit starts, up to 0.6 m): findings handed to the orbit's queue,
-  nothing designed here (Q1). F7 (a part growing the box at its seat) is an event at a seat, as his sentence allows.
+**What is decided — provisionally, to be tested (§8, the owner 2026-11-16).** Principles instead of one rule per shape, tested on 63 shapes and
+1596 cells *(study)*:
+* **P1 — his boundary condition.** Out of contact range, no singularity under the gizmo changes the path of the piece and the camera; in contact
+  range, the real surface and the collision govern (Q1). Today's two measured departures (F17: an oblique direction shifts the far piece by a depth
+  step × tan θ; the mouth: a real lip decides where the tilted orbit starts, up to 0.6 m) are recorded as defects for the orbit's queue.
 * **P2 — the landing is a first contact.** The gizmo's depth is where the HELD PIECE, moved along the face's normal, first touches the placed
-  parts: one operation, the piece as the only ruler, "nothing to land on" the one case with no answer. Far and medium the drop starts outside the
-  parts; close in WHERE THE PIECE IS, so a proud part stays a wall (his Q1 (b), kept). *(study)* Today's point marks a place where the piece
-  cannot rest (set there, it would enter a part) on 41 of 62 shapes — the marker only: far out the piece rides the shell, close in the collision
-  refuses it; P2 never, by construction. Close in P2 IS today's footprint support in 1398 of 1596 cells.
-* **P4 — a function of the place** (the face map's settled design, restated); **P5 — close in, blocked, not jumped** (the collision: in scope).
-* **P3, P6 — withdrawn** (the camera's frame at a crossing; the layout's singular points: the orbit's matters; their text in the audit companion
-  §5). The gizmo's side of the mouth stays: S10 and the hold, its domain restricted (Q4).
-* **Rules added *(study)*:** S26 no unnamed depth step; S27 tolerances join, never erase; S28 a goal's entry stated, only a set-down is a
-  landing; S29 an empty placed set out of reach (§2.7).
+  parts — first as a readout beside today's depth, then driving (Q2; it reverses his *"gizmo is a point, not the piece's footprint"* of 2026-11-07).
+  *(study)* Today's point marks a place where the piece cannot rest on 41 of 62 shapes; P2 never, by construction.
+* **THE PIECE SHALL NOT DROP (Q10).** The gizmo reads the real depth at every distance (D3); the piece enters a recess only by the approach
+  (A + dy) — *"the kid would need to push the piece"* (§1.2). Today's contact lowers it into every slot it fits: a departure handed to the
+  contact's queue (§2.2 P5).
+* **A goal has an ENTRY SET (Q5, his amendment).** Every clear path to the seated pose, from any orbit angle: the directions along which the part,
+  withdrawn from its goal, touches no placed part — computed, never listed; the ghost only where the set is narrow (S28, §2.5).
+* **P4** a function of the place; **P5** in contact range, blocked, not jumped; the mouth's hold restricted (Q4); one ruler and the noise family,
+  S26 / S27 (Q6); the Blender checks and the playability brief, now written into the workflow (Q7, §7bis); S25 / S22 (Q8); the first round's open
+  points (Q9). **P3, P6** withdrawn (the orbit's matters: audit §5).
 
-**And the Blender side (§7bis).** What these rules need of a scene's parts is checked when they are built, painted for the owner's look and
-re-checked at import: closed collision solids with the proxy on them (S25), what is exposed per stage, the landing map per held piece, every
-goal reachable by withdrawal along its entry (S21), the faces that are no place (S24); and a design-for-playability checklist.
+**What stays open.** The classes with no rule (⏳ in §5.2: C22 long flat shapes, a piece wider than its facet, C38 free-form, the layout's events
+at a pole); the classes the study has no shape for (§5.3); the findings handed over — to the ORBIT's queue (F17, the mouth's lip, F7 an event at a
+seat, D5 after a closing WS21, the camera's frame far out), to the CONTACT's queue (the drop, §2.2 P5). Nothing is built.
 
 **What cannot be avoided (§4).** A direction field round a closed shape has singular points (the poles; a hole through adds saddles); a depth
 read along one direction cannot see under an overhang, gives zero width to a face parallel to it, and steps at every wall. Each has a fallback.
-
-**What the owner is asked (§8).** Nine questions, each answerable in a line: P1 with his boundary, and whether today's two departures are
-recorded as defects in the orbit's queue or accepted (Q1); P2 with the piece as held (it reverses his *"gizmo is a point, not the piece's
-footprint"* of 2026-11-07); the mouth's hold restricted (Q4); the ghost computed and every entry stated; one ruler and the noise rules; the Blender
-checks; S25 / S22; the open points; and S5 close in (Q10).
 
 ---
 
@@ -88,10 +70,10 @@ checks; S25 / S22; the open points; and S5 close in (Q10).
 | *"S6 - Holes are closed at the contour: "close the holes for the moment".-> i am not sure if this decision is correct. It was a temporary fix at the time i took the decision. Amend if geometry or topology requires a better decision."* | Amended. S6 becomes a CONSEQUENCE of P2: a hole narrower than the held piece is closed because the piece rests on its rims; a blind hole the piece fits gives its floor; a hole right through and wider than the piece gives no contact — "nothing to land on", stated, the gizmo on the facet's plane and marked. On the glass, through holes look as today; the change is that it is no longer a blanket rule | §2.2 P2, §2.3 |
 | *"S7, S8 , S9, S10, S11, S14, S23: these decisions was taken ad hoc to simplify. If they conflict with other decisions or if geometry or topology requires a better decisions, propose it. Check literature for better patent-free proposals."* | S7, S8, S9, S23 → P2 (the drop cutter / configuration-space first contact: textbook, patent-free); S10 → kept, the gizmo's hold its domain restricted (P3, first proposed, withdrawn at the alignment, §0ter); S11 → the charts' fans (P6 withdrawn: the layout's matter); S14 → P5 (the haptic proxy and backing off). Literature in §2.2 and the audit file | §2.2, §2.3 |
 | *"S13, S16: there may be better alternatives: review literature for patent-free proposals and advise."* | S13: keep his ghost at the mouth, but COMPUTE it from the goal and its entry direction (assembly by disassembly) and check the drawn ghost against it; the plunge a guarded move started inside a capture region. S16: the piece as the one ruler for use, one share for the layout, tolerances for noise only | §2.5, §2.6 |
-| *"S17: the spirit is that at far or medium distance, a singularity at the surface does not impact the orbit of the piece - camera. Refine the rule if needed. At close in, this rule is overruled by collision rule, etc."* | Restated in his words as P1. *(alignment, his comment 1, §0ter)* "Close in" = where the piece can collide — inside the shell's offset (60 mm) in today's code; not the tilt's 0.6 – 0.65 m. The reviewer's "two boundaries" reading (the camera's frame beyond 0.6 m) is withdrawn. Today's departures (F17; the hold letting the real lip start the tilt from up to 0.6 m) are findings handed to the orbit's queue — Q1 | §0ter, §2.2 P1, §2.4 |
+| *"S17: the spirit is that at far or medium distance, a singularity at the surface does not impact the orbit of the piece - camera. Refine the rule if needed. At close in, this rule is overruled by collision rule, etc."* (here: contact range) | Restated in his words as P1. *(alignment, his comment 1, §0ter)* Contact range (§1.4) = where the piece can collide — inside the shell's offset (60 mm) in today's code; not the tilt's 0.6 – 0.65 m. The reviewer's "two boundaries" reading (the camera's frame beyond 0.6 m) is withdrawn. Today's departures (F17; the hold letting the real lip start the tilt from up to 0.6 m) are findings handed to the orbit's queue — Q1 | §0ter, §2.2 P1, §2.4 |
 | *"S18: I don’t recall where the mouth hold comes from but it may be revisited if other rules apply"* | Its history: his *"build b"* of 2026-11-10 for the shake at the channel's mouth. It stays, the one labelled exception to P4, its domain restricted (Q4); a general crossing rule to replace it is the orbit's matter (P3 withdrawn, audit §5) | §2.4 |
 | *"S20: do not propose ad hoc rule for each geometry, therefore check if this case is already covered by other rules and if you can remove this rule. Otherwise, keep it."* | Removed. Its premise was wrong: on `Scene_1` the edge at the bottom of the mouth is CONVEX (the side face's lip at the floor's level), not concave. The case is already covered by S10 and the mouth's hold as built (`face_map.ts:989-994`, `orbit_tilt.ts:290`); the hold's domain restricted (Q4) | §2.4 |
-| *"S21: the slide is removed; an orbit at close in can seat a piece as well; “it is checked when the level is built, not discovered by the player”: I think we need to modify the workflow of the blender object building to check that when we build in blender (the proxy surface, the collision surface, the ghost surface). Propose something. Also, we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* | Reworded (no slide: seated by the orbit close in, the approach or the plunge). The checks B1 – B6 run in Blender, painted on the meshes, re-verified at import; a PLAYABILITY BRIEF per part from the plan; a design-for-playability checklist traced to this document's rules | §7bis |
+| *"S21: the slide is removed; an orbit at close in can seat a piece as well (here: contact range); “it is checked when the level is built, not discovered by the player”: I think we need to modify the workflow of the blender object building to check that when we build in blender (the proxy surface, the collision surface, the ghost surface). Propose something. Also, we shall amend the blender object building workflow to make sure that any surface built in blender is built with consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* | Reworded (no slide: seated by the orbit in contact range, the approach or the plunge). The checks B1 – B6 run in Blender, painted on the meshes, re-verified at import; a PLAYABILITY BRIEF per part from the plan; a design-for-playability checklist traced to this document's rules | §7bis |
 | *"S24: this should be taken care at the blender building stage and included in the workflow, however i don’t know how. Propose something."* | B5, the coverage report: per stage, every exposed face that is no place, painted with its reason, for him to accept or change | §7bis B5 |
 | *"S25: i don’t know where it comes from. If it conflicts with other rules, this needs to be amended. It should be taken care by the blender workflow, not the scene build, and reverified during scene build."* | It came from the first review: every rule here assumes inside and outside are defined. As worded it conflicts with `PART_AUTHORING.md` (proxies are open by design; the finish pass opens render meshes). Restated on the union of a part's `UCX_` pieces, the proxy lying on it; checked in Blender (B1), re-verified at import | §7bis B1 |
 
@@ -104,25 +86,42 @@ angle) and close in (surface and collision govern) is not related to the 0.6 m -
 tilted orbit transition threshold is set at 0.6 m - 0.65 m for user's feeling to precisely control the piece close to the surface. surface and
 collision govern when the piece can collide (during approach, during orbit). It is clear that at far and medium distance, the piece cannot
 collide (except with parts which are not seated) nor shall surface aspects impact the orbit of the piece & camera."*
-* **Out of line.** §0, §2.2, §2.4 and Q1 set "close in" at the shell's 60 mm for the piece's PATH, and the reviewer added a second boundary at the
-  tilt's 0.6 m for the camera's FRAME ("two boundaries"): the camera's side of P1 tied to the 0.6 – 0.65 m transition, which he rules out.
-* **Done.** P1 is his sentence with HIS boundary: close in is where the piece can collide (during the approach, during the orbit) — in today's
+* **Done.** P1 is his sentence with HIS boundary: contact range (§1.4), where the piece can collide (during the approach, during the orbit) — in today's
   code inside the shell's offset; the tilt's 0.6 – 0.65 m is there for the feel of precise control, not P1's boundary; parts not seated are no
   surface, the collision handles them (§2.2 P1). "Two boundaries" withdrawn everywhere (§0, §0bis, §2.2, §2.4, Q1). Today's measured departures
   (F17; the mouth's lip from up to 0.6 m) are findings handed to the orbit's queue (Q1); F7 is an event at a seat, consistent with his sentence.
+  What was out of line before each comment: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §6.2.
 
 **Comment 2, on the scope (2026-11-16, verbatim):** *"in our pipeline, we have solved the problem of the impossible bijection between orbit and
 assembly surface after we have experimented several unsuccessful attemps of what drives what (gizmo drives, orbit angle drives, etc.). Do not
 reopen this point. The purpose of this orbit's surface specification is to define where the gizmo travels, not what governs the piece and camera
 orbit (unless you specifically see that the gizmo travel shall impact the piece and camera orbit, for example during collision)."*
-* **Out of line.** The document proposed changes to what governs the piece and the camera: the shell fed the gizmo's contour point (P1's
-  "mechanism", Q1 (a), §6 (1b)); the camera's frame at a crossing (P3, §2.4's place-functions); the layout's singular points (P6); D5's share
-  after a closing (the layout's facets, §2.6, Q6).
 * **Done.** The scope stated once (§0, §1.3). The far-foot mechanism removed: F17, F7 and the mouth handed over as findings (§2.2 P1). P3 and P6
   withdrawn, their numbers kept, their text in [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §5, "notes handed to the orbit's documents". The
   contour and the atlas described as the orbit's layers, read by the gizmo (§5.1); the D5 closing handed over (§2.6); P4 worded as the settled
   design restated. In scope and kept: P2 (the gizmo's depth), P4, P5 (the collision — his *"for example during collision"*), S26 – S29, the
   Blender checks.
+
+---
+
+## 0quater. THE OWNER'S ANSWER TO §8 (2026-11-16, the fourth exchange) AND WHAT WAS DONE
+
+**His answer (verbatim):** *"find another word for "close in" where the piece can collide, in order to distinguish properly from the close in of
+the orbit - tilted orbit transition. update the specification accordingly. That settles Q1. Q5: a goal can have multiple entry directions: for
+example a goal when a piece rests on a plane can be accessed from all the directions paralel to the plane, unless you call the plane the
+"direction". A hole can be entered from both sides. Q10: the piece shall not drop. Remember that we are specifying the movement of the gizmo on the
+surface, not the movement of the piece. the piece would enter the recess only following a A + dy approach. Remember that the goal is to mimick the
+placement of parts by a kid in an assembly game: the kid would need to push the piece to enter a slot the piece fits in, the piece would not enter
+by itself even if it fits in the slot. Other questions: I agree with the recommendations, although they shall be later tested and could be reversed
+if the testing shows they need to be reversed."* — **and on Q5's summary** (*"a piece resting on a plane then gets every direction parallel to the
+plane plus the set-down"*): *"there are infinite directions for the set down: any clear path towards the goal (=no collision in-between the piece
+and the piece as seated in the goal) can be travelled by the piece from any orbit angle: this is not one set-down. I may have misinterpreted your
+word, or you may be too restrictive."*
+* **The word** → §1.4: CONTACT RANGE; "close in" kept for the tilted orbit's transition; P5 renamed; quotations unchanged.
+* **Q5** → S28, §2.5, B4, the playability brief (§7bis.2), the two workflow documents, the study: a goal's ENTRY SET — one definition, computed.
+* **Q10** → his reason in §1.2; P2 ⑤, P5, §2.1 S5, §2.3, §2.8, §5.2, the shapes companion aligned; today's drop recorded as a departure (§2.2 P5).
+* **The others** → §8, accepted to be tested; §7bis written into `SCENE_WORKFLOW.md` and `PART_AUTHORING.md` (§7bis.5). The questions as they were
+  asked, their options and arguments: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §7.
 
 ---
 
@@ -148,9 +147,12 @@ orbit (unless you specifically see that the gizmo travel shall impact the piece 
 * It **moves with the finger** and **never jumps** (rules 2, 4, 7 there).
 * It **runs on the faces he can see and use**: a slot the piece fits is reachable; a crack, a groove too narrow, a sliver is not in the way.
 * The camera **looks square** at the face he works on and **stays upright** (rules 3, 6; the calm).
-* **Every piece can be brought to its goal** — seated by the orbit close in (the goal capture runs during the orbit, `LEVEL_END.md` §5quater), by
-  the approach, or by the plunge (specified, not built) — at every stage of the level; no face is out of reach without the author knowing it
-  (S21, S24).
+* **Every piece can be brought to its goal** — seated by the orbit in contact range (the goal capture runs during the orbit, `LEVEL_END.md`
+  §5quater), by the approach, or by the plunge (specified, not built), along any clear path of its entry set (S28) — at every stage of the level;
+  no face is out of reach without the author knowing it (S21, S24).
+* ⭐ **The piece does not enter by itself — the player PUSHES it in** [DECIDED 2026-11-16, Q10]: *"Remember that the goal is to mimick the placement
+  of parts by a kid in an assembly game: the kid would need to push the piece to enter a slot the piece fits in, the piece would not enter by itself
+  even if it fits in the slot."* The gizmo shows the slot's depth; only the approach (A + dy) brings the piece down into it.
 
 ### 1.3 What it is NOT
 
@@ -169,6 +171,16 @@ orbit (unless you specifically see that the gizmo travel shall impact the piece 
   (`TILTED_ORBIT_REBUILD_SCOPE.md` §10).
 * **Not a closest-point surface.** Nothing follows the nearest point of the surface each frame (the HoverCam family, US 8,044,953 — excluded).
 
+### 1.4 Two words (the owner, 2026-11-16, §0quater)
+
+*"find another word for "close in" where the piece can collide, in order to distinguish properly from the close in of the orbit - tilted orbit
+transition."*
+* **CONTACT RANGE** — where the piece can collide: during the approach, during the orbit (his comment 1, §0ter). "In contact range"; far and medium =
+  "out of contact range". In today's code: inside the shell's offset (`orbitShellOffsetMm`, 60 mm), where the foot comes down onto the gizmo and the
+  contact acts — a fact of the code, not a new constant.
+* **CLOSE IN** — ONLY the orbit ↔ tilted orbit transition (in at 0.6 m, out at 0.65 m, `tiltAutoM`): *"for user's feeling to precisely control the
+  piece close to the surface"*. Quotations keep their words; where one says "close in" for the collision, "(here: contact range)" follows it.
+
 ---
 
 ## 2. THE RULES AND THE PRINCIPLES
@@ -181,26 +193,27 @@ orbit (unless you specifically see that the gizmo travel shall impact the piece 
 | **S2** | Only **placed** parts count, and only their **exposed** faces: a face pressed against another part's face is not a surface (R1) | built 2026-11-09 (R1, `POLAR_ORBIT_CLEANUP.md` §6); a rule of the code — generalised by S22 |
 | **S3** | Everything is computed in the **model's coordinates** | [OWNER] 2026-11-15, `ORBIT_CHARTS.md` §4.5 |
 | **S4** | The **bottom** is a face like the others: *"the bottom is a face to orbit as the others (remember that the floor can be crossed by the camera and is invisible from below)"* | [OWNER] 2026-11-04, `TILTED_ORBIT_REBUILD_SCOPE.md` §16.1 (D2) |
-| **S5** | **The real depth**, and the piece does not dive by itself: *"Approach into an empty slot: the gizmo shall read the real depth under the gizmo, but the piece shall not go in (it shall continue its orbit). However, the A + dy shall be able to bring the piece inside the depth up to where it collides or where it meets the center of the orbit"* → *"center of the orbit = gizmo"* | [OWNER] 2026-11-04, §16.1 (D3). *(study, F8)* close in the contact drops the piece into every slot it fits: its order → §8 Q10 |
+| **S5** | **The real depth**, and the piece does not dive by itself: *"Approach into an empty slot: the gizmo shall read the real depth under the gizmo, but the piece shall not go in (it shall continue its orbit). However, the A + dy shall be able to bring the piece inside the depth up to where it collides or where it meets the center of the orbit"* → *"center of the orbit = gizmo"* | [OWNER] 2026-11-04, §16.1 (D3); ⭐ [DECIDED 2026-11-16, Q10] at EVERY distance: *"the piece shall not drop"* — today's contact departs (§2.2 P5) |
 | **S12** | The surface **changes as the game goes on**: *"it cannot be at boot: the assembly will change as the game progress"* | [OWNER] 2026-11-13, `POLAR_ZONES.md` header |
 | **S13** | A part going INTO a hole rests on a **ghost at the mouth**, then a **plunge**: *"the ghost face shall always be a face aligned with the assembly face where the hole exits"*; ghosts are *"connected to real surfaces"* — the advice he asked is §2.5 | [OWNER] 2026-11-13, `PART_AUTHORING.md` §3 item 3 (ghost read by the game: NOT built; plunge: NOT built) |
 | **S15** | No **local patch**: *"analyze the deep root cause, don't patch with fix which may conflict with other rules"*; and 2026-11-16: *"do not propose ad hoc rule for each geometry"* | [OWNER] 2026-11-15, `RND5.md`; 2026-11-16 (§0bis) |
 
-### 2.2 The principles [PROPOSED]
+### 2.2 The principles [DECIDED 2026-11-16 — P1, P2, P4, P5 accepted, to be tested]
 
 Each: in plain words; its established name and reference; what it guarantees; where it stops and the fallback there; its patent note. They
 were tested against the code and the record by three readers (literature, code, Blender, 2026-11-16); where a reader showed a principle wrong
 as first written, it is amended here and the amendment is said. References in full: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §3.
 *(alignment, §0ter)* P1 is a boundary condition, not a design; P3 and P6 are withdrawn (their numbers kept); P2, P4 and P5 are in scope.
+*(decisions)* P1, P2, P4, P5 [DECIDED 2026-11-16] — accepted, to be tested (§8).
 
-**P1 — A BOUNDARY CONDITION THIS SPECIFICATION MUST RESPECT, IN HIS WORDS (not a design of it).** *Far and medium, no singularity of the
+**P1 — A BOUNDARY CONDITION THIS SPECIFICATION MUST RESPECT, IN HIS WORDS (not a design of it).** *Out of contact range (far and medium), no singularity of the
 surface under the gizmo changes the path of the piece and the camera: their path is a function of the orbit's angles, the placed parts' BOX (the
 shell) and the CONTOUR (the layout) only; a part that grows the box or changes the contour changes it at the seat that places it (S19), never along
-a travel. Close in, the real surface and the collision govern and overrule.*
-* **His boundary** (2026-11-16, comment 1, §0ter). "Close in", for this rule, is WHERE THE PIECE CAN COLLIDE — during the approach, during the
+a travel. In contact range, the real surface and the collision govern and overrule.*
+* **His boundary** (2026-11-16, comment 1, §0ter; named in §1.4). CONTACT RANGE: WHERE THE PIECE CAN COLLIDE — during the approach, during the
   orbit. In today's code that is inside the shell's offset (`orbitShellOffsetMm`, 60 mm, `gestureConfig.ts:867`): there the foot comes down onto
   the gizmo and the contact acts (`orbit_shell.ts:7-11, 84-99`; `footprint.ts`) — a fact of the code, not a new constant. It is NOT the 0.6 –
-  0.65 m of the orbit ↔ tilted orbit transition, which is there for the player's feel of precise control near the surface. Far and medium the piece
+  0.65 m of the orbit ↔ tilted orbit transition (close in), which is there for the player's feel of precise control near the surface. Far and medium the piece
   can still collide with parts that are NOT seated: those are no surface (S2: placed parts only); the collision rule handles them.
 * **What it asks of this specification.** The gizmo may follow the real surface (P2) because, far and medium, the piece's and the camera's path
   does not read its depth; how the shell and the camera read the gizmo is the orbit's settled design (§1.3), not reopened here.
@@ -214,12 +227,12 @@ a travel. Close in, the real surface and the collision govern and overrule.*
   grows the box moves the far path at its seat (612 of 760 protrusion cells, by the box's growth; L24, L48, L50 through the contour) — an event at
   a seat, consistent with his sentence. **The mouth**: today the gizmo's hold lets a real lip decide where the tilted orbit starts, at up to 0.6 m
   (`assembly_wiring.ts:1157, 1211-1215`, `orbit_tilt.ts:290`; `Scene_1`'s lip at 466 mm, the contour's edge at 498.5 mm) — a surface aspect acting
-  at medium distance. Any remedy belongs to the orbit's specification; none is proposed here (§8 Q1).
+  at medium distance. [DECIDED 2026-11-16, Q1] F17 and the mouth RECORDED as defects for the orbit's queue; any remedy is the orbit's.
 
 **P2 — THE LANDING IS A FIRST CONTACT.** *The gizmo's depth is where the held piece, moved along the face's normal, first touches the placed
 parts.*
 * **In scope: where the gizmo is.** It changes nothing in what drives the piece and the camera; where it speaks of them it only reports — far
-  and medium the marker alone moves (the piece rides the shell), close in it equals the footprint support, i.e. the collision (P5).
+  and medium the marker alone moves (the piece rides the shell), in contact range it is read from where the piece is, the collision deciding (P5).
 * **Name.** The configuration-space obstacle of a translating piece (a Minkowski sum, Lozano-Pérez 1983); along one direction it is CAM's "drop
   cutter": drop the tool at a place until it touches; on a height field, a grey-scale dilation by the tool's own height function. Under it, a
   LAYERED depth per facet direction (dexels, layered depth images) holds overhangs and cavities. `footprint.ts` already cites the same idea for
@@ -227,7 +240,7 @@ parts.*
 * **What it replaces.** Today two implementations answer nearly this question and disagree: (a) the gizmo's `stackDepthAt` + `voidOpening` /
   `pieceEnters` — a POINT, the opening measured on the facet's plane only, the piece as its two smallest sizes either way round, at every
   distance, protrusions climbed whatever their width (`face_map.ts:980-1065`, `assembly_wiring.ts:922-933`); (b) the footprint support — the
-  piece's real outline as held, each part a convex body, only within 60 mm, never a step up (a WALL) (`footprint.ts:25-65`). Close in they part
+  piece's real outline as held, each part a convex body, only within 60 mm, never a step up (a WALL) (`footprint.ts:25-65`). In contact range they part
   the gizmo and the piece (`levelRaise`). P2 makes (a) = (b) and keeps (c), the GJK gap, as the arbiter of contact.
 * **Guarantees.** Exact first contact for a rigid piece at a fixed orientation, any shape, from its `UCX_` pieces (the union of convex
   Minkowski sums is exact). One operation for voids and protrusions alike: a void narrower than the piece is closed (it rests on the rims); a
@@ -238,29 +251,30 @@ parts.*
   pin touches it and would tip: the gizmo still shows the touch (it is where A + dy stops); *(study, F9)* the same for every partial support — a
   footprint partly past an edge or beside a hole lands where it first touches (198 cells, e.g. a rebate narrower than the piece, open on the
   edge's side); a stability test (the centre of mass over the support) is NOT proposed now. ④ *Steps remain* — a flat piece over a wall still steps, moved outward by half its width: far out the step
-  moves only the marker (P1); close in the collision decides (P5). ⑤ *A tall part beside the gizmo — WHERE THE DROP STARTS*: far and medium
-  the piece is dropped from outside the parts (from the shell), so the marker climbs half a piece before a proud part. Close in the drop starts
-  WHERE THE PIECE IS (a guarded move from its current pose, as the drop cutter descends from the tool's own height): a part whose top stands
-  above the piece's bottom is not under the piece but BESIDE it — a WALL that stops the piece, the gizmo and the camera (the owner's Q1 (b),
-  *"Proceed"*, `CLOSE_IN_CONTACT.md` §1, §5 – §6; `footprint.ts`: *"never a step up onto it"*) — P5. That is today's footprint support
-  exactly (the highest part under the footprint whose top is not above the piece's bottom, `footprint.ts:25-30`): P2 started at the piece
-  REPRODUCES it, it does not replace its step rule. ⛔ A drop started from outside at every distance would lift a piece in contact with
-  `Piece44` (41 mm proud) onto its top half a piece before the edge — a step up he refused.
+  moves only the marker (P1); in contact range the collision decides (P5). ⑤ *A tall part beside the gizmo — where the first contact is read FROM*: out of
+  contact range from outside the parts (from the shell), so the marker climbs half a piece before a proud part. In contact range FROM WHERE THE
+  PIECE IS (a guarded move from its pose, as the drop cutter descends from the tool's own height): a part whose top stands above the piece's bottom
+  is BESIDE it — a WALL that stops the piece, the gizmo and the camera (the owner's Q1 (b), *"Proceed"*, `CLOSE_IN_CONTACT.md` §1, §5 – §6;
+  `footprint.ts`: *"never a step up onto it"*) — P5. ⭐ *(decisions, Q10)* The GIZMO's depth still reads the floor of a slot the held piece fits
+  (D3, at every distance); the PIECE keeps its level across it — it does not drop — until A + dy pushes it in (§1.2). *(study, F9)* Read from the
+  piece, P2's level equals today's footprint support in 1398 of 1596 cells: there the gizmo's depth and the support's level agree on what is under
+  the piece; under Q10 that says nothing of what the piece does over a slot (it no longer follows the support down). ⛔ A first contact read from
+  outside at every distance would lift a piece in contact with `Piece44` (41 mm proud) onto its top half a piece before the edge — a step up he refused.
 * **What it changes on the glass, against S5** (*"the gizmo shall read the real depth under the gizmo"*). Over wide voids (the floor) and
   narrow ones (the rims' plane, as S8 already does): the same. Within half a piece of every wall and rim the depth changes there, not at the
   wall: off `Piece44` (41 mm proud) the gizmo stays up ~20 mm past its edge — as the piece already does; the channel's floor is a landing only
   in its central band (130 − 41.3 ≈ 89 mm for the green piece); a notch's floor only where the piece fits beside the riser; the goal slot
-  beside `Piece44` (6.75 mm gap) shows `Piece44`'s top unless the piece is turned to clear it — far and medium only: close in (⑤) nothing
-  changes, the proud part stays a wall and the piece still comes down only once its footprint has cleared it. Cost: one height map per facet
+  beside `Piece44` (6.75 mm gap) shows `Piece44`'s top unless the piece is turned to clear it — out of contact range only: in contact range (⑤)
+  the proud part stays a wall, and the piece keeps its level past it (Q10). Cost: one height map per facet
   direction at a pick-up and a turn (≈ 10 – 20 directions; a sample step of 4 mm — ≈ 128² over the 0.5 m assembly —, one constant in
   `units.ts`; not measured); each frame a lookup; the 24-query budget untouched. ⚠ A turn happens MID-GESTURE: rebuilding 10 – 20 maps in one
   frame may hitch on an iPhone — build them for the piece's orientations at the pick-up, or spread the rebuild over frames (the old map kept
   meanwhile); to be measured before it drives anything.
-* ⚠ **It reverses an owner's decision.** On branch `1.0.105-` (2026-11-07, `TILTED_ORBIT_REBUILD_SCOPE.md` §29 as kept on `1.0.107-Close-in-atlas`, decision 2):
-  *"gizmo is a point, not the piece's footprint"*. Since then he took the piece as the ruler for voids (*"Build"*, *"Yes"*,
-  `POLAR_ORBIT_CLEANUP.md` §7, §8.3) and for the support (*"Proceed"*, `CLOSE_IN_CONTACT.md` §5 – §6). P2 extends that to the gizmo's depth; it is
-  his call (§8 Q2). It also resembles §18-C1 (2026-11-05, never built: the boxes inflated by the piece, sphere-traced) — the difference: no
-  sphere tracing, no rounded layer, the exact piece, a lookup per frame.
+* ⚠ **It reverses an owner's decision — [DECIDED 2026-11-16, Q2]: he accepted it, first as a readout beside today's depth, then driving.** On
+  branch `1.0.105-` (2026-11-07, `TILTED_ORBIT_REBUILD_SCOPE.md` §29 as kept on `1.0.107-Close-in-atlas`, decision 2): *"gizmo is a point, not the
+  piece's footprint"*. Since then he took the piece as the ruler for voids (*"Build"*, *"Yes"*, `POLAR_ORBIT_CLEANUP.md` §7, §8.3) and for the
+  support (*"Proceed"*, `CLOSE_IN_CONTACT.md` §5 – §6). It resembles §18-C1 (2026-11-05, never built: the boxes inflated by the piece,
+  sphere-traced) — the difference: no sphere tracing, no rounded layer, the exact piece, a lookup per frame.
 * **Patent.** Drop cutter, Z-maps, Minkowski sums: textbook. ⚠ Patents claim dexel-based machining simulation and collision detection
   (US 9,117,300; US 10,140,395) — scopes NOT checked; keep the representation a plain per-direction depth list.
 * **Confirmed by the study** (F1 – F4, F11, F15): never into a part nor unmarked over nothing, and invariant to order and to a turn — BY
@@ -271,7 +285,7 @@ parts.*
 **P3 — withdrawn (2026-11-16, his comment 2).** It was "each real face in the frame that faces it": a crossing at a real edge, the camera's
 frame turning there — what governs the camera, the orbit's matter. Its text, with §2.4's three place-functions for the mouth: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md)
 §5.2 – §5.3, "notes handed to the orbit's documents". What stays here is the gizmo's side of the mouth: his S10 and the gizmo's hold as built
-(`mouthHold`, `orbit_tilt.ts:290`), its domain restricted (the study's F5; §2.4, §8 Q4).
+(`mouthHold`, `orbit_tilt.ts:290`), its domain restricted (the study's F5; §2.4, Q4 accepted).
 
 **P4 — A FUNCTION OF THE PLACE (the settled design, restated — not an alternative under discussion).** *The gizmo's target is a function of
 the orbit's angles and the held piece only, never of the path.*
@@ -284,21 +298,30 @@ the orbit's angles and the held piece only, never of the path.*
   SOLVED angles (`assembly_wiring.ts:1184` — the owner's Q1 (b): the gizmo stops with a blocked piece), the map's catch-up hold
   (`MAP_SYNC_HOLD_M`), the depth glide in time, the maps per tilt and per zone, the support level eased per face. P4 separates them: the
   TARGET (where the gizmo should be) is a function of the place; the SHOWN gizmo may lag in time (an ease, a glide) and the solved angles are
-  the place close in (P5). The mouth's hold is the one rule that changes the TARGET by the path — labelled in §2.3. *(study, F15)* Under P2 no
+  the place in contact range (P5). The mouth's hold is the one rule that changes the TARGET by the path — labelled in §2.3. *(study, F15)* Under P2 no
   place depends on the way in (by construction: no state); today's code breaks P4 only by the hold (F5) and the plane's first-face level (F6, S27).
 * **Patent.** Not checked (a memoryless map is textbook).
 
-**P5 — CLOSE IN, BLOCKED, NOT JUMPED.** *A step the piece in contact cannot pass blocks the orbit by collision, and is passed by going out and back in.*
+**P5 — IN CONTACT RANGE, BLOCKED, NOT JUMPED.** *A step the piece in contact cannot pass blocks the orbit by collision, and is passed by going out and back in.*
 * **In scope, by his own words** (comment 2, §0ter): *"unless you specifically see that the gizmo travel shall impact the piece and camera
-  orbit, for example during collision"* — close in the gizmo's place and the piece's contact are one question.
+  orbit, for example during collision"* — in contact range the gizmo's place and the piece's contact are one question.
 * **Name.** The god-object / proxy of haptic rendering (Zilles, Salisbury 1995; Ruspini et al. 1997): a proxy kept outside the surface, which
   slides and cannot pass a step it touches; backing off is a fine-motion strategy (Lozano-Pérez, Mason, Taylor 1984).
 * **Already built.** The owner's Q1 (b) (the piece, the gizmo and the camera stop at a wall), R4 (a jump whose landing is refused is a WALL),
   the ring's hold, *"backing out frees it"* (`CLOSE_IN_CONTACT.md` §10.4); S9's second half and S14 are this one principle.
-* **Confirmed *(study, F8)*, in a contact model (the piece at contact, no solver slide):** the travels stopped at a proud part (565 / 532 cells:
-  40 mm 228, 6 mm 228, 1 mm 99 / 76, 0.3 mm 10 / 0) are his Q1 (b) — ruled on `Piece44`, 41 mm proud; a 1 mm seat a wall: asked (Q6, S26);
-  those stopped after a drop into a slot → Q10.
-* **What would change.** The depth glide also acts inside 60 mm today, where the solver decides anyway: close in it would stop gliding.
+* ⭐ **The piece does not drop [DECIDED 2026-11-16, Q10].** In contact range the orbit never lowers the piece: over a slot it fits (or off a
+  step down) it keeps its level; only A + dy lowers it, up to the contact or the gizmo (D3). *(study, F8, rerun)* In a contact model (the piece at
+  contact, no solver slide), kept at its level: drops 0 (367 cells today); travels ending at a wall 728 of 1596 (849 today) — 532 at a proud part,
+  his Q1 (b) (40 mm 228, 6 mm 228, 1 mm 76: Q6), 196 that begin where a void opens on the facet's edge, the piece already at its floor; the traps
+  after a drop gone (L03's reach 54 % → 100 %).
+* ⛔ **TODAY'S CODE DEPARTS — measured by reading (`1.0.146-Orbit-charts` at `9f101a4`, nothing run), a finding HANDED TO THE CONTACT'S QUEUE,
+  nothing designed here.** In contact range the support is the highest placed part under the piece's whole footprint within the shell's offset
+  (`assembly_wiring.ts:746`); over a slot the piece fits that is the slot's floor part, and the level's target is its top (`:753`); the drop is
+  taken wherever the solver's gap says the piece fits (`:768-784`, *"A DROP ONLY WHERE THE PIECE FITS"*), eased (`footprint.ts:77-84`, τ 40 ms),
+  and the foot follows it (`assembly_wiring.ts:685-687`; within the offset the foot is on the gizmo, `orbit_shell.ts:84-99`) — the piece goes down
+  into the slot by the orbit alone. `CLOSE_IN_CONTACT.md` §10.3 records it as built: *"the piece crosses wall to wall and runs the channel's length
+  on its floor"*.
+* **What would change.** The depth glide also acts inside 60 mm today, where the solver decides anyway: in contact range it would stop gliding.
 * **Where it stops.** A step that blocks the only way to a goal is a level-design fact: B4 (§7bis) finds it, not the player.
 * **Patent.** The 1995 – 1997 papers are expired art; later refinements not checked.
 
@@ -316,43 +339,36 @@ proposal · **removed**. No rule that exists for one geometry stays without that
 | **S6** | [OWNER] holes closed at the contour, *"for the moment"* | consequence — P2 | a hole narrower than the piece closed by its rims; one it fits: its floor; through and wider: "nothing to land on", the plane, marked | through holes: as today, now marked; a blind hole narrower than the piece: as today (S8) *(study: L01, L02, L04, Q01)* |
 | **S7** | [OWNER] a closed void with no floor bridged, with a floor its real depth | consequence — P2 | the same outcomes from one operation; the asymmetry WS5 (the piece-fit test only with a floor) disappears | none on `Scene_1`'s known voids |
 | **S8** | built: a void the piece cannot enter is surface | consequence — P2, improved | the piece's real `UCX_` outline as held, not its two smallest sizes; read at every level, not only at the plane (C31) | the steps move half a piece inward (§2.2 P2) — *(study, F3)* and the piece as held: B 80 × 80 no longer judged 40 × 80 |
-| **S9** | [OWNER] a protrusion: the frontmost part under the point; a close-in block normal | consequence — first half P2 (frontmost under the FOOTPRINT), second half P5 | — | far and medium: the marker climbs half a piece before a proud part and comes down half a piece after it; close in: none (the drop starts at the piece: a wall, as today) |
+| **S9** | [OWNER] a protrusion: the frontmost part under the point; a close-in block normal (here: contact range) | consequence — first half P2 (frontmost under the FOOTPRINT), second half P5 | — | far and medium: the marker climbs half a piece before a proud part and comes down half a piece after it; in contact range: none (read from the piece: a wall, as today) |
 | **S10** | [OWNER] the tilt at the edge at the bottom of the mouth | kept as his rule; here only its gizmo's side: the hold as built, *(study, F5)* its domain restricted → Q4; the tilt and the crossing are the orbit's (P3 withdrawn) | — | none for the red; the hold no longer fires on a cap |
 | **S11** | [OWNER] small faces converging go polar | kept — a pointer to the orbit's charts (P6 withdrawn: the layout's matter) | the charts' fans (topology), as built | none (built) |
-| **S14** | [OWNER] a jump's singularity excluded close in, reached by going out and back in | consequence — P5 | blocked by collision, not by a region bound (the close-in atlas he wrote it for was superseded) | none (built) |
+| **S14** | [OWNER] a jump's singularity excluded in contact range, reached by going out and back in | consequence — P5 | blocked by collision, not by a region bound (the close-in atlas he wrote it for was superseded) | none (built) |
 | **S16** | [PROPOSED] a ruler per question | replaced — §2.6 | the piece for use (P2), one share for the layout, tolerances for noise | none by itself |
-| **S17** | [PROPOSED] the layer ball-like, holes closed | replaced — P1, a boundary condition in his words (§2.2, §0ter) | far / medium: no surface singularity moves piece or camera; close in (where the piece can collide): the collision | none designed here; today's departures (F17, the mouth) handed to the orbit's queue (Q1) |
+| **S17** | [PROPOSED] the layer ball-like, holes closed | replaced — P1, a boundary condition in his words (§2.2, §0ter) | far / medium: no surface singularity moves piece or camera; in contact range: the collision | none designed here; today's departures (F17, the mouth) recorded for the orbit's queue (Q1) |
 | **S18** | [PROPOSED] a function of the place, the hold the one exception | replaced — P4 as amended | target vs shown gizmo separated; the mouth's hold the one target exception, labelled, its domain restricted (Q4) | none on `Scene_1`'s channel |
 | **S20** | [PROPOSED] a mouth's concave edge a crossing | **removed** — wrong premise (the edge is convex); the case is covered today by S10 + the mouth's hold (`face_map.ts:989-994`, `orbit_tilt.ts:290`), its domain restricted (Q4) | — | — |
 | **S23** | [PROPOSED] the same ruler for what is missing and what stands out | consequence — P2 (by construction) | — | pins and ribs: the marker on their top where the piece touches them first |
 
 ### 2.4 S17, S18, S20 — the three the owner singled out
 
-**S17 restated, in his words of 2026-11-16** — [PROPOSED] P1: *"at far or medium distance, a singularity at the surface does not impact the
-orbit of the piece - camera … At close in, this rule is overruled by collision rule, etc."*
-* **"Close in" in millimetres today.** Three distances stand in the code (none was named for the surface): **60 mm** — the shell's offset
+**S17 restated, in his words of 2026-11-16** — P1 [DECIDED, Q1]: *"at far or medium distance, a singularity at the surface does not impact the
+orbit of the piece - camera … At close in, this rule is overruled by collision rule, etc."* (here: contact range)
+* **Contact range in millimetres today.** Three distances stand in the code (none was named for the surface): **60 mm** — the shell's offset
   (`orbitShellOffsetMm`, `gestureConfig.ts:867`): only inside it does the gizmo's depth reach the piece (`orbit_shell.ts:84-99`), and the footprint
   support acts only there (`footprint.ts`, its window); **0.3 m** — the look moves onto the foot (`assemblyLockDistM`, `:866`); **0.6 m** — the
   automatic tilt and the full gain (`tiltAutoM`, `orbitGainFullM`, `:883, :887`; off beyond 0.65 m).
-* **His boundary** (comment 1, §0ter): "close in" = where the piece can collide — in today's code inside the shell's 60 mm. The 0.3 m and
-  0.6 m are the orbit's camera rules (the tilt's 0.6 – 0.65 m for the feel of precise control), not P1's boundary. *(alignment)* The reviewer's
+* **His boundary** (comment 1, §0ter; §1.4): contact range = where the piece can collide — in today's code inside the shell's 60 mm. The 0.3 m
+  and 0.6 m are the orbit's camera rules (close in: the tilt's 0.6 – 0.65 m for the feel of precise control), not P1's boundary. *(alignment)* The reviewer's
   reading — the tilt's 0.6 m as a second boundary for the camera's frame — is withdrawn on his comment. The mouth, where the hold lets the real
-  lip start the tilt from up to 0.6 m, is a finding handed to the orbit's queue (§2.2 P1, Q1); so is one check not made: whether the camera's frame
+  lip start the tilt from up to 0.6 m, is a finding recorded for the orbit's queue (§2.2 P1, Q1); so is one check not made: whether the camera's frame
   (`free_face.ts`) reads the contour's facet or the real face under the gizmo far out.
 
-**S18 — where the mouth's hold comes from.** 2026-11-10 (`POLAR_ORBIT_CLEANUP.md` §9.10): *"when i cross the edge … there seems to be a sort of
-shake of the scene"* — *"when i cross at close in"*. Seen from a side, `Scene_1`'s top channel runs through (no floor along the side's normal),
-so §8.3's rule bridged it on the side's plane: a dy climbed the mouth to the box's corner (487 mm over a 466 mm floor), then the tilt dropped it
-onto the floor. Asked, he ruled: *"i think the tilt shall happen when the red section reaches the edge at the bottom of the mouth, therefore the
-green section should not be an issue"* → *"build b"*. Built: `stackDepthAt` returns `mouth` (`face_map.ts:989-994`); `mouthHold`
-(`orbit_tilt.ts:290`): a dy toward the open end HOLDS the gizmo at the floor's edge, a dx releases it onto the bridge. Flagged at once as
-*"path-dependent, the map's first exception since 2026-11-04"*. Its roots: §15's *"close the holes for the moment"* → D3's real depth → a void
-closed on a travel bridged (§18) → bridged only with no floor (§8.3): the mouth is where "closed across" and "open along the red" disagree.
-⚠ One more record bears on it: on `1.0.105-` (2026-11-07, decision 3) he asked that the gizmo *"shall not wait … it looks like a bug for the user if the gizmo
-waits"* — the hold is a wait, though a short one at an edge.
+**S18 — where the mouth's hold comes from.** His *"build b"* of 2026-11-10 (`POLAR_ORBIT_CLEANUP.md` §9.10), for the shake at `Scene_1`'s channel
+mouth: `mouthHold` (`orbit_tilt.ts:290`) holds the gizmo at the floor's edge on a dy toward the open end, a dx releases it. Its history and roots,
+and his *"shall not wait"* of 2026-11-07: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §6.3.
 
 **What stays here: the gizmo's side.** The hold as built, its domain restricted to where it hands over to the automatic tilt — never on a cap
-(now); over a void P2 leaves open for the held piece (when the landing map exists) — §8 Q4. Whether a general crossing rule should replace it
+(now); over a void P2 leaves open for the held piece (when the landing map exists) — [DECIDED 2026-11-16, Q4], to be tested. Whether a general crossing rule should replace it
 (the former P3's three place-functions for the mouth) is the orbit's matter: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §5.3.
 
 **S20 — removed.** It said the mouth's edge is concave (from `TILTED_POLE_CLOSE_IN.md` O11: *"a level floor meeting a wall that rises from
@@ -361,71 +377,80 @@ convex crossing at a real edge. It is covered today by S10 and the hold as built
 replacement is the orbit's (audit §5.3). Nothing is left for S20. The other concave edges (the notches, the steps) stay as he ruled
 (P2 + P5).
 
-### 2.5 S13 — the ghost at the mouth, then the plunge: the alternatives (the advice asked)
+### 2.5 S13 and S28 — a goal's ENTRY SET, the ghost, the plunge [DECIDED 2026-11-16, Q5 with his amendment — to be tested]
 
-His rule stands: the ghost is aligned with the face where the hole exits. The question is how it is MADE and how the plunge starts.
+His words (§0quater): *"a goal can have multiple entry directions … A hole can be entered from both sides."* — and *"any clear path towards the
+goal (=no collision in-between the piece and the piece as seated in the goal) can be travelled by the piece from any orbit angle: this is not one
+set-down."*
 
-| alternative | what it is | for | against |
-|---|---|---|---|
-| **(1) drawn ghost** (today's spec) | the author draws the ghost floor at the mouth; `plunge_axis`, `plunge`, `plunge_to` on it | in use for `Scene_2` | two homes for the entry fact — the script's `INSERTIONS` (the direction a part comes FROM) and the ghost's `plunge_axis` (INTO the hole), opposite by convention; nothing checks they agree; nothing checks it is where the part clears |
-| **(2) ghost at the goal's depth** | superseded 2026-11-13 (`PART_AUTHORING.md` §3 item 3) | A + dy alone inserts | the pistons floated off their bank, the crank lay recessed: refused |
-| **(3) computed ghost** — assembly by disassembly | the part withdrawn from its goal along its entry direction until it first clears the placed set (a swept test, not a local one): that pose IS the pre-insertion pose; the ghost is its resting face's plane (Wilson, Latombe 1994; Halperin, Latombe, Wilson 2000) | one source of truth: the goal pose + its entry direction; finds a blocked entry at the build (B4) | a computation per part and per stage (offline: cheap) |
-| **(4) approach then insert** (peg in hole) | the plunge a guarded move along the entry axis, started when the piece is inside a capture region at the mouth (preimages, Lozano-Pérez, Mason, Taylor 1984; chamfers, Whitney 1982 — not verified) | the goal margins (10 mm, 3°, `orbitGoalMm` / `orbitGoalDeg`) are already a capture funnel; the 3 mm of play needs aiming help | the capture *"held on the bore's axis … eased in"* (`SCENE_2_ASSEMBLY.md` §2.9 item 3) is a time state: an EVENT like a seat, never a place rule (P4) |
-| **(5) no ghost: P2 alone** | where the entry is ALONG the host face's normal and the part fits, its first contact is its seat | no authored face at all | needs an aim within the play (1.5 mm each side for a piston); a ghost's flat rest is gone |
-
-**Recommendation [PROPOSED]:** (3) + (4). The goal carries its **entry direction** (one home, exported); the ghost is COMPUTED from it, and a
-drawn ghost is CHECKED against it (B4); the plunge starts when the piece rests on the ghost inside the capture region (the goal margins lifted to
-the pre-insertion pose), as an event. (5) stays the rule where no ghost is authored (the former D-S5: the real floor, by P2).
+**The definition — one, for every goal.** An ENTRY is any clear path to the goal: from wherever the orbit has brought the piece, the move to its
+seated pose is allowed when nothing placed lies between the piece and the piece as seated. Read backwards (assembly by disassembly): **the ENTRY SET
+of a goal at a stage is the set of directions along which the part, withdrawn from its seated pose, touches no placed part** — a REGION of the
+sphere of directions, usually a continuum, never one direction nor a short list. In assembly planning it is the part's set of free (removal)
+directions at that stage, the sphere partitioned by the non-directional blocking graph (Wilson, Latombe 1994; Halperin, Latombe, Wilson 2000 — the
+exact term there not verified).
+* **Computed, not stated.** The check samples the sphere at a named step (`ENTRY_SPHERE_N`: 642 directions, ≈ 9° apart, in the study) PLUS the
+  placed parts' and the part's face normals — a tight slot's set is a single direction each way, of zero measure, which a sampling alone misses.
+  By default the author states nothing; the playability brief may NARROW the set (how the level means the part to be placed) and MARKS a goal whose
+  set is small (a bore, a keyed slot): those are the goals a level can make unreachable.
+* **Reachable** at a stage when the set is not empty AND at least one of its directions starts at a place the gizmo reaches (B4 with B3). B4
+  reports each set's size (its share of the sphere, its narrowest opening); a small set is a warning for his look, an empty one a failure.
+* **What the one definition gives** *(study, rerun 2026-11-16, ORBIT_SURFACE_SHAPES.md §3.3)* — outcomes, not rules: a piece resting on an open
+  plane: every direction on the plane's free side, from parallel to it up to its normal — about half the sphere (the lid on the tray, L19: 50 %);
+  between two walls: the directions the walls leave (L05's block in a channel open at its end and on top: 0.8 % of the samples, and +y, +z exactly); a
+  hole open at both ends: its axis in both senses, a narrow region each side; a blind hole: its axis from the open side (L03: 0 % of the samples,
+  +y alone — zero measure); a goal shut in (Q07, under a slab): EMPTY — unreachable at that stage, found by B4, never by the player.
+* **How it is played.** Where the set is wide, the gizmo's landing (P2), the approach (A + dy) and the goal capture place the piece from any orbit
+  angle inside it: no ghost. A direction whose first contact is the seat itself is a landing (L19 along +y: 120 = its seat); any other is a guarded
+  move ENDED by the goal capture (the goal margins, `LEVEL_END.md` §5quater) — alone it would stop at first contact, past the seat (L05 along +z:
+  −100 against 120). Where the set is narrow (a hole), the PRE-INSERTION POSE — the ghost — is computed per axis and sense: the part withdrawn along
+  it until it first clears the placed set; a drawn ghost is CHECKED against it (B4); the plunge starts when the piece rests on the ghost inside the
+  capture region (the goal margins lifted to that pose) — an event, never a place rule (P4). His rule stands where a ghost is used: it lies in the
+  plane where the hole exits. The alternatives weighed for S13: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §7.2.
 
 ### 2.6 S16 — the rulers: the alternatives (the advice asked)
 
-Today six rulers stand for "small" (§3.3). The alternatives found:
-
-| alternative | ruler | for | against |
-|---|---|---|---|
-| **(1) a ruler per question** (first review's S16) | the piece, a share, the camera, each named | each question honest | three constants that can disagree on one feature |
-| **(2) the piece + one layout share + noise tolerances** | P2's first contact (no threshold: the piece's own geometry), D5's share for "is it a facet", one tolerance family (coplanar distance and angle, the joint growth, a depth for "flush") for modelling noise only | the fewest constants; "small for use" needs none | the share remains one number |
-| **(3) persistence** — a feature's scale is the radius at which it closes (nested closings make it monotone) | one measure per feature, no threshold to classify | ruler-free; gives every feature its margin from any threshold | a global count of holes by scale is NOT monotone for general inputs: use it per feature; offline cost |
-| **(4) CAD defeaturing** (one "defeature size", virtual topology) | one size | industry practice | one size is a threshold per geometry in disguise |
-
-**Recommendation [PROPOSED]: (2), with (3) offline** in the Blender checks (B6: a feature whose closing radius is near the piece's size, or a
+Today six rulers stand for "small" (§3.3). Four alternatives were weighed (a ruler per question; the piece + one layout share + noise
+tolerances; persistence; CAD defeaturing — the table: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §7.2).
+**[DECIDED 2026-11-16, Q6 — accepted, to be tested]: (2), with (3) offline** in the Blender checks (B6: a feature whose closing radius is near the piece's size, or a
 facet near the share, is painted as "at a threshold" for the owner). **D5's quarter share** is the layout's one ruler — the orbit's, read
 here, not specified here. *(alignment)* A finding handed over (WS21): D5 reads the main group's region, so a porous face (a comb, studs) could
-lose its facet — not reproduced by the study (L38, L39, Q08); the closing first suggested for it is in the audit companion §5.5. The camera's reach is not a ruler of the surface (close in reaches
+lose its facet — not reproduced by the study (L38, L39, Q08); the closing first suggested for it is in the audit companion §5.5. The camera's reach is not a ruler of the surface (close in, the camera reaches
 anything; I17 closed *"not applicable"*). `MAP_GROW_M` (1.6 mm, `Scene_1`'s 3 mm joints) joins the noise family with the coplanar 0.5 mm, in
 `units.ts`. *(study, F6, F10)* The noise family decides NOISE only: S26 (one depth tolerance, no unnamed step) and S27 (tolerances join, never
 erase) are its two rules (§2.7); the study found today's tolerance erasing a real cap (76 cells) and 1 mm steps jumping with no event (238).
 
-### 2.7 The other proposed rules, kept
+### 2.7 The other rules — accepted with §8 (Q7 – Q9), to be tested
 
 | # | rule | status |
 |---|---|---|
-| S19 | **Rebuilt at two kinds of event**: (i) the placed set changes — the exposed faces and their classes; (ii) the orbit's frame changes (an automatic tilt, a polar-zone switch) — the classification the same in every frame (the layout's rebuild itself is the orbit's) | [PROPOSED] (former D-S4); today (ii) re-runs the whole `buildFaceMap` per tilt and per zone, unchecked (WS14). Under P2 add (iii): the held piece is picked or turned — its landing maps |
-| S21 | **Every goal is reachable**: at every stage, each piece still to place is seated from a place of the surface — by the orbit close in (the goal capture), the approach or the plunge — checked when the level is BUILT (in Blender, B4), re-verified at import | [PROPOSED] — the purpose behind S1's *"no … small unreachable faces"*; reworded (the slide is removed) |
-| S22 | **"Exposed" means reachable from outside**, on the parts taken together (their union): a face glued, buried in another part, or sealed in a cavity is not surface | [PROPOSED] — S2 generalised; computed in Blender (B2) |
-| S24 | **Nothing unreachable silently**: per scene and stage, the exposed faces that are no place, each with its reason | [PROPOSED] — the Blender coverage report (B5) |
-| S25 | **Each part's collision pieces are closed convex solids, and its proxy lies on their union, facing out** (restated, §7bis B1) | [PROPOSED] — from the first review; checked in Blender, re-verified at import |
-| S26 | **No unnamed depth step**: one depth tolerance (the noise family's "flush", 0.5 mm today) splits every depth change — under it the same face, at or above it the named depth event (glided far and medium, P5 close in); the glide's own 5 mm goes | [PROPOSED] *(study, F10: 238 cells, up to 3 mm; L43)* — not built |
-| S27 | **Tolerances join, never erase**: (a) the planes found independently of order — the faces' OWN levels clustered as connected components at the tolerance (single linkage; a greedy join against a running mean still depends on order), each plane at its component's area-weighted mean; (b) a face, or part of one, is removed only where another part's material covers it (S22), never by pairing with an opposite face on either side; (c) a part thinner than, or two parts overlapping by less than, the noise tolerance are refused at authoring (B1, C48) — out of the surface's reach otherwise | [PROPOSED] *(study, F6: 76 cells lose the top cap — the far foot up to 256.5 mm, the facet 90°; 32 a false mouth; F15: L42's order 0.3 mm)* — today's code breaks (a) and (b) |
-| S28 | **A goal's entry is stated; only a set-down is a landing**: a goal entered along its host facet's normal is reached by P2 (B4: its first contact is its seat); any other entry — slid, plunged, hooked — is a guarded move along the entry direction from the pre-insertion pose B4 computes, ENDED by the goal capture (the goal margins, `LEVEL_END.md` §5quater) — alone it would end at first contact, past the seat (§2.5 (3) + (4) for every such entry) | [PROPOSED] *(study, F13: L05's block, slid in, lands at the back wall −100 against its seat at 120, today and under P2)* |
-| S29 | **An empty placed set is out of the surface's reach**: every level boots with a placed part (W1 states it, B4 checks it); with none (only `lockPlacedPieces` 0, a debug setting) the gizmo holds, as today; one part smaller than the piece: P2 ① | [PROPOSED] *(study, F16: L51, L52)* — built in effect (every scene boots with one) |
+| S19 | **Rebuilt at two kinds of event**: (i) the placed set changes — the exposed faces and their classes; (ii) the orbit's frame changes (an automatic tilt, a polar-zone switch) — the classification the same in every frame (the layout's rebuild itself is the orbit's) | ACCEPTED (Q9, D-S4) (former D-S4); today (ii) re-runs the whole `buildFaceMap` per tilt and per zone, unchecked (WS14). Under P2 add (iii): the held piece is picked or turned — its landing maps |
+| S21 | **Every goal is reachable**: at every stage, each piece still to place is seated from a place of the surface — by the orbit in contact range (the goal capture), the approach or the plunge, along its entry set (S28) — checked when the level is BUILT (in Blender, B4), re-verified at import | ACCEPTED (Q7, B4) — the purpose behind S1's *"no … small unreachable faces"*; reworded (the slide is removed) |
+| S22 | **"Exposed" means reachable from outside**, on the parts taken together (their union): a face glued, buried in another part, or sealed in a cavity is not surface | ACCEPTED (Q8) — S2 generalised; computed in Blender (B2) |
+| S24 | **Nothing unreachable silently**: per scene and stage, the exposed faces that are no place, each with its reason | ACCEPTED (Q7) — the Blender coverage report (B5) |
+| S25 | **Each part's collision pieces are closed convex solids, and its proxy lies on their union, facing out** (restated, §7bis B1) | ACCEPTED (Q8) — from the first review; checked in Blender, re-verified at import |
+| S26 | **No unnamed depth step**: one depth tolerance (the noise family's "flush", 0.5 mm today) splits every depth change — under it the same face, at or above it the named depth event (glided out of contact range, P5 in contact range); the glide's own 5 mm goes | ACCEPTED (Q6) *(study, F10: 238 cells, up to 3 mm; L43)* — not built |
+| S27 | **Tolerances join, never erase**: (a) the planes found independently of order — the faces' OWN levels clustered as connected components at the tolerance (single linkage; a greedy join against a running mean still depends on order), each plane at its component's area-weighted mean; (b) a face, or part of one, is removed only where another part's material covers it (S22), never by pairing with an opposite face on either side; (c) a part thinner than, or two parts overlapping by less than, the noise tolerance are refused at authoring (B1, C48) — out of the surface's reach otherwise | ACCEPTED (Q6) *(study, F6: 76 cells lose the top cap — the far foot up to 256.5 mm, the facet 90°; 32 a false mouth; F15: L42's order 0.3 mm)* — today's code breaks (a) and (b) |
+| S28 | **A goal's ENTRY SET, computed** (§2.5): any clear path to the seated pose, from any orbit angle — the directions along which the part, withdrawn from its goal, touches no placed part; the author may narrow it and marks a small one; a direction whose first contact is the seat is a landing, any other a guarded move ENDED by the goal capture; a ghost (the pre-insertion pose, per axis and sense) only where the set is narrow | [DECIDED 2026-11-16, Q5 with his amendment — to be tested] *(study: L19 50 %, L05 0.8 % + two axes, L03 one axis, Q07 empty)* |
+| S29 | **An empty placed set is out of the surface's reach**: every level boots with a placed part (W1 states it, B4 checks it); with none (only `lockPlacedPieces` 0, a debug setting) the gizmo holds, as today; one part smaller than the piece: P2 ① | ACCEPTED (Q9) *(study, F16: L51, L52)* — built in effect (every scene boots with one) |
 
 ### 2.8 The tensions that remain
 
 | between | the tension | answer |
 |---|---|---|
 | S1 *real* vs P2 *closed by the piece* | a void the piece cannot use is not shown as a void | the owner's own order (S8): real where the piece can use it |
-| S5 *the real depth under the gizmo* vs P2 | far and medium the depth changes half a piece from each wall, not at it | §8 Q2 — it reverses his decision 2 of 2026-11-07 |
-| P1 vs today's shell along a travel *(study, F17)* | an oblique direction lets a depth step shift the far piece and camera (h × tan θ) | a finding handed to the orbit's queue; nothing designed here — §8 Q1 (2) |
-| P1 vs today's hold at the mouth | the hold lets the real lip start the tilt from up to 0.6 m | the same — §8 Q1 (2) |
+| S5 *the real depth under the gizmo* vs P2 | far and medium the depth changes half a piece from each wall, not at it | [DECIDED, Q2] the price accepted; it reverses his decision 2 of 2026-11-07 |
+| P1 vs today's shell along a travel *(study, F17)* | an oblique direction lets a depth step shift the far piece and camera (h × tan θ) | [DECIDED, Q1] a defect recorded for the orbit's queue; nothing designed here |
+| P1 vs today's hold at the mouth | the hold lets the real lip start the tilt from up to 0.6 m | the same (Q1) |
 | P2 ① *nothing to land on* vs the landing rule | over a wide through hole the gizmo is in the air, marked | stated; the plunge (S13) is the way in |
-| S10 / the hold vs P4 | the target depends on the path at one place | labelled; its domain restricted (§8 Q4) |
+| S10 / the hold vs P4 | the target depends on the path at one place | labelled; its domain restricted [DECIDED, Q4] |
 | S12 / S19 (ii) vs one classification | the frame's maps may keep other facets (WS14) | a vector across frames, S19 (ii) |
 | S12 vs determinism | the surface at a seat must not depend on the order of play | a function of the placed set (`placedKey`); a vector across orders |
-| P2 ② vs a turn of the piece | an oblong piece fits a slot one way only: the map changes at a turn | §8 Q2 (Q3 merged) |
+| P2 ② vs a turn of the piece | an oblong piece fits a slot one way only: the map changes at a turn | [DECIDED, Q2]: the map of the piece as held |
 | S21 vs OS3 | a goal inside a cavity or under an overhang is no place of a height field | the approach, the plunge, a ghost (S13); B4 says which goals need one; S28 |
-| S5 vs P2 ⑤ *(study, F8)* | close in the contact drops the piece into every slot it fits (367 / 432 cells), then a dx is trapped at the far wall | §8 Q10 — proposed: S5's "shall not go in" far and medium, P2 ⑤ + P5 close in |
-| the hold vs its purpose *(study, F5)* | it fires on the cap, along island gaps, in a V (32 cells, up to 479 mm — in the study's emulation, a dy as a travel along the facet's b); not at a channel closed far behind (L07) | §8 Q4 — its domain restricted |
+| S5 vs today's contact *(study, F8)* | in contact range today's contact drops the piece into every slot it fits (367 cells), then a dx is trapped at the far wall | [DECIDED, Q10] *"the piece shall not drop"*: D3 at every distance; today's drop a departure handed to the contact's queue (§2.2 P5) |
+| Q10 vs a step down *(decisions)* | kept at its level off a ledge as over a slot, the piece's gap to the gizmo grows by the step — beyond the shell's 60 mm it leaves contact range | [PROPOSED] read so: only A + dy lowers the piece; to be measured on the device |
+| the hold vs its purpose *(study, F5)* | it fires on the cap, along island gaps, in a V (32 cells, up to 479 mm — in the study's emulation, a dy as a travel along the facet's b); not at a channel closed far behind (L07) | [DECIDED, Q4] its domain restricted |
 
 ---
 
@@ -513,7 +538,7 @@ Six rulers stand in the record (rule 3, *one constant in one place*, is broken).
 | ¼ of its own polygon (D5, `facetMinShare`) | facets | the orbit's layout ruler, read here (WS21 handed over, §2.6) |
 | ≈ 7 mm "too narrow to stand on" | authoring check ⑤ (reference units: per scene) | → B6 paints what P2 closes for each piece; the 7 mm goes |
 | 0.22 × the placed box's smallest side (T3) | polar zones, `chartLayout 0` only | → goes with the legacy zones (step 2.5); the charts' fans need none |
-| the finger: a 37 mm face is 0.34 mm of finger far out (I17) | the reach on the glass | not a ruler of the surface (close in reaches anything) |
+| the finger: a 37 mm face is 0.34 mm of finger far out (I17) | the reach on the glass | not a ruler of the surface (close in, the camera reaches anything) |
 | `MAP_GROW_M` 1.6 mm; the coplanar 0.5 mm; the glide's 5 mm | joints; flush faces; depth steps | → ONE noise family in `units.ts`, with a named depth for "flush" (former D-S18); the glide's 5 mm goes (S26) |
 | the piece AS IT IS TURNED; a spacing (arrays) | a keyed slot (C44); studs, fins (C34) | → answered by P2 itself (§8 Q2 for the turn) |
 
@@ -529,7 +554,7 @@ principle answers it.
 | **OS1** | **The turn budget** — the orbit's cross (green, red) cannot be carried round a closed shape without turning | carry a small cross round a corner without turning it and it comes back turned by the corner's *angle defect* (2π minus its face angles); over a closed ball-like surface they sum to 720° (Gauss–Bonnet), and any direction field has singular points whose indices sum to 2 (Poincaré–Hopf, the hairy-ball theorem) | on flat faces (none of it lives there): the turn is paid on edges and at chosen points — the charts do this (`ORBIT_CHARTS.md` §1) | at the poles and fans → **the polar zone**. ⭐ The surface's singularities ADD to it: a notch's inner corner (+90°), a saddle where a re-entrant edge meets a top (−90°) — each a place the charts must pay for, unseen today because the contour is convex (and `Scene_1`'s notches left so by the owner, D-S12) |
 | **OS2** | **Holes through** (genus) | a hole through changes the count: 720° becomes 720° × (1 − g), and — given the two poles gravity imposes — each handle forces saddle-type singularities a columns chart cannot hold. A smooth orbit over a ball cannot map one-to-one onto a ring-shaped surface | the layout (the orbit's contour) never contains a hole; the depth: P2 — narrower than the piece, closed by its rims | wider than the piece → **nothing to land on**, marked; the way through or in is the approach or the plunge (S5, S13) |
 | **OS3** | **A height field cannot see everything** | a depth read along one direction is one number per place: it cannot hold the underside of an overhang (two surfaces on one ray), gives zero width to a face parallel to the ray (the tread), and steps at every wall (`TILTED_ORBIT_REBUILD_SCOPE.md` §31.4: occlusion, topology, sharp edges — *"no bijection possible"*) | where the faces are front-facing along their facet's normal: everything on the boxes' outer faces | an overhang's underside → reached from the facet that faces it (the bottom cap) or not at all; a tread → **a stated choice** (D-S7): unreachable, or its own facet; a wall's step → the **glide**, named as the one depth event |
-| **OS4** | **Jumps at depth steps** | the height field is discontinuous at every wall and protrusion: landing (the real depth) and continuity cannot both hold there; P2 moves the step outward by half a piece, it does not remove it | far and medium: the step moves only the gizmo's marker, glided (P1) — ⚠ today, along an oblique direction, the far piece too (F17, handed to the orbit's queue) | close in: the collision blocks the piece and the gizmo with it (P5) — the glide not used there; the step passed by going out and back in (S14) |
+| **OS4** | **Jumps at depth steps** | the height field is discontinuous at every wall and protrusion: landing (the real depth) and continuity cannot both hold there; P2 moves the step outward by half a piece, it does not remove it | far and medium: the step moves only the gizmo's marker, glided (P1) — ⚠ today, along an oblique direction, the far piece too (F17, recorded for the orbit's queue) | in contact range: the collision blocks the piece and the gizmo with it (P5) — the glide not used there; the step passed by going out and back in (S14) |
 | **OS5** | **"Small" has no single size** | the piece, the polygon, the finger and the scene's joints measure different things; the finger's ruler changes with distance, so no model-mm threshold makes a face reachable at every distance | §3.3's three questions, each with its ruler, each one constant | the finger's reach far out → **close in** (the camera), never the surface |
 | **OS6** | **The surface depends on the held piece, on time and on the frame** | S8 makes the depth a function of the piece; S12 makes the faces a function of the placed set; the tilted pole and the polar zones rebuild the layout in their own frame mid-orbit; continuity across a pick-up or a seat cannot be promised | rebuild the faces and their classes only when the placed set changes (S19 (i)), where the gizmo is relocated anyway; in a new frame rebuild only the layout, the classification held the same (S19 (ii)) | a seat that changes the face under the gizmo → **a relocation event**, stated once (the gizmo to the nearest place on the new surface), never a jump mid-gesture |
 | **OS7** | **Sharp edges have no normal** (step B) | a polyhedron's normal jumps at every edge; "the shape with its edges rounded" needs a radius, and a face smaller than the radius disappears into its edges | a rounding radius tied to the ruler (S16) | fins and blades thinner than the radius (C13): the normal flips side → step B's own fallback (`ORBIT_CHARTS.md` §5.3: worse on a blade) |
@@ -539,9 +564,9 @@ principle answers it.
 | **OS11** | **Islands** | a convex contour spans the gap between two islands; the depth under it is empty | P2: a gap narrower than the piece, closed by its rims | a wider gap with nothing under it → **nothing to land on**, on the contour plane, marked — today it hangs at the nearest plane instead (WS4) |
 | **OS12** | **Several geometries for one part** | the proxy, the collision pieces, the convex support and the render faces are authored or computed apart | a build-time check that they agree within a tolerance | none if the check exists; today it does not (WS2) |
 | **OS13** | **The convex contour is an assumption** *(review)* | the layout stands on a convex envelope of big flat facets: a fair picture only while the assembly fills most of it; on an L, a U, a tray, a ring the facets are mostly void and the inward faces face no facet | while each void is a feature IN a facet: P2 | beyond it → **a stated limit** (a measure per level and stage, Q9); inner faces by the approach or the plunge, checked by B4; lobes (convex decomposition) a new design, not proposed |
-| **OS14** | **The gizmo is a point, the piece is a body** *(review)* | where a POINT may stand and where a BODY fits differ by the body's half-width along every wall, rim and protrusion (configuration space) | P2: the gizmo's depth IS the body's first contact; its place stays the orbit's point | close in beside a wall: P5 (the collision); the piece's orientation: Q2 |
+| **OS14** | **The gizmo is a point, the piece is a body** *(review)* | where a POINT may stand and where a BODY fits differ by the body's half-width along every wall, rim and protrusion (configuration space) | P2: the gizmo's depth IS the body's first contact; its place stays the orbit's point | in contact range beside a wall: P5 (the collision); the piece's orientation: Q2 |
 | **OS15** | **The classes form a continuum** *(review)* | a pocket widens into a rebate, a rebate into a step, a step into another face; holes multiply into a grille; a boss thins into a pin | P2 needs no class for use: the piece decides; only the layout's share and the noise tolerances remain thresholds (§2.6) | a feature AT a threshold → **flagged at authoring** by its margin (B6, persistence §2.6 (3)) |
-| **OS16** | **Some goals are not places** *(review)* | the layout is ball-like and OS3 hides what no facet faces; a level may ask for a piece inside a cavity, under an overhang, down a bore | the orbit close in (the goal capture), the approach (A + dy), the plunge from a ghost at the entry (S13) | a goal none of these reaches → **the level's plan changes** (W1) — found in Blender by B4 (S21), never by the player |
+| **OS16** | **Some goals are not places** *(review)* | the layout is ball-like and OS3 hides what no facet faces; a level may ask for a piece inside a cavity, under an overhang, down a bore | the orbit in contact range (the goal capture), the approach (A + dy), the plunge from a ghost where the entry set is narrow (S13, S28) | a goal none of these reaches → **the level's plan changes** (W1) — found in Blender by B4 (S21), never by the player |
 
 ---
 
@@ -575,14 +600,14 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
 | class | answered by | what it gives | event at its border |
 |---|---|---|---|
 | C1 convex faces, edges, corners; C2 non-rectangular | the orbit's contour and charts (F1) — read, not specified here | facets | a crossing, its turn (the orbit's) |
-| C3 concave edge (a notch, a step) | P2 + P5 (the owner's notches as ruled) | a depth step, half a piece out | far: the marker glides; close in: blocked |
+| C3 concave edge (a notch, a step) | P2 + P5 (the owner's notches as ruled) | a depth step, half a piece out | out of contact range: the marker glides; in contact range: blocked |
 | C4 through hole; C9 island gap | P2 | narrower than the piece: closed; wider: nothing to land on | none (the plane continues) |
-| C5 channel; C6 blind hole; C8 groove | P2 | its floor where the piece fits, else closed | as C3 |
-| C6 hole with an authored ghost | S13 (§2.5) | the ghost at the mouth, then the plunge | the plunge, an event |
+| C5 channel; C6 blind hole; C8 groove | P2 | the gizmo on its floor where the piece fits, else closed; the piece in contact keeps its level over it (Q10) | as C3 |
+| C6 hole with a narrow entry set | S13 + S28 (§2.5) | the ghost at the mouth (computed per axis and sense), then the plunge | the plunge, an event |
 | C7(a) mouth; C49 a void whose far end decides *(study)* | S10 kept; the hold within its domain (§2.4, Q4) | the hold today | the tilt at the lip |
 | C7(b) cavity behind a narrow opening; C30 bent tunnel | P2 at the opening; behind it approached (S13) | — | — |
 | C10 overhang; C29 arch, legs | OS3: P2's first layer from the facet that faces it | the underside only from the bottom cap | — |
-| C11 protrusion; C13 fin; C33 pin, rib, plateau | P2 (+ P5 close in) | the top where the piece first touches it | as C3 |
+| C11 protrusion; C13 fin; C33 pin, rib, plateau | P2 (+ P5 in contact range) | the top where the piece first touches it | as C3 |
 | C12 tread between risers | OS3: the facet that faces it *(study: L12, L13)* | a place of the top, not of the side's travel | a crossing |
 | C14 small face; C37 shallow edge | the orbit's merge and D5's share (read; §2.6) | part of its neighbours | none |
 | C15 curve; C38 doubly curved | authored flat proxies (B); else not supported, said | — | crossings between its facets |
@@ -603,7 +628,7 @@ A + dy or a plunge. "⏳ open" = no principle answers it yet.
 | C41 a singularity on a singularity | its parts, for the landing *(study: Q01, Q05, Q08)*; a mouth at a pole: Q4 (Q02); ⏳ the layout's events at a pole, not studied | — | one event, never two |
 | C42 empty or nearly empty | S29 *(study: L51, L52)* | out of reach: a placed part at boot; round one small part P2 ① | — |
 | C44 the piece turned | P2 ② (§8 Q2) *(study: L53)* | the map of the piece as held | a depth change at the turn |
-| C45 goal entries | S13 + B4 + S28 *(study: L05, Q07)* | each goal's entry authored, checked; a set-down a landing, any other a guarded move | the entry, an event |
+| C45 goal entries | S13 + B4 + S28 *(study: L05, Q07)* | each goal's entry SET computed (B4), narrowed by the author where wanted; a direction whose first contact is the seat a landing, any other a guarded move | the entry, an event |
 | C47 defective input | S25 (B1) | refused at the build | — |
 | a frame change (tilt, polar zone) | S19 (ii) | L3 – L4 in the frame; classes unchanged | the tilt's or the zone's transition |
 
@@ -638,11 +663,11 @@ and ghosts: curves, cavities, goal entries), **C** the surface accessible to the
 table, and the owner's 2026-11-13 *"your proposals A, B and C have already been tried … no bijection possible"* (A′ is no new orbit → surface
 mapping: only the depth rule changes) → [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §4 (moved at the third step).
 
-**Recommendation [PROPOSED]. Build first:** (1) L2, the landing map (P2), as one pure function, its vectors against a brute-force drop, wired
+**Build first [DECIDED 2026-11-16 with Q2, Q4, Q7 — to be tested]:** (1) L2, the landing map (P2), as one pure function, its vectors against a brute-force drop, wired
 first as a READOUT beside today's depth on `Scene_1` (so the owner sees the difference before it drives anything) — the study's P reading is
 its second implementation; (2) the mouth's hold restricted (Q4); (3) the Blender checks B1, B2, B4 (§7bis); then (4) L2 driving the gizmo, the footprint support re-expressed on it with its wall kept
-(a replay of `Scene_1` close in against `Piece44`: unchanged). *(alignment)* The far-foot step first listed here (the shell fed the contour point)
-is withdrawn: F17, F7 and the mouth are findings for the orbit's queue (§2.2 P1, Q1).
+(a replay of `Scene_1` in contact range against `Piece44`: unchanged). The drop removed (Q10) is the contact's queue's, not this list's. *(alignment)* The far-foot step first listed here (the shell fed the contour point)
+is withdrawn: F17 and the mouth are defects recorded for the orbit's queue, F7 an event at a seat (§2.2 P1, Q1).
 
 ---
 
@@ -662,35 +687,20 @@ The 25 weaknesses (WS1 – WS25), the patches standing beside a rule, and the er
 
 ---
 
-## 7bis. THE BLENDER WORKFLOW — PROPOSED AMENDMENTS (S21, S24, S25)
+## 7bis. THE BLENDER WORKFLOW — THE AMENDMENTS (S21, S24, S25, S28) [DECIDED 2026-11-16, Q7 — to be tested]
 
-[PROPOSED] The owner: *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with
-consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* ⛔ `SCENE_WORKFLOW.md` and
-`PART_AUTHORING.md` are NOT edited by this study: the lines to amend are listed (§7bis.5), for after his approval.
+The owner: *"we shall amend the blender object building workflow to make sure that any surface built in blender is built with
+consideration of the playability of the game, therefore in consideration with the rules we are specifying here."* Accepted with Q7 (§8) and
+now WRITTEN into `SCENE_WORKFLOW.md` and `PART_AUTHORING.md` (§7bis.5); the Blender scripts and the game-side checks are SPECIFIED, NOT BUILT.
 
-### 7bis.1 The workflow as it stands (read on `1.0.146-Orbit-charts`; both files say "PROPOSED … NOT APPROVED" and are in use)
-
-1. **W0** the brief (object, reference, scale ≈ `Scene_1`'s cube) → **W1** the assembly plan (parts, steps, host, seat, approach axis, route),
-   nine rules checked ON PAPER (`SCENE_WORKFLOW.md` §2.3; rule 4 "the route's faces exposed" = not glued) → the owner's approval.
-2. **W2** the geometry sheet per part (look, `UCX_`, `UFM_` proxy and ghosts, `MC_` markers, goal) → **W3** `build_<scene>.py --step N`, one
-   step at a time, the owner's look between steps.
-3. Each run prints checks (`PART_AUTHORING.md` §4.2): size, seats (`SEAT_PAIRS`), the way in (`INSERTIONS`: `UCX_` swept 0.8 units back
-   against earlier steps by `BVHTree` overlap, with a control), proxy sanity ①–⑩, simplicity, the crank turned. **None fails the build** (exit
-   0; Claude reads the report); only internal `assert`s stop it.
-4. Before the export (§4.3): the geometry review (inside-out — ⚠ open meshes SKIPPED silently), the motion run, and the owner's PROXY REVIEW
-   (`review_proxies.py`: faces coloured by risk per build step; no pass rule, no control; its thresholds RETYPED from the game).
-5. **W4** the `.glb`, read back; the game's `readModelCatalog` refuses conventions by name — and checks NOTHING geometric (no convexity, no
-   closure, no seat pairing, no ghost flushness, no way in). **W5** level data; **W6** headless probes; **W7** the device look closes.
-6. ⚠ Gaps: the plan's order (`after`), entries and seat pairs live in the script and the markdown, not in the file; the build's 10 integer
-   steps are not the plan's 16 stages (six pistons share step 6); the proxy is an OPEN surface by design; the render meshes are opened by the
-   finish pass; `UCX_` budgets have two homes (24 / 48 in `PART_AUTHORING.md`, 64 / 16 in `BLENDER_COLLISION_AUTHORING.md` — `Scene_2`'s upper
-   case already has 19 pieces).
+### 7bis.1 The workflow as it stood — moved: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §7.3 (its gaps, read before the amendments)
 
 ### 7bis.2 The PLAYABILITY BRIEF a part carries from the plan (W1 → exported as `extras`)
 
 Per part, written at W1, ONE home, exported so that both Blender and the game read the same facts: its **stage** (`after`: the parts placed
-before it — the partial order, each placement its own stage); its **entry** (`entry_dir`, and `entry_kind`: set down / slid / plunged — the
-ghost's `plunge_axis` then derived from it or checked equal); its **seat pairs** (`mates_with` on each `MC_` marker); the **held piece's faces
+before it — the partial order, each placement its own stage); its **entry set** (S28, §2.5) — by default NOTHING (it is computed); the author
+may NARROW it (`entry_narrow`: the directions the level means) and MARKS a goal whose set is small (`entry_small`: a bore, a keyed slot), the
+ghost's `plunge_axis` then checked against the computed pose per axis and sense; its **seat pairs** (`mates_with` on each `MC_` marker); the **held piece's faces
 that rest** (its resting proxy); and the **faces later parts need as places** (the routes of later steps over it) — the faces B3 and B5 must
 find landable.
 
@@ -705,13 +715,14 @@ fails, with a planted **control** in `CHECK_CONTROLS` (*"a check never seen fail
 | **B1 solids** (S25 restated) | each `UCX_` convex, closed, volume > 0, in ONE budget; the part's `UFM_` proxy lies ON the union of its `UCX_` within a fit tolerance, facing OUT of it; each ghost's rim on a real proxy face | `bmesh`: `edge.is_manifold`, `is_boundary`, the hull's vertices; `mathutils.bvhtree.BVHTree`: `find_nearest` (proxy samples → `UCX_`), `overlap` (self-crossings); a point-in-convex test for "outward" | red: a proxy face off its solid or facing in; amber: within 2× the tolerance | all green, or an exemption written per piece (`fit_tol`: the squared bores) | a pure `src/core` function on the parsed `.glb` (the geometry from `glb_geometry.ts`): convex / closed / budget, proxy planar and outward; a vector on each scene's file | W3 every run; W4 import |
 | **B2 exposed per stage** (S22) | per stage, which proxy faces are on the boundary of the placed parts' union that the outside reaches | the union (Boolean, Exact solver — overlapping input) or a voxel grid of the `UCX_` pieces; a flood of the outside (numpy, 6-neighbour); each proxy face sampled against the flooded cells | grey: glued / buried / sealed | none — it is a map; it replaces "exposed = not glued" in the plan's rule 4 | the same on the game's data in a vector (a coarse grid), not at load | W3 per stage; W1 rule 4 made a script |
 | **B3 landing map** (P2) | per stage, per held piece, per facet direction: where the piece first touches | ⛔ NOT re-implemented in Python: a node script runs the GAME's own L2 function on the provisional `.glb` and writes `<scene>_landing.json`; `review_proxies.py` paints it | green landable; red closed for that piece; magenta "nothing to land on" | ⏳ pending until L2 exists: every face a later step needs as a place (7bis.2) is landable for the piece that needs it | it IS the game's function (one implementation) | W3 before the export; W5 |
-| **B4 goal reachable** (S21) | per part at its stage: withdrawn from its goal along `entry_dir` until it CLEARS the placed set (not a fixed 0.8); the pre-insertion pose; its entry point a landing of B3; the drawn ghost at the computed pose | `BVHTree.overlap` of the part's `UCX_` against the placed set's, stepped then bisected (the way-in sweep extended); the ghost compared within the fit tolerance | red: blocked (the blocking parts named); amber: the ghost off the computed pose | clear, reachable, ghost agrees | the same sweep with the game's GJK over the `UCX_` pairs, in a vector at W4 / W5; seat pairs re-checked from `mates_with` | W1 (on the reference's numbers, as rule 2), W3, W5 |
+| **B4 goal reachable** (S21, S28) | per part at its stage: its ENTRY SET — the sphere of directions sampled at a named step plus the parts' face normals, the part withdrawn from its goal along each until it CLEARS the placed set (not a fixed 0.8); the set's share of the sphere and its narrowest opening; at least one direction starting at a landing of B3; where the set is narrow, the pre-insertion pose per axis and sense and the drawn ghost at it | `BVHTree.overlap` of the part's `UCX_` against the placed set's, stepped then bisected (the way-in sweep extended to many directions); the ghost compared within the fit tolerance | red: EMPTY, or no direction starts at a place (the blocking parts named); amber: a SMALL set (a warning for his look), the ghost off the computed pose | not empty and reached; a small set warns, never fails | the same sweep with the game's GJK over the `UCX_` pairs, in a vector at W4 / W5; seat pairs re-checked from `mates_with` | W1 (on the reference's numbers, as rule 2), W3, W5 |
 | **B5 coverage** (S24) | per stage, every exposed face (B2) that is no place, with its reason: parallel to the cast, under an overhang, closed for the piece (B3), inside a cavity, below the share | from B2 and B3 (⏳ the reason "closed for the piece" pending until L2 exists) | each face by its reason; a text list | none — the owner accepts each class or changes the part | the list in the level's data; a vector that it does not grow unseen | W3 before the export: the owner's proxy review (§4.3 item 3) gets these colours |
 | **B6 conformance** | features near a threshold: a facet's elevation within 15° of 45°, two route faces within 30°, a feature whose closing radius is near the piece's size (§2.6 (3)), a facet near the share | the thresholds READ from the game's files (never retyped — as the lights are); numpy on the proxy's faces | amber: at a threshold, with its margin | no route or seat face at a threshold without a written acceptance | the same thresholds in the game: the vector reads one constant | W2 (sheet), W3 |
 
 ### 7bis.4 The DESIGN-FOR-PLAYABILITY checklist (for whoever draws a part; each line traced to a rule here)
 
-1. One clear entry per part, along its host face's normal where possible, from above if it can be (S21, B4; design for assembly).
+1. A wide entry set where the play allows; a narrow one (a bore, a keyed slot) only where the level means it, marked in the brief; along the host
+   face's normal and from above where it can be (S21, S28, B4; design for assembly).
 2. A lead-in: a chamfer or a ghost at the mouth, so the plunge starts from a capture region (S13, §2.5).
 3. Every face a later part rests on is wider than that part's footprint, or a ghost bridges it (P2, B3).
 4. No route or seat face within 15° of 45° of elevation; faces to be told apart ≥ 30° apart (B6).
@@ -722,15 +733,14 @@ fails, with a planted **control** in `CHECK_CONTROLS` (*"a check never seen fail
 9. Nothing placed inside what is already closed; no step that needs a turn mid-path (B4).
 10. Each exposed face is a place, or listed with its reason (S24, B5).
 
-### 7bis.5 Where it hooks, and the lines to amend LATER (after his approval; on `1.0.146-Orbit-charts`)
+### 7bis.5 Where it hooks — DONE (2026-11-16, Q7: written, to be tested; the scripts and the game's checks NOT built)
 
-* `SCENE_WORKFLOW.md` §1 (lines 21 – 29): W1 exports the playability brief; W3's gate adds B1 – B6's verdicts; W5's vectors re-verify B1, B3, B4.
-  §2.3 (lines 83 – 101): rule 2 (access) and rule 4 (the route exposed) become B4 and B2 run as scripts; "exposed" = reachable from outside.
-  §4 (lines 131 – 137): the face map's thresholds bind the ROUTE and SEAT faces (the contour's facets), not every real face — B6.
-* `PART_AUTHORING.md` §1 (line 16): "built from the EXPOSED faces" → reachable from outside (S22). §3 item 3 (lines 66 – 71): the paragraph on
-  the ghost AT THE DEPTH, already superseded, removed (WS6); (lines 137 – 147): the ghost computed from the entry and checked (§2.5).
-  §4.2 (lines 240 – 241, "Not yet in the report"): B1. §4.3 item 3 (lines 268 – 276): the review gets B3 – B6's colours and pass rules.
-* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`).
+* [`SCENE_WORKFLOW.md`](../../20_GAME_RULES/spec/SCENE_WORKFLOW.md) §7 (new): the playability brief at W1, B1 – B6 at W3's gate, the re-verification
+  at W4 / W5; pointers at §1, §2.3 rules 2 and 4 (B4, B2: "exposed" = reachable from outside), §4 (B6: the thresholds bind the route and seat faces).
+* [`PART_AUTHORING.md`](../../30_OBJECTS_3D/spec/PART_AUTHORING.md) §6 (new): the checks' table, the entry set and the ghost, the checklist; pointers at
+  §1 (exposed = reachable from outside, S22), §3 item 3 (the ghost at the depth already superseded; the ghost computed where the entry set is
+  narrow), §4.2 (B1 under "not yet in the report"), §4.3 item 3 (the review gets B3 – B6's colours and pass rules).
+* The game: a `src/core` checker beside `readModelCatalog` (B1's subset at load; the rest in vectors on each scene's `.glb`) — not built.
 
 **What it costs per scene** (estimates, not measured): B1, B4 — seconds per run; B2 — a voxel flood per stage (a 128³ grid in numpy: about a
 second each); B3 — the game's L2 per stage × held piece × facet direction, in node (tens of seconds per scene); B5, B6 — negligible. Authoring:
@@ -738,32 +748,25 @@ the brief's fields per part at W1, and a `fit_tol` where a proxy departs from it
 
 ---
 
-## 8. THE DECISIONS FOR THE OWNER
+## 8. THE OWNER'S DECISIONS OF 2026-11-16
 
-Nine questions, each answerable in one line. [PROPOSED] recommendations; nothing is his decision until he says so. *(study)* Q3 merged into Q2, Q4
-reworded, Q10 added; the numbers kept. *(review, 2026-11-16)* Q6's recommendation amended by the reviewer. *(alignment, §0ter)* Q1 is no longer
-a design choice: his boundary confirmed, and today's departures recorded or accepted; Q4 keeps only the gizmo's side (the hold's domain); each
-question checked against the scope — Q2, Q5 – Q9 are about where the gizmo is or how the parts are authored, Q10 is the contact (in scope).
+His answer is quoted whole in §0quater. For every recommendation he agreed with, his own condition: *"I agree with the recommendations, although
+they shall be later tested and could be reversed if the testing shows they need to be reversed."* — so **ACCEPTED** below means **ACCEPTED — to be
+tested; may be reversed if the testing shows it**. The questions as they were asked, the options not taken and their arguments, and the first
+round's decisions each answered: [ORBIT_SURFACE_AUDIT.md](ORBIT_SURFACE_AUDIT.md) §7.
 
-| # | question | options | recommendation |
+| # | the question | his decision | status |
 |---|---|---|---|
-| **Q1** | P1 is a boundary condition this specification respects, not a design of it. (1) Confirm P1's sentence with HIS boundary: "close in" = where the piece can collide (during the approach, during the orbit) — in today's code inside the shell's offset (`orbitShellOffsetMm`, 60 mm); not the 0.6 – 0.65 m of the tilted orbit's transition; parts not seated are no surface (S2), the collision handles them. (2) Today's code departs from it in two measured places — F17 (where the orbit's direction is oblique, a depth step h under the gizmo shifts the far piece and the camera by h × tan θ: a 40 mm slot, 15 mm at 20°, 40 mm at 45°) and the mouth (the gizmo's hold lets the real lip decide where the tilted orbit starts, at up to 0.6 m); F7 (a box grown at a seat) is an event at a seat, consistent with his sentence. Are the two departures RECORDED as defects in the orbit's queue (nothing designed here), or accepted? | (1) (a) yes; (b) another wording. (2) (a) recorded in the orbit's queue; (b) accepted as they are | (1) (a); (2) (a) — both depart from his comment 1 and F17 from the rebuild's aim 4 and I2; any remedy is the orbit's |
-| **Q2** | P2: the gizmo's depth = the first contact of the held piece AS HELD (its map rebuilt at a turn; Q3 merged) — reversing his decision 2 of 2026-11-07 (`1.0.105-`: *"gizmo is a point, not the piece's footprint"*)? Close in a proud part stays a WALL (his Q1 (b), *"Proceed"*); far the marker climbs half a piece early, S5's real depth then in the central band only (L03: 19 mm) | (a) yes, first as a readout beside today's depth, then driving; (b) no, the point stays | (a) — the study: today's marker stands where the piece cannot rest on 41 of 62 shapes (far out the piece rides the shell, close in the collision refuses it); its two-smallest-sizes ruler judges B 80 × 80 as 40 × 80 and the bar 20 × 20 (130 places across the keyed slot); P2 never, by construction |
-| **Q3** | → merged into Q2 (the piece as held) | — | — |
-| **Q4** | The mouth's hold — the gizmo's side of S10 — fires on the cap, along island gaps, in a V (F5, the study's emulation). Restrict it to where it hands over to the automatic tilt (a side facet, toward a cap's edge): never on a cap — now; over a void P2 leaves open for the held piece — once the landing map exists (L2's readout, §6 (1))? | (a) yes; (b) keep the hold as built; (c) delete it now | (a) |
-| **Q5** | S13 and S28: every goal carries its entry direction; a set-down is a landing (P2), any other entry a guarded move from the pre-insertion pose computed by withdrawal (the drawn ghost checked against it), the plunge one of them (§2.5 (3) + (4))? | (a) yes; (b) drawn ghosts only | (a) |
-| **Q6** | S16: the piece (P2) + one noise family in `units.ts` with S26 (one depth tolerance, no unnamed step) and S27 (tolerances join, never erase); persistence offline only (§2.6 (2))? (D5's share, the layout's ruler, is the orbit's: §2.6) ⚠ With P5, S26 makes a step of 0.5 mm or more a WALL close in — a seat 1 mm proud included (C36; 99 / 76 of the study's protrusion traps); his Q1 (b) was ruled on `Piece44`, 41 mm proud | (a) yes, every step ≥ 0.5 mm a wall; (b) a ruler per question; (c) (a) with a CLIMB height in the noise family under which a close-in step is not a wall | *(review)* (a) — today's rule (a seat is set exactly on its goal, `LEVEL_END.md` §5quinquies: a proud seat exists only where a part is drawn so); (c) only when a level's parts need it, the height then chosen on the device |
-| **Q7** | The Blender workflow: the playability brief, B1 – B6 failing the run, painted, re-verified at import, and the checklist (§7bis) — written into `SCENE_WORKFLOW.md` and `PART_AUTHORING.md`? | (a) yes, B1, B2, B4 first; B3, B5 once L2 exists; (b) some of them | (a) |
-| **Q8** | S25 restated on the `UCX_` union with the proxy on it, and S22 (exposed = reachable from outside)? | (a) yes; (b) as worded before / as today | (a) |
-| **Q9** | The first round's open points: the rebuild events (D-S4 (a)); a tread a place of the facet that faces it, not of the side's travel (D-S7, re-worded by the study: L12, L13); render faces for box scenes, proxies where authored (D-S9 (a)); the first build on `Scene_0`, `0bis`, `1` and the study's shapes (D-S11 (a)); a strongly non-convex assembly measured by B5's coverage and warned (D-S20 (a)); a level boots with a placed part (S29) | (a) all as recommended; (b) say which not | (a) |
-| **Q10** | *(study, F8)* S5 close in: the piece in contact crossing a slot it fits — (a) drops in and rests (today's footprint support, P2 ⑤ — built: the piece RESTS on its support, `CLOSE_IN_CONTACT.md` §10; the drop into a slot never judged on its own), the far wall a P5 wall, out by the approach; S5's *"the piece shall not go in"* then binds far and medium, where the shell keeps it by construction — this REVERSES his D3 (*"the piece shall not go in (it shall continue its orbit)"*) close in; (b) the orbit close in never lowers the piece — only A + dy does (a new rule in the contact) | (a); (b) | (a) — it is what the contact does today (built, never judged on its own); it reverses D3 close in, his call |
-
-**The first round's decisions, now answered by a principle if he accepts it** (their numbers kept): D-S1 withdrawn (unchanged);
-D-S2 → Q6; D-S3 → P1 (Q1) and P2 ① (holes closed or "nothing to land on"); D-S5 → P2 (the real floor by first contact where no ghost is
-authored) and §2.5; D-S6 → Q4; D-S8 → P2 ① (a gap with no floor: nothing to land on, marked); D-S10 → P5 (blocked by collision; the
-glide not close in); D-S12 → P2 + P5 (the notches as he ruled); D-S13 → Q2; D-S14 → P2 (the pin's top where the piece touches it first);
-D-S15 → P2 + S13 (inner walls approached or plunged; no slide); D-S16 → Q7 (B4, B5); D-S17 → Q8; D-S18 → Q6 (the depth in the noise
-family); D-S19 → Q6; D-S21 → Q8.
+| **Q1** | (1) P1 with his boundary; (2) today's two measured departures from it — recorded or accepted? | (1) settled by the new word (§1.4): P1's boundary is CONTACT RANGE, where the piece can collide (during the approach, during the orbit) — not the 0.6 – 0.65 m; parts not seated are no surface (S2), the collision handles them. (2) the recommendation (a): F17 (an oblique direction shifts the far piece and camera by a depth step × tan θ) and the mouth (a real lip starts the tilted orbit from up to 0.6 m) RECORDED as defects for the orbit's queue — nothing designed here, any remedy the orbit's; F7 an event at a seat | (1) **DECIDED**; (2) **ACCEPTED** |
+| **Q2** | P2: the gizmo's depth = the first contact of the held piece AS HELD (its map rebuilt at a turn; Q3 merged)? | (a): yes — first as a READOUT beside today's depth, then driving; it reverses his decision 2 of 2026-11-07 (`1.0.105-`: *"gizmo is a point, not the piece's footprint"*); in contact range a proud part stays a wall | **ACCEPTED** |
+| **Q3** | → merged into Q2 | — | — |
+| **Q4** | The mouth's hold (the gizmo's side of S10) restricted? | (a): never on a cap — now; over a void P2 leaves open for the held piece — once the landing map exists | **ACCEPTED** |
+| **Q5** | How does a piece enter its goal (S13, S28)? | (a) with HIS AMENDMENT and clarification: a goal has an ENTRY SET — every clear path to the seated pose from any orbit angle, the directions along which the part withdrawn from its goal touches no placed part; computed, narrowed by the author where wanted; the ghost computed per axis and sense only where the set is narrow, a drawn one checked (§2.5) | **ACCEPTED WITH HIS AMENDMENT** |
+| **Q6** | The rulers (S16)? | (a): the piece (P2) + one noise family in `units.ts` with S26 and S27; persistence offline only; a step ≥ 0.5 mm a wall in contact range; (c) a climb height only when a level's parts need it, chosen on the device | **ACCEPTED** |
+| **Q7** | The Blender workflow (§7bis)? | (a): the playability brief; B1, B2, B4 first; B3, B5 once L2 exists; failing the run, painted, re-verified at import; the checklist — written (§7bis.5) | **ACCEPTED** |
+| **Q8** | S25 on the `UCX_` union with the proxy on it; S22 (exposed = reachable from outside)? | (a) | **ACCEPTED** |
+| **Q9** | The first round's open points? | (a), all as recommended: D-S4 (a) the rebuild events; D-S7 a tread a place of the facet that faces it; D-S9 (a) render faces for box scenes, proxies where authored; D-S11 (a) the first build on `Scene_0`, `0bis`, `1` and the study's shapes; D-S20 (a) a strongly non-convex assembly measured by B5 and warned; S29 | **ACCEPTED** |
+| **Q10** | In contact range, crossing a slot it fits — does the piece drop in? | **(b), in his words: *"the piece shall not drop"*** — D3 stands at every distance: the gizmo reads the depth; the piece enters a recess only by A + dy. The recommendation (a) (today's drop) is NOT taken; today's code departs (§2.2 P5) | **DECIDED** |
 
 ---
 
