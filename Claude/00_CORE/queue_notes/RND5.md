@@ -178,3 +178,16 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
   the study's §8.1. Today measured first (180° in 0.52 s whatever the finger, the gizmo held, trailing the zoom); now the turn follows the approach
   finger over `tiltOutBlendMm` (12 mm; 0: today's), smooth at both ends, never over the one speed (6.0° a frame at most), the gizmo free, finished by
   time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `c7ac510` merged as main `40c6325`, live, both switches on by default; the owner's look owed.
+
+## 2026-11-16 — the rest launched by Opus agents; the to-do before step B
+
+* **The owner's words**: *"Do everything except the step B. Make sure to maximize the use of Opus agents as I do not have much Fable credits left
+  for this week. Also, before step B, we will need to work on the surface definition and the singularities (voids, channels, mouths, protrusions,
+  small faces): just capture that in your to do list for the moment."*
+* **Launched now, in this order** — each package built by an Opus agent and audited by another Opus agent: the probes and the gates moved into
+  `scripts/probes/` with their runbook and baseline (`scripts/probes/ORBIT_GATES.md`); **W11** (the tilt's entry under a fast dy); **C5** (one
+  half-turn event); **the test scenes**; **C2's wiring** (W5, W7); then, a second chain, **step 2.5** and **step 3 parts 1 and 2** of the charts.
+  ⛔ **Step B is NOT started.**
+* ⭐ **TO DO BEFORE STEP B — the surface definition and the singularities** (voids, channels, mouths, protrusions, small faces): a study by the
+  four-part method (the rules; the obstacles and the fallbacks; a systematic design from prior art; an audit of what is built), approved by the owner
+  before any build. The part of C5 / W9 about *"a mouth as a concave edge"* moves into that study (`TILTED_POLE_CLOSE_IN.md` §6).
