@@ -19,7 +19,7 @@ on."* A build of a recovery was started on 2026-11-16 and STOPPED at once on his
 2. ✅ CERTAIN (the owner's checks) — the dead state is Safari's, PROCESS-WIDE (its GPU side): it survives reloads, new and private tabs; only a force-quit clears it.
 3. ✅ CERTAIN (the owner's experiment) — reloading `Scene_2` (`?sceneIndex=3`) kills it at about the 4th load; reloading `Scene_0` many times does not.
 4. ✅ CERTAIN (measured) — `Scene_2` allocates NO MORE WebGL memory than `Scene_0`, and keeps nothing alive after a reload that `Scene_0` does not.
-5. 🔶 PROBABLE, NOT verified — the trigger is `Scene_2`'s GPU WORK per frame (245 meshes, PCSS soft shadows, PBR, the boot animation redrawing the shadow map every frame, at 3×) — iOS aborting GPU work that runs too long, and Safari then refusing WebGL until restarted.
+5. 🔶 PROBABLE, NOT verified — the trigger is `Scene_2`'s GPU WORK per frame (245 meshes, PCSS soft shadows, PBR, the shadow map redrawn every frame while shadows are on, the boot animation, at 3×) — iOS aborting GPU work that runs too long, and Safari then refusing WebGL until restarted.
 
 **What to do next** (in this order — no fix before step 1 says which feature): (1) ⭐ **THE TEST ON THE PHONE** — the section of that
 name below, a procedure with its addresses and an empty results table (no deploy, no slider needed); (2) if possible, Safari's Web Inspector from
@@ -107,7 +107,10 @@ a Mac on the black page; (3) only then choose among the fix candidates (`## The 
 * **The trigger is `Scene_2`'s GPU WORK per frame, not its memory**: ≈ 245 meshes drawn in the shadow pass and in the main pass, 4 BLEND materials,
   PBR with the environment cube, **PCSS soft shadows** (`lighting.ts:70`, `softnessDeg: 25` in `scene_2.ts`) over a full 3× screen
   (1179×2556 on the phone); and at boot the **boot animation** (`boot_anim_wiring.ts`, `1.0.139-`) moves every part while `shadowsOn` = 2 (AUTO)
-  still measures with the shadows FULL — the shadow map, drawn on events (`lighting.ts` `shadowsOnDemand`), is then redrawn EVERY frame. iOS aborts
+  still measures with the shadows FULL. ⭐ MEASURED (2026-11-16, headless, `?sceneIndex=3&shadowsOn=1`, 16 s after the boot, the scene at rest):
+  **87 draws a frame into the shadow map, every frame** (73 to the screen) — the map is NOT drawn on events only in `Scene_2`
+  (`lighting.ts` `shadowsOnDemand`: a caster's signature changes every frame); with the shadows off (`0`, or AUTO decided OFF): 0. Whether
+  AUTO stays ON on the phone (a median frame under 33 ms) is read on its HUD's `frame` line (`shadows=auto → on` / `→ OFF`). iOS aborts
   GPU command buffers that run too long (a GPU timeout / reset); after a few such resets Safari's GPU process stops giving working WebGL contexts
   until it is restarted. ⚠ That WebKit policy, and the timeouts themselves, are NOT verified: desktop Chrome on SwiftShader has no iOS GPU process,
   no GPU watchdog, no jetsam, and never lost a context on its own (≈ 40 loads over four runs).
@@ -140,6 +143,20 @@ reload (nothing saves them), but the same settings can be written in the ADDRESS
   every NUMERIC setting of `src/input/gestureConfig.ts`'s defaults may be given there (`NUMERIC_KEYS`). `shadowsOn` accepts 0 (off), 1 (on),
   2 (auto, the default); `bootAnimOn` 0 or 1 (default 1); `modelStage` 0 (boot, the default) or 1 (final) — `validateGestureConfig`,
   `gestureConfig.ts:1139/1159/1165`. A wrong value is refused and SAID on the HUD (`⛔ name=value: …`), never applied silently.
+* ⚠ **What each setting really does on `Scene_2`** (read at `c7ac510`, and measured 2026-11-16 by a headless run on the live site — draws per frame
+  and screenshots, `?sceneIndex=3`, 16 s after the boot):
+  * `shadowsOn` — `0` = the shadow LEVEL `PIECE` (`core/auto_shadow.ts` `shadowLevel`, `render/lighting.ts` `applyShadowLevel`): the scene's ONE
+    light (`Key_softbox`) is the key light, so it keeps its shadow generator and its map, but the map's caster list becomes the ORBITED piece alone
+    (a part picked up); every other part's cast shadow disappears and the map is no longer redrawn (measured: 0 draws a frame into it, against
+    87 with `1`). ⚠ It does NOT remove: the soft-shadow (PCSS) SAMPLING in every receiving surface's shader (the light's shadows stay enabled), the
+    shadow of the part in hand, and the **BAKED contact shadows** (the soft dark under and between the parts, written into the model's vertex
+    colours — `model_import.ts` `applyContactShadows`; no switch acts on them). `1` = every part casts, the map redrawn every frame. `2` (the default,
+    AUTO) = `1` while the device is measured (the first seconds — the boot animation's time), then `1` or `0` by the verdict. Nothing changes it
+    after boot when it is `0` or `1`. **In force when** the HUD's `frame` line ends `shadows=off (the piece's shadow kept)` (or `shadows=on`).
+  * `bootAnimOn=0` — the parts appear at once in their heaps: no pop, no fall (`boot_anim_wiring.ts:157`). **In force when** nothing falls at boot,
+    and the HUD's model line has no `· boot animation N s`.
+  * `modelStage=1` — the engine shown ASSEMBLED (every part at its goal) instead of the heaps; no boot animation then. **In force when** the engine
+    stands whole on the table.
 * **The HUD's `tuning` line shows what is in force**, e.g. `tuning sceneIndex=3 shadowsOn=0` (`hud_paint.ts:122`). Check it at EVERY load. (The
   line `⛔ v: not an overridable tunable` under it is harmless: the build check's marker — a side finding below.) If the HUD is folded, tap `HUD`.
 * **Safari's reload button reloads the same address**, settings included. The build check's own reload (`main.ts`, `location.replace`) keeps them
@@ -168,11 +185,11 @@ Run A2 — the baseline again (is the count constant?):
 ```
 https://dsug1.github.io/3d_assembly_game/?sceneIndex=3
 ```
-Run B — no shadow casters but the orbited piece (⚠ the soft-shadow shader still runs on the receivers):
+Run B — the shadow map's draws removed (the parts cast no shadow; ⚠ the baked contact shadows stay, and the soft-shadow sampling still runs):
 ```
 https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0
 ```
-Run C — no boot animation (no part moves at boot: the shadow map drawn once):
+Run C — no boot animation (no part moves at boot):
 ```
 https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&bootAnimOn=0
 ```
@@ -183,6 +200,10 @@ https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0&bootAnimOn=0
 Run E — the final stage at boot (no heaps, no fall) — only if B – D leave a doubt:
 ```
 https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&modelStage=1
+```
+Run G — the WORST case, shadows forced on (every part casts, the map redrawn every frame) — black SOONER than A = the shadow work matters:
+```
+https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=1
 ```
 Run F — the control, `Scene_0`, 20 loads (expected: never black):
 ```
@@ -195,25 +216,47 @@ https://dsug1.github.io/3d_assembly_game/?sceneIndex=0
 |---|---|---|---|---|---|
 | A | `?sceneIndex=3` | | | | |
 | A2 | `?sceneIndex=3` | | | | |
-| B | `?sceneIndex=3&shadowsOn=0` | | | | |
+| B | `?sceneIndex=3&shadowsOn=0` | ⚠ not counted yet — the owner (2026-11-16): *"https://dsug1.github.io/3d_assembly_game/?sceneIndex=3&shadowsOn=0: : not working: the scene loads with the shadows on, not off"*: shadows still on the glass — the address does not remove them all (the note below) | | 2026-11-16 | `40c6325` |
 | C | `?sceneIndex=3&bootAnimOn=0` | | | | |
 | D | `?sceneIndex=3&shadowsOn=0&bootAnimOn=0` | | | | |
 | E | `?sceneIndex=3&modelStage=1` | | | | |
 | F | `?sceneIndex=0` (20 loads) | | | | |
+| G | `?sceneIndex=3&shadowsOn=1` | | | | |
+
+**The note on run B (2026-11-16).** The owner saw shadows with `&shadowsOn=0`. Read at `c7ac510` and run headless on the live site the same day,
+the address DOES apply (the HUD: `tuning sceneIndex=3 shadowsOn=0`, `frame … shadows=off (the piece's shadow kept)`) and DOES remove the parts'
+cast shadows and the map's per-frame draws (screenshots with `0` and `1` side by side: the cast shadows on the floor gone with `0`). What stays on
+the glass with `0`, and reads as "shadows": the **baked contact shadows** (the soft dark under and between the parts, part of the model), the
+shadow of a part once picked up — and, in the first seconds with the default AUTO, the full shadows while the device is measured. So `0` is NOT
+"no shadows": it is "no cast shadows from the parts at rest". ⚠ Before counting run B, check on the phone that the `frame` line says
+`shadows=off (the piece's shadow kept)`; if it says anything else, the address did not apply (retype it in Safari's address bar).
 
 **How to read it.**
 * A and A2 about equal (≈ 4) — the damage builds up load after load; A and A2 very different, or black at the 1st load — one frame too heavy.
-* B "none in 15" — the shadow casters (the shadow pass of the ≈ 245 meshes) are the trigger.
-* C "none in 15" — the boot animation (the shadow map redrawn every frame while the parts fall) is the trigger.
+* B "none in 15" — the shadow map's draws (≈ 245 meshes redrawn into it every frame) are the trigger. G sooner than A says the same.
+* C "none in 15" — the boot animation is the trigger.
 * D "none in 15" but neither B nor C — the two together.
 * B, C or D with a HIGHER count than A but still black — that feature adds to the load, the rest of `Scene_2` too.
 * B, C, D all black at about A's count — the trigger is in what NO address can switch off (below).
 * F black — not `Scene_2` alone: back to the analysis (`## What is CERTAIN, PROBABLE, OPEN, RULED OUT`).
 
-**What no address can switch off** — a test of these WOULD need a build (a setting added), to be decided with the owner then: the soft shadows'
-shader itself (PCSS, `lighting.ts:70`), the HDR environment and its prefilter (`envIntensity=0` only dims it), the glass and the PBR materials, the
+**What no address can switch off** — a test of these WOULD need a build (a setting added), to be decided with the owner then: the shadows
+WHOLLY (no generator, no sampling — `shadowsOn=0` keeps the key light's map and its sampling), the soft shadows' shader itself (PCSS,
+`lighting.ts:70`), the baked contact shadows, the HDR environment and its prefilter (`envIntensity=0` only dims it), the glass and the PBR materials, the
 tone mapping, the device ratio (the 3× screen's full resolution), antialiasing (MSAA), the stencil. (`aoOn` does nothing on `Scene_2`: its contact
 shadows are baked, no SSAO is built.)
+
+### WHAT A TEST BUILD WOULD NEED — ⛔ NOT BUILT, the owner's decision
+
+The owner: *"I need to modify the deploy for each test"*. With the switches below in ONE build, every test would be an address again — one deploy
+for all of them. Each OFF by default (today's picture unchanged), each a numeric setting of `gestureConfig.ts` (so overridable from the address and
+shown on the `tuning` line), each with its vector:
+* **shadows truly off** — no shadow generator created, no surface receiving (no map, no sampling): e.g. `shadowsNone=1`;
+* **PCF in place of PCSS** — the key light's soft shadows as plain PCF: e.g. `shadowsPcf=1`;
+* **the baked contact shadows off** — e.g. `contactOff=1` (only to tell them apart on the glass; they cost nothing per frame);
+* **a device-ratio cap** — the engine's `limitDeviceRatio`: e.g. `maxDeviceRatio=2` (or 1);
+* **antialiasing off** — the context without MSAA: e.g. `msaaOff=1` (the engine is created with it, so it must be read before `new Engine`);
+* (the boot animation already has `bootAnimOn=0`.)
 
 ## How to make it certain
 
@@ -231,6 +274,7 @@ black, the `frame` line (how slow its frames are on the phone).
 |---|---|---|---|
 | PCF in place of PCSS on phones (`lighting.ts:70`) | the heaviest per-pixel shader | harder shadow edges on the phone | yes (a look) |
 | the shadows OFF during the boot animation, or AUTO measured after it | the shadow map redrawn every frame at boot | no shadows for the 1 – 2 s of the fall | yes |
+| the shadow map really drawn on events in `Scene_2` (measured: redrawn EVERY frame at rest with shadows on — 87 draws a frame; find which caster's signature changes, `lighting.ts` `shadowsOnDemand`) | ≈ 245 meshes redrawn into the map each frame | none | no — a defect of `806579a`'s intent |
 | a device-ratio cap (e.g. 2) and no MSAA on 3× screens (`scene.ts:106`, `limitDeviceRatio`) | ≈ 100 MB framebuffer, 2.25× the pixels shaded | a slightly softer image | yes (a look) |
 | `Scene_2`'s static meshes merged or frozen (`freezeWorldMatrix`, merged by material) | ≈ 245 draws in two passes | none | no — but verify the pick-up and the outlines |
 | the context released on `pagehide` (not `persisted`) and before the build gate's `location.replace` (`engine.dispose()` + `WEBGL_lose_context`) | GPU memory overlapping between two pages | none | no |
