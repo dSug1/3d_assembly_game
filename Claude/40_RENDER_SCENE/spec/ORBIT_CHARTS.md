@@ -760,7 +760,7 @@ today); far out a pole stays the polar orbit's limit (D-C6: with the press gone 
 
 The owner: *"I will go to sleep. Finish everything tonight without asking me anything. Just record your decisions so I can review tomorrow morning.
 Tomorrow, we will work on the tilted-pole orbit at close in and the hysteresis."* → the list, each with its reason and what undoes it:
-[`queue_notes/RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
+[`RND5.md`](../../00_CORE/queue_notes/RND5.md), "DECISIONS TO REVIEW". ⭐ **The next session**: the tilted pole close in (step C,
 §10.1 — it now runs on the one transition; the entry's 8.5° frame of §12.1's table is the first thing to look at) and the hysteresis (2.4d: ONE
 banded reading of the face under the gizmo, `faceSwitches` / `gizmoEdgeMarginMm`, for the tilt's entry and exit, the pole's crossing and the
 square camera's target — §10.2's table lists what has a band today). Nothing is pushed or deployed: live is still `157974f`.
