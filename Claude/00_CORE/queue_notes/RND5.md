@@ -191,3 +191,19 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ⭐ **TO DO BEFORE STEP B — the surface definition and the singularities** (voids, channels, mouths, protrusions, small faces): a study by the
   four-part method (the rules; the obstacles and the fallbacks; a systematic design from prior art; an audit of what is built), approved by the owner
   before any build. The part of C5 / W9 about *"a mouth as a concave edge"* moves into that study (`TILTED_POLE_CLOSE_IN.md` §6).
+
+## 2026-11-16 — C1 / W11 measured (an Opus agent): structural, NOT built — the options are the owner's
+
+* **The brief**: the tilt's entry under a fast dy turns the view 8.5° in one frame — measure it, name its cause, build the fix only if it is clear and
+  systematic (the share shown never faster than the tilts' one speed), else report the options.
+* **Measured** (`tilt_check.mjs` with every frame's transition state recorded, the three scenes): what jumps is the piece's SHOWN direction —
+  (1.) the direction's ease is read the moment the frame changes, before the same frame's square camera takes its first step (its target just
+  changed by the tilt): the gap (6.49°) is applied to a direction the step had already brought back, the piece is drawn 6.45° off at k = 0 and the
+  framing turns the camera 6.2° to hold it; then 8.0° the next frame. (2.) The root: every change of frame close in starts TWO turns at the one speed
+  — the transition's one turn and the square camera's pitch over the edge — and they add on the glass: the tilt's entries 6.7 – 8.2°, its exit 8.7°,
+  the ridge's and the spit's half turns 8.5 – 8.9° over most of their ~30 frames.
+* **Tried and reverted** (nothing committed): the ease read after the view's update — the entry 0.4 / 1.4° but another entry 10.4°; with the square
+  camera's pitch inside the one turn as well — `Scene_1` 6.0° at most, `Scene_0bis` 54.6° (a turn started in the camera's stage escapes the read).
+* ⛔ **Not built**: structural, in code every change of frame shares, and every fix changes what the owner has looked at (the ridge, the spit, the
+  tilt's turns). The options A (the one turn truly one — recommended), B (a limiter on the picture), C (one shared budget), D (keep) →
+  [`TILTED_POLE_CLOSE_IN.md`](../../40_RENDER_SCENE/spec/TILTED_POLE_CLOSE_IN.md) §12.

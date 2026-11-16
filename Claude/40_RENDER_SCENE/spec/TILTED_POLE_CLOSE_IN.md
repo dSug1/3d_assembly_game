@@ -263,7 +263,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **W8** | **Close in on a cap that takes no tilt** (a level face that is not a rectangle, D-C2) the square camera has NO target (`squareFrame`: *"none over a cap … the automatic tilt comes next"* — it no longer always comes): the camera keeps looking square at the face it left | `squareFrame` | O6 — a loophole, no scene has it |
 | **W9** | **The mouth** (a void open toward a pole): a hold that depends on the path, and a tilt made from a face the gizmo is not on (`asmMouth`, `mouthHold`) — the one place the gizmo is not a function of the place | `assemblyFrame`, `tiltOn` | O11 |
 | **W10** | **Bands in five spaces** — metres of distance, millimetres on the model (5 and 10), millimetres of finger (30), degrees of camera (2), a micrometre tie — and two triggers with none until step 2.4d (measured 2026-11-16, close in on the cube, the place wobbling ±3 mm across the top edge for 4 s: the tilt made and left 21 times, the view turned 1 188°; across a vertical edge: the square camera's target 20 times, 600°) | throughout | T11 |
-| **W11** | **A turn's first frame** — the tilt's entry under a fast dy turns the view 8.5° in one frame (5.7° before step 2.4c set the followers' states) | `seamRebase` | T5 — not yet analysed: the first thing to measure in the build |
+| **W11** | **A turn's first frame** — the tilt's entry under a fast dy turns the view 8.5° in one frame (5.7° before step 2.4c set the followers' states) | `seamRebase` | T5 — ✅ measured 2026-11-16 (C1, §12): not the rebase — two clocks in one transition (its turn and the square camera's pitch) and the direction's ease read too early; ⛔ NOT built, the options are the owner's |
 | **W12** | **Fallbacks with holes** — a face no columns chart serves goes to RINGS, which is not wired (it stays on gravity's map: the leaps and stalls of a BROKEN face); a partial fan likewise (D-C5); a near-level roof entered from its gable is BENT at the entry (by T6 — to be shown to the owner on a test scene, not found by accident) | `orbit_charts.ts`, the wiring | T12 |
 
 ### 4.3 The scripts — what no run covers
@@ -293,7 +293,7 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | step | what | gate |
 |---|---|---|
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
-| **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
+| **C1** ✅ | W11: the entry's first frame measured and its cause named — before anything is built on it. ✅ Measured 2026-11-16 (§12): structural (two clocks in one transition); ⛔ NOT built — the options A – D are the owner's (§12.4) | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
 | **C3** 🔧 | built 2026-11-16 (`86f2cbe` + the auditor's completion; §8.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `40c6325`, both switches on by default) — THE WAY OUT BLENDED (D-T1, W4, §8): the camera's turn after the threshold follows the approach finger (`tiltOutBlendMm`), smooth, never over the one speed, the gizmo free; ⛔ the owner's look owed. W8 (the square camera's target on a cap with no tilt) NOT in this step: with a test scene | the way-out run ✅, the replays ✅ (§8.1) |
 | **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ✅✅ **the owner's look, 2026-11-16: *"This is good."*** | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
@@ -461,3 +461,88 @@ After his look on C4 (main `6685f8f`): *"This is good. Commit. For the next depl
   switch-on one.
 * ⚠ **`Scene_2`** has never been run with the switches on (the owner keeps it out of these passes: *"I will do it myself when I troubleshoot the
   scene"*): with this default it runs the charts' layout too.
+
+## 12. STEP C1 — W11, THE TILT'S ENTRY UNDER A FAST DY (2026-11-16, an Opus agent)
+
+**As briefed**: the fault as measured — `Scene_1`, close in, the automatic tilt made on the cube's top under a FAST dy: the view turns 8.5° in ONE
+frame at the tilt's entry (W11, never analysed). Reproduce it (`tilt_check.mjs`, a fast dy; per frame the view's turn, the turn's share, the frame in
+force, what changed state), on `Scene_0` and `Scene_0bis` too; find WHICH quantity jumps in that frame and WHY (to test, not to conclude: the way in's
+share paced by the finger with no cap on the picture's speed; the square camera's target; the piece's direction ease; the frame set at once while the
+turn starts a frame late). Write the root cause here. Build the fix only if it is clear and systematic — the expected form: *from the pose shown, the
+share SHOWN never faster than the tilts' one speed* — under `chartLayout` 1 unless the fault is in common code; if it is not clear, or it changes what
+the owner has looked at and accepted elsewhere, report the options. The gates: verify, the off replays bit for bit, the default replays explained,
+`tilt_check` on the three scenes (the entry's largest one-frame turn at or under the one speed's step, nothing else moved), `edge_noise`, `mid_check`,
+`across_check` unchanged.
+
+### 12.1 Measured — what turns in those frames, and why
+
+`tilt_check.mjs` (its default run, 5 px a frame of dy) with every frame's state recorded besides (the camera's TARGET pose before the turn's mix, the
+turn's share and angles, the direction's ease, the square camera, the calm, the piece's place — a copy of the probe in the session's scratchpad, the
+wiring read through temporary lines, reverted). `Scene_1`, the tilt made on the top at the frame marked ▶ (the approach over: the turn goes by TIME):
+
+| frame | the view (° in the frame) | the camera's target pose (°) | the turn's share k | the camera's turn (°) | the direction's ease (°) | the square camera's normal (° in the frame) | the piece (mm in the frame) |
+|---|---|---|---|---|---|---|---|
+| 84 | 3.1 | 3.1 | — | — | — | 0 | 17 |
+| ▶ 85 | **6.2** | 0.04 | 0 | 0.04 | 6.49 | 6 (its target now the top, 84° away; its share 0.40 → 0.60) | 61 |
+| 86 | **8.0** | 1.75 | 0.92 | 1.8 | 6.49 | 6 | 87 |
+| 87 – 99 | 2.6 → 6.0 | the same | — (over) | — | — | 6 a frame | 38 – 66 |
+
+**The quantity that jumps is the piece's SHOWN direction** — not the camera's target (it moves 0.04° in the tilt's frame) and not the frame's angles
+(`seamRebase` keeps the gizmo, and the piece's raw direction moves 0.04° there too). Two causes, one inside the other:
+
+1. **The ease read too early.** The tilt's one transition (`tiltOn`) reads the gap between the direction drawn before and the new chart's
+   (`seamEase`, 6.49°) the moment the frame changes — before the same frame's calm and square camera have run (`calmFrame`). But the tilt has just
+   changed the square camera's target (the top's normal), and in that same frame the square camera takes its first step (its normal 6°, its share
+   0.40 → 0.60): the raw direction comes back by ~6.5°. The ease is then applied to a direction that no longer needs it: at k = 0 the piece is drawn
+   6.45° off the place it had — against the ease's own rule (*at the start exactly the one drawn before*, `seam_turn.ts`) — and the framing of the
+   turn (`poseFramingTwo`, which keeps the piece where it was on the glass) turns the camera 6.2° to hold it. The next frame the turn's clock reads a
+   whole of 0.04° + 6.49° and advances 0.92 of it at the one speed — 5.97° released, plus the square camera's own step: 8.0°.
+2. **Two clocks in one transition (the root).** Every change of frame close in — the tilt's entry, its exit, the ridge's crossing (`poleCross`), the
+   spit's crossing — also changes the square camera's target, and the square camera then turns on ITS OWN clock at the one speed (`squareTurn`: 84°
+   on a box's edge), while the transition's ONE turn (`asmZoneMix`) runs at the one speed over its own angle from the pose shown to a target that is
+   itself turning. On the glass the two add. Measured on the default run of each scene (the view in one frame while both run):
+
+| scene | the transition | the view, a frame (°) | for how long |
+|---|---|---|---|
+| `Scene_1` | the tilt's entry on the top (above) | 6.2, **8.0** | 2 frames |
+| `Scene_1` | the tilt's entry on the bottom (swing 38°) | 5.3, 6.7, then 6.0 | 2 frames |
+| `Scene_1` | the tilt's exit by dx (a quarter turn) | **8.7 → 8.0** | ~10 frames (the run's largest, 8.7 — not the entry) |
+| `Scene_0` | the tilt's entry on the bottom | 6.4, **8.2**, 6.9 | 3 frames |
+| `Scene_0` | the ridge's half turn (2.4b) | **8.8 → 8.5** | most of its ~30 frames |
+| `Scene_0bis` | the spit's half turn | 6.9, **8.9 → 8.1** | most of its ~30 frames |
+
+**In plain words**: when the frame changes, the game starts ONE camera turn from the picture on the glass — but the camera's "square to the face"
+rule starts its own pitch over the edge at the same moment, at the same speed. Each obeys the one speed; together the picture moves up to one and a
+half times as fast. At the tilt's entry it shows as a jolt, because the piece's direction is also corrected for a step that the pitch had already
+undone in that frame.
+
+The brief's candidates: the finger's pace — not involved (made with the approach over, the turn goes by time); C3's cap — the turn's own clock
+already keeps the one speed, the excess is its moving target; the direction's ease — yes (1.); the turn starting a frame late — costs nothing by
+itself (the camera's turn is 0.04° at its first frame).
+
+### 12.2 Tried, measured, reverted — nothing of it committed
+
+| trial | `Scene_1` | `Scene_0` | `Scene_0bis` |
+|---|---|---|---|
+| today | the largest 8.7°, in all 673°; the entry 6.2 / 8.0 | 8.8° | 8.9° |
+| T1 — the ease read once the frame's view is set (after `calmFrame`) | the entry **0.4 / 1.4**; but the bottom's entry **10.4** (was 6.7): the gap now holds the square's first step, which the camera's turn counts too, while the square keeps turning | — | — |
+| T2 — T1, and the square camera at its target while a transition's turn runs (its pitch INSIDE the one turn) | **6.0** at most, in all 504°; the same tilts made / left | 8.0 (a finger drag, no turn running) | ⛔ **54.6**: the spit's turn starts in the camera's stage, after the read — the piece's direction jumps; every start of a turn would need the read |
+
+So (1.) cannot be fixed alone: it is part of (2.). T2 shows the shape of a fix, and that it is not local.
+
+### 12.3 Why it is not built
+
+The cause is structural (a transition's one turn and the square camera's pitch: two clocks, the ease read between them), it lies in code every change
+of frame close in shares (the tilt's entry and exit, the ridge, the spit, the zones), and any fix changes how every one of them looks — the ridge's
+and the spit's half turns from 8.5 – 8.9° a frame to 6°, their pitch over the edge merged into the one turn — which the owner has looked at and
+accepted (2.4b, 2.4c, C4). By the brief and the standing rule (*root cause before patch*): the finding, the numbers and the options; no build. A fix
+for the entry alone would be the special case beside the rule.
+
+### 12.4 The options — the owner's
+
+| | what | what the player sees | cost |
+|---|---|---|---|
+| **A** (recommended) | **The one turn truly one**: while a transition's turn runs the square camera's target is reached INSIDE it (its pitch part of the one turn), and the direction's ease is read once the frame's view is set — at every start of a turn (the tilt's entry and exit, the ridge, the zone's switch, the spit's crossing in the camera's stage, a free face's entry and exit) | every change of frame close in turns the picture ONCE, never over the one speed (today 6.9 – 8.9° a frame); about as long as today (the larger of the two angles at the one speed) | a build across the turn starts; the three scenes' replays change at every transition (T2: `Scene_1` 8.7 → 6.0°) |
+| **B** | **A limiter on the picture**: each frame the turn's share held back until the picture moves no more than the one speed from the pose shown, whatever runs beside it | the same cap; the two motions still overlap | the piece's ease would lag the camera's share by a frame; a target turning faster than the speed by itself is not limited |
+| **C** | **One shared budget**: the square camera's pitch takes each frame only what the transition's turn leaves of the one speed | the pitch slowed while a turn runs | two clocks kept, coupled — W1's shape (one obstacle, several mechanisms) |
+| **D** | **Keep as is** | 8 – 9° a frame at a transition under a fast finger: a jolt of 1 – 2 frames at the tilt's entry, the whole half turn at the ridge and the spit | nothing |
