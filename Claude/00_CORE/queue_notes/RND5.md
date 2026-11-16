@@ -177,4 +177,4 @@ runs alone (the session's scratchpad `tilt_check.mjs`: `MODE=ridge`, `MODE=press
 * ✅ **C3 built and audited** (`86f2cbe`, an Opus agent, + the auditor's completion: the one speed on the picture): the way out of close in blended —
   the study's §8.1. Today measured first (180° in 0.52 s whatever the finger, the gizmo held, trailing the zoom); now the turn follows the approach
   finger over `tiltOutBlendMm` (12 mm; 0: today's), smooth at both ends, never over the one speed (6.0° a frame at most), the gizmo free, finished by
-  time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. LOCAL — the owner's look owed.
+  time only once the finger has lifted. **2058 vectors**; the slider at 0: bit for bit. ✅ Deployed 2026-11-16 (the owner: *"Deploy"*): `c7ac510` merged as main `40c6325`, live, both switches on by default; the owner's look owed.
