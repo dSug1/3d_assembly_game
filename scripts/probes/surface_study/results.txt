@@ -1,0 +1,1414 @@
+THE ORBIT'S SURFACE — THE STUDY (2026-11-16): the named library, the pairs and the parametric sweep, read TODAY and PROPOSED
+ORBIT_SURFACE.md; the owner: "I suggest you complement this set of rules by doing like you did for the orbit charts: you elaborate some basic geometries or
+topologies with surface singularities and you consolidate the rules you have drafted, or amend them, or add rules which are missing to cover cases we did
+not consider." — "Make sure you manage the load on my computer" (one process at a time, one core, each run under a minute).
+Readings: T = today's pure functions (buildFaceMap chart layout, stackDepthAt, castPoint, mapTarget, shellAnchor, footprintSupport, mouthHold) with an exact
+ray cast for modelCast; P = the principles as written (P2 first contact from outside far / from the piece close in, "nothing to land on" marked; P1's shell).
+Pieces: A 41.3 x 45 (48 tall), B 80 x 80 (40 tall), the bar 20 x 100 (20 tall). Thresholds: noise 0.5 mm, glide 5 mm, skin 0.3 mm, the shell's 60 mm.
+Emulated (engine-bound in the game): rawGizmo's D3 cast (from outside the box at castPoint, MAP_OUT 50 mm, a bridge counts a hit 0.5 mm in front), heldFoot
+(the two smallest sizes of the piece's own box). Left out: the edge blend (dead), the depth glide and every ease (the SHOWN gizmo, not the target), the
+solver's slide, the ring's hold, the automatic tilt. The travels are sampled on the facet's plane directly (not through mapTarget's angles) except the far
+regime (mapTarget on a grid of angles, d = 0.3 m). Close in = the piece at contact (d = 0), its bottom from where it is, a travel stopped at its first wall
+(the gizmo read at the solved angles). Parts: boxes and convex prisms only; exact levels and casts; S22 by a 4 mm voxel flood; coverage on 8 mm samples.
+
+═══ 1. THE NAMED LIBRARY: per shape x rule ═══
+
+■ L01 through hole 100  [C4 (genus 1)] — a 100 x 100 hole right through the block, inside the top  (4 parts)
+    expects P2: wider than A (41.3 x 45) and B? no (80 < 100: B fits): nothing to land on in the band where the piece clears both rims, MARKED; the plane elsewhere
+    expects S6: consequence of P2 (no blanket closing)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+    expects S13: the way through is the plunge (not built)
+  piece A:
+    landing (far)        T AIR 114/562 (no part under it)  |  P holds (+114 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 41/562 (no part under it)  |  P holds (+41 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9901 cm²)
+    coverage (S24, A)    T 90% · P 90% (no facet 0%, hidden 10%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L02 through hole 30 (narrower)  [C4] — a 30 x 30 hole through, narrower than every piece  (4 parts)
+    expects P2: P2: narrower than the piece — closed by its rims (S8 as a consequence): the gizmo on the plane
+    expects S6: closed (today by 'no floor', P2 by the rims)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9539 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L03 blind slot 60x60x40  [C6] — a pocket 60 x 60, 40 deep, inside the top; a peg 59 x 59 seats in it from above  (5 parts)
+    expects P2: P2: the piece fits — its floor, half a piece from each wall (the step moved half a piece out); S5 the real depth in the central band only (A fits; B does not: closed)
+    expects S5: the real depth under the gizmo — P2 changes it within half a piece of each wall
+    expects S21: the peg withdrawn along +y clears; its landing = its seat
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 84/482 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 54%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 54%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9306 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           withdrawal clear; landing T 200 · P 200 vs seat 200
+    determinism          holds
+    sensitivity          slot width at A's 41.3: T no flip · P no flip | slot width at A's 45: T FLIPS 240→200 (×20) · P FLIPS 240→200 (×20) | slot width at B's 80: T FLIPS 240→200 (×20) · P FLIPS 240→200 (×20) | slot width at B's heldFoot 40 (its height): T no flip · P no flip
+
+■ L04 blind slot 30x30x40 (narrower)  [C6, C8] — a pocket 30 x 30, 40 deep  (5 parts)
+    expects P2: P2: narrower than the piece — closed by its rims (S8 as a consequence): the gizmo on the plane
+    expects S8: a void the piece cannot enter is surface (built)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9287 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L05 channel 60w 30d, open at one end  [C5] — a 60-wide, 30-deep channel from z -100 to the front edge, open there  (4 parts)
+    expects P2: P2: the piece fits — its floor, half a piece from each wall (the step moved half a piece out); S5 the real depth in the central band only for A; B (80) closed
+    expects P3: at the open end (seen from the front): a mouth — S10 the tilt at the lip, P3 to measure
+    expects S21: a block slid in from the open end (+z): withdrawal clears
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 44/622 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 52%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 77%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 381/622 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9388 cm²)
+    coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
+    goal (S21)           withdrawal clear; landing T -100 · P -100 vs seat 120
+    determinism          holds
+
+■ L06 channel 60w 30d, open at both ends  [C5] — a 60-wide, 30-deep channel the whole top long  (3 parts)
+    expects P2: P2: the piece fits — its floor, half a piece from each wall (the step moved half a piece out); S5 the real depth in the central band only
+    expects S7: consequence of P2
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 41/622 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 77%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 77%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 381/622 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9487 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L07 mouth (L05 seen from its open end)  [C7(a)] — the front face with the channel's end: a 60 x 30 notch at its top edge  (4 parts)
+    expects S10: [OWNER] the tilt happens when the red reaches the edge at the bottom of the mouth (the lip at y 210)
+    expects P3: the place belongs to the top's facet where the front's direction finds nothing (the channel's back is 340 mm away): measured, not built
+    expects P4: the hold (built) is the one TARGET exception: path state on a dy
+    expects P2: seen along the front's normal: the channel's back wall at z -100 is 340 mm deep — inside the shell's window? no: a 'floor' far behind
+  piece A:
+    landing (far)        T AIR 8/763 (max 340 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9388 cm²)
+    coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L08 groove 13w 10d  [C8] — a 13-wide, 10-deep groove the whole top long (the cube's bottom groove)  (3 parts)
+    expects P2: P2: narrower than the piece — closed by its rims (S8 as a consequence): the gizmo on the plane
+    expects S8: built
+    expects noise: a joint under 3.2 mm closed by growth (MAP_GROW_M) — the noise family (§2.6)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9292 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+    sensitivity          groove width at the joint ruler 3.2 (2 x MAP_GROW): T no flip · P no flip
+
+■ L09 two islands, gap 3  [C9 (islands), C8] — two blocks 3 mm apart (the whole assembly)  (2 parts)
+    expects P2: narrower than the piece: closed by the rims
+    expects OS11: today: hangs at the nearest plane (WS4)?
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+    expects noise: 3 mm: closed by MAP_GROW
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       today 11520 vs S22 9216 cm² (sealed 2304, buried 0)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L10 two islands, gap 30  [C9 (islands), C8] — two blocks 30 mm apart (the whole assembly)  (2 parts)
+    expects P2: narrower than the piece: closed by the rims
+    expects OS11: today: hangs at the nearest plane (WS4)?
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+    expects noise: —
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (11059 cm²)
+    coverage (S24, A)    T 79% · P 79% (no facet 0%, hidden 21%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L11 two islands, gap 60  [C9 (islands), C8] — two blocks 60 mm apart (the whole assembly)  (2 parts)
+    expects P2: wider than A: nothing to land on (no floor), MARKED; B (80) closed
+    expects OS11: today: hangs at the nearest plane (WS4)?
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+    expects noise: —
+  piece A:
+    landing (far)        T AIR 460/964 (no part under it)  |  P holds (+460 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 422 places depend on the way in (420 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (10598 cm²)
+    coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L12 step 60 (half the top lowered)  [C3 (a concave edge), C35] — the top's front half 60 mm lower: a riser across the top  (2 parts)
+    expects P2: far: the marker on the high tread until half a piece past the riser's edge, then the low one (a step moved half a piece out)
+    expects P5: close in: the riser is a wall going back up; blocked, out and back in
+    expects C12: seen from the front: the low tread's riser face; the high tread is parallel to the front's cast (I10)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 44/1585 (max 48 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 86%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 86%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 380/1585 (max 40 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 65%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 85%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (8794 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L13 staircase (treads 60, risers 30)  [C3, C12 (the tread)] — four steps down toward the front: treads 60 deep, risers 30  (5 parts)
+    expects P2: from the top: each tread its own landing, the steps moved half a piece toward the low side
+    expects C12: from the front (the red climbs the risers): the treads have zero width on the front's height field — no rule (⏳ D-S7)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 778/1565 (max 48 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 41%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm  |  P reach 81%, 2 travel-ends trapped (P5), 8 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 882/1565 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (7 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 41%, 6 travel-ends trapped (P5), 7 drops ≥ 5 mm  |  P reach 82%, 2 travel-ends trapped (P5), 7 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (8904 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L14 L (the assembly)  [C40, C3] — the block less its front-right quarter: an L seen from above  (2 parts)
+    expects OS13: the contour spans the missing quarter: its facets are partly void
+    expects P2: over the missing quarter: nothing to land on (no floor), marked
+    expects C40: ⏳ open: no rule (a measure, D-S20)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 20/1094 (max 48 mm); AIR 438/1094 (no part under it)  |  P holds (+438 nothing to land on, marked)
+    continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 98%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 98%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 40/1094 (max 40 mm); AIR 400/1094 (no part under it)  |  P holds (+400 nothing to land on, marked)
+    continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 97%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 97%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (8064 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L15 notch 47 at the top-front edge  [C3, C35] — a 47-wide notch cut into the top-front edge, 60 down, 50 in (Scene_1's notches)  (4 parts)
+    expects P2: 47 > 45 > 41.3: A fits its floor only where it clears the riser; B closed
+    expects P3: not applied: the notch has a floor along each facet's direction (§2.2 P3)
+    expects owner: 'Stays as it is' (POLAR_ORBIT_CLEANUP §6 (a))
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 128/809 (max 48 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 56%, 6 travel-ends trapped (P5), 6 drops ≥ 5 mm  |  P reach 56%, 6 travel-ends trapped (P5), 6 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9116 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L16 missing corner 100  [C35 (across three facets)] — a 100 mm cube missing at the top-front-right corner  (3 parts)
+    expects P2: its floor from each facet where the piece fits (A, B both fit 100)
+    expects OS1: a saddle / concave corner the charts pay for, unseen (the contour is convex)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 84/724 (max 48 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 72%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 72%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 160/724 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 67%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 67%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (8993 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L17 overhang slab  [C10] — a 300 x 30 slab on the top, sticking 100 mm out over the front face  (2 parts)
+    expects OS3: its underside only from the bottom cap
+    expects P2: from the top: the slab's top; from the front: the slab's end
+    expects P1: the slab sticks out of the block's box: the box and the shell grow — the path changes (P1 'no change' cannot hold for what changes the box)
+  piece A:
+    landing (far)        T ENTERS 417/1986 (max 48 mm); AIR 68/1986 (max 240 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (5 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 52%, 7 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 69%, 5 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 489/1986 (max 40 mm); AIR 51/1986 (max 240 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (5 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 7 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 67%, 5 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 100 mm (SIDE yaw 60 pitch -40; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (SIDE yaw 60 pitch 40; box 100 mm, contour Δ 0 mm)
+    exposure (S22)       holds (10140 cm²)
+    coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds (a tie at a wall's exact place: T 30 mm)
+
+■ L18 tray (an open box)  [C25] — a 300 x 120 x 300 tray, walls 20 thick (the whole assembly)  (5 parts)
+    expects P2: its floor where the piece fits (260 inner: A, B fit)
+    expects C25: the inner walls face no facet: never a place (S13: approached)
+    expects S21: a load set on the floor from above: reachable
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 84/582 (max 48 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 88%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 88%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/582 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 81%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 81%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (4030 cm²)
+    coverage (S24, A)    T 75% · P 74% (no facet 0%, hidden 25%, closed T 0% / P 1%)
+    goal (S21)           withdrawal clear; landing T 20 · P 20 vs seat 20
+    determinism          holds
+
+■ L19 tray sealed by a lid (two stages)  [C26, C46] — L18, then a lid seated on it: the cavity sealed  (6 parts)
+    expects S22: the sealed inner faces are not surface (reachable from outside: no)
+    expects S19: rebuilt at the seat; the gizmo over the lid relocated once (C46)
+    expects today: WS19: the inner faces stay in the map (not glued)
+    expects S21: the lid set from above: reachable
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       today 5650 vs S22 3252 cm² (sealed 2397, buried 0)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           withdrawal clear; landing T 20 · P 120 vs seat 120
+    determinism          holds
+    stages (C46)         stage 1: gizmo at the top's centre T 20 · P 20; exposed today 4061 / S22 4030 (sealed 31); top-stack groups below the top 1 → stage 2: gizmo at the top's centre T 140 · P 140; exposed today 5650 / S22 3252 (sealed 2397); top-stack groups below the top 1
+
+■ L20 parts overlapping (a cube sunk 30 into the top)  [C27] — a 100 mm cube whose lower 30 mm are inside the block  (2 parts)
+    expects S22: the buried faces (the cube's lower sides, the block's top under it) are not surface
+    expects today: WS19: buried faces stay in the map
+    expects P2: P2: the piece touches the top first — the marker climbs half a piece BEFORE the part (far); close in the drop starts at the piece: a WALL (P5, his Q1 (b))
+  piece A:
+    landing (far)        T ENTERS 84/562 (max 48 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/562 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 18%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 18%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 70 mm (TOP yaw 0 pitch 60; box 70 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 70 mm (TOP yaw 0 pitch 60; box 70 mm, contour Δ 0 mm)
+    exposure (S22)       today 9769 vs S22 9462 cm² (sealed 0, buried 307)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds (a tie at a wall's exact place: T 70 mm)
+
+■ L21 parts touching on an edge  [C28] — two 100 mm cubes on the top sharing one vertical edge  (3 parts)
+    expects P2: each cube's top where the piece touches it; the pinch has no width
+    expects noise: the coplanar tolerance (§2.6)
+    expects P1: the cubes raise the box: the path changes far out
+  piece A:
+    landing (far)        T ENTERS 84/642 (max 48 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 12%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 12%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/642 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 7%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 7%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 60; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 60; box 100 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9937 cm²)
+    coverage (S24, A)    T 92% · P 92% (no facet 0%, hidden 8%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L22 parts touching at a corner  [C28] — a cube on the top and a second one touching it only at a corner, up in the air  (3 parts)
+    expects P2: the high cube's top first where the footprint is under it; else the low cube's
+    expects noise: the coplanar tolerance
+    expects OS3: the high cube's underside: from the bottom cap only
+  piece A:
+    landing (far)        T ENTERS 84/642 (max 48 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 56%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/642 (max 40 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 53%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 22%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 80; box 100 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 100 mm (TOP yaw 0 pitch 80; box 100 mm, contour Δ 0 mm)
+    exposure (S22)       holds (10138 cm²)
+    coverage (S24, A)    T 91% · P 90% (no facet 0%, hidden 9%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L23 arch (two posts and a lintel)  [C29 (genus), C10] — two 60 x 120 posts on the top and a lintel across them: an opening 140 wide, 120 high  (4 parts)
+    expects P2: from the front: the opening is a void with its floor (the block's top) far behind — the piece reaches the back wall? the block's front face is the facet; the arch stands in front
+    expects OS3: the lintel's underside only from the bottom cap
+    expects C29: the hole through runs along the facet: no rule names it (P2 + OS3)
+  piece A:
+    landing (far)        T ENTERS 40/1504 (max 48 mm); AIR 442/1504 (no part under it)  |  P holds (+274 nothing to land on, marked)
+    continuity           T holds (14 glided steps)  |  P holds (9 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 78%, 2 travel-ends trapped (P5), 12 drops ≥ 5 mm  |  P reach 78%, 2 travel-ends trapped (P5), 5 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 78/1504 (max 40 mm); AIR 331/1504 (no part under it)  |  P holds (+163 nothing to land on, marked)
+    continuity           T holds (14 glided steps)  |  P holds (9 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 77%, 2 travel-ends trapped (P5), 12 drops ≥ 5 mm  |  P reach 77%, 2 travel-ends trapped (P5), 5 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (10156 cm²)
+    coverage (S24, A)    T 91% · P 90% (no facet 0%, hidden 9%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L24 table on four legs (the whole assembly)  [C29, C10, C40] — a 400 x 30 x 400 top on four 30 mm legs 200 tall  (5 parts)
+    expects P2: from the front between the legs: the back legs far behind or nothing to land on; from below: the top's underside between the legs
+    expects OS13: the contour is mostly void on the sides
+    expects S4: the bottom is a face like the others
+  piece A:
+    landing (far)        T AIR 467/1785 (no part under it)  |  P holds (+467 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 189 places depend on the way in (0 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 412/1785 (no part under it)  |  P holds (+412 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 189 places depend on the way in (0 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 188.9 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 200 mm)  |  P BROKEN: the foot moves 188.9 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 200 mm)
+    exposure (S22)       holds (4736 cm²)
+    coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L25 elbow tunnel  [C30] — a 60 x 60 shaft down from the top that turns and leaves through the front  (5 parts)
+    expects P2: each mouth judged on its own facet: from the top the shaft's floor (the tunnel's floor at 120) where the piece fits; from the front the tunnel's back wall
+    expects C30: nothing ties the two ends (no rule)
+  piece A:
+    landing (far)        T ENTERS 124/964 (max 48 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 65%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm  |  P reach 65%, 6 travel-ends trapped (P5), 8 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9927 cm²)
+    coverage (S24, A)    T 93% · P 92% (no facet 0%, hidden 7%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L26 countersunk slot (narrowing 45°)  [C31 (narrowing)] — a slot 70 wide at the top, chamfered 45° to 30 at 20 deep, then 30 wide to 60 deep, 200 long  (7 parts)
+    expects P2: 70 > A: the piece drops until it touches the chamfers (exact, LP): a landing between 220 and 240; B (80) closed
+    expects C31: today: the chamfers are > 20° from the top: in no group; the 30-wide bore's floor
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 232/482 (max 48 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 66%, 4 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 232/482 (max 40 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9336 cm²)
+    coverage (S24, A)    T 97% · P 96% (no facet 1%, hidden 2%, closed T 0% / P 1%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L27 V groove 60w 30d  [C31 (a V)] — a V groove 60 wide, 30 deep, the whole top long  (2 parts)
+    expects P2: the piece rests on the V's two flanks: the landing a few mm under the plane at the centre
+    expects C31: today: the flanks (45°) in no group — the V open both ends, no floor: bridged? the nearest plane
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T AIR 258/482 (max 9.4 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 241 places depend on the way in (240 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 75%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 241 places depend on the way in (240 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9277 cm²)
+    coverage (S24, A)    T 96% · P 96% (no facet 4%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L28 counterbore  [C31 (stepped)] — an 80 x 80 recess 15 deep, then a 40 x 40 bore to 60 deep  (9 parts)
+    expects P2: A lands on the recess's floor (225) — the bore (40 < 41.3) closed; B (80) closed
+    expects C31: today: the fit read at the plane only (80 wide): A enters, then the bore's floor?
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 158/482 (max 45 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 58%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 58%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 158/482 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 50%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9275 cm²)
+    coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L29 dovetail slot (widening)  [C31 (widening, an undercut)] — a slot 30 wide at the mouth widening to 50 at 25 deep, the whole top long  (5 parts)
+    expects P2: the mouth (30) narrower than A: closed; from the front (its end) the undercut profile
+    expects OS3: the undercut's overhangs from no facet
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 23 places depend on the way in (23 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 23 places depend on the way in (23 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9504 cm²)
+    coverage (S24, A)    T 95% · P 95% (no facet 2%, hidden 1%, closed T 2% / P 2%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L30 ramp 18° (within the merge)  [C31 (inclined floor)] — a 120 x 60 pocket whose floor slopes 18° down from the top's level to 39 mm deep  (5 parts)
+    expects P2: 60 wide > A: the piece slides down the slope? no — a translation along −n: it touches the slope's high side under its footprint
+    expects C31: today: within 20° a floor at its centre level; the cast reads the slope
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 178/482 (max 38.7 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 68%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 178/482 (max 38.7 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9096 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+    sensitivity          ramp angle at the merge 20°: T FLIPS 209→240 (×15.5) · P FLIPS 216.1→213.4 (×1.3)
+
+■ L31 ramp 35° (beyond the merge)  [C31] — the same pocket, its floor 35° (84 mm deep at the low end)  (5 parts)
+    expects P2: as L30, steeper
+    expects C31: today: beyond 20° in no group — the pocket bridged (closed, no floor) or the nearest plane (WS22)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T AIR 93/482 (max 54.9 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 68%, 3 travel-ends trapped (P5), 38 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9252 cm²)
+    coverage (S24, A)    T 98% · P 98% (no facet 1%, hidden 2%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L32 boss in a pocket  [C32] — a 150 x 150 pocket 40 deep with a 50 x 50 boss rising to 20 below the top  (6 parts)
+    expects P2: the moat (50 wide) fits A: its floor; over the boss the boss's top; between, the boss's edge half a piece out
+    expects C32: today: the opening read at the plane is the whole pocket
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 170/562 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 34%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 34%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 198/562 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 63%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 63%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9482 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L33 tube (a hole in a protrusion)  [C32, C11] — an 80 x 80 square tube 60 tall on the top, walls 15, a 50 x 50 hole  (5 parts)
+    expects P2: the 50 hole fits A: its floor (the block's top) inside; the walls' top elsewhere; B rests on the walls
+    expects P1: the tube raises the box: the path changes far out
+  piece A:
+    landing (far)        T ENTERS 168/482 (max 48 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (8 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 25%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 254/482 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 60 mm (TOP yaw 0 pitch 60; box 60 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 60 mm (TOP yaw 0 pitch 60; box 60 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9507 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L34 plateau 120x120x20  [C33 (a plateau)] — a 120 x 120 block 20 tall on the top  (2 parts)
+    expects P2: P2: the piece touches the top first — the marker climbs half a piece BEFORE the part (far); close in the drop starts at the piece: a WALL (P5, his Q1 (b))
+    expects P1: the plateau raises the box by 20: the path changes far out
+  piece A:
+    landing (far)        T ENTERS 86/562 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 21%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 21%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 158/562 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 15%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 15%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 20 mm (TOP yaw 180 pitch 60; box 20 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 20 mm (TOP yaw 165 pitch 80; box 20 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9293 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L35 pin 10x10x40  [C33 (a pin)] — a 10 x 10 pin 40 tall  (2 parts)
+    expects P2: the piece touches the pin's top first wherever its footprint covers the pin (a 51 x 55 region for A): a landing on a pin, ③ first contact is not rest
+    expects S23: the same ruler as voids (consequence of P2)
+    expects P1: the pin raises the box by 40: the path changes far out
+  piece A:
+    landing (far)        T ENTERS 84/402 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/402 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 28%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9229 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L36 rib 10w 15h 300 long  [C33 (a rib)] — a 10-wide rib 15 tall along z  (2 parts)
+    expects P2: P2: the piece touches the top first — the marker climbs half a piece BEFORE the part (far); close in the drop starts at the piece: a WALL (P5, his Q1 (b))
+    expects P1: raises the box by 15
+  piece A:
+    landing (far)        T ENTERS 40/402 (max 15 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 69%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 69%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 78/402 (max 15 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 64%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 64%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 15 mm (TOP yaw 0 pitch 60; box 15 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 15 mm (TOP yaw 0 pitch 60; box 15 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9313 cm²)
+    coverage (S24, A)    T 99% · P 98% (no facet 0%, hidden 1%, closed T 0% / P 1%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L37 mushroom (stem 20, cap 60)  [C33 (with its own overhang)] — a 20 x 20 stem 30 tall carrying a 60 x 60 cap 10 thick  (3 parts)
+    expects P2: the cap's top first; its underside from the bottom cap only (OS3)
+    expects P1: raises the box by 40
+  piece A:
+    landing (far)        T ENTERS 84/442 (max 30 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 27%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 27%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/442 (max 30 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 19%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 19%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 195 pitch 80; box 40 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9306 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L38 grille (20 holes, 30 pitch, through)  [C34] — 36 holes 20 x 20 through, at a 30 mm pitch  (44 parts)
+    expects P2: every hole narrower than the piece: the grille is surface at its bars' tops
+    expects D5: the holes inside a frame count as face (filledRegion)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (14657 cm²)
+    coverage (S24, A)    T 59% · P 59% (no facet 0%, hidden 41%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L39 studs (12 x 12 x 8, 40 pitch)  [C34 (studs)] — a 4 x 4 field of studs  (17 parts)
+    expects P2: a field of studs is surface at their tops where the footprint covers one (A 41.3 > 28 gap: always on a stud inside the field)
+    expects today: the gizmo climbs each stud (C33): 8 mm steps
+    expects P1: raises the box by 8
+  piece A:
+    landing (far)        T ENTERS 350/522 (max 8 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 422/522 (max 8 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 10%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 10%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 8 mm (TOP yaw 0 pitch 60; box 8 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 8 mm (TOP yaw 0 pitch 60; box 8 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9226 cm²)
+    coverage (S24, A)    T 100% · P 98% (no facet 0%, hidden 0%, closed T 0% / P 2%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L40 frame (a pocket taking most of the facet)  [C35 (void or face?)] — a 400 x 400 pocket 20 deep, a 40 mm rim  (5 parts)
+    expects D5: which plane is the facet's: the pocket's floor (larger) or the rim? (C35, ⏳ order)
+    expects P2: the floor where the piece fits; the rim's 40 < A: closed? (the rim is material: a landing)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 84/958 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 87%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 87%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/958 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 84%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 84%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9318 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 1%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L41 rebate 60w 30d along the top-front edge  [C35 (a rebate)] — a 60-wide, 30-deep step along the whole top-front edge  (2 parts)
+    expects P2: A fits the rebate (60 > 45): its floor beyond half a piece from the riser; B closed
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 22/844 (max 30 mm); AIR 8/844 (max 60 mm)  |  P holds
+    continuity           T holds (1 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 91%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 79%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 40/844 (max 30 mm)  |  P holds
+    continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 89%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 89%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9137 cm²)
+    coverage (S24, A)    T 98% · P 100% (no facet 0%, hidden 0%, closed T 2% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L42 step of 0.3 mm  [C36 (shallow)] — the top's back half raised 0.3 mm  (2 parts)
+    expects noise: under the coplanar 0.5 mm: one plane
+    expects P2: far: the step moved half a piece onto the low side; close in: a 6 mm riser is a wall
+    expects P1: raises the box by the step: a 'no change' rule cannot hold
+  piece A:
+    landing (far)        T ENTERS 22/602 (max 0.3 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 39/602 (max 0.3 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9216 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          BROKEN: order T 0 P 0 contour 0.3; turned+moved T 0 P 0 contour 0
+
+■ L43 step of 1 mm  [C36 (shallow)] — the top's back half raised 1 mm  (2 parts)
+    expects noise: between 0.5 and 5 mm: a jump with no event (WS23, C36)
+    expects P2: far: the step moved half a piece onto the low side; close in: a 6 mm riser is a wall
+    expects P1: raises the box by the step: a 'no change' rule cannot hold
+  piece A:
+    landing (far)        T ENTERS 22/602 (max 1 mm)  |  P holds
+    continuity           T BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided  |  P BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 86%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 86%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 39/602 (max 1 mm)  |  P holds
+    continuity           T BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided  |  P BROKEN: 1 jumps 0.5–5 mm with no event (max 1 mm); 0 glided
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 84%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 1 mm (TOP yaw 195 pitch 60; box 1 mm, contour Δ 1 mm)  |  P BROKEN: the foot moves 1 mm (TOP yaw 0 pitch 60; box 1 mm, contour Δ 1 mm)
+    exposure (S22)       holds (9216 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+    sensitivity          step height at the coplanar 0.5 mm: T no flip · P no flip | step height at the glide's 5 mm: T FLIPS 244→246 (×1) · P FLIPS 244→246 (×1)
+
+■ L44 step of 6 mm  [C36 (shallow)] — the top's back half raised 6 mm  (2 parts)
+    expects noise: a glided step (the named depth event)
+    expects P2: far: the step moved half a piece onto the low side; close in: a 6 mm riser is a wall
+    expects P1: raises the box by the step: a 'no change' rule cannot hold
+  piece A:
+    landing (far)        T ENTERS 22/602 (max 6 mm)  |  P holds
+    continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 86%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 86%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 39/602 (max 6 mm)  |  P holds
+    continuity           T holds (1 glided steps)  |  P holds (1 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 84%, 1 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 6 mm (TOP yaw 195 pitch 60; box 6 mm, contour Δ 6 mm)  |  P BROKEN: the foot moves 6 mm (TOP yaw 0 pitch 60; box 6 mm, contour Δ 6 mm)
+    exposure (S22)       holds (9331 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L45 shallow edge (a low gable, 8°)  [C37 (shallow edge)] — a roof of 8° on the top, its ridge along z  (3 parts)
+    expects P1: merged under 20°: one facet, its normal up to 8° off the real faces'
+    expects P2: the landing on the slope under the footprint (exact)
+    expects C37: the rest normal (⏳)
+  piece A:
+    landing (far)        T ENTERS 396/802 (max 2.9 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 396/802 (max 5.6 mm)  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 50%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 33.7 mm (TOP yaw 60 pitch 60; box 33.7 mm, contour Δ 16.9 mm)  |  P BROKEN: the foot moves 33.7 mm (TOP yaw 60 pitch 80; box 33.7 mm, contour Δ 16.9 mm)
+    exposure (S22)       holds (9034 cm²)
+    coverage (S24, A)    T 78% · P 78% (no facet 0%, hidden 22%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L46 knife wedge (a 20° ridge)  [C37 (acute), C13] — a triangular blade 30 wide at its foot, 85 tall, along z  (2 parts)
+    expects P2: the piece touches the ridge line first: a landing on a knife (③ not rest)
+    expects OS7: step B worse on a blade
+    expects P1: raises the box by 85
+  piece A:
+    landing (far)        T ENTERS 70/1049 (max 48 mm); AIR 332/1049 (no part under it)  |  P holds (+236 nothing to land on, marked)
+    continuity           T holds (4 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 84%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 74%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 108/1049 (max 40 mm); AIR 270/1049 (no part under it)  |  P holds (+192 nothing to land on, marked)
+    continuity           T holds (4 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 82%, 2 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 71%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 85 mm (TOP yaw 0 pitch 60; box 85 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 85 mm (TOP yaw 60 pitch 80; box 85 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9665 cm²)
+    coverage (S24, A)    T 94% · P 94% (no facet 0%, hidden 6%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L47 fin 4 mm (80 tall, 200 long)  [C13] — a 4 mm plate standing 80 tall along z  (2 parts)
+    expects P2: the fin's edge first wherever the footprint covers it (45 mm of travel for A)
+    expects C13: today: nothing specific
+    expects P1: raises the box by 80
+  piece A:
+    landing (far)        T ENTERS 41/402 (max 48 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 70%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 70%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 79/402 (max 40 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 65%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 65%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 80 mm (TOP yaw 0 pitch 60; box 80 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 80 mm (TOP yaw 0 pitch 60; box 80 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9520 cm²)
+    coverage (S24, A)    T 97% · P 97% (no facet 0%, hidden 3%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds (a tie at a wall's exact place: T 80 mm)
+
+■ L48 U (the assembly)  [C40] — a back wall and two arms: a U open to the front  (3 parts)
+    expects OS13: the contour's top and front facets mostly void
+    expects P2: from the top: nothing to land on in the U; from the front: the back wall's face 360 mm behind
+    expects C40: ⏳ open
+  piece A:
+    landing (far)        T ENTERS 40/1354 (max 48 mm); AIR 199/1354 (no part under it)  |  P holds (+537 nothing to land on, marked)
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T BROKEN: 359 places depend on the way in (359 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 96%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 96%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 78/1354 (max 40 mm); AIR 161/1354 (no part under it)  |  P holds (+481 nothing to land on, marked)
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T BROKEN: 359 places depend on the way in (359 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 94%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 94%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 360 mm (SIDE yaw 45 pitch -40; box 0 mm, contour Δ 360 mm)  |  P BROKEN: the foot moves 360 mm (SIDE yaw 45 pitch -40; box 0 mm, contour Δ 360 mm)
+    exposure (S22)       holds (9216 cm²)
+    coverage (S24, A)    T 44% · P 43% (no facet 0%, hidden 56%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L49 ring (the assembly, a 200 hole)  [C40, C4 (genus 1)] — four blocks round a 200 x 200 hole through  (4 parts)
+    expects P2: nothing to land on over the hole's central band (marked)
+    expects OS2: genus 1: the contour never contains it
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T AIR 314/802 (no part under it)  |  P holds (+314 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 242/802 (no part under it)  |  P holds (+242 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (10189 cm²)
+    coverage (S24, A)    T 81% · P 81% (no facet 0%, hidden 19%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L50 two towers and a bridge  [C40, C29] — two 120 x 400 towers 240 apart, a bridge across their tops  (3 parts)
+    expects P2: from the front under the bridge: nothing to land on (no floor)
+    expects OS13: the contour's front facet mostly void
+    expects C40: ⏳ open
+  piece A:
+    landing (far)        T AIR 823/1614 (no part under it)  |  P holds (+823 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 349 places depend on the way in (0 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 734/1614 (no part under it)  |  P holds (+734 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 349 places depend on the way in (0 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 340 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 360 mm)  |  P BROKEN: the foot moves 340 mm (SIDE yaw 0 pitch -40; box 0 mm, contour Δ 360 mm)
+    exposure (S22)       holds (5088 cm²)
+    coverage (S24, A)    T 32% · P 32% (no facet 0%, hidden 68%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L51 nothing placed  [C42] — no part  (0 parts)
+    expects all: no rule says (C42, WS25): no box, no map; the gizmo held or at the boot centre
+    ALL CHECKS: no rule says — no placed part: shellBox null, no face map — the gizmo held or at the boot centre (assembly_wiring.ts:94-96); no rule says
+
+■ L52 one small part (30 mm cube)  [C42, C24] — a single 30 mm cube, smaller than every piece  (1 parts)
+    expects P2: the piece touches the cube's top wherever its footprint covers it; beyond: nothing to land on
+    expects C24: ⏳ a piece wider than its facet: open
+    expects C42: no rule says
+  piece A:
+    landing (far)        T AIR 96/242 (no part under it)  |  P holds (+96 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 24/242 (no part under it)  |  P holds (+24 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T no rule says (no twin: nothing placed without it)  |  P no rule says (no twin: nothing placed without it)
+    exposure (S22)       holds (61 cm²)
+    coverage (S24, A)    T 100% · P 100% (no facet 0%, hidden 0%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ L53 keyed slot 25x105 for the oblong piece  [C44] — a 25 x 105 slot 30 deep: the bar 20 x 100 fits only lengthwise along z  (5 parts)
+    expects P2: as held: lengthwise it lands on the floor; turned (long along t) closed — ② one map per orientation (Q3)
+    expects today: WS10: heldFoot = the two smallest sizes (20 x 20): 'fits' either way round
+    expects S21: the bar from above: reachable lengthwise
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece bar:
+    landing (far)        T ENTERS 120/482 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 51%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm  |  P reach 51%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm
+  piece barT:
+    landing (far)        T ENTERS 130/482 (max 20 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9298 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           withdrawal clear; landing T 210 · P 210 vs seat 210
+    determinism          holds
+    sensitivity          slot length at the bar's 100: T no flip · P FLIPS 240→210 (×15)
+
+■ Q01 through hole at the pole  [C4 + C41 (a void at a pole)]  (a PAIR) — L01's 100 mm hole at the top's centre, where the cap's quarters converge  (4 parts)
+    expects P2: nothing to land on at the pole, marked
+    expects P6: the pole on the landing map: one event (C41 ⏳)
+    expects C41: no rule says how the two meet
+  piece A:
+    landing (far)        T AIR 114/562 (no part under it)  |  P holds (+114 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T AIR 42/562 (no part under it)  |  P holds (+42 nothing to land on, marked)
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9953 cm²)
+    coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q02 channel through the pole, open at the edges that hold it  [C5 + C7(a) + C41]  (a PAIR) — a 60 x 30 channel the whole top long through its centre; its ends are mouths on the front and back  (3 parts)
+    expects S10: the tilt at the lip (y 210) on the red
+    expects P3: measured, not built
+    expects P6: the channel crosses the cap's centre: the quarters converge into a void (C41 ⏳)
+    expects P4: the hold is path state
+  piece A:
+    landing (far)        T ENTERS 40/1124 (max 30 mm)  |  P holds (+8 nothing to land on, marked)
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T BROKEN: 28 places depend on the way in (28 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 88%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm  |  P reach 88%, 2 travel-ends trapped (P5), 2 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 380/1124 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (0 glided steps)
+    function of place    T BROKEN: 28 places depend on the way in (28 held by the mouth's hold)  |  P holds
+    close in (P5)        T reach 75%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9482 cm²)
+    coverage (S24, A)    T 97% · P 96% (no facet 0%, hidden 3%, closed T 0% / P 1%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q03 pin beside a slot  [C6 + C33]  (a PAIR) — L03's slot with a 10 mm pin 30 tall standing 15 mm from its rim  (6 parts)
+    expects P2: A's footprint reaches the pin before it clears the slot's rim: the slot's floor narrowed on the pin's side
+    expects S21: the peg from above: clear of the pin (15 mm away)
+    expects P1: the pin raises the box
+  piece A:
+    landing (far)        T ENTERS 119/482 (max 40 mm)  |  P holds
+    continuity           T holds (6 glided steps)  |  P holds (6 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 45%, 4 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 45%, 4 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 78/482 (max 30 mm)  |  P holds
+    continuity           T holds (2 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 66%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 66%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9316 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           withdrawal clear; landing T 200 · P 200 vs seat 200
+    determinism          holds
+
+■ Q04 step inside a channel  [C5 + C3]  (a PAIR) — a 100-wide channel along z, 40 deep at the back, 60 deep at the front  (6 parts)
+    expects P2: the floor's step moved half a piece toward the deep side (far); close in the step up is a wall (P5)
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T ENTERS 63/622 (max 40 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 66%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 66%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 119/622 (max 40 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 61%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm  |  P reach 61%, 3 travel-ends trapped (P5), 3 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9440 cm²)
+    coverage (S24, A)    T 95% · P 94% (no facet 0%, hidden 5%, closed T 0% / P 1%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q05 two slots closer than the piece  [C6 x 2 + C41 (two features closer than the piece)]  (a PAIR) — two 30 x 30 slots 20 mm apart  (7 parts)
+    expects P2: each narrower than the piece: closed; the bar between them carries it
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9330 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q06 boss flush with the front edge  [C11 on an edge]  (a PAIR) — a 60 x 60 x 40 boss on the top, its front face flush with the block's  (2 parts)
+    expects P2: P2: the piece touches the top first — the marker climbs half a piece BEFORE the part (far); close in the drop starts at the piece: a WALL (P5, his Q1 (b))
+    expects P1: the boss raises the box: the front facet's top edge (the pole's band) moves
+    expects C41: a protrusion on the edge that holds the pole
+  piece A:
+    landing (far)        T ENTERS 63/814 (max 40 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 73%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 73%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 118/814 (max 40 mm)  |  P holds
+    continuity           T holds (3 glided steps)  |  P holds (3 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 69%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 69%, 3 travel-ends trapped (P5), 1 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 40 mm (TOP yaw 0 pitch 60; box 40 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 40 mm (TOP yaw 90 pitch 60; box 40 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9301 cm²)
+    coverage (S24, A)    T 99% · P 99% (no facet 0%, hidden 1%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q07 slot under an overhang  [C6 + C10 (a goal under an overhang)]  (a PAIR) — a slot 60 x 60 x 40 under a slab carried 60 mm above the top on a post  (7 parts)
+    expects S21: the peg withdrawn along +y meets the slab: NOT reachable that way — B4 finds it at the build
+    expects OS16: a goal that is not a place
+    expects P2: from the top the slab first
+  piece A:
+    landing (far)        T AIR 240/844 (no part under it)  |  P holds (+240 nothing to land on, marked)
+    continuity           T holds (1 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (1 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (10070 cm²)
+    coverage (S24, A)    T 91% · P 91% (no facet 0%, hidden 9%, closed T 0% / P 0%)
+    goal (S21)           BLOCKED by slab@40.3; landing T 320 · P 320 vs seat 200
+    determinism          holds
+
+■ Q08 grille under the pole  [C34 + C41]  (a PAIR) — L38's grille at the top's centre  (44 parts)
+    expects P2: surface at the bars' tops
+    expects P6: the pole over a porous region
+    expects P1: P1 (S17): far / medium the feature does not change the piece's or the camera's path (the shell, the contour) — only the gizmo's marker
+  piece A:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T holds  |  P holds
+    continuity           T holds (0 glided steps)  |  P holds (0 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 100%, 0 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (14856 cm²)
+    coverage (S24, A)    T 58% · P 58% (no facet 0%, hidden 42%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+■ Q09 pin in a hole (a moat)  [C32]  (a PAIR) — an 80 x 80 hole 40 deep with a 20 x 20 pin rising from its floor to 10 above the top  (6 parts)
+    expects P2: the moat is 30 wide (< A): A lands on the pin's top wherever it covers it, else the rim
+    expects C32: today: the pin stands proud: climbed; the opening the whole hole's
+    expects P1: the pin raises the box by 10
+  piece A:
+    landing (far)        T ENTERS 116/482 (max 48 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 37%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 156/482 (max 40 mm)  |  P holds
+    continuity           T holds (8 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 29%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 29%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T BROKEN: the foot moves 10 mm (TOP yaw 0 pitch 80; box 10 mm, contour Δ 0 mm)  |  P BROKEN: the foot moves 10 mm (TOP yaw 0 pitch 80; box 10 mm, contour Δ 0 mm)
+    exposure (S22)       holds (9297 cm²)
+    coverage (S24, A)    T 98% · P 98% (no facet 0%, hidden 2%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds (a tie at a wall's exact place: T 50 mm)
+
+■ Q10 fin beside a channel  [C5 + C13]  (a PAIR) — L06's channel with a 4 mm fin 60 tall on its rim  (4 parts)
+    expects P2: the fin is touched before the channel is entered from that side: the channel's floor narrowed
+    expects P1: the fin raises the box
+  piece A:
+    landing (far)        T ENTERS 62/482 (max 48 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (4 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 70%, 2 travel-ends trapped (P5), 1 drops ≥ 5 mm  |  P reach 70%, 2 travel-ends trapped (P5), 1 drops ≥ 5 mm
+  piece B:
+    landing (far)        T ENTERS 341/482 (max 40 mm)  |  P holds
+    continuity           T holds (4 glided steps)  |  P holds (2 glided steps)
+    function of place    T holds  |  P holds
+    close in (P5)        T reach 17%, 4 travel-ends trapped (P5), 0 drops ≥ 5 mm  |  P reach 67%, 2 travel-ends trapped (P5), 0 drops ≥ 5 mm
+    far regime (S17/P1)  T holds  |  P holds
+    exposure (S22)       holds (9695 cm²)
+    coverage (S24, A)    T 95% · P 95% (no facet 0%, hidden 5%, closed T 0% / P 0%)
+    goal (S21)           no goal
+    determinism          holds
+
+═══ 2. THE PARAMETRIC SWEEP: 1596 cells (piece A; two 1 mm travels through each feature) — cells BROKEN per check, T / P ═══
+  group                            cells        enter        air       jump       path        far       trap       drop
+  void island straight                64         40/0        0/0        8/8        0/0        0/0      24/24      16/16
+  void island stepped                 64         32/0        0/0        8/8        0/0      16/16      16/16        8/8
+  void island widening                32         16/0        0/0        0/0        0/0        0/0      16/16      16/16
+  void island through                 16          0/0        8/0        0/0        4/0        0/0        0/0        0/0
+  void strip1 straight                64         40/0        6/0       8/10        0/0        0/0      24/30      16/20
+  void strip1 stepped                 64         32/0        4/0       8/10        0/0      16/16      16/20       8/10
+  void strip1 widening                32         16/0        4/0        0/0        0/0        0/0      16/20      16/20
+  void strip1 through                 16          0/0       10/0        0/0        8/0        0/0        0/0        0/0
+  void strip2 straight                48         30/0        3/0        6/7        0/0        0/0      18/21      12/14
+  void strip2 stepped                 48         24/0        2/0        6/7        0/0      12/12      12/14        6/7
+  void strip2 widening                24         12/0        2/0        0/0        0/0        0/0      12/14      12/14
+  void strip2 through                 12          0/0        7/0        0/0        8/0        4/4        0/0        0/0
+  void ring straight                  64         40/0        6/0       8/10        0/0        0/0      28/30      16/20
+  void ring stepped                   64         32/0        4/0       8/10        0/0      16/16      20/20       8/10
+  void ring widening                  32         16/0        4/0        0/0        0/0        0/0      16/20      16/20
+  void ring through                   16          0/0        9/0        0/0        4/0        0/0        0/0        0/0
+  void array straight                 64         40/0        0/0        8/8        0/0        0/0      29/24      16/16
+  void array stepped                  64         32/0        0/0        8/8        1/0      16/16      21/16        8/8
+  void array widening                 32         16/0        0/0        0/0        0/0        2/2      16/16      16/16
+  void array through                  16          0/0        8/0        0/0        9/0        3/3        0/0        0/0
+  protrusion island straight          64         64/0        0/0      16/16        0/0      48/48      48/48      16/16
+  protrusion island stepped           64         48/0        0/0      16/16        4/0      48/48      35/32        0/8
+  protrusion island widening          32         32/0        0/0        0/0        0/0      32/32      32/32      16/16
+  protrusion strip1 straight          64         64/0        0/0      16/16        0/0      48/48      48/48      32/32
+  protrusion strip1 stepped           64         48/0        0/0      16/16        8/0      48/48      34/32        0/8
+  protrusion strip1 widening          32         32/0        0/0        0/0        0/0      32/32      32/32      32/32
+  protrusion strip2 straight          48         48/0        0/0      12/12        0/0      36/36      36/36        8/8
+  protrusion strip2 stepped           48         36/0        0/0      12/12        8/0      36/36      25/24        0/4
+  protrusion strip2 widening          24         24/0        0/0        0/0        0/0      24/24      24/24        8/8
+  protrusion ring straight            64         64/0        0/0      16/16        0/0      48/48      52/48      16/16
+  protrusion ring stepped             64         48/0        0/0      16/16        4/0      48/48      41/32        0/8
+  protrusion ring widening            32         32/0        0/0        0/0        0/0      32/32      32/32      16/16
+  protrusion array straight           64         64/0        0/0      16/16        0/0      50/50      54/48      16/18
+  protrusion array stepped            64         48/0        0/0      16/16        9/0      50/50      40/32        1/9
+  protrusion array widening           32         32/0        0/0        0/0        0/0      32/32      32/32      16/18
+  ALL                               1596       1102/0       77/0    228/238       67/0    697/697    849/833    367/432
+  (enter: the piece set at the gizmo enters a part; air: under it nothing within 0.5 mm, unmarked; jump: a 0.5–5 mm depth step with no event; path: a target
+   that depends on the way in; far: the far foot moves > 0.5 mm against the bare block; trap: a close-in travel that ends at a wall; drop: close in the piece
+   goes down ≥ 5 mm into something)
+
+═══ 3. THE FINDINGS, GROUPED BY CAUSE (evidence only — no rule change proposed) ═══
+Kinds: (i) a principle confirmed · (ii) a principle that breaks one of the owner's rules · (iii) two rules in conflict · (iv) a case no rule covers ·
+       (v) a difference between today's code and the proposal that changes what the player sees.
+
+F1 (v) + (i) — TODAY THE GIZMO IS A POINT: the piece set at it, centred, enters the part beside every wall, rim and protrusion; P2 never does
+   rule / principle: the landing rule (ORBIT_CHARTS §1 rule 1); P2; OS14 / C43
+   shapes: L03, L05, L06, L12, L13, L14, L15, L16, L17, L18, L20, L21, L22, L23, L25, L26, L28, L30, L32, L33, L34, L35, L36, L37, L39, L40, L41, L42, L43, L44, L45, L46, L47, L48, L53, Q02, Q03, Q04, Q06, Q09, Q10
+   numbers: today: 41 of 62 library shapes, 1102 of 1596 sweep cells; up to 48 mm into a part (the full height of the wall or the protrusion). P2: 0 library shapes and 0 cells with an entry or an unmarked air gap — none.
+   note: Far and medium this is the MARKER only (the piece rides the shell); close in the footprint support covers it (F9). The point-vs-body gap is half a piece wide along every wall.
+
+F2 (i) — P2 MOVES EVERY DEPTH STEP HALF A PIECE OFF THE WALL, it does not remove it
+   rule / principle: P2 (§2.2 'Steps remain … moved outward by half its width'); S5
+   shapes: L03, L05, L06, L07, L12, L13, L14, L15, L16, L17, L18, L20, L21, L22, L23, L25, L26, L28, L30, L31, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L46, L47, L48, Q02, Q03, Q04, Q06, Q09, Q10
+   numbers: piece A on the library's travels: 132 depth steps matched T↔P; the offset between today's step and P2's: median 21 mm (A's half-sizes 20.65 / 22.5 mm), range 8 – 39 mm. L03: today steps at the walls (91, 150 mm along the travel), P2 at 111 and 130 — the slot's floor a 19 mm band (60 − 41.3).
+   note: S5's 'real depth under the gizmo' holds only in the central band; the number of steps is unchanged (glided, the named event).
+
+F3 (v) — TODAY THE PIECE'S RULER IS ITS TWO SMALLEST SIZES, NOT ITS FOOTPRINT: a flat piece is judged by its thickness, an oblong one fits either way
+   rule / principle: WS10 (heldFoot: the two smallest sizes of the piece's own box); P2 ② / Q3
+   shapes: L05, L06, L12, L13, L14, L16, L17, L18, L20, L21, L22, L23, L26, L28, L30, L32, L33, L34, L35, L36, L37, L39, L40, L41, L44, L45, L46, L47, L48, Q02, Q03, Q04, Q06, Q09, Q10, L53, L19
+   numbers: piece B (80 x 80, 40 tall) is judged 40 x 80: today its gizmo goes to the floor of every void 40 – 80 wide (channels 60 wide: L05, L06, Q02) and the piece set there enters the rims by up to 30 mm along the whole travel (35 library shapes). The bar (20 x 100) is judged 20 x 20: turned across the 25 x 105 keyed slot today ENTERS 130 places (max 20 mm); P2 as held: 0. The lid of L19 (300 x 20 x 300) is judged 20 x 300: today its landing is the TRAY'S FLOOR (20) instead of its seat on the walls (120); P2: 120.
+   note: The difference is visible far out (the marker) and decides the goal's landing; close in the footprint support corrects the PIECE (not the gizmo).
+
+F4 (i) + (v) — 'NOTHING TO LAND ON' IS ONE CLASS: through holes wider than the piece, gaps between islands, the inside of an L, a U, a ring, under a table, a bridge, round a small part
+   rule / principle: P2 ① 'nothing to land on'; S6; OS2, OS11; WS4
+   shapes: L01, L11, L14, L23, L24, L46, L48, L49, L50, L52, Q01, Q02, Q07
+   numbers: 13 library shapes have places where no part is under the footprint at all; today the same places put the gizmo on a plane with nothing under the piece (12 shapes, unmarked); P2 marks them. Sweep: 43 cells (all through voids or wide gaps) marked by P2; today 77 cells with an unmarked air gap.
+   note: The same geometry, now named: S6's 'closed for the moment' becomes P2's two answers (closed by the rims / nothing to land on). Nothing changes on the glass except the mark.
+
+F5 (iv) + (ii) — THE MOUTH'S HOLD FIRES WHEREVER A VOID IS CLOSED ACROSS AND OPEN UP THE FACET WITH NO FLOOR — on the TOP CAP too, and along a gap between islands
+   rule / principle: S10 / the mouth's hold (S18, P4's one exception); C7(a); C41
+   shapes: Q02, L07, island-through@edge, strip1-through@inside, strip1-through@pole, strip2-through@inside, strip2-through@pole, ring-through@edge, array-through@edge, array-through@corner
+   numbers: designed case (Q02, a channel through, seen from its end): the red going up is held 28 / 0 mm under the lip, not held coming down — path-dependent, as labelled. Not designed: 32 sweep cells (through slots and islands open toward a cap edge, a through strip = a gap between two islands) hold the gizmo ON THE TOP CAP for up to 479 mm of a dy — a dy along the gap keeps the gizmo at its first place for the whole travel. L07 (the same channel open at ONE end, seen from that end): held 0 — the back wall 340 mm behind counts as a floor, so no mouth, no hold, the lip has no event.
+   note: Whether the visible lip is a 'mouth' depends on a fact 340 mm away (the channel's far end); and the rule built for a side's lip acts on a cap where no tilt hand-over exists. No rule names either case.
+
+F6 (ii) + (iv) — A LAYER THINNER THAN THE COPLANAR TOLERANCE ERASES THE FACE ABOVE IT: the top's real face 'glued' to a downward face up to 0.5 mm below it, D5 drops the cap, the charts lose the pole
+   rule / principle: the noise family (§2.6: MAP_COPLANAR_M 0.5 mm), R1 (exposed = not glued), D5, S17 / P1; WS15
+   shapes: void-island-stepped-d0.3, void-strip1-stepped-d0.3, void-strip2-stepped-d0.3, void-ring-stepped-d0.3, void-array-stepped-d0.3, protrusion-island-stepped-d1, protrusion-strip1-stepped-d1, protrusion-strip2-stepped-d1, protrusion-ring-stepped-d1, protrusion-array-stepped-d1
+   numbers: 76 sweep cells (voids stepped 0.3 mm deep: layers of 0.15 mm) end with a VIRTUAL top cap: far out the foot moves up to 256.5 mm and the facet under the gizmo turns 90° (the side band runs to the pole) — both readings (P1 keeps the same contour). 32 more cells (protrusions stepped 1 mm: layers of exactly 0.5 mm, the tolerance itself) keep their cap but read part of the protrusion as a VOID closed across with no floor — a false 'mouth', and the hold on the top (up to 235 mm of a dy). The plane's level is its FIRST face's (stackOf: planes.find(...)), so the order of the parts moves a facet: L42 (a 0.3 mm step) contour Δ 0.3 mm with the order reversed.
+   note: Cause: a face's coplanarity is tested against the PLANE's first level, not its own, and R1 glues any opposite face of another part within 0.5 mm of that plane — whichever side of it. Triggered by a part thinner than 0.5 mm or two parts overlapping by less than 0.5 mm (a press fit, the 0.3 mm skin). The spec's noise family states the tolerances but not this.
+
+F7 (ii) — EVERY PROTRUSION MOVES THE PIECE AND THE CAMERA FAR OUT BY ITS HEIGHT: the shell is built on the parts' BOX, and a protrusion grows the box
+   rule / principle: P1 / S17 ('far or medium, a singularity at the surface does not impact the orbit of the piece - camera')
+   shapes: L17, L20, L21, L22, L33, L34, L35, L36, L37, L39, L43, L44, L45, L46, L47, Q06, Q09
+   numbers: 612 of 760 protrusion cells move the far foot (both readings identical); the foot's move / the box's growth: 1 – 1 (the remaining 148: 0.3 mm, under the noise). Library: a 0.3 mm step moves it 0.3 mm, a pin 10 x 10 x 40 moves it 40 mm, the knife 85, the overhang slab 100. Voids: 9 cells move it (a void at an edge or corner that removes the box's extreme, or a corner through-void).
+   note: P1 as worded holds for voids and never for a protrusion that rises above the box; the voids hold it by construction.
+
+F8 (iii) — CLOSE IN, THE PIECE IN CONTACT DROPS INTO EVERY SLOT IT FITS, THEN A DX ACROSS IT IS TRAPPED AT THE FAR WALL — in both readings
+   rule / principle: S5 ('the piece shall not go in (it shall continue its orbit)') against the close-in contact (the footprint support today, P2 ⑤) and P5 / S14
+   shapes: L03, L05, L06, L12, L13, L14, L15, L16, L17, L18, L22, L23, L25, L28, L32, L40, L41, L44, L46, L48, Q02, Q03, Q04, Q06, Q10
+   numbers: sweep: drops ≥ 5 mm in 367 cells today / 432 P2; travels ending at a wall in 849 / 833 cells — of which voids where the piece first DROPPED IN: 190 / 215, and protrusions (a proud part a wall, his Q1 (b), as intended): 565 / 532. L03 (60 x 60 slot, piece A): reach 54%, 4 travel-ends trapped (P5), 4 drops ≥ 5 mm — the piece goes in, then cannot leave by the orbit (out by the approach, S14).
+   note: Measured with the piece at contact (d = 0); beyond the shell's offset the piece rides the shell and does not go in (S5 holds far). The trap is P5 working as written; whether a slot crossed close in should capture the piece is not stated anywhere.
+
+F9 (i) + (iv) — CLOSE IN, P2 STARTED AT THE PIECE GIVES TODAY'S FOOTPRINT SUPPORT — except where the footprint hangs past the assembly's edge
+   rule / principle: P2 ⑤ ('P2 started at the piece REPRODUCES [the footprint support]'); C24 / C43 (a piece over a facet's edge)
+   numbers: 1398 of 1596 cells: the same reach, traps and drops. 198 differ: by position {"edge":80,"corner":62,"inside":30,"pole":26} — e.g. a rebate 37 mm wide (narrower than A) along the block's edge: today the gizmo stays on the plane (bridged), P2 lets the piece land 1 – 40 mm down into it because part of the footprint is over empty space beyond the edge.
+   note: No rule says whether a landing may have part of the footprint over nothing (beyond the facet's polygon, beyond the box).
+
+F10 (iv) — DEPTH STEPS OF 0.5 – 5 MM ARE JUMPS WITH NO EVENT in both readings
+   rule / principle: C36 / WS23 (no depth ruler between the coplanar 0.5 mm and the glide's 5 mm); the noise family
+   shapes: L43
+   numbers: 238 sweep cells (all with a 1 mm step, or a stepped 6 mm profile: 3 mm halves); max 3 mm. L43 (1 mm): 2 jumps on each reading; L44 (6 mm): glided.
+   note: P2 changes where the step is, not its size; the spec names 'a depth for flush' in the noise family but no event for the band between.
+
+F11 (v) — ON A SLOPE TODAY'S POINT LANDS THE CENTRE (the uphill half enters); P2 lands the uphill edge. Beyond the 20° merge today's gizmo leaves the floor
+   rule / principle: C31 / C37 / WS22 (a floor = a group within 20°, at its centre's level; beyond 20° in no group)
+   shapes: L26, L27, L30, L31, L45, L46
+   numbers: L26: T enters 232 (max 48 mm), air 0 (max 0); P enters 0, air 0; L27: T enters 0 (max 0 mm), air 258 (max 9.4); P enters 0, air 0; L30: T enters 178 (max 38.7 mm), air 0 (max 0); P enters 0, air 0; L31: T enters 0 (max 0 mm), air 93 (max 54.9); P enters 0, air 0; L45: T enters 396 (max 2.9 mm), air 0 (max 0); P enters 0, air 0; L46: T enters 70 (max 48 mm), air 332 (max ∞); P enters 0, air 0
+   note: L45 (8° gable): today 2.9 mm into the slope everywhere = half-width x tan 8°; L31 (35° ramp): today's gizmo bridged across the ramp, the piece up to 55 mm over it; P2 exact on both.
+
+F12 (i) + (iv) — TODAY COUNTS SEALED AND BURIED FACES AS SURFACE; THE FACES THAT ARE NO PLACE ARE THE SAME CLASSES IN BOTH READINGS (undersides, inner walls, walls facing no facet)
+   rule / principle: S22 (exposed = reachable from outside), S24 (nothing unreachable silently), OS3, C12, C25, C26, C27
+   shapes: L09, L19, L20
+   numbers: exposure differs on 3 shapes: L09 today 11520 vs S22 9216 cm²; L19 today 5650 vs S22 3252 cm²; L20 today 9769 vs S22 9462 cm². Coverage under 85% of the S22-exposed area: L10 79% (hidden 21%, no facet 0%); L11 78% (hidden 22%, no facet 0%); L18 74% (hidden 25%, no facet 0%); L24 78% (hidden 22%, no facet 0%); L38 59% (hidden 41%, no facet 0%); L45 78% (hidden 22%, no facet 0%); L48 43% (hidden 56%, no facet 0%); L49 81% (hidden 19%, no facet 0%); L50 32% (hidden 68%, no facet 0%); Q08 58% (hidden 42%, no facet 0%). T and P coverage differ by more than 0.5% on: L18 T 74.9% P 74.4%; L26 T 96.8% P 96.1%; L36 T 99% P 98.4%; L39 T 99.6% P 98%; L40 T 97.3% P 96.6%; L41 T 98.3% P 100%; Q02 T 96.8% P 96%; Q04 T 95.1% P 94.3%.
+   note: L09's 3 mm gap reads 'sealed' at the flood's 4 mm resolution (the same answer as MAP_GROW's closing). P2's coverage is lower than today's where the piece can only rest ON studs or a rim (the base between studs is never touched) and higher where a footprint hangs past an edge (F9).
+
+F13 (i) + (iv) — THE WITHDRAWAL TEST FINDS THE BLOCKED GOAL; A GOAL ENTERED SIDEWAYS IS NO LANDING OF ANY PRINCIPLE
+   rule / principle: S21 (every goal reachable), B4 (withdrawal along the entry), C45 (how a piece enters), S13
+   shapes: L03, L05, L18, L19, L53, Q03, Q07
+   numbers: L03: withdrawal clear; landing T 200 · P 200 vs seat 200; L05: withdrawal clear; landing T -100 · P -100 vs seat 120; L18: withdrawal clear; landing T 20 · P 20 vs seat 20; L19: withdrawal clear; landing T 20 · P 120 vs seat 120; L53: withdrawal clear; landing T 210 · P 210 vs seat 210; Q03: withdrawal clear; landing T 200 · P 200 vs seat 200; Q07: BLOCKED by slab@40.3; landing T 320 · P 320 vs seat 200
+   note: Q07: the peg under the slab is blocked along +y (S21/B4 confirmed: found at the build, not by the player). L05: the block slid in from the channel's open end (+z) — P2 along the front's normal lands at the channel's back wall (−100), 220 mm from the seat (120): a slid entry has no landing; only the approach along +z reaches it, and no rule names that entry.
+
+F14 (i) — A CLASS FLIP AT A RULER MOVES THE GIZMO BY THE FEATURE'S WHOLE DEPTH FOR A MILLIMETRE OF WIDTH, in both readings
+   rule / principle: OS15 (the classes form a continuum); §2.6 (3) persistence; B6 (at a threshold)
+   shapes: L03, L08, L30, L43, L53
+   numbers: sweep, width 0.9 → 1.1 x A (37.2 → 45.4 mm, the same cell otherwise): the reading at the feature's centre flips in 105 of 399 today and 120 of 399 with P2; the largest move 4.9 mm of gizmo per mm of width. Library rulers: L03 slot width at A's 41.3 ±1: T — P —; L03 slot width at A's 45 ±1: T 240→200 (×20) P 240→200 (×20); L03 slot width at B's 80 ±1: T 240→200 (×20) P 240→200 (×20); L03 slot width at B's heldFoot 40 (its height) ±1: T — P —; L08 groove width at the joint ruler 3.2 (2 x MAP_GROW) ±1: T — P —; L30 ramp angle at the merge 20° ±1: T 209→240 (×15.5) P 216.1→213.4 (×1.3); L43 step height at the coplanar 0.5 mm ±0.2: T — P —; L43 step height at the glide's 5 mm ±1: T 244→246 (×1) P 244→246 (×1); L53 slot length at the bar's 100 ±1: T — P 240→210 (×15).
+   note: Inherent to any ruler; P2 moves the ruler to the true footprint as held (L03 at 41.3: no flip for P2 since 45 binds; B at its heldFoot 40: no flip either reading — B's ruler is 80 for P2, 80 for today too since its second size binds). The margin to a ruler is what B6 would paint.
+
+F15 (i) + (iv) — P2 IS EXACTLY INVARIANT; TODAY'S DEPTH IS TOO, BUT FOR TIES EXACTLY OVER A WALL AND THE PLANE'S FIRST-FACE LEVEL
+   rule / principle: P4; S12 / S19 (a function of the placed set, not of the order); WS15
+   shapes: L17, L20, L47, Q09, L42
+   numbers: travels 0.37 mm off the walls' exact places: today differs on 1 shapes (L42), P2 on 0. On the travels as drawn (samples exactly over a wall) today's level differs after a quarter turn on 4 shapes (L17, L20, L47, Q09): a point read exactly over a wall takes either level by the rounding (measure zero).
+   note: The order dependence is F6's cause (the plane's level is its first face's).
+
+F16 (iv) — NOTHING PLACED AND ONE SMALL PART HAVE NO RULE: no box, no map; round a part smaller than the piece every place but its top is 'nothing to land on'
+   rule / principle: C42 / WS25; C24
+   shapes: L51, L52
+   numbers: L51: no map at all (the gizmo held or at the boot centre). L52 (a 30 mm cube, piece A): P2 marks 96 of 242 places nothing to land on; today the gizmo sits on the facets' planes with no part under the piece at 96 places.
