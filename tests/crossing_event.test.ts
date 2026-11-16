@@ -161,7 +161,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): ONE function the f
     const i0 = code.indexOf("function crossTurn(");
     const c = code.slice(i0, code.indexOf("function ", i0 + 10));
     expect(c).toContain("if (c.at !== null) { const { mq, g } = c.at; seamRebase(st, mq); st.asmShown = null; st.asmFaceBand = null; st.asmGOff = null; const m = mapGizmo(st, mq.yaw, mq.pitch);");
-    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
+    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (uCarry !== null) easeCarry(st, mixWas, uCarry); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
     // ⛔ the sway: nothing of a drawn mesh, a pick or the camera decides (the pose shown only starts the turn, in `seamTurnStart`)
     expect(c).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|st\.camera\.|cameraPrev|modelCast|gizmoNormal/);
   });

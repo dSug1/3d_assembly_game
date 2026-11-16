@@ -39,7 +39,7 @@ const REC = `(() => { const st = window.__st; window.__rows = []; window.__leg =
     if (v !== lastV) { lastV = v; window.__verd.push([window.__rows.length, window.__leg, v.slice(0, 120)]); }
     window.__rows.push([window.__leg, c.position.x, c.position.y, c.position.z, t.x, t.y, t.z, c.upVector.x, c.upVector.y, c.upVector.z,
       g ? g[0] : NaN, g ? g[1] : NaN, g ? g[2] : NaN, n ? n[0] : NaN, n ? n[1] : NaN, n ? n[2] : NaN,
-      st.asmSpitSide ?? 0, st.asmZoneMix ? 1 : 0, st.asmEdgeHold ? 1 : 0, st.orbit.yaw, st.orbit.elevation, st.approach, st.asmTilt ? 1 : 0, st.asmFree ? 1 : 0]);
+      st.asmSpitSide ?? 0, st.asmZoneMix ? 1 : 0, st.asmEdgeHold ? 1 : 0, st.orbit.yaw, st.orbit.elevation, st.approach, st.asmTilt ? 1 : 0, st.asmFree ? 1 : 0, /* ⭐ (package A, TRACE) the turn's share, its angle, the ease, the square camera (its angle to its target, its share) */ st.asmZoneMix ? st.asmZoneMix.k : -1, st.asmZoneMix ? st.asmZoneMix.rad * 180 / Math.PI : 0, st.asmDirEase ? st.asmDirEase.angle * 180 / Math.PI : 0, st.asmSquare.n && st.asmSquare.target ? Math.acos(Math.max(-1, Math.min(1, st.asmSquare.n[0] * st.asmSquare.target[0] + st.asmSquare.n[1] * st.asmSquare.target[1] + st.asmSquare.n[2] * st.asmSquare.target[2]))) * 180 / Math.PI : -1, st.asmSquare.q]);
   } catch (e) { window.__recErr = String(e); } }; return true; })()`;
 
 try {
@@ -209,6 +209,9 @@ try {
     for (let i = Math.max(1, w.i0), k = 0; i < R.length; i++) { if (R[i][0] !== w.leg) continue; if (k++ % EVERY === 0) { const fr = F(i); const ax = s0.axis; path.push(`${(along(G(i)) * 1000).toFixed(0)}/${(off(G(i)) * 1000).toFixed(1)}/${R[i][16]}${R[i][23] ? "F" : ""}/${deg(Math.atan2(dot(ax, fr.u), dot(ax, fr.r))).toFixed(0)}/${deg(Math.asin(Math.max(-1, Math.min(1, -fr.l[1])))).toFixed(0)}`); } }
     console.log(`     along mm / off mm / side (F: on a free face) / the axis on the glass ° (0 right, 90 up) / looking down °, every ${EVERY} frames: ${path.join("  ")}`);
     console.log(`     verdicts: ${V.filter((v) => v[1] === w.leg).map((v) => `f${v[0]} ${v[2]}`).join(" | ") || "none"}`);
+    // ⭐ (package A) TRACE=n: the frames of the leg's first camera turn (3 before, n in all): the view's turn, the turn's share / angle, the ease, the square camera
+    if (process.env.TRACE) { let i0 = -1; for (let i = Math.max(1, w.i0); i < R.length; i++) if (R[i][0] === w.leg && R[i][17] && !R[i - 1][17]) { i0 = i; break; }
+      if (i0 > 0) for (let i = i0 - 3; i < Math.min(R.length, i0 + Number(process.env.TRACE)); i++) console.log(`       TRACE f${i} view ${rot(F(i - 1), F(i)).toFixed(2)}°  k ${Number(R[i][24]).toFixed(3)}  rad ${Number(R[i][25]).toFixed(1)}  ease ${Number(R[i][26]).toFixed(1)}  square ${Number(R[i][27]).toFixed(1)}° q ${Number(R[i][28]).toFixed(2)}  side ${R[i][16]}  hold ${R[i][18]}`); }
   }
   { let big = 0, all = 0, holds = 0;
     for (let i = 1; i < R.length; i++) { const t = rot(F(i - 1), F(i)); if (t === t) { big = Math.max(big, t); all += t; } if (R[i][18] && !R[i - 1][18]) holds++; }

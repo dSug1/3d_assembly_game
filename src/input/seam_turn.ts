@@ -94,6 +94,22 @@ export function seamWholeRad(turnRad: number, easeRad: number): number {
   return t + e;
 }
 
+/**
+ * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) ONE FRAME'S STEP ON THE TRANSITION'S CLOCK (rad, over `seamWholeRad`'s whole): the one
+ * speed's step `stepRad`, less what the camera's own angle (`turnRad`, read last frame) GROWS in the frame — where the camera follows the eased direction
+ * (the world's frame: `dirAt`) its target moves with the ease, by up to `easeRad` × the share's step, so the whole the clock reads is a frame late. The
+ * share's step `x` solves `x·(turnRad + easeRad) + x²·easeRad = stepRad`: the picture's turn in the frame at most `stepRad`. No ease: `stepRad` itself,
+ * exactly (as before). ⛔ The step on the whole read last frame: 6.19° in the first frame of `Scene_1`'s exit by an edge (the square camera inside it).
+ */
+export function seamStepRad(stepRad: number, turnRad: number, easeRad: number): number {
+  const t = Number.isFinite(turnRad) && turnRad > 0 ? turnRad : 0;
+  const e = Number.isFinite(easeRad) && easeRad > 0 ? easeRad : 0;
+  const w = t + e;
+  if (!(e > 1e-12) || !(stepRad > 0)) return stepRad;
+  const x = (-w + Math.sqrt(w * w + 4 * e * stepRad)) / (2 * e);
+  return x * w;
+}
+
 export type TurnPace = "HELD" | "FINGER" | "TIME";
 
 /**
@@ -126,14 +142,20 @@ export function seamTurnStep(
   share: number,
   dtMs: number,
   degS: number,
+  easeRad = 0,
 ): { readonly k: number; readonly done: number } {
   if (pace === "HELD") return { k: t.k, done: t.done };
   if (pace === "FINGER") {
-    const k = Math.min(1, Math.max(t.k, share));
+    // ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A — the owner: *"1- A"*) THE SHARE SHOWN NEVER OVER THE ONE SPEED: the finger's
+    // share, but at most `degS`'s step a frame over the turn's whole angle — and only once that angle is read (as the timed clock). ⛔ The finger's share at
+    // once: a fast finger turned the picture as fast as it went (the path the W11 auditor named, unmeasured)
+    if (!t.axisKnown) return { k: t.k, done: t.done };
+    const want = Math.min(1, Math.max(t.k, share));
+    const k = degS > 0 && t.rad > 1e-9 ? Math.min(want, t.k + seamStepRad(((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000), t.rad - easeRad, easeRad) / t.rad) : want;
     return { k, done: k * t.rad };
   }
   if (!t.axisKnown) return { k: t.k, done: t.done };
-  const done = degS > 0 ? Math.min(t.rad, t.done + ((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) : t.rad;
+  const done = degS > 0 ? Math.min(t.rad, t.done + seamStepRad(((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000), t.rad - easeRad, easeRad)) : t.rad;
   return { k: t.rad > 1e-9 ? Math.min(1, done / t.rad) : 1, done };
 }
 
@@ -207,6 +229,50 @@ export function turnHoldsGizmo(out: boolean, paced: boolean, pending: boolean, b
 export function poleYawKept(mq: { readonly yaw: number; readonly pitch: number }, maxPitch: number, yawShown: number | null): { readonly yaw: number; readonly pitch: number } {
   if (yawShown === null || !Number.isFinite(yawShown) || !(Math.abs(mq.pitch) >= maxPitch - 1e-9)) return mq;
   return { yaw: Math.atan2(Math.sin(yawShown), Math.cos(yawShown)), pitch: mq.pitch };
+}
+
+/**
+ * ⭐⭐⭐ (2026-11-16 night, `TILTED_POLE_CLOSE_IN.md` §18, package A) THE SQUARE CAMERA'S MIX, as an angle: the direction `calmDir` shows is the normalised
+ * mix `(1 − q)·b + q·n` of the calm's direction `b` and the square normal `n`, `thetaRad` apart — its angle from `b` at the share `q` (0 at 0, θ at 1).
+ */
+export function nlerpAngle(q: number, thetaRad: number): number {
+  return Math.atan2(q * Math.sin(thetaRad), 1 - q + q * Math.cos(thetaRad));
+}
+
+/**
+ * ⭐⭐⭐ (package A — the owner's *"1- A"*: the picture never faster than the tilts' one speed, *"the square camera's own share included"*) ONE FRAME OF THE
+ * SQUARE CAMERA'S OWN SHARE (no transition running): from `q0` toward `qWant`, the direction shown (`nlerpAngle`) turned by at most `maxRad` — exactly
+ * that while short (the share at that angle: `sin a / (sin a + sin(θ − a))`), the share asked once within it. No angle, no limit (`Infinity`: no speed),
+ * or the two directions opposite (no arc): the share asked. ⛔ Its own ease (`wholeShareStep` over 125 ms, or the finger's blend) uncapped: 11° and more
+ * in a frame at a quarter turn.
+ */
+export function squareShareStep(q0: number, qWant: number, thetaRad: number, maxRad: number): number {
+  const a = Number.isFinite(q0) ? Math.min(1, Math.max(0, q0)) : 0;
+  const w = Number.isFinite(qWant) ? Math.min(1, Math.max(0, qWant)) : a;
+  if (!Number.isFinite(maxRad) || !(thetaRad > 1e-9) || thetaRad > Math.PI - 1e-6) return w;
+  const m = Math.max(0, maxRad);
+  const a0 = nlerpAngle(a, thetaRad);
+  const aw = nlerpAngle(w, thetaRad);
+  if (Math.abs(aw - a0) <= m) return w;
+  const a1 = aw > a0 ? a0 + m : a0 - m;
+  const s = Math.sin(a1);
+  return s / (s + Math.sin(thetaRad - a1));
+}
+
+/** ⭐ (package A) under this angle two square normals are one (the gizmo's hold's own tie, `squareTurning`'s half degree) */
+export const SQUARE_SAME_RAD = (0.5 * Math.PI) / 180;
+
+/**
+ * ⭐⭐⭐ (package A) WHILE A TURN RUNS THE SQUARE CAMERA STANDS AT ITS TARGET (normal and share) — the turn's end pose the final one, ONE clock. A change of
+ * that target while the turn runs (the gizmo free: the finger-paced entry, the way out — a new face's normal, or the share's target switched) is a change
+ * of frame: the turn RESTARTED from the pose shown. Not at a turn just started (`read` false — its ease not read yet: the snap is that turn's own), nor
+ * with no square normal yet.
+ */
+export function squareRestarts(read: boolean, n: Vec3 | null, target: Vec3 | null, q: number, qTarget: number): boolean {
+  if (!read || n === null) return false;
+  if (Math.abs(q - qTarget) > 1e-9) return true;
+  if (target === null) return false;
+  return dot(n, target) < Math.cos(SQUARE_SAME_RAD);
 }
 
 /** ⭐⭐⭐ THE TILT LEFT AT ONCE: the place off the tilted facet (`onFacet` false) or the tilt turned off (`off`) — ⛔ a roll back inside F first. */

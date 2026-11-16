@@ -369,7 +369,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(raw(W).match(/freeFaceFrame\(st, /g)?.length).toBe(1);
   });
   it("⭐ the entry and the exit: each ONE camera turn from the pose shown (`asmZoneMix` from `poseShown`, as `spitStep`'s); the exit the side afresh, the coast stopped, the hold on the dy that pushed over the side (`exitHoldSign`, D-T4)", () => {
-    const turn = "const mixWas = st.asmZoneMix; if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas);";
+    const turn = "const mixWas = st.asmZoneMix; const uWas = drawnDir(st); if (st.asmCamLast !== null) st.asmZoneMix = { from: poseShown(st), k: 0, rad: Math.PI / 2, axis: null, rule: 0, keep: null, done: 0 }; easeCarry(st, mixWas, uWas);"; // ⭐ (package A) the direction drawn before the turn kept for the read
     const f = fnCode(W, "function freeFaceFrame(");
     expect(f).toContain("const z = spitZone(st);");
     expect(f).toContain("if (z === null || map === null || B === null || at === null) { st.asmFree = null; return; }");
@@ -391,7 +391,7 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     expect(x).toContain("st.asmFree = null; st.asmSpitSide = 0; st.asmSpitU = null; crossTurn(st, { at: null, uWas: null, carry: true, paced: false, hold: held });");
     expect(x).not.toContain("crossingHold(");
     const c = fnCode(W, "function crossTurn(");
-    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (c.carry) easeCarry(st, mixWas); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
+    expect(c).toContain("const mixWas = st.asmZoneMix; if (c.paced) seamOutStart(st); else if (st.asmCamLast !== null) seamTurnStart(st, false); if (c.uWas !== null) seamEase(st, c.uWas); else if (uCarry !== null) easeCarry(st, mixWas, uCarry); st.orbitInertia.stop(); if (c.hold !== 0) st.asmEdgeHold = { sign: c.hold, back: 0 };");
     // ⛔ the sway: nothing drawn, picked or seen by the camera decides — the pose shown and the up shown only continue the picture
     for (const s of [f, x]) expect(s).not.toMatch(/getBoundingInfo|pickWithRay|absolutePosition|computeWorldMatrix|cameraPrev|modelCast|gizmoNormal/);
     const cf = fnCode(W, "function contourOfFacet(");
@@ -405,7 +405,8 @@ describe("⭐⭐⭐ the wiring (`render/assembly_wiring.ts`): the carried headin
     const q = fnCode(W, "function squareFrame(");
     expect(q).toContain("const freeSq = st.cfg.freeFaceSquare === 1 && st.asmFree !== null ? st.asmFree.map.facets[st.asmFree.facet] : undefined;");
     expect(q).toContain("sq.target = bf === undefined || onCapB ? sq.target : bf.n; if (freeSq !== undefined) sq.target = freeSq.n;");
-    expect(q).toContain("else sq.q = wholeShareStep(sq.q, st.asmTiltAuto || freeSq !== undefined ? 1 : 0, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));");
+    expect(q).toContain("const qT = st.asmTiltPending ? sq.q : st.asmTiltAuto || freeSq !== undefined ? 1 : 0;"); // ⭐ (package A) the share's target, one place
+    expect(q).toContain(": wholeShareStep(sq.q, qT, dtMs, rollDurationMs(RELOCATE_ANGLE, st.cfg.tiltRollDegS));");
   });
   it("⭐ the reads of `asmFree`: five (⛔ each under `chartLayout === 1` before step 2.5 — the switch deleted)", () => {
     const code = codeOnly(raw(W));
