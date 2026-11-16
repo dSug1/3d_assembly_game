@@ -81,13 +81,32 @@ describe("⭐⭐⭐ the progress (`seamOutTarget`, `seamOutStep`)", () => {
     expect(seamOutTarget(0, 0.01, SPAN, 0, true)).toBe(1);
     expect(seamOutTarget(0, 0, SPAN, 0, true)).toBe(0);
   });
-  it("⭐ the finger LIFTED: the target 1 whatever the travels — it completes at the one speed: a half turn at 360°/s in 30 frames at 60 fps (within one); from 0.3, 21", () => {
+  it("⭐ the finger LIFTED: the target 1 whatever the travels — it completes with the PICTURE never over the one speed: a half turn at 360°/s in 36 frames at 60 fps (within one; 30 at the speed + its smooth ends); from 0.3, 27", () => {
     expect(seamOutTarget(0, 0, SPAN, ORB, false)).toBe(1);
     expect(seamOutTarget(SPAN * 0.1, 0, SPAN, ORB, false)).toBe(1);
-    expect(Math.abs(framesToWhole(0, 1) - 30)).toBeLessThanOrEqual(1);
-    expect(Math.abs(framesToWhole(0.3, 1) - 21)).toBeLessThanOrEqual(1);
+    expect(Math.abs(framesToWhole(0, 1) - 36)).toBeLessThanOrEqual(1);
+    expect(Math.abs(framesToWhole(0.3, 1) - 27)).toBeLessThanOrEqual(1);
     // a quarter turn: half the frames
-    expect(Math.abs(framesToWhole(0, 1, HALF / 2) - 15)).toBeLessThanOrEqual(1);
+    expect(Math.abs(framesToWhole(0, 1, HALF / 2) - 18)).toBeLessThanOrEqual(1);
+    // ⭐⭐⭐ (T5, the owner: "one speed for every tilt") the SHARE SHOWN never moves more than the one speed's step in a frame, cruises AT it in the middle,
+    // and starts and ends slower — whatever the turn's angle
+    for (const whole of [HALF, HALF / 2, HALF / 6]) {
+      const r = (((SPEED * Math.PI) / 180) * (DT / 1000)) / whole;
+      const steps: number[] = [];
+      let p = 0;
+      for (let i = 0; i < 400 && p < 1; i++) {
+        const q = seamOutStep(p, 1, DT, whole, SPEED, true);
+        steps.push(seamOutShare(q) - seamOutShare(p));
+        p = q;
+      }
+      expect(p).toBe(1);
+      for (const d of steps) expect(d).toBeLessThanOrEqual(r * (1 + 1e-9));
+      if (steps.length >= 8) {
+        expect(Math.max(...steps)).toBeGreaterThan(0.97 * r); // it cruises at the one speed
+        expect(steps[0]!).toBeLessThan(0.5 * r); // the smooth start
+        expect(steps[steps.length - 1]!).toBeLessThan(0.5 * r); // the smooth end
+      }
+    }
   });
   it("⭐ a FAST finger (the whole travel in one frame): the progress grows by the one speed's step only (1/30 a frame for a half turn at 360°/s)", () => {
     const t = seamOutTarget(5 * SPAN, 0, SPAN, ORB, true);

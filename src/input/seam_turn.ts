@@ -165,7 +165,7 @@ export function seamOutTarget(outMm: number, orbitMm: number, outSpanMm: number,
 
 /**
  * ⭐⭐⭐ (step C3) ONE FRAME OF THE WAY OUT'S PROGRESS `p`: toward `target`, NEVER BACK (a smaller target holds it), by at most the tilts' one speed
- * (`degS` °/s over the turn's whole angle `wholeRad`, `turnWhole`'s — as the timed turn's clock) — a fast finger never flips the picture in a frame. Held
+ * (`degS` °/s over the turn's whole angle `wholeRad`, `turnWhole`'s) ON THE SHARE SHOWN — a fast finger never flips the picture in a frame. Held
  * until the camera's stage has read the turn's angle (`axisKnown`, as the timed clock). A turn of no angle, or `degS` 0: the target at once (no angle: whole).
  */
 export function seamOutStep(p: number, target: number, dtMs: number, wholeRad: number, degS: number, axisKnown: boolean): number {
@@ -176,7 +176,13 @@ export function seamOutStep(p: number, target: number, dtMs: number, wholeRad: n
   if (!(t > p0)) return p0;
   if (!(degS > 0)) return t;
   const r = (((degS * Math.PI) / 180) * (Math.max(0, dtMs) / 1000)) / wholeRad;
-  return Math.min(t, p0 + r);
+  // ⭐⭐⭐ (the auditor, 2026-11-16 — T5, the owner: *"one speed for every tilt"*) THE ONE SPEED IS THE PICTURE'S: what is shown is the smooth share of `p`
+  // (`seamOutShare`, its slope up to 1.5 in the middle), so the progress's step is the speed's step over the steepest slope the step can meet — the
+  // SHOWN share never moves faster than `degS`; slower at both ends (the smooth start and end). ⛔ The speed's step on `p` itself: 540°/s in the middle
+  const slope = (x: number): number => 6 * x * (1 - x);
+  const p1 = Math.min(1, p0 + r);
+  const steepest = Math.max(1, slope(p0), slope(p1), p0 < 0.5 && p1 > 0.5 ? 1.5 : 0);
+  return Math.min(t, p0 + r / steepest);
 }
 
 /** ⭐⭐⭐ (step C3) THE SHARE SHOWN at the progress `p` (the turn's `k`): a smoothstep — no abrupt first or last frame; 0 at 0, ½ at ½, 1 at 1. */
