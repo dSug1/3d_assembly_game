@@ -19,7 +19,7 @@ import type { Sample } from "../input";
 import { alignRestingFace, orbitTravelStep, orbitDvPerMm, restOnTappedFace, restTargetKey, topPauseOn } from "./green_box_wiring";
 import { pauseYawStep } from "../input/top_pause";
 import { approachDistance, closeInGain, isApproachKey, ORBIT_PITCH_MAX_RAD, orbitDy } from "../input/assembly_orbit";
-import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, tiltClampStep, zoneFinger } from "./assembly_wiring";
+import { approachInput, approachRelease, assemblyOn, pieceOrbitOn, seamOutFeed, tiltClampStep, zoneFinger } from "./assembly_wiring";
 import { orbitDegPerMm } from "../input/follow_camera"; // ⏸ (2026-10-12) orbitRollStepRad, rollRestingFace — with the commented-out way in
 import { restingFaceTap } from "../input/orbit_tap";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -359,6 +359,8 @@ export function orbitDragStep(st: SceneState, pointerId: number, s: Sample, prev
     tiltClampStep(st, yawBefore, vBefore);
     // ⭐⭐⭐ (2026-11-11) the orbit's finger travel (the approach's excluded): the automatic tilt's pending ends at its first millimetre, its blend paced by it
     if (asmOn && !shiftApproach) st.asmOrbitMm += Math.hypot(db.dx, db.dy) / mmToPx(1);
+    // ⭐⭐⭐ (2026-11-16, `TILTED_POLE_CLOSE_IN.md` §8, step C3) …and for the way out's turn, while it is alive (`seamOutFeed`): an orbit started finishes it
+    if (asmOn && !shiftApproach) seamOutFeed(st, 0, Math.hypot(db.dx, db.dy) / mmToPx(1));
     // ⭐ prototype (green box), 2026-10-02: the orbit's own step, recorded for its INERTIA after the finger lifts (`OrbitInertia`).
     st.orbitInertia.record(s.t, st.orbit.yaw - yaw0, travel.du); // ⭐ (2026-10-21) the TRAVEL taken — a coast goes on through the pause
     void v0;

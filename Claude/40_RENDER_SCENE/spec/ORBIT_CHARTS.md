@@ -786,4 +786,4 @@ straight finger and NO noise, in the game before the charts too: the spit's fing
 structural, not a missing band (the side's own band is ≈ 8 mm there): NOT patched at 2.4d →
 [`TILTED_POLE_CLOSE_IN.md`](TILTED_POLE_CLOSE_IN.md) §4.1. **2.** The tilted-pole orbit close in: *"do the same as what we have done so far"* — its
 rules, the obstacles and their fallbacks, one design from what others solved, the audit → that study (PROPOSED: seven decisions are the owner's,
-nothing built). ✅ 2.4d deployed 2026-11-16 (the owner: *"Deploy"*): main `f1e03d3`; its look owed.
+nothing built). ✅ 2.4d deployed 2026-11-16 (the owner: *"Deploy"*): main `f1e03d3`. ⭐ **Both switches ON by default** from the next deploy, every scene (the owner, 2026-11-16, after his look on main `6685f8f`: *"This is good."* — `TILTED_POLE_CLOSE_IN.md` §11).

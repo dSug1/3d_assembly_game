@@ -295,8 +295,8 @@ tilt's close in. Later scenes with shafts, pins or cones lying on their side get
 | **C0** ✅ | run 2026-11-16 (§7) — **an offline round**, as for the charts: the free faces, their layouts and every exit's turn on the 35 shapes and on test scenes (a cube, a heptagon's end, an L-shaped top, a step, a spit body); a walker crossing every edge both ways — no turn without an edge, the turns round every corner adding up; N1 against N2 drawn for the owner | the tables; the owner's look at the drawings |
 | **C1** | W11: the entry's first frame measured and its cause named — before anything is built on it | the probe |
 | **C2** 🔧 | the pure part built 2026-11-16 (`c5538db`, an Opus agent, audited: `src/input/free_face.ts` — `freeFaces`, `freeEdges`, `entryHeading`, `nearestHeading`, `exitTurnRad`, `turnHolds`; equal to §7's reference on the 35 shapes; 53 vectors, **2013**; NOT wired) — free faces and their layouts in the atlas (pure, `src/input`); the entry by the edge; the exit's turn and the hold computed (W5, W6); the frame's map in the contour's box (W7) | vectors; the three scenes replay unchanged |
-| **C3** | THE WAY OUT BLENDED (D-T1, W4, §8) — measured first; the square camera's target on every face (W8) | the way-out run (§8); the close-in runs; the edge-noise run — ⛔ §8 is a PROPOSAL: the owner's word before it is built |
-| **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, LOCAL — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ⛔ the owner's look owed | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
+| **C3** 🔧 | built 2026-11-16 (`86f2cbe` + the auditor's completion; §8.1), audited, LOCAL — THE WAY OUT BLENDED (D-T1, W4, §8): the camera's turn after the threshold follows the approach finger (`tiltOutBlendMm`), smooth, never over the one speed, the gizmo free; ⛔ the owner's look owed. W8 (the square camera's target on a cap with no tilt) NOT in this step: with a test scene | the way-out run ✅, the replays ✅ (§8.1) |
+| **C4** 🔧 | built 2026-11-16 (`0125445`, an Opus agent, + the auditor's `28df70c`; §9.1), audited, DEPLOYED 2026-11-16 (the owner: *"Deploy"* — main `6685f8f`) — the spit on the same rule (D-T2, W2, W3): on a spit's level face the heading carried, the finger read off the picture, nothing in the face's middle, the half turn at the far edge; N1 / N2 behind `freeFaceSquare`; ✅✅ **the owner's look, 2026-11-16: *"This is good."*** | `mid_check.mjs`, `across_check.mjs` ✅; the replays ✅ (§9.1); the owner's records of 2026-11-14 not replayed |
 | **C5** | One half-turn event (W1), its hold from any turn over 90° (D-T4, W6); the mouth as a concave edge (W9) | the ridge and far-edge runs |
 | then | step 2.5 of the charts (the old detectors and the switch deleted) | — |
 
@@ -337,23 +337,55 @@ over the pole from there; the close-in layout's up is the heading carried in. Be
 nearest the edge it came over, a quarter at the sides, **half a turn on the far half** — and the camera travels round to that side. The polar
 layout's pole is in the middle of the face, so this cannot be removed. It can only be PACED.
 
-**Today** (step 2.4c): at 0.65 m the frame changes and ONE camera turn runs by TIME at `tiltRollDegS` (360°/s), the gizmo held — up to half a
-turn in half a second, under an approach that is still going. ⛔ To measure first (a probe: the gizmo on the far half of `Scene_1`'s top, the
-piece backed out): the turn's degrees a frame and its length against the approach's travel.
+**Today, measured** (2026-11-16, `Scene_1`, close in on the top, ONE approach drag out; the session's `tilt_check.mjs`, `MODE=out`):
 
-**Proposed — the way out mirrors the way in** (T10, the owner's rule of 2026-11-11):
+| the gizmo | the finger | the view's turn after the threshold | meanwhile the piece backs out |
+|---|---|---|---|
+| on the FAR half of the top | slow (1 px a frame) | **180° in 0.52 s**, a constant 6° a frame from its first frame to its last, the gizmo held | 1.4 m |
+| on the far half | faster (4 px a frame) | the same 180° in 0.52 s | 5.3 m — the zoom is over long before the turn: the turn TRAILS it |
+| on the near half | slow | 20° in 0.38 s, 3.6° a frame | 1.0 m |
 
-| | the way IN (as built) | the way OUT (proposed) |
+So the turn is a fixed half second whatever the finger does, it starts and stops abruptly, it holds the gizmo, and at any normal speed it runs on
+after the zoom has finished. ⚠ The approach's DISTANCE cannot pace it: it grows by 1.4 m in half a second under the slowest finger — only the
+finger's own travel can.
+
+**The way out — as briefed (step C3; the owner's go: *"Continue next step"*, 2026-11-16)**, under `chartLayout` 1:
+
+| | the way IN (as built) | the way OUT (C3) |
 |---|---|---|
-| at the threshold | the layout taken, the sections square at once | the polar orbit back, the sections polar at once; the gizmo kept |
-| the camera | waits while the approach goes on | **follows the approach's own travel outward**: its turn from the picture shown to the polar camera whole after a set distance more (a new slider, in metres) — a slow approach turns it slowly, a stopped one stops it |
+| at the threshold | the layout taken, the sections square at once | the polar orbit back, the sections polar at once; the gizmo kept — as today |
+| the camera | waits while the approach goes on | **follows the approach finger's own travel**: its turn from the picture shown to the polar camera is whole after `tiltOutBlendMm` of it (a new slider, millimetres ON THE GLASS; 0: today's timed turn), with a smooth start and end |
+| its speed | — | never faster than the tilts' one speed (`tiltRollDegS`, T5): a fast finger does not flip the picture in a frame — the turn then runs at that speed |
 | if the finger orbits before it is whole | blends by the finger's first millimetres (`tiltBlendMm`) | the same |
-| by time | never | **never** — ⛔ today's timed turn |
+| by time | never | only once the finger has LIFTED with the turn unfinished: it completes at the one speed — never left half done |
 | the gizmo | free | **free** — ⛔ today held while the turn runs |
-| turning back | — | approaching back in inside the band takes the way in again, from the picture shown |
+| turning back | — | the share never rewinds (no approach jitter into the camera, T11); back within the close-in distance the way in takes over, from the picture shown |
 
-The square camera's share (square to the face → the orbit's own direction, eased by the calm) goes on the same pace, so the direction and the up
-arrive together. ⚠ Its cost: on the far half of a top face the picture still turns half round — over the band's metres instead of half a second.
+What is shown is ONE mix from the picture frozen at the threshold to the live polar camera, so the direction and the up arrive together (the square
+camera's own ease runs under it).
+⚠ **What to expect**: on the far half of a top face the picture still turns half round — that cannot be removed (D-T1). Under a slow, deliberate
+finger it now follows the finger; at a normal speed it still takes about half a second (the one-speed rule), with a smooth start and end and the
+gizmo free. The slider stretches it.
+
+### 8.1 As built (2026-11-16: `86f2cbe`, an Opus agent; audited by Fable, one completion — the one speed on the PICTURE)
+
+`tiltOutBlendMm` (12 mm; its slider after `tiltBlendMm`, TILTED POLE; 0: today's timed, held turn); pure, in `src/input/seam_turn.ts`: `seamOutPaced`
+(the tilt left by distance — its latch off — under the charts' layout, the slider over 0), `seamOutTarget` (the larger of the two finger travels over
+their spans; whole once no finger is down), `seamOutStep` (toward the target, never back, the SHARE SHOWN never faster than `tiltRollDegS` — ⛔ as
+first built the step was taken on the progress under its smooth ends: 540°/s in the middle), `seamOutShare` (the smooth start and end),
+`turnHoldsGizmo`. The turn's progress and its two travels live on the turn itself (`asmZoneMix.out`); the approach's outward millimetres are fed from
+`approachInput`, the orbit's from the drag's step. **2058 vectors** (21 for this step). **The gates** (`Scene_1`, the gizmo on the far half of the
+top, one approach drag out):
+
+| the finger | before | C3 |
+|---|---|---|
+| slow (1 px a frame) | 180° in 0.52 s at a constant 6° a frame, abrupt at both ends, the gizmo held | the turn follows the finger: 180° over its 12 mm (0.77 s here), from 2.7° a frame up to **6.0°** in the middle and down to 1.4° — never over the one speed |
+| faster (4 px a frame) | the same 0.52 s, trailing the zoom | at the one speed with smooth ends: 0.6 s, at most 6.0° a frame |
+
+The replays: the slider at 0 — the three scenes bit for bit what they were; forced off — unchanged; the defaults — `Scene_1` and `Scene_0bis`
+unchanged, `Scene_0` another 63 frames round one approach out, its largest turns the same. ⚠ Not measured in the app (vectored only): a finger held
+still mid-turn (the camera waits), an orbit begun during the turn (the gizmo free, the turn finished over the orbit's first millimetres), coming back
+in mid-turn. ⚠ As §8 says: at a normal finger speed the half turn still takes about 0.6 s — it is the one-speed rule's.
 
 ## 9. STEP C4 — A SPIT'S LEVEL FACES, as briefed (2026-11-16; D-T2; under `chartLayout` 1, in a spit zone only)
 
@@ -417,3 +449,14 @@ geometry. It matters only if the finger is still pushing that way — which is t
 the turn is over 90° exactly when one dy sign moves the gizmo out through that edge (up on a top face, down on a bottom one); the hold is set on
 the finger's dy sign only if it IS that sign. On every face that carries a layout today (rectangles) nothing changes; the difference appears only
 on faces D-T5 keeps polar for now. Gravity's tilt keeps its own test (`edgeHoldAt`, 120°) until the half turns become one event (step C5).
+
+## 11. THE TWO SWITCHES ON BY DEFAULT (the owner, 2026-11-16)
+
+After his look on C4 (main `6685f8f`): *"This is good. Commit. For the next deploys always toggle on the two switches by default in all the scenes. Continue next step"*
+
+* **What changes**: `chartLayout` and `chartCalm` are 1 in the defaults — every scene, every device, from the next deploy on. The sliders stay
+  (GIZMO & SECTIONS); `?chartLayout=0&chartCalm=0` is the game as it was before the charts (the old detectors live until step 2.5 deletes them).
+* **The gates**: with both forced to 0 the three scenes replay bit for bit as the switch-off baseline; with no parameter they replay as the
+  switch-on one.
+* ⚠ **`Scene_2`** has never been run with the switches on (the owner keeps it out of these passes: *"I will do it myself when I troubleshoot the
+  scene"*): with this default it runs the charts' layout too.
