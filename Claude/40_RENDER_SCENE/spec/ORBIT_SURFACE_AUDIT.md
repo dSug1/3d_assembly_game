@@ -3,6 +3,8 @@
 > ⛔⛔ **PROPOSED, FOR THE OWNER'S REVIEW. NOTHING BUILT, NO CODE CHANGED.** Moved out of [ORBIT_SURFACE.md](ORBIT_SURFACE.md) §7 and §9 at its
 > second revision (2026-11-16, the owner's feedback), so that the specification stays under its line budget. The weaknesses WS1 – WS25 keep
 > their numbers; the specification cites them. Code references are `file:line` on `1190db2` (the first version's reading).
+> *(alignment, 2026-11-16)* §5 (new) holds what the specification withdrew on the owner's two comments of 2026-11-16 (its §0ter): notes handed to
+> the orbit's documents, NOT part of the specification.
 
 ## 1. THE WEAKNESSES OF WHAT IS BUILT (WS1 – WS25)
 
@@ -130,4 +132,136 @@ cousin of the dropped shell + cast (`TILTED_ORBIT_REBUILD_SCOPE.md` §22 – §2
 
 ⚠ **What was already tried.** 2026-11-13: *"your proposals A, B and C have already been tried … It all fails because there is no bijection
 possible between the orbit and the faces of the assembly"*. A′ is no new orbit → surface mapping: the face map's angles stay; only the depth
-rule (P2) and, if measured, the crossing at a mouth (P3) change. §31.4's bijection argument stands; OS3's fallbacks stay stated.
+rule (P2) changes (the crossing at a mouth, P3, is withdrawn: §5). §31.4's bijection argument stands; OS3's fallbacks stay stated. *(alignment)* The
+owner, 2026-11-16: *"Do not reopen this point."*
+
+## 5. NOTES HANDED TO THE ORBIT'S DOCUMENTS — NOT PART OF THIS SPECIFICATION
+
+Moved here from [ORBIT_SURFACE.md](ORBIT_SURFACE.md) at its alignment with the owner's two comments of 2026-11-16 (quoted whole in its §0ter). His
+comment 2: *"The purpose of this orbit's surface specification is to define where the gizmo travels, not what governs the piece and camera orbit
+(unless you specifically see that the gizmo travel shall impact the piece and camera orbit, for example during collision)."* What follows is about
+what governs the piece, the camera or the layout: kept as the record, for the orbit's own documents to take or leave; nothing here is proposed
+by the specification. The text is as it stood at `8e70263`; its "§", "Q" and "(i) / (ii)" references are to the specification as it was then.
+
+### 5.1 P1's former bullets — the far foot's mechanism (withdrawn, comment 2) and "two boundaries" (withdrawn, comment 1)
+
+P1's sentence stays in the specification as a boundary condition, with the owner's boundary (where the piece can collide). Its measurements
+stay there as findings handed to the orbit's queue (F17, F7, the mouth). Withdrawn: the bullet "The mechanism proposed" (how the shell reads the
+gizmo governs the piece and the camera) and the reviewer's "Two boundaries" (it tied the camera's side to the tilt's 0.6 m, which the owner rules
+out). Before the alignment:
+
+* **Corrected after the critic *(study, F7, F17)*.** The consolidation first reworded P1 as "a function of the box and the contour" and called it
+  built ("no bump along one assembly"): measured only with the direction along the facet's normal, where a depth step cannot move the foot. The game
+  calls `shellAnchor(gizmo, u, …)` with `u` the orbit's direction (`assembly_wiring.ts:686`), and the calm leaves `u` oblique toward a face's
+  edges: from a gizmo stepped down by h the ray reaches the shell h × tan θ further along — the far piece and the camera bump. Sweep, at 20°: 684 of
+  1596 cells today, 673 under P2; a 6 mm step 2.2 / 6 mm at 20° / 45°, a 40 mm one 14.6 / 40 mm; near the box's edge more (L12's 60 mm step: 82 /
+  171). That departs from his words and from the rebuild's own aim 4 and I2: *"A step in the assembly's depth may move the GIZMO (a break), never
+  the piece nor the camera"* (`TILTED_ORBIT_REBUILD_SCOPE.md` §1 item 4, §2 I2, approved 2026-11-04). Between assemblies (F7): 612 of 760
+  protrusion cells move the far foot by exactly the box's growth (a pin 40 mm, the slab 100), 9 of 836 voids; L24, L48, L50 through the contour
+  (189 – 360 mm) — at a seat, an event.
+* **The mechanism proposed [PROPOSED], for the class (every depth step under the gizmo).** Far and medium the shell is fed the gizmo's point ON
+  ITS CONTOUR FACET (the map's surface point, its depth left out); within the offset the real gizmo, by the same `gizmoShare` blend that brings the
+  foot down onto it today. The foot is then a function of the angles, the box and the contour by construction; the calm and its oblique direction
+  are kept. ⛔ Not the rule reverted on 2026-11-02 (`orbit_shell.ts` header: the piece on the shell by the direction from the centre, the gizmo a
+  readout): the piece still stands off the gizmo's place along `u`; only the depth is read on the contour. Not measured in the game: a replay of
+  `Scene_1` far out (a dx across `Piece44`, a dy over the channel) first.
+* **Built that way along the face's normal only.** Beyond the shell's offset (`orbitShellOffsetMm`, 60 mm) the piece's foot is on the shell, and *"a gizmo that
+  steps in DEPTH (a protrusion's edge, a recess, a notch) leaves the piece and the camera where they are"* (`orbit_shell.ts:7-11`); the camera's
+  look reads that foot (`assembly_wiring.ts:1268-1272`). The owner's own reason for the shell: *"it was good to filter out the bumps due to
+  protrusions or holes on the section contours"* (2026-11-04, `TILTED_ORBIT_REBUILD_SCOPE.md` §10). Inside the offset the foot comes down onto
+  the gizmo, and the footprint support, the solver and the ring's hold decide.
+* ⚠ **Not for the camera's FRAME at a mouth.** The automatic tilt acts within `tiltAutoM` (0.6 m, `gestureConfig.ts:887`), and at a mouth the
+  hold starts it: `tiltOn(st, st.asmMouth !== null ? st.asmMouth.hi : atPole)` (`assembly_wiring.ts:1157`; the hold set at `:1211-1215` by
+  `mouthHold`, `orbit_tilt.ts:290`), the cap taken the one the mouth opens toward (`assembly_wiring.ts:1805`). So between 60 mm and 0.6 m a
+  feature of the REAL surface — `Scene_1`'s channel lip at 466 mm, the contour's edge being at 498.5 mm — decides where the camera's frame turns:
+  the one place where today's code does not keep his S17 spirit at medium distance (*(review)* with "close in" = 0.6 m: none, next point). Two readings, his choice (§8 Q1): **(i)** P1 strict —
+  beyond 60 mm the tilt at the contour's edge (the map's angles reaching the top facet, as the hold already hands over far out), the real lip
+  only within 60 mm; **(ii)** the mouth a labelled exception up to 0.6 m — his S10 came with *"when i cross at close in"* on 2026-11-10, the day
+  `tiltAutoM` was set to 0.6 m, so his "close in" then was the tilt's distance. **P3 against P1**: far and medium a crossing is at the
+  CONTOUR's edge (P1), close in at the REAL edge (P3); they agree only if the hand-over between the two is ONE event at the regime's boundary,
+  never two crossing places on one travel. (ii) has no such switch; (i) needs it. Recommendation: (ii) until Q4's measurement.
+* *(review)* **Two boundaries, not one exception.** "Close in" has two distances in the game, both his: the shell's offset (60 mm), where the
+  collision takes over the PATH; and the tilt's distance (0.6 m in, 0.65 m out), where the camera's FRAME goes square to the face — *"the tilted
+  pole orbit is reserved for close in"*, *"The close in square is for fine placement of the piece, not for scene view"* (2026-11-16, his answer to
+  D-T1, `TILTED_POLE_CLOSE_IN.md` §5, §8). Read so, P1 binds the PATH beyond 60 mm and the FRAME beyond 0.6 m; the mouth's tilt starts only inside
+  0.6 m (`tiltAutoLatch`; the hold places the gizmo, not the frame): a close-in rule by his own words — reading (ii), without the word "exception". What then departs from P1 is F17 (and F7, at a seat).
+* **Amended.** The first wording called the orbit's layer "the surface closed at the orbit's scale, today's convex contour being its end"
+  (morphological closing; r-hulls, alpha shapes). The code reader showed this wrong twice: the shell is the offset of the parts' BOX, and the
+  contour is a set of facets each at its main group's plane, with protrusions standing in front of it. So P1 names TWO layers, neither a
+  closing: the **shell** carries the piece and the camera; the **contour** carries the layout. Closing at a scale r survives only as a
+  MEASURE — each feature's scale is the r at which it closes (used offline, §2.6, §7bis). ⛔ An intermediate r AT RUNTIME (a rounded layer the
+  piece rides) is the dropped shell + cast family (`TILTED_ORBIT_REBUILD_SCOPE.md` §22 – §29): not proposed.
+* **It stops** where the piece is inside the offset: P2, P3, P5 then. **Patent**: not checked (a shell and a box are textbook).
+
+And §2.4's "Proposed" bullet, as it stood:
+
+* **Proposed.** For the SURFACE, "close in" = the piece within the shell's offset (60 mm) of it; "far or medium" = beyond. The 0.3 m and 0.6 m
+  rules are camera rules on the CONTOUR (the facet under the gizmo, its poles) — ⚠ except at a MOUTH, where the hold hands the real lip to the
+  automatic tilt from up to 0.6 m (§2.2 P1, its second point): a surface singularity moving the camera's frame at medium distance today (*(review)*: a close-in rule if "close in" is the tilt's 0.6 m, §2.2 P1). His
+  choice between (i) the tilt at the real lip only within 60 mm and (ii) the mouth a labelled exception to 0.6 m is §8 Q1.
+  ⚠ Not verified: whether the camera's frame (`free_face.ts`) reads the contour's facet or the real face under the gizmo far out — if the real
+  face, a protrusion's side could still turn the camera there; to check before P1 is called built.
+
+
+### 5.2 P3 — each real face in the frame that faces it (withdrawn: the camera's frame at a crossing)
+
+**P3 — EACH REAL FACE IN THE FRAME THAT FACES IT.** *Where a facet's direction finds nothing to land on and a neighbouring facet's direction finds
+a real face, the place is that facet's: the crossing is at the real edge.*
+* **Name.** A per-face atlas (PolyCube maps, Tarini 2004); in machining, the faces one direction sees are its visibility map (Woo 1994) and
+  its accessibility cone (Spyridi, Requicha 1990); a walk across real edges by their dihedral (straightest geodesics — not verified).
+* **Already there in part.** The facet frames turn at an edge by its dihedral (the owner, 2026-11-04, §16.1 D1); the code's own comment at the
+  mouth says *"the red's travel there is the next facet's, not this plane's"* (`face_map.ts:990`).
+* **Its condition reopened *(study, F5)*.** "Finds nothing" is not the mouth's class: L07's channel, closed 340 mm behind its mouth, finds its
+  far wall (no mouth today; under P2 a 340 mm landing at the lip — C49), while Q02's, right through, finds nothing. Measured with Q4.
+* **What it is for.** `Scene_1`'s mouth (§2.4): the red reaches the side face's real lip at the floor's level and crosses there — his *"the tilt
+  shall happen when the red section reaches the edge at the bottom of the mouth"*, with no hold.
+* **Where it stops.** The green at the same height crosses the same region: strictly applied, a dx over the mouth would cross onto the top and
+  back — the *"too many back and forth"* he refused at the notches (`POLAR_ORBIT_CLEANUP.md` §8.1). Two travels, one point: §2.4 gives three
+  candidates, to be measured. P3 is NOT applied to the notches: a notch has a floor along the facet's direction (its set-back riser), so
+  nothing is missing there and P2 alone answers (*"Stays as it is"*, §6 (a)).
+* **Already in the record.** §18-C4 (`TILTED_ORBIT_REBUILD_SCOPE.md` §18, 2026-11-05, Step 7's gate): *"a crossing at a REAL edge, not only at the
+  contour's"*, for a void open on a travel (his attachment 1: *"the orbit tilt shall take over once it is built"*). What became of it: on
+  `1.0.107-Close-in-atlas` it was folded into §27.2's Gz0 (a gap — the orbit tilts on — or a deported face), part of the dropped track + shell
+  family; on the main line it was built at ONE place, the mouth's hold (*"build b"*, 2026-11-10). P3 is §18-C4 on today's face map, read per
+  facet direction — no track, no deported face.
+* ⚠ **Patent.** A camera that turns to face each new real face close in comes close to the HoverCam family (US 8,044,953; US 7,042,449). The
+  difference to keep: the gizmo is driven by the finger's dx / dy on charts and is never the point nearest the camera; the camera reads the
+  facet's frame. Scope not checked.
+
+### 5.3 The mouth's three place-functions (§2.4 before the alignment)
+
+The gizmo's side stays in the specification (the hold, its domain restricted, Q4). Whether a general crossing rule replaces the hold:
+
+**Can it go? Three place-functions for the mouth, to measure on `Scene_1`** (the literature cannot settle it — the readers agree):
+* **(a) P3 strict** — the mouth's region of the side's chart belongs to the top's facet. The red: crosses at the real lip (466 mm), the tilt
+  there — his rule, no hold. The green at the same height: crosses into the top inside the channel's span and back out (a back-and-forth).
+* **(b) the chart on the real outline** — the side's chart covers the side's REAL face (its top edge at 466 mm inside the channel's span, at
+  498.5 mm outside). The red ends at the lip and crosses; the green at a fixed height dips by up to 32 mm as it passes the span — an in-plane
+  step, glided like a depth step. ⚠ It resembles the travel on the true outline of §28.4 (not adopted: *"a dx walking up every step's side"*);
+  the difference: only where the facet's direction finds nothing, not at every step.
+* **(c) the hold, as built** — the one labelled path exception.
+* **Recommendation**: measure (a) and (b) in `void_sim` and a headless replay on the channel (dy up, dx across at three heights, close in and
+  far out) against (c); keep (c) until one of them gives his red with no back-and-forth (§8 Q4).
+
+### 5.4 P6 — the layout's own singular points (withdrawn: a rule of the atlas)
+
+**P6 — THE LAYOUT'S OWN SINGULAR POINTS.** *Where the contour's curvature is gathered on faces too small to work on, the layout treats the place
+as one singular point — a polar zone.* A rule of the atlas, not of the surface.
+* **Name.** Cone singularities in surface parametrization: the curvature (the angle defect) concentrated at a few points (Kharevych et al.
+  2006; Ben-Chen et al. 2008; Myles, Zorin 2012; Soliman, Slepčev, Crane 2018 — the placement by sparsity, one weight).
+* **Already built twice.** The charts' FANS — the faces round a corner pole with at least three faces taken as one frame, by topology, no size
+  ruler (`orbit_charts.ts:396-447`); the legacy polar zones by a size share (`valenceMin` 5, `facetMinRatio` 0.22), under `chartLayout` 0 only.
+* **Guarantees** the turn budget exactly (the cones' angles sum to Gauss – Bonnet's total). **Stops**: fewer cones mean more distortion — a
+  trade-off with one weight, not a threshold-free choice. Nothing changes on `Scene_1` (no fan) nor on `Scene_0bis` (the fans already do it).
+* **Patent.** Not checked; academic work.
+
+### 5.5 D5's share after a closing (§2.6 before the alignment: the layout's facets)
+
+A finding for the orbit's layout (WS21): D5 reads the main group's region, so a porous face could lose its facet — not reproduced by the study
+(L38, L39, Q08). What §2.6 recommended:
+
+**D5's quarter share** stays the layout's one ruler, measured after a
+closing that does NOT depend on the held piece: the placed parts closed at the level's SMALLEST piece's half-width (a level constant, read from
+the catalogue), so a comb or a field of studs keeps its facet (the former D-S19) while the contour and the charts stay a function of the placed
+set alone (S19: rebuilt at a seat, never at a pick-up or a turn). ⛔ Not after P2's own closing: that is per held piece and per turn, and would
+make the layout move with the piece.
