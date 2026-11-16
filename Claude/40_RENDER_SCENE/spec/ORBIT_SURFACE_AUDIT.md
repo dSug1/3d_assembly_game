@@ -101,3 +101,33 @@ R1 glued faces (`face_map.ts:512`), the rims' 1.6 mm (`:176`), R2's clip (`:584`
 * *(second revision)* Blender: `bmesh` (`is_manifold`, `is_boundary`, `recalc_face_normals`), the 3D-Print Toolbox (Solid, Intersections,
   Thickness, Overhang), `mathutils.bvhtree` (`ray_cast`, `find_nearest`, `overlap` — check that `overlap` exists in the version used), the Boolean
   modifier's Exact solver (overlapping input). numpy is bundled, scipy is not.
+
+## 4. THE CANDIDATE WAYS, restated by the principles (moved from ORBIT_SURFACE.md §6 at its third step, 2026-11-16, unchanged)
+
+**What is built today is one end of the family**: the layout on a convex contour (P1's contour), the piece and the camera on the box's shell
+(P1's shell), the gizmo's depth a POINT read plus a piece-fit test at the facet's plane, and a second footprint read close in.
+
+**A — Classified features on today's contour** (first version's recommendation): one classification of voids, mouths, protrusions with one
+ruler; prior art CAD defeaturing and virtual topology. ⚠ Under the owner's *"no ad hoc rule per geometry"* a classification is still a table of
+cases. **Superseded by A′.**
+
+**A′ — First contact on today's contour (P2).** Keep the contour, the charts and the shell; replace the stacks' per-case depth rules by ONE
+landing map per facet direction (L2), the GJK the arbiter; the footprint support becomes the same map read with the drop started at the piece
+(P2 ⑤) — its "never a step up" kept, so close in a proud part stays a wall. Prior art: drop cutter, Z-map, C-space.
+
+**B — An authored surface.** Proxies and ghosts built and checked in Blender (`PART_AUTHORING.md`); the game reads them. Prior art: game
+collision proxies, navigation meshes. Needed where no flat rule exists (C15, C38, C45).
+
+**C — The surface accessible to the piece, computed** (the union closed by the piece; faces by planar segmentation, VSA). Its runtime is the
+cousin of the dropped shell + cast (`TILTED_ORBIT_REBUILD_SCOPE.md` §22 – §29): **offline only** — the Blender checks B2, B3, B5.
+
+| | A′ — first contact | B — authored | C — computed, offline |
+|---|---|---|---|
+| solves | every void, groove, gap, pin, stud by one operation; the gizmo and the piece on one depth | curves, cavities, goal entries | "reachable from outside", the faces that are no place, the goals not reachable |
+| costs | a rewrite of `stackDepthAt`'s depth; `footprintSupport` re-expressed on the map, its wall kept; maps per pick-up and turn | authoring every scene | per scene, in Blender (§7bis costs) |
+| leaves open | treads (OS3); the mouth's green (§2.4); overhang undersides | consistency with the rules — B's checks | nothing at runtime |
+| patents | textbook; ⚠ dexel machining patents (scopes not checked) | none | ⚠ US 10,699,492 B2 (cavity removal, scope not checked); closing textbook |
+
+⚠ **What was already tried.** 2026-11-13: *"your proposals A, B and C have already been tried … It all fails because there is no bijection
+possible between the orbit and the faces of the assembly"*. A′ is no new orbit → surface mapping: the face map's angles stay; only the depth
+rule (P2) and, if measured, the crossing at a mouth (P3) change. §31.4's bijection argument stands; OS3's fallbacks stay stated.
